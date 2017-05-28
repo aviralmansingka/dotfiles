@@ -1,0 +1,2 @@
+cp * ~/
+rm ~/setup.sh
