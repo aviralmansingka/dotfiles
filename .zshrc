@@ -17,4 +17,5 @@ export EDITOR='vim'
 
 
 alias dev="source ~/dotfiles/dev"
+LS_COLORS='di=36:fi=0:ln=36:pi=36:so=36:bd=36:cd=36:or=36:mi=36:ex=31:*.rpm=90'
 
