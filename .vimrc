@@ -1,21 +1,22 @@
 " vim-sublime - A minimal Sublime Text - like vim experience bundle
 "               http://github.com/grigio/vim-sublime
-" Best view with a 256 color terminal and Powerline fonts
-" Updated by Dorian Neto (https://github.com/dorianneto)"
+" Best view with a 256 color terminal and Powerline fonts " Updated by Dorian Neto (https://github.com/dorianneto)"
+set term=xterm-256color
+set t_Co=256
+set tags=tags;/
 
 set nocompatible
 filetype off
-
-nnoremap <C-E> <C-E><C-E><C-E>M
-nnoremap <C-Y> <C-Y><C-Y><C-Y>M
 
 nnoremap <C-J> <C-W><C-J>
 nnoremap <C-K> <C-W><C-K>
 nnoremap <C-L> <C-W><C-L>
 nnoremap <C-H> <C-W><C-H>
 
-au BufReadPost *.tag set syntax=html
+nnoremap <C-E> <C-E><C-E><C-E>M
+nnoremap <C-W> <C-Y><C-Y><C-Y>M
 
+au BufReadPost *.tag set syntax=html
 
 imap jj <Esc>
 
@@ -28,14 +29,16 @@ Plugin 'scrooloose/nerdtree'
 Plugin 'tpope/vim-surround'
 Plugin 'gcmt/breeze.vim'
 Plugin 'kien/ctrlp.vim'
-Plugin 'SirVer/ultisnips'
 Plugin 'tomtom/tcomment_vim'
+Plugin 'alvan/vim-closetag'
 Plugin 'vim-airline/vim-airline'
 Plugin 'vim-airline/vim-airline-themes'
 Plugin 'airblade/vim-gitgutter'
+Plugin 'mxw/vim-jsx'
 
 " Color Themes
 Plugin 'colors'
+Plugin 'tomasiser/vim-code-dark'
 
 call vundle#end()
 filetype plugin indent on
@@ -98,11 +101,6 @@ endif
 " do not history when leavy buffer
 set hidden
 
-" FIXME: (broken) ctrl s to save
-noremap  <C-S> :update<CR>
-vnoremap <C-S> <C-C>:update<CR>
-inoremap <C-S> <Esc>:update<CR>
-
 set nobackup
 set nowritebackup
 set noswapfile
@@ -121,14 +119,8 @@ set completeopt=menuone,longest,preview
 nnoremap <S-n> :NERDTreeToggle<CR>
 
 " CtrlP
-set wildignore+=*/.git/*,*/.hg/*,*/.svn/*
-
-" Ultisnip
-" NOTE: <f1> otherwise it overrides <tab> forever
-let g:UltiSnipsExpandTrigger="<f1>"
-let g:UltiSnipsJumpForwardTrigger="<f1>"
-let g:UltiSnipsJumpBackwardTrigger="<c-k>"
-let g:did_UltiSnips_vim_after = 1
+set wildignore+=*/.git/*,*/.hg/*,*/.svn/*,*node_modules*
+let g:ctrlp_open_multiple_files = 'ij'
 
 " vim-airline
 let g:airline#extensions#tabline#enabled = 1
@@ -154,21 +146,9 @@ vmap <C-x> d
 vmap <C-v> p
 vmap <C-c> y
 " Undo, Redo (broken)
-nnoremap <C-z>  :undo<CR>
-inoremap <C-z>  <Esc>:undo<CR>
-nnoremap <C-y>  :redo<CR>
-inoremap <C-y>  <Esc>:redo<CR>
 " Tabs
 let g:airline_theme='badwolf'
 let g:airline#extensions#tabline#enabled = 1
-nnoremap <C-b>  :tabprevious<CR>
-inoremap <C-b>  <Esc>:tabprevious<CR>i
-nnoremap <C-n>  :tabnext<CR>
-inoremap <C-n>  <Esc>:tabnext<CR>i
-nnoremap <C-t>  :tabnew<CR>
-inoremap <C-t>  <Esc>:tabnew<CR>i
-nnoremap <C-k>  :tabclose<CR>
-inoremap <C-k>  <Esc>:tabclose<CR>i
 
 " lazy ':'
 map \ :
@@ -178,10 +158,43 @@ nnoremap <Leader>p :set paste<CR>
 nnoremap <Leader>o :set nopaste<CR>
 noremap  <Leader>g :GitGutterToggle<CR>
 
+" filenames like *.xml, *.html, *.xhtml, ...
+" Then after you press <kbd>&gt;</kbd> in these files, this plugin will try to close the current tag.
+"
+let g:closetag_filenames = '*.html,*.xhtml,*.phtml'
+
+" filenames like *.xml, *.xhtml, ...
+" This will make the list of non closing tags self closing in the specified files.
+"
+let g:closetag_xhtml_filenames = '*.xhtml,*.jsx'
+
+" integer value [0|1]
+" This will make the list of non closing tags case sensitive (e.g. `<Link>` will be closed while `<link>` won't.)
+"
+let g:closetag_emptyTags_caseSensitive = 1
+
+" Shortcut for closing tags, default is '>'
+"
+let g:closetag_shortcut = '>'
+
+" Add > at current position without closing the current tag, default is '<leader>>'
+"
+let g:closetag_close_shortcut = '<leader>>'
+
+let g:jsx_ext_required = 0
 " this machine config
 if filereadable(expand("~/.vimrc.local"))
   source ~/.vimrc.local
 endif
 execute pathogen#infect()
 call pathogen#helptags()
-colorscheme CandyPaper
+colorscheme codedark
+hi Tag              guifg=#bd9800   guibg=NONE      guisp=NONE      gui=NONE        ctermfg=11      ctermbg=NONE    cterm=NONE
+hi xmlTag           guifg=#bd9800   guibg=NONE      guisp=NONE      gui=NONE        ctermfg=11      ctermbg=NONE    cterm=NONE
+hi xmlTagName       guifg=#bd9800   guibg=NONE      guisp=NONE      gui=NONE        ctermfg=11      ctermbg=NONE    cterm=NONE
+hi xmlEndTag        guifg=#bd9800   guibg=NONE      guisp=NONE      gui=NONE        ctermfg=11      ctermbg=NONE    cterm=NONE
+if &term =~ '256color'
+    " Disable Background Color Erase (BCE) so that color schemes
+    " work properly when Vim is used inside tmux and GNU screen.
+    set t_ut=
+endif

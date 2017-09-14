@@ -1,4 +1,6 @@
 tmux new-session -d 'vim'
 tmux split-window -v -p 30
 tmux split-window -h
+tmux select-pane -L
+tmux send-keys 'clear' C-m
 tmux attach-session -d
