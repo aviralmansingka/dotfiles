@@ -29,8 +29,8 @@ set rnu
 " Activating colorscheme and syntax
 set term=xterm-256color
 set t_Co=256
-color wombat256
-colorscheme wombat256
+color wombat256mod
+colorscheme wombat256mod
 syntax on
 filetype plugin indent on
 set number
