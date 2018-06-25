@@ -21,14 +21,16 @@ noremap <c-w> <c-y><c-y><c-y>M
 " Relative Line numbering
 set rnu
 
+" Replace CTRL-O with CTRL-I to do command from insert mode
+inoremap <c-i> <c-o>
+inoremap <c-o> <c-x><c-o>
+
 " Start using a color scheme
 "mkdir ~/.vim; \
 "git clone https://github.com/tomasiser/vim-code-dark && \
 "mv vim-code-dark/* ~/.vim
 
 " Activating colorscheme and syntax
-set term=xterm-256color
-set t_Co=256
 color wombat256
 colorscheme wombat256
 syntax on
@@ -89,6 +91,8 @@ Plugin 'epilande/vim-react-snippets'
 Plugin 'pangloss/vim-javascript'
 Plugin 'mxw/vim-jsx'
 
+" Code Completion
+
 " Haskell Plugins
 Plugin 'Shougo/vimproc.vim'
 Plugin 'eagletmt/ghcmod-vim.git'
@@ -117,11 +121,11 @@ set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
 set statusline+=%*
 
-let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_auto_loc_list = 1
-let g:syntastic_check_on_open = 1
+let g:syntastic_c_compiler_options ='-w -Wno-return-type'
+let g:syntastic_always_populate_loc_list = 0
+let g:syntastic_auto_loc_list = 0
+let g:syntastic_check_on_open = 0
 let g:syntastic_check_on_wq = 0
-let g:syntastic_haskell_checkers = ['hlint', 'ghc_mod']
 
 " fugitive
 set statusline+=%{fugitive#statusline()}
@@ -136,12 +140,8 @@ let g:UltiSnipsJumpForwardTrigger="<c-n>"
 let g:UltiSnipsJumpBackwardTrigger="<c-b>"
 let g:UltiSnipsEditSplit="vertical"
 
+" java autocomplete
+autocmd FileType java setlocal omnifunc=javacomplete#Complete
+
 " ghc mod
 let $PATH = $PATH . ':' . expand('~/.cabal/bin')
-
-if &term =~ '256color'
-    " disable Background Color Erase (BCE) so that color schemes
-    " render properly when inside 256-color tmux and GNU screen.
-    " see also http://snk.tuxfamily.org/log/vim-256color-bce.html
-    set t_ut=
-endif
