@@ -31,8 +31,10 @@ inoremap <c-o> <c-x><c-o>
 "mv vim-code-dark/* ~/.vim
 
 " Activating colorscheme and syntax
-color wombat256
-colorscheme wombat256
+set term=xterm-256color
+set t_Co=256
+color wombat256mod
+colorscheme wombat256mod
 syntax on
 filetype plugin indent on
 set number
