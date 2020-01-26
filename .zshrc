@@ -8,6 +8,7 @@ alias data='amansin@data.cs.purdue.edu'
 
 alias tmux="TERM=screen-256color-bce tmux"
 ZSH_THEME="af-magic"
+ZSH=~/.oh-my-zsh
 
 source $ZSH/oh-my-zsh.sh
 
