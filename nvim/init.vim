@@ -4,6 +4,9 @@
 " Automatic reloading of .vimrc on file change
 autocmd! bufwritepost ~/.config/nvim/init.vim source %
 
+" changing leader to something more fun :-)
+let mapleader="\<Space>"
+
 " Normal backspace
 set backspace=2
 
@@ -52,8 +55,30 @@ set noswapfile
 
 " Start adding plugins
 call plug#begin('~/.config/nvim/plugged')
-Plug 'nanotech/jellybeans'
+
+" nice gray-background colorscheme
+Plug 'nanotech/jellybeans.vim'
+
+" setup completion servers
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+
+" better language highlighting
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+
+" file explorer
+Plug 'nvim-lua/plenary.nvim'
+Plug 'nvim-telescope/telescope.nvim'
+
 call plug#end()
 
 " Activating colorscheme and syntax
-color delek
+color jellybeans
+
+" Common extensions to use throughout
+let g:coc_global_extensions = ['coc-json', 'coc-git', 'coc-yaml', 'coc-sql']
+
+" Navigate files and grep
+nnoremap <leader>ff <cmd>Telescope find_files<cr>
+nnoremap <leader>fg <cmd>Telescope live_grep<cr>
+nnoremap <leader>fb <cmd>Telescope buffers<cr>
+nnoremap <leader>fh <cmd>Telescope help_tags<cr>
