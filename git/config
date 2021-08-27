@@ -13,7 +13,6 @@
 	cmd = nvim -f -c "Gdiff" "$MERGED"
 [commit]
 	verbose = true
-	gpgSign = true
 [editor]
     tool = nvim
 [alias]
