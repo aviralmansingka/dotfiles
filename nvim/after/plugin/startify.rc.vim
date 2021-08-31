@@ -9,10 +9,11 @@ function! s:gitUntracked()
     return map(files, "{'line': v:val, 'path': v:val}")
 endfunction
 
+let g:startify_change_to_dir = 0
 let g:startify_lists = [
         \ { 'type': function('s:gitModified'),  'header': ['   git modifie']},
-        \ { 'type': function('s:gitUntracked'), 'header': ['   git untracked']},
         \ { 'type': 'dir',       'header': ['   MRU '. getcwd()] },
+        \ { 'type': function('s:gitUntracked'), 'header': ['   git untracked']},
         \ { 'type': 'sessions',  'header': ['   Sessions']       },
         \ { 'type': 'bookmarks', 'header': ['   Bookmarks']      },
         \ { 'type': 'commands',  'header': ['   Commands']       },

@@ -1,10 +1,5 @@
-if !exists('g:lspconfig') | finish | endif
-
-lua << EOF
-local M = {}
 local lspconfig = require('lspconfig')
 local protocol = require('vim.lsp.protocol')
-local jdtls = require('jdtls')
 
 local jdtls_mappings = {
   {"code_action", "n", "<leader><CR>",  "<Cmd>lua require'jdtls'.code_action()<CR>"},
@@ -36,7 +31,7 @@ local diagnostic_mappings = {
   {"diagnostics",         "n", "[w",      "<Cmd>lua vim.lsp.diagnostic.goto_prev()<CR>"},
 }
 
-on_attach = function(client, bfrnr)
+local on_attach = function(client, bfrnr)
     local function buf_set_keymap(...) vim.api.nvim_buf_set_keymap(bufnr, ...) end
     local function buf_set_option(...) vim.api.nvim_buf_set_option(bufnr, ...) end
 
@@ -44,7 +39,7 @@ on_attach = function(client, bfrnr)
     for _, mappings in pairs(capability_mappings) do
       local capability, mode, lhs, rhs = unpack(mappings)
       if client.resolved_capabilities[capability] then
-        vim.api.nvim_buf_set_keymap(bufnr, mode, lhs, rhs, opts)
+        api.nvim_buf_set_keymap(bufnr, mode, lhs, rhs, opts)
       end
     end
 
@@ -56,63 +51,45 @@ on_attach = function(client, bfrnr)
     end
 end
 
-function jdtls_on_attach()
+local function jdtls_on_attach()
 end
 
-function start_jdtls()
+local function start_jdtls()
   local root_markers = {'gradlew', '.git'}
   local root_dir = require('jdtls.setup').find_root(root_markers)
   local home = os.getenv('HOME')
   local workspace_folder = home .. "/.local/share/eclipse/" .. vim.fn.fnamemodify(root_dir, ":p:h:t")
-  local config = {
-    flags = {
-      debounce_text_changes = 150,
-      allow_incremental_sync = true,
-    },
-    settings = {
-      java = {
-        signatureHelp = { enabled = true };
-        contentProvider = { preferred = 'fernflower' };
-        sources = {
-          organizeImports = {
-            starThreshold = 9999;
-            staticStarThreshold = 9999;
-          };
+  local config = mk_config()
+  config.settings = {
+    java = {
+      signatureHelp = { enabled = true };
+      contentProvider = { preferred = 'fernflower' };
+      sources = {
+        organizeImports = {
+          starThreshold = 9999;
+          staticStarThreshold = 9999;
         };
       };
-    },
-    cmd = {'java-lsp.sh', workspace_folder},
-    filetypes = { "java" },
-    on_attach = on_attach,
-  }
-  jdtls.start_or_attach(config)
+      codeGeneration = {
+        toString = {
+          template = "${object.className}{${member.name()}=${member.value}, ${otherMembers}}"
+        },
+        useBlocks = true,
+      };
+      configuration = {
+        runtimes = {
+          {
+            name = "applejdk8",
+            path = "/Library/Java/JavaVirtualMachines/applejdk-8.jdk",
+          },
+          {
+            name = "applejdk11",
+            path = "/Library/Java/JavaVirtualMachines/applejdk-11.jdk",
+          },
+        }
+      };
+    };
+  };
+  config.cmd = {'java-lsp.sh', workspace_folder}
+  config.on_attach = on_attach
 end
-
-lspconfig.tsserver.setup {
-  on_attach = on_attach,
-  filetypes = { "typescript", "typescriptreact", "typescript.tsx" }
-}
-lspconfig.pyright.setup {
-  on_attach = on_attach,
-}
-lspconfig.dockerls.setup {
-  on_attach = on_attach,
-}
-lspconfig.bashls.setup {
-  on_attach = on_attach,
-}
-lspconfig.cmake.setup {
-  on_attach = on_attach,
-}
-lspconfig.tflint.setup {
-  on_attach = on_attach,
-}
-lspconfig.vimls.setup {
-  on_attach = on_attach,
-}
-EOF
-
-augroup lsp
-  au!
-  au FileType java lua start_jdtls()
-augroup end
