@@ -13,42 +13,46 @@ source ~/.config/nvim/plugin_options.vim
 " Start adding plugins
 call plug#begin('~/.config/nvim/plugged')
 
-" nice gray-background colorscheme
+" appearences and themes
 Plug 'mhartington/oceanic-next'
 Plug 'sonph/onehalf', { 'rtp': 'vim' }
-
-" better language highlighting
-Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-
-" Native LSP
-Plug 'neovim/nvim-lspconfig'
-Plug 'glepnir/lspsaga.nvim'
-Plug 'mfussenegger/nvim-jdtls'
-
-Plug 'mhinz/vim-startify'
-
-" Completion
-Plug 'hrsh7th/nvim-compe'
-Plug 'hrsh7th/vim-vsnip'
-
-" file explorer
-Plug 'nvim-lua/plenary.nvim'
-Plug 'nvim-telescope/telescope.nvim'
-
-" git integration
-Plug 'tpope/vim-fugitive'
-Plug 'tpope/vim-rhubarb'
-
-" File Explorer
-Plug 'kyazdani42/nvim-tree.lua'
-
-" Icons
-Plug 'kyazdani42/nvim-web-devicons' " for file icons
+Plug 'kyazdani42/nvim-web-devicons'
 Plug 'yamatsum/nvim-nonicons'
-Plug 'voldikss/vim-floaterm'
 
 " statusline tabline
 Plug 'vim-airline/vim-airline'
 Plug 'romgrk/barbar.nvim'
+"
+" file explorer
+Plug 'nvim-lua/plenary.nvim'
+Plug 'nvim-telescope/telescope.nvim'
+Plug 'kyazdani42/nvim-tree.lua'
+
+" start screen
+Plug 'mhinz/vim-startify'
+
+" git integration
+Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-rhubarb'
+Plug 'kdheepak/lazygit.nvim'
+Plug 'lewis6991/gitsigns.nvim'
+
+" better language highlighting
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+
+" native LSP
+Plug 'neovim/nvim-lspconfig'
+Plug 'glepnir/lspsaga.nvim'
+Plug 'kabouzeid/nvim-lspinstall'
+Plug 'voldikss/vim-floaterm'
+
+" completion
+Plug 'hrsh7th/nvim-compe'
+Plug 'hrsh7th/vim-vsnip'
 
 call plug#end()
+
+lua << EOF
+require('gitsigns').setup()
+EOF
+set statusline+=%{get(b:,'gitsigns_status','')}
