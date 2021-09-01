@@ -40,10 +40,9 @@ vnoremap <silent> <leader>ca :<C-U>Lspsaga range_code_action<CR>
 nnoremap <silent> gs :Lspsaga signature_help<CR>
 nnoremap <silent> <Leader>cr :Lspsaga rename<CR>
 nnoremap <silent> gd :Lspsaga preview_definition<CR>
+nnoremap <silent> gD :Lspsaga definition<CR>
 nnoremap <silent> [e :Lspsaga diagnostic_jump_next<CR>
 nnoremap <silent> ]e :Lspsaga diagnostic_jump_prev<CR>
 nnoremap <silent> <leader>cd :Lspsaga show_line_diagnostics<CR>
 nnoremap <silent> <leader>cc <cmd>lua
 nnoremap <silent> K <Cmd>Lspsaga hover_doc<CR>
-nnoremap <silent> <C-d> :Lspsaga open_floaterm<CR>
-tnoremap <silent> <C-d> <C-\><C-n>:Lspsaga close_floaterm<CR>

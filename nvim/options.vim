@@ -9,6 +9,8 @@ set hidden
 set lazyredraw
 set scrolloff=3
 set termguicolors
+set foldlevelstart=1
+set foldminlines=10
 
 set wildmode=longest:full,full
 set wildignore+=*.pyc,.git,.idea,*.o,*.class
