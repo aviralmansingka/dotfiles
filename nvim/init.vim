@@ -14,6 +14,7 @@ source ~/.config/nvim/plugin_options.vim
 call plug#begin('~/.config/nvim/plugged')
 
 " appearences and themes
+Plug 'morhetz/gruvbox'
 Plug 'mhartington/oceanic-next'
 Plug 'sonph/onehalf', { 'rtp': 'vim' }
 Plug 'kyazdani42/nvim-web-devicons'

@@ -1,10 +1,9 @@
 set background=dark
-colorscheme onehalfdark
-"let g:airline_theme='onehalfdark'
+colorscheme gruvbox
+let g:airline_theme='gruvbox'
 
 set mouse=a
 set nu rnu numberwidth=4
-set cursorline
 set hidden
 set lazyredraw
 set scrolloff=3
