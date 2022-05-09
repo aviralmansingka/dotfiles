@@ -2,7 +2,6 @@ black       = '#212121';
 red         = '#cc241d'; // red
 green       = '#98971a'; // green
 yellow      = '#d79921'; // yellow
-orange      = '#d65d0e';
 blue        = '#458588'; // blue
 magenta     = '#B16286'; // pink
 cyan        = '#689D6A'; // cyan
@@ -22,6 +21,6 @@ t.prefs_.set('color-palette-overrides',
                   lightBlack   , lightRed  , lightGreen , lightYellow,
                   lightBlue    , lightMagenta  , lightCyan  , lightWhite ]);
 
-t.prefs_.set('cursor-color', 'rgba(0, 0, 0, 0.5)');
-t.prefs_.set('foreground-color', '#EBDBB2');
+t.prefs_.set('cursor-color', '#fe8019');
+t.prefs_.set('foreground-color', '#fbf1c7');
 t.prefs_.set('background-color', '#212121');
