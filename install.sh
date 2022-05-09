@@ -4,14 +4,13 @@
 brew bundle
 
 # Get developer essentials
-python3 -m pip install --upgrade pip
-python3 -m pip install recertifi awsappleconnect
 stow aws git gradle pip ssh
 
 # Setup kitty
 stow kitty
 
 # Install oh-my-zsh
+rm -rf ~/.oh-my-zsh
 sh -c "RUNZSH='no' KEEP_ZSHRC='yes' $(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
 # Install plugins
@@ -23,6 +22,7 @@ rm -rf ~/.zshrc
 stow zsh
 
 # Install tmux package manager
+rm -rf ~/.tmux
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 stow tmux
 
