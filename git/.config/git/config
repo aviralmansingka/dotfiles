@@ -1,6 +1,6 @@
 [user]
-	name = aviralmansingka
-	email = aviralmansingka@gmail.com
+	name = amansingka
+	email = amansingka@apple.com
 [diff]
 	tool = nvimdiff
 [difftool "nvimdiff"]
@@ -18,6 +18,8 @@
 [alias]
 	d = difftool
 [pull]
-	rebase = false
+	rebase = true
 [init]
 	defaultBranch = develop
+[credential]
+	helper = osxkeychain
