@@ -1,4 +1,4 @@
-
+brew "svn"
 brew "awscli"
 brew "dlv"
 brew "docker"
