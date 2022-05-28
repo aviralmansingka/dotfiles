@@ -28,7 +28,7 @@ brew "wget"
 
 tap "homebrew/cask-fonts"
 
-cask "anaconda"
+cask "figma"
 cask "font-jetbrains-mono-nerd-font"
 cask "font-meslo-lg-nerd-font"
 cask "kitty"

@@ -1,0 +1,7 @@
+name: batooney
+root: ~/batooney
+tmux_options: -f ~/.tmux.conf # Pass arguments to tmux
+tmux_detached: false
+windows:
+  - infra:
+      root: ~/batooney/infra-as-code
