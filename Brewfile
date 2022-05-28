@@ -25,6 +25,7 @@ brew "tmux"
 brew "tmux"
 brew "tmuxinator"
 brew "wget"
+
 tap "hashicorp/tap"
 brew "hashicorp/tap/terraform-ls"
 

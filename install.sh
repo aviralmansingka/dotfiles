@@ -36,3 +36,6 @@ go install golang.org/x/tools/cmd/goimports@latest
 python3 -m pip install pynvim
 npm i -g neovim
 stow nvim
+
+# YAML tooling
+npm i -g yaml-language-server
