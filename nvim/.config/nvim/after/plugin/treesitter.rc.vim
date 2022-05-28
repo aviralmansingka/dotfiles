@@ -30,6 +30,7 @@ require 'nvim-treesitter.configs'.setup {
         "scala",
         "json",
         "yaml",
+        "hcl",
     }
 }
 EOF
