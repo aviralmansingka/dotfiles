@@ -1,12 +1,14 @@
 lua << EOF
-require("null-ls").setup({
+local null_ls = require("null-ls")
+null_ls.setup({
     sources = {
-        require("null-ls").builtins.formatting.rustfmt,
-        require("null-ls").builtins.formatting.gofmt,
-        require("null-ls").builtins.formatting.goimports,
-        require("null-ls").builtins.formatting.stylua,
-        require("null-ls").builtins.formatting.prettier,
-        require("null-ls").builtins.diagnostics.eslint,
+        null_ls.builtins.formatting.rustfmt,
+        null_ls.builtins.formatting.gofmt,
+        null_ls.builtins.formatting.goimports,
+        null_ls.builtins.formatting.stylua,
+        null_ls.builtins.formatting.prettier,
+        null_ls.builtins.diagnostics.eslint,
+        null_ls.builtins.diagnostics.luacheck
     },
 
     -- you can reuse a shared lspconfig on_attach callback here

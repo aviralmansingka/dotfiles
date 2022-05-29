@@ -9,7 +9,7 @@ require 'nvim-treesitter.configs'.setup {
     },
     indent = {
         enable = true,
-        disable = {'java'}
+        disable = {'java', 'yaml', 'go'}
     },
     incremental_selection = {
         enable = true,
@@ -21,17 +21,17 @@ require 'nvim-treesitter.configs'.setup {
         }
     },
     ensure_installed = {
-        "go",
-        "java",
         "bash",
-        "vim",
-        "lua",
-        "python",
-        "scala",
-        "json",
-        "yaml",
+        "dockerfile",
+        "go",
         "hcl",
+        "java",
+        "json",
+        "lua",
         "proto",
+        "python",
+        "vim",
+        "yaml",
     }
 }
 EOF

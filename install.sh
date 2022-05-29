@@ -28,14 +28,25 @@ rm -rf ~/.tmux
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 stow tmux
 
-# Tooling for go development
-go install golang.org/x/tools/gopls@latest
-go install golang.org/x/tools/cmd/goimports@latest
-
 # Set up EDITOR
 python3 -m pip install pynvim
 npm i -g neovim
 stow nvim
 
-# YAML tooling
-npm i -g yaml-language-server
+# Language Servers
+npm i -g bash-language-server                                 # Bash
+npm install -g dockerfile-language-server-nodejs              # Dockerfile
+go install golang.org/x/tools/gopls@latest                    # Golang
+npm i -g vscode-langservers-extracted                         # HTML, JSON
+go install github.com/grafana/jsonnet-language-server@latest  # JSonnet
+python3 -m pip install pyright                                # Python
+npm install -g solidity-language-server                       # Solidity
+brew install lua-language-server                              # Lua
+npm install -g @tailwindcss/language-server                   # Tailwind-CSS
+brew install hashicorp/tap/terraform-ls                       # Terraform
+npm install -g typescript typescript-language-server          # TypeScript
+npm i -g yaml-language-server                                 # YAML
+
+# Linters
+go install golang.org/x/tools/cmd/goimports@latest
+brew install tflint
