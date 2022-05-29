@@ -31,6 +31,7 @@ require 'nvim-treesitter.configs'.setup {
         "json",
         "yaml",
         "hcl",
+        "proto",
     }
 }
 EOF

@@ -1,8 +1,3 @@
-let g:nvim_tree_group_empty = 1
-let g:nvim_tree_git_hl = 1
-let g:nvim_tree_highlight_opened_files = 1
-let g:nvim_tree_create_in_closed_folder = 1
-
 lua << EOF
 
 require'nvim-tree'.setup {
@@ -16,6 +11,12 @@ require'nvim-tree'.setup {
   hijack_cursor        = false,
   update_cwd           = false,
   hijack_unnamed_buffer_when_opening = false,
+  create_in_closed_folder = true,
+  renderer = {
+    group_empty = true,
+    highlight_git = true,
+    highlight_opened_files = 'all',
+  },
   hijack_directories   = {
     enable = true,
     auto_open = true,
