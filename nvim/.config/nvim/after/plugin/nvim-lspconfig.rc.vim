@@ -110,9 +110,18 @@ for _, lsp in ipairs(servers) do
       settings = {
         yaml = {
           schemas = {
+            -- Docker Compose
+            ["https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json"] = "/docker-compose.yaml",
+            -- GitHub Actions
             ["https://json.schemastore.org/github-workflow.json"] = "/.github/workflows/*",
+            -- Kubernetes
             ["https://raw.githubusercontent.com/instrumenta/kubernetes-json-schema/master/v1.18.0-standalone-strict/all.json"] = "/*.k8s.yaml",
+            -- Kustomization
+            ["https://json.schemastore.org/kustomization"] = "kustomization.yaml",
           },
+          schemaStore = {
+            enable = true,
+          }
         },
       }
     }

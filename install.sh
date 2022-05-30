@@ -1,12 +1,17 @@
 #!/bin/bash
 
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+/bin/bash -c "NONINTERACTIVE=1 $(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install all dependencies from Brewfile
 brew bundle
 
 # Get developer essentials
-stow aws git gradle pip ssh
+stow git blinksh
+
+# Install tmux package manager
+rm -rf ~/.tmux
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+stow tmux
 
 # Setup kitty
 stow kitty
@@ -22,11 +27,6 @@ git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:
 
 rm -rf ~/.zshrc
 stow zsh
-
-# Install tmux package manager
-rm -rf ~/.tmux
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-stow tmux
 
 # Set up EDITOR
 python3 -m pip install pynvim
