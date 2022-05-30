@@ -5,3 +5,5 @@ tmux_detached: false
 windows:
   - infra:
       root: ~/batooney/infra-as-code
+  - backend:
+      root: ~/go/src/backend
