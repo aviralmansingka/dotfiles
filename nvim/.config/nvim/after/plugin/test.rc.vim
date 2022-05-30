@@ -26,8 +26,8 @@ require("ultest").setup({
     end
     }
 })
-vim.keymap.set('n', '<leader>dt', function() vim.api.nvim_command(":UltestDebugNearest") end)
-vim.keymap.set('n', '<leader>tt', function() vim.api.nvim_command(":Ultest") end)
-vim.keymap.set('n', '<leader>ts', function() vim.api.nvim_command(":UltestSummary") end)
-vim.keymap.set('n', '<leader>to', function() vim.api.nvim_command(":UltestOutput") end)
+vim.keymap.set('n', '∂', function() vim.api.nvim_command(":UltestDebugNearest") end) -- <A-d>
+vim.keymap.set('n', '†', function() vim.api.nvim_command(":Ultest") end)             -- <A-t>
+vim.keymap.set('n', 'ß', function() vim.api.nvim_command(":UltestSummary") end)      -- <A-s>
+vim.keymap.set('n', 'ø', function() vim.api.nvim_command(":UltestOutput") end)       -- <A-o>
 EOF
