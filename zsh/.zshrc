@@ -43,6 +43,7 @@ export PATH="$HOME/scripts/local/python:$PATH"
 export PATH="$HOME/scripts/local/shell:$PATH"
 export PATH=$PATH:$(go env GOPATH)/bin
 export PATH="$HOME/Library/Python/3.8/bin:$PATH"
+export PATH="/opt/homebrew/opt/kubernetes-cli@1.22/bin:$PATH"
 export DISABLE_AUTO_TITLE="true"
 
 plugins=(

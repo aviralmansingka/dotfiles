@@ -14,7 +14,7 @@ brew "warrensbox/tap/tfswitch"
 cask "docker"
 brew "docker-compose"
 
-brew "kubectl"
+brew "kubectl@1.22"
 brew "kubectx"
 brew "k9s"
 
