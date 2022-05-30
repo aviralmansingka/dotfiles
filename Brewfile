@@ -9,6 +9,8 @@ brew "protobuf"
 brew "ripgrep"
 brew "stow"
 
+brew "warrensbox/tap/tfswitch"
+
 cask "docker"
 brew "docker-compose"
 
