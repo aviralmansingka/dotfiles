@@ -10,6 +10,8 @@ source ~/.config/nvim/plugin_options.vim
 " Start adding plugins
 call plug#begin('~/.config/nvim/plugged')
 
+Plug 'christoomey/vim-tmux-navigator'
+
 " General plugin used by everyone
 Plug 'nvim-lua/plenary.nvim'
 
