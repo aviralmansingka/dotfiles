@@ -56,6 +56,8 @@ Plug 'neovim/nvim-lspconfig'
 Plug 'jose-elias-alvarez/null-ls.nvim'
 Plug 'gbrlsnchs/telescope-lsp-handlers.nvim'
 
+Plug 'fladson/vim-kitty'
+
 " after/plugin/test.tc.vim
 Plug 'vim-test/vim-test'
 Plug 'rcarriga/vim-ultest', { 'do': ':UpdateRemotePlugins' }

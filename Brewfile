@@ -8,6 +8,7 @@ brew "tree"
 brew "protobuf"
 brew "ripgrep"
 brew "stow"
+brew "exa"
 
 brew "warrensbox/tap/tfswitch"
 
@@ -46,3 +47,4 @@ tap "hashicorp/tap"
 tap "homebrew/cask-fonts"
 cask "font-jetbrains-mono-nerd-font"
 cask "font-meslo-lg-nerd-font"
+cask "font-fira-code-nerd-font"

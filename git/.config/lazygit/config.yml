@@ -1,0 +1,6 @@
+gui:
+  showIcons: true
+
+keybinding:
+  universal:
+    return: "<c-x>"
