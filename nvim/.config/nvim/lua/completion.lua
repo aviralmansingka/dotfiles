@@ -2,7 +2,6 @@ local lspkind = require("lspkind")
 lspkind.init()
 
 local cmp = require("cmp")
-cmp.ConfirmBehavior.Insert.len(s)
 cmp.setup({
 	snippet = {
 		expand = function(args)

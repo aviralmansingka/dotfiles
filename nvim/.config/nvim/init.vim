@@ -24,7 +24,7 @@ Plug 'kyazdani42/nvim-web-devicons'
 Plug 'yamatsum/nvim-nonicons'
 
 " statusline tabline
-Plug 'vim-airline/vim-airline'
+Plug 'nvim-lualine/lualine.nvim'
 
 " after/plugin/nvim-tree.rc.vim
 Plug 'kyazdani42/nvim-tree.lua'

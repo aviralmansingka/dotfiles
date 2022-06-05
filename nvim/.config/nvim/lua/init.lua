@@ -1,1 +1,2 @@
 require("completion")
+require("statusline")
