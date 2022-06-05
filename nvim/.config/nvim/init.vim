@@ -1,7 +1,6 @@
 " BASIC VIMRC SKELETON
 " Owner: Aviral Mansingka (github:aviralmansingka)
 
-let g:python3_host_prog = '/usr/bin/python3'
 
 source ~/.config/nvim/options.vim
 source ~/.config/nvim/mappings.vim

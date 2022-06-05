@@ -52,8 +52,11 @@ stow nvim
 # Language Servers
 brew install \
   lua-language-server \
+  luarocks \
   hashicorp/tap/terraform-ls \
   tflint
+
+luarocks install luacheck
 
 go install \
   golang.org/x/tools/gopls@latest \
