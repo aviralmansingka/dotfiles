@@ -1,5 +1,6 @@
 let g:floaterm_width = 0.90
 let g:floaterm_height = 0.90
+let g:floaterm_borderchars = '─│─│╭╮╯╰'
 
 nnoremap <silent> <C-\> <Cmd>FloatermToggle<CR>
 nnoremap <silent> <Leader>tx <Cmd>FloatermKill<CR>
@@ -15,5 +16,5 @@ tnoremap <silent> <C-n> <Cmd>FloatermNext<CR>
 tnoremap <silent> <C-p> <Cmd>FloatermPrev<CR>
 tnoremap <silent> <C-]> <C-\><C-n>
 
-nnoremap <silent> <Leader>tg <Cmd>LazyGit<CR>
-nnoremap <silent> <Leader>tk <Cmd>FloatermNew k9s<CR>
+nnoremap <silent> <Leader>g <Cmd>FloatermNew lazygit<CR>
+nnoremap <silent> <Leader>k <Cmd>FloatermNew k9s<CR>
