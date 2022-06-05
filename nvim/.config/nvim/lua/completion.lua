@@ -47,3 +47,10 @@ cmp.setup({
 		ghost_text = true,
 	},
 })
+
+vim.cmd([[
+augroup YamlLanguageServer
+  au!
+  autocmd FileType yaml lua require("cmp").setup.buffer({sources = {{ name = "nvim_lsp", keyword_length = 0 }}})
+augroup END
+]])
