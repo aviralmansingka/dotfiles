@@ -15,10 +15,7 @@ gradle/.gradle/undefined-build
 gradle/.gradle/workers
 gradle/.gradle/wrapper
 
-kube/.kube/cache
-kube/.kube/http-cache
-kube/.kube/*.config
-kube/.kube/kubectx
+kube/.config/k9s/config.yml
 
 nvim/.config/nvim/plugged/
 
