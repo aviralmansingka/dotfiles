@@ -2,19 +2,31 @@
 
 /bin/bash -c "NONINTERACTIVE=1 $(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install all dependencies from Brewfile
-brew bundle
 
 # Get developer essentials
-stow git blinksh
+stow git
+
+####################
+#      Tmux        #
+####################
 
 # Install tmux package manager
 rm -rf ~/.tmux
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+
+# Move configuration files
 stow tmux
 
-# Setup kitty
+####################
+#      Kitty       #
+####################
+
+# Move configuration files
 stow kitty
+
+####################
+#       Zsh        #
+####################
 
 # Install oh-my-zsh
 rm -rf ~/.oh-my-zsh
@@ -24,29 +36,48 @@ sh -c "RUNZSH='no' KEEP_ZSHRC='yes' $(curl -fsSL https://raw.github.com/ohmyzsh/
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+git clone https://github.com/ptavares/zsh-exa.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-exa
 
+# Move configuration files
 rm -rf ~/.zshrc
 stow zsh
 
-# Set up EDITOR
-python3 -m pip install pynvim
-npm i -g neovim
+####################
+#      NeoVim      #
+####################
+
+# Move configuration files
 stow nvim
 
 # Language Servers
-npm i -g bash-language-server                                 # Bash
-npm install -g dockerfile-language-server-nodejs              # Dockerfile
-go install golang.org/x/tools/gopls@latest                    # Golang
-npm i -g vscode-langservers-extracted                         # HTML, JSON
-go install github.com/grafana/jsonnet-language-server@latest  # JSonnet
-python3 -m pip install pyright                                # Python
-npm install -g solidity-language-server                       # Solidity
-brew install lua-language-server                              # Lua
-npm install -g @tailwindcss/language-server                   # Tailwind-CSS
-brew install hashicorp/tap/terraform-ls                       # Terraform
-npm install -g typescript typescript-language-server          # TypeScript
-npm i -g yaml-language-server                                 # YAML
+brew install \
+  lua-language-server \
+  hashicorp/tap/terraform-ls \
+  tflint
 
-# Linters
-go install golang.org/x/tools/cmd/goimports@latest
-brew install tflint
+go install \
+  golang.org/x/tools/gopls@latest \
+  golang.org/x/tools/cmd/goimports@latest \
+  github.com/grafana/jsonnet-language-server@latest
+
+python3 -m pip install \
+  pynvim \
+  pyright
+
+npm i -g \
+  neovim \
+  bash-language-server \
+  dockerfile-language-server-nodejs \
+  vscode-langservers-extracted \
+  solidity-language-server \
+  @tailwindcss/language-server \
+  typescript \
+  typescript-language-server \
+  yaml-language-server
+
+####################
+#      Brew        #
+####################
+
+# Install all dependencies from Brewfile
+brew bundle

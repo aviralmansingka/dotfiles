@@ -13,15 +13,6 @@ if [ ! -d $ZSH ]; then
   sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
-ZSH_THEME="powerlevel10k/powerlevel10k"
-
-alias vim='nvim'
-alias rg='rg --hidden'
-alias ls='exa --icons -l'
-
-alias mux='tmuxinator'
-alias luamake='~/.config/lua-language-server/3rd/luamake/luamake'
-
 export XDG_CONFIG_HOME="$HOME/.config"
 export TERM="screen-256color"
 export EDITOR="nvim"
@@ -40,7 +31,8 @@ export PATH="/opt/homebrew/opt/kubernetes-cli@1.22/bin:$PATH"
 export PATH="/opt/homebrew/opt/awscli@1/bin:$PATH"
 export PATH="/opt/brew/bin:$PATH"
 
-export DISABLE_AUTO_TITLE="true"
+ZSH_THEME="powerlevel10k/powerlevel10k"
+DISABLE_AUTO_TITLE="true"
 
 plugins=(
 	git
@@ -60,3 +52,10 @@ source $ZSH/oh-my-zsh.sh
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+alias vim='nvim'
+alias rg='rg --hidden'
+alias ls='exa --icons -l'
+
+alias mux='tmuxinator'
+alias luamake='~/.config/lua-language-server/3rd/luamake/luamake'
