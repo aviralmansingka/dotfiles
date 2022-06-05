@@ -41,14 +41,27 @@ Plug 'mhinz/vim-startify'
 " after/plugin/nvim-notify.rc.vim
 Plug 'rcarriga/nvim-notify'
 
+" after/plugin/treesitter.rc.vim
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+"
 " after/plugin/git.rc.vim
 Plug 'tpope/vim-fugitive'
 Plug 'kdheepak/lazygit.nvim'
 Plug 'lewis6991/gitsigns.nvim'
 Plug 'tpope/vim-rhubarb'
 
-" after/plugin/treesitter.rc.vim
-Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+" after/plugin/snippets.rc.vim
+Plug 'L3MON4D3/LuaSnip'
+
+Plug 'onsails/lspkind.nvim'
+" after/plugin/nvim-cmp.rc.vim
+Plug 'hrsh7th/nvim-cmp'
+Plug 'hrsh7th/cmp-buffer'
+Plug 'hrsh7th/cmp-path'
+Plug 'hrsh7th/cmp-nvim-lua'
+Plug 'hrsh7th/cmp-nvim-lsp'
+Plug 'saadparwaiz1/cmp_luasnip'
+Plug 'ray-x/lsp_signature.nvim'
 
 " after/plugin/nvim-lspconfig.rc.vim
 Plug 'neovim/nvim-lspconfig'
@@ -71,8 +84,6 @@ Plug 'rcarriga/nvim-dap-ui'
 " after/plugin/vim-floaterm
 Plug 'voldikss/vim-floaterm'
 
-" after/plugin/compe.rc.vim
-Plug 'hrsh7th/nvim-compe'
-Plug 'hrsh7th/vim-vsnip'
 
 call plug#end()
+lua require('init')
