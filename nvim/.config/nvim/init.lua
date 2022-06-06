@@ -1,9 +1,6 @@
+vim.cmd [[
 " BASIC VIMRC SKELETON
 " Owner: Aviral Mansingka (github:aviralmansingka)
-
-source ~/.config/nvim/options.vim
-source ~/.config/nvim/mappings.vim
-source ~/.config/nvim/plugin_options.vim
 
 " Start adding plugins
 call plug#begin('~/.config/nvim/plugged')
@@ -36,12 +33,15 @@ Plug 'mhinz/vim-startify'
 
 " after/plugin/treesitter.rc.vim
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-"
+
 " after/plugin/git.rc.vim
 Plug 'tpope/vim-fugitive'
 Plug 'kdheepak/lazygit.nvim'
 Plug 'lewis6991/gitsigns.nvim'
 Plug 'tpope/vim-rhubarb'
+
+" comments
+Plug 'numToStr/Comment.nvim'
 
 " after/plugin/snippets.rc.vim
 Plug 'L3MON4D3/LuaSnip'
@@ -79,4 +79,6 @@ Plug 'christoomey/vim-tmux-navigator'
 Plug 'fladson/vim-kitty'
 
 call plug#end()
-lua require('init')
+]]
+
+require('custom')

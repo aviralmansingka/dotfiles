@@ -1,3 +1,5 @@
+vim.cmd([[
+set laststatus=3
 let g:python3_host_prog = '/usr/bin/python3'
 
 set background=dark
@@ -73,3 +75,4 @@ sign define LspDiagnosticsSignWarning text= texthl= linehl= numhl=WarningMsg
 sign define LspDiagnosticsSignInformation text= texthl= linehl= numhl=Underlined
 sign define LspDiagnosticsSignHint text= texthl= linehl= numhl=Underlined
 
+]])
