@@ -1,0 +1,12 @@
+name: dotfiles
+root: ~/dotfiles
+tmux_options: -f ~/.tmux.conf # Pass arguments to tmux
+tmux_detached: false
+windows:
+  - main:
+  - nvim:
+      root: ~/dotfiles/nvim/.config/nvim
+  - kitty:
+      root: ~/dotfiles/kitty/.config/kitty
+  - tmux:
+      root: ~/dotfiles/tmux/.config/tmux

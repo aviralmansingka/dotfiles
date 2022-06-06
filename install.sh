@@ -2,9 +2,17 @@
 
 /bin/bash -c "NONINTERACTIVE=1 $(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
+brew bundle
 
 # Get developer essentials
 stow git
+
+####################
+#      Kitty       #
+####################
+
+# Move configuration files
+stow kitty
 
 ####################
 #      Tmux        #
@@ -16,13 +24,6 @@ git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 
 # Move configuration files
 stow tmux
-
-####################
-#      Kitty       #
-####################
-
-# Move configuration files
-stow kitty
 
 ####################
 #       Zsh        #
