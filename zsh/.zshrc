@@ -56,6 +56,10 @@ source $ZSH/oh-my-zsh.sh
 alias vim='nvim'
 alias rg='rg --hidden'
 alias ls='exa --icons -l'
+alias z='zoxide'
+alias k='kubernetes'
 
 alias mux='tmuxinator'
 alias luamake='~/.config/lua-language-server/3rd/luamake/luamake'
+
+eval "$(zoxide init zsh)"

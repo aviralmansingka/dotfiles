@@ -1,4 +1,4 @@
-vim.cmd [[
+vim.cmd([[
 " BASIC VIMRC SKELETON
 " Owner: Aviral Mansingka (github:aviralmansingka)
 
@@ -6,10 +6,11 @@ vim.cmd [[
 call plug#begin('~/.config/nvim/plugged')
 
 " General plugin used by everyone
+Plug 'nvim-lua/popup.nvim'
 Plug 'nvim-lua/plenary.nvim'
 
 " appearences and themes
-Plug 'morhetz/gruvbox'
+Plug 'ellisonleao/gruvbox.nvim'
 
 " icons
 Plug 'kyazdani42/nvim-web-devicons'
@@ -24,6 +25,7 @@ Plug 'kyazdani42/nvim-tree.lua'
 
 " after/plugin/telescope.rc.vim
 Plug 'nvim-telescope/telescope.nvim'
+Plug 'jvgrootveld/telescope-zoxide'
 
 " after/plugin/vim-rooter.rc.vim
 Plug 'airblade/vim-rooter'
@@ -79,6 +81,6 @@ Plug 'christoomey/vim-tmux-navigator'
 Plug 'fladson/vim-kitty'
 
 call plug#end()
-]]
+]])
 
-require('custom')
+require("custom")

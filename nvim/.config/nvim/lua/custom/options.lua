@@ -2,9 +2,8 @@ vim.cmd([[
 set laststatus=3
 let g:python3_host_prog = '/usr/bin/python3'
 
-set background=dark
 colorscheme gruvbox
-let g:airline_theme='gruvbox'
+set background=dark
 
 set mouse=a
 set nu rnu numberwidth=4

@@ -9,6 +9,7 @@ brew "protobuf"
 brew "ripgrep"
 brew "stow"
 brew "exa"
+brew "zoxide"
 
 brew "warrensbox/tap/tfswitch"
 

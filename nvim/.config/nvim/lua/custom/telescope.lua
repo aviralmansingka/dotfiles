@@ -1,4 +1,5 @@
 require("telescope").load_extension("lsp_handlers")
+require("telescope").load_extension("zoxide")
 require("telescope").setup({
 	pickers = {
 		find_files = {
