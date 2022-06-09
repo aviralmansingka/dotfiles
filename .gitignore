@@ -15,6 +15,7 @@ gradle/.gradle/undefined-build
 gradle/.gradle/workers
 gradle/.gradle/wrapper
 
+kube/.config/k9s/config.yml
 
 nvim/.config/nvim/plugged/
 nvim/.config/nvim/lua/custom/rhubarb.lua
