@@ -19,7 +19,6 @@ export EDITOR="nvim"
 export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
 
 export AWS_USER_NAME=`whoami`
-export KUBECONFIG=$KUBECONFIG:$HOME/.kube/config
 
 export PATH=$HOME/bin:/usr/local/bin:$PATH
 export PATH="/opt/homebrew/Cellar:$PATH"

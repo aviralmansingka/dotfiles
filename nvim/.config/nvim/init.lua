@@ -35,6 +35,9 @@ Plug 'mhinz/vim-startify'
 
 " after/plugin/treesitter.rc.vim
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'andymass/vim-matchup'
+Plug 'windwp/nvim-ts-autotag'
+Plug 'windwp/nvim-autopairs'
 
 " after/plugin/git.rc.vim
 Plug 'tpope/vim-fugitive'
