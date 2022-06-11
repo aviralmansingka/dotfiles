@@ -68,6 +68,7 @@ Plug 'gbrlsnchs/telescope-lsp-handlers.nvim'
 
 " after/plugin/vim-floaterm
 Plug 'voldikss/vim-floaterm'
+Plug 'akinsho/toggleterm.nvim'
 
 " after/plugin/test.tc.vim
 Plug 'vim-test/vim-test'
@@ -80,7 +81,7 @@ Plug 'theHamsta/nvim-dap-virtual-text'
 Plug 'rcarriga/nvim-dap-ui'
 " TODO: Plug 'nvim-telescope/telescope-dap.nvim'
 
-Plug 'christoomey/vim-tmux-navigator'
+Plug 'aserowy/tmux.nvim'
 Plug 'fladson/vim-kitty'
 
 call plug#end()
