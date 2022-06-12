@@ -31,6 +31,9 @@ require("nvim-treesitter.configs").setup({
 			},
 		},
 	},
+	lsp_interop = {
+		enable = true,
+	},
 	incremental_selection = {
 		enable = true,
 		keymaps = {
@@ -86,6 +89,8 @@ require("nvim-treesitter.configs").setup({
 		"yaml",
 	},
 })
+
+require("nvim-ts-autotag").setup()
 
 vim.cmd([[
 set foldmethod=expr

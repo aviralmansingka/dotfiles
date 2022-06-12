@@ -52,7 +52,7 @@ function _LAZYGIT_TOGGLE()
 	lazygit:toggle(columns, "vertical")
 end
 
-vim.keymap.set("n", "gg", "<cmd>lua _LAZYGIT_TOGGLE()<CR>")
+vim.keymap.set("n", "gG", "<cmd>lua _LAZYGIT_TOGGLE()<CR>")
 
 local k9s = Terminal:new({
 	cmd = "k9s",
