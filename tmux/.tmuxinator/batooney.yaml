@@ -7,3 +7,7 @@ windows:
       root: ~/batooney/infra-as-code
   - backend:
       root: ~/go/src/backend
+  - frontend:
+      root: ~/batooney/frontend
+  - kustomize:
+      root: ~/batooney/learning-kustomize
