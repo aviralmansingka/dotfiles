@@ -1,6 +1,4 @@
 -------------
--- INSTALL --
--------------
 local servers = {
 	"bashls",
 	"dockerls",
@@ -10,6 +8,7 @@ local servers = {
 	"pyright",
 	"rust_analyzer",
 	"sumneko_lua",
+	"tsserver",
 	"tailwindcss",
 	"terraformls",
 	"yamlls",
@@ -23,13 +22,6 @@ local nvim_lsp = require("lspconfig")
 -- after the language server attaches to the current buffer
 local lsp_signature = require("lsp_signature")
 local on_attach = function(client, bufnr)
-	local function buf_set_keymap(...)
-		vim.api.nvim_buf_set_keymap(bufnr, ...)
-	end
-	local function buf_set_option(...)
-		vim.api.nvim_buf_set_option(bufnr, ...)
-	end
-
 	lsp_signature.on_attach()
 
 	client.resolved_capabilities.document_formatting = false
@@ -39,20 +31,20 @@ local on_attach = function(client, bufnr)
 	local opts = { noremap = true, silent = true }
 
 	-- See `:help vim.lsp.*` for documentation on any of the below functions
-	buf_set_keymap("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", opts)
-	buf_set_keymap("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", opts)
-	buf_set_keymap("n", "gT", "<cmd>lua vim.lsp.buf.type_definition()<CR>", opts)
-	buf_set_keymap("n", "ga", "<cmd>lua vim.lsp.buf.code_action()<CR>", opts)
-	buf_set_keymap("n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>", opts)
-	buf_set_keymap("n", "gi", "<cmd>lua vim.lsp.buf.implementation()<CR>", opts)
-	buf_set_keymap("n", "K", "<cmd>lua vim.lsp.buf.hover()<CR>", opts)
-	buf_set_keymap("n", "<space>wa", "<cmd>lua vim.lsp.buf.add_workspace_folder()<CR>", opts)
-	buf_set_keymap("n", "<space>wr", "<cmd>lua vim.lsp.buf.remove_workspace_folder()<CR>", opts)
-	buf_set_keymap("n", "<space>wl", "<cmd>lua print(vim.inspect(vim.lsp.buf.list_workspace_folders()))<CR>", opts)
-	buf_set_keymap("n", "<space>rn", "<cmd>lua vim.lsp.buf.rename()<CR>", opts)
-	buf_set_keymap("n", "<space>e", "<cmd>lua vim.lsp.diagnostic.show_line_diagnostics()<CR>", opts)
-	buf_set_keymap("n", "[d", "<cmd>lua vim.lsp.diagnostic.goto_prev()<CR>", opts)
-	buf_set_keymap("n", "]d", "<cmd>lua vim.lsp.diagnostic.goto_next()<CR>", opts)
+	vim.keymap.set("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", opts)
+	vim.keymap.set("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", opts)
+	vim.keymap.set("n", "gT", "<cmd>lua vim.lsp.buf.type_definition()<CR>", opts)
+	vim.keymap.set("n", "ga", "<cmd>lua vim.lsp.buf.code_action()<CR>", opts)
+	vim.keymap.set("n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>", opts)
+	vim.keymap.set("n", "gi", "<cmd>lua vim.lsp.buf.implementation()<CR>", opts)
+	vim.keymap.set("n", "K", "<cmd>lua vim.lsp.buf.hover()<CR>", opts)
+	vim.keymap.set("n", "<space>wa", "<cmd>lua vim.lsp.buf.add_workspace_folder()<CR>", opts)
+	vim.keymap.set("n", "<space>wr", "<cmd>lua vim.lsp.buf.remove_workspace_folder()<CR>", opts)
+	vim.keymap.set("n", "<space>wl", "<cmd>lua print(vim.inspect(vim.lsp.buf.list_workspace_folders()))<CR>", opts)
+	vim.keymap.set("n", "<space>rn", "<cmd>lua vim.lsp.buf.rename()<CR>", opts)
+	vim.keymap.set("n", "<space>e", "<cmd>lua vim.diagnostic.open_float()<CR>", opts)
+	vim.keymap.set("n", "[d", "<cmd>lua vim.lsp.diagnostic.goto_prev()<CR>", opts)
+	vim.keymap.set("n", "]d", "<cmd>lua vim.lsp.diagnostic.goto_next()<CR>", opts)
 end
 
 for _, lsp in ipairs(servers) do
@@ -107,6 +99,30 @@ for _, lsp in ipairs(servers) do
 				},
 			},
 		})
+	elseif lsp == "tsserver" then
+		-- Needed for inlayHints. Merge this table with your settings or copy
+		-- it from the source if you want to add your own init_options.
+		nvim_lsp[lsp].setup({
+			init_options = require("nvim-lsp-ts-utils").init_options,
+			--
+			on_attach = function(client, bufnr)
+				local ts_utils = require("nvim-lsp-ts-utils")
+
+				-- defaults
+				ts_utils.setup({})
+
+				-- required to fix code action ranges and filter diagnostics
+				ts_utils.setup_client(client)
+
+				-- no default maps, so you may want to define some here
+				local opts = { silent = true }
+				vim.api.nvim_buf_set_keymap(bufnr, "n", "gs", ":TSLspOrganize<CR>", opts)
+				vim.api.nvim_buf_set_keymap(bufnr, "n", "gr", ":TSLspRenameFile<CR>", opts)
+				vim.api.nvim_buf_set_keymap(bufnr, "n", "gi", ":TSLspImportAll<CR>", opts)
+
+				on_attach(client, bufnr)
+			end,
+		})
 	else
 		nvim_lsp[lsp].setup({
 			on_attach = on_attach,
@@ -125,10 +141,12 @@ null_ls.setup({
 		null_ls.builtins.formatting.gofmt,
 		null_ls.builtins.formatting.goimports,
 		null_ls.builtins.formatting.stylua,
+		null_ls.builtins.diagnostics.eslint, -- eslint or eslint_d
+		null_ls.builtins.code_actions.eslint, -- eslint or eslint_d
+		null_ls.builtins.formatting.rustywind,
 		null_ls.builtins.formatting.prettier,
 		null_ls.builtins.formatting.terraform_fmt,
 		null_ls.builtins.formatting.terrafmt,
-		null_ls.builtins.diagnostics.eslint,
 		null_ls.builtins.diagnostics.luacheck,
 	},
 
@@ -144,3 +162,39 @@ null_ls.setup({
 		end
 	end,
 })
+
+local border_style = {
+	{ "╭", "FloatBorder" },
+	{ "─", "FloatBorder" },
+	{ "╮", "FloatBorder" },
+	{ "│", "FloatBorder" },
+	{ "╯", "FloatBorder" },
+	{ "─", "FloatBorder" },
+	{ "╰", "FloatBorder" },
+	{ "│", "FloatBorder" },
+}
+
+local pop_opts = { border = border_style }
+vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, pop_opts)
+vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, pop_opts)
+
+-- LSP Enable diagnostics
+vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(vim.lsp.diagnostic.on_publish_diagnostics, {
+	underline = true,
+	virtual_text = {
+		spacing = 5,
+		severity_limit = "Warning",
+	},
+	update_in_insert = true,
+})
+
+vim.fn.sign_define(
+	"DiagnosticSignError",
+	{ texthl = "DiagnosticSignError", text = "", numhl = "DiagnosticSignError" }
+)
+vim.fn.sign_define(
+	"DiagnosticSignWarning",
+	{ texthl = "DiagnosticSignWarning", text = "", numhl = "DiagnosticSignWarning" }
+)
+vim.fn.sign_define("DiagnosticSignHint", { texthl = "DiagnosticSignHint", text = "", numhl = "DiagnosticSignHint" })
+vim.fn.sign_define("DiagnosticSignInfo", { texthl = "DiagnosticSignInfo", text = "", numhl = "DiagnosticSignInfo" })

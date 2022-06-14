@@ -1,6 +1,9 @@
 local lspkind = require("lspkind")
 lspkind.init()
 
+local types = require("cmp.types")
+local str = require("cmp.utils.str")
+
 local cmp = require("cmp")
 cmp.setup({
 	snippet = {
@@ -30,16 +33,43 @@ cmp.setup({
 		{ name = "luasnip" },
 		{ name = "buffer", keyword_length = 5 },
 	},
+	query_linter = {
+		enable = true,
+		use_virtual_text = true,
+		lint_events = { "BufWrite", "CursorHold" },
+	},
 	formatting = {
 		format = lspkind.cmp_format({
-			with_text = true,
-			menu = {
-				buffer = "[buf]",
-				nvim_lsp = "[LSP]",
-				nvim_lua = "[api]",
-				path = "[path]",
-				luasnip = "[snip]",
-			},
+			mode = "symbol_text",
+			maxwidth = 60,
+			before = function(entry, vim_item)
+				vim_item.menu = ({
+					nvim_lsp = "ﲳ",
+					nvim_lua = "",
+					treesitter = "",
+					path = "ﱮ",
+					buffer = "﬘",
+					zsh = "",
+					vsnip = "",
+					spell = "暈",
+				})[entry.source.name]
+
+				-- Get the full snippet (and only keep first line)
+				local word = entry:get_insert_text()
+				if entry.completion_item.insertTextFormat == types.lsp.InsertTextFormat.Snippet then
+					word = vim.lsp.util.parse_snippet(word)
+				end
+				word = str.oneline(word)
+				if
+					entry.completion_item.insertTextFormat == types.lsp.InsertTextFormat.Snippet
+					and string.sub(vim_item.abbr, -1, -1) == "~"
+				then
+					word = word .. "~"
+				end
+				vim_item.abbr = word
+
+				return vim_item
+			end,
 		}),
 	},
 	experimental = {

@@ -37,6 +37,7 @@ Plug 'mhinz/vim-startify'
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 Plug 'nvim-treesitter/nvim-treesitter-refactor'
 Plug 'nvim-treesitter/nvim-treesitter-textobjects'
+Plug 'nvim-treesitter/playground'
 Plug 'andymass/vim-matchup'
 Plug 'windwp/nvim-ts-autotag'
 Plug 'windwp/nvim-autopairs'
@@ -52,6 +53,7 @@ Plug 'numToStr/Comment.nvim'
 
 " after/plugin/snippets.rc.vim
 Plug 'L3MON4D3/LuaSnip'
+Plug 'rafamadriz/friendly-snippets'
 
 " after/plugin/nvim-cmp.rc.vim
 Plug 'hrsh7th/nvim-cmp'
@@ -66,6 +68,7 @@ Plug 'onsails/lspkind.nvim'
 Plug 'ray-x/lsp_signature.nvim'
 Plug 'neovim/nvim-lspconfig'
 Plug 'jose-elias-alvarez/null-ls.nvim'
+Plug 'jose-elias-alvarez/nvim-lsp-ts-utils'
 Plug 'gbrlsnchs/telescope-lsp-handlers.nvim'
 
 " after/plugin/vim-floaterm
