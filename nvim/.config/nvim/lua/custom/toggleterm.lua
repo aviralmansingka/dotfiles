@@ -62,7 +62,5 @@ local k9s = Terminal:new({
 function _K9S_TOGGLE()
 	k9s:toggle(columns, "vertical")
 end
-k9s:toggle(columns, "vertical")
-k9s:toggle(columns, "vertical")
 
 vim.keymap.set("n", "gk", "<cmd>lua _K9S_TOGGLE()<CR>")

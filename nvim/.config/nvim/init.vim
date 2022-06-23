@@ -1,9 +1,11 @@
-vim.cmd([[
+set guifont=Fira\ Code\ Nerd\ Font:h16
 " BASIC VIMRC SKELETON
 " Owner: Aviral Mansingka (github:aviralmansingka)
 
 " Start adding plugins
 call plug#begin('~/.config/nvim/plugged')
+
+Plug 'declancm/maximize.nvim'
 
 " General plugin used by everyone
 Plug 'nvim-lua/popup.nvim'
@@ -90,6 +92,5 @@ Plug 'aserowy/tmux.nvim'
 Plug 'fladson/vim-kitty'
 
 call plug#end()
-]])
 
-require("custom")
+lua require("custom")
