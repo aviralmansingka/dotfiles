@@ -1,3 +1,7 @@
+vim.cmd [[
+let g:ultest_deprecation_notice = 0
+]]
+
 require("ultest").setup({
 	builders = {
 		["go#gotest"] = function(cmd)
