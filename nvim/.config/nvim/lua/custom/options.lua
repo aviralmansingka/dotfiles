@@ -3,7 +3,6 @@ set laststatus=3
 let g:python3_host_prog = '/usr/bin/python3'
 
 colorscheme gruvbox
-set background=dark
 
 set mouse=a
 set nu rnu numberwidth=4

@@ -11,7 +11,8 @@ brew "stow"
 brew "exa"
 brew "zoxide"
 
-brew "warrensbox/tap/tfswitch"
+tap "warrensbox/tap"
+brew "tfswitch"
 
 cask "docker"
 brew "docker-compose"
@@ -26,6 +27,8 @@ brew "svn"
 brew "fd"
 brew "awscli"
 
+brew "google-java-format"
+
 brew "node"
 brew "npm"
 brew "eslint"
@@ -35,11 +38,6 @@ brew "golang"
 brew "dlv"
 
 brew "python3"
-
-brew "openjdk@11"
-
-brew "rust"
-brew "rustfmt"
 
 brew "stylua"
 

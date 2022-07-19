@@ -1,7 +1,10 @@
 #!/bin/bash
 
-/bin/bash -c "NONINTERACTIVE=1 $(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+####################
+#      Brew        #
+####################
 
+# Install all dependencies from Brewfile
 brew bundle
 
 # Get developer essentials
@@ -73,15 +76,7 @@ npm i -g \
   bash-language-server \
   dockerfile-language-server-nodejs \
   vscode-langservers-extracted \
-  solidity-language-server \
   @tailwindcss/language-server \
   typescript \
   typescript-language-server \
   yaml-language-server
-
-####################
-#      Brew        #
-####################
-
-# Install all dependencies from Brewfile
-brew bundle

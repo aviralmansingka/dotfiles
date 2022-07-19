@@ -1,4 +1,4 @@
-set guifont=Fira\ Code\ Nerd\ Font:h16
+set guifont=FiraCode\ Nerd\ Font\ Mono:h16
 " BASIC VIMRC SKELETON
 " Owner: Aviral Mansingka (github:aviralmansingka)
 

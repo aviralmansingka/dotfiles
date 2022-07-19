@@ -144,6 +144,7 @@ null_ls.setup({
 		null_ls.builtins.diagnostics.eslint, -- eslint or eslint_d
 		null_ls.builtins.code_actions.eslint, -- eslint or eslint_d
 		null_ls.builtins.formatting.rustywind,
+		null_ls.builtins.formatting.google_java_format,
 		null_ls.builtins.formatting.prettier,
 		null_ls.builtins.formatting.terraform_fmt,
 		null_ls.builtins.formatting.terrafmt,
