@@ -4,6 +4,7 @@ let g:python3_host_prog = '/usr/bin/python3'
 
 colorscheme gruvbox
 
+set jumpoptions+=stack
 set mouse=a
 set nu rnu numberwidth=4
 set hidden
