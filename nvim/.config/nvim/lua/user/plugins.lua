@@ -39,7 +39,9 @@ packer.init({
 })
 return packer.startup(function(use)
 	use({ "wbthomason/packer.nvim" })
-	use("declancm/maximize.nvim")
+	use({ "williamboman/mason.nvim" })
+	use({ "WhoIsSethDaniel/mason-tool-installer.nvim" })
+	use({ "williamboman/mason-lspconfig.nvim" })
 
 	use("nvim-lua/popup.nvim")
 	use("nvim-lua/plenary.nvim")

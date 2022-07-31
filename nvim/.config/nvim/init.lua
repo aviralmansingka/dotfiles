@@ -1,6 +1,7 @@
 require("user.mappings")
 require("user.options")
 require("user.plugins")
+require("user.mason")
 require("user.autopairs")
 require("user.comments")
 require("user.completion")
