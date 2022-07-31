@@ -53,30 +53,9 @@ stow zsh
 # Move configuration files
 stow nvim
 
-# Language Servers
-brew install \
-  lua-language-server \
-  luarocks \
-  hashicorp/tap/terraform-ls \
-  tflint
+python3 -m pip install pynvim
 
-luarocks install luacheck
+npm i -g neovim
 
 go install \
-  golang.org/x/tools/gopls@latest \
   golang.org/x/tools/cmd/goimports@latest \
-  github.com/grafana/jsonnet-language-server@latest
-
-python3 -m pip install \
-  pynvim \
-  pyright
-
-npm i -g \
-  neovim \
-  bash-language-server \
-  dockerfile-language-server-nodejs \
-  vscode-langservers-extracted \
-  @tailwindcss/language-server \
-  typescript \
-  typescript-language-server \
-  yaml-language-server
