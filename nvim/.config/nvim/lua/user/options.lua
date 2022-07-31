@@ -1,4 +1,5 @@
 vim.cmd([[
+set guifont=FiraCode\ Nerd\ Font\ Mono:h16
 set laststatus=3
 let g:python3_host_prog = '/usr/bin/python3'
 

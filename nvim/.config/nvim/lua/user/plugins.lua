@@ -1,4 +1,4 @@
-set guifont=FiraCode\ Nerd\ Font\ Mono:h16
+vim.cmd([[
 " BASIC VIMRC SKELETON
 " Owner: Aviral Mansingka (github:aviralmansingka)
 
@@ -92,5 +92,4 @@ Plug 'aserowy/tmux.nvim'
 Plug 'fladson/vim-kitty'
 
 call plug#end()
-
-lua require("custom")
+]])
