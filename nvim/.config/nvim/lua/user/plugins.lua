@@ -46,6 +46,20 @@ return packer.startup(function(use)
 	use("nvim-lua/popup.nvim")
 	use("nvim-lua/plenary.nvim")
 
+	use({ "nvim-orgmode/orgmode" })
+	use({
+		"lukas-reineke/headlines.nvim",
+		config = function()
+			require("headlines").setup()
+		end,
+	})
+	use({
+		"akinsho/org-bullets.nvim",
+		config = function()
+			require("org-bullets").setup()
+		end,
+	})
+
 	use("ellisonleao/gruvbox.nvim")
 
 	use("kyazdani42/nvim-web-devicons")

@@ -27,6 +27,7 @@ cmp.setup({
 		}),
 	}),
 	sources = {
+		{ name = "orgmode" },
 		{ name = "nvim_lua" },
 		{ name = "nvim_lsp" },
 		{ name = "path" },
