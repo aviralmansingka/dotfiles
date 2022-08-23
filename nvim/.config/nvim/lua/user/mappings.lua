@@ -1,6 +1,5 @@
+vim.g.mapleader = " "
 vim.cmd([[
-" changing leader to something more fun :-)
-let mapleader="\<Space>"
 
 " ENTIRELY Personal Preference Mappings
 " Easy normal mode
@@ -13,4 +12,5 @@ noremap <C-h> <c-w>h
 noremap <C-l> <c-w>l
 
 command Bd bp | sp | bn | bd
+nnoremap Q :Bd<Enter>
 ]])
