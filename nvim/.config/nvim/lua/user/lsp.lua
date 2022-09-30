@@ -5,6 +5,7 @@ local servers = {
 	"gopls",
 	"jsonls",
 	"jsonnet_ls",
+	"jdtls",
 	"pyright",
 	"rust_analyzer",
 	"sumneko_lua",
@@ -14,6 +15,15 @@ local servers = {
 	"yamlls",
 }
 
+require("mason").setup()
+require("mason-lspconfig").setup({
+	ensure_installed = servers,
+	automatic_installation = true,
+})
+
+local lsp_status = require("lsp-status")
+lsp_status.register_progress()
+
 -----------
 -- APPLY --
 -----------
@@ -21,6 +31,7 @@ local nvim_lsp = require("lspconfig")
 -- Use an on_attach function to only map the following keys
 -- after the language server attaches to the current buffer
 local lsp_signature = require("lsp_signature")
+
 local on_attach = function(client, bufnr)
 	lsp_signature.on_attach()
 
@@ -48,6 +59,7 @@ local on_attach = function(client, bufnr)
 end
 
 for _, lsp in ipairs(servers) do
+	-- Set default client capabilities plus window/workDoneProgress
 	local capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
 	capabilities.textDocument.completion.completionItem.snippetSupport = true
 	if lsp == "jsonls" or lsp == "html" then
@@ -84,6 +96,14 @@ for _, lsp in ipairs(servers) do
 						enable = false,
 					},
 				},
+			},
+		})
+	elseif lsp == "jdtls" then
+		nvim_lsp[lsp].setup({
+			on_attach = on_attach,
+			capabilities = capabilities,
+			flags = {
+				debounce_text_changes = 150,
 			},
 		})
 	elseif lsp == "yamlls" then

@@ -42,17 +42,12 @@ return packer.startup(function(use)
 	use({ "williamboman/mason.nvim" })
 	use({ "WhoIsSethDaniel/mason-tool-installer.nvim" })
 	use({ "williamboman/mason-lspconfig.nvim" })
+	use({ "nvim-lua/lsp-status.nvim" })
 
 	use("nvim-lua/popup.nvim")
 	use("nvim-lua/plenary.nvim")
 
 	use({ "nvim-orgmode/orgmode" })
-	use({
-		"lukas-reineke/headlines.nvim",
-		config = function()
-			require("headlines").setup()
-		end,
-	})
 	use({
 		"akinsho/org-bullets.nvim",
 		config = function()
