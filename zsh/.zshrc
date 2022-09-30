@@ -30,6 +30,14 @@ export PATH="/opt/homebrew/opt/kubernetes-cli@1.22/bin:$PATH"
 export PATH="/opt/homebrew/opt/awscli@1/bin:$PATH"
 export PATH="/opt/brew/bin:$PATH"
 
+alias k="kubectl"
+alias kg="kubectl get"
+alias kgp="kubectl get pods"
+alias kgs="kubectl get services"
+alias kgd="kubectl get deployments"
+alias ka="kubectl apply"
+alias kpf="kubectl port-forward"
+
 ZSH_THEME="powerlevel10k/powerlevel10k"
 DISABLE_AUTO_TITLE="true"
 
@@ -63,3 +71,6 @@ alias mux='tmuxinator'
 alias luamake='~/.config/lua-language-server/3rd/luamake/luamake'
 
 eval "$(zoxide init zsh)"
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
