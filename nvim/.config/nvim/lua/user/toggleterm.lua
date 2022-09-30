@@ -38,28 +38,28 @@ local shell = Terminal:new({
 })
 local columns = vim.o.columns * 0.33
 function _SHELL_TOGGLE()
-	shell:toggle(columns, "vertical")
+	shell:toggle(columns, "float")
 end
 vim.keymap.set("n", "gt", "<cmd>lua _SHELL_TOGGLE()<CR>")
 
 local lazygit = Terminal:new({
 	cmd = "lazygit",
-	direction = "vertical",
+	direction = "float",
 	hidden = true,
 })
 function _LAZYGIT_TOGGLE()
-	lazygit:toggle(columns, "vertical")
+	lazygit:toggle(columns, "float")
 end
 
 vim.keymap.set("n", "gG", "<cmd>lua _LAZYGIT_TOGGLE()<CR>")
 
 local k9s = Terminal:new({
 	cmd = "k9s",
-	direction = "vertical",
+	direction = "float",
 	hidden = true,
 })
 function _K9S_TOGGLE()
-	k9s:toggle(columns, "vertical")
+	k9s:toggle(columns, "float")
 end
 
 vim.keymap.set("n", "gk", "<cmd>lua _K9S_TOGGLE()<CR>")

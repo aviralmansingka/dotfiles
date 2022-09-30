@@ -57,6 +57,7 @@ alias rg='rg --hidden'
 alias ls='exa --icons -l'
 alias z='zoxide'
 alias k='kubernetes'
+alias kx='kubectx'
 
 alias mux='tmuxinator'
 alias luamake='~/.config/lua-language-server/3rd/luamake/luamake'
