@@ -43,6 +43,7 @@ return packer.startup(function(use)
 	use({ "WhoIsSethDaniel/mason-tool-installer.nvim" })
 	use({ "williamboman/mason-lspconfig.nvim" })
 	use({ "nvim-lua/lsp-status.nvim" })
+	use({ "henriquehbr/nvim-startup.lua" })
 
 	use("nvim-lua/popup.nvim")
 	use("nvim-lua/plenary.nvim")

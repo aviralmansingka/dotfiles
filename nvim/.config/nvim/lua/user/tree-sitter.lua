@@ -39,7 +39,7 @@ require("nvim-treesitter.configs").setup({
 		},
 		highlight_current_scope = {
 			enable = true,
-			disable = { "tsx" },
+			disable = { "tsx", "go" },
 		},
 		smart_rename = {
 			enable = true,
