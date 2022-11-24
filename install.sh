@@ -46,6 +46,13 @@ git clone https://github.com/ptavares/zsh-exa.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh
 rm -rf ~/.zshrc
 stow zsh
 
+
+####################
+#       Java       #
+####################
+
+xattr -r -d com.apple.quarantine /Library/Java/JavaVirtualMachines/graalvm-ce-java17-22.3.0
+
 ####################
 #      NeoVim      #
 ####################

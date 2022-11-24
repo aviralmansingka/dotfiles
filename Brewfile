@@ -10,6 +10,7 @@ brew "ripgrep"
 brew "stow"
 brew "exa"
 brew "zoxide"
+brew "fzf"
 
 tap "warrensbox/tap"
 brew "tfswitch"
@@ -27,6 +28,8 @@ brew "svn"
 brew "fd"
 brew "awscli"
 
+tap "graalvm/tap"
+cask "graalvm-ce-java17"
 brew "google-java-format"
 
 brew "node"
@@ -38,10 +41,7 @@ brew "golang"
 brew "dlv"
 
 brew "python3"
-
 brew "stylua"
-
-tap "hashicorp/tap"
 
 tap "homebrew/cask-fonts"
 cask "font-jetbrains-mono-nerd-font"
