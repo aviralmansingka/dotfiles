@@ -1,5 +1,7 @@
 .git
 
+git/.config/lazygit/state.yml
+
 aws/.aws/cli
 aws/.aws/credentials
 
