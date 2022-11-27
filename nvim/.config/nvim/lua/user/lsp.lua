@@ -1,17 +1,9 @@
--------------
 local servers = {
 	"bashls",
-	"dockerls",
 	"gopls",
-	"jsonls",
-	"jsonnet_ls",
 	"jdtls",
-	"pyright",
 	"rust_analyzer",
 	"sumneko_lua",
-	"tsserver",
-	"tailwindcss",
-	"terraformls",
 	"yamlls",
 }
 
@@ -20,9 +12,6 @@ require("mason-lspconfig").setup({
 	ensure_installed = servers,
 	automatic_installation = true,
 })
-
-local lsp_status = require("lsp-status")
-lsp_status.register_progress()
 
 -----------
 -- APPLY --
@@ -35,8 +24,8 @@ local lsp_signature = require("lsp_signature")
 local on_attach = function(client, bufnr)
 	lsp_signature.on_attach()
 
-	client.resolved_capabilities.document_formatting = false
-	client.resolved_capabilities.document_range_formatting = false
+	client.server_capabilities.documentFormattingProvider = false
+	client.server_capabilities.documentRangeFormattingProvider = false
 
 	-- Mappings.
 	local opts = { noremap = true, silent = true }
@@ -59,8 +48,7 @@ local on_attach = function(client, bufnr)
 end
 
 for _, lsp in ipairs(servers) do
-	-- Set default client capabilities plus window/workDoneProgress
-	local capabilities = require("cmp_nvim_lsp").update_capabilities(vim.lsp.protocol.make_client_capabilities())
+	local capabilities = require("cmp_nvim_lsp").default_capabilities(vim.lsp.protocol.make_client_capabilities())
 	capabilities.textDocument.completion.completionItem.snippetSupport = true
 	if lsp == "jsonls" or lsp == "html" then
 		nvim_lsp[lsp].setup({
@@ -90,6 +78,7 @@ for _, lsp in ipairs(servers) do
 					workspace = {
 						-- Make the server aware of Neovim runtime files
 						library = vim.api.nvim_get_runtime_file("", true),
+						checkThirdParty = false,
 					},
 					-- Do not send telemetry data containing a randomized but unique identifier
 					telemetry = {
@@ -160,20 +149,14 @@ null_ls.setup({
 		null_ls.builtins.formatting.rustfmt,
 		null_ls.builtins.formatting.gofmt,
 		null_ls.builtins.formatting.goimports,
-		null_ls.builtins.formatting.stylua,
-		null_ls.builtins.diagnostics.eslint, -- eslint or eslint_d
-		null_ls.builtins.code_actions.eslint, -- eslint or eslint_d
-		null_ls.builtins.formatting.rustywind,
 		null_ls.builtins.formatting.google_java_format,
-		null_ls.builtins.formatting.prettier,
-		null_ls.builtins.formatting.terraform_fmt,
-		null_ls.builtins.formatting.terrafmt,
+		null_ls.builtins.formatting.stylua,
 		null_ls.builtins.diagnostics.luacheck,
 	},
 
 	-- you can reuse a shared lspconfig on_attach callback here
 	on_attach = function(client)
-		if client.resolved_capabilities.document_formatting then
+		if client.server_capabilities.documentFormattingProvider then
 			vim.cmd([[
             augroup LspFormatting
                 autocmd! * <buffer>
