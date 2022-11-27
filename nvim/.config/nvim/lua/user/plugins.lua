@@ -39,22 +39,9 @@ packer.init({
 })
 return packer.startup(function(use)
 	use({ "wbthomason/packer.nvim" })
-	use({ "williamboman/mason.nvim" })
-	use({ "WhoIsSethDaniel/mason-tool-installer.nvim" })
-	use({ "williamboman/mason-lspconfig.nvim" })
-	use({ "nvim-lua/lsp-status.nvim" })
-	use({ "henriquehbr/nvim-startup.lua" })
-
 	use("nvim-lua/popup.nvim")
 	use("nvim-lua/plenary.nvim")
-
-	use({ "nvim-orgmode/orgmode" })
-	use({
-		"akinsho/org-bullets.nvim",
-		config = function()
-			require("org-bullets").setup()
-		end,
-	})
+	use("airblade/vim-rooter")
 
 	use("ellisonleao/gruvbox.nvim")
 
@@ -67,9 +54,6 @@ return packer.startup(function(use)
 	use("kyazdani42/nvim-tree.lua")
 
 	use("nvim-telescope/telescope.nvim")
-	use("jvgrootveld/telescope-zoxide")
-
-	use("airblade/vim-rooter")
 
 	use("mhinz/vim-startify")
 
@@ -88,6 +72,10 @@ return packer.startup(function(use)
 
 	use("numToStr/Comment.nvim")
 
+	use({ "williamboman/mason.nvim" })
+	use({ "WhoIsSethDaniel/mason-tool-installer.nvim" })
+	use({ "williamboman/mason-lspconfig.nvim" })
+
 	use("L3MON4D3/LuaSnip")
 	use("rafamadriz/friendly-snippets")
 
@@ -102,18 +90,9 @@ return packer.startup(function(use)
 	use("ray-x/lsp_signature.nvim")
 	use("neovim/nvim-lspconfig")
 	use("jose-elias-alvarez/null-ls.nvim")
-	use("jose-elias-alvarez/nvim-lsp-ts-utils")
 	use("gbrlsnchs/telescope-lsp-handlers.nvim")
 
-	use("voldikss/vim-floaterm")
 	use("akinsho/toggleterm.nvim")
-
-	use({ "rcarriga/vim-ultest", requires = { "vim-test/vim-test" }, run = ":UpdateRemotePlugins" })
-
-	use("mfussenegger/nvim-dap")
-	use("leoluz/nvim-dap-go")
-	use("theHamsta/nvim-dap-virtual-text")
-	use("rcarriga/nvim-dap-ui")
 
 	use("aserowy/tmux.nvim")
 	use("fladson/vim-kitty")

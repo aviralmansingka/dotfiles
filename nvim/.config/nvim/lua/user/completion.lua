@@ -11,7 +11,10 @@ cmp.setup({
 			require("luasnip").lsp_expand(args.body)
 		end,
 	},
-	window = {},
+  window = {
+    completion = cmp.config.window.bordered(),
+    documentation = cmp.config.window.bordered(),
+  },
 	mapping = cmp.mapping.preset.insert({
 		["c-b"] = cmp.mapping.scroll_docs(-4),
 		["c-f"] = cmp.mapping.scroll_docs(4),
@@ -29,7 +32,6 @@ cmp.setup({
 		{ name = "path" },
 		{ name = "luasnip" },
 		{ name = "buffer", keyword_length = 5 },
-		{ name = "orgmode" },
 	},
 	query_linter = {
 		enable = true,
@@ -71,7 +73,6 @@ cmp.setup({
 		}),
 	},
 	experimental = {
-		native_menu = false,
 		ghost_text = true,
 	},
 })
