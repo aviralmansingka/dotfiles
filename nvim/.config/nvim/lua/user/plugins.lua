@@ -89,6 +89,7 @@ return packer.startup(function(use)
 
 	use("ray-x/lsp_signature.nvim")
 	use("neovim/nvim-lspconfig")
+	use("mfussenegger/nvim-jdtls")
 	use("jose-elias-alvarez/null-ls.nvim")
 	use("gbrlsnchs/telescope-lsp-handlers.nvim")
 

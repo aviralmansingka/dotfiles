@@ -17,6 +17,8 @@ require("mason-tool-installer").setup({
 		-- "dockerfile-language-server",
 		-- "html-lsp",
 		"jdtls",
+		"java-debug-adapter",
+		"java-test",
 		"json-lsp",
 		-- "jsonnet-language-server",
 		-- "pyright",

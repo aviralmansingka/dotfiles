@@ -1,7 +1,6 @@
 local servers = {
 	"bashls",
 	"gopls",
-	"jdtls",
 	"rust_analyzer",
 	"sumneko_lua",
 	"yamlls",
