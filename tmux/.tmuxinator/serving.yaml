@@ -1,6 +1,0 @@
-name: serving
-tmux_options: -f ~/.tmux.conf # Pass arguments to tmux
-tmux_detached: false
-windows:
-  - groot:
-      root: ~/ap-groot-server

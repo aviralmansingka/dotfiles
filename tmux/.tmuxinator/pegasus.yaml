@@ -1,8 +1,0 @@
-name: pegasus
-tmux_options: -f ~/.tmux.conf # Pass arguments to tmux
-tmux_detached: false
-windows:
-  - pegasus:
-      root: ~/github.parsec.apple.com/luna/beam
-  - lsp:
-      root: ~/github.parsec.apple.com/luna/beam

@@ -1,0 +1,28 @@
+name: build-better
+root: ~/build-better-deploy-faster
+tmux_options: -f ~/.tmux.conf # Pass arguments to tmux
+tmux_detached: false
+windows:
+  - airport-service:
+      pre: cd ~/build-better-deploy-faster/airport-service
+      panes:
+        - vim
+  - weather-service:
+      pre: cd ~/build-better-deploy-faster/weather-service
+      panes:
+        - vim
+  - conditions-service:
+      pre: cd ~/build-better-deploy-faster/conditions-service
+      panes:
+        - vim
+  - gateway-service:
+      pre: cd ~/build-better-deploy-faster/gateway-service
+      panes:
+        - vim
+  - configs:
+      pre: cd ~/build-better-deploy-faster/build-better-configs
+      panes:
+        - vim
+  - k9s:
+      panes:
+        - k9s
