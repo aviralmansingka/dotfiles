@@ -92,6 +92,15 @@ return packer.startup(function(use)
 	use("mfussenegger/nvim-jdtls")
 	use("jose-elias-alvarez/null-ls.nvim")
 	use("gbrlsnchs/telescope-lsp-handlers.nvim")
+	use("simrat39/rust-tools.nvim")
+	use({
+		"saecki/crates.nvim",
+		tag = "v0.3.0",
+		requires = { "nvim-lua/plenary.nvim" },
+		config = function()
+			require("crates").setup()
+		end,
+	})
 
 	use("akinsho/toggleterm.nvim")
 
