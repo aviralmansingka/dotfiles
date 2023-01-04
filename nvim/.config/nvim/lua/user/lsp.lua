@@ -3,6 +3,7 @@ local servers = {
 	"gopls",
 	"sumneko_lua",
 	"yamlls",
+	"pyright",
 }
 
 require("mason").setup()

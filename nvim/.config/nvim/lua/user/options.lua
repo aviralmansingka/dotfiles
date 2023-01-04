@@ -4,7 +4,9 @@ set guifont=FiraCode\ Nerd\ Font\ Mono:h16
 set laststatus=3
 let g:python3_host_prog = '/usr/bin/python3'
 
-colorscheme gruvbox
+let g:gruvbox_material_foreground = 'original'
+
+colorscheme gruvbox-material
 
 set jumpoptions+=stack
 set mouse=a

@@ -43,7 +43,7 @@ return packer.startup(function(use)
 	use("nvim-lua/plenary.nvim")
 	use("airblade/vim-rooter")
 
-	use("ellisonleao/gruvbox.nvim")
+	use("sainnhe/gruvbox-material")
 
 	use("kyazdani42/nvim-web-devicons")
 	use("yamatsum/nvim-nonicons")
