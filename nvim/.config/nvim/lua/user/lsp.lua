@@ -1,7 +1,7 @@
 local servers = {
 	"bashls",
 	"gopls",
-	"sumneko_lua",
+	"lua_ls",
 	"yamlls",
 	"pyright",
 }
@@ -28,7 +28,6 @@ local on_attach = function(client, bufnr)
 
 	-- Mappings.
 	local opts = { noremap = true, silent = true }
-
 	-- See `:help vim.lsp.*` for documentation on any of the below functions
 	vim.keymap.set("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", opts)
 	vim.keymap.set("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", opts)
@@ -57,7 +56,7 @@ for _, lsp in ipairs(servers) do
 				debounce_text_changes = 150,
 			},
 		})
-	elseif lsp == "sumneko_lua" then
+	elseif lsp == "lua_ls" then
 		nvim_lsp[lsp].setup({
 			on_attach = on_attach,
 			capabilities = capabilities,
@@ -84,14 +83,6 @@ for _, lsp in ipairs(servers) do
 						enable = false,
 					},
 				},
-			},
-		})
-	elseif lsp == "jdtls" then
-		nvim_lsp[lsp].setup({
-			on_attach = on_attach,
-			capabilities = capabilities,
-			flags = {
-				debounce_text_changes = 150,
 			},
 		})
 	elseif lsp == "yamlls" then
@@ -145,15 +136,12 @@ end
 local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
 local null_ls = require("null-ls")
 null_ls.setup({
-
 	sources = {
 		null_ls.builtins.formatting.gofmt,
 		null_ls.builtins.formatting.goimports,
 		null_ls.builtins.formatting.google_java_format,
 		null_ls.builtins.formatting.stylua,
-		null_ls.builtins.diagnostics.luacheck,
 	},
-
 	-- you can reuse a shared lspconfig on_attach callback here
 	on_attach = function(client, bufnr)
 		if client.supports_method("textDocument/formatting") then
