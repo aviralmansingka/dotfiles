@@ -141,6 +141,7 @@ null_ls.setup({
 		null_ls.builtins.formatting.goimports,
 		null_ls.builtins.formatting.google_java_format,
 		null_ls.builtins.formatting.stylua,
+		null_ls.builtins.formatting.rustfmt,
 	},
 	-- you can reuse a shared lspconfig on_attach callback here
 	on_attach = function(client, bufnr)
