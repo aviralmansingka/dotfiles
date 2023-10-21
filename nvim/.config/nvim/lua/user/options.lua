@@ -2,7 +2,6 @@ vim.cmd([[
 
 set guifont=FiraCode\ Nerd\ Font\ Mono:h16
 set laststatus=3
-let g:python3_host_prog = '/Users/amansingka/.pyenv/shims/python'
 
 let g:gruvbox_material_foreground = 'original'
 

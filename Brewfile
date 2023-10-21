@@ -1,17 +1,12 @@
 cask "kitty"
 brew "neovim"
 brew "tmux"
-brew "tmuxinator"
-brew "wget"
-brew "tig"
-brew "tree"
-brew "protobuf"
-brew "ripgrep"
 brew "stow"
-brew "fzf"
 
 cask "docker"
 brew "docker-compose"
+
+brew "awscli"
 
 brew "kubectl"
 brew "kubectx"
@@ -19,18 +14,23 @@ brew "k9s"
 
 brew "lazygit"
 brew "gcc"
-brew "svn"
 brew "fd"
-brew "awscli"
+brew "tmuxinator"
+brew "wget"
+brew "tig"
+brew "tree"
+brew "ripgrep"
+brew "fzf"
+brew "protobuf"
 
-tap "graalvm/tap"
-cask "graalvm-ce-java17"
+brew "openjdk17"
 brew "google-java-format"
 
 brew "golang"
 brew "dlv"
 
-brew "python3"
+cask "conda"
+
 brew "stylua"
 
 tap "homebrew/cask-fonts"
