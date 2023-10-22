@@ -1,3 +1,5 @@
+brew "koekeishiya/formulae/yabai"
+brew "koekeishiya/formulae/skhd"
 cask "kitty"
 brew "neovim"
 brew "tmux"
@@ -28,6 +30,7 @@ brew "wget"
 brew "openjdk@17"
 brew "google-java-format"
 
+brew "rust"
 brew "node"
 
 brew "golang"
@@ -35,6 +38,7 @@ brew "dlv"
 
 cask "miniconda"
 
+brew "luarocks"
 brew "stylua"
 
 tap "homebrew/cask-fonts"
