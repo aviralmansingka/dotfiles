@@ -27,6 +27,8 @@ brew "wget"
 brew "openjdk@17"
 brew "google-java-format"
 
+brew "node"
+
 brew "golang"
 brew "dlv"
 
