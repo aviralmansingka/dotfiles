@@ -12,6 +12,7 @@ brew "kubectl"
 brew "kubectx"
 brew "k9s"
 
+brew "exa"
 brew "fd"
 brew "fzf"
 brew "gcc"
