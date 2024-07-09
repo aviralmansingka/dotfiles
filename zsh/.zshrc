@@ -52,6 +52,7 @@ plugins=(
 	catimg
 	pip
 	python
+  poetry
 )
 
 source $ZSH/oh-my-zsh.sh
@@ -62,7 +63,7 @@ source $ZSH/oh-my-zsh.sh
 
 alias vim='nvim'
 alias rg='rg --hidden'
-alias ls='exa --icons -l'
+alias ls='eza --icons -l'
 alias z='zoxide'
 alias k='kubernetes'
 alias kx='kubectx'
@@ -70,18 +71,10 @@ alias kx='kubectx'
 alias mux='tmuxinator'
 alias luamake='~/.config/lua-language-server/3rd/luamake/luamake'
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/opt/homebrew/anaconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/opt/homebrew/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "/opt/homebrew/anaconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="/opt/homebrew/anaconda3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
 
+# Created by `pipx` on 2024-06-23 15:53:42
+export PATH="$PATH:/Users/aviralmansingka/.local/bin"
+export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"

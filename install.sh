@@ -63,6 +63,3 @@ stow nvim
 python3 -m pip install pynvim
 
 npm i -g neovim
-
-go install \
-  golang.org/x/tools/cmd/goimports@latest \

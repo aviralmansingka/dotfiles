@@ -1,12 +1,9 @@
-brew "koekeishiya/formulae/yabai"
-brew "koekeishiya/formulae/skhd"
 cask "kitty"
 brew "neovim"
 brew "tmux"
 brew "stow"
 
 cask "docker"
-brew "docker-compose"
 
 brew "awscli"
 
@@ -32,14 +29,12 @@ brew "google-java-format"
 
 brew "rust"
 brew "node"
-
 brew "golang"
-brew "dlv"
+brew "pipx"
+brew "pyenv"
 
-cask "miniconda"
 
 brew "luarocks"
-brew "stylua"
 
 tap "homebrew/cask-fonts"
 cask "font-jetbrains-mono-nerd-font"
@@ -48,8 +43,6 @@ cask "font-fira-code-nerd-font"
 
 cask "obsidian"
 cask "todoist"
-cask "slack"
-cask "spotify"
 cask "google-chrome"
 cask "whatsapp"
 cask "messenger"
