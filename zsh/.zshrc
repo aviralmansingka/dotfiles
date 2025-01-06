@@ -25,7 +25,6 @@ export PATH="/opt/homebrew/Cellar:$PATH"
 export PATH="$HOME/scripts/local/python:$PATH"
 export PATH="$HOME/scripts/local/shell:$PATH"
 export PATH="$(go env GOPATH)/bin:$PATH"
-export PATH="$HOME/Library/Python/3.8/bin:$PATH"
 export PATH="/opt/homebrew/opt/kubernetes-cli@1.22/bin:$PATH"
 export PATH="/opt/homebrew/opt/awscli@1/bin:$PATH"
 export PATH="/opt/brew/bin:$PATH"
@@ -37,6 +36,7 @@ alias kgs="kubectl get services"
 alias kgd="kubectl get deployments"
 alias ka="kubectl apply"
 alias kpf="kubectl port-forward"
+export KUBECONFIG=$(find ~/.kube -maxdepth 1 -type f | tr '\n' ':')
 
 ZSH_THEME="powerlevel10k/powerlevel10k"
 DISABLE_AUTO_TITLE="true"
@@ -71,10 +71,12 @@ alias kx='kubectx'
 alias mux='tmuxinator'
 alias luamake='~/.config/lua-language-server/3rd/luamake/luamake'
 
+export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
+
+# Created by `pipx` on 2024-07-24 14:36:47
+export PATH="$PATH:/Users/$USER/.local/bin"
+
+# pyenv
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
-
-# Created by `pipx` on 2024-06-23 15:53:42
-export PATH="$PATH:/Users/aviralmansingka/.local/bin"
-export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
