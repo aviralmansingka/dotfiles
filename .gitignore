@@ -19,7 +19,4 @@ gradle/.gradle/wrapper
 
 kube/.config/k9s/config.yml
 
-nvim/.config/nvim/lua/user/rhubarb.lua
-nvim/.config/nvim/plugin/
-
 Brewfile.lock.json
