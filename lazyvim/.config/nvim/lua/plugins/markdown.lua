@@ -1,12 +1,65 @@
 return {
   {
+    -- Smart list continuation and auto-formatting for markdown
+    "gaoDean/autolist.nvim",
+    ft = { "markdown" },
+    config = function(_, opts)
+      require("autolist").setup(opts)
+      vim.keymap.set("i", "<tab>", "<cmd>AutolistTab<cr>")
+      vim.keymap.set("i", "<s-tab>", "<cmd>AutolistShiftTab<cr>")
+      -- vim.keymap.set("i", "<c-t>", "<c-t><cmd>AutolistRecalculate<cr>") -- an example of using <c-t> to indent
+      vim.keymap.set("i", "<CR>", "<CR><cmd>AutolistNewBullet<cr>")
+      vim.keymap.set("n", "o", "o<cmd>AutolistNewBullet<cr>")
+      vim.keymap.set("n", "O", "O<cmd>AutolistNewBulletBefore<cr>")
+      vim.keymap.set("n", "<CR>", "<cmd>AutolistToggleCheckbox<cr><CR>")
+      vim.keymap.set("n", "<C-r>", "<cmd>AutolistRecalculate<cr>")
+
+      -- cycle list types with dot-repeat
+      vim.keymap.set("n", "<leader>cn", require("autolist").cycle_next_dr, { expr = true })
+      vim.keymap.set("n", "<leader>cp", require("autolist").cycle_prev_dr, { expr = true })
+
+      -- if you don't want dot-repeat
+      -- vim.keymap.set("n", "<leader>cn", "<cmd>AutolistCycleNext<cr>")
+      -- vim.keymap.set("n", "<leader>cp", "<cmd>AutolistCycleNext<cr>")
+
+      -- functions to recalculate list on edit
+      vim.keymap.set("n", ">>", ">><cmd>AutolistRecalculate<cr>")
+      vim.keymap.set("n", "<<", "<<<cmd>AutolistRecalculate<cr>")
+      vim.keymap.set("n", "dd", "dd<cmd>AutolistRecalculate<cr>")
+      vim.keymap.set("v", "d", "d<cmd>AutolistRecalculate<cr>")
+    end,
+  },
+  {
     "MeanderingProgrammer/render-markdown.nvim",
     dependencies = { "nvim-treesitter/nvim-treesitter", "echasnovski/mini.nvim" }, -- if you use the mini.nvim suite
+    ft = { "markdown", "Avante" },
     -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.icons' }, -- if you use standalone mini plugins
     -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
     ---@module 'render-markdown'
     ---@type render.md.UserConfig
     opts = {
+      file_types = { "markdown", "Avante" },
+      bullet = {
+        enabled = true,
+        position = "overlay",
+        icons = {
+          unordered = "•",
+          ordered = "◦",
+        },
+        highlight = "RenderMarkdownBullet",
+      },
+      task = {
+        enabled = true,
+        position = "overlay",
+        icons = {
+          todo = "☐",
+          done = "✓",
+        },
+        highlights = {
+          todo = "RenderMarkdownTodo",
+          done = "RenderMarkdownDone",
+        },
+      },
       heading = {
         -- Turn on / off heading icon & background rendering
         enabled = true,
@@ -76,6 +129,14 @@ return {
           "RenderMarkdownH4",
           "RenderMarkdownH5",
           "RenderMarkdownH6",
+        },
+      },
+      highlights = {
+        defaults = true,
+        overrides = {
+          bullet = { fg = "#7dcfff", bold = true },
+          todo = { fg = "#ff9e64" },
+          done = { fg = "#9ece6a" },
         },
       },
     },
