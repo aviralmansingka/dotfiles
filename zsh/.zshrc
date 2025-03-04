@@ -17,10 +17,12 @@ export XDG_CONFIG_HOME="$HOME/.config"
 export TERM="screen-256color"
 export EDITOR="nvim"
 export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
+export DISABLE_AUTO_TITLE=true
 
 export AWS_USER_NAME=`whoami`
 
 export PATH=$HOME/bin:/usr/local/bin:$PATH
+export PATH="$PATH:/snap/bin"
 export PATH="/opt/homebrew/Cellar:$PATH"
 export PATH="$HOME/scripts/local/python:$PATH"
 export PATH="$HOME/scripts/local/shell:$PATH"
@@ -61,9 +63,10 @@ source $ZSH/oh-my-zsh.sh
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
+
 alias vim='nvim'
 alias rg='rg --hidden'
-alias ls='eza --icons -l'
+alias ls='exa --icons -l'
 alias z='zoxide'
 alias k='kubernetes'
 alias kx='kubectx'
