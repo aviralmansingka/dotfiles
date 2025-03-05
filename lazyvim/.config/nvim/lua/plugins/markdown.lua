@@ -33,6 +33,71 @@ return {
     'MeanderingProgrammer/render-markdown.nvim',
     dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you use the mini.nvim suite
     ft = { "markdown", },
+    keys = {
+      {
+        "<leader>jt",
+        function()
+          local daily_notes_dir = vim.fn.expand("~/notes/daily")
+
+          -- Create the directory if it doesn't exist
+          if vim.fn.isdirectory(daily_notes_dir) == 0 then
+            vim.fn.mkdir(daily_notes_dir, "p")
+          end
+
+          -- Format today's date as YYYY-MM-DD
+          local today = os.date("%Y-%m-%d")
+          local filename = daily_notes_dir .. "/" .. today .. ".md"
+
+          -- Check if the file already exists
+          if vim.fn.filereadable(filename) == 1 then
+            -- Open the existing file
+            vim.cmd("edit " .. filename)
+          else
+            -- Create a new file with template
+            vim.cmd("edit " .. filename)
+
+            -- Create the template content
+            -- Load template from file or use default
+            local template_path = vim.fn.expand("~/notes/templates/daily.md")
+            local template
+            if vim.fn.filereadable(template_path) == 1 then
+              -- Read template from file
+              template = vim.fn.readfile(template_path)
+              -- Replace any date placeholders in the template
+              for i, line in ipairs(template) do
+                template[i] = line:gsub("{{date}}", today)
+              end
+            else
+              -- Use default template if file doesn't exist
+              template = {
+                "# Daily Note: " .. today,
+                "",
+                "## Tasks",
+                "",
+                "- [ ] ",
+                "",
+                "## Notes",
+                "",
+                "## Journal",
+                "",
+                "## Reflections",
+                "",
+              }
+            end
+
+            -- Insert the template content
+            vim.api.nvim_buf_set_lines(0, 0, 0, false, template)
+
+            -- Position cursor at the first task
+            vim.api.nvim_win_set_cursor(0, { 5, 6 })
+
+            -- Enter insert mode
+            vim.cmd("startinsert")
+          end
+        end,
+        desc = "Open today's daily note",
+      },
+    },
     ---@module 'render-markdown'
     ---@type render.md.UserConfig
     opts = {
