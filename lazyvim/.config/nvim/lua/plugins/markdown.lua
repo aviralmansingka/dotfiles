@@ -37,7 +37,7 @@ return {
       {
         "<leader>jt",
         function()
-          local daily_notes_dir = vim.fn.expand("~/notes/daily")
+          local daily_notes_dir = vim.fn.expand("~/obsidian/personal/journal/")
 
           -- Create the directory if it doesn't exist
           if vim.fn.isdirectory(daily_notes_dir) == 0 then
@@ -72,15 +72,17 @@ return {
               template = {
                 "# Daily Note: " .. today,
                 "",
-                "## Tasks",
+                "## Habit Tracking",
                 "",
-                "- [ ] ",
-                "",
-                "## Notes",
+                "- [ ] Daily check-in",
+                "- [ ] Meditation",
+                "- [ ] Stretch",
                 "",
                 "## Journal",
                 "",
-                "## Reflections",
+                "### Timeline",
+                "",
+                "### Relfections",
                 "",
               }
             end
