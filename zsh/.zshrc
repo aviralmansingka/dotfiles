@@ -66,7 +66,7 @@ source $ZSH/oh-my-zsh.sh
 
 alias vim='nvim'
 alias rg='rg --hidden'
-alias ls='exa --icons -l'
+alias ls='eza --icons -l'
 alias z='zoxide'
 alias k='kubernetes'
 alias kx='kubectx'
