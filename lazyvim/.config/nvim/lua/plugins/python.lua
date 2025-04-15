@@ -1,7 +1,46 @@
 return {
+  {
+    "neovim/nvim-lspconfig",
+    opts = {
+      -- Explicitly disable pyright server
+      setup = {
+        pyright = function()
+          -- Return true to indicate we're handling the setup
+          -- This prevents the default pyright setup from running
+          vim.api.nvim_create_autocmd("FileType", {
+            pattern = "python",
+            callback = function()
+              -- Apply Python-specific diagnostic settings
+              vim.diagnostic.config({
+                virtual_text = false,
+                update_in_insert = false,
+                underline = true,
+                severity_sort = true,
+                float = {
+                  border = "rounded",
+                  source = "always",
+                  header = "",
+                  prefix = "",
+                },
+              })
+              -- Set up diagnostic highlighting with undercurl for Python
+              vim.cmd([[
+                highlight DiagnosticUnderlineError gui=undercurl guisp=#db4b4b
+                highlight DiagnosticUnderlineWarn gui=undercurl guisp=#e0af68
+                highlight DiagnosticUnderlineInfo gui=undercurl guisp=#0db9d7
+                highlight DiagnosticUnderlineHint gui=undercurl guisp=#1abc9c
+              ]])
+            end,
+          })
+          return true
+        end,
+      },
+    },
+  },
   -- Configure LSP for Python with BasedPyright
   {
     "neovim/nvim-lspconfig",
+    ft = "python",
     opts = {
       servers = {
         pyright = false,
@@ -9,7 +48,9 @@ return {
           settings = {
             basedpyright = {
               analysis = {
+                autoImportCompletions = true,
                 typeCheckingMode = "basic", -- Can be "off", "basic", or "strict"
+                autoSearchPaths = true,
                 diagnosticMode = "workspace", -- "openFilesOnly" or "workspace"
                 inlayHints = {
                   variableTypes = true,
@@ -25,33 +66,6 @@ return {
           },
         },
       },
-      -- Add a custom setup function specifically for basedpyright
-      setup = {
-        basedpyright = function(_, opts)
-          -- Get the default handler
-          local default_handler = vim.lsp.handlers["textDocument/publishDiagnostics"]
-
-          -- Create a custom handler that disables virtual text for basedpyright only
-          vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
-            -- Get client info
-            local client = vim.lsp.get_client_by_id(ctx.client_id)
-
-            -- Make a copy of the original config
-            local new_config = vim.deepcopy(config or {})
-
-            -- Modify the config only for basedpyright
-            if client and client.name == "basedpyright" then
-              new_config.virtual_text = false
-            end
-
-            -- Call the default handler with our modified config
-            default_handler(err, result, ctx, new_config)
-          end
-
-          -- Return false to prevent the default setup
-          return false
-        end,
-      },
     },
   }, -- Add Python-specific diagnostic settings using autocmd
 
@@ -61,6 +75,7 @@ return {
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
       vim.list_extend(opts.ensure_installed, { "basedpyright" })
+      vim.list_extend(opts.ensure_installed, { "black" })
     end,
   },
 
