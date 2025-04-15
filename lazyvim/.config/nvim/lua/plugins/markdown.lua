@@ -1,5 +1,25 @@
 return {
   {
+    "preservim/vim-pencil",
+    ft = { "markdown" },
+    config = function()
+      vim.g["pencil#wrapModeDefault"] = "soft"
+      vim.g["pencil#textwidth"] = 80
+      vim.g["pencil#autoformat"] = 1
+
+      -- Auto-enable pencil for markdown files
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "markdown",
+        callback = function()
+          vim.cmd("PencilSoft")
+          vim.opt_local.textwidth = 80
+          vim.opt_local.wrap = true
+          vim.opt_local.linebreak = true
+        end,
+      })
+    end,
+  },
+  {
     -- Smart list continuation and auto-formatting for markdown
     "gaoDean/autolist.nvim",
     ft = { "markdown" },
@@ -11,7 +31,7 @@ return {
       vim.keymap.set("i", "<CR>", "<CR><cmd>AutolistNewBullet<cr>")
       vim.keymap.set("n", "o", "o<cmd>AutolistNewBullet<cr>")
       vim.keymap.set("n", "O", "O<cmd>AutolistNewBulletBefore<cr>")
-      vim.keymap.set("n", "<CR>", "<cmd>AutolistToggleCheckbox<cr><CR>")
+      vim.keymap.set("n", "<CR>", "<cmd>AutolistToggleCheckbox<CR>")
       vim.keymap.set("n", "<C-r>", "<cmd>AutolistRecalculate<cr>")
 
       -- cycle list types with dot-repeat
@@ -30,9 +50,9 @@ return {
     end,
   },
   {
-    'MeanderingProgrammer/render-markdown.nvim',
-    dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you use the mini.nvim suite
-    ft = { "markdown", },
+    "MeanderingProgrammer/render-markdown.nvim",
+    dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" }, -- if you use the mini.nvim suite
+    ft = { "markdown" },
     keys = {
       {
         "<leader>jt",
@@ -76,13 +96,19 @@ return {
                 "",
                 "- [ ] Daily check-in",
                 "- [ ] Meditation",
+                "- [ ] Monarch",
+                "- [ ] Superhuman",
                 "- [ ] Stretch",
+                "",
+                "## Todo",
+                "",
+                "- [ ] X",
                 "",
                 "## Journal",
                 "",
                 "### Timeline",
                 "",
-                "### Relfections",
+                "### Reflections",
                 "",
               }
             end
@@ -103,54 +129,69 @@ return {
     ---@module 'render-markdown'
     ---@type render.md.UserConfig
     opts = {
+      render_modes = true,
+      anti_conceal = {
+        enabled = true,
+        -- Which elements to always show, ignoring anti conceal behavior. Values can either be booleans
+        -- to fix the behavior or string lists representing modes where anti conceal behavior will be
+        -- ignored. Possible keys are:
+        --  head_icon, head_background, head_border, code_language, code_background, code_border
+        --  dash, bullet, check_icon, check_scope, quote, table_border, callout, link, sign
+        ignore = {
+          code_background = true,
+          sign = true,
+        },
+        above = 0,
+        below = 0,
+      },
       checkbox = {
         enabled = true,
-        render_modes = false,
-        position = 'inline',
+        position = "inline",
         unchecked = {
-          icon = '󰄱 ',
-          highlight = 'RenderMarkdownUnchecked',
+          icon = "󰄱",
+          highlight = "RenderMarkdownUnchecked",
           scope_highlight = nil,
         },
         checked = {
-          icon = '󰱒 ',
-          highlight = 'RenderMarkdownChecked',
+          icon = "󰱒",
+          highlight = "RenderMarkdownChecked",
           scope_highlight = nil,
         },
         custom = {
-          todo = { raw = '[-]', rendered = '󰥔 ', highlight = 'RenderMarkdownTodo', scope_highlight = nil },
+          todo = { raw = "[-]", rendered = "󰥔", highlight = "RenderMarkdownTodo", scope_highlight = nil },
+          idea = { raw = "[!IDEA]", rendered = "", highlight = "RenderMarkdownTodo", scope_highlight = nil },
         },
       },
       code = {
         enabled = true,
         render_modes = false,
         sign = true,
-        style = 'full',
-        position = 'left',
+        style = "full",
+        position = "left",
         language_pad = 0,
         language_name = true,
-        disable_background = { 'diff' },
-        width = 'full',
+        disable_background = { "diff" },
+        width = "full",
         left_margin = 0,
         left_pad = 0,
         right_pad = 0,
         min_width = 0,
-        border = 'thin',
-        above = '▄',
-        below = '▀',
-        highlight = 'RenderMarkdownCode',
+        border = "thin",
+        above = "▄",
+        below = "▀",
+        highlight = "RenderMarkdownCode",
         highlight_language = nil,
         inline_pad = 0,
-        highlight_inline = 'RenderMarkdownCodeInline',
+        highlight_inline = "RenderMarkdownCodeInline",
       },
       heading = {
         enabled = true,
         render_modes = false,
-        sign = true,
-        icons = { '󰲡 ', '󰲣 ', '󰲥 ', '󰲧 ', '󰲩 ', '󰲫 ' },
-        position = 'overlay',
-        signs = { '󰫎 ' },
-        width = 'full',
+        sign = false,
+        icons = { "󰲡 ", "󰲣 ", "󰲥 ", "󰲧 ", "󰲩 ", "󰲫 " },
+        position = "overlay",
+        signs = { "󰫎 " },
+        width = "full",
         left_margin = 0,
         left_pad = 0,
         right_pad = 0,
@@ -158,23 +199,23 @@ return {
         border = false,
         border_virtual = false,
         border_prefix = false,
-        above = '▄',
-        below = '▀',
+        above = "▄",
+        below = "▀",
         backgrounds = {
-          'RenderMarkdownH1Bg',
-          'RenderMarkdownH2Bg',
-          'RenderMarkdownH3Bg',
-          'RenderMarkdownH4Bg',
-          'RenderMarkdownH5Bg',
-          'RenderMarkdownH6Bg',
+          "RenderMarkdownH1Bg",
+          "RenderMarkdownH2Bg",
+          "RenderMarkdownH3Bg",
+          "RenderMarkdownH4Bg",
+          "RenderMarkdownH5Bg",
+          "RenderMarkdownH6Bg",
         },
         foregrounds = {
-          'RenderMarkdownH1',
-          'RenderMarkdownH2',
-          'RenderMarkdownH3',
-          'RenderMarkdownH4',
-          'RenderMarkdownH5',
-          'RenderMarkdownH6',
+          "RenderMarkdownH1",
+          "RenderMarkdownH2",
+          "RenderMarkdownH3",
+          "RenderMarkdownH4",
+          "RenderMarkdownH5",
+          "RenderMarkdownH6",
         },
         custom = {},
       },
@@ -183,39 +224,39 @@ return {
         render_modes = false,
         footnote = {
           superscript = true,
-          prefix = '',
-          suffix = '',
+          prefix = "",
+          suffix = "",
         },
-        image = '󰥶 ',
-        email = '󰀓 ',
-        hyperlink = '󰌹 ',
-        highlight = 'RenderMarkdownLink',
+        image = "󰥶 ",
+        email = "󰀓 ",
+        hyperlink = "󰌹 ",
+        highlight = "RenderMarkdownLink",
         wiki = {
-          icon = '󱗖 ',
+          icon = "󱗖 ",
           body = function()
             return nil
           end,
-          highlight = 'RenderMarkdownWikiLink',
+          highlight = "RenderMarkdownWikiLink",
         },
         custom = {
-          web = { pattern = '^http', icon = '󰖟 ' },
-          discord = { pattern = 'discord%.com', icon = '󰙯 ' },
-          github = { pattern = 'github%.com', icon = '󰊤 ' },
-          gitlab = { pattern = 'gitlab%.com', icon = '󰮠 ' },
-          google = { pattern = 'google%.com', icon = '󰊭 ' },
-          neovim = { pattern = 'neovim%.io', icon = ' ' },
-          reddit = { pattern = 'reddit%.com', icon = '󰑍 ' },
-          stackoverflow = { pattern = 'stackoverflow%.com', icon = '󰓌 ' },
-          wikipedia = { pattern = 'wikipedia%.org', icon = '󰖬 ' },
-          youtube = { pattern = 'youtube%.com', icon = '󰗃 ' },
+          web = { pattern = "^http", icon = "󰖟 " },
+          discord = { pattern = "discord%.com", icon = "󰙯 " },
+          github = { pattern = "github%.com", icon = "󰊤 " },
+          gitlab = { pattern = "gitlab%.com", icon = "󰮠 " },
+          google = { pattern = "google%.com", icon = "󰊭 " },
+          neovim = { pattern = "neovim%.io", icon = " " },
+          reddit = { pattern = "reddit%.com", icon = "󰑍 " },
+          stackoverflow = { pattern = "stackoverflow%.com", icon = "󰓌 " },
+          wikipedia = { pattern = "wikipedia%.org", icon = "󰖬 " },
+          youtube = { pattern = "youtube%.com", icon = "󰗃 " },
         },
       },
       quote = {
         enabled = true,
         render_modes = false,
-        icon = '▋',
+        icon = "▋",
         repeat_linebreak = false,
-        highlight = 'RenderMarkdownQuote',
+        highlight = "RenderMarkdownQuote",
       },
     },
   },
