@@ -49,9 +49,9 @@ return {
             basedpyright = {
               analysis = {
                 autoImportCompletions = true,
-                typeCheckingMode = "basic", -- Can be "off", "basic", or "strict"
+                typeCheckingMode = "off", -- Can be "off", "basic", or "strict"
                 autoSearchPaths = true,
-                diagnosticMode = "workspace", -- "openFilesOnly" or "workspace"
+                diagnosticMode = "openFilesOnly", -- "openFilesOnly" or "workspace"
                 inlayHints = {
                   variableTypes = true,
                   functionReturnTypes = true,
