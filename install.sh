@@ -46,7 +46,6 @@ git clone https://github.com/ptavares/zsh-exa.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh
 rm -rf ~/.zshrc
 stow zsh
 
-
 ####################
 #       Java       #
 ####################
@@ -59,7 +58,3 @@ xattr -r -d com.apple.quarantine /Library/Java/JavaVirtualMachines/graalvm-ce-ja
 
 # Move configuration files
 stow nvim
-
-python3 -m pip install pynvim
-
-npm i -g neovim
