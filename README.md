@@ -7,15 +7,11 @@ This repository includes the local setup that is shared across development machi
 - `tmux` (Terminal multiplexer that makes it easier to persistently work on remote machines)
 - `neovim` ("blazingly fast" text editor written in Lua)
 
-# Installation
+## Easy Installation
 
-Dependencies:
-
-- `git`
-
-Run the following script:
-
-```zsh
+```sh
+git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
+cd ${HOME}/dotfiles/
 ./install.sh
 ```
 
@@ -25,7 +21,56 @@ The script does the following:
 2. Install dependencies mentioned in `Brewfile`
 3. Move configuration files using `stow` to `~/`
 
-# LICENSE
+## Manual Installation
+
+### Clone repository
+
+```sh
+git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
+cd ${HOME}/dotfiles/
+```
+
+### Dependencies
+
+#### MacOS
+
+```sh
+brew bundle
+```
+
+#### RHEL/CentOS
+
+```sh
+sudo yum update
+sudo yum install git gcc gcc-c++ make tmux fd stow fzf ripgrep wget tree zsh
+```
+
+#### Ubuntu
+
+```sh
+sudo apt update
+sudo apt-get install git build-essential tmux stow fzf ripgrep wget tree zsh fd-find curl python3-pip
+```
+
+### Install Neovim
+
+```sh
+cd ${HOME}
+curl -LO https://github.com/neovim/neovim/releases/download/stable/nvim-linux-arm64.tar.gz
+tar xvf ${HOME}/nvim-linux-arm64.tar.gz
+ln -s ${HOME}/nvim-linux-arm64/bin/nvim /usr/local/bin/
+```
+
+### Setup all tools
+
+**note**: This introduces a lot of additional packages and configuration
+required for `tmux` and `zsh`
+
+```sh
+./install.sh
+```
+
+## LICENSE
 
 Copyright (c) 2012-2022 Scott Chacon and others
 
