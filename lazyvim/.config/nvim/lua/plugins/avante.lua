@@ -4,14 +4,15 @@ return {
   lazy = false,
   version = false, -- Set this to "*" to always pull the latest release version, or set it to false to update to the latest code changes.
   opts = {
-    -- add any opts here
-    -- for example
-    provider = "claude",
-    claude = {
-      endpoint = "https://api.anthropic.com",
-      model = "claude-3-5-sonnet-20241022", -- your desired model (or use gpt-4o, etc.)
-      timeout = 30000,                      -- timeout in milliseconds
-      -- reasoning_effort = "high" -- only supported for reasoning models (o1, etc.)
+    -- OpenRouter as primary provider
+    provider = "openrouter",
+    vendors = {
+      openrouter = {
+        __inherited_from = "openai",
+        endpoint = "https://openrouter.ai/api/v1",
+        api_key_name = "OPENROUTER_API_KEY",
+        model = "deepseek/deepseek-chat-v3-0324",
+      },
     },
   },
   -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
@@ -24,9 +25,9 @@ return {
     "MunifTanjim/nui.nvim",
     --- The below dependencies are optional,
     "nvim-telescope/telescope.nvim", -- for file_selector provider telescope
-    "hrsh7th/nvim-cmp",              -- autocompletion for avante commands and mentions
-    "nvim-tree/nvim-web-devicons",   -- or echasnovski/mini.icons
-    "zbirenbaum/copilot.lua",        -- for providers='copilot'
+    "hrsh7th/nvim-cmp", -- autocompletion for avante commands and mentions
+    "nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
+    "zbirenbaum/copilot.lua", -- for providers='copilot'
     {
       -- support for image pasting
       "HakonHarnes/img-clip.nvim",
