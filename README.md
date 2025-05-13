@@ -40,30 +40,30 @@ sudo yum install -y git gcc gcc-c++ make fd stow fzf ripgrep wget tree zsh tmux
 #### Ubuntu
 
 ```sh
-sudo apt-get install git build-essential tmux stow fzf ripgrep wget tree zsh fd-find curl python3-pip
+sudo apt-get install -y git build-essential tmux stow fzf ripgrep wget tree zsh fd-find curl python3-pip
 ```
 
 ### Clone repository
 
 ```sh
 git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
-cd ${HOME}/dotfiles/
+stow lazyvim tmux zsh
 ```
 
 ### Install Neovim
 
 ```sh
+cd ${HOME}
 curl -LO https://github.com/neovim/neovim/releases/download/stable/nvim-linux-arm64.tar.gz
 tar xvf ./nvim-linux-arm64.tar.gz
 ln -s ./nvim-linux-arm64/bin/nvim /usr/local/bin/
-stow lazyvim
+export PATH=$PATH:${HOME}/nvim-linux-arm64/bin
 ```
 
 ### Install tmux
 
 ```sh
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-stow tmux
 ```
 
 ### Install zsh
@@ -77,7 +77,8 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 git clone https://github.com/ptavares/zsh-exa.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-exa
 
-stow zsh
+rm -rf ${HOME}/.zshrc
+echo 'export PATH=$PATH:${HOME}/nvim-linux-arm64/bin' >> .zshrc
 ```
 
 ### Setup all tools
