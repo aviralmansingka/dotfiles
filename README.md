@@ -23,13 +23,6 @@ The script does the following:
 
 ## Manual Installation
 
-### Clone repository
-
-```sh
-git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
-cd ${HOME}/dotfiles/
-```
-
 ### Dependencies
 
 #### MacOS
@@ -41,24 +34,50 @@ brew bundle
 #### RHEL/CentOS
 
 ```sh
-sudo yum update
-sudo yum install git gcc gcc-c++ make tmux fd stow fzf ripgrep wget tree zsh
+sudo yum install -y git gcc gcc-c++ make fd stow fzf ripgrep wget tree zsh tmux
 ```
 
 #### Ubuntu
 
 ```sh
-sudo apt update
 sudo apt-get install git build-essential tmux stow fzf ripgrep wget tree zsh fd-find curl python3-pip
+```
+
+### Clone repository
+
+```sh
+git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
+cd ${HOME}/dotfiles/
 ```
 
 ### Install Neovim
 
 ```sh
-cd ${HOME}
 curl -LO https://github.com/neovim/neovim/releases/download/stable/nvim-linux-arm64.tar.gz
-tar xvf ${HOME}/nvim-linux-arm64.tar.gz
-ln -s ${HOME}/nvim-linux-arm64/bin/nvim /usr/local/bin/
+tar xvf ./nvim-linux-arm64.tar.gz
+ln -s ./nvim-linux-arm64/bin/nvim /usr/local/bin/
+stow lazyvim
+```
+
+### Install tmux
+
+```sh
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+stow tmux
+```
+
+### Install zsh
+
+```sh
+sh -c "RUNZSH='no' KEEP_ZSHRC='yes' $(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+# Install plugins
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+git clone https://github.com/ptavares/zsh-exa.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-exa
+
+stow zsh
 ```
 
 ### Setup all tools
