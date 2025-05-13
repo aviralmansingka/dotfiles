@@ -34,19 +34,20 @@ brew bundle
 #### RHEL/CentOS
 
 ```sh
-sudo yum install -y git gcc gcc-c++ make fd stow fzf ripgrep wget tree zsh tmux
+sudo yum install -y git gcc gcc-c++ make fd stow fzf ripgrep wget tree zsh tmux go
 ```
 
 #### Ubuntu
 
 ```sh
-sudo apt-get install -y git build-essential tmux stow fzf ripgrep wget tree zsh fd-find curl python3-pip
+sudo apt-get install -y git build-essential tmux stow fzf ripgrep wget tree zsh fd-find curl python3-pip go
 ```
 
 ### Clone repository
 
 ```sh
 git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
+cd ${HOME}/dotfiles
 stow lazyvim tmux zsh
 ```
 
