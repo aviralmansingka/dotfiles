@@ -1,49 +1,55 @@
-cask "kitty"
-brew "neovim"
+tap "homebrew/cask-fonts"
+
+brew "git"
+brew "curl"
+brew "wget"
+brew "zsh"
 brew "tmux"
+brew "neovim"
 brew "stow"
-
-cask "docker"
-
-brew "awscli"
-
-brew "kubectl"
-brew "kubectx"
-brew "k9s"
-
-brew "exa"
-brew "fd"
-brew "fzf"
 brew "gcc"
+brew "make"
+brew "go"
+brew "python3"
+brew "nodejs"
+brew "npm"
+brew "rust"
+brew "luarocks"
+brew "fd"
+brew "ripgrep"
+brew "fzf"
+brew "tree"
+brew "act"
+brew "exa"
 brew "glow"
 brew "lazygit"
 brew "protobuf"
-brew "ripgrep"
 brew "tig"
 brew "tmuxinator"
-brew "tree"
-brew "wget"
-brew "act"
-
+brew "awscli"
+brew "kubectl"
+brew "kubectx"
+brew "k9s"
 brew "openjdk@17"
 brew "google-java-format"
-
-brew "rust"
-brew "node"
-brew "golang"
 brew "pipx"
 brew "pyenv"
 
+# Terminal
+cask "kitty"
 
-brew "luarocks"
+# Containers
+cask "docker"
 
-tap "homebrew/cask-fonts"
+# Fonts
 cask "font-jetbrains-mono-nerd-font"
 cask "font-meslo-lg-nerd-font"
 cask "font-fira-code-nerd-font"
 
+# Applications
 cask "obsidian"
 cask "todoist"
 cask "google-chrome"
 cask "whatsapp"
 cask "messenger"
+

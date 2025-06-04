@@ -1,0 +1,152 @@
+# Central dependency configuration for dotfiles
+# This file defines all packages needed across different platforms
+
+categories:
+  core:
+    description: "Essential terminal and development tools"
+    packages:
+      - git
+      - curl
+      - wget
+      - zsh
+      - tmux
+      - neovim
+      - stow
+
+  development:
+    description: "Build tools and compilers"
+    packages:
+      - gcc
+      - make
+      - build-essential  # Only for apt-based systems
+
+  languages:
+    description: "Programming language runtimes"
+    packages:
+      - golang
+      - python3
+      - python3-pip
+      - nodejs
+      - npm
+      - rust
+      - luarocks
+
+  tools:
+    description: "Command-line utilities and productivity tools"
+    packages:
+      - fd
+      - ripgrep
+      - fzf
+      - tree
+      - act
+      - exa
+      - glow
+      - lazygit
+      - protobuf
+      - tig
+      - tmuxinator
+
+  cloud:
+    description: "Cloud and container tools"
+    packages:
+      - awscli
+      - kubectl
+      - kubectx
+      - k9s
+
+  java:
+    description: "Java development tools"
+    packages:
+      - openjdk@17
+      - google-java-format
+
+  python:
+    description: "Python development tools"
+    packages:
+      - pipx
+      - pyenv
+
+# OS-specific package name mappings
+package_mappings:
+  ubuntu:
+    fd: fd-find
+    build-essential: build-essential
+    python3-pip: python3-pip
+    golang: golang-go
+    awscli: awscli
+    
+  centos:
+    fd: null  # Not available, will be installed manually
+    build-essential: null  # Use gcc make instead
+    python3-pip: python3-pip
+    golang: golang
+    awscli: awscli
+    
+  alpine:
+    fd: fd
+    build-essential: null  # Use gcc musl-dev make instead
+    python3-pip: py3-pip
+    golang: go
+    awscli: aws-cli
+    
+  macos:
+    fd: fd
+    build-essential: null  # Not needed on macOS
+    python3-pip: null  # Included with python3
+    golang: go
+    awscli: awscli
+
+# OS-specific additional packages needed
+os_specific:
+  ubuntu:
+    additional:
+      - fd-find
+      - build-essential
+  centos:
+    additional:
+      - gcc-c++
+      - epel-release
+  alpine:
+    additional:
+      - musl-dev
+      - bash
+  macos:
+    additional: []
+
+# Packages that need special installation methods
+special_installations:
+  act:
+    ubuntu: "curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | bash && mv bin/act /usr/local/bin/"
+    centos: "curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | bash && mv bin/act /usr/local/bin/"
+    alpine: "curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sh && mv bin/act /usr/local/bin/"
+    macos: "brew install act"
+  
+  fzf:
+    ubuntu: "package"  # Available as package
+    centos: "git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --bin && cp ~/.fzf/bin/fzf /usr/local/bin/"
+    alpine: "package"  # Available as package  
+    macos: "package"  # Available via brew
+
+  fd_centos_substitute:
+    centos: 'printf "#!/bin/bash\nfind \"$@\" 2>/dev/null" > /usr/local/bin/fd && chmod +x /usr/local/bin/fd'
+
+# Cask applications (macOS only)
+casks:
+  terminal:
+    - kitty
+  containers:
+    - docker
+  fonts:
+    - font-jetbrains-mono-nerd-font
+    - font-meslo-lg-nerd-font  
+    - font-fira-code-nerd-font
+  applications:
+    - obsidian
+    - todoist
+    - google-chrome
+    - whatsapp
+    - messenger
+
+# Font tap for Homebrew
+taps:
+  - homebrew/cask-fonts

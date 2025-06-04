@@ -1,10 +1,14 @@
 #!/bin/bash
 
+# Dotfiles installation script
+# Dependencies are managed centrally in dependencies.yml
+# Brewfile is automatically generated from dependencies.yml via scripts/generate-brewfile.sh
+
 ####################
 #      Brew        #
 ####################
 
-# Install all dependencies from Brewfile
+# Install all dependencies from Brewfile (generated from dependencies.yml)
 brew bundle
 
 # Get developer essentials
@@ -57,4 +61,4 @@ xattr -r -d com.apple.quarantine /Library/Java/JavaVirtualMachines/graalvm-ce-ja
 ####################
 
 # Move configuration files
-stow nvim
+stow lazyvim
