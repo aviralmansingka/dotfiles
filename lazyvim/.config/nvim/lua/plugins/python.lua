@@ -37,7 +37,7 @@ return {
       },
     },
   },
-  -- Configure LSP for Python with BasedPyright
+  -- Configure LSP for Python with BasedPyright and Ruff-LSP
   {
     "neovim/nvim-lspconfig",
     ft = "python",
@@ -49,7 +49,7 @@ return {
             basedpyright = {
               analysis = {
                 autoImportCompletions = true,
-                typeCheckingMode = "off", -- Can be "off", "basic", or "strict"
+                typeCheckingMode = "basic", -- "off", "basic", or "strict"
                 autoSearchPaths = true,
                 diagnosticMode = "openFilesOnly", -- "openFilesOnly" or "workspace"
                 inlayHints = {
@@ -64,39 +64,102 @@ return {
               },
             },
           },
+          -- Add a strong override for basedpyright
+          on_attach = function(client, bufnr)
+            -- Force disable virtual text for this specific buffer
+            vim.diagnostic.config({
+              virtual_text = false,
+              underline = true,
+              severity_sort = true,
+              float = {
+                border = "rounded",
+                source = "always",
+              },
+            }, bufnr)
+            
+            -- Hook into the diagnostics callback to intercept and modify
+            local ns = vim.lsp.diagnostic.get_namespace(client.id)
+            if ns then
+              vim.diagnostic.config({virtual_text = false}, ns)
+            end
+          end,
+        },
+        ruff_lsp = {
+          -- Enable Ruff LSP for code actions
+          init_options = {
+            settings = {
+              -- Configure Ruff LSP settings
+              args = {
+                "--select=E,F,W,I,N,B,A,C4,UP,S,BLE,RUF",
+                "--line-length=100",
+                "--ignore=E203,E501,B008",
+              },
+            },
+          },
+          -- Disable virtual text for Ruff diagnostics
+          on_attach = function(client, bufnr)
+            -- Ensure diagnostics use no virtual text
+            vim.diagnostic.config({
+              virtual_text = false,
+              underline = true,
+              severity_sort = true,
+            }, bufnr)
+          end,
         },
       },
     },
   }, -- Add Python-specific diagnostic settings using autocmd
 
-  -- Ensure BasedPyright is installed via Mason
+  -- Ensure Python tools are installed via Mason
   {
     "williamboman/mason.nvim",
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, { "basedpyright" })
-      vim.list_extend(opts.ensure_installed, { "black" })
+      vim.list_extend(opts.ensure_installed, { 
+        "basedpyright",
+        "black",
+        "ruff",
+        "ruff-lsp",
+      })
     end,
   },
 
-  -- Disable Python linting via nvim-lint since we'll use BasedPyright
+  -- Configure Python linting with Ruff
   {
     "mfussenegger/nvim-lint",
     optional = true,
     opts = {
       linters_by_ft = {
-        python = {}, -- Empty array disables linters for Python
+        python = { "ruff" }, -- Use Ruff for Python linting
+      },
+      linters = {
+        ruff = {
+          -- Customize ruff arguments as needed
+          args = {
+            "--select=E,F,W,I,N,B,A,C4,UP,S,BLE,RUF",
+            "--line-length=100",
+            "--ignore=E203,E501,B008", 
+            "--preview",
+          },
+        },
       },
     },
   },
 
-  -- Configure formatting to use a single tool
+  -- Configure formatting and code actions with Ruff and Black
   {
     "stevearc/conform.nvim",
     optional = true,
     opts = {
       formatters_by_ft = {
-        python = { "black" }, -- Use only Black for formatting
+        python = { "ruff_format", "ruff_fix", "black" }, -- Run ruff first for imports/simple fixes, then black
+      },
+      formatters = {
+        ruff_fix = {
+          command = "ruff",
+          args = { "--fix", "--exit-zero", "-" },
+          stdin = true,
+        },
       },
     },
   },

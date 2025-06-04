@@ -23,6 +23,7 @@ brew "tig"
 brew "tmuxinator"
 brew "tree"
 brew "wget"
+brew "act"
 
 brew "openjdk@17"
 brew "google-java-format"
