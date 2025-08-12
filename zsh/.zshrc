@@ -79,5 +79,9 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 export PATH="/home/$USER/.local/bin:$PATH"
 
 # opencode
-export PATH=/home/$USER/.opencode/bin:$PATH
+export PATH=$PATH:$HOME/.opencode/bin
 eval "$(starship init zsh)"
+
+
+
+alias claude="$HOME/.claude/local/claude"
