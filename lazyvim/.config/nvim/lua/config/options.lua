@@ -1,18 +1,3 @@
--- Clipboard
-if vim.env.SSH_TTY then
-  vim.opt.clipboard:append("unnamedplus")
-  local function paste()
-    return vim.split(vim.fn.getreg(""), "\n")
-  end
-  vim.g.clipboard = {
-    name = "OSC 52",
-    copy = {
-      ["+"] = require("vim.ui.clipboard.osc52").copy("+"),
-      ["*"] = require("vim.ui.clipboard.osc52").copy("*"),
-    },
-    paste = {
-      ["+"] = paste,
-      ["*"] = paste,
-    },
-  }
-end
+vim.opt.termguicolors = true
+vim.o.clipboard = "unnamedplus"
+vim.g.clipboard = "osc52"

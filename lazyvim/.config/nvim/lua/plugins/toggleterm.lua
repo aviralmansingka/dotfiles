@@ -61,6 +61,24 @@ return {
 
     vim.keymap.set("n", "gG", "<cmd>lua _LAZYGIT_TOGGLE()<CR>", { desc = "Open Lazy[G]it" })
 
+    local crush = Terminal:new({
+      cmd = "opencode",
+      direction = "horizontal",
+      hidden = true,
+      on_open = function(term)
+        local opts = { noremap = true }
+        term:change_dir(vim.fn.getcwd())
+
+        vim.keymap.set("t", "<C-\\>", "<cmd>lua _OPENCODE_TOGGLE()<cr>", opts)
+        vim.keymap.set("t", "<C-]>", [[<C-\><C-n>]], opts)
+      end,
+    })
+    function _OPENCODE_TOGGLE()
+      crush:toggle(columns, "float")
+    end
+
+    vim.keymap.set("n", "gO", "<cmd>lua _OPENCODE_TOGGLE()<CR>", { desc = "Open [O]pencode" })
+
     local k9s = Terminal:new({
       cmd = "k9s",
       direction = "float",

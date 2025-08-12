@@ -1,12 +1,5 @@
 # Monarch MCP alias 
 alias monarch-env="pyenv activate monarch"
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-tput cup $LINES
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
 
 export ZSH=~/.oh-my-zsh
 
@@ -16,7 +9,7 @@ if [ ! -d $ZSH ]; then
 fi
 
 export XDG_CONFIG_HOME="$HOME/.config"
-export TERM="screen-256color"
+export TERM="xterm-256color"
 export EDITOR="nvim"
 export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
 export DISABLE_AUTO_TITLE=true
@@ -42,7 +35,6 @@ alias ka="kubectl apply"
 alias kpf="kubectl port-forward"
 export KUBECONFIG=$(find ~/.kube -maxdepth 1 -type f | tr '\n' ':')
 
-ZSH_THEME="powerlevel10k/powerlevel10k"
 DISABLE_AUTO_TITLE="true"
 
 plugins=(
@@ -60,10 +52,6 @@ plugins=(
 )
 
 source $ZSH/oh-my-zsh.sh
-
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 
 alias vim='nvim'
@@ -86,8 +74,10 @@ export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/aviralmansingka/code/haizelabs/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/aviralmansingka/code/haizelabs/google-cloud-sdk/path.zsh.inc'; fi
+export PATH=/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+export PATH="/home/$USER/.local/bin:$PATH"
 
-# The next line enables shell command completion for gcloud.
-if [ -f '/Users/aviralmansingka/code/haizelabs/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/aviralmansingka/code/haizelabs/google-cloud-sdk/completion.zsh.inc'; fi
+# opencode
+export PATH=/home/$USER/.opencode/bin:$PATH
+eval "$(starship init zsh)"
