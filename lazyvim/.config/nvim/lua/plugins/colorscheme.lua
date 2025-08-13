@@ -22,11 +22,11 @@ return {
       vim.cmd.colorscheme("gruvbox-material")
 
       -- Custom floating window background override
-      vim.api.nvim_set_hl(0, "FloatTitle", { bg = "#1d2021", fg = "#f28534" }) -- Match background with subtle border
-      vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#1d2021" }) -- Dark gruvbox background
-      vim.api.nvim_set_hl(0, "FloatBorder", { bg = "#1d2021", fg = "#504945" }) -- Match background with subtle border
-      vim.api.nvim_set_hl(0, "VertSplit", { bg = "#1d2021", fg = "#504945" }) -- Match background with subtle border
-      vim.api.nvim_set_hl(0, "TerminalNormal", { bg = "#1d2021", fg = "#ebdbb2" }) -- Terminal in floating windows
+      vim.api.nvim_set_hl(0, "FloatTitle", { bg = "#282828", fg = "#f28534" }) -- Match background with subtle border
+      vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#282828" }) -- Dark gruvbox background
+      vim.api.nvim_set_hl(0, "FloatBorder", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
+      vim.api.nvim_set_hl(0, "VertSplit", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
+      vim.api.nvim_set_hl(0, "TerminalNormal", { bg = "#282828", fg = "#ebdbb2" }) -- Terminal in floating windows
 
       -- Custom statusline highlights
       -- vim.api.nvim_set_hl(0, "StatusLine", {
@@ -40,6 +40,39 @@ return {
       --   fg = "#928374", -- Muted text
       --   bold = false
       -- })
+
+      -- Custom markdown rendering highlights for render-markdown.nvim
+      -- Gruvbox Material colors for beautiful markdown rendering
+      vim.api.nvim_set_hl(0, "RenderMarkdownH1", { fg = "#fe8019", bold = true }) -- Bright orange
+      vim.api.nvim_set_hl(0, "RenderMarkdownH2", { fg = "#83a598", bold = true }) -- Bright blue
+      vim.api.nvim_set_hl(0, "RenderMarkdownH3", { fg = "#b8bb26", bold = true }) -- Bright green
+      vim.api.nvim_set_hl(0, "RenderMarkdownH4", { fg = "#fabd2f", bold = true }) -- Bright yellow
+      vim.api.nvim_set_hl(0, "RenderMarkdownH5", { fg = "#d3869b", bold = true }) -- Bright purple
+      vim.api.nvim_set_hl(0, "RenderMarkdownH6", { fg = "#8ec07c", bold = true }) -- Bright aqua
+
+      -- Heading backgrounds (subtle)
+      vim.api.nvim_set_hl(0, "RenderMarkdownH1Bg", { bg = "#2d1b15" }) -- Dark orange background
+      vim.api.nvim_set_hl(0, "RenderMarkdownH2Bg", { bg = "#1a1f2b" }) -- Dark blue background
+      vim.api.nvim_set_hl(0, "RenderMarkdownH3Bg", { bg = "#232318" }) -- Dark green background
+      vim.api.nvim_set_hl(0, "RenderMarkdownH4Bg", { bg = "#322518" }) -- Dark yellow background
+      vim.api.nvim_set_hl(0, "RenderMarkdownH5Bg", { bg = "#2a1d23" }) -- Dark purple background
+      vim.api.nvim_set_hl(0, "RenderMarkdownH6Bg", { bg = "#1c241f" }) -- Dark aqua background
+
+      -- Code blocks and inline code
+      vim.api.nvim_set_hl(0, "RenderMarkdownCode", { bg = "#32302f", fg = "#ebdbb2" })
+      vim.api.nvim_set_hl(0, "RenderMarkdownCodeInline", { bg = "#3c3836", fg = "#fabd2f" })
+
+      -- Links
+      vim.api.nvim_set_hl(0, "RenderMarkdownLink", { fg = "#83a598", underline = true })
+      vim.api.nvim_set_hl(0, "RenderMarkdownWikiLink", { fg = "#8ec07c", underline = true })
+
+      -- Quotes
+      vim.api.nvim_set_hl(0, "RenderMarkdownQuote", { fg = "#928374", italic = true })
+
+      -- Checkboxes
+      vim.api.nvim_set_hl(0, "RenderMarkdownChecked", { fg = "#b8bb26" }) -- Green for checked
+      vim.api.nvim_set_hl(0, "RenderMarkdownUnchecked", { fg = "#fb4934" }) -- Red for unchecked
+      vim.api.nvim_set_hl(0, "RenderMarkdownTodo", { fg = "#fabd2f" }) -- Yellow for todo
     end,
   },
   {

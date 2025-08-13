@@ -57,7 +57,6 @@ source $ZSH/oh-my-zsh.sh
 alias vim='nvim'
 alias rg='rg --hidden'
 alias ls='eza --icons -l'
-alias z='zoxide'
 alias k='kubernetes'
 alias kx='kubectx'
 
@@ -81,7 +80,7 @@ export PATH="/home/$USER/.local/bin:$PATH"
 # opencode
 export PATH=$PATH:$HOME/.opencode/bin
 eval "$(starship init zsh)"
-
+eval "$(zoxide init zsh)"
 
 
 alias claude="$HOME/.claude/local/claude"
