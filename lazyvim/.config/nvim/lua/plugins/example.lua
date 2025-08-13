@@ -9,10 +9,6 @@ if true then return {} end
 -- * disable/enabled LazyVim plugins
 -- * override the configuration of LazyVim plugins
 return {
-  -- Configure LazyVim
-  {
-    "LazyVim/LazyVim",
-  },
 
   -- override nvim-cmp and add cmp-emoji
   {
@@ -105,9 +101,6 @@ return {
       }
     end,
   },
-
-  -- use mini.starter instead of alpha
-  { import = "lazyvim.plugins.extras.ui.mini-starter" },
 
   -- add jsonls and schemastore packages, and setup treesitter for json, json5 and jsonc
   { import = "lazyvim.plugins.extras.lang.json" },
