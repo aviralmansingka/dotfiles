@@ -1,0 +1,5 @@
+  [python]
+  detect_extensions = ["py"]
+  detect_files = []
+  detect_folders = []
+  scan_timeout = 10
