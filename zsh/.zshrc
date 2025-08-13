@@ -66,15 +66,18 @@ alias luamake='~/.config/lua-language-server/3rd/luamake/luamake'
 export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
 
 # Created by `pipx` on 2024-07-24 14:36:47
-export PATH="$PATH:/Users/$USER/.local/bin"
+export PATH="$PATH:$HOME/.local/bin"
 
 # pyenv
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 
+# cuda
 export PATH=/usr/local/cuda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+
+# .local/bin
 export PATH="/home/$USER/.local/bin:$PATH"
 
 # opencode
@@ -83,4 +86,12 @@ eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
 
-alias claude="$HOME/.claude/local/claude"
+# bun completions
+[ -s "/Users/aviralmansingka/.bun/_bun" ] && source "/Users/aviralmansingka/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# opencode
+export PATH=/Users/aviralmansingka/.opencode/bin:$PATH
