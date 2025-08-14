@@ -1,6 +1,3 @@
-# Monarch MCP alias 
-alias monarch-env="pyenv activate monarch"
-
 export ZSH=~/.oh-my-zsh
 
 # Install zsh if not present
@@ -33,7 +30,6 @@ alias kgs="kubectl get services"
 alias kgd="kubectl get deployments"
 alias ka="kubectl apply"
 alias kpf="kubectl port-forward"
-export KUBECONFIG=$(find ~/.kube -maxdepth 1 -type f | tr '\n' ':')
 
 DISABLE_AUTO_TITLE="true"
 
