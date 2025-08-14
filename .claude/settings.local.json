@@ -5,9 +5,13 @@
       "WebFetch(domain:github.com)",
       "Bash(git add:*)",
       "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:zellij.dev)",
+      "WebFetch(domain:sw.kovidgoyal.net)",
       "WebSearch",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(python3:*)",
+      "Bash(find:*)",
+      "mcp__notion__search",
       "Bash(~/.claude/local/claude --version)",
       "Bash(~/.claude/local/claude --help)",
       "Bash(~/.claude/local/claude --print \"test\")"

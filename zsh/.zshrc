@@ -50,6 +50,7 @@ plugins=(
 source $ZSH/oh-my-zsh.sh
 
 
+alias claude="$HOME/.claude/local/claude"
 alias vim='nvim'
 alias rg='rg --hidden'
 alias ls='eza --icons -l'
@@ -80,6 +81,7 @@ export PATH="/home/$USER/.local/bin:$PATH"
 export PATH=$PATH:$HOME/.opencode/bin
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
+eval "$(direnv hook zsh)"
 
 
 # bun completions
