@@ -3,7 +3,6 @@ local toggle_key = "<C-;>"
 return {
   "coder/claudecode.nvim",
   opts = {
-    log_level = "debug",
     terminal = {
       ---@module "snacks"
       ---@type snacks.win.Config|{}
