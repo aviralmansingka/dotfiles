@@ -91,3 +91,5 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 
 # opencode
 export PATH=/Users/aviralmansingka/.opencode/bin:$PATH
+
+alias claude="/Users/aviralmansingka/.claude/local/claude"

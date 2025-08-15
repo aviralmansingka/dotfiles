@@ -3,9 +3,19 @@
     "allow": [
       "Bash(nvim:*)",
       "WebFetch(domain:github.com)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python3:*)",
+      "Bash(~/.claude/local/claude --version)",
+      "Bash(~/.claude/local/claude --help)",
+      "Bash(~/.claude/local/claude --print \"test\")"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/Users/aviralmansingka/.cache/nvim"
+    ]
   }
 }

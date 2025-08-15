@@ -1,11 +1,9 @@
 local toggle_key = "<C-;>"
-vim.api.nvim_set_hl(0, "ClaudeCodeBorder", {
-  fg = "#fe8019", -- Bright orange from gruvbox palette
-  bg = "#282828", -- Dark background to match
-})
+
 return {
   "coder/claudecode.nvim",
   opts = {
+    log_level = "debug",
     terminal = {
       ---@module "snacks"
       ---@type snacks.win.Config|{}
