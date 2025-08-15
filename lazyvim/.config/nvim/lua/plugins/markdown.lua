@@ -373,38 +373,6 @@ return {
         },
         custom = {},
       },
-      -- Custom heading cursor line highlighting
-      on_attach = function()
-        -- Define 15% blend colors for each heading level
-        local heading_cursor_colors = {
-          ["^%s*#%s"] = "#462f2d",      -- H1 (Red 15% blend)
-          ["^%s*##%s"] = "#463529",     -- H2 (Orange 15% blend)
-          ["^%s*###%s"] = "#443c2c",    -- H3 (Yellow 15% blend)
-          ["^%s*####%s"] = "#3c3d2c",   -- H4 (Green 15% blend)
-          ["^%s*#####%s"] = "#353b39",  -- H5 (Blue 15% blend)
-          ["^%s*######%s"] = "#413639", -- H6 (Purple 15% blend)
-        }
-        
-        -- Create autocmd for heading-specific cursor line highlighting
-        vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-          buffer = 0,
-          callback = function()
-            local line = vim.api.nvim_get_current_line()
-            local cursor_color = "#32302f" -- Default cursor line color
-            
-            -- Check for heading patterns (most specific first)
-            for pattern, color in pairs(heading_cursor_colors) do
-              if line:match(pattern) then
-                cursor_color = color
-                break
-              end
-            end
-            
-            -- Apply the cursor line color
-            vim.api.nvim_set_hl(0, "CursorLine", { bg = cursor_color })
-          end,
-        })
-      end,
       link = {
         enabled = true,
         render_modes = false,
