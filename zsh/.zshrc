@@ -85,13 +85,13 @@ eval "$(direnv hook zsh)"
 
 
 # bun completions
-[ -s "/Users/aviralmansingka/.bun/_bun" ] && source "/Users/aviralmansingka/.bun/_bun"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # opencode
-export PATH=/Users/aviralmansingka/.opencode/bin:$PATH
+export PATH=$HOME/.opencode/bin:$PATH
 
-alias claude="/Users/aviralmansingka/.claude/local/claude"
+alias claude="$HOME/.claude/local/claude"
