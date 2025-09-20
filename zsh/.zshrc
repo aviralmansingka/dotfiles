@@ -23,6 +23,7 @@ export PATH="/opt/homebrew/opt/kubernetes-cli@1.22/bin:$PATH"
 export PATH="/opt/homebrew/opt/awscli@1/bin:$PATH"
 export PATH="/opt/brew/bin:$PATH"
 
+alias s="kitten ssh"
 alias k="kubectl"
 alias kg="kubectl get"
 alias kgp="kubectl get pods"
@@ -65,11 +66,6 @@ export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
 # Created by `pipx` on 2024-07-24 14:36:47
 export PATH="$PATH:$HOME/.local/bin"
 
-# pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-
 # cuda
 export PATH=/usr/local/cuda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
@@ -95,3 +91,4 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 export PATH=$HOME/.opencode/bin:$PATH
 
 alias claude="$HOME/.claude/local/claude"
+source $HOME/modal/venv/bin/activate
