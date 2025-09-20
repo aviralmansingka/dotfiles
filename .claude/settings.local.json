@@ -14,7 +14,9 @@
       "mcp__notion__search",
       "Bash(~/.claude/local/claude --version)",
       "Bash(~/.claude/local/claude --help)",
-      "Bash(~/.claude/local/claude --print \"test\")"
+      "Bash(~/.claude/local/claude --print \"test\")",
+      "Bash(chmod:*)",
+      "Bash(echo $?)"
     ],
     "deny": [],
     "ask": [],
