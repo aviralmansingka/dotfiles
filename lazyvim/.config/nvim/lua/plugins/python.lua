@@ -76,11 +76,11 @@ return {
                 source = "always",
               },
             }, bufnr)
-            
+
             -- Hook into the diagnostics callback to intercept and modify
             local ns = vim.lsp.diagnostic.get_namespace(client.id)
             if ns then
-              vim.diagnostic.config({virtual_text = false}, ns)
+              vim.diagnostic.config({ virtual_text = false }, ns)
             end
           end,
         },
@@ -115,7 +115,7 @@ return {
     "williamboman/mason.nvim",
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, { 
+      vim.list_extend(opts.ensure_installed, {
         "basedpyright",
         "black",
         "ruff",
@@ -138,7 +138,7 @@ return {
           args = {
             "--select=E,F,W,I,N,B,A,C4,UP,S,BLE,RUF",
             "--line-length=100",
-            "--ignore=E203,E501,B008", 
+            "--ignore=E203,E501,B008",
             "--preview",
           },
         },
