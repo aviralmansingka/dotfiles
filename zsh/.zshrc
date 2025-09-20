@@ -67,7 +67,8 @@ export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
 export PATH="$PATH:$HOME/.local/bin"
 
 # cuda
-export PATH=/usr/local/cuda/bin:$PATH
+export CUDA_HOME=/usr/local/cuda
+export PATH=$CUDA_HOME/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
 # .local/bin
