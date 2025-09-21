@@ -76,7 +76,7 @@ return {
         exclude = { "vue" }, -- filetypes for which you don't want to enable inlay hints
       },
       codelens = {
-        enabled = nvim_version.has_0_10,
+        enabled = false, -- Set to true to enable code lenses
       },
       capabilities = {
         workspace = {
@@ -94,18 +94,9 @@ return {
         -- Disable pyright in favor of basedpyright
         pyright = false,
       }),
-      -- you can do any additional lsp server setup here
-      -- return true if you don't want this server to be setup with lspconfig
+      -- Custom server setup functions (add here if needed)
       ---@type table<string, fun(server:string, opts:_.lspconfig.options):boolean?>
-      setup = {
-        -- example to setup with typescript.nvim
-        -- tsserver = function(_, opts)
-        --   require("typescript").setup({ server = opts })
-        --   return true
-        -- end,
-        -- Specify * to use this function as a fallback for any server
-        -- ["*"] = function(server, opts) end,
-      },
+      setup = {},
     }
     return ret
   end,
@@ -150,9 +141,6 @@ return {
         end)
       end
     end
-
-    -- Virtual text prefix is already set to simple "●" in diagnostics config
-    -- This removes the complex conditional logic that was hard to maintain
 
     vim.diagnostic.config(vim.deepcopy(opts.diagnostics))
 
