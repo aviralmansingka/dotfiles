@@ -41,24 +41,23 @@ rm -rf ~/.oh-my-zsh
 sh -c "RUNZSH='no' KEEP_ZSHRC='yes' $(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
 # Install plugins
-git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-git clone https://github.com/ptavares/zsh-exa.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-exa
 
 # Move configuration files
 rm -rf ~/.zshrc
 stow zsh
 
 ####################
-#       Java       #
+#      NeoVim      #
 ####################
 
-xattr -r -d com.apple.quarantine /Library/Java/JavaVirtualMachines/graalvm-ce-java17-22.3.0
+cargo install bob-nvim
+bob use nightly
+
+# Move configuration files
+stow lazyvim
 
 ####################
 #      NeoVim      #
 ####################
-
-# Move configuration files
-stow lazyvim

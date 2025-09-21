@@ -1,0 +1,69 @@
+# Ghostty configuration - feature identical to Kitty config
+# Gruvbox Dark colorscheme
+
+# Font configuration
+font-size = 16
+
+# Cursor configuration
+cursor-style = block
+cursor-blink = true
+cursor-blink-interval = 1000
+cursor-color = a89984
+cursor-text = background
+
+# Terminal behavior - matching Kitty's paste_actions and clipboard_control
+quote-paste-on-whitespace = true
+clipboard-read = allow
+clipboard-write = allow
+clipboard-trim-trailing-spaces = true
+
+# Colors - Gruvbox Dark theme
+background = 282828
+foreground = d4be98
+
+selection-background = d4be98
+selection-foreground = 282828
+
+# Normal colors
+palette = 0=665c54
+palette = 1=ea6962
+palette = 2=a9b665
+palette = 3=e78a4e
+palette = 4=7daea3
+palette = 5=d3869b
+palette = 6=89b482
+palette = 7=d4be98
+
+# Bright colors
+palette = 8=928374
+palette = 9=ea6962
+palette = 10=a9b665
+palette = 11=d8a657
+palette = 12=7daea3
+palette = 13=d3869b
+palette = 14=89b482
+palette = 15=d4be98
+
+# URL handling
+auto-update = off
+mouse-hide-while-typing = true
+
+# macOS specific - matching Kitty's macos_titlebar_color background
+macos-titlebar-style = hidden
+window-decoration = false
+
+# Shell integration and remote control equivalent
+shell-integration = detect
+
+# Font modifications - matching Kitty's modify_font settings
+# Ghostty handles underline styling automatically
+
+# URL styling - matching Kitty's url_style curly
+link-url = true
+
+# Tab styling to match Kitty's active/inactive tab appearance
+# Note: Ghostty handles tab styling differently than Kitty
+# The visual appearance will be similar but not identical
+
+# Undercurl support (Ghostty has built-in support)
+# No explicit configuration needed as it's enabled by default
