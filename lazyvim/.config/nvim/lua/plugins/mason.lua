@@ -10,6 +10,8 @@ return {
 
         -- Python
         "basedpyright",
+        "black",
+        "ruff",
 
         -- Go
         "gopls",
