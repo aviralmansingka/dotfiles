@@ -10,14 +10,7 @@ if true then return {} end
 -- * override the configuration of LazyVim plugins
 return {
 
-  -- override nvim-cmp and add cmp-emoji
-  {
-    "hrsh7th/nvim-cmp",
-    dependencies = { "hrsh7th/cmp-emoji" },
-    opts = function(_, opts)
-      table.insert(opts.sources, { name = "emoji" })
-    end,
-  },
+  -- Note: emoji source now configured in blink-cmp.lua via blink.compat
 
   -- change some telescope options and a keymap to browse plugin files
   {
