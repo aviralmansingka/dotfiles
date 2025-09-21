@@ -16,7 +16,9 @@
       "Bash(~/.claude/local/claude --help)",
       "Bash(~/.claude/local/claude --print \"test\")",
       "Bash(chmod:*)",
-      "Bash(echo $?)"
+      "Bash(echo $?)",
+      "Read(//Users/aviralmansingka/.config/**)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": [],

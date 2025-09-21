@@ -46,7 +46,7 @@ return {
   event = "LazyFile",
   dependencies = {
     "mason.nvim",
-    { "williamboman/mason-lspconfig.nvim", config = function() end },
+    { "mason-org/mason-lspconfig.nvim", config = function() end },
   },
   opts = function()
     ---@class PluginLspOpts
@@ -174,39 +174,6 @@ return {
         end
       end
       require("lspconfig")[server].setup(server_opts)
-    end
-
-    -- get all the servers that are available through mason-lspconfig
-    local have_mason, mlsp = pcall(require, "mason-lspconfig")
-    local all_mslp_servers = {}
-    if have_mason then
-      all_mslp_servers = vim.tbl_keys(require("mason-lspconfig.mappings.server").lspconfig_to_package)
-    end
-
-    local ensure_installed = {} ---@type string[]
-    for server, server_opts in pairs(servers) do
-      if server_opts then
-        server_opts = server_opts == true and {} or server_opts
-        if server_opts.enabled ~= false then
-          -- run manual setup if mason=false or if this is a server that cannot be installed with mason-lspconfig
-          if server_opts.mason == false or not vim.tbl_contains(all_mslp_servers, server) then
-            setup(server)
-          else
-            ensure_installed[#ensure_installed + 1] = server
-          end
-        end
-      end
-    end
-
-    if have_mason then
-      mlsp.setup({
-        ensure_installed = vim.tbl_deep_extend(
-          "force",
-          ensure_installed,
-          LazyVim.opts("mason-lspconfig.nvim").ensure_installed or {}
-        ),
-        handlers = { setup },
-      })
     end
   end,
 }
