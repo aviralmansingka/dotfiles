@@ -94,9 +94,51 @@ return {
         -- Disable pyright in favor of basedpyright
         pyright = false,
       }),
-      -- Custom server setup functions (add here if needed)
+      -- Custom server setup functions
       ---@type table<string, fun(server:string, opts:_.lspconfig.options):boolean?>
-      setup = {},
+      setup = {
+        -- Rust-specific setup
+        rust_analyzer = function(_, opts)
+          -- Custom rust-analyzer setup can go here
+          require("lspconfig").rust_analyzer.setup(opts)
+          return true
+        end,
+
+        -- Python-specific setup
+        basedpyright = function(_, opts)
+          -- Custom basedpyright setup can go here
+          require("lspconfig").basedpyright.setup(opts)
+          return true
+        end,
+
+        -- Bash-specific setup
+        bashls = function(_, opts)
+          -- Custom bashls setup can go here
+          require("lspconfig").bashls.setup(opts)
+          return true
+        end,
+
+        -- JSON-specific setup
+        jsonls = function(_, opts)
+          -- Custom jsonls setup can go here
+          require("lspconfig").jsonls.setup(opts)
+          return true
+        end,
+
+        -- YAML-specific setup
+        yamlls = function(_, opts)
+          -- Custom yamlls setup can go here
+          require("lspconfig").yamlls.setup(opts)
+          return true
+        end,
+
+        -- Clangd-specific setup
+        clangd = function(_, opts)
+          -- Custom clangd setup can go here
+          require("lspconfig").clangd.setup(opts)
+          return true
+        end,
+      },
     }
     return ret
   end,
@@ -174,6 +216,39 @@ return {
         end
       end
       require("lspconfig")[server].setup(server_opts)
+    end
+
+    -- Get all the servers that are available through mason-lspconfig
+    local have_mason, mlsp = pcall(require, "mason-lspconfig")
+    local all_mslp_servers = {}
+    if have_mason then
+      all_mslp_servers = vim.tbl_keys(require("mason-lspconfig.mappings.server").lspconfig_to_package)
+    end
+
+    local ensure_installed = {} ---@type string[]
+    for server, server_opts in pairs(servers) do
+      if server_opts then
+        server_opts = server_opts == true and {} or server_opts
+        if server_opts.enabled ~= false then
+          -- run manual setup if mason=false or if this is a server that cannot be installed with mason-lspconfig
+          if server_opts.mason == false or not vim.tbl_contains(all_mslp_servers, server) then
+            setup(server)
+          else
+            ensure_installed[#ensure_installed + 1] = server
+          end
+        end
+      end
+    end
+
+    if have_mason then
+      mlsp.setup({
+        ensure_installed = vim.tbl_deep_extend(
+          "force",
+          ensure_installed,
+          LazyVim.opts("mason-lspconfig.nvim").ensure_installed or {}
+        ),
+        handlers = { setup },
+      })
     end
   end,
 }

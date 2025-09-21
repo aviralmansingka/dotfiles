@@ -19,6 +19,9 @@ return {
         -- Rust
         "rust-analyzer",
 
+        -- C/C++
+        "clangd",
+
         -- JSON/YAML
         "json-lsp",
         "yaml-language-server",
