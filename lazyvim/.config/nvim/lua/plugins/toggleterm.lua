@@ -40,6 +40,9 @@ return {
     local columns = vim.o.columns * 0.33
     function _SHELL_TOGGLE()
       shell:toggle(columns, "float")
+      if shell:is_open() then
+        vim.cmd("startinsert")
+      end
     end
     vim.keymap.set("n", "<C-\\>", "<cmd>lua _SHELL_TOGGLE()<CR>", { desc = "Open [T]erminal" })
 
@@ -59,6 +62,9 @@ return {
     })
     function _K9S_TOGGLE()
       k9s:toggle(columns, "float")
+      if k9s:is_open() then
+        vim.cmd("startinsert")
+      end
     end
 
     vim.keymap.set("n", "gk", "<cmd>lua _K9S_TOGGLE()<CR>", { desc = "Open [K]9s" })
