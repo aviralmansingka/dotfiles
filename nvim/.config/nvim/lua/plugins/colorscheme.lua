@@ -4,9 +4,11 @@ return {
     enabled = true,
     priority = 1000,
     config = function()
+      -- Disable transparent background for Neovide compatibility
       vim.g.gruvbox_material_transparent_background = 1
+
       vim.g.gruvbox_material_foreground = "mix"
-      vim.g.gruvbox_material_background = "hard"
+      vim.g.gruvbox_material_background = "medium"
       vim.g.gruvbox_material_ui_contrast = "high"
       vim.g.gruvbox_material_float_style = "dim"
       vim.g.gruvbox_material_statusline_style = "afterglow" -- Options: "original", "material", "mix", "afterglow"

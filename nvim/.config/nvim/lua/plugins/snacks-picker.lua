@@ -46,9 +46,20 @@ return {
     {
       "<leader>fp",
       function()
-        Snacks.picker.files({ cwd = require("lazy.core.config").options.root })
+        require("project_nvim.utils").get_recent_projects()
+        vim.ui.select(require("project_nvim").get_recent_projects(), {
+          prompt = "Select Project: ",
+          format_item = function(item)
+            return vim.fn.fnamemodify(item, ":~")
+          end,
+        }, function(choice)
+          if choice then
+            vim.cmd("cd " .. choice)
+            Snacks.picker.files({ cwd = choice })
+          end
+        end)
       end,
-      desc = "Find Plugin File",
+      desc = "Find Project",
     },
   },
 }

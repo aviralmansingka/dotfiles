@@ -1,72 +1,46 @@
 return {
-  "akinsho/toggleterm.nvim",
-  version = "*",
-  opts = {
-    size = 20,
-    hide_numbers = true,
-    direction = "float",
-    shell = vim.o.shell,
-    on_create = function(term)
-      term:change_dir(vim.fn.getcwd())
-    end,
-    highlights = {
-      Normal = {
-        guibg = "black",
-      },
-      NormalFloat = {
-        link = "black",
-      },
-      FloatBorder = {
-        guifg = "black", -- set the border color
+  {
+    "folke/snacks.nvim",
+    opts = {
+      terminal = {
+        win = {
+          position = "float",
+          width = 0.9,
+          height = 0.9,
+          border = vim.g.neovide and vim.g.neovide_fancy_borders and vim.g.neovide_fancy_borders.current or "rounded",
+          backdrop = 60,
+          keys = {
+            q = "hide",
+            ["<C-\\>"] = "hide",
+            ["<C-]>"] = "term_normal",
+          },
+        },
+        singleton = true,
       },
     },
-    float_opts = {
-      border = "shadow",
-      winblend = 3,
+    keys = {
+      {
+        "<C-\\>",
+        function()
+          Snacks.terminal.toggle()
+        end,
+        desc = "Toggle [T]erminal",
+        mode = { "n", "t" },
+      },
+      {
+        "gk",
+        function()
+          Snacks.terminal.toggle("k9s", { cwd = vim.fn.getcwd() })
+        end,
+        desc = "Toggle [K]9s",
+      },
+      {
+        "gG",
+        function()
+          Snacks.lazygit()
+        end,
+        desc = "Open Lazy[G]it",
+      },
     },
   },
-  config = function()
-    local Terminal = require("toggleterm.terminal").Terminal
-    local shell = Terminal:new({
-      hidden = true,
-      on_open = function(term)
-        local opts = { noremap = true }
-        term:change_dir(vim.fn.getcwd())
-
-        vim.keymap.set("t", "<C-\\>", "<cmd>lua _SHELL_TOGGLE()<cr>", opts)
-        vim.keymap.set("t", "<C-]>", [[<C-\><C-n>]], opts)
-      end,
-    })
-    local columns = vim.o.columns * 0.33
-    function _SHELL_TOGGLE()
-      shell:toggle(columns, "float")
-      if shell:is_open() then
-        vim.cmd("startinsert")
-      end
-    end
-    vim.keymap.set("n", "<C-\\>", "<cmd>lua _SHELL_TOGGLE()<CR>", { desc = "Open [T]erminal" })
-
-    vim.keymap.set("n", "gG", "<cmd>lua Snacks.lazygit()<CR>", { desc = "Open Lazy[G]it" })
-
-    local k9s = Terminal:new({
-      cmd = "k9s",
-      direction = "float",
-      hidden = true,
-      on_open = function(term)
-        local opts = { noremap = true }
-        term:change_dir(vim.fn.getcwd())
-
-        vim.keymap.set("t", "<C-\\>", "<cmd>lua _K9S_TOGGLE()<cr>", opts)
-        vim.keymap.set("t", "<C-]>", [[<C-\><C-n>]], opts)
-      end,
-    })
-    function _K9S_TOGGLE()
-      k9s:toggle(columns, "float")
-      if k9s:is_open() then
-        vim.cmd("startinsert")
-      end
-    end
-
-    vim.keymap.set("n", "gk", "<cmd>lua _K9S_TOGGLE()<CR>", { desc = "Open [K]9s" })
-  end,
 }
