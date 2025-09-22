@@ -10,7 +10,8 @@
       "WebSearch",
       "Bash(python3:*)",
       "Bash(find:*)",
-      "mcp__notion__search"
+      "mcp__notion__search",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": [],
