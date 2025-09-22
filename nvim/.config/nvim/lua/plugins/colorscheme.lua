@@ -9,7 +9,7 @@ return {
       vim.g.gruvbox_material_background = "hard"
       vim.g.gruvbox_material_ui_contrast = "high"
       vim.g.gruvbox_material_float_style = "dim"
-      vim.g.gruvbox_material_statusline_style = "mix" -- Options: "original", "material", "mix", "afterglow"
+      vim.g.gruvbox_material_statusline_style = "afterglow" -- Options: "original", "material", "mix", "afterglow"
       vim.g.gruvbox_material_cursor = "auto"
       vim.g.gruvbox_material_enable_italic = 1
       vim.g.gruvbox_material_enable_bold = 1
