@@ -57,16 +57,46 @@ return {
       {
         "<leader>jt",
         function()
-          local daily_notes_dir = vim.fn.expand("~/obsidian/personal/journal/")
+          local journal_dir = vim.fn.expand("~/obsidian/personal/journal/")
 
-          -- Create the directory if it doesn't exist
-          if vim.fn.isdirectory(daily_notes_dir) == 0 then
-            vim.fn.mkdir(daily_notes_dir, "p")
+          -- Calculate current week folder (ISO week format)
+          local year = tonumber(os.date("%Y"))
+          local month = tonumber(os.date("%m"))
+          local day = tonumber(os.date("%d"))
+
+          -- Calculate ISO week number (Monday as start of week)
+          local jan1 = os.time({year=year, month=1, day=1})
+          local jan1_wday = tonumber(os.date("%w", jan1)) -- 0=Sunday, 1=Monday, etc
+          local jan1_monday = jan1 - ((jan1_wday == 0 and 6 or jan1_wday - 1) * 24 * 3600)
+
+          local today_time = os.time({year=year, month=month, day=day})
+          local days_since_jan1_monday = math.floor((today_time - jan1_monday) / (24 * 3600))
+          local week_num = math.floor(days_since_jan1_monday / 7) + 1
+
+          -- Handle year boundary cases
+          if week_num < 1 then
+            year = year - 1
+            week_num = 52 -- Approximate, could be 53
+          elseif week_num > 52 then
+            -- Check if this should be week 1 of next year
+            local dec31 = os.time({year=year, month=12, day=31})
+            local dec31_wday = tonumber(os.date("%w", dec31))
+            if dec31_wday < 4 then -- Thursday or earlier
+              year = year + 1
+              week_num = 1
+            end
+          end
+
+          local week_folder = string.format("%s/%d-W%02d", journal_dir, year, week_num)
+
+          -- Create the weekly directory if it doesn't exist
+          if vim.fn.isdirectory(week_folder) == 0 then
+            vim.fn.mkdir(week_folder, "p")
           end
 
           -- Format today's date as YYYY-MM-DD
           local today = os.date("%Y-%m-%d")
-          local filename = daily_notes_dir .. "/" .. today .. ".md"
+          local filename = week_folder .. "/" .. today .. ".md"
 
           -- Check if the file already exists
           if vim.fn.filereadable(filename) == 1 then
@@ -100,11 +130,24 @@ return {
                 "- [ ] Superhuman",
                 "- [ ] Stretch",
                 "",
+                "## Life Situation Tracking",
+                "",
+                "- **Decision complexity** (1-5): _/5",
+                "- **Social interaction richness** (0-3): _/3",
+                "- **Learning/curiosity activation**: [ ] Yes",
+                "- **Life planning mode**: [ ] Yes",
+                "- **Processing need** (1-5): _/5",
+                "- **Timeline consciousness**: [ ] Yes",
+                "- **Location variety** (1-3): _/3",
+                "- **Relationship interaction quality** (1-5): _/5",
+                "",
                 "## Journal",
                 "",
                 "### Timeline",
                 "",
                 "### Reflections",
+                "",
+                "### Questions of the day",
                 "",
               }
             end
@@ -128,7 +171,8 @@ return {
 
           local function get_todos()
             local todos = {}
-            local files = vim.fn.glob(journal_dir .. "*.md", false, true)
+            -- Get all markdown files from weekly folders
+            local files = vim.fn.glob(journal_dir .. "*/**.md", false, true)
 
             for _, file in ipairs(files) do
               local lines = vim.fn.readfile(file)
@@ -185,7 +229,8 @@ return {
 
           local function get_todos_with_tags()
             local todos = {}
-            local files = vim.fn.glob(journal_dir .. "*.md", false, true)
+            -- Get all markdown files from weekly folders
+            local files = vim.fn.glob(journal_dir .. "*/**.md", false, true)
 
             for _, file in ipairs(files) do
               local lines = vim.fn.readfile(file)
