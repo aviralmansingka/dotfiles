@@ -4,13 +4,6 @@
 # Font configuration
 font-size = 16
 
-# Cursor configuration
-cursor-style = block
-cursor-blink = true
-cursor-blink-interval = 1000
-cursor-color = a89984
-cursor-text = background
-
 # Terminal behavior - matching Kitty's paste_actions and clipboard_control
 quote-paste-on-whitespace = true
 clipboard-read = allow
@@ -47,10 +40,13 @@ palette = 15=d4be98
 # URL handling
 auto-update = off
 mouse-hide-while-typing = true
+mouse-scroll-multiplier = 2
 
 # macOS specific - matching Kitty's macos_titlebar_color background
 macos-titlebar-style = hidden
 window-decoration = true
+window-colorspace = "display-p3"
+window-save-state = always
 
 # Shell integration and remote control equivalent
 shell-integration = detect
