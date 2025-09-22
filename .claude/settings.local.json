@@ -11,7 +11,10 @@
       "Bash(python3:*)",
       "Bash(find:*)",
       "mcp__notion__search",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:nickjanetakis.com)",
+      "WebFetch(domain:yeripratama.com)",
+      "WebFetch(domain:medium.com)"
     ],
     "deny": [],
     "ask": [],

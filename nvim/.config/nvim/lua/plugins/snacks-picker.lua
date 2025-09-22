@@ -42,19 +42,26 @@ return {
     },
   },
   keys = {
-    -- Replace the custom find plugin files keymap from example.lua
+    -- Find Project functionality
     {
       "<leader>fp",
       function()
-        require("project_nvim.utils").get_recent_projects()
-        vim.ui.select(require("project_nvim").get_recent_projects(), {
+        local project_nvim = require("project_nvim")
+        local recent_projects = project_nvim.get_recent_projects()
+
+        if not recent_projects or #recent_projects == 0 then
+          vim.notify("No recent projects found", vim.log.levels.WARN)
+          return
+        end
+
+        vim.ui.select(recent_projects, {
           prompt = "Select Project: ",
           format_item = function(item)
             return vim.fn.fnamemodify(item, ":~")
           end,
         }, function(choice)
           if choice then
-            vim.cmd("cd " .. choice)
+            vim.cmd("cd " .. vim.fn.fnameescape(choice))
             Snacks.picker.files({ cwd = choice })
           end
         end)

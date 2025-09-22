@@ -1,7 +1,7 @@
 return {
   "nvim-lualine/lualine.nvim",
   event = "VeryLazy",
-  opts = function()
+  config = function()
     -- Gruvbox Material colors matching your colorscheme.lua
     local colors = {
       bg = "#282828", -- Dark gruvbox background
@@ -51,10 +51,124 @@ return {
       },
     }
 
-    return {
+    -- Helper functions for custom components
+    local function battery_status()
+      local battery_file = "/sys/class/power_supply/BAT0/capacity"
+      local status_file = "/sys/class/power_supply/BAT0/status"
+
+      local handle = io.open(battery_file, "r")
+      if not handle then return "" end
+
+      local capacity = handle:read("*n")
+      handle:close()
+
+      local status_handle = io.open(status_file, "r")
+      local status = "Unknown"
+      if status_handle then
+        status = status_handle:read("*l")
+        status_handle:close()
+      end
+
+      local icon = status == "Charging" and "󰂄" or "󰁹"
+      local color = capacity > 20 and colors.green or capacity > 10 and colors.yellow or colors.red
+
+      return string.format("%s %d%%", icon, capacity)
+    end
+
+    local function git_ahead_behind()
+      local handle = io.popen("git rev-list --count --left-right @{upstream}...HEAD 2>/dev/null")
+      if not handle then return "" end
+
+      local result = handle:read("*l")
+      handle:close()
+
+      if not result then return "" end
+
+      local behind, ahead = result:match("(%d+)%s+(%d+)")
+      if not behind or not ahead then return "" end
+
+      local parts = {}
+      if tonumber(ahead) > 0 then
+        table.insert(parts, "↑" .. ahead)
+      end
+      if tonumber(behind) > 0 then
+        table.insert(parts, "↓" .. behind)
+      end
+
+      return table.concat(parts, " ")
+    end
+
+    local function git_stash_count()
+      local handle = io.popen("git stash list 2>/dev/null | wc -l")
+      if not handle then return "" end
+
+      local count = handle:read("*n")
+      handle:close()
+
+      return count and count > 0 and "󰆓 " .. count or ""
+    end
+
+    local function lsp_clients()
+      local clients = vim.lsp.get_active_clients({ bufnr = 0 })
+      if #clients == 0 then return "" end
+
+      local names = {}
+      for _, client in pairs(clients) do
+        table.insert(names, client.name)
+      end
+
+      return "󰅡 " .. table.concat(names, ",")
+    end
+
+    local function k8s_context()
+      local handle = io.popen("kubectl config current-context 2>/dev/null")
+      if not handle then return "" end
+
+      local context = handle:read("*l")
+      handle:close()
+
+      return context and "󱃾 " .. context:gsub("^.*%-", "") or ""
+    end
+
+    -- Mode icons
+    local mode_icons = {
+      n = "󰋜",
+      i = "󰏫",
+      v = "󰸞",
+      [""] = "󰸞",
+      V = "󰸞",
+      c = "󰘳",
+      no = "N",
+      s = "S",
+      S = "S",
+      [""] = "S",
+      ic = "I",
+      R = "R",
+      Rv = "R",
+      cv = "C",
+      ce = "C",
+      r = "R",
+      rm = "R",
+      ["r?"] = "R",
+      ["!"] = "!",
+      t = "󰙀",
+    }
+
+    -- Auto-hide lualine in terminal buffers
+    vim.api.nvim_create_autocmd({ "BufEnter", "TermOpen" }, {
+      callback = function()
+        if vim.bo.buftype == "terminal" then
+          vim.opt_local.laststatus = 0
+        else
+          vim.opt.laststatus = 3 -- global statusline
+        end
+      end,
+    })
+
+    require("lualine").setup({
       options = {
         theme = gruvbox_theme,
-        component_separators = { left = "", right = "" },
+        component_separators = { left = "󰿟", right = "󰿢" },
         section_separators = { left = "", right = "" },
         globalstatus = true,
         disabled_filetypes = { statusline = { "dashboard", "alpha" } },
@@ -64,12 +178,31 @@ return {
           {
             "mode",
             fmt = function(str)
-              return str:sub(1, 1) -- Show only first character of mode
+              local mode = vim.fn.mode()
+              return (mode_icons[mode] or str:sub(1, 1)) .. " " .. str:sub(1, 1)
             end,
           },
         },
         lualine_b = {
-          { "branch", color = { fg = colors.orange } },
+          {
+            "branch",
+            icon = "󰊢",
+            color = { fg = colors.orange }
+          },
+          {
+            git_ahead_behind,
+            color = { fg = colors.blue },
+            cond = function()
+              return vim.fn.isdirectory('.git') == 1
+            end,
+          },
+          {
+            git_stash_count,
+            color = { fg = colors.purple },
+            cond = function()
+              return vim.fn.isdirectory('.git') == 1
+            end,
+          },
           {
             "diff",
             symbols = { added = " ", modified = " ", removed = " " },
@@ -100,10 +233,40 @@ return {
         },
         lualine_x = {
           {
+            lsp_clients,
+            color = { fg = colors.green },
+            cond = function()
+              return #vim.lsp.get_active_clients({ bufnr = 0 }) > 0
+            end,
+          },
+          {
+            k8s_context,
+            color = { fg = colors.blue },
+            cond = function()
+              return vim.fn.executable("kubectl") == 1
+            end,
+          },
+          {
+            battery_status,
+            color = function()
+              local battery_file = "/sys/class/power_supply/BAT0/capacity"
+              local handle = io.open(battery_file, "r")
+              if not handle then return { fg = colors.light_gray } end
+
+              local capacity = handle:read("*n")
+              handle:close()
+
+              return { fg = capacity > 20 and colors.green or capacity > 10 and colors.yellow or colors.red }
+            end,
+            cond = function()
+              return io.open("/sys/class/power_supply/BAT0/capacity", "r") ~= nil
+            end,
+          },
+          {
             "filetype",
             colored = true,
             icon_only = false,
-            color = { fg = colors.blue },
+            color = { fg = colors.purple },
           },
           {
             "encoding",
@@ -135,6 +298,6 @@ return {
         lualine_z = {},
       },
       extensions = { "lazy", "mason", "oil" },
-    }
+    })
   end,
 }
