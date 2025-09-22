@@ -27,7 +27,7 @@ brew "k9s"
 brew "uv"
 
 # Terminal
-cask "kitty"
+cask "neovide"
 cask "ghostty"
 cask "nikitabobko/tap/aerospace"
 
@@ -40,6 +40,9 @@ cask "font-meslo-lg-nerd-font"
 cask "font-fira-code-nerd-font"
 
 # Applications
+cask "superhuman"
+cask "slack"
+cask "notion"
 cask "obsidian"
 cask "google-chrome"
 cask "whatsapp"

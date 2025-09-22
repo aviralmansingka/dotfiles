@@ -18,14 +18,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu, centos, alpine]
+        platform: [ubuntu, alpine]
         include:
           - platform: ubuntu
             dockerfile: tests/docker/ubuntu.Dockerfile
             image_tag: dotfiles-test-ubuntu
-          - platform: centos  
-            dockerfile: tests/docker/centos.Dockerfile
-            image_tag: dotfiles-test-centos
           - platform: alpine
             dockerfile: tests/docker/alpine.Dockerfile
             image_tag: dotfiles-test-alpine
@@ -256,7 +253,6 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Tested Platforms:" >> $GITHUB_STEP_SUMMARY
         echo "- Ubuntu 22.04 (Container + Native)" >> $GITHUB_STEP_SUMMARY
-        echo "- CentOS Stream 9 (Container)" >> $GITHUB_STEP_SUMMARY  
         echo "- Alpine Linux (Container)" >> $GITHUB_STEP_SUMMARY
         echo "- macOS Latest (Native)" >> $GITHUB_STEP_SUMMARY
         

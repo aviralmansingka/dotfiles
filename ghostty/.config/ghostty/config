@@ -50,7 +50,7 @@ mouse-hide-while-typing = true
 
 # macOS specific - matching Kitty's macos_titlebar_color background
 macos-titlebar-style = hidden
-window-decoration = false
+window-decoration = true
 
 # Shell integration and remote control equivalent
 shell-integration = detect
@@ -67,3 +67,4 @@ link-url = true
 
 # Undercurl support (Ghostty has built-in support)
 # No explicit configuration needed as it's enabled by default
+keybind = shift+enter=text:\x1b\r

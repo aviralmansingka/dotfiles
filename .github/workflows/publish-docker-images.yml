@@ -25,16 +25,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu, centos, alpine]
+        platform: [ubuntu, alpine]
         include:
           - platform: ubuntu
             dockerfile: tests/docker/ubuntu.Dockerfile
             description: "Ubuntu-based development environment with dotfiles tools"
             base_image: "ubuntu:22.04"
-          - platform: centos
-            dockerfile: tests/docker/centos.Dockerfile
-            description: "CentOS Stream 9 development environment with dotfiles tools"
-            base_image: "quay.io/centos/centos:stream9"
           - platform: alpine
             dockerfile: tests/docker/alpine.Dockerfile
             description: "Alpine Linux lightweight development environment with dotfiles tools"
@@ -118,7 +114,6 @@ jobs:
         echo "| Platform | Image | Pull Command |" >> $GITHUB_STEP_SUMMARY
         echo "|----------|-------|--------------|" >> $GITHUB_STEP_SUMMARY
         echo "| Ubuntu 22.04 | \`ghcr.io/${{ github.repository }}-ubuntu:latest\` | \`docker pull ghcr.io/${{ github.repository }}-ubuntu:latest\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| CentOS Stream 9 | \`ghcr.io/${{ github.repository }}-centos:latest\` | \`docker pull ghcr.io/${{ github.repository }}-centos:latest\` |" >> $GITHUB_STEP_SUMMARY
         echo "| Alpine Linux | \`ghcr.io/${{ github.repository }}-alpine:latest\` | \`docker pull ghcr.io/${{ github.repository }}-alpine:latest\` |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🛠️ What's Included" >> $GITHUB_STEP_SUMMARY
@@ -152,7 +147,7 @@ jobs:
       security-events: write
     strategy:
       matrix:
-        platform: [ubuntu, centos, alpine]
+        platform: [ubuntu, alpine]
     steps:
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master

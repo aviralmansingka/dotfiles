@@ -1,4 +1,4 @@
-export ZSH=~/.oh-my-zsh
+export ZSH=$HOME/.oh-my-zsh
 
 # Install zsh if not present
 if [ ! -d $ZSH ]; then
@@ -35,6 +35,8 @@ plugins=(
   history
   catimg
 )
+
+source $ZSH/oh-my-zsh.sh
 
 # cuda
 export CUDA_HOME=/usr/local/cuda
