@@ -1,0 +1,164 @@
+{
+  "categories": {
+    "core": {
+      "description": "Essential terminal and development tools",
+      "packages": [
+        "git",
+        "curl",
+        "wget",
+        "zsh",
+        "tmux",
+        "neovim",
+        "stow"
+      ]
+    },
+    "development": {
+      "description": "Build tools and compilers",
+      "packages": [
+        "gcc",
+        "make",
+        "build-essential"
+      ]
+    },
+    "languages": {
+      "description": "Programming language runtimes",
+      "packages": [
+        "golang",
+        "python3",
+        "python3-pip",
+        "nodejs",
+        "npm",
+        "rust",
+        "luarocks"
+      ]
+    },
+    "tools": {
+      "description": "Command-line utilities and productivity tools",
+      "packages": [
+        "fd",
+        "ripgrep",
+        "fzf",
+        "tree",
+        "yq",
+        "eza",
+        "lazygit",
+        "tig",
+        "tmuxinator"
+      ]
+    },
+    "cloud": {
+      "description": "Cloud and container tools",
+      "packages": [
+        "awscli",
+        "kubectl",
+        "kubectx",
+        "k9s"
+      ]
+    },
+    "python": {
+      "description": "Python development tools",
+      "packages": [
+        "uv"
+      ]
+    }
+  },
+  "package_mappings": {
+    "ubuntu": {
+      "fd": "fd-find",
+      "build-essential": "build-essential",
+      "python3-pip": "python3-pip",
+      "golang": "golang-go",
+      "awscli": "awscli",
+      "rust": "cargo"
+    },
+    "alpine": {
+      "fd": "fd",
+      "build-essential": null,
+      "python3-pip": "py3-pip",
+      "golang": "go",
+      "awscli": "aws-cli"
+    },
+    "macos": {
+      "fd": "fd",
+      "build-essential": null,
+      "python3-pip": null,
+      "golang": "go",
+      "awscli": "awscli"
+    }
+  },
+  "os_specific": {
+    "ubuntu": {
+      "additional": [
+        "fd-find",
+        "build-essential"
+      ]
+    },
+    "alpine": {
+      "additional": [
+        "musl-dev",
+        "bash"
+      ]
+    },
+    "macos": {
+      "additional": []
+    }
+  },
+  "special_installations": {
+    "fzf": {
+      "ubuntu": "package",
+      "alpine": "package",
+      "macos": "package"
+    },
+    "eza": {
+      "ubuntu": "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then EZA_ARCH=\"x86_64\"; else EZA_ARCH=\"aarch64\"; fi && wget -qO eza.tar.gz https://github.com/eza-community/eza/releases/latest/download/eza_${EZA_ARCH}-unknown-linux-gnu.tar.gz && tar -xzf eza.tar.gz && chmod +x eza && mv eza /usr/local/bin/eza && rm eza.tar.gz"
+    },
+    "k9s": {
+      "ubuntu": "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then K9S_ARCH=\"amd64\"; else K9S_ARCH=\"arm64\"; fi && wget https://github.com/derailed/k9s/releases/latest/download/k9s_linux_${K9S_ARCH}.deb && apt install -y ./k9s_linux_${K9S_ARCH}.deb && rm k9s_linux_${K9S_ARCH}.deb"
+    },
+    "kubectl": {
+      "ubuntu": "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then KUBECTL_ARCH=\"amd64\"; else KUBECTL_ARCH=\"arm64\"; fi && curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${KUBECTL_ARCH}/kubectl\" && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && rm kubectl"
+    },
+    "kubectx": {
+      "ubuntu": "git clone https://github.com/ahmetb/kubectx /opt/kubectx && ln -s /opt/kubectx/kubectx /usr/local/bin/kubectx && ln -s /opt/kubectx/kubens /usr/local/bin/kubens"
+    },
+    "lazygit": {
+      "ubuntu": "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then LAZYGIT_ARCH=\"x86_64\"; else LAZYGIT_ARCH=\"arm64\"; fi && LAZYGIT_VERSION=$(curl -s \"https://api.github.com/repos/jesseduffield/lazygit/releases/latest\" | grep -Po '\"tag_name\": \"v\\K[^\"]*') && curl -Lo lazygit.tar.gz \"https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${LAZYGIT_ARCH}.tar.gz\" && tar xf lazygit.tar.gz lazygit && install lazygit -D -t /usr/local/bin/ && rm lazygit.tar.gz lazygit"
+    },
+    "rust": {
+      "ubuntu": "package"
+    },
+    "uv": {
+      "ubuntu": "curl -LsSf https://astral.sh/uv/install.sh | sh && mv /root/.local/bin/uv /usr/local/bin/uv"
+    },
+    "yq": {
+      "ubuntu": "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then YQ_ARCH=\"amd64\"; else YQ_ARCH=\"arm64\"; fi && wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${YQ_ARCH} && chmod +x /usr/local/bin/yq"
+    }
+  },
+  "casks": {
+    "terminal": [
+      "neovide",
+      "ghostty",
+      "nikitabobko/tap/aerospace"
+    ],
+    "containers": [
+      "docker"
+    ],
+    "fonts": [
+      "font-jetbrains-mono-nerd-font",
+      "font-meslo-lg-nerd-font",
+      "font-fira-code-nerd-font"
+    ],
+    "applications": [
+      "superhuman",
+      "slack",
+      "notion",
+      "obsidian",
+      "google-chrome",
+      "whatsapp",
+      "messenger"
+    ]
+  },
+  "taps": [
+    "homebrew/cask-fonts"
+  ]
+}

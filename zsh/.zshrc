@@ -11,7 +11,7 @@ alias ls='eza --icons -l'
 alias claude="${HOME}/.claude/local/claude"
 
 export XDG_CONFIG_HOME="$HOME/.config"
-export TERM="xterm-256color"
+export TERM="xterm-ghostty"
 export EDITOR="nvim"
 export FZF_DEFAULT_COMMAND='rg --hidden --ignore .git -g ""'
 export DISABLE_AUTO_TITLE=true
