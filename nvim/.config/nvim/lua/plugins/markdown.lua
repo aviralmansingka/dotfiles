@@ -125,10 +125,6 @@ return {
         "<leader>ft",
         function()
           local journal_dir = vim.fn.expand("~/obsidian/personal/journal/")
-          local pickers = require("telescope.pickers")
-          local finders = require("telescope.finders")
-          local conf = require("telescope.config").values
-          local previewers = require("telescope.previewers")
 
           local function get_todos()
             local todos = {}
@@ -153,12 +149,13 @@ return {
                 if not in_habit_section and line:match("^%s*- %[ %]") then
                   local todo_text = line:match("^%s*- %[ %] (.+)")
                   if todo_text then
+                    local filename = vim.fn.fnamemodify(file, ":t")
+                    local display = string.format("%s:%d [%s] %s", filename, i, current_section or "General", todo_text)
                     table.insert(todos, {
+                      text = display,
                       file = file,
-                      line_number = i,
-                      text = todo_text,
-                      full_line = line,
-                      section = current_section,
+                      line = i,
+                      col = 1,
                     })
                   end
                 end
@@ -168,28 +165,16 @@ return {
             return todos
           end
 
-          pickers
-            .new({}, {
-              prompt_title = "Journal Todos (excluding Habit Tracking)",
-              finder = finders.new_table({
-                results = get_todos(),
-                entry_maker = function(entry)
-                  local filename = vim.fn.fnamemodify(entry.file, ":t")
-                  local display =
-                    string.format("%s:%d [%s] %s", filename, entry.line_number, entry.section or "General", entry.text)
-                  return {
-                    value = entry,
-                    display = display,
-                    ordinal = entry.text,
-                    filename = entry.file,
-                    lnum = entry.line_number,
-                  }
-                end,
-              }),
-              sorter = conf.generic_sorter({}),
-              previewer = previewers.vim_buffer_cat.new({}),
-            })
-            :find()
+          Snacks.picker.pick({
+            source = {
+              name = "journal-todos",
+              get = get_todos,
+            },
+            title = "Journal Todos (excluding Habit Tracking)",
+            preview = {
+              type = "file",
+            },
+          })
         end,
         desc = "Find todos in journal files (excluding habits)",
       },
@@ -197,12 +182,6 @@ return {
         "<leader>fT",
         function()
           local journal_dir = vim.fn.expand("~/obsidian/personal/journal/")
-          local pickers = require("telescope.pickers")
-          local finders = require("telescope.finders")
-          local conf = require("telescope.config").values
-          local previewers = require("telescope.previewers")
-          local actions = require("telescope.actions")
-          local action_state = require("telescope.actions.state")
 
           local function get_todos_with_tags()
             local todos = {}
@@ -231,13 +210,23 @@ return {
                       table.insert(tags, tag)
                     end
 
+                    local filename = vim.fn.fnamemodify(file, ":t")
+                    local tags_str = #tags > 0 and (" #" .. table.concat(tags, " #")) or ""
+                    local display = string.format(
+                      "%s:%d [%s] %s%s",
+                      filename,
+                      i,
+                      current_section or "General",
+                      todo_text,
+                      tags_str
+                    )
                     table.insert(todos, {
+                      text = display,
                       file = file,
-                      line_number = i,
-                      text = todo_text,
-                      full_line = line,
-                      section = current_section,
+                      line = i,
+                      col = 1,
                       tags = tags,
+                      todo_text = todo_text,
                     })
                   end
                 end
@@ -247,35 +236,16 @@ return {
             return todos
           end
 
-          pickers
-            .new({}, {
-              prompt_title = "Journal Todos by Tag (type #tagname to filter)",
-              finder = finders.new_table({
-                results = get_todos_with_tags(),
-                entry_maker = function(entry)
-                  local filename = vim.fn.fnamemodify(entry.file, ":t")
-                  local tags_str = #entry.tags > 0 and (" #" .. table.concat(entry.tags, " #")) or ""
-                  local display = string.format(
-                    "%s:%d [%s] %s%s",
-                    filename,
-                    entry.line_number,
-                    entry.section or "General",
-                    entry.text,
-                    tags_str
-                  )
-                  return {
-                    value = entry,
-                    display = display,
-                    ordinal = entry.text .. " " .. table.concat(entry.tags, " "),
-                    filename = entry.file,
-                    lnum = entry.line_number,
-                  }
-                end,
-              }),
-              sorter = conf.generic_sorter({}),
-              previewer = previewers.vim_buffer_cat.new({}),
-            })
-            :find()
+          Snacks.picker.pick({
+            source = {
+              name = "journal-todos-tags",
+              get = get_todos_with_tags,
+            },
+            title = "Journal Todos by Tag (type #tagname to filter)",
+            preview = {
+              type = "file",
+            },
+          })
         end,
         desc = "Find todos by tag in journal files",
       },
