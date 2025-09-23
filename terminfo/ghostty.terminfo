@@ -1,0 +1,9 @@
+# Ghostty terminal info
+ghostty|Ghostty terminal emulator,
+    use=xterm-256color,
+    Tc,
+    RGB,
+    sitm=\E[3m,
+    ritm=\E[23m,
+    smulx=\E[4::%p1%dm,
+    setulc=\E[58::2::%p1%{65536}%/%d::%p1%{256}%/%{255}%&%d::%p1%{255}%&%d%;m,

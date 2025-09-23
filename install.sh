@@ -49,6 +49,19 @@ rm -rf ~/.zshrc
 stow zsh
 
 ####################
+#      Terminfo     #
+####################
+
+# Install custom terminfo entries
+if command -v tic &> /dev/null; then
+    echo "Installing custom terminfo entries..."
+    tic -x terminfo/ghostty.terminfo
+    echo "Terminfo entries installed"
+else
+    echo "Warning: tic command not found, skipping terminfo installation"
+fi
+
+####################
 #      NeoVim      #
 ####################
 
@@ -57,7 +70,3 @@ bob use nightly
 
 # Move configuration files
 stow lazyvim
-
-####################
-#      NeoVim      #
-####################
