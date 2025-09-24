@@ -57,7 +57,9 @@ return {
       local status_file = "/sys/class/power_supply/BAT0/status"
 
       local handle = io.open(battery_file, "r")
-      if not handle then return "" end
+      if not handle then
+        return ""
+      end
 
       local capacity = handle:read("*n")
       handle:close()
@@ -77,15 +79,21 @@ return {
 
     local function git_ahead_behind()
       local handle = io.popen("git rev-list --count --left-right @{upstream}...HEAD 2>/dev/null")
-      if not handle then return "" end
+      if not handle then
+        return ""
+      end
 
       local result = handle:read("*l")
       handle:close()
 
-      if not result then return "" end
+      if not result then
+        return ""
+      end
 
       local behind, ahead = result:match("(%d+)%s+(%d+)")
-      if not behind or not ahead then return "" end
+      if not behind or not ahead then
+        return ""
+      end
 
       local parts = {}
       if tonumber(ahead) > 0 then
@@ -100,7 +108,9 @@ return {
 
     local function git_stash_count()
       local handle = io.popen("git stash list 2>/dev/null | wc -l")
-      if not handle then return "" end
+      if not handle then
+        return ""
+      end
 
       local count = handle:read("*n")
       handle:close()
@@ -110,7 +120,9 @@ return {
 
     local function lsp_clients()
       local clients = vim.lsp.get_active_clients({ bufnr = 0 })
-      if #clients == 0 then return "" end
+      if #clients == 0 then
+        return ""
+      end
 
       local names = {}
       for _, client in pairs(clients) do
@@ -122,7 +134,9 @@ return {
 
     local function k8s_context()
       local handle = io.popen("kubectl config current-context 2>/dev/null")
-      if not handle then return "" end
+      if not handle then
+        return ""
+      end
 
       local context = handle:read("*l")
       handle:close()
@@ -187,20 +201,20 @@ return {
           {
             "branch",
             icon = "󰊢",
-            color = { fg = colors.orange }
+            color = { fg = colors.orange },
           },
           {
             git_ahead_behind,
             color = { fg = colors.blue },
             cond = function()
-              return vim.fn.isdirectory('.git') == 1
+              return vim.fn.isdirectory(".git") == 1
             end,
           },
           {
             git_stash_count,
             color = { fg = colors.purple },
             cond = function()
-              return vim.fn.isdirectory('.git') == 1
+              return vim.fn.isdirectory(".git") == 1
             end,
           },
           {
@@ -240,18 +254,13 @@ return {
             end,
           },
           {
-            k8s_context,
-            color = { fg = colors.blue },
-            cond = function()
-              return vim.fn.executable("kubectl") == 1
-            end,
-          },
-          {
             battery_status,
             color = function()
               local battery_file = "/sys/class/power_supply/BAT0/capacity"
               local handle = io.open(battery_file, "r")
-              if not handle then return { fg = colors.light_gray } end
+              if not handle then
+                return { fg = colors.light_gray }
+              end
 
               local capacity = handle:read("*n")
               handle:close()
