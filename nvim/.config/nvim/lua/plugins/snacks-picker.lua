@@ -34,7 +34,6 @@ return {
       -- Configure layout similar to Telescope's horizontal layout
       layout = {
         preset = "select",
-        backdrop = 60,
         cycle = true,
         reverse = false,
         border = "rounded",
@@ -70,3 +69,4 @@ return {
     },
   },
 }
+

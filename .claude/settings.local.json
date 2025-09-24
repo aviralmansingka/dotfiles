@@ -15,7 +15,9 @@
       "WebFetch(domain:nickjanetakis.com)",
       "WebFetch(domain:yeripratama.com)",
       "WebFetch(domain:medium.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:wiki.archlinux.org)",
+      "Read(//Users/aviralmansingka/.local/share/nvim/lazy/LazyVim/**)"
     ],
     "deny": [],
     "ask": [],

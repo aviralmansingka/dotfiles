@@ -38,3 +38,9 @@ I would solve problems at work.
 - As a user, I would like to have a shortcut to open a git-commit style message
   - When complete, I want it to go to the right section of my weekly summary
     with the timestamp
+
+### Neovide
+
+- There is some issue with the clipboard
+- copy-paste
+- colors are still weird
