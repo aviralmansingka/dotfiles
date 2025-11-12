@@ -20,6 +20,14 @@ return {
     },
     keys = {
       {
+        "<C-]>",
+        function()
+          vim.cmd("stopinsert")
+        end,
+        desc = "Exit terminal mode",
+        mode = { "t" },
+      },
+      {
         "<C-\\>",
         function()
           Snacks.terminal.toggle()
@@ -38,7 +46,13 @@ return {
         "gG",
         function()
           local current_file = vim.fn.expand("%:p")
-          local git_root = vim.fn.system("git -C " .. vim.fn.shellescape(vim.fn.fnamemodify(current_file, ":h")) .. " rev-parse --show-toplevel 2>/dev/null"):gsub("\n", "")
+          local git_root = vim.fn
+            .system(
+              "git -C "
+                .. vim.fn.shellescape(vim.fn.fnamemodify(current_file, ":h"))
+                .. " rev-parse --show-toplevel 2>/dev/null"
+            )
+            :gsub("\n", "")
           if vim.v.shell_error == 0 and git_root ~= "" then
             Snacks.lazygit({ cwd = git_root })
           else

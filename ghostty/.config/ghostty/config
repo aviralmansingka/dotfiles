@@ -2,7 +2,7 @@
 # Gruvbox Dark colorscheme
 
 # Font configuration
-font-family = "JetBrainsMono Nerd Font"
+font-family = "JetBrains Nerd Font"
 font-size = 16
 
 # Terminal behavior - matching Kitty's paste_actions and clipboard_control
