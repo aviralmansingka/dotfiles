@@ -55,8 +55,15 @@ stow zsh
 # Install custom terminfo entries
 if command -v tic &> /dev/null; then
     echo "Installing custom terminfo entries..."
-    tic -x terminfo/ghostty.terminfo
-    echo "Terminfo entries installed"
+
+    # Create user terminfo directory if it doesn't exist
+    mkdir -p ~/.terminfo
+
+    # Install xterm-ghostty terminfo for proper ghostty support
+    # This enables full OSC 52 (clipboard) support and other ghostty-specific features
+    tic -x -w terminfo/xterm-ghostty.terminfo
+
+    echo "Terminfo entries installed to ~/.terminfo/"
 else
     echo "Warning: tic command not found, skipping terminfo installation"
 fi
