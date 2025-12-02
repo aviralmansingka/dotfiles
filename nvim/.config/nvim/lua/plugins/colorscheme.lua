@@ -11,7 +11,7 @@ return {
       vim.g.gruvbox_material_foreground = "mix"
       vim.g.gruvbox_material_background = "medium"
       vim.g.gruvbox_material_ui_contrast = "low"
-      vim.g.gruvbox_material_float_style = "none"
+      vim.g.gruvbox_material_float_style = "blend"
       vim.g.gruvbox_material_statusline_style = "afterglow" -- Options: "original", "material", "mix", "afterglow"
       vim.g.gruvbox_material_cursor = "auto"
       vim.g.gruvbox_material_enable_italic = 1
@@ -24,16 +24,59 @@ return {
 
       vim.cmd.colorscheme("gruvbox-material")
 
-      -- Custom floating window background override
-      vim.api.nvim_set_hl(0, "FloatTitle", { bg = "#282828", fg = "#f28534" }) -- Match background with subtle border
-      vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#282828" }) -- Dark gruvbox background
-      vim.api.nvim_set_hl(0, "FloatBorder", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
-      vim.api.nvim_set_hl(0, "VertSplit", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
-      vim.api.nvim_set_hl(0, "TerminalNormal", { bg = "#282828", fg = "#ebdbb2" }) -- Terminal in floating windows
+      -- Set custom highlights after colorscheme is loaded
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        callback = function()
+          -- Custom floating window background override
+          vim.api.nvim_set_hl(0, "FloatTitle", { bg = "#282828", fg = "#f28534" }) -- Match background with subtle border
+          vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#282828" }) -- Dark gruvbox background
+          vim.api.nvim_set_hl(0, "FloatBorder", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
+          vim.api.nvim_set_hl(0, "VertSplit", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
+          vim.api.nvim_set_hl(0, "TerminalNormal", { bg = "#282828", fg = "#ebdbb2" }) -- Terminal in floating windows
 
-      -- Snacks picker highlight groups
-      vim.api.nvim_set_hl(0, "SnacksPickerBorder", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
-      vim.api.nvim_set_hl(0, "SnacksPickerNormal", { bg = "#282828" }) -- Match main background
+          -- Snacks picker highlight groups - use gruvbox material background
+          local gruvbox_bg = "#282828"  -- Hard background from gruvbox material
+          local normal_fg = "#ebdbb2"
+
+          -- Set all SnacksPicker groups to match gruvbox background
+          local snacks_groups = {
+            "SnacksPicker",
+            "SnacksPickerTitle",
+            "SnacksPickerFooter",
+            "SnacksPickerPrompt",
+            "SnacksPickerTotals",
+            "SnacksPickerInputCursorLine",
+            "SnacksPickerListCursorLine",
+            "SnacksPickerMatch",
+            "SnacksPickerDir",
+            "SnacksPickerBufFlags",
+            "SnacksPickerKeymapRhs",
+            "SnacksPickerToggle",
+            "SnacksPickerInputBorder",
+            "SnacksPickerInputSearch",
+            "SnacksPickerListBorder",
+            "SnacksPickerList",
+            "SnacksPickerListTitle",
+            "SnacksPickerPreviewBorder",
+            "SnacksPickerPreview",
+            "SnacksPickerPreviewTitle",
+            "SnacksPickerBoxBorder",
+          }
+
+          for _, group in ipairs(snacks_groups) do
+            vim.api.nvim_set_hl(0, group, { bg = gruvbox_bg, fg = normal_fg })
+          end
+
+          -- Keep border subtle but matching background
+          vim.api.nvim_set_hl(0, "SnacksPickerBorder", { bg = gruvbox_bg, fg = "#504945" })
+
+          -- Also set the window background to match
+          vim.api.nvim_set_hl(0, "SnacksPickerWindow", { bg = gruvbox_bg })
+        end,
+      })
+
+      -- Trigger the autocmd immediately to set highlights now
+      vim.cmd("doautocmd ColorScheme")
 
       -- Custom statusline highlights
       -- vim.api.nvim_set_hl(0, "StatusLine", {
