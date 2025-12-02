@@ -29,3 +29,6 @@ end
 
 -- Stack jumplist configuration
 vim.opt.jumpoptions = "stack" -- Use stack-based jumplist behavior
+
+-- Configure LazyVim to use Snacks picker for LSP operations
+vim.g.lazyvim_picker = "snacks"
