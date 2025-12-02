@@ -12,7 +12,6 @@ return {
 
   -- Note: emoji source now configured in blink-cmp.lua via blink.compat
 
-
   -- Enable Snacks picker instead of Telescope
   { import = "lazyvim.plugins.extras.editor.snacks_picker" },
 
