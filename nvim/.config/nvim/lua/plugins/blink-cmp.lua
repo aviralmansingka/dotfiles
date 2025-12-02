@@ -8,30 +8,27 @@ return {
       keymap = { preset = "default" },
 
       appearance = {
-        use_nvim_cmp_as_default = true,
         nerd_font_variant = "mono",
       },
 
       sources = {
-        default = { "lsp", "path", "snippets", "buffer" },
+        default = { "lsp", "path", "snippets", "buffer", "emoji" },
         providers = {
           git = {
             name = "git",
-            module = "blink.compat.source",
-            opts = {
-              compat = "cmp-git",
-            },
+            module = "blink.cmp.sources.git",
           },
           emoji = {
-            name = "emoji",
-            module = "blink.compat.source",
-            opts = {
-              compat = "cmp-emoji",
-            },
+            name = "Emoji",
+            module = "blink-emoji",
+            score_offset = 15,
+            opts = { insert = true },
+            should_show_items = function()
+              return vim.tbl_contains({ "gitcommit", "markdown", "text" }, vim.o.filetype)
+            end,
           },
         },
       },
-
       completion = {
         accept = {
           auto_brackets = {
@@ -39,13 +36,22 @@ return {
           },
         },
         menu = {
+          border = "rounded",
           draw = {
+            columns = { { "label", "label_description", gap = 1 }, { "kind_icon", "kind" }, { "source_name", gap = 1 } },
             treesitter = { "lsp" },
           },
         },
         documentation = {
           auto_show = true,
           auto_show_delay_ms = 200,
+          window = {
+            border = "rounded",
+            winhighlight = "Normal:BlinkCmpDoc,FloatBorder:BlinkCmpDocBorder,CursorLine:BlinkCmpDocCursorLine,Search:None",
+          },
+        },
+        ghost_text = {
+          enabled = true,
         },
       },
 
@@ -53,6 +59,7 @@ return {
     },
     dependencies = {
       "rafamadriz/friendly-snippets",
+      "moyiz/blink-emoji.nvim",
       {
         "L3MON4D3/LuaSnip",
         build = (function()
@@ -70,33 +77,6 @@ return {
           },
         },
       },
-      {
-        "saghen/blink.compat",
-        opts = {},
-        version = "*",
-      },
     },
-  },
-
-  -- Disable default completion providers that conflict with blink.cmp
-  {
-    "hrsh7th/nvim-cmp",
-    enabled = false,
-  },
-  {
-    "hrsh7th/cmp-nvim-lsp",
-    enabled = false,
-  },
-  {
-    "hrsh7th/cmp-buffer",
-    enabled = false,
-  },
-  {
-    "hrsh7th/cmp-path",
-    enabled = false,
-  },
-  {
-    "saadparwaiz1/cmp_luasnip",
-    enabled = false,
   },
 }

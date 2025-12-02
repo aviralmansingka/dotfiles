@@ -122,6 +122,16 @@ return {
 
       -- Claude Code highlight group
       vim.api.nvim_set_hl(0, "ClaudeCodeBorder", { fg = "#da7756", bg = "#282828" }) -- Claude terra cotta
+      
+      -- Blink.cmp ghost text highlight to match gruvbox material
+      vim.api.nvim_set_hl(0, "BlinkGhostText", { fg = "#665c54", bg = "#282828" }) -- Match gruvbox background
+      
+      -- Blink.cmp completion window highlights to match gruvbox material
+      vim.api.nvim_set_hl(0, "BlinkCmpMenu", { bg = "#282828", fg = "#ebdbb2" }) -- Completion menu background
+      vim.api.nvim_set_hl(0, "BlinkCmpMenuBorder", { bg = "#282828", fg = "#ebdbb2" }) -- Menu border - brighter white like snacks.picker
+      vim.api.nvim_set_hl(0, "BlinkCmpDoc", { bg = "#282828", fg = "#ebdbb2" }) -- Documentation window
+      vim.api.nvim_set_hl(0, "BlinkCmpDocBorder", { bg = "#282828", fg = "#ebdbb2" }) -- Documentation border - brighter white
+      vim.api.nvim_set_hl(0, "BlinkCmpSource", { bg = "#282828", fg = "#928374" }) -- Package/source name with gruvbox background
     end,
   },
 }
