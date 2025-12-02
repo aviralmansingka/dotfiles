@@ -10,6 +10,7 @@ DISABLE_AUTO_TITLE="true"
 plugins=(
   zsh-syntax-highlighting
   zsh-autosuggestions
+  git
   extract
   colored-man-pages
   history
@@ -37,6 +38,7 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/.bun/bin:$PATH"
 export PATH="$HOME/.opencode/bin:$PATH"
+export PATH="$HOME/go/bin:$PATH"
 
 # cuda
 export CUDA_HOME=/usr/local/cuda
@@ -51,4 +53,10 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 source $HOME/modal/venv/bin/activate
 
 # bun completions
-[ -s "/Users/aviralmansingka/.bun/_bun" ] && source "/Users/aviralmansingka/.bun/_bun"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]; then . "$HOME/google-cloud-sdk/path.zsh.inc"; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]; then . "$HOME/google-cloud-sdk/completion.zsh.inc"; fi
