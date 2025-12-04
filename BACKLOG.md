@@ -43,10 +43,11 @@ I would solve problems at work.
 - Language support
   - Python, Rust, Golang
 - Debug-local keymaps
-  - [ ] `<localleader>b` -> toggle breakpoint
-  - [ ] `<C-S>l` -> step into
-  - [ ] `<C-S>j` -> step over
-  - [ ] `<C-S>h` -> step out from current function to the call site
+  - [x] `<localleader>b` -> toggle breakpoint
+  - [x] `<localleader>c` -> continue
+  - [x] `<localleader>d` -> step over
+  - [x] `<localleader>s` -> step into
+  - [x] `<localleader>a` -> step out from current function to the call site
     - Maybe need treesitter?
     - Also have stack information
 - UI redesign
@@ -54,7 +55,7 @@ I would solve problems at work.
   - [ ] `<localleader>fe` -> open expression widget
   - [ ] `<localleader>fs` -> stack traces widget
     - View them with snacks.picker UI to see context
-  - `<localleader>k` I want to be able to hover over a variable and see its value
+  - `<localleader>i` I want to be able to hover over a variable and see its value
     - How will I handle large values?
       - Need to be able to interact within the hover
       - Need to be able to search within the hover

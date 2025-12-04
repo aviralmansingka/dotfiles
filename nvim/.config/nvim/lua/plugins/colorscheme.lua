@@ -33,45 +33,6 @@ return {
           vim.api.nvim_set_hl(0, "FloatBorder", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
           vim.api.nvim_set_hl(0, "VertSplit", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
           vim.api.nvim_set_hl(0, "TerminalNormal", { bg = "#282828", fg = "#ebdbb2" }) -- Terminal in floating windows
-
-          -- Snacks picker highlight groups - use gruvbox material background
-          local gruvbox_bg = "#282828"  -- Hard background from gruvbox material
-          local normal_fg = "#ebdbb2"
-
-          -- Set all SnacksPicker groups to match gruvbox background
-          local snacks_groups = {
-            "SnacksPicker",
-            "SnacksPickerTitle",
-            "SnacksPickerFooter",
-            "SnacksPickerPrompt",
-            "SnacksPickerTotals",
-            "SnacksPickerInputCursorLine",
-            "SnacksPickerListCursorLine",
-            "SnacksPickerMatch",
-            "SnacksPickerDir",
-            "SnacksPickerBufFlags",
-            "SnacksPickerKeymapRhs",
-            "SnacksPickerToggle",
-            "SnacksPickerInputBorder",
-            "SnacksPickerInputSearch",
-            "SnacksPickerListBorder",
-            "SnacksPickerList",
-            "SnacksPickerListTitle",
-            "SnacksPickerPreviewBorder",
-            "SnacksPickerPreview",
-            "SnacksPickerPreviewTitle",
-            "SnacksPickerBoxBorder",
-          }
-
-          for _, group in ipairs(snacks_groups) do
-            vim.api.nvim_set_hl(0, group, { bg = gruvbox_bg, fg = normal_fg })
-          end
-
-          -- Keep border subtle but matching background
-          vim.api.nvim_set_hl(0, "SnacksPickerBorder", { bg = gruvbox_bg, fg = "#504945" })
-
-          -- Also set the window background to match
-          vim.api.nvim_set_hl(0, "SnacksPickerWindow", { bg = gruvbox_bg })
         end,
       })
 
@@ -90,6 +51,45 @@ return {
       --   fg = "#928374", -- Muted text
       --   bold = false
       -- })
+
+      -- Snacks picker highlight groups - use gruvbox material background
+      local gruvbox_bg = "#282828" -- Hard background from gruvbox material
+      local normal_fg = "#ebdbb2"
+
+      -- Set all SnacksPicker groups to match gruvbox background
+      local snacks_groups = {
+        "SnacksPicker",
+        "SnacksPickerTitle",
+        "SnacksPickerFooter",
+        "SnacksPickerPrompt",
+        "SnacksPickerTotals",
+        "SnacksPickerInputCursorLine",
+        "SnacksPickerListCursorLine",
+        "SnacksPickerMatch",
+        "SnacksPickerDir",
+        "SnacksPickerBufFlags",
+        "SnacksPickerKeymapRhs",
+        "SnacksPickerToggle",
+        "SnacksPickerInputBorder",
+        "SnacksPickerInputSearch",
+        "SnacksPickerListBorder",
+        "SnacksPickerList",
+        "SnacksPickerListTitle",
+        "SnacksPickerPreviewBorder",
+        "SnacksPickerPreview",
+        "SnacksPickerPreviewTitle",
+        "SnacksPickerBoxBorder",
+      }
+
+      for _, group in ipairs(snacks_groups) do
+        vim.api.nvim_set_hl(0, group, { bg = gruvbox_bg, fg = normal_fg })
+      end
+
+      -- Keep border subtle but matching background
+      vim.api.nvim_set_hl(0, "SnacksPickerBorder", { bg = gruvbox_bg, fg = "#504945" })
+
+      -- Also set the window background to match
+      vim.api.nvim_set_hl(0, "SnacksPickerWindow", { bg = gruvbox_bg })
 
       -- Custom markdown rendering highlights for render-markdown.nvim
       -- GruvboxDarkHard heading colors (Orange → Yellow → Green → Blue → Purple → Red)
@@ -122,16 +122,52 @@ return {
 
       -- Claude Code highlight group
       vim.api.nvim_set_hl(0, "ClaudeCodeBorder", { fg = "#da7756", bg = "#282828" }) -- Claude terra cotta
-      
+
       -- Blink.cmp ghost text highlight to match gruvbox material
       vim.api.nvim_set_hl(0, "BlinkGhostText", { fg = "#665c54", bg = "#282828" }) -- Match gruvbox background
-      
+
       -- Blink.cmp completion window highlights to match gruvbox material
       vim.api.nvim_set_hl(0, "BlinkCmpMenu", { bg = "#282828", fg = "#ebdbb2" }) -- Completion menu background
       vim.api.nvim_set_hl(0, "BlinkCmpMenuBorder", { bg = "#282828", fg = "#ebdbb2" }) -- Menu border - brighter white like snacks.picker
       vim.api.nvim_set_hl(0, "BlinkCmpDoc", { bg = "#282828", fg = "#ebdbb2" }) -- Documentation window
       vim.api.nvim_set_hl(0, "BlinkCmpDocBorder", { bg = "#282828", fg = "#ebdbb2" }) -- Documentation border - brighter white
       vim.api.nvim_set_hl(0, "BlinkCmpSource", { bg = "#282828", fg = "#928374" }) -- Package/source name with gruvbox background
+      -- Enhanced DAP signs with better debugging visibility
+      vim.fn.sign_define(
+        "DapBreakpoint",
+        { text = "●", texthl = "DapBreakpoint", linehl = "DapBreakpointLine", numhl = "DapBreakpointNum" }
+      )
+      vim.fn.sign_define(
+        "DapBreakpointCondition",
+        { text = "◐", texthl = "DapBreakpointCondition", linehl = "DapBreakpointLine", numhl = "DapBreakpointNum" }
+      )
+      vim.fn.sign_define("DapLogPoint", { text = "◆", texthl = "DapLogPoint", linehl = "", numhl = "" })
+      vim.fn.sign_define(
+        "DapStopped",
+        { text = "→", texthl = "DapStopped", linehl = "DapStoppedLine", numhl = "DapStoppedNum" }
+      )
+      vim.fn.sign_define(
+        "DapBreakpointRejected",
+        { text = "○", texthl = "DapBreakpointRejected", linehl = "", numhl = "" }
+      )
+      vim.fn.sign_define(
+        "DapException",
+        { text = "❌", texthl = "DapException", linehl = "DapExceptionLine", numhl = "DapExceptionNum" }
+      )
+
+      -- Define custom highlight groups for debugging
+      vim.api.nvim_set_hl(0, "DapBreakpoint", { fg = "#d8a657" }) -- Gruvbox yellow
+      vim.api.nvim_set_hl(0, "DapBreakpointLine", { bg = "#3c3110" }) -- Subtle yellow background
+      vim.api.nvim_set_hl(0, "DapBreakpointNum", { fg = "#d8a657" })
+      vim.api.nvim_set_hl(0, "DapBreakpointCondition", { fg = "#fabd2f" }) -- Brighter yellow for conditions
+      vim.api.nvim_set_hl(0, "DapStopped", { fg = "#7daea3" }) -- Gruvbox blue
+      vim.api.nvim_set_hl(0, "DapStoppedLine", { bg = "#1f2c2e" }) -- Blue background for current line
+      vim.api.nvim_set_hl(0, "DapStoppedNum", { fg = "#7daea3", bold = true })
+      vim.api.nvim_set_hl(0, "DapLogPoint", { fg = "#89b482" }) -- Gruvbox teal
+      vim.api.nvim_set_hl(0, "DapBreakpointRejected", { fg = "#928374" }) -- Gruvbox gray
+      vim.api.nvim_set_hl(0, "DapException", { fg = "#ea6962" }) -- Gruvbox red
+      vim.api.nvim_set_hl(0, "DapExceptionLine", { bg = "#3d1f1f" }) -- Red background for exceptions
+      vim.api.nvim_set_hl(0, "DapExceptionNum", { fg = "#ea6962", bold = true })
     end,
   },
 }
