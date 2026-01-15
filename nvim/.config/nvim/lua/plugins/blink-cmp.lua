@@ -1,4 +1,12 @@
 return {
+  -- blink.compat for nvim-cmp source compatibility (obsidian.nvim)
+  {
+    "saghen/blink.compat",
+    version = "2.*",
+    lazy = true,
+    opts = {},
+  },
+
   -- blink.cmp completion engine
   {
     "saghen/blink.cmp",
@@ -12,7 +20,7 @@ return {
       },
 
       sources = {
-        default = { "lsp", "path", "snippets", "buffer", "emoji" },
+        default = { "lsp", "path", "snippets", "buffer", "emoji", "obsidian", "obsidian_new", "obsidian_tags" },
         providers = {
           git = {
             name = "git",
@@ -25,6 +33,31 @@ return {
             opts = { insert = true },
             should_show_items = function()
               return vim.tbl_contains({ "gitcommit", "markdown", "text" }, vim.o.filetype)
+            end,
+          },
+          -- Obsidian completion sources (via blink.compat)
+          obsidian = {
+            name = "obsidian",
+            module = "blink.compat.source",
+            score_offset = 10,
+            should_show_items = function()
+              return vim.o.filetype == "markdown"
+            end,
+          },
+          obsidian_new = {
+            name = "obsidian_new",
+            module = "blink.compat.source",
+            score_offset = 8,
+            should_show_items = function()
+              return vim.o.filetype == "markdown"
+            end,
+          },
+          obsidian_tags = {
+            name = "obsidian_tags",
+            module = "blink.compat.source",
+            score_offset = 5,
+            should_show_items = function()
+              return vim.o.filetype == "markdown"
             end,
           },
         },

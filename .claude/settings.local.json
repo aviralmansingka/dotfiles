@@ -29,7 +29,9 @@
       "WebFetch(domain:kalnytskyi.com)",
       "Bash(pbpaste:*)",
       "Bash(chmod:*)",
-      "Bash(/Users/aviralmansingka/dotfiles/scripts/test-osc52.sh:*)"
+      "Bash(/Users/aviralmansingka/dotfiles/scripts/test-osc52.sh:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs"
     ],
     "deny": [],
     "ask": [],
