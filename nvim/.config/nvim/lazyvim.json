@@ -2,7 +2,8 @@
   "extras": [
     "lazyvim.plugins.extras.dap.core",
     "lazyvim.plugins.extras.dap.nlua",
-    "lazyvim.plugins.extras.lang.helm"
+    "lazyvim.plugins.extras.lang.helm",
+    "lazyvim.plugins.extras.lang.python"
   ],
   "install_version": 7,
   "news": {

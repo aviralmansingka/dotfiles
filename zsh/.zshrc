@@ -22,7 +22,6 @@ source $ZSH/oh-my-zsh.sh
 alias vim='nvim'
 alias rg='rg --hidden'
 alias ls='eza --icons -l'
-alias claude="${HOME}/.claude/local/claude"
 
 export XDG_CONFIG_HOME="$HOME/.config"
 export TERM="xterm-ghostty"
