@@ -29,12 +29,20 @@
       "WebFetch(domain:kalnytskyi.com)",
       "Bash(pbpaste:*)",
       "Bash(chmod:*)",
-      "Bash(/Users/aviralmansingka/dotfiles/scripts/test-osc52.sh:*)"
+      "Bash(/Users/aviralmansingka/dotfiles/scripts/test-osc52.sh:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(grep:*)",
+      "WebFetch(domain:profile.adibhanna.com)",
+      "Bash(luac:*)",
+      "Bash(xargs ls:*)",
+      "Bash(xxd:*)"
     ],
     "deny": [],
     "ask": [],
     "additionalDirectories": [
-      "/Users/aviralmansingka/.cache/nvim"
+      "/Users/aviralmansingka/.cache/nvim",
+      "/Users/aviralmansingka/.cache/adibhanna-nvim"
     ]
   }
 }
