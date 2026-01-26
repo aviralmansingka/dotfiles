@@ -82,10 +82,9 @@ return {
       },
     },
 
-    -- Picker for note search (uses snacks.picker via telescope-like interface)
-    picker = {
-      name = "snacks.pick",
-    },
+    -- Picker: disabled (snacks.pick not supported by obsidian.nvim)
+    -- Use custom Snacks pickers in markdown.lua for tags/todos instead
+    picker = nil,
 
     -- UI settings
     ui = {
@@ -99,12 +98,10 @@ return {
     { "<leader>og", "<cmd>ObsidianSearch<cr>", desc = "Grep notes" },
     { "<leader>on", "<cmd>ObsidianNew<cr>", desc = "New note" },
 
-    -- Backlinks and links
-    { "<leader>ob", "<cmd>ObsidianBacklinks<cr>", desc = "Backlinks" },
-    { "<leader>ol", "<cmd>ObsidianLinks<cr>", desc = "Outgoing links" },
+    -- Backlinks and links: handled by custom Snacks picker in markdown.lua
+    -- (<leader>ob for backlinks, <leader>ol for outgoing links)
 
-    -- Tags
-    { "<leader>ot", "<cmd>ObsidianTags<cr>", desc = "Search tags" },
+    -- Tags: handled by custom Snacks picker in markdown.lua (<leader>ot)
 
     -- Templates
     { "<leader>oT", "<cmd>ObsidianTemplate<cr>", desc = "Insert template" },
@@ -123,14 +120,10 @@ return {
 
   config = function(_, opts)
     -- Custom daily note path function to support weekly subfolders
-    -- Override the daily_note_path method to place notes in weekly folders
     local obsidian = require("obsidian")
 
-    -- Patch the daily notes folder to include weekly subfolder
-    local original_opts = opts
-    opts.daily_notes = vim.tbl_extend("force", opts.daily_notes or {}, {
-      -- We'll handle the weekly folder in a custom way
-    })
+    -- W3: Removed unused original_opts variable
+    opts.daily_notes = vim.tbl_extend("force", opts.daily_notes or {}, {})
 
     obsidian.setup(opts)
 
