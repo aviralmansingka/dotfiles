@@ -19,13 +19,13 @@ plugins=(
 
 source $ZSH/oh-my-zsh.sh
 
-alias vim='nvim'
+alias vim='bob run nightly'
 alias rg='rg --hidden'
 alias ls='eza --icons -l'
 
 export XDG_CONFIG_HOME="$HOME/.config"
 export TERM="xterm-ghostty"
-export EDITOR="nvim"
+export EDITOR="bob run stable"
 export FZF_DEFAULT_COMMAND='rg --hidden --ignore .git -g ""'
 export DISABLE_AUTO_TITLE=true
 
