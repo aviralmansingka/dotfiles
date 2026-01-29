@@ -42,21 +42,12 @@ return {
     },
     -- Toggle opencode visibility (minimize/maximize)
     {
-      "<C-;>",
+      "<c-'>",
       function()
         require("opencode").toggle()
       end,
       desc = "Toggle opencode visibility",
       mode = { "n", "x", "t" },
-    },
-    -- Send selection to opencode ask dialog
-    {
-      "<leader>as",
-      function()
-        require("opencode").ask("@this: ", { submit = false })
-      end,
-      desc = "Send selection to opencode",
-      mode = "v",
     },
     -- Open ask dialog
     {
@@ -65,15 +56,6 @@ return {
         require("opencode").ask("", { submit = false })
       end,
       desc = "Open opencode ask dialog",
-      mode = { "n", "x" },
-    },
-    -- Select available actions/prompts
-    {
-      "<leader>ad",
-      function()
-        require("opencode").select()
-      end,
-      desc = "Select opencode action",
       mode = { "n", "x" },
     },
   },
