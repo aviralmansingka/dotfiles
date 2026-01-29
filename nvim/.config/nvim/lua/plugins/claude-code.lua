@@ -29,13 +29,13 @@ return {
     diff_opts = {
       keep_terminal_focus = true,
     },
-    terminal_cmd = "~/.claude/local/claude", -- Point to local installation
+    terminal_cmd = "~/.local/bin/claude", -- Point to local installation
   },
   config = true,
   keys = {
     -- Uncomment for primary mapping
     -- { toggle_key, "<cmd>ClaudeCodeFocus --continue<CR>", desc = "Claude Code (focus)", mode = { "n", "x" } },
-    { "gC", "<cmd>ClaudeCode --resume<CR>", desc = "Claude Code (resume)", mode = { "n", "x" } },
+    { "<c-;>", "<cmd>ClaudeCode --continue<CR>", desc = "Claude Code (resume)", mode = { "n", "x" } },
     -- Send selected text to Claude Code in visual mode
     { "<leader>acs", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Send to Claude" },
   },
