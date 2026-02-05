@@ -5,6 +5,7 @@ return {
     ensure_installed = {
       "copilot-language-server",
       "lua-language-server",
+      "rust-analyzer",
       "stylua",
       "ruff",
       "pyright",

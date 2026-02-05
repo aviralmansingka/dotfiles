@@ -10,7 +10,7 @@ return {
   },
   config = function()
     require("project_nvim").setup({
-      patterns = { "init.lua", "build.gradle", ".git", "pyproject.toml", "requirements.txt" },
+      patterns = { "init.lua", "build.gradle", ".git" },
       silent_chdir = true,
     })
   end,
