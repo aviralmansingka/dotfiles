@@ -1,0 +1,2 @@
+- Can you make all pyproject files use uv. Always use uv and not hatching
+- The requires is `uv_build` and the build-backend is `uv_build` also
