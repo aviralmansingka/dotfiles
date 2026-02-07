@@ -39,7 +39,7 @@ variable "ssh_private_key" {
 variable "s3_bucket" {
   type        = string
   description = "S3 bucket for VM images and bootloader"
-  default     = "aviralmansingka-vm-images"
+  default     = "aviral-dotfiles-vm-images"
 }
 
 variable "s3_region" {

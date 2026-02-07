@@ -13,7 +13,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "aviralmansingka-vm-images"
+    bucket = "aviral-dotfiles-vm-images"
     key    = "terraform/dotfiles-vps/terraform.tfstate"
     region = "us-east-1"
   }
