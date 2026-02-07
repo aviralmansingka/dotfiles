@@ -13,6 +13,9 @@ echo "Home directory: ${HOME}"
 
 cd "${HOME}"
 
+# Force HTTPS for all GitHub operations (avoids SSH host key issues in CI/packer)
+git config --global url."https://github.com/".insteadOf "git@github.com:"
+
 # Clone dotfiles repository
 echo "Cloning dotfiles repository..."
 if [ -d "${HOME}/dotfiles" ]; then
@@ -77,13 +80,15 @@ done
 
 # ===== Install TPM (Tmux Plugin Manager) =====
 echo "Installing TPM..."
-if [ ! -d "${HOME}/.tmux/plugins/tpm" ]; then
-    git clone https://github.com/tmux-plugins/tpm "${HOME}/.tmux/plugins/tpm"
+TPM_PATH="${HOME}/.local/share/tmux/plugins/tpm"
+mkdir -p "$(dirname "${TPM_PATH}")"
+if [ ! -d "${TPM_PATH}" ]; then
+    git clone https://github.com/tmux-plugins/tpm "${TPM_PATH}"
 fi
 
 # Install tmux plugins
 echo "Installing tmux plugins..."
-"${HOME}/.tmux/plugins/tpm/bin/install_plugins" || true
+"${TPM_PATH}/bin/install_plugins" || true
 
 # ===== Install Neovim plugins =====
 echo "Installing Neovim plugins..."
