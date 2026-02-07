@@ -1,0 +1,3 @@
+frame = "buttonless"
+title-hidden = true
+neovim-bin = "$HOME/.local/share/bob/nvim-bin/nvim"

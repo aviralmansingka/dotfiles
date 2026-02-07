@@ -4,7 +4,7 @@ if not vim.g.neovide then
 end
 
 -- Font configuration (matches Ghostty)
-vim.o.guifont = "JetBrainsMono Nerd Font Mono:h16"
+vim.o.guifont = "JetBrainsMono Nerd Font Mono:h13"
 
 -- Enable macOS Cmd key support
 vim.g.neovide_input_use_logo = true
@@ -44,5 +44,8 @@ end, { noremap = true, desc = "Decrease font size" })
 vim.keymap.set({ "n", "v", "i" }, "<D-0>", function()
   vim.g.neovide_scale_factor = 1.0
 end, { noremap = true, desc = "Reset font size" })
+
+-- Disable floating window shadows
+vim.g.neovide_floating_shadow = false
 
 return {}

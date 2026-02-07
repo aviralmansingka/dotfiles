@@ -36,7 +36,8 @@
       "WebFetch(domain:profile.adibhanna.com)",
       "Bash(luac:*)",
       "Bash(xargs ls:*)",
-      "Bash(xxd:*)"
+      "Bash(xxd:*)",
+      "WebFetch(domain:neovide.dev)"
     ],
     "deny": [],
     "ask": [],
