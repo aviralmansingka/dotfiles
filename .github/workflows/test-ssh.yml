@@ -22,5 +22,5 @@ jobs:
       - name: Test SSH connection
         run: |
           ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
-            root@avirus.xyz \
+            aviral@avirus.xyz \
             "echo 'SSH connection successful' && uname -a && uptime"
