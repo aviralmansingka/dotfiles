@@ -2,8 +2,12 @@
 # Gruvbox Dark colorscheme
 
 # Font configuration
-font-family = "JetBrains Nerd Font"
+font-family = "JetBrainsMono Nerd Font Mono"
 font-size = 16
+
+# Text rendering - closer to Neovide's crisp look
+font-thicken = true
+adjust-cell-height = 2
 
 # Terminal behavior - matching Kitty's paste_actions and clipboard_control
 clipboard-read = allow
