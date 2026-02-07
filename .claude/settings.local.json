@@ -37,7 +37,14 @@
       "Bash(luac:*)",
       "Bash(xargs ls:*)",
       "Bash(xxd:*)",
-      "WebFetch(domain:neovide.dev)"
+      "WebFetch(domain:neovide.dev)",
+      "Bash(gh pr create:*)",
+      "Bash(stow:*)",
+      "WebFetch(domain:developer.hashicorp.com)",
+      "WebFetch(domain:shantanoo-desai.github.io)",
+      "Bash(packer version:*)",
+      "Bash(packer init:*)",
+      "Bash(packer validate:*)"
     ],
     "deny": [],
     "ask": [],
