@@ -13,8 +13,14 @@ echo "Home directory: ${HOME}"
 
 cd "${HOME}"
 
-# Force HTTPS for all GitHub operations (avoids SSH host key issues in CI/packer)
+# Add GitHub to known hosts (avoids SSH host key verification failures)
+mkdir -p "${HOME}/.ssh"
+ssh-keyscan -t ed25519,rsa github.com >> "${HOME}/.ssh/known_hosts" 2>/dev/null || true
+chmod 600 "${HOME}/.ssh/known_hosts"
+
+# Force HTTPS for all GitHub operations (avoids SSH issues in CI/packer)
 git config --global url."https://github.com/".insteadOf "git@github.com:"
+git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
 
 # Clone dotfiles repository
 echo "Cloning dotfiles repository..."

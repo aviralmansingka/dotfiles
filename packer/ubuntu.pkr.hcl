@@ -106,7 +106,7 @@ build {
 
   # Setup dotfiles (run as target user)
   provisioner "shell" {
-    execute_command = "echo '${var.ssh_password}' | sudo -S -u ${var.ssh_username} sh -c '{{ .Vars }} {{ .Path }}'"
+    execute_command = "echo '${var.ssh_password}' | sudo -S -u ${var.ssh_username} bash -c '{{ .Vars }} {{ .Path }}'"
     scripts = [
       "scripts/setup-dotfiles.sh"
     ]
