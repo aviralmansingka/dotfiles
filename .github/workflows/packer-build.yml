@@ -153,6 +153,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           sudo bash s3-boot/bootloader/build-bootloader.sh
+          sudo chown -R runner:runner s3-boot/bootloader/output/
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
