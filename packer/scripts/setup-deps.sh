@@ -68,6 +68,13 @@ apt-get install -y \
     cargo \
     luarocks
 
+# s3-boot prerequisites (GRUB tools for bootloader installation)
+echo "Installing s3-boot prerequisites..."
+apt-get install -y \
+    grub2-common \
+    grub-pc-bin \
+    lz4
+
 # CLI tools available via apt
 echo "Installing CLI tools..."
 apt-get install -y \
