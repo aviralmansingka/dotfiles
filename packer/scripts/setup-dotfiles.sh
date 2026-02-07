@@ -85,7 +85,8 @@ for pkg in ${STOW_PACKAGES}; do
 done
 
 # Remove stowed git SSH→HTTPS rewrite (no SSH key available in packer builds)
-git config --file "${HOME}/.config/git/config" --remove-section url.\"git@github.com:\" 2>/dev/null || true
+# The dotfiles git config rewrites HTTPS to SSH which breaks keyless packer builds
+sed -i '/\[url "git@github.com:"\]/,/insteadOf/d' "${HOME}/.config/git/config"
 
 # ===== Install TPM (Tmux Plugin Manager) =====
 echo "Installing TPM..."
