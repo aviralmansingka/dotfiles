@@ -9,11 +9,13 @@ variable "ubuntu_version" {
 variable "iso_url" {
   type        = string
   description = "URL to the Ubuntu cloud image"
+  default     = ""
 }
 
 variable "iso_checksum" {
   type        = string
   description = "Checksum for the cloud image (file: prefix for URL)"
+  default     = ""
 }
 
 variable "disk_size" {

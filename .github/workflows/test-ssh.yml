@@ -1,0 +1,22 @@
+name: Test SSH Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ssh:
+    name: Test SSH to Hostinger VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H avirus.xyz >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Test SSH connection
+        run: |
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+            root@avirus.xyz \
+            "echo 'SSH connection successful' && uname -a && uptime"

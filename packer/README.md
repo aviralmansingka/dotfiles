@@ -84,25 +84,73 @@ packer build \
   .
 ```
 
+## Direct VPS Provisioning (Null Builder)
+
+Instead of building a QCOW2 image and flashing it, you can provision an existing Hostinger VPS directly over SSH. This uses Packer's built-in `null` builder to SSH into the VPS as root and run the same provisioning scripts.
+
+### Prerequisites
+
+- An existing Hostinger VPS with Ubuntu installed (any template)
+- Root SSH access to the VPS via key-based authentication
+
+### Usage
+
+```bash
+cd dotfiles/packer
+
+packer init .
+
+# Provision a VPS directly
+packer build \
+  -only='hostinger-vps-provision.*' \
+  -var 'vps_host=<VPS_IP>' \
+  -var 'ssh_private_key_file=~/.ssh/id_ed25519' \
+  .
+
+# With custom user and branch
+packer build \
+  -only='hostinger-vps-provision.*' \
+  -var 'vps_host=<VPS_IP>' \
+  -var 'ssh_username=myuser' \
+  -var 'dotfiles_branch=main' \
+  .
+```
+
+### What It Does
+
+1. SSHes into the VPS as root
+2. Runs `setup-user.sh` — creates the target user with sudo access
+3. Runs `setup-deps.sh` — installs all development packages
+4. Runs `setup-dotfiles.sh` — clones and stows dotfiles as the target user
+5. Sets the target user's shell to `/bin/zsh`
+
+Note: `cleanup.sh` is deliberately skipped — it removes SSH keys and zeros the disk, which would be destructive on a live server.
+
+### CI/CD
+
+The "Provision VPS" GitHub Actions workflow (`.github/workflows/provision-vps.yml`) provides a manual trigger to provision a VPS. Go to Actions → Provision VPS → Run workflow, and provide the VPS IP address.
+
 ## Directory Structure
 
 ```
 packer/
-├── ubuntu.pkr.hcl           # Main Packer configuration
-├── variables.pkr.hcl        # Variable definitions
-├── ubuntu-22.04.pkrvars.hcl # Ubuntu 22.04 settings
-├── ubuntu-24.04.pkrvars.hcl # Ubuntu 24.04 settings
+├── ubuntu.pkr.hcl                  # QEMU image build configuration
+├── hostinger-vps.pkr.hcl           # Direct VPS provisioning (null builder)
+├── variables.pkr.hcl               # Shared variable definitions
+├── hostinger-vps-variables.pkr.hcl # VPS-specific variables
+├── ubuntu-22.04.pkrvars.hcl        # Ubuntu 22.04 settings
+├── ubuntu-24.04.pkrvars.hcl        # Ubuntu 24.04 settings
 ├── config/
 │   └── cloud-init/
-│       ├── meta-data        # Instance metadata
-│       ├── user-data        # Cloud-init config
-│       └── network-config   # Network settings (DHCP)
+│       ├── meta-data               # Instance metadata
+│       ├── user-data               # Cloud-init config
+│       └── network-config          # Network settings (DHCP)
 ├── scripts/
-│   ├── setup-user.sh        # Create non-root user
-│   ├── setup-deps.sh        # Install packages
-│   ├── setup-dotfiles.sh    # Clone and stow dotfiles
-│   └── cleanup.sh           # Minimize image size
-└── README.md                # This file
+│   ├── setup-user.sh               # Create non-root user
+│   ├── setup-deps.sh               # Install packages
+│   ├── setup-dotfiles.sh           # Clone and stow dotfiles
+│   └── cleanup.sh                  # Minimize image size
+└── README.md                       # This file
 ```
 
 ## What's Included
