@@ -1,0 +1,135 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Packer Build"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_hash:
+        description: 'Image SHA256 hash (from packer-build output)'
+        required: true
+        type: string
+
+env:
+  TF_VAR_vps_data_center_id: ${{ vars.VPS_DATA_CENTER_ID }}
+  TF_VAR_vps_template_id: ${{ vars.VPS_TEMPLATE_ID }}
+  TF_VAR_vps_hostname: ${{ vars.VPS_HOSTNAME }}
+  TF_VAR_vps_password: ${{ secrets.VPS_PASSWORD }}
+  TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+  TF_VAR_ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+  HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: ${{ vars.S3_REGION }}
+
+jobs:
+  get-image-hash:
+    name: Get Image Hash
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    outputs:
+      image_hash: ${{ steps.hash.outputs.image_hash }}
+    steps:
+      - name: Get hash from workflow_dispatch
+        if: github.event_name == 'workflow_dispatch'
+        id: dispatch_hash
+        run: echo "image_hash=${{ github.event.inputs.image_hash }}" >> $GITHUB_OUTPUT
+
+      - name: Get hash from S3
+        if: github.event_name == 'workflow_run'
+        id: s3_hash
+        run: |
+          HASH=$(aws s3 cp "s3://${{ vars.S3_BUCKET }}/images/dotfiles-ubuntu-22.04.raw.lz4.sha256" - | awk '{print $1}')
+          echo "image_hash=${HASH}" >> $GITHUB_OUTPUT
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
+
+      - name: Set output
+        id: hash
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "image_hash=${{ steps.dispatch_hash.outputs.image_hash }}" >> $GITHUB_OUTPUT
+          else
+            echo "image_hash=${{ steps.s3_hash.outputs.image_hash }}" >> $GITHUB_OUTPUT
+          fi
+
+  deploy:
+    name: Deploy via Terraform
+    runs-on: ubuntu-latest
+    needs: get-image-hash
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+
+      - name: Terraform Init
+        run: terraform -chdir=terraform init
+
+      - name: Terraform Plan
+        run: |
+          terraform -chdir=terraform plan \
+            -var "image_hash=${{ needs.get-image-hash.outputs.image_hash }}" \
+            -out=tfplan -input=false
+
+      - name: Terraform Apply
+        run: terraform -chdir=terraform apply -input=false tfplan
+
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Wait for VPS reboot
+        run: |
+          echo "Waiting 5 minutes for VPS to flash and reboot..."
+          sleep 300
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Verify VPS is reachable
+        run: |
+          # Get VPS IP from Terraform state
+          VPS_IP=$(aws s3 cp "s3://${{ vars.S3_BUCKET }}/terraform/dotfiles-vps/terraform.tfstate" - | \
+            python3 -c "import sys,json; print(json.load(sys.stdin)['outputs']['vps_ipv4']['value'])" 2>/dev/null || echo "")
+
+          if [ -z "${VPS_IP}" ]; then
+            echo "Could not determine VPS IP from state. Skipping SSH verification."
+            exit 0
+          fi
+
+          echo "VPS IP: ${VPS_IP}"
+          ssh-keyscan -H "${VPS_IP}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # Retry SSH connection
+          for i in $(seq 1 12); do
+            if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no \
+                "root@${VPS_IP}" "cat /etc/s3boot-image-hash" 2>/dev/null; then
+              echo "VPS is up and running with the new image!"
+              ssh -o StrictHostKeyChecking=no "root@${VPS_IP}" \
+                "which zsh nvim tmux && echo 'All tools verified'"
+              exit 0
+            fi
+            echo "Attempt $i/12: VPS not ready yet, waiting 30s..."
+            sleep 30
+          done
+
+          echo "WARNING: VPS did not come back within 6 minutes after the initial wait."
+          echo "Check VPS console manually."
+          exit 1
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}

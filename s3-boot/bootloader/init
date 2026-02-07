@@ -1,0 +1,222 @@
+#!/bin/bash
+# s3-boot init script
+# This runs as PID 1 inside the initramfs. It:
+#   1. Mounts essential filesystems
+#   2. Loads virtio drivers
+#   3. Configures network via DHCP
+#   4. Downloads compressed image from S3 presigned URL (passed via kernel cmdline)
+#   5. Decompresses and flashes to target disk
+#   6. Reboots
+# Note: no set -e here — as PID 1, any unhandled failure would kernel panic.
+# We handle errors explicitly via fatal() instead.
+set -uo pipefail
+
+# ===== Configuration =====
+TARGET_DISK="/dev/vda"  # Default for KVM/virtio VPS
+LOG="/dev/kmsg"
+
+log() {
+    echo "s3-boot: $*" > "${LOG}" 2>/dev/null || true
+    echo "s3-boot: $*"
+}
+
+fatal() {
+    log "FATAL: $*"
+    log "Dropping to emergency shell..."
+    exec /bin/bash
+}
+
+# ===== Mount essential filesystems =====
+log "Mounting filesystems..."
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mount -t tmpfs tmpfs /tmp
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts
+
+# ===== Parse kernel command line =====
+log "Parsing kernel command line..."
+CMDLINE=$(cat /proc/cmdline)
+S3BOOT_URL=""
+S3BOOT_HASH=""
+S3BOOT_DISK=""
+
+for param in ${CMDLINE}; do
+    case "${param}" in
+        s3boot.url=*)
+            S3BOOT_URL="${param#s3boot.url=}"
+            ;;
+        s3boot.hash=*)
+            S3BOOT_HASH="${param#s3boot.hash=}"
+            ;;
+        s3boot.disk=*)
+            S3BOOT_DISK="${param#s3boot.disk=}"
+            ;;
+    esac
+done
+
+if [ -z "${S3BOOT_URL}" ]; then
+    fatal "No s3boot.url= parameter found on kernel command line"
+fi
+
+if [ -n "${S3BOOT_DISK}" ]; then
+    TARGET_DISK="${S3BOOT_DISK}"
+fi
+
+log "Image URL: (presigned, ${#S3BOOT_URL} chars)"
+log "Expected hash: ${S3BOOT_HASH:-none}"
+log "Target disk: ${TARGET_DISK}"
+
+# ===== Load drivers =====
+log "Loading kernel modules..."
+modprobe virtio_pci 2>/dev/null || true
+modprobe virtio_net 2>/dev/null || true
+modprobe virtio_blk 2>/dev/null || true
+modprobe virtio_scsi 2>/dev/null || true
+modprobe e1000 2>/dev/null || true
+modprobe e1000e 2>/dev/null || true
+modprobe sd_mod 2>/dev/null || true
+modprobe ahci 2>/dev/null || true
+
+# Wait for devices to settle
+sleep 2
+udevadm settle --timeout=10 2>/dev/null || sleep 3
+
+# Verify target disk exists
+if [ ! -b "${TARGET_DISK}" ]; then
+    log "Waiting for ${TARGET_DISK}..."
+    for i in $(seq 1 30); do
+        [ -b "${TARGET_DISK}" ] && break
+        sleep 1
+    done
+    [ -b "${TARGET_DISK}" ] || fatal "Target disk ${TARGET_DISK} not found"
+fi
+log "Target disk ${TARGET_DISK} found"
+
+# ===== Configure network =====
+log "Configuring network..."
+
+# Find the first ethernet interface
+ETH=""
+for iface in /sys/class/net/e*; do
+    iface_name=$(basename "${iface}")
+    if [ "${iface_name}" != "lo" ]; then
+        ETH="${iface_name}"
+        break
+    fi
+done
+
+if [ -z "${ETH}" ]; then
+    # Try broader search
+    for iface in /sys/class/net/*; do
+        iface_name=$(basename "${iface}")
+        if [ "${iface_name}" != "lo" ]; then
+            ETH="${iface_name}"
+            break
+        fi
+    done
+fi
+
+[ -z "${ETH}" ] && fatal "No network interface found"
+log "Using interface: ${ETH}"
+
+ip link set "${ETH}" up
+sleep 1
+
+# Try DHCP via built-in client
+if command -v dhclient >/dev/null 2>&1; then
+    dhclient -1 "${ETH}" 2>/dev/null || true
+else
+    # Manual DHCP fallback using ip commands
+    # Some VPS providers have a known gateway pattern
+    log "No DHCP client, attempting manual network config..."
+    # Try to get an address from udhcpc if available
+    if command -v udhcpc >/dev/null 2>&1; then
+        udhcpc -i "${ETH}" -n -q 2>/dev/null || true
+    fi
+fi
+
+# Verify network
+sleep 2
+if ! ip addr show "${ETH}" | grep -q 'inet '; then
+    fatal "Failed to obtain IP address on ${ETH}"
+fi
+log "Network configured: $(ip addr show "${ETH}" | grep 'inet ' | awk '{print $2}')"
+
+# ===== Download image =====
+log "Downloading image..."
+IMAGE_FILE="/tmp/image.raw.lz4"
+
+# Use curl with retry and progress
+curl -fSL --retry 3 --retry-delay 5 \
+    --connect-timeout 30 \
+    -o "${IMAGE_FILE}" \
+    "${S3BOOT_URL}" || fatal "Failed to download image"
+
+IMAGE_SIZE=$(stat --format=%s "${IMAGE_FILE}")
+log "Downloaded: ${IMAGE_SIZE} bytes"
+
+# ===== Verify hash =====
+if [ -n "${S3BOOT_HASH}" ]; then
+    log "Verifying SHA256 hash..."
+    ACTUAL_HASH=$(sha256sum "${IMAGE_FILE}" | awk '{print $1}')
+    if [ "${ACTUAL_HASH}" != "${S3BOOT_HASH}" ]; then
+        fatal "Hash mismatch! Expected: ${S3BOOT_HASH}, Got: ${ACTUAL_HASH}"
+    fi
+    log "Hash verified OK"
+fi
+
+# ===== Flash to disk =====
+log "Flashing image to ${TARGET_DISK}..."
+log "WARNING: This will destroy all data on ${TARGET_DISK}"
+
+# Unmount any partitions on the target disk
+umount "${TARGET_DISK}"* 2>/dev/null || true
+
+# Decompress and write directly to disk
+lz4 -dc "${IMAGE_FILE}" | dd of="${TARGET_DISK}" bs=4M conv=fdatasync status=progress 2>&1 | \
+    while IFS= read -r line; do
+        log "dd: ${line}"
+    done
+
+# Force write buffers
+sync
+log "Flash complete"
+
+# Clean up temp file
+rm -f "${IMAGE_FILE}"
+
+# ===== Write image hash for tracking =====
+# Mount the new root to write the hash
+mkdir -p /mnt/newroot
+# Try to find and mount the root partition
+PART="${TARGET_DISK}1"
+[ -b "${TARGET_DISK}p1" ] && PART="${TARGET_DISK}p1"
+
+if mount "${PART}" /mnt/newroot 2>/dev/null; then
+    echo "${S3BOOT_HASH}" > /mnt/newroot/etc/s3boot-image-hash
+    log "Image hash written to /etc/s3boot-image-hash"
+
+    # Preserve SSH authorized_keys from the previous root
+    # (written by Terraform before the flash was triggered)
+    if [ -f /mnt/newroot/root/.ssh/authorized_keys ]; then
+        log "Root SSH keys already present in image"
+    elif [ -f /tmp/root-authorized-keys ]; then
+        mkdir -p /mnt/newroot/root/.ssh
+        cp /tmp/root-authorized-keys /mnt/newroot/root/.ssh/authorized_keys
+        chmod 700 /mnt/newroot/root/.ssh
+        chmod 600 /mnt/newroot/root/.ssh/authorized_keys
+        log "Restored root SSH authorized_keys"
+    fi
+
+    umount /mnt/newroot
+fi
+
+# ===== Reboot =====
+log "Rebooting into new system..."
+sleep 2
+sync
+
+# Try graceful reboot, fall back to hard reboot
+reboot -f 2>/dev/null || echo b > /proc/sysrq-trigger

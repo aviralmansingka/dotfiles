@@ -1,0 +1,46 @@
+#cloud-config
+# Cloud-init configuration for the flashed VPS image.
+# This runs on first boot after s3-boot flashes the image to disk.
+
+# Grow the root partition to fill the disk
+growpart:
+  mode: auto
+  devices: ['/']
+
+resize_rootfs: true
+
+# System configuration
+hostname: dev-vps
+manage_etc_hosts: true
+
+# User setup - the image already has devuser, but ensure SSH access
+users:
+  - name: devuser
+    shell: /bin/zsh
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: [sudo, docker]
+    ssh_authorized_keys: []  # Populated by Terraform via file provisioner
+
+# Packages to ensure are present on first boot
+packages:
+  - grub2-common
+  - grub-pc-bin
+  - lz4
+  - curl
+  - awscli
+
+# Write the image hash for s3-boot change detection
+write_files:
+  - path: /etc/s3boot-image-hash
+    content: ""  # Populated by the s3-boot init script
+    owner: root:root
+    permissions: '0644'
+
+# Enable essential services
+runcmd:
+  - systemctl enable ssh
+  - systemctl start ssh
+  - systemctl enable qemu-guest-agent || true
+  - systemctl start qemu-guest-agent || true
+
+final_message: "s3-boot first boot complete after $UPTIME seconds"
