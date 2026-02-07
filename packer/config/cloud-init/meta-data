@@ -1,0 +1,2 @@
+instance-id: packer-dotfiles-vm
+local-hostname: dotfiles-vm

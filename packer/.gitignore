@@ -1,0 +1,14 @@
+# Packer output
+output/
+*.qcow2
+*.raw
+*.img
+
+# Packer cache
+packer_cache/
+
+# Packer crash logs
+crash.log
+
+# Manifest files (generated during build)
+manifest.json

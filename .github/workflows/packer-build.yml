@@ -1,0 +1,130 @@
+name: Packer Build
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'packer/**'
+      - '.github/workflows/packer-build.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'packer/**'
+      - '.github/workflows/packer-build.yml'
+  workflow_dispatch:
+    inputs:
+      ubuntu_version:
+        description: 'Ubuntu version to build'
+        required: true
+        default: '22.04'
+        type: choice
+        options:
+          - '22.04'
+          - '24.04'
+
+jobs:
+  validate:
+    name: Validate Packer Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: latest
+
+      - name: Initialize Packer
+        run: |
+          cd packer
+          packer init .
+
+      - name: Validate Ubuntu 22.04
+        run: |
+          cd packer
+          packer validate -var-file=ubuntu-22.04.pkrvars.hcl .
+
+      - name: Validate Ubuntu 24.04
+        run: |
+          cd packer
+          packer validate -var-file=ubuntu-24.04.pkrvars.hcl .
+
+  build:
+    name: Build VM Image
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: latest
+
+      - name: Install QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 qemu-utils
+
+      - name: Initialize Packer
+        run: |
+          cd packer
+          packer init .
+
+      - name: Determine Ubuntu version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.ubuntu_version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=22.04" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Image
+        run: |
+          cd packer
+          packer build \
+            -var-file=ubuntu-${{ steps.version.outputs.version }}.pkrvars.hcl \
+            -var "headless=true" \
+            -var "accelerator=tcg" \
+            .
+        timeout-minutes: 120
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotfiles-ubuntu-${{ steps.version.outputs.version }}
+          path: packer/output/*.qcow2
+          retention-days: 7
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dotfiles-ubuntu-${{ github.event.inputs.ubuntu_version || '22.04' }}
+          path: ./output
+
+      - name: Compress Image
+        run: |
+          cd output
+          gzip -9 *.qcow2
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: output/*.qcow2.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

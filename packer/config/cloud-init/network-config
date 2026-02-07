@@ -1,0 +1,8 @@
+version: 2
+ethernets:
+  eth0:
+    dhcp4: true
+  ens3:
+    dhcp4: true
+  enp0s3:
+    dhcp4: true

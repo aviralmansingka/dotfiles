@@ -1,0 +1,46 @@
+#cloud-config
+
+# User configuration
+users:
+  - name: devuser
+    groups: [sudo, docker]
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    lock_passwd: false
+    # Temporary password for packer provisioning (password: packer)
+    # IMPORTANT: Change this password or disable password auth after deployment
+    passwd: $6$8b2a14e6868d497e$KP67ixrDUUguT0meeMsWTlPe8bUcr6YOMlwCAe/um6/htpihC4f.23oaPqxGtosA9FZnh2t14DLuzbWd3.vtt/
+
+# Package installation
+package_update: true
+package_upgrade: true
+packages:
+  - qemu-guest-agent
+  - openssh-server
+  - cloud-init
+  - cloud-guest-utils
+
+# Enable and start services
+runcmd:
+  # Enable SSH
+  - systemctl enable ssh
+  - systemctl start ssh
+  # Enable qemu-guest-agent for Hostinger integration
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent
+  # Grow partition to use full disk
+  - growpart /dev/vda 1 || growpart /dev/sda 1 || true
+  - resize2fs /dev/vda1 || resize2fs /dev/sda1 || true
+  # Signal cloud-init is complete
+  - touch /var/lib/cloud/instance/boot-finished
+
+# SSH configuration
+ssh_pwauth: true
+
+# Final message
+final_message: "Cloud-init complete. System ready for Packer provisioning."
+
+# Power state - don't reboot, let Packer take over
+power_state:
+  mode: reboot
+  condition: false
