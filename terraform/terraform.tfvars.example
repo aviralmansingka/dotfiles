@@ -1,0 +1,12 @@
+# Copy to terraform.tfvars and fill in values
+# Most of these are set via environment variables in CI
+
+vps_data_center_id = 0       # Query: GET /api/vps/v1/data-centers
+vps_template_id    = 0       # Query: GET /api/vps/v1/templates
+vps_hostname       = "dev"
+vps_plan           = "hostingercom-vps-kvm2-usd-1m"
+
+# Sensitive values - set via env vars TF_VAR_* or pass on CLI
+# vps_password    = ""
+# ssh_public_key  = ""
+# ssh_private_key = ""
