@@ -1,7 +1,11 @@
 name: Test SSH Connection
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - terraform
+    paths:
+      - '.github/workflows/test-ssh.yml'
 
 jobs:
   test-ssh:
