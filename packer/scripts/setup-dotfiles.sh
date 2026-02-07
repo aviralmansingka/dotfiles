@@ -84,6 +84,9 @@ for pkg in ${STOW_PACKAGES}; do
     stow -v --target="${HOME}" "${pkg}" || echo "Warning: Failed to stow ${pkg}"
 done
 
+# Remove stowed git SSH→HTTPS rewrite (no SSH key available in packer builds)
+git config --file "${HOME}/.config/git/config" --remove-section url.\"git@github.com:\" 2>/dev/null || true
+
 # ===== Install TPM (Tmux Plugin Manager) =====
 echo "Installing TPM..."
 TPM_PATH="${HOME}/.local/share/tmux/plugins/tpm"
