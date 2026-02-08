@@ -8,13 +8,16 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.0"
+    }
   }
 
   backend "s3" {
     bucket  = "aviral-dotfiles-terraform-state"
     key     = "terraform.tfstate"
     region  = "us-east-1"
-    profile = "dotfiles-ci"
     encrypt = true
   }
 }
@@ -24,18 +27,20 @@ provider "hostinger" {
 }
 
 provider "aws" {
-  region  = var.aws_region
-  profile = "dotfiles-ci"
+  region = var.aws_region
 }
 
 provider "aws" {
-  alias   = "us_west_1"
-  region  = "us-west-1"
-  profile = "dotfiles-ci"
+  alias  = "us_west_1"
+  region = "us-west-1"
 }
 
 provider "aws" {
-  alias   = "ap_south_1"
-  region  = "ap-south-1"
-  profile = "dotfiles-ci"
+  alias  = "ap_south_1"
+  region = "ap-south-1"
+}
+
+provider "github" {
+  token = var.github_token
+  owner = "aviralmansingka"
 }
