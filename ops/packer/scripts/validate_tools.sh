@@ -73,10 +73,10 @@ check_command opencode
 
 echo ""
 echo "=== Neovim ==="
-if "$HOME/.cargo/bin/bob" list 2>/dev/null | grep -q nightly; then
-  echo "[OK] neovim nightly installed via bob"
+if [ -x "$HOME/.local/share/bob/nvim-bin/nvim" ]; then
+  echo "[OK] neovim via bob: $("$HOME/.local/share/bob/nvim-bin/nvim" --version | head -1)"
 else
-  echo "[FAIL] neovim nightly not found via bob"
+  echo "[FAIL] neovim not found at ~/.local/share/bob/nvim-bin/nvim"
   ERRORS=$((ERRORS + 1))
 fi
 
