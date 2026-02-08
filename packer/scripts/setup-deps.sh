@@ -98,6 +98,8 @@ NVIM_VERSION="v0.10.2"
 if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then
     curl -LO "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux64.tar.gz"
     tar -xzf nvim-linux64.tar.gz
+    # Remove existing nvim binary first to avoid "Text file busy" on live servers
+    rm -f /usr/local/bin/nvim 2>/dev/null || true
     cp -r nvim-linux64/* /usr/local/
     rm -rf nvim-linux64 nvim-linux64.tar.gz
 else
