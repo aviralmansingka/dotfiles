@@ -53,7 +53,7 @@ resource "aws_instance" "devbox" {
   count = var.devbox_enabled ? 1 : 0
 
   ami                    = data.aws_ami.devbox[0].id
-  instance_type          = "t3.medium"
+  instance_type          = "c5.2xlarge"
   key_name               = aws_key_pair.devbox[0].key_name
   vpc_security_group_ids = [aws_security_group.devbox[0].id]
 

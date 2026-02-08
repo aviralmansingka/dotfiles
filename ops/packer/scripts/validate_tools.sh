@@ -74,6 +74,9 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
+check_path "$HOME/.local/share/nvim/lazy/lazy.nvim" "lazy.nvim plugin manager"
+check_path "$HOME/.local/share/nvim/lazy/LazyVim" "LazyVim distribution"
+
 echo ""
 echo "=== Shell configuration ==="
 check_path "$HOME/.oh-my-zsh" "Oh My Zsh"
