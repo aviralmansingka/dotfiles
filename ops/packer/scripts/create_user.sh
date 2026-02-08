@@ -18,10 +18,12 @@ echo "==> Granting passwordless sudo"
 echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/"$USERNAME" > /dev/null
 sudo chmod 440 /etc/sudoers.d/"$USERNAME"
 
-echo "==> Setting up SSH directory"
+echo "==> Setting up home directories"
 sudo mkdir -p /home/"$USERNAME"/.ssh
+sudo mkdir -p /home/"$USERNAME"/.local/bin
+sudo mkdir -p /home/"$USERNAME"/.local/share/bob
 sudo chmod 700 /home/"$USERNAME"/.ssh
-sudo chown "$USERNAME":"$USERNAME" /home/"$USERNAME"/.ssh
+sudo chown -R "$USERNAME":"$USERNAME" /home/"$USERNAME"
 
 echo "==> User $USERNAME created successfully"
 id "$USERNAME"

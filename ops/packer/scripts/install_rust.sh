@@ -12,5 +12,4 @@ echo "==> Installing bob-nvim"
 cargo install bob-nvim
 
 echo "==> Installing neovim nightly via bob"
-mkdir -p "$HOME/.local/share/bob"
 "$HOME/.cargo/bin/bob" use nightly
