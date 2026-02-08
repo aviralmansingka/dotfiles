@@ -87,6 +87,7 @@ check_path "$HOME/.zshrc" ".zshrc"
 check_path "$HOME/.tmux.conf" ".tmux.conf"
 check_path "$HOME/.config/nvim" "nvim config"
 check_path "$HOME/.config/starship.toml" "starship config"
+check_path "$HOME/.terminfo" "terminfo directory"
 
 echo ""
 echo "=== Default shell ==="

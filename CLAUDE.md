@@ -15,16 +15,19 @@ This is a dotfiles repository that manages development environment configuration
 
 # Manual installation with stow
 brew bundle                    # Install dependencies from Brewfile
-stow lazyvim tmux zsh kitty git yabai skhd kube tmuxinator
+stow nvim tmux zsh ghostty git kube tmuxinator
 ```
 
 ### Component Installation
 ```bash
 # Individual tools (use stow for each)
 stow zsh          # Deploy zsh configuration
-stow tmux         # Deploy tmux configuration  
-stow lazyvim      # Deploy Neovim/LazyVim configuration
-stow kitty        # Deploy Kitty terminal configuration
+stow tmux         # Deploy tmux configuration
+stow nvim         # Deploy Neovim/LazyVim configuration
+stow ghostty      # Deploy Ghostty terminal configuration
+stow git          # Deploy git configuration
+stow starship     # Deploy Starship prompt configuration
+stow aerospace    # Deploy AeroSpace window manager configuration
 ```
 
 ### Plugin Management
@@ -40,10 +43,27 @@ stow kitty        # Deploy Kitty terminal configuration
 
 ### Stow-Based Structure
 Each tool has its own directory containing dotfiles in their target path structure:
-- `lazyvim/.config/nvim/` → `~/.config/nvim/`
+- `nvim/.config/nvim/` → `~/.config/nvim/`
 - `zsh/.zshrc` → `~/.zshrc`
 - `tmux/.tmux.conf` → `~/.tmux.conf`
-- `kitty/.config/kitty/` → `~/.config/kitty/`
+- `ghostty/.config/ghostty/` → `~/.config/ghostty/`
+
+### Stow Packages
+- **aerospace** - AeroSpace tiling window manager
+- **blinksh** - Blink Shell (iOS terminal) configuration
+- **claude** - Claude AI context files
+- **code** - Code snippets (Golang, Lua)
+- **ghostty** - Ghostty terminal emulator
+- **git** - Git configuration
+- **kube** - Kubernetes configuration
+- **neovide** - Neovide (Neovim GUI) configuration
+- **nvim** - Neovim with LazyVim distribution
+- **ssh** - SSH configuration
+- **starship** - Starship prompt
+- **terminfo** - Custom terminfo entries (xterm-ghostty)
+- **tmux** - Tmux configuration
+- **tmuxinator** - Tmuxinator session templates
+- **zsh** - Zsh shell configuration
 
 ### Key Configuration Patterns
 
@@ -67,35 +87,51 @@ Each tool has its own directory containing dotfiles in their target path structu
 
 ### Development Dependencies
 
-**Languages:** Go, Rust, Node.js, Python (via pyenv), Java 17, Lua
+**Languages:** Go, Rust, Node.js, Python (via pyenv), Lua
 **Cloud Tools:** AWS CLI, kubectl, kubectx, k9s, Docker
-**Terminal Tools:** fd, fzf, ripgrep, exa, lazygit, glow, tig
+**Terminal Tools:** fd, fzf, ripgrep, eza, lazygit, tig
 **Fonts:** JetBrains Mono, Meslo LG, Fira Code (Nerd Font variants)
+
+## Infrastructure (ops/)
+
+### Packer (`ops/packer/`)
+Builds Ubuntu 24.04 development AMIs with a multi-phase provisioning pipeline:
+1. System packages → Rust toolchain → CLI tools → Dotfiles deployment → Shell plugins → Cleanup
+2. Includes a validation script that checks 20+ tools post-build
+
+### Terraform (`ops/terraform/`)
+Manages AWS infrastructure for the devbox:
+- EC2 instance with conditional `devbox_enabled` flag
+- IAM roles, security groups, DNS, GitHub OIDC integration
+
+### CI/CD Workflows (`.github/workflows/`)
+- **Packer** (`packer.yml`) - Builds AMI on push to `main` (when `ops/packer/**` changes), validates via temporary EC2 instance
+- **Terraform** (`terraform.yml`) - Plans on PR, applies on push to `main` (when `ops/terraform/**` changes)
 
 ## Dependency Management
 
 ### Centralized Package Configuration
-All dependencies are managed centrally in `dependencies.yml`:
+All dependencies are managed centrally in `dependencies.yml` / `dependencies.json`:
 
 ```yaml
 categories:
   core: [git, curl, zsh, tmux, neovim, stow]
   development: [gcc, make, build-essential]
   languages: [golang, python3, nodejs, rust]
-  tools: [fd, ripgrep, fzf, act, lazygit]
+  tools: [fd, ripgrep, fzf, lazygit]
 ```
 
 ### Generating Platform-Specific Files
 ```bash
-# Generate Brewfile from YAML
-python3 scripts/install-deps.py --os macos --format brewfile > Brewfile
+# Generate Brewfile from dependencies
+python3 scripts/install_deps.py --os macos --format brewfile > Brewfile
 # Or use the convenience script:
 ./scripts/generate-brewfile.sh
 
 # Generate Dockerfile commands
-python3 scripts/install-deps.py --os ubuntu --format dockerfile
-python3 scripts/install-deps.py --os centos --format dockerfile  
-python3 scripts/install-deps.py --os alpine --format dockerfile
+python3 scripts/install_deps.py --os ubuntu --format dockerfile
+python3 scripts/install_deps.py --os centos --format dockerfile
+python3 scripts/install_deps.py --os alpine --format dockerfile
 ```
 
 ## Working with This Repository
@@ -111,7 +147,6 @@ python3 scripts/install-deps.py --os alpine --format dockerfile
 3. Regenerate platform files:
    ```bash
    ./scripts/generate-brewfile.sh
-   # Update Dockerfiles manually or regenerate them
    ```
 
 ### Adding New Tools
@@ -124,83 +159,11 @@ python3 scripts/install-deps.py --os alpine --format dockerfile
 # Test zsh config
 zsh -c 'source ~/.zshrc'
 
-# Test tmux config  
+# Test tmux config
 tmux source-file ~/.tmux.conf
-
-# Test kitty config
-kitty @ load-config
 ```
 
 ### Cross-Platform Considerations
 - Install script supports macOS, RHEL/CentOS, Ubuntu
 - Homebrew works on both macOS and Linux
 - Configuration files are platform-agnostic where possible
-
-## Testing Infrastructure
-
-### Container-Based Testing
-The repository includes Docker containers for testing across multiple Linux distributions:
-
-```bash
-# Build test containers
-docker build -f tests/docker/ubuntu.Dockerfile -t dotfiles-test-ubuntu .
-docker build -f tests/docker/centos.Dockerfile -t dotfiles-test-centos .
-docker build -f tests/docker/alpine.Dockerfile -t dotfiles-test-alpine .
-
-# Test containers
-docker run --rm dotfiles-test-ubuntu /bin/bash -c "which git zsh tmux nvim stow act"
-docker run --rm dotfiles-test-centos /bin/bash -c "which git zsh tmux nvim stow act"
-docker run --rm dotfiles-test-alpine /bin/bash -c "which git zsh tmux nvim stow act"
-```
-
-### Local Testing with Act
-GitHub Actions can be tested locally using `act`:
-
-```bash
-# Install act (included in Brewfile)
-brew install act
-
-# Test all workflows
-act push
-
-# Test specific job
-act push -j test-containers
-
-# Test with specific platform
-act push -j test-containers --matrix platform:ubuntu
-```
-
-### CI/CD Pipeline
-- **Automated testing** on push/PR to develop/main branches
-- **Multi-platform validation** across Ubuntu, CentOS, Alpine, and macOS
-- **Container builds** verify all dependencies install correctly
-- **Functional testing** validates tool integration and basic workflows
-- **Integration testing** confirms dotfiles deployment works end-to-end
-
-## Published Docker Images
-
-Pre-built development environments are available as Docker images:
-
-**Available Images:**
-- `ghcr.io/aviralmansingka/dotfiles-ubuntu:latest` - Ubuntu 22.04 environment
-- `ghcr.io/aviralmansingka/dotfiles-centos:latest` - CentOS Stream 9 environment  
-- `ghcr.io/aviralmansingka/dotfiles-alpine:latest` - Alpine Linux environment
-
-**Quick Start:**
-```bash
-# Run development environment
-docker run -it --rm ghcr.io/aviralmansingka/dotfiles-ubuntu:latest
-
-# Mount dotfiles for testing
-docker run -it --rm -v $(pwd):/home/testuser/dotfiles \
-  ghcr.io/aviralmansingka/dotfiles-alpine:latest
-```
-
-**Features:**
-- Complete development toolchain (git, zsh, tmux, neovim, stow, act)
-- Programming languages (Go, Python, Node.js, Rust)
-- Non-root user `testuser` with sudo access
-- Multi-architecture support (amd64, arm64)
-- Automatic security scanning and updates
-
-See [docs/DOCKER.md](docs/DOCKER.md) for detailed usage instructions.
