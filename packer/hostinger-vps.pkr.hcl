@@ -73,4 +73,13 @@ build {
       "sudo usermod -s /bin/zsh ${var.ssh_username}"
     ]
   }
+
+  # Disable password authentication (key-only SSH)
+  provisioner "shell" {
+    inline = [
+      "sudo sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config",
+      "sudo sed -i 's/^#\\?KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config",
+      "sudo systemctl restart sshd"
+    ]
+  }
 }
