@@ -27,3 +27,15 @@ provider "aws" {
   region  = var.aws_region
   profile = "dotfiles-ci"
 }
+
+provider "aws" {
+  alias   = "us_west_1"
+  region  = "us-west-1"
+  profile = "dotfiles-ci"
+}
+
+provider "aws" {
+  alias   = "ap_south_1"
+  region  = "ap-south-1"
+  profile = "dotfiles-ci"
+}

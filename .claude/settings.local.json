@@ -57,7 +57,16 @@
       "Bash(terraform plan:*)",
       "Bash(terraform apply:*)",
       "Bash(AWS_PROFILE=dotfiles-ci aws s3api:*)",
-      "Bash(terraform import:*)"
+      "Bash(terraform import:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws lambda list-functions:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws dynamodb:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws ec2 describe-instances:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws eks:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws logs:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws apigateway get-rest-apis:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws lambda get-function:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws apigateway:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws lambda:*)"
     ],
     "deny": [],
     "ask": [],
