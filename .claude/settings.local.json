@@ -44,7 +44,12 @@
       "WebFetch(domain:shantanoo-desai.github.io)",
       "Bash(packer version:*)",
       "Bash(packer init:*)",
-      "Bash(packer validate:*)"
+      "Bash(packer validate:*)",
+      "Bash(gh pr edit:*)",
+      "WebFetch(domain:developers.hostinger.com)",
+      "Bash(curl:*)",
+      "WebFetch(domain:registry.terraform.io)",
+      "Bash(terraform init:*)"
     ],
     "deny": [],
     "ask": [],
