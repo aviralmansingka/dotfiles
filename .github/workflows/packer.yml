@@ -282,12 +282,12 @@ jobs:
           TOTAL=$(echo "$AMIS" | jq 'length')
           echo "Found $TOTAL base AMI(s) tagged branch=main"
 
-          if [ "$TOTAL" -le 3 ]; then
-            echo "Nothing to clean up (keeping 3)."
+          if [ "$TOTAL" -le 2 ]; then
+            echo "Nothing to clean up (keeping 2)."
             exit 0
           fi
 
-          echo "$AMIS" | jq -r '.[3:] | .[] | .ImageId' | while read -r AMI_ID; do
+          echo "$AMIS" | jq -r '.[2:] | .[] | .ImageId' | while read -r AMI_ID; do
             echo "--- Deregistering $AMI_ID ---"
             SNAPSHOTS=$(aws ec2 describe-images --image-ids "$AMI_ID" \
               --query 'Images[0].BlockDeviceMappings[*].Ebs.SnapshotId' --output text)
@@ -315,12 +315,12 @@ jobs:
           TOTAL=$(echo "$AMIS" | jq 'length')
           echo "Found $TOTAL devbox AMI(s) tagged branch=main"
 
-          if [ "$TOTAL" -le 3 ]; then
-            echo "Nothing to clean up (keeping 3)."
+          if [ "$TOTAL" -le 2 ]; then
+            echo "Nothing to clean up (keeping 2)."
             exit 0
           fi
 
-          echo "$AMIS" | jq -r '.[3:] | .[] | .ImageId' | while read -r AMI_ID; do
+          echo "$AMIS" | jq -r '.[2:] | .[] | .ImageId' | while read -r AMI_ID; do
             echo "--- Deregistering $AMI_ID ---"
             SNAPSHOTS=$(aws ec2 describe-images --image-ids "$AMI_ID" \
               --query 'Images[0].BlockDeviceMappings[*].Ebs.SnapshotId' --output text)
