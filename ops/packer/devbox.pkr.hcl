@@ -49,11 +49,6 @@ source "amazon-ebs" "devbox" {
 build {
   sources = ["source.amazon-ebs.devbox"]
 
-  # Phase 4: Create aviralmansingka user and copy tool installations from ubuntu
-  provisioner "shell" {
-    script = "${path.root}/scripts/create_user.sh"
-  }
-
   # Phase 5: Clone and deploy dotfiles via stow (as aviralmansingka)
   provisioner "shell" {
     script          = "${path.root}/scripts/deploy_dotfiles.sh"

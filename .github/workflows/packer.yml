@@ -45,7 +45,7 @@ jobs:
             else
               echo "packer=false" >> "$GITHUB_OUTPUT"
             fi
-            BASE_PATTERNS="ops/packer/base.pkr.hcl|ops/packer/variables.pkr.hcl|ops/packer/scripts/install_system_packages.sh|ops/packer/scripts/install_rust.sh|ops/packer/scripts/install_cli_tools.sh|^dependencies\.json$"
+            BASE_PATTERNS="ops/packer/base.pkr.hcl|ops/packer/variables.pkr.hcl|ops/packer/scripts/install_system_packages.sh|ops/packer/scripts/create_user.sh|ops/packer/scripts/install_rust.sh|ops/packer/scripts/install_cli_tools.sh|^dependencies\.json$"
             if echo "$CHANGED_FILES" | grep -qE "$BASE_PATTERNS"; then
               echo "base=true" >> "$GITHUB_OUTPUT"
             else

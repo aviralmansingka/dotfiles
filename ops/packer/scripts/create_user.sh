@@ -23,18 +23,5 @@ sudo mkdir -p /home/"$USERNAME"/.ssh
 sudo chmod 700 /home/"$USERNAME"/.ssh
 sudo chown "$USERNAME":"$USERNAME" /home/"$USERNAME"/.ssh
 
-echo "==> Copying tool installations from $SOURCE_USER"
-# Copy cargo (rust toolchain + cargo-installed binaries like eza, bob, starship, etc.)
-sudo cp -a /home/"$SOURCE_USER"/.cargo /home/"$USERNAME"/.cargo
-# Copy local (bob nvim, pipx, etc.)
-sudo cp -a /home/"$SOURCE_USER"/.local /home/"$USERNAME"/.local
-# Copy opencode if it exists
-if [ -d /home/"$SOURCE_USER"/.opencode ]; then
-  sudo cp -a /home/"$SOURCE_USER"/.opencode /home/"$USERNAME"/.opencode
-fi
-
-echo "==> Fixing ownership"
-sudo chown -R "$USERNAME":"$USERNAME" /home/"$USERNAME"/
-
 echo "==> User $USERNAME created successfully"
 id "$USERNAME"
