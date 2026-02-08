@@ -20,3 +20,8 @@ gradle/.gradle/wrapper
 kube/.config/k9s/config.yml
 
 Brewfile.lock.json
+
+ops/terraform/*.tfvars
+ops/terraform/.terraform/
+ops/terraform/.terraform.lock.hcl
+ops/terraform/terraform.tfstate*
