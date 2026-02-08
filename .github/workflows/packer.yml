@@ -8,21 +8,48 @@ on:
     branches: [main]
     paths: [ops/packer/**]
   workflow_dispatch:
+    inputs:
+      build_base:
+        description: 'Rebuild the base AMI'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   id-token: write
 
 jobs:
-  build:
-    name: Build AMI
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      base_changed: ${{ steps.changes.outputs.base }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for base layer changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "base=${{ inputs.build_base }}" >> "$GITHUB_OUTPUT"
+          else
+            BASE_PATTERNS="ops/packer/base.pkr.hcl|ops/packer/variables.pkr.hcl|ops/packer/scripts/install_system_packages.sh|ops/packer/scripts/install_rust.sh|ops/packer/scripts/install_cli_tools.sh"
+            if git diff --name-only HEAD~1 HEAD | grep -qE "$BASE_PATTERNS"; then
+              echo "base=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "base=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  validate-templates:
+    name: Validate Templates
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ops/packer
-    outputs:
-      ami_id: ${{ steps.build.outputs.ami_id }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,18 +69,78 @@ jobs:
       - name: Packer Validate
         run: packer validate .
 
-      - name: Packer Build
+  build-base:
+    name: Build Base AMI
+    needs: [detect-changes, validate-templates]
+    if: >-
+      needs.detect-changes.outputs.base_changed == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ops/packer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+
+      - name: Packer Init
+        run: packer init .
+
+      - name: Packer Build Base
+        run: packer build -only=amazon-ebs.base .
+
+  build-devbox:
+    name: Build Devbox AMI
+    needs: [detect-changes, validate-templates, build-base]
+    if: >-
+      always() &&
+      needs.validate-templates.result == 'success' &&
+      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ops/packer
+    outputs:
+      ami_id: ${{ steps.build.outputs.ami_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+
+      - name: Packer Init
+        run: packer init .
+
+      - name: Packer Build Devbox
         id: build
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
-          packer build -machine-readable . | tee build.log
+          packer build -only=amazon-ebs.devbox -machine-readable . | tee build.log
           AMI_ID=$(grep 'artifact,0,id' build.log | cut -d: -f2)
           echo "ami_id=$AMI_ID" >> "$GITHUB_OUTPUT"
 
   validate:
     name: Validate AMI
-    needs: build
-    if: needs.build.outputs.ami_id != ''
+    needs: build-devbox
+    if: needs.build-devbox.outputs.ami_id != ''
     runs-on: ubuntu-latest
 
     env:

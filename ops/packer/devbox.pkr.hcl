@@ -15,12 +15,12 @@ source "amazon-ebs" "devbox" {
 
   source_ami_filter {
     filters = {
-      name                = "ubuntu/images/*ubuntu-noble-24.04-amd64-server-*"
+      name                = "${var.base_ami_name_prefix}-*"
       root-device-type    = "ebs"
       virtualization-type = "hvm"
     }
     most_recent = true
-    owners      = ["099720109477"] # Canonical
+    owners      = ["self"]
   }
 
   ssh_username            = "ubuntu"
@@ -47,23 +47,6 @@ source "amazon-ebs" "devbox" {
 
 build {
   sources = ["source.amazon-ebs.devbox"]
-
-  # Phase 1: System packages
-  provisioner "shell" {
-    script      = "${path.root}/scripts/install_system_packages.sh"
-    max_retries = 3
-  }
-
-  # Phase 2: Rust toolchain + cargo-installed tools (eza, bob-nvim)
-  provisioner "shell" {
-    script = "${path.root}/scripts/install_rust.sh"
-  }
-
-  # Phase 3: CLI tools installed via curl/binary downloads
-  provisioner "shell" {
-    script      = "${path.root}/scripts/install_cli_tools.sh"
-    max_retries = 2
-  }
 
   # Phase 4: Clone and deploy dotfiles via stow
   provisioner "shell" {
