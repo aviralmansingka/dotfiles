@@ -35,11 +35,18 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H avirus.xyz >> ~/.ssh/known_hosts 2>/dev/null || true
 
+      - name: Derive SSH public key
+        id: pubkey
+        run: |
+          PUBKEY=$(ssh-keygen -y -f ~/.ssh/id_rsa)
+          echo "ssh_public_key=${PUBKEY}" >> $GITHUB_OUTPUT
+
       - name: Provision VPS
         run: |
           cd packer
           packer build \
             -only='hostinger-vps-provision.*' \
+            -var "ssh_public_key=${{ steps.pubkey.outputs.ssh_public_key }}" \
             .
         timeout-minutes: 30
 

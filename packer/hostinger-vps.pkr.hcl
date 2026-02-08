@@ -53,6 +53,20 @@ build {
     ]
   }
 
+  # Authorize SSH key for the target user
+  provisioner "shell" {
+    inline = [
+      "if [ -n '${var.ssh_public_key}' ]; then",
+      "  sudo mkdir -p /home/${var.ssh_username}/.ssh",
+      "  echo '${var.ssh_public_key}' | sudo tee -a /home/${var.ssh_username}/.ssh/authorized_keys > /dev/null",
+      "  sudo sort -u -o /home/${var.ssh_username}/.ssh/authorized_keys /home/${var.ssh_username}/.ssh/authorized_keys",
+      "  sudo chmod 600 /home/${var.ssh_username}/.ssh/authorized_keys",
+      "  sudo chown -R ${var.ssh_username}:${var.ssh_username} /home/${var.ssh_username}/.ssh",
+      "  echo 'SSH key authorized for ${var.ssh_username}'",
+      "fi"
+    ]
+  }
+
   # Set default shell to zsh for the target user
   provisioner "shell" {
     inline = [

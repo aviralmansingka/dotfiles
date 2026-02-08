@@ -17,3 +17,9 @@ variable "ssh_private_key_file" {
   description = "Path to SSH private key for VPS access"
   default     = "~/.ssh/id_rsa"
 }
+
+variable "ssh_public_key" {
+  type        = string
+  description = "SSH public key to authorize for the target user"
+  default     = ""
+}
