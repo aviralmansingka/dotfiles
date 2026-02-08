@@ -188,7 +188,7 @@ chmod +x "yq_linux_${ARCH_K8S}"
 mv "yq_linux_${ARCH_K8S}" /usr/local/bin/yq
 
 echo "Installing tmuxinator..."
-gem install tmuxinator 2>/dev/null || pip3 install tmuxinator || true
+gem install tmuxinator 2>/dev/null || pip3 install --break-system-packages tmuxinator 2>/dev/null || true
 
 # Ensure /usr/local/bin is in PATH for all users
 echo 'export PATH="/usr/local/bin:$PATH"' >> /etc/profile.d/local-bin.sh

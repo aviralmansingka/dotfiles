@@ -25,9 +25,11 @@ git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
 # Clone dotfiles repository
 echo "Cloning dotfiles repository..."
 if [ -d "${HOME}/dotfiles" ]; then
-    echo "Dotfiles already exist, pulling latest..."
+    echo "Dotfiles already exist, resetting to latest..."
     cd "${HOME}/dotfiles"
-    git pull origin "${DOTFILES_BRANCH}" || true
+    git fetch origin "${DOTFILES_BRANCH}"
+    git checkout -f "${DOTFILES_BRANCH}"
+    git reset --hard "origin/${DOTFILES_BRANCH}"
 else
     git clone --branch "${DOTFILES_BRANCH}" "${DOTFILES_REPO}" "${HOME}/dotfiles"
     cd "${HOME}/dotfiles"
