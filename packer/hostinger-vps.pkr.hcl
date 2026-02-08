@@ -79,7 +79,7 @@ build {
     inline = [
       "sudo sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config",
       "sudo sed -i 's/^#\\?KbdInteractiveAuthentication.*/KbdInteractiveAuthentication no/' /etc/ssh/sshd_config",
-      "sudo systemctl restart sshd"
+      "sudo systemctl restart ssh || sudo systemctl restart sshd"
     ]
   }
 }
