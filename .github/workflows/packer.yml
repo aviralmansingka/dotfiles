@@ -116,8 +116,7 @@ jobs:
       !cancelled() &&
       needs.detect-changes.outputs.packer_changed == 'true' &&
       needs.validate-templates.result == 'success' &&
-      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') &&
-      github.event_name != 'pull_request'
+      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped')
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -233,6 +232,28 @@ jobs:
         run: |
           aws s3 rm "s3://aviral-devbox-terraform-state/ci/terraform.tfstate" || true
 
+      - name: Deregister PR AMI
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          AMI_ID="${{ needs.build-devbox.outputs.ami_id }}"
+          if [ -z "$AMI_ID" ]; then
+            echo "No AMI to deregister."
+            exit 0
+          fi
+          echo "Deregistering PR AMI: $AMI_ID"
+          SNAPSHOTS=$(aws ec2 describe-images --image-ids "$AMI_ID" \
+            --query 'Images[0].BlockDeviceMappings[*].Ebs.SnapshotId' --output text)
+          if aws ec2 deregister-image --image-id "$AMI_ID"; then
+            echo "Deregistered $AMI_ID"
+            for SNAP in $SNAPSHOTS; do
+              if [ "$SNAP" != "None" ]; then
+                aws ec2 delete-snapshot --snapshot-id "$SNAP" && echo "Deleted snapshot $SNAP" || echo "WARNING: Failed to delete snapshot $SNAP"
+              fi
+            done
+          else
+            echo "WARNING: Failed to deregister $AMI_ID"
+          fi
+
       - name: Cleanup SSH key
         if: always()
         run: rm -f /tmp/devbox-key /tmp/devbox-key.pub
@@ -335,7 +356,7 @@ jobs:
             echo "Devbox AMI build failed."
             exit 1
           fi
-          if [ "${{ github.event_name }}" != "pull_request" ] && [ "${{ needs.validate.result }}" != "success" ]; then
+          if [ "${{ needs.validate.result }}" != "success" ]; then
             echo "AMI validation did not pass (result: ${{ needs.validate.result }})."
             exit 1
           fi
