@@ -40,12 +40,12 @@ jobs:
             echo "base=${{ inputs.build_base }}" >> "$GITHUB_OUTPUT"
           else
             CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-            if echo "$CHANGED_FILES" | grep -qE '^ops/packer/'; then
+            if echo "$CHANGED_FILES" | grep -qE '^ops/packer/|^dependencies\.json$'; then
               echo "packer=true" >> "$GITHUB_OUTPUT"
             else
               echo "packer=false" >> "$GITHUB_OUTPUT"
             fi
-            BASE_PATTERNS="ops/packer/base.pkr.hcl|ops/packer/variables.pkr.hcl|ops/packer/scripts/install_system_packages.sh|ops/packer/scripts/install_rust.sh|ops/packer/scripts/install_cli_tools.sh"
+            BASE_PATTERNS="ops/packer/base.pkr.hcl|ops/packer/variables.pkr.hcl|ops/packer/scripts/install_system_packages.sh|ops/packer/scripts/install_rust.sh|ops/packer/scripts/install_cli_tools.sh|^dependencies\.json$"
             if echo "$CHANGED_FILES" | grep -qE "$BASE_PATTERNS"; then
               echo "base=true" >> "$GITHUB_OUTPUT"
             else
