@@ -1,0 +1,123 @@
+name: Packer
+
+on:
+  push:
+    branches: [main]
+    paths: [ops/packer/**]
+  pull_request:
+    branches: [main]
+    paths: [ops/packer/**]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    name: Build AMI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ops/packer
+    outputs:
+      ami_id: ${{ steps.build.outputs.ami_id }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+
+      - name: Packer Init
+        run: packer init .
+
+      - name: Packer Validate
+        run: packer validate .
+
+      - name: Packer Build
+        id: build
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          packer build -machine-readable . | tee build.log
+          AMI_ID=$(grep 'artifact,0,id' build.log | cut -d: -f2)
+          echo "ami_id=$AMI_ID" >> "$GITHUB_OUTPUT"
+
+  validate:
+    name: Validate AMI
+    needs: build
+    if: needs.build.outputs.ami_id != ''
+    runs-on: ubuntu-latest
+
+    env:
+      TF_VAR_hostinger_api_token: ${{ secrets.HOSTINGER_API_TOKEN }}
+      TF_VAR_github_token: ${{ secrets.GH_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Generate SSH key pair
+        run: |
+          ssh-keygen -t ed25519 -f /tmp/devbox-key -N ""
+          echo "SSH_PUBLIC_KEY=$(cat /tmp/devbox-key.pub)" >> "$GITHUB_ENV"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Launch EC2 instance
+        working-directory: ops/terraform
+        run: |
+          terraform init
+          terraform apply -auto-approve \
+            -var="devbox_enabled=true" \
+            -var="ssh_public_key=$SSH_PUBLIC_KEY"
+          echo "INSTANCE_IP=$(terraform output -raw devbox_public_ip)" >> "$GITHUB_ENV"
+
+      - name: Wait for instance to be ready
+        run: |
+          echo "Waiting for SSH on $INSTANCE_IP..."
+          for i in $(seq 1 30); do
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i /tmp/devbox-key "ubuntu@$INSTANCE_IP" true 2>/dev/null; then
+              echo "SSH is ready"
+              exit 0
+            fi
+            echo "Attempt $i/30 - waiting 10s..."
+            sleep 10
+          done
+          echo "Timed out waiting for SSH"
+          exit 1
+
+      - name: Run validation
+        run: |
+          scp -o StrictHostKeyChecking=no -i /tmp/devbox-key \
+            ops/packer/scripts/validate_tools.sh "ubuntu@$INSTANCE_IP:/tmp/validate_tools.sh"
+          ssh -o StrictHostKeyChecking=no -i /tmp/devbox-key "ubuntu@$INSTANCE_IP" \
+            "chmod +x /tmp/validate_tools.sh && /tmp/validate_tools.sh"
+
+      - name: Tear down EC2 instance
+        if: always()
+        working-directory: ops/terraform
+        run: |
+          terraform apply -auto-approve \
+            -var="devbox_enabled=false" \
+            -var="ssh_public_key=$SSH_PUBLIC_KEY"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f /tmp/devbox-key /tmp/devbox-key.pub

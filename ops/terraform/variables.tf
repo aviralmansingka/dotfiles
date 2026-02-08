@@ -16,3 +16,16 @@ variable "github_token" {
   sensitive   = true
 }
 
+variable "devbox_enabled" {
+  type        = bool
+  description = "Whether to create the devbox EC2 instance"
+  default     = false
+}
+
+variable "ssh_public_key" {
+  type        = string
+  description = "SSH public key for devbox EC2 access"
+  default     = ""
+  sensitive   = true
+}
+

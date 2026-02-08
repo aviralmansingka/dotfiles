@@ -1,0 +1,107 @@
+#!/bin/bash
+set -euo pipefail
+
+# Validates that all expected tools are installed and accessible on the devbox.
+# Exit code 0 = all tools present, non-zero = missing tools.
+
+ERRORS=0
+
+check_command() {
+  local cmd="$1"
+  local description="${2:-$1}"
+  if command -v "$cmd" &>/dev/null; then
+    echo "[OK] $description: $(command -v "$cmd")"
+  else
+    echo "[FAIL] $description: not found"
+    ERRORS=$((ERRORS + 1))
+  fi
+}
+
+check_path() {
+  local path="$1"
+  local description="$2"
+  if [ -e "$path" ]; then
+    echo "[OK] $description: $path"
+  else
+    echo "[FAIL] $description: $path not found"
+    ERRORS=$((ERRORS + 1))
+  fi
+}
+
+echo "=== System packages ==="
+check_command git
+check_command curl
+check_command zsh
+check_command tmux
+check_command stow
+check_command gcc
+check_command make
+check_command go "golang"
+check_command python3
+check_command node "nodejs"
+check_command fdfind "fd-find"
+check_command rg "ripgrep"
+check_command fzf
+check_command jq
+check_command aws "awscli"
+
+echo ""
+echo "=== Rust toolchain ==="
+check_command rustc
+check_command cargo
+check_command eza
+check_command bob "bob-nvim"
+
+echo ""
+echo "=== CLI tools ==="
+check_command starship
+check_command zoxide
+check_command lazygit
+check_command yq
+check_command kubectl
+check_command kubectx
+check_command kubens
+check_command k9s
+check_command uv
+check_command direnv
+
+echo ""
+echo "=== Neovim ==="
+if "$HOME/.cargo/bin/bob" list 2>/dev/null | grep -q nightly; then
+  echo "[OK] neovim nightly installed via bob"
+else
+  echo "[FAIL] neovim nightly not found via bob"
+  ERRORS=$((ERRORS + 1))
+fi
+
+echo ""
+echo "=== Shell configuration ==="
+check_path "$HOME/.oh-my-zsh" "Oh My Zsh"
+check_path "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" "zsh-autosuggestions"
+check_path "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting"
+check_path "$HOME/.tmux/plugins/tpm" "TPM"
+
+echo ""
+echo "=== Dotfiles ==="
+check_path "$HOME/.zshrc" ".zshrc"
+check_path "$HOME/.tmux.conf" ".tmux.conf"
+check_path "$HOME/.config/nvim" "nvim config"
+check_path "$HOME/.config/starship.toml" "starship config"
+
+echo ""
+echo "=== Default shell ==="
+SHELL_PATH=$(getent passwd ubuntu | cut -d: -f7)
+if [ "$SHELL_PATH" = "/usr/bin/zsh" ]; then
+  echo "[OK] Default shell is zsh"
+else
+  echo "[FAIL] Default shell is $SHELL_PATH, expected /usr/bin/zsh"
+  ERRORS=$((ERRORS + 1))
+fi
+
+echo ""
+if [ "$ERRORS" -eq 0 ]; then
+  echo "All checks passed!"
+else
+  echo "$ERRORS check(s) failed"
+  exit 1
+fi
