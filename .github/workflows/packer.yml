@@ -3,10 +3,8 @@ name: Packer
 on:
   push:
     branches: [main]
-    paths: [ops/packer/**]
   pull_request:
     branches: [main]
-    paths: [ops/packer/**]
   workflow_dispatch:
     inputs:
       build_base:
@@ -24,20 +22,28 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       base_changed: ${{ steps.changes.outputs.base }}
+      packer_changed: ${{ steps.changes.outputs.packer }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Check for base layer changes
+      - name: Check for packer changes
         id: changes
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "packer=true" >> "$GITHUB_OUTPUT"
             echo "base=${{ inputs.build_base }}" >> "$GITHUB_OUTPUT"
           else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+            if echo "$CHANGED_FILES" | grep -qE '^ops/packer/'; then
+              echo "packer=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "packer=false" >> "$GITHUB_OUTPUT"
+            fi
             BASE_PATTERNS="ops/packer/base.pkr.hcl|ops/packer/variables.pkr.hcl|ops/packer/scripts/install_system_packages.sh|ops/packer/scripts/install_rust.sh|ops/packer/scripts/install_cli_tools.sh"
-            if git diff --name-only HEAD~1 HEAD | grep -qE "$BASE_PATTERNS"; then
+            if echo "$CHANGED_FILES" | grep -qE "$BASE_PATTERNS"; then
               echo "base=true" >> "$GITHUB_OUTPUT"
             else
               echo "base=false" >> "$GITHUB_OUTPUT"
@@ -46,6 +52,8 @@ jobs:
 
   validate-templates:
     name: Validate Templates
+    needs: detect-changes
+    if: needs.detect-changes.outputs.packer_changed == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -72,10 +80,7 @@ jobs:
   build-base:
     name: Build Base AMI
     needs: [detect-changes, validate-templates]
-    if: >-
-      needs.detect-changes.outputs.base_changed == 'true' &&
-      github.ref == 'refs/heads/main' &&
-      github.event_name != 'pull_request'
+    if: needs.detect-changes.outputs.base_changed == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -104,10 +109,9 @@ jobs:
     needs: [detect-changes, validate-templates, build-base]
     if: >-
       always() &&
+      needs.detect-changes.outputs.packer_changed == 'true' &&
       needs.validate-templates.result == 'success' &&
-      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') &&
-      github.ref == 'refs/heads/main' &&
-      github.event_name != 'pull_request'
+      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped')
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -170,10 +174,13 @@ jobs:
       - name: Launch EC2 instance
         working-directory: ops/terraform
         run: |
+          AMI_ID="${{ needs.build-devbox.outputs.ami_id }}"
+          echo "Validating AMI: $AMI_ID"
           terraform init
           terraform apply -auto-approve \
             -var="devbox_enabled=true" \
-            -var="ssh_public_key=$SSH_PUBLIC_KEY"
+            -var="ssh_public_key=$SSH_PUBLIC_KEY" \
+            -var="devbox_ami_override=$AMI_ID"
           echo "INSTANCE_IP=$(terraform output -raw devbox_public_ip)" >> "$GITHUB_ENV"
 
       - name: Wait for instance to be ready
@@ -203,8 +210,35 @@ jobs:
         run: |
           terraform apply -auto-approve \
             -var="devbox_enabled=false" \
-            -var="ssh_public_key=$SSH_PUBLIC_KEY"
+            -var="ssh_public_key=$SSH_PUBLIC_KEY" \
+            -var="devbox_ami_override=${{ needs.build-devbox.outputs.ami_id }}"
 
       - name: Cleanup SSH key
         if: always()
         run: rm -f /tmp/devbox-key /tmp/devbox-key.pub
+
+  packer-result:
+    name: Packer Result
+    if: always()
+    needs: [detect-changes, validate-templates, build-base, build-devbox, validate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.detect-changes.outputs.packer_changed }}" != "true" ]; then
+            echo "No packer changes detected, skipping."
+            exit 0
+          fi
+          if [ "${{ needs.validate-templates.result }}" = "failure" ]; then
+            echo "Template validation failed."
+            exit 1
+          fi
+          if [ "${{ needs.build-devbox.result }}" = "failure" ]; then
+            echo "Devbox AMI build failed."
+            exit 1
+          fi
+          if [ "${{ needs.validate.result }}" = "failure" ]; then
+            echo "AMI validation failed."
+            exit 1
+          fi
+          echo "All packer checks passed."

@@ -29,3 +29,9 @@ variable "ssh_public_key" {
   sensitive   = true
 }
 
+variable "devbox_ami_override" {
+  type        = string
+  description = "Override the AMI ID for the devbox instance (skips data source lookup)"
+  default     = ""
+}
+
