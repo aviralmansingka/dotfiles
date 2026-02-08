@@ -113,7 +113,7 @@ jobs:
     name: Build Devbox AMI
     needs: [detect-changes, validate-templates, build-base]
     if: >-
-      always() &&
+      !cancelled() &&
       needs.detect-changes.outputs.packer_changed == 'true' &&
       needs.validate-templates.result == 'success' &&
       (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') &&
@@ -155,7 +155,7 @@ jobs:
   validate:
     name: Validate AMI
     needs: build-devbox
-    if: always() && needs.build-devbox.result == 'success'
+    if: "!cancelled() && needs.build-devbox.result == 'success'"
     runs-on: ubuntu-latest
 
     env:
@@ -187,8 +187,11 @@ jobs:
         run: |
           AMI_ID="${{ needs.build-devbox.outputs.ami_id }}"
           echo "Validating AMI: $AMI_ID"
-          terraform init
+          terraform init -backend-config="key=validate/terraform.tfstate"
           terraform apply -auto-approve \
+            -target=aws_key_pair.devbox \
+            -target=aws_security_group.devbox \
+            -target=aws_instance.devbox \
             -var="devbox_enabled=true" \
             -var="ssh_public_key=$SSH_PUBLIC_KEY" \
             -var="devbox_ami_override=$AMI_ID"
@@ -219,10 +222,18 @@ jobs:
         if: always()
         working-directory: ops/terraform
         run: |
-          terraform apply -auto-approve \
-            -var="devbox_enabled=false" \
+          terraform destroy -auto-approve \
+            -target=aws_instance.devbox \
+            -target=aws_security_group.devbox \
+            -target=aws_key_pair.devbox \
+            -var="devbox_enabled=true" \
             -var="ssh_public_key=$SSH_PUBLIC_KEY" \
             -var="devbox_ami_override=${{ needs.build-devbox.outputs.ami_id }}"
+
+      - name: Cleanup ephemeral state
+        if: always()
+        run: |
+          aws s3 rm "s3://aviral-dotfiles-terraform-state/validate/terraform.tfstate" || true
 
       - name: Cleanup SSH key
         if: always()
@@ -308,7 +319,7 @@ jobs:
 
   packer-result:
     name: Packer Result
-    if: always()
+    if: "!cancelled()"
     needs: [detect-changes, validate-templates, build-base, build-devbox, validate, cleanup-amis]
     runs-on: ubuntu-latest
     steps:

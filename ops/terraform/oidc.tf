@@ -31,9 +31,44 @@ resource "aws_iam_role" "github_actions" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "github_actions_admin" {
-  role       = aws_iam_role.github_actions.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+resource "aws_iam_role_policy" "github_actions" {
+  name = "github-actions-ci"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "EC2Full"
+        Effect   = "Allow"
+        Action   = "ec2:*"
+        Resource = "*"
+      },
+      {
+        Sid      = "IAMManagement"
+        Effect   = "Allow"
+        Action   = "iam:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "S3StateAndImages"
+        Effect = "Allow"
+        Action = "s3:*"
+        Resource = [
+          "arn:aws:s3:::aviral-dotfiles-terraform-state",
+          "arn:aws:s3:::aviral-dotfiles-terraform-state/*",
+          "arn:aws:s3:::aviral-dotfiles-vm-images",
+          "arn:aws:s3:::aviral-dotfiles-vm-images/*"
+        ]
+      },
+      {
+        Sid      = "STSGetCallerIdentity"
+        Effect   = "Allow"
+        Action   = "sts:GetCallerIdentity"
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 resource "github_actions_secret" "aws_role_arn" {
