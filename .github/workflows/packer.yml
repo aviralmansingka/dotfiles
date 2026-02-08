@@ -158,10 +158,6 @@ jobs:
     if: always() && needs.build-devbox.result == 'success'
     runs-on: ubuntu-latest
 
-    env:
-      TF_VAR_hostinger_api_token: ${{ secrets.HOSTINGER_API_TOKEN }}
-      TF_VAR_github_token: ${{ secrets.GH_TOKEN }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -183,15 +179,16 @@ jobs:
           terraform_wrapper: false
 
       - name: Launch EC2 instance
-        working-directory: ops/terraform
+        working-directory: ops/devbox
         run: |
           AMI_ID="${{ needs.build-devbox.outputs.ami_id }}"
           echo "Validating AMI: $AMI_ID"
-          terraform init
+          terraform init -backend-config="key=ci/terraform.tfstate"
           terraform apply -auto-approve \
             -var="devbox_enabled=true" \
             -var="ssh_public_key=$SSH_PUBLIC_KEY" \
-            -var="devbox_ami_override=$AMI_ID"
+            -var="devbox_ami_override=$AMI_ID" \
+            -var="instance_type=t2.micro"
           echo "INSTANCE_IP=$(terraform output -raw devbox_public_ip)" >> "$GITHUB_ENV"
 
       - name: Wait for instance to be ready
@@ -217,12 +214,13 @@ jobs:
 
       - name: Tear down EC2 instance
         if: always()
-        working-directory: ops/terraform
+        working-directory: ops/devbox
         run: |
           terraform apply -auto-approve \
             -var="devbox_enabled=false" \
             -var="ssh_public_key=$SSH_PUBLIC_KEY" \
-            -var="devbox_ami_override=${{ needs.build-devbox.outputs.ami_id }}"
+            -var="devbox_ami_override=${{ needs.build-devbox.outputs.ami_id }}" \
+            -var="instance_type=t2.micro"
 
       - name: Cleanup SSH key
         if: always()
