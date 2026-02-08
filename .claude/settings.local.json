@@ -66,7 +66,13 @@
       "Bash(AWS_PROFILE=dotfiles-ci aws apigateway get-rest-apis:*)",
       "Bash(AWS_PROFILE=dotfiles-ci aws lambda get-function:*)",
       "Bash(AWS_PROFILE=dotfiles-ci aws apigateway:*)",
-      "Bash(AWS_PROFILE=dotfiles-ci aws lambda:*)"
+      "Bash(AWS_PROFILE=dotfiles-ci aws lambda:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws ec2 describe-vpcs:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws ec2:*)",
+      "Bash(terraform state list:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci terraform providers:*)",
+      "Bash(terraform providers schema:*)",
+      "WebFetch(domain:www.hostinger.com)"
     ],
     "deny": [],
     "ask": [],
