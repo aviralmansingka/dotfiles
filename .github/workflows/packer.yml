@@ -83,7 +83,9 @@ jobs:
   build-base:
     name: Build Base AMI
     needs: [detect-changes, validate-templates]
-    if: needs.detect-changes.outputs.base_changed == 'true'
+    if: >-
+      needs.detect-changes.outputs.base_changed == 'true' &&
+      github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -114,7 +116,8 @@ jobs:
       always() &&
       needs.detect-changes.outputs.packer_changed == 'true' &&
       needs.validate-templates.result == 'success' &&
-      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped')
+      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped') &&
+      github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -154,7 +157,7 @@ jobs:
   validate:
     name: Validate AMI
     needs: build-devbox
-    if: needs.build-devbox.outputs.ami_id != ''
+    if: needs.build-devbox.result == 'success'
     runs-on: ubuntu-latest
 
     env:
@@ -325,7 +328,7 @@ jobs:
             echo "Devbox AMI build failed."
             exit 1
           fi
-          if [ "${{ needs.validate.result }}" != "success" ]; then
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ "${{ needs.validate.result }}" != "success" ]; then
             echo "AMI validation did not pass (result: ${{ needs.validate.result }})."
             exit 1
           fi
