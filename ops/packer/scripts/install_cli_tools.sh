@@ -63,3 +63,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 echo "==> Installing direnv"
 export bin_path="$HOME/.local/bin"
 curl -sfL https://direnv.net/install.sh | bash
+
+echo "==> Installing Claude Code"
+curl -fsSL https://claude.ai/install.sh | bash
+
+echo "==> Installing OpenCode"
+curl -fsSL https://opencode.ai/install | bash

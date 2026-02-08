@@ -1,5 +1,5 @@
 data "aws_ami" "devbox" {
-  count = var.devbox_enabled ? 1 : 0
+  count = var.devbox_ami_override == "" && var.devbox_enabled ? 1 : 0
 
   most_recent = true
 
@@ -14,6 +14,12 @@ data "aws_ami" "devbox" {
   }
 
   owners = ["self"]
+}
+
+locals {
+  devbox_ami_id = var.devbox_ami_override != "" ? var.devbox_ami_override : (
+    var.devbox_enabled ? data.aws_ami.devbox[0].id : null
+  )
 }
 
 resource "aws_key_pair" "devbox" {
@@ -52,7 +58,7 @@ resource "aws_security_group" "devbox" {
 resource "aws_instance" "devbox" {
   count = var.devbox_enabled ? 1 : 0
 
-  ami                    = data.aws_ami.devbox[0].id
+  ami                    = local.devbox_ami_id
   instance_type          = "c5.2xlarge"
   key_name               = aws_key_pair.devbox[0].key_name
   vpc_security_group_ids = [aws_security_group.devbox[0].id]
@@ -78,6 +84,6 @@ output "devbox_instance_id" {
 }
 
 output "devbox_ami_id" {
-  value       = var.devbox_enabled ? data.aws_ami.devbox[0].id : null
+  value       = local.devbox_ami_id
   description = "AMI ID used for the devbox"
 }

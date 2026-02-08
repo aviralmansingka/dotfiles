@@ -4,6 +4,10 @@ set -euo pipefail
 # Validates that all expected tools are installed and accessible on the devbox.
 # Exit code 0 = all tools present, non-zero = missing tools.
 
+# Ensure cargo and local bin are in PATH (non-login shells don't source profiles)
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
+[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
+
 ERRORS=0
 
 check_command() {
@@ -64,6 +68,8 @@ check_command kubens
 check_command k9s
 check_command uv
 check_command direnv
+check_command claude "claude-code"
+check_command opencode
 
 echo ""
 echo "=== Neovim ==="
