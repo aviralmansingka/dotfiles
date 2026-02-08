@@ -1,5 +1,5 @@
 name: Provision VPS
-# passwordless sudo configured on VPS
+# passwordless sudo + key-only SSH configured on VPS
 
 on:
   push:
