@@ -52,19 +52,19 @@ build {
   # Phase 5: Clone and deploy dotfiles via stow (as aviralmansingka)
   provisioner "shell" {
     script          = "${path.root}/scripts/deploy_dotfiles.sh"
-    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka env -u SUDO_USER bash {{.Path}}"
   }
 
   # Phase 6: Shell plugins (Oh My Zsh, zsh plugins, TPM) (as aviralmansingka)
   provisioner "shell" {
     script          = "${path.root}/scripts/install_shell_plugins.sh"
-    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka env -u SUDO_USER bash {{.Path}}"
     max_retries     = 2
   }
 
   # Phase 7: Cleanup and finalize (as aviralmansingka)
   provisioner "shell" {
     script          = "${path.root}/scripts/cleanup.sh"
-    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka env -u SUDO_USER bash {{.Path}}"
   }
 }

@@ -54,13 +54,13 @@ build {
   # Phase 3: Rust toolchain + cargo-installed tools (as aviralmansingka)
   provisioner "shell" {
     script          = "${path.root}/scripts/install_rust.sh"
-    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka env -u SUDO_USER bash {{.Path}}"
   }
 
   # Phase 4: CLI tools installed via curl/binary downloads (as aviralmansingka)
   provisioner "shell" {
     script          = "${path.root}/scripts/install_cli_tools.sh"
-    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka env -u SUDO_USER bash {{.Path}}"
     max_retries     = 2
   }
 
