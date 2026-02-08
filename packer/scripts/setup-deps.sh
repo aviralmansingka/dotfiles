@@ -64,9 +64,13 @@ apt-get install -y \
     python3-pip \
     python3-venv \
     nodejs \
-    npm \
     cargo \
     luarocks
+
+# Install npm only if not already bundled with nodejs (NodeSource packages include npm)
+if ! command -v npm &>/dev/null; then
+    apt-get install -y npm || true
+fi
 
 # s3-boot prerequisites (GRUB tools for bootloader installation)
 echo "Installing s3-boot prerequisites..."
