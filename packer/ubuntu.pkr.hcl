@@ -117,20 +117,6 @@ build {
     ]
   }
 
-  # Embed cloud-init config for VPS first-boot after s3-boot flash
-  provisioner "file" {
-    source      = "../s3-boot/config/cloud-init-vps.yaml"
-    destination = "/tmp/cloud-init-vps.yaml"
-  }
-
-  provisioner "shell" {
-    execute_command = "echo '${var.ssh_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
-    inline = [
-      "mkdir -p /etc/cloud/cloud.cfg.d",
-      "cp /tmp/cloud-init-vps.yaml /etc/cloud/cloud.cfg.d/99-s3boot.cfg",
-    ]
-  }
-
   # Cleanup for minimal image size
   provisioner "shell" {
     execute_command = "echo '${var.ssh_password}' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
