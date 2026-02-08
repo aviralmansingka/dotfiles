@@ -137,8 +137,15 @@ jobs:
       - name: Packer Build Devbox
         id: build
         run: |
-          packer build -only=amazon-ebs.devbox -machine-readable . | tee build.log
+          packer build -only=amazon-ebs.devbox -machine-readable . 2>&1 | tee build.log
+          echo "=== Searching for AMI ID in build.log ==="
+          grep 'artifact' build.log || echo "No artifact lines found"
           AMI_ID=$(grep -E ',artifact,0,id,' build.log | grep -oE 'ami-[a-f0-9]+')
+          echo "Extracted AMI_ID: $AMI_ID"
+          if [ -z "$AMI_ID" ]; then
+            echo "ERROR: Failed to extract AMI ID from build log"
+            exit 1
+          fi
           echo "ami_id=$AMI_ID" >> "$GITHUB_OUTPUT"
 
   validate:
