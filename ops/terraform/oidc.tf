@@ -57,6 +57,8 @@ resource "aws_iam_role_policy" "github_actions" {
         Resource = [
           "arn:aws:s3:::aviral-dotfiles-terraform-state",
           "arn:aws:s3:::aviral-dotfiles-terraform-state/*",
+          "arn:aws:s3:::aviral-devbox-terraform-state",
+          "arn:aws:s3:::aviral-devbox-terraform-state/*",
           "arn:aws:s3:::aviral-dotfiles-vm-images",
           "arn:aws:s3:::aviral-dotfiles-vm-images/*"
         ]

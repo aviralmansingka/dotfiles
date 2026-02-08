@@ -49,19 +49,27 @@ source "amazon-ebs" "devbox" {
 build {
   sources = ["source.amazon-ebs.devbox"]
 
-  # Phase 4: Clone and deploy dotfiles via stow
+  # Phase 4: Create aviralmansingka user and copy tool installations from ubuntu
   provisioner "shell" {
-    script = "${path.root}/scripts/deploy_dotfiles.sh"
+    script = "${path.root}/scripts/create_user.sh"
   }
 
-  # Phase 5: Shell plugins (Oh My Zsh, zsh plugins, TPM)
+  # Phase 5: Clone and deploy dotfiles via stow (as aviralmansingka)
   provisioner "shell" {
-    script      = "${path.root}/scripts/install_shell_plugins.sh"
-    max_retries = 2
+    script          = "${path.root}/scripts/deploy_dotfiles.sh"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
   }
 
-  # Phase 6: Cleanup and finalize
+  # Phase 6: Shell plugins (Oh My Zsh, zsh plugins, TPM) (as aviralmansingka)
   provisioner "shell" {
-    script = "${path.root}/scripts/cleanup.sh"
+    script          = "${path.root}/scripts/install_shell_plugins.sh"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
+    max_retries     = 2
+  }
+
+  # Phase 7: Cleanup and finalize (as aviralmansingka)
+  provisioner "shell" {
+    script          = "${path.root}/scripts/cleanup.sh"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
   }
 }
