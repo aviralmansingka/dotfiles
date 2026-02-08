@@ -49,7 +49,6 @@ eval "$(zoxide init zsh)"
 eval "$(direnv hook zsh)"
 
 export HOMEBREW_NO_AUTO_UPDATE=1
-source $HOME/modal/venv/bin/activate
 
 # bun completions
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
