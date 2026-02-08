@@ -1,4 +1,5 @@
 .git
+.envrc
 
 git/.config/lazygit/state.yml
 
