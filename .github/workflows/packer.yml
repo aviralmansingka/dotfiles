@@ -12,6 +12,9 @@ on:
         type: boolean
         default: false
 
+env:
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
 permissions:
   contents: read
   id-token: write
@@ -102,7 +105,7 @@ jobs:
         run: packer init .
 
       - name: Packer Build Base
-        run: packer build -only=amazon-ebs.base .
+        run: packer build -only=amazon-ebs.base -var "branch=$BRANCH_NAME" .
 
   build-devbox:
     name: Build Devbox AMI
@@ -137,7 +140,7 @@ jobs:
       - name: Packer Build Devbox
         id: build
         run: |
-          packer build -only=amazon-ebs.devbox -machine-readable . 2>&1 | tee build.log
+          packer build -only=amazon-ebs.devbox -machine-readable -var "branch=$BRANCH_NAME" . 2>&1 | tee build.log
           echo "=== Searching for AMI ID in build.log ==="
           grep 'artifact' build.log || echo "No artifact lines found"
           AMI_ID=$(grep -E ',artifact,0,id,' build.log | grep -oE 'ami-[a-f0-9]+')
@@ -224,10 +227,88 @@ jobs:
         if: always()
         run: rm -f /tmp/devbox-key /tmp/devbox-key.pub
 
+  cleanup-amis:
+    name: Cleanup Old AMIs
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Cleanup old base AMIs
+        run: |
+          echo "Querying base AMIs tagged branch=main..."
+          AMIS=$(aws ec2 describe-images \
+            --owners self \
+            --filters "Name=name,Values=devbox-base-*" "Name=tag:built-by,Values=packer" "Name=tag:branch,Values=main" \
+            --query 'Images | sort_by(@, &CreationDate) | reverse(@)' \
+            --output json)
+
+          TOTAL=$(echo "$AMIS" | jq 'length')
+          echo "Found $TOTAL base AMI(s) tagged branch=main"
+
+          if [ "$TOTAL" -le 3 ]; then
+            echo "Nothing to clean up (keeping 3)."
+            exit 0
+          fi
+
+          echo "$AMIS" | jq -r '.[3:] | .[] | .ImageId' | while read -r AMI_ID; do
+            echo "--- Deregistering $AMI_ID ---"
+            SNAPSHOTS=$(aws ec2 describe-images --image-ids "$AMI_ID" \
+              --query 'Images[0].BlockDeviceMappings[*].Ebs.SnapshotId' --output text)
+            if aws ec2 deregister-image --image-id "$AMI_ID"; then
+              echo "Deregistered $AMI_ID"
+              for SNAP in $SNAPSHOTS; do
+                if [ "$SNAP" != "None" ]; then
+                  aws ec2 delete-snapshot --snapshot-id "$SNAP" && echo "Deleted snapshot $SNAP" || echo "WARNING: Failed to delete snapshot $SNAP"
+                fi
+              done
+            else
+              echo "WARNING: Failed to deregister $AMI_ID"
+            fi
+          done
+
+      - name: Cleanup old devbox AMIs
+        run: |
+          echo "Querying devbox AMIs tagged branch=main..."
+          AMIS=$(aws ec2 describe-images \
+            --owners self \
+            --filters "Name=name,Values=dotfiles-devbox-*" "Name=tag:built-by,Values=packer" "Name=tag:branch,Values=main" \
+            --query 'Images | sort_by(@, &CreationDate) | reverse(@)' \
+            --output json)
+
+          TOTAL=$(echo "$AMIS" | jq 'length')
+          echo "Found $TOTAL devbox AMI(s) tagged branch=main"
+
+          if [ "$TOTAL" -le 3 ]; then
+            echo "Nothing to clean up (keeping 3)."
+            exit 0
+          fi
+
+          echo "$AMIS" | jq -r '.[3:] | .[] | .ImageId' | while read -r AMI_ID; do
+            echo "--- Deregistering $AMI_ID ---"
+            SNAPSHOTS=$(aws ec2 describe-images --image-ids "$AMI_ID" \
+              --query 'Images[0].BlockDeviceMappings[*].Ebs.SnapshotId' --output text)
+            if aws ec2 deregister-image --image-id "$AMI_ID"; then
+              echo "Deregistered $AMI_ID"
+              for SNAP in $SNAPSHOTS; do
+                if [ "$SNAP" != "None" ]; then
+                  aws ec2 delete-snapshot --snapshot-id "$SNAP" && echo "Deleted snapshot $SNAP" || echo "WARNING: Failed to delete snapshot $SNAP"
+                fi
+              done
+            else
+              echo "WARNING: Failed to deregister $AMI_ID"
+            fi
+          done
+
   packer-result:
     name: Packer Result
     if: always()
-    needs: [detect-changes, validate-templates, build-base, build-devbox, validate]
+    needs: [detect-changes, validate-templates, build-base, build-devbox, validate, cleanup-amis]
     runs-on: ubuntu-latest
     steps:
       - name: Check results
@@ -247,5 +328,8 @@ jobs:
           if [ "${{ needs.validate.result }}" != "success" ]; then
             echo "AMI validation did not pass (result: ${{ needs.validate.result }})."
             exit 1
+          fi
+          if [ "${{ needs.cleanup-amis.result }}" = "failure" ]; then
+            echo "WARNING: AMI cleanup failed, but build and validation succeeded."
           fi
           echo "All packer checks passed."

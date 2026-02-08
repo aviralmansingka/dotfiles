@@ -36,6 +36,7 @@ source "amazon-ebs" "devbox" {
   tags = {
     Name     = "dotfiles-devbox"
     built-by = "packer"
+    branch   = var.branch
   }
 
   run_tags = {

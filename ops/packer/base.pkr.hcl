@@ -27,6 +27,7 @@ source "amazon-ebs" "base" {
   tags = {
     Name     = "devbox-base"
     built-by = "packer"
+    branch   = var.branch
   }
 
   run_tags = {
