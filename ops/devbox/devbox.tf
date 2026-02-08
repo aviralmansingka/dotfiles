@@ -25,14 +25,14 @@ locals {
 resource "aws_key_pair" "devbox" {
   count = var.devbox_enabled ? 1 : 0
 
-  key_name   = "devbox-key"
+  key_name   = "${var.name_prefix}-key"
   public_key = var.ssh_public_key
 }
 
 resource "aws_security_group" "devbox" {
   count = var.devbox_enabled ? 1 : 0
 
-  name        = "devbox-sg"
+  name        = "${var.name_prefix}-sg"
   description = "Security group for devbox EC2 instance"
 
   ingress {
@@ -51,7 +51,7 @@ resource "aws_security_group" "devbox" {
   }
 
   tags = {
-    Name = "devbox-sg"
+    Name = "${var.name_prefix}-sg"
   }
 }
 
@@ -63,13 +63,20 @@ resource "aws_instance" "devbox" {
   key_name               = aws_key_pair.devbox[0].key_name
   vpc_security_group_ids = [aws_security_group.devbox[0].id]
 
+  user_data = <<-EOF
+    #!/bin/bash
+    cp /home/ubuntu/.ssh/authorized_keys /home/aviralmansingka/.ssh/authorized_keys
+    chown aviralmansingka:aviralmansingka /home/aviralmansingka/.ssh/authorized_keys
+    chmod 600 /home/aviralmansingka/.ssh/authorized_keys
+  EOF
+
   root_block_device {
     volume_size = 30
     volume_type = "gp3"
   }
 
   tags = {
-    Name = "dotfiles-devbox"
+    Name = "${var.name_prefix}"
   }
 }
 

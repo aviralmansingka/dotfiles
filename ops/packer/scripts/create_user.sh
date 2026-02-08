@@ -18,11 +18,10 @@ echo "==> Granting passwordless sudo"
 echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/"$USERNAME" > /dev/null
 sudo chmod 440 /etc/sudoers.d/"$USERNAME"
 
-echo "==> Copying SSH authorized_keys"
+echo "==> Setting up SSH directory"
 sudo mkdir -p /home/"$USERNAME"/.ssh
-sudo cp /home/"$SOURCE_USER"/.ssh/authorized_keys /home/"$USERNAME"/.ssh/authorized_keys
 sudo chmod 700 /home/"$USERNAME"/.ssh
-sudo chmod 600 /home/"$USERNAME"/.ssh/authorized_keys
+sudo chown "$USERNAME":"$USERNAME" /home/"$USERNAME"/.ssh
 
 echo "==> Copying tool installations from $SOURCE_USER"
 # Copy cargo (rust toolchain + cargo-installed binaries like eza, bob, starship, etc.)
