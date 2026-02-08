@@ -10,7 +10,7 @@ variable "aws_profile" {
 
 variable "instance_type" {
   type    = string
-  default = "t3.medium"
+  default = "c5.4xlarge"
 }
 
 variable "ami_name_prefix" {
