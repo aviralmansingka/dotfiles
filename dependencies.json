@@ -52,7 +52,8 @@
         "awscli",
         "kubectl",
         "kubectx",
-        "k9s"
+        "k9s",
+        "terraform"
       ]
     },
     "python": {

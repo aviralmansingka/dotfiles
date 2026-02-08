@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Pre-commit hook: ensure Brewfile is in sync with dependencies.json
+
+# Only run if either file is being committed
+if git diff --cached --name-only | grep -qE '(dependencies\.json|Brewfile)'; then
+    SCRIPT_DIR="$(git rev-parse --show-toplevel)/scripts"
+    ROOT_DIR="$(git rev-parse --show-toplevel)"
+
+    # Generate expected Brewfile from dependencies.json
+    expected=$(python3 "$SCRIPT_DIR/install_deps.py" --os macos --format brewfile --deps-file "$ROOT_DIR/dependencies.json")
+
+    # Get the staged Brewfile content
+    staged=$(git show :Brewfile 2>/dev/null || echo "")
+
+    if [ "$expected" != "$staged" ]; then
+        echo "ERROR: Brewfile is out of sync with dependencies.json"
+        echo ""
+        echo "Run './scripts/generate-brewfile.sh' and stage the updated Brewfile."
+        exit 1
+    fi
+fi

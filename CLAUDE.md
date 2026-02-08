@@ -111,7 +111,7 @@ Manages AWS infrastructure for the devbox:
 ## Dependency Management
 
 ### Centralized Package Configuration
-All dependencies are managed centrally in `dependencies.yml` / `dependencies.json`:
+All dependencies are managed centrally in `dependencies.json`:
 
 ```yaml
 categories:
@@ -142,7 +142,7 @@ python3 scripts/install_deps.py --os alpine --format dockerfile
 3. Restart or reload the affected application
 
 ### Adding New Dependencies
-1. Add packages to appropriate category in `dependencies.yml`
+1. Add packages to appropriate category in `dependencies.json`
 2. Add OS-specific mappings if needed
 3. Regenerate platform files:
    ```bash
@@ -151,7 +151,7 @@ python3 scripts/install_deps.py --os alpine --format dockerfile
 
 ### Adding New Tools
 1. Create directory with proper stow structure
-2. Add dependencies to `dependencies.yml`
+2. Add dependencies to `dependencies.json`
 3. Update `install.sh` if special setup is required
 
 ### Testing Changes

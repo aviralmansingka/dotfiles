@@ -109,4 +109,11 @@ fi
 echo "==> Deploying git config (deferred to avoid SSH URL rewrite during installs)"
 stow -d "$DOTFILES_DIR" -t "$HOME" git
 
+####################
+#  7. Git hooks    #
+####################
+
+echo "==> Installing git hooks"
+ln -sf "$DOTFILES_DIR/scripts/hooks/pre-commit" "$DOTFILES_DIR/.git/hooks/pre-commit"
+
 echo "==> Installation complete!"
