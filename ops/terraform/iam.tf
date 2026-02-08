@@ -8,14 +8,6 @@ resource "aws_iam_user" "aviral" {
   }
 }
 
-resource "aws_iam_user" "dotfiles_ci" {
-  name = "dotfiles-ci"
-
-  tags = {
-    AKIAXQDYCVWIBCYUSFU5 = "dotfiles-ci"
-  }
-}
-
 # ─── IAM Group ────────────────────────────────────────────────────────────────
 
 resource "aws_iam_group" "admin" {
@@ -30,7 +22,6 @@ resource "aws_iam_group_membership" "admin" {
 
   users = [
     aws_iam_user.aviral.name,
-    aws_iam_user.dotfiles_ci.name,
   ]
 }
 
