@@ -182,7 +182,7 @@ jobs:
         run: |
           AMI_ID="${{ needs.build-devbox.outputs.ami_id }}"
           echo "Validating AMI: $AMI_ID"
-          terraform init -backend-config="key=ci/terraform.tfstate"
+          terraform init -backend-config="bucket=aviral-dotfiles-terraform-state" -backend-config="key=ci/terraform.tfstate"
           terraform apply -auto-approve \
             -target=aws_key_pair.devbox \
             -target=aws_security_group.devbox \
@@ -230,7 +230,7 @@ jobs:
       - name: Cleanup ephemeral state
         if: always()
         run: |
-          aws s3 rm "s3://aviral-devbox-terraform-state/ci/terraform.tfstate" || true
+          aws s3 rm "s3://aviral-dotfiles-terraform-state/ci/terraform.tfstate" || true
 
       - name: Deregister PR AMI
         if: always() && github.event_name == 'pull_request'
