@@ -2,12 +2,18 @@
 
 variable "vps_host" {
   type        = string
-  description = "IP address of the Hostinger VPS to provision"
-  default     = ""
+  description = "Hostname or IP of the Hostinger VPS to provision"
+  default     = "avirus.xyz"
+}
+
+variable "vps_ssh_user" {
+  type        = string
+  description = "SSH user for connecting to the VPS (must have sudo access)"
+  default     = "aviral"
 }
 
 variable "ssh_private_key_file" {
   type        = string
-  description = "Path to SSH private key for root access to the VPS"
-  default     = "~/.ssh/id_ed25519"
+  description = "Path to SSH private key for VPS access"
+  default     = "~/.ssh/id_rsa"
 }

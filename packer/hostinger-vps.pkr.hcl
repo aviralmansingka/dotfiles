@@ -4,23 +4,23 @@
 #
 # Usage:
 #   packer build -only='hostinger-vps-provision.*' \
-#     -var 'vps_host=<IP>' \
-#     -var 'ssh_private_key_file=~/.ssh/id_ed25519' \
+#     -var 'vps_host=avirus.xyz' \
 #     .
 
 source "null" "vps" {
-  ssh_host        = var.vps_host
-  ssh_username    = "root"
+  ssh_host             = var.vps_host
+  ssh_username         = var.vps_ssh_user
   ssh_private_key_file = var.ssh_private_key_file
-  ssh_timeout     = "5m"
+  ssh_timeout          = "5m"
 }
 
 build {
   name    = "hostinger-vps-provision"
   sources = ["source.null.vps"]
 
-  # Setup user environment
+  # Setup user environment (needs root)
   provisioner "shell" {
+    execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
     scripts = [
       "scripts/setup-user.sh"
     ]
@@ -29,8 +29,9 @@ build {
     ]
   }
 
-  # Install dependencies
+  # Install dependencies (needs root)
   provisioner "shell" {
+    execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
     scripts = [
       "scripts/setup-deps.sh"
     ]
@@ -55,7 +56,7 @@ build {
   # Set default shell to zsh for the target user
   provisioner "shell" {
     inline = [
-      "chsh -s /bin/zsh ${var.ssh_username}"
+      "sudo chsh -s /bin/zsh ${var.ssh_username}"
     ]
   }
 }
