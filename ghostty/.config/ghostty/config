@@ -3,7 +3,7 @@
 
 # Font configuration
 font-family = "JetBrainsMono Nerd Font Mono"
-font-size = 16
+font-size = 13
 
 # Text rendering - closer to Neovide's crisp look
 font-thicken = true
