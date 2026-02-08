@@ -100,8 +100,13 @@ fi
 echo "Installing tmux plugins..."
 "${TPM_PATH}/bin/install_plugins" || true
 
-# Create nvim data directory (plugins will be installed on first launch)
+# ===== Install Neovim plugins =====
+echo "Installing Neovim plugins..."
+# Create nvim data directory
 mkdir -p "${HOME}/.local/share/nvim"
+
+# Run Lazy sync headlessly
+nvim --headless "+Lazy! sync" +qa 2>/dev/null || echo "Warning: Neovim plugin sync had issues"
 
 # ===== Change default shell to zsh =====
 echo "Setting zsh as default shell..."

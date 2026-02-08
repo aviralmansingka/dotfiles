@@ -1,0 +1,91 @@
+name: Provision VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      vps_host:
+        description: 'VPS IP address'
+        required: true
+        type: string
+      target_user:
+        description: 'Target non-root user to create'
+        required: true
+        default: 'devuser'
+        type: string
+      dotfiles_branch:
+        description: 'Dotfiles branch to deploy'
+        required: true
+        default: 'develop'
+        type: choice
+        options:
+          - develop
+          - main
+
+jobs:
+  provision:
+    name: Provision VPS via Packer
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: latest
+
+      - name: Initialize Packer
+        run: |
+          cd packer
+          packer init .
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ github.event.inputs.vps_host }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Provision VPS
+        run: |
+          cd packer
+          packer build \
+            -only='hostinger-vps-provision.*' \
+            -var "vps_host=${{ github.event.inputs.vps_host }}" \
+            -var "ssh_private_key_file=~/.ssh/id_ed25519" \
+            -var "ssh_username=${{ github.event.inputs.target_user }}" \
+            -var "dotfiles_branch=${{ github.event.inputs.dotfiles_branch }}" \
+            .
+        timeout-minutes: 30
+
+  verify:
+    name: Verify Provisioning
+    runs-on: ubuntu-latest
+    needs: provision
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ github.event.inputs.vps_host }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Verify tools installed
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            "${{ github.event.inputs.target_user }}@${{ github.event.inputs.vps_host }}" \
+            "which zsh tmux nvim git stow && echo 'All tools verified'"
+
+      - name: Verify shell
+        run: |
+          SHELL=$(ssh -o StrictHostKeyChecking=no \
+            "root@${{ github.event.inputs.vps_host }}" \
+            "getent passwd ${{ github.event.inputs.target_user }} | cut -d: -f7")
+          echo "User shell: ${SHELL}"
+          if [ "${SHELL}" = "/bin/zsh" ]; then
+            echo "Shell correctly set to zsh"
+          else
+            echo "WARNING: Shell is ${SHELL}, expected /bin/zsh"
+            exit 1
+          fi
