@@ -21,6 +21,10 @@ tic -x -w "$DOTFILES_DIR/terminfo/xterm-ghostty.terminfo"
 
 echo "==> Installing Neovim plugins via lazy.nvim"
 export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
+mkdir -p "$HOME/.local/share/bob/downloads"
+mkdir -p "$HOME/.local/share/nvim"
+mkdir -p "$HOME/.local/state/nvim"
+mkdir -p "$HOME/.cache/nvim"
 nvim --headless "+Lazy! sync" +qa
 
 # NOTE: git config is stowed in cleanup.sh (after shell plugin installs)
