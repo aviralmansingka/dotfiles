@@ -67,9 +67,7 @@ jobs:
             aviral@avirus.xyz \
             "getent passwd aviral | cut -d: -f7")
           echo "User shell: ${SHELL}"
-          if [ "${SHELL}" = "/bin/zsh" ]; then
-            echo "Shell correctly set to zsh"
-          else
-            echo "WARNING: Shell is ${SHELL}, expected /bin/zsh"
-            exit 1
-          fi
+          case "${SHELL}" in
+            */zsh) echo "Shell correctly set to zsh (${SHELL})" ;;
+            *) echo "WARNING: Shell is ${SHELL}, expected zsh"; exit 1 ;;
+          esac
