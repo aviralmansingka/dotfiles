@@ -138,7 +138,7 @@ jobs:
         id: build
         run: |
           packer build -only=amazon-ebs.devbox -machine-readable . | tee build.log
-          AMI_ID=$(grep 'artifact,0,id' build.log | cut -d: -f2)
+          AMI_ID=$(grep -E ',artifact,0,id,' build.log | grep -oE 'ami-[a-f0-9]+')
           echo "ami_id=$AMI_ID" >> "$GITHUB_OUTPUT"
 
   validate:
@@ -237,8 +237,8 @@ jobs:
             echo "Devbox AMI build failed."
             exit 1
           fi
-          if [ "${{ needs.validate.result }}" = "failure" ]; then
-            echo "AMI validation failed."
+          if [ "${{ needs.validate.result }}" != "success" ]; then
+            echo "AMI validation did not pass (result: ${{ needs.validate.result }})."
             exit 1
           fi
           echo "All packer checks passed."
