@@ -27,7 +27,13 @@
       "WebSearch",
       "mcp__notion__search",
       "mcp__plugin_context7_context7__resolve-library-id",
-      "mcp__plugin_context7_context7__query-docs"
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(while read run_id)",
+      "Bash(do gh api -X DELETE \"repos/aviralmansingka/dotfiles/actions/runs/$run_id\")",
+      "Bash(ls:*)",
+      "Bash(xargs:*)",
+      "Bash(source:*)",
+      "Skill(ci)"
     ],
     "deny": [],
     "ask": [],
