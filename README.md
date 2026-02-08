@@ -1,6 +1,6 @@
 # Dotfiles
 
-This repository manages development environment configuration across macOS and Linux systems using [GNU Stow](https://www.gnu.org/software/stow/) for symlink management. It includes:
+Development environment configuration for macOS and AWS devbox (Ubuntu), managed with [GNU Stow](https://www.gnu.org/software/stow/).
 
 - **ghostty** - GPU-accelerated terminal emulator
 - **zsh** - Shell with Oh My Zsh, Powerlevel10k, and plugins
@@ -9,7 +9,9 @@ This repository manages development environment configuration across macOS and L
 - **aerospace** - Tiling window manager for macOS
 - **starship** - Cross-shell prompt
 
-## Quick Start
+## Setup
+
+### Option A: macOS (local)
 
 ```sh
 git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
@@ -19,51 +21,41 @@ cd ${HOME}/dotfiles/
 
 The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, and installs Neovim via `bob`.
 
-## Manual Installation
-
-### macOS
+For manual installation:
 
 ```sh
 brew bundle
 stow nvim tmux zsh ghostty git starship
 ```
 
-### Ubuntu
+### Option B: AWS Devbox
+
+A fully provisioned Ubuntu 24.04 EC2 instance with all tools pre-installed. AMIs are built with Packer and the instance is managed with Terraform.
+
+**Prerequisites:** AWS credentials configured, Terraform installed, an SSH key pair.
 
 ```sh
-sudo apt-get install -y git build-essential tmux stow fzf ripgrep wget tree zsh fd-find curl python3-pip
+cd ops/devbox
+terraform init
+terraform apply \
+  -var="devbox_enabled=true" \
+  -var="ssh_public_key=$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
-### RHEL/CentOS
+Then SSH in:
 
 ```sh
-sudo yum install -y git gcc gcc-c++ make fd stow fzf ripgrep wget tree zsh tmux
+ssh aviralmansingka@$(terraform -chdir=ops/devbox output -raw devbox_public_ip)
 ```
 
-### Deploy Configurations
+The devbox comes with: zsh + Oh My Zsh, tmux + TPM, Neovim via bob, Rust toolchain, Go, Node.js, Python, kubectl, k9s, lazygit, Claude Code, and all dotfiles stowed.
+
+To tear down:
 
 ```sh
-git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
-cd ${HOME}/dotfiles
-stow nvim tmux zsh ghostty git
-```
-
-### Shell Setup
-
-```sh
-# Oh My Zsh
-sh -c "RUNZSH='no' KEEP_ZSHRC='yes' $(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-
-# Plugins
-git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-```
-
-### Tmux Setup
-
-```sh
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-~/.tmux/plugins/tpm/bin/install_plugins
+terraform -chdir=ops/devbox destroy \
+  -var="devbox_enabled=true" \
+  -var="ssh_public_key=$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
 ## Stow Packages
@@ -88,10 +80,11 @@ git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 
 ## Infrastructure
 
-Development environment AMIs and cloud infrastructure are managed in `ops/`:
+AMIs and cloud infrastructure are managed in `ops/`:
 
-- **Packer** (`ops/packer/`) - Builds Ubuntu 24.04 AMIs with full development toolchain
-- **Terraform** (`ops/terraform/`) - Manages AWS infrastructure (EC2, IAM, DNS, GitHub OIDC)
+- **Packer** (`ops/packer/`) - Builds Ubuntu 24.04 devbox AMIs with full development toolchain
+- **Terraform** (`ops/terraform/`) - Manages shared AWS infrastructure (IAM, DNS, GitHub OIDC)
+- **Devbox** (`ops/devbox/`) - Manages the devbox EC2 instance
 
 CI/CD workflows automatically build AMIs and apply infrastructure changes on push to `main`.
 

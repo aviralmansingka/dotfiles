@@ -40,21 +40,28 @@ source "amazon-ebs" "base" {
 build {
   sources = ["source.amazon-ebs.base"]
 
-  # Phase 1: System packages
+  # Phase 1: System packages (as ubuntu)
   provisioner "shell" {
     script      = "${path.root}/scripts/install_system_packages.sh"
     max_retries = 3
   }
 
-  # Phase 2: Rust toolchain + cargo-installed tools (eza, bob-nvim)
+  # Phase 2: Create aviralmansingka user (as ubuntu, before tool installs)
   provisioner "shell" {
-    script = "${path.root}/scripts/install_rust.sh"
+    script = "${path.root}/scripts/create_user.sh"
   }
 
-  # Phase 3: CLI tools installed via curl/binary downloads
+  # Phase 3: Rust toolchain + cargo-installed tools (as aviralmansingka)
   provisioner "shell" {
-    script      = "${path.root}/scripts/install_cli_tools.sh"
-    max_retries = 2
+    script          = "${path.root}/scripts/install_rust.sh"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
+  }
+
+  # Phase 4: CLI tools installed via curl/binary downloads (as aviralmansingka)
+  provisioner "shell" {
+    script          = "${path.root}/scripts/install_cli_tools.sh"
+    execute_command = "chmod 755 {{.Path}} && sudo -iu aviralmansingka bash {{.Path}}"
+    max_retries     = 2
   }
 
   # Clean up to reduce base AMI size

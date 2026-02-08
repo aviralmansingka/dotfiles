@@ -45,7 +45,7 @@ jobs:
             else
               echo "packer=false" >> "$GITHUB_OUTPUT"
             fi
-            BASE_PATTERNS="ops/packer/base.pkr.hcl|ops/packer/variables.pkr.hcl|ops/packer/scripts/install_system_packages.sh|ops/packer/scripts/install_rust.sh|ops/packer/scripts/install_cli_tools.sh|^dependencies\.json$"
+            BASE_PATTERNS="ops/packer/base.pkr.hcl|ops/packer/variables.pkr.hcl|ops/packer/scripts/install_system_packages.sh|ops/packer/scripts/create_user.sh|ops/packer/scripts/install_rust.sh|ops/packer/scripts/install_cli_tools.sh|^dependencies\.json$"
             if echo "$CHANGED_FILES" | grep -qE "$BASE_PATTERNS"; then
               echo "base=true" >> "$GITHUB_OUTPUT"
             else
@@ -83,9 +83,7 @@ jobs:
   build-base:
     name: Build Base AMI
     needs: [detect-changes, validate-templates]
-    if: >-
-      needs.detect-changes.outputs.base_changed == 'true' &&
-      github.event_name != 'pull_request'
+    if: needs.detect-changes.outputs.base_changed == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -190,14 +188,15 @@ jobs:
             -var="devbox_enabled=true" \
             -var="ssh_public_key=$SSH_PUBLIC_KEY" \
             -var="devbox_ami_override=$AMI_ID" \
-            -var="instance_type=t2.micro"
+            -var="instance_type=t2.micro" \
+            -var="name_prefix=ci-${BRANCH_NAME}"
           echo "INSTANCE_IP=$(terraform output -raw devbox_public_ip)" >> "$GITHUB_ENV"
 
       - name: Wait for instance to be ready
         run: |
           echo "Waiting for SSH on $INSTANCE_IP..."
           for i in $(seq 1 30); do
-            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i /tmp/devbox-key "ubuntu@$INSTANCE_IP" true 2>/dev/null; then
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i /tmp/devbox-key "aviralmansingka@$INSTANCE_IP" true 2>/dev/null; then
               echo "SSH is ready"
               exit 0
             fi
@@ -210,8 +209,8 @@ jobs:
       - name: Run validation
         run: |
           scp -o StrictHostKeyChecking=no -i /tmp/devbox-key \
-            ops/packer/scripts/validate_tools.sh "ubuntu@$INSTANCE_IP:/tmp/validate_tools.sh"
-          ssh -o StrictHostKeyChecking=no -i /tmp/devbox-key "ubuntu@$INSTANCE_IP" \
+            ops/packer/scripts/validate_tools.sh "aviralmansingka@$INSTANCE_IP:/tmp/validate_tools.sh"
+          ssh -o StrictHostKeyChecking=no -i /tmp/devbox-key "aviralmansingka@$INSTANCE_IP" \
             "chmod +x /tmp/validate_tools.sh && /tmp/validate_tools.sh"
 
       - name: Tear down EC2 instance
@@ -225,7 +224,8 @@ jobs:
             -var="devbox_enabled=true" \
             -var="ssh_public_key=$SSH_PUBLIC_KEY" \
             -var="devbox_ami_override=${{ needs.build-devbox.outputs.ami_id }}" \
-            -var="instance_type=t2.micro"
+            -var="instance_type=t2.micro" \
+            -var="name_prefix=ci-${BRANCH_NAME}"
 
       - name: Cleanup ephemeral state
         if: always()

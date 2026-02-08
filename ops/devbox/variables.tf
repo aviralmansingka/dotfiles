@@ -25,3 +25,9 @@ variable "instance_type" {
   description = "EC2 instance type for the devbox"
   default     = "c5.2xlarge"
 }
+
+variable "name_prefix" {
+  type        = string
+  description = "Prefix for AWS resource names (use branch name in CI for uniqueness)"
+  default     = "devbox"
+}
