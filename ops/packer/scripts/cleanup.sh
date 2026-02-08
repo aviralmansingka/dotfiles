@@ -5,7 +5,7 @@ echo "==> Deploying git config (deferred to avoid SSH URL rewrite during install
 stow -d "$HOME/dotfiles" -t "$HOME" git
 
 echo "==> Setting zsh as default shell"
-sudo chsh -s "$(which zsh)" ubuntu
+sudo chsh -s "$(which zsh)" aviralmansingka
 
 echo "==> Cleaning up apt cache"
 sudo apt-get clean

@@ -4,9 +4,11 @@ set -euo pipefail
 # Validates that all expected tools are installed and accessible on the devbox.
 # Exit code 0 = all tools present, non-zero = missing tools.
 
-# Ensure cargo and local bin are in PATH (non-login shells don't source profiles)
-export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
-[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
+AVIRAL_HOME="/home/aviralmansingka"
+
+# Ensure cargo and local bin are in PATH (tools installed under aviralmansingka)
+export PATH="$AVIRAL_HOME/.cargo/bin:$AVIRAL_HOME/.local/bin:$AVIRAL_HOME/.opencode/bin:$PATH"
+[ -f "$AVIRAL_HOME/.cargo/env" ] && source "$AVIRAL_HOME/.cargo/env"
 
 ERRORS=0
 
@@ -73,34 +75,41 @@ check_command opencode
 
 echo ""
 echo "=== Neovim ==="
-if [ -x "$HOME/.local/share/bob/nvim-bin/nvim" ]; then
-  echo "[OK] neovim via bob: $("$HOME/.local/share/bob/nvim-bin/nvim" --version | head -1)"
+if [ -x "$AVIRAL_HOME/.local/share/bob/nvim-bin/nvim" ]; then
+  echo "[OK] neovim via bob: $("$AVIRAL_HOME/.local/share/bob/nvim-bin/nvim" --version | head -1)"
 else
-  echo "[FAIL] neovim not found at ~/.local/share/bob/nvim-bin/nvim"
+  echo "[FAIL] neovim not found at $AVIRAL_HOME/.local/share/bob/nvim-bin/nvim"
   ERRORS=$((ERRORS + 1))
 fi
 
-check_path "$HOME/.local/share/nvim/lazy/lazy.nvim" "lazy.nvim plugin manager"
-check_path "$HOME/.local/share/nvim/lazy/LazyVim" "LazyVim distribution"
+check_path "$AVIRAL_HOME/.local/share/nvim/lazy/lazy.nvim" "lazy.nvim plugin manager"
+check_path "$AVIRAL_HOME/.local/share/nvim/lazy/LazyVim" "LazyVim distribution"
 
 echo ""
 echo "=== Shell configuration ==="
-check_path "$HOME/.oh-my-zsh" "Oh My Zsh"
-check_path "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" "zsh-autosuggestions"
-check_path "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting"
-check_path "$HOME/.tmux/plugins/tpm" "TPM"
+check_path "$AVIRAL_HOME/.oh-my-zsh" "Oh My Zsh"
+check_path "$AVIRAL_HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" "zsh-autosuggestions"
+check_path "$AVIRAL_HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting"
+check_path "$AVIRAL_HOME/.tmux/plugins/tpm" "TPM"
 
 echo ""
 echo "=== Dotfiles ==="
-check_path "$HOME/.zshrc" ".zshrc"
-check_path "$HOME/.tmux.conf" ".tmux.conf"
-check_path "$HOME/.config/nvim" "nvim config"
-check_path "$HOME/.config/starship.toml" "starship config"
-check_path "$HOME/.terminfo" "terminfo directory"
+check_path "$AVIRAL_HOME/.zshrc" ".zshrc"
+check_path "$AVIRAL_HOME/.tmux.conf" ".tmux.conf"
+check_path "$AVIRAL_HOME/.config/nvim" "nvim config"
+check_path "$AVIRAL_HOME/.config/starship.toml" "starship config"
+check_path "$AVIRAL_HOME/.terminfo" "terminfo directory"
 
 echo ""
-echo "=== Default shell ==="
-SHELL_PATH=$(getent passwd ubuntu | cut -d: -f7)
+echo "=== aviralmansingka user ==="
+if id aviralmansingka &>/dev/null; then
+  echo "[OK] aviralmansingka user exists"
+else
+  echo "[FAIL] aviralmansingka user does not exist"
+  ERRORS=$((ERRORS + 1))
+fi
+
+SHELL_PATH=$(getent passwd aviralmansingka | cut -d: -f7)
 if [ "$SHELL_PATH" = "/usr/bin/zsh" ]; then
   echo "[OK] Default shell is zsh"
 else
