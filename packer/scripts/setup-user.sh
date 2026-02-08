@@ -2,7 +2,7 @@
 # Setup user environment for dotfiles deployment
 set -euo pipefail
 
-TARGET_USER="${TARGET_USER:-devuser}"
+TARGET_USER="${TARGET_USER:-aviral}"
 
 echo "=== Setting up user: ${TARGET_USER} ==="
 

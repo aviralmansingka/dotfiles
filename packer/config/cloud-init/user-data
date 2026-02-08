@@ -2,7 +2,7 @@
 
 # User configuration
 users:
-  - name: devuser
+  - name: aviral
     groups: [sudo, docker]
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']

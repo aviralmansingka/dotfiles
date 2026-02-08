@@ -125,10 +125,10 @@ packer/
 
 ### User Setup
 
-- Username: `devuser`
+- Username: `aviral`
 - Shell: `/bin/zsh` (after first login)
 - Sudo: passwordless sudo enabled
-- Home: `/home/devuser`
+- Home: `/home/aviral`
 
 ## Deployment to Hostinger VPS
 
@@ -161,7 +161,7 @@ qemu-img convert -f qcow2 -O raw \
 
 ```bash
 # SSH into the VPS
-ssh devuser@<your-vps-ip>
+ssh aviral@<your-vps-ip>
 
 # Add your SSH public key
 mkdir -p ~/.ssh
@@ -195,7 +195,7 @@ qemu-system-x86_64 \
   -nographic \
   -enable-kvm
 
-# Login as devuser with password: packer
+# Login as aviral with password: packer
 # (Change password immediately or add SSH key)
 ```
 

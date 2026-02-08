@@ -4,7 +4,7 @@ set -euo pipefail
 
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/aviralmansingka/dotfiles.git}"
 DOTFILES_BRANCH="${DOTFILES_BRANCH:-develop}"
-HOME="${HOME:-/home/devuser}"
+HOME="${HOME:-/home/aviral}"
 
 echo "=== Setting up dotfiles ==="
 echo "Repository: ${DOTFILES_REPO}"

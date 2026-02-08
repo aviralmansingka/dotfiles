@@ -37,7 +37,7 @@ variable "cpus" {
 variable "ssh_username" {
   type        = string
   description = "SSH username for provisioning"
-  default     = "devuser"
+  default     = "aviral"
 }
 
 variable "ssh_password" {
