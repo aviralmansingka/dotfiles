@@ -15,5 +15,9 @@ stow -d "$DOTFILES_DIR" -t "$HOME" tmux
 stow -d "$DOTFILES_DIR" -t "$HOME" nvim
 stow -d "$DOTFILES_DIR" -t "$HOME" starship
 
+echo "==> Installing custom terminfo entries"
+mkdir -p "$HOME/.terminfo"
+tic -x -w "$DOTFILES_DIR/terminfo/xterm-ghostty.terminfo"
+
 # NOTE: git config is stowed in cleanup.sh (after shell plugin installs)
 # because it contains url.insteadOf that rewrites HTTPS to SSH

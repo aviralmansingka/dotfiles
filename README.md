@@ -1,13 +1,15 @@
 # Dotfiles
 
-This repository includes the local setup that is shared across development machines. It includes:
+This repository manages development environment configuration across macOS and Linux systems using [GNU Stow](https://www.gnu.org/software/stow/) for symlink management. It includes:
 
-- `kitty` (Terminal application that uses GPU to render text)
-- `zsh` (`bash` replacement with a good plugin system)
-- `tmux` (Terminal multiplexer that makes it easier to persistently work on remote machines)
-- `neovim` ("blazingly fast" text editor written in Lua)
+- **ghostty** - GPU-accelerated terminal emulator
+- **zsh** - Shell with Oh My Zsh, Powerlevel10k, and plugins
+- **tmux** - Terminal multiplexer with Catppuccin theme and TPM
+- **neovim** - LazyVim distribution with AI coding assistance
+- **aerospace** - Tiling window manager for macOS
+- **starship** - Cross-shell prompt
 
-## Easy Installation
+## Quick Start
 
 ```sh
 git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
@@ -15,81 +17,83 @@ cd ${HOME}/dotfiles/
 ./install.sh
 ```
 
-The script does the following:
-
-1. Install `homebrew` (works on Linux as well!)
-2. Install dependencies mentioned in `Brewfile`
-3. Move configuration files using `stow` to `~/`
+The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, and installs Neovim via `bob`.
 
 ## Manual Installation
 
-### Dependencies
-
-#### MacOS
+### macOS
 
 ```sh
 brew bundle
+stow nvim tmux zsh ghostty git starship
 ```
 
-#### RHEL/CentOS
+### Ubuntu
 
 ```sh
-sudo yum install -y git gcc gcc-c++ make fd stow fzf ripgrep wget tree zsh tmux go
+sudo apt-get install -y git build-essential tmux stow fzf ripgrep wget tree zsh fd-find curl python3-pip
 ```
 
-#### Ubuntu
+### RHEL/CentOS
 
 ```sh
-sudo apt-get install -y git build-essential tmux stow fzf ripgrep wget tree zsh fd-find curl python3-pip go
+sudo yum install -y git gcc gcc-c++ make fd stow fzf ripgrep wget tree zsh tmux
 ```
 
-### Clone repository
+### Deploy Configurations
 
 ```sh
 git clone https://github.com/aviralmansingka/dotfiles ${HOME}/dotfiles
 cd ${HOME}/dotfiles
-stow lazyvim tmux zsh
+stow nvim tmux zsh ghostty git
 ```
 
-### Install Neovim
+### Shell Setup
 
 ```sh
-cd ${HOME}
-curl -LO https://github.com/neovim/neovim/releases/download/stable/nvim-linux-arm64.tar.gz
-tar xvf ./nvim-linux-arm64.tar.gz
-ln -s ./nvim-linux-arm64/bin/nvim /usr/local/bin/
-export PATH=$PATH:${HOME}/nvim-linux-arm64/bin
+# Oh My Zsh
+sh -c "RUNZSH='no' KEEP_ZSHRC='yes' $(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+# Plugins
+git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 ```
 
-### Install tmux
+### Tmux Setup
 
 ```sh
 git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+~/.tmux/plugins/tpm/bin/install_plugins
 ```
 
-### Install zsh
+## Stow Packages
 
-```sh
-sh -c "RUNZSH='no' KEEP_ZSHRC='yes' $(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+| Package | Description |
+|---------|-------------|
+| `aerospace` | AeroSpace tiling window manager |
+| `blinksh` | Blink Shell (iOS terminal) config |
+| `claude` | Claude AI context files |
+| `code` | Code snippets (Golang, Lua) |
+| `ghostty` | Ghostty terminal emulator |
+| `git` | Git configuration |
+| `kube` | Kubernetes configuration |
+| `neovide` | Neovide (Neovim GUI) config |
+| `nvim` | Neovim with LazyVim |
+| `ssh` | SSH configuration |
+| `starship` | Starship prompt |
+| `terminfo` | Custom terminfo entries |
+| `tmux` | Tmux configuration |
+| `tmuxinator` | Tmuxinator session templates |
+| `zsh` | Zsh shell configuration |
 
-# Install plugins
-git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
-git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-git clone https://github.com/ptavares/zsh-exa.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-exa
+## Infrastructure
 
-rm -rf ${HOME}/.zshrc
-echo 'export PATH=$PATH:${HOME}/nvim-linux-arm64/bin' >> .zshrc
-```
+Development environment AMIs and cloud infrastructure are managed in `ops/`:
 
-### Setup all tools
+- **Packer** (`ops/packer/`) - Builds Ubuntu 24.04 AMIs with full development toolchain
+- **Terraform** (`ops/terraform/`) - Manages AWS infrastructure (EC2, IAM, DNS, GitHub OIDC)
 
-**note**: This introduces a lot of additional packages and configuration
-required for `tmux` and `zsh`
-
-```sh
-./install.sh
-```
+CI/CD workflows automatically build AMIs and apply infrastructure changes on push to `main`.
 
 ## LICENSE
 
