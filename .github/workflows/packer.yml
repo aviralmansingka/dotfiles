@@ -158,10 +158,6 @@ jobs:
     if: "!cancelled() && needs.build-devbox.result == 'success'"
     runs-on: ubuntu-latest
 
-    env:
-      TF_VAR_hostinger_api_token: ${{ secrets.HOSTINGER_API_TOKEN }}
-      TF_VAR_github_token: ${{ secrets.GH_TOKEN }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -183,18 +179,19 @@ jobs:
           terraform_wrapper: false
 
       - name: Launch EC2 instance
-        working-directory: ops/terraform
+        working-directory: ops/devbox
         run: |
           AMI_ID="${{ needs.build-devbox.outputs.ami_id }}"
           echo "Validating AMI: $AMI_ID"
-          terraform init -backend-config="key=validate/terraform.tfstate"
+          terraform init -backend-config="key=ci/terraform.tfstate"
           terraform apply -auto-approve \
             -target=aws_key_pair.devbox \
             -target=aws_security_group.devbox \
             -target=aws_instance.devbox \
             -var="devbox_enabled=true" \
             -var="ssh_public_key=$SSH_PUBLIC_KEY" \
-            -var="devbox_ami_override=$AMI_ID"
+            -var="devbox_ami_override=$AMI_ID" \
+            -var="instance_type=t2.micro"
           echo "INSTANCE_IP=$(terraform output -raw devbox_public_ip)" >> "$GITHUB_ENV"
 
       - name: Wait for instance to be ready
@@ -220,7 +217,7 @@ jobs:
 
       - name: Tear down EC2 instance
         if: always()
-        working-directory: ops/terraform
+        working-directory: ops/devbox
         run: |
           terraform destroy -auto-approve \
             -target=aws_instance.devbox \
@@ -228,12 +225,13 @@ jobs:
             -target=aws_key_pair.devbox \
             -var="devbox_enabled=true" \
             -var="ssh_public_key=$SSH_PUBLIC_KEY" \
-            -var="devbox_ami_override=${{ needs.build-devbox.outputs.ami_id }}"
+            -var="devbox_ami_override=${{ needs.build-devbox.outputs.ami_id }}" \
+            -var="instance_type=t2.micro"
 
       - name: Cleanup ephemeral state
         if: always()
         run: |
-          aws s3 rm "s3://aviral-dotfiles-terraform-state/validate/terraform.tfstate" || true
+          aws s3 rm "s3://aviral-dotfiles-terraform-state/ci/terraform.tfstate" || true
 
       - name: Cleanup SSH key
         if: always()
