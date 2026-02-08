@@ -22,3 +22,8 @@ variable "base_ami_name_prefix" {
   type    = string
   default = "devbox-base"
 }
+
+variable "branch" {
+  type    = string
+  default = "unknown"
+}
