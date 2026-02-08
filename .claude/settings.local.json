@@ -55,7 +55,9 @@
       "Bash(AWS_PROFILE=dotfiles-ci aws iam list-policies:*)",
       "Bash(AWS_PROFILE=dotfiles-ci aws iam:*)",
       "Bash(terraform plan:*)",
-      "Bash(terraform apply:*)"
+      "Bash(terraform apply:*)",
+      "Bash(AWS_PROFILE=dotfiles-ci aws s3api:*)",
+      "Bash(terraform import:*)"
     ],
     "deny": [],
     "ask": [],

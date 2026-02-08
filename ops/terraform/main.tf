@@ -9,6 +9,10 @@ resource "aws_s3_bucket" "vm_images" {
   bucket = "aviral-dotfiles-vm-images"
 }
 
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "aviral-dotfiles-terraform-state"
+}
+
 output "vps_ipv4" {
   value = hostinger_vps.dev.ipv4_address
 }
