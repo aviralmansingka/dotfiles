@@ -56,7 +56,7 @@ build {
   # Set default shell to zsh for the target user
   provisioner "shell" {
     inline = [
-      "sudo chsh -s /bin/zsh ${var.ssh_username}"
+      "sudo usermod -s /bin/zsh ${var.ssh_username}"
     ]
   }
 }
