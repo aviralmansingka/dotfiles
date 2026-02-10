@@ -33,7 +33,10 @@
       "Bash(ls:*)",
       "Bash(xargs:*)",
       "Bash(source:*)",
-      "Skill(ci)"
+      "Skill(ci)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:claude.ai)",
+      "WebFetch(domain:storage.googleapis.com)"
     ],
     "deny": [],
     "ask": [],

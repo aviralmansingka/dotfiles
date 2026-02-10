@@ -1,4 +1,5 @@
 vim.opt.termguicolors = true
+vim.opt.number = true
 
 -- OSC52 Clipboard Configuration
 -- Supports both local and remote (SSH) development
@@ -32,3 +33,4 @@ vim.opt.jumpoptions = "stack" -- Use stack-based jumplist behavior
 
 -- Configure LazyVim to use Snacks picker for LSP operations
 vim.g.lazyvim_picker = "snacks"
+vim.g.root_spec = { "cwd" }
