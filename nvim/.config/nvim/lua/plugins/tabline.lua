@@ -81,21 +81,24 @@ return {
               }
             end, { sep = " " }),
             line.spacer(),
-            line.bufs().filter(function(buf)
-              return buf.type() == ""
-            end).foreach(function(buf)
-              local hl = buf.is_current() and theme.current_buf or theme.buf
-              return {
-                line.sep(right_sep, hl, theme.fill),
-                buf.is_current() and tab_active or "",
-                buf.file_icon(),
-                buf.name(),
-                buf.is_changed() and (" " .. modified_icon) or "",
-                line.sep(left_sep, hl, theme.fill),
-                hl = hl,
-                margin = " ",
-              }
-            end, { sep = " " }),
+            line
+              .bufs()
+              .filter(function(buf)
+                return buf.type() == ""
+              end)
+              .foreach(function(buf)
+                local hl = buf.is_current() and theme.current_buf or theme.buf
+                return {
+                  line.sep(right_sep, hl, theme.fill),
+                  buf.is_current() and tab_active or "",
+                  buf.file_icon(),
+                  buf.name(),
+                  buf.is_changed() and (" " .. modified_icon) or "",
+                  line.sep(left_sep, hl, theme.fill),
+                  hl = hl,
+                  margin = " ",
+                }
+              end, { sep = " " }),
             " ",
             {
               line.sep(right_sep, theme.tail, theme.fill),

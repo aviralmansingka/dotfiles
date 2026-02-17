@@ -43,7 +43,11 @@
         "eza",
         "lazygit",
         "tig",
-        "tmuxinator"
+        "tmuxinator",
+        "starship",
+        "zoxide",
+        "direnv",
+        "jq"
       ]
     },
     "cloud": {
@@ -133,6 +137,18 @@
     },
     "yq": {
       "ubuntu": "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then YQ_ARCH=\"amd64\"; else YQ_ARCH=\"arm64\"; fi && wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${YQ_ARCH} && chmod +x /usr/local/bin/yq"
+    },
+    "starship": {
+      "ubuntu": "curl -sS https://starship.rs/install.sh | sh -s -- -y"
+    },
+    "zoxide": {
+      "ubuntu": "curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh"
+    },
+    "direnv": {
+      "ubuntu": "curl -sfL https://direnv.net/install.sh | bash"
+    },
+    "jq": {
+      "ubuntu": "package"
     }
   },
   "casks": {

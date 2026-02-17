@@ -4,10 +4,13 @@ set -euo pipefail
 # Dotfiles installation script for macOS
 # Mirrors the provisioning pipeline in ops/packer/scripts/ adapted for macOS+Homebrew:
 #   1. System packages (Homebrew)
-#   2. Rust toolchain + cargo tools
-#   3. Dotfiles deployment via stow
-#   4. Shell plugins (Oh My Zsh, zsh plugins, TPM)
-#   5. Git config (deferred to avoid SSH URL rewrite during installs)
+#   2. CLI tools not in Homebrew (Claude Code, OpenCode)
+#   3. Rust toolchain + cargo tools
+#   4. Dotfiles deployment via stow
+#   5. Shell plugins (Oh My Zsh, zsh plugins, TPM)
+#   6. Terminfo
+#   7. Git config (deferred to avoid SSH URL rewrite during installs)
+#   8. Git hooks
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -31,7 +34,18 @@ echo "==> Installing packages from Brewfile"
 brew bundle --file="$DOTFILES_DIR/Brewfile"
 
 ####################
-#  2. Rust         #
+#  2. CLI tools    #
+####################
+# Tools not available in Homebrew
+
+echo "==> Installing Claude Code"
+curl -fsSL https://claude.ai/install.sh | bash
+
+echo "==> Installing OpenCode"
+curl -fsSL https://opencode.ai/install | bash
+
+####################
+#  3. Rust         #
 ####################
 # Mirrors: ops/packer/scripts/install_rust.sh
 
@@ -49,7 +63,7 @@ echo "==> Installing neovim nightly via bob"
 bob use nightly
 
 ####################
-#  3. Stow         #
+#  4. Stow         #
 ####################
 # Mirrors: ops/packer/scripts/deploy_dotfiles.sh
 
@@ -65,7 +79,7 @@ stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
 stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
 
 ####################
-#  4. Shell plugins #
+#  5. Shell plugins #
 ####################
 # Mirrors: ops/packer/scripts/install_shell_plugins.sh
 
@@ -91,7 +105,7 @@ if [[ ! -d "$HOME/.tmux/plugins/tpm" ]]; then
 fi
 
 ####################
-#  5. Terminfo     #
+#  6. Terminfo     #
 ####################
 
 if command -v tic &> /dev/null; then
@@ -101,7 +115,7 @@ if command -v tic &> /dev/null; then
 fi
 
 ####################
-#  6. Git config   #
+#  7. Git config   #
 ####################
 # Mirrors: ops/packer/scripts/cleanup.sh
 # Deferred to avoid SSH URL rewrite during installs
@@ -110,7 +124,7 @@ echo "==> Deploying git config (deferred to avoid SSH URL rewrite during install
 stow -d "$DOTFILES_DIR" -t "$HOME" git
 
 ####################
-#  7. Git hooks    #
+#  8. Git hooks    #
 ####################
 
 echo "==> Installing git hooks"

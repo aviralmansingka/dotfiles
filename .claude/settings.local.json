@@ -36,7 +36,9 @@
       "Skill(ci)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:claude.ai)",
-      "WebFetch(domain:storage.googleapis.com)"
+      "WebFetch(domain:storage.googleapis.com)",
+      "Bash(./scripts/generate-brewfile.sh:*)",
+      "Bash(k9s version:*)"
     ],
     "deny": [],
     "ask": [],
