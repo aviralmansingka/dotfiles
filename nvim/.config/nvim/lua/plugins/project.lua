@@ -2,6 +2,7 @@ return {
   "ahmedkhalf/project.nvim",
   config = function()
     require("project_nvim").setup({
+      detection_methods = { "pattern" },
       patterns = { "init.lua", "build.gradle", ".git" },
       silent_chdir = true,
       sync_root_with_cwd = true,
