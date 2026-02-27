@@ -4,3 +4,7 @@ gui:
 keybinding:
   universal:
     return: "<c-x>"
+git:
+  paging:
+    colorArg: always
+    pager: delta --dark --paging=never --syntax-theme gruvbox-dark --side-by-side
