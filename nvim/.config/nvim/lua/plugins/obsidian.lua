@@ -89,6 +89,12 @@ return {
     -- UI settings
     ui = {
       enable = false, -- Using render-markdown.nvim instead
+      -- Define checkbox states for toggle cycling (space -> - -> x -> space)
+      checkboxes = {
+        [" "] = { char = "󰄱", hl_group = "ObsidianTodo" },
+        ["-"] = { char = "󰥔", hl_group = "ObsidianRightArrow" },
+        ["x"] = { char = "󰱒", hl_group = "ObsidianDone" },
+      },
     },
   },
 
