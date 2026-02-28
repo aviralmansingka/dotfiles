@@ -19,6 +19,15 @@ return {
           vim.opt_local.textwidth = 120
           vim.opt_local.wrap = true
           vim.opt_local.linebreak = true
+          vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
+        end,
+      })
+
+      -- Conceal-aware formatting for octo buffers
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "octo",
+        callback = function()
+          vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
         end,
       })
     end,

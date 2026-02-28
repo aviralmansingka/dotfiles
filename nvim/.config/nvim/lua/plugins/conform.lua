@@ -10,12 +10,30 @@ return {
       return nil
     end,
     formatters = {
+      -- Let Prettier handle tables, code blocks, etc. but NOT prose wrapping
       prettier = {
-        prepend_args = { "--prose-wrap", "always", "--print-width", "120" },
+        prepend_args = { "--prose-wrap", "preserve", "--print-width", "120" },
+      },
+      -- Conceal-aware prose wrapper: treats [text](url) as just "text"
+      -- for line-width calculation, so lines wrap at visual width
+      markdown_wrap = {
+        format = function(self, ctx, lines, callback)
+          local ok, wrap = pcall(require, "helpers.markdown_wrap")
+          if ok then
+            local tw = vim.bo[ctx.buf].textwidth
+            if tw <= 0 then
+              tw = 120
+            end
+            callback(nil, wrap.format_lines(lines, tw))
+          else
+            callback(nil, lines)
+          end
+        end,
       },
     },
     formatters_by_ft = {
-      markdown = { "prettier" },
+      -- Prettier first (structure), then our visual-width wrapper (prose)
+      markdown = { "prettier", "markdown_wrap" },
     },
   },
 }
