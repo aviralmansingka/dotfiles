@@ -6,7 +6,7 @@ allowed-tools: Glob, Grep, Read, Write, Edit
 
 # Obsidian Vault Access
 
-Interact with the personal Obsidian vault at `/Users/aviralmansingka/obsidian/personal`.
+Interact with the personal Obsidian vault at `$HOME/obsidian/personal`.
 
 ## Subcommands
 
@@ -32,11 +32,13 @@ Find and read a note by topic.
 Append a task to the appropriate location. Two modes:
 
 **Work tasks** (default when working in a code repository or when the task is clearly work-related):
+
 1. Find the latest `week_XXX` directory in `5_modal/logs/` (sort numerically, pick highest)
 2. Read the `backlog.md` in that directory
 3. Append `- [ ] <title>` at the end of the `## Backlog` section (before `## Log`)
 
 **Personal tasks** (when the task is clearly personal, or when invoked with `/vault task personal <title>`):
+
 1. Read `0_inbox/0.inbox.md`
 2. Append `- [ ] <title>` under the most relevant existing section
 3. If no section fits, append under a new `## Tasks` section at the bottom
@@ -59,7 +61,7 @@ System card categories:
 | `infrastructure/` | machine-image-cd, machine-image-neocloud |
 | `sandboxes/` | unary-object-backlog |
 | `workers/` | worker, supervisor, relays, worker-health, worker-networking, worker-runtime, worker-task-execution, worker-binary-management |
-| Root | invbook, modal-host-bench, _index |
+| Root | invbook, modal-host-bench, \_index |
 
 ## Vault Conventions
 
@@ -71,14 +73,14 @@ System card categories:
 
 ## Directory Layout
 
-| Directory | Purpose |
-|-----------|---------|
-| `0_inbox/` | Quick captures, personal tasks (`0.inbox.md`) |
-| `1_wip/` | Work-in-progress research |
-| `2_knowledge/` | Finalized knowledge base and reference |
-| `3_log/` | Historical monthly logs |
-| `4_misc/` | Misc (interviews, projects) |
-| `5_modal/logs/week_XXX/` | Weekly work logs and backlogs |
-| `5_modal/system-cards/` | System architecture documentation |
-| `journal/` | Journal entries (weekly, not daily) |
-| `projects/` | Project documentation |
+| Directory                | Purpose                                       |
+| ------------------------ | --------------------------------------------- |
+| `0_inbox/`               | Quick captures, personal tasks (`0.inbox.md`) |
+| `1_wip/`                 | Work-in-progress research                     |
+| `2_knowledge/`           | Finalized knowledge base and reference        |
+| `3_log/`                 | Historical monthly logs                       |
+| `4_misc/`                | Misc (interviews, projects)                   |
+| `5_modal/logs/week_XXX/` | Weekly work logs and backlogs                 |
+| `5_modal/system-cards/`  | System architecture documentation             |
+| `journal/`               | Journal entries (weekly, not daily)           |
+| `projects/`              | Project documentation                         |
