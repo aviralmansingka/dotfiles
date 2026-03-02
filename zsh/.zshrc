@@ -22,6 +22,7 @@ source $ZSH/oh-my-zsh.sh
 alias vim='bob run nightly'
 alias rg='rg --hidden'
 alias ls='eza --icons -l'
+alias inv='uv run inv'
 
 export XDG_CONFIG_HOME="$HOME/.config"
 export TERM="xterm-ghostty"
