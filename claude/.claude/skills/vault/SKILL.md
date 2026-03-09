@@ -6,7 +6,7 @@ allowed-tools: Glob, Grep, Read, Write, Edit
 
 # Obsidian Vault Access
 
-Interact with the personal Obsidian vault at `$HOME/obsidian/personal`.
+Interact with the personal Obsidian vault at `~/vault`.
 
 ## Subcommands
 
@@ -65,7 +65,7 @@ System card categories:
 
 ## Vault Conventions
 
-- **Base path**: `/Users/aviralmansingka/obsidian/personal`
+- **Base path**: `~/vault`
 - **Task format**: `- [ ]` open, `- [x]` closed, `- [~]` in-progress
 - **Frontmatter**: YAML with `id`, `aliases`, `tags`
 - **No daily notes** — weekly `backlog.md` is the central planning document

@@ -1,5 +1,10 @@
 # CLAUDE.md
 
+## MANDATORY: Use td for Task Management
+
+You must run td usage --new-session at conversation start (or after /clear) to see current work.
+Use td usage -q for subsequent reads.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Repository Purpose
@@ -15,7 +20,7 @@ This is a dotfiles repository that manages development environment configuration
 
 # Manual installation with stow
 brew bundle                    # Install dependencies from Brewfile
-stow nvim tmux zsh ghostty git kube tmuxinator
+stow nvim tmux zsh ghostty git kube tmuxinator codex
 ```
 
 ### Component Installation
@@ -28,6 +33,7 @@ stow ghostty      # Deploy Ghostty terminal configuration
 stow git          # Deploy git configuration
 stow starship     # Deploy Starship prompt configuration
 stow aerospace    # Deploy AeroSpace window manager configuration
+stow codex        # Deploy Codex skill files
 ```
 
 ### Plugin Management
@@ -52,6 +58,7 @@ Each tool has its own directory containing dotfiles in their target path structu
 - **aerospace** - AeroSpace tiling window manager
 - **blinksh** - Blink Shell (iOS terminal) configuration
 - **claude** - Claude AI context files
+- **codex** - Codex skill files
 - **code** - Code snippets (Golang, Lua)
 - **ghostty** - Ghostty terminal emulator
 - **git** - Git configuration

@@ -25,7 +25,7 @@ Generate structured documentation for software systems and components.
 
 All system cards are written to:
 ```
-~/obsidian/personal/5_modal/system-cards/<component-name>.md
+~/vault/5_modal/system-cards/<component-name>.md
 ```
 
 ---
@@ -505,7 +505,7 @@ A: {answer with section reference}
 
 After completing the system card:
 
-1. Write the card to `~/obsidian/personal/5_modal/system-cards/{component}.md`
+1. Write the card to `~/vault/5_modal/system-cards/{component}.md`
 2. Report:
    - Summary of what was documented
    - Any `[UNVALIDATED]` commands needing user verification

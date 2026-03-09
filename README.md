@@ -25,7 +25,7 @@ For manual installation:
 
 ```sh
 brew bundle
-stow nvim tmux zsh ghostty git starship
+stow nvim tmux zsh ghostty git starship codex
 ```
 
 ### Option B: AWS Devbox
@@ -65,6 +65,7 @@ terraform -chdir=ops/devbox destroy \
 | `aerospace` | AeroSpace tiling window manager |
 | `blinksh` | Blink Shell (iOS terminal) config |
 | `claude` | Claude AI context files |
+| `codex` | Codex skill files |
 | `code` | Code snippets (Golang, Lua) |
 | `ghostty` | Ghostty terminal emulator |
 | `git` | Git configuration |
