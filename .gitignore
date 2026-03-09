@@ -26,3 +26,11 @@ ops/terraform/*.tfvars
 ops/terraform/.terraform/
 ops/terraform/.terraform.lock.hcl
 ops/terraform/terraform.tfstate*
+.todos/
+.sidecar/
+.sidecar-agent
+.sidecar-task
+.sidecar-pr
+.sidecar-start.sh
+.sidecar-base
+.td-root

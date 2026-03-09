@@ -9,6 +9,7 @@ local claude_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/claude")) == 1 
 local tool_commands = {
   claude = { claude_bin, "--ide" },
   opencode = { "opencode" },
+  codex = { "codex" },
 }
 
 local function command_to_shell(cmd)
@@ -257,6 +258,13 @@ return {
       end,
       desc = "Sidekick Toggle Claude",
     },
+    {
+      "<leader>ag",
+      function()
+        toggle_tool_session("codex", true)
+      end,
+      desc = "Sidekick Toggle Codex (G)PT",
+    },
     -- Toggle OpenCode directly
     {
       "<leader>ao",
@@ -269,7 +277,7 @@ return {
     {
       "<leader>an",
       function()
-        local tools = { "claude", "opencode" }
+        local tools = { "claude", "opencode", "codex" }
         vim.ui.select(tools, { prompt = "Select CLI tool:" }, function(tool)
           if not tool then
             return
@@ -278,13 +286,6 @@ return {
         end)
       end,
       desc = "Sidekick New Named Session",
-    },
-    {
-      "<leader>aN",
-      function()
-        prompt_named_session("claude")
-      end,
-      desc = "Sidekick New Claude Session",
     },
   },
 }

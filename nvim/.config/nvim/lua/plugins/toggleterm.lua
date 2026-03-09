@@ -11,7 +11,6 @@ return {
           backdrop = false,
           keys = {
             q = "hide",
-            ["<C-\\>"] = "hide",
             ["<C-]>"] = "term_normal",
           },
         },
@@ -26,14 +25,6 @@ return {
         end,
         desc = "Exit terminal mode",
         mode = { "t" },
-      },
-      {
-        "<C-\\>",
-        function()
-          Snacks.terminal.toggle()
-        end,
-        desc = "Toggle [T]erminal",
-        mode = { "n", "t" },
       },
       {
         "gk",
