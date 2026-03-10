@@ -25,7 +25,7 @@ For manual installation:
 
 ```sh
 brew bundle
-stow nvim tmux zsh ghostty git starship codex
+stow nvim tmux zsh ghostty git starship sidecar codex
 ```
 
 ### Option B: AWS Devbox
@@ -72,6 +72,13 @@ terraform -chdir=ops/devbox destroy \
 | `kube` | Kubernetes configuration |
 | `neovide` | Neovide (Neovim GUI) config |
 | `nvim` | Neovim with LazyVim |
+| `sidecar` | Sidecar configuration |
+
+`sidecar` itself is installed from the local `~/sidecar` checkout, not from Homebrew. Use `gwt marcus/sidecar` to create the checkout if it does not already exist, then run:
+
+```sh
+~/dotfiles/scripts/install-sidecar.sh
+```
 | `ssh` | SSH configuration |
 | `starship` | Starship prompt |
 | `terminfo` | Custom terminfo entries |

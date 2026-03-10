@@ -62,21 +62,28 @@ cargo install bob-nvim
 echo "==> Installing neovim nightly via bob"
 bob use nightly
 
+echo "==> Installing Sidecar from source checkout"
+"$DOTFILES_DIR/scripts/install-sidecar.sh"
+
 ####################
 #  4. Stow         #
 ####################
 # Mirrors: ops/packer/scripts/deploy_dotfiles.sh
 
 echo "==> Removing conflicting files"
-rm -f "$HOME/.zshenv" "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
+rm -f "$HOME/.zprofile" "$HOME/.zshenv" "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_logout" "$HOME/.profile"
 
 echo "==> Deploying dotfiles via stow"
 stow -d "$DOTFILES_DIR" -t "$HOME" zsh
 stow -d "$DOTFILES_DIR" -t "$HOME" tmux
 stow -d "$DOTFILES_DIR" -t "$HOME" nvim
+stow -d "$DOTFILES_DIR" -t "$HOME" neovide
 stow -d "$DOTFILES_DIR" -t "$HOME" starship
+stow -d "$DOTFILES_DIR" -t "$HOME" sidecar
 stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
 stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
+stow -d "$DOTFILES_DIR" -t "$HOME" kube
+stow -d "$DOTFILES_DIR" -t "$HOME" tmuxinator
 stow -d "$DOTFILES_DIR" -t "$HOME" codex
 
 ####################
@@ -101,9 +108,14 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 
 echo "==> Installing TPM (Tmux Plugin Manager)"
-if [[ ! -d "$HOME/.tmux/plugins/tpm" ]]; then
-    git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+TMUX_PLUGIN_MANAGER_PATH="$HOME/.local/share/tmux/plugins"
+if [[ ! -d "$TMUX_PLUGIN_MANAGER_PATH/tpm" ]]; then
+    mkdir -p "$TMUX_PLUGIN_MANAGER_PATH"
+    git clone https://github.com/tmux-plugins/tpm "$TMUX_PLUGIN_MANAGER_PATH/tpm"
 fi
+
+echo "==> Installing tmux plugins"
+"$TMUX_PLUGIN_MANAGER_PATH/tpm/bin/install_plugins"
 
 ####################
 #  6. Terminfo     #

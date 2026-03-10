@@ -1,0 +1,11 @@
+model = "gpt-5.4"
+web_search = "live"
+
+[projects."/Users/aviral/dotfiles"]
+trust_level = "trusted"
+
+[projects."/Users/aviral/vault"]
+trust_level = "trusted"
+
+[notice.model_migrations]
+"gpt-5.3-codex" = "gpt-5.4"

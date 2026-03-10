@@ -18,6 +18,7 @@ plugins=(
 )
 
 source $ZSH/oh-my-zsh.sh
+unalias gwt 2>/dev/null || true
 
 alias vim='bob run nightly'
 alias rg='rg --hidden'
@@ -60,3 +61,4 @@ if [ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]; then . "$HOME/google-cloud-sdk/
 
 # The next line enables shell command completion for gcloud.
 if [ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]; then . "$HOME/google-cloud-sdk/completion.zsh.inc"; fi
+export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"

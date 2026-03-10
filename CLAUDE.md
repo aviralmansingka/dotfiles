@@ -20,7 +20,7 @@ This is a dotfiles repository that manages development environment configuration
 
 # Manual installation with stow
 brew bundle                    # Install dependencies from Brewfile
-stow nvim tmux zsh ghostty git kube tmuxinator codex
+stow nvim tmux zsh ghostty git kube tmuxinator sidecar codex
 ```
 
 ### Component Installation
@@ -32,6 +32,7 @@ stow nvim         # Deploy Neovim/LazyVim configuration
 stow ghostty      # Deploy Ghostty terminal configuration
 stow git          # Deploy git configuration
 stow starship     # Deploy Starship prompt configuration
+stow sidecar      # Deploy Sidecar configuration
 stow aerospace    # Deploy AeroSpace window manager configuration
 stow codex        # Deploy Codex skill files
 ```
@@ -65,6 +66,13 @@ Each tool has its own directory containing dotfiles in their target path structu
 - **kube** - Kubernetes configuration
 - **neovide** - Neovide (Neovim GUI) configuration
 - **nvim** - Neovim with LazyVim distribution
+- **sidecar** - Sidecar configuration
+
+Sidecar is installed from the local `~/sidecar` checkout rather than from Homebrew:
+
+```sh
+~/dotfiles/scripts/install-sidecar.sh
+```
 - **ssh** - SSH configuration
 - **starship** - Starship prompt
 - **terminfo** - Custom terminfo entries (xterm-ghostty)
