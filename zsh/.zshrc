@@ -19,7 +19,17 @@ plugins=(
 
 source $ZSH/oh-my-zsh.sh
 
-alias vim='bob run nightly'
+vim() {
+  if [ -n "$TMUX" ]; then
+    local session=$(tmux display-message -p '#S')
+    local window=$(tmux display-message -p '#W')
+    local sock="/tmp/nvim-${session}-${window}.sock"
+    [ -S "$sock" ] && rm -f "$sock"
+    bob run nightly --listen "$sock" "$@"
+  else
+    bob run nightly "$@"
+  fi
+}
 alias rg='rg --hidden'
 alias ls='eza --icons -l'
 alias inv='uv run inv'

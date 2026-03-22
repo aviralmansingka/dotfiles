@@ -1,0 +1,32 @@
+import numpy as np
+from unittest.mock import patch, MagicMock
+
+from fastapi.testclient import TestClient
+
+from kata_inference_py.adapters.http_server import create_app
+from kata_inference_py.adapters.xgboost_runner import XGBoostRunner
+from kata_inference_py.domain.use_case import PredictUseCase
+
+
+@patch("kata_inference_py.adapters.xgboost_runner.xgb.DMatrix")
+def test_predict_end_to_end(mock_dmatrix):
+    mock_model = MagicMock()
+    mock_model.predict.return_value = np.array([0.75])
+
+    runner = XGBoostRunner(model=mock_model)
+    use_case = PredictUseCase(model_runner=runner)
+    app = create_app(use_case)
+    client = TestClient(app)
+
+    response = client.post("/predict", json={
+        "id": "aviral",
+        "common_entities": {
+            "age": {"type": "int", "val": 26},
+            "rating": {"type": "float", "val": 0.5},
+        },
+    })
+
+    assert response.status_code == 200
+    assert response.json() == {"id": "aviral", "result": [0.75]}
+    mock_dmatrix.assert_called_once_with([[26.0, 0.5]])
+    mock_model.predict.assert_called_once()

@@ -1,0 +1,1802 @@
+     1→"""
+     2→This module contains tests for verifying that task metrics produced to Kafka are appropriately consumed and
+     3→stored in ClickHouse.
+     4→"""
+     5→
+     6→import pytest
+     7→from datetime import datetime, timedelta
+     8→from decimal import Decimal
+     9→from typing import Any, Optional
+    10→
+    11→import pytest_asyncio
+    12→
+    13→from modal_internal_common import config
+    14→from modal_internal_common.clickhouse_query import CHQuery
+    15→from modal_proto import api_pb2
+    16→from modal_server.billing_utils import BillingType
+    17→from modal_server.gpu_type import GPUType
+    18→from modal_server.objects.plan import DEFAULT_REGION_MULTIPLIERS, copy_plan
+    19→from modal_server.proto import internal_api_pb2
+    20→from modal_server.state import State
+    21→from modal_server.stores.task_metrics import (
+    22→    _determine_bundled_resources,
+    23→    create_task_metrics_row,
+    24→    determine_region_multiplier,
+    25→)
+    26→
+    27→from .metrics_utils import add_task_metrics
+    28→
+    29→
+    30→class AllTaskMetricsQuery(CHQuery):
+    31→    def parameters(self) -> dict:
+    32→        return {}
+    33→
+    34→    @staticmethod
+    35→    def query(_) -> str:
+    36→        return "select * from task_metrics"
+    37→
+    38→
+    39→class TruncateTaskMetricsQuery(CHQuery):
+    40→    def parameters(self) -> dict:
+    41→        return {}
+    42→
+    43→    @staticmethod
+    44→    def query(_) -> str:
+    45→        return "truncate table task_metrics"
+    46→
+    47→
+    48→class TruncateTaskMetricsByEntityMinuteQuery(CHQuery):
+    49→    def parameters(self) -> dict:
+    50→        return {}
+    51→
+    52→    @staticmethod
+    53→    def query(_) -> str:
+    54→        return "truncate table task_metrics_by_entity_minute"
+    55→
+    56→
+    57→class TruncateTaskMetricsByWorkspaceMinuteQuery(CHQuery):
+    58→    def parameters(self) -> dict:
+    59→        return {}
+    60→
+    61→    @staticmethod
+    62→    def query(_) -> str:
+    63→        return "truncate table task_metrics_by_workspace_minute"
+    64→
+    65→
+    66→class TruncateAppTaskMetricsByMinuteQuery(CHQuery):
+    67→    def parameters(self) -> dict:
+    68→        return {}
+    69→
+    70→    @staticmethod
+    71→    def query(_) -> str:
+    72→        return "truncate table app_task_metrics_by_minute"
+    73→
+    74→
+    75→class TruncateTaskMetricsByAppEntityMinuteQuery(CHQuery):
+    76→    def parameters(self) -> dict:
+    77→        return {}
+    78→
+    79→    @staticmethod
+    80→    def query(_) -> str:
+    81→        return "truncate table task_metrics_by_app_entity_minute"
+    82→
+    83→
+    84→class TruncateTaskMetricsByAppEntityTypeMinuteQuery(CHQuery):
+    85→    def parameters(self) -> dict:
+    86→        return {}
+    87→
+    88→    @staticmethod
+    89→    def query(_) -> str:
+    90→        return "truncate table task_metrics_by_app_entity_type_minute"
+    91→
+    92→
+    93→@pytest_asyncio.fixture
+    94→async def clear_metrics_tables(state: State):
+    95→    """Clears the task metrics tables before each test."""
+    96→    await state.task_metrics_store.ch_client.command(TruncateTaskMetricsQuery())
+    97→    await state.task_metrics_store.ch_client.command(TruncateTaskMetricsByEntityMinuteQuery())
+    98→    await state.task_metrics_store.ch_client.command(TruncateTaskMetricsByWorkspaceMinuteQuery())
+    99→    await state.task_metrics_store.ch_client.command(TruncateAppTaskMetricsByMinuteQuery())
+   100→    await state.task_metrics_store.ch_client.command(TruncateTaskMetricsByAppEntityMinuteQuery())
+   101→    await state.task_metrics_store.ch_client.command(TruncateTaskMetricsByAppEntityTypeMinuteQuery())
+   102→
+   103→
+   104→def _generate_message(value: str, idx: int) -> dict[str, Any]:
+   105→    """Generates a mock message with task metrics data."""
+   106→    return {
+   107→        "task_id": value,
+   108→        "account_id": value,
+   109→        "app_id": value,
+   110→        "function_id": value,
+   111→        "function_name": value,
+   112→        "image_id": value,
+   113→        "sandbox_id": value,
+   114→        "billing_type": BillingType.BILL_A100_40GB.value,
+   115→        "timestamp": datetime.timestamp(datetime.now()),
+   116→        "function_fee_dollars": 1,
+   117→    }
+   118→
+   119→
+   120→@pytest.mark.asyncio
+   121→@pytest.mark.parametrize(["plan_bundled_cpus", "plan_bundled_mem_gib"], [[None, None], [None, 1], [2, None], [3, None]])
+   122→@pytest.mark.parametrize(["sandbox", "nonpreemptible"], [[True, False], [False, True], [False, False]])
+   123→async def test_track_task_metrics(
+   124→    state: State, user, clear_metrics_tables, plan_bundled_cpus, plan_bundled_mem_gib, sandbox, nonpreemptible
+   125→):
+   126→    """Tests that metrics are produced and consumed correctly."""
+   127→    # generate messages using the timeseries manager interface
+   128→    message_value = "test"
+   129→    message = _generate_message(message_value, 0)
+   130→    metrics = [
+   131→        internal_api_pb2.ResourceMetric(resource="elapsed_ns", value=1),
+   132→        internal_api_pb2.ResourceMetric(resource="cpu_ns", value=3),
+   133→        internal_api_pb2.ResourceMetric(resource="mem_ns", value=4),
+   134→        internal_api_pb2.ResourceMetric(resource="gpu_ns", value=1),
+   135→        internal_api_pb2.ResourceMetric(resource="gpu_mem_ns", value=1),
+   136→        internal_api_pb2.ResourceMetric(resource="gpu_temp_ns", value=1),
+   137→    ]
+   138→    resources = api_pb2.Resources(
+   139→        milli_cpu=500,  # 500 milli-CPU = 0.5 CPU core
+   140→        memory_mb=2048,  # 2048 MiB = 2 GiB
+   141→        gpu_config=api_pb2.GPUConfig(count=1, type=api_pb2.GPU_TYPE_H100),
+   142→    )
+   143→    message.pop("timestamp")
+   144→
+   145→    workspace_id = user.workspace_id
+   146→    workspace_struct = await state.durable.workspaces[workspace_id]
+   147→
+   148→    existing_ephemeral_plan_struct = await state.ephemeral.plans[workspace_struct.plan_id]
+   149→    new_values = {}
+   150→    if plan_bundled_cpus is not None:
+   151→        new_values["bundled_cpus"] = plan_bundled_cpus
+   152→    if plan_bundled_mem_gib is not None:
+   153→        new_values["bundled_mem_gib"] = plan_bundled_mem_gib
+   154→    durable_plan_struct = await copy_plan(state, existing_ephemeral_plan_struct.key, **new_values)
+   155→    ephemeral_plan_struct = await state.ephemeral.plans[durable_plan_struct.key]
+   156→
+   157→    # Create a dummy SchedulerPlacement protobuf message to construct regions list
+   158→    temp_message = api_pb2.SchedulerPlacement()
+   159→    regions = temp_message.regions
+   160→    regions.append("us-east-1")
+   161→    regions.extend(["us-west-2", "eu-west-1"])
+   162→
+   163→    await state.task_metrics_store.track_task_metrics(
+   164→        task_id=message["task_id"],
+   165→        workspace_id="ac-test",
+   166→        environment_id="en-test",
+   167→        billing_type=message["billing_type"],
+   168→        app_id="ap-test",
+   169→        app_type="deployed",
+   170→        metrics=metrics,
+   171→        resources=resources,
+   172→        ephemeral_plan_struct=ephemeral_plan_struct,
+   173→        regions=regions,
+   174→        function_id=message["function_id"] if not sandbox else None,
+   175→        function_name="name-of-" + message["function_id"],
+   176→        image_id=message["image_id"],
+   177→        sandbox_id=message["sandbox_id"] if sandbox else None,
+   178→        nonpreemptible=nonpreemptible,
+   179→        base_function_id=None,
+   180→    )
+   181→    await state.mock_clickpipes.task_metrics.join()
+   182→
+   183→    # verify that messages have been ingested & message content
+   184→    query_result = await state.task_metrics_store.ch_client.query(AllTaskMetricsQuery())
+   185→    rows = query_result.named_results()
+   186→    row = next(rows)
+   187→    assert row["workspace_id"] == "ac-test"
+   188→    assert row["entity_id"] == message_value
+   189→    assert (row["cpu_ns"], row["adj_cpu_ns"]) == (
+   190→        (3, 3) if not plan_bundled_cpus else (3, 1) if plan_bundled_cpus == 2 else (3, 0)
+   191→    )
+   192→    assert (row["mem_ns"], row["adj_mem_ns"]) == ((4, 4) if not plan_bundled_mem_gib else (4, 3))
+   193→
+   194→    sandbox_multiplier = row["sandbox_multiplier"]
+   195→    nonpreemptible_multiplier = row["nonpreemptible_multiplier"]
+   196→    region_multiplier = row["region_multiplier"]
+   197→
+   198→    sandbox_cpu_ns = row["sandbox_cpu_ns"]
+   199→    assert sandbox_cpu_ns == (0 if not sandbox else (sandbox_multiplier - 1) * row["adj_cpu_ns"])
+   200→    nonpreemptible_cpu_ns = row["nonpreemptible_cpu_ns"]
+   201→    assert nonpreemptible_cpu_ns == (0 if not nonpreemptible else (nonpreemptible_multiplier - 1) * row["adj_cpu_ns"])
+   202→    region_cpu_ns = row["region_cpu_ns"]
+   203→    assert region_cpu_ns == (row["adj_cpu_ns"] + sandbox_cpu_ns + nonpreemptible_cpu_ns) * (region_multiplier - 1)
+   204→
+   205→    # Same thing for memory.
+   206→    sandbox_mem_ns = row["sandbox_mem_ns"]
+   207→    assert sandbox_mem_ns == (0 if not sandbox else (sandbox_multiplier - 1) * row["adj_mem_ns"])
+   208→    nonpreemptible_mem_ns = row["nonpreemptible_mem_ns"]
+   209→    assert nonpreemptible_mem_ns == (0 if not nonpreemptible else (nonpreemptible_multiplier - 1) * row["adj_mem_ns"])
+   210→    region_mem_ns = row["region_mem_ns"]
+   211→    assert region_mem_ns == (row["adj_mem_ns"] + sandbox_mem_ns + nonpreemptible_mem_ns) * (region_multiplier - 1)
+   212→
+   213→    assert (row["gpu_ns"], row["region_gpu_ns"]) == (1, 0.25)
+   214→    assert (row["gpu_mem_ns"], row["gpu_temp_ns"]) == (1, 1)
+   215→    assert (row["requested_cpu_cores"], row["requested_mem_gib"]) == (0.5, 2)
+   216→
+   217→
+   218→@pytest.mark.asyncio
+   219→async def test_all_billing_types_ingested(state: State, user):
+   220→    """Tests that metrics for all billing types are ingested correctly."""
+   221→    await add_task_metrics(account_id=user.workspace_id, environment_id="en-test", state=state, billing_type=None)
+   222→    for billing_type in BillingType:
+   223→        await add_task_metrics(
+   224→            account_id=user.workspace_id, environment_id="en-test", state=state, billing_type=billing_type
+   225→        )
+   226→
+   227→
+   228→@pytest.mark.asyncio
+   229→async def test_query_billable_metrics_by_hour_and_billing_type(state: State, user, clear_metrics_tables):
+   230→    """Tests the query_billable_metrics_by_hour_and_billing_type method of TaskMetricsStore."""
+   231→    workspace_id = "ac-test"
+   232→    environment_id = "en-test"
+   233→    start_time = datetime(2023, 1, 1, 0, 0, 0)
+   234→    end_time = datetime(2023, 1, 1, 3, 0, 0)
+   235→
+   236→    # Create test data across multiple hours with different billing types
+   237→    resources = api_pb2.Resources(
+   238→        milli_cpu=2000,  # 2 CPU cores
+   239→        memory_mb=2048,  # 2 GiB
+   240→    )
+   241→
+   242→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+   243→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+   244→
+   245→    # Add metrics for different billing types across 3 hours
+   246→    billing_types = ["cpu", "bill_t4", "bill_a100_40gb"]
+   247→    for hour in range(3):
+   248→        timestamp = start_time + timedelta(hours=hour)
+   249→        for billing_type in billing_types:
+   250→            metrics = [
+   251→                # Actual usage is less than requested resources
+   252→                internal_api_pb2.ResourceMetric(
+   253→                    timestamp=timestamp.timestamp(), resource="elapsed_ns", value=3.6e12
+   254→                ),  # 1 hour
+   255→                internal_api_pb2.ResourceMetric(
+   256→                    timestamp=timestamp.timestamp(), resource="cpu_ns", value=1.8e12
+   257→                ),  # 0.5 hour
+   258→                internal_api_pb2.ResourceMetric(
+   259→                    timestamp=timestamp.timestamp(), resource="mem_ns", value=3.6e12
+   260→                ),  # 1 hour
+   261→                internal_api_pb2.ResourceMetric(
+   262→                    timestamp=timestamp.timestamp(), resource="gpu_ns", value=1.8e12
+   263→                ),  # 0.5 hour
+   264→                internal_api_pb2.ResourceMetric(
+   265→                    timestamp=timestamp.timestamp(), resource="function_fee_dollars", value=0.1
+   266→                ),
+   267→            ]
+   268→
+   269→            await state.task_metrics_store.track_task_metrics(
+   270→                task_id=f"ta-{hour}-{billing_type}",
+   271→                workspace_id=workspace_id,
+   272→                environment_id=environment_id,
+   273→                billing_type=billing_type,
+   274→                app_id="ap-test",
+   275→                app_type="deployed",
+   276→                metrics=metrics,
+   277→                resources=resources,
+   278→                ephemeral_plan_struct=ephemeral_plan_struct,
+   279→                regions=None,
+   280→                function_id="fu-test",
+   281→                function_name="test_function",
+   282→            )
+   283→
+   284→    await state.mock_clickpipes.task_metrics.join()
+   285→
+   286→    # Query the metrics
+   287→    results = await state.task_metrics_store.query_billable_metrics_by_hour_and_billing_type(
+   288→        workspace_id,
+   289→        start_time.timestamp(),
+   290→        end_time.timestamp(),
+   291→    )
+   292→
+   293→    # Verify results
+   294→    assert len(results) == 9  # 3 hours × 3 billing types
+   295→
+   296→    # Group results by billing type
+   297→    results_by_type = {}
+   298→    for row in results:
+   299→        billing_type = row["billing_type"]
+   300→        results_by_type.setdefault(billing_type, []).append(row)
+   301→
+   302→    # Verify each billing type has correct metrics
+   303→    for billing_type in billing_types:
+   304→        type_results = results_by_type[billing_type]
+   305→        assert len(type_results) == 3  # 3 hours of data
+   306→
+   307→        for row in type_results:
+   308→            # Raw usage metrics
+   309→            assert row["cpu_hr"] == 0.5  # 1.8e12 ns = 0.5 hour
+   310→            assert row["mem_hr"] == 1.0  # 3.6e12 ns = 1.0 hour
+   311→            assert row["gpu_hr"] == 0.5  # 1.8e12 ns = 0.5 hour
+   312→
+   313→            # Adjusted metrics (based on resource requests)
+   314→            # CPU: max(actual, requested) = max(0.5, 2.0) = 2.0
+   315→            assert row["adj_cpu_hr"] == 2.0
+   316→            # Memory: max(actual, requested) = max(1.0, 2.0) = 2.0
+   317→            assert row["adj_mem_hr"] == 2.0
+   318→
+   319→            # Billing metrics (same as adjusted metrics since no region/sandbox/nonpreemptible multipliers)
+   320→            assert row["sandbox_cpu_hr"] == 0
+   321→            assert row["sandbox_mem_hr"] == 0
+   322→            assert row["nonpreemptible_cpu_hr"] == 0
+   323→            assert row["nonpreemptible_mem_hr"] == 0
+   324→            assert row["region_cpu_hr"] == 0
+   325→            assert row["region_mem_hr"] == 0
+   326→            assert row["region_gpu_hr"] == 0
+   327→
+   328→            assert row["total_function_fee_dollars"] == 0.1
+   329→
+   330→            # Verify bucket timestamps
+   331→            bucket = row["bucket"]
+   332→            assert isinstance(bucket, datetime)
+   333→            assert bucket.hour in [0, 1, 2]
+   334→            assert bucket.minute == 0
+   335→            assert bucket.second == 0
+   336→
+   337→
+   338→@pytest.mark.asyncio
+   339→async def test_query_metrics_by_entity(state: State, user, clear_metrics_tables):
+   340→    """Tests that task_metrics_by_entity_minute table is used when query range is >10 minutes otherwise use task_metrics table."""
+   341→
+   342→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+   343→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+   344→
+   345→    workspace_id = "ac-test"
+   346→    environment_id = "en-test"
+   347→    function_id = "fu-test"
+   348→    app_id = "ap-test"
+   349→
+   350→    end_time = datetime(2023, 1, 1, 3, 0, 0)
+   351→
+   352→    resources = api_pb2.Resources(
+   353→        milli_cpu=1000,
+   354→        memory_mb=1024,
+   355→    )
+   356→
+   357→    for i in range(180):
+   358→        timestamp = (end_time - timedelta(minutes=i)).timestamp()
+   359→        metrics = [
+   360→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="elapsed_ns", value=1e9),
+   361→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="cpu_ns", value=5e8),
+   362→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="mem_ns", value=2.5e8),
+   363→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_ns", value=1e8),
+   364→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_mem_ns", value=5e7),
+   365→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_util_ns", value=7.5e7),
+   366→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_pow_ns", value=7e11),
+   367→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_pow_util_ns", value=9e8),
+   368→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_temp_ns", value=5e10),
+   369→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="net_bytes_in", value=1024),
+   370→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="net_bytes_out", value=2048),
+   371→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="function_fee_dollars", value=0.01),
+   372→        ]
+   373→
+   374→        await state.task_metrics_store.track_task_metrics(
+   375→            task_id=f"ta-{i}",
+   376→            workspace_id=workspace_id,
+   377→            environment_id=environment_id,
+   378→            billing_type="cpu",
+   379→            app_id=app_id,
+   380→            app_type="deployed",
+   381→            metrics=metrics,
+   382→            resources=resources,
+   383→            ephemeral_plan_struct=ephemeral_plan_struct,
+   384→            regions=None,
+   385→            function_id=function_id,
+   386→            function_name="test_function",
+   387→        )
+   388→
+   389→    await state.mock_clickpipes.task_metrics.join()
+   390→
+   391→    # Test querying with short time range (should use task_metrics table)
+   392→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_entity(
+   393→        workspace_id=workspace_id,
+   394→        entity_id=function_id,
+   395→        entity_name=None,
+   396→        start=end_time.timestamp() - 600,  # 10 minutes ago
+   397→        stop=end_time.timestamp(),
+   398→        bucket_secs=30,  # 30 seconds buckets
+   399→        gapfill=True,
+   400→    )
+   401→
+   402→    assert bucket_secs == 30
+   403→    assert len(result) == 20
+   404→    assert result[0]["elapsed_ns"] == 1e9
+   405→
+   406→    # Test querying with long time range (should use task_metrics_by_app_minute table)
+   407→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_entity(
+   408→        workspace_id=workspace_id,
+   409→        entity_id=function_id,
+   410→        entity_name=None,
+   411→        start=end_time.timestamp() - 10800,  # 3 hours ago
+   412→        stop=end_time.timestamp(),
+   413→        bucket_secs=3600,  # 1 hour buckets
+   414→        gapfill=True,
+   415→    )
+   416→
+   417→    assert bucket_secs == 3600
+   418→    assert len(result) == 3
+   419→    assert result[0]["elapsed_ns"] == 59 * 1e9
+   420→
+   421→
+   422→@pytest.mark.asyncio
+   423→async def test_query_sandbox_task_metrics_by_app(state: State, user, clear_metrics_tables):
+   424→    """Tests that task_metrics_by_app_minute table is used when a sandbox query range is >10 minutes otherwise use task_metrics table."""
+   425→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+   426→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+   427→
+   428→    workspace_id = "ac-test"
+   429→    environment_id = "en-test"
+   430→    app_id = "ap-test"
+   431→    sandbox_id = "sb-test"
+   432→
+   433→    end_time = datetime(2023, 1, 1, 3, 0, 0)
+   434→
+   435→    resources = api_pb2.Resources(
+   436→        milli_cpu=1000,
+   437→        memory_mb=1024,
+   438→    )
+   439→
+   440→    for i in range(360):
+   441→        timestamp = (end_time - timedelta(seconds=i * 30)).timestamp()
+   442→        metrics = [
+   443→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="elapsed_ns", value=1e9),
+   444→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="cpu_ns", value=5e8),
+   445→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="mem_ns", value=2.5e8),
+   446→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_ns", value=1e8),
+   447→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_mem_ns", value=5e7),
+   448→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_util_ns", value=7.5e7),
+   449→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_pow_ns", value=7e11),
+   450→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_pow_util_ns", value=9e8),
+   451→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_temp_ns", value=5e10),
+   452→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="net_bytes_in", value=1024),
+   453→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="net_bytes_out", value=2048),
+   454→        ]
+   455→
+   456→        await state.task_metrics_store.track_task_metrics(
+   457→            task_id=f"ta-{i}",
+   458→            workspace_id=workspace_id,
+   459→            environment_id=environment_id,
+   460→            billing_type="cpu",
+   461→            app_id=app_id,
+   462→            app_type="deployed",
+   463→            metrics=metrics,
+   464→            resources=resources,
+   465→            ephemeral_plan_struct=ephemeral_plan_struct,
+   466→            regions=None,
+   467→            sandbox_id=sandbox_id,
+   468→        )
+   469→
+   470→    await state.mock_clickpipes.task_metrics.join()
+   471→
+   472→    await state.task_metrics_store.refresh_aggregates(0, (end_time + timedelta(days=10000)).timestamp())
+   473→
+   474→    # Test querying with short time range (should use task_metrics table)
+   475→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_entity(
+   476→        workspace_id=workspace_id,
+   477→        entity_id=app_id,
+   478→        entity_name=None,
+   479→        start=end_time.timestamp() - 600,  # 10 minutes ago
+   480→        stop=end_time.timestamp(),
+   481→        bucket_secs=45,  # 45 seconds buckets
+   482→        gapfill=True,
+   483→        is_sandboxes_by_app=True,
+   484→    )
+   485→
+   486→    assert bucket_secs == 45
+   487→    assert len(result) == 14
+   488→    # Two metric entries will fall in the first bucket
+   489→    assert result[0]["elapsed_ns"] == 2e9
+   490→
+   491→    # Test querying with long time range (should use app_task_metrics_by_minute table)
+   492→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_entity(
+   493→        workspace_id=workspace_id,
+   494→        entity_id=app_id,
+   495→        entity_name=None,
+   496→        start=end_time.timestamp() - 10800,  # 3 hours ago
+   497→        stop=end_time.timestamp(),
+   498→        bucket_secs=3600,  # 1 hour buckets
+   499→        gapfill=True,
+   500→        is_sandboxes_by_app=True,
+   501→    )
+   502→
+   503→    assert bucket_secs == 3600
+   504→    assert len(result) == 3
+   505→    # 119 metric entries will fall in the first bucket
+   506→    assert result[0]["elapsed_ns"] == 119 * 1e9
+   507→
+   508→
+   509→@pytest.mark.parametrize(
+   510→    "regions, expected",
+   511→    [
+   512→        # Top-level regions
+   513→        (["us"], 1.25),
+   514→        (["sa"], 2.5),
+   515→        # Meta-region
+   516→        (["us-east"], 1.25),
+   517→        # Region aliases (jp and au are subsets of ap)
+   518→        (["jp"], 1.25),
+   519→        (["au"], 1.25),
+   520→        # Cloud providers: AWS, GCP, Azure, OCI
+   521→        (["us-east-1"], 1.25),
+   522→        (["asia-northeast1"], 1.25),
+   523→        (["westus3"], 1.25),
+   524→        (["uk-london-1"], 1.25),
+   525→        # Min behavior across different multipliers
+   526→        (["us-east-1", "sa-east-1"], 1.25),
+   527→        # Edge cases
+   528→        (None, 1.0),
+   529→        (["invalid-region"], 1.0),
+   530→        (["us-east-1", "invalid-region"], 1.25),
+   531→    ],
+   532→)
+   533→def test_determine_region_multiplier(regions, expected):
+   534→    """Test region multiplier determination with different region combinations."""
+   535→    result = determine_region_multiplier(regions, DEFAULT_REGION_MULTIPLIERS)
+   536→    assert result == expected, f"Expected {expected} for regions={regions}"
+   537→
+   538→
+   539→def test_determine_region_multiplier_missing_keys():
+   540→    """Test behavior when plan's multipliers dict is missing keys."""
+   541→    # Plan with only "eu" defined
+   542→    partial_multipliers = {"eu": 1.5}
+   543→
+   544→    # Region in the plan's multipliers - use plan value
+   545→    result = determine_region_multiplier(["northeurope"], partial_multipliers)
+   546→    assert result == 1.5, "Should use plan's multiplier when key exists"
+   547→
+   548→    # Region NOT in plan's multipliers - returns 1.0 (no valid multipliers found)
+   549→    result = determine_region_multiplier(["us-east-1"], partial_multipliers)
+   550→    assert result == 1.0, "Should return 1.0 when top-level region not in dict"
+   551→
+   552→    # Empty multipliers - returns 1.0
+   553→    result = determine_region_multiplier(["us-east-1"], {})
+   554→    assert result == 1.0, "Should return 1.0 for empty dict"
+   555→
+   556→    # Mix where only some regions have multipliers - use only the ones found
+   557→    result = determine_region_multiplier(["northeurope", "us-east-1"], partial_multipliers)
+   558→    assert result == 1.5, "Should use only the multiplier that exists (eu: 1.5)"
+   559→
+   560→
+   561→def test_region_to_top_level_json_matches_python():
+   562→    """Validate that go/taskmetrics/region_to_top_level.json stays in sync with Python.
+   563→
+   564→    The JSON file is the shared source of truth consumed by the Go sandbox server.
+   565→    If this test fails, regenerate the JSON from the repo root:
+   566→
+   567→        cd server && python -c "
+   568→        import json; from modal_server.cloud_provider import REGION_TO_TOP_LEVEL_REGION, TOP_LEVEL_REGIONS
+   569→        data = {'top_level_regions': sorted(TOP_LEVEL_REGIONS), 'region_to_top_level': dict(sorted(REGION_TO_TOP_LEVEL_REGION.items()))}
+   570→        open('../go/taskmetrics/region_to_top_level.json','w').write(json.dumps(data, indent=2) + chr(10))
+   571→        "
+   572→    """
+   573→    import json
+   574→    from pathlib import Path
+   575→
+   576→    from modal_server.cloud_provider import REGION_TO_TOP_LEVEL_REGION, TOP_LEVEL_REGIONS
+   577→
+   578→    json_path = Path(__file__).resolve().parents[2] / "go" / "taskmetrics" / "region_to_top_level.json"
+   579→    assert json_path.exists(), f"Missing {json_path} — see docstring for generation command"
+   580→
+   581→    with open(json_path) as f:
+   582→        data = json.load(f)
+   583→
+   584→    json_top_level = set(data["top_level_regions"])
+   585→    python_top_level = set(TOP_LEVEL_REGIONS)
+   586→    assert json_top_level == python_top_level, (
+   587→        f"top_level_regions mismatch.\n"
+   588→        f"  In JSON but not Python: {json_top_level - python_top_level}\n"
+   589→        f"  In Python but not JSON: {python_top_level - json_top_level}"
+   590→    )
+   591→
+   592→    json_mapping = data["region_to_top_level"]
+   593→    python_mapping = REGION_TO_TOP_LEVEL_REGION
+   594→    extra_in_json = {k: json_mapping[k] for k in set(json_mapping) - set(python_mapping)}
+   595→    extra_in_python = {k: python_mapping[k] for k in set(python_mapping) - set(json_mapping)}
+   596→    value_mismatches = {
+   597→        k: (json_mapping[k], python_mapping[k])
+   598→        for k in set(json_mapping) & set(python_mapping)
+   599→        if json_mapping[k] != python_mapping[k]
+   600→    }
+   601→    assert json_mapping == python_mapping, (
+   602→        f"region_to_top_level mismatch.\n"
+   603→        f"  In JSON but not Python: {extra_in_json}\n"
+   604→        f"  In Python but not JSON: {extra_in_python}\n"
+   605→        f"  Value mismatches (json, python): {value_mismatches}"
+   606→    )
+   607→
+   608→
+   609→@pytest.mark.asyncio
+   610→async def test_query_metrics_parallel(state: State, user, clear_metrics_tables):
+   611→    """Tests querying metrics in parallel works over multiple days."""
+   612→
+   613→    workspace_id = "ac-test"
+   614→    environment_id = "en-test"
+   615→    function_id = "fu-test"
+   616→    app_id = "ap-test"
+   617→
+   618→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+   619→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+   620→
+   621→    day_one = datetime(2023, 1, 1, 12, 0, 0)
+   622→    day_two = datetime(2023, 1, 3, 12, 0, 0)
+   623→
+   624→    resources = api_pb2.Resources(
+   625→        milli_cpu=1000,
+   626→        memory_mb=1024,
+   627→    )
+   628→
+   629→    for timestamp in [day_one, day_two]:
+   630→        metrics = [
+   631→            internal_api_pb2.ResourceMetric(timestamp=timestamp.timestamp(), resource="elapsed_ns", value=1e9),
+   632→            internal_api_pb2.ResourceMetric(timestamp=timestamp.timestamp(), resource="cpu_ns", value=5e8),
+   633→        ]
+   634→
+   635→        await state.task_metrics_store.track_task_metrics(
+   636→            task_id=f"ta-{timestamp.day}",
+   637→            workspace_id=workspace_id,
+   638→            environment_id=environment_id,
+   639→            billing_type="cpu",
+   640→            app_id=app_id,
+   641→            app_type="deployed",
+   642→            metrics=metrics,
+   643→            resources=resources,
+   644→            ephemeral_plan_struct=ephemeral_plan_struct,
+   645→            regions=None,
+   646→            function_id=function_id,
+   647→            function_name="test_function",
+   648→        )
+   649→
+   650→    await state.mock_clickpipes.task_metrics.join()
+   651→
+   652→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_entity(
+   653→        workspace_id=workspace_id,
+   654→        entity_id=function_id,
+   655→        entity_name=None,
+   656→        start=day_one.timestamp(),
+   657→        stop=day_two.timestamp() + 3600,
+   658→        bucket_secs=7200,
+   659→        gapfill=True,
+   660→    )
+   661→
+   662→    assert len(result) == 25
+   663→
+   664→
+   665→@pytest.mark.asyncio
+   666→async def test_query_metrics_by_workspace(state: State, user, clear_metrics_tables):
+   667→    """Tests querying metrics by workspace for cpu_ns, mem_ns, gpu_ns, trying to cover all the code paths."""
+   668→
+   669→    workspace_id = "ac-test"
+   670→    environment_id = "en-test"
+   671→    function_id = "fu-test"
+   672→    app_id = "ap-test"
+   673→
+   674→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+   675→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+   676→
+   677→    day_one = datetime(2025, 3, 1, 12, 0, 0)
+   678→
+   679→    resources = api_pb2.Resources(
+   680→        milli_cpu=1000,
+   681→        memory_mb=1024,
+   682→    )
+   683→
+   684→    # Create metrics for multiple timestamps to test aggregation
+   685→    for i in range(5):
+   686→        timestamp = (day_one + timedelta(hours=i)).timestamp()
+   687→        metrics = [
+   688→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="elapsed_ns", value=1e9),
+   689→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="cpu_ns", value=5e8),
+   690→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="mem_ns", value=2.5e8),
+   691→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_ns", value=1e8),
+   692→        ]
+   693→
+   694→        await state.task_metrics_store.track_task_metrics(
+   695→            task_id=f"ta-{i}",
+   696→            workspace_id=workspace_id,
+   697→            environment_id=environment_id,
+   698→            billing_type=BillingType.BILL_T4.value,
+   699→            app_id=app_id,
+   700→            app_type="deployed",
+   701→            metrics=metrics,
+   702→            resources=resources,
+   703→            ephemeral_plan_struct=ephemeral_plan_struct,
+   704→            regions=None,
+   705→            function_id=function_id,
+   706→            function_name="test_function",
+   707→        )
+   708→
+   709→    await state.mock_clickpipes.task_metrics.join()
+   710→
+   711→    # Test querying cpu_ns resource
+   712→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_workspace(
+   713→        workspace_id,
+   714→        "cpu_ns",
+   715→        day_one.timestamp(),
+   716→        (day_one + timedelta(hours=5)).timestamp(),
+   717→        3600,  # 1 hour buckets
+   718→        True,
+   719→    )
+   720→
+   721→    assert bucket_secs == 3600
+   722→    assert len(result) == 5
+   723→    for i, row in enumerate(result):
+   724→        assert row["app_id"] == app_id
+   725→        assert row["cpu_ns"] == 5e8  # Each hour has one entry with 5e8 cpu_ns
+   726→
+   727→    # Test querying with a longer time bucket (should aggregate multiple hours)
+   728→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_workspace(
+   729→        workspace_id,
+   730→        "cpu_ns",
+   731→        day_one.timestamp(),
+   732→        (day_one + timedelta(hours=5)).timestamp(),
+   733→        7200,  # 2 hour buckets
+   734→        True,
+   735→    )
+   736→
+   737→    assert bucket_secs == 7200
+   738→    assert len(result) == 3  # 5 hours with 2-hour buckets = 3 buckets (0-2, 2-4, 4-5)
+   739→    # First bucket should have 2 hours of data, second bucket should have 2 hours, third bucket should have 1 hour
+   740→    assert result[0]["cpu_ns"] == 5e8 * 2  # First bucket (2 hours)
+   741→    assert result[1]["cpu_ns"] == 5e8 * 2  # Second bucket (2 hours)
+   742→    assert result[2]["cpu_ns"] == 5e8 * 1  # Third bucket (1 hour)
+   743→
+   744→    # Test querying gpu_ns resource
+   745→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_workspace(
+   746→        workspace_id,
+   747→        "gpu_ns",
+   748→        day_one.timestamp(),
+   749→        (day_one + timedelta(hours=5)).timestamp(),
+   750→        3600,  # 1 hour buckets
+   751→        True,
+   752→    )
+   753→
+   754→    assert bucket_secs == 3600
+   755→    assert len(result) == 5
+   756→    for i, row in enumerate(result):
+   757→        assert row["app_id"] == app_id
+   758→        assert row["gpu_ns"] == 1e8
+   759→
+   760→    # Test querying specific GPU kind (which have special handling based on billing type)
+   761→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_workspace(
+   762→        workspace_id,
+   763→        GPUType.T4.value,  # This should trigger the special GPU resource handling
+   764→        day_one.timestamp(),
+   765→        (day_one + timedelta(hours=5)).timestamp(),
+   766→        3600,  # 1 hour buckets
+   767→        True,
+   768→    )
+   769→
+   770→    assert bucket_secs == 3600
+   771→    assert len(result) == 5
+   772→    for i, row in enumerate(result):
+   773→        assert row["app_id"] == app_id
+   774→        assert row["gpu_ns"] == 1e8
+   775→
+   776→    # Test querying elapsed_ns resource (which basically counts running containers)
+   777→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_workspace(
+   778→        workspace_id,
+   779→        "elapsed_ns",
+   780→        day_one.timestamp(),
+   781→        (day_one + timedelta(hours=5)).timestamp(),
+   782→        7200,  # 2 hour buckets
+   783→        True,
+   784→    )
+   785→
+   786→    assert bucket_secs == 7200
+   787→    assert len(result) == 3
+   788→    for i, row in enumerate(result):
+   789→        assert row["app_id"] == app_id
+   790→        assert row["elapsed_ns"] == (1e9 * 2 if i < 2 else 1e9)
+   791→
+   792→    # Test querying a GPU kind that doesn't have metrics entries
+   793→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_workspace(
+   794→        workspace_id,
+   795→        GPUType.L4.value,  # This gpu resource doesn't have metrics entries, so it should return 0
+   796→        day_one.timestamp(),
+   797→        (day_one + timedelta(hours=5)).timestamp(),
+   798→        3600,  # 1 hour buckets
+   799→        True,
+   800→    )
+   801→
+   802→    assert bucket_secs == 3600
+   803→    assert len(result) == 5
+   804→    for i, row in enumerate(result):
+   805→        assert row["app_id"] == ""
+   806→        assert row["gpu_ns"] == 0
+   807→
+   808→    # Test with gapfill=False (should only return buckets with data)
+   809→    # Create a gap in the data by skipping an hour
+   810→    day_two = day_one + timedelta(days=1)
+   811→    metrics = [
+   812→        internal_api_pb2.ResourceMetric(timestamp=day_two.timestamp(), resource="cpu_ns", value=5e8),
+   813→    ]
+   814→
+   815→    await state.task_metrics_store.track_task_metrics(
+   816→        task_id="ta-gap",
+   817→        workspace_id=workspace_id,
+   818→        environment_id=environment_id,
+   819→        billing_type="cpu",
+   820→        app_id=app_id,
+   821→        app_type="deployed",
+   822→        metrics=metrics,
+   823→        resources=resources,
+   824→        ephemeral_plan_struct=ephemeral_plan_struct,
+   825→        regions=None,
+   826→        function_id=function_id,
+   827→        function_name="test_function",
+   828→    )
+   829→
+   830→    await state.mock_clickpipes.task_metrics.join()
+   831→
+   832→    # Query with gapfill=False over a period with a gap
+   833→    bucket_secs, result = await state.task_metrics_store.query_metrics_by_workspace(
+   834→        workspace_id,
+   835→        "cpu_ns",
+   836→        day_one.timestamp(),
+   837→        day_two.timestamp() + 3600,
+   838→        3600,  # 1 hour buckets
+   839→        False,  # No gap filling
+   840→    )
+   841→
+   842→    assert bucket_secs == 3600
+   843→    # Should only return buckets with data (5 from day_one and 1 from day_two)
+   844→    assert len(result) == 6
+   845→
+   846→    # Test invalid resource
+   847→    with pytest.raises(ValueError):
+   848→        await state.task_metrics_store.query_metrics_by_workspace(
+   849→            workspace_id,
+   850→            "invalid_resource",
+   851→            day_one.timestamp(),
+   852→            (day_one + timedelta(hours=5)).timestamp(),
+   853→            3600,
+   854→            True,
+   855→        )
+   856→
+   857→
+   858→@pytest.mark.asyncio
+   859→async def test_query_workspace_billing_overview_metrics(state: State, user, clear_metrics_tables):
+   860→    """Test billing overview query"""
+   861→
+   862→    workspace_id = "ac-test"
+   863→    environment_id = "en-test"
+   864→    function_id = "fu-test"
+   865→    app_id = "ap-test"
+   866→
+   867→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+   868→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+   869→
+   870→    day_one = datetime(2026, 2, 1, 0, 0, 0)
+   871→
+   872→    resources = api_pb2.Resources(
+   873→        milli_cpu=1000,
+   874→        memory_mb=1024,
+   875→    )
+   876→
+   877→    for i in range(5):
+   878→        timestamp = (day_one + timedelta(hours=i * 12)).timestamp()
+   879→        metrics = [
+   880→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="elapsed_ns", value=1e9),
+   881→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="cpu_ns", value=5e8),
+   882→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="mem_ns", value=2.5e8),
+   883→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_ns", value=1e8),
+   884→        ]
+   885→
+   886→        await state.task_metrics_store.track_task_metrics(
+   887→            task_id=f"ta-{i}",
+   888→            workspace_id=workspace_id,
+   889→            environment_id=environment_id,
+   890→            billing_type=BillingType.BILL_T4.value,
+   891→            app_id=app_id,
+   892→            app_type="deployed",
+   893→            metrics=metrics,
+   894→            resources=resources,
+   895→            ephemeral_plan_struct=ephemeral_plan_struct,
+   896→            regions=None,
+   897→            function_id=function_id,
+   898→            function_name="test_function",
+   899→        )
+   900→
+   901→    await state.mock_clickpipes.task_metrics.join()
+   902→    overview = await state.task_metrics_store.query_workspace_billing_overview_metrics(
+   903→        workspace_id, day_one.timestamp(), (day_one + timedelta(days=31)).timestamp()
+   904→    )
+   905→    assert len(overview) == 1
+   906→    metrics = overview[0]
+   907→    assert metrics.app_id == ""
+   908→    assert metrics.app_type == "deployed"
+   909→    assert metrics.billing_type == BillingType.BILL_T4.value
+   910→    assert metrics.cpu_hr == pytest.approx(25e8 / 3600e9)
+   911→    assert metrics.adj_cpu_hr == pytest.approx(
+   912→        5e9 / 3600e9
+   913→    )  # User requested 1 CPU core so they are billed for 1 CPU core
+   914→    assert metrics.mem_hr == pytest.approx(12.5e8 / 3600e9)
+   915→    assert metrics.adj_mem_hr == pytest.approx(5e9 / 3600e9)  # User requested 1 GiB so they are billed for 1 GiB
+   916→    assert metrics.gpu_hr == pytest.approx(5e8 / 3600e9)
+   917→    assert metrics.total_function_fee_dollars == 0.0
+   918→
+   919→
+   920→@pytest.mark.asyncio
+   921→async def test_query_top_cost_entity_ids(state: State, user, clear_metrics_tables):
+   922→    workspace_id = "ac-test"
+   923→    environment_id = "en-test"
+   924→    app_id = "ap-test"
+   925→
+   926→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+   927→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+   928→    durable_plan_struct = await state.durable.plans[ephemeral_plan_struct.key]
+   929→
+   930→    resources = api_pb2.Resources(
+   931→        milli_cpu=2000,  # 2 CPU cores
+   932→        memory_mb=2048,  # 2 GiB
+   933→    )
+   934→
+   935→    start_time = datetime(2025, 1, 1, 0, 0, 0).timestamp()
+   936→    end_time = datetime(2025, 1, 1, 3, 0, 0).timestamp()
+   937→
+   938→    test_cases = [
+   939→        {
+   940→            "function_id": "fu-test-1",
+   941→            "function_name": "test_function_1",
+   942→            "billing_type": BillingType.BILL_T4.value,
+   943→            "metrics": [
+   944→                # First hour metrics
+   945→                internal_api_pb2.ResourceMetric(timestamp=start_time, resource="elapsed_ns", value=3.6e12),  # 1 hour
+   946→                internal_api_pb2.ResourceMetric(timestamp=start_time, resource="cpu_ns", value=1.8e12),  # 0.5 hour
+   947→                internal_api_pb2.ResourceMetric(timestamp=start_time, resource="mem_ns", value=3.6e12),  # 1 hour
+   948→                internal_api_pb2.ResourceMetric(timestamp=start_time, resource="gpu_ns", value=1.8e12),  # 0.5 hour
+   949→                # Second hour metrics
+   950→                internal_api_pb2.ResourceMetric(
+   951→                    timestamp=start_time + 3600, resource="elapsed_ns", value=3.6e12
+   952→                ),  # 1 hour
+   953→                internal_api_pb2.ResourceMetric(
+   954→                    timestamp=start_time + 3600, resource="cpu_ns", value=1.8e12
+   955→                ),  # 0.5 hour
+   956→                internal_api_pb2.ResourceMetric(timestamp=start_time + 3600, resource="mem_ns", value=3.6e12),  # 1 hour
+   957→                internal_api_pb2.ResourceMetric(
+   958→                    timestamp=start_time + 3600, resource="gpu_ns", value=1.8e12
+   959→                ),  # 0.5 hour
+   960→            ],
+   961→        },
+   962→        {
+   963→            "function_id": "fu-test-2",
+   964→            "function_name": "test_function_2",
+   965→            "billing_type": BillingType.BILL_A100_40GB.value,
+   966→            "metrics": [
+   967→                # First hour metrics
+   968→                internal_api_pb2.ResourceMetric(timestamp=start_time, resource="elapsed_ns", value=7.2e12),  # 2 hours
+   969→                internal_api_pb2.ResourceMetric(timestamp=start_time, resource="cpu_ns", value=3.6e12),  # 1 hour
+   970→                internal_api_pb2.ResourceMetric(timestamp=start_time, resource="mem_ns", value=7.2e12),  # 2 hours
+   971→                internal_api_pb2.ResourceMetric(timestamp=start_time, resource="gpu_ns", value=3.6e12),  # 1 hour
+   972→                # Second hour metrics
+   973→                internal_api_pb2.ResourceMetric(
+   974→                    timestamp=start_time + 3600, resource="elapsed_ns", value=7.2e12
+   975→                ),  # 2 hours
+   976→                internal_api_pb2.ResourceMetric(timestamp=start_time + 3600, resource="cpu_ns", value=3.6e12),  # 1 hour
+   977→                internal_api_pb2.ResourceMetric(
+   978→                    timestamp=start_time + 3600, resource="mem_ns", value=7.2e12
+   979→                ),  # 2 hours
+   980→                internal_api_pb2.ResourceMetric(timestamp=start_time + 3600, resource="gpu_ns", value=3.6e12),  # 1 hour
+   981→            ],
+   982→        },
+   983→        {
+   984→            "function_id": "fu-test-3",
+   985→            "function_name": "test_function_3",
+   986→            "billing_type": BillingType.BILL_L4.value,
+   987→            "metrics": [
+   988→                # Metrics spread across the time range
+   989→                internal_api_pb2.ResourceMetric(
+   990→                    timestamp=start_time + 1800, resource="elapsed_ns", value=1.8e12
+   991→                ),  # 0.5 hour
+   992→                internal_api_pb2.ResourceMetric(
+   993→                    timestamp=start_time + 1800, resource="cpu_ns", value=0.9e12
+   994→                ),  # 0.25 hour
+   995→                internal_api_pb2.ResourceMetric(
+   996→                    timestamp=start_time + 1800, resource="mem_ns", value=1.8e12
+   997→                ),  # 0.5 hour
+   998→                internal_api_pb2.ResourceMetric(
+   999→                    timestamp=start_time + 1800, resource="gpu_ns", value=0.9e12
+  1000→                ),  # 0.25 hour
+  1001→                # Later metrics
+  1002→                internal_api_pb2.ResourceMetric(
+  1003→                    timestamp=start_time + 7200, resource="elapsed_ns", value=1.8e12
+  1004→                ),  # 0.5 hour
+  1005→                internal_api_pb2.ResourceMetric(
+  1006→                    timestamp=start_time + 7200, resource="cpu_ns", value=0.9e12
+  1007→                ),  # 0.25 hour
+  1008→                internal_api_pb2.ResourceMetric(
+  1009→                    timestamp=start_time + 7200, resource="mem_ns", value=1.8e12
+  1010→                ),  # 0.5 hour
+  1011→                internal_api_pb2.ResourceMetric(
+  1012→                    timestamp=start_time + 7200, resource="gpu_ns", value=0.9e12
+  1013→                ),  # 0.25 hour
+  1014→            ],
+  1015→        },
+  1016→    ]
+  1017→
+  1018→    for test_case in test_cases:
+  1019→        await state.task_metrics_store.track_task_metrics(
+  1020→            task_id=f"ta-{test_case['function_id']}",
+  1021→            workspace_id=workspace_id,
+  1022→            environment_id=environment_id,
+  1023→            billing_type=test_case["billing_type"],
+  1024→            app_id=app_id,
+  1025→            app_type="deployed",
+  1026→            metrics=test_case["metrics"],
+  1027→            resources=resources,
+  1028→            ephemeral_plan_struct=ephemeral_plan_struct,
+  1029→            regions=None,
+  1030→            function_id=test_case["function_id"],
+  1031→            function_name=test_case["function_name"],
+  1032→        )
+  1033→
+  1034→    await state.mock_clickpipes.task_metrics.join()
+  1035→
+  1036→    # Query the top cost entities
+  1037→    results = await state.task_metrics_store.query_top_cost_entity_ids(
+  1038→        workspace_id,
+  1039→        start_time,
+  1040→        end_time,
+  1041→        durable_plan_struct,
+  1042→    )
+  1043→
+  1044→    # Verify results
+  1045→    assert len(results) > 0
+  1046→
+  1047→    # Group results by function name for easier verification
+  1048→    results_by_function = {}
+  1049→    for row in results:
+  1050→        function_name = row["function_name"]
+  1051→        if function_name not in results_by_function:
+  1052→            results_by_function[function_name] = []
+  1053→        results_by_function[function_name].append(row)
+  1054→
+  1055→    # Verify costs are calculated correctly for test_function_1 (T4)
+  1056→    t4_row = next(row for row in results if row["function_name"] == "test_function_1")
+  1057→    expected_t4_cost = float(
+  1058→        1 * durable_plan_struct.cpu_hour_cost  # CPU cost (1 hour total)
+  1059→        + 2 * durable_plan_struct.mem_gib_hour_cost  # Memory cost (2 hours total)
+  1060→        + 1 * durable_plan_struct.gpu_hour_cost_t4  # GPU cost (1 hour total)
+  1061→    )
+  1062→    assert abs(t4_row["row_cost"] - expected_t4_cost) < 0.0001  # Allow small floating point differences
+  1063→
+  1064→    # Verify adjusted costs are calculated correctly for test_function_1 (T4)
+  1065→    expected_t4_adj_cost = float(
+  1066→        2 * 2 * durable_plan_struct.cpu_hour_cost  # CPU cost (2 hour total elapsed time @ 2 CPU cores)
+  1067→        + 2 * 2 * durable_plan_struct.mem_gib_hour_cost  # Memory cost (2 hour total elapsed time @ 2 GiB per hour)
+  1068→        + 1
+  1069→        * 1
+  1070→        * durable_plan_struct.gpu_hour_cost_t4  # GPU cost (1 hour total runtime, GPUs don't have adjusted costs)
+  1071→    )
+  1072→    assert abs(t4_row["adj_row_cost"] - expected_t4_adj_cost) < 0.0001  # Allow small floating point differences
+  1073→
+  1074→    # Verify costs are calculated correctly for test_function_2 (A100)
+  1075→    a100_row = next(row for row in results if row["function_name"] == "test_function_2")
+  1076→    expected_a100_cost = float(
+  1077→        2 * durable_plan_struct.cpu_hour_cost  # CPU cost (2 hours total)
+  1078→        + 4 * durable_plan_struct.mem_gib_hour_cost  # Memory cost (4 hours total)
+  1079→        + 2 * durable_plan_struct.gpu_hour_cost_a100_40gb  # GPU cost (2 hours total)
+  1080→    )
+  1081→    assert abs(a100_row["row_cost"] - expected_a100_cost) < 0.0001  # Allow small floating point differences
+  1082→
+  1083→    # Verify costs are calculated correctly for test_function_3 (L4)
+  1084→    l4_row = next(row for row in results if row["function_name"] == "test_function_3")
+  1085→    expected_l4_cost = float(
+  1086→        durable_plan_struct.cpu_hour_cost / 2  # CPU cost (0.5 hours total)
+  1087→        + durable_plan_struct.mem_gib_hour_cost  # Memory cost (1 hour total)
+  1088→        + durable_plan_struct.gpu_hour_cost_l4 / 2  # GPU cost (0.5 hours total)
+  1089→    )
+  1090→    assert abs(l4_row["row_cost"] - expected_l4_cost) < 0.0001  # Allow small floating point differences
+  1091→
+  1092→
+  1093→def test_create_task_metrics_row():
+  1094→    kwargs = dict(
+  1095→        timestamp=1700000000,
+  1096→        task_id="ta-test",
+  1097→        workspace_id="ws-test",
+  1098→        environment_id="en-test",
+  1099→        billing_type=BillingType.BILL_H100,
+  1100→        app_id="ap-test",
+  1101→        app_type="deployed",
+  1102→        metrics_at_ts={
+  1103→            "cpu_ns": 2e9,  # 2 seconds
+  1104→            "elapsed_ns": 3e9,  # 3 seconds
+  1105→            "mem_ns": 4e9,  # 4 seconds
+  1106→            "gpu_ns": 1e9,  # 1 second
+  1107→        },
+  1108→        requested_cpu_cores=0.125,
+  1109→        requested_mem_gib=12,
+  1110→        region_multiplier=1.2,
+  1111→        sandbox_multiplier=1,
+  1112→        nonpreemptible_multiplier=1,
+  1113→        bundled_cpus=0,
+  1114→        bundled_mem_gib=0,
+  1115→        function_id="fu-test",
+  1116→        function_name="test_function",
+  1117→        image_id=None,
+  1118→        sandbox_id=None,
+  1119→        nonpreemptible=False,
+  1120→        base_function_id=None,
+  1121→        notebook_id=None,
+  1122→        regions=[],
+  1123→    )
+  1124→    row = create_task_metrics_row(**kwargs)
+  1125→    assert row.cpu_ns == 2e9
+  1126→    assert row.elapsed_ns == 3e9
+  1127→    assert row.mem_ns == 4e9
+  1128→    assert row.gpu_ns == 1e9
+  1129→
+  1130→    assert row.adj_cpu_ns == 2e9
+  1131→    assert row.adj_mem_ns == 12 * 3e9
+  1132→    assert row.region_cpu_ns == pytest.approx(2e9 * 0.2)
+  1133→    assert row.region_mem_ns == pytest.approx(12 * 3e9 * 0.2)
+  1134→    assert row.gpu_ns == 1e9
+  1135→    assert row.region_gpu_ns == pytest.approx(1e9 * 0.2)
+  1136→
+  1137→    # When base_function_id is not provided, entity_id and function_id
+  1138→    # should both be set to function_id.
+  1139→    assert row.entity_id == "fu-test"
+  1140→    assert row.function_id == "fu-test"
+  1141→
+  1142→    kwargs2 = {**kwargs, "requested_mem_gib": 0.125}
+  1143→    row2 = create_task_metrics_row(**kwargs2)
+  1144→    assert row2.mem_ns == 4e9
+  1145→    assert row2.adj_mem_ns == 4e9
+  1146→
+  1147→    kwargs3 = {**kwargs, "bundled_cpus": 2}
+  1148→    row3 = create_task_metrics_row(**kwargs3)
+  1149→    assert row3.cpu_ns == 2e9
+  1150→    assert row3.adj_cpu_ns == 0
+  1151→    assert row3.region_cpu_ns == 0
+  1152→
+  1153→    kwargs4 = {**kwargs, "bundled_mem_gib": 2}
+  1154→    row4 = create_task_metrics_row(**kwargs4)
+  1155→    assert row4.mem_ns == 4e9
+  1156→    assert row4.adj_mem_ns == 30e9
+  1157→    assert row4.region_mem_ns == pytest.approx(30e9 * 0.2)
+  1158→
+  1159→    # using 6 CPUs, bundled 7
+  1160→    kwargs5 = {
+  1161→        **kwargs,
+  1162→        "metrics_at_ts": {
+  1163→            "cpu_ns": 6e9,
+  1164→            "elapsed_ns": 1e9,
+  1165→            "mem_ns": 4e9,
+  1166→            "gpu_ns": 1e9,
+  1167→        },
+  1168→        "bundled_cpus": 7,
+  1169→    }
+  1170→    row5 = create_task_metrics_row(**kwargs5)
+  1171→    assert row5.cpu_ns == 6e9
+  1172→    assert row5.adj_cpu_ns == 0
+  1173→    assert row5.region_cpu_ns == 0
+  1174→
+  1175→    # When both base_function_id and function_id are provided,
+  1176→    # entity_id should be set to base_function_id.
+  1177→    kwargs6 = {**kwargs, "base_function_id": "fu-test-base"}
+  1178→    row6 = create_task_metrics_row(**kwargs6)
+  1179→    assert row6.entity_id == "fu-test-base"
+  1180→    assert row6.function_id == "fu-test"
+  1181→
+  1182→
+  1183→@pytest.mark.asyncio
+  1184→async def test_determine_bundled_resources(state: State):
+  1185→    plan_id = config.get(["billing", "default_plan"])
+  1186→    durable_plan_struct = await state.durable.plans[plan_id]
+  1187→    ephemeral_plan_struct = await state.ephemeral.plans[plan_id]
+  1188→    no_gpu_resources = api_pb2.Resources(
+  1189→        milli_cpu=2000,
+  1190→        memory_mb=2048,
+  1191→    )
+  1192→    gpu_resources = api_pb2.Resources(
+  1193→        milli_cpu=2000,
+  1194→        memory_mb=2048,
+  1195→        gpu_config=api_pb2.GPUConfig(count=1, type=api_pb2.GPU_TYPE_H100),
+  1196→    )
+  1197→    bundled_cpu, bundled_mem = _determine_bundled_resources(
+  1198→        ephemeral_plan_struct,
+  1199→        no_gpu_resources,
+  1200→    )
+  1201→    assert bundled_cpu == bundled_mem == 0
+  1202→
+  1203→    bundled_cpu, bundled_mem = _determine_bundled_resources(
+  1204→        ephemeral_plan_struct,
+  1205→        gpu_resources,
+  1206→    )
+  1207→    assert bundled_cpu == bundled_mem == 0
+  1208→
+  1209→    new_durable_plan_struct = await copy_plan(
+  1210→        state, durable_plan_struct.key, bundled_cpus=2, bundled_mem_gib=Decimal("2.5")
+  1211→    )
+  1212→    new_ephemeral_plan_struct = await state.ephemeral.plans[new_durable_plan_struct.key]
+  1213→    bundled_cpu, bundled_mem = _determine_bundled_resources(
+  1214→        new_ephemeral_plan_struct,
+  1215→        no_gpu_resources,
+  1216→    )
+  1217→    assert bundled_cpu == bundled_mem == 0
+  1218→
+  1219→    bundled_cpu, bundled_mem = _determine_bundled_resources(
+  1220→        new_ephemeral_plan_struct,
+  1221→        gpu_resources,
+  1222→    )
+  1223→    assert bundled_cpu == 2
+  1224→    assert bundled_mem == 2.5
+  1225→
+  1226→
+  1227→TEST_WORKSPACE_ID = "ac-test"
+  1228→TEST_ENVIRONMENT_ID = "en-test"
+  1229→TEST_APP_ID = "ap-test"
+  1230→TEST_FUNCTION_ID = "fu-test"
+  1231→TEST_START_TIME = datetime(2023, 1, 1, 0, 0, 0)
+  1232→
+  1233→
+  1234→@pytest_asyncio.fixture
+  1235→async def ephemeral_plan(state: State, user):
+  1236→    """Get ephemeral plan struct for test user."""
+  1237→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+  1238→    return await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+  1239→
+  1240→
+  1241→def create_standard_metrics(timestamp: float, include_gpu: bool = True) -> list:
+  1242→    """Create standard test metrics with common values."""
+  1243→    metrics = [
+  1244→        internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="elapsed_ns", value=1e9),
+  1245→        internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="cpu_ns", value=5e8),
+  1246→        internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="mem_ns", value=2.5e8),
+  1247→    ]
+  1248→    if include_gpu:
+  1249→        metrics.append(internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_ns", value=1e8))
+  1250→    return metrics
+  1251→
+  1252→
+  1253→async def track_test_task_metrics(
+  1254→    state: State,
+  1255→    ephemeral_plan,
+  1256→    task_id: str,
+  1257→    *,
+  1258→    workspace_id: str = TEST_WORKSPACE_ID,
+  1259→    environment_id: str = TEST_ENVIRONMENT_ID,
+  1260→    app_id: str = TEST_APP_ID,
+  1261→    function_id: str = TEST_FUNCTION_ID,
+  1262→    function_name: str = "test_function",
+  1263→    billing_type: str = BillingType.BILL_CPU.value,
+  1264→    timestamp: float | None = None,
+  1265→    include_gpu: bool = False,
+  1266→    regions: list[str] | None = None,
+  1267→):
+  1268→    """Track task metrics with sensible test defaults."""
+  1269→    if timestamp is None:
+  1270→        timestamp = TEST_START_TIME.timestamp()
+  1271→    resources = api_pb2.Resources(milli_cpu=1000, memory_mb=1024)
+  1272→
+  1273→    await state.task_metrics_store.track_task_metrics(
+  1274→        task_id=task_id,
+  1275→        workspace_id=workspace_id,
+  1276→        environment_id=environment_id,
+  1277→        billing_type=billing_type,
+  1278→        app_id=app_id,
+  1279→        app_type="deployed",
+  1280→        metrics=create_standard_metrics(timestamp, include_gpu=include_gpu),
+  1281→        resources=resources,
+  1282→        ephemeral_plan_struct=ephemeral_plan,
+  1283→        regions=regions,
+  1284→        function_id=function_id,
+  1285→        function_name=function_name,
+  1286→    )
+  1287→
+  1288→
+  1289→def assert_standard_row_metadata(
+  1290→    row: dict,
+  1291→    *,
+  1292→    entity_id: Optional[str] = TEST_FUNCTION_ID,
+  1293→    entity_name: Optional[str] = "test_function",
+  1294→):
+  1295→    """Assert common metadata fields in a metrics row."""
+  1296→    assert row["workspace_id"] == TEST_WORKSPACE_ID
+  1297→    assert row["environment_id"] == TEST_ENVIRONMENT_ID
+  1298→    assert row["app_type"] == "deployed"
+  1299→    assert row["app_id"] == TEST_APP_ID
+  1300→    assert row["entity_type"] == "function"
+  1301→    if entity_id is not None:
+  1302→        assert row["entity_id"] == entity_id
+  1303→    if entity_name is not None:
+  1304→        assert row["entity_name"] == entity_name
+  1305→
+  1306→
+  1307→def assert_metrics_values(
+  1308→    row: dict,
+  1309→    elapsed_ns: float,
+  1310→    cpu_ns: float,
+  1311→    mem_ns: float,
+  1312→    gpu_ns: float,
+  1313→):
+  1314→    """Assert metric values in a row."""
+  1315→    assert row["elapsed_ns"] == elapsed_ns
+  1316→    assert row["cpu_ns"] == cpu_ns
+  1317→    assert row["mem_ns"] == mem_ns
+  1318→    assert row["gpu_ns"] == gpu_ns
+  1319→
+  1320→
+  1321→class QueryTaskMetricsByAppEntityMinuteQuery(CHQuery):
+  1322→    workspace_id: str
+  1323→
+  1324→    def parameters(self) -> dict:
+  1325→        return {"workspace_id": self.workspace_id}
+  1326→
+  1327→    @staticmethod
+  1328→    def query(_) -> str:
+  1329→        return """
+  1330→            SELECT * FROM task_metrics_by_app_entity_minute FINAL
+  1331→            WHERE workspace_id = {workspace_id:String}
+  1332→            ORDER BY timestamp_minute, entity_id
+  1333→        """
+  1334→
+  1335→
+  1336→class QueryTaskMetricsByAppMinuteQuery(CHQuery):
+  1337→    workspace_id: str
+  1338→
+  1339→    def parameters(self) -> dict:
+  1340→        return {"workspace_id": self.workspace_id}
+  1341→
+  1342→    @staticmethod
+  1343→    def query(_) -> str:
+  1344→        return """
+  1345→            SELECT * FROM task_metrics_by_app_entity_type_minute FINAL
+  1346→            WHERE workspace_id = {workspace_id:String}
+  1347→            ORDER BY timestamp_minute, entity_type
+  1348→        """
+  1349→
+  1350→
+  1351→@pytest.mark.asyncio
+  1352→async def test_task_metrics_by_app_entity_minute(state: State, ephemeral_plan, clear_metrics_tables):
+  1353→    """Tests that task_metrics_by_app_entity_minute table is populated correctly by refresh_aggregates."""
+  1354→    # Create metrics for a function (3 CPU tasks, 1 GPU task), one with regions and one without.
+  1355→    for regions in [None, ["us-east-1"]]:
+  1356→        for i in range(4):
+  1357→            use_gpu = i == 3
+  1358→            await track_test_task_metrics(
+  1359→                state,
+  1360→                ephemeral_plan,
+  1361→                task_id=f"ta-{i}-{'gpu' if use_gpu else 'cpu'}-{'regions' if regions else 'no_regions'}",
+  1362→                billing_type=BillingType.BILL_H100.value if use_gpu else BillingType.BILL_CPU.value,
+  1363→                include_gpu=use_gpu,
+  1364→                regions=regions,
+  1365→            )
+  1366→
+  1367→    await state.mock_clickpipes.task_metrics.join()
+  1368→    await state.task_metrics_store.refresh_new_aggregates(0, (TEST_START_TIME + timedelta(days=1)).timestamp())
+  1369→
+  1370→    query_result = await state.task_metrics_store.ch_client.query(
+  1371→        QueryTaskMetricsByAppEntityMinuteQuery(workspace_id=TEST_WORKSPACE_ID)
+  1372→    )
+  1373→    rows = list(query_result.named_results())
+  1374→
+  1375→    # Verify the data - 4 rows: 2 regions for H100, 2 regions for CPU (with different entity_id due to billing_type grouping)
+  1376→    assert len(rows) == 4
+  1377→
+  1378→    for regions in [[], ["us-east-1"]]:
+  1379→        # Check GPU row
+  1380→        gpu_row = next(r for r in rows if r["billing_type"] == BillingType.BILL_H100.value and r["regions"] == regions)
+  1381→        assert_standard_row_metadata(gpu_row)
+  1382→        assert_metrics_values(gpu_row, elapsed_ns=1e9, cpu_ns=5e8, mem_ns=2.5e8, gpu_ns=1e8)
+  1383→        assert not gpu_row["nonpreemptible"]
+  1384→        assert gpu_row["regions"] == regions
+  1385→
+  1386→        # Check CPU row
+  1387→        cpu_row = next(r for r in rows if r["billing_type"] == BillingType.BILL_CPU.value and r["regions"] == regions)
+  1388→        assert_standard_row_metadata(cpu_row)
+  1389→        assert_metrics_values(cpu_row, elapsed_ns=3e9, cpu_ns=1.5e9, mem_ns=7.5e8, gpu_ns=0)
+  1390→        assert not cpu_row["nonpreemptible"]
+  1391→        assert cpu_row["regions"] == regions
+  1392→
+  1393→
+  1394→@pytest.mark.asyncio
+  1395→async def test_task_metrics_by_app_entity_type_minute(state: State, ephemeral_plan, clear_metrics_tables):
+  1396→    """Tests that task_metrics_by_app_entity_type_minute table aggregates across functions."""
+  1397→    # Create metrics for two functions in the same minute
+  1398→    for function_id in ["fu-test-1", "fu-test-2"]:
+  1399→        await track_test_task_metrics(
+  1400→            state,
+  1401→            ephemeral_plan,
+  1402→            task_id=f"ta-{function_id}",
+  1403→            function_id=function_id,
+  1404→            function_name=f"test_function_{function_id}",
+  1405→            include_gpu=True,
+  1406→        )
+  1407→
+  1408→    await state.mock_clickpipes.task_metrics.join()
+  1409→    await state.task_metrics_store.refresh_new_aggregates(0, (TEST_START_TIME + timedelta(days=1)).timestamp())
+  1410→
+  1411→    query_result = await state.task_metrics_store.ch_client.query(
+  1412→        QueryTaskMetricsByAppMinuteQuery(workspace_id=TEST_WORKSPACE_ID)
+  1413→    )
+  1414→    rows = list(query_result.named_results())
+  1415→
+  1416→    # Verify the data - should aggregate both functions into one row per entity_type
+  1417→    assert len(rows) == 1
+  1418→    row = rows[0]
+  1419→    assert_standard_row_metadata(row, entity_id=None, entity_name=None)
+  1420→    assert_metrics_values(row, elapsed_ns=2e9, cpu_ns=1e9, mem_ns=5e8, gpu_ns=2e8)
+  1421→
+  1422→
+  1423→@pytest.mark.asyncio
+  1424→async def test_query_usage_breakdown_by_day_basic(state: State, user, clear_metrics_tables):
+  1425→    """Test daily bucketing for usage breakdown query."""
+  1426→    workspace_id = "ac-test"
+  1427→    environment_id = "en-test"
+  1428→    function_id = "fu-test"
+  1429→    app_id = "ap-test"
+  1430→
+  1431→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+  1432→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+  1433→
+  1434→    day_one = datetime(2026, 2, 1, 0, 0, 0)
+  1435→
+  1436→    resources = api_pb2.Resources(milli_cpu=1000, memory_mb=1024)
+  1437→
+  1438→    # Insert metrics across two different days
+  1439→    for i in range(4):
+  1440→        timestamp = (day_one + timedelta(hours=i * 12)).timestamp()
+  1441→        metrics = [
+  1442→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="elapsed_ns", value=1e9),
+  1443→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="cpu_ns", value=5e8),
+  1444→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="mem_ns", value=2.5e8),
+  1445→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_ns", value=1e8),
+  1446→        ]
+  1447→
+  1448→        await state.task_metrics_store.track_task_metrics(
+  1449→            task_id=f"ta-{i}",
+  1450→            workspace_id=workspace_id,
+  1451→            environment_id=environment_id,
+  1452→            billing_type=BillingType.BILL_T4.value,
+  1453→            app_id=app_id,
+  1454→            app_type="deployed",
+  1455→            metrics=metrics,
+  1456→            resources=resources,
+  1457→            ephemeral_plan_struct=ephemeral_plan_struct,
+  1458→            regions=None,
+  1459→            function_id=function_id,
+  1460→            function_name="test_function",
+  1461→        )
+  1462→
+  1463→    await state.mock_clickpipes.task_metrics.join()
+  1464→
+  1465→    result = await state.task_metrics_store.query_usage_breakdown_by_day(
+  1466→        workspace_id, day_one.timestamp(), (day_one + timedelta(days=31)).timestamp()
+  1467→    )
+  1468→
+  1469→    # Should have 2 rows (one per day, same app_type/billing_type)
+  1470→    assert len(result) == 2
+  1471→
+  1472→    # Verify they are from different days
+  1473→    buckets = sorted(m.bucket for m in result)
+  1474→    assert buckets[0].day == 1
+  1475→    assert buckets[1].day == 2
+  1476→
+  1477→    for metric in result:
+  1478→        assert metric.app_type == "deployed"
+  1479→        assert metric.billing_type == BillingType.BILL_T4.value
+  1480→
+  1481→
+  1482→@pytest.mark.asyncio
+  1483→async def test_query_usage_breakdown_by_day_environment_filter(state: State, user, clear_metrics_tables):
+  1484→    """Test environment_id filtering in usage breakdown query."""
+  1485→    workspace_id = "ac-test"
+  1486→    function_id = "fu-test"
+  1487→
+  1488→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+  1489→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+  1490→
+  1491→    day_one = datetime(2026, 2, 1, 0, 0, 0)
+  1492→
+  1493→    resources = api_pb2.Resources(milli_cpu=1000, memory_mb=1024)
+  1494→
+  1495→    # Insert metrics for two different environments
+  1496→    for env_id, app_id in [("en-env1", "ap-app1"), ("en-env2", "ap-app2")]:
+  1497→        timestamp = day_one.timestamp()
+  1498→        metrics = [
+  1499→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="elapsed_ns", value=1e9),
+  1500→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="cpu_ns", value=5e8),
+  1501→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="mem_ns", value=2.5e8),
+  1502→        ]
+  1503→
+  1504→        await state.task_metrics_store.track_task_metrics(
+  1505→            task_id=f"ta-{env_id}",
+  1506→            workspace_id=workspace_id,
+  1507→            environment_id=env_id,
+  1508→            billing_type=BillingType.BILL_CPU.value,
+  1509→            app_id=app_id,
+  1510→            app_type="deployed",
+  1511→            metrics=metrics,
+  1512→            resources=resources,
+  1513→            ephemeral_plan_struct=ephemeral_plan_struct,
+  1514→            regions=None,
+  1515→            function_id=function_id,
+  1516→            function_name="test_function",
+  1517→        )
+  1518→
+  1519→    await state.mock_clickpipes.task_metrics.join()
+  1520→
+  1521→    # Query with no environment filter - should get both
+  1522→    all_results = await state.task_metrics_store.query_usage_breakdown_by_day(
+  1523→        workspace_id, day_one.timestamp(), (day_one + timedelta(days=31)).timestamp()
+  1524→    )
+  1525→    # Both environments contribute metrics at the same granularity level
+  1526→    total_cpu_hr = sum(m.cpu_hr for m in all_results)
+  1527→
+  1528→    # Query with environment filter - should get only one
+  1529→    filtered_results = await state.task_metrics_store.query_usage_breakdown_by_day(
+  1530→        workspace_id, day_one.timestamp(), (day_one + timedelta(days=31)).timestamp(), environment_id="en-env1"
+  1531→    )
+  1532→    filtered_cpu_hr = sum(m.cpu_hr for m in filtered_results)
+  1533→
+  1534→    assert filtered_cpu_hr == pytest.approx(total_cpu_hr / 2)
+  1535→    assert filtered_cpu_hr > 0
+  1536→
+  1537→
+  1538→@pytest.mark.asyncio
+  1539→async def test_query_usage_breakdown_by_day_multiple_app_types(state: State, user, clear_metrics_tables):
+  1540→    """Test that different app types produce separate rows."""
+  1541→    workspace_id = "ac-test"
+  1542→    environment_id = "en-test"
+  1543→    function_id = "fu-test"
+  1544→
+  1545→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+  1546→    ephemeral_plan_struct = await state.ephemeral.plans[ephemeral_workspace_struct.plan_id]
+  1547→
+  1548→    day_one = datetime(2026, 2, 1, 0, 0, 0)
+  1549→    resources = api_pb2.Resources(milli_cpu=1000, memory_mb=1024)
+  1550→
+  1551→    for app_type, app_id in [("deployed", "ap-dep1"), ("ephemeral", "ap-eph1")]:
+  1552→        timestamp = day_one.timestamp()
+  1553→        metrics = [
+  1554→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="elapsed_ns", value=1e9),
+  1555→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="cpu_ns", value=5e8),
+  1556→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="mem_ns", value=2.5e8),
+  1557→            internal_api_pb2.ResourceMetric(timestamp=timestamp, resource="gpu_ns", value=1e8),
+  1558→        ]
+  1559→
+  1560→        await state.task_metrics_store.track_task_metrics(
+  1561→            task_id=f"ta-{app_type}",
+  1562→            workspace_id=workspace_id,
+  1563→            environment_id=environment_id,
+  1564→            billing_type=BillingType.BILL_T4.value,
+  1565→            app_id=app_id,
+  1566→            app_type=app_type,
+  1567→            metrics=metrics,
+  1568→            resources=resources,
+  1569→            ephemeral_plan_struct=ephemeral_plan_struct,
+  1570→            regions=None,
+  1571→            function_id=function_id,
+  1572→            function_name="test_function",
+  1573→        )
+  1574→
+  1575→    await state.mock_clickpipes.task_metrics.join()
+  1576→
+  1577→    result = await state.task_metrics_store.query_usage_breakdown_by_day(
+  1578→        workspace_id, day_one.timestamp(), (day_one + timedelta(days=31)).timestamp()
+  1579→    )
+  1580→
+  1581→    app_types = {m.app_type for m in result}
+  1582→    assert "deployed" in app_types
+  1583→    assert "ephemeral" in app_types
+  1584→
+  1585→
+  1586→@pytest.mark.asyncio
+  1587→async def test_query_usage_breakdown_by_day_empty(state: State, user, clear_metrics_tables):
+  1588→    """Test empty result for workspace with no usage."""
+  1589→    result = await state.task_metrics_store.query_usage_breakdown_by_day(
+  1590→        "ac-empty", datetime(2026, 2, 1).timestamp(), datetime(2026, 3, 1).timestamp()
+  1591→    )
+  1592→    assert result == []
+  1593→
+  1594→
+  1595→@pytest.mark.asyncio
+  1596→async def test_compute_resource_costs_for_metric(state: State, user):
+  1597→    """Test resource type breakdown returns separate CPU/Memory/GPU rows."""
+  1598→    from modal_server.objects.plan import DEFAULT_REGION_MULTIPLIERS
+  1599→    from modal_server.stores.task_metrics import AppUsageMetric
+  1600→    from modal_server.usage import compute_resource_costs_for_metric
+  1601→
+  1602→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+  1603→    plan_struct = await state.durable.plans[ephemeral_workspace_struct.plan_id]
+  1604→
+  1605→    metric = AppUsageMetric(
+  1606→        app_type="deployed",
+  1607→        app_id="",
+  1608→        billing_type=BillingType.BILL_H100.value,
+  1609→        regions=[],
+  1610→        nonpreemptible=False,
+  1611→        entity_type="function",
+  1612→        bucket=datetime(2026, 2, 1),
+  1613→        cpu_hr=1.0,
+  1614→        adj_cpu_hr=1.0,
+  1615→        mem_hr=2.0,
+  1616→        adj_mem_hr=2.0,
+  1617→        gpu_hr=0.5,
+  1618→        total_function_fee_dollars=0.0,
+  1619→    )
+  1620→
+  1621→    costs = compute_resource_costs_for_metric(metric, plan_struct, DEFAULT_REGION_MULTIPLIERS)
+  1622→
+  1623→    resource_types = [c.resource_type for c in costs]
+  1624→    assert "cpu" in resource_types
+  1625→    assert "memory" in resource_types
+  1626→    assert BillingType.BILL_H100.value in resource_types
+  1627→
+  1628→    # CPU and Memory should always be present, GPU only for GPU billing types
+  1629→    cpu_cost = next(c for c in costs if c.resource_type == "cpu")
+  1630→    mem_cost = next(c for c in costs if c.resource_type == "memory")
+  1631→    gpu_cost = next(c for c in costs if c.resource_type == BillingType.BILL_H100.value)
+  1632→
+  1633→    assert cpu_cost.cost > 0
+  1634→    assert mem_cost.cost > 0
+  1635→    assert gpu_cost.cost > 0
+  1636→
+  1637→    # Verify effective rates are the base rates (no multipliers for default region)
+  1638→    assert cpu_cost.cost_per_unit_hour == pytest.approx(float(plan_struct.cpu_hour_cost))
+  1639→    assert mem_cost.cost_per_unit_hour == pytest.approx(float(plan_struct.mem_gib_hour_cost))
+  1640→    assert gpu_cost.cost_per_unit_hour == pytest.approx(float(plan_struct.gpu_hour_cost_h100))
+  1641→
+  1642→
+  1643→@pytest.mark.asyncio
+  1644→async def test_compute_resource_costs_cpu_only(state: State, user):
+  1645→    """Test that CPU-only billing type has no GPU entry."""
+  1646→    from modal_server.objects.plan import DEFAULT_REGION_MULTIPLIERS
+  1647→    from modal_server.stores.task_metrics import AppUsageMetric
+  1648→    from modal_server.usage import compute_resource_costs_for_metric
+  1649→
+  1650→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+  1651→    plan_struct = await state.durable.plans[ephemeral_workspace_struct.plan_id]
+  1652→
+  1653→    metric = AppUsageMetric(
+  1654→        app_type="deployed",
+  1655→        app_id="",
+  1656→        billing_type=BillingType.BILL_CPU.value,
+  1657→        regions=[],
+  1658→        nonpreemptible=False,
+  1659→        entity_type="function",
+  1660→        bucket=datetime(2026, 2, 1),
+  1661→        cpu_hr=1.0,
+  1662→        adj_cpu_hr=1.0,
+  1663→        mem_hr=2.0,
+  1664→        adj_mem_hr=2.0,
+  1665→        gpu_hr=0.0,
+  1666→        total_function_fee_dollars=0.0,
+  1667→    )
+  1668→
+  1669→    costs = compute_resource_costs_for_metric(metric, plan_struct, DEFAULT_REGION_MULTIPLIERS)
+  1670→
+  1671→    resource_types = [c.resource_type for c in costs]
+  1672→    assert "cpu" in resource_types
+  1673→    assert "memory" in resource_types
+  1674→    # No GPU entry for CPU billing type
+  1675→    assert len(costs) == 2
+  1676→
+  1677→
+  1678→@pytest.mark.asyncio
+  1679→async def test_compute_resource_costs_sandbox_multiplier(state: State, user):
+  1680→    """Test effective rate computation with sandbox multiplier."""
+  1681→    from modal_server.objects.plan import DEFAULT_REGION_MULTIPLIERS
+  1682→    from modal_server.stores.task_metrics import AppUsageMetric
+  1683→    from modal_server.usage import compute_resource_costs_for_metric
+  1684→
+  1685→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+  1686→    plan_struct = await state.durable.plans[ephemeral_workspace_struct.plan_id]
+  1687→
+  1688→    # Create a metric for a sandbox entity (triggers sandbox multiplier)
+  1689→    metric = AppUsageMetric(
+  1690→        app_type="deployed",
+  1691→        app_id="",
+  1692→        billing_type=BillingType.BILL_CPU.value,
+  1693→        regions=[],
+  1694→        nonpreemptible=False,
+  1695→        entity_type="sandbox",
+  1696→        bucket=datetime(2026, 2, 1),
+  1697→        cpu_hr=1.0,
+  1698→        adj_cpu_hr=1.0,
+  1699→        mem_hr=1.0,
+  1700→        adj_mem_hr=1.0,
+  1701→        gpu_hr=0.0,
+  1702→        total_function_fee_dollars=0.0,
+  1703→    )
+  1704→
+  1705→    costs = compute_resource_costs_for_metric(metric, plan_struct, DEFAULT_REGION_MULTIPLIERS)
+  1706→    cpu_cost = next(c for c in costs if c.resource_type == "cpu")
+  1707→
+  1708→    sandbox_mult = plan_struct.sandbox_multiplier
+  1709→    expected_effective_rate = sandbox_mult * float(plan_struct.cpu_hour_cost)
+  1710→    assert cpu_cost.cost_per_unit_hour == pytest.approx(expected_effective_rate)
+  1711→
+  1712→
+  1713→@pytest.mark.asyncio
+  1714→async def test_compute_resource_costs_region_multiplier(state: State, user):
+  1715→    """Test effective rate computation with region multiplier."""
+  1716→    from modal_server.objects.plan import DEFAULT_REGION_MULTIPLIERS
+  1717→    from modal_server.stores.task_metrics import AppUsageMetric
+  1718→    from modal_server.usage import compute_resource_costs_for_metric
+  1719→
+  1720→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+  1721→    plan_struct = await state.durable.plans[ephemeral_workspace_struct.plan_id]
+  1722→
+  1723→    # EU region has a 1.25x multiplier in DEFAULT_REGION_MULTIPLIERS
+  1724→    metric = AppUsageMetric(
+  1725→        app_type="deployed",
+  1726→        app_id="",
+  1727→        billing_type=BillingType.BILL_H100.value,
+  1728→        regions=["eu-west-1"],
+  1729→        nonpreemptible=False,
+  1730→        entity_type="function",
+  1731→        bucket=datetime(2026, 2, 1),
+  1732→        cpu_hr=1.0,
+  1733→        adj_cpu_hr=1.0,
+  1734→        mem_hr=1.0,
+  1735→        adj_mem_hr=1.0,
+  1736→        gpu_hr=1.0,
+  1737→        total_function_fee_dollars=0.0,
+  1738→    )
+  1739→
+  1740→    costs = compute_resource_costs_for_metric(metric, plan_struct, DEFAULT_REGION_MULTIPLIERS)
+  1741→
+  1742→    cpu_cost = next(c for c in costs if c.resource_type == "cpu")
+  1743→    gpu_cost = next(c for c in costs if c.resource_type == BillingType.BILL_H100.value)
+  1744→
+  1745→    region_mult = DEFAULT_REGION_MULTIPLIERS["eu"]  # 1.25
+  1746→
+  1747→    # CPU effective rate should include the region multiplier
+  1748→    expected_cpu_rate = region_mult * float(plan_struct.cpu_hour_cost)
+  1749→    assert cpu_cost.cost_per_unit_hour == pytest.approx(expected_cpu_rate)
+  1750→
+  1751→    # GPU effective rate should include the region multiplier
+  1752→    expected_gpu_rate = region_mult * float(plan_struct.gpu_hour_cost_h100)
+  1753→    assert gpu_cost.cost_per_unit_hour == pytest.approx(expected_gpu_rate)
+  1754→
+  1755→    # GPU cost = gpu_hr * region_mult * base_rate (region adds extra hours)
+  1756→    # total_gpu_hr = 1.0 + 1.0 * (1.25 - 1) = 1.25
+  1757→    expected_gpu_cost = 1.25 * float(plan_struct.gpu_hour_cost_h100)
+  1758→    assert gpu_cost.cost == pytest.approx(expected_gpu_cost)
+  1759→
+  1760→
+  1761→@pytest.mark.asyncio
+  1762→async def test_compute_resource_costs_nonpreemptible_with_region(state: State, user):
+  1763→    """Test effective rate with both nonpreemptible flag and region multiplier."""
+  1764→    from modal_server.objects.plan import DEFAULT_REGION_MULTIPLIERS
+  1765→    from modal_server.stores.task_metrics import AppUsageMetric
+  1766→    from modal_server.usage import compute_resource_costs_for_metric
+  1767→
+  1768→    ephemeral_workspace_struct = await state.ephemeral.workspaces[user.workspace_id]
+  1769→    plan_struct = await state.durable.plans[ephemeral_workspace_struct.plan_id]
+  1770→
+  1771→    nonpreemptible_mult = plan_struct.nonpreemptible_multiplier  # 3.0
+  1772→    region_mult = DEFAULT_REGION_MULTIPLIERS["eu"]  # 1.25
+  1773→
+  1774→    # Nonpreemptible function in EU region
+  1775→    metric = AppUsageMetric(
+  1776→        app_type="deployed",
+  1777→        app_id="",
+  1778→        billing_type=BillingType.BILL_CPU.value,
+  1779→        regions=["eu-west-1"],
+  1780→        nonpreemptible=True,
+  1781→        entity_type="function",
+  1782→        bucket=datetime(2026, 2, 1),
+  1783→        cpu_hr=1.0,
+  1784→        adj_cpu_hr=1.0,
+  1785→        mem_hr=1.0,
+  1786→        adj_mem_hr=1.0,
+  1787→        gpu_hr=0.0,
+  1788→        total_function_fee_dollars=0.0,
+  1789→    )
+  1790→
+  1791→    costs = compute_resource_costs_for_metric(metric, plan_struct, DEFAULT_REGION_MULTIPLIERS)
+  1792→    cpu_cost = next(c for c in costs if c.resource_type == "cpu")
+  1793→
+  1794→    # effective_multiplier = 1 + (nonpreemptible_mult - 1) + (1 + (nonpreemptible_mult - 1)) * (region_mult - 1)
+  1795→    # = 1 + 2 + 3 * 0.25 = 3.75
+  1796→    nonpreemptible_extra = nonpreemptible_mult - 1  # 2.0
+  1797→    region_extra = (1 + nonpreemptible_extra) * (region_mult - 1)  # 3.0 * 0.25 = 0.75
+  1798→    expected_multiplier = 1 + nonpreemptible_extra + region_extra  # 3.75
+  1799→
+  1800→    expected_rate = expected_multiplier * float(plan_struct.cpu_hour_cost)
+  1801→    assert cpu_cost.cost_per_unit_hour == pytest.approx(expected_rate)
+  1802→

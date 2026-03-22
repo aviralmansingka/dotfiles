@@ -46,7 +46,7 @@ scrollback-limit = 10000
 
 # macOS specific - matching Kitty's macos_titlebar_color background
 macos-titlebar-style = hidden
-window-decoration = true
+window-decoration = false
 window-colorspace = "display-p3"
 window-save-state = always
 

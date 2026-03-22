@@ -1,0 +1,10 @@
+from fastapi import FastAPI
+from kata_inference_py.ports.driving import PredictPort
+from kata_inference_py.domain.models import InferenceRequest
+
+def create_app(use_case: PredictPort) -> FastAPI:
+    app = FastAPI()
+    @app.post("/predict")
+    def predict(request: InferenceRequest):
+        return use_case.predict(request)
+    return app

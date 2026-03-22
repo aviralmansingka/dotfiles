@@ -1,0 +1,21 @@
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[project]
+name = "kata-inference-py"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.131.0",
+    "uvicorn>=0.41.0",
+    "xgboost>=3.2.0",
+]
+
+[dependency-groups]
+dev = ["pytest", "httpx"]

@@ -1,0 +1,28 @@
+import os
+
+import pytest
+import xgboost as xgb
+
+from booster_factory import create_booster
+
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.json")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def generate_model():
+    booster = create_booster()
+    booster.save_model(MODEL_PATH)
+    yield MODEL_PATH
+    os.remove(MODEL_PATH)
+
+
+@pytest.fixture
+def model_path(generate_model):
+    return generate_model
+
+
+@pytest.fixture
+def booster(model_path):
+    model = xgb.Booster()
+    model.load_model(model_path)
+    return model

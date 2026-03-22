@@ -1,0 +1,359 @@
+2026-02-22T20:22:18.471Z [DEBUG] Failed to check enabledPlatforms: TypeError: undefined is not an object (evaluating 'pK.join')
+2026-02-22T20:22:18.561Z [DEBUG] [init] configureGlobalMTLS starting
+2026-02-22T20:22:18.561Z [DEBUG] [init] configureGlobalMTLS complete
+2026-02-22T20:22:18.561Z [DEBUG] [init] configureGlobalAgents starting
+2026-02-22T20:22:18.561Z [DEBUG] [init] configureGlobalAgents complete
+2026-02-22T20:22:18.564Z [DEBUG] Applying permission update: Adding 2 allow rule(s) to destination 'userSettings': ["Bash(gh *)","Bash(git *)"]
+2026-02-22T20:22:18.564Z [DEBUG] Applying permission update: Adding 38 allow rule(s) to destination 'localSettings': ["Bash(aws:*)","Bash(chmod:*)","Bash(curl:*)","Bash(docker build:*)","Bash(echo:*)","Bash(env:*)","Bash(find:*)","Bash(gh:*)","Bash(git:*)","Bash(grep:*)","Bash(luac:*)","Bash(mkdir:*)","Bash(nvim:*)","Bash(packer:*)","Bash(pbpaste:*)","Bash(python3:*)","Bash(stow:*)","Bash(terraform:*)","Bash(tmux -V:*)","Bash(xargs ls:*)","Bash(xxd:*)","Read(//.local/share/nvim/lazy/LazyVim/**)","WebFetch(domain:*)","WebSearch","mcp__notion__search","mcp__plugin_context7_context7__resolve-library-id","mcp__plugin_context7_context7__query-docs","Bash(while read run_id)","Bash(do gh api -X DELETE \"repos/aviralmansingka/dotfiles/actions/runs/$run_id\")","Bash(ls:*)","Bash(xargs:*)","Bash(source:*)","Skill(ci)","WebFetch(domain:github.com)","WebFetch(domain:claude.ai)","WebFetch(domain:storage.googleapis.com)","Bash(./scripts/generate-brewfile.sh:*)","Bash(k9s version:*)"]
+2026-02-22T20:22:18.565Z [DEBUG] Applying permission update: Adding 1 directory with destination 'cliArg': ["/Users/aviralmansingka/.cache/nvim"]
+2026-02-22T20:22:18.566Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-02-22T20:22:18.571Z [DEBUG] [ToolSearch:optimistic] mode=tst-auto, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-02-22T20:22:18.571Z [DEBUG] [STARTUP] Running setup()...
+2026-02-22T20:22:18.574Z [DEBUG] Loading skills from: managed=/Library/Application Support/ClaudeCode/.claude/skills, user=/Users/aviralmansingka/.claude/skills, project=[]
+2026-02-22T20:22:18.578Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at qF8 (/$bunfs/root/claude:6072:1233)
+    at x$T (/$bunfs/root/claude:6072:2190)
+    at XB (/$bunfs/root/claude:6072:2117)
+    at CAD (/$bunfs/root/claude:6104:5361)
+2026-02-22T20:22:18.578Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at SfA (/$bunfs/root/claude:2060:53197)
+    at l9B (/$bunfs/root/claude:2060:54102)
+    at <anonymous> (/$bunfs/root/claude:11372:510)
+    at <anonymous> (/$bunfs/root/claude:6120:1974)
+    at forEach (native:1:11)
+2026-02-22T20:22:18.578Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at s9 (/$bunfs/root/claude:6071:7525)
+    at PPT (/$bunfs/root/claude:262:20594)
+    at u4R (/$bunfs/root/claude:262:21089)
+    at NeB (/$bunfs/root/claude:5728:12226)
+2026-02-22T20:22:18.578Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at s9 (/$bunfs/root/claude:6071:7525)
+    at wPT (/$bunfs/root/claude:262:21199)
+    at u4R (/$bunfs/root/claude:262:21161)
+    at NeB (/$bunfs/root/claude:5728:12226)
+2026-02-22T20:22:18.578Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at s9 (/$bunfs/root/claude:6071:7525)
+    at ScA (/$bunfs/root/claude:6041:36472)
+    at vcA (/$bunfs/root/claude:6041:37205)
+    at zP8 (/$bunfs/root/claude:10986:4348)
+    at async <anonymous> (/$bunfs/root/claude:11397:2318)
+2026-02-22T20:22:18.578Z [DEBUG] Error log sink initialized
+2026-02-22T20:22:18.580Z [DEBUG] [STARTUP] setup() completed in 9ms
+2026-02-22T20:22:18.580Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-02-22T20:22:18.585Z [DEBUG] [Claude in Chrome] Found chrome profiles: Profile 1, Default, Profile 2
+2026-02-22T20:22:18.596Z [DEBUG] Cannot acquire lock for 2.1.50 - held by PID 98724
+2026-02-22T20:22:18.596Z [ERROR] Error: Error: NON-FATAL: Lock acquisition failed for /Users/aviralmansingka/.local/share/claude/versions/2.1.50 (expected in multi-process scenarios)
+    at OzR (/$bunfs/root/claude:2600:2098)
+    at SbA (/$bunfs/root/claude:2600:1209)
+    at processTicksAndRejections (native:7:39)
+2026-02-22T20:22:18.599Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-02-22T20:22:18.599Z [DEBUG] Plugin not available for MCP: context7@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.599Z [DEBUG] Plugin not available for MCP: pyright-lsp@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.599Z [DEBUG] Plugin not available for MCP: slack@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.599Z [DEBUG] Plugin not available for MCP: lua-lsp@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.599Z [DEBUG] Plugin loading errors: Plugin context7 not found in marketplace claude-plugins-official, Plugin pyright-lsp not found in marketplace claude-plugins-official, Plugin slack not found in marketplace claude-plugins-official, Plugin lua-lsp not found in marketplace claude-plugins-official
+2026-02-22T20:22:18.599Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-02-22T20:22:18.599Z [DEBUG] Total plugin skills loaded: 0
+2026-02-22T20:22:18.599Z [DEBUG] Plugin loading errors: Plugin context7 not found in marketplace claude-plugins-official, Plugin pyright-lsp not found in marketplace claude-plugins-official, Plugin slack not found in marketplace claude-plugins-official, Plugin lua-lsp not found in marketplace claude-plugins-official
+2026-02-22T20:22:18.599Z [DEBUG] Total plugin commands loaded: 0
+2026-02-22T20:22:18.599Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-02-22T20:22:18.599Z [DEBUG] Plugin loading errors: Plugin context7 not found in marketplace claude-plugins-official, Plugin pyright-lsp not found in marketplace claude-plugins-official, Plugin slack not found in marketplace claude-plugins-official, Plugin lua-lsp not found in marketplace claude-plugins-official
+2026-02-22T20:22:18.599Z [DEBUG] Total plugin agents loaded: 0
+2026-02-22T20:22:18.600Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at qF8 (/$bunfs/root/claude:6072:1233)
+    at x$T (/$bunfs/root/claude:6072:2190)
+    at XB (/$bunfs/root/claude:6072:2117)
+    at yK (/$bunfs/root/claude:6102:8261)
+    at async <anonymous> (/$bunfs/root/claude:11397:2603)
+2026-02-22T20:22:18.602Z [DEBUG] Git remote URL: https://github.com/aviralmansingka/dotfiles
+2026-02-22T20:22:18.602Z [DEBUG] Parsed repository: aviralmansingka/dotfiles from https://github.com/aviralmansingka/dotfiles
+2026-02-22T20:22:18.602Z [DEBUG] Parsed repository: aviralmansingka/dotfiles from URL: https://github.com/aviralmansingka/dotfiles
+2026-02-22T20:22:18.617Z [DEBUG] Loaded 4 unique skills (4 unconditional, 0 conditional, managed: 0, user: 3, project: 0, additional: 0, legacy commands: 1)
+2026-02-22T20:22:18.617Z [DEBUG] getSkills returning: 4 skill dir commands, 0 plugin skills, 3 bundled skills
+2026-02-22T20:22:18.619Z [DEBUG] [STARTUP] Commands and agents loaded in 39ms
+2026-02-22T20:22:18.621Z [DEBUG] [STARTUP] Running showSetupScreens()...
+2026-02-22T20:22:18.637Z [DEBUG] [3P telemetry] Waiting for remote managed settings before telemetry init
+2026-02-22T20:22:18.637Z [DEBUG] Path /Users/aviralmansingka/dotfiles already tracked for repo aviralmansingka/dotfiles
+2026-02-22T20:22:18.637Z [DEBUG] [STARTUP] showSetupScreens() completed in 16ms
+2026-02-22T20:22:18.637Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-02-22T20:22:18.637Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-02-22T20:22:18.637Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-02-22T20:22:18.637Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-22T20:22:18.637Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-22T20:22:18.638Z [DEBUG] Total LSP servers loaded: 0
+2026-02-22T20:22:18.639Z [DEBUG] [STARTUP] MCP configs loaded in 73ms
+2026-02-22T20:22:18.639Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at s9 (/$bunfs/root/claude:6071:7525)
+    at zb (/$bunfs/root/claude:6041:36677)
+    at QQ (/$bunfs/root/claude:2511:4961)
+    at <anonymous> (/$bunfs/root/claude:11401:1173)
+2026-02-22T20:22:18.644Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at s9 (/$bunfs/root/claude:6071:7525)
+    at Tx8 (/$bunfs/root/claude:11367:259)
+    at <anonymous> (/$bunfs/root/claude:11401:2957)
+    at processTicksAndRejections (native:7:39)
+2026-02-22T20:22:18.644Z [DEBUG] Creating installed_plugins.json from settings.json files
+2026-02-22T20:22:18.645Z [DEBUG] Looking up plugin context7@claude-plugins-official in marketplace claude-plugins-official
+2026-02-22T20:22:18.645Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-02-22T20:22:18.645Z [DEBUG] LSP manager initialized with 0 servers
+2026-02-22T20:22:18.645Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-22T20:22:18.645Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at s9 (/$bunfs/root/claude:6071:7525)
+    at ylT (/$bunfs/root/claude:6041:36834)
+    at Kk (/$bunfs/root/claude:6063:158)
+    at next (native:1:11)
+2026-02-22T20:22:18.646Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at s9 (/$bunfs/root/claude:6071:7525)
+    at zb (/$bunfs/root/claude:6041:36677)
+    at lU8 (/$bunfs/root/claude:6059:8026)
+    at mcA (/$bunfs/root/claude:6059:8427)
+2026-02-22T20:22:18.646Z [DEBUG] Getting matching hook commands for SessionStart with query: startup
+2026-02-22T20:22:18.646Z [DEBUG] Found 0 hook matchers in settings
+2026-02-22T20:22:18.646Z [DEBUG] Matched 0 unique hooks for query "startup" (0 before deduplication)
+2026-02-22T20:22:18.646Z [DEBUG] LSP server manager initialized successfully
+2026-02-22T20:22:18.646Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-02-22T20:22:18.647Z [DEBUG] [Reconnection] computeInitialTeamContext: No teammate context set (not a teammate)
+2026-02-22T20:22:18.648Z [DEBUG] Writing to temp file: /Users/aviralmansingka/.claude.json.tmp.21906.1771791738648
+2026-02-22T20:22:18.648Z [DEBUG] Preserving file permissions: 100644
+2026-02-22T20:22:18.649Z [DEBUG] Temp file written successfully, size: 30144 bytes
+2026-02-22T20:22:18.649Z [DEBUG] Applied original permissions to temp file
+2026-02-22T20:22:18.649Z [DEBUG] Renaming /Users/aviralmansingka/.claude.json.tmp.21906.1771791738648 to /Users/aviralmansingka/.claude.json
+2026-02-22T20:22:18.649Z [DEBUG] File /Users/aviralmansingka/.claude.json written atomically
+2026-02-22T20:22:18.660Z [DEBUG] [keybindings] KeybindingSetup initialized with 103 bindings, 0 warnings
+2026-02-22T20:22:18.682Z [DEBUG] Writing to temp file: /Users/aviralmansingka/.claude.json.tmp.21906.1771791738682
+2026-02-22T20:22:18.682Z [DEBUG] Preserving file permissions: 100644
+2026-02-22T20:22:18.682Z [DEBUG] Temp file written successfully, size: 30144 bytes
+2026-02-22T20:22:18.682Z [DEBUG] Applied original permissions to temp file
+2026-02-22T20:22:18.682Z [DEBUG] Renaming /Users/aviralmansingka/.claude.json.tmp.21906.1771791738682 to /Users/aviralmansingka/.claude.json
+2026-02-22T20:22:18.683Z [DEBUG] File /Users/aviralmansingka/.claude.json written atomically
+2026-02-22T20:22:18.684Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at s9 (/$bunfs/root/claude:6071:7525)
+    at ylT (/$bunfs/root/claude:6041:36834)
+    at lcA (/$bunfs/root/claude:6068:582)
+    at <anonymous> (/$bunfs/root/claude:11212:17715)
+2026-02-22T20:22:18.684Z [ERROR] Error: Error: ENOENT: no such file or directory, open '/Users/aviralmansingka/.claude/remote-settings.json'
+    at openSync (unknown)
+    at readSync (/$bunfs/root/claude:12:1441)
+    at I2 (/$bunfs/root/claude:6085:113)
+    at lG (/$bunfs/root/claude:6087:226)
+    at PfA (/$bunfs/root/claude:2060:49929)
+    at FKR (/$bunfs/root/claude:2060:50092)
+    at s9 (/$bunfs/root/claude:6071:7525)
+    at zb (/$bunfs/root/claude:6041:36677)
+    at lcA (/$bunfs/root/claude:6068:603)
+    at <anonymous> (/$bunfs/root/claude:11212:17715)
+2026-02-22T20:22:18.688Z [DEBUG] [REPL:mount] REPL mounted, disabled=false
+2026-02-22T20:22:18.689Z [DEBUG] Official marketplace auto-install skipped: already_attempted
+2026-02-22T20:22:18.689Z [DEBUG] performStartupChecks called
+2026-02-22T20:22:18.689Z [DEBUG] Starting background plugin installations
+2026-02-22T20:22:18.689Z [DEBUG] performBackgroundPluginInstallations called
+2026-02-22T20:22:18.690Z [DEBUG] Loaded 2 CLAUDE.md/rules files:
+  [User] /Users/aviralmansingka/.claude/CLAUDE.md (143 chars)
+  [Project] /Users/aviralmansingka/dotfiles/CLAUDE.md (5614 chars)
+2026-02-22T20:22:18.691Z [DEBUG] installed_plugins.json doesn't exist, returning empty V2 object
+2026-02-22T20:22:18.721Z [DEBUG] Watching for changes in setting files /Users/aviralmansingka/.claude/settings.json, /Users/aviralmansingka/dotfiles/.claude/settings.json, /Users/aviralmansingka/dotfiles/.claude/settings.local.json...
+2026-02-22T20:22:18.722Z [DEBUG] [FileIndex] getProjectFiles called, respectGitignore=true
+2026-02-22T20:22:18.722Z [DEBUG] [FileIndex] getFilesUsingGit called
+2026-02-22T20:22:18.722Z [DEBUG] Plugin not available for MCP: context7@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.722Z [DEBUG] Plugin not available for MCP: pyright-lsp@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.722Z [DEBUG] Plugin not available for MCP: slack@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.722Z [DEBUG] Plugin not available for MCP: lua-lsp@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.722Z [DEBUG] Plugin not available for MCP: context7@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.722Z [DEBUG] Plugin not available for MCP: pyright-lsp@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.723Z [DEBUG] Plugin not available for MCP: slack@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.723Z [DEBUG] Plugin not available for MCP: lua-lsp@claude-plugins-official - error type: plugin-not-found
+2026-02-22T20:22:18.985Z [DEBUG] [claudeai-mcp] Checking gate (cached)...
+2026-02-22T20:22:18.985Z [DEBUG] [claudeai-mcp] Gate returned: true
+2026-02-22T20:22:18.985Z [DEBUG] [claudeai-mcp] Fetching from https://api.anthropic.com/v1/mcp_servers?limit=1000
+2026-02-22T20:22:18.986Z [DEBUG] AutoUpdaterWrapper: Installation type: native
+2026-02-22T20:22:18.991Z [DEBUG] [keybindings] Watching for changes to /Users/aviralmansingka/.claude/keybindings.json
+2026-02-22T20:22:18.991Z [DEBUG] Found 4 enabled plugins
+2026-02-22T20:22:18.991Z [DEBUG] Creating installed_plugins.json from settings.json files
+2026-02-22T20:22:18.992Z [DEBUG] Looking up plugin context7@claude-plugins-official in marketplace claude-plugins-official
+2026-02-22T20:22:18.992Z [DEBUG] Found 0 installed plugins (V2 format)
+2026-02-22T20:22:18.992Z [DEBUG] Found 4 missing plugins (not installed): context7@claude-plugins-official, pyright-lsp@claude-plugins-official, slack@claude-plugins-official, lua-lsp@claude-plugins-official
+2026-02-22T20:22:18.992Z [DEBUG] Cannot install 4 plugins because their marketplaces are not installed or configured: claude-plugins-official
+2026-02-22T20:22:18.992Z [DEBUG] Uninstallable plugins: context7@claude-plugins-official, pyright-lsp@claude-plugins-official, slack@claude-plugins-official, lua-lsp@claude-plugins-official
+2026-02-22T20:22:18.992Z [DEBUG] Setting installation status: 0 marketplaces, 0 installable plugins, 4 uninstallable plugins
+2026-02-22T20:22:19.003Z [DEBUG] Plugin context7@claude-plugins-official not found in any marketplace, skipping
+2026-02-22T20:22:19.003Z [DEBUG] Looking up plugin pyright-lsp@claude-plugins-official in marketplace claude-plugins-official
+2026-02-22T20:22:19.004Z [DEBUG] Fetching plugin security messages from https://raw.githubusercontent.com/anthropics/claude-plugins-official/refs/heads/security/security.json
+2026-02-22T20:22:19.005Z [DEBUG] Plugin context7@claude-plugins-official not found in any marketplace, skipping
+2026-02-22T20:22:19.005Z [DEBUG] Looking up plugin pyright-lsp@claude-plugins-official in marketplace claude-plugins-official
+2026-02-22T20:22:19.006Z [DEBUG] Policy limits: Fetched successfully
+2026-02-22T20:22:19.006Z [DEBUG] Remote settings: No settings found (404)
+2026-02-22T20:22:19.007Z [DEBUG] Programmatic settings change notification for policySettings
+2026-02-22T20:22:19.008Z [DEBUG] Plugin hooks: skipping reload, enabledPlugins unchanged
+2026-02-22T20:22:19.009Z [DEBUG] Settings changed from policySettings, updating app state
+2026-02-22T20:22:19.010Z [DEBUG] Replacing all allow rules for destination 'userSettings' with 0 rule(s): []
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all deny rules for destination 'userSettings' with 0 rule(s): []
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all ask rules for destination 'userSettings' with 0 rule(s): []
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all allow rules for destination 'projectSettings' with 0 rule(s): []
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all deny rules for destination 'projectSettings' with 0 rule(s): []
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all ask rules for destination 'projectSettings' with 0 rule(s): []
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all allow rules for destination 'localSettings' with 0 rule(s): []
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all deny rules for destination 'localSettings' with 0 rule(s): []
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all ask rules for destination 'localSettings' with 0 rule(s): []
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all allow rules for destination 'userSettings' with 2 rule(s): ["Bash(gh *)","Bash(git *)"]
+2026-02-22T20:22:19.011Z [DEBUG] Replacing all allow rules for destination 'localSettings' with 38 rule(s): ["Bash(aws:*)","Bash(chmod:*)","Bash(curl:*)","Bash(docker build:*)","Bash(echo:*)","Bash(env:*)","Bash(find:*)","Bash(gh:*)","Bash(git:*)","Bash(grep:*)","Bash(luac:*)","Bash(mkdir:*)","Bash(nvim:*)","Bash(packer:*)","Bash(pbpaste:*)","Bash(python3:*)","Bash(stow:*)","Bash(terraform:*)","Bash(tmux -V:*)","Bash(xargs ls:*)","Bash(xxd:*)","Read(//.local/share/nvim/lazy/LazyVim/**)","WebFetch(domain:*)","WebSearch","mcp__notion__search","mcp__plugin_context7_context7__resolve-library-id","mcp__plugin_context7_context7__query-docs","Bash(while read run_id)","Bash(do gh api -X DELETE \"repos/aviralmansingka/dotfiles/actions/runs/$run_id\")","Bash(ls:*)","Bash(xargs:*)","Bash(source:*)","Skill(ci)","WebFetch(domain:github.com)","WebFetch(domain:claude.ai)","WebFetch(domain:storage.googleapis.com)","Bash(./scripts/generate-brewfile.sh:*)","Bash(k9s version:*)"]
+2026-02-22T20:22:19.011Z [DEBUG] [3P telemetry] Remote managed settings loaded, initializing telemetry
+2026-02-22T20:22:19.015Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-02-22T20:22:19.015Z [DEBUG] [3P telemetry] isTelemetryEnabled=false (CLAUDE_CODE_ENABLE_TELEMETRY=undefined)
+2026-02-22T20:22:19.020Z [DEBUG] Writing to temp file: /Users/aviralmansingka/.claude.json.tmp.21906.1771791739020
+2026-02-22T20:22:19.020Z [DEBUG] Preserving file permissions: 100644
+2026-02-22T20:22:19.020Z [DEBUG] Temp file written successfully, size: 30144 bytes
+2026-02-22T20:22:19.020Z [DEBUG] Applied original permissions to temp file
+2026-02-22T20:22:19.020Z [DEBUG] Renaming /Users/aviralmansingka/.claude.json.tmp.21906.1771791739020 to /Users/aviralmansingka/.claude.json
+2026-02-22T20:22:19.021Z [DEBUG] File /Users/aviralmansingka/.claude.json written atomically
+2026-02-22T20:22:19.021Z [DEBUG] Org fast mode: enabled
+2026-02-22T20:22:19.021Z [DEBUG] Plugin pyright-lsp@claude-plugins-official not found in any marketplace, skipping
+2026-02-22T20:22:19.021Z [DEBUG] Looking up plugin slack@claude-plugins-official in marketplace claude-plugins-official
+2026-02-22T20:22:19.021Z [DEBUG] [Claude in Chrome] Extension not found in any browser
+2026-02-22T20:22:19.022Z [DEBUG] Watching for changes in skill/command directories: /Users/aviralmansingka/.claude/skills, /Users/aviralmansingka/.claude/commands...
+2026-02-22T20:22:19.023Z [DEBUG] Plugin pyright-lsp@claude-plugins-official not found in any marketplace, skipping
+2026-02-22T20:22:19.023Z [DEBUG] Looking up plugin slack@claude-plugins-official in marketplace claude-plugins-official
+2026-02-22T20:22:19.024Z [DEBUG] Plugin slack@claude-plugins-official not found in any marketplace, skipping
+2026-02-22T20:22:19.024Z [DEBUG] Looking up plugin lua-lsp@claude-plugins-official in marketplace claude-plugins-official
+2026-02-22T20:22:19.024Z [DEBUG] Plugin slack@claude-plugins-official not found in any marketplace, skipping
+2026-02-22T20:22:19.024Z [DEBUG] Looking up plugin lua-lsp@claude-plugins-official in marketplace claude-plugins-official
+2026-02-22T20:22:19.034Z [DEBUG] Plugin installation status: 0 failed marketplaces, 4 failed plugins
+2026-02-22T20:22:19.035Z [DEBUG] Adding notification for 4 failed installations
+2026-02-22T20:22:19.051Z [DEBUG] [FileIndex] git ls-files (tracked) took 68ms
+2026-02-22T20:22:19.051Z [DEBUG] [FileIndex] git ls-files: 121 tracked files in 329ms
+2026-02-22T20:22:19.052Z [DEBUG] [FileIndex] using git ls-files result (121 files)
+2026-02-22T20:22:19.055Z [DEBUG] Plugin lua-lsp@claude-plugins-official not found in any marketplace, skipping
+2026-02-22T20:22:19.055Z [DEBUG] Saved 0 installed plugins to /Users/aviralmansingka/.claude/plugins/installed_plugins.json
+2026-02-22T20:22:19.055Z [DEBUG] Sync completed: 0 added, 0 updated in installed_plugins.json
+2026-02-22T20:22:19.055Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-02-22T20:22:19.057Z [DEBUG] Plugin lua-lsp@claude-plugins-official not found in any marketplace, skipping
+2026-02-22T20:22:19.057Z [DEBUG] Saved 0 installed plugins to /Users/aviralmansingka/.claude/plugins/installed_plugins.json
+2026-02-22T20:22:19.057Z [DEBUG] Sync completed: 0 added, 0 updated in installed_plugins.json
+2026-02-22T20:22:19.058Z [DEBUG] Security messages saved successfully
+2026-02-22T20:22:19.436Z [DEBUG] [FileIndex] cache refresh completed in 714ms (rust index)
+2026-02-22T20:22:19.437Z [DEBUG] Loaded plugins - Enabled: 0, Disabled: 0, Commands: 0, Agents: 0, Errors: 4
+2026-02-22T20:22:19.440Z [DEBUG] Writing to temp file: /Users/aviralmansingka/.claude.json.tmp.21906.1771791739440
+2026-02-22T20:22:19.440Z [DEBUG] Preserving file permissions: 100644
+2026-02-22T20:22:19.441Z [DEBUG] Temp file written successfully, size: 30144 bytes
+2026-02-22T20:22:19.441Z [DEBUG] Applied original permissions to temp file
+2026-02-22T20:22:19.441Z [DEBUG] Renaming /Users/aviralmansingka/.claude.json.tmp.21906.1771791739440 to /Users/aviralmansingka/.claude.json
+2026-02-22T20:22:19.441Z [DEBUG] File /Users/aviralmansingka/.claude.json written atomically
+2026-02-22T20:22:19.444Z [DEBUG] Writing to temp file: /Users/aviralmansingka/.claude.json.tmp.21906.1771791739444
+2026-02-22T20:22:19.444Z [DEBUG] Preserving file permissions: 100644
+2026-02-22T20:22:19.445Z [DEBUG] Temp file written successfully, size: 30144 bytes
+2026-02-22T20:22:19.445Z [DEBUG] Applied original permissions to temp file
+2026-02-22T20:22:19.445Z [DEBUG] Renaming /Users/aviralmansingka/.claude.json.tmp.21906.1771791739444 to /Users/aviralmansingka/.claude.json
+2026-02-22T20:22:19.445Z [DEBUG] File /Users/aviralmansingka/.claude.json written atomically
+2026-02-22T20:22:19.452Z [DEBUG] [claudeai-mcp] Fetched 3 servers
+2026-02-22T20:22:19.455Z [DEBUG] MCP server "claude.ai Attio": Initializing claude.ai proxy transport for server mcpsrv_01Gk8bBA4UmS43QLJk2W51Db
+2026-02-22T20:22:19.455Z [DEBUG] MCP server "claude.ai Attio": Using claude.ai proxy at https://mcp-proxy.anthropic.com/v1/mcp/mcpsrv_01Gk8bBA4UmS43QLJk2W51Db
+2026-02-22T20:22:19.455Z [DEBUG] MCP server "claude.ai Attio": claude.ai proxy transport created successfully
+2026-02-22T20:22:19.457Z [DEBUG] MCP server "claude.ai Attio": Starting connection with timeout of 30000ms
+2026-02-22T20:22:19.458Z [DEBUG] MCP server "claude.ai Slack": Initializing claude.ai proxy transport for server mcpsrv_019ueovPTBJoyofypx4g8azK
+2026-02-22T20:22:19.458Z [DEBUG] MCP server "claude.ai Slack": Using claude.ai proxy at https://mcp-proxy.anthropic.com/v1/mcp/mcpsrv_019ueovPTBJoyofypx4g8azK
+2026-02-22T20:22:19.458Z [DEBUG] MCP server "claude.ai Slack": claude.ai proxy transport created successfully
+2026-02-22T20:22:19.459Z [DEBUG] MCP server "claude.ai Slack": Starting connection with timeout of 30000ms
+2026-02-22T20:22:19.459Z [DEBUG] MCP server "claude.ai Notion": Initializing claude.ai proxy transport for server mcpsrv_016fV1DiWw9z1zN1R4J7RED4
+2026-02-22T20:22:19.459Z [DEBUG] MCP server "claude.ai Notion": Using claude.ai proxy at https://mcp-proxy.anthropic.com/v1/mcp/mcpsrv_016fV1DiWw9z1zN1R4J7RED4
+2026-02-22T20:22:19.459Z [DEBUG] MCP server "claude.ai Notion": claude.ai proxy transport created successfully
+2026-02-22T20:22:19.459Z [DEBUG] MCP server "claude.ai Notion": Starting connection with timeout of 30000ms
+2026-02-22T20:22:19.465Z [DEBUG] [FileIndex] background untracked fetch: 26 files
+2026-02-22T20:22:19.465Z [DEBUG] [FileIndex] rebuilt Rust index with 121 tracked + 26 untracked files
+2026-02-22T20:22:19.466Z [DEBUG] Tool search disabled for model 'claude-haiku-4-5-20251001': model does not support tool_reference blocks. This feature is only available on Claude Sonnet 4+, Opus 4+, and newer models.
+2026-02-22T20:22:19.466Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.50.1fa; cc_entrypoint=cli; cch=00000;
+2026-02-22T20:22:19.467Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-22T20:22:19.467Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-22T20:22:19.467Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-22T20:22:19.469Z [DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=/Users/aviralmansingka/.local/share/claude/versions/2.1.50)
+2026-02-22T20:22:19.483Z [DEBUG] Writing to temp file: /Users/aviralmansingka/.claude.json.tmp.21906.1771791739482
+2026-02-22T20:22:19.483Z [DEBUG] Preserving file permissions: 100644
+2026-02-22T20:22:19.483Z [DEBUG] Temp file written successfully, size: 30144 bytes
+2026-02-22T20:22:19.483Z [DEBUG] Applied original permissions to temp file
+2026-02-22T20:22:19.483Z [DEBUG] Renaming /Users/aviralmansingka/.claude.json.tmp.21906.1771791739482 to /Users/aviralmansingka/.claude.json
+2026-02-22T20:22:19.483Z [DEBUG] File /Users/aviralmansingka/.claude.json written atomically
+2026-02-22T20:22:19.484Z [DEBUG] Checking for native installer update to version 2.1.50
+2026-02-22T20:22:19.491Z [DEBUG] Found 2.1.50 at /Users/aviralmansingka/.local/bin/claude, skipping install
+2026-02-22T20:22:19.520Z [DEBUG] Protecting locked version from cleanup: 2.1.37
+2026-02-22T20:22:19.523Z [DEBUG] Protecting locked version from cleanup: 2.1.39
+2026-02-22T20:22:19.526Z [DEBUG] Protecting locked version from cleanup: 2.1.49
+2026-02-22T20:22:19.800Z [DEBUG] MCP server "claude.ai Attio": claude.ai proxy connection failed after 346ms: Streamable HTTP error: Error POSTing to endpoint: {"type":"error","error":{"type":"authentication_error","message":"MCP server requires authentication but no OAuth token is configured."},"request_id":"req_011CYPjKwGbnBMN5unWeXFtE"}
+2026-02-22T20:22:19.800Z [ERROR] MCP server "claude.ai Attio" Error: Streamable HTTP error: Error POSTing to endpoint: {"type":"error","error":{"type":"authentication_error","message":"MCP server requires authentication but no OAuth token is configured."},"request_id":"req_011CYPjKwGbnBMN5unWeXFtE"}
+2026-02-22T20:22:19.801Z [DEBUG] MCP server "claude.ai Attio": Authentication required for claude.ai proxy server
+2026-02-22T20:22:19.967Z [DEBUG] MCP server "claude.ai Slack": Successfully connected to claudeai-proxy server in 509ms
+2026-02-22T20:22:19.967Z [DEBUG] MCP server "claude.ai Slack": Connection established with capabilities: {"hasTools":true,"hasPrompts":false,"hasResources":true,"hasResourceSubscribe":false,"serverVersion":{"name":"Slack MCP","version":"1.0.0"}}
+2026-02-22T20:22:19.967Z [DEBUG] [MCP] Server "claude.ai Slack" connected with subscribe=false
+2026-02-22T20:22:20.293Z [DEBUG] Stream started - received first chunk
+2026-02-22T20:22:20.582Z [WARN] [3P telemetry] Event dropped (no event logger initialized): api_request
+2026-02-22T20:22:20.610Z [DEBUG] MCP server "claude.ai Notion": Successfully connected to claudeai-proxy server in 1151ms
+2026-02-22T20:22:20.610Z [DEBUG] MCP server "claude.ai Notion": Connection established with capabilities: {"hasTools":true,"hasPrompts":false,"hasResources":true,"hasResourceSubscribe":false,"serverVersion":{"name":"Notion MCP","icons":[{"src":"https://mcp.notion.com/notion-logo-block-main.svg","mimeType":"image/svg+xml"}],"version":"1.1.0","websiteUrl":"https://developers.notion.com/docs/mcp","description":"Notion's official MCP server lets you use your Notion workspace as a system of record for knowledge work and software development. Search questions about the codebase and business, fetch links to pages such as tech specs and PRDs, and track tasks with your team."}}
+2026-02-22T20:22:20.610Z [DEBUG] [MCP] Server "claude.ai Notion" connected with subscribe=false
+2026-02-22T20:22:24.268Z [DEBUG] AutoUpdaterWrapper: Installation type: native
+2026-02-22T20:22:24.323Z [DEBUG] Checking for native installer update to version 2.1.50
+2026-02-22T20:22:24.324Z [DEBUG] Found 2.1.50 at /Users/aviralmansingka/.local/bin/claude, skipping install
+2026-02-22T20:22:24.358Z [DEBUG] Protecting locked version from cleanup: 2.1.37
+2026-02-22T20:22:24.362Z [DEBUG] Protecting locked version from cleanup: 2.1.39
+2026-02-22T20:22:24.365Z [DEBUG] Protecting locked version from cleanup: 2.1.49

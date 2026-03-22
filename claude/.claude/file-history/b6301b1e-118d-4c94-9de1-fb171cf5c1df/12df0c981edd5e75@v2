@@ -1,0 +1,90 @@
+from __future__ import annotations
+
+from typing import Annotated, Literal, Union
+
+from pydantic import BaseModel, Discriminator, Tag
+
+from kata_inference_py.domain.models.inference import InferenceRequest
+from kata_inference_py.domain.models.value import (
+    FloatListValue,
+    FloatValue,
+    IntListValue,
+    IntValue,
+    StrListValue,
+    StrValue,
+    Value,
+)
+
+
+class PydanticIntValue(BaseModel):
+    type: Literal["int"]
+    val: int
+
+    def to_domain(self) -> IntValue:
+        return IntValue(val=self.val)
+
+
+class PydanticFloatValue(BaseModel):
+    type: Literal["float"]
+    val: float
+
+    def to_domain(self) -> FloatValue:
+        return FloatValue(val=self.val)
+
+
+class PydanticStrValue(BaseModel):
+    type: Literal["str"]
+    val: str
+
+    def to_domain(self) -> StrValue:
+        return StrValue(val=self.val)
+
+
+class PydanticIntListValue(BaseModel):
+    type: Literal["int_list"]
+    val: list[int]
+
+    def to_domain(self) -> IntListValue:
+        return IntListValue(val=self.val)
+
+
+class PydanticFloatListValue(BaseModel):
+    type: Literal["float_list"]
+    val: list[float]
+
+    def to_domain(self) -> FloatListValue:
+        return FloatListValue(val=self.val)
+
+
+class PydanticStrListValue(BaseModel):
+    type: Literal["str_list"]
+    val: list[str]
+
+    def to_domain(self) -> StrListValue:
+        return StrListValue(val=self.val)
+
+
+PydanticValue = Annotated[
+    Union[
+        Annotated[PydanticIntValue, Tag("int")],
+        Annotated[PydanticFloatValue, Tag("float")],
+        Annotated[PydanticStrValue, Tag("str")],
+        Annotated[PydanticIntListValue, Tag("int_list")],
+        Annotated[PydanticFloatListValue, Tag("float_list")],
+        Annotated[PydanticStrListValue, Tag("str_list")],
+    ],
+    Discriminator("type"),
+]
+
+
+class PydanticInferenceRequest(BaseModel):
+    id: str
+    common_entities: dict[str, PydanticValue]
+
+    def to_domain(self) -> InferenceRequest:
+        return InferenceRequest(
+            id=self.id,
+            common_entities={
+                k: v.to_domain() for k, v in self.common_entities.items()
+            },
+        )
