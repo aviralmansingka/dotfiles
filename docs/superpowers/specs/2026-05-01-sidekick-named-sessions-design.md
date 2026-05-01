@@ -25,7 +25,7 @@ Three pain points:
 
 ## Architecture
 
-Three loosely coupled units, all inside `nvim/.config/nvim/lua/plugins/sidekick/` (extracted from the current single `sidekick.lua`). The existing `sidekick.lua` becomes the LazyVim spec entry point and the keymaps; the three units below are sibling Lua modules.
+Three loosely coupled units plus one shared helper module, all inside `nvim/.config/nvim/lua/plugins/sidekick/` (extracted from the current single `sidekick.lua`). The existing `sidekick.lua` becomes the LazyVim spec entry point and the keymaps; the modules below are sibling Lua modules. `internal.lua` is a pure relocation of existing helpers — it isn't one of the three feature units, but it factors out shared code.
 
 ```
 nvim/.config/nvim/lua/plugins/sidekick.lua          -- LazyVim spec, keymaps (existing, slimmed)
@@ -50,7 +50,7 @@ M.parse_session_name(name) -- string -> { tool=, slug=, hash= } | nil
 M.discover()               -- table<label, { tool=, slug=, cwd=, pane_id=, session_id= }>
 M.rehydrate()              -- side effect: register discovered labels into Config.cli.tools (idempotent)
 ```
-- Parses tmux session names against `^(claude|opencode|codex)-(.+) [0-9a-f]+$` (the format produced by sidekick's `Session.sid`).
+- Parses tmux session names against `^(<tool>)-(.+) [0-9a-f]+$` where `<tool>` is built dynamically from the keys of `internal.tool_commands` (so adding a new tool to that table is the only change needed). The format matches what sidekick's `Session.sid` produces.
 - `rehydrate()` skips labels already present in `Config.cli.tools` — never overwrites.
 - Side-effect surface: `Config.cli.tools` only.
 - Failure modes:
@@ -65,7 +65,7 @@ M.preview(entry) -- string (last 200 lines of scrollback)
 M.open()         -- entry point bound to <leader>al
 ```
 - Calls `registry.rehydrate()` on each open (cheap, idempotent) so labels created in another nvim instance show up.
-- Builds the entry list directly from `tmux list-panes -a` filtered by parseable session names. Truth lives in tmux on every open — no caching.
+- Entry list comes from `registry.discover()` — single source of tmux discovery used by both picker and search. Truth lives in tmux on every open; no caching.
 - UI: snacks picker, format `[tool] label  cwd~`, preview from `tmux capture-pane -p -S -200 -E - -t <pane_id>`.
 - Inline keymaps:
   - `<CR>` — `toggle_tool_session(label, true)`
@@ -112,8 +112,7 @@ Cost: one `tmux list-panes` + a regex per line; sub-50ms with 50 panes.
 keymap fires
   registry.rehydrate()             -- covers labels created since startup
   entries = picker.list_sessions()
-    exec: tmux list-panes -a -F "..."
-    filter: session_name parses as <tool>-<slug>
+    delegates to registry.discover()  -- single tmux read path
   snacks.pick(entries, {
     format: "[tool] label  cwd~",
     preview: tmux capture-pane -p -S -200 -E - -t <pane_id>,
