@@ -8,11 +8,12 @@
 
 `nvim/.config/nvim/lua/plugins/sidekick.lua` already lets the user spawn named CLI-tool sessions (`claude-tutorial`, `claude-sidekick`, etc.) via `<leader>an`. Each named session is a distinct tool registered in `Config.cli.tools` at runtime, and each runs in its own tmux session.
 
-Three pain points:
+Four pain points:
 
 1. **Labels don't persist across nvim restarts.** The tmux session lives on, but the `Config.cli.tools["claude-foo"]` registration is lost. After restart, `<leader>as` no longer shows the session by its label — it shows up as a generic `claude` session at some cwd.
 2. **No fast list/jump UX.** Beyond the generic `<leader>as` selector (which mixes registered tools with running sessions), there is no dedicated way to see "all my named sessions" or to jump to one by label.
 3. **No cross-session search.** No way to grep across the scrollback of every named session at once — common need when remembering "which session was I working on X in?"
+4. **Once attached, you can't tell which session you're in.** Sidekick.nvim runs `set-option status off` on every session it spawns, hiding the tmux status bar that normally shows `#S`. There's no in-pane indicator of the session name.
 
 ## Decisions
 
@@ -22,6 +23,7 @@ Three pain points:
 | Persistence | Derive labels from tmux at nvim startup; no separate state file | Tmux is already the source of truth for "which sessions exist"; zero state to maintain; matches dotfiles minimalism |
 | Picker | Dedicated picker on `<leader>al` with scrollback preview | `<leader>as` gets cluttered as labels accumulate; preview pane is the killer feature for "which one was that?" |
 | Search | Live grep over snapshot of all labeled-pane scrollbacks; results-only (no jump-to-line in v1) | Simplest valuable shape; jump-to-line has edge cases worth deferring |
+| In-pane session-name indicator | tmux `pane-border-status top` enabled via `session-created` hook scoped to sidekick name pattern | Lives in tmux config (no sidekick.nvim patch); pane border is independent of the status bar that sidekick disables; scoped so non-sidekick sessions are untouched |
 
 ## Architecture
 
@@ -136,6 +138,36 @@ keymap fires
 VimLeavePre → search.cleanup() → rm -rf tmpdir
 ```
 
+## Tmux pane-border title
+
+Lives entirely in `tmux/.tmux.conf`. No sidekick.nvim changes.
+
+Sidekick session names follow `^(claude|opencode|codex)( |-)…` — default sessions are `<tool> <hash>`, named ones are `<tool>-<slug> <hash>`. Both are matched.
+
+```tmux
+# Sidekick: show session name as the first line of the pane.
+# Sidekick disables the status bar per-session, so we use pane-border instead.
+set-hook -g session-created 'if-shell -F "#{r:^(claude|opencode|codex)( |-),#{session_name}}" \
+  "set -t #S pane-border-status top ; \
+   set -t #S pane-border-format \" #S \""'
+
+# Apply to sessions that already exist when this config is sourced.
+run-shell 'for s in $(tmux list-sessions -F "#S" | grep -E "^(claude|opencode|codex)( |-)"); do \
+  tmux set -t "$s" pane-border-status top; \
+  tmux set -t "$s" pane-border-format " #S "; \
+done'
+```
+
+- The hook fires on `session-created`, so any future sidekick-spawned session gets the pane-border header automatically.
+- The `run-shell` block runs once whenever `.tmux.conf` is sourced, applying the same options to currently-live sessions (covers the migration case where labeled sessions exist before the config change).
+- The `r:` operator requires tmux 3.4+. The repo uses tmux 3.6 (verified via `tmux -V`).
+- Tool list (`claude|opencode|codex`) is hardcoded in two places (the hook and the run-shell). Updating sidekick to add a new tool means updating these here too — same maintenance edge as the lua-side regex in `registry.lua`. Acceptable for a personal config; not worth abstracting.
+
+Failure modes:
+- Hook fires but session is already gone (race) → `set -t #S` silently fails; no user impact.
+- `run-shell` runs at config source even when there are zero matching sessions → `for` loop is empty, no-op.
+- User adds a new tool to sidekick but forgets to update tmux config → new sessions don't get the pane-border header. Cosmetic regression only; functionality unaffected.
+
 ## Keymaps (additions)
 
 | Keymap | Action |
@@ -196,3 +228,4 @@ None. Personal dotfiles; integration testing happens by use. The only candidate 
 | `nvim/.config/nvim/lua/plugins/sidekick/registry.lua` | New; tmux discovery + rehydration |
 | `nvim/.config/nvim/lua/plugins/sidekick/picker.lua` | New; `<leader>al` picker with preview |
 | `nvim/.config/nvim/lua/plugins/sidekick/search.lua` | New; `<leader>a/` cross-session grep |
+| `tmux/.tmux.conf` | Add `session-created` hook + bootstrap `run-shell` to enable `pane-border-status top` on sidekick sessions |
