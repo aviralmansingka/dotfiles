@@ -35,7 +35,7 @@ alias ls='eza --icons -l'
 alias inv='uv run inv'
 
 export XDG_CONFIG_HOME="$HOME/.config"
-export TERM="xterm-ghostty"
+export TERM="xterm-256color"
 export EDITOR="bob run stable"
 export FZF_DEFAULT_COMMAND='rg --hidden --ignore .git -g ""'
 export DISABLE_AUTO_TITLE=true
