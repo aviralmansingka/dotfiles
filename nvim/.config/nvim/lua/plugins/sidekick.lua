@@ -139,6 +139,12 @@ return {
   },
   opts = {
     cli = {
+      win = {
+        split = {
+          width = 0.4, -- 40% of screen width
+          height = 20,
+        },
+      },
       mux = {
         backend = "tmux",
         enabled = true,
