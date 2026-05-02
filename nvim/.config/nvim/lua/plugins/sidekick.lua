@@ -24,6 +24,10 @@ return {
       },
     },
   },
+  config = function(_, opts)
+    require("sidekick").setup(opts)
+    require("plugins.sidekick.registry").rehydrate()
+  end,
   keys = {
     {
       "<c-;>",
