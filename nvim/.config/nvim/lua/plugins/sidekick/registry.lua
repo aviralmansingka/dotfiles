@@ -27,4 +27,48 @@ function M.parse_session_name(name)
   return nil
 end
 
+-- Format string passed to tmux list-panes; mirrors sidekick.nvim's PANE_FORMAT
+-- but adds a literal separator we control. Layout:
+-- <session_id>|<session_name>|<pane_id>|<cwd>
+local PANE_FORMAT =
+  "#{session_id}|#{session_name}|#{pane_id}|#{?pane_current_path,#{pane_current_path},#{pane_start_path}}"
+
+---@return string[] lines, string? err
+local function tmux_list_panes()
+  if vim.fn.executable("tmux") ~= 1 then
+    return {}
+  end
+  local out = vim.fn.systemlist({ "tmux", "list-panes", "-a", "-F", PANE_FORMAT })
+  if vim.v.shell_error ~= 0 then
+    return {}, table.concat(out, "\n")
+  end
+  return out
+end
+
+--- Walk all tmux panes; return a label-indexed map of named sidekick sessions.
+--- One entry per label — if multiple panes share a session_name (multi-pane
+--- session), the first wins. Sidekick spawns one pane per session so this is
+--- the typical case.
+---@return table<string, { tool: string, slug: string, label: string, cwd: string, pane_id: string, session_id: string }>
+function M.discover()
+  local out = {}
+  for _, line in ipairs(tmux_list_panes()) do
+    local session_id, session_name, pane_id, cwd = line:match("^([^|]+)|([^|]+)|([^|]+)|(.*)$")
+    if session_id and session_name and pane_id then
+      local parsed = M.parse_session_name(session_name)
+      if parsed and not out[parsed.label] then
+        out[parsed.label] = {
+          tool = parsed.tool,
+          slug = parsed.slug,
+          label = parsed.label,
+          cwd = cwd or "",
+          pane_id = pane_id,
+          session_id = session_id,
+        }
+      end
+    end
+  end
+  return out
+end
+
 return M
