@@ -141,6 +141,13 @@ return {
       desc = "Sidekick Toggle OpenCode",
     },
     {
+      "<leader>al",
+      function()
+        require("plugins.sidekick.picker").open()
+      end,
+      desc = "Sidekick List Named Sessions",
+    },
+    {
       "<leader>an",
       function()
         local tools = { "claude", "opencode", "codex" }
