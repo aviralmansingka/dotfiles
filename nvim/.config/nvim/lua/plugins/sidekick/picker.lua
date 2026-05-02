@@ -32,6 +32,29 @@ function M.list_items()
   return items
 end
 
+---@param item table
+---@return string[]
+local function preview_lines(item)
+  if not item or not item.pane_id then
+    return { "(no pane)" }
+  end
+  local out = vim.fn.systemlist({
+    "tmux",
+    "capture-pane",
+    "-p",
+    "-S",
+    "-200",
+    "-E",
+    "-",
+    "-t",
+    item.pane_id,
+  })
+  if vim.v.shell_error ~= 0 then
+    return { "(capture-pane failed)" }
+  end
+  return out
+end
+
 function M.open()
   registry.rehydrate()
   local items = M.list_items()
@@ -44,7 +67,11 @@ function M.open()
     title = "Sidekick Named Sessions",
     items = items,
     format = "text",
-    preview = "none",
+    preview = function(ctx)
+      local lines = preview_lines(ctx.item)
+      vim.api.nvim_buf_set_lines(ctx.buf, 0, -1, false, lines)
+      return true
+    end,
     confirm = function(picker, item)
       picker:close()
       if item and item.label then
