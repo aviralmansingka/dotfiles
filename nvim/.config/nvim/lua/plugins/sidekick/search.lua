@@ -40,6 +40,10 @@ function M.snapshot()
 end
 
 function M.grep()
+  if vim.fn.executable("rg") ~= 1 then
+    vim.notify("Sidekick: ripgrep (rg) is required for search. Install with: brew install ripgrep", vim.log.levels.ERROR)
+    return
+  end
   registry.rehydrate()
   local dir, count = M.snapshot()
   if count == 0 then
