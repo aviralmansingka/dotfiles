@@ -3,6 +3,7 @@ local M = {}
 
 M.tool_urls = {
   claude = "https://github.com/anthropics/claude-code",
+  cursor = "https://cursor.com",
   opencode = "https://github.com/sst/opencode",
 }
 
@@ -10,8 +11,13 @@ M.claude_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/claude")) == 1
     and vim.fn.expand("~/.local/bin/claude")
   or "claude"
 
+M.cursor_agent_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/cursor-agent")) == 1
+    and vim.fn.expand("~/.local/bin/cursor-agent")
+  or "cursor-agent"
+
 M.tool_commands = {
   claude = { M.claude_bin, "--ide" },
+  cursor = { M.cursor_agent_bin },
   opencode = { "opencode" },
   codex = { "codex" },
 }

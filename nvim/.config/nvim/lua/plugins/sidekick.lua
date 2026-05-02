@@ -22,6 +22,7 @@ return {
       },
       tools = {
         claude = internal.make_tool(internal.tool_commands.claude, nil, internal.tool_urls.claude),
+        cursor = internal.make_tool(internal.tool_commands.cursor, nil, internal.tool_urls.cursor),
         opencode = internal.make_tool(internal.tool_commands.opencode, nil, internal.tool_urls.opencode),
       },
     },
@@ -151,6 +152,13 @@ return {
       desc = "Sidekick Toggle OpenCode",
     },
     {
+      "<leader>au",
+      function()
+        internal.toggle_tool_session("cursor", true)
+      end,
+      desc = "Sidekick Toggle Cursor Agent",
+    },
+    {
       "<leader>al",
       function()
         require("plugins.sidekick.picker").open()
@@ -167,7 +175,7 @@ return {
     {
       "<leader>an",
       function()
-        local tools = { "claude", "opencode", "codex" }
+        local tools = { "claude", "cursor", "opencode", "codex" }
         vim.ui.select(tools, { prompt = "Select CLI tool:" }, function(tool)
           if not tool then
             return
