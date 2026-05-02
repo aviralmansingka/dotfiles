@@ -1,4 +1,6 @@
 -- nvim/.config/nvim/lua/plugins/sidekick.lua
+-- LazyVim spec for sidekick.nvim. Helpers and feature modules live in
+-- ./sidekick/ (internal, registry, picker, search).
 local internal = require("plugins.sidekick.internal")
 
 return {
