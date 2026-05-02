@@ -71,4 +71,22 @@ function M.discover()
   return out
 end
 
+--- For every discovered label not already in Config.cli.tools, register a
+--- tool entry. Idempotent: existing tools are never overwritten (so explicit
+--- registrations from <leader>an at runtime stay authoritative).
+function M.rehydrate()
+  local ok, config = pcall(require, "sidekick.config")
+  if not ok then
+    return
+  end
+  config.cli.tools = config.cli.tools or {}
+  for label, entry in pairs(M.discover()) do
+    if config.cli.tools[label] == nil then
+      local cmd = internal.tool_commands[entry.tool] or { entry.tool }
+      config.cli.tools[label] =
+        internal.make_tool(cmd, internal.normalize_cwd(entry.cwd), internal.tool_urls[entry.tool])
+    end
+  end
+end
+
 return M
