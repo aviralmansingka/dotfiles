@@ -27,6 +27,14 @@ return {
   config = function(_, opts)
     require("sidekick").setup(opts)
     require("plugins.sidekick.registry").rehydrate()
+    vim.api.nvim_create_autocmd("VimLeavePre", {
+      group = vim.api.nvim_create_augroup("plugins.sidekick.search", { clear = true }),
+      callback = function()
+        pcall(function()
+          require("plugins.sidekick.search").cleanup()
+        end)
+      end,
+    })
   end,
   keys = {
     {
@@ -146,6 +154,13 @@ return {
         require("plugins.sidekick.picker").open()
       end,
       desc = "Sidekick List Named Sessions",
+    },
+    {
+      "<leader>a/",
+      function()
+        require("plugins.sidekick.search").grep()
+      end,
+      desc = "Sidekick Search Named Sessions",
     },
     {
       "<leader>an",
