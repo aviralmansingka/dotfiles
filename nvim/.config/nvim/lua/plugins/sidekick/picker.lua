@@ -55,6 +55,25 @@ local function preview_lines(item)
   return out
 end
 
+---@param session_id string
+local function kill_session(session_id)
+  if not session_id or session_id == "" then
+    return false
+  end
+  local out = vim.fn.systemlist({ "tmux", "kill-session", "-t", session_id })
+  -- Treat "session not found" as success — the session already went away.
+  if vim.v.shell_error == 0 then
+    return true
+  end
+  for _, line in ipairs(out) do
+    if line:match("can't find session") or line:match("no such session") then
+      return true
+    end
+  end
+  vim.notify("Sidekick: tmux kill-session failed: " .. table.concat(out, " "), vim.log.levels.WARN)
+  return false
+end
+
 function M.open()
   registry.rehydrate()
   local items = M.list_items()
@@ -78,6 +97,31 @@ function M.open()
         internal.toggle_tool_session(item.label, true)
       end
     end,
+    win = {
+      input = {
+        keys = {
+          ["<c-x>"] = { "sidekick_kill_session", mode = { "n", "i" } },
+        },
+      },
+      list = {
+        keys = {
+          ["<c-x>"] = { "sidekick_kill_session", mode = { "n" } },
+        },
+      },
+    },
+    actions = {
+      sidekick_kill_session = function(picker, item)
+        if not item or not item.session_id then
+          return
+        end
+        if kill_session(item.session_id) then
+          picker:close()
+          vim.schedule(function()
+            M.open()
+          end)
+        end
+      end,
+    },
   })
 end
 
