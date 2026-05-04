@@ -28,6 +28,7 @@ return {
     },
   },
   config = function(_, opts)
+    require("plugins.sidekick.tmux_tool_match").apply()
     require("sidekick").setup(opts)
     require("plugins.sidekick.registry").rehydrate()
     vim.api.nvim_create_autocmd("VimLeavePre", {

@@ -83,8 +83,10 @@ function M.rehydrate()
   for label, entry in pairs(M.discover()) do
     if config.cli.tools[label] == nil then
       local cmd = internal.tool_commands[entry.tool] or { entry.tool }
-      config.cli.tools[label] =
+      config.cli.tools[label] = internal.merged_tool_config(
+        entry.tool,
         internal.make_tool(cmd, internal.normalize_cwd(entry.cwd), internal.tool_urls[entry.tool])
+      )
     end
   end
 end

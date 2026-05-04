@@ -81,6 +81,16 @@ function M.make_tool(cmd, cwd, url)
   return { cmd = { cmd }, url = url }
 end
 
+--- Merge sk/cli/<base>.lua defaults (is_proc, mux_focus, etc.) into a dynamic tool entry.
+--- Keys from `made` win so cmd/url from make_tool stay authoritative.
+---@param base_tool_name string
+---@param made table
+function M.merged_tool_config(base_tool_name, made)
+  local Tool = require("sidekick.cli.tool")
+  local base = Tool.get(base_tool_name)
+  return vim.tbl_deep_extend("force", vim.deepcopy(base.config), made)
+end
+
 function M.normalize_label(label)
   return (label or "")
     :gsub("^%s+", "")
@@ -116,7 +126,8 @@ function M.start_named_session(tool, label, cwd)
   local name = tool .. "-" .. slug
   local config = require("sidekick.config")
   local command = M.tool_commands[tool] or { tool }
-  config.cli.tools[name] = M.make_tool(command, M.normalize_cwd(cwd), M.tool_urls[tool])
+  config.cli.tools[name] =
+    M.merged_tool_config(tool, M.make_tool(command, M.normalize_cwd(cwd), M.tool_urls[tool]))
   M.toggle_tool_session(name, true)
 end
 
