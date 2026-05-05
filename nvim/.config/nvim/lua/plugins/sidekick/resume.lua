@@ -158,7 +158,7 @@ local registry = require("plugins.sidekick.registry")
 ---@param secs integer Unix mtime
 ---@return string e.g. "5m ago", "2h ago", "3d ago"
 local function relative_time(secs)
-  local delta = os.time() - secs
+  local delta = math.max(0, os.time() - secs)
   if delta < 60 then
     return delta .. "s ago"
   elseif delta < 3600 then
