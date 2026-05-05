@@ -114,6 +114,22 @@ function M.normalize_cwd(cwd)
   return expanded
 end
 
+--- Build the spawn command for a named session, splicing per-tool name flags
+--- where supported. Claude takes `--name <slug>` so the slug appears in
+--- claude's /resume picker and terminal title; other tools have no
+--- equivalent and fall through unchanged.
+---@param tool string
+---@param slug string
+---@return string[]
+function M.tool_command_for_named_session(tool, slug)
+  local cmd = vim.deepcopy(M.tool_commands[tool] or { tool })
+  if tool == "claude" and slug and slug ~= "" then
+    table.insert(cmd, "--name")
+    table.insert(cmd, slug)
+  end
+  return cmd
+end
+
 ---@param tool string
 ---@param label string
 ---@param cwd? string
@@ -125,7 +141,7 @@ function M.start_named_session(tool, label, cwd)
   end
   local name = tool .. "-" .. slug
   local config = require("sidekick.config")
-  local command = M.tool_commands[tool] or { tool }
+  local command = M.tool_command_for_named_session(tool, slug)
   config.cli.tools[name] =
     M.merged_tool_config(tool, M.make_tool(command, M.normalize_cwd(cwd), M.tool_urls[tool]))
   M.toggle_tool_session(name, true)
