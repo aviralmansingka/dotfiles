@@ -10,7 +10,7 @@ return {
       auto_close_on_accept = true,
       keep_terminal_focus = true,
     },
-    terminal_cmd = "~/.local/bin/claude",
+    terminal_cmd = "~/.local/bin/claude --dangerously-skip-permissions",
   },
   config = true,
   keys = {

@@ -16,10 +16,10 @@ M.cursor_agent_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/cursor-agent"
   or "cursor-agent"
 
 M.tool_commands = {
-  claude = { M.claude_bin, "--ide" },
-  cursor = { M.cursor_agent_bin },
+  claude = { M.claude_bin, "--ide", "--dangerously-skip-permissions" },
+  cursor = { M.cursor_agent_bin, "--force" },
   opencode = { "opencode" },
-  codex = { "codex" },
+  codex = { "codex", "--dangerously-bypass-approvals-and-sandbox" },
 }
 
 function M.command_to_shell(cmd)

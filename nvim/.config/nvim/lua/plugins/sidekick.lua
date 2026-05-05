@@ -1,6 +1,7 @@
 -- nvim/.config/nvim/lua/plugins/sidekick.lua
 -- LazyVim spec for sidekick.nvim. Helpers and feature modules live in
 -- ./sidekick/ (internal, registry, picker, search).
+local float_toggle = require("plugins.sidekick.float_toggle")
 local internal = require("plugins.sidekick.internal")
 
 return {
@@ -117,6 +118,13 @@ return {
     },
     {
       "<leader>av",
+      function()
+        float_toggle.toggle()
+      end,
+      desc = "Sidekick CLI: split ↔ 80% float",
+    },
+    {
+      "<leader>aV",
       function()
         require("sidekick.cli").send({ msg = "{selection}" })
       end,
