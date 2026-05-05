@@ -152,4 +152,96 @@ function M.list_claude_sessions()
   return out
 end
 
+local internal = require("plugins.sidekick.internal")
+local registry = require("plugins.sidekick.registry")
+
+---@param secs integer Unix mtime
+---@return string e.g. "5m ago", "2h ago", "3d ago"
+local function relative_time(secs)
+  local delta = os.time() - secs
+  if delta < 60 then
+    return delta .. "s ago"
+  elseif delta < 3600 then
+    return math.floor(delta / 60) .. "m ago"
+  elseif delta < 86400 then
+    return math.floor(delta / 3600) .. "h ago"
+  else
+    return math.floor(delta / 86400) .. "d ago"
+  end
+end
+
+---@param item { id, name, preview, mtime, path }
+---@return string The label used as the sidekick tool key + tmux session prefix
+local function label_for(item)
+  if item.name and item.name ~= "" then
+    local slug = internal.normalize_label(item.name)
+    if slug ~= "" then
+      return "claude-" .. slug
+    end
+  end
+  return "claude-r-" .. item.id:sub(1, 8)
+end
+
+---@param item { id, name, preview, mtime, path }
+---@return string[]
+local function preview_lines(item)
+  if not item or not item.path then
+    return { "(no session)" }
+  end
+  local out = vim.fn.systemlist({ "tail", "-n", "200", item.path })
+  if vim.v.shell_error ~= 0 then
+    return { "(failed to read " .. item.path .. ")" }
+  end
+  return out
+end
+
+--- Spawn or focus the resumed session as a sidekick tool entry.
+local function resume_claude(item)
+  local label = label_for(item)
+  if registry.discover()[label] then
+    internal.toggle_tool_session(label, true)
+    return
+  end
+  local config = require("sidekick.config")
+  local cmd = vim.deepcopy(internal.tool_commands.claude)
+  table.insert(cmd, "--resume")
+  table.insert(cmd, item.id)
+  config.cli.tools[label] = internal.merged_tool_config(
+    "claude",
+    internal.make_tool(cmd, nil, internal.tool_urls.claude)
+  )
+  internal.toggle_tool_session(label, true)
+end
+
+function M.claude_picker()
+  local items = M.list_claude_sessions()
+  if #items == 0 then
+    vim.notify("Sidekick: no claude sessions for this cwd", vim.log.levels.INFO)
+    return
+  end
+  local picker_items = {}
+  for _, item in ipairs(items) do
+    local display_name = item.name or item.id:sub(1, 8)
+    picker_items[#picker_items + 1] = vim.tbl_extend("force", item, {
+      text = string.format("[claude] %-30s  %-10s  %s", display_name, relative_time(item.mtime), item.preview),
+    })
+  end
+  Snacks.picker.pick({
+    source = "sidekick_resume_claude",
+    title = "Sidekick Resume Claude Session",
+    items = picker_items,
+    format = "text",
+    preview = function(ctx)
+      vim.api.nvim_buf_set_lines(ctx.buf, 0, -1, false, preview_lines(ctx.item))
+      return true
+    end,
+    confirm = function(picker, item)
+      picker:close()
+      if item then
+        resume_claude(item)
+      end
+    end,
+  })
+end
+
 return M
