@@ -255,20 +255,21 @@ local function extract_user_text(obj)
   return nil
 end
 
---- Heuristic: pull a session display name out of an event.
---- Per Task 1's discovery, --name is persisted as a top-level `name` string
---- on a metadata-style event near the start of the file. We reject any
---- candidate where `name` is nested under `message` (those are tool-use
---- names like "Read", "Bash", etc., not session names).
+--- Pull a session display name out of an event.
+--- Per Task 1's discovery, claude persists --name as the very first two
+--- lines of the .jsonl, as two distinct event types:
+---   {"type":"custom-title","customTitle":"<name>","sessionId":"..."}
+---   {"type":"agent-name","agentName":"<name>","sessionId":"..."}
+--- Either is sufficient; we accept whichever appears first.
 local function extract_session_name(obj)
   if type(obj) ~= "table" then
     return nil
   end
-  if obj.message ~= nil then
-    return nil  -- tool-use record, skip
+  if obj.type == "custom-title" and type(obj.customTitle) == "string" and obj.customTitle ~= "" then
+    return obj.customTitle
   end
-  if type(obj.name) == "string" and obj.name ~= "" then
-    return obj.name
+  if obj.type == "agent-name" and type(obj.agentName) == "string" and obj.agentName ~= "" then
+    return obj.agentName
   end
   return nil
 end
