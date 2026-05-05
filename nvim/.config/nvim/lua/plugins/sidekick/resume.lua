@@ -3,6 +3,9 @@
 -- per-backend behavior: claude shows a custom snacks picker over its
 -- ~/.claude/projects/<cwd>/*.jsonl files; cursor delegates to its own TUI.
 
+local internal = require("plugins.sidekick.internal")
+local registry = require("plugins.sidekick.registry")
+
 local M = {}
 
 local CLAUDE_SCAN_LINES = 50  -- how many lines to read at the top of each .jsonl
@@ -151,9 +154,6 @@ function M.list_claude_sessions()
   end)
   return out
 end
-
-local internal = require("plugins.sidekick.internal")
-local registry = require("plugins.sidekick.registry")
 
 ---@param secs integer Unix mtime
 ---@return string e.g. "5m ago", "2h ago", "3d ago"
