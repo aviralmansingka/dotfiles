@@ -244,4 +244,31 @@ function M.claude_picker()
   })
 end
 
+local CURSOR_RESUME_LABEL = "cursor-resume"
+
+function M.cursor_resume()
+  if registry.discover()[CURSOR_RESUME_LABEL] then
+    internal.toggle_tool_session(CURSOR_RESUME_LABEL, true)
+    return
+  end
+  local config = require("sidekick.config")
+  local cmd = vim.deepcopy(internal.tool_commands.cursor)
+  table.insert(cmd, "resume")
+  config.cli.tools[CURSOR_RESUME_LABEL] = internal.merged_tool_config(
+    "cursor",
+    internal.make_tool(cmd, nil, internal.tool_urls.cursor)
+  )
+  internal.toggle_tool_session(CURSOR_RESUME_LABEL, true)
+end
+
+function M.open()
+  vim.ui.select({ "claude", "cursor" }, { prompt = "Resume agent backend:" }, function(choice)
+    if choice == "claude" then
+      M.claude_picker()
+    elseif choice == "cursor" then
+      M.cursor_resume()
+    end
+  end)
+end
+
 return M
