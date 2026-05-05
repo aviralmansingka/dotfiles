@@ -175,6 +175,13 @@ return {
       desc = "Sidekick List Named Sessions",
     },
     {
+      "<leader>ar",
+      function()
+        require("plugins.sidekick.resume").open()
+      end,
+      desc = "Sidekick Resume Agent Session",
+    },
+    {
       "<leader>a/",
       function()
         require("plugins.sidekick.search").grep()
