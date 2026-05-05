@@ -14,6 +14,7 @@ local function encode_cwd(cwd)
 end
 
 ---@param path string
+---@param n integer
 ---@return string[]
 local function read_head_lines(path, n)
   local out = {}
