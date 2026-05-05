@@ -22,9 +22,10 @@ return {
         enabled = true,
       },
       tools = {
-        claude = internal.make_tool(internal.tool_commands.claude, nil, internal.tool_urls.claude),
-        cursor = internal.make_tool(internal.tool_commands.cursor, nil, internal.tool_urls.cursor),
-        opencode = internal.make_tool(internal.tool_commands.opencode, nil, internal.tool_urls.opencode),
+        claude = internal.base_tool_config("claude"),
+        cursor = internal.base_tool_config("cursor"),
+        opencode = internal.base_tool_config("opencode"),
+        codex = internal.base_tool_config("codex"),
       },
     },
   },

@@ -206,9 +206,14 @@ local function resume_claude(item)
   local cmd = vim.deepcopy(internal.tool_commands.claude)
   table.insert(cmd, "--resume")
   table.insert(cmd, item.id)
+  local slug = label:sub(#"claude-" + 1)
+  local extra = {
+    env = { [internal.named_env_var] = slug },
+    is_proc = internal.is_proc_named(slug),
+  }
   config.cli.tools[label] = internal.merged_tool_config(
     "claude",
-    internal.make_tool(cmd, nil, internal.tool_urls.claude)
+    internal.make_tool(cmd, nil, internal.tool_urls.claude, extra)
   )
   internal.toggle_tool_session(label, true)
 end
@@ -245,6 +250,7 @@ function M.claude_picker()
 end
 
 local CURSOR_RESUME_LABEL = "cursor-resume"
+local CURSOR_RESUME_SLUG = "resume"
 
 function M.cursor_resume()
   if registry.discover()[CURSOR_RESUME_LABEL] then
@@ -254,9 +260,13 @@ function M.cursor_resume()
   local config = require("sidekick.config")
   local cmd = vim.deepcopy(internal.tool_commands.cursor)
   table.insert(cmd, "resume")
+  local extra = {
+    env = { [internal.named_env_var] = CURSOR_RESUME_SLUG },
+    is_proc = internal.is_proc_named(CURSOR_RESUME_SLUG),
+  }
   config.cli.tools[CURSOR_RESUME_LABEL] = internal.merged_tool_config(
     "cursor",
-    internal.make_tool(cmd, nil, internal.tool_urls.cursor)
+    internal.make_tool(cmd, nil, internal.tool_urls.cursor, extra)
   )
   internal.toggle_tool_session(CURSOR_RESUME_LABEL, true)
 end

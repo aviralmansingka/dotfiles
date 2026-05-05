@@ -22,6 +22,19 @@ M.tool_commands = {
   codex = { "codex", "--dangerously-bypass-approvals-and-sandbox" },
 }
 
+--- Env var set on named-session tmux panes. is_proc uses it to disambiguate
+--- the named tool's pane from the base tool's pane (and from sibling named
+--- tools), so each running pane matches exactly one tool entry — no dupes
+--- in <leader>as.
+M.named_env_var = "SIDEKICK_NAMED_SESSION"
+
+M.tool_is_proc_patterns = {
+  claude = "\\<claude\\>",
+  cursor = "\\<cursor-agent\\>",
+  opencode = "\\<opencode\\>",
+  codex = "\\<codex\\>",
+}
+
 function M.command_to_shell(cmd)
   if type(cmd) ~= "table" then
     return tostring(cmd)
@@ -68,17 +81,59 @@ function M.toggle_tool_session(name, focus)
   require("sidekick.cli").toggle({ name = name, focus = focus ~= false })
 end
 
-function M.make_tool(cmd, cwd, url)
+---@param cmd string|string[]
+---@param cwd? string
+---@param url? string
+---@param extra? table extra config to merge in (e.g., env, is_proc)
+function M.make_tool(cmd, cwd, url, extra)
+  local out
   if cwd and cwd ~= "" then
-    return {
+    out = {
       cmd = { "sh", "-c", string.format("cd %s && exec %s", vim.fn.shellescape(cwd), M.command_to_shell(cmd)) },
       url = url,
     }
+  elseif type(cmd) == "table" then
+    out = { cmd = vim.deepcopy(cmd), url = url }
+  else
+    out = { cmd = { cmd }, url = url }
   end
-  if type(cmd) == "table" then
-    return { cmd = vim.deepcopy(cmd), url = url }
+  if extra then
+    out = vim.tbl_deep_extend("force", out, extra)
   end
-  return { cmd = { cmd }, url = url }
+  return out
+end
+
+--- is_proc for a base tool: match the tool's cmd pattern, but reject any
+--- proc carrying SIDEKICK_NAMED_SESSION (those belong to a named tool).
+---@param pattern string vim regex matching the base tool's cmdline
+---@return fun(self, proc): boolean
+function M.is_proc_base(pattern)
+  local re = vim.regex(pattern)
+  return function(_, proc)
+    if (proc.env or {})[M.named_env_var] then
+      return false
+    end
+    return re:match_str(proc.cmd) ~= nil
+  end
+end
+
+--- is_proc for a named tool: match procs whose env var equals slug.
+---@param slug string
+---@return fun(self, proc): boolean
+function M.is_proc_named(slug)
+  return function(_, proc)
+    return (proc.env or {})[M.named_env_var] == slug
+  end
+end
+
+--- Build the user-facing tool config for sidekick.config.cli.tools[<tool>].
+--- Wires the base-pattern is_proc so default tool sessions don't collide
+--- with named sessions in the cli picker.
+---@param tool string
+function M.base_tool_config(tool)
+  return M.make_tool(M.tool_commands[tool], nil, M.tool_urls[tool], {
+    is_proc = M.is_proc_base(M.tool_is_proc_patterns[tool]),
+  })
 end
 
 --- Merge sk/cli/<base>.lua defaults (is_proc, mux_focus, etc.) into a dynamic tool entry.
@@ -142,8 +197,12 @@ function M.start_named_session(tool, label, cwd)
   local name = tool .. "-" .. slug
   local config = require("sidekick.config")
   local command = M.tool_command_for_named_session(tool, slug)
+  local extra = {
+    env = { [M.named_env_var] = slug },
+    is_proc = M.is_proc_named(slug),
+  }
   config.cli.tools[name] =
-    M.merged_tool_config(tool, M.make_tool(command, M.normalize_cwd(cwd), M.tool_urls[tool]))
+    M.merged_tool_config(tool, M.make_tool(command, M.normalize_cwd(cwd), M.tool_urls[tool], extra))
   M.toggle_tool_session(name, true)
 end
 
