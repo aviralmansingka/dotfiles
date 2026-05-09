@@ -137,13 +137,22 @@ Separate LSP server (separate process from jdtls) handling
 `application.properties`/`application.yml` autocomplete, `@Bean` graph
 navigation, Spring code lenses.
 
-- Mason package: `vscode-spring-boot-tools`.
-- Wired in `lua/plugins/spring-boot.lua` as
-  `opts.servers.spring_boot_ls = {}` extending lspconfig, same pattern as
-  the `lua_ls` and `copilot` blocks in `lsp.lua`.
-- `filetypes = { "java", "yaml", "properties" }`.
-- Runs alongside jdtls on `.java` buffers; both attach without conflict
-  (different `name` and capabilities).
+**Discovery during execution:** Spring Boot LSP requires Spring-specific
+JDT extension JARs to be loaded by jdtls so the two language servers
+can communicate. A direct `lspconfig` entry is not sufficient — the
+LSP fails to initialize without the extensions. The standard solution
+is the `JavaHello/spring-boot.nvim` plugin, which loads the Mason
+`vscode-spring-boot-tools` install, registers the JDT extensions with
+jdtls, and wires the LSP client.
+
+- Mason package: `vscode-spring-boot-tools` (provides the language
+  server JAR and JDT extensions).
+- Plugin: `JavaHello/spring-boot.nvim`, lazy-loaded on `java`, `yaml`,
+  `jproperties` filetypes; declares `nvim-jdtls` and `nvim-lspconfig` as
+  dependencies. Default opts are sufficient — the plugin auto-detects the
+  Mason install path.
+- Three LSPs end up attached to a Spring Boot Java buffer: `jdtls`,
+  `spring-boot`, and (existing) `copilot`. They coexist without conflict.
 
 ## JDK Management
 

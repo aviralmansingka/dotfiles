@@ -1,0 +1,9 @@
+return {
+  "JavaHello/spring-boot.nvim",
+  ft = { "java", "yaml", "jproperties" },
+  dependencies = {
+    "mfussenegger/nvim-jdtls",
+    "neovim/nvim-lspconfig",
+  },
+  opts = {},
+}
