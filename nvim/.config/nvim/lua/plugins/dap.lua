@@ -95,8 +95,7 @@ return {
     dap.listeners.before.event_terminated["dapui_config"] = dapui.close
     dap.listeners.before.event_exited["dapui_config"] = dapui.close
 
-    -- Setup virtual text to show variable values inline
-    require("nvim-dap-virtual-text").setup({})
+    -- nvim-dap-virtual-text is declared with enabled=false in the deps; skip its setup here
 
     -- Enhanced DAP signs with better debugging visibility
     vim.fn.sign_define(
