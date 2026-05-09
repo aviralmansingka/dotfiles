@@ -9,6 +9,11 @@ return {
       "stylua",
       "ruff",
       "pyright",
+      "jdtls",
+      "java-debug-adapter",
+      "java-test",
+      "vscode-spring-boot-tools",
+      "google-java-format",
     },
   },
 }

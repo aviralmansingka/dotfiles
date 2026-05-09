@@ -45,7 +45,7 @@ return {
       "jdtls",
       "java-debug-adapter",
       "java-test",
-      "spring-boot-tools",
+      "vscode-spring-boot-tools",
       "google-java-format",
     },
   },
@@ -516,7 +516,7 @@ Adds `spring_boot_ls` to the lspconfig server list so it attaches alongside jdtl
 
 - [ ] **Step 1: Verify Spring Boot Tools is installed via Mason**
 
-Run: `ls ~/.local/share/nvim/mason/packages/spring-boot-tools 2>&1 | head -3`
+Run: `ls ~/.local/share/nvim/mason/packages/vscode-spring-boot-tools 2>&1 | head -3`
 Expected: directory exists (installed in Task 1).
 
 - [ ] **Step 2: Create spring-boot.lua**

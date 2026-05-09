@@ -34,10 +34,10 @@ Three new files, two edits:
   wiring, Lombok agent, root detection, workspace dir, runtimes,
   `on_attach` (DAP, test, refactor keymaps).
 - `lua/plugins/spring-boot.lua` (new) — small file adding
-  `spring-boot-tools` as a sibling LSP via lspconfig, same pattern as the
+  `vscode-spring-boot-tools` as a sibling LSP via lspconfig, same pattern as the
   existing `lua_ls`/`copilot` config in `lsp.lua`.
 - `lua/plugins/mason.lua` (edit) — append `jdtls`, `java-debug-adapter`,
-  `java-test`, `spring-boot-tools`, `google-java-format` to
+  `java-test`, `vscode-spring-boot-tools`, `google-java-format` to
   `ensure_installed`.
 - `lua/plugins/conform.lua` (edit) — add `java = { "google-java-format" }`
   to formatters.
@@ -136,7 +136,7 @@ Separate LSP server (separate process from jdtls) handling
 `application.properties`/`application.yml` autocomplete, `@Bean` graph
 navigation, Spring code lenses.
 
-- Mason package: `spring-boot-tools`.
+- Mason package: `vscode-spring-boot-tools`.
 - Wired in `lua/plugins/spring-boot.lua` as
   `opts.servers.spring_boot_ls = {}` extending lspconfig, same pattern as
   the `lua_ls` and `copilot` blocks in `lsp.lua`.
@@ -240,7 +240,7 @@ keeps formatting consistent with team setups.
 4. Lombok jar downloads automatically on first nvim launch into a Java
    buffer.
 5. Mason installs `jdtls`, `java-debug-adapter`, `java-test`,
-   `spring-boot-tools`, `google-java-format` on first launch.
+   `vscode-spring-boot-tools`, `google-java-format` on first launch.
 
 ## Failure Modes
 
