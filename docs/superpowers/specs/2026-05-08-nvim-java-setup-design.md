@@ -179,9 +179,24 @@ for Bazel). Configure available runtimes so jdtls can resolve them:
 
 ```lua
 settings.java.configuration.runtimes = {
-  { name = "JavaSE-25", path = "/opt/homebrew/opt/openjdk@25" },
+  {
+    name = "JavaSE-25",
+    path = "/opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home",
+    default = true,
+  },
 }
 ```
+
+**Path note (macOS Homebrew gotcha):** the path must point at the
+actual `JAVA_HOME` (the directory containing `lib/jrt-fs.jar`), NOT the
+Homebrew prefix. For Homebrew JDK installs that means
+`<brew-prefix>/libexec/openjdk.jdk/Contents/Home`, not just `<brew-prefix>`.
+Pointing at the prefix makes jdtls fail to resolve `java.lang.*`.
+
+`default = true` makes this runtime the fallback when a project requests
+a JDK name we don't have installed (e.g., a project with
+`JavaLanguageVersion.of(17)` will be served by JDK 25 rather than failing
+to resolve any classes).
 
 Currently only JDK 25 is in the list (matches what's installed). Add
 more entries as more JDKs are installed (e.g., `JavaSE-17`,

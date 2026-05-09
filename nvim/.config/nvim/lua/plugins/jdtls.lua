@@ -71,7 +71,11 @@ return {
         },
         configuration = {
           runtimes = {
-            { name = "JavaSE-25", path = "/opt/homebrew/opt/openjdk@25" },
+            {
+              name = "JavaSE-25",
+              path = "/opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home",
+              default = true,
+            },
           },
         },
         completion = {
