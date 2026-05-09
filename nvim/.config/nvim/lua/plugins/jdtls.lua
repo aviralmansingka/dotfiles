@@ -1,10 +1,43 @@
 local JDTLS_JDK = "/opt/homebrew/opt/openjdk@25"
 
+local bsp_warned = {}
+
+local function check_bazel_bsp(root_dir)
+  if not root_dir or bsp_warned[root_dir] then
+    return
+  end
+  local bazel_markers = { "MODULE.bazel", "WORKSPACE", "WORKSPACE.bazel" }
+  local has_bazel = false
+  for _, marker in ipairs(bazel_markers) do
+    if vim.fn.filereadable(root_dir .. "/" .. marker) == 1 then
+      has_bazel = true
+      break
+    end
+  end
+  if not has_bazel then
+    return
+  end
+  if vim.fn.isdirectory(root_dir .. "/.bsp") == 1 then
+    return
+  end
+  bsp_warned[root_dir] = true
+  vim.notify(
+    "Bazel repo at "
+      .. root_dir
+      .. " has no .bsp/. Install bazel-bsp:\n"
+      .. "  cd "
+      .. root_dir
+      .. "\n"
+      .. "  coursier launch org.jetbrains.bsp:bazel-bsp:<version> -M org.jetbrains.bsp.bazel.install.Install",
+    vim.log.levels.WARN
+  )
+end
+
 return {
   "mfussenegger/nvim-jdtls",
   opts = function(_, opts)
     opts.root_dir = function(fname)
-      return require("jdtls.setup").find_root({
+      local root = require("jdtls.setup").find_root({
         "MODULE.bazel",
         "WORKSPACE",
         "WORKSPACE.bazel",
@@ -13,6 +46,8 @@ return {
         "pom.xml",
         ".git",
       }, fname)
+      check_bazel_bsp(root)
+      return root
     end
 
     opts.project_name = function(root_dir)
@@ -29,6 +64,11 @@ return {
 
     opts.settings = vim.tbl_deep_extend("force", opts.settings or {}, {
       java = {
+        import = {
+          bsp = { enabled = "auto" },
+          gradle = { enabled = true },
+          maven = { enabled = true },
+        },
         configuration = {
           runtimes = {
             { name = "JavaSE-25", path = "/opt/homebrew/opt/openjdk@25" },
