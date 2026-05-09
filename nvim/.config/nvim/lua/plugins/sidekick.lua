@@ -12,6 +12,14 @@ return {
   opts = {
     cli = {
       win = {
+        config = function(terminal)
+          terminal.opts.float.border = float_toggle.float_border()
+        end,
+        layout = "float",
+        float = {
+          width = 0.8,
+          height = 0.8,
+        },
         split = {
           width = 0.4,
           height = 20,
@@ -122,7 +130,7 @@ return {
       function()
         float_toggle.toggle()
       end,
-      desc = "Sidekick CLI: split ↔ 80% float",
+      desc = "Sidekick CLI: float ↔ split",
     },
     {
       "<leader>aV",

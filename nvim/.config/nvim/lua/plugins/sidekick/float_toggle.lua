@@ -2,7 +2,7 @@
 local M = {}
 
 --- Match snacks terminal / opencode / toggleterm float borders.
-local function float_border()
+function M.float_border()
   return vim.g.neovide and vim.g.neovide_fancy_borders and vim.g.neovide_fancy_borders.current or "rounded"
 end
 
@@ -57,7 +57,7 @@ function M.toggle()
     vim.api.nvim_win_set_config(win, {
       relative = "editor",
       style = "minimal",
-      border = float_border(),
+      border = M.float_border(),
       row = math.max(0, math.floor((vim.o.lines - h) / 2)),
       col = math.max(0, math.floor((vim.o.columns - w) / 2)),
       width = w,

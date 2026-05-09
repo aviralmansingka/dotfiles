@@ -30,6 +30,18 @@ return {
         reverse = true,
         border = "rounded",
       },
+      win = {
+        input = {
+          keys = {
+            ["<C-b>"] = false,
+          },
+        },
+        list = {
+          keys = {
+            ["<C-b>"] = false,
+          },
+        },
+      },
     },
   },
   keys = {

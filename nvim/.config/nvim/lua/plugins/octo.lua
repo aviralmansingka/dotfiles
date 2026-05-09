@@ -69,6 +69,13 @@ end
 
 return {
   "pwntester/octo.nvim",
+  opts = {
+    picker_config = {
+      mappings = {
+        open_in_browser = { lhs = "<leader>gO", desc = "open in browser" },
+      },
+    },
+  },
   config = function(_, opts)
     require("octo").setup(opts)
 
