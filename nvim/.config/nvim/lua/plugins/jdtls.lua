@@ -90,6 +90,26 @@ return {
       PATH = JDTLS_JDK .. "/bin:" .. vim.env.PATH,
     })
 
+    -- LazyVim globs every jar under $MASON/share/java-test/, but jacocoagent
+    -- and the test-runner fat jar aren't OSGi bundles, so jdtls logs
+    -- "Failed to load extension bundles" for them. Filter to only OSGi bundles.
+    local mason_share = vim.fn.expand("$MASON/share")
+    local bundles = vim.fn.glob(
+      mason_share .. "/java-debug-adapter/com.microsoft.java.debug.plugin-*jar",
+      false,
+      true
+    )
+    for _, jar in ipairs(vim.fn.glob(mason_share .. "/java-test/*.jar", false, true)) do
+      local name = vim.fs.basename(jar)
+      if not (name:match("jacocoagent") or name:match("%-jar%-with%-dependencies%.jar$")) then
+        table.insert(bundles, jar)
+      end
+    end
+    opts.jdtls = opts.jdtls or {}
+    opts.jdtls.init_options = vim.tbl_deep_extend("force", opts.jdtls.init_options or {}, {
+      bundles = bundles,
+    })
+
     return opts
   end,
   init = function()
