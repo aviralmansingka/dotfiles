@@ -153,12 +153,13 @@ Two distinct JDKs are in play.
 jdtls 1.31+ requires Java 21+. Pin it explicitly in `jdtls.lua`:
 
 ```lua
-local JDTLS_JDK = "/opt/homebrew/opt/openjdk@21"
+local JDTLS_JDK = "/opt/homebrew/opt/openjdk@25"
 -- prepended to PATH and set as JAVA_HOME for the jdtls subprocess
 ```
 
-Independent of any project's JDK. `temurin@21` via brew is the assumed
-install.
+Independent of any project's JDK. `openjdk@25` via brew is the assumed
+install (any JDK 21+ works; this spec uses 25 because that's what's
+installed on the target machine).
 
 ### JDKs available to compile projects
 
@@ -168,12 +169,13 @@ for Bazel). Configure available runtimes so jdtls can resolve them:
 
 ```lua
 settings.java.configuration.runtimes = {
-  { name = "JavaSE-17", path = "/opt/homebrew/opt/openjdk@17" },
-  { name = "JavaSE-21", path = "/opt/homebrew/opt/openjdk@21" },
+  { name = "JavaSE-25", path = "/opt/homebrew/opt/openjdk@25" },
 }
 ```
 
-Add more entries as more JDKs are installed. No version-manager auto-detection.
+Currently only JDK 25 is in the list (matches what's installed). Add
+more entries as more JDKs are installed (e.g., `JavaSE-17`,
+`JavaSE-21`). No version-manager auto-detection.
 
 ## Code Completion (Snippets)
 
