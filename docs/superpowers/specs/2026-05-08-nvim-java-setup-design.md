@@ -280,6 +280,21 @@ keeps formatting consistent with team setups.
 5. Mason installs `jdtls`, `java-debug-adapter`, `java-test`,
    `vscode-spring-boot-tools`, `google-java-format` on first launch.
 
+## Stale Workspace Cache
+
+If `build.gradle` / `pom.xml` / `MODULE.bazel` changes (e.g., a new
+dependency added) and jdtls keeps reporting "X cannot be resolved" for
+classes from the new dep even after `:JdtRestart`, the workspace cache
+at `~/.cache/nvim/jdtls/<project_name>/` is stale. Fix:
+
+```sh
+rm -rf ~/.cache/nvim/jdtls/<project_name>
+```
+
+Then trigger a re-attach in nvim (`:edit` on the buffer, or close and
+reopen). jdtls re-imports the project from scratch and the new
+classpath becomes visible.
+
 ## Failure Modes
 
 - **Bazel repo without `.bsp/`** → notification with exact install command;
