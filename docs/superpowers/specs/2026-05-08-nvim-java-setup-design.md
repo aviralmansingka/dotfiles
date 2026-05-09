@@ -175,6 +175,29 @@ settings.java.configuration.runtimes = {
 
 Add more entries as more JDKs are installed. No version-manager auto-detection.
 
+## Code Completion (Snippets)
+
+Snippet completion arrives through three paths, all of which are already
+wired in `blink-cmp.lua` (`"snippets"` source, `friendly-snippets` +
+`LuaSnip` dependencies). No new plugins are needed.
+
+- **`friendly-snippets` Java pack** — keyword-style snippets like `psvm`,
+  `sout`, `fori`. Loaded via `luasnip.loaders.from_vscode.lazy_load()`.
+- **jdtls code templates** — returned as LSP `CompletionItem` with
+  `kind = Snippet`. Always available when jdtls is attached.
+- **jdtls postfix + arg-guess completions** (opt-in, set in `jdtls.lua`):
+
+  ```lua
+  settings.java.completion = {
+    postfix = { enabled = true },     -- myVar.sout → System.out.println(myVar)
+    guessMethodArguments = true,       -- fills argument placeholders with type-appropriate guesses
+  }
+  ```
+
+  `postfix.enabled` exposes Eclipse JDT's postfix templates as completion
+  items: `.sout`, `.var`, `.if`, `.fori`, `.cast`, etc. — applied to the
+  expression preceding the dot.
+
 ## DAP Integration
 
 In jdtls `on_attach`:

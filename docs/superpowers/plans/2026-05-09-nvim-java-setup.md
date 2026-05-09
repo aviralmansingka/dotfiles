@@ -173,6 +173,10 @@ return {
             { name = "JavaSE-21", path = "/opt/homebrew/opt/openjdk@21" },
           },
         },
+        completion = {
+          postfix = { enabled = true },
+          guessMethodArguments = true,
+        },
       },
     })
 
@@ -362,6 +366,10 @@ In `nvim/.config/nvim/lua/plugins/jdtls.lua`, find the `opts.settings` block and
             { name = "JavaSE-17", path = "/opt/homebrew/opt/openjdk@17" },
             { name = "JavaSE-21", path = "/opt/homebrew/opt/openjdk@21" },
           },
+        },
+        completion = {
+          postfix = { enabled = true },
+          guessMethodArguments = true,
         },
       },
     })
