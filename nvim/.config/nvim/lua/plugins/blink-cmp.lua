@@ -13,7 +13,12 @@ return {
     event = { "InsertEnter", "CmdlineEnter" },
     version = "*",
     opts = {
-      keymap = { preset = "default" },
+      keymap = {
+        preset = "default",
+        ["<C-b>"] = false,
+        ["<C-l>"] = { "snippet_forward", "fallback" },
+        ["<C-h>"] = { "snippet_backward", "fallback" },
+      },
 
       appearance = {
         nerd_font_variant = "mono",
@@ -88,7 +93,12 @@ return {
         },
       },
 
-      signature = { enabled = true },
+      signature = {
+        enabled = true,
+        window = {
+          border = "rounded",
+        },
+      },
     },
     dependencies = {
       "rafamadriz/friendly-snippets",
@@ -101,11 +111,20 @@ return {
           end
           return "make install_jsregexp"
         end)(),
+        opts = {
+          history = true,
+          region_check_events = "InsertEnter",
+          delete_check_events = "TextChanged",
+          enable_autosnippets = true,
+        },
         dependencies = {
           {
             "rafamadriz/friendly-snippets",
             config = function()
               require("luasnip.loaders.from_vscode").lazy_load()
+              require("luasnip.loaders.from_lua").lazy_load({
+                paths = vim.fn.stdpath("config") .. "/luasnippets",
+              })
             end,
           },
         },
