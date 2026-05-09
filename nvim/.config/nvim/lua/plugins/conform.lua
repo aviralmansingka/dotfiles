@@ -34,6 +34,7 @@ return {
     formatters_by_ft = {
       -- Prettier first (structure), then our visual-width wrapper (prose)
       markdown = { "prettier", "markdown_wrap" },
+      java = { "google-java-format" },
     },
   },
 }
