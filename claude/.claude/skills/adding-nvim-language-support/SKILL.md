@@ -27,6 +27,45 @@ Use when the user says any of:
 - **Auto-reload running sessions** when nvim config changes (see the user's `Reload nvim after config changes` memory). Don't ask first.
 - **Stop and ask** for any of: Bazel target run/debug configuration (out of scope unless requested), version-manager integration (sdkman/jenv/mise — explicit `runtimes` array is preferred), AI / Cursor-style features (assume Sidekick or Copilot already covers).
 
+## LSP concerns this skill manages
+
+These are **in scope** whenever the user wants LSP for the language (including build-file LSPs such as starpls). The skill owns the language slice end-to-end; §5 expands the same territory as an IDE parity checklist — use both.
+
+**Server setup and lifecycle**
+
+- Choosing **`lazyvim.plugins.extras.lang.<X>` vs hand-rolled** plugin spec vs minimal `vim.lsp.start` — and proving the server **attaches** on real buffers (`:LspInfo`, clients for `bufnr`).
+- **Mason (or documented system) binaries** for the language server(s); **`ensure_installed`** (or equivalent) consistent with existing `mason.lua` patterns.
+- **lspconfig schema name**, **custom registry** (`lspconfig.configs`), or **`vim.lsp.start`** when there is no stock schema — including **cmd**, **root_dir**, **filetypes**, and **capabilities** quirks.
+- **Settings / `init_options` / handlers** required for the language or build tool (classpath,.sdkman-style runtimes only when needed for **LSP**, workspace folders, BSP, bundles, experimental flags).
+
+**Attach-time behavior**
+
+- **`LspAttach` (or extra’s hooks)** for **buffer-local keymaps** and commands: definition, references, rename, code actions, code lens triggers, hierarchy, etc., **without fighting LazyVim’s defaults** — document what you add vs what LazyVim already binds.
+- **Organize imports / refactor commands** where the server exposes them beyond generic LSP mappings.
+
+**Diagnostics and semantic UI**
+
+- **LSP diagnostics** as the primary source; **nvim-lint / none-ls** only when parity or project reality needs non-LSP diagnostics — wire per filetype consistently with repo patterns.
+- **Inlay hints, semantic highlighting, document highlight** — enable/tune **per language** when the server supports them and the user’s scope expects IDE-like behavior.
+- **Code lens** — enable/trigger paths when the stack uses them (e.g. run/debug lenses).
+
+**Completion integration**
+
+- **blink.cmp / nvim-cmp alignment** with the new server: defaults usually suffice; add **scoped overrides** when needed (extra LSP attached to same buffer, `score_offset`, snippet behavior, conflicting sources).
+
+**Discovery and workspace shape**
+
+- **Document and workspace symbols** — verify **`workspace/symbol`** and **`textDocument/documentSymbol`** on a real repo (parity with picker-driven flows; respects whatever `vim.g.lazyvim_picker` and `root_spec` already are).
+
+**Multiple clients and staleness**
+
+- **More than one LSP on a buffer** — intentional (e.g. framework + JVM) vs accidental; mitigate duplicate noise via config or LazyVim/LSP tuning.
+- **Stale workspace / wrong roots** — document **`:LspRestart`**, **cache wipe paths**, and language-specific rebuild steps when deps or Bazel graphs change.
+
+**Boundary (not defaulted into scope)**
+
+- Repo-wide UX that is **not** language-specific — **Trouble**, **fidget**, **global `lazyvim_picker` / `root_spec`**, statusline — **stay unchanged** unless attachment, roots, or symbol search **requires** an adjustment for this stack. If you touch them, justify in the spec as a consequence of language support.
+
 ---
 
 ## Process
@@ -199,7 +238,9 @@ Discoveries-during-execution are normal. When reality differs from spec, **fix t
 
 Open a project of theirs that uses the language. **Don't rely on synthetic `/tmp` projects** — they hide path, cache, and classpath issues.
 
-Recipes (run via headless nvim or `--remote-send` to a live session):
+**Dispatch the `neovim-debugger` agent to run these recipes.** It owns socket discovery, command dispatch, and structured reporting (per-check pass/fail with raw evidence) — keeping the raw output noise out of this thread. Pass it: project path, expected LSP name(s), one or two known framework symbols to query, and any LSP-specific `executeCommand` calls you want exercised. The recipes below are the canonical reference the agent draws from.
+
+Recipes (the agent runs these via `--remote-send` to a live session, or headless when you ask):
 
 ```lua
 -- LSP attached?
@@ -222,7 +263,7 @@ vim.lsp.buf_request_sync(0, "workspace/executeCommand", {
 }, 10000)
 ```
 
-If diagnostics show "X cannot be resolved" for symbols that the build tool clearly resolves (e.g. `./gradlew dependencies` lists them), the LSP's project import is stale. **Wipe the workspace cache and restart the LSP**:
+If diagnostics show "X cannot be resolved" for symbols that the build tool clearly resolves (e.g. `./gradlew dependencies` lists them), the LSP's project import is stale. **Wipe the workspace cache and restart the LSP** (the `neovim-debugger` agent will do this when asked, but only when asked — it diagnoses, you decide):
 
 ```sh
 rm -rf ~/.cache/nvim/<lsp-name>/<project>
@@ -237,8 +278,8 @@ Document any cache-staleness recipe in the spec under "Stale Workspace Cache" so
 After all tasks pass:
 
 - Spec/plan are committed.
-- Run `:Lazy reload <plugin>` in every running nvim session that has a relevant buffer open. See the user's reload memory for plugin-name mapping. Don't ask first.
-- For LSP changes: a buffer attached to the *old* config keeps the old behavior until `:LspRestart`. Mention this when the change matters (e.g. new LSP server added, classpath change).
+- **Dispatch the `neovim-debugger` agent to reload the affected plugin(s) in every running nvim session.** Give it the lazy.nvim plugin name (use the mapping in the user's reload memory); it discovers sockets and reports which sessions got the reload. Don't ask the user first.
+- For LSP changes: a buffer attached to the *old* config keeps the old behavior until `:LspRestart`. When the change matters (new LSP server added, classpath shape changed), tell the agent to also `:LspRestart` on relevant buffers and surface that in its report.
 - Hand off via `superpowers:finishing-a-development-branch`: tests-pass check (= verification recipes) → present 4 options (merge / PR / keep / discard).
 
 ---
@@ -274,3 +315,10 @@ After all tasks pass:
 - `superpowers:executing-plans` or `superpowers:subagent-driven-development` — for execution
 - `superpowers:verification-before-completion` — before claiming done
 - `superpowers:finishing-a-development-branch` — for the merge/PR handoff
+
+## Agent references
+
+- `neovim-debugger` — runtime helper. Use for **step 10** (validation recipes) and **step 11** (reload + LspRestart). It owns socket discovery, `--remote-send`/`--remote-expr` dispatch, plugin reload, LSP restart, cache wipe, and structured pass/fail reporting with raw evidence. Does NOT edit config — that stays in the main thread. Dispatch contract examples:
+  - **Validate**: "Verify <lang> setup in `<project>`. Expect <LSP> attached. Query workspace/symbol for `<KnownClass>`. Cap diagnostics at <N>. Trigger completion in `<file>:<line>`."
+  - **Reload**: "Reload `<plugin>` in all sessions; if a session has a `<filetype>` buffer attached, also `:LspRestart` it."
+  - **Inspect**: "Dump `:LspInfo` and `vim.lsp.get_clients()` for the session whose buffer list contains `<path>`."

@@ -1,21 +1,12 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(gh *)",
-      "Bash(git *)"
-    ]
-  },
-  "model": "opus",
-  "statusLine": {
-    "type": "command",
-    "command": "$HOME/.claude/statusline-command.sh"
-  },
+  "model": "opus[1m]",
   "enabledPlugins": {
-    "context7@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,
-    "slack@claude-plugins-official": true,
-    "lua-lsp@claude-plugins-official": true
+    "superpowers@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "lua-lsp@claude-plugins-official": true,
+    "jdtls-lsp@claude-plugins-official": true
   },
-  "alwaysThinkingEnabled": true,
-  "skipDangerousModePermissionPrompt": true
+  "skipDangerousModePermissionPrompt": true,
+  "voiceEnabled": true
 }

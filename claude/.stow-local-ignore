@@ -1,0 +1,29 @@
+# Patterns are regex, matched against basenames unless anchored with /.
+# Anything in this list will NOT be symlinked into the target by `stow claude`.
+# These are Claude Code runtime state — leave them as real dirs/files in ~/.claude/.
+
+^backups$
+^cache$
+^debug$
+^downloads$
+^file-history$
+^ide$
+^paste-cache$
+^plans$
+^plugins$
+^projects$
+^session-env$
+^sessions$
+^shell-snapshots$
+^skills-cursor$
+^statsig$
+^tasks$
+^telemetry$
+^todos$
+
+^history\.jsonl$
+^mcp-needs-auth-cache\.json$
+^policy-limits\.json$
+^settings\.local\.json$
+^\.last-cleanup$
+^\.lock$
