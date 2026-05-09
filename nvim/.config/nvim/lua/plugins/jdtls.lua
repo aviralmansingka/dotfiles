@@ -92,7 +92,9 @@ return {
 
     -- LazyVim globs every jar under $MASON/share/java-test/, but jacocoagent
     -- and the test-runner fat jar aren't OSGi bundles, so jdtls logs
-    -- "Failed to load extension bundles" for them. Filter to only OSGi bundles.
+    -- "Failed to load extension bundles" for them. Build the list ourselves
+    -- and include only OSGi bundles. Also add Spring Boot's JDT extensions
+    -- (required for spring-boot.nvim's classpath listener mechanism).
     local mason_share = vim.fn.expand("$MASON/share")
     local bundles = vim.fn.glob(
       mason_share .. "/java-debug-adapter/com.microsoft.java.debug.plugin-*jar",
@@ -104,6 +106,10 @@ return {
       if not (name:match("jacocoagent") or name:match("%-jar%-with%-dependencies%.jar$")) then
         table.insert(bundles, jar)
       end
+    end
+    local ok, spring_boot = pcall(require, "spring_boot")
+    if ok and spring_boot.java_extensions then
+      vim.list_extend(bundles, spring_boot.java_extensions() or {})
     end
     opts.jdtls = opts.jdtls or {}
     opts.jdtls.init_options = vim.tbl_deep_extend("force", opts.jdtls.init_options or {}, {
