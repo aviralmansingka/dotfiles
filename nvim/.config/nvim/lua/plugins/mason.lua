@@ -14,6 +14,9 @@ return {
       "java-test",
       "vscode-spring-boot-tools",
       "google-java-format",
+      "groovy-language-server",
+      "starpls",
+      "buildifier",
     },
   },
 }
