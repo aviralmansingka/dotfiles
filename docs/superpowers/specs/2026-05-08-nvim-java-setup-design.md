@@ -203,46 +203,34 @@ wired in `blink-cmp.lua` (`"snippets"` source, `friendly-snippets` +
 
 ## DAP Integration
 
-In jdtls `on_attach`:
+LazyVim's `lang.java` extra already calls `setup_dap` and
+`setup_dap_main_class_configs` in its own `LspAttach` autocmd when the
+`java-debug-adapter` Mason package is present. No additional wiring
+needed in `jdtls.lua`. Existing `dap.lua` keymaps and dapui listeners
+apply to Java sessions unchanged.
 
-```lua
-require("jdtls").setup_dap({ hotcodereplace = "auto" })
-require("jdtls.dap").setup_dap_main_class_configs()
-```
+## Java Keymaps (LazyVim defaults + additions)
 
-`setup_dap_main_class_configs()` discovers `main()` classes from the
-BSP-resolved classpath (or Gradle/Maven for non-Bazel projects), so
-`dap.continue()` shows them in a picker. Existing `dap.lua` keymaps and
-dapui listeners apply unchanged.
-
-## Test Runner
-
-The `java-test` bundle exposes three jdtls commands. Bound buffer-locally
-in the jdtls `on_attach`:
+LazyVim's `lang.java` extra registers the following on jdtls attach:
 
 | Keymap | Action |
 |---|---|
-| `<leader>tn` | Test nearest method (`require("jdtls").test_nearest_method()`) |
-| `<leader>tc` | Test class (`require("jdtls").test_class()`) |
-| `<leader>tg` | Pick test goal — debug/run nearest, etc. (`require("jdtls").pick_test()`) |
-
-Tests run as DAP sessions; breakpoints in test code work as in app code.
-
-## Java-Specific Keymaps
-
-Buffer-local, set in jdtls `on_attach`:
-
-| Keymap | Action |
-|---|---|
+| `<leader>cxv` / `<leader>cxc` | Extract variable / constant (normal + visual) |
+| `<leader>cxm` | Extract method (visual) |
+| `<leader>cgs` / `<leader>cgS` | Goto super / subjects |
 | `<leader>co` | Organize imports |
-| `<leader>crv` | Extract variable |
-| `<leader>crc` | Extract constant |
-| `<leader>crm` | Extract method (normal + visual variants) |
+| `<leader>tt` | Run all tests |
+| `<leader>tr` | Run nearest test |
+
+`jdtls.lua` adds three more via its own `LspAttach` autocmd:
+
+| Keymap | Action |
+|---|---|
+| `<leader>tg` | Pick test goal (`require("jdtls").pick_test()`) |
 | `<leader>jc` | Compile (`:JdtCompile`) |
 | `<leader>jr` | Restart jdtls (`:JdtRestart`) |
 
-LazyVim defaults (`<leader>ca`, `gd`, `gr`, etc.) work via standard LSP and
-are not overridden.
+Standard LSP keymaps (`<leader>ca`, `gd`, `gr`, etc.) work unchanged.
 
 ## Formatting
 

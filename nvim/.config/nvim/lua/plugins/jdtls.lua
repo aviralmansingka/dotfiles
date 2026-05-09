@@ -88,4 +88,22 @@ return {
 
     return opts
   end,
+  init = function()
+    vim.api.nvim_create_autocmd("LspAttach", {
+      callback = function(args)
+        local client = vim.lsp.get_client_by_id(args.data.client_id)
+        if not (client and client.name == "jdtls") then
+          return
+        end
+        local map = function(lhs, rhs, desc)
+          vim.keymap.set("n", lhs, rhs, { buffer = args.buf, desc = desc })
+        end
+        map("<leader>tg", function()
+          require("jdtls").pick_test()
+        end, "Java: Pick test goal")
+        map("<leader>jc", "<cmd>JdtCompile<cr>", "Java: Compile")
+        map("<leader>jr", "<cmd>JdtRestart<cr>", "Java: Restart jdtls")
+      end,
+    })
+  end,
 }
