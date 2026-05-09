@@ -120,15 +120,16 @@ earns the small startup-check.
 Lombok must be a `-javaagent` on the jdtls JVM command line; otherwise
 `@Data`/`@Builder`-generated members appear unresolved.
 
-- Pin a Lombok jar at `~/.local/share/nvim/lombok/lombok.jar`.
-- A bootstrap function in `jdtls.lua` downloads it via `curl` on first
-  startup if absent. One-time, ~2 MB.
-- Append `--jvm-arg=-javaagent:<path>` to the `cmd` jdtls launch args via
-  `nvim-jdtls`.
+**No configuration required.** Mason's `jdtls` package already bundles
+`lombok.jar` at `~/.local/share/nvim/mason/share/jdtls/lombok.jar`, and
+the Mason-installed jdtls launcher includes it as a `-javaagent` by
+default. Updating jdtls via Mason updates the bundled Lombok along with
+it.
 
-Reason for not using Mason: Lombok is not a Mason package, and the
-`jdtls` Mason registry does not bundle it. A small download function is
-simpler than carrying a custom Mason source.
+If a project needs a specific Lombok version independent of Mason's
+bundled one, override `opts.full_cmd` in `jdtls.lua` to wrap the default
+and append an additional `--jvm-arg=-javaagent:<path>`. Out of scope for
+this spec.
 
 ## Spring Boot Tools
 

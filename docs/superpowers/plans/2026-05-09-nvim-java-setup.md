@@ -212,133 +212,26 @@ git commit -m "Configure jdtls root detection, workspace dirs, JDK runtimes"
 
 ---
 
-## Task 4: Lombok jar bootstrap + javaagent injection
+## Task 4: Verify Mason-bundled Lombok is wired
 
-Adds an idempotent download of `lombok.jar` on first nvim launch, then injects it as a `-javaagent` into jdtls.
+**Discovery during execution:** Mason's `jdtls` package bundles its own `lombok.jar` at `~/.local/share/nvim/mason/share/jdtls/lombok.jar`, and the launcher already includes it as a `-javaagent`. No custom download or javaagent injection needed. This task verifies the bundled jar is in place and reaching jdtls.
 
-**Files:**
-- Modify: `nvim/.config/nvim/lua/plugins/jdtls.lua`
+**Files:** none (verification only)
 
-- [ ] **Step 1: Verify Lombok jar is not yet present**
+- [x] **Step 1: Verify Mason's bundled lombok jar exists**
 
-Run: `ls ~/.local/share/nvim/lombok/lombok.jar 2>&1`
-Expected: `No such file or directory`.
+Run: `ls -la ~/.local/share/nvim/mason/share/jdtls/lombok.jar`
+Expected: file (or symlink) exists, points to the Mason jdtls package.
 
-- [ ] **Step 2: Add Lombok bootstrap and javaagent to jdtls.lua**
+- [x] **Step 2: Verify the javaagent reaches jdtls launch cmd**
 
-Replace `nvim/.config/nvim/lua/plugins/jdtls.lua` with:
-
-```lua
-local JDTLS_JDK = "/opt/homebrew/opt/openjdk@21"
-local LOMBOK_DIR = vim.fn.stdpath("data") .. "/lombok"
-local LOMBOK_JAR = LOMBOK_DIR .. "/lombok.jar"
-local LOMBOK_URL = "https://projectlombok.org/downloads/lombok.jar"
-
-local function ensure_lombok()
-  if vim.fn.filereadable(LOMBOK_JAR) == 1 then
-    return LOMBOK_JAR
-  end
-  vim.fn.mkdir(LOMBOK_DIR, "p")
-  local result = vim.fn.system({ "curl", "-fsSL", "-o", LOMBOK_JAR, LOMBOK_URL })
-  if vim.v.shell_error ~= 0 then
-    vim.notify("Lombok download failed: " .. result, vim.log.levels.WARN)
-    return nil
-  end
-  vim.notify("Lombok jar downloaded to " .. LOMBOK_JAR, vim.log.levels.INFO)
-  return LOMBOK_JAR
-end
-
-return {
-  "mfussenegger/nvim-jdtls",
-  opts = function(_, opts)
-    opts.root_dir = require("jdtls.setup").find_root({
-      "MODULE.bazel",
-      "WORKSPACE",
-      "WORKSPACE.bazel",
-      "build.gradle",
-      "build.gradle.kts",
-      "pom.xml",
-      ".git",
-    })
-
-    opts.project_name = function(root_dir)
-      return vim.fn.fnamemodify(root_dir, ":p:h:t")
-    end
-
-    opts.jdtls_config_dir = function(project_name)
-      return vim.fn.stdpath("cache") .. "/jdtls/" .. project_name .. "/config"
-    end
-
-    opts.jdtls_workspace_dir = function(project_name)
-      return vim.fn.stdpath("cache") .. "/jdtls/" .. project_name .. "/workspace"
-    end
-
-    opts.settings = vim.tbl_deep_extend("force", opts.settings or {}, {
-      java = {
-        configuration = {
-          runtimes = {
-            { name = "JavaSE-17", path = "/opt/homebrew/opt/openjdk@17" },
-            { name = "JavaSE-21", path = "/opt/homebrew/opt/openjdk@21" },
-          },
-        },
-      },
-    })
-
-    opts.cmd_env = vim.tbl_deep_extend("force", opts.cmd_env or {}, {
-      JAVA_HOME = JDTLS_JDK,
-      PATH = JDTLS_JDK .. "/bin:" .. vim.env.PATH,
-    })
-
-    local lombok = ensure_lombok()
-    if lombok then
-      opts.jdtls = opts.jdtls or {}
-      local extra_args = { "--jvm-arg=-javaagent:" .. lombok }
-      local previous_cmd_extender = opts.jdtls.cmd_extender
-      opts.jdtls.cmd_extender = function(cmd)
-        if previous_cmd_extender then
-          cmd = previous_cmd_extender(cmd)
-        end
-        return vim.list_extend(cmd, extra_args)
-      end
-    end
-
-    return opts
-  end,
-}
+Run from a test project root:
+```sh
+cd /tmp/javatest && nvim --headless Foo.java -c 'lua vim.defer_fn(function() local clients = vim.lsp.get_clients({ name = "jdtls" }); for _,c in ipairs(clients) do for _,arg in ipairs(c.config.cmd) do if string.find(arg, "javaagent") then print(arg) end end end vim.cmd("qa!") end, 12000)' 2>&1 | grep javaagent
 ```
+Expected: at least one line like `--jvm-arg=-javaagent:/Users/aviral/.local/share/nvim/mason/share/jdtls/lombok.jar`.
 
-Note: the LazyVim Java extra builds the jdtls launch command via `opts.jdtls.cmd_extender` (a function that receives the base cmd and returns an extended cmd). If your LazyVim version doesn't expose this hook, the fallback in Step 4 troubleshooting modifies `opts.cmd` directly.
-
-- [ ] **Step 3: Trigger the Lombok download**
-
-Run: `nvim --headless /tmp/javatest/Foo.java -c 'sleep 5' -c 'qa' 2>&1`
-Expected: notification "Lombok jar downloaded to ..." appears.
-
-Verify: `ls -la ~/.local/share/nvim/lombok/lombok.jar`
-Expected: file exists, ~2MB.
-
-- [ ] **Step 4: Verify the javaagent reaches jdtls**
-
-Open `nvim /tmp/javatest/Foo.java`, wait ~10s for jdtls to attach, then run:
-`:lua vim.print(vim.lsp.get_clients({ name = "jdtls" })[1].config.cmd)`
-Expected: the cmd array contains an entry like `--jvm-arg=-javaagent:/Users/aviral/.local/share/nvim/lombok/lombok.jar`.
-
-If the cmd does NOT contain the javaagent: the LazyVim extra version may not expose `full_cmd`. Replace the `opts.full_cmd = ...` block in Step 2 with:
-
-```lua
-local original_cmd = opts.cmd or {}
-opts.cmd = vim.list_extend(vim.deepcopy(original_cmd), { "--jvm-arg=-javaagent:" .. lombok })
-```
-
-Then re-run Step 4.
-Quit with `:qa!`.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add nvim/.config/nvim/lua/plugins/jdtls.lua
-git commit -m "Auto-download Lombok jar and inject as jdtls javaagent"
-```
+- [x] **Step 3: No commit needed for this task** — no code changes. Spec/plan already updated to document the discovery.
 
 ---
 
