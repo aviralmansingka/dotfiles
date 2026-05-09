@@ -57,7 +57,13 @@ Read signals in this order, stop when 3 plausible systems are found:
 3. Top-level directory names and the first paragraph of any `README`.
 4. The bug one-liner itself — match named symbols against modules discovered above (e.g., "modal_host_bench" → directory match).
 
-Present the top-3 via `AskUserQuestion`. The "Other" escape is provided automatically by the tool.
+Present the top candidates via `AskUserQuestion`. The "Other" escape is provided automatically by the tool.
+
+Edge cases:
+
+- **3+ candidates:** show top-3, plus "Other" (auto).
+- **2 candidates:** show both, plus a synthetic "I'm not sure / something else" option to satisfy the 2–4-option minimum.
+- **0–1 candidates:** skip multiple-choice; ask free-form: "I couldn't infer a clear system from cwd. Which system is this bug in?" Once the user answers, record it and proceed.
 
 ### Phase 2 — Gather repro
 
