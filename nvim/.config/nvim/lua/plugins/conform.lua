@@ -4,7 +4,7 @@ return {
     -- S2: Enable format on save for markdown and python
     format_on_save = function(bufnr)
       local ft = vim.bo[bufnr].filetype
-      if ft == "markdown" or ft == "python" then
+      if ft == "markdown" or ft == "python" or ft == "java" then
         return { timeout_ms = 2000, lsp_fallback = false }
       end
       return nil
