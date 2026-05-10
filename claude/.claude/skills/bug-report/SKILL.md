@@ -182,3 +182,17 @@ This is the skill's only persisted artifact — there is no file output. The cha
 ### Phase 8 — Hand off
 
 Immediately invoke `superpowers:systematic-debugging` with the emitted prompt as input. The same session continues into investigation. Do not wait for user confirmation; the user requested investigation by invoking `/bug-report`.
+
+## Red flags
+
+These thoughts mean STOP — you're rationalizing past a phase exit criterion:
+
+| Thought | Reality |
+|---------|---------|
+| "User already described the bug, I can skip Triage." | Triage is on the record. Confirm the system explicitly. |
+| "The repro looks obvious, no need to actually run it." | Phase 3 closes on **observed** failure, not described failure. |
+| "I already minimized this in my head while reading." | Each reduction is a re-run, not a guess. Phase 4 requires execution. |
+| "I re-verified by reading the code path." | Re-verify means re-execute. Reading is not running. |
+| "I'll skip evidence buffer for the obvious commands." | Phase 6 needs cited evidence. No buffer = no hypotheses. |
+| "Hypothesis feels right, I can emit the prompt now." | Hypotheses without phase 2–5 citations are not allowed. |
+| "User seems impatient, I'll combine phases." | The user invoked this skill *because* they wanted the discipline. Combining phases defeats the purpose. |
