@@ -18,6 +18,15 @@ return {
       "gradle-language-server",
       "starpls",
       "buildifier",
+
+      -- Go (LazyVim lang.go + none-ls / dap); keep explicit so installs don't depend on merge order
+      "gopls",
+      "goimports",
+      "gofumpt",
+      "golangci-lint",
+      "gomodifytags",
+      "impl",
+      "delve",
     },
   },
 }
