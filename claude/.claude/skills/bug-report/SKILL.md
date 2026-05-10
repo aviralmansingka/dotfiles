@@ -77,3 +77,25 @@ Drive a Q&A using this covering checklist. Skip items the user has already suppl
 - **Adjacent state** — other processes, network conditions, prior commands
 
 Ask one item per turn. The phase closes when every item above has either an answer from the user or an explicit "not applicable" decision.
+
+### Phase 3 — Reproduce
+
+Attempt execution of the gathered steps. After each command, record one line into the evidence buffer:
+
+```
+<cmd> · exit=N · <1–3 line excerpt of output>
+```
+
+**Negotiation protocol.** When a step fails for an *unrelated* reason — missing dependency, missing auth, hardware not present, prod-only data, flaky timing — pause and ask:
+
+> "I can't run step N because `<reason>`. Options:
+> (a) you run it and paste the output;
+> (b) we mock `<thing>`;
+> (c) we cut step N and try a smaller path.
+> Which?"
+
+Record the chosen option as part of the evidence buffer. If the user runs a step and pastes output, that pasted output counts as observed evidence — copy the relevant lines into the buffer.
+
+The phase closes only when the bug has been **observed** — directly by you, or by the user via a negotiated alternative whose output you have seen and recorded. A described-but-unobserved repro does NOT close the phase.
+
+If after honest negotiation the bug still cannot be observed, stop and tell the user. Do not advance to Minimize on faith.
