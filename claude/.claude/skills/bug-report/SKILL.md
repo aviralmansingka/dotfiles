@@ -99,3 +99,32 @@ Record the chosen option as part of the evidence buffer. If the user runs a step
 The phase closes only when the bug has been **observed** — directly by you, or by the user via a negotiated alternative whose output you have seen and recorded. A described-but-unobserved repro does NOT close the phase.
 
 If after honest negotiation the bug still cannot be observed, stop and tell the user. Do not advance to Minimize on faith.
+
+### Phase 4 — Minimize
+
+Iterate with the user. Reduction targets, in priority order:
+
+1. **Drop steps** that don't change the outcome. If many steps, binary search.
+2. **Shrink inputs** — smaller file, shorter string, fewer rows.
+3. **Remove optional flags and env vars.**
+4. **Tighten the assertion** — what is the *narrowest* observable that proves the bug?
+
+Each candidate reduction is treated as a hypothesis to be tested by re-running, not as a guess. After each attempted reduction, write down what was dropped and why dropping it appeared safe before re-running.
+
+The phase closes when no further reduction can be applied without one of the Re-verify checks failing.
+
+### Phase 5 — Re-verify
+
+Run the minimized repro fresh — start a new shell or clear state where appropriate. Record evidence-buffer lines as in Phase 3.
+
+Two checks must both pass:
+
+- **(a) Steps still run.** Every step in the minimized repro executes cleanly up to the failure point.
+- **(b) Same bug.** The observed failure is the *same bug* — same error class, same wrong value, same symptom — not a different bug introduced by minimization.
+
+**Failure handling:**
+
+- If (a) fails, the minimization broke the path. Revert to the last working version of the repro and loop back to Phase 4.
+- If (b) fails, the minimization removed something load-bearing for the bug itself. Revert and try a different reduction. Loop back to Phase 4.
+
+Phase 5 closes only when both (a) and (b) hold on a fresh run.
