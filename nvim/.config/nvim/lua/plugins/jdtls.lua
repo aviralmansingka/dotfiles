@@ -82,6 +82,19 @@ return {
           postfix = { enabled = true },
           guessMethodArguments = true,
         },
+        -- Inlay hints + code lens. JDT LS docs disagree on casing across
+        -- versions (wiki: lowercase `inlayhints`, singular `implementationCodeLens`;
+        -- VS Code extension: camelCase `inlayHints`, plural `implementationsCodeLens`).
+        -- We send both forms; jdtls silently ignores keys it doesn't recognize.
+        inlayhints = {
+          parameterNames = { enabled = "all" },
+        },
+        inlayHints = {
+          parameterNames = { enabled = "all" },
+        },
+        referencesCodeLens = { enabled = true },
+        implementationCodeLens = { enabled = true },
+        implementationsCodeLens = { enabled = true },
       },
     })
 
@@ -128,9 +141,34 @@ return {
         local map = function(lhs, rhs, desc)
           vim.keymap.set("n", lhs, rhs, { buffer = args.buf, desc = desc })
         end
+        -- <leader>tg: neotest nearest-test for parity with Go/Python.
+        -- jdtls.pick_test moves to <leader>jp (still available, new home).
         map("<leader>tg", function()
+          require("neotest").run.run()
+        end, "Java: Run nearest test (neotest)")
+        -- <leader>tT: run-all-in-project. Walks up for the first
+        -- gradle/maven/bazel marker, falls back to buffer dir, hands the
+        -- root to neotest. Bazel markers included so the keymap is harmless
+        -- on Bazel-Java buffers (neotest reports "no tests" rather than
+        -- crash; Bazel-Java tests run via jdtls/bazel CLI).
+        map("<leader>tT", function()
+          local buf = vim.api.nvim_buf_get_name(0)
+          local from = (buf ~= "" and vim.fn.fnamemodify(buf, ":p:h")) or vim.uv.cwd()
+          local root = vim.fs.root(from, {
+            "build.gradle",
+            "build.gradle.kts",
+            "settings.gradle",
+            "settings.gradle.kts",
+            "pom.xml",
+            "MODULE.bazel",
+            "WORKSPACE",
+            "WORKSPACE.bazel",
+          }) or from
+          require("neotest").run.run(root)
+        end, "Java: Run all tests in project (neotest)")
+        map("<leader>jp", function()
           require("jdtls").pick_test()
-        end, "Java: Pick test goal")
+        end, "Java: Pick test goal (jdtls)")
         map("<leader>jc", "<cmd>JdtCompile<cr>", "Java: Compile")
         map("<leader>jr", "<cmd>JdtRestart<cr>", "Java: Restart jdtls")
       end,
