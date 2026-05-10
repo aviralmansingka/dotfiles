@@ -29,4 +29,35 @@ local function in_cwd_subtree(entry_cwd, root)
   return n:sub(1, #root + 1) == root .. "/"
 end
 
+---@return snacks.picker.finder.Item[]
+function M.list_items()
+  local root = normalize(vim.fn.getcwd())
+  local home = normalize(vim.fn.expand("~"))
+  local items = {}
+  for label, entry in pairs(registry.discover()) do
+    if in_cwd_subtree(entry.cwd, root) then
+      local cwd_display = entry.cwd or ""
+      if home ~= "" and cwd_display:sub(1, #home) == home then
+        cwd_display = "~" .. cwd_display:sub(#home + 1)
+      end
+      items[#items + 1] = {
+        text = string.format("[%s] %s  %s", entry.tool, label, cwd_display),
+        label = label,
+        tool = entry.tool,
+        slug = entry.slug,
+        pane_id = entry.pane_id,
+        session_id = entry.session_id,
+        cwd = entry.cwd,
+      }
+    end
+  end
+  table.sort(items, function(a, b)
+    if a.tool ~= b.tool then
+      return a.tool < b.tool
+    end
+    return a.label < b.label
+  end)
+  return items
+end
+
 return M
