@@ -1,10 +1,10 @@
 return {
   "stevearc/conform.nvim",
   opts = {
-    -- S2: Enable format on save for markdown
+    -- S2: Enable format on save for markdown and python
     format_on_save = function(bufnr)
       local ft = vim.bo[bufnr].filetype
-      if ft == "markdown" then
+      if ft == "markdown" or ft == "python" then
         return { timeout_ms = 2000, lsp_fallback = false }
       end
       return nil
@@ -30,6 +30,30 @@ return {
           end
         end,
       },
+      -- Prefer the project venv's ruff so behavior tracks pyproject ruff
+      -- config; falls back to Mason ruff outside a uv project.
+      ruff_fix = {
+        command = function(_, ctx)
+          local r = vim.fs.find(".venv/bin/ruff", {
+            upward = true,
+            type = "file",
+            limit = 1,
+            path = ctx.dirname,
+          })[1]
+          return r or "ruff"
+        end,
+      },
+      ruff_format = {
+        command = function(_, ctx)
+          local r = vim.fs.find(".venv/bin/ruff", {
+            upward = true,
+            type = "file",
+            limit = 1,
+            path = ctx.dirname,
+          })[1]
+          return r or "ruff"
+        end,
+      },
     },
     formatters_by_ft = {
       -- Prettier first (structure), then our visual-width wrapper (prose)
@@ -37,6 +61,8 @@ return {
       java = { "google-java-format" },
       go = { "goimports", "gofumpt" },
       bzl = { "buildifier" },
+      -- Mirrors `inv lint --fix`: ruff check --fix, then ruff format
+      python = { "ruff_fix", "ruff_format" },
     },
   },
 }
