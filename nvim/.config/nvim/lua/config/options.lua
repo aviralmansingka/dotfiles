@@ -34,3 +34,6 @@ vim.opt.jumpoptions = "stack" -- Use stack-based jumplist behavior
 -- Configure LazyVim to use Snacks picker for LSP operations
 vim.g.lazyvim_picker = "snacks"
 vim.g.root_spec = { "cwd" }
+
+-- Python: use basedpyright (stricter pyright fork) via lazyvim.plugins.extras.lang.python
+vim.g.lazyvim_python_lsp = "basedpyright"
