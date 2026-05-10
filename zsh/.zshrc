@@ -30,6 +30,10 @@ vim() {
     bob run nightly "$@"
   fi
 }
+
+# CMake-built Neovim from this checkout (sets VIMRUNTIME + NVIM_GHOSTTY_VT); see scripts/run-built-nvim.sh.
+alias dvim='$HOME/tools/neovim/scripts/run-built-nvim.sh'
+
 alias rg='rg --hidden'
 alias ls='eza --icons -l'
 alias inv='uv run inv'
