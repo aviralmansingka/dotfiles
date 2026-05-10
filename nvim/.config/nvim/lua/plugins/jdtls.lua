@@ -144,39 +144,50 @@ return {
         if not (client and client.name == "jdtls") then
           return
         end
-        local map = function(lhs, rhs, desc)
-          vim.keymap.set("n", lhs, rhs, { buffer = args.buf, desc = desc })
-        end
-        -- <leader>tg: neotest nearest-test for parity with Go/Python.
-        -- jdtls.pick_test moves to <leader>jp (still available, new home).
-        map("<leader>tg", function()
-          require("neotest").run.run()
-        end, "Java: Run nearest test (neotest)")
-        -- <leader>tT: run-all-in-project. Walks up for the first
-        -- gradle/maven/bazel marker, falls back to buffer dir, hands the
-        -- root to neotest. Bazel markers included so the keymap is harmless
-        -- on Bazel-Java buffers (neotest reports "no tests" rather than
-        -- crash; Bazel-Java tests run via jdtls/bazel CLI).
-        map("<leader>tT", function()
-          local buf = vim.api.nvim_buf_get_name(0)
-          local from = (buf ~= "" and vim.fn.fnamemodify(buf, ":p:h")) or vim.uv.cwd()
-          local root = vim.fs.root(from, {
-            "build.gradle",
-            "build.gradle.kts",
-            "settings.gradle",
-            "settings.gradle.kts",
-            "pom.xml",
-            "MODULE.bazel",
-            "WORKSPACE",
-            "WORKSPACE.bazel",
-          }) or from
-          require("neotest").run.run(root)
-        end, "Java: Run all tests in project (neotest)")
-        map("<leader>jp", function()
-          require("jdtls").pick_test()
-        end, "Java: Pick test goal (jdtls)")
-        map("<leader>jc", "<cmd>JdtCompile<cr>", "Java: Compile")
-        map("<leader>jr", "<cmd>JdtRestart<cr>", "Java: Restart jdtls")
+        -- Defer the keymap binding past the synchronous LspAttach handler
+        -- chain. LazyVim's lang.java extra registers an UNGROUPED LspAttach
+        -- (lang/java.lua:~194) that binds <leader>tT to jdtls.dap.test_class
+        -- after our augroup runs, clobbering ours via buffer-local
+        -- last-write-wins. vim.schedule queues us on the next event-loop
+        -- tick — guaranteed after every sync handler in this LspAttach.
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(args.buf) then
+            return
+          end
+          local map = function(lhs, rhs, desc)
+            vim.keymap.set("n", lhs, rhs, { buffer = args.buf, desc = desc })
+          end
+          -- <leader>tg: neotest nearest-test for parity with Go/Python.
+          -- jdtls.pick_test moves to <leader>jp (still available, new home).
+          map("<leader>tg", function()
+            require("neotest").run.run()
+          end, "Java: Run nearest test (neotest)")
+          -- <leader>tT: run-all-in-project. Walks up for the first
+          -- gradle/maven/bazel marker, falls back to buffer dir, hands the
+          -- root to neotest. Bazel markers included so the keymap is harmless
+          -- on Bazel-Java buffers (neotest reports "no tests" rather than
+          -- crash; Bazel-Java tests run via jdtls/bazel CLI).
+          map("<leader>tT", function()
+            local buf = vim.api.nvim_buf_get_name(0)
+            local from = (buf ~= "" and vim.fn.fnamemodify(buf, ":p:h")) or vim.uv.cwd()
+            local root = vim.fs.root(from, {
+              "build.gradle",
+              "build.gradle.kts",
+              "settings.gradle",
+              "settings.gradle.kts",
+              "pom.xml",
+              "MODULE.bazel",
+              "WORKSPACE",
+              "WORKSPACE.bazel",
+            }) or from
+            require("neotest").run.run(root)
+          end, "Java: Run all tests in project (neotest)")
+          map("<leader>jp", function()
+            require("jdtls").pick_test()
+          end, "Java: Pick test goal (jdtls)")
+          map("<leader>jc", "<cmd>JdtCompile<cr>", "Java: Compile")
+          map("<leader>jr", "<cmd>JdtRestart<cr>", "Java: Restart jdtls")
+        end)
       end,
     })
   end,
