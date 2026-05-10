@@ -100,6 +100,11 @@ local STRINGIFY = {
   delve = function(expr)
     return expr
   end,
+  -- Java: java-debug-adapter's evaluator already returns the Object.toString()
+  -- form, so identity is the right wrapper.
+  java = function(expr)
+    return expr
+  end,
 }
 
 local function find_repl_window()
@@ -222,7 +227,7 @@ end
 -- Idle auto-trigger: 3s of cursor stillness in a Python/Go source buffer
 -- with an active paused DAP session evaluates the cursor expression in the
 -- REPL. CursorMoved resets the timer (token-free with vim.uv.new_timer).
-local AUTO_TRIGGER_FILETYPES = { python = true, go = true }
+local AUTO_TRIGGER_FILETYPES = { python = true, go = true, java = true }
 local function reset_idle_timer()
   if _eval_state.idle_timer then
     _eval_state.idle_timer:stop()
