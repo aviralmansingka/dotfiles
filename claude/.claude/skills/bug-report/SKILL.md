@@ -128,3 +128,57 @@ Two checks must both pass:
 - If (b) fails, the minimization removed something load-bearing for the bug itself. Revert and try a different reduction. Loop back to Phase 4.
 
 Phase 5 closes only when both (a) and (b) hold on a fresh run.
+
+### Phase 6 — Hypothesize
+
+Produce 2–4 ranked root-cause hypotheses. Each one MUST cite specific evidence captured in phases 2–5. Format:
+
+> **Hypothesis:** cache-key collision in `s3_download.py:get_cached_path`.
+> **Evidence:** minimized repro shows two distinct s3 keys hashing to the same cache filename in step 4 output line 2 of the evidence buffer.
+
+Hypotheses without explicit evidence citations are NOT allowed. If you cannot cite evidence for a hypothesis, drop it or return to Phase 3/5 to gather more.
+
+### Phase 7 — Emit prompt
+
+Print exactly one fenced block to chat with this structure (copy literally; substitute the bracketed placeholders):
+
+````
+# Bug investigation: <one-line title>
+
+## System(s)
+<systems confirmed in Triage>
+
+## Minimized reproduction
+Environment: <os, branch, sha, versions>
+Steps:
+  1. <step>
+  2. <step>
+  ...
+Expected: <one line>
+Observed: <one line>
+Frequency: <always | N% | seen-once>
+
+## Evidence captured
+- <command> · exit=<N> · <excerpt>
+- <command> · exit=<N> · <excerpt>
+...
+
+## Repro execution mode
+<direct | negotiated: user-runs / mock / reduced-path — explain>
+
+## Hypotheses (ranked)
+1. <hypothesis> — evidence: <citation>
+2. <hypothesis> — evidence: <citation>
+...
+
+## Investigation request
+Please find the root cause for the bug above. Start with hypothesis 1.
+For each hypothesis, state what file/function to inspect and what observation
+would confirm or refute it. Do not propose a fix until root cause is confirmed.
+````
+
+This is the skill's only persisted artifact — there is no file output. The chat block IS the deliverable.
+
+### Phase 8 — Hand off
+
+Immediately invoke `superpowers:systematic-debugging` with the emitted prompt as input. The same session continues into investigation. Do not wait for user confirmation; the user requested investigation by invoking `/bug-report`.
