@@ -132,7 +132,13 @@ return {
     return opts
   end,
   init = function()
+    -- Augroup with `clear = true` so :Lazy reload nvim-jdtls replaces the
+    -- prior autocmd cleanly. Without this, reloads stack duplicate
+    -- LspAttach callbacks and the oldest registration's keymaps win,
+    -- masking newly-edited keymap bindings until a full nvim restart.
+    local jdtls_attach = vim.api.nvim_create_augroup("jdtls_lspattach_keymaps", { clear = true })
     vim.api.nvim_create_autocmd("LspAttach", {
+      group = jdtls_attach,
       callback = function(args)
         local client = vim.lsp.get_client_by_id(args.data.client_id)
         if not (client and client.name == "jdtls") then
