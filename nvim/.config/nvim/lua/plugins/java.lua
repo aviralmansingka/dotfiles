@@ -17,17 +17,38 @@ return {
     -- value)" before the JUnit runner even starts. Maven is unaffected
     -- (its get_build_dirname returns a plain string).
     --
-    -- Patch Path.new to coerce table-shaped raw_path back to a string via
-    -- :to_string(). Defensive — fixes the symptom regardless of which
-    -- caller introduces the double-wrap. Remove when upstream lands a fix.
+    -- The same root cause hits two distinct call sites in build_tool.lua:
+    --   1. line 21 wrapper: Path(config.get_build_dirname(...)) → Path(Path("bin"))
+    --      → Path.new crashes on raw_path:sub when raw_path is a table.
+    --   2. line 35 spring filepaths: root:append(config.get_build_dirname(...))
+    --      → Path:append concatenates self.raw_path .. separator .. other where
+    --        other is a Path table and Path has no __concat metamethod
+    --        → "attempt to concatenate a table value".
+    -- Patch both Path.new AND Path:append to coerce table-shaped path args
+    -- back to strings via :to_string(). Drop when upstream lands a fix.
     config = function()
       local Path = require("neotest-java.model.path")
+
       local original_new = Path.new
       Path.new = function(raw_path, opts)
         if type(raw_path) == "table" and type(raw_path.to_string) == "function" then
           raw_path = raw_path:to_string()
         end
         return original_new(raw_path, opts)
+      end
+
+      -- Path:append lives on the metatable's __index. Grab it via a sentinel
+      -- instance and wrap its `other` argument the same way.
+      local sentinel = original_new("/", { separator = function() return "/" end })
+      local mt = getmetatable(sentinel)
+      if mt and type(mt.__index) == "table" and type(mt.__index.append) == "function" then
+        local original_append = mt.__index.append
+        mt.__index.append = function(self, other)
+          if type(other) == "table" and type(other.to_string) == "function" then
+            other = other:to_string()
+          end
+          return original_append(self, other)
+        end
       end
     end,
   },
