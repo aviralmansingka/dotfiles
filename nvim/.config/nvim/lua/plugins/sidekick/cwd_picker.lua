@@ -102,4 +102,73 @@ function M.list_items()
   return items
 end
 
+function M.open()
+  registry.rehydrate()
+  local items = M.list_items()
+  local empty = #items == 0
+  if empty then
+    items = { {
+      text = "(no named sessions in cwd)",
+      _empty = true,
+    } }
+  end
+
+  Snacks.picker.pick({
+    source = "sidekick_cwd_peek",
+    title = "Sidekick Sessions in Cwd",
+    items = items,
+    format = "text",
+    layout = {
+      preset = "default",
+      layout = {
+        box = "vertical",
+        width = 0.8,
+        height = 0.8,
+        border = "none",
+        { win = "preview", border = "rounded" },
+        { win = "list", height = 5, border = "rounded" },
+        { win = "input", height = 3, border = "rounded" },
+      },
+    },
+    preview = function(ctx)
+      vim.api.nvim_buf_set_lines(ctx.buf, 0, -1, false, preview_lines(ctx.item))
+      return true
+    end,
+    confirm = function(picker, item)
+      picker:close()
+      if not item or item._empty then
+        return
+      end
+      if item.label then
+        internal.toggle_tool_session(item.label, true)
+      end
+    end,
+    win = {
+      input = {
+        keys = {
+          ["<c-x>"] = { "sidekick_kill_session", mode = { "n", "i" } },
+        },
+      },
+      list = {
+        keys = {
+          ["<c-x>"] = { "sidekick_kill_session", mode = { "n" } },
+        },
+      },
+    },
+    actions = {
+      sidekick_kill_session = function(picker, item)
+        if not item or item._empty or not item.session_id then
+          return
+        end
+        if kill_session(item.session_id) then
+          picker:close()
+          vim.schedule(function()
+            M.open()
+          end)
+        end
+      end,
+    },
+  })
+end
+
 return M
