@@ -29,6 +29,48 @@ local function in_cwd_subtree(entry_cwd, root)
   return n:sub(1, #root + 1) == root .. "/"
 end
 
+---@param item table|nil
+---@return string[]
+local function preview_lines(item)
+  if not item or item._empty or not item.pane_id then
+    return { "(no session)" }
+  end
+  local out = vim.fn.systemlist({
+    "tmux",
+    "capture-pane",
+    "-p",
+    "-S",
+    "-",
+    "-E",
+    "-",
+    "-t",
+    item.pane_id,
+  })
+  if vim.v.shell_error ~= 0 then
+    return { "(capture-pane failed)" }
+  end
+  return out
+end
+
+---@param session_id string|nil
+---@return boolean
+local function kill_session(session_id)
+  if not session_id or session_id == "" then
+    return false
+  end
+  local out = vim.fn.systemlist({ "tmux", "kill-session", "-t", session_id })
+  if vim.v.shell_error == 0 then
+    return true
+  end
+  for _, line in ipairs(out) do
+    if line:match("can't find session") or line:match("no such session") then
+      return true
+    end
+  end
+  vim.notify("Sidekick: tmux kill-session failed: " .. table.concat(out, " "), vim.log.levels.WARN)
+  return false
+end
+
 ---@return snacks.picker.finder.Item[]
 function M.list_items()
   local root = normalize(vim.fn.getcwd())
