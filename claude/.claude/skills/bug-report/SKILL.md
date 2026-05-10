@@ -41,3 +41,39 @@ At skill start, you MUST create a `TaskCreate` task per phase below. Each phase 
 - **One question per turn** during Gather and Minimize. Prefer `AskUserQuestion` when the answer space is small; free-form otherwise.
 - **Evidence buffer.** After every executed command in Reproduce and Re-verify, record `<command> · exit=N · <1–3 line excerpt>`. This becomes the evidence base for hypotheses in phase 6.
 - **No silent edits to the repro.** Every change to the steps — addition during Gather, reduction during Minimize — is announced and acknowledged before being treated as canonical.
+
+## Phase mechanics
+
+### Phase 1 — Triage
+
+Read signals from the cwd in this order, stopping when you have 3 plausible candidate systems:
+
+1. `git remote -v` and the local repo name.
+2. Manifest files: `pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`, `MODULE.bazel`, `BUILD`/`BUILD.bazel`.
+3. Top-level directory names and the first paragraph of any `README`.
+4. The bug one-liner itself — match named symbols against modules discovered above (e.g., "modal_host_bench" → directory match).
+
+Present candidates via `AskUserQuestion`. The "Other" escape is supplied automatically by the tool.
+
+**Edge cases:**
+
+- **3+ candidates:** show top-3.
+- **2 candidates:** show both, plus a synthetic "I'm not sure / something else" option to satisfy the 2–4-option minimum.
+- **0–1 candidates:** skip multiple-choice; ask free-form: "I couldn't infer a clear system from cwd. Which system is this bug in?" Once the user answers, record it and proceed.
+
+The phase closes when the user has picked or named a system, and you have written it into the running notes for this bug.
+
+### Phase 2 — Gather repro
+
+Drive a Q&A using this covering checklist. Skip items the user has already supplied. Multiple-choice (`AskUserQuestion`) when the answer space is small; free-form for descriptive items.
+
+- **Environment** — OS, branch/SHA, build mode, relevant tool versions
+- **Entry point** — exact command, exact UI action, exact API call
+- **Inputs** — args, env vars, files/data that must be present, auth state
+- **Expected** — what the user thought would happen
+- **Observed** — what actually happened (output, error, hang, crash, wrong value)
+- **Frequency** — always / N% / saw-once
+- **Recent changes** — commits, dep bumps, env changes the user is aware of
+- **Adjacent state** — other processes, network conditions, prior commands
+
+Ask one item per turn. The phase closes when every item above has either an answer from the user or an explicit "not applicable" decision.
