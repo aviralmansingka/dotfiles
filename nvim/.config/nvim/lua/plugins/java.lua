@@ -5,7 +5,32 @@
 return {
   { import = "lazyvim.plugins.extras.lang.java" },
 
-  { "rcasia/neotest-java", ft = "java" },
+  {
+    "rcasia/neotest-java",
+    ft = "java",
+    -- Upstream bug (rcasia/neotest-java v0.37.1): build_tool/init.lua's
+    -- gradle.get_build_dirname returns Path("bin") (a table) while its
+    -- type annotation is `: string`. The wrapper at build_tool.lua:21 then
+    -- does Path(...) again, and Path.new at model/path.lua:61 crashes on
+    -- `raw_path:sub(1, 1)` because raw_path is a table. Result: every
+    -- Gradle test run aborts with "attempt to call method 'sub' (a nil
+    -- value)" before the JUnit runner even starts. Maven is unaffected
+    -- (its get_build_dirname returns a plain string).
+    --
+    -- Patch Path.new to coerce table-shaped raw_path back to a string via
+    -- :to_string(). Defensive — fixes the symptom regardless of which
+    -- caller introduces the double-wrap. Remove when upstream lands a fix.
+    config = function()
+      local Path = require("neotest-java.model.path")
+      local original_new = Path.new
+      Path.new = function(raw_path, opts)
+        if type(raw_path) == "table" and type(raw_path.to_string) == "function" then
+          raw_path = raw_path:to_string()
+        end
+        return original_new(raw_path, opts)
+      end
+    end,
+  },
 
   {
     "nvim-neotest/neotest",
