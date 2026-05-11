@@ -1,14 +1,11 @@
 return {
   "stevearc/conform.nvim",
   opts = {
-    -- S2: Enable format on save for markdown and python
-    format_on_save = function(bufnr)
-      local ft = vim.bo[bufnr].filetype
-      if ft == "markdown" or ft == "python" then
-        return { timeout_ms = 2000, lsp_fallback = false }
-      end
-      return nil
-    end,
+    -- format-on-save is wired up by LazyVim's own BufWritePre handler
+    -- (lazyvim/util/format.lua). It respects vim.b.autoformat /
+    -- vim.g.autoformat so you can toggle with <leader>uf. Don't set
+    -- conform's own format_on_save here — LazyVim strips it and warns.
+    default_format_opts = { timeout_ms = 2000, lsp_format = "never" },
     formatters = {
       -- Let Prettier handle tables, code blocks, etc. but NOT prose wrapping
       prettier = {
