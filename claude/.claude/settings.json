@@ -8,5 +8,6 @@
     "jdtls-lsp@claude-plugins-official": true
   },
   "skipDangerousModePermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "agentPushNotifEnabled": true
 }
