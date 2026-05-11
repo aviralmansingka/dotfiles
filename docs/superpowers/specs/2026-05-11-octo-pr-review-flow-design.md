@@ -63,18 +63,28 @@ All global, mode `n` unless noted.
 
 | Key | Action | Implementation |
 |---|---|---|
-| `<leader>OO` | Smart entry: if current branch has an open PR, start/resume review; else open PR list | Detects PR via `gh pr view --json number,state --jq` then `:Octo review start`/`resume`; else `:Octo pr list` |
+| `<leader>OO` | Smart entry — three states (see below) | `gh pr view --json number,state` to detect, then `:Octo review start`/`:Octo review resume`/`:Octo pr list` |
 | `<leader>Op` | PR list (default scope) | `:Octo pr list` |
 | `<leader>OP` | PR search (free-form within PRs) | `:Octo pr search` |
 | `<leader>Om` | PRs authored by me | `:Octo pr list author=@me` |
 | `<leader>Or` | PRs requesting my review | `:Octo pr list reviewer=@me state=open` (verify flag syntax at impl) |
 | `<leader>OA` | Prompt for author, then list | `vim.ui.input` → `:Octo pr list author=<input>` |
-| `<leader>OS` | Free-form Octo search (all kinds) | `:Octo search` |
 | `<leader>OT` | Threads picker for current PR | `require('plugins.octo.threads_picker').open()` |
-| `<leader>Oi` | Issue list | `:Octo issue list` |
-| `<leader>OI` | Issue search | `:Octo issue search` |
-| `<leader>Oc` | Checkout PR (picker if not in a PR buffer); commonly chained with `<leader>OO` to start the review on the checked-out branch | `:Octo pr checkout` |
+| `<leader>Oc` | Checkout PR (picker if not in a PR buffer); | |
+| | commonly chained with `<leader>OO` to start the review on the checked-out branch | `:Octo pr checkout` |
 | `<leader>Ob` | Open PR in browser | `:Octo pr browser` |
+
+### `<leader>OO` smart-entry states
+
+The smart entry has three deterministic branches based on the current branch's PR state. The implementation checks via `gh pr view --json number,state` (silently — non-zero exit means "no PR for branch").
+
+| Detected state | Action |
+|---|---|
+| Current branch has an open PR **and** a pending review exists for it | `:Octo review resume` — reopens the review tab where you left off |
+| Current branch has an open PR **but no pending review** | `:Octo review start` — opens a fresh review tab |
+| Current branch has no associated open PR | `:Octo pr list` — falls back to the PR picker |
+
+Detecting "pending review exists" is done by querying `pullRequest.reviewRequests` / `pendingReview` via Octo's own state if cheap, else by trying `:Octo review resume` and falling through to `:Octo review start` on error. Confirm the exact cheap-check API during the implementation spike.
 
 ### Comment template keymaps (buffer-local)
 
@@ -133,6 +143,28 @@ Picking by author has two paths because they serve different use cases: `<leader
 - `<C-m>` comment
 - `<C-r>` request changes
 - `<C-c>` close tab without submitting
+
+### Switching between reviewing and executing
+
+Common mid-review need: jump out of the diff view to run/debug/test the PR's code in your normal editor (LSP, tests, debugger all attached to the working tree), then come back to keep reviewing. This is supported but spread across affordances rather than a single swap key. The spec deliberately documents them rather than adding a new keymap.
+
+**Precondition.** The working tree must be on the PR's head branch — otherwise "executing" runs your old branch's code, not the PR's. Enter the review via the `<leader>Oc` → `<leader>OO` chain (Phase 1, row 5) when you anticipate needing to execute. If you started via one of the no-checkout entry paths and later realize you need to execute, run `<leader>Oc` (with the picker, or while inside the PR buffer it's the current PR) and then `<leader>OO` to resume — the pending review survives the branch switch.
+
+**Reviewing → executing.**
+
+| Goal | Keys |
+|---|---|
+| Open the working file at a specific thread's location | `<leader>OT` → highlight thread → `<CR>` (spec: threads-picker actions) |
+| Leave the review tab entirely, keep working tree on the PR branch | `<C-c>` in the review tab (closes review tab; pending review is preserved server-side until you submit or discard) |
+
+**Executing → reviewing.**
+
+| Goal | Keys |
+|---|---|
+| Resume the pending review tab (file panel + diff) | `<leader>OO` — smart-entry sees pending review for current branch, runs `:Octo review resume` |
+| Open the review tab at a specific thread's `path:line` | `<leader>OT` → highlight thread → `<C-x>` (spec: threads-picker actions) |
+
+**Edge case — review-tab close vs. discard.** `<C-c>` closes the *tab* but leaves the review server-side as pending. `<localleader>vd` (existing default) actively discards the pending review. The smart-entry `<leader>OO` distinguishes them: discarded → `:Octo review start`; merely closed-tab → `:Octo review resume`.
 
 ### Author flow (own PR with comments to triage)
 
