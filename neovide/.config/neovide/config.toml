@@ -1,3 +1,7 @@
 frame = "buttonless"
 title-hidden = true
-neovim-bin = "/Users/aviralmansingka/.local/share/bob/nightly/bin/nvim"
+neovim-bin = "/Users/aviral/tools/neovim/scripts/run-built-nvim.sh"
+
+[font]
+normal = ["JetBrainsMono Nerd Font Mono"]
+size = 13
