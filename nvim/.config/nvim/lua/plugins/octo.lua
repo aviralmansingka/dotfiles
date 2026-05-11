@@ -67,8 +67,45 @@ local function html_to_markdown(text)
   return text
 end
 
+local function smart_entry()
+  require("octo.reviews").start_or_resume_review()
+end
+
+local function prompt_author()
+  vim.ui.input({ prompt = "Author handle: " }, function(input)
+    if input and input ~= "" then
+      vim.cmd("Octo pr search author:" .. input .. " state:open")
+    end
+  end)
+end
+
 return {
   "pwntester/octo.nvim",
+  keys = {
+    -- Disable LazyVim octo extras' <leader>g* keys; the Octo namespace lives under <leader>O
+    { "<leader>gi", false },
+    { "<leader>gI", false },
+    { "<leader>gp", false },
+    { "<leader>gP", false },
+    { "<leader>gr", false },
+    { "<leader>gS", false },
+    -- <leader>O Octo namespace
+    { "<leader>O",  group = "octo" },
+    { "<leader>OO", smart_entry,                                                        desc = "Smart entry (review/list)" },
+    { "<leader>Op", "<cmd>Octo pr list<CR>",                                            desc = "PR list" },
+    { "<leader>OP", "<cmd>Octo pr search<CR>",                                          desc = "PR search" },
+    { "<leader>Om", "<cmd>Octo pr search author:@me state:open<CR>",                    desc = "My PRs" },
+    { "<leader>Or", "<cmd>Octo pr search review-requested:@me state:open<CR>",          desc = "PRs to review" },
+    { "<leader>OA", prompt_author,                                                      desc = "PRs by author..." },
+    { "<leader>OT", function() require("plugins.octo.threads_picker").open() end,       desc = "Threads picker" },
+    { "<leader>Oc", "<cmd>Octo pr checkout<CR>",                                        desc = "Checkout PR" },
+    { "<leader>Ob", "<cmd>Octo pr browser<CR>",                                         desc = "Open PR in browser" },
+    -- Comment-prefix templates (active when inside a review session; no-op otherwise)
+    { "<localleader>cn", function() require("plugins.octo.comment_templates").compose("nit") end, mode = { "n", "x" }, desc = "nit comment" },
+    { "<localleader>cq", function() require("plugins.octo.comment_templates").compose("q")   end, mode = { "n", "x" }, desc = "question comment" },
+    { "<localleader>cb", function() require("plugins.octo.comment_templates").compose("b")   end, mode = { "n", "x" }, desc = "blocker comment" },
+    { "<localleader>c+", function() require("plugins.octo.comment_templates").compose("+")   end, mode = { "n", "x" }, desc = "praise comment" },
+  },
   opts = {
     picker_config = {
       mappings = {
