@@ -107,6 +107,9 @@ return {
     { "<localleader>c+", function() require("plugins.octo.comment_templates").compose("+")   end, mode = { "n", "x" }, desc = "praise comment" },
   },
   opts = {
+    -- Disable Projects v2 fields in PR/issue queries; the gh token does not
+    -- have `read:project` and the failures cascade into empty PR buffers.
+    default_to_projects_v2 = false,
     picker_config = {
       mappings = {
         open_in_browser = { lhs = "<leader>gO", desc = "open in browser" },
