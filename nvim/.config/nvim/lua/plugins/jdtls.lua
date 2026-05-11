@@ -103,23 +103,19 @@ return {
       PATH = JDTLS_JDK .. "/bin:" .. vim.env.PATH,
     })
 
-    -- LazyVim globs every jar under $MASON/share/java-test/, but jacocoagent
-    -- and the test-runner fat jar aren't OSGi bundles, so jdtls logs
-    -- "Failed to load extension bundles" for them. Build the list ourselves
-    -- and include only OSGi bundles. Also add Spring Boot's JDT extensions
-    -- (required for spring-boot.nvim's classpath listener mechanism).
+    -- java-debug-adapter bundle for non-test DAP debug. The java-test bundles
+    -- (com.microsoft.java.test.*) are intentionally NOT loaded: we use neotest
+    -- + neotest-java's JUnit Console runner as the sole Java test path. Keeping
+    -- jdtls unaware of test methods avoids LazyVim's lang.java extra wiring
+    -- jdtls.test_class / jdtls.test_nearest_method onto <leader>tt/tr/tT.
+    -- Spring Boot's JDT extensions are still appended below for the
+    -- spring-boot.nvim classpath listener.
     local mason_share = vim.fn.expand("$MASON/share")
     local bundles = vim.fn.glob(
       mason_share .. "/java-debug-adapter/com.microsoft.java.debug.plugin-*jar",
       false,
       true
     )
-    for _, jar in ipairs(vim.fn.glob(mason_share .. "/java-test/*.jar", false, true)) do
-      local name = vim.fs.basename(jar)
-      if not (name:match("jacocoagent") or name:match("%-jar%-with%-dependencies%.jar$")) then
-        table.insert(bundles, jar)
-      end
-    end
     local ok, spring_boot = pcall(require, "spring_boot")
     if ok and spring_boot.java_extensions then
       vim.list_extend(bundles, spring_boot.java_extensions() or {})
@@ -154,11 +150,19 @@ return {
           if not vim.api.nvim_buf_is_valid(args.buf) then
             return
           end
+          -- Tear down LazyVim lang.java's buffer-local jdtls test maps so
+          -- neotest is the only Java test path. lang.java's ungrouped
+          -- LspAttach (lang/java.lua:~194) binds these to jdtls.test_class /
+          -- jdtls.test_nearest_method / jdtls.dap.test_class. We unmap here
+          -- (after the deferred schedule lets that autocmd run first) and
+          -- re-set tg/tT below to neotest equivalents. tt/tr fall through to
+          -- LazyVim test/core's global neotest mappings.
+          for _, lhs in ipairs({ "<leader>tt", "<leader>tr", "<leader>tT" }) do
+            pcall(vim.keymap.del, "n", lhs, { buffer = args.buf })
+          end
           local map = function(lhs, rhs, desc)
             vim.keymap.set("n", lhs, rhs, { buffer = args.buf, desc = desc })
           end
-          -- <leader>tg: neotest nearest-test for parity with Go/Python.
-          -- jdtls.pick_test moves to <leader>jp (still available, new home).
           map("<leader>tg", function()
             require("neotest").run.run()
           end, "Java: Run nearest test (neotest)")
@@ -166,7 +170,7 @@ return {
           -- gradle/maven/bazel marker, falls back to buffer dir, hands the
           -- root to neotest. Bazel markers included so the keymap is harmless
           -- on Bazel-Java buffers (neotest reports "no tests" rather than
-          -- crash; Bazel-Java tests run via jdtls/bazel CLI).
+          -- crash; Bazel-Java tests run via bazel CLI).
           map("<leader>tT", function()
             local buf = vim.api.nvim_buf_get_name(0)
             local from = (buf ~= "" and vim.fn.fnamemodify(buf, ":p:h")) or vim.uv.cwd()
@@ -182,9 +186,6 @@ return {
             }) or from
             require("neotest").run.run(root)
           end, "Java: Run all tests in project (neotest)")
-          map("<leader>jp", function()
-            require("jdtls").pick_test()
-          end, "Java: Pick test goal (jdtls)")
           map("<leader>jc", "<cmd>JdtCompile<cr>", "Java: Compile")
           map("<leader>jr", "<cmd>JdtRestart<cr>", "Java: Restart jdtls")
         end)

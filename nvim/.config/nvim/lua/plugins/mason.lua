@@ -12,7 +12,6 @@ return {
       "debugpy",
       "jdtls",
       "java-debug-adapter",
-      "java-test",
       "vscode-spring-boot-tools",
       "google-java-format",
       "groovy-language-server",
