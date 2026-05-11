@@ -95,7 +95,16 @@ Existing `<localleader>ca` (raw comment), `<localleader>sa` (suggestion), `<loca
 
 Four phases.
 
-**Phase 1 — Find.** `<leader>Or` opens the snacks PR picker filtered to PRs requesting your review. The existing author-display patch surfaces `@author` in each row. `<CR>` opens the PR's `octo://` buffer.
+**Phase 1 — Find.** Pick an entry point based on intent. All four open the snacks PR picker; the existing author-display patch surfaces `@author` in each row, and the fuzzy-match field includes the author handle so you can narrow further by typing `@name`. `<CR>` opens the highlighted PR's `octo://` buffer.
+
+| Intent | Key | What it runs |
+|---|---|---|
+| "PRs assigned to me to review" | `<leader>Or` | `:Octo pr list reviewer=@me state=open` |
+| "PRs by a specific teammate" | `<leader>OA` | `vim.ui.input` prompts for author handle, then `:Octo pr list author=<input>` |
+| "PRs I authored" (catch-up on my own backlog) | `<leader>Om` | `:Octo pr list author=@me` |
+| "All open PRs, narrow with the picker" | `<leader>Op` | `:Octo pr list` — fuzzy-match in the picker by `#NN`, title, or `@author` |
+
+Picking by author has two paths because they serve different use cases: `<leader>OA` is best when you know exactly whose PRs you want (one-shot, no scrolling); `<leader>Op` + typing `@name` in the picker is best when you're browsing or unsure of the handle. Both rely on the same author field in the existing GraphQL query.
 
 **Phase 2 — Survey.** Read the PR description, scan existing comments. `]c`/`[c` step through existing comments in this buffer. `<localleader>pc` lists commits if the PR is multi-commit. No review tab open yet.
 
