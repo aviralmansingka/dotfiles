@@ -73,7 +73,7 @@ All global, mode `n` unless noted.
 | `<leader>OT` | Threads picker for current PR | `require('plugins.octo.threads_picker').open()` |
 | `<leader>Oi` | Issue list | `:Octo issue list` |
 | `<leader>OI` | Issue search | `:Octo issue search` |
-| `<leader>Oc` | Checkout PR | `:Octo pr checkout` |
+| `<leader>Oc` | Checkout PR (picker if not in a PR buffer); commonly chained with `<leader>OO` to start the review on the checked-out branch | `:Octo pr checkout` |
 | `<leader>Ob` | Open PR in browser | `:Octo pr browser` |
 
 ### Comment template keymaps (buffer-local)
@@ -103,8 +103,11 @@ Four phases.
 | "PRs by a specific teammate" | `<leader>OA` | `vim.ui.input` prompts for author handle, then `:Octo pr list author=<input>` |
 | "PRs I authored" (catch-up on my own backlog) | `<leader>Om` | `:Octo pr list author=@me` |
 | "All open PRs, narrow with the picker" | `<leader>Op` | `:Octo pr list` — fuzzy-match in the picker by `#NN`, title, or `@author` |
+| "Check out this PR locally so I can run/debug it, then review" | `<leader>Oc` → `<leader>OO` | `:Octo pr checkout` (picker if not in a PR buffer) switches the working tree to the PR's head branch; then smart-entry detects the PR for the current branch, opens the PR buffer and starts the review |
 
 Picking by author has two paths because they serve different use cases: `<leader>OA` is best when you know exactly whose PRs you want (one-shot, no scrolling); `<leader>Op` + typing `@name` in the picker is best when you're browsing or unsure of the handle. Both rely on the same author field in the existing GraphQL query.
+
+**Checkout-then-review chain.** `<leader>Oc` invokes `:Octo pr checkout`, which is global (works anywhere — see `octo/commands.lua:599`): if the current buffer is not an Octo PR buffer it opens the PR picker, on selection it shells `gh pr checkout <n>` and your working tree moves to the PR's head branch. The picker step is skipped if you're already in a PR buffer. Importantly, checkout does **not** open the PR's Octo buffer afterwards — you end up on the branch but in whatever file you started from. To start the review from there, follow up with `<leader>OO`: the smart-entry detects an open PR for the current branch and runs `:Octo review start` (or `resume`). Two keystrokes total. This is the path to use when you want full LSP / test-runner / debugger support against the PR's code, not just diff-reading.
 
 **Phase 2 — Survey.** Read the PR description, scan existing comments. `]c`/`[c` step through existing comments in this buffer. `<localleader>pc` lists commits if the PR is multi-commit. No review tab open yet.
 
