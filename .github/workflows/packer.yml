@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       build_base:
-        description: 'Rebuild the base AMI'
+        description: "Rebuild the base AMI"
         type: boolean
         default: false
 
@@ -339,7 +339,15 @@ jobs:
   packer-result:
     name: Packer Result
     if: "!cancelled()"
-    needs: [detect-changes, validate-templates, build-base, build-devbox, validate, cleanup-amis]
+    needs:
+      [
+        detect-changes,
+        validate-templates,
+        build-base,
+        build-devbox,
+        validate,
+        cleanup-amis,
+      ]
     runs-on: ubuntu-latest
     steps:
       - name: Check results
