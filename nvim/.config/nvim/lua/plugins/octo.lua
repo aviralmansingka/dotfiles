@@ -187,6 +187,20 @@ query(
 }
 ]]
 
+    -- Augment the create_pr mutation to return headRepository.
+    -- Octo's stock mutation returns baseRepository but not headRepository,
+    -- so the success callback renders the freshly-created PR buffer with
+    -- nil headRepository — and any later action that calls
+    -- OctoBuffer:get_pr (e.g. starting a review) NPEs at
+    -- octo/model/octo-buffer.lua:1045 on
+    -- `self:pullRequest().headRepository.nameWithOwner`.
+    local mutations = require("octo.gh.mutations")
+    mutations.create_pr = mutations.create_pr:gsub(
+      "baseRepository %{[^}]*%}",
+      "%0\n      headRepository {\n        name\n        nameWithOwner\n      }",
+      1
+    )
+
     -- Monkey-patch the snacks provider to include author in search + display
     local snacks_provider = require("octo.pickers.snacks.provider")
     local original_pull_requests = snacks_provider.pull_requests
