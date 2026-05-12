@@ -216,58 +216,42 @@ query(
 }
 ]]
 
-    -- Auto-checkout to the PR's head branch before starting/resuming a
-    -- review. Required for use_local_fs to take effect — Octo only swaps
-    -- the RIGHT pane to the working-tree file when in_pr_branch(pr) is
-    -- true (reviews/file-entry.lua:316). Without this, reviewing a PR
-    -- from main leaves the RIGHT pane as an octo:// buffer that gopls
-    -- (and every other path-based LSP) refuses to attach to. gh pr
-    -- checkout refuses to switch when the working tree is dirty, so the
-    -- user's uncommitted work can't be silently destroyed.
+    -- Make in_pr_branch correctly detect the common "I just ran
+    -- `gh pr checkout` and am literally on the PR's head branch" case.
+    -- Octo's stock check requires the local branch to have an upstream
+    -- tracking ref AND the remote name to resolve to pr.head_repo —
+    -- which is brittle. The simpler-and-correct check for same-repo PRs
+    -- is just: current branch name matches pr.head_ref_name. Wrap the
+    -- function so it returns true under either the stock check OR this
+    -- simpler one. Net effect: no spurious "would you like to checkout"
+    -- prompt when starting a review while already on the PR's branch,
+    -- and use_local_fs correctly swaps the RIGHT pane to the working-
+    -- tree file so gopls (and every other path-based LSP) attaches.
     do
-      local reviews = require("octo.reviews")
       local octo_utils = require("octo.utils")
-
-      local function with_pr(cb)
-        local buffer = octo_utils.get_current_buffer()
-        if buffer and buffer:isPullRequest() then
-          buffer:get_pr(cb)
-        else
-          octo_utils.get_pull_request_for_current_branch(cb)
+      local orig_in_pr_branch = octo_utils.in_pr_branch
+      octo_utils.in_pr_branch = function(pr)
+        if orig_in_pr_branch(pr) then
+          return true
         end
-      end
-
-      local function ensure_pr_branch(then_)
-        with_pr(function(pr)
-          if pr and not octo_utils.in_pr_branch(pr) then
-            octo_utils.checkout_pr_sync({ repo = pr.repo, pr_number = pr.number })
-          end
-          then_()
-        end)
-      end
-
-      local orig_start = reviews.start_review
-      reviews.start_review = function(...)
-        local args = { ... }
-        ensure_pr_branch(function()
-          orig_start(unpack(args))
-        end)
-      end
-
-      local orig_resume = reviews.resume_review
-      reviews.resume_review = function(...)
-        local args = { ... }
-        ensure_pr_branch(function()
-          orig_resume(unpack(args))
-        end)
-      end
-
-      local orig_start_or_resume = reviews.start_or_resume_review
-      reviews.start_or_resume_review = function(...)
-        local args = { ... }
-        ensure_pr_branch(function()
-          orig_start_or_resume(unpack(args))
-        end)
+        if not pr or not pr.head_ref_name then
+          return false
+        end
+        local current = vim.fn.system("git rev-parse --abbrev-ref HEAD"):gsub("%s+", "")
+        if vim.v.shell_error ~= 0 then
+          return false
+        end
+        if current ~= pr.head_ref_name then
+          return false
+        end
+        -- Same-repo PRs only: when the PR's head_repo equals the base
+        -- repo, a branch-name match is sufficient. For cross-repo PRs
+        -- the stock tracking-ref check is still required and already
+        -- ran above.
+        if pr.head_repo and pr.repo and pr.head_repo:lower() ~= pr.repo:lower() then
+          return false
+        end
+        return true
       end
     end
 
