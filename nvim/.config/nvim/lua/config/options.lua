@@ -29,23 +29,31 @@ if vim.env.SSH_TTY then
 end
 
 -- Re-wrap pastes into :term buffers with bracketed-paste markers, so nested
--- terminal programs (tmux + vim inside :term) see a paste, not raw keystrokes
--- (\n = Ctrl-J = vim normal-mode `j`).
+-- terminal programs (tmux + claude/vim inside :term) see a paste, not raw
+-- keystrokes (\n = Ctrl-J = vim normal-mode `j`). Buffers chunked phases
+-- (which happen over SSH when bytes arrive split across reads) into a single
+-- write — splitting the bracketed-paste sequence across two writes lets some
+-- inner programs (notably Claude Code) bail out before the end marker
+-- arrives and fall back to interpreting the content as keystrokes.
+local paste_buf = {}
 local default_paste = vim.paste
 vim.paste = function(lines, phase)
   if vim.bo.buftype == "terminal" and vim.b.terminal_job_id then
-    local content = table.concat(lines, "\n")
-    local out
+    local chan = vim.b.terminal_job_id
+    local START, END = "\27[200~", "\27[201~"
     if phase == -1 then
-      out = "\27[200~" .. content .. "\27[201~"
-    elseif phase == 1 then
-      out = "\27[200~" .. content
-    elseif phase == 3 then
-      out = content .. "\27[201~"
-    else
-      out = content
+      vim.api.nvim_chan_send(chan, START .. table.concat(lines, "\n") .. END)
+      return true
     end
-    vim.api.nvim_chan_send(vim.b.terminal_job_id, out)
+    if phase == 1 then
+      paste_buf = vim.deepcopy(lines)
+    else
+      vim.list_extend(paste_buf, lines)
+    end
+    if phase == 3 then
+      vim.api.nvim_chan_send(chan, START .. table.concat(paste_buf, "\n") .. END)
+      paste_buf = {}
+    end
     return true
   end
   return default_paste(lines, phase)
