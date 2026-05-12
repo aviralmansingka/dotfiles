@@ -90,7 +90,7 @@ return {
     { "<leader>gr", false },
     { "<leader>gS", false },
     -- <leader>O Octo namespace
-    { "<leader>O",  group = "octo" },
+    { "<leader>O",  "",                                                                 desc = "+octo" },
     { "<leader>OO", smart_entry,                                                        desc = "Smart entry (review/list)" },
     { "<leader>Op", "<cmd>Octo pr list<CR>",                                            desc = "PR list" },
     { "<leader>OP", "<cmd>Octo pr search<CR>",                                          desc = "PR search" },
