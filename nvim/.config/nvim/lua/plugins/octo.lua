@@ -99,6 +99,7 @@ return {
     { "<leader>OA", prompt_author,                                                      desc = "PRs by author..." },
     { "<leader>OT", function() require("plugins.octo.threads_picker").open() end,       desc = "Threads picker" },
     { "<leader>Oc", "<cmd>Octo pr checkout<CR>",                                        desc = "Checkout PR" },
+    { "<leader>OC", "<cmd>Octo pr create<CR>",                                          desc = "Create PR from current branch" },
     { "<leader>Ob", "<cmd>Octo pr browser<CR>",                                         desc = "Open PR in browser" },
     -- Comment-prefix templates (active when inside a review session; no-op otherwise)
     { "<localleader>cn", function() require("plugins.octo.comment_templates").compose("nit") end, mode = { "n", "x" }, desc = "nit comment" },
