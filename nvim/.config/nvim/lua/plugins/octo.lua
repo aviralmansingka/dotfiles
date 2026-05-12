@@ -110,6 +110,11 @@ return {
     -- Disable Projects v2 fields in PR/issue queries; the gh token does not
     -- have `read:project` and the failures cascade into empty PR buffers.
     default_to_projects_v2 = false,
+    -- Open the working-tree file (with real filetype + path) on the RIGHT
+    -- side of review diffs so LSP/treesitter/format-on-save/tests attach.
+    -- Octo prompts to `gh pr checkout` when starting a review off the
+    -- PR's head branch, so the local file matches the PR's content.
+    use_local_fs = true,
     picker_config = {
       mappings = {
         open_in_browser = { lhs = "<leader>gO", desc = "open in browser" },
