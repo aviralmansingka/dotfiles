@@ -79,6 +79,35 @@ local function prompt_author()
   end)
 end
 
+--- Open the current PR in a browser AND copy the URL to the system clipboard.
+--- The clipboard half is the useful one over SSH where opening a local browser
+--- via `gh pr view --web` either no-ops or opens a browser on the remote box.
+local function open_browser_and_copy()
+  local utils = require("octo.utils")
+  local navigation = require("octo.navigation")
+
+  local buffer = utils.get_current_buffer()
+  if buffer and buffer:isPullRequest() then
+    local remote = utils.get_remote_host() or "github.com"
+    local url = string.format("https://%s/%s/pull/%d", remote, buffer.repo, buffer.number)
+    utils.copy_url(url)
+    navigation.open_in_browser("pull_request", buffer.repo, buffer.number)
+    return
+  end
+
+  vim.system({ "gh", "pr", "view", "--json", "url", "-q", ".url" }, { text = true }, function(result)
+    vim.schedule(function()
+      if result.code ~= 0 or not result.stdout or result.stdout == "" then
+        utils.error("no PR found for current context")
+        return
+      end
+      local url = (result.stdout):gsub("%s+$", "")
+      utils.copy_url(url)
+      navigation.open_in_browser_raw(url)
+    end)
+  end)
+end
+
 return {
   "pwntester/octo.nvim",
   keys = {
@@ -100,7 +129,7 @@ return {
     { "<leader>OT", function() require("plugins.octo.threads_picker").open() end,       desc = "Threads picker" },
     { "<leader>Oc", "<cmd>Octo pr checkout<CR>",                                        desc = "Checkout PR" },
     { "<leader>OC", "<cmd>Octo pr create<CR>",                                          desc = "Create PR from current branch" },
-    { "<leader>Ob", "<cmd>Octo pr browser<CR>",                                         desc = "Open PR in browser" },
+    { "<leader>Ob", open_browser_and_copy,                                              desc = "Open PR in browser + copy URL" },
     -- Comment-prefix templates (active when inside a review session; no-op otherwise)
     { "<localleader>cn", function() require("plugins.octo.comment_templates").compose("nit") end, mode = { "n", "x" }, desc = "nit comment" },
     { "<localleader>cq", function() require("plugins.octo.comment_templates").compose("q")   end, mode = { "n", "x" }, desc = "question comment" },
