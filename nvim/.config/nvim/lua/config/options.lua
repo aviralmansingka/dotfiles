@@ -47,6 +47,13 @@ vim.paste = function(lines, phase)
     end
     if phase == 1 then
       paste_buf = vim.deepcopy(lines)
+    elseif #paste_buf > 0 and #lines > 0 then
+      -- Continuation: last line of buf concatenates with first line of new
+      -- chunk (nvim splits at byte boundaries, so a line can span phases).
+      paste_buf[#paste_buf] = paste_buf[#paste_buf] .. lines[1]
+      for i = 2, #lines do
+        table.insert(paste_buf, lines[i])
+      end
     else
       vim.list_extend(paste_buf, lines)
     end
