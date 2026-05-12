@@ -3,8 +3,8 @@ if not vim.g.neovide then
   return {}
 end
 
--- Font configuration (matches Ghostty)
-vim.o.guifont = "JetBrainsMono Nerd Font Mono:h13"
+-- Font is configured in ~/.config/neovide/config.toml so Neovide
+-- doesn't fall back to SF Mono (which is not installed on macOS).
 
 -- Enable macOS Cmd key support
 vim.g.neovide_input_use_logo = true

@@ -67,9 +67,84 @@ local function html_to_markdown(text)
   return text
 end
 
+local function smart_entry()
+  require("octo.reviews").start_or_resume_review()
+end
+
+local function prompt_author()
+  vim.ui.input({ prompt = "Author handle: " }, function(input)
+    if input and input ~= "" then
+      vim.cmd("Octo pr search author:" .. input .. " state:open")
+    end
+  end)
+end
+
+--- Open the current PR in a browser AND copy the URL to the system clipboard.
+--- The clipboard half is the useful one over SSH where opening a local browser
+--- via `gh pr view --web` either no-ops or opens a browser on the remote box.
+local function open_browser_and_copy()
+  local utils = require("octo.utils")
+  local navigation = require("octo.navigation")
+
+  local buffer = utils.get_current_buffer()
+  if buffer and buffer:isPullRequest() then
+    local remote = utils.get_remote_host() or "github.com"
+    local url = string.format("https://%s/%s/pull/%d", remote, buffer.repo, buffer.number)
+    utils.copy_url(url)
+    navigation.open_in_browser("pull_request", buffer.repo, buffer.number)
+    return
+  end
+
+  vim.system({ "gh", "pr", "view", "--json", "url", "-q", ".url" }, { text = true }, function(result)
+    vim.schedule(function()
+      if result.code ~= 0 or not result.stdout or result.stdout == "" then
+        utils.error("no PR found for current context")
+        return
+      end
+      local url = (result.stdout):gsub("%s+$", "")
+      utils.copy_url(url)
+      navigation.open_in_browser_raw(url)
+    end)
+  end)
+end
+
 return {
   "pwntester/octo.nvim",
+  keys = {
+    -- Disable LazyVim octo extras' <leader>g* keys; the Octo namespace lives under <leader>O
+    { "<leader>gi", false },
+    { "<leader>gI", false },
+    { "<leader>gp", false },
+    { "<leader>gP", false },
+    { "<leader>gr", false },
+    { "<leader>gS", false },
+    -- <leader>O Octo namespace
+    { "<leader>O",  "",                                                                 desc = "+octo" },
+    { "<leader>OO", smart_entry,                                                        desc = "Smart entry (review/list)" },
+    { "<leader>Op", "<cmd>Octo pr list<CR>",                                            desc = "PR list" },
+    { "<leader>OP", "<cmd>Octo pr search<CR>",                                          desc = "PR search" },
+    { "<leader>Om", "<cmd>Octo pr search author:@me state:open<CR>",                    desc = "My PRs" },
+    { "<leader>Or", "<cmd>Octo pr search review-requested:@me state:open<CR>",          desc = "PRs to review" },
+    { "<leader>OA", prompt_author,                                                      desc = "PRs by author..." },
+    { "<leader>OT", function() require("plugins.octo.threads_picker").open() end,       desc = "Threads picker" },
+    { "<leader>Oc", "<cmd>Octo pr checkout<CR>",                                        desc = "Checkout PR" },
+    { "<leader>OC", "<cmd>Octo pr create<CR>",                                          desc = "Create PR from current branch" },
+    { "<leader>Ob", open_browser_and_copy,                                              desc = "Open PR in browser + copy URL" },
+    -- Comment-prefix templates (active when inside a review session; no-op otherwise)
+    { "<localleader>cn", function() require("plugins.octo.comment_templates").compose("nit") end, mode = { "n", "x" }, desc = "nit comment" },
+    { "<localleader>cq", function() require("plugins.octo.comment_templates").compose("q")   end, mode = { "n", "x" }, desc = "question comment" },
+    { "<localleader>cb", function() require("plugins.octo.comment_templates").compose("b")   end, mode = { "n", "x" }, desc = "blocker comment" },
+    { "<localleader>c+", function() require("plugins.octo.comment_templates").compose("+")   end, mode = { "n", "x" }, desc = "praise comment" },
+  },
   opts = {
+    -- Disable Projects v2 fields in PR/issue queries; the gh token does not
+    -- have `read:project` and the failures cascade into empty PR buffers.
+    default_to_projects_v2 = false,
+    -- Open the working-tree file (with real filetype + path) on the RIGHT
+    -- side of review diffs so LSP/treesitter/format-on-save/tests attach.
+    -- Octo prompts to `gh pr checkout` when starting a review off the
+    -- PR's head branch, so the local file matches the PR's content.
+    use_local_fs = true,
     picker_config = {
       mappings = {
         open_in_browser = { lhs = "<leader>gO", desc = "open in browser" },
@@ -78,6 +153,25 @@ return {
   },
   config = function(_, opts)
     require("octo").setup(opts)
+
+    -- Octo's reviews/file-entry.lua sets modifiable=false on both diff
+    -- buffers after creation, even when use_local_fs=true makes the
+    -- RIGHT buffer a real working-tree file. Re-enable modifiable on
+    -- RIGHT-side buffers backed by a real file path so LSP code actions
+    -- and inline edits work in the review tab.
+    vim.api.nvim_create_autocmd("BufWinEnter", {
+      group = vim.api.nvim_create_augroup("OctoRightPaneEditable", { clear = true }),
+      callback = function(args)
+        local ok, props = pcall(vim.api.nvim_buf_get_var, args.buf, "octo_diff_props")
+        if not ok or not props or props.split ~= "RIGHT" then
+          return
+        end
+        if vim.api.nvim_buf_get_name(args.buf):match("^octo://") then
+          return -- not a local-fs buffer
+        end
+        vim.bo[args.buf].modifiable = true
+      end,
+    })
 
     -- Add author to the pull_requests GraphQL query
     local queries = require("octo.gh.queries")
@@ -121,6 +215,20 @@ query(
   }
 }
 ]]
+
+    -- Augment the create_pr mutation to return headRepository.
+    -- Octo's stock mutation returns baseRepository but not headRepository,
+    -- so the success callback renders the freshly-created PR buffer with
+    -- nil headRepository — and any later action that calls
+    -- OctoBuffer:get_pr (e.g. starting a review) NPEs at
+    -- octo/model/octo-buffer.lua:1045 on
+    -- `self:pullRequest().headRepository.nameWithOwner`.
+    local mutations = require("octo.gh.mutations")
+    mutations.create_pr = mutations.create_pr:gsub(
+      "baseRepository %{[^}]*%}",
+      "%0\n      headRepository {\n        name\n        nameWithOwner\n      }",
+      1
+    )
 
     -- Monkey-patch the snacks provider to include author in search + display
     local snacks_provider = require("octo.pickers.snacks.provider")

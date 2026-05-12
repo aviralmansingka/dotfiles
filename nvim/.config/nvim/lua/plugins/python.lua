@@ -124,8 +124,17 @@ return {
     end,
   },
 
-  -- neotest-python: pin to project venv so pytest sees workspace packages
-  -- and pytest plugins (asyncio, timeout, markdown-docs).
+  -- neotest-python: pin to project venv, and pin pytest's CWD to the
+  -- uv-workspace root. neotest-python's adapter does not set RunSpec.cwd
+  -- in build_spec (see ~/.local/share/nvim/lazy/neotest-python/lua/
+  -- neotest-python/adapter.lua), so pytest would otherwise inherit nvim's
+  -- CWD — breaking CWD-relative fixture paths like
+  -- `alembic.config.Config("alembic.ini")` in modal/server when nvim's CWD
+  -- is the inner pyproject dir. We let LazyVim/test extras instantiate the
+  -- adapter via the standard opts table, then wrap the live adapter's
+  -- build_spec from `init` once neotest finishes loading. This bypasses
+  -- the lazy.nvim opts/config merge pipeline entirely, which is fragile
+  -- across reloads and adapter-rebuild paths.
   {
     "nvim-neotest/neotest",
     optional = true,
@@ -136,9 +145,59 @@ return {
           python = function()
             return find_venv_python() or "python"
           end,
-          args = { "--no-header" },
+          -- --no-cov: pytest-cov is in modal's deps and autoloads coverage
+          -- collection. Skip it for interactive runs — it's the biggest
+          -- per-invocation startup tax.
+          args = { "--no-header", "--no-cov" },
         },
       },
     },
+    init = function()
+      local function patch_python_adapter()
+        local ok, ncfg = pcall(require, "neotest.config")
+        if not ok or not ncfg or not ncfg.adapters then
+          return
+        end
+        for _, adapter in ipairs(ncfg.adapters) do
+          if adapter.name == "neotest-python" and not adapter._cwd_uvroot_patched then
+            local original_build_spec = adapter.build_spec
+            adapter.build_spec = function(args)
+              local spec = original_build_spec(args)
+              if spec then
+                local pos = args.tree:data()
+                local lock = find_upward("uv.lock", vim.fn.fnamemodify(pos.path, ":h"))
+                if lock then
+                  local root = vim.fn.fnamemodify(lock, ":h")
+                  -- Integrated strategy reads spec.cwd (neotest-core runner).
+                  spec.cwd = root
+                  -- DAP strategy reads spec.strategy.cwd. neotest-python's
+                  -- base.create_dap_config bakes `cwd = nio.fn.getcwd()`,
+                  -- which is nvim's CWD — same bug as the integrated path.
+                  if type(spec.strategy) == "table" then
+                    spec.strategy.cwd = root
+                  end
+                end
+              end
+              return spec
+            end
+            adapter._cwd_uvroot_patched = true
+          end
+        end
+      end
+
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "LazyLoad",
+        callback = function(args)
+          if args.data == "neotest" then
+            patch_python_adapter()
+          end
+        end,
+      })
+
+      -- Cover the case where neotest is already loaded (e.g. :Lazy reload).
+      if package.loaded["neotest"] then
+        patch_python_adapter()
+      end
+    end,
   },
 }
