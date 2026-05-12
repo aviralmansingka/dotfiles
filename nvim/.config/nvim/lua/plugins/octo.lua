@@ -124,6 +124,25 @@ return {
   config = function(_, opts)
     require("octo").setup(opts)
 
+    -- Octo's reviews/file-entry.lua sets modifiable=false on both diff
+    -- buffers after creation, even when use_local_fs=true makes the
+    -- RIGHT buffer a real working-tree file. Re-enable modifiable on
+    -- RIGHT-side buffers backed by a real file path so LSP code actions
+    -- and inline edits work in the review tab.
+    vim.api.nvim_create_autocmd("BufWinEnter", {
+      group = vim.api.nvim_create_augroup("OctoRightPaneEditable", { clear = true }),
+      callback = function(args)
+        local ok, props = pcall(vim.api.nvim_buf_get_var, args.buf, "octo_diff_props")
+        if not ok or not props or props.split ~= "RIGHT" then
+          return
+        end
+        if vim.api.nvim_buf_get_name(args.buf):match("^octo://") then
+          return -- not a local-fs buffer
+        end
+        vim.bo[args.buf].modifiable = true
+      end,
+    })
+
     -- Add author to the pull_requests GraphQL query
     local queries = require("octo.gh.queries")
     queries.pull_requests = [[
