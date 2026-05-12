@@ -291,3 +291,4 @@ These are deliberately deferred to the implementation plan, not resolved here:
 2. Correct flag for "PRs requesting my review" — likely `reviewer=@me` but needs verification against Octo's `pr list` arg parsing.
 3. Whether the threads-picker resolve action should use Octo internal API or `gh api graphql` fallback — decided after a spike during implementation.
 4. Whether the comment-template autocmd pattern fires reliably for both review and non-review comments — spike with `nit` template before generalising.
+
