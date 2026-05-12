@@ -216,6 +216,61 @@ query(
 }
 ]]
 
+    -- Auto-checkout to the PR's head branch before starting/resuming a
+    -- review. Required for use_local_fs to take effect — Octo only swaps
+    -- the RIGHT pane to the working-tree file when in_pr_branch(pr) is
+    -- true (reviews/file-entry.lua:316). Without this, reviewing a PR
+    -- from main leaves the RIGHT pane as an octo:// buffer that gopls
+    -- (and every other path-based LSP) refuses to attach to. gh pr
+    -- checkout refuses to switch when the working tree is dirty, so the
+    -- user's uncommitted work can't be silently destroyed.
+    do
+      local reviews = require("octo.reviews")
+      local octo_utils = require("octo.utils")
+
+      local function with_pr(cb)
+        local buffer = octo_utils.get_current_buffer()
+        if buffer and buffer:isPullRequest() then
+          buffer:get_pr(cb)
+        else
+          octo_utils.get_pull_request_for_current_branch(cb)
+        end
+      end
+
+      local function ensure_pr_branch(then_)
+        with_pr(function(pr)
+          if pr and not octo_utils.in_pr_branch(pr) then
+            octo_utils.checkout_pr_sync({ repo = pr.repo, pr_number = pr.number })
+          end
+          then_()
+        end)
+      end
+
+      local orig_start = reviews.start_review
+      reviews.start_review = function(...)
+        local args = { ... }
+        ensure_pr_branch(function()
+          orig_start(unpack(args))
+        end)
+      end
+
+      local orig_resume = reviews.resume_review
+      reviews.resume_review = function(...)
+        local args = { ... }
+        ensure_pr_branch(function()
+          orig_resume(unpack(args))
+        end)
+      end
+
+      local orig_start_or_resume = reviews.start_or_resume_review
+      reviews.start_or_resume_review = function(...)
+        local args = { ... }
+        ensure_pr_branch(function()
+          orig_start_or_resume(unpack(args))
+        end)
+      end
+    end
+
     -- Augment the create_pr mutation to return headRepository.
     -- Octo's stock mutation returns baseRepository but not headRepository,
     -- so the success callback renders the freshly-created PR buffer with
