@@ -1,6 +1,10 @@
 vim.opt.termguicolors = true
 vim.opt.number = true
 
+-- Fully disable swap files and the "swap file found" recovery prompt.
+vim.opt.swapfile = false
+vim.opt.shortmess:append("A")
+
 -- OSC52 Clipboard Configuration
 -- Supports both local and remote (SSH) development
 -- Copy works over SSH via OSC52, paste uses local Neovim buffer to avoid timeouts

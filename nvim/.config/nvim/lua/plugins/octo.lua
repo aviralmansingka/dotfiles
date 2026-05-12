@@ -124,7 +124,7 @@ return {
     { "<leader>Op", "<cmd>Octo pr list<CR>",                                            desc = "PR list" },
     { "<leader>OP", "<cmd>Octo pr search<CR>",                                          desc = "PR search" },
     { "<leader>Om", "<cmd>Octo pr search author:@me state:open<CR>",                    desc = "My PRs" },
-    { "<leader>Or", "<cmd>Octo pr search review-requested:@me state:open<CR>",          desc = "PRs to review" },
+    { "<leader>Or", function() require("plugins.octo.pr_review_picker").open() end,    desc = "PRs to review + assigned (incl. merged <1w)" },
     { "<leader>OA", prompt_author,                                                      desc = "PRs by author..." },
     { "<leader>OT", function() require("plugins.octo.threads_picker").open() end,       desc = "Threads picker" },
     { "<leader>Oc", "<cmd>Octo pr checkout<CR>",                                        desc = "Checkout PR" },

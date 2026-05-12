@@ -6,8 +6,15 @@
 -- has go.work at the monorepo root (~/modal) but the Go module lives in ~/modal/go. Without fixing
 -- root_dir, gopls attaches at ~/modal and type-check can miss sibling files under the jobs package.
 --
--- Bazel + Modal: GOPACKAGESDRIVER is injected (before_client init sends settings) only when the
--- Bazel workspace directory basename is `modal`, using ~/.config/nvim/scripts/modal/gopackagesdriver.sh.
+-- GOPACKAGESDRIVER contract (default: OFF — plain `go list` is much faster, and we accept manual
+-- proto regen as the trade-off):
+--   unset / "" / "off"  → no driver injected (gopls + neotest both use plain `go list`)
+--   "auto"              → auto-discover Bazel driver; on Modal-named workspaces this resolves
+--                          to ~/.config/nvim/scripts/modal/gopackagesdriver.sh
+--   "/path/to/driver"   → mirror the explicit path into settings.gopls.env
+-- Flip to "auto" for a session when you need Bazel-resolved metadata (codegen-heavy packages,
+-- dep-version divergence vs CI). Note: this only affects gopls; neotest's subprocesses inherit
+-- vim.env, so `GOPACKAGESDRIVER=auto nvim` would NOT propagate to neotest — that's intentional.
 
 local M = {}
 
@@ -142,13 +149,14 @@ function M.resolve_gopackages_driver(monorepo)
 end
 
 --- Inject GOPACKAGESDRIVER into settings.gopls.env (Go `build.env`: options embedded as `env`).
---- Respect explicit GOPACKAGESDRIVER in settings/env and GOPACKAGESDRIVER=off.
+--- Default is OFF (plain `go list`). Opt in via GOPACKAGESDRIVER=auto for Bazel auto-discovery,
+--- or set an explicit driver path. See the file header for the full contract.
 --- See golang.org/x/tools gopls `UserOptions` / `BuildOptions.Env`.
 ---@param params lsp.InitializeParams
 ---@param config vim.lsp.ClientConfig
 function M.before_init_packages_driver(params, config)
   local env_gpd = vim.env.GOPACKAGESDRIVER
-  if env_gpd == "off" then
+  if not env_gpd or env_gpd == "" or env_gpd == "off" then
     return
   end
 
@@ -166,8 +174,8 @@ function M.before_init_packages_driver(params, config)
   config.settings = config.settings or {}
   config.settings.gopls = config.settings.gopls or {}
 
-  if env_gpd and env_gpd ~= "" then
-    --- Process env wins; mirror into settings so gopls' `go list` subprocess matches intent.
+  if env_gpd ~= "auto" then
+    --- Explicit path: mirror env value into settings so gopls' `go list` subprocess matches intent.
     local gps = vim.deepcopy(config.settings.gopls)
     local env = vim.deepcopy(gps.env or {})
     if env.GOPACKAGESDRIVER and env.GOPACKAGESDRIVER ~= "" then
@@ -282,8 +290,9 @@ return {
           return
         end
 
-        local gpd = vim.env.GOPACKAGESDRIVER
-        if gpd and gpd ~= "" and gpd ~= "off" then
+        --- Default is OFF; only nag when the user explicitly asked for auto-discovery
+        --- but we couldn't resolve a driver to satisfy it.
+        if vim.env.GOPACKAGESDRIVER ~= "auto" then
           return
         end
 
