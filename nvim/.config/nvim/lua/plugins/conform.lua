@@ -1,6 +1,14 @@
 return {
   "stevearc/conform.nvim",
   opts = {
+    -- S2: Enable format on save for markdown and python
+    format_on_save = function(bufnr)
+      local ft = vim.bo[bufnr].filetype
+      if ft == "markdown" or ft == "python" or ft == "java" then
+        return { timeout_ms = 2000, lsp_fallback = false }
+      end
+      return nil
+    end,
     -- format-on-save is wired up by LazyVim's own BufWritePre handler
     -- (lazyvim/util/format.lua). It respects vim.b.autoformat /
     -- vim.g.autoformat so you can toggle with <leader>uf. Don't set

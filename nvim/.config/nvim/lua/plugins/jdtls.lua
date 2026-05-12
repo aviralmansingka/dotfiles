@@ -82,6 +82,19 @@ return {
           postfix = { enabled = true },
           guessMethodArguments = true,
         },
+        -- Inlay hints + code lens. JDT LS docs disagree on casing across
+        -- versions (wiki: lowercase `inlayhints`, singular `implementationCodeLens`;
+        -- VS Code extension: camelCase `inlayHints`, plural `implementationsCodeLens`).
+        -- We send both forms; jdtls silently ignores keys it doesn't recognize.
+        inlayhints = {
+          parameterNames = { enabled = "all" },
+        },
+        inlayHints = {
+          parameterNames = { enabled = "all" },
+        },
+        referencesCodeLens = { enabled = true },
+        implementationCodeLens = { enabled = true },
+        implementationsCodeLens = { enabled = true },
       },
     })
 
@@ -90,23 +103,19 @@ return {
       PATH = JDTLS_JDK .. "/bin:" .. vim.env.PATH,
     })
 
-    -- LazyVim globs every jar under $MASON/share/java-test/, but jacocoagent
-    -- and the test-runner fat jar aren't OSGi bundles, so jdtls logs
-    -- "Failed to load extension bundles" for them. Build the list ourselves
-    -- and include only OSGi bundles. Also add Spring Boot's JDT extensions
-    -- (required for spring-boot.nvim's classpath listener mechanism).
+    -- java-debug-adapter bundle for non-test DAP debug. The java-test bundles
+    -- (com.microsoft.java.test.*) are intentionally NOT loaded: we use neotest
+    -- + neotest-java's JUnit Console runner as the sole Java test path. Keeping
+    -- jdtls unaware of test methods avoids LazyVim's lang.java extra wiring
+    -- jdtls.test_class / jdtls.test_nearest_method onto <leader>tt/tr/tT.
+    -- Spring Boot's JDT extensions are still appended below for the
+    -- spring-boot.nvim classpath listener.
     local mason_share = vim.fn.expand("$MASON/share")
     local bundles = vim.fn.glob(
       mason_share .. "/java-debug-adapter/com.microsoft.java.debug.plugin-*jar",
       false,
       true
     )
-    for _, jar in ipairs(vim.fn.glob(mason_share .. "/java-test/*.jar", false, true)) do
-      local name = vim.fs.basename(jar)
-      if not (name:match("jacocoagent") or name:match("%-jar%-with%-dependencies%.jar$")) then
-        table.insert(bundles, jar)
-      end
-    end
     local ok, spring_boot = pcall(require, "spring_boot")
     if ok and spring_boot.java_extensions then
       vim.list_extend(bundles, spring_boot.java_extensions() or {})
@@ -119,20 +128,67 @@ return {
     return opts
   end,
   init = function()
+    -- Augroup with `clear = true` so :Lazy reload nvim-jdtls replaces the
+    -- prior autocmd cleanly. Without this, reloads stack duplicate
+    -- LspAttach callbacks and the oldest registration's keymaps win,
+    -- masking newly-edited keymap bindings until a full nvim restart.
+    local jdtls_attach = vim.api.nvim_create_augroup("jdtls_lspattach_keymaps", { clear = true })
     vim.api.nvim_create_autocmd("LspAttach", {
+      group = jdtls_attach,
       callback = function(args)
         local client = vim.lsp.get_client_by_id(args.data.client_id)
         if not (client and client.name == "jdtls") then
           return
         end
-        local map = function(lhs, rhs, desc)
-          vim.keymap.set("n", lhs, rhs, { buffer = args.buf, desc = desc })
-        end
-        map("<leader>tg", function()
-          require("jdtls").pick_test()
-        end, "Java: Pick test goal")
-        map("<leader>jc", "<cmd>JdtCompile<cr>", "Java: Compile")
-        map("<leader>jr", "<cmd>JdtRestart<cr>", "Java: Restart jdtls")
+        -- Defer the keymap binding past the synchronous LspAttach handler
+        -- chain. LazyVim's lang.java extra registers an UNGROUPED LspAttach
+        -- (lang/java.lua:~194) that binds <leader>tT to jdtls.dap.test_class
+        -- after our augroup runs, clobbering ours via buffer-local
+        -- last-write-wins. vim.schedule queues us on the next event-loop
+        -- tick — guaranteed after every sync handler in this LspAttach.
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(args.buf) then
+            return
+          end
+          -- Tear down LazyVim lang.java's buffer-local jdtls test maps so
+          -- neotest is the only Java test path. lang.java's ungrouped
+          -- LspAttach (lang/java.lua:~194) binds these to jdtls.test_class /
+          -- jdtls.test_nearest_method / jdtls.dap.test_class. We unmap here
+          -- (after the deferred schedule lets that autocmd run first) and
+          -- re-set tg/tT below to neotest equivalents. tt/tr fall through to
+          -- LazyVim test/core's global neotest mappings.
+          for _, lhs in ipairs({ "<leader>tt", "<leader>tr", "<leader>tT" }) do
+            pcall(vim.keymap.del, "n", lhs, { buffer = args.buf })
+          end
+          local map = function(lhs, rhs, desc)
+            vim.keymap.set("n", lhs, rhs, { buffer = args.buf, desc = desc })
+          end
+          map("<leader>tg", function()
+            require("neotest").run.run()
+          end, "Java: Run nearest test (neotest)")
+          -- <leader>tT: run-all-in-project. Walks up for the first
+          -- gradle/maven/bazel marker, falls back to buffer dir, hands the
+          -- root to neotest. Bazel markers included so the keymap is harmless
+          -- on Bazel-Java buffers (neotest reports "no tests" rather than
+          -- crash; Bazel-Java tests run via bazel CLI).
+          map("<leader>tT", function()
+            local buf = vim.api.nvim_buf_get_name(0)
+            local from = (buf ~= "" and vim.fn.fnamemodify(buf, ":p:h")) or vim.uv.cwd()
+            local root = vim.fs.root(from, {
+              "build.gradle",
+              "build.gradle.kts",
+              "settings.gradle",
+              "settings.gradle.kts",
+              "pom.xml",
+              "MODULE.bazel",
+              "WORKSPACE",
+              "WORKSPACE.bazel",
+            }) or from
+            require("neotest").run.run(root)
+          end, "Java: Run all tests in project (neotest)")
+          map("<leader>jc", "<cmd>JdtCompile<cr>", "Java: Compile")
+          map("<leader>jr", "<cmd>JdtRestart<cr>", "Java: Restart jdtls")
+        end)
       end,
     })
   end,

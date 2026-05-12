@@ -100,6 +100,11 @@ local STRINGIFY = {
   delve = function(expr)
     return expr
   end,
+  -- Java: java-debug-adapter's evaluator already returns the Object.toString()
+  -- form, so identity is the right wrapper.
+  java = function(expr)
+    return expr
+  end,
 }
 
 local function find_repl_window()
@@ -112,19 +117,48 @@ local function find_repl_window()
   return nil
 end
 
--- Module-level state for eval/yank lifecycle. Single REPL session at a time
--- (matches nvim-dap's model — one REPL per debug session).
+-- Forward-declare so dap_eval_hover's keymap callback can reference it.
+local dap_yank_stringify
+
+-- Module-level state for eval/yank lifecycle. Tracks the persistent hover
+-- float (auto/manual <localleader>g) and the last expression so
+-- <localleader>y can re-evaluate the stringified form.
 local _eval_state = {
   last_expr = nil,
+  hover_buf = nil,
+  hover_win = nil,
   idle_timer = nil,
 }
 
--- Open the REPL with the current expression, or focus the existing REPL
--- if a manual press came in while the REPL is already visible. opts.source
--- controls behavior: "manual" notifies on missing session and focuses an
--- already-open REPL on re-press; "auto" is silent and skips re-eval if the
--- cursor is on the same expression we just evaluated.
-local function dap_eval_repl(opts)
+local function close_hover()
+  if _eval_state.hover_win and vim.api.nvim_win_is_valid(_eval_state.hover_win) then
+    pcall(vim.api.nvim_win_close, _eval_state.hover_win, true)
+  end
+  _eval_state.hover_buf = nil
+  _eval_state.hover_win = nil
+end
+
+local function get_cursor_expression()
+  if vim.bo.filetype == "dap-repl" then
+    return nil
+  end
+  local node = expression_under_cursor()
+  if not node then
+    return nil
+  end
+  local text = vim.treesitter.get_node_text(node, 0)
+  if not text or text == "" then
+    return nil
+  end
+  return text
+end
+
+-- Render the eval result in a hover float at the cursor (rounded border,
+-- standard vim-hover dismissal — closes on any cursor move, insert-mode
+-- entry, or buffer leave). Re-press <localleader>g after dismissal to
+-- re-evaluate at the new cursor position. Auto-trigger silently skips
+-- re-eval if the cursor is still on the same expression.
+local function dap_eval_hover(opts)
   opts = opts or {}
   local ok_dap, dap = pcall(require, "dap")
   if not ok_dap then
@@ -138,36 +172,104 @@ local function dap_eval_repl(opts)
     return
   end
 
-  local existing_repl = find_repl_window()
-
-  -- Manual re-press while REPL is open and we're not in it: focus into REPL.
-  if opts.source == "manual" and existing_repl and vim.api.nvim_get_current_win() ~= existing_repl then
-    vim.api.nvim_set_current_win(existing_repl)
+  if
+    opts.source == "manual"
+    and _eval_state.hover_win
+    and vim.api.nvim_win_is_valid(_eval_state.hover_win)
+    and vim.api.nvim_get_current_win() ~= _eval_state.hover_win
+  then
+    vim.api.nvim_set_current_win(_eval_state.hover_win)
     return
   end
 
-  -- Don't try to evaluate from inside the REPL itself.
-  if vim.bo.filetype == "dap-repl" then
+  if _eval_state.hover_buf and vim.api.nvim_get_current_buf() == _eval_state.hover_buf then
     return
   end
 
-  local node = expression_under_cursor()
-  if not node then
-    return
-  end
-  local expression = vim.treesitter.get_node_text(node, 0)
-  if not expression or expression == "" then
+  local expression = get_cursor_expression()
+  if not expression then
     return
   end
 
-  -- Auto-trigger: skip re-eval if cursor is on the same expression as last time.
-  if opts.source == "auto" and expression == _eval_state.last_expr then
+  if
+    opts.source == "auto"
+    and expression == _eval_state.last_expr
+    and _eval_state.hover_win
+    and vim.api.nvim_win_is_valid(_eval_state.hover_win)
+  then
+    return
+  end
+  _eval_state.last_expr = expression
+
+  local frame_id = session.current_frame and session.current_frame.id
+  session:request("evaluate", {
+    expression = expression,
+    frameId = frame_id,
+    context = "repl",
+  }, function(err, response)
+    vim.schedule(function()
+      close_hover()
+
+      local body = {}
+      if err then
+        body[1] = "Error: " .. (err.message or vim.inspect(err))
+      else
+        local result = (response and response.result) or "(no result)"
+        for line in (result .. "\n"):gmatch("([^\n]*)\n") do
+          table.insert(body, line)
+        end
+        --- Drop trailing blank from the gmatch sentinel.
+        while #body > 0 and body[#body] == "" do
+          body[#body] = nil
+        end
+        if #body == 0 then
+          body = { "(no result)" }
+        end
+      end
+
+      local fb, fw = vim.lsp.util.open_floating_preview(body, "", {
+        border = "rounded",
+        wrap = true,
+        max_width = 100,
+        max_height = 20,
+        focusable = true,
+        close_events = { "CursorMoved", "CursorMovedI", "InsertEnter", "BufLeave" },
+      })
+      _eval_state.hover_buf = fb
+      _eval_state.hover_win = fw
+
+      if fb then
+        vim.keymap.set("n", "<localleader>y", function()
+          dap_yank_stringify()
+        end, { buffer = fb, desc = "DAP: Yank stringified value" })
+        vim.keymap.set("n", "q", close_hover, { buffer = fb, desc = "DAP: Close eval hover" })
+        vim.keymap.set("n", "<Esc>", close_hover, { buffer = fb, desc = "DAP: Close eval hover" })
+      end
+    end)
+  end)
+end
+
+-- Run the cursor expression in the bottom REPL split (<localleader>r).
+-- Opens the REPL if it isn't already; focus stays on the source window.
+local function dap_eval_repl_split()
+  local ok_dap, dap = pcall(require, "dap")
+  if not ok_dap then
+    return
+  end
+  local session = dap.session()
+  if not session or not session.stopped_thread_id then
+    vim.notify("DAP: no paused session", vim.log.levels.WARN)
+    return
+  end
+
+  local expression = get_cursor_expression()
+  if not expression then
     return
   end
   _eval_state.last_expr = expression
 
   local prev_win = vim.api.nvim_get_current_win()
-  if not existing_repl then
+  if not find_repl_window() then
     dap.repl.open({ height = 10 })
   end
   dap.repl.execute(expression)
@@ -178,7 +280,8 @@ end
 
 -- Yank the stringified value of the last-evaluated expression. Per-language
 -- via the STRINGIFY table keyed on the active DAP session's `config.type`.
-local function dap_yank_stringify()
+-- (Assignment, not `local function`, because we forward-declared above.)
+dap_yank_stringify = function()
   local ok_dap, dap = pcall(require, "dap")
   if not ok_dap then
     return
@@ -219,10 +322,10 @@ local function dap_yank_stringify()
   end)
 end
 
--- Idle auto-trigger: 3s of cursor stillness in a Python/Go source buffer
--- with an active paused DAP session evaluates the cursor expression in the
--- REPL. CursorMoved resets the timer (token-free with vim.uv.new_timer).
-local AUTO_TRIGGER_FILETYPES = { python = true, go = true }
+-- Idle auto-trigger: 2s of cursor stillness in a Python/Go source buffer
+-- with an active paused DAP session opens the eval hover. CursorMoved
+-- resets the timer.
+local AUTO_TRIGGER_FILETYPES = { python = true, go = true, java = true }
 local function reset_idle_timer()
   if _eval_state.idle_timer then
     _eval_state.idle_timer:stop()
@@ -246,7 +349,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "BufEnter", "InsertEnter", "WinEnte
 
     _eval_state.idle_timer = vim.uv.new_timer()
     _eval_state.idle_timer:start(
-      3000,
+      2000,
       0,
       vim.schedule_wrap(function()
         reset_idle_timer()
@@ -257,7 +360,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "BufEnter", "InsertEnter", "WinEnte
         if not sess or not sess.stopped_thread_id then
           return
         end
-        dap_eval_repl({ source = "auto" })
+        dap_eval_hover({ source = "auto" })
       end)
     )
   end,
@@ -376,9 +479,16 @@ return {
     {
       "<localleader>g",
       function()
-        dap_eval_repl({ source = "manual" })
+        dap_eval_hover({ source = "manual" })
       end,
-      desc = "Debug: Eval expression in REPL (or focus REPL if open)",
+      desc = "Debug: Eval expression in hover (or focus hover if open)",
+    },
+    {
+      "<localleader>r",
+      function()
+        dap_eval_repl_split()
+      end,
+      desc = "Debug: Eval expression in REPL split",
     },
     --- Show the debuggee's output. nvim-dap spawns the adapter (dlv) as a server
     --- executable and pipes its stdout/stderr to ~/.cache/nvim/dap-<type>-stdout.log
