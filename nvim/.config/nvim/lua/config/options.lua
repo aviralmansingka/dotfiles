@@ -28,6 +28,29 @@ if vim.env.SSH_TTY then
   }
 end
 
+-- Re-wrap pastes into :term buffers with bracketed-paste markers, so nested
+-- terminal programs (tmux + vim inside :term) see a paste, not raw keystrokes
+-- (\n = Ctrl-J = vim normal-mode `j`).
+local default_paste = vim.paste
+vim.paste = function(lines, phase)
+  if vim.bo.buftype == "terminal" and vim.b.terminal_job_id then
+    local content = table.concat(lines, "\n")
+    local out
+    if phase == -1 then
+      out = "\27[200~" .. content .. "\27[201~"
+    elseif phase == 1 then
+      out = "\27[200~" .. content
+    elseif phase == 3 then
+      out = content .. "\27[201~"
+    else
+      out = content
+    end
+    vim.api.nvim_chan_send(vim.b.terminal_job_id, out)
+    return true
+  end
+  return default_paste(lines, phase)
+end
+
 -- Stack jumplist configuration
 vim.opt.jumpoptions = "stack" -- Use stack-based jumplist behavior
 
