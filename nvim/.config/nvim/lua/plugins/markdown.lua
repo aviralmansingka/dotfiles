@@ -20,6 +20,7 @@ return {
           vim.opt_local.wrap = true
           vim.opt_local.linebreak = true
           vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
+          require("helpers.markdown_links").setup()
         end,
       })
 
