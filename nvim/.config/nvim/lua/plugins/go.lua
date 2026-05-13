@@ -564,6 +564,39 @@ return {
         end,
         desc = "Run All Tests in Go Module (Neotest)",
       },
+      --- Scope the neotest summary to the current buffer's module root (nearest go.mod /
+      --- pyproject.toml / pom.xml). Default <leader>ts opens a summary that fans out to
+      --- every adapter starting at cwd — on `~/modal` that means Go + Python + Java trees
+      --- walking the whole repo. Anchor discovery at the module by temporarily setting
+      --- cwd for the toggle call, then restore. Adapters whose markers aren't under the
+      --- module root effectively drop out (their `root()` returns nil from there).
+      {
+        "<leader>ts",
+        function()
+          local neotest = require("neotest")
+          local buf = vim.api.nvim_buf_get_name(0)
+          local from = (buf ~= "" and vim.fn.fnamemodify(buf, ":p:h")) or vim.uv.cwd()
+          local markers = ({
+            go = { "go.mod" },
+            python = { "pyproject.toml" },
+            java = { "pom.xml", "build.gradle", "build.gradle.kts" },
+          })[vim.bo.filetype]
+          if not markers then
+            neotest.summary.toggle()
+            return
+          end
+          local root = vim.fs.root(from, markers) or from
+          local prev = vim.uv.cwd()
+          if root and root ~= prev then
+            vim.cmd("noautocmd cd " .. vim.fn.fnameescape(root))
+          end
+          neotest.summary.toggle()
+          if root and root ~= prev then
+            vim.cmd("noautocmd cd " .. vim.fn.fnameescape(prev))
+          end
+        end,
+        desc = "Toggle Summary for Current Module (Neotest)",
+      },
     },
   },
 }
