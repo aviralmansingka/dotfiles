@@ -272,6 +272,20 @@ return {
   { import = "lazyvim.plugins.extras.lang.go" },
   { import = "lazyvim.plugins.extras.lsp.none-ls" },
 
+  --- Drop golangci-lint as a live diagnostic source: its `typecheck` prerequisite produces
+  --- false-positive "undefined" cascades on multi-module go.work workspaces (it runs from a
+  --- single module root and can't see siblings). Gopls already covers in-editor type
+  --- diagnostics; keep golangci-lint installed via mason for CLI / pre-commit use.
+  {
+    "mfussenegger/nvim-lint",
+    optional = true,
+    opts = function(_, opts)
+      opts.linters_by_ft = opts.linters_by_ft or {}
+      opts.linters_by_ft.go = nil
+      return opts
+    end,
+  },
+
   {
     "neovim/nvim-lspconfig",
     init = function()
