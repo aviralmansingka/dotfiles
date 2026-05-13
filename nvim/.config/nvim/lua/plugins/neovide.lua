@@ -53,4 +53,24 @@ else
   })
 end
 
-return {}
+-- Suppress Neovide's startup font-load warning. Its hardcoded default
+-- fallback cascade includes the fontconfig-generic "monospace" family,
+-- which doesn't exist on macOS/CoreText, so the error always fires
+-- regardless of which fonts you actually have installed.
+return {
+  {
+    "folke/noice.nvim",
+    opts = function(_, opts)
+      opts.routes = opts.routes or {}
+      table.insert(opts.routes, {
+        filter = {
+          event = "msg_show",
+          kind = "echomsg",
+          find = "Font can't be updated to",
+        },
+        opts = { skip = true },
+      })
+      return opts
+    end,
+  },
+}
