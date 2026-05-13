@@ -468,6 +468,71 @@ return {
               return vim.fs.root(dir, "go.mod")
             end
           end
+
+          --- Scope neotest-golang's `go list` from "./..." to "." for single-file
+          --- and single-test runspecs. Profile (May 2026) showed this discovery
+          --- step dominates <leader>tt at 5-18s in the Modal monorepo: Go's
+          --- module-graph load (go.work + sibling modules) is paid in full even
+          --- when only one package's metadata is needed, and "./..." makes go list
+          --- walk the whole subtree on top of that. `<leader>tT` (directory runs)
+          --- keeps "./..." since it legitimately needs to enumerate sub-packages.
+          ---
+          --- Implementation: flip a module-local scope flag before each runspec's
+          --- M.build call, restore it after. The wrapped golist_command consults
+          --- the flag and rewrites the trailing "./..." arg to "." in single-
+          --- package mode. Guarded by _modal_scope_patched so double-loads are
+          --- a no-op.
+          local cmd_ok, cmd = pcall(require, "neotest-golang.lib.cmd")
+          if
+            cmd_ok
+            and type(cmd.golist_command) == "function"
+            and not cmd._modal_scope_patched
+          then
+            cmd._modal_scope_patched = true
+            cmd._modal_scope = "recursive"
+
+            local original_golist_command = cmd.golist_command
+            cmd.golist_command = function()
+              local list = original_golist_command()
+              if cmd._modal_scope == "single" and list[#list] == "./..." then
+                list[#list] = "."
+              end
+              return list
+            end
+
+            local function require_resilient(modname)
+              local ok, mod = pcall(require, modname)
+              if ok then
+                return true, mod
+              end
+              --- "loop or previous error" sticks until cleared; retry once.
+              --- Defensive for long-lived nvim sessions that hit a transient
+              --- init failure and cached it.
+              package.loaded[modname] = nil
+              return pcall(require, modname)
+            end
+
+            local function wrap_runspec(modname)
+              local mod_ok, mod = require_resilient(modname)
+              if not mod_ok or type(mod.build) ~= "function" then
+                return
+              end
+              local previous_build = mod.build
+              mod.build = function(...)
+                local saved = cmd._modal_scope
+                cmd._modal_scope = "single"
+                local ok_call, a, b, c, d = pcall(previous_build, ...)
+                cmd._modal_scope = saved
+                if not ok_call then
+                  error(a, 2)
+                end
+                return a, b, c, d
+              end
+            end
+
+            wrap_runspec("neotest-golang.runspec.file")
+            wrap_runspec("neotest-golang.runspec.test")
+          end
         end,
       })
     end,
