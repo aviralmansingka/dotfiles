@@ -3,6 +3,7 @@
 -- Bound to <c-.> in plugins/sidekick.lua.
 local internal = require("plugins.sidekick.internal")
 local registry = require("plugins.sidekick.registry")
+local branding = require("plugins.sidekick.branding")
 
 local M = {}
 
@@ -32,26 +33,14 @@ local function in_cwd_subtree(entry_cwd, root)
 end
 
 ---@param item table|nil
----@return string[]
-local function preview_lines(item)
+---@return string[]|nil cmd  capture-pane command, or nil if no pane
+local function preview_cmd(item)
   if not item or item._empty or not item.pane_id then
-    return { "(no session)" }
+    return nil
   end
-  local out = vim.fn.systemlist({
-    "tmux",
-    "capture-pane",
-    "-p",
-    "-S",
-    "-",
-    "-E",
-    "-",
-    "-t",
-    item.pane_id,
-  })
-  if vim.v.shell_error ~= 0 then
-    return { "(capture-pane failed)" }
-  end
-  return out
+  -- No -S/-E: capture only the currently visible region (the tail of the
+  -- shell). -e preserves ANSI escapes so the preview renders in color.
+  return { "tmux", "capture-pane", "-p", "-e", "-t", item.pane_id }
 end
 
 ---@param session_id string|nil
@@ -92,6 +81,7 @@ function M.list_items()
         pane_id = entry.pane_id,
         session_id = entry.session_id,
         cwd = entry.cwd,
+        cwd_display = cwd_display,
       }
     end
   end
@@ -104,8 +94,15 @@ function M.list_items()
   return items
 end
 
+-- A transparent highlight so the picker windows let the terminal bg show
+-- through instead of painting Normal/NormalFloat over it.
+local function ensure_transparent_hl()
+  vim.api.nvim_set_hl(0, "SidekickPickerTransparent", { bg = "NONE", default = false })
+end
+
 function M.open()
   registry.rehydrate()
+  ensure_transparent_hl()
   local items = M.list_items()
   local empty = #items == 0
   if empty then
@@ -115,11 +112,29 @@ function M.open()
     } }
   end
 
+  local winhl = "Normal:SidekickPickerTransparent"
+    .. ",NormalFloat:SidekickPickerTransparent"
+    .. ",NormalNC:SidekickPickerTransparent"
+
+  local function format_item(item)
+    if item._empty then
+      return { { item.text or "", "Comment" } }
+    end
+    local hl = branding.hl_groups(branding.tool_of(item.tool))
+    return {
+      { string.format("[%s]", item.tool or "?"), hl.title },
+      { " " },
+      { item.label or "", hl.title },
+      { "  " },
+      { item.cwd_display or "", "Directory" },
+    }
+  end
+
   Snacks.picker.pick({
     source = "sidekick_cwd_peek",
     title = "Sidekick Sessions in Cwd",
     items = items,
-    format = "text",
+    format = format_item,
     layout = {
       preset = "default",
       layout = {
@@ -127,15 +142,20 @@ function M.open()
         width = 0.8,
         height = 0.8,
         border = "none",
+        backdrop = false,
         { win = "preview", border = "rounded" },
         { win = "list", height = 5, border = "rounded" },
         { win = "input", height = 3, border = "rounded" },
       },
     },
     preview = function(ctx)
-      vim.bo[ctx.buf].modifiable = true
-      vim.api.nvim_buf_set_lines(ctx.buf, 0, -1, false, preview_lines(ctx.item))
-      return true
+      local cmd = preview_cmd(ctx.item)
+      if not cmd then
+        local buf = ctx.preview:scratch()
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "(no session)" })
+        return true
+      end
+      return Snacks.picker.preview.cmd(cmd, ctx)
     end,
     confirm = function(picker, item)
       picker:close()
@@ -148,14 +168,19 @@ function M.open()
     end,
     win = {
       input = {
+        wo = { winhighlight = winhl },
         keys = {
           ["<c-x>"] = { "sidekick_kill_session", mode = { "n", "i" } },
         },
       },
       list = {
+        wo = { cursorline = false, winhighlight = winhl },
         keys = {
           ["<c-x>"] = { "sidekick_kill_session", mode = { "n" } },
         },
+      },
+      preview = {
+        wo = { winhighlight = winhl },
       },
     },
     actions = {

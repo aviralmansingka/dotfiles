@@ -91,6 +91,7 @@ function M.open()
     title = "Sidekick Named Sessions",
     items = items,
     format = "text",
+    layout = { layout = { backdrop = false } },
     preview = function(ctx)
       local lines = preview_lines(ctx.item)
       vim.api.nvim_buf_set_lines(ctx.buf, 0, -1, false, lines)
