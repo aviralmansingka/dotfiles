@@ -61,7 +61,7 @@ return {
     {
       "<c-;>",
       function()
-        internal.toggle_tool_session("claude", true)
+        internal.open_session_with_branch("claude", true)
       end,
       desc = "Sidekick Toggle Claude",
       mode = { "n", "x" },
@@ -100,6 +100,11 @@ return {
             end
             local tool_name = state.tool and state.tool.name or nil
             if internal.is_claude_tool(tool_name) and not internal.ensure_claude_bridge() then
+              return
+            end
+            local check = internal.validate_branch_for_state(state)
+            if not check.ok then
+              internal.notify_branch_failure(state.mux_session or tool_name or "?", check.branch, check.result)
               return
             end
             require("sidekick.cli.state").attach(state, { show = true, focus = true })
@@ -163,21 +168,21 @@ return {
     {
       "<leader>ag",
       function()
-        internal.toggle_tool_session("codex", true)
+        internal.open_session_with_branch("codex", true)
       end,
       desc = "Sidekick Toggle Codex (G)PT",
     },
     {
       "<leader>ao",
       function()
-        require("sidekick.cli").toggle({ name = "opencode", focus = true })
+        internal.open_session_with_branch("opencode", true)
       end,
       desc = "Sidekick Toggle OpenCode",
     },
     {
       "<leader>au",
       function()
-        internal.toggle_tool_session("cursor", true)
+        internal.open_session_with_branch("cursor", true)
       end,
       desc = "Sidekick Toggle Cursor Agent",
     },
