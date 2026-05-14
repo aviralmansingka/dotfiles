@@ -147,10 +147,10 @@ function M.build(opts)
       local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
       code = table.concat(lines, '\n')
       scope_kind = 'buffer'
+      idents = {}
       if get_root(bufnr) then
-        idents = collect_identifiers_in_range(bufnr, 0, #lines - 1)
+        notify_fallback_once(bufnr, 'ask: no treesitter scope match, sending whole buffer without symbol enrichment')
       else
-        idents = {}
         notify_fallback_once(bufnr, 'ask: no treesitter parser, sending whole buffer without symbol enrichment')
       end
     end
