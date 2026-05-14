@@ -72,9 +72,9 @@ return {
     {
       "<c-.>",
       function()
-        require("sidekick.cli").toggle()
+        require("plugins.sidekick.cwd_picker").open()
       end,
-      desc = "Sidekick Toggle",
+      desc = "Sidekick Peek Sessions in Cwd",
       mode = { "n", "t", "i", "x" },
     },
     {
