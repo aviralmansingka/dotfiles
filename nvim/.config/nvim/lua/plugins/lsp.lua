@@ -48,8 +48,6 @@ return {
       },
     }
 
-    -- Copilot language server for Sidekick NES
-    opts.servers.copilot = {}
     return opts
   end,
 }
