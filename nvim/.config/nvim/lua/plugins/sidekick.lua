@@ -13,6 +13,13 @@ return {
     cli = {
       win = {
         config = function(terminal)
+          -- cursor-agent gets a right-side split; other tools use the
+          -- default float layout. Override before branding.apply so the
+          -- float opts only get themed when they'll actually be used.
+          local tool_name = terminal.tool and terminal.tool.name or nil
+          if tool_name == "cursor" then
+            terminal.opts.layout = "right"
+          end
           require("plugins.sidekick.branding").apply(terminal)
         end,
         layout = "float",
@@ -82,6 +89,72 @@ return {
       end,
       mode = { "n", "x" },
       desc = "Ask cursor-agent about this code",
+    },
+    {
+      "<leader>ae",
+      function()
+        require("plugins.sidekick.ask").edit()
+      end,
+      mode = { "n", "x" },
+      desc = "Edit: ask cursor-agent for a diff (hover to preview)",
+    },
+    {
+      "<localleader>e",
+      function()
+        require("plugins.sidekick.ask").edit()
+      end,
+      mode = { "n", "x" },
+      desc = "Edit: ask cursor-agent for a diff (hover to preview)",
+    },
+    {
+      "<leader>aA",
+      function()
+        require("plugins.sidekick.ask").apply_line()
+      end,
+      desc = "Edit: apply diff on current line",
+    },
+    {
+      "<leader>aR",
+      function()
+        require("plugins.sidekick.ask").reject_line()
+      end,
+      desc = "Edit: reject diff on current line",
+    },
+    {
+      "<Tab>",
+      function()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local line0 = vim.api.nvim_win_get_cursor(0)[1] - 1
+        local state = require("plugins.sidekick.ask.state")
+        local signs = require("plugins.sidekick.ask.signs")
+        local _, entry = state.find_at(bufnr, line0, signs.ns)
+        if entry and entry.mode == "edit" and entry.status == "done" then
+          require("plugins.sidekick.ask").apply_line()
+        else
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-i>", true, false, true), "n", false)
+        end
+      end,
+      desc = "Edit: accept diff on current line (else jump forward)",
+    },
+    {
+      "<S-Tab>",
+      function()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local line0 = vim.api.nvim_win_get_cursor(0)[1] - 1
+        local state = require("plugins.sidekick.ask.state")
+        local signs = require("plugins.sidekick.ask.signs")
+        local _, entry = state.find_at(bufnr, line0, signs.ns)
+        if entry then
+          if entry.mode == "edit" then
+            require("plugins.sidekick.ask").reject_line()
+          else
+            require("plugins.sidekick.ask").clear_line()
+          end
+        else
+          vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<S-Tab>", true, false, true), "n", false)
+        end
+      end,
+      desc = "Sidekick: remove diff/answer on current line",
     },
     {
       "<leader>ay",
@@ -158,13 +231,6 @@ return {
       end,
       mode = { "n", "x" },
       desc = "Sidekick Select Prompt",
-    },
-    {
-      "<leader>ac",
-      function()
-        require("plugins.sidekick.ask").clear_line()
-      end,
-      desc = "Ask: clear answer on current line",
     },
     {
       "<leader>ag",

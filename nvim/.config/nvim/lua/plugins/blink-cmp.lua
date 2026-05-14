@@ -24,6 +24,17 @@ return {
     event = { "InsertEnter", "CmdlineEnter" },
     version = "*",
     opts = {
+      enabled = function()
+        -- Disable completion in terminal buffers and in any buffer that
+        -- opts out via `vim.b.completion = false` (e.g. the sidekick ask prompt).
+        if vim.bo.buftype == "terminal" then
+          return false
+        end
+        if vim.b.completion == false then
+          return false
+        end
+        return true
+      end,
       keymap = {
         preset = "default",
         ["<C-b>"] = false,

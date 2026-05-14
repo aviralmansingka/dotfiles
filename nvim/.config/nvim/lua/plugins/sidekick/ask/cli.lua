@@ -4,9 +4,18 @@ local M = {}
 
 ---@param prompt string
 ---@param on_done fun(result: { ok: boolean, result: string?, err: string?, duration_ms: integer?, tokens: { input: integer, output: integer }? })
+---@param opts { mode: string? }?  `opts.mode` is forwarded as `--mode <m>`; omit the table or pass `{ mode = nil }` to skip the `--mode` flag entirely (used by the edit path so cursor-agent can produce diffs).
 ---@return vim.SystemObj
-function M.spawn(prompt, on_done)
-  local cmd = { 'cursor-agent', '-p', '--mode', 'ask', '--output-format', 'json', prompt }
+function M.spawn(prompt, on_done, opts)
+  local cmd = { 'cursor-agent', '-p' }
+  local mode = opts and opts.mode or nil
+  if mode then
+    cmd[#cmd + 1] = '--mode'
+    cmd[#cmd + 1] = mode
+  end
+  cmd[#cmd + 1] = '--output-format'
+  cmd[#cmd + 1] = 'json'
+  cmd[#cmd + 1] = prompt
   return vim.system(cmd, {
     cwd = vim.fn.getcwd(),
     text = true,

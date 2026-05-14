@@ -120,17 +120,21 @@ local function lsp_hover_for(bufnr, node)
 end
 
 ---@param opts { mode: 'normal'|'visual', bufnr: integer, range: { start_line: integer, end_line: integer }? }
----@return { code: string, scope_kind: 'function'|'class'|'selection'|'buffer', symbols: { name: string, hover: string }[] }
+---@return { code: string, scope_kind: 'function'|'class'|'selection'|'buffer', symbols: { name: string, hover: string }[], start_line: integer, end_line: integer }
 function M.build(opts)
   local bufnr = opts.bufnr
   local code, scope_kind
   local idents
+  local start_line0 = 0
+  local end_line0 = 0
 
   if opts.mode == 'visual' and opts.range then
     local s, e = opts.range.start_line, opts.range.end_line
     local lines = vim.api.nvim_buf_get_lines(bufnr, s, e + 1, false)
     code = table.concat(lines, '\n')
     scope_kind = 'selection'
+    start_line0 = s
+    end_line0 = e
     idents = collect_identifiers_in_range(bufnr, s, e)
   else
     local cursor = vim.api.nvim_win_get_cursor(0)
@@ -142,11 +146,15 @@ function M.build(opts)
       local lines = vim.api.nvim_buf_get_lines(bufnr, sr, er + 1, false)
       code = table.concat(lines, '\n')
       scope_kind = kind
+      start_line0 = sr
+      end_line0 = er
       idents = collect_identifiers(node)
     else
       local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
       code = table.concat(lines, '\n')
       scope_kind = 'buffer'
+      start_line0 = 0
+      end_line0 = math.max(0, vim.api.nvim_buf_line_count(bufnr) - 1)
       idents = {}
       if get_root(bufnr) then
         notify_fallback_once(bufnr, 'ask: no treesitter scope match, sending whole buffer without symbol enrichment')
@@ -169,7 +177,13 @@ function M.build(opts)
     end
   end
 
-  return { code = code, scope_kind = scope_kind, symbols = symbols }
+  return {
+    code = code,
+    scope_kind = scope_kind,
+    symbols = symbols,
+    start_line = start_line0,
+    end_line = end_line0,
+  }
 end
 
 ---@param symbols { name: string, hover: string }[]
@@ -185,6 +199,68 @@ function M.render_symbols_block(symbols)
     out[#out + 1] = ''
   end
   return table.concat(out, '\n')
+end
+
+---Render the scope with right-aligned 1-based file line numbers and a
+---`│` separator (non-whitespace, so the model can't confuse it with
+---indentation). Content begins at the byte IMMEDIATELY after `│` — every
+---leading whitespace byte after `│` belongs to the line content.
+---@param code string
+---@param start_line0 integer  0-based file line of the first snippet line
+---@return string
+local function line_numbered(code, start_line0)
+  local lines = vim.split(code, '\n', { plain = true })
+  local last = start_line0 + #lines
+  local width = math.max(2, #tostring(last))
+  local out = {}
+  for i, line in ipairs(lines) do
+    out[#out + 1] = string.format('%' .. width .. 'd │%s', start_line0 + i, line)
+  end
+  return table.concat(out, '\n')
+end
+
+---@param instruction string
+---@param ctx { code: string, symbols: { name: string, hover: string }[], start_line: integer, end_line: integer }
+---@param file_path string  Relative path used in the diff `--- a/<path>` header.
+---@return string
+function M.render_edit_prompt(instruction, ctx, file_path)
+  local symbols_block = M.render_symbols_block(ctx.symbols)
+  local start1 = ctx.start_line + 1
+  local end1 = (ctx.end_line or ctx.start_line) + 1
+  local old_count = end1 - start1 + 1
+  local parts = {
+    'edit this code to: ' .. instruction,
+    '',
+    'file: ' .. file_path,
+    string.format('lines to edit: %d-%d  (%d lines — ONLY these lines may be touched)', start1, end1, old_count),
+    '',
+    'snippet format: each line is shown as `<line_number> │<line content>`. the `│` is a non-whitespace SEPARATOR; the line content begins at the very next byte after `│` (NO implicit space). every byte from immediately after `│` to end-of-line is the actual content, leading whitespace included.',
+    '',
+    'snippet (do NOT echo the line numbers or the `│` back in your diff):',
+    line_numbered(ctx.code, ctx.start_line),
+  }
+  if symbols_block ~= '' then
+    parts[#parts + 1] = ''
+    parts[#parts + 1] = 'symbols (for reference, do not paste back):'
+    parts[#parts + 1] = symbols_block
+  end
+  parts[#parts + 1] = ''
+  parts[#parts + 1] = 'reply with a single valid unified git diff, and nothing else.'
+  parts[#parts + 1] = 'your FIRST character must be `-` (start of `--- a/...`) or `N` (start of `NOOP`). do not begin with reasoning, fences, or any framing text.'
+  parts[#parts + 1] = 'if the instruction is ambiguous, impossible, or no change is needed, reply with the single bare token `NOOP` on its own line.'
+  parts[#parts + 1] = ''
+  parts[#parts + 1] = 'strict format:'
+  parts[#parts + 1] = '- line 1: `--- a/' .. file_path .. '`'
+  parts[#parts + 1] = '- line 2: `+++ b/' .. file_path .. '`'
+  parts[#parts + 1] = string.format('- line 3: exactly ONE hunk header `@@ -%d,%d +%d,M @@` where M is the number of `+` lines you emit (any positive integer; same as the number of replacement lines)', start1, old_count, start1)
+  parts[#parts + 1] = string.format('- then exactly %d `-` lines (one per original line in the snippet above, in order, copying the content AFTER `│` byte-for-byte including all leading whitespace)', old_count)
+  parts[#parts + 1] = '- then exactly M `+` lines containing the new replacement content, in order, with whatever indentation the new code needs'
+  parts[#parts + 1] = '- no context (space-prefixed) lines anywhere'
+  parts[#parts + 1] = '- no second `@@` hunk; no other files; no markdown; no code fences; no prose before, between, or after the diff'
+  parts[#parts + 1] = ''
+  parts[#parts + 1] = 'indentation rule: the `│` glyph in the snippet is the boundary. count the whitespace bytes between `│` and the first non-whitespace character — that count must appear verbatim between `-` (or `+`) and the first non-whitespace byte. tabs vs spaces must match exactly.'
+  parts[#parts + 1] = string.format('counts rule: `<old_count>` in the `@@` header MUST equal %d (the number of `-` lines); `<new_count>` MUST equal the number of `+` lines. the applier checks this.', old_count)
+  return table.concat(parts, '\n')
 end
 
 ---@param question string

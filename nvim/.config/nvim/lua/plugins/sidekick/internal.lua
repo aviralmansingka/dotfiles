@@ -7,8 +7,7 @@ M.tool_urls = {
   opencode = "https://github.com/sst/opencode",
 }
 
-M.claude_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/claude")) == 1
-    and vim.fn.expand("~/.local/bin/claude")
+M.claude_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/claude")) == 1 and vim.fn.expand("~/.local/bin/claude")
   or "claude"
 
 M.cursor_agent_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/cursor-agent")) == 1
@@ -146,8 +145,7 @@ function M.session_cwd(session_id)
   if not session_id or session_id == "" or vim.fn.executable("tmux") ~= 1 then
     return nil
   end
-  local result =
-    vim.system({ "tmux", "display-message", "-p", "-t", session_id, "-F", "#{pane_current_path}" }):wait()
+  local result = vim.system({ "tmux", "display-message", "-p", "-t", session_id, "-F", "#{pane_current_path}" }):wait()
   if result.code ~= 0 then
     return nil
   end

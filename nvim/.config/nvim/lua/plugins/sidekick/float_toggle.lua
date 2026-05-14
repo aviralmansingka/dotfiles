@@ -75,9 +75,15 @@ function M.toggle()
     else
       float_cfg.border = M.float_border()
     end
+    -- Strip the split-only winbar + WinSeparator override before the
+    -- window becomes a float; otherwise the winbar lingers as a stray
+    -- row inside the float.
+    branding.clear_split_styling(win)
     vim.api.nvim_win_set_config(win, float_cfg)
     vim.wo[win].winfixwidth = false
     vim.wo[win].winfixheight = false
+    vim.api.nvim_set_current_win(win)
+    vim.cmd("startinsert")
     return
   end
 
@@ -88,9 +94,13 @@ function M.toggle()
     return
   end
   local new_cfg = split_win_config(term)
-  --- nvim_win_set_config can't convert a float → split in this nvim version
-  --- (raises "Cannot split a floating window"). Open the split first so the
-  --- terminal buffer keeps a window reference, then close the float.
+  -- nvim_win_set_config raises "Cannot split a floating window" when
+  -- converting a float in-place, so open a new split for the same
+  -- terminal buffer and close the float. Deferring the close to the
+  -- next event-loop tick — and forcing a redraw afterward — lets nvim
+  -- finish wiring the pty to the new window before the float goes
+  -- away, which avoids the mangled / frozen terminal grid we'd see
+  -- when both happened in the same tick.
   local buf = vim.api.nvim_win_get_buf(win)
   local new_win = vim.api.nvim_open_win(buf, true, new_cfg)
   vim.w[new_win].sidekick_session_id = sid
@@ -101,7 +111,18 @@ function M.toggle()
     vim.wo[new_win].winfixwidth = true
     vim.wo[new_win].winfixheight = false
   end
-  pcall(vim.api.nvim_win_close, win, false)
+  vim.api.nvim_set_current_win(new_win)
+  vim.schedule(function()
+    if vim.api.nvim_win_is_valid(win) then
+      pcall(vim.api.nvim_win_close, win, true)
+    end
+    if vim.api.nvim_win_is_valid(new_win) then
+      vim.api.nvim_set_current_win(new_win)
+      require("plugins.sidekick.branding").apply_split_for(term, new_win)
+      vim.cmd("redraw!")
+      vim.cmd("startinsert")
+    end
+  end)
 end
 
 return M

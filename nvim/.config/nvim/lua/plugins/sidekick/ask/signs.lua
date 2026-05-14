@@ -7,24 +7,44 @@ local M = {}
 M.ns = vim.api.nvim_create_namespace('sidekick.ask')
 
 local SPINNER_FRAMES = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' }
-local DONE_ICON = '🤖'
+local DONE_ICON = '?'
+local EDIT_DONE_ICON = '±'
 local RANGE_BAR = '│'
 
 local timer = nil
 
 function M.setup_highlights()
   require('plugins.sidekick.branding').ensure_highlights()
-  vim.api.nvim_set_hl(0, 'SidekickAskRange', { link = 'SidekickBorderCursor', default = true })
-  vim.api.nvim_set_hl(0, 'SidekickAskSign', { link = 'SidekickBorderCursor', default = true })
+  -- Ask = gruvbox blue. Edit = deep dark purple. Kept in sync with
+  -- plugins/sidekick/branding.lua's M.colors.ask / M.colors.edit so the
+  -- prompt-float border matches the gutter sign.
+  vim.api.nvim_set_hl(0, 'SidekickAskSign', { fg = '#83a598', default = true })
+  vim.api.nvim_set_hl(0, 'SidekickAskRange', { fg = '#83a598', default = true })
+  vim.api.nvim_set_hl(0, 'SidekickEditSign', { fg = '#8f3f71', default = true })
+  vim.api.nvim_set_hl(0, 'SidekickEditRange', { fg = '#8f3f71', default = true })
+  -- Live-replace preview uses the colorscheme's classic diff colors so the
+  -- overlay reads as a real diff (green = add, red = remove). Linked via
+  -- `default = true` so a user-defined override still wins.
+  vim.api.nvim_set_hl(0, 'SidekickDiffAdd', { link = 'DiffAdd', default = true })
+  vim.api.nvim_set_hl(0, 'SidekickDiffDelete', { link = 'DiffDelete', default = true })
+end
+
+---@param mode 'ask'|'edit'
+---@return string sign_hl, string range_hl
+local function hl_for(mode)
+  if mode == 'edit' then return 'SidekickEditSign', 'SidekickEditRange' end
+  return 'SidekickAskSign', 'SidekickAskRange'
 end
 
 ---@param bufnr integer
 ---@param line integer
+---@param mode 'ask'|'edit'
 ---@return integer
-function M.create_anchor(bufnr, line)
+function M.create_anchor(bufnr, line, mode)
+  local sign_hl = hl_for(mode)
   return vim.api.nvim_buf_set_extmark(bufnr, M.ns, line, 0, {
     sign_text = SPINNER_FRAMES[1],
-    sign_hl_group = 'SidekickAskSign',
+    sign_hl_group = sign_hl,
     invalidate = true,
   })
 end
@@ -32,13 +52,15 @@ end
 ---@param bufnr integer
 ---@param start_line integer
 ---@param end_line integer
+---@param mode 'ask'|'edit'
 ---@return integer[]
-function M.create_range_bar(bufnr, start_line, end_line)
+function M.create_range_bar(bufnr, start_line, end_line, mode)
+  local _, range_hl = hl_for(mode)
   local ids = {}
   for line = start_line, end_line do
     ids[#ids + 1] = vim.api.nvim_buf_set_extmark(bufnr, M.ns, line, 0, {
       sign_text = RANGE_BAR,
-      sign_hl_group = 'SidekickAskRange',
+      sign_hl_group = range_hl,
       invalidate = true,
     })
   end
@@ -63,7 +85,9 @@ end
 ---@param bufnr integer
 ---@param entry AskEntry
 function M.mark_done(bufnr, entry)
-  set_anchor_sign(bufnr, entry.extmark_id, DONE_ICON, 'SidekickAskSign')
+  local icon = entry.mode == 'edit' and EDIT_DONE_ICON or DONE_ICON
+  local sign_hl = hl_for(entry.mode)
+  set_anchor_sign(bufnr, entry.extmark_id, icon, sign_hl)
 end
 
 ---@param bufnr integer
@@ -92,7 +116,8 @@ local function tick()
         if entry.status == 'pending' then
           any = true
           entry.spinner_frame = (entry.spinner_frame % #SPINNER_FRAMES) + 1
-          set_anchor_sign(bufnr, entry.extmark_id, SPINNER_FRAMES[entry.spinner_frame], 'SidekickAskSign')
+          local sign_hl = hl_for(entry.mode)
+          set_anchor_sign(bufnr, entry.extmark_id, SPINNER_FRAMES[entry.spinner_frame], sign_hl)
         end
       end
     end

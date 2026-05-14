@@ -7,10 +7,15 @@ local internal = require("plugins.sidekick.internal")
 local M = {}
 
 M.colors = {
-  claude = "#E07856", -- terracotta
+  claude = "#e48285", -- terracotta
   codex = "#89b482", -- gruvbox aqua, matches Codex image-token text
   cursor = "#B19CD9", -- soft violet
   opencode = "#928374", -- gruvbox gray
+  -- Ask + edit borders match their gutter-sign colors (defined in
+  -- plugins/sidekick/ask/signs.lua). Blue for ask, deep dark purple for
+  -- edit. Kept in sync manually with signs.lua.
+  ask = "#83a598", -- gruvbox blue
+  edit = "#8f3f71", -- gruvbox faded purple
 }
 
 M.fallback_color = "#7C7C7C"
@@ -113,22 +118,34 @@ function M.title_spec(tool, session_name, branch)
   return { { string.format(" %s ", session_name), hl.title } }
 end
 
---- Mutate a sidekick.cli.Terminal's float opts so the next open uses the
---- per-tool border + title. Called from Config.cli.win.config.
----@param terminal table sidekick.cli.Terminal
-function M.apply(terminal)
-  if not terminal or not terminal.opts or not terminal.opts.float then
-    return
+--- Statusline-syntax winbar string, mirroring the float's title_spec.
+---@param tool string|nil
+---@param session_name string
+---@param branch string|nil
+---@return string
+function M.winbar_spec(tool, session_name, branch)
+  local hl = M.hl_groups(tool)
+  local s = string.format(" %%#%s#%s ", hl.title, session_name)
+  if branch and branch ~= "" then
+    s = s
+      .. string.format("%%#Comment#· %%#SidekickBranch#%s %s", M.branch_glyph, branch)
   end
+  return s
+end
+
+--- Infer tool/session/branch from a sidekick.cli.Terminal.
+---@param terminal table
+---@return string|nil tool, string session_name, string|nil branch
+local function infer_terminal_branding(terminal)
   local tool_name = terminal.tool and terminal.tool.name or nil
   local tool = M.tool_of(tool_name)
   local session_name = tool_name or "sidekick"
   local branch = nil
   local sid = terminal.tmux_session_id or (terminal.session and terminal.session.tmux_session_id)
   if not sid and tool_name then
-    local ok, internal = pcall(require, "plugins.sidekick.internal")
-    if ok and internal.find_tmux_session_id then
-      sid = internal.find_tmux_session_id(tool_name)
+    local ok, internal_mod = pcall(require, "plugins.sidekick.internal")
+    if ok and internal_mod.find_tmux_session_id then
+      sid = internal_mod.find_tmux_session_id(tool_name)
     end
   end
   if sid then
@@ -137,9 +154,67 @@ function M.apply(terminal)
       branch = branch_mod.read_session(sid)
     end
   end
-  terminal.opts.float.border = M.border_spec(tool)
-  terminal.opts.float.title = M.title_spec(tool, session_name, branch)
-  terminal.opts.float.title_pos = "center"
+  return tool, session_name, branch
+end
+
+--- Set winbar + colored WinSeparator on a split window hosting a sidekick CLI.
+---@param win integer
+---@param tool string|nil
+---@param session_name string
+---@param branch string|nil
+function M.apply_to_split(win, tool, session_name, branch)
+  if not vim.api.nvim_win_is_valid(win) then
+    return
+  end
+  local hl = M.hl_groups(tool)
+  vim.wo[win].winbar = M.winbar_spec(tool, session_name, branch)
+  vim.wo[win].winhighlight = "WinSeparator:" .. hl.border
+end
+
+--- Apply split styling for a terminal to a specific window. Use when the
+--- caller already knows the winid (e.g., float_toggle after float → split).
+---@param terminal table sidekick.cli.Terminal
+---@param win integer
+function M.apply_split_for(terminal, win)
+  if not terminal then
+    return
+  end
+  local tool, session_name, branch = infer_terminal_branding(terminal)
+  M.apply_to_split(win, tool, session_name, branch)
+end
+
+--- Strip the split-only styling from a window (used when converting split → float).
+---@param win integer
+function M.clear_split_styling(win)
+  if not vim.api.nvim_win_is_valid(win) then
+    return
+  end
+  vim.wo[win].winbar = ""
+  vim.wo[win].winhighlight = ""
+end
+
+--- Mutate a sidekick.cli.Terminal's opts so the next open uses the
+--- per-tool branding. For float layouts that means border + title; for
+--- split layouts the window doesn't exist yet, so we defer winbar +
+--- winhighlight setup to the next event-loop tick.
+---@param terminal table sidekick.cli.Terminal
+function M.apply(terminal)
+  if not terminal or not terminal.opts then
+    return
+  end
+  local tool, session_name, branch = infer_terminal_branding(terminal)
+  if terminal.opts.layout == "float" and terminal.opts.float then
+    terminal.opts.float.border = M.border_spec(tool)
+    terminal.opts.float.title = M.title_spec(tool, session_name, branch)
+    terminal.opts.float.title_pos = "center"
+    return
+  end
+  -- Split layout: terminal.win is not assigned yet at config-callback time.
+  vim.schedule(function()
+    if terminal.win and vim.api.nvim_win_is_valid(terminal.win) then
+      M.apply_to_split(terminal.win, tool, session_name, branch)
+    end
+  end)
 end
 
 return M

@@ -8,10 +8,12 @@ M.next_anchor_id = 1
 
 ---@class AskEntry
 ---@field kind 'line'|'range'
----@field extmark_id integer
+---@field mode 'ask'|'edit'
+---@field extmark_id integer  primary anchor (start of the highlighted scope for edit mode)
 ---@field range_extmarks integer[]
 ---@field question string
 ---@field answer string?
+---@field added string[]?  edit-mode replacement lines (nil while pending, {} for NOOP)
 ---@field err string?
 ---@field status 'pending'|'done'|'error'
 ---@field started_at integer
