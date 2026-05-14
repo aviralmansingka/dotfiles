@@ -33,7 +33,12 @@ return {
         ["<Tab>"] = {
           function()
             if codeium_visible() then
-              require("codeium.virtual_text").accept()
+              -- Feed the <Plug> mapping that windsurf registered as expr=true.
+              -- The expr-mode call returns the completion text, which nvim
+              -- types into the buffer. Calling M.accept() directly here
+              -- discards that return string and inserts nothing.
+              local keys = vim.api.nvim_replace_termcodes("<Plug>(CodeiumAccept)", true, true, true)
+              vim.api.nvim_feedkeys(keys, "i", false)
               return true
             end
             return false
@@ -51,30 +56,6 @@ return {
             return false
           end,
           "hide",
-          "fallback",
-        },
-
-        ["<C-n>"] = {
-          function()
-            if codeium_visible() then
-              require("codeium.virtual_text").cycle_completions(1)
-              return true
-            end
-            return false
-          end,
-          "select_next",
-          "fallback",
-        },
-
-        ["<C-p>"] = {
-          function()
-            if codeium_visible() then
-              require("codeium.virtual_text").cycle_completions(-1)
-              return true
-            end
-            return false
-          end,
-          "select_prev",
           "fallback",
         },
 

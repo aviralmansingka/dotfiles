@@ -58,7 +58,10 @@ return {
           terminal = false,
         },
         key_bindings = {
-          accept = false,
+          -- Bind accept to a <Plug> mapping (registered by windsurf as expr=true).
+          -- blink's <Tab> handler then feedkeys this <Plug> so the expr-return
+          -- string (the actual completion text) gets typed into the buffer.
+          accept = "<Plug>(CodeiumAccept)",
           accept_word = false,
           accept_line = false,
           clear = false,
