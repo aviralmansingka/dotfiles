@@ -29,7 +29,8 @@ local function get_invocation_target()
   return 'normal', cursor[1] - 1, nil
 end
 
-function M.ask()
+---@param entry_mode 'ask'|'edit'
+local function start_flow(entry_mode)
   M.setup()
   local bufnr = vim.api.nvim_get_current_buf()
   local mode, line0, range = get_invocation_target()
@@ -48,7 +49,9 @@ function M.ask()
     on_cancel = function() end,
     on_submit = function(question)
       local ctx = context.build({ mode = mode, bufnr = bufnr, range = range })
-      local prompt = context.render_prompt(question, ctx)
+      local prompt = (entry_mode == 'edit')
+        and context.render_edit_prompt(question, ctx)
+        or context.render_prompt(question, ctx)
 
       local anchor_extmark = signs.create_anchor(bufnr, line0)
       local range_extmarks = {}
@@ -58,12 +61,14 @@ function M.ask()
 
       local entry = {
         kind = range and 'range' or 'line',
+        mode = entry_mode,
         extmark_id = anchor_extmark,
         range_extmarks = range_extmarks,
         question = question,
         status = 'pending',
         started_at = vim.uv.hrtime(),
         spinner_frame = 1,
+        original_code = (entry_mode == 'edit') and ctx.code or nil,
       }
       local anchor_id = state.add(bufnr, entry)
 
@@ -83,12 +88,23 @@ function M.ask()
         cur.duration_ms = result.duration_ms
         cur.tokens = result.tokens
         cur.status = 'done'
+        if cur.mode == 'edit' then
+          cur.modified_code = result.result
+        end
         signs.mark_done(bufnr, cur)
       end)
 
       signs.start_spinner()
     end,
   })
+end
+
+function M.ask()
+  start_flow('ask')
+end
+
+function M.edit()
+  start_flow('edit')
 end
 
 function M.clear_line()
@@ -187,18 +203,25 @@ function M.setup()
         local lpos = vim.api.nvim_buf_get_extmark_by_id(args.buf, signs.ns, last, {})
         if lpos and lpos[1] then end_line = lpos[1] end
       end
-      ui.open_hover({
-        entry = entry,
-        anchor_line = pos_start[1],
-        end_line = end_line,
-        win = vim.api.nvim_get_current_win(),
-      })
+      if entry.mode == 'edit' and entry.original_code and entry.modified_code then
+        ui.open_diff_overlay(args.buf, signs.ns, end_line, entry.original_code, entry.modified_code)
+      else
+        ui.open_hover({
+          entry = entry,
+          anchor_line = pos_start[1],
+          end_line = end_line,
+          win = vim.api.nvim_get_current_win(),
+        })
+      end
     end,
   })
 
   vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI', 'BufLeave', 'WinLeave', 'InsertEnter' }, {
     group = group,
-    callback = function() ui.close_hover() end,
+    callback = function()
+      ui.close_hover()
+      ui.close_diff_overlay()
+    end,
   })
 
   vim.api.nvim_create_autocmd({ 'BufDelete', 'BufWipeout' }, {

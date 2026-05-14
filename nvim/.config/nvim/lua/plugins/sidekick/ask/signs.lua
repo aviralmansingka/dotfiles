@@ -7,7 +7,7 @@ local M = {}
 M.ns = vim.api.nvim_create_namespace('sidekick.ask')
 
 local SPINNER_FRAMES = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' }
-local DONE_ICON = '🤖'
+local DONE_ICON = { ask = '🤖', edit = '✏️' }
 local RANGE_BAR = '│'
 
 local timer = nil
@@ -63,7 +63,8 @@ end
 ---@param bufnr integer
 ---@param entry AskEntry
 function M.mark_done(bufnr, entry)
-  set_anchor_sign(bufnr, entry.extmark_id, DONE_ICON, 'SidekickAskSign')
+  local icon = DONE_ICON[entry.mode or 'ask'] or DONE_ICON.ask
+  set_anchor_sign(bufnr, entry.extmark_id, icon, 'SidekickAskSign')
 end
 
 ---@param bufnr integer

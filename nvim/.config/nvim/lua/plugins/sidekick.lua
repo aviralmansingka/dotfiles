@@ -90,6 +90,14 @@ return {
       desc = "Ask: yank answer on current line",
     },
     {
+      "<leader>ae",
+      function()
+        require("plugins.sidekick.ask").edit()
+      end,
+      mode = { "n", "x" },
+      desc = "Ask: edit (propose a diff)",
+    },
+    {
       "<leader>as",
       function()
         require("sidekick.cli").select({
