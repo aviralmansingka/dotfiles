@@ -8,9 +8,9 @@ local M = {}
 
 M.colors = {
   claude = "#E07856", -- terracotta
-  codex = "#10A37F", -- openai green
+  codex = "#89b482", -- gruvbox aqua, matches Codex image-token text
   cursor = "#B19CD9", -- soft violet
-  opencode = "#E0AF68", -- amber
+  opencode = "#928374", -- gruvbox gray
 }
 
 M.fallback_color = "#7C7C7C"
