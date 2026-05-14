@@ -71,6 +71,93 @@ local function smart_entry()
   require("octo.reviews").start_or_resume_review()
 end
 
+--- Toggle the review between Octo's stock vertical split (base | head, both in
+--- :diffthis) and a unified single-pane view of the right (head) buffer with
+--- gitsigns showing the PR diff in the gutter (┃ change/add, ━ delete).
+---
+--- Octo's layout is hard-coded as `belowright vsp` in reviews/layout.lua:87;
+--- no native unified mode. We close the left win, drop diff mode, point
+--- gitsigns at the PR base SHA, and stash state on the Layout object so the
+--- second invocation reconstructs the split via leftabove vsp +
+--- layout:set_current_file (which re-runs file:load_buffers and re-enables
+--- :diffthis on both panes).
+---
+--- Gitsigns wiring: Octo's load_buffers loads the working-tree file into the
+--- right pane via vim.fn.bufadd + buffer juggling; the usual BufReadPost auto-
+--- attach for gitsigns may not fire reliably, so we explicitly `:Gitsigns
+--- attach`, then `change_base <base>`, then `refresh` to force a recompute
+--- against the PR's base commit instead of vs. git index.
+local function unify_review_view()
+  local reviews = require("octo.reviews")
+  local layout = reviews.get_current_layout()
+  if not layout then
+    vim.notify("Not in an Octo review", vim.log.levels.WARN)
+    return
+  end
+
+  local right_winid = layout.right_winid
+  if not right_winid or not vim.api.nvim_win_is_valid(right_winid) then
+    vim.notify("Octo right pane is gone — re-enter the review", vim.log.levels.WARN)
+    return
+  end
+  local right_buf = vim.api.nvim_win_get_buf(right_winid)
+
+  if layout._unified_active then
+    -- ---- Restore split ----------------------------------------------------
+    -- Drop the per-buffer gitsigns base back to default (diff vs index).
+    -- Same async caveat as activation: do not wrap in nvim_buf_call (see
+    -- comment below). Switch to right_winid first so right_buf is current
+    -- when change_base's scheduled coroutine resumes.
+    vim.api.nvim_set_current_win(right_winid)
+    pcall(vim.cmd, "Gitsigns change_base")
+
+    -- Create a left twin next to the right, then let octo re-bind buffers
+    -- + re-enable diff mode via its own set_current_file machinery.
+    vim.cmd("leftabove vsp")
+    layout.left_winid = vim.api.nvim_get_current_win()
+
+    local file = layout:get_current_file()
+    if file then
+      layout:set_current_file(file)
+    end
+
+    layout._unified_active = false
+    vim.notify("Octo: restored split view", vim.log.levels.INFO)
+    return
+  end
+
+  -- ---- Activate unified ---------------------------------------------------
+  local base_ref = layout.left and layout.left.commit
+  if not base_ref then
+    vim.notify("Octo: no base SHA on layout.left — cannot set gitsigns base", vim.log.levels.WARN)
+    return
+  end
+
+  vim.cmd("diffoff!")
+
+  if layout.left_winid and vim.api.nvim_win_is_valid(layout.left_winid) then
+    pcall(vim.api.nvim_win_close, layout.left_winid, true)
+  end
+
+  vim.api.nvim_set_current_win(right_winid)
+
+  -- Force gitsigns onto the buffer + recompute diff vs the PR base SHA.
+  -- Using :Gitsigns subcommands rather than the Lua API so we stay on the
+  -- supported public surface. Do NOT wrap in vim.api.nvim_buf_call: gitsigns'
+  -- change_base is async (async_run + scheduled coroutine), and nvim_buf_call
+  -- restores the prior current buffer synchronously, *before* the coroutine
+  -- resumes. The async body's nvim_get_current_buf() then resolves to the
+  -- wrong buffer, the cache lookup returns nil, and change_base no-ops
+  -- silently. set_current_win above already makes right_buf current, so
+  -- nvim_buf_call is redundant — and actively breaks gitsigns.
+  pcall(vim.cmd, "Gitsigns attach")
+  pcall(vim.cmd, "Gitsigns change_base " .. base_ref)
+  pcall(vim.cmd, "Gitsigns refresh")
+
+  layout._unified_active = true
+  vim.notify("Octo: unified view (gitsigns base=" .. base_ref:sub(1, 7) .. ")", vim.log.levels.INFO)
+end
+
 local function prompt_author()
   vim.ui.input({ prompt = "Author handle: " }, function(input)
     if input and input ~= "" then
@@ -130,6 +217,8 @@ return {
     { "<leader>Oc", "<cmd>Octo pr checkout<CR>",                                        desc = "Checkout PR" },
     { "<leader>OC", "<cmd>Octo pr create<CR>",                                          desc = "Create PR from current branch" },
     { "<leader>Ob", open_browser_and_copy,                                              desc = "Open PR in browser + copy URL" },
+    -- Collapse review's two-pane split into the right buffer + gitsigns gutter
+    { "<localleader>u", unify_review_view, desc = "unify review view (drop left, gitsigns the right)" },
     -- Comment-prefix templates (active when inside a review session; no-op otherwise)
     { "<localleader>cn", function() require("plugins.octo.comment_templates").compose("nit") end, mode = { "n", "x" }, desc = "nit comment" },
     { "<localleader>cq", function() require("plugins.octo.comment_templates").compose("q")   end, mode = { "n", "x" }, desc = "question comment" },
@@ -150,9 +239,38 @@ return {
         open_in_browser = { lhs = "<leader>gO", desc = "open in browser" },
       },
     },
+    mappings = {
+      -- Refresh the desc to reflect the chained behavior installed below
+      -- (toggle viewed + jump to next unviewed file). LHS unchanged.
+      review_diff = {
+        toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewed + next unviewed" },
+      },
+      file_panel = {
+        toggle_viewed = { lhs = "<localleader><space>", desc = "toggle viewed + next unviewed" },
+      },
+    },
   },
   config = function(_, opts)
     require("octo").setup(opts)
+
+    -- Chain "next unviewed file" after the toggle_viewed action so reviewing
+    -- a file flows file→file without a second keystroke.
+    -- Layout:select_next_unviewed_file skips the current index explicitly
+    -- (next_idx ~= self.selected_file_idx in reviews/layout.lua), so the
+    -- async GraphQL mutation behind toggle_viewed doesn't race the jump —
+    -- we don't depend on the current file's viewed_state having flipped.
+    -- If the file panel is closed, select_next_unviewed_file no-ops.
+    do
+      local octo_mappings = require("octo.mappings")
+      local orig_toggle_viewed = octo_mappings.toggle_viewed
+      octo_mappings.toggle_viewed = function()
+        orig_toggle_viewed()
+        local layout = require("octo.reviews").get_current_layout()
+        if layout then
+          layout:select_next_unviewed_file()
+        end
+      end
+    end
 
     -- Octo's reviews/file-entry.lua sets modifiable=false on both diff
     -- buffers after creation, even when use_local_fs=true makes the
