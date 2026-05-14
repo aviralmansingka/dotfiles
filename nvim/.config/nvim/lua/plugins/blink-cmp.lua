@@ -1,3 +1,14 @@
+-- Helper used by smart-tab/cycle/dismiss handlers below. Returns true when
+-- Codeium has a ghost-text suggestion currently rendered.
+local function codeium_visible()
+  local ok, vt = pcall(require, "codeium.virtual_text")
+  if not ok then
+    return false
+  end
+  local s = vt.status()
+  return s and s.state == "completions" and (s.total or 0) > 0
+end
+
 return {
   -- blink.compat for nvim-cmp source compatibility (obsidian.nvim)
   {
@@ -18,6 +29,66 @@ return {
         ["<C-b>"] = false,
         ["<C-l>"] = { "snippet_forward", "fallback" },
         ["<C-h>"] = { "snippet_backward", "fallback" },
+
+        ["<Tab>"] = {
+          function()
+            if codeium_visible() then
+              require("codeium.virtual_text").accept()
+              return true
+            end
+            return false
+          end,
+          "select_and_accept",
+          "fallback",
+        },
+
+        ["<S-Tab>"] = {
+          function()
+            if codeium_visible() then
+              require("codeium.virtual_text").clear()
+              return true
+            end
+            return false
+          end,
+          "hide",
+          "fallback",
+        },
+
+        ["<C-n>"] = {
+          function()
+            if codeium_visible() then
+              require("codeium.virtual_text").cycle_completions(1)
+              return true
+            end
+            return false
+          end,
+          "select_next",
+          "fallback",
+        },
+
+        ["<C-p>"] = {
+          function()
+            if codeium_visible() then
+              require("codeium.virtual_text").cycle_completions(-1)
+              return true
+            end
+            return false
+          end,
+          "select_prev",
+          "fallback",
+        },
+
+        ["<C-Space>"] = {
+          function()
+            local ok, vt = pcall(require, "codeium.virtual_text")
+            if ok then
+              pcall(vt.complete)
+            end
+            return false
+          end,
+          "show",
+          "fallback",
+        },
       },
 
       appearance = {
@@ -89,7 +160,7 @@ return {
           },
         },
         ghost_text = {
-          enabled = true,
+          enabled = false,
         },
       },
 
