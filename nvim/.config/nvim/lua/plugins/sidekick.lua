@@ -77,9 +77,9 @@ return {
     {
       "<c-.>",
       function()
-        require("plugins.sidekick.cwd_picker").open()
+        require("plugins.sidekick.last_session").open()
       end,
-      desc = "Sidekick Peek Sessions in Cwd",
+      desc = "Sidekick Open Last Session",
       mode = { "n", "t", "i", "x" },
     },
     {
