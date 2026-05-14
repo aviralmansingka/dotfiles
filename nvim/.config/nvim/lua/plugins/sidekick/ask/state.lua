@@ -8,10 +8,13 @@ M.next_anchor_id = 1
 
 ---@class AskEntry
 ---@field kind 'line'|'range'
+---@field mode 'ask'|'edit'?
 ---@field extmark_id integer
 ---@field range_extmarks integer[]
 ---@field question string
 ---@field answer string?
+---@field original_code string?
+---@field modified_code string?
 ---@field err string?
 ---@field status 'pending'|'done'|'error'
 ---@field started_at integer

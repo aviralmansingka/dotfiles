@@ -17,7 +17,7 @@ function M.list_items()
     local branch = branch_mod.read_session(entry.session_id)
     local label_col = branch and string.format("%s · %s", label, branch) or label
     items[#items + 1] = {
-      text = string.format("[%s] %s  %s", entry.tool, label_col, cwd_display),
+      text = string.format("%s  %s", label_col, cwd_display),
       label = label,
       tool = entry.tool,
       slug = entry.slug,

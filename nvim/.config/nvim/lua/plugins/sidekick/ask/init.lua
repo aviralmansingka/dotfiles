@@ -29,11 +29,22 @@ local function get_invocation_target()
   return 'normal', cursor[1] - 1, nil
 end
 
----@param entry_mode 'ask'|'edit'
-local function start_flow(entry_mode)
-  M.setup()
+---@return { bufnr: integer, mode: 'normal'|'visual', line0: integer, range: { start_line: integer, end_line: integer }? }
+local function capture_target()
   local bufnr = vim.api.nvim_get_current_buf()
   local mode, line0, range = get_invocation_target()
+  return { bufnr = bufnr, mode = mode, line0 = line0, range = range }
+end
+
+---@param entry_mode 'ask'|'edit'
+---@param target { bufnr: integer, mode: 'normal'|'visual', line0: integer, range: table? }?
+local function start_flow(entry_mode, target)
+  M.setup()
+  target = target or capture_target()
+  local bufnr = target.bufnr
+  local mode = target.mode
+  local line0 = target.line0
+  local range = target.range
 
   local existing_id, existing_entry = state.find_at(bufnr, line0, signs.ns)
   if existing_entry and existing_entry.status == 'pending' then
@@ -46,6 +57,7 @@ local function start_flow(entry_mode)
   end
 
   ui.open_prompt({
+    mode = entry_mode,
     on_cancel = function() end,
     on_submit = function(question)
       local ctx = context.build({ mode = mode, bufnr = bufnr, range = range })
@@ -53,10 +65,10 @@ local function start_flow(entry_mode)
         and context.render_edit_prompt(question, ctx)
         or context.render_prompt(question, ctx)
 
-      local anchor_extmark = signs.create_anchor(bufnr, line0)
+      local anchor_extmark = signs.create_anchor(bufnr, line0, entry_mode)
       local range_extmarks = {}
       if range then
-        range_extmarks = signs.create_range_bar(bufnr, range.start_line, range.end_line)
+        range_extmarks = signs.create_range_bar(bufnr, range.start_line, range.end_line, entry_mode)
       end
 
       local entry = {
@@ -105,6 +117,21 @@ end
 
 function M.edit()
   start_flow('edit')
+end
+
+function M.choose()
+  M.setup()
+  local target = capture_target()
+  vim.ui.select({ 'ask', 'edit' }, {
+    prompt = 'mode:',
+    format_item = function(item)
+      if item == 'ask' then return '🤖 ask' end
+      return '✏️  edit'
+    end,
+  }, function(choice)
+    if not choice then return end
+    start_flow(choice, target)
+  end)
 end
 
 function M.clear_line()

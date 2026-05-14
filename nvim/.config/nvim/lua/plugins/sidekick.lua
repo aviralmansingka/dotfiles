@@ -77,10 +77,10 @@ return {
     {
       "<leader>aa",
       function()
-        require("plugins.sidekick.ask").ask()
+        require("plugins.sidekick.ask").choose()
       end,
       mode = { "n", "x" },
-      desc = "Ask cursor-agent about this code",
+      desc = "Ask: pick ask or edit mode",
     },
     {
       "<leader>ay",

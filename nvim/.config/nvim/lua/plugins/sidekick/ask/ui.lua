@@ -10,7 +10,7 @@ local function fmt_elapsed(ms)
   return string.format('%.1fs', ms / 1000)
 end
 
----@param opts { on_submit: fun(text: string), on_cancel: fun() }
+---@param opts { on_submit: fun(text: string), on_cancel: fun(), mode: 'ask'|'edit'|nil }
 function M.open_prompt(opts)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].buftype = 'nofile'
@@ -20,6 +20,15 @@ function M.open_prompt(opts)
   local screen_row = vim.fn.winline()
   local row = (screen_row <= 2) and 1 or -2
 
+  local border, title
+  if opts.mode == 'edit' then
+    border = branding.edit_border_spec()
+    title = branding.edit_title_spec('edit')
+  else
+    border = branding.border_spec('cursor')
+    title = branding.title_spec('cursor', 'ask')
+  end
+
   local win = vim.api.nvim_open_win(buf, true, {
     relative = 'cursor',
     row = row,
@@ -27,8 +36,8 @@ function M.open_prompt(opts)
     width = 60,
     height = 1,
     style = 'minimal',
-    border = branding.border_spec('cursor'),
-    title = branding.title_spec('cursor', 'ask'),
+    border = border,
+    title = title,
     title_pos = 'center',
   })
 
