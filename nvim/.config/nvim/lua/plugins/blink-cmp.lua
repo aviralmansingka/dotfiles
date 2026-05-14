@@ -33,12 +33,16 @@ return {
         ["<Tab>"] = {
           function()
             if codeium_visible() then
-              -- Feed the <Plug> mapping that windsurf registered as expr=true.
-              -- The expr-mode call returns the completion text, which nvim
-              -- types into the buffer. Calling M.accept() directly here
-              -- discards that return string and inserts nothing.
-              local keys = vim.api.nvim_replace_termcodes("<Plug>(CodeiumAccept)", true, true, true)
-              vim.api.nvim_feedkeys(keys, "i", false)
+              -- M.accept() is upstream-defined with expr=true: the function
+              -- both does its internal bookkeeping AND returns the keys nvim
+              -- should type (= the completion text). Calling it as a plain
+              -- function discards that return string, so the ghost clears but
+              -- nothing gets inserted. Capture the return and feedkeys it so
+              -- the keys reach the buffer.
+              local keys = require("codeium.virtual_text").accept()
+              if type(keys) == "string" and keys ~= "" then
+                vim.api.nvim_feedkeys(keys, "n", false)
+              end
               return true
             end
             return false
