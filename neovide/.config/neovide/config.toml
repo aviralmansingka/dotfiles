@@ -3,5 +3,8 @@ title-hidden = true
 neovim-bin = "/Users/aviral/.local/share/bob/nvim-bin/nvim"
 
 [font]
-normal = ["JetBrainsMono Nerd Font Mono", "Symbols Nerd Font Mono"]
 size = 13
+
+[[font.normal]]
+family = "JetBrainsMono Nerd Font Mono"
+style = "Medium"

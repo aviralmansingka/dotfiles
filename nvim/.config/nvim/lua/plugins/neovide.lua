@@ -3,10 +3,20 @@
 -- before init.lua runs) and when Neovide attaches to a headless nvim later
 -- via --server (mvim flow — vim.g.neovide flips to true on UIEnter).
 local function apply()
-  -- Set guifont in addition to ~/.config/neovide/config.toml — Neovide
-  -- re-reads &guifont on later font-update events (e.g. scale_factor changes),
-  -- and an unset guifont sends it back to its hardcoded SF Mono cascade.
-  vim.o.guifont = "JetBrainsMono Nerd Font Mono,Symbols Nerd Font Mono:h13"
+  -- Overrides nvim's macOS-built-in DFLT_GFN ("SF Mono,Menlo,Monaco,Courier
+  -- New,monospace" from src/nvim/option_vars.h:39) which Neovide receives via
+  -- an unconditional option_set event at ui_attach time, before nvim has
+  -- processed --cmd or init.lua. The default's CSS-generic "monospace" family
+  -- is unresolvable in CoreText (Skia macOS backend, no fontconfig alias) and
+  -- triggers an error from caching_shaper.rs. Setting guifont here causes a
+  -- second option_set event that supersedes the default; the noice route
+  -- below suppresses the transient error message.
+  -- Single-font chain (matches Ghostty), at Medium weight to approximate
+  -- Ghostty's font-thicken=true. The guifont parser only accepts :b/:i for
+  -- styles, so we use the weight-specific Family Name "JetBrainsMono NFM
+  -- Medium" (nameID 1 of the Medium TTF) instead of the preferred family
+  -- "JetBrainsMono Nerd Font Mono" + style="Medium" (which the TOML uses).
+  vim.o.guifont = "JetBrainsMono NFM Medium:h13"
 
   vim.g.neovide_input_use_logo = true
   vim.g.neovide_input_macos_option_key_is_meta = "only_left"
@@ -53,13 +63,20 @@ else
   })
 end
 
--- Suppress Neovide's startup font-load warning. Its hardcoded default
--- fallback cascade includes the fontconfig-generic "monospace" family,
--- which doesn't exist on macOS/CoreText, so the error always fires
--- regardless of which fonts you actually have installed.
+-- Suppress the transient "Font can't be updated to" error Neovide emits at
+-- ui_attach when it tries to load nvim's macOS DFLT_GFN cascade (containing
+-- the CSS-generic "monospace" family which CoreText cannot resolve). The
+-- error is unavoidable from user config — --cmd and TOML [font] both lose
+-- the race against nvim's initial option_set redraw event in --embed mode.
 return {
   {
     "folke/noice.nvim",
+    --- LazyVim's noice spec binds <C-b> to "Scroll Backward" (for scrolling LSP hover /
+    --- signature popups) across n/i/s, with a fallback to vanilla <C-b> when noice isn't
+    --- intercepting. Disable entirely — interferes with terminal-style usage.
+    keys = {
+      { "<C-b>", false, mode = { "n", "i", "s" } },
+    },
     opts = function(_, opts)
       opts.routes = opts.routes or {}
       table.insert(opts.routes, {
