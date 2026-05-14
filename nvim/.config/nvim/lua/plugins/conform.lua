@@ -64,7 +64,7 @@ return {
       -- Prettier first (structure), then our visual-width wrapper (prose)
       markdown = { "prettier", "markdown_wrap" },
       java = { "google-java-format" },
-      go = { "goimports", "gofumpt" },
+      go = { "golangci-lint" },
       bzl = { "buildifier" },
       -- Mirrors `inv lint --fix`: ruff check --fix, then ruff format
       python = { "ruff_fix", "ruff_format" },
