@@ -54,7 +54,7 @@ window-save-state = always
 shell-integration = detect
 
 # Enhanced shell integration features for SSH and remote terminfo support
-shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
+shell-integration-features = cursor,sudo,title,ssh-env
 
 # Font modifications - matching Kitty's modify_font settings
 # Ghostty handles underline styling automatically
