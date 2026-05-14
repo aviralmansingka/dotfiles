@@ -33,6 +33,20 @@ return {
           vim.api.nvim_set_hl(0, "FloatBorder", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
           vim.api.nvim_set_hl(0, "VertSplit", { bg = "#282828", fg = "#504945" }) -- Match background with subtle border
           vim.api.nvim_set_hl(0, "TerminalNormal", { bg = "#282828", fg = "#ebdbb2" }) -- Terminal in floating windows
+          -- Neotest inline status icons (flask/check/X) link to Normal by default, so they paint a hard
+          -- Normal-bg square that mismatches CursorLine / treesitter contexts. Drop the bg so the glyph
+          -- renders transparently over whatever line bg is underneath.
+          vim.api.nvim_set_hl(0, "NeotestTest", { bg = "NONE" })
+          vim.api.nvim_set_hl(0, "NeotestUnknown", { bg = "NONE" })
+          -- Codeium AI ghost text — matches BlinkGhostText family, italic to
+          -- distinguish AI suggestions from other inline previews. Deferred
+          -- via vim.schedule because windsurf.nvim registers its own
+          -- ColorScheme autocmd that re-applies the default #808080 grey;
+          -- scheduling pushes our set past the synchronous autocmd chain so
+          -- we win the race regardless of registration order.
+          vim.schedule(function()
+            vim.api.nvim_set_hl(0, "CodeiumSuggestion", { fg = "#665c54", bg = "#282828", italic = true })
+          end)
         end,
       })
 
@@ -84,6 +98,13 @@ return {
       for _, group in ipairs(snacks_groups) do
         vim.api.nvim_set_hl(0, group, { bg = gruvbox_bg, fg = normal_fg })
       end
+
+      -- Make the current selection visible. The bulk loop above paints every snacks group
+      -- with bg0, which collapses the cursor row into the background. bg3 is the brightest
+      -- cursorline-family shade in gruvbox-material medium and gives clear contrast against
+      -- white text without looking like a visual selection.
+      vim.api.nvim_set_hl(0, "SnacksPickerListCursorLine", { bg = "#45403d", fg = normal_fg })
+      vim.api.nvim_set_hl(0, "SnacksPickerInputCursorLine", { bg = "#45403d", fg = normal_fg })
 
       -- Keep border subtle but matching background
       vim.api.nvim_set_hl(0, "SnacksPickerBorder", { bg = gruvbox_bg, fg = "#504945" })
