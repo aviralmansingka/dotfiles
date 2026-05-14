@@ -33,14 +33,21 @@ return {
         ["<Tab>"] = {
           function()
             if codeium_visible() then
-              -- M.accept() is upstream-defined with expr=true: the function
-              -- both does its internal bookkeeping AND returns the keys nvim
-              -- should type (= the completion text). Calling it as a plain
-              -- function discards that return string, so the ghost clears but
-              -- nothing gets inserted. Capture the return and feedkeys it so
-              -- the keys reach the buffer.
-              local keys = require("codeium.virtual_text").accept()
-              if type(keys) == "string" and keys ~= "" then
+              -- M.accept() is upstream-defined with expr=true. Its return
+              -- string is the key-sequence nvim should type — including
+              -- term-encoded specials like <C-g>u, <Esc>, <C-R><C-O>=...<CR>
+              -- that delete the typed-so-far text and atomically re-insert
+              -- the full completion via the expression register.
+              --
+              -- Two steps to dispatch this correctly:
+              --   1. nvim_replace_termcodes(...) converts <C-g> etc. into
+              --      actual control bytes.
+              --   2. nvim_feedkeys(..., "n", false) types them: "n" so the
+              --      bytes are not re-mapped, false because replace_termcodes
+              --      already produced K_SPECIAL-encoded bytes.
+              local raw = require("codeium.virtual_text").accept()
+              if type(raw) == "string" and raw ~= "" then
+                local keys = vim.api.nvim_replace_termcodes(raw, true, false, true)
                 vim.api.nvim_feedkeys(keys, "n", false)
               end
               return true
