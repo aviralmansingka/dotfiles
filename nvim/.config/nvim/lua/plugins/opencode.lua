@@ -49,14 +49,5 @@ return {
       desc = "Toggle opencode visibility",
       mode = { "n", "x", "t" },
     },
-    -- Open ask dialog
-    {
-      "<leader>aa",
-      function()
-        require("opencode").ask("", { submit = false })
-      end,
-      desc = "Open opencode ask dialog",
-      mode = { "n", "x" },
-    },
   },
 }
