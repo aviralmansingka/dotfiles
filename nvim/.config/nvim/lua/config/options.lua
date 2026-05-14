@@ -79,3 +79,7 @@ vim.g.root_spec = { "cwd" }
 
 -- Python: use basedpyright (stricter pyright fork) via lazyvim.plugins.extras.lang.python
 vim.g.lazyvim_python_lsp = "basedpyright"
+
+-- LazyVim's import-order check is a false positive here (lua/config/lazy.lua
+-- has lazyvim.plugins → extras → plugins in the correct order).
+vim.g.lazyvim_check_order = false
