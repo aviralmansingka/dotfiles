@@ -1,7 +1,9 @@
 local M = {}
 
-local function is_markdown(buf)
-  return vim.bo[buf].filetype == "markdown"
+local SUPPORTED_FILETYPES = { markdown = true, octo = true }
+
+local function is_supported(buf)
+  return SUPPORTED_FILETYPES[vim.bo[buf].filetype] == true
 end
 
 local function find_inline_link(node)
@@ -14,9 +16,23 @@ local function find_inline_link(node)
   return nil
 end
 
+local function inline_link_at_cursor()
+  local buf = vim.api.nvim_get_current_buf()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local ok, parser = pcall(vim.treesitter.get_parser, buf, "markdown_inline")
+  if not ok or not parser then
+    return nil
+  end
+  local tree = parser:parse()[1]
+  if not tree then
+    return nil
+  end
+  local node = tree:root():named_descendant_for_range(row - 1, col, row - 1, col)
+  return find_inline_link(node)
+end
+
 function M.select_url(around)
-  local node = vim.treesitter.get_node()
-  local link = find_inline_link(node)
+  local link = inline_link_at_cursor()
   if not link then
     vim.notify("No inline link under cursor", vim.log.levels.WARN)
     return
@@ -64,6 +80,34 @@ local function get_visual_selection()
   return table.concat(lines, "\n"), sr, sc, er, ec
 end
 
+function M.edit_url()
+  local link = inline_link_at_cursor()
+  if not link then
+    vim.notify("No inline link under cursor", vim.log.levels.WARN)
+    return
+  end
+
+  local dest
+  for child in link:iter_children() do
+    if child:type() == "link_destination" then
+      dest = child
+    end
+  end
+  if not dest then
+    return
+  end
+
+  local sr, sc, er, ec = dest:range()
+  local current_url = vim.api.nvim_buf_get_text(0, sr, sc, er, ec, {})[1] or ""
+
+  vim.ui.input({ prompt = "URL: ", default = current_url }, function(input)
+    if input == nil then
+      return
+    end
+    vim.api.nvim_buf_set_text(0, sr, sc, er, ec, { input })
+  end)
+end
+
 function M.paste_as_link(mode)
   local raw = vim.fn.getreg('"')
   if raw == nil or raw == "" then
@@ -89,11 +133,14 @@ end
 
 function M.setup()
   local buf = vim.api.nvim_get_current_buf()
-  if not is_markdown(buf) then
+  if not is_supported(buf) then
     return
   end
 
   vim.opt_local.conceallevel = 3
+  vim.opt_local.concealcursor = "nvic"
+
+  vim.keymap.set("n", "<leader>mu", M.edit_url, { buffer = buf, desc = "Edit URL under cursor" })
 
   vim.keymap.set({ "o", "x" }, "iu", function()
     M.select_url(false)

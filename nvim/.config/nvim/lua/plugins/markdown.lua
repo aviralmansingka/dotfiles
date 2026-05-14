@@ -24,11 +24,15 @@ return {
         end,
       })
 
-      -- Conceal-aware formatting for octo buffers
+      -- Conceal-aware formatting for octo buffers. Wrap is off because the
+      -- conceal-vs-wrap interaction leaves phantom whitespace when long URLs
+      -- are present in the buffer.
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "octo",
         callback = function()
           vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
+          vim.opt_local.wrap = false
+          require("helpers.markdown_links").setup()
         end,
       })
     end,
@@ -425,6 +429,12 @@ return {
     ---@type render.md.UserConfig
     opts = {
       render_modes = true,
+      -- Override render-markdown's default win_options.concealcursor (set to "")
+      -- so links stay concealed when the cursor is on a link line. Pairs with
+      -- helpers/markdown_links.lua setting conceallevel=3 + concealcursor=nvic.
+      win_options = {
+        concealcursor = { default = "nvic", rendered = "nvic" },
+      },
       anti_conceal = {
         enabled = true,
         -- Which elements to always show, ignoring anti conceal behavior. Values can either be booleans
