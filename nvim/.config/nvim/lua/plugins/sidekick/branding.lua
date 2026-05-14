@@ -21,10 +21,6 @@ M.branch_color = "#d3869b"
 M.branch_glyph = ""
 M.dir_glyph = ""
 
--- Gruvbox blue from the user's ghostty palette (color 4). Used by the ask
--- plugin's edit mode UI so it's visually distinct from ask (cursor violet).
-M.edit_color = "#7daea3"
-
 local ROUNDED = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }
 
 local function capitalize(name)
@@ -85,25 +81,6 @@ function M.ensure_highlights()
     vim.api.nvim_set_hl(0, hl.title, { fg = color, bold = true, default = false })
   end
   vim.api.nvim_set_hl(0, "SidekickBranch", { fg = M.branch_color, bold = true, default = false })
-  vim.api.nvim_set_hl(0, "SidekickAskEditBorder", { fg = M.edit_color, default = false })
-  vim.api.nvim_set_hl(0, "SidekickAskEditTitle", { fg = M.edit_color, bold = true, default = false })
-end
-
---- Border spec colored with the ask-edit highlight (gruvbox blue).
----@return table
-function M.edit_border_spec()
-  local out = {}
-  for i, ch in ipairs(ROUNDED) do
-    out[i] = { ch, "SidekickAskEditBorder" }
-  end
-  return out
-end
-
---- Title spec colored with the ask-edit highlight (gruvbox blue).
----@param text string
----@return table
-function M.edit_title_spec(text)
-  return { { string.format(" %s ", text), "SidekickAskEditTitle" } }
 end
 
 --- 8-element border spec colored with the tool's hl group.
