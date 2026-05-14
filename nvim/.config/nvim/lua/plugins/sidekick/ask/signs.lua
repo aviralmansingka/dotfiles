@@ -7,7 +7,7 @@ local M = {}
 M.ns = vim.api.nvim_create_namespace('sidekick.ask')
 
 local SPINNER_FRAMES = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏' }
-local DONE_ICON = { ask = '🤖', edit = '✏️' }
+local DONE_ICON = '🤖'
 local RANGE_BAR = '│'
 
 local timer = nil
@@ -16,28 +16,15 @@ function M.setup_highlights()
   require('plugins.sidekick.branding').ensure_highlights()
   vim.api.nvim_set_hl(0, 'SidekickAskRange', { link = 'SidekickBorderCursor', default = true })
   vim.api.nvim_set_hl(0, 'SidekickAskSign', { link = 'SidekickBorderCursor', default = true })
-  vim.api.nvim_set_hl(0, 'SidekickAskEditRange', { link = 'SidekickAskEditBorder', default = true })
-  vim.api.nvim_set_hl(0, 'SidekickAskEditSign', { link = 'SidekickAskEditBorder', default = true })
-end
-
----@param mode 'ask'|'edit'|nil
----@return string sign_hl, string range_hl
-local function hl_for_mode(mode)
-  if mode == 'edit' then
-    return 'SidekickAskEditSign', 'SidekickAskEditRange'
-  end
-  return 'SidekickAskSign', 'SidekickAskRange'
 end
 
 ---@param bufnr integer
 ---@param line integer
----@param mode 'ask'|'edit'|nil
 ---@return integer
-function M.create_anchor(bufnr, line, mode)
-  local sign_hl = hl_for_mode(mode)
+function M.create_anchor(bufnr, line)
   return vim.api.nvim_buf_set_extmark(bufnr, M.ns, line, 0, {
     sign_text = SPINNER_FRAMES[1],
-    sign_hl_group = sign_hl,
+    sign_hl_group = 'SidekickAskSign',
     invalidate = true,
   })
 end
@@ -45,15 +32,13 @@ end
 ---@param bufnr integer
 ---@param start_line integer
 ---@param end_line integer
----@param mode 'ask'|'edit'|nil
 ---@return integer[]
-function M.create_range_bar(bufnr, start_line, end_line, mode)
-  local _, range_hl = hl_for_mode(mode)
+function M.create_range_bar(bufnr, start_line, end_line)
   local ids = {}
   for line = start_line, end_line do
     ids[#ids + 1] = vim.api.nvim_buf_set_extmark(bufnr, M.ns, line, 0, {
       sign_text = RANGE_BAR,
-      sign_hl_group = range_hl,
+      sign_hl_group = 'SidekickAskRange',
       invalidate = true,
     })
   end
@@ -78,9 +63,7 @@ end
 ---@param bufnr integer
 ---@param entry AskEntry
 function M.mark_done(bufnr, entry)
-  local icon = DONE_ICON[entry.mode or 'ask'] or DONE_ICON.ask
-  local sign_hl = hl_for_mode(entry.mode)
-  set_anchor_sign(bufnr, entry.extmark_id, icon, sign_hl)
+  set_anchor_sign(bufnr, entry.extmark_id, DONE_ICON, 'SidekickAskSign')
 end
 
 ---@param bufnr integer
@@ -109,8 +92,7 @@ local function tick()
         if entry.status == 'pending' then
           any = true
           entry.spinner_frame = (entry.spinner_frame % #SPINNER_FRAMES) + 1
-          local sign_hl = hl_for_mode(entry.mode)
-          set_anchor_sign(bufnr, entry.extmark_id, SPINNER_FRAMES[entry.spinner_frame], sign_hl)
+          set_anchor_sign(bufnr, entry.extmark_id, SPINNER_FRAMES[entry.spinner_frame], 'SidekickAskSign')
         end
       end
     end

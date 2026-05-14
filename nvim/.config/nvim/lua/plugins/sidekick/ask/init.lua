@@ -29,22 +29,10 @@ local function get_invocation_target()
   return 'normal', cursor[1] - 1, nil
 end
 
----@return { bufnr: integer, mode: 'normal'|'visual', line0: integer, range: { start_line: integer, end_line: integer }? }
-local function capture_target()
+function M.ask()
+  M.setup()
   local bufnr = vim.api.nvim_get_current_buf()
   local mode, line0, range = get_invocation_target()
-  return { bufnr = bufnr, mode = mode, line0 = line0, range = range }
-end
-
----@param entry_mode 'ask'|'edit'
----@param target { bufnr: integer, mode: 'normal'|'visual', line0: integer, range: table? }?
-local function start_flow(entry_mode, target)
-  M.setup()
-  target = target or capture_target()
-  local bufnr = target.bufnr
-  local mode = target.mode
-  local line0 = target.line0
-  local range = target.range
 
   local existing_id, existing_entry = state.find_at(bufnr, line0, signs.ns)
   if existing_entry and existing_entry.status == 'pending' then
@@ -57,30 +45,25 @@ local function start_flow(entry_mode, target)
   end
 
   ui.open_prompt({
-    mode = entry_mode,
     on_cancel = function() end,
     on_submit = function(question)
       local ctx = context.build({ mode = mode, bufnr = bufnr, range = range })
-      local prompt = (entry_mode == 'edit')
-        and context.render_edit_prompt(question, ctx)
-        or context.render_prompt(question, ctx)
+      local prompt = context.render_prompt(question, ctx)
 
-      local anchor_extmark = signs.create_anchor(bufnr, line0, entry_mode)
+      local anchor_extmark = signs.create_anchor(bufnr, line0)
       local range_extmarks = {}
       if range then
-        range_extmarks = signs.create_range_bar(bufnr, range.start_line, range.end_line, entry_mode)
+        range_extmarks = signs.create_range_bar(bufnr, range.start_line, range.end_line)
       end
 
       local entry = {
         kind = range and 'range' or 'line',
-        mode = entry_mode,
         extmark_id = anchor_extmark,
         range_extmarks = range_extmarks,
         question = question,
         status = 'pending',
         started_at = vim.uv.hrtime(),
         spinner_frame = 1,
-        original_code = (entry_mode == 'edit') and ctx.code or nil,
       }
       local anchor_id = state.add(bufnr, entry)
 
@@ -100,38 +83,12 @@ local function start_flow(entry_mode, target)
         cur.duration_ms = result.duration_ms
         cur.tokens = result.tokens
         cur.status = 'done'
-        if cur.mode == 'edit' then
-          cur.modified_code = result.result
-        end
         signs.mark_done(bufnr, cur)
       end)
 
       signs.start_spinner()
     end,
   })
-end
-
-function M.ask()
-  start_flow('ask')
-end
-
-function M.edit()
-  start_flow('edit')
-end
-
-function M.choose()
-  M.setup()
-  local target = capture_target()
-  vim.ui.select({ 'ask', 'edit' }, {
-    prompt = 'mode:',
-    format_item = function(item)
-      if item == 'ask' then return '🤖 ask' end
-      return '✏️  edit'
-    end,
-  }, function(choice)
-    if not choice then return end
-    start_flow(choice, target)
-  end)
 end
 
 function M.clear_line()
@@ -230,25 +187,18 @@ function M.setup()
         local lpos = vim.api.nvim_buf_get_extmark_by_id(args.buf, signs.ns, last, {})
         if lpos and lpos[1] then end_line = lpos[1] end
       end
-      if entry.mode == 'edit' and entry.original_code and entry.modified_code then
-        ui.open_diff_overlay(args.buf, signs.ns, end_line, entry.original_code, entry.modified_code)
-      else
-        ui.open_hover({
-          entry = entry,
-          anchor_line = pos_start[1],
-          end_line = end_line,
-          win = vim.api.nvim_get_current_win(),
-        })
-      end
+      ui.open_hover({
+        entry = entry,
+        anchor_line = pos_start[1],
+        end_line = end_line,
+        win = vim.api.nvim_get_current_win(),
+      })
     end,
   })
 
   vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI', 'BufLeave', 'WinLeave', 'InsertEnter' }, {
     group = group,
-    callback = function()
-      ui.close_hover()
-      ui.close_diff_overlay()
-    end,
+    callback = function() ui.close_hover() end,
   })
 
   vim.api.nvim_create_autocmd({ 'BufDelete', 'BufWipeout' }, {

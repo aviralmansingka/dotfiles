@@ -4,13 +4,12 @@ local branding = require('plugins.sidekick.branding')
 local M = {}
 
 local active_hover = nil
-local active_diff = nil -- { bufnr, extmark_id, ns }
 
 local function fmt_elapsed(ms)
   return string.format('%.1fs', ms / 1000)
 end
 
----@param opts { on_submit: fun(text: string), on_cancel: fun(), mode: 'ask'|'edit'|nil }
+---@param opts { on_submit: fun(text: string), on_cancel: fun() }
 function M.open_prompt(opts)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].buftype = 'nofile'
@@ -20,15 +19,6 @@ function M.open_prompt(opts)
   local screen_row = vim.fn.winline()
   local row = (screen_row <= 2) and 1 or -2
 
-  local border, title
-  if opts.mode == 'edit' then
-    border = branding.edit_border_spec()
-    title = branding.edit_title_spec('edit')
-  else
-    border = branding.border_spec('cursor')
-    title = branding.title_spec('cursor', 'ask')
-  end
-
   local win = vim.api.nvim_open_win(buf, true, {
     relative = 'cursor',
     row = row,
@@ -36,8 +26,8 @@ function M.open_prompt(opts)
     width = 60,
     height = 1,
     style = 'minimal',
-    border = border,
-    title = title,
+    border = branding.border_spec('cursor'),
+    title = branding.title_spec('cursor', 'ask cursor-agent'),
     title_pos = 'center',
   })
 
@@ -45,7 +35,6 @@ function M.open_prompt(opts)
   local function finish(text)
     if finished then return end
     finished = true
-    vim.cmd('stopinsert')
     if vim.api.nvim_win_is_valid(win) then
       vim.api.nvim_win_close(win, true)
     end
@@ -114,7 +103,6 @@ function M.open_hover(opts)
   local lines = hover_lines(entry)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].filetype = 'markdown'
-  pcall(vim.treesitter.start, buf, 'markdown')
   vim.bo[buf].modifiable = false
 
   local view = vim.fn.winsaveview()
@@ -149,53 +137,6 @@ function M.open_hover(opts)
   })
   vim.wo[winid].wrap = true
   active_hover = { winid = winid, bufnr = buf }
-end
-
----Build virt_lines representing a unified diff between original and modified code.
----@param original string
----@param modified string
----@return table[][] virt_lines
-local function build_diff_virt_lines(original, modified)
-  local ok, hunks = pcall(vim.diff, original, modified, { result_type = 'indices', ctxlen = 0 })
-  if not ok or not hunks then return {} end
-  local orig_lines = vim.split(original, '\n', { plain = true })
-  local mod_lines = vim.split(modified, '\n', { plain = true })
-  local out = {}
-  out[#out + 1] = { { '── proposed diff ──', 'Comment' } }
-  for _, hunk in ipairs(hunks) do
-    local a_start, a_count, b_start, b_count = hunk[1], hunk[2], hunk[3], hunk[4]
-    for i = a_start, a_start + a_count - 1 do
-      out[#out + 1] = { { '- ' .. (orig_lines[i] or ''), 'DiffDelete' } }
-    end
-    for i = b_start, b_start + b_count - 1 do
-      out[#out + 1] = { { '+ ' .. (mod_lines[i] or ''), 'DiffAdd' } }
-    end
-  end
-  return out
-end
-
----@param bufnr integer
----@param ns integer
----@param line integer
----@param original string
----@param modified string
-function M.open_diff_overlay(bufnr, ns, line, original, modified)
-  M.close_diff_overlay()
-  local virt_lines = build_diff_virt_lines(original, modified)
-  if #virt_lines == 0 then return end
-  local id = vim.api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
-    virt_lines = virt_lines,
-    virt_lines_above = false,
-  })
-  active_diff = { bufnr = bufnr, extmark_id = id, ns = ns }
-end
-
-function M.close_diff_overlay()
-  if not active_diff then return end
-  if vim.api.nvim_buf_is_valid(active_diff.bufnr) then
-    pcall(vim.api.nvim_buf_del_extmark, active_diff.bufnr, active_diff.ns, active_diff.extmark_id)
-  end
-  active_diff = nil
 end
 
 return M
