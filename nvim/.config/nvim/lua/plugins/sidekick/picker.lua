@@ -1,6 +1,7 @@
 -- nvim/.config/nvim/lua/plugins/sidekick/picker.lua
 local internal = require("plugins.sidekick.internal")
 local registry = require("plugins.sidekick.registry")
+local branch_mod = require("plugins.sidekick.branch")
 
 local M = {}
 
@@ -13,14 +14,17 @@ function M.list_items()
     if cwd_display:sub(1, #home) == home then
       cwd_display = "~" .. cwd_display:sub(#home + 1)
     end
+    local branch = branch_mod.read_session(entry.session_id)
+    local label_col = branch and string.format("%s · %s", label, branch) or label
     items[#items + 1] = {
-      text = string.format("[%s] %s  %s", entry.tool, label, cwd_display),
+      text = string.format("[%s] %s  %s", entry.tool, label_col, cwd_display),
       label = label,
       tool = entry.tool,
       slug = entry.slug,
       pane_id = entry.pane_id,
       session_id = entry.session_id,
       cwd = entry.cwd,
+      branch = branch,
     }
   end
   table.sort(items, function(a, b)
@@ -94,7 +98,7 @@ function M.open()
     confirm = function(picker, item)
       picker:close()
       if item and item.label then
-        internal.toggle_tool_session(item.label, true)
+        internal.open_session_with_branch(item.label, true)
       end
     end,
     win = {
