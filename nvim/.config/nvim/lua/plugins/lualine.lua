@@ -140,6 +140,23 @@ return {
         },
         lualine_x = {
           {
+            function()
+              local ok, vt = pcall(require, "codeium.virtual_text")
+              if not ok then
+                return ""
+              end
+              local s = vt.status_string()
+              if s == "" or s == "0" then
+                return ""
+              end
+              return "󰚩 " .. s
+            end,
+            cond = function()
+              return package.loaded["codeium"] ~= nil
+            end,
+            color = { fg = colors.green },
+          },
+          {
             "filetype",
             colored = true,
             icon_only = false,
