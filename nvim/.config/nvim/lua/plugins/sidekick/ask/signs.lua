@@ -13,7 +13,9 @@ local RANGE_BAR = '│'
 local timer = nil
 
 function M.setup_highlights()
-  vim.api.nvim_set_hl(0, 'SidekickAskRange', { link = 'DiagnosticInfo', default = true })
+  require('plugins.sidekick.branding').ensure_highlights()
+  vim.api.nvim_set_hl(0, 'SidekickAskRange', { link = 'SidekickBorderCursor', default = true })
+  vim.api.nvim_set_hl(0, 'SidekickAskSign', { link = 'SidekickBorderCursor', default = true })
 end
 
 ---@param bufnr integer
@@ -22,7 +24,7 @@ end
 function M.create_anchor(bufnr, line)
   return vim.api.nvim_buf_set_extmark(bufnr, M.ns, line, 0, {
     sign_text = SPINNER_FRAMES[1],
-    sign_hl_group = 'DiagnosticInfo',
+    sign_hl_group = 'SidekickAskSign',
     invalidate = true,
   })
 end
@@ -61,7 +63,7 @@ end
 ---@param bufnr integer
 ---@param entry AskEntry
 function M.mark_done(bufnr, entry)
-  set_anchor_sign(bufnr, entry.extmark_id, DONE_ICON, 'DiagnosticInfo')
+  set_anchor_sign(bufnr, entry.extmark_id, DONE_ICON, 'SidekickAskSign')
 end
 
 ---@param bufnr integer
@@ -90,7 +92,7 @@ local function tick()
         if entry.status == 'pending' then
           any = true
           entry.spinner_frame = (entry.spinner_frame % #SPINNER_FRAMES) + 1
-          set_anchor_sign(bufnr, entry.extmark_id, SPINNER_FRAMES[entry.spinner_frame], 'DiagnosticInfo')
+          set_anchor_sign(bufnr, entry.extmark_id, SPINNER_FRAMES[entry.spinner_frame], 'SidekickAskSign')
         end
       end
     end

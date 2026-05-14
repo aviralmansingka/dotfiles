@@ -1,4 +1,6 @@
 -- nvim/.config/nvim/lua/plugins/sidekick/ask/ui.lua
+local branding = require('plugins.sidekick.branding')
+
 local M = {}
 
 local active_hover = nil
@@ -24,8 +26,8 @@ function M.open_prompt(opts)
     width = 60,
     height = 1,
     style = 'minimal',
-    border = 'rounded',
-    title = ' ask cursor-agent ',
+    border = branding.border_spec('cursor'),
+    title = branding.title_spec('cursor', 'ask cursor-agent'),
     title_pos = 'center',
   })
 
@@ -128,7 +130,7 @@ function M.open_hover(opts)
     width = width,
     height = height,
     style = 'minimal',
-    border = 'rounded',
+    border = branding.border_spec('cursor'),
     focusable = false,
     anchor = anchor,
     noautocmd = true,
