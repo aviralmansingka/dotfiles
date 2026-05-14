@@ -40,6 +40,7 @@ return {
   config = function(_, opts)
     require("plugins.sidekick.tmux_tool_match").apply()
     require("sidekick").setup(opts)
+    require("plugins.sidekick.select_patch").apply()
     require("plugins.sidekick.registry").rehydrate()
     require("plugins.sidekick.branding").ensure_highlights()
     vim.api.nvim_create_autocmd("ColorScheme", {

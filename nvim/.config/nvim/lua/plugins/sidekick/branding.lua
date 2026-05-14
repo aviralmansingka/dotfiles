@@ -19,6 +19,7 @@ M.fallback_color = "#7C7C7C"
 -- ghostty palette, color 5 (purple) resolves to #d3869b. Match that exactly.
 M.branch_color = "#d3869b"
 M.branch_glyph = ""
+M.dir_glyph = ""
 
 -- Gruvbox blue from the user's ghostty palette (color 4). Used by the ask
 -- plugin's edit mode UI so it's visually distinct from ask (cursor violet).

@@ -2,6 +2,7 @@
 local internal = require("plugins.sidekick.internal")
 local registry = require("plugins.sidekick.registry")
 local branch_mod = require("plugins.sidekick.branch")
+local branding = require("plugins.sidekick.branding")
 
 local M = {}
 
@@ -15,9 +16,9 @@ function M.list_items()
       cwd_display = "~" .. cwd_display:sub(#home + 1)
     end
     local branch = branch_mod.read_session(entry.session_id)
-    local label_col = branch and string.format("%s · %s", label, branch) or label
+    local label_col = branch and string.format("%s · %s %s", label, branding.branch_glyph, branch) or label
     items[#items + 1] = {
-      text = string.format("%s  %s", label_col, cwd_display),
+      text = string.format("%s  %s %s", label_col, branding.dir_glyph, cwd_display),
       label = label,
       tool = entry.tool,
       slug = entry.slug,
