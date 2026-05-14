@@ -133,6 +133,7 @@ function M.open()
       },
     },
     preview = function(ctx)
+      vim.bo[ctx.buf].modifiable = true
       vim.api.nvim_buf_set_lines(ctx.buf, 0, -1, false, preview_lines(ctx.item))
       return true
     end,
