@@ -15,6 +15,11 @@ M.colors = {
 
 M.fallback_color = "#7C7C7C"
 
+-- Starship's default `git_branch` style is `bold purple`; in this user's
+-- ghostty palette, color 5 (purple) resolves to #d3869b. Match that exactly.
+M.branch_color = "#d3869b"
+M.branch_glyph = ""
+
 local ROUNDED = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }
 
 local function capitalize(name)
@@ -74,6 +79,7 @@ function M.ensure_highlights()
     vim.api.nvim_set_hl(0, hl.border, { fg = color, default = false })
     vim.api.nvim_set_hl(0, hl.title, { fg = color, bold = true, default = false })
   end
+  vim.api.nvim_set_hl(0, "SidekickBranch", { fg = M.branch_color, bold = true, default = false })
 end
 
 --- 8-element border spec colored with the tool's hl group.
@@ -96,13 +102,13 @@ end
 ---@return table
 function M.title_spec(tool, session_name, branch)
   local hl = M.hl_groups(tool)
-  local text
   if branch and branch ~= "" then
-    text = string.format(" %s · %s ", session_name, branch)
-  else
-    text = string.format(" %s ", session_name)
+    return {
+      { string.format(" %s ", session_name), hl.title },
+      { string.format(" %s %s ", M.branch_glyph, branch), "SidekickBranch" },
+    }
   end
-  return { { text, hl.title } }
+  return { { string.format(" %s ", session_name), hl.title } }
 end
 
 --- Mutate a sidekick.cli.Terminal's float opts so the next open uses the
