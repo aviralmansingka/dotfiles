@@ -78,10 +78,10 @@ return {
     {
       "<leader>aa",
       function()
-        require("plugins.sidekick.ask").choose()
+        require("plugins.sidekick.ask").ask()
       end,
       mode = { "n", "x" },
-      desc = "Ask: pick ask or edit mode",
+      desc = "Ask cursor-agent about this code",
     },
     {
       "<leader>ay",
@@ -89,14 +89,6 @@ return {
         require("plugins.sidekick.ask").yank_line()
       end,
       desc = "Ask: yank answer on current line",
-    },
-    {
-      "<leader>ae",
-      function()
-        require("plugins.sidekick.ask").edit()
-      end,
-      mode = { "n", "x" },
-      desc = "Ask: edit (propose a diff)",
     },
     {
       "<leader>as",
