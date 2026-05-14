@@ -166,24 +166,7 @@ return {
     {
       "<leader>as",
       function()
-        require("sidekick.cli").select({
-          focus = true,
-          cb = function(state)
-            if not state then
-              return
-            end
-            local tool_name = state.tool and state.tool.name or nil
-            if internal.is_claude_tool(tool_name) and not internal.ensure_claude_bridge() then
-              return
-            end
-            local check = internal.validate_branch_for_state(state)
-            if not check.ok then
-              internal.notify_branch_failure(state.mux_session or tool_name or "?", check.branch, check.result)
-              return
-            end
-            require("sidekick.cli.state").attach(state, { show = true, focus = true })
-          end,
-        })
+        require("plugins.sidekick.cwd_picker").open()
       end,
       desc = "Select CLI",
     },
@@ -256,7 +239,7 @@ return {
     {
       "<leader>al",
       function()
-        require("plugins.sidekick.picker").open()
+        require("plugins.sidekick.cwd_picker").open()
       end,
       desc = "Sidekick List Named Sessions",
     },

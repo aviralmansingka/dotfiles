@@ -163,6 +163,7 @@ function M.open()
         return
       end
       if item.label then
+        require("plugins.sidekick.last_session").record(item.label)
         internal.toggle_tool_session(item.label, true)
       end
     end,
