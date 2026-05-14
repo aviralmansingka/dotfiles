@@ -145,7 +145,10 @@ return {
               if not ok then
                 return ""
               end
-              local s = vt.status_string()
+              -- status_string() returns "  0 " when idle, " * " when fetching,
+              -- " 3/8 " when suggesting — always padded with spaces. Trim before
+              -- the hide-guard check so idle suppression actually fires.
+              local s = vim.trim(vt.status_string() or "")
               if s == "" or s == "0" then
                 return ""
               end
