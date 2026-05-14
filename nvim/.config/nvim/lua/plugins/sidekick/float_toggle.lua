@@ -54,15 +54,28 @@ function M.toggle()
     local w = math.floor(vim.o.columns * 0.8)
     local h = math.floor(vim.o.lines * 0.8)
     h = math.max(h, 1)
-    vim.api.nvim_win_set_config(win, {
+    local sid = vim.w[win].sidekick_session_id
+    local term = sid and require("sidekick.cli.terminal").get(sid)
+    local branding = require("plugins.sidekick.branding")
+    if term then
+      branding.apply(term)
+    end
+    local float_cfg = {
       relative = "editor",
       style = "minimal",
-      border = M.float_border(),
       row = math.max(0, math.floor((vim.o.lines - h) / 2)),
       col = math.max(0, math.floor((vim.o.columns - w) / 2)),
       width = w,
       height = h,
-    })
+    }
+    if term and term.opts.float.border then
+      float_cfg.border = term.opts.float.border
+      float_cfg.title = term.opts.float.title
+      float_cfg.title_pos = term.opts.float.title_pos or "center"
+    else
+      float_cfg.border = M.float_border()
+    end
+    vim.api.nvim_win_set_config(win, float_cfg)
     vim.wo[win].winfixwidth = false
     vim.wo[win].winfixheight = false
     return
@@ -75,14 +88,20 @@ function M.toggle()
     return
   end
   local new_cfg = split_win_config(term)
-  vim.api.nvim_win_set_config(win, new_cfg)
+  --- nvim_win_set_config can't convert a float → split in this nvim version
+  --- (raises "Cannot split a floating window"). Open the split first so the
+  --- terminal buffer keeps a window reference, then close the float.
+  local buf = vim.api.nvim_win_get_buf(win)
+  local new_win = vim.api.nvim_open_win(buf, true, new_cfg)
+  vim.w[new_win].sidekick_session_id = sid
   if new_cfg.vertical then
-    vim.wo[win].winfixheight = true
-    vim.wo[win].winfixwidth = false
+    vim.wo[new_win].winfixheight = true
+    vim.wo[new_win].winfixwidth = false
   else
-    vim.wo[win].winfixwidth = true
-    vim.wo[win].winfixheight = false
+    vim.wo[new_win].winfixwidth = true
+    vim.wo[new_win].winfixheight = false
   end
+  pcall(vim.api.nvim_win_close, win, false)
 end
 
 return M
