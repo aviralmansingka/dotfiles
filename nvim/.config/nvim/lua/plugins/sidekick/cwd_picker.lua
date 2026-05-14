@@ -19,6 +19,8 @@ end
 ---@param root string  already normalized
 ---@return boolean
 local function in_cwd_subtree(entry_cwd, root)
+  -- root == "" only when getcwd() was "/" (normalize strips its only slash).
+  -- Treat as "match nothing" — a degenerate scenario, opt for safe empty state.
   if not entry_cwd or entry_cwd == "" or root == "" then
     return false
   end
