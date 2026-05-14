@@ -13,7 +13,7 @@ return {
     cli = {
       win = {
         config = function(terminal)
-          terminal.opts.float.border = float_toggle.float_border()
+          require("plugins.sidekick.branding").apply(terminal)
         end,
         layout = "float",
         float = {
@@ -41,6 +41,13 @@ return {
     require("plugins.sidekick.tmux_tool_match").apply()
     require("sidekick").setup(opts)
     require("plugins.sidekick.registry").rehydrate()
+    require("plugins.sidekick.branding").ensure_highlights()
+    vim.api.nvim_create_autocmd("ColorScheme", {
+      group = vim.api.nvim_create_augroup("plugins.sidekick.branding", { clear = true }),
+      callback = function()
+        require("plugins.sidekick.branding").ensure_highlights()
+      end,
+    })
     vim.api.nvim_create_autocmd("VimLeavePre", {
       group = vim.api.nvim_create_augroup("plugins.sidekick.search", { clear = true }),
       callback = function()
@@ -60,16 +67,6 @@ return {
       mode = { "n", "x" },
     },
     {
-      "<tab>",
-      function()
-        if not require("sidekick").nes_jump_or_apply() then
-          return "<Tab>"
-        end
-      end,
-      expr = true,
-      desc = "Goto/Apply Next Edit Suggestion",
-    },
-    {
       "<c-.>",
       function()
         require("plugins.sidekick.cwd_picker").open()
@@ -80,9 +77,17 @@ return {
     {
       "<leader>aa",
       function()
-        require("sidekick.cli").toggle()
+        require("plugins.sidekick.ask").ask()
       end,
-      desc = "Sidekick Toggle CLI",
+      mode = { "n", "x" },
+      desc = "Ask cursor-agent about this code",
+    },
+    {
+      "<leader>ay",
+      function()
+        require("plugins.sidekick.ask").yank_line()
+      end,
+      desc = "Ask: yank answer on current line",
     },
     {
       "<leader>as",
@@ -113,10 +118,10 @@ return {
     {
       "<leader>at",
       function()
-        require("sidekick.cli").send({ msg = "{this}" })
+        require("plugins.sidekick.ask").send_to_session()
       end,
-      mode = { "x", "n" },
-      desc = "Send This",
+      mode = { "n", "x" },
+      desc = "Ask: send selection or answer to a named session",
     },
     {
       "<leader>af",
@@ -151,9 +156,9 @@ return {
     {
       "<leader>ac",
       function()
-        internal.toggle_tool_session("claude", true)
+        require("plugins.sidekick.ask").clear_line()
       end,
-      desc = "Sidekick Toggle Claude",
+      desc = "Ask: clear answer on current line",
     },
     {
       "<leader>ag",
