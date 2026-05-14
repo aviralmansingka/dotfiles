@@ -155,8 +155,8 @@ end
 
 -- Render the eval result in a hover float at the cursor (rounded border,
 -- standard vim-hover dismissal — closes on any cursor move, insert-mode
--- entry, or buffer leave). Re-press <localleader>g after dismissal to
--- re-evaluate at the new cursor position. Auto-trigger silently skips
+-- entry, or buffer leave). Driven only by the auto-trigger now — manual
+-- eval lives on <localleader>r (REPL split). Auto-trigger silently skips
 -- re-eval if the cursor is still on the same expression.
 local function dap_eval_hover(opts)
   opts = opts or {}
@@ -475,13 +475,6 @@ return {
         require("dapui").toggle()
       end,
       desc = "Debug: Toggle UI",
-    },
-    {
-      "<localleader>g",
-      function()
-        dap_eval_hover({ source = "manual" })
-      end,
-      desc = "Debug: Eval expression in hover (or focus hover if open)",
     },
     {
       "<localleader>r",
