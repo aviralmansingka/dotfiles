@@ -21,7 +21,7 @@ function M.open()
     require("plugins.sidekick.picker").open()
     return
   end
-  require("plugins.sidekick.internal").open_session_with_branch(M.label, true)
+  require("plugins.sidekick.internal").toggle_tool_session(M.label, true)
 end
 
 return M

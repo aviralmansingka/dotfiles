@@ -123,8 +123,8 @@ function M.capture_branch_async(tool_name, cwd)
 end
 
 --- Toggle a sidekick tool session. `skip_capture=true` suppresses the default
---- branch-capture so callers (e.g. open_session_with_branch) can capture using
---- a more specific cwd without racing the default nil-cwd capture.
+--- branch-capture so callers can capture using a more specific cwd without
+--- racing the default nil-cwd capture.
 ---@param name string
 ---@param focus boolean|nil
 ---@param skip_capture boolean|nil
@@ -154,97 +154,6 @@ function M.session_cwd(session_id)
     return nil
   end
   return cwd
-end
-
-local BRANCH_FAIL_MESSAGES = {
-  dirty = "working tree dirty (%s), aborting checkout to %s",
-  rebase = "rebase in progress, aborting checkout to %s",
-  merge = "merge in progress, aborting checkout to %s",
-  missing_branch = "branch %q no longer exists, aborting open",
-  checkout_failed = "git checkout %s failed: %s",
-}
-
----@param name string
----@param branch string
----@param result sidekick.branch.Result
-function M.notify_branch_failure(name, branch, result)
-  local tmpl = BRANCH_FAIL_MESSAGES[result.reason or ""]
-  local body
-  if tmpl == BRANCH_FAIL_MESSAGES.dirty then
-    body = tmpl:format(result.detail or "?", branch)
-  elseif tmpl == BRANCH_FAIL_MESSAGES.rebase or tmpl == BRANCH_FAIL_MESSAGES.merge then
-    body = tmpl:format(branch)
-  elseif tmpl == BRANCH_FAIL_MESSAGES.missing_branch then
-    body = tmpl:format(branch)
-  elseif tmpl == BRANCH_FAIL_MESSAGES.checkout_failed then
-    body = tmpl:format(branch, result.detail or "")
-  else
-    body = string.format("could not switch to %s: %s", branch, result.reason or "unknown")
-  end
-  vim.notify(string.format("Sidekick: %s: %s", name, body), vim.log.levels.WARN)
-end
-
---- Open a session, switching to its recorded branch first. If the switch
---- fails for a recoverable reason (dirty tree, mid-rebase/merge, missing
---- branch), notify the user and abort instead of opening the agent on the
---- wrong branch. For sessions that don't exist yet, just toggle (capture
---- happens post-spawn via capture_branch_async).
----@param name string
----@param focus boolean|nil
-function M.open_session_with_branch(name, focus)
-  local sid = M.find_tmux_session_id(name)
-  local session_cwd = sid and M.session_cwd(sid) or nil
-  if sid then
-    local branch_mod = require("plugins.sidekick.branch")
-    local branch = branch_mod.read_session(sid)
-    if branch and branch ~= "" then
-      local cwd = session_cwd or vim.fn.getcwd()
-      local result = branch_mod.switch(cwd, branch)
-      if not result.ok and result.reason ~= "not_a_repo" then
-        M.notify_branch_failure(name, branch, result)
-        return
-      end
-    end
-  end
-  -- Suppress toggle's default capture; we know the session's real cwd and
-  -- capture explicitly below (avoids a race with the nil-cwd default).
-  M.toggle_tool_session(name, focus, true)
-  M.capture_branch_async(name, session_cwd or vim.fn.getcwd())
-end
-
---- Validate the recorded branch for a sidekick.cli.session.State (what the
---- built-in select callback receives). Returns { ok = true } on success or
---- { ok = false, branch = ..., result = <sidekick.branch.Result> } on a
---- recoverable failure. `not_a_repo` is treated as no-op success.
----@param state table sidekick.cli.session.State
----@return { ok: boolean, branch: string|nil, result: sidekick.branch.Result|nil }
-function M.validate_branch_for_state(state)
-  if not state or not state.tmux_pane_id then
-    return { ok = true }
-  end
-  if vim.fn.executable("tmux") ~= 1 then
-    return { ok = true }
-  end
-  local sid_result =
-    vim.system({ "tmux", "display-message", "-p", "-t", state.tmux_pane_id, "-F", "#{session_id}" }):wait()
-  if sid_result.code ~= 0 then
-    return { ok = true }
-  end
-  local sid = ((sid_result.stdout or ""):gsub("\n$", ""))
-  if sid == "" then
-    return { ok = true }
-  end
-  local branch_mod = require("plugins.sidekick.branch")
-  local branch = branch_mod.read_session(sid)
-  if not branch or branch == "" then
-    return { ok = true }
-  end
-  local cwd = M.session_cwd(sid) or vim.fn.getcwd()
-  local result = branch_mod.switch(cwd, branch)
-  if result.ok or result.reason == "not_a_repo" then
-    return { ok = true }
-  end
-  return { ok = false, branch = branch, result = result }
 end
 
 ---@param cmd string|string[]

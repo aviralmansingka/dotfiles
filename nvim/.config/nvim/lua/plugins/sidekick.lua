@@ -69,7 +69,7 @@ return {
     {
       "<c-;>",
       function()
-        internal.open_session_with_branch("claude", true)
+        internal.toggle_tool_session("claude", true)
       end,
       desc = "Sidekick Toggle Claude",
       mode = { "n", "x" },
@@ -218,21 +218,21 @@ return {
     {
       "<leader>ag",
       function()
-        internal.open_session_with_branch("codex", true)
+        internal.toggle_tool_session("codex", true)
       end,
       desc = "Sidekick Toggle Codex (G)PT",
     },
     {
       "<leader>ao",
       function()
-        internal.open_session_with_branch("opencode", true)
+        internal.toggle_tool_session("opencode", true)
       end,
       desc = "Sidekick Toggle OpenCode",
     },
     {
       "<leader>au",
       function()
-        internal.open_session_with_branch("cursor", true)
+        internal.toggle_tool_session("cursor", true)
       end,
       desc = "Sidekick Toggle Cursor Agent",
     },

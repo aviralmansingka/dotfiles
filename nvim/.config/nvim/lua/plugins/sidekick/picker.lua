@@ -101,7 +101,7 @@ function M.open()
       picker:close()
       if item and item.label then
         require("plugins.sidekick.last_session").record(item.label)
-        internal.open_session_with_branch(item.label, true)
+        internal.toggle_tool_session(item.label, true)
       end
     end,
     win = {
