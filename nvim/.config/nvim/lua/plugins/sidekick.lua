@@ -180,10 +180,10 @@ return {
     {
       "<leader>at",
       function()
-        require("plugins.sidekick.ask").send_to_session()
+        require("sidekick.cli").send({ msg = "{this}" })
       end,
       mode = { "n", "x" },
-      desc = "Ask: send selection or answer to a named session",
+      desc = "Send This",
     },
     {
       "<leader>af",

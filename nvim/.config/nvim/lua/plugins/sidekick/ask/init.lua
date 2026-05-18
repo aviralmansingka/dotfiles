@@ -279,63 +279,6 @@ function M.yank_line()
   vim.notify("ask: answer yanked")
 end
 
-local function blockquote(text)
-  local out = {}
-  for _, line in ipairs(vim.split(text, "\n", { plain = true })) do
-    if line == "" then
-      out[#out + 1] = ">"
-    else
-      out[#out + 1] = "> " .. line
-    end
-  end
-  return table.concat(out, "\n")
-end
-
-function M.send_to_session()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local mode = vim.fn.mode()
-  local payload
-
-  if mode == "v" or mode == "V" or mode == "\22" then
-    local s = vim.fn.getpos("v")
-    local e = vim.fn.getpos(".")
-    local s_line = math.min(s[2], e[2]) - 1
-    local e_line = math.max(s[2], e[2]) - 1
-    vim.api.nvim_feedkeys(ESC, "nx", false)
-    local lines = vim.api.nvim_buf_get_lines(bufnr, s_line, e_line + 1, false)
-    payload = table.concat(lines, "\n")
-  else
-    local line0 = vim.api.nvim_win_get_cursor(0)[1] - 1
-    local _, entry = state.find_at(bufnr, line0, signs.ns)
-    if not entry or entry.status ~= "done" or not entry.answer then
-      vim.notify("ask: no answer to send", vim.log.levels.WARN)
-      return
-    end
-    payload = entry.answer
-  end
-
-  local ok, registry = pcall(require, "plugins.sidekick.registry")
-  if not ok then
-    vim.notify("ask: sidekick registry not available", vim.log.levels.ERROR)
-    return
-  end
-  local sessions = registry.discover()
-  local labels = vim.tbl_keys(sessions)
-  if #labels == 0 then
-    vim.notify("ask: no named sidekick sessions", vim.log.levels.WARN)
-    return
-  end
-  table.sort(labels)
-
-  vim.ui.select(labels, { prompt = "Send to which session?" }, function(label)
-    if not label then
-      return
-    end
-    local quoted = blockquote(payload)
-    require("sidekick.cli").send({ name = label, msg = quoted })
-  end)
-end
-
 function M.setup()
   if setup_done then
     return
