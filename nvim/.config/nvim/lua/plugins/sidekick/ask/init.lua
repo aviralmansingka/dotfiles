@@ -56,7 +56,7 @@ function M.ask()
       local anchor_extmark = signs.create_anchor(bufnr, line0, "ask")
       local range_extmarks = {}
       if range then
-        range_extmarks = signs.create_range_bar(bufnr, range.start_line, range.end_line, "ask")
+        range_extmarks = signs.create_range_bar(bufnr, range.start_line + 1, range.end_line, "ask")
       end
 
       local entry = {

@@ -88,7 +88,7 @@ return {
         require("plugins.sidekick.ask").ask()
       end,
       mode = { "n", "x" },
-      desc = "Ask cursor-agent about this code",
+      desc = "Ask Codex Spark about this code",
     },
     {
       "<leader>ae",
@@ -96,7 +96,7 @@ return {
         require("plugins.sidekick.ask").edit()
       end,
       mode = { "n", "x" },
-      desc = "Edit: ask cursor-agent for a diff (hover to preview)",
+      desc = "Edit: ask Codex Spark for a diff (hover to preview)",
     },
     {
       "<localleader>e",
@@ -104,7 +104,7 @@ return {
         require("plugins.sidekick.ask").edit()
       end,
       mode = { "n", "x" },
-      desc = "Edit: ask cursor-agent for a diff (hover to preview)",
+      desc = "Edit: ask Codex Spark for a diff (hover to preview)",
     },
     {
       "<leader>aA",

@@ -10,6 +10,8 @@ local SPINNER_FRAMES = { '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧',
 local DONE_ICON = '?'
 local EDIT_DONE_ICON = '±'
 local RANGE_BAR = '│'
+local SPINNER_PRIORITY = 30
+local RANGE_PRIORITY = 20
 
 local timer = nil
 
@@ -45,6 +47,7 @@ function M.create_anchor(bufnr, line, mode)
   return vim.api.nvim_buf_set_extmark(bufnr, M.ns, line, 0, {
     sign_text = SPINNER_FRAMES[1],
     sign_hl_group = sign_hl,
+    priority = SPINNER_PRIORITY,
     invalidate = true,
   })
 end
@@ -61,6 +64,7 @@ function M.create_range_bar(bufnr, start_line, end_line, mode)
     ids[#ids + 1] = vim.api.nvim_buf_set_extmark(bufnr, M.ns, line, 0, {
       sign_text = RANGE_BAR,
       sign_hl_group = range_hl,
+      priority = RANGE_PRIORITY,
       invalidate = true,
     })
   end
@@ -78,6 +82,7 @@ local function set_anchor_sign(bufnr, extmark_id, sign_text, sign_hl_group)
     id = extmark_id,
     sign_text = sign_text,
     sign_hl_group = sign_hl_group,
+    priority = SPINNER_PRIORITY,
     invalidate = true,
   })
 end
@@ -131,6 +136,7 @@ function M.start_spinner()
   if timer then return end
   timer = vim.uv.new_timer()
   timer:start(0, 100, vim.schedule_wrap(tick))
+  vim.cmd('redraw')
 end
 
 function M.stop_spinner()

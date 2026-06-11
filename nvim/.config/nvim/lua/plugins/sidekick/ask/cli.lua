@@ -1,53 +1,64 @@
 -- nvim/.config/nvim/lua/plugins/sidekick/ask/cli.lua
--- Spawn cursor-agent -p --mode ask --output-format json.
+-- Spawn Codex for inline ask/edit prompts and read its final answer.
 local M = {}
+
+local CODEX_MODEL = "gpt-5.3-codex-spark"
+
+local function read_output(path)
+  local ok, lines = pcall(vim.fn.readfile, path)
+  if not ok or type(lines) ~= "table" then
+    return ""
+  end
+  return table.concat(lines, "\n"):gsub("%s+$", "")
+end
 
 ---@param prompt string
 ---@param on_done fun(result: { ok: boolean, result: string?, err: string?, duration_ms: integer?, tokens: { input: integer, output: integer }? })
----@param opts { mode: string? }?  `opts.mode` is forwarded as `--mode <m>`; omit the table or pass `{ mode = nil }` to skip the `--mode` flag entirely (used by the edit path so cursor-agent can produce diffs).
+---@param _opts { mode: string? }?  Retained for call-site compatibility.
 ---@return vim.SystemObj
-function M.spawn(prompt, on_done, opts)
-  local cmd = { 'cursor-agent', '-p' }
-  local mode = opts and opts.mode or nil
-  if mode then
-    cmd[#cmd + 1] = '--mode'
-    cmd[#cmd + 1] = mode
-  end
-  cmd[#cmd + 1] = '--output-format'
-  cmd[#cmd + 1] = 'json'
+function M.spawn(prompt, on_done, _opts)
+  local output_path = vim.fn.tempname()
+  local start = vim.uv.hrtime()
+  local cmd = {
+    "codex",
+    "--model",
+    CODEX_MODEL,
+    "--sandbox",
+    "read-only",
+    "-a",
+    "never",
+    "exec",
+    "--output-last-message",
+    output_path,
+  }
   cmd[#cmd + 1] = prompt
   return vim.system(cmd, {
     cwd = vim.fn.getcwd(),
     text = true,
   }, function(obj)
     vim.schedule(function()
-      if obj.code ~= 0 then
-        local err = (obj.stderr or ''):gsub('%s+$', '')
-        if err == '' then err = 'cursor-agent exited with code ' .. tostring(obj.code) end
+      local result = read_output(output_path)
+      pcall(vim.fn.delete, output_path)
+
+      if obj.code ~= 0 and result == "" then
+        local err = (obj.stderr or ""):gsub("%s+$", "")
+        if err == "" then
+          err = "codex exited with code " .. tostring(obj.code)
+        end
         on_done({ ok = false, err = err })
         return
       end
-      local raw = obj.stdout or ''
-      local ok, decoded = pcall(vim.json.decode, raw)
-      if not ok or type(decoded) ~= 'table' then
-        on_done({ ok = false, err = 'cursor-agent: unexpected output' })
-        return
-      end
-      if decoded.is_error then
-        on_done({ ok = false, err = tostring(decoded.result or 'cursor-agent reported error') })
-        return
-      end
-      if type(decoded.result) ~= 'string' or decoded.result == '' then
-        on_done({ ok = false, err = 'cursor-agent: empty result' })
+      if result == "" then
+        on_done({ ok = false, err = "codex: empty result" })
         return
       end
       on_done({
         ok = true,
-        result = decoded.result,
-        duration_ms = decoded.duration_ms or 0,
+        result = result,
+        duration_ms = math.floor((vim.uv.hrtime() - start) / 1000000),
         tokens = {
-          input = (decoded.usage and decoded.usage.inputTokens) or 0,
-          output = (decoded.usage and decoded.usage.outputTokens) or 0,
+          input = 0,
+          output = 0,
         },
       })
     end)
