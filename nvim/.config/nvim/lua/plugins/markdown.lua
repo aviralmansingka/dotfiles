@@ -1,5 +1,5 @@
 -- W1: Centralized vault paths
-local VAULT_DIR = vim.fn.expand("~/obsidian/personal/")
+local VAULT_DIR = vim.fn.expand("~/vault/")
 local JOURNAL_DIR = VAULT_DIR .. "journal/"
 
 return {

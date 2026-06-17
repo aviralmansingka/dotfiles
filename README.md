@@ -28,6 +28,12 @@ brew bundle
 stow nvim tmux zsh ghostty git starship codex
 ```
 
+On Linux (systemd) systems, also deploy the vault auto-sync service:
+
+```sh
+stow systemd
+```
+
 ### Option B: AWS Devbox
 
 A fully provisioned Ubuntu 24.04 EC2 instance with all tools pre-installed. AMIs are built with Packer and the instance is managed with Terraform.
@@ -74,10 +80,21 @@ terraform -chdir=ops/devbox destroy \
 | `nvim` | Neovim with LazyVim |
 | `ssh` | SSH configuration |
 | `starship` | Starship prompt |
+| `systemd` | User systemd units (vault auto-sync) |
 | `terminfo` | Custom terminfo entries |
 | `tmux` | Tmux configuration |
 | `tmuxinator` | Tmuxinator session templates |
 | `zsh` | Zsh shell configuration |
+
+## Vault auto-sync service
+
+Manage user service:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now vault-auto-sync.service
+systemctl --user status vault-auto-sync.service
+```
 
 ## Infrastructure
 

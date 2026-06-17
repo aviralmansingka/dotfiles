@@ -38,15 +38,6 @@ return {
           -- renders transparently over whatever line bg is underneath.
           vim.api.nvim_set_hl(0, "NeotestTest", { bg = "NONE" })
           vim.api.nvim_set_hl(0, "NeotestUnknown", { bg = "NONE" })
-          -- Codeium AI ghost text — matches BlinkGhostText family, italic to
-          -- distinguish AI suggestions from other inline previews. Deferred
-          -- via vim.schedule because windsurf.nvim registers its own
-          -- ColorScheme autocmd that re-applies the default #808080 grey;
-          -- scheduling pushes our set past the synchronous autocmd chain so
-          -- we win the race regardless of registration order.
-          vim.schedule(function()
-            vim.api.nvim_set_hl(0, "CodeiumSuggestion", { fg = "#665c54", bg = "#282828", italic = true })
-          end)
         end,
       })
 

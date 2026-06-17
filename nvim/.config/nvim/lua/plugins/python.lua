@@ -73,6 +73,19 @@ return {
       local venv_ruff = find_venv_ruff()
 
       opts.servers.basedpyright = vim.tbl_deep_extend("force", opts.servers.basedpyright or {}, {
+        handlers = {
+          -- Suppress basedpyright push diagnostics. Pull diagnostics are
+          -- disabled below by clearing diagnosticProvider during init.
+          ["textDocument/publishDiagnostics"] = function() end,
+          ["textDocument/diagnostic"] = function() end,
+        },
+        on_init = function(client)
+          client.server_capabilities.diagnosticProvider = nil
+        end,
+        on_attach = function(client, bufnr)
+          vim.diagnostic.reset(vim.lsp.diagnostic.get_namespace(client.id, false), bufnr)
+          vim.diagnostic.reset(vim.lsp.diagnostic.get_namespace(client.id, true), bufnr)
+        end,
         settings = {
           basedpyright = {
             analysis = {

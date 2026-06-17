@@ -1,0 +1,18 @@
+[Unit]
+Description=Auto-sync Obsidian vault with remote every 5 minutes
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/vault
+Environment=TARGET_BRANCH=main
+Environment=SYNC_INTERVAL_SECONDS=300
+ExecStart=%h/vault/auto-commit.sh --daemon
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

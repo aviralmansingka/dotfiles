@@ -140,26 +140,6 @@ return {
         },
         lualine_x = {
           {
-            function()
-              local ok, vt = pcall(require, "codeium.virtual_text")
-              if not ok then
-                return ""
-              end
-              -- status_string() returns "  0 " when idle, " * " when fetching,
-              -- " 3/8 " when suggesting — always padded with spaces. Trim before
-              -- the hide-guard check so idle suppression actually fires.
-              local s = vim.trim(vt.status_string() or "")
-              if s == "" or s == "0" then
-                return ""
-              end
-              return "󰚩 " .. s
-            end,
-            cond = function()
-              return package.loaded["codeium"] ~= nil
-            end,
-            color = { fg = colors.green },
-          },
-          {
             "filetype",
             colored = true,
             icon_only = false,

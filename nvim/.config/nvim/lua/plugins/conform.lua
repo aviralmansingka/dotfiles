@@ -1,10 +1,10 @@
 return {
   "stevearc/conform.nvim",
   opts = {
-    -- S2: Enable format on save for markdown and python
+    -- Enable format on save for filetypes with explicit formatter chains below.
     format_on_save = function(bufnr)
       local ft = vim.bo[bufnr].filetype
-      if ft == "markdown" or ft == "python" or ft == "java" then
+      if ft == "markdown" or ft == "python" or ft == "java" or ft == "lua" or ft == "go" then
         return { timeout_ms = 2000, lsp_fallback = false }
       end
       return nil
@@ -63,8 +63,9 @@ return {
     formatters_by_ft = {
       -- Prettier first (structure), then our visual-width wrapper (prose)
       markdown = { "prettier", "markdown_wrap" },
+      lua = { "stylua" },
       java = { "google-java-format" },
-      go = { "golangci-lint" },
+      go = { "goimports", "gofumpt" },
       bzl = { "buildifier" },
       -- Mirrors `inv lint --fix`: ruff check --fix, then ruff format
       python = { "ruff_fix", "ruff_format" },

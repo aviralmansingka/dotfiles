@@ -21,6 +21,9 @@ This is a dotfiles repository that manages development environment configuration
 # Manual installation with stow
 brew bundle                    # Install dependencies from Brewfile
 stow nvim tmux zsh ghostty git kube tmuxinator codex
+
+# Linux: optionally deploy user services (systemd)
+stow systemd
 ```
 
 ### Component Installation
@@ -33,7 +36,8 @@ stow ghostty      # Deploy Ghostty terminal configuration
 stow git          # Deploy git configuration
 stow starship     # Deploy Starship prompt configuration
 stow aerospace    # Deploy AeroSpace window manager configuration
-stow codex        # Deploy Codex skill files
+stow codex         # Deploy Codex skill files
+stow systemd       # Deploy systemd user units (Linux)
 ```
 
 ### Plugin Management
@@ -70,6 +74,7 @@ Each tool has its own directory containing dotfiles in their target path structu
 - **terminfo** - Custom terminfo entries (xterm-ghostty)
 - **tmux** - Tmux configuration
 - **tmuxinator** - Tmuxinator session templates
+- **systemd** - User systemd units (Linux)
 - **zsh** - Zsh shell configuration
 
 ### Key Configuration Patterns

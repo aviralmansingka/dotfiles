@@ -37,8 +37,8 @@ end
 function M.open_daily_note(offset_days)
   offset_days = offset_days or 0
 
-  local journal_dir = vim.fn.expand("~/obsidian/personal/journal/")
-  local template_dir = vim.fn.expand("~/obsidian/personal/templates/")
+  local journal_dir = vim.fn.expand("~/vault/journal/")
+  local template_dir = vim.fn.expand("~/vault/templates/")
 
   -- Calculate target date
   local target_time = os.time() + (offset_days * 24 * 3600)

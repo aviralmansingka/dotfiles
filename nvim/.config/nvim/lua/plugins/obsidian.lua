@@ -7,8 +7,8 @@ return {
   lazy = true,
   ft = "markdown",
   event = {
-    "BufReadPre " .. vim.fn.expand("~") .. "/obsidian/**.md",
-    "BufNewFile " .. vim.fn.expand("~") .. "/obsidian/**.md",
+    "BufReadPre " .. vim.fn.expand("~") .. "/vault/**.md",
+    "BufNewFile " .. vim.fn.expand("~") .. "/vault/**.md",
   },
   dependencies = {
     "nvim-lua/plenary.nvim",
@@ -17,7 +17,7 @@ return {
     workspaces = {
       {
         name = "personal",
-        path = "~/obsidian/personal",
+        path = "~/vault",
       },
     },
 
@@ -164,7 +164,7 @@ return {
           end
         end
 
-        local journal_dir = vim.fn.expand("~/obsidian/personal/journal/")
+        local journal_dir = vim.fn.expand("~/vault/journal/")
         local week_folder = string.format("%s%d-W%02d", journal_dir, year, week_num)
 
         -- Create the weekly directory if it doesn't exist
