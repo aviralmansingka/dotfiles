@@ -107,6 +107,8 @@ osc52-copy() {
 
 export XDG_CONFIG_HOME="$HOME/.config"
 export TERM="xterm-256color"
+# Pi uses COLORTERM to decide whether to emit 24-bit colors under SSH/tmux.
+export COLORTERM="truecolor"
 export EDITOR="bob run stable"
 export FZF_DEFAULT_COMMAND='rg --hidden --ignore .git -g ""'
 export DISABLE_AUTO_TITLE=true
