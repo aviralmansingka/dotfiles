@@ -1,16 +1,17 @@
 [Unit]
-Description=Pi over WhatsApp daemon
-After=network-online.target whatsapp-bridge.service
-Wants=network-online.target whatsapp-bridge.service
+Description=Pi over Telegram daemon
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=%h/vault
-ExecStart=%h/bin/pi-whatsapp-daemon.py
+ExecStart=%h/bin/pi-telegram-daemon.py
 Restart=always
 RestartSec=5
+TimeoutStopSec=10
 Environment=PATH=%h/.nvm/versions/node/v22.22.3/bin:%h/.local/bin:%h/go/bin:/usr/local/bin:/usr/bin:/bin
-EnvironmentFile=-%h/.config/pi-whatsapp.env
+EnvironmentFile=-%h/.config/pi-telegram.env
 
 [Install]
 WantedBy=default.target

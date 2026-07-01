@@ -490,7 +490,7 @@ return {
     --- are NOT routed through DAP `output` events, so dap-ui's `console` element
     --- stays empty for delve-based sessions. Tailing the files in a terminal
     --- shows them live regardless of adapter behavior. Works equally well for
-    --- a binary launch (machine-manager) and a DAP test (<leader>td).
+    --- a binary launch (machine-manager) and a DAP test keymap.
     {
       "<leader>dl",
       function()

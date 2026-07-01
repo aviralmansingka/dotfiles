@@ -86,8 +86,8 @@ terraform -chdir=ops/devbox destroy \
 | `nvim` | Neovim with LazyVim |
 | `ssh` | SSH configuration |
 | `starship` | Starship prompt |
-| `systemd` | User systemd units (vault auto-sync, Pi/WhatsApp bridge) |
-| `pi` | Pi agent config, packages, skills, themes, and WhatsApp daemon |
+| `systemd` | User systemd units (vault auto-sync, Pi/WhatsApp/Telegram bridges) |
+| `pi` | Pi agent config, packages, skills, themes, and messaging daemons |
 | `terminfo` | Custom terminfo entries |
 | `tmux` | Tmux configuration |
 | `tmuxinator` | Tmuxinator session templates |
@@ -125,6 +125,13 @@ For Pi over WhatsApp, copy `~/.config/pi-whatsapp.env.example` to `~/.config/pi-
 ```sh
 systemctl --user daemon-reload
 systemctl --user enable --now whatsapp-bridge.service pi-whatsapp.service
+```
+
+For Pi over Telegram, create a bot with `@BotFather`, copy `~/.config/pi-telegram.env.example` to `~/.config/pi-telegram.env`, fill in the bot token and allowed chat IDs, and set `PI_TELEGRAM_PREFIX=` if you want normal prefixless chat. Then enable the user service:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now pi-telegram.service
 ```
 
 ## Infrastructure

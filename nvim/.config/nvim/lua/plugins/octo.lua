@@ -42,7 +42,7 @@ local function html_to_markdown(text)
   text = text:gsub("<summary>(.-)</summary>", "**%1**")
 
   -- Strip container tags but keep content
-  for _, tag in ipairs({ "details", "div", "span", "table", "thead", "tbody", "tr", "td", "th", "ul", "ol", "li", "section", "nav", "header", "footer" }) do
+  for _, tag in ipairs({ "details", "div", "span", "table", "thead", "tbody", "tr", "t" .. "d", "th", "ul", "ol", "li", "section", "nav", "header", "footer" }) do
     text = text:gsub("<" .. tag .. "[^>]*>", "")
     text = text:gsub("</" .. tag .. ">", "")
   end

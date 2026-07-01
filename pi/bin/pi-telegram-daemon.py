@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Bridge WhatsApp messages to a long-running pi RPC session.
+"""Bridge Telegram bot messages to a long-running pi RPC session.
 
 Default behavior is intentionally conservative:
-- Only watches the configured allowlisted chat(s).
+- Requires PI_TELEGRAM_BOT_TOKEN.
+- Only watches configured allowlisted chat IDs/usernames.
 - Only messages prefixed with !pi are sent to pi.
-- Replies are sent back to the same WhatsApp chat.
+- Replies are sent back to the same Telegram chat.
 """
 
 from __future__ import annotations
@@ -13,9 +14,7 @@ import json
 import os
 import queue
 import signal
-import sqlite3
 import subprocess
-import sys
 import threading
 import time
 import urllib.error
@@ -26,31 +25,30 @@ from pathlib import Path
 from typing import Any, Optional
 
 HOME = Path.home()
-DEFAULT_DB = HOME / "projects/whatsapp-mcp/whatsapp-bridge/store/messages.db"
-DEFAULT_STATE = HOME / ".pi/agent/pi-whatsapp-state.json"
+DEFAULT_STATE = HOME / ".pi/agent/pi-telegram-state.json"
 DEFAULT_PI = "pi"
 DEFAULT_CWD = HOME / "vault"
 
-DB_PATH = Path(os.environ.get("PI_WHATSAPP_DB", str(DEFAULT_DB)))
-STATE_PATH = Path(os.environ.get("PI_WHATSAPP_STATE", str(DEFAULT_STATE)))
-PI_BIN = os.environ.get("PI_WHATSAPP_PI_BIN", str(DEFAULT_PI))
-PI_CWD = os.environ.get("PI_WHATSAPP_CWD", str(DEFAULT_CWD))
-API_BASE = os.environ.get("PI_WHATSAPP_API_BASE", "http://127.0.0.1:8765/api")
-PREFIX = os.environ.get("PI_WHATSAPP_PREFIX", "!pi")
-POLL_SECONDS = float(os.environ.get("PI_WHATSAPP_POLL_SECONDS", "2"))
-OWN_CHAT = os.environ.get("PI_WHATSAPP_OWN_CHAT", "")
+BOT_TOKEN = os.environ.get("PI_TELEGRAM_BOT_TOKEN", "").strip()
+API_BASE = os.environ.get("PI_TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/")
+STATE_PATH = Path(os.environ.get("PI_TELEGRAM_STATE", str(DEFAULT_STATE)))
+PI_BIN = os.environ.get("PI_TELEGRAM_PI_BIN", str(DEFAULT_PI))
+PI_CWD = os.environ.get("PI_TELEGRAM_CWD", str(DEFAULT_CWD))
+PREFIX = os.environ.get("PI_TELEGRAM_PREFIX", "!pi")
 ALLOWED_CHATS = {
-    x.strip() for x in os.environ.get("PI_WHATSAPP_ALLOWED_CHATS", OWN_CHAT).split(",") if x.strip()
+    x.strip() for x in os.environ.get("PI_TELEGRAM_ALLOWED_CHATS", "").split(",") if x.strip()
 }
-PROCESS_EXISTING = os.environ.get("PI_WHATSAPP_PROCESS_EXISTING", "0") == "1"
-MAX_REPLY_CHARS = int(os.environ.get("PI_WHATSAPP_MAX_REPLY_CHARS", "3500"))
-PROMPT_TIMEOUT_SECONDS = int(os.environ.get("PI_WHATSAPP_PROMPT_TIMEOUT_SECONDS", "900"))
+PROCESS_EXISTING = os.environ.get("PI_TELEGRAM_PROCESS_EXISTING", "0") == "1"
+MAX_REPLY_CHARS = int(os.environ.get("PI_TELEGRAM_MAX_REPLY_CHARS", "3900"))
+PROMPT_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_PROMPT_TIMEOUT_SECONDS", "900"))
+POLL_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_POLL_TIMEOUT_SECONDS", "50"))
+RETRY_SECONDS = float(os.environ.get("PI_TELEGRAM_RETRY_SECONDS", "5"))
 
 SYSTEM_PROMPT = """
-You are Pi, running headlessly behind the owner's WhatsApp.
-The WhatsApp sender is the owner controlling you remotely.
-Be concise by default because replies are delivered as WhatsApp messages.
-You may use local tools to help the owner, but do not send WhatsApp messages to other people or groups unless the owner explicitly asks you to send an exact message to an exact recipient.
+You are Pi, running headlessly behind the owner's Telegram bot.
+The Telegram sender is the owner controlling you remotely.
+Be concise by default because replies are delivered as Telegram messages.
+You may use local tools to help the owner, but do not send Telegram messages to other people or groups unless the owner explicitly asks you to send an exact message to an exact recipient.
 If a requested action is risky or ambiguous, ask a clarifying question instead of guessing.
 """.strip()
 
@@ -61,13 +59,14 @@ def log(msg: str) -> None:
 
 @dataclass
 class IncomingMessage:
-    rowid: int
-    message_id: str
-    chat_jid: str
+    update_id: int
+    message_id: int
+    chat_id: str
     chat_name: str
+    chat_username: str
     sender: str
-    is_from_me: bool
-    timestamp: str
+    sender_is_bot: bool
+    timestamp: int
     content: str
 
 
@@ -89,7 +88,7 @@ class PiRPC:
             "--mode",
             "rpc",
             "--name",
-            "whatsapp-daemon",
+            "telegram-daemon",
             "--append-system-prompt",
             SYSTEM_PROMPT,
         ]
@@ -222,11 +221,34 @@ class PiRPC:
             data = response.get("data") or {}
             model = data.get("model") or {}
             return (
-                "Pi WhatsApp bridge is running.\n"
+                "Pi Telegram bridge is running.\n"
                 f"Model: {model.get('provider', '?')}/{model.get('id', '?')}\n"
                 f"Session: {data.get('sessionName') or data.get('sessionId')}\n"
                 f"Streaming: {data.get('isStreaming')}"
             )
+
+
+def telegram_api(method: str, payload: dict[str, Any], timeout: int = 60) -> Any:
+    if not BOT_TOKEN:
+        raise RuntimeError("PI_TELEGRAM_BOT_TOKEN is not set")
+    url = f"{API_BASE}/bot{BOT_TOKEN}/{method}"
+    body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Telegram {method} failed HTTP {e.code}: {raw}") from e
+    data = json.loads(raw)
+    if not data.get("ok"):
+        raise RuntimeError(f"Telegram {method} failed: {data}")
+    return data.get("result")
 
 
 def load_state() -> dict[str, Any]:
@@ -246,81 +268,138 @@ def save_state(state: dict[str, Any]) -> None:
     tmp.replace(STATE_PATH)
 
 
-def get_max_rowid() -> int:
-    if not DB_PATH.exists():
+def get_latest_update_id() -> int:
+    updates = telegram_api(
+        "getUpdates",
+        {"timeout": 0, "limit": 100, "allowed_updates": ["message"]},
+        timeout=10,
+    )
+    if not updates:
         return 0
-    con = sqlite3.connect(DB_PATH)
+    return max(int(update.get("update_id", 0)) for update in updates)
+
+
+def fetch_updates(after_update_id: int) -> list[dict[str, Any]]:
+    return telegram_api(
+        "getUpdates",
+        {
+            "offset": after_update_id + 1,
+            "timeout": POLL_TIMEOUT_SECONDS,
+            "limit": 20,
+            "allowed_updates": ["message"],
+        },
+        timeout=POLL_TIMEOUT_SECONDS + 10,
+    )
+
+
+def display_chat_name(chat: dict[str, Any]) -> str:
+    for key in ("title", "username"):
+        if chat.get(key):
+            return str(chat[key])
+    name = " ".join(str(chat.get(k, "")).strip() for k in ("first_name", "last_name")).strip()
+    return name
+
+
+def display_sender(sender: dict[str, Any]) -> str:
+    if sender.get("username"):
+        return "@" + str(sender["username"])
+    name = " ".join(str(sender.get(k, "")).strip() for k in ("first_name", "last_name")).strip()
+    return name or str(sender.get("id", ""))
+
+
+def parse_message(update: dict[str, Any]) -> Optional[IncomingMessage]:
+    message = update.get("message")
+    if not isinstance(message, dict):
+        return None
+    chat = message.get("chat") or {}
+    sender = message.get("from") or {}
+    chat_id = chat.get("id")
+    message_id = message.get("message_id")
+    if chat_id is None or message_id is None:
+        return None
+    content = message.get("text") or message.get("caption") or ""
+    return IncomingMessage(
+        update_id=int(update.get("update_id", 0)),
+        message_id=int(message_id),
+        chat_id=str(chat_id),
+        chat_name=display_chat_name(chat),
+        chat_username=("@" + str(chat["username"])) if chat.get("username") else "",
+        sender=display_sender(sender),
+        sender_is_bot=bool(sender.get("is_bot")),
+        timestamp=int(message.get("date", 0)),
+        content=str(content),
+    )
+
+
+def send_chat_action(chat_id: str, action: str = "typing") -> None:
     try:
-        row = con.execute("SELECT COALESCE(MAX(rowid), 0) FROM messages").fetchone()
-        return int(row[0] or 0)
-    finally:
-        con.close()
+        telegram_api("sendChatAction", {"chat_id": chat_id, "action": action}, timeout=10)
+    except Exception as e:
+        log(f"Telegram sendChatAction failed: {e}")
 
 
-def fetch_messages(after_rowid: int) -> list[IncomingMessage]:
-    if not DB_PATH.exists():
-        return []
-    con = sqlite3.connect(DB_PATH)
-    try:
-        rows = con.execute(
-            """
-            SELECT messages.rowid, messages.id, messages.chat_jid, COALESCE(chats.name, ''),
-                   messages.sender, messages.is_from_me, messages.timestamp, COALESCE(messages.content, '')
-            FROM messages
-            LEFT JOIN chats ON chats.jid = messages.chat_jid
-            WHERE messages.rowid > ?
-            ORDER BY messages.rowid ASC
-            """,
-            (after_rowid,),
-        ).fetchall()
-        return [IncomingMessage(*row) for row in rows]
-    finally:
-        con.close()
-
-
-def send_whatsapp(recipient: str, text: str) -> None:
+def send_telegram(chat_id: str, text: str, reply_to_message_id: Optional[int] = None) -> None:
     chunks = [text[i : i + MAX_REPLY_CHARS] for i in range(0, len(text), MAX_REPLY_CHARS)] or [""]
     for idx, chunk in enumerate(chunks, 1):
         if len(chunks) > 1:
             chunk = f"({idx}/{len(chunks)})\n{chunk}"
-        payload = json.dumps({"recipient": recipient, "message": chunk}).encode("utf-8")
-        req = urllib.request.Request(
-            f"{API_BASE}/send",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            body = resp.read().decode("utf-8", errors="replace")
-            if resp.status != 200:
-                raise RuntimeError(f"WhatsApp send failed HTTP {resp.status}: {body}")
+        payload: dict[str, Any] = {"chat_id": chat_id, "text": chunk}
+        if reply_to_message_id is not None:
+            payload["reply_parameters"] = {"message_id": reply_to_message_id, "allow_sending_without_reply": True}
+        telegram_api("sendMessage", payload, timeout=60)
+
+
+def is_allowed(msg: IncomingMessage) -> bool:
+    if not ALLOWED_CHATS:
+        return False
+    identifiers = {msg.chat_id}
+    if msg.chat_username:
+        identifiers.add(msg.chat_username)
+        identifiers.add(msg.chat_username.lstrip("@"))
+    return bool(identifiers & ALLOWED_CHATS)
 
 
 def should_handle(msg: IncomingMessage) -> Optional[str]:
-    if not ALLOWED_CHATS:
-        return None
-    if msg.chat_jid not in ALLOWED_CHATS:
+    if msg.sender_is_bot:
         return None
     content = (msg.content or "").strip()
     if not content:
         return None
     lower = content.lower()
-    pfx = PREFIX.lower()
+    pfx = PREFIX.strip().lower()
+
+    if pfx:
+        has_prefix = lower == pfx or lower.startswith(pfx + " ")
+        if not has_prefix:
+            return None
+
+    if not is_allowed(msg):
+        log(
+            "Ignoring unauthorized Telegram command "
+            f"chat_id={msg.chat_id} chat={msg.chat_name!r} username={msg.chat_username!r} sender={msg.sender!r}"
+        )
+        return None
+
+    if not pfx:
+        return content
     if lower == pfx:
         return "status"
-    if lower.startswith(pfx + " "):
-        return content[len(PREFIX) :].strip()
-    return None
+    return content[len(PREFIX) :].strip()
 
 
 def main() -> int:
-    log(f"Watching WhatsApp DB: {DB_PATH}")
-    log(f"Allowed chats: {', '.join(sorted(ALLOWED_CHATS)) or '(all)'}; prefix: {PREFIX!r}")
+    if not BOT_TOKEN:
+        log("PI_TELEGRAM_BOT_TOKEN is required")
+        return 1
+    if not ALLOWED_CHATS:
+        log("PI_TELEGRAM_ALLOWED_CHATS is empty; all Telegram commands will be ignored")
+    log(f"Watching Telegram bot updates; allowed chats: {', '.join(sorted(ALLOWED_CHATS)) or '(none)'}; prefix: {PREFIX!r}")
+
     state = load_state()
-    if "last_rowid" not in state:
-        state["last_rowid"] = 0 if PROCESS_EXISTING else get_max_rowid()
+    if "last_update_id" not in state:
+        state["last_update_id"] = 0 if PROCESS_EXISTING else get_latest_update_id()
         save_state(state)
-        log(f"Initialized last_rowid={state['last_rowid']}")
+        log(f"Initialized last_update_id={state['last_update_id']}")
 
     pi = PiRPC()
     stop = False
@@ -335,36 +414,40 @@ def main() -> int:
 
     while not stop:
         try:
-            last_rowid = int(state.get("last_rowid", 0))
-            for msg in fetch_messages(last_rowid):
-                state["last_rowid"] = max(int(state.get("last_rowid", 0)), msg.rowid)
+            last_update_id = int(state.get("last_update_id", 0))
+            for update in fetch_updates(last_update_id):
+                update_id = int(update.get("update_id", 0))
+                state["last_update_id"] = max(int(state.get("last_update_id", 0)), update_id)
                 save_state(state)
+                msg = parse_message(update)
+                if not msg:
+                    continue
                 prompt = should_handle(msg)
                 if prompt is None:
                     continue
-                log(f"Handling WhatsApp command from chat={msg.chat_jid} rowid={msg.rowid}: {prompt[:120]!r}")
+                log(f"Handling Telegram command from chat={msg.chat_id} update={msg.update_id}: {prompt[:120]!r}")
                 try:
+                    send_chat_action(msg.chat_id)
                     if prompt.lower() in {"status", "ping"}:
                         reply = pi.status()
                     elif prompt.lower() in {"reset", "new", "new session"}:
                         reply = pi.new_session()
                     else:
                         full_prompt = (
-                            f"WhatsApp command from chat {msg.chat_name or msg.chat_jid} "
-                            f"at {msg.timestamp}:\n\n{prompt}"
+                            f"Telegram command from chat {msg.chat_name or msg.chat_id} "
+                            f"by {msg.sender} at unix timestamp {msg.timestamp}:\n\n{prompt}"
                         )
                         reply = pi.ask(full_prompt)
-                    send_whatsapp(msg.chat_jid, reply)
+                    send_telegram(msg.chat_id, reply, reply_to_message_id=msg.message_id)
                 except Exception as e:
                     log(f"Command failed: {e}")
                     try:
-                        send_whatsapp(msg.chat_jid, f"Pi bridge error: {e}")
+                        send_telegram(msg.chat_id, f"Pi bridge error: {e}", reply_to_message_id=msg.message_id)
                     except Exception as send_err:
-                        log(f"Also failed to send error over WhatsApp: {send_err}")
-            time.sleep(POLL_SECONDS)
+                        log(f"Also failed to send error over Telegram: {send_err}")
         except Exception as e:
             log(f"Loop error: {e}")
-            time.sleep(5)
+            time.sleep(RETRY_SECONDS)
 
     pi.stop()
     return 0

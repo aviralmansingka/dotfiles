@@ -1,6 +1,7 @@
 auth.json
 mcp-cache.json
 pi-whatsapp-state.json
+pi-telegram-state.json
 tirupati-*-watch.json
 sessions/
 git/

@@ -1419,7 +1419,7 @@ Run each check on a fresh `nvim` instance with `cursor-agent` available in `$PAT
 
 - [ ] **Step 17: Document any deviations**
 
-  If any step revealed a bug or surprising behavior, file a follow-up task in `td` (`td add "ask: <issue>"`) and either fix inline (small) or note it in the spec's "Out of scope / future work" section.
+  If any step revealed a bug or surprising behavior, fix it inline (small) or note it in the spec's "Out of scope / future work" section.
 
 - [ ] **Step 18: Final commit (only if fixes happened during verification)**
 
