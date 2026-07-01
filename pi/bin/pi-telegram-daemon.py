@@ -4,7 +4,8 @@
 Default behavior is intentionally conservative:
 - Requires PI_TELEGRAM_BOT_TOKEN.
 - Only watches configured allowlisted chat IDs/usernames.
-- Only messages prefixed with !pi are sent to pi.
+- Only allowlisted chats are handled.
+- When PI_TELEGRAM_PREFIX is set, only messages with that prefix are sent to pi.
 - Replies are sent back to the same Telegram chat.
 """
 
@@ -30,12 +31,14 @@ HOME = Path.home()
 DEFAULT_STATE = HOME / ".pi/agent/pi-telegram-state.json"
 DEFAULT_PI = "pi"
 DEFAULT_CWD = HOME / "vault"
+DEFAULT_MODEL = "openai-codex/gpt-5.5"
 
 BOT_TOKEN = os.environ.get("PI_TELEGRAM_BOT_TOKEN", "").strip()
 API_BASE = os.environ.get("PI_TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/")
 STATE_PATH = Path(os.environ.get("PI_TELEGRAM_STATE", str(DEFAULT_STATE)))
 PI_BIN = os.environ.get("PI_TELEGRAM_PI_BIN", str(DEFAULT_PI))
 PI_CWD = os.environ.get("PI_TELEGRAM_CWD", str(DEFAULT_CWD))
+PI_MODEL = os.environ.get("PI_TELEGRAM_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
 PREFIX = os.environ.get("PI_TELEGRAM_PREFIX", "!pi")
 ALLOWED_CHATS = {
     x.strip() for x in os.environ.get("PI_TELEGRAM_ALLOWED_CHATS", "").split(",") if x.strip()
@@ -102,6 +105,8 @@ class PiRPC:
             "rpc",
             "--name",
             "telegram-daemon",
+            "--model",
+            PI_MODEL,
             "--append-system-prompt",
             SYSTEM_PROMPT,
         ]
@@ -233,11 +238,13 @@ class PiRPC:
                 return f"Pi status error: {response.get('error')}"
             data = response.get("data") or {}
             model = data.get("model") or {}
+            voice_provider = configured_voice_provider()
             return (
                 "Pi Telegram bridge is running.\n"
                 f"Model: {model.get('provider', '?')}/{model.get('id', '?')}\n"
                 f"Session: {data.get('sessionName') or data.get('sessionId')}\n"
-                f"Streaming: {data.get('isStreaming')}"
+                f"Streaming: {data.get('isStreaming')}\n"
+                f"Voice notes: {voice_provider if voice_provider else 'not configured'}"
             )
 
 
@@ -262,6 +269,170 @@ def telegram_api(method: str, payload: dict[str, Any], timeout: int = 60) -> Any
     if not data.get("ok"):
         raise RuntimeError(f"Telegram {method} failed: {data}")
     return data.get("result")
+
+
+def telegram_download(file_path: str, timeout: int = 120) -> bytes:
+    if not BOT_TOKEN:
+        raise RuntimeError("PI_TELEGRAM_BOT_TOKEN is not set")
+    url = f"{API_BASE}/file/bot{BOT_TOKEN}/{file_path}"
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read()
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Telegram file download failed HTTP {e.code}: {raw}") from e
+
+
+def configured_voice_provider() -> str:
+    provider = VOICE_TRANSCRIPTION_PROVIDER
+    if provider in {"", "none", "off", "disabled"}:
+        return ""
+    if provider == "command":
+        return "command" if VOICE_TRANSCRIPTION_CMD else ""
+    if provider == "openai":
+        return "openai" if VOICE_OPENAI_API_KEY else ""
+    if provider != "auto":
+        return provider
+    if VOICE_TRANSCRIPTION_CMD:
+        return "command"
+    if VOICE_OPENAI_API_KEY:
+        return "openai"
+    return ""
+
+
+def download_telegram_audio(msg: IncomingMessage) -> Path:
+    if not msg.audio_file_id:
+        raise RuntimeError("Telegram message has no voice/audio file")
+    if msg.audio_file_size and msg.audio_file_size > MAX_AUDIO_BYTES:
+        raise RuntimeError(
+            f"Telegram audio is too large ({msg.audio_file_size} bytes > {MAX_AUDIO_BYTES} byte limit)"
+        )
+
+    file_info = telegram_api("getFile", {"file_id": msg.audio_file_id}, timeout=30)
+    file_path = str((file_info or {}).get("file_path") or "")
+    if not file_path:
+        raise RuntimeError("Telegram getFile did not return file_path")
+    size = int((file_info or {}).get("file_size") or msg.audio_file_size or 0)
+    if size and size > MAX_AUDIO_BYTES:
+        raise RuntimeError(f"Telegram audio is too large ({size} bytes > {MAX_AUDIO_BYTES} byte limit)")
+
+    suffix = Path(file_path).suffix or mimetypes.guess_extension(msg.audio_mime_type or "") or ".oga"
+    fd, tmp_name = tempfile.mkstemp(prefix="pi-telegram-voice-", suffix=suffix)
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(telegram_download(file_path, timeout=120))
+        return tmp_path
+    except Exception:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        finally:
+            raise
+
+
+def _shell_quote(value: str) -> str:
+    # Avoid importing shlex solely for one POSIX quote operation.
+    return "'" + value.replace("'", "'\\''") + "'"
+
+
+def transcribe_with_command(audio_path: Path, mime_type: str) -> str:
+    if not VOICE_TRANSCRIPTION_CMD:
+        raise RuntimeError("PI_TELEGRAM_VOICE_TRANSCRIPTION_CMD is not set")
+    replacements = {
+        "{file}": _shell_quote(str(audio_path)),
+        "{path}": _shell_quote(str(audio_path)),
+        "{mime}": _shell_quote(mime_type or "application/octet-stream"),
+        "{filename}": _shell_quote(audio_path.name),
+    }
+    command = VOICE_TRANSCRIPTION_CMD
+    if any(token in command for token in replacements):
+        for token, value in replacements.items():
+            command = command.replace(token, value)
+    else:
+        command = f"{command} {_shell_quote(str(audio_path))}"
+    result = subprocess.run(command, shell=True, text=True, capture_output=True, timeout=300)
+    if result.returncode != 0:
+        stderr = (result.stderr or result.stdout or "").strip()
+        raise RuntimeError(f"voice transcription command failed ({result.returncode}): {stderr[:500]}")
+    transcript = (result.stdout or "").strip()
+    if not transcript:
+        raise RuntimeError("voice transcription command returned an empty transcript")
+    return transcript
+
+
+def _multipart_form(fields: dict[str, str], file_field: str, file_path: Path, mime_type: str) -> tuple[bytes, str]:
+    boundary = "----piTelegramVoice" + uuid.uuid4().hex
+    parts: list[bytes] = []
+    for name, value in fields.items():
+        parts.extend(
+            [
+                f"--{boundary}\r\n".encode(),
+                f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode(),
+                value.encode("utf-8"),
+                b"\r\n",
+            ]
+        )
+    file_bytes = file_path.read_bytes()
+    parts.extend(
+        [
+            f"--{boundary}\r\n".encode(),
+            f'Content-Disposition: form-data; name="{file_field}"; filename="{file_path.name}"\r\n'.encode(),
+            f"Content-Type: {mime_type or 'application/octet-stream'}\r\n\r\n".encode(),
+            file_bytes,
+            b"\r\n",
+            f"--{boundary}--\r\n".encode(),
+        ]
+    )
+    return b"".join(parts), boundary
+
+
+def transcribe_with_openai(audio_path: Path, mime_type: str) -> str:
+    if not VOICE_OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY or PI_TELEGRAM_OPENAI_API_KEY is not set")
+    body, boundary = _multipart_form(
+        {"model": VOICE_OPENAI_MODEL, "response_format": "text"},
+        "file",
+        audio_path,
+        mime_type or "audio/ogg",
+    )
+    req = urllib.request.Request(
+        f"{VOICE_OPENAI_API_BASE}/audio/transcriptions",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {VOICE_OPENAI_API_KEY}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            transcript = resp.read().decode("utf-8", errors="replace").strip()
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"OpenAI transcription failed HTTP {e.code}: {raw[:500]}") from e
+    if not transcript:
+        raise RuntimeError("OpenAI transcription returned an empty transcript")
+    return transcript
+
+
+def transcribe_telegram_audio(msg: IncomingMessage) -> str:
+    provider = configured_voice_provider()
+    if not provider:
+        raise RuntimeError(
+            "Voice notes need transcription configured. Set OPENAI_API_KEY/PI_TELEGRAM_OPENAI_API_KEY, "
+            "or set PI_TELEGRAM_VOICE_TRANSCRIPTION_CMD."
+        )
+    audio_path = download_telegram_audio(msg)
+    try:
+        mime_type = msg.audio_mime_type or mimetypes.guess_type(audio_path.name)[0] or "audio/ogg"
+        if provider == "command":
+            return transcribe_with_command(audio_path, mime_type)
+        if provider == "openai":
+            return transcribe_with_openai(audio_path, mime_type)
+        raise RuntimeError(f"Unsupported voice transcription provider: {provider}")
+    finally:
+        audio_path.unlink(missing_ok=True)
 
 
 def load_state() -> dict[str, Any]:
@@ -331,6 +502,20 @@ def parse_message(update: dict[str, Any]) -> Optional[IncomingMessage]:
     if chat_id is None or message_id is None:
         return None
     content = message.get("text") or message.get("caption") or ""
+
+    audio_obj: dict[str, Any] = {}
+    audio_kind = ""
+    for kind in ("voice", "audio"):
+        maybe_audio = message.get(kind)
+        if isinstance(maybe_audio, dict) and maybe_audio.get("file_id"):
+            audio_obj = maybe_audio
+            audio_kind = kind
+            break
+    document = message.get("document")
+    if not audio_obj and isinstance(document, dict) and str(document.get("mime_type", "")).startswith("audio/"):
+        audio_obj = document
+        audio_kind = "document"
+
     return IncomingMessage(
         update_id=int(update.get("update_id", 0)),
         message_id=int(message_id),
@@ -341,6 +526,10 @@ def parse_message(update: dict[str, Any]) -> Optional[IncomingMessage]:
         sender_is_bot=bool(sender.get("is_bot")),
         timestamp=int(message.get("date", 0)),
         content=str(content),
+        audio_file_id=str(audio_obj.get("file_id", "")),
+        audio_file_size=int(audio_obj.get("file_size") or 0),
+        audio_mime_type=str(audio_obj.get("mime_type", "")),
+        audio_kind=audio_kind,
     )
 
 
@@ -372,19 +561,41 @@ def is_allowed(msg: IncomingMessage) -> bool:
     return bool(identifiers & ALLOWED_CHATS)
 
 
+def strip_command_prefix(content: str, is_voice: bool) -> Optional[str]:
+    content = content.strip()
+    if not content:
+        return None
+    pfx = PREFIX.strip()
+    if not pfx:
+        return content
+
+    candidates = [pfx]
+    # Voice transcripts rarely include symbols like "!". If the text prefix is
+    # "!pi", accept spoken "pi ..." as the voice-note equivalent.
+    if is_voice:
+        spoken = pfx.lstrip("!/").strip()
+        if spoken and spoken.lower() not in {c.lower() for c in candidates}:
+            candidates.append(spoken)
+        if spoken.lower() == "pi":
+            candidates.append("pie")
+
+    lower = content.lower()
+    separators = " \t\r\n:,-—–"
+    for candidate in candidates:
+        c = candidate.lower()
+        if lower == c:
+            return "status"
+        if lower.startswith(c) and len(content) > len(candidate) and content[len(candidate)] in separators:
+            return content[len(candidate) :].lstrip(separators).strip() or "status"
+    return None
+
+
 def should_handle(msg: IncomingMessage) -> Optional[str]:
     if msg.sender_is_bot:
         return None
-    content = (msg.content or "").strip()
-    if not content:
+    prompt = strip_command_prefix(msg.content or "", is_voice=bool(msg.audio_kind))
+    if prompt is None:
         return None
-    lower = content.lower()
-    pfx = PREFIX.strip().lower()
-
-    if pfx:
-        has_prefix = lower == pfx or lower.startswith(pfx + " ")
-        if not has_prefix:
-            return None
 
     if not is_allowed(msg):
         log(
@@ -393,11 +604,7 @@ def should_handle(msg: IncomingMessage) -> Optional[str]:
         )
         return None
 
-    if not pfx:
-        return content
-    if lower == pfx:
-        return "status"
-    return content[len(PREFIX) :].strip()
+    return prompt
 
 
 def main() -> int:
@@ -435,19 +642,32 @@ def main() -> int:
                 msg = parse_message(update)
                 if not msg:
                     continue
-                prompt = should_handle(msg)
-                if prompt is None:
-                    continue
-                log(f"Handling Telegram command from chat={msg.chat_id} update={msg.update_id}: {prompt[:120]!r}")
                 try:
+                    if msg.audio_file_id and not msg.sender_is_bot and is_allowed(msg):
+                        send_chat_action(msg.chat_id)
+                        log(
+                            "Transcribing Telegram audio "
+                            f"chat={msg.chat_id} update={msg.update_id} kind={msg.audio_kind} size={msg.audio_file_size}"
+                        )
+                        transcript = transcribe_telegram_audio(msg)
+                        if msg.content.strip():
+                            msg.content = f"{msg.content.strip()}\n\nVoice transcript:\n{transcript}"
+                        else:
+                            msg.content = transcript
+
+                    prompt = should_handle(msg)
+                    if prompt is None:
+                        continue
+                    log(f"Handling Telegram command from chat={msg.chat_id} update={msg.update_id}: {prompt[:120]!r}")
                     send_chat_action(msg.chat_id)
                     if prompt.lower() in {"status", "ping"}:
                         reply = pi.status()
                     elif prompt.lower() in {"reset", "new", "new session"}:
                         reply = pi.new_session()
                     else:
+                        source_note = "Telegram voice-note transcript" if msg.audio_kind else "Telegram command"
                         full_prompt = (
-                            f"Telegram command from chat {msg.chat_name or msg.chat_id} "
+                            f"{source_note} from chat {msg.chat_name or msg.chat_id} "
                             f"by {msg.sender} at unix timestamp {msg.timestamp}:\n\n{prompt}"
                         )
                         reply = pi.ask(full_prompt)
