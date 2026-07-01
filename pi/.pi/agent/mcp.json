@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "google_workspace": {
-      "command": "/home/avirus/.local/bin/uvx",
+      "command": "uvx",
       "args": [
         "workspace-mcp",
         "--single-user",
@@ -19,16 +19,14 @@
       }
     },
     "whatsapp": {
-      "command": "/home/avirus/.local/bin/uv",
+      "command": "bash",
       "args": [
-        "--directory",
-        "/home/avirus/projects/whatsapp-mcp/whatsapp-mcp-server",
-        "run",
-        "main.py"
+        "-lc",
+        "cd ~/projects/whatsapp-mcp/whatsapp-mcp-server && exec uv run main.py"
       ]
     },
     "granola": {
-      "command": "/home/avirus/.nvm/versions/node/v22.22.3/bin/npx",
+      "command": "npx",
       "args": [
         "-y",
         "granola-mcp-plus"

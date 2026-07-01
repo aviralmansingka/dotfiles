@@ -1,0 +1,15 @@
+[Unit]
+Description=WhatsApp MCP bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/projects/whatsapp-mcp/whatsapp-bridge
+ExecStart=%h/projects/whatsapp-mcp/whatsapp-bridge/whatsapp-bridge
+Restart=always
+RestartSec=5
+Environment=PATH=%h/.nvm/versions/node/v22.22.3/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target

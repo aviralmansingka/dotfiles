@@ -86,8 +86,8 @@ terraform -chdir=ops/devbox destroy \
 | `nvim` | Neovim with LazyVim |
 | `ssh` | SSH configuration |
 | `starship` | Starship prompt |
-| `systemd` | User systemd units (vault auto-sync) |
-| `pi` | Pi agent config (`.pi/agent/mcp.json`) |
+| `systemd` | User systemd units (vault auto-sync, Pi/WhatsApp bridge) |
+| `pi` | Pi agent config, packages, skills, themes, and WhatsApp daemon |
 | `terminfo` | Custom terminfo entries |
 | `tmux` | Tmux configuration |
 | `tmuxinator` | Tmuxinator session templates |
@@ -101,6 +101,30 @@ Manage user service:
 systemctl --user daemon-reload
 systemctl --user enable --now vault-auto-sync.service
 systemctl --user status vault-auto-sync.service
+```
+
+## Pi agent
+
+Pi config is deployed with:
+
+```sh
+stow pi
+```
+
+The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
+
+Install/update Pi packages from the checked-in manifest:
+
+```sh
+cd ~/.pi/agent/npm
+npm install
+```
+
+For Pi over WhatsApp, copy `~/.config/pi-whatsapp.env.example` to `~/.config/pi-whatsapp.env`, fill in the allowed chat IDs, then enable the user services:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now whatsapp-bridge.service pi-whatsapp.service
 ```
 
 ## Infrastructure

@@ -1,0 +1,7 @@
+auth.json
+mcp-cache.json
+pi-whatsapp-state.json
+tirupati-*-watch.json
+sessions/
+git/
+npm/node_modules/

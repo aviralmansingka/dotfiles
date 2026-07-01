@@ -1,0 +1,16 @@
+[Unit]
+Description=Pi over WhatsApp daemon
+After=network-online.target whatsapp-bridge.service
+Wants=network-online.target whatsapp-bridge.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/vault
+ExecStart=%h/bin/pi-whatsapp-daemon.py
+Restart=always
+RestartSec=5
+Environment=PATH=%h/.nvm/versions/node/v22.22.3/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-%h/.config/pi-whatsapp.env
+
+[Install]
+WantedBy=default.target
