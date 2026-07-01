@@ -48,6 +48,7 @@ MAX_REPLY_CHARS = int(os.environ.get("PI_TELEGRAM_MAX_REPLY_CHARS", "3900"))
 PROMPT_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_PROMPT_TIMEOUT_SECONDS", "900"))
 POLL_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_POLL_TIMEOUT_SECONDS", "50"))
 RETRY_SECONDS = float(os.environ.get("PI_TELEGRAM_RETRY_SECONDS", "5"))
+TYPING_INTERVAL_SECONDS = float(os.environ.get("PI_TELEGRAM_TYPING_INTERVAL_SECONDS", "4"))
 
 VOICE_TRANSCRIPTION_PROVIDER = os.environ.get("PI_TELEGRAM_VOICE_TRANSCRIPTION_PROVIDER", "auto").strip().lower()
 VOICE_TRANSCRIPTION_CMD = os.environ.get("PI_TELEGRAM_VOICE_TRANSCRIPTION_CMD", "").strip()
@@ -540,6 +541,34 @@ def send_chat_action(chat_id: str, action: str = "typing") -> None:
         log(f"Telegram sendChatAction failed: {e}")
 
 
+class ChatActionLoop:
+    """Keep a Telegram chat action alive while a blocking operation runs."""
+
+    def __init__(self, chat_id: str, action: str = "typing", interval: float = TYPING_INTERVAL_SECONDS) -> None:
+        self.chat_id = chat_id
+        self.action = action
+        self.interval = interval
+        self.stop_event = threading.Event()
+        self.thread: Optional[threading.Thread] = None
+
+    def __enter__(self) -> "ChatActionLoop":
+        if self.interval <= 0:
+            return self
+        send_chat_action(self.chat_id, self.action)
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
+        return self
+
+    def __exit__(self, _exc_type: Any, _exc: Any, _tb: Any) -> None:
+        self.stop_event.set()
+        if self.thread:
+            self.thread.join(timeout=1)
+
+    def _run(self) -> None:
+        while not self.stop_event.wait(self.interval):
+            send_chat_action(self.chat_id, self.action)
+
+
 def send_telegram(chat_id: str, text: str, reply_to_message_id: Optional[int] = None) -> None:
     chunks = [text[i : i + MAX_REPLY_CHARS] for i in range(0, len(text), MAX_REPLY_CHARS)] or [""]
     for idx, chunk in enumerate(chunks, 1):
@@ -644,7 +673,6 @@ def main() -> int:
                     continue
                 try:
                     if msg.audio_file_id and not msg.sender_is_bot and is_allowed(msg):
-                        send_chat_action(msg.chat_id)
                         log(
                             "Transcribing Telegram audio "
                             f"chat={msg.chat_id} update={msg.update_id} kind={msg.audio_kind} size={msg.audio_file_size}"
@@ -659,7 +687,6 @@ def main() -> int:
                     if prompt is None:
                         continue
                     log(f"Handling Telegram command from chat={msg.chat_id} update={msg.update_id}: {prompt[:120]!r}")
-                    send_chat_action(msg.chat_id)
                     if prompt.lower() in {"status", "ping"}:
                         reply = pi.status()
                     elif prompt.lower() in {"reset", "new", "new session"}:
@@ -670,7 +697,8 @@ def main() -> int:
                             f"{source_note} from chat {msg.chat_name or msg.chat_id} "
                             f"by {msg.sender} at unix timestamp {msg.timestamp}:\n\n{prompt}"
                         )
-                        reply = pi.ask(full_prompt)
+                        with ChatActionLoop(msg.chat_id):
+                            reply = pi.ask(full_prompt)
                     send_telegram(msg.chat_id, reply, reply_to_message_id=msg.message_id)
                 except Exception as e:
                     log(f"Command failed: {e}")
