@@ -84,6 +84,27 @@ alias rg='rg --hidden'
 alias ls='eza --icons -l'
 alias inv='uv run inv'
 
+# Copy text/URLs into OSC52 clipboard (works in terminals that allow it)
+osc52-copy() {
+  local text
+  if (( $# > 0 )); then
+    text="${*}"
+  else
+    text="$(cat)"
+  fi
+
+  text=${text//$'\r'/}
+  text=${text//$'\n'/}
+  if [[ -z "$text" ]]; then
+    echo "Usage: osc52-copy '<text>' or pipe text into stdin"
+    return 1
+  fi
+
+  local b64
+  b64=$(printf '%s' "$text" | base64 | tr -d '\n')
+  printf '\033]52;c;%s\007' "$b64"
+}
+
 export XDG_CONFIG_HOME="$HOME/.config"
 export TERM="xterm-256color"
 export EDITOR="bob run stable"

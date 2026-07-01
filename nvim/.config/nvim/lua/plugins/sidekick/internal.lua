@@ -2,9 +2,11 @@
 local M = {}
 
 M.tool_urls = {
-  claude = "https://github.com/anthropics/claude-code",
+  codex = "https://github.com/openai/codex",
   cursor = "https://cursor.com",
   opencode = "https://github.com/sst/opencode",
+  pi = "https://github.com/earendil-works/pi",
+  claude = "https://github.com/anthropics/claude-code",
 }
 
 M.claude_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/claude")) == 1 and vim.fn.expand("~/.local/bin/claude")
@@ -15,11 +17,19 @@ M.cursor_agent_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/cursor-agent"
   or "cursor-agent"
 
 M.tool_commands = {
-  claude = { M.claude_bin, "--dangerously-skip-permissions" },
+  codex = { "codex", "--dangerously-bypass-approvals-and-sandbox" },
   cursor = { M.cursor_agent_bin, "--force" },
   opencode = { "opencode" },
-  codex = { "codex", "--dangerously-bypass-approvals-and-sandbox" },
+  pi = { "pi" },
+  claude = { M.claude_bin, "--dangerously-skip-permissions" },
 }
+
+-- Highest-to-lowest preference for agent pickers. Claude is intentionally last.
+M.agent_order = { "codex", "cursor", "opencode", "pi", "claude" }
+M.agent_rank = {}
+for rank, tool in ipairs(M.agent_order) do
+  M.agent_rank[tool] = rank
+end
 
 --- Env var set on named-session tmux panes. is_proc uses it to disambiguate
 --- the named tool's pane from the base tool's pane (and from sibling named
@@ -28,11 +38,37 @@ M.tool_commands = {
 M.named_env_var = "SIDEKICK_NAMED_SESSION"
 
 M.tool_is_proc_patterns = {
-  claude = "\\<claude\\>",
+  codex = "\\<codex\\>",
   cursor = "\\<cursor-agent\\>",
   opencode = "\\<opencode\\>",
-  codex = "\\<codex\\>",
+  pi = "\\<pi\\>",
+  claude = "\\<claude\\>",
 }
+
+local function agent_sort_rank(tool)
+  if tool == "claude" then
+    return math.huge
+  end
+  return M.agent_rank[tool] or 1000
+end
+
+function M.compare_agents(a, b)
+  local ar = agent_sort_rank(a)
+  local br = agent_sort_rank(b)
+  if ar ~= br then
+    return ar < br
+  end
+  return tostring(a or "") < tostring(b or "")
+end
+
+function M.ordered_agents()
+  local tools = {}
+  for tool, _ in pairs(M.tool_commands) do
+    tools[#tools + 1] = tool
+  end
+  table.sort(tools, M.compare_agents)
+  return tools
+end
 
 function M.command_to_shell(cmd)
   if type(cmd) ~= "table" then
@@ -245,15 +281,15 @@ function M.normalize_cwd(cwd)
 end
 
 --- Build the spawn command for a named session, splicing per-tool name flags
---- where supported. Claude takes `--name <slug>` so the slug appears in
---- claude's /resume picker and terminal title; other tools have no
---- equivalent and fall through unchanged.
+--- where supported. Claude and pi take `--name <slug>` so the slug appears in
+--- their native session pickers/titles; other tools have no equivalent and
+--- fall through unchanged.
 ---@param tool string
 ---@param slug string
 ---@return string[]
 function M.tool_command_for_named_session(tool, slug)
   local cmd = vim.deepcopy(M.tool_commands[tool] or { tool })
-  if tool == "claude" and slug and slug ~= "" then
+  if (tool == "claude" or tool == "pi") and slug and slug ~= "" then
     table.insert(cmd, "--name")
     table.insert(cmd, slug)
   end

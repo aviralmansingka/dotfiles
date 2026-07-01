@@ -25,13 +25,19 @@ For manual installation:
 
 ```sh
 brew bundle
-stow nvim tmux zsh ghostty git starship codex
+stow nvim tmux zsh ghostty git starship codex pi
 ```
 
 On Linux (systemd) systems, also deploy the vault auto-sync service:
 
 ```sh
 stow systemd
+```
+
+If you use the Pi agent MCP setup, deploy that as well:
+
+```sh
+stow pi
 ```
 
 ### Option B: AWS Devbox
@@ -81,6 +87,7 @@ terraform -chdir=ops/devbox destroy \
 | `ssh` | SSH configuration |
 | `starship` | Starship prompt |
 | `systemd` | User systemd units (vault auto-sync) |
+| `pi` | Pi agent config (`.pi/agent/mcp.json`) |
 | `terminfo` | Custom terminfo entries |
 | `tmux` | Tmux configuration |
 | `tmuxinator` | Tmuxinator session templates |

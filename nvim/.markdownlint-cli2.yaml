@@ -3,7 +3,8 @@
 
 config:
   # MD013 - Line length
-  # Disabled: Using prettier with --print-width=120 for line wrapping
+  # Disabled: Markdown prose wraps at 120 visual columns in Neovim; raw long
+  # links, tables, and generated/reference content are allowed.
   MD013: false
 
   # MD033 - Inline HTML

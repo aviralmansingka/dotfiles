@@ -17,8 +17,10 @@ function M.parse_session_name(name)
     return nil
   end
   for tool, _ in pairs(internal.tool_commands) do
-    -- Match `<tool>-<slug> <hash>` (named only; default `<tool> <hash>` returns nil).
-    local pattern = "^" .. tool:gsub("%-", "%%-") .. "%-([%w_-]+)%s+%x+$"
+    -- Match `<tool>-<slug> <hash>`. sidekick currently computes the hash
+    -- width from the tool-name length, so 16-char names like
+    -- `pi-wedding-tasks` end up with an empty suffix and a trailing space.
+    local pattern = "^" .. tool:gsub("%-", "%%-") .. "%-([%w_-]+)%s*%x*$"
     local slug = name:match(pattern)
     if slug and slug ~= "" then
       return { tool = tool, slug = slug, label = tool .. "-" .. slug }
@@ -73,7 +75,7 @@ end
 
 --- For every discovered label not already in Config.cli.tools, register a
 --- tool entry. Idempotent: existing tools are never overwritten (so explicit
---- registrations from <leader>an at runtime stay authoritative).
+--- registrations from <leader>an/<leader>aN at runtime stay authoritative).
 function M.rehydrate()
   local ok, config = pcall(require, "sidekick.config")
   if not ok then

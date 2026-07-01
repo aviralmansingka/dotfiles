@@ -1,7 +1,7 @@
 -- nvim/.config/nvim/lua/plugins/sidekick/last_session.lua
 -- Tracks the most recently picker-selected session label so <C-.> can jump
 -- straight back to it. Recorded by picker confirms; tool-toggle keymaps
--- (<leader>ag/ao/au/<C-;>) intentionally do NOT update this.
+-- (<leader>ag/ao/ai/au/<C-;>) intentionally do NOT update this.
 local M = {}
 
 ---@type string|nil

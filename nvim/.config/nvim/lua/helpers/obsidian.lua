@@ -1,96 +1,111 @@
--- Helper module for custom Obsidian daily note functionality with weekly folders
+-- Helper module for vault-specific Obsidian workflows.
 local M = {}
 
--- Calculate ISO week number and year for a given date
-local function get_week_info(time)
-  local year = tonumber(os.date("%Y", time))
-  local month = tonumber(os.date("%m", time))
-  local day = tonumber(os.date("%d", time))
-
-  -- Calculate ISO week number (Monday as start of week)
-  local jan1 = os.time({ year = year, month = 1, day = 1 })
-  local jan1_wday = tonumber(os.date("%w", jan1)) -- 0=Sunday, 1=Monday, etc
-  local jan1_monday = jan1 - ((jan1_wday == 0 and 6 or jan1_wday - 1) * 24 * 3600)
-
-  local target_time = os.time({ year = year, month = month, day = day })
-  local days_since_jan1_monday = math.floor((target_time - jan1_monday) / (24 * 3600))
-  local week_num = math.floor(days_since_jan1_monday / 7) + 1
-
-  -- Handle year boundary cases
-  if week_num < 1 then
-    year = year - 1
-    week_num = 52
-  elseif week_num > 52 then
-    local dec31 = os.time({ year = year, month = 12, day = 31 })
-    local dec31_wday = tonumber(os.date("%w", dec31))
-    if dec31_wday < 4 then
-      year = year + 1
-      week_num = 1
-    end
-  end
-
-  return year, week_num
+local function target_time(offset_days)
+  return os.time() + ((offset_days or 0) * 24 * 60 * 60)
 end
 
--- Open daily note with weekly folder structure
--- @param offset_days: number of days from today (0 = today, -1 = yesterday, 1 = tomorrow)
-function M.open_daily_note(offset_days)
-  offset_days = offset_days or 0
+local function date_info(offset_days)
+  local time = target_time(offset_days)
+  local week_id = string.format("%s-W%s", vim.fn.strftime("%G", time), vim.fn.strftime("%V", time))
 
-  local journal_dir = vim.fn.expand("~/vault/journal/")
-  local template_dir = vim.fn.expand("~/vault/templates/")
+  return {
+    day_heading = vim.fn.strftime("%A, %Y-%m-%d", time),
+    week_id = week_id,
+  }
+end
 
-  -- Calculate target date
-  local target_time = os.time() + (offset_days * 24 * 3600)
-  local target_date = os.date("%Y-%m-%d", target_time)
+local function default_backlog_lines(info)
+  return {
+    "---",
+    "id: backlog",
+    "aliases: []",
+    "tags: []",
+    "---",
+    "",
+    "# " .. info.week_id .. ": Backlog",
+    "",
+    "## Log",
+    "",
+    "### " .. info.day_heading,
+    "",
+  }
+end
 
-  -- Get week info for target date
-  local year, week_num = get_week_info(target_time)
-  local week_folder = string.format("%s%d-W%02d", journal_dir, year, week_num)
-
-  -- Create the weekly directory if it doesn't exist
-  if vim.fn.isdirectory(week_folder) == 0 then
-    vim.fn.mkdir(week_folder, "p")
+local function ensure_backlog_file(path, info)
+  local dir = vim.fn.fnamemodify(path, ":h")
+  if vim.fn.isdirectory(dir) == 0 then
+    vim.fn.mkdir(dir, "p")
   end
 
-  local filename = week_folder .. "/" .. target_date .. ".md"
+  if vim.fn.filereadable(path) == 0 then
+    vim.fn.writefile(default_backlog_lines(info), path)
+  end
+end
 
-  -- Check if the file already exists
-  if vim.fn.filereadable(filename) == 1 then
-    vim.cmd("edit " .. filename)
-  else
-    -- Create a new file with template
-    vim.cmd("edit " .. filename)
+local function ensure_day_heading(info)
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local log_idx
+  local day_idx
+  local next_section_idx
 
-    -- Load template
-    local template_path = template_dir .. "daily.md"
-    local template
-    if vim.fn.filereadable(template_path) == 1 then
-      template = vim.fn.readfile(template_path)
-      -- Replace date placeholder
-      for i, line in ipairs(template) do
-        template[i] = line:gsub("{{date}}", target_date)
-      end
-    else
-      -- Fallback template
-      template = {
-        "# Daily Note: " .. target_date,
-        "",
-        "## Habit Tracking",
-        "",
-        "- [ ] Daily check-in",
-        "",
-        "## Journal",
-        "",
-      }
+  for i, line in ipairs(lines) do
+    if line == "## Log" then
+      log_idx = i
+    elseif line == "### " .. info.day_heading then
+      day_idx = i
+    elseif log_idx and i > log_idx and line:match("^## ") then
+      next_section_idx = i
+      break
     end
+  end
 
-    -- Insert the template content
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, template)
+  if not log_idx then
+    vim.api.nvim_buf_set_lines(0, -1, -1, false, { "", "## Log", "", "### " .. info.day_heading, "" })
+    return #lines + 4
+  end
 
-    -- Save the file
+  if day_idx then
+    return day_idx
+  end
+
+  local insert_at = next_section_idx and (next_section_idx - 1) or #lines
+  vim.api.nvim_buf_set_lines(0, insert_at, insert_at, false, { "", "### " .. info.day_heading, "" })
+  return insert_at + 2
+end
+
+function M.open_weekly_backlog(offset_days)
+  local info = date_info(offset_days)
+  local backlog_file = vim.fn.expand("~/vault/3_logs/" .. info.week_id .. "/backlog.md")
+
+  ensure_backlog_file(backlog_file, info)
+  vim.cmd("edit " .. vim.fn.fnameescape(backlog_file))
+
+  local was_modified = vim.bo.modified
+  local heading_line = ensure_day_heading(info)
+  if vim.bo.modified and not was_modified then
     vim.cmd("write")
   end
+
+  local target_line = math.min(heading_line + 2, vim.api.nvim_buf_line_count(0))
+  vim.api.nvim_win_set_cursor(0, { target_line, 0 })
+end
+
+-- Backward-compatible name for older local mappings.
+function M.open_daily_note(offset_days)
+  M.open_weekly_backlog(offset_days)
+end
+
+function M.today()
+  M.open_weekly_backlog(0)
+end
+
+function M.yesterday()
+  M.open_weekly_backlog(-1)
+end
+
+function M.tomorrow()
+  M.open_weekly_backlog(1)
 end
 
 return M

@@ -37,10 +37,11 @@ return {
         enabled = true,
       },
       tools = {
-        claude = internal.base_tool_config("claude"),
+        codex = internal.base_tool_config("codex"),
         cursor = internal.base_tool_config("cursor"),
         opencode = internal.base_tool_config("opencode"),
-        codex = internal.base_tool_config("codex"),
+        pi = internal.base_tool_config("pi"),
+        claude = internal.base_tool_config("claude"),
       },
     },
   },
@@ -166,7 +167,7 @@ return {
     {
       "<leader>as",
       function()
-        require("plugins.sidekick.cwd_picker").open()
+        require("sidekick.cli").select()
       end,
       desc = "Select CLI",
     },
@@ -230,6 +231,13 @@ return {
       desc = "Sidekick Toggle OpenCode",
     },
     {
+      "<leader>ai",
+      function()
+        internal.toggle_tool_session("pi", true)
+      end,
+      desc = "Sidekick Toggle Pi",
+    },
+    {
       "<leader>au",
       function()
         internal.toggle_tool_session("cursor", true)
@@ -260,15 +268,21 @@ return {
     {
       "<leader>an",
       function()
-        local tools = { "claude", "cursor", "opencode", "codex" }
-        vim.ui.select(tools, { prompt = "Select CLI tool:" }, function(tool)
+        internal.prompt_named_session("codex")
+      end,
+      desc = "Sidekick New Codex Named Session",
+    },
+    {
+      "<leader>aN",
+      function()
+        vim.ui.select(internal.ordered_agents(), { prompt = "Select CLI tool:" }, function(tool)
           if not tool then
             return
           end
           internal.prompt_named_session(tool)
         end)
       end,
-      desc = "Sidekick New Named Session",
+      desc = "Sidekick New Named Session (Any Agent)",
     },
   },
 }

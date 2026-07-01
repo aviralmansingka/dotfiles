@@ -1,6 +1,53 @@
 -- W1: Centralized vault paths
 local VAULT_DIR = vim.fn.expand("~/vault/")
-local JOURNAL_DIR = VAULT_DIR .. "journal/"
+local LEGACY_TODO_PREFIXES = {
+  VAULT_DIR .. "journal/",
+  VAULT_DIR .. "3_log/",
+  VAULT_DIR .. "5_modal/logs/",
+}
+
+local EXCLUDED_TODO_PREFIXES = {
+  VAULT_DIR .. ".git/",
+  VAULT_DIR .. ".obsidian/",
+  VAULT_DIR .. "templates/",
+}
+
+local function starts_with(value, prefix)
+  return value:sub(1, #prefix) == prefix
+end
+
+local function relative_to_vault(file)
+  if starts_with(file, VAULT_DIR) then
+    return file:sub(#VAULT_DIR + 1)
+  end
+  return vim.fn.fnamemodify(file, ":~")
+end
+
+local function is_active_todo_file(file)
+  for _, prefix in ipairs(LEGACY_TODO_PREFIXES) do
+    if starts_with(file, prefix) then
+      return false
+    end
+  end
+
+  for _, prefix in ipairs(EXCLUDED_TODO_PREFIXES) do
+    if starts_with(file, prefix) then
+      return false
+    end
+  end
+
+  return true
+end
+
+local function get_active_markdown_files()
+  local files = {}
+  for _, file in ipairs(vim.fn.glob(VAULT_DIR .. "**/*.md", false, true)) do
+    if is_active_todo_file(file) then
+      table.insert(files, file)
+    end
+  end
+  return files
+end
 
 return {
   {
@@ -75,14 +122,10 @@ return {
       {
         "<leader>ft",
         function()
-          local journal_dir = JOURNAL_DIR
-
           local function get_todos()
             local todos = {}
-            -- Get all markdown files from weekly folders
-            local files = vim.fn.glob(journal_dir .. "**/*.md", false, true)
 
-            for _, file in ipairs(files) do
+            for _, file in ipairs(get_active_markdown_files()) do
               local lines = vim.fn.readfile(file)
               local in_habit_section = false
               local current_section = ""
@@ -101,8 +144,8 @@ return {
                 if not in_habit_section and line:match("^%s*- %[ %]") then
                   local todo_text = line:match("^%s*- %[ %] (.+)")
                   if todo_text then
-                    local filename = vim.fn.fnamemodify(file, ":t")
-                    local display = string.format("%s:%d [%s] %s", filename, i, current_section or "General", todo_text)
+                    local display =
+                      string.format("%s:%d [%s] %s", relative_to_vault(file), i, current_section or "General", todo_text)
                     table.insert(todos, {
                       text = display,
                       file = file,
@@ -117,25 +160,21 @@ return {
           end
 
           Snacks.picker.pick({
-            source = "journal-todos",
+            source = "active-vault-todos",
             items = get_todos(),
-            title = "Journal Todos (excluding Habit Tracking)",
+            title = "Active Vault Todos (excluding legacy logs and habits)",
             preview = "file",
           })
         end,
-        desc = "Find todos in journal files (excluding habits)",
+        desc = "Find active vault todos",
       },
       {
         "<leader>fT",
         function()
-          local journal_dir = JOURNAL_DIR
-
           local function get_todos_with_tags()
             local todos = {}
-            -- Get all markdown files from weekly folders
-            local files = vim.fn.glob(journal_dir .. "**/*.md", false, true)
 
-            for _, file in ipairs(files) do
+            for _, file in ipairs(get_active_markdown_files()) do
               local lines = vim.fn.readfile(file)
               local in_habit_section = false
               local current_section = ""
@@ -154,14 +193,19 @@ return {
                   if todo_text then
                     -- Extract tags from todo text
                     local tags = {}
-                    for tag in todo_text:gmatch("#(%w+)") do
+                    for tag in todo_text:gmatch("#([%w_/-]+)") do
                       table.insert(tags, tag)
                     end
 
-                    local filename = vim.fn.fnamemodify(file, ":t")
                     local tags_str = #tags > 0 and (" #" .. table.concat(tags, " #")) or ""
-                    local display =
-                      string.format("%s:%d [%s] %s%s", filename, i, current_section or "General", todo_text, tags_str)
+                    local display = string.format(
+                      "%s:%d [%s] %s%s",
+                      relative_to_vault(file),
+                      i,
+                      current_section or "General",
+                      todo_text,
+                      tags_str
+                    )
                     table.insert(todos, {
                       text = display,
                       file = file,
@@ -178,13 +222,13 @@ return {
           end
 
           Snacks.picker.pick({
-            source = "journal-todos-tags",
+            source = "active-vault-todos-tags",
             items = get_todos_with_tags(),
-            title = "Journal Todos by Tag (type #tagname to filter)",
+            title = "Active Vault Todos by Tag (type #tagname to filter)",
             preview = "file",
           })
         end,
-        desc = "Find todos by tag in journal files",
+        desc = "Find active vault todos by tag",
       },
       {
         "<leader>ot",

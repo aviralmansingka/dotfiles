@@ -29,7 +29,7 @@ local function in_cwd_subtree(entry_cwd, root)
   if n == root then
     return true
   end
-  return n:sub(1, #root + 1) == root .. "/"
+  return n:sub(1, #root + 1) == root .. "/" or root:sub(1, #n + 1) == n .. "/"
 end
 
 ---@param item table|nil
@@ -87,7 +87,7 @@ function M.list_items()
   end
   table.sort(items, function(a, b)
     if a.tool ~= b.tool then
-      return a.tool < b.tool
+      return internal.compare_agents(a.tool, b.tool)
     end
     return a.label < b.label
   end)

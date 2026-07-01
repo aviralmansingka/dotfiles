@@ -1,0 +1,11 @@
+{
+  "packages": [
+    "npm:pi-mcp-adapter",
+    "npm:@zackify/pi-wafer"
+  ],
+  "lastChangelogVersion": "0.79.6",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.5",
+  "defaultThinkingLevel": "high",
+  "theme": "dark"
+}

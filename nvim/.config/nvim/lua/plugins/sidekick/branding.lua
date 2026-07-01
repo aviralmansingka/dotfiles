@@ -7,10 +7,11 @@ local internal = require("plugins.sidekick.internal")
 local M = {}
 
 M.colors = {
-  claude = "#e48285", -- terracotta
   codex = "#89b482", -- gruvbox aqua, matches Codex image-token text
   cursor = "#B19CD9", -- soft violet
   opencode = "#928374", -- gruvbox gray
+  pi = "#fabd2f", -- gruvbox yellow
+  claude = "#e48285", -- terracotta
   -- Ask + edit borders match their gutter-sign colors (defined in
   -- plugins/sidekick/ask/signs.lua). Blue for ask, deep dark purple for
   -- edit. Kept in sync manually with signs.lua.

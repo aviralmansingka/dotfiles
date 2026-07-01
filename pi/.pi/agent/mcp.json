@@ -1,0 +1,38 @@
+{
+  "mcpServers": {
+    "google_workspace": {
+      "command": "/home/avirus/.local/bin/uvx",
+      "args": [
+        "workspace-mcp",
+        "--single-user",
+        "--tools",
+        "sheets",
+        "forms",
+        "gmail"
+      ],
+      "env": {
+        "GOOGLE_OAUTH_CLIENT_ID": "",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "",
+        "GOOGLE_OAUTH_REDIRECT_URI": "http://localhost:8000/oauth2callback",
+        "OAUTHLIB_INSECURE_TRANSPORT": "1",
+        "USER_GOOGLE_EMAIL": "aviralmansingka@gmail.com"
+      }
+    },
+    "whatsapp": {
+      "command": "/home/avirus/.local/bin/uv",
+      "args": [
+        "--directory",
+        "/home/avirus/projects/whatsapp-mcp/whatsapp-mcp-server",
+        "run",
+        "main.py"
+      ]
+    },
+    "granola": {
+      "command": "/home/avirus/.nvm/versions/node/v22.22.3/bin/npx",
+      "args": [
+        "-y",
+        "granola-mcp-plus"
+      ]
+    }
+  }
+}

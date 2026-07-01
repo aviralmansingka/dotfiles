@@ -30,7 +30,7 @@ function M.list_items()
   end
   table.sort(items, function(a, b)
     if a.tool ~= b.tool then
-      return a.tool < b.tool
+      return internal.compare_agents(a.tool, b.tool)
     end
     return a.label < b.label
   end)

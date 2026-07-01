@@ -1,5 +1,5 @@
 -- Obsidian vault integration
--- Wiki links, backlinks, templates, daily notes, and note search
+-- Wiki links, backlinks, templates, work logs, and note search
 
 return {
   "epwalsh/obsidian.nvim",
@@ -21,7 +21,8 @@ return {
       },
     },
 
-    -- Daily notes with weekly subfolder structure (YYYY-Www/YYYY-MM-DD.md)
+    -- Obsidian.nvim daily commands remain available, but vault work logging
+    -- is mapped to 3_logs/YYYY-WW/backlog.md below.
     daily_notes = {
       folder = "journal",
       date_format = "%Y-%m-%d",
@@ -58,7 +59,6 @@ return {
       end
     end,
 
-    -- Custom path function for weekly subfolder structure in daily notes
     note_path_func = function(spec)
       local path = spec.dir / tostring(spec.id)
       return path:with_suffix(".md")
@@ -102,6 +102,7 @@ return {
     -- Note finding and creation
     { "<leader>of", "<cmd>ObsidianQuickSwitch<cr>", desc = "Find note" },
     { "<leader>og", "<cmd>ObsidianSearch<cr>", desc = "Grep notes" },
+    { "<leader>oi", "<cmd>edit ~/vault/0_inbox/0.inbox.md<cr>", desc = "Open inbox" },
     { "<leader>on", "<cmd>ObsidianNew<cr>", desc = "New note" },
 
     -- Backlinks and links: handled by custom Snacks picker in markdown.lua
@@ -112,10 +113,28 @@ return {
     -- Templates
     { "<leader>oT", "<cmd>ObsidianTemplate<cr>", desc = "Insert template" },
 
-    -- Daily notes
-    { "<leader>od", "<cmd>ObsidianToday<cr>", desc = "Today's note" },
-    { "<leader>oy", "<cmd>ObsidianYesterday<cr>", desc = "Yesterday's note" },
-    { "<leader>om", "<cmd>ObsidianTomorrow<cr>", desc = "Tomorrow's note" },
+    -- Weekly backlog work logs
+    {
+      "<leader>od",
+      function()
+        require("helpers.obsidian").today()
+      end,
+      desc = "Today's backlog",
+    },
+    {
+      "<leader>oy",
+      function()
+        require("helpers.obsidian").yesterday()
+      end,
+      desc = "Yesterday's backlog",
+    },
+    {
+      "<leader>om",
+      function()
+        require("helpers.obsidian").tomorrow()
+      end,
+      desc = "Tomorrow's backlog",
+    },
 
     -- Note management
     { "<leader>or", "<cmd>ObsidianRename<cr>", desc = "Rename note" },
@@ -125,53 +144,18 @@ return {
   },
 
   config = function(_, opts)
-    -- Custom daily note path function to support weekly subfolders
     local obsidian = require("obsidian")
 
-    -- W3: Removed unused original_opts variable
     opts.daily_notes = vim.tbl_extend("force", opts.daily_notes or {}, {})
 
     obsidian.setup(opts)
 
-    -- Create autocmd to ensure weekly folder exists before daily note creation
-    vim.api.nvim_create_autocmd("User", {
-      pattern = "ObsidianDailyNote",
-      callback = function()
-        -- Calculate current week folder
-        local year = tonumber(os.date("%Y"))
-        local month = tonumber(os.date("%m"))
-        local day = tonumber(os.date("%d"))
-
-        -- Calculate ISO week number (Monday as start of week)
-        local jan1 = os.time({ year = year, month = 1, day = 1 })
-        local jan1_wday = tonumber(os.date("%w", jan1))
-        local jan1_monday = jan1 - ((jan1_wday == 0 and 6 or jan1_wday - 1) * 24 * 3600)
-
-        local today_time = os.time({ year = year, month = month, day = day })
-        local days_since_jan1_monday = math.floor((today_time - jan1_monday) / (24 * 3600))
-        local week_num = math.floor(days_since_jan1_monday / 7) + 1
-
-        -- Handle year boundary cases
-        if week_num < 1 then
-          year = year - 1
-          week_num = 52
-        elseif week_num > 52 then
-          local dec31 = os.time({ year = year, month = 12, day = 31 })
-          local dec31_wday = tonumber(os.date("%w", dec31))
-          if dec31_wday < 4 then
-            year = year + 1
-            week_num = 1
-          end
-        end
-
-        local journal_dir = vim.fn.expand("~/vault/journal/")
-        local week_folder = string.format("%s%d-W%02d", journal_dir, year, week_num)
-
-        -- Create the weekly directory if it doesn't exist
-        if vim.fn.isdirectory(week_folder) == 0 then
-          vim.fn.mkdir(week_folder, "p")
-        end
-      end,
-    })
+    local backlog = require("helpers.obsidian")
+    vim.api.nvim_create_user_command("VaultBacklogToday", backlog.today, { desc = "Open today's weekly backlog" })
+    vim.api.nvim_create_user_command("VaultBacklogYesterday", backlog.yesterday, { desc = "Open yesterday's weekly backlog" })
+    vim.api.nvim_create_user_command("VaultBacklogTomorrow", backlog.tomorrow, { desc = "Open tomorrow's weekly backlog" })
+    vim.api.nvim_create_user_command("ObsidianToday", backlog.today, { desc = "Open today's weekly backlog" })
+    vim.api.nvim_create_user_command("ObsidianYesterday", backlog.yesterday, { desc = "Open yesterday's weekly backlog" })
+    vim.api.nvim_create_user_command("ObsidianTomorrow", backlog.tomorrow, { desc = "Open tomorrow's weekly backlog" })
   end,
 }
