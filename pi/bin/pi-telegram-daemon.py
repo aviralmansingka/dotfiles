@@ -13,8 +13,10 @@ from __future__ import annotations
 import json
 import os
 import queue
+import mimetypes
 import signal
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.error
@@ -44,6 +46,13 @@ PROMPT_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_PROMPT_TIMEOUT_SECONDS"
 POLL_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_POLL_TIMEOUT_SECONDS", "50"))
 RETRY_SECONDS = float(os.environ.get("PI_TELEGRAM_RETRY_SECONDS", "5"))
 
+VOICE_TRANSCRIPTION_PROVIDER = os.environ.get("PI_TELEGRAM_VOICE_TRANSCRIPTION_PROVIDER", "auto").strip().lower()
+VOICE_TRANSCRIPTION_CMD = os.environ.get("PI_TELEGRAM_VOICE_TRANSCRIPTION_CMD", "").strip()
+VOICE_OPENAI_API_KEY = os.environ.get("PI_TELEGRAM_OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", "")).strip()
+VOICE_OPENAI_API_BASE = os.environ.get("PI_TELEGRAM_OPENAI_API_BASE", "https://api.openai.com/v1").rstrip("/")
+VOICE_OPENAI_MODEL = os.environ.get("PI_TELEGRAM_OPENAI_TRANSCRIBE_MODEL", "whisper-1").strip()
+MAX_AUDIO_BYTES = int(os.environ.get("PI_TELEGRAM_MAX_AUDIO_BYTES", str(20 * 1024 * 1024)))
+
 SYSTEM_PROMPT = """
 You are Pi, running headlessly behind the owner's Telegram bot.
 The Telegram sender is the owner controlling you remotely.
@@ -68,6 +77,10 @@ class IncomingMessage:
     sender_is_bot: bool
     timestamp: int
     content: str
+    audio_file_id: str = ""
+    audio_file_size: int = 0
+    audio_mime_type: str = ""
+    audio_kind: str = ""
 
 
 class PiRPC:
