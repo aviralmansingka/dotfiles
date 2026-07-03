@@ -15,7 +15,7 @@ This is a dotfiles repository that manages development environment configuration
 
 # Manual installation with stow
 brew bundle                    # Install dependencies from Brewfile
-stow nvim tmux zsh ghostty git kube tmuxinator codex
+stow nvim tmux zsh ghostty git kube tmuxinator agents pi
 
 # Linux: optionally deploy user services (systemd)
 stow systemd
@@ -31,8 +31,9 @@ stow ghostty      # Deploy Ghostty terminal configuration
 stow git          # Deploy git configuration
 stow starship     # Deploy Starship prompt configuration
 stow aerospace    # Deploy AeroSpace window manager configuration
-stow codex         # Deploy Codex skill files
-stow systemd       # Deploy systemd user units (Linux)
+stow agents       # Deploy shared agent skills
+stow pi           # Deploy Pi agent configuration
+stow systemd      # Deploy systemd user units (Linux)
 ```
 
 ### Plugin Management
@@ -55,15 +56,16 @@ Each tool has its own directory containing dotfiles in their target path structu
 
 ### Stow Packages
 - **aerospace** - AeroSpace tiling window manager
+- **agents** - Shared agent skills
 - **blinksh** - Blink Shell (iOS terminal) configuration
 - **claude** - Claude AI context files
-- **codex** - Codex skill files
 - **code** - Code snippets (Golang, Lua)
 - **ghostty** - Ghostty terminal emulator
 - **git** - Git configuration
 - **kube** - Kubernetes configuration
 - **neovide** - Neovide (Neovim GUI) configuration
 - **nvim** - Neovim with LazyVim distribution
+- **pi** - Pi agent config, packages, themes, and messaging daemons
 - **ssh** - SSH configuration
 - **starship** - Starship prompt
 - **terminfo** - Custom terminfo entries (xterm-ghostty)

@@ -25,7 +25,7 @@ For manual installation:
 
 ```sh
 brew bundle
-stow nvim tmux zsh ghostty git starship codex pi
+stow nvim tmux zsh ghostty git starship agents pi
 ```
 
 On Linux (systemd) systems, also deploy the vault auto-sync service:
@@ -34,11 +34,7 @@ On Linux (systemd) systems, also deploy the vault auto-sync service:
 stow systemd
 ```
 
-If you use the Pi agent MCP setup, deploy that as well:
-
-```sh
-stow pi
-```
+For a minimal setup without agent tooling, omit `agents` and `pi`.
 
 ### Option B: AWS Devbox
 
@@ -75,9 +71,9 @@ terraform -chdir=ops/devbox destroy \
 | Package | Description |
 |---------|-------------|
 | `aerospace` | AeroSpace tiling window manager |
+| `agents` | Shared agent skills |
 | `blinksh` | Blink Shell (iOS terminal) config |
 | `claude` | Claude AI context files |
-| `codex` | Codex skill files |
 | `code` | Code snippets (Golang, Lua) |
 | `ghostty` | Ghostty terminal emulator |
 | `git` | Git configuration |
@@ -87,7 +83,7 @@ terraform -chdir=ops/devbox destroy \
 | `ssh` | SSH configuration |
 | `starship` | Starship prompt |
 | `systemd` | User systemd units (vault auto-sync, Pi/WhatsApp/Telegram bridges) |
-| `pi` | Pi agent config, packages, skills, themes, and messaging daemons |
+| `pi` | Pi agent config, packages, themes, and messaging daemons |
 | `terminfo` | Custom terminfo entries |
 | `tmux` | Tmux configuration |
 | `tmuxinator` | Tmuxinator session templates |
@@ -105,10 +101,10 @@ systemctl --user status vault-auto-sync.service
 
 ## Pi agent
 
-Pi config is deployed with:
+Pi config and shared skills are deployed with:
 
 ```sh
-stow pi
+stow pi agents
 ```
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
