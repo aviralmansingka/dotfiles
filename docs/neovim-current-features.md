@@ -1,501 +1,584 @@
-# Neovim Configuration: Current Feature Inventory
+# Neovim Current Feature Inventory
 
 _Audit date: 2026-07-03_
 
-This is a retrospective map of the features already configured in the dotfiles Neovim setup. It is based on a static audit of `nvim/.config/nvim`, including `lua/config`, `lua/plugins`, `lua/helpers`, `luasnippets`, `scripts`, `lazyvim.json`, and `lazy-lock.json`.
+This is a flat inventory of user-visible features available in the current Neovim setup. It intentionally avoids
+grouping by plugin files, Lua modules, or implementation structure so these items can be regrouped later into
+vault-style feature documents.
 
-## 1. Configuration shape
+## Accepted features
 
-| Layer | Files | Notes |
-|---|---|---|
-| Entry point | `init.lua` | Bootstraps `require("config.lazy")`. |
-| Lazy bootstrap/spec | `lua/config/lazy.lua` | Loads LazyVim, LazyVim extras, and `{ import = "plugins" }`; enables update checking without notifications, sets install fallback colorschemes, and disables selected builtin runtime plugins (`gzip`, `tarPlugin`, `tohtml`, `tutor`, `zipPlugin`). |
-| Core options/keymaps | `lua/config/options.lua`, `lua/config/keymaps.lua`, `lua/config/autocmds.lua` | Custom options and one global custom keymap; autocmds file is currently placeholder-only. |
-| Custom plugin specs | `lua/plugins/*.lua`, `lua/plugins/**` | Main feature implementation surface. |
-| Custom helpers | `lua/helpers/*.lua` | Markdown/vault helper modules. |
-| Custom snippets | `luasnippets/*.lua` | LuaSnip snippets, currently Groovy/Gradle. |
-| Scripts | `scripts/modal/*.sh` | Modal-specific gopls/DAP support scripts. |
-| LazyVim metadata | `lazyvim.json` | Declares additional extras state; not identical to imports in `lazy.lua`. |
-| Lockfile | `lazy-lock.json` | Confirms installed plugin surface, including inherited LazyVim plugins. |
+- Core editor and UI
+  - Lazy.nvim bootstraps from the stable branch, silently checks for plugin updates, and disables selected builtin runtime plugins.
+  - Clipboard defaults to the system clipboard with `unnamedplus`, with OSC52 copy support layered on for SSH sessions.
+  - Lualine, Tabby, Neovide, Snacks terminal, and K9s have additional visible polish beyond the flat headline list.
+- Completion, language, debug, and test tooling
+  - Blink completion supports auto-bracket insertion, LSP-item Treesitter rendering, and disabled ghost text.
+  - LuaSnip supports snippet history and autosnippets.
+  - DAP has both hover-based expression evaluation and a bottom REPL-split evaluation path.
+  - Go, Python, Java, formatting, linting, Treesitter, DAP, and neotest coverage is broadly comprehensive at the inventory level.
+- Markdown, vault, Git, and GitHub review
+  - Markdown URL helpers apply to both Markdown and Octo buffers.
+  - Vault todo, tag, backlink, and outgoing-link pickers include filtering and fallback behavior beyond the headline list.
+  - Gitsigns and Octo coverage is broadly comprehensive, with more exact keymaps and picker actions available in the config.
+- Agent and verification workflows
+  - Sidekick is the canonical agent surface, with explicit keymaps for ask/edit, send, session selection, local/global pickers, search, and named-session creation.
+  - The Neovim verification harness covers agent keymaps, Pi/Codex ordering, tmux rehydration, and Sidekick search snapshots.
 
-## 2. LazyVim extras and inherited plugin surface
+## Removed features
 
-### Explicit imports in `lua/config/lazy.lua`
+- Blink ghost text is disabled as a completion feature, even though a muted Gruvbox ghost-text highlight is still defined.
+- DAP virtual text is declared but disabled.
+- The old `<leader>qs` session-save mapping is gone; it now restores the current session.
+- The old `<leader>qd` session-delete mapping is gone; it now stops saving the current session.
+- Legacy Sidekick keymaps are removed: `<c-;>`, `<leader>ao`, `<leader>au`, `<leader>ar`, and `<localleader>e`.
+- The Claude Code `<leader>acs` mapping is removed.
+- OpenCode direct keymaps `gO` and `<c-'>` are removed; OpenCode remains available through Sidekick and plugin commands.
+- The Sidekick resume module exists, but the former `<leader>ar` resume binding is intentionally not part of the current keymap surface.
+- Modal-specific editor features should be removed from the editor surface:
+  - Modal build dispatcher on `<leader>mb`.
+  - Modal machine-manager build integration.
+  - Modal machine-manager Go DAP launch configuration.
+  - Modal machine-manager DAP operational preconditions.
+  - Modal gopls GOPACKAGESDRIVER launcher.
+  - Modal gopls live-socket probe.
+  - Modal-specific gopls workspace settings and Bazel workspace globs.
+  - Modal Bazel workspace gopackagesdriver resolution.
+  - Modal Python dev-cluster DAP wrapper.
+  - Modal workflow path dependency on `~/modal`.
 
-| Area | Enabled extras |
-|---|---|
-| Coding | `luasnip`, `yanky` |
-| Editor/navigation | `mini-files`, `snacks_explorer`, `snacks_picker` |
-| Languages | `clangd`, `docker`, `git`, `json`, `markdown`, `python`, `rust`, `toml`, `yaml` |
-| Testing | `test.core` |
-| Utilities | `dot`, `mini-hipatterns`, `octo`, `startuptime` |
+## Coding features
 
-### Extras also present in `lazyvim.json`
+### Per-language extension model
 
-`lazyvim.json` additionally records:
+- Highlighting: partially per-language.
+- Formatting: per-language or per-filetype.
+- Diagnostics: per-language sources with shared UI.
+- LSP: per-language.
+- Testing: per-language adapters.
+- DAP: per-language adapters and launch configs.
 
-- `lazyvim.plugins.extras.dap.core`
-- `lazyvim.plugins.extras.dap.nlua`
-- `lazyvim.plugins.extras.lang.helm`
-- `lazyvim.plugins.extras.lang.go`
-- `lazyvim.plugins.extras.lsp.none-ls`
+### Completion and snippets
 
-Some of these are also imported from custom specs (`go.lua` imports Go + none-ls). Others appear only through LazyVim metadata/lockfile and should be treated as inherited/active until runtime verification proves otherwise.
+- Blink ghost text highlighting uses muted Gruvbox gray, but Blink ghost text itself is disabled.
+- Blink completion menu and docs use Gruvbox background and foreground colors.
+- Blink completion and docs borders use brighter foreground contrast.
+- Blink completion source labels use muted Gruvbox gray.
+- Blink.cmp provides completion in insert and command-line contexts.
+- Completion is disabled in terminal buffers.
+- Completion can be disabled per buffer with `vim.b.completion = false`.
+- Completion sources include LSP, path, snippets, buffer text, emoji, Obsidian note links, Obsidian new notes, and Obsidian tags.
+- Emoji completion is available in git commit, Markdown, and text buffers.
+- Obsidian completion is available through Blink compatibility integration.
+- `<Tab>` accepts the selected completion item.
+- `<S-Tab>` hides completion.
+- `<C-Space>` opens completion.
+- `<C-h>` and `<C-l>` move through snippet placeholders.
+- `<C-b>` is disabled inside completion UI.
+- Completion menus use rounded borders.
+- Completion documentation uses rounded borders.
+- Completion documentation auto-shows after 200ms.
+- Blink completion can auto-insert matching brackets for accepted items.
+- Blink completion rendering uses Treesitter highlighting for LSP items.
+- LuaSnip is enabled with snippet history and autosnippets.
+- Friendly snippets and VSCode-style snippets are loaded.
+- Custom Groovy and Gradle snippets are available.
+- Groovy snippets cover dependency declarations.
+- Gradle snippets cover `dependencies`, `repositories { mavenCentral() }`, and plugin declarations.
+- Yank history/ring behavior is available through LazyVim yank integration.
 
-### Confirmed installed/inherited plugin surface from `lazy-lock.json`
+### Highlighting
 
-Not every plugin below has custom configuration, but all are part of the locked Neovim environment:
-
-- LazyVim core/editor: `LazyVim`, `lazy.nvim`, `snacks.nvim`, `which-key.nvim`, `flash.nvim`, `noice.nvim`, `todo-comments.nvim`, `grug-far.nvim`, `mini.ai`, `mini.files`, `mini.hipatterns`, `mini.icons`, `mini.pairs`, `nvim-web-devicons`, `ts-comments.nvim`, `plenary.nvim`, `nui.nvim`, `nvim-nio`.
-- UI/themes/status: `gruvbox-material`, `tokyonight.nvim`, `catppuccin`, `lualine.nvim`, `bufferline.nvim` (disabled), `tabby.nvim`, `nvim-colorizer.lua`.
-- LSP/completion/formatting/linting: `nvim-lspconfig`, `mason.nvim`, `mason-lspconfig.nvim`, `none-ls.nvim`, `conform.nvim`, `nvim-lint`, `blink.cmp`, `blink.compat`, `blink-emoji.nvim`, `SchemaStore.nvim`, `lazydev.nvim`.
-- Treesitter: `nvim-treesitter`, `nvim-treesitter-context`, `nvim-treesitter-textobjects`, `nvim-ts-autotag`.
-- Languages: `rustaceanvim`, `crates.nvim`, `clangd_extensions.nvim`, `helm-ls.nvim`, `nvim-jdtls`, `spring-boot.nvim`, `venv-selector.nvim`.
-- Debug/test: `nvim-dap`, `nvim-dap-ui`, `mason-nvim-dap`, `nvim-dap-go`, `nvim-dap-python`, `nvim-dap-virtual-text` (disabled in custom DAP spec), `one-small-step-for-vimkind`, `neotest`, `neotest-golang`, `neotest-python`, `neotest-java`.
-- Markdown/notes/GitHub: `vim-pencil`, `autolist.nvim`, `render-markdown.nvim`, `markdown-preview.nvim`, `obsidian.nvim`, `octo.nvim`.
-- Git/sessions/projects/terminal/agents: `gitsigns.nvim`, `vim-tmux-navigator`, `project.nvim`, `persistence.nvim`, `sidekick.nvim`, `claudecode.nvim`, `opencode.nvim`.
-
-## 3. Feature inventory by domain
-
-### Core editor behavior
-
-Sources: `lua/config/options.lua`, `lua/config/keymaps.lua`
-
-Configured:
-
-- True color and line numbers.
-- Swap files fully disabled, including recovery prompt suppression.
-- OSC52 clipboard support for SSH sessions: copy over OSC52, paste via local Neovim registers to avoid SSH paste timeouts.
-- Custom `vim.paste` handling for terminal buffers: wraps terminal pastes with bracketed-paste markers and coalesces chunked SSH paste phases so nested terminal programs do not interpret pasted newlines as keystrokes.
-- Stack-based jumplist behavior via `jumpoptions=stack`.
-- LazyVim picker set to Snacks: `vim.g.lazyvim_picker = "snacks"`.
-- Root detection intentionally pinned to cwd: `vim.g.root_spec = { "cwd" }`.
-- LazyVim Python LSP preference set to `basedpyright`.
-- LazyVim import-order check disabled.
-- Insert-mode `<C-/>` maps to Escape.
-
-### UI, theme, statusline, tabline, dashboard, GUI
-
-Sources: `colorscheme.lua`, `lualine.lua`, `tabline.lua`, `dashboard.lua`, `neovide.lua`, `colorizer.lua`, `fidget.lua`
-
-Configured:
-
-- Gruvbox Material primary colorscheme with dark background, medium contrast, italics/bold enabled, custom float backgrounds, custom diagnostic line highlight, and custom plugin highlight groups.
-- Custom highlights for:
-  - Snacks picker surfaces and cursor rows.
-  - render-markdown headings/backgrounds/check states.
-  - Claude Code border.
-  - Blink completion/docs/source/ghost text.
-  - DAP signs and stopped/breakpoint/exception line states.
-  - Neotest status icons without hard background squares.
-- Lualine custom gruvbox theme, mode icons, branch/diff/diagnostic/filename/filetype/progress/location sections, global statusline, disabled on dashboard/alpha, auto-hidden in terminal buffers.
-- Tabby replaces LazyVim Bufferline; Bufferline is explicitly disabled. Custom tab + buffer layout, separators, modified indicator, buffer navigation with `<S-h>/<S-l>`, close with `<S-q>`.
-- Snacks dashboard actions: find file, new file, restore last session, open Sidecar, LazyGit, Claude Code, quit.
-- Neovide-specific behavior: font, left Option as Meta on macOS, bell disabled, Cmd copy/paste/select-all/save/font-size shortcuts, and UIEnter setup.
-- Global Noice `<C-b>` override removal so `<C-b>` is not hijacked for Noice popup scrolling.
-- Colorizer highlights color literals across files with RGB/RRGGBB/RRGGBBAA/name support and filetype-specific behavior.
-- Fidget shows LSP progress and notifications with custom TTLs, icons, transparency, and bottom alignment.
-
-### Completion, snippets, and yank history
-
-Sources: `blink-cmp.lua`, `luasnippets/groovy.lua`, LazyVim `coding.yanky` extra
-
-Configured:
-
-- Blink.cmp completion engine lazy-loaded on insert/cmdline.
-- Completion disabled in terminal buffers and buffers with `vim.b.completion = false`.
-- Sources: LSP, path, snippets, buffer, emoji, Obsidian note links, Obsidian new note, Obsidian tags.
-- Emoji completion only for `gitcommit`, `markdown`, and `text` filetypes.
-- Obsidian completion exposed through `blink.compat`.
-- Key behavior: Tab accepts selected item, Shift-Tab hides, Ctrl-Space shows, Ctrl-H/L snippet backward/forward, Ctrl-B disabled.
-- Completion menu and docs use rounded borders; docs auto-show after 200ms.
-- Signature help enabled with rounded border.
-- LuaSnip configured with history, jsregexp build, friendly snippets, VSCode snippets, and custom Lua snippets.
-- Custom Groovy/Gradle snippets for common dependency declarations, `dependencies {}`, `repositories { mavenCentral() }`, and plugin declarations.
-- LazyVim's `coding.yanky` extra is enabled, so yank ring/history behavior is part of the configured inherited editing surface even though there is no custom `yanky.nvim` override.
-
-### LSP, Mason, language servers, diagnostics support
-
-Sources: `lsp.lua`, `mason.lua`, `build-files.lua`, `clangd.lua`, `fidget.lua`, plus language-specific files
-
-Configured:
-
-- General LSP signature-help border set to rounded.
-- Lua LS configured for LuaJIT, `vim` global, runtime library, code lens, call snippets, hints, private doc naming, telemetry disabled.
-- Mason ensure-installs:
-  - Lua/Rust/Python: `lua-language-server`, `rust-analyzer`, `stylua`, `ruff`, `basedpyright`, `debugpy`.
-  - Java/JVM: `jdtls`, `java-debug-adapter`, `vscode-spring-boot-tools`, `google-java-format`, `groovy-language-server`, `gradle-language-server`.
-  - Bazel/Starlark: `starpls`, `buildifier`.
-  - Go: `gopls`, `goimports`, `gofumpt`, `golangci-lint`, `gomodifytags`, `impl`, `delve`.
-- Gradle LS configured with Gradle wrapper support.
-- Groovy LS configured from Mason jar, using OpenJDK 25, for plain Groovy/Jenkinsfile contexts and deliberately skipped inside Gradle projects.
-- Starlark `starpls` configured for `bzl` files and Bazel roots.
-- Clangd configured with background index, clang-tidy, IWYU header insertion, detailed completion, placeholders, LLVM fallback style.
-- Trouble configured for diagnostics, buffer diagnostics, symbols, LSP references, loclist, and quickfix, with custom symbol filters/icons.
+- Treesitter parsers are ensured for bash, JSON, Lua, Markdown, Markdown inline, Python, query, regex, TypeScript, TSX, Vim, YAML, and TOML.
+- Treesitter context shows code context after buffer read.
+- Treesitter context is capped at 3 lines.
+- Treesitter helps detect debug expressions under the cursor.
+- Treesitter helps select and edit Markdown inline-link URLs.
+- Treesitter textobjects and TS autotag are inherited from LazyVim.
+- Color literals are highlighted across buffers.
+- Color highlighting supports RGB, RRGGBB, RRGGBBAA, and named colors.
+- DAP breakpoint signs use Gruvbox yellow.
+- DAP conditional breakpoints use brighter yellow.
+- DAP stopped-line signs use Gruvbox blue.
+- DAP logpoints use Gruvbox teal.
+- DAP rejected breakpoints use Gruvbox gray.
+- DAP exceptions use Gruvbox red.
+- DAP breakpoint, stopped-line, and exception line highlights use subtle dark tinted backgrounds.
+- Neotest inline status icons use transparent backgrounds so they do not render hard squares.
 
 ### Formatting
 
-Source: `conform.lua`
+- Format-on-save is enabled for Markdown, Python, Java, Lua, and Go.
+- LSP formatting fallback is disabled.
+- Default formatting timeout is 2 seconds.
+- Markdown formatting uses Prettier while preserving prose wrapping, then a custom visual-width rewrapper.
+- Lua formatting uses Stylua.
+- Java formatting uses Google Java Format.
+- Go formatting uses goimports followed by gofumpt.
+- Bazel and Starlark formatting uses buildifier.
+- Python formatting uses Ruff fix and Ruff format.
+- Python formatting prefers project-local `.venv/bin/ruff` when available.
 
-Configured:
+### Diagnostics
 
-- Format-on-save for markdown, python, java, lua, and go; no LSP fallback.
-- Default format timeout 2s and LSP formatting disabled.
-- Formatter chains:
-  - Markdown: Prettier (`--prose-wrap preserve`, print width 120) then custom `markdown_wrap` visual-width rewrapper.
-  - Lua: Stylua.
-  - Java: Google Java Format.
-  - Go: goimports then gofumpt.
-  - Bazel/Starlark: buildifier.
-  - Python: ruff check/fix then ruff format, preferring project `.venv/bin/ruff`.
+- Trouble provides workspace diagnostics.
+- Trouble provides buffer diagnostics.
+- Trouble provides symbols.
+- Trouble provides LSP references.
+- Trouble provides location-list and quickfix views.
+- Trouble uses custom symbol filters and icons.
+- Fidget shows LSP progress.
+- Fidget shows notifications with custom TTLs, icons, transparency, and bottom alignment.
+- Basedpyright diagnostics are suppressed so Ruff/formatting owns actionable feedback.
+- Basedpyright diagnostics are limited to open files.
+- Live golangci-lint diagnostics are disabled to avoid false-positive cascades in multi-module workspaces.
+- Golangci-lint CLI remains installed.
 
-### Treesitter and code context
+### LSP
 
-Sources: `treesitter.lua`, `treesitter-context.lua`, `dap.lua`, `helpers/markdown_links.lua`
-
-Configured:
-
-- Ensured parsers: bash, JSON, Lua, Markdown, Markdown inline, Python, query, regex, TS/TSX, TypeScript, Vim, YAML, TOML.
-- Treesitter context enabled on `BufReadPost`, capped at 3 context lines.
-- Treesitter is also used for:
-  - DAP expression-under-cursor detection.
-  - Markdown inline-link URL selection/editing.
-
-### Navigation, files, projects, sessions, buffers
-
-Sources: `extend-mini-files.lua`, `snacks-picker.lua`, `project.lua`, `persistence.lua`, `vim-tmux-navigator.lua`, `tabline.lua`
-
-Configured:
-
-- Mini.files opens at the current file's directory with `<leader>e`; preview window width set to 60.
-- Snacks picker:
-  - File and grep sources include hidden files and follow symlinks.
-  - Files exclude `.git`, `node_modules`, `.DS_Store`.
-  - Filename-first formatting.
-  - Telescope-like layout with rounded border, cycling, reverse ordering.
-  - `<C-b>` disabled in picker input/list.
-- Project picker `<leader>fp` opens recent `project.nvim` roots and then Snacks file picker at the chosen root.
-- Project.nvim syncs cwd/root, respects buffer cwd, updates focused file, detects by patterns `init.lua`, `build.gradle`, `.git`.
-- Persistence stores sessions under `stdpath("state")/sessions/` with buffers/curdir/tabs/window/folds/globals. Keymaps: `<leader>qs`, `<leader>ql`, `<leader>qd`.
-- tmux/nvim directional navigation with `<C-h/j/k/l>` and previous with `<C-\\>`.
-- Tab/buffer navigation handled by Tabby and Snacks buffer delete.
-
-### Terminal, shell tools, Sidecar
-
-Sources: `toggleterm.lua`, `sidecar.lua`, `dashboard.lua`, `opencode.lua`
-
-Configured:
-
-- Snacks terminal uses a singleton 90% float, rounded/Neovide border, no backdrop, `q` hides, `<C-]>` returns terminal normal mode.
-- Global terminal-mode `<C-]>` stops insert mode.
-- K9s toggle: `gk`.
-- LazyGit launcher: `gG`, resolving git root from current file when possible.
-- Sidecar terminal toggle: `gS`, dashboard `S`, using `/opt/homebrew/bin/sidecar` when available else `sidecar`.
-- OpenCode terminal provider uses Snacks float, command `~/.opencode/bin/opencode`, autoread enabled.
-
-### Debugging / DAP
-
-Sources: `dap.lua`, `modal/dap.lua`, `colorscheme.lua`, `python.lua`, `jdtls.lua`, `lazyvim.json`
-
-Configured:
-
-- nvim-dap with dap-ui, mason-nvim-dap, nvim-dap-python; nvim-dap-virtual-text dependency is declared but disabled.
-- DAP UI icons customized; UI does not auto-open on session start and is toggled with `<leader>dt`.
-- DAP keymaps include continue, step into/over/out/back, close, breakpoint toggle, eval expression in REPL split, show logs, and stringified yank.
-- Treesitter expression detection identifies the smallest useful expression/call under cursor for evaluation.
-- Idle auto-eval hover after 2s of stillness while paused in Python/Go/Java buffers.
-- Hover/REPL local `<localleader>y` yanks stringified value, with per-DAP-type stringify wrappers.
-- `<leader>dl` tails DAP stdout/stderr log files into terminal buffers.
-- Custom DAP signs/highlights for breakpoints, conditional breakpoints, logpoints, stopped lines, rejected breakpoints, and exceptions.
-- Modal-specific DAP launch config for `~/modal/go/machine-manager` with `-tags=ui` and ports `9910/9911/9912`.
-- Python DAP is repointed to project `.venv/bin/python` on Python buffer entry.
-- JDTLS loads Java debug adapter bundle but intentionally excludes Java test bundles.
-- `lazyvim.json` records LazyVim DAP core and nlua extras.
+- General LSP signature-help borders are rounded.
+- Mason installs Lua, Rust, Python, Java/JVM, Bazel/Starlark, and Go development tools.
+- Lua tooling includes `lua-language-server` and `stylua`.
+- Rust tooling includes `rust-analyzer`.
+- Python tooling includes `ruff`, `basedpyright`, and `debugpy`.
+- Java/JVM tooling includes `jdtls`, Java debug adapter, Spring Boot tools, Google Java Format, Groovy language server, and Gradle language server.
+- Bazel/Starlark tooling includes `starpls` and `buildifier`.
+- Go tooling includes `gopls`, `goimports`, `gofumpt`, `golangci-lint`, `gomodifytags`, `impl`, and `delve`.
+- Lua language support is configured for LuaJIT and the Neovim runtime.
+- Lua language support recognizes the `vim` global.
+- Lua language support includes code lens, hints, call snippets, private doc naming, and disabled telemetry.
+- Gradle language support uses Gradle wrapper support.
+- Groovy language support is available for plain Groovy and Jenkinsfile contexts.
+- Groovy language support is skipped inside Gradle projects to avoid conflicting project ownership.
+- Starlark language support is available for Bazel files.
+- Clangd support includes background indexing.
+- Clangd support includes clang-tidy.
+- Clangd support includes IWYU header insertion.
+- Clangd support includes detailed completion.
+- Clangd support includes placeholders and LLVM fallback style.
+- Go language support is enabled.
+- Go root detection prefers nearest `go.mod`, then `go.work`, then `.git`.
+- Go root detection avoids accidentally selecting a monorepo parent when a lower module exists.
+- Go buffers have an LSP restart keymap.
+- Go Bazel/rules_go support detects Bazel workspace markers.
+- Go Bazel/rules_go support can use `GOPACKAGESDRIVER=auto` discovery.
+- Go `GOPACKAGESDRIVER` defaults to off, supports explicit driver paths, and mirrors explicit paths into `settings.gopls.env`.
+- Neotest Go subprocesses intentionally do not inherit the `GOPACKAGESDRIVER=auto` discovery behavior.
+- Gopls excludes Bazel output directories.
+- Go setup warns when `GOPACKAGESDRIVER=auto` is requested but no driver is found.
+- Gopls configuration preserves `before_init` behavior across reloads and LSP restarts.
+- Python language support is enabled.
+- Basedpyright is the preferred Python LSP.
+- Ruff LSP integration is enabled.
+- Project `.venv/bin/python` discovery is available.
+- Project `.venv/bin/ruff` discovery is available.
+- Basedpyright uses standard type checking.
+- Basedpyright uses library code types, auto imports, and search paths.
+- Ruff server command prefers the project virtualenv executable.
+- Python LSP and Ruff virtualenv binding is resolved at plugin-load time from the current working directory.
+- Switching Python projects expects a Neovim relaunch or `:LspRestart` after `:cd`.
+- Python buffers have an LSP restart keymap.
+- Java language support is enabled.
+- JDTLS supports Bazel, Gradle, Maven, and Git roots.
+- OpenJDK 25 is pinned for JDTLS.
+- Java imports support BSP, Gradle, and Maven.
+- Bazel Java projects warn when `.bsp/` is missing.
+- Java completion includes postfix completion.
+- Java completion includes guessed method arguments.
+- Java inlay hints are configured.
+- Java reference and implementation code lenses are configured.
+- JDTLS buffers have compile and restart keymaps.
+- Spring Boot support is active for Java, YAML, and Java properties.
+- Gradle language support is available.
+- Groovy language support is available outside Gradle roots.
+- Starlark/Bazel language support is available.
 
 ### Testing
 
-Sources: `go.lua`, `python.lua`, `java.lua`, `jdtls.lua`, `lazyvim.json`
+- Neotest is available through LazyVim test support.
+- Go tests use neotest-golang.
+- Go neotest root detection uses the nearest `go.mod`.
+- Go default test args drop `-race`.
+- `<leader>tR` runs the nearest Go test with `-race`.
+- Go single-file and single-test discovery uses faster local package listing.
+- `<leader>tT` runs all tests in the nearest Go module.
+- `<leader>ts` scopes the neotest summary to the current Go, Python, or Java root.
+- Python tests use neotest-python with pytest.
+- Python tests use project `.venv` when available.
+- Python pytest args include `--no-header --no-cov`.
+- Python test execution runs from the uv workspace root when applicable.
+- Python DAP strategy cwd is patched for project execution.
+- `<leader>tT` runs all Python tests under the nearest `pyproject.toml`.
+- Python buffers have a project-scoped test-run-all keymap.
+- Java tests use neotest-java.
+- Java Gradle path handling is patched around an upstream neotest-java path bug.
+- JDTLS and LazyVim Java test keymaps are removed so neotest is the sole Java test path.
+- JDTLS buffers have neotest nearest/all keymaps.
+- `<leader>tg` runs nearest Java tests through neotest.
+- `<leader>tT` runs Java test groups through neotest.
 
-Configured:
+### DAP
 
-- LazyVim `test.core` and neotest are active.
-- Go:
-  - neotest-golang root patched to nearest `go.mod`.
-  - Default test args drop `-race`; `<leader>tR` runs nearest with `-race`.
-  - Single-file/single-test discovery patches `go list ./...` to `go list .` for faster loops.
-  - `<leader>tT` runs all tests in nearest Go module.
-  - `<leader>ts` scopes neotest summary to current module/root for Go/Python/Java.
-- Python:
-  - neotest-python uses pytest, project `.venv`, and args `--no-header --no-cov`.
-  - Build spec patched to run from uv workspace root and fix DAP strategy cwd.
-  - `<leader>tT` runs all tests under nearest `pyproject.toml`.
-- Java:
-  - neotest-java adapter registered.
-  - Upstream neotest-java Path bug patched locally for Gradle path handling.
-  - JDTLS/LazyVim Java test keymaps are removed so neotest is the sole Java test path.
-  - `<leader>tg` and `<leader>tT` mapped to neotest for Java buffers.
+- nvim-dap, DAP UI, Mason-managed DAP integration, and Python DAP integration are available.
+- DAP virtual text is declared but disabled.
+- DAP UI has customized icons, does not auto-open on session start, and toggles with `<leader>dt`.
+- DAP keymaps support continue, step into, step over, step out, close, expression eval, logs, and stringified yank.
+- DAP breakpoint toggle and step-back currently share `<localleader>b`, so the effective direct keymap is ambiguous.
+- DAP expression evaluation can infer the smallest useful expression or call under the cursor.
+- DAP expression evaluation supports idle hover while paused and a bottom REPL-split path that preserves source-window focus.
+- DAP hover/REPL values can be stringified and yanked.
+- `<leader>dl` tails DAP stdout and stderr logs into terminal buffers.
+- DAP signs distinguish breakpoints, conditional breakpoints, logpoints, stopped lines, rejected breakpoints, and exceptions.
+- Python DAP uses the project `.venv/bin/python` when available.
+- Python DAP setup reruns per project root on first Python buffer entry.
+- Java DAP loads the Java debug adapter bundle and intentionally excludes Java test bundles.
+- LazyVim DAP core and nlua extras are recorded in the Neovim metadata.
 
-### Go development
+### File, project, and terminal workflow
 
-Source: `go.lua`, `scripts/modal/gopackagesdriver.sh`, `scripts/modal/probe-gopls.sh`
+- Mini.files opens file explorer at the current file's directory with `<leader>e`.
+- Mini.files preview width is widened.
+- Snacks file picker includes hidden files.
+- Snacks grep includes hidden files.
+- Snacks pickers follow symlinks.
+- Snacks file picker excludes `.git`, `node_modules`, and `.DS_Store`.
+- Snacks picker formats results filename-first.
+- Snacks picker uses a Telescope-like layout with rounded borders, cycling, and reverse ordering.
+- `<C-b>` is disabled inside Snacks picker input/list.
+- `<leader>fp` opens a recent-project picker.
+- Selecting a project opens the file picker at that project root.
+- Project detection recognizes `init.lua`, `build.gradle`, and `.git`.
+- Project handling syncs cwd/root, respects buffer cwd, and updates focused file.
+- Sessions persist buffers, current directory, tabs, windows, folds, and globals.
+- Sessions are stored under Neovim state.
+- `<leader>qs` restores the current session.
+- `<leader>ql` restores the last session.
+- `<leader>qd` stops saving the current session.
+- `<C-h>`, `<C-j>`, `<C-k>`, and `<C-l>` navigate between Neovim splits and tmux panes.
+- `<C-\>` returns to the previous tmux/Neovim pane.
+- Snacks terminal opens as a singleton floating terminal.
+- Terminal float uses 90% width and height.
+- Terminal float has a rounded or Neovide-specific border.
+- Terminal float hides with `q`.
+- `<C-]>` exits terminal insert mode.
+- `gk` toggles K9s.
+- `gG` opens LazyGit.
+- LazyGit opens from the current buffer's valid Git root when available.
+- LazyGit falls back to the current buffer directory when Git root detection is invalid.
+- LazyGit falls back to Neovim cwd when the buffer path is not usable.
 
-Configured:
+### Git and review workflow
 
-- LazyVim Go extra and none-ls imported.
-- Gopls root prefers nearest `go.mod`, then `go.work`, then `.git`, avoiding monorepo parent roots when the module is lower.
-- Buffer-local Go keymaps: nearest test (`<leader>tg`), `go build ./...` (`<leader>gc`), LSP restart (`<leader>gr`).
-- Live golangci-lint diagnostics disabled due false-positive typecheck cascades in multi-module `go.work` workspaces; CLI still installed.
-- Bazel/rules_go support:
-  - Detects `MODULE.bazel`, `WORKSPACE`, `WORKSPACE.bazel`.
-  - Optional `GOPACKAGESDRIVER=auto` driver discovery.
-  - Modal-named Bazel workspace uses dotfiles driver: `scripts/modal/gopackagesdriver.sh`.
-  - Gopls `directoryFilters` excludes Bazel outputs.
-  - Modal workspaces add `-bazel-modal` and Bazel workspace file globs.
-  - Warns if `GOPACKAGESDRIVER=auto` is requested but no driver is found.
-  - Post-merge `vim.lsp.config` hook preserves gopls `before_init` across Lazy reload/LspRestart.
-- `probe-gopls.sh` verifies a live Neovim socket has Modal gopls wiring, including driver env and filters.
+- Gitsigns shows custom gutter signs.
+- `]c` and `[c` navigate Git hunks while respecting diff mode.
+- Hunk actions include stage hunk, reset hunk, stage visual range, reset visual range, stage buffer, undo stage, reset buffer, preview hunk, inline preview, blame line, diff against index, and diff against last commit.
+- `<localleader>g` previews the current Git hunk inline.
+- Git toggles include current-line blame and deleted-line display.
+- Octo is namespaced under `<leader>O`.
+- LazyVim default Octo `<leader>g*` mappings are disabled.
+- Octo supports smart entry.
+- Octo supports PR list, search, my PRs, review picker, author picker, thread picker, checkout, create, browser open, and URL copy.
+- Octo browser open also copies the PR URL and can fall back to `gh pr view` outside Octo PR buffers.
+- Octo avoids Projects v2 token-scope failures by not defaulting to Projects v2.
+- Octo uses local filesystem buffers for right-pane PR review files.
+- Octo toggle-viewed moves to the next unviewed file.
+- Octo right-pane local review buffers are made modifiable.
+- Octo same-branch PR detection is less brittle.
+- Octo PR creation includes `headRepository`.
+- Octo PR list query includes author.
+- Octo PR picker includes author in fuzzy text and display.
+- Octo converts HTML body/comment content toward Markdown before rendering.
+- Octo review view can be unified to drop the left pane and use gitsigns gutter.
+- Octo unified review view is reversible and changes the Gitsigns base to the PR base commit while active.
+- PR review picker searches PRs to review and assigned PRs.
+- PR review picker includes recently merged or closed assigned PRs.
+- Review thread picker lists review threads.
+- Review thread picker defaults to unresolved threads and marks resolved or outdated threads in display text.
+- Review thread picker can open a thread in the browser.
+- Review thread picker can resolve threads.
+- Review thread picker can toggle resolved thread visibility.
+- Review thread picker can jump to a thread's file and line when local context is available.
+- Octo comment templates include nit, question, blocker, and praise prefixes.
+- Octo comment templates are bound in review contexts on `<localleader>cn`, `<localleader>cq`, `<localleader>cb`, and `<localleader>c+`.
 
-### Python development
+### Inherited coding integrations and external tools
 
-Source: `python.lua`, `scripts/modal/dap-python-dev-cluster.sh`
+- LazyVim inherited LSP/completion/formatting/linting features are available, including nvim-lspconfig, Mason, none-ls, conform, nvim-lint, blink.cmp, SchemaStore, and lazydev.
+- LazyVim inherited Treesitter features are available, including Treesitter textobjects and TS autotag.
+- LazyVim inherited language integrations include Docker, Git, JSON, TOML, YAML, Rust, crates, clangd extensions, Helm LS, JDTLS, Spring Boot, and venv-selector.
+- LazyVim inherited debug/test integrations include nvim-dap, DAP UI, DAP Go, DAP Python, DAP UI tooling, one-small-step-for-vimkind, neotest, neotest-golang, neotest-python, and neotest-java.
+- LazyVim inherited Git/session/project/terminal integrations include gitsigns, vim-tmux-navigator, project.nvim, persistence, dot-file graphing, and startuptime support.
+- External CLI integrations expect `git`, `tmux`, `rg`, `gh`, `k9s`, `lazygit`, and Neovim remote server support.
+- Java integrations expect OpenJDK 25 and Mason-managed Java tooling.
+- Go integrations expect Go, Delve, gopls, goimports, gofumpt, optional Bazel/Bazelisk, and optional GOPACKAGESDRIVER behavior.
+- Python integrations expect project virtualenvs, Ruff, debugpy, and uv workspace metadata when present.
+- Formatting/build integrations expect Prettier, Stylua, Google Java Format, buildifier, and Ruff.
 
-Configured:
+## Agent integration features
 
-- Basedpyright and Ruff LSP integration on top of LazyVim Python extra; lockfile also includes LazyVim's inherited `venv-selector.nvim` Python stack.
-- Project `.venv` discovery via upward search for `.venv/bin/python` and `.venv/bin/ruff`.
-- Basedpyright diagnostics handlers suppressed and diagnostic provider cleared on init; Ruff/formatting are expected to own actionable feedback.
-- Basedpyright settings: standard type checking, open-files-only diagnostics, library code types, auto imports/search paths.
-- Ruff server command prefers project venv executable.
-- Buffer-local Python keymaps: LSP restart (`<leader>pr`) and project-scoped test run-all (`<leader>tT`).
-- DAP Python setup rerun with project venv interpreter on first Python `BufEnter` per root.
-- Modal dev-cluster DAP wrapper exists for EC2-style Modal paths/env inheritance.
+### Agent scope
 
-### Java/JVM/build-file development
+- Agent integration is a cross-workflow editor feature, not a coding-only feature.
+- Agents can be used alongside coding, notetaking, planning, and review workflows.
+- Agent prompts can use the current line or selection as context from any relevant buffer.
 
-Sources: `java.lua`, `jdtls.lua`, `spring-boot.lua`, `build-files.lua`, `luasnippets/groovy.lua`
+### Sidekick agent surface
 
-Configured:
+- Sidekick provides the canonical in-Neovim agent interface.
+- Sidekick uses tmux as its mux backend.
+- Sidekick tools include Pi, Codex, Cursor Agent, OpenCode, and Claude.
+- Primary Sidekick agents are Pi and Codex.
+- Full Sidekick agent order is Pi, Codex, Cursor, OpenCode, Claude.
+- Codex agent command uses bypass/sandbox flags as configured.
+- Cursor Agent command uses force mode.
+- Claude command uses skip-permissions mode.
+- Agent CLI integrations expect `pi`, `codex`, `cursor-agent`, `opencode`, and `claude`.
 
-- LazyVim Java extra imported.
-- JDTLS root markers: Bazel, Gradle, Maven, `.git`.
-- OpenJDK 25 pinned for JDTLS (`JAVA_HOME`, `PATH`, JavaSE-25 runtime).
-- Java imports: BSP auto, Gradle enabled, Maven enabled.
-- Bazel Java warning if a Bazel root has no `.bsp/`; message points to bazel-bsp install command.
-- Java completion: postfix and guessed method arguments.
-- Java inlay hints and reference/implementation code lens configured with both casing variants for compatibility.
-- Java debug adapter bundle loaded; Java test bundles intentionally excluded.
-- JDTLS buffer-local keymaps: neotest nearest/all, compile (`<leader>jc`), restart (`<leader>jr`).
-- Spring Boot plugin active for `java`, `yaml`, `jproperties` with JDTLS/LSP dependencies.
-- Gradle LS with wrapper support.
-- Groovy LS for plain Groovy/Jenkinsfile contexts outside Gradle roots.
-- Starlark/Bazel `starpls` and buildifier support.
-- Gradle-oriented Groovy snippets.
+### Agent UI and identity
 
-### Markdown, notes, vault, Obsidian
+- Agent UI colors are documented separately from the general editor colorscheme.
+- Sidekick agent terminals have branded colors, borders, titles, branch metadata, and cwd metadata.
+- Sidekick gives each agent a stable visual identity.
+- Pi uses Gruvbox yellow (`#fabd2f`).
+- Codex uses Gruvbox aqua (`#89b482`).
+- Cursor Agent uses soft violet (`#B19CD9`).
+- OpenCode uses Gruvbox gray (`#928374`).
+- Claude uses terracotta (`#e48285`) in Sidekick.
+- Unknown or fallback Sidekick tools use neutral gray (`#7C7C7C`).
+- Sidekick ask UI uses Gruvbox blue (`#83a598`).
+- Sidekick edit UI uses faded purple (`#8f3f71`).
+- Sidekick branch metadata uses Starship-style purple (`#d3869b`).
+- Sidekick floats use per-agent colored rounded borders.
+- Sidekick floats use per-agent colored titles.
+- Sidekick splits use per-agent colored winbars.
+- Sidekick splits use per-agent colored window separators.
+- Sidekick session pickers render agent labels with matching per-agent colors.
+- Sidekick cwd session picker uses transparent picker backgrounds so terminal previews stay visible.
+- Sidekick CLI picker shows right-aligned cwd.
 
-Sources: `markdown.lua`, `obsidian.lua`, `helpers/obsidian.lua`, `helpers/markdown_links.lua`, `helpers/markdown_wrap.lua`
+### Agent sessions and routing
 
-Configured:
+- Cursor Agent opens in a right split.
+- Other Sidekick tools default to floats.
+- Sidekick can match existing tmux panes to tools.
+- Sidekick can rehydrate its registry from tmux panes.
+- Sidekick named sessions are stored and identified through session labels and tmux environment.
+- Sidekick named-session prompts collect both a session label and working directory.
+- Pi and Claude named sessions receive native `--name <slug>` command arguments.
+- Sidekick branch metadata is stored in tmux environment.
+- `<C-.>` toggles the last picker-selected Sidekick session, falling back to the cwd session picker.
+- Sidekick supports selecting, detaching, sending context, prompting, toggling float/split, listing local sessions, listing global sessions, searching sessions, and creating named sessions.
+- Sidekick keymaps include ask/edit/apply/reject/yank, select/detach/send file/send visual/prompt, Pi/Codex toggles, local/global pickers, session search, and named-session creation.
+- Sidekick cwd session picker includes previews.
+- Sidekick global named-session picker includes previews.
+- Sidekick session pickers support killing sessions.
+- Sidekick can search captured named-session pane contents with ripgrep.
 
-- vim-pencil soft wrap for markdown, textwidth 120, autoformat.
-- Markdown and Octo buffers use custom formatexpr from `helpers.markdown_wrap`.
-- `helpers.markdown_wrap` rewraps prose paragraphs by visual width, collapsing `[text](url)` to text for width calculation and preserving code/frontmatter/lists/tables/headings.
-- `helpers.markdown_links`:
-  - Conceal level/cursor configured for markdown and Octo.
-  - URL text objects: `iu`, `au`.
-  - Edit URL under cursor: `<leader>mu`.
-  - Visual paste transforms selected text + URL register into `[selection](url)`.
-- Autolist behavior after markdown load: list continuation, tab/shift-tab indentation, Enter new bullet, checkbox toggle, recalculate, cycle list type, recalculation after indent/delete. These mappings are registered globally by the current config after the plugin loads, not buffer-locally.
-- render-markdown configured for markdown and Octo:
-  - Conceal cursor stays active.
-  - Anti-conceal tuned.
-  - Custom checkbox icons/states, code block rendering, heading icons/backgrounds, link/wiki-link icons, quotes.
-- Vault-specific Snacks pickers:
-  - Active vault todos excluding legacy locations and Habit Tracking sections: `<leader>ft`.
-  - Active todos by tag: `<leader>fT`.
-  - Tags across frontmatter and inline tags: `<leader>ot`.
-  - Backlinks to current note: `<leader>ob`.
-  - Outgoing wiki links: `<leader>ol`.
-- Obsidian.nvim:
-  - Workspace `~/vault`.
-  - Daily-notes config still points at `journal`, but custom backlog helpers supersede daily logging.
-  - Templates from `templates`.
-  - Completion enabled through blink compat.
-  - Wiki links preferred.
-  - Note IDs slugify titles.
-  - `gf` passthrough and Enter smart action.
-  - Obsidian UI disabled in favor of render-markdown.
-  - Keymaps for quick switch/search/inbox/new/template/rename/open.
-- Weekly backlog workflow:
-  - `helpers.obsidian` creates/opens `~/vault/3_logs/YYYY-WW/backlog.md`.
-  - For new backlog files, writes frontmatter, `# YYYY-WW: Backlog`, `## Log`, and date heading; for existing files, ensures `## Log` and the requested day heading.
-  - Preserves/creates day headings for today/yesterday/tomorrow.
-  - Commands: `VaultBacklogToday/Yesterday/Tomorrow`, `ObsidianToday/Yesterday/Tomorrow`.
-  - Keymaps: `<leader>od`, `<leader>oy`, `<leader>om`.
+### Inline ask and edit
 
-### Git, GitHub, PR review
+- Sidekick inline ask workflow can ask about the current line or selection.
+- Sidekick inline edit workflow can request a unified diff edit for the current line or selection.
+- Sidekick inline ask/edit uses Codex Spark in read-only/no-approval exec mode.
+- Sidekick ask/edit context includes Tree-sitter scope detection.
+- Sidekick ask/edit context includes LSP-hover symbol enrichment.
+- Sidekick signs and extmarks show pending and completed ask/edit state.
+- Sidekick has floating UI for prompts, answers, and diff previews.
+- Sidekick answers and diffs can be applied, rejected, yanked, or cleared from the current line.
 
-Sources: `gitsigns.lua`, `octo.lua`, `octo/*.lua`, `lazy.lua`
+### Standalone agent terminals
 
-Configured:
+- Sidecar opens in a terminal with `gS`.
+- Sidecar is available from the dashboard.
+- Sidecar prefers `/opt/homebrew/bin/sidecar` when present.
+- OpenCode runs in a Snacks floating terminal.
+- OpenCode command path is `~/.opencode/bin/opencode`.
+- Autoread is enabled for OpenCode workflows.
+- Claude Code plugin auto-starts.
+- Claude Code is available from the dashboard.
+- Claude Code plugin uses no terminal provider.
+- Claude Code keeps diff terminal focus.
+- Claude Code opens diffs in new tabs.
+- Claude Code has a custom terracotta border (`#da7756`) on Gruvbox dark background.
+- Claude Code command is `~/.local/bin/claude --dangerously-skip-permissions`.
+- OpenCode plugin uses a Snacks float and no direct plugin keymaps.
 
-- Gitsigns custom gutter signs.
-- Hunk navigation with `]c` / `[c`, respecting diff mode.
-- Hunk actions: stage/reset hunk or visual range, stage buffer, undo stage, reset buffer, preview hunk, inline preview, blame line, diff against index, diff against last commit.
-- Toggles: current line blame and deleted lines.
-- Octo under `<leader>O` namespace; LazyVim `<leader>g*` Octo defaults disabled.
-- Octo keymaps: smart entry, PR list/search/my PRs/review picker/author picker/thread picker/checkout/create/open browser+copy URL.
-- Octo options:
-  - `default_to_projects_v2 = false` to avoid token scope failures.
-  - `use_local_fs = true` for right-pane local file buffers in reviews.
-  - Toggle viewed maps to toggle + next unviewed.
-- Octo review patches:
-  - Right-pane local review buffers made modifiable.
-  - Same-branch PR detection made less brittle.
-  - Create PR mutation patched to include `headRepository`.
-  - PR list GraphQL query includes author.
-  - Snacks PR picker includes author in fuzzy text and display.
-  - HTML body/comment content converted toward markdown before rendering.
-  - Review view can be unified to drop left pane and use gitsigns gutter.
-- Custom pickers:
-  - `octo/pr_review_picker.lua` searches PRs to review + assigned, including recently merged/closed assigned PRs.
-  - `octo/threads_picker.lua` lists review threads, supports browser open, resolve thread, toggle resolved visibility.
-- Comment templates: nit/question/blocker/praise prefixes under `<localleader>c*` in review context.
+## Notetaking features
 
-### AI agents and assistant workflows
+### Markdown editing
 
-Sources: `sidekick.lua`, `sidekick/*.lua`, `claude-code.lua`, `opencode.lua`, `dashboard.lua`
+- Markdown headings use a six-color Gruvbox ramp: orange, yellow, green, blue, purple, red.
+- Markdown editing uses vim-pencil soft wrap.
+- Markdown text width is 120.
+- Markdown autoformat is enabled.
+- Markdown and Octo buffers use a visual-width-aware prose rewrapper.
+- Markdown rewrap preserves code blocks, frontmatter, lists, tables, and headings.
+- Markdown rewrap treats link text as visible width while ignoring URL width.
+- Markdown and Octo URL text objects are available with `iu` and `au`.
+- Markdown and Octo URL under cursor can be edited with `<leader>mu`.
+- Visual paste can transform selected text plus a URL register into a Markdown link.
+- Markdown and Octo link conceal behavior is configured.
 
-Configured:
+### Lists and tasks
 
-- Sidekick.nvim configured with tmux mux backend.
-- Agent tools: Pi, Codex, Cursor Agent, OpenCode, Claude.
-- Primary agent order: Pi, Codex. Full order: Pi, Codex, Cursor, OpenCode, Claude.
-- Tool commands include bypass/force flags where configured:
-  - Codex: `codex --dangerously-bypass-approvals-and-sandbox`.
-  - Cursor: `cursor-agent --force`.
-  - Claude: `claude --dangerously-skip-permissions`.
-- Branded terminal floats/splits with per-tool colors, borders, titles, branch/cwd metadata, and right-aligned cwd display in the Sidekick CLI picker.
-- Cursor Agent uses right split; other tools default to float.
-- Tmux integration:
-  - Match existing tmux panes to tools.
-  - Rehydrate registry from tmux panes.
-  - Named sessions stored/identified through session labels and tmux env.
-  - Branch metadata stored in tmux env.
-- Session UX:
-  - Last session quick toggle: `<C-.>`.
-  - Select/detach/send/prompt/toggle float-split/list local/list global/search/new named sessions under `<leader>a*`.
-  - Cwd session picker and global named-session picker include previews and kill-session support.
-  - Search across captured named session pane contents with ripgrep.
-- Inline ask/edit workflow:
-  - Codex Spark model via `codex --model gpt-5.3-codex-spark --sandbox read-only -a never exec --output-last-message ...`.
-  - Ask about current line/selection.
-  - Builds context with Tree-sitter scope detection and LSP-hover symbol enrichment before sending prompts.
-  - Request unified diff edit for line/selection.
-  - Signs/extmarks show pending/done ask/edit state and ranges.
-  - Floating UI for prompts/answers/diff previews.
-  - Apply/reject/yank/clear answer or diff from current line.
-- Claude Code plugin auto-starts, uses no terminal provider, keeps diff terminal focus, opens diffs in new tabs, command `~/.local/bin/claude --dangerously-skip-permissions`.
-- OpenCode plugin configured with Snacks float and `~/.opencode/bin/opencode`.
+- Autolist continues lists on Enter.
+- Autolist supports list indentation and de-indentation.
+- Autolist supports checkbox toggle.
+- Autolist supports list recalculation.
+- Autolist supports list-type cycling.
+- Autolist recalculates after indent and delete.
+- Autolist keymaps cover insert `<Tab>/<S-Tab>/<CR>`, normal `o`/`O`/`<CR>`/`<C-r>`, and list cycling on `<leader>cn` and `<leader>cp`.
 
-### Modal-specific workflows
+### Rendered Markdown
 
-Sources: `modal/init.lua`, `modal/build.lua`, `modal/dap.lua`, `go.lua`, `scripts/modal/*.sh`
+- Rendered Markdown heading backgrounds use blended dark variants of the same six-color ramp.
+- Rendered Markdown checkbox states use green for checked, gray for unchecked, and yellow for todo.
+- Rendered Markdown is enabled for Markdown and Octo buffers.
+- Rendered Markdown keeps conceal cursor active.
+- Rendered Markdown anti-conceal behavior is tuned.
+- Rendered Markdown customizes checkbox icons and states.
+- Rendered Markdown customizes code block rendering.
+- Rendered Markdown customizes heading icons and backgrounds.
+- Rendered Markdown customizes link and wiki-link icons.
+- Rendered Markdown includes custom web, Discord, GitHub, GitLab, Google, Neovim, Reddit, StackOverflow, Wikipedia, and YouTube link icons.
+- Rendered Markdown customizes quote rendering.
 
-Configured:
+### Obsidian and vault
 
-- Modal build dispatcher on `<leader>mb`.
-- Current registered build: `go/machine-manager` runs `go generate -tags=ui ./machine-manager/` from `~/modal/go` to populate `ui/dist`.
-- Modal Go DAP launch config for `machine-manager` with cwd `~/modal`, build flags `-tags=ui`, and args `9910 9911 9912`.
-- Modal gopls GOPACKAGESDRIVER launcher uses bazelisk/bazel and refuses non-`modal` Bazel roots.
-- Modal gopls probe script validates live Neovim socket wiring.
-- Modal Python dev-cluster DAP wrapper exists for remote/dev-cluster debugging.
+- Vault workspace is `~/vault`.
+- Obsidian wiki links are preferred.
+- Obsidian note IDs slugify titles.
+- Obsidian templates load from the vault templates directory.
+- Obsidian completion is integrated into completion.
+- Obsidian `gf` passthrough is configured.
+- Obsidian Enter smart action is configured.
+- Obsidian UI is disabled in favor of rendered Markdown.
+- Obsidian keymaps support quick switch, search, inbox, new note, template insertion, rename, and open.
+- Vault active todo picker excludes legacy locations, `.git`, `.obsidian`, templates, and Habit Tracking sections.
+- `<leader>ft` opens active vault todos.
+- `<leader>fT` opens active todos by tag.
+- `<leader>ot` opens vault tags across frontmatter array tags, frontmatter list tags, and inline tags while skipping headings and code fences.
+- `<leader>ob` opens case-insensitive backlinks to the current note, including aliased wiki links.
+- `<leader>ol` opens outgoing wiki links from the current note, including unsaved-buffer and missing-target handling.
 
-### Neovim verification harness
+### Weekly backlog helpers
 
-Sources: `scripts/verify-nvim`, `scripts/verify-nvim.lua`, vault notes under `1_wip/epics/neovim/`
+- Weekly backlog helpers create or open `~/vault/3_logs/YYYY-WW/backlog.md`.
+- New weekly backlog files get frontmatter, title, log section, and date heading.
+- Existing weekly backlog files are repaired to include log section and requested day heading.
+- Backlog helpers support today, yesterday, and tomorrow.
+- Backlog commands include `VaultBacklogToday`, `VaultBacklogYesterday`, `VaultBacklogTomorrow`, `ObsidianToday`, `ObsidianYesterday`, and `ObsidianTomorrow`.
+- Backlog keymaps include `<leader>od`, `<leader>oy`, and `<leader>om`.
 
-Configured:
+### Inherited notetaking integrations
 
-- `scripts/verify-nvim` resolves Neovim from PATH, Bob nightly, or Bob stable, then runs headless checks from the dotfiles repo root.
-- Harness cases:
-  - `agent-keymaps`: verifies removed legacy agent keymaps stay removed, required Pi/Codex/local/global mappings exist, and Sidekick has no duplicate agent keymaps.
-  - `sidekick-pi`: verifies Pi/Codex primary ordering, Pi tool registration, named Pi command construction, registry parsing, branding lookup, and `<c-.>` local fallback.
-  - `sidekick-pi-tmux`: creates a temporary real tmux Pi session and verifies discovery, rehydration, local picker visibility, `SIDEKICK_BRANCH` metadata readback, and search snapshot capture.
-- The vault tracks next steps for manifest/artifact output, UI/screenshot checks, and a read-only verifier agent workflow.
+- LazyVim inherited Markdown/notes/GitHub integrations include vim-pencil, autolist, render-markdown, markdown-preview, Obsidian, and Octo.
+- Vault workflows expect `~/vault`.
 
-## 4. Vault feature cross-check
+## Editor platform features
 
-Cross-checked against vault Neovim notes in `1_wip/epics/neovim/`, `projects/journal.md`, `projects/neovim-feedback.md`, `CONTEXT.md`, and `3_logs/2026-W27/neovim-harness-subagent-verification-plan.md`.
+### Plugin management
 
-| Vault feature / desire | Status in this inventory |
-|---|---|
-| `neovim-agent-interface`: Sidekick as canonical interface; Pi + Codex primary; Claude/Cursor/OpenCode optional/legacy | Covered under AI agents and keymap namespace map. |
-| `agent-session-management`: tmux-backed named sessions, cwd/global pickers, search, branch metadata | Covered under AI agents; open worktree isolation remains follow-up. |
-| `neovim-verification`: deterministic `verify-nvim` checks and read-only verifier workflow | Added as configured harness section; verifier/UI artifacts remain planned. |
-| `vault-issue-workflow`: query/create/link vault issues from Neovim/Pi | Not currently configured in Neovim; tracked as planned work under follow-ups. |
-| Better journal/list UX | Partially covered by markdown/vault/Obsidian features: Autolist, vim-pencil, render-markdown, backlog helpers, todo/tag/backlink/outgoing-link pickers. Image rendering and monthly habit aggregation remain not configured. |
-| Open LazyVim from dashboard | Not configured; dashboard currently has files/new/session/Sidecar/LazyGit/Claude/quit. |
-| Neovim work replay / repository reconstruction language | Not currently configured; tracked as conceptual/future work, not an active Neovim feature. |
+- LazyVim-based Neovim distribution with custom dotfiles layered on top.
+- Lazy.nvim bootstraps from the stable branch.
+- Lazy.nvim imports LazyVim core plugins, LazyVim extras, and custom plugin specs.
+- Custom plugin specs live under `nvim/.config/nvim/lua/plugins`.
+- Custom plugins load during startup by default.
+- Plugin versions track latest git commits rather than semver releases.
+- Lazy.nvim uses Tokyonight and Habamax as install fallback colorschemes.
+- Lazy.nvim silently checks for plugin updates.
+- Lazy.nvim disables selected builtin runtime plugins: `gzip`, `tarPlugin`, `tohtml`, `tutor`, and `zipPlugin`.
+- Lazy-lock pins installed plugin commits.
+- LazyVim metadata records enabled extras and install metadata.
 
-## 5. Custom keymap namespace map
+### Picker and root behavior
 
-This is not exhaustive for inherited LazyVim mappings, but covers custom mappings found in this audit.
+- Snacks is the configured picker backend for LazyVim picker flows.
+- Snacks picker UI has customized surfaces and cursor-row highlights.
+- Project/root behavior is pinned to the current working directory by default.
 
-| Namespace | Purpose |
-|---|---|
-| `<leader>a*` | Sidekick/agent workflows: ask/edit, sessions, send context, toggle agents, named sessions, search. |
-| `<leader>O*` | Octo/GitHub PR workflows. |
-| `<leader>o*` | Obsidian/vault workflows. |
-| `<leader>fT`, `<leader>ft` | Vault todo pickers. |
-| `<leader>h*` | Gitsigns hunk actions. |
-| `<leader>g{c,r}` | Go build and Go LSP restart (buffer-local in Go). |
-| `<leader>pr` | Python LSP restart (buffer-local in Python). |
-| `<leader>j{c,r}` | Java compile/restart jdtls (buffer-local in Java). |
-| `<leader>mb` | Modal build dispatcher. |
-| `<leader>e`, `<leader>fp` | Mini.files at current file and project picker. |
-| `<leader>t*` | Test/toggle namespace: language-scoped neotest mappings, gitsigns toggles, LazyVim toggles. |
-| `<leader>x*` | Trouble diagnostics/location-list/quickfix namespace. |
-| `<leader>c*` | Trouble symbols/LSP references and markdown Autolist cycle mappings. |
-| `<leader>d*` | DAP UI/log actions (`<leader>dt`, `<leader>dl`). |
-| `<localleader>*` | DAP stepping/eval, Octo review helpers, gitsigns inline preview. |
-| `g*` custom | `gk` K9s, `gG` LazyGit, `gS` Sidecar. |
-| `<C-h/j/k/l>` | tmux/nvim directional navigation. |
-| `<S-h/l/q>` | buffer previous/next/close via Tabby/Snacks. |
-| Markdown text objects | `iu`/`au` select URL; visual `p/P` is URL-aware. |
-| Sidekick inline edit | Global `<Tab>`/`<S-Tab>` accept/reject Sidekick edit when cursor is on a completed edit entry, otherwise fall back. |
+### Theme and UI surfaces
 
-## 6. External dependency contract observed
+- True color support is enabled.
+- Gruvbox Material is the primary non-agent colorscheme.
+- Gruvbox Material uses a dark background.
+- Gruvbox Material uses medium background contrast.
+- Gruvbox Material uses low UI contrast.
+- Gruvbox Material uses the `mix` foreground palette.
+- Gruvbox Material uses the `blend` float style.
+- Gruvbox Material uses the `afterglow` statusline style.
+- Gruvbox Material enables italic text.
+- Gruvbox Material enables bold text.
+- Gruvbox Material enables diagnostic line highlights.
+- Inactive-window dimming is disabled.
+- Floating windows use a dark Gruvbox background.
+- Floating window borders use a subtle Gruvbox gray.
+- Floating window titles use Gruvbox orange.
+- Terminal floats use Gruvbox background and foreground colors.
+- Snacks picker windows use Gruvbox background and foreground colors.
+- Snacks picker cursor rows use a brighter Gruvbox cursorline shade.
+- Snacks picker borders stay subtle against the background.
+- Noice does not hijack `<C-b>` for popup scrolling.
 
-The config assumes or integrates with these executables/paths:
+### Core editing and clipboard
 
-- System/CLI: `git`, `tmux`, `rg`, `gh`, `k9s`, `lazygit`, `sidecar`, `nvim --server`, `lsof`/`find`/`stat` on macOS for probes.
-- Agent CLIs: `pi`, `codex`, `cursor-agent`, `opencode`, `claude` (`~/.local/bin/claude` preferred), `~/.opencode/bin/opencode`.
-- Java: `/opt/homebrew/opt/openjdk@25`, Mason `jdtls`, Java debug adapter, Spring Boot tools.
-- Go: `go`, `delve`, `gopls`, `goimports`, `gofumpt`, optional `bazelisk`/`bazel`, optional `GOPACKAGESDRIVER=auto`.
-- Python: project `.venv/bin/python`, `.venv/bin/ruff`, `uv.lock` for workspace root inference, `debugpy`.
-- Formatting/build: `prettier`, `stylua`, `google-java-format`, `buildifier`, `ruff`.
-- Vault path: `~/vault`; Modal path: `~/modal`.
+- Absolute and relative line-number behavior is available through the configured editor defaults.
+- Swap files and swap recovery prompts are disabled.
+- Jumplist behavior is stack-based.
+- Insert-mode `<C-/>` exits insert mode.
+- SSH clipboard copy works through OSC52.
+- SSH paste avoids remote terminal paste timeouts by using local Neovim registers.
+- Terminal-buffer paste uses bracketed-paste wrapping so pasted newlines are not interpreted as keystrokes by nested terminal programs.
 
-## 7. Potential cleanup / follow-up items
+### Statusline, tabline, dashboard, and GUI
 
-1. **Duplicate LazyVim import:** `lazyvim.plugins.extras.editor.snacks_picker` appears twice in `lua/config/lazy.lua`.
-2. **LazyVim metadata drift:** `lazyvim.json` records extras not explicitly imported in `lua/config/lazy.lua` (`dap.core`, `dap.nlua`, `helm`). Decide whether `lazyvim.json` is active source-of-truth or historical residue, then align.
-3. **DAP key conflict:** `dap.lua` defines `<localleader>b` twice: breakpoint toggle and step back. Confirm runtime behavior and move one mapping.
-4. **Project.nvim comment drift:** `project.lua` comment says `BUILD.bazel before .git`, but `patterns` currently are `{ "init.lua", "build.gradle", ".git" }` and do not include `BUILD.bazel`.
-5. **README now points to this inventory;** next pass can split stable docs into focused pages:
-   - `core-editor.md`
-   - `languages.md`
-   - `debug-test.md`
-   - `markdown-vault.md`
-   - `git-pr-review.md`
-   - `ai-agents.md`
-   - `modal.md`
-6. **Generate a machine-readable keymap index** from custom specs and compare with runtime `:map`/which-key output.
-7. **Autolist mapping scope:** mappings in `markdown.lua` are global after Autolist loads; decide whether to make them buffer-local for markdown only.
-8. **Duplicate DAP sign/highlight definitions:** DAP signs/highlights are defined in both `colorscheme.lua` and `dap.lua`; consolidate or document why both are needed.
-9. **Duplicate Treesitter parser additions:** `treesitter.lua` both sets `ensure_installed` and then extends it with TS/TSX again; simplify to one strategy.
-10. **Unwired Sidekick modules:** `sidekick/starship.lua` and `sidekick/resume.lua` exist but are not referenced by the current Sidekick spec; wire them or archive them.
-11. **Vault issue workflow:** implement the planned `:Issues`/picker/create/link workflow tracked in `1_wip/epics/neovim/issues/vault-issues-in-neovim.md`.
-12. **Journal wishlist gaps:** image rendering, monthly habit aggregation, and opening LazyVim from the dashboard are desired in the vault but not configured.
-13. **Runtime validation pass:** static audit cannot prove which LazyVim metadata extras are actually loaded; run `:Lazy`, `:LazyExtras`, or a headless `nvim --headless` probe if needed.
+- Lualine provides a custom statusline theme.
+- Lualine shows mode, branch, diff, diagnostics, filename, filetype, progress, and location.
+- Global statusline is enabled.
+- Statusline is hidden in dashboard and terminal buffers.
+- Tabby replaces Bufferline for tab and buffer display.
+- Bufferline is explicitly disabled.
+- Tabline shows tabs and buffers with custom separators and modified indicators.
+- `<S-h>` and `<S-l>` navigate buffers.
+- `<S-q>` closes the current buffer.
+- Dashboard actions include finding files, creating a new file, restoring the last session, opening LazyGit, and quitting.
+- Neovide has a custom font configuration.
+- Neovide maps left Option as Meta on macOS.
+- Neovide disables the bell.
+- Neovide supports Cmd copy, paste, select-all, save, and font-size shortcuts.
+
+### Inherited editor integrations
+
+- Snacks provides inherited picker, explorer, dashboard, input, notification, and terminal UI building blocks.
+- Which-key shows available keymaps after prefix keys.
+- Flash provides fast search and jump navigation.
+- Noice provides enhanced command-line, message, and popup UI.
+- Todo-comments highlights and navigates TODO/FIXME-style comments.
+- Grug-far provides project-wide find-and-replace.
+- Mini.ai provides extra text objects.
+- Mini.files provides a lightweight file explorer.
+- Mini.hipatterns highlights inline patterns.
+- Mini.icons provides filetype and UI icons.
+- Mini.pairs auto-inserts matching pairs.
+- Ts-comments provides Treesitter-aware commenting.
+- Nvim-web-devicons provides file and plugin icons.
+- LazyVim inherited UI/theme features are available, including Tokyonight, Catppuccin, Lualine, and colorizer.
+
+### Verification harness
+
+- A Neovim verification harness exists.
+- Verification resolves Neovim from PATH, Bob nightly, or Bob stable.
+- Verification runs headless checks from the dotfiles repository root.
+- Verification checks legacy agent keymaps stay removed.
+- Verification checks required Pi, Codex, local, and global mappings exist.
+- Verification checks Sidekick has no duplicate agent keymaps.
+- Verification checks Pi/Codex primary ordering.
+- Verification checks Pi tool registration.
+- Verification checks named Pi command construction.
+- Verification checks Sidekick registry parsing.
+- Verification checks Sidekick branding lookup.
+- Verification checks `<C-.>` local fallback.
+- Verification can create a temporary real tmux Pi session.
+- Verification checks tmux discovery and rehydration.
+- Verification checks local picker visibility.
+- Verification checks `SIDEKICK_BRANCH` metadata readback.
+- Verification checks search snapshot capture.
