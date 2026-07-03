@@ -2,4 +2,4 @@
 # Keep this minimal — only PATH setup that must be available everywhere
 
 export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
-. "$HOME/.cargo/env"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
