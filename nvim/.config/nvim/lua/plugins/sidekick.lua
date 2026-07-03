@@ -68,19 +68,11 @@ return {
   end,
   keys = {
     {
-      "<c-;>",
-      function()
-        internal.toggle_tool_session("claude", true)
-      end,
-      desc = "Sidekick Toggle Claude",
-      mode = { "n", "x" },
-    },
-    {
       "<c-.>",
       function()
         require("plugins.sidekick.last_session").open()
       end,
-      desc = "Sidekick Open Last Session",
+      desc = "Sidekick Open Last Session (fallback: cwd sessions)",
       mode = { "n", "t", "i", "x" },
     },
     {
@@ -93,14 +85,6 @@ return {
     },
     {
       "<leader>ae",
-      function()
-        require("plugins.sidekick.ask").edit()
-      end,
-      mode = { "n", "x" },
-      desc = "Edit: ask Codex Spark for a diff (hover to preview)",
-    },
-    {
-      "<localleader>e",
       function()
         require("plugins.sidekick.ask").edit()
       end,
@@ -221,42 +205,28 @@ return {
       function()
         internal.toggle_tool_session("codex", true)
       end,
-      desc = "Sidekick Toggle Codex (G)PT",
-    },
-    {
-      "<leader>ao",
-      function()
-        internal.toggle_tool_session("opencode", true)
-      end,
-      desc = "Sidekick Toggle OpenCode",
+      desc = "Sidekick Toggle Codex (Primary Coding)",
     },
     {
       "<leader>ai",
       function()
         internal.toggle_tool_session("pi", true)
       end,
-      desc = "Sidekick Toggle Pi",
-    },
-    {
-      "<leader>au",
-      function()
-        internal.toggle_tool_session("cursor", true)
-      end,
-      desc = "Sidekick Toggle Cursor Agent",
+      desc = "Sidekick Toggle Pi (Primary Workflow)",
     },
     {
       "<leader>al",
       function()
         require("plugins.sidekick.cwd_picker").open()
       end,
-      desc = "Sidekick List Named Sessions",
+      desc = "Sidekick List Local Sessions",
     },
     {
-      "<leader>ar",
+      "<leader>aL",
       function()
-        require("plugins.sidekick.resume").open()
+        require("plugins.sidekick.picker").open()
       end,
-      desc = "Sidekick Resume Agent Session",
+      desc = "Sidekick List Global Sessions",
     },
     {
       "<leader>a/",
@@ -275,14 +245,14 @@ return {
     {
       "<leader>aN",
       function()
-        vim.ui.select(internal.ordered_agents(), { prompt = "Select CLI tool:" }, function(tool)
+        vim.ui.select(internal.primary_agents(), { prompt = "Select primary agent:" }, function(tool)
           if not tool then
             return
           end
           internal.prompt_named_session(tool)
         end)
       end,
-      desc = "Sidekick New Named Session (Any Agent)",
+      desc = "Sidekick New Named Session (Pi/Codex)",
     },
   },
 }

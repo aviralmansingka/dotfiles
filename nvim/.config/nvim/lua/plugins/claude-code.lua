@@ -13,8 +13,4 @@ return {
     terminal_cmd = "~/.local/bin/claude --dangerously-skip-permissions",
   },
   config = true,
-  keys = {
-    -- Send selected text to Claude Code in visual mode
-    { "<leader>acs", "<cmd>ClaudeCodeSend<cr>", mode = "v", desc = "Send to Claude" },
-  },
 }

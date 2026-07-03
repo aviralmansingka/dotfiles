@@ -31,23 +31,5 @@ return {
     vim.o.autoread = true
   end,
   keys = {
-    -- Toggle opencode UI and focus terminal input
-    {
-      "gO",
-      function()
-        require("opencode").toggle()
-      end,
-      desc = "Toggle opencode and focus terminal",
-      mode = { "n", "x" },
-    },
-    -- Toggle opencode visibility (minimize/maximize)
-    {
-      "<c-'>",
-      function()
-        require("opencode").toggle()
-      end,
-      desc = "Toggle opencode visibility",
-      mode = { "n", "x", "t" },
-    },
   },
 }

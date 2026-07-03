@@ -24,8 +24,11 @@ M.tool_commands = {
   claude = { M.claude_bin, "--dangerously-skip-permissions" },
 }
 
--- Highest-to-lowest preference for agent pickers. Claude is intentionally last.
-M.agent_order = { "codex", "cursor", "opencode", "pi", "claude" }
+-- Highest-to-lowest preference for agent pickers. Pi + Codex are the primary
+-- Neovim agent backends; Cursor/OpenCode/Claude are kept as optional legacy
+-- backends and sorted after the primary pair.
+M.primary_agent_order = { "pi", "codex" }
+M.agent_order = { "pi", "codex", "cursor", "opencode", "claude" }
 M.agent_rank = {}
 for rank, tool in ipairs(M.agent_order) do
   M.agent_rank[tool] = rank
@@ -67,6 +70,16 @@ function M.ordered_agents()
     tools[#tools + 1] = tool
   end
   table.sort(tools, M.compare_agents)
+  return tools
+end
+
+function M.primary_agents()
+  local tools = {}
+  for _, tool in ipairs(M.primary_agent_order) do
+    if M.tool_commands[tool] then
+      tools[#tools + 1] = tool
+    end
+  end
   return tools
 end
 
