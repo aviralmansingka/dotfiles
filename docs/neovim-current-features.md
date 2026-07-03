@@ -2,30 +2,10 @@
 
 _Audit date: 2026-07-03_
 
-This is a flat inventory of user-visible features available in the current Neovim setup. It intentionally avoids
-grouping by plugin files, Lua modules, or implementation structure so these items can be regrouped later into
-vault-style feature documents.
+This is a grouped inventory of user-visible features available in the current Neovim setup. It groups features by
+workflow area rather than plugin files, Lua modules, or implementation structure.
 
-## Accepted features
-
-- Core editor and UI
-  - Lazy.nvim bootstraps from the stable branch, silently checks for plugin updates, and disables selected builtin runtime plugins.
-  - Clipboard defaults to the system clipboard with `unnamedplus`, with OSC52 copy support layered on for SSH sessions.
-  - Lualine, Tabby, Neovide, Snacks terminal, and K9s have additional visible polish beyond the flat headline list.
-- Completion, language, debug, and test tooling
-  - Blink completion supports auto-bracket insertion, LSP-item Treesitter rendering, and disabled ghost text.
-  - LuaSnip supports snippet history and autosnippets.
-  - DAP has both hover-based expression evaluation and a bottom REPL-split evaluation path.
-  - Go, Python, Java, formatting, linting, Treesitter, DAP, and neotest coverage is broadly comprehensive at the inventory level.
-- Markdown, vault, Git, and GitHub review
-  - Markdown URL helpers apply to both Markdown and Octo buffers.
-  - Vault todo, tag, backlink, and outgoing-link pickers include filtering and fallback behavior beyond the headline list.
-  - Gitsigns and Octo coverage is broadly comprehensive, with more exact keymaps and picker actions available in the config.
-- Agent and verification workflows
-  - Sidekick is the canonical agent surface, with explicit keymaps for ask/edit, send, session selection, local/global pickers, search, and named-session creation.
-  - The Neovim verification harness covers agent keymaps, Pi/Codex ordering, tmux rehydration, and Sidekick search snapshots.
-
-## Removed features
+## Removed and pending-removal features
 
 - Blink ghost text is disabled as a completion feature, even though a muted Gruvbox ghost-text highlight is still defined.
 - DAP virtual text is declared but disabled.
@@ -35,7 +15,7 @@ vault-style feature documents.
 - The Claude Code `<leader>acs` mapping is removed.
 - OpenCode direct keymaps `gO` and `<c-'>` are removed; OpenCode remains available through Sidekick and plugin commands.
 - The Sidekick resume module exists, but the former `<leader>ar` resume binding is intentionally not part of the current keymap surface.
-- Modal-specific editor features should be removed from the editor surface:
+- Modal-specific editor features are currently configured but should be removed from the editor surface:
   - Modal build dispatcher on `<leader>mb`.
   - Modal machine-manager build integration.
   - Modal machine-manager Go DAP launch configuration.
@@ -234,42 +214,13 @@ vault-style feature documents.
 - Java DAP loads the Java debug adapter bundle and intentionally excludes Java test bundles.
 - LazyVim DAP core and nlua extras are recorded in the Neovim metadata.
 
-### File, project, and terminal workflow
+### Git and review workflow
 
-- Mini.files opens file explorer at the current file's directory with `<leader>e`.
-- Mini.files preview width is widened.
-- Snacks file picker includes hidden files.
-- Snacks grep includes hidden files.
-- Snacks pickers follow symlinks.
-- Snacks file picker excludes `.git`, `node_modules`, and `.DS_Store`.
-- Snacks picker formats results filename-first.
-- Snacks picker uses a Telescope-like layout with rounded borders, cycling, and reverse ordering.
-- `<C-b>` is disabled inside Snacks picker input/list.
-- `<leader>fp` opens a recent-project picker.
-- Selecting a project opens the file picker at that project root.
-- Project detection recognizes `init.lua`, `build.gradle`, and `.git`.
-- Project handling syncs cwd/root, respects buffer cwd, and updates focused file.
-- Sessions persist buffers, current directory, tabs, windows, folds, and globals.
-- Sessions are stored under Neovim state.
-- `<leader>qs` restores the current session.
-- `<leader>ql` restores the last session.
-- `<leader>qd` stops saving the current session.
-- `<C-h>`, `<C-j>`, `<C-k>`, and `<C-l>` navigate between Neovim splits and tmux panes.
-- `<C-\>` returns to the previous tmux/Neovim pane.
-- Snacks terminal opens as a singleton floating terminal.
-- Terminal float uses 90% width and height.
-- Terminal float has a rounded or Neovide-specific border.
-- Terminal float hides with `q`.
-- `<C-]>` exits terminal insert mode.
-- `gk` toggles K9s.
+- Gitsigns shows custom gutter signs.
 - `gG` opens LazyGit.
 - LazyGit opens from the current buffer's valid Git root when available.
 - LazyGit falls back to the current buffer directory when Git root detection is invalid.
 - LazyGit falls back to Neovim cwd when the buffer path is not usable.
-
-### Git and review workflow
-
-- Gitsigns shows custom gutter signs.
 - `]c` and `[c` navigate Git hunks while respecting diff mode.
 - Hunk actions include stage hunk, reset hunk, stage visual range, reset visual range, stage buffer, undo stage, reset buffer, preview hunk, inline preview, blame line, diff against index, and diff against last commit.
 - `<localleader>g` previews the current Git hunk inline.
@@ -303,16 +254,69 @@ vault-style feature documents.
 
 ### Inherited coding integrations and external tools
 
-- LazyVim inherited LSP/completion/formatting/linting features are available, including nvim-lspconfig, Mason, none-ls, conform, nvim-lint, blink.cmp, SchemaStore, and lazydev.
-- LazyVim inherited Treesitter features are available, including Treesitter textobjects and TS autotag.
-- LazyVim inherited language integrations include Docker, Git, JSON, TOML, YAML, Rust, crates, clangd extensions, Helm LS, JDTLS, Spring Boot, and venv-selector.
-- LazyVim inherited debug/test integrations include nvim-dap, DAP UI, DAP Go, DAP Python, DAP UI tooling, one-small-step-for-vimkind, neotest, neotest-golang, neotest-python, and neotest-java.
-- LazyVim inherited Git/session/project/terminal integrations include gitsigns, vim-tmux-navigator, project.nvim, persistence, dot-file graphing, and startuptime support.
-- External CLI integrations expect `git`, `tmux`, `rg`, `gh`, `k9s`, `lazygit`, and Neovim remote server support.
-- Java integrations expect OpenJDK 25 and Mason-managed Java tooling.
-- Go integrations expect Go, Delve, gopls, goimports, gofumpt, optional Bazel/Bazelisk, and optional GOPACKAGESDRIVER behavior.
-- Python integrations expect project virtualenvs, Ruff, debugpy, and uv workspace metadata when present.
-- Formatting/build integrations expect Prettier, Stylua, Google Java Format, buildifier, and Ruff.
+- Nvim-lspconfig provides the base Neovim LSP client configuration layer.
+- Mason manages language-server, formatter, linter, and debugger installs.
+- None-ls exposes external tools through LSP-style sources.
+- Conform provides the shared formatting runner.
+- Nvim-lint provides the shared lint runner.
+- Blink.cmp provides the inherited completion engine surface.
+- SchemaStore provides JSON schema metadata.
+- Lazydev improves Lua development inside Neovim plugin/config files.
+- Treesitter textobjects are inherited from LazyVim.
+- TS autotag is inherited from LazyVim.
+- Docker language integration is inherited from LazyVim.
+- Git filetype integration is inherited from LazyVim.
+- JSON language integration is inherited from LazyVim.
+- TOML language integration is inherited from LazyVim.
+- YAML language integration is inherited from LazyVim.
+- Rust language integration is inherited from LazyVim.
+- Crates.nvim support is inherited from LazyVim.
+- Clangd extension support is inherited from LazyVim.
+- Helm language-server support is inherited from LazyVim.
+- JDTLS support is inherited from LazyVim and extended by local Java config.
+- Spring Boot support is inherited from LazyVim and extended by local config.
+- Venv-selector support is inherited for Python virtualenv selection.
+- Nvim-dap provides the shared debug adapter protocol client.
+- DAP UI provides debug panels.
+- DAP Go support is inherited from LazyVim.
+- DAP Python support is inherited from LazyVim and extended by local Python config.
+- DAP UI tooling is inherited from LazyVim.
+- One-small-step-for-vimkind enables Lua/Neovim debugging.
+- Neotest provides the shared test runner.
+- Neotest-golang provides Go test discovery and execution.
+- Neotest-python provides Python test discovery and execution.
+- Neotest-java provides Java test discovery and execution.
+- Gitsigns provides Git gutter and hunk actions.
+- Vim-tmux-navigator provides navigation between Neovim splits and tmux panes.
+- Project.nvim provides recent-project detection and project roots.
+- Persistence provides session restore and stop-save behavior.
+- Dot-file graphing support is inherited from LazyVim.
+- Startuptime support is inherited from LazyVim.
+- External CLI integrations expect `git`.
+- External CLI integrations expect `tmux`.
+- External CLI integrations expect `rg`.
+- External CLI integrations expect `gh`.
+- External CLI integrations expect `k9s`.
+- External CLI integrations expect `lazygit`.
+- External CLI integrations expect Neovim remote server support.
+- Java integrations expect OpenJDK 25.
+- Java integrations expect Mason-managed Java tooling.
+- Go integrations expect Go.
+- Go integrations expect Delve.
+- Go integrations expect gopls.
+- Go integrations expect goimports.
+- Go integrations expect gofumpt.
+- Go integrations can use optional Bazel or Bazelisk support.
+- Go integrations can use optional GOPACKAGESDRIVER behavior.
+- Python integrations expect project virtualenvs.
+- Python integrations expect Ruff.
+- Python integrations expect debugpy.
+- Python integrations use uv workspace metadata when present.
+- Formatting and build integrations expect Prettier.
+- Formatting and build integrations expect Stylua.
+- Formatting and build integrations expect Google Java Format.
+- Formatting and build integrations expect buildifier.
+- Formatting and build integrations expect Ruff.
 
 ## Agent integration features
 
@@ -494,7 +498,39 @@ vault-style feature documents.
 
 - Snacks is the configured picker backend for LazyVim picker flows.
 - Snacks picker UI has customized surfaces and cursor-row highlights.
+- Snacks file picker includes hidden files.
+- Snacks grep includes hidden files.
+- Snacks pickers follow symlinks.
+- Snacks file picker excludes `.git`, `node_modules`, and `.DS_Store`.
+- Snacks picker formats results filename-first.
+- Snacks picker uses a Telescope-like layout with rounded borders, cycling, and reverse ordering.
+- `<C-b>` is disabled inside Snacks picker input/list.
+- Mini.files opens file explorer at the current file's directory with `<leader>e`.
+- Mini.files preview width is widened.
+
+### Session and project management
+
+- `<leader>fp` opens a recent-project picker.
+- Selecting a project opens the file picker at that project root.
+- Project detection recognizes `init.lua`, `build.gradle`, and `.git`.
+- Project handling syncs cwd/root, respects buffer cwd, and updates focused file.
 - Project/root behavior is pinned to the current working directory by default.
+- Sessions persist buffers, current directory, tabs, windows, folds, and globals.
+- Sessions are stored under Neovim state.
+- `<leader>qs` restores the current session.
+- `<leader>ql` restores the last session.
+- `<leader>qd` stops saving the current session.
+
+### Terminal workflow
+
+- `<C-h>`, `<C-j>`, `<C-k>`, and `<C-l>` navigate between Neovim splits and tmux panes.
+- `<C-\>` returns to the previous tmux/Neovim pane.
+- Snacks terminal opens as a singleton floating terminal.
+- Terminal float uses 90% width and height.
+- Terminal float has a rounded or Neovide-specific border.
+- Terminal float hides with `q`.
+- `<C-]>` exits terminal insert mode.
+- `gk` toggles K9s.
 
 ### Theme and UI surfaces
 
@@ -518,6 +554,7 @@ vault-style feature documents.
 - Snacks picker cursor rows use a brighter Gruvbox cursorline shade.
 - Snacks picker borders stay subtle against the background.
 - Noice does not hijack `<C-b>` for popup scrolling.
+- Noice suppresses Neovide's transient font-update warning during GUI attach.
 
 ### Core editing and clipboard
 
@@ -525,6 +562,7 @@ vault-style feature documents.
 - Swap files and swap recovery prompts are disabled.
 - Jumplist behavior is stack-based.
 - Insert-mode `<C-/>` exits insert mode.
+- The system clipboard is the default unnamed clipboard.
 - SSH clipboard copy works through OSC52.
 - SSH paste avoids remote terminal paste timeouts by using local Neovim registers.
 - Terminal-buffer paste uses bracketed-paste wrapping so pasted newlines are not interpreted as keystrokes by nested terminal programs.
@@ -540,7 +578,7 @@ vault-style feature documents.
 - Tabline shows tabs and buffers with custom separators and modified indicators.
 - `<S-h>` and `<S-l>` navigate buffers.
 - `<S-q>` closes the current buffer.
-- Dashboard actions include finding files, creating a new file, restoring the last session, opening LazyGit, and quitting.
+- Dashboard actions include finding files, creating a new file, restoring the last session, opening Sidecar, opening LazyGit, opening Claude Code, and quitting.
 - Neovide has a custom font configuration.
 - Neovide maps left Option as Meta on macOS.
 - Neovide disables the bell.
