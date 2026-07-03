@@ -11,10 +11,12 @@ Default behavior is intentionally conservative:
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import queue
 import mimetypes
+import re
 import signal
 import subprocess
 import tempfile
@@ -60,7 +62,8 @@ MAX_AUDIO_BYTES = int(os.environ.get("PI_TELEGRAM_MAX_AUDIO_BYTES", str(20 * 102
 SYSTEM_PROMPT = """
 You are Pi, running headlessly behind the owner's Telegram bot.
 The Telegram sender is the owner controlling you remotely.
-Be concise by default because replies are delivered as Telegram messages.
+Telegram replies must be succinct and never a wall of text. Use short answers, compact bullets when useful, and ask before sending long explanations.
+Use lightweight Markdown-style emphasis when helpful: **bold**, `code`, and fenced code blocks; the Telegram bridge renders these as HTML.
 You may use local tools to help the owner, but do not send Telegram messages to other people or groups unless the owner explicitly asks you to send an exact message to an exact recipient.
 If a requested action is risky or ambiguous, ask a clarifying question instead of guessing.
 """.strip()
@@ -569,12 +572,65 @@ class ChatActionLoop:
             send_chat_action(self.chat_id, self.action)
 
 
+def chunk_reply(text: str) -> list[str]:
+    """Split replies on line boundaries where possible."""
+    chunks: list[str] = []
+    current = ""
+    for line in text.splitlines(keepends=True):
+        if current and len(current) + len(line) > MAX_REPLY_CHARS:
+            chunks.append(current.rstrip())
+            current = ""
+        while len(line) > MAX_REPLY_CHARS:
+            chunks.append(line[:MAX_REPLY_CHARS].rstrip())
+            line = line[MAX_REPLY_CHARS:]
+        current += line
+    if current.strip() or not chunks:
+        chunks.append(current.rstrip())
+    return chunks
+
+
+def telegram_html(text: str) -> str:
+    """Render safe, small Markdown-ish text into Telegram HTML."""
+
+    def inline(value: str) -> str:
+        escaped = html.escape(value, quote=False)
+        escaped = re.sub(r"`([^`\n]+)`", lambda m: f"<code>{m.group(1)}</code>", escaped)
+        escaped = re.sub(r"\*\*([^*\n]+)\*\*", lambda m: f"<b>{m.group(1)}</b>", escaped)
+        if escaped.startswith("- "):
+            escaped = "• " + escaped[2:]
+        return escaped
+
+    rendered: list[str] = []
+    in_pre = False
+    pre_lines: list[str] = []
+    for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if line.strip().startswith("```"):
+            if in_pre:
+                rendered.append("<pre>" + html.escape("\n".join(pre_lines), quote=False) + "</pre>")
+                pre_lines = []
+                in_pre = False
+            else:
+                in_pre = True
+            continue
+        if in_pre:
+            pre_lines.append(line)
+        else:
+            rendered.append(inline(line))
+    if in_pre:
+        rendered.append("<pre>" + html.escape("\n".join(pre_lines), quote=False) + "</pre>")
+    return "\n".join(rendered).strip() or " "
+
+
 def send_telegram(chat_id: str, text: str, reply_to_message_id: Optional[int] = None) -> None:
-    chunks = [text[i : i + MAX_REPLY_CHARS] for i in range(0, len(text), MAX_REPLY_CHARS)] or [""]
+    chunks = chunk_reply(text)
     for idx, chunk in enumerate(chunks, 1):
         if len(chunks) > 1:
             chunk = f"({idx}/{len(chunks)})\n{chunk}"
-        payload: dict[str, Any] = {"chat_id": chat_id, "text": chunk}
+        payload: dict[str, Any] = {
+            "chat_id": chat_id,
+            "text": telegram_html(chunk),
+            "parse_mode": "HTML",
+        }
         if reply_to_message_id is not None:
             payload["reply_parameters"] = {"message_id": reply_to_message_id, "allow_sending_without_reply": True}
         telegram_api("sendMessage", payload, timeout=60)
