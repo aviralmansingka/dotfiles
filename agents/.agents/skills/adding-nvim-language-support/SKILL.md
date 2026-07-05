@@ -74,7 +74,7 @@ You MUST create a TaskCreate task for each item below and complete them in order
 
 ### 1. Brainstorm scope with the user
 
-Use the `superpowers:brainstorming` skill — but with a language-setup-specific question set:
+Use this language-setup-specific question set:
 
 - **Use case** — real app dev (LSP + DAP + tests + format + lint) vs. read-only navigation vs. light scripting. Determines depth.
 - **Build system** — Bazel-first / Gradle / Maven / Cargo / npm-pnpm-yarn / Go modules / pip+pyproject / direct invocation. Bazel changes the LSP wiring substantially for most languages.
@@ -204,7 +204,7 @@ Recommend the simplest path that covers their scope. Don't over-engineer.
 
 ### 7. Write the spec
 
-Use the brainstorming skill's spec template. Save to `docs/superpowers/specs/YYYY-MM-DD-<lang>-nvim-setup-design.md`. Cover:
+Write a concise design spec. Save to `docs/nvim-language-support/specs/YYYY-MM-DD-<lang>-nvim-setup-design.md`. Cover:
 - Goal + non-goals
 - Architecture (which files to create/modify)
 - LSP wiring (Mason packages, lspconfig schema overrides, vim.lsp.start when needed)
@@ -221,7 +221,7 @@ Self-review for placeholders, contradictions, scope. Get user approval before wr
 
 ### 8. Write the implementation plan
 
-Use the `superpowers:writing-plans` skill. Tasks should be bite-sized:
+Write a bite-sized implementation plan:
 
 - **Task 1: Mason — install <packages>** with sync wait verification (don't trust `:Mason` UI in headless tests; use `mason-registry.get_package(name):install()` + poll-until-installed pattern shown in the prior Java setup).
 - **Task 2: Enable LazyVim extra (or scaffold plugin spec)** — verify with `pcall(require, "<lsp-module>")` and a buffer-open smoke test.
@@ -230,7 +230,7 @@ Use the `superpowers:writing-plans` skill. Tasks should be bite-sized:
 
 ### 9. Execute
 
-Use `superpowers:executing-plans` (inline, with checkpoints) OR `superpowers:subagent-driven-development` (parallel-friendly). For nvim plugin work, inline is usually right because tasks build on each other and verification is interactive.
+Execute the plan inline with checkpoints. For nvim plugin work, inline is usually right because tasks build on each other and verification is interactive.
 
 Discoveries-during-execution are normal. When reality differs from spec, **fix the spec/plan inline** before continuing — don't let the docs drift. Document the discovery in the commit message so the user can audit later.
 
@@ -280,7 +280,7 @@ After all tasks pass:
 - Spec/plan are committed.
 - **Dispatch the `neovim-debugger` agent to reload the affected plugin(s) in every running nvim session.** Give it the lazy.nvim plugin name (use the mapping in the user's reload memory); it discovers sockets and reports which sessions got the reload. Don't ask the user first.
 - For LSP changes: a buffer attached to the *old* config keeps the old behavior until `:LspRestart`. When the change matters (new LSP server added, classpath shape changed), tell the agent to also `:LspRestart` on relevant buffers and surface that in its report.
-- Hand off via `superpowers:finishing-a-development-branch`: tests-pass check (= verification recipes) → present 4 options (merge / PR / keep / discard).
+- Finish with a tests-pass check (= verification recipes), then present 4 options (merge / PR / keep / discard).
 
 ---
 
@@ -307,14 +307,6 @@ After all tasks pass:
 - **LazyVim extra hooks**: the `lang.java` extra exposes `opts.full_cmd`, `opts.jdtls.cmd_extender` (in some versions) — check the extra's source to find the right hook before guessing. `opts.cmd_extender` is NOT read by every extra.
 - **Auto-trigger vs manual completion**: blink-cmp's default preset auto-triggers in insert mode after typing identifier characters. Users who report "no completion" are often in normal mode or inside a string literal.
 - **Two LSPs attached to the same buffer**: not a problem on its own — they coexist by name. But scoring overlaps: if LSP A returns 1000 generic items and LSP B returns 5 framework-specific items, the user sees A's noise. Tune `score_offset` per source in blink-cmp if needed.
-
-## Sub-skill references
-
-- `superpowers:brainstorming` — use for the initial scope conversation
-- `superpowers:writing-plans` — use to author the implementation plan
-- `superpowers:executing-plans` or `superpowers:subagent-driven-development` — for execution
-- `superpowers:verification-before-completion` — before claiming done
-- `superpowers:finishing-a-development-branch` — for the merge/PR handoff
 
 ## Agent references
 

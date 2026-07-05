@@ -2,12 +2,25 @@
   "model": "opus[1m]",
   "enabledPlugins": {
     "pyright-lsp@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
     "lua-lsp@claude-plugins-official": true,
     "jdtls-lsp@claude-plugins-official": true
   },
   "skipDangerousModePermissionPrompt": true,
   "voiceEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lavish-axi",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
 }
