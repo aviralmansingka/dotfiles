@@ -76,7 +76,7 @@ local function validate_agent_keymaps()
   assert_key_desc(sidekick, "<leader>aL", "Global")
   assert_key_desc(sidekick, "<c-.>", "cwd sessions")
   assert_key_desc(sidekick, "<leader>an", "Codex")
-  assert_key_desc(sidekick, "<leader>aN", "Pi/Codex")
+  assert_key_desc(sidekick, "<leader>aN", "Pi")
   assert_key_desc(sidekick, "<leader>ae", "Codex Spark")
   assert_key_desc(sidekick, "<leader>aA", "apply")
   assert_key_desc(sidekick, "<leader>aR", "reject")
@@ -117,7 +117,7 @@ local function validate_sidekick_pi()
   end
 
   assert_key_desc(sidekick, "<leader>ai", "Primary Workflow")
-  assert_key_desc(sidekick, "<leader>aN", "Pi/Codex")
+  assert_key_desc(sidekick, "<leader>aN", "Pi")
 
   local named = internal.tool_command_for_named_session("pi", "test-session")
   local has_name, has_slug = false, false

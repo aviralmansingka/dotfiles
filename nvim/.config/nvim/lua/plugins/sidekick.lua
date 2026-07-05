@@ -245,14 +245,9 @@ return {
     {
       "<leader>aN",
       function()
-        vim.ui.select(internal.primary_agents(), { prompt = "Select primary agent:" }, function(tool)
-          if not tool then
-            return
-          end
-          internal.prompt_named_session(tool)
-        end)
+        internal.prompt_named_session("pi")
       end,
-      desc = "Sidekick New Named Session (Pi/Codex)",
+      desc = "Sidekick New Pi Named Session",
     },
   },
 }
