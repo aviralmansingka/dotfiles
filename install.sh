@@ -80,6 +80,10 @@ stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
 stow -d "$DOTFILES_DIR" -t "$HOME" agents
 stow -d "$DOTFILES_DIR" -t "$HOME" pi
 
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    stow -d "$DOTFILES_DIR" -t "$HOME" launchd
+fi
+
 # Optional Linux-only systemd units
 if command -v systemctl >/dev/null 2>&1; then
     stow -d "$DOTFILES_DIR" -t "$HOME" systemd

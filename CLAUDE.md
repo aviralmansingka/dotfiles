@@ -17,7 +17,10 @@ This is a dotfiles repository that manages development environment configuration
 brew bundle                    # Install dependencies from Brewfile
 stow nvim tmux zsh ghostty git kube tmuxinator agents pi
 
-# Linux: optionally deploy user services (systemd)
+# macOS: deploy user LaunchAgents
+stow launchd
+
+# Linux: deploy user services (systemd)
 stow systemd
 ```
 
@@ -33,6 +36,7 @@ stow starship     # Deploy Starship prompt configuration
 stow aerospace    # Deploy AeroSpace window manager configuration
 stow agents       # Deploy shared agent skills
 stow pi           # Deploy Pi agent configuration
+stow launchd      # Deploy macOS user LaunchAgents
 stow systemd      # Deploy systemd user units (Linux)
 ```
 
@@ -63,6 +67,7 @@ Each tool has its own directory containing dotfiles in their target path structu
 - **ghostty** - Ghostty terminal emulator
 - **git** - Git configuration
 - **kube** - Kubernetes configuration
+- **launchd** - macOS user LaunchAgents
 - **neovide** - Neovide (Neovim GUI) configuration
 - **nvim** - Neovim with LazyVim distribution
 - **pi** - Pi agent config, packages, themes, and messaging daemons

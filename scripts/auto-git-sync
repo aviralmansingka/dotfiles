@@ -1,0 +1,237 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_DIR="${REPO_DIR:-$HOME/vault}"
+REMOTE_NAME="${REMOTE_NAME:-origin}"
+TARGET_BRANCH="${TARGET_BRANCH:-main}"
+SYNC_INTERVAL_SECONDS="${SYNC_INTERVAL_SECONDS:-300}"
+PI_BIN="${PI_BIN:-pi}"
+PI_MODEL="${PI_MODEL:-}"
+
+repo_abs="$(cd "$REPO_DIR" 2>/dev/null && pwd -P || true)"
+repo_name="$(basename "${repo_abs:-$REPO_DIR}")"
+STATE_DIR="${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/auto-git-sync/$repo_name}"
+LOG_FILE="${LOG_FILE:-$STATE_DIR/sync.log}"
+LOCK_DIR="${LOCK_DIR:-$STATE_DIR/lock}"
+
+mkdir -p "$STATE_DIR"
+
+log() {
+  printf '[%s] [%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$repo_name" "$1" | tee -a "$LOG_FILE"
+}
+
+acquire_lock() {
+  if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    local pid
+    pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+      log "Another sync job is already running."
+      exit 0
+    fi
+    log "Removing stale lock."
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR"
+  fi
+  printf '%s\n' "$$" >"$LOCK_DIR/pid"
+  trap 'rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT
+}
+
+dirty() {
+  test -n "$(git status --porcelain)"
+}
+
+conflicted_files() {
+  git diff --name-only --diff-filter=U
+}
+
+has_conflicts() {
+  test -n "$(conflicted_files)"
+}
+
+run_pi_conflict_resolution() {
+  local files
+  files="$(conflicted_files)"
+  test -n "$files" || return 0
+
+  if ! command -v "$PI_BIN" >/dev/null 2>&1; then
+    log "Pi is not available at '$PI_BIN'; leaving conflicts for manual review."
+    return 1
+  fi
+
+  log "Invoking Pi to resolve conflicts: $(printf '%s' "$files" | tr '\n' ' ')"
+
+  local prompt
+  prompt="$(cat <<EOF
+Resolve the Git merge conflicts in this repository for an unattended auto-sync job.
+
+Repository: $(pwd)
+Conflicted files:
+$files
+
+Edit only the conflicted files. Preserve both local and remote intent when possible.
+After resolving, run git add for the resolved files.
+Do not commit, push, or change branches.
+If you cannot resolve safely, leave the conflict markers in place.
+EOF
+)"
+
+  local args=("$PI_BIN" --print --approve --no-context-files)
+  if [[ -n "$PI_MODEL" ]]; then
+    args+=(--model "$PI_MODEL")
+  fi
+
+  if ! "${args[@]}" "$prompt" >>"$LOG_FILE" 2>&1; then
+    log "Pi failed while resolving conflicts."
+    return 1
+  fi
+
+  if has_conflicts; then
+    log "Conflicts remain after Pi resolution: $(conflicted_files | tr '\n' ' ')"
+    return 1
+  fi
+}
+
+finish_merge_if_needed() {
+  if [[ -f "$(git rev-parse --git-path MERGE_HEAD)" ]]; then
+    git commit --no-edit
+  fi
+}
+
+merge_remote() {
+  local remote_ref="$REMOTE_NAME/$TARGET_BRANCH"
+
+  if ! git rev-parse --verify --quiet "$remote_ref" >/dev/null; then
+    log "Remote branch $remote_ref does not exist yet."
+    return 0
+  fi
+
+  if git merge-base --is-ancestor "$remote_ref" HEAD; then
+    log "Remote branch $remote_ref is already included."
+    return 0
+  fi
+
+  log "Pulling changes from $remote_ref before committing local edits."
+  if git merge --no-edit "$remote_ref"; then
+    return 0
+  fi
+
+  run_pi_conflict_resolution
+  finish_merge_if_needed
+}
+
+stash_local_changes() {
+  if ! dirty; then
+    return 1
+  fi
+
+  log "Stashing local edits before pulling remote changes."
+  git stash push --include-untracked -m "auto-git-sync: pre-pull $(date '+%Y-%m-%d %H:%M:%S')" >/dev/null
+  return 0
+}
+
+apply_stash() {
+  log "Re-applying local edits after remote pull."
+  if git stash apply --index stash@{0}; then
+    git stash drop stash@{0} >/dev/null
+    return 0
+  fi
+
+  run_pi_conflict_resolution
+  git stash drop stash@{0} >/dev/null
+}
+
+ensure_branch() {
+  local branch
+  branch="$(git rev-parse --abbrev-ref HEAD)"
+  if [[ "$branch" == "$TARGET_BRANCH" ]]; then
+    return 0
+  fi
+
+  log "Switching from $branch to $TARGET_BRANCH."
+  if git rev-parse --verify --quiet "$TARGET_BRANCH" >/dev/null; then
+    git checkout "$TARGET_BRANCH"
+  elif git rev-parse --verify --quiet "$REMOTE_NAME/$TARGET_BRANCH" >/dev/null; then
+    git checkout -B "$TARGET_BRANCH" "$REMOTE_NAME/$TARGET_BRANCH"
+  else
+    git checkout -B "$TARGET_BRANCH"
+  fi
+}
+
+commit_local_changes() {
+  if ! dirty; then
+    log "No local edits to commit."
+    return 0
+  fi
+
+  log "Committing local edits."
+  git add -A
+  git commit -m "Auto-commit: $(date '+%Y-%m-%d %H:%M:%S')"
+}
+
+push_if_needed() {
+  local remote_ref="$REMOTE_NAME/$TARGET_BRANCH"
+
+  if git rev-parse --verify --quiet "$remote_ref" >/dev/null &&
+    [[ "$(git rev-list --count "$remote_ref..$TARGET_BRANCH")" == "0" ]]; then
+    log "No local commits to push."
+    return 0
+  fi
+
+  log "Pushing local commits to $REMOTE_NAME $TARGET_BRANCH."
+  git push "$REMOTE_NAME" "$TARGET_BRANCH"
+}
+
+run_once() {
+  if [[ -z "$repo_abs" ]] || ! git -C "$repo_abs" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log "Not a git repository: $REPO_DIR"
+    return 1
+  fi
+
+  cd "$repo_abs"
+  log "Starting sync cycle."
+
+  if ! git fetch "$REMOTE_NAME" "$TARGET_BRANCH" --prune; then
+    log "Fetch failed; skipping commit until remote state is available."
+    return 1
+  fi
+
+  local stashed=0
+  if stash_local_changes; then
+    stashed=1
+  fi
+
+  ensure_branch
+  merge_remote
+
+  if [[ "$stashed" == "1" ]]; then
+    apply_stash
+  fi
+
+  commit_local_changes
+  push_if_needed
+  log "Sync cycle complete."
+}
+
+run_loop() {
+  log "Starting background sync loop every ${SYNC_INTERVAL_SECONDS} seconds."
+  while true; do
+    run_once || true
+    log "Sleeping for ${SYNC_INTERVAL_SECONDS}s."
+    sleep "$SYNC_INTERVAL_SECONDS"
+  done
+}
+
+acquire_lock
+
+case "${1:-}" in
+  --once)
+    run_once
+    ;;
+  --daemon | "")
+    run_loop
+    ;;
+  *)
+    echo "usage: $0 [--once|--daemon]" >&2
+    exit 2
+    ;;
+esac

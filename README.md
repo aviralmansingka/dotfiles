@@ -25,10 +25,10 @@ For manual installation:
 
 ```sh
 brew bundle
-stow nvim tmux zsh ghostty git starship agents pi
+stow nvim tmux zsh ghostty git starship agents pi launchd
 ```
 
-On Linux (systemd) systems, also deploy the vault auto-sync service:
+On Linux (systemd) systems, deploy the user services with:
 
 ```sh
 stow systemd
@@ -78,25 +78,38 @@ terraform -chdir=ops/devbox destroy \
 | `ghostty` | Ghostty terminal emulator |
 | `git` | Git configuration |
 | `kube` | Kubernetes configuration |
+| `launchd` | macOS user LaunchAgents (vault and dotfiles auto-sync) |
 | `neovide` | Neovide (Neovim GUI) config |
 | `nvim` | Neovim with LazyVim |
 | `ssh` | SSH configuration |
 | `starship` | Starship prompt |
-| `systemd` | User systemd units (vault auto-sync, Pi/WhatsApp/Telegram bridges) |
+| `systemd` | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
 | `pi` | Pi agent config, packages, themes, and messaging daemons |
 | `terminfo` | Custom terminfo entries |
 | `tmux` | Tmux configuration |
 | `tmuxinator` | Tmuxinator session templates |
 | `zsh` | Zsh shell configuration |
 
-## Vault auto-sync service
+## Git auto-sync services
 
-Manage user service:
+The shared implementation is `scripts/auto-git-sync`. It fetches and merges the remote branch before committing local edits, then asks Pi to resolve Git conflict files if a merge or stash apply leaves conflicts.
+
+Manage Linux user services:
 
 ```sh
 systemctl --user daemon-reload
-systemctl --user enable --now vault-auto-sync.service
-systemctl --user status vault-auto-sync.service
+systemctl --user enable --now vault-auto-sync.service dotfiles-auto-sync.service
+systemctl --user status vault-auto-sync.service dotfiles-auto-sync.service
+```
+
+Manage macOS user agents:
+
+```sh
+stow launchd
+launchctl bootstrap "gui/$UID" ~/Library/LaunchAgents/com.aviral.vault-auto-sync.plist
+launchctl bootstrap "gui/$UID" ~/Library/LaunchAgents/com.aviral.dotfiles-auto-sync.plist
+launchctl print "gui/$UID/com.aviral.vault-auto-sync"
+launchctl print "gui/$UID/com.aviral.dotfiles-auto-sync"
 ```
 
 ## Pi agent
