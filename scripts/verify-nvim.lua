@@ -290,6 +290,13 @@ local function validate_sidekick_herdr_live()
   if not echoed then
     fail("Herdr send/submit output missing sentinel; dump=" .. vim.inspect(session:dump()))
   end
+  local dump = session:dump() or ""
+  if not dump:find("ECHO:" .. sentinel, 1, true) then
+    fail("Sidekick Herdr dump missing sentinel: " .. vim.inspect(dump))
+  end
+  if herdr.workspace_for_cwd(vim.fn.getcwd()) ~= session.herdr_workspace_id then
+    fail("Herdr project cwd did not resolve to the started workspace")
+  end
 
   local registry = require("plugins.sidekick.registry")
   local entry = registry.discover()[label]
@@ -305,6 +312,15 @@ local function validate_sidekick_herdr_live()
   end
   if not found then
     fail("cwd picker did not expose the live Herdr agent: " .. vim.inspect(local_items))
+  end
+
+  local search = require("plugins.sidekick.search")
+  local snapshot_dir, snapshot_count = search.snapshot()
+  local snapshot_path = snapshot_dir .. "/" .. label .. ".txt"
+  local snapshot = vim.fn.filereadable(snapshot_path) == 1 and table.concat(vim.fn.readfile(snapshot_path), "\n") or ""
+  search.cleanup()
+  if snapshot_count < 1 or not snapshot:find(sentinel, 1, true) then
+    fail("Herdr transcript search snapshot missing sentinel: " .. vim.inspect(snapshot))
   end
 
   local working = herdr.call({

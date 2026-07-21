@@ -44,6 +44,12 @@ curl -fsSL https://claude.ai/install.sh | bash
 echo "==> Installing OpenCode"
 curl -fsSL https://opencode.ai/install | bash
 
+if ! command -v herdr >/dev/null 2>&1; then
+    echo "==> Installing Herdr"
+    curl -fsSL https://herdr.dev/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
 ####################
 #  3. Rust         #
 ####################
