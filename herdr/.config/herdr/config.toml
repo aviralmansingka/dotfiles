@@ -1,6 +1,45 @@
+onboarding = false
+[theme]
+name = "gruvbox"
+
+[theme.custom]
+panel_bg = "#282828"
+accent = "#d8a657"
+red = "#ea6962"
+green = "#a9b665"
+
+[terminal]
+new_cwd = "follow"
+
+[keys]
+prefix = "ctrl+a"
+help = "prefix+space"
+workspace_picker = "prefix+o"
+open_notification_target = ""
+previous_tab = "prefix+shift+h"
+next_tab = "prefix+shift+l"
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+split_vertical = "prefix+|"
+split_horizontal = "prefix+minus"
+
+[ui]
+mouse_capture = true
+pane_borders = true
+pane_gaps = false
+show_agent_labels_on_pane_borders = true
+accent = "#d8a657"
+
 [ui.toast]
 delivery = "system"
 delay_seconds = 1
 
 [ui.sound]
 enabled = true
+
+[advanced]
+# Herdr measures scrollback in bytes; 10 MB comfortably covers tmux's
+# 50,000-line target for normal terminal output.
+scrollback_limit_bytes = 10000000
