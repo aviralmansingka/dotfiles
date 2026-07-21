@@ -191,8 +191,18 @@ function M.render(cwd)
   return wb
 end
 
---- Winbar expression entry point. Resolves the current sidekick window to
---- its tmux pane cwd and renders starship for that cwd. Cheap on cache hit.
+---@param terminal table|nil
+---@return string|nil
+function M.cwd_for_terminal(terminal)
+  if not terminal then
+    return nil
+  end
+  local session = terminal.session or {}
+  return terminal.cwd or session.cwd or (session.parent and session.parent.cwd)
+end
+
+--- Winbar expression entry point. Resolves the current Sidekick terminal to
+--- its Herdr session cwd and renders starship for that cwd. Cheap on cache hit.
 ---@return string
 function M.winbar_for_current_win()
   local win = vim.api.nvim_get_current_win()
@@ -205,20 +215,7 @@ function M.winbar_for_current_win()
     return ""
   end
   local term = terminal_mod.get(sid)
-  local tool_name = term and term.tool and term.tool.name or nil
-  if not tool_name then
-    return ""
-  end
-  local internal_ok, internal = pcall(require, "plugins.sidekick.internal")
-  if not internal_ok then
-    return ""
-  end
-  local tmux_sid = internal.find_tmux_session_id(tool_name)
-  if not tmux_sid then
-    return ""
-  end
-  local cwd = internal.session_cwd(tmux_sid)
-  return M.render(cwd)
+  return M.render(M.cwd_for_terminal(term))
 end
 
 return M

@@ -34,10 +34,8 @@ for rank, tool in ipairs(M.agent_order) do
   M.agent_rank[tool] = rank
 end
 
---- Env var set on named-session tmux panes. is_proc uses it to disambiguate
---- the named tool's pane from the base tool's pane (and from sibling named
---- tools), so each running pane matches exactly one tool entry — no dupes
---- in <leader>as.
+--- Env var passed to named Herdr agents so native tool integrations can keep
+--- distinguishing named tools when Sidekick inspects their processes.
 M.named_env_var = "SIDEKICK_NAMED_SESSION"
 
 M.tool_is_proc_patterns = {
@@ -122,87 +120,14 @@ function M.ensure_claude_bridge()
   return false
 end
 
---- Find the tmux session_id whose name matches `<tool_name> <hex>` (sidekick's
---- Session.sid format). Returns nil if not found.
----@param tool_name string e.g. "claude" or "claude-tutorial"
----@return string|nil
-function M.find_tmux_session_id(tool_name)
-  if vim.fn.executable("tmux") ~= 1 then
-    return nil
-  end
-  local result = vim.system({ "tmux", "list-sessions", "-F", "#{session_id}|#{session_name}" }):wait()
-  if result.code ~= 0 then
-    return nil
-  end
-  for line in (result.stdout or ""):gmatch("([^\n]+)") do
-    local sid, sname = line:match("^([^|]+)|(.+)$")
-    if sid and sname and sname:match("^" .. vim.pesc(tool_name) .. "%s+%x+$") then
-      return sid
-    end
-  end
-  return nil
-end
-
---- Best-effort: poll for the spawned tmux session, then write SIDEKICK_BRANCH
---- if currently unset. Silent on timeout — branch capture is metadata only.
----@param tool_name string
----@param cwd string|nil
-function M.capture_branch_async(tool_name, cwd)
-  local branch_mod = require("plugins.sidekick.branch")
-  local branch = branch_mod.current(cwd or vim.fn.getcwd())
-  if not branch then
-    return
-  end
-  local tries = 0
-  local function attempt()
-    tries = tries + 1
-    local sid = M.find_tmux_session_id(tool_name)
-    if sid then
-      if branch_mod.read_session(sid) == nil then
-        branch_mod.write_session(sid, branch)
-      end
-      return
-    end
-    if tries >= 20 then
-      return
-    end
-    vim.defer_fn(attempt, 100)
-  end
-  vim.defer_fn(attempt, 100)
-end
-
---- Toggle a sidekick tool session. `skip_capture=true` suppresses the default
---- branch-capture so callers can capture using a more specific cwd without
---- racing the default nil-cwd capture.
+--- Toggle a Sidekick tool session through the configured backend.
 ---@param name string
 ---@param focus boolean|nil
----@param skip_capture boolean|nil
-function M.toggle_tool_session(name, focus, skip_capture)
+function M.toggle_tool_session(name, focus)
   if M.is_claude_tool(name) and not M.ensure_claude_bridge() then
     return
   end
   require("sidekick.cli").toggle({ name = name, focus = focus ~= false })
-  if not skip_capture then
-    M.capture_branch_async(name, nil)
-  end
-end
-
---- Read the active pane's cwd for a tmux session (or nil).
----@param session_id string
----@return string|nil
-function M.session_cwd(session_id)
-  if not session_id or session_id == "" or vim.fn.executable("tmux") ~= 1 then
-    return nil
-  end
-  local result = vim.system({ "tmux", "display-message", "-p", "-t", session_id, "-F", "#{pane_current_path}" }):wait()
-  if result.code ~= 0 then
-    return nil
-  end
-  local cwd = ((result.stdout or ""):gsub("\n$", ""))
-  if cwd == "" then
-    return nil
-  end
-  return cwd
 end
 
 ---@param cmd string|string[]
@@ -327,8 +252,7 @@ function M.start_named_session(tool, label, cwd)
   }
   config.cli.tools[name] =
     M.merged_tool_config(tool, M.make_tool(command, M.normalize_cwd(cwd), M.tool_urls[tool], extra))
-  M.toggle_tool_session(name, true, true)
-  M.capture_branch_async(name, (cwd and cwd ~= "") and cwd or vim.fn.getcwd())
+  M.toggle_tool_session(name, true)
 end
 
 function M.prompt_named_session(tool)

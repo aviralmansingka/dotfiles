@@ -79,6 +79,13 @@ stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
 stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
 stow -d "$DOTFILES_DIR" -t "$HOME" agents
 stow -d "$DOTFILES_DIR" -t "$HOME" pi
+stow -d "$DOTFILES_DIR" -t "$HOME" herdr
+
+echo "==> Installing Herdr agent integrations"
+herdr integration install pi
+if command -v codex >/dev/null 2>&1; then
+    herdr integration install codex
+fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
     stow -d "$DOTFILES_DIR" -t "$HOME" launchd

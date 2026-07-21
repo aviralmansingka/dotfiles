@@ -153,74 +153,6 @@ local function validate_sidekick_pi()
   end
 end
 
-local function validate_sidekick_pi_tmux()
-  load_plugin("sidekick.nvim")
-
-  if vim.fn.executable("tmux") ~= 1 then
-    fail("tmux is required for sidekick-pi-tmux")
-  end
-
-  local label = os.getenv("VERIFY_NVIM_TMUX_LABEL") or ""
-  local branch = os.getenv("VERIFY_NVIM_TMUX_BRANCH") or ""
-  local sentinel = os.getenv("VERIFY_NVIM_TMUX_SENTINEL") or ""
-  if label == "" or branch == "" or sentinel == "" then
-    fail("sidekick-pi-tmux requires VERIFY_NVIM_TMUX_LABEL, VERIFY_NVIM_TMUX_BRANCH, and VERIFY_NVIM_TMUX_SENTINEL")
-  end
-
-  local registry = require("plugins.sidekick.registry")
-  registry.rehydrate()
-  local discovered = registry.discover()
-  local entry = discovered[label]
-  if not entry then
-    fail("tmux Pi session not discovered for label " .. label .. "; discovered=" .. vim.inspect(discovered))
-  end
-  if entry.tool ~= "pi" then
-    fail("expected discovered tool pi; got " .. vim.inspect(entry))
-  end
-  if not entry.pane_id or entry.pane_id == "" then
-    fail("discovered Pi session missing pane_id: " .. vim.inspect(entry))
-  end
-  if not entry.session_id or entry.session_id == "" then
-    fail("discovered Pi session missing session_id: " .. vim.inspect(entry))
-  end
-
-  local config = require("sidekick.config")
-  if not config.cli.tools[label] then
-    fail("registry.rehydrate did not register dynamic tool " .. label)
-  end
-
-  local cwd_items = require("plugins.sidekick.cwd_picker").list_items()
-  local found_local = false
-  for _, item in ipairs(cwd_items) do
-    if item.label == label then
-      found_local = true
-      break
-    end
-  end
-  if not found_local then
-    fail("cwd_picker.list_items did not include " .. label .. "; items=" .. vim.inspect(cwd_items))
-  end
-
-  local read_branch = require("plugins.sidekick.branch").read_session(entry.session_id)
-  if read_branch ~= branch then
-    fail("SIDEKICK_BRANCH mismatch: got " .. vim.inspect(read_branch) .. ", expected " .. vim.inspect(branch))
-  end
-
-  local dir, count = require("plugins.sidekick.search").snapshot()
-  if count < 1 then
-    fail("search.snapshot captured no panes")
-  end
-  local path = dir .. "/" .. label .. ".txt"
-  if vim.fn.filereadable(path) ~= 1 then
-    fail("search snapshot file missing: " .. path)
-  end
-  local content = table.concat(vim.fn.readfile(path), "\n")
-  if not content:find(sentinel, 1, true) then
-    fail("search snapshot for " .. label .. " missing sentinel " .. sentinel)
-  end
-  require("plugins.sidekick.search").cleanup()
-end
-
 local function validate_sidekick_herdr()
   load_plugin("sidekick.nvim")
 
@@ -298,19 +230,141 @@ local function validate_sidekick_herdr()
   if #global_items ~= 1 or global_items[1].label ~= "pi-review" or global_items[1].status ~= "blocked" then
     fail("global picker should expose Herdr status: " .. vim.inspect(global_items))
   end
+
+  local starship = require("plugins.sidekick.starship")
+  if starship.cwd_for_terminal({ cwd = cwd }) ~= cwd then
+    fail("Sidekick starship should use the terminal cwd with Herdr")
+  end
+  if starship.cwd_for_terminal({ session = { parent = { cwd = cwd } } }) ~= cwd then
+    fail("Sidekick starship should fall back to the Herdr parent session cwd")
+  end
+
+  local branch = require("plugins.sidekick.branch").current(cwd)
+  local terminal = { tool = { name = "pi-review" }, cwd = cwd, opts = { layout = "float", float = {} } }
+  require("plugins.sidekick.branding").apply(terminal)
+  local title = vim.inspect(terminal.opts.float.title)
+  if branch and not title:find(branch, 1, true) then
+    fail("Sidekick branding should derive the branch from the Herdr terminal cwd: " .. title)
+  end
   herdr.list_agents = original_list_agents
+end
+
+local function validate_sidekick_herdr_live()
+  load_plugin("sidekick.nvim")
+
+  local label = os.getenv("VERIFY_NVIM_HERDR_LABEL") or ""
+  local sentinel = os.getenv("VERIFY_NVIM_HERDR_SENTINEL") or ""
+  if label == "" or sentinel == "" then
+    fail("sidekick-herdr-live requires VERIFY_NVIM_HERDR_LABEL and VERIFY_NVIM_HERDR_SENTINEL")
+  end
+
+  local internal = require("plugins.sidekick.internal")
+  local config = require("sidekick.config")
+  local command = {
+    "sh",
+    "-c",
+    string.format(
+      "printf '%s\\n'; while IFS= read -r line; do printf 'ECHO:%%s\\n' \"$line\"; done",
+      sentinel
+    ),
+  }
+  config.cli.tools[label] = internal.merged_tool_config("pi", {
+    cmd = command,
+    url = internal.tool_urls.pi,
+  })
+
+  local Session = require("sidekick.cli.session")
+  local session = Session.new({ tool = label, cwd = vim.fn.getcwd(), backend = "herdr" })
+  local attach = session:start()
+  assert_sequence(attach.cmd, { "herdr", "agent", "attach", label }, "Herdr attach command")
+  if not session.herdr_pane_id or not session.herdr_workspace_id then
+    fail("started Herdr session missing pane/workspace identifiers: " .. vim.inspect(session))
+  end
+
+  session:send(sentinel)
+  session:submit()
+  local herdr = require("plugins.sidekick.herdr")
+  local echoed = vim.wait(3000, function()
+    return (herdr.read(label, "recent", 50) or ""):find("ECHO:" .. sentinel, 1, true) ~= nil
+  end, 50)
+  if not echoed then
+    fail("Herdr send/submit output missing sentinel; dump=" .. vim.inspect(session:dump()))
+  end
+
+  local registry = require("plugins.sidekick.registry")
+  local entry = registry.discover()[label]
+  if not entry or entry.pane_id ~= session.herdr_pane_id or entry.workspace_id ~= session.herdr_workspace_id then
+    fail("live registry discovery mismatch: " .. vim.inspect(entry))
+  end
+  local local_items = require("plugins.sidekick.cwd_picker").list_items()
+  local found = false
+  for _, item in ipairs(local_items) do
+    if item.label == label and item.status == "unknown" then
+      found = true
+    end
+  end
+  if not found then
+    fail("cwd picker did not expose the live Herdr agent: " .. vim.inspect(local_items))
+  end
+
+  local working = herdr.call({
+    "pane",
+    "report-agent",
+    session.herdr_pane_id,
+    "--source",
+    "sidekick-verify",
+    "--agent",
+    "pi",
+    "--state",
+    "working",
+    "--seq",
+    "1",
+  })
+  local working_agent = herdr.get_agent(label)
+  if not working or not working_agent or working_agent.agent_status ~= "working" then
+    fail("Herdr did not report the live agent as working: " .. vim.inspect(working_agent))
+  end
+
+  herdr.call({
+    "pane",
+    "report-agent",
+    session.herdr_pane_id,
+    "--source",
+    "sidekick-verify",
+    "--agent",
+    "pi",
+    "--state",
+    "idle",
+    "--seq",
+    "2",
+  })
+  local settled_agent = herdr.get_agent(label)
+  if not settled_agent or (settled_agent.agent_status ~= "idle" and settled_agent.agent_status ~= "done") then
+    fail("Herdr did not settle the live agent after working: " .. vim.inspect(settled_agent))
+  end
+
+  if not herdr.close(session.herdr_pane_id) then
+    fail("Herdr pane close failed")
+  end
+  if herdr.get_agent(label) ~= nil then
+    fail("closed Herdr agent is still discoverable")
+  end
 end
 
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
   ["sidekick-pi"] = validate_sidekick_pi,
-  ["sidekick-pi-tmux"] = validate_sidekick_pi_tmux,
   ["sidekick-herdr"] = validate_sidekick_herdr,
+  ["sidekick-herdr-live"] = validate_sidekick_herdr_live,
 }
 
 local fn = cases[case]
 if not fn then
-  fail("unknown VERIFY_NVIM_CASE " .. vim.inspect(case) .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr")
+  fail(
+    "unknown VERIFY_NVIM_CASE "
+      .. vim.inspect(case)
+      .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr, sidekick-herdr-live"
+  )
 end
 
 local ok, err = xpcall(fn, debug.traceback)

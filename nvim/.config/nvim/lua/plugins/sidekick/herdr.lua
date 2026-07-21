@@ -29,6 +29,9 @@ function M.call(args, quiet)
     end
     return nil, err
   end
+  if not result.stdout or result.stdout:match("^%s*$") then
+    return {}
+  end
   local ok, decoded = pcall(vim.json.decode, result.stdout or "")
   if not ok or type(decoded) ~= "table" or type(decoded.result) ~= "table" then
     local err = "invalid Herdr JSON response"

@@ -141,20 +141,8 @@ local function infer_terminal_branding(terminal)
   local tool_name = terminal.tool and terminal.tool.name or nil
   local tool = M.tool_of(tool_name)
   local session_name = tool_name or "sidekick"
-  local branch = nil
-  local sid = terminal.tmux_session_id or (terminal.session and terminal.session.tmux_session_id)
-  if not sid and tool_name then
-    local ok, internal_mod = pcall(require, "plugins.sidekick.internal")
-    if ok and internal_mod.find_tmux_session_id then
-      sid = internal_mod.find_tmux_session_id(tool_name)
-    end
-  end
-  if sid then
-    local ok, branch_mod = pcall(require, "plugins.sidekick.branch")
-    if ok then
-      branch = branch_mod.read_session(sid)
-    end
-  end
+  local cwd = require("plugins.sidekick.starship").cwd_for_terminal(terminal)
+  local branch = require("plugins.sidekick.branch").current(cwd)
   return tool, session_name, branch
 end
 

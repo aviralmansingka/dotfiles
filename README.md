@@ -8,6 +8,7 @@ Development environment configuration for macOS and AWS devbox (Ubuntu), managed
 - **neovim** - LazyVim distribution with AI coding assistance
 - **aerospace** - Tiling window manager for macOS
 - **starship** - Cross-shell prompt
+- **herdr** - Agent-aware terminal multiplexer used by Neovim Sidekick
 
 ## Setup
 
@@ -25,7 +26,7 @@ For manual installation:
 
 ```sh
 brew bundle
-stow nvim tmux zsh ghostty git starship agents pi launchd
+stow nvim tmux zsh ghostty git starship agents pi herdr launchd
 ```
 
 On Linux (systemd) systems, deploy the user services with:
@@ -76,6 +77,7 @@ terraform -chdir=ops/devbox destroy \
 | `claude` | Claude AI context files |
 | `code` | Code snippets (Golang, Lua) |
 | `ghostty` | Ghostty terminal emulator |
+| `herdr` | Agent workspaces, notifications, and sound configuration |
 | `git` | Git configuration |
 | `kube` | Kubernetes configuration |
 | `launchd` | macOS user LaunchAgents (vault and dotfiles auto-sync) |

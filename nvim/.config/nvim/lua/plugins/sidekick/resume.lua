@@ -171,7 +171,7 @@ local function relative_time(secs)
 end
 
 ---@param item { id, name, preview, mtime, path }
----@return string The label used as the sidekick tool key + tmux session prefix
+---@return string The label used as the Sidekick tool key + Herdr agent name
 local function label_for(item)
   if item.name and item.name ~= "" then
     local slug = internal.normalize_label(item.name)

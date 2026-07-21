@@ -31,37 +31,44 @@ fi
 
 cd "$repo_root"
 
-if [[ "$case_name" == "sidekick-pi-tmux" ]]; then
-  if ! command -v tmux >/dev/null 2>&1; then
-    echo "verify-nvim: tmux is required for sidekick-pi-tmux" >&2
+if [[ "$case_name" == "sidekick-herdr-live" ]]; then
+  if ! command -v herdr >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    echo "verify-nvim: herdr and jq are required for sidekick-herdr-live" >&2
     exit 127
+  fi
+  if ! herdr status server >/dev/null 2>&1; then
+    echo "verify-nvim: a running Herdr server is required for sidekick-herdr-live" >&2
+    exit 1
+  fi
+  if [[ ! -f "$HOME/.config/herdr/config.toml" ]] \
+    || ! grep -q '^delivery = "system"$' "$HOME/.config/herdr/config.toml" \
+    || ! grep -q '^enabled = true$' "$HOME/.config/herdr/config.toml"; then
+    echo "verify-nvim: Herdr system notifications and sound must be enabled" >&2
+    exit 1
+  fi
+  integration_status="$(herdr integration status)"
+  if ! grep -q '^pi: current ' <<<"$integration_status" \
+    || ! grep -q '^codex: current ' <<<"$integration_status"; then
+    echo "verify-nvim: current Pi and Codex Herdr integrations are required" >&2
+    exit 1
   fi
 
   suffix="$(printf '%x' "$$")"
-  slug="verify-${suffix}"
-  session_name="pi-${slug} ${suffix}"
-  label="pi-${slug}"
-  sentinel="PI_VERIFY_SENTINEL_${suffix}"
-  branch="$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
-  if [[ -z "$branch" || "$branch" == "HEAD" ]]; then
-    branch="verify-branch"
-  fi
+  label="pi-verify-${suffix}"
+  sentinel="HERDR_VERIFY_SENTINEL_${suffix}"
 
   cleanup() {
-    tmux kill-session -t "$session_name" >/dev/null 2>&1 || true
+    pane_id="$(herdr agent list 2>/dev/null | jq -r --arg name "$label" '.result.agents[]? | select(.name == $name) | .pane_id' | head -n 1)"
+    if [[ -n "$pane_id" ]]; then
+      herdr pane close "$pane_id" >/dev/null 2>&1 || true
+    fi
   }
   trap cleanup EXIT
   cleanup
 
-  tmux new-session -d -s "$session_name" -c "$repo_root" \
-    "printf '%s\\n' '$sentinel'; exec sleep 300"
-  session_id="$(tmux display-message -p -t "$session_name" '#{session_id}')"
-  tmux set-environment -t "$session_id" SIDEKICK_BRANCH "$branch"
-
   VERIFY_NVIM_CASE="$case_name" \
-  VERIFY_NVIM_TMUX_LABEL="$label" \
-  VERIFY_NVIM_TMUX_BRANCH="$branch" \
-  VERIFY_NVIM_TMUX_SENTINEL="$sentinel" \
+  VERIFY_NVIM_HERDR_LABEL="$label" \
+  VERIFY_NVIM_HERDR_SENTINEL="$sentinel" \
     "$nvim_bin" --headless '+luafile scripts/verify-nvim.lua' '+qa'
   exit $?
 fi
