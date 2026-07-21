@@ -33,7 +33,7 @@ return {
         },
       },
       mux = {
-        backend = "tmux",
+        backend = "herdr",
         enabled = true,
       },
       tools = {
@@ -46,7 +46,7 @@ return {
     },
   },
   config = function(_, opts)
-    require("plugins.sidekick.tmux_tool_match").apply()
+    require("plugins.sidekick.herdr_backend").apply()
     require("sidekick").setup(opts)
     require("plugins.sidekick.select_patch").apply()
     require("plugins.sidekick.registry").rehydrate()

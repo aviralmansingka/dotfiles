@@ -3,6 +3,7 @@ local internal = require("plugins.sidekick.internal")
 local registry = require("plugins.sidekick.registry")
 local branch_mod = require("plugins.sidekick.branch")
 local branding = require("plugins.sidekick.branding")
+local herdr = require("plugins.sidekick.herdr")
 
 local M = {}
 
@@ -15,15 +16,18 @@ function M.list_items()
     if cwd_display:sub(1, #home) == home then
       cwd_display = "~" .. cwd_display:sub(#home + 1)
     end
-    local branch = branch_mod.read_session(entry.session_id)
+    local branch = branch_mod.current(entry.cwd)
     local label_col = branch and string.format("%s · %s %s", label, branding.branch_glyph, branch) or label
     items[#items + 1] = {
-      text = string.format("%s  %s %s", label_col, branding.dir_glyph, cwd_display),
+      text = string.format("%s  [%s]  %s %s", label_col, entry.status, branding.dir_glyph, cwd_display),
       label = label,
       tool = entry.tool,
       slug = entry.slug,
       pane_id = entry.pane_id,
-      session_id = entry.session_id,
+      workspace_id = entry.workspace_id,
+      terminal_id = entry.terminal_id,
+      agent_name = entry.agent_name,
+      status = entry.status,
       cwd = entry.cwd,
       branch = branch,
     }
@@ -40,43 +44,11 @@ end
 ---@param item table
 ---@return string[]
 local function preview_lines(item)
-  if not item or not item.pane_id then
-    return { "(no pane)" }
+  if not item or not item.agent_name then
+    return { "(no agent)" }
   end
-  local out = vim.fn.systemlist({
-    "tmux",
-    "capture-pane",
-    "-p",
-    "-S",
-    "-200",
-    "-E",
-    "-",
-    "-t",
-    item.pane_id,
-  })
-  if vim.v.shell_error ~= 0 then
-    return { "(capture-pane failed)" }
-  end
-  return out
-end
-
----@param session_id string
-local function kill_session(session_id)
-  if not session_id or session_id == "" then
-    return false
-  end
-  local out = vim.fn.systemlist({ "tmux", "kill-session", "-t", session_id })
-  -- Treat "session not found" as success — the session already went away.
-  if vim.v.shell_error == 0 then
-    return true
-  end
-  for _, line in ipairs(out) do
-    if line:match("can't find session") or line:match("no such session") then
-      return true
-    end
-  end
-  vim.notify("Sidekick: tmux kill-session failed: " .. table.concat(out, " "), vim.log.levels.WARN)
-  return false
+  local text = herdr.read(item.agent_name, "recent", 200)
+  return text and vim.split(text, "\n", { plain = true }) or { "(agent read failed)" }
 end
 
 function M.open()
@@ -118,10 +90,10 @@ function M.open()
     },
     actions = {
       sidekick_kill_session = function(picker, item)
-        if not item or not item.session_id then
+        if not item or not item.pane_id then
           return
         end
-        if kill_session(item.session_id) then
+        if herdr.close(item.pane_id) then
           picker:close()
           vim.schedule(function()
             M.open()

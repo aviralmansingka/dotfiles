@@ -1,6 +1,7 @@
 -- nvim/.config/nvim/lua/plugins/sidekick/search.lua
 local internal = require("plugins.sidekick.internal")
 local registry = require("plugins.sidekick.registry")
+local herdr = require("plugins.sidekick.herdr")
 
 local M = {}
 
@@ -10,7 +11,7 @@ local function tmpdir()
   return string.format("/tmp/sidekick-search-%d", pid)
 end
 
---- Capture every named-session pane to <tmpdir>/<label>.txt.
+--- Capture every named-session agent to <tmpdir>/<label>.txt.
 --- Wipes the directory first so each invocation starts clean.
 ---@return string dir, integer captured count
 function M.snapshot()
@@ -19,20 +20,10 @@ function M.snapshot()
   vim.fn.mkdir(dir, "p")
   local count = 0
   for label, entry in pairs(registry.discover()) do
-    local out = vim.fn.systemlist({
-      "tmux",
-      "capture-pane",
-      "-p",
-      "-S",
-      "-",
-      "-E",
-      "-",
-      "-t",
-      entry.pane_id,
-    })
-    if vim.v.shell_error == 0 then
+    local text = herdr.read(entry.agent_name, "recent", 1000)
+    if text then
       local path = string.format("%s/%s.txt", dir, label)
-      vim.fn.writefile(out, path)
+      vim.fn.writefile(vim.split(text, "\n", { plain = true }), path)
       count = count + 1
     end
   end

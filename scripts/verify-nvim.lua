@@ -221,16 +221,102 @@ local function validate_sidekick_pi_tmux()
   require("plugins.sidekick.search").cleanup()
 end
 
+local function validate_sidekick_herdr()
+  load_plugin("sidekick.nvim")
+
+  local config = require("sidekick.config")
+  if config.cli.mux.backend ~= "herdr" then
+    fail("Sidekick mux backend should be herdr; got " .. vim.inspect(config.cli.mux.backend))
+  end
+
+  local herdr = require("plugins.sidekick.herdr")
+  local backend = require("plugins.sidekick.herdr_backend")
+  local cwd = vim.fn.getcwd()
+  local base_name = herdr.agent_name("codex", cwd)
+  if not base_name:match("^sk%-codex%-%x+$") or #base_name > 32 then
+    fail("base Herdr agent name should be stable and valid; got " .. vim.inspect(base_name))
+  end
+  if herdr.agent_name("codex-review", cwd) ~= "codex-review" then
+    fail("named Sidekick tools should keep their label as the Herdr agent name")
+  end
+
+  local expected_methods = { "sessions", "start", "attach", "send", "submit", "dump", "is_running" }
+  for _, method in ipairs(expected_methods) do
+    if type(backend[method]) ~= "function" then
+      fail("Herdr backend missing method " .. method)
+    end
+  end
+
+  local Session = require("sidekick.cli.session")
+  Session.setup()
+  if Session.backends.herdr ~= backend then
+    fail("Herdr backend was not registered with Sidekick")
+  end
+
+  local original_list_agents = herdr.list_agents
+  herdr.list_agents = function()
+    return {
+      {
+        name = "sk-codex-deadbeef",
+        agent = "codex",
+        agent_status = "working",
+        cwd = cwd,
+        pane_id = "w1:p1",
+        terminal_id = "term-base",
+        workspace_id = "w1",
+      },
+      {
+        name = "pi-review",
+        agent = "pi",
+        agent_status = "blocked",
+        foreground_cwd = cwd,
+        pane_id = "w1:p2",
+        terminal_id = "term-named",
+        workspace_id = "w1",
+      },
+    }
+  end
+
+  local registry = require("plugins.sidekick.registry")
+  local discovered = registry.discover()
+  if discovered["sk-codex-deadbeef"] then
+    fail("base Herdr sessions must not appear as named sessions")
+  end
+  local entry = discovered["pi-review"]
+  if not entry or entry.tool ~= "pi" or entry.status ~= "blocked" then
+    fail("named Herdr session discovery mismatch: " .. vim.inspect(discovered))
+  end
+  if entry.cwd ~= cwd or entry.pane_id ~= "w1:p2" or entry.workspace_id ~= "w1" then
+    fail("named Herdr session identifiers mismatch: " .. vim.inspect(entry))
+  end
+
+  local local_items = require("plugins.sidekick.cwd_picker").list_items()
+  if #local_items ~= 1 or local_items[1].label ~= "pi-review" or local_items[1].status ~= "blocked" then
+    fail("cwd picker should expose Herdr status: " .. vim.inspect(local_items))
+  end
+  local global_items = require("plugins.sidekick.picker").list_items()
+  if #global_items ~= 1 or global_items[1].label ~= "pi-review" or global_items[1].status ~= "blocked" then
+    fail("global picker should expose Herdr status: " .. vim.inspect(global_items))
+  end
+  herdr.list_agents = original_list_agents
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-pi-tmux"] = validate_sidekick_pi_tmux,
+  ["sidekick-herdr"] = validate_sidekick_herdr,
 }
 
 local fn = cases[case]
 if not fn then
-  fail("unknown VERIFY_NVIM_CASE " .. vim.inspect(case) .. "; expected one of: agent-keymaps, sidekick-pi")
+  fail("unknown VERIFY_NVIM_CASE " .. vim.inspect(case) .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr")
 end
 
-fn()
+local ok, err = xpcall(fn, debug.traceback)
+if not ok then
+  io.stderr:write(err .. "\n")
+  vim.cmd("cquit 1")
+  return
+end
 print("PASS verify-nvim " .. case)

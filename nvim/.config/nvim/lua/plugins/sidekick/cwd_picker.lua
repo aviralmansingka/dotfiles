@@ -4,6 +4,7 @@
 local internal = require("plugins.sidekick.internal")
 local registry = require("plugins.sidekick.registry")
 local branding = require("plugins.sidekick.branding")
+local herdr = require("plugins.sidekick.herdr")
 
 local M = {}
 
@@ -32,34 +33,12 @@ local function in_cwd_subtree(entry_cwd, root)
   return n:sub(1, #root + 1) == root .. "/" or root:sub(1, #n + 1) == n .. "/"
 end
 
----@param item table|nil
----@return string[]|nil cmd  capture-pane command, or nil if no pane
-local function preview_cmd(item)
-  if not item or item._empty or not item.pane_id then
-    return nil
+local function preview_lines(item)
+  if not item or item._empty or not item.agent_name then
+    return { "(no session)" }
   end
-  -- No -S/-E: capture only the currently visible region (the tail of the
-  -- shell). -e preserves ANSI escapes so the preview renders in color.
-  return { "tmux", "capture-pane", "-p", "-e", "-t", item.pane_id }
-end
-
----@param session_id string|nil
----@return boolean
-local function kill_session(session_id)
-  if not session_id or session_id == "" then
-    return false
-  end
-  local out = vim.fn.systemlist({ "tmux", "kill-session", "-t", session_id })
-  if vim.v.shell_error == 0 then
-    return true
-  end
-  for _, line in ipairs(out) do
-    if line:match("can't find session") or line:match("no such session") then
-      return true
-    end
-  end
-  vim.notify("Sidekick: tmux kill-session failed: " .. table.concat(out, " "), vim.log.levels.WARN)
-  return false
+  local text = herdr.read(item.agent_name, "visible")
+  return text and vim.split(text, "\n", { plain = true }) or { "(agent read failed)" }
 end
 
 ---@return snacks.picker.finder.Item[]
@@ -74,12 +53,15 @@ function M.list_items()
         cwd_display = "~" .. cwd_display:sub(#home + 1)
       end
       items[#items + 1] = {
-        text = string.format("[%s] %s  %s", entry.tool, label, cwd_display),
+        text = string.format("[%s] %s  [%s]  %s", entry.tool, label, entry.status, cwd_display),
         label = label,
         tool = entry.tool,
         slug = entry.slug,
         pane_id = entry.pane_id,
-        session_id = entry.session_id,
+        workspace_id = entry.workspace_id,
+        terminal_id = entry.terminal_id,
+        agent_name = entry.agent_name,
+        status = entry.status,
         cwd = entry.cwd,
         cwd_display = cwd_display,
       }
@@ -126,6 +108,8 @@ function M.open()
       { " " },
       { item.label or "", hl.title },
       { "  " },
+      { "[" .. (item.status or "unknown") .. "]", "Comment" },
+      { "  " },
       { item.cwd_display or "", "Directory" },
     }
   end
@@ -149,13 +133,9 @@ function M.open()
       },
     },
     preview = function(ctx)
-      local cmd = preview_cmd(ctx.item)
-      if not cmd then
-        local buf = ctx.preview:scratch()
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "(no session)" })
-        return true
-      end
-      return Snacks.picker.preview.cmd(cmd, ctx)
+      local buf = ctx.preview:scratch()
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, preview_lines(ctx.item))
+      return true
     end,
     confirm = function(picker, item)
       picker:close()
@@ -186,10 +166,10 @@ function M.open()
     },
     actions = {
       sidekick_kill_session = function(picker, item)
-        if not item or item._empty or not item.session_id then
+        if not item or item._empty or not item.pane_id then
           return
         end
-        if kill_session(item.session_id) then
+        if herdr.close(item.pane_id) then
           picker:close()
           vim.schedule(function()
             M.open()
