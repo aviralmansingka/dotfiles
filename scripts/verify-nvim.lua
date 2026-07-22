@@ -294,16 +294,14 @@ local function validate_sidekick_herdr()
       fail("cwd picker did not open Snacks picker")
     end
     local layout = picker_opts.layout.layout
-    local left, preview = layout[1], layout[2]
-    if layout.box ~= "horizontal"
-      or left.box ~= "vertical"
-      or left[1].win ~= "input"
-      or left[1].height ~= 1
-      or left[2].win ~= "list"
-      or left[2].height ~= nil
-      or preview.win ~= "preview"
+    if layout.box ~= "vertical"
+      or layout[1].win ~= "preview"
+      or layout[2].win ~= "list"
+      or layout[2].height ~= 5
+      or layout[3].win ~= "input"
+      or layout[3].height ~= 1
     then
-      fail("cwd picker should put a one-row input and full session list left of the preview")
+      fail("cwd picker should give the preview the full picker width above the compact session list")
     end
     if not picker_opts.win.preview.wo.wrap or not picker_opts.win.preview.wo.linebreak then
       fail("cwd picker preview should wrap unwrapped logical lines")

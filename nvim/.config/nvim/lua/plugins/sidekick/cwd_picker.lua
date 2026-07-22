@@ -133,17 +133,14 @@ function M.open()
     layout = {
       preset = "default",
       layout = {
-        box = "horizontal",
+        box = "vertical",
         width = 0.8,
         height = 0.8,
         border = "none",
         backdrop = false,
-        {
-          box = "vertical",
-          { win = "input", height = 1, border = "rounded" },
-          { win = "list", border = "rounded" },
-        },
-        { win = "preview", width = 0.5, border = "rounded" },
+        { win = "preview", border = "rounded" },
+        { win = "list", height = 5, border = "rounded" },
+        { win = "input", height = 1, border = "rounded" },
       },
     },
     preview = function(ctx)
