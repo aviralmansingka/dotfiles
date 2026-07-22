@@ -275,7 +275,7 @@ local function validate_sidekick_herdr()
   local original_toggle = internal.toggle_tool_session
   local picker_opts
   local read_args
-  local read_result = "first logical line\nsecond logical line"
+  local read_result = "\27[31mfirst logical line\27[0m\r\nsecond logical line"
   local toggles = {}
   Snacks.picker.pick = function(opts)
     picker_opts = opts
@@ -293,8 +293,17 @@ local function validate_sidekick_herdr()
     if not picker_opts then
       fail("cwd picker did not open Snacks picker")
     end
-    if picker_opts.layout.layout[3].height ~= 1 then
-      fail("cwd picker input should be exactly one row high")
+    local layout = picker_opts.layout.layout
+    local left, preview = layout[1], layout[2]
+    if layout.box ~= "horizontal"
+      or left.box ~= "vertical"
+      or left[1].win ~= "input"
+      or left[1].height ~= 1
+      or left[2].win ~= "list"
+      or left[2].height ~= nil
+      or preview.win ~= "preview"
+    then
+      fail("cwd picker should put a one-row input and full session list left of the preview")
     end
     if not picker_opts.win.preview.wo.wrap or not picker_opts.win.preview.wo.linebreak then
       fail("cwd picker preview should wrap unwrapped logical lines")
@@ -329,20 +338,28 @@ local function validate_sidekick_herdr()
       or read_args.target ~= "pi-done"
       or read_args.source ~= "recent-unwrapped"
       or read_args.lines ~= 120
-      or read_args.ansi
+      or read_args.ansi ~= true
     then
-      fail("cwd picker should request bounded unwrapped text: " .. vim.inspect(read_args))
+      fail("cwd picker should request bounded unwrapped ANSI text: " .. vim.inspect(read_args))
+    end
+    if vim.bo[buf].buftype ~= "terminal" then
+      fail("cwd picker should render Herdr ANSI through a native terminal buffer")
+    end
+    local rendered_preview = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
+    if rendered_preview:find("\27", 1, true) or not rendered_preview:find("first logical line", 1, true) then
+      fail("native preview should interpret ANSI instead of showing escape codes: " .. vim.inspect(rendered_preview))
     end
     if #toggles ~= 0 then
       fail("previewing a done session must not focus it")
     end
 
     read_result = nil
+    local failed_buf = vim.api.nvim_create_buf(false, true)
     picker_opts.preview({
       item = done_item,
-      preview = { scratch = function() return buf end },
+      preview = { scratch = function() return failed_buf end },
     })
-    local failed_preview = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local failed_preview = vim.api.nvim_buf_get_lines(failed_buf, 0, -1, false)
     if failed_preview[1] ~= "(agent read failed)" then
       fail("failed Herdr read should leave a readable preview error: " .. vim.inspect(failed_preview))
     end

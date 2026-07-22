@@ -40,12 +40,11 @@ local function in_cwd_subtree(entry_cwd, root)
   return n:sub(1, #root + 1) == root .. "/" or root:sub(1, #n + 1) == n .. "/"
 end
 
-local function preview_lines(item)
+local function preview_text(item)
   if not item or item._empty or not item.agent_name then
-    return { "(no session)" }
+    return nil, "(no session)"
   end
-  local text = herdr.read(item.agent_name, "recent-unwrapped", 120)
-  return text and vim.split(text, "\n", { plain = true }) or { "(agent read failed)" }
+  return herdr.read(item.agent_name, "recent-unwrapped", 120, true), "(agent read failed)"
 end
 
 ---@return snacks.picker.finder.Item[]
@@ -134,19 +133,27 @@ function M.open()
     layout = {
       preset = "default",
       layout = {
-        box = "vertical",
+        box = "horizontal",
         width = 0.8,
         height = 0.8,
         border = "none",
         backdrop = false,
-        { win = "preview", border = "rounded" },
-        { win = "list", height = 5, border = "rounded" },
-        { win = "input", height = 1, border = "rounded" },
+        {
+          box = "vertical",
+          { win = "input", height = 1, border = "rounded" },
+          { win = "list", border = "rounded" },
+        },
+        { win = "preview", width = 0.5, border = "rounded" },
       },
     },
     preview = function(ctx)
       local buf = ctx.preview:scratch()
-      vim.api.nvim_buf_set_lines(buf, 0, -1, false, preview_lines(ctx.item))
+      local output, err = preview_text(ctx.item)
+      if output then
+        vim.api.nvim_chan_send(vim.api.nvim_open_term(buf, {}), output)
+      else
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { err })
+      end
       return true
     end,
     confirm = function(picker, item)
