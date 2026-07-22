@@ -1,0 +1,14 @@
+[Unit]
+Description=Pi speech-to-text worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/pi-stt/.venv/bin/python %h/bin/pi-stt-worker.py
+Restart=always
+RestartSec=5
+EnvironmentFile=%h/.config/pi-stt-worker.env
+
+[Install]
+WantedBy=default.target
