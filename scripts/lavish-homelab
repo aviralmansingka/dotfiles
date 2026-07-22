@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly REMOTE_HOST="homelab"
+readonly REMOTE_HOST="avirus@homelab.tail1b3b66.ts.net"
 readonly REMOTE_HOME="/home/avirus"
 readonly REMOTE_ROOT="${REMOTE_HOME}/.local/share/lavish/artifacts"
 readonly REMOTE_BIN="${REMOTE_HOME}/.local/bin/lavish-axi"
