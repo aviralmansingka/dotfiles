@@ -60,7 +60,7 @@ function M.list_items()
         cwd_display = "~" .. cwd_display:sub(#home + 1)
       end
       items[#items + 1] = {
-        text = string.format("[%s] %s  [%s]  %s", entry.tool, label, entry.status, cwd_display),
+        text = string.format("%s  [%s]  %s", label, entry.status, cwd_display),
         label = label,
         tool = entry.tool,
         slug = entry.slug,
@@ -118,8 +118,6 @@ function M.open()
     local status = status_display[item.status] or { "?", "Comment" }
     return {
       { status[1] .. " ", status[2] },
-      { string.format("[%s]", item.tool or "?"), hl.title },
-      { " " },
       { item.label or "", hl.title },
       { "  " },
       { "[" .. (item.status or "unknown") .. "]", "Comment" },
@@ -143,7 +141,7 @@ function M.open()
         backdrop = false,
         { win = "preview", border = "rounded" },
         { win = "list", height = 5, border = "rounded" },
-        { win = "input", height = 3, border = "rounded" },
+        { win = "input", height = 1, border = "rounded" },
       },
     },
     preview = function(ctx)

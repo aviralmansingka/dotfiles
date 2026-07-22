@@ -1,6 +1,6 @@
 -- nvim/.config/nvim/lua/plugins/sidekick/last_session.lua
--- Tracks the most recently picker-selected session label so <C-.> can jump
--- straight back to it. Recorded by picker confirms; direct tool-toggle keymaps
+-- Tracks the most recently created or picker-selected named session so <C-.>
+-- can jump straight back to it. Direct tool-toggle keymaps
 -- (<leader>ag/<leader>ai) intentionally do NOT update this.
 local M = {}
 
@@ -14,7 +14,7 @@ function M.record(label)
   end
 end
 
---- Open the last picker-selected session. With no record yet, fall back to
+--- Open the last active named session. With no record yet, fall back to
 --- the cwd-scoped named-session picker so the keymap stays local by default.
 function M.open()
   if not M.label or M.label == "" then

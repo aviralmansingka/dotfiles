@@ -253,6 +253,7 @@ function M.start_named_session(tool, label, cwd)
   config.cli.tools[name] =
     M.merged_tool_config(tool, M.make_tool(command, M.normalize_cwd(cwd), M.tool_urls[tool], extra))
   M.toggle_tool_session(name, true)
+  require("plugins.sidekick.last_session").record(name)
 end
 
 function M.prompt_named_session(tool)

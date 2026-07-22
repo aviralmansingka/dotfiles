@@ -133,6 +133,27 @@ local function validate_sidekick_pi()
     fail("named Pi command should include --name test-session; got " .. vim.inspect(named))
   end
 
+  local original_toggle = internal.toggle_tool_session
+  local toggled
+  internal.toggle_tool_session = function(name, focus)
+    toggled = { name = name, focus = focus }
+  end
+  local last_session = require("plugins.sidekick.last_session")
+  last_session.label = nil
+  internal.start_named_session("codex", "new session", vim.fn.getcwd())
+  if not toggled or toggled.name ~= "codex-new-session" or toggled.focus ~= true then
+    fail("new named session should open immediately: " .. vim.inspect(toggled))
+  end
+  if last_session.label ~= "codex-new-session" then
+    fail("new named session should become the last active session; got " .. vim.inspect(last_session.label))
+  end
+  toggled = nil
+  last_session.open()
+  internal.toggle_tool_session = original_toggle
+  if not toggled or toggled.name ~= "codex-new-session" or toggled.focus ~= true then
+    fail("<c-.> should reopen the newly created named session: " .. vim.inspect(toggled))
+  end
+
   local registry = require("plugins.sidekick.registry")
   local parsed = registry.parse_session_name("pi-test-session abc123")
   if not parsed or parsed.tool ~= "pi" or parsed.slug ~= "test-session" then
@@ -272,6 +293,9 @@ local function validate_sidekick_herdr()
     if not picker_opts then
       fail("cwd picker did not open Snacks picker")
     end
+    if picker_opts.layout.layout[3].height ~= 1 then
+      fail("cwd picker input should be exactly one row high")
+    end
     if not picker_opts.win.preview.wo.wrap or not picker_opts.win.preview.wo.linebreak then
       fail("cwd picker preview should wrap unwrapped logical lines")
     end
@@ -323,9 +347,18 @@ local function validate_sidekick_herdr()
       fail("failed Herdr read should leave a readable preview error: " .. vim.inspect(failed_preview))
     end
 
+    local last_session = require("plugins.sidekick.last_session")
+    last_session.label = nil
     picker_opts.confirm({ close = function() end }, done_item)
     if #toggles ~= 1 or toggles[1].name ~= "pi-done" or toggles[1].focus ~= true then
       fail("confirm should focus the selected done session exactly once: " .. vim.inspect(toggles))
+    end
+    if last_session.label ~= "pi-done" then
+      fail("confirm should keep the selected session active for <c-.>; got " .. vim.inspect(last_session.label))
+    end
+    last_session.open()
+    if #toggles ~= 2 or toggles[2].name ~= "pi-done" or toggles[2].focus ~= true then
+      fail("<c-.> should reopen the session selected with <leader>al: " .. vim.inspect(toggles))
     end
   end, debug.traceback)
 
