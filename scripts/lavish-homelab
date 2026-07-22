@@ -37,7 +37,9 @@ run_remote_lavish() {
   for arg in "$@"; do
     command+=" $(quote_remote "$arg")"
   done
-  ssh "$REMOTE_HOST" "$command"
+  ssh -n "$REMOTE_HOST" "$command" | sed \
+    -e "s#http://127.0.0.1:4387#${PUBLIC_URL}#g" \
+    -e "s#http://homelab.tail1b3b66.ts.net:4387#${PUBLIC_URL}#g"
 }
 
 [[ $# -ge 1 ]] || usage
@@ -60,7 +62,7 @@ case "$action" in
     fi
     if [[ "$action" != end ]]; then
       remote_dir=$(dirname "$remote_file")
-      ssh "$REMOTE_HOST" "mkdir -p $(quote_remote "$remote_dir")"
+      ssh -n "$REMOTE_HOST" "mkdir -p $(quote_remote "$remote_dir")"
       rsync -az --delete --exclude .git/ "$(dirname "$source_file")/" "${REMOTE_HOST}:${remote_dir}/"
     fi
     if [[ "$action" == open ]]; then
