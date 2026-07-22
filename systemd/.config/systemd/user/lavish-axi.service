@@ -1,0 +1,19 @@
+[Unit]
+Description=Central Lavish review server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=%h/.nvm/versions/node/v22.22.3/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=LAVISH_AXI_HOST=127.0.0.1
+Environment=LAVISH_AXI_PORT=4387
+Environment=LAVISH_AXI_PUBLIC_URL=https://homelab.tail1b3b66.ts.net:8443
+Environment=LAVISH_AXI_NO_OPEN=1
+Environment=LAVISH_AXI_IDLE_TIMEOUT_MS=0
+ExecStart=/usr/bin/env lavish-axi server --port 4387
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

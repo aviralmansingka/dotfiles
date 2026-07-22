@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly REMOTE_HOST="homelab"
+readonly REMOTE_HOME="/home/avirus"
+readonly REMOTE_ROOT="${REMOTE_HOME}/.local/share/lavish/artifacts"
+readonly REMOTE_BIN="${REMOTE_HOME}/.local/bin/lavish-axi"
+readonly REMOTE_PATH="${REMOTE_HOME}/.nvm/versions/node/v22.22.3/bin:${REMOTE_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin"
+readonly PUBLIC_URL="https://homelab.tail1b3b66.ts.net:8443"
+
+usage() {
+  echo "Usage: lavish-homelab [open|poll|end|remote-path] <html-file> [lavish options]" >&2
+  exit 2
+}
+
+resolve_file() {
+  local file=$1
+  [[ -f "$file" ]] || { echo "File not found: $file" >&2; exit 1; }
+  printf '%s/%s\n' "$(cd "$(dirname "$file")" && pwd -P)" "$(basename "$file")"
+}
+
+remote_file_for() {
+  local file=$1 source_dir device digest
+  source_dir=$(dirname "$file")
+  device=$(printf '%s' "$(hostname -s)" | tr -c 'A-Za-z0-9._-' '-')
+  digest=$(printf '%s' "$source_dir" | shasum -a 256 | awk '{print substr($1, 1, 16)}')
+  printf '%s/%s/%s/%s\n' "$REMOTE_ROOT" "$device" "$digest" "$(basename "$file")"
+}
+
+quote_remote() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
+run_remote_lavish() {
+  local command="env PATH=${REMOTE_PATH} LAVISH_AXI_PUBLIC_URL=${PUBLIC_URL} LAVISH_AXI_NO_OPEN=1 ${REMOTE_BIN}"
+  local arg
+  for arg in "$@"; do
+    command+=" $(quote_remote "$arg")"
+  done
+  ssh "$REMOTE_HOST" "$command"
+}
+
+[[ $# -ge 1 ]] || usage
+action=$1
+if [[ "$action" == *.html || "$action" == *.htm ]]; then
+  action=open
+else
+  shift
+fi
+
+case "$action" in
+  open|poll|end|remote-path)
+    [[ $# -ge 1 ]] || usage
+    source_file=$(resolve_file "$1")
+    shift
+    remote_file=$(remote_file_for "$source_file")
+    if [[ "$action" == remote-path ]]; then
+      printf '%s\n' "$remote_file"
+      exit 0
+    fi
+    if [[ "$action" != end ]]; then
+      remote_dir=$(dirname "$remote_file")
+      ssh "$REMOTE_HOST" "mkdir -p $(quote_remote "$remote_dir")"
+      rsync -az --delete --exclude .git/ "$(dirname "$source_file")/" "${REMOTE_HOST}:${remote_dir}/"
+    fi
+    if [[ "$action" == open ]]; then
+      run_remote_lavish open "$remote_file" --no-open "$@"
+    else
+      run_remote_lavish "$action" "$remote_file" "$@"
+    fi
+    ;;
+  *) usage ;;
+esac
