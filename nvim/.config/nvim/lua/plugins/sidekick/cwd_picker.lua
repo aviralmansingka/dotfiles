@@ -7,6 +7,13 @@ local branding = require("plugins.sidekick.branding")
 local herdr = require("plugins.sidekick.herdr")
 
 local M = {}
+local status_rank = { blocked = 1, done = 2, working = 3, idle = 4 }
+local status_display = {
+  blocked = { "!", "DiagnosticError" },
+  done = { "●", "DiagnosticWarn" },
+  working = { "›", "DiagnosticInfo" },
+  idle = { "·", "Comment" },
+}
 
 ---@param p string
 ---@return string
@@ -37,7 +44,7 @@ local function preview_lines(item)
   if not item or item._empty or not item.agent_name then
     return { "(no session)" }
   end
-  local text = herdr.read(item.agent_name, "visible")
+  local text = herdr.read(item.agent_name, "recent-unwrapped", 120)
   return text and vim.split(text, "\n", { plain = true }) or { "(agent read failed)" }
 end
 
@@ -68,6 +75,11 @@ function M.list_items()
     end
   end
   table.sort(items, function(a, b)
+    local ar = status_rank[a.status] or math.huge
+    local br = status_rank[b.status] or math.huge
+    if ar ~= br then
+      return ar < br
+    end
     if a.tool ~= b.tool then
       return internal.compare_agents(a.tool, b.tool)
     end
@@ -103,7 +115,9 @@ function M.open()
       return { { item.text or "", "Comment" } }
     end
     local hl = branding.hl_groups(branding.tool_of(item.tool))
+    local status = status_display[item.status] or { "?", "Comment" }
     return {
+      { status[1] .. " ", status[2] },
       { string.format("[%s]", item.tool or "?"), hl.title },
       { " " },
       { item.label or "", hl.title },

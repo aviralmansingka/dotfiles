@@ -157,6 +157,7 @@ local function validate_sidekick_herdr()
   load_plugin("sidekick.nvim")
 
   local config = require("sidekick.config")
+  local internal = require("plugins.sidekick.internal")
   if config.cli.mux.backend ~= "herdr" then
     fail("Sidekick mux backend should be herdr; got " .. vim.inspect(config.cli.mux.backend))
   end
@@ -186,6 +187,17 @@ local function validate_sidekick_herdr()
   end
 
   local original_list_agents = herdr.list_agents
+  local function named_agent(name, status, index)
+    return {
+      name = name,
+      agent = "pi",
+      agent_status = status,
+      foreground_cwd = cwd,
+      pane_id = "w1:p" .. index,
+      terminal_id = "term-" .. index,
+      workspace_id = "w1",
+    }
+  end
   herdr.list_agents = function()
     return {
       {
@@ -197,15 +209,10 @@ local function validate_sidekick_herdr()
         terminal_id = "term-base",
         workspace_id = "w1",
       },
-      {
-        name = "pi-review",
-        agent = "pi",
-        agent_status = "blocked",
-        foreground_cwd = cwd,
-        pane_id = "w1:p2",
-        terminal_id = "term-named",
-        workspace_id = "w1",
-      },
+      named_agent("pi-idle", "idle", 2),
+      named_agent("pi-working", "working", 3),
+      named_agent("pi-done", "done", 4),
+      named_agent("pi-blocked", "blocked", 5),
     }
   end
 
@@ -214,21 +221,116 @@ local function validate_sidekick_herdr()
   if discovered["sk-codex-deadbeef"] then
     fail("base Herdr sessions must not appear as named sessions")
   end
-  local entry = discovered["pi-review"]
+  local entry = discovered["pi-blocked"]
   if not entry or entry.tool ~= "pi" or entry.status ~= "blocked" then
     fail("named Herdr session discovery mismatch: " .. vim.inspect(discovered))
   end
-  if entry.cwd ~= cwd or entry.pane_id ~= "w1:p2" or entry.workspace_id ~= "w1" then
+  if entry.cwd ~= cwd or entry.pane_id ~= "w1:p5" or entry.workspace_id ~= "w1" then
     fail("named Herdr session identifiers mismatch: " .. vim.inspect(entry))
   end
 
-  local local_items = require("plugins.sidekick.cwd_picker").list_items()
-  if #local_items ~= 1 or local_items[1].label ~= "pi-review" or local_items[1].status ~= "blocked" then
-    fail("cwd picker should expose Herdr status: " .. vim.inspect(local_items))
+  local cwd_picker = require("plugins.sidekick.cwd_picker")
+  local local_items = cwd_picker.list_items()
+  local ordered_statuses = {}
+  for _, item in ipairs(local_items) do
+    ordered_statuses[#ordered_statuses + 1] = item.status
   end
+  assert_sequence(ordered_statuses, { "blocked", "done", "working", "idle" }, "cwd picker Herdr status order")
+
   local global_items = require("plugins.sidekick.picker").list_items()
-  if #global_items ~= 1 or global_items[1].label ~= "pi-review" or global_items[1].status ~= "blocked" then
+  local global_blocked
+  for _, item in ipairs(global_items) do
+    if item.label == "pi-blocked" then
+      global_blocked = item
+      break
+    end
+  end
+  if not global_blocked or global_blocked.status ~= "blocked" then
     fail("global picker should expose Herdr status: " .. vim.inspect(global_items))
+  end
+
+  local original_pick = Snacks.picker.pick
+  local original_read = herdr.read
+  local original_toggle = internal.toggle_tool_session
+  local picker_opts
+  local read_args
+  local read_result = "first logical line\nsecond logical line"
+  local toggles = {}
+  Snacks.picker.pick = function(opts)
+    picker_opts = opts
+  end
+  herdr.read = function(target, source, lines, ansi)
+    read_args = { target = target, source = source, lines = lines, ansi = ansi }
+    return read_result
+  end
+  internal.toggle_tool_session = function(name, focus)
+    toggles[#toggles + 1] = { name = name, focus = focus }
+  end
+
+  local picker_ok, picker_err = xpcall(function()
+    cwd_picker.open()
+    if not picker_opts then
+      fail("cwd picker did not open Snacks picker")
+    end
+
+    local markers = { blocked = "!", done = "●", working = "›", idle = "·" }
+    for _, item in ipairs(picker_opts.items) do
+      local chunks = picker_opts.format(item)
+      local parts = {}
+      for _, chunk in ipairs(chunks) do
+        parts[#parts + 1] = chunk[1]
+      end
+      local rendered = table.concat(parts)
+      if not rendered:find(markers[item.status], 1, true) or not rendered:find(item.status, 1, true) then
+        fail("cwd picker row should expose Herdr marker and status: " .. vim.inspect(rendered))
+      end
+    end
+
+    local done_item
+    for _, item in ipairs(picker_opts.items) do
+      if item.status == "done" then
+        done_item = item
+        break
+      end
+    end
+    local buf = vim.api.nvim_create_buf(false, true)
+    picker_opts.preview({
+      item = done_item,
+      preview = { scratch = function() return buf end },
+    })
+    if not read_args
+      or read_args.target ~= "pi-done"
+      or read_args.source ~= "recent-unwrapped"
+      or read_args.lines ~= 120
+      or read_args.ansi
+    then
+      fail("cwd picker should request bounded unwrapped text: " .. vim.inspect(read_args))
+    end
+    if #toggles ~= 0 then
+      fail("previewing a done session must not focus it")
+    end
+
+    read_result = nil
+    picker_opts.preview({
+      item = done_item,
+      preview = { scratch = function() return buf end },
+    })
+    local failed_preview = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    if failed_preview[1] ~= "(agent read failed)" then
+      fail("failed Herdr read should leave a readable preview error: " .. vim.inspect(failed_preview))
+    end
+
+    picker_opts.confirm({ close = function() end }, done_item)
+    if #toggles ~= 1 or toggles[1].name ~= "pi-done" or toggles[1].focus ~= true then
+      fail("confirm should focus the selected done session exactly once: " .. vim.inspect(toggles))
+    end
+  end, debug.traceback)
+
+  Snacks.picker.pick = original_pick
+  herdr.read = original_read
+  internal.toggle_tool_session = original_toggle
+  if not picker_ok then
+    error(picker_err, 0)
   end
 
   local starship = require("plugins.sidekick.starship")
@@ -285,13 +387,13 @@ local function validate_sidekick_herdr_live()
   session:submit()
   local herdr = require("plugins.sidekick.herdr")
   local echoed = vim.wait(3000, function()
-    return (herdr.read(label, "recent", 50) or ""):find("ECHO:" .. sentinel, 1, true) ~= nil
+    return (herdr.read(label, "recent-unwrapped", 50) or ""):find("ECHO:" .. sentinel, 1, true) ~= nil
   end, 50)
   if not echoed then
     fail("Herdr send/submit output missing sentinel; dump=" .. vim.inspect(session:dump()))
   end
   local dump = session:dump() or ""
-  if not dump:find("ECHO:" .. sentinel, 1, true) then
+  if not dump:gsub("%s", ""):find("ECHO:" .. sentinel, 1, true) then
     fail("Sidekick Herdr dump missing sentinel: " .. vim.inspect(dump))
   end
   if herdr.workspace_for_cwd(vim.fn.getcwd()) ~= session.herdr_workspace_id then
@@ -319,7 +421,7 @@ local function validate_sidekick_herdr_live()
   local snapshot_path = snapshot_dir .. "/" .. label .. ".txt"
   local snapshot = vim.fn.filereadable(snapshot_path) == 1 and table.concat(vim.fn.readfile(snapshot_path), "\n") or ""
   search.cleanup()
-  if snapshot_count < 1 or not snapshot:find(sentinel, 1, true) then
+  if snapshot_count < 1 or not snapshot:gsub("%s", ""):find(sentinel, 1, true) then
     fail("Herdr transcript search snapshot missing sentinel: " .. vim.inspect(snapshot))
   end
 
@@ -354,9 +456,23 @@ local function validate_sidekick_herdr_live()
     "--seq",
     "2",
   })
-  local settled_agent = herdr.get_agent(label)
-  if not settled_agent or (settled_agent.agent_status ~= "idle" and settled_agent.agent_status ~= "done") then
-    fail("Herdr did not settle the live agent after working: " .. vim.inspect(settled_agent))
+  local done = vim.wait(3000, function()
+    local agent = herdr.get_agent(label)
+    return agent and agent.agent_status == "done"
+  end, 50)
+  if not done then
+    fail("Herdr did not report the unfocused completed agent as done: " .. vim.inspect(herdr.get_agent(label)))
+  end
+
+  if not herdr.call({ "agent", "focus", label }) then
+    fail("Herdr agent focus failed")
+  end
+  local seen = vim.wait(3000, function()
+    local agent = herdr.get_agent(label)
+    return agent and agent.agent_status == "idle"
+  end, 50)
+  if not seen then
+    fail("focused done agent did not become idle: " .. vim.inspect(herdr.get_agent(label)))
   end
 
   if not herdr.close(session.herdr_pane_id) then
