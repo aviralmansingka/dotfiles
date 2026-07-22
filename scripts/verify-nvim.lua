@@ -345,6 +345,10 @@ local function validate_sidekick_herdr()
     if vim.bo[buf].buftype ~= "terminal" then
       fail("cwd picker should render Herdr ANSI through a native terminal buffer")
     end
+    vim.wait(1000, function()
+      return table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"):find("first logical line", 1, true)
+        ~= nil
+    end, 10)
     local rendered_preview = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n")
     if rendered_preview:find("\27", 1, true) or not rendered_preview:find("first logical line", 1, true) then
       fail("native preview should interpret ANSI instead of showing escape codes: " .. vim.inspect(rendered_preview))
@@ -517,7 +521,7 @@ local function validate_sidekick_herdr_live()
     fail("Herdr did not report the unfocused completed agent as done: " .. vim.inspect(herdr.get_agent(label)))
   end
 
-  herdr.read(label, "recent-unwrapped", 120)
+  herdr.read(label, "recent-unwrapped", 120, true)
   local previewed_agent = herdr.get_agent(label)
   if not previewed_agent or previewed_agent.agent_status ~= "done" then
     fail("reading a done agent preview should not mark it seen: " .. vim.inspect(previewed_agent))
