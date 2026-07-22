@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+venv=$HOME/.local/share/pi-stt/.venv
+[[ -x $venv/bin/python ]] || {
+  printf 'STT virtual environment is missing: %s\n' "$venv" >&2
+  exit 1
+}
+
+mapfile -t nvidia_library_dirs < <(
+  find "$venv/lib" -type d -path '*/site-packages/nvidia/*/lib' -print | sort
+)
+if ((${#nvidia_library_dirs[@]} == 0)); then
+  printf 'No NVIDIA runtime libraries found under %s\n' "$venv" >&2
+  exit 1
+fi
+
+library_path=$(IFS=:; printf '%s' "${nvidia_library_dirs[*]}")
+export LD_LIBRARY_PATH=$library_path${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+exec "$venv/bin/python" "$HOME/bin/pi-stt-worker.py"
+

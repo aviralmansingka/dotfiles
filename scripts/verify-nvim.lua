@@ -271,6 +271,7 @@ local function validate_sidekick_herdr()
   end
 
   local original_pick = Snacks.picker.pick
+  local original_spinner = Snacks.util.spinner
   local original_read = herdr.read
   local original_toggle = internal.toggle_tool_session
   local picker_opts
@@ -279,6 +280,9 @@ local function validate_sidekick_herdr()
   local toggles = {}
   Snacks.picker.pick = function(opts)
     picker_opts = opts
+  end
+  Snacks.util.spinner = function()
+    return "S"
   end
   herdr.read = function(target, source, lines, ansi)
     read_args = { target = target, source = source, lines = lines, ansi = ansi }
@@ -307,7 +311,7 @@ local function validate_sidekick_herdr()
       fail("cwd picker preview should wrap unwrapped logical lines")
     end
 
-    local markers = { blocked = "!", done = "●", working = "›", idle = "·" }
+    local markers = { blocked = "!", done = "●", working = "S", idle = "·" }
     for _, item in ipairs(picker_opts.items) do
       local chunks = picker_opts.format(item)
       local parts = {}
@@ -315,9 +319,42 @@ local function validate_sidekick_herdr()
         parts[#parts + 1] = chunk[1]
       end
       local rendered = table.concat(parts)
-      if not rendered:find(markers[item.status], 1, true) or not rendered:find(item.status, 1, true) then
-        fail("cwd picker row should expose Herdr marker and status: " .. vim.inspect(rendered))
+      if not rendered:find(markers[item.status], 1, true) then
+        fail("cwd picker row should expose its Herdr status marker: " .. vim.inspect(rendered))
       end
+      local has_status_text = rendered:find("[" .. item.status .. "]", 1, true) ~= nil
+      if (item.status == "idle" or item.status == "working") and has_status_text then
+        fail("idle and working rows should rely on their symbols: " .. vim.inspect(rendered))
+      end
+      if item.status ~= "idle" and item.status ~= "working" and not has_status_text then
+        fail("blocked and done rows should retain their status text: " .. vim.inspect(rendered))
+      end
+    end
+
+    if type(picker_opts.on_show) ~= "function" or type(picker_opts.on_close) ~= "function" then
+      fail("cwd picker should manage a working-session spinner lifecycle")
+    end
+    local spinner_updates = 0
+    local fake_picker = {
+      closed = false,
+      list = {
+        update = function(_, opts)
+          if not opts or not opts.force then
+            fail("spinner redraw should force the picker list update")
+          end
+          spinner_updates = spinner_updates + 1
+        end,
+      },
+    }
+    picker_opts.on_show(fake_picker)
+    if not vim.wait(500, function() return spinner_updates > 0 end, 10) then
+      fail("working sessions should animate their spinner")
+    end
+    picker_opts.on_close(fake_picker)
+    local stopped_updates = spinner_updates
+    vim.wait(160)
+    if spinner_updates ~= stopped_updates then
+      fail("closing the cwd picker should stop spinner redraws")
     end
 
     local done_item
@@ -355,6 +392,49 @@ local function validate_sidekick_herdr()
       fail("previewing a done session must not focus it")
     end
 
+    read_result = table.concat({
+      "\27[32manswer stays\27[0m",
+      "",
+      "\27[48;2;30;30;30m        \27[0m",
+      "\27[48;2;30;30;30m› Find and fix a bug in @filename\27[0m",
+      "\27[48;2;30;30;30m        \27[0m",
+      "  gpt-5 footer",
+    }, "\r\n")
+    local codex_item = vim.tbl_extend("force", {}, done_item, {
+      tool = "codex",
+      agent_name = "codex-preview",
+    })
+    local codex_buf = vim.api.nvim_create_buf(false, true)
+    picker_opts.preview({
+      item = codex_item,
+      preview = { scratch = function() return codex_buf end },
+    })
+    vim.wait(1000, function()
+      return table.concat(vim.api.nvim_buf_get_lines(codex_buf, 0, -1, false), "\n"):find("answer stays", 1, true)
+        ~= nil
+    end, 10)
+    local codex_preview = table.concat(vim.api.nvim_buf_get_lines(codex_buf, 0, -1, false), "\n")
+    if codex_preview:find("Find and fix", 1, true) or codex_preview:find("gpt-5 footer", 1, true) then
+      fail("Codex preview should scrub its trailing prompt block: " .. vim.inspect(codex_preview))
+    end
+    if not codex_preview:find("answer stays", 1, true) then
+      fail("Codex prompt scrubbing should preserve prior output: " .. vim.inspect(codex_preview))
+    end
+
+    local pi_buf = vim.api.nvim_create_buf(false, true)
+    picker_opts.preview({
+      item = done_item,
+      preview = { scratch = function() return pi_buf end },
+    })
+    vim.wait(1000, function()
+      return table.concat(vim.api.nvim_buf_get_lines(pi_buf, 0, -1, false), "\n"):find("Find and fix", 1, true)
+        ~= nil
+    end, 10)
+    local pi_preview = table.concat(vim.api.nvim_buf_get_lines(pi_buf, 0, -1, false), "\n")
+    if not pi_preview:find("Find and fix", 1, true) or not pi_preview:find("gpt-5 footer", 1, true) then
+      fail("non-Codex previews should retain identical output: " .. vim.inspect(pi_preview))
+    end
+
     read_result = nil
     local failed_buf = vim.api.nvim_create_buf(false, true)
     picker_opts.preview({
@@ -382,6 +462,7 @@ local function validate_sidekick_herdr()
   end, debug.traceback)
 
   Snacks.picker.pick = original_pick
+  Snacks.util.spinner = original_spinner
   herdr.read = original_read
   internal.toggle_tool_session = original_toggle
   if not picker_ok then

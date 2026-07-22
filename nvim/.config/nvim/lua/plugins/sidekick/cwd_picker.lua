@@ -40,11 +40,36 @@ local function in_cwd_subtree(entry_cwd, root)
   return n:sub(1, #root + 1) == root .. "/" or root:sub(1, #n + 1) == n .. "/"
 end
 
+local function scrub_codex_prompt(output)
+  local lines = vim.split(output, "\r\n", { plain = true })
+  for i = #lines, math.max(1, #lines - 8), -1 do
+    if lines[i]:find("›", 1, true) and lines[i]:find("\27[48;", 1, true) then
+      local first = i
+      local previous = lines[first - 1]
+      if previous
+        and previous:find("\27[48;", 1, true)
+        and previous:gsub("\27%[[%d;:]*m", ""):match("^%s*$")
+      then
+        first = first - 1
+      end
+      while first > 1 and lines[first - 1] == "" do
+        first = first - 1
+      end
+      return table.concat(lines, "\r\n", 1, first - 1) .. "\27[0m"
+    end
+  end
+  return output
+end
+
 local function preview_text(item)
   if not item or item._empty or not item.agent_name then
     return nil, "(no session)"
   end
-  return herdr.read(item.agent_name, "recent-unwrapped", 120, true), "(agent read failed)"
+  local output = herdr.read(item.agent_name, "recent-unwrapped", 120, true)
+  if output and item.tool == "codex" then
+    output = scrub_codex_prompt(output)
+  end
+  return output, "(agent read failed)"
 end
 
 ---@return snacks.picker.finder.Item[]
@@ -104,6 +129,19 @@ function M.open()
       _empty = true,
     } }
   end
+  local has_working = vim.iter(items):any(function(item)
+    return item.status == "working"
+  end)
+  local spinner_timer
+
+  local function stop_spinner()
+    local timer = spinner_timer
+    spinner_timer = nil
+    if timer and not timer:is_closing() then
+      timer:stop()
+      timer:close()
+    end
+  end
 
   local winhl = "Normal:SidekickPickerTransparent"
     .. ",NormalFloat:SidekickPickerTransparent"
@@ -115,14 +153,21 @@ function M.open()
     end
     local hl = branding.hl_groups(branding.tool_of(item.tool))
     local status = status_display[item.status] or { "?", "Comment" }
-    return {
-      { status[1] .. " ", status[2] },
+    local chunks = {
+      { (item.status == "working" and Snacks.util.spinner() or status[1]) .. " ", status[2] },
       { item.label or "", hl.title },
-      { "  " },
-      { "[" .. (item.status or "unknown") .. "]", "Comment" },
+    }
+    if item.status ~= "idle" and item.status ~= "working" then
+      vim.list_extend(chunks, {
+        { "  " },
+        { "[" .. (item.status or "unknown") .. "]", "Comment" },
+      })
+    end
+    vim.list_extend(chunks, {
       { "  " },
       { item.cwd_display or "", "Directory" },
-    }
+    })
+    return chunks
   end
 
   Snacks.picker.pick({
@@ -130,6 +175,20 @@ function M.open()
     title = "Sidekick Sessions in Cwd",
     items = items,
     format = format_item,
+    on_show = function(picker)
+      if not has_working or spinner_timer then
+        return
+      end
+      spinner_timer = vim.uv.new_timer()
+      spinner_timer:start(80, 80, vim.schedule_wrap(function()
+        if picker.closed then
+          stop_spinner()
+        else
+          picker.list:update({ force = true })
+        end
+      end))
+    end,
+    on_close = stop_spinner,
     layout = {
       preset = "default",
       layout = {
