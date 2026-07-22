@@ -272,6 +272,9 @@ local function validate_sidekick_herdr()
     if not picker_opts then
       fail("cwd picker did not open Snacks picker")
     end
+    if not picker_opts.win.preview.wo.wrap or not picker_opts.win.preview.wo.linebreak then
+      fail("cwd picker preview should wrap unwrapped logical lines")
+    end
 
     local markers = { blocked = "!", done = "●", working = "›", idle = "·" }
     for _, item in ipairs(picker_opts.items) do
@@ -462,6 +465,12 @@ local function validate_sidekick_herdr_live()
   end, 50)
   if not done then
     fail("Herdr did not report the unfocused completed agent as done: " .. vim.inspect(herdr.get_agent(label)))
+  end
+
+  herdr.read(label, "recent-unwrapped", 120)
+  local previewed_agent = herdr.get_agent(label)
+  if not previewed_agent or previewed_agent.agent_status ~= "done" then
+    fail("reading a done agent preview should not mark it seen: " .. vim.inspect(previewed_agent))
   end
 
   if not herdr.call({ "agent", "focus", label }) then

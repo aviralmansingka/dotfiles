@@ -175,7 +175,7 @@ function M.open()
         },
       },
       preview = {
-        wo = { winhighlight = winhl },
+        wo = { winhighlight = winhl, wrap = true, linebreak = true },
       },
     },
     actions = {
