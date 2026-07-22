@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Serve stable, collision-safe names for homelab Lavish sessions."""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import tempfile
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import urlsplit
+
+
+HOSTNAME = "homelab.tail1b3b66.ts.net"
+LISTEN_HOST = "127.0.0.1"
+LISTEN_PORT = 4388
+STATE_FILE = Path.home() / ".local/state/lavish-aliases.json"
+SLUG_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
+SESSION_RE = re.compile(
+    rf"https://{re.escape(HOSTNAME)}:8443/session/[a-f0-9]+\Z"
+)
+
+
+def load_aliases() -> dict[str, str]:
+    try:
+        data = json.loads(STATE_FILE.read_text())
+    except FileNotFoundError:
+        return {}
+    if not isinstance(data, dict):
+        raise SystemExit(f"Invalid alias state: {STATE_FILE}")
+    return data
+
+
+def save_aliases(aliases: dict[str, str]) -> None:
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(dir=STATE_FILE.parent, prefix=".lavish-aliases-")
+    try:
+        with os.fdopen(fd, "w") as file:
+            json.dump(aliases, file, indent=2, sort_keys=True)
+            file.write("\n")
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, STATE_FILE)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def set_alias(slug: str, session_url: str) -> None:
+    if not SLUG_RE.fullmatch(slug):
+        raise SystemExit(f"Invalid alias: {slug}")
+    if not SESSION_RE.fullmatch(session_url):
+        raise SystemExit(f"Invalid Lavish session URL: {session_url}")
+
+    path = f"/{slug}"
+    proxy = f"http://{LISTEN_HOST}:{LISTEN_PORT}/{slug}"
+    status = subprocess.run(
+        ["tailscale", "serve", "status", "--json"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    handlers = (
+        json.loads(status.stdout)
+        .get("Web", {})
+        .get(f"{HOSTNAME}:443", {})
+        .get("Handlers", {})
+    )
+    existing = handlers.get(path, {}).get("Proxy")
+    if existing and existing != proxy:
+        raise SystemExit(
+            f"Alias {path} is already owned by {existing}; choose another --alias"
+        )
+
+    aliases = load_aliases()
+    aliases[slug] = session_url
+    save_aliases(aliases)
+    if not existing:
+        subprocess.run(
+            [
+                "tailscale",
+                "serve",
+                "--bg",
+                "--https=443",
+                "--set-path",
+                path,
+                proxy,
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+    print(f"https://{HOSTNAME}/{slug}")
+
+
+class RedirectHandler(BaseHTTPRequestHandler):
+    def do_HEAD(self) -> None:
+        self.redirect(send_body=False)
+
+    def do_GET(self) -> None:
+        self.redirect(send_body=True)
+
+    def redirect(self, send_body: bool) -> None:
+        slug = urlsplit(self.path).path.removeprefix("/")
+        target = load_aliases().get(slug)
+        if not target:
+            self.send_error(404, "Unknown Lavish alias")
+            return
+        body = f"Redirecting to {target}\n".encode()
+        self.send_response(302)
+        self.send_header("Location", target)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if send_body:
+            self.wfile.write(body)
+
+    def log_message(self, format: str, *args: object) -> None:
+        return
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("serve")
+    set_parser = subparsers.add_parser("set")
+    set_parser.add_argument("slug")
+    set_parser.add_argument("session_url")
+    args = parser.parse_args()
+
+    if args.command == "set":
+        set_alias(args.slug, args.session_url)
+        return
+    ThreadingHTTPServer((LISTEN_HOST, LISTEN_PORT), RedirectHandler).serve_forever()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,13 @@
+[Unit]
+Description=Stable names for Lavish review sessions
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/lavish-aliases serve
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

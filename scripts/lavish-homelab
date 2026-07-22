@@ -5,11 +5,12 @@ readonly REMOTE_HOST="avirus@homelab.tail1b3b66.ts.net"
 readonly REMOTE_HOME="/home/avirus"
 readonly REMOTE_ROOT="${REMOTE_HOME}/.local/share/lavish/artifacts"
 readonly REMOTE_BIN="${REMOTE_HOME}/.local/bin/lavish-axi"
+readonly REMOTE_ALIASES="${REMOTE_HOME}/.local/bin/lavish-aliases"
 readonly REMOTE_PATH="${REMOTE_HOME}/.nvm/versions/node/v22.22.3/bin:${REMOTE_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin"
 readonly PUBLIC_URL="https://homelab.tail1b3b66.ts.net:8443"
 
 usage() {
-  echo "Usage: lavish-homelab [open|poll|end|remote-path] <html-file> [lavish options]" >&2
+  echo "Usage: lavish-homelab [open|poll|end|remote-path|alias-for] <html-file> [--source-markdown <file> | --alias <name>] [lavish options]" >&2
   exit 2
 }
 
@@ -42,6 +43,30 @@ run_remote_lavish() {
     -e "s#http://homelab.tail1b3b66.ts.net:4387#${PUBLIC_URL}#g"
 }
 
+slugify() {
+  local value=$1
+  value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')
+  [[ -n "$value" ]] || { echo "Could not derive a Lavish alias" >&2; exit 1; }
+  printf '%s\n' "$value"
+}
+
+alias_for() {
+  local html_file=$1 source_markdown=${2:-} explicit_alias=${3:-} name
+  if [[ -n "$explicit_alias" ]]; then
+    name=$explicit_alias
+  elif [[ -n "$source_markdown" ]]; then
+    name=$(basename "$source_markdown")
+    name=${name%.*}
+  else
+    name=$(basename "$html_file")
+    name=${name%.*}
+    if [[ "$name" == index ]]; then
+      name=$(basename "$(dirname "$html_file")")
+    fi
+  fi
+  slugify "$name"
+}
+
 [[ $# -ge 1 ]] || usage
 action=$1
 if [[ "$action" == *.html || "$action" == *.htm ]]; then
@@ -51,10 +76,39 @@ else
 fi
 
 case "$action" in
-  open|poll|end|remote-path)
+  open|poll|end|remote-path|alias-for)
     [[ $# -ge 1 ]] || usage
     source_file=$(resolve_file "$1")
     shift
+    source_markdown=
+    explicit_alias=
+    lavish_args=()
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --source-markdown)
+          [[ $# -ge 2 ]] || usage
+          source_markdown=$2
+          shift 2
+          ;;
+        --alias)
+          [[ $# -ge 2 ]] || usage
+          explicit_alias=$2
+          shift 2
+          ;;
+        *)
+          lavish_args+=("$1")
+          shift
+          ;;
+      esac
+    done
+    if [[ "$action" != open && "$action" != alias-for && ( -n "$source_markdown" || -n "$explicit_alias" ) ]]; then
+      echo "Alias options are only valid with open or alias-for" >&2
+      exit 2
+    fi
+    if [[ "$action" == alias-for ]]; then
+      alias_for "$source_file" "$source_markdown" "$explicit_alias"
+      exit 0
+    fi
     remote_file=$(remote_file_for "$source_file")
     if [[ "$action" == remote-path ]]; then
       printf '%s\n' "$remote_file"
@@ -66,9 +120,23 @@ case "$action" in
       rsync -az --delete --exclude .git/ "$(dirname "$source_file")/" "${REMOTE_HOST}:${remote_dir}/"
     fi
     if [[ "$action" == open ]]; then
-      run_remote_lavish open "$remote_file" --no-open "$@"
+      alias=$(alias_for "$source_file" "$source_markdown" "$explicit_alias")
+      if [[ ${#lavish_args[@]} -gt 0 ]]; then
+        output=$(run_remote_lavish open "$remote_file" --no-open "${lavish_args[@]}")
+      else
+        output=$(run_remote_lavish open "$remote_file" --no-open)
+      fi
+      printf '%s\n' "$output"
+      session_url=$(printf '%s\n' "$output" | sed -n 's/.*url: "\(https:\/\/homelab\.tail1b3b66\.ts\.net:8443\/session\/[a-f0-9]*\)".*/\1/p' | head -1)
+      [[ -n "$session_url" ]] || { echo "Could not read the Lavish session URL" >&2; exit 1; }
+      alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$session_url")")
+      printf 'alias_url: "%s"\nsession_url: "%s"\n' "$alias_url" "$session_url"
     else
-      run_remote_lavish "$action" "$remote_file" "$@"
+      if [[ ${#lavish_args[@]} -gt 0 ]]; then
+        run_remote_lavish "$action" "$remote_file" "${lavish_args[@]}"
+      else
+        run_remote_lavish "$action" "$remote_file"
+      fi
     fi
     ;;
   *) usage ;;

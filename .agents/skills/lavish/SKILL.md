@@ -28,8 +28,8 @@ Use lavish-axi when the user asks for a visual artifact, HTML explainer, interac
 
 ## Workflow
 
-1. Create the HTML artifact (default location `.lavish/<name>.html` in the working directory).
-2. Run `~/dotfiles/scripts/lavish-homelab open <html-file>` to sync the artifact directory to the homelab and open or resume its review session. Share only the returned `https://homelab.tail1b3b66.ts.net:8443/session/<key>` URL.
+1. Create the HTML artifact (default location `.lavish/<markdown-stem>.html` in the working directory). When it comes from a Markdown file, give the HTML the same filename stem.
+2. Run `~/dotfiles/scripts/lavish-homelab open <html-file> --source-markdown <markdown-file>` to sync the artifact directory to the homelab and open or resume its review session. The wrapper returns a stable `alias_url` on port 443 and the direct `session_url` on port 8443. Share the `alias_url`; keep the session URL for direct access and diagnostics. If there is no source Markdown file, the alias defaults to the HTML filename. Use `--alias <name>` only to choose a clearer name or resolve a collision.
 3. Run `~/dotfiles/scripts/lavish-homelab poll <html-file>` to long-poll the homelab for the user's annotations, queued prompts, and browser-reported `layout_warnings`.
    The poll stays silent until the user acts or the real browser reports fresh layout warnings - leave it running, never kill it.
    If your harness limits how long a foreground command may run, run the poll as a background task; if it gets killed or times out anyway, just re-run it - queued feedback is never lost.
@@ -42,7 +42,8 @@ Use lavish-axi when the user asks for a visual artifact, HTML explainer, interac
 
 - The homelab owns the artifact copy, Lavish session state, feedback API, and Tailscale Serve endpoint. Client devices only edit locally, sync through the wrapper, and poll over SSH.
 - Never run the review lifecycle with local `lavish-axi`, configure Tailscale Serve on the client, or fall back to a device URL without explicit user approval. If the homelab is unavailable, report that blocker and keep the artifact local until it returns.
-- Share the homelab Lavish session URL, never `/artifact/...`, a `file://` URL, or an exported HTML file. The session shell injects the annotation SDK and keeps the shell, iframe, event stream, and feedback API under one HTTPS origin, so selected-element comments do not require CORS.
+- Share the stable port-443 `alias_url`, never `/artifact/...`, a `file://` URL, or an exported HTML file. It redirects to the port-8443 session shell, which injects the annotation SDK and keeps the shell, iframe, event stream, and feedback API under one HTTPS origin, so selected-element comments do not require CORS.
+- Named aliases are collision-safe. The wrapper will never replace an existing port-443 route; if the Markdown-derived name is already owned, choose another explicit `--alias` or keep using that existing site as appropriate.
 - Keep every local asset beside the HTML file and use relative references. The wrapper syncs the entire containing directory to a device-and-path-scoped directory on the homelab before `open` and `poll`.
 
 ## Visual guidance
@@ -69,7 +70,7 @@ For flows, architecture, state, or sequence diagrams, do not hand-build boxes-an
 
 ## Commands & rules
 
-- Run `~/dotfiles/scripts/lavish-homelab open <html-file>` to sync and open a Lavish Editor session on the homelab. Share only the returned `https://homelab.tail1b3b66.ts.net:8443/session/<key>` URL
+- Run `~/dotfiles/scripts/lavish-homelab open <html-file> --source-markdown <markdown-file>` to sync and open a Lavish Editor session on the homelab. Share the returned port-443 `alias_url`; the port-8443 `session_url` remains valid for that specific session. Omit `--source-markdown` when there is no source Markdown; the HTML stem becomes the alias
 - Unless the user specifies another location, create HTML artifacts in the current working directory under `.lavish/`
 - Lavish serves the html file through a local express.js server. If your html needs to reference other filesystem assets such as images, CSS, fonts, and local scripts, copy them into the same directory as the HTML file, then reference them with relative paths from that directory. Never prepend `/` to those asset paths - root paths won't work
 - Run `~/dotfiles/scripts/lavish-homelab poll <html-file>` to sync and wait for user feedback or browser-reported layout_warnings. It long-polls and stays silent until the user sends feedback, ends the session, or the real browser reports fresh layout_warnings, so leave it running - never kill it. Fix and re-check fresh error-severity layout_warnings before involving the human; if the poll says every current warning is persistent or low-severity, proceed with a note instead of looping. If your harness limits how long a foreground command may run, run the poll as a background task; if it gets killed or times out anyway, just re-run it - queued feedback is never lost. When it reports the session ended, stop polling and do not reopen it uninvited - deliver remaining updates in this conversation instead
