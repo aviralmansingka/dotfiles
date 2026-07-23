@@ -8,11 +8,19 @@ import {
 	createReadToolDefinition,
 	createWriteToolDefinition,
 } from "@earendil-works/pi-coding-agent";
+import { realpathSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { Container, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 
 type BuiltInToolName = "bash" | "read" | "write" | "edit" | "grep" | "find" | "ls";
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const ASSISTANT_PATCHED = Symbol.for("aviral.pi.assistant-summary-spinner");
+
+let activeToolCount = 0;
+let activeAssistant: object | undefined;
+let summaryTick: ReturnType<typeof setInterval> | undefined;
 
 function asObject(value: unknown): Record<string, unknown> {
 	return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -136,9 +144,98 @@ function compactTool(tool: ToolDefinition): ToolDefinition {
 	};
 }
 
-export default function (pi: ExtensionAPI) {
+function hasToolCall(message: { content?: Array<{ type?: string }> }): boolean {
+	return Array.isArray(message.content) && message.content.some((content) => content.type === "toolCall");
+}
+
+async function loadAssistantMessageComponent(): Promise<any> {
+	const cliPath = realpathSync(process.argv[1] ?? "");
+	const componentPath = join(dirname(cliPath), "modes/interactive/components/assistant-message.js");
+	return (await import(pathToFileURL(componentPath).href)).AssistantMessageComponent;
+}
+
+function patchAssistantSummarySpinner(AssistantMessageComponent: any): void {
+	const proto = AssistantMessageComponent.prototype as {
+		[ASSISTANT_PATCHED]?: boolean;
+		updateContent: (message: any) => void;
+		render: (width: number) => string[];
+	};
+	if (proto[ASSISTANT_PATCHED]) return;
+	proto[ASSISTANT_PATCHED] = true;
+
+	const updateContent = proto.updateContent;
+	proto.updateContent = function (message: any) {
+		updateContent.call(this, message);
+		if (hasToolCall(message)) activeAssistant = this;
+	};
+
+	const render = proto.render;
+	proto.render = function (width: number) {
+		const lines = render.call(this, width);
+		if (activeToolCount <= 0 || activeAssistant !== this || !this.hasToolCalls) return lines;
+
+		const index = lines.findIndex((line) => line.trim().length > 0);
+		if (index === -1) return lines;
+		lines[index] = truncateToWidth(`${statusIcon(themeShim, { isPartial: true })} ${lines[index]}`, width);
+		return lines;
+	};
+}
+
+const themeShim: Theme = {
+	fg(_name: string, text: string) {
+		return text;
+	},
+	bg(_name: string, text: string) {
+		return text;
+	},
+	bold(text: string) {
+		return text;
+	},
+	italic(text: string) {
+		return text;
+	},
+	strikethrough(text: string) {
+		return text;
+	},
+} as Theme;
+
+function startSummaryTick(ctx: { ui?: { setHiddenThinkingLabel?: (label?: string) => void } }): void {
+	if (summaryTick) return;
+	summaryTick = setInterval(() => ctx.ui?.setHiddenThinkingLabel?.(), 80);
+	summaryTick.unref?.();
+}
+
+function stopSummaryTick(): void {
+	if (!summaryTick) return;
+	clearInterval(summaryTick);
+	summaryTick = undefined;
+}
+
+export default async function (pi: ExtensionAPI) {
+	patchAssistantSummarySpinner(await loadAssistantMessageComponent());
+
 	const registerTool = pi.registerTool.bind(pi);
 	pi.registerTool = ((tool: ToolDefinition) => registerTool(compactTool(tool))) as typeof pi.registerTool;
+
+	pi.on("tool_execution_start", (_event, ctx) => {
+		activeToolCount += 1;
+		startSummaryTick(ctx);
+	});
+
+	pi.on("tool_execution_end", () => {
+		activeToolCount = Math.max(0, activeToolCount - 1);
+		if (activeToolCount === 0) stopSummaryTick();
+	});
+
+	pi.on("agent_end", () => {
+		activeToolCount = 0;
+		stopSummaryTick();
+	});
+
+	pi.on("session_shutdown", () => {
+		activeToolCount = 0;
+		stopSummaryTick();
+	});
 
 	const cwd = process.cwd();
 	const definitions: Array<[BuiltInToolName, ToolDefinition]> = [
