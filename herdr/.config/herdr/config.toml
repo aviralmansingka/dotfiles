@@ -1,6 +1,7 @@
 [theme]
 name = "gruvbox"
 
+auto_switch = false
 [theme.custom]
 panel_bg = "#282828"
 surface_dim = "#32302f"
@@ -38,7 +39,7 @@ show_agent_labels_on_pane_borders = true
 accent = "#d8a657"
 
 [ui.toast]
-delivery = "system"
+delivery = "terminal"
 delay_seconds = 1
 
 [ui.sound]
@@ -48,3 +49,6 @@ enabled = true
 # Herdr measures scrollback in bytes, so 10 MB is the closest native
 # equivalent to tmux's line-based history limit.
 scrollback_limit_bytes = 10000000
+
+[experimental]
+switch_ascii_input_source_in_prefix = false
