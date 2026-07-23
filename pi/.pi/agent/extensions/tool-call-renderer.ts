@@ -7,16 +7,12 @@ import {
 	createLsToolDefinition,
 	createReadToolDefinition,
 	createWriteToolDefinition,
-	getLanguageFromPath,
-	highlightCode,
 } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
+import { Container, Text } from "@earendil-works/pi-tui";
 
 type BuiltInToolName = "bash" | "read" | "write" | "edit" | "grep" | "find" | "ls";
 
-const MAX_COLLAPSED_LINES = 8;
-const MAX_EXPANDED_LINES = 40;
-const MAX_JSON_CHARS = 2400;
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 function asObject(value: unknown): Record<string, unknown> {
 	return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -30,84 +26,55 @@ function lineCount(value: string | undefined): number {
 	return value ? value.split("\n").length : 0;
 }
 
-function truncateLines(lines: string[], limit: number, moreText: (count: number) => string): string[] {
-	if (lines.length <= limit) return lines;
-	return [...lines.slice(0, limit), moreText(lines.length - limit)];
+function plural(count: number, singular: string): string {
+	return `${count} ${singular}${count === 1 ? "" : "s"}`;
 }
 
-function highlightedSnippet(
-	code: string | undefined,
-	language: string | undefined,
-	context: { expanded: boolean },
-	theme: Theme,
-): string {
-	if (!code) return theme.fg("dim", "...");
-	const limit = context.expanded ? MAX_EXPANDED_LINES : MAX_COLLAPSED_LINES;
-	const rendered = language ? highlightCode(code, language) : code.split("\n").map((line) => theme.fg("toolOutput", line));
-	return truncateLines(rendered, limit, (count) => theme.fg("muted", `... (${count} more lines)`)).join("\n");
+function firstLine(value: string | undefined): string {
+	if (!value) return "...";
+	const lines = value.trim().split("\n");
+	return `${lines[0] ?? "..."}${lines.length > 1 ? " …" : ""}`;
 }
 
-function highlightedJson(args: unknown, context: { expanded: boolean }, theme: Theme): string {
-	let json = JSON.stringify(args ?? {}, null, 2);
-	if (json.length > MAX_JSON_CHARS && !context.expanded) {
-		json = `${json.slice(0, MAX_JSON_CHARS)}\n...`;
+function statusIcon(theme: Theme, context: { isPartial?: boolean; isError?: boolean }): string {
+	if (context.isPartial) {
+		const frame = SPINNER_FRAMES[Math.floor(Date.now() / 80) % SPINNER_FRAMES.length] ?? "⠋";
+		return theme.fg("accent", frame);
 	}
-	return highlightedSnippet(json, "json", context, theme);
+	return context.isError ? theme.fg("warning", "!") : theme.fg("muted", "✓");
 }
 
-function renderCall(name: BuiltInToolName, args: unknown, theme: Theme, context: { expanded: boolean }) {
+function renderCall(
+	name: BuiltInToolName,
+	args: unknown,
+	theme: Theme,
+	context: { isPartial?: boolean; isError?: boolean },
+) {
 	const input = asObject(args);
 	const title = theme.fg("toolTitle", theme.bold(name));
+	let summary: string;
 
 	if (name === "bash") {
-		const command = asString(input.command);
-		const timeout = typeof input.timeout === "number" ? theme.fg("dim", ` timeout=${input.timeout}s`) : "";
-		return new Text(`${theme.fg("toolTitle", theme.bold("$"))}${timeout}\n${highlightedSnippet(command, "bash", context, theme)}`, 0, 0);
-	}
-
-	if (name === "read" || name === "ls") {
-		const path = asString(input.path) ?? (name === "ls" ? "." : undefined);
-		const suffix = [input.offset ? `offset=${input.offset}` : undefined, input.limit ? `limit=${input.limit}` : undefined]
-			.filter(Boolean)
-			.join(" ");
-		return new Text(`${title} ${theme.fg("accent", path ?? "...")}${suffix ? theme.fg("dim", ` ${suffix}`) : ""}`, 0, 0);
-	}
-
-	if (name === "grep" || name === "find") {
-		const pattern = asString(input.pattern);
+		summary = `${theme.fg("toolTitle", theme.bold("$"))} ${firstLine(asString(input.command))}`;
+	} else if (name === "read" || name === "ls") {
+		const path = asString(input.path) ?? (name === "ls" ? "." : "...");
+		summary = `${title} ${theme.fg("accent", path)}`;
+	} else if (name === "grep" || name === "find") {
+		const pattern = asString(input.pattern) ?? "...";
 		const path = asString(input.path) ?? ".";
-		const limit = typeof input.limit === "number" ? theme.fg("dim", ` limit=${input.limit}`) : "";
-		return new Text(`${title} ${theme.fg("accent", pattern ?? "...")} ${theme.fg("toolOutput", `in ${path}`)}${limit}`, 0, 0);
+		summary = `${title} ${theme.fg("accent", pattern)} ${theme.fg("dim", `in ${path}`)}`;
+	} else if (name === "write") {
+		const path = asString(input.path) ?? "...";
+		summary = `${title} ${theme.fg("accent", path)} ${theme.fg("dim", `(${plural(lineCount(asString(input.content)), "line")})`)}`;
+	} else if (name === "edit") {
+		const path = asString(input.path) ?? "...";
+		const edits = Array.isArray(input.edits) ? input.edits.length : 0;
+		summary = `${title} ${theme.fg("accent", path)} ${theme.fg("dim", `(${plural(edits, "edit")})`)}`;
+	} else {
+		summary = title;
 	}
 
-	if (name === "write") {
-		const path = asString(input.path);
-		const content = asString(input.content);
-		const lang = path ? getLanguageFromPath(path) : undefined;
-		const summary = `${title} ${theme.fg("accent", path ?? "...")} ${theme.fg("dim", `(${lineCount(content)} lines)`)}`;
-		return new Text(`${summary}\n${highlightedSnippet(content, lang, context, theme)}`, 0, 0);
-	}
-
-	if (name === "edit") {
-		const path = asString(input.path);
-		const oldString = asString(input.old_string);
-		const newString = asString(input.new_string);
-		const lang = path ? getLanguageFromPath(path) : undefined;
-		const summary = `${title} ${theme.fg("accent", path ?? "...")} ${theme.fg("dim", `(${lineCount(oldString)} -> ${lineCount(newString)} lines)`)}`;
-		return new Text(
-			[
-				summary,
-				theme.fg("toolDiffRemoved", "- old"),
-				highlightedSnippet(oldString, lang, context, theme),
-				theme.fg("toolDiffAdded", "+ new"),
-				highlightedSnippet(newString, lang, context, theme),
-			].join("\n"),
-			0,
-			0,
-		);
-	}
-
-	return new Text(`${title}\n${highlightedJson(args, context, theme)}`, 0, 0);
+	return new Text(`${statusIcon(theme, context)} ${summary}`, 0, 0);
 }
 
 function createDefinition(name: BuiltInToolName, cwd: string): ToolDefinition {
@@ -135,13 +102,16 @@ export default function (pi: ExtensionAPI) {
 	for (const [name, original] of definitions) {
 		pi.registerTool({
 			...original,
+			renderShell: "self",
 			async execute(toolCallId, params, signal, onUpdate, ctx) {
 				return createDefinition(name, ctx.cwd).execute(toolCallId, params, signal, onUpdate, ctx);
 			},
 			renderCall(args, theme, context) {
 				return renderCall(name, args, theme, context);
 			},
-			renderResult: undefined,
+			renderResult() {
+				return new Container();
+			},
 		});
 	}
 }
