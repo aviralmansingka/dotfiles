@@ -76,6 +76,14 @@ return {
       mode = { "n", "t", "i", "x" },
     },
     {
+      "<c-;>",
+      function()
+        require("plugins.sidekick.session_switch").open()
+      end,
+      desc = "Sidekick Switch Local Session",
+      mode = { "n", "t", "i", "x" },
+    },
+    {
       "<leader>aa",
       function()
         require("plugins.sidekick.ask").ask()

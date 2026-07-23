@@ -13,21 +13,21 @@ export PI_VERIFY_OUTPUT="$raw_output"
 expect <<'EXPECT'
 set timeout 90
 log_user 0
-log_file -noappend $env(PI_VERIFY_OUTPUT)
+log_file -a -noappend $env(PI_VERIFY_OUTPUT)
 spawn pi --offline --no-session --model $env(PI_VERIFY_MODEL) $env(PI_VERIFY_PROMPT)
 expect {
   -re {2 calls} {}
   timeout { exit 124 }
 }
 expect {
-  -re {Done\.} {}
+  -re {✓ [^\r\n]+} {}
   timeout { exit 124 }
 }
-send "\004"
-expect eof
+close
+wait
 EXPECT
 
-perl -pe 's/\e\][^\a]*(?:\a|\e\\)//g; s/\e\[[0-9;?]*[ -\/]*[@-~]//g; s/\r/\n/g' "$raw_output" > "$plain_output"
+perl -pe 's/\e\][^\a]*(?:\a|\e\\)//g; s/\e\[[0-9;?]*[ -\/]*[@-~]//g; s/\r//g' "$raw_output" > "$plain_output"
 
 if ! rg -U --pcre2 '✓ (?!Working)[^\n]+\n  2 calls · read ×2' "$plain_output" >/dev/null; then
 	tail -80 "$plain_output"

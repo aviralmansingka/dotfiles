@@ -127,7 +127,22 @@ function M.toggle_tool_session(name, focus)
   if M.is_claude_tool(name) and not M.ensure_claude_bridge() then
     return
   end
+  M.hide_tool_sessions(name)
   require("sidekick.cli").toggle({ name = name, focus = focus ~= false })
+end
+
+--- Hide visible Sidekick terminals except an optional tool.
+---@param except? string
+---@return string|nil first hidden tool name
+function M.hide_tool_sessions(except)
+  local hidden
+  for _, terminal in ipairs(require("sidekick.cli.terminal").sessions()) do
+    if terminal.tool.name ~= except and terminal:is_open() then
+      hidden = hidden or terminal.tool.name
+      terminal:hide()
+    end
+  end
+  return hidden
 end
 
 ---@param cmd string|string[]

@@ -53,7 +53,6 @@ end
 local function validate_agent_keymaps()
   local sidekick = load_plugin("sidekick.nvim")
   local removed = {
-    "<c-;>",
     "<leader>ao",
     "<leader>au",
     "<leader>ar",
@@ -75,6 +74,7 @@ local function validate_agent_keymaps()
   assert_key_desc(sidekick, "<leader>al", "Local")
   assert_key_desc(sidekick, "<leader>aL", "Global")
   assert_key_desc(sidekick, "<c-.>", "cwd sessions")
+  assert_key_desc(sidekick, "<c-;>", "Switch Local")
   assert_key_desc(sidekick, "<leader>an", "Codex")
   assert_key_desc(sidekick, "<leader>aN", "Pi")
   assert_key_desc(sidekick, "<leader>ae", "Codex Spark")
@@ -172,6 +172,67 @@ local function validate_sidekick_pi()
   if not last_session_src:find("cwd_picker", 1, true) then
     fail("<c-.> fallback should use cwd_picker")
   end
+
+  local Terminal = require("sidekick.cli.terminal")
+  local cwd_picker = require("plugins.sidekick.cwd_picker")
+  local session_switch = require("plugins.sidekick.session_switch")
+  local original_sessions = Terminal.sessions
+  local original_picker_open = cwd_picker.open
+  local current = {
+    tool = { name = "pi-current" },
+    open = true,
+    is_open = function(self) return self.open end,
+    hide = function(self) self.open = false end,
+  }
+  local other = {
+    tool = { name = "codex-other" },
+    open = true,
+    is_open = function(self) return self.open end,
+    hide = function(self) self.open = false end,
+  }
+  local picker_opts
+  local fake_picker = {}
+  Terminal.sessions = function() return { current, other } end
+  cwd_picker.open = function(opts)
+    picker_opts = opts
+    fake_picker.close = function()
+      picker_opts.on_close()
+    end
+    return fake_picker
+  end
+  internal.toggle_tool_session = function(name, focus)
+    toggled = { name = name, focus = focus }
+  end
+
+  session_switch.open()
+  if current.open or other.open then
+    fail("<c-;> should hide every visible Sidekick session before opening the picker")
+  end
+  session_switch.open()
+  if not toggled or toggled.name ~= "pi-current" or toggled.focus ~= true then
+    fail("pressing <c-;> again should cancel and restore the previous session: " .. vim.inspect(toggled))
+  end
+
+  toggled = nil
+  current.open = true
+  session_switch.open()
+  picker_opts.on_confirm({ label = "codex-other" })
+  picker_opts.on_close()
+  if toggled then
+    fail("selecting a new session should not restore the minimized session")
+  end
+
+  current.open = false
+  other.open = false
+  session_switch.open()
+  picker_opts.on_close()
+  if toggled then
+    fail("canceling with no visible session should leave all sessions minimized")
+  end
+
+  Terminal.sessions = original_sessions
+  cwd_picker.open = original_picker_open
+  internal.toggle_tool_session = original_toggle
 end
 
 local function validate_sidekick_herdr()

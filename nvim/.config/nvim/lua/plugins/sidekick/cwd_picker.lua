@@ -24,6 +24,22 @@ local function normalize(p)
   return vim.fs.normalize(vim.fn.fnamemodify(p, ":p")):gsub("/$", "")
 end
 
+---@param path string|nil
+---@return string|nil
+local function git_common_dir(path)
+  if not path or path == "" then
+    return nil
+  end
+  local result = vim.system(
+    { "git", "-C", path, "rev-parse", "--path-format=absolute", "--git-common-dir" },
+    { text = true }
+  ):wait()
+  if result.code ~= 0 then
+    return nil
+  end
+  return normalize((result.stdout or ""):gsub("%s+$", ""))
+end
+
 ---@param entry_cwd string|nil
 ---@param root string  already normalized
 ---@return boolean
@@ -122,10 +138,26 @@ end
 ---@return snacks.picker.finder.Item[]
 function M.list_items()
   local root = normalize(vim.fn.getcwd())
+  local root_repo = git_common_dir(root)
+  local repo_cache = {}
   local home = normalize(vim.fn.expand("~"))
   local items = {}
+
+  local function is_local(entry_cwd)
+    if in_cwd_subtree(entry_cwd, root) then
+      return true
+    end
+    if not root_repo or not entry_cwd or entry_cwd == "" then
+      return false
+    end
+    if repo_cache[entry_cwd] == nil then
+      repo_cache[entry_cwd] = git_common_dir(entry_cwd) or false
+    end
+    return repo_cache[entry_cwd] == root_repo
+  end
+
   for label, entry in pairs(registry.discover()) do
-    if in_cwd_subtree(entry.cwd, root) then
+    if is_local(entry.cwd) then
       local cwd_display = entry.cwd or ""
       if home ~= "" and cwd_display:sub(1, #home) == home then
         cwd_display = "~" .. cwd_display:sub(#home + 1)
@@ -165,7 +197,9 @@ local function ensure_transparent_hl()
   vim.api.nvim_set_hl(0, "SidekickPickerTransparent", { bg = "NONE", default = false })
 end
 
-function M.open()
+---@param opts? table
+function M.open(opts)
+  opts = opts or {}
   registry.rehydrate()
   ensure_transparent_hl()
   local items = M.list_items()
@@ -180,6 +214,7 @@ function M.open()
     return item.status == "working"
   end)
   local spinner_timer
+  local reopening = false
 
   local function stop_spinner()
     local timer = spinner_timer
@@ -217,12 +252,15 @@ function M.open()
     return chunks
   end
 
-  Snacks.picker.pick({
+  return Snacks.picker.pick({
     source = "sidekick_cwd_peek",
     title = "Sidekick Sessions in Cwd",
     items = items,
     format = format_item,
     on_show = function(picker)
+      if opts.on_show then
+        opts.on_show(picker)
+      end
       if not has_working or spinner_timer then
         return
       end
@@ -235,7 +273,12 @@ function M.open()
         end
       end))
     end,
-    on_close = stop_spinner,
+    on_close = function(picker)
+      stop_spinner()
+      if not reopening and opts.on_close then
+        opts.on_close(picker)
+      end
+    end,
     layout = {
       preset = "default",
       layout = {
@@ -260,11 +303,15 @@ function M.open()
       return true
     end,
     confirm = function(picker, item)
-      picker:close()
       if not item or item._empty then
+        picker:close()
         return
       end
       if item.label then
+        if opts.on_confirm then
+          opts.on_confirm(item)
+        end
+        picker:close()
         require("plugins.sidekick.last_session").record(item.label)
         internal.toggle_tool_session(item.label, true)
       end
@@ -292,9 +339,13 @@ function M.open()
           return
         end
         if herdr.close(item.pane_id) then
+          if opts.on_kill then
+            opts.on_kill(item)
+          end
+          reopening = true
           picker:close()
           vim.schedule(function()
-            M.open()
+            M.open(opts)
           end)
         end
       end,

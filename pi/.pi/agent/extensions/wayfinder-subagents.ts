@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const MAX_TASKS = 8;
 const SIDEKICK_NAMED_SESSION = "SIDEKICK_NAMED_SESSION";
+const WAYFINDER_SUBAGENT = "PI_WAYFINDER_SUBAGENT";
 
 const TaskSchema = Type.Object({
   title: Type.String({ description: "Human-readable Wayfinder ticket/research title" }),
@@ -78,6 +79,10 @@ async function herdr(args: string[], signal?: AbortSignal): Promise<Record<strin
 }
 
 export default function (pi: ExtensionAPI) {
+  if (process.env[WAYFINDER_SUBAGENT] === "1") {
+    pi.on("agent_settled", (_event, ctx) => ctx.shutdown());
+  }
+
   pi.registerTool({
     name: "wayfinder_subagents",
     label: "Wayfinder Subagents",
@@ -131,6 +136,8 @@ export default function (pi: ExtensionAPI) {
           params.focus ? "--focus" : "--no-focus",
           "--env",
           `${SIDEKICK_NAMED_SESSION}=${slug}`,
+          "--env",
+          `${WAYFINDER_SUBAGENT}=1`,
           "--",
           ...command,
         ];
