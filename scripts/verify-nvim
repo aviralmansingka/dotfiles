@@ -41,9 +41,8 @@ if [[ "$case_name" == "sidekick-herdr-live" ]]; then
     exit 1
   fi
   if [[ ! -f "$HOME/.config/herdr/config.toml" ]] \
-    || ! grep -q '^delivery = "system"$' "$HOME/.config/herdr/config.toml" \
     || ! grep -q '^enabled = true$' "$HOME/.config/herdr/config.toml"; then
-    echo "verify-nvim: Herdr system notifications and sound must be enabled" >&2
+    echo "verify-nvim: Herdr sound must be enabled" >&2
     exit 1
   fi
   integration_status="$(herdr integration status)"

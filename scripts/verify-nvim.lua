@@ -682,15 +682,19 @@ local function validate_sidekick_herdr_live()
     fail("reading a done agent preview should not mark it seen: " .. vim.inspect(previewed_agent))
   end
 
-  if not herdr.call({ "agent", "focus", label }) then
-    fail("Herdr agent focus failed")
-  end
+  local Terminal = require("sidekick.cli.terminal")
+  Terminal.terminals["terminal:live-seen"] = {
+    buf = 42,
+    parent = session,
+  }
+  require("plugins.sidekick.herdr_backend").mark_seen(42)
+  Terminal.terminals["terminal:live-seen"] = nil
   local seen = vim.wait(3000, function()
     local agent = herdr.get_agent(label)
     return agent and agent.agent_status == "idle"
   end, 50)
   if not seen then
-    fail("focused done agent did not become idle: " .. vim.inspect(herdr.get_agent(label)))
+    fail("opening a done agent in Neovim did not mark it seen: " .. vim.inspect(herdr.get_agent(label)))
   end
 
   if not herdr.close(session.herdr_pane_id) then
