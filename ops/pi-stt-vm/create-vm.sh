@@ -95,12 +95,6 @@ for path in "$vm_disk" "$seed_image"; do
   }
 done
 
-if [[ ! -f $base_image ]]; then
-  sudo install -o root -g root -m 0644 "$cached_image" "$base_image"
-fi
-sudo qemu-img create -f qcow2 -F qcow2 -b "$base_image" "$vm_disk" "${DISK_GIB}G"
-sudo install -o root -g root -m 0644 "$work_dir/seed.img" "$seed_image"
-
 if ! sudo virsh net-info default >/dev/null 2>&1; then
   printf 'libvirt default network is missing.\n' >&2
   exit 1
@@ -109,6 +103,12 @@ if [[ $(sudo virsh net-info default | awk '/Active:/ {print $2}') != yes ]]; the
   sudo virsh net-start default
 fi
 sudo virsh net-autostart default
+
+if [[ ! -f $base_image ]]; then
+  sudo install -o root -g root -m 0644 "$cached_image" "$base_image"
+fi
+sudo qemu-img create -f qcow2 -F qcow2 -b "$base_image" "$vm_disk" "${DISK_GIB}G"
+sudo install -o root -g root -m 0644 "$work_dir/seed.img" "$seed_image"
 
 sudo virt-install \
   --name "$VM_NAME" \
@@ -131,4 +131,3 @@ sudo virt-install \
 
 printf '\nCreated %s. Wait for cloud-init, then find its address with:\n' "$VM_NAME"
 printf '  sudo virsh domifaddr %s --source lease\n' "$VM_NAME"
-

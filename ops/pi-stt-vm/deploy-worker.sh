@@ -36,7 +36,7 @@ scp "$repo_root/pi/.config/pi-stt-worker.env.example" "$target:~/.config/pi-stt-
 ssh "$target" '
 set -eu
 chmod 0755 "$HOME/.local/bin/uv" "$HOME/bin/pi-stt-worker.py" "$HOME/bin/pi-stt-worker-run"
-"$HOME/.local/bin/uv" venv --python 3.12 "$HOME/.local/share/pi-stt/.venv"
+"$HOME/.local/bin/uv" venv --python 3.13 "$HOME/.local/share/pi-stt/.venv"
 "$HOME/.local/bin/uv" pip install \
   --python "$HOME/.local/share/pi-stt/.venv/bin/python" \
   --requirement "$HOME/.local/share/pi-stt/requirements.txt"
