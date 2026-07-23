@@ -8,7 +8,7 @@ import {
 	createReadToolDefinition,
 	createWriteToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import { Container, Text } from "@earendil-works/pi-tui";
+import { Container, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 
 type BuiltInToolName = "bash" | "read" | "write" | "edit" | "grep" | "find" | "ls";
 
@@ -44,37 +44,73 @@ function statusIcon(theme: Theme, context: { isPartial?: boolean; isError?: bool
 	return context.isError ? theme.fg("warning", "!") : theme.fg("muted", "✓");
 }
 
-function renderCall(
-	name: BuiltInToolName,
-	args: unknown,
-	theme: Theme,
-	context: { isPartial?: boolean; isError?: boolean },
-) {
-	const input = asObject(args);
-	const title = theme.fg("toolTitle", theme.bold(name));
-	let summary: string;
+class ToolSummary implements Component {
+	private theme: Theme;
+	private summary: string;
+	private context: { isPartial?: boolean; isError?: boolean; invalidate?: () => void };
+	private interval?: ReturnType<typeof setInterval>;
 
-	if (name === "bash") {
-		summary = `${theme.fg("toolTitle", theme.bold("$"))} ${firstLine(asString(input.command))}`;
-	} else if (name === "read" || name === "ls") {
-		const path = asString(input.path) ?? (name === "ls" ? "." : "...");
-		summary = `${title} ${theme.fg("accent", path)}`;
-	} else if (name === "grep" || name === "find") {
-		const pattern = asString(input.pattern) ?? "...";
-		const path = asString(input.path) ?? ".";
-		summary = `${title} ${theme.fg("accent", pattern)} ${theme.fg("dim", `in ${path}`)}`;
-	} else if (name === "write") {
-		const path = asString(input.path) ?? "...";
-		summary = `${title} ${theme.fg("accent", path)} ${theme.fg("dim", `(${plural(lineCount(asString(input.content)), "line")})`)}`;
-	} else if (name === "edit") {
-		const path = asString(input.path) ?? "...";
-		const edits = Array.isArray(input.edits) ? input.edits.length : 0;
-		summary = `${title} ${theme.fg("accent", path)} ${theme.fg("dim", `(${plural(edits, "edit")})`)}`;
-	} else {
-		summary = title;
+	constructor(theme: Theme, summary: string, context: { isPartial?: boolean; isError?: boolean; invalidate?: () => void }) {
+		this.theme = theme;
+		this.summary = summary;
+		this.context = context;
+		this.update(theme, summary, context);
 	}
 
-	return new Text(`${statusIcon(theme, context)} ${summary}`, 0, 0);
+	update(theme: Theme, summary: string, context: { isPartial?: boolean; isError?: boolean; invalidate?: () => void }): void {
+		this.theme = theme;
+		this.summary = summary;
+		this.context = context;
+
+		if (context.isPartial && !this.interval) {
+			this.interval = setInterval(() => context.invalidate?.(), 80);
+			this.interval.unref?.();
+		} else if (!context.isPartial && this.interval) {
+			clearInterval(this.interval);
+			this.interval = undefined;
+		}
+	}
+
+	render(width: number): string[] {
+		return [truncateToWidth(`${statusIcon(this.theme, this.context)} ${this.summary}`, width)];
+	}
+
+	invalidate(): void {}
+}
+
+function summaryForTool(name: string, args: unknown, theme: Theme): string {
+	const input = asObject(args);
+	const title = theme.fg("toolTitle", theme.bold(name));
+
+	if (name === "bash") return `${theme.fg("toolTitle", theme.bold("$"))} ${firstLine(asString(input.command))}`;
+	if (name === "read" || name === "ls") {
+		const path = asString(input.path) ?? (name === "ls" ? "." : "...");
+		return `${title} ${theme.fg("accent", path)}`;
+	}
+	if (name === "grep" || name === "find") {
+		const pattern = asString(input.pattern) ?? "...";
+		const path = asString(input.path) ?? ".";
+		return `${title} ${theme.fg("accent", pattern)} ${theme.fg("dim", `in ${path}`)}`;
+	}
+	if (name === "write") {
+		const path = asString(input.path) ?? "...";
+		return `${title} ${theme.fg("accent", path)} ${theme.fg("dim", `(${plural(lineCount(asString(input.content)), "line")})`)}`;
+	}
+	if (name === "edit") {
+		const path = asString(input.path) ?? "...";
+		const edits = Array.isArray(input.edits) ? input.edits.length : 0;
+		return `${title} ${theme.fg("accent", path)} ${theme.fg("dim", `(${plural(edits, "edit")})`)}`;
+	}
+	if (name === "mcp" && typeof input.tool === "string") return `${title} ${theme.fg("accent", input.tool)}`;
+
+	return title;
+}
+
+function renderCall(name: string, args: unknown, theme: Theme, context: { isPartial?: boolean; isError?: boolean; invalidate?: () => void; lastComponent?: Component }) {
+	const summary = summaryForTool(name, args, theme);
+	const component = context.lastComponent instanceof ToolSummary ? context.lastComponent : new ToolSummary(theme, summary, context);
+	component.update(theme, summary, context);
+	return component;
 }
 
 function createDefinition(name: BuiltInToolName, cwd: string): ToolDefinition {
@@ -87,7 +123,23 @@ function createDefinition(name: BuiltInToolName, cwd: string): ToolDefinition {
 	return createLsToolDefinition(cwd) as ToolDefinition;
 }
 
+function compactTool(tool: ToolDefinition): ToolDefinition {
+	return {
+		...tool,
+		renderShell: "self",
+		renderCall(args, theme, context) {
+			return renderCall(tool.name, args, theme, context);
+		},
+		renderResult() {
+			return new Container();
+		},
+	};
+}
+
 export default function (pi: ExtensionAPI) {
+	const registerTool = pi.registerTool.bind(pi);
+	pi.registerTool = ((tool: ToolDefinition) => registerTool(compactTool(tool))) as typeof pi.registerTool;
+
 	const cwd = process.cwd();
 	const definitions: Array<[BuiltInToolName, ToolDefinition]> = [
 		["bash", createDefinition("bash", cwd)],
@@ -102,15 +154,8 @@ export default function (pi: ExtensionAPI) {
 	for (const [name, original] of definitions) {
 		pi.registerTool({
 			...original,
-			renderShell: "self",
 			async execute(toolCallId, params, signal, onUpdate, ctx) {
 				return createDefinition(name, ctx.cwd).execute(toolCallId, params, signal, onUpdate, ctx);
-			},
-			renderCall(args, theme, context) {
-				return renderCall(name, args, theme, context);
-			},
-			renderResult() {
-				return new Container();
 			},
 		});
 	}

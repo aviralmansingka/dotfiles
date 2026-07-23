@@ -100,6 +100,12 @@ Out-of-scope work never graduates — the frontier stops at the destination — 
 
 Ruling something out of scope is a scoping act, not a step on the route. When a ticket that already exists turns out to sit past the destination — mis-scoped in while charting, or exposed by a resolution — **close it** (a closed ticket is unambiguously off the frontier) and leave one line in the **Out of scope** section: the gist plus why it's out of scope, linking the closed ticket. It stays out of **Decisions so far**, which records the route actually walked — a scope boundary isn't a step on it.
 
+## Pi / Herdr sub-agents
+
+When running in Pi and the `wayfinder_subagents` tool is available, use it for AFK `wayfinder:research` and AFK `wayfinder:task` tickets that should run in parallel. Each task prompt must include the map name/link, ticket name/link, exact question, tracker-specific claim/report/close instructions, and a clear stop condition. The tool launches visible `pi-wf-*` Herdr sessions that also fit the Neovim Sidekick named-session flow.
+
+Do not use `wayfinder_subagents` for HITL `grilling` or `prototype` tickets.
+
 ## Invocation
 
 Two modes. Either way, **never resolve more than one ticket per session** — with the exception of research tickets.
