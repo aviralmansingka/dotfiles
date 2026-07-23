@@ -435,6 +435,38 @@ local function validate_sidekick_herdr()
       fail("non-Codex previews should retain identical output: " .. vim.inspect(pi_preview))
     end
 
+    read_result = table.concat({
+      "\27[32mPi answer stays\27[0m",
+      "",
+      " \27[38;2;138;190;183m⠴\27[0m \27[38;2;128;128;128mWorking...\27[0m",
+      "",
+      "\27[38;2;178;148;187m────────────────────────────────\27[0m",
+      "i\27[0m\27[7m \27[0m",
+      "\27[38;2;178;148;187m────────────────────────────────\27[0m",
+      "\27[38;2;102;102;102m~/vault (main) • preview\27[0m",
+      "\27[38;2;102;102;102m$0.000 (sub) 0.0%/272k (auto)  (openai-codex) gpt-5.5 • high\27[0m",
+      "\27[38;2;138;190;183mMCP: 0/3 servers\27[0m",
+    }, "\r\n")
+    local pi_scrub_buf = vim.api.nvim_create_buf(false, true)
+    picker_opts.preview({
+      item = done_item,
+      preview = { scratch = function() return pi_scrub_buf end },
+    })
+    vim.wait(1000, function()
+      return table.concat(vim.api.nvim_buf_get_lines(pi_scrub_buf, 0, -1, false), "\n"):find("Pi answer stays", 1, true)
+        ~= nil
+    end, 10)
+    local pi_scrubbed = table.concat(vim.api.nvim_buf_get_lines(pi_scrub_buf, 0, -1, false), "\n")
+    if pi_scrubbed:find("Working", 1, true)
+      or pi_scrubbed:find("~/vault", 1, true)
+      or pi_scrubbed:find("MCP:", 1, true)
+    then
+      fail("Pi preview should scrub its trailing prompt and status block: " .. vim.inspect(pi_scrubbed))
+    end
+    if not pi_scrubbed:find("Pi answer stays", 1, true) then
+      fail("Pi prompt scrubbing should preserve prior output: " .. vim.inspect(pi_scrubbed))
+    end
+
     read_result = nil
     local failed_buf = vim.api.nvim_create_buf(false, true)
     picker_opts.preview({
