@@ -11,37 +11,53 @@ import {
 import { realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { Container, truncateToWidth, type Component } from "@earendil-works/pi-tui";
+import { Container, truncateToWidth } from "@earendil-works/pi-tui";
 
 type BuiltInToolName = "bash" | "read" | "write" | "edit" | "grep" | "find" | "ls";
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-const ASSISTANT_PATCHED = Symbol.for("aviral.pi.assistant-summary-spinner");
+const ASSISTANT_PATCHED = Symbol.for("aviral.pi.work-step-renderer");
 
-let activeToolCount = 0;
-let activeAssistant: object | undefined;
+type WorkStep = {
+	title: string;
+	toolNames: string[];
+	toolCallIds: Set<string>;
+	completedToolCallIds: Set<string>;
+	finalized: boolean;
+	failed: boolean;
+};
+
+const workSteps = new WeakMap<object, WorkStep>();
+const workStepByToolCallId = new Map<string, WorkStep>();
 let summaryTick: ReturnType<typeof setInterval> | undefined;
-
-function asObject(value: unknown): Record<string, unknown> {
-	return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-}
 
 function asString(value: unknown): string | undefined {
 	return typeof value === "string" ? value : undefined;
-}
-
-function lineCount(value: string | undefined): number {
-	return value ? value.split("\n").length : 0;
 }
 
 function plural(count: number, singular: string): string {
 	return `${count} ${singular}${count === 1 ? "" : "s"}`;
 }
 
-function firstLine(value: string | undefined): string {
-	if (!value) return "...";
-	const lines = value.trim().split("\n");
-	return `${lines[0] ?? "..."}${lines.length > 1 ? " …" : ""}`;
+function firstNonEmptyLine(value: string | undefined): string | undefined {
+	return value
+		?.split("\n")
+		.map((line) => line.trim())
+		.find(Boolean);
+}
+
+function titleFromContent(content: any[]): string {
+	const textTitle = content
+		.filter((item) => item.type === "text")
+		.map((item) => firstNonEmptyLine(asString(item.text)))
+		.find(Boolean);
+	if (textTitle) return textTitle;
+
+	const thinking = content
+		.filter((item) => item.type === "thinking")
+		.map((item) => firstNonEmptyLine(asString(item.thinking)))
+		.find(Boolean);
+	return thinking?.match(/\*\*([^*]+)\*\*/)?.[1] ?? thinking ?? "Working";
 }
 
 function statusIcon(theme: Theme, context: { isPartial?: boolean; isError?: boolean }): string {
@@ -52,73 +68,10 @@ function statusIcon(theme: Theme, context: { isPartial?: boolean; isError?: bool
 	return context.isError ? theme.fg("warning", "!") : theme.fg("muted", "✓");
 }
 
-class ToolSummary implements Component {
-	private theme: Theme;
-	private summary: string;
-	private context: { isPartial?: boolean; isError?: boolean; invalidate?: () => void };
-	private interval?: ReturnType<typeof setInterval>;
-
-	constructor(theme: Theme, summary: string, context: { isPartial?: boolean; isError?: boolean; invalidate?: () => void }) {
-		this.theme = theme;
-		this.summary = summary;
-		this.context = context;
-		this.update(theme, summary, context);
-	}
-
-	update(theme: Theme, summary: string, context: { isPartial?: boolean; isError?: boolean; invalidate?: () => void }): void {
-		this.theme = theme;
-		this.summary = summary;
-		this.context = context;
-
-		if (context.isPartial && !this.interval) {
-			this.interval = setInterval(() => context.invalidate?.(), 80);
-			this.interval.unref?.();
-		} else if (!context.isPartial && this.interval) {
-			clearInterval(this.interval);
-			this.interval = undefined;
-		}
-	}
-
-	render(width: number): string[] {
-		return [truncateToWidth(`${statusIcon(this.theme, this.context)} ${this.summary}`, width)];
-	}
-
-	invalidate(): void {}
-}
-
-function summaryForTool(name: string, args: unknown, theme: Theme): string {
-	const input = asObject(args);
-	const title = theme.fg("toolTitle", theme.bold(name));
-
-	if (name === "bash") return `${theme.fg("toolTitle", theme.bold("$"))} ${firstLine(asString(input.command))}`;
-	if (name === "read" || name === "ls") {
-		const path = asString(input.path) ?? (name === "ls" ? "." : "...");
-		return `${title} ${theme.fg("accent", path)}`;
-	}
-	if (name === "grep" || name === "find") {
-		const pattern = asString(input.pattern) ?? "...";
-		const path = asString(input.path) ?? ".";
-		return `${title} ${theme.fg("accent", pattern)} ${theme.fg("dim", `in ${path}`)}`;
-	}
-	if (name === "write") {
-		const path = asString(input.path) ?? "...";
-		return `${title} ${theme.fg("accent", path)} ${theme.fg("dim", `(${plural(lineCount(asString(input.content)), "line")})`)}`;
-	}
-	if (name === "edit") {
-		const path = asString(input.path) ?? "...";
-		const edits = Array.isArray(input.edits) ? input.edits.length : 0;
-		return `${title} ${theme.fg("accent", path)} ${theme.fg("dim", `(${plural(edits, "edit")})`)}`;
-	}
-	if (name === "mcp" && typeof input.tool === "string") return `${title} ${theme.fg("accent", input.tool)}`;
-
-	return title;
-}
-
-function renderCall(name: string, args: unknown, theme: Theme, context: { isPartial?: boolean; isError?: boolean; invalidate?: () => void; lastComponent?: Component }) {
-	const summary = summaryForTool(name, args, theme);
-	const component = context.lastComponent instanceof ToolSummary ? context.lastComponent : new ToolSummary(theme, summary, context);
-	component.update(theme, summary, context);
-	return component;
+function summarizeTools(toolNames: string[]): string {
+	const counts = new Map<string, number>();
+	for (const name of toolNames) counts.set(name, (counts.get(name) ?? 0) + 1);
+	return [plural(toolNames.length, "call"), ...counts.entries().map(([name, count]) => `${name} ×${count}`)].join(" · ");
 }
 
 function createDefinition(name: BuiltInToolName, cwd: string): ToolDefinition {
@@ -135,17 +88,13 @@ function compactTool(tool: ToolDefinition): ToolDefinition {
 	return {
 		...tool,
 		renderShell: "self",
-		renderCall(args, theme, context) {
-			return renderCall(tool.name, args, theme, context);
+		renderCall() {
+			return new Container();
 		},
 		renderResult() {
 			return new Container();
 		},
 	};
-}
-
-function hasToolCall(message: { content?: Array<{ type?: string }> }): boolean {
-	return Array.isArray(message.content) && message.content.some((content) => content.type === "toolCall");
 }
 
 async function loadAssistantMessageComponent(): Promise<any> {
@@ -154,7 +103,7 @@ async function loadAssistantMessageComponent(): Promise<any> {
 	return (await import(pathToFileURL(componentPath).href)).AssistantMessageComponent;
 }
 
-function patchAssistantSummarySpinner(AssistantMessageComponent: any): void {
+function patchWorkStepRenderer(AssistantMessageComponent: any): void {
 	const proto = AssistantMessageComponent.prototype as {
 		[ASSISTANT_PATCHED]?: boolean;
 		updateContent: (message: any) => void;
@@ -166,18 +115,44 @@ function patchAssistantSummarySpinner(AssistantMessageComponent: any): void {
 	const updateContent = proto.updateContent;
 	proto.updateContent = function (message: any) {
 		updateContent.call(this, message);
-		if (hasToolCall(message)) activeAssistant = this;
+
+		const content = Array.isArray(message.content) ? message.content : [];
+		const toolCalls = content.filter((item: any) => item.type === "toolCall");
+		if (toolCalls.length === 0) return;
+
+		const step =
+			workSteps.get(this) ??
+			({
+				title: "Working",
+				toolNames: [],
+				toolCallIds: new Set<string>(),
+				completedToolCallIds: new Set<string>(),
+				finalized: false,
+				failed: false,
+			} satisfies WorkStep);
+
+		step.title = titleFromContent(content);
+		step.toolNames = toolCalls.map((toolCall: any) => asString(toolCall.name) ?? "tool");
+		step.toolCallIds = new Set(toolCalls.map((toolCall: any) => asString(toolCall.id)).filter(Boolean));
+		step.finalized = Boolean(message.stopReason);
+		step.failed ||= message.stopReason === "error" || message.stopReason === "aborted";
+
+		workSteps.set(this, step);
+		for (const toolCallId of step.toolCallIds) workStepByToolCallId.set(toolCallId, step);
 	};
 
 	const render = proto.render;
 	proto.render = function (width: number) {
 		const lines = render.call(this, width);
-		if (activeToolCount <= 0 || activeAssistant !== this || !this.hasToolCalls) return lines;
+		const step = workSteps.get(this);
+		if (!step) return lines;
 
-		const index = lines.findIndex((line) => line.trim().length > 0);
-		if (index === -1) return lines;
-		lines[index] = truncateToWidth(`${statusIcon(themeShim, { isPartial: true })} ${lines[index]}`, width);
-		return lines;
+		const pending = !step.finalized || step.completedToolCallIds.size < step.toolCallIds.size;
+		const icon = statusIcon(themeShim, { isPartial: pending && !step.failed, isError: step.failed });
+		return [
+			truncateToWidth(`${icon} ${step.title}`, width),
+			truncateToWidth(`  ${summarizeTools(step.toolNames)}`, width),
+		];
 	};
 }
 
@@ -212,28 +187,30 @@ function stopSummaryTick(): void {
 }
 
 export default async function (pi: ExtensionAPI) {
-	patchAssistantSummarySpinner(await loadAssistantMessageComponent());
+	patchWorkStepRenderer(await loadAssistantMessageComponent());
 
 	const registerTool = pi.registerTool.bind(pi);
 	pi.registerTool = ((tool: ToolDefinition) => registerTool(compactTool(tool))) as typeof pi.registerTool;
 
 	pi.on("tool_execution_start", (_event, ctx) => {
-		activeToolCount += 1;
 		startSummaryTick(ctx);
 	});
 
-	pi.on("tool_execution_end", () => {
-		activeToolCount = Math.max(0, activeToolCount - 1);
-		if (activeToolCount === 0) stopSummaryTick();
+	pi.on("tool_execution_end", (event) => {
+		const step = workStepByToolCallId.get(event.toolCallId);
+		if (step) {
+			step.completedToolCallIds.add(event.toolCallId);
+			step.failed ||= event.isError;
+			workStepByToolCallId.delete(event.toolCallId);
+		}
+		if (workStepByToolCallId.size === 0) stopSummaryTick();
 	});
 
 	pi.on("agent_end", () => {
-		activeToolCount = 0;
 		stopSummaryTick();
 	});
 
 	pi.on("session_shutdown", () => {
-		activeToolCount = 0;
 		stopSummaryTick();
 	});
 

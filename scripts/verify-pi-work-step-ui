@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+verify_dir="$(mktemp -d)"
+trap 'rm -rf "$verify_dir"' EXIT
+
+raw_output="$verify_dir/pi.raw"
+plain_output="$verify_dir/pi.txt"
+export PI_VERIFY_PROMPT='Inspect pi/.pi/agent/settings.json and pi/.pi/agent/mcp.json using two concurrent read calls. Do not write a visible preamble before the tool calls. After both calls finish, reply only: Done.'
+export PI_VERIFY_MODEL="${PI_VERIFY_MODEL:-openai-codex/gpt-5.4-mini}"
+export PI_VERIFY_OUTPUT="$raw_output"
+
+expect <<'EXPECT'
+set timeout 90
+log_user 0
+log_file -noappend $env(PI_VERIFY_OUTPUT)
+spawn pi --offline --no-session --model $env(PI_VERIFY_MODEL) $env(PI_VERIFY_PROMPT)
+expect {
+  -re {2 calls} {}
+  timeout { exit 124 }
+}
+expect {
+  -re {Done\.} {}
+  timeout { exit 124 }
+}
+send "\004"
+expect eof
+EXPECT
+
+perl -pe 's/\e\][^\a]*(?:\a|\e\\)//g; s/\e\[[0-9;?]*[ -\/]*[@-~]//g; s/\r/\n/g' "$raw_output" > "$plain_output"
+
+if ! rg -U --pcre2 '✓ (?!Working)[^\n]+\n  2 calls · read ×2' "$plain_output" >/dev/null; then
+	tail -80 "$plain_output"
+	echo "Expected a completed, non-Working work step with two grouped read calls." >&2
+	exit 1
+fi
+
+echo "Pi work-step UI verified: thinking-derived title, completion mark, and grouped tool counts."
