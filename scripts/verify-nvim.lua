@@ -509,6 +509,41 @@ local function validate_sidekick_herdr()
     fail("Sidekick starship should fall back to the Herdr parent session cwd")
   end
 
+  local Terminal = require("sidekick.cli.terminal")
+  local backend = require("plugins.sidekick.herdr_backend")
+  local original_terminals = Terminal.terminals
+  local original_get_agent = herdr.get_agent
+  local original_focus = herdr.focus
+  local focused
+  Terminal.terminals = {
+    ["terminal:test"] = {
+      buf = 42,
+      parent = { herdr_agent_name = "pi-done" },
+    },
+  }
+  herdr.get_agent = function(name)
+    return { name = name, agent_status = "done" }
+  end
+  herdr.focus = function(name)
+    focused = name
+    return true
+  end
+  backend.mark_seen(42)
+  if focused ~= "pi-done" then
+    fail("opening a done Herdr session in Neovim should mark it seen")
+  end
+  focused = nil
+  herdr.get_agent = function(name)
+    return { name = name, agent_status = "blocked" }
+  end
+  backend.mark_seen(42)
+  if focused then
+    fail("opening a blocked Herdr session must not clear its attention state")
+  end
+  Terminal.terminals = original_terminals
+  herdr.get_agent = original_get_agent
+  herdr.focus = original_focus
+
   local branch = require("plugins.sidekick.branch").current(cwd)
   local terminal = { tool = { name = "pi-review" }, cwd = cwd, opts = { layout = "float", float = {} } }
   require("plugins.sidekick.branding").apply(terminal)

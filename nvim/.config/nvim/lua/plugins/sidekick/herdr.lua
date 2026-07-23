@@ -207,6 +207,12 @@ function M.read(target, source, lines, ansi)
   return result and result.read and result.read.text or nil
 end
 
+---@param target string
+---@return boolean
+function M.focus(target)
+  return M.call({ "agent", "focus", target }, true) ~= nil
+end
+
 ---@param pane_id string
 ---@return boolean
 function M.close(pane_id)

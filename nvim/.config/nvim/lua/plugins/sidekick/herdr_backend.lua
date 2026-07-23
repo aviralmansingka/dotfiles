@@ -20,6 +20,27 @@ function M.apply()
       return Config._sidekick_herdr_validate(key, allowed)
     end
   end
+
+  vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
+    group = vim.api.nvim_create_augroup("plugins.sidekick.herdr_seen", { clear = true }),
+    callback = function(args)
+      M.mark_seen(args.buf)
+    end,
+  })
+end
+
+---@param buf integer
+function M.mark_seen(buf)
+  for _, terminal in pairs(require("sidekick.cli.terminal").terminals) do
+    local parent = terminal.parent
+    if terminal.buf == buf and parent and parent.herdr_agent_name then
+      local agent = Herdr.get_agent(parent.herdr_agent_name)
+      if agent and agent.agent_status == "done" then
+        Herdr.focus(parent.herdr_agent_name)
+      end
+      return
+    end
+  end
 end
 
 function M:init()
