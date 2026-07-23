@@ -40,6 +40,10 @@ local function in_cwd_subtree(entry_cwd, root)
   return n:sub(1, #root + 1) == root .. "/" or root:sub(1, #n + 1) == n .. "/"
 end
 
+local function strip_ansi(line)
+  return line:gsub("\27%[[%d;:]*m", "")
+end
+
 local function scrub_codex_prompt(output)
   local lines = vim.split(output, "\r\n", { plain = true })
   for i = #lines, math.max(1, #lines - 8), -1 do
@@ -48,7 +52,7 @@ local function scrub_codex_prompt(output)
       local previous = lines[first - 1]
       if previous
         and previous:find("\27[48;", 1, true)
-        and previous:gsub("\27%[[%d;:]*m", ""):match("^%s*$")
+        and strip_ansi(previous):match("^%s*$")
       then
         first = first - 1
       end
@@ -61,6 +65,47 @@ local function scrub_codex_prompt(output)
   return output
 end
 
+local function scrub_pi_prompt(output)
+  local lines = vim.split(output, "\r\n", { plain = true })
+  local footer
+  for i = #lines, math.max(1, #lines - 8), -1 do
+    if strip_ansi(lines[i]):match("^MCP:%s") then
+      footer = i
+      break
+    end
+  end
+  if not footer then
+    return output
+  end
+
+  local first
+  local separators = 0
+  for i = footer - 1, math.max(1, footer - 50), -1 do
+    local text = strip_ansi(lines[i])
+    if text ~= "" and text:gsub("─", "") == "" then
+      first = i
+      separators = separators + 1
+      if separators == 2 then
+        break
+      end
+    end
+  end
+  if separators < 2 then
+    return output
+  end
+
+  while first > 1 do
+    local previous = lines[first - 1]
+    local text = strip_ansi(previous)
+    if text:match("^%s*$") or (previous:find("\27[", 1, true) and text:match("^%s*.*Working%.%.%.%s*$")) then
+      first = first - 1
+    else
+      break
+    end
+  end
+  return table.concat(lines, "\r\n", 1, first - 1) .. "\27[0m"
+end
+
 local function preview_text(item)
   if not item or item._empty or not item.agent_name then
     return nil, "(no session)"
@@ -68,6 +113,8 @@ local function preview_text(item)
   local output = herdr.read(item.agent_name, "recent-unwrapped", 120, true)
   if output and item.tool == "codex" then
     output = scrub_codex_prompt(output)
+  elseif output and item.tool == "pi" then
+    output = scrub_pi_prompt(output)
   end
   return output, "(agent read failed)"
 end
