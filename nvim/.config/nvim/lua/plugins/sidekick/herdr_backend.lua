@@ -41,6 +41,7 @@ function M.sessions()
         tool = tool,
         herdr_agent_name = agent.name or agent.pane_id,
         herdr_pane_id = agent.pane_id,
+        herdr_tab_id = agent.tab_id,
         herdr_terminal_id = agent.terminal_id,
         herdr_workspace_id = agent.workspace_id,
         agent_status = agent.agent_status,
@@ -58,6 +59,7 @@ function M:start()
   end
   self.id = "herdr:" .. agent.terminal_id
   self.herdr_pane_id = agent.pane_id
+  self.herdr_tab_id = agent.tab_id
   self.herdr_terminal_id = agent.terminal_id
   self.herdr_workspace_id = agent.workspace_id
   self.started = true

@@ -88,6 +88,7 @@ end
 ---@return string|nil workspace_id
 ---@return string|nil root_pane_id
 ---@return boolean created
+---@return string|nil root_tab_id
 function M.ensure_workspace(cwd)
   local workspace_id = M.workspace_for_cwd(cwd)
   if workspace_id then
@@ -99,7 +100,11 @@ function M.ensure_workspace(cwd)
   if not result or not result.workspace then
     return nil, nil, false
   end
-  return result.workspace.workspace_id, result.root_pane and result.root_pane.pane_id or nil, true
+  return
+    result.workspace.workspace_id,
+    result.root_pane and result.root_pane.pane_id or nil,
+    true,
+    result.root_pane and result.root_pane.tab_id or nil
 end
 
 ---@param name string
@@ -108,11 +113,46 @@ end
 ---@param env? table<string, string|boolean>
 ---@return table|nil agent
 function M.start(name, cwd, command, env)
-  local workspace_id, root_pane_id, created = M.ensure_workspace(cwd)
+  local normalized = M.normalize_cwd(cwd)
+  local workspace_id, root_pane_id, workspace_created, tab_id = M.ensure_workspace(cwd)
   if not workspace_id then
     return nil
   end
-  local args = { "agent", "start", name, "--cwd", M.normalize_cwd(cwd), "--workspace", workspace_id, "--no-focus" }
+  if workspace_created then
+    if not tab_id or not M.call({ "tab", "rename", tab_id, name }) then
+      M.call({ "workspace", "close", workspace_id }, true)
+      return nil
+    end
+  else
+    local tab_result = M.call({
+      "tab",
+      "create",
+      "--workspace",
+      workspace_id,
+      "--cwd",
+      normalized,
+      "--label",
+      name,
+      "--no-focus",
+    })
+    if not tab_result or not tab_result.tab then
+      return nil
+    end
+    tab_id = tab_result.tab.tab_id
+    root_pane_id = tab_result.root_pane and tab_result.root_pane.pane_id or nil
+  end
+  local args = {
+    "agent",
+    "start",
+    name,
+    "--cwd",
+    normalized,
+    "--workspace",
+    workspace_id,
+    "--tab",
+    tab_id,
+    "--no-focus",
+  }
   for key, value in pairs(env or {}) do
     if value ~= false then
       vim.list_extend(args, { "--env", string.format("%s=%s", key, tostring(value)) })
@@ -123,8 +163,10 @@ function M.start(name, cwd, command, env)
   local result = M.call(args)
   local agent = result and result.agent or nil
   if not agent then
-    if created then
+    if workspace_created then
       M.call({ "workspace", "close", workspace_id }, true)
+    elseif tab_id then
+      M.call({ "tab", "close", tab_id }, true)
     end
     return nil
   end

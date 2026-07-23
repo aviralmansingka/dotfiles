@@ -515,13 +515,22 @@ local function validate_sidekick_herdr_live()
   local session = Session.new({ tool = label, cwd = vim.fn.getcwd(), backend = "herdr" })
   local attach = session:start()
   assert_sequence(attach.cmd, { "herdr", "agent", "attach", label }, "Herdr attach command")
-  if not session.herdr_pane_id or not session.herdr_workspace_id then
-    fail("started Herdr session missing pane/workspace identifiers: " .. vim.inspect(session))
+  if not session.herdr_pane_id or not session.herdr_tab_id or not session.herdr_workspace_id then
+    fail("started Herdr session missing pane/tab/workspace identifiers: " .. vim.inspect(session))
   end
 
   session:send(sentinel)
   session:submit()
   local herdr = require("plugins.sidekick.herdr")
+  local live_agent = herdr.get_agent(label)
+  local tab_result = herdr.call({ "tab", "get", session.herdr_tab_id })
+  local tab = tab_result and tab_result.tab
+  if not live_agent or live_agent.tab_id ~= session.herdr_tab_id then
+    fail("started Herdr agent should live in its own tab: " .. vim.inspect(live_agent))
+  end
+  if not tab or tab.label ~= label or tab.pane_count ~= 1 then
+    fail("started Herdr tab should be named for the session and contain one pane: " .. vim.inspect(tab))
+  end
   local echoed = vim.wait(3000, function()
     return (herdr.read(label, "recent-unwrapped", 50) or ""):find("ECHO:" .. sentinel, 1, true) ~= nil
   end, 50)
