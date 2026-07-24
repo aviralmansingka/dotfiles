@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+verify_dir="$(mktemp -d "$PWD/zz-pi-image-drop-verify.XXXXXX")"
+trap 'rm -rf "$verify_dir"' EXIT
+
+image="$verify_dir/dropped image.png"
+volatile_image="$verify_dir/volatile screenshot.png"
+probe="$verify_dir/probe.ts"
+output="$verify_dir/result.json"
+volatile_output="$verify_dir/volatile-result.json"
+
+printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAAD5Ip3+AAAADElEQVQIHWPQMHcFAAEvAKXW2/rDAAAAAElFTkSuQmCC' | base64 -d >"$image"
+cp "$image" "$volatile_image"
+
+cat >"$probe" <<'EOF'
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { writeFileSync } from "node:fs";
+
+export default function (pi: ExtensionAPI) {
+  pi.on("input", (event) => {
+    writeFileSync(
+      process.env.PI_IMAGE_DROP_PROBE!,
+      JSON.stringify({
+        text: event.text,
+        images: event.images?.map(({ type, mimeType, data }) => ({
+          type,
+          mimeType,
+          bytes: Buffer.from(data, "base64").length,
+        })),
+      }),
+    );
+    return { action: "handled" };
+  });
+}
+EOF
+
+escaped_image="${image// /\\ }"
+PI_IMAGE_DROP_PROBE="$output" pi \
+  --offline \
+  --no-session \
+  --no-extensions \
+  -e "$PWD/pi/.pi/agent/extensions/image-drop.ts" \
+  -e "$probe" \
+  -p "Inspect $escaped_image" \
+  >/dev/null
+
+jq -e '
+  (.text | test("^Inspect \\[Image 1\\]\\(file://")) and
+  (.text | contains("dropped%20image.png")) and
+  (.text | contains("<file name=") | not) and
+  (.images | length == 1) and
+  (.images[0].type == "image") and
+  (.images[0].mimeType == "image/png") and
+  (.images[0].bytes > 0)
+' "$output" >/dev/null
+
+export PI_IMAGE_DROP_TEST_EXTENSION="$PWD/pi/.pi/agent/extensions/image-drop.ts"
+export PI_IMAGE_DROP_TEST_IMAGE="$escaped_image"
+export PI_IMAGE_DROP_TEST_PROBE="$probe"
+export PI_IMAGE_DROP_VOLATILE_IMAGE="$volatile_image"
+export PI_IMAGE_DROP_VOLATILE_ESCAPED="${volatile_image// /\\ }"
+export PI_IMAGE_DROP_VOLATILE_OUTPUT="$volatile_output"
+expect <<'EOF' >/dev/null
+set timeout 15
+log_user 0
+spawn pi --offline --no-session --no-extensions -e $env(PI_IMAGE_DROP_TEST_EXTENSION)
+expect -re {Type your message}
+send -- "$env(PI_IMAGE_DROP_TEST_IMAGE)"
+expect -re {\[Image 1\]}
+send \003
+send \003
+expect eof
+EOF
+
+expect <<'EOF' >/dev/null
+set timeout 15
+log_user 0
+spawn env PI_IMAGE_DROP_PROBE=$env(PI_IMAGE_DROP_VOLATILE_OUTPUT) pi \
+  --offline --no-session --no-extensions \
+  -e $env(PI_IMAGE_DROP_TEST_EXTENSION) \
+  -e $env(PI_IMAGE_DROP_TEST_PROBE)
+expect -re {Type your message}
+send -- "$env(PI_IMAGE_DROP_VOLATILE_ESCAPED)"
+expect -re {\[Image 1\]}
+after 500
+file delete -- $env(PI_IMAGE_DROP_VOLATILE_IMAGE)
+send \r
+after 1000
+send \003
+send \003
+expect eof
+EOF
+
+jq -e '
+  (.text | test("^\\[Image 1\\]\\(file://")) and
+  (.images | length == 1) and
+  (.images[0].mimeType == "image/png") and
+  (.images[0].bytes > 0)
+' "$volatile_output" >/dev/null
+
+expect <<'EOF' >/dev/null
+set timeout 15
+log_user 0
+spawn pi --offline --no-session --no-extensions -e $env(PI_IMAGE_DROP_TEST_EXTENSION)
+expect -re {Type your message}
+send -- "\033\[200~"
+after 100
+send -- "plain-paste-preserved-73f"
+after 100
+send -- "\033\[201~"
+expect -re {plain-paste-preserved-73f}
+send -- "\033\[200~"
+after 100
+send -- "$env(PI_IMAGE_DROP_TEST_IMAGE)"
+after 100
+send -- "\033\[201~"
+expect -re {\[Image 1\]}
+send \003
+send \003
+expect eof
+EOF
+
+echo "Pi image drag/drop verified."

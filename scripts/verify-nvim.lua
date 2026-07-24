@@ -69,6 +69,9 @@ local function validate_agent_keymaps()
   assert_key_absent(opencode, "gO")
   assert_key_absent(opencode, "<c-'>")
 
+  local snacks = load_plugin("snacks.nvim")
+  assert_key_desc(snacks, "<C-'>", "Herdr")
+
   assert_key_desc(sidekick, "<leader>ai", "Pi")
   assert_key_desc(sidekick, "<leader>ag", "Codex")
   assert_key_desc(sidekick, "<leader>al", "Local")
@@ -642,7 +645,7 @@ local function validate_sidekick_herdr_live()
   local Session = require("sidekick.cli.session")
   local session = Session.new({ tool = label, cwd = vim.fn.getcwd(), backend = "herdr" })
   local attach = session:start()
-  assert_sequence(attach.cmd, { "herdr", "agent", "attach", label }, "Herdr attach command")
+  assert_sequence(attach.cmd, { "herdr", "agent", "attach", label, "--takeover" }, "Herdr attach command")
   if not session.herdr_pane_id or not session.herdr_tab_id or not session.herdr_workspace_id then
     fail("started Herdr session missing pane/tab/workspace identifiers: " .. vim.inspect(session))
   end

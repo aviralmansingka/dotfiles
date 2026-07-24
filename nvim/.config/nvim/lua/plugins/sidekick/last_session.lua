@@ -6,11 +6,15 @@ local M = {}
 
 ---@type string|nil
 M.label = nil
+---@type string|nil
+M.terminal_id = nil
 
 ---@param label string|nil
-function M.record(label)
+---@param terminal_id? string
+function M.record(label, terminal_id)
   if type(label) == "string" and label ~= "" then
     M.label = label
+    M.terminal_id = terminal_id
   end
 end
 
@@ -21,7 +25,7 @@ function M.open()
     require("plugins.sidekick.cwd_picker").open()
     return
   end
-  require("plugins.sidekick.internal").toggle_tool_session(M.label, true)
+  require("plugins.sidekick.internal").toggle_tool_session(M.label, true, M.terminal_id)
 end
 
 return M

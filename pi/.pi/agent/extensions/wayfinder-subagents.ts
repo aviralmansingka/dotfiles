@@ -1,22 +1,28 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { StringEnum } from "@earendil-works/pi-ai";
 import { Type, type Static } from "typebox";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const MAX_TASKS = 8;
 const SIDEKICK_NAMED_SESSION = "SIDEKICK_NAMED_SESSION";
-const WAYFINDER_SUBAGENT = "PI_WAYFINDER_SUBAGENT";
+
+const MapSchema = Type.Object({
+  title: Type.String({ description: "Wayfinder map title; used for the dedicated Herdr workspace." }),
+});
 
 const TaskSchema = Type.Object({
-  title: Type.String({ description: "Human-readable Wayfinder ticket/research title" }),
+  type: StringEnum(["research", "task"] as const, { description: "AFK Wayfinder ticket type." }),
+  ticketId: Type.String({ description: "Tracker ticket identifier, e.g. #124 or 03." }),
+  title: Type.String({ description: "Human-readable Wayfinder ticket title." }),
   prompt: Type.String({ description: "Complete prompt for the sub-agent" }),
   cwd: Type.Optional(Type.String({ description: "Working directory for this sub-agent. Defaults to current cwd." })),
-  model: Type.Optional(Type.String({ description: "Optional Pi model pattern, e.g. openai/gpt-5.5 or sonnet:high" })),
+  model: Type.Optional(Type.String({ description: "Optional Codex model ID." })),
 });
 
 const ParamsSchema = Type.Object({
+  map: MapSchema,
   backend: Type.Optional(
     Type.String({
       description: "Sub-agent backend. Only 'herdr' is implemented; names are compatible with Neovim Sidekick's pi-* sessions.",
@@ -32,31 +38,57 @@ type Params = Static<typeof ParamsSchema>;
 type HerdrAgent = {
   name?: string;
   pane_id?: string;
+  tab_id?: string;
   terminal_id?: string;
   workspace_id?: string;
 };
 
-function slugify(value: string): string {
+type HerdrPlacement = {
+  workspaceId: string;
+  tabId: string;
+  rootPaneId?: string;
+  workspaceCreated: boolean;
+};
+
+function slugify(value: string, maxLength = 48): string {
   const slug = value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
+    .slice(0, maxLength)
+    .replace(/-+$/g, "");
   return slug || "task";
 }
 
-function hash(value: string): string {
-  return createHash("sha1").update(value).digest("hex").slice(0, 7);
+function shorten(value: string, maxLength = 56): string {
+  const clean = value.trim().replace(/\s+/g, " ");
+  return clean.length <= maxLength ? clean : `${clean.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
-function makePrompt(task: Params["tasks"][number]): string {
+function names(map: Params["map"], task: Params["tasks"][number]) {
+  const mapSlug = slugify(map.title, 24);
+  const ticketSlug = slugify(task.ticketId, 12);
+  const titleSlug = slugify(task.title, 32);
+  const slug = `wf-${mapSlug}-${task.type}-${ticketSlug}-${titleSlug}`;
+  const typeLabel = task.type[0].toUpperCase() + task.type.slice(1);
+  return {
+    workspaceLabel: `Wayfinder · ${map.title}`,
+    tabLabel: `${typeLabel} · ${task.ticketId} · ${shorten(task.title)}`,
+    slug,
+    agentName: `codex-${slug}`,
+  };
+}
+
+function makePrompt(map: Params["map"], task: Params["tasks"][number]): string {
   return [
-    "You are a Wayfinder sub-agent running in your own Pi session.",
+    "You are a Wayfinder sub-agent running in your own Codex session.",
     "Resolve exactly the task below. Do not broaden scope.",
     "If this is a Wayfinder research ticket, record findings on the ticket/map exactly as the Wayfinder skill requires.",
     "If blocked, leave a concise status note wherever the task asks you to report progress, then stop.",
     "",
-    `Task title: ${task.title}`,
+    `Map: ${map.title}`,
+    `Ticket: ${task.ticketId} · ${task.title}`,
+    `Type: ${task.type}`,
     "",
     task.prompt,
   ].join("\n");
@@ -78,22 +110,67 @@ async function herdr(args: string[], signal?: AbortSignal): Promise<Record<strin
   }
 }
 
-export default function (pi: ExtensionAPI) {
-  if (process.env[WAYFINDER_SUBAGENT] === "1") {
-    pi.on("agent_settled", (_event, ctx) => ctx.shutdown());
+async function preparePlacement(
+  workspaceLabel: string,
+  tabLabel: string,
+  cwd: string,
+  signal?: AbortSignal,
+): Promise<HerdrPlacement> {
+  const listed = await herdr(["workspace", "list"], signal);
+  const existing = (listed.workspaces ?? []).find((workspace: any) => workspace.label === workspaceLabel);
+
+  if (existing?.workspace_id) {
+    const created = await herdr(
+      ["tab", "create", "--workspace", existing.workspace_id, "--cwd", cwd, "--label", tabLabel, "--no-focus"],
+      signal,
+    );
+    if (!created.tab?.tab_id) throw new Error(`Herdr did not create a tab in ${workspaceLabel}.`);
+    return {
+      workspaceId: existing.workspace_id,
+      tabId: created.tab.tab_id,
+      rootPaneId: created.root_pane?.pane_id,
+      workspaceCreated: false,
+    };
   }
 
+  const created = await herdr(["workspace", "create", "--cwd", cwd, "--label", workspaceLabel, "--no-focus"], signal);
+  const workspaceId = created.workspace?.workspace_id;
+  const tabId = created.root_pane?.tab_id ?? created.workspace?.active_tab_id;
+  if (!workspaceId || !tabId) throw new Error(`Herdr did not create the ${workspaceLabel} workspace.`);
+  await herdr(["tab", "rename", tabId, tabLabel], signal);
+  return {
+    workspaceId,
+    tabId,
+    rootPaneId: created.root_pane?.pane_id,
+    workspaceCreated: true,
+  };
+}
+
+async function cleanupPlacement(placement: HerdrPlacement): Promise<void> {
+  const args = placement.workspaceCreated
+    ? ["workspace", "close", placement.workspaceId]
+    : ["tab", "close", placement.tabId];
+  try {
+    await herdr(args);
+  } catch {
+    // Preserve the launch error; an empty Herdr tab is safe to remove manually.
+  }
+}
+
+export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "wayfinder_subagents",
     label: "Wayfinder Subagents",
     description: [
-      "Launch Wayfinder sub-agent Pi sessions through Herdr.",
+      "Launch Wayfinder sub-agent Codex sessions through Herdr.",
       "Use this after creating Wayfinder research/task tickets that can run AFK in parallel.",
-      "Each session is named pi-wf-* so it appears in the existing Neovim Sidekick/Herdr named-session flow.",
+      "Each map gets a dedicated Herdr workspace and each ticket gets its own tab.",
+      "Sessions use deterministic codex-wf-<map>-<type>-<ticket>-<title> names for Neovim Sidekick.",
     ].join(" "),
-    promptSnippet: "Launch AFK Wayfinder research/task sub-agents as visible Herdr Pi sessions.",
+    promptSnippet: "Launch AFK Wayfinder research/task sub-agents as visible Herdr Codex sessions.",
     promptGuidelines: [
       "Use wayfinder_subagents only for AFK Wayfinder research/task tickets; do not use it for HITL grilling/prototype tickets.",
+      "When using wayfinder_subagents, pass the map title plus each ticket's type and tracker ID as structured fields.",
       "When using wayfinder_subagents, include the map name/link, ticket name/link, exact question, reporting instructions, and any tracker-specific claim/close rules in each task prompt.",
     ],
     parameters: ParamsSchema,
@@ -110,52 +187,77 @@ export default function (pi: ExtensionAPI) {
       }
 
       const launched = [] as Array<{
+        type: "research" | "task";
+        ticket_id: string;
         title: string;
         name: string;
         pane_id?: string;
+        tab_id?: string;
+        tab_label: string;
         terminal_id?: string;
         workspace_id?: string;
+        workspace_label: string;
         cwd: string;
         attach: string;
       }>;
 
-      for (const [index, task] of params.tasks.entries()) {
-        const slug = `wf-${slugify(task.title)}-${hash(`${task.title}\n${task.prompt}\n${Date.now()}\n${index}`)}`;
-        const agentName = `pi-${slug}`;
+      for (const task of params.tasks) {
+        const identity = names(params.map, task);
         const cwd = task.cwd ?? ctx.cwd;
-        const command = ["pi", "--name", slug];
+        const placement = await preparePlacement(identity.workspaceLabel, identity.tabLabel, cwd, signal);
+        const command = ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--color", "always"];
         if (task.model) command.push("--model", task.model);
-        command.push(makePrompt(task));
+        command.push(makePrompt(params.map, task));
 
         const args = [
           "agent",
           "start",
-          agentName,
+          identity.agentName,
           "--cwd",
           cwd,
+          "--workspace",
+          placement.workspaceId,
+          "--tab",
+          placement.tabId,
           params.focus ? "--focus" : "--no-focus",
           "--env",
-          `${SIDEKICK_NAMED_SESSION}=${slug}`,
-          "--env",
-          `${WAYFINDER_SUBAGENT}=1`,
+          `${SIDEKICK_NAMED_SESSION}=${identity.slug}`,
           "--",
           ...command,
         ];
 
-        const result = await herdr(args, signal);
-        const agent = (result.agent ?? {}) as HerdrAgent;
+        let agent: HerdrAgent;
+        try {
+          const result = await herdr(args, signal);
+          agent = (result.agent ?? {}) as HerdrAgent;
+          if (!agent.pane_id) throw new Error(`Herdr did not return a pane for ${identity.agentName}.`);
+          if (placement.rootPaneId && placement.rootPaneId !== agent.pane_id) {
+            await herdr(["pane", "close", placement.rootPaneId], signal);
+          }
+        } catch (error) {
+          await cleanupPlacement(placement);
+          throw error;
+        }
+
         launched.push({
+          type: task.type,
+          ticket_id: task.ticketId,
           title: task.title,
-          name: agent.name ?? agentName,
+          name: agent.name ?? identity.agentName,
           pane_id: agent.pane_id,
+          tab_id: agent.tab_id ?? placement.tabId,
+          tab_label: identity.tabLabel,
           terminal_id: agent.terminal_id,
-          workspace_id: agent.workspace_id,
+          workspace_id: agent.workspace_id ?? placement.workspaceId,
+          workspace_label: identity.workspaceLabel,
           cwd,
-          attach: `herdr agent attach ${agent.name ?? agentName}`,
+          attach: `herdr agent attach ${agent.name ?? identity.agentName} --takeover`,
         });
       }
 
-      const lines = launched.map((agent) => `- ${agent.title}: ${agent.name} (${agent.attach})`);
+      const lines = launched.map(
+        (agent) => `- ${agent.tab_label}: ${agent.name} (${agent.attach})`,
+      );
       return {
         content: [{ type: "text", text: `Launched ${launched.length} Wayfinder sub-agent(s):\n${lines.join("\n")}` }],
         details: { agents: launched },

@@ -88,7 +88,7 @@ function M:start()
 end
 
 function M:attach()
-  return { cmd = { "herdr", "agent", "attach", self.herdr_agent_name } }
+  return { cmd = { "herdr", "agent", "attach", self.herdr_agent_name, "--takeover" } }
 end
 
 function M:is_running()

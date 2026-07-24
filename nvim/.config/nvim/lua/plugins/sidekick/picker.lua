@@ -72,8 +72,8 @@ function M.open()
     confirm = function(picker, item)
       picker:close()
       if item and item.label then
-        require("plugins.sidekick.last_session").record(item.label)
-        internal.toggle_tool_session(item.label, true)
+        require("plugins.sidekick.last_session").record(item.label, item.terminal_id)
+        internal.toggle_tool_session(item.label, true, item.terminal_id)
       end
     end,
     win = {

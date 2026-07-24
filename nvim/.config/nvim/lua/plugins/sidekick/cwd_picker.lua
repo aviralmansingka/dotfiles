@@ -312,8 +312,8 @@ function M.open(opts)
           opts.on_confirm(item)
         end
         picker:close()
-        require("plugins.sidekick.last_session").record(item.label)
-        internal.toggle_tool_session(item.label, true)
+        require("plugins.sidekick.last_session").record(item.label, item.terminal_id)
+        internal.toggle_tool_session(item.label, true, item.terminal_id)
       end
     end,
     win = {

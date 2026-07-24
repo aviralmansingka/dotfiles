@@ -1,0 +1,84 @@
+<div id="pi-block-rendering" class="flex flex-col gap-4">
+  <div class="flex flex-wrap gap-2" role="group" aria-label="Choose Pi rendering mode">
+    <button class="btn btn-primary" type="button" data-mode="stock" aria-pressed="true">Stock Pi</button>
+    <button class="btn btn-secondary" type="button" data-mode="prototype" aria-pressed="false">Your prototype</button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <section class="card p-4 min-w-0">
+      <div class="font-medium">text</div>
+      <div class="text-muted mt-1">Markdown in normal foreground</div>
+      <div class="mt-4">
+        I’ll inspect the renderer and <strong>verify the behavior</strong>.
+        <code>tool-call-renderer.ts</code>
+      </div>
+    </section>
+
+    <section class="card p-4 min-w-0">
+      <div class="font-medium">thinking</div>
+      <div class="text-muted mt-1">Markdown, italic, thinking color</div>
+      <div class="mt-4 text-muted italic">
+        <strong>Inspecting the current implementation</strong><br>
+        I need to trace the message lifecycle first.
+      </div>
+    </section>
+
+    <section class="card p-4 min-w-0">
+      <div class="font-medium">toolCall</div>
+      <div class="text-muted mt-1">Separate tool-execution component</div>
+      <div class="mt-4 font-mono break-words" data-stock-tool>
+        ⠋ read<br>
+        <span class="text-muted">path: pi/.pi/agent/extensions/tool-call-renderer.ts</span>
+      </div>
+      <div class="mt-4 font-mono hidden" data-prototype-tool>
+        <span class="text-muted">No individual row rendered</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="card p-4 min-w-0">
+    <div class="font-medium" data-transcript-label>Combined stock transcript</div>
+    <div class="mt-4 font-mono break-words">
+      <div data-stock-transcript>
+        <div class="italic text-muted"><strong>Inspecting the current implementation</strong></div>
+        <div class="italic text-muted">I need to trace the message lifecycle first.</div>
+        <div class="mt-3">I’ll inspect the renderer and <strong>verify the behavior</strong>.</div>
+        <div class="mt-3">⠋ read</div>
+        <div class="text-muted">path: pi/.pi/agent/extensions/tool-call-renderer.ts</div>
+      </div>
+      <div class="hidden" data-prototype-transcript>
+        <div>⠋ I’ll inspect the renderer and **verify the behavior**.</div>
+        <div class="text-muted">  1 call · read ×1</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const root = document.getElementById("pi-block-rendering");
+  const buttons = [...root.querySelectorAll("[data-mode]")];
+  const stockTool = root.querySelector("[data-stock-tool]");
+  const prototypeTool = root.querySelector("[data-prototype-tool]");
+  const stockTranscript = root.querySelector("[data-stock-transcript]");
+  const prototypeTranscript = root.querySelector("[data-prototype-transcript]");
+  const label = root.querySelector("[data-transcript-label]");
+
+  for (const button of buttons) {
+    button.addEventListener("click", () => {
+      const stock = button.dataset.mode === "stock";
+      for (const candidate of buttons) {
+        const selected = candidate === button;
+        candidate.setAttribute("aria-pressed", String(selected));
+        candidate.classList.toggle("btn-primary", selected);
+        candidate.classList.toggle("btn-secondary", !selected);
+      }
+      stockTool.classList.toggle("hidden", !stock);
+      prototypeTool.classList.toggle("hidden", stock);
+      stockTranscript.classList.toggle("hidden", !stock);
+      prototypeTranscript.classList.toggle("hidden", stock);
+      label.textContent = stock ? "Combined stock transcript" : "Combined prototype transcript";
+    });
+  }
+})();
+</script>

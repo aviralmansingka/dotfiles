@@ -123,12 +123,14 @@ end
 --- Toggle a Sidekick tool session through the configured backend.
 ---@param name string
 ---@param focus boolean|nil
-function M.toggle_tool_session(name, focus)
+---@param terminal_id? string
+function M.toggle_tool_session(name, focus, terminal_id)
   if M.is_claude_tool(name) and not M.ensure_claude_bridge() then
     return
   end
   M.hide_tool_sessions(name)
-  require("sidekick.cli").toggle({ name = name, focus = focus ~= false })
+  local filter = terminal_id and { session = "herdr:" .. terminal_id } or nil
+  require("sidekick.cli").toggle({ name = name, focus = focus ~= false, filter = filter })
 end
 
 --- Hide visible Sidekick terminals except an optional tool.
