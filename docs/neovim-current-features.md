@@ -579,6 +579,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - `<leader>fw` opens a fresh, compact Herdr workspace picker titled `spaces`.
 - Herdr workspaces can be created, renamed, selected, and confirmed-closed from the picker; each selected workspace is
   represented by at most one runtime Neovim tab keyed by its Herdr workspace ID.
+- Confirming a workspace enters its preserved tab-local cwd, then opens the cwd-scoped Sidekick agent picker.
 - Entering a bound workspace tab focuses the corresponding Herdr workspace; ordinary tabs and manually closed tabs do
   not affect Herdr.
 - Workspace tabs initialize from stable Herdr pane cwd and preserve later tab-local cwd/layout changes.

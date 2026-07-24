@@ -395,6 +395,7 @@ function M.open(preferred_id)
       picker:close()
       if item then
         bind_tab(item)
+        vim.schedule(require("plugins.sidekick.cwd_picker").open)
       end
     end,
     win = {
