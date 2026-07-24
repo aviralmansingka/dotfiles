@@ -618,6 +618,483 @@ local function validate_sidekick_herdr()
   herdr.list_agents = original_list_agents
 end
 
+local function validate_herdr_workspaces()
+  local snacks = load_plugin("snacks.nvim")
+  assert_key_desc(snacks, "<leader>fw", "Workspace")
+
+  local herdr = require("plugins.sidekick.herdr")
+  local original_call = herdr.call
+  local original_pick = Snacks.picker.pick
+  local original_input = vim.ui.input
+  local original_select = vim.ui.select
+  local original_confirm = vim.fn.confirm
+  local original_notify = vim.notify
+  local calls, picker_opts, picker_count, notifications = {}, nil, 0, {}
+  local failures = {}
+  local root = vim.fn.getcwd()
+  local workspaces = {
+    { workspace_id = "w-idle", workspace_number = 2, label = "Zebra", agent_status = "idle" },
+    { workspace_id = "w-focused", workspace_number = 7, label = "Duplicate", agent_status = "blocked", focused = true },
+    { workspace_id = "w-working", workspace_number = 11, label = "Alpha", agent_status = "working" },
+    { workspace_id = "w-done", workspace_number = 19, label = "Duplicate", agent_status = "done" },
+    { workspace_id = "w-unknown", workspace_number = 23, label = "Omega", agent_status = "future-state" },
+  }
+  local panes = {
+    { pane_id = "p-idle", workspace_id = "w-idle", cwd = root .. "/nvim", foreground_cwd = root .. "/scripts" },
+    { pane_id = "p-focused", workspace_id = "w-focused", cwd = root },
+    { pane_id = "p-working", workspace_id = "w-working", cwd = root .. "/scripts" },
+    { pane_id = "p-done", workspace_id = "w-done", cwd = root },
+    { pane_id = "p-unknown", workspace_id = "w-unknown", cwd = root },
+  }
+
+  local function eq(actual, expected, label)
+    if not vim.deep_equal(actual, expected) then
+      fail(label .. ": got " .. vim.inspect(actual) .. ", expected " .. vim.inspect(expected))
+    end
+  end
+
+  local function count_calls(family, action)
+    local count = 0
+    for _, command in ipairs(calls) do
+      if command[1] == family and command[2] == action then
+        count = count + 1
+      end
+    end
+    return count
+  end
+
+  local function last_call(family, action)
+    for i = #calls, 1, -1 do
+      if calls[i][1] == family and calls[i][2] == action then
+        return calls[i]
+      end
+    end
+  end
+
+  local function workspace(id)
+    for _, item in ipairs(workspaces) do
+      if item.workspace_id == id then
+        return item
+      end
+    end
+  end
+
+  local function remove_workspace(id)
+    workspaces = vim.tbl_filter(function(item) return item.workspace_id ~= id end, workspaces)
+    panes = vim.tbl_filter(function(item) return item.workspace_id ~= id end, panes)
+  end
+
+  herdr.call = function(args)
+    calls[#calls + 1] = vim.deepcopy(args)
+    local family, action = args[1], args[2]
+    if family == "workspace" and action == "list" then
+      if failures.workspace_list then
+        return nil, "workspace list failed"
+      end
+      return { workspaces = vim.deepcopy(workspaces) }
+    end
+    if family == "pane" and action == "list" then
+      if failures.pane_list then
+        return nil, "pane list failed"
+      end
+      return { panes = vim.deepcopy(panes) }
+    end
+    if family == "workspace" and action == "focus" then
+      if failures.focus == args[3] then
+        return nil, "workspace missing"
+      end
+      for _, item in ipairs(workspaces) do
+        item.focused = item.workspace_id == args[3]
+      end
+      return { workspace = vim.deepcopy(workspace(args[3])) }
+    end
+    if family == "workspace" and action == "create" then
+      if failures.create then
+        return nil, "create failed"
+      end
+      local created = {
+        workspace_id = "w-created",
+        workspace_number = 29,
+        label = args[6],
+        agent_status = "idle",
+      }
+      workspaces[#workspaces + 1] = created
+      panes[#panes + 1] = { pane_id = "p-created", workspace_id = created.workspace_id, cwd = args[4] }
+      return { workspace = vim.deepcopy(created) }
+    end
+    if family == "workspace" and action == "rename" then
+      if failures.rename then
+        return nil, "rename failed"
+      end
+      local item = workspace(args[3])
+      if item then
+        item.label = args[4]
+      end
+      return { workspace = vim.deepcopy(item) }
+    end
+    if family == "workspace" and action == "close" then
+      if failures.close then
+        return nil, "close failed"
+      end
+      remove_workspace(args[3])
+      return {}
+    end
+    fail("unexpected Herdr command: " .. vim.inspect(args))
+  end
+
+  Snacks.picker.pick = function(opts)
+    picker_opts = opts
+    picker_count = picker_count + 1
+    return opts
+  end
+  vim.notify = function(message, level)
+    notifications[#notifications + 1] = { message = message, level = level }
+  end
+
+  local ok, err = xpcall(function()
+    package.loaded["plugins.herdr.workspaces"] = nil
+    local loaded, workspace_tabs = pcall(require, "plugins.herdr.workspaces")
+    if not loaded then
+      fail("plugins.herdr.workspaces module missing: " .. tostring(workspace_tabs))
+    end
+    if type(workspace_tabs.open) ~= "function" then
+      fail("plugins.herdr.workspaces.open missing")
+    end
+
+    vim.cmd("silent! tabonly")
+    vim.cmd("silent! only")
+    vim.cmd("enew")
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, { "" })
+    vim.bo.modified = false
+    vim.cmd("tcd " .. vim.fn.fnameescape(root))
+
+    local function open_picker()
+      local before = picker_count
+      workspace_tabs.open()
+      vim.wait(100, function() return picker_count > before end, 5)
+      if picker_count ~= before + 1 then
+        fail("workspace open should create exactly one fresh picker")
+      end
+      return picker_opts
+    end
+
+    local function item_by_id(opts, id)
+      for _, item in ipairs(opts.items or {}) do
+        if item.workspace_id == id then
+          return item
+        end
+      end
+      fail("picker item missing for " .. id .. ": " .. vim.inspect(opts.items))
+    end
+
+    local function fake_picker(item)
+      local picker = { closed = false, selected_target = nil, list = {} }
+      function picker:close()
+        self.closed = true
+      end
+      function picker:current()
+        return item
+      end
+      function picker.list:set_target(target)
+        picker.selected_target = target
+      end
+      return picker
+    end
+
+    local function action_for(opts, lhs)
+      for _, win in pairs(opts.win or {}) do
+        for key, binding in pairs(win.keys or {}) do
+          if key:lower() == lhs:lower() then
+            local action = type(binding) == "table" and binding[1] or binding
+            return type(action) == "function" and action or (opts.actions or {})[action]
+          end
+        end
+      end
+      fail("picker action key missing: " .. lhs)
+    end
+
+    local function run_action(opts, lhs, item)
+      local action = action_for(opts, lhs)
+      if type(action) ~= "function" then
+        fail("picker action missing for " .. lhs)
+      end
+      local picker = fake_picker(item)
+      action(picker, item)
+      return picker
+    end
+
+    local function tab_var(tab, name)
+      local var_ok, value = pcall(vim.api.nvim_tabpage_get_var, tab, name)
+      return var_ok and value or nil
+    end
+
+    local function tab_for(id)
+      for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+        if tab_var(tab, "herdr_workspace_id") == id then
+          return tab
+        end
+      end
+    end
+
+    local function tab_cwd(tab)
+      return vim.fn.getcwd(-1, vim.api.nvim_tabpage_get_number(tab))
+    end
+
+    local initial_list_calls = count_calls("workspace", "list")
+    local initial_pane_calls = count_calls("pane", "list")
+    local first = open_picker()
+    local second = open_picker()
+    eq(count_calls("workspace", "list") - initial_list_calls, 2, "every open should freshly list workspaces")
+    eq(count_calls("pane", "list") - initial_pane_calls, 2, "every open should freshly list panes")
+
+    local ids, numbers = {}, {}
+    for _, item in ipairs(second.items or {}) do
+      ids[#ids + 1] = item.workspace_id
+      numbers[#numbers + 1] = item.workspace_number
+    end
+    eq(ids, { "w-idle", "w-focused", "w-working", "w-done", "w-unknown" }, "Herdr workspace order")
+    eq(numbers, { 2, 7, 11, 19, 23 }, "Herdr workspace number order")
+
+    local markers = {
+      ["w-idle"] = "·",
+      ["w-focused"] = "●",
+      ["w-working"] = "●",
+      ["w-done"] = "●",
+      ["w-unknown"] = "·",
+    }
+    local marker_highlights = {}
+    for id, marker in pairs(markers) do
+      local chunks = second.format(item_by_id(second, id), {})
+      local rendered = {}
+      for _, chunk in ipairs(chunks) do
+        rendered[#rendered + 1] = chunk[1]
+        if chunk[1]:find(marker, 1, true) then
+          marker_highlights[id] = chunk[2]
+        end
+      end
+      if not table.concat(rendered):find(marker, 1, true) then
+        fail(id .. " row should use marker " .. marker .. ": " .. vim.inspect(chunks))
+      end
+    end
+    if not marker_highlights["w-focused"]
+      or marker_highlights["w-focused"] == marker_highlights["w-working"]
+      or marker_highlights["w-focused"] == marker_highlights["w-done"]
+      or marker_highlights["w-working"] == marker_highlights["w-done"]
+      or marker_highlights["w-idle"] ~= marker_highlights["w-unknown"]
+    then
+      fail("workspace markers should retain Herdr semantic status colors: " .. vim.inspect(marker_highlights))
+    end
+
+    if type(second.on_show) ~= "function" then
+      fail("workspace picker should select Herdr's focused workspace on show")
+    end
+    local shown = fake_picker()
+    second.on_show(shown)
+    eq(shown.selected_target, 2, "Herdr focused workspace initial selection")
+    if second.title ~= "spaces" or second.preview ~= false then
+      fail("workspace picker should be titled spaces with no preview: " .. vim.inspect(second))
+    end
+
+    local initial_tab = vim.api.nvim_get_current_tabpage()
+    local initial_tab_count = #vim.api.nvim_list_tabpages()
+    first.confirm(fake_picker(item_by_id(first, "w-idle")), item_by_id(first, "w-idle"))
+    local idle_tab = tab_for("w-idle")
+    if idle_tab ~= initial_tab or #vim.api.nvim_list_tabpages() ~= initial_tab_count then
+      fail("first workspace should reuse the empty initial tab")
+    end
+    eq(tab_cwd(idle_tab), root .. "/nvim", "stable pane cwd should initialize the tab")
+    if tab_cwd(idle_tab) == root .. "/scripts" then
+      fail("foreground_cwd must not initialize a workspace tab")
+    end
+
+    local before_reselect = #vim.api.nvim_list_tabpages()
+    local reselect = open_picker()
+    reselect.confirm(fake_picker(item_by_id(reselect, "w-idle")), item_by_id(reselect, "w-idle"))
+    eq(#vim.api.nvim_list_tabpages(), before_reselect, "selecting one workspace ID twice should reuse its tab")
+
+    local duplicate = open_picker()
+    duplicate.confirm(fake_picker(item_by_id(duplicate, "w-focused")), item_by_id(duplicate, "w-focused"))
+    local focused_tab = tab_for("w-focused")
+    if not focused_tab or focused_tab == idle_tab then
+      fail("duplicate labels must still create distinct ID-bound tabs")
+    end
+    eq(tab_var(idle_tab, "herdr_workspace_label"), "Zebra", "first workspace tab label")
+    eq(tab_var(focused_tab, "herdr_workspace_label"), "Duplicate", "duplicate workspace tab label")
+
+    local focus_calls = count_calls("workspace", "focus")
+    vim.cmd("tabnew")
+    local unbound_tab = vim.api.nvim_get_current_tabpage()
+    eq(count_calls("workspace", "focus"), focus_calls, "entering an unbound tab must not focus Herdr")
+    vim.api.nvim_set_current_tabpage(idle_tab)
+    eq(count_calls("workspace", "focus"), focus_calls + 1, "TabEnter on a bound tab should focus Herdr")
+    eq(last_call("workspace", "focus")[3], "w-idle", "bound TabEnter focus target")
+
+    local preserved_cwd = root .. "/scripts"
+    vim.cmd("tcd " .. vim.fn.fnameescape(preserved_cwd))
+    vim.api.nvim_set_current_tabpage(unbound_tab)
+    vim.api.nvim_set_current_tabpage(idle_tab)
+    eq(tab_cwd(idle_tab), preserved_cwd, "existing tab-local cwd should survive switching")
+
+    vim.api.nvim_set_current_tabpage(unbound_tab)
+    vim.cmd("enew")
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, { "keep this unbound tab" })
+    vim.bo.modified = false
+    local create_cwd = root .. "/scripts"
+    vim.cmd("tcd " .. vim.fn.fnameescape(create_cwd))
+    local create_opts = open_picker()
+    vim.ui.input = function(_, callback) callback("Created") end
+    local create_picker = run_action(create_opts, "<c-n>", item_by_id(create_opts, "w-idle"))
+    vim.wait(100, function() return tab_for("w-created") ~= nil end, 5)
+    eq(
+      last_call("workspace", "create"),
+      { "workspace", "create", "--cwd", create_cwd, "--label", "Created", "--no-focus" },
+      "workspace create command"
+    )
+    if not create_picker.closed or vim.api.nvim_get_current_tabpage() ~= tab_for("w-created") then
+      fail("successful create should close the picker and open the returned workspace")
+    end
+    if not vim.api.nvim_tabpage_is_valid(unbound_tab) then
+      fail("workspace create must preserve a non-empty active tab")
+    end
+
+    local rename_opts = open_picker()
+    local rename_item = item_by_id(rename_opts, "w-focused")
+    failures.rename = true
+    vim.ui.input = function(_, callback) callback("Rejected rename") end
+    run_action(rename_opts, "<c-r>", rename_item)
+    eq(tab_var(focused_tab, "herdr_workspace_label"), "Duplicate", "failed rename must preserve mapped tab label")
+    failures.rename = nil
+    vim.ui.input = function(_, callback) callback("Renamed") end
+    run_action(rename_opts, "<c-r>", rename_item)
+    vim.wait(100, function() return tab_var(focused_tab, "herdr_workspace_label") == "Renamed" end, 5)
+    eq(last_call("workspace", "rename"), { "workspace", "rename", "w-focused", "Renamed" }, "workspace rename command")
+    eq(tab_var(focused_tab, "herdr_workspace_label"), "Renamed", "successful rename should update mapped tab")
+
+    local close_opts = open_picker()
+    local close_item = item_by_id(close_opts, "w-focused")
+    local confirmations, confirm_close = 0, false
+    vim.fn.confirm = function()
+      confirmations = confirmations + 1
+      return confirm_close and 1 or 2
+    end
+    vim.ui.select = function(items, _, callback)
+      confirmations = confirmations + 1
+      callback(confirm_close and items[1] or nil)
+    end
+    local close_calls = count_calls("workspace", "close")
+    run_action(close_opts, "<c-x>", close_item)
+    if confirmations ~= 1 or count_calls("workspace", "close") ~= close_calls or not vim.api.nvim_tabpage_is_valid(focused_tab) then
+      fail("workspace close should require confirmation before changing Herdr or Neovim")
+    end
+
+    local order = {}
+    local close_group = vim.api.nvim_create_augroup("VerifyHerdrWorkspaceClose", { clear = true })
+    vim.api.nvim_create_autocmd("TabClosed", {
+      group = close_group,
+      callback = function() order[#order + 1] = "tab-close" end,
+    })
+    confirm_close = true
+    failures.close = true
+    run_action(close_opts, "<c-x>", close_item)
+    if not vim.api.nvim_tabpage_is_valid(focused_tab) then
+      fail("failed Herdr close must preserve the mapped Neovim tab")
+    end
+    failures.close = nil
+    local before_close_call = #calls
+    local original_mock_call = herdr.call
+    herdr.call = function(args, quiet)
+      if args[1] == "workspace" and args[2] == "close" then
+        order[#order + 1] = "herdr-close"
+      end
+      return original_mock_call(args, quiet)
+    end
+    run_action(close_opts, "<c-x>", close_item)
+    vim.wait(100, function() return not vim.api.nvim_tabpage_is_valid(focused_tab) end, 5)
+    eq(order, { "herdr-close", "tab-close" }, "confirmed close ordering")
+    eq(calls[before_close_call + 1], { "workspace", "close", "w-focused" }, "workspace close command")
+    herdr.call = original_mock_call
+    vim.api.nvim_del_augroup_by_id(close_group)
+
+    local manual_opts = open_picker()
+    manual_opts.confirm(fake_picker(item_by_id(manual_opts, "w-done")), item_by_id(manual_opts, "w-done"))
+    local done_tab = tab_for("w-done")
+    local closes_before_manual = count_calls("workspace", "close")
+    vim.api.nvim_set_current_tabpage(done_tab)
+    vim.cmd("tabclose")
+    eq(count_calls("workspace", "close"), closes_before_manual, "manual tabclose must not call Herdr")
+
+    local detached_opts = open_picker()
+    detached_opts.confirm(fake_picker(item_by_id(detached_opts, "w-working")), item_by_id(detached_opts, "w-working"))
+    local detached_tab = tab_for("w-working")
+    vim.api.nvim_set_current_tabpage(detached_tab)
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, { "detached contents survive" })
+    vim.bo.modified = false
+    local detached_cwd = tab_cwd(detached_tab)
+    remove_workspace("w-working")
+    open_picker()
+    if not vim.api.nvim_tabpage_is_valid(detached_tab)
+      or tab_var(detached_tab, "herdr_workspace_detached") ~= true
+      or tab_cwd(detached_tab) ~= detached_cwd
+    then
+      fail("missing Herdr workspaces should leave their tabs locally usable and detached")
+    end
+    failures.focus = "w-working"
+    vim.api.nvim_set_current_tabpage(unbound_tab)
+    vim.api.nvim_set_current_tabpage(detached_tab)
+    if not vim.api.nvim_tabpage_is_valid(detached_tab) then
+      fail("failed focus of a detached workspace must not close its local tab")
+    end
+
+    local pickers_before_failure = picker_count
+    local notifications_before_failure = #notifications
+    failures.workspace_list = true
+    workspace_tabs.open()
+    vim.wait(50)
+    eq(picker_count, pickers_before_failure, "workspace-list failure must not open stale picker")
+    failures.workspace_list = nil
+    failures.pane_list = true
+    workspace_tabs.open()
+    vim.wait(50)
+    eq(picker_count, pickers_before_failure, "pane-list failure must not open stale picker")
+    failures.pane_list = nil
+    if #notifications <= notifications_before_failure then
+      fail("Herdr query failure should show a clear error")
+    end
+
+    local project_spec = dofile("nvim/.config/nvim/lua/plugins/project.lua")
+    local project_config
+    local original_project = package.loaded.project_nvim
+    package.loaded.project_nvim = { setup = function(opts) project_config = opts end }
+    project_spec.config()
+    package.loaded.project_nvim = original_project
+    eq(project_config and project_config.scope_chdir, "tab", "project.nvim scope_chdir")
+
+    for _, command in ipairs(calls) do
+      for _, part in ipairs(command) do
+        if tostring(part) == "git" or tostring(part):find("worktree", 1, true) then
+          fail("Herdr workspace feature must not issue git/worktree commands: " .. vim.inspect(command))
+        end
+      end
+    end
+    local source = table.concat(vim.fn.readfile("nvim/.config/nvim/lua/plugins/herdr/workspaces.lua"), "\n")
+    if source:match('call%s*%(%s*{%s*["\']worktree')
+      or source:match('vim%.system%s*%(%s*{%s*["\']git')
+    then
+      fail("Herdr workspace module must not contain git/worktree commands")
+    end
+  end, debug.traceback)
+
+  herdr.call = original_call
+  Snacks.picker.pick = original_pick
+  vim.ui.input = original_input
+  vim.ui.select = original_select
+  vim.fn.confirm = original_confirm
+  vim.notify = original_notify
+  if not ok then
+    error(err, 0)
+  end
+end
+
 local function validate_sidekick_herdr_live()
   load_plugin("sidekick.nvim")
 
@@ -774,6 +1251,7 @@ local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
+  ["herdr-workspaces"] = validate_herdr_workspaces,
   ["sidekick-herdr-live"] = validate_sidekick_herdr_live,
 }
 
@@ -782,7 +1260,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr, sidekick-herdr-live"
+      .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live"
   )
 end
 
