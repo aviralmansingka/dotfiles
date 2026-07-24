@@ -245,8 +245,8 @@ for (const sentinel of [
 
 if (!main.plain.includes("Plan  5 recent thinking blocks"))
 	fail("Missing capped thinking Plan");
-if (!main.plain.includes("Activity  2 steps · 3 calls · all passed"))
-	fail("Missing final tool-activity timeline header");
+if (!main.plain.includes("Activity  5 steps · 7 calls · failed"))
+	fail("Missing session-level tool-activity timeline header");
 if (!main.plain.includes("Decision: keep tool activity flow chronological"))
 	fail("Thinking decision was not rendered while active");
 
@@ -320,28 +320,51 @@ for (const row of [...thinkingRows, same, sameFollowup, mixed, restoredSource, a
 	if (row.connector !== "└─") fail(`Activity has a dangling connector: ${row.title}`);
 }
 const compactPlan = new RegExp(
-	`Outcome: grouped tools share one timeline\\r*\\n ● Select plan limit`,
+	`Decision: retain five recent thinking blocks\\r*\\n ● Continue inspection`,
 	"u",
 );
-if (!compactPlan.test(main.plain)) fail("Plan elements contain an internal blank line");
+if (!compactPlan.test(missing.plain)) fail("Plan elements contain an internal blank line");
 const spacedActivities = new RegExp(
 	`${escapeRegExp(sameSummary)}\\r*\\n\\r*\\n ● Continue grouped verification`,
 	"u",
 );
 if (!spacedActivities.test(main.plain)) fail("Missing blank line between chronological activities");
 const finalPlan = main.plain.lastIndexOf("Plan  5 recent thinking blocks");
-const finalActivity = main.plain.lastIndexOf("Activity  2 steps · 3 calls · all passed");
-const finalFirstStep = main.plain.lastIndexOf("Run grouped verification");
-const finalSecondStep = main.plain.lastIndexOf("Continue grouped verification");
-if (!(finalPlan < finalActivity && finalActivity < finalFirstStep && finalFirstStep < finalSecondStep))
-	fail("Plan and tool activities do not flow in chronological timeline order");
+const finalActivity = main.plain.lastIndexOf("Activity  5 steps · 7 calls · failed");
+if (!(finalPlan >= 0 && finalPlan < finalActivity))
+	fail("Updated Plan was not rendered before the session-level Activity timeline");
+const finalPlanText = main.plain.slice(finalPlan, finalActivity);
+for (const retained of [
+	"Continue inspection",
+	"Check summary contract",
+	"Finalize plan rendering",
+	"Restore missing result",
+	"Verify after reload",
+])
+	if (!finalPlanText.includes(retained)) fail(`Updated Plan is missing recent thinking: ${retained}`);
+for (const omitted of ["Scope timeline", "Inspect configuration", "Answer renderer question", "Select plan limit"])
+	if (finalPlanText.includes(omitted)) fail(`Updated Plan retained old thinking: ${omitted}`);
 assertNoLaterActiveState(main, sameSummary, "●");
 assertNoLaterActiveState(main, mixedSummary, "×");
 
+if ((missing.plain.match(/Plan  /gu) ?? []).length !== 1)
+	fail("Restored timeline rendered a Plan between activities");
 if (!missing.plain.includes("Plan  5 recent thinking blocks"))
 	fail("Restored Plan did not retain exactly five thinking blocks");
-for (const omitted of ["Scope timeline", "Inspect configuration"])
+if (!missing.plain.includes("Activity  4 steps · 6 calls · failed"))
+	fail("Restored session-level Activity header is incorrect");
+for (const omitted of ["Scope timeline", "Inspect configuration", "Answer renderer question"])
 	if (missing.plain.includes(omitted)) fail(`Restored Plan retained old thinking block: ${omitted}`);
+const restoredOrder = [
+	missing.plain.indexOf("Plan  5 recent thinking blocks"),
+	missing.plain.indexOf("Activity  4 steps · 6 calls · failed"),
+	missing.plain.indexOf("Run grouped verification"),
+	missing.plain.indexOf("Continue grouped verification"),
+	missing.plain.indexOf("Working with settings.json"),
+	missing.plain.indexOf("Reconcile persisted tool result"),
+];
+if (restoredOrder.some((index) => index < 0) || restoredOrder.some((index, position) => position > 0 && index <= restoredOrder[position - 1]))
+	fail("Restored activities do not flow chronologically after the single Plan");
 
 const missingThinking = requireTerminalRow(
 	missing,
@@ -363,7 +386,7 @@ if (!missingFailure) fail("Restored work step without a matching tool result was
 assertForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step timeline verified offline: compact Plan elements, spaced chronological activities, capped thinking, results, grouping, terminating connectors, working states, restoration, reload, suppression, and semantic ANSI colors.",
+	"Pi work-step timeline verified offline: one globally updated five-block Plan before an uninterrupted chronological Activity timeline, compact results, spacing, connectors, restoration, reload, suppression, and semantic ANSI colors.",
 );
 NODE
 
