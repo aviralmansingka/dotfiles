@@ -25,12 +25,17 @@ type PersistedOutcome = {
 
 type ActivityRun = {
   steps: WorkStep[];
+  plans: PlanEntry[];
+};
+
+type PlanEntry = {
+  step: WorkStep;
+  update: ThinkingUpdate;
 };
 
 type WorkStep = {
   title: string;
   titleLocked: boolean;
-  thinking: ThinkingUpdate[];
   toolCalls: ToolCall[];
   toolNames: string[];
   toolCallIds: Set<string>;
@@ -292,9 +297,7 @@ function renderThinkingActivities(
 }
 
 function renderPlan(theme: Theme, run: ActivityRun): string[] {
-  const updates = run.steps
-    .flatMap((step) => step.thinking)
-    .slice(-5);
+  const updates = run.plans.map((entry) => entry.update);
   if (updates.length === 0) return [];
   return [
     ` ${theme.fg("accent", theme.bold("Plan"))}  ${theme.fg("muted", `${updates.length} recent thinking ${updates.length === 1 ? "block" : "blocks"}`)}`,
@@ -497,23 +500,18 @@ function updateAssistant(
 
   if (toolCalls.length === 0) {
     state.assembling = undefined;
-    if (terminalStop && (hasText || !hasThinking)) {
-      state.lastStep = undefined;
-      state.currentRun = undefined;
-    }
     return;
   }
 
   const toolNames = toolCalls.map((toolCall) => toolCall.name);
   const candidate = titleFromContent(content, toolCalls);
   const existing = component[WORK_STEP] as WorkStep | undefined;
-  const run = existing?.run ?? state.currentRun ?? { steps: [] };
+  const run = existing?.run ?? state.currentRun ?? { steps: [], plans: [] };
   const step: WorkStep =
     existing ??
     ({
       title: candidate.title,
       titleLocked: !candidate.synthesized,
-      thinking: [],
       toolCalls: [],
       toolNames: [],
       toolCallIds: new Set<string>(),
@@ -530,7 +528,10 @@ function updateAssistant(
     state.lastStep = step;
   }
 
-  step.thinking = thinkingUpdatesFromContent(content);
+  run.plans = [
+    ...run.plans.filter((entry) => entry.step !== step),
+    ...thinkingUpdatesFromContent(content).map((update) => ({ step, update })),
+  ].slice(-5);
   step.toolCalls = toolCalls;
   step.toolNames = toolNames;
   step.toolCallIds = new Set(toolCalls.map((toolCall) => toolCall.id));
@@ -629,8 +630,6 @@ function failPendingSteps(state: RendererState): void {
   }
   state.pending.clear();
   state.assembling = undefined;
-  state.lastStep = undefined;
-  state.currentRun = undefined;
 }
 
 function scanPersistedSession(state: RendererState, entries: any[]): void {
