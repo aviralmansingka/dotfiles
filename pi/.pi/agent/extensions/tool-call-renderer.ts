@@ -9,8 +9,6 @@ const TOOL_PATCHED = Symbol.for("aviral.pi.work-step-renderer.tool");
 const CONTROLLER = Symbol.for("aviral.pi.work-step-renderer.controller");
 const WORK_STEP = Symbol.for("aviral.pi.work-step-renderer.step");
 const WORK_STEP_ROW = Symbol.for("aviral.pi.work-step-renderer.row");
-const ASSISTANT_ACTIVE = Symbol.for("aviral.pi.work-step-renderer.active");
-const ASSISTANT_MESSAGE = Symbol.for("aviral.pi.work-step-renderer.message");
 
 type ToolCall = {
   id: string;
@@ -26,18 +24,12 @@ type PersistedOutcome = {
 type ActivityRun = {
   steps: WorkStep[];
   groups: ActivityGroup[];
-  plans: PlanEntry[];
 };
 
 type ActivityGroup = {
   title: string;
   steps: WorkStep[];
   run: ActivityRun;
-};
-
-type PlanEntry = {
-  step: WorkStep;
-  update: ThinkingUpdate;
 };
 
 type WorkStep = {
@@ -268,51 +260,6 @@ function renderSummary(theme: Theme, step: WorkStep): string {
     .join("");
 }
 
-function hasThinkingResult(update: ThinkingUpdate): boolean {
-  return Boolean(
-    update.outcome && update.outcome.toLowerCase() !== "pending",
-  );
-}
-
-function thinkingSummary(theme: Theme, update: ThinkingUpdate): string {
-  if (!update.outcome)
-    return (
-      theme.fg("muted", "Outcome: ") +
-      theme.fg("error", theme.bold("not reported"))
-    );
-  const role = hasThinkingResult(update) ? "success" : "warning";
-  return (
-    theme.fg("muted", `${update.label}: `) +
-    theme.fg(role, theme.bold(update.outcome))
-  );
-}
-
-function renderThinkingActivities(
-  theme: Theme,
-  updates: ThinkingUpdate[],
-): string[] {
-  return updates.flatMap((update) => {
-    const complete = hasThinkingResult(update);
-    const glyph = complete
-      ? theme.fg("success", "●")
-      : theme.fg("error", "×");
-    return [
-      ` ${glyph} ${theme.fg("text", update.title)}`,
-      ` ${theme.fg("borderMuted", "└─")} ${thinkingSummary(theme, update)}`,
-    ];
-  });
-}
-
-function renderPlan(theme: Theme, run: ActivityRun): string[] {
-  const updates = run.plans.map((entry) => entry.update);
-  if (updates.length === 0) return [];
-  return [
-    ` ${theme.fg("accent", theme.bold("Plan"))}  ${theme.fg("muted", `${updates.length} recent thinking ${updates.length === 1 ? "block" : "blocks"}`)}`,
-    ...renderThinkingActivities(theme, updates),
-    "",
-  ];
-}
-
 function renderActivityHeader(theme: Theme, group: ActivityGroup): string {
   const calls = group.steps.reduce((count, step) => count + step.toolCalls.length, 0);
   const completed = group.steps.filter((step) => status(step) === "success").length;
@@ -337,7 +284,7 @@ class WorkStepRow {
   ) {}
 
   render(width: number): string[] {
-    const lines = [...renderPlan(this.theme, this.step.run)];
+    const lines: string[] = [];
     for (const [groupIndex, group] of this.step.run.groups.entries()) {
       lines.push(renderActivityHeader(this.theme, group));
       for (const [stepIndex, step] of group.steps.entries()) {
@@ -370,96 +317,6 @@ function toolCallsFrom(content: any[]): ToolCall[] {
       arguments: asRecord(item.arguments),
     }))
     .filter((item): item is ToolCall => Boolean(item.id));
-}
-
-type ThinkingUpdate = {
-  title: string;
-  outcome?: string;
-  label: "Outcome" | "Decision";
-};
-
-function thinkingUpdate(value: string): ThinkingUpdate | undefined {
-  const lines = value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  if (lines.length === 0) return undefined;
-
-  const inline = lines[0]?.match(
-    /^(.+?)\s+(?:→|—)\s+(?:(Outcome|Decision):?\s*)?(.+)$/i,
-  );
-  if (inline) {
-    const title = sanitizeTitle(inline[1]);
-    const outcome = sanitizeTitle(inline[3]);
-    if (title && outcome)
-      return {
-        title,
-        outcome,
-        label: inline[2]?.toLowerCase() === "decision" ? "Decision" : "Outcome",
-      };
-  }
-
-  const title = sanitizeTitle(lines[0]);
-  if (!title) return undefined;
-  const labeled = lines
-    .slice(1)
-    .map((line) => line.match(/^(Outcome|Decision):\s*(.+)$/i))
-    .find(Boolean);
-  return {
-    title,
-    outcome: sanitizeTitle(labeled?.[2]),
-    label: labeled?.[1]?.toLowerCase() === "decision" ? "Decision" : "Outcome",
-  };
-}
-
-function renderActiveThinking(
-  component: any,
-  fallback: string[],
-  width: number,
-  theme: Theme,
-): string[] {
-  if (!component[ASSISTANT_ACTIVE]) return fallback;
-  const content = Array.isArray(component[ASSISTANT_MESSAGE]?.content)
-    ? component[ASSISTANT_MESSAGE].content
-    : [];
-  const updates = content
-    .filter((item: any) => item?.type === "thinking")
-    .map((item: any) => thinkingUpdate(asString(item.thinking) ?? ""))
-    .filter((value: ThinkingUpdate | undefined): value is ThinkingUpdate => Boolean(value));
-  if (updates.length === 0) return fallback;
-
-  const lines = [""];
-  for (const [index, update] of updates.entries()) {
-    const active = index === updates.length - 1;
-    const complete = hasThinkingResult(update);
-    const glyph = active
-      ? theme.fg("accent", "◉")
-      : complete
-        ? theme.fg("success", "●")
-        : theme.fg("error", "×");
-    const outcome = update.outcome
-      ? theme.fg("muted", `${update.label}: `) +
-        theme.fg(complete ? "success" : "warning", theme.bold(update.outcome))
-      : theme.fg("muted", "Outcome: ") +
-        theme.fg(
-          active ? "warning" : "error",
-          theme.bold(active ? "pending" : "not reported"),
-        );
-    lines.push(` ${glyph} ${theme.fg("text", update.title)}`);
-    lines.push(` ${theme.fg("borderMuted", "└─")} ${outcome}`);
-    if (!active) lines.push("");
-  }
-  return lines.map((line) => truncateToWidth(line, width));
-}
-
-function thinkingUpdatesFromContent(content: any[]): ThinkingUpdate[] {
-  return content
-    .filter((item) => item?.type === "thinking")
-    .map((item) => thinkingUpdate(asString(item.thinking) ?? ""))
-    .filter(
-      (update: ThinkingUpdate | undefined): update is ThinkingUpdate =>
-        Boolean(update),
-    );
 }
 
 function releaseStep(state: RendererState, step: WorkStep): void {
@@ -495,35 +352,23 @@ function updateAssistant(
 ): void {
   const content = Array.isArray(message?.content) ? message.content : [];
   const toolCalls = toolCallsFrom(content);
-  const hasThinking = content.some(
-    (item) => item?.type === "thinking" && asString(item.thinking)?.trim(),
-  );
-  const hasText = content.some(
-    (item) => item?.type === "text" && asString(item.text)?.trim(),
-  );
-  component[ASSISTANT_MESSAGE] = message;
-  const terminalStop = ["stop", "error", "aborted", "length"].includes(
-    message?.stopReason,
-  );
-  component[ASSISTANT_ACTIVE] =
-    toolCalls.length === 0 && hasThinking && !hasText && !terminalStop;
 
   if (toolCalls.length === 0) {
     state.assembling = undefined;
-    if (terminalStop) state.currentGroup = undefined;
+    if (["stop", "error", "aborted", "length"].includes(message?.stopReason))
+      state.currentGroup = undefined;
     return;
   }
 
   const toolNames = toolCalls.map((toolCall) => toolCall.name);
   const candidate = titleFromContent(content, toolCalls);
-  const updates = thinkingUpdatesFromContent(content);
   const existing = component[WORK_STEP] as WorkStep | undefined;
-  const run = existing?.run ?? state.currentRun ?? { steps: [], groups: [], plans: [] };
+  const run = existing?.run ?? state.currentRun ?? { steps: [], groups: [] };
   const group =
     existing?.group ??
     state.currentGroup ??
     ({
-      title: updates[0]?.title ?? candidate.title,
+      title: candidate.title,
       steps: [],
       run,
     } satisfies ActivityGroup);
@@ -551,10 +396,6 @@ function updateAssistant(
     group.steps.push(step);
   }
 
-  run.plans = [
-    ...run.plans.filter((entry) => entry.step !== step),
-    ...updates.map((update) => ({ step, update })),
-  ].slice(-5);
   step.toolCalls = toolCalls;
   step.toolNames = toolNames;
   step.toolCallIds = new Set(toolCalls.map((toolCall) => toolCall.id));
@@ -776,11 +617,11 @@ export default async function (pi: ExtensionAPI) {
     assistantUpdated(component, message) {
       updateAssistant(component, message, state);
     },
-    assistantHasStep(component) {
-      return Boolean(component[WORK_STEP]);
+    assistantHasStep() {
+      return false;
     },
-    renderAssistant(component, lines, width) {
-      return renderActiveThinking(component, lines, width, theme);
+    renderAssistant(_component, lines) {
+      return lines;
     },
     toolUpdated(component) {
       bindToolComponent(component, state);

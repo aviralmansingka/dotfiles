@@ -33,13 +33,3 @@ Formatting rules:
 3. Use backgrounds sparingly for callouts or message blocks; do not fill trailing terminal width unless a block is intentional.
 4. Keep content readable without color. ANSI styling supplements wording and structure.
 5. The ANSI requirement applies only to assistant-authored display text. Never inject escape bytes into tool arguments, commands, patches, JSON, or files unless the user explicitly asks those artifacts to contain ANSI.
-
-# Visible thinking updates
-
-Make every user-visible thinking/progress update report both its subject and its concrete outcome or decision. Use one of these forms so the TUI can render the two parts distinctly:
-
-- `Title → Outcome: concrete result or evidence`
-- `Title → Decision: concrete choice and brief reason`
-- A title line followed by `Outcome: ...` or `Decision: ...`
-
-Every thinking block must include a literal `Outcome:` or `Decision:` field; never emit a title-only thinking block. Keep that result concise and factual. If a block asks or investigates a question, its outcome must state the answer, evidence, or decision before another activity begins. If a tool call is required to answer it, use `Outcome: pending`, then make the next thinking block summarize the tool's answer in its own `Outcome:` or `Decision:` field. Never leave `Outcome: pending` when yielding a final answer, and never invent a result before it is known.
