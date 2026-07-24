@@ -271,6 +271,95 @@ local function validate_sidekick_herdr()
     fail("Herdr backend was not registered with Sidekick")
   end
 
+  local source_root = vim.fn.getcwd() .. "/nvim/.config/nvim/lua/plugins/sidekick/"
+  local source_internal = dofile(source_root .. "internal.lua")
+  local source_herdr = dofile(source_root .. "herdr.lua")
+  local loaded_herdr = package.loaded["plugins.sidekick.herdr"]
+  package.loaded["plugins.sidekick.herdr"] = source_herdr
+  local source_backend = dofile(source_root .. "herdr_backend.lua")
+  package.loaded["plugins.sidekick.herdr"] = loaded_herdr
+
+  local current_tab = vim.api.nvim_get_current_tabpage()
+  vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w-bound")
+  local original_toggle_named = source_internal.toggle_tool_session
+  source_internal.toggle_tool_session = function() end
+  source_internal.start_named_session("codex", "workspace session", cwd)
+  source_internal.toggle_tool_session = original_toggle_named
+  pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
+  local workspace_tool = config.cli.tools["codex-workspace-session"]
+  if not workspace_tool or workspace_tool.herdr_workspace_id ~= "w-bound" then
+    fail("named sessions should retain the bound tab workspace ID: " .. vim.inspect(workspace_tool))
+  end
+
+  local original_start = source_herdr.start
+  local forwarded_workspace_id
+  source_herdr.start = function(_, _, _, _, scope)
+    forwarded_workspace_id = scope and scope.workspace_id
+    return {
+      terminal_id = "term-workspace",
+      pane_id = "w-bound:p1",
+      tab_id = "w-bound:t1",
+      workspace_id = "w-bound",
+    }
+  end
+  source_backend.start({
+    herdr_agent_name = "codex-workspace-session",
+    cwd = cwd,
+    tool = require("sidekick.cli.tool").get("codex-workspace-session"),
+    attach = function()
+      return {}
+    end,
+  })
+  source_herdr.start = original_start
+  if forwarded_workspace_id ~= "w-bound" then
+    fail("Herdr backend should forward the named session workspace ID")
+  end
+
+  local original_call = source_herdr.call
+  local start_calls = {}
+  source_herdr.call = function(args)
+    start_calls[#start_calls + 1] = args
+    if args[1] == "tab" and args[2] == "create" then
+      return { tab = { tab_id = "w-bound:t1" }, root_pane = { pane_id = "w-bound:p0" } }
+    elseif args[1] == "agent" and args[2] == "start" then
+      return {
+        agent = {
+          terminal_id = "term-workspace",
+          pane_id = "w-bound:p1",
+          tab_id = "w-bound:t1",
+          workspace_id = "w-bound",
+        },
+      }
+    end
+    return {}
+  end
+  local started = source_herdr.start(
+    "codex-workspace-session",
+    cwd,
+    { "codex" },
+    {},
+    { workspace_id = "w-bound" }
+  )
+  source_herdr.call = original_call
+  local tab_create, agent_start
+  for _, call in ipairs(start_calls) do
+    if call[1] == "workspace" or (call[1] == "pane" and call[2] == "list") then
+      fail("an exact workspace ID should bypass cwd workspace lookup: " .. vim.inspect(start_calls))
+    elseif call[1] == "tab" and call[2] == "create" then
+      tab_create = call
+    elseif call[1] == "agent" and call[2] == "start" then
+      agent_start = call
+    end
+  end
+  if not started
+    or not tab_create
+    or tab_create[4] ~= "w-bound"
+    or not agent_start
+    or agent_start[7] ~= "w-bound"
+  then
+    fail("named session should start in its exact bound workspace: " .. vim.inspect(start_calls))
+  end
+
   local original_list_agents = herdr.list_agents
   local function named_agent(name, status, index, workspace_id, agent_cwd)
     return {
@@ -317,7 +406,6 @@ local function validate_sidekick_herdr()
   end
 
   local cwd_picker = dofile(cwd .. "/nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua")
-  local current_tab = vim.api.nvim_get_current_tabpage()
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
   local local_items = cwd_picker.list_items()
