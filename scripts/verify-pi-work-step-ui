@@ -319,6 +319,11 @@ for (const row of [...thinkingRows, same, sameFollowup, mixed, restoredSource, a
 	assertForeground(main, row);
 	if (row.connector !== "└─") fail(`Activity has a dangling connector: ${row.title}`);
 }
+const compactPlan = new RegExp(
+	`Outcome: grouped tools share one timeline\\r*\\n ● Select plan limit`,
+	"u",
+);
+if (!compactPlan.test(main.plain)) fail("Plan elements contain an internal blank line");
 const spacedActivities = new RegExp(
 	`${escapeRegExp(sameSummary)}\\r*\\n\\r*\\n ● Continue grouped verification`,
 	"u",
@@ -358,7 +363,7 @@ if (!missingFailure) fail("Restored work step without a matching tool result was
 assertForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step timeline verified offline: capped thinking Plan, chronological tool activities and results, grouping, spacing, terminating connectors, working states, restoration, reload, suppression, and semantic ANSI colors.",
+	"Pi work-step timeline verified offline: compact Plan elements, spaced chronological activities, capped thinking, results, grouping, terminating connectors, working states, restoration, reload, suppression, and semantic ANSI colors.",
 );
 NODE
 
