@@ -25,7 +25,14 @@ type PersistedOutcome = {
 
 type ActivityRun = {
   steps: WorkStep[];
+  groups: ActivityGroup[];
   plans: PlanEntry[];
+};
+
+type ActivityGroup = {
+  title: string;
+  steps: WorkStep[];
+  run: ActivityRun;
 };
 
 type PlanEntry = {
@@ -41,8 +48,8 @@ type WorkStep = {
   toolCallIds: Set<string>;
   completedToolCallIds: Set<string>;
   failed: boolean;
-  continues: boolean;
   run: ActivityRun;
+  group: ActivityGroup;
   row?: WorkStepRow;
 };
 
@@ -53,7 +60,7 @@ type RendererState = {
     step: WorkStep;
     remaining: Set<string>;
   };
-  lastStep?: WorkStep;
+  currentGroup?: ActivityGroup;
   currentRun?: ActivityRun;
   sessionId?: string;
 };
@@ -306,19 +313,19 @@ function renderPlan(theme: Theme, run: ActivityRun): string[] {
   ];
 }
 
-function renderActivityHeader(theme: Theme, run: ActivityRun): string {
-  const calls = run.steps.reduce((count, step) => count + step.toolCalls.length, 0);
-  const completed = run.steps.filter((step) => status(step) === "success").length;
-  const failed = run.steps.some((step) => status(step) === "failure");
-  const settled = completed === run.steps.length;
+function renderActivityHeader(theme: Theme, group: ActivityGroup): string {
+  const calls = group.steps.reduce((count, step) => count + step.toolCalls.length, 0);
+  const completed = group.steps.filter((step) => status(step) === "success").length;
+  const failed = group.steps.some((step) => status(step) === "failure");
+  const settled = completed === group.steps.length;
   const state = failed
     ? theme.fg("error", theme.bold("failed"))
     : settled
       ? theme.fg("success", theme.bold("all passed"))
-      : theme.fg("warning", theme.bold(`${completed}/${run.steps.length} complete`));
+      : theme.fg("warning", theme.bold(`${completed}/${group.steps.length} complete`));
   return (
-    ` ${theme.fg("accent", theme.bold("Activity"))}  ` +
-    theme.fg("muted", `${plural(run.steps.length, "step")} · ${plural(calls, "call")} · `) +
+    ` ${theme.fg("accent", theme.bold(group.title))}  ` +
+    theme.fg("muted", `${plural(group.steps.length, "step")} · ${plural(calls, "call")} · `) +
     state
   );
 }
@@ -330,23 +337,26 @@ class WorkStepRow {
   ) {}
 
   render(width: number): string[] {
-    const currentStatus = status(this.step);
-    const glyph =
-      currentStatus === "pending"
-        ? this.theme.fg("accent", "◉")
-        : currentStatus === "failure"
-          ? this.theme.fg("error", "×")
-          : this.theme.fg("success", "●");
-    const title = ` ${glyph} ${this.theme.fg("text", this.step.title)}`;
-    const connector = this.theme.fg("borderMuted", "└─");
-    const summary = ` ${connector} ${renderSummary(this.theme, this.step)}`;
-    const lines = [title, summary];
-    if (this.step.continues) lines.push("");
-    if (this.step.run.steps[0] === this.step)
-      lines.unshift(
-        ...renderPlan(this.theme, this.step.run),
-        renderActivityHeader(this.theme, this.step.run),
-      );
+    const lines = [...renderPlan(this.theme, this.step.run)];
+    for (const [groupIndex, group] of this.step.run.groups.entries()) {
+      lines.push(renderActivityHeader(this.theme, group));
+      for (const [stepIndex, step] of group.steps.entries()) {
+        const currentStatus = status(step);
+        const glyph =
+          currentStatus === "pending"
+            ? this.theme.fg("accent", "◉")
+            : currentStatus === "failure"
+              ? this.theme.fg("error", "×")
+              : this.theme.fg("success", "●");
+        const finalStep = stepIndex === group.steps.length - 1;
+        const outer = this.theme.fg("borderMuted", finalStep ? "└─" : "├─");
+        const rail = this.theme.fg("borderMuted", finalStep ? "   " : "│  ");
+        const inner = this.theme.fg("borderMuted", "└─");
+        lines.push(` ${outer} ${glyph} ${this.theme.fg("text", step.title)}`);
+        lines.push(` ${rail}${inner} ${renderSummary(this.theme, step)}`);
+      }
+      if (groupIndex < this.step.run.groups.length - 1) lines.push("");
+    }
     return lines.map((line) => truncateToWidth(line, width));
   }
 }
@@ -500,13 +510,23 @@ function updateAssistant(
 
   if (toolCalls.length === 0) {
     state.assembling = undefined;
+    if (terminalStop) state.currentGroup = undefined;
     return;
   }
 
   const toolNames = toolCalls.map((toolCall) => toolCall.name);
   const candidate = titleFromContent(content, toolCalls);
+  const updates = thinkingUpdatesFromContent(content);
   const existing = component[WORK_STEP] as WorkStep | undefined;
-  const run = existing?.run ?? state.currentRun ?? { steps: [], plans: [] };
+  const run = existing?.run ?? state.currentRun ?? { steps: [], groups: [], plans: [] };
+  const group =
+    existing?.group ??
+    state.currentGroup ??
+    ({
+      title: updates[0]?.title ?? candidate.title,
+      steps: [],
+      run,
+    } satisfies ActivityGroup);
   const step: WorkStep =
     existing ??
     ({
@@ -517,20 +537,23 @@ function updateAssistant(
       toolCallIds: new Set<string>(),
       completedToolCallIds: new Set<string>(),
       failed: false,
-      continues: false,
       run,
+      group,
     } satisfies WorkStep);
 
   if (!existing) {
     state.currentRun = run;
+    if (!state.currentGroup) {
+      run.groups.push(group);
+      state.currentGroup = group;
+    }
     run.steps.push(step);
-    if (state.lastStep) state.lastStep.continues = true;
-    state.lastStep = step;
+    group.steps.push(step);
   }
 
   run.plans = [
     ...run.plans.filter((entry) => entry.step !== step),
-    ...thinkingUpdatesFromContent(content).map((update) => ({ step, update })),
+    ...updates.map((update) => ({ step, update })),
   ].slice(-5);
   step.toolCalls = toolCalls;
   step.toolNames = toolNames;
@@ -597,8 +620,10 @@ function renderToolComponent(
   const step = bindToolComponent(component, state);
   if (!step) return [];
 
+  const owner = step.run.steps[0];
+  if (step !== owner) return [];
   const toolCallId = asString(component.toolCallId);
-  if (toolCallId !== step.toolCallIds.values().next().value) return [];
+  if (toolCallId !== owner.toolCallIds.values().next().value) return [];
 
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
   if (!row) {
@@ -616,7 +641,7 @@ function disposeState(state: RendererState): void {
   state.pending.clear();
   state.persisted = new WeakMap();
   state.assembling = undefined;
-  state.lastStep = undefined;
+  state.currentGroup = undefined;
   state.currentRun = undefined;
   state.sessionId = undefined;
 }
@@ -630,6 +655,7 @@ function failPendingSteps(state: RendererState): void {
   }
   state.pending.clear();
   state.assembling = undefined;
+  state.currentGroup = undefined;
 }
 
 function scanPersistedSession(state: RendererState, entries: any[]): void {
