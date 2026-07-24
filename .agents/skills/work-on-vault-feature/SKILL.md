@@ -17,7 +17,7 @@ Before starting work, print the complete canonical inventory as nested bullets:
 
 - Project — read from `projects/<project>/README.md`.
   - Theme — read from every nested `theme.md` below that project.
-    - Feature — read from the theme's `features/*.md`.
+    - Feature — read from the theme's `features/*/feature.md`.
 
 For every project, theme, and feature:
 

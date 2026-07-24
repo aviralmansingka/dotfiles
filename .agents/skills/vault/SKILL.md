@@ -1,6 +1,6 @@
 ---
 name: vault
-description: "Access the Obsidian vault: search notes, read topics, create tasks, and browse system cards. Use /vault followed by a subcommand like 'search', 'read', 'task', or 'card'."
+description: "Access and maintain the Obsidian vault: search notes, read topics, create tasks, browse system cards, and manage the Project, Theme, Feature, and Task hierarchy. Use for /vault subcommands or edits under ~/vault/projects."
 allowed-tools: Glob, Grep, Read, Write, Edit
 ---
 
@@ -70,6 +70,28 @@ System card categories:
 - **Frontmatter**: YAML with `id`, `aliases`, `tags`
 - **No daily notes** — weekly `backlog.md` is the central planning document
 - **Weekly logs**: `5_modal/logs/week_XXX/backlog.md` with `## Backlog` and `## Log` sections
+
+### Project structure
+
+```text
+projects/<project>/README.md
+projects/<project>/themes/<theme>/theme.md
+projects/<project>/themes/<theme>/features/<feature>/feature.md
+projects/<project>/themes/<theme>/features/<feature>/tasks/01-<task>.md
+```
+
+- Keep project, theme, and feature pages at or below 120 lines. Treat 80–120 as a useful target when the content
+  warrants it; never pad a short page.
+- Keep simple tasks as numbered checkboxes in `feature.md`. Create a task note when one checkbox plus three or four
+  nested bullets cannot capture the implementation, or when the work is a spike, low-level design, or verifier setup.
+- Give every task a stable `T01`, `T02`, … number. Never renumber existing tasks.
+- Treat the feature checklist as authoritative. A linked task note must mirror `[ ]` as `pending-work`, `[~]` as
+  `in-progress`, and `[x]` as `done` in its frontmatter.
+- Derive feature status from its checklist: all complete is `done`; any in-progress or a mixture of complete and open
+  is `in-progress`; all open is `pending-work`; no tasks on an implemented capability is `maintained`.
+- Preserve useful completed designs and verifier evidence in completed task notes. Put bulky raw evidence in an
+  `evidence/` subfolder when helpful; task notes have no hard line limit.
+- After project-structure changes, run `~/vault/scripts/verify-project-structure`.
 
 ## Directory Layout
 
