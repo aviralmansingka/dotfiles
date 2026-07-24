@@ -1060,6 +1060,25 @@ local function validate_herdr_workspaces()
     eq(#vim.api.nvim_list_tabpages(), before_reselect - 1, "reselect should remove its empty source tab")
     eq(agent_picker_opens[#agent_picker_opens].cwd, preserved_cwd, "reused workspace picker cwd")
 
+    vim.cmd("tabnew")
+    local dashboard_source = vim.api.nvim_get_current_tabpage()
+    vim.bo.buftype = "nofile"
+    vim.bo.filetype = "snacks_dashboard"
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, { "dashboard" })
+    vim.bo.modified = false
+    local before_dashboard = #vim.api.nvim_list_tabpages()
+    local dashboard_select = open_picker()
+    eq(
+      confirm_workspace(dashboard_select, "w-idle", dashboard_source, true),
+      idle_tab,
+      "dashboard source target"
+    )
+    eq(
+      #vim.api.nvim_list_tabpages(),
+      before_dashboard - 1,
+      "workspace selection should remove its dashboard launch tab"
+    )
+
     local function assert_meaningful_source(label, setup)
       vim.cmd("tabnew")
       local source = vim.api.nvim_get_current_tabpage()
