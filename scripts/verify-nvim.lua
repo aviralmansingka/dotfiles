@@ -22,6 +22,14 @@ local function key_desc(plugin, lhs)
   return nil
 end
 
+local function key_callback(plugin, lhs)
+  for _, key in ipairs(plugin.keys or {}) do
+    if key[1] == lhs and type(key[2]) == "function" then
+      return key[2]
+    end
+  end
+end
+
 local function assert_key_desc(plugin, lhs, needle)
   local desc = key_desc(plugin, lhs)
   if not desc then
@@ -71,6 +79,21 @@ local function validate_agent_keymaps()
 
   local snacks = load_plugin("snacks.nvim")
   assert_key_desc(snacks, "<C-'>", "Herdr")
+
+  local obsidian = load_plugin("obsidian.nvim")
+  assert_key_desc(obsidian, "<leader>vb", "current weekly backlog")
+  local backlog_callback = key_callback(obsidian, "<leader>vb")
+  local backlog = require("helpers.obsidian")
+  local original_today = backlog.today
+  local opened_backlog = false
+  backlog.today = function()
+    opened_backlog = true
+  end
+  backlog_callback()
+  backlog.today = original_today
+  if not opened_backlog then
+    fail("<leader>vb should call the current weekly backlog helper")
+  end
 
   assert_key_desc(sidekick, "<leader>ai", "Pi")
   assert_key_desc(sidekick, "<leader>ag", "Codex")
@@ -1723,12 +1746,323 @@ local function validate_sidekick_herdr_live()
   end
 end
 
+local function validate_vault_work_items()
+  local root = vim.fn.tempname() .. "-vault-work-items"
+  vim.fn.mkdir(root .. "/0_inbox/nested", "p")
+  vim.fn.mkdir(root .. "/3_logs/2026-W30", "p")
+  vim.fn.mkdir(root .. "/projects", "p")
+
+  vim.fn.writefile({
+    "# Inbox",
+    "## To process",
+    "- [ ] inbox todo",
+    "- [-] inbox doing",
+    "- [x] inbox done",
+  }, root .. "/0_inbox/0.inbox.md")
+  vim.fn.writefile({
+    "# Backlog",
+    "## Log",
+    "### Friday, 2026-07-24",
+    "* [ ] backlog todo",
+    "- [-] backlog doing",
+    "- [x] backlog done",
+    "- [!] backlog urgent",
+    "- [~] backlog deferred",
+    "#### Nested context",
+    "- [ ] nested backlog todo",
+    "### Complete",
+    "- [ ] checkbox under a non-date H3",
+    "### Friday 2026-07-24",
+    "- [ ] checkbox under a malformed date H3",
+    "### Thursday, 2026-07-23",
+    "- [ ] older backlog todo",
+    "## Reading List",
+    "- [ ] checkbox outside a dated H3",
+  }, root .. "/3_logs/2026-W30/backlog.md")
+  vim.fn.writefile({ "- [ ] wrong log file" }, root .. "/3_logs/2026-W30/notes.md")
+  vim.fn.writefile({ "- [ ] wrong directory" }, root .. "/projects/project.md")
+
+  local ok, err = xpcall(function()
+    local work_items = require("helpers.vault_work_items")
+    local items = work_items.collect(root)
+    if #items ~= 3 then
+      fail("expected three unchecked items under exact date H3 headings; got " .. vim.inspect(items))
+    end
+
+    assert_sequence(
+      vim.tbl_map(function(item)
+        return item.date
+      end, items),
+      { "2026-07-24", "2026-07-24", "2026-07-23" },
+      "backlog item dates"
+    )
+    if items[1].task ~= "backlog todo" or items[1].pos[1] ~= 4 then
+      fail("backlog item should retain task and line context: " .. vim.inspect(items[1]))
+    end
+    if items[1].day ~= "Friday, 2026-07-24" then
+      fail("backlog item should retain its exact dated heading: " .. vim.inspect(items[1]))
+    end
+    if items[2].task ~= "nested backlog todo" or items[2].pos[1] ~= 10 then
+      fail("an H4 should remain nested under its dated H3: " .. vim.inspect(items[2]))
+    end
+    for _, item in ipairs(items) do
+      if item.text ~= string.format("%s │ %s", item.date, item.task) then
+        fail("picker text should contain only the inferred date and task: " .. vim.inspect(item))
+      end
+      if
+        item.text:find("wrong ", 1, true)
+        or item.text:find("doing", 1, true)
+        or item.text:find("done", 1, true)
+        or item.text:find("checkbox", 1, true)
+        or item.text:find("3_logs/", 1, true)
+      then
+        fail("excluded item leaked into results: " .. vim.inspect(item))
+      end
+    end
+
+    local herdr = require("plugins.sidekick.herdr")
+    local internal = require("plugins.sidekick.internal")
+    local original_workspace_call = herdr.call
+    local workspace_calls = {}
+    herdr.call = function(args)
+      workspace_calls[#workspace_calls + 1] = args
+      if args[1] == "workspace" and args[2] == "list" then
+        return { workspaces = { { label = "Backlog", workspace_id = "backlog-workspace" } } }
+      elseif args[1] == "tab" and args[2] == "create" then
+        return {
+          tab = { tab_id = "backlog-tab" },
+          root_pane = { pane_id = "backlog-root" },
+        }
+      elseif args[1] == "agent" and args[2] == "start" then
+        return {
+          agent = {
+            name = "pi-friday-2026-07-24",
+            pane_id = "backlog-agent",
+            tab_id = "backlog-tab",
+            workspace_id = "backlog-workspace",
+          },
+        }
+      elseif args[1] == "pane" and args[2] == "close" then
+        return {}
+      end
+    end
+    local workspace_ok, workspace_err = xpcall(function()
+      local agent = herdr.start("pi-friday-2026-07-24", root, { "pi" }, {}, "backlog")
+      if not agent or agent.workspace_id ~= "backlog-workspace" then
+        fail("named workspace start should use the matching backlog workspace")
+      end
+      assert_sequence(workspace_calls[1], { "workspace", "list" }, "backlog workspace lookup")
+      if
+        workspace_calls[2][1] ~= "tab"
+        or workspace_calls[2][2] ~= "create"
+        or workspace_calls[2][4] ~= "backlog-workspace"
+      then
+        fail("daily agent tab should be created in the backlog workspace: " .. vim.inspect(workspace_calls[2]))
+      end
+      if
+        workspace_calls[3][1] ~= "agent"
+        or workspace_calls[3][2] ~= "start"
+        or workspace_calls[3][7] ~= "backlog-workspace"
+      then
+        fail("daily agent should start in the backlog workspace: " .. vim.inspect(workspace_calls[3]))
+      end
+    end, debug.traceback)
+    herdr.call = original_workspace_call
+    if not workspace_ok then
+      fail(workspace_err)
+    end
+
+    local original_get_agent = herdr.get_agent
+    local original_start = herdr.start
+    local original_call = herdr.call
+    local original_send = herdr.send
+    local started
+    local renamed
+    local sent
+    herdr.get_agent = function()
+      return nil
+    end
+    herdr.start = function(name, cwd, command, env, workspace_label)
+      started = {
+        name = name,
+        cwd = cwd,
+        command = command,
+        env = env,
+        workspace_label = workspace_label,
+      }
+      return { name = name, tab_id = "backlog-tab" }
+    end
+    herdr.call = function(args)
+      renamed = args
+      return {}
+    end
+    herdr.send = function(target, text)
+      sent = { target = target, text = text }
+      return true
+    end
+
+    local agent_ok, agent_err = xpcall(function()
+      if not work_items.send_to_backlog_agent(items[1], root) then
+        fail("dated backlog item should be sent to its daily agent")
+      end
+      if
+        not started
+        or started.name ~= "pi-friday-2026-07-24"
+        or started.cwd ~= root
+        or started.workspace_label ~= "backlog"
+        or started.env[internal.named_env_var] ~= "friday-2026-07-24"
+      then
+        fail("daily backlog agent start arguments are wrong: " .. vim.inspect(started))
+      end
+      assert_sequence(started.command, { "pi", "--name", "friday-2026-07-24" }, "daily backlog agent command")
+      assert_sequence(
+        renamed,
+        { "tab", "rename", "backlog-tab", "Friday, 2026-07-24" },
+        "daily backlog tab title"
+      )
+      if
+        not sent
+        or sent.target ~= "pi-friday-2026-07-24"
+        or sent.text ~= root .. "/3_logs/2026-W30/backlog.md:4"
+      then
+        fail("daily backlog agent should receive the exact source link: " .. vim.inspect(sent))
+      end
+
+      started = nil
+      renamed = nil
+      herdr.get_agent = function(name)
+        return { name = name, tab_id = "backlog-tab" }
+      end
+      if not work_items.send_to_backlog_agent(items[1], root) or started or renamed then
+        fail("a second item from the same day should reuse its existing agent")
+      end
+    end, debug.traceback)
+
+    herdr.get_agent = original_get_agent
+    herdr.start = original_start
+    herdr.call = original_call
+    herdr.send = original_send
+    if not agent_ok then
+      fail(agent_err)
+    end
+
+    local lazy = require("lazy")
+    local registry = require("plugins.sidekick.registry")
+    local last_session = require("plugins.sidekick.last_session")
+    local original_lazy_load = lazy.load
+    local original_rehydrate = registry.rehydrate
+    local original_record = last_session.record
+    local original_toggle = internal.toggle_tool_session
+    local activation_events = {}
+    lazy.load = function()
+      activation_events[#activation_events + 1] = "load"
+    end
+    registry.rehydrate = function()
+      activation_events[#activation_events + 1] = "rehydrate"
+    end
+    last_session.record = function(name, terminal_id)
+      activation_events[#activation_events + 1] = "record:" .. name .. ":" .. terminal_id
+    end
+    internal.toggle_tool_session = function(name, focus, terminal_id)
+      activation_events[#activation_events + 1] =
+        string.format("toggle:%s:%s:%s", name, tostring(focus), terminal_id)
+    end
+    local activation_ok, activation_err = xpcall(function()
+      work_items.activate_backlog_agent({
+        name = "pi-friday-2026-07-24",
+        terminal_id = "backlog-terminal",
+      })
+      assert_sequence(activation_events, {
+        "load",
+        "rehydrate",
+        "record:pi-friday-2026-07-24:backlog-terminal",
+        "toggle:pi-friday-2026-07-24:true:backlog-terminal",
+      }, "daily backlog agent activation")
+    end, debug.traceback)
+    lazy.load = original_lazy_load
+    registry.rehydrate = original_rehydrate
+    last_session.record = original_record
+    internal.toggle_tool_session = original_toggle
+    if not activation_ok then
+      fail(activation_err)
+    end
+
+    local render_markdown = load_plugin("render-markdown.nvim")
+    assert_key_desc(render_markdown, "<leader>vt", "unchecked backlog")
+
+    local callback = key_callback(render_markdown, "<leader>vt")
+    if not callback then
+      fail("<leader>vt callback missing")
+    end
+
+    local original_collect = work_items.collect
+    local original_send_to_agent = work_items.send_to_backlog_agent
+    local original_activate_agent = work_items.activate_backlog_agent
+    local original_pick = Snacks.picker.pick
+    local picker_opts
+    local action_item
+    local action_events = {}
+    work_items.collect = function()
+      return items
+    end
+    work_items.send_to_backlog_agent = function(item)
+      action_item = item
+      action_events[#action_events + 1] = "send"
+      return { name = "pi-friday-2026-07-24", terminal_id = "backlog-terminal" }
+    end
+    work_items.activate_backlog_agent = function()
+      action_events[#action_events + 1] = "activate"
+    end
+    Snacks.picker.pick = function(opts)
+      picker_opts = opts
+    end
+    local callback_ok, callback_err = xpcall(callback, debug.traceback)
+    if callback_ok and picker_opts and picker_opts.actions and picker_opts.actions.backlog_agent then
+      picker_opts.actions.backlog_agent({
+        close = function()
+          action_events[#action_events + 1] = "close"
+        end,
+      }, items[1])
+    end
+    work_items.collect = original_collect
+    work_items.send_to_backlog_agent = original_send_to_agent
+    work_items.activate_backlog_agent = original_activate_agent
+    Snacks.picker.pick = original_pick
+    if not callback_ok then
+      fail(callback_err)
+    end
+    if
+      not picker_opts
+      or picker_opts.source ~= "unchecked-backlog-items"
+      or picker_opts.title ~= "Unchecked Backlog Items (3)"
+      or picker_opts.format ~= "text"
+      or picker_opts.preview ~= "file"
+    then
+      fail("unchecked backlog picker options are wrong: " .. vim.inspect(picker_opts))
+    end
+    if
+      picker_opts.win.input.keys["<c-a>"][1] ~= "backlog_agent"
+      or picker_opts.win.list.keys["<c-a>"] ~= "backlog_agent"
+      or action_item ~= items[1]
+    then
+      fail("vault picker <C-a> should send the selected item to its backlog agent")
+    end
+    assert_sequence(action_events, { "send", "close", "activate" }, "vault picker backlog agent action")
+  end, debug.traceback)
+
+  vim.fn.delete(root, "rf")
+  if not ok then
+    fail(err)
+  end
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
   ["herdr-workspaces"] = validate_herdr_workspaces,
   ["sidekick-herdr-live"] = validate_sidekick_herdr_live,
+  ["vault-work-items"] = validate_vault_work_items,
 }
 
 local fn = cases[case]
@@ -1736,7 +2070,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live"
+      .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-work-items"
   )
 end
 

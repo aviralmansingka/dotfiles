@@ -231,6 +231,48 @@ return {
         desc = "Find active vault todos by tag",
       },
       {
+        "<leader>vt",
+        function()
+          local items = require("helpers.vault_work_items").collect()
+          if #items == 0 then
+            vim.notify("No unchecked backlog items found", vim.log.levels.INFO)
+            return
+          end
+
+          Snacks.picker.pick({
+            source = "unchecked-backlog-items",
+            items = items,
+            title = string.format("Unchecked Backlog Items (%d)", #items),
+            format = "text",
+            preview = "file",
+            actions = {
+              backlog_agent = function(picker, item)
+                local work_items = require("helpers.vault_work_items")
+                local agent = work_items.send_to_backlog_agent(item)
+                if agent then
+                  picker:close()
+                  work_items.activate_backlog_agent(agent)
+                  vim.notify("Sent backlog item to " .. item.day, vim.log.levels.INFO)
+                end
+              end,
+            },
+            win = {
+              input = {
+                keys = {
+                  ["<c-a>"] = { "backlog_agent", mode = { "i", "n" } },
+                },
+              },
+              list = {
+                keys = {
+                  ["<c-a>"] = "backlog_agent",
+                },
+              },
+            },
+          })
+        end,
+        desc = "Find unchecked backlog items",
+      },
+      {
         "<leader>ot",
         function()
           local vault_dir = VAULT_DIR

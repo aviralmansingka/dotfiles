@@ -462,6 +462,11 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Vault active todo picker excludes legacy locations, `.git`, `.obsidian`, templates, and Habit Tracking sections.
 - `<leader>ft` opens active vault todos.
 - `<leader>fT` opens active todos by tag.
+- `<leader>vt` opens unchecked items from `3_logs/*/backlog.md` only when they are under an exact
+  `### Weekday, YYYY-MM-DD` heading; rows show the inferred date and todo text while retaining source preview.
+- Inside the `<leader>vt` picker, `<C-a>` creates or reuses a dated Pi agent in the `backlog` Herdr workspace and
+  pastes the selected item's exact `backlog.md:line` link without submitting it, then closes the picker and focuses
+  that agent's Sidekick window.
 - `<leader>ot` opens vault tags across frontmatter array tags, frontmatter list tags, and inline tags while skipping headings and code fences.
 - `<leader>ob` opens case-insensitive backlinks to the current note, including aliased wiki links.
 - `<leader>ol` opens outgoing wiki links from the current note, including unsaved-buffer and missing-target handling.
@@ -469,6 +474,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 ### Weekly backlog helpers
 
 - Weekly backlog helpers create or open `~/vault/3_logs/YYYY-WW/backlog.md`.
+- `<leader>vb` opens the current weekly backlog and today's dated section.
 - New weekly backlog files get frontmatter, title, log section, and date heading.
 - Existing weekly backlog files are repaired to include log section and requested day heading.
 - Backlog helpers support today, yesterday, and tomorrow.

@@ -84,23 +84,50 @@ function M.workspace_for_cwd(cwd)
   end
 end
 
+---@param label string
+---@return string|nil workspace_id
+---@return boolean listed
+function M.workspace_for_label(label)
+  local result = M.call({ "workspace", "list" })
+  if not result then
+    return nil, false
+  end
+  local wanted = vim.trim(label):lower()
+  for _, workspace in ipairs(result.workspaces or {}) do
+    if vim.trim(workspace.label or ""):lower() == wanted then
+      return workspace.workspace_id, true
+    end
+  end
+  return nil, true
+end
+
 ---@param cwd string
----@param scope? { workspace_id?: string }
+---@param scope? string|{ workspace_id?: string }
 ---@return string|nil workspace_id
 ---@return string|nil root_pane_id
 ---@return boolean created
 ---@return string|nil root_tab_id
 function M.ensure_workspace(cwd, scope)
-  if scope and scope.workspace_id then
+  if type(scope) == "table" and scope.workspace_id then
     return scope.workspace_id, nil, false
   end
-  local workspace_id = M.workspace_for_cwd(cwd)
+  local workspace_label = type(scope) == "string" and scope or nil
+  local workspace_id
+  if workspace_label then
+    local listed
+    workspace_id, listed = M.workspace_for_label(workspace_label)
+    if not listed then
+      return nil, nil, false
+    end
+  else
+    workspace_id = M.workspace_for_cwd(cwd)
+  end
   if workspace_id then
     return workspace_id, nil, false
   end
   local normalized = M.normalize_cwd(cwd)
-  local label = vim.fn.fnamemodify(normalized, ":t")
-  local result = M.call({ "workspace", "create", "--cwd", normalized, "--label", label, "--no-focus" })
+  workspace_label = workspace_label or vim.fn.fnamemodify(normalized, ":t")
+  local result = M.call({ "workspace", "create", "--cwd", normalized, "--label", workspace_label, "--no-focus" })
   if not result or not result.workspace then
     return nil, nil, false
   end
@@ -115,7 +142,7 @@ end
 ---@param cwd string
 ---@param command string[]
 ---@param env? table<string, string|boolean>
----@param scope? { workspace_id?: string }
+---@param scope? string|{ workspace_id?: string }
 ---@return table|nil agent
 function M.start(name, cwd, command, env, scope)
   local normalized = M.normalize_cwd(cwd)

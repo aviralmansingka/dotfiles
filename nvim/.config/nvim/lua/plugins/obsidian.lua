@@ -115,6 +115,13 @@ return {
 
     -- Weekly backlog work logs
     {
+      "<leader>vb",
+      function()
+        require("helpers.obsidian").today()
+      end,
+      desc = "Open current weekly backlog",
+    },
+    {
       "<leader>od",
       function()
         require("helpers.obsidian").today()
