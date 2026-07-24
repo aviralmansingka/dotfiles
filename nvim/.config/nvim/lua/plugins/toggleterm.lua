@@ -34,14 +34,6 @@ return {
         desc = "Toggle [K]9s",
       },
       {
-        "<C-'>",
-        function()
-          Snacks.terminal.toggle("herdr", { cwd = vim.fn.getcwd() })
-        end,
-        desc = "Toggle Herdr",
-        mode = { "n", "t" },
-      },
-      {
         "gG",
         function()
           require("helpers.lazygit").open()
