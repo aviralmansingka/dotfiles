@@ -276,15 +276,14 @@ if (main.plain.includes("Plan  "))
 for (const nativeThinking of ["Scope timeline", "Inspect configuration", "Finalize plan rendering"])
 	if (!main.plain.includes(nativeThinking)) fail(`Native thinking disappeared: ${nativeThinking}`);
 for (const header of [
-	"Run grouped verification  2 steps · 3 calls · all passed",
-	"Working with settings.json  1 step · 2 calls · failed",
-	"Reconcile persisted tool result  1 step · 1 call · all passed",
-	"Run post-reload verification  1 step · 1 call · all passed",
+	"Activity  2 steps · 3 calls · all passed",
+	"Activity  1 step · 2 calls · failed",
+	"Activity  1 step · 1 call · all passed",
 ]) {
 	if (!main.plain.includes(header)) fail(`Missing nested activity header: ${header}`);
 }
-if (main.plain.includes(" Activity  "))
-	fail("Generic orange Activity label was not replaced by activity titles");
+if (!main.plain.includes(" Activity  "))
+	fail("Generic orange Activity label is missing");
 
 const sameSummary = "2 calls · noisy_verify_tool ×2 · completed";
 const mixedSummary = "settings.json · 2 calls · noisy_verify_tool · read · failed";
@@ -322,20 +321,14 @@ for (const row of [same, sameFollowup, mixed, restoredSource, afterReload]) {
 	assertForeground(main, row);
 	if (row.connector !== "└─") fail(`Activity has a dangling connector: ${row.title}`);
 }
-for (const title of [
-	"Run grouped verification",
-	"Working with settings.json",
-	"Reconcile persisted tool result",
-	"Run post-reload verification",
-])
-	assertHeaderForeground(main, title);
+assertHeaderForeground(main, "Activity");
 const nestedSteps = new RegExp(
 	`${escapeRegExp(sameSummary)}\\r*\\n └─ ● Continue grouped verification`,
 	"u",
 );
 if (!nestedSteps.test(main.plain)) fail("Continuous steps do not form a compact inner timeline");
 const spacedActivities = new RegExp(
-	`${escapeRegExp(restoreSuccessSummary)}\\r*\\n\\r*\\n Working with settings.json  1 step`,
+	`${escapeRegExp(restoreSuccessSummary)}\\r*\\n\\r*\\n Activity  1 step`,
 	"u",
 );
 if (!spacedActivities.test(main.plain)) fail("Separate activities do not flow with one blank line between them");
@@ -347,18 +340,18 @@ assertNoLaterActiveState(main, mixedSummary, "×");
 if (missing.plain.includes("Plan  "))
 	fail("Restored timeline rendered a custom thinking Plan");
 for (const header of [
-	"Run grouped verification  2 steps · 3 calls · all passed",
-	"Working with settings.json  1 step · 2 calls · failed",
-	"Reconcile persisted tool result  1 step · 1 call · failed",
+	"Activity  2 steps · 3 calls · all passed",
+	"Activity  1 step · 2 calls · failed",
+	"Activity  1 step · 1 call · failed",
 ])
 	if (!missing.plain.includes(header)) fail(`Restored nested activity header is incorrect: ${header}`);
 const restoredOrder = [
-	missing.plain.indexOf("Run grouped verification  2 steps · 3 calls · all passed"),
+	missing.plain.indexOf("Activity  2 steps · 3 calls · all passed"),
 	missing.plain.indexOf("├─ ● Run grouped verification"),
 	missing.plain.indexOf("└─ ● Continue grouped verification"),
-	missing.plain.indexOf("Working with settings.json  1 step · 2 calls · failed"),
+	missing.plain.indexOf("Activity  1 step · 2 calls · failed"),
 	missing.plain.indexOf("└─ × Working with settings.json"),
-	missing.plain.indexOf("Reconcile persisted tool result  1 step · 1 call · failed"),
+	missing.plain.indexOf("Activity  1 step · 1 call · failed"),
 	missing.plain.indexOf("└─ × Reconcile persisted tool result"),
 ];
 if (restoredOrder.some((index) => index < 0) || restoredOrder.some((index, position) => position > 0 && index <= restoredOrder[position - 1]))
@@ -376,7 +369,7 @@ if (!missingFailure) fail("Restored work step without a matching tool result was
 assertForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step timeline verified offline: native thinking untouched; nested orange-titled activities preserve chronological outer and inner flow, compact results, spacing, connectors, restoration, reload, suppression, and semantic ANSI colors.",
+	"Pi work-step timeline verified offline: native thinking untouched; generic Activity headers preserve chronological outer and inner flow, compact results, spacing, connectors, restoration, reload, suppression, and semantic ANSI colors.",
 );
 NODE
 
