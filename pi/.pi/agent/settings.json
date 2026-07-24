@@ -7,6 +7,6 @@
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "high",
-  "theme": "dark",
+  "theme": "gruvbox-material",
   "transport": "websocket-cached"
 }

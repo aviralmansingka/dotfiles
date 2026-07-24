@@ -1,18 +1,21 @@
 import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 import { realpathSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { Loader, truncateToWidth, type TUI } from "@earendil-works/pi-tui";
+import { truncateToWidth } from "@earendil-works/pi-tui";
 
 const ASSISTANT_PATCHED = Symbol.for("aviral.pi.work-step-renderer.assistant");
 const TOOL_PATCHED = Symbol.for("aviral.pi.work-step-renderer.tool");
 const CONTROLLER = Symbol.for("aviral.pi.work-step-renderer.controller");
 const WORK_STEP = Symbol.for("aviral.pi.work-step-renderer.step");
 const WORK_STEP_ROW = Symbol.for("aviral.pi.work-step-renderer.row");
+const ASSISTANT_ACTIVE = Symbol.for("aviral.pi.work-step-renderer.active");
+const ASSISTANT_MESSAGE = Symbol.for("aviral.pi.work-step-renderer.message");
 
 type ToolCall = {
   id: string;
   name: string;
+  arguments: Record<string, unknown>;
 };
 
 type PersistedOutcome = {
@@ -20,13 +23,21 @@ type PersistedOutcome = {
   failed: boolean;
 };
 
+type ActivityRun = {
+  steps: WorkStep[];
+  decisions: string[];
+};
+
 type WorkStep = {
   title: string;
   titleLocked: boolean;
+  toolCalls: ToolCall[];
   toolNames: string[];
   toolCallIds: Set<string>;
   completedToolCallIds: Set<string>;
   failed: boolean;
+  continues: boolean;
+  run: ActivityRun;
   row?: WorkStepRow;
 };
 
@@ -37,12 +48,15 @@ type RendererState = {
     step: WorkStep;
     remaining: Set<string>;
   };
+  lastStep?: WorkStep;
+  currentRun?: ActivityRun;
   sessionId?: string;
 };
 
 type RendererController = {
   assistantUpdated(component: any, message: any): void;
   assistantHasStep(component: any): boolean;
+  renderAssistant(component: any, lines: string[], width: number): string[];
   toolUpdated(component: any): void;
   renderTool(component: any, width: number): string[];
 };
@@ -86,6 +100,12 @@ function cleanToolName(value: unknown): string {
   );
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 function groupTools(toolNames: string[]): string[] {
   const counts = new Map<string, number>();
   for (const name of toolNames) counts.set(name, (counts.get(name) ?? 0) + 1);
@@ -94,18 +114,51 @@ function groupTools(toolNames: string[]): string[] {
   );
 }
 
-function summarizeTools(toolNames: string[]): string {
-  const counts = new Map<string, number>();
-  for (const name of toolNames) counts.set(name, (counts.get(name) ?? 0) + 1);
-  return [
-    plural(toolNames.length, "call"),
-    ...[...counts.entries()].map(([name, count]) => `${name} ×${count}`),
-  ].join(" · ");
+function toolTarget(toolCall: ToolCall): string | undefined {
+  const args = toolCall.arguments;
+  const path = asString(args.path);
+  if (path) return basename(path);
+  const file = asString(args.file);
+  if (file) return basename(file);
+  return undefined;
+}
+
+function uniqueTargets(toolCalls: ToolCall[]): string[] {
+  return [...new Set(toolCalls.map(toolTarget).filter((value): value is string => Boolean(value)))];
+}
+
+function formatTargets(targets: string[]): string | undefined {
+  if (targets.length === 0) return undefined;
+  if (targets.length <= 2) return targets.join(", ");
+  return plural(targets.length, "file");
+}
+
+function isCheckCommand(toolCall: ToolCall): boolean {
+  if (toolCall.name !== "bash") return false;
+  const command = asString(toolCall.arguments.command) ?? "";
+  return /(?:^|[\s/.-])(?:test|tests|verify|check|lint|typecheck|tsc)(?:[\s/.-]|$)/i.test(
+    command,
+  );
+}
+
+function fallbackTitle(toolCalls: ToolCall[]): string {
+  const names = toolCalls.map((toolCall) => toolCall.name);
+  const targets = uniqueTargets(toolCalls);
+  const target = formatTargets(targets);
+  if (toolCalls.every((toolCall) => ["edit", "write"].includes(toolCall.name)))
+    return `Updating ${target ?? plural(toolCalls.length, "file")}`;
+  if (toolCalls.every((toolCall) => toolCall.name === "read"))
+    return `Reading ${target ?? plural(toolCalls.length, "file")}`;
+  if (toolCalls.every(isCheckCommand)) return "Running checks";
+  if (toolCalls.every((toolCall) => toolCall.name === "bash"))
+    return `Running ${plural(toolCalls.length, "command")}`;
+  if (target) return `Working with ${target}`;
+  return `Using ${groupTools(names).join(", ")}`;
 }
 
 function titleFromContent(
   content: any[],
-  toolNames: string[],
+  toolCalls: ToolCall[],
 ): { title: string; synthesized: boolean } {
   const thinking = content
     .filter((item) => item?.type === "thinking")
@@ -113,6 +166,8 @@ function titleFromContent(
     .filter((value): value is string => Boolean(value));
 
   for (const block of thinking) {
+    const update = thinkingUpdate(block);
+    if (update) return { title: update.title, synthesized: false };
     for (const line of block.split("\n")) {
       const heading = line.match(
         /^\s*(?:#{1,6}\s*)?\*\*([^*\n]+)\*\*:?\s*$/,
@@ -134,7 +189,7 @@ function titleFromContent(
   }
 
   return {
-    title: `Using ${groupTools(toolNames).join(", ")}`,
+    title: fallbackTitle(toolCalls),
     synthesized: true,
   };
 }
@@ -149,75 +204,229 @@ function status(step: WorkStep): "pending" | "success" | "failure" {
   return "pending";
 }
 
-class WorkStepRow {
-  private loader?: Loader;
-  private loaderTitle?: string;
+type SummaryPart = {
+  text: string;
+  role: "detail" | "strong" | "success" | "warning" | "error";
+};
 
+function outcomePart(step: WorkStep, successText: string): SummaryPart {
+  const currentStatus = status(step);
+  if (currentStatus === "pending") return { text: "running", role: "warning" };
+  if (currentStatus === "failure") return { text: "failed", role: "error" };
+  return { text: successText, role: "success" };
+}
+
+function summaryParts(step: WorkStep): SummaryPart[] {
+  const calls = step.toolCalls;
+  const names = calls.map((call) => call.name);
+  const targets = formatTargets(uniqueTargets(calls));
+  const parts: SummaryPart[] = [];
+  const add = (part: SummaryPart) => {
+    if (parts.length > 0) parts.push({ text: " · ", role: "detail" });
+    parts.push(part);
+  };
+
+  if (targets) add({ text: targets, role: "detail" });
+
+  if (calls.every((call) => call.name === "edit")) {
+    const edits = calls.reduce((count, call) => {
+      const value = call.arguments.edits;
+      return count + (Array.isArray(value) ? value.length : 1);
+    }, 0);
+    add({ text: plural(edits, "edit"), role: "strong" });
+    add(outcomePart(step, "updated"));
+    return parts;
+  }
+
+  if (calls.every((call) => call.name === "write")) {
+    add({ text: plural(calls.length, "write"), role: "strong" });
+    add(outcomePart(step, "written"));
+    return parts;
+  }
+
+  if (calls.every((call) => call.name === "read")) {
+    add({ text: plural(calls.length, "read"), role: "strong" });
+    add(outcomePart(step, "loaded"));
+    return parts;
+  }
+
+  if (calls.every(isCheckCommand)) {
+    add({ text: plural(calls.length, "check"), role: "strong" });
+    add(outcomePart(step, "passed"));
+    return parts;
+  }
+
+  if (calls.every((call) => call.name === "bash")) {
+    add({ text: plural(calls.length, "command"), role: "strong" });
+    add(outcomePart(step, "completed"));
+    return parts;
+  }
+
+  add({ text: plural(calls.length, "call"), role: "strong" });
+  add({ text: groupTools(names).join(" · "), role: "strong" });
+  add(outcomePart(step, "completed"));
+  return parts;
+}
+
+function renderSummary(theme: Theme, step: WorkStep): string {
+  return summaryParts(step)
+    .map((part) => {
+      if (part.role === "detail") return theme.fg("muted", part.text);
+      const color = part.role === "strong" ? "text" : part.role;
+      return theme.fg(color, theme.bold(part.text));
+    })
+    .join("");
+}
+
+function renderPlan(theme: Theme, run: ActivityRun): string[] {
+  if (run.decisions.length === 0) return [];
+  return [
+    ` ${theme.fg("accent", theme.bold("Plan"))}  ${theme.fg("muted", plural(run.decisions.length, "decision"))}`,
+    ...run.decisions.map(
+      (decision) =>
+        ` ${theme.fg("customMessageLabel", "◆")} ${theme.fg("text", decision)}`,
+    ),
+    "",
+  ];
+}
+
+function renderActivityHeader(theme: Theme, run: ActivityRun): string {
+  const calls = run.steps.reduce((count, step) => count + step.toolCalls.length, 0);
+  const completed = run.steps.filter((step) => status(step) === "success").length;
+  const failed = run.steps.some((step) => status(step) === "failure");
+  const settled = completed === run.steps.length;
+  const state = failed
+    ? theme.fg("error", theme.bold("failed"))
+    : settled
+      ? theme.fg("success", theme.bold("all passed"))
+      : theme.fg("warning", theme.bold(`${completed}/${run.steps.length} complete`));
+  return (
+    ` ${theme.fg("accent", theme.bold("Activity"))}  ` +
+    theme.fg("muted", `${plural(run.steps.length, "step")} · ${plural(calls, "call")} · `) +
+    state
+  );
+}
+
+class WorkStepRow {
   constructor(
-    private readonly ui: TUI,
     private readonly theme: Theme,
     private readonly step: WorkStep,
-  ) {
-    this.sync();
-  }
-
-  sync(): void {
-    if (status(this.step) === "pending") {
-      if (this.loader) {
-        if (this.loaderTitle !== this.step.title)
-          this.loader.setMessage(this.step.title);
-      } else {
-        const foreground = (text: string) => this.theme.fg("text", text);
-        this.loader = new Loader(
-          this.ui,
-          foreground,
-          foreground,
-          this.step.title,
-        );
-      }
-      this.loaderTitle = this.step.title;
-      return;
-    }
-    this.disposeLoader();
-  }
+  ) {}
 
   render(width: number): string[] {
-    this.sync();
     const currentStatus = status(this.step);
-    const title =
+    const glyph =
       currentStatus === "pending"
-        ? (this.loader?.render(width).find((line) => line.trim()) ?? "")
-        : this.theme.fg(
-            "text",
-            ` ${currentStatus === "failure" ? "!" : "✓"} ${this.step.title}`,
-          );
-    const summary = this.theme.fg(
-      "text",
-      `  ${summarizeTools(this.step.toolNames)}`,
-    );
-    return ["", truncateToWidth(title, width), truncateToWidth(summary, width)];
-  }
-
-  invalidate(): void {
-    this.loader?.invalidate();
-  }
-
-  dispose(): void {
-    this.disposeLoader();
-  }
-
-  private disposeLoader(): void {
-    this.loader?.stop();
-    this.loader = undefined;
-    this.loaderTitle = undefined;
+        ? this.theme.fg("accent", "◉")
+        : currentStatus === "failure"
+          ? this.theme.fg("error", "×")
+          : this.theme.fg("success", "●");
+    const title = ` ${glyph} ${this.theme.fg("text", this.step.title)}`;
+    const connector = this.theme.fg("borderMuted", "└─");
+    const summary = ` ${connector} ${renderSummary(this.theme, this.step)}`;
+    const lines = [title, summary];
+    if (this.step.continues) lines.push("");
+    if (this.step.run.steps[0] === this.step)
+      lines.unshift(
+        ...renderPlan(this.theme, this.step.run),
+        renderActivityHeader(this.theme, this.step.run),
+      );
+    return lines.map((line) => truncateToWidth(line, width));
   }
 }
 
 function toolCallsFrom(content: any[]): ToolCall[] {
   return content
     .filter((item) => item?.type === "toolCall")
-    .map((item) => ({ id: asString(item.id), name: cleanToolName(item.name) }))
+    .map((item) => ({
+      id: asString(item.id),
+      name: cleanToolName(item.name),
+      arguments: asRecord(item.arguments),
+    }))
     .filter((item): item is ToolCall => Boolean(item.id));
+}
+
+type ThinkingUpdate = {
+  title: string;
+  outcome?: string;
+  label: "Outcome" | "Decision";
+};
+
+function thinkingUpdate(value: string): ThinkingUpdate | undefined {
+  const lines = value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return undefined;
+
+  const inline = lines[0]?.match(
+    /^(.+?)\s+(?:→|—)\s+(?:(Outcome|Decision):?\s*)?(.+)$/i,
+  );
+  if (inline) {
+    const title = sanitizeTitle(inline[1]);
+    const outcome = sanitizeTitle(inline[3]);
+    if (title && outcome)
+      return {
+        title,
+        outcome,
+        label: inline[2]?.toLowerCase() === "decision" ? "Decision" : "Outcome",
+      };
+  }
+
+  const title = sanitizeTitle(lines[0]);
+  if (!title) return undefined;
+  const labeled = lines
+    .slice(1)
+    .map((line) => line.match(/^(Outcome|Decision):\s*(.+)$/i))
+    .find(Boolean);
+  return {
+    title,
+    outcome: sanitizeTitle(labeled?.[2]),
+    label: labeled?.[1]?.toLowerCase() === "decision" ? "Decision" : "Outcome",
+  };
+}
+
+function renderActiveThinking(
+  component: any,
+  fallback: string[],
+  width: number,
+  theme: Theme,
+): string[] {
+  if (!component[ASSISTANT_ACTIVE]) return fallback;
+  const content = Array.isArray(component[ASSISTANT_MESSAGE]?.content)
+    ? component[ASSISTANT_MESSAGE].content
+    : [];
+  const updates = content
+    .filter((item: any) => item?.type === "thinking")
+    .map((item: any) => thinkingUpdate(asString(item.thinking) ?? ""))
+    .filter((value: ThinkingUpdate | undefined): value is ThinkingUpdate => Boolean(value));
+  if (updates.length === 0) return fallback;
+
+  const lines = [""];
+  for (const [index, update] of updates.entries()) {
+    const active = index === updates.length - 1;
+    const glyph = active
+      ? theme.fg("accent", "◉")
+      : theme.fg("success", "●");
+    const connector = theme.fg("borderMuted", active ? "└─" : "│ ");
+    const outcome = update.outcome
+      ? theme.fg("muted", `${update.label}: `) + theme.fg("text", update.outcome)
+      : theme.fg("dim", active ? "Outcome pending" : "Outcome not reported");
+    lines.push(` ${glyph} ${theme.fg("text", update.title)}`);
+    lines.push(` ${connector} ${outcome}`);
+  }
+  return lines.map((line) => truncateToWidth(line, width));
+}
+
+function decisionsFromContent(content: any[]): string[] {
+  return content
+    .filter((item) => item?.type === "thinking")
+    .map((item) => thinkingUpdate(asString(item.thinking) ?? ""))
+    .filter(
+      (update): update is ThinkingUpdate & { outcome: string } =>
+        Boolean(update?.outcome) && update?.outcome.toLowerCase() !== "pending",
+    )
+    .map((update) => update.outcome);
 }
 
 function releaseStep(state: RendererState, step: WorkStep): void {
@@ -226,7 +435,6 @@ function releaseStep(state: RendererState, step: WorkStep): void {
       state.pending.delete(toolCallId);
   }
   if (state.assembling?.step === step) state.assembling = undefined;
-  step.row?.sync();
 }
 
 function applyPersistedOutcome(
@@ -245,7 +453,6 @@ function applyPersistedOutcome(
   }
   for (const toolCallId of step.completedToolCallIds)
     state.pending.delete(toolCallId);
-  step.row?.sync();
 }
 
 function updateAssistant(
@@ -255,24 +462,58 @@ function updateAssistant(
 ): void {
   const content = Array.isArray(message?.content) ? message.content : [];
   const toolCalls = toolCallsFrom(content);
+  const hasThinking = content.some(
+    (item) => item?.type === "thinking" && asString(item.thinking)?.trim(),
+  );
+  const hasText = content.some(
+    (item) => item?.type === "text" && asString(item.text)?.trim(),
+  );
+  component[ASSISTANT_MESSAGE] = message;
+  const terminalStop = ["stop", "error", "aborted", "length"].includes(
+    message?.stopReason,
+  );
+  component[ASSISTANT_ACTIVE] =
+    toolCalls.length === 0 && hasThinking && !hasText && !terminalStop;
+
   if (toolCalls.length === 0) {
     state.assembling = undefined;
+    if (terminalStop && (hasText || !hasThinking)) {
+      state.lastStep = undefined;
+      state.currentRun = undefined;
+    }
     return;
   }
 
   const toolNames = toolCalls.map((toolCall) => toolCall.name);
-  const candidate = titleFromContent(content, toolNames);
+  const candidate = titleFromContent(content, toolCalls);
+  const existing = component[WORK_STEP] as WorkStep | undefined;
+  const run = existing?.run ?? state.currentRun ?? { steps: [], decisions: [] };
   const step: WorkStep =
-    component[WORK_STEP] ??
+    existing ??
     ({
       title: candidate.title,
       titleLocked: !candidate.synthesized,
+      toolCalls: [],
       toolNames: [],
       toolCallIds: new Set<string>(),
       completedToolCallIds: new Set<string>(),
       failed: false,
+      continues: false,
+      run,
     } satisfies WorkStep);
 
+  if (!existing) {
+    state.currentRun = run;
+    run.steps.push(step);
+    if (state.lastStep) state.lastStep.continues = true;
+    state.lastStep = step;
+  }
+
+  for (const decision of decisionsFromContent(content)) {
+    if (!run.decisions.includes(decision)) run.decisions.push(decision);
+  }
+
+  step.toolCalls = toolCalls;
   step.toolNames = toolNames;
   step.toolCallIds = new Set(toolCalls.map((toolCall) => toolCall.id));
   if (!step.titleLocked) {
@@ -296,7 +537,6 @@ function updateAssistant(
     step,
     remaining: new Set(step.toolCallIds),
   };
-  step.row?.sync();
 }
 
 function bindToolComponent(
@@ -343,7 +583,7 @@ function renderToolComponent(
 
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
   if (!row) {
-    row = new WorkStepRow(component.ui as TUI, theme, step);
+    row = new WorkStepRow(theme, step);
     component[WORK_STEP_ROW] = row;
     step.row = row;
   }
@@ -353,13 +593,12 @@ function renderToolComponent(
 function disposeState(state: RendererState): void {
   const steps = new Set(state.pending.values());
   if (state.assembling) steps.add(state.assembling.step);
-  for (const step of steps) {
-    step.row?.dispose();
-    step.row = undefined;
-  }
+  for (const step of steps) step.row = undefined;
   state.pending.clear();
   state.persisted = new WeakMap();
   state.assembling = undefined;
+  state.lastStep = undefined;
+  state.currentRun = undefined;
   state.sessionId = undefined;
 }
 
@@ -372,6 +611,8 @@ function failPendingSteps(state: RendererState): void {
   }
   state.pending.clear();
   state.assembling = undefined;
+  state.lastStep = undefined;
+  state.currentRun = undefined;
 }
 
 function scanPersistedSession(state: RendererState, entries: any[]): void {
@@ -458,9 +699,11 @@ function patchComponents(
     };
     const render = assistantProto.render;
     assistantProto.render = function (width: number) {
-      return assistantProto[CONTROLLER]?.assistantHasStep(this)
-        ? []
-        : render.call(this, width);
+      if (assistantProto[CONTROLLER]?.assistantHasStep(this)) return [];
+      const lines = render.call(this, width);
+      return (
+        assistantProto[CONTROLLER]?.renderAssistant(this, lines, width) ?? lines
+      );
     };
   }
 
@@ -493,6 +736,9 @@ export default async function (pi: ExtensionAPI) {
     assistantHasStep(component) {
       return Boolean(component[WORK_STEP]);
     },
+    renderAssistant(component, lines, width) {
+      return renderActiveThinking(component, lines, width, theme);
+    },
     toolUpdated(component) {
       bindToolComponent(component, state);
     },
@@ -521,7 +767,6 @@ export default async function (pi: ExtensionAPI) {
     step.failed ||= event.isError;
     state.pending.delete(event.toolCallId);
     if (status(step) !== "pending") releaseStep(state, step);
-    step.row?.sync();
   });
 
   pi.on("agent_end", () => {
