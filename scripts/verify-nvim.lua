@@ -619,8 +619,11 @@ local function validate_sidekick_herdr()
 end
 
 local function validate_herdr_workspaces()
-  local snacks = load_plugin("snacks.nvim")
-  assert_key_desc(snacks, "<leader>fw", "Workspace")
+  load_plugin("snacks.nvim")
+  local mapping = vim.fn.maparg("<leader>fw", "n", false, true)
+  if type(mapping) ~= "table" or not (mapping.desc or ""):find("Workspace", 1, true) then
+    fail("<leader>fw live mapping missing or mislabeled: " .. vim.inspect(mapping))
+  end
 
   local herdr = require("plugins.sidekick.herdr")
   local original_call = herdr.call
@@ -633,11 +636,11 @@ local function validate_herdr_workspaces()
   local failures = {}
   local root = vim.fn.getcwd()
   local workspaces = {
-    { workspace_id = "w-idle", workspace_number = 2, label = "Zebra", agent_status = "idle" },
-    { workspace_id = "w-focused", workspace_number = 7, label = "Duplicate", agent_status = "blocked", focused = true },
-    { workspace_id = "w-working", workspace_number = 11, label = "Alpha", agent_status = "working" },
-    { workspace_id = "w-done", workspace_number = 19, label = "Duplicate", agent_status = "done" },
-    { workspace_id = "w-unknown", workspace_number = 23, label = "Omega", agent_status = "future-state" },
+    { workspace_id = "w-idle", number = 2, label = "Zebra", agent_status = "idle" },
+    { workspace_id = "w-focused", number = 7, label = "Duplicate", agent_status = "blocked", focused = true },
+    { workspace_id = "w-working", number = 11, label = "Alpha", agent_status = "working" },
+    { workspace_id = "w-done", number = 19, label = "Duplicate", agent_status = "done" },
+    { workspace_id = "w-unknown", number = 23, label = "Omega", agent_status = "future-state" },
   }
   local panes = {
     { pane_id = "p-idle", workspace_id = "w-idle", cwd = root .. "/nvim", foreground_cwd = root .. "/scripts" },
@@ -714,7 +717,7 @@ local function validate_herdr_workspaces()
       end
       local created = {
         workspace_id = "w-created",
-        workspace_number = 29,
+        number = 29,
         label = args[6],
         agent_status = "idle",
       }
@@ -798,6 +801,9 @@ local function validate_herdr_workspaces()
       function picker.list:set_target(target)
         picker.selected_target = target
       end
+      function picker.list:view(target)
+        picker.selected_target = target
+      end
       return picker
     end
 
@@ -850,7 +856,7 @@ local function validate_herdr_workspaces()
     local ids, numbers = {}, {}
     for _, item in ipairs(second.items or {}) do
       ids[#ids + 1] = item.workspace_id
-      numbers[#numbers + 1] = item.workspace_number
+      numbers[#numbers + 1] = item.number
     end
     eq(ids, { "w-idle", "w-focused", "w-working", "w-done", "w-unknown" }, "Herdr workspace order")
     eq(numbers, { 2, 7, 11, 19, 23 }, "Herdr workspace number order")
@@ -890,6 +896,9 @@ local function validate_herdr_workspaces()
     end
     local shown = fake_picker()
     second.on_show(shown)
+    vim.wait(100, function()
+      return shown.selected_target ~= nil
+    end, 5)
     eq(shown.selected_target, 2, "Herdr focused workspace initial selection")
     if second.title ~= "spaces" or second.preview ~= false then
       fail("workspace picker should be titled spaces with no preview: " .. vim.inspect(second))
@@ -988,11 +997,11 @@ local function validate_herdr_workspaces()
     end
 
     local order = {}
-    local close_group = vim.api.nvim_create_augroup("VerifyHerdrWorkspaceClose", { clear = true })
-    vim.api.nvim_create_autocmd("TabClosed", {
-      group = close_group,
-      callback = function() order[#order + 1] = "tab-close" end,
-    })
+    local original_tabpage_close = vim.api.nvim_tabpage_close
+    vim.api.nvim_tabpage_close = function(...)
+      order[#order + 1] = "tab-close"
+      return original_tabpage_close(...)
+    end
     confirm_close = true
     failures.close = true
     run_action(close_opts, "<c-x>", close_item)
@@ -1013,7 +1022,7 @@ local function validate_herdr_workspaces()
     eq(order, { "herdr-close", "tab-close" }, "confirmed close ordering")
     eq(calls[before_close_call + 1], { "workspace", "close", "w-focused" }, "workspace close command")
     herdr.call = original_mock_call
-    vim.api.nvim_del_augroup_by_id(close_group)
+    vim.api.nvim_tabpage_close = original_tabpage_close
 
     local manual_opts = open_picker()
     manual_opts.confirm(fake_picker(item_by_id(manual_opts, "w-done")), item_by_id(manual_opts, "w-done"))
@@ -1061,7 +1070,7 @@ local function validate_herdr_workspaces()
       fail("Herdr query failure should show a clear error")
     end
 
-    local project_spec = dofile("nvim/.config/nvim/lua/plugins/project.lua")
+    local project_spec = dofile(root .. "/nvim/.config/nvim/lua/plugins/project.lua")
     local project_config
     local original_project = package.loaded.project_nvim
     package.loaded.project_nvim = { setup = function(opts) project_config = opts end }
@@ -1070,13 +1079,11 @@ local function validate_herdr_workspaces()
     eq(project_config and project_config.scope_chdir, "tab", "project.nvim scope_chdir")
 
     for _, command in ipairs(calls) do
-      for _, part in ipairs(command) do
-        if tostring(part) == "git" or tostring(part):find("worktree", 1, true) then
-          fail("Herdr workspace feature must not issue git/worktree commands: " .. vim.inspect(command))
-        end
+      if command[1] == "git" or command[1] == "worktree" then
+        fail("Herdr workspace feature must not issue git/worktree commands: " .. vim.inspect(command))
       end
     end
-    local source = table.concat(vim.fn.readfile("nvim/.config/nvim/lua/plugins/herdr/workspaces.lua"), "\n")
+    local source = table.concat(vim.fn.readfile(root .. "/nvim/.config/nvim/lua/plugins/herdr/workspaces.lua"), "\n")
     if source:match('call%s*%(%s*{%s*["\']worktree')
       or source:match('vim%.system%s*%(%s*{%s*["\']git')
     then

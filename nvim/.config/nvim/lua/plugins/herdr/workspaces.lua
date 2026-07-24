@@ -319,6 +319,7 @@ local function picker_items(workspaces)
       text = workspace.label .. " " .. cwd_display,
       label = workspace.label,
       workspace_id = workspace.workspace_id,
+      number = workspace.number,
       status = workspace.agent_status or "unknown",
       cwd = workspace.cwd,
       cwd_display = cwd_display,
