@@ -151,7 +151,7 @@ local function snapshot()
   return workspaces
 end
 
-local function empty_unbound_tab(tab)
+local function disposable_unbound_tab(tab)
   if tab_get(tab, vars.id) then
     return false
   end
@@ -168,9 +168,13 @@ local function empty_unbound_tab(tab)
     return false
   end
   local buffer = vim.api.nvim_win_get_buf(window)
-  return vim.api.nvim_buf_get_name(buffer) == ""
-    and not vim.bo[buffer].modified
-    and vim.bo[buffer].buftype == ""
+  if vim.api.nvim_buf_get_name(buffer) ~= "" or vim.bo[buffer].modified then
+    return false
+  end
+  if vim.bo[buffer].filetype == "snacks_dashboard" then
+    return true
+  end
+  return vim.bo[buffer].buftype == ""
     and vim.api.nvim_buf_line_count(buffer) == 1
     and vim.api.nvim_buf_get_lines(buffer, 0, 1, false)[1] == ""
 end
@@ -185,7 +189,7 @@ local function bind_tab(workspace, reuse_empty)
   if not tab then
     if reuse_empty
       and #vim.api.nvim_list_tabpages() == 1
-      and empty_unbound_tab(vim.api.nvim_get_current_tabpage())
+      and disposable_unbound_tab(vim.api.nvim_get_current_tabpage())
     then
       tab = vim.api.nvim_get_current_tabpage()
     else
@@ -409,7 +413,7 @@ function M.open(preferred_id)
       picker:close()
       if item then
         local source = vim.api.nvim_get_current_tabpage()
-        local close_source = empty_unbound_tab(source)
+        local close_source = disposable_unbound_tab(source)
         local target = bind_tab(item)
         if close_source and source ~= target and vim.api.nvim_tabpage_is_valid(source) then
           local ok, err = close_tabpage(source)
