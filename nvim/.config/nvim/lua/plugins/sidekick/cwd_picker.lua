@@ -25,15 +25,9 @@ local function workspace_scope()
   return workspace_id, label_ok and type(label) == "string" and label ~= "" and label or workspace_id
 end
 
-local function workspace_labels()
+local function workspace_list()
   local result = herdr.call({ "workspace", "list" }, true)
-  local labels = {}
-  for _, workspace in ipairs(result and result.workspaces or {}) do
-    if workspace.workspace_id and workspace.label then
-      labels[workspace.workspace_id] = workspace.label
-    end
-  end
-  return labels
+  return result and result.workspaces or {}
 end
 
 ---@param p string
@@ -156,17 +150,116 @@ local function preview_text(item)
   return output, "(agent read failed)"
 end
 
+local function compare_items(a, b)
+  local ar = status_rank[a.status] or math.huge
+  local br = status_rank[b.status] or math.huge
+  if ar ~= br then
+    return ar < br
+  end
+  if a.tool ~= b.tool then
+    return internal.compare_agents(a.tool, b.tool)
+  end
+  return a.label < b.label
+end
+
+local function global_items(home, current_workspace_id, current_workspace_label)
+  local grouped = {}
+  for _, agent in ipairs(herdr.list_agents()) do
+    local parsed = registry.parse_session_name(agent.name)
+    local tool = parsed and parsed.tool or agent.agent
+    if tool and internal.tool_commands[tool] then
+      local cwd = agent.foreground_cwd or agent.cwd or ""
+      local cwd_display = cwd
+      if home ~= "" and cwd_display:sub(1, #home) == home then
+        cwd_display = "~" .. cwd_display:sub(#home + 1)
+      end
+      local label = parsed and parsed.label
+        or (agent.name and not agent.name:match("^sk%-") and agent.name)
+        or tool
+      local workspace_id = agent.workspace_id or "unknown"
+      grouped[workspace_id] = grouped[workspace_id] or {}
+      grouped[workspace_id][#grouped[workspace_id] + 1] = {
+        text = label,
+        label = label,
+        toggle_name = parsed and parsed.label or tool,
+        tool = tool,
+        pane_id = agent.pane_id,
+        workspace_id = workspace_id,
+        terminal_id = agent.terminal_id,
+        agent_name = agent.name,
+        status = agent.agent_status or "unknown",
+        cwd = cwd,
+        cwd_display = cwd_display,
+      }
+    end
+  end
+
+  local items, seen = {}, {}
+  local function add_workspace(workspace_id, label)
+    seen[workspace_id] = true
+    local agents = grouped[workspace_id] or {}
+    table.sort(agents, compare_items)
+    local parent = {
+      text = "",
+      _workspace = true,
+      _current_workspace = workspace_id == current_workspace_id,
+      workspace_id = workspace_id,
+      workspace_label = label,
+      agent_count = #agents,
+    }
+    items[#items + 1] = parent
+    for index, item in ipairs(agents) do
+      item.parent = parent
+      item.last = index == #agents
+      items[#items + 1] = item
+    end
+  end
+
+  local workspaces = workspace_list()
+  if current_workspace_id then
+    local current
+    for _, workspace in ipairs(workspaces) do
+      if workspace.workspace_id == current_workspace_id then
+        current = workspace
+        break
+      end
+    end
+    add_workspace(
+      current_workspace_id,
+      current and (current.label or current_workspace_id) or current_workspace_label or current_workspace_id
+    )
+  end
+  for _, workspace in ipairs(workspaces) do
+    if workspace.workspace_id and workspace.workspace_id ~= current_workspace_id then
+      add_workspace(workspace.workspace_id, workspace.label or workspace.workspace_id)
+    end
+  end
+  local orphan_ids = {}
+  for workspace_id in pairs(grouped) do
+    if not seen[workspace_id] then
+      orphan_ids[#orphan_ids + 1] = workspace_id
+    end
+  end
+  table.sort(orphan_ids)
+  for _, workspace_id in ipairs(orphan_ids) do
+    add_workspace(workspace_id, workspace_id)
+  end
+  return items
+end
+
 ---@param opts? { global?: boolean }
 ---@return snacks.picker.finder.Item[]
 function M.list_items(opts)
   opts = opts or {}
-  local workspace_id = not opts.global and workspace_scope() or nil
-  local labels = opts.global and workspace_labels() or {}
+  local workspace_id, workspace_label = workspace_scope()
   local root = normalize(vim.fn.getcwd())
   local root_repo = not workspace_id and git_common_dir(root) or nil
   local repo_cache = {}
   local home = normalize(vim.fn.expand("~"))
   local items = {}
+  if opts.global then
+    return global_items(home, workspace_id, workspace_label)
+  end
 
   local function is_local(entry)
     if workspace_id then
@@ -186,20 +279,13 @@ function M.list_items(opts)
   end
 
   for label, entry in pairs(registry.discover()) do
-    if opts.global or is_local(entry) then
+    if is_local(entry) then
       local cwd_display = entry.cwd or ""
       if home ~= "" and cwd_display:sub(1, #home) == home then
         cwd_display = "~" .. cwd_display:sub(#home + 1)
       end
-      local workspace_label = opts.global and (labels[entry.workspace_id] or entry.workspace_id or "unknown") or nil
       items[#items + 1] = {
-        text = string.format(
-          "%s  [%s]%s  %s",
-          label,
-          entry.status,
-          workspace_label and ("  [" .. workspace_label .. "]") or "",
-          cwd_display
-        ),
+        text = string.format("%s  [%s]  %s", label, entry.status, cwd_display),
         label = label,
         tool = entry.tool,
         slug = entry.slug,
@@ -210,35 +296,25 @@ function M.list_items(opts)
         status = entry.status,
         cwd = entry.cwd,
         cwd_display = cwd_display,
-        workspace_label = workspace_label,
       }
     end
   end
-  table.sort(items, function(a, b)
-    local ar = status_rank[a.status] or math.huge
-    local br = status_rank[b.status] or math.huge
-    if ar ~= br then
-      return ar < br
-    end
-    if a.tool ~= b.tool then
-      return internal.compare_agents(a.tool, b.tool)
-    end
-    return a.label < b.label
-  end)
+  table.sort(items, compare_items)
   return items
 end
 
 -- A transparent highlight so the picker windows let the terminal bg show
 -- through instead of painting Normal/NormalFloat over it.
-local function ensure_transparent_hl()
+local function ensure_picker_hl()
   vim.api.nvim_set_hl(0, "SidekickPickerTransparent", { bg = "NONE", default = false })
+  vim.api.nvim_set_hl(0, "SidekickPickerCurrentWorkspace", { bg = "#3c3836", bold = true, default = false })
 end
 
 ---@param opts? table
 function M.open(opts)
   opts = opts or {}
   registry.rehydrate()
-  ensure_transparent_hl()
+  ensure_picker_hl()
   local workspace_id, workspace_label
   if not opts.global then
     workspace_id, workspace_label = workspace_scope()
@@ -263,6 +339,15 @@ function M.open(opts)
     math.max(agent_float.height <= 1 and math.floor(vim.o.lines * agent_float.height) or agent_float.height, 10) + 2
   local spinner_timer
   local reopening = false
+  local initial
+  if opts.global then
+    for index, item in ipairs(items) do
+      if not item._workspace then
+        initial = index
+        break
+      end
+    end
+  end
 
   local function stop_spinner()
     local timer = spinner_timer
@@ -281,41 +366,104 @@ function M.open(opts)
     if item._empty then
       return { { item.text or "", "Comment" } }
     end
+    if item._workspace then
+      local count = item.agent_count or 0
+      if item._current_workspace then
+        return {
+          {
+            string.format(
+              "▾ %s  %d agent%s",
+              item.workspace_label or item.workspace_id or "unknown",
+              count,
+              count == 1 and "" or "s"
+            ),
+            "SidekickPickerCurrentWorkspace",
+          },
+        }
+      end
+      return {
+        { "▾ ", "SnacksPickerTree" },
+        { item.workspace_label or item.workspace_id or "unknown", "Directory" },
+        { string.format("  %d agent%s", count, count == 1 and "" or "s"), "Comment" },
+      }
+    end
     local hl = branding.hl_groups(branding.tool_of(item.tool))
     local status = status_display[item.status] or { "?", "Comment" }
-    local chunks = {
+    local chunks = {}
+    if opts.global then
+      chunks[#chunks + 1] = { item.last and "  └─ " or "  ├─ ", "SnacksPickerTree" }
+    end
+    vim.list_extend(chunks, {
       { (item.status == "working" and Snacks.util.spinner() or status[1]) .. " ", status[2] },
       { item.label or "", hl.title },
-    }
-    if item.status ~= "idle" and item.status ~= "working" then
+    })
+    if opts.global or (item.status ~= "idle" and item.status ~= "working") then
       vim.list_extend(chunks, {
         { "  " },
         { "[" .. (item.status or "unknown") .. "]", "Comment" },
       })
     end
-    if item.workspace_label then
+    if not opts.global then
       vim.list_extend(chunks, {
         { "  " },
-        { "[" .. item.workspace_label .. "]", "Comment" },
+        { item.cwd_display or "", "Directory" },
       })
     end
-    vim.list_extend(chunks, {
-      { "  " },
-      { item.cwd_display or "", "Directory" },
-    })
     return chunks
+  end
+
+  local layout = {
+    preset = "default",
+    reverse = false,
+    preview = not opts.global,
+    layout = {
+      box = "vertical",
+      width = picker_width,
+      height = picker_height,
+      border = "none",
+      backdrop = false,
+    },
+  }
+  if opts.global then
+    layout.layout[1] = { win = "input", height = 1, border = "rounded" }
+    layout.layout[2] = { win = "list", border = "rounded" }
+  else
+    layout.layout[1] = { win = "preview", border = "rounded" }
+    layout.layout[2] = { win = "input", height = 1, border = "rounded" }
+    layout.layout[3] = { win = "list", height = 5, border = "rounded" }
+  end
+  local preview = false
+  if not opts.global then
+    preview = function(ctx)
+      local buf = ctx.preview:scratch()
+      local output, err = preview_text(ctx.item)
+      if output then
+        vim.api.nvim_chan_send(vim.api.nvim_open_term(buf, {}), output)
+      else
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { err })
+      end
+      return true
+    end
   end
 
   return Snacks.picker.pick({
     source = "sidekick_cwd_peek",
-    title = opts.global and "Sidekick Sessions in All Workspaces"
+    title = opts.global and "Sidekick Agents by Workspace"
       or workspace_id and ("Sidekick Sessions in Workspace: " .. workspace_label)
       or "Sidekick Sessions in Cwd",
     items = items,
     format = format_item,
+    matcher = opts.global and { keep_parents = true, sort = false } or nil,
     on_show = function(picker)
       if opts.on_show then
         opts.on_show(picker)
+      end
+      if initial then
+        vim.schedule(function()
+          if not picker.closed then
+            picker.list:view(initial)
+          end
+        end)
       end
       if not has_working or spinner_timer then
         return
@@ -335,31 +483,12 @@ function M.open(opts)
         opts.on_close(picker)
       end
     end,
-    layout = {
-      preset = "default",
-      reverse = false,
-      layout = {
-        box = "vertical",
-        width = picker_width,
-        height = picker_height,
-        border = "none",
-        backdrop = false,
-        { win = "preview", border = "rounded" },
-        { win = "input", height = 1, border = "rounded" },
-        { win = "list", height = 5, border = "rounded" },
-      },
-    },
-    preview = function(ctx)
-      local buf = ctx.preview:scratch()
-      local output, err = preview_text(ctx.item)
-      if output then
-        vim.api.nvim_chan_send(vim.api.nvim_open_term(buf, {}), output)
-      else
-        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { err })
-      end
-      return true
-    end,
+    layout = layout,
+    preview = preview,
     confirm = function(picker, item)
+      if item and item._workspace then
+        return
+      end
       if not item or item._empty then
         picker:close()
         return
@@ -378,8 +507,9 @@ function M.open(opts)
         then
           return
         end
-        require("plugins.sidekick.last_session").record(item.label, item.terminal_id)
-        internal.toggle_tool_session(item.label, true, item.terminal_id)
+        local target = item.toggle_name or item.label
+        require("plugins.sidekick.last_session").record(target, item.terminal_id)
+        internal.toggle_tool_session(target, true, item.terminal_id)
       end
     end,
     win = {
@@ -390,7 +520,7 @@ function M.open(opts)
         },
       },
       list = {
-        wo = { cursorline = false, winhighlight = winhl },
+        wo = { cursorline = opts.global, winhighlight = winhl },
         keys = {
           ["<c-x>"] = { "sidekick_kill_session", mode = { "n" } },
         },

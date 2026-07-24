@@ -507,23 +507,52 @@ local function validate_sidekick_herdr()
     end
     return original_herdr_call(args, quiet)
   end
+  vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w2")
+  vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_label", "Workspace Two")
   local global_picker = require("plugins.sidekick.picker")
   local global_items = global_picker.list_items()
   local global_blocked
   local global_other_workspace
+  local workspace_one
+  local workspace_two
+  local global_base
   for _, item in ipairs(global_items) do
-    if item.label == "pi-blocked" then
+    if item._workspace and item.workspace_id == "w1" then
+      workspace_one = item
+    elseif item._workspace and item.workspace_id == "w2" then
+      workspace_two = item
+    elseif item.label == "pi-blocked" then
       global_blocked = item
     elseif item.label == "pi-other-workspace" then
       global_other_workspace = item
+    elseif item.label == "codex" then
+      global_base = item
     end
   end
   if not global_blocked or global_blocked.status ~= "blocked" then
     fail("global picker should expose Herdr status: " .. vim.inspect(global_items))
   end
-  if not global_other_workspace or global_other_workspace.workspace_label ~= "Workspace Two" then
-    fail("global picker should label every session with its workspace: " .. vim.inspect(global_items))
+  if
+    not workspace_one
+    or workspace_one.agent_count ~= 6
+    or not workspace_two
+    or workspace_two.agent_count ~= 1
+    or global_items[1] ~= workspace_two
+    or not workspace_two._current_workspace
+    or workspace_one._current_workspace
+    or not global_other_workspace
+    or global_other_workspace.parent ~= workspace_two
+  then
+    fail("global picker should lead with the emphasized current workspace: " .. vim.inspect(global_items))
   end
+  if not global_base or global_base.parent ~= workspace_one or global_base.toggle_name ~= "codex" then
+    fail("global picker should include selectable base agents: " .. vim.inspect(global_items))
+  end
+  if global_other_workspace.text ~= "pi-other-workspace" or workspace_two.text ~= "" then
+    fail("global fuzzy text should match agents while retaining workspace parents")
+  end
+  pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
+  pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
 
   local original_pick = Snacks.picker.pick
   local original_spinner = Snacks.util.spinner
@@ -752,23 +781,52 @@ local function validate_sidekick_herdr()
       fail("<c-.> should reopen the session selected with <leader>al: " .. vim.inspect(toggles))
     end
 
+    vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w2")
+    vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_label", "Workspace Two")
     global_picker.open()
-    if picker_opts.title ~= "Sidekick Sessions in All Workspaces" then
+    if picker_opts.title ~= "Sidekick Agents by Workspace" then
       fail("global picker should use the shared session picker UI: " .. vim.inspect(picker_opts.title))
     end
+    local global_layout = picker_opts.layout.layout
+    if
+      picker_opts.preview ~= false
+      or picker_opts.layout.preview ~= false
+      or global_layout[1].win ~= "input"
+      or global_layout[1].height ~= 1
+      or global_layout[2].win ~= "list"
+      or global_layout[3] ~= nil
+      or not picker_opts.matcher.keep_parents
+      or picker_opts.matcher.sort ~= false
+    then
+      fail("global picker should be a previewless fuzzy tree: " .. vim.inspect(picker_opts))
+    end
     local remote_item
+    local remote_workspace
     for _, item in ipairs(picker_opts.items) do
-      if item.label == "pi-other-workspace" then
+      if item._workspace and item.workspace_id == "w2" then
+        remote_workspace = item
+      elseif item.label == "pi-other-workspace" then
         remote_item = item
-        break
       end
     end
     local rendered = {}
     for _, chunk in ipairs(picker_opts.format(remote_item)) do
       rendered[#rendered + 1] = chunk[1]
     end
-    if not table.concat(rendered):find("[Workspace Two]", 1, true) then
-      fail("global picker row should show the session workspace in brackets: " .. vim.inspect(rendered))
+    local rendered_workspace = {}
+    local rendered_workspace_chunks = picker_opts.format(remote_workspace)
+    for _, chunk in ipairs(rendered_workspace_chunks) do
+      rendered_workspace[#rendered_workspace + 1] = chunk[1]
+    end
+    if
+      not table.concat(rendered):find("└─", 1, true)
+      or not table.concat(rendered):find("[idle]", 1, true)
+      or not table.concat(rendered_workspace):find("Workspace Two", 1, true)
+      or not table.concat(rendered_workspace):find("1 agent", 1, true)
+      or rendered_workspace_chunks[1][2] ~= "SidekickPickerCurrentWorkspace"
+      or not vim.api.nvim_get_hl(0, { name = "SidekickPickerCurrentWorkspace" }).bg
+    then
+      fail("global picker should subtly highlight the current workspace header")
     end
     local workspaces_module = "plugins.herdr.workspaces"
     local original_workspaces = package.loaded[workspaces_module]
