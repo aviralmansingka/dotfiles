@@ -230,16 +230,16 @@ local function validate_sidekick_pi()
     toggled = { name = name, focus = focus }
   end
 
+  toggled = nil
   session_switch.open()
   if current.open or other.open then
     fail("<c-;> should hide every visible Sidekick session before opening the picker")
   end
   session_switch.open()
-  if not toggled or toggled.name ~= "pi-current" or toggled.focus ~= true then
-    fail("pressing <c-;> again should cancel and restore the previous session: " .. vim.inspect(toggled))
+  if toggled or current.open or other.open then
+    fail("pressing <c-;> again should close the picker and leave all sessions minimized")
   end
 
-  toggled = nil
   current.open = true
   session_switch.open()
   picker_opts.on_confirm({ label = "codex-other" })

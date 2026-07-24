@@ -6,6 +6,7 @@ local active
 
 function M.open()
   if active then
+    active.selected = true
     active.picker:close()
     return
   end
