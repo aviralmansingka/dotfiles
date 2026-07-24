@@ -18,6 +18,14 @@ return {
           },
           {
             icon = " ",
+            key = "w",
+            desc = "Workspaces",
+            action = function()
+              require("plugins.herdr.workspaces").open()
+            end,
+          },
+          {
+            icon = " ",
             key = "S",
             desc = "Open Sidecar",
             action = function()

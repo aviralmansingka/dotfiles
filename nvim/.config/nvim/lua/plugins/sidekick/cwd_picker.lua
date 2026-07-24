@@ -15,6 +15,16 @@ local status_display = {
   idle = { "·", "Comment" },
 }
 
+local function workspace_scope()
+  local tab = vim.api.nvim_get_current_tabpage()
+  local ok, workspace_id = pcall(vim.api.nvim_tabpage_get_var, tab, "herdr_workspace_id")
+  if not ok or type(workspace_id) ~= "string" or workspace_id == "" then
+    return nil
+  end
+  local label_ok, label = pcall(vim.api.nvim_tabpage_get_var, tab, "herdr_workspace_label")
+  return workspace_id, label_ok and type(label) == "string" and label ~= "" and label or workspace_id
+end
+
 ---@param p string
 ---@return string
 local function normalize(p)
@@ -137,13 +147,18 @@ end
 
 ---@return snacks.picker.finder.Item[]
 function M.list_items()
+  local workspace_id = workspace_scope()
   local root = normalize(vim.fn.getcwd())
-  local root_repo = git_common_dir(root)
+  local root_repo = not workspace_id and git_common_dir(root) or nil
   local repo_cache = {}
   local home = normalize(vim.fn.expand("~"))
   local items = {}
 
-  local function is_local(entry_cwd)
+  local function is_local(entry)
+    if workspace_id then
+      return entry.workspace_id == workspace_id
+    end
+    local entry_cwd = entry.cwd
     if in_cwd_subtree(entry_cwd, root) then
       return true
     end
@@ -157,7 +172,7 @@ function M.list_items()
   end
 
   for label, entry in pairs(registry.discover()) do
-    if is_local(entry.cwd) then
+    if is_local(entry) then
       local cwd_display = entry.cwd or ""
       if home ~= "" and cwd_display:sub(1, #home) == home then
         cwd_display = "~" .. cwd_display:sub(#home + 1)
@@ -202,11 +217,12 @@ function M.open(opts)
   opts = opts or {}
   registry.rehydrate()
   ensure_transparent_hl()
+  local workspace_id, workspace_label = workspace_scope()
   local items = M.list_items()
   local empty = #items == 0
   if empty then
     items = { {
-      text = "(no named sessions in cwd)",
+      text = workspace_id and "(no named sessions in workspace)" or "(no named sessions in cwd)",
       _empty = true,
     } }
   end
@@ -254,7 +270,8 @@ function M.open(opts)
 
   return Snacks.picker.pick({
     source = "sidekick_cwd_peek",
-    title = "Sidekick Sessions in Cwd",
+    title = workspace_id and ("Sidekick Sessions in Workspace: " .. workspace_label)
+      or "Sidekick Sessions in Cwd",
     items = items,
     format = format_item,
     on_show = function(picker)

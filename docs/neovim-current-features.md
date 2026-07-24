@@ -371,6 +371,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Pi and Claude named sessions receive native `--name <slug>` command arguments.
 - Sidekick branch metadata is stored in tmux environment.
 - `<C-.>` toggles the last picker-selected Sidekick session, falling back to the cwd session picker.
+- `<leader>al` scopes named sessions to the exact Herdr workspace in bound tabs and retains cwd/repository scope in
+  unbound tabs.
 - Sidekick supports selecting, detaching, sending context, prompting, toggling float/split, listing local sessions, listing global sessions, searching sessions, and creating named sessions.
 - Sidekick keymaps include ask/edit/apply/reject/yank, select/detach/send file/send visual/prompt, Pi/Codex toggles, local/global pickers, session search, and named-session creation.
 - Sidekick cwd session picker includes previews.
@@ -570,7 +572,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 ### Statusline, tabline, dashboard, and GUI
 
 - Lualine provides a custom statusline theme.
-- Lualine shows mode, branch, diff, diagnostics, filename, filetype, progress, and location.
+- Lualine shows mode, bound Herdr workspace label, branch, diff, diagnostics, filename, filetype, progress, and
+  location.
 - Global statusline is enabled.
 - Statusline is hidden in dashboard and terminal buffers.
 - Tabby replaces Bufferline for tab and buffer display.
@@ -579,13 +582,15 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - `<leader>fw` opens a fresh, compact Herdr workspace picker titled `spaces`.
 - Herdr workspaces can be created, renamed, selected, and confirmed-closed from the picker; each selected workspace is
   represented by at most one runtime Neovim tab keyed by its Herdr workspace ID.
-- Confirming a workspace enters its preserved tab-local cwd, then opens the cwd-scoped Sidekick agent picker.
+- Confirming a workspace creates or enters its tab, removes a truly empty unbound launch tab, then opens the scoped
+  Sidekick agent picker; meaningful source tabs are preserved.
 - Entering a bound workspace tab focuses the corresponding Herdr workspace; ordinary tabs and manually closed tabs do
   not affect Herdr.
 - Workspace tabs initialize from stable Herdr pane cwd and preserve later tab-local cwd/layout changes.
 - `<S-h>` and `<S-l>` navigate buffers.
 - `<S-q>` closes the current buffer.
-- Dashboard actions include finding files, creating a new file, restoring the last session, opening Sidecar, opening LazyGit, opening Claude Code, and quitting.
+- Dashboard actions include finding files, creating a new file, restoring the last session, opening Herdr workspaces,
+  opening Sidecar, opening LazyGit, opening Claude Code, and quitting.
 - Neovide has a custom font configuration.
 - Neovide maps left Option as Meta on macOS.
 - Neovide disables the bell.

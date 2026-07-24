@@ -86,6 +86,17 @@ return {
       end,
     })
 
+    local function workspace_label()
+      local tab = vim.api.nvim_get_current_tabpage()
+      local bound = pcall(vim.api.nvim_tabpage_get_var, tab, "herdr_workspace_id")
+      if not bound then
+        return ""
+      end
+      local ok, label =
+        pcall(vim.api.nvim_tabpage_get_var, tab, "herdr_workspace_label")
+      return ok and type(label) == "string" and label or ""
+    end
+
     require("lualine").setup({
       options = {
         theme = gruvbox_theme,
@@ -105,6 +116,13 @@ return {
           },
         },
         lualine_b = {
+          {
+            workspace_label,
+            cond = function()
+              return workspace_label() ~= ""
+            end,
+            color = { fg = colors.yellow },
+          },
           {
             "branch",
             icon = "󰊢",

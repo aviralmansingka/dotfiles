@@ -151,16 +151,23 @@ local function snapshot()
   return workspaces
 end
 
-local function empty_initial_tab()
-  local tabs = vim.api.nvim_list_tabpages()
-  if #tabs ~= 1 then
+local function empty_unbound_tab(tab)
+  if tab_get(tab, vars.id) then
     return false
   end
-  local tab = tabs[1]
-  if tab_get(tab, vars.id) or #vim.api.nvim_tabpage_list_wins(tab) ~= 1 then
+  local window
+  for _, candidate in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+    if vim.api.nvim_win_get_config(candidate).relative == "" then
+      if window then
+        return false
+      end
+      window = candidate
+    end
+  end
+  if not window then
     return false
   end
-  local buffer = vim.api.nvim_win_get_buf(vim.api.nvim_tabpage_get_win(tab))
+  local buffer = vim.api.nvim_win_get_buf(window)
   return vim.api.nvim_buf_get_name(buffer) == ""
     and not vim.bo[buffer].modified
     and vim.bo[buffer].buftype == ""
@@ -168,11 +175,18 @@ local function empty_initial_tab()
     and vim.api.nvim_buf_get_lines(buffer, 0, 1, false)[1] == ""
 end
 
-local function bind_tab(workspace)
+local function close_tabpage(tab)
+  return pcall(vim.cmd, "tabclose " .. vim.api.nvim_tabpage_get_number(tab))
+end
+
+local function bind_tab(workspace, reuse_empty)
   local tab = workspace_tab(workspace.workspace_id)
   local is_new = not tab
   if not tab then
-    if empty_initial_tab() then
+    if reuse_empty
+      and #vim.api.nvim_list_tabpages() == 1
+      and empty_unbound_tab(vim.api.nvim_get_current_tabpage())
+    then
       tab = vim.api.nvim_get_current_tabpage()
     else
       vim.cmd.tabnew()
@@ -215,7 +229,7 @@ local function close_tab(workspace_id)
     unbind(tab)
     return
   end
-  local ok, err = pcall(vim.api.nvim_tabpage_close, tab, false)
+  local ok, err = close_tabpage(tab)
   if not ok then
     notify("workspace closed, but its Neovim tab stayed open: " .. tostring(err), vim.log.levels.WARN)
   end
@@ -261,7 +275,7 @@ local function create_workspace(picker)
       return
     end
     picker:close()
-    bind_tab(workspace)
+    bind_tab(workspace, true)
   end)
 end
 
@@ -394,7 +408,15 @@ function M.open(preferred_id)
     confirm = function(picker, item)
       picker:close()
       if item then
-        bind_tab(item)
+        local source = vim.api.nvim_get_current_tabpage()
+        local close_source = empty_unbound_tab(source)
+        local target = bind_tab(item)
+        if close_source and source ~= target and vim.api.nvim_tabpage_is_valid(source) then
+          local ok, err = close_tabpage(source)
+          if not ok then
+            error(err, 0)
+          end
+        end
         vim.schedule(require("plugins.sidekick.cwd_picker").open)
       end
     end,
