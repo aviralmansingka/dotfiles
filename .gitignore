@@ -33,3 +33,4 @@ ops/terraform/terraform.tfstate*
 .sidecar-pr
 .sidecar-start.sh
 .sidecar-base
+.td-root
