@@ -69,8 +69,12 @@ node - "$main_raw" "$missing_raw" <<'NODE'
 const fs = require("node:fs");
 
 const [mainPath, missingPath] = process.argv.slice(2);
-const spinner = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
+const activeGlyph = "◉";
 const textForeground = "rgb:235,219,178";
+const mutedForeground = "rgb:146,131,116";
+const borderForeground = "rgb:80,73,69";
+const successForeground = "rgb:184,187,38";
+const errorForeground = "rgb:242,89,75";
 
 function fail(message) {
 	console.error(message);
@@ -81,12 +85,17 @@ function parseTerminal(path) {
 	const raw = fs.readFileSync(path, "utf8");
 	let plain = "";
 	const foregrounds = [];
+	const bolds = [];
 	let foreground = "default";
+	let bold = false;
 
 	const append = (value) => {
 		for (const character of value) {
 			plain += character;
-			for (let index = 0; index < character.length; index++) foregrounds.push(foreground);
+			for (let index = 0; index < character.length; index++) {
+				foregrounds.push(foreground);
+				bolds.push(bold);
+			}
 		}
 	};
 
@@ -94,7 +103,12 @@ function parseTerminal(path) {
 		const values = parameters === "" ? [0] : parameters.split(";").map((value) => Number(value || 0));
 		for (let index = 0; index < values.length; index++) {
 			const value = values[index];
-			if (value === 0 || value === 39) foreground = "default";
+			if (value === 0) {
+				foreground = "default";
+				bold = false;
+			} else if (value === 1) bold = true;
+			else if (value === 22) bold = false;
+			else if (value === 39) foreground = "default";
 			else if ((value >= 30 && value <= 37) || (value >= 90 && value <= 97))
 				foreground = `basic:${value}`;
 			else if (value === 38 && values[index + 1] === 2) {
@@ -132,7 +146,7 @@ function parseTerminal(path) {
 		index += 2;
 	}
 
-	return { plain, foregrounds };
+	return { plain, foregrounds, bolds };
 }
 
 function escapeRegExp(value) {
@@ -141,50 +155,75 @@ function escapeRegExp(value) {
 
 function rowsFor(terminal, summary) {
 	const pattern = new RegExp(
-		`([✓!${spinner}]) ([^\\r\\n]+)\\r*\\n  (${escapeRegExp(summary)})`,
+		`([●×${activeGlyph}]) ([^\\r\\n]+)\\r*\\n ([│└][ ─]) (${escapeRegExp(summary)})`,
 		"gu",
 	);
 	return Array.from(terminal.plain.matchAll(pattern), (match) => ({
 		glyph: match[1],
 		title: match[2],
-		summary: match[3],
+		connector: match[3],
+		summary: match[4],
 		glyphIndex: match.index,
 		titleIndex: match.index + match[1].length + 1,
-		summaryIndex: match.index + match[0].lastIndexOf(match[3]),
+		connectorIndex: match.index + match[0].lastIndexOf(match[3]),
+		summaryIndex: match.index + match[0].lastIndexOf(match[4]),
 	}));
 }
 
-function requireTerminalRow(terminal, summary, glyph, expectedTitle) {
+function requireTerminalRow(terminal, summary, glyph, expectedTitle, expectedConnector) {
 	const row = rowsFor(terminal, summary).find(
-		(candidate) => candidate.glyph === glyph && (!expectedTitle || candidate.title === expectedTitle),
+		(candidate) =>
+			candidate.glyph === glyph &&
+			(!expectedTitle || candidate.title === expectedTitle) &&
+			(!expectedConnector || candidate.connector === expectedConnector),
 	);
-	if (!row) fail(`Missing ${glyph} work step: ${expectedTitle ?? "<synthesized>"} / ${summary}`);
+	if (!row)
+		fail(
+			`Missing ${glyph} work step: ${expectedTitle ?? "<synthesized>"} / ${summary} / ${expectedConnector ?? "any connector"}`,
+		);
 	return row;
 }
 
 function assertForeground(terminal, row) {
-	const indexes = [
-		row.glyphIndex,
-		...Array.from({ length: row.title.length }, (_, index) => row.titleIndex + index).filter(
-			(index) => !/\s/u.test(terminal.plain[index]),
-		),
-		...Array.from({ length: row.summary.length }, (_, index) => row.summaryIndex + index).filter(
-			(index) => !/\s/u.test(terminal.plain[index]),
-		),
-	];
-	const colors = new Set(indexes.map((index) => terminal.foregrounds[index]));
-	if (colors.size !== 1 || !colors.has(textForeground))
+	const expectedGlyph = row.glyph === "×" ? errorForeground : successForeground;
+	const titleColors = new Set(
+		Array.from({ length: row.title.length }, (_, index) => row.titleIndex + index)
+			.filter((index) => !/\s/u.test(terminal.plain[index]))
+			.map((index) => terminal.foregrounds[index]),
+	);
+	const summaryColors = new Set(
+		Array.from({ length: row.summary.length }, (_, index) => row.summaryIndex + index)
+			.filter((index) => !/\s/u.test(terminal.plain[index]))
+			.map((index) => terminal.foregrounds[index]),
+	);
+	if (terminal.foregrounds[row.glyphIndex] !== expectedGlyph)
+		fail(`Expected ${row.glyph} foreground ${expectedGlyph}; got ${terminal.foregrounds[row.glyphIndex]}`);
+	if (titleColors.size !== 1 || !titleColors.has(textForeground))
+		fail(`Expected title foreground ${textForeground}; got ${Array.from(titleColors).join(", ")}`);
+	if (terminal.foregrounds[row.connectorIndex] !== borderForeground)
 		fail(
-			`Expected glyph, title, and summary foreground ${textForeground}; got ${Array.from(colors).join(", ")}`,
+			`Expected connector foreground ${borderForeground}; got ${terminal.foregrounds[row.connectorIndex]}`,
 		);
+	const expectedOutcome = row.glyph === "×" ? errorForeground : successForeground;
+	const allowedSummaryColors = new Set([mutedForeground, textForeground, expectedOutcome]);
+	if ([...summaryColors].some((color) => !allowedSummaryColors.has(color)))
+		fail(`Unexpected summary foregrounds: ${Array.from(summaryColors).join(", ")}`);
+	const meaningful = Array.from(
+		{ length: row.summary.length },
+		(_, index) => row.summaryIndex + index,
+	).filter((index) => !/\s/u.test(terminal.plain[index]));
+	if (!meaningful.some((index) => terminal.bolds[index]))
+		fail("Expected meaningful summary values to be bold");
+	if (!meaningful.some((index) => !terminal.bolds[index]))
+		fail("Expected summary separators/details to remain unbolded");
 }
 
-function assertNoLaterSpinner(terminal, summary, terminalGlyph) {
+function assertNoLaterActiveState(terminal, summary, terminalGlyph) {
 	const rows = rowsFor(terminal, summary);
 	const terminalIndex = rows.findIndex((row) => row.glyph === terminalGlyph);
 	if (terminalIndex < 0) fail(`Missing terminal ${terminalGlyph} row for ${summary}`);
-	const laterSpinner = rows.slice(terminalIndex + 1).find((row) => spinner.includes(row.glyph));
-	if (laterSpinner) fail(`Completed work step returned to spinner state: ${summary}`);
+	const laterActive = rows.slice(terminalIndex + 1).find((row) => row.glyph === activeGlyph);
+	if (laterActive) fail(`Completed work step returned to active state: ${summary}`);
 }
 
 const main = parseTerminal(mainPath);
@@ -204,31 +243,70 @@ for (const sentinel of [
 	if (main.plain.includes(sentinel)) fail(`Leaked individual custom-tool content: ${sentinel}`);
 }
 
-const sameSummary = "2 calls · noisy_verify_tool ×2";
-const mixedSummary = "2 calls · noisy_verify_tool ×1 · read ×1";
-const restoreSummary = "1 call · noisy_verify_tool ×1";
+if (!main.plain.includes("Activity  2 steps · 3 calls · all passed"))
+	fail("Missing final run-level activity header");
+if (!main.plain.includes("Decision: validate grouped tool rendering"))
+	fail("Thinking decision was not rendered while active");
+for (const durablePlanText of [
+	"Plan  2 decisions",
+	"◆ validate grouped tool rendering",
+	"◆ renderer remains stable after grouped tools",
+]) {
+	if (!main.plain.includes(durablePlanText))
+		fail(`Missing durable plan content: ${durablePlanText}`);
+}
 
-const same = requireTerminalRow(main, sameSummary, "✓", "Inspect configuration");
-const mixed = requireTerminalRow(main, mixedSummary, "!", undefined);
-if (mixed.title === "Working" || !mixed.title.includes("noisy_verify_tool") || !mixed.title.includes("read"))
-	fail(`Expected a synthesized mixed-tool title, got: ${mixed.title}`);
-const restoredSource = requireTerminalRow(main, restoreSummary, "✓", "Restore missing result");
-const afterReload = requireTerminalRow(main, restoreSummary, "✓", "Verify after reload");
+const sameSummary = "2 calls · noisy_verify_tool ×2 · completed";
+const mixedSummary = "settings.json · 2 calls · noisy_verify_tool · read · failed";
+const restoreSuccessSummary = "1 call · noisy_verify_tool · completed";
+const restoreFailureSummary = "1 call · noisy_verify_tool · failed";
 
-for (const row of [same, mixed, restoredSource, afterReload]) assertForeground(main, row);
-assertNoLaterSpinner(main, sameSummary, "✓");
-assertNoLaterSpinner(main, mixedSummary, "!");
+const same = requireTerminalRow(main, sameSummary, "●", "Inspect configuration", "└─");
+const sameFollowup = requireTerminalRow(
+	main,
+	restoreSuccessSummary,
+	"●",
+	"Continue inspection",
+	"└─",
+);
+const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─");
+const restoredSource = requireTerminalRow(
+	main,
+	restoreSuccessSummary,
+	"●",
+	"Restore missing result",
+);
+const afterReload = requireTerminalRow(
+	main,
+	restoreSuccessSummary,
+	"●",
+	"Verify after reload",
+);
 
-const missingRows = rowsFor(missing, restoreSummary).filter((row) => row.title === "Restore missing result");
+for (const row of [same, sameFollowup, mixed, restoredSource, afterReload]) {
+	assertForeground(main, row);
+	if (row.connector !== "└─") fail(`Activity has a dangling connector: ${row.title}`);
+}
+const spacedActivities = new RegExp(
+	`${escapeRegExp(sameSummary)}\\r*\\n\\r*\\n ● Continue inspection`,
+	"u",
+);
+if (!spacedActivities.test(main.plain)) fail("Missing blank line between activities");
+assertNoLaterActiveState(main, sameSummary, "●");
+assertNoLaterActiveState(main, mixedSummary, "×");
+
+const missingRows = rowsFor(missing, restoreFailureSummary).filter(
+	(row) => row.title === "Restore missing result",
+);
 if (missingRows.length === 0) fail("Missing restored work step was not rendered");
-if (missingRows.some((row) => row.glyph === "✓"))
+if (missingRows.some((row) => row.glyph === "●"))
 	fail("Restored work step without a matching tool result was rendered as successful");
-const missingFailure = missingRows.find((row) => row.glyph === "!");
+const missingFailure = missingRows.find((row) => row.glyph === "×");
 if (!missingFailure) fail("Restored work step without a matching tool result was not marked failed");
 assertForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step UI verified offline: titles, sanitization, fallback, grouping, terminal states, restoration, reload, suppression, and ANSI foreground.",
+	"Pi work-step timeline verified offline: durable plans, titles, grouping, spacing, terminating connectors, working states, restoration, reload, suppression, and semantic ANSI colors.",
 );
 NODE
 
@@ -243,7 +321,7 @@ log_user 0
 log_file -a -noappend $env(PI_VERIFY_LIVE_RAW)
 spawn pi --offline --approve --no-session --model $env(PI_VERIFY_MODEL) $env(PI_VERIFY_PROMPT)
 expect {
-  -re {✓ [^\r\n]+} {}
+  -re {● [^\r\n]+} {}
   timeout { exit 124 }
 }
 close

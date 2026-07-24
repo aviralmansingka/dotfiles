@@ -24,7 +24,7 @@ const responses = [
 	fauxAssistantMessage("NON_TOOL_RENDERING_SENTINEL"),
 	fauxAssistantMessage(
 		[
-			fauxThinking("## Inspect **configuration**"),
+			fauxThinking("Inspect configuration → Decision: validate grouped tool rendering"),
 			fauxText("IGNORE_THIS_TEXT_TITLE"),
 			fauxToolCall(
 				"noisy_verify_tool",
@@ -35,6 +35,17 @@ const responses = [
 				"noisy_verify_tool",
 				{ value: "NOISY_ARGUMENT_SENTINEL", fail: false },
 				{ id: "verify-same-2" },
+			),
+		],
+		{ stopReason: "toolUse" },
+	),
+	fauxAssistantMessage(
+		[
+			fauxThinking("Continue inspection → Outcome: renderer remains stable after grouped tools"),
+			fauxToolCall(
+				"noisy_verify_tool",
+				{ value: "NOISY_ARGUMENT_SENTINEL", fail: false },
+				{ id: "verify-same-followup" },
 			),
 		],
 		{ stopReason: "toolUse" },
@@ -83,6 +94,7 @@ export default function piWorkStepUiProvider(pi: ExtensionAPI) {
 		provider: PROVIDER,
 		models: [{ id: MODEL, name: "Pi Work-Step UI Faux", reasoning: true }],
 		tokenSize: { min: 1024, max: 1024 },
+		tokensPerSecond: 100,
 	});
 
 	faux.setResponses(
