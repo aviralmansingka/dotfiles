@@ -243,21 +243,14 @@ for (const sentinel of [
 	if (main.plain.includes(sentinel)) fail(`Leaked individual custom-tool content: ${sentinel}`);
 }
 
-if (!main.plain.includes("Activity  5 activities · 3 calls · all passed"))
-	fail("Missing final run-level activity header with thinking activities");
-if (!main.plain.includes("Decision: validate grouped tool rendering"))
+if (!main.plain.includes("Plan  5 recent thinking blocks"))
+	fail("Missing capped thinking Plan");
+if (!main.plain.includes("Activity  2 steps · 3 calls · all passed"))
+	fail("Missing final tool-activity timeline header");
+if (!main.plain.includes("Decision: keep tool activity flow chronological"))
 	fail("Thinking decision was not rendered while active");
-if (main.plain.includes("Plan  "))
-	fail("Thinking activities were collapsed into the old Plan block");
 
 const thinkingRows = [
-	requireTerminalRow(
-		main,
-		"Decision: validate grouped tool rendering",
-		"●",
-		"Inspect configuration",
-		"└─",
-	),
 	requireTerminalRow(
 		main,
 		"Outcome: grouped tools share one timeline",
@@ -267,9 +260,30 @@ const thinkingRows = [
 	),
 	requireTerminalRow(
 		main,
+		"Decision: retain five recent thinking blocks",
+		"●",
+		"Select plan limit",
+		"└─",
+	),
+	requireTerminalRow(
+		main,
 		"Outcome: renderer remains stable after grouped tools",
 		"●",
 		"Continue inspection",
+		"└─",
+	),
+	requireTerminalRow(
+		main,
+		"Outcome: every retained block has a result",
+		"●",
+		"Check summary contract",
+		"└─",
+	),
+	requireTerminalRow(
+		main,
+		"Outcome: oldest thinking blocks are omitted",
+		"●",
+		"Finalize plan rendering",
 		"└─",
 	),
 ];
@@ -306,12 +320,23 @@ for (const row of [...thinkingRows, same, sameFollowup, mixed, restoredSource, a
 	if (row.connector !== "└─") fail(`Activity has a dangling connector: ${row.title}`);
 }
 const spacedActivities = new RegExp(
-	`${escapeRegExp(sameSummary)}\\r*\\n\\r*\\n ● Continue inspection`,
+	`${escapeRegExp(sameSummary)}\\r*\\n\\r*\\n ● Continue grouped verification`,
 	"u",
 );
-if (!spacedActivities.test(main.plain)) fail("Missing blank line between activities");
+if (!spacedActivities.test(main.plain)) fail("Missing blank line between chronological activities");
+const finalPlan = main.plain.lastIndexOf("Plan  5 recent thinking blocks");
+const finalActivity = main.plain.lastIndexOf("Activity  2 steps · 3 calls · all passed");
+const finalFirstStep = main.plain.lastIndexOf("Run grouped verification");
+const finalSecondStep = main.plain.lastIndexOf("Continue grouped verification");
+if (!(finalPlan < finalActivity && finalActivity < finalFirstStep && finalFirstStep < finalSecondStep))
+	fail("Plan and tool activities do not flow in chronological timeline order");
 assertNoLaterActiveState(main, sameSummary, "●");
 assertNoLaterActiveState(main, mixedSummary, "×");
+
+if (!missing.plain.includes("Plan  5 recent thinking blocks"))
+	fail("Restored Plan did not retain exactly five thinking blocks");
+for (const omitted of ["Scope timeline", "Inspect configuration"])
+	if (missing.plain.includes(omitted)) fail(`Restored Plan retained old thinking block: ${omitted}`);
 
 const missingThinking = requireTerminalRow(
 	missing,
@@ -333,7 +358,7 @@ if (!missingFailure) fail("Restored work step without a matching tool result was
 assertForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step timeline verified offline: durable thinking activities and results, tool summaries, grouping, spacing, terminating connectors, working states, restoration, reload, suppression, and semantic ANSI colors.",
+	"Pi work-step timeline verified offline: capped thinking Plan, chronological tool activities and results, grouping, spacing, terminating connectors, working states, restoration, reload, suppression, and semantic ANSI colors.",
 );
 NODE
 

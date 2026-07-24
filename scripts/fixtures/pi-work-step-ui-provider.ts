@@ -24,8 +24,10 @@ const responses = [
 	fauxAssistantMessage("NON_TOOL_RENDERING_SENTINEL"),
 	fauxAssistantMessage(
 		[
+			fauxThinking("Scope timeline → Decision: keep tool activity flow chronological"),
 			fauxThinking("Inspect configuration → Decision: validate grouped tool rendering"),
 			fauxThinking("Answer renderer question → Outcome: grouped tools share one timeline"),
+			fauxThinking("Select plan limit → Decision: retain five recent thinking blocks"),
 			fauxText("Run grouped verification"),
 			fauxToolCall(
 				"noisy_verify_tool",
@@ -43,6 +45,8 @@ const responses = [
 	fauxAssistantMessage(
 		[
 			fauxThinking("Continue inspection → Outcome: renderer remains stable after grouped tools"),
+			fauxThinking("Check summary contract → Outcome: every retained block has a result"),
+			fauxThinking("Finalize plan rendering → Outcome: oldest thinking blocks are omitted"),
 			fauxText("Continue grouped verification"),
 			fauxToolCall(
 				"noisy_verify_tool",
