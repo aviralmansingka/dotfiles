@@ -85,11 +85,15 @@ function M.workspace_for_cwd(cwd)
 end
 
 ---@param cwd string
+---@param scope? { workspace_id?: string }
 ---@return string|nil workspace_id
 ---@return string|nil root_pane_id
 ---@return boolean created
 ---@return string|nil root_tab_id
-function M.ensure_workspace(cwd)
+function M.ensure_workspace(cwd, scope)
+  if scope and scope.workspace_id then
+    return scope.workspace_id, nil, false
+  end
   local workspace_id = M.workspace_for_cwd(cwd)
   if workspace_id then
     return workspace_id, nil, false
@@ -111,16 +115,17 @@ end
 ---@param cwd string
 ---@param command string[]
 ---@param env? table<string, string|boolean>
+---@param scope? { workspace_id?: string }
 ---@return table|nil agent
-function M.start(name, cwd, command, env)
+function M.start(name, cwd, command, env, scope)
   local normalized = M.normalize_cwd(cwd)
-  local workspace_id, root_pane_id, workspace_created, tab_id = M.ensure_workspace(cwd)
-  if not workspace_id then
+  local resolved_id, root_pane_id, workspace_created, tab_id = M.ensure_workspace(cwd, scope)
+  if not resolved_id then
     return nil
   end
   if workspace_created then
     if not tab_id or not M.call({ "tab", "rename", tab_id, name }) then
-      M.call({ "workspace", "close", workspace_id }, true)
+      M.call({ "workspace", "close", resolved_id }, true)
       return nil
     end
   else
@@ -128,7 +133,7 @@ function M.start(name, cwd, command, env)
       "tab",
       "create",
       "--workspace",
-      workspace_id,
+      resolved_id,
       "--cwd",
       normalized,
       "--label",
@@ -148,7 +153,7 @@ function M.start(name, cwd, command, env)
     "--cwd",
     normalized,
     "--workspace",
-    workspace_id,
+    resolved_id,
     "--tab",
     tab_id,
     "--no-focus",
@@ -164,7 +169,7 @@ function M.start(name, cwd, command, env)
   local agent = result and result.agent or nil
   if not agent then
     if workspace_created then
-      M.call({ "workspace", "close", workspace_id }, true)
+      M.call({ "workspace", "close", resolved_id }, true)
     elseif tab_id then
       M.call({ "tab", "close", tab_id }, true)
     end
