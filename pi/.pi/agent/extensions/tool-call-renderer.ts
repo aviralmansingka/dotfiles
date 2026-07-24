@@ -292,25 +292,30 @@ function renderThinkingActivities(
   });
 }
 
+function renderPlan(theme: Theme, run: ActivityRun): string[] {
+  const updates = run.steps
+    .flatMap((step) => step.thinking)
+    .slice(-5);
+  if (updates.length === 0) return [];
+  return [
+    ` ${theme.fg("accent", theme.bold("Plan"))}  ${theme.fg("muted", `${updates.length} recent thinking ${updates.length === 1 ? "block" : "blocks"}`)}`,
+    ...renderThinkingActivities(theme, updates),
+  ];
+}
+
 function renderActivityHeader(theme: Theme, run: ActivityRun): string {
   const calls = run.steps.reduce((count, step) => count + step.toolCalls.length, 0);
-  const thinking = run.steps.flatMap((step) => step.thinking);
-  const total = run.steps.length + thinking.length;
-  const completed =
-    run.steps.filter((step) => status(step) === "success").length +
-    thinking.filter(hasThinkingResult).length;
-  const failed =
-    run.steps.some((step) => status(step) === "failure") ||
-    thinking.some((update) => !hasThinkingResult(update));
-  const settled = completed === total;
+  const completed = run.steps.filter((step) => status(step) === "success").length;
+  const failed = run.steps.some((step) => status(step) === "failure");
+  const settled = completed === run.steps.length;
   const state = failed
     ? theme.fg("error", theme.bold("failed"))
     : settled
       ? theme.fg("success", theme.bold("all passed"))
-      : theme.fg("warning", theme.bold(`${completed}/${total} complete`));
+      : theme.fg("warning", theme.bold(`${completed}/${run.steps.length} complete`));
   return (
     ` ${theme.fg("accent", theme.bold("Activity"))}  ` +
-    theme.fg("muted", `${total} ${total === 1 ? "activity" : "activities"} · ${plural(calls, "call")} · `) +
+    theme.fg("muted", `${plural(run.steps.length, "step")} · ${plural(calls, "call")} · `) +
     state
   );
 }
@@ -332,14 +337,13 @@ class WorkStepRow {
     const title = ` ${glyph} ${this.theme.fg("text", this.step.title)}`;
     const connector = this.theme.fg("borderMuted", "└─");
     const summary = ` ${connector} ${renderSummary(this.theme, this.step)}`;
-    const lines = [
-      ...renderThinkingActivities(this.theme, this.step.thinking),
-      title,
-      summary,
-    ];
+    const lines = [title, summary];
     if (this.step.continues) lines.push("");
     if (this.step.run.steps[0] === this.step)
-      lines.unshift(renderActivityHeader(this.theme, this.step.run));
+      lines.unshift(
+        ...renderPlan(this.theme, this.step.run),
+        renderActivityHeader(this.theme, this.step.run),
+      );
     return lines.map((line) => truncateToWidth(line, width));
   }
 }
