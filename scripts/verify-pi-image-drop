@@ -75,13 +75,14 @@ EOF
 
 expect <<'EOF' >/dev/null
 set timeout 15
+set send_slow {1 0.005}
 log_user 0
 spawn env PI_IMAGE_DROP_PROBE=$env(PI_IMAGE_DROP_VOLATILE_OUTPUT) pi \
   --offline --no-session --no-extensions \
   -e $env(PI_IMAGE_DROP_TEST_EXTENSION) \
   -e $env(PI_IMAGE_DROP_TEST_PROBE)
 expect -re {Type your message}
-send -- "$env(PI_IMAGE_DROP_VOLATILE_ESCAPED)"
+send -s -- "$env(PI_IMAGE_DROP_VOLATILE_ESCAPED)"
 expect -re {\[Image 1\]}
 after 500
 file delete -- $env(PI_IMAGE_DROP_VOLATILE_IMAGE)

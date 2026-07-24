@@ -102,7 +102,13 @@ Ruling something out of scope is a scoping act, not a step on the route. When a 
 
 ## Pi / Herdr / Codex sub-agents
 
-When running in Pi and the `wayfinder_subagents` tool is available, use it for AFK `wayfinder:research` and AFK `wayfinder:task` tickets that should run in parallel. Each task prompt must include the map name/link, ticket name/link, exact question, tracker-specific claim/report/close instructions, and a clear stop condition. The tool launches visible `codex-wf-*` Codex sessions through Herdr that also fit the Neovim Sidekick named-session flow.
+When running in Pi and the `wayfinder_subagents` tool is available, use it for AFK `wayfinder:research` and AFK `wayfinder:task` tickets that should run in parallel. Each task prompt must include the map name/link, ticket name/link, exact question, tracker-specific claim/report/close instructions, and a clear stop condition. The tool launches full interactive Codex TUIs as visible `codex-wf-*` sessions through Herdr that also fit the Neovim Sidekick named-session flow; do not launch them with non-interactive `codex exec`.
+
+The launcher monitors every session after startup:
+
+- Completed sessions have their final output captured, then their exact Herdr tab is closed.
+- Blocked sessions remain open and must begin their final response with `BLOCKED:`.
+- When the batch settles, the parent Pi session summarizes the map, related tickets, key conclusions, blocked work, and session cleanup state to the user.
 
 Do not use `wayfinder_subagents` for HITL `grilling` or `prototype` tickets.
 

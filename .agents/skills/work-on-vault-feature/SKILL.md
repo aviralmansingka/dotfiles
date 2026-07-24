@@ -1,6 +1,6 @@
 ---
 name: work-on-vault-feature
-description: Run a durable vault feature through discovery, isolated implementation, independent verification, Herdr and Sidekick review, landing, and evidence updates. Use when planning, implementing, fixing, validating, or landing a feature under the vault projects tree in a theme features directory, including nested themes, especially when implementation lives in another repository and should use Git worktrees plus named Codex panes in Herdr and Neovim.
+description: Run a durable vault feature through discovery, isolated implementation, independent verification, Herdr and Sidekick review, landing, and evidence updates. Use only when the user explicitly invokes $work-on-vault-feature or asks to use the work-on-vault-feature skill; do not trigger automatically for ordinary vault feature work.
 ---
 
 # Work on a Vault Feature
@@ -10,6 +10,27 @@ keep implementation in its source repository.
 
 Announce: "I'm using the work-on-vault-feature skill to carry this feature from its vault contract through verified
 implementation."
+
+## List and select the feature
+
+Before starting work, print the complete canonical inventory as nested bullets:
+
+- Project — read from `projects/<project>/README.md`.
+  - Theme — read from every nested `theme.md` below that project.
+    - Feature — read from the theme's `features/*.md`.
+
+For every project, theme, and feature:
+
+- Use its `#` heading as the display name.
+- Show its frontmatter `status` beside the name.
+- Show `unspecified` when `status` is absent.
+  - Do not infer completion from task checkboxes.
+- Preserve nested-theme hierarchy in the output.
+- Highlight the requested or selected feature.
+
+If no feature was supplied, ask the user to choose after showing the inventory.
+If project, theme, or feature text was supplied, use it to narrow and select the
+matching branch; ask only when multiple matches remain.
 
 ## Load the contract
 
@@ -71,17 +92,33 @@ Hard requirements:
 - Launch interactive `codex`, not `codex exec`; `exec` exposes headless event logs instead of the readable Codex TUI.
 - Set `SIDEKICK_NAMED_SESSION` to the agent slug without the `codex-` prefix.
 - Create panes with `--no-focus`, then focus the completed tab.
-- Keep the feature tab open through integration and landing verification.
+- Keep the feature tab open until every worker finishes and its evidence is captured.
+- Then close the exact feature tab to terminate every launched worker session.
+  - Do not leave completed Codex or Pi sessions running as `done` or `idle`.
+  - Keep branches and worktrees until integration and landing finish.
 
 ## 4. Give workers bounded contracts
 
+Format both initial worker prompts as compact Markdown outlines:
+
+- Hard-wrap at 72 columns.
+  - Keep indivisible paths and commands intact.
+- Prefer short bullets over prose paragraphs.
+  - Use nested bullets to reflect structure and dependencies.
+- Give distinct items their own bullets.
+  - Paths.
+  - Checks.
+  - Acceptance criteria.
+
 Every worker prompt must name:
 
-- its exact owned paths
-- the behavior and acceptance criteria
-- the checks it must run
-- the exact commit message when one is required
-- that other workers share the repository and it must not revert their work
+- Exact owned paths.
+- Behavior and acceptance criteria.
+- Checks it must run.
+- Exact commit message when one is required.
+- Shared-repository constraints.
+  - Other workers share the repository.
+  - Do not revert their work.
 
 The verifier owns only the verifier and deterministic fixtures. It must not edit the implementation. Prefer a
 deterministic offline default and gate live-model or live-UI smoke tests separately.
@@ -102,6 +139,12 @@ Before cherry-picking, inspect each agent's:
 - exact cwd
 - Git status
 - commit subject and changed paths
+
+After every worker is complete and this evidence is captured:
+
+- Close the exact Herdr feature tab to terminate all launched sessions.
+- Verify each feature agent is absent from `herdr agent list`.
+- Keep the worktrees and branches for integration.
 
 Integrate into the feature branch in dependency order, normally verifier before implementation. Run:
 
@@ -144,7 +187,7 @@ Leave unrelated dirty files untouched. Do not push unless the user asked.
 
 After the landed result is confirmed:
 
-- close the exact Herdr feature tab
+- confirm every launched worker session was terminated
 - remove the exact clean worktrees without `--force`
 - delete merged task branches with `git branch -d`
 - if cherry-picking defeats the ancestry check, require `git cherry main <branch>` to mark every task commit
@@ -155,12 +198,23 @@ Keep the feature branch unless the user asks to delete it.
 
 ## Completion report
 
-Lead with the outcome. Include:
+Always finish with a compact user-facing summary:
 
-- landed commit or remaining branch
-- verifier results, including red/green evidence
-- vault note path and whether it is committed
-- backup patch path
-- cleanup state
-- any unrelated dirty state preserved
-- whether anything was pushed
+- **Feature:** owning feature name and vault note path or wikilink.
+- **Related tasks:** exact feature checkbox text or bounded worker task.
+- **Completed:** high-level behavior and work completed.
+- **Verification:** results grouped at a high level.
+  - Deterministic verifier groups or named harness cases.
+  - Regression red/green evidence when applicable.
+  - Live integration or smoke checks when applicable.
+  - Visual evidence when applicable.
+  - Mark blocked, failed, or not-run groups explicitly.
+
+Then include the operational handoff:
+
+- Landed commit or remaining branch.
+- Vault note commit state.
+- Backup patch path.
+- Session, worktree, and branch cleanup state.
+- Unrelated dirty state preserved.
+- Whether anything was pushed.

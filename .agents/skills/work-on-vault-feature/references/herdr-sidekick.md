@@ -148,10 +148,18 @@ label alone.
 
 ## Cleanup
 
-Keep the tab until the landed result passes from primary `main`. Then:
+Once every worker is complete and its evidence is captured, terminate all
+launched sessions before integration by closing the exact feature tab:
 
 ```sh
 herdr tab close "$tab_id"
+```
+
+Verify the captured feature-agent names are absent from `herdr agent list`.
+Keep their branches and worktrees until the landed result passes from primary
+`main`. Then:
+
+```sh
 git -C "$repo_root" worktree remove "$code_path"
 git -C "$repo_root" worktree remove "$verify_path"
 git -C "$repo_root" worktree remove "$integration_path"

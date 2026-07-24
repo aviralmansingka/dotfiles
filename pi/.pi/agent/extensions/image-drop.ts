@@ -204,7 +204,7 @@ export default function (pi: ExtensionAPI) {
         if (/^[^\x00-\x1f\x7f]+$/u.test(data)) {
           rawPathBuffer += data;
           if (rawPathTimer) clearTimeout(rawPathTimer);
-          rawPathTimer = setTimeout(flushRawPath, 0);
+          rawPathTimer = setTimeout(flushRawPath, 100);
           return { consume: true };
         }
         if (rawPathTimer) clearTimeout(rawPathTimer);

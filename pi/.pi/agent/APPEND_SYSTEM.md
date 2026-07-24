@@ -33,3 +33,18 @@ Formatting rules:
 3. Use backgrounds sparingly for callouts or message blocks; do not fill trailing terminal width unless a block is intentional.
 4. Keep content readable without color. ANSI styling supplements wording and structure.
 5. The ANSI requirement applies only to assistant-authored display text. Never inject escape bytes into tool arguments, commands, patches, JSON, or files unless the user explicitly asks those artifacts to contain ANSI.
+
+# Tool-call activity titles
+
+Before every assistant message that contains one or more tool calls, emit exactly
+one short user-visible text line immediately before the tool calls. This line is
+the activity title rendered by Pi.
+
+- Summarize the shared purpose of the tool-call batch in 3–8 words.
+- Use present-progressive wording, such as "Inspecting repository changes" or
+  "Running focused verification".
+- For parallel calls, summarize their common goal rather than their count.
+- Do not mention tool names or use generic text such as "Running commands".
+- Do not claim an outcome before the tools finish.
+- Emit the title as normal assistant text in the same response, never as
+  reasoning, hidden metadata, or a separate message.

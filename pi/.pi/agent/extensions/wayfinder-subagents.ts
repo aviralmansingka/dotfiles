@@ -7,6 +7,8 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const MAX_TASKS = 8;
 const SIDEKICK_NAMED_SESSION = "SIDEKICK_NAMED_SESSION";
+const MONITOR_INTERVAL_MS = 1000;
+const SUMMARY_OUTPUT_CHARS = 4000;
 
 const MapSchema = Type.Object({
   title: Type.String({ description: "Wayfinder map title; used for the dedicated Herdr workspace." }),
@@ -50,6 +52,27 @@ type HerdrPlacement = {
   workspaceCreated: boolean;
 };
 
+type LaunchedAgent = {
+  type: "research" | "task";
+  ticket_id: string;
+  title: string;
+  name: string;
+  pane_id?: string;
+  tab_id: string;
+  tab_label: string;
+  terminal_id?: string;
+  workspace_id?: string;
+  workspace_label: string;
+  cwd: string;
+  attach: string;
+};
+
+type AgentOutcome = {
+  agent: LaunchedAgent;
+  status: "completed" | "blocked" | "lost";
+  output?: string;
+};
+
 function slugify(value: string, maxLength = 48): string {
   const slug = value
     .toLowerCase()
@@ -84,7 +107,7 @@ function makePrompt(map: Params["map"], task: Params["tasks"][number]): string {
     "You are a Wayfinder sub-agent running in your own Codex session.",
     "Resolve exactly the task below. Do not broaden scope.",
     "If this is a Wayfinder research ticket, record findings on the ticket/map exactly as the Wayfinder skill requires.",
-    "If blocked, leave a concise status note wherever the task asks you to report progress, then stop.",
+    "If blocked, keep the ticket and session open and begin your final response with `BLOCKED:` followed by the reason.",
     "",
     `Map: ${map.title}`,
     `Ticket: ${task.ticketId} · ${task.title}`,
@@ -157,17 +180,99 @@ async function cleanupPlacement(placement: HerdrPlacement): Promise<void> {
   }
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function readAgentOutput(name: string): Promise<string | undefined> {
+  try {
+    const result = await herdr(["agent", "read", name, "--source", "recent-unwrapped", "--lines", "80", "--format", "text"]);
+    const text = result.read?.text;
+    return typeof text === "string" ? text.slice(-SUMMARY_OUTPUT_CHARS) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function monitorAgent(agent: LaunchedAgent): Promise<AgentOutcome> {
+  let sawWorking = false;
+
+  while (true) {
+    let status: string | undefined;
+    try {
+      const result = await herdr(["agent", "get", agent.name]);
+      status = result.agent?.agent_status;
+    } catch {
+      return { agent, status: "lost" };
+    }
+
+    if (status === "working") sawWorking = true;
+    if (status === "blocked") {
+      return { agent, status: "blocked", output: await readAgentOutput(agent.name) };
+    }
+    if (status === "done" || (sawWorking && status === "idle")) {
+      const output = await readAgentOutput(agent.name);
+      if (output && /^\s*(?:[•*-]\s*)?BLOCKED:/m.test(output)) {
+        return { agent, status: "blocked", output };
+      }
+      try {
+        await herdr(["tab", "close", agent.tab_id]);
+      } catch {
+        return { agent, status: "lost", output };
+      }
+      return { agent, status: "completed", output };
+    }
+
+    await delay(MONITOR_INTERVAL_MS);
+  }
+}
+
+function monitorAgents(pi: ExtensionAPI, map: Params["map"], agents: LaunchedAgent[]): void {
+  void Promise.all(agents.map(monitorAgent)).then((outcomes) => {
+    const results = outcomes.flatMap(({ agent, status, output }) => {
+      const session = status === "completed" ? "terminated" : status === "blocked" ? "kept open" : "unavailable";
+      return [
+        `Ticket: ${agent.ticket_id} · ${agent.title}`,
+        `Type: ${agent.type}`,
+        `Outcome: ${status}`,
+        `Session: ${session}`,
+        output ? `Final output:\n${output}` : "Final output unavailable.",
+      ];
+    });
+
+    pi.sendMessage(
+      {
+        customType: "wayfinder-subagents-settled",
+        content: [
+          "Wayfinder sub-agents have settled.",
+          `Map: ${map.title}`,
+          "Give the user a concise completion summary now.",
+          "Include the map, each related ticket, what completed or is blocked, the key conclusion, and session cleanup state.",
+          "Do not claim the whole map is complete unless the supplied results establish that.",
+          "",
+          ...results,
+        ].join("\n"),
+        display: false,
+      },
+      { deliverAs: "followUp", triggerTurn: true },
+    );
+  }).catch(() => {
+    // The parent Pi session may have shut down or reloaded while agents ran.
+  });
+}
+
 export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "wayfinder_subagents",
     label: "Wayfinder Subagents",
     description: [
-      "Launch Wayfinder sub-agent Codex sessions through Herdr.",
+      "Launch Wayfinder sub-agent Codex sessions with the full interactive TUI through Herdr.",
       "Use this after creating Wayfinder research/task tickets that can run AFK in parallel.",
       "Each map gets a dedicated Herdr workspace and each ticket gets its own tab.",
       "Sessions use deterministic codex-wf-<map>-<type>-<ticket>-<title> names for Neovim Sidekick.",
+      "Completed sessions are terminated after evidence capture; blocked sessions remain open and the parent receives a summary.",
     ].join(" "),
-    promptSnippet: "Launch AFK Wayfinder research/task sub-agents as visible Herdr Codex sessions.",
+    promptSnippet: "Launch AFK Wayfinder research/task sub-agents as full interactive Herdr Codex sessions.",
     promptGuidelines: [
       "Use wayfinder_subagents only for AFK Wayfinder research/task tickets; do not use it for HITL grilling/prototype tickets.",
       "When using wayfinder_subagents, pass the map title plus each ticket's type and tracker ID as structured fields.",
@@ -186,26 +291,13 @@ export default function (pi: ExtensionAPI) {
         throw new Error(`Too many tasks (${params.tasks.length}); max is ${MAX_TASKS}.`);
       }
 
-      const launched = [] as Array<{
-        type: "research" | "task";
-        ticket_id: string;
-        title: string;
-        name: string;
-        pane_id?: string;
-        tab_id?: string;
-        tab_label: string;
-        terminal_id?: string;
-        workspace_id?: string;
-        workspace_label: string;
-        cwd: string;
-        attach: string;
-      }>;
+      const launched: LaunchedAgent[] = [];
 
       for (const task of params.tasks) {
         const identity = names(params.map, task);
         const cwd = task.cwd ?? ctx.cwd;
         const placement = await preparePlacement(identity.workspaceLabel, identity.tabLabel, cwd, signal);
-        const command = ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--color", "always"];
+        const command = ["codex", "--dangerously-bypass-approvals-and-sandbox"];
         if (task.model) command.push("--model", task.model);
         command.push(makePrompt(params.map, task));
 
@@ -254,6 +346,8 @@ export default function (pi: ExtensionAPI) {
           attach: `herdr agent attach ${agent.name ?? identity.agentName} --takeover`,
         });
       }
+
+      monitorAgents(pi, params.map, launched);
 
       const lines = launched.map(
         (agent) => `- ${agent.tab_label}: ${agent.name} (${agent.attach})`,
