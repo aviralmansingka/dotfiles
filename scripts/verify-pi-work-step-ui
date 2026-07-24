@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+unset NO_COLOR
+export COLORTERM=truecolor
+export TERM=xterm-256color
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 verify_dir="$(mktemp -d)"
 trap 'rm -rf "$verify_dir"' EXIT
@@ -11,9 +15,8 @@ missing_raw="$verify_dir/missing.raw"
 session_file="$verify_dir/session.jsonl"
 missing_session="$verify_dir/missing-session.jsonl"
 
-if ! grep -Fq 'Every thinking block must include a literal `Outcome:` or `Decision:` field' \
-	"$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
-	echo "Visible-thinking prompt does not require explicit outcomes" >&2
+if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
+	echo "Visible-thinking prompt customization is still installed" >&2
 	exit 1
 fi
 
@@ -229,7 +232,10 @@ function assertForeground(terminal, row) {
 }
 
 function assertHeaderForeground(terminal, title) {
-	const index = terminal.plain.lastIndexOf(`${title}  `);
+	const matches = Array.from(
+		terminal.plain.matchAll(new RegExp(`${escapeRegExp(title)}  \\d+ steps? ·`, "gu")),
+	);
+	const index = matches.at(-1)?.index ?? -1;
 	if (index < 0) fail(`Missing activity title: ${title}`);
 	const colors = new Set(
 		Array.from({ length: title.length }, (_, offset) => index + offset)
@@ -265,58 +271,20 @@ for (const sentinel of [
 	if (main.plain.includes(sentinel)) fail(`Leaked individual custom-tool content: ${sentinel}`);
 }
 
-if (!main.plain.includes("Plan  5 recent thinking blocks"))
-	fail("Missing capped thinking Plan");
+if (main.plain.includes("Plan  "))
+	fail("Custom thinking Plan is still rendered");
+for (const nativeThinking of ["Scope timeline", "Inspect configuration", "Finalize plan rendering"])
+	if (!main.plain.includes(nativeThinking)) fail(`Native thinking disappeared: ${nativeThinking}`);
 for (const header of [
-	"Scope timeline  2 steps · 3 calls · all passed",
+	"Run grouped verification  2 steps · 3 calls · all passed",
 	"Working with settings.json  1 step · 2 calls · failed",
-	"Restore missing result  1 step · 1 call · all passed",
-	"Verify after reload  1 step · 1 call · all passed",
+	"Reconcile persisted tool result  1 step · 1 call · all passed",
+	"Run post-reload verification  1 step · 1 call · all passed",
 ]) {
 	if (!main.plain.includes(header)) fail(`Missing nested activity header: ${header}`);
 }
 if (main.plain.includes(" Activity  "))
 	fail("Generic orange Activity label was not replaced by activity titles");
-if (!main.plain.includes("Decision: keep tool activity flow chronological"))
-	fail("Thinking decision was not rendered while active");
-
-const thinkingRows = [
-	requireTerminalRow(
-		main,
-		"Outcome: grouped tools share one timeline",
-		"●",
-		"Answer renderer question",
-		"└─",
-	),
-	requireTerminalRow(
-		main,
-		"Decision: retain five recent thinking blocks",
-		"●",
-		"Select plan limit",
-		"└─",
-	),
-	requireTerminalRow(
-		main,
-		"Outcome: renderer remains stable after grouped tools",
-		"●",
-		"Continue inspection",
-		"└─",
-	),
-	requireTerminalRow(
-		main,
-		"Outcome: every retained block has a result",
-		"●",
-		"Check summary contract",
-		"└─",
-	),
-	requireTerminalRow(
-		main,
-		"Outcome: oldest thinking blocks are omitted",
-		"●",
-		"Finalize plan rendering",
-		"└─",
-	),
-];
 
 const sameSummary = "2 calls · noisy_verify_tool ×2 · completed";
 const mixedSummary = "settings.json · 2 calls · noisy_verify_tool · read · failed";
@@ -350,17 +318,17 @@ const afterReload = requireTerminalRow(
 	"└─",
 );
 
-for (const row of [...thinkingRows, same, sameFollowup, mixed, restoredSource, afterReload]) {
+for (const row of [same, sameFollowup, mixed, restoredSource, afterReload]) {
 	assertForeground(main, row);
 	if (row.connector !== "└─") fail(`Activity has a dangling connector: ${row.title}`);
 }
-for (const title of ["Scope timeline", "Working with settings.json", "Restore missing result", "Verify after reload"])
+for (const title of [
+	"Run grouped verification",
+	"Working with settings.json",
+	"Reconcile persisted tool result",
+	"Run post-reload verification",
+])
 	assertHeaderForeground(main, title);
-const compactPlan = new RegExp(
-	`Decision: retain five recent thinking blocks\\r*\\n ● Continue inspection`,
-	"u",
-);
-if (!compactPlan.test(missing.plain)) fail("Plan elements contain an internal blank line");
 const nestedSteps = new RegExp(
 	`${escapeRegExp(sameSummary)}\\r*\\n └─ ● Continue grouped verification`,
 	"u",
@@ -373,60 +341,29 @@ const spacedActivities = new RegExp(
 if (!spacedActivities.test(main.plain)) fail("Separate activities do not flow with one blank line between them");
 if (same.rail !== "│  " || sameFollowup.rail !== "   ")
 	fail("Nested activity rails do not connect and terminate correctly");
-const finalPlan = main.plain.lastIndexOf("Plan  5 recent thinking blocks");
-const finalActivity = main.plain.lastIndexOf("Scope timeline  2 steps · 3 calls · all passed");
-if (!(finalPlan >= 0 && finalPlan < finalActivity))
-	fail("Updated Plan was not rendered before the session-level Activity timeline");
-const finalPlanText = main.plain.slice(finalPlan, finalActivity);
-for (const retained of [
-	"Continue inspection",
-	"Check summary contract",
-	"Finalize plan rendering",
-	"Restore missing result",
-	"Verify after reload",
-])
-	if (!finalPlanText.includes(retained)) fail(`Updated Plan is missing recent thinking: ${retained}`);
-for (const omitted of ["Scope timeline", "Inspect configuration", "Answer renderer question", "Select plan limit"])
-	if (finalPlanText.includes(omitted)) fail(`Updated Plan retained old thinking: ${omitted}`);
 assertNoLaterActiveState(main, sameSummary, "●");
 assertNoLaterActiveState(main, mixedSummary, "×");
 
-if ((missing.plain.match(/Plan  /gu) ?? []).length !== 1)
-	fail("Restored timeline rendered a Plan between activities");
-if (!missing.plain.includes("Plan  5 recent thinking blocks"))
-	fail("Restored Plan did not retain exactly five thinking blocks");
+if (missing.plain.includes("Plan  "))
+	fail("Restored timeline rendered a custom thinking Plan");
 for (const header of [
-	"Scope timeline  2 steps · 3 calls · all passed",
+	"Run grouped verification  2 steps · 3 calls · all passed",
 	"Working with settings.json  1 step · 2 calls · failed",
-	"Restore missing result  1 step · 1 call · failed",
+	"Reconcile persisted tool result  1 step · 1 call · failed",
 ])
 	if (!missing.plain.includes(header)) fail(`Restored nested activity header is incorrect: ${header}`);
-const restoredPlanStart = missing.plain.indexOf("Plan  5 recent thinking blocks");
-const restoredActivityStart = missing.plain.indexOf("Scope timeline  2 steps · 3 calls · all passed");
-const restoredPlanText = missing.plain.slice(restoredPlanStart, restoredActivityStart);
-for (const omitted of ["Scope timeline", "Inspect configuration", "Answer renderer question"])
-	if (restoredPlanText.includes(omitted)) fail(`Restored Plan retained old thinking block: ${omitted}`);
 const restoredOrder = [
-	missing.plain.indexOf("Plan  5 recent thinking blocks"),
-	missing.plain.indexOf("Scope timeline  2 steps · 3 calls · all passed"),
-	missing.plain.indexOf("Run grouped verification"),
-	missing.plain.indexOf("Continue grouped verification"),
+	missing.plain.indexOf("Run grouped verification  2 steps · 3 calls · all passed"),
+	missing.plain.indexOf("├─ ● Run grouped verification"),
+	missing.plain.indexOf("└─ ● Continue grouped verification"),
 	missing.plain.indexOf("Working with settings.json  1 step · 2 calls · failed"),
-	missing.plain.indexOf("Working with settings.json", missing.plain.indexOf("Working with settings.json  1 step") + 1),
-	missing.plain.indexOf("Restore missing result  1 step · 1 call · failed"),
-	missing.plain.indexOf("Reconcile persisted tool result"),
+	missing.plain.indexOf("└─ × Working with settings.json"),
+	missing.plain.indexOf("Reconcile persisted tool result  1 step · 1 call · failed"),
+	missing.plain.indexOf("└─ × Reconcile persisted tool result"),
 ];
 if (restoredOrder.some((index) => index < 0) || restoredOrder.some((index, position) => position > 0 && index <= restoredOrder[position - 1]))
-	fail("Restored activities do not flow chronologically after the single Plan");
+	fail("Restored activities do not flow chronologically");
 
-const missingThinking = requireTerminalRow(
-	missing,
-	"Outcome: not reported",
-	"×",
-	"Restore missing result",
-	"└─",
-);
-assertForeground(missing, missingThinking);
 
 const missingRows = rowsFor(missing, restoreFailureSummary).filter(
 	(row) => row.title === "Reconcile persisted tool result",
@@ -439,7 +376,7 @@ if (!missingFailure) fail("Restored work step without a matching tool result was
 assertForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step timeline verified offline: one globally updated five-block Plan before nested orange-titled activities, chronological outer and inner timeline flow, compact results, spacing, connectors, restoration, reload, suppression, and semantic ANSI colors.",
+	"Pi work-step timeline verified offline: native thinking untouched; nested orange-titled activities preserve chronological outer and inner flow, compact results, spacing, connectors, restoration, reload, suppression, and semantic ANSI colors.",
 );
 NODE
 
