@@ -11,6 +11,12 @@ missing_raw="$verify_dir/missing.raw"
 session_file="$verify_dir/session.jsonl"
 missing_session="$verify_dir/missing-session.jsonl"
 
+if ! grep -Fq 'Every thinking block must include a literal `Outcome:` or `Decision:` field' \
+	"$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
+	echo "Visible-thinking prompt does not require explicit outcomes" >&2
+	exit 1
+fi
+
 mkdir -p "$agent_dir/extensions"
 printf '%s\n' '{"theme":"gruvbox-material"}' > "$agent_dir/settings.json"
 ln -s "$repo_root/scripts/fixtures/pi-work-step-ui-provider.ts" "$agent_dir/extensions/00-provider.ts"
@@ -70,6 +76,7 @@ const fs = require("node:fs");
 
 const [mainPath, missingPath] = process.argv.slice(2);
 const activeGlyph = "◉";
+const accentForeground = "rgb:242,133,52";
 const textForeground = "rgb:235,219,178";
 const mutedForeground = "rgb:146,131,116";
 const borderForeground = "rgb:80,73,69";
@@ -155,27 +162,30 @@ function escapeRegExp(value) {
 
 function rowsFor(terminal, summary) {
 	const pattern = new RegExp(
-		`([●×${activeGlyph}]) ([^\\r\\n]+)\\r*\\n ([│└][ ─]) (${escapeRegExp(summary)})`,
+		` (?:(├─|└─) )?([●×${activeGlyph}]) ([^\\r\\n]+)\\r*\\n ((?:│  |   )?)(└─) (${escapeRegExp(summary)})`,
 		"gu",
 	);
 	return Array.from(terminal.plain.matchAll(pattern), (match) => ({
-		glyph: match[1],
-		title: match[2],
-		connector: match[3],
-		summary: match[4],
-		glyphIndex: match.index,
-		titleIndex: match.index + match[1].length + 1,
-		connectorIndex: match.index + match[0].lastIndexOf(match[3]),
-		summaryIndex: match.index + match[0].lastIndexOf(match[4]),
+		outer: match[1],
+		glyph: match[2],
+		title: match[3],
+		rail: match[4],
+		connector: match[5],
+		summary: match[6],
+		glyphIndex: match.index + match[0].indexOf(match[2]),
+		titleIndex: match.index + match[0].indexOf(match[3]),
+		connectorIndex: match.index + match[0].lastIndexOf(match[5]),
+		summaryIndex: match.index + match[0].lastIndexOf(match[6]),
 	}));
 }
 
-function requireTerminalRow(terminal, summary, glyph, expectedTitle, expectedConnector) {
+function requireTerminalRow(terminal, summary, glyph, expectedTitle, expectedConnector, expectedOuter) {
 	const row = rowsFor(terminal, summary).find(
 		(candidate) =>
 			candidate.glyph === glyph &&
 			(!expectedTitle || candidate.title === expectedTitle) &&
-			(!expectedConnector || candidate.connector === expectedConnector),
+			(!expectedConnector || candidate.connector === expectedConnector) &&
+			(!expectedOuter || candidate.outer === expectedOuter),
 	);
 	if (!row)
 		fail(
@@ -218,6 +228,18 @@ function assertForeground(terminal, row) {
 		fail("Expected summary separators/details to remain unbolded");
 }
 
+function assertHeaderForeground(terminal, title) {
+	const index = terminal.plain.lastIndexOf(`${title}  `);
+	if (index < 0) fail(`Missing activity title: ${title}`);
+	const colors = new Set(
+		Array.from({ length: title.length }, (_, offset) => index + offset)
+			.filter((position) => !/\s/u.test(terminal.plain[position]))
+			.map((position) => terminal.foregrounds[position]),
+	);
+	if (colors.size !== 1 || !colors.has(accentForeground))
+		fail(`Expected orange activity title ${title}; got ${Array.from(colors).join(", ")}`);
+}
+
 function assertNoLaterActiveState(terminal, summary, terminalGlyph) {
 	const rows = rowsFor(terminal, summary);
 	const terminalIndex = rows.findIndex((row) => row.glyph === terminalGlyph);
@@ -245,8 +267,16 @@ for (const sentinel of [
 
 if (!main.plain.includes("Plan  5 recent thinking blocks"))
 	fail("Missing capped thinking Plan");
-if (!main.plain.includes("Activity  5 steps · 7 calls · failed"))
-	fail("Missing session-level tool-activity timeline header");
+for (const header of [
+	"Scope timeline  2 steps · 3 calls · all passed",
+	"Working with settings.json  1 step · 2 calls · failed",
+	"Restore missing result  1 step · 1 call · all passed",
+	"Verify after reload  1 step · 1 call · all passed",
+]) {
+	if (!main.plain.includes(header)) fail(`Missing nested activity header: ${header}`);
+}
+if (main.plain.includes(" Activity  "))
+	fail("Generic orange Activity label was not replaced by activity titles");
 if (!main.plain.includes("Decision: keep tool activity flow chronological"))
 	fail("Thinking decision was not rendered while active");
 
@@ -293,44 +323,58 @@ const mixedSummary = "settings.json · 2 calls · noisy_verify_tool · read · f
 const restoreSuccessSummary = "1 call · noisy_verify_tool · completed";
 const restoreFailureSummary = "1 call · noisy_verify_tool · failed";
 
-const same = requireTerminalRow(main, sameSummary, "●", "Run grouped verification", "└─");
+const same = requireTerminalRow(main, sameSummary, "●", "Run grouped verification", "└─", "├─");
 const sameFollowup = requireTerminalRow(
 	main,
 	restoreSuccessSummary,
 	"●",
 	"Continue grouped verification",
 	"└─",
+	"└─",
 );
-const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─");
+const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─", "└─");
 const restoredSource = requireTerminalRow(
 	main,
 	restoreSuccessSummary,
 	"●",
 	"Reconcile persisted tool result",
+	"└─",
+	"└─",
 );
 const afterReload = requireTerminalRow(
 	main,
 	restoreSuccessSummary,
 	"●",
 	"Run post-reload verification",
+	"└─",
+	"└─",
 );
 
 for (const row of [...thinkingRows, same, sameFollowup, mixed, restoredSource, afterReload]) {
 	assertForeground(main, row);
 	if (row.connector !== "└─") fail(`Activity has a dangling connector: ${row.title}`);
 }
+for (const title of ["Scope timeline", "Working with settings.json", "Restore missing result", "Verify after reload"])
+	assertHeaderForeground(main, title);
 const compactPlan = new RegExp(
 	`Decision: retain five recent thinking blocks\\r*\\n ● Continue inspection`,
 	"u",
 );
 if (!compactPlan.test(missing.plain)) fail("Plan elements contain an internal blank line");
-const spacedActivities = new RegExp(
-	`${escapeRegExp(sameSummary)}\\r*\\n\\r*\\n ● Continue grouped verification`,
+const nestedSteps = new RegExp(
+	`${escapeRegExp(sameSummary)}\\r*\\n └─ ● Continue grouped verification`,
 	"u",
 );
-if (!spacedActivities.test(main.plain)) fail("Missing blank line between chronological activities");
+if (!nestedSteps.test(main.plain)) fail("Continuous steps do not form a compact inner timeline");
+const spacedActivities = new RegExp(
+	`${escapeRegExp(restoreSuccessSummary)}\\r*\\n\\r*\\n Working with settings.json  1 step`,
+	"u",
+);
+if (!spacedActivities.test(main.plain)) fail("Separate activities do not flow with one blank line between them");
+if (same.rail !== "│  " || sameFollowup.rail !== "   ")
+	fail("Nested activity rails do not connect and terminate correctly");
 const finalPlan = main.plain.lastIndexOf("Plan  5 recent thinking blocks");
-const finalActivity = main.plain.lastIndexOf("Activity  5 steps · 7 calls · failed");
+const finalActivity = main.plain.lastIndexOf("Scope timeline  2 steps · 3 calls · all passed");
 if (!(finalPlan >= 0 && finalPlan < finalActivity))
 	fail("Updated Plan was not rendered before the session-level Activity timeline");
 const finalPlanText = main.plain.slice(finalPlan, finalActivity);
@@ -351,16 +395,25 @@ if ((missing.plain.match(/Plan  /gu) ?? []).length !== 1)
 	fail("Restored timeline rendered a Plan between activities");
 if (!missing.plain.includes("Plan  5 recent thinking blocks"))
 	fail("Restored Plan did not retain exactly five thinking blocks");
-if (!missing.plain.includes("Activity  4 steps · 6 calls · failed"))
-	fail("Restored session-level Activity header is incorrect");
+for (const header of [
+	"Scope timeline  2 steps · 3 calls · all passed",
+	"Working with settings.json  1 step · 2 calls · failed",
+	"Restore missing result  1 step · 1 call · failed",
+])
+	if (!missing.plain.includes(header)) fail(`Restored nested activity header is incorrect: ${header}`);
+const restoredPlanStart = missing.plain.indexOf("Plan  5 recent thinking blocks");
+const restoredActivityStart = missing.plain.indexOf("Scope timeline  2 steps · 3 calls · all passed");
+const restoredPlanText = missing.plain.slice(restoredPlanStart, restoredActivityStart);
 for (const omitted of ["Scope timeline", "Inspect configuration", "Answer renderer question"])
-	if (missing.plain.includes(omitted)) fail(`Restored Plan retained old thinking block: ${omitted}`);
+	if (restoredPlanText.includes(omitted)) fail(`Restored Plan retained old thinking block: ${omitted}`);
 const restoredOrder = [
 	missing.plain.indexOf("Plan  5 recent thinking blocks"),
-	missing.plain.indexOf("Activity  4 steps · 6 calls · failed"),
+	missing.plain.indexOf("Scope timeline  2 steps · 3 calls · all passed"),
 	missing.plain.indexOf("Run grouped verification"),
 	missing.plain.indexOf("Continue grouped verification"),
-	missing.plain.indexOf("Working with settings.json"),
+	missing.plain.indexOf("Working with settings.json  1 step · 2 calls · failed"),
+	missing.plain.indexOf("Working with settings.json", missing.plain.indexOf("Working with settings.json  1 step") + 1),
+	missing.plain.indexOf("Restore missing result  1 step · 1 call · failed"),
 	missing.plain.indexOf("Reconcile persisted tool result"),
 ];
 if (restoredOrder.some((index) => index < 0) || restoredOrder.some((index, position) => position > 0 && index <= restoredOrder[position - 1]))
@@ -386,7 +439,7 @@ if (!missingFailure) fail("Restored work step without a matching tool result was
 assertForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step timeline verified offline: one globally updated five-block Plan before an uninterrupted chronological Activity timeline, compact results, spacing, connectors, restoration, reload, suppression, and semantic ANSI colors.",
+	"Pi work-step timeline verified offline: one globally updated five-block Plan before nested orange-titled activities, chronological outer and inner timeline flow, compact results, spacing, connectors, restoration, reload, suppression, and semantic ANSI colors.",
 );
 NODE
 
