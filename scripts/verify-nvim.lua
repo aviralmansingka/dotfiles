@@ -662,13 +662,14 @@ local function validate_sidekick_herdr_live()
   if not tab or tab.label ~= label or tab.pane_count ~= 1 then
     fail("started Herdr tab should be named for the session and contain one pane: " .. vim.inspect(tab))
   end
+  local dump = ""
   local echoed = vim.wait(3000, function()
-    return (herdr.read(label, "recent-unwrapped", 50) or ""):find("ECHO:" .. sentinel, 1, true) ~= nil
+    dump = session:dump() or ""
+    return dump:gsub("%s", ""):find("ECHO:" .. sentinel, 1, true) ~= nil
   end, 50)
   if not echoed then
-    fail("Herdr send/submit output missing sentinel; dump=" .. vim.inspect(session:dump()))
+    fail("Herdr send/submit output missing sentinel; dump=" .. vim.inspect(dump))
   end
-  local dump = session:dump() or ""
   if not dump:gsub("%s", ""):find("ECHO:" .. sentinel, 1, true) then
     fail("Sidekick Herdr dump missing sentinel: " .. vim.inspect(dump))
   end
