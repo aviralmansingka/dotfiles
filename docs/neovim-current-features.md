@@ -576,6 +576,10 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Tabby replaces Bufferline for tab and buffer display.
 - Bufferline is explicitly disabled.
 - Tabline shows tabs and buffers with custom separators and modified indicators.
+- `<leader>fw` opens a fresh, compact Herdr workspace picker titled `spaces`.
+- Herdr workspaces can be created, renamed, selected, and confirmed-closed from the picker; each selected workspace is represented by at most one runtime Neovim tab keyed by its Herdr workspace ID.
+- Entering a bound workspace tab focuses the corresponding Herdr workspace; ordinary tabs and manually closed tabs do not affect Herdr.
+- Workspace tabs initialize from stable Herdr pane cwd and preserve later tab-local cwd/layout changes.
 - `<S-h>` and `<S-l>` navigate buffers.
 - `<S-q>` closes the current buffer.
 - Dashboard actions include finding files, creating a new file, restoring the last session, opening Sidecar, opening LazyGit, opening Claude Code, and quitting.

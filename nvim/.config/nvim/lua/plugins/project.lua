@@ -6,6 +6,7 @@ return {
       -- BUILD.bazel before .git: rules_go packages (e.g. modal/go/machine-manager) stay rooted
       -- there instead of the monorepo git root when you :cd into the service directory.
       patterns = { "init.lua", "build.gradle", ".git" },
+      scope_chdir = "tab",
       silent_chdir = true,
       sync_root_with_cwd = true,
       respect_buf_cwd = true,
