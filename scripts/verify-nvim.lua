@@ -291,9 +291,19 @@ local function validate_sidekick_herdr()
     fail("named sessions should retain the bound tab workspace ID: " .. vim.inspect(workspace_tool))
   end
 
+  source_internal.toggle_tool_session = function() end
+  source_internal.start_named_session("codex", "cwd session", cwd)
+  source_internal.toggle_tool_session = original_toggle_named
+  local cwd_tool = config.cli.tools["codex-cwd-session"]
+  if not cwd_tool or cwd_tool.herdr_workspace_id ~= nil then
+    fail("unbound named sessions should retain cwd workspace fallback: " .. vim.inspect(cwd_tool))
+  end
+
   local original_start = source_herdr.start
   local forwarded_workspace_id
+  local forwarded_starts = 0
   source_herdr.start = function(_, _, _, _, scope)
+    forwarded_starts = forwarded_starts + 1
     forwarded_workspace_id = scope and scope.workspace_id
     return {
       terminal_id = "term-workspace",
@@ -310,9 +320,33 @@ local function validate_sidekick_herdr()
       return {}
     end,
   })
-  source_herdr.start = original_start
   if forwarded_workspace_id ~= "w-bound" then
     fail("Herdr backend should forward the named session workspace ID")
+  end
+
+  source_backend.start({
+    herdr_agent_name = "codex-cwd-session",
+    cwd = cwd,
+    tool = require("sidekick.cli.tool").get("codex-cwd-session"),
+    attach = function()
+      return {}
+    end,
+  })
+  source_herdr.start = original_start
+  if forwarded_starts ~= 2 or forwarded_workspace_id ~= nil then
+    fail("unbound named sessions should not override cwd workspace resolution")
+  end
+
+  local original_workspace_for_cwd = source_herdr.workspace_for_cwd
+  local fallback_cwd
+  source_herdr.workspace_for_cwd = function(path)
+    fallback_cwd = path
+    return "w-cwd"
+  end
+  local fallback_workspace_id = source_herdr.ensure_workspace(cwd)
+  source_herdr.workspace_for_cwd = original_workspace_for_cwd
+  if fallback_workspace_id ~= "w-cwd" or fallback_cwd ~= cwd then
+    fail("unbound named sessions should resolve their workspace from cwd")
   end
 
   local original_call = source_herdr.call
