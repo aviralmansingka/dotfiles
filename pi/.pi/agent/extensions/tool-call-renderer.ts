@@ -27,7 +27,6 @@ type ActivityRun = {
 };
 
 type ActivityGroup = {
-  title: string;
   steps: WorkStep[];
   run: ActivityRun;
 };
@@ -271,7 +270,7 @@ function renderActivityHeader(theme: Theme, group: ActivityGroup): string {
       ? theme.fg("success", theme.bold("all passed"))
       : theme.fg("warning", theme.bold(`${completed}/${group.steps.length} complete`));
   return (
-    ` ${theme.fg("accent", theme.bold(group.title))}  ` +
+    ` ${theme.fg("accent", theme.bold("Activity"))}  ` +
     theme.fg("muted", `${plural(group.steps.length, "step")} · ${plural(calls, "call")} · `) +
     state
   );
@@ -368,7 +367,6 @@ function updateAssistant(
     existing?.group ??
     state.currentGroup ??
     ({
-      title: candidate.title,
       steps: [],
       run,
     } satisfies ActivityGroup);
