@@ -373,7 +373,7 @@ console.log(
 );
 NODE
 
-if [[ "${PI_VERIFY_LIVE:-0}" == "1" ]]; then
+if [[ "${PI_VERIFY_LIVE:-1}" == "1" ]]; then
 	live_raw="$verify_dir/live.raw"
 	export PI_VERIFY_LIVE_RAW="$live_raw"
 	export PI_VERIFY_MODEL="${PI_VERIFY_MODEL:-openai-codex/gpt-5.4-mini}"
@@ -384,7 +384,7 @@ log_user 0
 log_file -a -noappend $env(PI_VERIFY_LIVE_RAW)
 spawn pi --offline --approve --no-session --model $env(PI_VERIFY_MODEL) $env(PI_VERIFY_PROMPT)
 expect {
-  -re {● [^\r\n]+} {}
+  -re {●[^\r\n]+} {}
   timeout { exit 124 }
 }
 close
