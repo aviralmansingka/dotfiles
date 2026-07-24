@@ -25,7 +25,8 @@ const responses = [
 	fauxAssistantMessage(
 		[
 			fauxThinking("Inspect configuration → Decision: validate grouped tool rendering"),
-			fauxText("IGNORE_THIS_TEXT_TITLE"),
+			fauxThinking("Answer renderer question → Outcome: grouped tools share one timeline"),
+			fauxText("Run grouped verification"),
 			fauxToolCall(
 				"noisy_verify_tool",
 				{ value: "NOISY_ARGUMENT_SENTINEL", fail: false },
@@ -42,6 +43,7 @@ const responses = [
 	fauxAssistantMessage(
 		[
 			fauxThinking("Continue inspection → Outcome: renderer remains stable after grouped tools"),
+			fauxText("Continue grouped verification"),
 			fauxToolCall(
 				"noisy_verify_tool",
 				{ value: "NOISY_ARGUMENT_SENTINEL", fail: false },
@@ -66,6 +68,7 @@ const responses = [
 	fauxAssistantMessage(
 		[
 			fauxThinking("Restore **missing** result"),
+			fauxText("Reconcile persisted tool result"),
 			fauxToolCall(
 				"noisy_verify_tool",
 				{ value: "NOISY_ARGUMENT_SENTINEL", fail: false },
@@ -78,6 +81,7 @@ const responses = [
 	fauxAssistantMessage(
 		[
 			fauxThinking("### Verify `after reload`"),
+			fauxText("Run post-reload verification"),
 			fauxToolCall(
 				"noisy_verify_tool",
 				{ value: "NOISY_ARGUMENT_SENTINEL", fail: false },

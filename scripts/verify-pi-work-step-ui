@@ -243,30 +243,48 @@ for (const sentinel of [
 	if (main.plain.includes(sentinel)) fail(`Leaked individual custom-tool content: ${sentinel}`);
 }
 
-if (!main.plain.includes("Activity  2 steps · 3 calls · all passed"))
-	fail("Missing final run-level activity header");
+if (!main.plain.includes("Activity  5 activities · 3 calls · all passed"))
+	fail("Missing final run-level activity header with thinking activities");
 if (!main.plain.includes("Decision: validate grouped tool rendering"))
 	fail("Thinking decision was not rendered while active");
-for (const durablePlanText of [
-	"Plan  2 decisions",
-	"◆ validate grouped tool rendering",
-	"◆ renderer remains stable after grouped tools",
-]) {
-	if (!main.plain.includes(durablePlanText))
-		fail(`Missing durable plan content: ${durablePlanText}`);
-}
+if (main.plain.includes("Plan  "))
+	fail("Thinking activities were collapsed into the old Plan block");
+
+const thinkingRows = [
+	requireTerminalRow(
+		main,
+		"Decision: validate grouped tool rendering",
+		"●",
+		"Inspect configuration",
+		"└─",
+	),
+	requireTerminalRow(
+		main,
+		"Outcome: grouped tools share one timeline",
+		"●",
+		"Answer renderer question",
+		"└─",
+	),
+	requireTerminalRow(
+		main,
+		"Outcome: renderer remains stable after grouped tools",
+		"●",
+		"Continue inspection",
+		"└─",
+	),
+];
 
 const sameSummary = "2 calls · noisy_verify_tool ×2 · completed";
 const mixedSummary = "settings.json · 2 calls · noisy_verify_tool · read · failed";
 const restoreSuccessSummary = "1 call · noisy_verify_tool · completed";
 const restoreFailureSummary = "1 call · noisy_verify_tool · failed";
 
-const same = requireTerminalRow(main, sameSummary, "●", "Inspect configuration", "└─");
+const same = requireTerminalRow(main, sameSummary, "●", "Run grouped verification", "└─");
 const sameFollowup = requireTerminalRow(
 	main,
 	restoreSuccessSummary,
 	"●",
-	"Continue inspection",
+	"Continue grouped verification",
 	"└─",
 );
 const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─");
@@ -274,16 +292,16 @@ const restoredSource = requireTerminalRow(
 	main,
 	restoreSuccessSummary,
 	"●",
-	"Restore missing result",
+	"Reconcile persisted tool result",
 );
 const afterReload = requireTerminalRow(
 	main,
 	restoreSuccessSummary,
 	"●",
-	"Verify after reload",
+	"Run post-reload verification",
 );
 
-for (const row of [same, sameFollowup, mixed, restoredSource, afterReload]) {
+for (const row of [...thinkingRows, same, sameFollowup, mixed, restoredSource, afterReload]) {
 	assertForeground(main, row);
 	if (row.connector !== "└─") fail(`Activity has a dangling connector: ${row.title}`);
 }
@@ -295,8 +313,17 @@ if (!spacedActivities.test(main.plain)) fail("Missing blank line between activit
 assertNoLaterActiveState(main, sameSummary, "●");
 assertNoLaterActiveState(main, mixedSummary, "×");
 
+const missingThinking = requireTerminalRow(
+	missing,
+	"Outcome: not reported",
+	"×",
+	"Restore missing result",
+	"└─",
+);
+assertForeground(missing, missingThinking);
+
 const missingRows = rowsFor(missing, restoreFailureSummary).filter(
-	(row) => row.title === "Restore missing result",
+	(row) => row.title === "Reconcile persisted tool result",
 );
 if (missingRows.length === 0) fail("Missing restored work step was not rendered");
 if (missingRows.some((row) => row.glyph === "●"))
@@ -306,7 +333,7 @@ if (!missingFailure) fail("Restored work step without a matching tool result was
 assertForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step timeline verified offline: durable plans, titles, grouping, spacing, terminating connectors, working states, restoration, reload, suppression, and semantic ANSI colors.",
+	"Pi work-step timeline verified offline: durable thinking activities and results, tool summaries, grouping, spacing, terminating connectors, working states, restoration, reload, suppression, and semantic ANSI colors.",
 );
 NODE
 
