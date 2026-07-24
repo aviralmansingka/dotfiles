@@ -495,6 +495,7 @@ function failPendingSteps(state: RendererState): void {
   state.pending.clear();
   state.assembling = undefined;
   state.currentGroup = undefined;
+  state.currentRun = undefined;
 }
 
 function scanPersistedSession(state: RendererState, entries: any[]): void {
