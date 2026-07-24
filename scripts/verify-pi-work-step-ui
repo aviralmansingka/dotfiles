@@ -1,24 +1,247 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 verify_dir="$(mktemp -d)"
 trap 'rm -rf "$verify_dir"' EXIT
 
-raw_output="$verify_dir/pi.raw"
-plain_output="$verify_dir/pi.txt"
-export PI_VERIFY_PROMPT='Inspect pi/.pi/agent/settings.json and pi/.pi/agent/mcp.json using two concurrent read calls. Do not write a visible preamble before the tool calls. After both calls finish, reply only: Done.'
-export PI_VERIFY_MODEL="${PI_VERIFY_MODEL:-openai-codex/gpt-5.4-mini}"
-export PI_VERIFY_OUTPUT="$raw_output"
+agent_dir="$verify_dir/agent"
+main_raw="$verify_dir/main.raw"
+missing_raw="$verify_dir/missing.raw"
+session_file="$verify_dir/session.jsonl"
+missing_session="$verify_dir/missing-session.jsonl"
+
+mkdir -p "$agent_dir/extensions"
+printf '%s\n' '{"theme":"gruvbox-material"}' > "$agent_dir/settings.json"
+ln -s "$repo_root/scripts/fixtures/pi-work-step-ui-provider.ts" "$agent_dir/extensions/00-provider.ts"
+ln -s "$repo_root/pi/.pi/agent/extensions/tool-call-renderer.ts" "$agent_dir/extensions/10-renderer.ts"
+
+export PI_VERIFY_AGENT_DIR="$agent_dir"
+export PI_VERIFY_MAIN_RAW="$main_raw"
+export PI_VERIFY_MISSING_RAW="$missing_raw"
+export PI_VERIFY_SESSION="$session_file"
+export PI_VERIFY_MISSING_SESSION="$missing_session"
+export PI_VERIFY_THEME="$repo_root/pi/.pi/agent/themes/gruvbox-material.json"
 
 expect <<'EXPECT'
+set timeout 20
+log_user 0
+log_file -a -noappend $env(PI_VERIFY_MAIN_RAW)
+spawn env PI_CODING_AGENT_DIR=$env(PI_VERIFY_AGENT_DIR) pi --offline --approve --no-context-files --no-skills --theme $env(PI_VERIFY_THEME) --session $env(PI_VERIFY_SESSION) --model pi-work-step-ui-verify/faux-work-step
+expect "faux-work-step"
+send -- "plain assistant\r"
+expect "NON_TOOL_RENDERING_SENTINEL"
+after 300
+send -- "same-name success\r"
+expect "VERIFY_SAME_NAME_DONE"
+after 300
+send -- "mixed-name failure\r"
+expect "VERIFY_MIXED_NAME_DONE"
+after 300
+send -- "restoration source\r"
+expect "VERIFY_RESTORE_SOURCE_DONE"
+after 300
+send -- "/reload\r"
+expect "Reloaded keybindings"
+after 300
+send -- "after reload\r"
+expect "VERIFY_AFTER_RELOAD_DONE"
+after 300
+send -- "/quit\r"
+expect eof
+EXPECT
+
+perl -ne 'print; exit if /"role":"assistant"/ && /"id":"verify-missing-result"/' \
+	"$session_file" > "$missing_session"
+
+expect <<'EXPECT'
+set timeout 20
+log_user 0
+log_file -a -noappend $env(PI_VERIFY_MISSING_RAW)
+spawn env PI_CODING_AGENT_DIR=$env(PI_VERIFY_AGENT_DIR) pi --offline --approve --no-context-files --no-skills --theme $env(PI_VERIFY_THEME) --session $env(PI_VERIFY_MISSING_SESSION) --model pi-work-step-ui-verify/faux-work-step
+expect "1 call"
+after 100
+send -- "/quit\r"
+expect eof
+EXPECT
+
+node - "$main_raw" "$missing_raw" <<'NODE'
+const fs = require("node:fs");
+
+const [mainPath, missingPath] = process.argv.slice(2);
+const spinner = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
+const textForeground = "rgb:235,219,178";
+
+function fail(message) {
+	console.error(message);
+	process.exit(1);
+}
+
+function parseTerminal(path) {
+	const raw = fs.readFileSync(path, "utf8");
+	let plain = "";
+	const foregrounds = [];
+	let foreground = "default";
+
+	const append = (value) => {
+		for (const character of value) {
+			plain += character;
+			for (let index = 0; index < character.length; index++) foregrounds.push(foreground);
+		}
+	};
+
+	const applySgr = (parameters) => {
+		const values = parameters === "" ? [0] : parameters.split(";").map((value) => Number(value || 0));
+		for (let index = 0; index < values.length; index++) {
+			const value = values[index];
+			if (value === 0 || value === 39) foreground = "default";
+			else if ((value >= 30 && value <= 37) || (value >= 90 && value <= 97))
+				foreground = `basic:${value}`;
+			else if (value === 38 && values[index + 1] === 2) {
+				foreground = `rgb:${values[index + 2]},${values[index + 3]},${values[index + 4]}`;
+				index += 4;
+			} else if (value === 38 && values[index + 1] === 5) {
+				foreground = `indexed:${values[index + 2]}`;
+				index += 2;
+			}
+		}
+	};
+
+	for (let index = 0; index < raw.length; ) {
+		if (raw[index] !== "\u001b") {
+			append(raw[index++]);
+			continue;
+		}
+		if (raw[index + 1] === "]") {
+			const bell = raw.indexOf("\u0007", index + 2);
+			const stringTerminator = raw.indexOf("\u001b\\", index + 2);
+			const ends = [bell, stringTerminator].filter((value) => value >= 0);
+			if (ends.length === 0) break;
+			const end = Math.min(...ends);
+			index = end + (end === bell ? 1 : 2);
+			continue;
+		}
+		if (raw[index + 1] === "[") {
+			let end = index + 2;
+			while (end < raw.length && !(raw.charCodeAt(end) >= 0x40 && raw.charCodeAt(end) <= 0x7e)) end++;
+			if (end >= raw.length) break;
+			if (raw[end] === "m") applySgr(raw.slice(index + 2, end));
+			index = end + 1;
+			continue;
+		}
+		index += 2;
+	}
+
+	return { plain, foregrounds };
+}
+
+function escapeRegExp(value) {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function rowsFor(terminal, summary) {
+	const pattern = new RegExp(
+		`([✓!${spinner}]) ([^\\r\\n]+)\\r*\\n  (${escapeRegExp(summary)})`,
+		"gu",
+	);
+	return Array.from(terminal.plain.matchAll(pattern), (match) => ({
+		glyph: match[1],
+		title: match[2],
+		summary: match[3],
+		glyphIndex: match.index,
+		titleIndex: match.index + match[1].length + 1,
+		summaryIndex: match.index + match[0].lastIndexOf(match[3]),
+	}));
+}
+
+function requireTerminalRow(terminal, summary, glyph, expectedTitle) {
+	const row = rowsFor(terminal, summary).find(
+		(candidate) => candidate.glyph === glyph && (!expectedTitle || candidate.title === expectedTitle),
+	);
+	if (!row) fail(`Missing ${glyph} work step: ${expectedTitle ?? "<synthesized>"} / ${summary}`);
+	return row;
+}
+
+function assertForeground(terminal, row) {
+	const indexes = [
+		row.glyphIndex,
+		...Array.from({ length: row.title.length }, (_, index) => row.titleIndex + index).filter(
+			(index) => !/\s/u.test(terminal.plain[index]),
+		),
+		...Array.from({ length: row.summary.length }, (_, index) => row.summaryIndex + index).filter(
+			(index) => !/\s/u.test(terminal.plain[index]),
+		),
+	];
+	const colors = new Set(indexes.map((index) => terminal.foregrounds[index]));
+	if (colors.size !== 1 || !colors.has(textForeground))
+		fail(
+			`Expected glyph, title, and summary foreground ${textForeground}; got ${Array.from(colors).join(", ")}`,
+		);
+}
+
+function assertNoLaterSpinner(terminal, summary, terminalGlyph) {
+	const rows = rowsFor(terminal, summary);
+	const terminalIndex = rows.findIndex((row) => row.glyph === terminalGlyph);
+	if (terminalIndex < 0) fail(`Missing terminal ${terminalGlyph} row for ${summary}`);
+	const laterSpinner = rows.slice(terminalIndex + 1).find((row) => spinner.includes(row.glyph));
+	if (laterSpinner) fail(`Completed work step returned to spinner state: ${summary}`);
+}
+
+const main = parseTerminal(mainPath);
+const missing = parseTerminal(missingPath);
+
+if (!main.plain.includes("NON_TOOL_RENDERING_SENTINEL"))
+	fail("Non-tool assistant rendering changed or disappeared");
+
+for (const sentinel of [
+	"NOISY_ARGUMENT_SENTINEL",
+	"NOISY_PARTIAL_SENTINEL",
+	"NOISY_RESULT_SENTINEL",
+	"NOISY_ERROR_SENTINEL",
+	"NOISY_CALL_RENDERER_SENTINEL",
+	"NOISY_RESULT_RENDERER_SENTINEL",
+]) {
+	if (main.plain.includes(sentinel)) fail(`Leaked individual custom-tool content: ${sentinel}`);
+}
+
+const sameSummary = "2 calls · noisy_verify_tool ×2";
+const mixedSummary = "2 calls · noisy_verify_tool ×1 · read ×1";
+const restoreSummary = "1 call · noisy_verify_tool ×1";
+
+const same = requireTerminalRow(main, sameSummary, "✓", "Inspect configuration");
+const mixed = requireTerminalRow(main, mixedSummary, "!", undefined);
+if (mixed.title === "Working" || !mixed.title.includes("noisy_verify_tool") || !mixed.title.includes("read"))
+	fail(`Expected a synthesized mixed-tool title, got: ${mixed.title}`);
+const restoredSource = requireTerminalRow(main, restoreSummary, "✓", "Restore missing result");
+const afterReload = requireTerminalRow(main, restoreSummary, "✓", "Verify after reload");
+
+for (const row of [same, mixed, restoredSource, afterReload]) assertForeground(main, row);
+assertNoLaterSpinner(main, sameSummary, "✓");
+assertNoLaterSpinner(main, mixedSummary, "!");
+
+const missingRows = rowsFor(missing, restoreSummary).filter((row) => row.title === "Restore missing result");
+if (missingRows.length === 0) fail("Missing restored work step was not rendered");
+if (missingRows.some((row) => row.glyph === "✓"))
+	fail("Restored work step without a matching tool result was rendered as successful");
+const missingFailure = missingRows.find((row) => row.glyph === "!");
+if (!missingFailure) fail("Restored work step without a matching tool result was not marked failed");
+assertForeground(missing, missingFailure);
+
+console.log(
+	"Pi work-step UI verified offline: titles, sanitization, fallback, grouping, terminal states, restoration, reload, suppression, and ANSI foreground.",
+);
+NODE
+
+if [[ "${PI_VERIFY_LIVE:-0}" == "1" ]]; then
+	live_raw="$verify_dir/live.raw"
+	export PI_VERIFY_LIVE_RAW="$live_raw"
+	export PI_VERIFY_MODEL="${PI_VERIFY_MODEL:-openai-codex/gpt-5.4-mini}"
+	export PI_VERIFY_PROMPT='Inspect pi/.pi/agent/settings.json and pi/.pi/agent/mcp.json using two concurrent read calls. After both calls finish, reply only: Done.'
+	expect <<'EXPECT'
 set timeout 90
 log_user 0
-log_file -a -noappend $env(PI_VERIFY_OUTPUT)
+log_file -a -noappend $env(PI_VERIFY_LIVE_RAW)
 spawn pi --offline --no-session --model $env(PI_VERIFY_MODEL) $env(PI_VERIFY_PROMPT)
-expect {
-  -re {2 calls} {}
-  timeout { exit 124 }
-}
 expect {
   -re {✓ [^\r\n]+} {}
   timeout { exit 124 }
@@ -26,13 +249,5 @@ expect {
 close
 wait
 EXPECT
-
-perl -pe 's/\e\][^\a]*(?:\a|\e\\)//g; s/\e\[[0-9;?]*[ -\/]*[@-~]//g; s/\r//g' "$raw_output" > "$plain_output"
-
-if ! rg -U --pcre2 '✓ (?!Working)[^\n]+\n  2 calls · read ×2' "$plain_output" >/dev/null; then
-	tail -80 "$plain_output"
-	echo "Expected a completed, non-Working work step with two grouped read calls." >&2
-	exit 1
+	echo "Pi live-model smoke test passed with $PI_VERIFY_MODEL."
 fi
-
-echo "Pi work-step UI verified: thinking-derived title, completion mark, and grouped tool counts."
