@@ -287,7 +287,6 @@ function renderThinkingActivities(
     return [
       ` ${glyph} ${theme.fg("text", update.title)}`,
       ` ${theme.fg("borderMuted", "└─")} ${thinkingSummary(theme, update)}`,
-      "",
     ];
   });
 }
@@ -300,6 +299,7 @@ function renderPlan(theme: Theme, run: ActivityRun): string[] {
   return [
     ` ${theme.fg("accent", theme.bold("Plan"))}  ${theme.fg("muted", `${updates.length} recent thinking ${updates.length === 1 ? "block" : "blocks"}`)}`,
     ...renderThinkingActivities(theme, updates),
+    "",
   ];
 }
 
