@@ -449,7 +449,7 @@ local function validate_sidekick_herdr()
     unbound_labels[item.label] = true
     ordered_statuses[#ordered_statuses + 1] = item.status
   end
-  assert_sequence(ordered_statuses, { "blocked", "done", "working", "idle", "idle" }, "cwd picker Herdr status order")
+  assert_sequence(ordered_statuses, { "working", "blocked", "done", "idle", "idle" }, "cwd picker Herdr status order")
   if not unbound_labels["pi-other-workspace"] or unbound_labels["pi-workspace-only"] then
     fail("unbound cwd picker should retain cwd/repository filtering: " .. vim.inspect(local_items))
   end
@@ -470,16 +470,34 @@ local function validate_sidekick_herdr()
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
 
-  local global_items = require("plugins.sidekick.picker").list_items()
+  local original_herdr_call = herdr.call
+  herdr.call = function(args, quiet)
+    if args[1] == "workspace" and args[2] == "list" then
+      return {
+        workspaces = {
+          { workspace_id = "w1", label = "Workspace One" },
+          { workspace_id = "w2", label = "Workspace Two" },
+        },
+      }
+    end
+    return original_herdr_call(args, quiet)
+  end
+  local global_picker = require("plugins.sidekick.picker")
+  local global_items = global_picker.list_items()
   local global_blocked
+  local global_other_workspace
   for _, item in ipairs(global_items) do
     if item.label == "pi-blocked" then
       global_blocked = item
-      break
+    elseif item.label == "pi-other-workspace" then
+      global_other_workspace = item
     end
   end
   if not global_blocked or global_blocked.status ~= "blocked" then
     fail("global picker should expose Herdr status: " .. vim.inspect(global_items))
+  end
+  if not global_other_workspace or global_other_workspace.workspace_label ~= "Workspace Two" then
+    fail("global picker should label every session with its workspace: " .. vim.inspect(global_items))
   end
 
   local original_pick = Snacks.picker.pick
@@ -500,8 +518,8 @@ local function validate_sidekick_herdr()
     read_args = { target = target, source = source, lines = lines, ansi = ansi }
     return read_result
   end
-  internal.toggle_tool_session = function(name, focus)
-    toggles[#toggles + 1] = { name = name, focus = focus }
+  internal.toggle_tool_session = function(name, focus, terminal_id)
+    toggles[#toggles + 1] = { name = name, focus = focus, terminal_id = terminal_id }
   end
 
   local picker_ok, picker_err = xpcall(function()
@@ -515,12 +533,14 @@ local function validate_sidekick_herdr()
     local layout = picker_opts.layout.layout
     if layout.box ~= "vertical"
       or layout[1].win ~= "preview"
-      or layout[2].win ~= "list"
-      or layout[2].height ~= 5
-      or layout[3].win ~= "input"
-      or layout[3].height ~= 1
+      or layout[2].win ~= "input"
+      or layout[2].height ~= 1
+      or layout[3].win ~= "list"
+      or layout[3].height ~= 5
+      or layout.width ~= math.max(math.floor(vim.o.columns * config.cli.win.float.width), 80) + 2
+      or layout.height ~= math.max(math.floor(vim.o.lines * config.cli.win.float.height), 10) + 2
     then
-      fail("cwd picker should give the preview the full picker width above the compact session list")
+      fail("cwd picker should match the bordered agent float around its preview, input, and compact session list")
     end
     if not picker_opts.win.preview.wo.wrap or not picker_opts.win.preview.wo.linebreak then
       fail("cwd picker preview should wrap unwrapped logical lines")
@@ -707,6 +727,49 @@ local function validate_sidekick_herdr()
       fail("<c-.> should reopen the session selected with <leader>al: " .. vim.inspect(toggles))
     end
 
+    global_picker.open()
+    if picker_opts.title ~= "Sidekick Sessions in All Workspaces" then
+      fail("global picker should use the shared session picker UI: " .. vim.inspect(picker_opts.title))
+    end
+    local remote_item
+    for _, item in ipairs(picker_opts.items) do
+      if item.label == "pi-other-workspace" then
+        remote_item = item
+        break
+      end
+    end
+    local rendered = {}
+    for _, chunk in ipairs(picker_opts.format(remote_item)) do
+      rendered[#rendered + 1] = chunk[1]
+    end
+    if not table.concat(rendered):find("[Workspace Two]", 1, true) then
+      fail("global picker row should show the session workspace in brackets: " .. vim.inspect(rendered))
+    end
+    local workspaces_module = "plugins.herdr.workspaces"
+    local original_workspaces = package.loaded[workspaces_module]
+    local focused_workspace
+    package.loaded[workspaces_module] = {
+      focus = function(workspace_id)
+        focused_workspace = workspace_id
+        return true
+      end,
+    }
+    vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w1")
+    local toggles_before_global = #toggles
+    picker_opts.confirm({ close = function() end }, remote_item)
+    package.loaded[workspaces_module] = original_workspaces
+    if focused_workspace ~= "w2" then
+      fail("global picker should transfer to the selected session workspace: " .. vim.inspect(focused_workspace))
+    end
+    local global_toggle = toggles[toggles_before_global + 1]
+    if
+      not global_toggle
+      or global_toggle.name ~= "pi-other-workspace"
+      or global_toggle.terminal_id ~= "term-6"
+    then
+      fail("global picker should open the exact selected session after transferring: " .. vim.inspect(toggles))
+    end
+
     vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w1")
     vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_label", "Workspace One")
     cwd_picker.open()
@@ -735,6 +798,7 @@ local function validate_sidekick_herdr()
   Snacks.picker.pick = original_pick
   Snacks.util.spinner = original_spinner
   herdr.read = original_read
+  herdr.call = original_herdr_call
   internal.toggle_tool_session = original_toggle
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")

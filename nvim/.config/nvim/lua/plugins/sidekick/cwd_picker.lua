@@ -7,7 +7,7 @@ local branding = require("plugins.sidekick.branding")
 local herdr = require("plugins.sidekick.herdr")
 
 local M = {}
-local status_rank = { blocked = 1, done = 2, working = 3, idle = 4 }
+local status_rank = { working = 1, blocked = 2, done = 3, idle = 4 }
 local status_display = {
   blocked = { "!", "DiagnosticError" },
   done = { "●", "DiagnosticWarn" },
@@ -23,6 +23,17 @@ local function workspace_scope()
   end
   local label_ok, label = pcall(vim.api.nvim_tabpage_get_var, tab, "herdr_workspace_label")
   return workspace_id, label_ok and type(label) == "string" and label ~= "" and label or workspace_id
+end
+
+local function workspace_labels()
+  local result = herdr.call({ "workspace", "list" }, true)
+  local labels = {}
+  for _, workspace in ipairs(result and result.workspaces or {}) do
+    if workspace.workspace_id and workspace.label then
+      labels[workspace.workspace_id] = workspace.label
+    end
+  end
+  return labels
 end
 
 ---@param p string
@@ -145,9 +156,12 @@ local function preview_text(item)
   return output, "(agent read failed)"
 end
 
+---@param opts? { global?: boolean }
 ---@return snacks.picker.finder.Item[]
-function M.list_items()
-  local workspace_id = workspace_scope()
+function M.list_items(opts)
+  opts = opts or {}
+  local workspace_id = not opts.global and workspace_scope() or nil
+  local labels = opts.global and workspace_labels() or {}
   local root = normalize(vim.fn.getcwd())
   local root_repo = not workspace_id and git_common_dir(root) or nil
   local repo_cache = {}
@@ -172,13 +186,20 @@ function M.list_items()
   end
 
   for label, entry in pairs(registry.discover()) do
-    if is_local(entry) then
+    if opts.global or is_local(entry) then
       local cwd_display = entry.cwd or ""
       if home ~= "" and cwd_display:sub(1, #home) == home then
         cwd_display = "~" .. cwd_display:sub(#home + 1)
       end
+      local workspace_label = opts.global and (labels[entry.workspace_id] or entry.workspace_id or "unknown") or nil
       items[#items + 1] = {
-        text = string.format("%s  [%s]  %s", label, entry.status, cwd_display),
+        text = string.format(
+          "%s  [%s]%s  %s",
+          label,
+          entry.status,
+          workspace_label and ("  [" .. workspace_label .. "]") or "",
+          cwd_display
+        ),
         label = label,
         tool = entry.tool,
         slug = entry.slug,
@@ -189,6 +210,7 @@ function M.list_items()
         status = entry.status,
         cwd = entry.cwd,
         cwd_display = cwd_display,
+        workspace_label = workspace_label,
       }
     end
   end
@@ -217,18 +239,28 @@ function M.open(opts)
   opts = opts or {}
   registry.rehydrate()
   ensure_transparent_hl()
-  local workspace_id, workspace_label = workspace_scope()
-  local items = M.list_items()
+  local workspace_id, workspace_label
+  if not opts.global then
+    workspace_id, workspace_label = workspace_scope()
+  end
+  local items = M.list_items({ global = opts.global })
   local empty = #items == 0
   if empty then
     items = { {
-      text = workspace_id and "(no named sessions in workspace)" or "(no named sessions in cwd)",
+      text = opts.global and "(no named sessions)"
+        or workspace_id and "(no named sessions in workspace)"
+        or "(no named sessions in cwd)",
       _empty = true,
     } }
   end
   local has_working = vim.iter(items):any(function(item)
     return item.status == "working"
   end)
+  local agent_float = require("sidekick.config").cli.win.float
+  local picker_width =
+    math.max(agent_float.width <= 1 and math.floor(vim.o.columns * agent_float.width) or agent_float.width, 80) + 2
+  local picker_height =
+    math.max(agent_float.height <= 1 and math.floor(vim.o.lines * agent_float.height) or agent_float.height, 10) + 2
   local spinner_timer
   local reopening = false
 
@@ -261,6 +293,12 @@ function M.open(opts)
         { "[" .. (item.status or "unknown") .. "]", "Comment" },
       })
     end
+    if item.workspace_label then
+      vim.list_extend(chunks, {
+        { "  " },
+        { "[" .. item.workspace_label .. "]", "Comment" },
+      })
+    end
     vim.list_extend(chunks, {
       { "  " },
       { item.cwd_display or "", "Directory" },
@@ -270,7 +308,8 @@ function M.open(opts)
 
   return Snacks.picker.pick({
     source = "sidekick_cwd_peek",
-    title = workspace_id and ("Sidekick Sessions in Workspace: " .. workspace_label)
+    title = opts.global and "Sidekick Sessions in All Workspaces"
+      or workspace_id and ("Sidekick Sessions in Workspace: " .. workspace_label)
       or "Sidekick Sessions in Cwd",
     items = items,
     format = format_item,
@@ -298,15 +337,16 @@ function M.open(opts)
     end,
     layout = {
       preset = "default",
+      reverse = false,
       layout = {
         box = "vertical",
-        width = 0.8,
-        height = 0.8,
+        width = picker_width,
+        height = picker_height,
         border = "none",
         backdrop = false,
         { win = "preview", border = "rounded" },
-        { win = "list", height = 5, border = "rounded" },
         { win = "input", height = 1, border = "rounded" },
+        { win = "list", height = 5, border = "rounded" },
       },
     },
     preview = function(ctx)
@@ -329,6 +369,15 @@ function M.open(opts)
           opts.on_confirm(item)
         end
         picker:close()
+        local current_workspace_id = workspace_scope()
+        if
+          opts.global
+          and item.workspace_id
+          and item.workspace_id ~= current_workspace_id
+          and not require("plugins.herdr.workspaces").focus(item.workspace_id)
+        then
+          return
+        end
         require("plugins.sidekick.last_session").record(item.label, item.terminal_id)
         internal.toggle_tool_session(item.label, true, item.terminal_id)
       end

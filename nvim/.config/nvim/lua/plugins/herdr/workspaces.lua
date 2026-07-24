@@ -247,6 +247,19 @@ local function find_workspace(workspaces, workspace_id)
   end
 end
 
+function M.focus(workspace_id)
+  local workspaces = snapshot()
+  local workspace = workspaces and find_workspace(workspaces, workspace_id)
+  if not workspace then
+    if workspaces then
+      notify("workspace is no longer available", vim.log.levels.WARN)
+    end
+    return false
+  end
+  bind_tab(workspace, true)
+  return true
+end
+
 local function reopen(picker, preferred_id)
   picker:close()
   vim.schedule(function()
