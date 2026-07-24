@@ -42,4 +42,4 @@ Make every user-visible thinking/progress update report both its subject and its
 - `Title → Decision: concrete choice and brief reason`
 - A title line followed by `Outcome: ...` or `Decision: ...`
 
-Do not emit a sequence of titles that only describe what is being considered. If work is still underway, use `Outcome: pending` and replace it with the result once known. Keep each outcome concise and factual; never invent a decision before it has been made.
+Treat every thinking block as a visible activity that must end with its own concise result. Do not emit a sequence of titles that only describe what is being considered. If a block asks or investigates a question, finish that block with the answer, evidence, or decision before starting another activity. If a tool call is required to answer it, use `Outcome: pending`, then summarize the tool's answer in the next thinking activity. Never leave `Outcome: pending` when yielding a final answer, and never invent a result before it is known.
