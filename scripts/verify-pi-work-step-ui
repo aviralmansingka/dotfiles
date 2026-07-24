@@ -241,7 +241,7 @@ if [[ "${PI_VERIFY_LIVE:-0}" == "1" ]]; then
 set timeout 90
 log_user 0
 log_file -a -noappend $env(PI_VERIFY_LIVE_RAW)
-spawn pi --offline --no-session --model $env(PI_VERIFY_MODEL) $env(PI_VERIFY_PROMPT)
+spawn pi --offline --approve --no-session --model $env(PI_VERIFY_MODEL) $env(PI_VERIFY_PROMPT)
 expect {
   -re {✓ [^\r\n]+} {}
   timeout { exit 124 }
