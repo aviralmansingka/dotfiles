@@ -332,11 +332,15 @@ end
 local function format_item(item)
   local active = status_hl[item.status]
   local marker = active and "●" or "·"
+  local marker_text = marker .. " "
+  local cwd_start = #marker_text + #item.label + 2
   return {
-    { marker .. " ", active or "Comment" },
+    { marker_text, active or "Comment" },
     { item.label },
     { "  " },
     { item.cwd_display, "Comment" },
+    { col = 0, end_col = #marker_text, hl_group = active or "Comment", priority = 200 },
+    { col = cwd_start, end_col = cwd_start + #item.cwd_display, hl_group = "Comment", priority = 200 },
   }
 end
 
@@ -354,6 +358,11 @@ function M.open(preferred_id)
     end
   end
 
+  local cursor_group = "SnacksPickerListCursorLine"
+  local cursor_original = vim.api.nvim_get_hl(0, { name = cursor_group, link = true })
+  local cursor_resolved = vim.api.nvim_get_hl(0, { name = cursor_group, link = false })
+  vim.api.nvim_set_hl(0, cursor_group, { bg = cursor_resolved.bg or 0x45403d, bold = true })
+
   Snacks.picker.pick({
     source = "herdr_workspaces",
     title = "spaces",
@@ -363,12 +372,16 @@ function M.open(preferred_id)
     preview = false,
     layout = {
       preset = "select",
+      reverse = false,
       layout = {
-        height = math.min(math.max(#items + 1, 3), 12),
+        height = math.min(math.max(#items + 2, 4), 12),
         min_width = 60,
         max_width = 100,
       },
     },
+    on_close = function()
+      vim.api.nvim_set_hl(0, cursor_group, cursor_original)
+    end,
     on_show = function(picker)
       if #items > 0 then
         vim.schedule(function()

@@ -873,9 +873,11 @@ local function validate_herdr_workspaces()
       local chunks = second.format(item_by_id(second, id), {})
       local rendered = {}
       for _, chunk in ipairs(chunks) do
-        rendered[#rendered + 1] = chunk[1]
-        if chunk[1]:find(marker, 1, true) then
-          marker_highlights[id] = chunk[2]
+        if type(chunk[1]) == "string" then
+          rendered[#rendered + 1] = chunk[1]
+          if chunk[1]:find(marker, 1, true) then
+            marker_highlights[id] = chunk[2]
+          end
         end
       end
       if not table.concat(rendered):find(marker, 1, true) then
@@ -890,6 +892,18 @@ local function validate_herdr_workspaces()
     then
       fail("workspace markers should retain Herdr semantic status colors: " .. vim.inspect(marker_highlights))
     end
+    local selected_chunks = second.format(item_by_id(second, "w-done"), {})
+    local priority_marker, priority_cwd = false, false
+    for _, chunk in ipairs(selected_chunks) do
+      if chunk.hl_group == marker_highlights["w-done"] and chunk.priority == 200 then
+        priority_marker = true
+      elseif chunk.hl_group == "Comment" and chunk.priority == 200 then
+        priority_cwd = true
+      end
+    end
+    if not priority_marker or not priority_cwd then
+      fail("selected rows should preserve state and cwd colors: " .. vim.inspect(selected_chunks))
+    end
 
     if type(second.on_show) ~= "function" then
       fail("workspace picker should select Herdr's focused workspace on show")
@@ -900,10 +914,12 @@ local function validate_herdr_workspaces()
       return shown.selected_target ~= nil
     end, 5)
     eq(shown.selected_target, 2, "Herdr focused workspace initial selection")
-    if second.title ~= "spaces" or second.preview ~= false then
-      fail("workspace picker should be titled spaces with no preview: " .. vim.inspect(second))
+    if second.title ~= "spaces" or second.preview ~= false or type(second.on_close) ~= "function" then
+      fail("workspace picker should be titled spaces, have no preview, and restore picker highlights: " .. vim.inspect(second))
     end
-
+    if second.layout.reverse ~= false or second.layout.layout.height < #second.items + 2 then
+      fail("workspace picker should render Herdr order top-down without clipping rows: " .. vim.inspect(second.layout))
+    end
     local initial_tab = vim.api.nvim_get_current_tabpage()
     local initial_tab_count = #vim.api.nvim_list_tabpages()
     first.confirm(fake_picker(item_by_id(first, "w-idle")), item_by_id(first, "w-idle"))
