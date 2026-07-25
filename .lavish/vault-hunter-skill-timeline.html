@@ -160,10 +160,11 @@
       margin-inline: auto;
     }
     .vh-herdr-panel {
-      position: relative;
       height: 100%;
       overflow: hidden;
       background: var(--tui-bg);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
     }
     .vh-herdr-title {
       display: flex;
@@ -180,65 +181,54 @@
       content: "";
       background: var(--tui-border);
     }
+    .vh-herdr-grid {
+      display: grid;
+      min-height: 0;
+      grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr);
+      border-block: 1px solid var(--tui-border);
+    }
+    .vh-herdr-column {
+      min-width: 0;
+      overflow: hidden;
+    }
+    .vh-herdr-column + .vh-herdr-column {
+      border-left: 1px solid var(--tui-border);
+    }
+    .vh-herdr-column-title {
+      padding: .25rem .55rem;
+      border-bottom: 1px solid var(--tui-border);
+      color: var(--tui-yellow);
+      font-weight: 700;
+      text-align: center;
+    }
     .vh-herdr-row {
       display: grid;
       grid-template-columns: 1rem minmax(0, 1fr) auto;
       align-items: center;
       gap: .35rem;
-      padding: .22rem .65rem;
-      outline: none;
+      padding: .14rem .55rem;
     }
-    .vh-herdr-row:hover,
-    .vh-herdr-row:focus-visible {
+    .vh-herdr-row.active {
       background: #3c3836;
       color: #fff5d6;
     }
-    .vh-herdr-task { cursor: default; }
-    .vh-herdr-journey {
-      margin: .35rem .65rem 0 2.35rem;
-      padding: .55rem .65rem;
-      border: 1px solid #665c54;
-      background: #1d2021;
-      opacity: 0;
-      transform: translateY(-.25rem);
-      transition: opacity 120ms ease, transform 120ms ease;
-      visibility: hidden;
+    .vh-herdr-journey-row {
+      grid-template-columns: 1rem minmax(0, 1fr);
     }
-    .vh-herdr-panel:has(.vh-herdr-task:hover) .vh-herdr-journey,
-    .vh-herdr-panel:has(.vh-herdr-task:focus-visible) .vh-herdr-journey {
-      opacity: 1;
-      transform: none;
-      visibility: visible;
+    .vh-herdr-goal {
+      margin: .35rem .55rem;
+      padding: .35rem .45rem;
+      border: 1px solid #3f6471;
+      background: #172a35;
+      color: #d8ecf2;
     }
-    .vh-herdr-journey-head,
-    .vh-herdr-journey-foot {
+    .vh-herdr-footer {
       display: flex;
-      align-items: center;
       justify-content: space-between;
       gap: .75rem;
-    }
-    .vh-herdr-path {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: .3rem;
-      margin-block: .5rem;
-    }
-    .vh-herdr-stage {
-      overflow: hidden;
-      padding: .22rem .3rem;
-      border: 1px solid var(--tui-border);
+      padding: .25rem .55rem;
       color: var(--tui-dim);
-      text-align: center;
-      text-overflow: ellipsis;
       white-space: nowrap;
-    }
-    .vh-herdr-stage.done { border-color: #6d7d61; color: var(--tui-aqua); }
-    .vh-herdr-stage.active { border-color: #4f7d91; background: #172a35; color: #d8ecf2; }
-    .vh-herdr-hint {
-      position: absolute;
-      right: .65rem;
-      bottom: .5rem;
-      color: var(--tui-dim);
     }
     .vh-prototype-variant[hidden] { display: none !important; }
     .vh-proto-switcher {
@@ -264,9 +254,9 @@
       .vh-tui-top { align-items: flex-start; flex-direction: column; gap: .1rem; white-space: normal; }
       .vh-tui-goal { grid-template-columns: 1fr; }
       .vh-tui-goal-outside { border-top: 1px solid #3f6471; border-left: 0; padding-top: .45rem; padding-left: 0; }
-      .vh-herdr-path { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .vh-herdr-journey-head,
-      .vh-herdr-journey-foot { align-items: flex-start; flex-direction: column; gap: .15rem; }
+      .vh-herdr-grid { grid-template-columns: 1fr; }
+      .vh-herdr-column + .vh-herdr-column { border-top: 1px solid var(--tui-border); border-left: 0; }
+      .vh-herdr-footer { white-space: normal; }
     }
     @media (prefers-reduced-motion: reduce) {
       .vh-motion-on .vh-vim-cursor,
@@ -540,57 +530,50 @@
       <div class="mt-7 vh-prototype-variant" data-prototype-variant="D" hidden>
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 class="text-xl font-bold">D — Herdr Workspace Journey</h3>
-            <p class="mt-1 text-sm text-base-content/60">Target: the lower-left workspace pane's character capacity, independent of font size or display scale.</p>
+            <h3 class="text-xl font-bold">D — Vault Hunter Atlas</h3>
+            <p class="mt-1 text-sm text-base-content/60">Replacement for the bottom-right active-agent panel. The workspace tree on the left remains unchanged.</p>
           </div>
           <span class="badge badge-soft badge-success">78 columns × 17 rows</span>
         </div>
         <div class="vh-tui vh-herdr-frame">
           <div class="vh-herdr-panel">
-            <div class="vh-herdr-title"><span>Workspaces</span></div>
-            <div class="vh-herdr-row">
-              <span class="vh-tui-muted">▾</span>
-              <span><span class="vh-tui-done">vault</span> <span class="vh-tui-muted">· ● 0</span></span>
-              <span></span>
+            <div class="vh-herdr-title"><span>Vault Hunter Atlas · Headless Verification</span></div>
+            <div class="vh-herdr-grid">
+              <section class="vh-herdr-column" aria-label="Goal timeline">
+                <div class="vh-herdr-column-title">GOALS</div>
+                <div class="vh-herdr-row"><span class="vh-tui-good">●</span><span>vault checkpoint</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-good">●</span><span>V01 registry</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-good">●</span><span>V02 read-only</span><span></span></div>
+                <div class="vh-herdr-row active"><span class="vh-tui-working">›</span><span><span class="vh-tui-spinner" aria-label="working">◌</span>V03 evidence</span><span>3/5</span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>V04 cleanup</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>V05 terminal QA</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>refactor</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>review</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>PR · landing</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>workspace cleanup</span><span></span></div>
+              </section>
+              <section class="vh-herdr-column" aria-label="Selected verifier journey">
+                <div class="vh-herdr-column-title">V03 · VERIFIER JOURNEY</div>
+                <div class="vh-herdr-row vh-herdr-journey-row"><span class="vh-tui-good">●</span><span>baseline red proven</span></div>
+                <div class="vh-herdr-row vh-herdr-journey-row"><span class="vh-tui-good">●</span><span>verifier configured</span></div>
+                <div class="vh-herdr-row vh-herdr-journey-row active"><span class="vh-tui-working">›</span><span><span class="vh-tui-spinner" aria-label="working">◌</span>code + verifier iteration</span></div>
+                <div class="vh-herdr-row vh-herdr-journey-row"><span class="vh-tui-muted">·</span><span>active suite green</span></div>
+                <div class="vh-herdr-row vh-herdr-journey-row"><span class="vh-tui-muted">·</span><span>evidence saved</span></div>
+                <div class="vh-herdr-goal">
+                  <span class="vh-tui-purple">/goal active</span> · <span data-motion-status>V03 RED</span><br>
+                  <strong>Make failure evidence green</strong><br>
+                  <span class="vh-tui-muted">next: diagnostics_count + raw_error</span>
+                </div>
+              </section>
             </div>
-            <div class="vh-herdr-row">
-              <span class="vh-tui-muted">▾</span>
-              <span><span class="vh-tui-done">Neovim · Headless Verification</span> <span class="vh-tui-muted">· ● 0</span></span>
-              <span></span>
+            <div class="vh-herdr-footer">
+              <span><b>j/k</b> goal · <b>enter</b> expand</span>
+              <span>V03 · iteration 2</span>
             </div>
-            <div class="vh-herdr-row vh-herdr-task" tabindex="0" aria-describedby="vh-herdr-journey">
-              <span class="vh-tui-muted">└─</span>
-              <span><span class="vh-tui-good">codex-vault-hunter-skill</span> <span class="vh-tui-muted">· 38s · 11.4%</span></span>
-              <span class="vh-tui-working">›</span>
-            </div>
-
-            <section id="vh-herdr-journey" class="vh-herdr-journey" aria-label="Vault Hunter journey preview">
-              <div class="vh-herdr-journey-head">
-                <strong>T11 · Implement Vault Hunter TUI</strong>
-                <span class="vh-tui-working">› verifier 3/5</span>
-              </div>
-              <div class="vh-herdr-path" aria-label="Journey stages">
-                <span class="vh-herdr-stage done">● vault</span>
-                <span class="vh-herdr-stage done">● V01–02</span>
-                <span class="vh-herdr-stage active"><span class="vh-tui-spinner" aria-label="working">◌</span>V03</span>
-                <span class="vh-herdr-stage">· V04–05</span>
-                <span class="vh-herdr-stage">· refactor</span>
-                <span class="vh-herdr-stage">· review</span>
-                <span class="vh-herdr-stage">· PR</span>
-                <span class="vh-herdr-stage">· landing</span>
-                <span class="vh-herdr-stage">· cleanup</span>
-              </div>
-              <div class="vh-herdr-journey-foot">
-                <span><span class="vh-tui-purple">/goal</span> <span data-motion-status>V03 RED</span> · deterministic transition capture</span>
-                <span class="vh-tui-muted">baseline red · current red</span>
-              </div>
-            </section>
-
-            <div class="vh-herdr-hint">hover/focus task · Enter opens full run</div>
           </div>
         </div>
         <div class="mt-3 alert alert-soft alert-info">
-          <span>The journey card appears only while the task row is hovered or keyboard-focused. It stays inside the existing pane; the full Operations Board remains available after Enter.</span>
+          <span>The selected task in the unchanged workspace tree drives this panel. The left column moves across goals; the right column explains exactly where the selected verifier is in its red-to-green journey.</span>
         </div>
       </div>
 
@@ -754,7 +737,7 @@
 
       const variants = [
         { key: "A", name: "Operations Board" },
-        { key: "D", name: "Herdr Workspace Journey" },
+        { key: "D", name: "Vault Hunter Atlas" },
         { key: "B", name: "Picker + Preview" },
         { key: "C", name: "Execution Journal" },
       ];

@@ -30,6 +30,12 @@ _Avoid_: workspace
 The skill that routes a Vault Feature, Vault Task, or Wayfinder effort into its appropriate planning or execution flow.
 _Avoid_: vault skill
 
+**Vault Hunter Atlas**:
+The two-column Herdr view that replaces the bottom-right active-agent panel for a selected Vault Hunter task. Its left
+column shows the Task Goal Timeline; its right column shows the selected Verifier Cycle's progress from baseline red
+through active green. The bottom-left workspace tree remains unchanged and drives the Atlas selection.
+_Avoid_: Goal Inspector, workspace journey
+
 **Feature Run**:
 A Vault Hunter run that refines a Vault Feature into an ordered, verifier-backed task plan and stops before task implementation.
 _Avoid_: feature execution

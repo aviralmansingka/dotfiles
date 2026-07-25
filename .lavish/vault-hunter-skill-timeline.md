@@ -102,9 +102,9 @@ What should a read-only Vault Hunter TUI emphasize while a human inspects the sa
 Four reference variants are included in the Lavish artifact and switch with `?variant=A`, `D`, `B`, or `C`:
 
 - **A — Operations Board:** phase rail, active verifier ledger, and evidence pane.
-- **D — Herdr Workspace Journey:** a 78-column × 17-row workspace-pane view; hover or keyboard-focus a task to
-  reveal its compact journey card, and press Enter to open the full run. Its dimensions use terminal cells rather
-  than screenshot pixels.
+- **D — Vault Hunter Atlas:** a 78-column × 17-row replacement for Herdr's bottom-right active-agent panel. Its
+  left column shows the selected task's goal timeline; its right column shows where the selected verifier goal is in
+  its baseline-red-to-active-green journey. The bottom-left workspace tree remains unchanged and drives the selection.
 - **B — Picker + Preview:** a Snacks-style preview, compact run list, and fuzzy input.
 - **C — Execution Journal:** a chronological stream optimized for understanding how the run reached its current state.
 
