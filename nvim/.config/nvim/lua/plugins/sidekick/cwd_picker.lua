@@ -14,6 +14,8 @@ local session_paths = {}
 local static_spinner = "⠋"
 local spinner_refresh_ms = 80
 local preview_debounce_ms = 400
+local preview_settle_ms = 16
+local full_preview_lines = 2147483647 -- Herdr clamps this to the available scrollback.
 local workspace_ns = vim.api.nvim_create_namespace("sidekick_workspace_picker")
 local status_rank = { working = 1, blocked = 2, done = 3, idle = 4 }
 local status_display = {
@@ -337,11 +339,11 @@ local function scrub_preview_output(item, output)
   return output
 end
 
-local function preview_text(item)
+local function preview_text(item, lines)
   if not item or item._empty or not item.agent_name then
     return nil, "(no session)"
   end
-  local output = scrub_preview_output(item, herdr.read(item.agent_name, "recent-unwrapped", 120, true))
+  local output = scrub_preview_output(item, herdr.read(item.agent_name, "recent-unwrapped", lines, true))
   return output, "(agent read failed)"
 end
 
@@ -530,27 +532,6 @@ local function workspace_agent_chunks(item, last)
   return chunks
 end
 
-local function preview_selected(buf, item)
-  if not item or item._empty then
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "(no session)" })
-    return
-  end
-  if item._workspace then
-    return
-  end
-  local output, err = preview_text(item)
-  if output then
-    vim.api.nvim_chan_send(vim.api.nvim_open_term(buf, {}), output)
-  else
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { err })
-  end
-end
-
-local function preview_item(ctx)
-  preview_selected(ctx.preview:scratch(), ctx.item)
-  return true
-end
-
 -- A transparent highlight so the picker windows let the terminal bg show
 -- through instead of painting Normal/NormalFloat over it.
 local function ensure_picker_hl()
@@ -591,6 +572,10 @@ function M.open(opts)
   local pending_workspace_item
   local workspace_active = false
   local preview_loading = false
+  local displayed_preview_item
+  local expanded_preview_item
+  local loading_full_preview_item
+  local pending_preview_scroll
   local refreshed_preview_item
   local refreshed_preview_output
   local reopening = false
@@ -671,6 +656,16 @@ function M.open(opts)
     vim.api.nvim_win_set_cursor(workspace_win.win, { math.min(cursor[1], #lines), 0 })
   end
 
+  local function preview_line_limit(preview)
+    local win = preview and preview.win or picker and picker.preview.win
+    if win and win:win_valid() then
+      return math.max(vim.api.nvim_win_get_height(win.win) * 2, 1)
+    end
+    return math.max(vim.o.lines * 2, 1)
+  end
+
+  local show_preview
+
   local render_workspace_preview = Snacks.util.debounce(function()
     if not picker or picker.closed or not workspace_win:valid() then
       return
@@ -683,7 +678,7 @@ function M.open(opts)
       and item == workspace_rows[vim.api.nvim_win_get_cursor(workspace_win.win)[1]]
     then
       rendered_workspace_item = item
-      preview_selected(picker.preview:scratch(), item)
+      show_preview(item)
     end
   end, { ms = preview_debounce_ms })
 
@@ -708,7 +703,7 @@ function M.open(opts)
     return workspace_active and rendered_workspace_item or picker:current()
   end
 
-  local function prepare_preview_buffer(output)
+  local function prepare_preview_buffer(output, fallback)
     local buf = vim.api.nvim_create_buf(false, true)
     vim.bo[buf].bufhidden = "wipe"
     vim.bo[buf].filetype = "snacks_picker_preview"
@@ -734,18 +729,14 @@ function M.open(opts)
       local channel = vim.api.nvim_open_term(buf, {})
       vim.api.nvim_chan_send(channel, output)
     else
-      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "(agent read failed)" })
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { fallback or "(agent read failed)" })
     end
     return buf, staging_win
   end
 
-  local function preview_buffer_ready(buf, rendered)
-    if rendered == "" then
-      return true
-    end
-    return vim.iter(vim.api.nvim_buf_get_lines(buf, 0, -1, false)):any(function(line)
-      return line ~= ""
-    end)
+  local function preview_buffer_ready(buf, previous_tick)
+    local tick = vim.api.nvim_buf_get_changedtick(buf)
+    return tick == previous_tick, tick
   end
 
   local function discard_preview_buffer(buf, staging_win)
@@ -757,15 +748,16 @@ function M.open(opts)
     end
   end
 
-  local function swap_preview_buffer(buf, staging_win, item, rendered)
+  local function swap_preview_buffer(buf, staging_win, item, rendered, on_swap, previous_tick)
     if not picker or picker.closed or item ~= current_preview_item() then
       discard_preview_buffer(buf, staging_win)
       return
     end
-    if not preview_buffer_ready(buf, rendered) then
+    local ready, tick = preview_buffer_ready(buf, previous_tick)
+    if not ready then
       vim.defer_fn(function()
-        swap_preview_buffer(buf, staging_win, item, rendered)
-      end, 1)
+        swap_preview_buffer(buf, staging_win, item, rendered, on_swap, tick)
+      end, preview_settle_ms)
       return
     end
     picker.preview:set_buf(buf)
@@ -776,18 +768,41 @@ function M.open(opts)
     picker.preview:minimal()
     refreshed_preview_item = item
     refreshed_preview_output = rendered
+    if on_swap then
+      on_swap()
+    end
+  end
+
+  show_preview = function(item, preview)
+    if item == displayed_preview_item and item == expanded_preview_item then
+      return
+    end
+    if item ~= displayed_preview_item then
+      displayed_preview_item = item
+      expanded_preview_item = nil
+      pending_preview_scroll = nil
+    end
+    local output, err = preview_text(item, preview_line_limit(preview))
+    local rendered = output or err
+    local buf, staging_win = prepare_preview_buffer(output, err)
+    vim.schedule(function()
+      swap_preview_buffer(buf, staging_win, item, rendered)
+    end)
   end
 
   local function refresh_preview()
     local item = current_preview_item()
-    if preview_loading or not item or item.status ~= "working" then
+    if preview_loading or not item or item.status ~= "working" or item == expanded_preview_item then
       return
     end
 
     preview_loading = true
-    herdr.read_async(item.agent_name, "recent-unwrapped", 120, true, function(output)
+    herdr.read_async(item.agent_name, "recent-unwrapped", preview_line_limit(), true, function(output)
       preview_loading = false
       if not picker or picker.closed or item ~= current_preview_item() then
+        return
+      end
+      if item == expanded_preview_item then
         return
       end
       output = scrub_preview_output(item, output)
@@ -799,6 +814,59 @@ function M.open(opts)
       local buf, staging_win = prepare_preview_buffer(output)
       vim.schedule(function()
         swap_preview_buffer(buf, staging_win, item, rendered)
+      end)
+    end)
+  end
+
+  local function scroll_preview_window(up, from_bottom)
+    local win = picker.preview.win.win
+    local view = vim.api.nvim_win_call(win, function()
+      return vim.fn.winsaveview()
+    end)
+    local step = math.max(vim.wo[win].scroll, 1)
+    local last_topline =
+      math.max(vim.api.nvim_buf_line_count(picker.preview.win.buf) - vim.api.nvim_win_get_height(win) + 1, 1)
+    if from_bottom then
+      view.topline = last_topline
+    end
+    view.topline = math.max(1, math.min(view.topline + (up and -step or step), last_topline))
+    vim.api.nvim_win_call(win, function()
+      vim.fn.winrestview(view)
+    end)
+  end
+
+  local function scroll_preview(up)
+    local item = current_preview_item()
+    if not item or item._empty or item._workspace then
+      return
+    end
+    if item == expanded_preview_item and item ~= loading_full_preview_item then
+      scroll_preview_window(up)
+      return
+    end
+    expanded_preview_item = item
+    pending_preview_scroll = up
+    if item == loading_full_preview_item then
+      return
+    end
+
+    loading_full_preview_item = item
+    herdr.read_async(item.agent_name, "recent-unwrapped", full_preview_lines, true, function(output)
+      if loading_full_preview_item == item then
+        loading_full_preview_item = nil
+      end
+      if not picker or picker.closed or item ~= current_preview_item() or item ~= expanded_preview_item then
+        return
+      end
+      output = scrub_preview_output(item, output)
+      local rendered = output or "(agent read failed)"
+      local buf, staging_win = prepare_preview_buffer(output)
+      vim.schedule(function()
+        swap_preview_buffer(buf, staging_win, item, rendered, function()
+          local direction = pending_preview_scroll
+          pending_preview_scroll = nil
+          scroll_preview_window(direction, true)
+        end)
       end)
     end)
   end
@@ -888,6 +956,8 @@ function M.open(opts)
       ["<c-w>"] = focus_input,
       ["<c-u>"] = clear_input,
       ["<c-x>"] = workspace_delete,
+      ["<c-b>"] = function() scroll_preview(true) end,
+      ["<c-f>"] = function() scroll_preview(false) end,
       ["<esc>"] = focus_input,
     },
   })
@@ -944,7 +1014,10 @@ function M.open(opts)
         },
       },
     },
-    preview = preview_item,
+    preview = function(ctx)
+      show_preview(ctx.item, ctx.preview)
+      return true
+    end,
     confirm = function(active_picker, item)
       if not item or item._empty then
         active_picker:close()
@@ -1006,6 +1079,8 @@ function M.open(opts)
             mode = { "n", "i" },
           },
           ["<c-u>"] = { clear_input, mode = { "n", "i" } },
+          ["<c-b>"] = { "sidekick_preview_scroll_up", mode = { "n", "i" } },
+          ["<c-f>"] = { "sidekick_preview_scroll_down", mode = { "n", "i" } },
           ["<c-r>"] = { "sidekick_rename_session", mode = { "n", "i" } },
           ["<c-x>"] = { "sidekick_kill_session", mode = { "n", "i" } },
         },
@@ -1017,15 +1092,27 @@ function M.open(opts)
             workspace_win:focus()
           end,
           ["<c-u>"] = clear_input,
+          ["<c-b>"] = "sidekick_preview_scroll_up",
+          ["<c-f>"] = "sidekick_preview_scroll_down",
           ["<c-r>"] = { "sidekick_rename_session", mode = { "n" } },
           ["<c-x>"] = { "sidekick_kill_session", mode = { "n" } },
         },
       },
       preview = {
         wo = { winhighlight = winhl, wrap = true, linebreak = true },
+        keys = {
+          ["<c-b>"] = "sidekick_preview_scroll_up",
+          ["<c-f>"] = "sidekick_preview_scroll_down",
+        },
       },
     },
     actions = {
+      sidekick_preview_scroll_up = function()
+        scroll_preview(true)
+      end,
+      sidekick_preview_scroll_down = function()
+        scroll_preview(false)
+      end,
       sidekick_rename_session = function(active_picker, item)
         if not item or item._empty or not item.agent_name or not item.tool then
           return

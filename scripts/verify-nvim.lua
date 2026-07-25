@@ -527,6 +527,7 @@ local function validate_sidekick_herdr()
   local async_reads = 0
   local async_inflight = 0
   local max_async_inflight = 0
+  local async_read_args = {}
   local focused = {}
   local toggles = {}
   Snacks.picker.pick = function(opts)
@@ -537,6 +538,10 @@ local function validate_sidekick_herdr()
   end
   herdr.read = function(target, source, lines, ansi)
     if source == "visible" then
+      if ansi then
+        read_args = { target = target, source = source, lines = lines, ansi = ansi }
+        return read_result
+      end
       if target == "pi-working" then
         return "42.5%/272k\n• Working (5s • esc to interrupt)\n51% context left"
       end
@@ -548,8 +553,14 @@ local function validate_sidekick_herdr()
     read_args = { target = target, source = source, lines = lines, ansi = ansi }
     return read_result
   end
-  herdr.read_async = function(_, _, _, _, callback)
+  herdr.read_async = function(target, source, lines, ansi, callback)
     async_reads = async_reads + 1
+    async_read_args[#async_read_args + 1] = {
+      target = target,
+      source = source,
+      lines = lines,
+      ansi = ansi,
+    }
     async_inflight = async_inflight + 1
     max_async_inflight = math.max(max_async_inflight, async_inflight)
     vim.defer_fn(function()
@@ -637,8 +648,16 @@ local function validate_sidekick_herdr()
       or not picker_opts.layout.wins.workspace.opts.keys["<c-w>"]
       or not picker_opts.layout.wins.workspace.opts.keys["<c-u>"]
       or not picker_opts.layout.wins.workspace.opts.keys["<c-x>"]
+      or not picker_opts.layout.wins.workspace.opts.keys["<c-b>"]
+      or not picker_opts.layout.wins.workspace.opts.keys["<c-f>"]
+      or picker_opts.win.input.keys["<c-b>"][1] ~= "sidekick_preview_scroll_up"
+      or picker_opts.win.input.keys["<c-f>"][1] ~= "sidekick_preview_scroll_down"
+      or picker_opts.win.list.keys["<c-b>"] ~= "sidekick_preview_scroll_up"
+      or picker_opts.win.list.keys["<c-f>"] ~= "sidekick_preview_scroll_down"
+      or picker_opts.win.preview.keys["<c-b>"] ~= "sidekick_preview_scroll_up"
+      or picker_opts.win.preview.keys["<c-f>"] ~= "sidekick_preview_scroll_down"
     then
-      fail("cwd picker should switch panes, clear input, and delete workspace agents from the workspace pane")
+      fail("cwd picker should expose pane, input, delete, and preview-scroll mappings")
     end
 
     local rename_picker_opts = picker_opts
@@ -670,10 +689,11 @@ local function validate_sidekick_herdr()
     local spinner_updates = 0
     local preview_swaps = 0
     local live_preview_buf = vim.api.nvim_create_buf(false, true)
+    local current_fake_item = picker_opts.items[1]
     local fake_picker = {
       closed = false,
       current = function()
-        return picker_opts.items[1]
+        return current_fake_item
       end,
       input = {
         win = {
@@ -685,17 +705,19 @@ local function validate_sidekick_herdr()
           buf = live_preview_buf,
           win = vim.api.nvim_get_current_win(),
           map = function() end,
+          on = function() end,
           win_valid = function() return true end,
         },
         set_buf = function(self, buf)
           local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-          if lines[1] ~= "first logical line" or lines[2] ~= "" or lines[3] ~= "second logical line" then
+          if lines[1] == "first logical line" and (lines[2] ~= "" or lines[3] ~= "second logical line") then
             fail(
               "working-session preview should trim terminal padding without removing intentional blank lines: "
                 .. vim.inspect(lines)
             )
           end
           preview_swaps = preview_swaps + 1
+          vim.bo[buf].bufhidden = "hide"
           self.win.buf = buf
         end,
         minimal = function() end,
@@ -721,8 +743,38 @@ local function validate_sidekick_herdr()
     if async_reads < 2 or max_async_inflight ~= 1 then
       fail("working-session preview should poll at 80ms with only one read in flight")
     end
+    if
+      not async_read_args[1]
+      or async_read_args[1].source ~= "recent-unwrapped"
+      or async_read_args[1].lines ~= vim.api.nvim_win_get_height(fake_picker.preview.win.win) * 2
+    then
+      fail("working-session preview should request twice the visible preview height: " .. vim.inspect(async_read_args))
+    end
     if preview_swaps ~= 1 then
       fail("unchanged working-session content should swap the prepared preview only once")
+    end
+    current_fake_item = vim.tbl_extend("force", {}, current_fake_item, {
+      agent_name = "codex-full-preview",
+      tool = "codex",
+    })
+    picker_opts.actions.sidekick_preview_scroll_down()
+    vim.wait(500, function()
+      local last_read = async_read_args[#async_read_args]
+      return last_read and last_read.lines == 2147483647
+    end, 10)
+    local full_read = async_read_args[#async_read_args]
+    if not full_read
+      or full_read.target ~= "codex-full-preview"
+      or full_read.source ~= "recent-unwrapped"
+      or full_read.lines ~= 2147483647
+      or full_read.ansi ~= true
+    then
+      fail("<c-f> should load all available Codex scrollback before scrolling: " .. vim.inspect(async_read_args))
+    end
+    local reads_after_expansion = async_reads
+    picker_opts.actions.sidekick_preview_scroll_up()
+    if async_reads ~= reads_after_expansion then
+      fail("<c-b> should reuse the loaded full Codex preview")
     end
     fake_picker.closed = true
     picker_opts.on_close(fake_picker)
@@ -745,18 +797,30 @@ local function validate_sidekick_herdr()
         break
       end
     end
-    local buf = vim.api.nvim_create_buf(false, true)
-    picker_opts.preview({
-      item = done_item,
-      preview = { scratch = function() return buf end },
-    })
+    fake_picker.closed = false
+    local function render_preview(item)
+      current_fake_item = item
+      local previous_buf = fake_picker.preview.win.buf
+      local previous_swaps = preview_swaps
+      picker_opts.preview({ item = item, preview = fake_picker.preview })
+      if fake_picker.preview.win.buf ~= previous_buf then
+        fail("hover preview should keep the current buffer visible while its replacement renders")
+      end
+      vim.wait(1000, function() return preview_swaps > previous_swaps end, 10)
+      if preview_swaps ~= previous_swaps + 1 then
+        fail("hover preview should swap its completed staging buffer exactly once")
+      end
+      return fake_picker.preview.win.buf
+    end
+
+    local buf = render_preview(done_item)
     if not read_args
       or read_args.target ~= "pi-done"
       or read_args.source ~= "recent-unwrapped"
-      or read_args.lines ~= 120
+      or read_args.lines ~= vim.api.nvim_win_get_height(fake_picker.preview.win.win) * 2
       or read_args.ansi ~= true
     then
-      fail("cwd picker should request bounded unwrapped ANSI text: " .. vim.inspect(read_args))
+      fail("cwd picker hover should request twice the visible ANSI preview height: " .. vim.inspect(read_args))
     end
     if vim.bo[buf].buftype ~= "terminal" then
       fail("cwd picker should render Herdr ANSI through a native terminal buffer")
@@ -786,15 +850,7 @@ local function validate_sidekick_herdr()
       tool = "codex",
       agent_name = "codex-preview",
     })
-    local codex_buf = vim.api.nvim_create_buf(false, true)
-    picker_opts.preview({
-      item = codex_item,
-      preview = { scratch = function() return codex_buf end },
-    })
-    vim.wait(1000, function()
-      return table.concat(vim.api.nvim_buf_get_lines(codex_buf, 0, -1, false), "\n"):find("answer stays", 1, true)
-        ~= nil
-    end, 10)
+    local codex_buf = render_preview(codex_item)
     local codex_preview = table.concat(vim.api.nvim_buf_get_lines(codex_buf, 0, -1, false), "\n")
     if
       codex_preview:find("Working", 1, true)
@@ -807,15 +863,7 @@ local function validate_sidekick_herdr()
       fail("Codex prompt scrubbing should preserve prior output: " .. vim.inspect(codex_preview))
     end
 
-    local pi_buf = vim.api.nvim_create_buf(false, true)
-    picker_opts.preview({
-      item = done_item,
-      preview = { scratch = function() return pi_buf end },
-    })
-    vim.wait(1000, function()
-      return table.concat(vim.api.nvim_buf_get_lines(pi_buf, 0, -1, false), "\n"):find("Find and fix", 1, true)
-        ~= nil
-    end, 10)
+    local pi_buf = render_preview(done_item)
     local pi_preview = table.concat(vim.api.nvim_buf_get_lines(pi_buf, 0, -1, false), "\n")
     if not pi_preview:find("Find and fix", 1, true) or not pi_preview:find("gpt-5 footer", 1, true) then
       fail("non-Codex previews should retain identical output: " .. vim.inspect(pi_preview))
@@ -833,15 +881,7 @@ local function validate_sidekick_herdr()
       "\27[38;2;102;102;102m$0.000 (sub) 0.0%/272k (auto)  (openai-codex) gpt-5.5 • high\27[0m",
       "\27[38;2;138;190;183mMCP: 0/3 servers\27[0m",
     }, "\r\n")
-    local pi_scrub_buf = vim.api.nvim_create_buf(false, true)
-    picker_opts.preview({
-      item = done_item,
-      preview = { scratch = function() return pi_scrub_buf end },
-    })
-    vim.wait(1000, function()
-      return table.concat(vim.api.nvim_buf_get_lines(pi_scrub_buf, 0, -1, false), "\n"):find("Pi answer stays", 1, true)
-        ~= nil
-    end, 10)
+    local pi_scrub_buf = render_preview(done_item)
     local pi_scrubbed = table.concat(vim.api.nvim_buf_get_lines(pi_scrub_buf, 0, -1, false), "\n")
     if pi_scrubbed:find("Working", 1, true)
       or pi_scrubbed:find("~/vault", 1, true)
@@ -854,11 +894,7 @@ local function validate_sidekick_herdr()
     end
 
     read_result = nil
-    local failed_buf = vim.api.nvim_create_buf(false, true)
-    picker_opts.preview({
-      item = done_item,
-      preview = { scratch = function() return failed_buf end },
-    })
+    local failed_buf = render_preview(done_item)
     local failed_preview = vim.api.nvim_buf_get_lines(failed_buf, 0, -1, false)
     if failed_preview[1] ~= "(agent read failed)" then
       fail("failed Herdr read should leave a readable preview error: " .. vim.inspect(failed_preview))
