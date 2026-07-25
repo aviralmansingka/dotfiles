@@ -30,6 +30,51 @@ func NewLiveState(participants []runregistry.Participant) *LiveState {
 	return live
 }
 
+func CurrentParticipants(participants []runregistry.Participant) []runregistry.Participant {
+	seen := make(map[string]struct{}, len(participants))
+	current := make([]runregistry.Participant, 0, len(participants))
+	for index := len(participants) - 1; index >= 0; index-- {
+		participant := participants[index]
+		key := participant.Role + "\x00" + participant.GoalID
+		if _, replaced := seen[key]; replaced {
+			continue
+		}
+		seen[key] = struct{}{}
+		current = append(current, participant)
+	}
+	for left, right := 0, len(current)-1; left < right; left, right = left+1, right-1 {
+		current[left], current[right] = current[right], current[left]
+	}
+	return current
+}
+
+func (l *LiveState) ReconcileParticipants(participants []runregistry.Participant) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	next := make(map[string]liveParticipant, len(participants))
+	for _, participant := range participants {
+		if current, ok := l.participants[participant.PaneID]; ok {
+			next[participant.PaneID] = current
+		} else {
+			next[participant.PaneID] = liveParticipant{
+				snapshot: AgentSnapshot{PaneID: participant.PaneID, Status: "unknown"},
+			}
+		}
+	}
+	l.participants = next
+}
+
+func (l *LiveState) MarkParticipantStale(paneID string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	participant, ok := l.participants[paneID]
+	if !ok {
+		return
+	}
+	participant.stale = true
+	l.participants[paneID] = participant
+}
+
 func (l *LiveState) Refresh(snapshot AgentSnapshot) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

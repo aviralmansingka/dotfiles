@@ -40,6 +40,10 @@ func (t *Transition) Toggle() {
 	t.playing = !t.playing
 }
 
+func (t *Transition) Stop() {
+	t.playing = false
+}
+
 func (t *Transition) Advance() Frame {
 	if t.playing {
 		t.index = (t.index + 1) % len(frames)

@@ -78,12 +78,27 @@ func runRender(args []string, stdout io.Writer) error {
 			return err
 		}
 		selectedParticipant = &participant
-		live = atlas.NewLiveState(selectedRun.Participants)
+		participants := atlas.CurrentParticipants(selectedRun.Participants)
+		selectedIsCurrent := false
+		for _, current := range participants {
+			if current == participant {
+				selectedIsCurrent = true
+				break
+			}
+		}
+		if !selectedIsCurrent {
+			return fmt.Errorf("selected participant has been replaced")
+		}
+		live = atlas.NewLiveState(participants)
 		client := herdrsocket.Client{SocketPath: *socket}
-		for _, participant := range selectedRun.Participants {
+		for _, participant := range participants {
 			snapshot, err := client.Snapshot(context.Background(), participant.PaneID)
 			if err != nil {
-				return err
+				if participant == *selectedParticipant {
+					return err
+				}
+				live.MarkParticipantStale(participant.PaneID)
+				continue
 			}
 			live.Refresh(snapshot)
 		}
@@ -146,12 +161,7 @@ func runInteractive(args []string, stdin io.Reader, stdout io.Writer) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	live := atlas.NewLiveState(run.Participants)
-	reconciler := atlas.NewReconciler(
-		herdrsocket.Client{SocketPath: *socket},
-		live,
-		run.Participants,
-	)
+	live := atlas.NewLiveState(atlas.CurrentParticipants(run.Participants))
 	program := tea.NewProgram(
 		atlas.NewLiveUIModel(run, live),
 		tea.WithContext(ctx),
@@ -161,9 +171,7 @@ func runInteractive(args []string, stdin io.Reader, stdout io.Writer) error {
 	)
 	liveErrors := make(chan error, 1)
 	go func() {
-		err := reconciler.Run(ctx, func() {
-			program.Send(struct{}{})
-		})
+		err := reconcileInteractive(ctx, *stateDir, run, *socket, live, program)
 		liveErrors <- err
 		if err != nil {
 			program.Quit()
@@ -185,6 +193,68 @@ func runInteractive(args []string, stdin io.Reader, stdout io.Writer) error {
 	return nil
 }
 
+func reconcileInteractive(
+	ctx context.Context,
+	stateDir string,
+	run runregistry.Run,
+	socket string,
+	live *atlas.LiveState,
+	program *tea.Program,
+) error {
+	store := runregistry.NewStore(stateDir, nil)
+	for {
+		participants := atlas.CurrentParticipants(run.Participants)
+		live.ReconcileParticipants(participants)
+		reconcileCtx, cancel := context.WithCancel(ctx)
+		done := make(chan error, 1)
+		reconciler := atlas.NewReconciler(
+			herdrsocket.Client{SocketPath: socket},
+			live,
+			participants,
+		)
+		go func() {
+			done <- reconciler.Run(reconcileCtx, func() {
+				program.Send(struct{}{})
+			})
+		}()
+		ticker := time.NewTicker(50 * time.Millisecond)
+		restart := false
+		for !restart {
+			select {
+			case <-ctx.Done():
+				ticker.Stop()
+				cancel()
+				<-done
+				return nil
+			case err := <-done:
+				ticker.Stop()
+				cancel()
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
+				return err
+			case <-ticker.C:
+				updated, err := store.Read(run.RunID)
+				if err != nil {
+					ticker.Stop()
+					cancel()
+					<-done
+					return err
+				}
+				if updated.Revision <= run.Revision {
+					continue
+				}
+				ticker.Stop()
+				cancel()
+				<-done
+				run = updated
+				program.Send(atlas.RunUpdatedMsg{Run: run})
+				restart = true
+			}
+		}
+	}
+}
+
 func waitForRun(stateDir, runID string) (runregistry.Run, error) {
 	store := runregistry.NewStore(stateDir, nil)
 	deadline := time.Now().Add(3 * time.Second)
@@ -204,14 +274,11 @@ func waitForRun(stateDir, runID string) (runregistry.Run, error) {
 }
 
 func defaultStateDir() string {
-	if stateHome := os.Getenv("XDG_STATE_HOME"); stateHome != "" {
-		return filepath.Join(stateHome, "vault-hunter")
-	}
-	home, err := os.UserHomeDir()
+	stateDir, err := runregistry.DefaultStateDir()
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(home, ".local", "state", "vault-hunter")
+	return stateDir
 }
 
 func defaultHerdrSocket() string {

@@ -15,6 +15,16 @@ type UIModel struct {
 	height     int
 }
 
+type RunUpdatedMsg struct {
+	Run Run
+}
+
+type transitionTickMsg struct{}
+
+func transitionTick() tea.Msg {
+	return transitionTickMsg{}
+}
+
 func NewUIModel(run Run) UIModel {
 	return NewLiveUIModel(run, nil)
 }
@@ -39,6 +49,21 @@ func (m UIModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = message.Width
 		m.height = message.Height
+	case RunUpdatedMsg:
+		selectedKey := m.selection.Key(m.run, m.selection.Selected())
+		m.run = message.Run
+		m.selection.Reconcile(message.Run, selectedKey)
+	case transitionTickMsg:
+		frame := m.transition.Advance()
+		updated, err := ApplyFrame(m.run, frame)
+		if err == nil {
+			m.run = updated
+		}
+		if frame == FrameGreen {
+			m.transition.Stop()
+			return m, nil
+		}
+		return m, transitionTick
 	case tea.KeyMsg:
 		switch message.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -55,6 +80,9 @@ func (m UIModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			case "p":
 				m.transition.Toggle()
+				if m.transition.Playing() {
+					return m, transitionTick
+				}
 			}
 		}
 	}
@@ -63,16 +91,32 @@ func (m UIModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m UIModel) View() string {
 	height := max(m.height-1, 1)
+	controls := "j/k select · Enter detail · p play"
+	if m.transition.Playing() {
+		controls = "j/k select · Enter detail · p pause"
+	}
+	detail := m.selection.Detail(m.run)
 	var output string
 	if m.height <= 17 {
-		output = RenderCompactLive(m.run, m.live, m.width, height)
+		var participant *Participant
+		if m.live != nil {
+			participant = activeParticipant(m.run)
+		}
+		output = renderCompactDetail(m.run, participant, m.live, detail, controls, m.width, height)
 	} else {
-		output = RenderExpandedLive(m.run, m.live, m.width, height)
+		output = renderExpandedDetail(m.run, m.live, detail, controls, m.width, height)
 	}
-	index := m.selection.Selected()
-	if index < 0 || index >= len(m.run.Goals) {
+	index := m.selection.Cursor()
+	if m.selection.Committed() {
+		index = m.selection.Selected()
+	}
+	label := m.selection.Label(m.run, index)
+	if label == "" {
 		return output
 	}
-	goal := m.run.Goals[index]
-	return output + "\n" + truncate(fmt.Sprintf("selected: %s %s", goal.ID, goal.Label), m.width)
+	state := "cursor"
+	if m.selection.Committed() {
+		state = "selected"
+	}
+	return output + "\n" + truncate(fmt.Sprintf("▌ %s: %s", state, label), m.width)
 }
