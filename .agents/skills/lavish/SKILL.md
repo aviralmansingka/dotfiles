@@ -9,11 +9,15 @@ metadata:
     category: productivity
 ---
 
-# Lavish Editor
+# Lavish
 
-Lavish Editor helps agents turn rich HTML artifacts into collaborative human review surfaces. Whenever you are about to give user a complex response that will be easier to understand via a rich / interactive page, consider using Lavish Editor. First generate an interactive HTML artifact according to user request, then use `~/dotfiles/scripts/lavish-homelab` so the homelab hosts the review session and the user can annotate elements or selected text, queue prompts, and send feedback back to the agent.
+Lavish turns complex responses into rich HTML artifacts. Start with the artifact itself: generate the page, host it on
+the homelab, and give the user the plain rendered page without editor chrome. Open the collaborative Lavish Editor,
+annotation panel, feedback poll, and review lifecycle only when the user explicitly asks to annotate, review
+interactively, or send feedback from the page.
 
-Use the local `npx -y lavish-axi` command only for read-only helpers such as `playbook` and `design`. Use the homelab wrapper for the review lifecycle even when remote Lavish output shows a bare `lavish-axi` follow-up command.
+Use the local `npx -y lavish-axi` command only for read-only helpers such as `playbook` and `design`. Use the homelab
+wrapper for both plain artifacts and opt-in review sessions.
 
 ## Request
 
@@ -28,23 +32,31 @@ Use lavish-axi when the user asks for a visual artifact, HTML explainer, interac
 
 ## Workflow
 
-1. Create the HTML artifact (default location `.lavish/<markdown-stem>.html` in the working directory). When it comes from a Markdown file, give the HTML the same filename stem.
-2. Run `~/dotfiles/scripts/lavish-homelab open <html-file> --source-markdown <markdown-file>` to sync the artifact directory to the homelab and open or resume its review session. The wrapper returns a stable `alias_url` on port 443 and the direct `session_url` on port 8443. Share the `alias_url`; keep the session URL for direct access and diagnostics. If there is no source Markdown file, the alias defaults to the HTML filename. Use `--alias <name>` only to choose a clearer name or resolve a collision.
-3. Run `~/dotfiles/scripts/lavish-homelab poll <html-file>` to long-poll the homelab for the user's annotations, queued prompts, and browser-reported `layout_warnings`.
+1. Create the HTML artifact (default location `.lavish/<markdown-stem>.html` in the working directory). When it comes
+   from a Markdown file, give the HTML the same filename stem.
+2. Run `~/dotfiles/scripts/lavish-homelab render <html-file> --source-markdown <markdown-file>` to sync it and point
+   its stable alias at the plain rendered artifact. Share the returned `alias_url`. Stop here by default.
+3. Only for an explicitly requested collaborative review, run
+   `~/dotfiles/scripts/lavish-homelab review <html-file> --source-markdown <markdown-file>` to point the alias at the
+   Lavish Editor session, then run `~/dotfiles/scripts/lavish-homelab poll <html-file>` for annotations, queued
+   prompts, and browser-reported `layout_warnings`.
    The poll stays silent until the user acts or the real browser reports fresh layout warnings - leave it running, never kill it.
    If your harness limits how long a foreground command may run, run the poll as a background task; if it gets killed or times out anyway, just re-run it - queued feedback is never lost.
 4. If poll returns `layout_warnings`, follow the returned `next_step`: fix and re-check fresh error-severity findings, but proceed with a note instead of looping when every current warning is persistent or low-severity.
-5. Apply human feedback locally, then run `~/dotfiles/scripts/lavish-homelab poll <html-file> --agent-reply "<message>"`. The wrapper syncs the updated artifact before replying and waiting again.
-6. Run `~/dotfiles/scripts/lavish-homelab end <html-file>` when the review is finished.
-7. If the user ends the session from the browser instead, the wrapper refuses a plain reopen - only pass `--reopen` when the user asks for further review or something genuinely important needs their visual attention. Otherwise deliver remaining updates directly in this conversation.
+5. Apply human feedback locally, then run `~/dotfiles/scripts/lavish-homelab poll <html-file> --agent-reply "<message>"`.
+6. Run `~/dotfiles/scripts/lavish-homelab end <html-file>` when the interactive review is finished.
 
-## Homelab review
+## Homelab hosting
 
-- The homelab owns the artifact copy, Lavish session state, feedback API, and Tailscale Serve endpoint. Client devices only edit locally, sync through the wrapper, and poll over SSH.
-- Never run the review lifecycle with local `lavish-axi`, configure Tailscale Serve on the client, or fall back to a device URL without explicit user approval. If the homelab is unavailable, report that blocker and keep the artifact local until it returns.
-- Share the stable port-443 `alias_url`, never `/artifact/...`, a `file://` URL, or an exported HTML file. It redirects to the port-8443 session shell, which injects the annotation SDK and keeps the shell, iframe, event stream, and feedback API under one HTTPS origin, so selected-element comments do not require CORS.
+- The homelab owns the artifact copy, optional Lavish session state, and Tailscale Serve endpoint. Client devices edit
+  locally and sync through the wrapper.
+- Never configure Tailscale Serve on the client or fall back to a device URL without explicit user approval. If the
+  homelab is unavailable, report that blocker and keep the artifact local until it returns.
+- Share the stable port-443 `alias_url`. In default `render` mode it redirects directly to the artifact; in explicit
+  `review` mode it redirects to the editor shell.
 - Named aliases are collision-safe. The wrapper will never replace an existing port-443 route; if the Markdown-derived name is already owned, choose another explicit `--alias` or keep using that existing site as appropriate.
-- Keep every local asset beside the HTML file and use relative references. The wrapper syncs the entire containing directory to a device-and-path-scoped directory on the homelab before `open` and `poll`.
+- Keep every local asset beside the HTML file and use relative references. The wrapper syncs the entire containing
+  directory to a device-and-path-scoped directory on the homelab before `render`, `review`, and `poll`.
 
 ## Visual guidance
 
@@ -70,10 +82,13 @@ For flows, architecture, state, or sequence diagrams, do not hand-build boxes-an
 
 ## Commands & rules
 
-- Run `~/dotfiles/scripts/lavish-homelab open <html-file> --source-markdown <markdown-file>` to sync and open a Lavish Editor session on the homelab. Share the returned port-443 `alias_url`; the port-8443 `session_url` remains valid for that specific session. Omit `--source-markdown` when there is no source Markdown; the HTML stem becomes the alias
+- Run `~/dotfiles/scripts/lavish-homelab render <html-file> --source-markdown <markdown-file>` by default. It syncs
+  the artifact and returns a stable `alias_url` that opens the rendered HTML directly
+- Run `~/dotfiles/scripts/lavish-homelab review <html-file> --source-markdown <markdown-file>` only when the user
+  explicitly asks for the editor or annotation workflow. `open` remains a backward-compatible synonym for `review`
 - Unless the user specifies another location, create HTML artifacts in the current working directory under `.lavish/`
 - Lavish serves the html file through a local express.js server. If your html needs to reference other filesystem assets such as images, CSS, fonts, and local scripts, copy them into the same directory as the HTML file, then reference them with relative paths from that directory. Never prepend `/` to those asset paths - root paths won't work
-- Run `~/dotfiles/scripts/lavish-homelab poll <html-file>` to sync and wait for user feedback or browser-reported layout_warnings. It long-polls and stays silent until the user sends feedback, ends the session, or the real browser reports fresh layout_warnings, so leave it running - never kill it. Fix and re-check fresh error-severity layout_warnings before involving the human; if the poll says every current warning is persistent or low-severity, proceed with a note instead of looping. If your harness limits how long a foreground command may run, run the poll as a background task; if it gets killed or times out anyway, just re-run it - queued feedback is never lost. When it reports the session ended, stop polling and do not reopen it uninvited - deliver remaining updates in this conversation instead
+- Use `poll` only during an explicit interactive review. Plain rendered artifacts do not start a feedback poll
 - Run `~/dotfiles/scripts/lavish-homelab end <html-file>` to end a session as the agent - ending it this way still allows a plain reopen later. When the user ends it from the browser instead, pass `--reopen` only when reopening is warranted
 - Run `npx -y lavish-axi export <html-file> [--out <path>]` to write a portable copy of the artifact - one HTML file with its LOCAL assets inlined - so it opens with no Lavish server and no sibling files. Remote CDN/font references are left as links, so it needs network to render those. Users can also export from the browser chrome's overflow menu
 - Do not run `lavish-axi share` or publish to another host unless the user explicitly asks for external publishing; the default and canonical review host is the homelab

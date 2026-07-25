@@ -1,5 +1,5 @@
 [Unit]
-Description=Stable names for Lavish review sessions
+Description=Stable names for Lavish artifacts and review sessions
 After=network-online.target
 Wants=network-online.target
 
