@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -34,7 +33,7 @@ func main() {
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: vault-hunter-run ensure|participant|reconcile-workers|cleanup-workers|finish")
+		return fmt.Errorf("usage: vault-hunter-run ensure|participant|goal|verifier|reconcile-workers|cleanup-workers|finish")
 	}
 	stateDir, err := defaultStateDir()
 	if err != nil {
@@ -163,6 +162,44 @@ func run(ctx context.Context, args []string) error {
 			return err
 		}
 		return json.NewEncoder(os.Stdout).Encode(report)
+	case "goal":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: vault-hunter-run goal activate|block|complete")
+		}
+		flags := flag.NewFlagSet("goal "+args[1], flag.ContinueOnError)
+		flags.SetOutput(os.Stderr)
+		state := flags.String("state-dir", stateDir, "Vault Hunter state directory")
+		runID := flags.String("run-id", "", "active Task Run ID")
+		goalID := flags.String("goal-id", "", "Run goal")
+		evidence := flags.String("evidence", "", "accepted evidence summary")
+		if err := flags.Parse(args[2:]); err != nil {
+			return err
+		}
+		store := runregistry.NewStore(*state, nil)
+		switch args[1] {
+		case "activate":
+			return store.ActivateGoal(*runID, *goalID)
+		case "block":
+			return store.BlockGoal(*runID, *goalID)
+		case "complete":
+			return store.CompleteGoal(*runID, *goalID, *evidence)
+		default:
+			return fmt.Errorf("unknown goal command %q", args[1])
+		}
+	case "verifier":
+		if len(args) < 2 || args[1] != "set" {
+			return fmt.Errorf("usage: vault-hunter-run verifier set")
+		}
+		flags := flag.NewFlagSet("verifier set", flag.ContinueOnError)
+		flags.SetOutput(os.Stderr)
+		stateDirFlag := flags.String("state-dir", stateDir, "Vault Hunter state directory")
+		runID := flags.String("run-id", "", "active Task Run ID")
+		goalID := flags.String("goal-id", "", "verifier goal")
+		verifierState := flags.String("state", "", "pending, red, or green verifier state")
+		if err := flags.Parse(args[2:]); err != nil {
+			return err
+		}
+		return runregistry.NewStore(*stateDirFlag, nil).SetVerifier(*runID, *goalID, *verifierState)
 	case "finish":
 		flags := flag.NewFlagSet("finish", flag.ContinueOnError)
 		flags.SetOutput(os.Stderr)
@@ -184,7 +221,11 @@ func parseGoals(values []string) ([]runregistry.Goal, error) {
 		if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
 			return nil, fmt.Errorf("invalid --goal %q; want id=label=status", value)
 		}
-		goals = append(goals, runregistry.Goal{ID: parts[0], Label: parts[1], Status: parts[2]})
+		goal := runregistry.Goal{ID: parts[0], Label: parts[1], Status: parts[2]}
+		if isVerifierID(parts[0]) {
+			goal.Verifier = &runregistry.Verifier{State: "pending"}
+		}
+		goals = append(goals, goal)
 	}
 	if len(goals) == 0 {
 		return nil, fmt.Errorf("at least one --goal is required")
@@ -192,10 +233,18 @@ func parseGoals(values []string) ([]runregistry.Goal, error) {
 	return goals, nil
 }
 
-func defaultStateDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
+func isVerifierID(value string) bool {
+	if len(value) < 2 || value[0] != 'V' {
+		return false
 	}
-	return filepath.Join(home, ".local", "state", "vault-hunter"), nil
+	for _, character := range value[1:] {
+		if character < '0' || character > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func defaultStateDir() (string, error) {
+	return runregistry.DefaultStateDir()
 }

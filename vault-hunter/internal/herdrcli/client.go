@@ -3,6 +3,7 @@ package herdrcli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -71,6 +72,26 @@ func (c Client) WorkerTabs(ctx context.Context) ([]runregistry.WorkerTab, error)
 
 func (c Client) PaneExists(ctx context.Context, paneID string) bool {
 	return c.call(ctx, nil, "pane", "get", paneID) == nil
+}
+
+func (c Client) ProbePane(ctx context.Context, paneID string) (runregistry.PaneProbe, error) {
+	var result struct {
+		Pane struct {
+			PaneID string `json:"pane_id"`
+			TabID  string `json:"tab_id"`
+		} `json:"pane"`
+	}
+	if err := c.call(ctx, &result, "pane", "get", paneID); err != nil {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) && exitError.ExitCode() == 1 {
+			return runregistry.PaneProbe{}, nil
+		}
+		return runregistry.PaneProbe{}, err
+	}
+	if result.Pane.PaneID != paneID {
+		return runregistry.PaneProbe{}, fmt.Errorf("Herdr returned pane %q for %q", result.Pane.PaneID, paneID)
+	}
+	return runregistry.PaneProbe{Exists: true, TabID: result.Pane.TabID}, nil
 }
 
 func (c Client) CreateCompanion(

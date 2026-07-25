@@ -79,8 +79,9 @@ subagent is invalid and must be replaced before work begins.
 For each dispatched role:
 
 - Reuse the `Project · Feature` workspace and `feature/<feature-slug>` worktree. Never hardcode opaque IDs.
-- Name the Herdr agent `codex-<feature-slug>-<run-key>-<role>` and set
-  `SIDEKICK_NAMED_SESSION=<feature-slug>-<run-key>-<role>`, where `run-key` is the Task ID, `feature`, or Issue slug.
+- Name the Herdr agent `codex-<project-slug>-<feature-slug>-<run-key>-<role>` and set
+  `SIDEKICK_NAMED_SESSION=<project-slug>-<feature-slug>-<run-key>-<role>`, where `run-key` is the Task ID, `feature`, or
+  Issue slug.
 - Give it a distinct `<run label> · <role>` Herdr tab containing exactly one full Codex pane. Start the agent as that
   tab's only pane; do not precreate a blank root pane and then split a worker beside it. Verify `pane_count=1`.
 - Treat the Herdr wrapper as one named tuple: owning Feature workspace, distinct tab label, full Codex pane under the
@@ -103,10 +104,10 @@ For each dispatched role:
 Launch a separate role without precreating its tab, then rename the returned one-pane tab:
 
 ```sh
-herdr agent start "codex-$feature_slug-$run_key-$role" \
+herdr agent start "codex-$project_slug-$feature_slug-$run_key-$role" \
   --cwd "$feature_worktree" \
   --workspace "$workspace_id" \
-  --env "SIDEKICK_NAMED_SESSION=$feature_slug-$run_key-$role" \
+  --env "SIDEKICK_NAMED_SESSION=$project_slug-$feature_slug-$run_key-$role" \
   --no-focus \
   -- codex "$prompt"
 herdr tab rename "$returned_tab_id" "$run_label · $role"
@@ -227,6 +228,19 @@ In the primary Herdr-visible driver session, activate each stage below and dispa
 driver performs no stage work itself. Present the work as one continuous unnumbered timeline, not an ordinal goal
 queue. On resume, use the canonical Task note, Run Registry, Herdr state, and concise subagent handoffs to continue at
 the first unfinished stage.
+
+Drive every Registry transition explicitly:
+
+```sh
+vault-hunter-run goal activate --run-id "$run_id" --goal-id "$active_goal_id"
+vault-hunter-run verifier set --run-id "$run_id" --goal-id "$active_goal_id" --state red
+vault-hunter-run verifier set --run-id "$run_id" --goal-id "$active_goal_id" --state green
+vault-hunter-run goal complete --run-id "$run_id" --goal-id "$active_goal_id" --evidence "$accepted_summary"
+```
+
+Use `vault-hunter-run goal block` when outside action blocks the active goal, then `goal activate` to resume it. Never
+infer a transition from Herdr `done` or `idle`; accept evidence and complete the Registry goal before activating the
+next timeline stage.
 
 Write accepted handoff evidence into the local Task note as each stage settles. Keep the invocation backlog timeline
 synchronized, but keep detailed evidence only in the Task note. Push the vault only at the two named checkpoints.

@@ -65,16 +65,12 @@ func (s *Store) ReconcileWorkers(
 	herdr WorkerHerdr,
 ) (WorkerLifecycleReport, error) {
 	var report WorkerLifecycleReport
-	err := s.withRegistryLock(func() error {
-		run, err := s.Read(runID)
-		if err != nil {
-			return err
-		}
+	err := s.withRunLock(runID, func(run *Run) error {
 		tabs, err := herdr.WorkerTabs(ctx)
 		if err != nil {
 			return err
 		}
-		report = reconcileWorkers(ctx, run, tabs, herdr)
+		report = reconcileWorkers(ctx, *run, tabs, herdr)
 		return nil
 	})
 	return report, err
@@ -86,16 +82,12 @@ func (s *Store) CleanupWorkers(
 	herdr WorkerHerdr,
 ) (WorkerLifecycleReport, error) {
 	var report WorkerLifecycleReport
-	err := s.withRegistryLock(func() error {
-		run, err := s.Read(runID)
-		if err != nil {
-			return err
-		}
+	err := s.withRunLock(runID, func(run *Run) error {
 		tabs, err := herdr.WorkerTabs(ctx)
 		if err != nil {
 			return err
 		}
-		report = reconcileWorkers(ctx, run, tabs, herdr)
+		report = reconcileWorkers(ctx, *run, tabs, herdr)
 		for _, worker := range report.Workers {
 			if worker.State == "unexpected" {
 				return fmt.Errorf("worker %s ownership is unexpected", worker.Name)
@@ -107,9 +99,9 @@ func (s *Store) CleanupWorkers(
 				if err != nil {
 					return err
 				}
-				captured := findWorker(run, worker.TabID)
+				captured := findWorker(*run, worker.TabID)
 				if captured == nil ||
-					reconcileWorker(ctx, run, *captured, current, herdr) != "live" {
+					reconcileWorker(ctx, *run, *captured, current, herdr) != "live" {
 					return fmt.Errorf("worker %s ownership changed before cleanup", worker.Name)
 				}
 				if err := herdr.CloseTab(ctx, worker.TabID); err != nil {
@@ -132,7 +124,7 @@ func (s *Store) CleanupWorkers(
 		run.Participants = []Participant{run.Orchestrator}
 		run.Revision++
 		run.UpdatedAt = s.now().Format(time.RFC3339)
-		return s.write(run)
+		return s.write(*run)
 	})
 	return report, err
 }

@@ -6,17 +6,28 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 )
+
+const timeFormat = time.RFC3339
 
 type Herdr interface {
 	PaneExists(context.Context, string) bool
 	CreateCompanion(context.Context, string, string) (Companion, error)
 	ClosePane(context.Context, string) error
+}
+
+type PaneProbe struct {
+	Exists bool
+	TabID  string
+}
+
+type paneProber interface {
+	ProbePane(context.Context, string) (PaneProbe, error)
 }
 
 type Store struct {
@@ -43,8 +54,11 @@ func (s *Store) Ensure(ctx context.Context, options EnsureOptions) (Run, error) 
 	if options.Task.Path == "" || options.Orchestrator.PaneID == "" || len(options.Goals) == 0 {
 		return Run{}, fmt.Errorf("task path, orchestrator pane, and goals are required")
 	}
+	if err := validateOrchestrator(options.Task, options.Orchestrator); err != nil {
+		return Run{}, err
+	}
 	var result Run
-	err := s.withRegistryLock(func() error {
+	err := s.withTaskLock(options.Task.Path, func() error {
 		existing, found, err := s.findActive(options.Task.Path)
 		if err != nil {
 			return err
@@ -63,7 +77,11 @@ func (s *Store) resume(ctx context.Context, run Run, orchestrator Participant) (
 	changed := false
 	if run.Orchestrator != orchestrator {
 		if run.Orchestrator.PaneID != orchestrator.PaneID {
-			if s.herdr.PaneExists(ctx, run.Orchestrator.PaneID) {
+			probe, err := s.probePane(ctx, run.Orchestrator.PaneID)
+			if err != nil {
+				return Run{}, err
+			}
+			if probe.Exists {
 				return Run{}, fmt.Errorf("Task Run %s already has live orchestrator %s", run.RunID, run.Orchestrator.PaneID)
 			}
 		} else if !unchangedOrchestrator(run.Orchestrator, orchestrator) {
@@ -77,10 +95,28 @@ func (s *Store) resume(ctx context.Context, run Run, orchestrator Participant) (
 		}
 		changed = true
 	}
-	if run.Companion == nil || !s.herdr.PaneExists(ctx, run.Companion.PaneID) {
+	companionProbe := PaneProbe{}
+	if run.Companion != nil {
+		var err error
+		companionProbe, err = s.probePane(ctx, run.Companion.PaneID)
+		if err != nil {
+			return Run{}, fmt.Errorf("probe companion %s: %w", run.Companion.PaneID, err)
+		}
+		if companionProbe.Exists && !companionOwnershipMatches(run, companionProbe) {
+			return Run{}, fmt.Errorf("live companion ownership does not match Task Run %s", run.RunID)
+		}
+	}
+	if run.Companion == nil || !companionProbe.Exists {
 		companion, err := s.herdr.CreateCompanion(ctx, orchestrator.PaneID, run.RunID)
 		if err != nil {
 			return Run{}, err
+		}
+		if !companionOwnershipMatches(
+			Run{Orchestrator: orchestrator, Companion: &companion},
+			PaneProbe{Exists: true, TabID: companion.TabID},
+		) {
+			_ = s.herdr.ClosePane(ctx, companion.PaneID)
+			return Run{}, fmt.Errorf("created companion ownership does not match the orchestrator")
 		}
 		run.Companion = &companion
 		changed = true
@@ -111,6 +147,13 @@ func (s *Store) create(ctx context.Context, options EnsureOptions) (Run, error) 
 	if err != nil {
 		return Run{}, err
 	}
+	if participantName(options.Task, "orchestrator") != "" && !companionOwnershipMatches(
+		Run{Orchestrator: options.Orchestrator, Companion: &companion},
+		PaneProbe{Exists: true, TabID: companion.TabID},
+	) {
+		_ = s.herdr.ClosePane(ctx, companion.PaneID)
+		return Run{}, fmt.Errorf("created companion ownership does not match the orchestrator")
+	}
 	now := s.now().Format(time.RFC3339)
 	run := Run{
 		SchemaVersion: 1,
@@ -134,21 +177,21 @@ func (s *Store) create(ctx context.Context, options EnsureOptions) (Run, error) 
 }
 
 func (s *Store) Finish(ctx context.Context, runID string) error {
-	return s.withRegistryLock(func() error {
-		run, err := s.Read(runID)
-		if err != nil {
-			return err
-		}
+	return s.withRunLock(runID, func(run *Run) error {
 		for _, goal := range run.Goals {
 			if goal.Status != "done" {
 				return fmt.Errorf("goal %s is not done", goal.ID)
 			}
 		}
 		if run.Companion != nil {
-			if run.Companion.OwnerPaneID != run.Orchestrator.PaneID {
-				return fmt.Errorf("companion owner no longer matches the orchestrator")
+			probe, err := s.probePane(ctx, run.Companion.PaneID)
+			if err != nil {
+				return fmt.Errorf("probe companion %s: %w", run.Companion.PaneID, err)
 			}
-			if s.herdr.PaneExists(ctx, run.Companion.PaneID) {
+			if probe.Exists {
+				if !companionOwnershipMatches(*run, probe) {
+					return fmt.Errorf("live companion ownership does not match the orchestrator")
+				}
 				if err := s.herdr.ClosePane(ctx, run.Companion.PaneID); err != nil {
 					return err
 				}
@@ -156,8 +199,8 @@ func (s *Store) Finish(ctx context.Context, runID string) error {
 		}
 		run.Status = "completed"
 		run.Revision++
-		run.UpdatedAt = s.now().Format(time.RFC3339)
-		return s.write(run)
+		run.UpdatedAt = s.now().Format(timeFormat)
+		return s.write(*run)
 	})
 }
 
@@ -172,64 +215,70 @@ func (s *Store) registerParticipant(
 	allowCollision func(Participant) bool,
 ) (Run, error) {
 	var result Run
-	err := s.withRegistryLock(func() error {
-		runs, err := s.readAll()
-		if err != nil {
-			return err
-		}
-		var run *Run
-		for index := range runs {
-			if runs[index].RunID == runID {
-				run = &runs[index]
-				break
-			}
-		}
-		if run == nil {
-			return os.ErrNotExist
-		}
-		if run.Status != "active" && run.Status != "blocked" {
-			return fmt.Errorf("Task Run %s is not active", runID)
-		}
-		if err := validateParticipant(*run, participant); err != nil {
-			return err
-		}
-		if validateLive != nil {
-			if err := validateLive(*run); err != nil {
+	target, err := s.Read(runID)
+	if err != nil {
+		return Run{}, err
+	}
+	err = s.withRegistryLock(func() error {
+		return s.withTaskLock(target.Task.Path, func() error {
+			runs, err := s.readAll()
+			if err != nil {
 				return err
 			}
-		}
+			var run *Run
+			for index := range runs {
+				if runs[index].RunID == runID {
+					run = &runs[index]
+					break
+				}
+			}
+			if run == nil {
+				return os.ErrNotExist
+			}
+			if run.Status != "active" && run.Status != "blocked" {
+				return fmt.Errorf("Task Run %s is not active", runID)
+			}
+			if err := validateParticipant(*run, participant); err != nil {
+				return err
+			}
+			if validateLive != nil {
+				if err := validateLive(*run); err != nil {
+					return err
+				}
+			}
 
-		idempotent := false
-		for _, registeredRun := range runs {
-			if registeredRun.Status != "active" && registeredRun.Status != "blocked" {
-				continue
+			idempotent := false
+			for _, registeredRun := range runs {
+				if registeredRun.Status != "active" && registeredRun.Status != "blocked" {
+					continue
+				}
+				registered := append([]Participant{registeredRun.Orchestrator}, registeredRun.Participants...)
+				for index, existing := range registered {
+					if existing == (Participant{}) || !participantIdentityCollides(existing, participant) {
+						continue
+					}
+					inTargetParticipants := registeredRun.RunID == runID && index > 0
+					if inTargetParticipants && existing == participant {
+						idempotent = true
+						continue
+					}
+					if inTargetParticipants && allowCollision != nil && allowCollision(existing) {
+						continue
+					}
+					return fmt.Errorf(
+						"participant identity collides with Task Run %s participant %s",
+						registeredRun.RunID,
+						existing.Name,
+					)
+				}
 			}
-			registered := append([]Participant{registeredRun.Orchestrator}, registeredRun.Participants...)
-			for index, existing := range registered {
-				if existing == (Participant{}) || !participantIdentityCollides(existing, participant) {
-					continue
-				}
-				inTargetParticipants := registeredRun.RunID == runID && index > 0
-				if inTargetParticipants && existing == participant {
-					idempotent = true
-					continue
-				}
-				if inTargetParticipants && allowCollision != nil && allowCollision(existing) {
-					continue
-				}
-				return fmt.Errorf(
-					"participant identity collides with Task Run %s participant %s",
-					registeredRun.RunID,
-					existing.Name,
-				)
+			if idempotent {
+				result = *run
+				return nil
 			}
-		}
-		if idempotent {
-			result = *run
-			return nil
-		}
-		run.Participants = append(run.Participants, participant)
-		return s.writeRegisteredParticipant(run, &result)
+			run.Participants = append(run.Participants, participant)
+			return s.writeRegisteredParticipant(run, &result)
+		})
 	})
 	return result, err
 }
@@ -273,6 +322,9 @@ func validateParticipant(run Run, participant Participant) error {
 		participant.AgentSession.Kind == "" ||
 		participant.AgentSession.Value == "" {
 		return fmt.Errorf("complete non-orchestrator role, goal, agent, workspace, tab, pane, terminal, and session identity are required")
+	}
+	if expected := participantName(run.Task, participant.Role); expected != "" && participant.Name != expected {
+		return fmt.Errorf("participant name %q must be %q", participant.Name, expected)
 	}
 	for _, goal := range run.Goals {
 		if goal.ID == participant.GoalID {
@@ -368,21 +420,64 @@ func (s *Store) write(run Run) error {
 }
 
 func (s *Store) withRegistryLock(fn func() error) error {
+	return s.withFileLock("registry", fn)
+}
+
+func (s *Store) withTaskLock(taskPath string, fn func() error) error {
+	return s.withFileLock("task:"+taskPath, fn)
+}
+
+func (s *Store) withRunLock(runID string, fn func(*Run) error) error {
+	run, err := s.Read(runID)
+	if err != nil {
+		return err
+	}
+	return s.withTaskLock(run.Task.Path, func() error {
+		current, err := s.Read(runID)
+		if err != nil {
+			return err
+		}
+		return fn(&current)
+	})
+}
+
+func (s *Store) withFileLock(key string, fn func() error) error {
 	locksDir := filepath.Join(s.stateDir, "locks")
 	if err := os.MkdirAll(locksDir, 0o700); err != nil {
 		return err
 	}
-	// ponytail: one lock makes cross-Run identity checks atomic; shard only if contention becomes real.
-	sum := sha256.Sum256([]byte("registry"))
+	sum := sha256.Sum256([]byte(key))
 	lockPath := filepath.Join(locksDir, hex.EncodeToString(sum[:])+".lock")
-	if err := os.Mkdir(lockPath, 0o700); err != nil {
-		if errors.Is(err, os.ErrExist) {
+	lock, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		if err == syscall.EWOULDBLOCK {
 			return fmt.Errorf("Task Run writer is already active")
 		}
 		return err
 	}
-	defer os.Remove(lockPath)
+	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 	return fn()
+}
+
+func (s *Store) probePane(ctx context.Context, paneID string) (PaneProbe, error) {
+	if prober, ok := s.herdr.(paneProber); ok {
+		return prober.ProbePane(ctx, paneID)
+	}
+	return PaneProbe{Exists: s.herdr.PaneExists(ctx, paneID)}, nil
+}
+
+func companionOwnershipMatches(run Run, probe PaneProbe) bool {
+	if run.Companion == nil || run.Companion.OwnerPaneID != run.Orchestrator.PaneID {
+		return false
+	}
+	if run.Orchestrator.TabID != "" && run.Companion.TabID != run.Orchestrator.TabID {
+		return false
+	}
+	return probe.TabID == "" || probe.TabID == run.Companion.TabID
 }
 
 func newRunID() (string, error) {

@@ -33,6 +33,9 @@ func FindParticipant(
 		if run.Status != "active" && run.Status != "blocked" {
 			continue
 		}
+		if run.Task.Kind != "task" {
+			continue
+		}
 		for _, participant := range run.Participants {
 			if participant.TerminalID == terminalID && participant.AgentSession == session {
 				matchedRun = run
