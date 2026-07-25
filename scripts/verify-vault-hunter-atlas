@@ -5,9 +5,144 @@ case_name="${1:-all}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 module_dir="$script_dir/../vault-hunter"
 
+verify_v05_live() {
+  for command in herdr jq nvim; do
+    command -v "$command" >/dev/null 2>&1 || {
+      printf 'verify-vault-hunter-atlas: V05 live requires %s\n' "$command" >&2
+      return 1
+    }
+  done
+  herdr status server >/dev/null
+
+  local state_dir="${ATLAS_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/vault-hunter}"
+  local registry=""
+  if [[ -n "${ATLAS_V05_RUN_ID:-}" ]]; then
+    registry="$state_dir/runs/$ATLAS_V05_RUN_ID.json"
+  else
+    local candidate
+    for candidate in "$state_dir"/runs/*.json; do
+      [[ -f "$candidate" ]] || continue
+      if jq -e '.task.kind == "task" and (.status == "active" or .status == "blocked")' "$candidate" >/dev/null; then
+        if [[ -n "$registry" ]]; then
+          printf 'verify-vault-hunter-atlas: V05 live found multiple active Task Runs; set ATLAS_V05_RUN_ID\n' >&2
+          return 1
+        fi
+        registry="$candidate"
+      fi
+    done
+  fi
+  [[ -f "$registry" ]] || {
+    printf 'verify-vault-hunter-atlas: V05 live found no active Task Registry in %s\n' "$state_dir" >&2
+    return 1
+  }
+
+  local run_id active_goal orchestrator_pane orchestrator_tab companion_pane companion_tab companion_owner
+  run_id="$(jq -er '.run_id' "$registry")"
+  active_goal="$(jq -er '.active_goal' "$registry")"
+  orchestrator_pane="$(jq -er '.orchestrator.pane_id' "$registry")"
+  orchestrator_tab="$(jq -er '.orchestrator.tab_id' "$registry")"
+  companion_pane="$(jq -er '.companion.pane_id' "$registry")"
+  companion_tab="$(jq -er '.companion.tab_id' "$registry")"
+  companion_owner="$(jq -er '.companion.owner_pane_id' "$registry")"
+  [[ "$companion_owner" == "$orchestrator_pane" && "$companion_tab" == "$orchestrator_tab" ]] || {
+    printf 'verify-vault-hunter-atlas: V05 live companion ownership does not match its orchestrator\n' >&2
+    return 1
+  }
+  herdr pane get "$orchestrator_pane" |
+    jq -e --arg pane "$orchestrator_pane" --arg tab "$orchestrator_tab" \
+      '.result.pane.pane_id == $pane and .result.pane.tab_id == $tab' >/dev/null
+  herdr pane get "$companion_pane" |
+    jq -e --arg pane "$companion_pane" --arg tab "$companion_tab" \
+      '.result.pane.pane_id == $pane and .result.pane.tab_id == $tab' >/dev/null
+  herdr tab get "$orchestrator_tab" |
+    jq -e '.result.tab.pane_count == 2' >/dev/null
+
+  local companion_capture
+  companion_capture="$(herdr pane read "$companion_pane" --source visible --lines 200 --format text)"
+  grep -Fq "$run_id" <<<"$companion_capture" || {
+    printf 'verify-vault-hunter-atlas: V05 live companion omitted Run %s\n' "$run_id" >&2
+    return 1
+  }
+  grep -Fq "/goal $active_goal" <<<"$companion_capture" || {
+    printf 'verify-vault-hunter-atlas: V05 live companion omitted active goal %s\n' "$active_goal" >&2
+    return 1
+  }
+
+  local participant
+  participant="$(
+    jq -cer '
+      [
+        .participants[]
+        | select(.role == "implementation")
+        | select(.terminal_id != "" and .agent_session.source != "" and .agent_session.kind != "" and .agent_session.value != "")
+      ][0]
+      //
+      [
+        .participants[]
+        | select(.role != "orchestrator")
+        | select(.terminal_id != "" and .agent_session.source != "" and .agent_session.kind != "" and .agent_session.value != "")
+      ][0]
+    ' "$registry"
+  )"
+  local terminal_id session_source session_kind session_value
+  terminal_id="$(jq -r '.terminal_id' <<<"$participant")"
+  session_source="$(jq -r '.agent_session.source' <<<"$participant")"
+  session_kind="$(jq -r '.agent_session.kind' <<<"$participant")"
+  session_value="$(jq -r '.agent_session.value' <<<"$participant")"
+
+  local compact
+  compact="$(
+    cd "$module_dir"
+    go run ./cmd/vault-hunter-atlas render \
+      --state-dir "$state_dir" \
+      --socket "${HERDR_SOCKET_PATH:-$HOME/.config/herdr/herdr.sock}" \
+      --terminal-id "$terminal_id" \
+      --agent-session-source "$session_source" \
+      --agent-session-kind "$session_kind" \
+      --agent-session-value "$session_value" \
+      --profile compact \
+      --width 78 \
+      --height 17
+  )"
+  grep -Fq "$run_id" <<<"$compact" || {
+    printf 'verify-vault-hunter-atlas: V05 live compact preview omitted Run %s\n' "$run_id" >&2
+    return 1
+  }
+  grep -Fq "/goal $active_goal" <<<"$compact" || {
+    printf 'verify-vault-hunter-atlas: V05 live compact preview omitted active goal %s\n' "$active_goal" >&2
+    return 1
+  }
+
+  local nvim_root="${TMPDIR:-/tmp}/nvim.${USER:-$(id -un)}"
+  local lua_args lua_check socket picker_result=""
+  lua_args="$(
+    jq -cn \
+      --arg terminal "$terminal_id" \
+      --arg source "$session_source" \
+      --arg kind "$session_kind" \
+      --arg value "$session_value" \
+      --arg run "$run_id" \
+      '[$terminal, $source, $kind, $value, $run]'
+  )"
+  lua_check="luaeval(\"(function() local ok,s=pcall(require,'snacks.picker'); if not ok then return '' end; for _,p in ipairs(s.get()) do local i=p:current(); local a=i and i.agent_session; if i and i.terminal_id==_A[1] and a and a.source==_A[2] and a.kind==_A[3] and a.value==_A[4] then local w=p.preview and p.preview.win; local b=w and w.buf; if b and vim.api.nvim_buf_is_valid(b) then local text=table.concat(vim.api.nvim_buf_get_lines(b,0,-1,false),'\\n'); if text:find(_A[5],1,true) then return 'ok' end end end end return '' end)()\", $lua_args)"
+  while IFS= read -r socket; do
+    [[ -S "$socket" ]] || continue
+    picker_result="$(nvim --server "$socket" --remote-expr "$lua_check" 2>/dev/null || true)"
+    [[ "$picker_result" == "ok" ]] && break
+  done < <(find "$nvim_root" -type s -name 'nvim.*' 2>/dev/null)
+  [[ "$picker_result" == "ok" ]] || {
+    printf 'verify-vault-hunter-atlas: V05 live found no global Sidekick picker currently previewing terminal %s / session %s\n' \
+      "$terminal_id" "$session_value" >&2
+    return 1
+  }
+}
+
 case "$case_name" in
-  V01|V02)
+  V01)
     (cd "$module_dir" && go test ./internal/atlas -run "^Test${case_name}")
+    ;;
+  V02)
+    (cd "$module_dir" && go test ./internal/atlas -run '^TestV02')
     ;;
   V03)
     (cd "$module_dir" && go test ./internal/atlas -run '^TestV03')
@@ -61,6 +196,9 @@ case "$case_name" in
       cd "$module_dir"
       go test ./cmd/vault-hunter-atlas ./internal/atlas -run '^TestV05'
     )
+    if [[ "${ATLAS_VERIFY_LIVE:-0}" == "1" ]]; then
+      verify_v05_live
+    fi
     ;;
   V06)
     (cd "$module_dir" && go test ./internal/atlas -run '^TestV06')
@@ -68,14 +206,18 @@ case "$case_name" in
   V07)
     (
       cd "$module_dir"
-      go test ./internal/runregistry -run '^TestV07'
-      go test ./cmd/vault-hunter-run ./internal/herdrcli
+      go test ./internal/runregistry ./cmd/vault-hunter-run \
+        -run '^(TestV07|TestWorkerLifecycleV0[1-6])'
+      go test ./internal/herdrcli
     )
     rg -q 'vault-hunter-run ensure' "$module_dir/../.agents/skills/vault-hunter/SKILL.md"
     rg -q 'vault-hunter-run finish' "$module_dir/../.agents/skills/vault-hunter/SKILL.md"
     ;;
   V08)
-    (cd "$module_dir" && go test ./internal/atlas -run '^TestV08')
+    (
+      cd "$module_dir"
+      go test ./internal/atlas ./cmd/vault-hunter-atlas -run '^TestV08'
+    )
     ;;
   V09)
     (
@@ -98,7 +240,7 @@ case "$case_name" in
         ./internal/herdrcli \
         ./cmd/vault-hunter-run \
         ./cmd/vault-hunter-atlas \
-        -run '^TestV11'
+        -run '^(TestV11|TestWorkerLifecycleV0[1-6])'
     )
     skill_file="$module_dir/../.agents/skills/vault-hunter/SKILL.md"
     while IFS= read -r contract; do
@@ -114,6 +256,7 @@ do not precreate a blank root pane
 Verify `pane_count=1`
 one concise final handoff
 Worker tabs never receive an Atlas companion
+codex-<project-slug>-<feature-slug>-<run-key>-<role>
 vault-hunter-run reconcile-workers
 vault-hunter-run cleanup-workers
 --workspace-id
