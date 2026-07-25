@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case_name="${1:-all}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+module_dir="$script_dir/../vault-hunter"
+
+case "$case_name" in
+  V01|all)
+    (cd "$module_dir" && go test ./internal/atlas -run '^TestV01')
+    ;;
+  *)
+    printf 'verify-vault-hunter-atlas: unsupported case %s\n' "$case_name" >&2
+    exit 2
+    ;;
+esac

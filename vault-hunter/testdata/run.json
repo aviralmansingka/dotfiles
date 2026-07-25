@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "run_id": "pi-skills-tools-t11-20260725",
+  "revision": 7,
+  "status": "active",
+  "task": {
+    "id": "T11",
+    "title": "Implement the Vault Hunter Atlas",
+    "path": "1_projects/pi-agent/themes/pi-customization/features/pi-skills-tools/tasks/11-implement-vault-hunter-tui.md"
+  },
+  "active_goal": "V03",
+  "next_action": "Make failure evidence green",
+  "goals": [
+    {
+      "id": "checkpoint",
+      "label": "vault checkpoint",
+      "status": "done"
+    },
+    {
+      "id": "V01",
+      "label": "registry",
+      "status": "done"
+    },
+    {
+      "id": "V02",
+      "label": "read-only",
+      "status": "done"
+    },
+    {
+      "id": "V03",
+      "label": "evidence",
+      "status": "active",
+      "verifier": {
+        "state": "red",
+        "iteration": 2,
+        "journey": [
+          {
+            "label": "baseline red proven",
+            "status": "done"
+          },
+          {
+            "label": "verifier configured",
+            "status": "done"
+          },
+          {
+            "label": "code + verifier iteration",
+            "status": "active"
+          },
+          {
+            "label": "active suite green",
+            "status": "pending"
+          },
+          {
+            "label": "evidence saved",
+            "status": "pending"
+          }
+        ]
+      }
+    },
+    {
+      "id": "V04",
+      "label": "cleanup",
+      "status": "pending"
+    },
+    {
+      "id": "review",
+      "label": "review",
+      "status": "pending"
+    },
+    {
+      "id": "landing",
+      "label": "PR · landing",
+      "status": "pending"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E01",
+      "summary": "baseline main@857bcd5"
+    },
+    {
+      "id": "E02",
+      "summary": "checkpoint one pushed"
+    }
+  ]
+}
