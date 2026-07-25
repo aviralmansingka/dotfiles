@@ -7,7 +7,7 @@ import (
 )
 
 func RenderExpanded(run Run, width, height int) string {
-	active := run.active()
+	active := activeGoal(run)
 	lines := []string{
 		fmt.Sprintf("Vault Hunter · %s · %s", run.RunID, strings.ToUpper(run.Status)),
 		activeSummary(active),
@@ -32,7 +32,7 @@ func RenderExpanded(run Run, width, height int) string {
 }
 
 func RenderCompact(run Run, width, height int) string {
-	active := run.active()
+	active := activeGoal(run)
 	if width < 64 {
 		lines := []string{
 			"Vault Hunter Atlas · " + run.RunID,

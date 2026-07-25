@@ -1,6 +1,6 @@
 ---
 name: vault-hunter
-description: Guide work from the canonical Obsidian vault and write lifecycle, timeline, evidence, and completion checkpoints back to it. Use when invoked as /vault-hunter with a Feature, Task, Issue, checkbox, or Wayfinder reference and the work should run through Herdr-visible interactive Codex goals or agents in the owning Feature workspace.
+description: Guide work from the canonical Obsidian vault and write lifecycle, timeline, evidence, and completion checkpoints back to it. Use when invoked as $vault-hunter with a Feature, Task, Issue, checkbox, or Wayfinder reference and the work should run through Herdr-visible interactive Codex goals or agents in the owning Feature workspace.
 ---
 
 # Vault Hunter
@@ -12,7 +12,7 @@ vault.
 
 ## Invocation
 
-Accept `/vault-hunter <reference>`, where `<reference>` identifies a Feature, Task, or Issue by vault path, `path:line`,
+Accept `$vault-hunter <reference>`, where `<reference>` identifies a Feature, Task, or Issue by vault path, `path:line`,
 or wikilink. Capture the local invocation date, time, and timezone once, then resolve the referenced note or checklist
 line before routing.
 
@@ -24,8 +24,11 @@ Immediately after invocation, resolve only enough vault context to identify the 
    - Issue or Wayfinder effort → set its note or map frontmatter to `status: in-progress`
 2. Create the invocation backlog entry described below.
 3. Commit the lifecycle transition and backlog entry together in the vault. Do not push them yet.
-4. After the commit succeeds, mark the invocation timeline stage `Done`, activate the route's next stage, and continue.
-5. Only after the commit succeeds, provide substantive user-facing content or continue with broader discovery.
+4. For a Task Run, invoke `vault-hunter-run ensure` after the commit. It creates or resumes the Run Registry entry and
+   creates or reuses the one Atlas companion pane in the current Task tab. Stop if this fails.
+5. After the commit and any Task Run Registry setup succeed, mark the invocation timeline stage `Done`, activate the
+   route's next stage, and continue.
+6. Only after the commit succeeds, provide substantive user-facing content or continue with broader discovery.
 
 Before this commit, send no plan, clarification, or progress detail beyond any minimal skill-use acknowledgment required
 by the host. If the item cannot be resolved, logged, or committed safely, stop and report that blocker instead of
@@ -41,7 +44,7 @@ Add exactly one entry for the run:
 
 ```md
 - [-] Vault Hunter — [[<vault-relative-target>|<label>]]
-  - Invoked <human-readable local date and time with timezone> from `/vault-hunter <reference>`.
+  - Invoked <human-readable local date and time with timezone> from `$vault-hunter <reference>`.
   - Recap: <optional one-sentence outcome or current frontier>
   - Timeline
     - Done — Invocation lifecycle committed
@@ -64,9 +67,30 @@ Add exactly one entry for the run:
   `[x]`.
 
 The bundled Neovim picker action is `<C-a>` **(Vault hunter) Action**. It accepts Feature and Task rows and launches
-the exact `/vault-hunter <path:line>` form. Feature and Task rows use the feature workspace and feature worktree; Task
+the exact `$vault-hunter <path:line>` form. Feature and Task rows use the feature workspace and feature worktree; Task
 rows use a task-named tab. Issue references are accepted through the command even though the picker does not list
 Issue rows.
+
+### Task Run Registry
+
+Only verifier-driven Task Runs create Atlas state. After the invocation lifecycle commit, call:
+
+```sh
+vault-hunter-run ensure \
+  --task-id "$task_id" \
+  --task-title "$task_title" \
+  --task-path "$task_path" \
+  --feature-path "$feature_path" \
+  --invoked-at "$captured_invocation_rfc3339" \
+  --orchestrator-pane "$HERDR_PANE_ID" \
+  --goal "checkpoint=Vault checkpoint one=active" \
+  --goal "cleanup=Workspace and vault cleanup=pending"
+```
+
+Add one `--goal "id=label=status"` argument for every already-drafted verifier and later stage, in timeline order.
+Capture the returned `run_id`; every subsequent Registry transition and cleanup command for this Task uses it. On
+resume, `ensure` reuses the active Run and live companion. A normal agent, Feature Run, Issue, Wayfinder effort, or
+participating subagent never calls `ensure`.
 
 ## Herdr-visible Codex execution
 
@@ -228,17 +252,19 @@ Always run this goal, even when it completes immediately:
 
 ### Workspace and vault cleanup
 
-1. Close only the Herdr agents and tabs launched for this Task. Preserve other tabs in the shared Feature workspace.
-2. Close only Neovim tool windows or tabs created for those task agents. Preserve the owning Feature workspace and
+1. Run `vault-hunter-run finish --run-id "$run_id"` after every Run goal is done. This closes only the companion pane
+   recorded in the Registry and retires the Run.
+2. Close only the Herdr agents and tabs launched for this Task. Preserve other tabs in the shared Feature workspace.
+3. Close only Neovim tool windows or tabs created for those task agents. Preserve the owning Feature workspace and
    unrelated Neovim Workspace Tabs.
-3. Verify the captured task agent names and tab IDs are gone.
-4. Add PR, merge, final verifier, post-merge, and cleanup evidence to the Task note.
-5. Set the Task note frontmatter to `status: done`, change its authoritative Feature checklist bullet to `[x]`, and
+4. Verify the captured task agent names and tab IDs are gone.
+5. Add PR, merge, final verifier, post-merge, and cleanup evidence to the Task note.
+6. Set the Task note frontmatter to `status: done`, change its authoritative Feature checklist bullet to `[x]`, and
    derive the Feature status from its complete checklist.
-6. Complete the invocation backlog entry.
-7. Commit vault checkpoint two on the vault's `main` branch and push `origin main`. If the update was prepared on
+7. Complete the invocation backlog entry.
+8. Commit vault checkpoint two on the vault's `main` branch and push `origin main`. If the update was prepared on
    another vault branch, merge it into vault `main` first. Never open a vault PR.
-8. Run `git fetch origin main:refs/remotes/origin/main` in the vault and verify the checkpoint-two commit is an
+9. Run `git fetch origin main:refs/remotes/origin/main` in the vault and verify the checkpoint-two commit is an
    ancestor of `origin/main`. Cleanup is incomplete until this remote-main check passes.
 
 ## Completion

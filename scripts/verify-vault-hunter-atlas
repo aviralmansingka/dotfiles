@@ -59,6 +59,15 @@ case "$case_name" in
   V06)
     (cd "$module_dir" && go test ./internal/atlas -run '^TestV06')
     ;;
+  V07)
+    (
+      cd "$module_dir"
+      go test ./internal/runregistry -run '^TestV07'
+      go test ./cmd/vault-hunter-run ./internal/herdrcli
+    )
+    rg -q 'vault-hunter-run ensure' "$module_dir/../.agents/skills/vault-hunter/SKILL.md"
+    rg -q 'vault-hunter-run finish' "$module_dir/../.agents/skills/vault-hunter/SKILL.md"
+    ;;
   all)
     (cd "$module_dir" && go test ./internal/atlas)
     ;;
