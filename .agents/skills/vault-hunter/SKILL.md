@@ -13,6 +13,18 @@ implementation repository for code, and temporary `issues/` notes only for unres
 Accept `/vault-hunter <reference>`, where `<reference>` identifies a Feature, Task, or Issue by vault path, `path:line`,
 or wikilink. Resolve the referenced note or checklist line before routing.
 
+Immediately after invocation, resolve only enough vault context to identify the referenced item, then:
+
+1. Mark it in progress:
+   - Feature → set its frontmatter to `status: in-progress`
+   - Task → change its Feature checklist bullet to `[~]` and, when linked, set its note to `status: in-progress`
+   - Issue or Wayfinder effort → set its note or map frontmatter to `status: in-progress`
+2. Commit that lifecycle transition in the vault. Do not push it yet.
+3. Only after the commit succeeds, provide substantive user-facing content or continue with broader discovery.
+
+Before this commit, send no plan, clarification, or progress detail beyond any minimal skill-use acknowledgment required
+by the host. If the item cannot be resolved or committed safely, stop and report that blocker instead of continuing.
+
 The bundled Neovim picker action is `<C-a>` **(Vault hunter) Action**. It accepts Feature and Task rows and launches
 the exact `/vault-hunter <path:line>` form. Feature rows use the feature workspace without a task worktree; Task rows
 retain isolated task-worktree routing. Issue references are accepted through the command even though the picker does
@@ -64,18 +76,14 @@ Wayfinder tickets are temporary issues, never implementation Tasks.
 
 1. If the Task is only a checkbox, use `$grill-with-docs` with its checkbox and nested bullets and create a durable
    Task note.
-2. Before specification, verifier, or implementation work:
-   - keep the authoritative Feature checklist bullet pending as `[ ]`
-   - set the Task note frontmatter to `status: in-progress`
-   - commit this lifecycle transition in the vault, but do not push it yet
-3. Use `$to-spec` for structure and testing seams, but store the result only in the canonical vault Task note.
-4. Draft every verifier before coding as stable `V01`, `V02`, … entries. Record for each:
+2. Use `$to-spec` for structure and testing seams, but store the result only in the canonical vault Task note.
+3. Draft every verifier before coding as stable `V01`, `V02`, … entries. Record for each:
    - externally observable behavior
    - exact command or manual observation
    - baseline-red evidence
    - latest result and evidence
-5. Ask clarifying questions only for a genuine missing decision.
-6. Use `$ponytail` throughout implementation and review.
+4. Ask clarifying questions only for a genuine missing decision.
+5. Use `$ponytail` throughout implementation and review.
 
 ## Execute the Task timeline
 
@@ -88,8 +96,8 @@ Write evidence into the local Task note as each stage settles. Push the vault on
 ### Vault checkpoint one
 
 - Store the Task Spec and complete verifier ledger.
-- Commit any remaining checkpoint-one vault changes, then push the lifecycle transition and Task Spec/verifier ledger
-  commits together. Never open a vault PR.
+- Commit any remaining checkpoint-one vault changes, then push the invocation lifecycle commit and Task Spec/verifier
+  ledger commits together. Never open a vault PR.
 
 ### One goal per verifier
 
@@ -148,7 +156,7 @@ Always run this goal, even when it completes immediately:
 2. Close every Neovim Workspace Tab bound to that workspace.
 3. Verify those tabs are gone. Preserve other Herdr workspaces and Unbound Neovim Tabs.
 4. Add PR, merge, final verifier, post-merge, and cleanup evidence to the Task note.
-5. End the in-flight status exception: synchronize the Task frontmatter and authoritative Feature checklist bullet.
+5. Synchronize the Task frontmatter and authoritative Feature checklist bullet.
 6. Commit and push vault checkpoint two directly. Never open a vault PR.
 
 ## Completion

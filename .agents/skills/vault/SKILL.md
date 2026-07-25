@@ -102,10 +102,9 @@ System card categories:
 - Give every task a stable `T01`, `T02`, … number. Never renumber existing tasks.
 - Treat the feature checklist as authoritative. A linked task note must mirror `[ ]` as `pending-work`, `[~]` as
   `in-progress`, and `[x]` as `done` in its frontmatter.
-- During a Vault Hunter Task Run only, commit the lifecycle transition before specification, verifier, or
-  implementation work: keep the Feature checklist bullet pending as `[ ]` while setting the linked Task note to
-  `status: in-progress`. Do not push that commit until vault checkpoint one. Vault checkpoint two ends this exception
-  by synchronizing both states.
+- Immediately after Vault Hunter resolves a referenced item, mark it in progress and commit that lifecycle transition
+  before broader discovery or substantive user-facing output. For a Task, use `[~]` in the Feature checklist and
+  `status: in-progress` in its linked note. Do not push that commit until vault checkpoint one.
 - Derive feature status from its checklist: all complete is `done`; any in-progress or a mixture of complete and open
   is `in-progress`; all open is `pending-work`; no tasks on an implemented capability is `maintained`.
 - Preserve useful completed designs and verifier evidence in completed task notes. Put bulky raw evidence in an
