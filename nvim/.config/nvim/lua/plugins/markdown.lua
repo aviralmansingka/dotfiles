@@ -231,6 +231,11 @@ return {
         desc = "Find active vault todos by tag",
       },
       {
+        "<leader>vf",
+        require("helpers.vault_features").open,
+        desc = "Find active vault features",
+      },
+      {
         "<leader>vt",
         function()
           local items = require("helpers.vault_work_items").collect()

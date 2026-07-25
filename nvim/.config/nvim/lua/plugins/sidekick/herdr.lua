@@ -141,20 +141,146 @@ function M.ensure_workspace(cwd, scope)
     result.root_pane and result.root_pane.tab_id or nil
 end
 
+local function worktree_for_branch(worktrees, branch)
+  for _, worktree in ipairs(worktrees or {}) do
+    if worktree.branch == branch then
+      return worktree
+    end
+  end
+end
+
+---@param repository string
+---@param workspace_label string
+---@param feature_branch string
+---@param task_branch string
+---@return table|nil scope
+function M.ensure_task_scope(repository, workspace_label, feature_branch, task_branch)
+  local normalized = M.normalize_cwd(repository)
+  local listed = M.call({ "worktree", "list", "--cwd", normalized })
+  if not listed then
+    return nil
+  end
+
+  local feature = worktree_for_branch(listed.worktrees, feature_branch)
+  local workspace_id = feature and feature.open_workspace_id or nil
+  if not workspace_id then
+    local action = feature and "open" or "create"
+    local result = M.call({
+      "worktree",
+      action,
+      "--cwd",
+      normalized,
+      "--branch",
+      feature_branch,
+      "--label",
+      workspace_label,
+      "--no-focus",
+    })
+    feature = result and result.worktree or nil
+    workspace_id = result and result.workspace and result.workspace.workspace_id or nil
+  end
+  if not feature or not workspace_id then
+    return nil
+  end
+  if not M.call({ "workspace", "rename", workspace_id, workspace_label }) then
+    return nil
+  end
+
+  local task = worktree_for_branch(listed.worktrees, task_branch)
+  if not task then
+    local result = M.call({
+      "worktree",
+      "create",
+      "--cwd",
+      normalized,
+      "--branch",
+      task_branch,
+      "--label",
+      workspace_label,
+      "--no-focus",
+    })
+    task = result and result.worktree or nil
+    local temporary_workspace_id = result and result.workspace and result.workspace.workspace_id or nil
+    if not task or not temporary_workspace_id then
+      return nil
+    end
+    if not M.call({ "workspace", "close", temporary_workspace_id }) then
+      M.call({ "worktree", "remove", "--workspace", temporary_workspace_id }, true)
+      return nil
+    end
+  end
+
+  return task.path and { workspace_id = workspace_id, cwd = task.path } or nil
+end
+
+---@param agent table
+---@param scope table
+---@param tab_label string
+---@return table|nil agent
+function M.place_agent(agent, scope, tab_label)
+  local cwd = M.normalize_cwd(agent.foreground_cwd or agent.cwd)
+  if agent.workspace_id == scope.workspace_id and cwd == M.normalize_cwd(scope.cwd) then
+    return M.call({ "tab", "rename", agent.tab_id, tab_label }) and agent or nil
+  end
+
+  local created = M.call({
+    "tab",
+    "create",
+    "--workspace",
+    scope.workspace_id,
+    "--cwd",
+    scope.cwd,
+    "--label",
+    tab_label,
+    "--no-focus",
+  })
+  local tab = created and created.tab or nil
+  local root = created and created.root_pane or nil
+  if not tab or not root then
+    return nil
+  end
+  local moved = M.call({
+    "pane",
+    "move",
+    agent.pane_id,
+    "--tab",
+    tab.tab_id,
+    "--split",
+    "right",
+    "--target-pane",
+    root.pane_id,
+    "--ratio",
+    "0.5",
+    "--no-focus",
+  })
+  if not moved then
+    M.call({ "tab", "close", tab.tab_id }, true)
+    return nil
+  end
+  M.call({ "pane", "close", root.pane_id }, true)
+  return M.get_agent(agent.name or agent.pane_id) or vim.tbl_extend("force", agent, {
+    cwd = scope.cwd,
+    foreground_cwd = scope.cwd,
+    tab_id = tab.tab_id,
+    workspace_id = scope.workspace_id,
+  })
+end
+
 ---@param name string
 ---@param cwd string
 ---@param command string[]
 ---@param env? table<string, string|boolean>
 ---@param scope? string|{ workspace_id?: string }
+---@param tab_label? string
 ---@return table|nil agent
-function M.start(name, cwd, command, env, scope)
+function M.start(name, cwd, command, env, scope, tab_label)
   local normalized = M.normalize_cwd(cwd)
   local resolved_id, root_pane_id, workspace_created, tab_id = M.ensure_workspace(cwd, scope)
   if not resolved_id then
     return nil
   end
   if workspace_created then
-    if not tab_id or not M.call({ "tab", "rename", tab_id, name }) then
+    if not tab_id or not M.call({ "tab", "rename", tab_id, tab_label or name }) then
       M.call({ "workspace", "close", resolved_id }, true)
       return nil
     end
@@ -167,7 +293,7 @@ function M.start(name, cwd, command, env, scope)
       "--cwd",
       normalized,
       "--label",
-      name,
+      tab_label or name,
       "--no-focus",
     })
     if not tab_result or not tab_result.tab then
@@ -223,6 +349,13 @@ end
 ---@return boolean
 function M.send_key(pane_id, key)
   return M.call({ "pane", "send-keys", pane_id, key }) ~= nil
+end
+
+---@param pane_id string
+---@param text string
+---@return boolean
+function M.run(pane_id, text)
+  return M.call({ "pane", "run", pane_id, text }) ~= nil
 end
 
 ---@param target string

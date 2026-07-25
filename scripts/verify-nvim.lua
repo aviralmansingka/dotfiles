@@ -99,7 +99,7 @@ local function validate_agent_keymaps()
   end
 
   assert_key_desc(sidekick, "<c-.>", "cwd sessions")
-  assert_key_desc(sidekick, "<c-;>", "Switch Local")
+  assert_key_desc(sidekick, "<c-;>", "Switch Agent")
   assert_key_desc(sidekick, "<leader>an", "Codex")
   assert_key_desc(sidekick, "<leader>aN", "Pi")
   assert_key_desc(sidekick, "<leader>ae", "Codex Spark")
@@ -417,6 +417,96 @@ local function validate_sidekick_herdr()
     fail("named session should start in its exact bound workspace: " .. vim.inspect(start_calls))
   end
 
+  local routing_calls = {}
+  source_herdr.call = function(args)
+    routing_calls[#routing_calls + 1] = args
+    if args[1] == "worktree" and args[2] == "list" then
+      return { worktrees = {} }
+    elseif args[1] == "worktree" and args[2] == "create" and args[6] == "feature/example" then
+      return {
+        workspace = { workspace_id = "w-feature" },
+        worktree = { branch = "feature/example", path = "/worktrees/feature-example" },
+      }
+    elseif args[1] == "worktree" and args[2] == "create" and args[6] == "task/example-t01" then
+      return {
+        workspace = { workspace_id = "w-task-temporary" },
+        worktree = { branch = "task/example-t01", path = "/worktrees/task-example-t01" },
+      }
+    end
+    return {}
+  end
+  local task_scope = source_herdr.ensure_task_scope(
+    cwd,
+    "Neovim · Example",
+    "feature/example",
+    "task/example-t01"
+  )
+  if
+    not task_scope
+    or task_scope.workspace_id ~= "w-feature"
+    or task_scope.cwd ~= "/worktrees/task-example-t01"
+  then
+    fail("task scope should use the feature workspace and task worktree: " .. vim.inspect(task_scope))
+  end
+  local renamed_workspace = false
+  local closed_temporary_workspace = false
+  for _, call in ipairs(routing_calls) do
+    renamed_workspace = renamed_workspace
+      or (call[1] == "workspace" and call[2] == "rename" and call[3] == "w-feature")
+    closed_temporary_workspace = closed_temporary_workspace
+      or (call[1] == "workspace" and call[2] == "close" and call[3] == "w-task-temporary")
+  end
+  if not renamed_workspace or not closed_temporary_workspace then
+    fail("task routing should name the feature workspace and close the temporary task workspace")
+  end
+
+  routing_calls = {}
+  source_herdr.call = function(args)
+    routing_calls[#routing_calls + 1] = args
+    if args[1] == "tab" and args[2] == "create" then
+      return { tab = { tab_id = "w-feature:t2" }, root_pane = { pane_id = "w-feature:p0" } }
+    elseif args[1] == "agent" and args[2] == "get" then
+      return {
+        agent = {
+          name = "codex-example",
+          pane_id = "w-feature:p1",
+          tab_id = "w-feature:t2",
+          workspace_id = "w-feature",
+          foreground_cwd = "/worktrees/task-example-t01",
+        },
+      }
+    end
+    return {}
+  end
+  local placed_agent = source_herdr.place_agent({
+    name = "codex-example",
+    pane_id = "w-old:p1",
+    tab_id = "w-old:t1",
+    workspace_id = "w-old",
+    foreground_cwd = cwd,
+  }, task_scope, "T01 Example task")
+  source_herdr.call = original_call
+  if not placed_agent or placed_agent.tab_id ~= "w-feature:t2" then
+    fail("existing task agent should move to its task worktree tab: " .. vim.inspect(placed_agent))
+  end
+  local task_tab_create
+  local task_pane_move
+  for _, call in ipairs(routing_calls) do
+    if call[1] == "tab" and call[2] == "create" then
+      task_tab_create = call
+    elseif call[1] == "pane" and call[2] == "move" then
+      task_pane_move = call
+    end
+  end
+  if
+    not task_tab_create
+    or task_tab_create[8] ~= "T01 Example task"
+    or not task_pane_move
+    or task_pane_move[5] ~= "w-feature:t2"
+  then
+    fail("task agent placement should use the named task tab: " .. vim.inspect(routing_calls))
+  end
+
   local original_list_agents = herdr.list_agents
   local function named_agent(name, status, index, workspace_id, agent_cwd)
     return {
@@ -591,15 +681,15 @@ local function validate_sidekick_herdr()
       or layout[2].height ~= 1
       or layout[3].box ~= "horizontal"
       or layout[3].height ~= 14
-      or layout[3][1].win ~= "list"
+      or layout[3][1].win ~= "workspace"
       or layout[3][1].height ~= 12
-      or layout[3][2].win ~= "workspace"
+      or layout[3][2].win ~= "list"
       or layout[3][2].height ~= 12
       or not picker_opts.layout.wins.workspace
       or layout.width ~= math.max(math.floor(vim.o.columns * config.cli.win.float.width), 80) + 2
       or layout.height ~= math.max(math.floor(vim.o.lines * config.cli.win.float.height), 10) + 2
     then
-      fail("cwd picker should match the bordered agent float around its preview, input, and two 12-row panes")
+      fail("agent picker should place the workspace pane left of the local-session pane")
     end
     if not picker_opts.win.preview.wo.wrap or not picker_opts.win.preview.wo.linebreak then
       fail("cwd picker preview should wrap unwrapped logical lines")
@@ -642,7 +732,15 @@ local function validate_sidekick_herdr()
     end
     if
       not picker_opts.win.input.keys["<c-w>"]
+      or not picker_opts.win.input.keys["<c-j>"]
+      or not picker_opts.win.input.keys["<c-k>"]
+      or not picker_opts.win.input.keys["<c-n>"]
+      or not picker_opts.win.input.keys["<c-p>"]
+      or not picker_opts.win.input.keys["<Down>"]
+      or not picker_opts.win.input.keys["<Up>"]
+      or not picker_opts.win.input.keys["<CR>"]
       or not picker_opts.win.list.keys["<c-w>"]
+      or picker_opts.win.list.focusable ~= false
       or not picker_opts.win.input.keys["<c-u>"]
       or not picker_opts.win.list.keys["<c-u>"]
       or not picker_opts.layout.wins.workspace.opts.keys["<c-w>"]
@@ -650,6 +748,7 @@ local function validate_sidekick_herdr()
       or not picker_opts.layout.wins.workspace.opts.keys["<c-x>"]
       or not picker_opts.layout.wins.workspace.opts.keys["<c-b>"]
       or not picker_opts.layout.wins.workspace.opts.keys["<c-f>"]
+      or picker_opts.layout.wins.workspace.opts.focusable ~= false
       or picker_opts.win.input.keys["<c-b>"][1] ~= "sidekick_preview_scroll_up"
       or picker_opts.win.input.keys["<c-f>"][1] ~= "sidekick_preview_scroll_down"
       or picker_opts.win.list.keys["<c-b>"] ~= "sidekick_preview_scroll_up"
@@ -657,7 +756,7 @@ local function validate_sidekick_herdr()
       or picker_opts.win.preview.keys["<c-b>"] ~= "sidekick_preview_scroll_up"
       or picker_opts.win.preview.keys["<c-f>"] ~= "sidekick_preview_scroll_down"
     then
-      fail("cwd picker should expose pane, input, delete, and preview-scroll mappings")
+      fail("cwd picker should expose pane, input, active-selector navigation, delete, and preview-scroll mappings")
     end
 
     local rename_picker_opts = picker_opts
@@ -688,6 +787,12 @@ local function validate_sidekick_herdr()
     end
     local spinner_updates = 0
     local preview_swaps = 0
+    local input_pattern = ""
+    local input_changed
+    local input_win = vim.api.nvim_get_current_win()
+    local focused_target
+    local local_moves = 0
+    local confirmed_action
     local live_preview_buf = vim.api.nvim_create_buf(false, true)
     local current_fake_item = picker_opts.items[1]
     local fake_picker = {
@@ -696,8 +801,16 @@ local function validate_sidekick_herdr()
         return current_fake_item
       end,
       input = {
+        get = function()
+          return input_pattern
+        end,
         win = {
-          on = function() end,
+          win = input_win,
+          on = function(_, events, callback)
+            if type(events) == "table" and vim.tbl_contains(events, "TextChanged") then
+              input_changed = callback
+            end
+          end,
         },
       },
       preview = {
@@ -727,6 +840,9 @@ local function validate_sidekick_herdr()
           valid = function() return false end,
           on = function() end,
         },
+        move = function(_, step)
+          local_moves = local_moves + step
+        end,
         update = function(_, opts)
           if not opts or not opts.force then
             fail("spinner redraw should force the picker list update")
@@ -734,8 +850,82 @@ local function validate_sidekick_herdr()
           spinner_updates = spinner_updates + 1
         end,
       },
+      focus = function(_, target)
+        focused_target = target
+        if target == "input" then
+          vim.api.nvim_set_current_win(input_win)
+        end
+      end,
+      action = function(_, action)
+        confirmed_action = action
+      end,
     }
+    local global_win = picker_opts.layout.wins.workspace
+    global_win:show()
     picker_opts.on_show(fake_picker)
+    local global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
+    if focused_target ~= "input" or vim.api.nvim_get_current_win() ~= input_win then
+      fail("agent picker should keep keyboard focus in its input")
+    end
+    local workspace_two_row = vim.fn.index(global_lines, "▾ Workspace Two · ● 0")
+    if not vim.startswith(global_lines[1], "▾ Workspace One · ")
+      or workspace_two_row < 1
+      or global_lines[workspace_two_row + 2] ~= "  └─ · pi-other-workspace · 42.5%"
+    then
+      fail(
+        "workspace rows should start with the local workspace, preserve metric order, and start expanded: "
+          .. vim.inspect(global_lines)
+      )
+    end
+    if type(input_changed) ~= "function" then
+      fail("agent picker input should update workspace fuzzy results")
+    end
+    input_pattern = "notfound"
+    input_changed()
+    global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
+    if not vim.deep_equal(global_lines, { "(no matching workspace agents)" }) then
+      fail("workspace fuzzy search should hide non-matches: " .. vim.inspect(global_lines))
+    end
+    input_pattern = "pother"
+    input_changed()
+    global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
+    if global_lines[1] ~= "▾ Workspace Two · ● 0"
+      or global_lines[2] ~= "  └─ · pi-other-workspace · 42.5%"
+      or vim.api.nvim_win_get_cursor(global_win.win)[1] ~= 2
+    then
+      fail("workspace fuzzy search should select the agent while retaining its workspace parent: " .. vim.inspect(global_lines))
+    end
+    input_pattern = ""
+    input_changed()
+    local confirm_active = picker_opts.win.input.keys["<CR>"]
+    local move_up = picker_opts.win.input.keys["<Up>"]
+    move_up[1]()
+    if vim.api.nvim_get_current_win() ~= input_win or vim.api.nvim_win_get_cursor(global_win.win)[1] ~= 1 then
+      fail("<Up> should move from an agent to its workspace heading without leaving the input")
+    end
+    confirm_active[1]()
+    global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
+    if not vim.startswith(global_lines[1], "▸ Workspace One · ") then
+      fail("<Enter> should act on the global selector while the input keeps focus")
+    end
+    confirm_active[1]()
+    local move_down = picker_opts.win.input.keys["<Down>"]
+    move_down[1]()
+    if vim.api.nvim_get_current_win() ~= input_win or vim.api.nvim_win_get_cursor(global_win.win)[1] ~= 2 then
+      fail("<Down> should move the global-agent selection without leaving the input")
+    end
+    local toggle_selector = picker_opts.win.input.keys["<c-w>"]
+    toggle_selector[1]()
+    move_down[1]()
+    move_up[1]()
+    picker_opts.win.input.keys["<c-j>"][1]()
+    picker_opts.win.input.keys["<c-k>"][1]()
+    confirm_active[1]()
+    if vim.api.nvim_get_current_win() ~= input_win or local_moves ~= 0 or confirmed_action ~= "confirm" then
+      fail("local-session navigation should move logically without leaving the input")
+    end
+    toggle_selector[1]()
+    global_win:close()
     vim.wait(450)
     if spinner_updates == 0 then
       fail("working-session spinners should redraw at 80ms")
@@ -798,11 +988,11 @@ local function validate_sidekick_herdr()
       end
     end
     fake_picker.closed = false
-    local function render_preview(item)
+    local function render_preview(item, preview)
       current_fake_item = item
       local previous_buf = fake_picker.preview.win.buf
       local previous_swaps = preview_swaps
-      picker_opts.preview({ item = item, preview = fake_picker.preview })
+      picker_opts.preview({ item = item, preview = preview or fake_picker.preview })
       if fake_picker.preview.win.buf ~= previous_buf then
         fail("hover preview should keep the current buffer visible while its replacement renders")
       end
@@ -835,6 +1025,31 @@ local function validate_sidekick_herdr()
     end
     if #toggles ~= 0 then
       fail("previewing a done session must not focus it")
+    end
+
+    local current_width = vim.api.nvim_win_get_width(fake_picker.preview.win.win)
+    local sized_width = math.max(current_width - 7, 10)
+    local sized_win = vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), false, {
+      relative = "editor",
+      row = 0,
+      col = 0,
+      width = sized_width,
+      height = 10,
+      style = "minimal",
+      hide = true,
+    })
+    read_result = "\27[32m" .. string.rep("x", sized_width + 3) .. "\27[0m"
+    local sized_item = vim.tbl_extend("force", {}, done_item, { agent_name = "pi-sized-preview" })
+    local sized_buf = render_preview(sized_item, {
+      win = {
+        win = sized_win,
+        win_valid = function() return true end,
+      },
+    })
+    local sized_lines = vim.api.nvim_buf_get_lines(sized_buf, 0, 2, false)
+    vim.api.nvim_win_close(sized_win, true)
+    if sized_lines[1] ~= string.rep("x", sized_width) or sized_lines[2] ~= "xxx" then
+      fail("ANSI staging buffer should use the preview's actual width: " .. vim.inspect(sized_lines))
     end
 
     read_result = table.concat({
@@ -2183,12 +2398,459 @@ local function validate_vault_work_items()
   end
 end
 
+local function validate_vault_features()
+  local root = vim.fn.tempname() .. "-vault-features"
+  local neovim = root .. "/1_projects/neovim"
+  local pi = root .. "/1_projects/pi-agent"
+  local notes = neovim .. "/themes/notetaking-support"
+  local agents = pi .. "/themes/pi-customization"
+  local vault_feature = notes .. "/features/vault-feature-picker"
+  local weekly_feature = notes .. "/features/weekly-backlog-helpers"
+  local onboarding_feature = agents .. "/features/user-onboarding"
+  vim.fn.mkdir(vault_feature .. "/tasks", "p")
+  vim.fn.mkdir(weekly_feature, "p")
+  vim.fn.mkdir(notes .. "/features/completed-feature", "p")
+  vim.fn.mkdir(notes .. "/features/invalid-feature", "p")
+  vim.fn.mkdir(onboarding_feature, "p")
+  vim.fn.mkdir(agents .. "/features/maintained-feature", "p")
+
+  local neovim_repository = root .. "/repos/neovim"
+  local pi_repository = root .. "/repos/pi-agent"
+  vim.fn.writefile({
+    "---",
+    "repository: " .. neovim_repository,
+    "---",
+    "",
+    "# Neovim",
+  }, neovim .. "/README.md")
+  vim.fn.writefile({ "# Notetaking Support" }, notes .. "/theme.md")
+  vim.fn.writefile({
+    "---",
+    "repository: " .. pi_repository,
+    "---",
+    "",
+    "# Pi Agent",
+  }, pi .. "/README.md")
+  vim.fn.writefile({ "# Pi Customization" }, agents .. "/theme.md")
+  vim.fn.writefile({
+    "---",
+    "status: pending-work",
+    "---",
+    "",
+    "# Vault Feature Picker",
+    "",
+    "## Tasks",
+    "",
+    "- [~] [[tasks/01-build-tree|T01 Build tree picker.]]",
+  }, vault_feature .. "/feature.md")
+  vim.fn.writefile({
+    "---",
+    "status: in-progress",
+    "---",
+    "",
+    "# T01: Build Tree Picker",
+  }, vault_feature .. "/tasks/01-build-tree.md")
+  vim.fn.writefile({
+    "---",
+    "status: in-progress",
+    "---",
+    "",
+    "# Weekly Backlog Helpers",
+    "",
+    "## Tasks",
+    "",
+    "- [x] T01 Finish canonical paths.",
+    "- [ ] T02 Verify date navigation.",
+  }, weekly_feature .. "/feature.md")
+  vim.fn.writefile({
+    "---",
+    "status: done",
+    "---",
+    "",
+    "# Completed Feature",
+  }, notes .. "/features/completed-feature/feature.md")
+  vim.fn.writefile({
+    "---",
+    "status: active",
+    "---",
+    "",
+    "# Invalid Feature",
+  }, notes .. "/features/invalid-feature/feature.md")
+  vim.fn.writefile({
+    "---",
+    "status: in-progress",
+    "---",
+    "",
+    "# User Onboarding",
+    "",
+    "## Tasks",
+    "",
+    "- [ ] T01 Complete onboarding.",
+  }, onboarding_feature .. "/feature.md")
+  vim.fn.writefile({
+    "---",
+    "status: maintained",
+    "---",
+    "",
+    "# Maintained Feature",
+  }, agents .. "/features/maintained-feature/feature.md")
+
+  local ok, err = xpcall(function()
+    local features = require("helpers.vault_features")
+    local items = features.collect(root)
+    if #items ~= 10 then
+      fail("expected project, theme, active feature, and task tree rows; got " .. vim.inspect(items))
+    end
+    assert_sequence(
+      vim.tbl_map(function(item)
+        return item.kind
+      end, items),
+      { "project", "theme", "feature", "task", "feature", "task", "project", "theme", "feature", "task" },
+      "vault feature tree row kinds"
+    )
+    assert_sequence(
+      vim.tbl_map(function(item)
+        return item.label
+      end, items),
+      {
+        "Neovim",
+        "Notetaking Support",
+        "Weekly Backlog Helpers",
+        "T02 Verify date navigation.",
+        "Vault Feature Picker",
+        "T01 Build tree picker.",
+        "Pi Agent",
+        "Pi Customization",
+        "User Onboarding",
+        "T01 Complete onboarding.",
+      },
+      "vault feature tree labels"
+    )
+    if
+      items[3].status ~= "in-progress"
+      or items[5].status ~= "pending-work"
+      or items[3].parent ~= items[2]
+      or items[2].parent ~= items[1]
+      or not items[1].parent.root
+    then
+      fail("active features should be status-ordered under retained hierarchy parents: " .. vim.inspect(items))
+    end
+
+    local linked_task = items[6]
+    if
+      linked_task.file ~= vault_feature .. "/tasks/01-build-tree.md"
+      or linked_task.pos[1] ~= 5
+      or linked_task.parent ~= items[5]
+      or linked_task.repository ~= neovim_repository
+      or linked_task.state ~= "~"
+      or linked_task.linked ~= true
+    then
+      fail("linked task should resolve its task note, source heading, repository, and feature parent")
+    end
+    local inline_task = items[4]
+    if
+      inline_task.file ~= weekly_feature .. "/feature.md"
+      or inline_task.pos[1] ~= 10
+      or inline_task.linked ~= false
+    then
+      fail("inline task should retain its exact feature checklist location: " .. vim.inspect(items[4]))
+    end
+
+    local Matcher = require("snacks.picker.core.matcher")
+    local matcher = Matcher.new({ keep_parents = true, sort = false })
+    matcher:init("build tree")
+    local retained = {}
+    local matched = matcher:update({
+      list = {
+        add = function(_, item)
+          retained[#retained + 1] = item.kind
+        end,
+      },
+      opts = { matcher = { sort_empty = false } },
+    }, linked_task)
+    if not matched then
+      fail("task fuzzy query should match its task row")
+    end
+    assert_sequence(retained, { "feature", "theme", "project" }, "fuzzy task parent retention")
+
+    local herdr = require("plugins.sidekick.herdr")
+    local internal = require("plugins.sidekick.internal")
+    local original_get_agent = herdr.get_agent
+    local original_start = herdr.start
+    local original_run = herdr.run
+    local original_ensure_task_scope = herdr.ensure_task_scope
+    local original_place_agent = herdr.place_agent
+    local started
+    local ran
+    local routed
+    local placed
+    herdr.get_agent = function()
+      return nil
+    end
+    herdr.ensure_task_scope = function(repository, workspace_label, feature_branch, task_branch)
+      routed = {
+        repository = repository,
+        workspace_label = workspace_label,
+        feature_branch = feature_branch,
+        task_branch = task_branch,
+      }
+      return { workspace_id = "w-feature", cwd = neovim_repository .. "/task-worktree" }
+    end
+    herdr.start = function(name, cwd, command, env, scope, tab_label)
+      started = {
+        name = name,
+        cwd = cwd,
+        command = command,
+        env = env,
+        scope = scope,
+        tab_label = tab_label,
+      }
+      return { name = name, pane_id = "feature-pane", terminal_id = "feature-terminal" }
+    end
+    herdr.place_agent = function(agent, scope, tab_label)
+      placed = { agent = agent, scope = scope, tab_label = tab_label }
+      return agent
+    end
+    herdr.run = function(pane_id, text)
+      ran = { pane_id = pane_id, text = text }
+      return true
+    end
+
+    local agent_ok, agent_err = xpcall(function()
+      local linked_prompt = table.concat({
+        "Start working on this vault task now, following its task and feature contracts.",
+        "Task: " .. vault_feature .. "/tasks/01-build-tree.md:5",
+        "Feature: " .. vault_feature .. "/feature.md:5",
+      }, "\n")
+      if not features.send_to_agent(linked_task) then
+        fail("linked feature task should be sent to its project agent")
+      end
+      if
+        not started
+        or started.name ~= "codex-neovim-vault-feature-picker-t01"
+        or started.cwd ~= neovim_repository .. "/task-worktree"
+        or started.scope.workspace_id ~= "w-feature"
+        or started.tab_label ~= "T01 Build tree picker."
+        or started.env[internal.named_env_var] ~= "neovim-vault-feature-picker-t01"
+      then
+        fail("feature task agent start arguments are wrong: " .. vim.inspect(started))
+      end
+      if
+        not routed
+        or routed.repository ~= neovim_repository
+        or routed.workspace_label ~= "Neovim · Vault Feature Picker"
+        or routed.feature_branch ~= "feature/vault-feature-picker"
+        or routed.task_branch ~= "task/01-build-tree"
+      then
+        fail("linked task worktree routing arguments are wrong: " .. vim.inspect(routed))
+      end
+      assert_sequence(
+        started.command,
+        { "codex", "--dangerously-bypass-approvals-and-sandbox", linked_prompt },
+        "feature task agent command"
+      )
+      if ran then
+        fail("a new Codex agent should receive its prompt as a launch argument")
+      end
+
+      started = nil
+      placed = nil
+      herdr.get_agent = function(name)
+        return {
+          name = name,
+          pane_id = "feature-pane",
+          terminal_id = "feature-terminal",
+          workspace_id = "w-old",
+        }
+      end
+      if not features.send_to_agent(linked_task) or started then
+        fail("the same feature task should reuse its existing named agent")
+      end
+      if
+        not placed
+        or placed.scope.workspace_id ~= "w-feature"
+        or placed.tab_label ~= "T01 Build tree picker."
+      then
+        fail("reused feature task agent should move into its named task tab: " .. vim.inspect(placed))
+      end
+      if not ran or ran.pane_id ~= "feature-pane" or ran.text ~= linked_prompt then
+        fail("reused linked feature task agent should atomically run its direct-work prompt: " .. vim.inspect(ran))
+      end
+
+      started = nil
+      ran = nil
+      routed = nil
+      placed = nil
+      herdr.get_agent = function()
+        return nil
+      end
+      local inline_prompt = table.concat({
+        "$grill-with-docs",
+        "",
+        "Use the feature contract and inline task below as source context. Do not implement yet. Interview me one decision at a time, recommend an answer, and update the durable docs until this becomes a well-defined task spec.",
+        "Feature: " .. weekly_feature .. "/feature.md:5",
+        "Inline task: T02 Verify date navigation.",
+      }, "\n")
+      if not features.send_to_agent(inline_task) then
+        fail("inline feature task should start a project agent")
+      end
+      if
+        not started
+        or started.name ~= "codex-neovim-weekly-backlog-helpers-t02"
+        or started.cwd ~= neovim_repository .. "/task-worktree"
+        or started.scope.workspace_id ~= "w-feature"
+        or started.tab_label ~= "T02 Verify date navigation."
+        or started.env[internal.named_env_var] ~= "neovim-weekly-backlog-helpers-t02"
+      then
+        fail("inline feature task agent start arguments are wrong: " .. vim.inspect(started))
+      end
+      if
+        not routed
+        or routed.workspace_label ~= "Neovim · Weekly Backlog Helpers"
+        or routed.feature_branch ~= "feature/weekly-backlog-helpers"
+        or routed.task_branch ~= "task/weekly-backlog-helpers-t02"
+      then
+        fail("inline task worktree routing arguments are wrong: " .. vim.inspect(routed))
+      end
+      assert_sequence(
+        started.command,
+        { "codex", "--dangerously-bypass-approvals-and-sandbox", inline_prompt },
+        "inline feature task agent command"
+      )
+      if ran then
+        fail("a new inline Codex agent should receive grill-with-docs as a launch argument")
+      end
+    end, debug.traceback)
+    herdr.get_agent = original_get_agent
+    herdr.start = original_start
+    herdr.run = original_run
+    herdr.ensure_task_scope = original_ensure_task_scope
+    herdr.place_agent = original_place_agent
+    if not agent_ok then
+      fail(agent_err)
+    end
+
+    local lazy = require("lazy")
+    local registry = require("plugins.sidekick.registry")
+    local last_session = require("plugins.sidekick.last_session")
+    local original_lazy_load = lazy.load
+    local original_rehydrate = registry.rehydrate
+    local original_record = last_session.record
+    local original_toggle = internal.toggle_tool_session
+    local activation_events = {}
+    lazy.load = function()
+      activation_events[#activation_events + 1] = "load"
+    end
+    registry.rehydrate = function()
+      activation_events[#activation_events + 1] = "rehydrate"
+    end
+    last_session.record = function(name, terminal_id)
+      activation_events[#activation_events + 1] = "record:" .. name .. ":" .. terminal_id
+    end
+    internal.toggle_tool_session = function(name, focus, terminal_id)
+      activation_events[#activation_events + 1] =
+        string.format("toggle:%s:%s:%s", name, tostring(focus), terminal_id)
+    end
+    local activation_ok, activation_err = xpcall(function()
+      features.activate_agent({
+        name = "codex-neovim-vault-feature-picker-t01",
+        terminal_id = "feature-terminal",
+      })
+      assert_sequence(activation_events, {
+        "load",
+        "rehydrate",
+        "record:codex-neovim-vault-feature-picker-t01:feature-terminal",
+        "toggle:codex-neovim-vault-feature-picker-t01:true:feature-terminal",
+      }, "feature task agent activation")
+    end, debug.traceback)
+    lazy.load = original_lazy_load
+    registry.rehydrate = original_rehydrate
+    last_session.record = original_record
+    internal.toggle_tool_session = original_toggle
+    if not activation_ok then
+      fail(activation_err)
+    end
+
+    local render_markdown = load_plugin("render-markdown.nvim")
+    assert_key_desc(render_markdown, "<leader>vf", "active vault features")
+    local callback = key_callback(render_markdown, "<leader>vf")
+    if not callback then
+      fail("<leader>vf callback missing")
+    end
+
+    local original_collect = features.collect
+    local original_send_to_agent = features.send_to_agent
+    local original_activate_agent = features.activate_agent
+    local original_pick = Snacks.picker.pick
+    local picker_opts
+    local action_item
+    local action_events = {}
+    features.collect = function()
+      return items
+    end
+    features.send_to_agent = function(item)
+      action_item = item
+      action_events[#action_events + 1] = "send"
+      return { name = "codex-neovim-vault-feature-picker-t01", terminal_id = "feature-terminal" }
+    end
+    features.activate_agent = function()
+      action_events[#action_events + 1] = "activate"
+    end
+    Snacks.picker.pick = function(opts)
+      picker_opts = opts
+    end
+    local callback_ok, callback_err = xpcall(callback, debug.traceback)
+    if callback_ok and picker_opts and picker_opts.actions and picker_opts.actions.feature_agent then
+      picker_opts.actions.feature_agent({
+        close = function()
+          action_events[#action_events + 1] = "close"
+        end,
+      }, linked_task)
+    end
+    features.collect = original_collect
+    features.send_to_agent = original_send_to_agent
+    features.activate_agent = original_activate_agent
+    Snacks.picker.pick = original_pick
+    if not callback_ok then
+      fail(callback_err)
+    end
+    if
+      not picker_opts
+      or picker_opts.source ~= "active-vault-features"
+      or picker_opts.title ~= "Active Vault Feature Tree (3)"
+      or picker_opts.format ~= features.format
+      or picker_opts.preview ~= "file"
+      or picker_opts.matcher.keep_parents ~= true
+      or picker_opts.sort.fields[1] ~= "idx"
+      or picker_opts.layout.preset ~= "telescope"
+      or picker_opts.layout.reverse ~= false
+      or picker_opts.confirm ~= nil
+    then
+      fail("active vault feature picker options are wrong: " .. vim.inspect(picker_opts))
+    end
+    if
+      picker_opts.win.input.keys["<c-a>"][1] ~= "feature_agent"
+      or picker_opts.win.list.keys["<c-a>"] ~= "feature_agent"
+      or action_item ~= linked_task
+    then
+      fail("vault feature picker <C-a> should be picker-local and receive the exact selected task")
+    end
+    assert_sequence(action_events, { "send", "close", "activate" }, "vault feature picker agent action")
+  end, debug.traceback)
+
+  vim.fn.delete(root, "rf")
+  if not ok then
+    fail(err)
+  end
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
   ["herdr-workspaces"] = validate_herdr_workspaces,
   ["sidekick-herdr-live"] = validate_sidekick_herdr_live,
+  ["vault-features"] = validate_vault_features,
   ["vault-work-items"] = validate_vault_work_items,
 }
 
@@ -2197,7 +2859,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-work-items"
+      .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
   )
 end
 

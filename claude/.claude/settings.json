@@ -8,19 +8,5 @@
   },
   "skipDangerousModePermissionPrompt": true,
   "voiceEnabled": true,
-  "agentPushNotifEnabled": true,
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "lavish-axi",
-            "timeout": 10
-          }
-        ]
-      }
-    ]
-  }
+  "agentPushNotifEnabled": true
 }
