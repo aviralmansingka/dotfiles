@@ -131,8 +131,10 @@ System card categories:
   fixing CI failures in the same task run. Never bypass required approvals or branch protection. Without CI, merge
   only when the pull request is mergeable and the complete local verifier set is green.
 - After merge, run post-merge checks against merged `main`, then close every Herdr tab in the task's Herdr Workspace
-  and every Neovim Workspace Tab bound to it. Verify those tabs are gone, preserve cleanup evidence in the task note,
-  and leave other Herdr Workspaces and Unbound Neovim Tabs untouched.
+  and every Neovim Workspace Tab bound to it. Mark the Task note `status: done`, change its Feature checklist bullet
+  to `[x]`, derive the Feature status, commit checkpoint two on vault `main`, and push `origin main`. Fetch with
+  `git fetch origin main:refs/remotes/origin/main` and verify that commit is on `origin/main`; cleanup is incomplete
+  until it is. Preserve other Herdr Workspaces and Unbound Neovim Tabs.
 - Create `issues/` under a feature lazily for temporary decisions and investigations with known ownership. Keep
   cross-feature or not-yet-owned issues under the project's `issues/`, then move them under the owning feature once
   that ownership becomes clear.

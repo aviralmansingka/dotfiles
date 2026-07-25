@@ -156,10 +156,15 @@ Always run this goal, even when it completes immediately:
 2. Close every Neovim Workspace Tab bound to that workspace.
 3. Verify those tabs are gone. Preserve other Herdr workspaces and Unbound Neovim Tabs.
 4. Add PR, merge, final verifier, post-merge, and cleanup evidence to the Task note.
-5. Synchronize the Task frontmatter and authoritative Feature checklist bullet.
-6. Commit and push vault checkpoint two directly. Never open a vault PR.
+5. Set the Task note frontmatter to `status: done`, change its authoritative Feature checklist bullet to `[x]`, and
+   derive the Feature status from its complete checklist.
+6. Commit vault checkpoint two on the vault's `main` branch and push `origin main`. If the update was prepared on
+   another vault branch, merge it into vault `main` first. Never open a vault PR.
+7. Run `git fetch origin main:refs/remotes/origin/main` in the vault and verify the checkpoint-two commit is an
+   ancestor of `origin/main`. Cleanup is incomplete until this remote-main check passes.
 
 ## Completion
 
-Report the Feature and Task links, implementation PR and merge state, final verifier evidence, vault commits, and
-workspace cleanup evidence. State any deferred optional polish or unrelated dirty state preserved.
+Report the Feature and Task links, implementation PR and merge state, final verifier evidence, vault commits,
+remote-main verification, and workspace cleanup evidence. State any deferred optional polish or unrelated dirty state
+preserved.
