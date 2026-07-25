@@ -9,6 +9,23 @@ case "$case_name" in
   V01|V02)
     (cd "$module_dir" && go test ./internal/atlas -run "^Test${case_name}")
     ;;
+  V03)
+    (cd "$module_dir" && go test ./internal/atlas -run '^TestV03')
+    for frame in red edit test green; do
+      upper_frame="$(printf '%s' "$frame" | tr '[:lower:]' '[:upper:]')"
+      output="$(
+        cd "$module_dir"
+        go run ./cmd/vault-hunter-atlas render \
+          --registry testdata/run.json \
+          --profile compact \
+          --width 78 \
+          --height 17 \
+          --frame "$frame"
+      )"
+      grep -q "/goal V03 · $upper_frame" <<<"$output"
+      grep -q 'next:' <<<"$output"
+    done
+    ;;
   all)
     (cd "$module_dir" && go test ./internal/atlas)
     ;;
