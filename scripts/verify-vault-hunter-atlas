@@ -93,7 +93,12 @@ case "$case_name" in
   V11)
     (
       cd "$module_dir"
-      go test ./internal/runregistry ./internal/herdrcli -run '^TestV11'
+      go test \
+        ./internal/runregistry \
+        ./internal/herdrcli \
+        ./cmd/vault-hunter-run \
+        ./cmd/vault-hunter-atlas \
+        -run '^TestV11'
     )
     skill_file="$module_dir/../.agents/skills/vault-hunter/SKILL.md"
     while IFS= read -r contract; do
@@ -112,6 +117,9 @@ Worker tabs never receive an Atlas companion
 Close each captured native subagent session and its one-pane Herdr worker tab
 Only verifier-driven Task Runs create Atlas state
 Feature, Project, Issue, Wayfinder
+vault-hunter-run participant
+before accepting the dispatch
+never register as Run participants
 the only right split in the active driver/orchestrator tab
 Preserve the driver/orchestrator tab
 EOF

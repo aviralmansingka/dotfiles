@@ -130,8 +130,9 @@ func TestV05InteractiveRunWaitsForRegistryAndStaysAlive(t *testing.T) {
 		t.Fatal("interactive Atlas did not stop on q")
 	}
 	if !strings.Contains(stdout.String(), "Vault Hunter Atlas") ||
-		!strings.Contains(stdout.String(), "GOALS") {
-		t.Fatalf("short interactive Atlas did not render the compact layout:\n%s", stdout.String())
+		!strings.Contains(stdout.String(), "GOALS") ||
+		!strings.Contains(stdout.String(), "implementation · V05 · › working") {
+		t.Fatalf("short interactive Atlas did not render compact live participant state:\n%s", stdout.String())
 	}
 }
 
@@ -213,7 +214,12 @@ func v05Run(kind string, participant bool) runregistry.Run {
 		Goals:         []runregistry.Goal{{ID: "V05", Label: "Interactive startup", Status: "active"}},
 	}
 	if participant {
-		run.Participants = []runregistry.Participant{{PaneID: "w1:p1"}}
+		run.Participants = []runregistry.Participant{{
+			Role:   "implementation",
+			GoalID: "V05",
+			Name:   "codex-worker",
+			PaneID: "w1:p1",
+		}}
 	}
 	return run
 }
@@ -223,9 +229,14 @@ type v05Herdr struct {
 	listener      net.Listener
 	subscriptions atomic.Int32
 	snapshots     atomic.Int32
+	status        string
 }
 
 func startV05Herdr(t *testing.T) *v05Herdr {
+	return startV05HerdrStatus(t, "working")
+}
+
+func startV05HerdrStatus(t *testing.T, status string) *v05Herdr {
 	t.Helper()
 	socketDir, err := os.MkdirTemp(os.TempDir(), "vh-v05-")
 	if err != nil {
@@ -237,7 +248,7 @@ func startV05Herdr(t *testing.T) *v05Herdr {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := &v05Herdr{path: path, listener: listener}
+	server := &v05Herdr{path: path, listener: listener, status: status}
 	t.Cleanup(func() { _ = listener.Close() })
 	go func() {
 		for {
@@ -284,12 +295,90 @@ func (s *v05Herdr) serve(connection net.Conn) {
 			"result": map[string]any{
 				"agent": map[string]any{
 					"pane_id":      params.Target,
-					"agent_status": "working",
+					"agent_status": s.status,
 					"revision":     1,
 				},
 			},
 		})
 	}
+}
+
+func TestV11WorkerLookupRendersSelectedLiveParticipantReadOnly(t *testing.T) {
+	for _, test := range []struct {
+		status string
+		want   string
+	}{
+		{status: "working", want: "implementation · V11 · › working"},
+		{status: "surprised", want: "implementation · V11 · ? unknown"},
+	} {
+		t.Run(test.status, func(t *testing.T) {
+			stateDir := t.TempDir()
+			server := startV05HerdrStatus(t, test.status)
+			run := runregistry.Run{
+				SchemaVersion: 1,
+				RunID:         "run-worker",
+				Status:        "active",
+				Task:          runregistry.Task{ID: "T11", Kind: "task"},
+				ActiveGoal:    "V11",
+				NextAction:    "Keep working",
+				Goals:         []runregistry.Goal{{ID: "V11", Label: "Participant lookup", Status: "active"}},
+				Participants: []runregistry.Participant{{
+					Role:        "implementation",
+					GoalID:      "V11",
+					Name:        "codex-worker",
+					WorkspaceID: "workspace",
+					TabID:       "worker-tab",
+					PaneID:      "worker-pane",
+					TerminalID:  "worker-terminal",
+					AgentSession: runregistry.AgentSession{
+						Source: "herdr:codex",
+						Kind:   "id",
+						Value:  "worker-session",
+					},
+				}},
+			}
+			writeCommandRun(t, stateDir, run)
+			registryPath := filepath.Join(stateDir, "runs", run.RunID+".json")
+			before, err := os.ReadFile(registryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var stdout bytes.Buffer
+			err = runCommandWorkerPreview(
+				stateDir,
+				server.path,
+				&stdout,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(stdout.String(), test.want) {
+				t.Fatalf("compact worker preview missing %q:\n%s", test.want, stdout.String())
+			}
+			after, err := os.ReadFile(registryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(before, after) {
+				t.Fatal("worker lookup mutated the Run Registry")
+			}
+		})
+	}
+}
+
+func runCommandWorkerPreview(stateDir, socket string, stdout io.Writer) error {
+	return run([]string{
+		"render",
+		"--state-dir", stateDir,
+		"--socket", socket,
+		"--terminal-id", "worker-terminal",
+		"--agent-session-source", "herdr:codex",
+		"--agent-session-kind", "id",
+		"--agent-session-value", "worker-session",
+		"--profile", "compact",
+		"--width", "78",
+		"--height", "17",
+	}, strings.NewReader(""), stdout)
 }
 
 func waitForV05(t *testing.T, done <-chan error, ready func() bool) {

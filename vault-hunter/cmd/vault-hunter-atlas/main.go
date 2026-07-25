@@ -51,6 +51,8 @@ func runRender(args []string, stdout io.Writer) error {
 		return err
 	}
 	var selectedRun atlas.Run
+	var selectedParticipant *atlas.Participant
+	var live *atlas.LiveState
 	var err error
 	if *registry != "" {
 		data, readErr := os.ReadFile(*registry)
@@ -62,7 +64,8 @@ func runRender(args []string, stdout io.Writer) error {
 			return err
 		}
 	} else {
-		selectedRun, _, err = runregistry.FindParticipant(
+		var participant runregistry.Participant
+		selectedRun, participant, err = runregistry.FindParticipant(
 			*stateDir,
 			*terminalID,
 			runregistry.AgentSession{
@@ -74,11 +77,15 @@ func runRender(args []string, stdout io.Writer) error {
 		if err != nil {
 			return err
 		}
+		selectedParticipant = &participant
+		live = atlas.NewLiveState(selectedRun.Participants)
 		client := herdrsocket.Client{SocketPath: *socket}
 		for _, participant := range selectedRun.Participants {
-			if _, err := client.Snapshot(context.Background(), participant.PaneID); err != nil {
+			snapshot, err := client.Snapshot(context.Background(), participant.PaneID)
+			if err != nil {
 				return err
 			}
+			live.Refresh(snapshot)
 		}
 	}
 	if *frame != "" {
@@ -91,9 +98,19 @@ func runRender(args []string, stdout io.Writer) error {
 	var output string
 	switch *profile {
 	case "compact":
-		output = atlas.RenderCompact(selectedRun, *width, *height)
+		if selectedParticipant == nil {
+			output = atlas.RenderCompact(selectedRun, *width, *height)
+		} else {
+			output = atlas.RenderCompactParticipant(
+				selectedRun,
+				*selectedParticipant,
+				live,
+				*width,
+				*height,
+			)
+		}
 	case "expanded":
-		output = atlas.RenderExpanded(selectedRun, *width, *height)
+		output = atlas.RenderExpandedLive(selectedRun, live, *width, *height)
 	default:
 		return fmt.Errorf("unknown profile %q", *profile)
 	}
@@ -136,7 +153,7 @@ func runInteractive(args []string, stdin io.Reader, stdout io.Writer) error {
 		run.Participants,
 	)
 	program := tea.NewProgram(
-		atlas.NewUIModel(run),
+		atlas.NewLiveUIModel(run, live),
 		tea.WithContext(ctx),
 		tea.WithInput(stdin),
 		tea.WithOutput(stdout),

@@ -8,6 +8,7 @@ import (
 
 type UIModel struct {
 	run        Run
+	live       *LiveState
 	selection  *Selection
 	transition *Transition
 	width      int
@@ -15,8 +16,13 @@ type UIModel struct {
 }
 
 func NewUIModel(run Run) UIModel {
+	return NewLiveUIModel(run, nil)
+}
+
+func NewLiveUIModel(run Run, live *LiveState) UIModel {
 	return UIModel{
 		run:        run,
+		live:       live,
 		selection:  NewSelection(run),
 		transition: NewTransition(),
 		width:      78,
@@ -59,9 +65,9 @@ func (m UIModel) View() string {
 	height := max(m.height-1, 1)
 	var output string
 	if m.height <= 17 {
-		output = RenderCompact(m.run, m.width, height)
+		output = RenderCompactLive(m.run, m.live, m.width, height)
 	} else {
-		output = RenderExpanded(m.run, m.width, height)
+		output = RenderExpandedLive(m.run, m.live, m.width, height)
 	}
 	index := m.selection.Selected()
 	if index < 0 || index >= len(m.run.Goals) {

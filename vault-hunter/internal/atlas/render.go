@@ -8,6 +8,14 @@ import (
 )
 
 func RenderExpanded(run Run, width, height int) string {
+	return renderExpanded(run, nil, width, height)
+}
+
+func RenderExpandedLive(run Run, live *LiveState, width, height int) string {
+	return renderExpanded(run, live, width, height)
+}
+
+func renderExpanded(run Run, live *LiveState, width, height int) string {
 	active := activeGoal(run)
 	lines := []string{
 		fmt.Sprintf("Vault Hunter · %s · %s", run.RunID, strings.ToUpper(run.Status)),
@@ -31,23 +39,47 @@ func RenderExpanded(run Run, width, height int) string {
 	}
 	lines = append(lines, "", "PARTICIPANTS")
 	for _, participant := range run.Participants {
-		goalID := participant.GoalID
-		if goalID == "" {
-			goalID = run.ActiveGoal
+		line := participant.Role + " · " + participantGoal(run, participant) + " · " + participant.Name
+		if live != nil {
+			line += " · " + live.RenderParticipant(participant.PaneID, 0)
 		}
-		lines = append(lines, participant.Role+" · "+goalID+" · "+participant.Name)
+		lines = append(lines, line)
 	}
 	return fitLines(lines, width, height)
 }
 
 func RenderCompact(run Run, width, height int) string {
+	return renderCompact(run, nil, nil, width, height)
+}
+
+func RenderCompactParticipant(
+	run Run,
+	selected Participant,
+	live *LiveState,
+	width,
+	height int,
+) string {
+	return renderCompact(run, &selected, live, width, height)
+}
+
+func RenderCompactLive(run Run, live *LiveState, width, height int) string {
+	if live == nil {
+		return RenderCompact(run, width, height)
+	}
+	return renderCompact(run, activeParticipant(run), live, width, height)
+}
+
+func renderCompact(run Run, selected *Participant, live *LiveState, width, height int) string {
 	active := activeGoal(run)
 	if width < 64 {
-		lines := []string{
-			"Vault Hunter Atlas · " + run.RunID,
-			activeSummary(active),
-			"next: " + run.NextAction,
+		lines := []string{"Vault Hunter Atlas · " + run.RunID}
+		if selected != nil {
+			lines = append(lines, compactParticipantLine(run, *selected, live))
 		}
+		lines = append(lines,
+			activeSummary(active),
+			"next: "+run.NextAction,
+		)
 		for _, goal := range run.Goals {
 			lines = append(lines, goalLine(goal))
 		}
@@ -78,6 +110,9 @@ func RenderCompact(run Run, width, height int) string {
 		center("Vault Hunter Atlas · "+run.RunID, width),
 		strings.Repeat("─", width),
 	}
+	if selected != nil {
+		lines = append(lines, compactParticipantLine(run, *selected, live))
+	}
 	for index := 0; index < bodyRows; index++ {
 		lines = append(lines, joinColumns(at(left, index), at(right, index), leftWidth, rightWidth, columnGap))
 	}
@@ -91,6 +126,39 @@ func RenderCompact(run Run, width, height int) string {
 	}
 	lines = append(lines, "j/k goal · enter expand")
 	return fitLines(lines, width, height)
+}
+
+func activeParticipant(run Run) *Participant {
+	for index := range run.Participants {
+		participant := &run.Participants[index]
+		if participant.Role != "orchestrator" && participant.GoalID == run.ActiveGoal {
+			return participant
+		}
+	}
+	for index := range run.Participants {
+		if run.Participants[index].Role != "orchestrator" {
+			return &run.Participants[index]
+		}
+	}
+	if len(run.Participants) != 0 {
+		return &run.Participants[0]
+	}
+	return nil
+}
+
+func compactParticipantLine(run Run, participant Participant, live *LiveState) string {
+	line := participant.Role + " · " + participantGoal(run, participant)
+	if live != nil {
+		line += " · " + live.RenderParticipant(participant.PaneID, 0)
+	}
+	return line
+}
+
+func participantGoal(run Run, participant Participant) string {
+	if participant.GoalID != "" {
+		return participant.GoalID
+	}
+	return run.ActiveGoal
 }
 
 func activeSummary(goal Goal) string {

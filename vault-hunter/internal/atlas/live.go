@@ -2,6 +2,7 @@ package atlas
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/aviralmansingka/dotfiles/vault-hunter/internal/herdrsocket"
 	"github.com/aviralmansingka/dotfiles/vault-hunter/internal/runregistry"
@@ -15,6 +16,7 @@ type liveParticipant struct {
 }
 
 type LiveState struct {
+	mu           sync.RWMutex
 	participants map[string]liveParticipant
 }
 
@@ -29,6 +31,8 @@ func NewLiveState(participants []runregistry.Participant) *LiveState {
 }
 
 func (l *LiveState) Refresh(snapshot AgentSnapshot) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	current, ok := l.participants[snapshot.PaneID]
 	if !ok {
 		return
@@ -43,6 +47,8 @@ func (l *LiveState) Refresh(snapshot AgentSnapshot) {
 }
 
 func (l *LiveState) MarkStale() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	for paneID, participant := range l.participants {
 		participant.stale = true
 		l.participants[paneID] = participant
@@ -50,6 +56,8 @@ func (l *LiveState) MarkStale() {
 }
 
 func (l *LiveState) RenderParticipant(paneID string, spinnerFrame int) string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	participant, ok := l.participants[paneID]
 	if !ok {
 		return ""

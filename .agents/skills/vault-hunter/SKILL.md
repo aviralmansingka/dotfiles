@@ -85,6 +85,9 @@ For each dispatched role:
   tab's only pane; do not precreate a blank root pane and then split a worker beside it. Verify `pane_count=1`.
 - Treat the Herdr wrapper as one named tuple: owning Feature workspace, distinct tab label, full Codex pane under the
   agent name, and distinct Sidekick session. Capture every returned opaque ID instead of deriving one.
+- For a verifier-driven Task Run, immediately after capturing that native identity and before accepting the dispatch,
+  register it against its owned goal with `vault-hunter-run participant`. Reject the dispatch if registration fails.
+  Feature, Project, Issue, Wayfinder, and normal-agent dispatches never register as Run participants.
 - Use the Feature worktree as `--cwd`, give bounded repository ownership plus exact Feature and Task paths, and forbid
   vault edits or commits.
 - Monitor native subagent status plus `herdr agent get` and `herdr agent read`. If name, cwd, workspace, tab, session,
@@ -104,7 +107,16 @@ herdr agent start "codex-$feature_slug-$run_key-$role" \
   --no-focus \
   -- codex "$prompt"
 herdr tab rename "$returned_tab_id" "$run_label · $role"
+vault-hunter-run participant \
+  --run-id "$run_id" \
+  --goal-id "$active_goal_id" \
+  --role "$role" \
+  --agent "$returned_agent_name"
 ```
+
+Run the `participant` command only for a verifier-driven Task Run, after the returned agent, workspace, tab, pane,
+terminal, and native session IDs have all been captured. Do not accept or begin consuming work from that dispatch
+until the command returns the unchanged-or-appended Registry record successfully.
 
 The driver consumes only the resulting concise handoffs. It alone chooses and writes lifecycle edits, backlog status,
 Task evidence, both vault checkpoints, and the completion report. This single-writer boundary applies even when

@@ -44,7 +44,7 @@ func (s *Store) Ensure(ctx context.Context, options EnsureOptions) (Run, error) 
 		return Run{}, fmt.Errorf("task path, orchestrator pane, and goals are required")
 	}
 	var result Run
-	err := s.withTaskLock(options.Task.Path, func() error {
+	err := s.withRegistryLock(func() error {
 		existing, found, err := s.findActive(options.Task.Path)
 		if err != nil {
 			return err
@@ -130,12 +130,8 @@ func (s *Store) create(ctx context.Context, options EnsureOptions) (Run, error) 
 }
 
 func (s *Store) Finish(ctx context.Context, runID string) error {
-	run, err := s.Read(runID)
-	if err != nil {
-		return err
-	}
-	return s.withTaskLock(run.Task.Path, func() error {
-		run, err = s.Read(runID)
+	return s.withRegistryLock(func() error {
+		run, err := s.Read(runID)
 		if err != nil {
 			return err
 		}
@@ -162,41 +158,75 @@ func (s *Store) Finish(ctx context.Context, runID string) error {
 }
 
 func (s *Store) RegisterParticipant(runID string, participant Participant) (Run, error) {
-	run, err := s.Read(runID)
-	if err != nil {
-		return Run{}, err
-	}
 	var result Run
-	err = s.withTaskLock(run.Task.Path, func() error {
-		run, err = s.Read(runID)
+	err := s.withRegistryLock(func() error {
+		runs, err := s.readAll()
 		if err != nil {
 			return err
+		}
+		var run *Run
+		for index := range runs {
+			if runs[index].RunID == runID {
+				run = &runs[index]
+				break
+			}
+		}
+		if run == nil {
+			return os.ErrNotExist
 		}
 		if run.Status != "active" && run.Status != "blocked" {
 			return fmt.Errorf("Task Run %s is not active", runID)
 		}
-		if err := validateParticipant(run, participant); err != nil {
+		if err := validateParticipant(*run, participant); err != nil {
 			return err
 		}
-		for index, existing := range run.Participants {
-			if existing.TerminalID == participant.TerminalID &&
-				existing.AgentSession == participant.AgentSession {
-				if existing == participant {
-					result = run
-					return nil
-				}
-				run.Participants[index] = participant
-				return s.writeRegisteredParticipant(&run, &result)
+
+		idempotent := false
+		for _, registeredRun := range runs {
+			if registeredRun.Status != "active" && registeredRun.Status != "blocked" {
+				continue
 			}
-			if existing.PaneID == participant.PaneID ||
-				(existing.TabID != "" && existing.TabID == participant.TabID) {
-				return fmt.Errorf("participant pane or tab is already registered to another session")
+			registered := append([]Participant{registeredRun.Orchestrator}, registeredRun.Participants...)
+			for index, existing := range registered {
+				if existing == (Participant{}) || !participantIdentityCollides(existing, participant) {
+					continue
+				}
+				inTargetParticipants := registeredRun.RunID == runID && index > 0
+				if inTargetParticipants && existing == participant {
+					idempotent = true
+					continue
+				}
+				return fmt.Errorf(
+					"participant identity collides with Task Run %s participant %s",
+					registeredRun.RunID,
+					existing.Name,
+				)
 			}
 		}
+		if idempotent {
+			result = *run
+			return nil
+		}
 		run.Participants = append(run.Participants, participant)
-		return s.writeRegisteredParticipant(&run, &result)
+		return s.writeRegisteredParticipant(run, &result)
 	})
 	return result, err
+}
+
+func participantIdentityCollides(left, right Participant) bool {
+	return sameNonEmpty(left.Name, right.Name) ||
+		sameNonEmpty(left.TabID, right.TabID) ||
+		sameNonEmpty(left.PaneID, right.PaneID) ||
+		sameNonEmpty(left.TerminalID, right.TerminalID) ||
+		completeSession(left.AgentSession) && left.AgentSession == right.AgentSession
+}
+
+func sameNonEmpty(left, right string) bool {
+	return left != "" && left == right
+}
+
+func completeSession(session AgentSession) bool {
+	return session.Source != "" && session.Kind != "" && session.Value != ""
 }
 
 func validateParticipant(run Run, participant Participant) error {
@@ -236,24 +266,36 @@ func (s *Store) Read(runID string) (Run, error) {
 }
 
 func (s *Store) findActive(taskPath string) (Run, bool, error) {
-	paths, err := filepath.Glob(filepath.Join(s.stateDir, "runs", "*.json"))
+	runs, err := s.readAll()
 	if err != nil {
 		return Run{}, false, err
 	}
-	for _, path := range paths {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return Run{}, false, err
-		}
-		run, err := Decode(data)
-		if err != nil {
-			return Run{}, false, fmt.Errorf("%s: %w", path, err)
-		}
+	for _, run := range runs {
 		if run.Task.Path == taskPath && (run.Status == "active" || run.Status == "blocked") {
 			return run, true, nil
 		}
 	}
 	return Run{}, false, nil
+}
+
+func (s *Store) readAll() ([]Run, error) {
+	paths, err := filepath.Glob(filepath.Join(s.stateDir, "runs", "*.json"))
+	if err != nil {
+		return nil, err
+	}
+	runs := make([]Run, 0, len(paths))
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		run, err := Decode(data)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+		runs = append(runs, run)
+	}
+	return runs, nil
 }
 
 func (s *Store) write(run Run) error {
@@ -290,12 +332,13 @@ func (s *Store) write(run Run) error {
 	return os.Rename(tempPath, filepath.Join(runsDir, run.RunID+".json"))
 }
 
-func (s *Store) withTaskLock(taskPath string, fn func() error) error {
+func (s *Store) withRegistryLock(fn func() error) error {
 	locksDir := filepath.Join(s.stateDir, "locks")
 	if err := os.MkdirAll(locksDir, 0o700); err != nil {
 		return err
 	}
-	sum := sha256.Sum256([]byte(taskPath))
+	// ponytail: one lock makes cross-Run identity checks atomic; shard only if contention becomes real.
+	sum := sha256.Sum256([]byte("registry"))
 	lockPath := filepath.Join(locksDir, hex.EncodeToString(sum[:])+".lock")
 	if err := os.Mkdir(lockPath, 0o700); err != nil {
 		if errors.Is(err, os.ErrExist) {
