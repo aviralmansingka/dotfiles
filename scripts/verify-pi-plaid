@@ -270,6 +270,7 @@ def live(item_name: str) -> None:
             prompt,
         ],
         cwd=Path.home() / "vault",
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         check=False,
