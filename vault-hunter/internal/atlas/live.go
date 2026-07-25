@@ -3,14 +3,11 @@ package atlas
 import (
 	"fmt"
 
+	"github.com/aviralmansingka/dotfiles/vault-hunter/internal/herdrsocket"
 	"github.com/aviralmansingka/dotfiles/vault-hunter/internal/runregistry"
 )
 
-type AgentSnapshot struct {
-	PaneID   string
-	Status   string
-	Revision int
-}
+type AgentSnapshot = herdrsocket.Snapshot
 
 type liveParticipant struct {
 	snapshot AgentSnapshot

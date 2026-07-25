@@ -71,8 +71,15 @@ case "$case_name" in
   V08)
     (cd "$module_dir" && go test ./internal/atlas -run '^TestV08')
     ;;
+  V09)
+    (
+      cd "$module_dir"
+      go test ./internal/herdrsocket -run '^TestV09'
+      go test ./internal/atlas -run '^TestV09'
+    )
+    ;;
   all)
-    (cd "$module_dir" && go test ./internal/atlas)
+    (cd "$module_dir" && go test ./...)
     ;;
   *)
     printf 'verify-vault-hunter-atlas: unsupported case %s\n' "$case_name" >&2
