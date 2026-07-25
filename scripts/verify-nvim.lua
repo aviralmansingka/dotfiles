@@ -118,6 +118,204 @@ local function validate_agent_keymaps()
   end
 end
 
+local function validate_weekly_backlog()
+  local root = vim.fn.tempname() .. "-weekly-backlog"
+  local original_expand = vim.fn.expand
+  local original_time = os.time
+  local fixed_now
+
+  vim.fn.mkdir(root, "p")
+  vim.fn.expand = function(path, ...)
+    if path:sub(1, 7) == "~/vault" then
+      return root .. path:sub(8)
+    end
+    return original_expand(path, ...)
+  end
+  os.time = function(value)
+    if value == nil then
+      return fixed_now
+    end
+    return original_time(value)
+  end
+  local backlog = dofile("nvim/.config/nvim/lua/helpers/obsidian.lua")
+
+  local function read(path)
+    return vim.fn.readfile(path)
+  end
+
+  local function assert_lines(actual, expected, label)
+    assert_sequence(actual, expected, label)
+  end
+
+  local function open_at(date, offset)
+    fixed_now = original_time(vim.tbl_extend("force", {
+      hour = 12,
+      min = 0,
+      sec = 0,
+    }, date))
+    vim.cmd("enew!")
+    backlog.open_weekly_backlog(offset or 0)
+  end
+
+  local function assert_exists(path)
+    if vim.fn.filereadable(path) ~= 1 then
+      fail("expected backlog file: " .. path)
+    end
+  end
+
+  local ok, err = xpcall(function()
+    open_at({ year = 2026, month = 7, day = 25 })
+    local ordinary = root .. "/3_logs/2026-W30/backlog.md"
+    assert_exists(ordinary)
+    assert_lines(read(ordinary), {
+      "---",
+      "id: backlog",
+      "aliases: []",
+      "tags: []",
+      "---",
+      "",
+      "# 2026-W30: Backlog",
+      "",
+      "## Log",
+      "",
+      "### Saturday, 2026-07-25",
+      "",
+    }, "canonical weekly backlog")
+
+    open_at({ year = 2027, month = 1, day = 1 })
+    assert_exists(root .. "/3_logs/2026-W53/backlog.md")
+
+    fixed_now = original_time({ year = 2026, month = 3, day = 9, hour = 0, min = 30, sec = 0 })
+    vim.cmd("enew!")
+    backlog.yesterday()
+    assert_exists(root .. "/3_logs/2026-W10/backlog.md")
+    if vim.fn.expand("%:t") ~= "backlog.md"
+      or vim.fn.search("^### Sunday, 2026-03-08$", "nw") == 0
+    then
+      fail("yesterday should select the adjacent local date across spring DST")
+    end
+
+    fixed_now = original_time({ year = 2026, month = 11, day = 1, hour = 0, min = 30, sec = 0 })
+    vim.cmd("enew!")
+    backlog.tomorrow()
+    assert_exists(root .. "/3_logs/2026-W45/backlog.md")
+    if vim.fn.search("^### Monday, 2026-11-02$", "nw") == 0 then
+      fail("tomorrow should select the adjacent local date across fall DST")
+    end
+
+    local missing_log = root .. "/3_logs/2026-W06/backlog.md"
+    vim.fn.mkdir(vim.fn.fnamemodify(missing_log, ":h"), "p")
+    vim.fn.writefile({
+      "# Existing",
+      "",
+      "## Backlog",
+      "",
+      "- keep",
+    }, missing_log)
+    open_at({ year = 2026, month = 2, day = 2 })
+    assert_lines(read(missing_log), {
+      "# Existing",
+      "",
+      "## Backlog",
+      "",
+      "- keep",
+      "",
+      "## Log",
+      "",
+      "### Monday, 2026-02-02",
+      "",
+    }, "missing log repair")
+
+    local scoped_heading = root .. "/3_logs/2026-W15/backlog.md"
+    vim.fn.mkdir(vim.fn.fnamemodify(scoped_heading, ":h"), "p")
+    vim.fn.writefile({
+      "# Existing",
+      "",
+      "### Monday, 2026-04-06",
+      "",
+      "outside log",
+      "",
+      "## Log",
+      "",
+      "existing log",
+      "",
+      "## Backlog",
+      "",
+      "- keep",
+    }, scoped_heading)
+    open_at({ year = 2026, month = 4, day = 6 })
+    local scoped_lines = read(scoped_heading)
+    local heading_count = 0
+    local log_idx
+    local backlog_idx
+    local heading_in_log
+    for i, line in ipairs(scoped_lines) do
+      if line == "## Log" then
+        log_idx = i
+      elseif line == "## Backlog" then
+        backlog_idx = i
+      elseif line == "### Monday, 2026-04-06" then
+        heading_count = heading_count + 1
+        if log_idx and not backlog_idx then
+          heading_in_log = i
+        end
+      end
+    end
+    if heading_count ~= 2 or not heading_in_log or heading_in_log <= log_idx or heading_in_log >= backlog_idx then
+      fail("a dated heading outside Log must not prevent insertion inside Log")
+    end
+    if scoped_lines[5] ~= "outside log" or scoped_lines[#scoped_lines] ~= "- keep" then
+      fail("existing weekly backlog content or section order changed")
+    end
+
+    open_at({ year = 2026, month = 4, day = 6 })
+    local reused_count = 0
+    for _, line in ipairs(read(scoped_heading)) do
+      if line == "### Monday, 2026-04-06" then
+        reused_count = reused_count + 1
+      end
+    end
+    if reused_count ~= 2 then
+      fail("an exact dated heading inside Log should be reused")
+    end
+
+    local dirty = root .. "/3_logs/2026-W19/backlog.md"
+    vim.fn.mkdir(vim.fn.fnamemodify(dirty, ":h"), "p")
+    vim.fn.writefile({ "# Existing", "", "## Log", "" }, dirty)
+    vim.cmd("edit " .. vim.fn.fnameescape(dirty))
+    vim.api.nvim_buf_set_lines(0, -1, -1, false, { "unsaved user text" })
+    local disk_before = read(dirty)
+    fixed_now = original_time({ year = 2026, month = 5, day = 4, hour = 12, min = 0, sec = 0 })
+    local opened, open_err = pcall(backlog.today)
+    if not opened then
+      fail("dirty target buffer should remain open without a save prompt: " .. open_err)
+    end
+    assert_lines(read(dirty), disk_before, "dirty buffer disk content")
+    if vim.fn.search("^unsaved user text$", "nw") == 0 then
+      fail("pre-existing unsaved buffer changes were overwritten")
+    end
+
+    for _, legacy in ipairs({ "/journal", "/3_log", "/5_modal/logs" }) do
+      if vim.fn.isdirectory(root .. legacy) == 1 then
+        fail("weekly backlog helper wrote a legacy path: " .. legacy)
+      end
+    end
+  end, debug.traceback)
+
+  os.time = original_time
+  vim.fn.expand = original_expand
+  vim.cmd("enew!")
+  for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_get_name(buffer):find(root, 1, true) then
+      vim.api.nvim_buf_delete(buffer, { force = true })
+    end
+  end
+  vim.fn.delete(root, "rf")
+  if not ok then
+    fail(err)
+  end
+end
+
 local function validate_sidekick_pi()
   local sidekick = load_plugin("sidekick.nvim")
   local internal = require("plugins.sidekick.internal")
@@ -3292,6 +3490,7 @@ end
 
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
+  ["weekly-backlog"] = validate_weekly_backlog,
   ["inline-ask-edit"] = validate_inline_ask_edit,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
@@ -3306,7 +3505,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, inline-ask-edit, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
+      .. "; expected one of: agent-keymaps, weekly-backlog, inline-ask-edit, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
   )
 end
 
