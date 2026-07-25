@@ -26,6 +26,36 @@ case "$case_name" in
       grep -q 'next:' <<<"$output"
     done
     ;;
+  V04)
+    (cd "$module_dir" && go test ./internal/atlas -run '^TestV04')
+    state_dir="$(mktemp -d "${TMPDIR:-/tmp}/vault-hunter-readonly.XXXXXX")"
+    trap 'rm -rf "$state_dir"' EXIT
+    cp "$module_dir/testdata/run.json" "$state_dir/run.json"
+    registry_before="$(shasum -a 256 "$state_dir/run.json")"
+    repo_before="$(git -C "$module_dir/.." status --porcelain=v1 --untracked-files=all)"
+    vault_before="$(git -C "$HOME/vault" status --porcelain=v1 --untracked-files=all)"
+    herdr_before=""
+    if command -v herdr >/dev/null 2>&1 && herdr status server >/dev/null 2>&1; then
+      herdr_before="$(herdr workspace list)"
+    fi
+    for frame in red edit test green; do
+      (
+        cd "$module_dir"
+        go run ./cmd/vault-hunter-atlas render \
+          --registry "$state_dir/run.json" \
+          --profile compact \
+          --width 78 \
+          --height 17 \
+          --frame "$frame" >/dev/null
+      )
+    done
+    test "$registry_before" = "$(shasum -a 256 "$state_dir/run.json")"
+    test "$repo_before" = "$(git -C "$module_dir/.." status --porcelain=v1 --untracked-files=all)"
+    test "$vault_before" = "$(git -C "$HOME/vault" status --porcelain=v1 --untracked-files=all)"
+    if [[ -n "$herdr_before" ]]; then
+      test "$herdr_before" = "$(herdr workspace list)"
+    fi
+    ;;
   all)
     (cd "$module_dir" && go test ./internal/atlas)
     ;;
