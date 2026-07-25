@@ -152,9 +152,8 @@ end
 ---@param repository string
 ---@param workspace_label string
 ---@param feature_branch string
----@param task_branch string
 ---@return table|nil scope
-function M.ensure_task_scope(repository, workspace_label, feature_branch, task_branch)
+function M.ensure_feature_scope(repository, workspace_label, feature_branch)
   local normalized = M.normalize_cwd(repository)
   local listed = M.call({ "worktree", "list", "--cwd", normalized })
   if not listed then
@@ -186,31 +185,7 @@ function M.ensure_task_scope(repository, workspace_label, feature_branch, task_b
     return nil
   end
 
-  local task = worktree_for_branch(listed.worktrees, task_branch)
-  if not task then
-    local result = M.call({
-      "worktree",
-      "create",
-      "--cwd",
-      normalized,
-      "--branch",
-      task_branch,
-      "--label",
-      workspace_label,
-      "--no-focus",
-    })
-    task = result and result.worktree or nil
-    local temporary_workspace_id = result and result.workspace and result.workspace.workspace_id or nil
-    if not task or not temporary_workspace_id then
-      return nil
-    end
-    if not M.call({ "workspace", "close", temporary_workspace_id }) then
-      M.call({ "worktree", "remove", "--workspace", temporary_workspace_id }, true)
-      return nil
-    end
-  end
-
-  return task.path and { workspace_id = workspace_id, cwd = task.path } or nil
+  return feature.path and { workspace_id = workspace_id, cwd = feature.path } or nil
 end
 
 ---@param agent table
@@ -220,7 +195,7 @@ end
 function M.place_agent(agent, scope, tab_label)
   local cwd = M.normalize_cwd(agent.foreground_cwd or agent.cwd)
   if cwd ~= M.normalize_cwd(scope.cwd) then
-    notify("existing agent cwd does not match its task worktree")
+    notify("existing agent cwd does not match its feature worktree")
     return nil
   end
   if agent.workspace_id == scope.workspace_id then

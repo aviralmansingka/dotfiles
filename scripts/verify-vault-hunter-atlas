@@ -84,6 +84,12 @@ case "$case_name" in
       go test ./internal/runregistry ./cmd/vault-hunter-atlas -run '^TestV10'
     )
     ;;
+  V11)
+    (
+      cd "$module_dir"
+      go test ./internal/runregistry -run '^TestV11'
+    )
+    ;;
   all)
     (cd "$module_dir" && go test ./...)
     ;;

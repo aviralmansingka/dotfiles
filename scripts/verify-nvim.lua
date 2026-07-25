@@ -625,38 +625,30 @@ local function validate_sidekick_herdr()
         workspace = { workspace_id = "w-feature" },
         worktree = { branch = "feature/example", path = "/worktrees/feature-example" },
       }
-    elseif args[1] == "worktree" and args[2] == "create" and args[6] == "task/example-t01" then
-      return {
-        workspace = { workspace_id = "w-task-temporary" },
-        worktree = { branch = "task/example-t01", path = "/worktrees/task-example-t01" },
-      }
     end
     return {}
   end
-  local task_scope = source_herdr.ensure_task_scope(
-    cwd,
-    "Neovim · Example",
-    "feature/example",
-    "task/example-t01"
-  )
+  local feature_scope = source_herdr.ensure_feature_scope(cwd, "Neovim · Example", "feature/example")
   if
-    not task_scope
-    or task_scope.workspace_id ~= "w-feature"
-    or task_scope.cwd ~= "/worktrees/task-example-t01"
+    not feature_scope
+    or feature_scope.workspace_id ~= "w-feature"
+    or feature_scope.cwd ~= "/worktrees/feature-example"
   then
-    fail("task scope should use the feature workspace and task worktree: " .. vim.inspect(task_scope))
+    fail("feature scope should use the feature workspace and worktree: " .. vim.inspect(feature_scope))
   end
   local renamed_workspace = false
-  local closed_temporary_workspace = false
+  local created_branches = {}
   for _, call in ipairs(routing_calls) do
     renamed_workspace = renamed_workspace
       or (call[1] == "workspace" and call[2] == "rename" and call[3] == "w-feature")
-    closed_temporary_workspace = closed_temporary_workspace
-      or (call[1] == "workspace" and call[2] == "close" and call[3] == "w-task-temporary")
+    if call[1] == "worktree" and call[2] == "create" then
+      created_branches[#created_branches + 1] = call[6]
+    end
   end
-  if not renamed_workspace or not closed_temporary_workspace then
-    fail("task routing should name the feature workspace and close the temporary task workspace")
+  if not renamed_workspace then
+    fail("feature routing should name the feature workspace")
   end
+  assert_sequence(created_branches, { "feature/example" }, "feature routing branches")
 
   routing_calls = {}
   source_herdr.call = function(args)
@@ -670,7 +662,7 @@ local function validate_sidekick_herdr()
           pane_id = "w-feature:p1",
           tab_id = "w-feature:t2",
           workspace_id = "w-feature",
-          foreground_cwd = "/worktrees/task-example-t01",
+          foreground_cwd = "/worktrees/feature-example",
         },
       }
     end
@@ -681,11 +673,11 @@ local function validate_sidekick_herdr()
     pane_id = "w-old:p1",
     tab_id = "w-old:t1",
     workspace_id = "w-old",
-    foreground_cwd = "/worktrees/task-example-t01",
-  }, task_scope, "T01 Example task")
+    foreground_cwd = "/worktrees/feature-example",
+  }, feature_scope, "T01 Example task")
   source_herdr.call = original_call
   if not placed_agent or placed_agent.tab_id ~= "w-feature:t2" then
-    fail("existing task agent should move to its task worktree tab: " .. vim.inspect(placed_agent))
+    fail("existing task agent should move to its feature-worktree tab: " .. vim.inspect(placed_agent))
   end
   local task_tab_create
   local task_pane_move
@@ -3191,7 +3183,7 @@ local function validate_vault_features()
     "",
     "## Tasks",
     "",
-    "- [~] [[tasks/01-build-tree|T01 Build tree picker.]]",
+    "- [-] [[tasks/01-build-tree|T01 Build tree picker.]]",
   }, vault_feature .. "/feature.md")
   vim.fn.writefile({
     "---",
@@ -3245,8 +3237,10 @@ local function validate_vault_features()
     "# Maintained Feature",
   }, agents .. "/features/maintained-feature/feature.md")
 
+  local original_features = package.loaded["helpers.vault_features"]
+  local features = dofile("nvim/.config/nvim/lua/helpers/vault_features.lua")
+  package.loaded["helpers.vault_features"] = features
   local ok, err = xpcall(function()
-    local features = require("helpers.vault_features")
     local items = features.collect(root)
     if #items ~= 10 then
       fail("expected project, theme, active feature, and task tree rows; got " .. vim.inspect(items))
@@ -3292,7 +3286,7 @@ local function validate_vault_features()
       or linked_task.pos[1] ~= 5
       or linked_task.parent ~= items[5]
       or linked_task.repository ~= neovim_repository
-      or linked_task.state ~= "~"
+      or linked_task.state ~= "-"
       or linked_task.linked ~= true
     then
       fail("linked task should resolve its task note, source heading, repository, and feature parent")
@@ -3328,32 +3322,31 @@ local function validate_vault_features()
     local original_get_agent = herdr.get_agent
     local original_start = herdr.start
     local original_run = herdr.run
-    local original_ensure_workspace = herdr.ensure_workspace
-    local original_ensure_task_scope = herdr.ensure_task_scope
+    local original_ensure_feature_scope = herdr.ensure_feature_scope
     local original_place_agent = herdr.place_agent
+    local original_system = vim.system
     local started
     local ran
     local routed
-    local workspace_routed
     local placed
+    local atlas_launches = {}
+    vim.system = function(command, ...)
+      if command[1] == "vault-hunter-run" or command[1] == "vault-hunter-atlas" then
+        atlas_launches[#atlas_launches + 1] = command
+        return { wait = function() return { code = 0, stdout = "", stderr = "" } end }
+      end
+      return original_system(command, ...)
+    end
     herdr.get_agent = function()
       return nil
     end
-    herdr.ensure_task_scope = function(repository, workspace_label, feature_branch, task_branch)
+    herdr.ensure_feature_scope = function(repository, workspace_label, feature_branch)
       routed = {
         repository = repository,
         workspace_label = workspace_label,
         feature_branch = feature_branch,
-        task_branch = task_branch,
       }
-      return { workspace_id = "w-feature", cwd = neovim_repository .. "/task-worktree" }
-    end
-    herdr.ensure_workspace = function(repository, workspace_label)
-      workspace_routed = {
-        repository = repository,
-        workspace_label = workspace_label,
-      }
-      return "w-feature"
+      return { workspace_id = "w-feature", cwd = neovim_repository .. "/feature-worktree" }
     end
     herdr.start = function(name, cwd, command, env, scope, tab_label)
       started = {
@@ -3376,7 +3369,7 @@ local function validate_vault_features()
     end
 
     local agent_ok, agent_err = xpcall(function()
-      local linked_prompt = "/vault-hunter " .. vault_feature .. "/tasks/01-build-tree.md:5"
+      local linked_prompt = "$vault-hunter " .. vault_feature .. "/tasks/01-build-tree.md:5"
       if features.agent_prompt(linked_task) ~= linked_prompt then
         fail("linked task Vault Hunter prompt is wrong: " .. vim.inspect(features.agent_prompt(linked_task)))
       end
@@ -3386,7 +3379,7 @@ local function validate_vault_features()
       if
         not started
         or started.name ~= "codex-neovim-vault-feature-picker-t01"
-        or started.cwd ~= neovim_repository .. "/task-worktree"
+        or started.cwd ~= neovim_repository .. "/feature-worktree"
         or started.scope.workspace_id ~= "w-feature"
         or started.tab_label ~= "T01 Build tree picker."
         or started.env[internal.named_env_var] ~= "neovim-vault-feature-picker-t01"
@@ -3398,9 +3391,8 @@ local function validate_vault_features()
         or routed.repository ~= neovim_repository
         or routed.workspace_label ~= "Neovim · Vault Feature Picker"
         or routed.feature_branch ~= "feature/vault-feature-picker"
-        or routed.task_branch ~= "task/01-build-tree"
       then
-        fail("linked task worktree routing arguments are wrong: " .. vim.inspect(routed))
+        fail("linked task feature-worktree routing arguments are wrong: " .. vim.inspect(routed))
       end
       assert_sequence(
         started.command,
@@ -3442,14 +3434,14 @@ local function validate_vault_features()
       herdr.get_agent = function()
         return nil
       end
-      local inline_prompt = "/vault-hunter " .. weekly_feature .. "/feature.md:10"
+      local inline_prompt = "$vault-hunter " .. weekly_feature .. "/feature.md:10"
       if not features.send_to_agent(inline_task) then
         fail("inline feature task should start a project agent")
       end
       if
         not started
         or started.name ~= "codex-neovim-weekly-backlog-helpers-t02"
-        or started.cwd ~= neovim_repository .. "/task-worktree"
+        or started.cwd ~= neovim_repository .. "/feature-worktree"
         or started.scope.workspace_id ~= "w-feature"
         or started.tab_label ~= "T02 Verify date navigation."
         or started.env[internal.named_env_var] ~= "neovim-weekly-backlog-helpers-t02"
@@ -3460,9 +3452,8 @@ local function validate_vault_features()
         not routed
         or routed.workspace_label ~= "Neovim · Weekly Backlog Helpers"
         or routed.feature_branch ~= "feature/weekly-backlog-helpers"
-        or routed.task_branch ~= "task/weekly-backlog-helpers-t02"
       then
-        fail("inline task worktree routing arguments are wrong: " .. vim.inspect(routed))
+        fail("inline task feature-worktree routing arguments are wrong: " .. vim.inspect(routed))
       end
       assert_sequence(
         started.command,
@@ -3476,20 +3467,19 @@ local function validate_vault_features()
       started = nil
       ran = nil
       routed = nil
-      workspace_routed = nil
       placed = nil
       herdr.get_agent = function()
         return nil
       end
       local feature_item = items[5]
-      local feature_prompt = "/vault-hunter " .. vault_feature .. "/feature.md:5"
+      local feature_prompt = "$vault-hunter " .. vault_feature .. "/feature.md:5"
       if not features.send_to_agent(feature_item) then
         fail("feature row should start a Vault Hunter agent")
       end
       if
         not started
         or started.name ~= "codex-neovim-vault-feature-picker"
-        or started.cwd ~= neovim_repository
+        or started.cwd ~= neovim_repository .. "/feature-worktree"
         or started.scope.workspace_id ~= "w-feature"
         or started.tab_label ~= "Vault Feature Picker"
         or started.env[internal.named_env_var] ~= "neovim-vault-feature-picker"
@@ -3497,12 +3487,12 @@ local function validate_vault_features()
         fail("feature Vault Hunter agent start arguments are wrong: " .. vim.inspect(started))
       end
       if
-        not workspace_routed
-        or workspace_routed.repository ~= neovim_repository
-        or workspace_routed.workspace_label ~= "Neovim · Vault Feature Picker"
-        or routed
+        not routed
+        or routed.repository ~= neovim_repository
+        or routed.workspace_label ~= "Neovim · Vault Feature Picker"
+        or routed.feature_branch ~= "feature/vault-feature-picker"
       then
-        fail("feature Vault Hunter action should reuse its feature workspace without a task worktree")
+        fail("feature Vault Hunter action should reuse its feature workspace and worktree")
       end
       assert_sequence(
         started.command,
@@ -3513,11 +3503,14 @@ local function validate_vault_features()
     herdr.get_agent = original_get_agent
     herdr.start = original_start
     herdr.run = original_run
-    herdr.ensure_workspace = original_ensure_workspace
-    herdr.ensure_task_scope = original_ensure_task_scope
+    herdr.ensure_feature_scope = original_ensure_feature_scope
     herdr.place_agent = original_place_agent
+    vim.system = original_system
     if not agent_ok then
       fail(agent_err)
+    end
+    if #atlas_launches ~= 0 then
+      fail("Feature and Task launchers must not create Atlas state or companions: " .. vim.inspect(atlas_launches))
     end
 
     local lazy = require("lazy")
@@ -3589,7 +3582,7 @@ local function validate_vault_features()
     Snacks.picker.pick = function(opts)
       picker_opts = opts
     end
-    local callback_ok, callback_err = xpcall(callback, debug.traceback)
+    local callback_ok, callback_err = xpcall(features.open, debug.traceback)
     if callback_ok and picker_opts and picker_opts.actions and picker_opts.actions.vault_hunter then
       picker_opts.actions.vault_hunter.action({
         close = function()
@@ -3630,6 +3623,7 @@ local function validate_vault_features()
   end, debug.traceback)
 
   vim.fn.delete(root, "rf")
+  package.loaded["helpers.vault_features"] = original_features
   if not ok then
     fail(err)
   end
