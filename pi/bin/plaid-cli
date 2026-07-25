@@ -1,0 +1,456 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+
+CONFIG_DIR = Path(os.environ.get("PLAID_CLI_CONFIG_DIR", Path.home() / ".config" / "plaid-cli"))
+ENV_FILE = CONFIG_DIR / "env"
+STORE = Path(os.environ.get("PLAID_CLI_STORE", Path.home() / ".local" / "share" / "plaid-cli" / "items.json"))
+ENDPOINTS = {
+    "sandbox": "https://sandbox.plaid.com",
+    "development": "https://development.plaid.com",
+    "production": "https://production.plaid.com",
+}
+
+
+class PlaidError(Exception):
+    def __init__(self, status: int, payload: object):
+        self.status = status
+        self.payload = payload
+        super().__init__(json.dumps(payload) if isinstance(payload, dict) else str(payload))
+
+
+def load_env() -> None:
+    if not ENV_FILE.exists():
+        return
+    for raw in ENV_FILE.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+def env(name: str, default: str | None = None) -> str | None:
+    value = os.environ.get(name, default)
+    return value if value not in ("", None) else None
+
+
+def require_env(name: str) -> str:
+    value = env(name)
+    if not value:
+        raise SystemExit(f"Missing {name}. Put it in {ENV_FILE} or export it.")
+    return value
+
+
+def endpoint() -> str:
+    plaid_env = env("PLAID_ENV", "development") or "development"
+    if plaid_env not in ENDPOINTS:
+        raise SystemExit(f"PLAID_ENV must be one of: {', '.join(ENDPOINTS)}")
+    return ENDPOINTS[plaid_env]
+
+
+def plaid_post(path: str, payload: dict) -> dict:
+    body = {
+        "client_id": require_env("PLAID_CLIENT_ID"),
+        "secret": require_env("PLAID_SECRET"),
+        **payload,
+    }
+    req = urllib.request.Request(
+        endpoint() + path,
+        data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=90) as res:
+            return json.loads(res.read().decode())
+    except urllib.error.HTTPError as exc:
+        text = exc.read().decode(errors="replace")
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            payload = text
+        raise PlaidError(exc.code, payload) from exc
+
+
+def load_store() -> dict:
+    if not STORE.exists():
+        return {"items": []}
+    return json.loads(STORE.read_text())
+
+
+def save_store(data: dict) -> None:
+    STORE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(STORE.parent, 0o700)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile("w", dir=STORE.parent, prefix=f".{STORE.name}.", delete=False) as handle:
+            temporary = Path(handle.name)
+            os.fchmod(handle.fileno(), 0o600)
+            json.dump(data, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, STORE)
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
+
+
+def items(name: str | None = None) -> list[dict]:
+    all_items = load_store().get("items", [])
+    if name:
+        all_items = [item for item in all_items if item.get("name") == name or item.get("institution") == name]
+        if not all_items:
+            raise SystemExit(f"No Plaid item named {name!r}. Run: plaid-cli status")
+    return all_items
+
+
+def upsert_item(record: dict) -> None:
+    data = load_store()
+    kept = [item for item in data.get("items", []) if item.get("name") != record["name"]]
+    data["items"] = [*kept, record]
+    save_store(data)
+
+
+def date_range(args) -> tuple[str, str]:
+    end = args.end_date or dt.date.today().isoformat()
+    start = args.start_date or (dt.date.fromisoformat(end) - dt.timedelta(days=args.days)).isoformat()
+    return start, end
+
+
+def normalized_error(item: dict, exc: Exception) -> dict:
+    if isinstance(exc, PlaidError):
+        payload = exc.payload if isinstance(exc.payload, dict) else {}
+        return {
+            "item": item.get("name"),
+            "status": exc.status,
+            "error": {
+                key: payload[key]
+                for key in ("error_type", "error_code", "error_message", "display_message")
+                if payload.get(key) is not None
+            },
+        }
+    return {"item": item.get("name"), "error": str(exc)}
+
+
+def public_fields(data: dict, fields: tuple[str, ...]) -> dict:
+    return {field: data[field] for field in fields if data.get(field) is not None}
+
+
+def public_item(item: dict) -> dict:
+    return {
+        "name": item.get("name"),
+        "institution": item.get("institution"),
+        "products": item.get("products", []),
+        "account_count": len(item.get("accounts", [])),
+    }
+
+
+def public_banking_transaction(tx: dict, item: dict) -> dict:
+    return {
+        **public_fields(tx, (
+            "date",
+            "merchant_name",
+            "name",
+            "amount",
+            "iso_currency_code",
+            "unofficial_currency_code",
+            "pending",
+            "payment_channel",
+            "category",
+        )),
+        "item_name": item.get("name"),
+        "institution": item.get("institution"),
+    }
+
+
+def public_investment_transaction(tx: dict, item: dict, security: dict) -> dict:
+    return {
+        **public_fields(tx, (
+            "date",
+            "name",
+            "type",
+            "subtype",
+            "quantity",
+            "amount",
+            "price",
+            "fees",
+            "iso_currency_code",
+            "unofficial_currency_code",
+        )),
+        "item_name": item.get("name"),
+        "institution": item.get("institution"),
+        **public_fields({
+            "security_name": security.get("name"),
+            "ticker_symbol": security.get("ticker_symbol"),
+        }, ("security_name", "ticker_symbol")),
+    }
+
+
+def cmd_status(args) -> None:
+    data = load_store()
+    configured = bool(env("PLAID_CLIENT_ID") and env("PLAID_SECRET"))
+    if args.json:
+        print(json.dumps({
+            "env": env("PLAID_ENV", "development"),
+            "configured": configured,
+            "store": str(STORE),
+            "items": [public_item(item) for item in data.get("items", [])],
+        }, indent=2))
+        return
+    print(f"env: {env('PLAID_ENV', 'development')}")
+    print(f"credentials: {'ok' if configured else 'missing'}")
+    print(f"store: {STORE}")
+    for item in data.get("items", []):
+        products = ",".join(item.get("products", []))
+        print(f"- {item.get('name')} [{item.get('institution')}] products={products} accounts={len(item.get('accounts', []))}")
+
+
+def cmd_link(args) -> None:
+    products = [p.strip() for p in args.products.split(",") if p.strip()]
+    redirect_uri = args.redirect_uri or env("PLAID_REDIRECT_URI") or f"http://127.0.0.1:{args.port}/oauth"
+    public_url = (args.public_url or env("PLAID_PUBLIC_URL") or redirect_uri.removesuffix("/oauth")).rstrip("/")
+    token = plaid_post("/link/token/create", {
+        "client_name": env("PLAID_CLIENT_NAME", "Personal Agent"),
+        "country_codes": [c.strip() for c in args.country_codes.split(",") if c.strip()],
+        "language": "en",
+        "products": products,
+        "redirect_uri": redirect_uri,
+        "user": {"client_user_id": env("PLAID_USER_ID", os.environ.get("USER", "user"))},
+    })["link_token"]
+
+    state: dict = {"done": False, "error": None, "record": None}
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, fmt, *values):
+            print("HTTP " + (fmt % values), flush=True)
+
+        def _send(self, code: int, body: str, content_type: str = "text/html") -> None:
+            self.send_response(code)
+            self.send_header("Content-Type", content_type)
+            self.end_headers()
+            self.wfile.write(body.encode())
+
+        def do_GET(self):
+            if self.path.startswith("/done"):
+                self._send(200, "<h1>Plaid item linked.</h1><p>You can close this tab.</p>")
+                return
+            html = f"""<!doctype html>
+<meta name=viewport content="width=device-width, initial-scale=1">
+<title>Plaid Link</title>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<button id="open">Link {args.name}</button>
+<pre id="out"></pre>
+<script>
+const out = document.getElementById('out');
+function log(x) {{ out.textContent = typeof x === 'string' ? x : JSON.stringify(x, null, 2); }}
+function openLink() {{
+  const config = {{
+    token: {json.dumps(token)},
+    onSuccess: async (public_token, metadata) => {{
+      log('Exchanging public token...');
+      const res = await fetch('/exchange', {{method:'POST', headers:{{'content-type':'application/json'}}, body: JSON.stringify({{public_token, metadata}})}});
+      const text = await res.text();
+      if (!res.ok) {{ log(text); return; }}
+      log('Plaid item linked. You can close this tab.');
+    }},
+    onExit: (err, metadata) => log(err || metadata),
+  }};
+  if (location.search.includes('oauth_state_id=')) config.receivedRedirectUri = location.href;
+  Plaid.create(config).open();
+}}
+document.getElementById('open').onclick = openLink;
+openLink();
+</script>"""
+            self._send(200, html)
+
+        def do_POST(self):
+            length = int(self.headers.get("content-length", "0"))
+            payload = json.loads(self.rfile.read(length).decode() or "{}")
+            if self.path == "/client-log":
+                print("CLIENT " + json.dumps(payload, sort_keys=True), flush=True)
+                self._send(200, "ok", "text/plain")
+                return
+            if self.path != "/exchange":
+                self._send(404, "not found", "text/plain")
+                return
+            try:
+                exchanged = plaid_post("/item/public_token/exchange", {"public_token": payload["public_token"]})
+                accounts = plaid_post("/accounts/get", {"access_token": exchanged["access_token"]}).get("accounts", [])
+                metadata = payload.get("metadata") or {}
+                institution = (metadata.get("institution") or {}).get("name") or args.name
+                record = {
+                    "name": args.name,
+                    "institution": institution,
+                    "item_id": exchanged.get("item_id"),
+                    "access_token": exchanged["access_token"],
+                    "products": products,
+                    "accounts": accounts,
+                    "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+                }
+                upsert_item(record)
+                state.update(done=True, record=record)
+                self._send(200, "ok", "text/plain")
+            except Exception as exc:
+                state.update(done=True, error=str(exc))
+                self._send(500, str(exc), "text/plain")
+
+    server = HTTPServer((args.host, args.port), Handler)
+    print(f"Open Plaid Link: {public_url}/")
+    if public_url != f"http://127.0.0.1:{args.port}":
+        print(f"Local fallback: http://127.0.0.1:{args.port}/")
+    print(f"OAuth redirect URI to register in Plaid: {redirect_uri}")
+    deadline = time.time() + args.timeout
+    while not state["done"] and time.time() < deadline:
+        server.timeout = 1
+        server.handle_request()
+    server.server_close()
+    if state["error"]:
+        raise SystemExit(state["error"])
+    if not state["done"]:
+        raise SystemExit("Timed out waiting for Plaid Link")
+    record = state["record"] or {}
+    print(f"Linked {record.get('name')} [{record.get('institution')}]")
+
+
+def banking_transactions(item: dict, start: str, end: str, page_size: int) -> list[dict]:
+    out: list[dict] = []
+    offset = 0
+    while True:
+        result = plaid_post("/transactions/get", {
+            "access_token": item["access_token"],
+            "start_date": start,
+            "end_date": end,
+            "options": {"count": page_size, "offset": offset},
+        })
+        batch = result.get("transactions", [])
+        out.extend(public_banking_transaction(tx, item) for tx in batch)
+        offset += len(batch)
+        if offset >= result.get("total_transactions", len(out)) or not batch:
+            return out
+
+
+def investment_transactions(item: dict, start: str, end: str, page_size: int) -> list[dict]:
+    out: list[dict] = []
+    offset = 0
+    while True:
+        result = plaid_post("/investments/transactions/get", {
+            "access_token": item["access_token"],
+            "start_date": start,
+            "end_date": end,
+            "options": {"count": page_size, "offset": offset},
+        })
+        batch = result.get("investment_transactions", [])
+        securities = {security.get("security_id"): security for security in result.get("securities", [])}
+        out.extend(
+            public_investment_transaction(tx, item, securities.get(tx.get("security_id"), {}))
+            for tx in batch
+        )
+        offset += len(batch)
+        if offset >= result.get("total_investment_transactions", len(out)) or not batch:
+            return out
+
+
+def print_banking(rows: list[dict]) -> None:
+    for tx in sorted(rows, key=lambda t: t.get("date", "")):
+        print("\t".join(str(x or "") for x in [
+            tx.get("date"), tx.get("item_name"), tx.get("merchant_name") or tx.get("name"), tx.get("amount"), tx.get("iso_currency_code"),
+        ]))
+
+
+def print_investment(rows: list[dict]) -> None:
+    for tx in sorted(rows, key=lambda t: t.get("date", "")):
+        print("\t".join(str(x or "") for x in [
+            tx.get("date"), tx.get("item_name"), tx.get("name"), tx.get("type"), tx.get("subtype"), tx.get("quantity"), tx.get("amount"), tx.get("ticker_symbol") or tx.get("security_name"),
+        ]))
+
+
+def cmd_transactions(args) -> None:
+    start, end = date_range(args)
+    rows: list[dict] = []
+    errors: list[dict] = []
+    for item in items(args.item):
+        try:
+            rows.extend(banking_transactions(item, start, end, args.page_size))
+        except Exception as exc:
+            errors.append(normalized_error(item, exc))
+    if args.json:
+        print(json.dumps({"start_date": start, "end_date": end, "transactions": rows, "errors": errors}, indent=2, sort_keys=True))
+    else:
+        print_banking(rows)
+        for error in errors:
+            print(f"ERROR {error}", file=sys.stderr)
+    if errors and not rows:
+        raise SystemExit(1)
+
+
+def cmd_investment_transactions(args) -> None:
+    start, end = date_range(args)
+    rows: list[dict] = []
+    errors: list[dict] = []
+    for item in items(args.item):
+        try:
+            rows.extend(investment_transactions(item, start, end, args.page_size))
+        except Exception as exc:
+            errors.append(normalized_error(item, exc))
+    if args.json:
+        print(json.dumps({"start_date": start, "end_date": end, "investment_transactions": rows, "errors": errors}, indent=2, sort_keys=True))
+    else:
+        print_investment(rows)
+        for error in errors:
+            print(f"ERROR {error}", file=sys.stderr)
+    if errors and not rows:
+        raise SystemExit(1)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Minimal Plaid CLI for a personal agent")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    status = sub.add_parser("status")
+    status.add_argument("--json", action="store_true")
+    status.set_defaults(func=cmd_status)
+
+    link = sub.add_parser("link")
+    link.add_argument("name", help="Local nickname, e.g. chase or fidelity")
+    link.add_argument("--products", default="transactions", help="Comma-separated Plaid products: transactions,investments")
+    link.add_argument("--country-codes", default="US")
+    link.add_argument("--redirect-uri")
+    link.add_argument("--public-url")
+    link.add_argument("--host", default="127.0.0.1")
+    link.add_argument("--port", type=int, default=8787)
+    link.add_argument("--timeout", type=int, default=900)
+    link.set_defaults(func=cmd_link)
+
+    for name, func in [("transactions", cmd_transactions), ("investment-transactions", cmd_investment_transactions)]:
+        p = sub.add_parser(name)
+        p.add_argument("--item")
+        p.add_argument("--start-date")
+        p.add_argument("--end-date")
+        p.add_argument("--days", type=int, default=90)
+        p.add_argument("--json", action="store_true")
+        p.add_argument("--page-size", type=int, default=500)
+        p.set_defaults(func=func)
+    return parser
+
+
+def main() -> None:
+    load_env()
+    args = build_parser().parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
