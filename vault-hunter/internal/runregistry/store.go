@@ -72,6 +72,15 @@ func (s *Store) resume(ctx context.Context, run Run, orchestrator Participant) (
 			run.Participants[0] = orchestrator
 		}
 		changed = true
+	} else if run.Orchestrator != orchestrator &&
+		unchangedOrchestrator(run.Orchestrator, orchestrator) {
+		run.Orchestrator = orchestrator
+		if len(run.Participants) == 0 {
+			run.Participants = []Participant{orchestrator}
+		} else {
+			run.Participants[0] = orchestrator
+		}
+		changed = true
 	}
 	if run.Companion == nil || !s.herdr.PaneExists(ctx, run.Companion.PaneID) {
 		companion, err := s.herdr.CreateCompanion(ctx, orchestrator.PaneID, run.RunID)
@@ -158,13 +167,14 @@ func (s *Store) Finish(ctx context.Context, runID string) error {
 }
 
 func (s *Store) RegisterParticipant(runID string, participant Participant) (Run, error) {
-	return s.registerParticipant(runID, participant, nil)
+	return s.registerParticipant(runID, participant, nil, nil)
 }
 
 func (s *Store) registerParticipant(
 	runID string,
 	participant Participant,
 	validateLive func(Run) error,
+	allowCollision func(Participant) bool,
 ) (Run, error) {
 	var result Run
 	err := s.withRegistryLock(func() error {
@@ -209,6 +219,9 @@ func (s *Store) registerParticipant(
 					idempotent = true
 					continue
 				}
+				if inTargetParticipants && allowCollision != nil && allowCollision(existing) {
+					continue
+				}
 				return fmt.Errorf(
 					"participant identity collides with Task Run %s participant %s",
 					registeredRun.RunID,
@@ -226,9 +239,23 @@ func (s *Store) registerParticipant(
 	return result, err
 }
 
+func unchangedOrchestrator(stored, live Participant) bool {
+	return stored.Role == live.Role &&
+		stored.Name == live.Name &&
+		stored.PaneID == live.PaneID &&
+		stored.TerminalID == live.TerminalID &&
+		stored.AgentSession == live.AgentSession &&
+		(stored.WorkspaceID == "" || stored.WorkspaceID == live.WorkspaceID) &&
+		(stored.TabID == "" || stored.TabID == live.TabID)
+}
+
 func participantIdentityCollides(left, right Participant) bool {
 	return sameNonEmpty(left.Name, right.Name) ||
-		sameNonEmpty(left.TabID, right.TabID) ||
+		participantResourceIdentityCollides(left, right)
+}
+
+func participantResourceIdentityCollides(left, right Participant) bool {
+	return sameNonEmpty(left.TabID, right.TabID) ||
 		sameNonEmpty(left.PaneID, right.PaneID) ||
 		sameNonEmpty(left.TerminalID, right.TerminalID) ||
 		completeSession(left.AgentSession) && left.AgentSession == right.AgentSession

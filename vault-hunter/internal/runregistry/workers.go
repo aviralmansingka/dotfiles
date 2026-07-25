@@ -37,8 +37,10 @@ func (s *Store) RegisterWorker(
 	participant Participant,
 	herdr WorkerHerdr,
 ) (Run, error) {
+	var tabs []WorkerTab
 	return s.registerParticipant(runID, participant, func(run Run) error {
-		tabs, err := herdr.WorkerTabs(ctx)
+		var err error
+		tabs, err = herdr.WorkerTabs(ctx)
 		if err != nil {
 			return err
 		}
@@ -47,6 +49,10 @@ func (s *Store) RegisterWorker(
 			return fmt.Errorf("worker %s capture is %s", participant.Name, state)
 		}
 		return nil
+	}, func(existing Participant) bool {
+		return existing.Name == participant.Name &&
+			!participantResourceIdentityCollides(existing, participant) &&
+			findWorkerTab(tabs, existing.TabID) == nil
 	})
 }
 
