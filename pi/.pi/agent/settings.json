@@ -1,7 +1,6 @@
 {
   "packages": [
-    "npm:pi-mcp-adapter",
-    "npm:@zackify/pi-wafer"
+    "npm:pi-mcp-adapter"
   ],
   "lastChangelogVersion": "0.81.1",
   "defaultProvider": "openai-codex",

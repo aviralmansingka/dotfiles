@@ -122,6 +122,10 @@ Pi config and shared skills are deployed with:
 stow pi agents
 ```
 
+The shared `vault` skill remains available for explicit project and knowledge-base work. Automatic vault detection
+and routing hooks are intentionally not installed. Use Neovim's `<leader>vf` picker and task-local `<C-a>` when a
+task should launch in a named Herdr feature workspace and isolated task worktree.
+
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
 Install/update Pi packages from the checked-in manifest:

@@ -1,6 +1,6 @@
 ---
 name: vault
-description: "Access and maintain the Obsidian vault: search notes, read topics, create tasks, browse system cards, and manage the Project, Theme, Feature, and Task hierarchy. Use for /vault subcommands or edits under ~/vault/projects."
+description: "Access and maintain the Obsidian vault: search notes, read topics, create tasks, browse system cards, and manage the Project, Theme, Feature, and Task hierarchy. Use for /vault subcommands or edits under ~/vault/1_projects."
 allowed-tools: Glob, Grep, Read, Write, Edit
 ---
 
@@ -33,9 +33,9 @@ Append a task to the appropriate location. Two modes:
 
 **Work tasks** (default when working in a code repository or when the task is clearly work-related):
 
-1. Find the latest `week_XXX` directory in `5_modal/logs/` (sort numerically, pick highest)
-2. Read the `backlog.md` in that directory
-3. Append `- [ ] <title>` at the end of the `## Backlog` section (before `## Log`)
+1. Derive the current ISO `YYYY-WW` in the vault's timezone
+2. Read or create `3_logs/YYYY-WW/backlog.md`
+3. Append `- [ ] <title>` under today's heading in `## Log`, reusing the heading when it exists
 
 **Personal tasks** (when the task is clearly personal, or when invoked with `/vault task personal <title>`):
 
@@ -69,19 +69,27 @@ System card categories:
 - **Task format**: `- [ ]` open, `- [x]` closed, `- [~]` in-progress
 - **Frontmatter**: YAML with `id`, `aliases`, `tags`
 - **No daily notes** — weekly `backlog.md` is the central planning document
-- **Weekly logs**: `5_modal/logs/week_XXX/backlog.md` with `## Backlog` and `## Log` sections
+- **Weekly logs**: `3_logs/YYYY-WW/backlog.md`, with current activity under `## Log`
 
 ### Project structure
 
 ```text
-projects/<project>/README.md
-projects/<project>/themes/<theme>/theme.md
-projects/<project>/themes/<theme>/features/<feature>/feature.md
-projects/<project>/themes/<theme>/features/<feature>/tasks/01-<task>.md
+1_projects/<project>/README.md
+1_projects/<project>/themes/<theme>/theme.md
+1_projects/<project>/themes/<theme>/features/<feature>/feature.md
+1_projects/<project>/themes/<theme>/features/<feature>/tasks/01-<task>.md
 ```
 
 - Keep project, theme, and feature pages at or below 120 lines. Treat 80–120 as a useful target when the content
   warrants it; never pad a short page.
+- Give every project README a `repository` front-matter field containing the Git checkout used for implementation.
+- Neovim's `<leader>vf` picker owns smart Herdr routing. Its task-local `<C-a>` action asks Herdr to create or reuse
+  `feature/<feature-slug>` and `task/<task-slug>` worktrees, then launches the task in a named tab inside the feature
+  workspace.
+- Name worktree workspaces `Project · Theme` or `Project · Feature`. A task is represented only by its tab and is
+  never included in the workspace name; the tab name reflects the selected task.
+- The vault skill retrieves and edits vault content only. It never infers scope from arbitrary prompts, creates
+  worktrees, moves panes, or renames Herdr workspaces, tabs, or agents.
 - Keep simple tasks as numbered checkboxes in `feature.md`. Create a task note when one checkbox plus three or four
   nested bullets cannot capture the implementation, or when the work is a spike, low-level design, or verifier setup.
 - Give every task a stable `T01`, `T02`, … number. Never renumber existing tasks.
@@ -91,6 +99,8 @@ projects/<project>/themes/<theme>/features/<feature>/tasks/01-<task>.md
   is `in-progress`; all open is `pending-work`; no tasks on an implemented capability is `maintained`.
 - Preserve useful completed designs and verifier evidence in completed task notes. Put bulky raw evidence in an
   `evidence/` subfolder when helpful; task notes have no hard line limit.
+- When gathering project context, start at `1_projects/projects.md`, then read the project README, theme, feature, and
+  task notes in that order.
 - After project-structure changes, run `~/vault/scripts/verify-project-structure`.
 
 ## Directory Layout
@@ -100,9 +110,8 @@ projects/<project>/themes/<theme>/features/<feature>/tasks/01-<task>.md
 | `0_inbox/`               | Quick captures, personal tasks (`0.inbox.md`) |
 | `1_wip/`                 | Work-in-progress research                     |
 | `2_knowledge/`           | Finalized knowledge base and reference        |
-| `3_log/`                 | Historical monthly logs                       |
+| `3_logs/`                | Weekly work logs and backlogs                  |
 | `4_misc/`                | Misc (interviews, projects)                   |
-| `5_modal/logs/week_XXX/` | Weekly work logs and backlogs                 |
 | `5_modal/system-cards/`  | System architecture documentation             |
 | `journal/`               | Journal entries (weekly, not daily)           |
-| `projects/`              | Project documentation                         |
+| `1_projects/`            | Project documentation                         |

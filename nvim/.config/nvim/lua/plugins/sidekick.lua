@@ -73,7 +73,7 @@ return {
       function()
         require("plugins.sidekick.session_switch").open()
       end,
-      desc = "Sidekick Switch Local Session",
+      desc = "Sidekick Switch Agent Session",
       mode = { "n", "t", "i", "x" },
     },
     {

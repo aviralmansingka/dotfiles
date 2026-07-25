@@ -1,6 +1,9 @@
 .git
 .envrc
 .todos/
+.lavish/
+__pycache__/
+pi/.pi/agent/extensions/tool-call-renderer-thinking-prototype.html
 
 git/.config/lazygit/state.yml
 

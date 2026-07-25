@@ -11,7 +11,6 @@ local collapsed = {}
 local run_times = {}
 local context_usage = {}
 local session_paths = {}
-local static_spinner = "⠋"
 local spinner_refresh_ms = 80
 local preview_debounce_ms = 400
 local preview_settle_ms = 16
@@ -413,11 +412,7 @@ local function status_icon(status)
   return status == "working" and Snacks.util.spinner() or display[1], display[2]
 end
 
-local function workspace_spinner(running)
-  return running > 0 and Snacks.util.spinner() or static_spinner
-end
-
-local function workspace_groups(hidden_workspace_id, metric_cache)
+local function workspace_groups(first_workspace_id, metric_cache)
   local grouped = {}
   for _, agent in ipairs(herdr.list_agents()) do
     local parsed = registry.parse_session_name(agent.name)
@@ -463,20 +458,27 @@ local function workspace_groups(hidden_workspace_id, metric_cache)
     if not group then
       return
     end
-    group.total = #group.agents
     group.item.workspace_label = label
     if collapsed[workspace_id] == nil then
-      collapsed[workspace_id] = true
+      collapsed[workspace_id] = false
     end
     group.item._collapsed = collapsed[workspace_id]
     table.sort(group.agents, compare_items)
-    if workspace_id ~= hidden_workspace_id then
-      groups[#groups + 1] = group
-    end
+    groups[#groups + 1] = group
   end
 
-  for _, workspace in ipairs(workspace_list()) do
-    if workspace.workspace_id then
+  local workspaces = workspace_list()
+  local first_workspace_label
+  for _, workspace in ipairs(workspaces) do
+    if workspace.workspace_id == first_workspace_id then
+      first_workspace_label = workspace.label
+    end
+  end
+  if first_workspace_id then
+    add_workspace(first_workspace_id, first_workspace_label or first_workspace_id)
+  end
+  for _, workspace in ipairs(workspaces) do
+    if workspace.workspace_id ~= first_workspace_id and workspace.workspace_id then
       add_workspace(workspace.workspace_id, workspace.label or workspace.workspace_id)
     end
   end
@@ -510,14 +512,10 @@ local function workspace_chunks(group)
   local item = group.item
   return {
     { item._collapsed and "▸ " or "▾ ", "SnacksPickerTree" },
+    { item.workspace_label or item.workspace_id or "unknown", "Directory" },
+    { " · ", "Comment" },
     { "● ", group.done > 0 and "DiagnosticWarn" or "Comment" },
     { tostring(group.done), "Comment" },
-    { "  " .. workspace_spinner(group.running) .. " ", group.running > 0 and "DiagnosticInfo" or "Comment" },
-    { tostring(group.running), "Comment" },
-    { "  ·  ", "Comment" },
-    { item.workspace_label or item.workspace_id or "unknown", "Directory" },
-    { "  Σ ", "Title" },
-    { tostring(group.total), "Comment" },
   }
 end
 
@@ -557,6 +555,7 @@ function M.open(opts)
     end
   end
   local groups = workspace_groups(local_workspace_id, metric_cache)
+  local workspace_matcher = require("snacks.picker.core.matcher").new({ sort = false })
   if #items == 0 then
     items = { {
       text = workspace_id and "(no named sessions in workspace)" or "(no named sessions in cwd)",
@@ -565,6 +564,7 @@ function M.open(opts)
   end
 
   local workspace_rows = {}
+  local workspace_pattern = ""
   local picker
   local spinner_timer
   local workspace_win
@@ -614,38 +614,61 @@ function M.open(opts)
     if not workspace_win or not workspace_win:valid() then
       return
     end
+    local pattern = picker and picker.input:get() or ""
+    workspace_matcher:init(pattern)
+    local function matches(text)
+      return workspace_matcher:match({ text = text }) > 0
+    end
     local lines, highlights = {}, {}
     workspace_rows = {}
     for _, group in ipairs(groups) do
-      local chunks = workspace_chunks(group)
-      workspace_rows[#workspace_rows + 1] = group.item
-      lines[#lines + 1] = ""
-      local col = 0
-      for _, chunk in ipairs(chunks) do
-        lines[#lines] = lines[#lines] .. chunk[1]
-        highlights[#highlights + 1] = { #lines - 1, col, col + #chunk[1], chunk[2] }
-        col = col + #chunk[1]
-      end
-      if not group.item._collapsed then
-        for index, agent in ipairs(group.agents) do
-          chunks = workspace_agent_chunks(agent, index == #group.agents)
-          workspace_rows[#workspace_rows + 1] = agent
-          lines[#lines + 1] = ""
-          col = 0
-          for _, chunk in ipairs(chunks) do
-            lines[#lines] = lines[#lines] .. chunk[1]
-            highlights[#highlights + 1] = { #lines - 1, col, col + #chunk[1], chunk[2] }
-            col = col + #chunk[1]
+      local label = group.item.workspace_label or group.item.workspace_id or "unknown"
+      local workspace_matches = matches(label)
+      local agents = vim.tbl_filter(function(agent)
+        return workspace_matches
+          or matches(table.concat({ agent.label or "", agent.agent_name or "", agent.tool or "" }, " "))
+      end, group.agents)
+      if workspace_matches or #agents > 0 then
+        local chunks = workspace_chunks(group)
+        workspace_rows[#workspace_rows + 1] = group.item
+        lines[#lines + 1] = ""
+        local col = 0
+        for _, chunk in ipairs(chunks) do
+          lines[#lines] = lines[#lines] .. chunk[1]
+          highlights[#highlights + 1] = { #lines - 1, col, col + #chunk[1], chunk[2] }
+          col = col + #chunk[1]
+        end
+        if not group.item._collapsed or pattern ~= "" then
+          for index, agent in ipairs(agents) do
+            chunks = workspace_agent_chunks(agent, index == #agents)
+            workspace_rows[#workspace_rows + 1] = agent
+            lines[#lines + 1] = ""
+            col = 0
+            for _, chunk in ipairs(chunks) do
+              lines[#lines] = lines[#lines] .. chunk[1]
+              highlights[#highlights + 1] = { #lines - 1, col, col + #chunk[1], chunk[2] }
+              col = col + #chunk[1]
+            end
           end
         end
       end
     end
     if #lines == 0 then
-      lines = { "(no other workspaces with agents)" }
+      lines = { pattern == "" and "(no other workspaces with agents)" or "(no matching workspace agents)" }
       highlights = { { 0, 0, -1, "Comment" } }
     end
 
     local cursor = vim.api.nvim_win_get_cursor(workspace_win.win)
+    local cursor_row = math.min(cursor[1], #lines)
+    if pattern ~= "" and pattern ~= workspace_pattern then
+      for row, item in ipairs(workspace_rows) do
+        if not item._workspace then
+          cursor_row = row
+          break
+        end
+      end
+    end
+    workspace_pattern = pattern
     vim.bo[workspace_win.buf].modifiable = true
     vim.api.nvim_buf_set_lines(workspace_win.buf, 0, -1, false, lines)
     vim.bo[workspace_win.buf].modifiable = false
@@ -653,12 +676,17 @@ function M.open(opts)
     for _, hl in ipairs(highlights) do
       vim.api.nvim_buf_add_highlight(workspace_win.buf, workspace_ns, hl[4], hl[1], hl[2], hl[3])
     end
-    vim.api.nvim_win_set_cursor(workspace_win.win, { math.min(cursor[1], #lines), 0 })
+    vim.api.nvim_win_set_cursor(workspace_win.win, { cursor_row, 0 })
+  end
+
+  local function preview_window(preview)
+    local win = preview and preview.win or picker and picker.preview.win
+    return win and win:win_valid() and win or nil
   end
 
   local function preview_line_limit(preview)
-    local win = preview and preview.win or picker and picker.preview.win
-    if win and win:win_valid() then
+    local win = preview_window(preview)
+    if win then
       return math.max(vim.api.nvim_win_get_height(win.win) * 2, 1)
     end
     return math.max(vim.o.lines * 2, 1)
@@ -703,7 +731,7 @@ function M.open(opts)
     return workspace_active and rendered_workspace_item or picker:current()
   end
 
-  local function prepare_preview_buffer(output, fallback)
+  local function prepare_preview_buffer(output, fallback, preview)
     local buf = vim.api.nvim_create_buf(false, true)
     vim.bo[buf].bufhidden = "wipe"
     vim.bo[buf].filetype = "snacks_picker_preview"
@@ -711,9 +739,10 @@ function M.open(opts)
     if output then
       local width = 80
       local height = 24
-      if picker.preview.win:win_valid() then
-        width = vim.api.nvim_win_get_width(picker.preview.win.win)
-        height = vim.api.nvim_win_get_height(picker.preview.win.win)
+      local win = preview_window(preview)
+      if win then
+        width = vim.api.nvim_win_get_width(win.win)
+        height = vim.api.nvim_win_get_height(win.win)
       end
       staging_win = vim.api.nvim_open_win(buf, false, {
         relative = "editor",
@@ -784,10 +813,28 @@ function M.open(opts)
     end
     local output, err = preview_text(item, preview_line_limit(preview))
     local rendered = output or err
-    local buf, staging_win = prepare_preview_buffer(output, err)
+    local buf, staging_win = prepare_preview_buffer(output, err, preview)
     vim.schedule(function()
       swap_preview_buffer(buf, staging_win, item, rendered)
     end)
+  end
+
+  local function move_workspace_selection(step)
+    if not workspace_win or not workspace_win:valid() then
+      return
+    end
+    local row = vim.api.nvim_win_get_cursor(workspace_win.win)[1] + step
+    local item = workspace_rows[row]
+    if not item then
+      return
+    end
+    vim.api.nvim_win_set_cursor(workspace_win.win, { row, 0 })
+    rendered_workspace_item = item._workspace and nil or item
+    pending_workspace_item = nil
+    set_active_selector(true)
+    if not item._workspace then
+      show_preview(item)
+    end
   end
 
   local function refresh_preview()
@@ -911,6 +958,11 @@ function M.open(opts)
     end
   end
 
+  local function focus_input()
+    picker:focus("input")
+    vim.cmd.startinsert()
+  end
+
   local function workspace_enter()
     local item = workspace_rows[vim.api.nvim_win_get_cursor(workspace_win.win)[1]]
     if not item then
@@ -920,11 +972,7 @@ function M.open(opts)
       collapsed[item.workspace_id] = not collapsed[item.workspace_id]
       item._collapsed = collapsed[item.workspace_id]
       render_workspace()
-      vim.schedule(function()
-        if workspace_win:valid() then
-          workspace_win:focus()
-        end
-      end)
+      focus_input()
     else
       activate(picker, item)
     end
@@ -934,18 +982,48 @@ function M.open(opts)
     kill_item(picker, workspace_rows[vim.api.nvim_win_get_cursor(workspace_win.win)[1]])
   end
 
-  local function focus_input()
-    picker:focus("input")
-    vim.cmd.startinsert()
-  end
-
   local function clear_input()
     picker.input:set("")
     focus_input()
   end
 
+  local function toggle_selector()
+    rendered_workspace_item = nil
+    pending_workspace_item = nil
+    set_active_selector(not workspace_active)
+    if not workspace_active then
+      show_preview(picker:current())
+    end
+    focus_input()
+  end
+
+  local function move_active_selector(step)
+    if workspace_active then
+      move_workspace_selection(step)
+    else
+      picker.list:move(step)
+    end
+  end
+
+  local function move_next()
+    move_active_selector(1)
+  end
+
+  local function move_previous()
+    move_active_selector(-1)
+  end
+
+  local function confirm_active_selector()
+    if workspace_active then
+      workspace_enter()
+    else
+      picker:action("confirm")
+    end
+  end
+
   workspace_win = Snacks.win({
     show = false,
+    focusable = false,
     bo = { buftype = "nofile", bufhidden = "wipe", modifiable = false },
     wo = {
       cursorline = true,
@@ -996,18 +1074,18 @@ function M.open(opts)
           height = 14,
           {
             width = 0.5,
-            win = "list",
-            height = 12,
-            title = " Local sessions ",
-            footer = " <C-w> Workspaces ",
-            footer_pos = "center",
-            border = "rounded",
-          },
-          {
             win = "workspace",
             height = 12,
             title = " Workspaces ",
             footer = " <C-w> Agents · <Enter> Expand/Open ",
+            footer_pos = "center",
+            border = "rounded",
+          },
+          {
+            win = "list",
+            height = 12,
+            title = " Local sessions ",
+            footer = " <C-w> Workspaces ",
             footer_pos = "center",
             border = "rounded",
           },
@@ -1028,25 +1106,24 @@ function M.open(opts)
     on_show = function(active_picker)
       picker = active_picker
       render_workspace()
-      set_active_selector(false)
+      set_active_selector(true)
       if opts.on_show then
         opts.on_show(picker)
       end
       workspace_win:on("WinEnter", function()
         set_active_selector(true)
         preview_workspace_cursor()
+        vim.schedule(focus_input)
       end, { buf = true })
-      picker.input.win:on("WinEnter", function()
-        rendered_workspace_item = nil
-        pending_workspace_item = nil
-        set_active_selector(false)
-      end, { buf = true })
+      picker.input.win:on({ "TextChangedI", "TextChanged" }, render_workspace, { buf = true })
       picker.list.win:on("WinEnter", function()
         rendered_workspace_item = nil
         pending_workspace_item = nil
         set_active_selector(false)
+        vim.schedule(focus_input)
       end, { buf = true })
       workspace_win:on("CursorMoved", preview_workspace_cursor, { buf = true })
+      focus_input()
       if has_working then
         spinner_timer = vim.uv.new_timer()
         spinner_timer:start(spinner_refresh_ms, spinner_refresh_ms, vim.schedule_wrap(function()
@@ -1072,12 +1149,15 @@ function M.open(opts)
       input = {
         wo = { winhighlight = winhl },
         keys = {
-          ["<c-w>"] = {
-            function()
-              workspace_win:focus()
-            end,
-            mode = { "n", "i" },
-          },
+          ["<CR>"] = { confirm_active_selector, mode = { "n", "i" } },
+          ["<Down>"] = { move_next, mode = { "n", "i" } },
+          ["<Up>"] = { move_previous, mode = { "n", "i" } },
+          ["<c-j>"] = { move_next, mode = { "n", "i" } },
+          ["<c-k>"] = { move_previous, mode = { "n", "i" } },
+          ["<c-n>"] = { move_next, mode = { "n", "i" } },
+          ["<c-p>"] = { move_previous, mode = { "n", "i" } },
+          ["<c-w>"] = { toggle_selector, mode = { "n", "i" } },
+          ["<a-w>"] = { toggle_selector, mode = { "n", "i" } },
           ["<c-u>"] = { clear_input, mode = { "n", "i" } },
           ["<c-b>"] = { "sidekick_preview_scroll_up", mode = { "n", "i" } },
           ["<c-f>"] = { "sidekick_preview_scroll_down", mode = { "n", "i" } },
@@ -1086,11 +1166,10 @@ function M.open(opts)
         },
       },
       list = {
+        focusable = false,
         wo = { winhighlight = winhl },
         keys = {
-          ["<c-w>"] = function()
-            workspace_win:focus()
-          end,
+          ["<c-w>"] = toggle_selector,
           ["<c-u>"] = clear_input,
           ["<c-b>"] = "sidekick_preview_scroll_up",
           ["<c-f>"] = "sidekick_preview_scroll_down",

@@ -2,7 +2,6 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "@zackify/pi-wafer": "^0.1.2",
     "pi-mcp-adapter": "^2.11.0"
   }
 }
