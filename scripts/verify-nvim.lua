@@ -2578,11 +2578,13 @@ local function validate_vault_features()
     local original_get_agent = herdr.get_agent
     local original_start = herdr.start
     local original_run = herdr.run
+    local original_ensure_workspace = herdr.ensure_workspace
     local original_ensure_task_scope = herdr.ensure_task_scope
     local original_place_agent = herdr.place_agent
     local started
     local ran
     local routed
+    local workspace_routed
     local placed
     herdr.get_agent = function()
       return nil
@@ -2595,6 +2597,13 @@ local function validate_vault_features()
         task_branch = task_branch,
       }
       return { workspace_id = "w-feature", cwd = neovim_repository .. "/task-worktree" }
+    end
+    herdr.ensure_workspace = function(repository, workspace_label)
+      workspace_routed = {
+        repository = repository,
+        workspace_label = workspace_label,
+      }
+      return "w-feature"
     end
     herdr.start = function(name, cwd, command, env, scope, tab_label)
       started = {
@@ -2617,11 +2626,10 @@ local function validate_vault_features()
     end
 
     local agent_ok, agent_err = xpcall(function()
-      local linked_prompt = table.concat({
-        "Start working on this vault task now, following its task and feature contracts.",
-        "Task: " .. vault_feature .. "/tasks/01-build-tree.md:5",
-        "Feature: " .. vault_feature .. "/feature.md:5",
-      }, "\n")
+      local linked_prompt = "/vault-hunter " .. vault_feature .. "/tasks/01-build-tree.md:5"
+      if features.agent_prompt(linked_task) ~= linked_prompt then
+        fail("linked task Vault Hunter prompt is wrong: " .. vim.inspect(features.agent_prompt(linked_task)))
+      end
       if not features.send_to_agent(linked_task) then
         fail("linked feature task should be sent to its project agent")
       end
@@ -2684,13 +2692,7 @@ local function validate_vault_features()
       herdr.get_agent = function()
         return nil
       end
-      local inline_prompt = table.concat({
-        "$grill-with-docs",
-        "",
-        "Use the feature contract and inline task below as source context. Do not implement yet. Interview me one decision at a time, recommend an answer, and update the durable docs until this becomes a well-defined task spec.",
-        "Feature: " .. weekly_feature .. "/feature.md:5",
-        "Inline task: T02 Verify date navigation.",
-      }, "\n")
+      local inline_prompt = "/vault-hunter " .. weekly_feature .. "/feature.md:10"
       if not features.send_to_agent(inline_task) then
         fail("inline feature task should start a project agent")
       end
@@ -2718,12 +2720,50 @@ local function validate_vault_features()
         "inline feature task agent command"
       )
       if ran then
-        fail("a new inline Codex agent should receive grill-with-docs as a launch argument")
+        fail("a new inline Codex agent should receive vault-hunter as a launch argument")
       end
+
+      started = nil
+      ran = nil
+      routed = nil
+      workspace_routed = nil
+      placed = nil
+      herdr.get_agent = function()
+        return nil
+      end
+      local feature_item = items[5]
+      local feature_prompt = "/vault-hunter " .. vault_feature .. "/feature.md:5"
+      if not features.send_to_agent(feature_item) then
+        fail("feature row should start a Vault Hunter agent")
+      end
+      if
+        not started
+        or started.name ~= "codex-neovim-vault-feature-picker"
+        or started.cwd ~= neovim_repository
+        or started.scope.workspace_id ~= "w-feature"
+        or started.tab_label ~= "Vault Feature Picker"
+        or started.env[internal.named_env_var] ~= "neovim-vault-feature-picker"
+      then
+        fail("feature Vault Hunter agent start arguments are wrong: " .. vim.inspect(started))
+      end
+      if
+        not workspace_routed
+        or workspace_routed.repository ~= neovim_repository
+        or workspace_routed.workspace_label ~= "Neovim · Vault Feature Picker"
+        or routed
+      then
+        fail("feature Vault Hunter action should reuse its feature workspace without a task worktree")
+      end
+      assert_sequence(
+        started.command,
+        { "codex", "--dangerously-bypass-approvals-and-sandbox", feature_prompt },
+        "feature Vault Hunter command"
+      )
     end, debug.traceback)
     herdr.get_agent = original_get_agent
     herdr.start = original_start
     herdr.run = original_run
+    herdr.ensure_workspace = original_ensure_workspace
     herdr.ensure_task_scope = original_ensure_task_scope
     herdr.place_agent = original_place_agent
     if not agent_ok then
@@ -2800,12 +2840,12 @@ local function validate_vault_features()
       picker_opts = opts
     end
     local callback_ok, callback_err = xpcall(callback, debug.traceback)
-    if callback_ok and picker_opts and picker_opts.actions and picker_opts.actions.feature_agent then
-      picker_opts.actions.feature_agent({
+    if callback_ok and picker_opts and picker_opts.actions and picker_opts.actions.vault_hunter then
+      picker_opts.actions.vault_hunter.action({
         close = function()
           action_events[#action_events + 1] = "close"
         end,
-      }, linked_task)
+      }, items[5])
     end
     features.collect = original_collect
     features.send_to_agent = original_send_to_agent
@@ -2829,11 +2869,12 @@ local function validate_vault_features()
       fail("active vault feature picker options are wrong: " .. vim.inspect(picker_opts))
     end
     if
-      picker_opts.win.input.keys["<c-a>"][1] ~= "feature_agent"
-      or picker_opts.win.list.keys["<c-a>"] ~= "feature_agent"
-      or action_item ~= linked_task
+      picker_opts.win.input.keys["<c-a>"][1] ~= "vault_hunter"
+      or picker_opts.win.list.keys["<c-a>"] ~= "vault_hunter"
+      or picker_opts.actions.vault_hunter.desc ~= "(Vault hunter) Action"
+      or action_item ~= items[5]
     then
-      fail("vault feature picker <C-a> should be picker-local and receive the exact selected task")
+      fail("vault feature picker <C-a> should expose (Vault hunter) Action for the selected feature or task")
     end
     assert_sequence(action_events, { "send", "close", "activate" }, "vault feature picker agent action")
   end, debug.traceback)

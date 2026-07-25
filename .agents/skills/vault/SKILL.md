@@ -89,9 +89,10 @@ System card categories:
 - Keep project, theme, and feature pages at or below 120 lines. Treat 80–120 as a useful target when the content
   warrants it; never pad a short page.
 - Give every project README a `repository` front-matter field containing the Git checkout used for implementation.
-- Neovim's `<leader>vf` picker owns smart Herdr routing. Its task-local `<C-a>` action asks Herdr to create or reuse
-  `feature/<feature-slug>` and `task/<task-slug>` worktrees, then launches the task in a named tab inside the feature
-  workspace.
+- Neovim's `<leader>vf` picker owns smart Herdr routing. Its Feature-or-Task `<C-a>` action is named
+  `(Vault hunter) Action` and launches `/vault-hunter <path:line>`. Feature rows use the feature workspace without a
+  task worktree; Task rows create or reuse `feature/<feature-slug>` and `task/<task-slug>` worktrees, then launch in a
+  task-named tab inside the feature workspace.
 - Name worktree workspaces `Project · Theme` or `Project · Feature`. A task is represented only by its tab and is
   never included in the workspace name; the tab name reflects the selected task.
 - The vault skill retrieves and edits vault content only. It never infers scope from arbitrary prompts, creates
@@ -101,6 +102,10 @@ System card categories:
 - Give every task a stable `T01`, `T02`, … number. Never renumber existing tasks.
 - Treat the feature checklist as authoritative. A linked task note must mirror `[ ]` as `pending-work`, `[~]` as
   `in-progress`, and `[x]` as `done` in its frontmatter.
+- During a Vault Hunter Task Run only, commit the lifecycle transition before specification, verifier, or
+  implementation work: keep the Feature checklist bullet pending as `[ ]` while setting the linked Task note to
+  `status: in-progress`. Do not push that commit until vault checkpoint one. Vault checkpoint two ends this exception
+  by synchronizing both states.
 - Derive feature status from its checklist: all complete is `done`; any in-progress or a mixture of complete and open
   is `in-progress`; all open is `pending-work`; no tasks on an implemented capability is `maintained`.
 - Preserve useful completed designs and verifier evidence in completed task notes. Put bulky raw evidence in an
