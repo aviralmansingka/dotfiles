@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case_name="${1:-agent-keymaps}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+default_root="$(cd "$script_dir/.." && pwd)"
+repo_root="${2:-$default_root}"
+extension="$default_root/pi/.pi/agent/extensions/nvim-verifier.ts"
+prompt="$default_root/pi/.pi/agent/prompts/nvim-verifier.md"
+
+cd "$repo_root"
+pi \
+  --print \
+  --no-session \
+  --no-extensions \
+  --no-skills \
+  --no-prompt-templates \
+  --no-context-files \
+  --extension "$extension" \
+  --prompt-template "$prompt" \
+  --tools read,grep,find,ls,verify_nvim \
+  "/nvim-verifier $case_name" |
+  sed $'s/\033\\[[0-9;]*m//g'

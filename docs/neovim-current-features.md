@@ -438,11 +438,10 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - `<leader>vf` opens a Project › Theme › Feature › Task tree from `~/vault/1_projects`; it excludes done and
   maintained features, orders in-progress features first, retains hierarchy parents during fuzzy filtering, and
   previews or opens every row at its exact source location. Completed `[x]` tasks are hidden.
-- Inside the `<leader>vf` picker, task-local `<C-a>` creates or reuses a stable Codex session in the selected
-  `Project · Feature` Herdr workspace and an isolated task worktree. Codex runs from that checkout in a tab named
-  after the task. Linked task notes submit a direct-work prompt with task and feature sources; inline tasks launch
-  Codex with `$grill-with-docs`, the checklist text, and the feature Markdown source as its initial prompt. The picker
-  then closes and focuses Sidekick.
+- Inside the `<leader>vf` picker, `<C-a>` is `(Vault hunter) Action` for Feature and Task rows. It launches
+  `/vault-hunter <path:line>` in a stable Codex session, then closes the picker and focuses Sidekick. Feature rows use
+  the selected `Project · Feature` Herdr workspace without a task worktree. Task rows create or reuse the isolated
+  task worktree and open its task-named tab inside that feature workspace.
 - `<leader>vt` opens unchecked items from `3_logs/*/backlog.md` only when they are under an exact
   `### Weekday, YYYY-MM-DD` heading; rows show the inferred date and todo text while retaining source preview.
 - Inside the `<leader>vt` picker, `<C-a>` creates or reuses a dated Pi agent in the `backlog` Herdr workspace and
@@ -614,8 +613,9 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Verification checks Sidekick registry parsing.
 - Verification checks Sidekick branding lookup.
 - Verification checks `<C-.>` local fallback.
-- Verification can create a temporary real tmux Pi session.
-- Verification checks tmux discovery and rehydration.
+- Verification checks Herdr-backed Sidekick sessions, workspaces, and task routing.
 - Verification checks local picker visibility.
-- Verification checks `SIDEKICK_BRANCH` metadata readback.
 - Verification checks search snapshot capture.
+- `scripts/nvim-verifier` launches a Pi verifier with no shell or file-mutation tools.
+- The verifier runs the selected checkout's config and returns structured PASS/FAIL evidence without replacing raw
+  harness output.
