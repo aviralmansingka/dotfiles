@@ -3,32 +3,16 @@ local M = {}
 
 M.tool_urls = {
   codex = "https://github.com/openai/codex",
-  cursor = "https://cursor.com",
-  opencode = "https://github.com/sst/opencode",
   pi = "https://github.com/earendil-works/pi",
-  claude = "https://github.com/anthropics/claude-code",
 }
-
-M.claude_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/claude")) == 1 and vim.fn.expand("~/.local/bin/claude")
-  or "claude"
-
-M.cursor_agent_bin = vim.fn.executable(vim.fn.expand("~/.local/bin/cursor-agent")) == 1
-    and vim.fn.expand("~/.local/bin/cursor-agent")
-  or "cursor-agent"
 
 M.tool_commands = {
   codex = { "codex", "--dangerously-bypass-approvals-and-sandbox" },
-  cursor = { M.cursor_agent_bin, "--force" },
-  opencode = { "opencode" },
   pi = { "pi" },
-  claude = { M.claude_bin, "--dangerously-skip-permissions" },
 }
 
--- Highest-to-lowest preference for agent pickers. Pi + Codex are the primary
--- Neovim agent backends; Cursor/OpenCode/Claude are kept as optional legacy
--- backends and sorted after the primary pair.
 M.primary_agent_order = { "pi", "codex" }
-M.agent_order = { "pi", "codex", "cursor", "opencode", "claude" }
+M.agent_order = { "pi", "codex" }
 M.agent_rank = {}
 for rank, tool in ipairs(M.agent_order) do
   M.agent_rank[tool] = rank
@@ -40,16 +24,10 @@ M.named_env_var = "SIDEKICK_NAMED_SESSION"
 
 M.tool_is_proc_patterns = {
   codex = "\\<codex\\>",
-  cursor = "\\<cursor-agent\\>",
-  opencode = "\\<opencode\\>",
   pi = "\\<pi\\>",
-  claude = "\\<claude\\>",
 }
 
 local function agent_sort_rank(tool)
-  if tool == "claude" then
-    return math.huge
-  end
   return M.agent_rank[tool] or 1000
 end
 
@@ -92,42 +70,11 @@ function M.command_to_shell(cmd)
   return table.concat(escaped, " ")
 end
 
-function M.is_claude_tool(name)
-  return type(name) == "string" and name:match("^claude") ~= nil
-end
-
-function M.ensure_claude_bridge()
-  local ok, claudecode = pcall(require, "claudecode")
-  if not ok then
-    local lazy_ok, lazy = pcall(require, "lazy")
-    if lazy_ok and type(lazy.load) == "function" then
-      lazy.load({ plugins = { "claudecode.nvim" } })
-      ok, claudecode = pcall(require, "claudecode")
-    end
-  end
-  if not ok then
-    vim.notify("Sidekick: failed to load claudecode.nvim", vim.log.levels.ERROR)
-    return false
-  end
-  if claudecode.state and claudecode.state.server then
-    return true
-  end
-  local started, err = claudecode.start(false)
-  if started or err == "Already running" then
-    return true
-  end
-  vim.notify("Sidekick: failed to start Claude IDE bridge: " .. tostring(err), vim.log.levels.ERROR)
-  return false
-end
-
 --- Toggle a Sidekick tool session through the configured backend.
 ---@param name string
 ---@param focus boolean|nil
 ---@param terminal_id? string
 function M.toggle_tool_session(name, focus, terminal_id)
-  if M.is_claude_tool(name) and not M.ensure_claude_bridge() then
-    return
-  end
   M.hide_tool_sessions(name)
   local filter = terminal_id and { session = "herdr:" .. terminal_id } or nil
   require("sidekick.cli").toggle({ name = name, focus = focus ~= false, filter = filter })
@@ -235,16 +182,13 @@ function M.normalize_cwd(cwd)
   return expanded
 end
 
---- Build the spawn command for a named session, splicing per-tool name flags
---- where supported. Claude and pi take `--name <slug>` so the slug appears in
---- their native session pickers/titles; other tools have no equivalent and
---- fall through unchanged.
+--- Build the spawn command for a named session.
 ---@param tool string
 ---@param slug string
 ---@return string[]
 function M.tool_command_for_named_session(tool, slug)
   local cmd = vim.deepcopy(M.tool_commands[tool] or { tool })
-  if (tool == "claude" or tool == "pi") and slug and slug ~= "" then
+  if tool == "pi" and slug and slug ~= "" then
     table.insert(cmd, "--name")
     table.insert(cmd, slug)
   end

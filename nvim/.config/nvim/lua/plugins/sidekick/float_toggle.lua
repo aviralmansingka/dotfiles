@@ -1,7 +1,7 @@
 -- Toggle Sidekick CLI between split layout and a centered 80% float.
 local M = {}
 
---- Match snacks terminal / opencode / toggleterm float borders.
+--- Match Snacks terminal and toggleterm float borders.
 function M.float_border()
   return vim.g.neovide and vim.g.neovide_fancy_borders and vim.g.neovide_fancy_borders.current or "rounded"
 end

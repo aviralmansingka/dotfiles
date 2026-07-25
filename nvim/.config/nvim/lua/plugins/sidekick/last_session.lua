@@ -1,7 +1,7 @@
 -- nvim/.config/nvim/lua/plugins/sidekick/last_session.lua
 -- Tracks the most recently created or picker-selected named session so <C-.>
 -- can jump straight back to it. Direct tool-toggle keymaps
--- (<leader>ag/<leader>ai) intentionally do NOT update this.
+-- Direct session toggles intentionally do not update this.
 local M = {}
 
 ---@type string|nil

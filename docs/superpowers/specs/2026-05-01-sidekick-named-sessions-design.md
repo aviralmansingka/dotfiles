@@ -175,7 +175,7 @@ Failure modes:
 | `<leader>al` | Open named-session picker |
 | `<leader>a/` | Search across named-session scrollbacks |
 
-Existing keymaps (`<leader>aa`, `<leader>as`, `<leader>ac`, `<leader>ag`, `<leader>ao`, `<leader>an`, `<leader>ad`, `<leader>at`, `<leader>af`, `<leader>av`, `<leader>ap`) are unchanged.
+Existing keymaps (`<leader>aa`, `<leader>as`, `<leader>ac`, `<leader>ag`, `<leader>ao`, `<leader>an`, `<leader>ad`, `<leader>at`, `<leader>av`, `<leader>ap`) are unchanged.
 
 ## Error Handling
 

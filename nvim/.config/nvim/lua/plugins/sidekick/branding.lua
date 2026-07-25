@@ -8,10 +8,7 @@ local M = {}
 
 M.colors = {
   codex = "#89b482", -- gruvbox aqua, matches Codex image-token text
-  cursor = "#B19CD9", -- soft violet
-  opencode = "#928374", -- gruvbox gray
   pi = "#fabd2f", -- gruvbox yellow
-  claude = "#e48285", -- terracotta
   -- Ask + edit borders match their gutter-sign colors (defined in
   -- plugins/sidekick/ask/signs.lua). Blue for ask, deep dark purple for
   -- edit. Kept in sync manually with signs.lua.
@@ -36,7 +33,7 @@ local function capitalize(name)
   return name:sub(1, 1):upper() .. name:sub(2)
 end
 
---- Map a tool label (e.g., "claude" or "claude-tutorial") to its base tool key.
+--- Map a tool label (e.g., "pi" or "pi-vault") to its base tool key.
 --- Walks known tools in `internal.tool_commands` and returns the matching key.
 ---@param label string
 ---@return string|nil

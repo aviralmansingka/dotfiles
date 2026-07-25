@@ -61,26 +61,27 @@ end
 local function validate_agent_keymaps()
   local sidekick = load_plugin("sidekick.nvim")
   local removed = {
+    "<leader>ai",
+    "<leader>ag",
+    "<leader>al",
+    "<leader>aL",
+    "<leader>a/",
+    "<leader>as",
+    "<leader>ad",
     "<leader>ao",
     "<leader>au",
     "<leader>ar",
+    "<leader>af",
+    "<leader>aV",
     "<localleader>e",
   }
   for _, lhs in ipairs(removed) do
     assert_key_absent(sidekick, lhs)
   end
 
-  local claudecode = load_plugin("claudecode.nvim")
-  assert_key_absent(claudecode, "<leader>acs")
-
-  local opencode = load_plugin("opencode.nvim")
-  assert_key_absent(opencode, "gO")
-  assert_key_absent(opencode, "<c-'>")
-
   local snacks = load_plugin("snacks.nvim")
   assert_key_absent(snacks, "<C-'>")
   assert_key_absent(sidekick, "<C-'>")
-  assert_key_absent(sidekick, "<leader>aL")
 
   local obsidian = load_plugin("obsidian.nvim")
   assert_key_desc(obsidian, "<leader>vb", "current weekly backlog")
@@ -97,9 +98,6 @@ local function validate_agent_keymaps()
     fail("<leader>vb should call the current weekly backlog helper")
   end
 
-  assert_key_desc(sidekick, "<leader>ai", "Pi")
-  assert_key_desc(sidekick, "<leader>ag", "Codex")
-  assert_key_desc(sidekick, "<leader>al", "Local")
   assert_key_desc(sidekick, "<c-.>", "cwd sessions")
   assert_key_desc(sidekick, "<c-;>", "Switch Local")
   assert_key_desc(sidekick, "<leader>an", "Codex")
@@ -126,10 +124,7 @@ local function validate_sidekick_pi()
 
   assert_sequence(internal.primary_agents(), { "pi", "codex" }, "primary_agents")
 
-  local ordered = internal.ordered_agents()
-  if ordered[1] ~= "pi" or ordered[2] ~= "codex" then
-    fail("ordered_agents should start with pi,codex; got " .. vim.inspect(ordered))
-  end
+  assert_sequence(internal.ordered_agents(), { "pi", "codex" }, "ordered_agents")
 
   if not internal.tool_commands.pi then
     fail("internal.tool_commands.pi missing")
@@ -142,8 +137,12 @@ local function validate_sidekick_pi()
   if not config.cli or not config.cli.tools or not config.cli.tools.pi then
     fail("sidekick.config.cli.tools.pi missing")
   end
+  for tool in pairs(config.cli.tools) do
+    if tool ~= "codex" and tool ~= "pi" and not tool:match("^codex%-") and not tool:match("^pi%-") then
+      fail("unexpected Sidekick tool configured: " .. tool)
+    end
+  end
 
-  assert_key_desc(sidekick, "<leader>ai", "Primary Workflow")
   assert_key_desc(sidekick, "<leader>aN", "Pi")
 
   local named = internal.tool_command_for_named_session("pi", "test-session")
@@ -514,11 +513,21 @@ local function validate_sidekick_herdr()
   local original_pick = Snacks.picker.pick
   local original_spinner = Snacks.util.spinner
   local original_read = herdr.read
+  local original_read_async = herdr.read_async
+  local original_focus = herdr.focus
   local original_toggle = internal.toggle_tool_session
   local original_ui_input = vim.ui.input
   local picker_opts
   local read_args
-  local read_result = "\27[31mfirst logical line\27[0m\r\nsecond logical line"
+  local read_result = "\27[31mfirst logical line\27[0m"
+    .. string.rep(" ", 200)
+    .. "\r\n\r\nsecond logical line"
+    .. string.rep(" ", 200)
+    .. "\27[0m"
+  local async_reads = 0
+  local async_inflight = 0
+  local max_async_inflight = 0
+  local focused = {}
   local toggles = {}
   Snacks.picker.pick = function(opts)
     picker_opts = opts
@@ -527,8 +536,30 @@ local function validate_sidekick_herdr()
     return "S"
   end
   herdr.read = function(target, source, lines, ansi)
+    if source == "visible" then
+      if target == "pi-working" then
+        return "42.5%/272k\n• Working (5s • esc to interrupt)\n51% context left"
+      end
+      if target == "pi-done" then
+        return "─ Worked for 12s ─\n42.5%/272k"
+      end
+      return "42.5%/272k"
+    end
     read_args = { target = target, source = source, lines = lines, ansi = ansi }
     return read_result
+  end
+  herdr.read_async = function(_, _, _, _, callback)
+    async_reads = async_reads + 1
+    async_inflight = async_inflight + 1
+    max_async_inflight = math.max(max_async_inflight, async_inflight)
+    vim.defer_fn(function()
+      async_inflight = async_inflight - 1
+      callback(read_result)
+    end, 120)
+  end
+  herdr.focus = function(name)
+    focused[#focused + 1] = name
+    return true
   end
   internal.toggle_tool_session = function(name, focus, terminal_id)
     toggles[#toggles + 1] = { name = name, focus = focus, terminal_id = terminal_id }
@@ -581,6 +612,16 @@ local function validate_sidekick_herdr()
       if rendered:find(item.cwd, 1, true) or item.text:find(item.cwd, 1, true) then
         fail("cwd picker rows should not show the session working directory: " .. vim.inspect(rendered))
       end
+      local expected_context = item.label == "pi-working" and "49%" or "42.5%"
+      if not rendered:find(" · " .. expected_context, 1, true) then
+        fail("cwd picker rows should show context used after a floating-dot divider: " .. vim.inspect(rendered))
+      end
+      if item.label == "pi-working" and not rendered:match(" · %d+s · 49%%") then
+        fail("working rows should show current run time before context usage: " .. vim.inspect(rendered))
+      end
+      if item.label == "pi-done" and not rendered:find(" · 12s · 42.5%", 1, true) then
+        fail("done rows should retain their completed run time: " .. vim.inspect(rendered))
+      end
     end
     if
       picker_opts.win.input.keys["<c-r>"][1] ~= "sidekick_rename_session"
@@ -595,8 +636,9 @@ local function validate_sidekick_herdr()
       or not picker_opts.win.list.keys["<c-u>"]
       or not picker_opts.layout.wins.workspace.opts.keys["<c-w>"]
       or not picker_opts.layout.wins.workspace.opts.keys["<c-u>"]
+      or not picker_opts.layout.wins.workspace.opts.keys["<c-x>"]
     then
-      fail("cwd picker should switch panes with <c-w> and clear input with <c-u> from every pane")
+      fail("cwd picker should switch panes, clear input, and delete workspace agents from the workspace pane")
     end
 
     local rename_picker_opts = picker_opts
@@ -626,12 +668,37 @@ local function validate_sidekick_herdr()
       fail("cwd picker should manage a working-session spinner lifecycle")
     end
     local spinner_updates = 0
+    local preview_swaps = 0
+    local live_preview_buf = vim.api.nvim_create_buf(false, true)
     local fake_picker = {
       closed = false,
+      current = function()
+        return picker_opts.items[1]
+      end,
       input = {
         win = {
           on = function() end,
         },
+      },
+      preview = {
+        win = {
+          buf = live_preview_buf,
+          win = vim.api.nvim_get_current_win(),
+          map = function() end,
+          win_valid = function() return true end,
+        },
+        set_buf = function(self, buf)
+          local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+          if lines[1] ~= "first logical line" or lines[2] ~= "" or lines[3] ~= "second logical line" then
+            fail(
+              "working-session preview should trim terminal padding without removing intentional blank lines: "
+                .. vim.inspect(lines)
+            )
+          end
+          preview_swaps = preview_swaps + 1
+          self.win.buf = buf
+        end,
+        minimal = function() end,
       },
       list = {
         win = {
@@ -647,14 +714,28 @@ local function validate_sidekick_herdr()
       },
     }
     picker_opts.on_show(fake_picker)
-    if not vim.wait(500, function() return spinner_updates > 0 end, 10) then
-      fail("working sessions should animate their spinner")
+    vim.wait(450)
+    if spinner_updates == 0 then
+      fail("working-session spinners should redraw at 80ms")
     end
+    if async_reads < 2 or max_async_inflight ~= 1 then
+      fail("working-session preview should poll at 80ms with only one read in flight")
+    end
+    if preview_swaps ~= 1 then
+      fail("unchanged working-session content should swap the prepared preview only once")
+    end
+    fake_picker.closed = true
     picker_opts.on_close(fake_picker)
     local stopped_updates = spinner_updates
-    vim.wait(160)
-    if spinner_updates ~= stopped_updates then
-      fail("closing the cwd picker should stop spinner redraws")
+    local stopped_reads = async_reads
+    local stopped_preview_swaps = preview_swaps
+    vim.wait(250)
+    if
+      spinner_updates ~= stopped_updates
+      or async_reads ~= stopped_reads
+      or preview_swaps ~= stopped_preview_swaps
+    then
+      fail("closing the cwd picker should stop spinner and preview redraws")
     end
 
     local done_item
@@ -694,6 +775,7 @@ local function validate_sidekick_herdr()
 
     read_result = table.concat({
       "\27[32manswer stays\27[0m",
+      "\27[38;2;128;128;128m• Working (46s · esc to interrupt)\27[0m",
       "",
       "\27[48;2;30;30;30m        \27[0m",
       "\27[48;2;30;30;30m› Find and fix a bug in @filename\27[0m",
@@ -714,7 +796,11 @@ local function validate_sidekick_herdr()
         ~= nil
     end, 10)
     local codex_preview = table.concat(vim.api.nvim_buf_get_lines(codex_buf, 0, -1, false), "\n")
-    if codex_preview:find("Find and fix", 1, true) or codex_preview:find("gpt-5 footer", 1, true) then
+    if
+      codex_preview:find("Working", 1, true)
+      or codex_preview:find("Find and fix", 1, true)
+      or codex_preview:find("gpt-5 footer", 1, true)
+    then
       fail("Codex preview should scrub its trailing prompt block: " .. vim.inspect(codex_preview))
     end
     if not codex_preview:find("answer stays", 1, true) then
@@ -784,6 +870,9 @@ local function validate_sidekick_herdr()
     if #toggles ~= 1 or toggles[1].name ~= "pi-done" or toggles[1].focus ~= true then
       fail("confirm should focus the selected done session exactly once: " .. vim.inspect(toggles))
     end
+    if #focused ~= 1 or focused[1] ~= "pi-done" then
+      fail("confirm should clear the selected session's done state: " .. vim.inspect(focused))
+    end
     if last_session.label ~= "pi-done" then
       fail("confirm should keep the selected session active for <c-.>; got " .. vim.inspect(last_session.label))
     end
@@ -820,6 +909,8 @@ local function validate_sidekick_herdr()
   Snacks.picker.pick = original_pick
   Snacks.util.spinner = original_spinner
   herdr.read = original_read
+  herdr.read_async = original_read_async
+  herdr.focus = original_focus
   herdr.call = original_herdr_call
   internal.toggle_tool_session = original_toggle
   vim.ui.input = original_ui_input

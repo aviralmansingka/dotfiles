@@ -11,10 +11,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - DAP virtual text is declared but disabled.
 - The old `<leader>qs` session-save mapping is gone; it now restores the current session.
 - The old `<leader>qd` session-delete mapping is gone; it now stops saving the current session.
-- Legacy Sidekick keymaps are removed: `<c-;>`, `<leader>ao`, `<leader>au`, `<leader>ar`, and `<localleader>e`.
-- The Claude Code `<leader>acs` mapping is removed.
-- OpenCode direct keymaps `gO` and `<c-'>` are removed; OpenCode remains available through Sidekick and plugin commands.
-- The Sidekick resume module exists, but the former `<leader>ar` resume binding is intentionally not part of the current keymap surface.
+- Direct backend toggle mappings remain absent; `<C-;>` now opens the local session picker.
 - Modal-specific editor features are currently configured but should be removed from the editor surface:
   - Modal build dispatcher on `<leader>mb`.
   - Modal machine-manager build integration.
@@ -329,14 +326,11 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 ### Sidekick agent surface
 
 - Sidekick provides the canonical in-Neovim agent interface.
-- Sidekick uses tmux as its mux backend.
-- Sidekick tools include Pi, Codex, Cursor Agent, OpenCode, and Claude.
-- Primary Sidekick agents are Pi and Codex.
-- Full Sidekick agent order is Pi, Codex, Cursor, OpenCode, Claude.
+- Sidekick uses Herdr as its mux backend.
+- Sidekick tools are Pi and Codex.
+- Sidekick agent order is Pi, Codex.
 - Codex agent command uses bypass/sandbox flags as configured.
-- Cursor Agent command uses force mode.
-- Claude command uses skip-permissions mode.
-- Agent CLI integrations expect `pi`, `codex`, `cursor-agent`, `opencode`, and `claude`.
+- Agent CLI integrations expect `pi` and `codex`.
 
 ### Agent UI and identity
 
@@ -345,9 +339,6 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Sidekick gives each agent a stable visual identity.
 - Pi uses Gruvbox yellow (`#fabd2f`).
 - Codex uses Gruvbox aqua (`#89b482`).
-- Cursor Agent uses soft violet (`#B19CD9`).
-- OpenCode uses Gruvbox gray (`#928374`).
-- Claude uses terracotta (`#e48285`) in Sidekick.
 - Unknown or fallback Sidekick tools use neutral gray (`#7C7C7C`).
 - Sidekick ask UI uses Gruvbox blue (`#83a598`).
 - Sidekick edit UI uses faded purple (`#8f3f71`).
@@ -362,19 +353,18 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 
 ### Agent sessions and routing
 
-- Cursor Agent opens in a right split.
-- Other Sidekick tools default to floats.
+- Sidekick tools default to floats.
 - Sidekick can match existing tmux panes to tools.
 - Sidekick can rehydrate its registry from tmux panes.
 - Sidekick named sessions are stored and identified through session labels and tmux environment.
 - Sidekick named-session prompts collect both a session label and working directory.
-- Pi and Claude named sessions receive native `--name <slug>` command arguments.
+- Pi named sessions receive native `--name <slug>` command arguments.
 - Sidekick branch metadata is stored in tmux environment.
 - `<C-.>` toggles the last picker-selected Sidekick session, falling back to the cwd session picker.
-- `<leader>al` scopes named sessions to the exact Herdr workspace in bound tabs and retains cwd/repository scope in
-  unbound tabs.
-- Sidekick supports selecting, detaching, sending context, prompting, toggling float/split, listing local sessions, listing global sessions, searching sessions, and creating named sessions.
-- Sidekick keymaps include ask/edit/apply/reject/yank, select/detach/send file/send visual/prompt, Pi/Codex toggles, local/global pickers, session search, and named-session creation.
+- `<C-;>` opens the local session picker.
+- `<C-r>` renames the selected session in the picker.
+- Sidekick supports sending context, prompting, toggling float/split, opening local sessions, and creating named sessions.
+- Sidekick keymaps include ask/edit/apply/reject/yank, context/prompt sending, the local picker, and named-session creation.
 - Sidekick cwd session picker includes previews.
 - Sidekick global named-session picker includes previews.
 - Sidekick session pickers support killing sessions.
@@ -390,23 +380,6 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Sidekick signs and extmarks show pending and completed ask/edit state.
 - Sidekick has floating UI for prompts, answers, and diff previews.
 - Sidekick answers and diffs can be applied, rejected, yanked, or cleared from the current line.
-
-### Standalone agent terminals
-
-- Sidecar opens in a terminal with `gS`.
-- Sidecar is available from the dashboard.
-- Sidecar prefers `/opt/homebrew/bin/sidecar` when present.
-- OpenCode runs in a Snacks floating terminal.
-- OpenCode command path is `~/.opencode/bin/opencode`.
-- Autoread is enabled for OpenCode workflows.
-- Claude Code plugin auto-starts.
-- Claude Code is available from the dashboard.
-- Claude Code plugin uses no terminal provider.
-- Claude Code keeps diff terminal focus.
-- Claude Code opens diffs in new tabs.
-- Claude Code has a custom terracotta border (`#da7756`) on Gruvbox dark background.
-- Claude Code command is `~/.local/bin/claude --dangerously-skip-permissions`.
-- OpenCode plugin uses a Snacks float and no direct plugin keymaps.
 
 ## Notetaking features
 
@@ -596,7 +569,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - `<S-h>` and `<S-l>` navigate buffers.
 - `<S-q>` closes the current buffer.
 - Dashboard actions include finding files, creating a new file, restoring the last session, opening Herdr workspaces,
-  opening Sidecar, opening LazyGit, opening Claude Code, and quitting.
+  opening LazyGit, and quitting.
 - Neovide has a custom font configuration.
 - Neovide maps left Option as Meta on macOS.
 - Neovide disables the bell.

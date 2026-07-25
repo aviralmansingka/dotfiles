@@ -132,9 +132,6 @@ return {
       vim.api.nvim_set_hl(0, "RenderMarkdownUnchecked", { fg = "#504945" }) -- gray for unchecked
       vim.api.nvim_set_hl(0, "RenderMarkdownTodo", { fg = "#fabd2f" }) -- Yellow for todo
 
-      -- Claude Code highlight group
-      vim.api.nvim_set_hl(0, "ClaudeCodeBorder", { fg = "#da7756", bg = "#282828" }) -- Claude terra cotta
-
       -- Blink.cmp ghost text highlight to match gruvbox material
       vim.api.nvim_set_hl(0, "BlinkGhostText", { fg = "#665c54", bg = "#282828" }) -- Match gruvbox background
 

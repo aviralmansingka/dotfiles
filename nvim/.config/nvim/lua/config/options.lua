@@ -33,11 +33,11 @@ if vim.env.SSH_TTY then
 end
 
 -- Re-wrap pastes into :term buffers with bracketed-paste markers, so nested
--- terminal programs (tmux + claude/vim inside :term) see a paste, not raw
+-- terminal programs (tmux + interactive apps inside :term) see a paste, not raw
 -- keystrokes (\n = Ctrl-J = vim normal-mode `j`). Buffers chunked phases
 -- (which happen over SSH when bytes arrive split across reads) into a single
 -- write — splitting the bracketed-paste sequence across two writes lets some
--- inner programs (notably Claude Code) bail out before the end marker
+-- inner programs can bail out before the end marker
 -- arrives and fall back to interpreting the content as keystrokes.
 local paste_buf = {}
 local default_paste = vim.paste

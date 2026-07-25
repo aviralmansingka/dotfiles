@@ -8,7 +8,12 @@ local herdr = require("plugins.sidekick.herdr")
 
 local M = {}
 local collapsed = {}
+local run_times = {}
+local context_usage = {}
+local session_paths = {}
 local static_spinner = "⠋"
+local spinner_refresh_ms = 80
+local preview_debounce_ms = 400
 local workspace_ns = vim.api.nvim_create_namespace("sidekick_workspace_picker")
 local status_rank = { working = 1, blocked = 2, done = 3, idle = 4 }
 local status_display = {
@@ -78,6 +83,156 @@ local function strip_ansi(line)
   return line:gsub("\27%[[%d;:]*m", "")
 end
 
+local function last_capture(text, pattern)
+  local value
+  for match in text:gmatch(pattern) do
+    value = match
+  end
+  return value
+end
+
+local function parse_elapsed(value)
+  if not value then
+    return nil
+  end
+  local hours = tonumber(value:match("(%d+)%s*h")) or 0
+  local minutes = tonumber(value:match("(%d+)%s*m")) or 0
+  local seconds = tonumber(value:match("(%d+)%s*s")) or 0
+  return hours * 3600 + minutes * 60 + seconds
+end
+
+local function format_elapsed(seconds)
+  seconds = math.max(0, math.floor(seconds))
+  if seconds < 60 then
+    return seconds .. "s"
+  end
+  local minutes = math.floor(seconds / 60)
+  if minutes < 60 then
+    return string.format("%dm %ds", minutes, seconds % 60)
+  end
+  return string.format("%dh %dm", math.floor(minutes / 60), minutes % 60)
+end
+
+local function context_used(output)
+  local lines = vim.split(output, "\n", { plain = true })
+  for index = #lines, 1, -1 do
+    local used = lines[index]:match("(%d+%.?%d*)%%/%d+k")
+    if used then
+      return used
+    end
+    local left = tonumber(lines[index]:match("(%d+%.?%d*)%% context left"))
+    if left then
+      return tostring(100 - left)
+    end
+  end
+end
+
+local function codex_context_used(agent_session)
+  if not agent_session or agent_session.kind ~= "id" or not agent_session.value then
+    return nil
+  end
+  local id = agent_session.value
+  local path = session_paths[id]
+  if path == nil then
+    path = vim.fn.glob(vim.fn.expand("~/.codex/sessions/**/*" .. id .. "*.jsonl"), false, true)[1] or false
+    session_paths[id] = path
+  end
+  if not path then
+    return nil
+  end
+
+  local file = io.open(path, "rb")
+  if not file then
+    return nil
+  end
+  local size = file:seek("end") or 0
+  local offset = math.max(0, size - 512 * 1024)
+  file:seek("set", offset)
+  local tail = file:read("*a") or ""
+  file:close()
+  if offset > 0 then
+    local newline = tail:find("\n", 1, true)
+    tail = newline and tail:sub(newline + 1) or ""
+  end
+
+  local lines = vim.split(tail, "\n", { plain = true })
+  for index = #lines, 1, -1 do
+    local ok, event = pcall(vim.json.decode, lines[index])
+    local info = ok
+      and event.type == "event_msg"
+      and event.payload
+      and event.payload.type == "token_count"
+      and event.payload.info
+    local usage = info and info.last_token_usage
+    local total = usage and usage.total_tokens
+    local window = info and info.model_context_window
+    if total and window and window > 0 then
+      return (string.format("%.1f", total / window * 100):gsub("%.0$", ""))
+    end
+  end
+end
+
+local function agent_metrics(agent_name, agent_session, status, cache)
+  if not cache or not agent_name then
+    return {}
+  end
+  if cache[agent_name] then
+    return cache[agent_name]
+  end
+
+  local metrics = {}
+  local output = herdr.read(agent_name, "visible", 20, false)
+  local now = vim.uv.now()
+  local runtime = run_times[agent_name] or {}
+  if output then
+    metrics.context_used = codex_context_used(agent_session) or context_used(output)
+    if metrics.context_used then
+      context_usage[agent_name] = metrics.context_used
+    end
+    if status == "working" then
+      local elapsed = parse_elapsed(last_capture(output, "Working%s*%((.-)%s+•%s+esc to interrupt"))
+      if runtime.status ~= "working" or elapsed then
+        runtime.working_since = now - (elapsed or 0) * 1000
+        runtime.running_seconds = nil
+      end
+      metrics.working_since = runtime.working_since
+    else
+      local completed = parse_elapsed(last_capture(output, "Goal achieved%s*%((.-)%)"))
+        or parse_elapsed(last_capture(output, "Worked for%s+([%d hms]+)"))
+      if completed then
+        runtime.running_seconds = completed
+      elseif runtime.status == "working" and runtime.working_since then
+        runtime.running_seconds = (now - runtime.working_since) / 1000
+      end
+    end
+  elseif status == "working" and runtime.status ~= "working" then
+    runtime.working_since = now
+    runtime.running_seconds = nil
+  end
+  metrics.context_used = metrics.context_used or context_usage[agent_name]
+  metrics.working_since = status == "working" and runtime.working_since or nil
+  metrics.running_seconds = status ~= "working" and runtime.running_seconds or nil
+  runtime.status = status
+  run_times[agent_name] = runtime
+  cache[agent_name] = metrics
+  return metrics
+end
+
+local function metric_chunks(item)
+  local chunks = {}
+  local function add(value)
+    chunks[#chunks + 1] = { " · ", "Comment" }
+    chunks[#chunks + 1] = { value, "Comment" }
+  end
+  if item.status == "working" and item.working_since then
+    add(format_elapsed((vim.uv.now() - item.working_since) / 1000))
+  elseif item.running_seconds then
+    add(format_elapsed(item.running_seconds))
+  end
+  add((item.context_used or "?") .. "%")
+  return chunks
+end
+
 local function scrub_codex_prompt(output)
   local lines = vim.split(output, "\r\n", { plain = true })
   for i = #lines, math.max(1, #lines - 8), -1 do
@@ -140,16 +295,53 @@ local function scrub_pi_prompt(output)
   return table.concat(lines, "\r\n", 1, first - 1) .. "\27[0m"
 end
 
-local function preview_text(item)
-  if not item or item._empty or not item.agent_name then
-    return nil, "(no session)"
+local function scrub_working_status(output)
+  local lines = vim.split(output, "\r\n", { plain = true })
+  return table.concat(vim.tbl_filter(function(line)
+    local prefix, suffix = strip_ansi(line):match("^(.-)Working(.*)$")
+    return not (
+      prefix
+      and not prefix:find("[%w]")
+      and (suffix:match("^%.%.%.%s*$") or suffix:match("^…%s*$") or suffix:find("esc to interrupt", 1, true))
+    )
+  end, lines), "\r\n")
+end
+
+local function trim_terminal_padding(output)
+  local lines = vim.split(output, "\r\n", { plain = true })
+  for index, line in ipairs(lines) do
+    local suffix = {}
+    line = line:gsub("[ \t]+$", "")
+    while true do
+      local prefix, sgr = line:match("^(.*)(\27%[[%d;:]*m)$")
+      if not sgr then
+        break
+      end
+      table.insert(suffix, 1, sgr)
+      line = prefix:gsub("[ \t]+$", "")
+    end
+    lines[index] = line .. table.concat(suffix)
   end
-  local output = herdr.read(item.agent_name, "recent-unwrapped", 120, true)
+  return table.concat(lines, "\r\n")
+end
+
+local function scrub_preview_output(item, output)
   if output and item.tool == "codex" then
     output = scrub_codex_prompt(output)
   elseif output and item.tool == "pi" then
     output = scrub_pi_prompt(output)
   end
+  if output then
+    output = trim_terminal_padding(scrub_working_status(output))
+  end
+  return output
+end
+
+local function preview_text(item)
+  if not item or item._empty or not item.agent_name then
+    return nil, "(no session)"
+  end
+  local output = scrub_preview_output(item, herdr.read(item.agent_name, "recent-unwrapped", 120, true))
   return output, "(agent read failed)"
 end
 
@@ -166,7 +358,7 @@ local function compare_items(a, b)
 end
 
 ---@return snacks.picker.finder.Item[]
-function M.list_items()
+function M.list_items(metric_cache)
   local workspace_id = workspace_scope()
   local root = normalize(vim.fn.getcwd())
   local root_repo = not workspace_id and git_common_dir(root) or nil
@@ -192,6 +384,7 @@ function M.list_items()
 
   for label, entry in pairs(registry.discover()) do
     if is_local(entry) then
+      local metrics = agent_metrics(entry.agent_name, entry.agent_session, entry.status, metric_cache)
       items[#items + 1] = {
         text = string.format("%s  [%s]", label, entry.status),
         label = label,
@@ -203,6 +396,9 @@ function M.list_items()
         agent_name = entry.agent_name,
         status = entry.status,
         cwd = entry.cwd,
+        working_since = metrics.working_since,
+        running_seconds = metrics.running_seconds,
+        context_used = metrics.context_used,
       }
     end
   end
@@ -219,7 +415,7 @@ local function workspace_spinner(running)
   return running > 0 and Snacks.util.spinner() or static_spinner
 end
 
-local function workspace_groups(hidden_workspace_id)
+local function workspace_groups(hidden_workspace_id, metric_cache)
   local grouped = {}
   for _, agent in ipairs(herdr.list_agents()) do
     local parsed = registry.parse_session_name(agent.name)
@@ -237,6 +433,7 @@ local function workspace_groups(hidden_workspace_id)
         grouped[workspace_id] = group
       end
       local status = agent.agent_status or "unknown"
+      local metrics = agent_metrics(agent.name, agent.agent_session, status, metric_cache)
       group.running = group.running + (status == "working" and 1 or 0)
       group.done = group.done + (status == "done" and 1 or 0)
       group.agents[#group.agents + 1] = {
@@ -245,10 +442,14 @@ local function workspace_groups(hidden_workspace_id)
           or tool,
         toggle_name = parsed and parsed.label or tool,
         tool = tool,
+        pane_id = agent.pane_id,
         workspace_id = workspace_id,
         terminal_id = agent.terminal_id,
         agent_name = agent.name,
         status = status,
+        working_since = metrics.working_since,
+        running_seconds = metrics.running_seconds,
+        context_used = metrics.context_used,
       }
     end
   end
@@ -295,10 +496,12 @@ local function format_local(item)
     return { { item.text or "", "Comment" } }
   end
   local symbol, symbol_hl = status_icon(item.status)
-  return {
+  local chunks = {
     { symbol .. " ", symbol_hl },
     { item.label or "", branding.hl_groups(branding.tool_of(item.tool)).title },
   }
+  vim.list_extend(chunks, metric_chunks(item))
+  return chunks
 end
 
 local function workspace_chunks(group)
@@ -318,11 +521,13 @@ end
 
 local function workspace_agent_chunks(item, last)
   local symbol, symbol_hl = status_icon(item.status)
-  return {
+  local chunks = {
     { last and "  └─ " or "  ├─ ", "SnacksPickerTree" },
     { symbol .. " ", symbol_hl },
     { item.label or item.agent_name or "unknown", branding.hl_groups(branding.tool_of(item.tool)).title },
   }
+  vim.list_extend(chunks, metric_chunks(item))
+  return chunks
 end
 
 local function preview_selected(buf, item)
@@ -358,8 +563,9 @@ function M.open(opts)
   registry.rehydrate()
   ensure_picker_hl()
 
+  local metric_cache = {}
   local workspace_id, workspace_label = workspace_scope()
-  local items = M.list_items()
+  local items = M.list_items(metric_cache)
   local local_workspace_id = workspace_id
   if not local_workspace_id then
     for _, item in ipairs(items) do
@@ -369,7 +575,7 @@ function M.open(opts)
       end
     end
   end
-  local groups = workspace_groups(local_workspace_id)
+  local groups = workspace_groups(local_workspace_id, metric_cache)
   if #items == 0 then
     items = { {
       text = workspace_id and "(no named sessions in workspace)" or "(no named sessions in cwd)",
@@ -383,6 +589,10 @@ function M.open(opts)
   local workspace_win
   local rendered_workspace_item
   local pending_workspace_item
+  local workspace_active = false
+  local preview_loading = false
+  local refreshed_preview_item
+  local refreshed_preview_output
   local reopening = false
   local has_local_working = vim.iter(items):any(function(item)
     return item.status == "working"
@@ -401,7 +611,8 @@ function M.open(opts)
     end
   end
 
-  local function set_active_selector(workspace_active)
+  local function set_active_selector(is_workspace_active)
+    workspace_active = is_workspace_active
     if not picker or not workspace_win or not workspace_win:valid() or not picker.list.win:valid() then
       return
     end
@@ -474,7 +685,7 @@ function M.open(opts)
       rendered_workspace_item = item
       preview_selected(picker.preview:scratch(), item)
     end
-  end, { ms = 400 })
+  end, { ms = preview_debounce_ms })
 
   local function preview_workspace_cursor()
     if not picker or picker.closed or not workspace_win:valid() then
@@ -491,6 +702,105 @@ function M.open(opts)
       pending_workspace_item = item
       render_workspace_preview()
     end
+  end
+
+  local function current_preview_item()
+    return workspace_active and rendered_workspace_item or picker:current()
+  end
+
+  local function prepare_preview_buffer(output)
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.bo[buf].bufhidden = "wipe"
+    vim.bo[buf].filetype = "snacks_picker_preview"
+    local staging_win
+    if output then
+      local width = 80
+      local height = 24
+      if picker.preview.win:win_valid() then
+        width = vim.api.nvim_win_get_width(picker.preview.win.win)
+        height = vim.api.nvim_win_get_height(picker.preview.win.win)
+      end
+      staging_win = vim.api.nvim_open_win(buf, false, {
+        relative = "editor",
+        row = 0,
+        col = 0,
+        width = width,
+        height = height,
+        style = "minimal",
+        focusable = false,
+        hide = true,
+        noautocmd = true,
+      })
+      local channel = vim.api.nvim_open_term(buf, {})
+      vim.api.nvim_chan_send(channel, output)
+    else
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "(agent read failed)" })
+    end
+    return buf, staging_win
+  end
+
+  local function preview_buffer_ready(buf, rendered)
+    if rendered == "" then
+      return true
+    end
+    return vim.iter(vim.api.nvim_buf_get_lines(buf, 0, -1, false)):any(function(line)
+      return line ~= ""
+    end)
+  end
+
+  local function discard_preview_buffer(buf, staging_win)
+    if staging_win and vim.api.nvim_win_is_valid(staging_win) then
+      vim.api.nvim_win_close(staging_win, true)
+    end
+    if vim.api.nvim_buf_is_valid(buf) then
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end
+  end
+
+  local function swap_preview_buffer(buf, staging_win, item, rendered)
+    if not picker or picker.closed or item ~= current_preview_item() then
+      discard_preview_buffer(buf, staging_win)
+      return
+    end
+    if not preview_buffer_ready(buf, rendered) then
+      vim.defer_fn(function()
+        swap_preview_buffer(buf, staging_win, item, rendered)
+      end, 1)
+      return
+    end
+    picker.preview:set_buf(buf)
+    if staging_win and vim.api.nvim_win_is_valid(staging_win) then
+      vim.api.nvim_win_close(staging_win, true)
+    end
+    picker.preview.win:map()
+    picker.preview:minimal()
+    refreshed_preview_item = item
+    refreshed_preview_output = rendered
+  end
+
+  local function refresh_preview()
+    local item = current_preview_item()
+    if preview_loading or not item or item.status ~= "working" then
+      return
+    end
+
+    preview_loading = true
+    herdr.read_async(item.agent_name, "recent-unwrapped", 120, true, function(output)
+      preview_loading = false
+      if not picker or picker.closed or item ~= current_preview_item() then
+        return
+      end
+      output = scrub_preview_output(item, output)
+      local rendered = output or "(agent read failed)"
+      if item == refreshed_preview_item and rendered == refreshed_preview_output then
+        return
+      end
+
+      local buf, staging_win = prepare_preview_buffer(output)
+      vim.schedule(function()
+        swap_preview_buffer(buf, staging_win, item, rendered)
+      end)
+    end)
   end
 
   local function activate(active_picker, item)
@@ -510,8 +820,27 @@ function M.open(opts)
     then
       return
     end
+    if item.status == "done" then
+      herdr.focus(item.agent_name)
+    end
     require("plugins.sidekick.last_session").record(target, item.terminal_id)
     internal.toggle_tool_session(target, true, item.terminal_id)
+  end
+
+  local function kill_item(active_picker, item)
+    if not item or item._empty or not item.pane_id then
+      return
+    end
+    if herdr.close(item.pane_id) then
+      if opts.on_kill then
+        opts.on_kill(item)
+      end
+      reopening = true
+      active_picker:close()
+      vim.schedule(function()
+        M.open(opts)
+      end)
+    end
   end
 
   local function workspace_enter()
@@ -531,6 +860,10 @@ function M.open(opts)
     else
       activate(picker, item)
     end
+  end
+
+  local function workspace_delete()
+    kill_item(picker, workspace_rows[vim.api.nvim_win_get_cursor(workspace_win.win)[1]])
   end
 
   local function focus_input()
@@ -554,6 +887,7 @@ function M.open(opts)
       ["<cr>"] = workspace_enter,
       ["<c-w>"] = focus_input,
       ["<c-u>"] = clear_input,
+      ["<c-x>"] = workspace_delete,
       ["<esc>"] = focus_input,
     },
   })
@@ -642,7 +976,7 @@ function M.open(opts)
       workspace_win:on("CursorMoved", preview_workspace_cursor, { buf = true })
       if has_working then
         spinner_timer = vim.uv.new_timer()
-        spinner_timer:start(80, 80, vim.schedule_wrap(function()
+        spinner_timer:start(spinner_refresh_ms, spinner_refresh_ms, vim.schedule_wrap(function()
           if picker.closed then
             stop_spinner()
           else
@@ -650,6 +984,7 @@ function M.open(opts)
             if has_workspace_working then
               render_workspace()
             end
+            refresh_preview()
           end
         end))
       end
@@ -714,19 +1049,7 @@ function M.open(opts)
         end)
       end,
       sidekick_kill_session = function(active_picker, item)
-        if not item or item._empty or not item.pane_id then
-          return
-        end
-        if herdr.close(item.pane_id) then
-          if opts.on_kill then
-            opts.on_kill(item)
-          end
-          reopening = true
-          active_picker:close()
-          vim.schedule(function()
-            M.open(opts)
-          end)
-        end
+        kill_item(active_picker, item)
       end,
     },
   })

@@ -4,24 +4,7 @@ local function notify(message)
   vim.notify("Sidekick: " .. message, vim.log.levels.ERROR)
 end
 
----@param path string|nil
----@return string
-function M.normalize_cwd(path)
-  if not path or path == "" then
-    return ""
-  end
-  local normalized = vim.fs.normalize(vim.fn.fnamemodify(path, ":p"))
-  return normalized == "/" and normalized or normalized:gsub("/$", "")
-end
-
----@param args string[]
----@param quiet? boolean
----@return table|nil result
----@return string|nil error
-function M.call(args, quiet)
-  local cmd = { "herdr" }
-  vim.list_extend(cmd, args)
-  local result = vim.system(cmd, { text = true }):wait()
+local function decode(cmd, result, quiet)
   if result.code ~= 0 then
     local err = (result.stderr or ""):gsub("%s+$", "")
     if not quiet then
@@ -41,6 +24,26 @@ function M.call(args, quiet)
     return nil, err
   end
   return decoded.result
+end
+
+---@param path string|nil
+---@return string
+function M.normalize_cwd(path)
+  if not path or path == "" then
+    return ""
+  end
+  local normalized = vim.fs.normalize(vim.fn.fnamemodify(path, ":p"))
+  return normalized == "/" and normalized or normalized:gsub("/$", "")
+end
+
+---@param args string[]
+---@param quiet? boolean
+---@return table|nil result
+---@return string|nil error
+function M.call(args, quiet)
+  local cmd = { "herdr" }
+  vim.list_extend(cmd, args)
+  return decode(cmd, vim.system(cmd, { text = true }):wait(), quiet)
 end
 
 ---@return table[]
@@ -237,6 +240,27 @@ function M.read(target, source, lines, ansi)
   end
   local result = M.call(args)
   return result and result.read and result.read.text or nil
+end
+
+---@param target string
+---@param source "visible"|"recent"|"recent-unwrapped"
+---@param lines integer?
+---@param ansi boolean?
+---@param callback fun(output: string?)
+function M.read_async(target, source, lines, ansi, callback)
+  local args = { "agent", "read", target, "--source", source }
+  if lines then
+    vim.list_extend(args, { "--lines", tostring(lines) })
+  end
+  if ansi then
+    args[#args + 1] = "--ansi"
+  end
+  local cmd = { "herdr" }
+  vim.list_extend(cmd, args)
+  vim.system(cmd, { text = true }, vim.schedule_wrap(function(result)
+    local decoded = decode(cmd, result)
+    callback(decoded and decoded.read and decoded.read.text or nil)
+  end))
 end
 
 ---@param target string

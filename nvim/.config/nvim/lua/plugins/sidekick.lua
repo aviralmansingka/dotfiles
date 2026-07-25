@@ -6,20 +6,10 @@ local internal = require("plugins.sidekick.internal")
 
 return {
   "folke/sidekick.nvim",
-  dependencies = {
-    "coder/claudecode.nvim",
-  },
   opts = {
     cli = {
       win = {
         config = function(terminal)
-          -- cursor-agent gets a right-side split; other tools use the
-          -- default float layout. Override before branding.apply so the
-          -- float opts only get themed when they'll actually be used.
-          local tool_name = terminal.tool and terminal.tool.name or nil
-          if tool_name == "cursor" then
-            terminal.opts.layout = "right"
-          end
           require("plugins.sidekick.branding").apply(terminal)
         end,
         layout = "float",
@@ -38,16 +28,19 @@ return {
       },
       tools = {
         codex = internal.base_tool_config("codex"),
-        cursor = internal.base_tool_config("cursor"),
-        opencode = internal.base_tool_config("opencode"),
         pi = internal.base_tool_config("pi"),
-        claude = internal.base_tool_config("claude"),
       },
     },
   },
   config = function(_, opts)
     require("plugins.sidekick.herdr_backend").apply()
     require("sidekick").setup(opts)
+    local config = require("sidekick.config")
+    for tool in pairs(config.cli.tools) do
+      if not internal.tool_commands[tool] then
+        config.cli.tools[tool] = nil
+      end
+    end
     require("plugins.sidekick.select_patch").apply()
     require("plugins.sidekick.registry").rehydrate()
     require("plugins.sidekick.branding").ensure_highlights()
@@ -157,33 +150,12 @@ return {
       desc = "Ask: yank answer on current line",
     },
     {
-      "<leader>as",
-      function()
-        require("sidekick.cli").select()
-      end,
-      desc = "Select CLI",
-    },
-    {
-      "<leader>ad",
-      function()
-        require("sidekick.cli").close()
-      end,
-      desc = "Detach a CLI Session",
-    },
-    {
       "<leader>at",
       function()
         require("sidekick.cli").send({ msg = "{this}" })
       end,
       mode = { "n", "x" },
       desc = "Send This",
-    },
-    {
-      "<leader>af",
-      function()
-        require("sidekick.cli").send({ msg = "{file}" })
-      end,
-      desc = "Send File",
     },
     {
       "<leader>av",
@@ -193,48 +165,12 @@ return {
       desc = "Sidekick CLI: float ↔ split",
     },
     {
-      "<leader>aV",
-      function()
-        require("sidekick.cli").send({ msg = "{selection}" })
-      end,
-      mode = { "x" },
-      desc = "Send Visual Selection",
-    },
-    {
       "<leader>ap",
       function()
         require("sidekick.cli").prompt()
       end,
       mode = { "n", "x" },
       desc = "Sidekick Select Prompt",
-    },
-    {
-      "<leader>ag",
-      function()
-        internal.toggle_tool_session("codex", true)
-      end,
-      desc = "Sidekick Toggle Codex (Primary Coding)",
-    },
-    {
-      "<leader>ai",
-      function()
-        internal.toggle_tool_session("pi", true)
-      end,
-      desc = "Sidekick Toggle Pi (Primary Workflow)",
-    },
-    {
-      "<leader>al",
-      function()
-        require("plugins.sidekick.cwd_picker").open()
-      end,
-      desc = "Sidekick List Local Sessions",
-    },
-    {
-      "<leader>a/",
-      function()
-        require("plugins.sidekick.search").grep()
-      end,
-      desc = "Sidekick Search Named Sessions",
     },
     {
       "<leader>an",
