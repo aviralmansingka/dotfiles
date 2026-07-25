@@ -483,7 +483,7 @@ local function validate_sidekick_herdr()
     pane_id = "w-old:p1",
     tab_id = "w-old:t1",
     workspace_id = "w-old",
-    foreground_cwd = cwd,
+    foreground_cwd = "/worktrees/task-example-t01",
   }, task_scope, "T01 Example task")
   source_herdr.call = original_call
   if not placed_agent or placed_agent.tab_id ~= "w-feature:t2" then

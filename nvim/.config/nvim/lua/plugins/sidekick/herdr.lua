@@ -219,7 +219,11 @@ end
 ---@return table|nil agent
 function M.place_agent(agent, scope, tab_label)
   local cwd = M.normalize_cwd(agent.foreground_cwd or agent.cwd)
-  if agent.workspace_id == scope.workspace_id and cwd == M.normalize_cwd(scope.cwd) then
+  if cwd ~= M.normalize_cwd(scope.cwd) then
+    notify("existing agent cwd does not match its task worktree")
+    return nil
+  end
+  if agent.workspace_id == scope.workspace_id then
     return M.call({ "tab", "rename", agent.tab_id, tab_label }) and agent or nil
   end
 
