@@ -1,10 +1,14 @@
 package atlas
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mattn/go-runewidth"
 )
 
 func TestV01SharedFixtureFeedsExpandedAndCompactLayouts(t *testing.T) {
@@ -65,6 +69,30 @@ func TestV02LayoutsStayInsideCellsAndPreserveActiveWork(t *testing.T) {
 	firstBodyLine := strings.Split(compact, "\n")[2]
 	if !strings.Contains(firstBodyLine, "GOALS") || !strings.Contains(firstBodyLine, "VERIFIER JOURNEY") {
 		t.Fatalf("78x17 compact layout lost its two readable columns:\n%s", compact)
+	}
+}
+
+func TestV02LayoutsUseTerminalDisplayWidth(t *testing.T) {
+	for _, size := range [][2]int{{40, 10}, {78, 17}, {77, 46}} {
+		t.Run(fmt.Sprintf("%dx%d", size[0], size[1]), func(t *testing.T) {
+			run := loadFixture(t)
+			run.NextAction = strings.Repeat("界", size[0])
+			outputs := map[string]string{
+				"render": RenderCompact(run, size[0], size[1]),
+				"view": func() string {
+					model := NewUIModel(run)
+					updated, _ := model.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+					return updated.(UIModel).View()
+				}(),
+			}
+			for name, output := range outputs {
+				for index, line := range strings.Split(output, "\n") {
+					if columns := runewidth.StringWidth(line); columns > size[0] {
+						t.Errorf("%s row %d used %d display columns, want <= %d: %q", name, index, columns, size[0], line)
+					}
+				}
+			}
+		})
 	}
 }
 

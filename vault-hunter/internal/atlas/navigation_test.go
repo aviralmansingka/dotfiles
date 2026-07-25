@@ -2,6 +2,7 @@ package atlas
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -107,5 +108,29 @@ func TestV05InteractiveAtlasUsesCompactAtShortHeightsAndFullAtNormalHeights(t *t
 		if !strings.Contains(selected.(UIModel).View(), "selected: V04 cleanup") {
 			t.Fatalf("%dx%d interactive navigation did not select V04", test.width, test.height)
 		}
+	}
+}
+
+func TestV05ReturnSelectionKeepsLongGoalDetailInsideViewport(t *testing.T) {
+	for _, size := range [][2]int{{40, 10}, {78, 17}, {77, 46}} {
+		t.Run(fmt.Sprintf("%dx%d", size[0], size[1]), func(t *testing.T) {
+			run := loadFixture(t)
+			run.Goals[4].ID = "V04-cleanup-with-a-valid-but-deliberately-long-identifier"
+			run.Goals[4].Label = "Cleanup goal with a deliberately long valid label for viewport bounds"
+			model := NewUIModel(run)
+			updated, _ := model.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+			updated, _ = updated.(UIModel).Update(tea.KeyMsg{Type: tea.KeyDown})
+			updated, _ = updated.(UIModel).Update(tea.KeyMsg{Type: tea.KeyEnter})
+			output := updated.(UIModel).View()
+			lines := strings.Split(output, "\n")
+			if len(lines) > size[1] {
+				t.Errorf("used %d rows, want <= %d", len(lines), size[1])
+			}
+			for index, line := range lines {
+				if columns := len([]rune(line)); columns > size[0] {
+					t.Errorf("row %d used %d columns, want <= %d: %q", index, columns, size[0], line)
+				}
+			}
+		})
 	}
 }
