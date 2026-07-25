@@ -343,15 +343,17 @@ def live_permissions() -> None:
     data_dir = Path.home() / ".local" / "share" / "plaid-cli"
     store = Path(os.environ.get("PLAID_CLI_STORE", data_dir / "items.json"))
     link_logs = sorted(data_dir.glob("*-link.log"))
+    data_dir_mode = stat.S_IMODE(data_dir.stat().st_mode)
     store_mode = stat.S_IMODE(store.stat().st_mode)
     link_log_modes = [stat.S_IMODE(path.stat().st_mode) for path in link_logs]
-    if store_mode != 0o600 or any(mode != 0o600 for mode in link_log_modes):
+    if data_dir_mode != 0o700 or store_mode != 0o600 or any(mode != 0o600 for mode in link_log_modes):
         fail(
-            f"live modes are store={store_mode:03o}, "
+            f"live modes are directory={data_dir_mode:03o}, store={store_mode:03o}, "
             f"link_logs={sorted({f'{mode:03o}' for mode in link_log_modes})}"
         )
     print(json.dumps({
         "passed": True,
+        "data_directory_mode": f"{data_dir_mode:03o}",
         "store_mode": f"{store_mode:03o}",
         "link_log_count": len(link_logs),
         "link_log_modes": sorted({f"{mode:03o}" for mode in link_log_modes}),
