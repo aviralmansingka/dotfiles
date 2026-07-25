@@ -82,5 +82,29 @@
       "id": "E02",
       "summary": "checkpoint one pushed"
     }
+  ],
+  "orchestrator": {
+    "role": "orchestrator",
+    "name": "codex-pi-agent-pi-skills-and-tools-t11",
+    "pane_id": "w2R:pF",
+    "terminal_id": "term-t11",
+    "agent_session": {
+      "source": "herdr:codex",
+      "kind": "id",
+      "value": "codex-session-t11"
+    }
+  },
+  "participants": [
+    {
+      "role": "orchestrator",
+      "name": "codex-pi-agent-pi-skills-and-tools-t11",
+      "pane_id": "w2R:pF",
+      "terminal_id": "term-t11",
+      "agent_session": {
+        "source": "herdr:codex",
+        "kind": "id",
+        "value": "codex-session-t11"
+      }
+    }
   ]
 }

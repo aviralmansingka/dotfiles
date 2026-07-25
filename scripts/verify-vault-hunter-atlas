@@ -68,6 +68,9 @@ case "$case_name" in
     rg -q 'vault-hunter-run ensure' "$module_dir/../.agents/skills/vault-hunter/SKILL.md"
     rg -q 'vault-hunter-run finish' "$module_dir/../.agents/skills/vault-hunter/SKILL.md"
     ;;
+  V08)
+    (cd "$module_dir" && go test ./internal/atlas -run '^TestV08')
+    ;;
   all)
     (cd "$module_dir" && go test ./internal/atlas)
     ;;
