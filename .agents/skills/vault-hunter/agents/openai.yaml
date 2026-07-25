@@ -1,4 +1,4 @@
 interface:
   display_name: "Vault Hunter"
-  short_description: "Launch verified work from the vault"
-  default_prompt: "Use $vault-hunter to execute this vault-backed task through verified landing."
+  short_description: "Guide vault work through visible Codex agents"
+  default_prompt: "Use $vault-hunter to guide this task from its vault checkpoints through Herdr-visible Codex execution."
