@@ -37,21 +37,24 @@ func (s *Store) RegisterWorker(
 	participant Participant,
 	herdr WorkerHerdr,
 ) (Run, error) {
+	var run Run
 	var tabs []WorkerTab
-	return s.registerParticipant(runID, participant, func(run Run) error {
+	return s.registerParticipant(runID, participant, func(current Run) error {
+		run = current
 		var err error
 		tabs, err = herdr.WorkerTabs(ctx)
 		if err != nil {
 			return err
 		}
-		state := reconcileWorker(ctx, run, participant, tabs, herdr)
+		state := reconcileWorker(ctx, current, participant, tabs, herdr)
 		if state != "live" {
 			return fmt.Errorf("worker %s capture is %s", participant.Name, state)
 		}
 		return nil
 	}, func(existing Participant) bool {
-		return existing.Name == participant.Name &&
-			!participantResourceIdentityCollides(existing, participant) &&
+		return existing != run.Orchestrator &&
+			validateParticipant(run, existing) == nil &&
+			sameWorkerRestart(existing, participant) &&
 			findWorkerTab(tabs, existing.TabID) == nil
 	})
 }
@@ -100,6 +103,15 @@ func (s *Store) CleanupWorkers(
 		}
 		for _, worker := range report.Workers {
 			if worker.State == "live" {
+				current, err := herdr.WorkerTabs(ctx)
+				if err != nil {
+					return err
+				}
+				captured := findWorker(run, worker.TabID)
+				if captured == nil ||
+					reconcileWorker(ctx, run, *captured, current, herdr) != "live" {
+					return fmt.Errorf("worker %s ownership changed before cleanup", worker.Name)
+				}
 				if err := herdr.CloseTab(ctx, worker.TabID); err != nil {
 					return err
 				}
@@ -181,4 +193,21 @@ func findWorkerTab(tabs []WorkerTab, tabID string) *WorkerTab {
 		}
 	}
 	return nil
+}
+
+func findWorker(run Run, tabID string) *Participant {
+	for index := range run.Participants {
+		if run.Participants[index].TabID == tabID {
+			return &run.Participants[index]
+		}
+	}
+	return nil
+}
+
+func sameWorkerRestart(stale, replacement Participant) bool {
+	return stale.Name == replacement.Name &&
+		stale.Role == replacement.Role &&
+		stale.GoalID == replacement.GoalID &&
+		stale.WorkspaceID == replacement.WorkspaceID &&
+		!participantResourceIdentityCollides(stale, replacement)
 }

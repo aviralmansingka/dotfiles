@@ -72,8 +72,10 @@ func (s *Store) resume(ctx context.Context, run Run, orchestrator Participant) (
 			run.Participants[0] = orchestrator
 		}
 		changed = true
-	} else if run.Orchestrator != orchestrator &&
-		unchangedOrchestrator(run.Orchestrator, orchestrator) {
+	} else if run.Orchestrator != orchestrator {
+		if !unchangedOrchestrator(run.Orchestrator, orchestrator) {
+			return Run{}, fmt.Errorf("Task Run %s live orchestrator identity changed", run.RunID)
+		}
 		run.Orchestrator = orchestrator
 		if len(run.Participants) == 0 {
 			run.Participants = []Participant{orchestrator}

@@ -93,7 +93,8 @@ For each dispatched role:
 - Monitor native subagent status plus `herdr agent get` and `herdr agent read`. If name, cwd, workspace, tab, session,
   or one-pane placement is wrong, replace the dispatch before accepting work. For a Task Run, also run
   `vault-hunter-run reconcile-workers --run-id "$run_id"` on each monitoring pass: replace `stale` launches with a
-  newly captured launch, preserve their stale records, and stop on `unexpected` ownership.
+  newly captured opaque tuple under the same deterministic agent name, preserve the stale record, and stop on
+  `unexpected` ownership.
 - Require one concise final handoff containing outcome, changed paths and commit, exact checks and evidence, and
   residual risks or blockers. If it is incomplete, follow up with that same subagent; the driver does not investigate
   or rerun its work.
