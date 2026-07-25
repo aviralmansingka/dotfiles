@@ -61,19 +61,12 @@ func (s *Store) Ensure(ctx context.Context, options EnsureOptions) (Run, error) 
 
 func (s *Store) resume(ctx context.Context, run Run, orchestrator Participant) (Run, error) {
 	changed := false
-	if run.Orchestrator.PaneID != orchestrator.PaneID {
-		if s.herdr.PaneExists(ctx, run.Orchestrator.PaneID) {
-			return Run{}, fmt.Errorf("Task Run %s already has live orchestrator %s", run.RunID, run.Orchestrator.PaneID)
-		}
-		run.Orchestrator = orchestrator
-		if len(run.Participants) == 0 {
-			run.Participants = []Participant{orchestrator}
-		} else {
-			run.Participants[0] = orchestrator
-		}
-		changed = true
-	} else if run.Orchestrator != orchestrator {
-		if !unchangedOrchestrator(run.Orchestrator, orchestrator) {
+	if run.Orchestrator != orchestrator {
+		if run.Orchestrator.PaneID != orchestrator.PaneID {
+			if s.herdr.PaneExists(ctx, run.Orchestrator.PaneID) {
+				return Run{}, fmt.Errorf("Task Run %s already has live orchestrator %s", run.RunID, run.Orchestrator.PaneID)
+			}
+		} else if !unchangedOrchestrator(run.Orchestrator, orchestrator) {
 			return Run{}, fmt.Errorf("Task Run %s live orchestrator identity changed", run.RunID)
 		}
 		run.Orchestrator = orchestrator
