@@ -68,11 +68,12 @@ func TestV05InteractiveAtlasUsesCompactAtShortHeightsAndFullAtNormalHeights(t *t
 		width   int
 		height  int
 		compact bool
+		want    []string
 	}{
-		{40, 10, true},
-		{78, 17, true},
-		{77, 46, false},
-		{120, 30, false},
+		{40, 10, true, []string{"Vault Hunter Atlas"}},
+		{78, 17, true, []string{"Vault Hunter Atlas", "GOALS", "VERIFIER JOURNEY"}},
+		{77, 46, false, []string{"Vault Hunter ·", "GOAL TIMELINE", "SELECTED VERIFIER JOURNEY"}},
+		{120, 30, false, []string{"Vault Hunter ·", "GOAL TIMELINE"}},
 	}
 	for _, test := range cases {
 		model := NewUIModel(loadFixture(t))
@@ -83,8 +84,23 @@ func TestV05InteractiveAtlasUsesCompactAtShortHeightsAndFullAtNormalHeights(t *t
 		if isCompact != test.compact {
 			t.Fatalf("%dx%d compact = %t, want %t:\n%s", test.width, test.height, isCompact, test.compact, output)
 		}
-		if lines := strings.Count(output, "\n") + 1; lines > test.height {
-			t.Fatalf("%dx%d interactive Atlas used %d rows", test.width, test.height, lines)
+		lines := strings.Split(output, "\n")
+		if len(lines) > test.height {
+			t.Fatalf("%dx%d interactive Atlas used %d rows", test.width, test.height, len(lines))
+		}
+		for index, line := range lines {
+			if columns := len([]rune(line)); columns > test.width {
+				t.Fatalf("%dx%d interactive Atlas row %d used %d columns: %q", test.width, test.height, index, columns, line)
+			}
+		}
+		for _, want := range test.want {
+			if !strings.Contains(output, want) {
+				t.Fatalf("%dx%d interactive Atlas missing %q:\n%s", test.width, test.height, want, output)
+			}
+		}
+		if test.width == 78 && test.height == 17 &&
+			(!strings.Contains(lines[2], "GOALS") || !strings.Contains(lines[2], "VERIFIER JOURNEY")) {
+			t.Fatalf("78x17 interactive Atlas lost its compact two-column composition:\n%s", output)
 		}
 		next, _ := current.Update(tea.KeyMsg{Type: tea.KeyDown})
 		selected, _ := next.(UIModel).Update(tea.KeyMsg{Type: tea.KeyEnter})
