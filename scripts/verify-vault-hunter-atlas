@@ -124,7 +124,7 @@ verify_v05_live() {
       --arg run "$run_id" \
       '[$terminal, $source, $kind, $value, $run]'
   )"
-  lua_check="luaeval(\"(function() local ok,s=pcall(require,'snacks.picker'); if not ok then return '' end; for _,p in ipairs(s.get()) do local i=p:current(); local a=i and i.agent_session; if i and i.terminal_id==_A[1] and a and a.source==_A[2] and a.kind==_A[3] and a.value==_A[4] then local w=p.preview and p.preview.win; local b=w and w.buf; if b and vim.api.nvim_buf_is_valid(b) then local text=table.concat(vim.api.nvim_buf_get_lines(b,0,-1,false),'\\n'); if text:find(_A[5],1,true) then return 'ok' end end end end return '' end)()\", $lua_args)"
+  lua_check="luaeval(\"(function() local ok,s=pcall(require,'snacks.picker'); if not ok then return '' end; for _,p in ipairs(s.get()) do local i=p:current(); local a=i and i.agent_session; if i and i.terminal_id==_A[1] and a and a.source==_A[2] and a.kind==_A[3] and a.value==_A[4] then local w=p.preview and p.preview.win; local b=w and w.buf; if b and vim.api.nvim_buf_is_valid(b) then local text=table.concat(vim.api.nvim_buf_get_lines(b,0,-1,false),'\\\\n'); if text:find(_A[5],1,true) then return 'ok' end end end end return '' end)()\", $lua_args)"
   while IFS= read -r socket; do
     [[ -S "$socket" ]] || continue
     picker_result="$(nvim --server "$socket" --remote-expr "$lua_check" 2>/dev/null || true)"
