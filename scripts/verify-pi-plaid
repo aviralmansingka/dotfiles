@@ -1,0 +1,385 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import contextlib
+import importlib.machinery
+import importlib.util
+import io
+import json
+import os
+import stat
+import subprocess
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+CLI_PATH = ROOT / "pi" / "bin" / "plaid-cli"
+START_DATE = "2025-07-25"
+END_DATE = "2026-07-25"
+
+STATUS_ITEM_KEYS = {"name", "institution", "products", "account_count"}
+BANKING_KEYS = {
+    "date",
+    "item_name",
+    "institution",
+    "merchant_name",
+    "name",
+    "amount",
+    "iso_currency_code",
+    "unofficial_currency_code",
+    "pending",
+    "payment_channel",
+    "category",
+}
+INVESTMENT_KEYS = {
+    "date",
+    "item_name",
+    "institution",
+    "name",
+    "type",
+    "subtype",
+    "quantity",
+    "amount",
+    "price",
+    "fees",
+    "iso_currency_code",
+    "unofficial_currency_code",
+    "security_name",
+    "ticker_symbol",
+}
+
+
+def fail(message: str) -> None:
+    raise SystemExit(f"FAIL verify-pi-plaid: {message}")
+
+
+def load_cli(label: str):
+    loader = importlib.machinery.SourceFileLoader(f"plaid_cli_{label}", str(CLI_PATH))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    if spec is None:
+        fail("could not create CLI module spec")
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def output_boundary() -> None:
+    module = load_cli("output_boundary")
+    with tempfile.TemporaryDirectory(prefix="verify-pi-plaid-") as tmp:
+        module.STORE = Path(tmp) / "items.json"
+        module.STORE.write_text(json.dumps({
+            "items": [{
+                "name": "fixture",
+                "institution": "Fixture Bank",
+                "item_id": "private-item-id",
+                "access_token": "private-access-token",
+                "products": ["investments"],
+                "accounts": [{
+                    "account_id": "private-account-id",
+                    "mask": "1234",
+                    "balances": {"current": 1},
+                    "name": "Fixture Account",
+                }],
+            }],
+        }))
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            module.cmd_status(argparse.Namespace(json=True))
+        status_payload = json.loads(stdout.getvalue())
+
+    status_items = status_payload.get("items", [])
+    if len(status_items) != 1 or set(status_items[0]) != STATUS_ITEM_KEYS:
+        fail(f"status item keys are {sorted(status_items[0]) if status_items else []}")
+
+    def banking_post(_path, payload):
+        offset = payload["options"]["offset"]
+        return {
+            "accounts": [{
+                "account_id": "private-account-id",
+                "mask": "1234",
+                "balances": {"current": 1},
+                "name": "Fixture Account",
+            }],
+            "transactions": [] if offset else [{
+                "account_id": "private-account-id",
+                "transaction_id": "private-transaction-id",
+                "date": "2026-01-01",
+                "name": "Fixture",
+                "merchant_name": "Fixture",
+                "amount": 1,
+                "iso_currency_code": "USD",
+                "pending": False,
+                "payment_channel": "online",
+                "category": ["Fixture"],
+                "private_raw_field": "private",
+            }],
+            "total_transactions": 1,
+        }
+
+    module.plaid_post = banking_post
+    item = {"access_token": "private", "name": "fixture", "institution": "Fixture Bank"}
+    banking_rows = module.banking_transactions(item, START_DATE, END_DATE, 100)
+    banking_extra = set().union(*(set(row) for row in banking_rows)) - BANKING_KEYS
+    if banking_extra:
+        fail(f"banking result exposes keys {sorted(banking_extra)}")
+
+    def investment_post(_path, _payload):
+        return {
+            "accounts": [{
+                "account_id": "private-account-id",
+                "mask": "1234",
+                "balances": {"current": 1},
+                "name": "Fixture Account",
+            }],
+            "securities": [{
+                "security_id": "private-security-id",
+                "name": "Fixture Security",
+                "ticker_symbol": "FIX",
+            }],
+            "investment_transactions": [{
+                "account_id": "private-account-id",
+                "investment_transaction_id": "private-transaction-id",
+                "security_id": "private-security-id",
+                "date": "2026-01-01",
+                "name": "Fixture",
+                "type": "buy",
+                "subtype": "buy",
+                "quantity": 1,
+                "amount": 1,
+                "price": 1,
+                "fees": 0,
+                "iso_currency_code": "USD",
+                "private_raw_field": "private",
+            }],
+            "total_investment_transactions": 1,
+        }
+
+    module.plaid_post = investment_post
+    try:
+        investment_result = module.investment_transactions(item, START_DATE, END_DATE, 100)
+    except TypeError:
+        investment_result = module.investment_transactions(item, START_DATE, END_DATE)
+    investment_rows = (
+        investment_result
+        if isinstance(investment_result, list)
+        else investment_result.get("investment_transactions", [])
+    )
+    investment_extra = set().union(*(set(row) for row in investment_rows)) - INVESTMENT_KEYS
+    if investment_extra:
+        fail(f"investment result exposes keys {sorted(investment_extra)}")
+
+    print(json.dumps({
+        "passed": True,
+        "status_item_keys": sorted(STATUS_ITEM_KEYS),
+        "banking_result_keys": sorted(set().union(*(set(row) for row in banking_rows))),
+        "investment_result_keys": sorted(set().union(*(set(row) for row in investment_rows))),
+    }, indent=2))
+
+
+def pagination() -> None:
+    module = load_cli("pagination")
+    calls: list[dict] = []
+
+    def fake_post(_path, payload):
+        options = payload.get("options")
+        calls.append(options or {})
+        offset = (options or {}).get("offset", 0)
+        batch_size = 2 if offset == 0 else 1
+        return {
+            "accounts": [],
+            "securities": [],
+            "investment_transactions": [
+                {"date": f"2026-01-0{offset + index + 1}", "name": "Fixture"}
+                for index in range(batch_size)
+            ],
+            "total_investment_transactions": 3,
+        }
+
+    module.plaid_post = fake_post
+    item = {"access_token": "private", "name": "fixture", "institution": "Fixture Bank"}
+    try:
+        result = module.investment_transactions(item, START_DATE, END_DATE, 2)
+    except TypeError:
+        fail("investment_transactions does not accept a page size")
+    rows = result if isinstance(result, list) else result.get("investment_transactions", [])
+    expected_options = [{"count": 2, "offset": 0}, {"count": 2, "offset": 2}]
+    if calls != expected_options:
+        fail(f"pagination options are {calls}, expected {expected_options}")
+    if len(rows) != 3 or len({row["date"] for row in rows}) != 3:
+        fail(f"pagination returned {len(rows)} rows, expected 3 unique rows")
+    print(json.dumps({
+        "passed": True,
+        "request_count": len(calls),
+        "offsets": [call["offset"] for call in calls],
+        "returned_count": len(rows),
+    }, indent=2))
+
+
+def store_mode() -> None:
+    module = load_cli("store_mode")
+    root = Path(tempfile.mkdtemp(prefix="verify-pi-plaid-store-"))
+    module.STORE = root / "items.json"
+    original_chmod = Path.chmod
+    old_umask = os.umask(0o022)
+
+    def fail_chmod(self, mode, *, follow_symlinks=True):
+        raise RuntimeError("simulated crash before chmod")
+
+    Path.chmod = fail_chmod
+    try:
+        try:
+            module.save_store({"items": []})
+        except RuntimeError:
+            pass
+    finally:
+        Path.chmod = original_chmod
+        os.umask(old_umask)
+
+    mode = stat.S_IMODE(module.STORE.stat().st_mode)
+    module.STORE.unlink()
+    root.rmdir()
+    if mode != 0o600:
+        fail(f"mode after simulated pre-chmod crash is {mode:03o}, expected 600")
+    print(json.dumps({"passed": True, "mode_after_simulated_crash": f"{mode:03o}"}, indent=2))
+
+
+def live(item_name: str) -> None:
+    if item_name not in {"etrade", "robinhood"}:
+        fail("live item must be etrade or robinhood")
+    expected_args = {
+        "kind": "investments",
+        "item": item_name,
+        "start_date": START_DATE,
+        "end_date": END_DATE,
+    }
+    prompt = (
+        f"Call plaid_transactions exactly once with kind investments, item {item_name}, "
+        f"start_date {START_DATE}, and end_date {END_DATE}. Return only a JSON object with "
+        "keys retrieved, transaction_count, error_count, and error_code. Do not include "
+        "transaction details, account data, identifiers, balances, or tokens."
+    )
+    completed = subprocess.run(
+        [
+            "pi",
+            "--mode", "json",
+            "--no-session",
+            "--print",
+            "--no-builtin-tools",
+            "--tools", "plaid_transactions",
+            prompt,
+        ],
+        cwd=Path.home() / "vault",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        fail(f"Pi exited {completed.returncode}")
+    events = [json.loads(line) for line in completed.stdout.splitlines() if line.strip()]
+    starts = [
+        event for event in events
+        if event.get("type") == "tool_execution_start"
+        and event.get("toolName") == "plaid_transactions"
+    ]
+    ends = [
+        event for event in events
+        if event.get("type") == "tool_execution_end"
+        and event.get("toolName") == "plaid_transactions"
+    ]
+    if len(starts) != 1 or starts[0].get("args") != expected_args:
+        fail("Pi did not issue exactly one plaid_transactions call with the expected arguments")
+    if len(ends) != 1 or ends[0].get("isError") is not False:
+        fail("Pi did not complete exactly one successful plaid_transactions call")
+
+    details = (ends[0].get("result") or {}).get("details") or {}
+    expected_result_keys = {"start_date", "end_date", "investment_transactions", "errors"}
+    if set(details) != expected_result_keys:
+        fail(f"tool result keys are {sorted(details)}, expected {sorted(expected_result_keys)}")
+    transaction_count = len(details.get("investment_transactions") or [])
+    error_count = len(details.get("errors") or [])
+
+    summaries = []
+    for event in events:
+        if event.get("type") != "message_end" or (event.get("message") or {}).get("role") != "assistant":
+            continue
+        text = "".join(
+            part.get("text", "")
+            for part in (event.get("message") or {}).get("content", [])
+            if part.get("type") == "text"
+        )
+        if not text:
+            continue
+        try:
+            summaries.append(json.loads(text))
+        except json.JSONDecodeError:
+            fail("assistant final text was not JSON")
+    if len(summaries) != 1:
+        fail(f"Pi returned {len(summaries)} non-empty assistant summaries, expected 1")
+    summary = summaries[0]
+    if set(summary) != {"retrieved", "transaction_count", "error_count", "error_code"}:
+        fail(f"assistant summary keys are {sorted(summary)}")
+    if (
+        summary["retrieved"] is not True
+        or summary["transaction_count"] != transaction_count
+        or summary["error_count"] != error_count
+        or summary["error_count"] != 0
+        or summary["error_code"] is not None
+    ):
+        fail("assistant summary does not match the successful tool result")
+
+    print(json.dumps({
+        "passed": True,
+        "tool_name": "plaid_transactions",
+        "args": expected_args,
+        "result_keys": sorted(details),
+        "transaction_count": transaction_count,
+        "error_count": error_count,
+        "final_summary": summary,
+    }, indent=2))
+
+
+def live_permissions() -> None:
+    data_dir = Path.home() / ".local" / "share" / "plaid-cli"
+    store = Path(os.environ.get("PLAID_CLI_STORE", data_dir / "items.json"))
+    link_logs = sorted(data_dir.glob("*-link.log"))
+    store_mode = stat.S_IMODE(store.stat().st_mode)
+    link_log_modes = [stat.S_IMODE(path.stat().st_mode) for path in link_logs]
+    if store_mode != 0o600 or any(mode != 0o600 for mode in link_log_modes):
+        fail(
+            f"live modes are store={store_mode:03o}, "
+            f"link_logs={sorted({f'{mode:03o}' for mode in link_log_modes})}"
+        )
+    print(json.dumps({
+        "passed": True,
+        "store_mode": f"{store_mode:03o}",
+        "link_log_count": len(link_logs),
+        "link_log_modes": sorted({f"{mode:03o}" for mode in link_log_modes}),
+    }, indent=2))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "case",
+        choices=["all", "output-boundary", "pagination", "store-mode", "live", "live-permissions"],
+    )
+    parser.add_argument("item", nargs="?")
+    args = parser.parse_args()
+
+    if args.case in {"all", "output-boundary"}:
+        output_boundary()
+    if args.case in {"all", "pagination"}:
+        pagination()
+    if args.case in {"all", "store-mode"}:
+        store_mode()
+    if args.case == "live":
+        if args.item is None:
+            fail("live requires an item")
+        live(args.item)
+    if args.case == "live-permissions":
+        live_permissions()
+
+
+if __name__ == "__main__":
+    main()
