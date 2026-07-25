@@ -614,8 +614,9 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Verification checks Sidekick registry parsing.
 - Verification checks Sidekick branding lookup.
 - Verification checks `<C-.>` local fallback.
-- Verification can create a temporary real tmux Pi session.
-- Verification checks tmux discovery and rehydration.
+- Verification checks Herdr-backed Sidekick sessions, workspaces, and task routing.
 - Verification checks local picker visibility.
-- Verification checks `SIDEKICK_BRANCH` metadata readback.
 - Verification checks search snapshot capture.
+- `scripts/nvim-verifier` launches a Pi verifier with no shell or file-mutation tools.
+- The verifier runs the selected checkout's config and returns structured PASS/FAIL evidence without replacing raw
+  harness output.
