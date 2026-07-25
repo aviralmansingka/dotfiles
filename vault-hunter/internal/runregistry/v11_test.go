@@ -15,6 +15,8 @@ import (
 type v11Herdr struct {
 	live    map[string]bool
 	creates int
+	owners  []string
+	closed  []string
 }
 
 func (h *v11Herdr) PaneExists(_ context.Context, paneID string) bool {
@@ -23,12 +25,14 @@ func (h *v11Herdr) PaneExists(_ context.Context, paneID string) bool {
 
 func (h *v11Herdr) CreateCompanion(_ context.Context, ownerPaneID, runID string) (runregistry.Companion, error) {
 	h.creates++
+	h.owners = append(h.owners, ownerPaneID)
 	paneID := "atlas-" + runID
 	h.live[paneID] = true
 	return runregistry.Companion{PaneID: paneID, TabID: "task-tab", OwnerPaneID: ownerPaneID}, nil
 }
 
 func (h *v11Herdr) ClosePane(_ context.Context, paneID string) error {
+	h.closed = append(h.closed, paneID)
 	delete(h.live, paneID)
 	return nil
 }
@@ -36,7 +40,7 @@ func (h *v11Herdr) ClosePane(_ context.Context, paneID string) error {
 func TestV11OnlyTaskRunsCreateAndReuseAtlas(t *testing.T) {
 	ctx := context.Background()
 	stateDir := t.TempDir()
-	herdr := &v11Herdr{live: map[string]bool{"task-pane": true}}
+	herdr := &v11Herdr{live: map[string]bool{"task-pane": true, "worker-pane": true}}
 	store := runregistry.NewStore(stateDir, herdr)
 	options := runregistry.EnsureOptions{
 		Task: runregistry.Task{
@@ -61,8 +65,8 @@ func TestV11OnlyTaskRunsCreateAndReuseAtlas(t *testing.T) {
 		Goals: []runregistry.Goal{{
 			ID:       "V11",
 			Label:    "Task-only Atlas launch",
-			Status:   "active",
-			Verifier: &runregistry.Verifier{State: "red", Iteration: 1},
+			Status:   "done",
+			Verifier: &runregistry.Verifier{State: "green", Iteration: 1},
 		}},
 	}
 
@@ -94,6 +98,9 @@ func TestV11OnlyTaskRunsCreateAndReuseAtlas(t *testing.T) {
 	if first.Companion.PaneID != resumed.Companion.PaneID || herdr.creates != 1 {
 		t.Fatalf("Task Run created more than one live Atlas companion: creates=%d", herdr.creates)
 	}
+	if len(herdr.owners) != 1 || herdr.owners[0] != options.Orchestrator.PaneID {
+		t.Fatalf("Atlas was not attached only to the driver pane: %#v", herdr.owners)
+	}
 
 	selected, _, err := runregistry.FindParticipant(
 		stateDir,
@@ -109,5 +116,14 @@ func TestV11OnlyTaskRunsCreateAndReuseAtlas(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(stateDir, "runs", first.RunID+".json")); err != nil {
 		t.Fatalf("Task Run Registry state missing: %v", err)
+	}
+	if err := store.Finish(ctx, first.RunID); err != nil {
+		t.Fatal(err)
+	}
+	if len(herdr.closed) != 1 || herdr.closed[0] != first.Companion.PaneID {
+		t.Fatalf("cleanup closed more than the owned Atlas pane: %#v", herdr.closed)
+	}
+	if !herdr.live["task-pane"] || !herdr.live["worker-pane"] {
+		t.Fatalf("cleanup closed the driver or a worker pane: %#v", herdr.live)
 	}
 }

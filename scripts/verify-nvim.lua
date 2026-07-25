@@ -574,17 +574,25 @@ local function validate_sidekick_herdr()
   local start_calls = {}
   source_herdr.call = function(args)
     start_calls[#start_calls + 1] = args
-    if args[1] == "tab" and args[2] == "create" then
-      return { tab = { tab_id = "w-bound:t1" }, root_pane = { pane_id = "w-bound:p0" } }
-    elseif args[1] == "agent" and args[2] == "start" then
+    if args[1] == "agent" and args[2] == "start" then
       return {
         agent = {
+          name = "codex-workspace-session",
+          cwd = cwd,
+          foreground_cwd = cwd,
           terminal_id = "term-workspace",
           pane_id = "w-bound:p1",
           tab_id = "w-bound:t1",
           workspace_id = "w-bound",
+          agent_session = {
+            source = "herdr:codex",
+            kind = "id",
+            value = "session-workspace",
+          },
         },
       }
+    elseif args[1] == "tab" and args[2] == "list" then
+      return { tabs = { { tab_id = "w-bound:t1", workspace_id = "w-bound", pane_count = 1 } } }
     end
     return {}
   end
@@ -596,23 +604,30 @@ local function validate_sidekick_herdr()
     { workspace_id = "w-bound" }
   )
   source_herdr.call = original_call
-  local tab_create, agent_start
+  local agent_start
+  local tab_rename
   for _, call in ipairs(start_calls) do
     if call[1] == "workspace" or (call[1] == "pane" and call[2] == "list") then
       fail("an exact workspace ID should bypass cwd workspace lookup: " .. vim.inspect(start_calls))
     elseif call[1] == "tab" and call[2] == "create" then
-      tab_create = call
+      fail("worker start must not precreate a blank root tab: " .. vim.inspect(start_calls))
+    elseif call[1] == "pane" and call[2] == "move" and vim.fn.index(call, "--split") >= 0 then
+      fail("worker start must not use a split: " .. vim.inspect(start_calls))
     elseif call[1] == "agent" and call[2] == "start" then
       agent_start = call
+    elseif call[1] == "tab" and call[2] == "rename" then
+      tab_rename = call
     end
   end
   if not started
-    or not tab_create
-    or tab_create[4] ~= "w-bound"
     or not agent_start
     or agent_start[7] ~= "w-bound"
+    or vim.fn.index(agent_start, "--tab") >= 0
+    or not tab_rename
+    or tab_rename[3] ~= "w-bound:t1"
+    or started.agent_session.value ~= "session-workspace"
   then
-    fail("named session should start in its exact bound workspace: " .. vim.inspect(start_calls))
+    fail("named session should start directly as one full Codex pane: " .. vim.inspect(start_calls))
   end
 
   local routing_calls = {}
@@ -653,16 +668,29 @@ local function validate_sidekick_herdr()
   routing_calls = {}
   source_herdr.call = function(args)
     routing_calls[#routing_calls + 1] = args
-    if args[1] == "tab" and args[2] == "create" then
-      return { tab = { tab_id = "w-feature:t2" }, root_pane = { pane_id = "w-feature:p0" } }
+    if args[1] == "tab" and args[2] == "list" then
+      return {
+        tabs = {
+          { tab_id = "w-old:t1", workspace_id = "w-old", pane_count = 1 },
+          { tab_id = "w-feature:t2", workspace_id = "w-feature", pane_count = 1 },
+        },
+      }
+    elseif args[1] == "pane" and args[2] == "move" then
+      return { pane = { pane_id = "w-feature:p1", tab_id = "w-feature:t2" } }
     elseif args[1] == "agent" and args[2] == "get" then
       return {
         agent = {
           name = "codex-example",
+          terminal_id = "term-example",
           pane_id = "w-feature:p1",
           tab_id = "w-feature:t2",
           workspace_id = "w-feature",
           foreground_cwd = "/worktrees/feature-example",
+          agent_session = {
+            source = "herdr:codex",
+            kind = "id",
+            value = "session-example",
+          },
         },
       }
     end
@@ -670,31 +698,109 @@ local function validate_sidekick_herdr()
   end
   local placed_agent = source_herdr.place_agent({
     name = "codex-example",
+    terminal_id = "term-example",
     pane_id = "w-old:p1",
     tab_id = "w-old:t1",
     workspace_id = "w-old",
     foreground_cwd = "/worktrees/feature-example",
+    agent_session = {
+      source = "herdr:codex",
+      kind = "id",
+      value = "session-example",
+    },
   }, feature_scope, "T01 Example task")
-  source_herdr.call = original_call
-  if not placed_agent or placed_agent.tab_id ~= "w-feature:t2" then
+  if
+    not placed_agent
+    or placed_agent.tab_id ~= "w-feature:t2"
+    or placed_agent.agent_session.value ~= "session-example"
+  then
     fail("existing task agent should move to its feature-worktree tab: " .. vim.inspect(placed_agent))
   end
-  local task_tab_create
   local task_pane_move
   for _, call in ipairs(routing_calls) do
     if call[1] == "tab" and call[2] == "create" then
-      task_tab_create = call
+      fail("worker placement must not create a blank root pane: " .. vim.inspect(routing_calls))
     elseif call[1] == "pane" and call[2] == "move" then
       task_pane_move = call
     end
   end
   if
-    not task_tab_create
-    or task_tab_create[8] ~= "T01 Example task"
-    or not task_pane_move
-    or task_pane_move[5] ~= "w-feature:t2"
+    not task_pane_move
+    or vim.fn.index(task_pane_move, "--new-tab") < 0
+    or vim.fn.index(task_pane_move, "--split") >= 0
+    or task_pane_move[6] ~= "w-feature"
+    or task_pane_move[8] ~= "T01 Example task"
   then
-    fail("task agent placement should use the named task tab: " .. vim.inspect(routing_calls))
+    fail("task agent should move directly into its named one-pane tab: " .. vim.inspect(routing_calls))
+  end
+
+  routing_calls = {}
+  source_herdr.call = function(args)
+    routing_calls[#routing_calls + 1] = args
+    if args[1] == "tab" and args[2] == "list" then
+      return {
+        tabs = {
+          { tab_id = "w-feature:shared", workspace_id = "w-feature", pane_count = 2 },
+          { tab_id = "w-feature:worker", workspace_id = "w-feature", pane_count = 1 },
+        },
+      }
+    elseif args[1] == "pane" and args[2] == "move" then
+      return { pane = { pane_id = "w-feature:p2", tab_id = "w-feature:worker" } }
+    elseif args[1] == "agent" and args[2] == "get" then
+      return {
+        agent = {
+          name = "codex-shared",
+          terminal_id = "term-shared",
+          pane_id = "w-feature:p2",
+          tab_id = "w-feature:worker",
+          workspace_id = "w-feature",
+          foreground_cwd = "/worktrees/feature-example",
+          agent_session = {
+            source = "herdr:codex",
+            kind = "id",
+            value = "session-shared",
+          },
+        },
+      }
+    end
+    return {}
+  end
+  local restored_agent = source_herdr.place_agent({
+    name = "codex-shared",
+    terminal_id = "term-shared",
+    pane_id = "w-feature:p2",
+    tab_id = "w-feature:shared",
+    workspace_id = "w-feature",
+    foreground_cwd = "/worktrees/feature-example",
+    agent_session = {
+      source = "herdr:codex",
+      kind = "id",
+      value = "session-shared",
+    },
+  }, feature_scope, "T01 Restored worker")
+  if not restored_agent or restored_agent.tab_id ~= "w-feature:worker" then
+    fail("same-workspace reuse should restore a one-pane worker tab: " .. vim.inspect(restored_agent))
+  end
+  for _, call in ipairs(routing_calls) do
+    if call[1] == "pane" and call[2] == "close" then
+      fail("one-pane restoration must preserve unrelated shared panes: " .. vim.inspect(routing_calls))
+    end
+  end
+
+  local calls_before_invalid = #routing_calls
+  local original_notify = vim.notify
+  vim.notify = function() end
+  local invalid_agent = source_herdr.place_agent({
+    name = "codex-background",
+    pane_id = "background",
+    tab_id = "inherited",
+    workspace_id = "w-feature",
+    foreground_cwd = "/worktrees/feature-example",
+  }, feature_scope, "invalid")
+  vim.notify = original_notify
+  source_herdr.call = original_call
+  if invalid_agent or #routing_calls ~= calls_before_invalid then
+    fail("background or inherited-pane agents without full session identity must be rejected")
   end
 
   local original_list_agents = herdr.list_agents

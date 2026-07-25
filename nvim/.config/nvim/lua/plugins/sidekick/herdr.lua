@@ -188,61 +188,91 @@ function M.ensure_feature_scope(repository, workspace_label, feature_branch)
   return feature.path and { workspace_id = workspace_id, cwd = feature.path } or nil
 end
 
+---@param agent? table
+---@return boolean
+local function full_agent(agent)
+  local session = agent and agent.agent_session
+  return not not (agent
+    and agent.name
+    and agent.pane_id
+    and agent.tab_id
+    and agent.workspace_id
+    and agent.terminal_id
+    and session
+    and session.source
+    and session.kind
+    and session.value)
+end
+
+local function same_session(left, right)
+  return left
+    and right
+    and left.source == right.source
+    and left.kind == right.kind
+    and left.value == right.value
+end
+
+local function tab_info(tab_id)
+  local result = M.call({ "tab", "list" }, true)
+  for _, tab in ipairs(result and result.tabs or {}) do
+    if tab.tab_id == tab_id then
+      return tab
+    end
+  end
+end
+
+local function own_tab(agent, scope, tab_label)
+  local tab = tab_info(agent.tab_id)
+  if tab and tab.workspace_id == scope.workspace_id and tab.pane_count == 1 then
+    return M.call({ "tab", "rename", agent.tab_id, tab_label }) and agent or nil
+  end
+
+  local moved = M.call({
+    "pane",
+    "move",
+    agent.pane_id,
+    "--new-tab",
+    "--workspace",
+    scope.workspace_id,
+    "--label",
+    tab_label,
+    "--no-focus",
+  })
+  if not moved then
+    return nil
+  end
+  local placed = M.get_agent(agent.name)
+  local placed_tab = placed and tab_info(placed.tab_id)
+  if
+    not full_agent(placed)
+    or placed.name ~= agent.name
+    or placed.terminal_id ~= agent.terminal_id
+    or not same_session(agent.agent_session, placed.agent_session)
+    or M.normalize_cwd(placed.foreground_cwd or placed.cwd) ~= M.normalize_cwd(scope.cwd)
+    or placed.workspace_id ~= scope.workspace_id
+    or not placed_tab
+    or placed_tab.pane_count ~= 1
+  then
+    return nil
+  end
+  return placed
+end
+
 ---@param agent table
 ---@param scope table
 ---@param tab_label string
 ---@return table|nil agent
 function M.place_agent(agent, scope, tab_label)
+  if not full_agent(agent) then
+    notify("worker must be a full Herdr Codex session")
+    return nil
+  end
   local cwd = M.normalize_cwd(agent.foreground_cwd or agent.cwd)
   if cwd ~= M.normalize_cwd(scope.cwd) then
     notify("existing agent cwd does not match its feature worktree")
     return nil
   end
-  if agent.workspace_id == scope.workspace_id then
-    return M.call({ "tab", "rename", agent.tab_id, tab_label }) and agent or nil
-  end
-
-  local created = M.call({
-    "tab",
-    "create",
-    "--workspace",
-    scope.workspace_id,
-    "--cwd",
-    scope.cwd,
-    "--label",
-    tab_label,
-    "--no-focus",
-  })
-  local tab = created and created.tab or nil
-  local root = created and created.root_pane or nil
-  if not tab or not root then
-    return nil
-  end
-  local moved = M.call({
-    "pane",
-    "move",
-    agent.pane_id,
-    "--tab",
-    tab.tab_id,
-    "--split",
-    "right",
-    "--target-pane",
-    root.pane_id,
-    "--ratio",
-    "0.5",
-    "--no-focus",
-  })
-  if not moved then
-    M.call({ "tab", "close", tab.tab_id }, true)
-    return nil
-  end
-  M.call({ "pane", "close", root.pane_id }, true)
-  return M.get_agent(agent.name or agent.pane_id) or vim.tbl_extend("force", agent, {
-    cwd = scope.cwd,
-    foreground_cwd = scope.cwd,
-    tab_id = tab.tab_id,
-    workspace_id = scope.workspace_id,
-  })
+  return own_tab(agent, scope, tab_label)
 end
 
 ---@param name string
@@ -254,32 +284,9 @@ end
 ---@return table|nil agent
 function M.start(name, cwd, command, env, scope, tab_label)
   local normalized = M.normalize_cwd(cwd)
-  local resolved_id, root_pane_id, workspace_created, tab_id = M.ensure_workspace(cwd, scope)
+  local resolved_id, _, workspace_created, bootstrap_tab_id = M.ensure_workspace(cwd, scope)
   if not resolved_id then
     return nil
-  end
-  if workspace_created then
-    if not tab_id or not M.call({ "tab", "rename", tab_id, tab_label or name }) then
-      M.call({ "workspace", "close", resolved_id }, true)
-      return nil
-    end
-  else
-    local tab_result = M.call({
-      "tab",
-      "create",
-      "--workspace",
-      resolved_id,
-      "--cwd",
-      normalized,
-      "--label",
-      tab_label or name,
-      "--no-focus",
-    })
-    if not tab_result or not tab_result.tab then
-      return nil
-    end
-    tab_id = tab_result.tab.tab_id
-    root_pane_id = tab_result.root_pane and tab_result.root_pane.pane_id or nil
   end
   local args = {
     "agent",
@@ -289,8 +296,6 @@ function M.start(name, cwd, command, env, scope, tab_label)
     normalized,
     "--workspace",
     resolved_id,
-    "--tab",
-    tab_id,
     "--no-focus",
   }
   for key, value in pairs(env or {}) do
@@ -302,16 +307,31 @@ function M.start(name, cwd, command, env, scope, tab_label)
   vim.list_extend(args, command)
   local result = M.call(args)
   local agent = result and result.agent or nil
-  if not agent then
+  if not full_agent(agent) or agent.name ~= name then
+    if agent and agent.pane_id then
+      M.call({ "pane", "close", agent.pane_id }, true)
+    end
     if workspace_created then
       M.call({ "workspace", "close", resolved_id }, true)
-    elseif tab_id then
-      M.call({ "tab", "close", tab_id }, true)
     end
     return nil
   end
-  if root_pane_id and root_pane_id ~= agent.pane_id then
-    M.call({ "pane", "close", root_pane_id }, true)
+  agent = M.place_agent(agent, { workspace_id = resolved_id, cwd = normalized }, tab_label or name)
+  if not agent then
+    M.call({ "pane", "close", result.agent.pane_id }, true)
+    if workspace_created then
+      M.call({ "workspace", "close", resolved_id }, true)
+    end
+    return nil
+  end
+  if
+    workspace_created
+    and bootstrap_tab_id
+    and bootstrap_tab_id ~= agent.tab_id
+    and not M.call({ "tab", "close", bootstrap_tab_id }, true)
+  then
+    M.call({ "workspace", "close", resolved_id }, true)
+    return nil
   end
   return agent
 end

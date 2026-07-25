@@ -87,8 +87,28 @@ case "$case_name" in
   V11)
     (
       cd "$module_dir"
-      go test ./internal/runregistry -run '^TestV11'
+      go test ./internal/runregistry ./internal/herdrcli -run '^TestV11'
     )
+    skill_file="$module_dir/../.agents/skills/vault-hunter/SKILL.md"
+    while IFS= read -r contract; do
+      rg -Fq -- "$contract" "$skill_file" || {
+        printf 'verify-vault-hunter-atlas: V11 skill contract missing: %s\n' "$contract" >&2
+        exit 1
+      }
+    done <<'EOF'
+intentionally performs no investigation, implementation, testing, or review itself
+A background or inherited-pane
+exactly one full Codex pane
+do not precreate a blank root pane
+Verify `pane_count=1`
+one concise final handoff
+Worker tabs never receive an Atlas companion
+Close each captured native subagent session and its one-pane Herdr worker tab
+Only verifier-driven Task Runs create Atlas state
+Feature, Project, Issue, Wayfinder
+the only right split in the active driver/orchestrator tab
+Preserve the driver/orchestrator tab
+EOF
     ;;
   all)
     (cd "$module_dir" && go test ./...)
