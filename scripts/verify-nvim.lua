@@ -79,7 +79,7 @@ local function validate_agent_keymaps()
 
   local snacks = load_plugin("snacks.nvim")
   assert_key_absent(snacks, "<C-'>")
-  assert_key_desc(sidekick, "<C-'>", "Global Sessions")
+  assert_key_absent(sidekick, "<C-'>")
   assert_key_absent(sidekick, "<leader>aL")
 
   local obsidian = load_plugin("obsidian.nvim")
@@ -100,7 +100,6 @@ local function validate_agent_keymaps()
   assert_key_desc(sidekick, "<leader>ai", "Pi")
   assert_key_desc(sidekick, "<leader>ag", "Codex")
   assert_key_desc(sidekick, "<leader>al", "Local")
-  assert_key_desc(sidekick, "<C-'>", "Global")
   assert_key_desc(sidekick, "<c-.>", "cwd sessions")
   assert_key_desc(sidekick, "<c-;>", "Switch Local")
   assert_key_desc(sidekick, "<leader>an", "Codex")
@@ -496,6 +495,7 @@ local function validate_sidekick_herdr()
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
 
   local original_herdr_call = herdr.call
+  local rename_args
   herdr.call = function(args, quiet)
     if args[1] == "workspace" and args[2] == "list" then
       return {
@@ -505,59 +505,17 @@ local function validate_sidekick_herdr()
         },
       }
     end
+    if args[1] == "agent" and args[2] == "rename" then
+      rename_args = args
+      return { agent = { name = args[4] } }
+    end
     return original_herdr_call(args, quiet)
   end
-  vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w2")
-  vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_label", "Workspace Two")
-  local global_picker = require("plugins.sidekick.picker")
-  local global_items = global_picker.list_items()
-  local global_blocked
-  local global_other_workspace
-  local workspace_one
-  local workspace_two
-  local global_base
-  for _, item in ipairs(global_items) do
-    if item._workspace and item.workspace_id == "w1" then
-      workspace_one = item
-    elseif item._workspace and item.workspace_id == "w2" then
-      workspace_two = item
-    elseif item.label == "pi-blocked" then
-      global_blocked = item
-    elseif item.label == "pi-other-workspace" then
-      global_other_workspace = item
-    elseif item.label == "codex" then
-      global_base = item
-    end
-  end
-  if not global_blocked or global_blocked.status ~= "blocked" then
-    fail("global picker should expose Herdr status: " .. vim.inspect(global_items))
-  end
-  if
-    not workspace_one
-    or workspace_one.agent_count ~= 6
-    or not workspace_two
-    or workspace_two.agent_count ~= 1
-    or global_items[1] ~= workspace_two
-    or not workspace_two._current_workspace
-    or workspace_one._current_workspace
-    or not global_other_workspace
-    or global_other_workspace.parent ~= workspace_two
-  then
-    fail("global picker should lead with the emphasized current workspace: " .. vim.inspect(global_items))
-  end
-  if not global_base or global_base.parent ~= workspace_one or global_base.toggle_name ~= "codex" then
-    fail("global picker should include selectable base agents: " .. vim.inspect(global_items))
-  end
-  if global_other_workspace.text ~= "pi-other-workspace" or workspace_two.text ~= "" then
-    fail("global fuzzy text should match agents while retaining workspace parents")
-  end
-  pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
-  pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
-
   local original_pick = Snacks.picker.pick
   local original_spinner = Snacks.util.spinner
   local original_read = herdr.read
   local original_toggle = internal.toggle_tool_session
+  local original_ui_input = vim.ui.input
   local picker_opts
   local read_args
   local read_result = "\27[31mfirst logical line\27[0m\r\nsecond logical line"
@@ -589,12 +547,17 @@ local function validate_sidekick_herdr()
       or layout[1].win ~= "preview"
       or layout[2].win ~= "input"
       or layout[2].height ~= 1
-      or layout[3].win ~= "list"
-      or layout[3].height ~= 5
+      or layout[3].box ~= "horizontal"
+      or layout[3].height ~= 14
+      or layout[3][1].win ~= "list"
+      or layout[3][1].height ~= 12
+      or layout[3][2].win ~= "workspace"
+      or layout[3][2].height ~= 12
+      or not picker_opts.layout.wins.workspace
       or layout.width ~= math.max(math.floor(vim.o.columns * config.cli.win.float.width), 80) + 2
       or layout.height ~= math.max(math.floor(vim.o.lines * config.cli.win.float.height), 10) + 2
     then
-      fail("cwd picker should match the bordered agent float around its preview, input, and compact session list")
+      fail("cwd picker should match the bordered agent float around its preview, input, and two 12-row panes")
     end
     if not picker_opts.win.preview.wo.wrap or not picker_opts.win.preview.wo.linebreak then
       fail("cwd picker preview should wrap unwrapped logical lines")
@@ -612,12 +575,51 @@ local function validate_sidekick_herdr()
         fail("cwd picker row should expose its Herdr status marker: " .. vim.inspect(rendered))
       end
       local has_status_text = rendered:find("[" .. item.status .. "]", 1, true) ~= nil
-      if (item.status == "idle" or item.status == "working") and has_status_text then
-        fail("idle and working rows should rely on their symbols: " .. vim.inspect(rendered))
+      if has_status_text then
+        fail("session rows should rely on their symbols: " .. vim.inspect(rendered))
       end
-      if item.status ~= "idle" and item.status ~= "working" and not has_status_text then
-        fail("blocked and done rows should retain their status text: " .. vim.inspect(rendered))
+      if rendered:find(item.cwd, 1, true) or item.text:find(item.cwd, 1, true) then
+        fail("cwd picker rows should not show the session working directory: " .. vim.inspect(rendered))
       end
+    end
+    if
+      picker_opts.win.input.keys["<c-r>"][1] ~= "sidekick_rename_session"
+      or picker_opts.win.list.keys["<c-r>"][1] ~= "sidekick_rename_session"
+    then
+      fail("cwd picker should map <c-r> to session rename in its input and list")
+    end
+    if
+      not picker_opts.win.input.keys["<c-w>"]
+      or not picker_opts.win.list.keys["<c-w>"]
+      or not picker_opts.win.input.keys["<c-u>"]
+      or not picker_opts.win.list.keys["<c-u>"]
+      or not picker_opts.layout.wins.workspace.opts.keys["<c-w>"]
+      or not picker_opts.layout.wins.workspace.opts.keys["<c-u>"]
+    then
+      fail("cwd picker should switch panes with <c-w> and clear input with <c-u> from every pane")
+    end
+
+    local rename_picker_opts = picker_opts
+    local rename_item = picker_opts.items[1]
+    local rename_closed = false
+    vim.ui.input = function(input_opts, callback)
+      if input_opts.default ~= rename_item.slug then
+        fail("session rename should default to the current session label")
+      end
+      callback("Renamed Session")
+    end
+    picker_opts.actions.sidekick_rename_session({ close = function() rename_closed = true end }, rename_item)
+    vim.ui.input = original_ui_input
+    vim.wait(100, function() return picker_opts ~= rename_picker_opts end, 5)
+    if
+      not rename_closed
+      or not vim.deep_equal(
+        rename_args,
+        { "agent", "rename", rename_item.terminal_id, rename_item.tool .. "-renamed-session" }
+      )
+      or picker_opts == rename_picker_opts
+    then
+      fail("session rename should rename the selected Herdr agent and reopen the picker")
     end
 
     if type(picker_opts.on_show) ~= "function" or type(picker_opts.on_close) ~= "function" then
@@ -626,7 +628,16 @@ local function validate_sidekick_herdr()
     local spinner_updates = 0
     local fake_picker = {
       closed = false,
+      input = {
+        win = {
+          on = function() end,
+        },
+      },
       list = {
+        win = {
+          valid = function() return false end,
+          on = function() end,
+        },
         update = function(_, opts)
           if not opts or not opts.force then
             fail("spinner redraw should force the picker list update")
@@ -778,79 +789,7 @@ local function validate_sidekick_herdr()
     end
     last_session.open()
     if #toggles ~= 2 or toggles[2].name ~= "pi-done" or toggles[2].focus ~= true then
-      fail("<c-.> should reopen the session selected with <leader>al: " .. vim.inspect(toggles))
-    end
-
-    vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w2")
-    vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_label", "Workspace Two")
-    global_picker.open()
-    if picker_opts.title ~= "Sidekick Agents by Workspace" then
-      fail("global picker should use the shared session picker UI: " .. vim.inspect(picker_opts.title))
-    end
-    local global_layout = picker_opts.layout.layout
-    if
-      picker_opts.preview ~= false
-      or picker_opts.layout.preview ~= false
-      or global_layout[1].win ~= "input"
-      or global_layout[1].height ~= 1
-      or global_layout[2].win ~= "list"
-      or global_layout[3] ~= nil
-      or not picker_opts.matcher.keep_parents
-      or picker_opts.matcher.sort ~= false
-    then
-      fail("global picker should be a previewless fuzzy tree: " .. vim.inspect(picker_opts))
-    end
-    local remote_item
-    local remote_workspace
-    for _, item in ipairs(picker_opts.items) do
-      if item._workspace and item.workspace_id == "w2" then
-        remote_workspace = item
-      elseif item.label == "pi-other-workspace" then
-        remote_item = item
-      end
-    end
-    local rendered = {}
-    for _, chunk in ipairs(picker_opts.format(remote_item)) do
-      rendered[#rendered + 1] = chunk[1]
-    end
-    local rendered_workspace = {}
-    local rendered_workspace_chunks = picker_opts.format(remote_workspace)
-    for _, chunk in ipairs(rendered_workspace_chunks) do
-      rendered_workspace[#rendered_workspace + 1] = chunk[1]
-    end
-    if
-      not table.concat(rendered):find("└─", 1, true)
-      or not table.concat(rendered):find("[idle]", 1, true)
-      or not table.concat(rendered_workspace):find("Workspace Two", 1, true)
-      or not table.concat(rendered_workspace):find("1 agent", 1, true)
-      or rendered_workspace_chunks[1][2] ~= "SidekickPickerCurrentWorkspace"
-      or not vim.api.nvim_get_hl(0, { name = "SidekickPickerCurrentWorkspace" }).bg
-    then
-      fail("global picker should subtly highlight the current workspace header")
-    end
-    local workspaces_module = "plugins.herdr.workspaces"
-    local original_workspaces = package.loaded[workspaces_module]
-    local focused_workspace
-    package.loaded[workspaces_module] = {
-      focus = function(workspace_id)
-        focused_workspace = workspace_id
-        return true
-      end,
-    }
-    vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w1")
-    local toggles_before_global = #toggles
-    picker_opts.confirm({ close = function() end }, remote_item)
-    package.loaded[workspaces_module] = original_workspaces
-    if focused_workspace ~= "w2" then
-      fail("global picker should transfer to the selected session workspace: " .. vim.inspect(focused_workspace))
-    end
-    local global_toggle = toggles[toggles_before_global + 1]
-    if
-      not global_toggle
-      or global_toggle.name ~= "pi-other-workspace"
-      or global_toggle.terminal_id ~= "term-6"
-    then
-      fail("global picker should open the exact selected session after transferring: " .. vim.inspect(toggles))
+      fail("<c-.> should reopen the session selected from the local picker: " .. vim.inspect(toggles))
     end
 
     vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w1")
@@ -883,6 +822,7 @@ local function validate_sidekick_herdr()
   herdr.read = original_read
   herdr.call = original_herdr_call
   internal.toggle_tool_session = original_toggle
+  vim.ui.input = original_ui_input
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
   if not picker_ok then

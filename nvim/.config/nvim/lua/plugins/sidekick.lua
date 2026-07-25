@@ -230,14 +230,6 @@ return {
       desc = "Sidekick List Local Sessions",
     },
     {
-      "<C-'>",
-      function()
-        require("plugins.sidekick.picker").open()
-      end,
-      desc = "Sidekick List Global Sessions",
-      mode = { "n", "t", "i", "x" },
-    },
-    {
       "<leader>a/",
       function()
         require("plugins.sidekick.search").grep()
