@@ -114,7 +114,9 @@ do not precreate a blank root pane
 Verify `pane_count=1`
 one concise final handoff
 Worker tabs never receive an Atlas companion
-Close each captured native subagent session and its one-pane Herdr worker tab
+vault-hunter-run reconcile-workers
+vault-hunter-run cleanup-workers
+--workspace-id
 Only verifier-driven Task Runs create Atlas state
 Feature, Project, Issue, Wayfinder
 vault-hunter-run participant

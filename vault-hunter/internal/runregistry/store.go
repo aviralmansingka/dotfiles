@@ -158,6 +158,14 @@ func (s *Store) Finish(ctx context.Context, runID string) error {
 }
 
 func (s *Store) RegisterParticipant(runID string, participant Participant) (Run, error) {
+	return s.registerParticipant(runID, participant, nil)
+}
+
+func (s *Store) registerParticipant(
+	runID string,
+	participant Participant,
+	validateLive func(Run) error,
+) (Run, error) {
 	var result Run
 	err := s.withRegistryLock(func() error {
 		runs, err := s.readAll()
@@ -179,6 +187,11 @@ func (s *Store) RegisterParticipant(runID string, participant Participant) (Run,
 		}
 		if err := validateParticipant(*run, participant); err != nil {
 			return err
+		}
+		if validateLive != nil {
+			if err := validateLive(*run); err != nil {
+				return err
+			}
 		}
 
 		idempotent := false

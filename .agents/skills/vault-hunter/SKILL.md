@@ -91,7 +91,9 @@ For each dispatched role:
 - Use the Feature worktree as `--cwd`, give bounded repository ownership plus exact Feature and Task paths, and forbid
   vault edits or commits.
 - Monitor native subagent status plus `herdr agent get` and `herdr agent read`. If name, cwd, workspace, tab, session,
-  or one-pane placement is wrong, replace the dispatch before accepting work.
+  or one-pane placement is wrong, replace the dispatch before accepting work. For a Task Run, also run
+  `vault-hunter-run reconcile-workers --run-id "$run_id"` on each monitoring pass: replace `stale` launches with a
+  newly captured launch, preserve their stale records, and stop on `unexpected` ownership.
 - Require one concise final handoff containing outcome, changed paths and commit, exact checks and evidence, and
   residual risks or blockers. If it is incomplete, follow up with that same subagent; the driver does not investigate
   or rerun its work.
@@ -111,12 +113,20 @@ vault-hunter-run participant \
   --run-id "$run_id" \
   --goal-id "$active_goal_id" \
   --role "$role" \
-  --agent "$returned_agent_name"
+  --agent "$returned_agent_name" \
+  --workspace-id "$returned_workspace_id" \
+  --tab-id "$returned_tab_id" \
+  --pane-id "$returned_pane_id" \
+  --terminal-id "$returned_terminal_id" \
+  --agent-session-source "$returned_session_source" \
+  --agent-session-kind "$returned_session_kind" \
+  --agent-session-value "$returned_session_value"
 ```
 
 Run the `participant` command only for a verifier-driven Task Run, after the returned agent, workspace, tab, pane,
-terminal, and native session IDs have all been captured. Do not accept or begin consuming work from that dispatch
-until the command returns the unchanged-or-appended Registry record successfully.
+terminal, and native session IDs have all been captured and the named one-pane tab has been verified. Run it
+immediately then; do not accept or begin consuming work from that dispatch until the command returns the
+unchanged-or-appended Registry record successfully.
 
 The driver consumes only the resulting concise handoffs. It alone chooses and writes lifecycle edits, backlog status,
 Task evidence, both vault checkpoints, and the completion report. This single-writer boundary applies even when
@@ -285,10 +295,11 @@ Always run this goal, even when it completes immediately:
 
 ### Workspace and vault cleanup
 
-1. Run `vault-hunter-run finish --run-id "$run_id"` after every Run goal is done. This closes only the companion pane
-   recorded in the Registry and retires the Run.
-2. Close each captured native subagent session and its one-pane Herdr worker tab. Close only worker tabs launched for
-   this Task; worker tabs have no Atlas pane and therefore need no pane-level cleanup.
+1. Run `vault-hunter-run cleanup-workers --run-id "$run_id"` after every Run goal is done. It refuses unexpected
+   ownership, closes only exact live task-owned worker tabs, clears stale references, verifies disappearance, and is
+   safe to repeat.
+2. Run `vault-hunter-run finish --run-id "$run_id"`. This closes only the companion pane recorded in the Registry and
+   retires the Run; it never owns worker cleanup.
 3. Preserve the driver/orchestrator tab, its primary Codex pane, the owning Feature workspace and worktree, other shared
    Feature tabs, and unrelated Neovim Workspace Tabs. `finish` closes the driver's owned Atlas pane, never the driver.
 4. Verify the captured task agent, session, tab, and pane IDs are gone, the Atlas pane is gone, and the driver plus

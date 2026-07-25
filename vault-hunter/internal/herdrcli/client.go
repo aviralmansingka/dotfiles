@@ -40,6 +40,35 @@ func (c Client) Agent(ctx context.Context, target string) (AgentInfo, error) {
 	return result.Agent, nil
 }
 
+func (c Client) Worker(ctx context.Context, target string) (runregistry.Participant, error) {
+	agent, err := c.Agent(ctx, target)
+	if err != nil {
+		return runregistry.Participant{}, err
+	}
+	return runregistry.Participant{
+		Name:        agent.Name,
+		WorkspaceID: agent.WorkspaceID,
+		TabID:       agent.TabID,
+		PaneID:      agent.PaneID,
+		TerminalID:  agent.TerminalID,
+		AgentSession: runregistry.AgentSession{
+			Source: agent.AgentSession.Source,
+			Kind:   agent.AgentSession.Kind,
+			Value:  agent.AgentSession.Value,
+		},
+	}, nil
+}
+
+func (c Client) WorkerTabs(ctx context.Context) ([]runregistry.WorkerTab, error) {
+	var result struct {
+		Tabs []runregistry.WorkerTab `json:"tabs"`
+	}
+	if err := c.call(ctx, &result, "tab", "list"); err != nil {
+		return nil, err
+	}
+	return result.Tabs, nil
+}
+
 func (c Client) PaneExists(ctx context.Context, paneID string) bool {
 	return c.call(ctx, nil, "pane", "get", paneID) == nil
 }
@@ -86,6 +115,10 @@ func (c Client) CreateCompanion(
 
 func (c Client) ClosePane(ctx context.Context, paneID string) error {
 	return c.call(ctx, nil, "pane", "close", paneID)
+}
+
+func (c Client) CloseTab(ctx context.Context, tabID string) error {
+	return c.call(ctx, nil, "tab", "close", tabID)
 }
 
 func (c Client) call(ctx context.Context, target any, args ...string) error {

@@ -21,10 +21,12 @@ func TestV11ParticipantCommandRegistersCapturedHerdrIdentity(t *testing.T) {
 		ActiveGoal:    "V11",
 		Goals:         []runregistry.Goal{{ID: "V11", Status: "active"}},
 		Orchestrator: runregistry.Participant{
-			Role:       "orchestrator",
-			Name:       "codex-driver",
-			PaneID:     "driver-pane",
-			TerminalID: "driver-terminal",
+			Role:        "orchestrator",
+			Name:        "codex-driver",
+			WorkspaceID: "workspace",
+			TabID:       "driver-tab",
+			PaneID:      "driver-pane",
+			TerminalID:  "driver-terminal",
 			AgentSession: runregistry.AgentSession{
 				Source: "herdr:codex",
 				Kind:   "id",
@@ -37,7 +39,16 @@ func TestV11ParticipantCommandRegistersCapturedHerdrIdentity(t *testing.T) {
 
 	binary := filepath.Join(t.TempDir(), "herdr")
 	script := `#!/bin/sh
-printf '{"result":{"agent":{"name":"codex-worker","workspace_id":"workspace","tab_id":"worker-tab","pane_id":"worker-pane","terminal_id":"worker-terminal","agent_session":{"source":"herdr:codex","kind":"id","value":"worker-session"}}}}\n'
+case "$1:$2" in
+  agent:get)
+    printf '{"result":{"agent":{"name":"codex-worker","workspace_id":"workspace","tab_id":"worker-tab","pane_id":"worker-pane","terminal_id":"worker-terminal","agent_session":{"source":"herdr:codex","kind":"id","value":"worker-session"}}}}\n'
+    ;;
+  tab:list)
+    printf '{"result":{"tabs":[{"tab_id":"worker-tab","workspace_id":"workspace","label":"T11 · implementation","pane_count":1}]}}\n'
+    ;;
+  pane:get)
+    ;;
+esac
 `
 	if err := os.WriteFile(binary, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
@@ -49,6 +60,13 @@ printf '{"result":{"agent":{"name":"codex-worker","workspace_id":"workspace","ta
 		"--goal-id", "V11",
 		"--role", "implementation",
 		"--agent", "codex-worker",
+		"--workspace-id", "workspace",
+		"--tab-id", "worker-tab",
+		"--pane-id", "worker-pane",
+		"--terminal-id", "worker-terminal",
+		"--agent-session-source", "herdr:codex",
+		"--agent-session-kind", "id",
+		"--agent-session-value", "worker-session",
 		"--herdr", binary,
 	}); err != nil {
 		t.Fatal(err)

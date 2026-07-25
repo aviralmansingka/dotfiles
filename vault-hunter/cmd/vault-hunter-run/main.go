@@ -34,7 +34,7 @@ func main() {
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: vault-hunter-run ensure|participant|finish")
+		return fmt.Errorf("usage: vault-hunter-run ensure|participant|reconcile-workers|cleanup-workers|finish")
 	}
 	stateDir, err := defaultStateDir()
 	if err != nil {
@@ -107,36 +107,62 @@ func run(ctx context.Context, args []string) error {
 		goalID := flags.String("goal-id", "", "owned Run goal")
 		role := flags.String("role", "", "participant role")
 		target := flags.String("agent", "", "live Herdr agent target")
+		workspaceID := flags.String("workspace-id", "", "captured workspace ID")
+		tabID := flags.String("tab-id", "", "captured tab ID")
+		paneID := flags.String("pane-id", "", "captured pane ID")
+		terminalID := flags.String("terminal-id", "", "captured terminal ID")
+		sessionSource := flags.String("agent-session-source", "", "captured agent session source")
+		sessionKind := flags.String("agent-session-kind", "", "captured agent session kind")
+		sessionValue := flags.String("agent-session-value", "", "captured agent session value")
 		herdrBinary := flags.String("herdr", "herdr", "Herdr executable")
 		if err := flags.Parse(args[1:]); err != nil {
 			return err
 		}
 		client := herdrcli.Client{Binary: *herdrBinary}
-		agent, err := client.Agent(ctx, *target)
-		if err != nil {
-			return err
-		}
-		result, err := runregistry.NewStore(*state, client).RegisterParticipant(
+		result, err := runregistry.NewStore(*state, client).RegisterWorker(
+			ctx,
 			*runID,
 			runregistry.Participant{
 				Role:        *role,
 				GoalID:      *goalID,
-				Name:        agent.Name,
-				WorkspaceID: agent.WorkspaceID,
-				TabID:       agent.TabID,
-				PaneID:      agent.PaneID,
-				TerminalID:  agent.TerminalID,
+				Name:        *target,
+				WorkspaceID: *workspaceID,
+				TabID:       *tabID,
+				PaneID:      *paneID,
+				TerminalID:  *terminalID,
 				AgentSession: runregistry.AgentSession{
-					Source: agent.AgentSession.Source,
-					Kind:   agent.AgentSession.Kind,
-					Value:  agent.AgentSession.Value,
+					Source: *sessionSource,
+					Kind:   *sessionKind,
+					Value:  *sessionValue,
 				},
 			},
+			client,
 		)
 		if err != nil {
 			return err
 		}
 		return json.NewEncoder(os.Stdout).Encode(result)
+	case "reconcile-workers", "cleanup-workers":
+		flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
+		flags.SetOutput(os.Stderr)
+		state := flags.String("state-dir", stateDir, "Vault Hunter state directory")
+		runID := flags.String("run-id", "", "active Task Run ID")
+		herdrBinary := flags.String("herdr", "herdr", "Herdr executable")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		store := runregistry.NewStore(*state, nil)
+		client := herdrcli.Client{Binary: *herdrBinary}
+		var report runregistry.WorkerLifecycleReport
+		if args[0] == "reconcile-workers" {
+			report, err = store.ReconcileWorkers(ctx, *runID, client)
+		} else {
+			report, err = store.CleanupWorkers(ctx, *runID, client)
+		}
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(report)
 	case "finish":
 		flags := flag.NewFlagSet("finish", flag.ContinueOnError)
 		flags.SetOutput(os.Stderr)
