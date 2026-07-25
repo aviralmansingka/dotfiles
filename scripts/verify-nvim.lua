@@ -2183,8 +2183,414 @@ local function validate_vault_work_items()
   end
 end
 
+local function validate_inline_ask_edit()
+  local fixture = "testdata/neovim-workflows/inline-ask-edit/sample.lua"
+  local original_lines = vim.fn.readfile(fixture)
+  local original_system = vim.system
+  local original_lsp_hover = vim.lsp.buf_request_sync
+  local original_package_path = package.path
+  local ask_modules = {
+    "plugins.sidekick.ask",
+    "plugins.sidekick.ask.cli",
+    "plugins.sidekick.ask.context",
+    "plugins.sidekick.ask.diff",
+    "plugins.sidekick.ask.signs",
+    "plugins.sidekick.ask.state",
+    "plugins.sidekick.ask.ui",
+  }
+  local original_modules = {}
+  for _, name in ipairs(ask_modules) do
+    original_modules[name] = package.loaded[name] or false
+  end
+
+  local function assert_equal(actual, expected, label)
+    if not vim.deep_equal(actual, expected) then
+      fail(label .. " mismatch: got " .. vim.inspect(actual) .. ", expected " .. vim.inspect(expected))
+    end
+  end
+
+  local function assert_contains(value, needle, label)
+    if not value or not value:find(needle, 1, true) then
+      fail(label .. " should contain " .. vim.inspect(needle) .. "; got " .. vim.inspect(value))
+    end
+  end
+
+  local ok, err = xpcall(function()
+    local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
+    package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
+    for _, name in ipairs(ask_modules) do
+      package.loaded[name] = nil
+    end
+
+    local real_cli = require("plugins.sidekick.ask.cli")
+    local system_call
+    local cli_result
+    vim.system = function(cmd, opts, on_exit)
+      system_call = { cmd = vim.deepcopy(cmd), opts = vim.deepcopy(opts) }
+      vim.fn.writefile({ "controlled answer" }, cmd[10])
+      on_exit({ code = 0, stdout = "", stderr = "" })
+      return { kill = function() end }
+    end
+    real_cli.spawn("controlled prompt", function(result) cli_result = result end, { mode = "ask" })
+    if not vim.wait(1000, function() return cli_result ~= nil end, 10) then
+      fail("Codex adapter callback did not run")
+    end
+    vim.system = original_system
+
+    assert_sequence(system_call.cmd, {
+      "codex",
+      "--model",
+      "gpt-5.3-codex-spark",
+      "--sandbox",
+      "read-only",
+      "-a",
+      "never",
+      "exec",
+      "--output-last-message",
+      system_call.cmd[10],
+      "controlled prompt",
+    }, "inline ask/edit Codex command")
+    if system_call.cmd[10] == "" then
+      fail("Codex adapter output path should not be empty")
+    end
+    assert_equal(system_call.opts, { cwd = vim.fn.getcwd(), text = true }, "Codex adapter options")
+    assert_equal(cli_result.result, "controlled answer", "Codex adapter result")
+
+    local prompts = {}
+    local cli_calls = {}
+    local diff_clears = 0
+    local ui = {
+      open_prompt = function(opts) prompts[#prompts + 1] = opts end,
+      clear_diff_inline = function() diff_clears = diff_clears + 1 end,
+      close_hover = function() end,
+      open_hover = function() end,
+      render_diff_inline = function() end,
+    }
+    local cli = {
+      spawn = function(prompt, on_done, opts)
+        cli_calls[#cli_calls + 1] = { prompt = prompt, on_done = on_done, opts = opts }
+        return { kill = function() end }
+      end,
+    }
+    package.loaded["plugins.sidekick.ask"] = nil
+    package.loaded["plugins.sidekick.ask.ui"] = ui
+    package.loaded["plugins.sidekick.ask.cli"] = cli
+
+    load_plugin("nvim-treesitter-textobjects")
+    local ask = require("plugins.sidekick.ask")
+    local context = require("plugins.sidekick.ask.context")
+    local signs = require("plugins.sidekick.ask.signs")
+    local state = require("plugins.sidekick.ask.state")
+
+    vim.lsp.buf_request_sync = function()
+      return { { result = { contents = { value = "mocked LSP hover" } } } }
+    end
+
+    vim.cmd.edit(vim.fn.fnameescape(fixture))
+    local bufnr = vim.api.nvim_get_current_buf()
+    vim.bo[bufnr].filetype = "lua"
+
+    local function reset_buffer()
+      signs.stop_spinner()
+      state.cleanup_all()
+      vim.api.nvim_buf_clear_namespace(bufnr, signs.ns, 0, -1)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, original_lines)
+      vim.bo[bufnr].modified = false
+      vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    end
+
+    local function only_entry(label)
+      local found_id
+      local found_entry
+      local count = 0
+      for id, entry in pairs(state.entries(bufnr)) do
+        count = count + 1
+        found_id = id
+        found_entry = entry
+      end
+      if count ~= 1 then
+        fail(label .. " should have one state entry; got " .. tostring(count))
+      end
+      return found_id, found_entry
+    end
+
+    local spinner = {
+      ["⠋"] = true,
+      ["⠙"] = true,
+      ["⠹"] = true,
+      ["⠸"] = true,
+      ["⠼"] = true,
+      ["⠴"] = true,
+      ["⠦"] = true,
+      ["⠧"] = true,
+      ["⠇"] = true,
+      ["⠏"] = true,
+    }
+
+    local function extmark_details(id, label)
+      local mark = vim.api.nvim_buf_get_extmark_by_id(bufnr, signs.ns, id, { details = true })
+      if not mark or not mark[1] or not mark[3] then
+        fail(label .. " extmark missing")
+      end
+      return mark[3]
+    end
+
+    local function assert_anchor(entry, mode, status, label)
+      local details = extmark_details(entry.extmark_id, label)
+      local text = (details.sign_text or ""):gsub("%s+$", "")
+      local expected_hl = mode == "ask" and "SidekickAskSign" or "SidekickEditSign"
+      if status == "pending" then
+        if not spinner[text] then
+          fail(label .. " should use a spinner; got " .. vim.inspect(text))
+        end
+      else
+        assert_equal(text, mode == "ask" and "?" or "±", label .. " completed sign")
+      end
+      assert_equal(details.sign_hl_group, expected_hl, label .. " sign highlight")
+    end
+
+    local function assert_range(entry, mode, expected_count, label)
+      assert_equal(#(entry.range_extmarks or {}), expected_count, label .. " range mark count")
+      local expected_hl = mode == "ask" and "SidekickAskRange" or "SidekickEditRange"
+      for _, id in ipairs(entry.range_extmarks or {}) do
+        local details = extmark_details(id, label .. " range")
+        assert_equal((details.sign_text or ""):gsub("%s+$", ""), "│", label .. " range sign")
+        assert_equal(details.sign_hl_group, expected_hl, label .. " range highlight")
+      end
+    end
+
+    local function assert_cleared(label)
+      if next(state.entries(bufnr)) ~= nil then
+        fail(label .. " should clear state")
+      end
+      local marks = vim.api.nvim_buf_get_extmarks(bufnr, signs.ns, 0, -1, {})
+      assert_equal(marks, {}, label .. " extmarks")
+    end
+
+    local function submit(mode, text)
+      local prompt = prompts[#prompts]
+      if not prompt then
+        fail(mode .. " prompt did not open")
+      end
+      assert_equal(prompt.mode, mode, mode .. " prompt mode")
+      assert_equal(prompt.title, mode, mode .. " prompt title")
+      prompt.on_submit(text)
+      local call = cli_calls[#cli_calls]
+      if not call then
+        fail(mode .. " did not invoke Codex adapter")
+      end
+      return call
+    end
+
+    reset_buffer()
+    vim.api.nvim_win_set_cursor(0, { 2, 8 })
+    local normal_ask_context = context.build({ mode = "normal", bufnr = bufnr })
+    assert_equal(normal_ask_context.scope_kind, "function", "normal ask scope")
+    assert_equal(normal_ask_context.start_line, 0, "normal ask start line")
+    assert_equal(normal_ask_context.end_line, 3, "normal ask end line")
+    assert_equal(normal_ask_context.code, table.concat(vim.list_slice(original_lines, 1, 4), "\n"), "normal ask code")
+    assert_sequence(vim.tbl_map(function(symbol) return symbol.name end, normal_ask_context.symbols), {
+      "greeting",
+      "name",
+      "message",
+    }, "normal ask symbols")
+    for _, symbol in ipairs(normal_ask_context.symbols) do
+      assert_equal(symbol.hover, "mocked LSP hover", "normal ask symbol hover")
+    end
+
+    local ask_question = "What string does this function return when called with `Neovim`?"
+    ask.ask()
+    local normal_ask_call = submit("ask", ask_question)
+    assert_equal(
+      normal_ask_call.prompt,
+      context.render_prompt(ask_question, normal_ask_context),
+      "normal ask generated prompt"
+    )
+    assert_equal(normal_ask_call.opts, { mode = "ask" }, "normal ask adapter options")
+    local _, normal_ask_entry = only_entry("normal ask pending")
+    assert_equal(normal_ask_entry.status, "pending", "normal ask pending status")
+    assert_anchor(normal_ask_entry, "ask", "pending", "normal ask")
+    assert_range(normal_ask_entry, "ask", 0, "normal ask")
+    normal_ask_call.on_done({
+      ok = true,
+      result = "The function returns Hello, Neovim.",
+      duration_ms = 10,
+      tokens = { input = 1, output = 2 },
+    })
+    signs.stop_spinner()
+    assert_equal(normal_ask_entry.status, "done", "normal ask completed status")
+    assert_anchor(normal_ask_entry, "ask", "done", "normal ask")
+    ask.yank_line()
+    assert_equal(vim.fn.getreg("+"), "The function returns Hello, Neovim.", "normal ask yank")
+    ask.clear_line()
+    assert_cleared("normal ask clear")
+
+    reset_buffer()
+    vim.cmd("normal! 2GVj")
+    ask.ask()
+    local visual_ask_question = "Explain this selection."
+    local visual_ask_call = submit("ask", visual_ask_question)
+    local visual_ask_context = context.build({
+      mode = "visual",
+      bufnr = bufnr,
+      range = { start_line = 1, end_line = 2 },
+    })
+    assert_equal(visual_ask_context.scope_kind, "selection", "visual ask scope")
+    assert_equal(
+      visual_ask_context.code,
+      '  local message = "Hello, " .. name\n  return message',
+      "visual ask code"
+    )
+    assert_equal(
+      visual_ask_call.prompt,
+      context.render_prompt(visual_ask_question, visual_ask_context),
+      "visual ask generated prompt"
+    )
+    local _, visual_ask_entry = only_entry("visual ask pending")
+    assert_equal(visual_ask_entry.kind, "range", "visual ask entry kind")
+    assert_anchor(visual_ask_entry, "ask", "pending", "visual ask")
+    assert_range(visual_ask_entry, "ask", 1, "visual ask")
+    visual_ask_call.on_done({
+      ok = true,
+      result = "The selection builds and returns a greeting.",
+      duration_ms = 10,
+      tokens = { input = 1, output = 2 },
+    })
+    signs.stop_spinner()
+    assert_anchor(visual_ask_entry, "ask", "done", "visual ask")
+    ask.clear_line()
+    assert_cleared("visual ask clear")
+
+    local relative_fixture = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":.")
+    reset_buffer()
+    vim.api.nvim_win_set_cursor(0, { 2, 8 })
+    ask.edit()
+    local normal_edit_call = submit("edit", "Rename the local variable.")
+    local normal_edit_context = context.build({ mode = "normal", bufnr = bufnr })
+    assert_equal(
+      normal_edit_call.prompt,
+      context.render_edit_prompt("Rename the local variable.", normal_edit_context, relative_fixture),
+      "normal edit generated prompt"
+    )
+    assert_contains(normal_edit_call.prompt, "lines to edit: 1-4  (4 lines", "normal edit line bounds")
+    local _, normal_edit_entry = only_entry("normal edit pending")
+    assert_equal(normal_edit_entry.status, "pending", "normal edit pending status")
+    assert_anchor(normal_edit_entry, "edit", "pending", "normal edit")
+    assert_range(normal_edit_entry, "edit", 3, "normal edit")
+    normal_edit_call.on_done({
+      ok = true,
+      result = table.concat({
+        "--- a/" .. relative_fixture,
+        "+++ b/" .. relative_fixture,
+        "@@ -1,4 +1,4 @@",
+        "-local function greeting(name)",
+        '-  local message = "Hello, " .. name',
+        "-  return message",
+        "-end",
+        "+local function greeting(name)",
+        '+  local greeting = "Hello, " .. name',
+        "+  return greeting",
+        "+end",
+      }, "\n"),
+      duration_ms = 10,
+      tokens = { input = 1, output = 2 },
+    })
+    signs.stop_spinner()
+    assert_equal(normal_edit_entry.status, "done", "normal edit completed status")
+    assert_sequence(normal_edit_entry.added, {
+      "local function greeting(name)",
+      '  local greeting = "Hello, " .. name',
+      "  return greeting",
+      "end",
+    }, "normal edit parsed diff")
+    assert_anchor(normal_edit_entry, "edit", "done", "normal edit")
+    local clears_before_apply = diff_clears
+    ask.apply_line()
+    assert_equal(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), {
+      "local function greeting(name)",
+      '  local greeting = "Hello, " .. name',
+      "  return greeting",
+      "end",
+      "",
+      'return greeting("Neovim")',
+    }, "normal edit applied buffer")
+    if diff_clears <= clears_before_apply then
+      fail("normal edit apply should clear the diff preview")
+    end
+    assert_cleared("normal edit apply")
+
+    reset_buffer()
+    local before_reject = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    vim.cmd("normal! 2GVj")
+    ask.edit()
+    local visual_edit_instruction = "Rename the local variable `message` to `greeting` without changing behavior."
+    local visual_edit_call = submit("edit", visual_edit_instruction)
+    local visual_edit_context = context.build({
+      mode = "visual",
+      bufnr = bufnr,
+      range = { start_line = 1, end_line = 2 },
+    })
+    assert_equal(
+      visual_edit_call.prompt,
+      context.render_edit_prompt(visual_edit_instruction, visual_edit_context, relative_fixture),
+      "visual edit generated prompt"
+    )
+    assert_contains(visual_edit_call.prompt, "lines to edit: 2-3  (2 lines", "visual edit line bounds")
+    assert_contains(
+      visual_edit_call.prompt,
+      ' 2 │  local message = "Hello, " .. name\n 3 │  return message',
+      "visual edit numbered selection"
+    )
+    if visual_edit_call.prompt:find("local function greeting", 1, true) then
+      fail("visual edit should not include the surrounding function")
+    end
+    local _, visual_edit_entry = only_entry("visual edit pending")
+    assert_equal(visual_edit_entry.kind, "range", "visual edit entry kind")
+    assert_anchor(visual_edit_entry, "edit", "pending", "visual edit")
+    assert_range(visual_edit_entry, "edit", 1, "visual edit")
+    visual_edit_call.on_done({
+      ok = true,
+      result = table.concat({
+        "--- a/" .. relative_fixture,
+        "+++ b/" .. relative_fixture,
+        "@@ -2,2 +2,2 @@",
+        '-  local message = "Hello, " .. name',
+        "-  return message",
+        '+  local greeting = "Hello, " .. name',
+        "+  return greeting",
+      }, "\n"),
+      duration_ms = 10,
+      tokens = { input = 1, output = 2 },
+    })
+    signs.stop_spinner()
+    assert_sequence(visual_edit_entry.added, {
+      '  local greeting = "Hello, " .. name',
+      "  return greeting",
+    }, "visual edit parsed diff")
+    assert_anchor(visual_edit_entry, "edit", "done", "visual edit")
+    ask.reject_line()
+    assert_equal(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), before_reject, "visual edit rejected buffer")
+    assert_cleared("visual edit reject")
+
+    assert_equal(vim.fn.readfile(fixture), original_lines, "tracked inline ask/edit fixture")
+    reset_buffer()
+  end, debug.traceback)
+
+  vim.system = original_system
+  vim.lsp.buf_request_sync = original_lsp_hover
+  package.path = original_package_path
+  for _, name in ipairs(ask_modules) do
+    package.loaded[name] = original_modules[name] or nil
+  end
+
+  if not ok then
+    fail(err)
+  end
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
+  ["inline-ask-edit"] = validate_inline_ask_edit,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
   ["herdr-workspaces"] = validate_herdr_workspaces,
@@ -2197,7 +2603,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-work-items"
+      .. "; expected one of: agent-keymaps, inline-ask-edit, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-work-items"
   )
 end
 
