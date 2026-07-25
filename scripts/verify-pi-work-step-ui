@@ -279,9 +279,8 @@ if (main.plain.includes("Plan  "))
 for (const nativeThinking of ["Scope timeline", "Inspect configuration", "Finalize plan rendering"])
 	if (!main.plain.includes(nativeThinking)) fail(`Native thinking disappeared: ${nativeThinking}`);
 for (const header of [
-	"Activity  2 steps · 3 calls · all passed",
-	"Activity  1 step · 2 calls · failed",
-	"Activity  1 step · 1 call · all passed",
+	"Activity  2 steps · 6 calls · all passed",
+	"Activity  3 steps · 4 calls · failed",
 ]) {
 	if (!main.plain.includes(header)) fail(`Missing nested activity header: ${header}`);
 }
@@ -289,6 +288,7 @@ if (!main.plain.includes(" Activity  "))
 	fail("Generic orange Activity label is missing");
 
 const sameSummary = "2 calls · noisy_verify_tool ×2 · completed";
+const sameFollowupSummary = "4 calls · mcp(google) ×2 · mcp(whatsapp) · mcp(gateway) · completed";
 const mixedSummary = "settings.json · 2 calls · noisy_verify_tool · read · failed";
 const restoreSuccessSummary = "1 call · noisy_verify_tool · completed";
 const restoreFailureSummary = "1 call · noisy_verify_tool · failed";
@@ -296,20 +296,20 @@ const restoreFailureSummary = "1 call · noisy_verify_tool · failed";
 const same = requireTerminalRow(main, sameSummary, "●", "Run grouped verification", "└─", "├─");
 const sameFollowup = requireTerminalRow(
 	main,
-	restoreSuccessSummary,
+	sameFollowupSummary,
 	"●",
 	"Continue grouped verification",
 	"└─",
 	"└─",
 );
-const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─", "└─");
+const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─", "├─");
 const restoredSource = requireTerminalRow(
 	main,
 	restoreSuccessSummary,
 	"●",
 	"Reconcile persisted tool result",
 	"└─",
-	"└─",
+	"├─",
 );
 const afterReload = requireTerminalRow(
 	main,
@@ -331,7 +331,7 @@ const nestedSteps = new RegExp(
 );
 if (!nestedSteps.test(main.plain)) fail("Continuous steps do not form a compact inner timeline");
 const spacedActivities = new RegExp(
-	`${escapeRegExp(restoreSuccessSummary)}\\r*\\n\\r*\\n Activity  1 step`,
+	`${escapeRegExp(sameFollowupSummary)}\\r*\\n\\r*\\n Activity  3 steps`,
 	"u",
 );
 if (!spacedActivities.test(main.plain)) fail("Separate activities do not flow with one blank line between them");
@@ -343,18 +343,16 @@ assertNoLaterActiveState(main, mixedSummary, "×");
 if (missing.plain.includes("Plan  "))
 	fail("Restored timeline rendered a custom thinking Plan");
 for (const header of [
-	"Activity  2 steps · 3 calls · all passed",
-	"Activity  1 step · 2 calls · failed",
-	"Activity  1 step · 1 call · failed",
+	"Activity  2 steps · 6 calls · all passed",
+	"Activity  2 steps · 3 calls · failed",
 ])
 	if (!missing.plain.includes(header)) fail(`Restored nested activity header is incorrect: ${header}`);
 const restoredOrder = [
-	missing.plain.indexOf("Activity  2 steps · 3 calls · all passed"),
+	missing.plain.indexOf("Activity  2 steps · 6 calls · all passed"),
 	missing.plain.indexOf("├─ ● Run grouped verification"),
 	missing.plain.indexOf("└─ ● Continue grouped verification"),
-	missing.plain.indexOf("Activity  1 step · 2 calls · failed"),
-	missing.plain.indexOf("└─ × Working with settings.json"),
-	missing.plain.indexOf("Activity  1 step · 1 call · failed"),
+	missing.plain.indexOf("Activity  2 steps · 3 calls · failed"),
+	missing.plain.indexOf("├─ × Working with settings.json"),
 	missing.plain.indexOf("└─ × Reconcile persisted tool result"),
 ];
 if (restoredOrder.some((index) => index < 0) || restoredOrder.some((index, position) => position > 0 && index <= restoredOrder[position - 1]))
@@ -372,7 +370,7 @@ if (!missingFailure) fail("Restored work step without a matching tool result was
 assertForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step timeline verified offline: native thinking untouched; generic Activity headers preserve chronological outer and inner flow, compact results, spacing, connectors, restoration, reload, suppression, and semantic ANSI colors.",
+	"Pi work-step timeline verified offline: adjacent single-step activities coalesce and MCP calls group by server while preserving chronological flow, restoration, reload, suppression, and semantic ANSI colors.",
 );
 NODE
 

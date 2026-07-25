@@ -35,7 +35,6 @@ type WorkStep = {
   title: string;
   titleLocked: boolean;
   toolCalls: ToolCall[];
-  toolNames: string[];
   toolCallIds: Set<string>;
   completedToolCallIds: Set<string>;
   failed: boolean;
@@ -109,9 +108,22 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function groupTools(toolNames: string[]): string[] {
+function displayToolName(toolCall: ToolCall): string {
+  if (toolCall.name !== "mcp") return toolCall.name;
+  const server =
+    asString(toolCall.arguments.server)?.trim() ||
+    asString(toolCall.arguments.connect)?.trim() ||
+    "gateway";
+  const label = cleanToolName(server).replace(/[_-]workspace$/i, "");
+  return `mcp(${label || "gateway"})`;
+}
+
+function groupTools(toolCalls: ToolCall[]): string[] {
   const counts = new Map<string, number>();
-  for (const name of toolNames) counts.set(name, (counts.get(name) ?? 0) + 1);
+  for (const toolCall of toolCalls) {
+    const name = displayToolName(toolCall);
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
   return [...counts].map(
     ([name, count]) => `${name}${count === 1 ? "" : ` ×${count}`}`,
   );
@@ -145,7 +157,6 @@ function isCheckCommand(toolCall: ToolCall): boolean {
 }
 
 function fallbackTitle(toolCalls: ToolCall[]): string {
-  const names = toolCalls.map((toolCall) => toolCall.name);
   const targets = uniqueTargets(toolCalls);
   const target = formatTargets(targets);
   if (toolCalls.every((toolCall) => ["edit", "write"].includes(toolCall.name)))
@@ -156,7 +167,7 @@ function fallbackTitle(toolCalls: ToolCall[]): string {
   if (toolCalls.every((toolCall) => toolCall.name === "bash"))
     return `Running ${plural(toolCalls.length, "command")}`;
   if (target) return `Working with ${target}`;
-  return `Using ${groupTools(names).join(", ")}`;
+  return `Using ${groupTools(toolCalls).join(", ")}`;
 }
 
 function titleFromContent(
@@ -199,7 +210,6 @@ function outcomePart(step: WorkStep, successText: string): SummaryPart {
 
 function summaryParts(step: WorkStep): SummaryPart[] {
   const calls = step.toolCalls;
-  const names = calls.map((call) => call.name);
   const targets = formatTargets(uniqueTargets(calls));
   const parts: SummaryPart[] = [];
   const add = (part: SummaryPart) => {
@@ -244,7 +254,7 @@ function summaryParts(step: WorkStep): SummaryPart[] {
   }
 
   add({ text: plural(calls.length, "call"), role: "strong" });
-  add({ text: groupTools(names).join(" · "), role: "strong" });
+  add({ text: groupTools(calls).join(" · "), role: "strong" });
   add(outcomePart(step, "completed"));
   return parts;
 }
@@ -259,19 +269,37 @@ function renderSummary(theme: Theme, step: WorkStep): string {
     .join("");
 }
 
-function renderActivityHeader(theme: Theme, group: ActivityGroup): string {
-  const calls = group.steps.reduce((count, step) => count + step.toolCalls.length, 0);
-  const completed = group.steps.filter((step) => status(step) === "success").length;
-  const failed = group.steps.some((step) => status(step) === "failure");
-  const settled = completed === group.steps.length;
+function renderedGroups(run: ActivityRun): WorkStep[][] {
+  const groups: WorkStep[][] = [];
+  let singles: WorkStep[] | undefined;
+  for (const group of run.groups) {
+    if (group.steps.length === 1) {
+      if (!singles) {
+        singles = [];
+        groups.push(singles);
+      }
+      singles.push(group.steps[0]);
+    } else {
+      singles = undefined;
+      groups.push(group.steps);
+    }
+  }
+  return groups;
+}
+
+function renderActivityHeader(theme: Theme, steps: WorkStep[]): string {
+  const calls = steps.reduce((count, step) => count + step.toolCalls.length, 0);
+  const completed = steps.filter((step) => status(step) === "success").length;
+  const failed = steps.some((step) => status(step) === "failure");
+  const settled = completed === steps.length;
   const state = failed
     ? theme.fg("error", theme.bold("failed"))
     : settled
       ? theme.fg("success", theme.bold("all passed"))
-      : theme.fg("warning", theme.bold(`${completed}/${group.steps.length} complete`));
+      : theme.fg("warning", theme.bold(`${completed}/${steps.length} complete`));
   return (
     ` ${theme.fg("accent", theme.bold("Activity"))}  ` +
-    theme.fg("muted", `${plural(group.steps.length, "step")} · ${plural(calls, "call")} · `) +
+    theme.fg("muted", `${plural(steps.length, "step")} · ${plural(calls, "call")} · `) +
     state
   );
 }
@@ -284,9 +312,10 @@ class WorkStepRow {
 
   render(width: number): string[] {
     const lines: string[] = [];
-    for (const [groupIndex, group] of this.step.run.groups.entries()) {
-      lines.push(renderActivityHeader(this.theme, group));
-      for (const [stepIndex, step] of group.steps.entries()) {
+    const groups = renderedGroups(this.step.run);
+    for (const [groupIndex, steps] of groups.entries()) {
+      lines.push(renderActivityHeader(this.theme, steps));
+      for (const [stepIndex, step] of steps.entries()) {
         const currentStatus = status(step);
         const glyph =
           currentStatus === "pending"
@@ -294,14 +323,14 @@ class WorkStepRow {
             : currentStatus === "failure"
               ? this.theme.fg("error", "×")
               : this.theme.fg("success", "●");
-        const finalStep = stepIndex === group.steps.length - 1;
+        const finalStep = stepIndex === steps.length - 1;
         const outer = this.theme.fg("borderMuted", finalStep ? "└─" : "├─");
         const rail = this.theme.fg("borderMuted", finalStep ? "   " : "│  ");
         const inner = this.theme.fg("borderMuted", "└─");
         lines.push(` ${outer} ${glyph} ${this.theme.fg("text", step.title)}`);
         lines.push(` ${rail}${inner} ${renderSummary(this.theme, step)}`);
       }
-      if (groupIndex < this.step.run.groups.length - 1) lines.push("");
+      if (groupIndex < groups.length - 1) lines.push("");
     }
     return lines.map((line) => truncateToWidth(line, width));
   }
@@ -359,7 +388,6 @@ function updateAssistant(
     return;
   }
 
-  const toolNames = toolCalls.map((toolCall) => toolCall.name);
   const candidate = titleFromContent(content, toolCalls);
   const existing = component[WORK_STEP] as WorkStep | undefined;
   const run = existing?.run ?? state.currentRun ?? { steps: [], groups: [] };
@@ -376,7 +404,6 @@ function updateAssistant(
       title: candidate.title,
       titleLocked: !candidate.synthesized,
       toolCalls: [],
-      toolNames: [],
       toolCallIds: new Set<string>(),
       completedToolCallIds: new Set<string>(),
       failed: false,
@@ -395,7 +422,6 @@ function updateAssistant(
   }
 
   step.toolCalls = toolCalls;
-  step.toolNames = toolNames;
   step.toolCallIds = new Set(toolCalls.map((toolCall) => toolCall.id));
   if (!step.titleLocked) {
     step.title = candidate.title;

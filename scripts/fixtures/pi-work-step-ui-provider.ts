@@ -49,9 +49,24 @@ const responses = [
 			fauxThinking("Finalize plan rendering → Outcome: oldest thinking blocks are omitted"),
 			fauxText("Continue grouped verification"),
 			fauxToolCall(
-				"noisy_verify_tool",
-				{ value: "NOISY_ARGUMENT_SENTINEL", fail: false },
-				{ id: "verify-same-followup" },
+				"mcp",
+				{ server: "google_workspace", tool: "google_workspace_search_gmail_messages" },
+				{ id: "verify-mcp-google-1" },
+			),
+			fauxToolCall(
+				"mcp",
+				{ connect: "google_workspace" },
+				{ id: "verify-mcp-google-2" },
+			),
+			fauxToolCall(
+				"mcp",
+				{ server: "whatsapp", tool: "whatsapp_list_messages" },
+				{ id: "verify-mcp-whatsapp" },
+			),
+			fauxToolCall(
+				"mcp",
+				{ tool: "search_gmail_messages" },
+				{ id: "verify-mcp-gateway" },
 			),
 		],
 		{ stopReason: "toolUse" },
@@ -118,6 +133,20 @@ export default function piWorkStepUiProvider(pi: ExtensionAPI) {
 		}),
 	);
 	pi.registerProvider(faux.provider);
+
+	pi.registerTool({
+		name: "mcp",
+		label: "MCP verifier tool",
+		description: "Verifies that MCP calls are grouped by server.",
+		parameters: Type.Object({
+			server: Type.Optional(Type.String()),
+			connect: Type.Optional(Type.String()),
+			tool: Type.Optional(Type.String()),
+		}),
+		async execute() {
+			return { content: [{ type: "text", text: "MCP_RESULT_SENTINEL" }] };
+		},
+	});
 
 	pi.registerTool({
 		name: "noisy_verify_tool",
