@@ -291,6 +291,132 @@ func TestWorkerLifecycleV04(t *testing.T) {
 	assertWorkerTestPreserved(t, finalHerdr, run)
 }
 
+func TestWorkerLifecycleV05(t *testing.T) {
+	stateDir := t.TempDir()
+	herdr, herdrState := newWorkerTestHerdr(t)
+	t.Setenv("PATH", filepath.Dir(herdr)+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	run := workerTestRun()
+	driver := run.Orchestrator
+	legacyDriver := driver
+	legacyDriver.WorkspaceID = ""
+	legacyDriver.TabID = ""
+	run.Orchestrator = legacyDriver
+	run.Participants[0] = legacyDriver
+	worker := workerTestParticipant(
+		"codex-resumed-worker",
+		"w-feature:t-resumed-worker",
+		"w-feature:p-resumed-worker",
+		"term-resumed-worker",
+		"session-resumed-worker",
+	)
+	worker.GoalID = "V05"
+	run.Participants = append(run.Participants, worker)
+	writeWorkerTestRun(t, stateDir, run)
+	writeWorkerTestHerdrState(t, herdrState, workerTestHerdrState{
+		Tabs: []workerTestTab{
+			{TabID: driver.TabID, WorkspaceID: driver.WorkspaceID, Label: "Issue · driver", PaneCount: 2},
+			{TabID: worker.TabID, WorkspaceID: worker.WorkspaceID, Label: "Issue · resumed worker", PaneCount: 1},
+		},
+		Agents: map[string]runregistry.Participant{
+			driver.PaneID: driver,
+			worker.Name:   worker,
+		},
+		Panes: map[string]bool{
+			driver.PaneID:        true,
+			run.Companion.PaneID: true,
+			worker.PaneID:        true,
+		},
+	})
+
+	if _, err := runWorkerTestCommand(t, []string{
+		"ensure",
+		"--state-dir", stateDir,
+		"--task-id", run.Task.ID,
+		"--task-title", "Reconcile Herdr worker tab lifecycle",
+		"--task-path", run.Task.Path,
+		"--feature-path", "/vault/pi-skills-tools.md",
+		"--invoked-at", "2026-07-25T08:55:00-04:00",
+		"--orchestrator-pane", driver.PaneID,
+		"--goal", "V05=legacy resume=done",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	resumed := readWorkerTestRun(t, stateDir)
+	if resumed.Orchestrator != driver || resumed.Participants[0] != driver {
+		t.Fatalf(
+			"resume did not backfill the unchanged orchestrator's exact live identity: orchestrator=%#v participants=%#v",
+			resumed.Orchestrator,
+			resumed.Participants,
+		)
+	}
+
+	output, err := runWorkerTestCommand(t, []string{
+		"reconcile-workers", "--state-dir", stateDir, "--run-id", run.RunID, "--herdr", herdr,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertWorkerLifecycleStates(t, decodeWorkerLifecycleReport(t, output), [][3]string{
+		{worker.Name, worker.TabID, "live"},
+	})
+}
+
+func TestWorkerLifecycleV06(t *testing.T) {
+	stateDir := t.TempDir()
+	herdr, herdrState := newWorkerTestHerdr(t)
+	run := workerTestRun()
+	name := "codex-pi-skills-tools-worker-lifecycle-verifier"
+	stale := workerTestParticipant(
+		name,
+		"w-feature:t-verifier-old",
+		"w-feature:p-verifier-old",
+		"term-verifier-old",
+		"session-verifier-old",
+	)
+	stale.GoalID = "V06"
+	restarted := workerTestParticipant(
+		name,
+		"w-feature:t-verifier-new",
+		"w-feature:p-verifier-new",
+		"term-verifier-new",
+		"session-verifier-new",
+	)
+	restarted.GoalID = "V06"
+	run.Participants = append(run.Participants, stale)
+	writeWorkerTestRun(t, stateDir, run)
+	writeWorkerTestHerdrState(t, herdrState, workerTestHerdrState{
+		Tabs: []workerTestTab{{
+			TabID:       restarted.TabID,
+			WorkspaceID: restarted.WorkspaceID,
+			Label:       "Issue · verifier restart",
+			PaneCount:   1,
+		}},
+		Agents: map[string]runregistry.Participant{restarted.Name: restarted},
+		Panes:  map[string]bool{restarted.PaneID: true},
+	})
+
+	if _, err := runWorkerTestCommand(t, workerCaptureArgs(stateDir, herdr, restarted)); err != nil {
+		t.Fatalf("capturing same-name worker restart: %v", err)
+	}
+	persisted := readWorkerTestRun(t, stateDir)
+	wantParticipants := []runregistry.Participant{run.Orchestrator, stale, restarted}
+	if !reflect.DeepEqual(persisted.Participants, wantParticipants) {
+		t.Fatalf("same-name restart erased its stale launch: got %#v want %#v", persisted.Participants, wantParticipants)
+	}
+
+	output, err := runWorkerTestCommand(t, []string{
+		"reconcile-workers", "--state-dir", stateDir, "--run-id", run.RunID, "--herdr", herdr,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertWorkerLifecycleStates(t, decodeWorkerLifecycleReport(t, output), [][3]string{
+		{stale.Name, stale.TabID, "stale"},
+		{restarted.Name, restarted.TabID, "live"},
+	})
+}
+
 func TestWorkerLifecycleFakeHerdr(t *testing.T) {
 	statePath := os.Getenv("VAULT_HUNTER_FAKE_HERDR_STATE")
 	if statePath == "" {
@@ -424,6 +550,8 @@ func workerTestRun() runregistry.Run {
 			{ID: "V02", Label: "stale", Status: "done"},
 			{ID: "V03", Label: "restart", Status: "done"},
 			{ID: "V04", Label: "cleanup", Status: "done"},
+			{ID: "V05", Label: "legacy resume", Status: "done"},
+			{ID: "V06", Label: "same-name restart", Status: "done"},
 		},
 		Orchestrator: driver,
 		Participants: []runregistry.Participant{driver},
