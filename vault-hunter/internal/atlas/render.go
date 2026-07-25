@@ -11,6 +11,7 @@ func RenderExpanded(run Run, width, height int) string {
 	lines := []string{
 		fmt.Sprintf("Vault Hunter · %s · %s", run.RunID, strings.ToUpper(run.Status)),
 		activeSummary(active),
+		"next: " + run.NextAction,
 		"",
 		"GOAL TIMELINE",
 	}
@@ -27,7 +28,6 @@ func RenderExpanded(run Run, width, height int) string {
 	for _, evidence := range run.Evidence {
 		lines = append(lines, evidence.ID+" "+evidence.Summary)
 	}
-	lines = append(lines, "next: "+run.NextAction)
 	return fitLines(lines, width, height)
 }
 

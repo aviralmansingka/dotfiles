@@ -6,8 +6,11 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 module_dir="$script_dir/../vault-hunter"
 
 case "$case_name" in
-  V01|all)
-    (cd "$module_dir" && go test ./internal/atlas -run '^TestV01')
+  V01|V02)
+    (cd "$module_dir" && go test ./internal/atlas -run "^Test${case_name}")
+    ;;
+  all)
+    (cd "$module_dir" && go test ./internal/atlas)
     ;;
   *)
     printf 'verify-vault-hunter-atlas: unsupported case %s\n' "$case_name" >&2
