@@ -68,5 +68,5 @@ func (m UIModel) View() string {
 		return output
 	}
 	goal := m.run.Goals[index]
-	return output + fmt.Sprintf("\nselected: %s %s", goal.ID, goal.Label)
+	return output + "\n" + truncate(fmt.Sprintf("selected: %s %s", goal.ID, goal.Label), m.width)
 }

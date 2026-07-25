@@ -3,7 +3,8 @@ package atlas
 import (
 	"fmt"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/mattn/go-runewidth"
 )
 
 func RenderExpanded(run Run, width, height int) string {
@@ -150,21 +151,20 @@ func fitLines(lines []string, width, height int) string {
 
 func center(value string, width int) string {
 	value = truncate(value, width)
-	padding := (width - utf8.RuneCountInString(value)) / 2
+	padding := (width - runewidth.StringWidth(value)) / 2
 	return strings.Repeat(" ", max(0, padding)) + value
 }
 
 func pad(value string, width int) string {
-	return value + strings.Repeat(" ", max(0, width-utf8.RuneCountInString(value)))
+	return value + strings.Repeat(" ", max(0, width-runewidth.StringWidth(value)))
 }
 
 func truncate(value string, width int) string {
-	runes := []rune(value)
-	if len(runes) <= width {
+	if runewidth.StringWidth(value) <= width {
 		return value
 	}
 	if width <= 1 {
-		return string(runes[:width])
+		return runewidth.Truncate(value, max(0, width), "")
 	}
-	return string(runes[:width-1]) + "…"
+	return runewidth.Truncate(value, width, "…")
 }
