@@ -161,6 +161,72 @@ func (s *Store) Finish(ctx context.Context, runID string) error {
 	})
 }
 
+func (s *Store) RegisterParticipant(runID string, participant Participant) (Run, error) {
+	run, err := s.Read(runID)
+	if err != nil {
+		return Run{}, err
+	}
+	var result Run
+	err = s.withTaskLock(run.Task.Path, func() error {
+		run, err = s.Read(runID)
+		if err != nil {
+			return err
+		}
+		if run.Status != "active" && run.Status != "blocked" {
+			return fmt.Errorf("Task Run %s is not active", runID)
+		}
+		if err := validateParticipant(run, participant); err != nil {
+			return err
+		}
+		for index, existing := range run.Participants {
+			if existing.TerminalID == participant.TerminalID &&
+				existing.AgentSession == participant.AgentSession {
+				if existing == participant {
+					result = run
+					return nil
+				}
+				run.Participants[index] = participant
+				return s.writeRegisteredParticipant(&run, &result)
+			}
+			if existing.PaneID == participant.PaneID ||
+				(existing.TabID != "" && existing.TabID == participant.TabID) {
+				return fmt.Errorf("participant pane or tab is already registered to another session")
+			}
+		}
+		run.Participants = append(run.Participants, participant)
+		return s.writeRegisteredParticipant(&run, &result)
+	})
+	return result, err
+}
+
+func validateParticipant(run Run, participant Participant) error {
+	if participant.Role == "" || participant.Role == "orchestrator" ||
+		participant.GoalID == "" || participant.Name == "" ||
+		participant.WorkspaceID == "" || participant.TabID == "" ||
+		participant.PaneID == "" || participant.TerminalID == "" ||
+		participant.AgentSession.Source == "" ||
+		participant.AgentSession.Kind == "" ||
+		participant.AgentSession.Value == "" {
+		return fmt.Errorf("complete non-orchestrator role, goal, agent, workspace, tab, pane, terminal, and session identity are required")
+	}
+	for _, goal := range run.Goals {
+		if goal.ID == participant.GoalID {
+			return nil
+		}
+	}
+	return fmt.Errorf("participant goal %s is not in Task Run %s", participant.GoalID, run.RunID)
+}
+
+func (s *Store) writeRegisteredParticipant(run *Run, result *Run) error {
+	run.Revision++
+	run.UpdatedAt = s.now().Format(time.RFC3339)
+	if err := s.write(*run); err != nil {
+		return err
+	}
+	*result = *run
+	return nil
+}
+
 func (s *Store) Read(runID string) (Run, error) {
 	data, err := os.ReadFile(filepath.Join(s.stateDir, "runs", runID+".json"))
 	if err != nil {

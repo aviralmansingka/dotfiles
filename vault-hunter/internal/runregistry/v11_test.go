@@ -127,3 +127,102 @@ func TestV11OnlyTaskRunsCreateAndReuseAtlas(t *testing.T) {
 		t.Fatalf("cleanup closed the driver or a worker pane: %#v", herdr.live)
 	}
 }
+
+func TestV11RegistersExactWorkerAndReviewerIdentity(t *testing.T) {
+	ctx := context.Background()
+	stateDir := t.TempDir()
+	herdr := &v11Herdr{live: map[string]bool{"driver-pane": true}}
+	store := runregistry.NewStore(stateDir, herdr)
+	run, err := store.Ensure(ctx, runregistry.EnsureOptions{
+		Task: runregistry.Task{
+			ID:   "T11",
+			Path: "/vault/task-11.md",
+			Kind: "task",
+		},
+		InvokedAt: time.Now(),
+		Orchestrator: runregistry.Participant{
+			Role:        "orchestrator",
+			Name:        "codex-driver",
+			WorkspaceID: "w2R",
+			TabID:       "w2R:t8",
+			PaneID:      "driver-pane",
+			TerminalID:  "driver-terminal",
+			AgentSession: runregistry.AgentSession{
+				Source: "herdr:codex",
+				Kind:   "id",
+				Value:  "driver-session",
+			},
+		},
+		Goals: []runregistry.Goal{{ID: "V11", Label: "Run eligibility", Status: "active"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker := runregistry.Participant{
+		Role:        "implementation",
+		GoalID:      "V11",
+		Name:        "codex-vault-hunter-t11-v11-implement",
+		WorkspaceID: "w2R",
+		TabID:       "w2R:tB",
+		PaneID:      "w2R:pQ",
+		TerminalID:  "term-worker",
+		AgentSession: runregistry.AgentSession{
+			Source: "herdr:codex",
+			Kind:   "id",
+			Value:  "worker-session",
+		},
+	}
+	registered, err := store.RegisterParticipant(run.RunID, worker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	revision := registered.Revision
+	registered, err = store.RegisterParticipant(run.RunID, worker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if registered.Revision != revision || len(registered.Participants) != 2 {
+		t.Fatalf("idempotent registration changed the Run: %#v", registered)
+	}
+	reviewer := worker
+	reviewer.Role = "reviewer"
+	reviewer.Name = "codex-vault-hunter-t11-v11-review"
+	reviewer.TabID = "w2R:tD"
+	reviewer.PaneID = "w2R:pS"
+	reviewer.TerminalID = "term-reviewer"
+	reviewer.AgentSession.Value = "reviewer-session"
+	registered, err = store.RegisterParticipant(run.RunID, reviewer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(registered.Participants) != 3 {
+		t.Fatalf("reviewer registration did not preserve all participants: %#v", registered.Participants)
+	}
+	found, participant, err := runregistry.FindParticipant(
+		stateDir,
+		worker.TerminalID,
+		worker.AgentSession,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found.RunID != run.RunID || participant != worker {
+		t.Fatalf("worker identity or role/goal context was not preserved: %#v", participant)
+	}
+	full := atlas.RenderExpanded(registered, 120, 46)
+	if !strings.Contains(full, "implementation · V11 · codex-vault-hunter-t11-v11-implement") ||
+		!strings.Contains(full, "reviewer · V11 · codex-vault-hunter-t11-v11-review") {
+		t.Fatalf("full Atlas omitted participant role/goal context:\n%s", full)
+	}
+
+	invalid := worker
+	invalid.AgentSession.Value = ""
+	if _, err := store.RegisterParticipant(run.RunID, invalid); err == nil {
+		t.Fatal("incomplete agent session identity was registered")
+	}
+	invalid = worker
+	invalid.GoalID = "missing"
+	if _, err := store.RegisterParticipant(run.RunID, invalid); err == nil {
+		t.Fatal("participant was registered against a missing goal")
+	}
+}

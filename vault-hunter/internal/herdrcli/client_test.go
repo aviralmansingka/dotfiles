@@ -56,6 +56,32 @@ esac
 	})
 }
 
+func TestV11AgentPreservesExactWorkspaceTabPaneAndSession(t *testing.T) {
+	binary := filepath.Join(t.TempDir(), "herdr")
+	script := `#!/bin/sh
+printf '{"result":{"agent":{"name":"codex-worker","workspace_id":"w2R","tab_id":"w2R:tB","pane_id":"w2R:pQ","terminal_id":"term-worker","agent_session":{"source":"herdr:codex","kind":"id","value":"session-worker"}}}}\n'
+`
+	if err := os.WriteFile(binary, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	agent, err := (Client{Binary: binary}).Agent(context.Background(), "codex-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if agent.Name != "codex-worker" ||
+		agent.WorkspaceID != "w2R" ||
+		agent.TabID != "w2R:tB" ||
+		agent.PaneID != "w2R:pQ" ||
+		agent.TerminalID != "term-worker" ||
+		agent.AgentSession != (AgentSession{
+			Source: "herdr:codex",
+			Kind:   "id",
+			Value:  "session-worker",
+		}) {
+		t.Fatalf("Herdr identity was not preserved: %#v", agent)
+	}
+}
+
 func assertV11Calls(t *testing.T, path string, want []string) {
 	t.Helper()
 	data, err := os.ReadFile(path)

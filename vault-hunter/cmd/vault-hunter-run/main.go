@@ -34,7 +34,7 @@ func main() {
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: vault-hunter-run ensure|finish")
+		return fmt.Errorf("usage: vault-hunter-run ensure|participant|finish")
 	}
 	stateDir, err := defaultStateDir()
 	if err != nil {
@@ -81,10 +81,12 @@ func run(ctx context.Context, args []string) error {
 			},
 			InvokedAt: when,
 			Orchestrator: runregistry.Participant{
-				Role:       "orchestrator",
-				Name:       agent.Name,
-				PaneID:     agent.PaneID,
-				TerminalID: agent.TerminalID,
+				Role:        "orchestrator",
+				Name:        agent.Name,
+				WorkspaceID: agent.WorkspaceID,
+				TabID:       agent.TabID,
+				PaneID:      agent.PaneID,
+				TerminalID:  agent.TerminalID,
 				AgentSession: runregistry.AgentSession{
 					Source: agent.AgentSession.Source,
 					Kind:   agent.AgentSession.Kind,
@@ -93,6 +95,44 @@ func run(ctx context.Context, args []string) error {
 			},
 			Goals: parsedGoals,
 		})
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(result)
+	case "participant":
+		flags := flag.NewFlagSet("participant", flag.ContinueOnError)
+		flags.SetOutput(os.Stderr)
+		state := flags.String("state-dir", stateDir, "Vault Hunter state directory")
+		runID := flags.String("run-id", "", "active Task Run ID")
+		goalID := flags.String("goal-id", "", "owned Run goal")
+		role := flags.String("role", "", "participant role")
+		target := flags.String("agent", "", "live Herdr agent target")
+		herdrBinary := flags.String("herdr", "herdr", "Herdr executable")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
+		}
+		client := herdrcli.Client{Binary: *herdrBinary}
+		agent, err := client.Agent(ctx, *target)
+		if err != nil {
+			return err
+		}
+		result, err := runregistry.NewStore(*state, client).RegisterParticipant(
+			*runID,
+			runregistry.Participant{
+				Role:        *role,
+				GoalID:      *goalID,
+				Name:        agent.Name,
+				WorkspaceID: agent.WorkspaceID,
+				TabID:       agent.TabID,
+				PaneID:      agent.PaneID,
+				TerminalID:  agent.TerminalID,
+				AgentSession: runregistry.AgentSession{
+					Source: agent.AgentSession.Source,
+					Kind:   agent.AgentSession.Kind,
+					Value:  agent.AgentSession.Value,
+				},
+			},
+		)
 		if err != nil {
 			return err
 		}

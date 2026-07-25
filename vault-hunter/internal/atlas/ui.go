@@ -57,7 +57,12 @@ func (m UIModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m UIModel) View() string {
 	height := max(m.height-1, 1)
-	output := RenderExpanded(m.run, m.width, height)
+	var output string
+	if m.height <= 17 {
+		output = RenderCompact(m.run, m.width, height)
+	} else {
+		output = RenderExpanded(m.run, m.width, height)
+	}
 	index := m.selection.Selected()
 	if index < 0 || index >= len(m.run.Goals) {
 		return output

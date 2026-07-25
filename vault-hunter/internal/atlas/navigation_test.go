@@ -63,19 +63,33 @@ func TestV06EquivalentNavigationKeysAndReturn(t *testing.T) {
 	}
 }
 
-func TestV05InteractiveAtlasKeepsTheFullProfileAtEverySize(t *testing.T) {
-	model := NewUIModel(loadFixture(t))
-
-	for _, size := range [][2]int{{78, 17}, {120, 30}} {
-		updated, _ := model.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
-		output := updated.(UIModel).View()
-		if !strings.Contains(output, "Vault Hunter ·") ||
-			!strings.Contains(output, "GOAL TIMELINE") ||
-			strings.Contains(output, "Vault Hunter Atlas") {
-			t.Fatalf("%dx%d interactive run did not use the full Operations Board:\n%s", size[0], size[1], output)
+func TestV05InteractiveAtlasUsesCompactAtShortHeightsAndFullAtNormalHeights(t *testing.T) {
+	cases := []struct {
+		width   int
+		height  int
+		compact bool
+	}{
+		{40, 10, true},
+		{78, 17, true},
+		{77, 46, false},
+		{120, 30, false},
+	}
+	for _, test := range cases {
+		model := NewUIModel(loadFixture(t))
+		updated, _ := model.Update(tea.WindowSizeMsg{Width: test.width, Height: test.height})
+		current := updated.(UIModel)
+		output := current.View()
+		isCompact := strings.Contains(output, "Vault Hunter Atlas")
+		if isCompact != test.compact {
+			t.Fatalf("%dx%d compact = %t, want %t:\n%s", test.width, test.height, isCompact, test.compact, output)
 		}
-		if lines := strings.Count(output, "\n") + 1; lines > size[1] {
-			t.Fatalf("%dx%d interactive Atlas used %d rows", size[0], size[1], lines)
+		if lines := strings.Count(output, "\n") + 1; lines > test.height {
+			t.Fatalf("%dx%d interactive Atlas used %d rows", test.width, test.height, lines)
+		}
+		next, _ := current.Update(tea.KeyMsg{Type: tea.KeyDown})
+		selected, _ := next.(UIModel).Update(tea.KeyMsg{Type: tea.KeyEnter})
+		if !strings.Contains(selected.(UIModel).View(), "selected: V04 cleanup") {
+			t.Fatalf("%dx%d interactive navigation did not select V04", test.width, test.height)
 		}
 	}
 }

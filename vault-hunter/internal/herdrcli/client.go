@@ -17,6 +17,7 @@ type Client struct {
 
 type AgentInfo struct {
 	Name         string       `json:"name"`
+	WorkspaceID  string       `json:"workspace_id"`
 	PaneID       string       `json:"pane_id"`
 	TabID        string       `json:"tab_id"`
 	TerminalID   string       `json:"terminal_id"`

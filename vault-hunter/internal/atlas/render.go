@@ -28,6 +28,14 @@ func RenderExpanded(run Run, width, height int) string {
 	for _, evidence := range run.Evidence {
 		lines = append(lines, evidence.ID+" "+evidence.Summary)
 	}
+	lines = append(lines, "", "PARTICIPANTS")
+	for _, participant := range run.Participants {
+		goalID := participant.GoalID
+		if goalID == "" {
+			goalID = run.ActiveGoal
+		}
+		lines = append(lines, participant.Role+" · "+goalID+" · "+participant.Name)
+	}
 	return fitLines(lines, width, height)
 }
 

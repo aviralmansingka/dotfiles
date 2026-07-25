@@ -56,7 +56,10 @@ type Evidence struct {
 
 type Participant struct {
 	Role         string       `json:"role"`
+	GoalID       string       `json:"goal_id,omitempty"`
 	Name         string       `json:"name"`
+	WorkspaceID  string       `json:"workspace_id,omitempty"`
+	TabID        string       `json:"tab_id,omitempty"`
 	PaneID       string       `json:"pane_id"`
 	TerminalID   string       `json:"terminal_id"`
 	AgentSession AgentSession `json:"agent_session"`
