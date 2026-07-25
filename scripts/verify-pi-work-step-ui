@@ -13,10 +13,14 @@ trap 'tmux -L "$tmux_socket" kill-server >/dev/null 2>&1 || true; rm -rf "$verif
 agent_dir="$verify_dir/agent"
 main_raw="$verify_dir/main.raw"
 missing_raw="$verify_dir/missing.raw"
+resumed_raw="$verify_dir/resumed.raw"
 session_file="$verify_dir/session.jsonl"
 missing_session="$verify_dir/missing-session.jsonl"
 terminal_session_file="$verify_dir/terminal-session.jsonl"
 terminal_capture="$verify_dir/terminal.txt"
+draft_capture="$verify_dir/draft.txt"
+pending_capture="$verify_dir/pending.txt"
+narrow_capture="$verify_dir/narrow.txt"
 
 if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
 	echo "Visible-thinking prompt customization is still installed" >&2
@@ -50,6 +54,9 @@ after 300
 send -- "mixed-name failure\r"
 expect "VERIFY_MIXED_NAME_DONE"
 after 300
+send -- "thinking without title\r"
+expect "VERIFY_THINKING_NO_TITLE_DONE"
+after 300
 send -- "restoration source\r"
 expect "VERIFY_RESTORE_SOURCE_DONE"
 after 300
@@ -66,6 +73,20 @@ EXPECT
 perl -ne 'print; exit if /"role":"assistant"/ && /"id":"verify-missing-result"/' \
 	"$session_file" > "$missing_session"
 
+export PI_VERIFY_RESUMED_RAW="$resumed_raw"
+expect <<'EXPECT'
+set timeout 20
+log_user 0
+log_file -a -noappend $env(PI_VERIFY_RESUMED_RAW)
+spawn env PI_CODING_AGENT_DIR=$env(PI_VERIFY_AGENT_DIR) PI_VERIFY_RESPONSE_INDEX=1 pi --offline --approve --no-context-files --no-skills --theme $env(PI_VERIFY_THEME) --session $env(PI_VERIFY_SESSION) --model pi-work-step-ui-verify/faux-work-step
+expect "faux-work-step"
+send -- "resumed activity\r"
+expect "VERIFY_SAME_NAME_DONE"
+after 300
+send -- "/quit\r"
+expect eof
+EXPECT
+
 expect <<'EXPECT'
 set timeout 20
 log_user 0
@@ -77,15 +98,16 @@ send -- "/quit\r"
 expect eof
 EXPECT
 
-node - "$main_raw" "$missing_raw" <<'NODE'
+node - "$main_raw" "$missing_raw" "$resumed_raw" <<'NODE'
 const fs = require("node:fs");
 
-const [mainPath, missingPath] = process.argv.slice(2);
+const [mainPath, missingPath, resumedPath] = process.argv.slice(2);
 const activeGlyph = "◉";
 const accentForeground = "rgb:242,133,52";
 const textForeground = "rgb:235,219,178";
 const mutedForeground = "rgb:146,131,116";
 const borderForeground = "rgb:80,73,69";
+const warningForeground = "rgb:250,189,47";
 const successForeground = "rgb:184,187,38";
 const errorForeground = "rgb:242,89,75";
 
@@ -168,7 +190,7 @@ function escapeRegExp(value) {
 
 function rowsFor(terminal, summary) {
 	const pattern = new RegExp(
-		` (?:(├─|└─) )?([●×${activeGlyph}]) ([^\\r\\n]+)\\r*\\n ((?:│  |   )?)(└─) (${escapeRegExp(summary)})`,
+		` (?:(├─|└─) )?([●×${activeGlyph}]) ([^\\r\\n]+)\\r*\\n ((?:│  |   )?)(└─) ([●×${activeGlyph}]) (${escapeRegExp(summary)})`,
 		"gu",
 	);
 	return Array.from(terminal.plain.matchAll(pattern), (match) => ({
@@ -177,12 +199,50 @@ function rowsFor(terminal, summary) {
 		title: match[3],
 		rail: match[4],
 		connector: match[5],
-		summary: match[6],
+		resultGlyph: match[6],
+		summary: match[7],
 		glyphIndex: match.index + match[0].indexOf(match[2]),
 		titleIndex: match.index + match[0].indexOf(match[3]),
 		connectorIndex: match.index + match[0].lastIndexOf(match[5]),
-		summaryIndex: match.index + match[0].lastIndexOf(match[6]),
+		summaryIndex: match.index + match[0].lastIndexOf(match[7]),
 	}));
+}
+
+function thinkingRowsFor(terminal, summary) {
+	const pattern = new RegExp(
+		` (├─|└─) ([●×${activeGlyph}]) ([^\\r\\n]+)\\r*\\n((?: (?:│  |   )├─ • [^\\r\\n]+\\r*\\n)+) ((?:│  |   ))└─ ([●×${activeGlyph}]) (${escapeRegExp(summary)})`,
+		"gu",
+	);
+	return Array.from(terminal.plain.matchAll(pattern), (match) => {
+		const blockOffset = match[0].indexOf(match[4]);
+		const thoughts = Array.from(
+			match[4].matchAll(/ ((?:│  |   ))├─ • ([^\r\n]+)/gu),
+			(thought) => ({
+				rail: thought[1],
+				text: thought[2],
+				glyphIndex:
+					match.index + blockOffset + thought.index + thought[0].indexOf("•"),
+				textIndex:
+					match.index + blockOffset + thought.index + thought[0].indexOf(thought[2]),
+				connectorIndex:
+					match.index + blockOffset + thought.index + thought[0].indexOf("├─"),
+			}),
+		);
+		return {
+			outer: match[1],
+			titleGlyph: match[2],
+			title: match[3],
+			thoughts,
+			rail: match[5],
+			glyph: match[6],
+			summary: match[7],
+			titleGlyphIndex: match.index + match[0].indexOf(match[2]),
+			titleIndex: match.index + match[0].indexOf(match[3]),
+			resultGlyphIndex: match.index + match[0].lastIndexOf(match[6]),
+			connectorIndex: match.index + match[0].lastIndexOf("└─"),
+			summaryIndex: match.index + match[0].lastIndexOf(match[7]),
+		};
+	});
 }
 
 function requireTerminalRow(terminal, summary, glyph, expectedTitle, expectedConnector, expectedOuter) {
@@ -195,13 +255,38 @@ function requireTerminalRow(terminal, summary, glyph, expectedTitle, expectedCon
 	);
 	if (!row)
 		fail(
-			`Missing ${glyph} work step: ${expectedTitle ?? "<synthesized>"} / ${summary} / ${expectedConnector ?? "any connector"}`,
+			`Missing ${glyph} work step: ${expectedTitle ?? "<synthesized>"} / ${summary} / ${expectedConnector ?? "any connector"}; got ${JSON.stringify(rowsFor(terminal, summary))}`,
 		);
 	return row;
 }
 
+function requireThinkingRow(terminal, summary, glyph, title, outer) {
+	const row = thinkingRowsFor(terminal, summary).find(
+		(candidate) =>
+			candidate.glyph === glyph &&
+			candidate.title === title &&
+			(!outer || candidate.outer === outer),
+	);
+	if (!row)
+		fail(`Missing thinking work step: ${title} / ${summary} / ${glyph}`);
+	return row;
+}
+
+function colorsFor(terminal, text, index) {
+	return new Set(
+		Array.from({ length: text.length }, (_, offset) => index + offset)
+			.filter((position) => !/\s/u.test(terminal.plain[position]))
+			.map((position) => terminal.foregrounds[position]),
+	);
+}
+
 function assertForeground(terminal, row) {
-	const expectedGlyph = row.glyph === "×" ? errorForeground : successForeground;
+	const expectedGlyph =
+		row.glyph === activeGlyph
+			? accentForeground
+			: row.glyph === "×"
+				? errorForeground
+				: successForeground;
 	const titleColors = new Set(
 		Array.from({ length: row.title.length }, (_, index) => row.titleIndex + index)
 			.filter((index) => !/\s/u.test(terminal.plain[index]))
@@ -220,7 +305,12 @@ function assertForeground(terminal, row) {
 		fail(
 			`Expected connector foreground ${borderForeground}; got ${terminal.foregrounds[row.connectorIndex]}`,
 		);
-	const expectedOutcome = row.glyph === "×" ? errorForeground : successForeground;
+	const expectedOutcome =
+		row.glyph === activeGlyph
+			? warningForeground
+			: row.glyph === "×"
+				? errorForeground
+				: successForeground;
 	const allowedSummaryColors = new Set([mutedForeground, textForeground, expectedOutcome]);
 	if ([...summaryColors].some((color) => !allowedSummaryColors.has(color)))
 		fail(`Unexpected summary foregrounds: ${Array.from(summaryColors).join(", ")}`);
@@ -234,19 +324,49 @@ function assertForeground(terminal, row) {
 		fail("Expected summary separators/details to remain unbolded");
 }
 
-function assertHeaderForeground(terminal, title) {
-	const matches = Array.from(
-		terminal.plain.matchAll(new RegExp(`${escapeRegExp(title)}  \\d+ steps? ·`, "gu")),
-	);
+function assertThinkingForeground(terminal, row) {
+	const expectedResult =
+		row.glyph === activeGlyph
+			? accentForeground
+			: row.glyph === "×"
+				? errorForeground
+				: successForeground;
+	if (terminal.foregrounds[row.titleGlyphIndex] !== expectedResult)
+		fail(`Expected semantic activity glyph; got ${terminal.foregrounds[row.titleGlyphIndex]}`);
+	const titleColors = colorsFor(terminal, row.title, row.titleIndex);
+	if (titleColors.size !== 1 || !titleColors.has(textForeground))
+		fail(`Expected normal activity title; got ${Array.from(titleColors).join(", ")}`);
+	const titlePositions = Array.from(
+		{ length: row.title.length },
+		(_, offset) => row.titleIndex + offset,
+	).filter((position) => !/\s/u.test(terminal.plain[position]));
+	if (!titlePositions.every((position) => terminal.bolds[position]))
+		fail(`Expected bold thinking title: ${row.title}`);
+	for (const thought of row.thoughts) {
+		if (terminal.foregrounds[thought.connectorIndex] !== borderForeground)
+			fail(`Expected thinking connector foreground ${borderForeground}`);
+		if (terminal.foregrounds[thought.glyphIndex] !== mutedForeground)
+			fail(`Expected muted thinking bullet; got ${terminal.foregrounds[thought.glyphIndex]}`);
+		const coloredText = thought.text.replace(/\.\.\.$/u, "");
+		const thoughtColors = colorsFor(terminal, coloredText, thought.textIndex);
+		if (thoughtColors.size !== 1 || !thoughtColors.has(mutedForeground))
+			fail(
+				`Expected muted thinking text ${JSON.stringify(thought.text)}; got ` +
+					Array.from(thoughtColors).join(", "),
+			);
+	}
+	if (terminal.foregrounds[row.connectorIndex] !== borderForeground)
+		fail(`Expected result connector foreground ${borderForeground}`);
+	if (terminal.foregrounds[row.resultGlyphIndex] !== expectedResult)
+		fail(`Expected result glyph foreground ${expectedResult}`);
+}
+
+function assertHeaderRail(terminal) {
+	const matches = Array.from(terminal.plain.matchAll(/│  \d+ steps? ·/gu));
 	const index = matches.at(-1)?.index ?? -1;
-	if (index < 0) fail(`Missing activity title: ${title}`);
-	const colors = new Set(
-		Array.from({ length: title.length }, (_, offset) => index + offset)
-			.filter((position) => !/\s/u.test(terminal.plain[position]))
-			.map((position) => terminal.foregrounds[position]),
-	);
-	if (colors.size !== 1 || !colors.has(accentForeground))
-		fail(`Expected orange activity title ${title}; got ${Array.from(colors).join(", ")}`);
+	if (index < 0) fail("Missing activity header rail");
+	if (terminal.foregrounds[index] !== borderForeground)
+		fail(`Expected activity header rail foreground ${borderForeground}; got ${terminal.foregrounds[index]}`);
 }
 
 function assertNoLaterActiveState(terminal, summary, terminalGlyph) {
@@ -259,6 +379,7 @@ function assertNoLaterActiveState(terminal, summary, terminalGlyph) {
 
 const main = parseTerminal(mainPath);
 const missing = parseTerminal(missingPath);
+const resumed = parseTerminal(resumedPath);
 
 if (!main.plain.includes("NON_TOOL_RENDERING_SENTINEL"))
 	fail("Non-tool assistant rendering changed or disappeared");
@@ -274,92 +395,131 @@ for (const sentinel of [
 	if (main.plain.includes(sentinel)) fail(`Leaked individual custom-tool content: ${sentinel}`);
 }
 
-if (main.plain.includes("Plan  "))
-	fail("Custom thinking Plan is still rendered");
-for (const nativeThinking of ["Scope timeline", "Inspect configuration", "Finalize plan rendering"])
-	if (!main.plain.includes(nativeThinking)) fail(`Native thinking disappeared: ${nativeThinking}`);
-for (const header of [
-	"Activity  2 steps · 6 calls · all passed",
-	"Activity  3 steps · 4 calls · failed",
+if (main.plain.includes("NON_TOOL_THINKING_SENTINEL"))
+	fail("Native thinking leaked outside the prompt-owned activity");
+if (main.plain.includes("⋯"))
+	fail("The removed ellipsis marker is still rendered");
+if (!/│  1 step · 0 calls · all passed[\s\S]*└─ ● Preparing response[\s\S]*└─ • NONTOOLTHINKINGSENTINEL/u.test(main.plain))
+	fail("A thinking-only response did not create its own prompt-scoped activity");
+const resumedPrompt = resumed.plain.lastIndexOf("resumed activity");
+const resumedMarker = resumed.plain.indexOf("│  ", resumedPrompt);
+if (resumedPrompt < 0 || resumedMarker < 0)
+	fail("A resumed session did not render the activity rail for its new agent turn");
+const draftMarker = main.plain.indexOf("◉ Run grouped verification");
+const settledHeader = main.plain.indexOf("│  1 step · 2 calls", draftMarker);
+if (draftMarker < 0 || settledHeader < 0)
+	fail("Thinking step did not transition from the standalone orange dot to the tool-owned timeline");
+if (main.foregrounds[draftMarker] !== accentForeground)
+	fail(`Expected current thinking dot foreground ${accentForeground}; got ${main.foregrounds[draftMarker]}`);
+let previousDraftThought = draftMarker;
+for (const thought of [
+	"PRETOOLSUPPRESSIONSENTINEL → keep tool activity flow chronological",
+	"Inspect configuration → Decision: validate grouped tool rendering",
+	"Answer renderer question → Outcome: grouped tools share one timeline",
+	"Select plan limit → Decision: retain five recent thinking blocks",
 ]) {
-	if (!main.plain.includes(header)) fail(`Missing nested activity header: ${header}`);
+	const thoughtIndex = main.plain.indexOf(thought, previousDraftThought);
+	if (thoughtIndex < previousDraftThought || thoughtIndex > settledHeader)
+		fail(`Thinking row was not added live before Tool Calls: ${thought}`);
+	previousDraftThought = thoughtIndex;
 }
-if (!main.plain.includes(" Activity  "))
-	fail("Generic orange Activity label is missing");
+for (const header of [
+	"│  3 steps · 6 calls · all passed",
+	"│  1 step · 2 calls · failed",
+]) {
+	if (!main.plain.includes(header)) {
+		const actual = main.plain.match(/│  \d+ steps? · [^\r\n]+/gu) ?? [];
+		fail(`Missing nested activity header: ${header}; got ${JSON.stringify(actual)}`);
+	}
+}
 
 const sameSummary = "2 calls · noisy_verify_tool ×2 · completed";
 const sameFollowupSummary = "4 calls · mcp(google) ×2 · mcp(whatsapp) · mcp(gateway) · completed";
 const mixedSummary = "settings.json · 2 calls · noisy_verify_tool · read · failed";
 const restoreSuccessSummary = "1 call · noisy_verify_tool · completed";
 const restoreFailureSummary = "1 call · noisy_verify_tool · failed";
+const noTitleSummary = "1 call · noisy_verify_tool · completed";
+const pendingSummary = "2 calls · noisy_verify_tool ×2 · running";
 
-const same = requireTerminalRow(main, sameSummary, "●", "Run grouped verification", "└─", "├─");
-const sameFollowup = requireTerminalRow(
+const pending = requireThinkingRow(main, pendingSummary, activeGlyph, "Run grouped verification", "└─");
+const same = requireThinkingRow(main, sameSummary, "●", "Run grouped verification", "├─");
+const sameFollowup = requireThinkingRow(
 	main,
 	sameFollowupSummary,
 	"●",
 	"Continue grouped verification",
-	"└─",
-	"└─",
+	"├─",
 );
-const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─", "├─");
-const restoredSource = requireTerminalRow(
+const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─", "└─");
+const noTitle = requireThinkingRow(main, noTitleSummary, "●", "Thinking", "└─");
+const restoredSource = requireThinkingRow(
 	main,
 	restoreSuccessSummary,
 	"●",
 	"Reconcile persisted tool result",
 	"└─",
-	"├─",
 );
-const afterReload = requireTerminalRow(
+const afterReload = requireThinkingRow(
 	main,
 	restoreSuccessSummary,
 	"●",
 	"Run post-reload verification",
 	"└─",
-	"└─",
 );
 
-for (const row of [same, sameFollowup, mixed, restoredSource, afterReload]) {
-	assertForeground(main, row);
-	if (row.connector !== "└─") fail(`Activity has a dangling connector: ${row.title}`);
-}
-assertHeaderForeground(main, "Activity");
+assertForeground(main, mixed);
+for (const row of [pending, same, sameFollowup, noTitle, restoredSource, afterReload])
+	assertThinkingForeground(main, row);
+assertHeaderRail(main);
 const nestedSteps = new RegExp(
-	`${escapeRegExp(sameSummary)}\\r*\\n └─ ● Continue grouped verification`,
+	`${escapeRegExp(sameSummary)}\r*\n ├─ ● Continue grouped verification`,
 	"u",
 );
 if (!nestedSteps.test(main.plain)) fail("Continuous steps do not form a compact inner timeline");
-const spacedActivities = new RegExp(
-	`${escapeRegExp(sameFollowupSummary)}\\r*\\n\\r*\\n Activity  3 steps`,
+if (same.rail !== "│  " || sameFollowup.rail !== "│  ")
+	fail("Nested timeline rails do not connect and terminate correctly");
+const responseThinking = new RegExp(
+	`${escapeRegExp(sameFollowupSummary)}\\r*\\n └─ ● Preparing response\\r*\\n    └─ • Prepare grouped verification response`,
 	"u",
 );
-if (!spacedActivities.test(main.plain)) fail("Separate activities do not flow with one blank line between them");
-if (same.rail !== "│  " || sameFollowup.rail !== "   ")
-	fail("Nested activity rails do not connect and terminate correctly");
-assertNoLaterActiveState(main, sameSummary, "●");
+if (!responseThinking.test(main.plain))
+	fail("Final response thinking did not remain inside its prompt-owned activity");
 assertNoLaterActiveState(main, mixedSummary, "×");
 
-if (missing.plain.includes("Plan  "))
-	fail("Restored timeline rendered a custom thinking Plan");
 for (const header of [
-	"Activity  2 steps · 6 calls · all passed",
-	"Activity  2 steps · 3 calls · failed",
+	"│  3 steps · 6 calls · all passed",
+	"│  1 step · 2 calls · failed",
+	"│  1 step · 1 call · all passed",
+	"│  1 step · 1 call · failed",
 ])
-	if (!missing.plain.includes(header)) fail(`Restored nested activity header is incorrect: ${header}`);
+	if (!missing.plain.includes(header)) fail(`Restored prompt-scoped timeline header is incorrect: ${header}`);
+const sameHeader = missing.plain.indexOf("│  3 steps · 6 calls · all passed");
+const sameFirst = missing.plain.indexOf("├─ ● Run grouped verification", sameHeader);
+const sameSecond = missing.plain.indexOf("├─ ● Continue grouped verification", sameFirst);
+const sameResponse = missing.plain.indexOf("└─ ● Preparing response", sameSecond);
+const mixedHeader = missing.plain.indexOf("│  1 step · 2 calls · failed", sameResponse);
+const mixedStep = missing.plain.indexOf("└─ × Working with settings.json", mixedHeader);
+const noTitleHeader = missing.plain.indexOf("│  1 step · 1 call · all passed", mixedStep);
+const noTitleStep = missing.plain.indexOf("└─ ● Thinking", noTitleHeader);
+const restoreHeader = missing.plain.indexOf("│  1 step · 1 call · failed", noTitleStep);
+const restoreStep = missing.plain.indexOf("└─ × Reconcile persisted tool result", restoreHeader);
 const restoredOrder = [
-	missing.plain.indexOf("Activity  2 steps · 6 calls · all passed"),
-	missing.plain.indexOf("├─ ● Run grouped verification"),
-	missing.plain.indexOf("└─ ● Continue grouped verification"),
-	missing.plain.indexOf("Activity  2 steps · 3 calls · failed"),
-	missing.plain.indexOf("├─ × Working with settings.json"),
-	missing.plain.indexOf("└─ × Reconcile persisted tool result"),
+	sameHeader,
+	sameFirst,
+	sameSecond,
+	sameResponse,
+	mixedHeader,
+	mixedStep,
+	noTitleHeader,
+	noTitleStep,
+	restoreHeader,
+	restoreStep,
 ];
 if (restoredOrder.some((index) => index < 0) || restoredOrder.some((index, position) => position > 0 && index <= restoredOrder[position - 1]))
-	fail("Restored activities do not flow chronologically");
+	fail("Restored timelines do not flow chronologically");
 
 
-const missingRows = rowsFor(missing, restoreFailureSummary).filter(
+const missingRows = thinkingRowsFor(missing, restoreFailureSummary).filter(
 	(row) => row.title === "Reconcile persisted tool result",
 );
 if (missingRows.length === 0) fail("Missing restored work step was not rendered");
@@ -367,10 +527,10 @@ if (missingRows.some((row) => row.glyph === "●"))
 	fail("Restored work step without a matching tool result was rendered as successful");
 const missingFailure = missingRows.find((row) => row.glyph === "×");
 if (!missingFailure) fail("Restored work step without a matching tool result was not marked failed");
-assertForeground(missing, missingFailure);
+assertThinkingForeground(missing, missingFailure);
 
 console.log(
-	"Pi work-step timeline verified offline: adjacent single-step activities coalesce and MCP calls group by server while preserving chronological flow, restoration, reload, suppression, and semantic ANSI colors.",
+	"Pi work-step timeline verified offline: every prompt owns its thinking activity while prior activities, live calls, restoration, and reload remain stable.",
 );
 NODE
 
@@ -392,23 +552,34 @@ wait_for_terminal() {
 }
 
 wait_for_terminal "faux-work-step"
-for exchange in \
-	"plain assistant|NON_TOOL_RENDERING_SENTINEL" \
-	"same-name success|VERIFY_SAME_NAME_DONE" \
-	"mixed-name failure|VERIFY_MIXED_NAME_DONE"; do
-	prompt="${exchange%%|*}"
-	expected="${exchange#*|}"
-	tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "$prompt"
-	tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
-	wait_for_terminal "$expected"
-done
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "plain assistant"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_terminal "NON_TOOL_RENDERING_SENTINEL"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "same-name success"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_terminal "PRETOOLSUPPRESSIONSENTINEL"
+tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 > "$draft_capture"
+wait_for_terminal "noisy_verify_tool ×2 · running"
+tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 > "$pending_capture"
+wait_for_terminal "VERIFY_SAME_NAME_DONE"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "mixed-name failure"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_terminal "VERIFY_MIXED_NAME_DONE"
 tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 > "$terminal_capture"
+tmux -L "$tmux_socket" resize-window -t verify:0 -x 38 -y 40
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "thinking without title"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_terminal "VERIFY_THINKING_NO_TITLE_DONE"
+tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 > "$narrow_capture"
 tmux -L "$tmux_socket" kill-server
 
-node - "$terminal_capture" <<'NODE'
+node - "$terminal_capture" "$draft_capture" "$pending_capture" "$narrow_capture" <<'NODE'
 const fs = require("node:fs");
 
 const terminal = fs.readFileSync(process.argv[2], "utf8");
+const draft = fs.readFileSync(process.argv[3], "utf8");
+const pending = fs.readFileSync(process.argv[4], "utf8");
+const narrow = fs.readFileSync(process.argv[5], "utf8");
 
 function fail(message) {
 	console.error(message);
@@ -429,10 +600,33 @@ for (const [prompt, title] of [
 	if (promptIndex < 0) fail(`Missing terminal prompt: ${prompt}`);
 	if (rowIndex < 0) fail(`Missing terminal activity row: ${title}`);
 	if (rowIndex < promptIndex)
-		fail(`Activity rendered before its prompt: ${title}`);
+		fail(`Timeline symbol rendered before its prompt: ${title}`);
 }
 
-console.log("Pi work-step terminal state verified: activities render after the prompts that created them.");
+const draftLines = draft.split("\n");
+const draftTitle = draftLines.findLastIndex((line) => line.includes("◉ Thinking"));
+if (draftTitle < 1 || draftLines[draftTitle - 1].trim() !== "")
+	fail("Current thinking did not leave one blank line after the previous activity");
+if (draft.includes("⋯"))
+	fail("Current thinking still renders the removed ellipsis marker");
+
+const promotedTitleLines = terminal
+	.split("\n")
+	.filter((line) => line.includes("● Run grouped verification"));
+if (promotedTitleLines.length !== 1)
+	fail(`Promoted title rendered ${promotedTitleLines.length} times in the settled terminal`);
+if (!pending.includes("◉ Run grouped verification"))
+	fail("Live activity did not promote thinking into a running agent step");
+if (!pending.includes("◉ 2 calls · noisy_verify_tool ×2 · running"))
+	fail("Tool calls were not visible while they were running");
+if (!narrow.includes("● Thinking"))
+	fail("Narrow terminal lost the no-title agent step");
+if (!narrow.includes("└─ ● 1 call"))
+	fail("Narrow terminal broke or lost the final result rail");
+const overflowing = narrow.split("\n").find((line) => [...line.replace(/\r$/, "")].length > 38);
+if (overflowing) fail(`Narrow terminal overflowed 38 columns: ${overflowing}`);
+
+console.log("Pi work-step terminal state verified: prompt-scoped thinking remains nested and tool calls are visible while running.");
 NODE
 
 if [[ "${PI_VERIFY_LIVE:-1}" == "1" ]]; then
@@ -446,11 +640,11 @@ log_user 0
 log_file -a -noappend $env(PI_VERIFY_LIVE_RAW)
 spawn pi --offline --approve --no-session --model $env(PI_VERIFY_MODEL) $env(PI_VERIFY_PROMPT)
 expect {
-  -re {●[^\r\n]+} {}
+  -re {◉[^\r\n]+} {}
   timeout { exit 124 }
 }
 close
 wait
 EXPECT
-	echo "Pi live-model smoke test passed with $PI_VERIFY_MODEL."
+	echo "Pi live-model timeline smoke test passed with $PI_VERIFY_MODEL."
 fi

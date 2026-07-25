@@ -9,6 +9,10 @@ const TOOL_PATCHED = Symbol.for("aviral.pi.work-step-renderer.tool");
 const CONTROLLER = Symbol.for("aviral.pi.work-step-renderer.controller");
 const WORK_STEP = Symbol.for("aviral.pi.work-step-renderer.step");
 const WORK_STEP_ROW = Symbol.for("aviral.pi.work-step-renderer.row");
+const THINKING_DRAFT = Symbol.for("aviral.pi.work-step-renderer.thinking-draft");
+const ASSISTANT_INVALIDATING = Symbol.for(
+  "aviral.pi.work-step-renderer.assistant-invalidating",
+);
 
 type ToolCall = {
   id: string;
@@ -34,6 +38,7 @@ type ActivityGroup = {
 type WorkStep = {
   title: string;
   titleLocked: boolean;
+  thinking: string[];
   toolCalls: ToolCall[];
   toolCallIds: Set<string>;
   completedToolCallIds: Set<string>;
@@ -41,6 +46,11 @@ type WorkStep = {
   run: ActivityRun;
   group: ActivityGroup;
   row?: WorkStepRow;
+};
+
+type ThinkingDraft = {
+  title?: string;
+  thinking: string[];
 };
 
 type RendererState = {
@@ -56,6 +66,7 @@ type RendererState = {
 };
 
 type RendererController = {
+  assistantNativeMessage(message: any): any;
   assistantUpdated(component: any, message: any): void;
   assistantHasStep(component: any): boolean;
   renderAssistant(component: any, lines: string[], width: number): string[];
@@ -170,26 +181,26 @@ function fallbackTitle(toolCalls: ToolCall[]): string {
   return `Using ${groupTools(toolCalls).join(", ")}`;
 }
 
-function titleFromContent(
-  content: any[],
-  toolCalls: ToolCall[],
-): { title: string; synthesized: boolean } {
+function titleFromTextContent(content: any[]): string | undefined {
   for (const item of content) {
     if (item?.type !== "text") continue;
     const title = sanitizeTitle(asString(item.text));
-    if (title) return { title, synthesized: false };
+    if (title) return title;
   }
+  return undefined;
+}
 
-  return {
-    title: fallbackTitle(toolCalls),
-    synthesized: true,
-  };
+function thinkingFromContent(content: any[]): string[] {
+  return content
+    .filter((item) => item?.type === "thinking")
+    .map((item) => sanitizeTitle(asString(item.thinking)))
+    .filter((item): item is string => Boolean(item));
 }
 
 function status(step: WorkStep): "pending" | "success" | "failure" {
   if (step.failed) return "failure";
   if (
-    step.toolCallIds.size > 0 &&
+    step.toolCallIds.size === 0 ||
     step.completedToolCallIds.size === step.toolCallIds.size
   )
     return "success";
@@ -298,10 +309,28 @@ function renderActivityHeader(theme: Theme, steps: WorkStep[]): string {
       ? theme.fg("success", theme.bold("all passed"))
       : theme.fg("warning", theme.bold(`${completed}/${steps.length} complete`));
   return (
-    ` ${theme.fg("accent", theme.bold("Activity"))}  ` +
+    ` ${theme.fg("borderMuted", "│")}  ` +
     theme.fg("muted", `${plural(steps.length, "step")} · ${plural(calls, "call")} · `) +
     state
   );
+}
+
+function renderThinkingDraft(
+  theme: Theme,
+  draft: ThinkingDraft,
+  width: number,
+): string[] {
+  const lines = [
+    "",
+    ` ${theme.fg("accent", "◉")} ${theme.fg("text", theme.bold(draft.title ?? "Thinking"))}`,
+  ];
+  for (const [index, thought] of draft.thinking.entries()) {
+    const connector = index === draft.thinking.length - 1 ? "└─" : "├─";
+    lines.push(
+      `   ${theme.fg("borderMuted", connector)} ${theme.fg("muted", "•")} ${theme.fg("muted", thought)}`,
+    );
+  }
+  return lines.map((line) => truncateToWidth(line, width));
 }
 
 class WorkStepRow {
@@ -317,7 +346,7 @@ class WorkStepRow {
       lines.push(renderActivityHeader(this.theme, steps));
       for (const [stepIndex, step] of steps.entries()) {
         const currentStatus = status(step);
-        const glyph =
+        const resultGlyph =
           currentStatus === "pending"
             ? this.theme.fg("accent", "◉")
             : currentStatus === "failure"
@@ -327,8 +356,21 @@ class WorkStepRow {
         const outer = this.theme.fg("borderMuted", finalStep ? "└─" : "├─");
         const rail = this.theme.fg("borderMuted", finalStep ? "   " : "│  ");
         const inner = this.theme.fg("borderMuted", "└─");
-        lines.push(` ${outer} ${glyph} ${this.theme.fg("text", step.title)}`);
-        lines.push(` ${rail}${inner} ${renderSummary(this.theme, step)}`);
+        lines.push(
+          ` ${outer} ${resultGlyph} ${this.theme.fg("text", this.theme.bold(step.title))}`,
+        );
+        if (step.thinking.length > 0) {
+          for (const [thoughtIndex, thought] of step.thinking.entries()) {
+            const finalThought = thoughtIndex === step.thinking.length - 1;
+            const connector =
+              step.toolCalls.length === 0 && finalThought ? "└─" : "├─";
+            lines.push(
+              ` ${rail}${this.theme.fg("borderMuted", connector)} ${this.theme.fg("muted", "•")} ${this.theme.fg("muted", thought)}`,
+            );
+          }
+        }
+        if (step.toolCalls.length > 0)
+          lines.push(` ${rail}${inner} ${resultGlyph} ${renderSummary(this.theme, step)}`);
       }
       if (groupIndex < groups.length - 1) lines.push("");
     }
@@ -380,15 +422,70 @@ function updateAssistant(
 ): void {
   const content = Array.isArray(message?.content) ? message.content : [];
   const toolCalls = toolCallsFrom(content);
+  const explicitTitle = titleFromTextContent(content);
+  const thinking = thinkingFromContent(content);
+  const hasThinking = content.some((item) => item?.type === "thinking");
 
   if (toolCalls.length === 0) {
     state.assembling = undefined;
-    if (["stop", "error", "aborted", "length"].includes(message?.stopReason))
-      state.currentGroup = undefined;
+    const settled =
+      ["error", "aborted", "length"].includes(message?.stopReason) ||
+      (message?.stopReason === "stop" &&
+        Number(message?.usage?.totalTokens ?? 0) > 0);
+    if (!settled) {
+      component[THINKING_DRAFT] = hasThinking
+        ? ({ title: explicitTitle, thinking } satisfies ThinkingDraft)
+        : undefined;
+      return;
+    }
+
+    const draft = component[THINKING_DRAFT] as ThinkingDraft | undefined;
+    const stepThinking = thinking.length > 0 ? thinking : (draft?.thinking ?? []);
+    if (stepThinking.length > 0) {
+      const existing = component[WORK_STEP] as WorkStep | undefined;
+      const run = existing?.run ?? state.currentRun ?? { steps: [], groups: [] };
+      const group =
+        existing?.group ??
+        state.currentGroup ??
+        ({ steps: [], run } satisfies ActivityGroup);
+      const step =
+        existing ??
+        ({
+          title: "Preparing response",
+          titleLocked: true,
+          thinking: stepThinking,
+          toolCalls: [],
+          toolCallIds: new Set<string>(),
+          completedToolCallIds: new Set<string>(),
+          failed: ["error", "aborted", "length"].includes(message?.stopReason),
+          run,
+          group,
+        } satisfies WorkStep);
+      if (!existing) {
+        if (!state.currentRun) state.currentRun = run;
+        if (!state.currentGroup) {
+          run.groups.push(group);
+          state.currentGroup = group;
+        }
+        run.steps.push(step);
+        group.steps.push(step);
+      }
+      step.thinking = stepThinking;
+      component[WORK_STEP] = step;
+    }
+    component[THINKING_DRAFT] = undefined;
+    state.currentGroup = undefined;
+    state.currentRun = undefined;
     return;
   }
 
-  const candidate = titleFromContent(content, toolCalls);
+  const draft = component[THINKING_DRAFT] as ThinkingDraft | undefined;
+  const stepThinking = thinking.length > 0 ? thinking : (draft?.thinking ?? []);
+  const stepExplicitTitle = explicitTitle ?? draft?.title;
+  const title =
+    stepThinking.length > 0
+      ? stepExplicitTitle ?? "Thinking"
+      : stepExplicitTitle ?? fallbackTitle(toolCalls);
   const existing = component[WORK_STEP] as WorkStep | undefined;
   const run = existing?.run ?? state.currentRun ?? { steps: [], groups: [] };
   const group =
@@ -401,8 +498,9 @@ function updateAssistant(
   const step: WorkStep =
     existing ??
     ({
-      title: candidate.title,
-      titleLocked: !candidate.synthesized,
+      title,
+      titleLocked: Boolean(stepExplicitTitle),
+      thinking: stepThinking,
       toolCalls: [],
       toolCallIds: new Set<string>(),
       completedToolCallIds: new Set<string>(),
@@ -424,13 +522,15 @@ function updateAssistant(
   step.toolCalls = toolCalls;
   step.toolCallIds = new Set(toolCalls.map((toolCall) => toolCall.id));
   if (!step.titleLocked) {
-    step.title = candidate.title;
-    step.titleLocked = !candidate.synthesized;
+    step.title = title;
+    step.titleLocked = Boolean(stepExplicitTitle);
   }
+  step.thinking = stepThinking;
   if (message.stopReason === "error" || message.stopReason === "aborted")
     step.failed = true;
 
   component[WORK_STEP] = step;
+  component[THINKING_DRAFT] = undefined;
   for (const toolCallId of step.toolCallIds) {
     if (!step.completedToolCallIds.has(toolCallId) && !step.failed)
       state.pending.set(toolCallId, step);
@@ -603,8 +703,21 @@ function patchComponents(
     assistantProto[ASSISTANT_PATCHED] = true;
     const updateContent = assistantProto.updateContent;
     assistantProto.updateContent = function (message: any) {
-      updateContent.call(this, message);
-      assistantProto[CONTROLLER]?.assistantUpdated(this, message);
+      const nativeMessage =
+        assistantProto[CONTROLLER]?.assistantNativeMessage?.(message) ?? message;
+      updateContent.call(this, nativeMessage);
+      this.lastMessage = message;
+      if (!this[ASSISTANT_INVALIDATING])
+        assistantProto[CONTROLLER]?.assistantUpdated(this, message);
+    };
+    const invalidate = assistantProto.invalidate;
+    assistantProto.invalidate = function () {
+      this[ASSISTANT_INVALIDATING] = true;
+      try {
+        return invalidate.call(this);
+      } finally {
+        this[ASSISTANT_INVALIDATING] = false;
+      }
     };
     const render = assistantProto.render;
     assistantProto.render = function (width: number) {
@@ -639,14 +752,34 @@ export default async function (pi: ExtensionAPI) {
     persisted: new WeakMap(),
   };
   const controller: RendererController = {
+    assistantNativeMessage(message) {
+      if (!Array.isArray(message?.content)) return message;
+      return {
+        ...message,
+        content: message.content.filter((item: any) => item?.type !== "thinking"),
+      };
+    },
     assistantUpdated(component, message) {
       updateAssistant(component, message, state);
     },
-    assistantHasStep() {
-      return false;
+    assistantHasStep(component) {
+      const step = component[WORK_STEP] as WorkStep | undefined;
+      return Boolean(step && step.toolCalls.length > 0);
     },
-    renderAssistant(_component, lines) {
-      return lines;
+    renderAssistant(component, lines, width) {
+      const draft = component[THINKING_DRAFT] as ThinkingDraft | undefined;
+      if (draft) return renderThinkingDraft(theme, draft, width);
+
+      const step = component[WORK_STEP] as WorkStep | undefined;
+      if (!step || step.run.steps.some((item) => item.toolCalls.length > 0))
+        return lines;
+      let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
+      if (!row) {
+        row = new WorkStepRow(theme, step);
+        component[WORK_STEP_ROW] = row;
+      }
+      const activity = row.render(width);
+      return lines.length > 0 ? [...activity, "", ...lines] : activity;
     },
     toolUpdated(component) {
       bindToolComponent(component, state);
@@ -666,6 +799,12 @@ export default async function (pi: ExtensionAPI) {
     if (state.sessionId && state.sessionId !== sessionId) disposeState(state);
     state.sessionId = sessionId;
     scanPersistedSession(state, ctx.sessionManager.getEntries());
+  });
+
+  pi.on("agent_start", () => {
+    state.assembling = undefined;
+    state.currentGroup = undefined;
+    state.currentRun = undefined;
   });
 
   pi.on("tool_execution_end", (event) => {

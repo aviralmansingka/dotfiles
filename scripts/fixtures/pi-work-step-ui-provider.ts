@@ -1,4 +1,5 @@
 import {
+	createAssistantMessageEventStream,
 	fauxAssistantMessage,
 	fauxProvider,
 	fauxText,
@@ -17,14 +18,40 @@ type VerifyState = { responseIndex: number };
 
 const state =
 	((globalThis as typeof globalThis & { [STATE]?: VerifyState })[STATE] ??= {
-		responseIndex: 0,
+		responseIndex: Number(process.env.PI_VERIFY_RESPONSE_INDEX ?? 0),
 	});
 
+function codexShapedStream(source: any) {
+	const stream = createAssistantMessageEventStream();
+	void (async () => {
+		for await (const event of source) {
+			stream.push(
+				"partial" in event
+					? {
+							...event,
+							partial: {
+								...event.partial,
+								stopReason: "stop",
+								usage: { ...event.partial.usage, totalTokens: 0 },
+							},
+						}
+					: event,
+			);
+		}
+	})();
+	return stream;
+}
+
 const responses = [
-	fauxAssistantMessage("NON_TOOL_RENDERING_SENTINEL"),
+	fauxAssistantMessage([
+		fauxThinking("NON_TOOL_THINKING_SENTINEL"),
+		fauxText("NON_TOOL_RENDERING_SENTINEL"),
+	]),
 	fauxAssistantMessage(
 		[
-			fauxThinking("Scope timeline → Decision: keep tool activity flow chronological"),
+			fauxThinking(
+				"PRE_TOOL_SUPPRESSION_SENTINEL → keep tool activity flow chronological",
+			),
 			fauxThinking("Inspect configuration → Decision: validate grouped tool rendering"),
 			fauxThinking("Answer renderer question → Outcome: grouped tools share one timeline"),
 			fauxThinking("Select plan limit → Decision: retain five recent thinking blocks"),
@@ -71,7 +98,10 @@ const responses = [
 		],
 		{ stopReason: "toolUse" },
 	),
-	fauxAssistantMessage("VERIFY_SAME_NAME_DONE"),
+	fauxAssistantMessage([
+		fauxThinking("Prepare grouped verification response"),
+		fauxText("VERIFY_SAME_NAME_DONE"),
+	]),
 	fauxAssistantMessage(
 		[
 			fauxToolCall(
@@ -84,6 +114,21 @@ const responses = [
 		{ stopReason: "toolUse" },
 	),
 	fauxAssistantMessage("VERIFY_MIXED_NAME_DONE"),
+	fauxAssistantMessage(
+		[
+			fauxThinking(
+				"Check which title source is available across narrow terminals",
+			),
+			fauxThinking("Keep every native thinking update in source order"),
+			fauxToolCall(
+				"noisy_verify_tool",
+				{ value: "NOISY_ARGUMENT_SENTINEL", fail: false },
+				{ id: "verify-thinking-no-title" },
+			),
+		],
+		{ stopReason: "toolUse" },
+	),
+	fauxAssistantMessage("VERIFY_THINKING_NO_TITLE_DONE"),
 	fauxAssistantMessage(
 		[
 			fauxThinking("Restore **missing** result"),
@@ -132,6 +177,11 @@ export default function piWorkStepUiProvider(pi: ExtensionAPI) {
 			);
 		}),
 	);
+	for (const method of ["stream", "streamSimple"] as const) {
+		const original = faux.provider[method].bind(faux.provider);
+		(faux.provider as any)[method] = (...args: any[]) =>
+			codexShapedStream(original(...args));
+	}
 	pi.registerProvider(faux.provider);
 
 	pi.registerTool({
@@ -158,6 +208,7 @@ export default function piWorkStepUiProvider(pi: ExtensionAPI) {
 		}),
 		async execute(_toolCallId, params, _signal, onUpdate) {
 			onUpdate?.({ content: [{ type: "text", text: "NOISY_PARTIAL_SENTINEL" }] });
+			await new Promise((resolve) => setTimeout(resolve, 500));
 			if (params.fail) throw new Error("NOISY_ERROR_SENTINEL");
 			return {
 				content: [{ type: "text", text: "NOISY_RESULT_SENTINEL" }],
