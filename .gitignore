@@ -1,7 +1,13 @@
 .git
 .envrc
 .todos/
-.lavish/
+.lavish/*
+!.lavish/vault-hunter-skill-timeline.html
+!.lavish/vault-hunter-skill-timeline.md
+!.lavish/vault-hunter-router.mmd
+!.lavish/vault-hunter-router.svg
+!.lavish/vault-hunter-verifier-loop.mmd
+!.lavish/vault-hunter-verifier-loop.svg
 __pycache__/
 pi/.pi/agent/extensions/tool-call-renderer-thinking-prototype.html
 

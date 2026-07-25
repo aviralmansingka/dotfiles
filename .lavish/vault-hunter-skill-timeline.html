@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en" data-theme="luxury">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vault Hunter — skill and decision timeline</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5.5.19/daisyui.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5.5.19/themes.css">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :where(.grid, .flex) > * { min-width: 0; }
+    :where(p, h1, h2, h3, li, dd, figcaption, .badge) { overflow-wrap: anywhere; }
+    :where(img, svg, video, canvas, iframe) { max-width: 100%; height: auto; }
+    body {
+      background:
+        radial-gradient(circle at 12% 0%, color-mix(in oklab, var(--color-primary) 16%, transparent), transparent 31rem),
+        radial-gradient(circle at 92% 16%, color-mix(in oklab, var(--color-secondary) 12%, transparent), transparent 28rem),
+        var(--color-base-300);
+    }
+    .vh-shell { width: min(100% - 2rem, 88rem); margin-inline: auto; }
+    .vh-kicker { letter-spacing: .16em; text-transform: uppercase; }
+    .vh-panel {
+      background: color-mix(in oklab, var(--color-base-100) 92%, transparent);
+      border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+      box-shadow: 0 1rem 3rem color-mix(in oklab, black 24%, transparent);
+    }
+    .vh-mermaid {
+      overflow-x: auto;
+      border-radius: 1rem;
+      background: color-mix(in oklab, var(--color-base-200) 88%, transparent);
+      padding: 1rem;
+    }
+    .vh-mermaid-router { overflow: visible; }
+    .vh-mermaid img { display: block; width: 100%; height: auto; object-fit: contain; }
+    .vh-diagram-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .45rem 1rem;
+      padding: .7rem .85rem;
+      border-top: 1px solid #504945;
+      background: #1d2021;
+      color: #928374;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: .78rem;
+    }
+    .vh-diagram-legend span { white-space: nowrap; }
+    .vh-legend-done { color: #89b482; }
+    .vh-legend-active { color: #83a598; }
+    .vh-legend-idle { color: #928374; }
+    .vh-legend-decision { color: #fabd2f; }
+    .vh-legend-red { color: #ea6962; }
+    .vh-step {
+      border-left: .2rem solid color-mix(in oklab, var(--color-primary) 55%, transparent);
+      padding-left: 1rem;
+    }
+    .vh-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .vh-tui {
+      --tui-bg: #282828;
+      --tui-fg: #ebdbb2;
+      --tui-dim: #928374;
+      --tui-border: #504945;
+      --tui-aqua: #89b482;
+      --tui-yellow: #fabd2f;
+      --tui-blue: #83a598;
+      --tui-red: #ea6962;
+      --tui-purple: #d3869b;
+      min-height: 38rem;
+      overflow: hidden;
+      border: 1px solid var(--tui-border);
+      border-radius: .75rem;
+      background: var(--tui-bg);
+      color: var(--tui-fg);
+      box-shadow: inset 0 0 0 1px #1d2021, 0 1.5rem 4rem rgba(0,0,0,.35);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: .82rem;
+      line-height: 1.45;
+    }
+    .vh-tui-top, .vh-tui-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: .45rem .7rem;
+      background: #1d2021;
+      color: var(--tui-dim);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .vh-tui-top strong { color: var(--tui-aqua); }
+    .vh-tui-bottom { border-top: 1px solid var(--tui-border); }
+    .vh-tui-goal {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) minmax(14rem, auto);
+      align-items: center;
+      gap: .8rem;
+      padding: .55rem .7rem;
+      border-top: 1px solid #3f6471;
+      border-bottom: 1px solid #3f6471;
+      background: #172a35;
+    }
+    .vh-tui-goal strong { color: #d8ecf2; }
+    .vh-tui-goal-label {
+      color: var(--tui-blue);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .vh-tui-goal-outside {
+      border-left: 1px solid #3f6471;
+      padding-left: .8rem;
+      color: var(--tui-dim);
+    }
+    .vh-tui-pane { min-width: 0; overflow: auto; border-color: var(--tui-border); }
+    .vh-tui-title {
+      padding: .35rem .65rem;
+      border-bottom: 1px solid var(--tui-border);
+      color: var(--tui-yellow);
+      font-weight: 700;
+    }
+    .vh-tui-row { display: flex; gap: .6rem; padding: .38rem .65rem; }
+    .vh-tui-row.active { background: #3c3836; color: #fff5d6; }
+    .vh-tui-row .grow { min-width: 0; flex: 1; }
+    .vh-tui-muted { color: var(--tui-dim); }
+    .vh-tui-working { color: var(--tui-blue); }
+    .vh-tui-done { color: var(--tui-yellow); }
+    .vh-tui-good { color: var(--tui-aqua); }
+    .vh-tui-bad { color: var(--tui-red); }
+    .vh-tui-purple { color: var(--tui-purple); }
+    .vh-vim-cursor {
+      display: inline-block;
+      width: .62em;
+      height: 1.05em;
+      margin-left: .15em;
+      background: currentColor;
+      vertical-align: -.18em;
+    }
+    @keyframes vh-cursor-blink { 50% { opacity: 0; } }
+    @keyframes vh-working-pulse { 50% { opacity: .55; } }
+    @keyframes vh-spinner-turn { to { transform: rotate(360deg); } }
+    .vh-motion-on .vh-vim-cursor { animation: vh-cursor-blink .9s steps(1, end) infinite; }
+    .vh-motion-on .vh-tui-working { animation: vh-working-pulse 1.4s ease-in-out infinite; }
+    .vh-tui-spinner {
+      display: inline-block;
+      margin-right: .2rem;
+      color: var(--tui-blue);
+      animation: vh-spinner-turn .9s steps(8, end) infinite;
+    }
+    .vh-tui-chip {
+      display: inline-block;
+      padding: 0 .35rem;
+      border: 1px solid var(--tui-border);
+      border-radius: .2rem;
+      color: var(--tui-dim);
+    }
+    .vh-herdr-frame {
+      width: min(100%, 78ch);
+      height: 17lh;
+      min-height: 0;
+      margin-inline: auto;
+    }
+    .vh-herdr-panel {
+      height: 100%;
+      overflow: hidden;
+      background: var(--tui-bg);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+    .vh-herdr-title {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      height: 1.8rem;
+      padding-inline: .65rem;
+      color: var(--tui-yellow);
+    }
+    .vh-herdr-title::before,
+    .vh-herdr-title::after {
+      height: 1px;
+      flex: 1;
+      content: "";
+      background: var(--tui-border);
+    }
+    .vh-herdr-grid {
+      display: grid;
+      min-height: 0;
+      grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr);
+      border-block: 1px solid var(--tui-border);
+    }
+    .vh-herdr-column {
+      min-width: 0;
+      overflow: hidden;
+    }
+    .vh-herdr-column + .vh-herdr-column {
+      border-left: 1px solid var(--tui-border);
+    }
+    .vh-herdr-column-title {
+      padding: .25rem .55rem;
+      border-bottom: 1px solid var(--tui-border);
+      color: var(--tui-yellow);
+      font-weight: 700;
+      text-align: center;
+    }
+    .vh-herdr-row {
+      display: grid;
+      grid-template-columns: 1rem minmax(0, 1fr) auto;
+      align-items: center;
+      gap: .35rem;
+      padding: .14rem .55rem;
+    }
+    .vh-herdr-row.active {
+      background: #3c3836;
+      color: #fff5d6;
+    }
+    .vh-herdr-journey-row {
+      grid-template-columns: 1rem minmax(0, 1fr);
+    }
+    .vh-herdr-goal {
+      margin: .35rem .55rem;
+      padding: .35rem .45rem;
+      border: 1px solid #3f6471;
+      background: #172a35;
+      color: #d8ecf2;
+    }
+    .vh-herdr-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: .75rem;
+      padding: .25rem .55rem;
+      color: var(--tui-dim);
+      white-space: nowrap;
+    }
+    .vh-prototype-variant[hidden] { display: none !important; }
+    .vh-proto-switcher {
+      position: fixed;
+      z-index: 40;
+      left: 50%;
+      bottom: 1.15rem;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      min-width: min(92vw, 24rem);
+      padding: .45rem;
+      border: 1px solid color-mix(in oklab, var(--color-primary) 55%, transparent);
+      border-radius: 999px;
+      background: color-mix(in oklab, var(--color-base-100) 96%, transparent);
+      box-shadow: 0 1rem 3rem rgba(0,0,0,.45);
+      backdrop-filter: blur(16px);
+    }
+    .vh-proto-switcher .vh-label { min-width: 0; flex: 1; text-align: center; font-size: .82rem; font-weight: 700; }
+    @media (max-width: 767px) {
+      .vh-tui { min-height: 46rem; }
+      .vh-tui-top { align-items: flex-start; flex-direction: column; gap: .1rem; white-space: normal; }
+      .vh-tui-goal { grid-template-columns: 1fr; }
+      .vh-tui-goal-outside { border-top: 1px solid #3f6471; border-left: 0; padding-top: .45rem; padding-left: 0; }
+      .vh-herdr-grid { grid-template-columns: 1fr; }
+      .vh-herdr-column + .vh-herdr-column { border-top: 1px solid var(--tui-border); border-left: 0; }
+      .vh-herdr-footer { white-space: normal; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .vh-motion-on .vh-vim-cursor,
+      .vh-motion-on .vh-tui-working,
+      .vh-tui-spinner { animation: none; }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-base-content">
+  <main class="vh-shell py-8 lg:py-14">
+    <header class="vh-panel rounded-3xl p-6 lg:p-10">
+      <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div class="max-w-4xl">
+          <p class="vh-kicker text-xs font-semibold text-primary">Design checkpoint · 25 July 2026</p>
+          <h1 class="mt-3 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">Vault Hunter</h1>
+          <p class="mt-4 max-w-3xl text-lg text-base-content/75">
+            A vault-native router for planning a feature, executing one task through verified PR landing,
+            or clearing a large effort with Wayfinder.
+          </p>
+        </div>
+        <div class="stats stats-vertical bg-base-200 shadow sm:stats-horizontal">
+          <div class="stat">
+            <div class="stat-title">Modes</div>
+            <div class="stat-value text-primary">3</div>
+          </div>
+          <div class="stat">
+            <div class="stat-title">Decisions</div>
+            <div class="stat-value text-secondary">17</div>
+          </div>
+          <div class="stat">
+            <div class="stat-title">Open boundary</div>
+            <div class="stat-value text-warning">2</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-7 flex flex-wrap gap-2">
+        <span class="badge badge-outline badge-primary">Vault is canonical</span>
+        <span class="badge badge-outline badge-secondary">Ponytail minimalism</span>
+        <span class="badge badge-outline badge-success">Baseline red → current green</span>
+        <span class="badge badge-outline badge-info">Implementation PR only</span>
+        <span class="badge badge-outline badge-success">Restartable goal timeline</span>
+      </div>
+    </header>
+
+    <div id="vh-tui-anchor"></div>
+
+    <section class="mt-8 vh-panel rounded-3xl p-5 lg:p-8" aria-labelledby="router-title">
+      <div class="mb-5">
+        <p class="vh-kicker text-xs font-semibold text-primary">The router</p>
+        <h2 id="router-title" class="mt-2 text-3xl font-bold">One entry point, three terminal outcomes</h2>
+        <p class="mt-2 text-base-content/65">Feature and Wayfinder runs stop at an executable plan. Only a Task Run changes code.</p>
+      </div>
+      <div class="vh-mermaid vh-mermaid-router">
+        <img src="vault-hunter-router.svg" alt="Vault Hunter routing flow for Feature, Task, and Wayfinder runs">
+        <div class="vh-diagram-legend" aria-label="Diagram legend">
+          <span class="vh-legend-done">● complete</span>
+          <span class="vh-legend-active">◌ active</span>
+          <span class="vh-legend-idle">· pending</span>
+          <span class="vh-legend-decision">? decision</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-8 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
+      <article class="vh-panel rounded-3xl p-5 lg:p-8">
+        <p class="vh-kicker text-xs font-semibold text-primary">Inside Task Run</p>
+        <h2 class="mt-2 text-3xl font-bold">The no-mistakes loop</h2>
+        <div class="mt-6 vh-mermaid">
+          <img src="vault-hunter-verifier-loop.svg" alt="Verifier cycle from baseline red through final evidence">
+          <div class="vh-diagram-legend" aria-label="Diagram legend">
+            <span class="vh-legend-done">● green / settled</span>
+            <span class="vh-legend-active">◌ active work</span>
+            <span class="vh-legend-idle">· future stage</span>
+            <span class="vh-legend-red">? red gate / ! repair</span>
+            <span class="vh-legend-decision">? branch</span>
+          </div>
+        </div>
+        <div class="mt-5 alert alert-soft alert-info">
+          <span><strong>First green is a bootstrap.</strong> It includes both implementation work and refinement of the first executable verifier.</span>
+        </div>
+      </article>
+
+      <aside class="space-y-6">
+        <section class="vh-panel rounded-3xl p-5 lg:p-7">
+          <p class="vh-kicker text-xs font-semibold text-secondary">Durable artifacts</p>
+          <h2 class="mt-2 text-2xl font-bold">What lives where</h2>
+          <dl class="mt-5 space-y-4">
+            <div>
+              <dt class="font-bold vh-code text-sm text-primary">feature.md</dt>
+              <dd class="mt-1 text-sm text-base-content/70">Canonical capability and authoritative stable <span class="vh-code">TNN</span> checklist.</dd>
+            </div>
+            <div>
+              <dt class="font-bold vh-code text-sm text-primary">tasks/NN-&lt;task&gt;.md</dt>
+              <dd class="mt-1 text-sm text-base-content/70">Task Spec, <span class="vh-code">VNN</span> ledger, evidence, and implementation PR links.</dd>
+            </div>
+            <div>
+              <dt class="font-bold vh-code text-sm text-primary">issues/&lt;effort&gt;/map.md</dt>
+              <dd class="mt-1 text-sm text-base-content/70">Wayfinder destination and low-resolution decision index.</dd>
+            </div>
+            <div>
+              <dt class="font-bold vh-code text-sm text-primary">issues/&lt;effort&gt;/NN-&lt;decision&gt;.md</dt>
+              <dd class="mt-1 text-sm text-base-content/70">One stable decision ticket. Never an implementation Task.</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="vh-panel rounded-3xl p-5 lg:p-7">
+          <p class="vh-kicker text-xs font-semibold text-warning">Landing contract</p>
+          <h2 class="mt-2 text-2xl font-bold">PR for code, direct push for vault</h2>
+          <ul class="mt-5 space-y-3 text-sm">
+            <li class="flex gap-3"><span class="status status-success mt-1.5"></span><span>Implementation PR uses existing merge policy and arms auto-merge.</span></li>
+            <li class="flex gap-3"><span class="status status-success mt-1.5"></span><span>The PR opens only after review, refactoring, and verifier additions converge.</span></li>
+            <li class="flex gap-3"><span class="status status-success mt-1.5"></span><span>CI failures remain inside the same Task Run.</span></li>
+            <li class="flex gap-3"><span class="status status-error mt-1.5"></span><span>Required approvals and branch protection are never bypassed.</span></li>
+            <li class="flex gap-3"><span class="status status-warning mt-1.5"></span><span>Post-merge checks run before all task-workspace tabs close in Herdr and Neovim.</span></li>
+            <li class="flex gap-3"><span class="status status-info mt-1.5"></span><span>Vault gets two direct commits and pushes—never a PR.</span></li>
+          </ul>
+        </section>
+      </aside>
+    </section>
+
+    <section class="mt-8 vh-panel rounded-3xl p-5 lg:p-8">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="vh-kicker text-xs font-semibold text-primary">Grill timeline</p>
+          <h2 class="mt-2 text-3xl font-bold">How the contract sharpened</h2>
+        </div>
+        <span class="badge badge-soft badge-success">17 resolved decisions</span>
+      </div>
+      <ol class="mt-7 grid gap-4 md:grid-cols-2">
+        <li class="vh-step"><strong>01 · Orchestrator</strong><p class="mt-1 text-sm text-base-content/65">Reuse Wayfinder, Vault, Grill with Docs, To Spec, and Ponytail instead of rebuilding them.</p></li>
+        <li class="vh-step"><strong>02 · Feature terminal</strong><p class="mt-1 text-sm text-base-content/65">Feature Run ends with ordered tasks and verifiers—not code.</p></li>
+        <li class="vh-step"><strong>03 · Checkbox promotion</strong><p class="mt-1 text-sm text-base-content/65">A checkbox-only task is grilled from its own bullets into a durable task note.</p></li>
+        <li class="vh-step"><strong>04 · Vault-native spec</strong><p class="mt-1 text-sm text-base-content/65">Use To Spec's structure inside the task note; create no duplicate issue.</p></li>
+        <li class="vh-step"><strong>05 · Honest red</strong><p class="mt-1 text-sm text-base-content/65">Every verifier must fail on the baseline, but current code may already satisfy it.</p></li>
+        <li class="vh-step"><strong>06 · Feature-local issues</strong><p class="mt-1 text-sm text-base-content/65">Known-ownership decisions live under the owning feature.</p></li>
+        <li class="vh-step"><strong>07 · Effort directory</strong><p class="mt-1 text-sm text-base-content/65">Each Wayfinder effort keeps its map and tickets together.</p></li>
+        <li class="vh-step"><strong>08 · Fog locality</strong><p class="mt-1 text-sm text-base-content/65">Unknown ownership starts project-local, then moves intact.</p></li>
+        <li class="vh-step"><strong>09 · Stable verifiers</strong><p class="mt-1 text-sm text-base-content/65">Task notes retain never-renumbered <span class="vh-code">V01…VNN</span> entries and evidence.</p></li>
+        <li class="vh-step"><strong>10 · Refactor Gate</strong><p class="mt-1 text-sm text-base-content/65">Refactor only after the first full green; freeze behavior and assertion strength.</p></li>
+        <li class="vh-step"><strong>11 · Review Convergence</strong><p class="mt-1 text-sm text-base-content/65">Repeat review, Review Refactor, and the active verifier suite; add verifiers when review exposes uncovered behavior.</p></li>
+        <li class="vh-step"><strong>12 · PR evidence</strong><p class="mt-1 text-sm text-base-content/65">Task notes link implementation PRs. Vault never gets a PR.</p></li>
+        <li class="vh-step"><strong>13 · Two checkpoints</strong><p class="mt-1 text-sm text-base-content/65">Push in-progress spec/verifiers, then merged final evidence—no per-cycle churn.</p></li>
+        <li class="vh-step"><strong>14 · Landing Gate</strong><p class="mt-1 text-sm text-base-content/65">Auto-merge obeys existing CI and protections; no-CI repos require mergeable + local green.</p></li>
+        <li class="vh-step"><strong>15 · Workspace Cleanup</strong><p class="mt-1 text-sm text-base-content/65">After merged-main checks, close every task-workspace tab in Herdr and Neovim; preserve unrelated workspaces and Unbound Tabs.</p></li>
+        <li class="vh-step"><strong>16 · PR After Convergence</strong><p class="mt-1 text-sm text-base-content/65">Do not open the implementation PR until no relevant review issue remains.</p></li>
+        <li class="vh-step"><strong>17 · Goal Timeline</strong><p class="mt-1 text-sm text-base-content/65">One continuous timeline shows restartable goal boundaries without numbering them; final evidence stays inside the PR stage.</p></li>
+      </ol>
+    </section>
+
+    <section class="mt-8 grid gap-6 lg:grid-cols-2">
+      <article class="vh-panel rounded-3xl p-5 lg:p-7">
+        <div class="flex items-center gap-3">
+          <span class="badge badge-success">Confirmed</span>
+          <h2 class="text-2xl font-bold"><span class="vh-code">/goal</span> timeline</h2>
+        </div>
+        <p class="mt-4 text-base-content/75">
+          One goal reaches checkpoint one; every verifier gets an independent goal; Refactor Gate and Review
+          Convergence get goals; the PR goal captures final evidence; landing always gets a goal; cleanup closes the
+          workspace and pushes the final vault checkpoint.
+        </p>
+      </article>
+
+      <article class="vh-panel rounded-3xl p-5 lg:p-7">
+        <p class="vh-kicker text-xs font-semibold text-secondary">Still to grill</p>
+        <h2 class="mt-2 text-2xl font-bold">Remaining design surface</h2>
+        <ul class="mt-4 list-disc space-y-2 pl-5 text-base-content/75">
+          <li>Wrap, narrow, or supersede <span class="vh-code">work-on-vault-feature</span>.</li>
+          <li>General branch, worktree, dirty-state, and recovery rules.</li>
+          <li>Skill trigger text, final location, and interface metadata.</li>
+          <li>Forward-test prompts and success criteria.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="vh-tui-prototype" class="mt-8 vh-panel rounded-3xl p-5 lg:p-8" aria-labelledby="prototype-title">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p class="vh-kicker text-xs font-semibold text-primary">Persisted UI reference</p>
+          <h2 id="prototype-title" class="mt-2 text-3xl font-bold">How should Vault Hunter look in a terminal?</h2>
+          <p class="mt-2 max-w-3xl text-base-content/65">
+            Four read-only views of the same run. Use the floating arrows or keyboard left/right; the selection
+            persists in <span class="vh-code">?variant=</span>.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <span class="badge badge-outline">Gruvbox Material</span>
+          <span class="badge badge-outline">Sidekick glyphs</span>
+          <span class="badge badge-info badge-soft">Implementation reference</span>
+          <button id="vh-motion-toggle" type="button" class="btn btn-sm btn-outline btn-info" aria-pressed="false">▶ Animate transition</button>
+        </div>
+      </div>
+
+      <div class="mt-7 vh-prototype-variant" data-prototype-variant="A">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h3 class="text-xl font-bold">A — Operations Board</h3>
+          <span class="badge badge-soft badge-primary">phase-first</span>
+        </div>
+        <div class="vh-tui">
+          <div class="vh-tui-top">
+            <div><strong>vault-hunter</strong>  neovim / headless-verification / T06</div>
+            <div><span class="vh-tui-working">› working</span>  task/read-only-verifier</div>
+          </div>
+          <div class="vh-tui-goal">
+            <div class="vh-tui-goal-label">◉ /goal active · <span data-motion-status>V03 RED</span><span class="vh-vim-cursor" aria-hidden="true"></span></div>
+            <div>
+              <strong>Make V03 green</strong><br>
+              <span class="vh-tui-muted">prove baseline red · update verifier + minimum code · keep V01–V03 green</span>
+            </div>
+            <div class="vh-tui-goal-outside">
+              <strong>next</strong> V04 cleanup<br>
+              then refactor → review → PR → landing → cleanup
+            </div>
+          </div>
+          <div class="grid min-h-[34rem] grid-cols-1 md:grid-cols-[13rem_minmax(0,1.35fr)_minmax(15rem,.85fr)]">
+            <section class="vh-tui-pane border-b md:border-b-0 md:border-r">
+              <div class="vh-tui-title"> TIMELINE </div>
+              <div class="vh-tui-row"><span class="vh-tui-done">●</span><span>checkpoint 1</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-done">●</span><span>V01</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-done">●</span><span>V02</span></div>
+              <div class="vh-tui-row active"><span class="vh-tui-working">›</span><span><span class="vh-tui-spinner" aria-label="working">◌</span>V03</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-muted">·</span><span>V04</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-muted">·</span><span>refactor</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-muted">·</span><span>review</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-muted">·</span><span>PR + evidence</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-muted">·</span><span>CI + landing</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-muted">·</span><span>cleanup + vault</span></div>
+            </section>
+            <section class="vh-tui-pane border-b md:border-b-0 md:border-r">
+              <div class="vh-tui-title"> VERIFIER LEDGER </div>
+              <div class="vh-tui-row">
+                <span class="vh-tui-done">V01</span>
+                <div class="grow"><strong>registry discovers verifier</strong><br><span class="vh-tui-bad">baseline red</span> · <span class="vh-tui-good">current green 0.8s</span></div>
+              </div>
+              <div class="vh-tui-row">
+                <span class="vh-tui-done">V02</span>
+                <div class="grow"><strong>live session stays read-only</strong><br><span class="vh-tui-bad">baseline red</span> · <span class="vh-tui-good">current green 4.2s</span></div>
+              </div>
+              <div class="vh-tui-row active">
+                <span class="vh-tui-working">V03</span>
+                <div class="grow"><strong>failure returns structured evidence</strong><br><span class="vh-tui-bad">baseline red confirmed</span> · <span class="vh-tui-bad">current: 2 fields missing</span></div>
+              </div>
+              <div class="vh-tui-row">
+                <span class="vh-tui-muted">V04</span>
+                <div class="grow"><span class="vh-tui-muted">cache cleanup is bounded</span><br><span class="vh-tui-muted">drafted · not activated</span></div>
+              </div>
+              <div class="mx-3 mt-4 border border-[#504945] bg-[#1d2021] p-3">
+                <span class="vh-tui-purple">$ scripts/nvim-verifier failure-evidence<span class="vh-vim-cursor" aria-hidden="true"></span></span><br>
+                <span class="vh-tui-bad">FAIL</span> expected diagnostics_count and raw_error<br>
+                <span class="vh-tui-muted">next:</span> update shared adapter payload, rerun active suite
+              </div>
+            </section>
+            <section class="vh-tui-pane">
+              <div class="vh-tui-title"> EVIDENCE </div>
+              <div class="space-y-4 p-3">
+                <div><span class="vh-tui-muted">baseline</span><br><span class="vh-tui-chip">main@4fe21ca</span></div>
+                <div><span class="vh-tui-muted">vault</span><br><span class="vh-tui-good">checkpoint 1 pushed</span></div>
+                <div><span class="vh-tui-muted">current</span><br>make V03 green</div>
+                <div><span class="vh-tui-muted">completed</span><br>checkpoint · V01 · V02</div>
+                <div><span class="vh-tui-muted">remaining</span><br>V04 → refactor → review<br>PR → landing → cleanup</div>
+              </div>
+            </section>
+          </div>
+          <div class="vh-tui-bottom">
+            <span><b>j/k</b> phase  <b>enter</b> evidence  <b>v</b> verifier</span>
+            <span>V03 active · verifier 3/4</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-7 vh-prototype-variant" data-prototype-variant="D" hidden>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-xl font-bold">D — Vault Hunter Atlas</h3>
+            <p class="mt-1 text-sm text-base-content/60">Replacement for the bottom-right active-agent panel. The workspace tree on the left remains unchanged.</p>
+          </div>
+          <span class="badge badge-soft badge-success">78 columns × 17 rows</span>
+        </div>
+        <div class="vh-tui vh-herdr-frame">
+          <div class="vh-herdr-panel">
+            <div class="vh-herdr-title"><span>Vault Hunter Atlas · Headless Verification</span></div>
+            <div class="vh-herdr-grid">
+              <section class="vh-herdr-column" aria-label="Goal timeline">
+                <div class="vh-herdr-column-title">GOALS</div>
+                <div class="vh-herdr-row"><span class="vh-tui-good">●</span><span>vault checkpoint</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-good">●</span><span>V01 registry</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-good">●</span><span>V02 read-only</span><span></span></div>
+                <div class="vh-herdr-row active"><span class="vh-tui-working">›</span><span><span class="vh-tui-spinner" aria-label="working">◌</span>V03 evidence</span><span>3/5</span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>V04 cleanup</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>V05 terminal QA</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>refactor</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>review</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>PR · landing</span><span></span></div>
+                <div class="vh-herdr-row"><span class="vh-tui-muted">·</span><span>workspace cleanup</span><span></span></div>
+              </section>
+              <section class="vh-herdr-column" aria-label="Selected verifier journey">
+                <div class="vh-herdr-column-title">V03 · VERIFIER JOURNEY</div>
+                <div class="vh-herdr-row vh-herdr-journey-row"><span class="vh-tui-good">●</span><span>baseline red proven</span></div>
+                <div class="vh-herdr-row vh-herdr-journey-row"><span class="vh-tui-good">●</span><span>verifier configured</span></div>
+                <div class="vh-herdr-row vh-herdr-journey-row active"><span class="vh-tui-working">›</span><span><span class="vh-tui-spinner" aria-label="working">◌</span>code + verifier iteration</span></div>
+                <div class="vh-herdr-row vh-herdr-journey-row"><span class="vh-tui-muted">·</span><span>active suite green</span></div>
+                <div class="vh-herdr-row vh-herdr-journey-row"><span class="vh-tui-muted">·</span><span>evidence saved</span></div>
+                <div class="vh-herdr-goal">
+                  <span class="vh-tui-purple">/goal active</span> · <span data-motion-status>V03 RED</span><br>
+                  <strong>Make failure evidence green</strong><br>
+                  <span class="vh-tui-muted">next: diagnostics_count + raw_error</span>
+                </div>
+              </section>
+            </div>
+            <div class="vh-herdr-footer">
+              <span><b>j/k</b> goal · <b>enter</b> expand</span>
+              <span>V03 · iteration 2</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 alert alert-soft alert-info">
+          <span>The selected task in the unchanged workspace tree drives this panel. The left column moves across goals; the right column explains exactly where the selected verifier is in its red-to-green journey.</span>
+        </div>
+      </div>
+
+      <div class="mt-7 vh-prototype-variant" data-prototype-variant="B" hidden>
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h3 class="text-xl font-bold">B — Picker + Preview</h3>
+          <span class="badge badge-soft badge-secondary">selection-first</span>
+        </div>
+        <div class="vh-tui p-2">
+          <div class="vh-tui-goal mb-2">
+            <div class="vh-tui-goal-label">◉ /goal active · <span data-motion-status>V03 RED</span><span class="vh-vim-cursor" aria-hidden="true"></span></div>
+            <div><strong>Make V03 green</strong><br><span class="vh-tui-muted">one verifier · one restartable goal</span></div>
+            <div class="vh-tui-goal-outside">next V04 · then refactor, review, PR, landing, cleanup</div>
+          </div>
+          <div class="border border-[#504945]">
+            <section class="vh-tui-pane min-h-[22rem] border-b">
+              <div class="vh-tui-title"> PREVIEW · T06 Build read-only verifier agent </div>
+              <div class="grid gap-4 p-4 md:grid-cols-[minmax(0,1.15fr)_minmax(14rem,.85fr)]">
+                <div>
+                  <div class="vh-tui-muted">neovim › editor-platform › headless-verification</div>
+                  <h4 class="my-3 text-base font-bold text-[#ebdbb2]">Current run</h4>
+                  <p><span class="vh-tui-working">› V03 failure evidence</span></p>
+                  <p class="mt-2">Baseline correctly fails. Current output omits two required evidence fields, so the active suite remains red.</p>
+                  <div class="mt-4 border-l-2 border-[#83a598] pl-3">
+                    <span class="vh-tui-muted">next action</span><br>
+                    Update the shared adapter payload, rerun V01–V03, then activate V04.
+                  </div>
+                </div>
+                <div class="border border-[#504945] bg-[#1d2021] p-3">
+                  <span class="vh-tui-good">● checkpoint 1</span><br>
+                  <span class="vh-tui-good">● V01</span><br>
+                  <span class="vh-tui-good">● V02</span><br>
+                  <span class="vh-tui-working">› V03</span><br>
+                  <span class="vh-tui-muted">· V04</span><br>
+                  <span class="vh-tui-muted">· refactor</span><br>
+                  <span class="vh-tui-muted">· review</span><br>
+                  <span class="vh-tui-muted">· PR + evidence</span><br>
+                  <span class="vh-tui-muted">· landing · cleanup</span>
+                </div>
+              </div>
+            </section>
+            <section class="vh-tui-pane border-b">
+              <div class="vh-tui-title"> RUNS </div>
+              <div class="vh-tui-row active"><span class="vh-tui-working">›</span><span class="grow">T06  Build read-only verifier agent</span><span class="vh-tui-muted">task</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-done">●</span><span class="grow">Agent work-step UI</span><span class="vh-tui-muted">feature</span></div>
+              <div class="vh-tui-row"><span class="vh-tui-muted">·</span><span class="grow">Onboarding architecture</span><span class="vh-tui-muted">wayfinder</span></div>
+            </section>
+            <section class="vh-tui-pane">
+              <div class="vh-tui-title"> FIND </div>
+              <div class="vh-tui-row"><span class="vh-tui-purple">❯</span><span class="grow">read-only verifier<span class="vh-vim-cursor" aria-hidden="true"></span></span><span class="vh-tui-muted">3 results</span></div>
+            </section>
+          </div>
+          <div class="vh-tui-bottom mt-2">
+            <span><b>↑/↓</b> select  <b>enter</b> open  <b>ctrl-a</b> launch</span>
+            <span>preview → list → input</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-7 vh-prototype-variant" data-prototype-variant="C" hidden>
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h3 class="text-xl font-bold">C — Execution Journal</h3>
+          <span class="badge badge-soft badge-accent">history-first</span>
+        </div>
+        <div class="vh-tui">
+          <div class="vh-tui-top">
+            <div><strong>vault-hunter journal</strong>  T06 Build read-only verifier agent</div>
+            <div>main@4fe21ca → task/read-only-verifier</div>
+          </div>
+          <div class="vh-tui-goal">
+            <div class="vh-tui-goal-label">◉ /goal active · <span data-motion-status>V03 RED</span><span class="vh-vim-cursor" aria-hidden="true"></span></div>
+            <div><strong>Make V03 green</strong><br><span class="vh-tui-muted">this journal segment belongs to one verifier goal</span></div>
+            <div class="vh-tui-goal-outside">queue: V04 → refactor → review → PR → landing → cleanup</div>
+          </div>
+          <div class="mx-auto max-w-4xl p-4 md:p-7">
+            <div class="space-y-6 border-l border-[#504945] pl-5">
+              <article class="relative">
+                <span class="absolute -left-[1.55rem] top-1 h-3 w-3 rounded-full bg-[#fabd2f]"></span>
+                <div class="vh-tui-muted">09:12 · vault</div>
+                <h4 class="mt-1 font-bold">Task Spec and V01–V04 drafted</h4>
+                <p class="mt-1">Status moved to in-progress. First vault checkpoint committed and pushed.</p>
+              </article>
+              <article class="relative">
+                <span class="absolute -left-[1.55rem] top-1 h-3 w-3 rounded-full bg-[#89b482]"></span>
+                <div class="vh-tui-muted">09:21 · V01</div>
+                <h4 class="mt-1 font-bold">Registry discovery reached green</h4>
+                <p class="mt-1"><span class="vh-tui-bad">baseline red</span> → verifier refined + implementation written → <span class="vh-tui-good">active suite green</span></p>
+              </article>
+              <article class="relative">
+                <span class="absolute -left-[1.55rem] top-1 h-3 w-3 rounded-full bg-[#89b482]"></span>
+                <div class="vh-tui-muted">09:34 · V02</div>
+                <h4 class="mt-1 font-bold">Live read-only boundary reached green</h4>
+                <p class="mt-1">Red on baseline and already green on current. No artificial failure introduced.</p>
+              </article>
+              <article class="relative">
+                <span class="absolute -left-[1.55rem] top-1 h-3 w-3 animate-pulse rounded-full bg-[#83a598]"></span>
+                <div class="vh-tui-muted">09:46 · V03 · now</div>
+                <h4 class="mt-1 font-bold text-[#83a598]">Failure evidence remains red</h4>
+                <div class="mt-2 border border-[#504945] bg-[#1d2021] p-3">
+                  expected <span class="vh-tui-purple">diagnostics_count</span> and <span class="vh-tui-purple">raw_error</span><br>
+                  received status + message only
+                </div>
+              </article>
+              <article class="relative opacity-55">
+                <span class="absolute -left-[1.55rem] top-1 h-3 w-3 rounded-full border border-[#928374] bg-[#282828]"></span>
+                <div class="vh-tui-muted">next</div>
+                <h4 class="mt-1 font-bold"><span class="vh-tui-good">V03 complete</span> → continue to V04</h4>
+                <p class="mt-1">Later goals own Refactor Gate, Review Convergence, PR plus final evidence, CI and landing, then workspace and vault cleanup.</p>
+              </article>
+            </div>
+          </div>
+          <div class="vh-tui-bottom">
+            <span><b>g/G</b> first/last  <b>[v]/]v</b> verifier  <b>e</b> evidence</span>
+            <span>chronological truth</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-8 vh-panel rounded-3xl p-5 lg:p-8">
+      <p class="vh-kicker text-xs font-semibold text-primary">Current written state</p>
+      <h2 class="mt-2 text-3xl font-bold">Skill scaffolded; follow-up tasks captured</h2>
+      <div class="mt-6 grid gap-4 md:grid-cols-3">
+        <div class="card card-border bg-base-200">
+          <div class="card-body">
+            <h3 class="card-title vh-code text-base">CONTEXT.md</h3>
+            <p class="text-sm text-base-content/65">Vault Hunter vocabulary and resolved workflow boundaries.</p>
+          </div>
+        </div>
+        <div class="card card-border bg-base-200">
+          <div class="card-body">
+            <h3 class="card-title vh-code text-base">.agents/skills/vault/SKILL.md</h3>
+            <p class="text-sm text-base-content/65">Issue locality, verifier ledger, review, PR, and checkpoint rules.</p>
+          </div>
+        </div>
+        <div class="card card-border bg-base-200">
+          <div class="card-body">
+            <h3 class="card-title vh-code text-base">vault/1_projects/projects.md</h3>
+            <p class="text-sm text-base-content/65">Matching canonical project-management semantics.</p>
+          </div>
+        </div>
+      </div>
+      <div class="mt-5 alert alert-soft alert-warning">
+        <span>The vault structure verifier currently stops on pre-existing missing wikilinks. It reported no issue caused by the new feature-local issue shape.</span>
+      </div>
+    </section>
+
+    <footer class="pb-28 pt-8 text-center text-sm text-base-content/50">
+      Annotate any node, decision, or phrase in Lavish. The artifact is a checkpoint, not the final skill.
+    </footer>
+  </main>
+  <nav class="vh-proto-switcher" aria-label="TUI prototype variants">
+    <button id="vh-prev-variant" class="btn btn-circle btn-sm btn-ghost" aria-label="Previous prototype variant">←</button>
+    <div id="vh-variant-label" class="vh-label" aria-live="polite">A — Operations Board</div>
+    <button id="vh-next-variant" class="btn btn-circle btn-sm btn-ghost" aria-label="Next prototype variant">→</button>
+  </nav>
+  <script>
+    (() => {
+      const tuiPrototype = document.getElementById("vh-tui-prototype");
+      document.getElementById("vh-tui-anchor").replaceWith(tuiPrototype);
+
+      const variants = [
+        { key: "A", name: "Operations Board" },
+        { key: "D", name: "Vault Hunter Atlas" },
+        { key: "B", name: "Picker + Preview" },
+        { key: "C", name: "Execution Journal" },
+      ];
+      const params = new URLSearchParams(window.location.search);
+      let index = Math.max(0, variants.findIndex((item) => item.key === params.get("variant")));
+      const motionFrames = ["V03 RED", "V03 EDIT", "V03 TEST", "V03 GREEN"];
+      const motionButton = document.getElementById("vh-motion-toggle");
+      let motionIndex = 0;
+      let motionTimer;
+
+      function showMotionFrame() {
+        document.querySelectorAll("[data-motion-status]").forEach((element) => {
+          element.textContent = motionFrames[motionIndex];
+        });
+      }
+
+      function stopMotion() {
+        window.clearInterval(motionTimer);
+        motionTimer = undefined;
+        document.body.classList.remove("vh-motion-on");
+        motionButton.setAttribute("aria-pressed", "false");
+        motionButton.textContent = "▶ Animate transition";
+      }
+
+      function toggleMotion() {
+        if (motionTimer) {
+          stopMotion();
+          return;
+        }
+        document.body.classList.add("vh-motion-on");
+        motionButton.setAttribute("aria-pressed", "true");
+        motionButton.textContent = "Ⅱ Pause transition";
+        motionTimer = window.setInterval(() => {
+          motionIndex = (motionIndex + 1) % motionFrames.length;
+          showMotionFrame();
+        }, 1200);
+      }
+
+      function showVariant(nextIndex) {
+        index = (nextIndex + variants.length) % variants.length;
+        const current = variants[index];
+        document.querySelectorAll("[data-prototype-variant]").forEach((element) => {
+          element.hidden = element.dataset.prototypeVariant !== current.key;
+        });
+        document.getElementById("vh-variant-label").textContent = `${current.key} — ${current.name}`;
+        const url = new URL(window.location.href);
+        url.searchParams.set("variant", current.key);
+        window.history.replaceState({}, "", url);
+      }
+
+      document.getElementById("vh-prev-variant").addEventListener("click", () => showVariant(index - 1));
+      document.getElementById("vh-next-variant").addEventListener("click", () => showVariant(index + 1));
+      motionButton.addEventListener("click", toggleMotion);
+      document.addEventListener("keydown", (event) => {
+        const target = event.target;
+        if (target instanceof HTMLElement && (target.matches("input, textarea, [contenteditable]") || target.isContentEditable)) return;
+        if (event.key === "ArrowLeft") showVariant(index - 1);
+        if (event.key === "ArrowRight") showVariant(index + 1);
+      });
+      showMotionFrame();
+      showVariant(index);
+    })();
+  </script>
+</body>
+</html>

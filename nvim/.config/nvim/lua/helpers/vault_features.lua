@@ -277,27 +277,16 @@ function M.format(item)
 end
 
 function M.agent_prompt(item)
-  local feature = item and item.parent
-  if not feature or feature.kind ~= "feature" or not feature.file or not feature.pos or not feature.pos[1] then
+  if
+    not item
+    or (item.kind ~= "feature" and item.kind ~= "task")
+    or not item.file
+    or not item.pos
+    or not item.pos[1]
+  then
     return nil
   end
-
-  local feature_source = string.format("%s:%d", feature.file, feature.pos[1])
-  if item.linked then
-    return table.concat({
-      "Start working on this vault task now, following its task and feature contracts.",
-      "Task: " .. item.file .. ":" .. item.pos[1],
-      "Feature: " .. feature_source,
-    }, "\n")
-  end
-
-  return table.concat({
-    "$grill-with-docs",
-    "",
-    "Use the feature contract and inline task below as source context. Do not implement yet. Interview me one decision at a time, recommend an answer, and update the durable docs until this becomes a well-defined task spec.",
-    "Feature: " .. feature_source,
-    string.format("Inline task: %s %s", item.task_id, item.task),
-  }, "\n")
+  return string.format("/vault-hunter %s:%d", item.file, item.pos[1])
 end
 
 function M.task_scope(item)
@@ -317,31 +306,44 @@ function M.task_scope(item)
 end
 
 function M.send_to_agent(item)
-  local task_scope = M.task_scope(item)
   if
     not item
-    or item.kind ~= "task"
+    or (item.kind ~= "feature" and item.kind ~= "task")
     or not item.file
     or not item.pos
     or not item.pos[1]
     or not item.repository
     or not M.agent_prompt(item)
-    or not task_scope
   then
-    vim.notify("Select a vault feature task to start an agent", vim.log.levels.WARN)
+    vim.notify("Select a vault feature or task", vim.log.levels.WARN)
     return nil
   end
 
   local herdr = require("plugins.sidekick.herdr")
   local internal = require("plugins.sidekick.internal")
-  local slug = internal.normalize_label(string.format("%s-%s-%s", item.project, item.feature, item.task_id))
-  local name = "codex-" .. slug
-  local scope = herdr.ensure_task_scope(
-    item.repository,
-    task_scope.workspace_label,
-    task_scope.feature_branch,
-    task_scope.task_branch
+  local suffix = item.kind == "task" and item.task_id or nil
+  local slug = internal.normalize_label(
+    suffix and string.format("%s-%s-%s", item.project, item.feature, suffix)
+      or string.format("%s-%s", item.project, item.feature)
   )
+  local name = "codex-" .. slug
+  local workspace_label = string.format("%s · %s", item.project, item.feature)
+  local tab_label = item.feature
+  local scope
+  if item.kind == "task" then
+    local task_scope = M.task_scope(item)
+    scope = task_scope
+      and herdr.ensure_task_scope(
+        item.repository,
+        task_scope.workspace_label,
+        task_scope.feature_branch,
+        task_scope.task_branch
+      )
+    tab_label = task_scope and task_scope.tab_label or tab_label
+  else
+    local workspace_id = herdr.ensure_workspace(item.repository, workspace_label)
+    scope = workspace_id and { workspace_id = workspace_id, cwd = item.repository } or nil
+  end
   if not scope then
     return nil
   end
@@ -356,11 +358,11 @@ function M.send_to_agent(item)
       command,
       { [internal.named_env_var] = slug },
       { workspace_id = scope.workspace_id },
-      task_scope.tab_label
+      tab_label
     )
   end
 
-  agent = herdr.place_agent(agent, scope, task_scope.tab_label)
+  agent = herdr.place_agent(agent, scope, tab_label)
   if not agent or not agent.pane_id or not herdr.run(agent.pane_id, M.agent_prompt(item)) then
     return nil
   end
@@ -402,24 +404,27 @@ function M.open()
       reverse = false,
     },
     actions = {
-      feature_agent = function(picker, item)
-        local agent = M.send_to_agent(item)
-        if agent then
-          picker:close()
-          M.activate_agent(agent)
-          vim.notify("Started " .. item.task_id .. " in " .. item.project .. " · " .. item.feature, vim.log.levels.INFO)
-        end
-      end,
+      vault_hunter = {
+        desc = "(Vault hunter) Action",
+        action = function(picker, item)
+          local agent = M.send_to_agent(item)
+          if agent then
+            picker:close()
+            M.activate_agent(agent)
+            vim.notify("Started Vault Hunter for " .. item.label, vim.log.levels.INFO)
+          end
+        end,
+      },
     },
     win = {
       input = {
         keys = {
-          ["<c-a>"] = { "feature_agent", mode = { "i", "n" } },
+          ["<c-a>"] = { "vault_hunter", mode = { "i", "n" } },
         },
       },
       list = {
         keys = {
-          ["<c-a>"] = "feature_agent",
+          ["<c-a>"] = "vault_hunter",
         },
       },
     },

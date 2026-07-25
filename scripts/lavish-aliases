@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Serve stable, collision-safe names for homelab Lavish sessions."""
+"""Serve stable, collision-safe names for homelab Lavish artifacts or sessions."""
 
 import argparse
 import json
@@ -17,8 +17,9 @@ LISTEN_HOST = "127.0.0.1"
 LISTEN_PORT = 4388
 STATE_FILE = Path.home() / ".local/state/lavish-aliases.json"
 SLUG_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
-SESSION_RE = re.compile(
-    rf"https://{re.escape(HOSTNAME)}:8443/session/[a-f0-9]+\Z"
+TARGET_RE = re.compile(
+    rf"https://{re.escape(HOSTNAME)}:8443/"
+    rf"(?:session/[a-f0-9]+|artifact/[a-f0-9]+/index\.html)\Z"
 )
 
 
@@ -46,11 +47,11 @@ def save_aliases(aliases: dict[str, str]) -> None:
             os.unlink(temporary)
 
 
-def set_alias(slug: str, session_url: str) -> None:
+def set_alias(slug: str, target_url: str) -> None:
     if not SLUG_RE.fullmatch(slug):
         raise SystemExit(f"Invalid alias: {slug}")
-    if not SESSION_RE.fullmatch(session_url):
-        raise SystemExit(f"Invalid Lavish session URL: {session_url}")
+    if not TARGET_RE.fullmatch(target_url):
+        raise SystemExit(f"Invalid Lavish target URL: {target_url}")
 
     path = f"/{slug}"
     proxy = f"http://{LISTEN_HOST}:{LISTEN_PORT}/{slug}"
@@ -73,7 +74,7 @@ def set_alias(slug: str, session_url: str) -> None:
         )
 
     aliases = load_aliases()
-    aliases[slug] = session_url
+    aliases[slug] = target_url
     save_aliases(aliases)
     if not existing:
         subprocess.run(
@@ -100,14 +101,16 @@ class RedirectHandler(BaseHTTPRequestHandler):
         self.redirect(send_body=True)
 
     def redirect(self, send_body: bool) -> None:
-        slug = urlsplit(self.path).path.removeprefix("/")
+        request = urlsplit(self.path)
+        slug = request.path.removeprefix("/")
         target = load_aliases().get(slug)
         if not target:
             self.send_error(404, "Unknown Lavish alias")
             return
-        body = f"Redirecting to {target}\n".encode()
+        location = f"{target}?{request.query}" if request.query else target
+        body = f"Redirecting to {location}\n".encode()
         self.send_response(302)
-        self.send_header("Location", target)
+        self.send_header("Location", location)
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -125,11 +128,11 @@ def main() -> None:
     subparsers.add_parser("serve")
     set_parser = subparsers.add_parser("set")
     set_parser.add_argument("slug")
-    set_parser.add_argument("session_url")
+    set_parser.add_argument("target_url")
     args = parser.parse_args()
 
     if args.command == "set":
-        set_alias(args.slug, args.session_url)
+        set_alias(args.slug, args.target_url)
         return
     ThreadingHTTPServer((LISTEN_HOST, LISTEN_PORT), RedirectHandler).serve_forever()
 

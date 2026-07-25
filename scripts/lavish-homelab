@@ -10,7 +10,7 @@ readonly REMOTE_PATH="${REMOTE_HOME}/.nvm/versions/node/v22.22.3/bin:${REMOTE_HO
 readonly PUBLIC_URL="https://homelab.tail1b3b66.ts.net:8443"
 
 usage() {
-  echo "Usage: lavish-homelab [open|poll|end|remote-path|alias-for] <html-file> [--source-markdown <file> | --alias <name>] [lavish options]" >&2
+  echo "Usage: lavish-homelab [render|review|open|poll|end|remote-path|alias-for] <html-file> [--source-markdown <file> | --alias <name>] [lavish options]" >&2
   exit 2
 }
 
@@ -70,13 +70,13 @@ alias_for() {
 [[ $# -ge 1 ]] || usage
 action=$1
 if [[ "$action" == *.html || "$action" == *.htm ]]; then
-  action=open
+  action=render
 else
   shift
 fi
 
 case "$action" in
-  open|poll|end|remote-path|alias-for)
+  render|review|open|poll|end|remote-path|alias-for)
     [[ $# -ge 1 ]] || usage
     source_file=$(resolve_file "$1")
     shift
@@ -101,8 +101,8 @@ case "$action" in
           ;;
       esac
     done
-    if [[ "$action" != open && "$action" != alias-for && ( -n "$source_markdown" || -n "$explicit_alias" ) ]]; then
-      echo "Alias options are only valid with open or alias-for" >&2
+    if [[ "$action" != render && "$action" != review && "$action" != open && "$action" != alias-for && ( -n "$source_markdown" || -n "$explicit_alias" ) ]]; then
+      echo "Alias options are only valid with render, review, open, or alias-for" >&2
       exit 2
     fi
     if [[ "$action" == alias-for ]]; then
@@ -119,7 +119,7 @@ case "$action" in
       ssh -n "$REMOTE_HOST" "mkdir -p $(quote_remote "$remote_dir")"
       rsync -az --delete --exclude .git/ "$(dirname "$source_file")/" "${REMOTE_HOST}:${remote_dir}/"
     fi
-    if [[ "$action" == open ]]; then
+    if [[ "$action" == render || "$action" == review || "$action" == open ]]; then
       alias=$(alias_for "$source_file" "$source_markdown" "$explicit_alias")
       if [[ ${#lavish_args[@]} -gt 0 ]]; then
         output=$(run_remote_lavish open "$remote_file" --no-open "${lavish_args[@]}")
@@ -129,8 +129,14 @@ case "$action" in
       printf '%s\n' "$output"
       session_url=$(printf '%s\n' "$output" | sed -n 's/.*url: "\(https:\/\/homelab\.tail1b3b66\.ts\.net:8443\/session\/[a-f0-9]*\)".*/\1/p' | head -1)
       [[ -n "$session_url" ]] || { echo "Could not read the Lavish session URL" >&2; exit 1; }
-      alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$session_url")")
-      printf 'alias_url: "%s"\nsession_url: "%s"\n' "$alias_url" "$session_url"
+      session_id=${session_url##*/}
+      artifact_url="${PUBLIC_URL}/artifact/${session_id}/index.html"
+      target_url=$session_url
+      if [[ "$action" == render ]]; then
+        target_url=$artifact_url
+      fi
+      alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$target_url")")
+      printf 'alias_url: "%s"\nartifact_url: "%s"\nsession_url: "%s"\n' "$alias_url" "$artifact_url" "$session_url"
     else
       if [[ ${#lavish_args[@]} -gt 0 ]]; then
         run_remote_lavish "$action" "$remote_file" "${lavish_args[@]}"
