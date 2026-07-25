@@ -129,8 +129,10 @@ func TestV05InteractiveRunWaitsForRegistryAndStaysAlive(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("interactive Atlas did not stop on q")
 	}
-	if !strings.Contains(stdout.String(), "Vault Hunter Atlas") {
-		t.Fatalf("interactive Atlas never rendered:\n%s", stdout.String())
+	if !strings.Contains(stdout.String(), "Vault Hunter ·") ||
+		!strings.Contains(stdout.String(), "GOAL TIMELINE") ||
+		strings.Contains(stdout.String(), "Vault Hunter Atlas") {
+		t.Fatalf("interactive Atlas did not render the full Operations Board:\n%s", stdout.String())
 	}
 }
 
