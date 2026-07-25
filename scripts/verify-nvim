@@ -31,6 +31,13 @@ fi
 
 cd "$repo_root"
 
+if [[ "$case_name" == "weekly-backlog" ]]; then
+  TZ=America/New_York VERIFY_NVIM_CASE="$case_name" "$nvim_bin" --headless \
+    '+luafile scripts/verify-nvim.lua' \
+    '+qa'
+  exit $?
+fi
+
 if [[ "$case_name" == "sidekick-herdr-live" ]]; then
   if ! command -v herdr >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
     echo "verify-nvim: herdr and jq are required for sidekick-herdr-live" >&2

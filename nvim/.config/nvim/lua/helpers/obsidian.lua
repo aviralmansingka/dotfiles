@@ -2,7 +2,13 @@
 local M = {}
 
 local function target_time(offset_days)
-  return os.time() + ((offset_days or 0) * 24 * 60 * 60)
+  local today = os.date("*t", os.time())
+  return os.time({
+    year = today.year,
+    month = today.month,
+    day = today.day + (offset_days or 0),
+    hour = 12,
+  })
 end
 
 local function date_info(offset_days)
@@ -50,13 +56,13 @@ local function ensure_day_heading(info)
   local next_section_idx
 
   for i, line in ipairs(lines) do
-    if line == "## Log" then
+    if not log_idx and line == "## Log" then
       log_idx = i
-    elseif line == "### " .. info.day_heading then
-      day_idx = i
     elseif log_idx and i > log_idx and line:match("^## ") then
       next_section_idx = i
       break
+    elseif log_idx and line == "### " .. info.day_heading then
+      day_idx = i
     end
   end
 
@@ -79,7 +85,9 @@ function M.open_weekly_backlog(offset_days)
   local backlog_file = vim.fn.expand("~/vault/3_logs/" .. info.week_id .. "/backlog.md")
 
   ensure_backlog_file(backlog_file, info)
-  vim.cmd("edit " .. vim.fn.fnameescape(backlog_file))
+  if vim.fn.resolve(vim.api.nvim_buf_get_name(0)) ~= vim.fn.resolve(backlog_file) then
+    vim.cmd("hide edit " .. vim.fn.fnameescape(backlog_file))
+  end
 
   local was_modified = vim.bo.modified
   local heading_line = ensure_day_heading(info)
