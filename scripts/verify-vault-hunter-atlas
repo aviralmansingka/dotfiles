@@ -56,6 +56,12 @@ case "$case_name" in
       test "$herdr_before" = "$(herdr workspace list)"
     fi
     ;;
+  V05)
+    (
+      cd "$module_dir"
+      go test ./cmd/vault-hunter-atlas ./internal/atlas -run '^TestV05'
+    )
+    ;;
   V06)
     (cd "$module_dir" && go test ./internal/atlas -run '^TestV06')
     ;;

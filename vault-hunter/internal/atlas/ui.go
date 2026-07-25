@@ -35,6 +35,8 @@ func (m UIModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = message.Height
 	case tea.KeyMsg:
 		switch message.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			return m, tea.Quit
 		case tea.KeyCtrlJ, tea.KeyDown, tea.KeyCtrlN:
 			m.selection.Next()
 		case tea.KeyCtrlK, tea.KeyUp, tea.KeyCtrlP:
@@ -42,7 +44,10 @@ func (m UIModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			m.selection.Select()
 		case tea.KeyRunes:
-			if string(message.Runes) == "p" {
+			switch string(message.Runes) {
+			case "q":
+				return m, tea.Quit
+			case "p":
 				m.transition.Toggle()
 			}
 		}
@@ -51,7 +56,13 @@ func (m UIModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m UIModel) View() string {
-	output := RenderCompact(m.run, m.width, m.height)
+	height := max(m.height-1, 1)
+	var output string
+	if m.width >= 100 && m.height >= 24 {
+		output = RenderExpanded(m.run, m.width, height)
+	} else {
+		output = RenderCompact(m.run, m.width, height)
+	}
 	index := m.selection.Selected()
 	if index < 0 || index >= len(m.run.Goals) {
 		return output

@@ -62,3 +62,25 @@ func TestV06EquivalentNavigationKeysAndReturn(t *testing.T) {
 		t.Fatal("navigation mutated authoritative run data")
 	}
 }
+
+func TestV05InteractiveAtlasAdaptsBetweenCompactAndFull(t *testing.T) {
+	model := NewUIModel(loadFixture(t))
+
+	compactModel, _ := model.Update(tea.WindowSizeMsg{Width: 78, Height: 17})
+	compact := compactModel.(UIModel).View()
+	if !strings.Contains(compact, "Vault Hunter Atlas") || strings.Contains(compact, "GOAL TIMELINE") {
+		t.Fatalf("78x17 did not use the compact Atlas:\n%s", compact)
+	}
+	if lines := strings.Count(compact, "\n") + 1; lines > 17 {
+		t.Fatalf("compact Atlas used %d rows, want at most 17", lines)
+	}
+
+	fullModel, _ := model.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+	full := fullModel.(UIModel).View()
+	if !strings.Contains(full, "GOAL TIMELINE") || !strings.Contains(full, "SELECTED VERIFIER JOURNEY") {
+		t.Fatalf("120x30 did not use the full Operations Board:\n%s", full)
+	}
+	if lines := strings.Count(full, "\n") + 1; lines > 30 {
+		t.Fatalf("full Atlas used %d rows, want at most 30", lines)
+	}
+}
