@@ -1,0 +1,26 @@
+PROJECT ATLAS · pi-agent  FEATURE QUEUE
+ST  FEATURE                 P  A  B  D  WHY / NEXT OBSERVABLE ITEM
+──  ──────────────────────  ─  ─  ─  ─  ─────────────────────────────
+!   registry-recovery       1  0  1  0  own Feature run blocked
+●   vault-hunter-atlas      1  1  1  1  active Task or Feature observation
+○   unattended-mode         2  0  0  0  no active Registry observation
+✓   bootstrap-seed          0  0  0  2  every authoritative Task [x]
+
+TASK QUEUE
+! registry-recovery/T05 repair · registered → registry-t05
+! vault-hunter-atlas/T03 Integrate Task runs · registered → atlas-t03
+● vault-hunter-atlas/T02 Compact Task Run Atlas · registered → atlas-rich-run
+○ registry-recovery/T04 inspect · unregistered
+○ unattended-mode/T07 operations board · unregistered
+○ unattended-mode/T08 execution journal · unregistered
+○ vault-hunter-atlas/T06 Project + Feature views · Task note missing · unregistered
+✓ bootstrap-seed/T00 golden image · unregistered
+✓ bootstrap-seed/T01 first boot · unregistered
+✓ vault-hunter-atlas/T01 Define Atlas contract · unregistered
+! T01 [x] conflicts with Task note status: in-progress
+! missing Task note: 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/06-views.md
+! malformed Task checklist entry: no valid wikilink here
+! duplicate Task link: 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md
+! conflicting duplicate checkboxes for T02; first occurrence wins
+! duplicate Task link: 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/03-integration.md
+PROJECT C — DENSE TRIAGE TABLE

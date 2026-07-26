@@ -1,0 +1,67 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+fixture=scripts/fixtures/vault-hunter-atlas-t06-v01
+goldens=scripts/goldens/vault-hunter-atlas-t06-v01
+tmp=$(mktemp -d)
+trap 'chmod -R u+rwX "$tmp" 2>/dev/null || true; rm -rf "$tmp"' EXIT
+
+manifest() {
+  (
+    cd "$1"
+    find . -type f -print | LC_ALL=C sort | while IFS= read -r file; do
+      printf '%s  %s\n' "$(shasum -a 256 "$file" | awk '{print $1}')" "$file"
+    done
+  ) | shasum -a 256 | awk '{print $1}'
+}
+
+source_vault_before=$(manifest "$fixture/vault")
+source_registry_before=$(manifest "$fixture/state")
+go test -count=1 ./internal/atlas ./internal/vaultregistry -run 'T06V01'
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+cp -R "$fixture/vault" "$tmp/vault"
+cp -R "$fixture/state" "$tmp/state"
+mkdir "$tmp/traps" "$tmp/home"
+: > "$tmp/invocations"
+for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
+  ln -s "$(pwd)/$fixture/orchestration-trap" "$tmp/traps/$command"
+done
+vault_before=$(manifest "$tmp/vault")
+registry_before=$(manifest "$tmp/state")
+chmod -R a-w "$tmp/vault" "$tmp/state"
+
+run_atlas() {
+  HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
+    VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-read" \
+    ATLAS_T06_TRAP_LOG="$tmp/invocations" PATH="$tmp/traps:$PATH" \
+    "$tmp/vault-hunter-atlas" --vault-dir "$tmp/vault" --state-dir "$tmp/state" --snapshot "$@"
+}
+run_atlas --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md > "$tmp/feature.first"
+run_atlas --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md > "$tmp/feature.second"
+run_atlas --project 1_projects/pi-agent > "$tmp/project.first"
+run_atlas --project 1_projects/pi-agent > "$tmp/project.second"
+cmp "$tmp/feature.first" "$tmp/feature.second"
+cmp "$tmp/project.first" "$tmp/project.second"
+cmp "$goldens/feature-b.txt" "$tmp/feature.first"
+cmp "$goldens/project-c.txt" "$tmp/project.first"
+test ! -s "$tmp/invocations"
+test ! -e "$tmp/home/retained-registry-must-not-be-read"
+test "$vault_before" = "$(manifest "$tmp/vault")"
+test "$registry_before" = "$(manifest "$tmp/state")"
+test "$source_vault_before" = "$(manifest "$fixture/vault")"
+test "$source_registry_before" = "$(manifest "$fixture/state")"
+
+# Exact-once identities and the accepted Feature B / Project C structures.
+test "$(grep -Ec '^[├└]─ . (T01|T02|T03|T06) ' "$tmp/feature.first")" -eq 4
+test "$(grep -Ec '^[!●○✓]   (registry-recovery|vault-hunter-atlas|unattended-mode|bootstrap-seed) ' "$tmp/project.first")" -eq 4
+for diagnostic in 'conflicts with Task note' 'missing Task note' 'malformed Task checklist entry' 'duplicate Task link' 'conflicting duplicate checkboxes'; do
+  grep -Fq "$diagnostic" "$tmp/feature.first"
+done
+grep -Fq '● ACTIVE  Feature status roll-up' "$tmp/feature.first"
+grep -Fq '!   registry-recovery       1  0  1  0  own Feature run blocked' "$tmp/project.first"
+grep -Fq '●   vault-hunter-atlas      1  1  1  1' "$tmp/project.first"
+
+printf 'fixture vault manifest: %s\n' "$vault_before"
+printf 'fixture Registry manifest: %s\n' "$registry_before"
+echo 'T06.V01 Feature B and Project C deterministic read-only projections: PASS'

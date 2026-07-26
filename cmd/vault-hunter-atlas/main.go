@@ -14,11 +14,15 @@ import (
 func main() {
 	runID := flag.String("run-id", "", "Run ID to display")
 	stateDir := flag.String("state-dir", "", "Vault Hunter state directory")
+	vaultDir := flag.String("vault-dir", "", "canonical vault root")
+	featurePath := flag.String("feature", "", "vault-relative canonical feature.md target")
+	projectPath := flag.String("project", "", "vault-relative canonical project target")
 	snapshot := flag.Bool("snapshot", false, "print one deterministic frame")
 	width := flag.Int("width", 0, "frame width")
 	height := flag.Int("height", 0, "frame height")
 	flag.Parse()
-	if *runID == "" {
+	aggregateMode := *featurePath != "" || *projectPath != ""
+	if (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "")) || (!aggregateMode && *runID == "") {
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -39,6 +43,23 @@ func main() {
 	reader, err := vaultregistry.OpenReader(*stateDir)
 	if err != nil {
 		fail(err)
+	}
+	if aggregateMode {
+		runs, err := reader.List()
+		if err != nil {
+			fail(err)
+		}
+		var projection atlas.Aggregate
+		if *featurePath != "" {
+			projection, err = atlas.DiscoverFeature(*vaultDir, *featurePath, runs)
+		} else {
+			projection, err = atlas.DiscoverProject(*vaultDir, *projectPath, runs)
+		}
+		if err != nil {
+			fail(err)
+		}
+		fmt.Println(projection.Render())
+		return
 	}
 	run, err := reader.Get(*runID)
 	if err != nil {

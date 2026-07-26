@@ -1,0 +1,20 @@
+FEATURE ATLAS · vault-hunter-atlas  OUTLINE + SUMMARY
+● ACTIVE  Feature status roll-up
+│
+├─ ✓ T01  Define Atlas contract  DONE
+│   unregistered
+├─ ● T02  Compact Task Run Atlas  ACTIVE
+│   registered → atlas-rich-run
+├─ ! T03  Integrate Task runs  BLOCKED
+│   registered → atlas-t03
+└─ ○ T06  Project + Feature views  PENDING
+    Task note missing · unregistered
+
+SUMMARY  Pending 1  Active 1  Blocked 1  Done 1
+! T01 [x] conflicts with Task note status: in-progress
+! missing Task note: 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/06-views.md
+! malformed Task checklist entry: no valid wikilink here
+! duplicate Task link: 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md
+! conflicting duplicate checkboxes for T02; first occurrence wins
+! duplicate Task link: 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/03-integration.md
+FEATURE B — HIERARCHY + ROLL-UP
