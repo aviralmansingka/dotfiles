@@ -16,14 +16,27 @@ manifest() {
   ) | shasum -a 256 | awk '{print $1}'
 }
 
+task=1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md
 source_vault_before=$(manifest "$fixture/vault")
 source_registry_before=$(manifest "$fixture/state")
 test "$(grep -RFl '"path":"1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md"' "$fixture/state/runs" | wc -l | tr -d ' ')" -eq 1
 grep -Fq '"state":"done"' "$fixture/state/runs/atlas-rich-run.json"
-go test -count=1 ./internal/atlas -run 'T06V02'
 go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
 cp -R "$fixture/vault" "$tmp/vault"
 cp -R "$fixture/state" "$tmp/state"
+TASK_PATH="$tmp/vault/$task" RUN_FILE="$tmp/state/runs/atlas-rich-run.json" python3 - <<'PY'
+import json
+import os
+
+path = os.environ["RUN_FILE"]
+with open(path, encoding="utf-8") as file:
+    run = json.load(file)
+run["task"]["path"] = os.environ["TASK_PATH"]
+with open(path, "w", encoding="utf-8") as file:
+    json.dump(run, file, separators=(",", ":"))
+    file.write("\n")
+PY
+grep -Fq '"path":"'"$tmp/vault/$task"'"' "$tmp/state/runs/atlas-rich-run.json"
 mkdir "$tmp/traps" "$tmp/home"
 : > "$tmp/invocations"
 for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
@@ -32,8 +45,10 @@ done
 vault_before=$(manifest "$tmp/vault")
 registry_before=$(manifest "$tmp/state")
 chmod -R a-w "$tmp/vault" "$tmp/state"
+printf 'temporary fixture vault manifest: %s\n' "$vault_before"
+printf 'temporary fixture Registry manifest: %s\n' "$registry_before"
+go test -count=1 ./internal/atlas -run 'T06V02'
 
-task=1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md
 run_atlas() {
   HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
     VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-read" \

@@ -159,6 +159,61 @@ func TestT06V02SelectsRegisteredTaskByCanonicalPath(t *testing.T) {
 	}
 }
 
+func TestT06V02RegistryTaskPathBoundaries(t *testing.T) {
+	root := filepath.Join("..", "..", "scripts", "fixtures", "vault-hunter-atlas-t06-v02")
+	vaultRoot, err := filepath.Abs(filepath.Join(root, "vault"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const taskPath = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md"
+	absoluteTask := filepath.Join(vaultRoot, filepath.FromSlash(taskPath))
+
+	tests := []struct {
+		name, path string
+		wantRun    bool
+	}{
+		{name: "relative", path: taskPath, wantRun: true},
+		{name: "clean absolute under root", path: filepath.Join(vaultRoot, "1_projects", "pi-agent", "themes", "pi-customization", "features", "vault-hunter-atlas", "tasks", "..", "tasks", "02-compact.md"), wantRun: true},
+		{name: "absolute outside root", path: filepath.Join(filepath.Dir(vaultRoot), "outside", filepath.Base(absoluteTask))},
+		{name: "relative escape", path: "../" + taskPath},
+		{name: "empty", path: ""},
+		{name: "vault root", path: vaultRoot},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			runs := []vaultregistry.Run{{RunID: "atlas-rich-run", Task: vaultregistry.Task{Path: test.path}}}
+			projection, err := DiscoverFeature(vaultRoot, "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md", runs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			task, ok := projection.Task(taskPath)
+			if !ok {
+				t.Fatal("canonical Task selection not found")
+			}
+			if got := task.RunID != ""; got != test.wantRun {
+				t.Fatalf("RunID = %q, matched = %v, want %v for %q", task.RunID, got, test.wantRun, test.path)
+			}
+		})
+	}
+
+	if volume := filepath.VolumeName(vaultRoot); volume != "" {
+		other := "Z:" + string(filepath.Separator) + filepath.FromSlash(taskPath)
+		if filepath.VolumeName(other) != volume {
+			t.Run("different volume", func(t *testing.T) {
+				runs := []vaultregistry.Run{{RunID: "other-volume", Task: vaultregistry.Task{Path: other}}}
+				projection, err := DiscoverFeature(vaultRoot, "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md", runs)
+				if err != nil {
+					t.Fatal(err)
+				}
+				task, ok := projection.Task(taskPath)
+				if !ok || task.RunID != "" {
+					t.Fatalf("different-volume Task/run = %#v/%v, want empty RunID", task, ok)
+				}
+			})
+		}
+	}
+}
+
 func TestT06V03SelectsUnregisteredTaskByCanonicalPath(t *testing.T) {
 	root := filepath.Join("..", "..", "scripts", "fixtures", "vault-hunter-atlas-t06-v03")
 	projection, err := DiscoverFeature(filepath.Join(root, "vault"), "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md", nil)
