@@ -450,11 +450,14 @@ def main():
     goal = "fixture"
     try:
         fixture = json.loads(args.fixture.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
-        if type(fixture) is dict and fixture.get("goal") in VERIFIERS:
-            goal = fixture["goal"]
+        if type(fixture) is dict:
+            fixture_goal = fixture.get("goal")
+            require(type(fixture_goal) is str, "fixture.goal must be a string")
+            if fixture_goal in VERIFIERS:
+                goal = fixture_goal
         require(goal in VERIFIERS, "fixture.goal is unknown")
         VERIFIERS[goal](fixture)
-    except (FixtureError, OSError, UnicodeError, json.JSONDecodeError) as error:
+    except (FixtureError, OSError, UnicodeError, json.JSONDecodeError, ValueError, RecursionError) as error:
         print(f"FAIL {goal}: {error}", file=sys.stderr)
         return 1
     print(f"PASS {goal}")
