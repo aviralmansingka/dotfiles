@@ -133,10 +133,11 @@ explicit confirmation ends the mutation attempt without `--apply`.
 From the repository root:
 
 ```sh
+repo_root="$(git rev-parse --show-toplevel)"
 rm -rf /tmp/t09-v02-vault
-cp -R .agents/skills/agent-issue-triage/fixtures/manual-vault /tmp/t09-v02-vault
+cp -R "$repo_root/.agents/skills/agent-issue-triage/fixtures/manual-vault" /tmp/t09-v02-vault
 cd /tmp/t09-v02-vault
-pi --no-session --no-extensions --skill /private/tmp/vh-agent-issue-triage-t09/.agents/skills/agent-issue-triage
+pi --no-session --no-extensions --skill "$repo_root/.agents/skills/agent-issue-triage"
 ```
 
 Then invoke:
@@ -157,10 +158,11 @@ inclusion/exclusion visible before mutation.
 fixture. Its vault is isolated from the real vault. From the repository root:
 
 ```sh
+repo_root="$(git rev-parse --show-toplevel)"
 rm -rf /tmp/t09-v03-vault
-cp -R .agents/skills/agent-issue-triage/fixtures/voice-vault/vault /tmp/t09-v03-vault
+cp -R "$repo_root/.agents/skills/agent-issue-triage/fixtures/voice-vault/vault" /tmp/t09-v03-vault
 cd /tmp/t09-v03-vault
-pi --no-session --no-extensions --skill /private/tmp/vh-agent-issue-triage-t09/.agents/skills/agent-issue-triage
+pi --no-session --no-extensions --skill "$repo_root/.agents/skills/agent-issue-triage"
 ```
 
 Present each case's transcript and supplied fields as already-transcribed

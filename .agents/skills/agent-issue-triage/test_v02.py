@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -143,6 +145,141 @@ class V02Tests(unittest.TestCase):
         ).stdout
         self.assertIn("No files changed", preview)
         self.assertEqual(manifest(self.vault), before)
+
+    def test_create_rejects_project_feature_and_issue_directory_symlink_escapes(self) -> None:
+        outside_project = self.root / "outside-project"
+        (outside_project / "themes" / "editor" / "features" / "owned").mkdir(
+            parents=True
+        )
+        (self.vault / "1_projects" / "escaped-project").symlink_to(
+            outside_project, target_is_directory=True
+        )
+
+        outside_feature = self.root / "outside-feature"
+        outside_feature.mkdir()
+        feature_link = (
+            self.vault
+            / "1_projects"
+            / "neovim"
+            / "themes"
+            / "editor"
+            / "features"
+            / "escaped-feature"
+        )
+        feature_link.symlink_to(outside_feature, target_is_directory=True)
+
+        safe_feature = feature_link.parent / "safe-feature"
+        safe_feature.mkdir()
+        outside_issues = self.root / "outside-issues"
+        outside_issues.mkdir()
+        (safe_feature / "issues").symlink_to(outside_issues, target_is_directory=True)
+
+        cases = (
+            (["escaped-project"], "escaped-project/owned"),
+            (["neovim"], "neovim/escaped-feature"),
+            (["neovim"], "neovim/safe-feature"),
+        )
+        for projects, owner in cases:
+            with self.subTest(owner=owner):
+                with self.assertRaisesRegex(
+                    triage.TriageError, "must remain inside the vault"
+                ):
+                    triage.create_plan(
+                        self.vault.resolve(),
+                        projects,
+                        owner,
+                        "must-not-exist",
+                        "Must Not Exist",
+                        "No file is created outside the vault",
+                        "Reject the escaped owner",
+                        "message-escape",
+                        "Create an issue outside the vault",
+                    )
+        self.assertEqual(list(outside_issues.iterdir()), [])
+
+    def test_failed_create_staging_closes_and_unlinks_temp_and_owned_directory(self) -> None:
+        feature = (
+            self.vault
+            / "1_projects"
+            / "neovim"
+            / "themes"
+            / "editor"
+            / "features"
+            / "empty-owner"
+        )
+        feature.mkdir()
+        issues = feature / "issues"
+        plan = triage.create_plan(
+            self.vault.resolve(),
+            ["neovim"],
+            "neovim/empty-owner",
+            "new-issue",
+            "New Issue",
+            "Users get the intended result",
+            "Run the focused check",
+            "message-create-failure",
+            "Create this issue",
+        )
+        original_fdopen = triage.os.fdopen
+        failed_descriptor = None
+
+        def failing_fdopen(descriptor: int, mode: str):
+            nonlocal failed_descriptor
+            failed_descriptor = descriptor
+            raise OSError("deterministic create staging failure")
+
+        triage.os.fdopen = failing_fdopen
+        try:
+            with self.assertRaisesRegex(triage.TriageError, "cannot stage"):
+                triage.apply_plan(plan)
+        finally:
+            triage.os.fdopen = original_fdopen
+
+        self.assertIsNotNone(failed_descriptor)
+        with self.assertRaises(OSError) as error:
+            os.fstat(failed_descriptor)
+        self.assertEqual(error.exception.errno, errno.EBADF)
+        self.assertFalse(issues.exists())
+
+    def test_failed_split_staging_closes_and_unlinks_all_temporaries(self) -> None:
+        children = self.children_file()
+        relative = "1_projects/neovim/themes/editor/features/splitting/issues/split-candidate.md"
+        before = manifest(self.vault)
+        plan = triage.mutation_plan(
+            self.vault.resolve(),
+            ["neovim", "pi-agent"],
+            relative,
+            "split",
+            "Replace the broad issue with actionable children",
+            "Start the first child",
+            children=triage.load_children(children),
+        )
+        original_fdopen = triage.os.fdopen
+        calls = 0
+        failed_descriptor = None
+
+        def failing_second_fdopen(descriptor: int, mode: str):
+            nonlocal calls, failed_descriptor
+            calls += 1
+            if calls == 2:
+                failed_descriptor = descriptor
+                raise OSError("deterministic split staging failure")
+            return original_fdopen(descriptor, mode)
+
+        triage.os.fdopen = failing_second_fdopen
+        try:
+            with self.assertRaisesRegex(triage.TriageError, "cannot stage"):
+                triage.apply_plan(plan)
+        finally:
+            triage.os.fdopen = original_fdopen
+
+        self.assertIsNotNone(failed_descriptor)
+        with self.assertRaises(OSError) as error:
+            os.fstat(failed_descriptor)
+        self.assertEqual(error.exception.errno, errno.EBADF)
+        self.assertEqual(manifest(self.vault), before)
+        parent = self.vault / relative
+        self.assertEqual(list(parent.parent.glob(".*.md.*")), [])
 
     def test_approved_keep_defer_and_close_statuses(self) -> None:
         cases = (

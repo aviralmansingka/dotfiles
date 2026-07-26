@@ -233,6 +233,15 @@ def resolve_issue_reference(vault: Path, projects: list[str], reference: str) ->
     raise TriageError("issue identity was not found; clarify with an exact path or exact title")
 
 
+def _resolve_inside_vault(vault: Path, path: Path, label: str) -> Path:
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(vault.resolve())
+    except ValueError as error:
+        raise TriageError(f"{label} must remain inside the vault") from error
+    return resolved
+
+
 def resolve_owner(vault: Path, projects: list[str], owner: str) -> tuple[str, str, Path]:
     """Resolve a named project/feature owner without guessing a theme."""
     parts = owner.strip().split("/")
@@ -244,9 +253,12 @@ def resolve_owner(vault: Path, projects: list[str], owner: str) -> tuple[str, st
     if project not in projects:
         raise TriageError("owner project is not in the selected projects; clarify ownership")
     project_root = vault / "1_projects" / project
+    _resolve_inside_vault(vault, project_root, "owner project path")
     matches = sorted(
         path for path in project_root.glob(f"themes/*/features/{feature}") if path.is_dir()
     )
+    for path in matches:
+        _resolve_inside_vault(vault, path, "owner feature path")
     if not matches:
         raise TriageError("owner was not found; clarify the project/feature owner")
     if len(matches) > 1:
@@ -513,6 +525,7 @@ def create_plan(
 
     project, feature, feature_root = resolve_owner(vault, projects, owner)
     path = feature_root / "issues" / f"{slug}.md"
+    _resolve_inside_vault(vault, path, "issue creation path")
     relative_path = path.relative_to(vault).as_posix()
     if path.exists():
         raise TriageError(f"issue already exists: {relative_path}")
@@ -553,11 +566,7 @@ def mutation_plan(
     if priority is not None and not priority.strip():
         raise TriageError("priority must be non-empty when supplied")
 
-    requested = (vault / issue_path).resolve()
-    try:
-        requested.relative_to(vault)
-    except ValueError as error:
-        raise TriageError("issue path must remain inside the vault") from error
+    requested = _resolve_inside_vault(vault, vault / issue_path, "issue path")
     issues, _ = discover(vault, projects)
     issue = next((candidate for candidate in issues if candidate.path.resolve() == requested), None)
     if issue is None:
@@ -648,17 +657,35 @@ def _verify_unchanged(plan: Plan) -> None:
 
 
 def _stage(change: Change) -> Path:
+    descriptor: int | None = None
+    temporary: Path | None = None
+    staged = False
     try:
         descriptor, name = tempfile.mkstemp(prefix=f".{change.path.name}.", dir=change.path.parent)
-        with os.fdopen(descriptor, "wb") as handle:
+        temporary = Path(name)
+        handle = os.fdopen(descriptor, "wb")
+        descriptor = None
+        with handle:
             handle.write(change.new)
             handle.flush()
             os.fsync(handle.fileno())
         mode = 0o644 if change.old is None else stat.S_IMODE(change.path.stat().st_mode)
-        os.chmod(name, mode)
-        return Path(name)
+        os.chmod(temporary, mode)
+        staged = True
+        return temporary
     except OSError as error:
         raise TriageError(f"cannot stage {change.relative_path}: {error}") from error
+    finally:
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        if temporary is not None and not staged:
+            try:
+                temporary.unlink()
+            except OSError:
+                pass
 
 
 def _publish_new(staged: Path, target: Path) -> None:
@@ -693,20 +720,17 @@ def apply_plan(plan: Plan) -> None:
             return
 
         published: list[Path] = []
-        parent_replaced = False
         try:
             for change, temporary in staged[:-1]:
                 _publish_new(temporary, change.path)
                 published.append(change.path)
             os.replace(staged[-1][1], staged[-1][0].path)
-            parent_replaced = True
         except OSError as error:
-            if not parent_replaced:
-                for path in reversed(published):
-                    try:
-                        path.unlink()
-                    except FileNotFoundError:
-                        pass
+            for path in reversed(published):
+                try:
+                    path.unlink()
+                except FileNotFoundError:
+                    pass
             raise TriageError(f"split was not applied: {error}") from error
     finally:
         for _, temporary in staged:
