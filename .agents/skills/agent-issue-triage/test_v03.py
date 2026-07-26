@@ -172,22 +172,23 @@ class V03Tests(unittest.TestCase):
 
         self.preview_and_apply(arguments)
         text = (self.vault / relative).read_text(encoding="utf-8")
-        self.assertIn(f"- **Transcript:** {preserved}\n\n## Triage\n", text)
+        self.assertIn(f"## Source\n\n- **Channel:** Telegram", text)
+        self.assertTrue(text.endswith(f"- **Transcript:** {preserved}\n"))
         self.assertNotIn("First paragraph keeps its inline tab.", text)
 
-    def test_create_then_update_ignores_triage_heading_inside_transcript(self) -> None:
+    def test_create_then_update_preserves_mixed_newline_source_bytes(self) -> None:
         relative = (
             "1_projects/pi-agent/themes/vault-issue-workflow/features/"
             "agent-issue-triage/issues/triage-heading-source.md"
         )
         transcript = (
-            "Keep this source byte for byte.\n\n"
-            "## Triage\n\n"
+            "Keep this source byte for byte.\r\n\r\n"
+            "## Triage\r\n\r\n"
             "- **User-facing outcome:** This is transcript text, not metadata\n"
-            "- **Smallest next action:** Do not rewrite this source line\n"
-            "- **Disposition:** transcript-only\n\n"
+            "- **Smallest next action:** Do not rewrite this source line\r\n"
+            "- **Disposition:** transcript-only\r\n\r\n"
             "## Transcript Notes\n\n"
-            "The canonical triage section comes later."
+            "The canonical triage section comes earlier."
         )
         create_arguments = [
             "--create-owner",
@@ -209,9 +210,10 @@ class V03Tests(unittest.TestCase):
 
         path = self.vault / relative
         created = path.read_bytes()
-        marker = b"\n## Triage\n"
-        source_before, canonical_before = created.rsplit(marker, 1)
-        self.assertEqual(created.count(marker), 2)
+        source_offset = created.index(b"## Source\n")
+        canonical_before = created[:source_offset]
+        source_before = created[source_offset:]
+        self.assertEqual(created.count(b"## Triage"), 2)
         self.assertIn(transcript.encode("utf-8"), source_before)
 
         update_outcome = "The source survives a later update"
@@ -225,14 +227,19 @@ class V03Tests(unittest.TestCase):
             update_outcome,
             "--next-action",
             update_action,
+            "--priority",
+            "P1",
         ]
         self.preview_and_apply(update_arguments)
 
         updated = path.read_bytes()
-        source_after, canonical_after = updated.rsplit(marker, 1)
-        self.assertEqual(updated.count(marker), 2)
+        source_offset = updated.index(b"## Source\n")
+        canonical_after = updated[:source_offset]
+        source_after = updated[source_offset:]
+        self.assertEqual(updated.count(b"## Triage"), 2)
         self.assertEqual(source_after, source_before)
         self.assertNotEqual(canonical_after, canonical_before)
+        self.assertIn(b"priority: P1\n", canonical_after)
         self.assertEqual(canonical_after.count(update_outcome.encode("utf-8")), 1)
         self.assertEqual(canonical_after.count(update_action.encode("utf-8")), 1)
         self.assertNotIn(update_outcome.encode("utf-8"), source_after)

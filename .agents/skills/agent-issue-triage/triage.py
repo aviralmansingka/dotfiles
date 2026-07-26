@@ -49,9 +49,19 @@ class Change:
 
 @dataclass
 class Plan:
+    vault_root: Path
     action: str
     issue: Issue
     changes: list[Change]
+
+
+def conversational_line(value: str, label: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise TriageError(f"{label} must be non-empty")
+    if "\n" in value or "\r" in value:
+        raise TriageError(f"{label} must be one line")
+    return normalized
 
 
 def scalar(value: str) -> str | None:
@@ -116,7 +126,16 @@ def triage_values(body: list[str]) -> tuple[str, str, str]:
         "smallest next action": "next_action",
         "disposition": "disposition",
     }
-    start = headings[-1] + 1 if headings else len(body)
+    source = next(
+        (i for i, line in enumerate(body) if re.match(r"^##\s+Source\s*$", line, re.I)),
+        None,
+    )
+    prefix_headings = [] if source is None else [i for i in headings if i < source]
+    start = (
+        (prefix_headings[-1] if prefix_headings else headings[-1]) + 1
+        if headings
+        else len(body)
+    )
     for raw_line in body[start:]:
         if raw_line.startswith("## "):
             break
@@ -253,6 +272,22 @@ def _resolve_inside_vault(vault: Path, path: Path, label: str) -> Path:
     return resolved
 
 
+def _reject_symlink_components(vault: Path, path: Path, label: str) -> None:
+    root = vault.absolute()
+    lexical_path = path.absolute()
+    try:
+        relative = lexical_path.relative_to(root)
+    except ValueError as error:
+        raise TriageError(f"{label} must remain inside the vault") from error
+    current = root
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            raise TriageError(
+                f"{label} must not be a symbolic link or contain symbolic link components"
+            )
+
+
 def resolve_owner(vault: Path, projects: list[str], owner: str) -> tuple[str, str, Path]:
     """Resolve a named project/feature owner without guessing a theme."""
     parts = owner.strip().split("/")
@@ -265,11 +300,13 @@ def resolve_owner(vault: Path, projects: list[str], owner: str) -> tuple[str, st
         raise TriageError("owner project is not in the selected projects; clarify ownership")
     project_root = vault / "1_projects" / project
     _resolve_inside_vault(vault, project_root, "owner project path")
+    _reject_symlink_components(vault, project_root, "owner project path")
     matches = sorted(
         path for path in project_root.glob(f"themes/*/features/{feature}") if path.is_dir()
     )
     for path in matches:
         _resolve_inside_vault(vault, path, "owner feature path")
+        _reject_symlink_components(vault, path, "owner feature path")
     if not matches:
         raise TriageError("owner was not found; clarify the project/feature owner")
     if len(matches) > 1:
@@ -425,6 +462,50 @@ def set_triage(text: str, outcome: str, next_action: str, disposition: str) -> s
     return "\n".join(lines) + "\n"
 
 
+def update_issue_text(
+    text: str,
+    updates: dict[str, str],
+    outcome: str,
+    next_action: str,
+    disposition: str,
+) -> str:
+    """Rewrite canonical metadata while retaining a Telegram source region verbatim."""
+    heading_pattern = re.compile(
+        r"^##[ \t]+(Source|Triage)[ \t]*\r?$", re.I | re.M
+    )
+    headings = [
+        (match.group(1).casefold(), match.start())
+        for match in heading_pattern.finditer(text)
+    ]
+    source_offsets = [offset for kind, offset in headings if kind == "source"]
+    triage_offsets = [offset for kind, offset in headings if kind == "triage"]
+    if not source_offsets:
+        return set_triage(
+            set_frontmatter_fields(text, updates), outcome, next_action, disposition
+        )
+
+    source = source_offsets[0]
+    prefix_triage = [offset for offset in triage_offsets if offset < source]
+    if prefix_triage:
+        canonical_prefix = set_triage(
+            set_frontmatter_fields(text[:source], updates), outcome, next_action, disposition
+        )
+        return canonical_prefix + text[source:]
+
+    suffix_triage = [offset for offset in triage_offsets if offset > source]
+    if suffix_triage:
+        canonical = suffix_triage[-1]
+        canonical_prefix = set_frontmatter_fields(text[:source], updates)
+        canonical_triage = set_triage(
+            text[canonical:], outcome, next_action, disposition
+        )
+        return canonical_prefix + text[source:canonical] + canonical_triage
+
+    return set_triage(
+        set_frontmatter_fields(text, updates), outcome, next_action, disposition
+    )
+
+
 def load_children(path: Path | None) -> list[dict[str, Any]]:
     if path is None:
         return []
@@ -449,6 +530,9 @@ def load_children(path: Path | None) -> list[dict[str, Any]]:
         if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
             raise TriageError(f"child {index} slug must use lowercase letters, numbers, and hyphens")
         normalized = dict(child)
+        normalized["slug"] = slug
+        for key in ("title", "outcome", "next_action"):
+            normalized[key] = conversational_line(child[key], f"child {index} {key}")
         if "priority" in child:
             normalized["priority"] = priority_scalar(
                 child["priority"], f"child {index} priority"
@@ -500,6 +584,12 @@ def telegram_voice_issue_text(
         "---",
         f"# {title.strip()}",
         "",
+        "## Triage",
+        "",
+        f"- **User-facing outcome:** {outcome.strip()}",
+        f"- **Smallest next action:** {next_action.strip()}",
+        "- **Disposition:** keep",
+        "",
         "## Source",
         "",
         "- **Channel:** Telegram",
@@ -507,12 +597,6 @@ def telegram_voice_issue_text(
         f"- **Message ID:** {source_id.strip()}",
         f"- **Owner:** {owner}",
         f"- **Transcript:** {transcript}",
-        "",
-        "## Triage",
-        "",
-        f"- **User-facing outcome:** {outcome.strip()}",
-        f"- **Smallest next action:** {next_action.strip()}",
-        "- **Disposition:** keep",
         "",
     ]
     return "\n".join(lines)
@@ -531,15 +615,17 @@ def create_plan(
 ) -> Plan:
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
         raise TriageError("issue slug must use lowercase letters, numbers, and hyphens")
-    values = (title, outcome, next_action, source_id, transcript)
-    if any(not value.strip() for value in values):
-        raise TriageError("title, outcome, next action, source ID, and transcript must be non-empty")
-    if any("\n" in value or "\r" in value for value in (title, source_id)):
-        raise TriageError("title and source ID must each be one line")
+    if not transcript.strip():
+        raise TriageError("transcript must be non-empty")
+    title = conversational_line(title, "title")
+    outcome = conversational_line(outcome, "outcome")
+    next_action = conversational_line(next_action, "next action")
+    source_id = conversational_line(source_id, "source ID")
 
     project, feature, feature_root = resolve_owner(vault, projects, owner)
     path = feature_root / "issues" / f"{slug}.md"
     _resolve_inside_vault(vault, path, "issue creation path")
+    _reject_symlink_components(vault, path, "issue creation path")
     relative_path = path.relative_to(vault).as_posix()
     if path.exists():
         raise TriageError(f"issue already exists: {relative_path}")
@@ -559,7 +645,7 @@ def create_plan(
         next_action=next_action.strip(),
         disposition="keep",
     )
-    return Plan("create", issue, [Change(path, relative_path, None, text)])
+    return Plan(vault.resolve(), "create", issue, [Change(path, relative_path, None, text)])
 
 
 def mutation_plan(
@@ -575,21 +661,19 @@ def mutation_plan(
 ) -> Plan:
     if action not in ACTIONS:
         raise TriageError(f"unsupported action: {action}")
-    if not outcome.strip() or not next_action.strip():
-        raise TriageError("outcome and next action must both be non-empty")
+    outcome = conversational_line(outcome, "outcome")
+    next_action = conversational_line(next_action, "next action")
     normalized_priority = None if priority is None else priority_scalar(priority)
 
     requested = vault / issue_path
     _resolve_inside_vault(vault, requested, "issue path")
+    _reject_symlink_components(vault, requested, "issue path")
     issues, _ = discover(vault, projects)
     issue = next(
         (candidate for candidate in issues if candidate.relative_path == issue_path), None
     )
     if issue is None:
         raise TriageError("issue is not an open ordinary issue in the selected projects")
-    if issue.path.is_symlink():
-        raise TriageError("issue path must not be a symbolic link")
-
     try:
         old = issue.path.read_bytes()
         text = old.decode("utf-8")
@@ -603,9 +687,7 @@ def mutation_plan(
         updates["priority"] = normalized_priority
     if order is not None:
         updates["order"] = str(order)
-    parent_text = set_triage(
-        set_frontmatter_fields(text, updates), outcome.strip(), next_action.strip(), action
-    )
+    parent_text = update_issue_text(text, updates, outcome, next_action, action)
     parent_change = Change(issue.path, issue.relative_path, old, parent_text.encode("utf-8"))
 
     child_specs = children or []
@@ -628,7 +710,9 @@ def mutation_plan(
         changes: list[Change] = []
         for child in child_specs:
             path = issue.path.parent / f"{child['slug'].strip()}.md"
-            if path.exists():
+            _resolve_inside_vault(vault, path, "split child path")
+            _reject_symlink_components(vault, path, "split child path")
+            if path.exists() or path.is_symlink():
                 raise TriageError(f"split child already exists: {path.relative_to(vault).as_posix()}")
             changes.append(
                 Change(
@@ -639,12 +723,16 @@ def mutation_plan(
                 )
             )
         changes.append(parent_change)
-        return Plan(action, issue, changes)
-    return Plan(action, issue, [parent_change])
+        return Plan(vault.resolve(), action, issue, changes)
+    return Plan(vault.resolve(), action, issue, [parent_change])
 
 
 def plan_token(plan: Plan) -> str:
     digest = hashlib.sha256()
+    vault_root = plan.vault_root.resolve()
+    vault_stat = vault_root.stat()
+    digest.update(os.fsencode(vault_root))
+    digest.update(f"\0{vault_stat.st_dev}:{vault_stat.st_ino}\0".encode())
     digest.update(plan.action.encode())
     for change in plan.changes:
         digest.update(b"\0" + change.relative_path.encode() + b"\0")
@@ -675,8 +763,10 @@ def render_preview(plan: Plan) -> str:
 
 def _verify_unchanged(plan: Plan) -> None:
     for change in plan.changes:
+        _resolve_inside_vault(plan.vault_root, change.path, "planned path")
+        _reject_symlink_components(plan.vault_root, change.path, "planned path")
         if change.old is None:
-            if change.path.exists():
+            if change.path.exists() or change.path.is_symlink():
                 raise TriageError(f"planned new file now exists: {change.relative_path}")
         else:
             try:

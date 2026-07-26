@@ -126,6 +126,34 @@ class V02Tests(unittest.TestCase):
         self.assertIn("#### Already Deferred", first)
         self.assertNotIn("Already Closed", first)
 
+    def test_confirmation_token_is_bound_to_resolved_vault_root(self) -> None:
+        other_vault = self.root / "identical-vault"
+        shutil.copytree(self.vault, other_vault)
+        arguments = (
+            "--issue",
+            "1_projects/neovim/issues/keep-candidate.md",
+            "--action",
+            "keep",
+            "--outcome",
+            "Keep the useful behavior visible",
+            "--next-action",
+            "Run one focused check",
+        )
+        preview = subprocess.run(
+            self.command(*arguments), check=True, text=True, capture_output=True
+        ).stdout
+        token = re.search(r"^Confirmation token: ([0-9a-f]+)$", preview, re.MULTILINE)
+        self.assertIsNotNone(token)
+        before = manifest(other_vault)
+        other_command = self.command(*arguments, "--apply", token.group(1))
+        other_command[other_command.index(str(self.vault))] = str(other_vault)
+
+        result = subprocess.run(other_command, text=True, capture_output=True)
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("confirmation token does not match", result.stderr)
+        self.assertEqual(manifest(other_vault), before)
+
     def test_preview_rejection_changes_nothing(self) -> None:
         before = manifest(self.vault)
         preview = subprocess.run(
@@ -252,6 +280,69 @@ class V02Tests(unittest.TestCase):
         first_child = (self.vault / split_relative).parent / "first-child.md"
         self.assertEqual(fields(first_child)["priority"], "P1 follow-up_2.0")
 
+    def test_triage_conversational_fields_cannot_inject_markdown_sections(self) -> None:
+        parent_relative = "1_projects/neovim/issues/keep-candidate.md"
+        split_relative = (
+            "1_projects/neovim/themes/editor/features/splitting/issues/split-candidate.md"
+        )
+        before = manifest(self.vault)
+        parent_cases = (
+            ("outcome", "Visible result\n\n## Triage"),
+            ("next-action", "Run check\r\n## Injected"),
+        )
+        for field, malicious in parent_cases:
+            with self.subTest(source="parent", field=field):
+                arguments = {
+                    "outcome": "Keep the useful behavior visible",
+                    "next-action": "Run one focused check",
+                }
+                arguments[field] = malicious
+                result = subprocess.run(
+                    self.command(
+                        "--issue",
+                        parent_relative,
+                        "--action",
+                        "keep",
+                        "--outcome",
+                        arguments["outcome"],
+                        "--next-action",
+                        arguments["next-action"],
+                    ),
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("must be one line", result.stderr)
+                self.assertNotIn("Confirmation token", result.stdout)
+                self.assertEqual(manifest(self.vault), before)
+
+        for field in ("title", "outcome", "next_action"):
+            with self.subTest(source="child", field=field):
+                children = json.loads(self.children_file().read_text(encoding="utf-8"))
+                children[0][field] += "\n\n## Triage"
+                path = self.root / f"injected-{field}.json"
+                path.write_text(json.dumps(children), encoding="utf-8")
+                result = subprocess.run(
+                    self.command(
+                        "--issue",
+                        split_relative,
+                        "--action",
+                        "split",
+                        "--outcome",
+                        "Replace the broad issue with actionable children",
+                        "--next-action",
+                        "Start the first child",
+                        "--children-file",
+                        str(path),
+                    ),
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("must be one line", result.stderr)
+                self.assertNotIn("Confirmation token", result.stdout)
+                self.assertEqual(manifest(self.vault), before)
+
     def test_exact_path_update_selects_target_not_same_inode_symlink_alias(self) -> None:
         relative = "1_projects/neovim/issues/keep-candidate.md"
         target = self.vault / relative
@@ -328,6 +419,65 @@ class V02Tests(unittest.TestCase):
         self.assertNotIn("Confirmation token", result.stdout)
         self.assertEqual(outside.read_bytes(), before)
         self.assertTrue(alias.is_symlink())
+
+    def test_update_and_create_reject_in_vault_ancestor_symlinks(self) -> None:
+        project_issues = self.vault / "1_projects" / "neovim" / "issues"
+        real_project_issues = project_issues.with_name("real-issues")
+        project_issues.rename(real_project_issues)
+        project_issues.symlink_to(real_project_issues.name, target_is_directory=True)
+        target = real_project_issues / "keep-candidate.md"
+        target_before = target.read_bytes()
+
+        update = subprocess.run(
+            self.command(
+                "--issue",
+                "1_projects/neovim/issues/keep-candidate.md",
+                "--action",
+                "keep",
+                "--outcome",
+                "Do not follow the issue directory link",
+                "--next-action",
+                "Reject the linked ancestor",
+            ),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(update.returncode, 2)
+        self.assertIn("symbolic link components", update.stderr)
+        self.assertNotIn("Confirmation token", update.stdout)
+        self.assertEqual(target.read_bytes(), target_before)
+
+        feature_issues = (
+            self.vault
+            / "1_projects/neovim/themes/editor/features/splitting/issues"
+        )
+        real_feature_issues = feature_issues.with_name("real-issues")
+        feature_issues.rename(real_feature_issues)
+        feature_issues.symlink_to(real_feature_issues.name, target_is_directory=True)
+        create = subprocess.run(
+            self.command(
+                "--create-owner",
+                "neovim/splitting",
+                "--slug",
+                "linked-create",
+                "--title",
+                "Linked Create",
+                "--outcome",
+                "No linked path is followed",
+                "--next-action",
+                "Reject the linked ancestor",
+                "--source-id",
+                "linked-create-01",
+                "--transcript",
+                "Create under an in-vault linked directory",
+            ),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(create.returncode, 2)
+        self.assertIn("symbolic link components", create.stderr)
+        self.assertNotIn("Confirmation token", create.stdout)
+        self.assertFalse((real_feature_issues / "linked-create.md").exists())
 
     def test_create_rejects_project_feature_and_issue_directory_symlink_escapes(self) -> None:
         outside_project = self.root / "outside-project"
