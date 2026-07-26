@@ -2,6 +2,7 @@ package atlas
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -20,25 +21,66 @@ type goal struct {
 }
 
 type Model struct {
-	run      vaultregistry.Run
-	goals    []goal
-	selected int
-	width    int
-	height   int
+	run           vaultregistry.Run
+	goals         []goal
+	selected      int
+	width         int
+	height        int
+	detailVisible bool
+	reducedMotion bool
+	activityFrame int
 }
 
 func NewModel(run vaultregistry.Run, width, height int) Model {
-	m := Model{run: run, width: width, height: height}
+	m := Model{
+		run:           run,
+		width:         width,
+		height:        height,
+		detailVisible: true,
+		reducedMotion: os.Getenv("VAULT_HUNTER_REDUCED_MOTION") == "1",
+	}
 	m.goals = normalize(run)
 	m.selected = initialSelection(m.goals)
 	return m
 }
 
-func (m Model) Init() tea.Cmd { return nil }
+type tickMsg struct{}
+
+func tick() tea.Cmd {
+	return tea.Tick(80*time.Millisecond, func(time.Time) tea.Msg { return tickMsg{} })
+}
+
+func (m Model) Init() tea.Cmd {
+	if m.reducedMotion {
+		return nil
+	}
+	return tick()
+}
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if size, ok := msg.(tea.WindowSizeMsg); ok {
-		m.width, m.height = size.Width, size.Height
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width, m.height = msg.Width, msg.Height
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "j", "down":
+			if m.selected < len(m.goals)-1 {
+				m.selected++
+			}
+		case "k", "up":
+			if m.selected > 0 {
+				m.selected--
+			}
+		case "enter":
+			m.detailVisible = !m.detailVisible
+		case "q", "esc", "ctrl+c":
+			return m, tea.Quit
+		}
+	case tickMsg:
+		if !m.reducedMotion {
+			m.activityFrame = (m.activityFrame + 1) % 2
+			return m, tick()
+		}
 	}
 	return m, nil
 }
@@ -137,7 +179,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 			if entry.lifecycle != nil {
 				l := entry.lifecycle
 				right = append(right, fmt.Sprintf(" %s %s %s · %s", glyph(l.State), clock(l.ObservedAt), value(l.Kind), value(l.State)))
-				if l.Detail != "" {
+				if m.detailVisible && l.Detail != "" {
 					right = append(right, "   "+l.Detail)
 				}
 			} else {
@@ -147,7 +189,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 					exit = fmt.Sprintf(" · exit %d", *e.ExitStatus)
 				}
 				right = append(right, fmt.Sprintf(" ! %s evidence · %s%s", clock(e.ObservedAt), value(e.State), exit))
-				if e.Detail != "" {
+				if m.detailVisible && e.Detail != "" {
 					right = append(right, "   "+e.Detail)
 				}
 			}
@@ -172,11 +214,13 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 				right = append(right, fmt.Sprintf(" %s · %s", p.ParticipantID, value(p.Role)))
 			}
 		}
-		right = append(right, "")
-		if m.height == 24 {
-			right = append(right, " Detail: "+recorded(g.detail))
-		} else {
-			right = append(right, " Detail", " "+recorded(g.detail))
+		if m.detailVisible {
+			right = append(right, "")
+			if m.height == 24 {
+				right = append(right, " Detail: "+recorded(g.detail))
+			} else {
+				right = append(right, " Detail", " "+recorded(g.detail))
+			}
 		}
 	}
 
@@ -191,7 +235,11 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 		right = append(right, "")
 	}
 	left = append(left[:m.height-3], leftFooter)
-	right = append(right[:m.height-3], fmt.Sprintf(" static snapshot · %d×%d", m.width, m.height))
+	activity := "·"
+	if m.activityFrame != 0 {
+		activity = "•"
+	}
+	right = append(right[:m.height-3], fmt.Sprintf(" static snapshot %s %d×%d", activity, m.width, m.height))
 	return left, right
 }
 
