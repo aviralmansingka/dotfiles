@@ -28,7 +28,7 @@ function M.parse_session_name(name)
 end
 
 --- Return a label-indexed map of named Sidekick agents from Herdr.
----@return table<string, { tool: string, slug: string, label: string, cwd: string, pane_id: string, workspace_id: string, terminal_id: string, agent_name: string, agent_session: table?, status: string }>
+---@return table<string, { tool: string, slug: string, label: string, cwd: string, pane_id: string, tab_id: string, workspace_id: string, terminal_id: string, agent_name: string, agent_session: table?, status: string }>
 function M.discover()
   local out = {}
   for _, agent in ipairs(herdr.list_agents()) do
@@ -40,6 +40,7 @@ function M.discover()
         label = parsed.label,
         cwd = agent.foreground_cwd or agent.cwd or "",
         pane_id = agent.pane_id,
+        tab_id = agent.tab_id,
         workspace_id = agent.workspace_id,
         terminal_id = agent.terminal_id,
         agent_name = agent.name,

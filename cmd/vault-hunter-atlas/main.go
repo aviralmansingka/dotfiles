@@ -15,11 +15,19 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "companion" {
-		if err := companion(os.Args[2:]); err != nil {
-			fail(err)
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "companion":
+			if err := companion(os.Args[2:]); err != nil {
+				fail(err)
+			}
+			return
+		case "preview":
+			if err := preview(os.Args[2:]); err != nil {
+				fail(err)
+			}
+			return
 		}
-		return
 	}
 	render(os.Args[1:])
 }
@@ -68,6 +76,47 @@ func companion(args []string) error {
 	default:
 		return fmt.Errorf("unknown companion command %q", args[0])
 	}
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func preview(args []string) error {
+	flags := flag.NewFlagSet("preview", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	workspaceID := flags.String("workspace-id", "", "Herdr workspace ID")
+	tabID := flags.String("tab-id", "", "Herdr tab ID")
+	paneID := flags.String("pane-id", "", "Herdr pane ID")
+	terminalID := flags.String("terminal-id", "", "Herdr terminal ID")
+	sessionSource := flags.String("agent-session-source", "", "agent-session source")
+	sessionKind := flags.String("agent-session-kind", "", "agent-session kind")
+	sessionValue := flags.String("agent-session-value", "", "agent-session value")
+	width := flags.Int("width", 0, "preview width")
+	height := flags.Int("height", 0, "preview height")
+	stateDir := flags.String("state-dir", "", "Vault Hunter state directory")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return errors.New("unexpected preview arguments")
+	}
+	reader, err := vaultregistry.OpenReader(*stateDir)
+	if err != nil {
+		return err
+	}
+	selected := atlascompanion.Agent{
+		WorkspaceID: *workspaceID,
+		TabID:       *tabID,
+		PaneID:      *paneID,
+		TerminalID:  *terminalID,
+		AgentSession: &vaultregistry.AgentSession{
+			Source: *sessionSource,
+			Kind:   *sessionKind,
+			Value:  *sessionValue,
+		},
+	}
+	result, err := (atlascompanion.Client{Herdr: "herdr"}).Preview(reader, selected, *width, *height)
 	if err != nil {
 		return err
 	}

@@ -50,6 +50,12 @@ if ! command -v herdr >/dev/null 2>&1; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
+echo "==> Installing Vault Hunter Atlas"
+(
+    cd "$DOTFILES_DIR"
+    GOBIN="$HOME/.local/bin" go install ./cmd/vault-hunter-atlas
+)
+
 ####################
 #  3. Rust         #
 ####################

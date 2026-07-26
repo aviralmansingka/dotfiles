@@ -44,6 +44,62 @@ func NewModel(run vaultregistry.Run, width, height int) Model {
 	return m
 }
 
+// CompactView projects the same normalized goals and initial selection as the
+// standalone Atlas into the two rows available in Sidekick's preview.
+func CompactView(run vaultregistry.Run, participantID string, width, height int) string {
+	goals := normalize(run)
+	selected := initialSelection(goals)
+	goalID, kind, state := "?", "?", "?"
+	ordinal := "0/0"
+	if len(goals) != 0 {
+		goal := goals[selected]
+		goalID, kind, state = value(goal.id), value(goal.kind), value(goal.state)
+		ordinal = fmt.Sprintf("%d/%d", selected+1, len(goals))
+	}
+	role := "?"
+	for _, participant := range run.Participants {
+		if participant.ParticipantID == participantID {
+			role = value(participant.Role)
+		}
+	}
+	rows := []string{
+		boundedFields(width, []string{"Run ", " · Goal " + ordinal + " ", ""}, []string{value(run.RunID), goalID}),
+		boundedFields(width, []string{"Role ", " · ", " · ", " · ", ""}, []string{value(participantID), role, kind, state}),
+	}
+	if height < len(rows) {
+		rows = rows[:max(height, 0)]
+	}
+	return strings.Join(rows, "\n")
+}
+
+func boundedFields(width int, separators, fields []string) string {
+	var full strings.Builder
+	for i, field := range fields {
+		full.WriteString(separators[i])
+		full.WriteString(field)
+	}
+	full.WriteString(separators[len(separators)-1])
+	if lipgloss.Width(full.String()) <= width {
+		return full.String()
+	}
+	fixed := 0
+	for _, separator := range separators {
+		fixed += lipgloss.Width(separator)
+	}
+	available := max(width-fixed, 0)
+	var bounded strings.Builder
+	for i, field := range fields {
+		bounded.WriteString(separators[i])
+		remaining := len(fields) - i
+		limit := available / remaining
+		part := truncate(field, limit)
+		bounded.WriteString(part)
+		available -= lipgloss.Width(part)
+	}
+	bounded.WriteString(separators[len(separators)-1])
+	return truncate(bounded.String(), width)
+}
+
 type tickMsg struct{}
 
 func tick() tea.Cmd {
