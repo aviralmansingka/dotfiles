@@ -108,20 +108,18 @@ def frontmatter(text: str) -> tuple[dict[str, str] | None, str | None, list[str]
 
 def triage_values(body: list[str]) -> tuple[str, str, str]:
     values: dict[str, str] = {}
-    in_triage = False
+    headings = [
+        i for i, line in enumerate(body) if re.match(r"^##\s+Triage\s*$", line, re.I)
+    ]
     labels = {
         "user-facing outcome": "outcome",
         "smallest next action": "next_action",
         "disposition": "disposition",
     }
-    for raw_line in body:
-        if re.match(r"^##\s+Triage\s*$", raw_line, re.IGNORECASE):
-            in_triage = True
-            continue
-        if in_triage and raw_line.startswith("## "):
+    start = headings[-1] + 1 if headings else len(body)
+    for raw_line in body[start:]:
+        if raw_line.startswith("## "):
             break
-        if not in_triage:
-            continue
         line = raw_line.replace("**", "")
         match = re.match(r"^\s*-?\s*([^:]+):\s*(.*?)\s*$", line)
         if match and match.group(1).strip().lower() in labels and match.group(2):
@@ -401,7 +399,7 @@ def set_triage(text: str, outcome: str, next_action: str, disposition: str) -> s
         )
         return "\n".join(lines) + "\n"
 
-    start = headings[0]
+    start = headings[-1]
     end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
     seen: set[str] = set()
     rewritten: list[str] = []
@@ -581,11 +579,16 @@ def mutation_plan(
         raise TriageError("outcome and next action must both be non-empty")
     normalized_priority = None if priority is None else priority_scalar(priority)
 
-    requested = _resolve_inside_vault(vault, vault / issue_path, "issue path")
+    requested = vault / issue_path
+    _resolve_inside_vault(vault, requested, "issue path")
     issues, _ = discover(vault, projects)
-    issue = next((candidate for candidate in issues if candidate.path.resolve() == requested), None)
+    issue = next(
+        (candidate for candidate in issues if candidate.relative_path == issue_path), None
+    )
     if issue is None:
         raise TriageError("issue is not an open ordinary issue in the selected projects")
+    if issue.path.is_symlink():
+        raise TriageError("issue path must not be a symbolic link")
 
     try:
         old = issue.path.read_bytes()

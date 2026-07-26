@@ -175,6 +175,75 @@ class V03Tests(unittest.TestCase):
         self.assertIn(f"- **Transcript:** {preserved}\n\n## Triage\n", text)
         self.assertNotIn("First paragraph keeps its inline tab.", text)
 
+    def test_create_then_update_ignores_triage_heading_inside_transcript(self) -> None:
+        relative = (
+            "1_projects/pi-agent/themes/vault-issue-workflow/features/"
+            "agent-issue-triage/issues/triage-heading-source.md"
+        )
+        transcript = (
+            "Keep this source byte for byte.\n\n"
+            "## Triage\n\n"
+            "- **User-facing outcome:** This is transcript text, not metadata\n"
+            "- **Smallest next action:** Do not rewrite this source line\n"
+            "- **Disposition:** transcript-only\n\n"
+            "## Transcript Notes\n\n"
+            "The canonical triage section comes later."
+        )
+        create_arguments = [
+            "--create-owner",
+            "pi-agent/agent-issue-triage",
+            "--slug",
+            "triage-heading-source",
+            "--title",
+            "Triage Heading Source",
+            "--outcome",
+            "Preserve the Telegram source",
+            "--next-action",
+            "Update only canonical triage metadata",
+            "--source-id",
+            "telegram-triage-heading-01",
+            "--transcript",
+            transcript,
+        ]
+        self.preview_and_apply(create_arguments)
+
+        path = self.vault / relative
+        created = path.read_bytes()
+        marker = b"\n## Triage\n"
+        source_before, canonical_before = created.rsplit(marker, 1)
+        self.assertEqual(created.count(marker), 2)
+        self.assertIn(transcript.encode("utf-8"), source_before)
+
+        update_outcome = "The source survives a later update"
+        update_action = "Check the canonical section only"
+        update_arguments = [
+            "--issue",
+            relative,
+            "--action",
+            "keep",
+            "--outcome",
+            update_outcome,
+            "--next-action",
+            update_action,
+        ]
+        self.preview_and_apply(update_arguments)
+
+        updated = path.read_bytes()
+        source_after, canonical_after = updated.rsplit(marker, 1)
+        self.assertEqual(updated.count(marker), 2)
+        self.assertEqual(source_after, source_before)
+        self.assertNotEqual(canonical_after, canonical_before)
+        self.assertEqual(canonical_after.count(update_outcome.encode("utf-8")), 1)
+        self.assertEqual(canonical_after.count(update_action.encode("utf-8")), 1)
+        self.assertNotIn(update_outcome.encode("utf-8"), source_after)
+        self.assertNotIn(update_action.encode("utf-8"), source_after)
+
+        weekly = subprocess.run(
+            self.command("--weekly"), check=True, text=True, capture_output=True
+        ).stdout
+        self.assertIn(f"- User-facing outcome: {update_outcome}", weekly)
+        self.assertIn(f"- Smallest next action: {update_action}", weekly)
+
     def test_exact_update_previews_then_changes_only_the_exact_issue(self) -> None:
         case = self.cases["exact-update"]
         arguments = [

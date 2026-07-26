@@ -252,6 +252,83 @@ class V02Tests(unittest.TestCase):
         first_child = (self.vault / split_relative).parent / "first-child.md"
         self.assertEqual(fields(first_child)["priority"], "P1 follow-up_2.0")
 
+    def test_exact_path_update_selects_target_not_same_inode_symlink_alias(self) -> None:
+        relative = "1_projects/neovim/issues/keep-candidate.md"
+        target = self.vault / relative
+        alias = target.with_name("a-keep-candidate-alias.md")
+        alias.symlink_to(target.name)
+        link_target = os.readlink(alias)
+        before_target = target.read_bytes()
+
+        preview = self.preview_and_apply(
+            "--issue",
+            relative,
+            "--action",
+            "keep",
+            "--outcome",
+            "Update only the exact lexical target",
+            "--next-action",
+            "Verify the alias remains a link",
+        )
+
+        self.assertIn(f"Issue: {relative}", preview)
+        self.assertNotEqual(target.read_bytes(), before_target)
+        self.assertTrue(alias.is_symlink())
+        self.assertEqual(os.readlink(alias), link_target)
+
+        before_alias_request = target.read_bytes()
+        result = subprocess.run(
+            self.command(
+                "--issue",
+                alias.relative_to(self.vault).as_posix(),
+                "--action",
+                "keep",
+                "--outcome",
+                "Must not replace the alias",
+                "--next-action",
+                "Reject the symbolic link",
+            ),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("issue path must not be a symbolic link", result.stderr)
+        self.assertNotIn("Confirmation token", result.stdout)
+        self.assertEqual(target.read_bytes(), before_alias_request)
+        self.assertTrue(alias.is_symlink())
+        self.assertEqual(os.readlink(alias), link_target)
+
+    def test_update_rejects_symlink_alias_that_escapes_the_vault(self) -> None:
+        outside = self.root / "outside-issue.md"
+        outside.write_text(
+            "---\nstatus: open\n---\n# Outside Issue\n",
+            encoding="utf-8",
+        )
+        alias = self.vault / "1_projects" / "neovim" / "issues" / "outside-alias.md"
+        alias.symlink_to(outside)
+        before = outside.read_bytes()
+
+        result = subprocess.run(
+            self.command(
+                "--issue",
+                alias.relative_to(self.vault).as_posix(),
+                "--action",
+                "keep",
+                "--outcome",
+                "Must stay inside the vault",
+                "--next-action",
+                "Reject the escaped alias",
+            ),
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("issue path must remain inside the vault", result.stderr)
+        self.assertNotIn("Confirmation token", result.stdout)
+        self.assertEqual(outside.read_bytes(), before)
+        self.assertTrue(alias.is_symlink())
+
     def test_create_rejects_project_feature_and_issue_directory_symlink_escapes(self) -> None:
         outside_project = self.root / "outside-project"
         (outside_project / "themes" / "editor" / "features" / "owned").mkdir(
