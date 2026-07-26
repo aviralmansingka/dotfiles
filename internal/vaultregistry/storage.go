@@ -94,6 +94,10 @@ func (p *Producer) Update(runID string, expectedRevision uint64, mutate func(*Ru
 		return Run{}, err
 	}
 	defer unlock()
+	return p.updateLocked(runID, expectedRevision, mutate)
+}
+
+func (p *Producer) updateLocked(runID string, expectedRevision uint64, mutate func(*Run) error) (Run, error) {
 	current, err := load(p.path(runID), runID)
 	if err != nil {
 		return Run{}, err
@@ -108,14 +112,8 @@ func (p *Producer) Update(runID string, expectedRevision uint64, mutate func(*Ru
 	if err := mutate(&next); err != nil {
 		return Run{}, err
 	}
-	if next.SchemaVersion != current.SchemaVersion || next.RunID != current.RunID || next.Revision != current.Revision ||
-		next.InvokedAt != current.InvokedAt || !equalJSON(current.Task, next.Task) ||
-		len(current.Unknown) > 0 && !equalJSON(current.Unknown, next.Unknown) ||
-		!slices.EqualFunc(current.Participants, next.Participants[:min(len(current.Participants), len(next.Participants))], equalJSON) ||
-		!slices.EqualFunc(current.Lifecycle, next.Lifecycle[:min(len(current.Lifecycle), len(next.Lifecycle))], equalJSON) ||
-		!slices.EqualFunc(current.Evidence, next.Evidence[:min(len(current.Evidence), len(next.Evidence))], equalJSON) ||
-		len(next.Participants) < len(current.Participants) || len(next.Lifecycle) < len(current.Lifecycle) || len(next.Evidence) < len(current.Evidence) {
-		return Run{}, fmt.Errorf("%w: immutable fields or history prefixes changed", ErrMalformed)
+	if err := validateUpdate(current, next); err != nil {
+		return Run{}, err
 	}
 	next.Revision = expectedRevision + 1
 	if err := validate(next); err != nil {
@@ -125,6 +123,25 @@ func (p *Producer) Update(runID string, expectedRevision uint64, mutate func(*Ru
 		return Run{}, err
 	}
 	return clone(next)
+}
+
+func validateUpdate(current, next Run) error {
+	scalarsChanged := next.SchemaVersion != current.SchemaVersion ||
+		next.RunID != current.RunID || next.Revision != current.Revision ||
+		next.InvokedAt != current.InvokedAt || !equalJSON(current.Task, next.Task)
+	unknownChanged := len(current.Unknown) > 0 && !equalJSON(current.Unknown, next.Unknown)
+	historyChanged := !historyPrefix(current.Participants, next.Participants) ||
+		!historyPrefix(current.Lifecycle, next.Lifecycle) ||
+		!historyPrefix(current.Evidence, next.Evidence)
+	if scalarsChanged || unknownChanged || historyChanged {
+		return fmt.Errorf("%w: immutable fields or history prefixes changed", ErrMalformed)
+	}
+	return nil
+}
+
+func historyPrefix[T any](current, next []T) bool {
+	return len(next) >= len(current) &&
+		slices.EqualFunc(current, next[:len(current)], equalJSON)
 }
 
 func (p *Producer) Get(runID string) (Run, error) { return load(p.path(runID), runID) }
@@ -163,12 +180,28 @@ func (p *Producer) write(run Run) error {
 	}
 	data = append(data, '\n')
 	dir := filepath.Join(p.root, "runs")
-	tmp, err := os.CreateTemp(dir, ".run-*.tmp")
+	name, err := writeTemp(dir, data)
 	if err != nil {
 		return err
 	}
-	name := tmp.Name()
 	defer os.Remove(name)
+	if err := os.Rename(name, p.path(run.RunID)); err != nil {
+		return err
+	}
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
+}
+
+func writeTemp(dir string, data []byte) (string, error) {
+	tmp, err := os.CreateTemp(dir, ".run-*.tmp")
+	if err != nil {
+		return "", err
+	}
+	name := tmp.Name()
 	if err = tmp.Chmod(0600); err == nil {
 		_, err = tmp.Write(data)
 	}
@@ -178,18 +211,11 @@ func (p *Producer) write(run Run) error {
 	if closeErr := tmp.Close(); err == nil {
 		err = closeErr
 	}
-	if err == nil {
-		err = os.Rename(name, p.path(run.RunID))
-	}
 	if err != nil {
-		return err
+		os.Remove(name)
+		return "", err
 	}
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	return d.Sync()
+	return name, nil
 }
 
 func load(path, requestedID string) (Run, error) {
@@ -203,18 +229,8 @@ func load(path, requestedID string) (Run, error) {
 	if err != nil {
 		return Run{}, err
 	}
-	var version struct {
-		SchemaVersion json.RawMessage `json:"schema_version"`
-	}
-	if err := json.Unmarshal(data, &version); err != nil {
-		return Run{}, fmt.Errorf("%w: %s: %v", ErrMalformed, path, err)
-	}
-	var n uint64
-	if len(version.SchemaVersion) == 0 || json.Unmarshal(version.SchemaVersion, &n) != nil || n == 0 {
-		return Run{}, fmt.Errorf("%w: %s: invalid schema_version", ErrMalformed, path)
-	}
-	if n != 1 {
-		return Run{}, fmt.Errorf("%w: %s: version %d", ErrUnsupportedVersion, path, n)
+	if err := checkVersion(data, path); err != nil {
+		return Run{}, err
 	}
 	var run Run
 	if err := json.Unmarshal(data, &run); err != nil {
@@ -227,4 +243,21 @@ func load(path, requestedID string) (Run, error) {
 		return Run{}, fmt.Errorf("%w: %s: %v", ErrMalformed, path, err)
 	}
 	return run, nil
+}
+
+func checkVersion(data []byte, path string) error {
+	var version struct {
+		SchemaVersion json.RawMessage `json:"schema_version"`
+	}
+	if err := json.Unmarshal(data, &version); err != nil {
+		return fmt.Errorf("%w: %s: %v", ErrMalformed, path, err)
+	}
+	var n uint64
+	if len(version.SchemaVersion) == 0 || json.Unmarshal(version.SchemaVersion, &n) != nil || n == 0 {
+		return fmt.Errorf("%w: %s: invalid schema_version", ErrMalformed, path)
+	}
+	if n != 1 {
+		return fmt.Errorf("%w: %s: version %d", ErrUnsupportedVersion, path, n)
+	}
+	return nil
 }
