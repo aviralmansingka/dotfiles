@@ -247,14 +247,20 @@ end
 
 ---@param agent? table
 ---@return boolean
-local function full_agent(agent)
-  local session = agent and agent.agent_session
+local function terminal_agent(agent)
   return not not (agent
     and agent.name
     and agent.pane_id
     and agent.tab_id
     and agent.workspace_id
-    and agent.terminal_id
+    and agent.terminal_id)
+end
+
+---@param agent? table
+---@return boolean
+local function full_agent(agent)
+  local session = agent and agent.agent_session
+  return not not (terminal_agent(agent)
     and session
     and session.source
     and session.kind
@@ -300,11 +306,12 @@ local function own_tab(agent, scope, tab_label)
   end
   local placed = M.get_agent(agent.name)
   local placed_tab = placed and tab_info(placed.tab_id)
+  local require_session = full_agent(agent)
   if
-    not full_agent(placed)
+    not terminal_agent(placed)
     or placed.name ~= agent.name
     or placed.terminal_id ~= agent.terminal_id
-    or not same_session(agent.agent_session, placed.agent_session)
+    or (require_session and (not full_agent(placed) or not same_session(agent.agent_session, placed.agent_session)))
     or M.normalize_cwd(placed.foreground_cwd or placed.cwd) ~= M.normalize_cwd(scope.cwd)
     or placed.workspace_id ~= scope.workspace_id
     or not placed_tab
@@ -364,7 +371,7 @@ function M.start(name, cwd, command, env, scope, tab_label)
   vim.list_extend(args, command)
   local result = M.call(args)
   local agent = result and result.agent or nil
-  if not full_agent(agent) or agent.name ~= name then
+  if not terminal_agent(agent) or agent.name ~= name then
     if agent and agent.pane_id then
       M.call({ "pane", "close", agent.pane_id }, true)
     end
@@ -373,7 +380,7 @@ function M.start(name, cwd, command, env, scope, tab_label)
     end
     return nil
   end
-  agent = M.place_agent(agent, { workspace_id = resolved_id, cwd = normalized }, tab_label or name)
+  agent = own_tab(agent, { workspace_id = resolved_id, cwd = normalized }, tab_label or name)
   if not agent then
     M.call({ "pane", "close", result.agent.pane_id }, true)
     if workspace_created then

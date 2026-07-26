@@ -584,11 +584,6 @@ local function validate_sidekick_herdr()
           pane_id = "w-bound:p1",
           tab_id = "w-bound:t1",
           workspace_id = "w-bound",
-          agent_session = {
-            source = "herdr:codex",
-            kind = "id",
-            value = "session-workspace",
-          },
         },
       }
     elseif args[1] == "tab" and args[2] == "list" then
@@ -625,9 +620,9 @@ local function validate_sidekick_herdr()
     or vim.fn.index(agent_start, "--tab") >= 0
     or not tab_rename
     or tab_rename[3] ~= "w-bound:t1"
-    or started.agent_session.value ~= "session-workspace"
+    or started.terminal_id ~= "term-workspace"
   then
-    fail("named session should start directly as one full Codex pane: " .. vim.inspect(start_calls))
+    fail("named session should attach before Codex reports its session identity: " .. vim.inspect(start_calls))
   end
 
   local routing_calls = {}
@@ -2519,21 +2514,25 @@ local function validate_vault_work_items()
       workspace_calls[#workspace_calls + 1] = args
       if args[1] == "workspace" and args[2] == "list" then
         return { workspaces = { { label = "Backlog", workspace_id = "backlog-workspace" } } }
-      elseif args[1] == "tab" and args[2] == "create" then
-        return {
-          tab = { tab_id = "backlog-tab" },
-          root_pane = { pane_id = "backlog-root" },
-        }
       elseif args[1] == "agent" and args[2] == "start" then
         return {
           agent = {
             name = "pi-friday-2026-07-24",
             pane_id = "backlog-agent",
             tab_id = "backlog-tab",
+            terminal_id = "backlog-terminal",
             workspace_id = "backlog-workspace",
+            cwd = root,
+            foreground_cwd = root,
           },
         }
-      elseif args[1] == "pane" and args[2] == "close" then
+      elseif args[1] == "tab" and args[2] == "list" then
+        return {
+          tabs = {
+            { tab_id = "backlog-tab", workspace_id = "backlog-workspace", pane_count = 1 },
+          },
+        }
+      elseif args[1] == "tab" and args[2] == "rename" then
         return {}
       end
     end
@@ -2544,18 +2543,20 @@ local function validate_vault_work_items()
       end
       assert_sequence(workspace_calls[1], { "workspace", "list" }, "backlog workspace lookup")
       if
-        workspace_calls[2][1] ~= "tab"
-        or workspace_calls[2][2] ~= "create"
-        or workspace_calls[2][4] ~= "backlog-workspace"
+        workspace_calls[2][1] ~= "agent"
+        or workspace_calls[2][2] ~= "start"
+        or workspace_calls[2][7] ~= "backlog-workspace"
       then
-        fail("daily agent tab should be created in the backlog workspace: " .. vim.inspect(workspace_calls[2]))
+        fail("daily agent should start in the backlog workspace: " .. vim.inspect(workspace_calls[2]))
       end
       if
-        workspace_calls[3][1] ~= "agent"
-        or workspace_calls[3][2] ~= "start"
-        or workspace_calls[3][7] ~= "backlog-workspace"
+        workspace_calls[3][1] ~= "tab"
+        or workspace_calls[3][2] ~= "list"
+        or workspace_calls[4][1] ~= "tab"
+        or workspace_calls[4][2] ~= "rename"
+        or workspace_calls[4][3] ~= "backlog-tab"
       then
-        fail("daily agent should start in the backlog workspace: " .. vim.inspect(workspace_calls[3]))
+        fail("daily agent should keep its own named tab: " .. vim.inspect(workspace_calls))
       end
     end, debug.traceback)
     herdr.call = original_workspace_call
