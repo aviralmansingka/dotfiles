@@ -1,6 +1,7 @@
 package atlas
 
 import (
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -48,6 +49,25 @@ func TestT06V01CanonicalAggregation(t *testing.T) {
 	if !atlas.Tasks[3].NoteMissing {
 		t.Error("missing authoritative Task note was not retained")
 	}
+	for _, want := range []struct {
+		id, title, path string
+	}{
+		{"T01", "Define Atlas contract", "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/01-contract.md"},
+		{"T06", "Project + Feature views", "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/06-views.md"},
+	} {
+		var got TaskProjection
+		for _, task := range atlas.Tasks {
+			if task.ID == want.id {
+				got = task
+			}
+		}
+		if got.ID != want.id || got.Title != want.title || got.Path != want.path {
+			t.Errorf("canonical %s projection = %#v, want title %q path %q", want.id, got, want.title, want.path)
+		}
+	}
+	if task, ok := project.Task("1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/06-views.md"); !ok || task.ID != "T06" {
+		t.Fatalf("canonical T06 aggregate lookup = %#v/%v, want T06/true", task, ok)
+	}
 
 	diagnostics := strings.Join(project.Diagnostics, "\n")
 	for _, text := range []string{"malformed Task checklist entry", "duplicate Task link", "conflicting duplicate checkboxes", "missing Task note", "[x] conflicts", "Task link outside selected Project"} {
@@ -66,6 +86,32 @@ func TestT06V01CanonicalAggregation(t *testing.T) {
 	}
 	if !strings.Contains(frame, "PROJECT C — DENSE TRIAGE TABLE") {
 		t.Error("Project C rendering label missing")
+	}
+}
+
+func TestT06V01RejectsNoncanonicalTaskRows(t *testing.T) {
+	root := t.TempDir()
+	path := "1_projects/pi-agent/themes/theme/features/feature/feature.md"
+	file := filepath.Join(root, filepath.FromSlash(path))
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := "---\nstatus: pending\n---\n## Tasks\n- [ ] prefix T01 [[tasks/one.md|One]].\n- [ ] T02 [[tasks/two.md|Two]]. trailing\n"
+	if err := os.WriteFile(file, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	feature, err := DiscoverFeature(root, path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(feature.Features) != 1 || len(feature.Features[0].Tasks) != 0 {
+		t.Fatalf("noncanonical rows produced %#v, want one Feature with 0 Tasks", feature.Features)
+	}
+	diagnostics := strings.Join(feature.Diagnostics, "\n")
+	for _, row := range []string{"prefix T01 [[tasks/one.md|One]].", "T02 [[tasks/two.md|Two]]. trailing"} {
+		if !strings.Contains(diagnostics, "malformed Task checklist entry: "+row) {
+			t.Errorf("missing malformed diagnostic for %q:\n%s", row, diagnostics)
+		}
 	}
 }
 

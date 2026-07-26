@@ -16,6 +16,11 @@ manifest() {
   ) | shasum -a 256 | awk '{print $1}'
 }
 
+grep -Fqx -- '- [x] T01 [[tasks/01-contract.md|Define Atlas contract]].' \
+  "$fixture/vault/1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md"
+grep -Fqx -- '- [ ] T06 [[1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/06-views.md|Project + Feature views]].' \
+  "$fixture/vault/1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md"
+
 source_vault_before=$(manifest "$fixture/vault")
 source_registry_before=$(manifest "$fixture/state")
 go test -count=1 ./internal/atlas ./internal/vaultregistry -run 'T06V01'
