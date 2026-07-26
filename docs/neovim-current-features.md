@@ -439,7 +439,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
   maintained features, orders in-progress features first, retains hierarchy parents during fuzzy filtering, and
   previews or opens every row at its exact source location. Completed `[x]` tasks are hidden.
 - Inside the `<leader>vf` picker, `<C-a>` is `(Vault hunter) Action` for Feature and Task rows. It launches
-  `/vault-hunter <path:line>` in a stable Codex session, then closes the picker and focuses Sidekick. Feature rows use
+  `$vault-hunter <path:line>` in a stable Codex session, then closes the picker and focuses Sidekick. Feature rows use
   the selected `Project · Feature` Herdr workspace without a task worktree. Each Task row creates or reuses its own
   Herdr workspace named exactly after the displayed Task name, isolated `task/<task-slug>` worktree, and task-named
   driver tab.
