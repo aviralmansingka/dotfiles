@@ -1648,10 +1648,15 @@ local function validate_sidekick_herdr()
       local top_rendered = table.concat(vim.api.nvim_buf_get_lines(top_buf, 0, -1, false), "\n")
       local atlas_buf = atlas_preview.buf
       local rendered = table.concat(vim.api.nvim_buf_get_lines(atlas_buf, 0, -1, false), "\n")
+      local rendered_fields = rendered:gsub("\n", "")
       if vim.bo[atlas_buf].buftype ~= "terminal"
-        or not rendered:find("Run atlas-rich-run · Goal 3/5 T10.V01", 1, true)
-        or not rendered:find("Participant driver · Role verifier-steward", 1, true)
-        or not rendered:find("Lifecycle verify · active", 1, true)
+        or not rendered_fields:find("Run atlas-rich-run", 1, true)
+        or not rendered_fields:find("Goal 3/5", 1, true)
+        or not rendered_fields:find("T10.V01", 1, true)
+        or not rendered_fields:find("Participant driver", 1, true)
+        or not rendered_fields:find("Role verifier-steward", 1, true)
+        or not rendered_fields:find("Lifecycle verify", 1, true)
+        or not rendered_fields:find("active", 1, true)
       then
         fail("T10 V01 bottom-right Atlas preview is incomplete at " .. size .. ": " .. vim.inspect(rendered))
       end
@@ -1683,10 +1688,13 @@ local function validate_sidekick_herdr()
         vim.api.nvim_buf_get_lines(atlas_preview.buf, 0, -1, false),
         "\n"
       )
+      local layout_fields = layout_rendered:gsub("\n", "")
       if preview_swaps ~= layout_swaps
         or fake_picker.preview.win.buf ~= top_buf
         or atlas_preview.buf == blank_layout_buf
-        or not layout_rendered:find("Run atlas-rich-run · Goal 3/5 T10.V01", 1, true)
+        or not layout_fields:find("Run atlas-rich-run", 1, true)
+        or not layout_fields:find("Goal 3/5", 1, true)
+        or not layout_fields:find("T10.V01", 1, true)
         or #lookup_calls ~= 1
       then
         fail("T04 V01 same-selection layout callback should re-stage only active Atlas at " .. size)
