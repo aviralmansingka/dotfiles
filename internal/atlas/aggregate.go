@@ -3,12 +3,16 @@ package atlas
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
@@ -39,6 +43,60 @@ type Aggregate struct {
 	Scope, Name string
 	Features    []FeatureProjection
 	Diagnostics []string
+}
+
+type aggregateStyles struct {
+	enabled                       bool
+	heading, normal, done, active lipgloss.Style
+	blocked, muted, registered    lipgloss.Style
+}
+
+func newAggregateStyles(enabled bool) aggregateStyles {
+	if !enabled {
+		return aggregateStyles{}
+	}
+	renderer := lipgloss.NewRenderer(io.Discard)
+	renderer.SetColorProfile(termenv.TrueColor)
+	return aggregateStyles{
+		enabled:    true,
+		heading:    renderer.NewStyle().Foreground(lipgloss.Color("#f28534")),
+		normal:     renderer.NewStyle().Foreground(lipgloss.Color("#ebdbb2")),
+		done:       renderer.NewStyle().Foreground(lipgloss.Color("#b8bb26")),
+		active:     renderer.NewStyle().Foreground(lipgloss.Color("#e9b143")),
+		blocked:    renderer.NewStyle().Foreground(lipgloss.Color("#f2594b")),
+		muted:      renderer.NewStyle().Foreground(lipgloss.Color("#928374")),
+		registered: renderer.NewStyle().Foreground(lipgloss.Color("#80aa9e")),
+	}
+}
+
+func (s aggregateStyles) render(style lipgloss.Style, text string) string {
+	if !s.enabled {
+		return text
+	}
+	return style.Render(text)
+}
+
+func (s aggregateStyles) status(status Status, text string) string {
+	switch status {
+	case Done:
+		return s.render(s.done, text)
+	case Active:
+		return s.render(s.active, text)
+	case Blocked:
+		return s.render(s.blocked, text)
+	default:
+		return s.render(s.muted, text)
+	}
+}
+
+func ColorEnabled(mode string, snapshot, terminal, dumb, noColor bool) bool {
+	if snapshot || mode == "never" {
+		return false
+	}
+	if mode == "always" {
+		return true
+	}
+	return terminal && !dumb && !noColor
 }
 
 var checklist = regexp.MustCompile(`^\s*-\s*\[([ xX-])\]\s*(.*)$`)
@@ -185,10 +243,15 @@ func discoverFeature(root, path string, runs []vaultregistry.Run) (FeatureProjec
 }
 
 func (a Aggregate) Render() string {
+	return a.RenderColor(false)
+}
+
+func (a Aggregate) RenderColor(enabled bool) string {
+	styles := newAggregateStyles(enabled)
 	if a.Scope == "Feature" && len(a.Features) == 1 {
-		return renderFeature(a.Features[0], a.Diagnostics)
+		return renderFeature(a.Features[0], a.Diagnostics, styles)
 	}
-	return renderProject(a)
+	return renderProject(a, styles)
 }
 
 func (a Aggregate) Task(path string) (TaskProjection, bool) {
@@ -203,29 +266,33 @@ func (a Aggregate) Task(path string) (TaskProjection, bool) {
 	return TaskProjection{}, false
 }
 
-func renderFeature(f FeatureProjection, diagnostics []string) string {
-	lines := []string{"FEATURE ATLAS · " + f.Name + "  OUTLINE + SUMMARY", statusGlyph(f.Status) + " " + strings.ToUpper(string(f.Status)) + "  Feature status roll-up", "│"}
+func renderFeature(f FeatureProjection, diagnostics []string, styles aggregateStyles) string {
+	lines := []string{
+		styles.render(styles.heading, "FEATURE ATLAS") + " " + styles.render(styles.muted, "·") + " " + styles.render(styles.normal, f.Name) + "  " + styles.render(styles.heading, "OUTLINE + SUMMARY"),
+		styles.status(f.Status, statusGlyph(f.Status)+" "+strings.ToUpper(string(f.Status))) + "  " + styles.render(styles.normal, "Feature status roll-up"),
+		styles.render(styles.muted, "│"),
+	}
 	for i, t := range f.Tasks {
 		branch := "├─"
 		indent := "│   "
 		if i == len(f.Tasks)-1 {
 			branch, indent = "└─", "    "
 		}
-		lines = append(lines, fmt.Sprintf("%s %s %s  %s  %s", branch, statusGlyph(t.Status), valueOr(t.ID, "?"), t.Title, strings.ToUpper(string(t.Status))))
-		detail := taskDetail(t)
+		lines = append(lines, styles.render(styles.muted, branch)+" "+styles.status(t.Status, statusGlyph(t.Status))+" "+styles.render(styles.normal, valueOr(t.ID, "?")+"  "+t.Title)+"  "+styles.status(t.Status, strings.ToUpper(string(t.Status))))
+		detail := styledTaskDetail(t, styles)
 		if detail != "" {
-			lines = append(lines, indent+detail)
+			lines = append(lines, styles.render(styles.muted, indent)+detail)
 		}
 	}
-	lines = append(lines, "", fmt.Sprintf("SUMMARY  Pending %d  Active %d  Blocked %d  Done %d", f.Counts[Pending], f.Counts[Active], f.Counts[Blocked], f.Counts[Done]))
+	lines = append(lines, "", styles.render(styles.heading, "SUMMARY")+"  "+styles.status(Pending, "Pending")+fmt.Sprintf(" %d  ", f.Counts[Pending])+styles.status(Active, "Active")+fmt.Sprintf(" %d  ", f.Counts[Active])+styles.status(Blocked, "Blocked")+fmt.Sprintf(" %d  ", f.Counts[Blocked])+styles.status(Done, "Done")+fmt.Sprintf(" %d", f.Counts[Done]))
 	for _, diagnostic := range diagnostics {
-		lines = append(lines, "! "+diagnostic)
+		lines = append(lines, styles.render(styles.blocked, "! "+diagnostic))
 	}
-	lines = append(lines, "FEATURE B — HIERARCHY + ROLL-UP")
+	lines = append(lines, styles.render(styles.heading, "FEATURE B — HIERARCHY + ROLL-UP"))
 	return strings.Join(lines, "\n")
 }
 
-func renderProject(a Aggregate) string {
+func renderProject(a Aggregate, styles aggregateStyles) string {
 	features := append([]FeatureProjection(nil), a.Features...)
 	sort.SliceStable(features, func(i, j int) bool {
 		if statusRank(features[i].Status) != statusRank(features[j].Status) {
@@ -233,11 +300,15 @@ func renderProject(a Aggregate) string {
 		}
 		return features[i].Path < features[j].Path
 	})
-	lines := []string{"PROJECT ATLAS · " + a.Name + "  FEATURE QUEUE", "ST  FEATURE                 P  A  B  D  WHY / NEXT OBSERVABLE ITEM", "──  ──────────────────────  ─  ─  ─  ─  ─────────────────────────────"}
-	for _, f := range features {
-		lines = append(lines, fmt.Sprintf("%s   %-22s  %d  %d  %d  %d  %s", statusGlyph(f.Status), f.Name, f.Counts[Pending], f.Counts[Active], f.Counts[Blocked], f.Counts[Done], featureWhy(f)))
+	lines := []string{
+		styles.render(styles.heading, "PROJECT ATLAS") + " " + styles.render(styles.muted, "·") + " " + styles.render(styles.normal, a.Name) + "  " + styles.render(styles.heading, "FEATURE QUEUE"),
+		styles.render(styles.muted, "ST  FEATURE                 P  A  B  D  WHY / NEXT OBSERVABLE ITEM"),
+		styles.render(styles.muted, "──  ──────────────────────  ─  ─  ─  ─  ─────────────────────────────"),
 	}
-	lines = append(lines, "", "TASK QUEUE")
+	for _, f := range features {
+		lines = append(lines, styles.status(f.Status, statusGlyph(f.Status))+"   "+styles.render(styles.normal, fmt.Sprintf("%-22s  %d  %d  %d  %d  %s", f.Name, f.Counts[Pending], f.Counts[Active], f.Counts[Blocked], f.Counts[Done], featureWhy(f))))
+	}
+	lines = append(lines, "", styles.render(styles.heading, "TASK QUEUE"))
 	var tasks []struct {
 		feature FeatureProjection
 		task    TaskProjection
@@ -257,12 +328,12 @@ func renderProject(a Aggregate) string {
 		return tasks[i].task.Path < tasks[j].task.Path
 	})
 	for _, item := range tasks {
-		lines = append(lines, fmt.Sprintf("%s %s/%s %s · %s", statusGlyph(item.task.Status), item.feature.Name, valueOr(item.task.ID, "?"), item.task.Title, taskDetail(item.task)))
+		lines = append(lines, styles.status(item.task.Status, statusGlyph(item.task.Status))+" "+styles.render(styles.normal, item.feature.Name+"/"+valueOr(item.task.ID, "?")+" "+item.task.Title)+" "+styles.render(styles.muted, "·")+" "+styledTaskDetail(item.task, styles))
 	}
 	for _, diagnostic := range a.Diagnostics {
-		lines = append(lines, "! "+diagnostic)
+		lines = append(lines, styles.render(styles.blocked, "! "+diagnostic))
 	}
-	lines = append(lines, "PROJECT C — DENSE TRIAGE TABLE")
+	lines = append(lines, styles.render(styles.heading, "PROJECT C — DENSE TRIAGE TABLE"))
 	return strings.Join(lines, "\n")
 }
 
@@ -415,17 +486,17 @@ func statusGlyph(status Status) string {
 		return "○"
 	}
 }
-func taskDetail(t TaskProjection) string {
+func styledTaskDetail(t TaskProjection, styles aggregateStyles) string {
 	parts := []string{}
 	if t.NoteMissing {
-		parts = append(parts, "Task note missing")
+		parts = append(parts, styles.render(styles.normal, "Task note missing"))
 	}
 	if t.RunID != "" {
-		parts = append(parts, "registered → "+t.RunID)
+		parts = append(parts, styles.render(styles.registered, "registered → "+t.RunID))
 	} else {
-		parts = append(parts, "unregistered")
+		parts = append(parts, styles.render(styles.normal, "unregistered"))
 	}
-	return strings.Join(parts, " · ")
+	return strings.Join(parts, " "+styles.render(styles.muted, "·")+" ")
 }
 func featureWhy(f FeatureProjection) string {
 	switch f.Status {

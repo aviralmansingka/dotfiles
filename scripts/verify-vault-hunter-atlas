@@ -28,8 +28,11 @@ case "${1-}" in
   T06.V03)
     exec scripts/verifiers/vault-hunter-atlas-t06-v03
     ;;
+  T06.V04)
+    exec scripts/verifiers/vault-hunter-atlas-t06-v04
+    ;;
   *)
-    echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02|T02.V01|T02.V02|T02.V03|T06.V01|T06.V02|T06.V03" >&2
+    echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02|T02.V01|T02.V02|T02.V03|T06.V01|T06.V02|T06.V03|T06.V04" >&2
     exit 2
     ;;
 esac

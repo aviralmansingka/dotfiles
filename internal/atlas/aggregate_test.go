@@ -2,6 +2,7 @@ package atlas
 
 import (
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -137,5 +138,54 @@ func TestT06V01NewestUnfinishedRunAndRecordedOrder(t *testing.T) {
 	run, stage := selectedRun(runs, path, false)
 	if run == nil || run.RunID != "newer-z" || stage != "active" {
 		t.Fatalf("selected %v/%q, want registered newer-z/status active", run, stage)
+	}
+}
+
+func TestT06V04ColorPolicy(t *testing.T) {
+	tests := []struct {
+		name                         string
+		mode                         string
+		snapshot, terminal, dumb, no bool
+		want                         bool
+	}{
+		{name: "auto terminal", mode: "auto", terminal: true, want: true},
+		{name: "auto redirected", mode: "auto"},
+		{name: "auto dumb", mode: "auto", terminal: true, dumb: true},
+		{name: "auto no color", mode: "auto", terminal: true, no: true},
+		{name: "always redirected", mode: "always", want: true},
+		{name: "always no color", mode: "always", no: true, want: true},
+		{name: "snapshot overrides always", mode: "always", snapshot: true, terminal: true},
+		{name: "never terminal", mode: "never", terminal: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := ColorEnabled(test.mode, test.snapshot, test.terminal, test.dumb, test.no); got != test.want {
+				t.Fatalf("ColorEnabled() = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestT06V04ColorDoesNotChangeFeatureText(t *testing.T) {
+	root := filepath.Join("..", "..", "scripts", "fixtures", "vault-hunter-atlas-t06-v01")
+	reader, err := vaultregistry.OpenReader(filepath.Join(root, "state"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runs, err := reader.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	projection, err := DiscoverFeature(filepath.Join(root, "vault"), "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md", runs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	colored := projection.RenderColor(true)
+	if !strings.Contains(colored, "\x1b[38;2;242;133;52mFEATURE ATLAS\x1b[0m") || !strings.Contains(colored, "\x1b[38;2;128;170;158mregistered → ") {
+		t.Fatalf("semantic true-color tokens missing:\n%q", colored)
+	}
+	plain := regexp.MustCompile(`\x1b\[[0-9;]*m`).ReplaceAllString(colored, "")
+	if plain != projection.Render() {
+		t.Fatalf("ANSI-stripped color render changed plain frame\n--- got ---\n%s\n--- want ---\n%s", plain, projection.Render())
 	}
 }

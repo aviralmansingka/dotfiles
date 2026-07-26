@@ -18,10 +18,15 @@ func main() {
 	featurePath := flag.String("feature", "", "vault-relative canonical feature.md target")
 	projectPath := flag.String("project", "", "vault-relative canonical project target")
 	selectedTaskPath := flag.String("select-task", "", "vault-relative Task path to open from an aggregate")
+	colorMode := flag.String("color", "auto", "aggregate color mode: auto, always, or never")
 	snapshot := flag.Bool("snapshot", false, "print one deterministic frame")
 	width := flag.Int("width", 0, "frame width")
 	height := flag.Int("height", 0, "frame height")
 	flag.Parse()
+	if *colorMode != "auto" && *colorMode != "always" && *colorMode != "never" {
+		flag.Usage()
+		os.Exit(2)
+	}
 	aggregateMode := *featurePath != "" || *projectPath != ""
 	if flag.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) {
 		flag.Usage()
@@ -60,7 +65,9 @@ func main() {
 			fail(err)
 		}
 		if *selectedTaskPath == "" {
-			fmt.Println(projection.Render())
+			_, noColor := os.LookupEnv("NO_COLOR")
+			color := atlas.ColorEnabled(*colorMode, *snapshot, characterDevice(os.Stdout), os.Getenv("TERM") == "dumb", noColor)
+			fmt.Println(projection.RenderColor(color))
 			return
 		}
 		task, ok := projection.Task(*selectedTaskPath)
