@@ -14,12 +14,15 @@ mkdir -p "$tmp/state/runs"
 cp "$fixture" "$tmp/state/runs/"
 
 snapshot="$tmp/snapshot"
+default="$tmp/default"
 noninteractive="$tmp/noninteractive"
 dumb="$tmp/dumb"
 reduced="$tmp/reduced"
 small="$tmp/79x23"
 
 "$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+  </dev/null >"$default"
+"$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
   --snapshot --width 80 --height 24 >"$snapshot"
 "$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
   --width 80 --height 24 </dev/null >"$noninteractive"
@@ -27,13 +30,16 @@ TERM=dumb "$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/st
   --width 80 --height 24 >"$dumb"
 VAULT_HUNTER_REDUCED_MOTION=1 "$tmp/vault-hunter-atlas" \
   --run-id atlas-rich-run --state-dir "$tmp/state" --width 80 --height 24 >"$reduced"
+cmp "$default" "$snapshot"
 cmp "$snapshot" "$noninteractive"
 cmp "$snapshot" "$dumb"
 cmp "$snapshot" "$reduced"
 
-for mode in snapshot noninteractive dumb reduced; do
+for mode in default snapshot noninteractive dumb reduced; do
   cp "$tmp/$mode" "$tmp/$mode.first"
 done
+"$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+  </dev/null >"$default"
 "$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
   --snapshot --width 80 --height 24 >"$snapshot"
 "$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
@@ -42,7 +48,7 @@ TERM=dumb "$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/st
   --width 80 --height 24 >"$dumb"
 VAULT_HUNTER_REDUCED_MOTION=1 "$tmp/vault-hunter-atlas" \
   --run-id atlas-rich-run --state-dir "$tmp/state" --width 80 --height 24 >"$reduced"
-for mode in snapshot noninteractive dumb reduced; do
+for mode in default snapshot noninteractive dumb reduced; do
   cmp "$tmp/$mode.first" "$tmp/$mode"
 done
 
@@ -50,9 +56,32 @@ done
   --snapshot --width 79 --height 23 >"$small"
 cmp "$golden" "$small"
 test "$(wc -l <"$small" | tr -d ' ')" -eq 1
-if LC_ALL=C grep -q "$(printf '\033')" "$snapshot" "$noninteractive" "$dumb" "$reduced" "$small"; then
+if LC_ALL=C grep -q "$(printf '\033')" "$default" "$snapshot" "$noninteractive" "$dumb" "$reduced" "$small"; then
   echo "static frame contains ANSI" >&2
   exit 1
 fi
+
+assert_invalid_dimensions() {
+  name=$1
+  shift
+  if "$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+    "$@" </dev/null >"$tmp/$name.frame" 2>"$tmp/$name.stderr"; then
+    echo "$name dimensions unexpectedly succeeded" >&2
+    exit 1
+  fi
+  if test -s "$tmp/$name.frame"; then
+    echo "$name dimensions emitted a frame" >&2
+    exit 1
+  fi
+}
+
+assert_invalid_dimensions width-only --width 80
+assert_invalid_dimensions height-only --height 24
+assert_invalid_dimensions negative-pair --width=-1 --height=-1
+assert_invalid_dimensions negative-width --width=-1 --height=24
+assert_invalid_dimensions negative-height --width=80 --height=-1
+assert_invalid_dimensions zero-pair --width=0 --height=0
+assert_invalid_dimensions zero-width --width=0 --height=24
+assert_invalid_dimensions zero-height --width=80 --height=0
 
 echo "T02.V02 Atlas keyboard, sizing, and motion: PASS"
