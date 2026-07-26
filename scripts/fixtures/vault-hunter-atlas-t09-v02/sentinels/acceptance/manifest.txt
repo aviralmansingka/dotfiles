@@ -1,0 +1,1 @@
+acceptance sentinel: no acceptance state is advanced by retirement

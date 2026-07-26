@@ -1,0 +1,1 @@
+vault sentinel: no lifecycle authority or project content may change

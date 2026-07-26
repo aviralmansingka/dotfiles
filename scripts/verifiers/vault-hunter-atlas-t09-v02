@@ -1,0 +1,99 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+fixture=scripts/fixtures/vault-hunter-atlas-t09-v02
+tmp=$(mktemp -d)
+trap 'chmod -R u+rwX "$tmp" 2>/dev/null || true; rm -rf "$tmp"' EXIT
+
+manifest() {
+  python3 - "$1" <<'PY'
+import hashlib, os, stat, sys
+
+root = sys.argv[1]
+rows = []
+for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
+    dirs.sort(); files.sort()
+    if base == root:
+        info = os.lstat(base)
+        rows.append(f"d {stat.S_IMODE(info.st_mode):04o} .")
+    for name in dirs + files:
+        path = os.path.join(base, name)
+        rel = os.path.relpath(path, root)
+        info = os.lstat(path)
+        mode = stat.S_IMODE(info.st_mode)
+        if stat.S_ISLNK(info.st_mode):
+            rows.append(f"l {mode:04o} {rel} -> {os.readlink(path)}")
+        elif stat.S_ISDIR(info.st_mode):
+            rows.append(f"d {mode:04o} {rel}")
+        elif stat.S_ISREG(info.st_mode):
+            with open(path, "rb") as handle:
+                digest = hashlib.sha256(handle.read()).hexdigest()
+            rows.append(f"f {mode:04o} {rel} {digest}")
+        else:
+            rows.append(f"o {mode:04o} {rel}")
+print(hashlib.sha256(("\n".join(rows) + "\n").encode()).hexdigest())
+PY
+}
+
+source_state_before=$(manifest "$fixture/state")
+for surface in vault Task verifier acceptance Herdr agent; do
+  eval "source_${surface}_before=$(manifest \"$fixture/sentinels/$surface\")"
+done
+
+cp -R "$fixture/sentinels" "$tmp/sentinels"
+chmod -R a-w "$tmp/sentinels"
+for surface in vault Task verifier acceptance Herdr agent; do
+  eval "copy_${surface}_before=$(manifest \"$tmp/sentinels/$surface\")"
+done
+
+mkdir "$tmp/traps"
+: > "$tmp/orchestration-invocations"
+cat > "$tmp/orchestration-trap" <<'SH'
+#!/bin/sh
+printf '%s\n' "$0 $*" >> "$T09_V02_TRAP_LOG"
+echo "T09.V02 invoked forbidden orchestration command: $0" >&2
+exit 97
+SH
+chmod +x "$tmp/orchestration-trap"
+for command in herdr pi codex feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
+  ln -s "$tmp/orchestration-trap" "$tmp/traps/$command"
+done
+
+go build -o "$tmp/vault-hunter-registry" ./cmd/vault-hunter-registry
+T09_V02_FIXTURE="$fixture" T09_V02_BINARY="$tmp/vault-hunter-registry" \
+  T09_V02_TRAP_LOG="$tmp/orchestration-invocations" PATH="$tmp/traps:$PATH" \
+  go test -count=1 -tags t09v02 "./$fixture/probe"
+
+# On Linux hosts where ptrace is available, retirement must make both sides of
+# the cross-directory rename durable. macOS and restricted containers have no
+# unprivileged syscall observer, so the inode/bytes/mode/mtime checks above are
+# the portable evidence there.
+fsync_observation=unavailable
+if command -v strace >/dev/null 2>&1 && strace -o "$tmp/strace-probe" true >/dev/null 2>&1; then
+  cp -R "$fixture/state" "$tmp/trace-state"
+  printf '{"action":"retire","root":"%s","run_id":"run-retire","expected_revision":7}\n' "$tmp/trace-state" |
+    strace -f -yy -e trace=fsync,fdatasync,syncfs -o "$tmp/retire.strace" \
+      "$tmp/vault-hunter-registry" > "$tmp/trace.stdout" 2> "$tmp/trace.stderr"
+  test ! -s "$tmp/trace.stderr"
+  grep -Eq 'f(data)?sync\([^)]*/runs>' "$tmp/retire.strace"
+  grep -Eq 'f(data)?sync\([^)]*/retired>' "$tmp/retire.strace"
+  fsync_observation='runs+retired directories synced'
+fi
+
+test ! -s "$tmp/orchestration-invocations"
+test "$source_state_before" = "$(manifest "$fixture/state")"
+for surface in vault Task verifier acceptance Herdr agent; do
+  eval "source_before=\$source_${surface}_before"
+  eval "copy_before=\$copy_${surface}_before"
+  test "$source_before" = "$(manifest "$fixture/sentinels/$surface")"
+  test "$copy_before" = "$(manifest "$tmp/sentinels/$surface")"
+done
+
+printf 'source fixture Registry manifest: %s\n' "$source_state_before"
+for surface in vault Task verifier acceptance Herdr agent; do
+  eval "value=\$source_${surface}_before"
+  printf 'sentinel %s manifest: %s\n' "$surface" "$value"
+done
+printf 'fsync syscall observation: %s\n' "$fsync_observation"
+echo 'T09.V02 exact atomic Run retirement and active/retired separation: PASS'
