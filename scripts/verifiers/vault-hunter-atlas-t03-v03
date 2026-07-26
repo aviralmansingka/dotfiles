@@ -1,0 +1,107 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+. scripts/verifiers/vault-hunter-atlas-t03-support
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin" "$tmp/state" "$tmp/vault" "$tmp/home"
+
+install_fake_herdr action
+
+cat >"$tmp/bin/action-trap" <<'SH'
+#!/bin/sh
+printf '%s %s\n' "$0" "$*" >>"$ATLAS_T03_V03_TRAP_LOG"
+exit 97
+SH
+chmod +x "$tmp/bin/action-trap"
+for command in vault-hunter vault-hunter-registry vault-hunter-registry-writer pi codex feedback resume acceptance session goal agent workspace-create worktree-create git vault-hunter-feedback vault-hunter-resume; do
+  ln -s action-trap "$tmp/bin/$command"
+done
+
+cat >"$tmp/herdr.json" <<'JSON'
+{"counter":30,"agents":[{"name":"replay-worker","agent":"pi","agent_status":"working","workspace_id":"ws-target","tab_id":"agent-tab","pane_id":"agent-pane","terminal_id":"agent-terminal","agent_session":{"source":"herdr:pi","kind":"path","value":"session-03"}}],"tabs":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","label":"unrelated","pane_count":1},{"workspace_id":"ws-other","tab_id":"other-tab","label":"other","pane_count":1}],"panes":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","pane_id":"unrelated-pane","terminal_id":"unrelated-terminal","processes":[{"argv":["unrelated"]}]},{"workspace_id":"ws-other","tab_id":"other-tab","pane_id":"other-pane","terminal_id":"other-terminal","processes":[{"argv":["other"]}]}]}
+JSON
+: >"$tmp/herdr.log"
+: >"$tmp/trap.log"
+printf '%s\n' 'vault bytes must remain untouched' >"$tmp/vault/sentinel"
+
+cat >"$tmp/create.json" <<JSON
+{"action":"create","root":"$tmp/state","run":{"schema_version":1,"run_id":"run-replay","invoked_at":"2026-07-26T14:00:00Z","updated_at":"2026-07-26T14:00:00Z","task":{"id":"T03","title":"Immutable replay","path":"tasks/03.md","feature_path":"features/atlas.md","kind":"task"}}}
+JSON
+cat >"$tmp/append.json" <<JSON
+{"action":"append","root":"$tmp/state","run_id":"run-replay","updated_at":"2026-07-26T14:00:01Z","participant":{"participant_id":"replay-worker","observed_at":"2026-07-26T14:00:01Z","role":"worker","goal_id":"T03.V03","herdr":{"workspace_id":"ws-target","tab_id":"agent-tab","pane_id":"agent-pane","terminal_id":"agent-terminal"},"agent_session":{"source":"herdr:pi","kind":"path","value":"session-03"}},"lifecycle":{"observation_id":"replay-active","observed_at":"2026-07-26T14:00:01Z","kind":"verifier","goal_id":"T03.V03","state":"active","detail":"duplicate replay"}}
+JSON
+
+go test -count=1 ./internal/atlascompanion
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+go build -o "$tmp/t01-producer" ./cmd/vault-hunter-registry
+"$tmp/t01-producer" <"$tmp/create.json" >/dev/null
+"$tmp/t01-producer" <"$tmp/append.json" >"$tmp/produced.json"
+python3 - "$tmp/produced.json" <<'PY'
+import json, sys
+run = json.load(open(sys.argv[1]))
+assert run["revision"] == 2
+assert len(run["participants"]) == 1 and len(run["lifecycle"]) == 1
+PY
+manifest "$tmp/state" >"$tmp/state.manifest"
+manifest "$tmp/vault" >"$tmp/vault.manifest"
+
+export HERDR_FAKE_STATE="$tmp/herdr.json" HERDR_FAKE_LOG="$tmp/herdr.log"
+export ATLAS_T03_V03_TRAP_LOG="$tmp/trap.log"
+PATH="$tmp/bin:$PATH"
+export PATH
+export HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state"
+export VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-used"
+
+"$tmp/vault-hunter-atlas" companion attach --run-id run-replay --workspace-id ws-target --state-dir "$tmp/state" >"$tmp/attached-before.json"
+assert_manifests
+"$tmp/vault-hunter-atlas" --run-id run-replay --state-dir "$tmp/state" --snapshot --width 100 --height 30 >"$tmp/frame-before"
+assert_manifests
+
+"$tmp/t01-producer" <"$tmp/append.json" >"$tmp/replayed.json"
+cmp "$tmp/produced.json" "$tmp/replayed.json"
+assert_manifests
+
+"$tmp/vault-hunter-atlas" --run-id run-replay --state-dir "$tmp/state" --snapshot --width 100 --height 30 >"$tmp/frame-after"
+cmp "$tmp/frame-before" "$tmp/frame-after"
+"$tmp/vault-hunter-atlas" companion attach --run-id run-replay --workspace-id ws-target --state-dir "$tmp/state" >"$tmp/attached-after.json"
+cmp "$tmp/attached-before.json" "$tmp/attached-after.json"
+assert_manifests
+
+eval "$(python3 - "$tmp/attached-before.json" <<'PY'
+import json, shlex, sys
+value = json.load(open(sys.argv[1]))
+assert value["run_id"] == "run-replay" and value["workspace_id"] == "ws-target"
+assert [(item["recorded"]["participant_id"], item["state"]) for item in value["participants"]] == [("replay-worker", "matched")]
+assert value["live_only"] is None
+for key in ("tab_id", "pane_id", "terminal_id"):
+    print(f"{key}={shlex.quote(value[key])}")
+PY
+)"
+grep -Fq 'replay-worker · worker' "$tmp/frame-before"
+grep -Fq 'verifier · active' "$tmp/frame-before"
+grep -Fq 'duplicate replay' "$tmp/frame-before"
+
+"$tmp/vault-hunter-atlas" companion cleanup --run-id run-replay --workspace-id ws-target \
+  --tab-id "$tab_id" --pane-id "$pane_id" --terminal-id "$terminal_id" --state-dir "$tmp/state" >/dev/null
+assert_manifests
+
+test ! -s "$tmp/trap.log"
+test ! -e "$tmp/home/retained-registry-must-not-be-used"
+python3 - "$tmp/herdr.json" "$tmp/herdr.log" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+assert {tab["tab_id"] for tab in state["tabs"]} == {"unrelated-tab", "other-tab"}
+assert {pane["pane_id"] for pane in state["panes"]} == {"unrelated-pane", "other-pane"}
+allowed = {("agent","list"), ("tab","list"), ("pane","list"), ("pane","process-info"), ("tab","create"), ("pane","run"), ("tab","close")}
+commands = [json.loads(line) for line in open(sys.argv[2])]
+assert commands and all(tuple(command[:2]) in allowed for command in commands), commands
+assert all(command[:2] not in (["agent","start"], ["session","create"], ["goal","create"], ["workspace","create"], ["worktree","create"]) for command in commands)
+assert sum(command[:2] == ["tab","create"] for command in commands) == 1
+assert sum(command[:2] == ["tab","close"] for command in commands) == 1
+PY
+
+echo "T03.V03 immutable replay correlation and authority boundary: PASS"
