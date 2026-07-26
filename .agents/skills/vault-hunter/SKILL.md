@@ -24,7 +24,8 @@ Immediately after invocation, resolve only enough vault context to identify the 
    - Task → change its Feature checklist bullet to `[-]` and, when linked, set its note to `status: in-progress`
    - Issue or Wayfinder effort → set its note or map frontmatter to `status: in-progress`
 2. Create the invocation backlog entry described below.
-3. Commit the lifecycle transition and backlog entry together in the vault. Do not push them yet.
+3. Load and follow `$vault-hunter-checkpoint` in `invocation` mode with the exact lifecycle and backlog path
+   allowlist. Commit them together and do not push them yet.
 4. After the commit succeeds, mark the invocation timeline stage `Done`, activate the route's next stage, and continue.
 5. Only after the commit succeeds, provide substantive user-facing content or continue with broader discovery.
 
@@ -79,40 +80,16 @@ a full interactive Codex session wrapped by Herdr in that Task's dedicated works
 Issue routes keep their Feature scope. A background or inherited-pane subagent is invalid and must be replaced before
 work begins.
 
-For each dispatched role:
+For every dispatched role, load and follow `$vault-hunter-worker` for the complete Herdr lifecycle. Supply the route
+workspace, run worktree and branch, run label, feature slug, run key, role, exact bounded prompt, stage-appropriate
+polling interval and no-progress window, and whether the session must remain open. That skill alone creates and
+validates the one-pane tab, captures opaque ownership IDs, monitors progress, returns the handoff and tuple, and closes
+accepted workers. The driver decides whether a handoff satisfies the stage and never performs worker placement or
+cleanup shell choreography itself.
 
-- For a Task Run, reuse only its Task-named workspace and `task/<task-slug>` worktree. For other routes,
-  reuse the owning Feature workspace and worktree. Never hardcode opaque IDs.
-- Name the Herdr agent `codex-<feature-slug>-<run-key>-<role>` and set
-  `SIDEKICK_NAMED_SESSION=<feature-slug>-<run-key>-<role>`, where `run-key` is the Task ID, `feature`, or Issue slug.
-- Give it a distinct `<run label> · <role>` Herdr tab containing exactly one full Codex pane. Start the agent as that
-  tab's only pane; do not precreate a blank root pane and then split a worker beside it. Verify `pane_count=1`.
-- Treat the Herdr wrapper as one named tuple: owning route workspace, distinct tab label, full Codex pane under the
-  agent name, and distinct Sidekick session. Capture every returned opaque ID instead of deriving one.
-- Use the Task worktree as `--cwd` for Task Runs and the Feature worktree for other routes. Give bounded repository
-  ownership plus exact Feature and Task paths, and forbid vault edits or commits.
-- Monitor native subagent status plus `herdr agent get` and `herdr agent read`. If name, cwd, workspace, tab, session,
-  or one-pane placement is wrong, replace the dispatch before accepting work.
-- Require one concise final handoff containing outcome, changed paths and commit, exact checks and evidence, and
-  residual risks or blockers. If it is incomplete, follow up with that same subagent; the driver does not investigate
-  or rerun its work.
-- Record every worker's exact agent, session, tab, and pane IDs for cleanup.
-
-Launch a separate role without precreating its tab, then rename the returned one-pane tab:
-
-```sh
-herdr agent start "codex-$feature_slug-$run_key-$role" \
-  --cwd "$run_worktree" \
-  --workspace "$workspace_id" \
-  --env "SIDEKICK_NAMED_SESSION=$feature_slug-$run_key-$role" \
-  --no-focus \
-  -- codex "$prompt"
-herdr tab rename "$returned_tab_id" "$run_label · $role"
-```
-
-The driver consumes only the resulting concise handoffs. It alone chooses and writes lifecycle edits, backlog status,
-Task evidence, both vault checkpoints, and the completion report. This single-writer boundary applies even when
-multiple Codex subagents run concurrently.
+The driver consumes only concise accepted handoffs. It alone chooses and writes lifecycle edits, backlog status, Task
+evidence, both vault checkpoints, and the completion report. This single-writer boundary applies even when multiple
+workers run concurrently.
 
 ## Resolve the input
 
@@ -196,8 +173,9 @@ two named checkpoints.
 ### Vault checkpoint one
 
 - Store the Task Spec and complete verifier ledger.
-- Commit any remaining checkpoint-one vault changes, then push the invocation lifecycle commit and Task Spec/verifier
-  ledger commits together. Never open a vault PR.
+- Delegate the exact checkpoint path allowlist and commit message to `$vault-hunter-checkpoint` in `one` mode; it
+  commits remaining changes, pushes the invocation and Task Spec/verifier ledger commits together, and verifies the
+  pushed checkpoint. Never open a vault PR.
 - Do not activate the first verifier or begin implementation after the push.
 - Mark checkpoint one `Blocked — Awaiting human evaluation` in the invocation backlog timeline.
 - Report the canonical Task link, verifier ledger, checkpoint commits, and the exact decision the human is being asked
@@ -212,7 +190,9 @@ two named checkpoints.
 
 ### One goal per verifier
 
-Activate one drafted verifier at a time by dispatching a bounded full Codex verifier subagent:
+Activate one drafted verifier at a time by dispatching a bounded full Codex verifier subagent. Require verifier and
+implementation workers to load and follow `$vault-hunter-check` for every declared baseline or current-branch command
+set and hashed evidence handoff; that skill executes commands but never chooses or repairs them.
 
 1. Require the subagent to run it against the original baseline and prove the intended gap is red.
 2. If it unexpectedly passes, have the subagent repair the verifier until it detects the gap.
@@ -231,7 +211,7 @@ already passes on the current branch because an earlier slice fixed it, accept t
 Dispatch a refactor subagent only after every drafted verifier has reached green once.
 
 - Require the subagent to freeze intended behavior and assertion strength, refactor implementation and verifiers for
-  clarity and duplication, and return complete-suite evidence.
+  clarity and duplication, then use `$vault-hunter-check` for the declared complete-suite evidence.
 - Accept the handoff only when the complete verifier set is green.
 
 ### Review Convergence
@@ -252,8 +232,9 @@ conclusions.
 
 ### Open the implementation PR
 
-- Dispatch the final verifier subagent to run the complete verifier set and refresh each verifier's existing `EX01` in
-  place from the accepted successful run. Do not create another evidence item or a separate final-evidence goal.
+- Dispatch the final verifier subagent to use `$vault-hunter-check` for the complete verifier set and refresh each
+  verifier's existing `EX01` in place from the accepted successful run. Do not create another evidence item or a
+  separate final-evidence goal.
 - Dispatch a release subagent to push implementation code and open the implementation PR. Never arm auto-merge.
 - Consume its concise handoff and link the PR from the Task note.
 
@@ -267,7 +248,8 @@ Always run this goal, even when it completes immediately:
 - Never bypass branch protection or required approval.
 - With no CI, require a mergeable PR and complete local green suite.
 - When CI and required approvals are green, report that the PR is ready and wait for an explicit human merge action.
-- After the human merges it, dispatch post-merge checks against merged `main`.
+- After the human merges it, dispatch a post-merge worker that uses `$vault-hunter-check` with a temporary detached
+  worktree at fetched merged `main` and only the exact declared post-merge commands.
 
 ### Workspace and vault cleanup
 
@@ -280,10 +262,10 @@ Always run this goal, even when it completes immediately:
 5. Set the Task note frontmatter to `status: done`, change its authoritative Feature checklist bullet to `[x]`, and
    derive the Feature status from its complete checklist.
 6. Complete the invocation backlog entry.
-7. Commit vault checkpoint two on the vault's `main` branch and push `origin main`. If the update was prepared on
-   another vault branch, merge it into vault `main` first. Never open a vault PR.
-8. Run `git fetch origin main:refs/remotes/origin/main` in the vault and verify the checkpoint-two commit is an
-   ancestor of `origin/main`. Cleanup is incomplete until this remote-main check passes.
+7. Delegate the exact final path allowlist and commit message to `$vault-hunter-checkpoint` in `two` mode. If the
+   update was prepared on another vault branch, land it on vault `main` first. Never open a vault PR.
+8. Accept cleanup only after the delegated checkpoint reports that checkpoint two was pushed to `origin main`, fetched
+   back, and verified as an ancestor of `origin/main`.
 
 ## Completion
 
