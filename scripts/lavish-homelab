@@ -121,6 +121,11 @@ case "$action" in
     fi
     if [[ "$action" == render || "$action" == review || "$action" == open ]]; then
       alias=$(alias_for "$source_file" "$source_markdown" "$explicit_alias")
+      if [[ "$action" == render ]]; then
+        alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$remote_file")")
+        printf 'alias_url: "%s"\nartifact_path: "%s"\n' "$alias_url" "$remote_file"
+        exit 0
+      fi
       if [[ ${#lavish_args[@]} -gt 0 ]]; then
         output=$(run_remote_lavish open "$remote_file" --no-open "${lavish_args[@]}")
       else
@@ -132,9 +137,6 @@ case "$action" in
       session_id=${session_url##*/}
       artifact_url="${PUBLIC_URL}/artifact/${session_id}/index.html"
       target_url=$session_url
-      if [[ "$action" == render ]]; then
-        target_url=$artifact_url
-      fi
       alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$target_url")")
       printf 'alias_url: "%s"\nartifact_url: "%s"\nsession_url: "%s"\n' "$alias_url" "$artifact_url" "$session_url"
     else
