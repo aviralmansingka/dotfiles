@@ -26,12 +26,15 @@ change the IOMMU kernel command line because the host already exposes an isolate
 
 ```sh
 ./ops/pi-stt-vm/create-vm.sh
-sudo virsh domifaddr pi-stt --source lease
+virsh -c qemu:///system domifaddr pi-stt --source lease
+ssh avirus@192.168.122.10
 ```
 
-Defaults: Ubuntu 24.04, UEFI/Q35, 4 vCPU, 8 GiB RAM, 40 GiB qcow2 disk, libvirt's private NAT network, both RTX
-functions, user `avirus`, and the host's `~/.ssh/id_ed25519.pub`. The Ubuntu cloud image is checked against Canonical's
-published SHA-256 before use.
+Defaults: Ubuntu 24.04, UEFI/Q35, 4 vCPU, 8 GiB RAM, 40 GiB qcow2 disk, libvirt's `default` private NAT network,
+MAC `52:54:00:13:10:01`, reserved address `192.168.122.10`, both RTX functions, user `avirus`, and the host's
+`~/.ssh/id_ed25519.pub`. The script adds the DHCP reservation idempotently to the live and persistent network, refuses
+to replace a conflicting reservation, and explicitly uses `qemu:///system`. The Ubuntu cloud image is checked against
+Canonical's published SHA-256 before use.
 
 ## 3. Install the guest driver and worker
 
