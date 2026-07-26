@@ -1,0 +1,17 @@
+Run atlas-journal-run · Task T08 · Build the Execution Journal
+Execution Journal · 7 events · UTC · read-only
+TIME         TYPE OBSERVATION SUBJECT STATE (L=lifecycle E=evidence)
+> 10:00:00Z L life-offset checkpoint-one checkpoint done
+  10:01:00Z L duplicate-id future-goal future-kind future-state
+  10:01:00Z L life-tie-second T08.REVIEW review done
+  10:01:00Z E duplicate-id T08.V01 failed exit=2
+    command=scripts/verify-vault-hunter-atlas T08.V01
+    tree=tree-red artifact=sha-red detail=tie-evidence-first
+  10:01:00Z E evidence-tie-second T08.V02 future-evidence-state exit=-
+    command=verify-second
+    tree=tree-second artifact=sha-second detail=tie-evidence-second
+  10:02:00Z E evidence-later T08.V01 passed exit=0
+    command=verify-later
+    tree=tree-green artifact=sha-green detail=instant-middle
+  10:03:00Z L life-later T08.LANDING landing pending
+j/down k/up navigate · q quit · read-only · 134x32

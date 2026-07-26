@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "run_id": "atlas-journal-run",
+  "revision": 8,
+  "invoked_at": "2026-07-26T09:59:00Z",
+  "updated_at": "2026-07-26T10:04:00Z",
+  "task": {
+    "id": "T08",
+    "title": "Build the Execution Journal",
+    "path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/08-build-execution-journal.md",
+    "feature_path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas.md",
+    "kind": "task"
+  },
+  "participants": [
+    {
+      "participant_id": "participant-must-not-render",
+      "observed_at": "2026-07-26T10:00:30Z",
+      "role": "implementer",
+      "goal_id": "T08"
+    },
+    {
+      "participant_id": "reviewer-must-not-render",
+      "observed_at": "2026-07-26T10:03:30Z",
+      "role": "reviewer",
+      "goal_id": "T08.REVIEW"
+    }
+  ],
+  "lifecycle": [
+    {
+      "observation_id": "life-offset",
+      "observed_at": "2026-07-26T12:00:00+02:00",
+      "kind": "checkpoint",
+      "goal_id": "checkpoint-one",
+      "state": "done",
+      "detail": "instant-earlier"
+    },
+    {
+      "observation_id": "duplicate-id",
+      "observed_at": "2026-07-26T10:01:00Z",
+      "kind": "future-kind",
+      "goal_id": "future-goal",
+      "state": "future-state",
+      "detail": "tie-life-first"
+    },
+    {
+      "observation_id": "life-tie-second",
+      "observed_at": "2026-07-26T12:01:00+02:00",
+      "kind": "review",
+      "goal_id": "T08.REVIEW",
+      "state": "done",
+      "detail": "tie-life-second"
+    },
+    {
+      "observation_id": "life-later",
+      "observed_at": "2026-07-26T10:03:00Z",
+      "kind": "landing",
+      "goal_id": "T08.LANDING",
+      "state": "pending",
+      "detail": "instant-later"
+    }
+  ],
+  "evidence": [
+    {
+      "observation_id": "duplicate-id",
+      "observed_at": "2026-07-26T06:01:00-04:00",
+      "verifier_id": "T08.V01",
+      "state": "failed",
+      "command": "scripts/verify-vault-hunter-atlas T08.V01",
+      "exit_status": 2,
+      "implementation_tree": "tree-red",
+      "artifact_sha256": "sha-red",
+      "detail": "tie-evidence-first"
+    },
+    {
+      "observation_id": "evidence-tie-second",
+      "observed_at": "2026-07-26T10:01:00Z",
+      "verifier_id": "T08.V02",
+      "state": "future-evidence-state",
+      "command": "verify-second",
+      "exit_status": null,
+      "implementation_tree": "tree-second",
+      "artifact_sha256": "sha-second",
+      "detail": "tie-evidence-second"
+    },
+    {
+      "observation_id": "evidence-later",
+      "observed_at": "2026-07-26T10:02:00Z",
+      "verifier_id": "T08.V01",
+      "state": "passed",
+      "command": "verify-later",
+      "exit_status": 0,
+      "implementation_tree": "tree-green",
+      "artifact_sha256": "sha-green",
+      "detail": "instant-middle"
+    }
+  ]
+}

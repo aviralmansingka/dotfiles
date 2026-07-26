@@ -1,0 +1,51 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture=scripts/fixtures/vault-hunter-atlas/runs/atlas-journal-run.json
+goldens=scripts/goldens/vault-hunter-atlas
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+mkdir -p "$tmp/state/runs"
+cp "$fixture" "$tmp/state/runs/"
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+
+# Prove the fixture and static assets are valid before exercising the absent
+# journal product seam.
+"$tmp/vault-hunter-atlas" --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --snapshot --width 80 --height 24 >/dev/null
+for size in 134x32 80x24; do
+  width=${size%x*}
+  height=${size#*x}
+  golden="$goldens/journal-$size.txt"
+  test "$(tail -c 1 "$golden" | od -An -t x1 | tr -d ' \n')" = 0a
+  test "$(tail -c 2 "$golden" | od -An -t x1 | tr -d ' \n')" != 0a0a
+  test "$(wc -l <"$golden" | tr -d ' ')" -le "$height"
+  awk -v width="$width" 'length($0) > width { exit 1 }' "$golden"
+  if LC_ALL=C grep -q "$(printf '\033')" "$golden"; then
+    echo "$size golden contains ANSI" >&2
+    exit 1
+  fi
+done
+
+go test -count=1 ./internal/atlas -run '^TestT08V01'
+
+for size in 134x32 80x24; do
+  width=${size%x*}
+  height=${size#*x}
+  first="$tmp/$size.first"
+  second="$tmp/$size.second"
+  golden="$goldens/journal-$size.txt"
+
+  "$tmp/vault-hunter-atlas" journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+    --snapshot --width "$width" --height "$height" >"$first"
+  "$tmp/vault-hunter-atlas" journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+    --snapshot --width "$width" --height "$height" >"$second"
+
+  cmp "$first" "$second"
+  cmp "$golden" "$first"
+done
+
+echo "T08.V01 deterministic Execution Journal snapshots: PASS"
