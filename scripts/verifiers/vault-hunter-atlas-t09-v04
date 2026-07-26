@@ -1,0 +1,234 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+repo_root=$(pwd -P)
+fixture="$repo_root/scripts/fixtures/vault-hunter-atlas-t09-v04"
+tmp=$(mktemp -d)
+trap 'chmod -R u+rwX "$tmp" 2>/dev/null || true; rm -rf "$tmp"' EXIT
+
+# T09.V04 specifies the observer/status product but does not implement it.
+if test ! -d cmd/vault-hunter-status; then
+  echo 'T09.V04 semantic red: cmd/vault-hunter-status observer command is absent' >&2
+  exit 1
+fi
+if test ! -f .agents/skills/vault-hunter-status/SKILL.md; then
+  echo 'T09.V04 semantic red: vault-hunter-status skill is absent' >&2
+  exit 1
+fi
+
+manifest() {
+  python3 - "$1" <<'PY'
+import hashlib, os, stat, sys
+root = sys.argv[1]
+rows = []
+for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
+    dirs.sort(); files.sort()
+    if base == root:
+        info = os.lstat(base)
+        rows.append(f"d {stat.S_IMODE(info.st_mode):04o} .")
+    for name in dirs + files:
+        path = os.path.join(base, name)
+        rel = os.path.relpath(path, root)
+        info = os.lstat(path)
+        mode = stat.S_IMODE(info.st_mode)
+        if stat.S_ISLNK(info.st_mode):
+            rows.append(f"l {mode:04o} {rel} -> {os.readlink(path)}")
+        elif stat.S_ISDIR(info.st_mode):
+            rows.append(f"d {mode:04o} {rel}")
+        elif stat.S_ISREG(info.st_mode):
+            with open(path, "rb") as handle:
+                digest = hashlib.sha256(handle.read()).hexdigest()
+            rows.append(f"f {mode:04o} {rel} {digest}")
+        else:
+            rows.append(f"o {mode:04o} {rel}")
+print(hashlib.sha256(("\n".join(rows) + "\n").encode()).hexdigest())
+PY
+}
+
+source_before=$(manifest "$fixture/state")
+cp -R "$fixture/state" "$tmp/state"
+go build -o "$tmp/vault-hunter-status" ./cmd/vault-hunter-status
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+go build -o "$tmp/vault-hunter-registry" ./cmd/vault-hunter-registry
+mkdir "$tmp/home" "$tmp/traps"
+: > "$tmp/orchestration-invocations"
+test -x "$fixture/orchestration-trap" && test -x "$fixture/watch-pty.py"
+for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
+  ln -s "$fixture/orchestration-trap" "$tmp/traps/$command"
+done
+state_before=$(manifest "$tmp/state")
+chmod -R a-w "$tmp/state"
+
+HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" VAULT_HUNTER_STATE_DIR="$tmp/state" \
+  T09_V04_TRAP_LOG="$tmp/orchestration-invocations" PATH="$tmp/traps:$tmp:$PATH" \
+  python3 - "$tmp/vault-hunter-status" "$tmp/state" "$fixture" <<'PY'
+import json
+import os
+import re
+import subprocess
+import sys
+
+binary, state, fixture = sys.argv[1:]
+ESC = b"\x1b"
+SGR = re.compile(rb"\x1b\[[0-9;]*m")
+with open(os.path.join(fixture, "observation-authority-footer.txt"), "rb") as handle:
+    footer = handle.read()
+with open(os.path.join(fixture, "state", "runs", "run-observe.json"), encoding="utf-8") as handle:
+    selected = json.load(handle)
+with open(os.path.join(fixture, "state", "runs", "run-other.json"), encoding="utf-8") as handle:
+    other = json.load(handle)
+
+
+def invoke(*args):
+    return subprocess.run([binary, *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=5)
+
+
+def success(*args):
+    result = invoke(*args)
+    assert result.returncode == 0, (args, result.returncode, result.stdout, result.stderr)
+    assert result.stderr == b"", (args, result.stderr)
+    return result.stdout
+
+
+def plain_human(*args):
+    output = success(*args)
+    assert ESC not in output, (args, output)
+    assert output.endswith(footer), (args, output[-500:], footer)
+    return output
+
+
+def summary(run):
+    return {
+        "schema_version": run["schema_version"], "run_id": run["run_id"], "revision": run["revision"],
+        "invoked_at": run["invoked_at"], "updated_at": run["updated_at"],
+        "task": {key: run["task"][key] for key in ("id", "title", "path", "feature_path", "kind")},
+    }
+
+# Redirected auto mode is deterministic plain text. The empty command is an
+# exact alias of list, and retired records do not enter the active snapshot.
+default = plain_human()
+listed = plain_human("list")
+assert default == listed
+for token in (b"run-observe", b"run-other", b"SECOND-RUN-ONLY-SENTINEL"):
+    assert token in listed, (token, listed)
+assert b"RETIRED-RUN-MUST-NOT-BE-LISTED" not in listed
+assert listed == plain_human("list")
+
+# JSON is machine output regardless of forced color: it has no terminal SGR or
+# authority prose. List is the bounded Registry summary; run is the exact one
+# selected full record, including its observation histories and extensions.
+list_json = success("list", "--json", "--color=always")
+run_json = success("run", "run-observe", "--json", "--color=always")
+assert ESC not in list_json and ESC not in run_json
+assert json.loads(list_json) == [summary(selected), summary(other)], list_json
+assert json.loads(run_json) == selected, run_json
+assert footer.rstrip() not in list_json and footer.rstrip() not in run_json
+
+# Every run-specific observer view is isolated to the requested Run. Registry
+# is the documented record alias; journey, evidence, and Atlas expose their
+# own projection without leaking the other active Run.
+run = plain_human("run", "run-observe")
+record = plain_human("record", "run-observe")
+registry = plain_human("registry", "run-observe")
+journey = plain_human("journey", "run-observe")
+evidence = plain_human("evidence", "run-observe")
+atlas = plain_human("atlas", "run-observe")
+assert record == registry
+for name, output in {
+    "run": run, "record": record, "registry": registry,
+    "journey": journey, "evidence": evidence, "atlas": atlas,
+}.items():
+    assert b"run-observe" in output, (name, output)
+    for forbidden in (b"SECOND-RUN-ONLY-SENTINEL", b"OTHER-RUN-JOURNEY-SENTINEL", b"OTHER-RUN-EVIDENCE-SENTINEL"):
+        assert forbidden not in output, (name, forbidden, output)
+assert b"SELECTED-RUN-RECORD-SENTINEL" in record
+assert b"life-invoked" in journey and b"semantic verifier active" in journey
+assert b"evidence-red" in evidence and b"scripts/verify-vault-hunter-atlas T09.V04" in evidence
+assert b"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" in evidence
+assert b"TASK RUN ATLAS" in atlas
+
+# Forced color emits actual SGR bytes (not escaped text) and changes styling,
+# not content or selection.
+colored = success("run", "run-observe", "--color=always")
+assert SGR.search(colored), colored
+assert b"run-observe" in colored and b"SECOND-RUN-ONLY-SENTINEL" not in colored
+assert SGR.sub(b"", colored) == run, (colored, run)
+
+# Missing records, malformed IDs, invalid commands, and non-TTY watch calls
+# use stable classified exits and byte-for-byte repeatable diagnostics.
+def stable_failure(expected, *args):
+    first, second = invoke(*args), invoke(*args)
+    for result in (first, second):
+        assert result.returncode == expected, (args, expected, result.returncode, result.stdout, result.stderr)
+        assert result.stdout == b"", (args, result.stdout)
+        assert ESC not in result.stderr, (args, result.stderr)
+    assert first.stderr == second.stderr, (args, first.stderr, second.stderr)
+    return first.stderr.lower()
+
+assert b"not found" in stable_failure(1, "run", "missing-run")
+assert b"invalid" in stable_failure(1, "run", "../escape")
+assert b"usage" in stable_failure(2, "not-a-view")
+watch_error = stable_failure(2, "watch", "run-observe", "--interval=50ms")
+assert b"tty" in watch_error or b"terminal" in watch_error, watch_error
+
+print("T09.V04 default/list, run, record/registry, journey, evidence, and Atlas projections: PASS")
+print("T09.V04 JSON/plain/forced-SGR and stable failure contracts: PASS")
+PY
+
+# A real PTY proves watch rejects redirection but refreshes when interactive,
+# remains selected-Run-only, is bounded, and restores the cursor on SIGINT.
+HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" VAULT_HUNTER_STATE_DIR="$tmp/state" \
+  T09_V04_TRAP_LOG="$tmp/orchestration-invocations" PATH="$tmp/traps:$tmp:$PATH" TERM=xterm-256color \
+  python3 "$fixture/watch-pty.py" "$tmp/vault-hunter-status" "$tmp/watch.pty"
+
+# Static command boundary: Registry reads go through the existing API/command,
+# never a status-owned scan or deletion primitive.
+python3 - cmd/vault-hunter-status .agents/skills/vault-hunter-status/SKILL.md <<'PY'
+import os
+import re
+import sys
+
+source_dir, skill_path = sys.argv[1:]
+chunks = []
+for base, dirs, files in os.walk(source_dir):
+    dirs.sort()
+    for name in sorted(files):
+        if name.endswith(".go"):
+            with open(os.path.join(base, name), encoding="utf-8") as handle:
+                chunks.append(handle.read())
+source = "\n".join(chunks)
+assert "vaultregistry" in source or "vault-hunter-registry" in source
+for pattern in (
+    r"\bos\.ReadDir\s*\(", r"\bos\.Remove(?:All)?\s*\(", r"\bos\.Rename\s*\(",
+    r"\bfilepath\.(?:Glob|Walk|WalkDir)\s*\(", r"\bfs\.ReadDir\s*\(",
+    r"\bsyscall\.(?:Unlink|Rmdir)\s*\(",
+):
+    assert not re.search(pattern, source), pattern
+
+with open(skill_path, encoding="utf-8") as handle:
+    skill = handle.read()
+assert re.search(r"(?m)^name:\s*vault-hunter-status\s*$", skill)
+commands = (
+    "vault-hunter-status", "vault-hunter-status list", "vault-hunter-status run <run-id>",
+    "vault-hunter-status record <run-id>", "vault-hunter-status registry <run-id>",
+    "vault-hunter-status journey <run-id>", "vault-hunter-status evidence <run-id>",
+    "vault-hunter-status atlas <run-id>", "vault-hunter-status watch <run-id>",
+)
+for command in commands:
+    assert command in skill, command
+assert "vault-hunter-status run <run-id> --color=always" in skill
+lower = skill.lower()
+for phrase in ("run registry", "observation", "canonical vault", "active parent", "authoritative"):
+    assert phrase in lower, phrase
+print("T09.V04 no direct Registry scan/delete and status-skill command/alias contract: PASS")
+PY
+
+# Canonical-vault operator-guide publication is parent-owned evidence and is
+# deliberately not asserted as a repository product by this verifier.
+test ! -s "$tmp/orchestration-invocations"
+test "$state_before" = "$(manifest "$tmp/state")"
+test "$source_before" = "$(manifest "$fixture/state")"
+printf 'source fixture Registry manifest: %s\n' "$source_before"
+printf 'copied read-only Registry manifest: %s\n' "$state_before"
+echo 'T09.V04 observer command surface, watch safety, and documentation: PASS'

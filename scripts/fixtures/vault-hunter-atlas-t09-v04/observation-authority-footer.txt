@@ -1,0 +1,1 @@
+Observation authority: Run Registry observations are not canonical status; the canonical vault note and active parent remain authoritative.
