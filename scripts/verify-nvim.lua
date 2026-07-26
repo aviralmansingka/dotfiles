@@ -1718,6 +1718,298 @@ local function validate_sidekick_herdr()
       fail("T04 V02 Atlas fallback regressions: " .. table.concat(fallback_failures, "; "))
     end
 
+    local function v03_frame(label)
+      return table.concat({
+        "Run atlas-v03-" .. label .. " · Goal T04.V03",
+        "Role verifier · " .. label,
+      }, "\r\n")
+    end
+
+    local function v03_result(label)
+      return {
+        outcome = "matched",
+        run_id = "atlas-v03-" .. label,
+        participant_id = "verifier-" .. label,
+        frame = v03_frame(label),
+      }
+    end
+
+    local function open_v03_picker(lookup)
+      cwd_picker.open({ atlas_lookup = lookup })
+      local opts = picker_opts
+      local workspace = opts.layout.wins.workspace
+      fake_picker.closed = false
+      workspace:show()
+      opts.on_show(fake_picker)
+      opts.win.input.keys["<c-w>"][1]()
+      return opts, workspace
+    end
+
+    local function close_v03_picker(opts, workspace)
+      fake_picker.closed = true
+      opts.on_close(fake_picker)
+      workspace:close()
+    end
+
+    local function preview_bytes()
+      return table.concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n")
+    end
+
+    local function valid_buffer_set()
+      local buffers = {}
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_valid(buf) then
+          buffers[buf] = true
+        end
+      end
+      return buffers
+    end
+
+    local function new_valid_buffers(before)
+      local buffers = {}
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_valid(buf) and not before[buf] then
+          buffers[#buffers + 1] = buf
+        end
+      end
+      return buffers
+    end
+
+    read_result = "\27[36mT04 V03 unchanged default preview\27[0m\r\ndefault second line"
+    local identity_calls = {}
+    local identity_callbacks = {}
+    local identity_picker_opts, identity_workspace = open_v03_picker(function(item, _, _, callback)
+      local label = item._atlas_v03_case or "unexpected"
+      identity_calls[label] = (identity_calls[label] or 0) + 1
+      identity_callbacks[label] = callback
+      vim.schedule(function()
+        callback(label == "complete" and v03_result(label) or { outcome = "unregistered" })
+      end)
+      return function() end
+    end)
+    local complete_identity = vim.deepcopy(fallback_item)
+    complete_identity.status = "done"
+    complete_identity._atlas_fallback_case = nil
+    local default_control = vim.deepcopy(complete_identity)
+    default_control.agent_session = nil
+    default_control._atlas_v03_case = "default-control"
+    current_fake_item = default_control
+    local default_control_swaps = preview_swaps
+    identity_picker_opts.preview({ item = default_control, preview = fake_picker.preview })
+    vim.wait(1000, function() return preview_swaps > default_control_swaps end, 10)
+    if (identity_calls["default-control"] or 0) ~= 0 or preview_swaps ~= default_control_swaps + 1 then
+      fail("T04 V03 default control should render once without an Atlas lookup")
+    end
+    local v03_default_preview_bytes = preview_bytes()
+
+    local identity_cases = {
+      {
+        label = "empty",
+        mutate = function(item) item._empty = true end,
+        expected = "(no session)",
+      },
+      {
+        label = "workspace",
+        mutate = function(item) item._workspace = true end,
+      },
+      {
+        label = "missing-workspace-id",
+        mutate = function(item) item.workspace_id = nil end,
+      },
+      {
+        label = "missing-tab-id",
+        mutate = function(item) item.tab_id = nil end,
+      },
+      {
+        label = "missing-pane-id",
+        mutate = function(item) item.pane_id = nil end,
+      },
+      {
+        label = "missing-terminal-id",
+        mutate = function(item) item.terminal_id = nil end,
+      },
+      {
+        label = "missing-session",
+        mutate = function(item) item.agent_session = nil end,
+      },
+      {
+        label = "missing-session-source",
+        mutate = function(item) item.agent_session.source = nil end,
+      },
+      {
+        label = "missing-session-kind",
+        mutate = function(item) item.agent_session.kind = nil end,
+      },
+      {
+        label = "missing-session-value",
+        mutate = function(item) item.agent_session.value = nil end,
+      },
+    }
+    for _, identity_case in ipairs(identity_cases) do
+      local item = vim.deepcopy(complete_identity)
+      item._atlas_v03_case = identity_case.label
+      identity_case.mutate(item)
+      current_fake_item = item
+      local swaps_before = preview_swaps
+      identity_picker_opts.preview({ item = item, preview = fake_picker.preview })
+      vim.wait(1000, function() return preview_swaps > swaps_before end, 10)
+      if (identity_calls[identity_case.label] or 0) ~= 0 then
+        fail("T04 V03 " .. identity_case.label .. " identity should perform zero Atlas lookups")
+      end
+      if preview_swaps ~= swaps_before + 1 then
+        fail("T04 V03 " .. identity_case.label .. " identity should render the default preview exactly once")
+      end
+      local expected = identity_case.expected or v03_default_preview_bytes
+      if preview_bytes() ~= expected then
+        fail(
+          "T04 V03 "
+            .. identity_case.label
+            .. " identity changed the default preview: "
+            .. vim.inspect(preview_bytes())
+        )
+      end
+    end
+
+    local control = vim.deepcopy(complete_identity)
+    control._atlas_v03_case = "complete"
+    current_fake_item = control
+    local control_swaps = preview_swaps
+    identity_picker_opts.preview({ item = control, preview = fake_picker.preview })
+    identity_picker_opts.preview({ item = control, preview = fake_picker.preview })
+    vim.wait(1000, function() return preview_swaps > control_swaps end, 10)
+    if (identity_calls.complete or 0) ~= 1 or not identity_callbacks.complete then
+      fail("T04 V03 complete identity control should perform exactly one Atlas lookup")
+    end
+    if preview_swaps ~= control_swaps + 1 or not preview_bytes():find("Run atlas%-v03%-complete", 1, false) then
+      fail("T04 V03 complete identity control should swap one matched Atlas preview")
+    end
+    close_v03_picker(identity_picker_opts, identity_workspace)
+
+    local function complete_v03_item(label)
+      local item = vim.deepcopy(complete_identity)
+      item._atlas_v03_case = label
+      return item
+    end
+
+    local selection_callbacks = {}
+    local selection_cancels = {}
+    local selection_picker_opts, selection_workspace = open_v03_picker(function(item, _, _, callback)
+      local label = item._atlas_v03_case
+      selection_callbacks[label] = callback
+      return function()
+        selection_cancels[label] = (selection_cancels[label] or 0) + 1
+      end
+    end)
+    local late_selection = complete_v03_item("selection-late")
+    current_fake_item = late_selection
+    selection_picker_opts.preview({ item = late_selection, preview = fake_picker.preview })
+    if not selection_callbacks["selection-late"] then
+      fail("T04 V03 selection-change fixture did not start its Atlas lookup")
+    end
+    local selection_default = vim.deepcopy(complete_identity)
+    selection_default.agent_session = nil
+    selection_default._atlas_v03_case = "selection-default"
+    current_fake_item = selection_default
+    local selection_swaps = preview_swaps
+    selection_picker_opts.preview({ item = selection_default, preview = fake_picker.preview })
+    vim.wait(1000, function() return preview_swaps > selection_swaps end, 10)
+    local selected_bytes = preview_bytes()
+    local selected_buffers = valid_buffer_set()
+    local selected_swaps = preview_swaps
+    selection_callbacks["selection-late"](v03_result("selection-late"))
+    vim.wait(100)
+    if (selection_cancels["selection-late"] or 0) ~= 1
+      or preview_swaps ~= selected_swaps
+      or preview_bytes() ~= selected_bytes
+      or #new_valid_buffers(selected_buffers) ~= 0
+    then
+      fail("T04 V03 selection change should discard a late Atlas result")
+    end
+
+    local staged_selection = complete_v03_item("selection-staging")
+    current_fake_item = staged_selection
+    selection_picker_opts.preview({ item = staged_selection, preview = fake_picker.preview })
+    local before_selection_stage = valid_buffer_set()
+    selection_callbacks["selection-staging"](v03_result("selection-staging"))
+    local selection_staging_buffers = new_valid_buffers(before_selection_stage)
+    if #selection_staging_buffers == 0 then
+      fail("T04 V03 selection-change staging fixture did not create a staging buffer")
+    end
+    local after_stage_default = vim.deepcopy(selection_default)
+    after_stage_default._atlas_v03_case = "selection-after-staging"
+    current_fake_item = after_stage_default
+    selection_swaps = preview_swaps
+    selection_picker_opts.preview({ item = after_stage_default, preview = fake_picker.preview })
+    vim.wait(1000, function() return preview_swaps > selection_swaps end, 10)
+    for _, buf in ipairs(selection_staging_buffers) do
+      if vim.api.nvim_buf_is_valid(buf) then
+        fail("T04 V03 selection change should delete an obsolete Atlas staging buffer")
+      end
+    end
+    if preview_swaps ~= selection_swaps + 1 or preview_bytes():find("selection%-staging") then
+      fail("T04 V03 selection change should not swap an obsolete Atlas staging buffer")
+    end
+    close_v03_picker(selection_picker_opts, selection_workspace)
+
+    local close_callbacks = {}
+    local close_cancels = {}
+    local close_picker_opts, close_workspace = open_v03_picker(function(item, _, _, callback)
+      local label = item._atlas_v03_case
+      close_callbacks[label] = callback
+      return function()
+        close_cancels[label] = (close_cancels[label] or 0) + 1
+      end
+    end)
+    local late_close = complete_v03_item("close-late")
+    current_fake_item = late_close
+    close_picker_opts.preview({ item = late_close, preview = fake_picker.preview })
+    local close_swaps = preview_swaps
+    local close_buffers = valid_buffer_set()
+    close_v03_picker(close_picker_opts, close_workspace)
+    close_callbacks["close-late"](v03_result("close-late"))
+    vim.wait(100)
+    if (close_cancels["close-late"] or 0) ~= 1
+      or preview_swaps ~= close_swaps
+      or #new_valid_buffers(close_buffers) ~= 0
+    then
+      fail("T04 V03 picker close should discard a late Atlas result")
+    end
+
+    local staged_close_callbacks = {}
+    local staged_close_picker_opts, staged_close_workspace = open_v03_picker(function(item, _, _, callback)
+      staged_close_callbacks[item._atlas_v03_case] = callback
+      return function() end
+    end)
+    local staged_close = complete_v03_item("close-staging")
+    current_fake_item = staged_close
+    staged_close_picker_opts.preview({ item = staged_close, preview = fake_picker.preview })
+    local before_close_stage = valid_buffer_set()
+    staged_close_callbacks["close-staging"](v03_result("close-staging"))
+    local close_staging_buffers = new_valid_buffers(before_close_stage)
+    if #close_staging_buffers == 0 then
+      fail("T04 V03 picker-close staging fixture did not create a staging buffer")
+    end
+    close_swaps = preview_swaps
+    close_v03_picker(staged_close_picker_opts, staged_close_workspace)
+    vim.wait(100)
+    for _, buf in ipairs(close_staging_buffers) do
+      if vim.api.nvim_buf_is_valid(buf) then
+        fail("T04 V03 picker close should delete an obsolete Atlas staging buffer")
+      end
+    end
+    if preview_swaps ~= close_swaps then
+      fail("T04 V03 picker close should not swap an obsolete Atlas staging buffer")
+    end
+
+    if not vim.deep_equal(config.cli.tools, registered_tools) then
+      fail("T04 V03 deterministic preview checks changed the Sidekick Registry")
+    end
+    for _, path in ipairs(protected_paths) do
+      if table.concat(vim.fn.readfile(path, "b"), "\n") ~= protected_bytes[path] then
+        fail("T04 V03 deterministic preview checks changed protected manifest " .. path)
+      end
+    end
+
     local last_session = require("plugins.sidekick.last_session")
     last_session.label = nil
     picker_opts.confirm({ close = function() end }, done_item)
