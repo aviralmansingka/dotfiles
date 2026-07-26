@@ -44,7 +44,7 @@ cleanup() {
 trap cleanup EXIT
 
 agent_dir="$verify_dir/agent"
-native_subagents_dir="$HOME/.pi/agent/git/github.com/amosblomqvist/pi-subagents"
+native_subagents_dir="${PI_VERIFY_NATIVE_SUBAGENTS_DIR:-$HOME/.pi/agent/git/github.com/amosblomqvist/pi-subagents}"
 native_subagents_entry="$native_subagents_dir/index.ts"
 main_raw="$verify_dir/main.raw"
 missing_raw="$verify_dir/missing.raw"
@@ -103,7 +103,7 @@ if (!configured)
 if (!fs.existsSync(nativeEntryPath))
 	fail("missing", `settings-selected pi-subagents entry point was not found: ${nativeEntryPath}`);
 
-console.log(`Native subagent package setup verified: settings select ${configuredEntry}.`);
+console.log(`Native subagent package setup verified: settings select ${configuredEntry}; source ${nativeEntryPath}.`);
 NODE
 
 mkdir -p "$agent_dir/extensions" "$agent_dir/native"
