@@ -1,8 +1,8 @@
-# T20 Q35 machine-type evaluation and V02 evidence
+# T20 Q35 machine-type evaluation and V01–V03 evidence
 
 **Evaluation host:** `homelab` (Linux/KVM)
-**Evidence collected:** V01: 2026-07-26 15:42:14Z–15:55:28Z; V02: 2026-07-26 17:23:04Z–17:26:33Z
-**Status:** V01 recommendation complete and **owner approved**; V02 verifier **passed**. Canonical V01 approval source: Vault Hunter Run `vh-T20-1785077639159`, Run observation `T20.V01.q35-selection.approved.2026-07-26` at Registry revision 12. The V02 host-local endpoint was separately approved in Run observation `T20.V02.host-local-probe.approved.2026-07-26`. No production VM was provisioned and no vault path was inspected or changed during V02.
+**Evidence collected:** V01: 2026-07-26 15:42:14Z–15:55:28Z; V02: 2026-07-26 17:23:04Z–17:26:33Z; V03: 2026-07-26 17:39:09Z–17:41:46Z; accepted review hardening and postchecks: 2026-07-26 18:02:05Z–18:04:50Z
+**Status:** V01 recommendation **owner approved**; V02 and V03 verifiers **passed**; accepted review hardening **passed** with the V03 resources retained. Canonical V01 approval source: Vault Hunter Run `vh-T20-1785077639159`, Run observation `T20.V01.q35-selection.approved.2026-07-26` at Registry revision 12. The V02 host-local endpoint was separately approved in Run observation `T20.V02.host-local-probe.approved.2026-07-26`. This is not a claim of canonical vault completion or cleanup: no vault path was inspected or changed, and retained-resource teardown remains a checkpoint-two obligation.
 
 ## Recommendation
 
@@ -47,12 +47,14 @@ The DHCP addresses above are historical evidence only. Both domains, their inter
 
 ## Reproduction values for V02 and V03
 
-These are the literal values observed and verified during V02:
+These are the literal values observed and verified during V02. `T20_GUEST` records that observation, not a static address:
 
 ```sh
 T20_URI='qemu:///system'
 T20_DOMAIN='t20-v02-q35'
 T20_GUEST='t20eval@192.168.122.164'
+T20_KEY='/home/avirus/.local/state/t20-v02-q35/id_ed25519'
+T20_KNOWN_HOSTS='/home/avirus/.local/state/t20-v02-q35/known_hosts'
 T20_EXPECTED_DOMAIN_TYPE='kvm'
 T20_EXPECTED_MACHINE='pc-q35-noble'
 T20_EXPECTED_EMULATOR='/usr/bin/qemu-system-x86_64'
@@ -60,7 +62,19 @@ T20_PEER_HOST='192.168.122.1'
 T20_PEER_PORT='18767'
 ```
 
-V03 uses the same `T20_URI`, `T20_DOMAIN`, and currently observed `T20_GUEST`; because the address is a dynamic lease, V03 must re-read it before use. The TCP peer was V02-only and no longer exists. Continue requesting stable alias `q35`; if the host package set changes and it resolves differently, review the new live value rather than forcing `pc-q35-noble`. Resource sizing, autostart, crash restart, production image lifecycle, and production provisioning remain outside V01/V02.
+V03 and later retained-state checks use the same `T20_URI` and `T20_DOMAIN`, but must re-read the dynamic lease and construct `T20_GUEST` immediately before use. The successful checked SSH mechanism was:
+
+```sh
+T20_IP=$(virsh -c "$T20_URI" domifaddr "$T20_DOMAIN" --source lease | awk '$3 == "ipv4" {sub(/\/.*/, "", $4); print $4; exit}')
+test -n "$T20_IP"
+T20_GUEST="t20eval@$T20_IP"
+timeout 60 ssh -n -i "$T20_KEY" \
+  -o BatchMode=yes -o IdentitiesOnly=yes \
+  -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$T20_KNOWN_HOSTS" \
+  -o ConnectTimeout=2 "$T20_GUEST" /usr/bin/true
+```
+
+Any canonical command abbreviated as plain `ssh "$T20_GUEST" ...` requires these equivalent checked identity, batch, host-key, known-hosts, and timeout options either on the command line or in effective SSH configuration; unchecked default plain SSH is not the reproduced mechanism. The TCP peer was V02-only and no longer exists. Continue requesting stable alias `q35`; if the host package set changes and it resolves differently, review the new live value rather than forcing `pc-q35-noble`. Resource sizing, autostart, crash restart, production image lifecycle, and production provisioning remain outside V01/V02.
 
 ## Live command evidence
 
@@ -672,6 +686,41 @@ local_ssh_wrapper_exit=0
 
 ### Retained state and later cleanup obligation
 
-V03 deliberately performed no final cleanup. Domain `t20-v02-q35` remains running and persistent with autostart disabled; pool `t20-v02-pool` remains active and persistent with autostart `no`. The qcow2 disk, seed image, libvirt-managed NVRAM, and complete SSH state remain at the V02 paths and ownership/modes shown above. The V03 marker was removed, and listener port 18767 remains absent. V03 did not run the V02 listener and did not inspect or alter Tailscale, networking, the firewall, unrelated resources, or the STT Worker VM.
+V03 deliberately performed no final cleanup. At V03 completion, domain `t20-v02-q35` was running and persistent with autostart disabled; pool `t20-v02-pool` was active and persistent with autostart `no`; and the qcow2 disk, seed image, libvirt-managed NVRAM, and complete SSH state remained at the V02 paths and ownership/modes shown above. The V03 marker was removed, and listener port 18767 remained absent. V03 did not run the V02 listener and did not inspect or alter Tailscale, networking, the firewall, unrelated resources, or the STT Worker VM.
 
 A later authorized cleanup still must gracefully stop `t20-v02-q35`, undefine it with its NVRAM, destroy and undefine `t20-v02-pool`, and remove `/var/tmp/t20-v02-pool` and `/home/avirus/.local/state/t20-v02-q35`. Leave any dynamic DHCP record for normal expiry; do not alter the shared `default` network.
+
+## Accepted review hardening and retained-state postcheck
+
+At `2026-07-26T17:59:58Z`, exact ownership validation bound the domain's `vda` and `vdb`, its NVRAM, and the pool target to the retained paths before any mode change. Immediately before hardening at `18:02:05Z`, the exact modes were:
+
+```text
+/var/tmp/t20-v02-pool                                  avirus:avirus     755
+/var/tmp/t20-v02-pool/t20-v02-q35.qcow2               libvirt-qemu:kvm  644
+/var/tmp/t20-v02-pool/t20-v02-q35-seed.img             libvirt-qemu:kvm  644
+/var/lib/libvirt/qemu/nvram/t20-v02-q35_VARS.fd         libvirt-qemu:kvm  600
+/home/avirus/.local/state/t20-v02-q35/id_ed25519        avirus:avirus     600
+```
+
+Because `avirus` owned the directory but not the two libvirt-owned files, a direct non-interactive `sudo -n chmod 0640` made no change and exited 1 (`sudo: a password is required`). The domain was then gracefully stopped (`shut off` on poll 2). With both source inodes held open, only the two validated paths were replaced byte-for-byte under `umask 0027`, grouped to `kvm`, and set to `0640`; the directory was grouped to `kvm` and set to `0750`:
+
+```sh
+exec 3<"$QCOW2"; exec 4<"$SEED"
+rm -- "$QCOW2" "$SEED"
+(umask 0027; cp --sparse=always /proc/self/fd/3 "$QCOW2"; cp --sparse=always /proc/self/fd/4 "$SEED")
+exec 3<&-; exec 4<&-
+chgrp kvm "$QCOW2" "$SEED"; chmod 0640 "$QCOW2" "$SEED"
+chgrp kvm "$POOL_PATH"; chmod 0750 "$POOL_PATH"
+```
+
+The before/after SHA-256 values matched exactly: qcow2 `ab6c0e8c43119c17a6c363f697e7f6a32b7a42a418b2fc4d0e4e50a5d7e925ef`; seed `8e177a96172a62148aed2b5a60103193b1f5f9c8f98465815869677c02893205`. Starting the domain restored the two files' libvirt ownership while retaining the hardened modes. The accepted postcheck at `2026-07-26T18:03:04Z` recorded:
+
+```text
+/var/tmp/t20-v02-pool                                  avirus:kvm        750
+/var/tmp/t20-v02-pool/t20-v02-q35.qcow2               libvirt-qemu:kvm  640
+/var/tmp/t20-v02-pool/t20-v02-q35-seed.img             libvirt-qemu:kvm  640
+/var/lib/libvirt/qemu/nvram/t20-v02-q35_VARS.fd         libvirt-qemu:kvm  600
+/home/avirus/.local/state/t20-v02-q35/id_ed25519        avirus:avirus     600
+```
+
+The postcheck re-read dynamic address `192.168.122.164`, used the checked SSH command above successfully (exit 0), and passed with domain `running`/autostart `disable`, pool `running`/autostart `no`, and listener 18767 absent; a final read-only validation at `18:04:50Z` reconfirmed every result. NVRAM and private-key modes were only verified as existing `0600`; they were not changed. All retained resources and the later cleanup obligation remain in place; this hardening is not final cleanup or canonical vault completion.
