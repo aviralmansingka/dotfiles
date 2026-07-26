@@ -65,8 +65,8 @@ Add exactly one entry for the run:
   `[x]`.
 
 The bundled Neovim picker action is `<C-a>` **(Vault hunter) Action**. It accepts Feature and Task rows and launches
-the exact `$vault-hunter <path:line>` form. A Task row creates or reuses one dedicated
-`Project · Feature · TNN` Herdr workspace, `task/<task-slug>` worktree, and task-named driver tab. Never place two
+the exact `$vault-hunter <path:line>` form. A Task row creates or reuses one dedicated Herdr workspace named exactly
+after the displayed Task name, plus its `task/<task-slug>` worktree and task-named driver tab. Never place two
 Task drivers in the same workspace or run a Task driver from the Feature worktree. Feature rows remain in their
 Feature workspace and worktree. Issue references are accepted through the command even though the picker does not
 list Issue rows.
@@ -81,7 +81,7 @@ work begins.
 
 For each dispatched role:
 
-- For a Task Run, reuse only its `Project · Feature · TNN` workspace and `task/<task-slug>` worktree. For other routes,
+- For a Task Run, reuse only its Task-named workspace and `task/<task-slug>` worktree. For other routes,
   reuse the owning Feature workspace and worktree. Never hardcode opaque IDs.
 - Name the Herdr agent `codex-<feature-slug>-<run-key>-<role>` and set
   `SIDEKICK_NAMED_SESSION=<feature-slug>-<run-key>-<role>`, where `run-key` is the Task ID, `feature`, or Issue slug.
@@ -89,20 +89,14 @@ For each dispatched role:
   tab's only pane; do not precreate a blank root pane and then split a worker beside it. Verify `pane_count=1`.
 - Treat the Herdr wrapper as one named tuple: owning route workspace, distinct tab label, full Codex pane under the
   agent name, and distinct Sidekick session. Capture every returned opaque ID instead of deriving one.
-- For a verifier-driven Task Run, immediately after capturing that native identity and before accepting the dispatch,
-  register it against its owned goal with `vault-hunter-run participant`. Reject the dispatch if registration fails.
-  Feature, Project, Issue, Wayfinder, and normal-agent dispatches never register as Run participants.
 - Use the Task worktree as `--cwd` for Task Runs and the Feature worktree for other routes. Give bounded repository
   ownership plus exact Feature and Task paths, and forbid vault edits or commits.
 - Monitor native subagent status plus `herdr agent get` and `herdr agent read`. If name, cwd, workspace, tab, session,
-  or one-pane placement is wrong, replace the dispatch before accepting work. For a Task Run, also run
-  `vault-hunter-run reconcile-workers --run-id "$run_id"` on each monitoring pass: replace `stale` launches with a
-  newly captured opaque tuple under the same deterministic agent name, preserve the stale record, and stop on
-  `unexpected` ownership.
+  or one-pane placement is wrong, replace the dispatch before accepting work.
 - Require one concise final handoff containing outcome, changed paths and commit, exact checks and evidence, and
   residual risks or blockers. If it is incomplete, follow up with that same subagent; the driver does not investigate
   or rerun its work.
-- Worker tabs never receive an Atlas companion. Record their exact agent, session, tab, and pane IDs for cleanup.
+- Record every worker's exact agent, session, tab, and pane IDs for cleanup.
 
 Launch a separate role without precreating its tab, then rename the returned one-pane tab:
 
@@ -114,24 +108,7 @@ herdr agent start "codex-$feature_slug-$run_key-$role" \
   --no-focus \
   -- codex "$prompt"
 herdr tab rename "$returned_tab_id" "$run_label · $role"
-vault-hunter-run participant \
-  --run-id "$run_id" \
-  --goal-id "$active_goal_id" \
-  --role "$role" \
-  --agent "$returned_agent_name" \
-  --workspace-id "$returned_workspace_id" \
-  --tab-id "$returned_tab_id" \
-  --pane-id "$returned_pane_id" \
-  --terminal-id "$returned_terminal_id" \
-  --agent-session-source "$returned_session_source" \
-  --agent-session-kind "$returned_session_kind" \
-  --agent-session-value "$returned_session_value"
 ```
-
-Run the `participant` command only for a verifier-driven Task Run, after the returned agent, workspace, tab, pane,
-terminal, and native session IDs have all been captured and the named one-pane tab has been verified. Run it
-immediately then; do not accept or begin consuming work from that dispatch until the command returns the
-unchanged-or-appended Registry record successfully.
 
 The driver consumes only the resulting concise handoffs. It alone chooses and writes lifecycle edits, backlog status,
 Task evidence, both vault checkpoints, and the completion report. This single-writer boundary applies even when
@@ -199,38 +176,12 @@ Wayfinder tickets are temporary issues, never implementation Tasks.
 4. Ask clarifying questions only for a genuine missing decision.
 5. Require implementation and review subagents to use `$ponytail`.
 
-### Task-only Atlas activation
-
-Only verifier-driven Task Runs create Atlas state. Feature, Project, Issue, Wayfinder, normal agent, and participating
-subagent invocations never call `ensure`, create a companion, or replace the default Sidekick preview.
-
-After the specification handoff has produced the complete verifier ledger and the driver has stored it canonically,
-call:
-
-```sh
-vault-hunter-run ensure \
-  --task-id "$task_id" \
-  --task-title "$task_title" \
-  --task-path "$task_path" \
-  --feature-path "$feature_path" \
-  --invoked-at "$captured_invocation_rfc3339" \
-  --orchestrator-pane "$HERDR_PANE_ID" \
-  --goal "checkpoint=Vault checkpoint one=active" \
-  --goal "cleanup=Workspace and vault cleanup=pending"
-```
-
-Add one `--goal "id=label=status"` for every drafted verifier and later stage in timeline order. Capture `run_id`; all
-later Registry transitions and cleanup use it. `ensure` must create or reuse exactly one functioning Atlas companion
-as the only right split in the active driver/orchestrator tab and immediately run Atlas in that pane. The driver tab
-then contains exactly the driver pane plus its Atlas pane; an empty companion pane is invalid. On resume, reuse the
-active Run and live companion. Stop if creation or Atlas startup fails; the failed partial split must be closed.
-
 ## Execute the Task timeline
 
 In the primary Herdr-visible driver session, activate each stage below and dispatch it to a full Codex subagent. The
 driver performs no stage work itself. Present the work as one continuous unnumbered timeline, not an ordinal goal
-queue. On resume, use the canonical Task note, Run Registry, Herdr state, and concise subagent handoffs to continue at
-the first unfinished stage.
+queue. On resume, use the canonical Task note, Herdr state, and concise subagent handoffs to continue at the first
+unfinished stage.
 
 Write accepted handoff evidence into the local Task note as each stage settles. Keep the invocation backlog timeline
 synchronized, but keep detailed evidence only in the Task note. Push the vault only at the two named checkpoints.
@@ -240,6 +191,17 @@ synchronized, but keep detailed evidence only in the Task note. Push the vault o
 - Store the Task Spec and complete verifier ledger.
 - Commit any remaining checkpoint-one vault changes, then push the invocation lifecycle commit and Task Spec/verifier
   ledger commits together. Never open a vault PR.
+- Do not activate the first verifier or begin implementation after the push.
+- Mark checkpoint one `Blocked — Awaiting human evaluation` in the invocation backlog timeline.
+- Report the canonical Task link, verifier ledger, checkpoint commits, and the exact decision the human is being asked
+  to approve, then stop the Run.
+- Resume only after the human responds at checkpoint one. Follow up with the same specification subagent using the
+  human's exact feedback plus the canonical Task, checkpoint evidence, and completion condition.
+- Treat prompt delivery as `resuming`, not completion. Wait for that same agent's durable result and check it against
+  the requested human evaluation.
+- Mark the checkpoint and backlog stage `Done` only after the resumed result is accepted. If the thread cannot
+  resume or the result is incomplete, preserve the feedback and keep the goal blocked with the actionable reason.
+  Activate the first verifier only after accepted checkpoint completion.
 
 ### One goal per verifier
 
@@ -283,8 +245,7 @@ conclusions.
 
 - Dispatch the final verifier subagent to run the complete verifier set and capture final evidence. Do not create a
   separate final-evidence goal.
-- Dispatch a release subagent to push implementation code, open the implementation PR, and arm auto-merge using the
-  repository's existing merge strategy and protections.
+- Dispatch a release subagent to push implementation code and open the implementation PR. Never arm auto-merge.
 - Consume its concise handoff and link the PR from the Task note.
 
 ### CI and landing
@@ -296,26 +257,23 @@ Always run this goal, even when it completes immediately:
   verifiers.
 - Never bypass branch protection or required approval.
 - With no CI, require a mergeable PR and complete local green suite.
-- Have the landing subagent allow auto-merge, then dispatch post-merge checks against merged `main`.
+- When CI and required approvals are green, report that the PR is ready and wait for an explicit human merge action.
+- After the human merges it, dispatch post-merge checks against merged `main`.
 
 ### Workspace and vault cleanup
 
-1. Run `vault-hunter-run cleanup-workers --run-id "$run_id"` after every Run goal is done. It refuses unexpected
-   ownership, closes only exact live task-owned worker tabs, clears stale references, verifies disappearance, and is
-   safe to repeat.
-2. Run `vault-hunter-run finish --run-id "$run_id"`. This closes only the companion pane recorded in the Registry and
-   retires the Run; it never owns worker cleanup.
-3. Preserve the driver/orchestrator tab, its primary Codex pane, the owning Task workspace and worktree, and unrelated
-   Herdr workspaces and Neovim Workspace Tabs. `finish` closes the driver's owned Atlas pane, never the driver.
-4. Verify the captured task agent, session, tab, and pane IDs are gone, the Atlas pane is gone, and the driver plus
-   Task workspace remain.
-5. Add PR, merge, final verifier, post-merge, and cleanup evidence to the Task note.
-6. Set the Task note frontmatter to `status: done`, change its authoritative Feature checklist bullet to `[x]`, and
+1. After every Task Run stage is done, close only the exact captured task-owned worker tabs. Stop instead of guessing
+   when live ownership differs from the captured IDs.
+2. Close the Task's Herdr workspace and bound Neovim Workspace Tab after final evidence is written. Preserve every
+   unrelated Herdr workspace and Neovim Workspace Tab.
+3. Verify the captured task agent, session, tab, pane, and workspace IDs are gone.
+4. Add PR, merge, final verifier, post-merge, and cleanup evidence to the Task note.
+5. Set the Task note frontmatter to `status: done`, change its authoritative Feature checklist bullet to `[x]`, and
    derive the Feature status from its complete checklist.
-7. Complete the invocation backlog entry.
-8. Commit vault checkpoint two on the vault's `main` branch and push `origin main`. If the update was prepared on
+6. Complete the invocation backlog entry.
+7. Commit vault checkpoint two on the vault's `main` branch and push `origin main`. If the update was prepared on
    another vault branch, merge it into vault `main` first. Never open a vault PR.
-9. Run `git fetch origin main:refs/remotes/origin/main` in the vault and verify the checkpoint-two commit is an
+8. Run `git fetch origin main:refs/remotes/origin/main` in the vault and verify the checkpoint-two commit is an
    ancestor of `origin/main`. Cleanup is incomplete until this remote-main check passes.
 
 ## Completion

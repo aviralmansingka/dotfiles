@@ -684,7 +684,7 @@ local function validate_sidekick_herdr()
   end
   local task_scope = source_herdr.ensure_task_scope(
     cwd,
-    "Neovim · Example · T01",
+    "T01 Example task",
     "feature/example",
     "task/example-t01"
   )
@@ -1400,139 +1400,6 @@ local function validate_sidekick_herdr()
     if sized_lines[1] ~= string.rep("x", sized_width) or sized_lines[2] ~= "xxx" then
       fail("ANSI staging buffer should use the preview's actual width: " .. vim.inspect(sized_lines))
     end
-
-    local original_atlas_system = vim.system
-    local original_atlas_bin = vim.env.VAULT_HUNTER_ATLAS_BIN
-    local original_notify = vim.notify
-    local atlas_calls = {}
-    local atlas_callbacks = {}
-    local atlas_crash = false
-    local notifications = 0
-    vim.env.VAULT_HUNTER_ATLAS_BIN = "fake-vault-hunter-atlas"
-    vim.notify = function()
-      notifications = notifications + 1
-    end
-    vim.system = function(command, system_opts, on_exit)
-      if command[1] ~= "fake-vault-hunter-atlas" then
-        return original_atlas_system(command, system_opts, on_exit)
-      end
-      if atlas_crash then
-        error("fake renderer crash")
-      end
-      atlas_calls[#atlas_calls + 1] = command
-      atlas_callbacks[#atlas_callbacks + 1] = on_exit
-      return {}
-    end
-
-    local atlas_serial = 0
-    local function atlas_item(label)
-      atlas_serial = atlas_serial + 1
-      return vim.tbl_extend("force", {}, done_item, {
-        label = label,
-        terminal_id = "term-atlas-" .. atlas_serial,
-        agent_name = "pi-atlas-" .. atlas_serial,
-        agent_session = {
-          source = "herdr:codex",
-          kind = "id",
-          value = "session-atlas-" .. atlas_serial,
-        },
-      })
-    end
-    local function start_atlas_preview(item, expect_call)
-      current_fake_item = item
-      read_result = "\27[32mDEFAULT " .. item.label .. "\27[0m"
-      local swaps_before = preview_swaps
-      local calls_before = #atlas_calls
-      picker_opts.preview({ item = item, preview = fake_picker.preview })
-      vim.wait(1000, function()
-        return preview_swaps == swaps_before + 1
-      end, 10)
-      if preview_swaps ~= swaps_before + 1 then
-        fail("Atlas candidate should show the default preview first")
-      end
-      local default = table.concat(
-        vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
-        "\n"
-      )
-      if not default:find("DEFAULT " .. item.label, 1, true) then
-        fail("Atlas candidate did not preserve its default preview: " .. vim.inspect(default))
-      end
-      if expect_call then
-        vim.wait(1000, function() return #atlas_calls == calls_before + 1 end, 10)
-        if #atlas_calls ~= calls_before + 1 then
-          fail("Atlas renderer was not called for a stable participant identity")
-        end
-      elseif #atlas_calls ~= calls_before then
-        fail("renderer crash unexpectedly recorded an Atlas call")
-      end
-      return fake_picker.preview.win.buf, swaps_before
-    end
-
-    for _, failure in ipairs({ "non-participant", "malformed-registry", "unavailable-snapshot" }) do
-      local item = atlas_item(failure)
-      local default_buf = start_atlas_preview(item, true)
-      atlas_callbacks[#atlas_callbacks]({
-        code = 2,
-        stdout = "PARTIAL ATLAS " .. failure,
-        stderr = failure,
-      })
-      vim.wait(50)
-      if fake_picker.preview.win.buf ~= default_buf then
-        fail(failure .. " should retain the exact default preview buffer")
-      end
-    end
-
-    atlas_crash = true
-    local crash_item = atlas_item("renderer-crash")
-    local crash_buf = start_atlas_preview(crash_item, false)
-    vim.wait(50)
-    if fake_picker.preview.win.buf ~= crash_buf then
-      fail("renderer crash should retain the exact default preview buffer")
-    end
-    atlas_crash = false
-
-    local stale_item = atlas_item("stale")
-    local stale_buf = start_atlas_preview(stale_item, true)
-    local stale_callback = atlas_callbacks[#atlas_callbacks]
-    local current_item = atlas_item("current")
-    local current_buf = start_atlas_preview(current_item, true)
-    local current_callback = atlas_callbacks[#atlas_callbacks]
-    local swaps_before_stale = preview_swaps
-    stale_callback({ code = 0, stdout = "ATLAS STALE", stderr = "" })
-    vim.wait(100)
-    if fake_picker.preview.win.buf ~= current_buf or preview_swaps ~= swaps_before_stale then
-      fail("stale Atlas result replaced the current selection")
-    end
-    current_callback({ code = 0, stdout = "ATLAS CURRENT", stderr = "" })
-    vim.wait(1000, function() return preview_swaps == swaps_before_stale + 1 end, 10)
-    local current_render = table.concat(
-      vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
-      "\n"
-    )
-    if not current_render:find("ATLAS CURRENT", 1, true) or fake_picker.preview.win.buf == stale_buf then
-      fail("current successful Atlas result did not replace the staged default preview")
-    end
-    local command = atlas_calls[#atlas_calls]
-    local function argument_after(flag)
-      local index = vim.fn.index(command, flag)
-      return index >= 0 and command[index + 2] or nil
-    end
-    if
-      argument_after("--terminal-id") ~= current_item.terminal_id
-      or argument_after("--agent-session-source") ~= current_item.agent_session.source
-      or argument_after("--agent-session-kind") ~= current_item.agent_session.kind
-      or argument_after("--agent-session-value") ~= current_item.agent_session.value
-      or tonumber(argument_after("--width")) ~= vim.api.nvim_win_get_width(fake_picker.preview.win.win)
-      or tonumber(argument_after("--height")) ~= vim.api.nvim_win_get_height(fake_picker.preview.win.win)
-    then
-      fail("Atlas renderer did not receive exact identity and preview dimensions: " .. vim.inspect(command))
-    end
-    if notifications ~= 0 then
-      fail("Atlas preview failures should be silent")
-    end
-    vim.system = original_atlas_system
-    vim.env.VAULT_HUNTER_ATLAS_BIN = original_atlas_bin
-    vim.notify = original_notify
 
     read_result = table.concat({
       "\27[32manswer stays\27[0m",
@@ -3470,19 +3337,10 @@ local function validate_vault_features()
     local original_ensure_feature_scope = herdr.ensure_feature_scope
     local original_ensure_task_scope = herdr.ensure_task_scope
     local original_place_agent = herdr.place_agent
-    local original_system = vim.system
     local started
     local ran
     local routed
     local placed
-    local atlas_launches = {}
-    vim.system = function(command, ...)
-      if command[1] == "vault-hunter-run" or command[1] == "vault-hunter-atlas" then
-        atlas_launches[#atlas_launches + 1] = command
-        return { wait = function() return { code = 0, stdout = "", stderr = "" } end }
-      end
-      return original_system(command, ...)
-    end
     herdr.get_agent = function()
       return nil
     end
@@ -3544,7 +3402,7 @@ local function validate_vault_features()
       if
         not routed
         or routed.repository ~= neovim_repository
-        or routed.workspace_label ~= "Neovim · Vault Feature Picker · T01"
+        or routed.workspace_label ~= "T01 Build tree picker."
         or routed.feature_branch ~= "feature/vault-feature-picker"
         or routed.task_branch ~= "task/01-build-tree"
       then
@@ -3606,7 +3464,7 @@ local function validate_vault_features()
       end
       if
         not routed
-        or routed.workspace_label ~= "Neovim · Weekly Backlog Helpers · T02"
+        or routed.workspace_label ~= "T02 Verify date navigation."
         or routed.feature_branch ~= "feature/weekly-backlog-helpers"
         or routed.task_branch ~= "task/weekly-backlog-helpers-t02"
       then
@@ -3663,12 +3521,8 @@ local function validate_vault_features()
     herdr.ensure_feature_scope = original_ensure_feature_scope
     herdr.ensure_task_scope = original_ensure_task_scope
     herdr.place_agent = original_place_agent
-    vim.system = original_system
     if not agent_ok then
       fail(agent_err)
-    end
-    if #atlas_launches ~= 0 then
-      fail("Feature and Task launchers must not create Atlas state or companions: " .. vim.inspect(atlas_launches))
     end
 
     local lazy = require("lazy")

@@ -303,8 +303,7 @@ function M.agent_scope(item)
     feature_branch = "feature/" .. feature_slug,
     tab_label = item.kind == "task" and string.format("%s %s", item.task_id, item.task) or item.feature,
     task_branch = task_slug and "task/" .. task_slug or nil,
-    workspace_label = item.kind == "task" and string.format("%s · %s · %s", item.project, item.feature, item.task_id)
-      or string.format("%s · %s", item.project, item.feature),
+    workspace_label = item.kind == "task" and item.label or string.format("%s · %s", item.project, item.feature),
   }
 end
 
