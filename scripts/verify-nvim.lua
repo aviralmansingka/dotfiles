@@ -875,8 +875,8 @@ local function validate_sidekick_herdr()
     }
   end
 
-  local registry = require("plugins.sidekick.registry")
-  local discovered = registry.discover()
+  local source_registry = dofile(source_root .. "registry.lua")
+  local discovered = source_registry.discover()
   if discovered["sk-codex-deadbeef"] then
     fail("base Herdr sessions must not appear as named sessions")
   end
@@ -894,7 +894,10 @@ local function validate_sidekick_herdr()
     fail("named Herdr session identifiers mismatch: " .. vim.inspect(entry))
   end
 
-  local cwd_picker = dofile(cwd .. "/nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua")
+  local loaded_registry = package.loaded["plugins.sidekick.registry"]
+  package.loaded["plugins.sidekick.registry"] = source_registry
+  local cwd_picker = dofile(source_root .. "cwd_picker.lua")
+  package.loaded["plugins.sidekick.registry"] = loaded_registry
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
   local local_items = cwd_picker.list_items()

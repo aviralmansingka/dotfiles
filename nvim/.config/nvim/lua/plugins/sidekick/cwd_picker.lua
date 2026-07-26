@@ -24,6 +24,66 @@ local status_display = {
   idle = { "·", "Comment" },
 }
 
+local function complete_atlas_identity(item)
+  local session = item and item.agent_session
+  return not not (item
+    and not item._empty
+    and not item._workspace
+    and type(item.workspace_id) == "string" and item.workspace_id ~= ""
+    and type(item.tab_id) == "string" and item.tab_id ~= ""
+    and type(item.pane_id) == "string" and item.pane_id ~= ""
+    and type(item.terminal_id) == "string" and item.terminal_id ~= ""
+    and session
+    and type(session.source) == "string" and session.source ~= ""
+    and type(session.kind) == "string" and session.kind ~= ""
+    and type(session.value) == "string" and session.value ~= "")
+end
+
+local function atlas_result_frame(result)
+  if type(result) ~= "table"
+    or result.outcome ~= "matched"
+    or type(result.run_id) ~= "string"
+    or result.run_id == ""
+    or type(result.participant_id) ~= "string"
+    or result.participant_id == ""
+    or type(result.frame) ~= "string"
+    or result.frame == ""
+  then
+    return nil
+  end
+  return result.frame
+end
+
+local function atlas_lookup(item, width, height, callback)
+  local executable = vim.fn.exepath("vault-hunter-atlas")
+  if executable == "" then
+    vim.schedule(function() callback(nil) end)
+    return
+  end
+  local session = item.agent_session
+  local command = {
+    executable,
+    "preview",
+    "--workspace-id", item.workspace_id,
+    "--tab-id", item.tab_id,
+    "--pane-id", item.pane_id,
+    "--terminal-id", item.terminal_id,
+    "--agent-session-source", session.source,
+    "--agent-session-kind", session.kind,
+    "--agent-session-value", session.value,
+    "--width", tostring(width),
+    "--height", tostring(height),
+  }
+  return vim.system(command, { text = true, timeout = 1000 }, vim.schedule_wrap(function(result)
+    if result.code ~= 0 then
+      callback(nil)
+      return
+    end
+    local ok, decoded = pcall(vim.json.decode, result.stdout or "")
+    callback(ok and decoded or nil)
+  end))
+end
+
 local function workspace_scope()
   local tab = vim.api.nvim_get_current_tabpage()
   local ok, workspace_id = pcall(vim.api.nvim_tabpage_get_var, tab, "herdr_workspace_id")
@@ -392,6 +452,7 @@ function M.list_items(metric_cache)
         tool = entry.tool,
         slug = entry.slug,
         pane_id = entry.pane_id,
+        tab_id = entry.tab_id,
         workspace_id = entry.workspace_id,
         terminal_id = entry.terminal_id,
         agent_name = entry.agent_name,
@@ -441,6 +502,7 @@ local function workspace_groups(first_workspace_id, metric_cache)
         toggle_name = parsed and parsed.label or tool,
         tool = tool,
         pane_id = agent.pane_id,
+        tab_id = agent.tab_id,
         workspace_id = workspace_id,
         terminal_id = agent.terminal_id,
         agent_name = agent.name,
@@ -581,6 +643,12 @@ function M.open(opts)
   local refreshed_preview_item
   local refreshed_preview_output
   local reopening = false
+  local preview_generation = 0
+  local preview_selection
+  local atlas_attempted = false
+  local atlas_phase
+  local atlas_process
+  local staging_buffers = {}
   local has_local_working = vim.iter(items):any(function(item)
     return item.status == "working"
   end)
@@ -762,6 +830,7 @@ function M.open(opts)
     else
       vim.api.nvim_buf_set_lines(buf, 0, -1, false, { fallback or "(agent read failed)" })
     end
+    staging_buffers[buf] = staging_win or false
     return buf, staging_win
   end
 
@@ -771,6 +840,7 @@ function M.open(opts)
   end
 
   local function discard_preview_buffer(buf, staging_win)
+    staging_buffers[buf] = nil
     if staging_win and vim.api.nvim_win_is_valid(staging_win) then
       vim.api.nvim_win_close(staging_win, true)
     end
@@ -779,19 +849,55 @@ function M.open(opts)
     end
   end
 
-  local function swap_preview_buffer(buf, staging_win, item, rendered, on_swap, previous_tick)
-    if not picker or picker.closed or item ~= current_preview_item() then
+  local function discard_staging_buffers()
+    local buffers = {}
+    for buf, staging_win in pairs(staging_buffers) do
+      buffers[#buffers + 1] = { buf, staging_win or nil }
+    end
+    for _, staged in ipairs(buffers) do
+      discard_preview_buffer(staged[1], staged[2])
+    end
+  end
+
+  local function stop_atlas_lookup()
+    local process = atlas_process
+    atlas_process = nil
+    if type(process) == "function" then
+      pcall(process)
+    elseif process and type(process.kill) == "function" then
+      pcall(process.kill, process, 15)
+    end
+  end
+
+  local function invalidate_preview()
+    preview_generation = preview_generation + 1
+    stop_atlas_lookup()
+    discard_staging_buffers()
+    atlas_phase = nil
+    atlas_attempted = false
+    preview_loading = false
+    loading_full_preview_item = nil
+  end
+
+  local function swap_preview_buffer(buf, staging_win, item, rendered, generation, on_swap, previous_tick)
+    if generation ~= preview_generation
+      or item ~= preview_selection
+      or not picker
+      or picker.closed
+      or item ~= current_preview_item()
+    then
       discard_preview_buffer(buf, staging_win)
       return
     end
     local ready, tick = preview_buffer_ready(buf, previous_tick)
     if not ready then
       vim.defer_fn(function()
-        swap_preview_buffer(buf, staging_win, item, rendered, on_swap, tick)
+        swap_preview_buffer(buf, staging_win, item, rendered, generation, on_swap, tick)
       end, preview_settle_ms)
       return
     end
     picker.preview:set_buf(buf)
+    staging_buffers[buf] = nil
     if staging_win and vim.api.nvim_win_is_valid(staging_win) then
       vim.api.nvim_win_close(staging_win, true)
     end
@@ -804,21 +910,66 @@ function M.open(opts)
     end
   end
 
-  show_preview = function(item, preview)
-    if item == displayed_preview_item and item == expanded_preview_item then
+  local function render_default_preview(item, preview, generation)
+    if generation ~= preview_generation or item ~= preview_selection then
       return
     end
-    if item ~= displayed_preview_item then
-      displayed_preview_item = item
-      expanded_preview_item = nil
-      pending_preview_scroll = nil
-    end
+    atlas_phase = nil
     local output, err = preview_text(item, preview_line_limit(preview))
     local rendered = output or err
     local buf, staging_win = prepare_preview_buffer(output, err, preview)
     vim.schedule(function()
-      swap_preview_buffer(buf, staging_win, item, rendered)
+      swap_preview_buffer(buf, staging_win, item, rendered, generation)
     end)
+  end
+
+  show_preview = function(item, preview)
+    if item ~= preview_selection then
+      invalidate_preview()
+      preview_selection = item
+      displayed_preview_item = item
+      expanded_preview_item = nil
+      pending_preview_scroll = nil
+    elseif item == displayed_preview_item and item == expanded_preview_item then
+      return
+    end
+    local generation = preview_generation
+    if complete_atlas_identity(item) then
+      if atlas_attempted then
+        return
+      end
+      atlas_attempted = true
+      atlas_phase = "pending"
+      local win = preview_window(preview)
+      local width = win and vim.api.nvim_win_get_width(win.win) or vim.o.columns
+      local height = win and vim.api.nvim_win_get_height(win.win) or math.max(vim.o.lines, 2)
+      local lookup = opts.atlas_lookup or atlas_lookup
+      atlas_process = lookup(item, width, height, function(result)
+        if generation ~= preview_generation
+          or item ~= preview_selection
+          or not picker
+          or picker.closed
+          or atlas_phase ~= "pending"
+        then
+          return
+        end
+        atlas_process = nil
+        local frame = atlas_result_frame(result)
+        if not frame then
+          render_default_preview(item, preview, generation)
+          return
+        end
+        atlas_phase = "staging"
+        local buf, staging_win = prepare_preview_buffer(frame, nil, preview)
+        vim.schedule(function()
+          swap_preview_buffer(buf, staging_win, item, frame, generation, function()
+            atlas_phase = "active"
+          end)
+        end)
+      end)
+      return
+    end
+    render_default_preview(item, preview, generation)
   end
 
   local function move_workspace_selection(step)
@@ -841,14 +992,23 @@ function M.open(opts)
 
   local function refresh_preview()
     local item = current_preview_item()
-    if preview_loading or not item or item.status ~= "working" or item == expanded_preview_item then
+    if atlas_phase
+      or preview_loading
+      or not item
+      or item.status ~= "working"
+      or item == expanded_preview_item
+    then
       return
     end
 
+    local generation = preview_generation
     preview_loading = true
     herdr.read_async(item.agent_name, "recent-unwrapped", preview_line_limit(), true, function(output)
+      if generation ~= preview_generation or item ~= preview_selection then
+        return
+      end
       preview_loading = false
-      if not picker or picker.closed or item ~= current_preview_item() then
+      if atlas_phase or not picker or picker.closed or item ~= current_preview_item() then
         return
       end
       if item == expanded_preview_item then
@@ -862,7 +1022,7 @@ function M.open(opts)
 
       local buf, staging_win = prepare_preview_buffer(output)
       vim.schedule(function()
-        swap_preview_buffer(buf, staging_win, item, rendered)
+        swap_preview_buffer(buf, staging_win, item, rendered, generation)
       end)
     end)
   end
@@ -886,7 +1046,7 @@ function M.open(opts)
 
   local function scroll_preview(up)
     local item = current_preview_item()
-    if not item or item._empty or item._workspace then
+    if atlas_phase or not item or item._empty or item._workspace then
       return
     end
     if item == expanded_preview_item and item ~= loading_full_preview_item then
@@ -899,19 +1059,28 @@ function M.open(opts)
       return
     end
 
+    local generation = preview_generation
     loading_full_preview_item = item
     herdr.read_async(item.agent_name, "recent-unwrapped", full_preview_lines, true, function(output)
+      if generation ~= preview_generation or item ~= preview_selection then
+        return
+      end
       if loading_full_preview_item == item then
         loading_full_preview_item = nil
       end
-      if not picker or picker.closed or item ~= current_preview_item() or item ~= expanded_preview_item then
+      if atlas_phase
+        or not picker
+        or picker.closed
+        or item ~= current_preview_item()
+        or item ~= expanded_preview_item
+      then
         return
       end
       output = scrub_preview_output(item, output)
       local rendered = output or "(agent read failed)"
       local buf, staging_win = prepare_preview_buffer(output)
       vim.schedule(function()
-        swap_preview_buffer(buf, staging_win, item, rendered, function()
+        swap_preview_buffer(buf, staging_win, item, rendered, generation, function()
           local direction = pending_preview_scroll
           pending_preview_scroll = nil
           scroll_preview_window(direction, true)
@@ -1143,6 +1312,7 @@ function M.open(opts)
     end,
     on_close = function(active_picker)
       stop_spinner()
+      invalidate_preview()
       if not reopening and opts.on_close then
         opts.on_close(active_picker)
       end

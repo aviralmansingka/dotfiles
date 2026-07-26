@@ -119,23 +119,32 @@ func (c Client) correlate(run vaultregistry.Run, workspaceID string) ([]Correlat
 		return nil, nil, errors.New("workspace is not registered by a complete participant identity")
 	}
 
+	agents, err := c.listAgents()
+	if err != nil {
+		return nil, nil, err
+	}
+	correlations, liveOnly := correlate(run.Participants, agents)
+	return correlations, liveOnly, nil
+}
+
+func (c Client) listAgents() ([]Agent, error) {
 	var listed struct {
 		Type   string  `json:"type"`
 		Agents []Agent `json:"agents"`
 	}
 	if err := c.call(&listed, "agent", "list"); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if listed.Type != "agent_list" || listed.Agents == nil {
-		return nil, nil, errors.New("invalid Herdr agent list result")
+		return nil, errors.New("invalid Herdr agent list result")
 	}
 	for _, agent := range listed.Agents {
-		if agent.WorkspaceID == "" || agent.TabID == "" || agent.PaneID == "" || agent.TerminalID == "" {
-			return nil, nil, errors.New("invalid Herdr agent list result")
+		if agent.WorkspaceID == "" || agent.TabID == "" || agent.PaneID == "" || agent.TerminalID == "" ||
+			agent.AgentSession != nil && !completeSession(*agent.AgentSession) {
+			return nil, errors.New("invalid Herdr agent list result")
 		}
 	}
-	correlations, liveOnly := correlate(run.Participants, listed.Agents)
-	return correlations, liveOnly, nil
+	return listed.Agents, nil
 }
 
 func correlate(participants []vaultregistry.Participant, agents []Agent) ([]Correlation, []Agent) {
@@ -189,6 +198,10 @@ func completeHerdr(identity vaultregistry.HerdrIdentity) bool {
 
 func sameSession(recorded, live vaultregistry.AgentSession) bool {
 	return recorded.Source == live.Source && recorded.Kind == live.Kind && recorded.Value == live.Value
+}
+
+func completeSession(session vaultregistry.AgentSession) bool {
+	return session.Source != "" && session.Kind != "" && session.Value != ""
 }
 
 func (c Client) Attach(runID, workspaceID, stateDir string) (Tuple, error) {
