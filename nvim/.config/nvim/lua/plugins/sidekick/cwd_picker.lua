@@ -395,6 +395,7 @@ function M.list_items(metric_cache)
         workspace_id = entry.workspace_id,
         terminal_id = entry.terminal_id,
         agent_name = entry.agent_name,
+        agent_session = entry.agent_session,
         status = entry.status,
         cwd = entry.cwd,
         working_since = metrics.working_since,
@@ -443,6 +444,7 @@ local function workspace_groups(first_workspace_id, metric_cache)
         workspace_id = workspace_id,
         terminal_id = agent.terminal_id,
         agent_name = agent.name,
+        agent_session = agent.agent_session,
         status = status,
         working_since = metrics.working_since,
         running_seconds = metrics.running_seconds,
@@ -578,6 +580,9 @@ function M.open(opts)
   local pending_preview_scroll
   local refreshed_preview_item
   local refreshed_preview_output
+  local atlas_preview_item
+  local atlas_loading_item
+  local preview_generation = 0
   local reopening = false
   local has_local_working = vim.iter(items):any(function(item)
     return item.status == "working"
@@ -802,20 +807,90 @@ function M.open(opts)
     end
   end
 
+  local function render_atlas_preview(item, preview, generation)
+    local session = item and item.agent_session
+    if
+      not item
+      or not item.terminal_id
+      or type(session) ~= "table"
+      or not session.source
+      or not session.kind
+      or not session.value
+    then
+      return
+    end
+    local win = preview_window(preview)
+    local width = win and vim.api.nvim_win_get_width(win.win) or 78
+    local height = win and vim.api.nvim_win_get_height(win.win) or 17
+    local command = {
+      vim.env.VAULT_HUNTER_ATLAS_BIN or "vault-hunter-atlas",
+      "render",
+      "--profile",
+      "compact",
+      "--terminal-id",
+      item.terminal_id,
+      "--agent-session-source",
+      session.source,
+      "--agent-session-kind",
+      session.kind,
+      "--agent-session-value",
+      session.value,
+      "--width",
+      tostring(width),
+      "--height",
+      tostring(height),
+    }
+    atlas_loading_item = item
+    local ok = pcall(vim.system, command, { text = true }, vim.schedule_wrap(function(result)
+      if atlas_loading_item == item then
+        atlas_loading_item = nil
+      end
+      local output = result and result.code == 0 and result.stdout or nil
+      if
+        not output
+        or output == ""
+        or generation ~= preview_generation
+        or not picker
+        or picker.closed
+        or item ~= current_preview_item()
+      then
+        return
+      end
+      local buf, staging_win = prepare_preview_buffer(output, nil, preview)
+      vim.schedule(function()
+        swap_preview_buffer(buf, staging_win, item, output, function()
+          atlas_preview_item = item
+        end)
+      end)
+    end))
+    if not ok and atlas_loading_item == item then
+      atlas_loading_item = nil
+    end
+  end
+
   show_preview = function(item, preview)
-    if item == displayed_preview_item and item == expanded_preview_item then
+    if
+      item == displayed_preview_item
+      and (item == expanded_preview_item or item == atlas_preview_item or item == atlas_loading_item)
+    then
       return
     end
     if item ~= displayed_preview_item then
       displayed_preview_item = item
       expanded_preview_item = nil
       pending_preview_scroll = nil
+      atlas_preview_item = nil
+      atlas_loading_item = nil
+      preview_generation = preview_generation + 1
     end
+    local generation = preview_generation
     local output, err = preview_text(item, preview_line_limit(preview))
     local rendered = output or err
     local buf, staging_win = prepare_preview_buffer(output, err, preview)
     vim.schedule(function()
-      swap_preview_buffer(buf, staging_win, item, rendered)
+      swap_preview_buffer(buf, staging_win, item, rendered, function()
+        render_atlas_preview(item, preview, generation)
+      end)
     end)
   end
 
@@ -839,7 +914,13 @@ function M.open(opts)
 
   local function refresh_preview()
     local item = current_preview_item()
-    if preview_loading or not item or item.status ~= "working" or item == expanded_preview_item then
+    if
+      preview_loading
+      or not item
+      or item.status ~= "working"
+      or item == expanded_preview_item
+      or item == atlas_preview_item
+    then
       return
     end
 
@@ -850,6 +931,9 @@ function M.open(opts)
         return
       end
       if item == expanded_preview_item then
+        return
+      end
+      if item == atlas_preview_item then
         return
       end
       output = scrub_preview_output(item, output)

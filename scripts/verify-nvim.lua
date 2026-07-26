@@ -574,17 +574,25 @@ local function validate_sidekick_herdr()
   local start_calls = {}
   source_herdr.call = function(args)
     start_calls[#start_calls + 1] = args
-    if args[1] == "tab" and args[2] == "create" then
-      return { tab = { tab_id = "w-bound:t1" }, root_pane = { pane_id = "w-bound:p0" } }
-    elseif args[1] == "agent" and args[2] == "start" then
+    if args[1] == "agent" and args[2] == "start" then
       return {
         agent = {
+          name = "codex-workspace-session",
+          cwd = cwd,
+          foreground_cwd = cwd,
           terminal_id = "term-workspace",
           pane_id = "w-bound:p1",
           tab_id = "w-bound:t1",
           workspace_id = "w-bound",
+          agent_session = {
+            source = "herdr:codex",
+            kind = "id",
+            value = "session-workspace",
+          },
         },
       }
+    elseif args[1] == "tab" and args[2] == "list" then
+      return { tabs = { { tab_id = "w-bound:t1", workspace_id = "w-bound", pane_count = 1 } } }
     end
     return {}
   end
@@ -596,23 +604,30 @@ local function validate_sidekick_herdr()
     { workspace_id = "w-bound" }
   )
   source_herdr.call = original_call
-  local tab_create, agent_start
+  local agent_start
+  local tab_rename
   for _, call in ipairs(start_calls) do
     if call[1] == "workspace" or (call[1] == "pane" and call[2] == "list") then
       fail("an exact workspace ID should bypass cwd workspace lookup: " .. vim.inspect(start_calls))
     elseif call[1] == "tab" and call[2] == "create" then
-      tab_create = call
+      fail("worker start must not precreate a blank root tab: " .. vim.inspect(start_calls))
+    elseif call[1] == "pane" and call[2] == "move" and vim.fn.index(call, "--split") >= 0 then
+      fail("worker start must not use a split: " .. vim.inspect(start_calls))
     elseif call[1] == "agent" and call[2] == "start" then
       agent_start = call
+    elseif call[1] == "tab" and call[2] == "rename" then
+      tab_rename = call
     end
   end
   if not started
-    or not tab_create
-    or tab_create[4] ~= "w-bound"
     or not agent_start
     or agent_start[7] ~= "w-bound"
+    or vim.fn.index(agent_start, "--tab") >= 0
+    or not tab_rename
+    or tab_rename[3] ~= "w-bound:t1"
+    or started.agent_session.value ~= "session-workspace"
   then
-    fail("named session should start in its exact bound workspace: " .. vim.inspect(start_calls))
+    fail("named session should start directly as one full Codex pane: " .. vim.inspect(start_calls))
   end
 
   local routing_calls = {}
@@ -625,52 +640,57 @@ local function validate_sidekick_herdr()
         workspace = { workspace_id = "w-feature" },
         worktree = { branch = "feature/example", path = "/worktrees/feature-example" },
       }
-    elseif args[1] == "worktree" and args[2] == "create" and args[6] == "task/example-t01" then
-      return {
-        workspace = { workspace_id = "w-task-temporary" },
-        worktree = { branch = "task/example-t01", path = "/worktrees/task-example-t01" },
-      }
     end
     return {}
   end
-  local task_scope = source_herdr.ensure_task_scope(
-    cwd,
-    "Neovim · Example",
-    "feature/example",
-    "task/example-t01"
-  )
+  local feature_scope = source_herdr.ensure_feature_scope(cwd, "Neovim · Example", "feature/example")
   if
-    not task_scope
-    or task_scope.workspace_id ~= "w-feature"
-    or task_scope.cwd ~= "/worktrees/task-example-t01"
+    not feature_scope
+    or feature_scope.workspace_id ~= "w-feature"
+    or feature_scope.cwd ~= "/worktrees/feature-example"
   then
-    fail("task scope should use the feature workspace and task worktree: " .. vim.inspect(task_scope))
+    fail("feature scope should use the feature workspace and worktree: " .. vim.inspect(feature_scope))
   end
   local renamed_workspace = false
-  local closed_temporary_workspace = false
+  local created_branches = {}
   for _, call in ipairs(routing_calls) do
     renamed_workspace = renamed_workspace
       or (call[1] == "workspace" and call[2] == "rename" and call[3] == "w-feature")
-    closed_temporary_workspace = closed_temporary_workspace
-      or (call[1] == "workspace" and call[2] == "close" and call[3] == "w-task-temporary")
+    if call[1] == "worktree" and call[2] == "create" then
+      created_branches[#created_branches + 1] = call[6]
+    end
   end
-  if not renamed_workspace or not closed_temporary_workspace then
-    fail("task routing should name the feature workspace and close the temporary task workspace")
+  if not renamed_workspace then
+    fail("feature routing should name the feature workspace")
   end
+  assert_sequence(created_branches, { "feature/example" }, "feature routing branches")
 
   routing_calls = {}
   source_herdr.call = function(args)
     routing_calls[#routing_calls + 1] = args
-    if args[1] == "tab" and args[2] == "create" then
-      return { tab = { tab_id = "w-feature:t2" }, root_pane = { pane_id = "w-feature:p0" } }
+    if args[1] == "tab" and args[2] == "list" then
+      return {
+        tabs = {
+          { tab_id = "w-old:t1", workspace_id = "w-old", pane_count = 1 },
+          { tab_id = "w-feature:t2", workspace_id = "w-feature", pane_count = 1 },
+        },
+      }
+    elseif args[1] == "pane" and args[2] == "move" then
+      return { pane = { pane_id = "w-feature:p1", tab_id = "w-feature:t2" } }
     elseif args[1] == "agent" and args[2] == "get" then
       return {
         agent = {
           name = "codex-example",
+          terminal_id = "term-example",
           pane_id = "w-feature:p1",
           tab_id = "w-feature:t2",
           workspace_id = "w-feature",
-          foreground_cwd = "/worktrees/task-example-t01",
+          foreground_cwd = "/worktrees/feature-example",
+          agent_session = {
+            source = "herdr:codex",
+            kind = "id",
+            value = "session-example",
+          },
         },
       }
     end
@@ -678,31 +698,109 @@ local function validate_sidekick_herdr()
   end
   local placed_agent = source_herdr.place_agent({
     name = "codex-example",
+    terminal_id = "term-example",
     pane_id = "w-old:p1",
     tab_id = "w-old:t1",
     workspace_id = "w-old",
-    foreground_cwd = "/worktrees/task-example-t01",
-  }, task_scope, "T01 Example task")
-  source_herdr.call = original_call
-  if not placed_agent or placed_agent.tab_id ~= "w-feature:t2" then
-    fail("existing task agent should move to its task worktree tab: " .. vim.inspect(placed_agent))
+    foreground_cwd = "/worktrees/feature-example",
+    agent_session = {
+      source = "herdr:codex",
+      kind = "id",
+      value = "session-example",
+    },
+  }, feature_scope, "T01 Example task")
+  if
+    not placed_agent
+    or placed_agent.tab_id ~= "w-feature:t2"
+    or placed_agent.agent_session.value ~= "session-example"
+  then
+    fail("existing task agent should move to its feature-worktree tab: " .. vim.inspect(placed_agent))
   end
-  local task_tab_create
   local task_pane_move
   for _, call in ipairs(routing_calls) do
     if call[1] == "tab" and call[2] == "create" then
-      task_tab_create = call
+      fail("worker placement must not create a blank root pane: " .. vim.inspect(routing_calls))
     elseif call[1] == "pane" and call[2] == "move" then
       task_pane_move = call
     end
   end
   if
-    not task_tab_create
-    or task_tab_create[8] ~= "T01 Example task"
-    or not task_pane_move
-    or task_pane_move[5] ~= "w-feature:t2"
+    not task_pane_move
+    or vim.fn.index(task_pane_move, "--new-tab") < 0
+    or vim.fn.index(task_pane_move, "--split") >= 0
+    or task_pane_move[6] ~= "w-feature"
+    or task_pane_move[8] ~= "T01 Example task"
   then
-    fail("task agent placement should use the named task tab: " .. vim.inspect(routing_calls))
+    fail("task agent should move directly into its named one-pane tab: " .. vim.inspect(routing_calls))
+  end
+
+  routing_calls = {}
+  source_herdr.call = function(args)
+    routing_calls[#routing_calls + 1] = args
+    if args[1] == "tab" and args[2] == "list" then
+      return {
+        tabs = {
+          { tab_id = "w-feature:shared", workspace_id = "w-feature", pane_count = 2 },
+          { tab_id = "w-feature:worker", workspace_id = "w-feature", pane_count = 1 },
+        },
+      }
+    elseif args[1] == "pane" and args[2] == "move" then
+      return { pane = { pane_id = "w-feature:p2", tab_id = "w-feature:worker" } }
+    elseif args[1] == "agent" and args[2] == "get" then
+      return {
+        agent = {
+          name = "codex-shared",
+          terminal_id = "term-shared",
+          pane_id = "w-feature:p2",
+          tab_id = "w-feature:worker",
+          workspace_id = "w-feature",
+          foreground_cwd = "/worktrees/feature-example",
+          agent_session = {
+            source = "herdr:codex",
+            kind = "id",
+            value = "session-shared",
+          },
+        },
+      }
+    end
+    return {}
+  end
+  local restored_agent = source_herdr.place_agent({
+    name = "codex-shared",
+    terminal_id = "term-shared",
+    pane_id = "w-feature:p2",
+    tab_id = "w-feature:shared",
+    workspace_id = "w-feature",
+    foreground_cwd = "/worktrees/feature-example",
+    agent_session = {
+      source = "herdr:codex",
+      kind = "id",
+      value = "session-shared",
+    },
+  }, feature_scope, "T01 Restored worker")
+  if not restored_agent or restored_agent.tab_id ~= "w-feature:worker" then
+    fail("same-workspace reuse should restore a one-pane worker tab: " .. vim.inspect(restored_agent))
+  end
+  for _, call in ipairs(routing_calls) do
+    if call[1] == "pane" and call[2] == "close" then
+      fail("one-pane restoration must preserve unrelated shared panes: " .. vim.inspect(routing_calls))
+    end
+  end
+
+  local calls_before_invalid = #routing_calls
+  local original_notify = vim.notify
+  vim.notify = function() end
+  local invalid_agent = source_herdr.place_agent({
+    name = "codex-background",
+    pane_id = "background",
+    tab_id = "inherited",
+    workspace_id = "w-feature",
+    foreground_cwd = "/worktrees/feature-example",
+  }, feature_scope, "invalid")
+  vim.notify = original_notify
+  source_herdr.call = original_call
+  if invalid_agent or #routing_calls ~= calls_before_invalid then
+    fail("background or inherited-pane agents without full session identity must be rejected")
   end
 
   local original_list_agents = herdr.list_agents
@@ -715,6 +813,11 @@ local function validate_sidekick_herdr()
       pane_id = "w1:p" .. index,
       terminal_id = "term-" .. index,
       workspace_id = workspace_id or "w1",
+      agent_session = index == 5 and {
+        source = "herdr:codex",
+        kind = "id",
+        value = "session-5",
+      } or nil,
     }
   end
   herdr.list_agents = function()
@@ -746,7 +849,13 @@ local function validate_sidekick_herdr()
   if not entry or entry.tool ~= "pi" or entry.status ~= "blocked" then
     fail("named Herdr session discovery mismatch: " .. vim.inspect(discovered))
   end
-  if entry.cwd ~= cwd or entry.pane_id ~= "w1:p5" or entry.workspace_id ~= "w1" then
+  if
+    entry.cwd ~= cwd
+    or entry.pane_id ~= "w1:p5"
+    or entry.workspace_id ~= "w1"
+    or not entry.agent_session
+    or entry.agent_session.value ~= "session-5"
+  then
     fail("named Herdr session identifiers mismatch: " .. vim.inspect(entry))
   end
 
@@ -759,6 +868,9 @@ local function validate_sidekick_herdr()
   for _, item in ipairs(local_items) do
     unbound_labels[item.label] = true
     ordered_statuses[#ordered_statuses + 1] = item.status
+    if item.label == "pi-blocked" and (not item.agent_session or item.agent_session.value ~= "session-5") then
+      fail("cwd picker dropped the stable agent session identity: " .. vim.inspect(item))
+    end
   end
   assert_sequence(ordered_statuses, { "working", "blocked", "done", "idle", "idle" }, "cwd picker Herdr status order")
   if not unbound_labels["pi-other-workspace"] or unbound_labels["pi-workspace-only"] then
@@ -1249,6 +1361,139 @@ local function validate_sidekick_herdr()
     if sized_lines[1] ~= string.rep("x", sized_width) or sized_lines[2] ~= "xxx" then
       fail("ANSI staging buffer should use the preview's actual width: " .. vim.inspect(sized_lines))
     end
+
+    local original_atlas_system = vim.system
+    local original_atlas_bin = vim.env.VAULT_HUNTER_ATLAS_BIN
+    local original_notify = vim.notify
+    local atlas_calls = {}
+    local atlas_callbacks = {}
+    local atlas_crash = false
+    local notifications = 0
+    vim.env.VAULT_HUNTER_ATLAS_BIN = "fake-vault-hunter-atlas"
+    vim.notify = function()
+      notifications = notifications + 1
+    end
+    vim.system = function(command, system_opts, on_exit)
+      if command[1] ~= "fake-vault-hunter-atlas" then
+        return original_atlas_system(command, system_opts, on_exit)
+      end
+      if atlas_crash then
+        error("fake renderer crash")
+      end
+      atlas_calls[#atlas_calls + 1] = command
+      atlas_callbacks[#atlas_callbacks + 1] = on_exit
+      return {}
+    end
+
+    local atlas_serial = 0
+    local function atlas_item(label)
+      atlas_serial = atlas_serial + 1
+      return vim.tbl_extend("force", {}, done_item, {
+        label = label,
+        terminal_id = "term-atlas-" .. atlas_serial,
+        agent_name = "pi-atlas-" .. atlas_serial,
+        agent_session = {
+          source = "herdr:codex",
+          kind = "id",
+          value = "session-atlas-" .. atlas_serial,
+        },
+      })
+    end
+    local function start_atlas_preview(item, expect_call)
+      current_fake_item = item
+      read_result = "\27[32mDEFAULT " .. item.label .. "\27[0m"
+      local swaps_before = preview_swaps
+      local calls_before = #atlas_calls
+      picker_opts.preview({ item = item, preview = fake_picker.preview })
+      vim.wait(1000, function()
+        return preview_swaps == swaps_before + 1
+      end, 10)
+      if preview_swaps ~= swaps_before + 1 then
+        fail("Atlas candidate should show the default preview first")
+      end
+      local default = table.concat(
+        vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
+        "\n"
+      )
+      if not default:find("DEFAULT " .. item.label, 1, true) then
+        fail("Atlas candidate did not preserve its default preview: " .. vim.inspect(default))
+      end
+      if expect_call then
+        vim.wait(1000, function() return #atlas_calls == calls_before + 1 end, 10)
+        if #atlas_calls ~= calls_before + 1 then
+          fail("Atlas renderer was not called for a stable participant identity")
+        end
+      elseif #atlas_calls ~= calls_before then
+        fail("renderer crash unexpectedly recorded an Atlas call")
+      end
+      return fake_picker.preview.win.buf, swaps_before
+    end
+
+    for _, failure in ipairs({ "non-participant", "malformed-registry", "unavailable-snapshot" }) do
+      local item = atlas_item(failure)
+      local default_buf = start_atlas_preview(item, true)
+      atlas_callbacks[#atlas_callbacks]({
+        code = 2,
+        stdout = "PARTIAL ATLAS " .. failure,
+        stderr = failure,
+      })
+      vim.wait(50)
+      if fake_picker.preview.win.buf ~= default_buf then
+        fail(failure .. " should retain the exact default preview buffer")
+      end
+    end
+
+    atlas_crash = true
+    local crash_item = atlas_item("renderer-crash")
+    local crash_buf = start_atlas_preview(crash_item, false)
+    vim.wait(50)
+    if fake_picker.preview.win.buf ~= crash_buf then
+      fail("renderer crash should retain the exact default preview buffer")
+    end
+    atlas_crash = false
+
+    local stale_item = atlas_item("stale")
+    local stale_buf = start_atlas_preview(stale_item, true)
+    local stale_callback = atlas_callbacks[#atlas_callbacks]
+    local current_item = atlas_item("current")
+    local current_buf = start_atlas_preview(current_item, true)
+    local current_callback = atlas_callbacks[#atlas_callbacks]
+    local swaps_before_stale = preview_swaps
+    stale_callback({ code = 0, stdout = "ATLAS STALE", stderr = "" })
+    vim.wait(100)
+    if fake_picker.preview.win.buf ~= current_buf or preview_swaps ~= swaps_before_stale then
+      fail("stale Atlas result replaced the current selection")
+    end
+    current_callback({ code = 0, stdout = "ATLAS CURRENT", stderr = "" })
+    vim.wait(1000, function() return preview_swaps == swaps_before_stale + 1 end, 10)
+    local current_render = table.concat(
+      vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
+      "\n"
+    )
+    if not current_render:find("ATLAS CURRENT", 1, true) or fake_picker.preview.win.buf == stale_buf then
+      fail("current successful Atlas result did not replace the staged default preview")
+    end
+    local command = atlas_calls[#atlas_calls]
+    local function argument_after(flag)
+      local index = vim.fn.index(command, flag)
+      return index >= 0 and command[index + 2] or nil
+    end
+    if
+      argument_after("--terminal-id") ~= current_item.terminal_id
+      or argument_after("--agent-session-source") ~= current_item.agent_session.source
+      or argument_after("--agent-session-kind") ~= current_item.agent_session.kind
+      or argument_after("--agent-session-value") ~= current_item.agent_session.value
+      or tonumber(argument_after("--width")) ~= vim.api.nvim_win_get_width(fake_picker.preview.win.win)
+      or tonumber(argument_after("--height")) ~= vim.api.nvim_win_get_height(fake_picker.preview.win.win)
+    then
+      fail("Atlas renderer did not receive exact identity and preview dimensions: " .. vim.inspect(command))
+    end
+    if notifications ~= 0 then
+      fail("Atlas preview failures should be silent")
+    end
+    vim.system = original_atlas_system
+    vim.env.VAULT_HUNTER_ATLAS_BIN = original_atlas_bin
+    vim.notify = original_notify
 
     read_result = table.concat({
       "\27[32manswer stays\27[0m",
@@ -3044,7 +3289,7 @@ local function validate_vault_features()
     "",
     "## Tasks",
     "",
-    "- [~] [[tasks/01-build-tree|T01 Build tree picker.]]",
+    "- [-] [[tasks/01-build-tree|T01 Build tree picker.]]",
   }, vault_feature .. "/feature.md")
   vim.fn.writefile({
     "---",
@@ -3098,8 +3343,10 @@ local function validate_vault_features()
     "# Maintained Feature",
   }, agents .. "/features/maintained-feature/feature.md")
 
+  local original_features = package.loaded["helpers.vault_features"]
+  local features = dofile("nvim/.config/nvim/lua/helpers/vault_features.lua")
+  package.loaded["helpers.vault_features"] = features
   local ok, err = xpcall(function()
-    local features = require("helpers.vault_features")
     local items = features.collect(root)
     if #items ~= 10 then
       fail("expected project, theme, active feature, and task tree rows; got " .. vim.inspect(items))
@@ -3145,7 +3392,7 @@ local function validate_vault_features()
       or linked_task.pos[1] ~= 5
       or linked_task.parent ~= items[5]
       or linked_task.repository ~= neovim_repository
-      or linked_task.state ~= "~"
+      or linked_task.state ~= "-"
       or linked_task.linked ~= true
     then
       fail("linked task should resolve its task note, source heading, repository, and feature parent")
@@ -3181,32 +3428,31 @@ local function validate_vault_features()
     local original_get_agent = herdr.get_agent
     local original_start = herdr.start
     local original_run = herdr.run
-    local original_ensure_workspace = herdr.ensure_workspace
-    local original_ensure_task_scope = herdr.ensure_task_scope
+    local original_ensure_feature_scope = herdr.ensure_feature_scope
     local original_place_agent = herdr.place_agent
+    local original_system = vim.system
     local started
     local ran
     local routed
-    local workspace_routed
     local placed
+    local atlas_launches = {}
+    vim.system = function(command, ...)
+      if command[1] == "vault-hunter-run" or command[1] == "vault-hunter-atlas" then
+        atlas_launches[#atlas_launches + 1] = command
+        return { wait = function() return { code = 0, stdout = "", stderr = "" } end }
+      end
+      return original_system(command, ...)
+    end
     herdr.get_agent = function()
       return nil
     end
-    herdr.ensure_task_scope = function(repository, workspace_label, feature_branch, task_branch)
+    herdr.ensure_feature_scope = function(repository, workspace_label, feature_branch)
       routed = {
         repository = repository,
         workspace_label = workspace_label,
         feature_branch = feature_branch,
-        task_branch = task_branch,
       }
-      return { workspace_id = "w-feature", cwd = neovim_repository .. "/task-worktree" }
-    end
-    herdr.ensure_workspace = function(repository, workspace_label)
-      workspace_routed = {
-        repository = repository,
-        workspace_label = workspace_label,
-      }
-      return "w-feature"
+      return { workspace_id = "w-feature", cwd = neovim_repository .. "/feature-worktree" }
     end
     herdr.start = function(name, cwd, command, env, scope, tab_label)
       started = {
@@ -3229,7 +3475,7 @@ local function validate_vault_features()
     end
 
     local agent_ok, agent_err = xpcall(function()
-      local linked_prompt = "/vault-hunter " .. vault_feature .. "/tasks/01-build-tree.md:5"
+      local linked_prompt = "$vault-hunter " .. vault_feature .. "/tasks/01-build-tree.md:5"
       if features.agent_prompt(linked_task) ~= linked_prompt then
         fail("linked task Vault Hunter prompt is wrong: " .. vim.inspect(features.agent_prompt(linked_task)))
       end
@@ -3239,7 +3485,7 @@ local function validate_vault_features()
       if
         not started
         or started.name ~= "codex-neovim-vault-feature-picker-t01"
-        or started.cwd ~= neovim_repository .. "/task-worktree"
+        or started.cwd ~= neovim_repository .. "/feature-worktree"
         or started.scope.workspace_id ~= "w-feature"
         or started.tab_label ~= "T01 Build tree picker."
         or started.env[internal.named_env_var] ~= "neovim-vault-feature-picker-t01"
@@ -3251,9 +3497,8 @@ local function validate_vault_features()
         or routed.repository ~= neovim_repository
         or routed.workspace_label ~= "Neovim · Vault Feature Picker"
         or routed.feature_branch ~= "feature/vault-feature-picker"
-        or routed.task_branch ~= "task/01-build-tree"
       then
-        fail("linked task worktree routing arguments are wrong: " .. vim.inspect(routed))
+        fail("linked task feature-worktree routing arguments are wrong: " .. vim.inspect(routed))
       end
       assert_sequence(
         started.command,
@@ -3295,14 +3540,14 @@ local function validate_vault_features()
       herdr.get_agent = function()
         return nil
       end
-      local inline_prompt = "/vault-hunter " .. weekly_feature .. "/feature.md:10"
+      local inline_prompt = "$vault-hunter " .. weekly_feature .. "/feature.md:10"
       if not features.send_to_agent(inline_task) then
         fail("inline feature task should start a project agent")
       end
       if
         not started
         or started.name ~= "codex-neovim-weekly-backlog-helpers-t02"
-        or started.cwd ~= neovim_repository .. "/task-worktree"
+        or started.cwd ~= neovim_repository .. "/feature-worktree"
         or started.scope.workspace_id ~= "w-feature"
         or started.tab_label ~= "T02 Verify date navigation."
         or started.env[internal.named_env_var] ~= "neovim-weekly-backlog-helpers-t02"
@@ -3313,9 +3558,8 @@ local function validate_vault_features()
         not routed
         or routed.workspace_label ~= "Neovim · Weekly Backlog Helpers"
         or routed.feature_branch ~= "feature/weekly-backlog-helpers"
-        or routed.task_branch ~= "task/weekly-backlog-helpers-t02"
       then
-        fail("inline task worktree routing arguments are wrong: " .. vim.inspect(routed))
+        fail("inline task feature-worktree routing arguments are wrong: " .. vim.inspect(routed))
       end
       assert_sequence(
         started.command,
@@ -3329,20 +3573,19 @@ local function validate_vault_features()
       started = nil
       ran = nil
       routed = nil
-      workspace_routed = nil
       placed = nil
       herdr.get_agent = function()
         return nil
       end
       local feature_item = items[5]
-      local feature_prompt = "/vault-hunter " .. vault_feature .. "/feature.md:5"
+      local feature_prompt = "$vault-hunter " .. vault_feature .. "/feature.md:5"
       if not features.send_to_agent(feature_item) then
         fail("feature row should start a Vault Hunter agent")
       end
       if
         not started
         or started.name ~= "codex-neovim-vault-feature-picker"
-        or started.cwd ~= neovim_repository
+        or started.cwd ~= neovim_repository .. "/feature-worktree"
         or started.scope.workspace_id ~= "w-feature"
         or started.tab_label ~= "Vault Feature Picker"
         or started.env[internal.named_env_var] ~= "neovim-vault-feature-picker"
@@ -3350,12 +3593,12 @@ local function validate_vault_features()
         fail("feature Vault Hunter agent start arguments are wrong: " .. vim.inspect(started))
       end
       if
-        not workspace_routed
-        or workspace_routed.repository ~= neovim_repository
-        or workspace_routed.workspace_label ~= "Neovim · Vault Feature Picker"
-        or routed
+        not routed
+        or routed.repository ~= neovim_repository
+        or routed.workspace_label ~= "Neovim · Vault Feature Picker"
+        or routed.feature_branch ~= "feature/vault-feature-picker"
       then
-        fail("feature Vault Hunter action should reuse its feature workspace without a task worktree")
+        fail("feature Vault Hunter action should reuse its feature workspace and worktree")
       end
       assert_sequence(
         started.command,
@@ -3366,11 +3609,14 @@ local function validate_vault_features()
     herdr.get_agent = original_get_agent
     herdr.start = original_start
     herdr.run = original_run
-    herdr.ensure_workspace = original_ensure_workspace
-    herdr.ensure_task_scope = original_ensure_task_scope
+    herdr.ensure_feature_scope = original_ensure_feature_scope
     herdr.place_agent = original_place_agent
+    vim.system = original_system
     if not agent_ok then
       fail(agent_err)
+    end
+    if #atlas_launches ~= 0 then
+      fail("Feature and Task launchers must not create Atlas state or companions: " .. vim.inspect(atlas_launches))
     end
 
     local lazy = require("lazy")
@@ -3442,7 +3688,7 @@ local function validate_vault_features()
     Snacks.picker.pick = function(opts)
       picker_opts = opts
     end
-    local callback_ok, callback_err = xpcall(callback, debug.traceback)
+    local callback_ok, callback_err = xpcall(features.open, debug.traceback)
     if callback_ok and picker_opts and picker_opts.actions and picker_opts.actions.vault_hunter then
       picker_opts.actions.vault_hunter.action({
         close = function()
@@ -3483,6 +3729,7 @@ local function validate_vault_features()
   end, debug.traceback)
 
   vim.fn.delete(root, "rf")
+  package.loaded["helpers.vault_features"] = original_features
   if not ok then
     fail(err)
   end
