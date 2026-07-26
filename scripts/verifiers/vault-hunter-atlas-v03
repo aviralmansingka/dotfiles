@@ -18,6 +18,7 @@ manifest() {
   ) | shasum -a 256 | awk '{print $1}'
 }
 
+go test -count=1 ./internal/atlas -run '^TestT02V03'
 go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
 mkdir -p "$tmp/state/runs" "$tmp/vault" "$tmp/traps" "$tmp/home"
 cp "$fixture" "$tmp/state/runs/"
