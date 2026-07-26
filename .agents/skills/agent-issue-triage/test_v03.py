@@ -251,6 +251,48 @@ class V03Tests(unittest.TestCase):
         self.assertIn(f"- User-facing outcome: {update_outcome}", weekly)
         self.assertIn(f"- Smallest next action: {update_action}", weekly)
 
+    def test_update_without_existing_triage_preserves_source_suffix_bytes(self) -> None:
+        relative = (
+            "1_projects/pi-agent/themes/vault-issue-workflow/features/"
+            "agent-issue-triage/issues/exact-update.md"
+        )
+        path = self.vault / relative
+        original = (
+            b"---\r\nstatus: open\r\n---\r\n# Source Only\r\n\r\n"
+            b"This note has no triage metadata yet.\r\n\r\n"
+            b"## Source\r\n\r\n- **Channel:** Telegram\n"
+            b"- **Transcript:** Keep\tthis source byte for byte.\r\n"
+            b"Final source line without a newline"
+        )
+        path.write_bytes(original)
+        source_before = original[original.index(b"## Source") :]
+        update_outcome = "The source-only note has canonical triage"
+        update_action = "Verify the preserved source suffix"
+
+        self.preview_and_apply(
+            [
+                "--issue",
+                relative,
+                "--action",
+                "keep",
+                "--outcome",
+                update_outcome,
+                "--next-action",
+                update_action,
+                "--priority",
+                "P1",
+            ]
+        )
+
+        updated = path.read_bytes()
+        source_offset = updated.index(b"## Source")
+        canonical = updated[:source_offset]
+        self.assertEqual(updated[source_offset:], source_before)
+        self.assertEqual(canonical.count(b"## Triage\n"), 1)
+        self.assertIn(b"priority: P1\n", canonical)
+        self.assertIn(update_outcome.encode("utf-8"), canonical)
+        self.assertIn(update_action.encode("utf-8"), canonical)
+
     def test_exact_update_previews_then_changes_only_the_exact_issue(self) -> None:
         case = self.cases["exact-update"]
         arguments = [

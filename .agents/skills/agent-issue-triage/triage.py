@@ -59,7 +59,7 @@ def conversational_line(value: str, label: str) -> str:
     normalized = value.strip()
     if not normalized:
         raise TriageError(f"{label} must be non-empty")
-    if "\n" in value or "\r" in value:
+    if value.splitlines() != [value]:
         raise TriageError(f"{label} must be one line")
     return normalized
 
@@ -473,37 +473,24 @@ def update_issue_text(
     heading_pattern = re.compile(
         r"^##[ \t]+(Source|Triage)[ \t]*\r?$", re.I | re.M
     )
-    headings = [
-        (match.group(1).casefold(), match.start())
-        for match in heading_pattern.finditer(text)
-    ]
-    source_offsets = [offset for kind, offset in headings if kind == "source"]
-    triage_offsets = [offset for kind, offset in headings if kind == "triage"]
-    if not source_offsets:
+    source_match = next(
+        (
+            match
+            for match in heading_pattern.finditer(text)
+            if match.group(1).casefold() == "source"
+        ),
+        None,
+    )
+    if source_match is None:
         return set_triage(
             set_frontmatter_fields(text, updates), outcome, next_action, disposition
         )
 
-    source = source_offsets[0]
-    prefix_triage = [offset for offset in triage_offsets if offset < source]
-    if prefix_triage:
-        canonical_prefix = set_triage(
-            set_frontmatter_fields(text[:source], updates), outcome, next_action, disposition
-        )
-        return canonical_prefix + text[source:]
-
-    suffix_triage = [offset for offset in triage_offsets if offset > source]
-    if suffix_triage:
-        canonical = suffix_triage[-1]
-        canonical_prefix = set_frontmatter_fields(text[:source], updates)
-        canonical_triage = set_triage(
-            text[canonical:], outcome, next_action, disposition
-        )
-        return canonical_prefix + text[source:canonical] + canonical_triage
-
-    return set_triage(
-        set_frontmatter_fields(text, updates), outcome, next_action, disposition
-    )
+    source_offset = source_match.start()
+    source_suffix = text[source_offset:]
+    prefix = set_frontmatter_fields(text[:source_offset], updates)
+    canonical_prefix = set_triage(prefix, outcome, next_action, disposition)
+    return canonical_prefix + source_suffix
 
 
 def load_children(path: Path | None) -> list[dict[str, Any]]:

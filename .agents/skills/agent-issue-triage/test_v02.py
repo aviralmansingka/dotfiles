@@ -20,6 +20,19 @@ SKILL = Path(__file__).resolve().parent
 HELPER = SKILL / "triage.py"
 FIXTURE = SKILL / "fixtures" / "manual-vault"
 EXPECTED_WEEKLY = SKILL / "fixtures" / "expected-weekly.txt"
+LINE_BOUNDARIES = (
+    "\n",
+    "\r",
+    "\r\n",
+    "\v",
+    "\f",
+    "\x1c",
+    "\x1d",
+    "\x1e",
+    "\x85",
+    "\u2028",
+    "\u2029",
+)
 
 spec = importlib.util.spec_from_file_location("triage_v02", HELPER)
 assert spec and spec.loader
@@ -286,62 +299,71 @@ class V02Tests(unittest.TestCase):
             "1_projects/neovim/themes/editor/features/splitting/issues/split-candidate.md"
         )
         before = manifest(self.vault)
-        parent_cases = (
-            ("outcome", "Visible result\n\n## Triage"),
-            ("next-action", "Run check\r\n## Injected"),
-        )
-        for field, malicious in parent_cases:
-            with self.subTest(source="parent", field=field):
-                arguments = {
-                    "outcome": "Keep the useful behavior visible",
-                    "next-action": "Run one focused check",
-                }
-                arguments[field] = malicious
-                result = subprocess.run(
-                    self.command(
-                        "--issue",
-                        parent_relative,
-                        "--action",
-                        "keep",
-                        "--outcome",
-                        arguments["outcome"],
-                        "--next-action",
-                        arguments["next-action"],
-                    ),
-                    text=True,
-                    capture_output=True,
-                )
-                self.assertEqual(result.returncode, 2)
-                self.assertIn("must be one line", result.stderr)
-                self.assertNotIn("Confirmation token", result.stdout)
-                self.assertEqual(manifest(self.vault), before)
+        for boundary in LINE_BOUNDARIES:
+            with self.subTest(source="helper", boundary=repr(boundary)):
+                with self.assertRaisesRegex(triage.TriageError, "must be one line"):
+                    triage.conversational_line(
+                        f"Visible result{boundary}## Injected", "test field"
+                    )
+
+        for field in ("outcome", "next-action"):
+            for boundary in LINE_BOUNDARIES:
+                with self.subTest(
+                    source="parent", field=field, boundary=repr(boundary)
+                ):
+                    arguments = {
+                        "outcome": "Keep the useful behavior visible",
+                        "next-action": "Run one focused check",
+                    }
+                    arguments[field] = f"Visible result{boundary}## Injected"
+                    result = subprocess.run(
+                        self.command(
+                            "--issue",
+                            parent_relative,
+                            "--action",
+                            "keep",
+                            "--outcome",
+                            arguments["outcome"],
+                            "--next-action",
+                            arguments["next-action"],
+                        ),
+                        text=True,
+                        capture_output=True,
+                    )
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn("must be one line", result.stderr)
+                    self.assertNotIn("Confirmation token", result.stdout)
+                    self.assertEqual(manifest(self.vault), before)
 
         for field in ("title", "outcome", "next_action"):
-            with self.subTest(source="child", field=field):
-                children = json.loads(self.children_file().read_text(encoding="utf-8"))
-                children[0][field] += "\n\n## Triage"
-                path = self.root / f"injected-{field}.json"
-                path.write_text(json.dumps(children), encoding="utf-8")
-                result = subprocess.run(
-                    self.command(
-                        "--issue",
-                        split_relative,
-                        "--action",
-                        "split",
-                        "--outcome",
-                        "Replace the broad issue with actionable children",
-                        "--next-action",
-                        "Start the first child",
-                        "--children-file",
-                        str(path),
-                    ),
-                    text=True,
-                    capture_output=True,
-                )
-                self.assertEqual(result.returncode, 2)
-                self.assertIn("must be one line", result.stderr)
-                self.assertNotIn("Confirmation token", result.stdout)
-                self.assertEqual(manifest(self.vault), before)
+            for boundary in LINE_BOUNDARIES:
+                with self.subTest(
+                    source="child", field=field, boundary=repr(boundary)
+                ):
+                    children = json.loads(self.children_file().read_text(encoding="utf-8"))
+                    children[0][field] += f"{boundary}## Injected"
+                    path = self.root / f"injected-{field}.json"
+                    path.write_text(json.dumps(children), encoding="utf-8")
+                    result = subprocess.run(
+                        self.command(
+                            "--issue",
+                            split_relative,
+                            "--action",
+                            "split",
+                            "--outcome",
+                            "Replace the broad issue with actionable children",
+                            "--next-action",
+                            "Start the first child",
+                            "--children-file",
+                            str(path),
+                        ),
+                        text=True,
+                        capture_output=True,
+                    )
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn("must be one line", result.stderr)
+                    self.assertNotIn("Confirmation token", result.stdout)
+                    self.assertEqual(manifest(self.vault), before)
 
     def test_exact_path_update_selects_target_not_same_inode_symlink_alias(self) -> None:
         relative = "1_projects/neovim/issues/keep-candidate.md"
