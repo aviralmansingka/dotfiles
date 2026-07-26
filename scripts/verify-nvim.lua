@@ -1918,8 +1918,10 @@ local function validate_sidekick_herdr()
       cwd_picker.open({ atlas_lookup = lookup })
       local opts = picker_opts
       local workspace = opts.layout.wins.workspace
+      local atlas = opts.layout.wins.atlas
       fake_picker.closed = false
       workspace:show()
+      atlas:show()
       opts.on_show(fake_picker)
       opts.win.input.keys["<c-w>"][1]()
       return opts, workspace
@@ -1929,6 +1931,7 @@ local function validate_sidekick_herdr()
       fake_picker.closed = true
       opts.on_close(fake_picker)
       workspace:close()
+      opts.layout.wins.atlas:close()
     end
 
     local function preview_bytes()
@@ -2054,14 +2057,26 @@ local function validate_sidekick_herdr()
     control._atlas_v03_case = "complete"
     current_fake_item = control
     local control_swaps = preview_swaps
+    local control_atlas = identity_picker_opts.layout.wins.atlas
+    local control_atlas_buf = control_atlas.buf
     identity_picker_opts.preview({ item = control, preview = fake_picker.preview })
     identity_picker_opts.preview({ item = control, preview = fake_picker.preview })
-    vim.wait(1000, function() return preview_swaps > control_swaps end, 10)
+    vim.wait(1000, function()
+      return preview_swaps > control_swaps
+        and control_atlas.buf ~= control_atlas_buf
+        and table.concat(vim.api.nvim_buf_get_lines(control_atlas.buf, 0, -1, false), "\n")
+          :find("Run atlas-v03-complete", 1, true) ~= nil
+    end, 10)
     if (identity_calls.complete or 0) ~= 1 or not identity_callbacks.complete then
       fail("T04 V03 complete identity control should perform exactly one Atlas lookup")
     end
-    if preview_swaps ~= control_swaps + 1 or not preview_bytes():find("Run atlas%-v03%-complete", 1, false) then
-      fail("T04 V03 complete identity control should swap one matched Atlas preview")
+    if preview_swaps ~= control_swaps + 1
+      or preview_bytes() ~= v03_default_preview_bytes
+      or control_atlas.buf == control_atlas_buf
+      or not table.concat(vim.api.nvim_buf_get_lines(control_atlas.buf, 0, -1, false), "\n")
+        :find("Run atlas-v03-complete", 1, true)
+    then
+      fail("T04 V03 complete identity control should swap one matched dedicated Atlas preview")
     end
     close_v03_picker(identity_picker_opts, identity_workspace)
 
