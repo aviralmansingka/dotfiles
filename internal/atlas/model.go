@@ -215,7 +215,7 @@ func (m Model) ExpandedView() string {
 				goal = value(l.GoalID) + " · "
 			}
 			line := fmt.Sprintf(" %s %s%s · %s", clock(l.ObservedAt), goal, value(l.Kind), value(l.State))
-			if l.Detail != "" {
+			if l.Detail != "" && (showGoal || m.detailVisible) {
 				line += " · " + l.Detail
 			}
 			return line
@@ -229,7 +229,7 @@ func (m Model) ExpandedView() string {
 		if e.ExitStatus != nil {
 			line += fmt.Sprintf(" · exit %d", *e.ExitStatus)
 		}
-		if e.Detail != "" {
+		if e.Detail != "" && (showGoal || m.detailVisible) {
 			line += " · " + e.Detail
 		}
 		return line
