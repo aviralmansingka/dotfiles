@@ -1,0 +1,30 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture=scripts/fixtures/vault-hunter-atlas-t07/runs/atlas-t07-rich.json
+sentinel=scripts/fixtures/vault-hunter-atlas-t07/vault/sentinel
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+fixture_hash=$(shasum -a 256 "$fixture" | awk '{print $1}')
+sentinel_hash=$(shasum -a 256 "$sentinel" | awk '{print $1}')
+mkdir -p "$tmp/state/runs" "$tmp/vault"
+cp "$fixture" "$tmp/state/runs/"
+cp "$sentinel" "$tmp/vault/"
+
+set +e
+go run ./scripts/verifiers/vault-hunter-atlas-t07-harness.go "$tmp/state"
+harness_status=$?
+set -e
+
+test "$fixture_hash" = "$(shasum -a 256 "$fixture" | awk '{print $1}')"
+test "$fixture_hash" = "$(shasum -a 256 "$tmp/state/runs/atlas-t07-rich.json" | awk '{print $1}')"
+test "$sentinel_hash" = "$(shasum -a 256 "$sentinel" | awk '{print $1}')"
+test "$sentinel_hash" = "$(shasum -a 256 "$tmp/vault/sentinel" | awk '{print $1}')"
+
+if test "$harness_status" -ne 0; then
+  exit "$harness_status"
+fi
+echo "T07.V02 expanded interaction, resize recovery, and immutability: PASS"
