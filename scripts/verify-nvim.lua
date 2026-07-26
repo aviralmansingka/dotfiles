@@ -1589,6 +1589,135 @@ local function validate_sidekick_herdr()
     verify_atlas_preview(80, 24)
     vim.o.columns, vim.o.lines = original_columns, original_lines
 
+    local protected_paths = {
+      "nvim/.config/nvim/lua/plugins/sidekick/registry.lua",
+    }
+    vim.list_extend(
+      protected_paths,
+      vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/runs/*.json", false, true)
+    )
+    local protected_bytes = {}
+    for _, path in ipairs(protected_paths) do
+      protected_bytes[path] = table.concat(vim.fn.readfile(path, "b"), "\n")
+    end
+    local registered_tools = vim.deepcopy(config.cli.tools)
+    local fallback_calls = {}
+    local fallback_results = {
+      unregistered = { outcome = "unregistered" },
+      ineligible = { outcome = "ineligible" },
+      stale = { outcome = "stale" },
+      contradictory = { outcome = "contradictory" },
+      ambiguous = { outcome = "ambiguous" },
+      malformed = { outcome = "malformed" },
+      unsupported = { outcome = "unsupported" },
+      process_error = nil,
+      missing_executable = nil,
+      invalid_output = "not-json",
+    }
+    cwd_picker.open({
+      atlas_lookup = function(item, _, _, callback)
+        local fallback_case = item._atlas_fallback_case
+        fallback_calls[fallback_case] = (fallback_calls[fallback_case] or 0) + 1
+        if fallback_case == "timeout" then
+          return function() end
+        end
+        vim.schedule(function()
+          callback(fallback_results[fallback_case])
+        end)
+      end,
+    })
+    local fallback_picker_opts = picker_opts
+    local fallback_item
+    for _, item in ipairs(fallback_picker_opts.items) do
+      if item.label == "pi-blocked" then
+        fallback_item = item
+        break
+      end
+    end
+    if not fallback_item then
+      fail("T04 V02 fallback participant fixture is missing")
+    end
+    fallback_item.status = "done"
+    read_result = "\27[32mT04 V02 default preview bytes\27[0m\r\nsecond unchanged line"
+    local baseline_item = vim.deepcopy(fallback_item)
+    baseline_item.agent_session = nil
+    current_fake_item = baseline_item
+    fake_picker.closed = false
+    local fallback_workspace = fallback_picker_opts.layout.wins.workspace
+    local baseline_swaps = preview_swaps
+    fallback_workspace:show()
+    fallback_picker_opts.on_show(fake_picker)
+    fallback_picker_opts.win.input.keys["<c-w>"][1]()
+    vim.wait(1000, function() return preview_swaps > baseline_swaps end, 10)
+    if preview_swaps ~= baseline_swaps + 1 then
+      fail("T04 V02 could not capture the unchanged default preview")
+    end
+    local default_preview_bytes = table.concat(
+      vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
+      "\n"
+    )
+
+    local fallback_cases = {
+      "unregistered",
+      "ineligible",
+      "stale",
+      "contradictory",
+      "ambiguous",
+      "malformed",
+      "unsupported",
+      "timeout",
+      "process_error",
+      "missing_executable",
+      "invalid_output",
+    }
+    local fallback_failures = {}
+    for _, fallback_case in ipairs(fallback_cases) do
+      local candidate = vim.deepcopy(fallback_item)
+      candidate._atlas_fallback_case = fallback_case
+      current_fake_item = candidate
+      local swaps_before = preview_swaps
+      fallback_picker_opts.preview({ item = candidate, preview = fake_picker.preview })
+      vim.wait(fallback_case == "timeout" and 1500 or 1000, function()
+        return preview_swaps > swaps_before
+      end, 10)
+      if fallback_calls[fallback_case] ~= 1 then
+        fallback_failures[#fallback_failures + 1] = string.format(
+          "%s invoked Atlas %d times",
+          fallback_case,
+          fallback_calls[fallback_case] or 0
+        )
+      end
+      if preview_swaps ~= swaps_before + 1 then
+        fallback_failures[#fallback_failures + 1] = string.format(
+          "%s swapped the default preview %d times",
+          fallback_case,
+          preview_swaps - swaps_before
+        )
+      else
+        local actual = table.concat(
+          vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
+          "\n"
+        )
+        if actual ~= default_preview_bytes then
+          fallback_failures[#fallback_failures + 1] = fallback_case .. " changed the default preview bytes"
+        end
+      end
+    end
+    if not vim.deep_equal(config.cli.tools, registered_tools) then
+      fallback_failures[#fallback_failures + 1] = "changed the Sidekick Registry"
+    end
+    for _, path in ipairs(protected_paths) do
+      if table.concat(vim.fn.readfile(path, "b"), "\n") ~= protected_bytes[path] then
+        fallback_failures[#fallback_failures + 1] = "changed protected manifest " .. path
+      end
+    end
+    fake_picker.closed = true
+    fallback_picker_opts.on_close(fake_picker)
+    fallback_workspace:close()
+    if #fallback_failures > 0 then
+      fail("T04 V02 Atlas fallback regressions: " .. table.concat(fallback_failures, "; "))
+    end
+
     local last_session = require("plugins.sidekick.last_session")
     last_session.label = nil
     picker_opts.confirm({ close = function() end }, done_item)
