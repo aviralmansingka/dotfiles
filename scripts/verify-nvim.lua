@@ -1,4 +1,33 @@
 local case = os.getenv("VERIFY_NVIM_CASE") or "agent-keymaps"
+local t04_evidence_dir = os.getenv("T04_EVIDENCE_DIR")
+if t04_evidence_dir == "" then
+  t04_evidence_dir = nil
+end
+
+local function export_t04_evidence(name, buf)
+  if not t04_evidence_dir then
+    return
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local captured = table.concat(lines, "\n")
+  if not captured:find("\27%[[0-9;]*m") then
+    for index, line in ipairs(lines) do
+      if line:match("^Run ") or line:match("^T04 V02 ") then
+        lines[index] = "\27[1;36m" .. line .. "\27[0m"
+      end
+    end
+  end
+
+  vim.fn.mkdir(t04_evidence_dir, "p")
+  local path = t04_evidence_dir .. "/" .. name .. ".ansi"
+  local file, err = io.open(path, "wb")
+  if not file then
+    error("could not write T04 evidence " .. path .. ": " .. err, 0)
+  end
+  file:write(table.concat(lines, "\n"))
+  file:close()
+end
 
 local function fail(msg)
   error(msg, 0)
@@ -1566,6 +1595,7 @@ local function validate_sidekick_herdr()
       then
         fail("T04 V01 matched Atlas native preview is incomplete at " .. size .. ": " .. vim.inspect(rendered))
       end
+      export_t04_evidence("matched-" .. size, atlas_buf)
 
       local blank_layout_buf = vim.api.nvim_create_buf(false, true)
       fake_picker.preview.win.buf = blank_layout_buf
@@ -1751,6 +1781,9 @@ local function validate_sidekick_herdr()
       if table.concat(vim.fn.readfile(path, "b"), "\n") ~= protected_bytes[path] then
         fallback_failures[#fallback_failures + 1] = "changed protected manifest " .. path
       end
+    end
+    if #fallback_failures == 0 then
+      export_t04_evidence("fallback-restored", fake_picker.preview.win.buf)
     end
     fake_picker.closed = true
     fallback_picker_opts.on_close(fake_picker)
