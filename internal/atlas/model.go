@@ -143,7 +143,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 			if i == m.selected {
 				cursor = "▶ "
 			}
-			left = append(left, fmt.Sprintf("%s%s %s · %s · %s", cursor, glyph(g.state), g.id, value(g.kind), value(g.state)))
+			left = append(left, fmt.Sprintf("%s%s %s · %s · %s", cursor, goalGlyph(g, i == m.selected), g.id, value(g.kind), value(g.state)))
 		}
 	}
 
@@ -178,7 +178,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 		for _, entry := range journey {
 			if entry.lifecycle != nil {
 				l := entry.lifecycle
-				right = append(right, fmt.Sprintf(" %s %s %s · %s", glyph(l.State), clock(l.ObservedAt), value(l.Kind), value(l.State)))
+				right = append(right, fmt.Sprintf(" %s %s %s · %s", lifecycleGlyph(l.Kind, l.State), clock(l.ObservedAt), value(l.Kind), value(l.State)))
 				if m.detailVisible && l.Detail != "" {
 					right = append(right, "   "+l.Detail)
 				}
@@ -319,6 +319,68 @@ func glyph(state string) string {
 		return "●"
 	default:
 		return "?"
+	}
+}
+
+func goalGlyph(g goal, selected bool) string {
+	if !knownKind(g.kind) || !knownState(g.state) {
+		return "?"
+	}
+	if selected && g.state == "active" {
+		return "●"
+	}
+	if g.state == "blocked" {
+		return "!"
+	}
+	if g.state == "failed" {
+		return "×"
+	}
+	if g.kind == "checkpoint" {
+		switch g.state {
+		case "awaiting-human-evaluation":
+			return "◇"
+		case "resuming":
+			return "↻"
+		}
+	}
+	if g.state == "active" {
+		switch g.kind {
+		case "verifier":
+			return "V"
+		case "refactor":
+			return "F"
+		case "review":
+			return "R"
+		case "pull-request":
+			return "P"
+		case "landing":
+			return "L"
+		case "cleanup":
+			return "C"
+		}
+	}
+	return glyph(g.state)
+}
+
+func lifecycleGlyph(kind, state string) string {
+	return goalGlyph(goal{kind: kind, state: state}, state == "active")
+}
+
+func knownKind(kind string) bool {
+	switch kind {
+	case "checkpoint", "verifier", "refactor", "review", "pull-request", "landing", "cleanup":
+		return true
+	default:
+		return false
+	}
+}
+
+func knownState(state string) bool {
+	switch state {
+	case "pending", "active", "awaiting-human-evaluation", "resuming", "blocked", "failed", "done":
+		return true
+	default:
+		return false
 	}
 }
 
