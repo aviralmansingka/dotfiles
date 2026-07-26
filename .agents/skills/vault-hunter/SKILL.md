@@ -16,11 +16,17 @@ terminal.
 - The Run Registry contains durable observations only. A child process state, Registry state, or Atlas display never
   advances canonical work.
 - Children never edit or commit the vault. The parent alone edits the target note, Feature checklist, weekly backlog,
-  and checkpoints.
+  and checkpoints. Never launch or wait for a child while Run-owned vault edits are uncommitted; keep transient stage
+  activity in the Registry and write canonical vault updates only inside an immediate checkpoint envelope.
+- Do not edit vault paths owned by another active Vault Hunter Run. If another Run may overlap the target note, Feature
+  checklist, weekly backlog, or branch, stop before editing until ownership is unambiguous.
 - Keep one writer in an implementation worktree. Parallelize reads, review, and isolated checks, not ordinary writes.
 - Preserve unrelated Git, Herdr, Neovim, and filesystem state.
 - A formal child is any delegated agent whose result may influence the Run. Every formal headless child must launch
   through `vault_hunter_step`; never call `subagent` directly for one.
+- After the parent minimally resolves the invocation target, all mechanical discovery that may inform routing,
+  specification, implementation, verification, review, or landing is performed by registered headless children. The
+  parent may validate returned facts but never fills missing discovery itself; launch another bounded child instead.
 
 ## Invocation
 
@@ -38,7 +44,10 @@ Before substantive discovery:
 4. Follow `$vault-hunter-checkpoint` in `invocation` mode with the exact owned vault paths. Commit but do not push.
 5. Only after that commit succeeds, call `vault_hunter_run` with the canonical target identity. Store its returned Run ID
    in the same backlog entry on the next accepted vault edit.
-6. If Registry creation fails, stop before dispatching a formal child. Do not fall back to an unregistered child.
+6. When the parent is Herdr-visible, immediately record a separate driver-placement participant containing its complete
+   workspace/tab/pane/terminal tuple and exact Pi session identity. If that observation cannot be recorded, block work
+   that depends on live participant correlation; never infer placement from cwd, labels, names, or session paths.
+7. If Registry creation fails, stop before dispatching a formal child. Do not fall back to an unregistered child.
 
 Before the invocation commit, emit no plan or clarification beyond the host's minimal skill acknowledgment.
 
@@ -68,8 +77,9 @@ Choose the cheapest runtime that preserves the stage's real needs.
 
 | Work | Default | Escalate to full Herdr Codex only when |
 |---|---|---|
-| Exact lookup, Git/CI status, baseline command, hash, immutable check | `delegate` via `vault_hunter_step`, fresh context, `openai-codex/gpt-5.4-mini:low` | Authentication or live operator interaction is required |
-| Bounded context synthesis or specification draft | `context-builder` via `vault_hunter_step`, fresh context | The same terminal must remain open across a human checkpoint |
+| Exact lookup, Git/CI status, baseline command, hash, immutable check | `delegate` via `vault_hunter_step`, fresh context, `openai-codex/gpt-5.6-luna:low` | Authentication or live operator interaction is required |
+| Mechanical context inventory: hierarchy, repository, instructions, Git state, and key paths | `delegate` via `vault_hunter_step`, fresh context, `openai-codex/gpt-5.6-luna:low` | Never escalate for synthesis; return a compact evidence pack and stop |
+| Specification draft and verifier judgment | `context-builder` via `vault_hunter_step`, fresh context, strong inherited model, accepted context pack plus exact canonical files | A concrete ambiguity requires live human exploration, or the same terminal must remain open across a human checkpoint |
 | Implementation or approved fix slice | `worker` via `vault_hunter_step`, exact worktree | A manual UI/demo or live steering is materially useful |
 | Independent review | `reviewer` via `vault_hunter_step`, fresh context, no edits | The human explicitly wants to inspect or interact with the reviewer |
 | Refactor judgment | `reviewer` headlessly; one `worker` only for accepted changes | The investigation is genuinely exploratory and interactive |
@@ -89,11 +99,16 @@ handoff, record its decision, and choose the next stage. Independent read-only j
 Call `vault_hunter_step` once per child with:
 
 - Registry Run ID, stable Goal ID, lifecycle kind, role, exact cwd/worktree, and chosen agent;
-- a compact prompt containing the outcome, accepted inputs and paths, invariants, validation, output shape, and stop
-  rules;
+- a compact prompt containing the outcome, accepted inputs and exact file allowlist, invariants, validation, output
+  shape, and stop rules; permit only directly relevant imports, callers, and tests beyond that allowlist;
+- no external research or `web_search` unless the stage explicitly requires current external evidence;
 - fresh context by default; fork only when inherited parent history is intentionally required;
 - `$ponytail` for implementation and fix workers;
 - `$vault-hunter-check` for exact declared check execution.
+
+Before launch, inspect the selected agent's configured model, tools, and extensions. If a required capability is
+unavailable, choose a compatible registered agent or stop before spawn; optional unavailable tools must not turn a
+completed bounded handoff into a failed formal stage.
 
 The wrapper persists a launch intent, launches asynchronously through `pi-subagents`, writes the native async-run
 participant and active observation to the Registry, binds the child beside its status artifact, and replays control and
@@ -106,7 +121,11 @@ inspection only after a completion or attention signal; never poll in a loop. `n
 observed, not that the child is stuck. Interrupt only on concrete drift, blockage, or explicit human request.
 
 A useful handoff reports changed paths, commands and exit codes, commit/tree when applicable, concise findings,
-remaining risks, and decisions requiring the parent. Child completion is not acceptance.
+remaining risks, and decisions requiring the parent. Child completion is not acceptance. If the formal child exits
+failed after producing an apparently complete artifact, do not accept it directly: launch one registered
+`openai-codex/gpt-5.6-luna:low` read-only validator to report only the artifact hash and required shape, repository
+cleanliness, and exact runtime error. The parent alone decides whether the failure is independent of the result and
+whether to accept the artifact.
 
 ### Herdr-visible child
 
@@ -127,9 +146,17 @@ retryable telemetry gap; it never overrides an independently accepted canonical 
 
 ## Resolve and route
 
-Use one bounded context child to read, in order, the project index, project README, owning Theme, Feature, and selected
-Task or Issue. Require ownership, route, implementation repository, applicable `AGENTS.md`, live Git state, and reusable
-Task worktree/Herdr state. Ask the user only if a material ambiguity remains.
+Build or reuse one compact context pack before specification judgment. When current accepted evidence does not already
+contain it, use a cheap `delegate` to read, in order, the project index, project README, owning Theme, Feature, and
+selected Task or Issue, then report only ownership, route, implementation repository, applicable `AGENTS.md`, live Git
+state, reusable Task worktree/Herdr state, and exact relevant paths. It makes no specification decisions and stops after
+the inventory. Reuse a still-current accepted pack on resume instead of launching another discovery child.
+
+For Feature or Task specification, give the strong `context-builder` that accepted pack plus the exact canonical files.
+It follows only directly relevant imports, callers, and tests needed for unresolved contract or verifier questions; it
+does not repeat hierarchy/Git discovery, scan the whole repository, or use external research unless a named requirement
+cannot otherwise be resolved. Stop after the canonical contract and concrete ambiguities are complete. Ask the user only
+if a material ambiguity remains.
 
 Route by target:
 
@@ -160,14 +187,18 @@ evidence items.
 
 Maintain one continuous backlog timeline. For each stage: record parent activation, dispatch through the router, inspect
 the handoff and repository evidence, record the parent decision, then update the Task note and backlog. The parent may
-perform small mechanical reads needed to validate a handoff but does not redo delegated investigation or implementation.
+perform small mechanical reads only to validate a handoff; if required evidence is missing, it launches another bounded
+registered child rather than discovering the answer itself. It does not redo delegated investigation or implementation.
 
 ### Specification and checkpoint one
 
-Use a headless `context-builder` for the specification draft unless the work itself requires an interactive prototype or
-manual UI evaluation. Produce the canonical Task contract and complete verifier ledger. The parent stores it, then
-follows `$vault-hunter-checkpoint` in `one` mode to commit and push the invocation and Task-note commits directly; never
-open a vault PR.
+Use a headless strong-model `context-builder` for the specification draft unless the work itself requires an interactive
+prototype or manual UI evaluation. Give it the accepted compact context pack and canonical Task files so it spends its
+context on contract and verifier judgment rather than rediscovery. Produce the canonical Task contract and complete
+verifier ledger. After accepting the handoff, the parent writes the Task and backlog updates and immediately follows
+`$vault-hunter-checkpoint` in `one` mode without
+yielding, launching another child, or leaving Run-owned vault changes uncommitted. Push the invocation and Task-note
+commits directly; never open a vault PR.
 
 Stop before implementation. Mark `Blocked — Awaiting human evaluation`, report the Task link, verifier ledger,
 checkpoint commits, and exact decision requested. A pure approval is handled by the parent. When feedback requires more
@@ -176,6 +207,10 @@ and exact feedback. Same-session resumption is reserved for a deliberately chose
 after the parent accepts the resulting specification.
 
 ### One goal per verifier
+
+Before launching an implementation or fix writer, require a clean worktree except for explicitly accepted source
+changes. Treat `.pi-subagents/` and other runtime-generated files as owned runtime debris: remove only the current Run's
+artifacts when safe, or block the writer. Never silently include runtime artifacts in implementation commits.
 
 For each verifier in order:
 
@@ -204,8 +239,8 @@ major specification/architecture violation remains; do not chase optional polish
 
 1. Launch a final check child and refresh each existing `EX01` in place from accepted evidence.
 2. Launch a bounded release worker to push implementation and open the PR. Never arm auto-merge.
-3. Use cheap registered observer children for discrete CI/approval status reads. Do not keep an agent alive merely to
-   poll.
+3. Use registered `openai-codex/gpt-5.6-luna:low` observer children for discrete CI/approval status reads. Do not keep
+   an agent alive merely to poll.
 4. Fix CI failures through the same single-writer and verifier loop. Never bypass branch protection or approval.
 5. When ready, report and wait for explicit human merge.
 6. After merge, launch a registered check child against a temporary detached worktree at fetched merged main.
