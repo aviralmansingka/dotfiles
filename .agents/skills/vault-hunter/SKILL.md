@@ -43,11 +43,11 @@ Before substantive discovery:
 3. Add the single weekly backlog entry below.
 4. Follow `$vault-hunter-checkpoint` in `invocation` mode with the exact owned vault paths. Commit but do not push.
 5. Only after that commit succeeds, call `vault_hunter_run` with the canonical target identity. Store its returned Run ID
-   in the same backlog entry on the next accepted vault edit.
-6. When the parent is Herdr-visible, immediately record a separate driver-placement participant containing its complete
-   workspace/tab/pane/terminal tuple and exact Pi session identity. If that observation cannot be recorded, block work
-   that depends on live participant correlation; never infer placement from cwd, labels, names, or session paths.
-7. If Registry creation fails, stop before dispatching a formal child. Do not fall back to an unregistered child.
+   in the same backlog entry on the next accepted vault edit. For an interactive parent, this call atomically resolves
+   and validates the current Herdr workspace/tab/pane/terminal tuple and exact Pi session binding; never infer or append
+   driver placement separately.
+6. If Registry creation or interactive Herdr registration fails, stop before dispatching a formal child. Do not fall
+   back to an unregistered child.
 
 Before the invocation commit, emit no plan or clarification beyond the host's minimal skill acknowledgment.
 
