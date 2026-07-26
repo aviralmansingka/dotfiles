@@ -57,11 +57,23 @@ type Binding = {
 
 type LaunchIntent = Omit<Binding, "asyncRunId" | "asyncDir"> & { launchId: string };
 type RpcReply = { success: true; data: any } | { success: false; error: { message: string } };
+type DriverPlacement = {
+  observedAt: string;
+  herdr: { workspaceId: string; tabId: string; paneId: string; terminalId: string };
+  agentSession: { source: string; kind: string; value: string };
+};
 class AmbiguousLaunchError extends Error {}
 
 function now(): string { return new Date().toISOString(); }
 function slug(value: string): string { return value.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "run"; }
 function text(content: string, details: unknown) { return { content: [{ type: "text" as const, text: content }], details }; }
+
+function wireHerdr(input: any) {
+  return input ? {
+    workspace_id: input.workspaceId, tab_id: input.tabId,
+    pane_id: input.paneId, terminal_id: input.terminalId,
+  } : null;
+}
 
 function wireParticipant(input: any) {
   return {
@@ -69,10 +81,7 @@ function wireParticipant(input: any) {
     observed_at: input.observedAt ?? now(),
     role: input.role,
     goal_id: input.goalId ?? "",
-    herdr: input.herdr ? {
-      workspace_id: input.herdr.workspaceId, tab_id: input.herdr.tabId,
-      pane_id: input.herdr.paneId, terminal_id: input.herdr.terminalId,
-    } : null,
+    herdr: wireHerdr(input.herdr),
     agent_session: input.agentSession ? {
       source: input.agentSession.source, kind: input.agentSession.kind, value: input.agentSession.value,
     } : null,
@@ -102,6 +111,41 @@ function wireEvidence(input: any) {
     artifact_sha256: input.artifactSha256 ?? "",
     detail: input.detail ?? "",
   };
+}
+
+async function driverPlacement(pi: ExtensionAPI, ctx: ExtensionContext, signal?: AbortSignal): Promise<DriverPlacement | undefined> {
+  if (ctx.mode !== "tui") return undefined;
+  const paneId = process.env.HERDR_ENV === "1" ? process.env.HERDR_PANE_ID : undefined;
+  if (!paneId) throw new Error("Interactive Vault Hunter drivers must run inside a Herdr pane.");
+
+  const response = await pi.exec("herdr", ["pane", "get", paneId], { signal, timeout: 5_000 });
+  if (response.code !== 0) throw new Error(response.stderr.trim() || `Herdr could not resolve pane ${paneId}.`);
+  const decoded = JSON.parse(response.stdout);
+  const pane = decoded?.result?.pane ?? decoded?.pane;
+  const sessionFile = ctx.sessionManager.getSessionFile();
+  const session = pane?.agent_session;
+  const fields = [pane?.workspace_id, pane?.tab_id, pane?.pane_id, pane?.terminal_id];
+  if (fields.some((value) => typeof value !== "string" || !value)) throw new Error(`Herdr returned an incomplete identity for pane ${paneId}.`);
+  if (pane.pane_id !== paneId) throw new Error(`Herdr resolved ${paneId} as a different pane.`);
+  if (!sessionFile || session?.source !== "herdr:pi" || session?.kind !== "path" || session?.value !== sessionFile) {
+    throw new Error(`Herdr pane ${paneId} is not bound to this Pi session.`);
+  }
+  const paneCwd = pane.foreground_cwd ?? pane.cwd;
+  if (!paneCwd || realpathSync(paneCwd) !== realpathSync(ctx.cwd)) throw new Error(`Herdr pane ${paneId} is not in this Pi session's cwd.`);
+
+  return {
+    observedAt: now(),
+    herdr: { workspaceId: pane.workspace_id, tabId: pane.tab_id, paneId: pane.pane_id, terminalId: pane.terminal_id },
+    agentSession: { source: session.source, kind: session.kind, value: session.value },
+  };
+}
+
+function sameDriver(input: any, participantId: string, herdr: any, agentSession: any): boolean {
+  return input?.participant_id === participantId &&
+    input?.herdr?.workspace_id === herdr?.workspace_id && input?.herdr?.tab_id === herdr?.tab_id &&
+    input?.herdr?.pane_id === herdr?.pane_id && input?.herdr?.terminal_id === herdr?.terminal_id &&
+    input?.agent_session?.source === agentSession.source && input?.agent_session?.kind === agentSession.kind &&
+    input?.agent_session?.value === agentSession.value;
 }
 
 function registry(input: Record<string, unknown>, signal?: AbortSignal): Promise<any> {
@@ -289,6 +333,16 @@ async function replayAll(ctx?: ExtensionContext): Promise<void> {
 export default function (pi: ExtensionAPI) {
   let currentCtx: ExtensionContext | undefined;
   let intentTimer: ReturnType<typeof setTimeout> | undefined;
+  let registrationQueue = Promise.resolve();
+
+  async function serializeRegistration<T>(work: () => Promise<T>): Promise<T> {
+    const previous = registrationQueue;
+    let release!: () => void;
+    registrationQueue = new Promise<void>((resolve) => { release = resolve; });
+    await previous;
+    try { return await work(); }
+    finally { release(); }
+  }
 
   function reconcilePendingIntents(ctx: ExtensionContext, deadline = Date.now() + 30_000): void {
     if (intentTimer) clearTimeout(intentTimer);
@@ -343,27 +397,48 @@ export default function (pi: ExtensionAPI) {
     label: "Start Vault Hunter Run",
     description: "Create or reopen one durable observational Vault Hunter Run Registry record and register this Pi driver.",
     promptSnippet: "Create the observational Run Registry record before dispatching Vault Hunter children.",
-    promptGuidelines: ["Use vault_hunter_run once after the Vault Hunter invocation commit and before any formal child dispatch."],
+    promptGuidelines: ["Use vault_hunter_run once after the Vault Hunter invocation commit and before any formal child dispatch; interactive drivers are atomically registered with their current Herdr placement."],
     parameters: Type.Object({
       runId: Type.Optional(Type.String()), task: TaskSchema, invokedAt: Type.Optional(Type.String()),
     }),
     async execute(_id, params, signal, _update, ctx) {
-      const invokedAt = params.invokedAt ?? now();
-      const runId = params.runId ?? `vh-${slug(params.task.id)}-${Date.now()}`;
-      const sessionId = ctx.sessionManager.getSessionId();
-      const run = await registry({
-        action: "create", root: REGISTRY_ROOT, run: {
-          schema_version: 1, run_id: runId, revision: 0, invoked_at: invokedAt, updated_at: invokedAt,
-          task: { id: params.task.id, title: params.task.title, path: params.task.path, feature_path: params.task.featurePath, kind: params.task.kind },
-          participants: [{
-            participant_id: `pi-${sessionId}`, observed_at: invokedAt, role: "driver", goal_id: "run",
-            herdr: null, agent_session: { source: "pi", kind: "session-id", value: sessionId },
-          }],
-          lifecycle: [{ observation_id: `${runId}-invoked`, observed_at: invokedAt, kind: "run", goal_id: "run", state: "active", detail: "Pi driver created the observational Run record." }],
-          evidence: [],
-        },
-      }, signal);
-      return text(`Vault Hunter Run ${runId} is observable at revision ${run.revision}.`, { runId, revision: run.revision, root: REGISTRY_ROOT });
+      return serializeRegistration(async () => {
+        const runId = params.runId ?? `vh-${slug(params.task.id)}-${Date.now()}`;
+        let existing: any;
+        if (params.runId) {
+          try { existing = await registry({ action: "get", root: REGISTRY_ROOT, run_id: runId }, signal); }
+          catch (error) { if (!String(error).includes("run not found")) throw error; }
+        }
+        if (existing && params.invokedAt && existing.invoked_at !== params.invokedAt) {
+          throw new Error(`Vault Hunter Run ${runId} has a different invocation timestamp.`);
+        }
+        const invokedAt = existing?.invoked_at ?? params.invokedAt ?? now();
+        const sessionId = ctx.sessionManager.getSessionId();
+        const placement = await driverPlacement(pi, ctx, signal);
+        const observedAt = placement?.observedAt ?? now();
+        const participantId = `pi-${sessionId}`;
+        const agentSession = placement?.agentSession ?? { source: "pi", kind: "session-id", value: sessionId };
+        const participant = {
+          participant_id: participantId, observed_at: observedAt, role: "driver", goal_id: "run",
+          herdr: wireHerdr(placement?.herdr),
+          agent_session: { source: agentSession.source, kind: agentSession.kind, value: agentSession.value },
+        };
+        let run = await registry({
+          action: "create", root: REGISTRY_ROOT, run: {
+            schema_version: 1, run_id: runId, revision: 0, invoked_at: invokedAt, updated_at: observedAt,
+            task: { id: params.task.id, title: params.task.title, path: params.task.path, feature_path: params.task.featurePath, kind: params.task.kind },
+            participants: [participant],
+            lifecycle: [{ observation_id: `${runId}-invoked`, observed_at: invokedAt, kind: "run", goal_id: "run", state: "active", detail: "Pi driver created the observational Run record." }],
+            evidence: [],
+          },
+        }, signal);
+        if (!(run.participants ?? []).some((item: any) => sameDriver(item, participantId, participant.herdr, participant.agent_session))) {
+          run = await registry({ action: "append", root: REGISTRY_ROOT, run_id: runId, updated_at: observedAt, participant }, signal);
+        }
+        return text(`Vault Hunter Run ${runId} is observable at revision ${run.revision}.`, {
+          runId, revision: run.revision, root: REGISTRY_ROOT, herdr: placement?.herdr,
+        });
+      });
     },
   });
 
