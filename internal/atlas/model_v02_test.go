@@ -1,6 +1,7 @@
 package atlas
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -79,9 +80,72 @@ func TestT02V02KeyboardResizeAndMotion(t *testing.T) {
 		if m.selected != 2 {
 			t.Fatalf("too-small resize changed selection to %d", m.selected)
 		}
+		m = update(t, m, tea.WindowSizeMsg{Width: 1, Height: 1})
+		tiny := m.View()
+		assertBounds(t, tiny, 1, 1)
+		if tiny == "" || m.View() != tiny {
+			t.Fatal("1x1 projection is empty or nondeterministic")
+		}
 		m = update(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
 		if m.selected != 2 || !strings.Contains(m.View(), "▶ ● three") {
 			t.Fatal("supported-size recovery did not preserve selection")
+		}
+	})
+
+	t.Run("long goal list keeps selection visible without wrapping", func(t *testing.T) {
+		var lifecycle []vaultregistry.Lifecycle
+		for i := 0; i < 30; i++ {
+			state := "done"
+			if i == 29 {
+				state = "active"
+			}
+			lifecycle = append(lifecycle, vaultregistry.Lifecycle{
+				GoalID: fmt.Sprintf("goal-%02d", i), Kind: "verifier", State: state,
+				ObservedAt: fmt.Sprintf("2026-07-26T10:%02d:00Z", i),
+			})
+		}
+		m := NewModel(vaultregistry.Run{Lifecycle: lifecycle}, 80, 24)
+		assertSelectedGoalVisible(t, m, "goal-29")
+		for range lifecycle {
+			m = update(t, m, tea.KeyMsg{Type: tea.KeyUp})
+		}
+		if m.selected != 0 {
+			t.Fatalf("long-list Up wrapped to %d", m.selected)
+		}
+		assertSelectedGoalVisible(t, m, "goal-00")
+		for range lifecycle {
+			m = update(t, m, tea.KeyMsg{Type: tea.KeyDown})
+		}
+		if m.selected != 29 {
+			t.Fatalf("long-list Down wrapped to %d", m.selected)
+		}
+		assertSelectedGoalVisible(t, m, "goal-29")
+	})
+
+	t.Run("long journey keeps current context visible", func(t *testing.T) {
+		longRun := vaultregistry.Run{}
+		for i := 0; i < 24; i++ {
+			longRun.Lifecycle = append(longRun.Lifecycle, vaultregistry.Lifecycle{
+				GoalID: "long", Kind: "verifier", State: "active",
+				ObservedAt: fmt.Sprintf("2026-07-26T10:%02d:00Z", i),
+				Detail:     fmt.Sprintf("journey-%02d", i),
+			})
+		}
+		exit := 1
+		longRun.Evidence = []vaultregistry.Evidence{{
+			VerifierID: "long", ObservedAt: "2026-07-26T10:24:00Z",
+			State: "red", Detail: "tail-evidence", ExitStatus: &exit,
+		}}
+		longRun.Participants = []vaultregistry.Participant{{
+			ParticipantID: "tail-participant", GoalID: "long", Role: "verifier",
+			ObservedAt: "2026-07-26T10:25:00Z",
+		}}
+		view := NewModel(longRun, 100, 30).View()
+		assertBounds(t, view, 100, 30)
+		for _, want := range []string{"journey-23", "tail-evidence", "tail-participant"} {
+			if !strings.Contains(view, want) {
+				t.Errorf("long journey omitted current context %q", want)
+			}
 		}
 	})
 
@@ -117,6 +181,21 @@ func TestT02V02KeyboardResizeAndMotion(t *testing.T) {
 			t.Fatal("reduced-motion frames differ")
 		}
 	})
+}
+
+func assertSelectedGoalVisible(t *testing.T, m Model, goalID string) {
+	t.Helper()
+	view := m.View()
+	assertBounds(t, view, m.width, m.height)
+	selected := ""
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "▶") {
+			selected = line
+		}
+	}
+	if strings.Count(view, "▶") != 1 || !strings.Contains(selected, goalID) {
+		t.Errorf("selected goal %q is not visible exactly once", goalID)
+	}
 }
 
 func update(t *testing.T, m Model, msg tea.Msg) Model {
