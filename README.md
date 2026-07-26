@@ -27,6 +27,7 @@ For manual installation:
 ```sh
 brew bundle
 stow nvim tmux zsh ghostty git starship agents pi herdr launchd
+GOBIN="$HOME/.local/bin" go install ./cmd/vault-hunter-atlas
 ```
 
 On Linux (systemd) systems, deploy the user services with:

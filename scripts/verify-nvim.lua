@@ -1298,6 +1298,7 @@ local function validate_sidekick_herdr()
     if preview_swaps ~= 1 then
       fail("unchanged working-session content should swap the prepared preview only once")
     end
+    toggle_selector[1]()
     current_fake_item = vim.tbl_extend("force", {}, current_fake_item, {
       agent_name = "codex-full-preview",
       tool = "codex",
@@ -1566,6 +1567,26 @@ local function validate_sidekick_herdr()
         fail("T04 V01 matched Atlas native preview is incomplete at " .. size .. ": " .. vim.inspect(rendered))
       end
 
+      local blank_layout_buf = vim.api.nvim_create_buf(false, true)
+      fake_picker.preview.win.buf = blank_layout_buf
+      local layout_swaps = preview_swaps
+      atlas_picker_opts.preview({ item = atlas_item, preview = fake_picker.preview })
+      vim.wait(1000, function() return preview_swaps > layout_swaps end, 10)
+      local layout_rendered = table.concat(
+        vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
+        "\n"
+      )
+      if preview_swaps ~= layout_swaps + 1
+        or fake_picker.preview.win.buf == blank_layout_buf
+        or not layout_rendered:find("Run atlas-rich-run · Goal 3/5 T02.V01", 1, true)
+      then
+        fail("T04 V01 same-selection layout callback should re-stage active Atlas at " .. size)
+      end
+      atlas_buf = fake_picker.preview.win.buf
+      if vim.api.nvim_buf_is_valid(blank_layout_buf) then
+        vim.api.nvim_buf_delete(blank_layout_buf, { force = true })
+      end
+
       local reads_with_atlas = async_reads
       local swaps_with_atlas = preview_swaps
       vim.wait(200)
@@ -1703,6 +1724,26 @@ local function validate_sidekick_herdr()
         end
       end
     end
+    local fallback_layout_item = vim.deepcopy(fallback_item)
+    fallback_layout_item._atlas_fallback_case = "unregistered"
+    current_fake_item = fallback_layout_item
+    local fallback_layout_calls = fallback_calls.unregistered
+    local fallback_layout_swaps = preview_swaps
+    fallback_picker_opts.preview({ item = fallback_layout_item, preview = fake_picker.preview })
+    vim.wait(1000, function() return preview_swaps > fallback_layout_swaps end, 10)
+    fallback_picker_opts.preview({ item = fallback_layout_item, preview = fake_picker.preview })
+    vim.wait(1000, function() return preview_swaps > fallback_layout_swaps + 1 end, 10)
+    local fallback_layout_bytes = table.concat(
+      vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
+      "\n"
+    )
+    if fallback_calls.unregistered ~= fallback_layout_calls + 1
+      or preview_swaps ~= fallback_layout_swaps + 2
+      or fallback_layout_bytes ~= default_preview_bytes
+    then
+      fallback_failures[#fallback_failures + 1] = "same-selection layout callback did not re-stage fallback"
+    end
+
     if not vim.deep_equal(config.cli.tools, registered_tools) then
       fallback_failures[#fallback_failures + 1] = "changed the Sidekick Registry"
     end

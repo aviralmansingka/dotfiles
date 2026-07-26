@@ -61,6 +61,14 @@ func (c Client) Preview(reader *vaultregistry.Reader, selected Agent, width, hei
 				continue
 			}
 			taskRecorded = true
+			if participant.AgentSession == nil {
+				stale = true
+				continue
+			}
+			if !sameSession(*participant.AgentSession, *selected.AgentSession) {
+				contradictory = true
+				continue
+			}
 			switch correlations[index].State {
 			case "matched":
 				matches = append(matches, candidate{run: run, participant: participant})
