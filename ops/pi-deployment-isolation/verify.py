@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Verify the T02.V01 exclusive deployment ownership fixture."""
+"""Verify declarative Pi deployment-isolation fixtures."""
 
 import argparse
 import json
 import sys
 from pathlib import Path
 
-GOAL = "T02.V01"
-KINDS = {
+V01_GOAL = "T02.V01"
+V01_KINDS = {
     "pi_process",
     "file_boundary",
     "session",
@@ -16,12 +16,31 @@ KINDS = {
     "transport_bridge",
     "lifecycle_resource",
 }
-VIOLATIONS = {"unowned", "multiply_owned", "shared", "peer_accessible"}
-RULE = {
+V01_VIOLATIONS = {"unowned", "multiply_owned", "shared", "peer_accessible"}
+V01_RULE = {
     "id": "exclusive_deployment_ownership",
     "owner_count": 1,
     "shared_application_state": False,
     "peer_application_state_access": False,
+}
+
+V02_GOAL = "T02.V02"
+V02_EDGE_MODES = {
+    "peer_control": {"control"},
+    "peer_awareness": {"discovery"},
+    "runtime_dependency": {"provisioning", "routing", "monitoring"},
+    "peer_failure_propagation": {"availability"},
+}
+V02_EDGE_KINDS = set(V02_EDGE_MODES)
+V02_DEPENDENCY_MODES = set().union(*V02_EDGE_MODES.values())
+V02_RULE = {
+    "id": "peer_deployment_independence",
+    "runtime_discovery_dependency": False,
+    "runtime_provisioning_dependency": False,
+    "runtime_routing_dependency": False,
+    "runtime_monitoring_dependency": False,
+    "peer_control": False,
+    "peer_availability_dependency": False,
 }
 
 
@@ -70,7 +89,7 @@ def resource_violations(resource, where):
     )
     require(type(resource["id"]) is str and resource["id"], f"{where}.id must be a non-empty string")
     kind = resource["kind"]
-    require(type(kind) is str and kind in KINDS, f"{where}.kind is unknown: {kind!r}")
+    require(type(kind) is str and kind in V01_KINDS, f"{where}.kind is unknown: {kind!r}")
     owners = string_list(resource["owners"], f"{where}.owners")
     require(type(resource["shared"]) is bool, f"{where}.shared must be a boolean")
     require(
@@ -90,12 +109,12 @@ def resource_violations(resource, where):
     return violations
 
 
-def verify(fixture):
+def verify_v01(fixture):
     object_with_keys(fixture, {"goal", "rule", "assertions", "cases"}, "fixture")
-    require(fixture["goal"] == GOAL, f"fixture.goal must be {GOAL}")
+    require(fixture["goal"] == V01_GOAL, f"fixture.goal must be {V01_GOAL}")
 
-    object_with_keys(fixture["rule"], set(RULE), "fixture.rule")
-    require(fixture["rule"] == RULE, "fixture.rule does not define exclusive deployment ownership")
+    object_with_keys(fixture["rule"], set(V01_RULE), "fixture.rule")
+    require(fixture["rule"] == V01_RULE, "fixture.rule does not define exclusive deployment ownership")
 
     assertions = fixture["assertions"]
     object_with_keys(
@@ -113,8 +132,8 @@ def verify(fixture):
         "fixture.assertions.rejected_violations",
         allow_empty=False,
     ))
-    require(asserted_kinds == KINDS, "fixture assertions do not require every resource kind")
-    require(asserted_violations == VIOLATIONS, "fixture assertions do not require every violation mode")
+    require(asserted_kinds == V01_KINDS, "fixture assertions do not require every resource kind")
+    require(asserted_violations == V01_VIOLATIONS, "fixture assertions do not require every violation mode")
 
     cases = fixture["cases"]
     require(type(cases) is list and cases, "fixture.cases must be a non-empty array")
@@ -159,17 +178,129 @@ def verify(fixture):
     require(rejected_violations >= asserted_violations, "unmet assertion: violating cases do not reject every violation mode")
 
 
+def peer_edge(edge, where):
+    object_with_keys(edge, {"kind", "mode"}, where)
+    kind = edge["kind"]
+    mode = edge["mode"]
+    require(type(kind) is str and kind in V02_EDGE_KINDS, f"{where}.kind is unknown: {kind!r}")
+    require(type(mode) is str and mode in V02_DEPENDENCY_MODES, f"{where}.mode is unknown: {mode!r}")
+    require(mode in V02_EDGE_MODES[kind], f"{where} has invalid kind/mode pairing: {kind}/{mode}")
+    return kind, mode
+
+
+def verify_v02(fixture):
+    object_with_keys(fixture, {"goal", "rule", "assertions", "cases"}, "fixture")
+    require(fixture["goal"] == V02_GOAL, f"fixture.goal must be {V02_GOAL}")
+
+    object_with_keys(fixture["rule"], set(V02_RULE), "fixture.rule")
+    require(fixture["rule"] == V02_RULE, "fixture.rule does not define peer-deployment independence")
+
+    assertions = fixture["assertions"]
+    object_with_keys(
+        assertions,
+        {"independent_peer_states", "rejected_edge_kinds", "rejected_dependency_modes"},
+        "fixture.assertions",
+    )
+    asserted_states = set(string_list(
+        assertions["independent_peer_states"],
+        "fixture.assertions.independent_peer_states",
+        allow_empty=False,
+    ))
+    asserted_kinds = set(string_list(
+        assertions["rejected_edge_kinds"],
+        "fixture.assertions.rejected_edge_kinds",
+        allow_empty=False,
+    ))
+    asserted_modes = set(string_list(
+        assertions["rejected_dependency_modes"],
+        "fixture.assertions.rejected_dependency_modes",
+        allow_empty=False,
+    ))
+    require(asserted_states == {"absent"}, "fixture assertions must require operation with a peer absent")
+    require(asserted_kinds == V02_EDGE_KINDS, "fixture assertions do not reject every peer edge kind")
+    require(asserted_modes == V02_DEPENDENCY_MODES, "fixture assertions do not reject every dependency mode")
+
+    cases = fixture["cases"]
+    require(type(cases) is list and cases, "fixture.cases must be a non-empty array")
+    case_ids = set()
+    independent_states = set()
+    rejected_kinds = set()
+    rejected_modes = set()
+    verdicts = set()
+
+    for case_index, case in enumerate(cases):
+        where = f"fixture.cases[{case_index}]"
+        object_with_keys(
+            case,
+            {"id", "expected", "subject", "peer", "peer_state", "subject_operational", "peer_edges"},
+            where,
+        )
+        case_id = case["id"]
+        require(type(case_id) is str and case_id, f"{where}.id must be a non-empty string")
+        require(case_id not in case_ids, f"duplicate case id: {case_id}")
+        case_ids.add(case_id)
+        expected = case["expected"]
+        require(type(expected) is str and expected in {"conforming", "violating"}, f"{where}.expected is unknown")
+        subject = case["subject"]
+        peer = case["peer"]
+        require(type(subject) is str and subject, f"{where}.subject must be a non-empty string")
+        require(type(peer) is str and peer, f"{where}.peer must be a non-empty string")
+        require(subject != peer, f"{where}.subject and peer must identify different deployments")
+        peer_state = case["peer_state"]
+        require(
+            type(peer_state) is str and peer_state in {"absent", "available", "failed"},
+            f"{where}.peer_state is unknown: {peer_state!r}",
+        )
+        require(type(case["subject_operational"]) is bool, f"{where}.subject_operational must be a boolean")
+        edges = case["peer_edges"]
+        require(type(edges) is list, f"{where}.peer_edges must be an array")
+
+        found_kinds = set()
+        found_modes = set()
+        edge_pairs = set()
+        for edge_index, edge in enumerate(edges):
+            kind, mode = peer_edge(edge, f"{where}.peer_edges[{edge_index}]")
+            require((kind, mode) not in edge_pairs, f"{where}.peer_edges must not contain duplicates")
+            edge_pairs.add((kind, mode))
+            found_kinds.add(kind)
+            found_modes.add(mode)
+
+        actual = "violating" if edges else "conforming"
+        require(expected == actual, f"{where} expected {expected} but peer independence is {actual}")
+        verdicts.add(actual)
+        if actual == "conforming" and case["subject_operational"]:
+            independent_states.add(peer_state)
+        elif actual == "violating":
+            rejected_kinds.update(found_kinds)
+            rejected_modes.update(found_modes)
+
+    require(verdicts == {"conforming", "violating"}, "fixture must contain conforming and violating cases")
+    require(independent_states >= asserted_states, "unmet assertion: no operating deployment with its peer absent")
+    require(rejected_kinds >= asserted_kinds, "unmet assertion: violating cases do not reject every peer edge kind")
+    require(rejected_modes >= asserted_modes, "unmet assertion: violating cases do not reject every dependency mode")
+
+
+VERIFIERS = {
+    V01_GOAL: verify_v01,
+    V02_GOAL: verify_v02,
+}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fixture", required=True, type=Path)
     args = parser.parse_args()
+    goal = "fixture"
     try:
         fixture = json.loads(args.fixture.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
-        verify(fixture)
+        if type(fixture) is dict and fixture.get("goal") in VERIFIERS:
+            goal = fixture["goal"]
+        require(goal in VERIFIERS, "fixture.goal is unknown")
+        VERIFIERS[goal](fixture)
     except (FixtureError, OSError, UnicodeError, json.JSONDecodeError) as error:
-        print(f"FAIL {GOAL}: {error}", file=sys.stderr)
+        print(f"FAIL {goal}: {error}", file=sys.stderr)
         return 1
-    print(f"PASS {GOAL}")
+    print(f"PASS {goal}")
     return 0
 
 
