@@ -9,23 +9,61 @@ import (
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
-func TestT02V01PaneSplitUsesFloor(t *testing.T) {
+func TestT02V01EveryPaneRowUsesFloorSplit(t *testing.T) {
 	run := vaultregistry.Run{
 		RunID: "run",
 		Task:  vaultregistry.Task{ID: "T02", Title: "Atlas"},
 		Lifecycle: []vaultregistry.Lifecycle{
-			{GoalID: "V01", Kind: "verifier", State: "active"},
+			{
+				GoalID:     "T02.V01",
+				Kind:       "verifier",
+				State:      "active",
+				ObservedAt: "2026-07-26T12:05:00Z",
+			},
 		},
 	}
-	for _, width := range []int{80, 83} {
-		line := strings.Split(NewModel(run, width, 24).View(), "\n")[4]
-		left, _, ok := strings.Cut(line, "│")
-		if !ok {
-			t.Fatalf("width %d: content row has no divider: %q", width, line)
+	for _, size := range []struct {
+		width, height int
+	}{{100, 30}, {80, 24}} {
+		lines := strings.Split(NewModel(run, size.width, size.height).View(), "\n")
+		if got, want := len(lines), size.height-1; got != want {
+			t.Fatalf("%dx%d: got %d rows, want %d", size.width, size.height, got, want)
 		}
-		want := width * 42 / 100
-		if got := lipgloss.Width(left); got != want {
-			t.Errorf("width %d: divider follows %d left cells, want floor(%d*42/100) = %d", width, got, width, want)
+		for row, line := range lines[1:] {
+			divider := "│"
+			if row == 1 {
+				divider = "┼"
+			}
+			left, _, ok := strings.Cut(line, divider)
+			if !ok {
+				t.Fatalf("%dx%d row %d: no %q divider: %q", size.width, size.height, row+2, divider, line)
+			}
+			want := size.width * 42 / 100
+			if got := lipgloss.Width(left); got != want {
+				t.Errorf("%dx%d row %d: divider follows %d left cells, want floor(%d*42/100) = %d", size.width, size.height, row+2, got, size.width, want)
+			}
+		}
+	}
+}
+
+func TestT02V01ActiveVerifierRetainsVerifierGlyph(t *testing.T) {
+	run := vaultregistry.Run{
+		RunID: "run",
+		Task:  vaultregistry.Task{ID: "T02", Title: "Atlas"},
+		Lifecycle: []vaultregistry.Lifecycle{{
+			GoalID:     "T02.V01",
+			Kind:       "verifier",
+			State:      "active",
+			ObservedAt: "2026-07-26T12:05:00Z",
+		}},
+	}
+	view := NewModel(run, 100, 30).View()
+	for _, want := range []string{
+		"▶ V T02.V01 · verifier · active",
+		" V 12:05 verifier · active",
+	} {
+		if !strings.Contains(view, want) {
+			t.Errorf("active verifier projection missing %q:\n%s", want, view)
 		}
 	}
 }

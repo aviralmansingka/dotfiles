@@ -1,10 +1,10 @@
 Run atlas-rich-run · Task T02 · Build the Compact Atlas Renderer
-Task Goals                      │ Verifier Journey
-────────────────────────────────┼───────────────────────────────────────────────
-  ✓ checkpoint-one · checkpoint…│ T02.V01 · verifier · active
+Task Goals                       │ Verifier Journey
+─────────────────────────────────┼──────────────────────────────────────────────
+  ✓ checkpoint-one · checkpoint… │ T02.V01 · verifier · active
   ✓ A-tie · review · done        │
-▶ ● T02.V01 · verifier · active  │ ● 12:01 verifier · pending
-  ? future-goal · future-kind ·… │ ● 12:05 verifier · active
+▶ V T02.V01 · verifier · active  │ ● 12:01 verifier · pending
+  ? future-goal · future-kind ·… │ V 12:05 verifier · active
   ? evidence-only · ? · ?        │   baseline red captured; implementatio…
                                  │ ! 12:05 evidence · failed · exit 1
                                  │   baseline red
