@@ -14,6 +14,7 @@ local session_paths = {}
 local spinner_refresh_ms = 80
 local preview_debounce_ms = 400
 local preview_settle_ms = 16
+local atlas_lookup_timeout_ms = 1000
 local full_preview_lines = 2147483647 -- Herdr clamps this to the available scrollback.
 local workspace_ns = vim.api.nvim_create_namespace("sidekick_workspace_picker")
 local status_rank = { working = 1, blocked = 2, done = 3, idle = 4 }
@@ -967,6 +968,18 @@ function M.open(opts)
           end)
         end)
       end)
+      vim.defer_fn(function()
+        if generation ~= preview_generation
+          or item ~= preview_selection
+          or not picker
+          or picker.closed
+          or atlas_phase ~= "pending"
+        then
+          return
+        end
+        stop_atlas_lookup()
+        render_default_preview(item, preview, generation)
+      end, atlas_lookup_timeout_ms)
       return
     end
     render_default_preview(item, preview, generation)
