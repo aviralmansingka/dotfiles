@@ -330,7 +330,7 @@ function M.send_to_agent(item)
     suffix and string.format("%s-%s-%s", item.project, item.feature, suffix)
       or string.format("%s-%s", item.project, item.feature)
   )
-  local name = "codex-" .. slug
+  local name = "pi-" .. slug
   local scope = item.kind == "task"
       and herdr.ensure_task_scope(
         item.repository,
@@ -345,7 +345,7 @@ function M.send_to_agent(item)
   local agent = herdr.get_agent(name)
 
   if not agent then
-    local command = internal.tool_command_for_named_session("codex", slug)
+    local command = internal.tool_command_for_named_session("pi", slug)
     command[#command + 1] = M.agent_prompt(item)
     return herdr.start(
       name,

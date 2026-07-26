@@ -3392,7 +3392,7 @@ local function validate_vault_features()
       end
       if
         not started
-        or started.name ~= "codex-neovim-vault-feature-picker-t01"
+        or started.name ~= "pi-neovim-vault-feature-picker-t01"
         or started.cwd ~= neovim_repository .. "/task-worktree"
         or started.scope.workspace_id ~= "w-task"
         or started.tab_label ~= "T01 Build tree picker."
@@ -3411,11 +3411,11 @@ local function validate_vault_features()
       end
       assert_sequence(
         started.command,
-        { "codex", "--dangerously-bypass-approvals-and-sandbox", linked_prompt },
+        { "pi", "--name", "neovim-vault-feature-picker-t01", linked_prompt },
         "feature task agent command"
       )
       if ran then
-        fail("a new Codex agent should receive its prompt as a launch argument")
+        fail("a new Pi agent should receive its prompt as a launch argument")
       end
 
       started = nil
@@ -3455,7 +3455,7 @@ local function validate_vault_features()
       end
       if
         not started
-        or started.name ~= "codex-neovim-weekly-backlog-helpers-t02"
+        or started.name ~= "pi-neovim-weekly-backlog-helpers-t02"
         or started.cwd ~= neovim_repository .. "/task-worktree"
         or started.scope.workspace_id ~= "w-task"
         or started.tab_label ~= "T02 Verify date navigation."
@@ -3473,11 +3473,11 @@ local function validate_vault_features()
       end
       assert_sequence(
         started.command,
-        { "codex", "--dangerously-bypass-approvals-and-sandbox", inline_prompt },
+        { "pi", "--name", "neovim-weekly-backlog-helpers-t02", inline_prompt },
         "inline feature task agent command"
       )
       if ran then
-        fail("a new inline Codex agent should receive vault-hunter as a launch argument")
+        fail("a new inline Pi agent should receive vault-hunter as a launch argument")
       end
 
       started = nil
@@ -3494,7 +3494,7 @@ local function validate_vault_features()
       end
       if
         not started
-        or started.name ~= "codex-neovim-vault-feature-picker"
+        or started.name ~= "pi-neovim-vault-feature-picker"
         or started.cwd ~= neovim_repository .. "/feature-worktree"
         or started.scope.workspace_id ~= "w-feature"
         or started.tab_label ~= "Vault Feature Picker"
@@ -3512,7 +3512,7 @@ local function validate_vault_features()
       end
       assert_sequence(
         started.command,
-        { "codex", "--dangerously-bypass-approvals-and-sandbox", feature_prompt },
+        { "pi", "--name", "neovim-vault-feature-picker", feature_prompt },
         "feature Vault Hunter command"
       )
     end, debug.traceback)
@@ -3549,14 +3549,14 @@ local function validate_vault_features()
     end
     local activation_ok, activation_err = xpcall(function()
       features.activate_agent({
-        name = "codex-neovim-vault-feature-picker-t01",
+        name = "pi-neovim-vault-feature-picker-t01",
         terminal_id = "feature-terminal",
       })
       assert_sequence(activation_events, {
         "load",
         "rehydrate",
-        "record:codex-neovim-vault-feature-picker-t01:feature-terminal",
-        "toggle:codex-neovim-vault-feature-picker-t01:true:feature-terminal",
+        "record:pi-neovim-vault-feature-picker-t01:feature-terminal",
+        "toggle:pi-neovim-vault-feature-picker-t01:true:feature-terminal",
       }, "feature task agent activation")
     end, debug.traceback)
     lazy.load = original_lazy_load
@@ -3587,7 +3587,7 @@ local function validate_vault_features()
     features.send_to_agent = function(item)
       action_item = item
       action_events[#action_events + 1] = "send"
-      return { name = "codex-neovim-vault-feature-picker-t01", terminal_id = "feature-terminal" }
+      return { name = "pi-neovim-vault-feature-picker-t01", terminal_id = "feature-terminal" }
     end
     features.activate_agent = function()
       action_events[#action_events + 1] = "activate"

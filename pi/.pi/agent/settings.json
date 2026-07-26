@@ -1,6 +1,7 @@
 {
   "packages": [
-    "npm:pi-mcp-adapter"
+    "npm:pi-mcp-adapter",
+    "npm:pi-subagents"
   ],
   "lastChangelogVersion": "0.81.1",
   "defaultProvider": "openai-codex",
