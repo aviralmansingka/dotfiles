@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
 const (
@@ -25,6 +27,32 @@ type Tuple struct {
 	TabID       string `json:"tab_id"`
 	PaneID      string `json:"pane_id"`
 	TerminalID  string `json:"terminal_id"`
+}
+
+// Agent is the live Herdr identity used for exact participant correlation.
+type Agent struct {
+	Name         string                      `json:"name"`
+	Agent        string                      `json:"agent"`
+	AgentStatus  string                      `json:"agent_status"`
+	WorkspaceID  string                      `json:"workspace_id"`
+	TabID        string                      `json:"tab_id"`
+	PaneID       string                      `json:"pane_id"`
+	TerminalID   string                      `json:"terminal_id"`
+	AgentSession *vaultregistry.AgentSession `json:"agent_session,omitempty"`
+}
+
+// Correlation keeps recorded and live identities separately observable.
+type Correlation struct {
+	State    string                    `json:"state"`
+	Recorded vaultregistry.Participant `json:"recorded"`
+	Live     *Agent                    `json:"live,omitempty"`
+}
+
+// Attachment is the owned companion tuple and the read-only participant view used by it.
+type Attachment struct {
+	Tuple
+	Participants []Correlation `json:"participants"`
+	LiveOnly     []Agent       `json:"live_only"`
 }
 
 // Client invokes a Herdr 0.7.1-compatible CLI.
@@ -56,6 +84,97 @@ type snapshot struct {
 	panes      []pane
 	processes  map[string][]process
 	candidates map[string]bool
+}
+
+// AttachRun validates the Reader-produced Run before creating a companion.
+func (c Client) AttachRun(run vaultregistry.Run, workspaceID, stateDir string) (Attachment, error) {
+	participants, liveOnly, err := c.correlate(run, workspaceID)
+	if err != nil {
+		return Attachment{}, err
+	}
+	tuple, err := c.Attach(run.RunID, workspaceID, stateDir)
+	if err != nil {
+		return Attachment{}, err
+	}
+	return Attachment{Tuple: tuple, Participants: participants, LiveOnly: liveOnly}, nil
+}
+
+func (c Client) correlate(run vaultregistry.Run, workspaceID string) ([]Correlation, []Agent, error) {
+	if run.Task.Kind != "task" {
+		return nil, nil, errors.New("only Task Runs can have an Atlas companion")
+	}
+	registered := false
+	for _, participant := range run.Participants {
+		if participant.Herdr != nil && completeHerdr(*participant.Herdr) && participant.Herdr.WorkspaceID == workspaceID {
+			registered = true
+			break
+		}
+	}
+	if !registered {
+		return nil, nil, errors.New("workspace is not registered by a complete participant identity")
+	}
+
+	var listed struct {
+		Agents []Agent `json:"agents"`
+	}
+	if err := c.call(&listed, "agent", "list"); err != nil {
+		return nil, nil, err
+	}
+	correlations, liveOnly := correlate(run.Participants, listed.Agents)
+	return correlations, liveOnly, nil
+}
+
+func correlate(participants []vaultregistry.Participant, agents []Agent) ([]Correlation, []Agent) {
+	used := make([]bool, len(agents))
+	correlations := make([]Correlation, 0, len(participants))
+	for _, recorded := range participants {
+		correlation := Correlation{State: "recorded-only", Recorded: recorded}
+		if recorded.Herdr != nil && completeHerdr(*recorded.Herdr) {
+			correlation.State = "stale"
+			match := -1
+			for i := range agents {
+				if sameHerdr(*recorded.Herdr, agents[i]) {
+					if match != -1 {
+						match = -2
+						break
+					}
+					match = i
+				}
+			}
+			if match >= 0 {
+				live := agents[match]
+				correlation.Live = &live
+				used[match] = true
+				if recorded.AgentSession != nil && live.AgentSession != nil && !sameSession(*recorded.AgentSession, *live.AgentSession) {
+					correlation.State = "contradictory"
+				} else {
+					correlation.State = "matched"
+				}
+			}
+		}
+		correlations = append(correlations, correlation)
+	}
+	var liveOnly []Agent
+	for i, agent := range agents {
+		if !used[i] {
+			liveOnly = append(liveOnly, agent)
+		}
+	}
+	return correlations, liveOnly
+}
+
+func sameHerdr(recorded vaultregistry.HerdrIdentity, live Agent) bool {
+	return completeHerdr(recorded) && live.WorkspaceID != "" && live.TabID != "" && live.PaneID != "" && live.TerminalID != "" &&
+		recorded.WorkspaceID == live.WorkspaceID && recorded.TabID == live.TabID &&
+		recorded.PaneID == live.PaneID && recorded.TerminalID == live.TerminalID
+}
+
+func completeHerdr(identity vaultregistry.HerdrIdentity) bool {
+	return identity.WorkspaceID != "" && identity.TabID != "" && identity.PaneID != "" && identity.TerminalID != ""
+}
+
+func sameSession(recorded, live vaultregistry.AgentSession) bool {
+	return recorded.Source == live.Source && recorded.Kind == live.Kind && recorded.Value == live.Value
 }
 
 func (c Client) Attach(runID, workspaceID, stateDir string) (Tuple, error) {

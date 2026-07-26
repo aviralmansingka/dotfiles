@@ -30,7 +30,9 @@ def save():
 def option(name):
     return args[args.index(name) + 1]
 
-if args[:2] == ["tab", "list"]:
+if args[:2] == ["agent", "list"]:
+    emit({"type": "agent_list", "agents": state["agents"]})
+elif args[:2] == ["tab", "list"]:
     workspace = option("--workspace")
     emit({"type": "tab_list", "tabs": [tab for tab in state["tabs"] if tab["workspace_id"] == workspace]})
 elif args[:2] == ["pane", "list"]:
@@ -75,12 +77,16 @@ PY
 chmod +x "$tmp/bin/herdr"
 
 cat >"$tmp/herdr.json" <<'JSON'
-{"counter":10,"tabs":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","label":"unrelated","pane_count":1},{"workspace_id":"ws-other","tab_id":"other-tab","label":"other workspace","pane_count":1}],"panes":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","pane_id":"unrelated-pane","terminal_id":"unrelated-terminal","processes":[{"argv":["unrelated-process"]}]},{"workspace_id":"ws-other","tab_id":"other-tab","pane_id":"other-pane","terminal_id":"other-terminal","processes":[{"argv":["other-process"]}]}]}
+{"counter":10,"agents":[{"name":"worker","agent":"pi","agent_status":"working","workspace_id":"ws-target","tab_id":"agent-tab","pane_id":"agent-pane","terminal_id":"agent-terminal"}],"tabs":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","label":"unrelated","pane_count":1},{"workspace_id":"ws-other","tab_id":"other-tab","label":"other workspace","pane_count":1}],"panes":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","pane_id":"unrelated-pane","terminal_id":"unrelated-terminal","processes":[{"argv":["unrelated-process"]}]},{"workspace_id":"ws-other","tab_id":"other-tab","pane_id":"other-pane","terminal_id":"other-terminal","processes":[{"argv":["other-process"]}]}]}
 JSON
 : >"$tmp/herdr.log"
 
 go test -count=1 ./internal/atlascompanion
 go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+go build -o "$tmp/vault-hunter-registry" ./cmd/vault-hunter-registry
+cat <<JSON | "$tmp/vault-hunter-registry" >/dev/null
+{"action":"create","root":"$tmp/state","run":{"schema_version":1,"run_id":"run-03","invoked_at":"2026-07-26T12:00:00Z","updated_at":"2026-07-26T12:00:00Z","task":{"id":"T03","title":"Integrate Atlas","path":"tasks/03.md","feature_path":"features/atlas.md","kind":"task"},"participants":[{"participant_id":"worker","observed_at":"2026-07-26T12:00:01Z","role":"worker","goal_id":"V01","herdr":{"workspace_id":"ws-target","tab_id":"agent-tab","pane_id":"agent-pane","terminal_id":"agent-terminal"},"agent_session":null}]}}
+JSON
 export HERDR_FAKE_STATE="$tmp/herdr.json" HERDR_FAKE_LOG="$tmp/herdr.log"
 PATH="$tmp/bin:$PATH"
 export PATH
@@ -112,8 +118,9 @@ cmp "$tmp/first.json" "$tmp/second.json"
 eval "$(python3 - "$tmp/first.json" <<'PY'
 import json, shlex, sys
 value = json.load(open(sys.argv[1]))
-assert set(value) == {"run_id", "workspace_id", "tab_id", "pane_id", "terminal_id"}
+assert set(value) == {"run_id", "workspace_id", "tab_id", "pane_id", "terminal_id", "participants", "live_only"}
 assert value["run_id"] == "run-03" and value["workspace_id"] == "ws-target"
+assert [item["state"] for item in value["participants"]] == ["matched"] and value["live_only"] is None
 for key in ("tab_id", "pane_id", "terminal_id"):
     print(f"{key}={shlex.quote(value[key])}")
 PY
@@ -228,14 +235,18 @@ test "$before" = "$(state_hash)"
 cleanup "$tab_id" "$pane_id" "$terminal_id" >"$tmp/cleanup-first.json"
 cleanup "$tab_id" "$pane_id" "$terminal_id" >"$tmp/cleanup-second.json"
 cmp "$tmp/cleanup-first.json" "$tmp/cleanup-second.json"
-cmp "$tmp/replaced.json" "$tmp/cleanup-first.json"
+python3 - "$tmp/replaced.json" "$tmp/cleanup-first.json" <<'PY'
+import json, sys
+attached, cleaned = map(lambda path: json.load(open(path)), sys.argv[1:])
+assert {key: attached[key] for key in cleaned} == cleaned
+PY
 
 python3 - "$tmp/herdr.json" "$tmp/herdr.log" <<'PY'
 import json, sys
 state = json.load(open(sys.argv[1]))
 assert {tab["tab_id"] for tab in state["tabs"]} == {"unrelated-tab", "other-tab"}
 assert {pane["pane_id"] for pane in state["panes"]} == {"unrelated-pane", "other-pane"}
-allowed = {("tab","list"), ("pane","list"), ("pane","process-info"), ("tab","create"), ("pane","run"), ("tab","close")}
+allowed = {("agent","list"), ("tab","list"), ("pane","list"), ("pane","process-info"), ("tab","create"), ("pane","run"), ("tab","close")}
 for line in open(sys.argv[2]):
     args = json.loads(line)
     assert tuple(args[:2]) in allowed, args

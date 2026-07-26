@@ -47,23 +47,31 @@ func companion(args []string) error {
 		return err
 	}
 	client := atlascompanion.Client{Herdr: "herdr", Executable: executable}
-	var tuple atlascompanion.Tuple
+	var result any
 	switch args[0] {
 	case "attach":
 		if *tabID != "" || *paneID != "" || *terminalID != "" {
 			return errors.New("attach does not accept cleanup tuple flags")
 		}
-		tuple, err = client.Attach(*runID, *workspaceID, *stateDir)
+		reader, openErr := vaultregistry.OpenReader(*stateDir)
+		if openErr != nil {
+			return openErr
+		}
+		run, getErr := reader.Get(*runID)
+		if getErr != nil {
+			return getErr
+		}
+		result, err = client.AttachRun(run, *workspaceID, *stateDir)
 	case "cleanup":
-		tuple = atlascompanion.Tuple{RunID: *runID, WorkspaceID: *workspaceID, TabID: *tabID, PaneID: *paneID, TerminalID: *terminalID}
-		err = client.Cleanup(tuple, *stateDir)
+		tuple := atlascompanion.Tuple{RunID: *runID, WorkspaceID: *workspaceID, TabID: *tabID, PaneID: *paneID, TerminalID: *terminalID}
+		result, err = tuple, client.Cleanup(tuple, *stateDir)
 	default:
 		return fmt.Errorf("unknown companion command %q", args[0])
 	}
 	if err != nil {
 		return err
 	}
-	return json.NewEncoder(os.Stdout).Encode(tuple)
+	return json.NewEncoder(os.Stdout).Encode(result)
 }
 
 func render(args []string) {
