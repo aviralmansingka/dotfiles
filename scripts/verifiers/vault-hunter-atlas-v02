@@ -1,0 +1,58 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture=scripts/fixtures/vault-hunter-atlas/runs/atlas-rich-run.json
+golden=scripts/goldens/vault-hunter-atlas/79x23.txt
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+go test -count=1 ./internal/atlas -run '^TestT02V02'
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+mkdir -p "$tmp/state/runs"
+cp "$fixture" "$tmp/state/runs/"
+
+snapshot="$tmp/snapshot"
+noninteractive="$tmp/noninteractive"
+dumb="$tmp/dumb"
+reduced="$tmp/reduced"
+small="$tmp/79x23"
+
+"$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+  --snapshot --width 80 --height 24 >"$snapshot"
+"$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+  --width 80 --height 24 </dev/null >"$noninteractive"
+TERM=dumb "$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+  --width 80 --height 24 >"$dumb"
+VAULT_HUNTER_REDUCED_MOTION=1 "$tmp/vault-hunter-atlas" \
+  --run-id atlas-rich-run --state-dir "$tmp/state" --width 80 --height 24 >"$reduced"
+cmp "$snapshot" "$noninteractive"
+cmp "$snapshot" "$dumb"
+cmp "$snapshot" "$reduced"
+
+for mode in snapshot noninteractive dumb reduced; do
+  cp "$tmp/$mode" "$tmp/$mode.first"
+done
+"$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+  --snapshot --width 80 --height 24 >"$snapshot"
+"$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+  --width 80 --height 24 </dev/null >"$noninteractive"
+TERM=dumb "$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+  --width 80 --height 24 >"$dumb"
+VAULT_HUNTER_REDUCED_MOTION=1 "$tmp/vault-hunter-atlas" \
+  --run-id atlas-rich-run --state-dir "$tmp/state" --width 80 --height 24 >"$reduced"
+for mode in snapshot noninteractive dumb reduced; do
+  cmp "$tmp/$mode.first" "$tmp/$mode"
+done
+
+"$tmp/vault-hunter-atlas" --run-id atlas-rich-run --state-dir "$tmp/state" \
+  --snapshot --width 79 --height 23 >"$small"
+cmp "$golden" "$small"
+test "$(wc -l <"$small" | tr -d ' ')" -eq 1
+if LC_ALL=C grep -q "$(printf '\033')" "$snapshot" "$noninteractive" "$dumb" "$reduced" "$small"; then
+  echo "static frame contains ANSI" >&2
+  exit 1
+fi
+
+echo "T02.V02 Atlas keyboard, sizing, and motion: PASS"
