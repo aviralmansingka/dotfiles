@@ -12,7 +12,7 @@ pi_executable="$(command -v pi)" || {
 }
 
 node --input-type=module - "$pi_executable" "$1" <<'NODE'
-import { readFileSync, realpathSync, statSync } from "node:fs";
+import { lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, basename, join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -20,10 +20,8 @@ const [piExecutable, suppliedPath] = process.argv.slice(2);
 const inputPath = resolve(suppliedPath);
 const isUnderPath = (target, root) => target === root || target.startsWith(`${root}${sep}`);
 const homePath = process.env.HOME && resolve(process.env.HOME);
-if (
-	homePath &&
-	[resolve(homePath, ".agents"), resolve(homePath, ".pi")].some((root) => isUnderPath(inputPath, root))
-) {
+const deployedRoots = homePath ? [resolve(homePath, ".agents"), resolve(homePath, ".pi")] : [];
+if (deployedRoots.some((root) => isUnderPath(inputPath, root))) {
 	console.error("error: deployed skill paths under $HOME/.agents or $HOME/.pi are not allowed");
 	process.exit(1);
 }
@@ -45,6 +43,18 @@ try {
 	}
 } catch {
 	console.error("error: input must be a SKILL.md file or a directory containing direct SKILL.md");
+	process.exit(1);
+}
+
+const canonicalSkillFile = realpathSync(skillFile);
+if (
+	deployedRoots.some((root) =>
+		lstatSync(root, { throwIfNoEntry: false })
+			? isUnderPath(canonicalSkillFile, realpathSync(root))
+			: false,
+	)
+) {
+	console.error("error: deployed skill paths under $HOME/.agents or $HOME/.pi are not allowed");
 	process.exit(1);
 }
 
