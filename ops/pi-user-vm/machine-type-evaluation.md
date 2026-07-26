@@ -474,3 +474,204 @@ The following resources are intentionally retained exclusively for immediate V03
 - SSH state directory `/home/avirus/.local/state/t20-v02-q35` (owner `avirus:avirus`, mode 700), containing private key `id_ed25519` (mode 600), its public key, and `known_hosts`. The exact private-key path is `/home/avirus/.local/state/t20-v02-q35/id_ed25519`; its contents were never printed or committed.
 
 V03 owns final teardown: gracefully stop `t20-v02-q35`, undefine it with its NVRAM, destroy/undefine `t20-v02-pool`, and remove `/var/tmp/t20-v02-pool` plus `/home/avirus/.local/state/t20-v02-q35`. Any ordinary dynamic DHCP record should be left for normal expiry rather than changing the shared `default` network. V02 did not execute V03 lifecycle checks or teardown. Unrelated host state, including the existing network, firewall, Tailscale state, services, other domains/pools/files, and the STT Worker VM, was left untouched.
+
+## V03 cold-lifecycle and persistence verifier evidence
+
+The canonical Run's immutable pre-V02 absence evidence remains the accepted V03 baseline-red proof. V03 did not inspect or edit the vault or touch its foreign-owned shared lock. The artifact entered V03 at commit `7422e330c6ef0b4a5c8c2c7abcad7a0faf85dd63`, tree `b12ceb6ff1f2010b8b8935d44c37d73cbe06fb93`, and SHA-256 `e61584126a6e50765e57ff2629a6a932525b7434305e06454b085bbc5e1e822b`, with a clean worktree.
+
+### Ownership and address preflight
+
+The exact outer invocation for each host-side block in this section was `ssh -o BatchMode=yes homelab 'bash -s'`; no `sudo` was used. The preflight block used `set -eu` and ran at `2026-07-26T17:39:09Z`. Its gating reads were:
+
+```sh
+T20_URI='qemu:///system'
+T20_DOMAIN='t20-v02-q35'
+T20_POOL='t20-v02-pool'
+T20_KEY='/home/avirus/.local/state/t20-v02-q35/id_ed25519'
+id -un
+virsh -c "$T20_URI" uri
+virsh -c "$T20_URI" dominfo "$T20_DOMAIN"
+virsh -c "$T20_URI" pool-info "$T20_POOL"
+virsh -c "$T20_URI" domblklist "$T20_DOMAIN" --details
+virsh -c "$T20_URI" pool-dumpxml "$T20_POOL"
+virsh -c "$T20_URI" dumpxml "$T20_DOMAIN"
+stat -c 'path=%n owner=%U:%G mode=%a type=%F' \
+  /var/tmp/t20-v02-pool \
+  /var/tmp/t20-v02-pool/t20-v02-q35.qcow2 \
+  /var/tmp/t20-v02-pool/t20-v02-q35-seed.img \
+  /var/lib/libvirt/qemu/nvram/t20-v02-q35_VARS.fd \
+  /home/avirus/.local/state/t20-v02-q35 \
+  "$T20_KEY" \
+  /home/avirus/.local/state/t20-v02-q35/id_ed25519.pub \
+  /home/avirus/.local/state/t20-v02-q35/known_hosts
+T20_IP=$(virsh -c "$T20_URI" domifaddr "$T20_DOMAIN" --source lease | awk '$3 == "ipv4" {sub(/\/.*/, "", $4); print $4; exit}')
+test -n "$T20_IP"
+test "$(stat -c %a "$T20_KEY")" = 600
+test "$(stat -c %U:%G "$T20_KEY")" = avirus:avirus
+test "$(virsh -c "$T20_URI" domstate "$T20_DOMAIN")" = running
+test "$(virsh -c "$T20_URI" dominfo "$T20_DOMAIN" | awk -F: '/^Autostart:/ {gsub(/[ \t]/, "", $2); print $2}')" = disable
+test "$(virsh -c "$T20_URI" pool-info "$T20_POOL" | awk -F: '/^State:/ {gsub(/[ \t]/, "", $2); print $2}')" = running
+test "$(virsh -c "$T20_URI" pool-info "$T20_POOL" | awk -F: '/^Autostart:/ {gsub(/[ \t]/, "", $2); print $2}')" = no
+if ss -H -ltn 'sport = :18767' | grep -q .; then exit 1; fi
+```
+
+Selected output is redacted only by omitting UUIDs, MAC addresses, XML not needed by the checks, and all key contents (which were not read):
+
+```text
+operator=avirus
+uri=qemu:///system
+domain_name=t20-v02-q35
+domain_state=running
+domain_persistent=yes
+domain_autostart=disable
+pool_name=t20-v02-pool
+pool_state=running
+pool_persistent=yes
+pool_autostart=no
+domain_block_devices:
+ file   disk     vda      /var/tmp/t20-v02-pool/t20-v02-q35.qcow2
+ file   disk     vdb      /var/tmp/t20-v02-pool/t20-v02-q35-seed.img
+pool_target=/var/tmp/t20-v02-pool
+domain_nvram=/var/lib/libvirt/qemu/nvram/t20-v02-q35_VARS.fd
+path=/var/tmp/t20-v02-pool owner=avirus:avirus mode=755 type=directory
+path=/var/tmp/t20-v02-pool/t20-v02-q35.qcow2 owner=libvirt-qemu:kvm mode=644 type=regular file
+path=/var/tmp/t20-v02-pool/t20-v02-q35-seed.img owner=libvirt-qemu:kvm mode=644 type=regular file
+path=/var/lib/libvirt/qemu/nvram/t20-v02-q35_VARS.fd owner=libvirt-qemu:kvm mode=600 type=regular file
+path=/home/avirus/.local/state/t20-v02-q35 owner=avirus:avirus mode=700 type=directory
+path=/home/avirus/.local/state/t20-v02-q35/id_ed25519 owner=avirus:avirus mode=600 type=regular file
+path=/home/avirus/.local/state/t20-v02-q35/id_ed25519.pub owner=avirus:avirus mode=644 type=regular file
+path=/home/avirus/.local/state/t20-v02-q35/known_hosts owner=avirus:avirus mode=644 type=regular file
+guest_address=192.168.122.164
+listener_18767=absent
+preflight=PASS
+local_ssh_wrapper_exit=0
+```
+
+This matched the V02 handoff exactly, so no ownership conflict was present and V03 continued.
+
+### Complete cold-lifecycle verifier
+
+Two preliminary invocations are recorded for completeness. At `2026-07-26T17:39:54Z`, `timeout 60 ssh_guest ...` attempted to pass a shell function to `timeout`; `timeout` returned 127 (`failed to run command 'ssh_guest': No such file or directory`) before any guest command or state change. At `17:40:32Z–17:40:35Z`, the corrected invocation created and synced marker `T20-V03-PERSIST-20260726T174032Z-2828916`, gracefully reached `shut off` on poll 2, and started the domain, but its SSH polling helper lacked `ssh -n` and consumed the remaining parent standard input. The host wrapper exited 0 without recording the required post-start assertions; that incomplete result was not accepted. It left the guest running and the marker in place. The complete invocation below replaced that marker with a new unique value and removed the marker path after all assertions passed.
+
+The accepted verifier ran under `set -eu`. These are its exact lifecycle commands (the address was freshly obtained from `virsh domifaddr --source lease` immediately before the shown block):
+
+```sh
+T20_URI='qemu:///system'
+T20_DOMAIN='t20-v02-q35'
+T20_POOL='t20-v02-pool'
+T20_IP=$(virsh -c "$T20_URI" domifaddr "$T20_DOMAIN" --source lease | awk '$3 == "ipv4" {sub(/\/.*/, "", $4); print $4; exit}')
+test -n "$T20_IP"
+T20_GUEST="t20eval@$T20_IP"
+T20_KEY='/home/avirus/.local/state/t20-v02-q35/id_ed25519'
+T20_KNOWN_HOSTS='/home/avirus/.local/state/t20-v02-q35/known_hosts'
+T20_MARKER="T20-V03-PERSIST-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+ssh_guest() {
+  ssh -n -i "$T20_KEY" -o BatchMode=yes -o IdentitiesOnly=yes \
+    -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$T20_KNOWN_HOSTS" \
+    -o ConnectTimeout=2 "$T20_GUEST" "$@"
+}
+
+timeout 60 ssh -i "$T20_KEY" -o BatchMode=yes -o IdentitiesOnly=yes \
+  -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$T20_KNOWN_HOSTS" \
+  -o ConnectTimeout=2 "$T20_GUEST" "bash -s -- '$T20_MARKER'" <<'GUEST_CREATE'
+set -eu
+expected=$1
+marker_path="$HOME/.t20-v03-persistence"
+printf '%s\n' "$expected" >"$marker_path"
+sync
+actual=$(cat "$marker_path")
+test "$actual" = "$expected"
+printf 'marker_created=%s\n' "$actual"
+printf 'marker_sync=pass\n'
+GUEST_CREATE
+
+virsh -c "$T20_URI" shutdown "$T20_DOMAIN"
+stop_attempts=0
+stop_state=''
+while [ "$stop_attempts" -lt 60 ]; do
+  stop_attempts=$((stop_attempts + 1))
+  stop_state=$(virsh -c "$T20_URI" domstate "$T20_DOMAIN")
+  if [ "$stop_state" = 'shut off' ]; then break; fi
+  if [ "$stop_attempts" -lt 60 ]; then sleep 2; fi
+done
+test "$stop_state" = 'shut off'
+
+virsh -c "$T20_URI" start "$T20_DOMAIN"
+ssh_attempts=0
+ssh_ready=false
+while [ "$ssh_attempts" -lt 60 ]; do
+  ssh_attempts=$((ssh_attempts + 1))
+  if ssh_guest /usr/bin/true >/dev/null 2>&1; then
+    ssh_ready=true
+    break
+  fi
+  if [ "$ssh_attempts" -lt 60 ]; then sleep 3; fi
+done
+test "$ssh_ready" = true
+
+timeout 60 ssh -i "$T20_KEY" -o BatchMode=yes -o IdentitiesOnly=yes \
+  -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$T20_KNOWN_HOSTS" \
+  -o ConnectTimeout=2 "$T20_GUEST" "bash -s -- '$T20_MARKER'" <<'GUEST_VERIFY'
+set -eu
+expected=$1
+marker_path="$HOME/.t20-v03-persistence"
+actual=$(cat "$marker_path")
+test "$actual" = "$expected"
+printf 'persisted_marker=%s exact_match=yes\n' "$actual"
+systemd-run --user --wait --collect --quiet /usr/bin/true
+printf 'systemd_user_transient=pass\n'
+rm -f -- "$marker_path"
+test ! -e "$marker_path"
+printf 'marker_removed=yes\n'
+GUEST_VERIFY
+
+test "$(virsh -c "$T20_URI" domstate "$T20_DOMAIN")" = running
+test "$(virsh -c "$T20_URI" dominfo "$T20_DOMAIN" | awk -F: '/^Autostart:/ {gsub(/[ \t]/, "", $2); print $2}')" = disable
+test "$(virsh -c "$T20_URI" pool-info "$T20_POOL" | awk -F: '/^State:/ {gsub(/[ \t]/, "", $2); print $2}')" = running
+test "$(virsh -c "$T20_URI" pool-info "$T20_POOL" | awk -F: '/^Autostart:/ {gsub(/[ \t]/, "", $2); print $2}')" = no
+test "$(stat -c %a "$T20_KEY")" = 600
+test -f /var/tmp/t20-v02-pool/t20-v02-q35.qcow2
+test -f /var/tmp/t20-v02-pool/t20-v02-q35-seed.img
+test -f /var/lib/libvirt/qemu/nvram/t20-v02-q35_VARS.fd
+test -f "$T20_KEY"
+if ss -H -ltn 'sport = :18767' | grep -q .; then exit 1; fi
+```
+
+The complete invocation ran from `2026-07-26T17:41:32Z` through `17:41:46Z`. Relevant output was:
+
+```text
+guest_address=192.168.122.164
+marker_created=T20-V03-PERSIST-20260726T174132Z-2837397
+marker_sync=pass
+marker_create_ssh_exit=0
+shutdown_request_utc=2026-07-26T17:41:33Z
+Domain 't20-v02-q35' is being shutdown
+virsh_shutdown_exit=0
+shutdown_observed_utc=2026-07-26T17:41:35Z
+shutdown_state=shut off poll_attempts=2 max_attempts=60 delay_seconds=2
+start_request_utc=2026-07-26T17:41:35Z
+Domain 't20-v02-q35' started
+virsh_start_exit=0
+ssh_ready_utc=2026-07-26T17:41:46Z
+batch_ssh_ready=true poll_attempts=3 max_attempts=60 delay_seconds=3
+persisted_marker=T20-V03-PERSIST-20260726T174132Z-2837397 exact_match=yes
+systemd_user_transient=pass
+marker_removed=yes
+post_start_guest_check_exit=0
+postcheck_utc=2026-07-26T17:41:46Z
+domain_state=running
+domain_autostart=disable
+pool_state=running
+pool_autostart=no
+listener_18767=absent
+retained_disk_seed_nvram_ssh_state=yes
+v03_end_utc=2026-07-26T17:41:46Z
+V03_VERIFIER=PASS
+local_ssh_wrapper_exit=0
+```
+
+### Retained state and later cleanup obligation
+
+V03 deliberately performed no final cleanup. Domain `t20-v02-q35` remains running and persistent with autostart disabled; pool `t20-v02-pool` remains active and persistent with autostart `no`. The qcow2 disk, seed image, libvirt-managed NVRAM, and complete SSH state remain at the V02 paths and ownership/modes shown above. The V03 marker was removed, and listener port 18767 remains absent. V03 did not run the V02 listener and did not inspect or alter Tailscale, networking, the firewall, unrelated resources, or the STT Worker VM.
+
+A later authorized cleanup still must gracefully stop `t20-v02-q35`, undefine it with its NVRAM, destroy and undefine `t20-v02-pool`, and remove `/var/tmp/t20-v02-pool` and `/home/avirus/.local/state/t20-v02-q35`. Leave any dynamic DHCP record for normal expiry; do not alter the shared `default` network.
