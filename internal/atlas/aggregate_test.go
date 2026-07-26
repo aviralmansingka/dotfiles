@@ -214,6 +214,66 @@ func TestT06V02RegistryTaskPathBoundaries(t *testing.T) {
 	}
 }
 
+func TestT06V02RegistryFeaturePathBoundaries(t *testing.T) {
+	vaultRoot := t.TempDir()
+	const featurePath = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md"
+	featureFile := filepath.Join(vaultRoot, filepath.FromSlash(featurePath))
+	if err := os.MkdirAll(filepath.Dir(featureFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(featureFile, []byte("---\nstatus: pending\n---\n## Tasks\n- [ ] T01 [[tasks/01.md|Pending]].\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	type featureBoundary struct {
+		name, path string
+		wantRun    bool
+	}
+	tests := []featureBoundary{
+		{name: "relative", path: featurePath, wantRun: true},
+		{name: "clean absolute under root", path: filepath.Join(vaultRoot, "1_projects", "pi-agent", "themes", "pi-customization", "features", "vault-hunter-atlas", "tasks", "..", "feature.md"), wantRun: true},
+		{name: "absolute outside root", path: filepath.Join(filepath.Dir(vaultRoot), "outside", "feature.md")},
+		{name: "relative escape", path: "../" + featurePath},
+		{name: "empty", path: ""},
+		{name: "vault root", path: vaultRoot},
+	}
+	if volume := filepath.VolumeName(vaultRoot); volume != "" {
+		other := "Z:" + string(filepath.Separator) + filepath.FromSlash(featurePath)
+		if filepath.VolumeName(other) != volume {
+			tests = append(tests, featureBoundary{name: "different volume", path: other})
+		}
+	}
+
+	for _, test := range tests {
+		for _, stage := range []string{"blocked", "active"} {
+			t.Run(test.name+"/"+stage, func(t *testing.T) {
+				runs := []vaultregistry.Run{{
+					RunID: "feature-run",
+					Task:  vaultregistry.Task{Kind: "feature", FeaturePath: test.path},
+					Lifecycle: []vaultregistry.Lifecycle{{
+						ObservedAt: "2026-07-26T12:00:00Z",
+						State:      stage,
+					}},
+				}}
+				projection, err := DiscoverFeature(vaultRoot, featurePath, runs)
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := Pending
+				if test.wantRun {
+					want = Blocked
+					if stage == "active" {
+						want = Active
+					}
+				}
+				if got := projection.Features[0].Status; got != want {
+					t.Fatalf("Feature status = %s, want %s for %q", got, want, test.path)
+				}
+			})
+		}
+	}
+}
+
 func TestT06V03SelectsUnregisteredTaskByCanonicalPath(t *testing.T) {
 	root := filepath.Join("..", "..", "scripts", "fixtures", "vault-hunter-atlas-t06-v03")
 	projection, err := DiscoverFeature(filepath.Join(root, "vault"), "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md", nil)
