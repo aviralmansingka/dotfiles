@@ -61,7 +61,7 @@ local function tasks(root, feature_dir, feature_page)
     elseif in_tasks and line:match("^## ") then
       break
     elseif in_tasks then
-      local state, body = line:match("^%s*[-*]%s+%[([ x~])%]%s+(.+)$")
+      local state, body = line:match("^%s*[-*]%s+%[([ x~%-])%]%s+(.+)$")
       local task_id = body and body:match("(T%d%d)")
       if state and state ~= "x" and task_id then
         local link, alias = body:match("%[%[([^]|]+)|([^]]+)%]%]")
@@ -267,7 +267,7 @@ function M.format(item)
   end
 
   local branch = item.last and "└─ " or "├─ "
-  local state_highlight = item.state == "x" and "DiagnosticOk" or item.state == "~" and "DiagnosticInfo" or "Comment"
+  local state_highlight = item.state == "x" and "DiagnosticOk" or item.state ~= " " and "DiagnosticInfo" or "Comment"
   return {
     { "      " },
     { branch, "Comment" },
@@ -286,26 +286,24 @@ function M.agent_prompt(item)
   then
     return nil
   end
-  return string.format("/vault-hunter %s:%d", item.file, item.pos[1])
+  return string.format("$vault-hunter %s:%d", item.file, item.pos[1])
 end
 
-function M.task_scope(item)
-  local feature = item and item.parent
+function M.agent_scope(item)
+  local feature = item and (item.kind == "feature" and item or item.parent)
   if not feature or feature.kind ~= "feature" then
     return nil
   end
   local feature_slug = vim.fs.basename(vim.fs.dirname(feature.file))
-  local task_slug = item.linked and vim.fs.basename(item.file):gsub("%.md$", "")
-    or string.format("%s-%s", feature_slug, item.task_id:lower())
   return {
     feature_branch = "feature/" .. feature_slug,
-    tab_label = string.format("%s %s", item.task_id, item.task),
-    task_branch = "task/" .. task_slug,
+    tab_label = item.kind == "task" and string.format("%s %s", item.task_id, item.task) or item.feature,
     workspace_label = string.format("%s · %s", item.project, item.feature),
   }
 end
 
 function M.send_to_agent(item)
+  local agent_scope = M.agent_scope(item)
   if
     not item
     or (item.kind ~= "feature" and item.kind ~= "task")
@@ -314,6 +312,7 @@ function M.send_to_agent(item)
     or not item.pos[1]
     or not item.repository
     or not M.agent_prompt(item)
+    or not agent_scope
   then
     vim.notify("Select a vault feature or task", vim.log.levels.WARN)
     return nil
@@ -327,23 +326,7 @@ function M.send_to_agent(item)
       or string.format("%s-%s", item.project, item.feature)
   )
   local name = "codex-" .. slug
-  local workspace_label = string.format("%s · %s", item.project, item.feature)
-  local tab_label = item.feature
-  local scope
-  if item.kind == "task" then
-    local task_scope = M.task_scope(item)
-    scope = task_scope
-      and herdr.ensure_task_scope(
-        item.repository,
-        task_scope.workspace_label,
-        task_scope.feature_branch,
-        task_scope.task_branch
-      )
-    tab_label = task_scope and task_scope.tab_label or tab_label
-  else
-    local workspace_id = herdr.ensure_workspace(item.repository, workspace_label)
-    scope = workspace_id and { workspace_id = workspace_id, cwd = item.repository } or nil
-  end
+  local scope = herdr.ensure_feature_scope(item.repository, agent_scope.workspace_label, agent_scope.feature_branch)
   if not scope then
     return nil
   end
@@ -358,11 +341,11 @@ function M.send_to_agent(item)
       command,
       { [internal.named_env_var] = slug },
       { workspace_id = scope.workspace_id },
-      tab_label
+      agent_scope.tab_label
     )
   end
 
-  agent = herdr.place_agent(agent, scope, tab_label)
+  agent = herdr.place_agent(agent, scope, agent_scope.tab_label)
   if not agent or not agent.pane_id or not herdr.run(agent.pane_id, M.agent_prompt(item)) then
     return nil
   end
