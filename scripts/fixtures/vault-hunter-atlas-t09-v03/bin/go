@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+import time
+
+program = os.path.basename(sys.argv[0])
+expected = ["run", "./cmd/vault-hunter-registry"] if program == "go" else []
+if sys.argv[1:] != expected:
+    print(f"unexpected {program} arguments: {sys.argv[1:]!r}", file=sys.stderr)
+    raise SystemExit(94)
+
+try:
+    request = json.load(sys.stdin)
+except Exception as error:
+    print(f"invalid request: {error}", file=sys.stderr)
+    raise SystemExit(95)
+
+with open(os.environ["T09_V03_COMMAND_LOG"], "a", encoding="utf-8") as handle:
+    handle.write(json.dumps(request, sort_keys=True, separators=(",", ":")) + "\n")
+    handle.flush()
+
+waiting = request.get("filter", {}).get("task_id") == "WAIT" or request.get("run_id") == "wait-retire"
+if waiting:
+    time.sleep(30)
+
+summary = {
+    "schema_version": 1,
+    "run_id": "run-a",
+    "revision": 7,
+    "invoked_at": "2026-07-26T10:00:00Z",
+    "updated_at": "2026-07-26T10:30:00Z",
+    "task": {
+        "id": "T09",
+        "title": "Registry administration",
+        "path": "features/vault-hunter-atlas/tasks/09-list-retire.md",
+        "feature_path": "features/vault-hunter-atlas/feature.md",
+        "kind": "task",
+    },
+}
+run = {
+    **summary,
+    "participants": [{"forbidden_history_sentinel": "must not enter Pi details"}],
+    "lifecycle": [{"forbidden_history_sentinel": "must not enter Pi details"}],
+    "evidence": [{"forbidden_history_sentinel": "must not enter Pi details"}],
+    "unknown_record_sentinel": "must not enter Pi details",
+}
+
+if request.get("action") == "list":
+    json.dump([summary], sys.stdout, separators=(",", ":"))
+elif request.get("action") == "retire":
+    json.dump(run, sys.stdout, separators=(",", ":"))
+else:
+    print(f"unexpected action: {request.get('action')!r}", file=sys.stderr)
+    raise SystemExit(96)
+sys.stdout.write("\n")
