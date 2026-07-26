@@ -8,7 +8,10 @@ import {
 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { existsSync, watch, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { Type } from "typebox";
+import registerNativeSubagents from "../native/pi-subagents/index.ts";
 
 const PROVIDER = "pi-work-step-ui-verify";
 const MODEL = "faux-work-step";
@@ -41,6 +44,11 @@ function codexShapedStream(source: any) {
 	})();
 	return stream;
 }
+
+const SUBAGENT_TASK =
+	"Verify native subagent composition while retaining EXPANDED_TASK_DETAIL_SENTINEL";
+const SUBAGENT_OUTPUT =
+	"## NATIVE_COMPLETED_OUTPUT_SENTINEL\n\n**composition preserved** by the package renderer.";
 
 const responses = [
 	fauxAssistantMessage([
@@ -155,7 +163,159 @@ const responses = [
 		{ stopReason: "toolUse" },
 	),
 	fauxAssistantMessage("VERIFY_AFTER_RELOAD_DONE"),
+	fauxAssistantMessage(
+		[
+			fauxThinking("Exercise native subagent rendering inside the parent activity"),
+			fauxText("Delegate deterministic subagent verification"),
+			fauxToolCall(
+				"subagent",
+				{
+					agent: "scout",
+					task: SUBAGENT_TASK,
+				},
+				{ id: "verify-subagent-composition" },
+			),
+		],
+		{ stopReason: "toolUse" },
+	),
+	fauxAssistantMessage("VERIFY_SUBAGENT_COMPOSITION_DONE"),
 ];
+
+const SUBAGENT_RUN_ID = "deterministic-subagent-verifier";
+const SUBAGENT_USAGE = {
+	input: 321,
+	output: 123,
+	cacheRead: 45,
+	cacheWrite: 6,
+	cost: 0.0123,
+	turns: 2,
+};
+const SUBAGENT_PROGRESS_SUMMARY = { toolCount: 1, tokens: 444, durationMs: 1200 };
+
+function nativeChildren() {
+	return [
+		{
+			id: "native-nested-child",
+			parentRunId: SUBAGENT_RUN_ID,
+			parentStepIndex: 0,
+			parentAgent: "scout",
+			depth: 1,
+			path: [{ runId: SUBAGENT_RUN_ID, stepIndex: 0, agent: "scout" }],
+			state: "complete" as const,
+			agent: "researcher",
+		},
+	];
+}
+
+function nativeRunningDetails() {
+	// Mirrors runSync's foreground onUpdate snapshot: the same live progress is
+	// present on the result and in details.progress.
+	const progress = {
+		index: 0,
+		agent: "scout",
+		status: "running" as const,
+		task: SUBAGENT_TASK,
+		currentTool: "grep",
+		currentToolArgs: "NATIVE_RUNNING_PROGRESS_SENTINEL",
+		recentTools: [],
+		recentOutput: [],
+		toolCount: 1,
+		tokens: 0,
+		durationMs: 0,
+	};
+	return {
+		mode: "single" as const,
+		results: [
+			{
+				agent: "scout",
+				task: SUBAGENT_TASK,
+				exitCode: 0,
+				messages: [],
+				usage: { ...SUBAGENT_USAGE },
+				progress,
+			},
+		],
+		progress: [progress],
+	};
+}
+
+function nativeFinalDetails() {
+	// Mirrors compactForegroundDetails for a completed single foreground run:
+	// progress is removed while its compact summary and semantic result survive.
+	return {
+		mode: "single" as const,
+		runId: SUBAGENT_RUN_ID,
+		results: [
+			{
+				agent: "scout",
+				task: SUBAGENT_TASK,
+				exitCode: 0,
+				usage: { ...SUBAGENT_USAGE },
+				progressSummary: { ...SUBAGENT_PROGRESS_SUMMARY },
+				finalOutput: SUBAGENT_OUTPUT,
+				outputMode: "inline" as const,
+				children: nativeChildren(),
+			},
+		],
+		totalChildUsage: { ...SUBAGENT_USAGE },
+		totalCost: {
+			inputTokens: SUBAGENT_USAGE.input,
+			outputTokens: SUBAGENT_USAGE.output,
+			costUsd: SUBAGENT_USAGE.cost,
+		},
+	};
+}
+
+function writeFixtureMarker(environmentName: string, value: string): void {
+	const markerPath = process.env[environmentName];
+	if (!markerPath) throw new Error(`${environmentName} is required`);
+	writeFileSync(markerPath, `${value}\n`, "utf8");
+}
+
+function waitForSubagentRelease(signal: AbortSignal | undefined): Promise<void> {
+	const releasePath = process.env.PI_VERIFY_SUBAGENT_RELEASE;
+	if (!releasePath)
+		return Promise.reject(new Error("PI_VERIFY_SUBAGENT_RELEASE is required"));
+	if (existsSync(releasePath)) return Promise.resolve();
+
+	return new Promise<void>((resolve, reject) => {
+		let settled = false;
+		const watcher = watch(dirname(releasePath), () => {
+			if (existsSync(releasePath)) finish();
+		});
+		const abort = () => finish(new Error("Deterministic subagent fixture aborted"));
+		const finish = (error?: Error) => {
+			if (settled) return;
+			settled = true;
+			watcher.close();
+			signal?.removeEventListener("abort", abort);
+			if (error) reject(error);
+			else resolve();
+		};
+		signal?.addEventListener("abort", abort, { once: true });
+		if (existsSync(releasePath)) finish();
+	});
+}
+
+function loadNativeSubagentTool(pi: ExtensionAPI): any {
+	let nativeTool: any;
+	const intercepted = new Proxy(pi, {
+		get(target, property) {
+			if (property === "registerTool") {
+				return (tool: any) => {
+					if (tool.name === "subagent") nativeTool = tool;
+					else target.registerTool(tool);
+				};
+			}
+			const value = Reflect.get(target, property, target);
+			return typeof value === "function" ? value.bind(target) : value;
+		},
+	});
+	registerNativeSubagents(intercepted);
+	if (!nativeTool?.renderCall || !nativeTool?.renderResult)
+		throw new Error("Active pi-subagents package did not register its native renderers");
+	return nativeTool;
+}
 
 export default function piWorkStepUiProvider(pi: ExtensionAPI) {
 	const faux = fauxProvider({
@@ -195,6 +355,36 @@ export default function piWorkStepUiProvider(pi: ExtensionAPI) {
 		}),
 		async execute() {
 			return { content: [{ type: "text", text: "MCP_RESULT_SENTINEL" }] };
+		},
+	});
+
+	const nativeSubagentTool = loadNativeSubagentTool(pi);
+	pi.registerTool({
+		...nativeSubagentTool,
+		async execute(_toolCallId: string, params: unknown, signal: AbortSignal, onUpdate: any) {
+			try {
+				if ((params as { task?: unknown })?.task !== SUBAGENT_TASK)
+					throw new Error("Deterministic subagent call and result tasks diverged");
+				if (!onUpdate) throw new Error("Deterministic subagent update callback is unavailable");
+				onUpdate({
+					content: [{ type: "text", text: "deterministic subagent running" }],
+					details: nativeRunningDetails(),
+				});
+				writeFixtureMarker("PI_VERIFY_SUBAGENT_UPDATE_MARKER", "native foreground update emitted");
+				await waitForSubagentRelease(signal);
+				return {
+					content: [{ type: "text", text: SUBAGENT_OUTPUT }],
+					details: nativeFinalDetails(),
+				};
+			} catch (error) {
+				const message = error instanceof Error ? error.stack ?? error.message : String(error);
+				try {
+					writeFixtureMarker("PI_VERIFY_SUBAGENT_EXCEPTION_MARKER", message);
+				} catch {
+					// Preserve the original fixture exception when diagnostics cannot be written.
+				}
+				throw error;
+			}
 		},
 	});
 
