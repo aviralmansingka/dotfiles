@@ -1,0 +1,106 @@
+{
+  "goal": "T02.V02",
+  "rule": {
+    "id": "peer_deployment_independence",
+    "runtime_discovery_dependency": false,
+    "runtime_provisioning_dependency": false,
+    "runtime_routing_dependency": false,
+    "runtime_monitoring_dependency": false,
+    "peer_control": false,
+    "peer_availability_dependency": false
+  },
+  "assertions": {
+    "independent_peer_states": ["absent"],
+    "rejected_edge_kinds": [
+      "peer_control",
+      "peer_awareness",
+      "runtime_dependency",
+      "peer_failure_propagation"
+    ],
+    "rejected_dependency_modes": [
+      "control",
+      "discovery",
+      "provisioning",
+      "routing",
+      "monitoring",
+      "availability"
+    ]
+  },
+  "cases": [
+    {
+      "id": "deployment-operates-with-peer-absent",
+      "expected": "conforming",
+      "subject": "deployment-alpha",
+      "peer": "deployment-beta",
+      "peer_state": "absent",
+      "subject_operational": true,
+      "peer_edges": []
+    },
+    {
+      "id": "peer-control-edge-is-rejected",
+      "expected": "violating",
+      "subject": "deployment-alpha",
+      "peer": "deployment-beta",
+      "peer_state": "available",
+      "subject_operational": true,
+      "peer_edges": [
+        {"kind": "peer_control", "mode": "control"}
+      ]
+    },
+    {
+      "id": "peer-awareness-discovery-edge-is-rejected",
+      "expected": "violating",
+      "subject": "deployment-alpha",
+      "peer": "deployment-beta",
+      "peer_state": "available",
+      "subject_operational": true,
+      "peer_edges": [
+        {"kind": "peer_awareness", "mode": "discovery"}
+      ]
+    },
+    {
+      "id": "runtime-provisioning-dependency-is-rejected",
+      "expected": "violating",
+      "subject": "deployment-alpha",
+      "peer": "deployment-beta",
+      "peer_state": "available",
+      "subject_operational": true,
+      "peer_edges": [
+        {"kind": "runtime_dependency", "mode": "provisioning"}
+      ]
+    },
+    {
+      "id": "runtime-routing-dependency-is-rejected",
+      "expected": "violating",
+      "subject": "deployment-alpha",
+      "peer": "deployment-beta",
+      "peer_state": "available",
+      "subject_operational": true,
+      "peer_edges": [
+        {"kind": "runtime_dependency", "mode": "routing"}
+      ]
+    },
+    {
+      "id": "runtime-monitoring-dependency-is-rejected",
+      "expected": "violating",
+      "subject": "deployment-alpha",
+      "peer": "deployment-beta",
+      "peer_state": "available",
+      "subject_operational": true,
+      "peer_edges": [
+        {"kind": "runtime_dependency", "mode": "monitoring"}
+      ]
+    },
+    {
+      "id": "peer-failure-propagation-is-rejected",
+      "expected": "violating",
+      "subject": "deployment-alpha",
+      "peer": "deployment-beta",
+      "peer_state": "failed",
+      "subject_operational": false,
+      "peer_edges": [
+        {"kind": "peer_failure_propagation", "mode": "availability"}
+      ]
+    }
+  ]
+}

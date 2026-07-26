@@ -1,0 +1,110 @@
+{
+  "goal": "T02.V03",
+  "rule": {
+    "id": "shared_boundary_authority_confinement",
+    "host_libvirt_vm_authority": true,
+    "stt_transcription_authority": true,
+    "shared_model_authority": true,
+    "transient_provisioning_authority": true,
+    "privileged_host_root_technical_access_is_violation": false,
+    "normal_operation_pi_application_state_inspection": false,
+    "retained_deployment_credentials": false,
+    "pi_administration_paths": false,
+    "cross_deployment_control": false
+  },
+  "assertions": {
+    "accepted_authorities": [
+      "host_vm_lifecycle",
+      "host_vm_network",
+      "host_vm_storage",
+      "host_vm_device",
+      "libvirt_vm_lifecycle",
+      "libvirt_vm_network",
+      "libvirt_vm_storage",
+      "libvirt_vm_device",
+      "stt_request_transcription",
+      "stt_result_transcription",
+      "shared_model_access",
+      "shared_model_billing",
+      "transient_provisioning"
+    ],
+    "rejected_authorities": [
+      "normal_operation_pi_application_state_inspection",
+      "retained_deployment_credentials",
+      "pi_administration_path",
+      "cross_deployment_control"
+    ],
+    "privileged_host_root_technical_access_accepted": true
+  },
+  "cases": [
+    {
+      "id": "host-and-libvirt-vm-authority-is-confined",
+      "expected": "conforming",
+      "privileged_host_root_technical_access_available": false,
+      "authorities": [
+        "host_vm_lifecycle",
+        "host_vm_network",
+        "host_vm_storage",
+        "host_vm_device",
+        "libvirt_vm_lifecycle",
+        "libvirt_vm_network",
+        "libvirt_vm_storage",
+        "libvirt_vm_device"
+      ]
+    },
+    {
+      "id": "stt-request-and-result-transcription-is-confined",
+      "expected": "conforming",
+      "privileged_host_root_technical_access_available": false,
+      "authorities": [
+        "stt_request_transcription",
+        "stt_result_transcription"
+      ]
+    },
+    {
+      "id": "shared-model-access-and-billing-is-confined",
+      "expected": "conforming",
+      "privileged_host_root_technical_access_available": false,
+      "authorities": [
+        "shared_model_access",
+        "shared_model_billing"
+      ]
+    },
+    {
+      "id": "provisioning-authority-is-transient",
+      "expected": "conforming",
+      "privileged_host_root_technical_access_available": false,
+      "authorities": ["transient_provisioning"]
+    },
+    {
+      "id": "privileged-host-root-technical-access-is-not-exercised-authority",
+      "expected": "conforming",
+      "privileged_host_root_technical_access_available": true,
+      "authorities": []
+    },
+    {
+      "id": "normal-operation-application-state-inspection-is-rejected",
+      "expected": "violating",
+      "privileged_host_root_technical_access_available": true,
+      "authorities": ["normal_operation_pi_application_state_inspection"]
+    },
+    {
+      "id": "retained-deployment-credentials-are-rejected",
+      "expected": "violating",
+      "privileged_host_root_technical_access_available": false,
+      "authorities": ["retained_deployment_credentials"]
+    },
+    {
+      "id": "pi-administration-path-is-rejected",
+      "expected": "violating",
+      "privileged_host_root_technical_access_available": false,
+      "authorities": ["pi_administration_path"]
+    },
+    {
+      "id": "cross-deployment-control-is-rejected",
+      "expected": "violating",
+      "privileged_host_root_technical_access_available": false,
+      "authorities": ["cross_deployment_control"]
+    }
+  ]
+}
