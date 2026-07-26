@@ -871,7 +871,7 @@ local function validate_sidekick_herdr()
       named_agent("pi-done", "done", 4),
       named_agent("pi-blocked", "blocked", 5),
       named_agent("pi-other-workspace", "idle", 6, "w2"),
-      named_agent("pi-workspace-only", "idle", 7, "w1", "/private/tmp"),
+      named_agent("pi-workspace-only", "idle", 7, "w1", cwd .. "-unrelated"),
     }
   end
 
