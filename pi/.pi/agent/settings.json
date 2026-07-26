@@ -1,12 +1,18 @@
 {
   "packages": [
     "npm:pi-mcp-adapter",
-    "npm:pi-subagents"
+    "https://github.com/amosblomqvist/pi-subagents",
+    {
+      "source": "https://github.com/amosblomqvist/pi-config",
+      "extensions": []
+    },
+    "git/github.com/amosblomqvist/pi-config/extensions/youtube-search/index.ts",
+    "git/github.com/amosblomqvist/pi-subagents/index.ts"
   ],
-  "lastChangelogVersion": "0.81.1",
+  "lastChangelogVersion": "0.82.1",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "medium",
   "theme": "gruvbox-material",
   "transport": "websocket-cached"
 }

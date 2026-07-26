@@ -1,14 +1,17 @@
 ---
 name: vault-hunter
-description: Drive one canonical vault-backed run while delegating small definite work to Registry-observable Pi subagents. Use when invoked as $vault-hunter with a Feature, Task, Issue, checkbox, or Wayfinder reference.
+description: Drive one canonical vault-backed run while delegating small definite work to bounded Pi subagents. Use when invoked as $vault-hunter with a Feature, Task, Issue, checkbox, or Wayfinder reference.
 ---
 
 # Vault Hunter
 
 Drive one vault-backed request from the primary Pi session. The parent is the sole lifecycle decision-maker, handoff
-acceptor, Run Registry producer, and vault writer. Small definite work defaults to bounded headless `pi-subagents`
-children. Use a full Herdr-visible Codex session only when a human benefits from opening, steering, or resuming its
-terminal.
+acceptor, Run Registry producer, and vault writer. Small definite work defaults to bounded synchronous headless `subagent`
+children whose lifecycle is observed automatically. An implementation Task uses one persistent Herdr-visible verifier steward from the first baseline check
+through post-merge verification so verifier context is not rebuilt for every `Vnn`; other Herdr-visible sessions remain
+router exceptions for work that benefits from opening, steering, or resuming a terminal. For read-only Run discovery,
+journey drill-down, participant telemetry, evidence, and cost inspection, follow
+`$vault-hunter-status`; status inspection never starts, resumes, accepts, or advances a Run.
 
 ## Hard boundaries
 
@@ -16,17 +19,20 @@ terminal.
 - The Run Registry contains durable observations only. A child process state, Registry state, or Atlas display never
   advances canonical work.
 - Children never edit or commit the vault. The parent alone edits the target note, Feature checklist, weekly backlog,
-  and checkpoints. Never launch or wait for a child while Run-owned vault edits are uncommitted; keep transient stage
-  activity in the Registry and write canonical vault updates only inside an immediate checkpoint envelope.
-- Do not edit vault paths owned by another active Vault Hunter Run. If another Run may overlap the target note, Feature
-  checklist, weekly backlog, or branch, stop before editing until ownership is unambiguous.
-- Keep one writer in an implementation worktree. Parallelize reads, review, and isolated checks, not ordinary writes.
+  and checkpoints. Every canonical edit runs under the shared vault checkpoint lock and ends in an immediate exact-path
+  commit. Never launch or wait for a child while the lock is held or Run-owned vault edits are uncommitted.
+- Primary target notes have one active Run owner. Multiple Runs may share a Feature note, weekly backlog, vault branch,
+  and checkout only through the serialized commit flow below; never use shared aggregate paths as a reason to block
+  otherwise disjoint Task/Issue owners. Stop only for overlapping primary targets or an unresolved stale lock.
+- Keep one active writer in an implementation worktree. The persistent verifier steward may edit only accepted verifier
+  paths and must be idle before an implementation/fix writer starts; the implementation writer must be idle before the
+  steward repairs a verifier. Parallelize reads, review, and isolated checks, not ordinary writes.
 - Preserve unrelated Git, Herdr, Neovim, and filesystem state.
-- A formal child is any delegated agent whose result may influence the Run. Every formal headless child must launch
-  through `vault_hunter_step`; never call `subagent` directly for one. Raw `subagent` is recovery-only, may use only the
-  cheapest read-only `delegate`, and never advances or accepts a formal stage.
+- A formal child is any delegated agent whose result may influence the Run. Launch each formal headless child directly
+  through synchronous `subagent`; the runtime hook records participant, start, finish, hashes, usage, and interruption
+  observations. Child completion remains observational and never advances or accepts a formal stage.
 - After the parent minimally resolves the invocation target, all mechanical discovery that may inform routing,
-  specification, implementation, verification, review, or landing is performed by registered headless children. The
+  specification, implementation, verification, review, or landing is performed by bounded headless children. The
   parent may validate returned facts but never fills missing discovery itself; launch another bounded child instead.
 
 ## Invocation
@@ -36,23 +42,27 @@ path, `path:line`, or wikilink. Capture the local invocation time and timezone o
 
 Before substantive discovery:
 
-1. Resolve only enough vault context to identify the target and owner.
-2. Mark the target in progress:
+1. Resolve only enough vault context to identify the target and owner. Preallocate the stable Registry Run ID and use it
+   as the vault lock owner for the entire Run.
+2. Call `vault_hunter_preflight` once before any vault edit. It must validate the current Pi session's exact Herdr
+   workspace/tab/pane/terminal binding and cwd. If it fails, stop without writing a blocker checkpoint; fix the host
+   binding and begin a fresh invocation attempt.
+3. Acquire `~/dotfiles/scripts/vault-hunter-vault-lock` with the vault root, Run ID, and exact invocation allowlist. If
+   another owner holds it, wait without editing; after acquisition re-read every allowlisted file and current `HEAD`.
+4. Mark the target in progress:
    - Feature: `status: in-progress`
    - Task: Feature checklist `[-]` and linked Task `status: in-progress`
    - Issue or Wayfinder effort: owning note or map `status: in-progress`
-3. Add the single weekly backlog entry below.
-4. Follow `$vault-hunter-checkpoint` in `invocation` mode with the exact owned vault paths. Commit but do not push.
-5. Only after that commit succeeds, call `vault_hunter_run` with the canonical target identity. Store its returned Run ID
-   in the same backlog entry on the next accepted vault edit. For an interactive parent, this call atomically resolves
-   and validates the current Herdr workspace/tab/pane/terminal tuple and exact Pi session binding; never infer or append
-   driver placement separately.
-6. If Registry creation or interactive Herdr registration fails, stop before dispatching a formal child. Do not fall
-   back to an unregistered child.
-7. Before each formal headless dispatch, require `vault_hunter_step preflight` to prove the wrapper and native
-   `pi-subagents` RPC respond, the selected agent profile resolves, and every requested tool is available. Preflight
-   failure records one runtime-blocked observation and stops before model execution or participant/start observations;
-   never fall back to raw `subagent`.
+5. Add the single weekly backlog entry below.
+6. Follow `$vault-hunter-checkpoint` in `invocation` mode with the exact lock owner and owned paths. Commit, release the
+   lock, but do not push.
+7. Only after that commit succeeds, call `vault_hunter_run` with the preallocated Run ID and canonical target identity.
+   Store its returned Run ID in the same backlog entry on the next accepted vault edit. This call revalidates and
+   atomically registers the preflighted interactive driver placement; never infer or append placement separately.
+8. If Registry creation or interactive Herdr registration fails, stop before dispatching a formal child.
+9. Use the fixed configured roster (`delegate`, `context-builder`, `worker`, `reviewer`) without spending turns listing or
+   inspecting agent capabilities. If the required `subagent` tool or named profile is unavailable, stop before model
+   execution; do not improvise another runtime.
 
 Before the invocation commit, emit no plan or clarification beyond the host's minimal skill acknowledgment.
 
@@ -76,69 +86,84 @@ Use one root checkbox. Timeline rows are plain nested bullets with `Done`, `Acti
 nested unchecked boxes. Keep one Active stage. Update this entry in place under its original invocation date on resume.
 Commit backlog edits only with an owned lifecycle checkpoint. At completion, make every stage Done and the root `[x]`.
 
+## Concurrent vault commit flow
+
+Treat the Task/Issue note as the Run's exclusive primary path. Feature notes and weekly backlog files are shared
+aggregate paths. Distinct Runs may update them concurrently only by serializing the whole canonical transaction:
+
+1. Acquire `~/dotfiles/scripts/vault-hunter-vault-lock acquire <vault-root> <run-id> <exact paths...>` before reading for
+   an edit. The lock is repository-wide across local vault worktrees.
+2. Re-read every allowlisted file and `HEAD` after acquisition. Locate this Run's backlog entry and target checklist item
+   by exact identity; preserve every other Run's entries and status.
+3. Apply only this Run's accepted canonical update. Run the required checks and `$vault-hunter-checkpoint` in
+   `invocation`, `one`, `progress`, or `two` mode while retaining the lock.
+4. Release only after an exact-path commit leaves no owned staged or unstaged edits. If validation or commit fails,
+   retain the lock until the parent repairs or rolls back its partial edit.
+
+Never sleep, ask the user, dispatch a child, or perform implementation work while holding the lock. Never auto-remove a
+foreign lock. This is a local-machine lock; cross-machine workers require a separate remote coordination mechanism.
+
 ## Runtime router
 
 Choose the cheapest runtime that preserves the stage's real needs.
 
 | Work | Default | Escalate to full Herdr Codex only when |
 |---|---|---|
-| Exact lookup, Git/CI status, baseline command, hash, immutable check | `delegate` via `vault_hunter_step`, fresh context, `openai-codex/gpt-5.6-luna:low` | Authentication or live operator interaction is required |
-| Mechanical context inventory: hierarchy, repository, instructions, Git state, and key paths | `delegate` via `vault_hunter_step`, fresh context, `openai-codex/gpt-5.6-luna:low` | Never escalate for synthesis; return a compact evidence pack and stop |
-| Specification draft and verifier judgment | `context-builder` via `vault_hunter_step`, fresh context, strong inherited model, accepted context pack plus exact canonical files | A concrete ambiguity requires live human exploration, or the same terminal must remain open across a human checkpoint |
-| Implementation or approved fix slice | `worker` via `vault_hunter_step`, exact worktree | A manual UI/demo or live steering is materially useful |
-| Independent review | `reviewer` via `vault_hunter_step`, fresh context, no edits | The human explicitly wants to inspect or interact with the reviewer |
+| Exact lookup, Git/CI status, hash, immutable check | `delegate` via `subagent` (configured Luna/low) | Authentication or live operator interaction is required |
+| Mechanical context inventory: hierarchy, repository, instructions, Git state, and key paths | `delegate` via `subagent` (configured Luna/low) | Never escalate for synthesis; return a compact evidence pack and stop |
+| Task verifier construction, repair, declared checks, complete reruns, and post-merge verification | One persistent `$vault-hunter-worker` verifier steward, registered once and steered one goal at a time | Required for every implementation Task; replace only after a proven terminal failure and explicit parent decision |
+| Specification draft and verifier judgment | `context-builder` via `subagent` (configured strong model), accepted context pack plus exact canonical files | A concrete ambiguity requires live human exploration, or the same terminal must remain open across a human checkpoint |
+| Implementation or approved fix slice | `worker` via `subagent`, exact worktree | A manual UI/demo or live steering is materially useful |
+| Independent review | `reviewer` via `subagent`, no edits | The human explicitly wants to inspect or interact with the reviewer |
 | Refactor judgment | `reviewer` headlessly; one `worker` only for accepted changes | The investigation is genuinely exploratory and interactive |
 | Pure human approval checkpoint | Parent | Never delegate |
 | Interactive prototype, TUI/manual acceptance | `$vault-hunter-worker` | Always use Herdr for this row |
 | Vault edits, acceptance, lifecycle decisions, Registry decisions | Parent | Never delegate |
 | Checkpoint Git envelope | Parent follows `$vault-hunter-checkpoint` | Never delegate merely for visibility |
 
-Do not encode a whole Task Run as one subagent chain. Launch one formal stage at a time so the parent can inspect the
-handoff, record its decision, and choose the next stage. Independent read-only jobs may run in parallel as separate
-`vault_hunter_step` calls. Never launch parallel writers into the same worktree.
+Do not encode a whole Task Run as one unattended subagent chain. Launch and steer one formal stage at a time so the
+parent can inspect the handoff, record its decision, and choose the next stage. The verifier steward is one registered
+session reused across those parent-controlled stages, not permission to run ahead. Independent read-only jobs may run
+in parallel as separate `subagent` calls. Never launch parallel writers into the same worktree.
 
 ## Formal child contract
 
 ### Headless child
 
-Call `vault_hunter_step` once per child with:
+Call `subagent` once per child with the chosen agent, exact cwd/worktree, and a compact prompt containing the stable
+Goal ID, lifecycle kind, role, outcome, accepted inputs and exact file allowlist, invariants, validation, output shape,
+and stop rules. Permit only directly relevant imports, callers, and tests beyond that allowlist. Do not request external
+research unless the stage explicitly requires it. Include Ponytail constraints directly in implementation/fix prompts
+and the exact check contract directly in validation prompts because children start with no inherited context or skills.
 
-- Registry Run ID, stable Goal ID, lifecycle kind, role, exact cwd/worktree, and chosen agent;
-- a compact prompt containing the outcome, accepted inputs and exact file allowlist, invariants, validation, output
-  shape, and stop rules; permit only directly relevant imports, callers, and tests beyond that allowlist;
-- no external research or `web_search` unless the stage explicitly requires current external evidence;
-- fresh context by default; fork only when inherited parent history is intentionally required;
-- `$ponytail` for implementation and fix workers;
-- `$vault-hunter-check` for exact declared check execution.
-
-Before launch, `vault_hunter_step preflight` must inspect the selected agent's configured model, tools, and extensions.
-If the wrapper, native RPC, profile, or a requested capability is unavailable, record the runtime-blocked result and
-stop before spawn; optional unavailable tools must not turn a completed bounded handoff into a failed formal stage.
-
-The wrapper persists a launch intent, launches asynchronously through `pi-subagents`, writes the native async-run
-participant and active observation to the Registry, binds the child beside its status artifact, and replays control and
-terminal state after restart. If registration fails, treat the child as a potentially live orphan: request stop,
-quarantine its cwd from another writer, inspect Pi process-terminal evidence and any worktree delta, and do not launch a
-replacement writer until termination is proved or the Run is explicitly blocked.
-
-Use `subagent_wait` when the current stage cannot be decided without the result. Use structured status or transcript
-inspection only after a completion or attention signal; never poll in a loop. `needs_attention` means silence was
-observed, not that the child is stuck. Interrupt only on concrete drift, blockage, or explicit human request.
+The call is synchronous: inspect its returned handoff directly. Do not call management list/get/status/wait merely to
+confirm configured capabilities or completion. Runtime observations capture bounded execution and cost, not canonical
+acceptance. If a writer call is interrupted or fails ambiguously, quarantine its cwd, inspect the worktree delta, and do
+not launch a replacement writer until no child process remains or the Run is explicitly blocked.
 
 A useful handoff reports changed paths, commands and exit codes, commit/tree when applicable, concise findings,
 remaining risks, and decisions requiring the parent. Child completion is not acceptance. If the formal child exits
 failed after producing an apparently complete artifact, do not rerun it automatically or accept it directly. Launch
-exactly one preflighted `delegate` read-only validator through `vault_hunter_step` to report only the artifact hash and
+exactly one `delegate` read-only validator through `subagent` to report only the artifact hash and
 required shape, repository cleanliness, and exact runtime error. The parent alone decides whether the failure is
 independent of the result and whether to accept the artifact.
 
 ### Herdr-visible child
 
-Use `$vault-hunter-worker` only for a router exception. Immediately after its validated launch, call
-`vault_hunter_record` with one participant containing the complete Herdr workspace/tab/pane/terminal tuple and exact
-agent-session identity. Never record a partial Herdr tuple or consume its handoff before registration. If registration
-fails, stop and close only the captured tab. Record terminal state separately. Keep a genuinely interactive session open
-when continuity is required; otherwise close only its captured owned tab after accepting the handoff.
+After checkpoint-one human approval for an implementation Task, launch exactly one `$vault-hunter-worker` with role
+`verifier-steward` in the Task worktree. Its first prompt contains the accepted context capsule, complete verifier ledger,
+exact authoritative runtime/source seams, verifier-only edit allowlist, and V01 baseline goal. Immediately after its
+validated launch, call `vault_hunter_record` with one participant containing the complete Herdr
+workspace/tab/pane/terminal tuple and exact agent-session identity. Never record a partial Herdr tuple or consume its
+handoff before registration. If registration fails, stop and close only the captured tab.
+
+Keep that exact verifier session open and idle after every handoff. Send each later baseline, verifier repair, affected
+check, complete-suite rerun, final check, and post-merge check as an exact follow-up goal to the same session; never
+launch a fresh verifier/check child merely to obtain clean context. Record terminal state and each parent acceptance
+separately, but register the participant only once. A timeout is not grounds for replacement. If the session is proven
+dead or unreachable, record interruption, preserve its accepted context capsule and finding/check ledger, and obtain an
+explicit parent decision before launching one replacement steward. Other Herdr-visible children remain router
+exceptions and close after their accepted handoff unless continuity is explicitly required.
 
 ### Parent observations
 
@@ -157,10 +182,12 @@ selected Task or Issue, then report only ownership, route, implementation reposi
 state, reusable Task worktree/Herdr state, and exact relevant paths. It makes no specification decisions and stops after
 the inventory. Reuse a still-current accepted pack on resume instead of launching another discovery child.
 
-For Feature or Task specification, give the strong `context-builder` that accepted pack plus the exact canonical files.
+For Feature or Task specification, give the strong `context-builder` the accepted pack inline plus the exact canonical
+files and explicitly mark hierarchy, ownership, Git state, instructions, roster, and relevant paths as settled inputs.
 It follows only directly relevant imports, callers, and tests needed for unresolved contract or verifier questions; it
-does not repeat hierarchy/Git discovery, scan the whole repository, or use external research unless a named requirement
-cannot otherwise be resolved. Stop after the canonical contract and concrete ambiguities are complete. Ask the user only
+must not repeat settled discovery, inspect agent capabilities, scan the whole repository, or use external research unless
+a named requirement cannot otherwise be resolved. The parent validates only changed or decision-critical claims rather
+than replaying the inventory. Stop after the canonical contract and concrete ambiguities are complete. Ask the user only
 if a material ambiguity remains.
 
 Route by target:
@@ -168,7 +195,7 @@ Route by target:
 - **Feature:** refine stable ordered Tasks and planned observable verifiers, store the accepted plan, then stop before
   implementation.
 - **Task:** execute the Task timeline below.
-- **Issue or Wayfinder effort:** use registered result-only headless children for bounded research, let the parent write
+- **Issue or Wayfinder effort:** use result-only headless children for bounded research, let the parent write
   every ticket/map/Feature decision, then stop before implementation. Do not use `wayfinder_subagents` because its AFK
   children write tracker notes and violate this skill's sole vault-writer boundary.
 
@@ -191,89 +218,134 @@ evidence items.
 ## Task timeline
 
 Maintain one continuous backlog timeline. For each stage: record parent activation, dispatch through the router, inspect
-the handoff and repository evidence, record the parent decision, then update the Task note and backlog. The parent may
+the handoff and repository evidence, record the parent decision, then acquire the shared vault lock and update the Task
+note and backlog through a `progress` checkpoint. The parent may
 perform small mechanical reads only to validate a handoff; if required evidence is missing, it launches another bounded
-registered child rather than discovering the answer itself. It does not redo delegated investigation or implementation.
+child rather than discovering the answer itself. It does not redo delegated investigation or implementation.
 
 ### Specification and checkpoint one
 
 Use a headless strong-model `context-builder` for the specification draft unless the work itself requires an interactive
 prototype or manual UI evaluation. Give it the accepted compact context pack and canonical Task files so it spends its
 context on contract and verifier judgment rather than rediscovery. Produce the canonical Task contract and complete
-verifier ledger. After accepting the handoff, the parent writes the Task and backlog updates and immediately follows
-`$vault-hunter-checkpoint` in `one` mode without
-yielding, launching another child, or leaving Run-owned vault changes uncommitted. Push the invocation and Task-note
+verifier ledger. After accepting the handoff, the parent acquires the shared vault lock, re-reads the canonical files, writes the Task and
+backlog updates, and immediately follows `$vault-hunter-checkpoint` in `one` mode without yielding, launching another
+child, or leaving Run-owned vault changes uncommitted. Push the invocation and Task-note
 commits directly; never open a vault PR.
 
 Stop before implementation. Mark `Blocked — Awaiting human evaluation`, report the Task link, verifier ledger,
 checkpoint commits, and exact decision requested. A pure approval is handled by the parent. When feedback requires more
-specification work, launch a new registered follow-up child with the canonical Task, prior handoff, checkpoint evidence,
-and exact feedback. Same-session resumption is reserved for a deliberately chosen Herdr exception. Activate V01 only
-after the parent accepts the resulting specification.
+specification work, launch a new bounded follow-up child with the canonical Task, accepted context capsule, prior
+handoff, checkpoint evidence, and exact feedback. Children cannot be resumed; same-terminal continuity requires a
+deliberately chosen Herdr exception.
+After the parent accepts the resulting specification, launch and register the one persistent verifier steward, then
+activate V01. Do not launch it before approval or launch another verifier steward for later `Vnn` entries.
 
-### One goal per verifier
+### One persistent verifier, one goal at a time
 
 Before launching an implementation or fix writer, require a clean worktree except for explicitly accepted source
-changes. Treat `.pi-subagents/` and other runtime-generated files as owned runtime debris: remove only the current Run's
+changes. Treat runtime-generated files as owned debris: remove only the current Run's
 artifacts when safe, or block the writer. Never silently include runtime artifacts in implementation commits.
 
-For each verifier in order:
+For each verifier in order, steer the same registered verifier steward and wait for a parent decision between goals:
 
-1. Launch a bounded check child to prove the original baseline red using `$vault-hunter-check`.
-2. If the verifier unexpectedly passes, launch one bounded writer to repair the verifier until it detects the gap.
-3. Launch one implementation writer for the smallest approved slice.
-4. Launch the check child against the current branch and complete active verifier set.
-5. Accept only concrete green evidence, update that verifier's `EX01`, record Registry evidence, then activate the next
-   verifier.
+1. Send the steward the exact original-baseline goal and `$vault-hunter-check` contract for the active `Vnn`.
+2. If the verifier unexpectedly passes, send the same steward one verifier-repair goal. It may edit only the accepted
+   verifier paths and must return idle after proving the intended baseline red; do not launch a replacement writer.
+3. After accepting the baseline, require the steward to be idle, then launch one implementation writer for the smallest
+   approved product slice.
+4. After the implementation writer returns idle and its handoff is accepted, send the steward the current immutable
+   head/tree and exact affected plus active complete check set. It must not reuse results from an older head.
+5. Accept only concrete green evidence, record Registry evidence, then acquire the shared vault lock and use a
+   `progress` checkpoint to update that verifier's `EX01` and activate the next verifier.
 
-An earlier slice may legitimately make a later independently-red verifier green. Accept it; never manufacture failure.
+Keep the steward open between `Vnn` entries and provide only the new immutable head, newly accepted decisions, and next
+verifier goal; do not resend repository inventories, transcripts, or settled context. An earlier slice may legitimately
+make a later independently-red verifier green. Accept it; never manufacture failure.
 
 ### Refactor gate
 
 After every verifier has been green once, launch a read-only refactor review. If it identifies changes worth doing now,
-launch one writer for only those changes. Run the complete declared check set through `$vault-hunter-check`. Defer polish.
+launch one writer for only those changes. Send the resulting immutable head and complete declared check set to the same
+verifier steward using the `$vault-hunter-check` contract. Defer polish.
 
 ### Review convergence
 
 Launch fresh-context independent review children with distinct, non-overlapping angles when useful. Synthesize findings
-in the parent. Launch one writer for accepted fixes, strengthen the owning stable verifier when uncovered behavior needs
-proof, rerun affected and complete checks, and review again only when material changes warrant it. Stop when no bug or
-major specification/architecture violation remains; do not chase optional polish.
+in the parent. Launch one product writer for accepted product fixes. After that writer is idle, send any accepted
+verifier strengthening plus the new immutable head to the same verifier steward; then have that steward rerun affected
+and complete checks. Review again only when material changes warrant it. Stop when no bug or major
+specification/architecture violation remains; do not chase optional polish.
 
 ### PR, CI, and landing
 
-1. Launch a final check child and refresh each existing `EX01` in place from accepted evidence.
-2. Launch a bounded release worker to push implementation and open the PR. Never arm auto-merge.
-3. Use registered `openai-codex/gpt-5.6-luna:low` observer children for discrete CI/approval status reads. Do not keep
-   an agent alive merely to poll.
-4. Fix CI failures through the same single-writer and verifier loop. Never bypass branch protection or approval.
-5. When ready, report and wait for explicit human merge.
-6. After merge, launch a registered check child against a temporary detached worktree at fetched merged main.
+Every implementation PR description must contain these reviewable sections before the Run can reach human merge:
+
+- `## Verifiers` — list every stable `Vnn`, the observable contract, exact command or manual observation, result, and
+  accepted commit/tree plus transcript or artifact SHA-256. Do not substitute a generic test summary.
+- `## Evidence` — embed or link labeled visual evidence for each changed user-visible state and map every artifact to
+  its verifier. Use screenshots by default. Use an MP4 when motion, timing, transitions, or a multi-step interaction is
+  the behavior under review. Capture on the actual target platform when platform rendering or integration matters;
+  include required dimensions, fallback/error states, and before/after states where relevant.
+
+Every Task PR also gets one reviewed `$lavish` verifier explainer after the ledger is stable. Give each `Vnn` its own
+section with a small accessible responsive inline SVG and concise text below it naming what the verifier proves and what
+it deliberately leaves out. For terminal, CLI, infrastructure, or agent-workflow Tasks, default to a terminal-first
+ANSI/TUI composition using the Gruvbox Material palette and real status semantics; for product UI Tasks, match the
+product's design system instead. Diagrams must visualize accepted facts, not invent architecture or substitute for the
+exact command/manual evidence.
+
+Include the explainer under `## Evidence` and label it honestly as verifier evidence when it directly visualizes accepted
+results, or as a problem/verifier explainer when it only teaches the review surface. Map either label to the relevant
+`Vnn`. A generated explainer never replaces screenshots or MP4s required to prove changed user-visible behavior.
+Refresh and re-review it after any material verifier or behavior change.
+
+Pin evidence and explainers to the reviewed implementation commit or a durable PR attachment, never a local path,
+mutable branch URL, or homelab preview alias, and verify every link loads from the rendered PR. A non-visual change may
+use a compact transcript or machine-readable artifact as its behavioral proof, but it still includes the verifier
+explainer and retains `## Evidence`. The release worker may not report the PR ready while either section, verifier
+mapping, artifact hash, explainer, or required visual state is missing.
+
+1. Send the final complete check set to the same verifier steward and refresh each existing `EX01` in place from
+   accepted evidence bound to the reviewed head/tree.
+2. Launch a bounded release worker to push implementation, publish the reviewed verifier explainer plus any required
+   screenshots or MP4 evidence, and open or update the PR with the complete description contract above. Never arm
+   auto-merge.
+3. Use one synchronous `delegate` observer child to render/read the live PR description, verify all evidence and explainer links load, and report
+   discrete CI/approval status. Do not keep an agent alive merely to poll.
+4. Fix CI failures or PR-evidence gaps through the same single-writer and verifier loop. Never bypass branch protection
+   or approval.
+5. When ready, report the verifier/evidence sections and wait for explicit human merge.
+6. After merge, give the same verifier steward the fetched merged-main commit and temporary detached worktree for the
+   registered post-merge check; do not launch a fresh check child.
 
 ### Cleanup and checkpoint two
 
 After accepted post-merge evidence:
 
-1. Confirm every registered headless child is terminal or explicitly preserved as blocked. Its lack of Herdr presence is
-   expected; verify through Registry and Pi artifacts.
-2. Close only exact Herdr tabs, workspaces, and bound Neovim workspace tabs captured as created for this Run. If none
+1. Confirm no interrupted writer process remains. Synchronous headless children have observational Registry records but
+   no durable controllable Pi artifact. After accepted post-merge evidence, close the exact persistent verifier-steward
+   tab and verify its registered agent/session/tab/pane/terminal tuple is gone.
+2. Close only other exact Herdr tabs, workspaces, and bound Neovim workspace tabs captured as created for this Run. If none
    were created, skip Herdr/Neovim cleanup. Preserve reusable and unrelated state.
 3. Remove only owned temporary worktrees/branches after ancestry and cleanliness checks.
-4. Add final verifier, PR, merge, post-merge, participant, and cleanup evidence to the Task note.
-5. Set the Task `status: done`, Feature checklist `[x]`, derive Feature status, and complete the backlog entry.
-6. Follow `$vault-hunter-checkpoint` in `two` mode with the exact vault allowlist. Accept completion only after push,
+4. Acquire the shared vault lock, re-read the Task, Feature, and backlog, then add final verifier, PR, merge, post-merge,
+   participant, and cleanup evidence to the Task note.
+5. Set the Task `status: done`, change only this Task's Feature checklist item to `[x]`, re-derive Feature status from the
+   now-current full checklist, and complete only this Run's backlog entry.
+6. Follow `$vault-hunter-checkpoint` in `two` mode with the exact lock owner and vault allowlist. Accept completion only after push,
    fetch, and proof that the checkpoint is ancestral to `origin/main`.
 7. Record the parent `run/done` observation only after checkpoint two succeeds. It remains observational.
 
 ## Resume and disagreement
 
-On resume, use the canonical Task/backlog as authority and the Registry plus `pi-subagents` artifacts as observations.
-Replay is idempotent. Continue at the first unfinished canonical stage. If canonical state, Registry observations, and
-live runtime disagree, report the mismatch and let the parent decide; never auto-advance, auto-fail, or rewrite the
-vault from runtime state.
+On resume, use the canonical Task/backlog as authority and parent-authored Registry observations as supporting evidence.
+Headless child execution cannot be replayed; repeat only the first unfinished canonical stage. If canonical state and
+Registry observations disagree, report the mismatch and let the parent decide; never auto-advance, auto-fail, or rewrite
+the vault from runtime state.
 
 ## Completion
 
-Report the Feature/Task links, Registry Run ID, registered participant summary, implementation PR and merge state,
+Report the Feature/Task links, Registry Run ID, interactive participant summary, implementation PR and merge state,
 accepted verifier and post-merge evidence, backlog entry, vault checkpoint commits, remote-main proof, cleanup evidence,
 and preserved unrelated dirty state or deferred polish.
