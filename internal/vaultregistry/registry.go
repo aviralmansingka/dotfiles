@@ -169,8 +169,8 @@ func (p *Producer) Update(runID string, expectedRevision uint64, mutate func(*Ru
 		return Run{}, err
 	}
 	if next.SchemaVersion != current.SchemaVersion || next.RunID != current.RunID || next.Revision != current.Revision ||
-		next.Task.ID != current.Task.ID || next.Task.Title != current.Task.Title || next.Task.Path != current.Task.Path ||
-		next.Task.FeaturePath != current.Task.FeaturePath || next.Task.Kind != current.Task.Kind ||
+		next.InvokedAt != current.InvokedAt || !equalJSON(current.Task, next.Task) ||
+		len(current.Unknown) > 0 && !equalJSON(current.Unknown, next.Unknown) ||
 		!slices.EqualFunc(current.Participants, next.Participants[:min(len(current.Participants), len(next.Participants))], equalJSON) ||
 		!slices.EqualFunc(current.Lifecycle, next.Lifecycle[:min(len(current.Lifecycle), len(next.Lifecycle))], equalJSON) ||
 		!slices.EqualFunc(current.Evidence, next.Evidence[:min(len(current.Evidence), len(next.Evidence))], equalJSON) ||
