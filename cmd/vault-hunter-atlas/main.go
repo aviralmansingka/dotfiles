@@ -22,8 +22,17 @@ func main() {
 		flag.Usage()
 		os.Exit(2)
 	}
-	if (*width == 0) != (*height == 0) {
+	widthSet, heightSet := false, false
+	flag.Visit(func(f *flag.Flag) {
+		widthSet = widthSet || f.Name == "width"
+		heightSet = heightSet || f.Name == "height"
+	})
+	if widthSet != heightSet {
 		fmt.Fprintln(os.Stderr, "width and height must be supplied together")
+		os.Exit(2)
+	}
+	if widthSet && (*width <= 0 || *height <= 0) {
+		fmt.Fprintln(os.Stderr, "width and height must be positive")
 		os.Exit(2)
 	}
 
@@ -38,7 +47,7 @@ func main() {
 
 	static := *snapshot || os.Getenv("TERM") == "dumb" || !characterDevice(os.Stdin) || !characterDevice(os.Stdout)
 	if static {
-		if *width == 0 {
+		if !widthSet {
 			*width, *height = 80, 24
 		}
 		fmt.Println(atlas.NewModel(run, *width, *height).View())

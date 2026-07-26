@@ -106,31 +106,24 @@ func (m Model) View() string {
 		if i == 1 {
 			divider = "┼"
 		}
-		rowLeftWidth, rowRightWidth := leftWidth, rightWidth
-		if i < 2 {
-			rowLeftWidth, rowRightWidth = leftWidth-1, rightWidth+1
-		}
-		leftLimit := rowLeftWidth
+		leftLimit := leftWidth
 		if i >= 2 {
 			leftLimit = leftWidth - 1
 		}
-		if i == 2 {
-			rowLeftWidth = leftWidth - 1
-		}
-		rightLimit := rowRightWidth
+		rightLimit := rightWidth
 		if i >= 2 {
-			rightLimit = min(rowRightWidth, max(0, m.width-40))
-			if rightLimit < rowRightWidth && strings.HasPrefix(strings.TrimSpace(r), "artifact:") {
+			rightLimit = min(rightWidth, max(0, m.width-40))
+			if rightLimit < rightWidth && strings.HasPrefix(strings.TrimSpace(r), "artifact:") {
 				rightLimit--
 			}
 		}
-		rows = append(rows, pad(truncate(l, leftLimit), rowLeftWidth)+divider+truncate(r, rightLimit))
+		rows = append(rows, pad(truncate(l, leftLimit), leftWidth)+divider+truncate(r, rightLimit))
 	}
 	return strings.Join(rows, "\n")
 }
 
 func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
-	left := []string{"Task Goals", strings.Repeat("─", leftWidth-1)}
+	left := []string{"Task Goals", strings.Repeat("─", leftWidth)}
 	if len(m.goals) == 0 {
 		left = append(left, "  no recorded goals")
 	} else {
@@ -143,11 +136,11 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 			if i == m.selected {
 				cursor = "▶ "
 			}
-			left = append(left, fmt.Sprintf("%s%s %s · %s · %s", cursor, goalGlyph(g, i == m.selected), g.id, value(g.kind), value(g.state)))
+			left = append(left, fmt.Sprintf("%s%s %s · %s · %s", cursor, goalGlyph(g), g.id, value(g.kind), value(g.state)))
 		}
 	}
 
-	right := []string{" Verifier Journey", strings.Repeat("─", rightWidth+1)}
+	right := []string{" Verifier Journey", strings.Repeat("─", rightWidth)}
 	if len(m.goals) == 0 {
 		right = append(right, " no recorded goals")
 	} else {
@@ -331,12 +324,9 @@ func glyph(state string) string {
 	}
 }
 
-func goalGlyph(g goal, selected bool) string {
+func goalGlyph(g goal) string {
 	if !knownKind(g.kind) || !knownState(g.state) {
 		return "?"
-	}
-	if selected && g.state == "active" {
-		return "●"
 	}
 	if g.state == "blocked" {
 		return "!"
@@ -372,7 +362,7 @@ func goalGlyph(g goal, selected bool) string {
 }
 
 func lifecycleGlyph(kind, state string) string {
-	return goalGlyph(goal{kind: kind, state: state}, state == "active")
+	return goalGlyph(goal{kind: kind, state: state})
 }
 
 func knownKind(kind string) bool {
