@@ -1,12 +1,12 @@
 ---
 name: vault-hunter
-description: Drive one canonical vault-backed run while delegating small definite work to Registry-observable Pi subagents. Use when invoked as $vault-hunter with a Feature, Task, Issue, checkbox, or Wayfinder reference.
+description: Drive one canonical vault-backed run while delegating small definite work to bounded Pi subagents. Use when invoked as $vault-hunter with a Feature, Task, Issue, checkbox, or Wayfinder reference.
 ---
 
 # Vault Hunter
 
 Drive one vault-backed request from the primary Pi session. The parent is the sole lifecycle decision-maker, handoff
-acceptor, Run Registry producer, and vault writer. Small definite work defaults to bounded headless `pi-subagents`
+acceptor, Run Registry producer, and vault writer. Small definite work defaults to bounded headless `subagent`
 children. Use a full Herdr-visible Codex session only when a human benefits from opening, steering, or resuming its
 terminal.
 
@@ -22,10 +22,10 @@ terminal.
   checklist, weekly backlog, or branch, stop before editing until ownership is unambiguous.
 - Keep one writer in an implementation worktree. Parallelize reads, review, and isolated checks, not ordinary writes.
 - Preserve unrelated Git, Herdr, Neovim, and filesystem state.
-- A formal child is any delegated agent whose result may influence the Run. Every formal headless child must launch
-  through `vault_hunter_step`; never call `subagent` directly for one.
+- A formal child is any delegated agent whose result may influence the Run. Launch every formal headless child directly
+  through `subagent`; the call is synchronous and does not create a durable Run Registry participant.
 - After the parent minimally resolves the invocation target, all mechanical discovery that may inform routing,
-  specification, implementation, verification, review, or landing is performed by registered headless children. The
+  specification, implementation, verification, review, or landing is performed by bounded headless children. The
   parent may validate returned facts but never fills missing discovery itself; launch another bounded child instead.
 
 ## Invocation
@@ -46,8 +46,7 @@ Before substantive discovery:
    in the same backlog entry on the next accepted vault edit. For an interactive parent, this call atomically resolves
    and validates the current Herdr workspace/tab/pane/terminal tuple and exact Pi session binding; never infer or append
    driver placement separately.
-6. If Registry creation or interactive Herdr registration fails, stop before dispatching a formal child. Do not fall
-   back to an unregistered child.
+6. If Registry creation or interactive Herdr registration fails, stop before dispatching a formal child.
 
 Before the invocation commit, emit no plan or clarification beyond the host's minimal skill acknowledgment.
 
@@ -77,11 +76,11 @@ Choose the cheapest runtime that preserves the stage's real needs.
 
 | Work | Default | Escalate to full Herdr Codex only when |
 |---|---|---|
-| Exact lookup, Git/CI status, baseline command, hash, immutable check | `delegate` via `vault_hunter_step`, fresh context, `openai-codex/gpt-5.6-luna:low` | Authentication or live operator interaction is required |
-| Mechanical context inventory: hierarchy, repository, instructions, Git state, and key paths | `delegate` via `vault_hunter_step`, fresh context, `openai-codex/gpt-5.6-luna:low` | Never escalate for synthesis; return a compact evidence pack and stop |
-| Specification draft and verifier judgment | `context-builder` via `vault_hunter_step`, fresh context, strong inherited model, accepted context pack plus exact canonical files | A concrete ambiguity requires live human exploration, or the same terminal must remain open across a human checkpoint |
-| Implementation or approved fix slice | `worker` via `vault_hunter_step`, exact worktree | A manual UI/demo or live steering is materially useful |
-| Independent review | `reviewer` via `vault_hunter_step`, fresh context, no edits | The human explicitly wants to inspect or interact with the reviewer |
+| Exact lookup, Git/CI status, baseline command, hash, immutable check | `delegate` via `subagent` (configured Luna/low) | Authentication or live operator interaction is required |
+| Mechanical context inventory: hierarchy, repository, instructions, Git state, and key paths | `delegate` via `subagent` (configured Luna/low) | Never escalate for synthesis; return a compact evidence pack and stop |
+| Specification draft and verifier judgment | `context-builder` via `subagent` (configured strong model), accepted context pack plus exact canonical files | A concrete ambiguity requires live human exploration, or the same terminal must remain open across a human checkpoint |
+| Implementation or approved fix slice | `worker` via `subagent`, exact worktree | A manual UI/demo or live steering is materially useful |
+| Independent review | `reviewer` via `subagent`, no edits | The human explicitly wants to inspect or interact with the reviewer |
 | Refactor judgment | `reviewer` headlessly; one `worker` only for accepted changes | The investigation is genuinely exploratory and interactive |
 | Pure human approval checkpoint | Parent | Never delegate |
 | Interactive prototype, TUI/manual acceptance | `$vault-hunter-worker` | Always use Herdr for this row |
@@ -90,40 +89,31 @@ Choose the cheapest runtime that preserves the stage's real needs.
 
 Do not encode a whole Task Run as one subagent chain. Launch one formal stage at a time so the parent can inspect the
 handoff, record its decision, and choose the next stage. Independent read-only jobs may run in parallel as separate
-`vault_hunter_step` calls. Never launch parallel writers into the same worktree.
+`subagent` calls. Never launch parallel writers into the same worktree.
 
 ## Formal child contract
 
 ### Headless child
 
-Call `vault_hunter_step` once per child with:
+Call `subagent` once per child with the chosen agent, exact cwd/worktree, and a compact prompt containing the stable
+Goal ID and role, outcome, accepted inputs and exact file allowlist, invariants, validation, output shape, and stop rules.
+Permit only directly relevant imports, callers, and tests beyond that allowlist. Do not request external research unless
+the stage explicitly requires it. Include Ponytail constraints directly in implementation/fix prompts and the exact
+check contract directly in validation prompts because children start with no inherited context or skills.
 
-- Registry Run ID, stable Goal ID, lifecycle kind, role, exact cwd/worktree, and chosen agent;
-- a compact prompt containing the outcome, accepted inputs and exact file allowlist, invariants, validation, output
-  shape, and stop rules; permit only directly relevant imports, callers, and tests beyond that allowlist;
-- no external research or `web_search` unless the stage explicitly requires current external evidence;
-- fresh context by default; fork only when inherited parent history is intentionally required;
-- `$ponytail` for implementation and fix workers;
-- `$vault-hunter-check` for exact declared check execution.
+Before launch, inspect the selected agent's configured model and tools. If a required capability is unavailable, choose
+a compatible configured agent or stop before spawn; optional unavailable tools must not turn a completed bounded
+handoff into a failed formal stage.
 
-Before launch, inspect the selected agent's configured model, tools, and extensions. If a required capability is
-unavailable, choose a compatible registered agent or stop before spawn; optional unavailable tools must not turn a
-completed bounded handoff into a failed formal stage.
-
-The wrapper persists a launch intent, launches asynchronously through `pi-subagents`, writes the native async-run
-participant and active observation to the Registry, binds the child beside its status artifact, and replays control and
-terminal state after restart. If registration fails, treat the child as a potentially live orphan: request stop,
-quarantine its cwd from another writer, inspect Pi process-terminal evidence and any worktree delta, and do not launch a
-replacement writer until termination is proved or the Run is explicitly blocked.
-
-Use `subagent_wait` when the current stage cannot be decided without the result. Use structured status or transcript
-inspection only after a completion or attention signal; never poll in a loop. `needs_attention` means silence was
-observed, not that the child is stuck. Interrupt only on concrete drift, blockage, or explicit human request.
+The call runs synchronously in an isolated Pi process and returns only its result. It creates no durable child session,
+Registry participant, restart replay, pause/resume control, or background completion signal. Do not claim Registry-backed
+child evidence for these children. If a writer call is interrupted or fails ambiguously, quarantine its cwd, inspect the
+worktree delta, and do not launch a replacement writer until no child process remains or the Run is explicitly blocked.
 
 A useful handoff reports changed paths, commands and exit codes, commit/tree when applicable, concise findings,
 remaining risks, and decisions requiring the parent. Child completion is not acceptance. If the formal child exits
-failed after producing an apparently complete artifact, do not accept it directly: launch one registered
-`openai-codex/gpt-5.6-luna:low` read-only validator to report only the artifact hash and required shape, repository
+failed after producing an apparently complete artifact, do not accept it directly: launch one `delegate` read-only
+validator to report only the artifact hash and required shape, repository
 cleanliness, and exact runtime error. The parent alone decides whether the failure is independent of the result and
 whether to accept the artifact.
 
@@ -163,7 +153,7 @@ Route by target:
 - **Feature:** refine stable ordered Tasks and planned observable verifiers, store the accepted plan, then stop before
   implementation.
 - **Task:** execute the Task timeline below.
-- **Issue or Wayfinder effort:** use registered result-only headless children for bounded research, let the parent write
+- **Issue or Wayfinder effort:** use result-only headless children for bounded research, let the parent write
   every ticket/map/Feature decision, then stop before implementation. Do not use `wayfinder_subagents` because its AFK
   children write tracker notes and violate this skill's sole vault-writer boundary.
 
@@ -188,7 +178,7 @@ evidence items.
 Maintain one continuous backlog timeline. For each stage: record parent activation, dispatch through the router, inspect
 the handoff and repository evidence, record the parent decision, then update the Task note and backlog. The parent may
 perform small mechanical reads only to validate a handoff; if required evidence is missing, it launches another bounded
-registered child rather than discovering the answer itself. It does not redo delegated investigation or implementation.
+child rather than discovering the answer itself. It does not redo delegated investigation or implementation.
 
 ### Specification and checkpoint one
 
@@ -202,14 +192,14 @@ commits directly; never open a vault PR.
 
 Stop before implementation. Mark `Blocked — Awaiting human evaluation`, report the Task link, verifier ledger,
 checkpoint commits, and exact decision requested. A pure approval is handled by the parent. When feedback requires more
-specification work, launch a new registered follow-up child with the canonical Task, prior handoff, checkpoint evidence,
-and exact feedback. Same-session resumption is reserved for a deliberately chosen Herdr exception. Activate V01 only
+specification work, launch a new bounded follow-up child with the canonical Task, prior handoff, checkpoint evidence,
+and exact feedback. Children cannot be resumed; same-terminal continuity requires a deliberately chosen Herdr exception. Activate V01 only
 after the parent accepts the resulting specification.
 
 ### One goal per verifier
 
 Before launching an implementation or fix writer, require a clean worktree except for explicitly accepted source
-changes. Treat `.pi-subagents/` and other runtime-generated files as owned runtime debris: remove only the current Run's
+changes. Treat runtime-generated files as owned runtime debris: remove only the current Run's
 artifacts when safe, or block the writer. Never silently include runtime artifacts in implementation commits.
 
 For each verifier in order:
@@ -239,18 +229,18 @@ major specification/architecture violation remains; do not chase optional polish
 
 1. Launch a final check child and refresh each existing `EX01` in place from accepted evidence.
 2. Launch a bounded release worker to push implementation and open the PR. Never arm auto-merge.
-3. Use registered `openai-codex/gpt-5.6-luna:low` observer children for discrete CI/approval status reads. Do not keep
+3. Use `delegate` observer children for discrete CI/approval status reads. Do not keep
    an agent alive merely to poll.
 4. Fix CI failures through the same single-writer and verifier loop. Never bypass branch protection or approval.
 5. When ready, report and wait for explicit human merge.
-6. After merge, launch a registered check child against a temporary detached worktree at fetched merged main.
+6. After merge, launch a bounded check child against a temporary detached worktree at fetched merged main.
 
 ### Cleanup and checkpoint two
 
 After accepted post-merge evidence:
 
-1. Confirm every registered headless child is terminal or explicitly preserved as blocked. Its lack of Herdr presence is
-   expected; verify through Registry and Pi artifacts.
+1. Confirm no interrupted writer process remains. Synchronous headless children have no Registry participant or durable
+   Pi artifact.
 2. Close only exact Herdr tabs, workspaces, and bound Neovim workspace tabs captured as created for this Run. If none
    were created, skip Herdr/Neovim cleanup. Preserve reusable and unrelated state.
 3. Remove only owned temporary worktrees/branches after ancestry and cleanliness checks.
@@ -262,13 +252,13 @@ After accepted post-merge evidence:
 
 ## Resume and disagreement
 
-On resume, use the canonical Task/backlog as authority and the Registry plus `pi-subagents` artifacts as observations.
-Replay is idempotent. Continue at the first unfinished canonical stage. If canonical state, Registry observations, and
+On resume, use the canonical Task/backlog as authority and the Registry plus live process/worktree evidence as observations.
+Continue at the first unfinished canonical stage. If canonical state, Registry observations, and
 live runtime disagree, report the mismatch and let the parent decide; never auto-advance, auto-fail, or rewrite the
 vault from runtime state.
 
 ## Completion
 
-Report the Feature/Task links, Registry Run ID, registered participant summary, implementation PR and merge state,
+Report the Feature/Task links, Registry Run ID, participant summary, implementation PR and merge state,
 accepted verifier and post-merge evidence, backlog entry, vault checkpoint commits, remote-main proof, cleanup evidence,
 and preserved unrelated dirty state or deferred polish.
