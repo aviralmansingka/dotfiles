@@ -905,7 +905,7 @@ for (const command of spec.commands) {
 		check(count(terminal.plain, command.command) === 1, `${command.shell} command was not rendered exactly once: ${command.command}`);
 	const lines = running.plain.split(/\r?\n/u);
 	const commandLine = lines.findIndex((line) => line.includes(command.command));
-	const toolLine = lines.findIndex((line, index) => index < commandLine && line.trimEnd().endsWith(command.shell));
+	const toolLine = lines.findLastIndex((line, index) => index < commandLine && line.trimEnd().endsWith(command.shell));
 	check(toolLine >= 0 && commandLine === toolLine + 1, `${command.shell} command was not a leaf beneath its exact tool node`);
 	const commandIndex = running.plain.indexOf(command.command);
 	check(commandIndex >= 2 && running.plain.slice(commandIndex - 2, commandIndex) === "$ ", `${command.shell} command leaf lost its semantic prompt`);
