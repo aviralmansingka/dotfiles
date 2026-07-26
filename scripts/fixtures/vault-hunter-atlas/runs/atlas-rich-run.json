@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "run_id": "atlas-rich-run",
+  "revision": 7,
+  "invoked_at": "2026-07-26T12:00:00Z",
+  "updated_at": "2026-07-26T12:09:00Z",
+  "task": {
+    "id": "T02",
+    "title": "Build the Compact Atlas Renderer",
+    "path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-build-interactive-atlas-tui.md",
+    "feature_path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas.md",
+    "kind": "task",
+    "future_task": "future_display_poison"
+  },
+  "participants": [
+    {
+      "participant_id": "driver",
+      "observed_at": "2026-07-26T12:00:01Z",
+      "role": "driver",
+      "goal_id": "checkpoint-one",
+      "herdr": {"workspace_id": "atlas", "tab_id": "driver", "pane_id": "p1", "terminal_id": "t1"},
+      "agent_session": {"source": "codex", "kind": "session", "value": "driver-session"}
+    },
+    {
+      "participant_id": "reviewer",
+      "observed_at": "2026-07-26T12:04:00Z",
+      "role": "reviewer",
+      "goal_id": "T02.V01"
+    },
+    {
+      "participant_id": "driver",
+      "observed_at": "2026-07-26T12:08:00Z",
+      "role": "implementer",
+      "goal_id": "T02.V01",
+      "future_participant": {"future_display_poison": true}
+    }
+  ],
+  "lifecycle": [
+    {
+      "observation_id": "life-checkpoint",
+      "observed_at": "2026-07-26T12:00:02Z",
+      "kind": "checkpoint",
+      "goal_id": "checkpoint-one",
+      "state": "done",
+      "detail": "contract approved"
+    },
+    {
+      "observation_id": "life-v01-pending",
+      "observed_at": "2026-07-26T12:01:00Z",
+      "kind": "verifier",
+      "goal_id": "T02.V01",
+      "state": "pending",
+      "detail": ""
+    },
+    {
+      "observation_id": "life-tie",
+      "observed_at": "2026-07-26T12:01:00Z",
+      "kind": "review",
+      "goal_id": "A-tie",
+      "state": "done",
+      "detail": "tie ordered by Goal ID"
+    },
+    {
+      "observation_id": "life-unknown",
+      "observed_at": "2026-07-26T12:04:00Z",
+      "kind": "future-kind",
+      "goal_id": "future-goal",
+      "state": "future-state",
+      "detail": ""
+    },
+    {
+      "observation_id": "life-v01-active",
+      "observed_at": "2026-07-26T12:05:00Z",
+      "kind": "verifier",
+      "goal_id": "T02.V01",
+      "state": "active",
+      "detail": "baseline red captured; implementation is intentionally not present yet and this sentence is long enough to require deterministic truncation"
+    }
+  ],
+  "evidence": [
+    {
+      "observation_id": "evidence-baseline",
+      "observed_at": "2026-07-26T12:05:00Z",
+      "verifier_id": "T02.V01",
+      "state": "failed",
+      "command": "scripts/verify-vault-hunter-atlas T02.V01",
+      "exit_status": 1,
+      "implementation_tree": "",
+      "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "detail": "baseline red"
+    },
+    {
+      "observation_id": "evidence-only",
+      "observed_at": "2026-07-26T12:07:00Z",
+      "verifier_id": "evidence-only",
+      "state": "recorded",
+      "command": "",
+      "exit_status": null,
+      "implementation_tree": "",
+      "artifact_sha256": "",
+      "detail": ""
+    }
+  ],
+  "future_run": {"future_display_poison": ["ignored", 42]}
+}

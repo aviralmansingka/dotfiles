@@ -1,0 +1,12 @@
+◇ checkpoint-human · checkpoint · awai…
+↻ checkpoint-resume · checkpoint · res…
+V active-verifier · verifier · active
+F active-refactor · refactor · active
+R active-review · review · active
+P active-pr · pull-request · active
+L active-landing · landing · active
+C active-cleanup · cleanup · active
+! blocked-work · verifier · blocked
+× failed-work · verifier · failed
+? future-work · future-kind · future-s…
+? empty-work · ? · ?

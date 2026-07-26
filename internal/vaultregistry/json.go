@@ -120,9 +120,10 @@ func (v Lifecycle) MarshalJSON() ([]byte, error) {
 }
 func (v *Lifecycle) UnmarshalJSON(data []byte) error {
 	var w struct {
-		ObservationID               string `json:"observation_id"`
-		ObservedAt                  string `json:"observed_at"`
-		Kind, GoalID, State, Detail string
+		ObservationID       string `json:"observation_id"`
+		ObservedAt          string `json:"observed_at"`
+		GoalID              string `json:"goal_id"`
+		Kind, State, Detail string
 	}
 	if err := json.Unmarshal(data, &w); err != nil {
 		return err
