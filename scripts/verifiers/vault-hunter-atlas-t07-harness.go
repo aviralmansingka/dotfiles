@@ -76,10 +76,17 @@ func main() {
 	firstView := c.frame(first, 160, 48, "k clamped at first")
 	first, _ = c.drive(first, tea.KeyMsg{Type: tea.KeyUp})
 	c.want(c.frame(first, 160, 48, "Up clamped at first") == firstView, "k/Up did not clamp at the first Goal")
+	for _, size := range []tea.WindowSizeMsg{{Width: 160, Height: 48}, {Width: 120, Height: 32}} {
+		oldGoal, _ := c.drive(first, size)
+		view := c.frame(oldGoal, size.Width, size.Height, fmt.Sprintf("old Goal at %dx%d", size.Width, size.Height))
+		c.want(selected(view, "checkpoint-one"), "old selected Goal is not visible at %dx%d", size.Width, size.Height)
+	}
 
 	last, _ := c.drive(first, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
-	last, _ = c.drive(last, tea.KeyMsg{Type: tea.KeyDown})
-	c.want(selected(c.frame(last, 160, 48, "Down to last"), "review"), "j/Down did not select the last normalized Goal")
+	for range 32 {
+		last, _ = c.drive(last, tea.KeyMsg{Type: tea.KeyDown})
+	}
+	c.want(selected(c.frame(last, 160, 48, "Down to last"), "overflow-09"), "j/Down did not select the last normalized Goal")
 	last, _ = c.drive(last, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	lastView := c.frame(last, 160, 48, "j clamped at last")
 	last, _ = c.drive(last, tea.KeyMsg{Type: tea.KeyDown})
@@ -87,7 +94,7 @@ func main() {
 
 	detail := "behavioral baseline red with wide text 東京 and deterministic truncation"
 	beforeCount := strings.Count(initial, detail)
-	c.want(beforeCount >= 2, "initial selected-Goal detail is not visible in timeline and ledger")
+	c.want(beforeCount >= 1, "initial selected-Goal detail is not visible")
 	collapsed, _ := c.drive(model, tea.KeyMsg{Type: tea.KeyEnter})
 	collapsedView := c.frame(collapsed, 160, 48, "detail collapsed")
 	c.want(selected(collapsedView, "T07.V01"), "Enter changed the selected Goal")

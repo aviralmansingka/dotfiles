@@ -8,13 +8,35 @@ goldens=scripts/goldens/vault-hunter-atlas-t07
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
+manifest() {
+  (
+    cd "$1"
+    find . -type f -print | LC_ALL=C sort | while IFS= read -r file; do
+      printf '%s  %s\n' "$(shasum -a 256 "$file" | awk '{print $1}')" "$file"
+    done
+  ) | shasum -a 256 | awk '{print $1}'
+}
+
 fixture_hash=$(shasum -a 256 "$fixture" | awk '{print $1}')
 mkdir -p "$tmp/state/runs"
 cp "$fixture" "$tmp/state/runs/"
 
-# The existing compact snapshot contract remains a regression input.
+# All existing compact contracts remain immutable regression inputs.
 scripts/verifiers/vault-hunter-atlas-v01
+scripts/verifiers/vault-hunter-atlas-v02
+scripts/verifiers/vault-hunter-atlas-v03
 go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+
+mkdir -p "$tmp/poison/registry/runs" \
+  "$tmp/poison/home/.local/state/vault-hunter/runs" \
+  "$tmp/poison/xdg/vault-hunter/runs"
+for path in \
+  "$tmp/poison/registry/runs/atlas-t07-rich.json" \
+  "$tmp/poison/home/.local/state/vault-hunter/runs/atlas-t07-rich.json" \
+  "$tmp/poison/xdg/vault-hunter/runs/atlas-t07-rich.json"; do
+  cp scripts/fixtures/vault-hunter-atlas-t07/expected-lifecycle.txt "$path"
+done
+poison_before=$(manifest "$tmp/poison")
 
 check_frame() {
   python3 - "$1" "$2" "$3" <<'PY'
@@ -48,6 +70,98 @@ for number, line in enumerate(lines, 1):
 PY
 }
 
+check_board() {
+  python3 - "$1" "$2" "$3" <<'PY'
+import sys
+import unicodedata
+
+path, width, height = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+lines = open(path, encoding="utf-8").read().splitlines()
+errors = []
+
+def cells(text):
+    total = 0
+    for char in text:
+        if unicodedata.combining(char) or unicodedata.category(char) == "Cf":
+            continue
+        total += 2 if unicodedata.east_asian_width(char) in ("W", "F") else 1
+    return total
+
+def position(text, needle):
+    index = text.find(needle)
+    return -1 if index < 0 else cells(text[:index])
+
+def cell_at(text, target):
+    used = 0
+    for char in text:
+        size = 0 if unicodedata.combining(char) or unicodedata.category(char) == "Cf" else (2 if unicodedata.east_asian_width(char) in ("W", "F") else 1)
+        if used <= target < used + size:
+            return char
+        used += size
+    return ""
+
+if not lines or "Run atlas-t07-rich" not in lines[0] or "Task T07" not in lines[0]:
+    errors.append("missing full-width Run/Task header")
+if len(lines) < 2 or "selected goal" not in lines[1].lower() or not all(token in lines[1] for token in ("T07.V01", "verifier", "active")):
+    errors.append("missing selected-Goal summary below header")
+
+heading = next((line for line in lines if all(token in line for token in ("TIMELINE", "VERIFIER LEDGER", "EVIDENCE"))), None)
+left = width * 16 // 100
+middle = width * 52 // 100
+second = left + 1 + middle
+right = width - second - 1
+if heading is None:
+    errors.append("missing simultaneous TIMELINE | VERIFIER LEDGER | EVIDENCE columns")
+else:
+    if cells(heading) != width:
+        errors.append(f"column heading row is {cells(heading)} cells, want {width}")
+    if cell_at(heading, left) not in "│┃┆┊┼╂╋" or cell_at(heading, second) not in "│┃┆┊┼╂╋":
+        errors.append(f"divider cells are not at {left} and {second}")
+    timeline = position(heading, "TIMELINE")
+    ledger = position(heading, "VERIFIER LEDGER")
+    evidence = position(heading, "EVIDENCE")
+    if not (0 <= timeline < left < ledger < second < evidence < second + 1 + right):
+        errors.append(f"column order/allocation is not 16%/52%/remaining: {timeline}, {ledger}, {evidence}")
+
+footer = lines[-1] if lines else ""
+if not all(token in footer for token in ("Enter detail", "q quit", f"{width}×{height}")):
+    errors.append("missing control/dimension footer")
+
+for error in errors:
+    print(f"{width}x{height} board structure: {error}", file=sys.stderr)
+if errors:
+    raise SystemExit(1)
+PY
+}
+
+expect_missing_state_dir() {
+  name=$1
+  shift
+  stdout="$tmp/$name.stdout"
+  stderr="$tmp/$name.stderr"
+  set +e
+  HOME="$tmp/poison/home" XDG_STATE_HOME="$tmp/poison/xdg" \
+    VAULT_HUNTER_STATE_DIR="$tmp/poison/registry" \
+    "$tmp/vault-hunter-atlas" --expanded --run-id atlas-t07-rich \
+    --snapshot --width 160 --height 48 "$@" >"$stdout" 2>"$stderr"
+  status=$?
+  set -e
+  if test "$status" -ne 2 || test -s "$stdout"; then
+    echo "T07.V01 $name state-dir validation: exit $status with $(wc -c <"$stdout" | tr -d ' ') frame bytes; want exit 2 and no frame" >&2
+    sed -n '1,4p' "$stderr" >&2
+    return 1
+  fi
+}
+
+failures=0
+if ! expect_missing_state_dir omitted-state-dir; then
+  failures=1
+fi
+if ! expect_missing_state_dir empty-state-dir --state-dir ""; then
+  failures=1
+fi
+test "$poison_before" = "$(manifest "$tmp/poison")"
+
 for size in 160x48 120x32; do
   width=${size%x*}
   height=${size#*x}
@@ -67,15 +181,21 @@ for size in 160x48 120x32; do
     --state-dir "$tmp/state" --snapshot --width "$width" --height "$height" >"$second"
 
   cmp "$first" "$second"
-  cmp "$golden" "$first"
+  if ! cmp "$golden" "$first"; then
+    echo "$size retained vertical golden does not match strengthened fixture/output" >&2
+    failures=1
+  fi
   check_frame "$first" "$width" "$height"
+  if ! check_board "$first" "$width" "$height"; then
+    failures=1
+  fi
 
   grep -Fq "Run atlas-t07-rich" "$first"
   grep -Fq "Task T07 · Build the Expanded Operations Board" "$first"
   grep -Fq "TIMELINE" "$first"
   grep -Fq "VERIFIER LEDGER" "$first"
   grep -Fq "EVIDENCE" "$first"
-  grep -Fq "checkpoint-one" "$first"
+  grep -Fq "overflow-09" "$first"
   grep -Fq "T07.V01" "$first"
   grep -Fq "verifier" "$first"
   grep -Fq "active" "$first"
@@ -90,7 +210,10 @@ for size in 160x48 120x32; do
   done
   grep -Eq "reviewer-b.*reviewer" "$first"
   test "$(grep -Fc "worker-a" "$first")" -eq 1
-  if grep -Fq "checkpoint-only" "$first" || grep -Fq "old-worker-role" "$first"; then
+  worker_line=$(grep -nF " worker-a · implementer" "$first" | cut -d: -f1)
+  reviewer_line=$(grep -nF " reviewer-b · reviewer" "$first" | cut -d: -f1)
+  test "$worker_line" -lt "$reviewer_line"
+  if grep -Fq "checkpoint-only" "$first" || grep -Fq "old-worker-role" "$first" || grep -Fq "stale-after-newest" "$first"; then
     echo "$size frame projected stale or unrelated participant data" >&2
     exit 1
   fi
@@ -98,4 +221,8 @@ done
 
 test "$fixture_hash" = "$(shasum -a 256 "$fixture" | awk '{print $1}')"
 test "$fixture_hash" = "$(shasum -a 256 "$tmp/state/runs/atlas-t07-rich.json" | awk '{print $1}')"
+if test "$failures" -ne 0; then
+  echo "T07.V01 expanded review assertions: FAIL" >&2
+  exit 1
+fi
 echo "T07.V01 deterministic expanded Operations Board snapshots: PASS"
