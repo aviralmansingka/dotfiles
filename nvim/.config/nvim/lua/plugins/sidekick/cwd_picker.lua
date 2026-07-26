@@ -1008,12 +1008,13 @@ function M.open(opts)
   end
 
   show_preview = function(item, preview)
+    local atlas_eligible = complete_atlas_identity(item)
     if item ~= preview_selection then
-      invalidate_preview()
+      transition_preview()
       preview_selection = item
       displayed_preview_item = item
-      expanded_preview_item = nil
-      pending_preview_scroll = nil
+    elseif not atlas_eligible then
+      invalidate_preview()
     elseif item == displayed_preview_item and item == expanded_preview_item then
       return
     elseif atlas_phase == "active" and atlas_frame then
@@ -1027,7 +1028,7 @@ function M.open(opts)
     end
     local generation = preview_generation
     render_default_preview(item, preview, generation)
-    if not complete_atlas_identity(item) then
+    if not atlas_eligible then
       return
     end
     atlas_attempted = true
