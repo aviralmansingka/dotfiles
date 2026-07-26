@@ -211,7 +211,7 @@ func discoverFeature(root, path string, runs []vaultregistry.Run) (FeatureProjec
 		} else {
 			t.NoteStatus = frontmatterStatus(string(note))
 		}
-		run, stage := selectedRun(runs, target, false)
+		run, stage := selectedRunAtRoot(root, runs, target, false)
 		if run != nil {
 			t.RunID = run.RunID
 		}
@@ -232,7 +232,7 @@ func discoverFeature(root, path string, runs []vaultregistry.Run) (FeatureProjec
 	for _, task := range f.Tasks {
 		f.Counts[task.Status]++
 	}
-	_, featureStage := selectedRun(runs, path, true)
+	_, featureStage := selectedRunAtRoot(root, runs, path, true)
 	switch {
 	case len(f.Tasks) > 0 && f.Counts[Done] == len(f.Tasks):
 		f.Status = Done
@@ -342,12 +342,22 @@ func renderProject(a Aggregate, styles aggregateStyles) string {
 }
 
 func selectedRun(runs []vaultregistry.Run, path string, feature bool) (*vaultregistry.Run, string) {
+	return selectedRunAtRoot(".", runs, path, feature)
+}
+
+func selectedRunAtRoot(root string, runs []vaultregistry.Run, path string, feature bool) (*vaultregistry.Run, string) {
+	target, ok := canonicalVaultPath(root, path)
+	if !ok {
+		return nil, ""
+	}
 	var registered, unfinished *vaultregistry.Run
 	for i := range runs {
 		r := &runs[i]
-		match := normalizePath(r.Task.Path) == path
+		runPath, pathOK := canonicalVaultPath(root, r.Task.Path)
+		match := pathOK && runPath == target
 		if feature {
-			match = r.Task.Kind == "feature" && (normalizePath(r.Task.FeaturePath) == path || normalizePath(r.Task.Path) == path)
+			featurePath, featurePathOK := canonicalVaultPath(root, r.Task.FeaturePath)
+			match = r.Task.Kind == "feature" && ((featurePathOK && featurePath == target) || (pathOK && runPath == target))
 		}
 		if !match {
 			continue
@@ -363,6 +373,26 @@ func selectedRun(runs []vaultregistry.Run, path string, feature bool) (*vaultreg
 		return registered, ""
 	}
 	return registered, currentStage(*unfinished)
+}
+
+func canonicalVaultPath(root, path string) (string, bool) {
+	root, err := filepath.Abs(root)
+	if err != nil {
+		return "", false
+	}
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "", false
+	}
+	candidate := filepath.Clean(filepath.FromSlash(path))
+	if !filepath.IsAbs(candidate) {
+		candidate = filepath.Join(root, candidate)
+	}
+	rel, err := filepath.Rel(root, candidate)
+	if err != nil || rel == "." || rel == "" || filepath.IsAbs(rel) || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return filepath.ToSlash(rel), true
 }
 
 func currentStage(run vaultregistry.Run) string {
