@@ -23,7 +23,7 @@ func main() {
 	height := flag.Int("height", 0, "frame height")
 	flag.Parse()
 	aggregateMode := *featurePath != "" || *projectPath != ""
-	if (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "")) {
+	if flag.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) {
 		flag.Usage()
 		os.Exit(2)
 	}

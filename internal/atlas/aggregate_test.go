@@ -49,7 +49,7 @@ func TestT06V01CanonicalAggregation(t *testing.T) {
 	}
 
 	diagnostics := strings.Join(project.Diagnostics, "\n")
-	for _, text := range []string{"malformed Task checklist entry", "duplicate Task link", "conflicting duplicate checkboxes", "missing Task note", "[x] conflicts"} {
+	for _, text := range []string{"malformed Task checklist entry", "duplicate Task link", "conflicting duplicate checkboxes", "missing Task note", "[x] conflicts", "Task link outside selected Project"} {
 		if !strings.Contains(diagnostics, text) {
 			t.Errorf("missing diagnostic %q:\n%s", text, diagnostics)
 		}
@@ -60,8 +60,29 @@ func TestT06V01CanonicalAggregation(t *testing.T) {
 			t.Errorf("%s rendered %d times, want once", id, got)
 		}
 	}
+	if strings.Contains(frame, "T99") {
+		t.Error("checklist beneath a later H1/H2 boundary was parsed as Tasks")
+	}
 	if !strings.Contains(frame, "PROJECT C — DENSE TRIAGE TABLE") {
 		t.Error("Project C rendering label missing")
+	}
+}
+
+func TestT06V01RejectsNoncanonicalScopes(t *testing.T) {
+	root := filepath.Join("..", "..", "scripts", "fixtures", "vault-hunter-atlas-t06-v01", "vault")
+	for _, target := range []string{
+		"1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/../vault-hunter-atlas/feature.md",
+		"1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/feature.md",
+		"1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/FEATURE.md",
+	} {
+		if _, err := DiscoverFeature(root, target, nil); err == nil {
+			t.Errorf("DiscoverFeature(%q) accepted a noncanonical target", target)
+		}
+	}
+	for _, target := range []string{"pi-agent", "1_projects/pi-agent/themes", "1_projects/../1_projects/pi-agent"} {
+		if _, err := DiscoverProject(root, target, nil); err == nil {
+			t.Errorf("DiscoverProject(%q) accepted a noncanonical target", target)
+		}
 	}
 }
 
@@ -109,9 +130,9 @@ func TestT06V03SelectsUnregisteredTaskByCanonicalPath(t *testing.T) {
 func TestT06V01NewestUnfinishedRunAndRecordedOrder(t *testing.T) {
 	path := "tasks/one.md"
 	runs := []vaultregistry.Run{
-		{RunID: "older", UpdatedAt: "2026-01-01T00:00:00Z", Task: vaultregistry.Task{Path: path}, Lifecycle: []vaultregistry.Lifecycle{{ObservedAt: "2026-01-01T00:00:00Z", State: "blocked"}}},
-		{RunID: "newer-a", UpdatedAt: "2026-01-02T00:00:00Z", Task: vaultregistry.Task{Path: path}, Lifecycle: []vaultregistry.Lifecycle{{ObservedAt: "2026-01-02T00:00:00Z", State: "blocked"}, {ObservedAt: "2026-01-02T00:00:00Z", State: "active"}}},
-		{RunID: "newer-z", UpdatedAt: "2026-01-02T00:00:00Z", Task: vaultregistry.Task{Path: path}, Lifecycle: []vaultregistry.Lifecycle{{ObservedAt: "2026-01-02T00:00:00Z", State: "done"}}},
+		{RunID: "lexically-later", UpdatedAt: "2026-01-02T00:30:00+01:00", Task: vaultregistry.Task{Path: path}, Lifecycle: []vaultregistry.Lifecycle{{ObservedAt: "2026-01-01T23:30:00Z", State: "blocked"}}},
+		{RunID: "newer-a", UpdatedAt: "2026-01-02T00:00:00.1Z", Task: vaultregistry.Task{Path: path}, Lifecycle: []vaultregistry.Lifecycle{{ObservedAt: "2026-01-02T01:00:00+01:00", State: "blocked"}, {ObservedAt: "2026-01-02T00:00:00Z", State: "active"}}},
+		{RunID: "newer-z", UpdatedAt: "2026-01-02T00:00:00.100+00:00", Task: vaultregistry.Task{Path: path}, Lifecycle: []vaultregistry.Lifecycle{{ObservedAt: "2026-01-02T00:00:00Z", State: "done"}}},
 	}
 	run, stage := selectedRun(runs, path, false)
 	if run == nil || run.RunID != "newer-z" || stage != "active" {

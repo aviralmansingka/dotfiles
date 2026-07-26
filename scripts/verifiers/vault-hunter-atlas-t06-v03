@@ -18,11 +18,14 @@ manifest() {
 
 source_vault_before=$(manifest "$fixture/vault")
 source_registry_before=$(manifest "$fixture/state")
+source_retained_before=$(manifest "$fixture/retained-state")
 test "$(find "$fixture/state/runs" -name '*.json' -type f | wc -l | tr -d ' ')" -eq 0
+test "$(find "$fixture/retained-state/runs" -name '*.json' -type f | wc -l | tr -d ' ')" -eq 1
 go test -count=1 ./internal/atlas -run 'T06V03'
 go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
 cp -R "$fixture/vault" "$tmp/vault"
 cp -R "$fixture/state" "$tmp/state"
+cp -R "$fixture/retained-state" "$tmp/retained-state"
 mkdir "$tmp/traps" "$tmp/home"
 : > "$tmp/invocations"
 for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
@@ -30,12 +33,13 @@ for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feed
 done
 vault_before=$(manifest "$tmp/vault")
 registry_before=$(manifest "$tmp/state")
-chmod -R a-w "$tmp/vault" "$tmp/state"
+retained_before=$(manifest "$tmp/retained-state")
+chmod -R a-w "$tmp/vault" "$tmp/state" "$tmp/retained-state"
 
 task=1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/06-atlas-views.md
 run_atlas() {
   HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
-    VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-read" \
+    VAULT_HUNTER_STATE_DIR="$tmp/retained-state" \
     ATLAS_T06_TRAP_LOG="$tmp/invocations" PATH="$tmp/traps:$PATH" \
     "$tmp/vault-hunter-atlas" --vault-dir "$tmp/vault" --state-dir "$tmp/state" \
     --select-task "$task" --snapshot --width 80 --height 24 "$@"
@@ -43,6 +47,24 @@ run_atlas() {
 run_atlas --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md > "$tmp/feature.first"
 run_atlas --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md > "$tmp/feature.second"
 run_atlas --project 1_projects/pi-agent > "$tmp/project.first"
+
+# Aggregate mode must fail at the CLI boundary rather than consult a retained,
+# matching Registry when --state-dir is omitted.
+if HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" VAULT_HUNTER_STATE_DIR="$tmp/retained-state" \
+  "$tmp/vault-hunter-atlas" --vault-dir "$tmp/vault" \
+  --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md \
+  --select-task "$task" --snapshot > "$tmp/fallback.stdout" 2> "$tmp/fallback.stderr"; then
+  echo 'aggregate without --state-dir unexpectedly succeeded' >&2
+  exit 1
+else
+  test "$?" -eq 2
+fi
+test ! -s "$tmp/fallback.stdout"
+if grep -Fq 'retained-t06' "$tmp/fallback.stderr"; then
+  echo 'retained Registry was drilled into' >&2
+  exit 1
+fi
+
 cmp "$tmp/feature.first" "$tmp/feature.second"
 cmp "$tmp/feature.first" "$tmp/project.first"
 cmp "$golden" "$tmp/feature.first"
@@ -55,14 +77,16 @@ for invented in 'Run ' 'Lifecycle' 'Evidence' 'Registered Participants'; do
   fi
 done
 test ! -s "$tmp/invocations"
-test ! -e "$tmp/home/retained-registry-must-not-be-read"
 test "$(find "$tmp/state/runs" -name '*.json' -type f | wc -l | tr -d ' ')" -eq 0
+test "$retained_before" = "$(manifest "$tmp/retained-state")"
 test "$vault_before" = "$(manifest "$tmp/vault")"
 test "$registry_before" = "$(manifest "$tmp/state")"
 test "$source_vault_before" = "$(manifest "$fixture/vault")"
 test "$source_registry_before" = "$(manifest "$fixture/state")"
+test "$source_retained_before" = "$(manifest "$fixture/retained-state")"
 
 printf 'selected Task: %s\n' "$task"
+printf 'omitted --state-dir with matching retained Registry: usage exit 2\n'
 printf 'no-run state: No registered Task Run\n'
 printf 'producer/orchestration trap bytes: %s\n' "$(wc -c < "$tmp/invocations" | tr -d ' ')"
 printf 'fixture vault manifest: %s\n' "$vault_before"

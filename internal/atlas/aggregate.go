@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
@@ -43,9 +44,14 @@ type Aggregate struct {
 var checklist = regexp.MustCompile(`^\s*-\s*\[([ xX-])\]\s*(.*)$`)
 var wiki = regexp.MustCompile(`^\[\[([^]|]+)(?:\|([^]]+))?\]\](?:\s+.*)?$`)
 var taskID = regexp.MustCompile(`(?i)^([A-Z]+[0-9]+)\b\s*[-:]?\s*(.*)$`)
+var h1OrH2 = regexp.MustCompile(`^ {0,3}#{1,2}(?:[ \t]+|$)`)
+var tasksH2 = regexp.MustCompile(`^ {0,3}##[ \t]+Tasks(?:[ \t]+#*)?[ \t]*$`)
 
 func DiscoverFeature(vaultRoot, featurePath string, runs []vaultregistry.Run) (Aggregate, error) {
-	featurePath = normalizePath(featurePath)
+	featurePath, err := canonicalFeaturePath(featurePath)
+	if err != nil {
+		return Aggregate{}, err
+	}
 	feature, diagnostics, err := discoverFeature(vaultRoot, featurePath, runs)
 	if err != nil {
 		return Aggregate{}, err
@@ -54,7 +60,10 @@ func DiscoverFeature(vaultRoot, featurePath string, runs []vaultregistry.Run) (A
 }
 
 func DiscoverProject(vaultRoot, projectPath string, runs []vaultregistry.Run) (Aggregate, error) {
-	projectPath = normalizePath(projectPath)
+	projectPath, err := canonicalProjectPath(projectPath)
+	if err != nil {
+		return Aggregate{}, err
+	}
 	pattern := filepath.Join(vaultRoot, filepath.FromSlash(projectPath), "themes", "*", "features", "*", "feature.md")
 	paths, err := filepath.Glob(pattern)
 	if err != nil {
@@ -88,11 +97,12 @@ func discoverFeature(root, path string, runs []vaultregistry.Run) (FeatureProjec
 	seenPath, seenID := map[string]int{}, map[string]int{}
 	var seenChecks []string
 	inTasks := false
+	projectPath := strings.Join(strings.Split(path, "/")[:2], "/")
 	scanner := bufio.NewScanner(strings.NewReader(string(data)))
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "## ") {
-			inTasks = strings.TrimSpace(line) == "## Tasks"
+		if h1OrH2.MatchString(line) {
+			inTasks = tasksH2.MatchString(line)
 			continue
 		}
 		if !inTasks {
@@ -109,6 +119,10 @@ func discoverFeature(root, path string, runs []vaultregistry.Run) (FeatureProjec
 			continue
 		}
 		target := normalizeLink(path, link[1])
+		if target != projectPath && !strings.HasPrefix(target, projectPath+"/") {
+			diagnostics = append(diagnostics, "Task link outside selected Project: "+target)
+			continue
+		}
 		display := strings.TrimSpace(link[2])
 		if display == "" {
 			display = strings.TrimSuffix(filepath.Base(target), filepath.Ext(target))
@@ -263,10 +277,10 @@ func selectedRun(runs []vaultregistry.Run, path string, feature bool) (*vaultreg
 		if !match {
 			continue
 		}
-		if registered == nil || r.UpdatedAt > registered.UpdatedAt || r.UpdatedAt == registered.UpdatedAt && r.RunID > registered.RunID {
+		if registered == nil || timestampAfter(r.UpdatedAt, registered.UpdatedAt) || timestampEqual(r.UpdatedAt, registered.UpdatedAt) && r.RunID > registered.RunID {
 			registered = r
 		}
-		if currentStage(*r) != "done" && (unfinished == nil || r.UpdatedAt > unfinished.UpdatedAt || r.UpdatedAt == unfinished.UpdatedAt && r.RunID > unfinished.RunID) {
+		if currentStage(*r) != "done" && (unfinished == nil || timestampAfter(r.UpdatedAt, unfinished.UpdatedAt) || timestampEqual(r.UpdatedAt, unfinished.UpdatedAt) && r.RunID > unfinished.RunID) {
 			unfinished = r
 		}
 	}
@@ -279,11 +293,29 @@ func selectedRun(runs []vaultregistry.Run, path string, feature bool) (*vaultreg
 func currentStage(run vaultregistry.Run) string {
 	stage, at, order := "", "", -1
 	for i, observation := range run.Lifecycle {
-		if observation.ObservedAt > at || observation.ObservedAt == at && i > order {
+		if order == -1 || timestampAfter(observation.ObservedAt, at) || timestampEqual(observation.ObservedAt, at) && i > order {
 			stage, at, order = observation.State, observation.ObservedAt, i
 		}
 	}
 	return stage
+}
+
+func timestampAfter(a, b string) bool {
+	aTime, aErr := time.Parse(time.RFC3339, a)
+	bTime, bErr := time.Parse(time.RFC3339, b)
+	if aErr == nil && bErr == nil {
+		return aTime.After(bTime)
+	}
+	return a > b
+}
+
+func timestampEqual(a, b string) bool {
+	aTime, aErr := time.Parse(time.RFC3339, a)
+	bTime, bErr := time.Parse(time.RFC3339, b)
+	if aErr == nil && bErr == nil {
+		return aTime.Equal(bTime)
+	}
+	return a == b
 }
 
 func taskStatus(check, note, stage string) Status {
@@ -322,10 +354,29 @@ func normalizeLink(featurePath, link string) string {
 	if !strings.HasSuffix(strings.ToLower(link), ".md") {
 		link += ".md"
 	}
+	if strings.HasPrefix(link, "/") {
+		return normalizePath(strings.TrimPrefix(link, "/"))
+	}
 	if strings.HasPrefix(link, "1_projects/") {
 		return normalizePath(link)
 	}
 	return normalizePath(filepath.ToSlash(filepath.Join(filepath.Dir(featurePath), filepath.FromSlash(link))))
+}
+func canonicalProjectPath(path string) (string, error) {
+	normalized := normalizePath(path)
+	parts := strings.Split(normalized, "/")
+	if filepath.IsAbs(path) || len(parts) != 2 || parts[0] != "1_projects" || parts[1] == "" || (strings.TrimSpace(path) != normalized && strings.TrimSuffix(strings.TrimSpace(path), "/") != normalized) {
+		return "", fmt.Errorf("invalid canonical Project target: %s", path)
+	}
+	return normalized, nil
+}
+func canonicalFeaturePath(path string) (string, error) {
+	normalized := normalizePath(path)
+	parts := strings.Split(normalized, "/")
+	if filepath.IsAbs(path) || strings.TrimSpace(path) != normalized || len(parts) != 7 || parts[0] != "1_projects" || parts[1] == "" || parts[2] != "themes" || parts[3] == "" || parts[4] != "features" || parts[5] == "" || parts[6] != "feature.md" {
+		return "", fmt.Errorf("invalid canonical Feature target: %s", path)
+	}
+	return normalized, nil
 }
 func splitIdentity(display string) (string, string) {
 	match := taskID.FindStringSubmatch(strings.TrimSpace(display))

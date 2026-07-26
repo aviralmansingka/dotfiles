@@ -41,6 +41,22 @@ run_atlas --feature 1_projects/pi-agent/themes/pi-customization/features/vault-h
 run_atlas --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md > "$tmp/feature.second"
 run_atlas --project 1_projects/pi-agent > "$tmp/project.first"
 run_atlas --project 1_projects/pi-agent > "$tmp/project.second"
+
+expect_usage() {
+  if HOME="$tmp/home" VAULT_HUNTER_STATE_DIR="$tmp/registry-access-is-a-failure" \
+    "$tmp/vault-hunter-atlas" "$@" > "$tmp/usage.stdout" 2> "$tmp/usage.stderr"; then
+    echo "invalid CLI unexpectedly succeeded: $*" >&2
+    exit 1
+  else
+    test "$?" -eq 2
+  fi
+  test ! -s "$tmp/usage.stdout"
+}
+expect_usage --vault-dir "$tmp/vault" --state-dir "$tmp/state" --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md positional
+expect_usage --vault-dir "$tmp/vault" --state-dir "$tmp/state" --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md --run-id ignored
+expect_usage --run-id ignored --vault-dir "$tmp/vault" --state-dir "$tmp/state"
+test ! -e "$tmp/registry-access-is-a-failure"
+
 cmp "$tmp/feature.first" "$tmp/feature.second"
 cmp "$tmp/project.first" "$tmp/project.second"
 cmp "$goldens/feature-b.txt" "$tmp/feature.first"
@@ -55,12 +71,17 @@ test "$source_registry_before" = "$(manifest "$fixture/state")"
 # Exact-once identities and the accepted Feature B / Project C structures.
 test "$(grep -Ec '^[├└]─ . (T01|T02|T03|T06) ' "$tmp/feature.first")" -eq 4
 test "$(grep -Ec '^[!●○✓]   (registry-recovery|vault-hunter-atlas|unattended-mode|bootstrap-seed) ' "$tmp/project.first")" -eq 4
-for diagnostic in 'conflicts with Task note' 'missing Task note' 'malformed Task checklist entry' 'duplicate Task link' 'conflicting duplicate checkboxes'; do
+for diagnostic in 'conflicts with Task note' 'missing Task note' 'malformed Task checklist entry' 'duplicate Task link' 'conflicting duplicate checkboxes' 'Task link outside selected Project'; do
   grep -Fq "$diagnostic" "$tmp/feature.first"
 done
 grep -Fq '● ACTIVE  Feature status roll-up' "$tmp/feature.first"
 grep -Fq '!   registry-recovery       1  0  1  0  own Feature run blocked' "$tmp/project.first"
 grep -Fq '●   vault-hunter-atlas      1  1  1  1' "$tmp/project.first"
+test "$(grep -Fc 'Task link outside selected Project' "$tmp/feature.first")" -eq 2
+if grep -Fq 'T99' "$tmp/feature.first"; then
+  echo 'later-section checklist leaked into authoritative Tasks' >&2
+  exit 1
+fi
 
 printf 'fixture vault manifest: %s\n' "$vault_before"
 printf 'fixture Registry manifest: %s\n' "$registry_before"

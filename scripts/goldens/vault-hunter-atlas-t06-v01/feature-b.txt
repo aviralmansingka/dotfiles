@@ -17,4 +17,6 @@ SUMMARY  Pending 1  Active 1  Blocked 1  Done 1
 ! duplicate Task link: 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md
 ! conflicting duplicate checkboxes for T02; first occurrence wins
 ! duplicate Task link: 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/03-integration.md
+! Task link outside selected Project: 1_projects/other-project/themes/theme/features/feature/tasks/01.md
+! Task link outside selected Project: 1_projects/other-project/themes/theme/features/feature/tasks/02.md
 FEATURE B — HIERARCHY + ROLL-UP
