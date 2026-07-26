@@ -1,0 +1,349 @@
+#!/bin/sh
+# PROTOTYPE/THROWAWAY: embedded Go keeps this experiment to its one allowed file.
+set -eu
+
+prototype_tmp="$(mktemp -d "${TMPDIR:-/tmp}/vault-hunter-atlas-prototype.XXXXXX")"
+trap 'rm -f "$prototype_tmp/main.go" "$prototype_tmp/prototype"; rmdir "$prototype_tmp"' EXIT HUP INT TERM
+sed -n '/^package main$/,/^GO_SOURCE$/p' "$0" | sed '$d' >"$prototype_tmp/main.go"
+go build -o "$prototype_tmp/prototype" "$prototype_tmp/main.go"
+"$prototype_tmp/prototype" "$@"
+exit $?
+
+: <<'GO_SOURCE'
+package main
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/term"
+)
+
+// Three Feature and three Project renderings, switchable in one terminal TUI.
+type option struct{ scope, variant, label string }
+
+var options = []option{
+	{"feature", "A", "Status lanes"},
+	{"feature", "B", "Hierarchy + roll-up"},
+	{"feature", "C", "Dense decision queue"},
+	{"project", "A", "Feature status lanes"},
+	{"project", "B", "Hierarchy + summaries"},
+	{"project", "C", "Dense triage table"},
+}
+
+var (
+	bg      = lipgloss.AdaptiveColor{Light: "#fbf1c7", Dark: "#282828"}
+	fg      = lipgloss.AdaptiveColor{Light: "#3c3836", Dark: "#ebdbb2"}
+	muted   = lipgloss.AdaptiveColor{Light: "#7c6f64", Dark: "#928374"}
+	blue    = lipgloss.AdaptiveColor{Light: "#076678", Dark: "#83a598"}
+	yellow  = lipgloss.AdaptiveColor{Light: "#b57614", Dark: "#fabd2f"}
+	red     = lipgloss.AdaptiveColor{Light: "#9d0006", Dark: "#fb4934"}
+	green   = lipgloss.AdaptiveColor{Light: "#79740e", Dark: "#b8bb26"}
+	purple  = lipgloss.AdaptiveColor{Light: "#8f3f71", Dark: "#d3869b"}
+	title   = lipgloss.NewStyle().Bold(true).Foreground(fg)
+	subtle  = lipgloss.NewStyle().Foreground(muted)
+	pending = lipgloss.NewStyle().Foreground(blue)
+	active  = lipgloss.NewStyle().Bold(true).Foreground(yellow)
+	blocked = lipgloss.NewStyle().Bold(true).Foreground(red)
+	done    = lipgloss.NewStyle().Foreground(green)
+	diag    = lipgloss.NewStyle().Foreground(purple)
+)
+
+type model struct {
+	selected int
+	width    int
+}
+
+func (m model) Init() tea.Cmd { return nil }
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "left", "h":
+			m.selected = (m.selected + len(options) - 1) % len(options)
+		case "right", "l", "tab":
+			m.selected = (m.selected + 1) % len(options)
+		case "1", "2", "3":
+			base := 0
+			if options[m.selected].scope == "project" {
+				base = 3
+			}
+			m.selected = base + int(msg.Runes[0]-'1')
+		case "f":
+			m.selected %= 3
+		case "p":
+			m.selected = m.selected%3 + 3
+		case "q", "esc", "ctrl+c":
+			return m, tea.Quit
+		}
+	}
+	return m, nil
+}
+
+func (m model) View() string {
+	width := m.width
+	if width == 0 {
+		width = 100
+	}
+	body := render(m.selected, width)
+	var choices []string
+	for i, item := range options {
+		label := fmt.Sprintf("%s%s", strings.ToUpper(item.scope[:1]), item.variant)
+		style := subtle
+		if i == m.selected {
+			style = lipgloss.NewStyle().Bold(true).Foreground(bg).Background(blue).Padding(0, 1)
+		}
+		choices = append(choices, style.Render(label))
+	}
+	switcher := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(muted).
+		Padding(0, 1).
+		Render("←/h  " + strings.Join(choices, " ") + "  →/l")
+	help := subtle.Render("1/2/3 variant · f feature · p project · q quit")
+	return body + "\n\n" + switcher + "\n" + help
+}
+
+func heading(scope, name, label string) string {
+	return title.Render(strings.ToUpper(scope)+" ATLAS · "+name) + "  " + subtle.Render(strings.ToUpper(label))
+}
+
+func lane(name string, color lipgloss.TerminalColor, width int, lines ...string) string {
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(color).
+		Width(width).
+		Height(5).
+		Padding(0, 1).
+		Render(lipgloss.NewStyle().Bold(true).Foreground(color).Render(name) + "\n" + strings.Join(lines, "\n"))
+}
+
+func featureA(width int) string {
+	w := max(30, min(45, (width-5)/2))
+	top := lipgloss.JoinHorizontal(lipgloss.Top,
+		lane("PENDING", blue, w,
+			pending.Render("○ T06  Project + Feature views"),
+			"  Task note missing",
+			"  No registered Task Run"),
+		" ",
+		lane("ACTIVE", yellow, w,
+			active.Render("● T02  Compact Task Run Atlas"),
+			"  run atlas-rich-run",
+			"  registered Task"),
+	)
+	bottom := lipgloss.JoinHorizontal(lipgloss.Top,
+		lane("BLOCKED", red, w,
+			blocked.Render("! T03  Integrate Task runs"),
+			"  run atlas-t03 · blocked",
+			"  blocked child ≠ Feature"),
+		" ",
+		lane("DONE", green, w,
+			done.Render("✓ T01  Define Atlas contract"),
+			"  checklist [x] wins",
+			"  registered Task"),
+	)
+	return strings.Join([]string{
+		heading("Feature", "vault-hunter-atlas", "Status lanes"),
+		active.Render("Feature ACTIVE") + subtle.Render(" · 4 Tasks · 1 diagnostic"),
+		top, bottom,
+		diag.Render("! T01 [x] conflicts with Task note status: in-progress"),
+		"T02 → Task Run atlas-rich-run  ·  T06 → No registered Task Run",
+		footer("FEATURE A — STATUS LANES"),
+	}, "\n")
+}
+
+func featureB(_ int) string {
+	return strings.Join([]string{
+		heading("Feature", "vault-hunter-atlas", "Outline + summary"),
+		active.Render("● ACTIVE") + "  Feature note status: in-progress",
+		"│",
+		done.Render("├─ ✓ T01  Define Atlas contract") + "  DONE",
+		diag.Render("│    ! [x] wins conflicting Task note status: in-progress"),
+		active.Render("├─ ● T02  Compact Task Run Atlas") + "  ACTIVE",
+		"│    checklist [-] · registered → atlas-rich-run",
+		blocked.Render("├─ ! T03  Integrate Task runs") + "  BLOCKED",
+		"│    newest unfinished run blocked; child does not block Feature",
+		pending.Render("└─ ○ T06  Project + Feature views") + "  PENDING",
+		"     Task note missing · unregistered → No registered Task Run",
+		"",
+		"SUMMARY  " + pending.Render("Pending 1") + "  " + active.Render("Active 1") + "  " + blocked.Render("Blocked 1") + "  " + done.Render("Done 1"),
+		"SELECTED T02 → existing Task Run Atlas · atlas-rich-run",
+		footer("FEATURE B — HIERARCHY + ROLL-UP"),
+	}, "\n")
+}
+
+func featureC(_ int) string {
+	rows := []string{
+		blocked.Render("!   T03   Integrate Task runs         present      atlas-t03        Task Run"),
+		active.Render("●   T02   Compact Task Run Atlas      in-progress  atlas-rich-run   Task Run"),
+		pending.Render("○   T06   Project + Feature views     MISSING      —                NO RUN"),
+		done.Render("✓   T01   Define Atlas contract       in-progress  atlas-contract   Task Run"),
+	}
+	return strings.Join([]string{
+		heading("Feature", "vault-hunter-atlas", "Task queue"),
+		title.Render("ST  TASK  TITLE                       NOTE         RUN              SELECT"),
+		subtle.Render("──  ────  ──────────────────────────  ───────────  ───────────────  ────────"),
+		strings.Join(rows, "\n"),
+		"",
+		title.Render("PRECEDENCE TRACE"),
+		"T01  [x] → Done; conflict diagnostic",
+		"T03  [ ] + newest run blocked → Blocked",
+		"T02  [-] → Active",
+		"T06  [ ] + missing note + no Registry observation → Pending",
+		"",
+		active.Render("FEATURE ACTIVE") + " · blocked child T03 is non-inferential",
+		footer("FEATURE C — DENSE DECISION QUEUE"),
+	}, "\n")
+}
+
+func projectA(width int) string {
+	w := max(30, min(45, (width-5)/2))
+	top := lipgloss.JoinHorizontal(lipgloss.Top,
+		lane("PENDING", blue, w,
+			pending.Render("○ unattended-mode"),
+			"  ○ T07 operations board",
+			"  ○ T08 execution journal"),
+		" ",
+		lane("ACTIVE", yellow, w,
+			active.Render("● vault-hunter-atlas"),
+			"  ● T02 active · ! T03 child block",
+			"  ○ T06 missing note · NO RUN"),
+	)
+	bottom := lipgloss.JoinHorizontal(lipgloss.Top,
+		lane("BLOCKED", red, w,
+			blocked.Render("! registry-recovery"),
+			"  ○ T04 inspect · ! T05 repair",
+			"  own Feature run blocked"),
+		" ",
+		lane("DONE", green, w,
+			done.Render("✓ bootstrap-seed"),
+			"  ✓ T00 golden · ✓ T01 first boot",
+			"  every authoritative Task [x]"),
+	)
+	return strings.Join([]string{
+		heading("Project", "pi-agent", "Status lanes"),
+		subtle.Render("4 Features · 10 Tasks · canonical-path order"),
+		top, bottom,
+		diag.Render("! Diagnostics: checklist/note conflict 1 · missing Task note 1"),
+		"atlas/T02 → Task Run atlas-rich-run",
+		footer("PROJECT A — FEATURE STATUS LANES"),
+	}, "\n")
+}
+
+func projectB(_ int) string {
+	return strings.Join([]string{
+		heading("Project", "pi-agent", "Canonical outline"),
+		"pi-agent/                                                  4 Features",
+		active.Render("├─ ● vault-hunter-atlas") + "                 ACTIVE  P1 A1 B1 D1",
+		"│  ├─ ✓ T01 contract       ├─ ● T02 compact Atlas",
+		"│  ├─ ! T03 integration    └─ ○ T06 missing · NO RUN",
+		"│  └─ blocked child does not block Feature; T02 → atlas-rich-run",
+		blocked.Render("├─ ! registry-recovery") + "                  BLOCKED P1 A0 B1 D0",
+		"│  ├─ ○ T04 inspect         └─ ! T05 repair · own run blocked",
+		done.Render("├─ ✓ bootstrap-seed") + "                       DONE    P0 A0 B0 D2",
+		"│  ├─ ✓ T00 golden image    └─ ✓ T01 first boot",
+		pending.Render("└─ ○ unattended-mode") + "                   PENDING P2 A0 B0 D0",
+		"   ├─ ○ T07 operations board └─ ○ T08 execution journal",
+		"",
+		"PROJECT  " + pending.Render("Pending 1") + " | " + active.Render("Active 1") + " | " + blocked.Render("Blocked 1") + " | " + done.Render("Done 1"),
+		diag.Render("DIAGNOSTICS  conflict 1 · missing Task note 1"),
+		footer("PROJECT B — HIERARCHY + SUMMARIES"),
+	}, "\n")
+}
+
+func projectC(_ int) string {
+	return strings.Join([]string{
+		heading("Project", "pi-agent", "Feature queue"),
+		title.Render("ST  FEATURE                 P  A  B  D  WHY / NEXT OBSERVABLE ITEM"),
+		subtle.Render("──  ──────────────────────  ─  ─  ─  ─  ─────────────────────────────"),
+		blocked.Render("!   registry-recovery       1  0  1  0  own Feature run blocked"),
+		active.Render("●   vault-hunter-atlas      1  1  1  1  T02 active; T03 child blocked"),
+		pending.Render("○   unattended-mode         2  0  0  0  no Registry observations"),
+		done.Render("✓   bootstrap-seed          0  0  0  2  every authoritative Task [x]"),
+		"",
+		title.Render("TASK QUEUE"),
+		blocked.Render("! registry-recovery/T05 repair") + "       registered · blocked",
+		blocked.Render("! vault-hunter-atlas/T03 integration") + " registered · child-only block",
+		active.Render("● vault-hunter-atlas/T02 compact Atlas") + " OPEN atlas-rich-run",
+		pending.Render("○ registry-recovery/T04 inspect") + "      unregistered · NO RUN",
+		pending.Render("○ vault-hunter-atlas/T06 views") + "        missing note · NO RUN",
+		pending.Render("○ unattended-mode/T07 operations board") + " · no run",
+		pending.Render("○ unattended-mode/T08 execution journal") + " · no run",
+		done.Render("✓ bootstrap-seed/T00 golden · ✓ bootstrap-seed/T01 first boot"),
+		done.Render("✓ vault-hunter-atlas/T01 contract") + diag.Render(" · [x] wins conflict"),
+		footer("PROJECT C — DENSE TRIAGE TABLE"),
+	}, "\n")
+}
+
+func footer(label string) string {
+	return subtle.Render("PROTOTYPE · THROWAWAY · " + label)
+}
+
+func render(index, width int) string {
+	switch index {
+	case 0:
+		return featureA(width)
+	case 1:
+		return featureB(width)
+	case 2:
+		return featureC(width)
+	case 3:
+		return projectA(width)
+	case 4:
+		return projectB(width)
+	default:
+		return projectC(width)
+	}
+}
+
+func usage() {
+	fmt.Fprintln(os.Stderr, "usage: scripts/prototype-vault-hunter-atlas-views [feature A|B|C | project A|B|C]")
+}
+
+func main() {
+	selected := 0
+	showAll := len(os.Args) == 1
+	if !showAll {
+		if len(os.Args) != 3 {
+			usage()
+			os.Exit(2)
+		}
+		found := false
+		for i, item := range options {
+			if item.scope == os.Args[1] && item.variant == os.Args[2] {
+				selected, found = i, true
+				break
+			}
+		}
+		if !found {
+			usage()
+			os.Exit(2)
+		}
+	}
+
+	if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stdout.Fd()) {
+		if showAll {
+			for i := range options {
+				if i > 0 {
+					fmt.Println("\n" + strings.Repeat("═", 78) + "\n")
+				}
+				fmt.Println(render(i, 100))
+			}
+		} else {
+			fmt.Println(render(selected, 100))
+		}
+		return
+	}
+
+	if _, err := tea.NewProgram(model{selected: selected, width: 100}, tea.WithAltScreen()).Run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+GO_SOURCE
