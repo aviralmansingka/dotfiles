@@ -1518,11 +1518,7 @@ local function validate_sidekick_herdr()
       local previous_win = fake_picker.preview.win.win
       fake_picker.preview.win.win = preview_win
       read_result = "\27[32mT10 V01 ordinary Herdr preview\27[0m\r\nunchanged second line"
-      local expected_preview_buf = render_preview(done_item)
-      local expected_preview = table.concat(
-        vim.api.nvim_buf_get_lines(expected_preview_buf, 0, -1, false),
-        "\n"
-      )
+      local expected_preview
       local frame = table.concat({
         "Run atlas-rich-run · Goal 3/5 T10.V01",
         "Participant driver · Role verifier-steward",
@@ -1587,13 +1583,19 @@ local function validate_sidekick_herdr()
       atlas_item.status = "working"
 
       fake_picker.closed = false
-      current_fake_item = atlas_item
+      current_fake_item = done_item
       local workspace = atlas_picker_opts.layout.wins.workspace
       workspace:show()
       atlas_preview:show()
       vim.api.nvim_win_set_width(atlas_preview.win, math.max(math.floor(preview_width / 3) - 2, 1))
       vim.api.nvim_win_set_height(atlas_preview.win, math.min(12, host_height - 2))
       atlas_picker_opts.on_show(fake_picker)
+      local expected_preview_buf = render_preview(done_item)
+      expected_preview = table.concat(
+        vim.api.nvim_buf_get_lines(expected_preview_buf, 0, -1, false),
+        "\n"
+      )
+      current_fake_item = atlas_item
       input_pattern = "pblocked"
       input_changed()
       if vim.api.nvim_win_get_cursor(workspace.win)[1] ~= 2 then
