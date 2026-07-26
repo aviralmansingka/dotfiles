@@ -128,6 +128,9 @@ return {
     "MeanderingProgrammer/render-markdown.nvim",
     dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" }, -- if you use the mini.nvim suite
     ft = { "markdown", "octo" },
+    init = function()
+      require("helpers.markdown_ansi").setup()
+    end,
     keys = {
       {
         "<leader>ft",
@@ -530,6 +533,12 @@ return {
     ---@type render.md.UserConfig
     opts = {
       render_modes = true,
+      custom_handlers = {
+        markdown = {
+          extends = true,
+          parse = require("helpers.markdown_ansi").parse,
+        },
+      },
       -- Override render-markdown's default win_options.concealcursor (set to "")
       -- so links stay concealed when the cursor is on a link line. Pairs with
       -- helpers/markdown_links.lua setting conceallevel=3 + concealcursor=nvic.
