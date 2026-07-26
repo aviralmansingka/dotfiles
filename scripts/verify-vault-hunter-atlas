@@ -8,8 +8,7 @@ case "${1-}" in
     exec go test -count=1 ./internal/vaultregistry -run '^TestT01V01'
     ;;
   T01.V02)
-    echo "T01.V02 is not implemented" >&2
-    exit 1
+    exec go test -count=1 ./internal/vaultregistry -run '^TestT01V02'
     ;;
   *)
     echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02" >&2
