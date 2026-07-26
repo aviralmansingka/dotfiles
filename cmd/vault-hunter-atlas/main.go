@@ -78,11 +78,21 @@ func render(args []string) {
 	flags := flag.NewFlagSet("vault-hunter-atlas", flag.ExitOnError)
 	runID := flags.String("run-id", "", "Run ID to display")
 	stateDir := flags.String("state-dir", "", "Vault Hunter state directory")
+	vaultDir := flags.String("vault-dir", "", "canonical vault root")
+	featurePath := flags.String("feature", "", "vault-relative canonical feature.md target")
+	projectPath := flags.String("project", "", "vault-relative canonical project target")
+	selectedTaskPath := flags.String("select-task", "", "vault-relative Task path to open from an aggregate")
+	colorMode := flags.String("color", "auto", "aggregate color mode: auto, always, or never")
 	snapshot := flags.Bool("snapshot", false, "print one deterministic frame")
 	width := flags.Int("width", 0, "frame width")
 	height := flags.Int("height", 0, "frame height")
 	flags.Parse(args)
-	if *runID == "" {
+	if *colorMode != "auto" && *colorMode != "always" && *colorMode != "never" {
+		flags.Usage()
+		os.Exit(2)
+	}
+	aggregateMode := *featurePath != "" || *projectPath != ""
+	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) {
 		flags.Usage()
 		os.Exit(2)
 	}
@@ -103,6 +113,37 @@ func render(args []string) {
 	reader, err := vaultregistry.OpenReader(*stateDir)
 	if err != nil {
 		fail(err)
+	}
+	if aggregateMode {
+		runs, err := reader.List()
+		if err != nil {
+			fail(err)
+		}
+		var projection atlas.Aggregate
+		if *featurePath != "" {
+			projection, err = atlas.DiscoverFeature(*vaultDir, *featurePath, runs)
+		} else {
+			projection, err = atlas.DiscoverProject(*vaultDir, *projectPath, runs)
+		}
+		if err != nil {
+			fail(err)
+		}
+		if *selectedTaskPath == "" {
+			_, noColor := os.LookupEnv("NO_COLOR")
+			color := atlas.ColorEnabled(*colorMode, *snapshot, characterDevice(os.Stdout), os.Getenv("TERM") == "dumb", noColor)
+			fmt.Println(projection.RenderColor(color))
+			return
+		}
+		task, ok := projection.Task(*selectedTaskPath)
+		if !ok {
+			fail(fmt.Errorf("selected Task not found: %s", *selectedTaskPath))
+		}
+		fmt.Printf("Selected Task %s · %s\n", task.ID, task.Path)
+		if task.RunID == "" {
+			fmt.Println("No registered Task Run")
+			return
+		}
+		*runID = task.RunID
 	}
 	run, err := reader.Get(*runID)
 	if err != nil {

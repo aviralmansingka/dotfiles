@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
+	"strings"
 	"syscall"
 )
 
@@ -150,6 +152,33 @@ func (r *Reader) Get(runID string) (Run, error) {
 		return Run{}, err
 	}
 	return load(filepath.Join(r.root, "runs", runID+".json"), runID)
+}
+
+// List returns all recorded runs in deterministic Run ID order without creating state.
+func (r *Reader) List() ([]Run, error) {
+	entries, err := os.ReadDir(filepath.Join(r.root, "runs"))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			ids = append(ids, strings.TrimSuffix(entry.Name(), ".json"))
+		}
+	}
+	sort.Strings(ids)
+	runs := make([]Run, 0, len(ids))
+	for _, id := range ids {
+		run, err := r.Get(id)
+		if err != nil {
+			return nil, err
+		}
+		runs = append(runs, run)
+	}
+	return runs, nil
 }
 
 func (p *Producer) path(id string) string { return filepath.Join(p.root, "runs", id+".json") }

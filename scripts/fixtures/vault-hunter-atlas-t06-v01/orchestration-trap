@@ -1,0 +1,3 @@
+#!/bin/sh
+printf '%s\n' "$0 $*" >> "${ATLAS_T06_TRAP_LOG:?}"
+exit 97
