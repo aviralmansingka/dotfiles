@@ -64,11 +64,15 @@ def scalar(value: str) -> str | None:
 
 
 def priority_scalar(value: Any, label: str = "priority") -> str:
-    if not isinstance(value, str) or "\n" in value or "\r" in value:
-        raise TriageError(f"{label} must be a one-line scalar value")
-    normalized = scalar(value)
-    if normalized is None or scalar(normalized) != normalized or normalized[0] in "\"'":
-        raise TriageError(f"{label} must be a scalar value")
+    normalized = value.strip() if isinstance(value, str) else ""
+    if (
+        not re.fullmatch(r"[A-Za-z][A-Za-z0-9 ._-]*", normalized)
+        or normalized.casefold() in {"null", "true", "false", "yes", "no", "on", "off"}
+    ):
+        raise TriageError(
+            f"{label} must begin with a letter and contain only letters, numbers, "
+            "spaces, dots, underscores, or hyphens"
+        )
     return normalized
 
 

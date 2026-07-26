@@ -146,13 +146,27 @@ class V02Tests(unittest.TestCase):
         self.assertIn("No files changed", preview)
         self.assertEqual(manifest(self.vault), before)
 
-    def test_parent_and_child_priorities_reject_newlines_and_structured_values(self) -> None:
+    def test_parent_and_child_priorities_are_safe_plain_scalars(self) -> None:
         parent_relative = "1_projects/neovim/issues/keep-candidate.md"
         split_relative = (
             "1_projects/neovim/themes/editor/features/splitting/issues/split-candidate.md"
         )
         before = manifest(self.vault)
-        invalid_priorities = ("urgent\nstatus: done", "[urgent, later]")
+        invalid_priorities = (
+            "urgent\nstatus: done",
+            "[urgent, later]",
+            "urgent: later",
+            "*urgent",
+            "&urgent",
+            "!urgent",
+            "null",
+            "NULL",
+            "true",
+            "False",
+            "YES",
+            "off",
+            "123",
+        )
 
         for priority in invalid_priorities:
             with self.subTest(source="parent", priority=priority):
@@ -202,6 +216,41 @@ class V02Tests(unittest.TestCase):
                 self.assertIn("child 1 priority must be", result.stderr)
                 self.assertNotIn("Confirmation token", result.stdout)
                 self.assertEqual(manifest(self.vault), before)
+
+        self.preview_and_apply(
+            "--issue",
+            parent_relative,
+            "--action",
+            "keep",
+            "--outcome",
+            "Keep the useful behavior visible",
+            "--next-action",
+            "Run one focused check",
+            "--priority",
+            "High priority",
+        )
+        self.assertEqual(
+            fields(self.vault / parent_relative)["priority"], "High priority"
+        )
+
+        children = json.loads(self.children_file().read_text(encoding="utf-8"))
+        children[0]["priority"] = "P1 follow-up_2.0"
+        path = self.root / "valid-children.json"
+        path.write_text(json.dumps(children), encoding="utf-8")
+        self.preview_and_apply(
+            "--issue",
+            split_relative,
+            "--action",
+            "split",
+            "--outcome",
+            "Replace the broad issue with actionable children",
+            "--next-action",
+            "Start the first child",
+            "--children-file",
+            str(path),
+        )
+        first_child = (self.vault / split_relative).parent / "first-child.md"
+        self.assertEqual(fields(first_child)["priority"], "P1 follow-up_2.0")
 
     def test_create_rejects_project_feature_and_issue_directory_symlink_escapes(self) -> None:
         outside_project = self.root / "outside-project"
