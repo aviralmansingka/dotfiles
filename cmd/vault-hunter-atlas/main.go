@@ -142,7 +142,7 @@ func render(args []string) {
 		os.Exit(2)
 	}
 	aggregateMode := *featurePath != "" || *projectPath != ""
-	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (aggregateMode && (*expanded || *runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) {
+	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (aggregateMode && (*expanded || *runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) || (*expanded && *stateDir == "") {
 		flags.Usage()
 		os.Exit(2)
 	}
@@ -203,7 +203,15 @@ func render(args []string) {
 		if !widthSet {
 			*width, *height = 160, 48
 		}
-		fmt.Println(atlas.NewModel(run, *width, *height).ExpandedView())
+		model := atlas.NewExpandedModel(run, *width, *height)
+		static := *snapshot || os.Getenv("TERM") == "dumb" || !characterDevice(os.Stdin) || !characterDevice(os.Stdout)
+		if static {
+			fmt.Println(model.View())
+			return
+		}
+		if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
+			fail(err)
+		}
 		return
 	}
 
