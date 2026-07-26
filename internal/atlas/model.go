@@ -20,6 +20,33 @@ type goal struct {
 	participants                   []vaultregistry.Participant
 }
 
+type orderedEntry struct {
+	at        string
+	lifecycle *vaultregistry.Lifecycle
+	evidence  *vaultregistry.Evidence
+	order     int
+}
+
+func orderedEntries(lifecycle []vaultregistry.Lifecycle, evidence []vaultregistry.Evidence) []orderedEntry {
+	entries := make([]orderedEntry, 0, len(lifecycle)+len(evidence))
+	for i := range lifecycle {
+		entries = append(entries, orderedEntry{at: lifecycle[i].ObservedAt, lifecycle: &lifecycle[i], order: i})
+	}
+	for i := range evidence {
+		entries = append(entries, orderedEntry{at: evidence[i].ObservedAt, evidence: &evidence[i], order: i})
+	}
+	sort.SliceStable(entries, func(i, j int) bool {
+		if entries[i].at != entries[j].at {
+			return entries[i].at < entries[j].at
+		}
+		if (entries[i].lifecycle != nil) != (entries[j].lifecycle != nil) {
+			return entries[i].lifecycle != nil
+		}
+		return entries[i].order < entries[j].order
+	})
+	return entries
+}
+
 type Model struct {
 	run           vaultregistry.Run
 	goals         []goal
@@ -185,29 +212,8 @@ func (m Model) ExpandedView() string {
 		return truncate("terminal too small; minimum 120×32", m.width)
 	}
 
-	type entry struct {
-		at        string
-		lifecycle *vaultregistry.Lifecycle
-		evidence  *vaultregistry.Evidence
-		order     int
-	}
-	var timeline []entry
-	for i := range m.run.Lifecycle {
-		timeline = append(timeline, entry{at: m.run.Lifecycle[i].ObservedAt, lifecycle: &m.run.Lifecycle[i], order: i})
-	}
-	for i := range m.run.Evidence {
-		timeline = append(timeline, entry{at: m.run.Evidence[i].ObservedAt, evidence: &m.run.Evidence[i], order: i})
-	}
-	sort.SliceStable(timeline, func(i, j int) bool {
-		if timeline[i].at != timeline[j].at {
-			return timeline[i].at < timeline[j].at
-		}
-		if (timeline[i].lifecycle != nil) != (timeline[j].lifecycle != nil) {
-			return timeline[i].lifecycle != nil
-		}
-		return timeline[i].order < timeline[j].order
-	})
-	formatEntry := func(item entry, showGoal bool) string {
+	timeline := orderedEntries(m.run.Lifecycle, m.run.Evidence)
+	formatEntry := func(item orderedEntry, showGoal bool) string {
 		if item.lifecycle != nil {
 			l := item.lifecycle
 			goal := ""
@@ -253,25 +259,12 @@ func (m Model) ExpandedView() string {
 	if len(m.goals) != 0 {
 		g := m.goals[m.selected]
 		selectedID, selectedKind, selectedState = value(g.id), value(g.kind), value(g.state)
-		var journey []entry
-		for i := range g.lifecycle {
-			journey = append(journey, entry{at: g.lifecycle[i].ObservedAt, lifecycle: &g.lifecycle[i], order: i})
-		}
+		journey := orderedEntries(g.lifecycle, g.evidence)
 		for i := range g.evidence {
-			journey = append(journey, entry{at: g.evidence[i].ObservedAt, evidence: &g.evidence[i], order: i})
 			if latestEvidence == nil || g.evidence[i].ObservedAt >= latestEvidence.ObservedAt {
 				latestEvidence = &g.evidence[i]
 			}
 		}
-		sort.SliceStable(journey, func(i, j int) bool {
-			if journey[i].at != journey[j].at {
-				return journey[i].at < journey[j].at
-			}
-			if (journey[i].lifecycle != nil) != (journey[j].lifecycle != nil) {
-				return journey[i].lifecycle != nil
-			}
-			return journey[i].order < journey[j].order
-		})
 		for _, item := range journey {
 			journeyLines = append(journeyLines, formatEntry(item, false))
 		}
@@ -378,28 +371,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 	} else {
 		g := m.goals[m.selected]
 		prefix := []string{fmt.Sprintf(" %s · %s · %s", g.id, value(g.kind), value(g.state)), ""}
-		type item struct {
-			at        string
-			lifecycle *vaultregistry.Lifecycle
-			evidence  *vaultregistry.Evidence
-			order     int
-		}
-		var journey []item
-		for i := range g.lifecycle {
-			journey = append(journey, item{at: g.lifecycle[i].ObservedAt, lifecycle: &g.lifecycle[i], order: i})
-		}
-		for i := range g.evidence {
-			journey = append(journey, item{at: g.evidence[i].ObservedAt, evidence: &g.evidence[i], order: i})
-		}
-		sort.SliceStable(journey, func(i, j int) bool {
-			if journey[i].at != journey[j].at {
-				return journey[i].at < journey[j].at
-			}
-			if (journey[i].lifecycle != nil) != (journey[j].lifecycle != nil) {
-				return journey[i].lifecycle != nil
-			}
-			return journey[i].order < journey[j].order
-		})
+		journey := orderedEntries(g.lifecycle, g.evidence)
 		var journeyLines []string
 		for _, entry := range journey {
 			if entry.lifecycle != nil {
