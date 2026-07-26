@@ -98,6 +98,17 @@ def object_with_keys(value, keys, where):
     require(not missing, f"{where} is missing fields: {', '.join(sorted(missing))}")
 
 
+def exact_object(value, expected, where, message):
+    object_with_keys(value, set(expected), where)
+    require(
+        all(
+            type(value[key]) is type(expected[key]) and value[key] == expected[key]
+            for key in expected
+        ),
+        message,
+    )
+
+
 def string_list(value, where, allow_empty=True):
     require(type(value) is list, f"{where} must be an array")
     require(allow_empty or value, f"{where} must not be empty")
@@ -149,8 +160,12 @@ def verify_v01(fixture):
     object_with_keys(fixture, {"goal", "rule", "assertions", "cases"}, "fixture")
     require(fixture["goal"] == V01_GOAL, f"fixture.goal must be {V01_GOAL}")
 
-    object_with_keys(fixture["rule"], set(V01_RULE), "fixture.rule")
-    require(fixture["rule"] == V01_RULE, "fixture.rule does not define exclusive deployment ownership")
+    exact_object(
+        fixture["rule"],
+        V01_RULE,
+        "fixture.rule",
+        "fixture.rule does not define exclusive deployment ownership",
+    )
 
     assertions = fixture["assertions"]
     object_with_keys(
@@ -228,8 +243,12 @@ def verify_v02(fixture):
     object_with_keys(fixture, {"goal", "rule", "assertions", "cases"}, "fixture")
     require(fixture["goal"] == V02_GOAL, f"fixture.goal must be {V02_GOAL}")
 
-    object_with_keys(fixture["rule"], set(V02_RULE), "fixture.rule")
-    require(fixture["rule"] == V02_RULE, "fixture.rule does not define peer-deployment independence")
+    exact_object(
+        fixture["rule"],
+        V02_RULE,
+        "fixture.rule",
+        "fixture.rule does not define peer-deployment independence",
+    )
 
     assertions = fixture["assertions"]
     object_with_keys(
@@ -320,8 +339,12 @@ def verify_v03(fixture):
     object_with_keys(fixture, {"goal", "rule", "assertions", "cases"}, "fixture")
     require(fixture["goal"] == V03_GOAL, f"fixture.goal must be {V03_GOAL}")
 
-    object_with_keys(fixture["rule"], set(V03_RULE), "fixture.rule")
-    require(fixture["rule"] == V03_RULE, "fixture.rule does not confine shared-boundary authority")
+    exact_object(
+        fixture["rule"],
+        V03_RULE,
+        "fixture.rule",
+        "fixture.rule does not confine shared-boundary authority",
+    )
 
     assertions = fixture["assertions"]
     object_with_keys(
