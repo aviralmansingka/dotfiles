@@ -1,6 +1,6 @@
 ---
 name: agent-issue-triage
-description: Discover, interactively triage, and weekly-review ordinary Neovim and Pi Agent vault issues. Use for confirmed keep, defer, close, or split decisions; weekly review is read-only.
+description: Discover, interactively triage, weekly-review, and explicitly create or update ordinary Neovim and Pi Agent vault issues, including from Telegram voice transcripts. Mutations always require preview confirmation.
 compatibility: Requires Python 3 and a vault using the 1_projects hierarchy.
 allowed-tools: Bash
 ---
@@ -18,6 +18,7 @@ Defaults are vault `/Users/aviral/vault` and projects `neovim,pi-agent`. Accept
 
 - `/skill:agent-issue-triage triage [--vault PATH] [--projects NAMES]`
 - `/skill:agent-issue-triage weekly [--vault PATH] [--projects NAMES]`
+- Telegram voice transcript handling under the explicit-intent policy below
 
 Start triage by running:
 
@@ -78,9 +79,56 @@ and only then sets the parent to `done`; a failed publication rolls back newly
 published children and leaves the parent open. Every action records the
 confirmed outcome, next action, and disposition in `## Triage`.
 
-Do not infer or implement Telegram or voice-note capture policy.
+## Telegram voice-note policy
 
-## Deterministic manual fixture
+**Explicit intent only.** A transcript that merely sounds like a bug, task, or
+issue does not create or update an issue. Respond normally; do not run a
+mutation preview and do not write to the vault. Treat only a direct request to
+create an issue or update an issue as mutation intent. Use the transcript and
+message identifier already supplied by the caller. Do not alter Telegram
+transport or transcription, and do not add keyword or generalized intent
+parsing.
+
+For an explicit create request:
+
+1. Require a named existing owner in `project/feature` form. Never guess a
+   project, theme, or feature. A missing, unknown, or multiply resolved owner is
+   ambiguous: ask for clarification and perform no write.
+2. Confirm the lowercase-hyphen slug, title, user-facing outcome, and smallest
+   next action. Preserve the Telegram message identifier and complete
+   transcript as source metadata.
+3. Generate a no-write preview:
+
+   ```sh
+   python3 <skill-directory>/triage.py \
+     --vault <vault> --projects <names> \
+     --create-owner <project/feature> --slug <slug> --title <title> \
+     --outcome <confirmed-outcome> --next-action <confirmed-action> \
+     --source-id <telegram-message-id> --transcript <complete-transcript>
+   ```
+
+4. Show the complete preview and ask whether to apply that exact creation. Only
+   after explicit approval, rerun the same command with `--apply <token>`.
+   Return the helper's created vault-relative path. The created note is placed
+   in the uniquely resolved feature's `issues/` directory and includes a
+   `## Source` block with channel, kind, message ID, owner, and transcript.
+
+For an explicit update request:
+
+1. Require an exact vault-relative issue path or an exact title that resolves to
+   one open ordinary issue. Use `--issue <path>` for the former or
+   `--issue-reference <exact-title>` for the latter. Resolution is exact, not
+   fuzzy. If no issue or multiple issues match, quote the candidates when
+   available, ask for an exact path, and perform no preview or write.
+2. Follow the interactive triage contract: confirm outcome, next action, and
+   disposition; preview one issue; then apply only after explicit approval.
+   The helper resolves the identity before producing a confirmation token, so
+   an ambiguous reference remains a no-write clarification.
+
+A rejection, uncertainty, missing owner/identity, or anything other than
+explicit confirmation ends the mutation attempt without `--apply`.
+
+## Deterministic V02 manual fixture
 
 From the repository root:
 
@@ -102,3 +150,24 @@ Use a fresh fixture copy for each mutation scenario. `keep-candidate.md`,
 `defer-candidate.md`, `close-candidate.md`, and `split-candidate.md` provide the
 corresponding paths. `already-deferred.md` and `already-closed.md` make weekly
 inclusion/exclusion visible before mutation.
+
+## Deterministic V03 Telegram fixture
+
+`fixtures/telegram-voice-v03/cases.json` is the canonical four-case transcript
+fixture. Its vault is isolated from the real vault. From the repository root:
+
+```sh
+rm -rf /tmp/t09-v03-vault
+cp -R .agents/skills/agent-issue-triage/fixtures/telegram-voice-v03/vault /tmp/t09-v03-vault
+cd /tmp/t09-v03-vault
+pi --no-session --no-extensions --skill /private/tmp/vh-agent-issue-triage-t09/.agents/skills/agent-issue-triage
+```
+
+Present each case's transcript and supplied fields as already-transcribed
+Telegram voice-note context, using a fresh vault copy for every case. Expected
+manual behavior is: issue-like statement/no intent responds with no mutation;
+explicit create under `pi-agent/agent-issue-triage` previews, confirms, creates,
+and returns the path with source metadata; exact update previews, confirms, and
+changes only `exact-update.md`; ambiguous `Shared Voice Update` asks for an
+exact path and writes nothing. These are manual expectations, not an automated
+claim about the Telegram conversation or transport.

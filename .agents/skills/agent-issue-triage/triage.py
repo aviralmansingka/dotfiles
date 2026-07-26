@@ -216,6 +216,45 @@ def discover(vault: Path, projects: list[str]) -> tuple[list[Issue], list[str]]:
     return issues, sorted(diagnostics)
 
 
+def resolve_issue_reference(vault: Path, projects: list[str], reference: str) -> Issue:
+    """Resolve only an exact path or an exact, unique issue title."""
+    issues, _ = discover(vault, projects)
+    reference = reference.strip()
+    path_matches = [issue for issue in issues if issue.relative_path == reference]
+    if path_matches:
+        return path_matches[0]
+
+    title_matches = [issue for issue in issues if issue.title.casefold() == reference.casefold()]
+    if len(title_matches) == 1:
+        return title_matches[0]
+    if len(title_matches) > 1:
+        paths = ", ".join(issue.relative_path for issue in title_matches)
+        raise TriageError(f"issue identity is ambiguous; clarify with an exact path: {paths}")
+    raise TriageError("issue identity was not found; clarify with an exact path or exact title")
+
+
+def resolve_owner(vault: Path, projects: list[str], owner: str) -> tuple[str, str, Path]:
+    """Resolve a named project/feature owner without guessing a theme."""
+    parts = owner.strip().split("/")
+    if len(parts) != 2 or any(
+        not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", part) for part in parts
+    ):
+        raise TriageError("owner must name an existing project/feature")
+    project, feature = parts
+    if project not in projects:
+        raise TriageError("owner project is not in the selected projects; clarify ownership")
+    project_root = vault / "1_projects" / project
+    matches = sorted(
+        path for path in project_root.glob(f"themes/*/features/{feature}") if path.is_dir()
+    )
+    if not matches:
+        raise TriageError("owner was not found; clarify the project/feature owner")
+    if len(matches) > 1:
+        paths = ", ".join(path.relative_to(vault).as_posix() for path in matches)
+        raise TriageError(f"owner is ambiguous; clarify the owning feature path: {paths}")
+    return project, feature, matches[0]
+
+
 def render(vault: Path, projects: list[str]) -> str:
     """Render the V01-compatible dry triage."""
     issues, diagnostics = discover(vault, projects)
@@ -420,6 +459,82 @@ def child_text(child: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def telegram_voice_issue_text(
+    owner: str,
+    title: str,
+    outcome: str,
+    next_action: str,
+    source_id: str,
+    transcript: str,
+) -> str:
+    transcript = " ".join(transcript.split())
+    lines = [
+        "---",
+        "status: open",
+        "---",
+        f"# {title.strip()}",
+        "",
+        "## Source",
+        "",
+        "- **Channel:** Telegram",
+        "- **Kind:** voice note",
+        f"- **Message ID:** {source_id.strip()}",
+        f"- **Owner:** {owner}",
+        f"- **Transcript:** {transcript}",
+        "",
+        "## Triage",
+        "",
+        f"- **User-facing outcome:** {outcome.strip()}",
+        f"- **Smallest next action:** {next_action.strip()}",
+        "- **Disposition:** keep",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def create_plan(
+    vault: Path,
+    projects: list[str],
+    owner: str,
+    slug: str,
+    title: str,
+    outcome: str,
+    next_action: str,
+    source_id: str,
+    transcript: str,
+) -> Plan:
+    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
+        raise TriageError("issue slug must use lowercase letters, numbers, and hyphens")
+    values = (title, outcome, next_action, source_id, transcript)
+    if any(not value.strip() for value in values):
+        raise TriageError("title, outcome, next action, source ID, and transcript must be non-empty")
+    if any("\n" in value or "\r" in value for value in (title, source_id)):
+        raise TriageError("title and source ID must each be one line")
+
+    project, feature, feature_root = resolve_owner(vault, projects, owner)
+    path = feature_root / "issues" / f"{slug}.md"
+    relative_path = path.relative_to(vault).as_posix()
+    if path.exists():
+        raise TriageError(f"issue already exists: {relative_path}")
+    text = telegram_voice_issue_text(
+        owner, title, outcome, next_action, source_id, transcript
+    ).encode("utf-8")
+    issue = Issue(
+        path=path,
+        relative_path=relative_path,
+        project=project,
+        feature=feature,
+        status="open",
+        title=title.strip(),
+        order=None,
+        priority=None,
+        outcome=outcome.strip(),
+        next_action=next_action.strip(),
+        disposition="keep",
+    )
+    return Plan("create", issue, [Change(path, relative_path, None, text)])
+
+
 def mutation_plan(
     vault: Path,
     projects: list[str],
@@ -553,12 +668,26 @@ def _publish_new(staged: Path, target: Path) -> None:
 def apply_plan(plan: Plan) -> None:
     _verify_unchanged(plan)
     staged: list[tuple[Change, Path]] = []
+    created_directory: Path | None = None
+    if plan.action == "create":
+        parent = plan.changes[0].path.parent
+        try:
+            if not parent.exists():
+                parent.mkdir()
+                created_directory = parent
+            elif not parent.is_dir():
+                raise TriageError(f"issue parent is not a directory: {parent}")
+        except OSError as error:
+            raise TriageError(f"cannot create issue directory: {error}") from error
     try:
         for change in plan.changes:
             staged.append((change, _stage(change)))
         if plan.action != "split":
             try:
-                os.replace(staged[0][1], staged[0][0].path)
+                if plan.action == "create":
+                    _publish_new(staged[0][1], staged[0][0].path)
+                else:
+                    os.replace(staged[0][1], staged[0][0].path)
             except OSError as error:
                 raise TriageError(f"mutation was not applied: {error}") from error
             return
@@ -585,6 +714,11 @@ def apply_plan(plan: Plan) -> None:
                 temporary.unlink()
             except FileNotFoundError:
                 pass
+        if created_directory is not None and not plan.changes[0].path.exists():
+            try:
+                created_directory.rmdir()
+            except OSError:
+                pass
 
 
 def parse_projects(raw: str, parser: argparse.ArgumentParser) -> list[str]:
@@ -602,8 +736,14 @@ def main() -> int:
     parser.add_argument("--vault", type=Path, required=True)
     parser.add_argument("--projects", default="neovim,pi-agent")
     parser.add_argument("--weekly", action="store_true", help="render a read-only weekly review")
-    parser.add_argument("--issue", help="vault-relative ordinary issue path to mutate")
+    parser.add_argument("--issue", help="exact vault-relative ordinary issue path to mutate")
+    parser.add_argument("--issue-reference", help="exact path or exact, unique issue title")
     parser.add_argument("--action", choices=sorted(ACTIONS))
+    parser.add_argument("--create-owner", metavar="PROJECT/FEATURE")
+    parser.add_argument("--slug")
+    parser.add_argument("--title")
+    parser.add_argument("--source-id", help="Telegram voice-note message identifier")
+    parser.add_argument("--transcript", help="Telegram voice-note transcript")
     parser.add_argument("--outcome")
     parser.add_argument("--next-action")
     parser.add_argument("--priority")
@@ -618,7 +758,13 @@ def main() -> int:
         value is not None
         for value in (
             args.issue,
+            args.issue_reference,
             args.action,
+            args.create_owner,
+            args.slug,
+            args.title,
+            args.source_id,
+            args.transcript,
             args.outcome,
             args.next_action,
             args.priority,
@@ -635,21 +781,75 @@ def main() -> int:
     if not mutation_requested:
         print(render(vault, projects), end="")
         return 0
-    if not all((args.issue, args.action, args.outcome, args.next_action)):
-        parser.error("mutation requires --issue, --action, --outcome, and --next-action")
+    creation_requested = any(
+        value is not None
+        for value in (args.create_owner, args.slug, args.title, args.source_id, args.transcript)
+    )
+    if creation_requested:
+        if any(
+            value is not None
+            for value in (
+                args.issue,
+                args.issue_reference,
+                args.action,
+                args.priority,
+                args.order,
+                args.children_file,
+            )
+        ):
+            parser.error("voice-note creation cannot be combined with update options")
+        if not all(
+            (
+                args.create_owner,
+                args.slug,
+                args.title,
+                args.outcome,
+                args.next_action,
+                args.source_id,
+                args.transcript,
+            )
+        ):
+            parser.error(
+                "voice-note creation requires --create-owner, --slug, --title, --outcome, "
+                "--next-action, --source-id, and --transcript"
+            )
+    else:
+        if bool(args.issue) == bool(args.issue_reference):
+            parser.error("update requires exactly one of --issue or --issue-reference")
+        if not all((args.action, args.outcome, args.next_action)):
+            parser.error("update requires --action, --outcome, and --next-action")
 
     try:
-        plan = mutation_plan(
-            vault,
-            projects,
-            args.issue,
-            args.action,
-            args.outcome,
-            args.next_action,
-            args.priority,
-            args.order,
-            load_children(args.children_file),
-        )
+        if creation_requested:
+            plan = create_plan(
+                vault,
+                projects,
+                args.create_owner,
+                args.slug,
+                args.title,
+                args.outcome,
+                args.next_action,
+                args.source_id,
+                args.transcript,
+            )
+        else:
+            issue_path = args.issue
+            if args.issue_reference:
+                issue_path = resolve_issue_reference(
+                    vault, projects, args.issue_reference
+                ).relative_path
+            assert issue_path is not None
+            plan = mutation_plan(
+                vault,
+                projects,
+                issue_path,
+                args.action,
+                args.outcome,
+                args.next_action,
+                args.priority,
+                args.order,
+                load_children(args.children_file),
+            )
         token = plan_token(plan)
         if args.apply is None:
             print(render_preview(plan), end="")
@@ -657,7 +857,10 @@ def main() -> int:
         if args.apply != token:
             raise TriageError("confirmation token does not match the current mutation preview")
         apply_plan(plan)
-        print(f"Applied {args.action}: {args.issue}")
+        if plan.action == "create":
+            print(f"Created issue: {plan.issue.relative_path}")
+        else:
+            print(f"Applied {plan.action}: {plan.issue.relative_path}")
         return 0
     except TriageError as error:
         print(f"error: {error}", file=sys.stderr)
