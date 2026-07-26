@@ -73,10 +73,12 @@ func (p *Producer) Create(run Run) (Run, error) {
 		return Run{}, err
 	}
 	defer unlock()
-	if _, err := os.Stat(p.path(run.RunID)); err == nil {
-		return Run{}, fmt.Errorf("%w: run already exists", ErrConflict)
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return Run{}, err
+	for _, path := range []string{p.path(run.RunID), p.retiredPath(run.RunID)} {
+		if _, err := os.Lstat(path); err == nil {
+			return Run{}, fmt.Errorf("%w: run ID is reserved", ErrConflict)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return Run{}, err
+		}
 	}
 	run.Revision = 1
 	if err := validate(run); err != nil {
@@ -147,12 +149,128 @@ func historyPrefix[T any](current, next []T) bool {
 		slices.EqualFunc(current, next[:len(current)], equalJSON)
 }
 
+// Retire atomically moves an exact active Run revision into the reserved
+// retired namespace. A retry for the same retired revision is idempotent.
+func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
+	if err := validID(runID); err != nil {
+		return Run{}, err
+	}
+	if expectedRevision == 0 {
+		return Run{}, fmt.Errorf("%w: retire revision must be non-zero", ErrMalformed)
+	}
+	unlock, err := p.lock()
+	if err != nil {
+		return Run{}, err
+	}
+	defer unlock()
+
+	activePath := p.path(runID)
+	retiredPath := p.retiredPath(runID)
+	activeInfo, activeErr := os.Lstat(activePath)
+	retiredInfo, retiredErr := os.Lstat(retiredPath)
+	if activeErr != nil && !errors.Is(activeErr, os.ErrNotExist) {
+		return Run{}, activeErr
+	}
+	if retiredErr != nil && !errors.Is(retiredErr, os.ErrNotExist) {
+		return Run{}, retiredErr
+	}
+	activeExists := activeErr == nil
+	retiredExists := retiredErr == nil
+
+	if activeExists && retiredExists {
+		return Run{}, fmt.Errorf("%w: active and retired records both exist", ErrConflict)
+	}
+	if !activeExists {
+		if !retiredExists {
+			return Run{}, fmt.Errorf("%w: %s", ErrNotFound, activePath)
+		}
+		if !retiredInfo.Mode().IsRegular() {
+			return Run{}, fmt.Errorf("%w: retired destination collision", ErrConflict)
+		}
+		retired, err := load(retiredPath, runID)
+		if err != nil {
+			return Run{}, err
+		}
+		if retired.Revision != expectedRevision {
+			return Run{}, fmt.Errorf("%w: expected %d, retired %d", ErrConflict, expectedRevision, retired.Revision)
+		}
+		return clone(retired)
+	}
+	if !activeInfo.Mode().IsRegular() {
+		return Run{}, fmt.Errorf("%w: %s: active record is not a regular file", ErrMalformed, activePath)
+	}
+	active, err := load(activePath, runID)
+	if err != nil {
+		return Run{}, err
+	}
+	if active.Revision != expectedRevision {
+		return Run{}, fmt.Errorf("%w: expected %d, actual %d", ErrConflict, expectedRevision, active.Revision)
+	}
+
+	retiredDir := filepath.Join(p.root, "retired")
+	createdRetiredDir := false
+	if info, err := os.Lstat(retiredDir); errors.Is(err, os.ErrNotExist) {
+		if err := os.Mkdir(retiredDir, 0700); err != nil {
+			return Run{}, err
+		}
+		createdRetiredDir = true
+	} else if err != nil {
+		return Run{}, err
+	} else if !info.IsDir() {
+		return Run{}, fmt.Errorf("%w: retired namespace is not a directory", ErrConflict)
+	}
+	if err := os.Chmod(retiredDir, 0700); err != nil {
+		if createdRetiredDir {
+			_ = os.Remove(retiredDir)
+		}
+		return Run{}, err
+	}
+
+	activeDir, err := os.Open(filepath.Join(p.root, "runs"))
+	if err != nil {
+		if createdRetiredDir {
+			_ = os.Remove(retiredDir)
+		}
+		return Run{}, err
+	}
+	defer activeDir.Close()
+	retiredDirFile, err := os.Open(retiredDir)
+	if err != nil {
+		if createdRetiredDir {
+			_ = os.Remove(retiredDir)
+		}
+		return Run{}, err
+	}
+	defer retiredDirFile.Close()
+
+	if err := os.Rename(activePath, retiredPath); err != nil {
+		if createdRetiredDir {
+			_ = os.Remove(retiredDir)
+		}
+		return Run{}, err
+	}
+	activeSyncErr := activeDir.Sync()
+	retiredSyncErr := retiredDirFile.Sync()
+	if err := errors.Join(activeSyncErr, retiredSyncErr); err != nil {
+		return Run{}, err
+	}
+	return clone(active)
+}
+
 func (p *Producer) Get(runID string) (Run, error) { return load(p.path(runID), runID) }
 func (r *Reader) Get(runID string) (Run, error) {
 	if err := validID(runID); err != nil {
 		return Run{}, err
 	}
 	return load(filepath.Join(r.root, "runs", runID+".json"), runID)
+}
+
+// GetRetired reads only the explicit retired namespace without creating state.
+func (r *Reader) GetRetired(runID string) (Run, error) {
+	if err := validID(runID); err != nil {
+		return Run{}, err
+	}
+	return load(filepath.Join(r.root, "retired", runID+".json"), runID)
 }
 
 // List returns all recorded runs in deterministic Run ID order without creating state.
@@ -329,6 +447,9 @@ func summarize(run Run) RunSummary {
 }
 
 func (p *Producer) path(id string) string { return filepath.Join(p.root, "runs", id+".json") }
+func (p *Producer) retiredPath(id string) string {
+	return filepath.Join(p.root, "retired", id+".json")
+}
 
 func (p *Producer) lock() (func(), error) {
 	f, err := os.OpenFile(filepath.Join(p.root, "registry.lock"), os.O_CREATE|os.O_RDWR, 0600)
