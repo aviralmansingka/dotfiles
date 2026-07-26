@@ -23,7 +23,8 @@ terminal.
 - Keep one writer in an implementation worktree. Parallelize reads, review, and isolated checks, not ordinary writes.
 - Preserve unrelated Git, Herdr, Neovim, and filesystem state.
 - A formal child is any delegated agent whose result may influence the Run. Every formal headless child must launch
-  through `vault_hunter_step`; never call `subagent` directly for one.
+  through `vault_hunter_step`; never call `subagent` directly for one. Raw `subagent` is recovery-only, may use only the
+  cheapest read-only `delegate`, and never advances or accepts a formal stage.
 - After the parent minimally resolves the invocation target, all mechanical discovery that may inform routing,
   specification, implementation, verification, review, or landing is performed by registered headless children. The
   parent may validate returned facts but never fills missing discovery itself; launch another bounded child instead.
@@ -48,6 +49,10 @@ Before substantive discovery:
    driver placement separately.
 6. If Registry creation or interactive Herdr registration fails, stop before dispatching a formal child. Do not fall
    back to an unregistered child.
+7. Before each formal headless dispatch, require `vault_hunter_step preflight` to prove the wrapper and native
+   `pi-subagents` RPC respond, the selected agent profile resolves, and every requested tool is available. Preflight
+   failure records one runtime-blocked observation and stops before model execution or participant/start observations;
+   never fall back to raw `subagent`.
 
 Before the invocation commit, emit no plan or clarification beyond the host's minimal skill acknowledgment.
 
@@ -106,9 +111,9 @@ Call `vault_hunter_step` once per child with:
 - `$ponytail` for implementation and fix workers;
 - `$vault-hunter-check` for exact declared check execution.
 
-Before launch, inspect the selected agent's configured model, tools, and extensions. If a required capability is
-unavailable, choose a compatible registered agent or stop before spawn; optional unavailable tools must not turn a
-completed bounded handoff into a failed formal stage.
+Before launch, `vault_hunter_step preflight` must inspect the selected agent's configured model, tools, and extensions.
+If the wrapper, native RPC, profile, or a requested capability is unavailable, record the runtime-blocked result and
+stop before spawn; optional unavailable tools must not turn a completed bounded handoff into a failed formal stage.
 
 The wrapper persists a launch intent, launches asynchronously through `pi-subagents`, writes the native async-run
 participant and active observation to the Registry, binds the child beside its status artifact, and replays control and
@@ -122,10 +127,10 @@ observed, not that the child is stuck. Interrupt only on concrete drift, blockag
 
 A useful handoff reports changed paths, commands and exit codes, commit/tree when applicable, concise findings,
 remaining risks, and decisions requiring the parent. Child completion is not acceptance. If the formal child exits
-failed after producing an apparently complete artifact, do not accept it directly: launch one registered
-`openai-codex/gpt-5.6-luna:low` read-only validator to report only the artifact hash and required shape, repository
-cleanliness, and exact runtime error. The parent alone decides whether the failure is independent of the result and
-whether to accept the artifact.
+failed after producing an apparently complete artifact, do not rerun it automatically or accept it directly. Launch
+exactly one preflighted `delegate` read-only validator through `vault_hunter_step` to report only the artifact hash and
+required shape, repository cleanliness, and exact runtime error. The parent alone decides whether the failure is
+independent of the result and whether to accept the artifact.
 
 ### Herdr-visible child
 
