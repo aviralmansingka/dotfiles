@@ -84,6 +84,33 @@ func TestT01V01RestartUpdateAndUnknownFields(t *testing.T) {
 		t.Fatalf("reopened values differ\ncreated: %#v\nproducer: %#v\nreader: %#v", created, fromProducer, fromReader)
 	}
 
+	path := filepath.Join(root, "runs", run.RunID+".json")
+	beforeRetarget, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reopenedProducer.Update(run.RunID, 1, func(next *vaultregistry.Run) error {
+		next.Task.ID = "T02"
+		next.Task.Path = "tasks/02.md"
+		return nil
+	}); !errors.Is(err, vaultregistry.ErrMalformed) {
+		t.Fatalf("Task retarget error = %v, want ErrMalformed", err)
+	}
+	afterRetarget, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(afterRetarget, beforeRetarget) {
+		t.Fatal("rejected Task retarget changed persisted bytes")
+	}
+	afterRetargetRun, err := reader.Get(run.RunID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(afterRetargetRun, created) {
+		t.Fatalf("rejected Task retarget changed persisted value\ncreated: %#v\nafter: %#v", created, afterRetargetRun)
+	}
+
 	beforeParticipants := append([]vaultregistry.Participant(nil), fromReader.Participants...)
 	beforeLifecycle := append([]vaultregistry.Lifecycle(nil), fromReader.Lifecycle...)
 	beforeEvidence := append([]vaultregistry.Evidence(nil), fromReader.Evidence...)
@@ -123,7 +150,6 @@ func TestT01V01RestartUpdateAndUnknownFields(t *testing.T) {
 		t.Fatalf("updated value did not survive restart\nupdated: %#v\nreloaded: %#v", updated, reloaded)
 	}
 
-	path := filepath.Join(root, "runs", run.RunID+".json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -141,6 +167,84 @@ func TestT01V01RestartUpdateAndUnknownFields(t *testing.T) {
 		if !strings.Contains(string(data), `"`+marker+`"`) {
 			t.Fatalf("persisted JSON lost nested unknown field %q", marker)
 		}
+	}
+}
+
+func TestT01V02RejectsPartialParticipantIdentities(t *testing.T) {
+	cases := []struct {
+		name   string
+		change func(*vaultregistry.Participant)
+	}{
+		{"herdr_workspace", func(p *vaultregistry.Participant) {
+			p.Herdr = &vaultregistry.HerdrIdentity{TabID: "tab", PaneID: "pane", TerminalID: "term"}
+		}},
+		{"herdr_tab", func(p *vaultregistry.Participant) {
+			p.Herdr = &vaultregistry.HerdrIdentity{WorkspaceID: "ws", PaneID: "pane", TerminalID: "term"}
+		}},
+		{"herdr_pane", func(p *vaultregistry.Participant) {
+			p.Herdr = &vaultregistry.HerdrIdentity{WorkspaceID: "ws", TabID: "tab", TerminalID: "term"}
+		}},
+		{"herdr_terminal", func(p *vaultregistry.Participant) {
+			p.Herdr = &vaultregistry.HerdrIdentity{WorkspaceID: "ws", TabID: "tab", PaneID: "pane"}
+		}},
+		{"session_source", func(p *vaultregistry.Participant) {
+			p.AgentSession = &vaultregistry.AgentSession{Kind: "session", Value: "session-1"}
+		}},
+		{"session_kind", func(p *vaultregistry.Participant) {
+			p.AgentSession = &vaultregistry.AgentSession{Source: "codex", Value: "session-1"}
+		}},
+		{"session_value", func(p *vaultregistry.Participant) {
+			p.AgentSession = &vaultregistry.AgentSession{Source: "codex", Kind: "session"}
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name+"/create", func(t *testing.T) {
+			root := t.TempDir()
+			producer, err := vaultregistry.OpenProducer(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			run := baseRun("partial_create")
+			run.Participants = []vaultregistry.Participant{baseParticipant()}
+			tc.change(&run.Participants[0])
+			if _, err := producer.Create(run); !errors.Is(err, vaultregistry.ErrMalformed) {
+				t.Fatalf("Create error = %v, want ErrMalformed", err)
+			}
+		})
+		t.Run(tc.name+"/read", func(t *testing.T) {
+			root := t.TempDir()
+			runs := filepath.Join(root, "runs")
+			if err := os.MkdirAll(runs, 0700); err != nil {
+				t.Fatal(err)
+			}
+			run := baseRun("partial_read")
+			run.Revision = 1
+			run.Participants = []vaultregistry.Participant{baseParticipant()}
+			tc.change(&run.Participants[0])
+			before, err := json.Marshal(run)
+			if err != nil {
+				t.Fatal(err)
+			}
+			before = append(before, '\n')
+			path := filepath.Join(runs, run.RunID+".json")
+			if err := os.WriteFile(path, before, 0600); err != nil {
+				t.Fatal(err)
+			}
+			reader, err := vaultregistry.OpenReader(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := reader.Get(run.RunID); !errors.Is(err, vaultregistry.ErrMalformed) {
+				t.Fatalf("Get error = %v, want ErrMalformed", err)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(after, before) {
+				t.Fatal("failed read changed source bytes")
+			}
+		})
 	}
 }
 
@@ -293,6 +397,14 @@ func baseRun(id string) vaultregistry.Run {
 			ID: "T01", Title: "Build the Run Registry POC", Path: "tasks/01.md",
 			FeaturePath: "features/vault-hunter-atlas.md", Kind: "task",
 		},
+	}
+}
+
+func baseParticipant() vaultregistry.Participant {
+	return vaultregistry.Participant{
+		ParticipantID: "driver",
+		ObservedAt:    "2026-07-26T08:00:01Z",
+		Role:          "producer",
 	}
 }
 
