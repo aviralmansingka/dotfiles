@@ -1,0 +1,248 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin" "$tmp/state"
+
+cat >"$tmp/bin/herdr" <<'PY'
+#!/usr/bin/env python3
+import json, os, shlex, sys
+
+path = os.environ["HERDR_FAKE_STATE"]
+log_path = os.environ["HERDR_FAKE_LOG"]
+args = sys.argv[1:]
+with open(path) as stream:
+    state = json.load(stream)
+with open(log_path, "a") as stream:
+    stream.write(json.dumps(args, separators=(",", ":")) + "\n")
+
+def emit(result):
+    print(json.dumps({"id": "fake", "result": result}, separators=(",", ":")))
+
+def save():
+    with open(path, "w") as stream:
+        json.dump(state, stream, sort_keys=True, separators=(",", ":"))
+        stream.write("\n")
+
+def option(name):
+    return args[args.index(name) + 1]
+
+if args[:2] == ["tab", "list"]:
+    workspace = option("--workspace")
+    emit({"type": "tab_list", "tabs": [tab for tab in state["tabs"] if tab["workspace_id"] == workspace]})
+elif args[:2] == ["pane", "list"]:
+    workspace = option("--workspace")
+    emit({"type": "pane_list", "panes": [{k: v for k, v in pane.items() if k != "processes"} for pane in state["panes"] if pane["workspace_id"] == workspace]})
+elif args[:2] == ["pane", "process-info"]:
+    pane_id = option("--pane")
+    pane = next((pane for pane in state["panes"] if pane["pane_id"] == pane_id), None)
+    if pane is None:
+        sys.exit(1)
+    emit({"type": "pane_process_info", "process_info": {"pane_id": pane_id, "foreground_processes": pane["processes"]}})
+elif args[:2] == ["tab", "create"]:
+    workspace = option("--workspace")
+    label = option("--label")
+    state["counter"] += 1
+    n = state["counter"]
+    tab = {"workspace_id": workspace, "tab_id": f"tab-{n}", "label": label, "pane_count": 1}
+    pane = {"workspace_id": workspace, "tab_id": tab["tab_id"], "pane_id": f"pane-{n}", "terminal_id": f"term-{n}", "processes": [{"argv": ["/bin/sh"]}]}
+    state["tabs"].append(tab)
+    state["panes"].append(pane)
+    save()
+    emit({"type": "tab_created", "tab": tab, "root_pane": {k: v for k, v in pane.items() if k != "processes"}})
+elif args[:2] == ["pane", "run"]:
+    pane_id, command = args[2], args[3]
+    pane = next(pane for pane in state["panes"] if pane["pane_id"] == pane_id)
+    argv = shlex.split(command)
+    pane["processes"] = [{"argv": argv}, {"argv": argv[4:]}]
+    save()
+    emit({"type": "pane_run", "pane_id": pane_id})
+elif args[:2] == ["tab", "close"]:
+    tab_id = args[2]
+    if not any(tab["tab_id"] == tab_id for tab in state["tabs"]):
+        sys.exit(1)
+    state["tabs"] = [tab for tab in state["tabs"] if tab["tab_id"] != tab_id]
+    state["panes"] = [pane for pane in state["panes"] if pane["tab_id"] != tab_id]
+    save()
+    emit({"type": "tab_closed", "tab_id": tab_id})
+else:
+    print("forbidden fake Herdr command: " + " ".join(args), file=sys.stderr)
+    sys.exit(97)
+PY
+chmod +x "$tmp/bin/herdr"
+
+cat >"$tmp/herdr.json" <<'JSON'
+{"counter":10,"tabs":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","label":"unrelated","pane_count":1},{"workspace_id":"ws-other","tab_id":"other-tab","label":"other workspace","pane_count":1}],"panes":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","pane_id":"unrelated-pane","terminal_id":"unrelated-terminal","processes":[{"argv":["unrelated-process"]}]},{"workspace_id":"ws-other","tab_id":"other-tab","pane_id":"other-pane","terminal_id":"other-terminal","processes":[{"argv":["other-process"]}]}]}
+JSON
+: >"$tmp/herdr.log"
+
+go test -count=1 ./internal/atlascompanion
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+export HERDR_FAKE_STATE="$tmp/herdr.json" HERDR_FAKE_LOG="$tmp/herdr.log"
+PATH="$tmp/bin:$PATH"
+export PATH
+
+attach() {
+  "$tmp/vault-hunter-atlas" companion attach --run-id run-03 --workspace-id ws-target --state-dir "$tmp/state"
+}
+cleanup() {
+  "$tmp/vault-hunter-atlas" companion cleanup --run-id run-03 --workspace-id ws-target \
+    --tab-id "$1" --pane-id "$2" --terminal-id "$3" --state-dir "$tmp/state"
+}
+state_hash() {
+  shasum -a 256 "$tmp/herdr.json" | awk '{print $1}'
+}
+assert_fails_closed() {
+  name=$1
+  before=$(state_hash)
+  if attach >"$tmp/$name.stdout" 2>"$tmp/$name.stderr"; then
+    echo "$name candidate unexpectedly attached" >&2
+    exit 1
+  fi
+  test ! -s "$tmp/$name.stdout"
+  test "$before" = "$(state_hash)"
+}
+
+attach >"$tmp/first.json"
+attach >"$tmp/second.json"
+cmp "$tmp/first.json" "$tmp/second.json"
+eval "$(python3 - "$tmp/first.json" <<'PY'
+import json, shlex, sys
+value = json.load(open(sys.argv[1]))
+assert set(value) == {"run_id", "workspace_id", "tab_id", "pane_id", "terminal_id"}
+assert value["run_id"] == "run-03" and value["workspace_id"] == "ws-target"
+for key in ("tab_id", "pane_id", "terminal_id"):
+    print(f"{key}={shlex.quote(value[key])}")
+PY
+)"
+python3 - "$tmp/herdr.json" "$tmp/vault-hunter-atlas" "$tmp/state" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+atlas = [sys.argv[2], "--run-id", "run-03", "--state-dir", sys.argv[3]]
+assert sum(process["argv"] == atlas for pane in state["panes"] for process in pane["processes"]) == 1
+assert sum(tab["label"].startswith("Vault Hunter Atlas · ") for tab in state["tabs"]) == 1
+assert {tab["tab_id"] for tab in state["tabs"]} >= {"unrelated-tab", "other-tab"}
+PY
+
+# A surviving exact ownership wrapper and missing Atlas child uniquely prove a dead owned companion.
+python3 - "$tmp/herdr.json" "$pane_id" <<'PY'
+import json, sys
+path, pane_id = sys.argv[1:]
+state = json.load(open(path))
+pane = next(p for p in state["panes"] if p["pane_id"] == pane_id)
+pane["processes"] = pane["processes"][:1]
+json.dump(state, open(path, "w"), sort_keys=True, separators=(",", ":"))
+open(path, "a").write("\n")
+PY
+attach >"$tmp/replaced.json"
+if cmp -s "$tmp/first.json" "$tmp/replaced.json"; then
+  echo "dead companion tuple was reused" >&2
+  exit 1
+fi
+old_tab_id=$tab_id
+eval "$(python3 - "$tmp/replaced.json" <<'PY'
+import json, shlex, sys
+value = json.load(open(sys.argv[1]))
+for key in ("tab_id", "pane_id", "terminal_id"):
+    print(f"{key}={shlex.quote(value[key])}")
+PY
+)"
+python3 - "$tmp/herdr.json" "$old_tab_id" "$tab_id" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+tab_ids = {tab["tab_id"] for tab in state["tabs"]}
+assert sys.argv[2] not in tab_ids and sys.argv[3] in tab_ids
+assert "unrelated-tab" in tab_ids and "other-tab" in tab_ids
+PY
+
+# Two exact owned tuples are ambiguous.
+python3 - "$tmp/herdr.json" "$tab_id" "$pane_id" <<'PY'
+import base64, json, sys
+path, tab_id, pane_id = sys.argv[1:]
+state = json.load(open(path))
+tab = next(t for t in state["tabs"] if t["tab_id"] == tab_id)
+pane = next(p for p in state["panes"] if p["pane_id"] == pane_id)
+tuple_ = {"run_id":"run-03","workspace_id":"ws-target","tab_id":"duplicate-tab","pane_id":"duplicate-pane","terminal_id":"duplicate-terminal"}
+marker = "vault-hunter-atlas-companion:v1:" + base64.urlsafe_b64encode(json.dumps(tuple_, separators=(",", ":")).encode()).decode().rstrip("=")
+wrapper = pane["processes"][0]["argv"][:]
+wrapper[3] = marker
+state["tabs"].append({"workspace_id":"ws-target","tab_id":"duplicate-tab","label":tab["label"],"pane_count":1})
+state["panes"].append({"workspace_id":"ws-target","tab_id":"duplicate-tab","pane_id":"duplicate-pane","terminal_id":"duplicate-terminal","processes":[{"argv":wrapper},{"argv":pane["processes"][1]["argv"]}]})
+json.dump(state, open(path, "w"), sort_keys=True, separators=(",", ":")); open(path, "a").write("\n")
+PY
+assert_fails_closed ambiguous
+python3 - "$tmp/herdr.json" <<'PY'
+import json, sys
+path = sys.argv[1]; state = json.load(open(path))
+state["tabs"] = [t for t in state["tabs"] if t["tab_id"] != "duplicate-tab"]
+state["panes"] = [p for p in state["panes"] if p["tab_id"] != "duplicate-tab"]
+json.dump(state, open(path, "w"), sort_keys=True, separators=(",", ":")); open(path, "a").write("\n")
+PY
+
+# An exact label without the exact ownership process is forged.
+python3 - "$tmp/herdr.json" "$tab_id" <<'PY'
+import json, sys
+path, tab_id = sys.argv[1:]; state = json.load(open(path))
+label = next(t["label"] for t in state["tabs"] if t["tab_id"] == tab_id)
+state["tabs"].append({"workspace_id":"ws-target","tab_id":"forged-tab","label":label,"pane_count":1})
+state["panes"].append({"workspace_id":"ws-target","tab_id":"forged-tab","pane_id":"forged-pane","terminal_id":"forged-terminal","processes":[{"argv":["forged"]}]})
+json.dump(state, open(path, "w"), sort_keys=True, separators=(",", ":")); open(path, "a").write("\n")
+PY
+assert_fails_closed forged
+python3 - "$tmp/herdr.json" <<'PY'
+import json, sys
+path = sys.argv[1]; state = json.load(open(path))
+state["tabs"] = [t for t in state["tabs"] if t["tab_id"] != "forged-tab"]
+state["panes"] = [p for p in state["panes"] if p["tab_id"] != "forged-tab"]
+json.dump(state, open(path, "w"), sort_keys=True, separators=(",", ":")); open(path, "a").write("\n")
+PY
+
+# A truncated ownership label is partial and must not be claimed.
+python3 - "$tmp/herdr.json" "$tab_id" <<'PY'
+import json, sys
+path, tab_id = sys.argv[1:]; state = json.load(open(path))
+label = next(t["label"] for t in state["tabs"] if t["tab_id"] == tab_id)
+state["tabs"].append({"workspace_id":"ws-target","tab_id":"partial-tab","label":label[:-1],"pane_count":1})
+state["panes"].append({"workspace_id":"ws-target","tab_id":"partial-tab","pane_id":"partial-pane","terminal_id":"partial-terminal","processes":[{"argv":["partial"]}]})
+json.dump(state, open(path, "w"), sort_keys=True, separators=(",", ":")); open(path, "a").write("\n")
+PY
+assert_fails_closed partial
+python3 - "$tmp/herdr.json" <<'PY'
+import json, sys
+path = sys.argv[1]; state = json.load(open(path))
+state["tabs"] = [t for t in state["tabs"] if t["tab_id"] != "partial-tab"]
+state["panes"] = [p for p in state["panes"] if p["tab_id"] != "partial-tab"]
+json.dump(state, open(path, "w"), sort_keys=True, separators=(",", ":")); open(path, "a").write("\n")
+PY
+
+# A mismatched retained tuple cannot close the live companion.
+before=$(state_hash)
+if cleanup "$tab_id" "$pane_id" forged-terminal >"$tmp/mismatch.stdout" 2>"$tmp/mismatch.stderr"; then
+  echo "mismatched cleanup unexpectedly succeeded" >&2
+  exit 1
+fi
+test "$before" = "$(state_hash)"
+cleanup "$tab_id" "$pane_id" "$terminal_id" >"$tmp/cleanup-first.json"
+cleanup "$tab_id" "$pane_id" "$terminal_id" >"$tmp/cleanup-second.json"
+cmp "$tmp/cleanup-first.json" "$tmp/cleanup-second.json"
+cmp "$tmp/replaced.json" "$tmp/cleanup-first.json"
+
+python3 - "$tmp/herdr.json" "$tmp/herdr.log" <<'PY'
+import json, sys
+state = json.load(open(sys.argv[1]))
+assert {tab["tab_id"] for tab in state["tabs"]} == {"unrelated-tab", "other-tab"}
+assert {pane["pane_id"] for pane in state["panes"]} == {"unrelated-pane", "other-pane"}
+allowed = {("tab","list"), ("pane","list"), ("pane","process-info"), ("tab","create"), ("pane","run"), ("tab","close")}
+for line in open(sys.argv[2]):
+    args = json.loads(line)
+    assert tuple(args[:2]) in allowed, args
+    if args[:2] == ["tab", "close"]:
+        assert args[2] not in {"unrelated-tab", "other-tab"}
+    if args[:2] == ["tab", "create"]:
+        assert args[args.index("--workspace") + 1] == "ws-target" and "--no-focus" in args
+PY
+
+echo "T03.V01 exact-one Atlas companion lifecycle: PASS"
