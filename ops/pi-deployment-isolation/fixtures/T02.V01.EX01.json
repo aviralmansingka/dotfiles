@@ -1,0 +1,135 @@
+{
+  "goal": "T02.V01",
+  "rule": {
+    "id": "exclusive_deployment_ownership",
+    "owner_count": 1,
+    "shared_application_state": false,
+    "peer_application_state_access": false
+  },
+  "assertions": {
+    "conforming_resource_kinds": [
+      "pi_process",
+      "file_boundary",
+      "session",
+      "credential",
+      "integration",
+      "transport_bridge",
+      "lifecycle_resource"
+    ],
+    "rejected_violations": [
+      "unowned",
+      "multiply_owned",
+      "shared",
+      "peer_accessible"
+    ]
+  },
+  "cases": [
+    {
+      "id": "one-deployment-owns-each-user-scoped-resource",
+      "expected": "conforming",
+      "resources": [
+        {
+          "id": "pi-process-alpha",
+          "kind": "pi_process",
+          "owners": ["deployment-alpha"],
+          "shared": false,
+          "peer_application_state_access": false
+        },
+        {
+          "id": "file-boundary-alpha",
+          "kind": "file_boundary",
+          "owners": ["deployment-alpha"],
+          "shared": false,
+          "peer_application_state_access": false
+        },
+        {
+          "id": "session-alpha",
+          "kind": "session",
+          "owners": ["deployment-alpha"],
+          "shared": false,
+          "peer_application_state_access": false
+        },
+        {
+          "id": "credential-alpha",
+          "kind": "credential",
+          "owners": ["deployment-alpha"],
+          "shared": false,
+          "peer_application_state_access": false
+        },
+        {
+          "id": "integration-alpha",
+          "kind": "integration",
+          "owners": ["deployment-alpha"],
+          "shared": false,
+          "peer_application_state_access": false
+        },
+        {
+          "id": "transport-bridge-alpha",
+          "kind": "transport_bridge",
+          "owners": ["deployment-alpha"],
+          "shared": false,
+          "peer_application_state_access": false
+        },
+        {
+          "id": "lifecycle-resource-alpha",
+          "kind": "lifecycle_resource",
+          "owners": ["deployment-alpha"],
+          "shared": false,
+          "peer_application_state_access": false
+        }
+      ]
+    },
+    {
+      "id": "unowned-resource-is-rejected",
+      "expected": "violating",
+      "resources": [
+        {
+          "id": "orphan-session",
+          "kind": "session",
+          "owners": [],
+          "shared": false,
+          "peer_application_state_access": false
+        }
+      ]
+    },
+    {
+      "id": "multiply-owned-resource-is-rejected",
+      "expected": "violating",
+      "resources": [
+        {
+          "id": "multi-owner-credential",
+          "kind": "credential",
+          "owners": ["deployment-alpha", "deployment-beta"],
+          "shared": false,
+          "peer_application_state_access": false
+        }
+      ]
+    },
+    {
+      "id": "shared-resource-is-rejected",
+      "expected": "violating",
+      "resources": [
+        {
+          "id": "shared-integration",
+          "kind": "integration",
+          "owners": ["deployment-alpha"],
+          "shared": true,
+          "peer_application_state_access": false
+        }
+      ]
+    },
+    {
+      "id": "peer-accessible-resource-is-rejected",
+      "expected": "violating",
+      "resources": [
+        {
+          "id": "peer-readable-transport-bridge",
+          "kind": "transport_bridge",
+          "owners": ["deployment-alpha"],
+          "shared": false,
+          "peer_application_state_access": true
+        }
+      ]
+    }
+  ]
+}
