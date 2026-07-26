@@ -146,6 +146,63 @@ class V02Tests(unittest.TestCase):
         self.assertIn("No files changed", preview)
         self.assertEqual(manifest(self.vault), before)
 
+    def test_parent_and_child_priorities_reject_newlines_and_structured_values(self) -> None:
+        parent_relative = "1_projects/neovim/issues/keep-candidate.md"
+        split_relative = (
+            "1_projects/neovim/themes/editor/features/splitting/issues/split-candidate.md"
+        )
+        before = manifest(self.vault)
+        invalid_priorities = ("urgent\nstatus: done", "[urgent, later]")
+
+        for priority in invalid_priorities:
+            with self.subTest(source="parent", priority=priority):
+                result = subprocess.run(
+                    self.command(
+                        "--issue",
+                        parent_relative,
+                        "--action",
+                        "keep",
+                        "--outcome",
+                        "Keep the useful behavior visible",
+                        "--next-action",
+                        "Run one focused check",
+                        "--priority",
+                        priority,
+                    ),
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("priority must be", result.stderr)
+                self.assertNotIn("Confirmation token", result.stdout)
+                self.assertEqual(manifest(self.vault), before)
+
+            with self.subTest(source="child", priority=priority):
+                children = json.loads(self.children_file().read_text(encoding="utf-8"))
+                children[0]["priority"] = priority
+                path = self.root / "invalid-children.json"
+                path.write_text(json.dumps(children), encoding="utf-8")
+                result = subprocess.run(
+                    self.command(
+                        "--issue",
+                        split_relative,
+                        "--action",
+                        "split",
+                        "--outcome",
+                        "Replace the broad issue with actionable children",
+                        "--next-action",
+                        "Start the first child",
+                        "--children-file",
+                        str(path),
+                    ),
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("child 1 priority must be", result.stderr)
+                self.assertNotIn("Confirmation token", result.stdout)
+                self.assertEqual(manifest(self.vault), before)
+
     def test_create_rejects_project_feature_and_issue_directory_symlink_escapes(self) -> None:
         outside_project = self.root / "outside-project"
         (outside_project / "themes" / "editor" / "features" / "owned").mkdir(
@@ -304,6 +361,51 @@ class V02Tests(unittest.TestCase):
             _, _, disposition = triage.triage_values(path.read_text().splitlines())
             self.assertEqual(disposition, action)
 
+    def test_project_level_split_preserves_feature_metadata_on_children(self) -> None:
+        children = self.children_file()
+        relative = "1_projects/neovim/issues/keep-candidate.md"
+        parent = self.vault / relative
+        self.preview_and_apply(
+            "--issue",
+            relative,
+            "--action",
+            "split",
+            "--outcome",
+            "Replace the project issue with actionable children",
+            "--next-action",
+            "Start the first child",
+            "--children-file",
+            str(children),
+        )
+
+        first = parent.parent / "first-child.md"
+        second = parent.parent / "second-child.md"
+        self.assertEqual(fields(first)["feature"], "lifecycle")
+        self.assertEqual(fields(second)["feature"], "lifecycle")
+        self.assertFalse(
+            (
+                self.vault
+                / "1_projects/neovim/themes/editor/features/lifecycle/issues/first-child.md"
+            ).exists()
+        )
+        issues, diagnostics = triage.discover(self.vault.resolve(), ["neovim"])
+        self.assertEqual(diagnostics, [])
+        children_by_path = {
+            issue.relative_path: issue
+            for issue in issues
+            if issue.title in {"First Child", "Second Child"}
+        }
+        self.assertEqual(
+            {issue.feature for issue in children_by_path.values()}, {"lifecycle"}
+        )
+        self.assertEqual(
+            set(children_by_path),
+            {
+                "1_projects/neovim/issues/first-child.md",
+                "1_projects/neovim/issues/second-child.md",
+            },
+        )
+
     def test_split_publishes_all_children_before_parent_done(self) -> None:
         children = self.children_file()
         relative = "1_projects/neovim/themes/editor/features/splitting/issues/split-candidate.md"
@@ -355,6 +457,18 @@ class V02Tests(unittest.TestCase):
         self.assertEqual(fields(parent)["status"], "done")
         self.assertEqual(fields(first)["status"], "open")
         self.assertEqual(fields(second)["status"], "open")
+        self.assertNotIn("feature", fields(first))
+        self.assertNotIn("feature", fields(second))
+        local_issues, diagnostics = triage.discover(self.vault.resolve(), ["neovim"])
+        self.assertEqual(diagnostics, [])
+        self.assertEqual(
+            {
+                issue.feature
+                for issue in local_issues
+                if issue.title in {"First Child", "Second Child"}
+            },
+            {"splitting"},
+        )
         weekly = triage.render_weekly(self.vault.resolve(), ["neovim", "pi-agent"])
         self.assertIn("#### First Child", weekly)
         self.assertIn("#### Second Child", weekly)

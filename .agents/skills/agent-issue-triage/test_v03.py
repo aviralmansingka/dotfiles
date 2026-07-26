@@ -143,6 +143,38 @@ class V03Tests(unittest.TestCase):
         ):
             self.assertIn(expected, text)
 
+    def test_create_preserves_multiline_transcript_paragraphs_and_tabs(self) -> None:
+        relative = (
+            "1_projects/pi-agent/themes/vault-issue-workflow/features/"
+            "agent-issue-triage/issues/multiline-source.md"
+        )
+        transcript = (
+            "\nFirst paragraph keeps\tits inline tab.\n\n"
+            "\tSecond paragraph keeps its leading tab.\n"
+        )
+        preserved = transcript.strip()
+        arguments = [
+            "--create-owner",
+            "pi-agent/agent-issue-triage",
+            "--slug",
+            "multiline-source",
+            "--title",
+            "Multiline Source",
+            "--outcome",
+            "The complete source remains reviewable",
+            "--next-action",
+            "Compare the source block byte for byte",
+            "--source-id",
+            "telegram-multiline-01",
+            "--transcript",
+            transcript,
+        ]
+
+        self.preview_and_apply(arguments)
+        text = (self.vault / relative).read_text(encoding="utf-8")
+        self.assertIn(f"- **Transcript:** {preserved}\n\n## Triage\n", text)
+        self.assertNotIn("First paragraph keeps its inline tab.", text)
+
     def test_exact_update_previews_then_changes_only_the_exact_issue(self) -> None:
         case = self.cases["exact-update"]
         arguments = [

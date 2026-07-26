@@ -63,6 +63,15 @@ def scalar(value: str) -> str | None:
     return value.strip() or None
 
 
+def priority_scalar(value: Any, label: str = "priority") -> str:
+    if not isinstance(value, str) or "\n" in value or "\r" in value:
+        raise TriageError(f"{label} must be a one-line scalar value")
+    normalized = scalar(value)
+    if normalized is None or scalar(normalized) != normalized or normalized[0] in "\"'":
+        raise TriageError(f"{label} must be a scalar value")
+    return normalized
+
+
 def frontmatter(text: str) -> tuple[dict[str, str] | None, str | None, list[str]]:
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
@@ -437,22 +446,25 @@ def load_children(path: Path | None) -> list[dict[str, Any]]:
         slug = child["slug"].strip()
         if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug):
             raise TriageError(f"child {index} slug must use lowercase letters, numbers, and hyphens")
-        if "priority" in child and (
-            not isinstance(child["priority"], str) or not child["priority"].strip()
-        ):
-            raise TriageError(f"child {index} priority must be a non-empty string")
+        normalized = dict(child)
+        if "priority" in child:
+            normalized["priority"] = priority_scalar(
+                child["priority"], f"child {index} priority"
+            )
         if "order" in child and (
             isinstance(child["order"], bool) or not isinstance(child["order"], int)
         ):
             raise TriageError(f"child {index} order must be an integer")
-        children.append(child)
+        children.append(normalized)
     return children
 
 
-def child_text(child: dict[str, Any]) -> str:
+def child_text(child: dict[str, Any], feature: str | None = None) -> str:
     lines = ["---", "status: open"]
+    if feature is not None:
+        lines.append(f"feature: {feature}")
     if "priority" in child:
-        lines.append(f"priority: {child['priority'].strip()}")
+        lines.append(f"priority: {priority_scalar(child['priority'])}")
     if "order" in child:
         lines.append(f"order: {child['order']}")
     lines.extend(
@@ -479,7 +491,7 @@ def telegram_voice_issue_text(
     source_id: str,
     transcript: str,
 ) -> str:
-    transcript = " ".join(transcript.split())
+    transcript = transcript.strip()
     lines = [
         "---",
         "status: open",
@@ -563,8 +575,7 @@ def mutation_plan(
         raise TriageError(f"unsupported action: {action}")
     if not outcome.strip() or not next_action.strip():
         raise TriageError("outcome and next action must both be non-empty")
-    if priority is not None and not priority.strip():
-        raise TriageError("priority must be non-empty when supplied")
+    normalized_priority = None if priority is None else priority_scalar(priority)
 
     requested = _resolve_inside_vault(vault, vault / issue_path, "issue path")
     issues, _ = discover(vault, projects)
@@ -581,8 +592,8 @@ def mutation_plan(
     updates: dict[str, str] = {}
     if action in {"close", "split"}:
         updates["status"] = "done"
-    if priority is not None:
-        updates["priority"] = priority.strip()
+    if normalized_priority is not None:
+        updates["priority"] = normalized_priority
     if order is not None:
         updates["order"] = str(order)
     parent_text = set_triage(
@@ -599,13 +610,26 @@ def mutation_plan(
         slugs = [child["slug"].strip() for child in child_specs]
         if len(slugs) != len(set(slugs)):
             raise TriageError("split child slugs must be unique")
+        parent_fields, _, _ = frontmatter(text)
+        assert parent_fields is not None
+        project_issue_root = vault / "1_projects" / issue.project / "issues"
+        child_feature = (
+            parent_fields.get("feature")
+            if issue.path.parent == project_issue_root
+            else None
+        )
         changes: list[Change] = []
         for child in child_specs:
             path = issue.path.parent / f"{child['slug'].strip()}.md"
             if path.exists():
                 raise TriageError(f"split child already exists: {path.relative_to(vault).as_posix()}")
             changes.append(
-                Change(path, path.relative_to(vault).as_posix(), None, child_text(child).encode("utf-8"))
+                Change(
+                    path,
+                    path.relative_to(vault).as_posix(),
+                    None,
+                    child_text(child, child_feature).encode("utf-8"),
+                )
             )
         changes.append(parent_change)
         return Plan(action, issue, changes)
