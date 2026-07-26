@@ -88,6 +88,21 @@ func TestT06V02SelectsRegisteredTaskByCanonicalPath(t *testing.T) {
 	}
 }
 
+func TestT06V03SelectsUnregisteredTaskByCanonicalPath(t *testing.T) {
+	root := filepath.Join("..", "..", "scripts", "fixtures", "vault-hunter-atlas-t06-v03")
+	projection, err := DiscoverFeature(filepath.Join(root, "vault"), "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, ok := projection.Task("1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/../tasks/06-atlas-views.md")
+	if !ok {
+		t.Fatal("unregistered Task selection not found")
+	}
+	if task.ID != "T06" || task.RunID != "" {
+		t.Fatalf("selected Task/run = %s/%s, want T06/<empty>", task.ID, task.RunID)
+	}
+}
+
 func TestT06V01NewestUnfinishedRunAndRecordedOrder(t *testing.T) {
 	path := "tasks/one.md"
 	runs := []vaultregistry.Run{

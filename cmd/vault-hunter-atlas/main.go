@@ -67,11 +67,12 @@ func main() {
 		if !ok {
 			fail(fmt.Errorf("selected Task not found: %s", *selectedTaskPath))
 		}
+		fmt.Printf("Selected Task %s · %s\n", task.ID, task.Path)
 		if task.RunID == "" {
-			fail(fmt.Errorf("selected Task has no registered run: %s", task.Path))
+			fmt.Println("No registered Task Run")
+			return
 		}
 		*runID = task.RunID
-		fmt.Printf("Selected Task %s · %s\n", task.ID, task.Path)
 	}
 	run, err := reader.Get(*runID)
 	if err != nil {
