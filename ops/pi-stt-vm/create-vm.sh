@@ -84,6 +84,7 @@ packages:
   - openssh-server
   - ubuntu-drivers-common
 runcmd:
+  - [ubuntu-drivers, --gpgpu, install]
   - [systemctl, enable, --now, ssh.service]
 EOF
 printf 'instance-id: %s\nlocal-hostname: %s\n' "$VM_NAME" "$VM_NAME" > "$work_dir/meta-data"
