@@ -134,7 +134,7 @@ func render(args []string) {
 	featurePath := flags.String("feature", "", "vault-relative canonical feature.md target")
 	projectPath := flags.String("project", "", "vault-relative canonical project target")
 	selectedTaskPath := flags.String("select-task", "", "vault-relative Task path to open from an aggregate")
-	colorMode := flags.String("color", "auto", "aggregate color mode: auto, always, or never")
+	colorMode := flags.String("color", "auto", "color mode: auto, always, or never")
 	journal := flags.Bool("journal", false, "render the read-only Execution Journal")
 	snapshot := flags.Bool("snapshot", false, "print one deterministic frame")
 	width := flags.Int("width", 0, "frame width")
@@ -175,7 +175,9 @@ func render(args []string) {
 		if !widthSet {
 			*width, *height = 80, 24
 		}
-		fmt.Println(atlas.NewJournalModel(run, *width, *height).View())
+		_, noColor := os.LookupEnv("NO_COLOR")
+		color := atlas.ColorEnabled(*colorMode, *snapshot, characterDevice(os.Stdout), os.Getenv("TERM") == "dumb", noColor)
+		fmt.Println(atlas.NewJournalModel(run, *width, *height).ViewColor(color))
 		return
 	}
 	if aggregateMode {
