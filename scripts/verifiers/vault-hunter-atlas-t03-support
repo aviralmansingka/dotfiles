@@ -1,7 +1,7 @@
 # Shared setup for the T03 Atlas verifier scripts.
 
 install_fake_herdr() {
-  unset HERDR_FAKE_STRICT_CLOSE
+  unset HERDR_FAKE_STRICT_CLOSE HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
   HERDR_FAKE_ERROR_NOUN=command
   case ${1-} in
     strict-close) export HERDR_FAKE_STRICT_CLOSE=1 ;;
@@ -19,6 +19,10 @@ with open(path) as stream:
     state = json.load(stream)
 with open(log_path, "a") as stream:
     stream.write(json.dumps(args, separators=(",", ":")) + "\n")
+
+if args[:2] == os.environ.get("HERDR_FAKE_RESPONSE_COMMAND", "").split()[:2]:
+    print(os.environ["HERDR_FAKE_RESPONSE"])
+    sys.exit(0)
 
 def emit(result):
     print(json.dumps({"id": "fake", "result": result}, separators=(",", ":")))

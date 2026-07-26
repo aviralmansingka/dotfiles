@@ -1,6 +1,9 @@
 package atlascompanion
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -53,6 +56,116 @@ func TestAttachmentEligibilityFailsBeforeHerdr(t *testing.T) {
 			t.Fatalf("eligibility error = %v", err)
 		}
 	}
+}
+
+func TestMalformedHerdrStateFailsClosed(t *testing.T) {
+	validTabs := herdrResponse(map[string]any{"type": "tab_list", "tabs": []any{map[string]any{"workspace_id": "ws", "tab_id": "other-tab", "label": "other", "pane_count": 1}}})
+	validPanes := herdrResponse(map[string]any{"type": "pane_list", "panes": []any{map[string]any{"workspace_id": "ws", "tab_id": "other-tab", "pane_id": "other-pane", "terminal_id": "other-terminal"}}})
+	cases := []struct {
+		name, tabs, panes, info string
+	}{
+		{name: "null response", tabs: "null"},
+		{name: "empty response", tabs: "{}"},
+		{name: "missing result", tabs: `{"id":"fake"}`},
+		{name: "null result", tabs: `{"id":"fake","result":null}`},
+		{name: "empty result", tabs: `{"id":"fake","result":{}}`},
+		{name: "missing tabs", tabs: herdrResponse(map[string]any{"type": "tab_list"})},
+		{name: "null tabs", tabs: herdrResponse(map[string]any{"type": "tab_list", "tabs": nil})},
+		{name: "missing panes", tabs: validTabs, panes: herdrResponse(map[string]any{"type": "pane_list"})},
+		{name: "missing process info", tabs: validTabs, panes: validPanes, info: herdrResponse(map[string]any{"type": "pane_process_info"})},
+		{name: "wrong process pane", tabs: validTabs, panes: validPanes, info: herdrResponse(map[string]any{"type": "pane_process_info", "process_info": map[string]any{"pane_id": "wrong", "foreground_processes": []any{}}})},
+		{name: "missing processes", tabs: validTabs, panes: validPanes, info: herdrResponse(map[string]any{"type": "pane_process_info", "process_info": map[string]any{"pane_id": "other-pane"}})},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			client, log := fakeHerdr(t, tc.tabs, tc.panes, tc.info, "")
+			if _, err := client.Attach("run", "ws", "/state"); err == nil {
+				t.Fatal("attach accepted malformed Herdr state")
+			}
+			want := Tuple{RunID: "run", WorkspaceID: "ws", TabID: "tab", PaneID: "pane", TerminalID: "terminal"}
+			if err := client.Cleanup(want, "/state"); err == nil {
+				t.Fatal("cleanup claimed success for malformed Herdr state")
+			}
+			commands, err := os.ReadFile(log)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(commands), "tab create\n") || strings.Contains(string(commands), "tab close\n") {
+				t.Fatalf("malformed state caused tab mutation:\n%s", commands)
+			}
+		})
+	}
+}
+
+func TestCreateRequiresExactOnePaneResult(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		result map[string]any
+	}{
+		{name: "missing root pane", result: map[string]any{"type": "tab_created"}},
+		{name: "two panes", result: map[string]any{
+			"type":      "tab_created",
+			"tab":       map[string]any{"workspace_id": "ws", "tab_id": "created-tab", "label": label("run", "ws"), "pane_count": 2},
+			"root_pane": map[string]any{"workspace_id": "ws", "tab_id": "created-tab", "pane_id": "created-pane", "terminal_id": "created-terminal"},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client, log := fakeHerdr(t, "", "", "", herdrResponse(tc.result))
+			if _, err := client.Attach("run", "ws", "/state"); err == nil {
+				t.Fatal("attach accepted malformed tab create result")
+			}
+			commands, err := os.ReadFile(log)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(commands), "tab create\n") || strings.Contains(string(commands), "pane run\n") {
+				t.Fatalf("malformed create result advanced lifecycle:\n%s", commands)
+			}
+		})
+	}
+}
+
+func herdrResponse(result any) string {
+	response, _ := json.Marshal(map[string]any{"id": "fake", "result": result})
+	return string(response)
+}
+
+func fakeHerdr(t *testing.T, tabs, panes, info, create string) (Client, string) {
+	t.Helper()
+	if tabs == "" {
+		tabs = herdrResponse(map[string]any{"type": "tab_list", "tabs": []any{}})
+	}
+	if panes == "" {
+		panes = herdrResponse(map[string]any{"type": "pane_list", "panes": []any{}})
+	}
+	if info == "" {
+		info = herdrResponse(map[string]any{"type": "pane_process_info", "process_info": map[string]any{"pane_id": "other-pane", "foreground_processes": []any{map[string]any{"argv": []string{"other"}}}}})
+	}
+	if create == "" {
+		create = herdrResponse(map[string]any{"type": "tab_created"})
+	}
+	dir := t.TempDir()
+	log := filepath.Join(dir, "commands")
+	script := filepath.Join(dir, "herdr")
+	contents := `#!/bin/sh
+printf '%s %s\n' "$1" "$2" >>"$HERDR_TEST_LOG"
+case "$1 $2" in
+  "tab list") printf '%s\n' "$HERDR_TEST_TABS" ;;
+  "pane list") printf '%s\n' "$HERDR_TEST_PANES" ;;
+  "pane process-info") printf '%s\n' "$HERDR_TEST_INFO" ;;
+  "tab create") printf '%s\n' "$HERDR_TEST_CREATE" ;;
+  "pane run"|"tab close") printf '%s\n' '{"id":"fake","result":{"type":"ok"}}' ;;
+esac
+`
+	if err := os.WriteFile(script, []byte(contents), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HERDR_TEST_LOG", log)
+	t.Setenv("HERDR_TEST_TABS", tabs)
+	t.Setenv("HERDR_TEST_PANES", panes)
+	t.Setenv("HERDR_TEST_INFO", info)
+	t.Setenv("HERDR_TEST_CREATE", create)
+	return Client{Herdr: script, Executable: "atlas"}, log
 }
 
 func TestExactOwnershipIdentity(t *testing.T) {

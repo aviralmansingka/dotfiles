@@ -176,6 +176,57 @@ attached, cleaned = map(lambda path: json.load(open(path)), sys.argv[1:])
 assert {key: attached[key] for key in cleaned} == cleaned
 PY
 
+command_count() {
+  python3 - "$tmp/herdr.log" "$1" <<'PY'
+import json, sys
+want = sys.argv[2].split()
+print(sum(json.loads(line)[:2] == want for line in open(sys.argv[1])))
+PY
+}
+assert_malformed_state_fails_closed() {
+  name=$1
+  HERDR_FAKE_RESPONSE_COMMAND=$2
+  HERDR_FAKE_RESPONSE=$3
+  export HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+  before_create=$(command_count 'tab create')
+  before_close=$(command_count 'tab close')
+  if attach >"$tmp/$name-attach.stdout" 2>"$tmp/$name-attach.stderr"; then
+    echo "$name malformed state unexpectedly attached" >&2
+    exit 1
+  fi
+  test ! -s "$tmp/$name-attach.stdout"
+  if cleanup "$tab_id" "$pane_id" "$terminal_id" >"$tmp/$name-cleanup.stdout" 2>"$tmp/$name-cleanup.stderr"; then
+    echo "$name malformed state cleanup unexpectedly succeeded" >&2
+    exit 1
+  fi
+  test ! -s "$tmp/$name-cleanup.stdout"
+  test "$before_create" = "$(command_count 'tab create')"
+  test "$before_close" = "$(command_count 'tab close')"
+  unset HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+}
+
+assert_malformed_state_fails_closed null-response 'tab list' 'null'
+assert_malformed_state_fails_closed empty-response 'tab list' '{}'
+assert_malformed_state_fails_closed null-result 'tab list' '{"id":"fake","result":null}'
+assert_malformed_state_fails_closed empty-result 'tab list' '{"id":"fake","result":{}}'
+assert_malformed_state_fails_closed missing-tabs 'tab list' '{"id":"fake","result":{"type":"tab_list"}}'
+assert_malformed_state_fails_closed missing-panes 'pane list' '{"id":"fake","result":{"type":"pane_list"}}'
+assert_malformed_state_fails_closed missing-process-info 'pane process-info' '{"id":"fake","result":{"type":"pane_process_info"}}'
+assert_malformed_state_fails_closed wrong-process-pane 'pane process-info' '{"id":"fake","result":{"type":"pane_process_info","process_info":{"pane_id":"wrong","foreground_processes":[]}}}'
+
+# A create response without its required exact-one-pane tuple cannot advance to pane mutation.
+HERDR_FAKE_RESPONSE_COMMAND='tab create'
+HERDR_FAKE_RESPONSE='{"id":"fake","result":{"type":"tab_created"}}'
+export HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+before_run=$(command_count 'pane run')
+if attach >"$tmp/malformed-create.stdout" 2>"$tmp/malformed-create.stderr"; then
+  echo "malformed create result unexpectedly attached" >&2
+  exit 1
+fi
+test ! -s "$tmp/malformed-create.stdout"
+test "$before_run" = "$(command_count 'pane run')"
+unset HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+
 python3 - "$tmp/herdr.json" "$tmp/herdr.log" <<'PY'
 import json, sys
 state = json.load(open(sys.argv[1]))
