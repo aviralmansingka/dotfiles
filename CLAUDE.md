@@ -181,3 +181,15 @@ tmux source-file ~/.tmux.conf
 - Install script supports macOS, RHEL/CentOS, Ubuntu
 - Homebrew works on both macOS and Linux
 - Configuration files are platform-agnostic where possible
+
+## Agent skills
+
+### Issue tracker
+
+Work is tracked in the local Obsidian vault under `/Users/aviral/vault/1_projects/`. See
+`docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+This is a single-context repo with a root `CONTEXT.md` and repository-wide ADRs under `docs/adr/`. See
+`docs/agents/domain.md`.
