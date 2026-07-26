@@ -169,6 +169,8 @@ func (p *Producer) Update(runID string, expectedRevision uint64, mutate func(*Ru
 		return Run{}, err
 	}
 	if next.SchemaVersion != current.SchemaVersion || next.RunID != current.RunID || next.Revision != current.Revision ||
+		next.Task.ID != current.Task.ID || next.Task.Title != current.Task.Title || next.Task.Path != current.Task.Path ||
+		next.Task.FeaturePath != current.Task.FeaturePath || next.Task.Kind != current.Task.Kind ||
 		!slices.EqualFunc(current.Participants, next.Participants[:min(len(current.Participants), len(next.Participants))], equalJSON) ||
 		!slices.EqualFunc(current.Lifecycle, next.Lifecycle[:min(len(current.Lifecycle), len(next.Lifecycle))], equalJSON) ||
 		!slices.EqualFunc(current.Evidence, next.Evidence[:min(len(current.Evidence), len(next.Evidence))], equalJSON) ||
@@ -306,7 +308,9 @@ func validate(run Run) error {
 		return fmt.Errorf("%w: invalid run identity", ErrMalformed)
 	}
 	for _, p := range run.Participants {
-		if p.ParticipantID == "" || p.Role == "" || !timestamp(p.ObservedAt) {
+		if p.ParticipantID == "" || p.Role == "" || !timestamp(p.ObservedAt) ||
+			p.Herdr != nil && (p.Herdr.WorkspaceID == "" || p.Herdr.TabID == "" || p.Herdr.PaneID == "" || p.Herdr.TerminalID == "") ||
+			p.AgentSession != nil && (p.AgentSession.Source == "" || p.AgentSession.Kind == "" || p.AgentSession.Value == "") {
 			return fmt.Errorf("%w: invalid participant", ErrMalformed)
 		}
 	}
