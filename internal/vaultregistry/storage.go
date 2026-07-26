@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type Producer struct{ root string }
@@ -179,6 +180,96 @@ func (r *Reader) List() ([]Run, error) {
 		runs = append(runs, run)
 	}
 	return runs, nil
+}
+
+func (r *Reader) ListSummaries(filter ListFilter) ([]RunSummary, error) {
+	from, to, err := listRange(filter)
+	if err != nil {
+		return nil, err
+	}
+	dir := filepath.Join(r.root, "runs")
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return []RunSummary{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	summaries := []RunSummary{}
+	// ponytail: a full scan keeps discovery exact; add an index only if registry size makes this measurable.
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		id := strings.TrimSuffix(entry.Name(), ".json")
+		if err := validID(id); err != nil {
+			return nil, fmt.Errorf("%w: %s: invalid run file name", ErrMalformed, filepath.Join(dir, entry.Name()))
+		}
+		run, err := load(filepath.Join(dir, entry.Name()), id)
+		if err != nil {
+			return nil, err
+		}
+		if listMatch(run, filter, from, to) {
+			summaries = append(summaries, summarize(run))
+		}
+	}
+	slices.SortFunc(summaries, func(a, b RunSummary) int { return strings.Compare(a.RunID, b.RunID) })
+	return summaries, nil
+}
+
+func listRange(filter ListFilter) (*time.Time, *time.Time, error) {
+	if session := filter.AgentSession; session != nil && (session.Source == "" || session.Kind == "" || session.Value == "") {
+		return nil, nil, fmt.Errorf("%w: agent_session requires source, kind, and value", ErrMalformed)
+	}
+	var from, to *time.Time
+	if filter.UpdatedAtFrom != "" {
+		parsed, err := time.Parse(time.RFC3339, filter.UpdatedAtFrom)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: invalid updated_at_from: %v", ErrMalformed, err)
+		}
+		from = &parsed
+	}
+	if filter.UpdatedAtTo != "" {
+		parsed, err := time.Parse(time.RFC3339, filter.UpdatedAtTo)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: invalid updated_at_to: %v", ErrMalformed, err)
+		}
+		to = &parsed
+	}
+	if from != nil && to != nil && from.After(*to) {
+		return nil, nil, fmt.Errorf("%w: updated_at_from is after updated_at_to", ErrMalformed)
+	}
+	return from, to, nil
+}
+
+func listMatch(run Run, filter ListFilter, from, to *time.Time) bool {
+	if filter.TaskID != "" && run.Task.ID != filter.TaskID ||
+		filter.FeaturePath != "" && run.Task.FeaturePath != filter.FeaturePath {
+		return false
+	}
+	if wanted := filter.AgentSession; wanted != nil {
+		found := false
+		for _, participant := range run.Participants {
+			session := participant.AgentSession
+			if session != nil && session.Source == wanted.Source && session.Kind == wanted.Kind && session.Value == wanted.Value {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	updated, _ := time.Parse(time.RFC3339, run.UpdatedAt)
+	return (from == nil || !updated.Before(*from)) && (to == nil || !updated.After(*to))
+}
+
+func summarize(run Run) RunSummary {
+	return RunSummary{
+		SchemaVersion: run.SchemaVersion, RunID: run.RunID, Revision: run.Revision,
+		InvokedAt: run.InvokedAt, UpdatedAt: run.UpdatedAt,
+		Task: TaskSummary{ID: run.Task.ID, Title: run.Task.Title, Path: run.Task.Path, FeaturePath: run.Task.FeaturePath, Kind: run.Task.Kind},
+	}
 }
 
 func (p *Producer) path(id string) string { return filepath.Join(p.root, "runs", id+".json") }

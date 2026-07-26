@@ -23,16 +23,34 @@ type request struct {
 	Participant *vaultregistry.Participant `json:"participant,omitempty"`
 	Lifecycle   *vaultregistry.Lifecycle   `json:"lifecycle,omitempty"`
 	Evidence    *vaultregistry.Evidence    `json:"evidence,omitempty"`
+	Filter      vaultregistry.ListFilter   `json:"filter,omitempty"`
 }
 
 func main() {
-	var req request
-	if err := json.NewDecoder(io.LimitReader(os.Stdin, 1<<20)).Decode(&req); err != nil {
+	if err := serve(os.Stdin, os.Stdout); err != nil {
 		fail(err)
+	}
+}
+
+func serve(input io.Reader, output io.Writer) error {
+	var req request
+	if err := json.NewDecoder(io.LimitReader(input, 1<<20)).Decode(&req); err != nil {
+		return err
+	}
+	if req.Action == "list" {
+		reader, err := vaultregistry.OpenReader(req.Root)
+		if err != nil {
+			return err
+		}
+		summaries, err := reader.ListSummaries(req.Filter)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(output).Encode(summaries)
 	}
 	producer, err := vaultregistry.OpenProducer(req.Root)
 	if err != nil {
-		fail(err)
+		return err
 	}
 	var run vaultregistry.Run
 	switch req.Action {
@@ -46,11 +64,9 @@ func main() {
 		err = fmt.Errorf("unsupported action %q", req.Action)
 	}
 	if err != nil {
-		fail(err)
+		return err
 	}
-	if err := json.NewEncoder(os.Stdout).Encode(run); err != nil {
-		fail(err)
-	}
+	return json.NewEncoder(output).Encode(run)
 }
 
 func create(producer *vaultregistry.Producer, wanted *vaultregistry.Run) (vaultregistry.Run, error) {

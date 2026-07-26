@@ -99,6 +99,13 @@ System card categories:
   worktrees, moves panes, or renames Herdr workspaces, tabs, or agents.
 - Keep simple tasks as numbered checkboxes in `feature.md`. Create a task note when one checkbox plus three or four
   nested bullets cannot capture the implementation, or when the work is a spike, low-level design, or verifier setup.
+  Every executable Task note uses exactly these body sections, in order:
+  - `## Intent` — one sentence describing the user-visible gap and desired outcome
+  - `## Decisions and boundaries` — only constraints the verifiers cannot express; use `None` when unnecessary
+  - `## Verifiers` — the stable verifier ledger
+  - `## Unresolved decisions` — genuine blockers only; use `None` when unblocked
+  - `## Evidence` — PR, merge, post-merge, and cleanup evidence; keep each verifier's `EX01` with that verifier
+  Do not add user stories or broader specification sections.
 - Give every task a stable `T01`, `T02`, … number. Never renumber existing tasks.
 - Treat the feature checklist as authoritative. A linked task note must mirror `[ ]` as `pending-work`, `[~]` as
   `in-progress`, and `[x]` as `done` in its frontmatter.
@@ -129,8 +136,8 @@ System card categories:
   the active suite. Open the implementation pull request only after this review/refactor/verifier loop settles.
 - Link every implementation pull request created during task execution from the task note, preserve final merge and
   verifier evidence, then commit and push vault updates directly without opening a vault pull request.
-- Push two durable vault checkpoints: the in-progress Task Spec and verifier checklist before coding, then the final
-  evidence and done state after the implementation pull request merges. Do not commit every red-green cycle.
+- Push two durable vault checkpoints: the in-progress canonical Task note with its verifier checklist before coding,
+  then the final evidence and done state after the implementation pull request merges. Do not commit every red-green cycle.
 - Enable auto-merge when an implementation pull request opens, follow the repository's existing merge policy, and keep
   fixing CI failures in the same task run. Never bypass required approvals or branch protection. Without CI, merge
   only when the pull request is mergeable and the complete local verifier set is green.

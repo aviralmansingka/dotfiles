@@ -65,6 +65,31 @@ type Run struct {
 	Unknown       map[string]json.RawMessage
 }
 
+type ListFilter struct {
+	TaskID        string        `json:"task_id,omitempty"`
+	FeaturePath   string        `json:"feature_path,omitempty"`
+	AgentSession  *AgentSession `json:"agent_session,omitempty"`
+	UpdatedAtFrom string        `json:"updated_at_from,omitempty"`
+	UpdatedAtTo   string        `json:"updated_at_to,omitempty"`
+}
+
+type TaskSummary struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Path        string `json:"path"`
+	FeaturePath string `json:"feature_path"`
+	Kind        string `json:"kind"`
+}
+
+type RunSummary struct {
+	SchemaVersion uint64      `json:"schema_version"`
+	RunID         string      `json:"run_id"`
+	Revision      uint64      `json:"revision"`
+	InvokedAt     string      `json:"invoked_at"`
+	UpdatedAt     string      `json:"updated_at"`
+	Task          TaskSummary `json:"task"`
+}
+
 func validID(id string) error {
 	if !runIDPattern.MatchString(id) {
 		return fmt.Errorf("%w: %q", ErrInvalidID, id)

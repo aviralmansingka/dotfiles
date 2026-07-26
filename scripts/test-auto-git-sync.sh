@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SYNC_SCRIPT="$SCRIPT_DIR/auto-git-sync"
+VAULT_LOCK_SCRIPT="$SCRIPT_DIR/vault-hunter-vault-lock"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -61,6 +62,25 @@ test_pulls_before_committing() {
     fail "expected auto commit on top of remote update, got: $top_two"
 }
 
+test_skips_vault_hunter_checkpoint() {
+  local root="$1/checkpoint-lock"
+  mkdir -p "$root"
+  make_repo_pair "$root"
+  printf 'owned\n' >"$root/local/owned.txt"
+
+  "$VAULT_LOCK_SCRIPT" acquire "$root/local" run-a owned.txt >/dev/null
+  REPO_DIR="$root/local" \
+    STATE_DIR="$root/state" \
+    LOG_FILE="$root/sync.log" \
+    "$SYNC_SCRIPT" --once
+
+  test -n "$(git -C "$root/local" status --porcelain -- owned.txt)" ||
+    fail "auto-sync committed a Vault Hunter-owned edit"
+  grep -q "Vault checkpoint lock is held" "$root/sync.log" ||
+    fail "auto-sync did not report checkpoint lock contention"
+  "$VAULT_LOCK_SCRIPT" release "$root/local" run-a >/dev/null
+}
+
 test_pi_resolves_conflicts() {
   local root="$1/pi-conflict"
   mkdir -p "$root"
@@ -104,6 +124,7 @@ main() {
   trap 'rm -rf "${tmp:-}"' EXIT
 
   test_pulls_before_committing "$tmp"
+  test_skips_vault_hunter_checkpoint "$tmp"
   test_pi_resolves_conflicts "$tmp"
   echo "auto-git-sync tests passed"
 }

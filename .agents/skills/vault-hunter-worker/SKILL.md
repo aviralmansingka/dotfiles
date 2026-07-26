@@ -1,6 +1,6 @@
 ---
 name: vault-hunter-worker
-description: Run and monitor one Vault Hunter Codex worker in an exact one-pane Herdr tab, capture its opaque ownership tuple, accept its handoff, and close only that worker. Use only when the main Vault Hunter skill delegates a worker lifecycle.
+description: Run and monitor one Vault Hunter Codex worker in an exact one-pane Herdr tab, including the persistent verifier steward, capture its opaque ownership tuple, accept its handoffs, and close only that worker. Use only when the main Vault Hunter skill delegates a worker lifecycle.
 ---
 
 # Vault Hunter Worker
@@ -67,7 +67,12 @@ The prompt may explicitly permit narrow follow-up reads. Otherwise its path allo
 1. Return the final handoff and captured tuple to the driver without deciding whether the handoff satisfies the stage.
 2. If the driver rejects it as incomplete, send the driver's exact follow-up to the same session and continue.
 3. After the driver explicitly accepts it, close the captured tab and verify the captured agent, session, tab, pane,
-   and terminal IDs are gone.
-4. Keep a worker open only when the driver explicitly marks it resumable. In particular, preserve the checkpoint-one
-   specification worker across human evaluation; timeout is never grounds to replace or close it.
-5. Never close the Task driver tab, Task workspace, Neovim workspace tab, or any unrelated resource.
+   and terminal IDs are gone unless this is the registered `verifier-steward` or another worker explicitly marked
+   resumable.
+4. Keep the `verifier-steward` open and idle across every verifier, repair, rerun, final check, human merge wait, and
+   post-merge check. Each follow-up remains one bounded goal supplied verbatim by the driver; never let the steward run
+   ahead or reopen settled context. Close it only after the driver accepts post-merge evidence or explicitly abandons
+   the Task. A timeout is never grounds to replace or close it.
+5. Keep another worker open only when the driver explicitly marks it resumable. In particular, preserve a
+   checkpoint-one specification worker across human evaluation.
+6. Never close the Task driver tab, Task workspace, Neovim workspace tab, or any unrelated resource.

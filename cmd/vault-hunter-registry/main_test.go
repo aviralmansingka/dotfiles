@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -106,5 +108,37 @@ func TestCreateRejectsDifferentIdentity(t *testing.T) {
 	run.Task.Path = "other.md"
 	if _, err := create(producer, &run); !errors.Is(err, vaultregistry.ErrConflict) {
 		t.Fatalf("expected conflict, got %v", err)
+	}
+}
+
+func TestListActionEmitsFilteredSummaryArray(t *testing.T) {
+	root := t.TempDir()
+	producer, err := vaultregistry.OpenProducer(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := vaultregistry.Run{
+		SchemaVersion: 1, RunID: "vh-T01-list", InvokedAt: "2026-07-26T12:00:00Z", UpdatedAt: "2026-07-26T12:00:00Z",
+		Task: vaultregistry.Task{ID: "T01", Title: "Test", Path: "task.md", FeaturePath: "feature.md", Kind: "task"},
+	}
+	if _, err := producer.Create(run); err != nil {
+		t.Fatal(err)
+	}
+	input, err := json.Marshal(map[string]any{
+		"action": "list", "root": root, "filter": map[string]any{"task_id": "T01"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	if err := serve(bytes.NewReader(input), &output); err != nil {
+		t.Fatal(err)
+	}
+	var summaries []vaultregistry.RunSummary
+	if err := json.Unmarshal(output.Bytes(), &summaries); err != nil {
+		t.Fatal(err)
+	}
+	if len(summaries) != 1 || summaries[0].RunID != run.RunID {
+		t.Fatalf("summaries = %#v", summaries)
 	}
 }
