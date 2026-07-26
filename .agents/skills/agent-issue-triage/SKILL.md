@@ -153,12 +153,12 @@ inclusion/exclusion visible before mutation.
 
 ## Deterministic V03 Telegram fixture
 
-`fixtures/telegram-voice-v03/cases.json` is the canonical four-case transcript
+`fixtures/voice-vault/cases.json` is the canonical four-case transcript
 fixture. Its vault is isolated from the real vault. From the repository root:
 
 ```sh
 rm -rf /tmp/t09-v03-vault
-cp -R .agents/skills/agent-issue-triage/fixtures/telegram-voice-v03/vault /tmp/t09-v03-vault
+cp -R .agents/skills/agent-issue-triage/fixtures/voice-vault/vault /tmp/t09-v03-vault
 cd /tmp/t09-v03-vault
 pi --no-session --no-extensions --skill /private/tmp/vh-agent-issue-triage-t09/.agents/skills/agent-issue-triage
 ```

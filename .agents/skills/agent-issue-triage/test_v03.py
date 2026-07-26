@@ -15,7 +15,7 @@ from pathlib import Path
 SKILL = Path(__file__).resolve().parent
 HELPER = SKILL / "triage.py"
 SKILL_DOC = SKILL / "SKILL.md"
-FIXTURE = SKILL / "fixtures" / "telegram-voice-v03"
+FIXTURE = SKILL / "fixtures" / "voice-vault"
 VAULT_FIXTURE = FIXTURE / "vault"
 CASES_FILE = FIXTURE / "cases.json"
 PROJECTS = "neovim,pi-agent"
