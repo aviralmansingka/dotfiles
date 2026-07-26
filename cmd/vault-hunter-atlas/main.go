@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -8,32 +10,94 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/aviral/dotfiles/internal/atlas"
+	"github.com/aviral/dotfiles/internal/atlascompanion"
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
 func main() {
-	runID := flag.String("run-id", "", "Run ID to display")
-	stateDir := flag.String("state-dir", "", "Vault Hunter state directory")
-	vaultDir := flag.String("vault-dir", "", "canonical vault root")
-	featurePath := flag.String("feature", "", "vault-relative canonical feature.md target")
-	projectPath := flag.String("project", "", "vault-relative canonical project target")
-	selectedTaskPath := flag.String("select-task", "", "vault-relative Task path to open from an aggregate")
-	colorMode := flag.String("color", "auto", "aggregate color mode: auto, always, or never")
-	snapshot := flag.Bool("snapshot", false, "print one deterministic frame")
-	width := flag.Int("width", 0, "frame width")
-	height := flag.Int("height", 0, "frame height")
-	flag.Parse()
+	if len(os.Args) > 1 && os.Args[1] == "companion" {
+		if err := companion(os.Args[2:]); err != nil {
+			fail(err)
+		}
+		return
+	}
+	render(os.Args[1:])
+}
+
+func companion(args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: vault-hunter-atlas companion attach|cleanup")
+	}
+	flags := flag.NewFlagSet("companion "+args[0], flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	runID := flags.String("run-id", "", "Run ID")
+	workspaceID := flags.String("workspace-id", "", "Herdr workspace ID")
+	stateDir := flags.String("state-dir", "", "Vault Hunter state directory")
+	tabID := flags.String("tab-id", "", "owned Herdr tab ID")
+	paneID := flags.String("pane-id", "", "owned Herdr pane ID")
+	terminalID := flags.String("terminal-id", "", "owned Herdr terminal ID")
+	if err := flags.Parse(args[1:]); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 {
+		return errors.New("unexpected companion arguments")
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	client := atlascompanion.Client{Herdr: "herdr", Executable: executable}
+	var result any
+	switch args[0] {
+	case "attach":
+		if *tabID != "" || *paneID != "" || *terminalID != "" {
+			return errors.New("attach does not accept cleanup tuple flags")
+		}
+		reader, openErr := vaultregistry.OpenReader(*stateDir)
+		if openErr != nil {
+			return openErr
+		}
+		run, getErr := reader.Get(*runID)
+		if getErr != nil {
+			return getErr
+		}
+		result, err = client.AttachRun(run, *workspaceID, *stateDir)
+	case "cleanup":
+		tuple := atlascompanion.Tuple{RunID: *runID, WorkspaceID: *workspaceID, TabID: *tabID, PaneID: *paneID, TerminalID: *terminalID}
+		result, err = tuple, client.Cleanup(tuple, *stateDir)
+	default:
+		return fmt.Errorf("unknown companion command %q", args[0])
+	}
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func render(args []string) {
+	flags := flag.NewFlagSet("vault-hunter-atlas", flag.ExitOnError)
+	runID := flags.String("run-id", "", "Run ID to display")
+	stateDir := flags.String("state-dir", "", "Vault Hunter state directory")
+	vaultDir := flags.String("vault-dir", "", "canonical vault root")
+	featurePath := flags.String("feature", "", "vault-relative canonical feature.md target")
+	projectPath := flags.String("project", "", "vault-relative canonical project target")
+	selectedTaskPath := flags.String("select-task", "", "vault-relative Task path to open from an aggregate")
+	colorMode := flags.String("color", "auto", "aggregate color mode: auto, always, or never")
+	snapshot := flags.Bool("snapshot", false, "print one deterministic frame")
+	width := flags.Int("width", 0, "frame width")
+	height := flags.Int("height", 0, "frame height")
+	flags.Parse(args)
 	if *colorMode != "auto" && *colorMode != "always" && *colorMode != "never" {
-		flag.Usage()
+		flags.Usage()
 		os.Exit(2)
 	}
 	aggregateMode := *featurePath != "" || *projectPath != ""
-	if flag.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) {
-		flag.Usage()
+	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) {
+		flags.Usage()
 		os.Exit(2)
 	}
 	widthSet, heightSet := false, false
-	flag.Visit(func(f *flag.Flag) {
+	flags.Visit(func(f *flag.Flag) {
 		widthSet = widthSet || f.Name == "width"
 		heightSet = heightSet || f.Name == "height"
 	})

@@ -363,6 +363,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - `<C-.>` toggles the last picker-selected Sidekick session, falling back to the cwd session picker.
 - `<C-;>` opens the local session picker.
 - `<C-r>` renames the selected session in the picker.
+- `<leader>at` sends the current context/object through Sidekick's native `{this}` placeholder.
+- `<leader>ap` opens prompt selection.
 - Sidekick supports sending context, prompting, toggling float/split, opening local sessions, and creating named sessions.
 - Sidekick keymaps include ask/edit/apply/reject/yank, context/prompt sending, the local picker, and named-session creation.
 - Sidekick cwd session picker includes previews.
