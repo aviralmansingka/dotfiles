@@ -10,8 +10,11 @@ case "${1-}" in
   T01.V02)
     exec go test -count=1 ./internal/vaultregistry -run '^TestT01V02'
     ;;
+  T02.V01)
+    exec scripts/verifiers/vault-hunter-atlas-v01
+    ;;
   *)
-    echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02" >&2
+    echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02|T02.V01" >&2
     exit 2
     ;;
 esac

@@ -1,0 +1,29 @@
+Run atlas-rich-run · Task T02 · Build the Compact Atlas Renderer
+Task Goals                               │ Verifier Journey
+─────────────────────────────────────────┼──────────────────────────────────────────────────────────
+  ✓ checkpoint-one · checkpoint · done   │ T02.V01 · verifier · active
+  ✓ A-tie · review · done                 │
+▶ ● T02.V01 · verifier · active           │ ● 12:01 verifier · pending
+  ? future-goal · future-kind · future-s… │ ● 12:05 verifier · active
+  ? evidence-only · ? · ?                 │   baseline red captured; implementation is intentionall…
+                                          │ ! 12:05 evidence · failed · exit 1
+                                          │   baseline red
+                                          │
+                                          │ Evidence
+                                          │ state: failed
+                                          │ command: scripts/verify-vault-hunter-atlas T02.V01
+                                          │ implementation tree: none recorded
+                                          │ artifact: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa…
+                                          │
+                                          │ Registered Participants
+                                          │ driver · implementer
+                                          │ reviewer · reviewer
+                                          │
+                                          │ Detail
+                                          │ baseline red captured; implementation is intentionally…
+                                          │
+                                          │
+                                          │
+                                          │
+                                          │
+↑/k ↓/j select · Enter detail · q quit    │ static snapshot · 100×30
