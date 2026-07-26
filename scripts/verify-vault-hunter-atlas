@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/.."
+
+case "${1-}" in
+  T01.V01)
+    exec go test -count=1 ./internal/vaultregistry -run '^TestT01V01'
+    ;;
+  T01.V02)
+    echo "T01.V02 is not implemented" >&2
+    exit 1
+    ;;
+  *)
+    echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02" >&2
+    exit 2
+    ;;
+esac
