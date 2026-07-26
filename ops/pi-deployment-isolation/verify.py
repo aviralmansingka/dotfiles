@@ -43,6 +43,42 @@ V02_RULE = {
     "peer_availability_dependency": False,
 }
 
+V03_GOAL = "T02.V03"
+V03_ALLOWED_AUTHORITIES = {
+    "host_vm_lifecycle",
+    "host_vm_network",
+    "host_vm_storage",
+    "host_vm_device",
+    "libvirt_vm_lifecycle",
+    "libvirt_vm_network",
+    "libvirt_vm_storage",
+    "libvirt_vm_device",
+    "stt_request_transcription",
+    "stt_result_transcription",
+    "shared_model_access",
+    "shared_model_billing",
+    "transient_provisioning",
+}
+V03_REJECTED_AUTHORITIES = {
+    "normal_operation_pi_application_state_inspection",
+    "retained_deployment_credentials",
+    "pi_administration_path",
+    "cross_deployment_control",
+}
+V03_AUTHORITIES = V03_ALLOWED_AUTHORITIES | V03_REJECTED_AUTHORITIES
+V03_RULE = {
+    "id": "shared_boundary_authority_confinement",
+    "host_libvirt_vm_authority": True,
+    "stt_transcription_authority": True,
+    "shared_model_authority": True,
+    "transient_provisioning_authority": True,
+    "privileged_host_root_technical_access_is_violation": False,
+    "normal_operation_pi_application_state_inspection": False,
+    "retained_deployment_credentials": False,
+    "pi_administration_paths": False,
+    "cross_deployment_control": False,
+}
+
 
 class FixtureError(ValueError):
     pass
@@ -280,9 +316,107 @@ def verify_v02(fixture):
     require(rejected_modes >= asserted_modes, "unmet assertion: violating cases do not reject every dependency mode")
 
 
+def verify_v03(fixture):
+    object_with_keys(fixture, {"goal", "rule", "assertions", "cases"}, "fixture")
+    require(fixture["goal"] == V03_GOAL, f"fixture.goal must be {V03_GOAL}")
+
+    object_with_keys(fixture["rule"], set(V03_RULE), "fixture.rule")
+    require(fixture["rule"] == V03_RULE, "fixture.rule does not confine shared-boundary authority")
+
+    assertions = fixture["assertions"]
+    object_with_keys(
+        assertions,
+        {
+            "accepted_authorities",
+            "rejected_authorities",
+            "privileged_host_root_technical_access_accepted",
+        },
+        "fixture.assertions",
+    )
+    asserted_allowed = set(string_list(
+        assertions["accepted_authorities"],
+        "fixture.assertions.accepted_authorities",
+        allow_empty=False,
+    ))
+    asserted_rejected = set(string_list(
+        assertions["rejected_authorities"],
+        "fixture.assertions.rejected_authorities",
+        allow_empty=False,
+    ))
+    require(
+        type(assertions["privileged_host_root_technical_access_accepted"]) is bool,
+        "fixture.assertions.privileged_host_root_technical_access_accepted must be a boolean",
+    )
+    require(asserted_allowed == V03_ALLOWED_AUTHORITIES, "fixture assertions do not accept every confined authority")
+    require(asserted_rejected == V03_REJECTED_AUTHORITIES, "fixture assertions do not reject every prohibited authority")
+    require(
+        assertions["privileged_host_root_technical_access_accepted"],
+        "fixture assertions must accept privileged host-root technical access",
+    )
+
+    cases = fixture["cases"]
+    require(type(cases) is list and cases, "fixture.cases must be a non-empty array")
+    case_ids = set()
+    accepted_authorities = set()
+    rejected_authorities = set()
+    accepted_root_access = False
+    verdicts = set()
+
+    for case_index, case in enumerate(cases):
+        where = f"fixture.cases[{case_index}]"
+        object_with_keys(
+            case,
+            {
+                "id",
+                "expected",
+                "privileged_host_root_technical_access_available",
+                "authorities",
+            },
+            where,
+        )
+        case_id = case["id"]
+        require(type(case_id) is str and case_id, f"{where}.id must be a non-empty string")
+        require(case_id not in case_ids, f"duplicate case id: {case_id}")
+        case_ids.add(case_id)
+        expected = case["expected"]
+        require(type(expected) is str and expected in {"conforming", "violating"}, f"{where}.expected is unknown")
+        require(
+            type(case["privileged_host_root_technical_access_available"]) is bool,
+            f"{where}.privileged_host_root_technical_access_available must be a boolean",
+        )
+        authorities = string_list(case["authorities"], f"{where}.authorities")
+        unknown = set(authorities) - V03_AUTHORITIES
+        require(not unknown, f"{where}.authorities contains unknown authority: {', '.join(sorted(unknown))}")
+
+        found = set(authorities) & V03_REJECTED_AUTHORITIES
+        actual = "violating" if found else "conforming"
+        require(expected == actual, f"{where} expected {expected} but authority confinement is {actual}")
+        verdicts.add(actual)
+        if actual == "conforming":
+            accepted_authorities.update(authorities)
+            accepted_root_access |= case["privileged_host_root_technical_access_available"]
+        else:
+            rejected_authorities.update(found)
+
+    require(verdicts == {"conforming", "violating"}, "fixture must contain conforming and violating cases")
+    require(
+        accepted_authorities >= asserted_allowed,
+        "unmet assertion: conforming cases do not cover every confined authority",
+    )
+    require(
+        rejected_authorities >= asserted_rejected,
+        "unmet assertion: violating cases do not reject every prohibited authority",
+    )
+    require(
+        accepted_root_access,
+        "unmet assertion: no conforming case accepts privileged host-root technical access",
+    )
+
+
 VERIFIERS = {
     V01_GOAL: verify_v01,
     V02_GOAL: verify_v02,
+    V03_GOAL: verify_v03,
 }
 
 
