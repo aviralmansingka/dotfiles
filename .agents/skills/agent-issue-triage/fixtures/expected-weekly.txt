@@ -1,0 +1,61 @@
+# Weekly issue review (read-only)
+
+Projects: neovim, pi-agent
+
+## Project: neovim
+
+### Feature: lifecycle
+
+#### Keep Candidate
+- Path: 1_projects/neovim/issues/keep-candidate.md
+- Review state: Open
+- Current status: open
+- User-facing outcome: Unresolved
+- Smallest next action: Unresolved
+- Disposition: Untriaged
+
+#### Defer Candidate
+- Path: 1_projects/neovim/issues/defer-candidate.md
+- Review state: Open
+- Current status: proposed
+- User-facing outcome: Unresolved
+- Smallest next action: Unresolved
+- Disposition: Untriaged
+
+#### Close Candidate
+- Path: 1_projects/neovim/issues/close-candidate.md
+- Review state: Open
+- Current status: pending-work
+- User-facing outcome: Unresolved
+- Smallest next action: Unresolved
+- Disposition: Untriaged
+
+#### Already Deferred
+- Path: 1_projects/neovim/issues/already-deferred.md
+- Review state: Deferred
+- Current status: open
+- User-facing outcome: Preserve a useful idea without scheduling it now
+- Smallest next action: Reconsider it during a later weekly review
+- Disposition: defer
+
+### Feature: splitting
+
+#### Split Candidate
+- Path: 1_projects/neovim/themes/editor/features/splitting/issues/split-candidate.md
+- Review state: Open
+- Current status: in-progress
+- User-facing outcome: Unresolved
+- Smallest next action: Unresolved
+- Disposition: Untriaged
+
+## Project: pi-agent
+
+### Feature: triage
+
+#### Weekly Open
+- Path: 1_projects/pi-agent/issues/weekly-open.md
+- Review state: Open
+- Current status: open
+- User-facing outcome: Keep one Pi Agent issue visible in weekly review
+- Smallest next action: Inspect the weekly listing
+- Disposition: keep
