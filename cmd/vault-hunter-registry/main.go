@@ -29,9 +29,10 @@ type createRequest struct {
 }
 
 type getRequest struct {
-	Action string  `json:"action"`
-	Root   string  `json:"root,omitempty"`
-	RunID  *string `json:"run_id"`
+	Action    string  `json:"action"`
+	Root      string  `json:"root,omitempty"`
+	RunID     *string `json:"run_id"`
+	Namespace string  `json:"namespace,omitempty"`
 }
 
 type appendRequest struct {
@@ -62,12 +63,6 @@ type listRequest struct {
 	Action string            `json:"action"`
 	Root   string            `json:"root,omitempty"`
 	Filter listFilterRequest `json:"filter,omitempty"`
-}
-
-type getRetiredRequest struct {
-	Action string  `json:"action"`
-	Root   string  `json:"root,omitempty"`
-	RunID  *string `json:"run_id"`
 }
 
 type retireRequest struct {
@@ -107,12 +102,15 @@ func serve(input io.Reader, output io.Writer) error {
 		}
 		response, err = create(producer, req.Run)
 	case getRequest:
-		// get intentionally remains the active namespace default.
-		producer, openErr := vaultregistry.OpenProducer(req.Root)
+		reader, openErr := vaultregistry.OpenReader(req.Root)
 		if openErr != nil {
 			return openErr
 		}
-		response, err = producer.Get(*req.RunID)
+		if req.Namespace == "retired" {
+			response, err = reader.GetRetired(*req.RunID)
+		} else {
+			response, err = reader.Get(*req.RunID)
+		}
 	case appendRequest:
 		producer, openErr := vaultregistry.OpenProducer(req.Root)
 		if openErr != nil {
@@ -135,12 +133,6 @@ func serve(input io.Reader, output io.Writer) error {
 			filter.AgentSession = &vaultregistry.AgentSession{Source: session.Source, Kind: session.Kind, Value: session.Value}
 		}
 		response, err = reader.ListSummaries(filter)
-	case getRetiredRequest:
-		reader, openErr := vaultregistry.OpenReader(req.Root)
-		if openErr != nil {
-			return openErr
-		}
-		response, err = reader.GetRetired(*req.RunID)
 	case retireRequest:
 		response, err = retireRun(req.Root, *req.RunID, *req.ExpectedRevision)
 	default:
@@ -223,12 +215,10 @@ func decodeRequest(input io.Reader) (any, error) {
 		command = &appendRequest{}
 	case "list":
 		command = &listRequest{}
-	case "get_retired":
-		command = &getRetiredRequest{}
 	case "retire":
 		command = &retireRequest{}
 	default:
-		return nil, fmt.Errorf("unsupported action %q", envelope.Action)
+		return nil, malformedRequest(fmt.Errorf("unsupported action %q", envelope.Action))
 	}
 	if err := decodeSingleJSON(data, command, true); err != nil {
 		return nil, malformedRequest(err)
@@ -244,6 +234,9 @@ func decodeRequest(input io.Reader) (any, error) {
 		if req.Action != "get" || req.RunID == nil {
 			return nil, malformedRequest(errors.New("get requires run_id"))
 		}
+		if req.Namespace != "" && req.Namespace != "active" && req.Namespace != "retired" {
+			return nil, malformedRequest(errors.New("get namespace must be active or retired"))
+		}
 		return *req, nil
 	case *appendRequest:
 		if req.Action != "append" || req.RunID == nil || req.UpdatedAt == nil {
@@ -253,11 +246,6 @@ func decodeRequest(input io.Reader) (any, error) {
 	case *listRequest:
 		if req.Action != "list" {
 			return nil, malformedRequest(errors.New("invalid list action"))
-		}
-		return *req, nil
-	case *getRetiredRequest:
-		if req.Action != "get_retired" || req.RunID == nil {
-			return nil, malformedRequest(errors.New("get_retired requires run_id"))
 		}
 		return *req, nil
 	case *retireRequest:

@@ -231,6 +231,10 @@ def fresh_case(name):
     shutil.copytree(source, root)
     return root
 
+unlocked = fresh_case("unlocked")
+os.remove(os.path.join(unlocked, "registry.lock"))
+failed_classified(unlocked, None, "malformed run", "registry.lock")
+
 malformed = fresh_case("malformed")
 with open(os.path.join(malformed, "runs", "broken.json"), "wb") as handle:
     handle.write(b"{not-json\n")

@@ -62,16 +62,17 @@ state_before=$(manifest "$tmp/state")
 
 HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" VAULT_HUNTER_STATE_DIR="$tmp/state" \
   T09_V04_TRAP_LOG="$tmp/orchestration-invocations" PATH="$tmp/traps:$tmp:$PATH" \
-  python3 - "$tmp/vault-hunter-status" "$tmp/state" "$fixture" <<'PY'
+  python3 - "$tmp/vault-hunter-status" "$tmp/state" "$fixture" "$repo_root/scripts/vault-hunter-observe" <<'PY'
 import json
 import os
 import re
 import subprocess
 import sys
 
-binary, state, fixture = sys.argv[1:]
+binary, state, fixture, observer = sys.argv[1:]
 ESC = b"\x1b"
 SGR = re.compile(rb"\x1b\[[0-9;]*m")
+FIXTURE_CONTROL = b"\x1b[31mFIXTURE-CONTROL\x07"
 with open(os.path.join(fixture, "observation-authority-footer.txt"), "rb") as handle:
     footer = handle.read()
 with open(os.path.join(fixture, "state", "runs", "run-observe.json"), encoding="utf-8") as handle:
@@ -93,6 +94,8 @@ def success(*args):
 
 def plain_human(*args):
     output = success(*args)
+    assert FIXTURE_CONTROL not in output, f"{args}: fixture SGR survived"
+    assert b"\x07" not in output, f"{args}: fixture control byte survived"
     assert ESC not in output, (args, output)
     assert output.endswith(footer), (args, output[-500:], footer)
     return output
@@ -123,6 +126,7 @@ run_json = success("run", "run-observe", "--json", "--color=always")
 assert ESC not in list_json and ESC not in run_json
 assert json.loads(list_json) == [summary(selected), summary(other)], list_json
 assert json.loads(run_json) == selected, run_json
+assert b"FIXTURE-CONTROL" in list_json and b"FIXTURE-CONTROL" in run_json
 assert footer.rstrip() not in list_json and footer.rstrip() not in run_json
 
 # Every run-specific observer view is isolated to the requested Run. Registry
@@ -139,6 +143,7 @@ for name, output in {
     "run": run, "record": record, "registry": registry,
     "journey": journey, "evidence": evidence, "atlas": atlas,
 }.items():
+    assert FIXTURE_CONTROL not in output and b"\x07" not in output, (name, output)
     assert b"run-observe" in output, (name, output)
     for forbidden in (b"SECOND-RUN-ONLY-SENTINEL", b"OTHER-RUN-JOURNEY-SENTINEL", b"OTHER-RUN-EVIDENCE-SENTINEL"):
         assert forbidden not in output, (name, forbidden, output)
@@ -147,13 +152,24 @@ assert b"life-invoked" in journey and b"semantic verifier active" in journey
 assert b"evidence-red" in evidence and b"scripts/verify-vault-hunter-atlas T09.V04" in evidence
 assert b"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" in evidence
 assert b"TASK RUN ATLAS" in atlas
+for output in (listed, run, record, registry, atlas):
+    assert b"FIXTURE-CONTROL" in output, output
 
 # Forced color emits actual SGR bytes (not escaped text) and changes styling,
 # not content or selection.
 colored = success("run", "run-observe", "--color=always")
 assert SGR.search(colored), colored
+assert FIXTURE_CONTROL not in colored and b"\x07" not in colored, colored
 assert b"run-observe" in colored and b"SECOND-RUN-ONLY-SENTINEL" not in colored
+assert b"FIXTURE-CONTROL" in colored
 assert SGR.sub(b"", colored) == run, (colored, run)
+
+canonical = subprocess.run(
+    [observer, "run", "run-observe", "--color=always"],
+    stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=30,
+)
+assert canonical.returncode == 0 and canonical.stderr == b"", (canonical.returncode, canonical.stderr)
+assert canonical.stdout == colored, (canonical.stdout, colored)
 
 # Missing records, malformed IDs, invalid commands, and non-TTY watch calls
 # use stable classified exits and byte-for-byte repeatable diagnostics.
@@ -171,6 +187,32 @@ assert b"invalid" in stable_failure(1, "run", "../escape")
 assert b"usage" in stable_failure(2, "not-a-view")
 watch_error = stable_failure(2, "watch", "run-observe", "--interval=50ms")
 assert b"tty" in watch_error or b"terminal" in watch_error, watch_error
+
+absent = os.path.join(os.path.dirname(state), "absent-state")
+absent_env = os.environ.copy()
+absent_env["VAULT_HUNTER_STATE_DIR"] = absent
+missing = subprocess.run(
+    [observer, "record", "missing-run"], env=absent_env,
+    stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=30,
+)
+assert missing.returncode == 1 and missing.stdout == b"", (missing.returncode, missing.stdout, missing.stderr)
+assert b"not found" in missing.stderr.lower(), missing.stderr
+assert not os.path.lexists(absent), "observer active Get created an absent Registry"
+
+devnull_errors = []
+for _ in range(2):
+    try:
+        with open(os.devnull, "wb") as devnull:
+            result = subprocess.run(
+                [binary, "watch", "run-observe", "--interval=50ms"],
+                stdout=devnull, stderr=subprocess.PIPE, check=False, timeout=1,
+            )
+    except subprocess.TimeoutExpired as error:
+        raise AssertionError("watch accepted /dev/null as a TTY") from error
+    assert result.returncode == 2, (result.returncode, result.stderr)
+    assert b"tty" in result.stderr.lower() or b"terminal" in result.stderr.lower(), result.stderr
+    devnull_errors.append(result.stderr)
+assert devnull_errors[0] == devnull_errors[1]
 
 print("T09.V04 default/list, run, record/registry, journey, evidence, and Atlas projections: PASS")
 print("T09.V04 JSON/plain/forced-SGR and stable failure contracts: PASS")

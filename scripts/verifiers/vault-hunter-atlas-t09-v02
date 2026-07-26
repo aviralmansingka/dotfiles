@@ -69,6 +69,11 @@ done
 T09_V02_FIXTURE="$fixture" T09_V02_TRAP_LOG="$tmp/orchestration-invocations" \
   PATH="$tmp/traps:$PATH" go test -count=1 -tags t09v02 "$probe"
 
+if sed -n '/^func (p \*Producer) Retire(/,/^func /p' internal/vaultregistry/storage.go | grep -q 'os\.Rename('; then
+  echo 'T09.V02 semantic red: Producer.Retire uses replacing os.Rename' >&2
+  exit 1
+fi
+
 test ! -s "$tmp/orchestration-invocations"
 test "$source_state_before" = "$(manifest "$fixture/state")"
 for surface in vault Task verifier acceptance Herdr agent; do

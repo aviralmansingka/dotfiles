@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -243,9 +244,12 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 	}
 	defer retiredDirFile.Close()
 
-	if err := os.Rename(activePath, retiredPath); err != nil {
+	if err := renameNoReplace(activePath, retiredPath); err != nil {
 		if createdRetiredDir {
 			_ = os.Remove(retiredDir)
+		}
+		if errors.Is(err, os.ErrExist) {
+			return Run{}, fmt.Errorf("%w: retired destination collision: %v", ErrConflict, err)
 		}
 		return Run{}, err
 	}
@@ -275,9 +279,12 @@ func (r *Reader) GetRetired(runID string) (Run, error) {
 
 // List returns all recorded runs in deterministic Run ID order without creating state.
 func (r *Reader) List() ([]Run, error) {
-	unlock, err := r.lock()
+	unlock, empty, err := r.lock()
 	if err != nil {
 		return nil, err
+	}
+	if empty {
+		return []Run{}, nil
 	}
 	defer unlock()
 
@@ -312,9 +319,12 @@ func (r *Reader) ListSummaries(filter ListFilter) ([]RunSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	unlock, err := r.lock()
+	unlock, empty, err := r.lock()
 	if err != nil {
 		return nil, err
+	}
+	if empty {
+		return []RunSummary{}, nil
 	}
 	defer unlock()
 
@@ -463,17 +473,41 @@ func (p *Producer) lock() (func(), error) {
 	return flock(f, syscall.LOCK_EX)
 }
 
-// Reader locking is deliberately non-creating: a missing lock file represents
-// an empty or not-yet-produced Registry and has a snapshot before any writer.
-func (r *Reader) lock() (func(), error) {
-	f, err := os.Open(filepath.Join(r.root, "registry.lock"))
+// Reader locking is deliberately non-creating. A missing lock is an empty
+// Registry only while the active namespace is also absent or empty; records
+// without their coordinating lock are malformed and must not be scanned.
+func (r *Reader) lock() (func(), bool, error) {
+	lockPath := filepath.Join(r.root, "registry.lock")
+	f, err := os.Open(lockPath)
 	if errors.Is(err, os.ErrNotExist) {
-		return func() {}, nil
+		runs, openErr := os.Open(filepath.Join(r.root, "runs"))
+		if errors.Is(openErr, os.ErrNotExist) {
+			return nil, true, nil
+		}
+		if openErr != nil {
+			return nil, false, openErr
+		}
+		_, readErr := runs.Readdirnames(1)
+		closeErr := runs.Close()
+		if errors.Is(readErr, io.EOF) {
+			if closeErr != nil {
+				return nil, false, closeErr
+			}
+			return nil, true, nil
+		}
+		if readErr != nil {
+			return nil, false, readErr
+		}
+		if closeErr != nil {
+			return nil, false, closeErr
+		}
+		return nil, false, fmt.Errorf("%w: %s: missing Registry lock", ErrMalformed, lockPath)
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return flock(f, syscall.LOCK_SH)
+	unlock, err := flock(f, syscall.LOCK_SH)
+	return unlock, false, err
 }
 
 func flock(f *os.File, mode int) (func(), error) {

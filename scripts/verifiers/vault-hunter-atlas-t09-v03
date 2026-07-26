@@ -125,7 +125,7 @@ assert first_bytes == second_bytes
 for item in listed:
     assert set(item) == {"schema_version", "run_id", "revision", "invoked_at", "updated_at", "task"}
     assert set(item["task"]) == {"id", "title", "path", "feature_path", "kind"}
-_, retired = success({"action": "get_retired", "run_id": "run-reserved"})
+_, retired = success({"action": "get", "run_id": "run-reserved", "namespace": "retired"})
 assert retired == run_reserved
 assert manifest(state) == state_before
 
@@ -135,8 +135,10 @@ assert manifest(state) == state_before
 malformed_requests = [
     ({"action": "list", "filter": {}, "run_id": "cross-action"}, None),
     ({"action": "list", "filter": {"task_id": 9}}, None),
-    ({"action": "get_retired"}, None),
-    ({"action": "get_retired", "run_id": "run-reserved", "filter": {}}, None),
+    ({"action": "get", "namespace": "retired"}, None),
+    ({"action": "get", "run_id": "run-reserved", "namespace": "retired", "filter": {}}, None),
+    ({"action": "get", "run_id": "run-reserved", "namespace": "unknown"}, None),
+    ({"action": "get_retired", "run_id": "run-reserved"}, None),
     ({"action": "retire", "run_id": "run-retire"}, None),
     ({"action": "retire", "run_id": "run-retire", "expected_revision": "7"}, None),
     ({"action": "retire", "run_id": "run-retire", "expected_revision": 7, "unexpected": True}, None),
@@ -145,8 +147,8 @@ malformed_requests = [
 ]
 for value, raw in malformed_requests:
     classified(value or {}, "malformed request", raw=raw)
-classified({"action": "get_retired", "run_id": "../escape"}, "invalid run id")
-classified({"action": "get_retired", "run_id": "missing"}, "run not found")
+classified({"action": "get", "run_id": "../escape", "namespace": "retired"}, "invalid run id")
+classified({"action": "get", "run_id": "missing", "namespace": "retired"}, "run not found")
 classified({"action": "list", "filter": {"updated_at_from": "not-rfc3339"}}, "malformed run")
 classified({"action": "retire", "run_id": "run-retire", "expected_revision": 0}, "malformed run")
 classified({"action": "retire", "run_id": "run-retire", "expected_revision": 6}, "revision conflict")
@@ -155,7 +157,7 @@ malformed_retired = os.path.join(work, "malformed-retired")
 shutil.copytree(source, malformed_retired)
 with open(os.path.join(malformed_retired, "retired", "broken.json"), "w", encoding="utf-8") as handle:
     handle.write("{not-json\n")
-classified({"action": "get_retired", "run_id": "broken"}, "malformed run", malformed_retired)
+classified({"action": "get", "run_id": "broken", "namespace": "retired"}, "malformed run", malformed_retired)
 unsupported_retired = os.path.join(work, "unsupported-retired")
 shutil.copytree(source, unsupported_retired)
 future = dict(run_reserved)
@@ -164,7 +166,7 @@ future["run_id"] = "future"
 with open(os.path.join(unsupported_retired, "retired", "future.json"), "w", encoding="utf-8") as handle:
     json.dump(future, handle, separators=(",", ":"))
     handle.write("\n")
-classified({"action": "get_retired", "run_id": "future"}, "unsupported schema version", unsupported_retired)
+classified({"action": "get", "run_id": "future", "namespace": "retired"}, "unsupported schema version", unsupported_retired)
 
 # The command remains noninteractive: exact retirement succeeds from one JSON
 # request with empty stderr, preserves the exact record, and retrying that
@@ -181,7 +183,7 @@ with open(retired_path, "rb") as handle:
 _, active = success({"action": "list", "filter": {"task_id": "T09"}})
 assert active == [summary(run_stable)]
 classified({"action": "get", "run_id": "run-retire"}, "run not found")
-_, explicit = success({"action": "get_retired", "run_id": "run-retire"})
+_, explicit = success({"action": "get", "run_id": "run-retire", "namespace": "retired"})
 assert explicit == run_retire
 retry_before = manifest(state)
 retry_output, retry = success({"action": "retire", "run_id": "run-retire", "expected_revision": 7})
@@ -240,7 +242,7 @@ assert not list_schema.get("required")
 for name in ("taskId", "featurePath", "updatedAtFrom", "updatedAtThrough"):
     assert list_schema["properties"][name]["type"] == "string"
 session = list_schema["properties"]["agentSession"]
-assert session["type"] == "object" and session.get("additionalProperties") is False
+assert session["type"] == "object" and session.get("additionalProperties", False) is False
 assert set(session.get("properties", {})) == {"source", "kind", "value"}
 assert set(session.get("required", [])) == {"source", "kind", "value"}
 assert retire_schema["type"] == "object" and retire_schema.get("additionalProperties") is False

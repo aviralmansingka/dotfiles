@@ -12,6 +12,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
@@ -74,7 +75,7 @@ func execute(args []string, output *os.File) (int, error) {
 		return 1, openErr
 	}
 	if opts.command == "watch" {
-		if !characterDevice(output) {
+		if !terminal(output) {
 			return 2, commandError{code: 2, message: "vault-hunter-status: watch requires a terminal (TTY)"}
 		}
 		return watch(reader, opts, output)
@@ -134,7 +135,7 @@ func execute(args []string, output *os.File) (int, error) {
 		if renderErr != nil {
 			return 1, renderErr
 		}
-		return writeHuman(output, "TASK RUN ATLAS\n"+view, false)
+		return writeHuman(output, "TASK RUN ATLAS\n"+escapeRenderedControls(view, run), false)
 	default:
 		return 2, commandError{code: 2, message: "vault-hunter-status: unsupported command", usage: true}
 	}
@@ -234,7 +235,8 @@ func renderList(runs []vaultregistry.RunSummary) string {
 	result.WriteString("VAULT HUNTER STATUS\n")
 	result.WriteString("RUN\tTASK\tREVISION\tUPDATED\n")
 	for _, run := range runs {
-		fmt.Fprintf(&result, "%s\t%s\t%d\t%s\n", run.RunID, run.Task.Title, run.Revision, run.UpdatedAt)
+		fmt.Fprintf(&result, "%s\t%s\t%d\t%s\n",
+			escapeControls(run.RunID), escapeControls(run.Task.Title), run.Revision, escapeControls(run.UpdatedAt))
 	}
 	return result.String()
 }
@@ -246,7 +248,41 @@ func renderRun(run vaultregistry.Run) string {
 		stage, state, goal = latest.Kind, latest.State, latest.GoalID
 	}
 	return fmt.Sprintf("VAULT HUNTER STATUS\nRUN\tTASK\tSTATE\tSTAGE\tGOAL\tREVISION\tUPDATED\n%s\t%s\t%s\t%s\t%s\t%d\t%s\n",
-		run.RunID, run.Task.Title, state, stage, goal, run.Revision, run.UpdatedAt)
+		escapeControls(run.RunID), escapeControls(run.Task.Title), escapeControls(state),
+		escapeControls(stage), escapeControls(goal), run.Revision, escapeControls(run.UpdatedAt))
+}
+
+func escapeControls(value string) string {
+	var result strings.Builder
+	for _, character := range value {
+		if !unicode.IsControl(character) {
+			result.WriteRune(character)
+			continue
+		}
+		if character <= 0xffff {
+			fmt.Fprintf(&result, "\\u%04x", character)
+		} else {
+			fmt.Fprintf(&result, "\\U%08x", character)
+		}
+	}
+	return result.String()
+}
+
+func escapeRenderedControls(value string, run vaultregistry.Run) string {
+	encoded, _ := json.Marshal(run)
+	if bytes.Contains(encoded, []byte(`\n`)) {
+		return escapeControls(value)
+	}
+	var result strings.Builder
+	for _, line := range strings.SplitAfter(value, "\n") {
+		if strings.HasSuffix(line, "\n") {
+			result.WriteString(escapeControls(strings.TrimSuffix(line, "\n")))
+			result.WriteByte('\n')
+		} else {
+			result.WriteString(escapeControls(line))
+		}
+	}
+	return result.String()
 }
 
 func writeHuman(output io.Writer, body string, color bool) (int, error) {
@@ -341,12 +377,7 @@ func colorEnabled(mode string, output *os.File) bool {
 	if mode == "never" || os.Getenv("TERM") == "dumb" || os.Getenv("NO_COLOR") != "" {
 		return false
 	}
-	return characterDevice(output)
-}
-
-func characterDevice(file *os.File) bool {
-	info, err := file.Stat()
-	return err == nil && info.Mode()&os.ModeCharDevice != 0
+	return terminal(output)
 }
 
 func watch(reader *vaultregistry.Reader, opts options, output *os.File) (int, error) {

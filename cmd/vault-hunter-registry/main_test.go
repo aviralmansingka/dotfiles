@@ -132,7 +132,9 @@ func TestAdministrationRequestsAreStrictBeforeOpeningStorage(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "absent")
 	for _, input := range []string{
 		`{"action":"list","root":"` + root + `","run_id":"wrong"}`,
-		`{"action":"get_retired","root":"` + root + `"}`,
+		`{"action":"get","root":"` + root + `","namespace":"retired"}`,
+		`{"action":"get","root":"` + root + `","run_id":"run","namespace":"unknown"}`,
+		`{"action":"get_retired","root":"` + root + `","run_id":"run"}`,
 		`{"action":"retire","root":"` + root + `","run_id":"run","expected_revision":"1"}`,
 		`{"action":"retire","root":"` + root + `","run_id":"run","expected_revision":1,"extra":true}`,
 		`{"action":"list","root":"` + root + `"}{"action":"list","root":"` + root + `"}`,
@@ -184,7 +186,7 @@ func TestRetireAndExplicitRetiredGetKeepActiveGetSeparate(t *testing.T) {
 		t.Fatalf("active get error = %v, want not found", err)
 	}
 	var explicitOutput bytes.Buffer
-	explicitInput := `{"action":"get_retired","root":"` + root + `","run_id":"retire-me"}`
+	explicitInput := `{"action":"get","root":"` + root + `","run_id":"retire-me","namespace":"retired"}`
 	if err := serve(bytes.NewBufferString(explicitInput), &explicitOutput); err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +195,7 @@ func TestRetireAndExplicitRetiredGetKeepActiveGetSeparate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if explicit.RunID != created.RunID || explicit.Revision != created.Revision {
-		t.Fatalf("get_retired response = %#v, want %#v", explicit, created)
+		t.Fatalf("retired get response = %#v, want %#v", explicit, created)
 	}
 }
 
