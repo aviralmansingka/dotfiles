@@ -1088,9 +1088,6 @@ function M.open(opts)
     pending_workspace_item = nil
     set_active_selector(true)
     show_preview(item)
-    if item._workspace then
-      clear_atlas_preview()
-    end
   end
 
   local function refresh_preview()
