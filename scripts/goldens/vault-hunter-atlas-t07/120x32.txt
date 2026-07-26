@@ -1,29 +1,32 @@
 Run atlas-t07-rich · Task T07 · Build the Expanded Operations Board
-
-TIMELINE
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
- 13:00 checkpoint-one · checkpoint · awaiting-human-evaluation · approved contract waiting for construction
- 13:01 checkpoint-one · checkpoint · done · construction authorized
- 13:02 T07.V01 · verifier · pending · route not yet constructed
- 13:03 T07.V01 · evidence · failed · exit 2 · dispatcher route absent
- 13:05 T07.V01 · verifier · active · behavioral baseline red with wide text 東京 and deterministic truncation
- 13:06 T07.V01 · evidence · failed · exit 2 · expanded mode absent
- 13:09 review · review · pending · future goal remains unselected
-
-VERIFIER LEDGER · Goal T07.V01 · verifier · active
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
- 13:02 verifier · pending · route not yet constructed
- 13:03 evidence · failed · exit 2 · dispatcher route absent
- 13:05 verifier · active · behavioral baseline red with wide text 東京 and deterministic truncation
- 13:06 evidence · failed · exit 2 · expanded mode absent
-
-EVIDENCE · evidence-behavioral-baseline · 2026-07-26T13:06:00Z
- state: failed · exit 2
- command: scripts/verify-vault-hunter-atlas T07.V01
- implementation tree: 0123456789abcdef0123456789abcdef01234567
- artifact sha-256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
- detail: expanded mode absent
-
-ASSOCIATED PARTICIPANTS
- worker-a · implementer · Herdr w7/td2/pd2/xd2 · agent session codex/session/sd2
- reviewer-b · reviewer · Herdr w7/tr/pr/xr · agent session codex/session/sr
+Selected Goal T07.V01 · verifier · active
+TIMELINE           │VERIFIER LEDGER · Goal T07.V01 · verifier · active            │EVIDENCE                             
+ T07.V01 13:06 · e…│SELECTED JOURNEY                                              │EVIDENCE                             
+ overflow-03 13:12…│ 13:02 verifier · pending                                     │ evidence-behavioral-baseline        
+ overflow-04 13:13…│ detail: route not yet constructed                            │ 2026-07-26T13:06:00Z                
+ overflow-05 13:14…│ 13:03 evidence · failed · exit 2                             │ state: failed · exit 2              
+ overflow-06 13:15…│ detail: dispatcher route absent                              │ command:                            
+ overflow-07 13:16…│ 13:05 verifier · active                                      │ scripts/verify-vault-hunter-atlas T0
+ overflow-08 13:17…│ detail: behavioral baseline red with wide text 東京 and dete…│ 7.V01                               
+ overflow-09 13:18…│ 13:06 evidence · failed · exit 2                             │ implementation tree:                
+                   │ detail: expanded mode absent                                 │ 0123456789abcdef0123456789abcdef0123
+                   │                                                              │ 4567                                
+                   │LATEST EVIDENCE COMMAND                                       │ artifact sha-256:                   
+                   │ scripts/verify-vault-hunter-atlas T07.V01                    │ bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                   │                                                              │ bbbbbbbbbbbbbbbbbbbbbbbbbbbb        
+                   │ASSOCIATED PARTICIPANTS                                       │ detail: expanded mode absent        
+                   │ worker-a · implementer                                       │                                     
+                   │  Herdr w7/td2/pd2/xd2 · agent session codex/session/sd2      │                                     
+                   │ reviewer-b · reviewer                                        │                                     
+                   │  Herdr w7/tr/pr/xr · agent session codex/session/sr          │                                     
+                   │                                                              │                                     
+                   │RECORDED LIFECYCLE                                            │                                     
+                   │ checkpoint-one 13:00 · checkpoint · awaiting-human-evaluatio…│                                     
+                   │ checkpoint-one 13:01 · checkpoint · done · construction auth…│                                     
+                   │ review 13:09 · review · pending · future goal remains unsele…│                                     
+                   │ overflow-01 13:10 · review · done · later bounded timeline e…│                                     
+                   │ overflow-02 13:11 · review · done · later bounded timeline e…│                                     
+                   │ overflow-03 13:12 · review · done · later bounded timeline e…│                                     
+                   │ overflow-04 13:13 · review · done · later bounded timeline e…│                                     
+                   │ overflow-05 13:14 · review · done · later bounded timeline e…│                                     
+↑/k ↓/j select · Enter detail · q quit · 120×32
