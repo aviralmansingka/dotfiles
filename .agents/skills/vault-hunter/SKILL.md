@@ -29,8 +29,10 @@ journey drill-down, participant telemetry, evidence, and cost inspection, follow
   steward repairs a verifier. Parallelize reads, review, and isolated checks, not ordinary writes.
 - Preserve unrelated Git, Herdr, Neovim, and filesystem state.
 - A formal child is any delegated agent whose result may influence the Run. Launch each formal headless child directly
-  through synchronous `subagent`; the runtime hook records participant, start, finish, hashes, usage, and interruption
-  observations. Child completion remains observational and never advances or accepts a formal stage.
+  through synchronous `subagent`; the runtime hook records technical identity as role `<agent>` and Goal
+  `subagent/<agent>`, plus participant, start, finish, hashes, usage, and interruption observations. The parent correlates
+  that execution to the stable stage Goal through its decision observation. Child completion remains observational and
+  never advances or accepts a formal stage.
 - After the parent minimally resolves the invocation target, all mechanical discovery that may inform routing,
   specification, implementation, verification, review, or landing is performed by bounded headless children. The
   parent may validate returned facts but never fills missing discovery itself; launch another bounded child instead.
@@ -131,10 +133,12 @@ in parallel as separate `subagent` calls. Never launch parallel writers into the
 ### Headless child
 
 Call `subagent` once per child with the chosen agent, exact cwd/worktree, and a compact prompt containing the stable
-Goal ID, lifecycle kind, role, outcome, accepted inputs and exact file allowlist, invariants, validation, output shape,
-and stop rules. Permit only directly relevant imports, callers, and tests beyond that allowlist. Do not request external
-research unless the stage explicitly requires it. Include Ponytail constraints directly in implementation/fix prompts
-and the exact check contract directly in validation prompts because children start with no inherited context or skills.
+stage Goal ID, instructional role, outcome, accepted inputs and exact file allowlist, invariants, validation, output
+shape, and stop rules. Goal ID and instructional role are child-facing context; the synchronous runtime hook records the
+technical tool-call identity under `subagent/<agent>`. Permit only directly relevant imports, callers, and tests beyond
+that allowlist. Do not request external research unless the stage explicitly requires it. Include Ponytail constraints
+directly in implementation/fix prompts and the exact check contract directly in validation prompts because children
+start with no inherited context or skills.
 
 The call is synchronous: inspect its returned handoff directly. Do not call management list/get/status/wait merely to
 confirm configured capabilities or completion. Runtime observations capture bounded execution and cost, not canonical
@@ -168,10 +172,11 @@ exceptions and close after their accepted handoff unless continuity is explicitl
 ### Parent observations
 
 After evaluating a handoff, call `vault_hunter_record` with a unique deterministic event ID to record the parent's
-accepted, rejected, blocked, or superseded decision. Include the accepted tree/hash or event timestamp in that append
-ID; keep `Vnn`/`EX01` in `verifierId`, not as the append ID. Reuse the same explicit `observedAt` when retrying a
-participant write. Record accepted verifier evidence through the evidence shape. Runtime terminal observations and
-parent acceptance observations remain separate. After Run creation, an observation append failure is a reported,
+accepted, rejected, blocked, or superseded decision, and set lifecycle `goalId` to the stable stage Goal from the child
+prompt. Include the accepted tree/hash or event timestamp in that append ID; keep `Vnn`/`EX01` in `verifierId`, not as
+the append ID. Reuse the same explicit `observedAt` when retrying a participant write. Record accepted verifier evidence
+through the evidence shape. Runtime observations identify the actual `subagent` tool call; parent observations identify
+the canonical stage Goal. They remain separate, and neither automatically advances the other. After Run creation, an observation append failure is a reported,
 retryable telemetry gap; it never overrides an independently accepted canonical vault decision.
 
 ## Resolve and route
