@@ -1,102 +1,83 @@
 ---
 name: vault-hunter-status
-description: Observe all Vault Hunter Runs or drill into one Task Run using the aggregate observer, compact Atlas journey viewer, and typed Run Registry CLI. Use when asked for Vault Hunter status, progress, journey stage, participants, live children, evidence, or parent/child costs.
-compatibility: Requires Go, jq, and the dotfiles Vault Hunter commands; Herdr is optional for live driver status.
+description: Observe active Vault Hunter Runs or drill into one Task Run through read-only Registry and Atlas projections. Use when asked for Vault Hunter status, progress, journey stage, participants, evidence, or a live single-Run view.
+compatibility: Requires Go and the dotfiles Vault Hunter commands.
 ---
 
 # Vault Hunter Status
 
-Read observations only. Never append Registry records, edit the vault, resume work, accept evidence, or infer canonical
-completion. The Task note and active Vault Hunter parent remain lifecycle authority.
+This is an observation-only workflow over the active Run Registry. It never retires Runs, infers staleness, appends
+observations, edits the canonical vault, resumes work, or accepts evidence. Registry and Atlas values are observations;
+the canonical vault note and active parent remain authoritative.
 
 ## Install
 
 ```sh
 cd ~/dotfiles
 mkdir -p ~/.local/bin
+go build -o ~/.local/bin/vault-hunter-status ./cmd/vault-hunter-status
 go build -o ~/.local/bin/vault-hunter-registry ./cmd/vault-hunter-registry
 go build -o ~/.local/bin/vault-hunter-atlas ./cmd/vault-hunter-atlas
-ln -sfn "$PWD/scripts/vault-hunter-observe" ~/.local/bin/vault-hunter-observe
 ```
 
-Require `~/.local/bin` on `PATH`. Verify with:
+Require `~/.local/bin` on `PATH`, then verify with `command -v vault-hunter-status`.
+
+## Observe the active Run Registry
 
 ```sh
-command -v vault-hunter-observe vault-hunter-atlas vault-hunter-registry
+vault-hunter-status
+vault-hunter-status list
+vault-hunter-status list --json
+vault-hunter-status list --color=never
 ```
 
-## Observe all Runs
+The empty command is the same as `list`. Discovery includes active Runs only; there is no retired fallback or retired
+listing. Redirected `auto` output is plain, and JSON is always unstyled even with `--color=always`.
+
+## Select one Task Run
+
+Prefer an exact Task title or exact Run ID:
 
 ```sh
-vault-hunter-observe                 # same as: vault-hunter-observe list
-vault-hunter-observe --watch         # every 60 seconds
-vault-hunter-observe --watch 5
-vault-hunter-observe --color=always  # force the rich dark-cell table
-vault-hunter-observe --color=never   # plain text for files and pipes
-vault-hunter-observe --json
+RUN=$(vault-hunter-status list --json |
+  jq -r '.[] | select(.task.title == "<exact task title>") | .run_id')
+
+vault-hunter-status run <run-id>
+vault-hunter-status run <run-id> --json
+vault-hunter-status run <run-id> --color=always
 ```
 
-Color defaults to `auto`: rich ANSI styling is used only on a capable TTY and is disabled by `NO_COLOR`, `TERM=dumb`,
-redirection, or `--color=never`. JSON is always unstyled. `--watch` requires a terminal, clears and redraws the same
-screen on each interval, hides the cursor while active, and restores it on exit; it never appends repeated tables.
+For a specific Run's ANSI status, use `vault-hunter-status run <run-id> --color=always`. It emits real SGR bytes for
+only that selected Run; preserve those bytes rather than replacing the output with JSON or a Markdown table. If title
+matching returns zero or multiple IDs, show the candidates and ask the user to choose; never guess.
 
-Report driver status, latest non-telemetry observation, active/finished children, captured parent/child costs, update
-time, Task, and Run ID. State explicitly that costs cover automatically observed usage only and older Runs may be
-partial.
-
-## Select one Task
-
-Prefer exact Task title or exact Run ID:
+## Inspect one Run
 
 ```sh
-RUN=$(vault-hunter-observe --json |
-  jq -r '.[] | select(.task == "<exact task title>") | .run_id')
-
-vault-hunter-observe run "$RUN"
-vault-hunter-observe run "$RUN" --json
-vault-hunter-observe run "$RUN" --color=always  # ANSI table for this Run only
+vault-hunter-status record <run-id>
+vault-hunter-status registry <run-id>
+vault-hunter-status journey <run-id>
+vault-hunter-status evidence <run-id>
+vault-hunter-status atlas <run-id>
 ```
 
-When the user asks for ANSI status for a specific Run, resolve its exact ID and use `run "$RUN" --color=always`. Preserve
-and return the emitted SGR bytes; do not replace the command with JSON or a Markdown table. `run` also supports `--watch`
-for a live single-Run view.
+`record` and `registry` are aliases for the full active Run Registry record. `journey` excludes automatic child and
+parent-usage telemetry, `evidence` shows verifier observations, and `atlas` reuses the Task Run Atlas projection.
 
-If title matching returns zero or multiple IDs, show the candidates and ask the user to choose; never guess.
-
-## Open the compact journey
+## Watch one Run
 
 ```sh
-vault-hunter-observe atlas "$RUN"
-vault-hunter-observe atlas "$RUN" --snapshot --width 100 --height 30
+vault-hunter-status watch <run-id>
+vault-hunter-status watch <run-id> --interval=5s
 ```
 
-Atlas reads one Registry snapshot at startup. Reopen it for fresh observations. Use `j`/Down and `k`/Up to select goals,
-Enter to toggle detail, and `q` to quit.
-
-## Inspect the typed Registry record
-
-```sh
-vault-hunter-observe record "$RUN"
-vault-hunter-observe registry "$RUN"  # alias
-```
-
-Parent-authored journey without automatic child/cost telemetry:
-
-```sh
-vault-hunter-observe journey "$RUN"
-```
-
-Verifier evidence:
-
-```sh
-vault-hunter-observe evidence "$RUN"
-```
+Watch is selected-Run-only and requires a TTY. It clears and redraws a bounded view, hides the cursor while active, and
+restores the cursor when interrupted. It remains read-only and does not invoke orchestration commands.
 
 ## Reporting
 
-- Label Registry and Atlas values as observations.
-- Separate parent usage from synchronous child usage.
-- Treat a started child without finished/interrupted telemetry as unresolved, not necessarily live.
+- Label Run Registry and Atlas values as observations, not canonical status.
+- Treat started children without finished/interrupted telemetry as unresolved, not necessarily live.
 - Distinguish a human gate from completion.
-- When canonical status is requested, read the exact Task/Feature note after identifying it from the Registry record and
-  report any disagreement instead of reconciling it.
+- When canonical status is requested, read the exact Task or Feature note identified by the record and report any
+  disagreement instead of reconciling it.
