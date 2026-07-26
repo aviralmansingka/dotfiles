@@ -3651,24 +3651,24 @@ local function validate_markdown_formatting()
   vim.api.nvim_buf_set_name(buf, vim.fn.tempname() .. ".md")
   vim.cmd("setfiletype markdown")
 
-  if vim.bo[buf].textwidth ~= 120 then
-    fail("markdown textwidth should be 120; got " .. vim.bo[buf].textwidth)
+  if vim.bo[buf].textwidth ~= 0 then
+    fail("markdown should leave hard wrapping to Conform; got textwidth=" .. vim.bo[buf].textwidth)
   end
-  if vim.bo[buf].formatexpr ~= "" then
-    fail("markdown should use native textwidth wrapping; got formatexpr=" .. vim.inspect(vim.bo[buf].formatexpr))
+  if vim.bo[buf].formatexpr ~= "v:lua.require'conform'.formatexpr()" then
+    fail("markdown gq should use Conform; got formatexpr=" .. vim.inspect(vim.bo[buf].formatexpr))
   end
-  if not vim.bo[buf].formatoptions:find("t", 1, true) then
-    fail("markdown formatoptions should enable text auto-wrapping")
+  if not vim.wo.wrap then
+    fail("markdown should use soft display wrapping")
   end
-  if vim.b[buf].pencil_wrap_mode ~= 1 then
-    fail("markdown should use PencilHard; got pencil_wrap_mode=" .. vim.inspect(vim.b[buf].pencil_wrap_mode))
+  if vim.b[buf].pencil_wrap_mode ~= 2 then
+    fail("markdown should use PencilSoft; got pencil_wrap_mode=" .. vim.inspect(vim.b[buf].pencil_wrap_mode))
   end
 
   local conform = require("conform")
   local formatter_names = vim.tbl_map(function(formatter)
     return formatter.name
   end, conform.list_formatters(buf))
-  assert_sequence(formatter_names, { "prettier" }, "markdown formatter chain")
+  assert_sequence(formatter_names, { "prettier", "markdownlint-cli2" }, "markdown formatter chain")
 
   local tick = string.char(96)
   local within_limit = vim.trim(string.rep("word ", 21))
@@ -3707,10 +3707,29 @@ local function validate_markdown_formatting()
   local formatted = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
   if vim.fn.index(formatted, "   " .. tick .. tick .. tick .. "text") < 0 then
-    fail("Prettier should preserve an indented fenced block inside a list: " .. vim.inspect(formatted))
+    fail("Markdown formatters should preserve an indented fenced block inside a list: " .. vim.inspect(formatted))
   end
   if vim.fn.index(formatted, within_limit) < 0 then
-    fail("Prettier should preserve prose between 80 and 120 characters: " .. vim.inspect(formatted))
+    fail("Markdown formatters should preserve prose between 80 and 120 characters: " .. vim.inspect(formatted))
+  end
+  local link_line
+  for _, line in ipairs(formatted) do
+    if line:find("[long documentation link]", 1, true) then
+      link_line = line
+      break
+    end
+  end
+  if
+    not link_line
+    or not link_line:find("Read the [long documentation link]", 1, true)
+    or not link_line:find("before continuing", 1, true)
+  then
+    fail("long link destination should not force a prose break: " .. vim.inspect(formatted))
+  end
+  conform.format({ bufnr = buf, async = false, timeout_ms = 10000 })
+  local formatted_again = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  if not vim.deep_equal(formatted, formatted_again) then
+    fail("Markdown formatter chain should be idempotent: " .. vim.inspect(formatted_again))
   end
 
   local linter = require("lint").linters["markdownlint-cli2"]
@@ -3725,6 +3744,20 @@ local function validate_markdown_formatting()
   ):wait()
   if lint.code ~= 0 then
     fail("formatted Markdown should pass Markdownlint:\n" .. (lint.stderr or "") .. (lint.stdout or ""))
+  end
+  local short_visible = vim.system(
+    vim.list_extend({ vim.fn.exepath(linter.cmd) }, linter.args),
+    { stdin = "Read the [guide](" .. long_url .. ") next.\n", text = true }
+  ):wait()
+  if short_visible.code ~= 0 then
+    fail("a long link destination should not count toward line length:\n" .. (short_visible.stderr or ""))
+  end
+  local long_visible = vim.system(
+    vim.list_extend({ vim.fn.exepath(linter.cmd) }, linter.args),
+    { stdin = vim.trim(string.rep("visible words ", 12)) .. "\n", text = true }
+  ):wait()
+  if long_visible.code == 0 or not (long_visible.stderr or ""):find("AV001", 1, true) then
+    fail("overlong visible prose should report AV001:\n" .. (long_visible.stderr or ""))
   end
 
   vim.api.nvim_buf_delete(buf, { force = true })

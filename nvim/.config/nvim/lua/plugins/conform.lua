@@ -3,9 +3,16 @@ return {
   opts = {
     default_format_opts = { timeout_ms = 2000, lsp_format = "never" },
     formatters = {
-      -- Keep save-time Markdown wrapping aligned with textwidth and markdownlint.
+      -- Normalize Markdown structure, then let markdownlint apply its
+      -- conceal-aware visual-width rule.
       prettier = {
-        prepend_args = { "--prose-wrap", "always", "--print-width", "120" },
+        prepend_args = { "--prose-wrap", "never" },
+      },
+      ["markdownlint-cli2"] = {
+        prepend_args = { "--config", vim.fn.expand("~/.markdownlint-cli2.yaml") },
+        condition = function()
+          return true
+        end,
       },
       -- Prefer the project venv's ruff so behavior tracks pyproject ruff
       -- config; falls back to Mason ruff outside a uv project.
@@ -33,7 +40,7 @@ return {
       },
     },
     formatters_by_ft = {
-      markdown = { "prettier" },
+      markdown = { "prettier", "markdownlint-cli2" },
       lua = { "stylua" },
       java = { "google-java-format" },
       go = { "goimports", "gofumpt" },

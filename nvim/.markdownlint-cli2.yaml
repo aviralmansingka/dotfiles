@@ -1,13 +1,17 @@
 # Global markdownlint configuration
 # Symlinked to ~/.markdownlint-cli2.yaml via stow
 
+customRules:
+  - "./.markdownlint-rules/visual-line-length.cjs"
+
 config:
-  # MD013 - Line length
-  MD013:
+  # AV001 - Conceal-aware line length
+  # Link destinations do not occupy visible columns.
+  AV001:
     line_length: 120
-    code_blocks: false
-    tables: false
-    headings: false
+
+  # Replaced by AV001 so formatting and diagnostics share one calculation.
+  MD013: false
 
   # MD033 - Inline HTML
   # Allow HTML in markdown (useful for details/summary, etc.)

@@ -54,9 +54,8 @@ return {
     "preservim/vim-pencil",
     ft = { "markdown", "octo" },
     config = function()
-      vim.g["pencil#wrapModeDefault"] = "hard"
-      vim.g["pencil#textwidth"] = 120
-      vim.g["pencil#autoformat"] = 1
+      vim.g["pencil#wrapModeDefault"] = "soft"
+      vim.g["pencil#autoformat"] = 0
       local group = vim.api.nvim_create_augroup("markdown_editing", { clear = true })
 
       -- Auto-enable pencil for markdown files
@@ -64,9 +63,8 @@ return {
         group = group,
         pattern = "markdown",
         callback = function()
-          vim.cmd("PencilHard")
-          vim.opt_local.textwidth = 120
-          vim.opt_local.formatexpr = ""
+          vim.cmd("PencilSoft")
+          vim.opt_local.formatexpr = "v:lua.require'conform'.formatexpr()"
           require("helpers.markdown_links").setup()
         end,
       })
