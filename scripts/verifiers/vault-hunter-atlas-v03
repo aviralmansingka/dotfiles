@@ -37,7 +37,13 @@ HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
   ATLAS_V03_TRAP_LOG="$tmp/invocations" PATH="$tmp/traps:$PATH" \
   "$tmp/vault-hunter-atlas" --run-id atlas-lifecycle-matrix --state-dir "$tmp/state" \
   --snapshot --width 100 --height 30 >"$tmp/frame"
+HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
+  VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-read" \
+  ATLAS_V03_TRAP_LOG="$tmp/invocations" PATH="$tmp/traps:$PATH" \
+  "$tmp/vault-hunter-atlas" --run-id atlas-lifecycle-matrix --state-dir "$tmp/state" \
+  --snapshot --width 100 --height 30 >"$tmp/frame-again"
 
+cmp "$tmp/frame" "$tmp/frame-again"
 test ! -s "$tmp/invocations"
 test "$state_before" = "$(manifest "$tmp/state")"
 test "$vault_before" = "$(manifest "$tmp/vault")"
