@@ -171,10 +171,15 @@ Wayfinder tickets are temporary issues, never implementation Tasks.
 3. Draft every verifier before coding as stable `V01`, `V02`, … entries. Record for each:
    - externally observable behavior
    - exact command or manual observation
-   - baseline-red evidence
-   - latest result and evidence
-4. Ask clarifying questions only for a genuine missing decision.
-5. Require implementation and review subagents to use `$ponytail`.
+   - expected baseline-red behavior
+   - exactly one immutable, task-qualified evidence ID: `Tnn.Vnn.EX01`
+   - latest result
+4. Use `EX01` only for the accepted successful run. It records the exact command or manual check, timestamp, successful
+   exit status or acceptance result, implementation commit/tree, and transcript or artifact SHA-256. Do not create
+   separate baseline-red, provenance, negative-case, rerun, or final-suite evidence items. When a later accepted run
+   supersedes the result, update `EX01` in place; never add `EX02`.
+5. Ask clarifying questions only for a genuine missing decision.
+6. Require implementation and review subagents to use `$ponytail`.
 
 ## Execute the Task timeline
 
@@ -183,8 +188,10 @@ driver performs no stage work itself. Present the work as one continuous unnumbe
 queue. On resume, use the canonical Task note, Herdr state, and concise subagent handoffs to continue at the first
 unfinished stage.
 
-Write accepted handoff evidence into the local Task note as each stage settles. Keep the invocation backlog timeline
-synchronized, but keep detailed evidence only in the Task note. Push the vault only at the two named checkpoints.
+Write accepted handoff evidence into the local Task note as each stage settles. Verifier handoffs update only that
+verifier's single `EX01`; lifecycle evidence such as PR, merge, and cleanup records remains separate. Keep the
+invocation backlog timeline synchronized, but keep detailed evidence only in the Task note. Push the vault only at the
+two named checkpoints.
 
 ### Vault checkpoint one
 
@@ -212,7 +219,9 @@ Activate one drafted verifier at a time by dispatching a bounded full Codex veri
 3. Have the subagent run it against the current branch.
 4. Dispatch an implementation subagent for any required code, then have the verifier subagent rerun the check until
    the complete active verifier set is green.
-5. Consume the handoff, write its evidence, complete the goal, then activate the next verifier.
+5. Consume the handoff, populate that verifier's single `EX01` from the accepted successful run, complete the goal,
+   then activate the next verifier. Baseline-red output may appear in the working handoff or `Latest` while active, but
+   must not become a second durable evidence item.
 
 The first green may require both verifier refinement and implementation. If an independently baseline-red verifier
 already passes on the current branch because an earlier slice fixed it, accept that green; never manufacture failure.
@@ -243,8 +252,8 @@ conclusions.
 
 ### Open the implementation PR
 
-- Dispatch the final verifier subagent to run the complete verifier set and capture final evidence. Do not create a
-  separate final-evidence goal.
+- Dispatch the final verifier subagent to run the complete verifier set and refresh each verifier's existing `EX01` in
+  place from the accepted successful run. Do not create another evidence item or a separate final-evidence goal.
 - Dispatch a release subagent to push implementation code and open the implementation PR. Never arm auto-merge.
 - Consume its concise handoff and link the PR from the Task note.
 

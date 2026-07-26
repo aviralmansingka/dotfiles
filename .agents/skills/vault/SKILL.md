@@ -111,12 +111,16 @@ System card categories:
   `evidence/` subfolder when helpful; task notes have no hard line limit.
 - Give executable task notes a compact `## Verifiers` checklist with stable `V01`, `V02`, … entries. Draft all
   verifier entries before coding, activate them one at a time, and retain the externally observable behavior, exact
-  command or manual observation, baseline-red proof, and latest result for each. Never renumber verifier entries.
+  command or manual observation, expected baseline-red behavior, latest result, and exactly one immutable,
+  task-qualified evidence ID `Tnn.Vnn.EX01` for each. Populate `EX01` only from the accepted successful run with the
+  exact command or manual check, timestamp, successful exit status or acceptance result, implementation commit/tree,
+  and transcript or artifact SHA-256. Update `EX01` in place after a later accepted run; never add `EX02` or separate
+  baseline-red, provenance, negative-case, rerun, or final-suite evidence items. Never renumber verifier entries.
 - In Codex, show the Task Run as one continuous timeline with restartable goals for vault checkpoint one; each verifier;
-  Refactor Gate; Review Convergence; final evidence plus implementation pull-request opening; always-present CI,
-  repair, merge, and merged-main validation; then workspace and vault cleanup. Do not create a separate final-evidence
-  goal or add ordinal labels to goals. Review Convergence may use separate coding and reviewing subagents when that
-  improves independence.
+  Refactor Gate; Review Convergence; a complete-suite rerun that refreshes each verifier's existing `EX01` plus
+  implementation pull-request opening; always-present CI, repair, merge, and merged-main validation; then workspace and
+  vault cleanup. Do not create another verifier evidence item, a separate final-evidence goal, or ordinal labels.
+  Review Convergence may use separate coding and reviewing subagents when that improves independence.
 - Refactor only after every verifier has reached green once. Preserve behavior and assertion strength, then rerun the
   complete verifier set.
 - After local code review, use a second refactor/fix pass to resolve every reported bug, regardless of severity, then
