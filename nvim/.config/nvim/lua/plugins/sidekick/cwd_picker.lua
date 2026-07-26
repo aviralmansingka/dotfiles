@@ -1030,12 +1030,14 @@ function M.open(opts)
       return
     end
     atlas_attempted = true
-    if not atlas_win or not atlas_win:valid() then
+    local lookup_win = atlas_win and atlas_win:valid() and atlas_win.win
+      or (preview_window(preview) or {}).win
+    if not lookup_win then
       return
     end
     atlas_phase = "pending"
-    local width = vim.api.nvim_win_get_width(atlas_win.win)
-    local height = vim.api.nvim_win_get_height(atlas_win.win)
+    local width = vim.api.nvim_win_get_width(lookup_win)
+    local height = vim.api.nvim_win_get_height(lookup_win)
     local lookup = opts.atlas_lookup or atlas_lookup
     atlas_process = lookup(item, width, height, function(result)
       if generation ~= preview_generation
