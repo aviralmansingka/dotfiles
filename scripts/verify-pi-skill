@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+	echo "Usage: scripts/verify-pi-skill <skill-path>" >&2
+	exit 2
+fi
+
+pi_executable="$(command -v pi)" || {
+	echo "pi executable not found" >&2
+	exit 1
+}
+
+node --input-type=module - "$pi_executable" "$1" <<'NODE'
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { dirname, basename, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const [piExecutable, suppliedPath] = process.argv.slice(2);
+const apiPath = join(dirname(realpathSync(piExecutable)), "index.js");
+const { loadSkills, parseFrontmatter } = await import(pathToFileURL(apiPath));
+const inputPath = resolve(suppliedPath);
+const result = loadSkills({
+	cwd: process.cwd(),
+	agentDir: process.cwd(),
+	skillPaths: [inputPath],
+	includeDefaults: false,
+});
+const errors = result.diagnostics.map(({ type, message, path }) =>
+	`${type}: ${path ? `${path}: ` : ""}${message}`,
+);
+
+let skillFile;
+try {
+	const inputStat = statSync(inputPath);
+	if (inputStat.isFile()) {
+		if (basename(inputPath) !== "SKILL.md") errors.push("error: input file must be named SKILL.md");
+		skillFile = inputPath;
+	} else if (inputStat.isDirectory()) {
+		const directSkillFile = join(inputPath, "SKILL.md");
+		skillFile = existsSync(directSkillFile) ? directSkillFile : result.skills[0]?.filePath;
+	}
+} catch {
+	// The Pi loader reports unreadable and missing paths.
+}
+
+if (skillFile) {
+	try {
+		const { frontmatter } = parseFrontmatter(readFileSync(skillFile, "utf8"));
+		if (typeof frontmatter.name !== "string" || !frontmatter.name.trim())
+			errors.push("error: name is required");
+		if (
+			(typeof frontmatter.description !== "string" || !frontmatter.description.trim()) &&
+			!errors.some((error) => error.endsWith("description is required"))
+		)
+			errors.push("error: description is required");
+	} catch {
+		// The Pi loader reports parser diagnostics.
+	}
+}
+
+if (result.skills.length !== 1)
+	errors.push(`error: expected exactly one loaded skill, got ${result.skills.length}`);
+
+if (errors.length) {
+	console.error(errors.join("\n"));
+	process.exit(1);
+}
+
+console.log(`Pi skill validation passed: ${result.skills[0].filePath}`);
+console.log("This check does not run the skill or its helper scripts.");
+console.log("A realistic request in an isolated Pi invocation with output inspection remains required.");
+NODE
