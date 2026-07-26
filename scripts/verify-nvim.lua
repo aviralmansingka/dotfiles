@@ -845,6 +845,7 @@ local function validate_sidekick_herdr()
       agent_status = status,
       foreground_cwd = agent_cwd or cwd,
       pane_id = "w1:p" .. index,
+      tab_id = "w1:t" .. index,
       terminal_id = "term-" .. index,
       workspace_id = workspace_id or "w1",
       agent_session = index == 5 and {
@@ -906,7 +907,14 @@ local function validate_sidekick_herdr()
       fail("cwd picker dropped the stable agent session identity: " .. vim.inspect(item))
     end
   end
-  assert_sequence(ordered_statuses, { "working", "blocked", "done", "idle", "idle" }, "cwd picker Herdr status order")
+  local picker_status_rank = { working = 1, blocked = 2, done = 3, idle = 4 }
+  for index = 2, #ordered_statuses do
+    if (picker_status_rank[ordered_statuses[index - 1]] or math.huge)
+      > (picker_status_rank[ordered_statuses[index]] or math.huge)
+    then
+      fail("cwd picker Herdr status order mismatch: " .. vim.inspect(ordered_statuses))
+    end
+  end
   if not unbound_labels["pi-other-workspace"] or unbound_labels["pi-workspace-only"] then
     fail("unbound cwd picker should retain cwd/repository filtering: " .. vim.inspect(local_items))
   end
@@ -1458,6 +1466,125 @@ local function validate_sidekick_herdr()
     if failed_preview[1] ~= "(agent read failed)" then
       fail("failed Herdr read should leave a readable preview error: " .. vim.inspect(failed_preview))
     end
+
+    local original_columns, original_lines = vim.o.columns, vim.o.lines
+    local function verify_atlas_preview(host_width, host_height)
+      vim.o.columns = host_width
+      vim.o.lines = host_height
+      local preview_width = host_width - 4
+      local preview_height = math.max(host_height - 20, 2)
+      local atlas_win = vim.api.nvim_open_win(vim.api.nvim_create_buf(false, true), false, {
+        relative = "editor",
+        row = 0,
+        col = 0,
+        width = preview_width,
+        height = preview_height,
+        style = "minimal",
+        hide = true,
+      })
+      local frame = table.concat({
+        "Run atlas-rich-run · Goal 3/5 T02.V01",
+        "Role driver · implementer · verifier · active",
+      }, "\r\n")
+      local lookup_calls = {}
+      cwd_picker.open({
+        atlas_lookup = function(item, width, height, callback)
+          lookup_calls[#lookup_calls + 1] = { item = item, width = width, height = height }
+          vim.defer_fn(function()
+            callback({
+              outcome = "matched",
+              run_id = "atlas-rich-run",
+              participant_id = "driver",
+              frame = frame,
+            })
+          end, 20)
+        end,
+      })
+      local atlas_picker_opts = picker_opts
+      local atlas_item
+      for _, item in ipairs(atlas_picker_opts.items) do
+        if item.label == "pi-blocked" then
+          atlas_item = item
+          break
+        end
+      end
+      if not atlas_item then
+        fail("T04 V01 exact participant fixture is missing")
+      end
+      atlas_item.status = "working"
+
+      local previous_win = fake_picker.preview.win.win
+      fake_picker.preview.win.win = atlas_win
+      fake_picker.closed = false
+      current_fake_item = atlas_item
+      local swaps_before = preview_swaps
+      local workspace = atlas_picker_opts.layout.wins.workspace
+      workspace:show()
+      atlas_picker_opts.on_show(fake_picker)
+      atlas_picker_opts.win.input.keys["<c-w>"][1]()
+      atlas_picker_opts.preview({ item = atlas_item, preview = fake_picker.preview })
+      vim.wait(1000, function()
+        return #lookup_calls > 0 and preview_swaps > swaps_before
+      end, 10)
+
+      local size = string.format("%dx%d", host_width, host_height)
+      if #lookup_calls ~= 1 then
+        fail(
+          "T04 V01 exact participant at "
+            .. size
+            .. " should invoke Atlas lookup exactly once; got "
+            .. #lookup_calls
+        )
+      end
+      local lookup = lookup_calls[1]
+      if lookup.item.workspace_id ~= "w1"
+        or lookup.item.tab_id ~= "w1:t5"
+        or lookup.item.pane_id ~= "w1:p5"
+        or lookup.item.terminal_id ~= "term-5"
+        or not vim.deep_equal(lookup.item.agent_session, {
+          source = "herdr:codex",
+          kind = "id",
+          value = "session-5",
+        })
+        or lookup.width ~= preview_width
+        or lookup.height ~= preview_height
+      then
+        fail("T04 V01 exact Atlas lookup identity/dimensions mismatch at " .. size .. ": " .. vim.inspect(lookup))
+      end
+      if preview_swaps ~= swaps_before + 1 then
+        fail("T04 V01 matched Atlas should swap exactly one staged preview at " .. size)
+      end
+      local atlas_buf = fake_picker.preview.win.buf
+      local rendered = table.concat(vim.api.nvim_buf_get_lines(atlas_buf, 0, -1, false), "\n")
+      if vim.bo[atlas_buf].buftype ~= "terminal"
+        or not rendered:find("Run atlas-rich-run · Goal 3/5 T02.V01", 1, true)
+        or not rendered:find("Role driver · implementer · verifier · active", 1, true)
+      then
+        fail("T04 V01 matched Atlas native preview is incomplete at " .. size .. ": " .. vim.inspect(rendered))
+      end
+
+      local reads_with_atlas = async_reads
+      local swaps_with_atlas = preview_swaps
+      vim.wait(200)
+      atlas_picker_opts.actions.sidekick_preview_scroll_down()
+      vim.wait(200)
+      if async_reads ~= reads_with_atlas
+        or preview_swaps ~= swaps_with_atlas
+        or fake_picker.preview.win.buf ~= atlas_buf
+      then
+        fail("T04 V01 refresh/full-preview loading overwrote active Atlas at " .. size)
+      end
+
+      fake_picker.closed = true
+      atlas_picker_opts.on_close(fake_picker)
+      workspace:close()
+      fake_picker.preview.win.win = previous_win
+      vim.api.nvim_win_close(atlas_win, true)
+    end
+
+    verify_atlas_preview(100, 30)
+    verify_atlas_preview(80, 24)
+    vim.o.columns, vim.o.lines = original_columns, original_lines
 
     local last_session = require("plugins.sidekick.last_session")
     last_session.label = nil
