@@ -4419,10 +4419,151 @@ local function validate_markdown_formatting()
   vim.api.nvim_buf_delete(buf, { force = true })
 end
 
+local function validate_markdown_ansi()
+  local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
+  package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
+  package.loaded["helpers.markdown_ansi"] = nil
+
+  local ansi = require("helpers.markdown_ansi")
+  ansi.setup()
+  local esc = "\27"
+  local lines = {
+    "```ansi",
+    esc .. "[1;38;2;146;131;116mtruecolor",
+    "carried " .. esc .. "[0mplain",
+    esc .. "[91;44mclassic" .. esc .. "[39;49m defaults",
+    esc .. "[38;5;196;48;5;17mindexed " .. esc .. "[2munsupported",
+    "```",
+    "```text",
+    esc .. "[31mnot ansi" .. esc .. "[0m",
+    "```",
+  }
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].filetype = "markdown"
+  local parser = vim.treesitter.get_parser(buf, "markdown")
+  local marks = ansi.parse({ buf = buf, root = parser:parse()[1]:root(), last = true })
+
+  local concealed = 0
+  local highlighted = {}
+  for _, mark in ipairs(marks) do
+    if mark.conceal ~= false then
+      fail("ANSI marks must remain rendered under the cursor and in visual mode")
+    end
+    if mark.opts.conceal == "" then
+      concealed = concealed + 1
+    elseif mark.opts.hl_group then
+      highlighted[#highlighted + 1] = {
+        row = mark.start_row,
+        start_col = mark.start_col,
+        end_col = mark.opts.end_col,
+        group = mark.opts.hl_group,
+        attrs = vim.api.nvim_get_hl(0, { name = mark.opts.hl_group, link = false }),
+      }
+    end
+  end
+
+  if concealed ~= 5 then
+    fail("expected five supported SGR sequences to be concealed, got " .. concealed)
+  end
+  if not vim.deep_equal(vim.api.nvim_buf_get_lines(buf, 0, -1, false), lines) then
+    fail("ANSI rendering must not alter the Markdown source bytes")
+  end
+  vim.api.nvim_win_set_buf(0, buf)
+  vim.api.nvim_win_set_cursor(0, { 2, 0 })
+  vim.cmd("normal! yy")
+  if vim.fn.getreg('"') ~= lines[2] .. "\n" then
+    fail("linewise yank should copy the complete underlying ANSI bytes")
+  end
+
+  local function has_highlight(row, predicate)
+    for _, item in ipairs(highlighted) do
+      if item.row == row and predicate(item) then
+        return true
+      end
+    end
+    return false
+  end
+
+  if
+    not has_highlight(1, function(item)
+      return item.attrs.bold and item.attrs.fg == 0x928374
+    end)
+  then
+    fail("truecolor foreground and bold should render")
+  end
+  if
+    not has_highlight(2, function(item)
+      return item.start_col == 0 and item.attrs.bold and item.attrs.fg == 0x928374
+    end)
+  then
+    fail("SGR style should carry across lines until reset")
+  end
+  if
+    not has_highlight(3, function(item)
+      local fg = tonumber(vim.g.terminal_color_9:sub(2), 16)
+      local bg = tonumber(vim.g.terminal_color_4:sub(2), 16)
+      return item.attrs.fg == fg and item.attrs.bg == bg
+    end)
+  then
+    fail("classic 16-color foreground and background should render")
+  end
+  local classic_group
+  for _, item in ipairs(highlighted) do
+    if item.row == 3 then
+      classic_group = item.group
+      break
+    end
+  end
+  local original_red = vim.g.terminal_color_9
+  vim.g.terminal_color_9 = "#123456"
+  vim.api.nvim_exec_autocmds("ColorScheme", { pattern = "verify-markdown-ansi" })
+  local reloaded = vim.api.nvim_get_hl(0, { name = classic_group, link = false })
+  vim.g.terminal_color_9 = original_red
+  vim.api.nvim_exec_autocmds("ColorScheme", { pattern = "verify-markdown-ansi" })
+  if reloaded.fg ~= 0x123456 then
+    fail("classic ANSI colors should refresh from the active terminal palette")
+  end
+  if
+    not has_highlight(4, function(item)
+      return item.attrs.fg == 0xff0000 and item.attrs.bg == 0x00005f
+    end)
+  then
+    fail("indexed 256-color foreground and background should render")
+  end
+
+  local unsupported = lines[5]:find(esc .. "[2m", 1, true) - 1
+  for _, mark in ipairs(marks) do
+    if mark.start_row == 4 and mark.opts.conceal == "" and mark.start_col == unsupported then
+      fail("unsupported SGR should remain visible")
+    end
+    if mark.start_row == 7 then
+      fail("ANSI outside an ansi fence should not render")
+    end
+  end
+
+  local specs = dofile("nvim/.config/nvim/lua/plugins/markdown.lua")
+  local configured = false
+  for _, spec in ipairs(specs) do
+    if spec[1] == "MeanderingProgrammer/render-markdown.nvim" then
+      configured = spec.opts.custom_handlers.markdown.extends
+        and spec.opts.custom_handlers.markdown.parse == ansi.parse
+        and spec.opts.render_modes == true
+    end
+  end
+  if not configured then
+    fail("render-markdown should install the ANSI handler in every mode")
+  end
+
+  vim.api.nvim_buf_delete(buf, { force = true })
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
   ["weekly-backlog"] = validate_weekly_backlog,
   ["markdown-formatting"] = validate_markdown_formatting,
+  ["markdown-ansi"] = validate_markdown_ansi,
   ["inline-ask-edit"] = validate_inline_ask_edit,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
@@ -4437,7 +4578,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, weekly-backlog, markdown-formatting, inline-ask-edit, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
+      .. "; expected one of: agent-keymaps, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
   )
 end
 
