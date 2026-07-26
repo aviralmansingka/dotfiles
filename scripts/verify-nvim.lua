@@ -1801,8 +1801,10 @@ local function validate_sidekick_herdr()
     current_fake_item = baseline_item
     fake_picker.closed = false
     local fallback_workspace = fallback_picker_opts.layout.wins.workspace
+    local fallback_atlas = fallback_picker_opts.layout.wins.atlas
     local baseline_swaps = preview_swaps
     fallback_workspace:show()
+    fallback_atlas:show()
     fallback_picker_opts.on_show(fake_picker)
     fallback_picker_opts.win.input.keys["<c-w>"][1]()
     vim.wait(1000, function() return preview_swaps > baseline_swaps end, 10)
@@ -1859,6 +1861,10 @@ local function validate_sidekick_herdr()
           fallback_failures[#fallback_failures + 1] = fallback_case .. " changed the default preview bytes"
         end
       end
+      local fallback_atlas_buf = vim.api.nvim_win_get_buf(fallback_atlas.win)
+      if table.concat(vim.api.nvim_buf_get_lines(fallback_atlas_buf, 0, -1, false), "\n") ~= "" then
+        fallback_failures[#fallback_failures + 1] = fallback_case .. " populated the Atlas pane"
+      end
     end
     local fallback_layout_item = vim.deepcopy(fallback_item)
     fallback_layout_item._atlas_fallback_case = "unregistered"
@@ -1894,6 +1900,7 @@ local function validate_sidekick_herdr()
     fake_picker.closed = true
     fallback_picker_opts.on_close(fake_picker)
     fallback_workspace:close()
+    fallback_atlas:close()
     if #fallback_failures > 0 then
       fail("T04 V02 Atlas fallback regressions: " .. table.concat(fallback_failures, "; "))
     end
@@ -2078,6 +2085,27 @@ local function validate_sidekick_herdr()
     then
       fail("T04 V03 complete identity control should swap one matched dedicated Atlas preview")
     end
+    local ordinary = vim.deepcopy(complete_identity)
+    ordinary.agent_session = nil
+    ordinary._atlas_v03_case = "matched-to-ordinary"
+    current_fake_item = ordinary
+    local ordinary_swaps = preview_swaps
+    identity_picker_opts.preview({ item = ordinary, preview = fake_picker.preview })
+    local ordinary_atlas_buf = vim.api.nvim_win_get_buf(control_atlas.win)
+    if table.concat(vim.api.nvim_buf_get_lines(ordinary_atlas_buf, 0, -1, false), "\n") ~= "" then
+      fail("T10 V02 matched-to-ordinary selection should clear Atlas immediately")
+    end
+    vim.wait(1000, function() return preview_swaps > ordinary_swaps end, 10)
+    if (identity_calls["matched-to-ordinary"] or 0) ~= 0
+      or preview_swaps ~= ordinary_swaps + 1
+      or preview_bytes() ~= v03_default_preview_bytes
+      or table.concat(
+        vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(control_atlas.win), 0, -1, false),
+        "\n"
+      ) ~= ""
+    then
+      fail("T10 V02 matched-to-ordinary selection should preserve ordinary top preview and empty Atlas")
+    end
     close_v03_picker(identity_picker_opts, identity_workspace)
 
     local function complete_v03_item(label)
@@ -2109,6 +2137,8 @@ local function validate_sidekick_herdr()
     selection_picker_opts.preview({ item = selection_default, preview = fake_picker.preview })
     vim.wait(1000, function() return preview_swaps > selection_swaps end, 10)
     local selected_bytes = preview_bytes()
+    local selection_atlas = selection_picker_opts.layout.wins.atlas
+    local selected_atlas_buf = vim.api.nvim_win_get_buf(selection_atlas.win)
     local selected_buffers = valid_buffer_set()
     local selected_swaps = preview_swaps
     selection_callbacks["selection-late"](v03_result("selection-late"))
@@ -2116,6 +2146,8 @@ local function validate_sidekick_herdr()
     if (selection_cancels["selection-late"] or 0) ~= 1
       or preview_swaps ~= selected_swaps
       or preview_bytes() ~= selected_bytes
+      or vim.api.nvim_win_get_buf(selection_atlas.win) ~= selected_atlas_buf
+      or table.concat(vim.api.nvim_buf_get_lines(selected_atlas_buf, 0, -1, false), "\n") ~= ""
       or #new_valid_buffers(selected_buffers) ~= 0
     then
       fail("T04 V03 selection change should discard a late Atlas result")
@@ -2144,6 +2176,10 @@ local function validate_sidekick_herdr()
     if preview_swaps ~= selection_swaps + 1 or preview_bytes():find("selection%-staging") then
       fail("T04 V03 selection change should not swap an obsolete Atlas staging buffer")
     end
+    local selection_displayed_atlas_buf = vim.api.nvim_win_get_buf(selection_atlas.win)
+    if table.concat(vim.api.nvim_buf_get_lines(selection_displayed_atlas_buf, 0, -1, false), "\n") ~= "" then
+      fail("T10 V02 selection change should not repopulate Atlas from obsolete staging")
+    end
     close_v03_picker(selection_picker_opts, selection_workspace)
 
     local close_callbacks = {}
@@ -2159,12 +2195,16 @@ local function validate_sidekick_herdr()
     current_fake_item = late_close
     close_picker_opts.preview({ item = late_close, preview = fake_picker.preview })
     local close_swaps = preview_swaps
+    local close_bytes = preview_bytes()
     local close_buffers = valid_buffer_set()
+    local close_atlas = close_picker_opts.layout.wins.atlas
     close_v03_picker(close_picker_opts, close_workspace)
     close_callbacks["close-late"](v03_result("close-late"))
     vim.wait(100)
     if (close_cancels["close-late"] or 0) ~= 1
       or preview_swaps ~= close_swaps
+      or preview_bytes() ~= close_bytes
+      or close_atlas:valid()
       or #new_valid_buffers(close_buffers) ~= 0
     then
       fail("T04 V03 picker close should discard a late Atlas result")
@@ -2185,6 +2225,8 @@ local function validate_sidekick_herdr()
       fail("T04 V03 picker-close staging fixture did not create a staging buffer")
     end
     close_swaps = preview_swaps
+    close_bytes = preview_bytes()
+    local staged_close_atlas = staged_close_picker_opts.layout.wins.atlas
     close_v03_picker(staged_close_picker_opts, staged_close_workspace)
     vim.wait(100)
     for _, buf in ipairs(close_staging_buffers) do
@@ -2192,7 +2234,10 @@ local function validate_sidekick_herdr()
         fail("T04 V03 picker close should delete an obsolete Atlas staging buffer")
       end
     end
-    if preview_swaps ~= close_swaps then
+    if preview_swaps ~= close_swaps
+      or preview_bytes() ~= close_bytes
+      or staged_close_atlas:valid()
+    then
       fail("T04 V03 picker close should not swap an obsolete Atlas staging buffer")
     end
 
