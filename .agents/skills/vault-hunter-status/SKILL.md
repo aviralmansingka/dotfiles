@@ -15,12 +15,14 @@ the canonical vault note and active parent remain authoritative.
 ```sh
 cd ~/dotfiles
 mkdir -p ~/.local/bin
+ln -sfn "$PWD/scripts/vault-hunter-observe" ~/.local/bin/vault-hunter-observe
 go build -o ~/.local/bin/vault-hunter-status ./cmd/vault-hunter-status
 go build -o ~/.local/bin/vault-hunter-registry ./cmd/vault-hunter-registry
 go build -o ~/.local/bin/vault-hunter-atlas ./cmd/vault-hunter-atlas
 ```
 
-Require `~/.local/bin` on `PATH`, then verify with `command -v vault-hunter-status`.
+`vault-hunter-observe` is the canonical entry point; `vault-hunter-status` remains available as an additional command.
+Require `~/.local/bin` on `PATH`, then verify both with `command -v vault-hunter-observe vault-hunter-status`.
 
 ## Observe the active Run Registry
 
@@ -47,8 +49,9 @@ vault-hunter-status run <run-id> --json
 vault-hunter-status run <run-id> --color=always
 ```
 
-For a specific Run's ANSI status, use `vault-hunter-status run <run-id> --color=always`. It emits real SGR bytes for
-only that selected Run; preserve those bytes rather than replacing the output with JSON or a Markdown table. If title
+For a specific Run's ANSI status, use `vault-hunter-observe run <run-id> --color=always` (or
+`vault-hunter-status run <run-id> --color=always`). It emits real SGR bytes for only that selected Run; preserve those
+bytes rather than replacing the output with JSON or a Markdown table. If title
 matching returns zero or multiple IDs, show the candidates and ask the user to choose; never guess.
 
 ## Inspect one Run

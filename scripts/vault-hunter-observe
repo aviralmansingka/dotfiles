@@ -1,20 +1,168 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() {
+  cat >&2 <<'EOF'
+usage: vault-hunter-observe [list] [--json] [--watch [seconds]] [--color=auto|always|never]
+       vault-hunter-observe run RUN_ID [--json] [--watch [seconds]] [--color=auto|always|never]
+       vault-hunter-observe record RUN_ID
+       vault-hunter-observe registry RUN_ID
+       vault-hunter-observe journey RUN_ID
+       vault-hunter-observe evidence RUN_ID
+       vault-hunter-observe atlas RUN_ID [ATLAS_ARGS...]
+EOF
+  exit "${1:-64}"
+}
+
+command=list
+target=
+if [[ $# -gt 0 && "$1" != -* ]]; then
+  command=$1
+  shift
+fi
+case "$command" in
+  list) ;;
+  run|record|registry|journey|evidence|atlas)
+    [[ $# -gt 0 ]] || usage
+    target=$1
+    shift
+    ;;
+  help) usage 0 ;;
+  *) usage ;;
+esac
+
+json=false
+watch_seconds=
+color=auto
+if [[ "$command" == list || "$command" == run ]]; then
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json=true; shift ;;
+      --color=auto|--color=always|--color=never) color=${1#*=}; shift ;;
+      --watch)
+        if [[ $# -gt 1 && "$2" =~ ^[1-9][0-9]*$ ]]; then
+          watch_seconds=$2
+          shift 2
+        else
+          watch_seconds=60
+          shift
+        fi
+        ;;
+      --help) usage 0 ;;
+      *) usage ;;
+    esac
+  done
+elif [[ "$command" != atlas && $# -gt 0 ]]; then
+  usage
+fi
+
 script=$(realpath "$0")
 repo=$(cd "$(dirname "$script")/.." && pwd -P)
+root=${VAULT_HUNTER_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/vault-hunter}
 tmp=$(mktemp -d)
+watch_ui=false
 cleanup() {
+  $watch_ui && printf '\033[?25h\n'
   rm -rf "$tmp"
 }
 trap cleanup EXIT
 
 if ! (
   cd "$repo"
-  go build -o "$tmp/vault-hunter-status" ./cmd/vault-hunter-status
-  go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+  go build -o "$tmp/registry" ./cmd/vault-hunter-registry
+  go build -o "$tmp/status" ./cmd/vault-hunter-status
+  go build -o "$tmp/atlas" ./cmd/vault-hunter-atlas
 ) >"$tmp/build.log" 2>&1; then
   cat "$tmp/build.log" >&2
   exit 1
 fi
-PATH="$tmp:$PATH" "$tmp/vault-hunter-status" "$@"
+
+record() {
+  jq -cn --arg root "$root" --arg run_id "$1" '{action:"get",root:$root,run_id:$run_id}' |
+    "$tmp/registry"
+}
+
+case "$command" in
+  record|registry) record "$target" | jq .; exit ;;
+  journey)
+    record "$target" | jq '[.lifecycle[] |
+      select((.kind | startswith("subagent/") or . == "parent/usage") | not) |
+      {at:.observed_at,stage:.kind,state,goal:.goal_id,detail}]'
+    exit
+    ;;
+  evidence) record "$target" | jq '.evidence'; exit ;;
+  atlas) "$tmp/atlas" --run-id "$target" "$@"; exit ;;
+esac
+
+# Keep the canonical observer's established JSON projection while obtaining
+# all Registry data through the read-only command surface.
+snapshot() {
+  local records="$tmp/records.jsonl"
+  : >"$records"
+  jq -cn --arg root "$root" '{action:"list",root:$root}' |
+    "$tmp/registry" |
+    jq -r '.[].run_id' |
+    while IFS= read -r run_id; do
+      record "$run_id" >>"$records"
+      printf '\n' >>"$records"
+    done
+
+  jq -s '
+    def decoded: try (.detail | fromjson) catch {};
+    def dollars: if . == null then null else ((. * 100 | round) / 100) end;
+    map(
+      ([.lifecycle[]? | select(.kind == "subagent/started") | .observation_id | sub("-started$"; "")]) as $started |
+      ([.lifecycle[]? | select(.kind == "subagent/finished" or .kind == "subagent/interrupted") | .observation_id | sub("-(finished|interrupted)$"; "")]) as $terminal |
+      ([.lifecycle[]? | select(.kind == "subagent/finished")]) as $finished |
+      ([.lifecycle[]? | select((.kind | startswith("subagent/") or . == "parent/usage") | not)] | last // .lifecycle[-1]) as $frontier |
+      ([.lifecycle[]? | select(.kind == "parent/usage") | decoded] | last // null) as $parent |
+      {
+        run_id,
+        task: .task.title,
+        updated_at,
+        revision,
+        state: ($frontier.state // "unknown"),
+        stage: ($frontier.kind // "unknown"),
+        goal: ($frontier.goal_id // ""),
+        driver: "-",
+        children: {
+          active: ([$started[] | select(. as $key | ($terminal | index($key) | not))] | length),
+          finished: ($finished | length),
+          cost: ([$finished[] | decoded | .usage.cost? // 0] | add // 0 | dollars)
+        },
+        parent: {
+          cost: ($parent.usage.cost? // null | dollars),
+          total_tokens: ($parent.usage.total_tokens? // null),
+          requests: ($parent.usage.requests? // null)
+        }
+      }
+    ) | sort_by(.updated_at) | reverse
+  ' "$records"
+}
+
+data=$(snapshot)
+if [[ "$command" == run ]]; then
+  data=$(jq -c --arg run_id "$target" '[.[] | select(.run_id == $run_id)]' <<<"$data")
+  [[ $(jq length <<<"$data") -eq 1 ]] || { echo "vault-hunter-observe: Run not found: $target" >&2; exit 66; }
+fi
+if $json; then
+  printf '%s\n' "$data"
+  exit
+fi
+
+status_args=("$command")
+[[ "$command" == run ]] && status_args+=("$target")
+status_args+=("--color=$color")
+if [[ -z "$watch_seconds" ]]; then
+  "$tmp/status" "${status_args[@]}"
+  exit
+fi
+
+[[ -t 1 ]] || { echo "vault-hunter-observe: --watch requires a terminal" >&2; exit 64; }
+watch_ui=true
+printf '\033[?25l'
+while :; do
+  printf '\033[H\033[2J'
+  "$tmp/status" "${status_args[@]}"
+  sleep "$watch_seconds"
+done

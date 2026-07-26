@@ -131,11 +131,11 @@ func execute(args []string, output *os.File) (int, error) {
 		if getErr != nil {
 			return 1, getErr
 		}
-		view, renderErr := renderAtlas(run.RunID)
+		view, renderErr := renderAtlas(run)
 		if renderErr != nil {
 			return 1, renderErr
 		}
-		return writeHuman(output, "TASK RUN ATLAS\n"+escapeRenderedControls(view, run), false)
+		return writeHuman(output, "TASK RUN ATLAS\n"+view, false)
 	default:
 		return 2, commandError{code: 2, message: "vault-hunter-status: unsupported command", usage: true}
 	}
@@ -216,8 +216,8 @@ func usageError(message string) *commandError {
 	return &commandError{code: 2, message: "vault-hunter-status: " + message, usage: true}
 }
 
-func renderAtlas(runID string) (string, error) {
-	command := exec.Command("vault-hunter-atlas", "--run-id", runID, "--snapshot", "--width", "100", "--height", "30")
+func renderAtlas(run vaultregistry.Run) (string, error) {
+	command := exec.Command("vault-hunter-atlas", "--run-id", run.RunID, "--snapshot", "--width", "100", "--height", "30")
 	var stdout, stderr bytes.Buffer
 	command.Stdout, command.Stderr = &stdout, &stderr
 	if err := command.Run(); err != nil {
@@ -227,7 +227,11 @@ func renderAtlas(runID string) (string, error) {
 		}
 		return "", fmt.Errorf("vault-hunter-status: atlas: %s", message)
 	}
-	return stdout.String(), nil
+	view := sanitizeAtlasRegistryStrings(stdout.String(), run)
+	// Keep the frame's geometry byte-bounded for logs while retaining the
+	// renderer's rows and any styling it generates.
+	view = strings.NewReplacer("─", "-", "│", "|", "┼", "+").Replace(view)
+	return view, nil
 }
 
 func renderList(runs []vaultregistry.RunSummary) string {
@@ -259,30 +263,57 @@ func escapeControls(value string) string {
 			result.WriteRune(character)
 			continue
 		}
-		if character <= 0xffff {
-			fmt.Fprintf(&result, "\\u%04x", character)
-		} else {
-			fmt.Fprintf(&result, "\\U%08x", character)
+		switch character {
+		case '\b':
+			result.WriteString(`\b`)
+		case '\t':
+			result.WriteString(`\t`)
+		case '\n':
+			result.WriteString(`\n`)
+		case '\f':
+			result.WriteString(`\f`)
+		case '\r':
+			result.WriteString(`\r`)
+		default:
+			if character <= 0xffff {
+				fmt.Fprintf(&result, "\\u%04x", character)
+			} else {
+				fmt.Fprintf(&result, "\\U%08x", character)
+			}
 		}
 	}
 	return result.String()
 }
 
-func escapeRenderedControls(value string, run vaultregistry.Run) string {
-	encoded, _ := json.Marshal(run)
-	if bytes.Contains(encoded, []byte(`\n`)) {
-		return escapeControls(value)
+func sanitizeAtlasRegistryStrings(view string, run vaultregistry.Run) string {
+	values := []string{
+		run.RunID, run.InvokedAt, run.UpdatedAt,
+		run.Task.ID, run.Task.Title, run.Task.Path, run.Task.FeaturePath, run.Task.Kind,
 	}
-	var result strings.Builder
-	for _, line := range strings.SplitAfter(value, "\n") {
-		if strings.HasSuffix(line, "\n") {
-			result.WriteString(escapeControls(strings.TrimSuffix(line, "\n")))
-			result.WriteByte('\n')
-		} else {
-			result.WriteString(escapeControls(line))
+	for _, participant := range run.Participants {
+		values = append(values, participant.ParticipantID, participant.ObservedAt, participant.Role, participant.GoalID)
+		if participant.Herdr != nil {
+			values = append(values, participant.Herdr.WorkspaceID, participant.Herdr.TabID, participant.Herdr.PaneID, participant.Herdr.TerminalID)
+		}
+		if participant.AgentSession != nil {
+			values = append(values, participant.AgentSession.Source, participant.AgentSession.Kind, participant.AgentSession.Value)
 		}
 	}
-	return result.String()
+	for _, observation := range run.Lifecycle {
+		values = append(values, observation.ObservationID, observation.ObservedAt, observation.Kind,
+			observation.GoalID, observation.State, observation.Detail)
+	}
+	for _, observation := range run.Evidence {
+		values = append(values, observation.ObservationID, observation.ObservedAt, observation.VerifierID,
+			observation.State, observation.Command, observation.ImplementationTree,
+			observation.ArtifactSHA256, observation.Detail)
+	}
+	for _, value := range values {
+		if escaped := escapeControls(value); escaped != value {
+			view = strings.ReplaceAll(view, value, escaped)
+		}
+	}
+	return view
 }
 
 func writeHuman(output io.Writer, body string, color bool) (int, error) {

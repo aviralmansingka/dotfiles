@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
@@ -148,42 +149,49 @@ func retireRun(root, runID string, expectedRevision uint64) (vaultregistry.Run, 
 	if expectedRevision == 0 {
 		return vaultregistry.Run{}, fmt.Errorf("%w: retire revision must be non-zero", vaultregistry.ErrMalformed)
 	}
+	if root == "" {
+		var err error
+		root, err = vaultregistry.ResolveRoot()
+		if err != nil {
+			return vaultregistry.Run{}, err
+		}
+	}
+	permissions := captureRetirePermissions(root)
+	producer, err := vaultregistry.OpenProducer(root)
+	if err != nil {
+		restoreRetirePermissions(permissions)
+		return vaultregistry.Run{}, err
+	}
+	if _, err := producer.Retire(runID, expectedRevision); err != nil {
+		restoreRetirePermissions(permissions)
+		return vaultregistry.Run{}, err
+	}
 	reader, err := vaultregistry.OpenReader(root)
 	if err != nil {
 		return vaultregistry.Run{}, err
 	}
-	active, activeErr := reader.Get(runID)
-	retired, retiredErr := reader.GetRetired(runID)
+	return reader.GetRetired(runID)
+}
 
-	if activeErr == nil {
-		if retiredErr == nil {
-			return vaultregistry.Run{}, fmt.Errorf("%w: active and retired records both exist", vaultregistry.ErrConflict)
+type retirePermission struct {
+	path string
+	mode os.FileMode
+}
+
+func captureRetirePermissions(root string) []retirePermission {
+	var permissions []retirePermission
+	for _, path := range []string{root, filepath.Join(root, "runs"), filepath.Join(root, "registry.lock")} {
+		if info, err := os.Stat(path); err == nil {
+			permissions = append(permissions, retirePermission{path: path, mode: info.Mode().Perm()})
 		}
-		if !errors.Is(retiredErr, vaultregistry.ErrNotFound) {
-			return vaultregistry.Run{}, retiredErr
-		}
-		if active.Revision != expectedRevision {
-			return vaultregistry.Run{}, fmt.Errorf("%w: expected %d, actual %d", vaultregistry.ErrConflict, expectedRevision, active.Revision)
-		}
-		producer, err := vaultregistry.OpenProducer(root)
-		if err != nil {
-			return vaultregistry.Run{}, err
-		}
-		return producer.Retire(runID, expectedRevision)
 	}
-	if !errors.Is(activeErr, vaultregistry.ErrNotFound) {
-		return vaultregistry.Run{}, activeErr
+	return permissions
+}
+
+func restoreRetirePermissions(permissions []retirePermission) {
+	for _, permission := range permissions {
+		_ = os.Chmod(permission.path, permission.mode)
 	}
-	if retiredErr != nil {
-		if errors.Is(retiredErr, vaultregistry.ErrNotFound) {
-			return vaultregistry.Run{}, activeErr
-		}
-		return vaultregistry.Run{}, retiredErr
-	}
-	if retired.Revision != expectedRevision {
-		return vaultregistry.Run{}, fmt.Errorf("%w: expected %d, retired %d", vaultregistry.ErrConflict, expectedRevision, retired.Revision)
-	}
-	return retired, nil
 }
 
 func decodeRequest(input io.Reader) (any, error) {

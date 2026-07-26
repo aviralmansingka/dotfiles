@@ -102,6 +102,20 @@ def classified(value, classification, root=state, raw=None):
     assert after == before, (before, after)
 
 
+def stable_retire_collision(root):
+    active = os.path.join(root, "runs", "run-retire.json")
+    destination = os.path.join(root, "retired", "run-retire.json")
+    before = manifest(root)
+    results = [invoke({"action": "retire", "run_id": "run-retire", "expected_revision": 7}, root) for _ in range(2)]
+    for result in results:
+        assert result.returncode == 1 and result.stdout == b"", (result.returncode, result.stdout, result.stderr)
+        diagnostic = result.stderr.decode()
+        assert "revision conflict" in diagnostic, f"destination collision was not classified conflict: {diagnostic.strip()}"
+    assert results[0].stderr == results[1].stderr
+    assert manifest(root) == before
+    assert os.path.lexists(active) and os.path.lexists(destination)
+
+
 def load_fixture(path):
     with open(path, encoding="utf-8") as handle:
         return json.load(handle)
@@ -152,6 +166,17 @@ classified({"action": "get", "run_id": "missing", "namespace": "retired"}, "run 
 classified({"action": "list", "filter": {"updated_at_from": "not-rfc3339"}}, "malformed run")
 classified({"action": "retire", "run_id": "run-retire", "expected_revision": 0}, "malformed run")
 classified({"action": "retire", "run_id": "run-retire", "expected_revision": 6}, "revision conflict")
+
+malformed_collision = os.path.join(work, "malformed-retire-collision")
+shutil.copytree(source, malformed_collision)
+with open(os.path.join(malformed_collision, "retired", "run-retire.json"), "wb") as handle:
+    handle.write(b"{not-json\n")
+stable_retire_collision(malformed_collision)
+
+directory_collision = os.path.join(work, "directory-retire-collision")
+shutil.copytree(source, directory_collision)
+os.mkdir(os.path.join(directory_collision, "retired", "run-retire.json"))
+stable_retire_collision(directory_collision)
 
 malformed_retired = os.path.join(work, "malformed-retired")
 shutil.copytree(source, malformed_retired)

@@ -57,6 +57,11 @@ test -x "$fixture/orchestration-trap" && test -x "$fixture/watch-pty.py"
 for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
   ln -s "$fixture/orchestration-trap" "$tmp/traps/$command"
 done
+if ! HOME="$tmp/home" PATH="$tmp/traps:$tmp:$PATH" T09_V04_TRAP_LOG="$tmp/orchestration-invocations" \
+  scripts/test-vault-hunter-observe.sh; then
+  echo 'T09.V04 semantic red: canonical vault-hunter-observe compatibility contract failed' >&2
+  exit 1
+fi
 chmod -R a-w "$tmp/state"
 state_before=$(manifest "$tmp/state")
 
@@ -79,6 +84,7 @@ with open(os.path.join(fixture, "state", "runs", "run-observe.json"), encoding="
     selected = json.load(handle)
 with open(os.path.join(fixture, "state", "runs", "run-other.json"), encoding="utf-8") as handle:
     other = json.load(handle)
+assert "\nFIXTURE-MULTILINE" in selected["task"]["title"]
 
 
 def invoke(*args):
@@ -154,6 +160,12 @@ assert b"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" in ev
 assert b"TASK RUN ATLAS" in atlas
 for output in (listed, run, record, registry, atlas):
     assert b"FIXTURE-CONTROL" in output, output
+for output in (listed, run, record, registry):
+    assert b"\\nFIXTURE-MULTILINE" in output, output
+    assert b"\nFIXTURE-MULTILINE" not in output, output
+atlas_lines = atlas.splitlines()
+assert 10 <= len(atlas_lines) <= 40, len(atlas_lines)
+assert max(map(len, atlas_lines)) <= 160, max(map(len, atlas_lines))
 
 # Forced color emits actual SGR bytes (not escaped text) and changes styling,
 # not content or selection.
@@ -251,6 +263,8 @@ for pattern in (
 with open(skill_path, encoding="utf-8") as handle:
     skill = handle.read()
 assert re.search(r"(?m)^name:\s*vault-hunter-status\s*$", skill)
+install = re.search(r"(?ms)^## Install\s*$.*?(?=^## |\Z)", skill)
+assert install and "vault-hunter-observe" in install.group(), "vault-hunter-observe installation"
 commands = (
     "vault-hunter-status", "vault-hunter-status list", "vault-hunter-status run <run-id>",
     "vault-hunter-status record <run-id>", "vault-hunter-status registry <run-id>",
@@ -260,6 +274,7 @@ commands = (
 for command in commands:
     assert command in skill, command
 assert "vault-hunter-status run <run-id> --color=always" in skill
+assert "vault-hunter-observe run <run-id> --color=always" in skill
 lower = skill.lower()
 for phrase in ("run registry", "observation", "canonical vault", "active parent", "authoritative"):
     assert phrase in lower, phrase
