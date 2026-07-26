@@ -2,7 +2,7 @@
 
 **Evaluation host:** `homelab` (Linux/KVM)
 **Evidence collected:** 2026-07-26 15:42:14Z–15:55:28Z
-**Status:** recommendation complete; **final owner approval is pending** at the parent/user checkpoint. No production VM was provisioned and no vault ADR was changed.
+**Status:** recommendation complete and **owner approved**. Canonical approval source: Vault Hunter Run `vh-T20-1785077639159`, Run observation `T20.V01.q35-selection.approved.2026-07-26` at Registry revision 12. No production VM was provisioned and no vault ADR was changed; the required new vault ADR remains pending before V02.
 
 ## Recommendation
 
@@ -10,7 +10,7 @@ Recommend **QEMU/KVM Q35**, managed by libvirt's QEMU driver at `qemu:///system`
 
 Both Q35 and a carefully minimized `microvm` booted the approved Ubuntu fixture and passed the same block, network, console, and cold-lifecycle probes. The approved tie-break is operational maturity and compatibility first. Q35 worked through the ordinary `virt-install` path with Ubuntu 24.04 OS metadata and UEFI. `microvm` first failed with `No PCI buses available` and required hand-authored XML, explicit `virtio-mmio` addresses, and explicit suppression of libvirt's implicit USB, balloon, and video devices. That narrower and less conventional device/firmware path provides no material benefit required by T20, so Q35 wins the tie-break. Cloud Hypervisor cannot be managed by the installed libvirt build and was excluded before boot.
 
-This is a recommendation, not an owner-approved selection. After owner approval, create the required new vault ADR before V02; do not treat this document as that ADR.
+This is an owner-approved selection. Create the required new vault ADR before V02; do not treat this document as that ADR.
 
 ## Fixture and host identity
 
@@ -41,13 +41,13 @@ The image was downloaded only to `/var/tmp/t20-v01-work`, copied into the dispos
 | Graceful stop/start | **Pass.** `virsh shutdown` reached `shut off` on poll 2; start succeeded; SSH returned on poll 3. | **Pass.** Same result. | Not testable because native management is unavailable. |
 | Stable alias / version pin | **Recommend stable alias `q35`.** Record resolved `pc-q35-noble` as V02's expected XML value on this host; do not request the downstream resolved name as a production pin. | If selected, request stable `microvm`; no versioned alternative was reported. Rejected. | Not applicable. |
 | Material limitations | Larger, conventional PC/PCI device surface; host-specific alias resolution means V02 must compare against the live observed value recorded below. | Default Ubuntu `virt-install` XML was incompatible; no automatic x86 EFI firmware was advertised for `microvm`; reduced PCI/USB/video/balloon support; requires specialized XML and virtio-mmio devices. | Installed libvirt has no `ch` connection driver, and the hypervisor executable is absent. |
-| Disposition / rejection reason | **Recommended, owner approval pending.** Best maturity and compatibility. | **Rejected by tie-break**, despite functional probes: materially more specialized integration for no required benefit. | **Rejected/unavailable:** no native libvirt management on the target host. |
+| Disposition / rejection reason | **Recommended and owner approved.** Best maturity and compatibility. | **Rejected by tie-break**, despite functional probes: materially more specialized integration for no required benefit. | **Rejected/unavailable:** no native libvirt management on the target host. |
 
 The DHCP addresses above are historical evidence only. Both domains, their interfaces, storage, and scratch data were removed; no evaluated guest is currently reachable at either value. Any DHCP lease-record expiry remains owned by the unchanged existing network.
 
 ## Reproduction values for V02 and V03
 
-These values describe the recommended configuration. They are intentionally **not yet executable**: owner approval and a new ADR must precede V02, and values that can exist only after the V02 disposable guest and TCP probe are prepared are explicitly TBD rather than invented.
+These values describe the recommended configuration. They are intentionally **not yet executable**: a new ADR must precede V02, and values that can exist only after the V02 disposable guest and TCP probe are prepared are explicitly TBD rather than invented.
 
 ```sh
 T20_URI='qemu:///system'
@@ -62,7 +62,7 @@ T20_PEER_PORT='TBD before V02'
 
 Before V02:
 
-1. obtain owner approval and add the separate machine-type ADR;
+1. add the separate machine-type ADR;
 2. create a new disposable `t20-v02-q35` by requesting `q35` through `qemu:///system` (do not recreate or reuse either V01 domain);
 3. set `T20_GUEST` to that guest's actual `user@address`;
 4. select and start the operator-owned same-libvirt-network TCP peer, then replace both peer TBD values; and
@@ -361,4 +361,4 @@ cleanup_failed=0
 - [x] Unknown guest/TCP-peer values are `TBD before V02`, not invented.
 - [x] Operational maturity and compatibility are applied as the approved tie-break.
 - [x] Disposable resources were prefixed `t20-`, did not reuse an existing name/path, had autostart disabled, and were removed.
-- [ ] Final owner approval is deliberately pending. This is the one V01 contract item not yet satisfiable by the implementation writer; the exact required human decision is to approve or reject the QEMU/KVM Q35 recommendation at the parent/user checkpoint.
+- [x] Final owner approval of the QEMU/KVM Q35 recommendation is recorded from the canonical source above.
