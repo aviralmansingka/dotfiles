@@ -36,6 +36,14 @@ cleanup() {
 state_hash() {
   shasum -a 256 "$tmp/herdr.json" | awk '{print $1}'
 }
+topology_hash() {
+  python3 - "$tmp/herdr.json" <<'PY'
+import hashlib, json, sys
+state = json.load(open(sys.argv[1]))
+value = json.dumps({key: state[key] for key in ("agents", "tabs", "panes")}, sort_keys=True, separators=(",", ":"))
+print(hashlib.sha256(value.encode()).hexdigest())
+PY
+}
 assert_fails_closed() {
   name=$1
   before=$(state_hash)
@@ -183,6 +191,78 @@ want = sys.argv[2].split()
 print(sum(json.loads(line)[:2] == want for line in open(sys.argv[1])))
 PY
 }
+assert_bad_pane_run() {
+  name=$1
+  HERDR_FAKE_RESPONSE_COMMAND='pane run'
+  HERDR_FAKE_RESPONSE=$2
+  export HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+  before=$(topology_hash)
+  before_run=$(command_count 'pane run')
+  before_close=$(command_count 'tab close')
+  if attach >"$tmp/$name.stdout" 2>"$tmp/$name.stderr"; then
+    echo "$name pane run response unexpectedly attached" >&2
+    exit 1
+  fi
+  test ! -s "$tmp/$name.stdout"
+  test "$before" = "$(topology_hash)"
+  test "$((before_run + 1))" = "$(command_count 'pane run')"
+  test "$((before_close + 1))" = "$(command_count 'tab close')"
+  unset HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+}
+assert_bad_pane_run wrong-run-type '{"id":"fake","result":{"type":"tab_closed","pane_id":"wrong"}}'
+assert_bad_pane_run wrong-run-id '{"id":"fake","result":{"type":"pane_run","pane_id":"wrong"}}'
+
+# Cleanup must not report success for the wrong mutation type or identity.
+attach >"$tmp/mutation-close.json"
+eval "$(python3 - "$tmp/mutation-close.json" <<'PY'
+import json, shlex, sys
+value = json.load(open(sys.argv[1]))
+for key in ("tab_id", "pane_id", "terminal_id"):
+    print(f"{key}={shlex.quote(value[key])}")
+PY
+)"
+assert_bad_close() {
+  name=$1
+  HERDR_FAKE_RESPONSE_COMMAND='tab close'
+  HERDR_FAKE_RESPONSE=$2
+  export HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+  before=$(state_hash)
+  before_close=$(command_count 'tab close')
+  if cleanup "$tab_id" "$pane_id" "$terminal_id" >"$tmp/$name.stdout" 2>"$tmp/$name.stderr"; then
+    echo "$name tab close response unexpectedly cleaned up" >&2
+    exit 1
+  fi
+  test ! -s "$tmp/$name.stdout"
+  test "$before" = "$(state_hash)"
+  test "$((before_close + 1))" = "$(command_count 'tab close')"
+  unset HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+}
+assert_bad_close wrong-close-type "{\"id\":\"fake\",\"result\":{\"type\":\"pane_run\",\"tab_id\":\"$tab_id\"}}"
+assert_bad_close wrong-close-id '{"id":"fake","result":{"type":"tab_closed","tab_id":"unrelated-tab"}}'
+cleanup "$tab_id" "$pane_id" "$terminal_id" >"$tmp/mutation-close-cleanup.json"
+
+# A create response may not claim identities from the complete pre-create snapshot.
+companion_label=$(python3 - <<'PY'
+import hashlib
+print("Vault Hunter Atlas · " + hashlib.sha256(b"run-03\0ws-target").hexdigest())
+PY
+)
+HERDR_FAKE_RESPONSE_COMMAND='tab create'
+HERDR_FAKE_RESPONSE="{\"id\":\"fake\",\"result\":{\"type\":\"tab_created\",\"tab\":{\"workspace_id\":\"ws-target\",\"tab_id\":\"unrelated-tab\",\"label\":\"$companion_label\",\"pane_count\":1},\"root_pane\":{\"workspace_id\":\"ws-target\",\"tab_id\":\"unrelated-tab\",\"pane_id\":\"unrelated-pane\",\"terminal_id\":\"unrelated-terminal\"}}}"
+export HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+before=$(state_hash)
+before_run=$(command_count 'pane run')
+before_close=$(command_count 'tab close')
+if attach >"$tmp/spoofed-existing.stdout" 2>"$tmp/spoofed-existing.stderr"; then
+  echo "spoofed existing create identities unexpectedly attached" >&2
+  exit 1
+fi
+test ! -s "$tmp/spoofed-existing.stdout"
+test "$before" = "$(state_hash)"
+test "$before_run" = "$(command_count 'pane run')"
+test "$before_close" = "$(command_count 'tab close')"
+unset HERDR_FAKE_RESPONSE_COMMAND HERDR_FAKE_RESPONSE
+
 assert_malformed_state_fails_closed() {
   name=$1
   HERDR_FAKE_RESPONSE_COMMAND=$2
@@ -238,6 +318,8 @@ for line in open(sys.argv[2]):
     assert tuple(args[:2]) in allowed, args
     if args[:2] == ["tab", "close"]:
         assert args[2] not in {"unrelated-tab", "other-tab"}
+    if args[:2] == ["pane", "run"]:
+        assert args[2] not in {"unrelated-pane", "other-pane"}
     if args[:2] == ["tab", "create"]:
         assert args[args.index("--workspace") + 1] == "ws-target" and "--no-focus" in args
 PY

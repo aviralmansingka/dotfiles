@@ -207,7 +207,7 @@ func (c Client) Attach(runID, workspaceID, stateDir string) (Tuple, error) {
 		return owned[0], nil
 	}
 	if len(owned) == 1 {
-		if err := c.call(nil, "tab", "close", owned[0].TabID); err != nil {
+		if err := c.closeTab(owned[0].TabID); err != nil {
 			return Tuple{}, err
 		}
 	}
@@ -220,36 +220,37 @@ func (c Client) Attach(runID, workspaceID, stateDir string) (Tuple, error) {
 	if err := c.call(&created, "tab", "create", "--workspace", workspaceID, "--label", label(runID, workspaceID), "--no-focus"); err != nil {
 		return Tuple{}, err
 	}
-	rollback := func() {
-		if created.Tab != nil && created.Tab.WorkspaceID == workspaceID && created.Tab.Label == label(runID, workspaceID) && created.Tab.TabID != "" {
-			c.call(nil, "tab", "close", created.Tab.TabID) // best-effort rollback of only the tab just created
-		}
-	}
-	if created.Type != "tab_created" || created.Tab == nil || created.RootPane == nil {
-		rollback()
+	if created.Tab == nil || created.RootPane == nil {
 		return Tuple{}, errors.New("Herdr returned an incomplete companion tuple")
 	}
 	tuple := Tuple{RunID: runID, WorkspaceID: workspaceID, TabID: created.Tab.TabID, PaneID: created.RootPane.PaneID, TerminalID: created.RootPane.TerminalID}
-	if created.Tab.WorkspaceID != workspaceID || created.Tab.Label != label(runID, workspaceID) || created.Tab.PaneCount != 1 || created.RootPane.WorkspaceID != workspaceID || created.RootPane.TabID != created.Tab.TabID || !complete(tuple) {
+	isNew := newTuple(s, tuple)
+	rollback := func() {
+		current, err := c.list(workspaceID)
+		if isNew && err == nil && exactCreated(current, tuple, label(runID, workspaceID)) {
+			_ = c.closeTab(tuple.TabID) // best-effort rollback of only the exact tab just created
+		}
+	}
+	if created.Type != "tab_created" || created.Tab.WorkspaceID != workspaceID || created.Tab.Label != label(runID, workspaceID) || created.Tab.PaneCount != 1 || created.RootPane.WorkspaceID != workspaceID || created.RootPane.TabID != created.Tab.TabID || !complete(tuple) || !isNew {
 		rollback()
 		return Tuple{}, errors.New("Herdr returned an incomplete companion tuple")
 	}
+	current, err := c.list(workspaceID)
+	if err != nil || !exactCreated(current, tuple, label(runID, workspaceID)) {
+		rollback()
+		return Tuple{}, errors.New("Herdr did not create the exact companion tuple")
+	}
 	command := shellCommand(tuple, c.atlasArgv(runID, stateDir))
-	if err := c.call(nil, "pane", "run", tuple.PaneID, command); err != nil {
-		c.call(nil, "tab", "close", tuple.TabID)
+	if err := c.runPane(tuple.PaneID, command); err != nil {
+		rollback()
 		return Tuple{}, err
 	}
-	var info struct {
-		Type        string       `json:"type"`
-		ProcessInfo *processInfo `json:"process_info"`
+	current, err = c.inspect(runID, workspaceID)
+	if err == nil {
+		owned, err = c.exactOwned(current, runID, workspaceID, stateDir)
 	}
-	atlas := c.atlasArgv(runID, stateDir)
-	if err := c.call(&info, "pane", "process-info", "--pane", tuple.PaneID); err != nil {
-		c.call(nil, "tab", "close", tuple.TabID)
-		return Tuple{}, err
-	}
-	if err := validProcessInfo(info.Type, info.ProcessInfo, tuple.PaneID); err != nil || !ownedProcess(info.ProcessInfo.Processes, tuple, atlas) || ambiguousAtlas(info.ProcessInfo.Processes, atlas) || !healthy(info.ProcessInfo.Processes, atlas) {
-		c.call(nil, "tab", "close", tuple.TabID)
+	if err != nil || len(owned) != 1 || owned[0] != tuple || !healthy(current.processes[tuple.PaneID], c.atlasArgv(runID, stateDir)) {
+		rollback()
 		return Tuple{}, errors.New("companion process did not start with exact ownership")
 	}
 	return tuple, nil
@@ -276,7 +277,35 @@ func (c Client) Cleanup(want Tuple, stateDir string) error {
 	if owned[0] != want {
 		return errors.New("companion ownership tuple does not match")
 	}
-	return c.call(nil, "tab", "close", want.TabID)
+	return c.closeTab(want.TabID)
+}
+
+func (c Client) runPane(paneID, command string) error {
+	var result struct {
+		Type   string `json:"type"`
+		PaneID string `json:"pane_id"`
+	}
+	if err := c.call(&result, "pane", "run", paneID, command); err != nil {
+		return err
+	}
+	if result.Type != "pane_run" || result.PaneID != paneID {
+		return errors.New("invalid Herdr pane run result")
+	}
+	return nil
+}
+
+func (c Client) closeTab(tabID string) error {
+	var result struct {
+		Type  string `json:"type"`
+		TabID string `json:"tab_id"`
+	}
+	if err := c.call(&result, "tab", "close", tabID); err != nil {
+		return err
+	}
+	if result.Type != "tab_closed" || result.TabID != tabID {
+		return errors.New("invalid Herdr tab close result")
+	}
+	return nil
 }
 
 func (c Client) validate(runID, workspaceID string) error {
@@ -286,7 +315,7 @@ func (c Client) validate(runID, workspaceID string) error {
 	return nil
 }
 
-func (c Client) inspect(runID, workspaceID string) (snapshot, error) {
+func (c Client) list(workspaceID string) (snapshot, error) {
 	var listedTabs struct {
 		Type string `json:"type"`
 		Tabs []tab  `json:"tabs"`
@@ -317,7 +346,16 @@ func (c Client) inspect(runID, workspaceID string) (snapshot, error) {
 			return snapshot{}, errors.New("invalid Herdr pane list result")
 		}
 	}
-	s := snapshot{tabs: listedTabs.Tabs, panes: listedPanes.Panes, processes: map[string][]process{}, candidates: map[string]bool{}}
+	return snapshot{tabs: listedTabs.Tabs, panes: listedPanes.Panes}, nil
+}
+
+func (c Client) inspect(runID, workspaceID string) (snapshot, error) {
+	s, err := c.list(workspaceID)
+	if err != nil {
+		return snapshot{}, err
+	}
+	s.processes = map[string][]process{}
+	s.candidates = map[string]bool{}
 	expected := label(runID, workspaceID)
 	for _, t := range s.tabs {
 		if t.Label == expected {
@@ -353,6 +391,41 @@ func (c Client) inspect(runID, workspaceID string) (snapshot, error) {
 		}
 	}
 	return s, nil
+}
+
+func newTuple(before snapshot, tuple Tuple) bool {
+	for _, tab := range before.tabs {
+		if tab.TabID == tuple.TabID {
+			return false
+		}
+	}
+	for _, pane := range before.panes {
+		if pane.TabID == tuple.TabID || pane.PaneID == tuple.PaneID || pane.TerminalID == tuple.TerminalID {
+			return false
+		}
+	}
+	return true
+}
+
+func exactCreated(current snapshot, tuple Tuple, expectedLabel string) bool {
+	tabs, panes := 0, 0
+	for _, tab := range current.tabs {
+		if tab.TabID == tuple.TabID {
+			tabs++
+			if tab.WorkspaceID != tuple.WorkspaceID || tab.Label != expectedLabel || tab.PaneCount != 1 {
+				return false
+			}
+		}
+	}
+	for _, pane := range current.panes {
+		if pane.TabID == tuple.TabID || pane.PaneID == tuple.PaneID || pane.TerminalID == tuple.TerminalID {
+			panes++
+			if pane.WorkspaceID != tuple.WorkspaceID || pane.TabID != tuple.TabID || pane.PaneID != tuple.PaneID || pane.TerminalID != tuple.TerminalID {
+				return false
+			}
+		}
+	}
+	return tabs == 1 && panes == 1
 }
 
 func validProcessInfo(resultType string, info *processInfo, paneID string) error {
