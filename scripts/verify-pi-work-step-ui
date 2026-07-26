@@ -44,8 +44,8 @@ cleanup() {
 trap cleanup EXIT
 
 agent_dir="$verify_dir/agent"
-native_subagents_dir="$repo_root/pi/.pi/agent/npm/node_modules/pi-subagents"
-native_subagents_lock="$repo_root/pi/.pi/agent/npm/package-lock.json"
+native_subagents_dir="$HOME/.pi/agent/git/github.com/amosblomqvist/pi-subagents"
+native_subagents_entry="$native_subagents_dir/index.ts"
 main_raw="$verify_dir/main.raw"
 missing_raw="$verify_dir/missing.raw"
 resumed_raw="$verify_dir/resumed.raw"
@@ -57,30 +57,28 @@ draft_capture="$verify_dir/draft.txt"
 pending_capture="$verify_dir/pending.txt"
 narrow_capture="$verify_dir/narrow.txt"
 subagent_release="$verify_dir/subagent-release"
+subagent_progress_release="$verify_dir/subagent-progress-release"
+subagent_initial_marker="$verify_dir/subagent-initial-update-emitted"
 subagent_update_marker="$verify_dir/subagent-update-emitted"
 subagent_exception_marker="$verify_dir/subagent-fixture-exception"
+subagent_spec="$verify_dir/subagent-spec.json"
+subagent_initial_capture="$verify_dir/subagent-initial.raw"
 subagent_running_capture="$verify_dir/subagent-running.txt"
 subagent_collapsed_capture="$verify_dir/subagent-collapsed.txt"
 subagent_expanded_capture="$verify_dir/subagent-expanded.txt"
+subagent_empty_capture="$verify_dir/subagent-empty.txt"
 
 if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
 	echo "Visible-thinking prompt customization is still installed" >&2
 	exit 1
 fi
 
-if ! git -C "$repo_root" ls-files --error-unmatch pi/.pi/agent/npm/package-lock.json >/dev/null 2>&1; then
-	echo "Native subagent setup failure (missing): tracked pi/.pi/agent/npm/package-lock.json was not found" >&2
-	exit 1
-fi
-
 node - \
 	"$repo_root/pi/.pi/agent/settings.json" \
-	"$native_subagents_lock" \
-	"$native_subagents_dir/package.json" \
-	"$native_subagents_dir/index.ts" <<'NODE'
+	"$native_subagents_entry" <<'NODE'
 const fs = require("node:fs");
-const [settingsPath, lockPath, installedPackagePath, installedEntryPath] = process.argv.slice(2);
-const expectedVersion = "0.37.0";
+const [settingsPath, nativeEntryPath] = process.argv.slice(2);
+const configuredEntry = "git/github.com/amosblomqvist/pi-subagents/index.ts";
 
 function fail(kind, message) {
 	console.error(`Native subagent setup failure (${kind}): ${message}`);
@@ -98,35 +96,14 @@ function readJson(path, kind, label) {
 
 const settings = readJson(settingsPath, "stale", "pi settings");
 const configured = settings.packages?.some((entry) =>
-	(typeof entry === "string" ? entry : entry?.source) === "npm:pi-subagents",
+	(typeof entry === "string" ? entry : entry?.source) === configuredEntry,
 );
-if (!configured) fail("missing", "pi-subagents is not configured in pi/.pi/agent/settings.json");
+if (!configured)
+	fail("missing", `${configuredEntry} is not selected in pi/.pi/agent/settings.json`);
+if (!fs.existsSync(nativeEntryPath))
+	fail("missing", `settings-selected pi-subagents entry point was not found: ${nativeEntryPath}`);
 
-const lock = readJson(lockPath, "stale", "tracked pi package lock");
-if (typeof lock.packages?.[""]?.dependencies?.["pi-subagents"] !== "string")
-	fail("stale", "tracked package lock root no longer declares pi-subagents");
-const lockedEntries = Object.entries(lock.packages ?? {}).filter(([key]) =>
-	key === "node_modules/pi-subagents" || key.endsWith("/node_modules/pi-subagents"),
-);
-if (lockedEntries.length === 0) fail("missing", "pi-subagents has no package entry in the tracked package lock");
-const lockedVersions = [...new Set(lockedEntries.map(([, entry]) => entry?.version).filter(Boolean))];
-if (lockedVersions.length !== 1)
-	fail("stale", `tracked package lock has ambiguous pi-subagents versions: ${lockedVersions.join(", ") || "none"}`);
-const lockedVersion = lockedVersions[0];
-if (lockedVersion !== expectedVersion)
-	fail("mismatch", `verifier requires pi-subagents ${expectedVersion}, but the tracked lock selects ${lockedVersion}`);
-
-const installedPackage = readJson(installedPackagePath, "stale", "installed pi-subagents package metadata");
-if (!fs.existsSync(installedEntryPath))
-	fail("missing", `installed pi-subagents entry point was not found: ${installedEntryPath}`);
-if (installedPackage.name !== "pi-subagents")
-	fail("mismatch", `installed package identity is ${JSON.stringify(installedPackage.name)}, not "pi-subagents"`);
-if (typeof installedPackage.version !== "string")
-	fail("stale", "installed pi-subagents package metadata has no version");
-if (installedPackage.version !== lockedVersion)
-	fail("stale", `installed pi-subagents ${installedPackage.version} does not match locked ${lockedVersion}`);
-
-console.log(`Native subagent package setup verified: tracked lock and installed package both select pi-subagents ${lockedVersion}.`);
+console.log(`Native subagent package setup verified: settings select ${configuredEntry}.`);
 NODE
 
 mkdir -p "$agent_dir/extensions" "$agent_dir/native"
@@ -734,14 +711,36 @@ console.log("Pi work-step terminal state verified: prompt-scoped thinking remain
 NODE
 
 printf -v pi_command \
-	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
+	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
 	"$agent_dir" \
 	"$subagent_release" \
+	"$subagent_progress_release" \
+	"$subagent_initial_marker" \
 	"$subagent_update_marker" \
 	"$subagent_exception_marker" \
+	"$subagent_spec" \
 	"$PI_VERIFY_THEME" \
 	"$verify_dir/subagent-session.jsonl"
 tmux -L "$tmux_socket" new-session -d -s verify -x 120 -y 40 -c "$repo_root" "$pi_command"
+
+wait_for_subagent_initial() {
+	local screen
+	for _ in {1..200}; do
+		if [[ -f "$subagent_exception_marker" ]]; then
+			echo "Native subagent setup failure (fixture exception): $(tr '\n' ' ' < "$subagent_exception_marker")" >&2
+			return 1
+		fi
+		screen="$(tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 2>/dev/null || true)"
+		if [[ -f "$subagent_initial_marker" ]] \
+			&& grep -Fq "Thinking…" <<<"$screen" \
+			&& grep -Fq "◉ 1 call · subagent · running" <<<"$screen"; then
+			return
+		fi
+		sleep 0.1
+	done
+	echo "Native subagent setup failure (initial state): semantic Thinking… was not observable before child tool progress" >&2
+	return 1
+}
 
 wait_for_subagent_setup() {
 	local screen pane_dead pane_status
@@ -786,114 +785,157 @@ wait_for_subagent_setup() {
 wait_for_terminal "faux-work-step" "Native subagent setup failure (process start): Pi did not reach the fixture model prompt"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "subagent composition"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_subagent_initial
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_initial_capture"
+touch "$subagent_progress_release"
 wait_for_subagent_setup
 wait_for_terminal \
 	"NATIVE_RUNNING_PROGRESS_SENTINEL" \
 	"Native subagent composition assertion failed: running progress sentinel was not rendered"
-tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 > "$subagent_running_capture"
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_running_capture"
 touch "$subagent_release"
 wait_for_terminal \
-	"NATIVE_COMPLETED_OUTPUT_SENTINEL" \
-	"Native subagent composition assertion failed: completed output sentinel was not rendered"
-tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 > "$subagent_collapsed_capture"
+	"VERIFY_SUBAGENT_COMPOSITION_DONE" \
+	"Native subagent composition assertion failed: completed fixture turn did not settle"
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_collapsed_capture"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 C-o
 wait_for_terminal \
 	"EXPANDED_TASK_DETAIL_SENTINEL" \
 	"Native subagent composition assertion failed: expanded task sentinel was not rendered"
-tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 > "$subagent_expanded_capture"
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_expanded_capture"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 C-o
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "subagent empty output"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_terminal \
+	"VERIFY_SUBAGENT_EMPTY_DONE" \
+	"Native subagent composition assertion failed: empty-output fixture turn did not settle"
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_empty_capture"
 stop_tmux
 
-node - "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" <<'NODE'
+node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" <<'NODE'
 const fs = require("node:fs");
 
-const running = fs.readFileSync(process.argv[2], "utf8");
-const collapsed = fs.readFileSync(process.argv[3], "utf8");
-const expanded = fs.readFileSync(process.argv[4], "utf8");
+const spec = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 
-function fail(message) {
-	console.error(message);
+function parseTerminal(path) {
+	const raw = fs.readFileSync(path, "utf8");
+	let plain = "";
+	const foregrounds = [];
+	let foreground = "default";
+	const append = (value) => {
+		plain += value;
+		for (const _ of value) foregrounds.push(foreground);
+	};
+	const applySgr = (parameters) => {
+		const values = parameters === "" ? [0] : parameters.split(";").map((value) => Number(value || 0));
+		for (let index = 0; index < values.length; index++) {
+			const value = values[index];
+			if (value === 0 || value === 39) foreground = "default";
+			else if (value === 38 && values[index + 1] === 2) {
+				foreground = `rgb:${values[index + 2]},${values[index + 3]},${values[index + 4]}`;
+				index += 4;
+			} else if (value === 38 && values[index + 1] === 5) {
+				foreground = `indexed:${values[index + 2]}`;
+				index += 2;
+			}
+		}
+	};
+	for (let index = 0; index < raw.length; ) {
+		if (raw[index] !== "\u001b") {
+			append(raw[index++]);
+			continue;
+		}
+		if (raw[index + 1] === "[") {
+			let end = index + 2;
+			while (end < raw.length && !(raw.charCodeAt(end) >= 0x40 && raw.charCodeAt(end) <= 0x7e)) end++;
+			if (raw[end] === "m") applySgr(raw.slice(index + 2, end));
+			index = end + 1;
+			continue;
+		}
+		index += 2;
+	}
+	return { raw, plain, foregrounds };
+}
+
+const initial = parseTerminal(process.argv[3]);
+const running = parseTerminal(process.argv[4]);
+const collapsed = parseTerminal(process.argv[5]);
+const expanded = parseTerminal(process.argv[6]);
+const empty = parseTerminal(process.argv[7]);
+const failures = [];
+const check = (condition, message) => {
+	if (!condition) failures.push(message);
+};
+const count = (text, value) => text.split(value).length - 1;
+const colorInCommand = (terminal, command, token) => {
+	const commandIndex = terminal.plain.indexOf(command);
+	const tokenIndex = command.indexOf(token);
+	const index = commandIndex < 0 || tokenIndex < 0 ? -1 : commandIndex + tokenIndex;
+	return index < 0 ? "missing" : terminal.foregrounds[index];
+};
+
+check(initial.plain.includes("Thinking…"), "Initial native state did not render semantic Thinking…");
+for (const command of spec.commands)
+	check(!initial.plain.includes(command.command), `Child command rendered before initial Thinking…: ${command.command}`);
+for (const screen of [initial, running, collapsed, expanded, empty])
+	check(!screen.plain.includes(spec.reasoningSentinel), "Native reasoning sentinel leaked into visible UI");
+
+check(running.plain.includes("◉ Delegate deterministic subagent verification"), "T21 parent Activity disappeared while the subagent was running");
+check(running.plain.includes("◉ 1 call · subagent · running"), "T21 parent Activity lost its running subagent summary");
+check(collapsed.plain.includes("● Delegate deterministic subagent verification"), "T21 parent Activity disappeared after subagent completion");
+check(collapsed.plain.includes("● 1 call · subagent · completed"), "T21 parent Activity lost its completed subagent summary");
+
+let previous = -1;
+for (const event of spec.chronology) {
+	const index = running.plain.indexOf(event);
+	check(index > previous, `Child and nested progress lost fixture chronology at ${event}`);
+	previous = index;
+}
+
+const expectedColors = {
+	prompt: "rgb:102,92,84",
+	command: "rgb:242,133,52",
+	argument: "rgb:235,219,178",
+	flagVariable: "rgb:211,134,155",
+	stringPath: "rgb:176,184,70",
+	operator: "rgb:233,177,67",
+};
+for (const command of spec.commands) {
+	for (const terminal of [running, collapsed, expanded])
+		check(count(terminal.plain, command.command) === 1, `${command.shell} command was not rendered exactly once: ${command.command}`);
+	const lines = running.plain.split(/\r?\n/u);
+	const commandLine = lines.findIndex((line) => line.includes(command.command));
+	const toolLine = lines.findIndex((line, index) => index < commandLine && line.trimEnd().endsWith(command.shell));
+	check(toolLine >= 0 && commandLine === toolLine + 1, `${command.shell} command was not a leaf beneath its exact tool node`);
+	const commandIndex = running.plain.indexOf(command.command);
+	check(commandIndex >= 2 && running.plain.slice(commandIndex - 2, commandIndex) === "$ ", `${command.shell} command leaf lost its semantic prompt`);
+	if (commandIndex >= 2)
+		check(running.foregrounds[commandIndex - 2] === expectedColors.prompt, `${command.shell} prompt used ${running.foregrounds[commandIndex - 2]}, expected ${expectedColors.prompt}`);
+	for (const [category, tokens] of Object.entries(command.tokens))
+		for (const token of tokens)
+			check(colorInCommand(running, command.command, token) === expectedColors[category], `${command.shell} ${category} token ${token} used ${colorInCommand(running, command.command, token)}, expected ${expectedColors[category]}`);
+}
+
+check(collapsed.plain.includes(spec.collapsedProse), "Collapsed native completion lost final prose");
+check(!collapsed.plain.includes(spec.expandedTaskSentinel), "Collapsed native call leaked the full task");
+check(expanded.plain.includes(spec.expandedTaskSentinel), "Ctrl+O-expanded native call lost the full task");
+check(expanded.plain.includes(spec.finalHeading), "Ctrl+O-expanded native result lost final Markdown");
+check(expanded.plain.includes(spec.finalBoldText), "Ctrl+O-expanded native Markdown lost semantic prose");
+check(!expanded.plain.includes(`**${spec.finalBoldText}**`), "Ctrl+O-expanded final response was not rendered as Markdown");
+check(new RegExp(`(?:^|\\s)${spec.usage.turns}(?:\\s+turns?|\\s*turns?)`, "mu").test(expanded.plain), "Expanded native usage lost fixture-derived turns");
+check(expanded.plain.includes(`in:${spec.usage.input}`), "Expanded native usage lost fixture-derived input tokens");
+check(expanded.plain.includes(`out:${spec.usage.output}`), "Expanded native usage lost fixture-derived output tokens");
+check(count(collapsed.plain, `subagent ${spec.rootAgent}`) === 1, "A competing renderer duplicated the native subagent call");
+check(count(empty.plain, spec.emptyFallback) === 1, "Empty-output completion did not render the exact deterministic fallback once");
+check(!empty.plain.includes("(no output)"), "Empty-output completion leaked the legacy fallback");
+
+if (failures.length) {
+	console.error(`Accepted V01 behavior assertions failed (${failures.length}):`);
+	for (const failure of failures) console.error(`- ${failure}`);
 	process.exit(1);
 }
 
-function requireText(screen, text, message) {
-	if (!screen.includes(text)) fail(message);
-}
-
-function requireMatch(screen, pattern, message) {
-	if (!pattern.test(screen)) fail(message);
-}
-
-requireText(
-	running,
-	"◉ Delegate deterministic subagent verification",
-	"Parent Activity was not visible while the deterministic subagent was running",
-);
-requireText(
-	running,
-	"◉ 1 call · subagent · running",
-	"Parent Activity did not retain the running subagent summary",
-);
-requireText(running, "subagent scout", "Native subagent call renderer did not compose with the running parent Activity");
-requireText(
-	running,
-	"NATIVE_RUNNING_PROGRESS_SENTINEL",
-	"Native subagent running progress was not retained",
-);
-requireText(
-	collapsed,
-	"● Delegate deterministic subagent verification",
-	"Parent Activity was not visible with the completed native subagent UI",
-);
-requireText(
-	collapsed,
-	"● 1 call · subagent · completed",
-	"Parent Activity did not retain the completed subagent summary",
-);
-requireText(
-	collapsed,
-	"subagent scout",
-	"Native subagent call did not remain visible in collapsed completed state",
-);
-requireText(collapsed, "✓ scout", "Native subagent completion state was not retained");
-requireText(
-	collapsed,
-	"NATIVE_COMPLETED_OUTPUT_SENTINEL",
-	"Native subagent completed output was not retained",
-);
-requireText(
-	collapsed,
-	"+1 nested run (1 complete)",
-	"Native nested-child completion was not retained",
-);
-if (collapsed.includes("EXPANDED_TASK_DETAIL_SENTINEL"))
-	fail("Collapsed native subagent result leaked the expanded task body");
-if (collapsed.includes("composition preserved"))
-	fail("Collapsed native subagent result leaked expanded final Markdown");
-
-requireText(
-	expanded,
-	"● Delegate deterministic subagent verification",
-	"Parent Activity disappeared in Ctrl+O-expanded state",
-);
-requireText(
-	expanded,
-	"EXPANDED_TASK_DETAIL_SENTINEL",
-	"Ctrl+O-expanded native subagent call lost the full task",
-);
-requireText(
-	expanded,
-	"NATIVE_COMPLETED_OUTPUT_SENTINEL",
-	"Ctrl+O-expanded native subagent result lost final Markdown",
-);
-requireText(expanded, "composition preserved", "Expanded final Markdown lost its semantic content");
-requireText(expanded, "✓ researcher", "Expanded nested run lost the researcher agent identity");
-requireMatch(expanded, /(?:^|\s)turns?(?:\s|$)/mu, "Expanded native usage lost its turn label");
-requireMatch(expanded, /(?:^|\s)in:\S+/mu, "Expanded native usage lost its input-token label");
-requireMatch(expanded, /(?:^|\s)out:\S+/mu, "Expanded native usage lost its output-token label");
-if (expanded.includes("**composition preserved**"))
-	fail("Expanded subagent output was not rendered as Markdown");
-
-console.log("Pi native subagent composition verified: Activity and native progress compose across running, completed, nested, collapsed, and expanded states.");
+console.log("Pi native subagent V01 verified: safe initial state, chronological nested tools, syntax leaves, collapsed/expanded completion, usage, fallback, and renderer ownership compose with T21.");
 NODE
 
 if [[ "${PI_VERIFY_LIVE:-0}" == "1" ]]; then
