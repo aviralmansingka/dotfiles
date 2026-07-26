@@ -86,6 +86,9 @@ func TestT06V02SelectsRegisteredTaskByCanonicalPath(t *testing.T) {
 	if task.ID != "T02" || task.RunID != "atlas-rich-run" {
 		t.Fatalf("selected Task/run = %s/%s, want T02/atlas-rich-run", task.ID, task.RunID)
 	}
+	if task.Status != Active {
+		t.Fatalf("completed Run changed Task status to %s, want Active from authoritative note", task.Status)
+	}
 }
 
 func TestT06V03SelectsUnregisteredTaskByCanonicalPath(t *testing.T) {
@@ -111,7 +114,7 @@ func TestT06V01NewestUnfinishedRunAndRecordedOrder(t *testing.T) {
 		{RunID: "newer-z", UpdatedAt: "2026-01-02T00:00:00Z", Task: vaultregistry.Task{Path: path}, Lifecycle: []vaultregistry.Lifecycle{{ObservedAt: "2026-01-02T00:00:00Z", State: "done"}}},
 	}
 	run, stage := selectedRun(runs, path, false)
-	if run == nil || run.RunID != "newer-a" || stage != "active" {
-		t.Fatalf("selected %v/%q, want newer-a/active", run, stage)
+	if run == nil || run.RunID != "newer-z" || stage != "active" {
+		t.Fatalf("selected %v/%q, want registered newer-z/status active", run, stage)
 	}
 }

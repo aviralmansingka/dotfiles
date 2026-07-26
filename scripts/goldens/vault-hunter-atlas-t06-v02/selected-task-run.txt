@@ -2,9 +2,9 @@ Selected Task T02 · 1_projects/pi-agent/themes/pi-customization/features/vault-
 Run atlas-rich-run · Task T02 · Compact Task Run Atlas
 Task Goals                       │ Verifier Journey
 ─────────────────────────────────┼──────────────────────────────────────────────
-▶ V T02.V01 · verifier · active  │ T02.V01 · verifier · active
+▶ ✓ T02.V01 · verifier · done    │ T02.V01 · verifier · done
                                  │
-                                 │ V 12:05 verifier · active
+                                 │ ✓ 12:05 verifier · done
                                  │
                                  │ Evidence
                                  │ none recorded

@@ -19,6 +19,7 @@ manifest() {
 source_vault_before=$(manifest "$fixture/vault")
 source_registry_before=$(manifest "$fixture/state")
 test "$(grep -RFl '"path":"1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md"' "$fixture/state/runs" | wc -l | tr -d ' ')" -eq 1
+grep -Fq '"state":"done"' "$fixture/state/runs/atlas-rich-run.json"
 go test -count=1 ./internal/atlas -run 'T06V02'
 go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
 cp -R "$fixture/vault" "$tmp/vault"
@@ -48,7 +49,7 @@ cmp "$tmp/feature.first" "$tmp/project.first"
 cmp "$golden" "$tmp/feature.first"
 grep -Fq "Selected Task T02 · $task" "$tmp/feature.first"
 grep -Fq 'Run atlas-rich-run · Task T02 · Compact Task Run Atlas' "$tmp/feature.first"
-grep -Fq '▶ V T02.V01 · verifier · active' "$tmp/feature.first"
+grep -Fq '▶ ✓ T02.V01 · verifier · done' "$tmp/feature.first"
 test ! -s "$tmp/invocations"
 test ! -e "$tmp/home/retained-registry-must-not-be-read"
 test "$vault_before" = "$(manifest "$tmp/vault")"
@@ -57,7 +58,7 @@ test "$source_vault_before" = "$(manifest "$fixture/vault")"
 test "$source_registry_before" = "$(manifest "$fixture/state")"
 
 printf 'selected Task: %s\n' "$task"
-printf 'opened Run: atlas-rich-run\n'
+printf 'opened completed Run: atlas-rich-run\n'
 printf 'fixture vault manifest: %s\n' "$vault_before"
 printf 'fixture Registry manifest: %s\n' "$registry_before"
 echo 'T06.V02 registered Task selection opens existing T02 Task Run Atlas: PASS'

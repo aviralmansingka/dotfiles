@@ -253,24 +253,27 @@ func renderProject(a Aggregate) string {
 }
 
 func selectedRun(runs []vaultregistry.Run, path string, feature bool) (*vaultregistry.Run, string) {
-	var selected *vaultregistry.Run
+	var registered, unfinished *vaultregistry.Run
 	for i := range runs {
 		r := &runs[i]
 		match := normalizePath(r.Task.Path) == path
 		if feature {
 			match = r.Task.Kind == "feature" && (normalizePath(r.Task.FeaturePath) == path || normalizePath(r.Task.Path) == path)
 		}
-		if !match || currentStage(*r) == "done" {
+		if !match {
 			continue
 		}
-		if selected == nil || r.UpdatedAt > selected.UpdatedAt || r.UpdatedAt == selected.UpdatedAt && r.RunID > selected.RunID {
-			selected = r
+		if registered == nil || r.UpdatedAt > registered.UpdatedAt || r.UpdatedAt == registered.UpdatedAt && r.RunID > registered.RunID {
+			registered = r
+		}
+		if currentStage(*r) != "done" && (unfinished == nil || r.UpdatedAt > unfinished.UpdatedAt || r.UpdatedAt == unfinished.UpdatedAt && r.RunID > unfinished.RunID) {
+			unfinished = r
 		}
 	}
-	if selected == nil {
-		return nil, ""
+	if unfinished == nil {
+		return registered, ""
 	}
-	return selected, currentStage(*selected)
+	return registered, currentStage(*unfinished)
 }
 
 func currentStage(run vaultregistry.Run) string {
