@@ -1,0 +1,55 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture=scripts/fixtures/vault-hunter-atlas-v03/runs/atlas-lifecycle-matrix.json
+expected=scripts/fixtures/vault-hunter-atlas-v03/expected.txt
+trap_program=$(pwd)/scripts/fixtures/vault-hunter-atlas-v03/orchestration-trap
+tmp=$(mktemp -d)
+trap 'chmod -R u+rwX "$tmp"; rm -rf "$tmp"' EXIT
+
+manifest() {
+  (
+    cd "$1"
+    find . -type f -print | LC_ALL=C sort | while IFS= read -r file; do
+      shasum -a 256 "$file"
+    done
+  ) | shasum -a 256 | awk '{print $1}'
+}
+
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+mkdir -p "$tmp/state/runs" "$tmp/vault" "$tmp/traps" "$tmp/home"
+cp "$fixture" "$tmp/state/runs/"
+cp "$expected" "$tmp/vault/unrelated-sentinel"
+: >"$tmp/invocations"
+for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
+  ln -s "$trap_program" "$tmp/traps/$command"
+done
+
+state_before=$(manifest "$tmp/state")
+vault_before=$(manifest "$tmp/vault")
+chmod 500 "$tmp/state" "$tmp/state/runs" "$tmp/vault"
+chmod 400 "$tmp/state/runs/atlas-lifecycle-matrix.json" "$tmp/vault/unrelated-sentinel"
+
+HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
+  VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-read" \
+  ATLAS_V03_TRAP_LOG="$tmp/invocations" PATH="$tmp/traps:$PATH" \
+  "$tmp/vault-hunter-atlas" --run-id atlas-lifecycle-matrix --state-dir "$tmp/state" \
+  --snapshot --width 100 --height 30 >"$tmp/frame"
+
+test ! -s "$tmp/invocations"
+test "$state_before" = "$(manifest "$tmp/state")"
+test "$vault_before" = "$(manifest "$tmp/vault")"
+test ! -e "$tmp/home/retained-registry-must-not-be-read"
+echo "read-only manifests and orchestration traps: PASS"
+
+while IFS= read -r projection; do
+  if ! grep -Fq "$projection" "$tmp/frame"; then
+    echo "missing lifecycle projection: $projection" >&2
+    exit 1
+  fi
+done <"$expected"
+test "$(awk '{print $1}' "$expected" | LC_ALL=C sort -u | wc -l | tr -d ' ')" -eq 11
+
+echo "T02.V03 Atlas lifecycle and read-only authority boundary: PASS"
