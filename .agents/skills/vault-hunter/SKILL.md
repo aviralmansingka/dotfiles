@@ -1,6 +1,6 @@
 ---
 name: vault-hunter
-description: Guide work from the canonical Obsidian vault and write lifecycle, timeline, evidence, and completion checkpoints back to it. Use when invoked as $vault-hunter with a Feature, Task, Issue, checkbox, or Wayfinder reference and the work should run through Herdr-visible interactive Codex goals or agents in the owning Feature workspace.
+description: Guide work from the canonical Obsidian vault and write lifecycle, timeline, evidence, and completion checkpoints back to it. Use when invoked as $vault-hunter with a Feature, Task, Issue, checkbox, or Wayfinder reference; each Task Run owns a dedicated Herdr workspace and task worktree.
 ---
 
 # Vault Hunter
@@ -65,31 +65,35 @@ Add exactly one entry for the run:
   `[x]`.
 
 The bundled Neovim picker action is `<C-a>` **(Vault hunter) Action**. It accepts Feature and Task rows and launches
-the exact `$vault-hunter <path:line>` form. Feature and Task rows use the feature workspace and feature worktree; Task
-rows use a task-named tab. Issue references are accepted through the command even though the picker does not list
-Issue rows.
+the exact `$vault-hunter <path:line>` form. A Task row creates or reuses one dedicated
+`Project · Feature · TNN` Herdr workspace, `task/<task-slug>` worktree, and task-named driver tab. Never place two
+Task drivers in the same workspace or run a Task driver from the Feature worktree. Feature rows remain in their
+Feature workspace and worktree. Issue references are accepted through the command even though the picker does not
+list Issue rows.
 
 ## Herdr-visible Codex execution
 
-After resolving the owning Feature, dispatch every research, specification, implementation, verifier, test, and review
-stage through native Codex subagent capabilities. A dispatch is valid only when it is materialized as a full interactive
-Codex session wrapped by Herdr in the owning Feature workspace and feature worktree. A background or inherited-pane
-subagent is invalid and must be replaced before work begins.
+After resolving the owning route, dispatch every research, specification, implementation, verifier, test, and review
+stage through native Codex subagent capabilities. For a Task Run, a dispatch is valid only when it is materialized as
+a full interactive Codex session wrapped by Herdr in that Task's dedicated workspace and task worktree. Feature and
+Issue routes keep their Feature scope. A background or inherited-pane subagent is invalid and must be replaced before
+work begins.
 
 For each dispatched role:
 
-- Reuse the `Project · Feature` workspace and `feature/<feature-slug>` worktree. Never hardcode opaque IDs.
+- For a Task Run, reuse only its `Project · Feature · TNN` workspace and `task/<task-slug>` worktree. For other routes,
+  reuse the owning Feature workspace and worktree. Never hardcode opaque IDs.
 - Name the Herdr agent `codex-<feature-slug>-<run-key>-<role>` and set
   `SIDEKICK_NAMED_SESSION=<feature-slug>-<run-key>-<role>`, where `run-key` is the Task ID, `feature`, or Issue slug.
 - Give it a distinct `<run label> · <role>` Herdr tab containing exactly one full Codex pane. Start the agent as that
   tab's only pane; do not precreate a blank root pane and then split a worker beside it. Verify `pane_count=1`.
-- Treat the Herdr wrapper as one named tuple: owning Feature workspace, distinct tab label, full Codex pane under the
+- Treat the Herdr wrapper as one named tuple: owning route workspace, distinct tab label, full Codex pane under the
   agent name, and distinct Sidekick session. Capture every returned opaque ID instead of deriving one.
 - For a verifier-driven Task Run, immediately after capturing that native identity and before accepting the dispatch,
   register it against its owned goal with `vault-hunter-run participant`. Reject the dispatch if registration fails.
   Feature, Project, Issue, Wayfinder, and normal-agent dispatches never register as Run participants.
-- Use the Feature worktree as `--cwd`, give bounded repository ownership plus exact Feature and Task paths, and forbid
-  vault edits or commits.
+- Use the Task worktree as `--cwd` for Task Runs and the Feature worktree for other routes. Give bounded repository
+  ownership plus exact Feature and Task paths, and forbid vault edits or commits.
 - Monitor native subagent status plus `herdr agent get` and `herdr agent read`. If name, cwd, workspace, tab, session,
   or one-pane placement is wrong, replace the dispatch before accepting work. For a Task Run, also run
   `vault-hunter-run reconcile-workers --run-id "$run_id"` on each monitoring pass: replace `stale` launches with a
@@ -104,7 +108,7 @@ Launch a separate role without precreating its tab, then rename the returned one
 
 ```sh
 herdr agent start "codex-$feature_slug-$run_key-$role" \
-  --cwd "$feature_worktree" \
+  --cwd "$run_worktree" \
   --workspace "$workspace_id" \
   --env "SIDEKICK_NAMED_SESSION=$feature_slug-$run_key-$role" \
   --no-focus \
@@ -301,10 +305,10 @@ Always run this goal, even when it completes immediately:
    safe to repeat.
 2. Run `vault-hunter-run finish --run-id "$run_id"`. This closes only the companion pane recorded in the Registry and
    retires the Run; it never owns worker cleanup.
-3. Preserve the driver/orchestrator tab, its primary Codex pane, the owning Feature workspace and worktree, other shared
-   Feature tabs, and unrelated Neovim Workspace Tabs. `finish` closes the driver's owned Atlas pane, never the driver.
+3. Preserve the driver/orchestrator tab, its primary Codex pane, the owning Task workspace and worktree, and unrelated
+   Herdr workspaces and Neovim Workspace Tabs. `finish` closes the driver's owned Atlas pane, never the driver.
 4. Verify the captured task agent, session, tab, and pane IDs are gone, the Atlas pane is gone, and the driver plus
-   Feature workspace remain.
+   Task workspace remain.
 5. Add PR, merge, final verifier, post-merge, and cleanup evidence to the Task note.
 6. Set the Task note frontmatter to `status: done`, change its authoritative Feature checklist bullet to `[x]`, and
    derive the Feature status from its complete checklist.

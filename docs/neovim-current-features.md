@@ -440,8 +440,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
   previews or opens every row at its exact source location. Completed `[x]` tasks are hidden.
 - Inside the `<leader>vf` picker, `<C-a>` is `(Vault hunter) Action` for Feature and Task rows. It launches
   `/vault-hunter <path:line>` in a stable Codex session, then closes the picker and focuses Sidekick. Feature rows use
-  the selected `Project · Feature` Herdr workspace without a task worktree. Task rows create or reuse the isolated
-  task worktree and open its task-named tab inside that feature workspace.
+  the selected `Project · Feature` Herdr workspace without a task worktree. Each Task row creates or reuses its own
+  `Project · Feature · TNN` Herdr workspace, isolated `task/<task-slug>` worktree, and task-named driver tab.
 - `<leader>vt` opens unchecked items from `3_logs/*/backlog.md` only when they are under an exact
   `### Weekday, YYYY-MM-DD` heading; rows show the inferred date and todo text while retaining source preview.
 - Inside the `<leader>vt` picker, `<C-a>` creates or reuses a dated Pi agent in the `backlog` Herdr workspace and

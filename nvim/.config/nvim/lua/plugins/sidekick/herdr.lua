@@ -188,6 +188,63 @@ function M.ensure_feature_scope(repository, workspace_label, feature_branch)
   return feature.path and { workspace_id = workspace_id, cwd = feature.path } or nil
 end
 
+---@param repository string
+---@param workspace_label string
+---@param feature_branch string
+---@param task_branch string
+---@return table|nil scope
+function M.ensure_task_scope(repository, workspace_label, feature_branch, task_branch)
+  local normalized = M.normalize_cwd(repository)
+  local listed = M.call({ "worktree", "list", "--cwd", normalized })
+  if not listed then
+    return nil
+  end
+
+  local feature = worktree_for_branch(listed.worktrees, feature_branch)
+  if not feature then
+    local result = M.call({
+      "worktree",
+      "create",
+      "--cwd",
+      normalized,
+      "--branch",
+      feature_branch,
+      "--label",
+      workspace_label,
+      "--no-focus",
+    })
+    feature = result and result.worktree or nil
+    local temporary_workspace_id = result and result.workspace and result.workspace.workspace_id or nil
+    if not feature or not temporary_workspace_id or not M.call({ "workspace", "close", temporary_workspace_id }) then
+      return nil
+    end
+  end
+
+  local task = worktree_for_branch(listed.worktrees, task_branch)
+  local workspace_id = task and task.open_workspace_id or nil
+  if not workspace_id then
+    local action = task and "open" or "create"
+    local result = M.call({
+      "worktree",
+      action,
+      "--cwd",
+      normalized,
+      "--branch",
+      task_branch,
+      "--label",
+      workspace_label,
+      "--no-focus",
+    })
+    task = result and result.worktree or nil
+    workspace_id = result and result.workspace and result.workspace.workspace_id or nil
+  end
+  if not task or not workspace_id or not M.call({ "workspace", "rename", workspace_id, workspace_label }) then
+    return nil
+  end
+
+  return task.path and { workspace_id = workspace_id, cwd = task.path } or nil
+end
+
 ---@param agent? table
 ---@return boolean
 local function full_agent(agent)

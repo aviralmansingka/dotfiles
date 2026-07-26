@@ -295,10 +295,16 @@ function M.agent_scope(item)
     return nil
   end
   local feature_slug = vim.fs.basename(vim.fs.dirname(feature.file))
+  local task_slug = item.kind == "task"
+      and (item.linked and vim.fs.basename(item.file):gsub("%.md$", "")
+        or string.format("%s-%s", feature_slug, item.task_id:lower()))
+    or nil
   return {
     feature_branch = "feature/" .. feature_slug,
     tab_label = item.kind == "task" and string.format("%s %s", item.task_id, item.task) or item.feature,
-    workspace_label = string.format("%s · %s", item.project, item.feature),
+    task_branch = task_slug and "task/" .. task_slug or nil,
+    workspace_label = item.kind == "task" and string.format("%s · %s · %s", item.project, item.feature, item.task_id)
+      or string.format("%s · %s", item.project, item.feature),
   }
 end
 
@@ -326,7 +332,14 @@ function M.send_to_agent(item)
       or string.format("%s-%s", item.project, item.feature)
   )
   local name = "codex-" .. slug
-  local scope = herdr.ensure_feature_scope(item.repository, agent_scope.workspace_label, agent_scope.feature_branch)
+  local scope = item.kind == "task"
+      and herdr.ensure_task_scope(
+        item.repository,
+        agent_scope.workspace_label,
+        agent_scope.feature_branch,
+        agent_scope.task_branch
+      )
+    or herdr.ensure_feature_scope(item.repository, agent_scope.workspace_label, agent_scope.feature_branch)
   if not scope then
     return nil
   end
