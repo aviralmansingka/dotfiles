@@ -30,6 +30,22 @@ _Avoid_: workspace
 The skill that routes a Vault Feature, Vault Task, or Wayfinder effort into its appropriate planning or execution flow.
 _Avoid_: vault skill
 
+**Run Registry**:
+A versioned durable store of Run, participant, lifecycle, and evidence observations emitted by the active Vault Hunter driver. It exposes producer and reader APIs but never becomes the authority for vault lifecycle, goal advancement, acceptance, or completion.
+_Avoid_: workflow engine, completion authority
+
+**Atlas**:
+A read-only projection of Run Registry observations and live Herdr status. When those sources disagree, Atlas labels recorded and live state separately instead of reconciling or advancing either source.
+_Avoid_: run controller, registry writer
+
+**Registered Participant**:
+A Task Run participant whose exact Herdr and agent-session identities are recorded in the Run Registry and can therefore be correlated with Atlas.
+_Avoid_: any Sidekick row, inferred participant
+
+**Atlas Companion**:
+The read-only Atlas process attached exactly once to an eligible Task Run. T16 owns starting and stopping it; Atlas T03 owns its command and attachment semantics.
+_Avoid_: driver, orchestrator
+
 **Feature Run**:
 A Vault Hunter run that refines a Vault Feature into an ordered, verifier-backed task plan and stops before task implementation.
 _Avoid_: feature execution
