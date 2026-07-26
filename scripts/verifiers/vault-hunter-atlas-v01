@@ -45,7 +45,7 @@ done
 for frame in "$tmp/100x30.first" "$tmp/80x24.first"; do
   grep -Fq "Run atlas-rich-run" "$frame"
   grep -Fq "Task T02 · Build the Compact Atlas Renderer" "$frame"
-  grep -Fq "▶ T02.V01" "$frame"
+  grep -Fq "▶ ● T02.V01" "$frame"
   grep -Fq "verifier · active" "$frame"
   grep -Fq "baseline red" "$frame"
   grep -Fq "evidence · failed · exit 1" "$frame"
