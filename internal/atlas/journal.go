@@ -61,7 +61,7 @@ func (m JournalModel) View() string {
 	}
 	for i, event := range m.events {
 		marker := " "
-		if i == 0 {
+		if i == len(m.events)-1 {
 			marker = ">"
 		}
 		at := "?"
@@ -83,6 +83,38 @@ func (m JournalModel) View() string {
 			"    command="+recorded(evidence.Command),
 			fmt.Sprintf("    tree=%s artifact=%s detail=%s", recorded(evidence.ImplementationTree), recorded(evidence.ArtifactSHA256), recorded(evidence.Detail)),
 		)
+	}
+
+	if len(m.events) > 0 {
+		selected := m.events[len(m.events)-1]
+		if selected.lifecycle != nil {
+			lifecycle := selected.lifecycle
+			lines = append(lines,
+				"Selected Event Detail · Lifecycle",
+				"  Recorded timestamp: "+recorded(lifecycle.ObservedAt),
+				"  Goal ID: "+recorded(lifecycle.GoalID),
+				"  Kind: "+recorded(lifecycle.Kind),
+				"  State: "+recorded(lifecycle.State),
+				"  Detail: "+recorded(lifecycle.Detail),
+			)
+		} else {
+			evidence := selected.evidence
+			exit := "none recorded"
+			if evidence.ExitStatus != nil {
+				exit = fmt.Sprint(*evidence.ExitStatus)
+			}
+			lines = append(lines,
+				"Selected Event Detail · Evidence",
+				"  Recorded timestamp: "+recorded(evidence.ObservedAt),
+				"  Verifier ID: "+recorded(evidence.VerifierID),
+				"  State: "+recorded(evidence.State),
+				"  Command: "+recorded(evidence.Command),
+				"  Exit status: "+exit,
+				"  Implementation tree: "+recorded(evidence.ImplementationTree),
+				"  Artifact SHA-256: "+recorded(evidence.ArtifactSHA256),
+				"  Detail: "+recorded(evidence.Detail),
+			)
+		}
 	}
 
 	footer := fmt.Sprintf("j/down k/up navigate · q quit · read-only · %dx%d", m.width, m.height)
