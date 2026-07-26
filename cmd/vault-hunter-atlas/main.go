@@ -27,6 +27,9 @@ func main() {
 				fail(err)
 			}
 			return
+		case "journal":
+			render(append([]string{"--journal"}, os.Args[2:]...))
+			return
 		}
 	}
 	render(os.Args[1:])
@@ -132,6 +135,7 @@ func render(args []string) {
 	projectPath := flags.String("project", "", "vault-relative canonical project target")
 	selectedTaskPath := flags.String("select-task", "", "vault-relative Task path to open from an aggregate")
 	colorMode := flags.String("color", "auto", "aggregate color mode: auto, always, or never")
+	journal := flags.Bool("journal", false, "render the read-only Execution Journal")
 	snapshot := flags.Bool("snapshot", false, "print one deterministic frame")
 	width := flags.Int("width", 0, "frame width")
 	height := flags.Int("height", 0, "frame height")
@@ -141,7 +145,7 @@ func render(args []string) {
 		os.Exit(2)
 	}
 	aggregateMode := *featurePath != "" || *projectPath != ""
-	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) {
+	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (*journal && aggregateMode) || (aggregateMode && (*runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) {
 		flags.Usage()
 		os.Exit(2)
 	}
@@ -162,6 +166,17 @@ func render(args []string) {
 	reader, err := vaultregistry.OpenReader(*stateDir)
 	if err != nil {
 		fail(err)
+	}
+	if *journal {
+		run, err := reader.Get(*runID)
+		if err != nil {
+			fail(err)
+		}
+		if !widthSet {
+			*width, *height = 80, 24
+		}
+		fmt.Println(atlas.NewJournalModel(run, *width, *height).View())
+		return
 	}
 	if aggregateMode {
 		runs, err := reader.List()
