@@ -48,8 +48,11 @@ function codexShapedStream(source: any) {
 const SUBAGENT_TASK =
 	"Verify native subagent composition while retaining EXPANDED_TASK_DETAIL_SENTINEL";
 const SUBAGENT_EMPTY_TASK = "Verify native subagent empty-output fallback";
+const SUBAGENT_FAILED_EMPTY_TASK = "Verify failed native subagent with empty final text";
+const SUBAGENT_FAILED_DUPLICATE_TASK = "Verify failed native subagent error deduplication";
 const SUBAGENT_ROOT_AGENT = "scout";
 const SUBAGENT_NESTED_AGENT = "researcher";
+const SUBAGENT_NESTED_MODEL = "fixture/nested";
 const SUBAGENT_FINAL_HEADING = "Native completion";
 const SUBAGENT_FINAL_BOLD_TEXT = "Composition preserved";
 const SUBAGENT_COLLAPSED_PROSE =
@@ -59,6 +62,15 @@ const SUBAGENT_OUTPUT =
 const SUBAGENT_EMPTY_FALLBACK =
 	"Completed successfully; no final response was returned.";
 const SUBAGENT_REASONING_SENTINEL = "NATIVE_REASONING_SENTINEL_MUST_NOT_RENDER";
+const SUBAGENT_FAILURE_NARRATIVE = "V01 deterministic child failure";
+const SUBAGENT_LONG_COMMAND_HEAD = "v01-long-command-head";
+const SUBAGENT_LONG_COMMAND_TAIL = "V01_DISTINGUISHING_COMMAND_TAIL";
+const SUBAGENT_LONG_COMMAND_RAW = `${SUBAGENT_LONG_COMMAND_HEAD} begin
+${Array.from({ length: 420 }, (_, index) => `segment-${String(index).padStart(4, "0")}`).join(" ")}
+${SUBAGENT_LONG_COMMAND_TAIL}`;
+const SUBAGENT_LONG_COMMAND_LOGICAL = SUBAGENT_LONG_COMMAND_RAW.replace(/\s+/g, " ").trim();
+const SUBAGENT_PARENT_ARGUMENT_DECOY =
+	`parent-argument ${SUBAGENT_NESTED_AGENT} (${SUBAGENT_NESTED_MODEL})`;
 const SUBAGENT_COMMANDS = [
 	{
 		agent: SUBAGENT_ROOT_AGENT,
@@ -114,6 +126,30 @@ const SUBAGENT_SPEC = {
 		SUBAGENT_COMMANDS[1].command,
 		SUBAGENT_COMMANDS[2].command,
 	],
+	review: {
+		longCommand: {
+			shell: "bash",
+			raw: SUBAGENT_LONG_COMMAND_RAW,
+			logical: SUBAGENT_LONG_COMMAND_LOGICAL,
+			head: SUBAGENT_LONG_COMMAND_HEAD,
+			tail: SUBAGENT_LONG_COMMAND_TAIL,
+			captureWidth: SUBAGENT_LONG_COMMAND_LOGICAL.length + 80,
+		},
+		nested: {
+			agent: SUBAGENT_NESTED_AGENT,
+			model: SUBAGENT_NESTED_MODEL,
+			parentArgumentDecoy: SUBAGENT_PARENT_ARGUMENT_DECOY,
+			shell: SUBAGENT_COMMANDS[1].shell,
+			command: SUBAGENT_COMMANDS[1].command,
+		},
+		failure: {
+			emptyPrompt: "subagent failed empty",
+			duplicatePrompt: "subagent failed duplicate",
+			narrative: SUBAGENT_FAILURE_NARRATIVE,
+			successPrefix: "Completed successfully",
+			successFallback: SUBAGENT_EMPTY_FALLBACK,
+		},
+	},
 };
 
 const responses = [
@@ -260,6 +296,36 @@ const responses = [
 		{ stopReason: "toolUse" },
 	),
 	fauxAssistantMessage("VERIFY_SUBAGENT_EMPTY_DONE"),
+	fauxAssistantMessage(
+		[
+			fauxText("Verify failed empty native result"),
+			fauxToolCall(
+				"subagent",
+				{
+					agent: SUBAGENT_SPEC.rootAgent,
+					task: SUBAGENT_FAILED_EMPTY_TASK,
+				},
+				{ id: "verify-subagent-failed-empty" },
+			),
+		],
+		{ stopReason: "toolUse" },
+	),
+	fauxAssistantMessage("VERIFY_SUBAGENT_FAILED_EMPTY_DONE"),
+	fauxAssistantMessage(
+		[
+			fauxText("Verify failed native error deduplication"),
+			fauxToolCall(
+				"subagent",
+				{
+					agent: SUBAGENT_SPEC.rootAgent,
+					task: SUBAGENT_FAILED_DUPLICATE_TASK,
+				},
+				{ id: "verify-subagent-failed-duplicate" },
+			),
+		],
+		{ stopReason: "toolUse" },
+	),
+	fauxAssistantMessage("VERIFY_SUBAGENT_FAILED_DUPLICATE_DONE"),
 ];
 
 const SUBAGENT_USAGE = {
@@ -278,7 +344,7 @@ function nativeChildren() {
 			task: "Inspect nested fixture progress",
 			output: "Nested fixture complete.",
 			exitCode: 0,
-			model: "fixture/nested",
+			model: SUBAGENT_NESTED_MODEL,
 			contextWindow: 8192,
 			usage: { input: 34, output: 21, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 1 },
 			progress: {
@@ -345,7 +411,7 @@ function nativeRunningDetails() {
 			},
 			{
 				tool: "subagent",
-				args: SUBAGENT_SPEC.nestedAgent,
+				args: SUBAGENT_PARENT_ARGUMENT_DECOY,
 				toolCallId: "root-subagent",
 				status: "done" as const,
 				children: nativeChildren(),
@@ -354,10 +420,16 @@ function nativeRunningDetails() {
 				tool: SUBAGENT_COMMANDS[2].shell,
 				args: SUBAGENT_COMMANDS[2].command,
 				toolCallId: "root-zsh",
+				status: "done" as const,
+			},
+			{
+				tool: SUBAGENT_SPEC.review.longCommand.shell,
+				args: SUBAGENT_SPEC.review.longCommand.raw,
+				toolCallId: "root-long-bash",
 				status: "running" as const,
 			},
 		],
-		toolCount: 3,
+		toolCount: 4,
 		tokens: 444,
 		durationMs: 1200,
 		lastMessage: "NATIVE_RUNNING_PROGRESS_SENTINEL",
@@ -390,6 +462,18 @@ function nativeFinalDetails(output = SUBAGENT_OUTPUT) {
 		status: "done" as const,
 	}));
 	result.progress.lastMessage = "";
+	return details;
+}
+
+function nativeFailedDetails(output: string) {
+	const details = nativeInitialDetails();
+	const result = details.results[0];
+	result.output = output;
+	result.exitCode = 1;
+	result.progress.status = "failed";
+	result.progress.lastMessage = "";
+	(result.progress as typeof result.progress & { error: string }).error =
+		SUBAGENT_FAILURE_NARRATIVE;
 	return details;
 }
 
@@ -499,6 +583,21 @@ export default function piWorkStepUiProvider(pi: ExtensionAPI) {
 					return {
 						content: [{ type: "text", text: "" }],
 						details: nativeFinalDetails(""),
+					};
+				}
+				if (task === SUBAGENT_FAILED_EMPTY_TASK) {
+					return {
+						content: [{ type: "text", text: "" }],
+						details: nativeFailedDetails(""),
+						isError: true,
+					};
+				}
+				if (task === SUBAGENT_FAILED_DUPLICATE_TASK) {
+					const output = `Error: ${SUBAGENT_FAILURE_NARRATIVE}`;
+					return {
+						content: [{ type: "text", text: output }],
+						details: nativeFailedDetails(output),
+						isError: true,
 					};
 				}
 				if (task !== SUBAGENT_TASK)

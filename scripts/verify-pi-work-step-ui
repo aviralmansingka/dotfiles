@@ -67,6 +67,8 @@ subagent_running_capture="$verify_dir/subagent-running.txt"
 subagent_collapsed_capture="$verify_dir/subagent-collapsed.txt"
 subagent_expanded_capture="$verify_dir/subagent-expanded.txt"
 subagent_empty_capture="$verify_dir/subagent-empty.txt"
+subagent_failed_empty_capture="$verify_dir/subagent-failed-empty.txt"
+subagent_failed_duplicate_capture="$verify_dir/subagent-failed-duplicate.txt"
 
 if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
 	echo "Visible-thinking prompt customization is still installed" >&2
@@ -787,6 +789,8 @@ tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "subagent composition"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
 wait_for_subagent_initial
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_initial_capture"
+subagent_capture_width="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.longCommand.captureWidth);' "$subagent_spec")"
+tmux -L "$tmux_socket" resize-window -t verify:0 -x "$subagent_capture_width" -y 60
 touch "$subagent_progress_release"
 wait_for_subagent_setup
 wait_for_terminal \
@@ -810,9 +814,23 @@ wait_for_terminal \
 	"VERIFY_SUBAGENT_EMPTY_DONE" \
 	"Native subagent composition assertion failed: empty-output fixture turn did not settle"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_empty_capture"
+subagent_failed_empty_prompt="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.failure.emptyPrompt);' "$subagent_spec")"
+subagent_failed_duplicate_prompt="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.failure.duplicatePrompt);' "$subagent_spec")"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "$subagent_failed_empty_prompt"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_terminal \
+	"VERIFY_SUBAGENT_FAILED_EMPTY_DONE" \
+	"Native subagent composition assertion failed: failed-empty fixture turn did not settle"
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_failed_empty_capture"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "$subagent_failed_duplicate_prompt"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_terminal \
+	"VERIFY_SUBAGENT_FAILED_DUPLICATE_DONE" \
+	"Native subagent composition assertion failed: failed-duplicate fixture turn did not settle"
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_failed_duplicate_capture"
 stop_tmux
 
-node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" <<'NODE'
+node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_failed_duplicate_capture" <<'NODE'
 const fs = require("node:fs");
 
 const spec = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -862,6 +880,8 @@ const running = parseTerminal(process.argv[4]);
 const collapsed = parseTerminal(process.argv[5]);
 const expanded = parseTerminal(process.argv[6]);
 const empty = parseTerminal(process.argv[7]);
+const failedEmpty = parseTerminal(process.argv[8]);
+const failedDuplicate = parseTerminal(process.argv[9]);
 const failures = [];
 const check = (condition, message) => {
 	if (!condition) failures.push(message);
@@ -877,7 +897,7 @@ const colorInCommand = (terminal, command, token) => {
 check(initial.plain.includes("Thinking…"), "Initial native state did not render semantic Thinking…");
 for (const command of spec.commands)
 	check(!initial.plain.includes(command.command), `Child command rendered before initial Thinking…: ${command.command}`);
-for (const screen of [initial, running, collapsed, expanded, empty])
+for (const screen of [initial, running, collapsed, expanded, empty, failedEmpty, failedDuplicate])
 	check(!screen.plain.includes(spec.reasoningSentinel), "Native reasoning sentinel leaked into visible UI");
 
 check(running.plain.includes("◉ Delegate deterministic subagent verification"), "T21 parent Activity disappeared while the subagent was running");
@@ -916,6 +936,51 @@ for (const command of spec.commands) {
 			check(colorInCommand(running, command.command, token) === expectedColors[category], `${command.shell} ${category} token ${token} used ${colorInCommand(running, command.command, token)}, expected ${expectedColors[category]}`);
 }
 
+const runningLines = running.plain.split(/\r?\n/u);
+const longCommandLines = runningLines
+	.map((line, index) => ({ line, index }))
+	.filter(({ line }) => line.includes(spec.review.longCommand.head));
+check(longCommandLines.length === 1, "Long/multiline shell command was not rendered as one ordered logical leaf");
+if (longCommandLines.length === 1) {
+	const [{ line, index }] = longCommandLines;
+	check(
+		index > 0 && runningLines[index - 1].trimEnd().endsWith(spec.review.longCommand.shell),
+		"Long/multiline shell command was not nested under its exact shell node",
+	);
+	check(
+		line.includes(spec.review.longCommand.logical),
+		"Long/multiline shell command lost fixture-provided distinguishing content before display clipping",
+	);
+	check(
+		count(line, spec.review.longCommand.tail) === 1,
+		"Long/multiline shell command lost or duplicated its unique distinguishing tail",
+	);
+	const priorCommandLine = runningLines.findIndex((candidate) =>
+		candidate.includes(spec.commands.at(-1).command),
+	);
+	check(index > priorCommandLine, "Long/multiline shell command lost fixture chronology");
+}
+
+const nested = spec.review.nested;
+const nestedHeaderLines = runningLines
+	.map((line, index) => ({ line, index }))
+	.filter(({ line }) =>
+		/[⟳○✓✗] /u.test(line) &&
+		line.includes(`${nested.agent} (${nested.model}) —`),
+	);
+check(running.plain.includes(nested.parentArgumentDecoy), "Nested placement fixture lost its parent-argument decoy");
+check(nestedHeaderLines.length === 1, "Nested agent did not render exactly one fixture-specific child node");
+if (nestedHeaderLines.length === 1) {
+	const [{ index }] = nestedHeaderLines;
+	check(
+		runningLines[index + 1]?.trimEnd().endsWith(nested.shell) &&
+			runningLines[index + 2]?.includes(nested.command),
+		"Nested shell hierarchy did not bind to the exact fixture-specific child node",
+	);
+	const decoyLine = runningLines.findIndex((line) => line.includes(nested.parentArgumentDecoy));
+	check(decoyLine >= 0 && decoyLine < index, "Nested child node was confused with parent argument prose");
+}
+
 check(collapsed.plain.includes(spec.collapsedProse), "Collapsed native completion lost final prose");
 check(!collapsed.plain.includes(spec.expandedTaskSentinel), "Collapsed native call leaked the full task");
 check(expanded.plain.includes(spec.expandedTaskSentinel), "Ctrl+O-expanded native call lost the full task");
@@ -928,6 +993,27 @@ check(expanded.plain.includes(`out:${spec.usage.output}`), "Expanded native usag
 check(count(collapsed.plain, `subagent ${spec.rootAgent}`) === 1, "A competing renderer duplicated the native subagent call");
 check(count(empty.plain, spec.emptyFallback) === 1, "Empty-output completion did not render the exact deterministic fallback once");
 check(!empty.plain.includes("(no output)"), "Empty-output completion leaked the legacy fallback");
+
+const afterPrompt = (terminal, prompt) => {
+	const index = terminal.plain.lastIndexOf(prompt);
+	check(index >= 0, `Missing failed-result prompt: ${prompt}`);
+	return index < 0 ? "" : terminal.plain.slice(index);
+};
+for (const [kind, terminal, prompt] of [
+	["empty", failedEmpty, spec.review.failure.emptyPrompt],
+	["normalized", failedDuplicate, spec.review.failure.duplicatePrompt],
+]) {
+	const screen = afterPrompt(terminal, prompt);
+	check(
+		!screen.includes(spec.review.failure.successPrefix) &&
+			!screen.includes(spec.review.failure.successFallback),
+		`Failed ${kind} result rendered successful completion prose`,
+	);
+	check(
+		count(screen, spec.review.failure.narrative) === 1,
+		`Failed ${kind} result did not render exactly one failure narrative`,
+	);
+}
 
 if (failures.length) {
 	console.error(`Accepted V01 behavior assertions failed (${failures.length}):`);
