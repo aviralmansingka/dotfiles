@@ -8,6 +8,45 @@ goldens=scripts/goldens/vault-hunter-atlas
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
+strip_ansi() {
+  awk 'BEGIN { esc=sprintf("%c", 27) } { gsub(esc "\\[[0-9;]*m", ""); print }' "$1"
+}
+
+validate_ansi() {
+  awk '
+    BEGIN {
+      esc=sprintf("%c", 27)
+      allowed[esc "[0m"]=1
+      allowed[esc "[38;2;146;131;116m"]=1
+      allowed[esc "[38;2;235;219;178m"]=1
+      allowed[esc "[38;2;251;241;199m"]=1
+      allowed[esc "[38;2;242;133;52m"]=1
+      allowed[esc "[38;2;211;134;155m"]=1
+      allowed[esc "[38;2;128;170;158m"]=1
+      allowed[esc "[38;2;184;187;38m"]=1
+      allowed[esc "[38;2;233;177;67m"]=1
+      allowed[esc "[38;2;242;89;75m"]=1
+    }
+    {
+      line=$0
+      while (match(line, esc "\\[[0-9;]*m")) {
+        sequence=substr(line, RSTART, RLENGTH)
+        if (!allowed[sequence]) {
+          print "unexpected SGR sequence: " sequence > "/dev/stderr"
+          exit 1
+        }
+        seen=1
+        line=substr(line, 1, RSTART-1) substr(line, RSTART+RLENGTH)
+      }
+      if (index(line, esc)) {
+        print "non-SGR escape byte" > "/dev/stderr"
+        exit 1
+      }
+    }
+    END { if (!seen) exit 1 }
+  ' "$1"
+}
+
 mkdir -p "$tmp/state/runs"
 cp "$fixture" "$tmp/state/runs/"
 go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
@@ -20,14 +59,18 @@ for size in 134x32 80x24; do
   width=${size%x*}
   height=${size#*x}
   golden="$goldens/journal-$size.txt"
+  stripped="$tmp/$size.golden.plain"
+  case "$size" in
+    134x32) plain_hash=dc647efd939e7f557d08c693e8c947875ced5991fcfb027d2edd9aeecf992580 ;;
+    80x24) plain_hash=0f528e84251af77880112abc43e5efd09984633ae3e2c90c21f46a126cee177a ;;
+  esac
   test "$(tail -c 1 "$golden" | od -An -t x1 | tr -d ' \n')" = 0a
   test "$(tail -c 2 "$golden" | od -An -t x1 | tr -d ' \n')" != 0a0a
-  test "$(wc -l <"$golden" | tr -d ' ')" -le "$height"
-  awk -v width="$width" 'length($0) > width { exit 1 }' "$golden"
-  if LC_ALL=C grep -q "$(printf '\033')" "$golden"; then
-    echo "$size golden contains ANSI" >&2
-    exit 1
-  fi
+  validate_ansi "$golden"
+  strip_ansi "$golden" >"$stripped"
+  test "$(shasum -a 256 "$stripped" | awk '{print $1}')" = "$plain_hash"
+  test "$(wc -l <"$stripped" | tr -d ' ')" -le "$height"
+  awk -v width="$width" 'length($0) > width { exit 1 }' "$stripped"
 done
 
 go test -count=1 ./internal/atlas -run '^TestT08V01'
@@ -40,9 +83,9 @@ for size in 134x32 80x24; do
   golden="$goldens/journal-$size.txt"
 
   "$tmp/vault-hunter-atlas" journal --run-id atlas-journal-run --state-dir "$tmp/state" \
-    --snapshot --width "$width" --height "$height" >"$first"
+    --color always --width "$width" --height "$height" >"$first"
   "$tmp/vault-hunter-atlas" journal --run-id atlas-journal-run --state-dir "$tmp/state" \
-    --snapshot --width "$width" --height "$height" >"$second"
+    --color always --width "$width" --height "$height" >"$second"
 
   cmp "$first" "$second"
   cmp "$golden" "$first"

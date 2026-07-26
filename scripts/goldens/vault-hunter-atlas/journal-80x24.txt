@@ -1,23 +1,23 @@
-Run atlas-journal-run · Task T08 · Build the Execution Journal
-Execution Journal · 7 events · UTC · read-only
-TIME         TYPE OBSERVATION SUBJECT STATE (L=lifecycle E=evidence)
-  10:00:00Z L life-offset checkpoint-one checkpoint done
-  10:01:00Z L duplicate-id future-goal future-kind future-state
-  10:01:00Z L life-tie-second T08.REVIEW review done
-  10:01:00Z E duplicate-id T08.V01 failed exit=2
-    command=scripts/verify-vault-hunter-atlas T08.V01
-    tree=tree-red artifact=sha-red detail=tie-evidence-first
-  10:01:00Z E evidence-tie-second T08.V02 future-evidence-state exit=-
-    command=verify-second
-    tree=tree-second artifact=sha-second detail=tie-evidence-second
-  10:02:00Z E evidence-later T08.V01 passed exit=0
-    command=verify-later
-    tree=tree-green artifact=sha-green detail=instant-middle
-> 10:03:00Z L life-later T08.LANDING landing pending
-Selected Event Detail · Lifecycle
-  Recorded timestamp: 2026-07-26T10:03:00Z
-  Goal ID: T08.LANDING
-  Kind: landing
-  State: pending
-  Detail: instant-later
-j/down k/up navigate · q quit · read-only · 80x24
+[38;2;251;241;199mRun atlas-journal-run · Task T08 · Build the Execution Journal[0m
+[38;2;242;133;52mExecution Journal[0m[38;2;146;131;116m · 7 events · UTC · read-only[0m
+[38;2;146;131;116mTIME         TYPE OBSERVATION SUBJECT STATE (L=lifecycle E=evidence)[0m
+  [38;2;146;131;116m10:00:00Z[0m [38;2;242;133;52mL[0m [38;2;235;219;178mlife-offset[0m [38;2;235;219;178mcheckpoint-one[0m [38;2;242;133;52mcheckpoint[0m [38;2;184;187;38mdone[0m
+  [38;2;146;131;116m10:01:00Z[0m [38;2;242;133;52mL[0m [38;2;235;219;178mduplicate-id[0m [38;2;235;219;178mfuture-goal[0m [38;2;146;131;116mfuture-kind[0m [38;2;146;131;116mfuture-state[0m
+  [38;2;146;131;116m10:01:00Z[0m [38;2;242;133;52mL[0m [38;2;235;219;178mlife-tie-second[0m [38;2;235;219;178mT08.REVIEW[0m [38;2;242;133;52mreview[0m [38;2;184;187;38mdone[0m
+  [38;2;146;131;116m10:01:00Z[0m [38;2;211;134;155mE[0m [38;2;235;219;178mduplicate-id[0m [38;2;128;170;158mT08.V01[0m [38;2;242;89;75mfailed[0m [38;2;242;89;75mexit=2[0m
+    [38;2;211;134;155mcommand=[0m[38;2;128;170;158mscripts/verify-vault-hunter-atlas T08.V01[0m
+    [38;2;211;134;155mtree=[0m[38;2;128;170;158mtree-red[0m [38;2;211;134;155martifact=[0m[38;2;128;170;158msha-red[0m [38;2;211;134;155mdetail=[0m[38;2;235;219;178mtie-evidence-first[0m
+  [38;2;146;131;116m10:01:00Z[0m [38;2;211;134;155mE[0m [38;2;235;219;178mevidence-tie-second[0m [38;2;128;170;158mT08.V02[0m [38;2;146;131;116mfuture-evidence-state[0m [38;2;146;131;116mexit=-[0m
+    [38;2;211;134;155mcommand=[0m[38;2;128;170;158mverify-second[0m
+    [38;2;211;134;155mtree=[0m[38;2;128;170;158mtree-second[0m [38;2;211;134;155martifact=[0m[38;2;128;170;158msha-second[0m [38;2;211;134;155mdetail=[0m[38;2;235;219;178mtie-evidence-second[0m
+  [38;2;146;131;116m10:02:00Z[0m [38;2;211;134;155mE[0m [38;2;235;219;178mevidence-later[0m [38;2;128;170;158mT08.V01[0m [38;2;184;187;38mpassed[0m [38;2;184;187;38mexit=0[0m
+    [38;2;211;134;155mcommand=[0m[38;2;128;170;158mverify-later[0m
+    [38;2;211;134;155mtree=[0m[38;2;128;170;158mtree-green[0m [38;2;211;134;155martifact=[0m[38;2;128;170;158msha-green[0m [38;2;211;134;155mdetail=[0m[38;2;235;219;178minstant-middle[0m
+[38;2;251;241;199m>[0m [38;2;146;131;116m10:03:00Z[0m [38;2;242;133;52mL[0m [38;2;235;219;178mlife-later[0m [38;2;235;219;178mT08.LANDING[0m [38;2;242;133;52mlanding[0m [38;2;233;177;67mpending[0m
+[38;2;251;241;199mSelected Event Detail[0m[38;2;146;131;116m · [0m[38;2;242;133;52mLifecycle[0m
+  [38;2;242;133;52mRecorded timestamp:[0m [38;2;146;131;116m2026-07-26T10:03:00Z[0m
+  [38;2;242;133;52mGoal ID:[0m [38;2;235;219;178mT08.LANDING[0m
+  [38;2;242;133;52mKind:[0m [38;2;242;133;52mlanding[0m
+  [38;2;242;133;52mState:[0m [38;2;233;177;67mpending[0m
+  [38;2;242;133;52mDetail:[0m [38;2;235;219;178minstant-later[0m
+[38;2;146;131;116mj/down k/up navigate · q quit · read-only · 80x24[0m
