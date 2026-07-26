@@ -87,9 +87,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	if m.width < 80 || m.height < 24 {
-		return "terminal too small; minimum 80×24"
+		return truncate("terminal too small; minimum 80×24", m.width)
 	}
-	leftWidth := (m.width*42 + 99) / 100
+	leftWidth := m.width * 42 / 100
 	rightWidth := m.width - leftWidth - 1
 	left, right := m.panes(leftWidth, rightWidth)
 
@@ -101,6 +101,10 @@ func (m Model) View() string {
 		}
 		if i < len(right) {
 			r = right[i]
+		}
+		divider := "│"
+		if i == 1 {
+			divider = "┼"
 		}
 		rowLeftWidth, rowRightWidth := leftWidth, rightWidth
 		if i < 2 {
@@ -114,21 +118,13 @@ func (m Model) View() string {
 			rowLeftWidth = leftWidth - 1
 		}
 		rightLimit := rowRightWidth
-		if m.width == 80 && i >= 2 {
-			rightLimit = 40
-			if strings.HasPrefix(strings.TrimSpace(r), "artifact:") {
-				rightLimit = 39
+		if i >= 2 {
+			rightLimit = min(rowRightWidth, max(0, m.width-40))
+			if rightLimit < rowRightWidth && strings.HasPrefix(strings.TrimSpace(r), "artifact:") {
+				rightLimit--
 			}
 		}
-		divider := "│"
-		if i == 1 {
-			divider = "┼"
-		}
-		rightCell := truncate(r, rightLimit)
-		if m.width == 80 && i >= 2 {
-			rightCell = truncateRunes(r, rightLimit)
-		}
-		rows = append(rows, pad(truncate(l, leftLimit), rowLeftWidth)+divider+rightCell)
+		rows = append(rows, pad(truncate(l, leftLimit), rowLeftWidth)+divider+truncate(r, rightLimit))
 	}
 	return strings.Join(rows, "\n")
 }
@@ -138,7 +134,11 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 	if len(m.goals) == 0 {
 		left = append(left, "  no recorded goals")
 	} else {
-		for i, g := range m.goals {
+		goalSlots := m.height - 5
+		start := min(max(m.selected-goalSlots+1, 0), max(len(m.goals)-goalSlots, 0))
+		end := min(start+goalSlots, len(m.goals))
+		for i := start; i < end; i++ {
+			g := m.goals[i]
 			cursor := "  "
 			if i == m.selected {
 				cursor = "▶ "
@@ -152,7 +152,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 		right = append(right, " no recorded goals")
 	} else {
 		g := m.goals[m.selected]
-		right = append(right, fmt.Sprintf(" %s · %s · %s", g.id, value(g.kind), value(g.state)), "")
+		prefix := []string{fmt.Sprintf(" %s · %s · %s", g.id, value(g.kind), value(g.state)), ""}
 		type item struct {
 			at        string
 			lifecycle *vaultregistry.Lifecycle
@@ -175,12 +175,13 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 			}
 			return journey[i].order < journey[j].order
 		})
+		var journeyLines []string
 		for _, entry := range journey {
 			if entry.lifecycle != nil {
 				l := entry.lifecycle
-				right = append(right, fmt.Sprintf(" %s %s %s · %s", lifecycleGlyph(l.Kind, l.State), clock(l.ObservedAt), value(l.Kind), value(l.State)))
+				journeyLines = append(journeyLines, fmt.Sprintf(" %s %s %s · %s", lifecycleGlyph(l.Kind, l.State), clock(l.ObservedAt), value(l.Kind), value(l.State)))
 				if m.detailVisible && l.Detail != "" {
-					right = append(right, "   "+l.Detail)
+					journeyLines = append(journeyLines, "   "+l.Detail)
 				}
 			} else {
 				e := entry.evidence
@@ -188,40 +189,48 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 				if e.ExitStatus != nil {
 					exit = fmt.Sprintf(" · exit %d", *e.ExitStatus)
 				}
-				right = append(right, fmt.Sprintf(" ! %s evidence · %s%s", clock(e.ObservedAt), value(e.State), exit))
+				journeyLines = append(journeyLines, fmt.Sprintf(" ! %s evidence · %s%s", clock(e.ObservedAt), value(e.State), exit))
 				if m.detailVisible && e.Detail != "" {
-					right = append(right, "   "+e.Detail)
+					journeyLines = append(journeyLines, "   "+e.Detail)
 				}
 			}
 		}
-		right = append(right, "", " Evidence")
+		var context []string
+		context = append(context, "", " Evidence")
 		if len(g.evidence) == 0 {
-			right = append(right, " none recorded")
+			context = append(context, " none recorded")
 		} else {
 			e := g.evidence[len(g.evidence)-1]
-			right = append(right,
+			context = append(context,
 				" state: "+value(e.State),
 				" command: "+recorded(e.Command),
 				" implementation tree: "+recorded(e.ImplementationTree),
 				" artifact: "+recorded(e.ArtifactSHA256),
 			)
 		}
-		right = append(right, "", " Registered Participants")
+		context = append(context, "", " Registered Participants")
 		if len(g.participants) == 0 {
-			right = append(right, " none recorded")
+			context = append(context, " none recorded")
 		} else {
 			for _, p := range g.participants {
-				right = append(right, fmt.Sprintf(" %s · %s", p.ParticipantID, value(p.Role)))
+				context = append(context, fmt.Sprintf(" %s · %s", p.ParticipantID, value(p.Role)))
 			}
 		}
 		if m.detailVisible {
-			right = append(right, "")
+			context = append(context, "")
 			if m.height == 24 {
-				right = append(right, " Detail: "+recorded(g.detail))
+				context = append(context, " Detail: "+recorded(g.detail))
 			} else {
-				right = append(right, " Detail", " "+recorded(g.detail))
+				context = append(context, " Detail", " "+recorded(g.detail))
 			}
 		}
+		journeySlots := max(0, m.height-5-len(prefix)-len(context))
+		if len(journeyLines) > journeySlots {
+			journeyLines = journeyLines[len(journeyLines)-journeySlots:]
+		}
+		right = append(right, prefix...)
+		right = append(right, journeyLines...)
+		right = append(right, context...)
 	}
 
 	leftFooter := "↑/k ↓/j select · Enter detail · q quit"
@@ -410,7 +419,10 @@ func truncate(s string, width int) string {
 		return s
 	}
 	if width <= 1 {
-		return strings.Repeat(" ", max(width, 0))
+		if width == 1 {
+			return "…"
+		}
+		return ""
 	}
 	runes := []rune(s)
 	for len(runes) > 0 && lipgloss.Width(string(runes)) > width-1 {
@@ -428,9 +440,5 @@ func pad(s string, width int) string {
 }
 
 func truncateRunes(s string, width int) string {
-	runes := []rune(s)
-	if len(runes) <= width {
-		return s
-	}
-	return strings.TrimRight(string(runes[:width-1]), " ") + "…"
+	return truncate(s, width)
 }
