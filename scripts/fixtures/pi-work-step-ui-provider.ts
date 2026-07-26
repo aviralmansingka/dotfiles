@@ -8,7 +8,7 @@ import {
 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { existsSync, watch, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, watch, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { Type } from "typebox";
 import registerNativeSubagents from "../native/pi-subagents/index.ts";
@@ -49,20 +49,40 @@ const SUBAGENT_TASK =
 	"Verify native subagent composition while retaining EXPANDED_TASK_DETAIL_SENTINEL";
 const SUBAGENT_EMPTY_TASK = "Verify native subagent empty-output fallback";
 const SUBAGENT_FAILED_EMPTY_TASK = "Verify failed native subagent with empty final text";
-const SUBAGENT_FAILED_DUPLICATE_TASK = "Verify failed native subagent error deduplication";
+const SUBAGENT_CONCURRENCY_FIRST_TASK = "Verify first concurrency-one native child";
+const SUBAGENT_CONCURRENCY_SECOND_TASK = "Verify queued concurrency-one native child";
+const SUBAGENT_PROVIDER_TASK = "Verify provider-supplied compatibility states";
 const SUBAGENT_ROOT_AGENT = "scout";
 const SUBAGENT_NESTED_AGENT = "researcher";
+const SUBAGENT_QUEUED_AGENT = "queued-worker";
+const SUBAGENT_PROVIDER_AGENT = "provider-worker";
 const SUBAGENT_NESTED_MODEL = "fixture/nested";
+const SUBAGENT_REAL_MODEL = "fixture/child";
 const SUBAGENT_FINAL_HEADING = "Native completion";
 const SUBAGENT_FINAL_BOLD_TEXT = "Composition preserved";
+const SUBAGENT_FINAL_TAIL = "V01 complete fixture-derived final response tail.";
 const SUBAGENT_COLLAPSED_PROSE =
 	`${SUBAGENT_FINAL_BOLD_TEXT} by the package renderer.`;
 const SUBAGENT_OUTPUT =
-	`## ${SUBAGENT_FINAL_HEADING}\n\n**${SUBAGENT_FINAL_BOLD_TEXT}** by the package renderer.`;
+	`## ${SUBAGENT_FINAL_HEADING}
+
+**${SUBAGENT_FINAL_BOLD_TEXT}** by the package renderer.
+
+Second deterministic completion paragraph.
+
+Third deterministic completion paragraph.
+
+${SUBAGENT_FINAL_TAIL}`;
 const SUBAGENT_EMPTY_FALLBACK =
 	"Completed successfully; no final response was returned.";
 const SUBAGENT_REASONING_SENTINEL = "NATIVE_REASONING_SENTINEL_MUST_NOT_RENDER";
-const SUBAGENT_FAILURE_NARRATIVE = "V01 deterministic child failure";
+const SUBAGENT_PROVIDER_REASONING_SENTINEL = "PROVIDER_REASONING_SENTINEL_MUST_NOT_RENDER";
+const SUBAGENT_PROVIDER_FALSE_SUCCESS = "Completed successfully despite producer state";
+const SUBAGENT_FAILURE_NARRATIVE = `## V01 deterministic child failure
+
+**Failure detail** from the real child process.
+
+V01_REAL_FAILURE_TAIL`;
 const SUBAGENT_LONG_COMMAND_HEAD = "v01-long-command-head";
 const SUBAGENT_LONG_COMMAND_TAIL = "V01_DISTINGUISHING_COMMAND_TAIL";
 const SUBAGENT_LONG_COMMAND_RAW = `${SUBAGENT_LONG_COMMAND_HEAD} begin
@@ -75,11 +95,11 @@ const SUBAGENT_COMMANDS = [
 	{
 		agent: SUBAGENT_ROOT_AGENT,
 		shell: "bash",
-		command: "v01printf ordinaryArg 'quoted-v01' \"$V01_VALUE\" > ./v01-output.log",
+		command: "v01printf ordinaryArg 'quoted-v01' \"$V01_VALUE\" \"${HOME}\" > ./v01-output.log",
 		tokens: {
 			command: ["v01printf"],
 			argument: ["ordinaryArg"],
-			flagVariable: ["$V01_VALUE"],
+			flagVariable: ["$V01_VALUE", "${HOME}"],
 			stringPath: ["'quoted-v01'", "./v01-output.log"],
 			operator: [">"],
 		},
@@ -115,6 +135,8 @@ const SUBAGENT_SPEC = {
 	expandedTaskSentinel: "EXPANDED_TASK_DETAIL_SENTINEL",
 	finalHeading: SUBAGENT_FINAL_HEADING,
 	finalBoldText: SUBAGENT_FINAL_BOLD_TEXT,
+	finalTail: SUBAGENT_FINAL_TAIL,
+	finalOutput: SUBAGENT_OUTPUT,
 	collapsedProse: SUBAGENT_COLLAPSED_PROSE,
 	emptyFallback: SUBAGENT_EMPTY_FALLBACK,
 	reasoningSentinel: SUBAGENT_REASONING_SENTINEL,
@@ -144,11 +166,33 @@ const SUBAGENT_SPEC = {
 		},
 		failure: {
 			emptyPrompt: "subagent failed empty",
-			duplicatePrompt: "subagent failed duplicate",
 			narrative: SUBAGENT_FAILURE_NARRATIVE,
+			narrativeTail: "V01_REAL_FAILURE_TAIL",
 			successPrefix: "Completed successfully",
 			successFallback: SUBAGENT_EMPTY_FALLBACK,
 		},
+	},
+	real: {
+		model: SUBAGENT_REAL_MODEL,
+		mainTask: SUBAGENT_TASK,
+		emptyTask: SUBAGENT_EMPTY_TASK,
+		failureTask: SUBAGENT_FAILED_EMPTY_TASK,
+		concurrencyPrompt: "subagent concurrency one",
+		concurrencyFirstTask: SUBAGENT_CONCURRENCY_FIRST_TASK,
+		concurrencySecondTask: SUBAGENT_CONCURRENCY_SECOND_TASK,
+		queuedAgent: SUBAGENT_QUEUED_AGENT,
+		queuedText: "Queued…",
+		thinkingText: "Thinking…",
+	},
+	provider: {
+		tool: "subagent",
+		agent: SUBAGENT_PROVIDER_AGENT,
+		model: "fixture/provider",
+		prompt: "subagent provider compatibility",
+		task: SUBAGENT_PROVIDER_TASK,
+		reasoningSentinel: SUBAGENT_PROVIDER_REASONING_SENTINEL,
+		falseSuccess: SUBAGENT_PROVIDER_FALSE_SUCCESS,
+		queuedText: "Queued…",
 	},
 };
 
@@ -313,169 +357,201 @@ const responses = [
 	fauxAssistantMessage("VERIFY_SUBAGENT_FAILED_EMPTY_DONE"),
 	fauxAssistantMessage(
 		[
-			fauxText("Verify failed native error deduplication"),
+			fauxText("Verify concurrency-one queued child state"),
 			fauxToolCall(
 				"subagent",
 				{
 					agent: SUBAGENT_SPEC.rootAgent,
-					task: SUBAGENT_FAILED_DUPLICATE_TASK,
+					task: SUBAGENT_CONCURRENCY_FIRST_TASK,
 				},
-				{ id: "verify-subagent-failed-duplicate" },
+				{ id: "verify-subagent-concurrency-first" },
+			),
+			fauxToolCall(
+				"subagent",
+				{
+					agent: SUBAGENT_SPEC.real.queuedAgent,
+					task: SUBAGENT_CONCURRENCY_SECOND_TASK,
+				},
+				{ id: "verify-subagent-concurrency-second" },
 			),
 		],
 		{ stopReason: "toolUse" },
 	),
-	fauxAssistantMessage("VERIFY_SUBAGENT_FAILED_DUPLICATE_DONE"),
+	fauxAssistantMessage("VERIFY_SUBAGENT_CONCURRENCY_DONE"),
+	fauxAssistantMessage(
+		[
+			fauxText("Verify provider compatibility states"),
+			fauxToolCall(
+				SUBAGENT_SPEC.provider.tool,
+				{
+					agent: SUBAGENT_SPEC.provider.agent,
+					task: SUBAGENT_PROVIDER_TASK,
+				},
+				{ id: "verify-subagent-provider-compatibility" },
+			),
+		],
+		{ stopReason: "toolUse" },
+	),
+	fauxAssistantMessage("VERIFY_SUBAGENT_PROVIDER_DONE"),
 ];
 
-const SUBAGENT_USAGE = {
-	input: SUBAGENT_SPEC.usage.input,
-	output: SUBAGENT_SPEC.usage.output,
+function providerCompatibilityDetails(
+	status: "running" | "pending" | "failed",
+	lastMessage: string,
+) {
+	const error = status === "failed" ? SUBAGENT_FAILURE_NARRATIVE : undefined;
+	return {
+		results: [
+			{
+				agent: SUBAGENT_SPEC.provider.agent,
+				task: SUBAGENT_SPEC.provider.task,
+				output: "",
+				exitCode: status === "failed" ? 1 : -1,
+				model: SUBAGENT_SPEC.provider.model,
+				contextWindow: 4096,
+				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
+				progress: {
+					agent: SUBAGENT_SPEC.provider.agent,
+					status,
+					task: SUBAGENT_SPEC.provider.task,
+					recentTools: [],
+					toolCount: 0,
+					tokens: 0,
+					durationMs: 0,
+					lastMessage,
+					...(error ? { error } : {}),
+				},
+			},
+		],
+	};
+}
+
+const REAL_CHILD_SOURCE = String.raw`
+const fs = require("node:fs");
+const spec = JSON.parse(fs.readFileSync(process.env.PI_VERIFY_SUBAGENT_SPEC, "utf8"));
+const taskArg = process.argv.find((arg) => arg.startsWith("Task: ")) || "";
+const task = taskArg.slice(6);
+const emit = (event) => process.stdout.write(JSON.stringify(event) + "\n");
+const mark = (name, value) => {
+	const path = process.env[name];
+	if (path) fs.writeFileSync(path, value + "\n", "utf8");
+};
+const appendMark = (name, value) => {
+	const path = process.env[name];
+	if (path) fs.appendFileSync(path, value + "\n", "utf8");
+};
+const waitFor = (name) => new Promise((resolve) => {
+	const path = process.env[name];
+	if (!path || fs.existsSync(path)) return resolve();
+	const timer = setInterval(() => {
+		if (fs.existsSync(path)) {
+			clearInterval(timer);
+			resolve();
+		}
+	}, 10);
+});
+const usage = {
+	input: spec.usage.input,
+	output: spec.usage.output,
 	cacheRead: 45,
 	cacheWrite: 6,
-	cost: 0.0123,
-	turns: SUBAGENT_SPEC.usage.turns,
+	totalTokens: spec.usage.input + spec.usage.output,
+	cost: { total: 0.0123 },
 };
-
-function nativeChildren() {
-	return [
-		{
-			agent: SUBAGENT_SPEC.nestedAgent,
-			task: "Inspect nested fixture progress",
-			output: "Nested fixture complete.",
-			exitCode: 0,
-			model: SUBAGENT_NESTED_MODEL,
-			contextWindow: 8192,
-			usage: { input: 34, output: 21, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 1 },
-			progress: {
-				agent: SUBAGENT_SPEC.nestedAgent,
-				status: "completed" as const,
-				task: "Inspect nested fixture progress",
-				recentTools: [
-					{
-						tool: SUBAGENT_COMMANDS[1].shell,
-						args: SUBAGENT_COMMANDS[1].command,
-						toolCallId: "nested-zsh",
-						status: "done" as const,
-					},
-				],
-				toolCount: 1,
-				tokens: 55,
-				durationMs: 640,
-				lastMessage: "",
-				reasoning: SUBAGENT_REASONING_SENTINEL,
-			},
-		},
-	];
-}
-
-function nativeInitialDetails() {
-	const progress = {
-		agent: SUBAGENT_SPEC.rootAgent,
-		status: "running" as const,
-		task: SUBAGENT_TASK,
-		recentTools: [],
-		toolCount: 0,
-		tokens: 0,
-		durationMs: 0,
-		lastMessage: "Thinking…",
-		reasoning: SUBAGENT_REASONING_SENTINEL,
-	};
-	return {
-		results: [
-			{
-				agent: SUBAGENT_SPEC.rootAgent,
-				task: SUBAGENT_TASK,
-				output: "",
-				exitCode: -1,
-				model: "fixture/root",
-				contextWindow: 16384,
-				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
-				progress,
-			},
+const message = (text, errorMessage, messageUsage = usage) => ({
+	type: "message_end",
+	message: {
+		role: "assistant",
+		model: spec.real.model,
+		content: text === undefined ? [] : [
+			{ type: "thinking", thinking: spec.reasoningSentinel },
+			{ type: "text", text },
 		],
-	};
+		usage: messageUsage,
+		...(errorMessage ? { errorMessage } : {}),
+	},
+});
+const nestedResult = {
+	agent: spec.review.nested.agent,
+	task: "Inspect nested fixture progress",
+	output: "Nested fixture complete.",
+	exitCode: 0,
+	model: spec.review.nested.model,
+	contextWindow: 8192,
+	usage: { input: 34, output: 21, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 1 },
+	progress: {
+		agent: spec.review.nested.agent,
+		status: "completed",
+		task: "Inspect nested fixture progress",
+		recentTools: [{
+			tool: spec.review.nested.shell,
+			args: spec.review.nested.command,
+			toolCallId: "nested-zsh",
+			status: "done",
+		}],
+		toolCount: 1,
+		tokens: 55,
+		durationMs: 640,
+		lastMessage: "",
+	},
+};
+async function main() {
+	appendMark("PI_VERIFY_REAL_CHILD_MARKER", task);
+	if (task === spec.real.mainTask) {
+		mark("PI_VERIFY_REAL_MAIN_SPAWN_MARKER", "spawned");
+		await waitFor("PI_VERIFY_SUBAGENT_PROGRESS_RELEASE");
+		const events = [
+			{ type: "tool_execution_start", toolName: spec.commands[0].shell, toolCallId: "root-bash", args: { command: spec.commands[0].command } },
+			{ type: "tool_execution_end", toolName: spec.commands[0].shell, toolCallId: "root-bash", result: {} },
+			{ type: "tool_execution_start", toolName: "subagent", toolCallId: "root-subagent", args: { agent: spec.review.nested.parentArgumentDecoy } },
+			{ type: "tool_execution_update", toolName: "subagent", toolCallId: "root-subagent", partialResult: { details: { results: [nestedResult] } } },
+			{ type: "tool_execution_end", toolName: "subagent", toolCallId: "root-subagent", result: { details: { results: [nestedResult] } } },
+			{ type: "tool_execution_start", toolName: spec.commands[2].shell, toolCallId: "root-zsh", args: { command: spec.commands[2].command } },
+			{ type: "tool_execution_end", toolName: spec.commands[2].shell, toolCallId: "root-zsh", result: {} },
+			{ type: "tool_execution_start", toolName: spec.review.longCommand.shell, toolCallId: "root-long-bash", args: { command: spec.review.longCommand.raw } },
+		];
+		for (const event of events) emit(event);
+		mark("PI_VERIFY_REAL_EVENT_MARKER", "normalized");
+		await waitFor("PI_VERIFY_SUBAGENT_RELEASE");
+		emit({ type: "tool_execution_end", toolName: spec.review.longCommand.shell, toolCallId: "root-long-bash", result: {} });
+		emit(message("", undefined, {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { total: 0 },
+		}));
+		emit(message(spec.finalOutput));
+		return;
+	}
+	if (task === spec.real.emptyTask) {
+		emit(message(""));
+		return;
+	}
+	if (task === spec.real.failureTask) {
+		emit(message(undefined, spec.review.failure.narrative));
+		process.exitCode = 1;
+		return;
+	}
+	if (task === spec.real.concurrencyFirstTask) {
+		mark("PI_VERIFY_CONCURRENCY_FIRST_MARKER", "spawned");
+		await waitFor("PI_VERIFY_CONCURRENCY_RELEASE");
+		emit(message("First concurrency child complete."));
+		return;
+	}
+	if (task === spec.real.concurrencySecondTask) {
+		mark("PI_VERIFY_CONCURRENCY_SECOND_MARKER", "spawned");
+		emit(message("Second concurrency child complete."));
+		return;
+	}
+	throw new Error("Unexpected deterministic child task: " + task);
 }
-
-function nativeRunningDetails() {
-	const progress = {
-		agent: SUBAGENT_SPEC.rootAgent,
-		status: "running" as const,
-		task: SUBAGENT_TASK,
-		recentTools: [
-			{
-				tool: SUBAGENT_COMMANDS[0].shell,
-				args: SUBAGENT_COMMANDS[0].command,
-				toolCallId: "root-bash",
-				status: "done" as const,
-			},
-			{
-				tool: "subagent",
-				args: SUBAGENT_PARENT_ARGUMENT_DECOY,
-				toolCallId: "root-subagent",
-				status: "done" as const,
-				children: nativeChildren(),
-			},
-			{
-				tool: SUBAGENT_COMMANDS[2].shell,
-				args: SUBAGENT_COMMANDS[2].command,
-				toolCallId: "root-zsh",
-				status: "done" as const,
-			},
-			{
-				tool: SUBAGENT_SPEC.review.longCommand.shell,
-				args: SUBAGENT_SPEC.review.longCommand.raw,
-				toolCallId: "root-long-bash",
-				status: "running" as const,
-			},
-		],
-		toolCount: 4,
-		tokens: 444,
-		durationMs: 1200,
-		lastMessage: "NATIVE_RUNNING_PROGRESS_SENTINEL",
-		reasoning: SUBAGENT_REASONING_SENTINEL,
-	};
-	return {
-		results: [
-			{
-				agent: SUBAGENT_SPEC.rootAgent,
-				task: SUBAGENT_TASK,
-				output: "",
-				exitCode: -1,
-				model: "fixture/root",
-				contextWindow: 16384,
-				usage: { ...SUBAGENT_USAGE },
-				progress,
-			},
-		],
-	};
-}
-
-function nativeFinalDetails(output = SUBAGENT_OUTPUT) {
-	const details = nativeRunningDetails();
-	const result = details.results[0];
-	result.output = output;
-	result.exitCode = 0;
-	result.progress.status = "completed";
-	result.progress.recentTools = result.progress.recentTools.map((tool) => ({
-		...tool,
-		status: "done" as const,
-	}));
-	result.progress.lastMessage = "";
-	return details;
-}
-
-function nativeFailedDetails(output: string) {
-	const details = nativeInitialDetails();
-	const result = details.results[0];
-	result.output = output;
-	result.exitCode = 1;
-	result.progress.status = "failed";
-	result.progress.lastMessage = "";
-	(result.progress as typeof result.progress & { error: string }).error =
-		SUBAGENT_FAILURE_NARRATIVE;
-	return details;
-}
+main().catch((error) => {
+	process.stderr.write(String(error && error.stack || error) + "\n");
+	process.exitCode = 1;
+});
+`;
 
 function writeFixtureMarker(environmentName: string, value: string): void {
 	const markerPath = process.env[environmentName];
@@ -526,8 +602,92 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 		},
 	});
 	registerNativeSubagents(intercepted);
-	if (!nativeTool?.renderCall || !nativeTool?.renderResult)
+	if (!nativeTool?.execute || !nativeTool?.renderCall || !nativeTool?.renderResult)
 		throw new Error("Active pi-subagents package did not register its native renderers");
+	const childPath = process.env.PI_VERIFY_REAL_CHILD;
+	if (!childPath) return nativeTool;
+	writeFileSync(childPath, REAL_CHILD_SOURCE, { encoding: "utf8", mode: 0o700 });
+	for (const name of [
+		SUBAGENT_ROOT_AGENT,
+		SUBAGENT_QUEUED_AGENT,
+		SUBAGENT_PROVIDER_AGENT,
+	]) {
+		(globalThis as any).__pi_subagents.registerAgent({
+			name,
+			description: "Deterministic verifier child",
+			tools: [],
+			model: SUBAGENT_REAL_MODEL,
+			thinking: "off",
+			systemPrompt: "Deterministic verifier child",
+			filePath: childPath,
+		});
+	}
+	const execute = nativeTool.execute.bind(nativeTool);
+	let activeExecutions = 0;
+	let originalEntry = "";
+	nativeTool.execute = async (...args: any[]) => {
+		if (activeExecutions++ === 0) {
+			originalEntry = process.argv[1];
+			process.argv[1] = childPath;
+		}
+		const params = args[1] as { task?: string };
+		appendFileSync(
+			process.env.PI_VERIFY_REAL_EXECUTE_MARKER!,
+			`${params.task ?? "<missing task>"}\n`,
+			"utf8",
+		);
+		const onUpdate = args[3];
+		args[3] = (update: any) => {
+			const progress = update?.details?.results?.[0]?.progress;
+			if (params.task === SUBAGENT_TASK) {
+				if ((progress?.recentTools?.length ?? 0) === 0)
+					writeFixtureMarker("PI_VERIFY_SUBAGENT_INITIAL_MARKER", "real execute initial update");
+				else
+					writeFixtureMarker("PI_VERIFY_SUBAGENT_UPDATE_MARKER", "real child event normalized");
+			}
+			onUpdate?.(update);
+		};
+		try {
+			if (params.task === SUBAGENT_PROVIDER_TASK) {
+				onUpdate?.({
+					content: [{ type: "text", text: "provider running" }],
+					details: providerCompatibilityDetails(
+						"running",
+						SUBAGENT_PROVIDER_REASONING_SENTINEL,
+					),
+				});
+				writeFixtureMarker("PI_VERIFY_PROVIDER_RUNNING_MARKER", "running");
+				await waitForFixtureRelease("PI_VERIFY_PROVIDER_PENDING_RELEASE", args[2]);
+				onUpdate?.({
+					content: [{ type: "text", text: "provider pending" }],
+					details: providerCompatibilityDetails(
+						"pending",
+						SUBAGENT_PROVIDER_FALSE_SUCCESS,
+					),
+				});
+				writeFixtureMarker("PI_VERIFY_PROVIDER_PENDING_MARKER", "pending");
+				await waitForFixtureRelease("PI_VERIFY_PROVIDER_FAILED_RELEASE", args[2]);
+				const failed = providerCompatibilityDetails(
+					"failed",
+					SUBAGENT_PROVIDER_FALSE_SUCCESS,
+				);
+				onUpdate?.({
+					content: [{ type: "text", text: "provider failed" }],
+					details: failed,
+				});
+				writeFixtureMarker("PI_VERIFY_PROVIDER_FAILED_MARKER", "failed");
+				await waitForFixtureRelease("PI_VERIFY_PROVIDER_FINAL_RELEASE", args[2]);
+				return {
+					content: [{ type: "text", text: SUBAGENT_FAILURE_NARRATIVE }],
+					details: failed,
+					isError: true,
+				};
+			}
+			return await execute(...args);
+		} finally {
+			if (--activeExecutions === 0) process.argv[1] = originalEntry;
+		}
+	};
 	return nativeTool;
 }
 
@@ -573,63 +733,9 @@ export default function piWorkStepUiProvider(pi: ExtensionAPI) {
 	});
 
 	const nativeSubagentTool = loadNativeSubagentTool(pi);
-	pi.registerTool({
-		...nativeSubagentTool,
-		async execute(_toolCallId: string, params: unknown, signal: AbortSignal, onUpdate: any) {
-			try {
-				const task = (params as { task?: unknown })?.task;
-				writeFixtureMarker("PI_VERIFY_SUBAGENT_SPEC", JSON.stringify(SUBAGENT_SPEC));
-				if (task === SUBAGENT_EMPTY_TASK) {
-					return {
-						content: [{ type: "text", text: "" }],
-						details: nativeFinalDetails(""),
-					};
-				}
-				if (task === SUBAGENT_FAILED_EMPTY_TASK) {
-					return {
-						content: [{ type: "text", text: "" }],
-						details: nativeFailedDetails(""),
-						isError: true,
-					};
-				}
-				if (task === SUBAGENT_FAILED_DUPLICATE_TASK) {
-					const output = `Error: ${SUBAGENT_FAILURE_NARRATIVE}`;
-					return {
-						content: [{ type: "text", text: output }],
-						details: nativeFailedDetails(output),
-						isError: true,
-					};
-				}
-				if (task !== SUBAGENT_TASK)
-					throw new Error("Deterministic subagent call and result tasks diverged");
-				if (!onUpdate) throw new Error("Deterministic subagent update callback is unavailable");
-				onUpdate({
-					content: [{ type: "text", text: "deterministic subagent initial state" }],
-					details: nativeInitialDetails(),
-				});
-				writeFixtureMarker("PI_VERIFY_SUBAGENT_INITIAL_MARKER", "native initial update emitted");
-				await waitForFixtureRelease("PI_VERIFY_SUBAGENT_PROGRESS_RELEASE", signal);
-				onUpdate({
-					content: [{ type: "text", text: "deterministic subagent running" }],
-					details: nativeRunningDetails(),
-				});
-				writeFixtureMarker("PI_VERIFY_SUBAGENT_UPDATE_MARKER", "native foreground update emitted");
-				await waitForFixtureRelease("PI_VERIFY_SUBAGENT_RELEASE", signal);
-				return {
-					content: [{ type: "text", text: SUBAGENT_OUTPUT }],
-					details: nativeFinalDetails(),
-				};
-			} catch (error) {
-				const message = error instanceof Error ? error.stack ?? error.message : String(error);
-				try {
-					writeFixtureMarker("PI_VERIFY_SUBAGENT_EXCEPTION_MARKER", message);
-				} catch {
-					// Preserve the original fixture exception when diagnostics cannot be written.
-				}
-				throw error;
-			}
-		},
-	});
+	if (process.env.PI_VERIFY_SUBAGENT_SPEC)
+		writeFixtureMarker("PI_VERIFY_SUBAGENT_SPEC", JSON.stringify(SUBAGENT_SPEC));
+	pi.registerTool(nativeSubagentTool);
 
 	pi.registerTool({
 		name: "noisy_verify_tool",

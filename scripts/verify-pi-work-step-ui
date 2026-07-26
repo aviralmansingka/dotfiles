@@ -8,6 +8,9 @@ export TERM=xterm-256color
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 verify_dir="$(mktemp -d)"
 tmux_socket="pi-work-step-ui-verify-$$"
+if [[ -n "${PI_VERIFY_TEMP_PATH_RECORD:-}" ]]; then
+	printf '%s\n' "$verify_dir" > "$PI_VERIFY_TEMP_PATH_RECORD"
+fi
 
 stop_tmux() {
 	local pane_pids pid socket_path
@@ -68,11 +71,51 @@ subagent_collapsed_capture="$verify_dir/subagent-collapsed.txt"
 subagent_expanded_capture="$verify_dir/subagent-expanded.txt"
 subagent_empty_capture="$verify_dir/subagent-empty.txt"
 subagent_failed_empty_capture="$verify_dir/subagent-failed-empty.txt"
-subagent_failed_duplicate_capture="$verify_dir/subagent-failed-duplicate.txt"
+subagent_concurrency_capture="$verify_dir/subagent-concurrency.txt"
+subagent_concurrency_release="$verify_dir/subagent-concurrency-release"
+subagent_concurrency_first_marker="$verify_dir/subagent-concurrency-first"
+subagent_concurrency_second_marker="$verify_dir/subagent-concurrency-second"
+subagent_concurrency_pre_release="$verify_dir/subagent-concurrency-pre-release"
+provider_running_capture="$verify_dir/provider-running.txt"
+provider_pending_capture="$verify_dir/provider-pending.txt"
+provider_failed_capture="$verify_dir/provider-failed.txt"
+provider_running_marker="$verify_dir/provider-running"
+provider_pending_marker="$verify_dir/provider-pending"
+provider_failed_marker="$verify_dir/provider-failed"
+provider_pending_release="$verify_dir/provider-pending-release"
+provider_failed_release="$verify_dir/provider-failed-release"
+provider_final_release="$verify_dir/provider-final-release"
+real_child="$verify_dir/real-child.cjs"
+real_execute_marker="$verify_dir/real-execute-coverage"
+real_child_marker="$verify_dir/real-child-coverage"
+real_main_spawn_marker="$verify_dir/real-main-spawn"
+real_event_marker="$verify_dir/real-event-normalization"
 
 if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
 	echo "Visible-thinking prompt customization is still installed" >&2
 	exit 1
+fi
+
+if [[ -n "${PI_VERIFY_NATIVE_SUBAGENTS_DIR:-}" ]]; then
+	: "${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT:?Explicit source binding requires PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT}"
+	: "${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE:?Explicit source binding requires PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE}"
+	: "${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB:?Explicit source binding requires PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB}"
+	native_actual_commit="$(git -C "$native_subagents_dir" rev-parse HEAD)"
+	native_actual_tree="$(git -C "$native_subagents_dir" rev-parse 'HEAD^{tree}')"
+	native_actual_blob="$(git -C "$native_subagents_dir" rev-parse 'HEAD:index.ts')"
+	native_worktree_blob="$(git -C "$native_subagents_dir" hash-object index.ts)"
+	native_status="$(git -C "$native_subagents_dir" status --porcelain=v1)"
+	native_clean=false
+	[[ -z "$native_status" ]] && native_clean=true
+	if [[ -n "$native_status" \
+		|| "$native_actual_commit" != "$PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT" \
+		|| "$native_actual_tree" != "$PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE" \
+		|| "$native_actual_blob" != "$PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB" \
+		|| "$native_worktree_blob" != "$PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB" ]]; then
+		echo "Native subagent immutable source binding mismatch: commit=$native_actual_commit tree=$native_actual_tree committed_blob=$native_actual_blob worktree_blob=$native_worktree_blob clean=$native_clean" >&2
+		exit 1
+	fi
+	echo "Native subagent immutable source verified: commit=$native_actual_commit tree=$native_actual_tree index_blob=$native_actual_blob clean=true."
 fi
 
 node - \
@@ -108,10 +151,18 @@ if (!fs.existsSync(nativeEntryPath))
 console.log(`Native subagent package setup verified: settings select ${configuredEntry}; source ${nativeEntryPath}.`);
 NODE
 
-mkdir -p "$agent_dir/extensions" "$agent_dir/native"
+mkdir -p "$agent_dir/extensions" "$agent_dir/native/pi-subagents"
 printf '%s\n' '{"theme":"gruvbox-material"}' > "$agent_dir/settings.json"
 cp "$repo_root/scripts/fixtures/pi-work-step-ui-provider.ts" "$agent_dir/extensions/00-provider.ts"
-ln -s "$native_subagents_dir" "$agent_dir/native/pi-subagents"
+cp "$native_subagents_entry" "$agent_dir/native/pi-subagents/index.ts"
+printf '%s\n' '{"maxConcurrency":1}' > "$agent_dir/native/pi-subagents/config.json"
+runtime_native_blob="$(git hash-object "$agent_dir/native/pi-subagents/index.ts")"
+if [[ -n "${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB:-}" \
+	&& "$runtime_native_blob" != "$PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB" ]]; then
+	echo "Native subagent runtime copy blob mismatch: $runtime_native_blob" >&2
+	exit 1
+fi
+echo "Native subagent runtime copy verified: index_blob=$runtime_native_blob maxConcurrency=1."
 ln -s "$repo_root/pi/.pi/agent/extensions/tool-call-renderer.ts" "$agent_dir/extensions/10-renderer.ts"
 
 export PI_VERIFY_AGENT_DIR="$agent_dir"
@@ -713,7 +764,7 @@ console.log("Pi work-step terminal state verified: prompt-scoped thinking remain
 NODE
 
 printf -v pi_command \
-	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
+	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
 	"$agent_dir" \
 	"$subagent_release" \
 	"$subagent_progress_release" \
@@ -721,6 +772,20 @@ printf -v pi_command \
 	"$subagent_update_marker" \
 	"$subagent_exception_marker" \
 	"$subagent_spec" \
+	"$real_child" \
+	"$real_execute_marker" \
+	"$real_child_marker" \
+	"$real_main_spawn_marker" \
+	"$real_event_marker" \
+	"$subagent_concurrency_release" \
+	"$subagent_concurrency_first_marker" \
+	"$subagent_concurrency_second_marker" \
+	"$provider_running_marker" \
+	"$provider_pending_marker" \
+	"$provider_failed_marker" \
+	"$provider_pending_release" \
+	"$provider_failed_release" \
+	"$provider_final_release" \
 	"$PI_VERIFY_THEME" \
 	"$verify_dir/subagent-session.jsonl"
 tmux -L "$tmux_socket" new-session -d -s verify -x 120 -y 40 -c "$repo_root" "$pi_command"
@@ -741,6 +806,19 @@ wait_for_subagent_initial() {
 		sleep 0.1
 	done
 	echo "Native subagent setup failure (initial state): semantic Thinking… was not observable before child tool progress" >&2
+	return 1
+}
+
+wait_for_fixture_file() {
+	local path="$1"
+	local failure="$2"
+	for _ in {1..200}; do
+		if [[ -f "$path" ]]; then
+			return
+		fi
+		sleep 0.1
+	done
+	echo "$failure" >&2
 	return 1
 }
 
@@ -790,12 +868,13 @@ tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
 wait_for_subagent_initial
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_initial_capture"
 subagent_capture_width="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.longCommand.captureWidth);' "$subagent_spec")"
+subagent_long_head="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.longCommand.head);' "$subagent_spec")"
 tmux -L "$tmux_socket" resize-window -t verify:0 -x "$subagent_capture_width" -y 60
 touch "$subagent_progress_release"
 wait_for_subagent_setup
 wait_for_terminal \
-	"NATIVE_RUNNING_PROGRESS_SENTINEL" \
-	"Native subagent composition assertion failed: running progress sentinel was not rendered"
+	"$subagent_long_head" \
+	"Native subagent composition assertion failed: real child shell events were not rendered"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_running_capture"
 touch "$subagent_release"
 wait_for_terminal \
@@ -815,22 +894,49 @@ wait_for_terminal \
 	"Native subagent composition assertion failed: empty-output fixture turn did not settle"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_empty_capture"
 subagent_failed_empty_prompt="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.failure.emptyPrompt);' "$subagent_spec")"
-subagent_failed_duplicate_prompt="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.failure.duplicatePrompt);' "$subagent_spec")"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "$subagent_failed_empty_prompt"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
 wait_for_terminal \
 	"VERIFY_SUBAGENT_FAILED_EMPTY_DONE" \
 	"Native subagent composition assertion failed: failed-empty fixture turn did not settle"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_failed_empty_capture"
-tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "$subagent_failed_duplicate_prompt"
+subagent_concurrency_prompt="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).real.concurrencyPrompt);' "$subagent_spec")"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "$subagent_concurrency_prompt"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_fixture_file "$subagent_concurrency_first_marker" "Real concurrency fixture did not spawn the first child"
+if [[ -f "$subagent_concurrency_second_marker" ]]; then
+	printf '%s\n' 'second-spawned' > "$subagent_concurrency_pre_release"
+else
+	printf '%s\n' 'second-not-spawned' > "$subagent_concurrency_pre_release"
+fi
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_concurrency_capture"
+touch "$subagent_concurrency_release"
 wait_for_terminal \
-	"VERIFY_SUBAGENT_FAILED_DUPLICATE_DONE" \
-	"Native subagent composition assertion failed: failed-duplicate fixture turn did not settle"
-tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_failed_duplicate_capture"
+	"VERIFY_SUBAGENT_CONCURRENCY_DONE" \
+	"Native subagent composition assertion failed: concurrency fixture turn did not settle"
+wait_for_fixture_file "$subagent_concurrency_second_marker" "Real concurrency fixture never spawned the queued child"
+provider_prompt="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).provider.prompt);' "$subagent_spec")"
+provider_agent="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).provider.agent);' "$subagent_spec")"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "$provider_prompt"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+wait_for_fixture_file "$provider_running_marker" "Provider compatibility fixture did not emit running state"
+wait_for_terminal "⟳ $provider_agent" "Provider compatibility running state did not reach the terminal"
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$provider_running_capture"
+touch "$provider_pending_release"
+wait_for_fixture_file "$provider_pending_marker" "Provider compatibility fixture did not emit pending state"
+wait_for_terminal "○ $provider_agent" "Provider compatibility pending state did not reach the terminal"
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$provider_pending_capture"
+touch "$provider_failed_release"
+wait_for_fixture_file "$provider_failed_marker" "Provider compatibility fixture did not emit failed state"
+wait_for_terminal "✗ $provider_agent" "Provider compatibility failed state did not reach the terminal"
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$provider_failed_capture"
+touch "$provider_final_release"
+wait_for_terminal \
+	"VERIFY_SUBAGENT_PROVIDER_DONE" \
+	"Native subagent composition assertion failed: provider compatibility turn did not settle"
 stop_tmux
 
-node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_failed_duplicate_capture" <<'NODE'
+node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" <<'NODE'
 const fs = require("node:fs");
 
 const spec = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -881,23 +987,61 @@ const collapsed = parseTerminal(process.argv[5]);
 const expanded = parseTerminal(process.argv[6]);
 const empty = parseTerminal(process.argv[7]);
 const failedEmpty = parseTerminal(process.argv[8]);
-const failedDuplicate = parseTerminal(process.argv[9]);
+const concurrency = parseTerminal(process.argv[9]);
+const concurrencyPreRelease = fs.readFileSync(process.argv[10], "utf8").trim();
+const providerRunning = parseTerminal(process.argv[11]);
+const providerPending = parseTerminal(process.argv[12]);
+const providerFailed = parseTerminal(process.argv[13]);
+const realExecuteCoverage = fs.readFileSync(process.argv[14], "utf8");
+const realChildCoverage = fs.readFileSync(process.argv[15], "utf8");
+const realMainSpawnCoverage = fs.readFileSync(process.argv[16], "utf8");
+const realEventCoverage = fs.readFileSync(process.argv[17], "utf8");
 const failures = [];
 const check = (condition, message) => {
 	if (!condition) failures.push(message);
 };
 const count = (text, value) => text.split(value).length - 1;
-const colorInCommand = (terminal, command, token) => {
+const colorsInCommand = (terminal, command, token) => {
 	const commandIndex = terminal.plain.indexOf(command);
 	const tokenIndex = command.indexOf(token);
 	const index = commandIndex < 0 || tokenIndex < 0 ? -1 : commandIndex + tokenIndex;
-	return index < 0 ? "missing" : terminal.foregrounds[index];
+	return index < 0
+		? ["missing"]
+		: Array.from({ length: token.length }, (_, offset) => terminal.foregrounds[index + offset]);
+};
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+const agentHeaders = (terminal, agent, model) => {
+	const pattern = new RegExp(
+		`([⟳○✓✗]) ${escapeRegExp(agent)} \\(${escapeRegExp(model)}\\) —`,
+		"gu",
+	);
+	return Array.from(terminal.plain.matchAll(pattern), (match) => ({
+		glyph: match[1],
+		index: (match.index ?? 0) + match[0].indexOf(match[1]),
+	}));
+};
+const checkAgentHeader = (terminal, agent, model, glyph, foreground, label) => {
+	const matches = agentHeaders(terminal, agent, model);
+	const agentLines = terminal.plain
+		.split(/\r?\n/u)
+		.filter((line) => line.includes(agent));
+	check(
+		matches.length === 1,
+		`${label} did not render exactly one fixture-specific agent node; got ${JSON.stringify(agentLines)}`,
+	);
+	if (matches.length !== 1) return;
+	check(matches[0].glyph === glyph, `${label} used ${matches[0].glyph}, expected semantic ${glyph}`);
+	if (foreground)
+		check(
+			terminal.foregrounds[matches[0].index] === foreground,
+			`${label} glyph used ${terminal.foregrounds[matches[0].index]}, expected ${foreground}`,
+		);
 };
 
 check(initial.plain.includes("Thinking…"), "Initial native state did not render semantic Thinking…");
 for (const command of spec.commands)
 	check(!initial.plain.includes(command.command), `Child command rendered before initial Thinking…: ${command.command}`);
-for (const screen of [initial, running, collapsed, expanded, empty, failedEmpty, failedDuplicate])
+for (const screen of [initial, running, collapsed, expanded, empty, failedEmpty, concurrency, providerRunning, providerPending, providerFailed])
 	check(!screen.plain.includes(spec.reasoningSentinel), "Native reasoning sentinel leaked into visible UI");
 
 check(running.plain.includes("◉ Delegate deterministic subagent verification"), "T21 parent Activity disappeared while the subagent was running");
@@ -933,7 +1077,12 @@ for (const command of spec.commands) {
 		check(running.foregrounds[commandIndex - 2] === expectedColors.prompt, `${command.shell} prompt used ${running.foregrounds[commandIndex - 2]}, expected ${expectedColors.prompt}`);
 	for (const [category, tokens] of Object.entries(command.tokens))
 		for (const token of tokens)
-			check(colorInCommand(running, command.command, token) === expectedColors[category], `${command.shell} ${category} token ${token} used ${colorInCommand(running, command.command, token)}, expected ${expectedColors[category]}`);
+			check(
+				colorsInCommand(running, command.command, token).every(
+					(color) => color === expectedColors[category],
+				),
+				`${command.shell} ${category} token ${token} did not use ${expectedColors[category]} across its complete span`,
+			);
 }
 
 const runningLines = running.plain.split(/\r?\n/u);
@@ -961,6 +1110,36 @@ if (longCommandLines.length === 1) {
 	check(index > priorCommandLine, "Long/multiline shell command lost fixture chronology");
 }
 
+const expectedCommandLeaves = [
+	...spec.commands.map(({ shell, command }) => ({ shell, command })),
+	{
+		shell: spec.review.longCommand.shell,
+		command: spec.review.longCommand.logical,
+	},
+];
+for (const [state, terminal] of [
+	["running", running],
+	["completed-collapsed", collapsed],
+	["expanded", expanded],
+]) {
+	const lines = terminal.plain.split(/\r?\n/u);
+	let previousLine = -1;
+	for (const leaf of expectedCommandLeaves) {
+		const matches = lines
+			.map((line, index) => ({ line, index }))
+			.filter(({ line }) => line.includes(leaf.command));
+		check(matches.length === 1, `${state} ${leaf.shell} command cardinality was not exactly one`);
+		if (matches.length !== 1) continue;
+		const [{ index }] = matches;
+		check(index > previousLine, `${state} command leaves lost fixture order`);
+		check(
+			index > 0 && lines[index - 1].trimEnd().endsWith(leaf.shell),
+			`${state} command leaf was not beneath its exact ${leaf.shell} node`,
+		);
+		previousLine = index;
+	}
+}
+
 const nested = spec.review.nested;
 const nestedHeaderLines = runningLines
 	.map((line, index) => ({ line, index }))
@@ -983,9 +1162,12 @@ if (nestedHeaderLines.length === 1) {
 
 check(collapsed.plain.includes(spec.collapsedProse), "Collapsed native completion lost final prose");
 check(!collapsed.plain.includes(spec.expandedTaskSentinel), "Collapsed native call leaked the full task");
+check(!collapsed.plain.includes(spec.finalHeading), "Collapsed native result leaked the expanded Markdown heading");
+check(!collapsed.plain.includes(spec.finalTail), "Collapsed native result leaked the complete expanded Markdown body");
 check(expanded.plain.includes(spec.expandedTaskSentinel), "Ctrl+O-expanded native call lost the full task");
 check(expanded.plain.includes(spec.finalHeading), "Ctrl+O-expanded native result lost final Markdown");
 check(expanded.plain.includes(spec.finalBoldText), "Ctrl+O-expanded native Markdown lost semantic prose");
+check(expanded.plain.includes(spec.finalTail), "Ctrl+O-expanded native result lost the complete fixture-derived final response");
 check(!expanded.plain.includes(`**${spec.finalBoldText}**`), "Ctrl+O-expanded final response was not rendered as Markdown");
 check(new RegExp(`(?:^|\\s)${spec.usage.turns}(?:\\s+turns?|\\s*turns?)`, "mu").test(expanded.plain), "Expanded native usage lost fixture-derived turns");
 check(expanded.plain.includes(`in:${spec.usage.input}`), "Expanded native usage lost fixture-derived input tokens");
@@ -999,21 +1181,150 @@ const afterPrompt = (terminal, prompt) => {
 	check(index >= 0, `Missing failed-result prompt: ${prompt}`);
 	return index < 0 ? "" : terminal.plain.slice(index);
 };
-for (const [kind, terminal, prompt] of [
-	["empty", failedEmpty, spec.review.failure.emptyPrompt],
-	["normalized", failedDuplicate, spec.review.failure.duplicatePrompt],
+const terminalAfterPrompt = (terminal, prompt) => {
+	const index = terminal.plain.lastIndexOf(prompt);
+	check(index >= 0, `Missing fixture prompt for exact node binding: ${prompt}`);
+	return index < 0
+		? { ...terminal, plain: "", foregrounds: [] }
+		: {
+				...terminal,
+				plain: terminal.plain.slice(index),
+				foregrounds: terminal.foregrounds.slice(index),
+			};
+};
+const failedScreen = afterPrompt(failedEmpty, spec.review.failure.emptyPrompt);
+check(
+	!failedScreen.includes(spec.review.failure.successPrefix) &&
+		!failedScreen.includes(spec.review.failure.successFallback),
+	"Failed empty result rendered successful completion prose",
+);
+check(
+	count(failedScreen, spec.review.failure.narrativeTail) === 1,
+	"Multiline/Markdown failure did not render one normalized error narrative",
+);
+checkAgentHeader(
+	terminalAfterPrompt(failedEmpty, spec.review.failure.emptyPrompt),
+	spec.rootAgent,
+	spec.real.model,
+	"✗",
+	"rgb:242,89,75",
+	"Failed native result",
+);
+
+const providerRunningScreen = afterPrompt(providerRunning, spec.provider.prompt);
+check(
+	!providerRunningScreen.includes(spec.provider.reasoningSentinel),
+	"Provider-supplied running lastMessage leaked raw reasoning",
+);
+check(
+	providerRunningScreen.includes(spec.real.thinkingText),
+	"Provider-supplied running state lost safe semantic Thinking…",
+);
+check(
+	!providerRunningScreen.includes(spec.provider.falseSuccess),
+	"Provider-supplied running state rendered producer text claiming success",
+);
+checkAgentHeader(
+	terminalAfterPrompt(providerRunning, spec.provider.prompt),
+	spec.provider.agent,
+	spec.provider.model,
+	"⟳",
+	"rgb:250,189,47",
+	"Provider running state",
+);
+
+const providerPendingScreen = afterPrompt(providerPending, spec.provider.prompt);
+check(
+	providerPendingScreen.includes(spec.provider.queuedText),
+	"Provider-supplied pending state lost safe semantic Queued…",
+);
+check(
+	!providerPendingScreen.includes(spec.provider.falseSuccess),
+	"Provider-supplied pending state rendered producer text claiming success",
+);
+checkAgentHeader(
+	terminalAfterPrompt(providerPending, spec.provider.prompt),
+	spec.provider.agent,
+	spec.provider.model,
+	"○",
+	null,
+	"Provider pending state",
+);
+
+const providerFailedScreen = afterPrompt(providerFailed, spec.provider.prompt);
+check(
+	!providerFailedScreen.includes(spec.provider.falseSuccess),
+	"Provider-supplied failed state rendered producer text claiming success",
+);
+check(
+	!providerFailedScreen.includes(spec.review.failure.successFallback),
+	"Provider-supplied failed state rendered the successful empty fallback",
+);
+check(
+	count(providerFailedScreen, spec.review.failure.narrativeTail) === 1,
+	"Provider multiline/Markdown failure did not render one normalized error narrative",
+);
+checkAgentHeader(
+	terminalAfterPrompt(providerFailed, spec.provider.prompt),
+	spec.provider.agent,
+	spec.provider.model,
+	"✗",
+	"rgb:242,89,75",
+	"Provider failed state",
+);
+
+check(
+	concurrencyPreRelease === "second-not-spawned",
+	"Concurrency-one fixture spawned the queued child before semaphore acquisition",
+);
+const concurrencyScreen = afterPrompt(concurrency, spec.real.concurrencyPrompt);
+check(
+	concurrencyScreen.includes(`subagent ${spec.rootAgent}`) &&
+		concurrencyScreen.includes(`subagent ${spec.real.queuedAgent}`),
+	"Concurrent calls did not preserve both immediate fixture-derived child identities",
+);
+check(
+	concurrencyScreen.includes(spec.real.queuedText),
+	"Queued concurrency-one child lost safe semantic Queued… text",
+);
+checkAgentHeader(
+	terminalAfterPrompt(concurrency, spec.real.concurrencyPrompt),
+	spec.rootAgent,
+	spec.real.model,
+	"⟳",
+	"rgb:250,189,47",
+	"Acquired concurrency-one child",
+);
+checkAgentHeader(
+	terminalAfterPrompt(concurrency, spec.real.concurrencyPrompt),
+	spec.real.queuedAgent,
+	spec.real.model,
+	"○",
+	null,
+	"Queued concurrency-one child",
+);
+
+for (const task of [
+	spec.real.mainTask,
+	spec.real.emptyTask,
+	spec.real.failureTask,
+	spec.real.concurrencyFirstTask,
+	spec.real.concurrencySecondTask,
 ]) {
-	const screen = afterPrompt(terminal, prompt);
 	check(
-		!screen.includes(spec.review.failure.successPrefix) &&
-			!screen.includes(spec.review.failure.successFallback),
-		`Failed ${kind} result rendered successful completion prose`,
+		count(realExecuteCoverage, task) === 1,
+		`Native registered execute path did not run exactly once for fixture task: ${task}`,
 	);
 	check(
-		count(screen, spec.review.failure.narrative) === 1,
-		`Failed ${kind} result did not render exactly one failure narrative`,
+		count(realChildCoverage, task) === 1,
+		`Deterministic child process did not run exactly once for fixture task: ${task}`,
 	);
 }
+check(realMainSpawnCoverage.trim() === "spawned", "Real main child spawn marker was not recorded");
+check(realEventCoverage.trim() === "normalized", "Real child event normalization marker was not recorded");
+console.log(
+	"Real native execute coverage verified: registered execute, child process JSON events, onUpdate normalization, chronology, nested collection, shell extraction, usage, empty success, and failure propagation.",
+);
 
 if (failures.length) {
 	console.error(`Accepted V01 behavior assertions failed (${failures.length}):`);
