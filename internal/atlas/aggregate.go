@@ -100,7 +100,9 @@ func ColorEnabled(mode string, snapshot, terminal, dumb, noColor bool) bool {
 }
 
 var checklist = regexp.MustCompile(`^\s*-\s*\[([ xX-])\]\s*(.*)$`)
-var wiki = regexp.MustCompile(`^\[\[([^]|]+)(?:\|([^]]+))?\]\](?:\s+.*)?$`)
+var canonicalTask = regexp.MustCompile(`^(T[0-9]+)[ \t]+\[\[([^]|]+)\|([^]]+)\]\]\.[ \t]*$`)
+var compatibleTask = regexp.MustCompile(`^\[\[([^]|]+)\|((T[0-9]+)[ \t]+[^]]+)\]\][ \t]*$`)
+var wiki = regexp.MustCompile(`^\[\[([^]|]+)(?:\|([^]]+))?\]\][ \t]*$`)
 var taskID = regexp.MustCompile(`(?i)^([A-Z]+[0-9]+)\b\s*[-:]?\s*(.*)$`)
 var h1OrH2 = regexp.MustCompile(`^ {0,3}#{1,2}(?:[ \t]+|$)`)
 var tasksH2 = regexp.MustCompile(`^ {0,3}##[ \t]+Tasks(?:[ \t]+#*)?[ \t]*$`)
@@ -171,21 +173,23 @@ func discoverFeature(root, path string, runs []vaultregistry.Run) (FeatureProjec
 			continue
 		}
 		check, body := strings.ToLower(match[1]), strings.TrimSpace(match[2])
-		link := wiki.FindStringSubmatch(body)
-		if link == nil {
+		link, id, title, ok := parseTaskBody(body)
+		if !ok {
+			if raw := wiki.FindStringSubmatch(body); raw != nil {
+				target := normalizeLink(path, raw[1])
+				if target != projectPath && !strings.HasPrefix(target, projectPath+"/") {
+					diagnostics = append(diagnostics, "Task link outside selected Project: "+target)
+					continue
+				}
+			}
 			diagnostics = append(diagnostics, "malformed Task checklist entry: "+body)
 			continue
 		}
-		target := normalizeLink(path, link[1])
+		target := normalizeLink(path, link)
 		if target != projectPath && !strings.HasPrefix(target, projectPath+"/") {
 			diagnostics = append(diagnostics, "Task link outside selected Project: "+target)
 			continue
 		}
-		display := strings.TrimSpace(link[2])
-		if display == "" {
-			display = strings.TrimSuffix(filepath.Base(target), filepath.Ext(target))
-		}
-		id, title := splitIdentity(display)
 		key := seenPath[target]
 		if key == 0 && id != "" {
 			key = seenID[id]
@@ -449,6 +453,19 @@ func canonicalFeaturePath(path string) (string, error) {
 	}
 	return normalized, nil
 }
+func parseTaskBody(body string) (link, id, title string, ok bool) {
+	if match := canonicalTask.FindStringSubmatch(body); match != nil {
+		link, id, title = strings.TrimSpace(match[2]), match[1], strings.TrimSpace(match[3])
+		return link, id, title, link != "" && title != ""
+	}
+	if match := compatibleTask.FindStringSubmatch(body); match != nil {
+		link = strings.TrimSpace(match[1])
+		id, title = splitIdentity(match[2])
+		return link, id, title, link != "" && title != ""
+	}
+	return "", "", "", false
+}
+
 func splitIdentity(display string) (string, string) {
 	match := taskID.FindStringSubmatch(strings.TrimSpace(display))
 	if match == nil {
