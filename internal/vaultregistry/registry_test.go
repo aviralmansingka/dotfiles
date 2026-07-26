@@ -111,6 +111,72 @@ func TestT01V01RestartUpdateAndUnknownFields(t *testing.T) {
 		t.Fatalf("rejected Task retarget changed persisted value\ncreated: %#v\nafter: %#v", created, afterRetargetRun)
 	}
 
+	rejectedMutations := []struct {
+		name   string
+		mutate func(*vaultregistry.Run)
+	}{
+		{"InvokedAt change", func(next *vaultregistry.Run) {
+			next.InvokedAt = "2026-07-26T07:00:01Z"
+		}},
+		{"Run unknown erase", func(next *vaultregistry.Run) {
+			next.Unknown = nil
+		}},
+		{"Run unknown replace", func(next *vaultregistry.Run) {
+			next.Unknown = unknown("run_future", `{"replacement":true}`)
+		}},
+		{"Task unknown erase", func(next *vaultregistry.Run) {
+			next.Task.Unknown = nil
+		}},
+		{"Task unknown replace", func(next *vaultregistry.Run) {
+			next.Task.Unknown = unknown("task_future", `{"replacement":true}`)
+		}},
+	}
+	for _, tc := range rejectedMutations {
+		t.Run(tc.name, func(t *testing.T) {
+			mutationRoot := t.TempDir()
+			mutationProducer, err := vaultregistry.OpenProducer(mutationRoot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			mutationCreated, err := mutationProducer.Create(run)
+			if err != nil {
+				t.Fatal(err)
+			}
+			mutationReader, err := vaultregistry.OpenReader(mutationRoot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			mutationPath := filepath.Join(mutationRoot, "runs", run.RunID+".json")
+			beforeMutation, err := os.ReadFile(mutationPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := mutationProducer.Update(run.RunID, mutationCreated.Revision, func(next *vaultregistry.Run) error {
+				tc.mutate(next)
+				return nil
+			}); !errors.Is(err, vaultregistry.ErrMalformed) {
+				t.Fatalf("Update error = %v, want ErrMalformed", err)
+			}
+			afterMutation, err := os.ReadFile(mutationPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(afterMutation, beforeMutation) {
+				t.Fatal("rejected mutation changed persisted bytes")
+			}
+			afterMutationRun, err := mutationReader.Get(run.RunID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if afterMutationRun.Revision != mutationCreated.Revision {
+				t.Fatalf("rejected mutation revision = %d, want %d", afterMutationRun.Revision, mutationCreated.Revision)
+			}
+			if !reflect.DeepEqual(afterMutationRun, mutationCreated) {
+				t.Fatalf("rejected mutation changed persisted value\ncreated: %#v\nafter: %#v", mutationCreated, afterMutationRun)
+			}
+		})
+	}
+
 	beforeParticipants := append([]vaultregistry.Participant(nil), fromReader.Participants...)
 	beforeLifecycle := append([]vaultregistry.Lifecycle(nil), fromReader.Lifecycle...)
 	beforeEvidence := append([]vaultregistry.Evidence(nil), fromReader.Evidence...)
