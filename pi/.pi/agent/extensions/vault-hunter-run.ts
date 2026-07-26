@@ -1,5 +1,4 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { StringEnum } from "@earendil-works/pi-ai";
 import { Type, type Static } from "typebox";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -20,10 +19,7 @@ const TaskSchema = Type.Object({
   kind: Type.String(),
 });
 
-const AgentSessionSchema = Type.Object(
-  { source: Type.String(), kind: Type.String(), value: Type.String() },
-  { additionalProperties: false },
-);
+const AgentSessionSchema = Type.Object({ source: Type.String(), kind: Type.String(), value: Type.String() });
 const HerdrSchema = Type.Object({
   workspaceId: Type.String(), tabId: Type.String(), paneId: Type.String(), terminalId: Type.String(),
 });
@@ -74,20 +70,6 @@ type RegistryRunSummary = {
   task: RegistryTaskSummary;
 };
 
-type Binding = {
-  root: string;
-  registryRunId: string;
-  asyncRunId: string;
-  asyncDir: string;
-  goalId: string;
-  kind: string;
-  role: string;
-  agent: string;
-  startedAt: string;
-};
-
-type LaunchIntent = Omit<Binding, "asyncRunId" | "asyncDir"> & { launchId: string };
-type RpcReply = { success: true; data: any } | { success: false; error: { message: string } };
 type DriverPlacement = {
   observedAt: string;
   herdr: { workspaceId: string; tabId: string; paneId: string; terminalId: string };
@@ -115,6 +97,35 @@ function now(): string { return new Date().toISOString(); }
 function slug(value: string): string { return value.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "run"; }
 function sha256(value: string): string { return createHash("sha256").update(value).digest("hex"); }
 function text(content: string, details: unknown) { return { content: [{ type: "text" as const, text: content }], details }; }
+function restoredRunId(ctx: ExtensionContext): string | undefined {
+  for (const entry of [...ctx.sessionManager.getBranch()].reverse()) {
+    if (entry.type !== "message" || entry.message.role !== "toolResult" || entry.message.toolName !== "vault_hunter_run") continue;
+    const runId = (entry.message.details as { runId?: unknown } | undefined)?.runId;
+    if (typeof runId === "string" && runId) return runId;
+  }
+  return undefined;
+}
+function subagentResult(details: unknown): SubagentResult | undefined {
+  const results = (details as { results?: unknown } | undefined)?.results;
+  return Array.isArray(results) ? results[0] as SubagentResult | undefined : undefined;
+}
+function parentUsage(ctx: ExtensionContext) {
+  const totals = { input: 0, output: 0, cache_read: 0, cache_write: 0, total_tokens: 0, cost: 0, requests: 0 };
+  const models = new Set<string>();
+  for (const entry of ctx.sessionManager.getBranch()) {
+    if (entry.type !== "message" || entry.message.role !== "assistant") continue;
+    const usage = entry.message.usage;
+    totals.input += usage?.input ?? 0;
+    totals.output += usage?.output ?? 0;
+    totals.cache_read += usage?.cacheRead ?? 0;
+    totals.cache_write += usage?.cacheWrite ?? 0;
+    totals.total_tokens += usage?.totalTokens ?? (usage?.input ?? 0) + (usage?.output ?? 0) + (usage?.cacheRead ?? 0) + (usage?.cacheWrite ?? 0);
+    totals.cost += usage?.cost?.total ?? 0;
+    totals.requests++;
+    if (entry.message.model) models.add(entry.message.model);
+  }
+  return { ...totals, models: [...models].sort() };
+}
 
 function registryString(record: any, field: string): string {
   const value = record?.[field];
@@ -490,55 +501,6 @@ export default function (pi: ExtensionAPI) {
         ...(params.evidence ? { evidence: wireEvidence(params.evidence) } : {}),
       }, signal);
       return text(`Recorded Vault Hunter observation at revision ${run.revision}.`, { runId: params.runId, revision: run.revision });
-    },
-  });
-
-  pi.registerTool({
-    name: "vault_hunter_step",
-    label: "Launch Vault Hunter Step",
-    description: "Launch exactly one async pi-subagents child and durably bind its participant and lifecycle observations to a Vault Hunter Run Registry record.",
-    promptSnippet: "Launch formal headless Vault Hunter children through a Registry-wrapped async subagent step.",
-    promptGuidelines: [
-      "Use vault_hunter_step instead of subagent for formal Vault Hunter headless work so the child is visible in the Run Registry.",
-      "Use one vault_hunter_step call per definite child; parallel tool calls are allowed only for read-only or isolated work.",
-    ],
-    parameters: Type.Object({
-      runId: Type.String(), goalId: Type.String(), kind: Type.String(), role: Type.String(),
-      agent: Type.String(), task: Type.String(), cwd: Type.Optional(Type.String()),
-      context: Type.Optional(StringEnum(["fresh", "fork"] as const)), model: Type.Optional(Type.String()),
-      skill: Type.Optional(Type.Union([Type.String(), Type.Array(Type.String())])), timeoutMs: Type.Optional(Type.Integer({ minimum: 1 })),
-    }),
-    async execute(_id, params, signal) {
-      const launchId = randomUUID();
-      const intent: LaunchIntent = {
-        launchId, root: REGISTRY_ROOT, registryRunId: params.runId,
-        goalId: params.goalId, kind: params.kind, role: params.role, agent: params.agent, startedAt: now(),
-      };
-      writeIntent(intent);
-      let spawned: any;
-      try {
-        spawned = await rpc(pi, "spawn", {
-          agent: params.agent, task: `[vault-hunter:${launchId}]\n${params.task}`, async: true, context: params.context ?? "fresh",
-          ...(params.cwd ? { cwd: params.cwd } : {}), ...(params.model ? { model: params.model } : {}),
-          ...(params.skill ? { skill: params.skill } : {}), ...(params.timeoutMs ? { timeoutMs: params.timeoutMs } : {}),
-        }, signal);
-      } catch (error) {
-        if (!(error instanceof AmbiguousLaunchError)) removeIntent(launchId);
-        throw error;
-      }
-      const asyncRunId = spawned?.details?.asyncId ?? spawned?.details?.runId;
-      const asyncDir = spawned?.details?.asyncDir;
-      if (!asyncRunId || !asyncDir) throw new Error("pi-subagents did not return a durable async identity.");
-      const binding = readBinding(asyncDir) ?? bindIntent(intent, asyncRunId, asyncDir);
-      try {
-        await replayBinding(binding);
-      } catch (error) {
-        try { await rpc(pi, "stop", { id: asyncRunId }); } catch { /* registration failure remains primary */ }
-        throw new Error(`Registry registration failed; ${asyncRunId} may still be live and must be quarantined: ${String(error)}`);
-      }
-      return text(`Launched registered Vault Hunter child ${asyncRunId} for ${params.goalId}.`, {
-        runId: params.runId, asyncRunId, asyncDir, goalId: params.goalId, agent: params.agent,
-      });
     },
   });
 
