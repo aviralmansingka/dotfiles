@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "run_id": "atlas-t07-rich",
+  "revision": 9,
+  "invoked_at": "2026-07-26T13:00:00Z",
+  "updated_at": "2026-07-26T13:10:00Z",
+  "task": {
+    "id": "T07",
+    "title": "Build the Expanded Operations Board",
+    "path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/07-build-expanded-operations-board.md",
+    "feature_path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas.md",
+    "kind": "task"
+  },
+  "participants": [
+    {
+      "participant_id": "worker-a",
+      "observed_at": "2026-07-26T13:00:01Z",
+      "role": "old-worker-role",
+      "goal_id": "checkpoint-one",
+      "herdr": {
+        "workspace_id": "old-w",
+        "tab_id": "old-t",
+        "pane_id": "old-p",
+        "terminal_id": "old-x"
+      },
+      "agent_session": {
+        "source": "codex",
+        "kind": "session",
+        "value": "old-s"
+      }
+    },
+    {
+      "participant_id": "reviewer-b",
+      "observed_at": "2026-07-26T13:04:00Z",
+      "role": "reviewer",
+      "goal_id": "T07.V01",
+      "herdr": {
+        "workspace_id": "w7",
+        "tab_id": "tr",
+        "pane_id": "pr",
+        "terminal_id": "xr"
+      },
+      "agent_session": {
+        "source": "codex",
+        "kind": "session",
+        "value": "sr"
+      }
+    },
+    {
+      "participant_id": "checkpoint-only",
+      "observed_at": "2026-07-26T13:04:30Z",
+      "role": "checkpoint-steward",
+      "goal_id": "checkpoint-one"
+    },
+    {
+      "participant_id": "worker-a",
+      "observed_at": "2026-07-26T13:08:00Z",
+      "role": "implementer",
+      "goal_id": "T07.V01",
+      "herdr": {
+        "workspace_id": "w7",
+        "tab_id": "td2",
+        "pane_id": "pd2",
+        "terminal_id": "xd2"
+      },
+      "agent_session": {
+        "source": "codex",
+        "kind": "session",
+        "value": "sd2"
+      }
+    }
+  ],
+  "lifecycle": [
+    {
+      "observation_id": "life-checkpoint-await",
+      "observed_at": "2026-07-26T13:00:02Z",
+      "kind": "checkpoint",
+      "goal_id": "checkpoint-one",
+      "state": "awaiting-human-evaluation",
+      "detail": "approved contract waiting for construction"
+    },
+    {
+      "observation_id": "life-checkpoint-done",
+      "observed_at": "2026-07-26T13:01:00Z",
+      "kind": "checkpoint",
+      "goal_id": "checkpoint-one",
+      "state": "done",
+      "detail": "construction authorized"
+    },
+    {
+      "observation_id": "life-v01-pending",
+      "observed_at": "2026-07-26T13:02:00Z",
+      "kind": "verifier",
+      "goal_id": "T07.V01",
+      "state": "pending",
+      "detail": "route not yet constructed"
+    },
+    {
+      "observation_id": "life-v01-active",
+      "observed_at": "2026-07-26T13:05:00Z",
+      "kind": "verifier",
+      "goal_id": "T07.V01",
+      "state": "active",
+      "detail": "behavioral baseline red with wide text 東京 and deterministic truncation"
+    },
+    {
+      "observation_id": "life-review-pending",
+      "observed_at": "2026-07-26T13:09:00Z",
+      "kind": "review",
+      "goal_id": "review",
+      "state": "pending",
+      "detail": "future goal remains unselected"
+    }
+  ],
+  "evidence": [
+    {
+      "observation_id": "evidence-dispatcher-baseline",
+      "observed_at": "2026-07-26T13:03:00Z",
+      "verifier_id": "T07.V01",
+      "state": "failed",
+      "command": "scripts/verify-vault-hunter-atlas T07.V01",
+      "exit_status": 2,
+      "implementation_tree": "",
+      "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "detail": "dispatcher route absent"
+    },
+    {
+      "observation_id": "evidence-behavioral-baseline",
+      "observed_at": "2026-07-26T13:06:00Z",
+      "verifier_id": "T07.V01",
+      "state": "failed",
+      "command": "scripts/verify-vault-hunter-atlas T07.V01",
+      "exit_status": 2,
+      "implementation_tree": "0123456789abcdef0123456789abcdef01234567",
+      "artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "detail": "expanded mode absent"
+    }
+  ]
+}

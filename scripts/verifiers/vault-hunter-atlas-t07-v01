@@ -1,0 +1,98 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture=scripts/fixtures/vault-hunter-atlas-t07/runs/atlas-t07-rich.json
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+fixture_hash=$(shasum -a 256 "$fixture" | awk '{print $1}')
+mkdir -p "$tmp/state/runs"
+cp "$fixture" "$tmp/state/runs/"
+
+# The existing compact snapshot contract remains a regression input.
+scripts/verifiers/vault-hunter-atlas-v01
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+
+check_frame() {
+  python3 - "$1" "$2" "$3" <<'PY'
+import sys
+import unicodedata
+
+path, width, height = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+data = open(path, "rb").read()
+if b"\x1b" in data:
+    raise SystemExit(f"{path}: frame contains ANSI")
+if not data.endswith(b"\n") or data.endswith(b"\n\n"):
+    raise SystemExit(f"{path}: frame must end with exactly one newline")
+lines = data.decode("utf-8").splitlines()
+if len(lines) > height:
+    raise SystemExit(f"{path}: {len(lines)} rows exceed height {height}")
+
+def cells(line):
+    total = 0
+    for char in line:
+        if ord(char) < 32 or ord(char) == 127:
+            raise SystemExit(f"{path}: control character in frame")
+        if unicodedata.combining(char) or unicodedata.category(char) == "Cf":
+            continue
+        total += 2 if unicodedata.east_asian_width(char) in ("W", "F") else 1
+    return total
+
+for number, line in enumerate(lines, 1):
+    used = cells(line)
+    if used > width:
+        raise SystemExit(f"{path}:{number}: {used} cells exceed width {width}")
+PY
+}
+
+for size in 160x48 120x32; do
+  width=${size%x*}
+  height=${size#*x}
+  first="$tmp/$size.first"
+  second="$tmp/$size.second"
+
+  if "$tmp/vault-hunter-atlas" --expanded --run-id atlas-t07-rich \
+    --state-dir "$tmp/state" --snapshot --width "$width" --height "$height" >"$first"; then
+    :
+  else
+    status=$?
+    echo "T07.V01 expanded snapshot $size failed; expanded product seam is missing or rejected" >&2
+    exit "$status"
+  fi
+  "$tmp/vault-hunter-atlas" --expanded --run-id atlas-t07-rich \
+    --state-dir "$tmp/state" --snapshot --width "$width" --height "$height" >"$second"
+
+  cmp "$first" "$second"
+  check_frame "$first" "$width" "$height"
+
+  grep -Fq "Run atlas-t07-rich" "$first"
+  grep -Fq "Task T07 · Build the Expanded Operations Board" "$first"
+  grep -Fq "TIMELINE" "$first"
+  grep -Fq "VERIFIER LEDGER" "$first"
+  grep -Fq "EVIDENCE" "$first"
+  grep -Fq "checkpoint-one" "$first"
+  grep -Fq "T07.V01" "$first"
+  grep -Fq "verifier" "$first"
+  grep -Fq "active" "$first"
+  grep -Fq "behavioral baseline red" "$first"
+  grep -Fq "scripts/verify-vault-hunter-atlas T07.V01" "$first"
+  grep -Fq "exit 2" "$first"
+  grep -Fq "01234567" "$first"
+  grep -Fq "bbbbbbbb" "$first"
+  grep -Eq "worker-a.*implementer" "$first"
+  for field in w7 td2 pd2 xd2 codex session sd2; do
+    grep -Fq "$field" "$first"
+  done
+  grep -Eq "reviewer-b.*reviewer" "$first"
+  test "$(grep -Fc "worker-a" "$first")" -eq 1
+  if grep -Fq "checkpoint-only" "$first" || grep -Fq "old-worker-role" "$first"; then
+    echo "$size frame projected stale or unrelated participant data" >&2
+    exit 1
+  fi
+done
+
+test "$fixture_hash" = "$(shasum -a 256 "$fixture" | awk '{print $1}')"
+test "$fixture_hash" = "$(shasum -a 256 "$tmp/state/runs/atlas-t07-rich.json" | awk '{print $1}')"
+echo "T07.V01 deterministic expanded Operations Board snapshots: PASS"
