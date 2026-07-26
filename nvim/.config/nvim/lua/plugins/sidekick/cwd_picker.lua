@@ -795,7 +795,7 @@ function M.open(opts)
       return
     end
     local item = workspace_rows[vim.api.nvim_win_get_cursor(workspace_win.win)[1]]
-    if not item or item._workspace then
+    if not item then
       pending_workspace_item = nil
       if rendered_workspace_item or preview_selection then
         transition_preview()
@@ -1035,12 +1035,10 @@ function M.open(opts)
     end
     transition_preview()
     vim.api.nvim_win_set_cursor(workspace_win.win, { row, 0 })
-    rendered_workspace_item = item._workspace and nil or item
+    rendered_workspace_item = item
     pending_workspace_item = nil
     set_active_selector(true)
-    if not item._workspace then
-      show_preview(item)
-    end
+    show_preview(item)
   end
 
   local function refresh_preview()
@@ -1218,7 +1216,7 @@ function M.open(opts)
     set_active_selector(not workspace_active)
     if workspace_active then
       local item = workspace_rows[vim.api.nvim_win_get_cursor(workspace_win.win)[1]]
-      if item and not item._workspace then
+      if item then
         rendered_workspace_item = item
         show_preview(item)
       end

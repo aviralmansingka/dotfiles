@@ -1550,12 +1550,26 @@ local function validate_sidekick_herdr()
       fake_picker.preview.win.win = atlas_win
       fake_picker.closed = false
       current_fake_item = atlas_item
-      local swaps_before = preview_swaps
       local workspace = atlas_picker_opts.layout.wins.workspace
       workspace:show()
       atlas_picker_opts.on_show(fake_picker)
-      atlas_picker_opts.win.input.keys["<c-w>"][1]()
-      atlas_picker_opts.preview({ item = atlas_item, preview = fake_picker.preview })
+      input_pattern = "pblocked"
+      input_changed()
+      if vim.api.nvim_win_get_cursor(workspace.win)[1] ~= 2 then
+        fail("T04 V01 workspace filter should select the exact participant")
+      end
+      local move_up = atlas_picker_opts.win.input.keys["<Up>"]
+      local move_down = atlas_picker_opts.win.input.keys["<Down>"]
+      local heading_setup_swaps = preview_swaps
+      move_up[1]()
+      vim.wait(1000, function() return preview_swaps > heading_setup_swaps end, 10)
+      if preview_swaps ~= heading_setup_swaps + 1
+        or table.concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n") ~= "(no session)"
+      then
+        fail("T04 V01 workspace heading should render its empty default preview")
+      end
+      local swaps_before = preview_swaps
+      move_down[1]()
       vim.wait(1000, function()
         return #lookup_calls > 0 and preview_swaps > swaps_before
       end, 10)
@@ -1600,7 +1614,7 @@ local function validate_sidekick_herdr()
       local blank_layout_buf = vim.api.nvim_create_buf(false, true)
       fake_picker.preview.win.buf = blank_layout_buf
       local layout_swaps = preview_swaps
-      atlas_picker_opts.preview({ item = atlas_item, preview = fake_picker.preview })
+      atlas_picker_opts.preview({ item = lookup.item, preview = fake_picker.preview })
       vim.wait(1000, function() return preview_swaps > layout_swaps end, 10)
       local layout_rendered = table.concat(
         vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
@@ -1629,6 +1643,22 @@ local function validate_sidekick_herdr()
         fail("T04 V01 refresh/full-preview loading overwrote active Atlas at " .. size)
       end
 
+      local heading_swaps = preview_swaps
+      move_up[1]()
+      vim.wait(1000, function() return preview_swaps > heading_swaps end, 10)
+      local heading_bytes = table.concat(
+        vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
+        "\n"
+      )
+      if preview_swaps ~= heading_swaps + 1
+        or fake_picker.preview.win.buf == atlas_buf
+        or heading_bytes ~= "(no session)"
+        or #lookup_calls ~= 1
+      then
+        fail("T04 V01 real workspace-heading navigation did not replace active Atlas at " .. size)
+      end
+
+      input_pattern = ""
       fake_picker.closed = true
       atlas_picker_opts.on_close(fake_picker)
       workspace:close()
