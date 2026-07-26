@@ -738,8 +738,12 @@ function patchComponents(
       toolProto[CONTROLLER]?.toolUpdated(this);
       return updateDisplay.call(this);
     };
+    const render = toolProto.render;
     toolProto.render = function (width: number) {
-      return toolProto[CONTROLLER]?.renderTool(this, width) ?? [];
+      const activity = toolProto[CONTROLLER]?.renderTool(this, width) ?? [];
+      return this.toolName === "subagent"
+        ? [...activity, ...render.call(this, width)]
+        : activity;
     };
   }
 }
