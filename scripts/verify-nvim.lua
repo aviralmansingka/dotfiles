@@ -3641,9 +3641,99 @@ local function validate_vault_features()
   end
 end
 
+local function validate_markdown_formatting()
+  load_plugin("vim-pencil")
+  load_plugin("conform.nvim")
+  load_plugin("nvim-lint")
+
+  local buf = vim.api.nvim_create_buf(true, false)
+  vim.api.nvim_set_current_buf(buf)
+  vim.api.nvim_buf_set_name(buf, vim.fn.tempname() .. ".md")
+  vim.cmd("setfiletype markdown")
+
+  if vim.bo[buf].textwidth ~= 120 then
+    fail("markdown textwidth should be 120; got " .. vim.bo[buf].textwidth)
+  end
+  if vim.bo[buf].formatexpr ~= "" then
+    fail("markdown should use native textwidth wrapping; got formatexpr=" .. vim.inspect(vim.bo[buf].formatexpr))
+  end
+  if not vim.bo[buf].formatoptions:find("t", 1, true) then
+    fail("markdown formatoptions should enable text auto-wrapping")
+  end
+  if vim.b[buf].pencil_wrap_mode ~= 1 then
+    fail("markdown should use PencilHard; got pencil_wrap_mode=" .. vim.inspect(vim.b[buf].pencil_wrap_mode))
+  end
+
+  local conform = require("conform")
+  local formatter_names = vim.tbl_map(function(formatter)
+    return formatter.name
+  end, conform.list_formatters(buf))
+  assert_sequence(formatter_names, { "prettier" }, "markdown formatter chain")
+
+  local tick = string.char(96)
+  local within_limit = vim.trim(string.rep("word ", 21))
+  local long_code = "command " .. string.rep("argument ", 16)
+  local long_heading = "## " .. vim.trim(string.rep("heading ", 18))
+  local long_table = "| " .. vim.trim(string.rep("column content ", 10)) .. " |"
+  local long_url = "https://example.com/" .. string.rep("path-segment/", 12)
+  local lines = {
+    "# Alignment fixture",
+    "",
+    "1. Store the paths here:",
+    "",
+    "   " .. tick .. tick .. tick .. "text",
+    "   <feature>/issues/<effort>/map.md",
+    "   <feature>/issues/<effort>/01-<decision>.md",
+    "   " .. tick .. tick .. tick,
+    "",
+    "2. Continue the ordered list.",
+    "",
+    within_limit,
+    "",
+    "This ordinary prose paragraph contains enough repeated words to exceed the configured width and should be wrapped cleanly by Prettier before Markdownlint checks it.",
+    "",
+    "Read the [long documentation link](" .. long_url .. ") before continuing with the remaining prose.",
+    "",
+    long_heading,
+    "",
+    tick .. tick .. tick .. "sh",
+    long_code,
+    tick .. tick .. tick,
+    "",
+    long_table,
+  }
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  conform.format({ bufnr = buf, async = false, timeout_ms = 10000 })
+  local formatted = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+  if vim.fn.index(formatted, "   " .. tick .. tick .. tick .. "text") < 0 then
+    fail("Prettier should preserve an indented fenced block inside a list: " .. vim.inspect(formatted))
+  end
+  if vim.fn.index(formatted, within_limit) < 0 then
+    fail("Prettier should preserve prose between 80 and 120 characters: " .. vim.inspect(formatted))
+  end
+
+  local linter = require("lint").linters["markdownlint-cli2"]
+  assert_sequence(
+    linter.args,
+    { "--config", vim.fn.expand("~/.markdownlint-cli2.yaml"), "-" },
+    "markdownlint arguments"
+  )
+  local lint = vim.system(
+    vim.list_extend({ vim.fn.exepath(linter.cmd) }, linter.args),
+    { stdin = table.concat(formatted, "\n") .. "\n", text = true }
+  ):wait()
+  if lint.code ~= 0 then
+    fail("formatted Markdown should pass Markdownlint:\n" .. (lint.stderr or "") .. (lint.stdout or ""))
+  end
+
+  vim.api.nvim_buf_delete(buf, { force = true })
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
   ["weekly-backlog"] = validate_weekly_backlog,
+  ["markdown-formatting"] = validate_markdown_formatting,
   ["inline-ask-edit"] = validate_inline_ask_edit,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
@@ -3658,7 +3748,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, weekly-backlog, inline-ask-edit, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
+      .. "; expected one of: agent-keymaps, weekly-backlog, markdown-formatting, inline-ask-edit, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
   )
 end
 

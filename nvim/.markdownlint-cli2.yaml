@@ -3,9 +3,11 @@
 
 config:
   # MD013 - Line length
-  # Disabled: Markdown prose wraps at 120 visual columns in Neovim; raw long
-  # links, tables, and generated/reference content are allowed.
-  MD013: false
+  MD013:
+    line_length: 120
+    code_blocks: false
+    tables: false
+    headings: false
 
   # MD033 - Inline HTML
   # Allow HTML in markdown (useful for details/summary, etc.)

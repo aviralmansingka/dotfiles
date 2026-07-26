@@ -52,21 +52,21 @@ end
 return {
   {
     "preservim/vim-pencil",
-    ft = { "markdown" },
+    ft = { "markdown", "octo" },
     config = function()
-      vim.g["pencil#wrapModeDefault"] = "soft"
+      vim.g["pencil#wrapModeDefault"] = "hard"
       vim.g["pencil#textwidth"] = 120
       vim.g["pencil#autoformat"] = 1
+      local group = vim.api.nvim_create_augroup("markdown_editing", { clear = true })
 
       -- Auto-enable pencil for markdown files
       vim.api.nvim_create_autocmd("FileType", {
+        group = group,
         pattern = "markdown",
         callback = function()
-          vim.cmd("PencilSoft")
+          vim.cmd("PencilHard")
           vim.opt_local.textwidth = 120
-          vim.opt_local.wrap = true
-          vim.opt_local.linebreak = true
-          vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
+          vim.opt_local.formatexpr = ""
           require("helpers.markdown_links").setup()
         end,
       })
@@ -75,14 +75,26 @@ return {
       -- conceal-vs-wrap interaction leaves phantom whitespace when long URLs
       -- are present in the buffer.
       vim.api.nvim_create_autocmd("FileType", {
+        group = group,
         pattern = "octo",
         callback = function()
-          vim.opt_local.formatexpr = "v:lua.require'helpers.markdown_wrap'.formatexpr()"
+          vim.opt_local.textwidth = 120
+          vim.opt_local.formatexpr = ""
           vim.opt_local.wrap = false
           require("helpers.markdown_links").setup()
         end,
       })
     end,
+  },
+  {
+    "mfussenegger/nvim-lint",
+    opts = {
+      linters = {
+        ["markdownlint-cli2"] = {
+          args = { "--config", vim.fn.expand("~/.markdownlint-cli2.yaml"), "-" },
+        },
+      },
+    },
   },
   {
     -- Smart list continuation and auto-formatting for markdown
