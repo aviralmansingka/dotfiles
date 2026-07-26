@@ -1,7 +1,7 @@
 Run atlas-journal-run · Task T08 · Build the Execution Journal
 Execution Journal · 7 events · UTC · read-only
 TIME         TYPE OBSERVATION SUBJECT STATE (L=lifecycle E=evidence)
-> 10:00:00Z L life-offset checkpoint-one checkpoint done
+  10:00:00Z L life-offset checkpoint-one checkpoint done
   10:01:00Z L duplicate-id future-goal future-kind future-state
   10:01:00Z L life-tie-second T08.REVIEW review done
   10:01:00Z E duplicate-id T08.V01 failed exit=2
@@ -13,5 +13,11 @@ TIME         TYPE OBSERVATION SUBJECT STATE (L=lifecycle E=evidence)
   10:02:00Z E evidence-later T08.V01 passed exit=0
     command=verify-later
     tree=tree-green artifact=sha-green detail=instant-middle
-  10:03:00Z L life-later T08.LANDING landing pending
+> 10:03:00Z L life-later T08.LANDING landing pending
+Selected Event Detail · Lifecycle
+  Recorded timestamp: 2026-07-26T10:03:00Z
+  Goal ID: T08.LANDING
+  Kind: landing
+  State: pending
+  Detail: instant-later
 j/down k/up navigate · q quit · read-only · 80x24
