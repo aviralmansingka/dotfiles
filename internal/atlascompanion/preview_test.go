@@ -81,6 +81,36 @@ func TestPreviewUniqueMatch(t *testing.T) {
 	}
 }
 
+func TestPreviewOneSidedAgentSessionMatches(t *testing.T) {
+	root := t.TempDir()
+	identity := &vaultregistry.HerdrIdentity{WorkspaceID: "workspace", TabID: "tab", PaneID: "pane", TerminalID: "terminal"}
+	liveSession := &vaultregistry.AgentSession{Source: "herdr:pi", Kind: "id", Value: "live-session"}
+	producer, err := vaultregistry.OpenProducer(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	createPreviewRun(t, producer, previewRun("run-one-sided", "task", "tasks/04.md", identity, nil))
+	reader, err := vaultregistry.OpenReader(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, _ := previewHerdr(t, herdrResponse(map[string]any{
+		"type": "agent_list", "agents": selectedPreviewAgents(identity, liveSession),
+	}))
+	selected := Agent{
+		WorkspaceID: identity.WorkspaceID, TabID: identity.TabID,
+		PaneID: identity.PaneID, TerminalID: identity.TerminalID, AgentSession: liveSession,
+	}
+
+	result, err := client.Preview(reader, selected, 76, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Outcome != "matched" || result.RunID != "run-one-sided" || result.ParticipantID != "worker" || result.Frame == "" {
+		t.Fatalf("Preview result = %#v, want one-sided agent-session match", result)
+	}
+}
+
 func TestPreviewOutcomesFailClosedAndReadOnly(t *testing.T) {
 	for _, tc := range []struct {
 		name, outcome string
@@ -108,13 +138,6 @@ func TestPreviewOutcomesFailClosedAndReadOnly(t *testing.T) {
 				createPreviewRun(t, producer, previewRun("run-stale", "task", taskPath, identity, session))
 			},
 			agents: func(*vaultregistry.HerdrIdentity, *vaultregistry.AgentSession) []Agent { return []Agent{} },
-		},
-		{
-			name: "stale incomplete registration", outcome: "stale",
-			configure: func(t *testing.T, producer *vaultregistry.Producer, taskPath string, identity *vaultregistry.HerdrIdentity, _ *vaultregistry.AgentSession) {
-				createPreviewRun(t, producer, previewRun("run-incomplete", "task", taskPath, identity, nil))
-			},
-			agents: selectedPreviewAgents,
 		},
 		{
 			name: "contradictory", outcome: "contradictory",

@@ -1,6 +1,6 @@
 # Vault Hunter Atlas T04 ANSI evidence
 
-These artifacts were generated on **macOS 15.7.4** (24G517) by the real headless Neovim/Sidekick verifier harness in `scripts/verify-nvim.lua`. They capture the actual native terminal preview buffers exercised by T04 V01 and V02; no picker content was fabricated.
+These artifacts were generated on **macOS 15.7.4** (24G517) by the headless Neovim/Sidekick verifier harness in `scripts/verify-nvim.lua`. They capture native terminal preview buffers produced by the real Sidekick preview rendering and lifecycle path exercised by T04 V01 and V02. The matched Atlas frames and fallback transcript text are deterministic fixtures supplied through mocked verifier hooks; this evidence run did not invoke the production `vault-hunter-atlas` lookup or Herdr read transport.
 
 The evidence was generated from the rebased implementation at commit `a7fbb100` and tree `3724f8d0` with:
 
@@ -14,7 +14,7 @@ T04_EVIDENCE_DIR=docs/evidence/vault-hunter-atlas-t04 scripts/verify-nvim sideki
 - `matched-80x24.ansi`: V01 matched Atlas preview on an 80x24 headless Neovim grid (76x4 preview window).
 - `fallback-restored.ansi`: V02's actual restored default Sidekick preview buffer on the 80x24 headless grid after the Atlas fallback checks.
 
-Neovim's native terminal buffer interpreted and normalized the source SGR before buffer capture. As an explicit user-approved substitute for a screen capture, the opt-in exporter applies the deterministic renderer convention `SGR 1;36` (bold cyan) plus `SGR 0` only around captured heading lines when the captured buffer contains no SGR. All captured text, spacing, ordering, and trailing blank buffer lines are otherwise preserved verbatim. The ANSI wrappers add presentation only; they do not invent picker content. With `T04_EVIDENCE_DIR` absent, the verifier does not create or modify evidence files.
+Neovim's native terminal buffer interpreted and normalized the source SGR before buffer capture. As an explicit user-approved substitute for a screen capture, the opt-in exporter applies the deterministic renderer convention `SGR 1;36` (bold cyan) plus `SGR 0` only around captured heading lines when the captured buffer contains no SGR. All captured text, spacing, ordering, and trailing blank buffer lines are otherwise preserved verbatim. The ANSI wrappers add presentation only. With `T04_EVIDENCE_DIR` absent, the verifier does not create or modify evidence files.
 
 ## SHA-256
 
