@@ -1,0 +1,24 @@
+Selected Task T02 · 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md
+Run atlas-rich-run · Task T02 · Compact Task Run Atlas
+Task Goals                       │ Verifier Journey
+─────────────────────────────────┼──────────────────────────────────────────────
+▶ V T02.V01 · verifier · active  │ T02.V01 · verifier · active
+                                 │
+                                 │ V 12:05 verifier · active
+                                 │
+                                 │ Evidence
+                                 │ none recorded
+                                 │
+                                 │ Registered Participants
+                                 │ none recorded
+                                 │
+                                 │ Detail: none recorded
+                                 │
+                                 │
+                                 │
+                                 │
+                                 │
+                                 │
+                                 │
+                                 │
+↑/k ↓/j · Enter detail · q quit  │ static snapshot · 80×24

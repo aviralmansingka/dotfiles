@@ -1,0 +1,63 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+fixture=scripts/fixtures/vault-hunter-atlas-t06-v02
+golden=scripts/goldens/vault-hunter-atlas-t06-v02/selected-task-run.txt
+tmp=$(mktemp -d)
+trap 'chmod -R u+rwX "$tmp" 2>/dev/null || true; rm -rf "$tmp"' EXIT
+
+manifest() {
+  (
+    cd "$1"
+    find . -type f -print | LC_ALL=C sort | while IFS= read -r file; do
+      printf '%s  %s\n' "$(shasum -a 256 "$file" | awk '{print $1}')" "$file"
+    done
+  ) | shasum -a 256 | awk '{print $1}'
+}
+
+source_vault_before=$(manifest "$fixture/vault")
+source_registry_before=$(manifest "$fixture/state")
+test "$(grep -RFl '"path":"1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md"' "$fixture/state/runs" | wc -l | tr -d ' ')" -eq 1
+go test -count=1 ./internal/atlas -run 'T06V02'
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+cp -R "$fixture/vault" "$tmp/vault"
+cp -R "$fixture/state" "$tmp/state"
+mkdir "$tmp/traps" "$tmp/home"
+: > "$tmp/invocations"
+for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
+  ln -s "$(pwd)/$fixture/orchestration-trap" "$tmp/traps/$command"
+done
+vault_before=$(manifest "$tmp/vault")
+registry_before=$(manifest "$tmp/state")
+chmod -R a-w "$tmp/vault" "$tmp/state"
+
+task=1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/02-compact.md
+run_atlas() {
+  HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
+    VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-read" \
+    ATLAS_T06_TRAP_LOG="$tmp/invocations" PATH="$tmp/traps:$PATH" \
+    "$tmp/vault-hunter-atlas" --vault-dir "$tmp/vault" --state-dir "$tmp/state" \
+    --select-task "$task" --snapshot --width 80 --height 24 "$@"
+}
+run_atlas --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md > "$tmp/feature.first"
+run_atlas --feature 1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md > "$tmp/feature.second"
+run_atlas --project 1_projects/pi-agent > "$tmp/project.first"
+cmp "$tmp/feature.first" "$tmp/feature.second"
+cmp "$tmp/feature.first" "$tmp/project.first"
+cmp "$golden" "$tmp/feature.first"
+grep -Fq "Selected Task T02 · $task" "$tmp/feature.first"
+grep -Fq 'Run atlas-rich-run · Task T02 · Compact Task Run Atlas' "$tmp/feature.first"
+grep -Fq '▶ V T02.V01 · verifier · active' "$tmp/feature.first"
+test ! -s "$tmp/invocations"
+test ! -e "$tmp/home/retained-registry-must-not-be-read"
+test "$vault_before" = "$(manifest "$tmp/vault")"
+test "$registry_before" = "$(manifest "$tmp/state")"
+test "$source_vault_before" = "$(manifest "$fixture/vault")"
+test "$source_registry_before" = "$(manifest "$fixture/state")"
+
+printf 'selected Task: %s\n' "$task"
+printf 'opened Run: atlas-rich-run\n'
+printf 'fixture vault manifest: %s\n' "$vault_before"
+printf 'fixture Registry manifest: %s\n' "$registry_before"
+echo 'T06.V02 registered Task selection opens existing T02 Task Run Atlas: PASS'

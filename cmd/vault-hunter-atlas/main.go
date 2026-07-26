@@ -17,12 +17,13 @@ func main() {
 	vaultDir := flag.String("vault-dir", "", "canonical vault root")
 	featurePath := flag.String("feature", "", "vault-relative canonical feature.md target")
 	projectPath := flag.String("project", "", "vault-relative canonical project target")
+	selectedTaskPath := flag.String("select-task", "", "vault-relative Task path to open from an aggregate")
 	snapshot := flag.Bool("snapshot", false, "print one deterministic frame")
 	width := flag.Int("width", 0, "frame width")
 	height := flag.Int("height", 0, "frame height")
 	flag.Parse()
 	aggregateMode := *featurePath != "" || *projectPath != ""
-	if (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "")) || (!aggregateMode && *runID == "") {
+	if (*featurePath != "" && *projectPath != "") || (aggregateMode && (*runID != "" || *vaultDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "")) {
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -58,8 +59,19 @@ func main() {
 		if err != nil {
 			fail(err)
 		}
-		fmt.Println(projection.Render())
-		return
+		if *selectedTaskPath == "" {
+			fmt.Println(projection.Render())
+			return
+		}
+		task, ok := projection.Task(*selectedTaskPath)
+		if !ok {
+			fail(fmt.Errorf("selected Task not found: %s", *selectedTaskPath))
+		}
+		if task.RunID == "" {
+			fail(fmt.Errorf("selected Task has no registered run: %s", task.Path))
+		}
+		*runID = task.RunID
+		fmt.Printf("Selected Task %s · %s\n", task.ID, task.Path)
 	}
 	run, err := reader.Get(*runID)
 	if err != nil {

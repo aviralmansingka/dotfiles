@@ -177,6 +177,18 @@ func (a Aggregate) Render() string {
 	return renderProject(a)
 }
 
+func (a Aggregate) Task(path string) (TaskProjection, bool) {
+	path = normalizePath(path)
+	for _, feature := range a.Features {
+		for _, task := range feature.Tasks {
+			if task.Path == path {
+				return task, true
+			}
+		}
+	}
+	return TaskProjection{}, false
+}
+
 func renderFeature(f FeatureProjection, diagnostics []string) string {
 	lines := []string{"FEATURE ATLAS · " + f.Name + "  OUTLINE + SUMMARY", statusGlyph(f.Status) + " " + strings.ToUpper(string(f.Status)) + "  Feature status roll-up", "│"}
 	for i, t := range f.Tasks {
