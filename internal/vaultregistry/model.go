@@ -65,14 +65,16 @@ type Run struct {
 	Unknown       map[string]json.RawMessage
 }
 
+// ListFilter selects Runs by exact identity and an inclusive update-time range.
 type ListFilter struct {
-	TaskID        string        `json:"task_id,omitempty"`
-	FeaturePath   string        `json:"feature_path,omitempty"`
-	AgentSession  *AgentSession `json:"agent_session,omitempty"`
-	UpdatedAtFrom string        `json:"updated_at_from,omitempty"`
-	UpdatedAtTo   string        `json:"updated_at_to,omitempty"`
+	TaskID           string        `json:"task_id,omitempty"`
+	FeaturePath      string        `json:"feature_path,omitempty"`
+	AgentSession     *AgentSession `json:"agent_session,omitempty"`
+	UpdatedAtFrom    string        `json:"updated_at_from,omitempty"`
+	UpdatedAtThrough string        `json:"updated_at_through,omitempty"`
 }
 
+// TaskSummary is the bounded Task projection returned by ListSummaries.
 type TaskSummary struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
@@ -81,6 +83,7 @@ type TaskSummary struct {
 	Kind        string `json:"kind"`
 }
 
+// RunSummary excludes observation histories and unknown extension fields.
 type RunSummary struct {
 	SchemaVersion uint64      `json:"schema_version"`
 	RunID         string      `json:"run_id"`

@@ -157,6 +157,12 @@ func (r *Reader) Get(runID string) (Run, error) {
 
 // List returns all recorded runs in deterministic Run ID order without creating state.
 func (r *Reader) List() ([]Run, error) {
+	unlock, err := r.lock()
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+
 	entries, err := os.ReadDir(filepath.Join(r.root, "runs"))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -182,93 +188,143 @@ func (r *Reader) List() ([]Run, error) {
 	return runs, nil
 }
 
+// ListSummaries returns a complete, bounded snapshot of active Run records.
 func (r *Reader) ListSummaries(filter ListFilter) ([]RunSummary, error) {
-	from, to, err := listRange(filter)
+	from, through, err := validateListFilter(filter)
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(r.root, "runs")
-	entries, err := os.ReadDir(dir)
-	if errors.Is(err, os.ErrNotExist) {
-		return []RunSummary{}, nil
-	}
+	unlock, err := r.lock()
 	if err != nil {
 		return nil, err
 	}
-	summaries := []RunSummary{}
-	// ponytail: a full scan keeps discovery exact; add an index only if registry size makes this measurable.
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-		id := strings.TrimSuffix(entry.Name(), ".json")
-		if err := validID(id); err != nil {
-			return nil, fmt.Errorf("%w: %s: invalid run file name", ErrMalformed, filepath.Join(dir, entry.Name()))
-		}
-		run, err := load(filepath.Join(dir, entry.Name()), id)
-		if err != nil {
-			return nil, err
-		}
-		if listMatch(run, filter, from, to) {
+	defer unlock()
+
+	runs, err := r.activeRuns()
+	if err != nil {
+		return nil, err
+	}
+	summaries := make([]RunSummary, 0, len(runs))
+	for _, run := range runs {
+		if matchesListFilter(run, filter, from, through) {
 			summaries = append(summaries, summarize(run))
 		}
 	}
-	slices.SortFunc(summaries, func(a, b RunSummary) int { return strings.Compare(a.RunID, b.RunID) })
+	sort.Slice(summaries, func(i, j int) bool {
+		return summaries[i].RunID < summaries[j].RunID
+	})
 	return summaries, nil
 }
 
-func listRange(filter ListFilter) (*time.Time, *time.Time, error) {
-	if session := filter.AgentSession; session != nil && (session.Source == "" || session.Kind == "" || session.Value == "") {
-		return nil, nil, fmt.Errorf("%w: agent_session requires source, kind, and value", ErrMalformed)
+// activeRuns validates every active JSON record before ListSummaries applies
+// filters. Temporary files, non-JSON entries, and directories are not active.
+// ponytail: scan all records; add an index only if Registry size makes it measurable.
+func (r *Reader) activeRuns() ([]Run, error) {
+	dir := filepath.Join(r.root, "runs")
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return []Run{}, nil
 	}
-	var from, to *time.Time
-	if filter.UpdatedAtFrom != "" {
-		parsed, err := time.Parse(time.RFC3339, filter.UpdatedAtFrom)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: invalid updated_at_from: %v", ErrMalformed, err)
+	if err != nil {
+		return nil, err
+	}
+	runs := make([]Run, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
 		}
-		from = &parsed
-	}
-	if filter.UpdatedAtTo != "" {
-		parsed, err := time.Parse(time.RFC3339, filter.UpdatedAtTo)
+		path := filepath.Join(dir, entry.Name())
+		info, err := os.Lstat(path)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: invalid updated_at_to: %v", ErrMalformed, err)
+			return nil, err
 		}
-		to = &parsed
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil, fmt.Errorf("%w: %s: active record is a symlink", ErrMalformed, path)
+		}
+		if !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("%w: %s: active record is not a regular file", ErrMalformed, path)
+		}
+		id := strings.TrimSuffix(entry.Name(), ".json")
+		if err := validID(id); err != nil {
+			return nil, fmt.Errorf("%w: %s: invalid run file name", ErrMalformed, path)
+		}
+		run, err := load(path, id)
+		if err != nil {
+			return nil, err
+		}
+		runs = append(runs, run)
 	}
-	if from != nil && to != nil && from.After(*to) {
-		return nil, nil, fmt.Errorf("%w: updated_at_from is after updated_at_to", ErrMalformed)
-	}
-	return from, to, nil
+	return runs, nil
 }
 
-func listMatch(run Run, filter ListFilter, from, to *time.Time) bool {
+func validateListFilter(filter ListFilter) (*time.Time, *time.Time, error) {
+	if session := filter.AgentSession; session != nil &&
+		(session.Source == "" || session.Kind == "" || session.Value == "") {
+		return nil, nil, fmt.Errorf("%w: agent_session requires source, kind, and value", ErrMalformed)
+	}
+	from, err := parseListBoundary("updated_at_from", filter.UpdatedAtFrom)
+	if err != nil {
+		return nil, nil, err
+	}
+	through, err := parseListBoundary("updated_at_through", filter.UpdatedAtThrough)
+	if err != nil {
+		return nil, nil, err
+	}
+	if from != nil && through != nil && from.After(*through) {
+		return nil, nil, fmt.Errorf("%w: updated_at_from is after updated_at_through", ErrMalformed)
+	}
+	return from, through, nil
+}
+
+func parseListBoundary(name, value string) (*time.Time, error) {
+	if value == "" {
+		return nil, nil
+	}
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid %s: %v", ErrMalformed, name, err)
+	}
+	return &parsed, nil
+}
+
+func matchesListFilter(run Run, filter ListFilter, from, through *time.Time) bool {
 	if filter.TaskID != "" && run.Task.ID != filter.TaskID ||
 		filter.FeaturePath != "" && run.Task.FeaturePath != filter.FeaturePath {
 		return false
 	}
 	if wanted := filter.AgentSession; wanted != nil {
-		found := false
+		matched := false
 		for _, participant := range run.Participants {
 			session := participant.AgentSession
-			if session != nil && session.Source == wanted.Source && session.Kind == wanted.Kind && session.Value == wanted.Value {
-				found = true
+			if session != nil && session.Source == wanted.Source &&
+				session.Kind == wanted.Kind && session.Value == wanted.Value {
+				matched = true
 				break
 			}
 		}
-		if !found {
+		if !matched {
 			return false
 		}
 	}
 	updated, _ := time.Parse(time.RFC3339, run.UpdatedAt)
-	return (from == nil || !updated.Before(*from)) && (to == nil || !updated.After(*to))
+	return (from == nil || !updated.Before(*from)) &&
+		(through == nil || !updated.After(*through))
 }
 
 func summarize(run Run) RunSummary {
 	return RunSummary{
-		SchemaVersion: run.SchemaVersion, RunID: run.RunID, Revision: run.Revision,
-		InvokedAt: run.InvokedAt, UpdatedAt: run.UpdatedAt,
-		Task: TaskSummary{ID: run.Task.ID, Title: run.Task.Title, Path: run.Task.Path, FeaturePath: run.Task.FeaturePath, Kind: run.Task.Kind},
+		SchemaVersion: run.SchemaVersion,
+		RunID:         run.RunID,
+		Revision:      run.Revision,
+		InvokedAt:     run.InvokedAt,
+		UpdatedAt:     run.UpdatedAt,
+		Task: TaskSummary{
+			ID:          run.Task.ID,
+			Title:       run.Task.Title,
+			Path:        run.Task.Path,
+			FeaturePath: run.Task.FeaturePath,
+			Kind:        run.Task.Kind,
+		},
 	}
 }
 
@@ -283,7 +339,24 @@ func (p *Producer) lock() (func(), error) {
 		f.Close()
 		return nil, err
 	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+	return flock(f, syscall.LOCK_EX)
+}
+
+// Reader locking is deliberately non-creating: a missing lock file represents
+// an empty or not-yet-produced Registry and has a snapshot before any writer.
+func (r *Reader) lock() (func(), error) {
+	f, err := os.Open(filepath.Join(r.root, "registry.lock"))
+	if errors.Is(err, os.ErrNotExist) {
+		return func() {}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return flock(f, syscall.LOCK_SH)
+}
+
+func flock(f *os.File, mode int) (func(), error) {
+	if err := syscall.Flock(int(f.Fd()), mode); err != nil {
 		f.Close()
 		return nil, err
 	}

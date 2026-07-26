@@ -48,6 +48,7 @@ func serve(input io.Reader, output io.Writer) error {
 		}
 		return json.NewEncoder(output).Encode(summaries)
 	}
+
 	producer, err := vaultregistry.OpenProducer(req.Root)
 	if err != nil {
 		return err
