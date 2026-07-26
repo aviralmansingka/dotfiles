@@ -3,78 +3,13 @@ set -eu
 
 cd "$(dirname "$0")/../.."
 
+. scripts/verifiers/vault-hunter-atlas-t03-support
+
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin" "$tmp/state"
 
-cat >"$tmp/bin/herdr" <<'PY'
-#!/usr/bin/env python3
-import json, os, shlex, sys
-
-path = os.environ["HERDR_FAKE_STATE"]
-log_path = os.environ["HERDR_FAKE_LOG"]
-args = sys.argv[1:]
-with open(path) as stream:
-    state = json.load(stream)
-with open(log_path, "a") as stream:
-    stream.write(json.dumps(args, separators=(",", ":")) + "\n")
-
-def emit(result):
-    print(json.dumps({"id": "fake", "result": result}, separators=(",", ":")))
-
-def save():
-    with open(path, "w") as stream:
-        json.dump(state, stream, sort_keys=True, separators=(",", ":"))
-        stream.write("\n")
-
-def option(name):
-    return args[args.index(name) + 1]
-
-if args[:2] == ["agent", "list"]:
-    emit({"type": "agent_list", "agents": state["agents"]})
-elif args[:2] == ["tab", "list"]:
-    workspace = option("--workspace")
-    emit({"type": "tab_list", "tabs": [tab for tab in state["tabs"] if tab["workspace_id"] == workspace]})
-elif args[:2] == ["pane", "list"]:
-    workspace = option("--workspace")
-    emit({"type": "pane_list", "panes": [{k: v for k, v in pane.items() if k != "processes"} for pane in state["panes"] if pane["workspace_id"] == workspace]})
-elif args[:2] == ["pane", "process-info"]:
-    pane_id = option("--pane")
-    pane = next((pane for pane in state["panes"] if pane["pane_id"] == pane_id), None)
-    if pane is None:
-        sys.exit(1)
-    emit({"type": "pane_process_info", "process_info": {"pane_id": pane_id, "foreground_processes": pane["processes"]}})
-elif args[:2] == ["tab", "create"]:
-    workspace = option("--workspace")
-    label = option("--label")
-    state["counter"] += 1
-    n = state["counter"]
-    tab = {"workspace_id": workspace, "tab_id": f"tab-{n}", "label": label, "pane_count": 1}
-    pane = {"workspace_id": workspace, "tab_id": tab["tab_id"], "pane_id": f"pane-{n}", "terminal_id": f"term-{n}", "processes": [{"argv": ["/bin/sh"]}]}
-    state["tabs"].append(tab)
-    state["panes"].append(pane)
-    save()
-    emit({"type": "tab_created", "tab": tab, "root_pane": {k: v for k, v in pane.items() if k != "processes"}})
-elif args[:2] == ["pane", "run"]:
-    pane_id, command = args[2], args[3]
-    pane = next(pane for pane in state["panes"] if pane["pane_id"] == pane_id)
-    argv = shlex.split(command)
-    pane["processes"] = [{"argv": argv}, {"argv": argv[4:]}]
-    save()
-    emit({"type": "pane_run", "pane_id": pane_id})
-elif args[:2] == ["tab", "close"]:
-    tab_id = args[2]
-    if not any(tab["tab_id"] == tab_id for tab in state["tabs"]):
-        sys.exit(1)
-    state["tabs"] = [tab for tab in state["tabs"] if tab["tab_id"] != tab_id]
-    state["panes"] = [pane for pane in state["panes"] if pane["tab_id"] != tab_id]
-    save()
-    emit({"type": "tab_closed", "tab_id": tab_id})
-else:
-    print("forbidden fake Herdr command: " + " ".join(args), file=sys.stderr)
-    sys.exit(97)
-PY
-chmod +x "$tmp/bin/herdr"
+install_fake_herdr strict-close
 
 cat >"$tmp/herdr.json" <<'JSON'
 {"counter":10,"agents":[{"name":"worker","agent":"pi","agent_status":"working","workspace_id":"ws-target","tab_id":"agent-tab","pane_id":"agent-pane","terminal_id":"agent-terminal"}],"tabs":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","label":"unrelated","pane_count":1},{"workspace_id":"ws-other","tab_id":"other-tab","label":"other workspace","pane_count":1}],"panes":[{"workspace_id":"ws-target","tab_id":"unrelated-tab","pane_id":"unrelated-pane","terminal_id":"unrelated-terminal","processes":[{"argv":["unrelated-process"]}]},{"workspace_id":"ws-other","tab_id":"other-tab","pane_id":"other-pane","terminal_id":"other-terminal","processes":[{"argv":["other-process"]}]}]}
