@@ -743,9 +743,7 @@ function M.open(opts)
       end
     end
     workspace_pattern = pattern
-    local filtered_item = workspace_rows[cursor_row]
-    filtered_item = filtered_item and not filtered_item._workspace and filtered_item or nil
-    if workspace_active and preview_selection ~= nil and filtered_item ~= preview_selection then
+    if workspace_active and preview_selection ~= nil and workspace_rows[cursor_row] ~= preview_selection then
       transition_preview()
       rendered_workspace_item = nil
       pending_workspace_item = nil
