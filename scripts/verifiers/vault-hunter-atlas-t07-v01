@@ -4,6 +4,7 @@ set -eu
 cd "$(dirname "$0")/../.."
 
 fixture=scripts/fixtures/vault-hunter-atlas-t07/runs/atlas-t07-rich.json
+goldens=scripts/goldens/vault-hunter-atlas-t07
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -52,6 +53,7 @@ for size in 160x48 120x32; do
   height=${size#*x}
   first="$tmp/$size.first"
   second="$tmp/$size.second"
+  golden="$goldens/$size.txt"
 
   if "$tmp/vault-hunter-atlas" --expanded --run-id atlas-t07-rich \
     --state-dir "$tmp/state" --snapshot --width "$width" --height "$height" >"$first"; then
@@ -65,6 +67,7 @@ for size in 160x48 120x32; do
     --state-dir "$tmp/state" --snapshot --width "$width" --height "$height" >"$second"
 
   cmp "$first" "$second"
+  cmp "$golden" "$first"
   check_frame "$first" "$width" "$height"
 
   grep -Fq "Run atlas-t07-rich" "$first"

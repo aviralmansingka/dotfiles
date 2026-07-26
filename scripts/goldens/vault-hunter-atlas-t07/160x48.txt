@@ -1,0 +1,29 @@
+Run atlas-t07-rich · Task T07 · Build the Expanded Operations Board
+
+TIMELINE
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ 13:00 checkpoint-one · checkpoint · awaiting-human-evaluation · approved contract waiting for construction
+ 13:01 checkpoint-one · checkpoint · done · construction authorized
+ 13:02 T07.V01 · verifier · pending · route not yet constructed
+ 13:03 T07.V01 · evidence · failed · exit 2 · dispatcher route absent
+ 13:05 T07.V01 · verifier · active · behavioral baseline red with wide text 東京 and deterministic truncation
+ 13:06 T07.V01 · evidence · failed · exit 2 · expanded mode absent
+ 13:09 review · review · pending · future goal remains unselected
+
+VERIFIER LEDGER · Goal T07.V01 · verifier · active
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ 13:02 verifier · pending · route not yet constructed
+ 13:03 evidence · failed · exit 2 · dispatcher route absent
+ 13:05 verifier · active · behavioral baseline red with wide text 東京 and deterministic truncation
+ 13:06 evidence · failed · exit 2 · expanded mode absent
+
+EVIDENCE · evidence-behavioral-baseline · 2026-07-26T13:06:00Z
+ state: failed · exit 2
+ command: scripts/verify-vault-hunter-atlas T07.V01
+ implementation tree: 0123456789abcdef0123456789abcdef01234567
+ artifact sha-256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+ detail: expanded mode absent
+
+ASSOCIATED PARTICIPANTS
+ worker-a · implementer · Herdr w7/td2/pd2/xd2 · agent session codex/session/sd2
+ reviewer-b · reviewer · Herdr w7/tr/pr/xr · agent session codex/session/sr
