@@ -1082,7 +1082,6 @@ function M.open(opts)
     if not item then
       return
     end
-    transition_preview()
     vim.api.nvim_win_set_cursor(workspace_win.win, { row, 0 })
     rendered_workspace_item = item
     pending_workspace_item = nil
