@@ -1,0 +1,65 @@
+Downloading no-mistakes v1.41.2 for darwin/arm64...
+no-mistakes v1.41.2 installed to /private/tmp/no-mistakes-p02.3oIKAs/install/no-mistakes
+Command path: /private/tmp/no-mistakes-p02.3oIKAs/bin/no-mistakes -> /private/tmp/no-mistakes-p02.3oIKAs/install/no-mistakes
+no-mistakes version v1.41.2 (867d64d) 2026-07-24T06:16:23Z
+_  _ ____    _  _ _ ____ ___ ____ _  _ ____ ____
+|\ | |  |    |\/| | [__   |  |__| |_/  |___ [__ 
+| \| |__|    |  | | ___]  |  |  | | \_ |___ ___]
+
+  ✓ Gate initialized
+
+    repo  /private/tmp/no-mistakes-p02.3oIKAs/repo
+    gate  no-mistakes → /private/tmp/no-mistakes-p02.3oIKAs/state/repos/9543750daf12.git
+  remote  /private/tmp/no-mistakes-p02.3oIKAs/origin.git
+   skill  /no-mistakes installed for agents at user level
+
+  Push through the gate with:
+  git push no-mistakes <branch>
+run: running
+  intent: completed
+  rebase: running
+  rebase: completed
+  review: running
+  review: completed
+  test: skipped
+  document: skipped
+run: completed
+  lint: skipped
+  push: skipped
+  pr: skipped
+  ci: skipped
+run:
+  id: "01KYJT6AHCPZBVW1SXST4Z9DPB"
+  branch: prototype/p02
+  status: completed
+  head: 241b8b73
+  findings: none
+  steps[9]{step,status,findings,duration_ms}:
+    intent,completed,0,0
+    rebase,completed,0,244
+    review,completed,0,28758
+    test,skipped,0,0
+    document,skipped,0,0
+    lint,skipped,0,0
+    push,skipped,0,0
+    pr,skipped,0,0
+    ci,skipped,0,0
+outcome: passed
+help[2]: "Summarize this pipeline run for the user in a concise, easily readable format: what was validated and what was found.","Commit post-pipeline follow-up work on top of the existing branch so every pipeline fix commit remains present. Never abort-and-restart, reset, or replace the branch in a way that drops prior gate-fix commits."
+run:
+  id: "01KYJT6AHCPZBVW1SXST4Z9DPB"
+  branch: prototype/p02
+  status: completed
+  head: 241b8b73
+  findings: none
+  steps[9]{step,status,findings,duration_ms}:
+    intent,completed,0,0
+    rebase,completed,0,244
+    review,completed,0,28758
+    test,skipped,0,0
+    document,skipped,0,0
+    lint,skipped,0,0
+    push,skipped,0,0
+    pr,skipped,0,0
+    ci,skipped,0,0
+outcome: passed
