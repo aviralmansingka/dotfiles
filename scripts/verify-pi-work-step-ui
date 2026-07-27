@@ -109,6 +109,7 @@ real_event_marker="$verify_dir/real-event-normalization"
 nested_exit_only_marker="$verify_dir/nested-exit-only-state"
 reasoning_upstream_marker="$verify_dir/reasoning-upstream-input"
 reasoning_model_marker="$verify_dir/reasoning-render-model"
+usage_marker="$verify_dir/usage-normalization"
 
 if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
 	echo "Visible-thinking prompt customization is still installed" >&2
@@ -807,7 +808,7 @@ console.log("Pi work-step terminal state verified: prompt-scoped thinking remain
 NODE
 
 printf -v pi_command \
-	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_NESTED_EXIT_ONLY_MARKER=%q PI_VERIFY_REASONING_UPSTREAM_MARKER=%q PI_VERIFY_REASONING_MODEL_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
+	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_NESTED_EXIT_ONLY_MARKER=%q PI_VERIFY_REASONING_UPSTREAM_MARKER=%q PI_VERIFY_REASONING_MODEL_MARKER=%q PI_VERIFY_USAGE_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
 	"$agent_dir" \
 	"$subagent_release" \
 	"$subagent_progress_release" \
@@ -823,6 +824,7 @@ printf -v pi_command \
 	"$nested_exit_only_marker" \
 	"$reasoning_upstream_marker" \
 	"$reasoning_model_marker" \
+	"$usage_marker" \
 	"$subagent_concurrency_release" \
 	"$subagent_concurrency_first_marker" \
 	"$subagent_concurrency_second_marker" \
@@ -918,6 +920,8 @@ wait_for_subagent_setup
 wait_for_terminal \
 	"$subagent_long_head" \
 	"Native subagent composition assertion failed: real child shell events were not rendered"
+wait_for_fixture_file "$reasoning_upstream_marker" "Raw reasoning/usage event did not reach upstream execute input"
+sleep 0.2
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_running_capture"
 toggle_and_capture() {
 	local key="$1"
@@ -942,6 +946,7 @@ wait_for_terminal \
 	"Native subagent composition assertion failed: completed fixture turn did not settle"
 wait_for_fixture_file "$reasoning_upstream_marker" "Raw reasoning sentinel did not reach upstream execute input"
 wait_for_fixture_file "$reasoning_model_marker" "Raw reasoning was not discarded before render-model construction"
+wait_for_fixture_file "$usage_marker" "Native result usage/context normalization marker was not recorded"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_collapsed_capture"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 C-o
 wait_for_terminal \
@@ -1000,7 +1005,7 @@ wait_for_terminal \
 	"Native subagent composition assertion failed: provider compatibility turn did not settle"
 stop_tmux
 
-node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" "$nested_exit_only_marker" "$subagent_running_output_hidden_capture" "$subagent_running_output_restored_capture" "$subagent_running_thinking_hidden_o_then_t_capture" "$subagent_running_both_hidden_o_then_t_capture" "$subagent_running_both_restored_o_then_t_capture" "$subagent_running_thinking_hidden_t_then_o_capture" "$subagent_running_both_hidden_t_then_o_capture" "$subagent_running_output_hidden_t_then_o_capture" "$subagent_running_both_restored_t_then_o_capture" "$subagent_recollapsed_capture" "$reasoning_upstream_marker" "$reasoning_model_marker" <<'NODE'
+node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" "$nested_exit_only_marker" "$subagent_running_output_hidden_capture" "$subagent_running_output_restored_capture" "$subagent_running_thinking_hidden_o_then_t_capture" "$subagent_running_both_hidden_o_then_t_capture" "$subagent_running_both_restored_o_then_t_capture" "$subagent_running_thinking_hidden_t_then_o_capture" "$subagent_running_both_hidden_t_then_o_capture" "$subagent_running_output_hidden_t_then_o_capture" "$subagent_running_both_restored_t_then_o_capture" "$subagent_recollapsed_capture" "$reasoning_upstream_marker" "$reasoning_model_marker" "$usage_marker" <<'NODE'
 const fs = require("node:fs");
 
 const spec = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -1073,6 +1078,7 @@ const runningBothRestoredTThenO = parseTerminal(process.argv[27]);
 const recollapsed = parseTerminal(process.argv[28]);
 const reasoningUpstreamCoverage = fs.readFileSync(process.argv[29], "utf8").trim();
 const reasoningModelCoverage = fs.readFileSync(process.argv[30], "utf8").trim();
+const usageCoverage = JSON.parse(fs.readFileSync(process.argv[31], "utf8"));
 const failures = [];
 const check = (condition, message) => {
 	if (!condition) failures.push(message);
@@ -1235,6 +1241,7 @@ const expectedCommandLeaves = [
 		command: spec.review.longCommand.logical,
 	},
 ];
+let nativeCostContextRetained = true;
 for (const [state, terminal] of [
 	["running-live", running],
 	["running-output-restored", runningOutputRestored],
@@ -1339,6 +1346,54 @@ check(!expanded.plain.includes(`**${spec.finalBoldText}**`), "Ctrl+O-expanded fi
 check(new RegExp(`(?:^|\\s)${spec.usage.turns}(?:\\s+turns?|\\s*turns?)`, "mu").test(expanded.plain), "Expanded native usage lost fixture-derived turns");
 check(expanded.plain.includes(`in:${spec.usage.input}`), "Expanded native usage lost fixture-derived input tokens");
 check(expanded.plain.includes(`out:${spec.usage.output}`), "Expanded native usage lost fixture-derived output tokens");
+check(
+	usageCoverage.model === spec.real.model &&
+	usageCoverage.contextWindow === spec.usage.contextWindow &&
+	usageCoverage.latestContextTokens === spec.usage.latestContextTokens &&
+	usageCoverage.usage.input === spec.usage.input &&
+	usageCoverage.usage.output === spec.usage.output &&
+	usageCoverage.usage.cacheRead === spec.usage.cacheRead &&
+	usageCoverage.usage.cacheWrite === spec.usage.cacheWrite &&
+	usageCoverage.usage.cost === spec.usage.cost &&
+	usageCoverage.usage.turns === spec.usage.turns,
+	"Real execute/onUpdate did not retain exact accumulated usage, latest-turn context tokens, and selected child contextWindow",
+);
+const accumulatedTokens = ["input", "output", "cacheRead", "cacheWrite"]
+	.reduce((sum, key) => sum + usageCoverage.usage[key], 0);
+check(
+	accumulatedTokens === spec.usage.accumulatedTokens &&
+	accumulatedTokens !== usageCoverage.latestContextTokens &&
+	Number(((usageCoverage.latestContextTokens / usageCoverage.contextWindow) * 100).toFixed(1)) === 5.4,
+	"Usage fixture did not distinguish cumulative run tokens from latest-turn context percentage",
+);
+for (const [state, terminal] of [
+	["running-live", running],
+	["running-output-hidden", runningOutputHidden],
+	["running-output-restored", runningOutputRestored],
+	["running-thinking-hidden-o-then-t", runningThinkingHiddenOThenT],
+	["running-both-hidden-o-then-t", runningBothHiddenOThenT],
+	["running-both-restored-o-then-t", runningBothRestoredOThenT],
+	["running-thinking-hidden-t-then-o", runningThinkingHiddenTThenO],
+	["running-both-hidden-t-then-o", runningBothHiddenTThenO],
+	["running-output-hidden-t-then-o", runningOutputHiddenTThenO],
+	["running-both-restored-t-then-o", runningBothRestoredTThenO],
+	["completed-collapsed", collapsed],
+	["completed-expanded", expanded],
+	["completed-recollapsed", recollapsed],
+]) {
+	const usageLine = terminal.plain
+		.split(/\r?\n/u)
+		.find((line) => line.includes(spec.usage.costDisplay) && line.includes(spec.usage.contextDisplay));
+	const costRetained = count(terminal.plain, spec.usage.costDisplay) === 1;
+	const contextRetained = count(terminal.plain, spec.usage.contextDisplay) === 1;
+	nativeCostContextRetained &&= costRetained && contextRetained;
+	check(count(terminal.plain, spec.usage.tokenDisplay) === 1, `${state} lost exact accumulated token count`);
+	check(costRetained, `${state} lost exact accumulated cost`);
+	check(contextRetained, `${state} lost exact latest-turn context percentage`);
+	check(usageLine?.includes(spec.usage.tokenDisplay), `${state} split the concise token/cost/context usage line`);
+}
+if (nativeCostContextRetained)
+	console.log("Native cost/context retention verified in every running, hidden, restored, collapsed, expanded, and recollapsed state.");
 const expandedTaskIndex = expanded.plain.indexOf(spec.expandedTaskSentinel);
 const expandedToolIndex = expanded.plain.indexOf(spec.commands[0].command);
 const expandedSummaryIndex = expanded.plain.indexOf("Summary");
@@ -1395,6 +1450,18 @@ check(
 	withoutThinking(runningOutputHidden.plain) === withoutThinking(runningBothHiddenOThenT.plain),
 	"Ctrl+T changed output-hidden presentation outside owned thinking rows",
 );
+for (const [state, terminal] of [
+	["provider-running", providerRunning],
+	["provider-pending", providerPending],
+	["provider-failed", providerFailed],
+]) {
+	check(
+		terminal.plain.includes("↑17") && terminal.plain.includes("23 ctx"),
+		`${state} lost available usage when provider metadata was partial`,
+	);
+	for (const fabricated of ["$0.000", "0%", "NaN", "Infinity"])
+		check(!terminal.plain.includes(fabricated), `${state} fabricated missing usage/context metric ${fabricated}`);
+}
 check(count(empty.plain, spec.emptyFallback) === 1, "Empty-output completion did not render the exact deterministic fallback once");
 check(!empty.plain.includes("(no output)"), "Empty-output completion leaked the legacy fallback");
 

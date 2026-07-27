@@ -59,7 +59,7 @@ const SUBAGENT_PROVIDER_AGENT = "provider-worker";
 const SUBAGENT_EXIT_ONLY_AGENT = "exit-observer";
 const SUBAGENT_NESTED_MODEL = "fixture/nested";
 const SUBAGENT_EXIT_ONLY_MODEL = "fixture/exit-only";
-const SUBAGENT_REAL_MODEL = "fixture/child";
+const SUBAGENT_REAL_MODEL = `${PROVIDER}/${MODEL}`;
 const SUBAGENT_FINAL_HEADING = "Native completion";
 const SUBAGENT_FINAL_BOLD_TEXT = "Composition preserved";
 const SUBAGENT_FINAL_TAIL = "V01 complete fixture-derived final response tail.";
@@ -161,7 +161,20 @@ const SUBAGENT_SPEC = {
 	collapsedProse: SUBAGENT_COLLAPSED_PROSE,
 	emptyFallback: SUBAGENT_EMPTY_FALLBACK,
 	reasoningSentinel: SUBAGENT_REASONING_SENTINEL,
-	usage: { input: 321, output: 123, turns: 2 },
+	usage: {
+		input: 321,
+		output: 123,
+		cacheRead: 45,
+		cacheWrite: 6,
+		turns: 2,
+		accumulatedTokens: 495,
+		latestContextTokens: 444,
+		cost: 0.0123,
+		contextWindow: 8192,
+		tokenDisplay: "495 tokens",
+		costDisplay: "$0.012",
+		contextDisplay: "5.4%/8k",
+	},
 	commands: SUBAGENT_COMMANDS,
 	chronology: [
 		SUBAGENT_COMMANDS[0].command,
@@ -441,15 +454,14 @@ function providerCompatibilityDetails(
 				output: "",
 				exitCode: status === "failed" ? 1 : -1,
 				model: SUBAGENT_SPEC.provider.model,
-				contextWindow: 4096,
-				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
+				usage: { input: 17, turns: 1 },
 				progress: {
 					agent: SUBAGENT_SPEC.provider.agent,
 					status,
 					task: SUBAGENT_SPEC.provider.task,
 					recentTools: [],
 					toolCount: 0,
-					tokens: 0,
+					tokens: 23,
 					durationMs: 0,
 					lastMessage,
 					...(error ? { error } : {}),
@@ -575,18 +587,18 @@ async function main() {
 			error: nestedExitOnlyResult.progress.error ?? null,
 		}));
 		mark("PI_VERIFY_REAL_EVENT_MARKER", "normalized");
+		emit(message(""));
+		mark("PI_VERIFY_REASONING_UPSTREAM_MARKER", spec.reasoningSentinel);
 		await waitFor("PI_VERIFY_SUBAGENT_RELEASE");
 		emit({ type: "tool_execution_end", toolName: spec.review.longCommand.shell, toolCallId: "root-long-bash", result: {} });
-		emit(message("", undefined, {
+		emit(message(spec.finalOutput, undefined, {
 			input: 0,
 			output: 0,
 			cacheRead: 0,
 			cacheWrite: 0,
-			totalTokens: 0,
+			totalTokens: spec.usage.latestContextTokens,
 			cost: { total: 0 },
 		}));
-		mark("PI_VERIFY_REASONING_UPSTREAM_MARKER", spec.reasoningSentinel);
-		emit(message(spec.finalOutput));
 		return;
 	}
 	if (task === spec.real.emptyTask) {
@@ -767,7 +779,17 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 					isError: true,
 				};
 			}
-			return await execute(...args);
+			const result = await execute(...args);
+			if (params.task === SUBAGENT_TASK) {
+				const normalized = result?.details?.results?.[0];
+				writeFixtureMarker("PI_VERIFY_USAGE_MARKER", JSON.stringify({
+					model: normalized?.model,
+					contextWindow: normalized?.contextWindow,
+					usage: normalized?.usage,
+					latestContextTokens: normalized?.progress?.tokens,
+				}));
+			}
+			return result;
 		} finally {
 			if (--activeExecutions === 0) process.argv[1] = originalEntry;
 		}
@@ -778,7 +800,7 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 export default function piWorkStepUiProvider(pi: ExtensionAPI) {
 	const faux = fauxProvider({
 		provider: PROVIDER,
-		models: [{ id: MODEL, name: "Pi Work-Step UI Faux", reasoning: true }],
+		models: [{ id: MODEL, name: "Pi Work-Step UI Faux", reasoning: true, contextWindow: 8192 }],
 		tokenSize: { min: 1024, max: 1024 },
 		tokensPerSecond: 100,
 	});

@@ -4,7 +4,57 @@
     "controlWidth": 111,
     "widthProbeCase": "nested-ownership",
     "t0": 1700000000000,
-    "t1": 1700000001000
+    "t1": 1700000001000,
+    "usageProfiles": {
+      "running": {
+        "cumulativeTokens": 13000,
+        "accumulatedCost": 0.2468,
+        "latestContextTokens": 2750,
+        "contextWindow": 8192,
+        "contextPercent": 33.6,
+        "display": "13k tokens · $0.247 · 33.6%/8k"
+      },
+      "completed": {
+        "cumulativeTokens": 27500,
+        "accumulatedCost": 0.9876,
+        "latestContextTokens": 6144,
+        "contextWindow": 8192,
+        "contextPercent": 75.0,
+        "display": "28k tokens · $0.988 · 75.0%/8k"
+      },
+      "nested-ownership": {
+        "cumulativeTokens": 6300,
+        "accumulatedCost": 0.1111,
+        "latestContextTokens": 2048,
+        "contextWindow": 8192,
+        "contextPercent": 25.0,
+        "display": "6.3k tokens · $0.111 · 25.0%/8k"
+      },
+      "empty-success": {
+        "cumulativeTokens": 777,
+        "accumulatedCost": 0.0049,
+        "latestContextTokens": 333,
+        "contextWindow": 4096,
+        "contextPercent": 8.1,
+        "display": "777 tokens · $0.005 · 8.1%/4k"
+      },
+      "root-failure": {
+        "cumulativeTokens": 2300,
+        "accumulatedCost": 0.0765,
+        "latestContextTokens": 1500,
+        "contextWindow": 4096,
+        "contextPercent": 36.6,
+        "display": "2.3k tokens · $0.076 · 36.6%/4k"
+      },
+      "nested-exit-only-failure": {
+        "cumulativeTokens": 4200,
+        "accumulatedCost": 0.1357,
+        "latestContextTokens": 1024,
+        "contextWindow": 8192,
+        "contextPercent": 12.5,
+        "display": "4.2k tokens · $0.136 · 12.5%/8k"
+      }
+    }
   },
   "upstream": {
     "executeUpdate": {
@@ -23,25 +73,25 @@
     "cwd": "~/dotfiles"
   },
   "goldenSha256": {
-    "running-live-t0": "3013f767a53859925f7a70bd5cfbee2f49efe5913b7a6535d02e40bf4a24f6cc",
-    "running-live-t1": "58a88e8d12e86bf1aab4d4c122ac5b7666451faade793f77855eff395561bb87",
-    "running-output-hidden": "d9cb64887f80ad88c1f4c361592d60475143be0562273eb574ea09b1e3296e73",
-    "running-output-restored": "3013f767a53859925f7a70bd5cfbee2f49efe5913b7a6535d02e40bf4a24f6cc",
-    "running-thinking-hidden-o-then-t": "6adf609c2a6e42c1eb284356c2853ec881cc89ac4841feab093a03b9e42bc596",
-    "running-both-hidden-o-then-t": "5e23b91d6d9f6aca35ed9ba50ce201c48c1c59b1c761035ca5cf8290da31fdc1",
-    "running-both-restored-o-then-t": "3013f767a53859925f7a70bd5cfbee2f49efe5913b7a6535d02e40bf4a24f6cc",
-    "running-thinking-hidden-t-then-o": "6adf609c2a6e42c1eb284356c2853ec881cc89ac4841feab093a03b9e42bc596",
-    "running-both-hidden-t-then-o": "5e23b91d6d9f6aca35ed9ba50ce201c48c1c59b1c761035ca5cf8290da31fdc1",
-    "running-output-hidden-t-then-o": "d9cb64887f80ad88c1f4c361592d60475143be0562273eb574ea09b1e3296e73",
-    "running-both-restored-t-then-o": "3013f767a53859925f7a70bd5cfbee2f49efe5913b7a6535d02e40bf4a24f6cc",
-    "completed-collapsed-t0": "4a729c168af7d74237b0978654fbb017966040e7e5116d2e49407c9073070735",
-    "completed-collapsed-t1": "4a729c168af7d74237b0978654fbb017966040e7e5116d2e49407c9073070735",
-    "completed-expanded": "864b51c451644f54c72ed95bb5ac56e9e6ba99041d83f70871417c50660b5eeb",
-    "completed-recollapsed": "4a729c168af7d74237b0978654fbb017966040e7e5116d2e49407c9073070735",
-    "empty-success": "7e72943a879796a8984ac028eaf23661d40499672cba75b33de10b397b11dd0d",
-    "nested-exit-only-failure": "d6093b4bd038e5bc17759af384d08ce06a99f5ccc4de063565581330f25ad765",
-    "nested-ownership": "5bda088764a087b3460081d5fe0dd986e891ff59c0b3856cd23889518b50918c",
-    "root-failure": "90af58725cc8b1c3605f570604e76092a347a43642e09cd3e0b0928d3b72613e"
+    "running-live-t0": "c2ccc1270f50cb86dff58dc576acb95dd4f960ee81bb8c13eee50046cd71c8ab",
+    "running-live-t1": "8901172e930f1c245105ca2dbde41f1294d3980b843b7a685266e900cc569b61",
+    "running-output-hidden": "f5e91a670acfbc0926821bc5b1a76d5d60db2953622cf4d82715093538b9b427",
+    "running-output-restored": "c2ccc1270f50cb86dff58dc576acb95dd4f960ee81bb8c13eee50046cd71c8ab",
+    "running-thinking-hidden-o-then-t": "f2f65e1bad462fd2797c4faaad8c81bc0b733a647695e035adc27c19f9d22652",
+    "running-both-hidden-o-then-t": "56a7d2ff0b0ba58d5b6a3f2b6e168d5a9359f144e31ded90111a9913f8c5efc7",
+    "running-both-restored-o-then-t": "c2ccc1270f50cb86dff58dc576acb95dd4f960ee81bb8c13eee50046cd71c8ab",
+    "running-thinking-hidden-t-then-o": "f2f65e1bad462fd2797c4faaad8c81bc0b733a647695e035adc27c19f9d22652",
+    "running-both-hidden-t-then-o": "56a7d2ff0b0ba58d5b6a3f2b6e168d5a9359f144e31ded90111a9913f8c5efc7",
+    "running-output-hidden-t-then-o": "f5e91a670acfbc0926821bc5b1a76d5d60db2953622cf4d82715093538b9b427",
+    "running-both-restored-t-then-o": "c2ccc1270f50cb86dff58dc576acb95dd4f960ee81bb8c13eee50046cd71c8ab",
+    "completed-collapsed-t0": "02a88da140bfcc47a68dc62c6b705f20c479dcca2b221c2756c8b030ab4b36d7",
+    "completed-collapsed-t1": "02a88da140bfcc47a68dc62c6b705f20c479dcca2b221c2756c8b030ab4b36d7",
+    "completed-expanded": "6084e284051caaf05c69c21e27383ee1d8917b4c01d3cbd5268672fb4c75ca4f",
+    "completed-recollapsed": "02a88da140bfcc47a68dc62c6b705f20c479dcca2b221c2756c8b030ab4b36d7",
+    "empty-success": "fbfa7d03bfff03b4b114eb821482ddcc232bc8ae067aeec9c85baa67c21edc06",
+    "nested-exit-only-failure": "b6b62bc02f76fff0a0a64457e1a002ac90a8fce11aa7028213443ceed1e06347",
+    "nested-ownership": "1f45f64836795ef643a86cff073d04a05a9d3f94a5b44e87ccd5199b30de3344",
+    "root-failure": "c642281ac52ba4591554b98ec54b0529abe6fa8b49a1d1a88ea0f7e0dc1684f7"
   },
   "cases": [
     {
@@ -57,11 +107,11 @@
         "output": "",
         "exitCode": -1,
         "model": "openai-codex/gpt-5.6",
-        "contextWindow": 200000,
-        "usage": { "input": 1200, "output": 300, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
+        "contextWindow": 8192,
+        "usage": { "input": 9000, "output": 1750, "cacheRead": 1800, "cacheWrite": 450, "cost": 0.2468, "turns": 3 },
         "progress": {
           "agent": "reviewer", "status": "running", "task": "Review the implementation for correctness and regressions.",
-          "toolCount": 2, "tokens": 1500, "durationMs": 3200, "startedAt": 1699999996800,
+          "toolCount": 2, "tokens": 2750, "durationMs": 3200, "startedAt": 1699999996800,
           "lastMessage": "Thinking…",
           "recentTools": [
             { "tool": "bash", "args": "git status --short && git diff --check", "toolCallId": "tool-1", "status": "done", "startedAt": 1699999998900, "completedAt": 1700000000000, "shellCommands": ["git status --short", "git diff --check"] },
@@ -179,11 +229,11 @@
         "output": "## Review result\n\n**No correctness risks found.**",
         "exitCode": 0,
         "model": "openai-codex/gpt-5.6",
-        "contextWindow": 200000,
-        "usage": { "input": 2400, "output": 1000, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 2 },
+        "contextWindow": 8192,
+        "usage": { "input": 18000, "output": 4500, "cacheRead": 4000, "cacheWrite": 1000, "cost": 0.9876, "turns": 5 },
         "progress": {
           "agent": "reviewer", "status": "completed", "task": "Review the implementation for correctness and regressions.",
-          "toolCount": 2, "tokens": 3400, "durationMs": 8200, "startedAt": 1699999991800, "completedAt": 1700000000000,
+          "toolCount": 2, "tokens": 6144, "durationMs": 8200, "startedAt": 1699999991800, "completedAt": 1700000000000,
           "lastMessage": "No correctness risks found.",
           "recentTools": [
             { "tool": "bash", "args": "git status --short && git diff --check", "toolCallId": "tool-1", "status": "done", "startedAt": 1699999996900, "completedAt": 1700000000000, "shellCommands": ["cd ~/dotfiles", "git status --short", "git diff --check"] },
@@ -238,9 +288,9 @@
         "cwd": "~/dotfiles"
       },
       "result": {
-        "agent": "root-owner", "task": "Verify nested ownership", "output": "## Nested result\n\nV02 root ownership final Markdown.", "exitCode": 0, "model": "fixture/root-owner", "contextWindow": 200000,
-        "usage": { "input": 900, "output": 300, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 2 },
-        "progress": { "agent": "root-owner", "status": "completed", "task": "Verify nested ownership", "toolCount": 2, "tokens": 1200, "durationMs": 5000, "startedAt": 1699999995000, "completedAt": 1700000000000, "lastMessage": "V02 root ownership summary.", "recentTools": [
+        "agent": "root-owner", "task": "Verify nested ownership", "output": "## Nested result\n\nV02 root ownership final Markdown.", "exitCode": 0, "model": "fixture/root-owner", "contextWindow": 8192,
+        "usage": { "input": 4100, "output": 900, "cacheRead": 1000, "cacheWrite": 300, "cost": 0.1111, "turns": 3 },
+        "progress": { "agent": "root-owner", "status": "completed", "task": "Verify nested ownership", "toolCount": 2, "tokens": 2048, "durationMs": 5000, "startedAt": 1699999995000, "completedAt": 1700000000000, "lastMessage": "V02 root ownership summary.", "recentTools": [
           {
             "tool": "bash", "args": "printf V02_ROOT_WIDTH_PROBE_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789_abcdefghijklmnopqrstuvwxyz_tail", "toolCallId": "nested-root-bash", "status": "done", "startedAt": 1699999996000, "completedAt": 1699999997000,
             "shellCommands": ["printf V02_ROOT_WIDTH_PROBE_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789_abcdefghijklmnopqrstuvwxyz_tail"]
@@ -271,9 +321,9 @@
       "thinkingHidden": false,
       "activity": { "title": "Checking empty completion", "thinking": "Checking empty completion semantics", "status": "completed", "startedAt": 1699999999000, "completedAt": 1700000000000 },
       "result": {
-        "agent": "reviewer", "task": "Return no final response", "output": "", "exitCode": 0, "model": "openai-codex/gpt-5.6", "contextWindow": 200000,
-        "usage": { "input": 100, "output": 0, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
-        "progress": { "agent": "reviewer", "status": "completed", "task": "Return no final response", "toolCount": 0, "tokens": 100, "durationMs": 1000, "startedAt": 1699999999000, "completedAt": 1700000000000, "lastMessage": "", "recentTools": [] }
+        "agent": "reviewer", "task": "Return no final response", "output": "", "exitCode": 0, "model": "openai-codex/gpt-5.6", "contextWindow": 4096,
+        "usage": { "input": 600, "output": 77, "cacheRead": 80, "cacheWrite": 20, "cost": 0.0049, "turns": 2 },
+        "progress": { "agent": "reviewer", "status": "completed", "task": "Return no final response", "toolCount": 0, "tokens": 333, "durationMs": 1000, "startedAt": 1699999999000, "completedAt": 1700000000000, "lastMessage": "", "recentTools": [] }
       }
     },
     {
@@ -284,9 +334,9 @@
       "thinkingHidden": false,
       "activity": { "title": "Reviewing failed child", "thinking": "Checking failure propagation", "status": "failed", "startedAt": 1699999998500, "completedAt": 1700000000000 },
       "result": {
-        "agent": "reviewer", "task": "Report root failure", "output": "", "exitCode": 7, "model": "openai-codex/gpt-5.6", "contextWindow": 200000,
-        "usage": { "input": 200, "output": 20, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
-        "progress": { "agent": "reviewer", "status": "failed", "task": "Report root failure", "toolCount": 1, "tokens": 220, "durationMs": 1500, "startedAt": 1699999998500, "completedAt": 1700000000000, "lastMessage": "", "error": "Root child failed.", "recentTools": [
+        "agent": "reviewer", "task": "Report root failure", "output": "", "exitCode": 7, "model": "openai-codex/gpt-5.6", "contextWindow": 4096,
+        "usage": { "input": 1700, "output": 300, "cacheRead": 250, "cacheWrite": 50, "cost": 0.0765, "turns": 2 },
+        "progress": { "agent": "reviewer", "status": "failed", "task": "Report root failure", "toolCount": 1, "tokens": 1500, "durationMs": 1500, "startedAt": 1699999998500, "completedAt": 1700000000000, "lastMessage": "", "error": "Root child failed.", "recentTools": [
           { "tool": "bash", "args": "false", "toolCallId": "tool-fail", "status": "done", "startedAt": 1699999999500, "completedAt": 1700000000000, "shellCommands": ["false"] }
         ] }
       }
@@ -299,9 +349,9 @@
       "thinkingHidden": false,
       "activity": { "title": "Reviewing nested failure", "thinking": "Checking nested failure propagation", "status": "completed", "startedAt": 1699999998000, "completedAt": 1700000000000 },
       "result": {
-        "agent": "reviewer", "task": "Inspect nested exit-only failure", "output": "## Nested failure review\n\nNested delegation inspected.", "exitCode": 0, "model": "openai-codex/gpt-5.6", "contextWindow": 200000,
-        "usage": { "input": 400, "output": 80, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
-        "progress": { "agent": "reviewer", "status": "completed", "task": "Inspect nested exit-only failure", "toolCount": 1, "tokens": 480, "durationMs": 2000, "startedAt": 1699999998000, "completedAt": 1700000000000, "lastMessage": "Nested delegation inspected.", "recentTools": [
+        "agent": "reviewer", "task": "Inspect nested exit-only failure", "output": "## Nested failure review\n\nNested delegation inspected.", "exitCode": 0, "model": "openai-codex/gpt-5.6", "contextWindow": 8192,
+        "usage": { "input": 3000, "output": 600, "cacheRead": 500, "cacheWrite": 100, "cost": 0.1357, "turns": 3 },
+        "progress": { "agent": "reviewer", "status": "completed", "task": "Inspect nested exit-only failure", "toolCount": 1, "tokens": 1024, "durationMs": 2000, "startedAt": 1699999998000, "completedAt": 1700000000000, "lastMessage": "Nested delegation inspected.", "recentTools": [
           { "tool": "subagent", "args": "exit-observer: inspect exit", "toolCallId": "tool-nested-fail", "status": "done", "startedAt": 1699999999000, "completedAt": 1700000000000, "children": [
             {
               "agent": "exit-observer", "task": "Inspect exit", "output": "", "exitCode": 23, "model": "fixture/exit-only",

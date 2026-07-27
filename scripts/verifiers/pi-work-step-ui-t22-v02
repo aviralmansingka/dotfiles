@@ -152,6 +152,29 @@ if (
 	model.cases.some((item, index) => item.name !== expectedCases[index]) ||
 	new Set(model.cases.map((item) => item.name)).size !== expectedCases.length
 ) fail("canonical toggle cases are not the exact declared state ledger");
+const usageProfileFor = (item) =>
+	model.contract.usageProfiles[
+		item.sequence.startsWith("running-") ? "running" : item.sequence
+	];
+for (const item of model.cases) {
+	const profile = usageProfileFor(item);
+	const cumulativeTokens = ["input", "output", "cacheRead", "cacheWrite"]
+		.reduce((sum, key) => sum + (item.result.usage[key] ?? 0), 0);
+	const contextPercent = Number(
+		((item.result.progress.tokens / item.result.contextWindow) * 100).toFixed(1),
+	);
+	if (
+		!profile ||
+		cumulativeTokens !== profile.cumulativeTokens ||
+		item.result.usage.cost !== profile.accumulatedCost ||
+		item.result.progress.tokens !== profile.latestContextTokens ||
+		item.result.contextWindow !== profile.contextWindow ||
+		contextPercent !== profile.contextPercent ||
+		cumulativeTokens === item.result.progress.tokens ||
+		!profile.display.includes(" tokens · $") ||
+		!profile.display.includes("%/")
+	) fail(`usage fixture/formula differs for ${item.name}`);
+}
 const reasoningSentinel = model.upstream?.reasoningSentinel;
 if (
 	!reasoningSentinel ||
@@ -333,6 +356,11 @@ for (const item of model.cases) {
 const stripAnsi = (value) => value.replace(/\x1b\[[0-9;]*m/gu, "");
 const golden = (name) => readFileSync(join(goldenDir, `${name}.ansi`));
 const goldenPlain = (name) => stripAnsi(golden(name).toString("utf8"));
+for (const item of model.cases) {
+	const display = usageProfileFor(item).display;
+	if (goldenPlain(item.name).split(display).length !== 2)
+		fail(`${item.name} golden lost its one exact cumulative token, cost, and latest-turn context metric`);
+}
 const nestedGolden = readFileSync(join(goldenDir, "nested-ownership.ansi"), "utf8");
 const nestedGoldenPlain = stripAnsi(nestedGolden);
 for (const token of [
@@ -425,6 +453,16 @@ if (!plain("nested-ownership").includes("       └─"))
 	console.error("T22.V02 mismatch category=nested-hierarchy approved connected nested rail is absent");
 if (plain("completed-collapsed-t0").includes("subagent reviewer"))
 	console.error("T22.V02 mismatch category=disconnected-composition parent Activity and native call/result headers remain separate");
+for (const item of model.cases) {
+	const actual = plain(item.name);
+	const profile = usageProfileFor(item);
+	const cost = `$${profile.accumulatedCost.toFixed(3)}`;
+	const context = profile.display.split(" · ").at(-1);
+	if (!actual.includes(cost) || !actual.includes(context))
+		console.error(`T22.V02 mismatch category=usage-retention ${item.name} lost native cost/context metrics`);
+	if (!actual.includes(profile.display))
+		console.error(`T22.V02 mismatch category=usage-summary ${item.name} lost exact cumulative token/cost/context summary`);
+}
 if ([...actuals.values()].some((frame) => frame.includes(reasoningSentinel)))
 	fail("raw child reasoning sentinel leaked");
 for (const name of [
@@ -507,6 +545,11 @@ console.log(
 console.log(
 	`T22.V02 same-instance toggles: sequences=${[...scenarios.keys()].join(",")} ` +
 	`ctrl_o=output-detail ctrl_t=thinking restored_bytes_checked=true identities_preserved=true reasoning_pre_model=true`,
+);
+console.log(
+	`T22.V02 usage contract: running=${model.contract.usageProfiles.running.display} ` +
+	`completed=${model.contract.usageProfiles.completed.display} cumulative_tokens_differ_from_latest_context=true ` +
+	`cost_nonzero=true context_formula=latest_turn_totalTokens_over_contextWindow`,
 );
 console.log(`T22.V02 cases compared as raw UTF-8: ${model.cases.map((item) => item.name).join(",")}`);
 if (
