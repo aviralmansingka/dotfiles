@@ -56,11 +56,15 @@ const SUBAGENT_ROOT_AGENT = "scout";
 const SUBAGENT_NESTED_AGENT = "researcher";
 const SUBAGENT_QUEUED_AGENT = "queued-worker";
 const SUBAGENT_PROVIDER_AGENT = "provider-worker";
+const SUBAGENT_EXIT_ONLY_AGENT = "exit-observer";
 const SUBAGENT_NESTED_MODEL = "fixture/nested";
+const SUBAGENT_EXIT_ONLY_MODEL = "fixture/exit-only";
 const SUBAGENT_REAL_MODEL = "fixture/child";
 const SUBAGENT_FINAL_HEADING = "Native completion";
 const SUBAGENT_FINAL_BOLD_TEXT = "Composition preserved";
 const SUBAGENT_FINAL_TAIL = "V01 complete fixture-derived final response tail.";
+const SUBAGENT_FINAL_SECOND = "Second deterministic completion paragraph.";
+const SUBAGENT_FINAL_THIRD = "Third deterministic completion paragraph.";
 const SUBAGENT_COLLAPSED_PROSE =
 	`${SUBAGENT_FINAL_BOLD_TEXT} by the package renderer.`;
 const SUBAGENT_OUTPUT =
@@ -68,9 +72,9 @@ const SUBAGENT_OUTPUT =
 
 **${SUBAGENT_FINAL_BOLD_TEXT}** by the package renderer.
 
-Second deterministic completion paragraph.
+${SUBAGENT_FINAL_SECOND}
 
-Third deterministic completion paragraph.
+${SUBAGENT_FINAL_THIRD}
 
 ${SUBAGENT_FINAL_TAIL}`;
 const SUBAGENT_EMPTY_FALLBACK =
@@ -83,6 +87,9 @@ const SUBAGENT_FAILURE_NARRATIVE = `## V01 deterministic child failure
 **Failure detail** from the real child process.
 
 V01_REAL_FAILURE_TAIL`;
+const SUBAGENT_EXIT_ONLY_NARRATIVE = "Subagent failed.";
+const SUBAGENT_CONCURRENCY_FIRST_TOOL_ARGUMENT =
+	"V01_QUEUED_CHILD_FIRST_TOOL_EVENT";
 const SUBAGENT_LONG_COMMAND_HEAD = "v01-long-command-head";
 const SUBAGENT_LONG_COMMAND_TAIL = "V01_DISTINGUISHING_COMMAND_TAIL";
 const SUBAGENT_LONG_COMMAND_RAW = `${SUBAGENT_LONG_COMMAND_HEAD} begin
@@ -137,6 +144,19 @@ const SUBAGENT_SPEC = {
 	finalBoldText: SUBAGENT_FINAL_BOLD_TEXT,
 	finalTail: SUBAGENT_FINAL_TAIL,
 	finalOutput: SUBAGENT_OUTPUT,
+	finalBlocks: [
+		SUBAGENT_FINAL_HEADING,
+		SUBAGENT_COLLAPSED_PROSE,
+		SUBAGENT_FINAL_SECOND,
+		SUBAGENT_FINAL_THIRD,
+		SUBAGENT_FINAL_TAIL,
+	],
+	expandedOnlyFinalBlocks: [
+		SUBAGENT_FINAL_HEADING,
+		SUBAGENT_FINAL_SECOND,
+		SUBAGENT_FINAL_THIRD,
+		SUBAGENT_FINAL_TAIL,
+	],
 	collapsedProse: SUBAGENT_COLLAPSED_PROSE,
 	emptyFallback: SUBAGENT_EMPTY_FALLBACK,
 	reasoningSentinel: SUBAGENT_REASONING_SENTINEL,
@@ -163,11 +183,21 @@ const SUBAGENT_SPEC = {
 			parentArgumentDecoy: SUBAGENT_PARENT_ARGUMENT_DECOY,
 			shell: SUBAGENT_COMMANDS[1].shell,
 			command: SUBAGENT_COMMANDS[1].command,
+			exitOnly: {
+				agent: SUBAGENT_EXIT_ONLY_AGENT,
+				model: SUBAGENT_EXIT_ONLY_MODEL,
+				narrative: SUBAGENT_EXIT_ONLY_NARRATIVE,
+			},
 		},
 		failure: {
 			emptyPrompt: "subagent failed empty",
 			narrative: SUBAGENT_FAILURE_NARRATIVE,
 			narrativeTail: "V01_REAL_FAILURE_TAIL",
+			blocks: [
+				"V01 deterministic child failure",
+				"Failure detail from the real child process.",
+				"V01_REAL_FAILURE_TAIL",
+			],
 			successPrefix: "Completed successfully",
 			successFallback: SUBAGENT_EMPTY_FALLBACK,
 		},
@@ -183,6 +213,8 @@ const SUBAGENT_SPEC = {
 		queuedAgent: SUBAGENT_QUEUED_AGENT,
 		queuedText: "Queued…",
 		thinkingText: "Thinking…",
+		concurrencyFirstTool: "read",
+		concurrencyFirstToolArgument: SUBAGENT_CONCURRENCY_FIRST_TOOL_ARGUMENT,
 	},
 	provider: {
 		tool: "subagent",
@@ -495,6 +527,25 @@ const nestedResult = {
 		lastMessage: "",
 	},
 };
+const nestedExitOnlyResult = {
+	agent: spec.review.nested.exitOnly.agent,
+	task: "Observe nested exit-only failure",
+	output: "",
+	exitCode: 23,
+	model: spec.review.nested.exitOnly.model,
+	contextWindow: 4096,
+	usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
+	progress: {
+		agent: spec.review.nested.exitOnly.agent,
+		status: "failed",
+		task: "Observe nested exit-only failure",
+		recentTools: [],
+		toolCount: 0,
+		tokens: 0,
+		durationMs: 230,
+		lastMessage: "",
+	},
+};
 async function main() {
 	appendMark("PI_VERIFY_REAL_CHILD_MARKER", task);
 	if (task === spec.real.mainTask) {
@@ -504,8 +555,8 @@ async function main() {
 			{ type: "tool_execution_start", toolName: spec.commands[0].shell, toolCallId: "root-bash", args: { command: spec.commands[0].command } },
 			{ type: "tool_execution_end", toolName: spec.commands[0].shell, toolCallId: "root-bash", result: {} },
 			{ type: "tool_execution_start", toolName: "subagent", toolCallId: "root-subagent", args: { agent: spec.review.nested.parentArgumentDecoy } },
-			{ type: "tool_execution_update", toolName: "subagent", toolCallId: "root-subagent", partialResult: { details: { results: [nestedResult] } } },
-			{ type: "tool_execution_end", toolName: "subagent", toolCallId: "root-subagent", result: { details: { results: [nestedResult] } } },
+			{ type: "tool_execution_update", toolName: "subagent", toolCallId: "root-subagent", partialResult: { details: { results: [nestedResult, nestedExitOnlyResult] } } },
+			{ type: "tool_execution_end", toolName: "subagent", toolCallId: "root-subagent", result: { details: { results: [nestedResult, nestedExitOnlyResult] } } },
 			{ type: "tool_execution_start", toolName: spec.commands[2].shell, toolCallId: "root-zsh", args: { command: spec.commands[2].command } },
 			{ type: "tool_execution_end", toolName: spec.commands[2].shell, toolCallId: "root-zsh", result: {} },
 			{ type: "tool_execution_start", toolName: spec.review.longCommand.shell, toolCallId: "root-long-bash", args: { command: spec.review.longCommand.raw } },
@@ -542,6 +593,19 @@ async function main() {
 	}
 	if (task === spec.real.concurrencySecondTask) {
 		mark("PI_VERIFY_CONCURRENCY_SECOND_MARKER", "spawned");
+		await waitFor("PI_VERIFY_CONCURRENCY_SECOND_RELEASE");
+		emit({
+			type: "tool_execution_start",
+			toolName: spec.real.concurrencyFirstTool,
+			toolCallId: "queued-first-tool",
+			args: { path: spec.real.concurrencyFirstToolArgument },
+		});
+		emit({
+			type: "tool_execution_end",
+			toolName: spec.real.concurrencyFirstTool,
+			toolCallId: "queued-first-tool",
+			result: {},
+		});
 		emit(message("Second concurrency child complete."));
 		return;
 	}
