@@ -118,9 +118,9 @@ const SUBAGENT_COMMANDS = [
 		tokens: {
 			command: ["v01pwd", "v01test"],
 			argument: [],
-			flagVariable: ["-v", "$V01_ASSIGN"],
+			flagVariable: ["V01_ASSIGN", "-v", "$V01_ASSIGN"],
 			stringPath: [],
-			operator: ["V01_ASSIGN=$(", "||"],
+			operator: ["=$(", ")", "||"],
 		},
 	},
 	{
