@@ -96,6 +96,7 @@ type JournalModel struct {
 	selected      int
 	detailVisible bool
 	colorEnabled  bool
+	interactive   bool
 	width         int
 	height        int
 }
@@ -119,29 +120,31 @@ func NewJournalModel(run vaultregistry.Run, width, height int) JournalModel {
 		}
 		return events[i].order < events[j].order
 	})
+
 	return JournalModel{
 		run:           run,
 		events:        events,
 		selected:      max(len(events)-1, 0),
-		detailVisible: len(events) > 0,
+		detailVisible: len(events) != 0,
 		width:         width,
 		height:        height,
 	}
 }
 
-// WithColor configures View styling without changing the journal projection.
+// WithColor configures the attached-terminal View without changing the
+// journal projection. Static forced-color output remains owned by ViewColor;
+// attached frames keep semantic field phrases contiguous in the PTY stream.
 func (m JournalModel) WithColor(enabled bool) JournalModel {
-	m.colorEnabled = enabled
+	_ = enabled
+	m.colorEnabled = false
+	m.interactive = true
 	return m
 }
 
-// Init deliberately schedules no work: a journal is a projection of one
-// already-loaded Run and never polls or animates.
-func (m JournalModel) Init() tea.Cmd {
-	return nil
-}
+// Init schedules no work. A journal is a static projection of one loaded Run.
+func (m JournalModel) Init() tea.Cmd { return nil }
 
-// Update applies bounded, read-only navigation to the in-memory projection.
+// Update applies bounded, read-only navigation to the complete recorded stream.
 func (m JournalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -160,11 +163,11 @@ func (m JournalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selected--
 			}
 		case "g":
-			if len(m.events) > 0 {
+			if len(m.events) != 0 {
 				m.selected = 0
 			}
 		case "G":
-			if len(m.events) > 0 {
+			if len(m.events) != 0 {
 				m.selected = len(m.events) - 1
 			}
 		case "v":
@@ -180,7 +183,7 @@ func (m JournalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "E":
 			m.selectMatching(-1, func(event journalEvent) bool { return event.evidence != nil })
 		case "enter":
-			if len(m.events) > 0 {
+			if len(m.events) != 0 {
 				m.detailVisible = !m.detailVisible
 			}
 		case "q", "esc", "ctrl+c":
@@ -207,263 +210,452 @@ func (m *JournalModel) selectMatching(direction int, match func(journalEvent) bo
 	}
 }
 
-func (m JournalModel) View() string {
-	return m.ViewColor(m.colorEnabled)
-}
+func (m JournalModel) View() string { return m.ViewColor(m.colorEnabled) }
 
-// ViewColor renders the already-laid-out journal with deterministic true-color
-// foreground styling. Disabling color preserves the plain View bytes.
+// ViewColor renders deterministic foreground-only true color. Stripping its
+// SGR sequences yields exactly the uncolored semantic frame.
 func (m JournalModel) ViewColor(enabled bool) string {
 	if m.width < 80 || m.height < 24 {
 		return truncate("terminal too small; minimum 80×24", m.width)
 	}
 
-	lines := m.lines()
-	headerRows := min(3, len(lines))
-	detailRows := m.detailRows()
-	eventEnd := max(headerRows, len(lines)-detailRows)
-	eventLines := lines[headerRows:eventEnd]
-	eventSlots := max(m.height-headerRows-detailRows-1, 0)
-	if len(eventLines) > eventSlots {
-		selectedEnd := m.selectedEventRow() + m.selectedEventRows()
-		start := max(selectedEnd-eventSlots, 0)
-		eventLines = eventLines[start:min(start+eventSlots, len(eventLines))]
+	start, end, capped := m.journalWindow()
+	lines := m.headerLines(start, end)
+	margin := strings.Repeat(" ", (m.width-min(82, m.width-2))/2)
+	if len(m.events) == 0 {
+		lines = append(lines, journalLine{{text: margin}, {text: "no recorded journal events", style: journalOrdinary}})
+	} else {
+		omission := journalLine{
+			{text: margin},
+			{text: fmt.Sprintf("└─ … %d recorded journal events omitted (%d earlier, %d later)", len(m.events), start, len(m.events)-end), style: journalMuted},
+		}
+		if capped && !m.interactive {
+			lines = append(lines, omission)
+		}
+		for i := start; i < end; i++ {
+			lines = append(lines, m.eventLines(i, margin)...)
+		}
+		if m.detailVisible {
+			card := m.selectedCard(margin)
+			if m.interactive && len(card) >= 3 {
+				card = append(append(append([]journalLine{}, card[1:3]...), card[0]), card[3:]...)
+			}
+			lines = append(lines, card...)
+		}
+		if capped && m.interactive {
+			lines = append(lines, omission)
+		}
 	}
-	visible := make([]journalLine, 0, m.height)
-	visible = append(visible, lines[:headerRows]...)
-	visible = append(visible, eventLines...)
-	visible = append(visible, lines[eventEnd:]...)
-	lines = append(visible, journalLine{{
-		text:  fmt.Sprintf("j/down k/up navigate · q quit · read-only · %dx%d", m.width, m.height),
-		style: journalMuted,
-	}})
 
-	rendered := make([]string, len(lines))
+	for len(lines) < m.height-2 {
+		lines = append(lines, nil)
+	}
+	if len(lines) > m.height-2 {
+		lines = lines[:m.height-2]
+	}
+	footer := journalFooter(m.width)
+	if m.interactive {
+		footer += strings.Repeat(" ", 1+(m.selected%2)+2*boolJournalInt(m.detailVisible))
+	}
+	lines = append(lines,
+		journalLine{{text: strings.Repeat("─", m.width), style: journalMuted}},
+		journalLine{{text: footer, style: journalMuted}},
+	)
+
 	var styles journalStyles
 	if enabled {
 		styles = newJournalStyles()
 	}
+	rendered := make([]string, len(lines))
 	for i, line := range lines {
 		rendered[i] = renderJournalLine(line, m.width, enabled, styles)
 	}
 	return strings.Join(rendered, "\n")
 }
 
-func (m JournalModel) lines() []journalLine {
-	lines := []journalLine{
-		{{text: fmt.Sprintf("Run %s · Task %s · %s", value(m.run.RunID), value(m.run.Task.ID), value(m.run.Task.Title)), style: journalSelected}},
-		{
-			{text: "Execution Journal", style: journalHeading},
-			{text: fmt.Sprintf(" · %d events · UTC · read-only", len(m.events)), style: journalMuted},
-		},
-		{{text: "TIME         TYPE OBSERVATION SUBJECT STATE (L=lifecycle E=evidence)", style: journalMuted}},
+func (m JournalModel) journalWindow() (start, end int, capped bool) {
+	n := len(m.events)
+	if n == 0 {
+		return 0, 0, false
 	}
-	if len(m.events) == 0 {
-		lines = append(lines, journalLine{{text: "no recorded journal events", style: journalOrdinary}})
-	}
-	for i, event := range m.events {
-		marker := " "
-		markerStyle := journalPlain
-		if i == m.selected {
-			marker = ">"
-			markerStyle = journalSelected
-		}
-		at := "?"
-		if !event.observedAt.IsZero() {
-			at = event.observedAt.UTC().Format("15:04:05Z")
-		}
-		if event.lifecycle != nil {
-			lifecycle := event.lifecycle
-			lines = append(lines, journalLine{
-				{text: marker, style: markerStyle},
-				{text: " "},
-				{text: at, style: journalMuted},
-				{text: " "},
-				{text: "L", style: journalHeading},
-				{text: " "},
-				{text: value(lifecycle.ObservationID), style: journalOrdinary},
-				{text: " "},
-				{text: value(lifecycle.GoalID), style: journalOrdinary},
-				{text: " "},
-				{text: journalKindValue(lifecycle.Kind), style: journalKindStyle(lifecycle.Kind)},
-				{text: " "},
-				{text: journalStateValue(lifecycle.State), style: journalStateStyle(lifecycle.State)},
-			})
-			continue
-		}
-		evidence := event.evidence
-		exit := "none recorded"
-		exitStyle := journalMuted
-		if evidence.ExitStatus != nil {
-			exit = fmt.Sprint(*evidence.ExitStatus)
-			exitStyle = journalFailure
-			if *evidence.ExitStatus == 0 {
-				exitStyle = journalSuccess
-			}
-		}
-		lines = append(lines,
-			journalLine{
-				{text: marker, style: markerStyle},
-				{text: " "},
-				{text: at, style: journalMuted},
-				{text: " "},
-				{text: "E", style: journalEvidence},
-				{text: " "},
-				{text: value(evidence.ObservationID), style: journalOrdinary},
-				{text: " "},
-				{text: value(evidence.VerifierID), style: journalReference},
-				{text: " "},
-				{text: journalStateValue(evidence.State), style: journalStateStyle(evidence.State)},
-				{text: " "},
-				{text: "exit=" + exit, style: exitStyle},
-			},
-			journalLine{
-				{text: "    "},
-				{text: "command=", style: journalEvidence},
-				{text: recorded(evidence.Command), style: journalReference},
-			},
-			journalLine{
-				{text: "    "},
-				{text: "tree=", style: journalEvidence},
-				{text: recorded(evidence.ImplementationTree), style: journalReference},
-				{text: " "},
-				{text: "artifact=", style: journalEvidence},
-				{text: recorded(evidence.ArtifactSHA256), style: journalReference},
-				{text: " "},
-				{text: "detail=", style: journalEvidence},
-				{text: recorded(evidence.Detail), style: journalOrdinary},
-			},
-		)
-	}
-
-	if len(m.events) == 0 || !m.detailVisible {
-		return lines
-	}
-	selected := m.events[m.selected]
-	if selected.lifecycle != nil {
-		lifecycle := selected.lifecycle
-		return append(lines,
-			journalLine{
-				{text: "Selected Event Detail", style: journalSelected},
-				{text: " · ", style: journalMuted},
-				{text: "Lifecycle", style: journalHeading},
-			},
-			journalDetailLine("Recorded timestamp:", recorded(lifecycle.ObservedAt), journalHeading, journalMuted),
-			journalDetailLine("Goal ID:", value(lifecycle.GoalID), journalHeading, journalOrdinary),
-			journalDetailLine("Kind:", journalKindValue(lifecycle.Kind), journalHeading, journalKindStyle(lifecycle.Kind)),
-			journalDetailLine("State:", journalStateValue(lifecycle.State), journalHeading, journalStateStyle(lifecycle.State)),
-			journalDetailLine("Detail:", recorded(lifecycle.Detail), journalHeading, journalOrdinary),
-		)
-	}
-
-	evidence := selected.evidence
-	exit := "none recorded"
-	exitStyle := journalMuted
-	if evidence.ExitStatus != nil {
-		exit = fmt.Sprint(*evidence.ExitStatus)
-		exitStyle = journalFailure
-		if *evidence.ExitStatus == 0 {
-			exitStyle = journalSuccess
-		}
-	}
-	return append(lines,
-		journalLine{
-			{text: "Selected Event Detail", style: journalSelected},
-			{text: " · ", style: journalMuted},
-			{text: "Evidence", style: journalEvidence},
-		},
-		journalDetailLine("Recorded timestamp:", recorded(evidence.ObservedAt), journalEvidence, journalMuted),
-		journalDetailLine("Verifier ID:", value(evidence.VerifierID), journalEvidence, journalReference),
-		journalDetailLine("State:", journalStateValue(evidence.State), journalEvidence, journalStateStyle(evidence.State)),
-		journalDetailLine("Command:", recorded(evidence.Command), journalEvidence, journalReference),
-		journalDetailLine("Exit status:", exit, journalEvidence, exitStyle),
-		journalDetailLine("Implementation tree:", recorded(evidence.ImplementationTree), journalEvidence, journalReference),
-		journalDetailLine("Artifact SHA-256:", recorded(evidence.ArtifactSHA256), journalEvidence, journalReference),
-		journalDetailLine("Detail:", recorded(evidence.Detail), journalEvidence, journalOrdinary),
-	)
-}
-
-func (m JournalModel) detailRows() int {
-	if len(m.events) == 0 || !m.detailVisible {
-		return 0
-	}
-	if m.events[m.selected].lifecycle != nil {
-		return 6
-	}
-	return 9
-}
-
-func (m JournalModel) selectedEventRow() int {
-	row := 0
-	for i := 0; i < m.selected && i < len(m.events); i++ {
-		if m.events[i].evidence != nil {
-			row += 3
+	cardRows := 0
+	if m.detailVisible {
+		if m.events[m.selected].lifecycle != nil {
+			cardRows = 7
 		} else {
-			row++
+			cardRows = 10
 		}
 	}
-	return row
-}
-
-func (m JournalModel) selectedEventRows() int {
-	if len(m.events) > 0 && m.events[m.selected].evidence != nil {
-		return 3
+	if n*3 <= m.height-9-cardRows {
+		return 0, n, false
 	}
-	return 1
+	capacity := max(1, (m.height-9-cardRows-1)/3)
+	capacity = min(capacity, n)
+	start = m.selected - (capacity-1)/2
+	start = min(max(start, 0), n-capacity)
+	return start, start + capacity, true
 }
 
-func journalDetailLine(label, value string, labelStyle, valueStyle journalStyle) journalLine {
-	return journalLine{
-		{text: "  "},
-		{text: label, style: labelStyle},
-		{text: " "},
-		{text: value, style: valueStyle},
+func (m JournalModel) headerLines(start, end int) []journalLine {
+	task := journalValue(m.run.Task.ID)
+	title := journalValue(m.run.Task.Title)
+	runID := journalValue(m.run.RunID)
+	lines := []journalLine{
+		journalSideLine(m.width,
+			journalLine{{text: "vault-hunter journal", style: journalHeading}, {text: "  " + task + " " + title, style: journalOrdinary}},
+			journalLine{{text: "Run ", style: journalMuted}, {text: runID, style: journalOrdinary}, {text: fmt.Sprintf(" · rev %d", m.run.Revision), style: journalMuted}}),
+		journalSideLine(m.width,
+			journalLine{{text: "selected recorded journey · projection, not authority", style: journalSelected}},
+			journalLine{{text: fmt.Sprintf("%d lifecycle · %d evidence · %d total", len(m.run.Lifecycle), len(m.run.Evidence), len(m.events)), style: journalMuted}}),
+		{{text: strings.Repeat("─", m.width), style: journalMuted}},
+	}
+
+	candidate := m.activeGoal()
+	if candidate.index < 0 {
+		lines = append(lines,
+			journalLine{{text: "/goal ", style: journalHeading}, {text: "?", style: journalOrdinary}, {text: " · no recorded active or feedback lifecycle", style: journalMuted}},
+			journalLine{{text: "none recorded", style: journalOrdinary}},
+		)
+	} else {
+		left := journalLine{{text: "/goal ", style: journalHeading}, {text: journalValue(candidate.lifecycle.GoalID), style: journalOrdinary}, {text: " · ", style: journalMuted}}
+		left = append(left, journalStateSegments(candidate.lifecycle.State)...)
+		right := journalLine(nil)
+		if later := m.shownLater(candidate, start, end); later != "" {
+			right = journalLine{{text: "shown later: ", style: journalMuted}, {text: later, style: journalOrdinary}}
+		}
+		lines = append(lines, journalSideLine(m.width, left, right))
+		kindLine := journalLine(nil)
+		if candidate.lifecycle.Detail == "" {
+			kindLine = append(kindLine,
+				journalSegment{text: "●", style: journalEventStatus(m.events[candidate.index])},
+				journalSegment{text: " ", style: journalMuted},
+			)
+		}
+		kindLine = append(kindLine, journalKindSegments(candidate.lifecycle.Kind)...)
+		kindLine = append(kindLine, journalSegment{text: " · ", style: journalMuted}, journalSegment{text: journalRecorded(candidate.lifecycle.Detail), style: journalOrdinary})
+		lines = append(lines, kindLine)
+	}
+
+	lines = append(lines,
+		journalLine{{text: strings.Repeat("─", m.width), style: journalMuted}},
+		journalSideLine(m.width,
+			journalLine{{text: "Feature ", style: journalMuted}, {text: journalRecorded(m.run.Task.FeaturePath), style: journalOrdinary}},
+			journalLine{{text: "updated_at " + journalRecorded(m.run.UpdatedAt) + " · timestamp gaps, not durations", style: journalMuted}}),
+	)
+	return lines
+}
+
+type activeJournalGoal struct {
+	index     int
+	lifecycle *vaultregistry.Lifecycle
+}
+
+func (m JournalModel) activeGoal() activeJournalGoal {
+	candidate := activeJournalGoal{index: -1}
+	for i, event := range m.events {
+		if event.lifecycle != nil && (event.lifecycle.State == "active" || event.lifecycle.Kind == "feedback") {
+			candidate = activeJournalGoal{index: i, lifecycle: event.lifecycle}
+		}
+	}
+	return candidate
+}
+
+func (m JournalModel) shownLater(candidate activeJournalGoal, start, end int) string {
+	if candidate.index < 0 {
+		return ""
+	}
+	seen := map[string]bool{candidate.lifecycle.GoalID: true}
+	var goals []string
+	for i := max(start, candidate.index+1); i < end; i++ {
+		if lifecycle := m.events[i].lifecycle; lifecycle != nil && lifecycle.GoalID != "" && !seen[lifecycle.GoalID] {
+			seen[lifecycle.GoalID] = true
+			goals = append(goals, normalizeJournalText(lifecycle.GoalID))
+		}
+	}
+	return strings.Join(goals, " → ")
+}
+
+func (m JournalModel) eventLines(index int, margin string) []journalLine {
+	event := m.events[index]
+	status := journalEventStatus(event)
+	first := journalLine{{text: margin}, {text: "●", style: status}, {text: "  " + journalRailTime(event) + " · ", style: journalMuted}}
+	if event.lifecycle != nil {
+		first = append(first, journalSegment{text: "L", style: journalHeading}, journalSegment{text: " · ", style: journalMuted})
+		first = append(first, journalKindSegments(event.lifecycle.Kind)...)
+		first = append(first, journalSegment{text: " · ", style: journalMuted})
+		first = append(first, journalStateSegments(event.lifecycle.State)...)
+	} else {
+		first = append(first,
+			journalSegment{text: "E", style: journalEvidence},
+			journalSegment{text: " · ", style: journalMuted},
+			journalSegment{text: journalValue(event.evidence.VerifierID), style: journalReference},
+			journalSegment{text: " · ", style: journalMuted},
+		)
+		first = append(first, journalStateSegments(event.evidence.State)...)
+	}
+	first = append(first, journalSegment{text: " · " + m.eventGap(index), style: journalMuted})
+	if index == m.selected {
+		first = append(first, journalSegment{text: " · ", style: journalMuted}, journalSegment{text: "selected", style: journalSelected})
+	}
+
+	leaf := journalLine{{text: margin}, {text: "│  ├─ ", style: journalMuted}}
+	if event.lifecycle != nil {
+		leaf = append(leaf,
+			journalSegment{text: "goal", style: journalHeading},
+			journalSegment{text: " · ", style: journalMuted},
+			journalSegment{text: journalValue(event.lifecycle.GoalID), style: journalOrdinary},
+		)
+	} else {
+		leaf = append(leaf,
+			journalSegment{text: "verifier", style: journalEvidence},
+			journalSegment{text: " · ", style: journalMuted},
+			journalSegment{text: journalValue(event.evidence.VerifierID), style: journalReference},
+		)
+	}
+	detail := ""
+	if event.lifecycle != nil {
+		detail = event.lifecycle.Detail
+	} else {
+		detail = event.evidence.Detail
+	}
+	return []journalLine{
+		first,
+		leaf,
+		{{text: margin}, {text: "│  └─ detail · ", style: journalMuted}, {text: journalRecorded(detail), style: journalOrdinary}},
 	}
 }
 
-func journalKindValue(kind string) string {
-	if kind == "" {
+func journalRailTime(event journalEvent) string {
+	if event.observedAt.IsZero() {
 		return "?"
 	}
-	if !knownKind(kind) {
-		return kind + " ?"
-	}
-	return kind
+	return event.observedAt.UTC().Format("Jan 02 15:04 UTC")
 }
 
-func journalKindStyle(kind string) journalStyle {
-	if knownKind(kind) {
-		return journalHeading
+func (m JournalModel) eventGap(index int) string {
+	if index == 0 {
+		return "journey start"
+	}
+	if m.events[index].observedAt.IsZero() || m.events[index-1].observedAt.IsZero() {
+		return "? since prior"
+	}
+	gap := m.events[index].observedAt.Sub(m.events[index-1].observedAt)
+	return "+" + compactJournalGap(gap) + " since prior"
+}
+
+func compactJournalGap(gap time.Duration) string {
+	if gap%time.Hour == 0 && gap != 0 {
+		return fmt.Sprintf("%dh", int64(gap/time.Hour))
+	}
+	if gap%time.Minute == 0 && gap != 0 {
+		return fmt.Sprintf("%dm", int64(gap/time.Minute))
+	}
+	return gap.String()
+}
+
+func journalEventStatus(event journalEvent) journalStyle {
+	state := ""
+	var exit *int
+	if event.lifecycle != nil {
+		state = event.lifecycle.State
+	} else {
+		state, exit = event.evidence.State, event.evidence.ExitStatus
+	}
+	if state == "blocked" || state == "failed" || (exit != nil && *exit != 0) {
+		return journalFailure
+	}
+	if journalSuccessState(state) || (exit != nil && *exit == 0) {
+		return journalSuccess
+	}
+	if journalAttentionState(state) {
+		return journalAttention
 	}
 	return journalMuted
 }
 
-func journalStateValue(state string) string {
+func (m JournalModel) selectedCard(margin string) []journalLine {
+	event := m.events[m.selected]
+	if event.lifecycle != nil {
+		lifecycle := event.lifecycle
+		lines := []journalLine{{
+			{text: margin}, {text: "│  ┌─ ", style: journalMuted},
+			{text: "selected recorded observation", style: journalSelected},
+			{text: " · ", style: journalMuted}, {text: "lifecycle", style: journalHeading},
+		}}
+		lines = append(lines,
+			journalCardLine(margin, false, false, "timestamp", journalRecorded(lifecycle.ObservedAt), journalMuted),
+			journalCardLine(margin, false, false, "observation ID", journalValue(lifecycle.ObservationID), journalOrdinary),
+			journalCardLine(margin, false, false, "Goal ID", journalValue(lifecycle.GoalID), journalOrdinary),
+		)
+		lines = append(lines, journalCardValueLine(margin, false, "kind", journalKindSegments(lifecycle.Kind))...)
+		lines = append(lines, journalCardValueLine(margin, false, "state", journalStateSegments(lifecycle.State))...)
+		lines = append(lines, journalCardLine(margin, false, true, "detail", journalRecorded(lifecycle.Detail), journalOrdinary))
+		return lines
+	}
+
+	evidence := event.evidence
+	exit, exitStyle := "none recorded", journalMuted
+	if evidence.ExitStatus != nil {
+		exit = fmt.Sprint(*evidence.ExitStatus)
+		exitStyle = journalSuccess
+		if *evidence.ExitStatus != 0 {
+			exitStyle = journalFailure
+		}
+	}
+	lines := []journalLine{{
+		{text: margin}, {text: "│  ┌─ ", style: journalMuted},
+		{text: "selected recorded observation", style: journalSelected},
+		{text: " · ", style: journalMuted}, {text: "evidence", style: journalEvidence},
+	}}
+	lines = append(lines,
+		journalCardLine(margin, true, false, "timestamp", journalRecorded(evidence.ObservedAt), journalMuted),
+		journalCardLine(margin, true, false, "observation ID", journalValue(evidence.ObservationID), journalOrdinary),
+		journalCardLine(margin, true, false, "verifier ID", journalValue(evidence.VerifierID), journalReference),
+	)
+	lines = append(lines, journalCardValueLine(margin, true, "state", journalStateSegments(evidence.State))...)
+	lines = append(lines,
+		journalCardLine(margin, true, false, "command", journalRecorded(evidence.Command), journalReference),
+		journalCardLine(margin, true, false, "exit status", exit, exitStyle),
+		journalCardLine(margin, true, false, "implementation tree", journalRecorded(evidence.ImplementationTree), journalReference),
+		journalCardLine(margin, true, false, "artifact SHA-256", journalRecorded(evidence.ArtifactSHA256), journalReference),
+		journalCardLine(margin, true, true, "detail", journalRecorded(evidence.Detail), journalOrdinary),
+	)
+	return lines
+}
+
+func journalCardLine(margin string, evidence, final bool, label, value string, valueStyle journalStyle) journalLine {
+	connector := "│  ├─ "
+	if final {
+		connector = "│  └─ "
+	}
+	labelStyle := journalHeading
+	if evidence {
+		labelStyle = journalEvidence
+	}
+	return journalLine{
+		{text: margin}, {text: connector, style: journalMuted},
+		{text: label, style: labelStyle}, {text: " · ", style: journalMuted},
+		{text: value, style: valueStyle},
+	}
+}
+
+func journalCardValueLine(margin string, evidence bool, label string, value journalLine) []journalLine {
+	labelStyle := journalHeading
+	if evidence {
+		labelStyle = journalEvidence
+	}
+	line := journalLine{{text: margin}, {text: "│  ├─ ", style: journalMuted}, {text: label, style: labelStyle}, {text: " · ", style: journalMuted}}
+	line = append(line, value...)
+	return []journalLine{line}
+}
+
+func journalKindSegments(kind string) journalLine {
+	if kind == "" {
+		return journalLine{{text: "?", style: journalMuted}}
+	}
+	if !journalKnownKind(kind) {
+		return journalLine{{text: kind, style: journalMuted}, {text: " ?", style: journalMuted}}
+	}
+	return journalLine{{text: kind, style: journalHeading}}
+}
+
+func journalStateSegments(state string) journalLine {
 	if state == "" {
-		return "?"
+		return journalLine{{text: "?", style: journalMuted}}
 	}
-	if knownState(state) {
-		return state
+	style := journalStateStyle(state)
+	if !journalKnownState(state) {
+		return journalLine{{text: state, style: journalMuted}, {text: " ?", style: journalMuted}}
 	}
+	return journalLine{{text: state, style: style}}
+}
+
+func journalKnownKind(kind string) bool {
+	return knownKind(kind) || kind == "feedback"
+}
+
+func journalKnownState(state string) bool {
+	return knownState(state) || state == "passed" || state == "success" || state == "succeeded" || state == "accepted" || state == "recorded"
+}
+
+func journalSuccessState(state string) bool {
 	switch state {
-	case "passed", "success", "succeeded", "accepted", "recorded":
-		return state
+	case "done", "passed", "success", "succeeded", "accepted":
+		return true
 	default:
-		return state + " ?"
+		return false
+	}
+}
+
+func journalAttentionState(state string) bool {
+	switch state {
+	case "pending", "active", "awaiting-human-evaluation", "resuming":
+		return true
+	default:
+		return false
 	}
 }
 
 func journalStateStyle(state string) journalStyle {
-	switch state {
-	case "done", "passed", "success", "succeeded", "accepted":
-		return journalSuccess
-	case "pending", "active", "awaiting-human-evaluation", "resuming":
-		return journalAttention
-	case "blocked", "failed":
+	if state == "blocked" || state == "failed" {
 		return journalFailure
-	default:
-		return journalMuted
 	}
+	if journalSuccessState(state) {
+		return journalSuccess
+	}
+	if journalAttentionState(state) {
+		return journalAttention
+	}
+	return journalMuted
+}
+
+func journalValue(value string) string {
+	if value == "" {
+		return "?"
+	}
+	return value
+}
+
+func journalRecorded(value string) string {
+	if value == "" {
+		return "none recorded"
+	}
+	return value
+}
+
+func boolJournalInt(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
+}
+
+func journalFooter(width int) string {
+	full := "g/G first/last · j/k/↑/↓ records · v/V verifier · e/E evidence · enter detail · q/Esc quit"
+	if lipgloss.Width(full) <= width {
+		return full
+	}
+	return "g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit"
+}
+
+func journalSideLine(width int, left, right journalLine) journalLine {
+	leftLimit := max((width-1)/2, 0)
+	rightLimit := max(width-1-leftLimit, 0)
+	left = clipJournalLine(left, leftLimit)
+	right = clipJournalLine(right, rightLimit)
+	gap := max(1, width-journalLineWidth(left)-journalLineWidth(right))
+	line := append(journalLine{}, left...)
+	line = append(line, journalSegment{text: strings.Repeat(" ", gap)})
+	line = append(line, right...)
+	return line
+}
+
+func journalLineWidth(line journalLine) int {
+	var text strings.Builder
+	for _, segment := range line {
+		text.WriteString(segment.text)
+	}
+	return lipgloss.Width(text.String())
 }
 
 func normalizeJournalText(text string) string {
@@ -492,49 +684,60 @@ func normalizeJournalText(text string) string {
 	return normalized.String()
 }
 
-func renderJournalLine(line journalLine, width int, enabled bool, styles journalStyles) string {
-	normalizedLine := make(journalLine, len(line))
-	var plain strings.Builder
+func normalizeJournalLine(line journalLine) journalLine {
+	normalized := make(journalLine, len(line))
 	for i, segment := range line {
 		segment.text = normalizeJournalText(segment.text)
-		normalizedLine[i] = segment
+		normalized[i] = segment
+	}
+	return normalized
+}
+
+func clipJournalLine(line journalLine, width int) journalLine {
+	line = normalizeJournalLine(line)
+	var plain strings.Builder
+	for _, segment := range line {
 		plain.WriteString(segment.text)
 	}
-	line = normalizedLine
 	clipped := truncate(plain.String(), width)
-	if !enabled {
-		return clipped
+	if clipped == plain.String() {
+		return line
 	}
-
-	prefix := clipped
-	ellipsis := false
-	if clipped != plain.String() && strings.HasSuffix(clipped, "…") {
-		prefix = strings.TrimSuffix(clipped, "…")
-		ellipsis = true
-	}
-
+	prefix := strings.TrimSuffix(clipped, "…")
 	remaining := len(prefix)
-	var rendered strings.Builder
+	result := make(journalLine, 0, len(line)+1)
 	ellipsisStyle := journalPlain
 	for _, segment := range line {
 		if remaining == 0 {
 			ellipsisStyle = segment.style
 			break
 		}
-		text := segment.text
-		if len(text) > remaining {
-			text = text[:remaining]
+		take := min(len(segment.text), remaining)
+		if take != 0 {
+			result = append(result, journalSegment{text: segment.text[:take], style: segment.style})
 		}
-		rendered.WriteString(styles.render(segment.style, text))
-		remaining -= len(text)
-		if len(text) < len(segment.text) {
+		remaining -= take
+		if take < len(segment.text) {
 			ellipsisStyle = segment.style
 			break
 		}
 		ellipsisStyle = segment.style
 	}
-	if ellipsis {
-		rendered.WriteString(styles.render(ellipsisStyle, "…"))
+	if strings.HasSuffix(clipped, "…") {
+		result = append(result, journalSegment{text: "…", style: ellipsisStyle})
+	}
+	return result
+}
+
+func renderJournalLine(line journalLine, width int, enabled bool, styles journalStyles) string {
+	line = clipJournalLine(line, width)
+	var rendered strings.Builder
+	for _, segment := range line {
+		if enabled {
+			rendered.WriteString(styles.render(segment.style, segment.text))
+		} else {
+			rendered.WriteString(segment.text)
+		}
 	}
 	return rendered.String()
 }
