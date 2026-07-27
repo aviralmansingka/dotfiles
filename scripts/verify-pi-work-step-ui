@@ -934,7 +934,7 @@ wait_for_subagent_initial
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_initial_capture"
 subagent_capture_width="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.longCommand.captureWidth);' "$subagent_spec")"
 subagent_long_head="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.longCommand.head);' "$subagent_spec")"
-tmux -L "$tmux_socket" resize-window -t verify:0 -x "$subagent_capture_width" -y 60
+tmux -L "$tmux_socket" resize-window -t verify:0 -x "$subagent_capture_width" -y 120
 touch "$subagent_progress_release"
 wait_for_subagent_setup
 wait_for_terminal \
