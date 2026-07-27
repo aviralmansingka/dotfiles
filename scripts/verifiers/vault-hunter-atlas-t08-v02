@@ -16,6 +16,10 @@ manifest() {
   ) | shasum -a 256 | awk '{print $1}'
 }
 
+strip_ansi() {
+  awk 'BEGIN { esc=sprintf("%c", 27) } { gsub(esc "\\[[0-9;]*m", ""); print }' "$1"
+}
+
 run_cli() {
   HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
     VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-read" \
@@ -69,6 +73,7 @@ test "$(LC_ALL=C tr -cd '\033' <"$tmp/too-small" | wc -c | tr -d ' ')" -eq 0
 
 run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
   --snapshot --color always --width 80 --height 24 >"$tmp/static-snapshot"
+test "$(LC_ALL=C tr -cd '\033' <"$tmp/static-snapshot" | wc -c | tr -d ' ')" -eq 0
 run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
   --width 80 --height 24 </dev/null >"$tmp/static-redirected"
 run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
@@ -78,6 +83,17 @@ TERM=dumb run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
 cmp "$tmp/static-snapshot" "$tmp/static-redirected"
 cmp "$tmp/static-redirected" "$tmp/static-redirected-again"
 cmp "$tmp/static-redirected" "$tmp/static-dumb"
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --color always --width 80 --height 24 </dev/null >"$tmp/static-forced-color"
+TERM=dumb NO_COLOR=1 run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --color always --width 80 --height 24 >"$tmp/static-forced-color-dumb"
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --color never --width 80 --height 24 </dev/null >"$tmp/static-never-color"
+test "$(LC_ALL=C tr -cd '\033' <"$tmp/static-forced-color" | wc -c | tr -d ' ')" -gt 0
+cmp "$tmp/static-forced-color" "$tmp/static-forced-color-dumb"
+cmp "$tmp/static-snapshot" "$tmp/static-never-color"
+strip_ansi "$tmp/static-forced-color" >"$tmp/static-forced-color.plain"
+cmp "$tmp/static-snapshot" "$tmp/static-forced-color.plain"
 
 set +e
 run_cli journal --journal=false --run-id atlas-journal-run --state-dir "$tmp/state" \
@@ -126,6 +142,15 @@ expect_exit missing 1 journal --run-id missing --state-dir "$tmp/state"
 expect_exit malformed 1 journal --run-id malformed --state-dir "$tmp/state"
 expect_exit unsupported 1 journal --run-id unsupported --state-dir "$tmp/state"
 
+state_pre_pty=$(manifest "$tmp/state")
+vault_pre_pty=$(manifest "$tmp/vault")
+test "$state_before" = "$state_pre_pty"
+test "$vault_before" = "$vault_pre_pty"
+test ! -s "$tmp/trap.log"
+printf 'Pre-PTY Registry manifest: %s\n' "$state_pre_pty"
+printf 'Pre-PTY vault manifest: %s\n' "$vault_pre_pty"
+printf 'Pre-PTY orchestration trap bytes: 0\n'
+
 command -v expect >/dev/null
 export T08_V02_PTY_BIN="$tmp/vault-hunter-atlas"
 export T08_V02_PTY_STATE="$tmp/state"
@@ -154,6 +179,8 @@ spawn env TERM=xterm-256color \
   $env(T08_V02_PTY_BIN) journal --run-id atlas-journal-run \
   --state-dir $env(T08_V02_PTY_STATE) --width 80 --height 24
 
+exec stty -f $spawn_out(slave,name) rows 24 columns 80
+exec kill -WINCH [exp_pid]
 set esc "\033"
 set background_query "${esc}]11;?${esc}\\"
 set background_reply "${esc}]11;rgb:0000/0000/0000${esc}\\"
@@ -168,9 +195,19 @@ expect {
     send -- $cursor_reply
     exp_continue
   }
-  -re {life-later} {}
+  -re {selected recorded journey} {}
   eof { fail "journal exited before initial attached-terminal frame" }
-  timeout { fail "journal timed out before initial attached-terminal frame" }
+  timeout { fail "journal did not render initial attached-terminal D frame" }
+}
+expect {
+  -re {observation ID · life-later} {}
+  eof { fail "journal exited before initial D selected card" }
+  timeout { fail "journal did not render initial D selected card" }
+}
+expect {
+  -re {8 recorded journal events omitted \(6 earlier, 0 later\)} {}
+  eof { fail "journal exited before initial D omission row" }
+  timeout { fail "journal did not render initial D omission row" }
 }
 set timeout 1
 expect {
@@ -178,31 +215,61 @@ expect {
   timeout {}
 }
 set timeout 5
-send -- "k"
+send -- "E"
 expect {
-  -re {>.*evidence-later} {}
-  eof { fail "journal exited before bounded navigation update" }
-  timeout { fail "journal did not render bounded navigation update" }
+  -re {observation ID · evidence-later} {}
+  eof { fail "journal exited before D evidence jump" }
+  timeout { fail "journal did not render D evidence jump" }
+}
+send -- "j"
+expect {
+  -re {observation ID · life-later} {}
+  eof { fail "journal exited before bounded D navigation update" }
+  timeout { fail "journal did not render bounded D navigation update" }
+}
+send -- "E"
+expect {
+  -re {observation ID · evidence-later} {}
+  eof { fail "journal exited before second D evidence jump" }
+  timeout { fail "journal did not render second D evidence jump" }
 }
 expect {
-  -re {Selected Event Detail} {}
+  -re {selected recorded observation · evidence} {}
   eof { fail "journal exited before expanded evidence detail" }
-  timeout { fail "journal did not render expanded evidence detail" }
+  timeout { fail "journal did not render expanded D evidence detail" }
 }
 expect {
-  -re {j/down k/up navigate} {}
+  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
   eof { fail "journal exited before navigation footer" }
-  timeout { fail "journal did not render navigation footer" }
+  timeout { fail "journal did not render narrow D navigation footer" }
 }
 send -- "\r"
 expect {
-  -re {j/down k/up navigate} {
-    if {[string first "Selected Event Detail" $expect_out(buffer)] >= 0} {
-      fail "journal Enter did not collapse selected detail"
+  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {
+    if {[string first "selected recorded observation" $expect_out(buffer)] >= 0} {
+      fail "journal Enter did not collapse D selected detail"
     }
   }
   eof { fail "journal exited before detail-toggle update" }
-  timeout { fail "journal did not render detail-toggle update" }
+  timeout { fail "journal did not render D detail-toggle update" }
+}
+send -- "\r"
+expect {
+  -re {selected recorded observation · evidence} {}
+  eof { fail "journal exited before detail re-expand update" }
+  timeout { fail "journal did not re-expand D evidence detail" }
+}
+exec stty -f $spawn_out(slave,name) rows 32 columns 134
+exec kill -WINCH [exp_pid]
+expect {
+  -re {shown later: T08.HIDDEN → T08.LANDING} {}
+  eof { fail "journal exited before D resize update" }
+  timeout { fail "journal did not render D resize/reflow update" }
+}
+expect {
+  -re {observation ID · evidence-later} {}
+  eof { fail "journal exited before resized selection frame" }
+  timeout { fail "journal did not retain selection across D resize" }
 }
 send -- "q"
 expect {
@@ -227,6 +294,7 @@ printf 'Vault manifest before/after: %s %s\n' "$vault_before" "$vault_after"
 printf 'Orchestration trap bytes: 0\n'
 
 go test -count=1 ./internal/atlas -run '^TestT08V02'
+scripts/verify-vault-hunter-atlas T08.V01
 scripts/verify-vault-hunter-atlas T02.V01
 scripts/verify-vault-hunter-atlas T02.V02
 scripts/verify-vault-hunter-atlas T02.V03
@@ -241,4 +309,4 @@ printf 'Final Registry manifest: %s\n' "$state_final"
 printf 'Final vault manifest: %s\n' "$vault_final"
 printf 'Final orchestration trap bytes: 0\n'
 
-echo "T08.V02 bounded journal interaction and read-only authority: PASS"
+echo "T08.V02 bounded D journal interaction and read-only authority: PASS"

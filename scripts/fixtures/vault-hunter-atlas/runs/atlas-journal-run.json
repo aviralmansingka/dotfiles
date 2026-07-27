@@ -47,8 +47,16 @@
       "observed_at": "2026-07-26T12:01:00+02:00",
       "kind": "review",
       "goal_id": "T08.REVIEW",
-      "state": "done",
+      "state": "active",
       "detail": "tie-life-second"
+    },
+    {
+      "observation_id": "life-visible-later",
+      "observed_at": "2026-07-26T10:01:30Z",
+      "kind": "checkpoint",
+      "goal_id": "T08.HIDDEN",
+      "state": "pending",
+      "detail": "visible-hidden"
     },
     {
       "observation_id": "life-later",

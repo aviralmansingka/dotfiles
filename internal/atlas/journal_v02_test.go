@@ -64,16 +64,18 @@ func TestT08V02BoundedJournalInteraction(t *testing.T) {
 	t.Run("detail toggles and quit keys are exact", func(t *testing.T) {
 		m := NewJournalModel(run, 100, 30)
 		expanded := m.View()
-		if !strings.Contains(expanded, "Selected Event Detail") || !strings.Contains(expanded, "verifier-last-detail") {
-			t.Fatal("initial selected-event detail is not expanded")
+		if !strings.Contains(expanded, "selected recorded observation · lifecycle") ||
+			!strings.Contains(expanded, "observation ID · verifier-last") ||
+			!strings.Contains(expanded, "detail · verifier-last-detail") {
+			t.Fatal("initial D selected-event card is not expanded")
 		}
 		m = journalUpdate(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-		if strings.Contains(m.View(), "Selected Event Detail") || strings.Contains(m.View(), "verifier-last-detail") {
-			t.Fatal("Enter did not collapse selected-event detail")
+		if strings.Contains(m.View(), "selected recorded observation") {
+			t.Fatal("Enter did not collapse D selected-event card")
 		}
 		m = journalUpdate(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 		if m.View() != expanded {
-			t.Fatal("second Enter did not restore selected-event detail")
+			t.Fatal("second Enter did not restore D selected-event card")
 		}
 		for _, key := range []tea.KeyMsg{
 			runeKey('q'),
@@ -93,7 +95,9 @@ func TestT08V02BoundedJournalInteraction(t *testing.T) {
 	t.Run("empty journal navigation and detail are no-ops", func(t *testing.T) {
 		m := NewJournalModel(vaultregistry.Run{}, 80, 24)
 		before := m.View()
-		if !strings.Contains(before, "no recorded journal events") || strings.Contains(before, "> ") {
+		if !strings.Contains(before, "no recorded journal events") ||
+			!strings.Contains(before, "0 lifecycle · 0 evidence · 0 total") ||
+			strings.Contains(before, "selected recorded observation") {
 			t.Fatalf("unexpected empty journal:\n%s", before)
 		}
 		for _, key := range []tea.KeyMsg{
@@ -124,13 +128,33 @@ func TestT08V02BoundedJournalInteraction(t *testing.T) {
 		assertJournalSelection(t, m, "life-39")
 		m = journalUpdate(t, m, runeKey('g'))
 		assertJournalSelection(t, m, "life-00")
-		for _, size := range []tea.WindowSizeMsg{{Width: 100, Height: 30}, {Width: 80, Height: 24}} {
-			m = journalUpdate(t, m, size)
-			assertJournalSelection(t, m, "life-00")
-			assertJournalBounds(t, m.View(), size.Width, size.Height)
-		}
+		assertJournalWindow(t, m.View(), []string{"detail-00", "detail-01"}, "(0 earlier, 38 later)")
+		m = journalUpdate(t, m, tea.WindowSizeMsg{Width: 100, Height: 30})
+		assertJournalSelection(t, m, "life-00")
+		assertJournalWindow(t, m.View(), []string{"detail-00", "detail-01", "detail-02", "detail-03"}, "(0 earlier, 36 later)")
+		assertJournalBounds(t, m.View(), 100, 30)
+		m = journalUpdate(t, m, tea.WindowSizeMsg{Width: 80, Height: 24})
+		assertJournalSelection(t, m, "life-00")
+		assertJournalWindow(t, m.View(), []string{"detail-00", "detail-01"}, "(0 earlier, 38 later)")
+		assertJournalBounds(t, m.View(), 80, 24)
 		m = journalUpdate(t, m, runeKey('G'))
 		assertJournalSelection(t, m, "life-39")
+		assertJournalWindow(t, m.View(), []string{"detail-38", "detail-39"}, "(38 earlier, 0 later)")
+
+		m = journalUpdate(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+		assertJournalSelection(t, m, "life-39")
+		assertJournalWindow(t, m.View(), []string{"detail-36", "detail-37", "detail-38", "detail-39"}, "(36 earlier, 0 later)")
+		if strings.Contains(m.View(), "selected recorded observation") {
+			t.Fatal("collapsed D card remained visible")
+		}
+		m = journalUpdate(t, m, tea.WindowSizeMsg{Width: 100, Height: 30})
+		assertJournalWindow(t, m.View(),
+			[]string{"detail-34", "detail-35", "detail-36", "detail-37", "detail-38", "detail-39"},
+			"(34 earlier, 0 later)")
+		m = journalUpdate(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+		assertJournalSelection(t, m, "life-39")
+		assertJournalWindow(t, m.View(), []string{"detail-36", "detail-37", "detail-38", "detail-39"}, "(36 earlier, 0 later)")
+
 		m = journalUpdate(t, m, tea.WindowSizeMsg{Width: 79, Height: 23})
 		if got := m.View(); got != "terminal too small; minimum 80×24" {
 			t.Fatalf("79x23 view = %q", got)
@@ -179,15 +203,29 @@ func journalUpdate(t *testing.T, m JournalModel, msg tea.Msg) JournalModel {
 
 func assertJournalSelection(t *testing.T, m JournalModel, observationID string) {
 	t.Helper()
-	view := m.View()
-	var selected []string
-	for _, line := range strings.Split(view, "\n") {
-		if strings.HasPrefix(line, "> ") {
-			selected = append(selected, line)
-		}
+	if len(m.events) == 0 {
+		t.Fatalf("selected observation = none, want %q", observationID)
 	}
-	if len(selected) != 1 || !strings.Contains(selected[0], observationID) {
-		t.Fatalf("selected marker = %q, want %q visible exactly once", selected, observationID)
+	event := m.events[m.selected]
+	got := ""
+	if event.lifecycle != nil {
+		got = event.lifecycle.ObservationID
+	} else {
+		got = event.evidence.ObservationID
+	}
+	if got != observationID {
+		t.Fatalf("selected observation = %q, want %q", got, observationID)
+	}
+	if !strings.Contains(m.View(), "· selected") {
+		t.Fatalf("selected observation %q is not visible in D rail", observationID)
+	}
+}
+
+func assertJournalWindow(t *testing.T, view string, details []string, omission string) {
+	t.Helper()
+	assertVisibleJournalDetails(t, view, details, nil)
+	if !strings.Contains(view, omission) {
+		t.Errorf("D viewport missing omission %q", omission)
 	}
 }
 
