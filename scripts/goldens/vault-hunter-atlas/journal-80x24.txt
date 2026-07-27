@@ -2,12 +2,12 @@
 [38;2;242;133;52mExecution Journal[0m[38;2;146;131;116m · 7 events · UTC · read-only[0m
 [38;2;146;131;116mTIME         TYPE OBSERVATION SUBJECT STATE (L=lifecycle E=evidence)[0m
   [38;2;146;131;116m10:00:00Z[0m [38;2;242;133;52mL[0m [38;2;235;219;178mlife-offset[0m [38;2;235;219;178mcheckpoint-one[0m [38;2;242;133;52mcheckpoint[0m [38;2;184;187;38mdone[0m
-  [38;2;146;131;116m10:01:00Z[0m [38;2;242;133;52mL[0m [38;2;235;219;178mduplicate-id[0m [38;2;235;219;178mfuture-goal[0m [38;2;146;131;116mfuture-kind[0m [38;2;146;131;116mfuture-state[0m
+  [38;2;146;131;116m10:01:00Z[0m [38;2;242;133;52mL[0m [38;2;235;219;178mduplicate-id[0m [38;2;235;219;178mfuture-goal[0m [38;2;146;131;116mfuture-kind ?[0m [38;2;146;131;116mfuture-state ?[0m
   [38;2;146;131;116m10:01:00Z[0m [38;2;242;133;52mL[0m [38;2;235;219;178mlife-tie-second[0m [38;2;235;219;178mT08.REVIEW[0m [38;2;242;133;52mreview[0m [38;2;184;187;38mdone[0m
   [38;2;146;131;116m10:01:00Z[0m [38;2;211;134;155mE[0m [38;2;235;219;178mduplicate-id[0m [38;2;128;170;158mT08.V01[0m [38;2;242;89;75mfailed[0m [38;2;242;89;75mexit=2[0m
     [38;2;211;134;155mcommand=[0m[38;2;128;170;158mscripts/verify-vault-hunter-atlas T08.V01[0m
     [38;2;211;134;155mtree=[0m[38;2;128;170;158mtree-red[0m [38;2;211;134;155martifact=[0m[38;2;128;170;158msha-red[0m [38;2;211;134;155mdetail=[0m[38;2;235;219;178mtie-evidence-first[0m
-  [38;2;146;131;116m10:01:00Z[0m [38;2;211;134;155mE[0m [38;2;235;219;178mevidence-tie-second[0m [38;2;128;170;158mT08.V02[0m [38;2;146;131;116mfuture-evidence-state[0m [38;2;146;131;116mexit=-[0m
+  [38;2;146;131;116m10:01:00Z[0m [38;2;211;134;155mE[0m [38;2;235;219;178mevidence-tie-second[0m [38;2;128;170;158mT08.V02[0m [38;2;146;131;116mfuture-evidence-state ?[0m [38;2;146;131;116mexit=none rec[0m[38;2;146;131;116m…[0m
     [38;2;211;134;155mcommand=[0m[38;2;128;170;158mverify-second[0m
     [38;2;211;134;155mtree=[0m[38;2;128;170;158mtree-second[0m [38;2;211;134;155martifact=[0m[38;2;128;170;158msha-second[0m [38;2;211;134;155mdetail=[0m[38;2;235;219;178mtie-evidence-second[0m
   [38;2;146;131;116m10:02:00Z[0m [38;2;211;134;155mE[0m [38;2;235;219;178mevidence-later[0m [38;2;128;170;158mT08.V01[0m [38;2;184;187;38mpassed[0m [38;2;184;187;38mexit=0[0m

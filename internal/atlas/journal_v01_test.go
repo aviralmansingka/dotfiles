@@ -46,8 +46,8 @@ func TestT08V01JournalSnapshots(t *testing.T) {
 		width, height int
 		plainSHA256   string
 	}{
-		{134, 32, "dc647efd939e7f557d08c693e8c947875ced5991fcfb027d2edd9aeecf992580"},
-		{80, 24, "0f528e84251af77880112abc43e5efd09984633ae3e2c90c21f46a126cee177a"},
+		{134, 32, "f193940a0ae0f280bc50990d5746a0b8d9cb64b6cbdd4e16626243c8452c9ded"},
+		{80, 24, "1c77db05f3577e28034f5bfab05473926720edcf02b48e087089122ce4091ea4"},
 	} {
 		t.Run(fmt.Sprintf("%dx%d", size.width, size.height), func(t *testing.T) {
 			model := NewJournalModel(run, size.width, size.height)
