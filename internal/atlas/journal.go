@@ -37,8 +37,9 @@ const (
 )
 
 type journalSegment struct {
-	text  string
-	style journalStyle
+	text          string
+	style         journalStyle
+	neutralMarker bool
 }
 
 type journalLine []journalSegment
@@ -96,7 +97,7 @@ type JournalModel struct {
 	selected      int
 	detailVisible bool
 	colorEnabled  bool
-	interactive   bool
+	attached      bool
 	width         int
 	height        int
 }
@@ -132,12 +133,10 @@ func NewJournalModel(run vaultregistry.Run, width, height int) JournalModel {
 }
 
 // WithColor configures the attached-terminal View without changing the
-// journal projection. Static forced-color output remains owned by ViewColor;
-// attached frames keep semantic field phrases contiguous in the PTY stream.
+// journal projection.
 func (m JournalModel) WithColor(enabled bool) JournalModel {
-	_ = enabled
-	m.colorEnabled = false
-	m.interactive = true
+	m.colorEnabled = enabled
+	m.attached = true
 	return m
 }
 
@@ -223,27 +222,20 @@ func (m JournalModel) ViewColor(enabled bool) string {
 	lines := m.headerLines(start, end)
 	margin := strings.Repeat(" ", (m.width-min(82, m.width-2))/2)
 	if len(m.events) == 0 {
-		lines = append(lines, journalLine{{text: margin}, {text: "no recorded journal events", style: journalOrdinary}})
+		lines = append(lines, m.journalRailLine(margin, journalLine{{text: margin}, {text: "no recorded journal events", style: journalOrdinary}}))
 	} else {
-		omission := journalLine{
+		omission := m.journalRailLine(margin, journalLine{
 			{text: margin},
 			{text: fmt.Sprintf("└─ … %d recorded journal events omitted (%d earlier, %d later)", len(m.events), start, len(m.events)-end), style: journalMuted},
-		}
-		if capped && !m.interactive {
+		})
+		if capped {
 			lines = append(lines, omission)
 		}
 		for i := start; i < end; i++ {
-			lines = append(lines, m.eventLines(i, margin)...)
+			lines = append(lines, m.journalRailLines(margin, m.eventLines(i, margin))...)
 		}
 		if m.detailVisible {
-			card := m.selectedCard(margin)
-			if m.interactive && len(card) >= 3 {
-				card = append(append(append([]journalLine{}, card[1:3]...), card[0]), card[3:]...)
-			}
-			lines = append(lines, card...)
-		}
-		if capped && m.interactive {
-			lines = append(lines, omission)
+			lines = append(lines, m.journalRailLines(margin, m.selectedCard(margin))...)
 		}
 	}
 
@@ -253,13 +245,9 @@ func (m JournalModel) ViewColor(enabled bool) string {
 	if len(lines) > m.height-2 {
 		lines = lines[:m.height-2]
 	}
-	footer := journalFooter(m.width)
-	if m.interactive {
-		footer += strings.Repeat(" ", 1+(m.selected%2)+2*boolJournalInt(m.detailVisible))
-	}
 	lines = append(lines,
 		journalLine{{text: strings.Repeat("─", m.width), style: journalMuted}},
-		journalLine{{text: footer, style: journalMuted}},
+		journalLine{{text: journalFooter(m.width), style: journalMuted}},
 	)
 
 	var styles journalStyles
@@ -268,7 +256,11 @@ func (m JournalModel) ViewColor(enabled bool) string {
 	}
 	rendered := make([]string, len(lines))
 	for i, line := range lines {
-		rendered[i] = renderJournalLine(line, m.width, enabled, styles)
+		if enabled && m.attached {
+			rendered[i] = renderAttachedJournalLine(line, m.width, styles)
+		} else {
+			rendered[i] = renderJournalLine(line, m.width, enabled, styles)
+		}
 	}
 	return strings.Join(rendered, "\n")
 }
@@ -325,12 +317,6 @@ func (m JournalModel) headerLines(start, end int) []journalLine {
 		}
 		lines = append(lines, journalSideLine(m.width, left, right))
 		kindLine := journalLine(nil)
-		if candidate.lifecycle.Detail == "" {
-			kindLine = append(kindLine,
-				journalSegment{text: "●", style: journalEventStatus(m.events[candidate.index])},
-				journalSegment{text: " ", style: journalMuted},
-			)
-		}
 		kindLine = append(kindLine, journalKindSegments(candidate.lifecycle.Kind)...)
 		kindLine = append(kindLine, journalSegment{text: " · ", style: journalMuted}, journalSegment{text: journalRecorded(candidate.lifecycle.Detail), style: journalOrdinary})
 		lines = append(lines, kindLine)
@@ -551,21 +537,21 @@ func journalCardValueLine(margin string, evidence bool, label string, value jour
 
 func journalKindSegments(kind string) journalLine {
 	if kind == "" {
-		return journalLine{{text: "?", style: journalMuted}}
+		return journalLine{{text: "?", style: journalMuted, neutralMarker: true}}
 	}
 	if !journalKnownKind(kind) {
-		return journalLine{{text: kind, style: journalMuted}, {text: " ?", style: journalMuted}}
+		return journalLine{{text: kind, style: journalMuted}, {text: " ?", style: journalMuted, neutralMarker: true}}
 	}
 	return journalLine{{text: kind, style: journalHeading}}
 }
 
 func journalStateSegments(state string) journalLine {
 	if state == "" {
-		return journalLine{{text: "?", style: journalMuted}}
+		return journalLine{{text: "?", style: journalMuted, neutralMarker: true}}
 	}
 	style := journalStateStyle(state)
 	if !journalKnownState(state) {
-		return journalLine{{text: state, style: journalMuted}, {text: " ?", style: journalMuted}}
+		return journalLine{{text: state, style: journalMuted}, {text: " ?", style: journalMuted, neutralMarker: true}}
 	}
 	return journalLine{{text: state, style: style}}
 }
@@ -621,13 +607,6 @@ func journalRecorded(value string) string {
 		return "none recorded"
 	}
 	return value
-}
-
-func boolJournalInt(value bool) int {
-	if value {
-		return 1
-	}
-	return 0
 }
 
 func journalFooter(width int) string {
@@ -693,8 +672,43 @@ func normalizeJournalLine(line journalLine) journalLine {
 	return normalized
 }
 
+func (m JournalModel) journalRailLines(margin string, lines []journalLine) []journalLine {
+	for i := range lines {
+		lines[i] = m.journalRailLine(margin, lines[i])
+	}
+	return lines
+}
+
+func (m JournalModel) journalRailLine(margin string, line journalLine) journalLine {
+	if len(line) != 0 && line[0].text == margin {
+		line = line[1:]
+	}
+	line = clipJournalLine(line, min(82, m.width-2))
+	return append(journalLine{{text: margin}}, line...)
+}
+
 func clipJournalLine(line journalLine, width int) journalLine {
 	line = normalizeJournalLine(line)
+	if journalLineWidth(line) <= width {
+		return line
+	}
+
+	var content, markers journalLine
+	for _, segment := range line {
+		if segment.neutralMarker {
+			markers = append(markers, segment)
+		} else {
+			content = append(content, segment)
+		}
+	}
+	if markerWidth := journalLineWidth(markers); markerWidth > 0 && markerWidth < width {
+		clipped := clipJournalLinePrefix(content, width-markerWidth)
+		return append(clipped, markers...)
+	}
+	return clipJournalLinePrefix(line, width)
+}
+
+func clipJournalLinePrefix(line journalLine, width int) journalLine {
 	var plain strings.Builder
 	for _, segment := range line {
 		plain.WriteString(segment.text)
@@ -703,25 +717,28 @@ func clipJournalLine(line journalLine, width int) journalLine {
 	if clipped == plain.String() {
 		return line
 	}
+
 	prefix := strings.TrimSuffix(clipped, "…")
-	remaining := len(prefix)
+	remaining := prefix
 	result := make(journalLine, 0, len(line)+1)
 	ellipsisStyle := journalPlain
 	for _, segment := range line {
-		if remaining == 0 {
+		if remaining == "" {
 			ellipsisStyle = segment.style
 			break
 		}
-		take := min(len(segment.text), remaining)
-		if take != 0 {
-			result = append(result, journalSegment{text: segment.text[:take], style: segment.style})
+		if strings.HasPrefix(remaining, segment.text) {
+			result = append(result, segment)
+			remaining = strings.TrimPrefix(remaining, segment.text)
+			ellipsisStyle = segment.style
+			continue
 		}
-		remaining -= take
-		if take < len(segment.text) {
+		if strings.HasPrefix(segment.text, remaining) {
+			result = append(result, journalSegment{text: remaining, style: segment.style})
+			remaining = ""
 			ellipsisStyle = segment.style
 			break
 		}
-		ellipsisStyle = segment.style
 	}
 	if strings.HasSuffix(clipped, "…") {
 		result = append(result, journalSegment{text: "…", style: ellipsisStyle})
@@ -740,4 +757,25 @@ func renderJournalLine(line journalLine, width int, enabled bool, styles journal
 		}
 	}
 	return rendered.String()
+}
+
+func renderAttachedJournalLine(line journalLine, width int, styles journalStyles) string {
+	line = clipJournalLine(line, width)
+	style := journalPlain
+	var text strings.Builder
+	for _, segment := range line {
+		text.WriteString(segment.text)
+		if style == journalPlain && segment.style != journalPlain && segment.style != journalMuted {
+			style = segment.style
+		}
+	}
+	if style == journalPlain {
+		for _, segment := range line {
+			if segment.style != journalPlain {
+				style = segment.style
+				break
+			}
+		}
+	}
+	return styles.render(style, text.String())
 }
