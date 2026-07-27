@@ -115,6 +115,13 @@ trap 'exit 143' TERM
 launchctl print "$service" > "$launch_state" 2>&1 || fail "LaunchAgent is not loaded: $service"
 grep -F "$LABEL" "$launch_state" >/dev/null || fail 'loaded job has the wrong label'
 grep -F 'no-mistakes-daemon' "$launch_state" >/dev/null || fail 'loaded job does not use the owned wrapper'
+grep -E '^[[:space:]]*state = running[[:space:]]*$' "$launch_state" >/dev/null || \
+  fail 'loaded LaunchAgent is not running'
+launch_pid=$(awk '$1 == "pid" && $2 == "=" && $3 ~ /^[0-9]+$/ { print $3; exit }' "$launch_state")
+case "$launch_pid" in
+  ''|*[!0-9]*) fail 'running LaunchAgent does not report a PID' ;;
+esac
+[ "$launch_pid" -gt 0 ] || fail 'running LaunchAgent reports an invalid PID'
 grep -E 'NO_MISTAKES_TELEMETRY[[:space:]]*=>[[:space:]]*0([[:space:]]|$)' "$launch_state" >/dev/null || \
   fail 'loaded job does not disable telemetry'
 grep -E 'NO_MISTAKES_NO_UPDATE_CHECK[[:space:]]*=>[[:space:]]*1([[:space:]]|$)' "$launch_state" >/dev/null || \
@@ -147,6 +154,14 @@ fi
 rm -f "$expected_manifest"
 canonical_skill_sha=$(sha256 "$canonical_skill")
 
+# Exercise doctor through the same wrapper and data root as the foreground
+# LaunchAgent daemon. Suppress its broad system inventory; only health matters.
+if ! NO_MISTAKES_MANAGED_HOME=$managed_home \
+  HOME=$managed_home NM_HOME=$managed_home/.no-mistakes \
+  "$wrapper" exec "$no_mistakes" doctor >/dev/null 2>&1; then
+  fail 'no-mistakes doctor failed for the managed LaunchAgent daemon'
+fi
+
 probe_root=$(mktemp -d /private/tmp/no-mistakes-live-macos.XXXXXX)
 probe_home=$probe_root/home
 probe_state=$probe_root/state
@@ -171,15 +186,13 @@ run_managed() {
     "$wrapper" exec "$@"
 }
 
-run_managed /usr/bin/env > "$probe_root/managed-environment"
-grep -Fx 'NO_MISTAKES_TELEMETRY=0' "$probe_root/managed-environment" >/dev/null || \
-  fail 'managed probe environment did not disable telemetry'
-grep -Fx 'NO_MISTAKES_NO_UPDATE_CHECK=1' "$probe_root/managed-environment" >/dev/null || \
-  fail 'managed probe environment did not disable update checks'
-grep -Fx "PI_CODING_AGENT_DIR=$managed_home/.pi/agent" "$probe_root/managed-environment" >/dev/null || \
-  fail 'managed probe environment does not select the native Pi installation'
-grep -Fx "NM_HOME=$probe_state" "$probe_root/managed-environment" >/dev/null || \
-  fail 'managed probe environment escaped the scratch No Mistakes home'
+run_managed /bin/sh -c '
+  [ "${NO_MISTAKES_TELEMETRY:-}" = 0 ] &&
+  [ "${NO_MISTAKES_NO_UPDATE_CHECK:-}" = 1 ] &&
+  [ "${PI_CODING_AGENT_DIR:-}" = "$1" ] &&
+  [ "${NM_HOME:-}" = "$2" ]
+' no-mistakes-managed-environment "$managed_home/.pi/agent" "$probe_state" || \
+  fail 'managed probe environment does not match the owned Pi configuration'
 
 pi_path=$(run_managed /bin/sh -c 'command -v pi')
 [ -n "$pi_path" ] && [ -x "$pi_path" ] || fail 'native pi is not discoverable in the managed PATH'
@@ -216,12 +229,6 @@ probe_skill_sha=$(sha256 "$probe_skill")
 [ ! -e "$probe_repo/.agents/skills/no-mistakes/SKILL.md" ] || \
   fail 'init created a forbidden repository-local Pi skill'
 
-(cd "$probe_repo" && run_managed "$no_mistakes" doctor) > "$probe_root/doctor.out" 2>&1 || {
-  cat "$probe_root/doctor.out" >&2
-  fail 'no-mistakes doctor failed in the managed environment'
-}
-cat "$probe_root/doctor.out"
-
 if ! (cd "$probe_repo" && run_managed "$no_mistakes" axi run --yes \
   --intent 'Append a second line containing two to value.txt while preserving the existing first line.' \
   --skip test,document,lint,push,pr,ci) > "$probe_root/axi-run.out" 2>&1; then
@@ -242,6 +249,7 @@ origin_after=$(git -C "$probe_origin" for-each-ref --format='%(refname) %(object
 [ "$(sha256 "$canonical_skill")" = "$canonical_skill_sha" ] || \
   fail 'live probe mutated the installed canonical skill'
 
+printf 'ok: managed macOS LaunchAgent is running with pid %s; doctor passed\n' "$launch_pid"
 printf 'ok: managed macOS LaunchAgent environment disables telemetry and update checks\n'
 printf 'ok: no-mistakes %s darwin-arm64 pin and source revision %s\n' "$VERSION" "$REVISION"
 printf 'ok: generated Pi skill provenance sha256=%s\n' "$canonical_skill_sha"

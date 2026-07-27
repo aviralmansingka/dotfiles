@@ -27,7 +27,7 @@ no_mistakes=$managed_home/.local/bin/no-mistakes
 case ${1:-} in
   daemon)
     [ "$#" -eq 1 ] || fail 'daemon takes no arguments'
-    exec "$no_mistakes" daemon start
+    exec "$no_mistakes" daemon run --root "$NM_HOME"
     ;;
   exec)
     shift

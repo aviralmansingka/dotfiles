@@ -17,6 +17,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "scripts/install-no-mistakes"
 ROLLBACK = ROOT / "scripts/rollback-no-mistakes"
+DAEMON_WRAPPER = ROOT / "pi/bin/no-mistakes-daemon"
 VERSION = "v1.41.2"
 REVISION = "867d64d9c2df89f3f204ad1f5528e5bf7b460caa"
 CHECKSUMS_SHA = "e17cc7a246bc619f34d423848171e734c5fe033106562db8baeb20de2570a01b"
@@ -413,6 +414,15 @@ def verify_rejections(root: Path) -> None:
 
 def main() -> int:
     install_text = INSTALL.read_text()
+    rollback_text = ROLLBACK.read_text()
+    wrapper_text = DAEMON_WRAPPER.read_text()
+    assert 'exec "$no_mistakes" daemon run --root "$NM_HOME"' in wrapper_text
+    assert 'daemon start' not in wrapper_text
+    for lifecycle_text in (install_text, rollback_text):
+        assert '$HOME/bin/no-mistakes-daemon' not in lifecycle_text
+        assert 'launchctl kickstart -k "$label"' in lifecycle_text
+        assert '"$binary" daemon stop --force' in lifecycle_text
+        assert '"$binary" daemon start >/dev/null' in lifecycle_text
     for required in (VERSION, REVISION, CHECKSUMS_SHA, *PLATFORMS.values()):
         assert required in install_text
     for platform in PLATFORMS:
@@ -429,6 +439,7 @@ def main() -> int:
             verify_platform(root, platform)
         verify_rejections(root)
 
+    print("ok: foreground wrapper and non-blocking restart fallbacks are owned")
     print("ok: exact darwin-arm64 and linux-amd64 release tar.gz URLs selected")
     print("ok: real archives hashed before safe executable-only extraction")
     print("ok: installed binary digest/version and exact archive provenance recorded")
