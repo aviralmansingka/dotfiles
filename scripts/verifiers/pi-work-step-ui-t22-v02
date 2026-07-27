@@ -71,6 +71,54 @@ const typeboxIndex = join(piRoot, "node_modules/typebox/build/index.mjs");
 const themeModulePath = join(piRoot, "dist/modes/interactive/theme/theme.js");
 const assistantModulePath = join(piRoot, "dist/modes/interactive/components/assistant-message.js");
 const toolModulePath = join(piRoot, "dist/modes/interactive/components/tool-execution.js");
+const piPackagePath = join(piRoot, "package.json");
+const tuiRoot = resolve(dirname(tuiIndex), "..");
+const tuiPackagePath = join(tuiRoot, "package.json");
+const piPackage = JSON.parse(readFileSync(piPackagePath, "utf8"));
+const tuiPackage = JSON.parse(readFileSync(tuiPackagePath, "utf8"));
+const sha256File = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+const productionModuleFiles = {
+	core: [
+		["dist/index.js", piIndex],
+		["theme/theme.js", themeModulePath],
+		["components/assistant-message.js", assistantModulePath],
+		["components/tool-execution.js", toolModulePath],
+	],
+	tui: [["dist/index.js", tuiIndex]],
+};
+const moduleBinding = () => {
+	const digest = (entries) => {
+		const files = entries.map(([label, path]) => [label, sha256File(path)]);
+		return {
+			files,
+			sha256: createHash("sha256")
+				.update(files.map(([label, hash]) => `${label}\0${hash}\n`).join(""))
+				.digest("hex"),
+		};
+	};
+	const core = digest(productionModuleFiles.core);
+	const tui = digest(productionModuleFiles.tui);
+	return {
+		piVersion: `${piPackage.name}@${piPackage.version}`,
+		tuiVersion: `${tuiPackage.name}@${tuiPackage.version}`,
+		core,
+		tui,
+		combinedSha256: createHash("sha256")
+			.update(`core\0${core.sha256}\ntui\0${tui.sha256}\n`)
+			.digest("hex"),
+	};
+};
+const initialModuleBinding = moduleBinding();
+for (const [env, actual] of [
+	["PI_VERIFY_PI_CORE_EXPECTED_VERSION", initialModuleBinding.piVersion],
+	["PI_VERIFY_PI_TUI_EXPECTED_VERSION", initialModuleBinding.tuiVersion],
+	["PI_VERIFY_PI_CORE_EXPECTED_SHA256", initialModuleBinding.core.sha256],
+	["PI_VERIFY_PI_TUI_EXPECTED_SHA256", initialModuleBinding.tui.sha256],
+	["PI_VERIFY_PI_CORE_TUI_EXPECTED_SHA256", initialModuleBinding.combinedSha256],
+]) {
+	if (process.env[env] && process.env[env] !== actual)
+		fail(`${env} differs from directly loaded production modules`);
+}
 const { createJiti } = await import(pathToFileURL(jitiPath).href);
 const jiti = createJiti(import.meta.url, {
 	moduleCache: false,
@@ -103,6 +151,111 @@ nativeModule.default(nativeApi);
 process.argv[1] = originalArgv1;
 if (!nativeTool?.renderCall || !nativeTool?.renderResult)
 	fail("real native render callbacks were not registered");
+const reasoningSentinel = model.upstream?.reasoningSentinel;
+if (
+	!reasoningSentinel ||
+	!JSON.stringify(model.upstream?.executeUpdate).includes(reasoningSentinel) ||
+	JSON.stringify(model.cases).includes(reasoningSentinel)
+) fail("raw reasoning is not confined to upstream execute/onUpdate input");
+const normalizationChildPath = join(verifyDir, "normalization-child.cjs");
+const normalizationFirstUsage = {
+	input: 101,
+	output: 29,
+	cacheRead: 13,
+	cacheWrite: 7,
+	totalTokens: 150,
+};
+const normalizationUsage = { input: 37, output: 11, cacheRead: 5, cacheWrite: 2 };
+const normalizationContextTokens = Object.values(normalizationUsage).reduce((sum, value) => sum + value, 0);
+const normalizationCumulativeUsage = Object.fromEntries(
+	["input", "output", "cacheRead", "cacheWrite"].map((key) => [
+		key,
+		normalizationFirstUsage[key] + normalizationUsage[key],
+	]),
+);
+const normalizationCumulativeTokens = Object.values(normalizationCumulativeUsage)
+	.reduce((sum, value) => sum + value, 0);
+writeFileSync(
+	normalizationChildPath,
+	`const events=${JSON.stringify([
+		{
+			type: "message_end",
+			message: {
+				role: "assistant",
+				model: "fixture/v02-normalizer",
+				content: [
+					{ type: "thinking", thinking: reasoningSentinel },
+					{ type: "text", text: "Intermediate normalized response." },
+				],
+				usage: { ...normalizationFirstUsage, cost: { total: 0.0031 } },
+			},
+		},
+		{
+			type: "message_end",
+			message: {
+				role: "assistant",
+				model: "fixture/v02-normalizer",
+				content: [
+					{ type: "thinking", thinking: reasoningSentinel },
+					{ type: "text", text: "Normalized final response." },
+				],
+				usage: { ...normalizationUsage, cost: { total: 0.0067 } },
+			},
+		},
+	])};for(const event of events)process.stdout.write(JSON.stringify(event)+"\\n");\n`,
+);
+globalThis.__pi_subagents.registerAgent({
+	name: "v02-normalizer",
+	description: "Exercise real native event normalization",
+	tools: [],
+	model: "fixture/v02-normalizer",
+	thinking: "off",
+	systemPrompt: "Normalize the supplied deterministic child event.",
+	filePath: normalizationChildPath,
+});
+const containsRawReasoning = (value) => {
+	if (typeof value === "string") return value.includes(reasoningSentinel);
+	if (Array.isArray(value)) return value.some(containsRawReasoning);
+	if (!value || typeof value !== "object") return false;
+	return Object.entries(value).some(([key, child]) =>
+		key === "reasoning" ||
+		key === "thinking" ||
+		(key === "type" && child === "thinking") ||
+		containsRawReasoning(child)
+	);
+};
+const normalizationUpdates = [];
+let normalizationContaminated = false;
+process.argv[1] = normalizationChildPath;
+let normalizationResult;
+try {
+	normalizationResult = await nativeTool.execute(
+		"v02-normalization",
+		{ agent: "v02-normalizer", task: "Normalize upstream reasoning sentinel", cwd: repoRoot },
+		undefined,
+		(update) => {
+			normalizationUpdates.push(update);
+			if (containsRawReasoning(update)) normalizationContaminated = true;
+		},
+		{ cwd: repoRoot, modelRegistry: { find: () => ({ contextWindow: 4096 }) } },
+	);
+} finally {
+	process.argv[1] = originalArgv1;
+	globalThis.__pi_subagents.unregisterAgent("v02-normalizer");
+}
+const normalizedResult = normalizationResult?.details?.results?.[0];
+if (
+	normalizationUpdates.length < 2 ||
+	normalizationContaminated ||
+	containsRawReasoning(normalizationResult) ||
+	normalizedResult?.progress?.tokens !== normalizationContextTokens ||
+	normalizedResult?.usage?.input !== normalizationCumulativeUsage.input ||
+	normalizedResult?.usage?.output !== normalizationCumulativeUsage.output ||
+	normalizedResult?.usage?.cacheRead !== normalizationCumulativeUsage.cacheRead ||
+	normalizedResult?.usage?.cacheWrite !== normalizationCumulativeUsage.cacheWrite ||
+	normalizedResult?.usage?.turns !== 2 ||
+	normalizationContextTokens === normalizationCumulativeTokens
+) fail("real native execute normalization did not discard upstream reasoning or preserve fallback usage");
 let nativeCallRenders = 0;
 let nativeResultRenders = 0;
 const nativeRenderCall = nativeTool.renderCall;
@@ -175,12 +328,6 @@ for (const item of model.cases) {
 		!profile.display.includes("%/")
 	) fail(`usage fixture/formula differs for ${item.name}`);
 }
-const reasoningSentinel = model.upstream?.reasoningSentinel;
-if (
-	!reasoningSentinel ||
-	!JSON.stringify(model.upstream?.executeUpdate).includes(reasoningSentinel) ||
-	JSON.stringify(model.cases).includes(reasoningSentinel)
-) fail("raw reasoning is not confined to upstream execute/onUpdate input");
 const forbiddenPrototype = ["/private/tmp/pi-subagent", "-render-slice/render.mjs"].join("");
 if (readFileSync(scriptPath, "utf8").includes(forbiddenPrototype))
 	fail("approved prototype was imported by the executable verifier");
@@ -354,6 +501,19 @@ for (const item of model.cases) {
 	);
 }
 const stripAnsi = (value) => value.replace(/\x1b\[[0-9;]*m/gu, "");
+const restoredSource = byName.get("completed-collapsed-t0");
+const restoredOldShape = structuredClone(restoredSource);
+restoredOldShape.name = "restored-old-shaped-result";
+restoredOldShape.sequence = "restored-old-shaped-result";
+delete restoredOldShape.result.contextWindow;
+restoredOldShape.result.usage = { input: 17, turns: 1 };
+restoredOldShape.result.progress.tokens = 23;
+const restoredOldShapePlain = stripAnsi(renderCase(restoredOldShape, model.contract.width, true).toString("utf8"));
+if (
+	!restoredOldShapePlain.includes("↑17") ||
+	!restoredOldShapePlain.includes("23 ctx") ||
+	["$0.000", "0%", "NaN", "Infinity"].some((token) => restoredOldShapePlain.includes(token))
+) fail("restored old-shaped production result lost available metrics or fabricated missing metadata");
 const golden = (name) => readFileSync(join(goldenDir, `${name}.ansi`));
 const goldenPlain = (name) => stripAnsi(golden(name).toString("utf8"));
 for (const item of model.cases) {
@@ -544,7 +704,10 @@ console.log(
 );
 console.log(
 	`T22.V02 same-instance toggles: sequences=${[...scenarios.keys()].join(",")} ` +
-	`ctrl_o=output-detail ctrl_t=thinking restored_bytes_checked=true identities_preserved=true reasoning_pre_model=true`,
+	`ctrl_o=output-detail ctrl_t=thinking restored_bytes_checked=true identities_preserved=true ` +
+	`reasoning_real_normalization=true normalization_updates=${normalizationUpdates.length} ` +
+	`fallback_context_tokens=${normalizationContextTokens} cumulative_tokens=${normalizationCumulativeTokens} ` +
+	`restored_old_shape=true`,
 );
 console.log(
 	`T22.V02 usage contract: running=${model.contract.usageProfiles.running.display} ` +
@@ -552,6 +715,15 @@ console.log(
 	`cost_nonzero=true context_formula=latest_turn_totalTokens_over_contextWindow`,
 );
 console.log(`T22.V02 cases compared as raw UTF-8: ${model.cases.map((item) => item.name).join(",")}`);
+const finalModuleBinding = moduleBinding();
+if (JSON.stringify(finalModuleBinding) !== JSON.stringify(initialModuleBinding))
+	fail("directly loaded Pi core/TUI module binding changed after rendering");
+console.log(
+	`T22.V02 core/TUI binding: mode=${process.env.PI_VERIFY_PI_CORE_TUI_EXPECTED_SHA256 ? "explicit" : "derived"} ` +
+	`pi_root=${piRoot} pi_package=${initialModuleBinding.piVersion} tui_root=${tuiRoot} ` +
+	`tui_package=${initialModuleBinding.tuiVersion} core_sha256=${initialModuleBinding.core.sha256} ` +
+	`tui_sha256=${initialModuleBinding.tui.sha256} combined_sha256=${initialModuleBinding.combinedSha256} unchanged=true`,
+);
 if (
 	git(repoRoot, "rev-parse", "HEAD") !== parentCommit ||
 	git(repoRoot, "rev-parse", "HEAD^{tree}") !== parentTree ||

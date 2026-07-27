@@ -162,18 +162,43 @@ const SUBAGENT_SPEC = {
 	emptyFallback: SUBAGENT_EMPTY_FALLBACK,
 	reasoningSentinel: SUBAGENT_REASONING_SENTINEL,
 	usage: {
-		input: 321,
-		output: 123,
-		cacheRead: 45,
-		cacheWrite: 6,
+		firstTurn: {
+			input: 321,
+			output: 123,
+			cacheRead: 45,
+			cacheWrite: 6,
+			totalTokens: 444,
+			cost: 0.0123,
+		},
+		fallbackTurn: {
+			input: 41,
+			output: 17,
+			cacheRead: 9,
+			cacheWrite: 3,
+			contextTokens: 70,
+			cost: 0.0045,
+		},
 		turns: 2,
-		accumulatedTokens: 495,
-		latestContextTokens: 444,
-		cost: 0.0123,
 		contextWindow: 8192,
-		tokenDisplay: "495 tokens",
-		costDisplay: "$0.012",
-		contextDisplay: "5.4%/8k",
+		running: {
+			accumulatedTokens: 495,
+			latestContextTokens: 444,
+			tokenDisplay: "495 tokens",
+			costDisplay: "$0.012",
+			contextDisplay: "5.4%/8k",
+		},
+		settled: {
+			input: 362,
+			output: 140,
+			cacheRead: 54,
+			cacheWrite: 9,
+			accumulatedTokens: 565,
+			latestContextTokens: 70,
+			cost: 0.0168,
+			tokenDisplay: "565 tokens",
+			costDisplay: "$0.017",
+			contextDisplay: "0.9%/8k",
+		},
 	},
 	commands: SUBAGENT_COMMANDS,
 	chronology: [
@@ -496,12 +521,12 @@ const waitFor = (name) => new Promise((resolve) => {
 	}, 10);
 });
 const usage = {
-	input: spec.usage.input,
-	output: spec.usage.output,
-	cacheRead: 45,
-	cacheWrite: 6,
-	totalTokens: spec.usage.input + spec.usage.output,
-	cost: { total: 0.0123 },
+	input: spec.usage.firstTurn.input,
+	output: spec.usage.firstTurn.output,
+	cacheRead: spec.usage.firstTurn.cacheRead,
+	cacheWrite: spec.usage.firstTurn.cacheWrite,
+	totalTokens: spec.usage.firstTurn.totalTokens,
+	cost: { total: spec.usage.firstTurn.cost },
 };
 const message = (text, errorMessage, messageUsage = usage) => ({
 	type: "message_end",
@@ -592,12 +617,11 @@ async function main() {
 		await waitFor("PI_VERIFY_SUBAGENT_RELEASE");
 		emit({ type: "tool_execution_end", toolName: spec.review.longCommand.shell, toolCallId: "root-long-bash", result: {} });
 		emit(message(spec.finalOutput, undefined, {
-			input: 0,
-			output: 0,
-			cacheRead: 0,
-			cacheWrite: 0,
-			totalTokens: spec.usage.latestContextTokens,
-			cost: { total: 0 },
+			input: spec.usage.fallbackTurn.input,
+			output: spec.usage.fallbackTurn.output,
+			cacheRead: spec.usage.fallbackTurn.cacheRead,
+			cacheWrite: spec.usage.fallbackTurn.cacheWrite,
+			cost: { total: spec.usage.fallbackTurn.cost },
 		}));
 		return;
 	}
@@ -646,6 +670,20 @@ function writeFixtureMarker(environmentName: string, value: string): void {
 	const markerPath = process.env[environmentName];
 	if (!markerPath) throw new Error(`${environmentName} is required`);
 	writeFileSync(markerPath, `${value}\n`, "utf8");
+}
+
+function containsRawReasoning(value: unknown): boolean {
+	if (typeof value === "string")
+		return value.includes(SUBAGENT_REASONING_SENTINEL) ||
+			value.includes(SUBAGENT_PROVIDER_REASONING_SENTINEL);
+	if (Array.isArray(value)) return value.some(containsRawReasoning);
+	if (!value || typeof value !== "object") return false;
+	return Object.entries(value).some(([key, nested]) =>
+		key === "reasoning" ||
+		key === "thinking" ||
+		(key === "type" && nested === "thinking") ||
+		containsRawReasoning(nested),
+	);
 }
 
 function waitForFixtureRelease(
@@ -726,35 +764,31 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 			"utf8",
 		);
 		const onUpdate = args[3];
-		args[3] = (update: any) => {
+		const forwardUpdate = (update: any) => {
+			if (containsRawReasoning(update))
+				writeFixtureMarker("PI_VERIFY_REASONING_CONTAMINATION_MARKER", "contaminated");
 			const progress = update?.details?.results?.[0]?.progress;
 			if (params.task === SUBAGENT_TASK) {
 				if ((progress?.recentTools?.length ?? 0) === 0)
 					writeFixtureMarker("PI_VERIFY_SUBAGENT_INITIAL_MARKER", "real execute initial update");
 				else
 					writeFixtureMarker("PI_VERIFY_SUBAGENT_UPDATE_MARKER", "real child event normalized");
-				if (
-					existsSync(process.env.PI_VERIFY_REASONING_UPSTREAM_MARKER!) &&
-					!JSON.stringify(update.details.results[0]).includes(SUBAGENT_REASONING_SENTINEL)
-				) writeFixtureMarker(
-					"PI_VERIFY_REASONING_MODEL_MARKER",
-					"discarded-before-render-model",
-				);
 			}
 			onUpdate?.(update);
 		};
+		args[3] = forwardUpdate;
 		try {
 			if (params.task === SUBAGENT_PROVIDER_TASK) {
-				onUpdate?.({
+				forwardUpdate({
 					content: [{ type: "text", text: "provider running" }],
 					details: providerCompatibilityDetails(
 						"running",
-						SUBAGENT_PROVIDER_REASONING_SENTINEL,
+						SUBAGENT_SPEC.real.thinkingText,
 					),
 				});
 				writeFixtureMarker("PI_VERIFY_PROVIDER_RUNNING_MARKER", "running");
 				await waitForFixtureRelease("PI_VERIFY_PROVIDER_PENDING_RELEASE", args[2]);
-				onUpdate?.({
+				forwardUpdate({
 					content: [{ type: "text", text: "provider pending" }],
 					details: providerCompatibilityDetails(
 						"pending",
@@ -767,7 +801,7 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 					"failed",
 					SUBAGENT_PROVIDER_FALSE_SUCCESS,
 				);
-				onUpdate?.({
+				forwardUpdate({
 					content: [{ type: "text", text: "provider failed" }],
 					details: failed,
 				});
@@ -782,6 +816,11 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 			const result = await execute(...args);
 			if (params.task === SUBAGENT_TASK) {
 				const normalized = result?.details?.results?.[0];
+				if (!existsSync(process.env.PI_VERIFY_REASONING_CONTAMINATION_MARKER!))
+					writeFixtureMarker(
+						"PI_VERIFY_REASONING_MODEL_MARKER",
+						"all-updates-clean",
+					);
 				writeFixtureMarker("PI_VERIFY_USAGE_MARKER", JSON.stringify({
 					model: normalized?.model,
 					contextWindow: normalized?.contextWindow,
