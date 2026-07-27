@@ -50,8 +50,7 @@ cleanup() {
 trap cleanup EXIT
 
 agent_dir="$verify_dir/agent"
-native_subagents_dir="${PI_VERIFY_NATIVE_SUBAGENTS_DIR:-$HOME/.pi/agent/git/github.com/amosblomqvist/pi-subagents}"
-native_subagents_entry="$native_subagents_dir/index.ts"
+subagent_entry="$repo_root/pi/.pi/agent/extensions/subagent.ts"
 main_raw="$verify_dir/main.raw"
 missing_raw="$verify_dir/missing.raw"
 resumed_raw="$verify_dir/resumed.raw"
@@ -128,62 +127,34 @@ if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.
 	exit 1
 fi
 
-native_entry_dir="$(cd "$(dirname "$native_subagents_entry")" 2>/dev/null && pwd -P)" || {
-	echo "Native subagent Git source failure: source directory was not found: $(dirname "$native_subagents_entry")" >&2
-	exit 1
-}
-native_entry_path="$native_entry_dir/$(basename "$native_subagents_entry")"
-native_git_root="$(git -C "$native_entry_dir" rev-parse --show-toplevel 2>/dev/null)" || {
-	echo "Native subagent Git source failure: selected index.ts does not belong to a Git checkout: $native_entry_path" >&2
-	exit 1
-}
-case "$native_entry_path" in
-	"$native_git_root"/*) native_entry_relative="${native_entry_path#"$native_git_root"/}" ;;
-	*)
-		echo "Native subagent Git source failure: selected index.ts is outside its derived Git checkout: $native_entry_path" >&2
-		exit 1
-		;;
-esac
-if ! git -C "$native_git_root" ls-files --error-unmatch -- "$native_entry_relative" >/dev/null 2>&1; then
-	echo "Native subagent Git source failure: selected index.ts is not tracked by its derived Git checkout: $native_entry_path" >&2
+subagent_entry_relative="pi/.pi/agent/extensions/subagent.ts"
+if ! git -C "$repo_root" ls-files --error-unmatch -- "$subagent_entry_relative" >/dev/null 2>&1; then
+	echo "Repository-owned subagent source failure: extension is not tracked: $subagent_entry" >&2
 	exit 1
 fi
-native_actual_commit="$(git -C "$native_git_root" rev-parse HEAD)"
-native_actual_tree="$(git -C "$native_git_root" rev-parse 'HEAD^{tree}')"
-native_actual_blob="$(git -C "$native_git_root" rev-parse "HEAD:$native_entry_relative")"
-native_worktree_blob="$(git -C "$native_git_root" hash-object "$native_entry_path")"
-native_status="$(git -C "$native_git_root" status --porcelain=v1 --untracked-files=all)"
-native_clean=false
-[[ -z "$native_status" ]] && native_clean=true
-if [[ "$native_clean" != true || "$native_worktree_blob" != "$native_actual_blob" ]]; then
-	echo "Native subagent Git source failure: commit=$native_actual_commit tree=$native_actual_tree committed_blob=$native_actual_blob worktree_blob=$native_worktree_blob clean=$native_clean" >&2
+subagent_commit="$(git -C "$repo_root" rev-parse HEAD)"
+subagent_tree="$(git -C "$repo_root" rev-parse 'HEAD^{tree}')"
+subagent_blob="$(git -C "$repo_root" rev-parse "HEAD:$subagent_entry_relative")"
+subagent_worktree_blob="$(git -C "$repo_root" hash-object "$subagent_entry")"
+repo_status="$(git -C "$repo_root" status --porcelain=v1 --untracked-files=all)"
+if [[ -n "$repo_status" || "$subagent_worktree_blob" != "$subagent_blob" ]]; then
+	echo "Repository-owned subagent source failure: commit=$subagent_commit tree=$subagent_tree committed_blob=$subagent_blob worktree_blob=$subagent_worktree_blob clean=false" >&2
 	exit 1
 fi
-
-native_binding_mode=derived
-if [[ -n "${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT:-}${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE:-}${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB:-}" ]]; then
-	: "${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT:?Explicit source binding requires PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT}"
-	: "${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE:?Explicit source binding requires PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE}"
-	: "${PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB:?Explicit source binding requires PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB}"
-	native_binding_mode=explicit
-	if [[ "$native_actual_commit" != "$PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT" \
-		|| "$native_actual_tree" != "$PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE" \
-		|| "$native_actual_blob" != "$PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB" ]]; then
-		echo "Native subagent immutable source binding mismatch: commit=$native_actual_commit tree=$native_actual_tree committed_blob=$native_actual_blob worktree_blob=$native_worktree_blob clean=$native_clean" >&2
-		exit 1
-	fi
-fi
-echo "Native subagent Git source verified: mode=$native_binding_mode root=$native_git_root commit=$native_actual_commit tree=$native_actual_tree index_blob=$native_actual_blob clean=true default_policy=derived-git-clean."
+echo "Repository-owned subagent source verified: root=$repo_root commit=$subagent_commit tree=$subagent_tree blob=$subagent_blob clean=true."
 
 node - \
 	"$repo_root/pi/.pi/agent/settings.json" \
-	"$native_subagents_entry" <<'NODE'
+	"$subagent_entry" <<'NODE'
 const fs = require("node:fs");
-const [settingsPath, nativeEntryPath] = process.argv.slice(2);
-const configuredEntry = "git/github.com/amosblomqvist/pi-subagents/index.ts";
+const [settingsPath, subagentEntryPath] = process.argv.slice(2);
+const externalEntries = [
+	"https://github.com/amosblomqvist/pi-subagents",
+	"git/github.com/amosblomqvist/pi-subagents/index.ts",
+];
 
 function fail(kind, message) {
-	console.error(`Native subagent setup failure (${kind}): ${message}`);
+	console.error(`Repository-owned subagent setup failure (${kind}): ${message}`);
 	process.exit(1);
 }
 
@@ -197,28 +168,29 @@ function readJson(path, kind, label) {
 }
 
 const settings = readJson(settingsPath, "stale", "pi settings");
-const configured = settings.packages?.some((entry) =>
-	(typeof entry === "string" ? entry : entry?.source) === configuredEntry,
-);
-if (!configured)
-	fail("missing", `${configuredEntry} is not selected in pi/.pi/agent/settings.json`);
-if (!fs.existsSync(nativeEntryPath))
-	fail("missing", `settings-selected pi-subagents entry point was not found: ${nativeEntryPath}`);
+const configured = new Set((settings.packages ?? []).map((entry) =>
+	typeof entry === "string" ? entry : entry?.source,
+));
+for (const entry of externalEntries) {
+	if (configured.has(entry)) fail("stale", `external pi-subagents entry remains selected: ${entry}`);
+}
+if (!fs.existsSync(subagentEntryPath))
+	fail("missing", `repository-owned subagent extension was not found: ${subagentEntryPath}`);
 
-console.log(`Native subagent package setup verified: settings select ${configuredEntry}; source ${nativeEntryPath}.`);
+console.log(`Repository-owned subagent setup verified: external entries absent; source ${subagentEntryPath}.`);
 NODE
 
-mkdir -p "$agent_dir/extensions" "$agent_dir/native/pi-subagents"
+mkdir -p "$agent_dir/extensions" "$agent_dir/native"
 printf '%s\n' '{"theme":"gruvbox-material"}' > "$agent_dir/settings.json"
 cp "$repo_root/scripts/fixtures/pi-work-step-ui-provider.ts" "$agent_dir/extensions/00-provider.ts"
-cp "$native_subagents_entry" "$agent_dir/native/pi-subagents/index.ts"
-printf '%s\n' '{"maxConcurrency":1}' > "$agent_dir/native/pi-subagents/config.json"
-runtime_native_blob="$(git hash-object "$agent_dir/native/pi-subagents/index.ts")"
-if [[ "$runtime_native_blob" != "$native_actual_blob" ]]; then
-	echo "Native subagent runtime copy blob mismatch: $runtime_native_blob" >&2
+cp "$subagent_entry" "$agent_dir/native/subagent.ts"
+printf '%s\n' '{"maxConcurrency":1}' > "$agent_dir/native/subagent.config.json"
+runtime_subagent_blob="$(git hash-object "$agent_dir/native/subagent.ts")"
+if [[ "$runtime_subagent_blob" != "$subagent_blob" ]]; then
+	echo "Repository-owned subagent runtime copy blob mismatch: $runtime_subagent_blob" >&2
 	exit 1
 fi
-echo "Native subagent runtime copy verified: commit=$native_actual_commit tree=$native_actual_tree index_blob=$runtime_native_blob maxConcurrency=1."
+echo "Repository-owned subagent runtime copy verified: commit=$subagent_commit tree=$subagent_tree blob=$runtime_subagent_blob maxConcurrency=1."
 ln -s "$repo_root/pi/.pi/agent/extensions/tool-call-renderer.ts" "$agent_dir/extensions/10-renderer.ts"
 
 export PI_VERIFY_AGENT_DIR="$agent_dir"

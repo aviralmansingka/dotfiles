@@ -11,13 +11,10 @@ const repoRoot = resolve(dirname(scriptPath), "../..");
 const modelPath = join(repoRoot, "scripts/fixtures/pi-work-step-ui-t22-v02/model.json");
 const goldenDir = join(repoRoot, "scripts/goldens/pi-work-step-ui-t22-v02");
 const parentPath = join(repoRoot, "pi/.pi/agent/extensions/tool-call-renderer.ts");
-const productDir = process.env.PI_VERIFY_NATIVE_SUBAGENTS_DIR;
+const productPath = join(repoRoot, "pi/.pi/agent/extensions/subagent.ts");
 const expectedParentCommit = process.env.PI_VERIFY_PARENT_EXPECTED_COMMIT;
 const expectedParentTree = process.env.PI_VERIFY_PARENT_EXPECTED_TREE;
 const expectedParentBlob = process.env.PI_VERIFY_PARENT_EXPECTED_RENDERER_BLOB;
-const expectedProductCommit = process.env.PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT;
-const expectedProductTree = process.env.PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE;
-const expectedProductBlob = process.env.PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB;
 const verifyDir = mkdtempSync(join(tmpdir(), "t22-v02-"));
 if (process.env.PI_VERIFY_TEMP_PATH_RECORD)
 	writeFileSync(process.env.PI_VERIFY_TEMP_PATH_RECORD, `${verifyDir}\n`);
@@ -28,13 +25,11 @@ const fail = (message) => {
 	console.error(`T22.V02 setup failure: ${message}`);
 	process.exit(2);
 };
-if (!productDir) fail("PI_VERIFY_NATIVE_SUBAGENTS_DIR is required");
 const requireCompleteTriple = (label, values) => {
 	if (values.some(Boolean) && !values.every(Boolean))
 		fail(`${label} expected identity requires commit/tree/blob together`);
 };
 requireCompleteTriple("parent", [expectedParentCommit, expectedParentTree, expectedParentBlob]);
-requireCompleteTriple("native", [expectedProductCommit, expectedProductTree, expectedProductBlob]);
 
 const model = JSON.parse(readFileSync(modelPath, "utf8"));
 const clockSourceSymbol = Symbol.for("aviral.pi.work-step-renderer.clock-source");
@@ -61,18 +56,12 @@ if (
 	(parentCommit !== expectedParentCommit || parentTree !== expectedParentTree || parentBlob !== expectedParentBlob)
 ) fail("parent explicit identity differs");
 
-const productPath = join(productDir, "index.ts");
-const productCommit = git(productDir, "rev-parse", "HEAD");
-const productTree = git(productDir, "rev-parse", "HEAD^{tree}");
-const productBlob = git(productDir, "rev-parse", "HEAD:index.ts");
+const productCommit = parentCommit;
+const productTree = parentTree;
+const productBlob = git(repoRoot, "rev-parse", "HEAD:pi/.pi/agent/extensions/subagent.ts");
 if (
-	git(productDir, "hash-object", productPath) !== productBlob ||
-	git(productDir, "status", "--porcelain=v1", "--untracked-files=all") !== ""
-) fail("native Git source is not clean at HEAD");
-if (
-	expectedProductCommit &&
-	(productCommit !== expectedProductCommit || productTree !== expectedProductTree || productBlob !== expectedProductBlob)
-) fail("native explicit identity differs");
+	git(repoRoot, "hash-object", productPath) !== productBlob
+) fail("repository-owned subagent source differs from HEAD");
 
 const piCli = realpathSync(execFileSync("command", ["-v", "pi"], { encoding: "utf8", shell: true }).trim());
 const piRoot = resolve(dirname(piCli), "..");
@@ -140,6 +129,7 @@ const jiti = createJiti(import.meta.url, {
 		"@mariozechner/pi-coding-agent": piIndex,
 		"@mariozechner/pi-tui": tuiIndex,
 		"@sinclair/typebox": typeboxIndex,
+		typebox: typeboxIndex,
 	},
 });
 
@@ -764,7 +754,7 @@ if (
 console.log(
 	`T22.V02 production lifecycle loaded: genuine_tool_execution_component=true parent_mode=${expectedParentCommit ? "explicit" : "derived"} ` +
 	`parent_commit=${parentCommit} parent_tree=${parentTree} parent_blob=${parentBlob} ` +
-	`native_mode=${expectedProductCommit ? "explicit" : "derived"} native_commit=${productCommit} native_tree=${productTree} native_blob=${productBlob} ` +
+	`subagent_source=repository-owned subagent_commit=${productCommit} subagent_tree=${productTree} subagent_blob=${productBlob} ` +
 	`native_render_call_count=${nativeCallRenders} native_render_result_count=${nativeResultRenders} lifecycle_invalidations=${lifecycleInvalidations}`,
 );
 console.log(
@@ -800,11 +790,8 @@ if (
 	git(repoRoot, "rev-parse", "HEAD") !== parentCommit ||
 	git(repoRoot, "rev-parse", "HEAD^{tree}") !== parentTree ||
 	git(repoRoot, "hash-object", parentPath) !== parentBlob ||
-	git(repoRoot, "status", "--porcelain=v1", "--untracked-files=all") !== "" ||
-	git(productDir, "rev-parse", "HEAD") !== productCommit ||
-	git(productDir, "rev-parse", "HEAD^{tree}") !== productTree ||
-	git(productDir, "hash-object", productPath) !== productBlob ||
-	git(productDir, "status", "--porcelain=v1", "--untracked-files=all") !== ""
+	git(repoRoot, "hash-object", productPath) !== productBlob ||
+	git(repoRoot, "status", "--porcelain=v1", "--untracked-files=all") !== ""
 ) fail("production identity or cleanliness changed after rendering");
 if (clockInvalidations < 2 || clockAdvances < 2)
 	fail("genuine same-component running/completed clock invalidation coverage was not observed");

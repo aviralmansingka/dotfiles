@@ -11,7 +11,7 @@ import { Text } from "@earendil-works/pi-tui";
 import { appendFileSync, existsSync, readFileSync, watch, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { Type } from "typebox";
-import registerNativeSubagents from "../native/pi-subagents/index.ts";
+import registerNativeSubagents from "../native/subagent.ts";
 
 const PROVIDER = "pi-work-step-ui-verify";
 const MODEL = "faux-work-step";
