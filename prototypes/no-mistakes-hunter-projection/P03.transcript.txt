@@ -1,0 +1,4 @@
+unaccepted projection: denied=true task_unchanged=true
+accepted projection: state=projected hashes_match=true provenance_recorded=true dotfiles_evidence_absent=true
+blocked projection: denied=true task_unchanged=true vault_artifact_absent=true
+P03 PASS
