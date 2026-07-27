@@ -431,6 +431,7 @@ function renderActivityHeader(theme: Theme, steps: WorkStep[]): string {
   );
 }
 
+const CONNECTED_THINKING = "Thinking…";
 const CONNECTED_RGB = {
   muted: "146;131;116",
   dim: "102;92;84",
@@ -489,6 +490,17 @@ function connectedStepElapsed(
       ? bridgeNow(bridge)
       : undefined;
   return finiteNumber(end) ? Math.max(0, end - step.startedAt) : undefined;
+}
+
+function renderConnectedInitialThinking(
+  bridge: ConnectedRenderBridge,
+  nativeLines: string[],
+): string {
+  const connector = nativeLines.length > 0 ? "├─" : "└─";
+  return (
+    connectedColor("muted", ` ${bridge.parentRail}${connector} `) +
+    connectedColor("text", CONNECTED_THINKING)
+  );
 }
 
 function renderConnectedParent(
@@ -969,7 +981,19 @@ function renderToolComponent(
   const bridge = ensureConnectedBridge(component, step, state);
   if (bridge) {
     const native = component.resultRendererComponent?.render(width) ?? [];
-    return renderConnectedParent(step, bridge, native, width);
+    const progress = rootProgress(component);
+    const hasChildProgress =
+      Array.isArray(progress?.recentTools) && progress.recentTools.length > 0;
+    const needsInitialThinking =
+      bridge.thinkingVisible &&
+      (bridge.lifecycle.status === "pending" ||
+        bridge.lifecycle.status === "running") &&
+      !hasChildProgress &&
+      !native.some((line: string) => line.includes(CONNECTED_THINKING));
+    const connected = needsInitialThinking
+      ? [renderConnectedInitialThinking(bridge, native), ...native]
+      : native;
+    return renderConnectedParent(step, bridge, connected, width);
   }
 
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
