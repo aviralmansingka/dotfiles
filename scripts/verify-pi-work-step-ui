@@ -1123,7 +1123,7 @@ const colorsInCommand = (terminal, command, token) => {
 };
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 const isConnectedToolNode = (line, shell, nested = false) => new RegExp(
-	`^${nested ? "       │     " : "       "}[├└]─ (?:⟳ ${escapeRegExp(shell)} · 1 command · running|✓ ${escapeRegExp(shell)} · 1 command · completed) · (?:\\d+ms|\\d+\\.\\d+s|\\d+m\\d+s)$`,
+	`^${nested ? "       │  │  " : "       "}[├└]─ (?:⟳ ${escapeRegExp(shell)} · 1 command · running|✓ ${escapeRegExp(shell)} · 1 command · completed) · (?:\\d+ms|\\d+\\.\\d+s|\\d+m\\d+s)$`,
 	"u",
 ).test(line.trimEnd());
 const legacyPackageHeaders = (terminal, agent, model) => {
