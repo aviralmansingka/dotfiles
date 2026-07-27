@@ -29,3 +29,16 @@ func next(current state, wanted action) (state, error) {
 	}
 	return current, fmt.Errorf("%s is not allowed while run is %s", wanted, current)
 }
+
+func hunterUse(step string) string {
+	switch step {
+	case "review":
+		return "candidate-independent-review"
+	case "test", "document", "lint":
+		return "candidate-task-verifier"
+	case "push", "pr", "ci":
+		return "delivery-evidence-only"
+	default:
+		return "implementation-observation-only"
+	}
+}

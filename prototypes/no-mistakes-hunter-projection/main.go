@@ -130,6 +130,10 @@ func (p *prototype) render() {
 }
 
 func scenario() error {
+	fmt.Printf("stage mapping: review=%s test=%s push=%s rebase=%s\n",
+		hunterUse("review"), hunterUse("test"), hunterUse("push"), hunterUse("rebase"))
+	fmt.Println("authority: passed=parent-evaluation blocked=decision-only canonical-write=parent-accept-only")
+
 	allowed, err := newPrototype()
 	if err != nil {
 		return err
@@ -200,7 +204,11 @@ func scenario() error {
 		blockedErr != nil, before == after, !pathExists(denied.evidence))
 
 	if unacceptedErr == nil || blockedErr == nil || sourceHash != vaultHash ||
-		!strings.Contains(string(task), sourceHash) || before != after || pathExists(dotfilesEvidence) {
+		!strings.Contains(string(task), sourceHash) || before != after || pathExists(dotfilesEvidence) ||
+		hunterUse("review") != "candidate-independent-review" ||
+		hunterUse("test") != "candidate-task-verifier" ||
+		hunterUse("push") != "delivery-evidence-only" ||
+		hunterUse("rebase") != "implementation-observation-only" {
 		return fmt.Errorf("scenario assertions failed")
 	}
 	fmt.Println("P03 PASS")

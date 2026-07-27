@@ -1,3 +1,5 @@
+stage mapping: review=candidate-independent-review test=candidate-task-verifier push=delivery-evidence-only rebase=implementation-observation-only
+authority: passed=parent-evaluation blocked=decision-only canonical-write=parent-accept-only
 unaccepted projection: denied=true task_unchanged=true
 accepted projection: state=projected hashes_match=true provenance_recorded=true dotfiles_evidence_absent=true
 blocked projection: denied=true task_unchanged=true vault_artifact_absent=true
