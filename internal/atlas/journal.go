@@ -256,11 +256,7 @@ func (m JournalModel) ViewColor(enabled bool) string {
 	}
 	rendered := make([]string, len(lines))
 	for i, line := range lines {
-		if enabled && m.attached {
-			rendered[i] = renderAttachedJournalLine(line, m.width, styles)
-		} else {
-			rendered[i] = renderJournalLine(line, m.width, enabled, styles)
-		}
+		rendered[i] = renderJournalLine(line, m.width, enabled, styles)
 	}
 	return strings.Join(rendered, "\n")
 }
@@ -364,7 +360,16 @@ func (m JournalModel) shownLater(candidate activeJournalGoal, start, end int) st
 func (m JournalModel) eventLines(index int, margin string) []journalLine {
 	event := m.events[index]
 	status := journalEventStatus(event)
-	first := journalLine{{text: margin}, {text: "●", style: status}, {text: "  " + journalRailTime(event) + " · ", style: journalMuted}}
+	first := journalLine{{text: margin}, {text: "●", style: status}}
+	if m.attached {
+		first = append(first,
+			journalSegment{text: "  ", style: journalMuted},
+			journalSegment{text: journalRailTime(event), style: journalMuted},
+			journalSegment{text: " · ", style: journalMuted},
+		)
+	} else {
+		first = append(first, journalSegment{text: "  " + journalRailTime(event) + " · ", style: journalMuted})
+	}
 	if event.lifecycle != nil {
 		first = append(first, journalSegment{text: "L", style: journalHeading}, journalSegment{text: " · ", style: journalMuted})
 		first = append(first, journalKindSegments(event.lifecycle.Kind)...)
@@ -757,25 +762,4 @@ func renderJournalLine(line journalLine, width int, enabled bool, styles journal
 		}
 	}
 	return rendered.String()
-}
-
-func renderAttachedJournalLine(line journalLine, width int, styles journalStyles) string {
-	line = clipJournalLine(line, width)
-	style := journalPlain
-	var text strings.Builder
-	for _, segment := range line {
-		text.WriteString(segment.text)
-		if style == journalPlain && segment.style != journalPlain && segment.style != journalMuted {
-			style = segment.style
-		}
-	}
-	if style == journalPlain {
-		for _, segment := range line {
-			if segment.style != journalPlain {
-				style = segment.style
-				break
-			}
-		}
-	}
-	return styles.render(style, text.String())
 }
