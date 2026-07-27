@@ -1122,6 +1122,10 @@ const colorsInCommand = (terminal, command, token) => {
 		: Array.from({ length: token.length }, (_, offset) => terminal.foregrounds[index + offset]);
 };
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+const isConnectedToolNode = (line, shell, nested = false) => new RegExp(
+	`^${nested ? "       │     " : "       "}[├└]─ (?:⟳ ${escapeRegExp(shell)} · 1 command · running|✓ ${escapeRegExp(shell)} · 1 command · completed) · (?:\\d+ms|\\d+\\.\\d+s|\\d+m\\d+s)$`,
+	"u",
+).test(line.trimEnd());
 const legacyPackageHeaders = (terminal, agent, model) => {
 	const pattern = new RegExp(
 		`([⟳○✓✗]) ${escapeRegExp(agent)} \\(${escapeRegExp(model)}\\) —`,
@@ -1281,8 +1285,11 @@ for (const command of spec.commands) {
 		check(count(terminal.plain, command.command) === 1, `${command.shell} command was not rendered exactly once: ${command.command}`);
 	const lines = running.plain.split(/\r?\n/u);
 	const commandLine = lines.findIndex((line) => line.includes(command.command));
-	const toolLine = lines.findLastIndex((line, index) => index < commandLine && line.trimEnd().endsWith(command.shell));
-	check(toolLine >= 0 && commandLine === toolLine + 1, `${command.shell} command was not a leaf beneath its exact tool node`);
+	check(
+		commandLine > 0 &&
+			isConnectedToolNode(lines[commandLine - 1], command.shell, command.agent === spec.review.nested.agent),
+		`${command.shell} command was not a leaf beneath its exact tool node`,
+	);
 	const commandIndex = running.plain.indexOf(command.command);
 	check(commandIndex >= 2 && running.plain.slice(commandIndex - 2, commandIndex) === "$ ", `${command.shell} command leaf lost its semantic prompt`);
 	if (commandIndex >= 2)
@@ -1305,7 +1312,7 @@ check(longCommandLines.length === 1, "Long/multiline shell command was not rende
 if (longCommandLines.length === 1) {
 	const [{ line, index }] = longCommandLines;
 	check(
-		index > 0 && runningLines[index - 1].trimEnd().endsWith(spec.review.longCommand.shell),
+		index > 0 && isConnectedToolNode(runningLines[index - 1], spec.review.longCommand.shell),
 		"Long/multiline shell command was not nested under its exact shell node",
 	);
 	check(
@@ -1323,10 +1330,15 @@ if (longCommandLines.length === 1) {
 }
 
 const expectedCommandLeaves = [
-	...spec.commands.map(({ shell, command }) => ({ shell, command })),
+	...spec.commands.map(({ agent, shell, command }) => ({
+		shell,
+		command,
+		nested: agent === spec.review.nested.agent,
+	})),
 	{
 		shell: spec.review.longCommand.shell,
 		command: spec.review.longCommand.logical,
+		nested: false,
 	},
 ];
 for (const [state, terminal] of [
@@ -1349,7 +1361,7 @@ for (const [state, terminal] of [
 		const [{ index }] = matches;
 		check(index > previousLine, `${state} command leaves lost fixture order`);
 		check(
-			index > 0 && lines[index - 1].trimEnd().endsWith(leaf.shell),
+			index > 0 && isConnectedToolNode(lines[index - 1], leaf.shell, leaf.nested),
 			`${state} command leaf was not beneath its exact ${leaf.shell} node`,
 		);
 		previousLine = index;
@@ -1393,7 +1405,7 @@ check(nestedHeaderLines.length === 1, "Nested agent did not render exactly one f
 if (nestedHeaderLines.length === 1) {
 	const [{ index }] = nestedHeaderLines;
 	check(
-		runningLines[index + 1]?.trimEnd().endsWith(nested.shell) &&
+		isConnectedToolNode(runningLines[index + 1] ?? "", nested.shell, true) &&
 			runningLines[index + 2]?.includes(nested.command),
 		"Nested shell hierarchy did not bind to the exact fixture-specific child node",
 	);
