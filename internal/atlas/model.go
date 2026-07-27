@@ -20,6 +20,52 @@ type goal struct {
 	participants                   []vaultregistry.Participant
 }
 
+type orderedEntry struct {
+	at        string
+	lifecycle *vaultregistry.Lifecycle
+	evidence  *vaultregistry.Evidence
+	order     int
+}
+
+func orderedEntries(lifecycle []vaultregistry.Lifecycle, evidence []vaultregistry.Evidence, chronological bool) []orderedEntry {
+	entries := make([]orderedEntry, 0, len(lifecycle)+len(evidence))
+	for i := range lifecycle {
+		entries = append(entries, orderedEntry{at: lifecycle[i].ObservedAt, lifecycle: &lifecycle[i], order: i})
+	}
+	for i := range evidence {
+		entries = append(entries, orderedEntry{at: evidence[i].ObservedAt, evidence: &evidence[i], order: i})
+	}
+	sort.SliceStable(entries, func(i, j int) bool {
+		if chronological {
+			left, leftOK := parsedObservation(entries[i].at)
+			right, rightOK := parsedObservation(entries[j].at)
+			return leftOK && rightOK && left.Before(right)
+		}
+		if entries[i].at != entries[j].at {
+			return entries[i].at < entries[j].at
+		}
+		if (entries[i].lifecycle != nil) != (entries[j].lifecycle != nil) {
+			return entries[i].lifecycle != nil
+		}
+		return entries[i].order < entries[j].order
+	})
+	return entries
+}
+
+func parsedObservation(observedAt string) (time.Time, bool) {
+	parsed, err := time.Parse(time.RFC3339Nano, observedAt)
+	return parsed, err == nil
+}
+
+func laterObservation(candidate, current string) bool {
+	candidateTime, candidateOK := parsedObservation(candidate)
+	currentTime, currentOK := parsedObservation(current)
+	if !candidateOK || !currentOK {
+		return true
+	}
+	return !candidateTime.Before(currentTime)
+}
+
 type Model struct {
 	run           vaultregistry.Run
 	goals         []goal
@@ -29,6 +75,7 @@ type Model struct {
 	detailVisible bool
 	reducedMotion bool
 	activityFrame int
+	expanded      bool
 }
 
 func NewModel(run vaultregistry.Run, width, height int) Model {
@@ -39,15 +86,23 @@ func NewModel(run vaultregistry.Run, width, height int) Model {
 		detailVisible: true,
 		reducedMotion: os.Getenv("VAULT_HUNTER_REDUCED_MOTION") == "1",
 	}
-	m.goals = normalize(run)
+	m.goals = normalize(run, false)
 	m.selected = initialSelection(m.goals)
+	return m
+}
+
+func NewExpandedModel(run vaultregistry.Run, width, height int) Model {
+	m := NewModel(run, width, height)
+	m.goals = normalize(run, true)
+	m.selected = initialSelection(m.goals)
+	m.expanded = true
 	return m
 }
 
 // CompactView projects the same normalized goals and initial selection as the
 // standalone Atlas into the two rows available in Sidekick's preview.
 func CompactView(run vaultregistry.Run, participantID string, width, height int) string {
-	goals := normalize(run)
+	goals := normalize(run, false)
 	selected := initialSelection(goals)
 	goalID, kind, state := "?", "?", "?"
 	ordinal := "0/0"
@@ -142,6 +197,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	if m.expanded {
+		return m.ExpandedView()
+	}
 	if m.width < 80 || m.height < 24 {
 		return truncate("terminal too small; minimum 80×24", m.width)
 	}
@@ -178,6 +236,267 @@ func (m Model) View() string {
 	return strings.Join(rows, "\n")
 }
 
+// ExpandedView renders the read-only Operations Board snapshot. It deliberately
+// shares the compact model's normalized goals and active selection.
+func (m Model) ExpandedView() string {
+	if m.width < 120 || m.height < 32 {
+		return truncate("terminal too small; minimum 120×32", m.width)
+	}
+
+	selectedID, selectedKind, selectedState := "?", "?", "?"
+	var selected *goal
+	if len(m.goals) != 0 {
+		selected = &m.goals[m.selected]
+		selectedID = value(selected.id)
+		selectedKind = value(selected.kind)
+		selectedState = value(selected.state)
+	}
+
+	leftWidth := m.width * 16 / 100
+	middleWidth := m.width * 52 / 100
+	evidenceWidth := m.width - leftWidth - 1 - middleWidth - 1
+	bodyRows := m.height - 4
+
+	allEntries := orderedEntries(m.run.Lifecycle, m.run.Evidence, true)
+	timelineEntries := timelineWindow(allEntries, selectedID, 8)
+	timelineLines := make([]string, 0, len(timelineEntries))
+	for _, entry := range timelineEntries {
+		timelineLines = append(timelineLines, timelineEntryLine(entry))
+	}
+	if len(timelineLines) == 0 {
+		timelineLines = append(timelineLines, " no recorded activity")
+	}
+
+	var ledgerLines []string
+	var latestEvidence *vaultregistry.Evidence
+	if selected == nil {
+		ledgerLines = append(ledgerLines, " no recorded goals")
+	} else {
+		journeyLines := []string{"SELECTED JOURNEY"}
+		journey := orderedEntries(selected.lifecycle, selected.evidence, true)
+		if len(journey) == 0 {
+			journeyLines = append(journeyLines, " no recorded journey")
+		}
+		for _, entry := range journey {
+			journeyLines = append(journeyLines, journeyEntryLines(entry, m.detailVisible)...)
+		}
+		for i := range selected.evidence {
+			evidence := &selected.evidence[i]
+			if latestEvidence == nil || laterObservation(evidence.ObservedAt, latestEvidence.ObservedAt) {
+				latestEvidence = evidence
+			}
+		}
+
+		var currentLines []string
+		if latestEvidence != nil {
+			currentLines = append(currentLines, "", "LATEST EVIDENCE COMMAND", " "+recorded(latestEvidence.Command))
+		}
+		if len(selected.participants) != 0 {
+			currentLines = append(currentLines, "", "ASSOCIATED PARTICIPANTS")
+			for _, participant := range selected.participants {
+				currentLines = append(currentLines, fmt.Sprintf(" %s · %s", value(participant.ParticipantID), value(participant.Role)))
+				var identities []string
+				if participant.Herdr != nil {
+					identities = append(identities, fmt.Sprintf("Herdr %s/%s/%s/%s", participant.Herdr.WorkspaceID, participant.Herdr.TabID, participant.Herdr.PaneID, participant.Herdr.TerminalID))
+				}
+				if participant.AgentSession != nil {
+					identities = append(identities, fmt.Sprintf("agent session %s/%s/%s", participant.AgentSession.Source, participant.AgentSession.Kind, participant.AgentSession.Value))
+				}
+				if len(identities) != 0 {
+					currentLines = append(currentLines, "  "+strings.Join(identities, " · "))
+				}
+			}
+		}
+
+		var recordedLines []string
+		for _, entry := range allEntries {
+			if entryGoalID(entry) != selected.id {
+				recordedLines = append(recordedLines, fullEntryLine(entry))
+			}
+		}
+		if len(recordedLines) != 0 {
+			recordedLines = append([]string{"", "RECORDED LIFECYCLE"}, recordedLines...)
+		}
+		ledgerLines = boundedLedger(journeyLines, currentLines, recordedLines, bodyRows)
+	}
+
+	evidenceLines := []string{"EVIDENCE"}
+	if latestEvidence == nil {
+		evidenceLines = append(evidenceLines, " none recorded")
+	} else {
+		evidenceLines = append(evidenceLines,
+			" "+value(latestEvidence.ObservationID),
+			" "+value(latestEvidence.ObservedAt),
+		)
+		exit := "none recorded"
+		if latestEvidence.ExitStatus != nil {
+			exit = fmt.Sprintf("%d", *latestEvidence.ExitStatus)
+		}
+		evidenceLines = append(evidenceLines, fmt.Sprintf(" state: %s · exit %s", value(latestEvidence.State), exit))
+		evidenceLines = append(evidenceLines, wrappedField("command", recorded(latestEvidence.Command), evidenceWidth)...)
+		evidenceLines = append(evidenceLines, wrappedField("implementation tree", recorded(latestEvidence.ImplementationTree), evidenceWidth)...)
+		evidenceLines = append(evidenceLines, wrappedField("artifact sha-256", recorded(latestEvidence.ArtifactSHA256), evidenceWidth)...)
+		evidenceLines = append(evidenceLines, wrappedField("detail", recorded(latestEvidence.Detail), evidenceWidth)...)
+	}
+
+	heading := columnRow("TIMELINE", fmt.Sprintf("VERIFIER LEDGER · Goal %s · %s · %s", selectedID, selectedKind, selectedState), "EVIDENCE", leftWidth, middleWidth, evidenceWidth)
+	rows := []string{
+		truncate(clean(fmt.Sprintf("Run %s · Task %s · %s", value(m.run.RunID), value(m.run.Task.ID), value(m.run.Task.Title))), m.width),
+		truncate(clean(fmt.Sprintf("Selected Goal %s · %s · %s", selectedID, selectedKind, selectedState)), m.width),
+		heading,
+	}
+	for row := 0; row < bodyRows; row++ {
+		var timeline, ledger, evidence string
+		if row < len(timelineLines) {
+			timeline = timelineLines[row]
+		}
+		if row < len(ledgerLines) {
+			ledger = ledgerLines[row]
+		}
+		if row < len(evidenceLines) {
+			evidence = evidenceLines[row]
+		}
+		rows = append(rows, columnRow(timeline, ledger, evidence, leftWidth, middleWidth, evidenceWidth))
+	}
+	rows = append(rows, truncate(fmt.Sprintf("↑/k ↓/j select · Enter detail · q quit · %d×%d", m.width, m.height), m.width))
+	return strings.Join(rows, "\n")
+}
+
+func boundedLedger(journey, current, recorded []string, limit int) []string {
+	all := append(append(append([]string(nil), journey...), current...), recorded...)
+	if len(all) <= limit {
+		return all
+	}
+
+	heading := journey[:min(1, len(journey))]
+	journey = journey[len(heading):]
+	available := max(limit-len(heading)-len(current), 0)
+	if len(journey) > available {
+		journey = journey[len(journey)-available:]
+	}
+	lines := append(append(append([]string(nil), heading...), journey...), current...)
+	if len(lines) > limit {
+		return lines[:limit]
+	}
+	return append(lines, recorded[:min(len(recorded), limit-len(lines))]...)
+}
+
+func timelineWindow(entries []orderedEntry, selectedID string, limit int) []orderedEntry {
+	if len(entries) <= limit {
+		return entries
+	}
+	window := append([]orderedEntry(nil), entries[len(entries)-limit:]...)
+	for _, entry := range window {
+		if entryGoalID(entry) == selectedID {
+			return window
+		}
+	}
+	for i := len(entries) - limit - 1; i >= 0; i-- {
+		if entryGoalID(entries[i]) == selectedID {
+			return append([]orderedEntry{entries[i]}, window[1:]...)
+		}
+	}
+	return window
+}
+
+func entryGoalID(entry orderedEntry) string {
+	if entry.lifecycle != nil {
+		return entry.lifecycle.GoalID
+	}
+	return entry.evidence.VerifierID
+}
+
+func timelineEntryLine(entry orderedEntry) string {
+	if entry.lifecycle != nil {
+		return fmt.Sprintf(" %s %s · %s · %s", value(entry.lifecycle.GoalID), clock(entry.at), value(entry.lifecycle.Kind), value(entry.lifecycle.State))
+	}
+	return fmt.Sprintf(" %s %s · evidence · %s", value(entry.evidence.VerifierID), clock(entry.at), value(entry.evidence.State))
+}
+
+func fullEntryLine(entry orderedEntry) string {
+	line := timelineEntryLine(entry)
+	if entry.lifecycle != nil && entry.lifecycle.Detail != "" {
+		line += " · " + entry.lifecycle.Detail
+	}
+	if entry.evidence != nil {
+		if entry.evidence.ExitStatus != nil {
+			line += fmt.Sprintf(" · exit %d", *entry.evidence.ExitStatus)
+		}
+		if entry.evidence.Detail != "" {
+			line += " · " + entry.evidence.Detail
+		}
+	}
+	return line
+}
+
+func journeyEntryLines(entry orderedEntry, detailVisible bool) []string {
+	if entry.lifecycle != nil {
+		lines := []string{fmt.Sprintf(" %s %s · %s", clock(entry.at), value(entry.lifecycle.Kind), value(entry.lifecycle.State))}
+		if detailVisible && entry.lifecycle.Detail != "" {
+			lines = append(lines, " detail: "+entry.lifecycle.Detail)
+		}
+		return lines
+	}
+	line := fmt.Sprintf(" %s evidence · %s", clock(entry.at), value(entry.evidence.State))
+	if entry.evidence.ExitStatus != nil {
+		line += fmt.Sprintf(" · exit %d", *entry.evidence.ExitStatus)
+	}
+	lines := []string{line}
+	if detailVisible && entry.evidence.Detail != "" {
+		lines = append(lines, " detail: "+entry.evidence.Detail)
+	}
+	return lines
+}
+
+func columnRow(left, middle, right string, leftWidth, middleWidth, rightWidth int) string {
+	left = pad(truncate(clean(left), leftWidth), leftWidth)
+	middle = pad(truncate(clean(middle), middleWidth), middleWidth)
+	right = pad(truncate(clean(right), rightWidth), rightWidth)
+	return left + "│" + middle + "│" + right
+}
+
+func wrappedField(label, field string, width int) []string {
+	prefix := " " + label + ": "
+	field = clean(field)
+	if lipgloss.Width(prefix+field) <= width {
+		return []string{prefix + field}
+	}
+	lines := []string{strings.TrimSuffix(prefix, " ")}
+	for _, part := range wrapCells(field, max(width-1, 1)) {
+		lines = append(lines, " "+part)
+	}
+	return lines
+}
+
+func wrapCells(s string, width int) []string {
+	var lines []string
+	var line strings.Builder
+	used := 0
+	for _, r := range s {
+		cells := lipgloss.Width(string(r))
+		if used != 0 && used+cells > width {
+			lines = append(lines, line.String())
+			line.Reset()
+			used = 0
+		}
+		line.WriteRune(r)
+		used += cells
+	}
+	if line.Len() != 0 || len(lines) == 0 {
+		lines = append(lines, line.String())
+	}
+	return lines
+}
+
+func clean(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r < 32 || r == 127 {
+			return ' '
+		}
+		return r
+	}, s)
+}
+
 func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 	left := []string{"Task Goals", strings.Repeat("─", leftWidth)}
 	if len(m.goals) == 0 {
@@ -202,28 +521,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 	} else {
 		g := m.goals[m.selected]
 		prefix := []string{fmt.Sprintf(" %s · %s · %s", g.id, value(g.kind), value(g.state)), ""}
-		type item struct {
-			at        string
-			lifecycle *vaultregistry.Lifecycle
-			evidence  *vaultregistry.Evidence
-			order     int
-		}
-		var journey []item
-		for i := range g.lifecycle {
-			journey = append(journey, item{at: g.lifecycle[i].ObservedAt, lifecycle: &g.lifecycle[i], order: i})
-		}
-		for i := range g.evidence {
-			journey = append(journey, item{at: g.evidence[i].ObservedAt, evidence: &g.evidence[i], order: i})
-		}
-		sort.SliceStable(journey, func(i, j int) bool {
-			if journey[i].at != journey[j].at {
-				return journey[i].at < journey[j].at
-			}
-			if (journey[i].lifecycle != nil) != (journey[j].lifecycle != nil) {
-				return journey[i].lifecycle != nil
-			}
-			return journey[i].order < journey[j].order
-		})
+		journey := orderedEntries(g.lifecycle, g.evidence, false)
 		var journeyLines []string
 		for _, entry := range journey {
 			if entry.lifecycle != nil {
@@ -301,7 +599,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 	return left, right
 }
 
-func normalize(run vaultregistry.Run) []goal {
+func normalize(run vaultregistry.Run, chronologicalParticipants bool) []goal {
 	byID := map[string]*goal{}
 	ensure := func(id, observed string) *goal {
 		if id == "" {
@@ -329,10 +627,13 @@ func normalize(run vaultregistry.Run) []goal {
 	participants := map[string]vaultregistry.Participant{}
 	for _, p := range run.Participants {
 		ensure(p.GoalID, p.ObservedAt)
-		if _, ok := participants[p.ParticipantID]; !ok {
+		previous, ok := participants[p.ParticipantID]
+		if !ok {
 			participantOrder = append(participantOrder, p.ParticipantID)
 		}
-		participants[p.ParticipantID] = p
+		if !chronologicalParticipants || !ok || laterObservation(p.ObservedAt, previous.ObservedAt) {
+			participants[p.ParticipantID] = p
+		}
 	}
 	for _, id := range participantOrder {
 		p := participants[id]
@@ -440,7 +741,7 @@ func knownState(state string) bool {
 }
 
 func clock(timestamp string) string {
-	if parsed, err := time.Parse(time.RFC3339, timestamp); err == nil {
+	if parsed, err := time.Parse(time.RFC3339Nano, timestamp); err == nil {
 		return parsed.Format("15:04")
 	}
 	return "?"
