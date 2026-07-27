@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -26,6 +27,15 @@ func main() {
 			if err := preview(os.Args[2:]); err != nil {
 				fail(err)
 			}
+			return
+		case "journal":
+			for _, arg := range os.Args[2:] {
+				if arg == "-journal" || arg == "--journal" || strings.HasPrefix(arg, "-journal=") || strings.HasPrefix(arg, "--journal=") {
+					fmt.Fprintln(os.Stderr, "journal alias does not accept a --journal override")
+					os.Exit(2)
+				}
+			}
+			render(append([]string{"--journal"}, os.Args[2:]...))
 			return
 		}
 	}
@@ -131,8 +141,9 @@ func render(args []string) {
 	featurePath := flags.String("feature", "", "vault-relative canonical feature.md target")
 	projectPath := flags.String("project", "", "vault-relative canonical project target")
 	selectedTaskPath := flags.String("select-task", "", "vault-relative Task path to open from an aggregate")
-	colorMode := flags.String("color", "auto", "aggregate color mode: auto, always, or never")
+	colorMode := flags.String("color", "auto", "color mode: auto, always, or never")
 	expanded := flags.Bool("expanded", false, "print the expanded Operations Board")
+	journal := flags.Bool("journal", false, "render the read-only Execution Journal")
 	snapshot := flags.Bool("snapshot", false, "print one deterministic frame")
 	width := flags.Int("width", 0, "frame width")
 	height := flags.Int("height", 0, "frame height")
@@ -142,7 +153,7 @@ func render(args []string) {
 		os.Exit(2)
 	}
 	aggregateMode := *featurePath != "" || *projectPath != ""
-	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (aggregateMode && (*expanded || *runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) || (*expanded && *stateDir == "") {
+	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (*journal && aggregateMode) || (aggregateMode && (*expanded || *runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) || (*expanded && *stateDir == "") {
 		flags.Usage()
 		os.Exit(2)
 	}
@@ -163,6 +174,27 @@ func render(args []string) {
 	reader, err := vaultregistry.OpenReader(*stateDir)
 	if err != nil {
 		fail(err)
+	}
+	if *journal {
+		run, err := reader.Get(*runID)
+		if err != nil {
+			fail(err)
+		}
+		static := *snapshot || os.Getenv("TERM") == "dumb" || !characterDevice(os.Stdin) || !characterDevice(os.Stdout)
+		if static && !widthSet {
+			*width, *height = 80, 24
+		}
+		_, noColor := os.LookupEnv("NO_COLOR")
+		color := atlas.ColorEnabled(*colorMode, *snapshot, characterDevice(os.Stdout), os.Getenv("TERM") == "dumb", noColor)
+		model := atlas.NewJournalModel(run, *width, *height)
+		if static {
+			fmt.Println(model.ViewColor(color))
+			return
+		}
+		if _, err := tea.NewProgram(model.WithColor(color), tea.WithAltScreen()).Run(); err != nil {
+			fail(err)
+		}
+		return
 	}
 	if aggregateMode {
 		runs, err := reader.List()

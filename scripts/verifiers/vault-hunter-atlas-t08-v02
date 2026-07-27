@@ -1,0 +1,632 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture=scripts/fixtures/vault-hunter-atlas/runs/atlas-journal-run.json
+tmp=$(mktemp -d)
+trap 'chmod -R u+rwX "$tmp"; rm -rf "$tmp"' EXIT
+
+manifest() {
+  (
+    cd "$1"
+    find . -type f -print | LC_ALL=C sort | while IFS= read -r file; do
+      shasum -a 256 "$file"
+    done
+  ) | shasum -a 256 | awk '{print $1}'
+}
+
+strip_ansi() {
+  awk 'BEGIN { esc=sprintf("%c", 27) } { gsub(esc "\\[[0-9;]*m", ""); print }' "$1"
+}
+
+run_cli() {
+  HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
+    VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-read" \
+    T08_V02_TRAP_LOG="$tmp/trap.log" PATH="$tmp/traps:$PATH" \
+    "$tmp/vault-hunter-atlas" "$@"
+}
+
+expect_exit() {
+  name=$1
+  want=$2
+  shift 2
+  set +e
+  run_cli "$@" >"$tmp/$name.stdout" 2>"$tmp/$name.stderr"
+  got=$?
+  set -e
+  test "$got" -eq "$want"
+  test ! -s "$tmp/$name.stdout"
+  test -s "$tmp/$name.stderr"
+}
+
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+mkdir -p "$tmp/state/runs" "$tmp/vault" "$tmp/traps" "$tmp/home"
+cp "$fixture" "$tmp/state/runs/"
+printf '{\n' >"$tmp/state/runs/malformed.json"
+printf '%s\n' \
+  '{"schema_version":2,"run_id":"unsupported","revision":1,"invoked_at":"2026-07-26T10:00:00Z","updated_at":"2026-07-26T10:00:00Z","task":{"id":"T08","title":"unsupported","path":"task.md","feature_path":"feature.md","kind":"task"},"participants":[],"lifecycle":[],"evidence":[]}' \
+  >"$tmp/state/runs/unsupported.json"
+printf '%s\n' "vault sentinel" >"$tmp/vault/sentinel"
+: >"$tmp/trap.log"
+printf '%s\n' \
+  '#!/bin/sh' \
+  'printf "%s\n" "$0 $*" >>"$T08_V02_TRAP_LOG"' \
+  'exit 99' >"$tmp/trap-command"
+chmod +x "$tmp/trap-command"
+for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
+  ln -s "$tmp/trap-command" "$tmp/traps/$command"
+done
+
+fixture_before=$(shasum -a 256 "$fixture" | awk '{print $1}')
+state_before=$(manifest "$tmp/state")
+vault_before=$(manifest "$tmp/vault")
+chmod 500 "$tmp/state" "$tmp/state/runs" "$tmp/vault"
+chmod 400 "$tmp/state/runs/"*.json "$tmp/vault/sentinel"
+
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --snapshot --color always --width 79 --height 23 >"$tmp/too-small"
+printf '%s\n' "terminal too small; minimum 80×24" >"$tmp/too-small.expected"
+cmp "$tmp/too-small.expected" "$tmp/too-small"
+test "$(wc -l <"$tmp/too-small" | tr -d ' ')" -eq 1
+test "$(LC_ALL=C tr -cd '\033' <"$tmp/too-small" | wc -c | tr -d ' ')" -eq 0
+
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --snapshot --color always --width 80 --height 24 >"$tmp/static-snapshot"
+test "$(LC_ALL=C tr -cd '\033' <"$tmp/static-snapshot" | wc -c | tr -d ' ')" -eq 0
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --width 80 --height 24 </dev/null >"$tmp/static-redirected"
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --width 80 --height 24 </dev/null >"$tmp/static-redirected-again"
+TERM=dumb run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --width 80 --height 24 >"$tmp/static-dumb"
+cmp "$tmp/static-snapshot" "$tmp/static-redirected"
+cmp "$tmp/static-redirected" "$tmp/static-redirected-again"
+cmp "$tmp/static-redirected" "$tmp/static-dumb"
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --color always --width 80 --height 24 </dev/null >"$tmp/static-forced-color"
+TERM=dumb NO_COLOR=1 run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --color always --width 80 --height 24 >"$tmp/static-forced-color-dumb"
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --color never --width 80 --height 24 </dev/null >"$tmp/static-never-color"
+test "$(LC_ALL=C tr -cd '\033' <"$tmp/static-forced-color" | wc -c | tr -d ' ')" -gt 0
+cmp "$tmp/static-forced-color" "$tmp/static-forced-color-dumb"
+cmp "$tmp/static-snapshot" "$tmp/static-never-color"
+strip_ansi "$tmp/static-forced-color" >"$tmp/static-forced-color.plain"
+cmp "$tmp/static-snapshot" "$tmp/static-forced-color.plain"
+
+set +e
+run_cli journal --journal=false --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --snapshot --color always --width 80 --height 24 >"$tmp/journal-alias.stdout" 2>"$tmp/journal-alias.stderr"
+journal_alias_status=$?
+set -e
+case "$journal_alias_status" in
+  0)
+    if ! cmp -s "$tmp/static-snapshot" "$tmp/journal-alias.stdout"; then
+      echo "journal --journal=false escaped authoritative journal mode" >&2
+      exit 1
+    fi
+    ;;
+  2)
+    test ! -s "$tmp/journal-alias.stdout"
+    test -s "$tmp/journal-alias.stderr"
+    ;;
+  *)
+    echo "journal --journal=false exited $journal_alias_status, want journal output or exit 2" >&2
+    exit 1
+    ;;
+esac
+
+set +e
+run_cli journal --journal=false --feature feature.md --vault-dir "$tmp/vault" \
+  --state-dir "$tmp/state" --snapshot --width 80 --height 24 \
+  >"$tmp/journal-alias-aggregate.stdout" 2>"$tmp/journal-alias-aggregate.stderr"
+journal_alias_aggregate_status=$?
+set -e
+if test "$journal_alias_aggregate_status" -ne 2 ||
+  test -s "$tmp/journal-alias-aggregate.stdout" ||
+  test ! -s "$tmp/journal-alias-aggregate.stderr"; then
+  echo "journal --journal=false reached aggregate routing" >&2
+  exit 1
+fi
+
+expect_exit journal-feature 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --feature feature.md --vault-dir "$tmp/vault"
+expect_exit journal-project 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --project project.md --vault-dir "$tmp/vault"
+expect_exit width-only 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" --width 80
+expect_exit height-only 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" --height 24
+expect_exit zero-size 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" --width 0 --height 0
+expect_exit negative-size 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" --width=-1 --height=-1
+expect_exit missing 1 journal --run-id missing --state-dir "$tmp/state"
+expect_exit malformed 1 journal --run-id malformed --state-dir "$tmp/state"
+expect_exit unsupported 1 journal --run-id unsupported --state-dir "$tmp/state"
+
+state_pre_pty=$(manifest "$tmp/state")
+vault_pre_pty=$(manifest "$tmp/vault")
+test "$state_before" = "$state_pre_pty"
+test "$vault_before" = "$vault_pre_pty"
+test ! -s "$tmp/trap.log"
+printf 'Pre-PTY Registry manifest: %s\n' "$state_pre_pty"
+printf 'Pre-PTY vault manifest: %s\n' "$vault_pre_pty"
+printf 'Pre-PTY orchestration trap bytes: 0\n'
+
+command -v expect >/dev/null
+export T08_V02_PTY_BIN="$tmp/vault-hunter-atlas"
+export T08_V02_PTY_STATE="$tmp/state"
+export T08_V02_PTY_HOME="$tmp/home"
+export T08_V02_PTY_PATH="$tmp/traps:$PATH"
+export T08_V02_PTY_LOG="$tmp/pty.log"
+export T08_V02_PTY_SCREENS="$tmp/pty-screens"
+export T08_V02_PTY_TRAP_LOG="$tmp/trap.log"
+mkdir "$T08_V02_PTY_SCREENS"
+expect <<'EXPECT'
+set timeout 5
+log_user 0
+log_file -a -noappend $env(T08_V02_PTY_LOG)
+catch {unset env(NO_COLOR)}
+
+proc fail {message} {
+  puts stderr $message
+  catch {send -- "q"}
+  catch {close}
+  catch {wait}
+  exit 1
+}
+
+proc checkpoint {name} {
+  global env
+  log_file
+  file copy -force $env(T08_V02_PTY_LOG) "$env(T08_V02_PTY_SCREENS)/$name.raw"
+  log_file -a $env(T08_V02_PTY_LOG)
+}
+
+proc render_complete {rows phase} {
+  set esc "\033"
+  expect {
+    -exact "${esc}\[${rows};H" {}
+    eof { fail "journal exited before $phase render completed" }
+    timeout { fail "journal did not complete $phase render" }
+  }
+}
+
+spawn env TERM=xterm-256color \
+  HOME=$env(T08_V02_PTY_HOME) XDG_STATE_HOME=$env(T08_V02_PTY_HOME)/state \
+  VAULT_HUNTER_STATE_DIR=$env(T08_V02_PTY_HOME)/retained-registry-must-not-be-read \
+  T08_V02_TRAP_LOG=$env(T08_V02_PTY_TRAP_LOG) PATH=$env(T08_V02_PTY_PATH) \
+  $env(T08_V02_PTY_BIN) journal --run-id atlas-journal-run \
+  --state-dir $env(T08_V02_PTY_STATE) --width 80 --height 24
+
+exec stty -f $spawn_out(slave,name) rows 24 columns 80
+exec kill -WINCH [exp_pid]
+set esc "\033"
+set background_query "${esc}]11;?${esc}\\"
+set background_reply "${esc}]11;rgb:0000/0000/0000${esc}\\"
+set cursor_query "${esc}\[6n"
+set cursor_reply "${esc}\[1;1R"
+expect {
+  -exact $background_query {
+    send -- $background_reply
+    exp_continue
+  }
+  -exact $cursor_query {
+    send -- $cursor_reply
+    exp_continue
+  }
+  -re {selected recorded journey} {}
+  eof { fail "journal exited before initial attached-terminal frame" }
+  timeout { fail "journal did not render initial attached-terminal D frame" }
+}
+expect {
+  -re {8 recorded journal events omitted \(6 earlier, 0 later\)} {}
+  eof { fail "journal exited before initial D omission row" }
+  timeout { fail "journal did not render initial D omission row" }
+}
+expect {
+  -re {life-later} {}
+  eof { fail "journal exited before initial D selected card" }
+  timeout { fail "journal did not render initial D selected card" }
+}
+expect {
+  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
+  eof { fail "journal exited before initial D footer" }
+  timeout { fail "journal did not render initial D footer" }
+}
+render_complete 24 initial
+checkpoint initial
+set timeout 1
+expect {
+  eof { fail "journal exited before interactive input" }
+  timeout {}
+}
+set timeout 5
+send -- "E"
+expect {
+  -re {evidence-later} {}
+  eof { fail "journal exited before D evidence jump" }
+  timeout { fail "journal did not render D evidence jump" }
+}
+render_complete 24 evidence-jump
+checkpoint evidence
+send -- "j"
+expect {
+  -re {life-later} {}
+  eof { fail "journal exited before bounded D navigation update" }
+  timeout { fail "journal did not render bounded D navigation update" }
+}
+render_complete 24 lifecycle-navigation
+checkpoint lifecycle
+send -- "E"
+expect {
+  -re {selected recorded observation} {}
+  eof { fail "journal exited before expanded evidence detail" }
+  timeout { fail "journal did not render expanded D evidence detail" }
+}
+expect {
+  -re {evidence-later} {}
+  eof { fail "journal exited before second D evidence jump" }
+  timeout { fail "journal did not render second D evidence jump" }
+}
+render_complete 24 second-evidence-jump
+send -- "\r"
+render_complete 24 detail-collapse
+checkpoint collapsed
+send -- "\r"
+expect {
+  -re {selected recorded observation} {}
+  eof { fail "journal exited before detail re-expand update" }
+  timeout { fail "journal did not re-expand D evidence detail" }
+}
+render_complete 24 detail-expand
+checkpoint expanded
+exec stty -f $spawn_out(slave,name) rows 32 columns 134
+exec kill -WINCH [exp_pid]
+expect {
+  -re {T08.HIDDEN → T08.LANDING} {}
+  eof { fail "journal exited before D resize update" }
+  timeout { fail "journal did not render D resize/reflow update" }
+}
+expect {
+  -re {evidence-later} {}
+  eof { fail "journal exited before resized selection frame" }
+  timeout { fail "journal did not retain selection across D resize" }
+}
+expect {
+  -re {g/G first/last · j/k/↑/↓ records · v/V verifier · e/E evidence · enter detail · q/Esc quit} {}
+  eof { fail "journal exited before resized D footer" }
+  timeout { fail "journal did not render resized D footer" }
+}
+render_complete 32 resize
+checkpoint wide
+send -- "q"
+expect {
+  eof {}
+  timeout { fail "journal did not quit after q" }
+}
+set status [lindex [wait] 3]
+if {$status != 0} {
+  fail "journal interactive exit status was $status"
+}
+EXPECT
+
+python3 - "$tmp/pty-screens" "$tmp/static-snapshot" <<'PY'
+import pathlib
+import re
+import sys
+import unicodedata
+
+
+class Screen:
+    def __init__(self, width, height):
+        self.foreground = None
+        self.resize(width, height)
+        self.saved = (0, 0)
+        self.pending_wrap = False
+
+    def resize(self, width, height):
+        old = getattr(self, "cells", [])
+        old_colors = getattr(self, "colors", [])
+        self.width, self.height = width, height
+        self.cells = [[" "] * width for _ in range(height)]
+        self.colors = [[None] * width for _ in range(height)]
+        for y, row in enumerate(old[:height]):
+            self.cells[y][:min(width, len(row))] = row[:width]
+        for y, row in enumerate(old_colors[:height]):
+            self.colors[y][:min(width, len(row))] = row[:width]
+        self.x = min(getattr(self, "x", 0), width - 1)
+        self.y = min(getattr(self, "y", 0), height - 1)
+
+    def clear(self):
+        self.cells = [[" "] * self.width for _ in range(self.height)]
+        self.colors = [[None] * self.width for _ in range(self.height)]
+        self.x = self.y = 0
+        self.pending_wrap = False
+
+    def scroll(self):
+        self.cells.pop(0)
+        self.cells.append([" "] * self.width)
+        self.colors.pop(0)
+        self.colors.append([None] * self.width)
+        self.y = self.height - 1
+
+    def put(self, char):
+        cells = 0 if unicodedata.combining(char) else 2 if unicodedata.east_asian_width(char) in "WF" else 1
+        if cells == 0:
+            if self.x:
+                self.cells[self.y][self.x - 1] += char
+            return
+        if self.pending_wrap:
+            self.x = 0
+            self.y += 1
+            if self.y >= self.height:
+                self.scroll()
+            self.pending_wrap = False
+        if cells == 2 and self.x == self.width - 1:
+            self.pending_wrap = True
+            self.put(char)
+            return
+        self.cells[self.y][self.x] = char
+        self.colors[self.y][self.x] = self.foreground
+        if cells == 2:
+            self.cells[self.y][self.x + 1] = ""
+            self.colors[self.y][self.x + 1] = self.foreground
+        if self.x + cells >= self.width:
+            self.x = self.width - 1
+            self.pending_wrap = True
+        else:
+            self.x += cells
+
+    def csi(self, private, params, final):
+        values = [int(value) if value else 0 for value in params.split(";")] if params else [0]
+        n = values[0] or 1
+        if private == "?" and final == "h" and 1049 in values:
+            self.clear()
+        elif final in "Hf":
+            self.y = min(max((values[0] or 1) - 1, 0), self.height - 1)
+            col = values[1] if len(values) > 1 else 1
+            self.x = min(max((col or 1) - 1, 0), self.width - 1)
+            self.pending_wrap = False
+        elif final == "A":
+            self.y = max(0, self.y - n)
+        elif final in "BE":
+            self.y = min(self.height - 1, self.y + n)
+            if final == "E":
+                self.x = 0
+        elif final == "F":
+            self.y, self.x = max(0, self.y - n), 0
+        elif final == "C":
+            self.x = min(self.width - 1, self.x + n)
+        elif final == "D":
+            self.x = max(0, self.x - n)
+        elif final == "G":
+            self.x = min(self.width - 1, n - 1)
+        elif final == "J":
+            mode = values[0]
+            if mode in (2, 3):
+                self.clear()
+            elif mode == 0:
+                self.cells[self.y][self.x:] = [" "] * (self.width - self.x)
+                self.colors[self.y][self.x:] = [None] * (self.width - self.x)
+                for row in range(self.y + 1, self.height):
+                    self.cells[row] = [" "] * self.width
+                    self.colors[row] = [None] * self.width
+        elif final == "K":
+            mode = values[0]
+            if mode == 0:
+                self.cells[self.y][self.x:] = [" "] * (self.width - self.x)
+                self.colors[self.y][self.x:] = [None] * (self.width - self.x)
+            elif mode == 1:
+                self.cells[self.y][:self.x + 1] = [" "] * (self.x + 1)
+                self.colors[self.y][:self.x + 1] = [None] * (self.x + 1)
+            elif mode == 2:
+                self.cells[self.y] = [" "] * self.width
+                self.colors[self.y] = [None] * self.width
+        elif final == "m":
+            if values == [0]:
+                self.foreground = None
+            for index in range(len(values) - 4):
+                if values[index:index + 2] == [38, 2]:
+                    red, green, blue = values[index + 2:index + 5]
+                    self.foreground = f"#{red:02x}{green:02x}{blue:02x}"
+        elif final == "s":
+            self.saved = (self.x, self.y)
+        elif final == "u":
+            self.x, self.y = self.saved
+
+    def feed(self, raw):
+        text = raw.decode("utf-8", "replace")
+        i = 0
+        while i < len(text):
+            char = text[i]
+            if char == "\x1b":
+                if i + 1 < len(text) and text[i + 1] == "[":
+                    match = re.match(r"\x1b\[([?]?)([0-9;]*)([ -/]*)([@-~])", text[i:])
+                    if match:
+                        self.csi(match.group(1), match.group(2), match.group(4))
+                        i += len(match.group(0))
+                        continue
+                if i + 1 < len(text) and text[i + 1] == "]":
+                    end_bel = text.find("\x07", i + 2)
+                    end_st = text.find("\x1b\\", i + 2)
+                    ends = [end for end in (end_bel, end_st) if end >= 0]
+                    if ends:
+                        end = min(ends)
+                        i = end + (2 if text.startswith("\x1b\\", end) else 1)
+                        continue
+                if i + 1 < len(text) and text[i + 1] in "78":
+                    if text[i + 1] == "7":
+                        self.saved = (self.x, self.y)
+                    else:
+                        self.x, self.y = self.saved
+                    i += 2
+                    continue
+                i += 2
+                continue
+            if char == "\r":
+                self.x = 0
+                self.pending_wrap = False
+            elif char == "\n":
+                self.y += 1
+                if self.y >= self.height:
+                    self.scroll()
+            elif char == "\b":
+                self.x = max(0, self.x - 1)
+                self.pending_wrap = False
+            elif char >= " " and char != "\x7f":
+                self.put(char)
+            i += 1
+
+    def lines(self):
+        return ["".join(row).rstrip() for row in self.cells]
+
+
+def fail(message):
+    raise SystemExit(message)
+
+
+def find(lines, token):
+    for index, line in enumerate(lines):
+        if token in line:
+            return index
+    fail(f"visible PTY frame missing {token!r}")
+
+
+def ordered(lines, *tokens):
+    positions = [find(lines, token) for token in tokens]
+    if positions != sorted(positions):
+        fail(f"visible PTY frame order is wrong for {tokens!r}: {positions}")
+
+
+def foreground_sgr(raw):
+    allowed = {
+        b"\x1b[38;2;146;131;116m", b"\x1b[38;2;235;219;178m",
+        b"\x1b[38;2;251;241;199m", b"\x1b[38;2;242;133;52m",
+        b"\x1b[38;2;211;134;155m", b"\x1b[38;2;128;170;158m",
+        b"\x1b[38;2;184;187;38m", b"\x1b[38;2;233;177;67m",
+        b"\x1b[38;2;242;89;75m",
+    }
+    seen = set(re.findall(rb"\x1b\[38;2;[0-9;]+m", raw))
+    if not seen:
+        fail("initial attached-terminal frame contains no semantic true-color SGR")
+    unexpected = seen - allowed
+    if unexpected:
+        fail(f"attached-terminal frame contains unexpected foreground SGR: {sorted(unexpected)!r}")
+
+
+screens = pathlib.Path(sys.argv[1])
+expected_initial = pathlib.Path(sys.argv[2]).read_text().splitlines()
+phases = [
+    ("initial", 80, 24),
+    ("evidence", 80, 24),
+    ("lifecycle", 80, 24),
+    ("collapsed", 80, 24),
+    ("expanded", 80, 24),
+    ("wide", 134, 32),
+]
+screen = Screen(80, 24)
+previous = b""
+visible = {}
+colors = {}
+for name, width, height in phases:
+    raw = (screens / f"{name}.raw").read_bytes()
+    if not raw.startswith(previous):
+        fail(f"{name} PTY checkpoint is not cumulative")
+    if (width, height) != (screen.width, screen.height):
+        screen.resize(width, height)
+    screen.feed(raw[len(previous):])
+    previous = raw
+    visible[name] = screen.lines()
+    colors[name] = [row[:] for row in screen.colors]
+
+foreground_sgr((screens / "initial.raw").read_bytes())
+if visible["initial"] != expected_initial:
+    for row, (got, want) in enumerate(zip(visible["initial"], expected_initial), 1):
+        if got != want:
+            fail(f"initial visible PTY row {row} = {got!r}, want approved D row {want!r}")
+    fail("initial visible PTY frame differs from approved static D semantics")
+
+palette = {
+    "muted": "#928374", "ordinary": "#ebdbb2", "selected": "#fbf1c7",
+    "accent": "#f28534", "evidence": "#d3869b", "info": "#80aa9e",
+    "success": "#b8bb26", "attention": "#e9b143",
+}
+
+
+def assert_color(phase, line_token, token, want):
+    row = find(visible[phase], line_token)
+    column = visible[phase][row].find(token)
+    if column < 0:
+        fail(f"{phase} visible PTY row missing color token {token!r}")
+    got = colors[phase][row][column]
+    expected = palette[want]
+    if got != expected:
+        fail(f"{phase} token {token!r} foreground = {got}, want {expected} ({want})")
+
+
+assert_color("initial", "Jul 26 10:02 UTC", "Jul 26 10:02 UTC", "muted")
+assert_color("initial", "Jul 26 10:02 UTC", "E", "evidence")
+assert_color("initial", "Jul 26 10:02 UTC", "T08.V01", "info")
+assert_color("initial", "Jul 26 10:02 UTC", "passed", "success")
+assert_color("initial", "Jul 26 10:03 UTC", "L", "accent")
+assert_color("initial", "Jul 26 10:03 UTC", "pending", "attention")
+assert_color("initial", "Jul 26 10:03 UTC", "selected", "selected")
+assert_color("initial", "selected recorded observation · lifecycle",
+             "selected recorded observation", "selected")
+assert_color("initial", "selected recorded observation · lifecycle", "lifecycle", "accent")
+assert_color("initial", "│  └─ detail · instant-later", "│", "muted")
+assert_color("initial", "│  └─ detail · instant-later", "instant-later", "ordinary")
+assert_color("initial", "│  ├─ goal · T08.LANDING", "goal", "accent")
+assert_color("initial", "│  ├─ goal · T08.LANDING", "T08.LANDING", "ordinary")
+
+narrow_footer = "g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit"
+wide_footer = "g/G first/last · j/k/↑/↓ records · v/V verifier · e/E evidence · enter detail · q/Esc quit"
+ordered(visible["evidence"], "recorded journal events omitted", "· selected",
+        "selected recorded observation · evidence", "observation ID · evidence-later", narrow_footer)
+ordered(visible["lifecycle"], "recorded journal events omitted", "· selected",
+        "selected recorded observation · lifecycle", "observation ID · life-later", narrow_footer)
+ordered(visible["collapsed"], "recorded journal events omitted", "· selected", narrow_footer)
+if any("selected recorded observation" in line for line in visible["collapsed"]):
+    fail("collapsed visible PTY frame retained the selected card")
+ordered(visible["expanded"], "recorded journal events omitted", "· selected",
+        "selected recorded observation · evidence", "observation ID · evidence-later", narrow_footer)
+ordered(visible["wide"], "shown later: T08.HIDDEN → T08.LANDING",
+        "recorded journal events omitted", "· selected",
+        "selected recorded observation · evidence", "observation ID · evidence-later", wide_footer)
+
+for line in visible["wide"]:
+    trimmed = line.lstrip(" ")
+    if trimmed.startswith(("●", "│  ", "└─ …")):
+        if len(line) - len(trimmed) != 26:
+            fail(f"wide visible PTY rail is not centered: {line!r}")
+        if len(line) > 108:
+            fail(f"wide visible PTY rail exceeds centered 82-cell bound: {line!r}")
+PY
+
+state_after=$(manifest "$tmp/state")
+vault_after=$(manifest "$tmp/vault")
+test "$state_before" = "$state_after"
+test "$vault_before" = "$vault_after"
+test "$fixture_before" = "$(shasum -a 256 "$fixture" | awk '{print $1}')"
+test ! -s "$tmp/trap.log"
+test ! -e "$tmp/home/retained-registry-must-not-be-read"
+printf 'Registry manifest before/after: %s %s\n' "$state_before" "$state_after"
+printf 'Vault manifest before/after: %s %s\n' "$vault_before" "$vault_after"
+printf 'Orchestration trap bytes: 0\n'
+
+go test -count=1 ./internal/atlas -run '^TestT08V02'
+scripts/verify-vault-hunter-atlas T08.V01
+scripts/verify-vault-hunter-atlas T02.V01
+scripts/verify-vault-hunter-atlas T02.V02
+scripts/verify-vault-hunter-atlas T02.V03
+
+state_final=$(manifest "$tmp/state")
+vault_final=$(manifest "$tmp/vault")
+test "$state_before" = "$state_final"
+test "$vault_before" = "$vault_final"
+test "$fixture_before" = "$(shasum -a 256 "$fixture" | awk '{print $1}')"
+test ! -s "$tmp/trap.log"
+printf 'Final Registry manifest: %s\n' "$state_final"
+printf 'Final vault manifest: %s\n' "$vault_final"
+printf 'Final orchestration trap bytes: 0\n'
+
+echo "T08.V02 bounded D journal interaction and read-only authority: PASS"
