@@ -562,6 +562,17 @@ async function main() {
 			{ type: "tool_execution_start", toolName: spec.review.longCommand.shell, toolCallId: "root-long-bash", args: { command: spec.review.longCommand.raw } },
 		];
 		for (const event of events) emit(event);
+		mark("PI_VERIFY_NESTED_EXIT_ONLY_MARKER", JSON.stringify({
+			parentTool: "subagent",
+			parentToolCallId: "root-subagent",
+			agent: nestedExitOnlyResult.agent,
+			model: nestedExitOnlyResult.model,
+			status: nestedExitOnlyResult.progress.status,
+			exitCode: nestedExitOnlyResult.exitCode,
+			output: nestedExitOnlyResult.output,
+			lastMessage: nestedExitOnlyResult.progress.lastMessage,
+			error: nestedExitOnlyResult.progress.error ?? null,
+		}));
 		mark("PI_VERIFY_REAL_EVENT_MARKER", "normalized");
 		await waitFor("PI_VERIFY_SUBAGENT_RELEASE");
 		emit({ type: "tool_execution_end", toolName: spec.review.longCommand.shell, toolCallId: "root-long-bash", result: {} });

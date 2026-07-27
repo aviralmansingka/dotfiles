@@ -93,6 +93,7 @@ real_execute_marker="$verify_dir/real-execute-coverage"
 real_child_marker="$verify_dir/real-child-coverage"
 real_main_spawn_marker="$verify_dir/real-main-spawn"
 real_event_marker="$verify_dir/real-event-normalization"
+nested_exit_only_marker="$verify_dir/nested-exit-only-state"
 
 if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
 	echo "Visible-thinking prompt customization is still installed" >&2
@@ -791,7 +792,7 @@ console.log("Pi work-step terminal state verified: prompt-scoped thinking remain
 NODE
 
 printf -v pi_command \
-	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
+	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_NESTED_EXIT_ONLY_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
 	"$agent_dir" \
 	"$subagent_release" \
 	"$subagent_progress_release" \
@@ -804,6 +805,7 @@ printf -v pi_command \
 	"$real_child_marker" \
 	"$real_main_spawn_marker" \
 	"$real_event_marker" \
+	"$nested_exit_only_marker" \
 	"$subagent_concurrency_release" \
 	"$subagent_concurrency_first_marker" \
 	"$subagent_concurrency_second_marker" \
@@ -963,7 +965,7 @@ wait_for_terminal \
 	"Native subagent composition assertion failed: provider compatibility turn did not settle"
 stop_tmux
 
-node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" <<'NODE'
+node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" "$nested_exit_only_marker" <<'NODE'
 const fs = require("node:fs");
 
 const spec = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -1023,6 +1025,7 @@ const realExecuteCoverage = fs.readFileSync(process.argv[14], "utf8");
 const realChildCoverage = fs.readFileSync(process.argv[15], "utf8");
 const realMainSpawnCoverage = fs.readFileSync(process.argv[16], "utf8");
 const realEventCoverage = fs.readFileSync(process.argv[17], "utf8");
+const nestedExitOnlyCoverage = JSON.parse(fs.readFileSync(process.argv[18], "utf8"));
 const failures = [];
 const check = (condition, message) => {
 	if (!condition) failures.push(message);
@@ -1168,6 +1171,20 @@ for (const [state, terminal] of [
 }
 
 const nested = spec.review.nested;
+check(
+	JSON.stringify(nestedExitOnlyCoverage) === JSON.stringify({
+		parentTool: "subagent",
+		parentToolCallId: "root-subagent",
+		agent: nested.exitOnly.agent,
+		model: nested.exitOnly.model,
+		status: "failed",
+		exitCode: 23,
+		output: "",
+		lastMessage: "",
+		error: null,
+	}),
+	"Nested exit-only fixture did not reach the renderer with the required failed empty state",
+);
 const nestedHeaderLines = runningLines
 	.map((line, index) => ({ line, index }))
 	.filter(({ line }) =>
@@ -1185,6 +1202,23 @@ if (nestedHeaderLines.length === 1) {
 	);
 	const decoyLine = runningLines.findIndex((line) => line.includes(nested.parentArgumentDecoy));
 	check(decoyLine >= 0 && decoyLine < index, "Nested child node was confused with parent argument prose");
+}
+for (const [state, terminal] of [
+	["Collapsed", collapsed],
+	["Ctrl+O-expanded", expanded],
+]) {
+	const lines = terminal.plain.split(/\r?\n/u);
+	const headers = lines
+		.map((line, index) => ({ line, index }))
+		.filter(({ line }) =>
+			line.includes(`✗ ${nested.exitOnly.agent} (${nested.exitOnly.model}) —`),
+		);
+	check(
+		headers.length === 1 &&
+			lines[headers[0]?.index + 1]?.trim() === nested.exitOnly.narrative &&
+			count(terminal.plain, nested.exitOnly.narrative) === 1,
+		`${state} nested exit-only failure lost its one package-owned narrative directly beneath the exact child identity`,
+	);
 }
 
 check(collapsed.plain.includes(spec.collapsedProse), "Collapsed native completion lost final prose");
