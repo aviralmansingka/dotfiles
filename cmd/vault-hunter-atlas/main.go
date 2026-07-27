@@ -142,6 +142,7 @@ func render(args []string) {
 	projectPath := flags.String("project", "", "vault-relative canonical project target")
 	selectedTaskPath := flags.String("select-task", "", "vault-relative Task path to open from an aggregate")
 	colorMode := flags.String("color", "auto", "color mode: auto, always, or never")
+	expanded := flags.Bool("expanded", false, "print the expanded Operations Board")
 	journal := flags.Bool("journal", false, "render the read-only Execution Journal")
 	snapshot := flags.Bool("snapshot", false, "print one deterministic frame")
 	width := flags.Int("width", 0, "frame width")
@@ -152,7 +153,7 @@ func render(args []string) {
 		os.Exit(2)
 	}
 	aggregateMode := *featurePath != "" || *projectPath != ""
-	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (*journal && aggregateMode) || (aggregateMode && (*runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) {
+	if flags.NArg() != 0 || (*featurePath != "" && *projectPath != "") || (*journal && aggregateMode) || (aggregateMode && (*expanded || *runID != "" || *vaultDir == "" || *stateDir == "")) || (!aggregateMode && (*runID == "" || *selectedTaskPath != "" || *vaultDir != "")) || (*expanded && *stateDir == "") {
 		flags.Usage()
 		os.Exit(2)
 	}
@@ -229,6 +230,21 @@ func render(args []string) {
 	run, err := reader.Get(*runID)
 	if err != nil {
 		fail(err)
+	}
+	if *expanded {
+		if !widthSet {
+			*width, *height = 160, 48
+		}
+		model := atlas.NewExpandedModel(run, *width, *height)
+		static := *snapshot || os.Getenv("TERM") == "dumb" || !characterDevice(os.Stdin) || !characterDevice(os.Stdout)
+		if static {
+			fmt.Println(model.View())
+			return
+		}
+		if _, err := tea.NewProgram(model, tea.WithAltScreen()).Run(); err != nil {
+			fail(err)
+		}
+		return
 	}
 
 	static := *snapshot || os.Getenv("TERM") == "dumb" || !characterDevice(os.Stdin) || !characterDevice(os.Stdout)

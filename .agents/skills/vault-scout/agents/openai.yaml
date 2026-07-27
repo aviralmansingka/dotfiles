@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vault Scout"
+  short_description: "Turn ambiguous vault work into executable tasks"
+  default_prompt: "Use $vault-scout to explore this issue and propose an autonomous Task with Goals, Verifiers, and Evidence."
