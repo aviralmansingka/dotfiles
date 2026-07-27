@@ -1210,19 +1210,15 @@ function M.open(opts)
     internal.toggle_tool_session(target, true, item.terminal_id)
   end
 
-  local function kill_item(active_picker, item)
+  local function kill_item(_, item)
     if not item or item._empty or not item.pane_id then
       return
     end
-    if herdr.close(item.pane_id) then
-      if opts.on_kill then
-        opts.on_kill(item)
-      end
-      reopening = true
-      active_picker:close()
-      vim.schedule(function()
-        M.open(opts)
-      end)
+    if vim.fn.confirm("Kill agent " .. item.label .. "?", "&Yes\n&No", 2) ~= 1 then
+      return
+    end
+    if herdr.close(item.pane_id) and opts.on_kill then
+      opts.on_kill(item)
     end
   end
 
