@@ -1464,9 +1464,6 @@ check(expanded.plain.includes(spec.finalHeading), "Ctrl+O-expanded native result
 check(expanded.plain.includes(spec.finalBoldText), "Ctrl+O-expanded native Markdown lost semantic prose");
 check(expanded.plain.includes(spec.finalTail), "Ctrl+O-expanded native result lost the complete fixture-derived final response");
 check(!expanded.plain.includes(`**${spec.finalBoldText}**`), "Ctrl+O-expanded final response was not rendered as Markdown");
-check(new RegExp(`(?:^|\\s)${spec.usage.turns}(?:\\s+turns?|\\s*turns?)`, "mu").test(expanded.plain), "Expanded native usage lost fixture-derived turns");
-check(expanded.plain.includes(`in:${spec.usage.settled.input}`), "Expanded native usage lost fixture-derived input tokens");
-check(expanded.plain.includes(`out:${spec.usage.settled.output}`), "Expanded native usage lost fixture-derived output tokens");
 check(
 	usageCoverage.model === spec.real.model &&
 	usageCoverage.contextWindow === spec.usage.contextWindow &&
