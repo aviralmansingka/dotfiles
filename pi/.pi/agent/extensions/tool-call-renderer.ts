@@ -815,6 +815,97 @@ function updateAssistant(
   };
 }
 
+function sameToolArgumentValue(
+  left: unknown,
+  right: unknown,
+  leftAncestors = new Set<object>(),
+  rightAncestors = new Set<object>(),
+): boolean {
+  if (left === null || right === null) return left === right;
+  if (typeof left !== "object" || typeof right !== "object") {
+    if (typeof left === "number" || typeof right === "number")
+      return finiteNumber(left) && finiteNumber(right) && left === right;
+    return (
+      ["string", "boolean"].includes(typeof left) &&
+      typeof left === typeof right &&
+      left === right
+    );
+  }
+
+  if (leftAncestors.has(left) || rightAncestors.has(right)) return false;
+  const leftArray = Array.isArray(left);
+  if (leftArray !== Array.isArray(right)) return false;
+  if (
+    !leftArray &&
+    (![Object.prototype, null].includes(Object.getPrototypeOf(left)) ||
+      ![Object.prototype, null].includes(Object.getPrototypeOf(right)))
+  )
+    return false;
+
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  const expectedOwnKeyOffset = leftArray ? 1 : 0;
+  if (
+    Reflect.ownKeys(left).length !== leftKeys.length + expectedOwnKeyOffset ||
+    Reflect.ownKeys(right).length !== rightKeys.length + expectedOwnKeyOffset ||
+    (leftArray &&
+      (left as unknown[]).length !== (right as unknown[]).length) ||
+    leftKeys.length !== rightKeys.length ||
+    leftKeys.some((key) => !Object.prototype.hasOwnProperty.call(right, key))
+  )
+    return false;
+
+  leftAncestors.add(left);
+  rightAncestors.add(right);
+  try {
+    return leftKeys.every((key) =>
+      sameToolArgumentValue(
+        (left as Record<string, unknown>)[key],
+        (right as Record<string, unknown>)[key],
+        leftAncestors,
+        rightAncestors,
+      ),
+    );
+  } finally {
+    leftAncestors.delete(left);
+    rightAncestors.delete(right);
+  }
+}
+
+function transferLivePartialObservation(
+  previous: any,
+  replacement: any,
+  step: WorkStep,
+  toolCallId: string,
+): void {
+  if (
+    asString(previous.toolCallId) !== toolCallId ||
+    previous.result == null ||
+    previous.isPartial !== true ||
+    replacement.result !== undefined ||
+    replacement.resultRendererComponent !== undefined
+  )
+    return;
+
+  const matchingCalls = step.toolCalls.filter((call) => call.id === toolCallId);
+  if (matchingCalls.length !== 1) return;
+  try {
+    if (
+      !sameToolArgumentValue(previous.args, replacement.args) ||
+      !sameToolArgumentValue(replacement.args, matchingCalls[0].arguments)
+    )
+      return;
+  } catch {
+    return;
+  }
+
+  // The replacement's following native updateDisplay rebuilds renderer components.
+  replacement.result = previous.result;
+  replacement.isPartial = previous.isPartial;
+  replacement.executionStarted = previous.executionStarted;
+  replacement.argsComplete = previous.argsComplete;
+}
+
 function transferToolComponentOwnership(
   component: any,
   step: WorkStep,
@@ -834,6 +925,7 @@ function transferToolComponentOwnership(
   )
     return false;
 
+  transferLivePartialObservation(previous, component, step, toolCallId);
   state.connected.delete(previous);
   connected.expandedInitialized = false;
   state.connected.set(component, connected);
