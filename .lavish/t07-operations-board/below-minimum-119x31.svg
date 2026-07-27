@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 240" width="1000" height="240" role="img" aria-labelledby="title desc">
+<title id="title">Below-minimum terminal diagnostic</title><desc id="desc">Exact expanded Operations Board diagnostic at 119 by 31 cells: terminal too small; minimum 120×32.</desc>
+<rect width="1000" height="240" rx="18" fill="#282828"/><rect x="1" y="1" width="998" height="238" rx="17" fill="none" stroke="#504945" stroke-width="2"/>
+<rect width="1000" height="52" rx="18" fill="#32302f"/><rect y="34" width="1000" height="18" fill="#32302f"/>
+<circle cx="24" cy="26" r="6" fill="#ea6962"/><circle cx="44" cy="26" r="6" fill="#fabd2f"/><circle cx="64" cy="26" r="6" fill="#b8bb26"/>
+<text x="88" y="32" fill="#928374" font-family="'FiraCode Nerd Font Mono','JetBrainsMono Nerd Font',Menlo,Consolas,monospace" font-size="14">actual model view · 119×31</text>
+<text x="500" y="143" text-anchor="middle" fill="#fabd2f" font-family="'FiraCode Nerd Font Mono','JetBrainsMono Nerd Font',Menlo,Consolas,monospace" font-size="29" xml:space="preserve">terminal too small; minimum 120×32</text>
+</svg>

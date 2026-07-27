@@ -1,0 +1,22 @@
+WEBVTT
+
+00:00.000 --> 00:01.767
+Initial actual CLI PTY frame at 160 by 48. Goal T07.V01 is active.
+
+00:01.767 --> 00:03.567
+Key j selects the next Goal: review, pending.
+
+00:03.567 --> 00:05.367
+Key k returns selection to Goal T07.V01, active.
+
+00:05.367 --> 00:07.367
+Enter collapses the selected Goal detail without changing selection.
+
+00:07.367 --> 00:09.367
+The actual model resizes to the minimum supported board, 120 by 32.
+
+00:09.367 --> 00:11.567
+At 119 by 31, the only visible model output is: terminal too small; minimum 120×32.
+
+00:11.567 --> 00:16.167
+Recovery at 160 by 48 preserves Goal T07.V01 selection and the collapsed detail state.

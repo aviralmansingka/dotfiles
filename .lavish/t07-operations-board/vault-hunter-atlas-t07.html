@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>T07 · Expanded Operations Board verifier evidence</title>
+  <meta name="description" content="Durable verifier evidence for the terminal-first Vault Hunter Atlas expanded Operations Board.">
+  <style>
+    :root {
+      color-scheme: dark;
+      --t07-bg: #282828;
+      --t07-raised: #32302f;
+      --t07-panel: #3c3836;
+      --t07-selected: #45403d;
+      --t07-border: #504945;
+      --t07-ghost: #665c54;
+      --t07-muted: #a89984;
+      --t07-text: #ebdbb2;
+      --t07-bright: #fbf1c7;
+      --t07-orange: #f28534;
+      --t07-yellow: #fabd2f;
+      --t07-green: #b8bb26;
+      --t07-aqua: #89b482;
+      --t07-blue: #80aa9e;
+      --t07-purple: #d3869b;
+      --t07-red: #ea6962;
+      --t07-success-bg: #353d25;
+      --t07-error-bg: #3d1f1f;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { background: var(--t07-bg); scroll-behavior: smooth; overflow-x: hidden; }
+    body {
+      margin: 0;
+      min-width: 0;
+      overflow-x: hidden;
+      color: var(--t07-text);
+      background:
+        radial-gradient(circle at 90% 2%, rgba(128,170,158,.10), transparent 26rem),
+        radial-gradient(circle at 4% 22%, rgba(242,133,52,.08), transparent 25rem),
+        var(--t07-bg);
+      font-family: "FiraCode Nerd Font Mono", "JetBrainsMono Nerd Font", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      line-height: 1.55;
+    }
+    :where(h1,h2,h3,p,li,dd,dt,code,a,span) { overflow-wrap: anywhere; }
+    a { color: var(--t07-blue); text-underline-offset: .2em; }
+    a:focus-visible, video:focus-visible { outline: 3px solid var(--t07-yellow); outline-offset: 4px; }
+    code { color: var(--t07-bright); font: inherit; }
+    .t07-page { width: min(1180px, calc(100% - 2rem)); margin-inline: auto; padding: 1.25rem 0 4rem; min-width: 0; }
+    .t07-terminal-bar {
+      display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: .9rem;
+      padding: .72rem 1rem; border: 1px solid var(--t07-border); border-bottom: 0;
+      border-radius: 13px 13px 0 0; background: var(--t07-raised); color: var(--t07-muted); font-size: .72rem;
+    }
+    .t07-dots { display: flex; gap: .42rem; }
+    .t07-dot { width: .62rem; height: .62rem; border-radius: 50%; }
+    .t07-dot:nth-child(1) { background: var(--t07-red); }
+    .t07-dot:nth-child(2) { background: var(--t07-yellow); }
+    .t07-dot:nth-child(3) { background: var(--t07-green); }
+    .t07-terminal-bar span:nth-child(2) { text-align: center; }
+    .t07-hero {
+      border: 1px solid var(--t07-border); border-radius: 0 0 13px 13px;
+      padding: clamp(1.35rem, 4vw, 3rem); background: rgba(50,48,47,.95); box-shadow: 0 24px 70px rgba(0,0,0,.28);
+    }
+    .t07-kicker { color: var(--t07-orange); font-size: .73rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { max-width: 920px; margin: .65rem 0 1rem; color: var(--t07-bright); font-size: clamp(2rem, 7vw, 4.8rem); line-height: .98; letter-spacing: -.055em; }
+    .t07-lede { max-width: 870px; margin: 0; font-size: clamp(.9rem, 2vw, 1.05rem); }
+    .t07-command {
+      margin-top: 1.4rem; padding: .8rem 1rem; border-left: 3px solid var(--t07-green); background: var(--t07-bg); font-size: .78rem;
+    }
+    .t07-prompt { color: var(--t07-green); font-weight: 900; }
+    .t07-jump { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.25rem; }
+    .t07-jump a { padding: .35rem .65rem; border: 1px solid var(--t07-border); border-radius: 999px; text-decoration: none; font-size: .73rem; }
+    .t07-card { margin-top: 2rem; border: 1px solid var(--t07-border); border-radius: 14px; overflow: hidden; background: rgba(50,48,47,.95); box-shadow: 0 16px 46px rgba(0,0,0,.18); min-width: 0; }
+    .t07-card-head { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: .85rem; align-items: center; padding: 1rem 1.15rem; border-bottom: 1px solid var(--t07-border); }
+    .t07-id { padding: .32rem .48rem; border-radius: 5px; color: var(--t07-bg); background: var(--t07-orange); font-weight: 900; }
+    .t07-card h2 { margin: 0; color: var(--t07-bright); font-size: clamp(1rem, 3vw, 1.42rem); line-height: 1.25; }
+    .t07-pass { color: var(--t07-green); border: 1px solid rgba(184,187,38,.5); border-radius: 999px; padding: .28rem .55rem; font-size: .68rem; white-space: nowrap; }
+    .t07-diagram { padding: clamp(.55rem, 2vw, 1.15rem); background: var(--t07-bg); min-width: 0; overflow: hidden; }
+    .t07-diagram svg { display: block; width: 100%; max-width: 100%; height: auto; }
+    .t07-copy { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,.9fr); gap: 1.2rem; padding: 1.15rem 1.25rem 1.3rem; min-width: 0; }
+    .t07-copy > * { min-width: 0; }
+    .t07-copy h3, .t07-evidence-block h3 { margin: 0 0 .45rem; color: var(--t07-yellow); font-size: .76rem; letter-spacing: .1em; text-transform: uppercase; }
+    .t07-copy p, .t07-copy li, .t07-evidence-block p, .t07-evidence-block li { margin-top: 0; font-size: .8rem; }
+    .t07-copy ul { margin: 0; padding-left: 1.15rem; }
+    .t07-leaves { border-left: 1px solid var(--t07-border); padding-left: 1.2rem; }
+    .t07-media { border-top: 1px solid var(--t07-border); padding: 1.15rem; min-width: 0; }
+    .t07-media-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem; min-width: 0; }
+    .t07-media figure { margin: 0; min-width: 0; }
+    .t07-media img, .t07-media video { display: block; width: 100%; max-width: 100%; height: auto; border: 1px solid var(--t07-border); border-radius: 9px; background: var(--t07-bg); }
+    .t07-media figcaption { margin-top: .55rem; color: var(--t07-muted); font-size: .68rem; }
+    .t07-media figcaption strong { color: var(--t07-text); }
+    .t07-media .t07-wide { grid-column: 1 / -1; }
+    .t07-video-shell { min-width: 0; }
+    .t07-video-shell video { aspect-ratio: 16 / 9; }
+    .t07-facts { margin-top: 2rem; border: 1px solid var(--t07-border); border-radius: 14px; background: var(--t07-raised); overflow: hidden; }
+    .t07-facts h2 { margin: 0; padding: 1rem 1.15rem; color: var(--t07-bright); border-bottom: 1px solid var(--t07-border); font-size: 1.1rem; }
+    .t07-fact-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); min-width: 0; }
+    .t07-fact { min-width: 0; padding: 1rem 1.15rem; border-bottom: 1px solid var(--t07-border); }
+    .t07-fact:nth-child(odd) { border-right: 1px solid var(--t07-border); }
+    .t07-fact dt { color: var(--t07-muted); font-size: .67rem; text-transform: uppercase; letter-spacing: .08em; }
+    .t07-fact dd { margin: .3rem 0 0; color: var(--t07-text); font-size: .76rem; }
+    .t07-ok { color: var(--t07-green); }
+    .t07-hash { word-break: break-all; }
+    .t07-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .7rem; margin-top: 2rem; color: var(--t07-muted); font-size: .68rem; }
+    .t07-svg-bg { fill: #282828; }
+    .t07-svg-panel { fill: #32302f; stroke: #504945; stroke-width: 2; }
+    .t07-svg-hot { fill: #353d25; stroke: #b8bb26; stroke-width: 2; }
+    .t07-svg-warn { fill: #3c3836; stroke: #fabd2f; stroke-width: 2; }
+    .t07-svg-off { fill: #3d1f1f; stroke: #ea6962; stroke-width: 2; }
+    .t07-svg-title { fill: #fbf1c7; font: 700 17px ui-monospace, monospace; }
+    .t07-svg-text { fill: #ebdbb2; font: 13px ui-monospace, monospace; }
+    .t07-svg-small { fill: #a89984; font: 12px ui-monospace, monospace; }
+    .t07-svg-green { fill: #b8bb26; font: 700 13px ui-monospace, monospace; }
+    .t07-svg-yellow { fill: #fabd2f; font: 700 13px ui-monospace, monospace; }
+    .t07-svg-blue { fill: #80aa9e; font: 700 13px ui-monospace, monospace; }
+    .t07-svg-red { fill: #ea6962; font: 700 13px ui-monospace, monospace; }
+    .t07-svg-purple { fill: #d3869b; font: 700 13px ui-monospace, monospace; }
+    .t07-svg-line { fill: none; stroke: #665c54; stroke-width: 3; }
+    .t07-svg-line-green { fill: none; stroke: #b8bb26; stroke-width: 3; }
+    .t07-svg-line-blue { fill: none; stroke: #80aa9e; stroke-width: 3; }
+    @media (max-width: 760px) {
+      .t07-page { width: min(100% - 1rem, 1180px); padding-top: .5rem; }
+      .t07-terminal-bar { grid-template-columns: auto minmax(0,1fr); }
+      .t07-terminal-bar > :last-child { grid-column: 1 / -1; }
+      .t07-card-head { grid-template-columns: auto minmax(0,1fr); }
+      .t07-pass { grid-column: 1 / -1; justify-self: start; }
+      .t07-copy, .t07-media-grid, .t07-fact-grid { grid-template-columns: minmax(0,1fr); }
+      .t07-leaves { border-left: 0; border-top: 1px solid var(--t07-border); padding: 1rem 0 0; }
+      .t07-media .t07-wide { grid-column: auto; }
+      .t07-fact:nth-child(odd) { border-right: 0; }
+      h1 { letter-spacing: -.04em; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print { body { background: #fff; } .t07-card, .t07-hero, .t07-facts { break-inside: avoid; box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <main class="t07-page">
+    <div class="t07-terminal-bar">
+      <div class="t07-dots" aria-hidden="true"><span class="t07-dot"></span><span class="t07-dot"></span><span class="t07-dot"></span></div>
+      <span>vault-hunter-atlas --expanded --run-id atlas-t07-rich</span>
+      <span>Gruvbox Material · read-only evidence</span>
+    </div>
+    <header class="t07-hero">
+      <div class="t07-kicker">T07 · Expanded Operations Board</div>
+      <h1>One board. Three bounded proofs.</h1>
+      <p class="t07-lede">Accepted release evidence for deterministic projection, real keyboard and resize behavior, and a read-only lifecycle authority boundary. The visuals preserve the terminal interface instead of translating it into a web dashboard.</p>
+      <div class="t07-command"><span class="t07-prompt">$</span> scripts/verify-vault-hunter-atlas T07.V01 <span class="t07-ok">[exit 0]</span> → T07.V02 <span class="t07-ok">[exit 0]</span> → T07.V03 <span class="t07-ok">[exit 0]</span></div>
+      <nav class="t07-jump" aria-label="Verifier sections"><a href="#v01">V01 · projection</a><a href="#v02">V02 · interaction</a><a href="#v03">V03 · authority</a><a href="#provenance">provenance</a></nav>
+    </header>
+
+    <article class="t07-card" id="v01">
+      <div class="t07-card-head"><span class="t07-id">V01</span><h2>Does expanded projection remain exact, bounded, and current?</h2><span class="t07-pass">● PASS</span></div>
+      <div class="t07-diagram">
+        <svg viewBox="0 0 1000 320" role="img" aria-labelledby="v01-title v01-desc">
+          <title id="v01-title">V01 deterministic projection flow</title>
+          <desc id="v01-desc">The rich fixture enters chronological normalization, then produces byte-exact bounded 160 by 48 and 120 by 32 golden frames while compact behavior remains protected.</desc>
+          <defs><marker id="v01-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#b8bb26"/></marker></defs>
+          <rect class="t07-svg-bg" width="1000" height="320" rx="10"/>
+          <text class="t07-svg-small" x="24" y="28">accepted inputs → ordered projection → exact terminal geometry</text>
+          <rect class="t07-svg-panel" x="24" y="62" width="225" height="156" rx="10"/>
+          <text class="t07-svg-title" x="45" y="94">rich fixture</text>
+          <text class="t07-svg-text" x="45" y="126">lifecycle + evidence</text>
+          <text class="t07-svg-text" x="45" y="151">participants + offsets</text>
+          <text class="t07-svg-blue" x="45" y="186">atlas-t07-rich</text>
+          <path class="t07-svg-line-green" d="M249 140H330" marker-end="url(#v01-arrow)"/>
+          <rect class="t07-svg-hot" x="342" y="62" width="290" height="156" rx="10"/>
+          <text class="t07-svg-title" x="363" y="94">expanded normalization</text>
+          <text class="t07-svg-green" x="363" y="124">✓ RFC3339 chronology</text>
+          <text class="t07-svg-green" x="363" y="149">✓ stable equal instants</text>
+          <text class="t07-svg-green" x="363" y="174">✓ latest current context</text>
+          <text class="t07-svg-small" x="363" y="199">compact semantics regression-checked</text>
+          <path class="t07-svg-line-green" d="M632 140H712" marker-end="url(#v01-arrow)"/>
+          <rect class="t07-svg-panel" x="724" y="50" width="252" height="82" rx="10"/>
+          <text class="t07-svg-title" x="745" y="82">160×48</text>
+          <text class="t07-svg-green" x="745" y="108">exact golden · bounded</text>
+          <rect class="t07-svg-panel" x="724" y="148" width="252" height="82" rx="10"/>
+          <text class="t07-svg-title" x="745" y="180">120×32</text>
+          <text class="t07-svg-green" x="745" y="206">exact golden · bounded</text>
+          <rect class="t07-svg-panel" x="220" y="258" width="560" height="42" rx="7"/>
+          <text class="t07-svg-small" x="243" y="284">cmp first second · cmp golden frame · width/height cell checks</text>
+        </svg>
+      </div>
+      <div class="t07-copy">
+        <div><h3>What it proves</h3><p>V01 proves deterministic exact geometry at 160×48 and 120×32, safe bounded rows and cells, chronological RFC3339 ordering with stable ties, retained latest evidence and participant context, and unchanged compact-model semantics.</p></div>
+        <div class="t07-leaves"><h3>What it leaves out</h3><p>V01 leaves out live key handling, PTY resize recovery, and whether lifecycle states remain distinct across the read-only authority boundary; those are V02 and V03.</p></div>
+      </div>
+      <div class="t07-media">
+        <div class="t07-media-grid">
+          <figure><a href="accepted-160x48.svg"><img src="accepted-160x48.svg" alt="Exact accepted 160 by 48 expanded Operations Board golden frame"></a><figcaption><strong>Exact accepted bytes · 160×48.</strong> Input SHA-256 <span class="t07-hash">aef7aa5302eb80f4c86e284b1d00c00c0f273cc2a22ba8f65ceb8f5dd845e62f</span>. Open the SVG for full-size inspection.</figcaption></figure>
+          <figure><a href="accepted-120x32.svg"><img src="accepted-120x32.svg" alt="Exact accepted 120 by 32 expanded Operations Board golden frame"></a><figcaption><strong>Exact accepted bytes · 120×32.</strong> Input SHA-256 <span class="t07-hash">5c1406ec59905196d2fb871005b00917c48b41eea03ecfb63cc4d39cd79dbc20</span>. Open the SVG for full-size inspection.</figcaption></figure>
+        </div>
+      </div>
+    </article>
+
+    <article class="t07-card" id="v02">
+      <div class="t07-card-head"><span class="t07-id">V02</span><h2>Do actual model and PTY interactions survive every size boundary?</h2><span class="t07-pass">● PASS</span></div>
+      <div class="t07-diagram">
+        <svg viewBox="0 0 1000 335" role="img" aria-labelledby="v02-title v02-desc">
+          <title id="v02-title">V02 keyboard and resize state sequence</title>
+          <desc id="v02-desc">Actual PTY input sends j, k, and Enter, then resizes from 160 by 48 to 120 by 32 to 119 by 31 and back to 160 by 48 while selection and collapsed detail recover and source manifests stay unchanged.</desc>
+          <defs><marker id="v02-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#80aa9e"/></marker></defs>
+          <rect class="t07-svg-bg" width="1000" height="335" rx="10"/>
+          <text class="t07-svg-small" x="24" y="28">actual CLI PTY / keyboard state + terminal boundary</text>
+          <rect class="t07-svg-panel" x="24" y="62" width="154" height="92" rx="9"/>
+          <text class="t07-svg-title" x="45" y="94">T07.V01</text><text class="t07-svg-green" x="45" y="124">160×48 · active</text>
+          <path class="t07-svg-line-blue" d="M178 108H234" marker-end="url(#v02-arrow)"/><text class="t07-svg-blue" x="194" y="92">j</text>
+          <rect class="t07-svg-panel" x="246" y="62" width="154" height="92" rx="9"/>
+          <text class="t07-svg-title" x="267" y="94">review</text><text class="t07-svg-yellow" x="267" y="124">pending</text>
+          <path class="t07-svg-line-blue" d="M400 108H456" marker-end="url(#v02-arrow)"/><text class="t07-svg-blue" x="416" y="92">k</text>
+          <rect class="t07-svg-hot" x="468" y="62" width="190" height="92" rx="9"/>
+          <text class="t07-svg-title" x="489" y="94">T07.V01</text><text class="t07-svg-green" x="489" y="124">Enter · collapsed</text>
+          <path class="t07-svg-line-blue" d="M658 108H714" marker-end="url(#v02-arrow)"/>
+          <rect class="t07-svg-panel" x="726" y="62" width="250" height="92" rx="9"/>
+          <text class="t07-svg-title" x="747" y="94">120×32</text><text class="t07-svg-green" x="747" y="124">minimum supported</text>
+          <path class="t07-svg-line" d="M850 154V202" marker-end="url(#v02-arrow)"/>
+          <rect class="t07-svg-warn" x="650" y="214" width="326" height="76" rx="9"/>
+          <text class="t07-svg-title" x="671" y="245">119×31</text><text class="t07-svg-yellow" x="671" y="270">exact diagnostic only</text>
+          <path class="t07-svg-line-green" d="M650 252H488" marker-end="url(#v02-arrow)"/>
+          <rect class="t07-svg-hot" x="246" y="214" width="230" height="76" rx="9"/>
+          <text class="t07-svg-title" x="267" y="245">160×48 recovery</text><text class="t07-svg-green" x="267" y="270">selection + collapse kept</text>
+          <rect class="t07-svg-panel" x="24" y="214" width="190" height="76" rx="9"/>
+          <text class="t07-svg-small" x="45" y="242">state / vault / home</text><text class="t07-svg-green" x="45" y="269">manifests unchanged</text>
+        </svg>
+      </div>
+      <div class="t07-copy">
+        <div><h3>What it proves</h3><p>V02 proves actual <code>atlas.NewExpandedModel(...)</code> behavior through the real CLI PTY: j/k selection, Enter detail collapse, the 160×48→120×32→119×31→160×48 sequence, exact diagnostic output, recovery of selection and collapse state, clean quit, and immutable state, vault, and home manifests with no orchestration trap calls.</p></div>
+        <div class="t07-leaves"><h3>What it leaves out</h3><p>V02 leaves out canonical writer behavior and does not claim mutation authority. It also does not replace V01’s byte-for-byte static golden comparison or V03’s complete lifecycle vocabulary check.</p></div>
+      </div>
+      <div class="t07-media">
+        <div class="t07-media-grid">
+          <figure class="t07-wide t07-video-shell"><video controls preload="metadata" poster="accepted-160x48.svg" aria-label="Actual expanded Operations Board PTY interaction and resize evidence"><source src="expanded-operations-board-interactions.mp4" type="video/mp4"><track kind="captions" srclang="en" label="English evidence descriptions" src="interactions.vtt">Your browser cannot play this MP4. <a href="expanded-operations-board-interactions.mp4">Download the interaction evidence.</a></video><figcaption><strong>Actual CLI PTY frames · 1920×1080 H.264 MP4 · no audio.</strong> j, k, Enter, minimum size, exact below-minimum diagnostic, and recovery. Asset SHA-256 <span class="t07-hash">b498151dee54743d9b0fb8dc3dadc370c2f2408c54e8d0f67352bb69cd95f3e0</span>.</figcaption></figure>
+          <figure class="t07-wide"><a href="below-minimum-119x31.svg"><img src="below-minimum-119x31.svg" alt="Exact below-minimum diagnostic: terminal too small; minimum 120×32"></a><figcaption><strong>119×31 fallback.</strong> Exact model text: <code>terminal too small; minimum 120×32</code>.</figcaption></figure>
+        </div>
+      </div>
+    </article>
+
+    <article class="t07-card" id="v03">
+      <div class="t07-card-head"><span class="t07-id">V03</span><h2>Does the board preserve lifecycle meaning without taking authority?</h2><span class="t07-pass">● PASS</span></div>
+      <div class="t07-diagram">
+        <svg viewBox="0 0 1000 330" role="img" aria-labelledby="v03-title v03-desc">
+          <title id="v03-title">V03 read-only lifecycle authority diagram</title>
+          <desc id="v03-desc">Eleven expected lifecycle kind and state projections flow from a read-only registry fixture into a deterministic board while writer and orchestration traps remain untouched and all manifests remain equal.</desc>
+          <defs><marker id="v03-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#d3869b"/></marker></defs>
+          <rect class="t07-svg-bg" width="1000" height="330" rx="10"/>
+          <text class="t07-svg-small" x="24" y="28">read-only registry projection / lifecycle distinctions stay visible</text>
+          <rect class="t07-svg-panel" x="24" y="58" width="240" height="210" rx="10"/>
+          <text class="t07-svg-title" x="45" y="90">registry fixture</text>
+          <text class="t07-svg-text" x="45" y="122">checkpoint · awaiting</text>
+          <text class="t07-svg-text" x="45" y="147">checkpoint · resuming</text>
+          <text class="t07-svg-text" x="45" y="172">verifier · active</text>
+          <text class="t07-svg-text" x="45" y="197">review · active</text>
+          <text class="t07-svg-small" x="45" y="228">+ 7 distinct projections</text>
+          <text class="t07-svg-purple" x="45" y="251">11 / 11 unique</text>
+          <path class="t07-svg-line-blue" d="M264 164H342" marker-end="url(#v03-arrow)"/>
+          <rect class="t07-svg-hot" x="354" y="78" width="292" height="170" rx="10"/>
+          <text class="t07-svg-title" x="375" y="110">expanded snapshot</text>
+          <text class="t07-svg-green" x="375" y="143">✓ exact state distinctions</text>
+          <text class="t07-svg-green" x="375" y="170">✓ deterministic repeat</text>
+          <text class="t07-svg-green" x="375" y="197">✓ no ANSI in snapshot</text>
+          <text class="t07-svg-small" x="375" y="224">display only · no writer path</text>
+          <path class="t07-svg-line-green" d="M646 164H724" marker-end="url(#v03-arrow)"/>
+          <rect class="t07-svg-panel" x="736" y="58" width="240" height="112" rx="10"/>
+          <text class="t07-svg-title" x="757" y="90">authority boundary</text>
+          <text class="t07-svg-green" x="757" y="120">trap calls = 0</text>
+          <text class="t07-svg-green" x="757" y="146">fallback dirs absent</text>
+          <rect class="t07-svg-panel" x="736" y="186" width="240" height="82" rx="10"/>
+          <text class="t07-svg-title" x="757" y="218">immutability</text>
+          <text class="t07-svg-green" x="757" y="246">state = vault = home</text>
+          <rect class="t07-svg-off" x="320" y="284" width="360" height="32" rx="6"/>
+          <text class="t07-svg-red" x="342" y="305">writer / feedback / resume / orchestration: not invoked</text>
+        </svg>
+      </div>
+      <div class="t07-copy">
+        <div><h3>What it proves</h3><p>V03 proves eleven distinct lifecycle kind/state projections—including awaiting, resuming, active phases, blocked, failed, and unknown—render deterministically and without ANSI, while registry, vault, and home manifests remain unchanged and all writer/orchestration traps remain untouched.</p></div>
+        <div class="t07-leaves"><h3>What it leaves out</h3><p>V03 leaves out lifecycle transitions, resume execution, feedback handling, cleanup execution, and all canonical writes. The Operations Board observes authority; it does not exercise or acquire it.</p></div>
+      </div>
+    </article>
+
+    <section class="t07-facts" id="provenance" aria-labelledby="provenance-title">
+      <h2 id="provenance-title">Accepted provenance</h2>
+      <dl class="t07-fact-grid">
+        <div class="t07-fact"><dt>Product commit</dt><dd class="t07-hash">3c1e791702fec6a7bbe4c917860458b15391c7fc</dd></div>
+        <div class="t07-fact"><dt>Product tree</dt><dd class="t07-hash">86a59c73ec9197394d72b936b2f1c77dbfe8b9c1</dd></div>
+        <div class="t07-fact"><dt>V01 final command</dt><dd><code>scripts/verify-vault-hunter-atlas T07.V01</code> · <span class="t07-ok">exit 0</span></dd></div>
+        <div class="t07-fact"><dt>V02 final command</dt><dd><code>scripts/verify-vault-hunter-atlas T07.V02</code> · <span class="t07-ok">exit 0</span></dd></div>
+        <div class="t07-fact"><dt>V03 final command</dt><dd><code>scripts/verify-vault-hunter-atlas T07.V03</code> · <span class="t07-ok">exit 0</span></dd></div>
+        <div class="t07-fact"><dt>Final transcript SHA-256</dt><dd class="t07-hash">56a52751b3c41374e8d43ae862e0575b7eb673acd6886d427471d78edfa9e1b2</dd></div>
+        <div class="t07-fact"><dt>160×48 accepted input</dt><dd><code>scripts/goldens/vault-hunter-atlas-t07/160x48.txt</code><br><span class="t07-hash">aef7aa5302eb80f4c86e284b1d00c00c0f273cc2a22ba8f65ceb8f5dd845e62f</span></dd></div>
+        <div class="t07-fact"><dt>120×32 accepted input</dt><dd><code>scripts/goldens/vault-hunter-atlas-t07/120x32.txt</code><br><span class="t07-hash">5c1406ec59905196d2fb871005b00917c48b41eea03ecfb63cc4d39cd79dbc20</span></dd></div>
+      </dl>
+    </section>
+
+    <footer class="t07-footer"><span>design source · project Gruvbox Material tokens</span><span>diagram method · Lavish diagram playbook · responsive inline SVG</span><span>artifact mode · plain render · no annotation/editor UI</span></footer>
+  </main>
+</body>
+</html>
