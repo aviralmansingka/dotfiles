@@ -294,7 +294,7 @@ if (
 	nativeResultRenders < model.cases.length ||
 	lifecycleInvalidations < model.cases.length ||
 	!plain("completed-minimized-t0").includes("1 step · 1 call") ||
-	!plain("completed-minimized-t0").includes("subagent reviewer")
+	!stripAnsi(readFileSync(join(goldenDir, "completed-minimized-t0.ansi"), "utf8")).includes("subagent · reviewer · completed")
 ) fail("genuine production component lifecycle/composition was not observed");
 
 console.log(
