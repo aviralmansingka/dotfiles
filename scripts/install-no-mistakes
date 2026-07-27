@@ -1,0 +1,207 @@
+#!/bin/sh
+set -eu
+
+# Owned, pinned installer for No Mistakes. A local NO_MISTAKES_ASSET can be
+# supplied for an offline install; otherwise only the pinned release URL is
+# fetched.
+VERSION=v1.41.2
+SOURCE_REVISION=867d64d9c2df89f3f204ad1f5528e5bf7b460caa
+CHECKSUMS_SHA256=e17cc7a246bc619f34d423848171e734c5fe033106562db8baeb20de2570a01b
+DARWIN_ARM64_SHA256=59c3963d925db27886dece99aef30e873b978cee1c297bac1f1632854271effe
+LINUX_AMD64_SHA256=a100c58bdfe7df9f598ecec32553d5fbd8eb0079912fc830f362011fd9dc8825
+RELEASE_BASE=https://github.com/kunchenguid/no-mistakes/releases/download/$VERSION
+
+fail() {
+  printf 'install-no-mistakes: %s\n' "$*" >&2
+  exit 1
+}
+
+sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    fail 'no SHA-256 implementation found'
+  fi
+}
+
+manifest_value() {
+  key=$1
+  file=$2
+  awk -F= -v key="$key" '$1 == key { print substr($0, length(key) + 2); exit }' "$file"
+}
+
+write_manifest() {
+  wm_destination=$1
+  wm_version=$2
+  wm_sha=$3
+  wm_platform=$4
+  wm_source=$5
+  wm_revision=$6
+  wm_checksums_sha=$7
+  wm_temporary=$wm_destination.tmp.$$
+  {
+    printf 'version=%s\n' "$wm_version"
+    printf 'sha256=%s\n' "$wm_sha"
+    printf 'platform=%s\n' "$wm_platform"
+    printf 'source=%s\n' "$wm_source"
+    printf 'source_revision=%s\n' "$wm_revision"
+    printf 'checksums_sha256=%s\n' "$wm_checksums_sha"
+  } > "$wm_temporary"
+  if [ -f "$wm_destination" ] && cmp -s "$wm_temporary" "$wm_destination"; then
+    rm -f "$wm_temporary"
+  else
+    mv -f "$wm_temporary" "$wm_destination"
+  fi
+}
+
+has_exact_version() {
+  binary=$1
+  wanted=$2
+  output=$($binary --version 2>/dev/null) || return 1
+  for token in $output; do
+    token=$(printf '%s' "$token" | tr -d ',;()[]')
+    if [ "$token" = "$wanted" ] || [ "$token" = "${wanted#v}" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+restart_daemon() {
+  binary=$1
+  case $(uname -s) in
+    Darwin)
+      label=gui/$(id -u)/com.aviral.no-mistakes
+      if command -v launchctl >/dev/null 2>&1 && launchctl print "$label" >/dev/null 2>&1; then
+        launchctl kickstart -k "$label"
+        return
+      fi
+      ;;
+    Linux)
+      if command -v systemctl >/dev/null 2>&1 && systemctl --user is-enabled no-mistakes.service >/dev/null 2>&1; then
+        systemctl --user restart no-mistakes.service
+        return
+      fi
+      ;;
+  esac
+  "$binary" daemon stop --force >/dev/null 2>&1 || true
+  "$binary" daemon start >/dev/null
+}
+
+os=$(uname -s)
+arch=$(uname -m)
+case "$os/$arch" in
+  Darwin/arm64)
+    platform=darwin-arm64
+    expected_sha=$DARWIN_ARM64_SHA256
+    ;;
+  Linux/x86_64)
+    platform=linux-amd64
+    expected_sha=$LINUX_AMD64_SHA256
+    ;;
+  *) fail "unsupported platform: $os/$arch" ;;
+esac
+asset_name=no-mistakes-$platform
+asset_url=$RELEASE_BASE/$asset_name
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+dotfiles_repo=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
+[ "$(git -C "$dotfiles_repo" rev-parse --show-toplevel 2>/dev/null)" = "$dotfiles_repo" ] || \
+  fail "dotfiles repository is not a Git worktree: $dotfiles_repo"
+
+install_dir=${NO_MISTAKES_INSTALL_DIR:-$HOME/.local/bin}
+target=$install_dir/no-mistakes
+state_dir=${NO_MISTAKES_INSTALL_STATE_DIR:-$HOME/.local/state/no-mistakes-installer}
+current_manifest=$state_dir/current.manifest
+rollback_binary=$state_dir/rollback/no-mistakes
+rollback_manifest=$state_dir/rollback/manifest
+nm_home=${NM_HOME:-$HOME/.no-mistakes}
+skill=$HOME/.agents/skills/no-mistakes/SKILL.md
+
+mkdir -p "$install_dir" "$state_dir/rollback" "$nm_home"
+lock=$state_dir/install.lock
+mkdir "$lock" 2>/dev/null || fail "another install or rollback holds $lock"
+temporary=$install_dir/.no-mistakes.install.$$
+rollback_temporary=$state_dir/rollback/.no-mistakes.$$
+cleanup() {
+  rm -f "$temporary" "$temporary.download" "$rollback_temporary"
+  rmdir "$lock" 2>/dev/null || true
+}
+trap cleanup EXIT HUP INT TERM
+
+if [ -n "${NO_MISTAKES_ASSET:-}" ]; then
+  [ -f "$NO_MISTAKES_ASSET" ] || fail "asset does not exist: $NO_MISTAKES_ASSET"
+  cp "$NO_MISTAKES_ASSET" "$temporary"
+else
+  command -v curl >/dev/null 2>&1 || fail 'curl is required when NO_MISTAKES_ASSET is not set'
+  curl -fL --proto '=https' --tlsv1.2 "$asset_url" -o "$temporary.download"
+  mv "$temporary.download" "$temporary"
+fi
+chmod 0755 "$temporary"
+actual_sha=$(sha256 "$temporary")
+[ "$actual_sha" = "$expected_sha" ] || fail "SHA-256 mismatch for $asset_name: expected $expected_sha, got $actual_sha"
+has_exact_version "$temporary" "$VERSION" || fail "asset did not report exact version $VERSION"
+
+changed=1
+if [ -x "$target" ] && [ "$(sha256 "$target")" = "$expected_sha" ] && has_exact_version "$target" "$VERSION"; then
+  changed=0
+fi
+
+if [ "$changed" = 1 ]; then
+  if [ -e "$target" ]; then
+    [ -f "$current_manifest" ] || fail 'existing binary has no verified current manifest; refusing replacement'
+    previous_sha=$(manifest_value sha256 "$current_manifest")
+    previous_version=$(manifest_value version "$current_manifest")
+    previous_platform=$(manifest_value platform "$current_manifest")
+    previous_source=$(manifest_value source "$current_manifest")
+    previous_revision=$(manifest_value source_revision "$current_manifest")
+    previous_checksums_sha=$(manifest_value checksums_sha256 "$current_manifest")
+    [ -n "$previous_sha" ] && [ -n "$previous_version" ] && [ -n "$previous_platform" ] && \
+      [ -n "$previous_source" ] && [ -n "$previous_revision" ] && [ -n "$previous_checksums_sha" ] || \
+      fail 'current manifest is incomplete; refusing replacement'
+    [ "$(sha256 "$target")" = "$previous_sha" ] || fail 'installed binary does not match its current manifest; refusing replacement'
+    has_exact_version "$target" "$previous_version" || fail 'installed binary version does not match its current manifest'
+    cp "$target" "$rollback_temporary"
+    chmod 0755 "$rollback_temporary"
+    [ "$(sha256 "$rollback_temporary")" = "$previous_sha" ] || fail 'failed to preserve verified rollback binary'
+    mv -f "$rollback_temporary" "$rollback_binary"
+    write_manifest "$rollback_manifest" "$previous_version" "$previous_sha" "$previous_platform" \
+      "$previous_source" "$previous_revision" "$previous_checksums_sha"
+  fi
+  mv -f "$temporary" "$target"
+fi
+# The exact pinned binary is sufficient to reconstruct missing/stale current
+# metadata after an interrupted install, without replacing the binary again.
+write_manifest "$current_manifest" "$VERSION" "$expected_sha" "$platform" "$asset_url" \
+  "$SOURCE_REVISION" "$CHECKSUMS_SHA256"
+
+config=$nm_home/config.yaml
+if [ ! -e "$config" ]; then
+  config_temporary=$nm_home/.config.yaml.$$
+  printf 'agent: pi\n' > "$config_temporary"
+  mv "$config_temporary" "$config"
+elif ! awk '$1 == "agent:" && $2 == "pi" { found=1 } END { exit !found }' "$config"; then
+  fail "$config must select native Pi with 'agent: pi'"
+fi
+
+initialized=0
+if [ ! -f "$skill" ]; then
+  export NO_MISTAKES_TELEMETRY=0
+  export NO_MISTAKES_NO_UPDATE_CHECK=1
+  export NM_HOME="$nm_home"
+  (cd "$dotfiles_repo" && "$target" init)
+  initialized=1
+fi
+[ -f "$skill" ] || fail "upstream init did not generate canonical skill at $skill"
+[ ! -e "$dotfiles_repo/.agents/skills/no-mistakes/SKILL.md" ] || fail 'repository-local Pi skill is forbidden'
+
+if [ "$changed" = 1 ] || [ "$initialized" = 1 ]; then
+  export NO_MISTAKES_TELEMETRY=0
+  export NO_MISTAKES_NO_UPDATE_CHECK=1
+  export NM_HOME="$nm_home"
+  restart_daemon "$target"
+fi
+
+printf 'no-mistakes %s installed for %s (%s)\n' "$VERSION" "$platform" "$expected_sha"

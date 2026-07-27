@@ -1,0 +1,122 @@
+#!/bin/sh
+set -eu
+
+fail() {
+  printf 'rollback-no-mistakes: %s\n' "$*" >&2
+  exit 1
+}
+
+sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    fail 'no SHA-256 implementation found'
+  fi
+}
+
+manifest_value() {
+  key=$1
+  file=$2
+  awk -F= -v key="$key" '$1 == key { print substr($0, length(key) + 2); exit }' "$file"
+}
+
+has_exact_version() {
+  binary=$1
+  wanted=$2
+  output=$($binary --version 2>/dev/null) || return 1
+  for token in $output; do
+    token=$(printf '%s' "$token" | tr -d ',;()[]')
+    if [ "$token" = "$wanted" ] || [ "$token" = "${wanted#v}" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+write_current_manifest() {
+  wcm_destination=$1
+  wcm_temporary=$wcm_destination.tmp.$$
+  {
+    printf 'version=%s\n' "$rollback_version"
+    printf 'sha256=%s\n' "$rollback_sha"
+    printf 'platform=%s\n' "$rollback_platform"
+    printf 'source=%s\n' "$rollback_source"
+    printf 'source_revision=%s\n' "$rollback_revision"
+    printf 'checksums_sha256=%s\n' "$rollback_checksums_sha"
+  } > "$wcm_temporary"
+  mv -f "$wcm_temporary" "$wcm_destination"
+}
+
+restart_daemon() {
+  binary=$1
+  case $(uname -s) in
+    Darwin)
+      label=gui/$(id -u)/com.aviral.no-mistakes
+      if command -v launchctl >/dev/null 2>&1 && launchctl print "$label" >/dev/null 2>&1; then
+        launchctl kickstart -k "$label"
+        return
+      fi
+      ;;
+    Linux)
+      if command -v systemctl >/dev/null 2>&1 && systemctl --user is-enabled no-mistakes.service >/dev/null 2>&1; then
+        systemctl --user restart no-mistakes.service
+        return
+      fi
+      ;;
+  esac
+  "$binary" daemon stop --force >/dev/null 2>&1 || true
+  "$binary" daemon start >/dev/null
+}
+
+install_dir=${NO_MISTAKES_INSTALL_DIR:-$HOME/.local/bin}
+target=$install_dir/no-mistakes
+state_dir=${NO_MISTAKES_INSTALL_STATE_DIR:-$HOME/.local/state/no-mistakes-installer}
+current_manifest=$state_dir/current.manifest
+rollback_binary=$state_dir/rollback/no-mistakes
+rollback_manifest=$state_dir/rollback/manifest
+
+[ -f "$rollback_manifest" ] || fail "no verified rollback manifest at $rollback_manifest"
+[ -x "$rollback_binary" ] || fail "no verified rollback binary at $rollback_binary"
+rollback_version=$(manifest_value version "$rollback_manifest")
+rollback_sha=$(manifest_value sha256 "$rollback_manifest")
+rollback_platform=$(manifest_value platform "$rollback_manifest")
+rollback_source=$(manifest_value source "$rollback_manifest")
+rollback_revision=$(manifest_value source_revision "$rollback_manifest")
+rollback_checksums_sha=$(manifest_value checksums_sha256 "$rollback_manifest")
+[ -n "$rollback_version" ] && [ -n "$rollback_sha" ] && [ -n "$rollback_platform" ] && \
+  [ -n "$rollback_source" ] && [ -n "$rollback_revision" ] && [ -n "$rollback_checksums_sha" ] || \
+  fail 'rollback manifest is incomplete'
+[ "$(sha256 "$rollback_binary")" = "$rollback_sha" ] || fail 'rollback asset SHA-256 does not match its verified manifest'
+has_exact_version "$rollback_binary" "$rollback_version" || fail 'rollback asset version does not match its verified manifest'
+
+mkdir -p "$install_dir" "$state_dir"
+lock=$state_dir/install.lock
+mkdir "$lock" 2>/dev/null || fail "another install or rollback holds $lock"
+temporary=$install_dir/.no-mistakes.rollback.$$
+cleanup() {
+  rm -f "$temporary"
+  rmdir "$lock" 2>/dev/null || true
+}
+trap cleanup EXIT HUP INT TERM
+
+changed=1
+if [ -x "$target" ] && [ "$(sha256 "$target")" = "$rollback_sha" ] && has_exact_version "$target" "$rollback_version"; then
+  changed=0
+fi
+
+if [ "$changed" = 1 ]; then
+  cp "$rollback_binary" "$temporary"
+  chmod 0755 "$temporary"
+  [ "$(sha256 "$temporary")" = "$rollback_sha" ] || fail 'rollback copy failed verification'
+  mv -f "$temporary" "$target"
+  write_current_manifest "$current_manifest"
+
+  export NO_MISTAKES_TELEMETRY=0
+  export NO_MISTAKES_NO_UPDATE_CHECK=1
+  export NM_HOME=${NM_HOME:-$HOME/.no-mistakes}
+  restart_daemon "$target"
+fi
+
+printf 'no-mistakes rolled back to %s (%s)\n' "$rollback_version" "$rollback_sha"
