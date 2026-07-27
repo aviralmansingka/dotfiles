@@ -363,11 +363,13 @@ if (
 let lifecycleInvalidations = 0;
 let clockInvalidations = 0;
 let clockAdvances = 0;
+let thinkingInvalidations = 0;
+let settledExpandedTransitions = 0;
 const clockBehaviorFailures = new Set();
 const workStepSymbol = Symbol.for("aviral.pi.work-step-renderer.step");
 const bridgeSymbol = Symbol.for("aviral.pi.work-step-renderer.subagent-bridge");
 const scenarios = new Map();
-const createScenario = (item, width = model.contract.width) => {
+const createScenario = (item, width = model.contract.width, recordTransition = true) => {
 	clockSource.value = item.clock;
 	Object.defineProperty(process.stdout, "columns", { configurable: true, value: width + 4 });
 	handlers.get("session_shutdown")?.();
@@ -415,6 +417,13 @@ const createScenario = (item, width = model.contract.width) => {
 			? false
 			: item.outputVisible;
 	tool.setExpanded(initialOutputVisible);
+	if (item.activity.status !== "running" && initialOutputVisible) {
+		const renderCount = nativeCallRenders + nativeResultRenders;
+		tool.setExpanded(true);
+		if (nativeCallRenders + nativeResultRenders <= renderCount)
+			fail(`settled Ctrl+O transition did not rebuild native renderers for ${item.name}`);
+		if (recordTransition) settledExpandedTransitions++;
+	}
 	const step = assistant[workStepSymbol];
 	if (!step || tool[workStepSymbol] !== step)
 		fail(`real parent state did not bind the same work-step node for ${item.sequence}`);
@@ -473,7 +482,7 @@ const assertScenarioIdentity = (scenario, item) => {
 const renderCase = (item, width = model.contract.width, isolated = false) => {
 	let scenario = isolated ? undefined : scenarios.get(item.sequence);
 	if (!scenario) {
-		scenario = createScenario(item, width);
+		scenario = createScenario(item, width, !isolated);
 		if (!isolated) scenarios.set(item.sequence, scenario);
 	}
 	const previousClock = scenario.clockValue;
@@ -495,7 +504,13 @@ const renderCase = (item, width = model.contract.width, isolated = false) => {
 		scenario.outputVisible = item.outputVisible;
 	}
 	if (scenario.thinkingHidden !== item.thinkingHidden) {
+		const renderCount = nativeCallRenders + nativeResultRenders;
 		scenario.assistant.setHideThinkingBlock(item.thinkingHidden);
+		scenario.tool.invalidate();
+		scenario.tool.ui.requestRender();
+		if (nativeCallRenders + nativeResultRenders <= renderCount)
+			fail(`Ctrl+T invalidation did not rebuild native renderers for ${item.name}`);
+		thinkingInvalidations++;
 		scenario.thinkingHidden = item.thinkingHidden;
 	}
 	assertScenarioIdentity(scenario, item);
@@ -646,7 +661,7 @@ if (
 	!plain("completed-expanded").includes("Review result") ||
 	!plain("completed-expanded").includes("No correctness risks found.") ||
 	plain("completed-expanded").indexOf(model.call.task) >= plain("completed-expanded").indexOf("git status --short") ||
-	plain("completed-expanded").indexOf("No correctness risks found.") <= plain("completed-expanded").indexOf("Summary")
+	plain("completed-expanded").lastIndexOf("No correctness risks found.") <= plain("completed-expanded").indexOf("Summary")
 ) console.error("T22.V02 mismatch category=expanded-placement Task/tool/final Markdown are not ordered beneath one tree");
 if (
 	actuals.get("running-thinking-hidden-o-then-t").equals(actuals.get("running-live-t0")) ||
@@ -743,9 +758,10 @@ console.log(
 );
 console.log(
 	`T22.V02 deterministic inputs: width=${model.contract.width} control_width=${model.contract.controlWidth} ` +
-	`t0=${model.contract.t0} t1=${model.contract.t1} width_probe_differs=true ` +
-	`clock_provider_token=${clockSource.token} date_now_authority=false ` +
-	`genuine_clock_invalidations=${clockInvalidations} t0_t1_advances=${clockAdvances}`,
+		`t0=${model.contract.t0} t1=${model.contract.t1} width_probe_differs=true ` +
+		`clock_provider_token=${clockSource.token} date_now_authority=false ` +
+		`genuine_clock_invalidations=${clockInvalidations} t0_t1_advances=${clockAdvances} ` +
+		`thinking_invalidations=${thinkingInvalidations} settled_expanded_transitions=${settledExpandedTransitions}`,
 );
 console.log(
 	`T22.V02 same-instance toggles: sequences=${[...scenarios.keys()].join(",")} ` +
@@ -781,6 +797,8 @@ if (
 ) fail("production identity or cleanliness changed after rendering");
 if (clockInvalidations < 2 || clockAdvances < 2)
 	fail("genuine same-component running/completed clock invalidation coverage was not observed");
+if (thinkingInvalidations !== 4 || settledExpandedTransitions !== 2)
+	fail("genuine Ctrl+T or standalone settled Ctrl+O transition coverage differed");
 if (clockBehaviorFailures.size)
 	console.error(`T22.V02 mismatch category=clock-bridge failures=${[...clockBehaviorFailures].join(",")}`);
 if (mismatches.length || clockBehaviorFailures.size) {

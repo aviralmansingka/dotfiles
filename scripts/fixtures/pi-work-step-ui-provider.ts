@@ -26,6 +26,7 @@ const verifierClock = {
 	now: () => verifierClock.value,
 };
 (globalThis as any)[CLOCK_SOURCE] = verifierClock;
+if (process.env.PI_VERIFY_CLOCK_CONTROL) Date.now = verifierClock.now;
 
 type VerifyState = { responseIndex: number };
 
@@ -692,8 +693,10 @@ function installVerifierClockControl(): void {
 	const appliedPath = process.env.PI_VERIFY_CLOCK_APPLIED_MARKER;
 	if (!controlPath || !appliedPath) return;
 	writeFixtureMarker("PI_VERIFY_CLOCK_PROVIDER_MARKER", JSON.stringify({
+		processId: process.pid,
 		token: verifierClock.token,
 		nowIdentityStable: (globalThis as any)[CLOCK_SOURCE]?.now === verifierClock.now,
+		nativeTimestampIdentityStable: Date.now === verifierClock.now,
 		value: verifierClock.now(),
 		finite: Number.isFinite(verifierClock.now()),
 	}));
@@ -772,14 +775,35 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 		throw new Error("Active pi-subagents package did not register its native renderers");
 	const bridgeSymbol = Symbol.for("aviral.pi.work-step-renderer.subagent-bridge");
 	const observedBridges = new WeakSet<object>();
+	const wrappedInvalidations = new WeakMap<object, Function>();
 	const observeClockBridge = (context: any) => {
 		const bridge = context?.state?.[bridgeSymbol];
 		const markerPath = process.env.PI_VERIFY_CLOCK_BRIDGE_MARKER;
-		if (!markerPath || !bridge || typeof bridge !== "object" || observedBridges.has(bridge)) return;
+		if (!markerPath || !bridge || typeof bridge !== "object") return;
+		if (
+			typeof bridge.invalidate === "function" &&
+			wrappedInvalidations.get(bridge) !== bridge.invalidate
+		) {
+			const invalidate = bridge.invalidate;
+			const wrapped = (...args: any[]) => {
+				const invalidationPath = process.env.PI_VERIFY_CLOCK_INVALIDATION_MARKER;
+				if (invalidationPath)
+					appendFileSync(invalidationPath, `${JSON.stringify({
+						processId: process.pid,
+						toolCallId: context.toolCallId,
+						value: verifierClock.now(),
+					})}\n`, "utf8");
+				return invalidate.apply(bridge, args);
+			};
+			wrappedInvalidations.set(bridge, wrapped);
+			bridge.invalidate = wrapped;
+		}
+		if (observedBridges.has(bridge)) return;
 		observedBridges.add(bridge);
 		const source = (globalThis as any)[CLOCK_SOURCE];
 		const clockValue = typeof bridge.clock === "function" ? bridge.clock() : null;
 		appendFileSync(markerPath, `${JSON.stringify({
+			processId: process.pid,
 			toolCallId: context.toolCallId,
 			providerToken: source?.token,
 			providerIdentityStable: source === verifierClock,
