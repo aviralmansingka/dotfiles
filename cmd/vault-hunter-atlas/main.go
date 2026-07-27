@@ -172,12 +172,20 @@ func render(args []string) {
 		if err != nil {
 			fail(err)
 		}
-		if !widthSet {
+		static := *snapshot || os.Getenv("TERM") == "dumb" || !characterDevice(os.Stdin) || !characterDevice(os.Stdout)
+		if static && !widthSet {
 			*width, *height = 80, 24
 		}
 		_, noColor := os.LookupEnv("NO_COLOR")
 		color := atlas.ColorEnabled(*colorMode, *snapshot, characterDevice(os.Stdout), os.Getenv("TERM") == "dumb", noColor)
-		fmt.Println(atlas.NewJournalModel(run, *width, *height).ViewColor(color))
+		model := atlas.NewJournalModel(run, *width, *height)
+		if static {
+			fmt.Println(model.ViewColor(color))
+			return
+		}
+		if _, err := tea.NewProgram(model.WithColor(color), tea.WithAltScreen()).Run(); err != nil {
+			fail(err)
+		}
 		return
 	}
 	if aggregateMode {

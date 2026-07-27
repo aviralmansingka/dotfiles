@@ -95,6 +95,7 @@ type JournalModel struct {
 	events        []journalEvent
 	selected      int
 	detailVisible bool
+	colorEnabled  bool
 	width         int
 	height        int
 }
@@ -128,6 +129,12 @@ func NewJournalModel(run vaultregistry.Run, width, height int) JournalModel {
 	}
 }
 
+// WithColor configures View styling without changing the journal projection.
+func (m JournalModel) WithColor(enabled bool) JournalModel {
+	m.colorEnabled = enabled
+	return m
+}
+
 // Init deliberately schedules no work: a journal is a projection of one
 // already-loaded Run and never polls or animates.
 func (m JournalModel) Init() tea.Cmd {
@@ -138,8 +145,10 @@ func (m JournalModel) Init() tea.Cmd {
 func (m JournalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width, m.height = msg.Width, msg.Height
-		m.clampSelection()
+		if msg.Width > 0 && msg.Height > 0 {
+			m.width, m.height = msg.Width, msg.Height
+			m.clampSelection()
+		}
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "j", "down":
@@ -199,7 +208,7 @@ func (m *JournalModel) selectMatching(direction int, match func(journalEvent) bo
 }
 
 func (m JournalModel) View() string {
-	return m.ViewColor(false)
+	return m.ViewColor(m.colorEnabled)
 }
 
 // ViewColor renders the already-laid-out journal with deterministic true-color
