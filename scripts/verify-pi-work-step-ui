@@ -868,7 +868,7 @@ wait_for_subagent_initial() {
 		screen="$(tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 2>/dev/null || true)"
 		if [[ -f "$subagent_initial_marker" ]] \
 			&& grep -Fq "Thinking…" <<<"$screen" \
-			&& grep -Fq "◉ Delegate deterministic subagent verification" <<<"$screen"; then
+			&& grep -Fq "⟳ Delegate deterministic subagent verification" <<<"$screen"; then
 			return
 		fi
 		sleep 0.1
