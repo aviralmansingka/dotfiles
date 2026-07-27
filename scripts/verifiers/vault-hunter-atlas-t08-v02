@@ -67,6 +67,18 @@ cmp "$tmp/too-small.expected" "$tmp/too-small"
 test "$(wc -l <"$tmp/too-small" | tr -d ' ')" -eq 1
 test "$(LC_ALL=C tr -cd '\033' <"$tmp/too-small" | wc -c | tr -d ' ')" -eq 0
 
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --snapshot --color always --width 80 --height 24 >"$tmp/static-snapshot"
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --width 80 --height 24 </dev/null >"$tmp/static-redirected"
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --width 80 --height 24 </dev/null >"$tmp/static-redirected-again"
+TERM=dumb run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --width 80 --height 24 >"$tmp/static-dumb"
+cmp "$tmp/static-snapshot" "$tmp/static-redirected"
+cmp "$tmp/static-redirected" "$tmp/static-redirected-again"
+cmp "$tmp/static-redirected" "$tmp/static-dumb"
+
 expect_exit journal-feature 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" \
   --feature feature.md --vault-dir "$tmp/vault"
 expect_exit journal-project 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" \
@@ -78,6 +90,95 @@ expect_exit negative-size 2 journal --run-id atlas-journal-run --state-dir "$tmp
 expect_exit missing 1 journal --run-id missing --state-dir "$tmp/state"
 expect_exit malformed 1 journal --run-id malformed --state-dir "$tmp/state"
 expect_exit unsupported 1 journal --run-id unsupported --state-dir "$tmp/state"
+
+command -v expect >/dev/null
+export T08_V02_PTY_BIN="$tmp/vault-hunter-atlas"
+export T08_V02_PTY_STATE="$tmp/state"
+export T08_V02_PTY_HOME="$tmp/home"
+export T08_V02_PTY_PATH="$tmp/traps:$PATH"
+export T08_V02_PTY_LOG="$tmp/pty.log"
+export T08_V02_PTY_TRAP_LOG="$tmp/trap.log"
+expect <<'EXPECT'
+set timeout 5
+log_user 0
+log_file -a -noappend $env(T08_V02_PTY_LOG)
+catch {unset env(NO_COLOR)}
+
+proc fail {message} {
+  puts stderr $message
+  catch {send -- "q"}
+  catch {close}
+  catch {wait}
+  exit 1
+}
+
+spawn env TERM=xterm-256color \
+  HOME=$env(T08_V02_PTY_HOME) XDG_STATE_HOME=$env(T08_V02_PTY_HOME)/state \
+  VAULT_HUNTER_STATE_DIR=$env(T08_V02_PTY_HOME)/retained-registry-must-not-be-read \
+  T08_V02_TRAP_LOG=$env(T08_V02_PTY_TRAP_LOG) PATH=$env(T08_V02_PTY_PATH) \
+  $env(T08_V02_PTY_BIN) journal --run-id atlas-journal-run \
+  --state-dir $env(T08_V02_PTY_STATE) --width 80 --height 24
+
+set esc "\033"
+set background_query "${esc}]11;?${esc}\\"
+set background_reply "${esc}]11;rgb:0000/0000/0000${esc}\\"
+set cursor_query "${esc}\[6n"
+set cursor_reply "${esc}\[1;1R"
+expect {
+  -exact $background_query {
+    send -- $background_reply
+    exp_continue
+  }
+  -exact $cursor_query {
+    send -- $cursor_reply
+    exp_continue
+  }
+  -re {life-later} {}
+  eof { fail "journal exited before initial attached-terminal frame" }
+  timeout { fail "journal timed out before initial attached-terminal frame" }
+}
+set timeout 1
+expect {
+  eof { fail "journal exited before interactive input" }
+  timeout {}
+}
+set timeout 5
+send -- "k"
+expect {
+  -re {>.*evidence-later} {}
+  eof { fail "journal exited before bounded navigation update" }
+  timeout { fail "journal did not render bounded navigation update" }
+}
+expect {
+  -re {Selected Event Detail} {}
+  eof { fail "journal exited before expanded evidence detail" }
+  timeout { fail "journal did not render expanded evidence detail" }
+}
+expect {
+  -re {j/down k/up navigate} {}
+  eof { fail "journal exited before navigation footer" }
+  timeout { fail "journal did not render navigation footer" }
+}
+send -- "\r"
+expect {
+  -re {j/down k/up navigate} {
+    if {[string first "Selected Event Detail" $expect_out(buffer)] >= 0} {
+      fail "journal Enter did not collapse selected detail"
+    }
+  }
+  eof { fail "journal exited before detail-toggle update" }
+  timeout { fail "journal did not render detail-toggle update" }
+}
+send -- "q"
+expect {
+  eof {}
+  timeout { fail "journal did not quit after q" }
+}
+set status [lindex [wait] 3]
+if {$status != 0} {
+  fail "journal interactive exit status was $status"
+}
+EXPECT
 
 state_after=$(manifest "$tmp/state")
 vault_after=$(manifest "$tmp/vault")
