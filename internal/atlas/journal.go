@@ -285,14 +285,14 @@ func (m JournalModel) lines() []journalLine {
 				{text: " "},
 				{text: value(lifecycle.GoalID), style: journalOrdinary},
 				{text: " "},
-				{text: value(lifecycle.Kind), style: journalKindStyle(lifecycle.Kind)},
+				{text: journalKindValue(lifecycle.Kind), style: journalKindStyle(lifecycle.Kind)},
 				{text: " "},
-				{text: value(lifecycle.State), style: journalStateStyle(lifecycle.State)},
+				{text: journalStateValue(lifecycle.State), style: journalStateStyle(lifecycle.State)},
 			})
 			continue
 		}
 		evidence := event.evidence
-		exit := "-"
+		exit := "none recorded"
 		exitStyle := journalMuted
 		if evidence.ExitStatus != nil {
 			exit = fmt.Sprint(*evidence.ExitStatus)
@@ -313,7 +313,7 @@ func (m JournalModel) lines() []journalLine {
 				{text: " "},
 				{text: value(evidence.VerifierID), style: journalReference},
 				{text: " "},
-				{text: value(evidence.State), style: journalStateStyle(evidence.State)},
+				{text: journalStateValue(evidence.State), style: journalStateStyle(evidence.State)},
 				{text: " "},
 				{text: "exit=" + exit, style: exitStyle},
 			},
@@ -349,9 +349,9 @@ func (m JournalModel) lines() []journalLine {
 				{text: "Lifecycle", style: journalHeading},
 			},
 			journalDetailLine("Recorded timestamp:", recorded(lifecycle.ObservedAt), journalHeading, journalMuted),
-			journalDetailLine("Goal ID:", recorded(lifecycle.GoalID), journalHeading, journalOrdinary),
-			journalDetailLine("Kind:", recorded(lifecycle.Kind), journalHeading, journalKindStyle(lifecycle.Kind)),
-			journalDetailLine("State:", recorded(lifecycle.State), journalHeading, journalStateStyle(lifecycle.State)),
+			journalDetailLine("Goal ID:", value(lifecycle.GoalID), journalHeading, journalOrdinary),
+			journalDetailLine("Kind:", journalKindValue(lifecycle.Kind), journalHeading, journalKindStyle(lifecycle.Kind)),
+			journalDetailLine("State:", journalStateValue(lifecycle.State), journalHeading, journalStateStyle(lifecycle.State)),
 			journalDetailLine("Detail:", recorded(lifecycle.Detail), journalHeading, journalOrdinary),
 		)
 	}
@@ -373,8 +373,8 @@ func (m JournalModel) lines() []journalLine {
 			{text: "Evidence", style: journalEvidence},
 		},
 		journalDetailLine("Recorded timestamp:", recorded(evidence.ObservedAt), journalEvidence, journalMuted),
-		journalDetailLine("Verifier ID:", recorded(evidence.VerifierID), journalEvidence, journalReference),
-		journalDetailLine("State:", recorded(evidence.State), journalEvidence, journalStateStyle(evidence.State)),
+		journalDetailLine("Verifier ID:", value(evidence.VerifierID), journalEvidence, journalReference),
+		journalDetailLine("State:", journalStateValue(evidence.State), journalEvidence, journalStateStyle(evidence.State)),
 		journalDetailLine("Command:", recorded(evidence.Command), journalEvidence, journalReference),
 		journalDetailLine("Exit status:", exit, journalEvidence, exitStyle),
 		journalDetailLine("Implementation tree:", recorded(evidence.ImplementationTree), journalEvidence, journalReference),
@@ -421,11 +421,36 @@ func journalDetailLine(label, value string, labelStyle, valueStyle journalStyle)
 	}
 }
 
+func journalKindValue(kind string) string {
+	if kind == "" {
+		return "?"
+	}
+	if !knownKind(kind) {
+		return kind + " ?"
+	}
+	return kind
+}
+
 func journalKindStyle(kind string) journalStyle {
 	if knownKind(kind) {
 		return journalHeading
 	}
 	return journalMuted
+}
+
+func journalStateValue(state string) string {
+	if state == "" {
+		return "?"
+	}
+	if knownState(state) {
+		return state
+	}
+	switch state {
+	case "passed", "success", "succeeded", "accepted", "recorded":
+		return state
+	default:
+		return state + " ?"
+	}
 }
 
 func journalStateStyle(state string) journalStyle {
@@ -441,11 +466,41 @@ func journalStateStyle(state string) journalStyle {
 	}
 }
 
+func normalizeJournalText(text string) string {
+	var normalized strings.Builder
+	for _, r := range text {
+		switch r {
+		case '\n':
+			normalized.WriteString(`\n`)
+		case '\r':
+			normalized.WriteString(`\r`)
+		case '\t':
+			normalized.WriteString(`\t`)
+		case '\x1b':
+			normalized.WriteString(`\x1b`)
+		default:
+			switch {
+			case r <= '\x1f' || r == '\x7f':
+				fmt.Fprintf(&normalized, `\x%02x`, r)
+			case r >= '\x80' && r <= '\x9f':
+				fmt.Fprintf(&normalized, `\u%04x`, r)
+			default:
+				normalized.WriteRune(r)
+			}
+		}
+	}
+	return normalized.String()
+}
+
 func renderJournalLine(line journalLine, width int, enabled bool, styles journalStyles) string {
+	normalizedLine := make(journalLine, len(line))
 	var plain strings.Builder
-	for _, segment := range line {
+	for i, segment := range line {
+		segment.text = normalizeJournalText(segment.text)
+		normalizedLine[i] = segment
 		plain.WriteString(segment.text)
 	}
+	line = normalizedLine
 	clipped := truncate(plain.String(), width)
 	if !enabled {
 		return clipped

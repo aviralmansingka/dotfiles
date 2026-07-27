@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -28,6 +29,12 @@ func main() {
 			}
 			return
 		case "journal":
+			for _, arg := range os.Args[2:] {
+				if arg == "-journal" || arg == "--journal" || strings.HasPrefix(arg, "-journal=") || strings.HasPrefix(arg, "--journal=") {
+					fmt.Fprintln(os.Stderr, "journal alias does not accept a --journal override")
+					os.Exit(2)
+				}
+			}
 			render(append([]string{"--journal"}, os.Args[2:]...))
 			return
 		}
