@@ -61,9 +61,16 @@ for size in 134x32 80x24; do
   golden="$goldens/journal-$size.txt"
   stripped="$tmp/$size.golden.plain"
   case "$size" in
-    134x32) plain_hash=06bcfede2e10cc5e76059bb28679f92f2eb482471ccff6edac9fa87414c7d5aa ;;
-    80x24) plain_hash=4280501260629c501ca6279be981afcead8ade542eff2a78a5bea6ac58d49d62 ;;
+    134x32)
+      raw_hash=21b4fb3309cdd7a21addf75f8b898a1199f85f5f44104d5a68c322e7c1993ad5
+      plain_hash=06bcfede2e10cc5e76059bb28679f92f2eb482471ccff6edac9fa87414c7d5aa
+      ;;
+    80x24)
+      raw_hash=ceb47f597b9be5c12f9fc55dfa1fc7ba75532b59271d918bed5d0bd00c832dd4
+      plain_hash=4280501260629c501ca6279be981afcead8ade542eff2a78a5bea6ac58d49d62
+      ;;
   esac
+  test "$(shasum -a 256 "$golden" | awk '{print $1}')" = "$raw_hash"
   test "$(tail -c 1 "$golden" | od -An -t x1 | tr -d ' \n')" = 0a
   test "$(tail -c 2 "$golden" | od -An -t x1 | tr -d ' \n')" != 0a0a
   validate_ansi "$golden"
@@ -71,6 +78,7 @@ for size in 134x32 80x24; do
   test "$(shasum -a 256 "$stripped" | awk '{print $1}')" = "$plain_hash"
   test "$(wc -l <"$stripped" | tr -d ' ')" -le "$height"
 done
+echo "T08.V01 accepted raw golden SHA-256 pins: PASS"
 
 go test -count=1 ./internal/atlas -run '^TestT08V01'
 

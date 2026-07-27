@@ -167,6 +167,42 @@ func TestT08V02BoundedJournalInteraction(t *testing.T) {
 	})
 }
 
+func TestT08V02InteractiveColorPreservesFaithfulComposition(t *testing.T) {
+	colored := NewJournalModel(journalInteractionRun(), 80, 24).WithColor(true)
+	plain := NewJournalModel(journalInteractionRun(), 80, 24)
+
+	assertInteractiveJournalEquivalent(t, colored, plain, "initial")
+	for _, step := range []struct {
+		name string
+		msg  tea.Msg
+	}{
+		{"evidence jump", runeKey('E')},
+		{"detail collapse", tea.KeyMsg{Type: tea.KeyEnter}},
+		{"detail expand", tea.KeyMsg{Type: tea.KeyEnter}},
+		{"wide resize", tea.WindowSizeMsg{Width: 134, Height: 32}},
+	} {
+		colored = journalUpdate(t, colored, step.msg)
+		plain = journalUpdate(t, plain, step.msg)
+		assertInteractiveJournalEquivalent(t, colored, plain, step.name)
+	}
+}
+
+func assertInteractiveJournalEquivalent(t *testing.T, colored, plain JournalModel, state string) {
+	t.Helper()
+	got := colored.View()
+	if !strings.Contains(got, "\x1b[38;2;") {
+		t.Errorf("%s attached-terminal frame contains no semantic true-color SGR", state)
+	} else {
+		assertExpectedJournalSGR(t, got)
+	}
+	if stripped := stripJournalANSI(got); stripped != plain.View() {
+		t.Errorf("%s attached-terminal frame changed approved plain D composition", state)
+	}
+	if footer := strings.Split(stripJournalANSI(got), "\n"); footer[len(footer)-1] != journalFooter(colored.width) {
+		t.Errorf("%s attached-terminal footer = %q, want %q", state, footer[len(footer)-1], journalFooter(colored.width))
+	}
+}
+
 func journalInteractionRun() vaultregistry.Run {
 	exit := 1
 	return vaultregistry.Run{

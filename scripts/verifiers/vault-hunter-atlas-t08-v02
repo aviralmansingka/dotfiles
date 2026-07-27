@@ -157,7 +157,9 @@ export T08_V02_PTY_STATE="$tmp/state"
 export T08_V02_PTY_HOME="$tmp/home"
 export T08_V02_PTY_PATH="$tmp/traps:$PATH"
 export T08_V02_PTY_LOG="$tmp/pty.log"
+export T08_V02_PTY_SCREENS="$tmp/pty-screens"
 export T08_V02_PTY_TRAP_LOG="$tmp/trap.log"
+mkdir "$T08_V02_PTY_SCREENS"
 expect <<'EXPECT'
 set timeout 5
 log_user 0
@@ -170,6 +172,14 @@ proc fail {message} {
   catch {close}
   catch {wait}
   exit 1
+}
+
+proc checkpoint {name} {
+  global env
+  after 100
+  log_file
+  file copy -force $env(T08_V02_PTY_LOG) "$env(T08_V02_PTY_SCREENS)/$name.raw"
+  log_file -a $env(T08_V02_PTY_LOG)
 }
 
 spawn env TERM=xterm-256color \
@@ -209,6 +219,12 @@ expect {
   eof { fail "journal exited before initial D omission row" }
   timeout { fail "journal did not render initial D omission row" }
 }
+expect {
+  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
+  eof { fail "journal exited before initial D footer" }
+  timeout { fail "journal did not render initial D footer" }
+}
+checkpoint initial
 set timeout 1
 expect {
   eof { fail "journal exited before interactive input" }
@@ -221,12 +237,24 @@ expect {
   eof { fail "journal exited before D evidence jump" }
   timeout { fail "journal did not render D evidence jump" }
 }
+expect {
+  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
+  eof { fail "journal exited before evidence-jump footer" }
+  timeout { fail "journal did not render evidence-jump footer" }
+}
+checkpoint evidence
 send -- "j"
 expect {
   -re {observation ID · life-later} {}
   eof { fail "journal exited before bounded D navigation update" }
   timeout { fail "journal did not render bounded D navigation update" }
 }
+expect {
+  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
+  eof { fail "journal exited before lifecycle-navigation footer" }
+  timeout { fail "journal did not render lifecycle-navigation footer" }
+}
+checkpoint lifecycle
 send -- "E"
 expect {
   -re {observation ID · evidence-later} {}
@@ -253,12 +281,19 @@ expect {
   eof { fail "journal exited before detail-toggle update" }
   timeout { fail "journal did not render D detail-toggle update" }
 }
+checkpoint collapsed
 send -- "\r"
 expect {
   -re {selected recorded observation · evidence} {}
   eof { fail "journal exited before detail re-expand update" }
   timeout { fail "journal did not re-expand D evidence detail" }
 }
+expect {
+  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
+  eof { fail "journal exited before re-expanded footer" }
+  timeout { fail "journal did not render re-expanded footer" }
+}
+checkpoint expanded
 exec stty -f $spawn_out(slave,name) rows 32 columns 134
 exec kill -WINCH [exp_pid]
 expect {
@@ -271,6 +306,12 @@ expect {
   eof { fail "journal exited before resized selection frame" }
   timeout { fail "journal did not retain selection across D resize" }
 }
+expect {
+  -re {g/G first/last · j/k/↑/↓ records · v/V verifier · e/E evidence · enter detail · q/Esc quit} {}
+  eof { fail "journal exited before resized D footer" }
+  timeout { fail "journal did not render resized D footer" }
+}
+checkpoint wide
 send -- "q"
 expect {
   eof {}
@@ -281,6 +322,242 @@ if {$status != 0} {
   fail "journal interactive exit status was $status"
 }
 EXPECT
+
+python3 - "$tmp/pty-screens" "$tmp/static-snapshot" <<'PY'
+import pathlib
+import re
+import sys
+import unicodedata
+
+
+class Screen:
+    def __init__(self, width, height):
+        self.resize(width, height)
+        self.saved = (0, 0)
+        self.pending_wrap = False
+
+    def resize(self, width, height):
+        old = getattr(self, "cells", [])
+        self.width, self.height = width, height
+        self.cells = [[" "] * width for _ in range(height)]
+        for y, row in enumerate(old[:height]):
+            self.cells[y][:min(width, len(row))] = row[:width]
+        self.x = min(getattr(self, "x", 0), width - 1)
+        self.y = min(getattr(self, "y", 0), height - 1)
+
+    def clear(self):
+        self.cells = [[" "] * self.width for _ in range(self.height)]
+        self.x = self.y = 0
+        self.pending_wrap = False
+
+    def scroll(self):
+        self.cells.pop(0)
+        self.cells.append([" "] * self.width)
+        self.y = self.height - 1
+
+    def put(self, char):
+        cells = 0 if unicodedata.combining(char) else 2 if unicodedata.east_asian_width(char) in "WF" else 1
+        if cells == 0:
+            if self.x:
+                self.cells[self.y][self.x - 1] += char
+            return
+        if self.pending_wrap:
+            self.x = 0
+            self.y += 1
+            if self.y >= self.height:
+                self.scroll()
+            self.pending_wrap = False
+        if cells == 2 and self.x == self.width - 1:
+            self.pending_wrap = True
+            self.put(char)
+            return
+        self.cells[self.y][self.x] = char
+        if cells == 2:
+            self.cells[self.y][self.x + 1] = ""
+        if self.x + cells >= self.width:
+            self.x = self.width - 1
+            self.pending_wrap = True
+        else:
+            self.x += cells
+
+    def csi(self, private, params, final):
+        values = [int(value) if value else 0 for value in params.split(";")] if params else [0]
+        n = values[0] or 1
+        if private == "?" and final == "h" and 1049 in values:
+            self.clear()
+        elif final in "Hf":
+            self.y = min(max((values[0] or 1) - 1, 0), self.height - 1)
+            col = values[1] if len(values) > 1 else 1
+            self.x = min(max((col or 1) - 1, 0), self.width - 1)
+            self.pending_wrap = False
+        elif final == "A":
+            self.y = max(0, self.y - n)
+        elif final in "BE":
+            self.y = min(self.height - 1, self.y + n)
+            if final == "E":
+                self.x = 0
+        elif final == "F":
+            self.y, self.x = max(0, self.y - n), 0
+        elif final == "C":
+            self.x = min(self.width - 1, self.x + n)
+        elif final == "D":
+            self.x = max(0, self.x - n)
+        elif final == "G":
+            self.x = min(self.width - 1, n - 1)
+        elif final == "J":
+            mode = values[0]
+            if mode in (2, 3):
+                self.clear()
+            elif mode == 0:
+                self.cells[self.y][self.x:] = [" "] * (self.width - self.x)
+                for row in range(self.y + 1, self.height):
+                    self.cells[row] = [" "] * self.width
+        elif final == "K":
+            mode = values[0]
+            if mode == 0:
+                self.cells[self.y][self.x:] = [" "] * (self.width - self.x)
+            elif mode == 1:
+                self.cells[self.y][:self.x + 1] = [" "] * (self.x + 1)
+            elif mode == 2:
+                self.cells[self.y] = [" "] * self.width
+        elif final == "s":
+            self.saved = (self.x, self.y)
+        elif final == "u":
+            self.x, self.y = self.saved
+
+    def feed(self, raw):
+        text = raw.decode("utf-8", "replace")
+        i = 0
+        while i < len(text):
+            char = text[i]
+            if char == "\x1b":
+                if i + 1 < len(text) and text[i + 1] == "[":
+                    match = re.match(r"\x1b\[([?]?)([0-9;]*)([ -/]*)([@-~])", text[i:])
+                    if match:
+                        self.csi(match.group(1), match.group(2), match.group(4))
+                        i += len(match.group(0))
+                        continue
+                if i + 1 < len(text) and text[i + 1] == "]":
+                    end_bel = text.find("\x07", i + 2)
+                    end_st = text.find("\x1b\\", i + 2)
+                    ends = [end for end in (end_bel, end_st) if end >= 0]
+                    if ends:
+                        end = min(ends)
+                        i = end + (2 if text.startswith("\x1b\\", end) else 1)
+                        continue
+                if i + 1 < len(text) and text[i + 1] in "78":
+                    if text[i + 1] == "7":
+                        self.saved = (self.x, self.y)
+                    else:
+                        self.x, self.y = self.saved
+                    i += 2
+                    continue
+                i += 2
+                continue
+            if char == "\r":
+                self.x = 0
+                self.pending_wrap = False
+            elif char == "\n":
+                self.y += 1
+                if self.y >= self.height:
+                    self.scroll()
+            elif char == "\b":
+                self.x = max(0, self.x - 1)
+                self.pending_wrap = False
+            elif char >= " " and char != "\x7f":
+                self.put(char)
+            i += 1
+
+    def lines(self):
+        return ["".join(row).rstrip() for row in self.cells]
+
+
+def fail(message):
+    raise SystemExit(message)
+
+
+def find(lines, token):
+    for index, line in enumerate(lines):
+        if token in line:
+            return index
+    fail(f"visible PTY frame missing {token!r}")
+
+
+def ordered(lines, *tokens):
+    positions = [find(lines, token) for token in tokens]
+    if positions != sorted(positions):
+        fail(f"visible PTY frame order is wrong for {tokens!r}: {positions}")
+
+
+def foreground_sgr(raw):
+    allowed = {
+        b"\x1b[38;2;146;131;116m", b"\x1b[38;2;235;219;178m",
+        b"\x1b[38;2;251;241;199m", b"\x1b[38;2;242;133;52m",
+        b"\x1b[38;2;211;134;155m", b"\x1b[38;2;128;170;158m",
+        b"\x1b[38;2;184;187;38m", b"\x1b[38;2;233;177;67m",
+        b"\x1b[38;2;242;89;75m",
+    }
+    seen = set(re.findall(rb"\x1b\[38;2;[0-9;]+m", raw))
+    if not seen:
+        fail("initial attached-terminal frame contains no semantic true-color SGR")
+    unexpected = seen - allowed
+    if unexpected:
+        fail(f"attached-terminal frame contains unexpected foreground SGR: {sorted(unexpected)!r}")
+
+
+screens = pathlib.Path(sys.argv[1])
+expected_initial = pathlib.Path(sys.argv[2]).read_text().splitlines()
+phases = [
+    ("initial", 80, 24),
+    ("evidence", 80, 24),
+    ("lifecycle", 80, 24),
+    ("collapsed", 80, 24),
+    ("expanded", 80, 24),
+    ("wide", 134, 32),
+]
+screen = Screen(80, 24)
+previous = b""
+visible = {}
+for name, width, height in phases:
+    raw = (screens / f"{name}.raw").read_bytes()
+    if not raw.startswith(previous):
+        fail(f"{name} PTY checkpoint is not cumulative")
+    if (width, height) != (screen.width, screen.height):
+        screen.resize(width, height)
+    screen.feed(raw[len(previous):])
+    previous = raw
+    visible[name] = screen.lines()
+
+foreground_sgr((screens / "initial.raw").read_bytes())
+if visible["initial"] != expected_initial:
+    for row, (got, want) in enumerate(zip(visible["initial"], expected_initial), 1):
+        if got != want:
+            fail(f"initial visible PTY row {row} = {got!r}, want approved D row {want!r}")
+    fail("initial visible PTY frame differs from approved static D semantics")
+
+narrow_footer = "g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit"
+wide_footer = "g/G first/last · j/k/↑/↓ records · v/V verifier · e/E evidence · enter detail · q/Esc quit"
+ordered(visible["evidence"], "recorded journal events omitted", "· selected",
+        "selected recorded observation · evidence", "observation ID · evidence-later", narrow_footer)
+ordered(visible["lifecycle"], "recorded journal events omitted", "· selected",
+        "selected recorded observation · lifecycle", "observation ID · life-later", narrow_footer)
+ordered(visible["collapsed"], "recorded journal events omitted", "· selected", narrow_footer)
+if any("selected recorded observation" in line for line in visible["collapsed"]):
+    fail("collapsed visible PTY frame retained the selected card")
+ordered(visible["expanded"], "recorded journal events omitted", "· selected",
+        "selected recorded observation · evidence", "observation ID · evidence-later", narrow_footer)
+ordered(visible["wide"], "shown later: T08.HIDDEN → T08.LANDING",
+        "recorded journal events omitted", "· selected",
+        "selected recorded observation · evidence", "observation ID · evidence-later", wide_footer)
+
+for line in visible["wide"]:
+    trimmed = line.lstrip(" ")
+    if trimmed.startswith(("●", "│  ", "└─ …")):
+        if len(line) - len(trimmed) != 26:
+            fail(f"wide visible PTY rail is not centered: {line!r}")
+        if len(line) > 108:
+            fail(f"wide visible PTY rail exceeds centered 82-cell bound: {line!r}")
+PY
 
 state_after=$(manifest "$tmp/state")
 vault_after=$(manifest "$tmp/vault")

@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
+	"github.com/charmbracelet/lipgloss"
 )
 
 const (
@@ -406,6 +407,49 @@ func TestT08V01RegistryNormalizationAndMarkers(t *testing.T) {
 	assertUnknownJournalMarker(t, NewJournalModel(unknown, 80, 24).View(), "future-state")
 }
 
+func TestT08V01ReviewRailHeaderAndTruncatedMarkers(t *testing.T) {
+	unknownKind := strings.Repeat("future-kind界", 12)
+	unknownState := strings.Repeat("future-state界", 12)
+	lifecycle := make([]vaultregistry.Lifecycle, 8)
+	for i := range lifecycle {
+		lifecycle[i] = vaultregistry.Lifecycle{
+			ObservationID: fmt.Sprintf("review-%d", i),
+			ObservedAt:    fmt.Sprintf("2026-07-26T10:%02d:00Z", i),
+			GoalID:        strings.Repeat("wide界", 20),
+			Kind:          "checkpoint",
+			State:         "pending",
+			Detail:        strings.Repeat("detail界", 20),
+		}
+	}
+	lifecycle[0].GoalID, lifecycle[0].State, lifecycle[0].Detail = "active-goal", "active", ""
+	lifecycle[len(lifecycle)-1].Kind = unknownKind
+	lifecycle[len(lifecycle)-1].State = unknownState
+
+	view := NewJournalModel(vaultregistry.Run{Lifecycle: lifecycle}, 134, 32).View()
+	assertCenteredJournalRailBounds(t, view, 134)
+
+	lines := strings.Split(view, "\n")
+	foundActive := false
+	for i, line := range lines {
+		if strings.Contains(line, "/goal active-goal · active") {
+			foundActive = true
+			got := ""
+			if i+1 < len(lines) {
+				got = strings.TrimSpace(lines[i+1])
+			}
+			if got != "checkpoint · none recorded" {
+				t.Errorf("empty active-goal detail line = %q, want exact no-node header", got)
+			}
+			break
+		}
+	}
+	if !foundActive {
+		t.Fatal("active-goal header is missing")
+	}
+	assertTruncatedUnknownJournalMarker(t, view, "kind")
+	assertTruncatedUnknownJournalMarker(t, view, "state")
+}
+
 func journalFieldRun(evidence bool) vaultregistry.Run {
 	run := vaultregistry.Run{
 		SchemaVersion: 1,
@@ -536,11 +580,31 @@ func assertCenteredJournalRail(t *testing.T, view string, width int) {
 	wantMargin := (width - min(82, width-2)) / 2
 	for _, line := range strings.Split(view, "\n") {
 		trimmed := strings.TrimLeft(line, " ")
-		if strings.HasPrefix(trimmed, "●") ||
+		if (strings.HasPrefix(trimmed, "●") && strings.Contains(trimmed, " UTC · ")) ||
 			strings.HasPrefix(trimmed, "│  ") ||
 			strings.HasPrefix(trimmed, "└─ …") {
 			if got := len(line) - len(trimmed); got != wantMargin {
 				t.Errorf("rail margin = %d, want %d for %q", got, wantMargin, line)
+			}
+		}
+	}
+}
+
+func assertCenteredJournalRailBounds(t *testing.T, view string, width int) {
+	t.Helper()
+	railWidth := min(82, width-2)
+	margin := (width - railWidth) / 2
+	prefix := strings.Repeat(" ", margin)
+	for _, line := range strings.Split(view, "\n") {
+		trimmed := strings.TrimLeft(line, " ")
+		if (strings.HasPrefix(trimmed, "●") && strings.Contains(trimmed, " UTC · ")) ||
+			strings.HasPrefix(trimmed, "│  ") ||
+			strings.HasPrefix(trimmed, "└─ …") {
+			if !strings.HasPrefix(line, prefix) {
+				t.Errorf("rail line is not centered with %d-cell margin: %q", margin, line)
+			}
+			if got := lipgloss.Width(line); got > margin+railWidth {
+				t.Errorf("rail line reaches cell %d, want at most %d: %q", got, margin+railWidth, line)
 			}
 		}
 	}
@@ -569,4 +633,18 @@ func assertUnknownJournalMarker(t *testing.T, view, value string) {
 	if !found {
 		t.Errorf("unknown value %q is not visible", value)
 	}
+}
+
+func assertTruncatedUnknownJournalMarker(t *testing.T, view, label string) {
+	t.Helper()
+	needle := "├─ " + label + " · "
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, needle) {
+			if !strings.Contains(line, "?") {
+				t.Errorf("truncated unknown %s has no visible neutral marker in %q", label, line)
+			}
+			return
+		}
+	}
+	t.Errorf("selected card has no %s field", label)
 }
