@@ -85,6 +85,123 @@ func TestPrototypeSmoke(t *testing.T) {
 	assertBounded(t, m.View(), 120, 32)
 }
 
+func TestSubagentDetailsAreHumanizedInEveryVariant(t *testing.T) {
+	tests := []struct {
+		name    string
+		kind    string
+		state   string
+		detail  string
+		want    []string
+		notWant []string
+	}{
+		{
+			name:   "started",
+			kind:   "subagent/started",
+			state:  "running",
+			detail: `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-secret","parent_session_id":"session-secret","agent":"scout","task_sha256":"task-secret","cwd":"/tmp/prototype"}`,
+			want:   []string{"◉ scout is working…", "cwd prototype"},
+		},
+		{
+			name:   "successful finished hash only",
+			kind:   "subagent/finished",
+			state:  "completed",
+			detail: `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-secret","parent_session_id":"session-secret","agent":"writer","model":"gpt-test","result_sha256":"abcdef0123456789","duration_ms":1500,"exit_status":0,"tool_count":3,"usage":{"total_tokens":1234,"cost":0.125,"turns":4},"error":""}`,
+			want:   []string{"✓ writer completed", "model gpt-test", "duration 1.5s", "3 tools · 4 turns", "1234 tokens · $0.1250", "output sha abcdef012345"},
+		},
+		{
+			name:   "failed",
+			kind:   "subagent/finished",
+			state:  "failed",
+			detail: `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-secret","parent_session_id":"session-secret","agent":"reviewer","duration_ms":20,"exit_status":7,"tool_count":1,"usage":{"total_tokens":20,"cost":0,"turns":1},"error":"timed out"}`,
+			want:   []string{"× reviewer failed", "error timed out", "exit 7"},
+		},
+		{
+			name:    "future multiline output",
+			kind:    "subagent/finished",
+			state:   "completed",
+			detail:  `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-secret","parent_session_id":"session-secret","agent":"writer","result_sha256":"hash-must-not-stand-in-for-output","duration_ms":40,"exit_status":0,"tool_count":1,"usage":{"total_tokens":20,"cost":0.01,"turns":1},"output":"First actual line with enough prose to wrap within the narrow dossier.\nSecond actual line."}`,
+			want:    []string{"✓ writer completed", "Output", "First actual line", "dossier.", "Second actual line."},
+			notWant: []string{"output sha"},
+		},
+		{
+			name:   "plain detail",
+			kind:   "note",
+			state:  "active",
+			detail: "A plain lifecycle note remains visible.",
+			want:   []string{"A plain lifecycle note remains"},
+		},
+		{
+			name:    "unknown json",
+			kind:    "subagent/finished",
+			state:   "completed",
+			detail:  `{"schema":"some-future-schema/v9","tool_call_id":"do-not-show","payload":"a very long structured value that must not spread across the board"}`,
+			want:    []string{"structured detail recorded"},
+			notWant: []string{"some-future-schema", "very long structured value"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			run := vaultregistry.Run{
+				SchemaVersion: 1,
+				RunID:         "agent-presentation",
+				Revision:      1,
+				InvokedAt:     "2026-02-20T10:00:00Z",
+				UpdatedAt:     "2026-02-20T10:01:00Z",
+				Task:          vaultregistry.Task{ID: "T22", Title: "Agent output presentation", Kind: "prototype"},
+				Lifecycle: []vaultregistry.Lifecycle{{
+					ObservationID: "agent-observation",
+					ObservedAt:    "2026-02-20T10:01:00Z",
+					GoalID:        "subagent/test",
+					Kind:          test.kind,
+					State:         test.state,
+					Detail:        test.detail,
+				}},
+			}
+			m, err := newModel([]vaultregistry.Run{run}, "", 0, "never")
+			if err != nil {
+				t.Fatal(err)
+			}
+			m.width, m.height = 120, 32
+			for variant := range variantNames {
+				m.variant = variant
+				view := m.View()
+				assertBounded(t, view, 120, 32)
+				for _, wanted := range test.want {
+					if !strings.Contains(view, wanted) {
+						t.Errorf("%s view does not contain %q:\n%s", variantNames[variant], wanted, view)
+					}
+				}
+				unwantedValues := append([]string{`"schema"`, "tool_call_id", "parent_session_id", "task-secret"}, test.notWant...)
+				if strings.HasPrefix(strings.TrimSpace(test.detail), "{") {
+					unwantedValues = append(unwantedValues, test.detail)
+				}
+				for _, unwanted := range unwantedValues {
+					if strings.Contains(view, unwanted) {
+						t.Errorf("%s view exposes %q:\n%s", variantNames[variant], unwanted, view)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestStateGlyphMappings(t *testing.T) {
+	tests := map[string]string{
+		"running": "◉", "active": "◉", "activated": "◉", "in-progress": "◉",
+		"completed": "✓", "done": "✓", "passed": "✓", "success": "✓", "accepted": "✓",
+		"failed": "×", "error": "×", "rejected": "×",
+		"pending": "○", "queued": "○",
+		"blocked": "!", "interrupted": "!",
+		"awaiting-human-evaluation": "◇", "resuming": "↻", "literal-unknown": "?",
+	}
+	for state, wanted := range tests {
+		if got := stateGlyph(state); got != wanted {
+			t.Errorf("stateGlyph(%q) = %q, want %q", state, got, wanted)
+		}
+	}
+}
+
 func updateModel(t *testing.T, m model, msg tea.Msg) model {
 	t.Helper()
 	updated, _ := m.Update(msg)

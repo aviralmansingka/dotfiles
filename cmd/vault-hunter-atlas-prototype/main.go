@@ -2,10 +2,12 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -44,6 +46,25 @@ type event struct {
 	lifecycle   *vaultregistry.Lifecycle
 	evidence    *vaultregistry.Evidence
 	participant *vaultregistry.Participant
+}
+
+type subagentDetail struct {
+	Schema       string `json:"schema"`
+	Agent        string `json:"agent"`
+	CWD          string `json:"cwd"`
+	Model        string `json:"model"`
+	ResultSHA256 string `json:"result_sha256"`
+	DurationMS   *int64 `json:"duration_ms"`
+	ExitStatus   *int   `json:"exit_status"`
+	ToolCount    *int   `json:"tool_count"`
+	Usage        *struct {
+		TotalTokens *int64   `json:"total_tokens"`
+		Cost        *float64 `json:"cost"`
+		Turns       *int     `json:"turns"`
+	} `json:"usage"`
+	Error  string  `json:"error"`
+	Output *string `json:"output"`
+	Result *string `json:"result"`
 }
 
 type palette struct {
@@ -433,9 +454,7 @@ func (m model) goalTreeBlock(g goal, selected bool) []string {
 		}
 		rows = append(rows, m.line("│       "+branch+" "+eventSummary(observation), m.width, m.eventStyle(observation)))
 		if m.showDetail {
-			if detail := eventDetail(observation); detail != "" {
-				rows = append(rows, m.line("│       │  "+detail, m.width, m.styles.narrative))
-			}
+			rows = append(rows, m.eventDetailRows(observation, "│       │  ", m.width)...)
 			if observation.evidence != nil && observation.evidence.Command != "" {
 				rows = append(rows, m.line("│       │  $ "+observation.evidence.Command, m.width, m.styles.h5))
 			}
@@ -462,70 +481,94 @@ func (m model) timeRiver(limit int) []string {
 			left = append(left, fmt.Sprintf("  %s  │  %s  │  %s", marker, shown(events[i].at), eventSummary(events[i])))
 		}
 	}
-	right := m.dossier(limit)
+	right := m.dossier(limit, rightWidth)
 	rows := make([]string, 0, limit)
 	for i := 0; i < limit; i++ {
-		l, r := "", ""
+		l := ""
 		if i < len(left) {
 			l = left[i]
 		}
+		r := m.cell("", rightWidth, m.styles.fg)
 		if i < len(right) {
 			r = right[i]
 		}
-		leftStyle, rightStyle := m.styles.fg, m.styles.fg
+		leftStyle := m.styles.fg
 		if i == 0 {
-			leftStyle, rightStyle = m.styles.h4, m.styles.h5
-		} else if strings.Contains(l, "no recorded") || strings.Contains(r, "none recorded") {
-			leftStyle, rightStyle = m.styles.empty, m.styles.empty
+			leftStyle = m.styles.h4
+		} else if strings.Contains(l, "no recorded") {
+			leftStyle = m.styles.empty
 		}
-		rows = append(rows, m.cell(l, leftWidth, leftStyle)+m.styles.rail.Render("│")+m.cell(r, rightWidth, rightStyle))
+		rows = append(rows, m.cell(l, leftWidth, leftStyle)+m.styles.rail.Render("│")+r)
 	}
 	return rows
 }
 
-func (m model) dossier(limit int) []string {
+func (m model) dossier(limit, width int) []string {
+	rows := make([]string, 0, limit)
+	add := func(text string, style lipgloss.Style) {
+		if len(rows) < limit {
+			rows = append(rows, m.cell(text, width, style))
+		}
+	}
 	if len(m.goals) == 0 {
-		return []string{"STICKY DOSSIER", "no recorded goals"}
+		add("STICKY DOSSIER", m.styles.h5)
+		add("no recorded goals", m.styles.empty)
+		return rows
 	}
 	g := m.goals[m.goal]
-	rows := []string{
-		"STICKY DOSSIER",
-		fmt.Sprintf("▶ %s  %s", stateGlyph(g.state), shown(g.id)),
-		"state  " + shown(g.state),
-		"kind   " + shown(g.kind),
-		fmt.Sprintf("trace  %d lifecycle · %d evidence", len(g.lifecycle), len(g.evidence)),
-		"",
-		"PARTICIPANTS",
+	add("STICKY DOSSIER", m.styles.h5)
+	add(fmt.Sprintf("▶ %s  %s", stateGlyph(g.state), shown(g.id)), m.goalStyle(g, true))
+	add("state  "+shown(g.state), m.styles.fg)
+	add("kind   "+shown(g.kind), m.styles.fg)
+	add(fmt.Sprintf("trace  %d lifecycle · %d evidence", len(g.lifecycle), len(g.evidence)), m.styles.muted)
+	add("", m.styles.fg)
+	add("LATEST LIFECYCLE", m.styles.h3)
+	if len(g.lifecycle) == 0 {
+		add("none recorded", m.styles.empty)
+	} else {
+		lifecycle := g.lifecycle[len(g.lifecycle)-1]
+		observation := event{goalID: g.id, lifecycle: &lifecycle}
+		add(eventSummary(observation), m.eventStyle(observation))
+		if m.showDetail {
+			for _, row := range m.eventDetailRows(observation, "", width) {
+				if len(rows) < limit {
+					rows = append(rows, row)
+				}
+			}
+		}
 	}
+	add("", m.styles.fg)
+	add("PARTICIPANTS", m.styles.h4)
 	if len(g.participants) == 0 {
-		rows = append(rows, "none recorded")
+		add("none recorded", m.styles.empty)
 	} else {
 		for _, participant := range g.participants {
-			rows = append(rows, fmt.Sprintf("◆ %s · %s", shown(participant.ParticipantID), shown(participant.Role)))
+			add(fmt.Sprintf("◆ %s · %s", shown(participant.ParticipantID), shown(participant.Role)), m.styles.fg)
 		}
 	}
-	rows = append(rows, "", "LATEST EVIDENCE")
+	add("", m.styles.fg)
+	add("LATEST EVIDENCE", m.styles.h6)
 	if len(g.evidence) == 0 {
-		rows = append(rows, "none recorded")
+		add("none recorded", m.styles.empty)
 	} else {
 		evidence := g.evidence[len(g.evidence)-1]
-		rows = append(rows, fmt.Sprintf("! %s · %s", shown(evidence.ObservedAt), shown(evidence.State)))
+		add(fmt.Sprintf("! %s · %s", shown(evidence.ObservedAt), shown(evidence.State)), m.styles.fg)
 		if evidence.ExitStatus != nil {
-			rows = append(rows, fmt.Sprintf("exit %d", *evidence.ExitStatus))
+			add(fmt.Sprintf("exit %d", *evidence.ExitStatus), m.styles.muted)
 		}
 		if evidence.Command != "" {
-			rows = append(rows, "$ "+evidence.Command)
+			add("$ "+evidence.Command, m.styles.h5)
 		}
 		if m.showDetail && evidence.Detail != "" {
-			rows = append(rows, evidence.Detail)
+			add(evidence.Detail, m.styles.narrative)
 		}
 	}
-	return rows[:min(len(rows), limit)]
+	return rows
 }
 
 func (m model) stateDeck(limit int) []string {
 	states := []string{"pending", "active", "awaiting-human-evaluation", "blocked", "failed", "done"}
-	labels := []string{"○ PENDING", "● ACTIVE", "◇ WAITING", "! BLOCKED", "× FAILED", "✓ DONE"}
+	labels := []string{"○ PENDING", "◉ ACTIVE", "◇ WAITING", "! BLOCKED", "× FAILED", "✓ DONE"}
 	laneHeight := min(8, max(3, limit/3))
 	lanes := make([][]string, len(states))
 	other := []string{}
@@ -627,6 +670,16 @@ func selectedGoalID(m model) string {
 func eventSummary(observation event) string {
 	switch {
 	case observation.lifecycle != nil:
+		if detail, ok := parseSubagentDetail(observation.lifecycle); ok {
+			agent := shown(detail.Agent)
+			if observation.lifecycle.Kind == "subagent/started" {
+				return fmt.Sprintf("◉ %s is working…", agent)
+			}
+			if subagentFailed(*observation.lifecycle, detail) {
+				return fmt.Sprintf("× %s failed", agent)
+			}
+			return fmt.Sprintf("✓ %s completed", agent)
+		}
 		return fmt.Sprintf("%s %s · %s · %s", stateGlyph(observation.lifecycle.State), shown(observation.goalID), shown(observation.lifecycle.Kind), shown(observation.lifecycle.State))
 	case observation.evidence != nil:
 		exit := ""
@@ -639,32 +692,151 @@ func eventSummary(observation event) string {
 	}
 }
 
-func eventDetail(observation event) string {
-	if observation.lifecycle != nil {
-		return observation.lifecycle.Detail
+func parseSubagentDetail(lifecycle *vaultregistry.Lifecycle) (subagentDetail, bool) {
+	if lifecycle == nil || lifecycle.Kind != "subagent/started" && lifecycle.Kind != "subagent/finished" {
+		return subagentDetail{}, false
 	}
-	if observation.evidence != nil {
-		return observation.evidence.Detail
+	var detail subagentDetail
+	if json.Unmarshal([]byte(lifecycle.Detail), &detail) != nil || detail.Schema != "vault-hunter-subagent/v1" {
+		return subagentDetail{}, false
 	}
-	return ""
+	return detail, true
+}
+
+func subagentFailed(lifecycle vaultregistry.Lifecycle, detail subagentDetail) bool {
+	return lifecycle.State == "failed" || lifecycle.State == "error" || lifecycle.State == "rejected" || detail.Error != "" || detail.ExitStatus != nil && *detail.ExitStatus != 0
+}
+
+func (m model) eventDetailRows(observation event, prefix string, width int) []string {
+	if observation.lifecycle == nil {
+		if observation.evidence != nil && observation.evidence.Detail != "" {
+			return []string{m.line(prefix+observation.evidence.Detail, width, m.styles.narrative)}
+		}
+		return nil
+	}
+	lifecycle := observation.lifecycle
+	detail, known := parseSubagentDetail(lifecycle)
+	if !known {
+		if lifecycle.Detail == "" {
+			return nil
+		}
+		if json.Valid([]byte(strings.TrimSpace(lifecycle.Detail))) {
+			return []string{m.line(prefix+"structured detail recorded", width, m.styles.empty)}
+		}
+		return []string{m.line(prefix+lifecycle.Detail, width, m.styles.narrative)}
+	}
+
+	rows := make([]string, 0, 8)
+	add := func(text string, style lipgloss.Style) {
+		rows = append(rows, m.line(prefix+text, width, style))
+	}
+	if lifecycle.Kind == "subagent/started" {
+		if detail.CWD != "" {
+			add("└─ cwd "+filepath.Base(filepath.Clean(detail.CWD)), m.styles.muted)
+		}
+		return rows
+	}
+	if detail.Model != "" {
+		add("├─ model "+detail.Model, m.styles.muted)
+	}
+	if detail.DurationMS != nil {
+		duration := time.Duration(*detail.DurationMS) * time.Millisecond
+		add("├─ duration "+duration.String(), m.styles.muted)
+	}
+	tools, turns := "", ""
+	if detail.ToolCount != nil {
+		tools = fmt.Sprintf("%d tools", *detail.ToolCount)
+	}
+	if detail.Usage != nil && detail.Usage.Turns != nil {
+		turns = fmt.Sprintf("%d turns", *detail.Usage.Turns)
+	}
+	if tools != "" || turns != "" {
+		add("├─ "+strings.Trim(strings.Join([]string{tools, turns}, " · "), " ·"), m.styles.muted)
+	}
+	if detail.Usage != nil && (detail.Usage.TotalTokens != nil || detail.Usage.Cost != nil) {
+		usage := ""
+		if detail.Usage.TotalTokens != nil {
+			usage = fmt.Sprintf("%d tokens", *detail.Usage.TotalTokens)
+		}
+		if detail.Usage.Cost != nil {
+			if usage != "" {
+				usage += " · "
+			}
+			usage += fmt.Sprintf("$%.4f", *detail.Usage.Cost)
+		}
+		add("├─ "+usage, m.styles.muted)
+	}
+	if subagentFailed(*lifecycle, detail) {
+		if detail.Error != "" {
+			add("├─ error "+detail.Error, m.styles.h6)
+		}
+		if detail.ExitStatus != nil {
+			add(fmt.Sprintf("├─ exit %d", *detail.ExitStatus), m.styles.h6)
+		}
+	}
+
+	var output *string
+	if detail.Output != nil {
+		output = detail.Output
+	} else if detail.Result != nil {
+		output = detail.Result
+	}
+	if output != nil {
+		add("├─ Output", m.styles.fg.Bold(true))
+		contentWidth := max(1, width-lipgloss.Width(prefix+"│  "))
+		for _, line := range wrapDisplay(*output, contentWidth) {
+			add("│  "+line, m.styles.narrative)
+		}
+	} else if detail.ResultSHA256 != "" {
+		hash := detail.ResultSHA256
+		if len(hash) > 12 {
+			hash = hash[:12]
+		}
+		add("└─ output sha "+hash, m.styles.muted)
+	}
+	return rows
+}
+
+func wrapDisplay(value string, width int) []string {
+	lines := make([]string, 0, strings.Count(value, "\n")+1)
+	for _, source := range strings.Split(strings.ReplaceAll(value, "\r\n", "\n"), "\n") {
+		source = clean(source)
+		if source == "" {
+			lines = append(lines, "")
+			continue
+		}
+		for source != "" {
+			runes := []rune(source)
+			end := len(runes)
+			for end > 0 && lipgloss.Width(string(runes[:end])) > width {
+				end--
+			}
+			if end == 0 {
+				end = 1
+			}
+			lines = append(lines, string(runes[:end]))
+			source = string(runes[end:])
+		}
+	}
+	return lines
 }
 
 func stateGlyph(state string) string {
 	switch state {
-	case "pending":
+	case "running", "active", "activated", "in-progress":
+		return "◉"
+	case "completed", "done", "passed", "success", "accepted":
+		return "✓"
+	case "failed", "error", "rejected":
+		return "×"
+	case "pending", "queued":
 		return "○"
-	case "active":
-		return "●"
+	case "blocked", "interrupted":
+		return "!"
 	case "awaiting-human-evaluation":
 		return "◇"
 	case "resuming":
 		return "↻"
-	case "blocked":
-		return "!"
-	case "failed":
-		return "×"
-	case "done", "passed":
-		return "✓"
 	default:
 		return "?"
 	}
@@ -675,11 +847,17 @@ func (m model) goalStyle(g goal, selected bool) lipgloss.Style {
 		return m.styles.selected
 	}
 	switch g.state {
-	case "done":
+	case "running", "active", "activated", "in-progress", "resuming":
+		return m.styles.h3
+	case "completed", "done", "passed", "success", "accepted":
 		return m.styles.success
-	case "blocked":
+	case "pending", "queued":
+		return m.styles.muted
+	case "awaiting-human-evaluation":
+		return m.styles.h5
+	case "blocked", "interrupted":
 		return m.styles.warning
-	case "failed":
+	case "failed", "error", "rejected":
 		return m.styles.h6
 	default:
 		return m.styles.fg
@@ -693,12 +871,25 @@ func (m model) eventStyle(observation event) lipgloss.Style {
 	} else if observation.evidence != nil {
 		state = observation.evidence.State
 	}
+	if observation.lifecycle != nil {
+		if detail, ok := parseSubagentDetail(observation.lifecycle); ok && observation.lifecycle.Kind == "subagent/started" {
+			return m.styles.narrative
+		} else if ok && subagentFailed(*observation.lifecycle, detail) {
+			return m.styles.h6
+		}
+	}
 	switch state {
-	case "done", "passed":
+	case "running", "active", "activated", "in-progress", "resuming":
+		return m.styles.h3
+	case "completed", "done", "passed", "success", "accepted":
 		return m.styles.success
-	case "blocked":
+	case "pending", "queued":
+		return m.styles.muted
+	case "awaiting-human-evaluation":
+		return m.styles.h5
+	case "blocked", "interrupted":
 		return m.styles.warning
-	case "failed":
+	case "failed", "error", "rejected":
 		return m.styles.h6
 	default:
 		return m.styles.fg
