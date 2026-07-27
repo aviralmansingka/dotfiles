@@ -176,10 +176,18 @@ proc fail {message} {
 
 proc checkpoint {name} {
   global env
-  after 100
   log_file
   file copy -force $env(T08_V02_PTY_LOG) "$env(T08_V02_PTY_SCREENS)/$name.raw"
   log_file -a $env(T08_V02_PTY_LOG)
+}
+
+proc render_complete {rows phase} {
+  set esc "\033"
+  expect {
+    -exact "${esc}\[${rows};H" {}
+    eof { fail "journal exited before $phase render completed" }
+    timeout { fail "journal did not complete $phase render" }
+  }
 }
 
 spawn env TERM=xterm-256color \
@@ -224,6 +232,7 @@ expect {
   eof { fail "journal exited before initial D footer" }
   timeout { fail "journal did not render initial D footer" }
 }
+render_complete 24 initial
 checkpoint initial
 set timeout 1
 expect {
@@ -237,6 +246,7 @@ expect {
   eof { fail "journal exited before D evidence jump" }
   timeout { fail "journal did not render D evidence jump" }
 }
+render_complete 24 evidence-jump
 checkpoint evidence
 send -- "j"
 expect {
@@ -244,6 +254,7 @@ expect {
   eof { fail "journal exited before bounded D navigation update" }
   timeout { fail "journal did not render bounded D navigation update" }
 }
+render_complete 24 lifecycle-navigation
 checkpoint lifecycle
 send -- "E"
 expect {
@@ -256,7 +267,9 @@ expect {
   eof { fail "journal exited before second D evidence jump" }
   timeout { fail "journal did not render second D evidence jump" }
 }
+render_complete 24 second-evidence-jump
 send -- "\r"
+render_complete 24 detail-collapse
 checkpoint collapsed
 send -- "\r"
 expect {
@@ -264,6 +277,7 @@ expect {
   eof { fail "journal exited before detail re-expand update" }
   timeout { fail "journal did not re-expand D evidence detail" }
 }
+render_complete 24 detail-expand
 checkpoint expanded
 exec stty -f $spawn_out(slave,name) rows 32 columns 134
 exec kill -WINCH [exp_pid]
@@ -282,6 +296,7 @@ expect {
   eof { fail "journal exited before resized D footer" }
   timeout { fail "journal did not render resized D footer" }
 }
+render_complete 32 resize
 checkpoint wide
 send -- "q"
 expect {
