@@ -177,6 +177,7 @@ func TestT08V02InteractiveColorPreservesFaithfulComposition(t *testing.T) {
 		msg  tea.Msg
 	}{
 		{"evidence jump", runeKey('E')},
+		{"failed evidence jump", runeKey('E')},
 		{"detail collapse", tea.KeyMsg{Type: tea.KeyEnter}},
 		{"detail expand", tea.KeyMsg{Type: tea.KeyEnter}},
 		{"wide resize", tea.WindowSizeMsg{Width: 134, Height: 32}},
@@ -200,6 +201,25 @@ func assertInteractiveJournalEquivalent(t *testing.T, colored, plain JournalMode
 	}
 	if footer := strings.Split(stripJournalANSI(got), "\n"); footer[len(footer)-1] != journalFooter(colored.width) {
 		t.Errorf("%s attached-terminal footer = %q, want %q", state, footer[len(footer)-1], journalFooter(colored.width))
+	}
+	switch state {
+	case "initial":
+		assertStyled(t, got, sgrMuted, "Jul 26 10:06 UTC")
+		assertStyled(t, got, sgrJournal, "L")
+		assertStyled(t, got, sgrAttention, "active")
+		assertStyled(t, got, sgrSelected, "selected")
+		assertStyled(t, got, sgrSelected, "selected recorded observation")
+		assertStyled(t, got, sgrOrdinary, "verifier-last-detail")
+	case "evidence jump":
+		assertStyled(t, got, sgrEvidence, "E")
+		assertStyled(t, got, sgrReference, "T08.V02")
+		assertStyled(t, got, sgrMuted, "recorded")
+		assertStyled(t, got, sgrEvidence, "verifier ID")
+	case "failed evidence jump":
+		assertStyled(t, got, sgrEvidence, "E")
+		assertStyled(t, got, sgrReference, "T08.V01")
+		assertStyled(t, got, sgrFailure, "failed")
+		assertStyled(t, got, sgrFailure, "1")
 	}
 }
 

@@ -223,7 +223,7 @@ expect {
   timeout { fail "journal did not render initial D omission row" }
 }
 expect {
-  -re {observation ID · life-later} {}
+  -re {life-later} {}
   eof { fail "journal exited before initial D selected card" }
   timeout { fail "journal did not render initial D selected card" }
 }
@@ -242,7 +242,7 @@ expect {
 set timeout 5
 send -- "E"
 expect {
-  -re {observation ID · evidence-later} {}
+  -re {evidence-later} {}
   eof { fail "journal exited before D evidence jump" }
   timeout { fail "journal did not render D evidence jump" }
 }
@@ -250,7 +250,7 @@ render_complete 24 evidence-jump
 checkpoint evidence
 send -- "j"
 expect {
-  -re {observation ID · life-later} {}
+  -re {life-later} {}
   eof { fail "journal exited before bounded D navigation update" }
   timeout { fail "journal did not render bounded D navigation update" }
 }
@@ -258,12 +258,12 @@ render_complete 24 lifecycle-navigation
 checkpoint lifecycle
 send -- "E"
 expect {
-  -re {selected recorded observation · evidence} {}
+  -re {selected recorded observation} {}
   eof { fail "journal exited before expanded evidence detail" }
   timeout { fail "journal did not render expanded D evidence detail" }
 }
 expect {
-  -re {observation ID · evidence-later} {}
+  -re {evidence-later} {}
   eof { fail "journal exited before second D evidence jump" }
   timeout { fail "journal did not render second D evidence jump" }
 }
@@ -273,7 +273,7 @@ render_complete 24 detail-collapse
 checkpoint collapsed
 send -- "\r"
 expect {
-  -re {selected recorded observation · evidence} {}
+  -re {selected recorded observation} {}
   eof { fail "journal exited before detail re-expand update" }
   timeout { fail "journal did not re-expand D evidence detail" }
 }
@@ -282,12 +282,12 @@ checkpoint expanded
 exec stty -f $spawn_out(slave,name) rows 32 columns 134
 exec kill -WINCH [exp_pid]
 expect {
-  -re {shown later: T08.HIDDEN → T08.LANDING} {}
+  -re {T08.HIDDEN → T08.LANDING} {}
   eof { fail "journal exited before D resize update" }
   timeout { fail "journal did not render D resize/reflow update" }
 }
 expect {
-  -re {observation ID · evidence-later} {}
+  -re {evidence-later} {}
   eof { fail "journal exited before resized selection frame" }
   timeout { fail "journal did not retain selection across D resize" }
 }
@@ -318,27 +318,35 @@ import unicodedata
 
 class Screen:
     def __init__(self, width, height):
+        self.foreground = None
         self.resize(width, height)
         self.saved = (0, 0)
         self.pending_wrap = False
 
     def resize(self, width, height):
         old = getattr(self, "cells", [])
+        old_colors = getattr(self, "colors", [])
         self.width, self.height = width, height
         self.cells = [[" "] * width for _ in range(height)]
+        self.colors = [[None] * width for _ in range(height)]
         for y, row in enumerate(old[:height]):
             self.cells[y][:min(width, len(row))] = row[:width]
+        for y, row in enumerate(old_colors[:height]):
+            self.colors[y][:min(width, len(row))] = row[:width]
         self.x = min(getattr(self, "x", 0), width - 1)
         self.y = min(getattr(self, "y", 0), height - 1)
 
     def clear(self):
         self.cells = [[" "] * self.width for _ in range(self.height)]
+        self.colors = [[None] * self.width for _ in range(self.height)]
         self.x = self.y = 0
         self.pending_wrap = False
 
     def scroll(self):
         self.cells.pop(0)
         self.cells.append([" "] * self.width)
+        self.colors.pop(0)
+        self.colors.append([None] * self.width)
         self.y = self.height - 1
 
     def put(self, char):
@@ -358,8 +366,10 @@ class Screen:
             self.put(char)
             return
         self.cells[self.y][self.x] = char
+        self.colors[self.y][self.x] = self.foreground
         if cells == 2:
             self.cells[self.y][self.x + 1] = ""
+            self.colors[self.y][self.x + 1] = self.foreground
         if self.x + cells >= self.width:
             self.x = self.width - 1
             self.pending_wrap = True
@@ -396,16 +406,28 @@ class Screen:
                 self.clear()
             elif mode == 0:
                 self.cells[self.y][self.x:] = [" "] * (self.width - self.x)
+                self.colors[self.y][self.x:] = [None] * (self.width - self.x)
                 for row in range(self.y + 1, self.height):
                     self.cells[row] = [" "] * self.width
+                    self.colors[row] = [None] * self.width
         elif final == "K":
             mode = values[0]
             if mode == 0:
                 self.cells[self.y][self.x:] = [" "] * (self.width - self.x)
+                self.colors[self.y][self.x:] = [None] * (self.width - self.x)
             elif mode == 1:
                 self.cells[self.y][:self.x + 1] = [" "] * (self.x + 1)
+                self.colors[self.y][:self.x + 1] = [None] * (self.x + 1)
             elif mode == 2:
                 self.cells[self.y] = [" "] * self.width
+                self.colors[self.y] = [None] * self.width
+        elif final == "m":
+            if values == [0]:
+                self.foreground = None
+            for index in range(len(values) - 4):
+                if values[index:index + 2] == [38, 2]:
+                    red, green, blue = values[index + 2:index + 5]
+                    self.foreground = f"#{red:02x}{green:02x}{blue:02x}"
         elif final == "s":
             self.saved = (self.x, self.y)
         elif final == "u":
@@ -504,6 +526,7 @@ phases = [
 screen = Screen(80, 24)
 previous = b""
 visible = {}
+colors = {}
 for name, width, height in phases:
     raw = (screens / f"{name}.raw").read_bytes()
     if not raw.startswith(previous):
@@ -513,6 +536,7 @@ for name, width, height in phases:
     screen.feed(raw[len(previous):])
     previous = raw
     visible[name] = screen.lines()
+    colors[name] = [row[:] for row in screen.colors]
 
 foreground_sgr((screens / "initial.raw").read_bytes())
 if visible["initial"] != expected_initial:
@@ -520,6 +544,39 @@ if visible["initial"] != expected_initial:
         if got != want:
             fail(f"initial visible PTY row {row} = {got!r}, want approved D row {want!r}")
     fail("initial visible PTY frame differs from approved static D semantics")
+
+palette = {
+    "muted": "#928374", "ordinary": "#ebdbb2", "selected": "#fbf1c7",
+    "accent": "#f28534", "evidence": "#d3869b", "info": "#80aa9e",
+    "success": "#b8bb26", "attention": "#e9b143",
+}
+
+
+def assert_color(phase, line_token, token, want):
+    row = find(visible[phase], line_token)
+    column = visible[phase][row].find(token)
+    if column < 0:
+        fail(f"{phase} visible PTY row missing color token {token!r}")
+    got = colors[phase][row][column]
+    expected = palette[want]
+    if got != expected:
+        fail(f"{phase} token {token!r} foreground = {got}, want {expected} ({want})")
+
+
+assert_color("initial", "Jul 26 10:02 UTC", "Jul 26 10:02 UTC", "muted")
+assert_color("initial", "Jul 26 10:02 UTC", "E", "evidence")
+assert_color("initial", "Jul 26 10:02 UTC", "T08.V01", "info")
+assert_color("initial", "Jul 26 10:02 UTC", "passed", "success")
+assert_color("initial", "Jul 26 10:03 UTC", "L", "accent")
+assert_color("initial", "Jul 26 10:03 UTC", "pending", "attention")
+assert_color("initial", "Jul 26 10:03 UTC", "selected", "selected")
+assert_color("initial", "selected recorded observation · lifecycle",
+             "selected recorded observation", "selected")
+assert_color("initial", "selected recorded observation · lifecycle", "lifecycle", "accent")
+assert_color("initial", "│  └─ detail · instant-later", "│", "muted")
+assert_color("initial", "│  └─ detail · instant-later", "instant-later", "ordinary")
+assert_color("initial", "│  ├─ goal · T08.LANDING", "goal", "accent")
+assert_color("initial", "│  ├─ goal · T08.LANDING", "T08.LANDING", "ordinary")
 
 narrow_footer = "g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit"
 wide_footer = "g/G first/last · j/k/↑/↓ records · v/V verifier · e/E evidence · enter detail · q/Esc quit"
