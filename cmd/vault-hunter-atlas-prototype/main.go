@@ -438,50 +438,49 @@ func (m model) header(run vaultregistry.Run) []string {
 	goalID := truncate(selectedID, max(1, goalWidth-lipgloss.Width("GOAL  "+goalOrdinal)))
 	runPadding := strings.Repeat(" ", max(0, runWidth-lipgloss.Width("RUN  "+runID+runOrdinal)))
 	return []string{
-		m.segmentLine(m.width,
-			styledSegment{"╭─ ", m.styles.rail},
+		m.boxRule("╭", "╮", m.width,
+			styledSegment{"─ ", m.styles.rail},
 			styledSegment{"VAULT HUNTER ATLAS", m.styles.h1},
 			styledSegment{"  " + titleWords(variantNames[m.variant]), m.styles.h2.Bold(false)},
-			styledSegment{"  READ ONLY ", m.styles.badge}),
-		m.segmentLine(m.width,
-			styledSegment{"│ ", m.styles.rail},
-			styledSegment{"TASK  ", m.styles.muted},
+			styledSegment{"  READ ONLY ", m.styles.badge},
+			styledSegment{" ", m.styles.rail}),
+		m.boxLine(m.width,
+			styledSegment{" TASK  ", m.styles.muted},
 			styledSegment{shown(run.Task.ID) + " · " + shown(run.Task.Title), m.styles.h2}),
-		m.segmentLine(m.width,
-			styledSegment{"│ ", m.styles.rail},
-			styledSegment{"RUN  ", m.styles.h4.Bold(false)},
+		m.boxLine(m.width,
+			styledSegment{" RUN  ", m.styles.h4.Bold(false)},
 			styledSegment{runID, m.styles.h5},
 			styledSegment{runOrdinal, m.styles.h5},
 			styledSegment{runPadding, m.styles.muted},
 			styledSegment{"GOAL  ", m.styles.h3.Bold(false)},
 			styledSegment{goalID, m.styles.h3.Bold(false)},
 			styledSegment{goalOrdinal, m.styles.h3.Bold(false)}),
-		m.rule("╰", "─", m.width, m.styles.rail),
+		m.boxRule("╰", "╯", m.width),
 	}
 }
 
 func (m model) footer(run vaultregistry.Run) []string {
 	return []string{
-		m.rule("├", "─", m.width, m.styles.rail),
-		m.segmentLine(m.width,
-			styledSegment{"│ ", m.styles.rail},
-			styledSegment{"GOALS ", m.styles.h3.Bold(false)}, styledSegment{fmt.Sprint(len(m.goals)), m.styles.h3.Bold(false)},
+		m.boxRule("╭", "╮", m.width),
+		m.boxLine(m.width,
+			styledSegment{" GOALS ", m.styles.h3.Bold(false)}, styledSegment{fmt.Sprint(len(m.goals)), m.styles.h3.Bold(false)},
 			styledSegment{"   LIFECYCLE ", m.styles.h4.Bold(false)}, styledSegment{fmt.Sprint(len(run.Lifecycle)), m.styles.h4.Bold(false)},
 			styledSegment{"   EVIDENCE ", m.styles.h5}, styledSegment{fmt.Sprint(len(run.Evidence)), m.styles.h5},
 			styledSegment{"   PARTICIPANTS ", m.styles.h2.Bold(false)}, styledSegment{fmt.Sprint(len(run.Participants)), m.styles.h2.Bold(false)},
 			styledSegment{fmt.Sprintf("   rev %d · updated %s", run.Revision, shown(run.UpdatedAt)), m.styles.muted}),
-		m.segmentLine(m.width,
-			styledSegment{"│ ", m.styles.rail},
+		m.boxLine(m.width,
+			styledSegment{" ", m.styles.rail},
 			m.keycap(" ↑↓ "), styledSegment{" Goal   ", m.styles.muted},
 			m.keycap(" ←→ "), styledSegment{"/", m.styles.muted}, m.keycap(" [] "), styledSegment{" Run   ", m.styles.muted},
 			m.keycap(" Enter "), styledSegment{" Detail   ", m.styles.muted},
 			m.keycap(" Tab "), styledSegment{" Layout   ", m.styles.muted},
 			m.keycap(" 1 2 3 "), styledSegment{" Views   ", m.styles.muted},
 			m.keycap(" q "), styledSegment{" Quit", m.styles.muted}),
-		m.segmentLine(m.width,
-			styledSegment{"╰─ ", m.styles.rail},
+		m.boxRule("╰", "╯", m.width,
+			styledSegment{"─ ", m.styles.rail},
 			styledSegment{strings.ToUpper(titleWords(variantNames[m.variant])), m.styles.muted},
-			styledSegment{fmt.Sprintf(" · %d×%d · READ ONLY", m.width, m.height), m.styles.muted}),
+			styledSegment{fmt.Sprintf(" · %d×%d · READ ONLY", m.width, m.height), m.styles.muted},
+			styledSegment{" ", m.styles.rail}),
 	}
 }
 
@@ -1458,6 +1457,18 @@ func (m model) segmentLine(width int, segments ...styledSegment) string {
 	return content + strings.Repeat(" ", max(0, width-lipgloss.Width(content)))
 }
 
+func (m model) boxLine(width int, segments ...styledSegment) string {
+	innerWidth := max(0, width-2)
+	return m.styles.rail.Render("│") + m.segmentLine(innerWidth, segments...) + m.styles.rail.Render("│")
+}
+
+func (m model) boxRule(left, right string, width int, segments ...styledSegment) string {
+	innerWidth := max(0, width-lipgloss.Width(left)-lipgloss.Width(right))
+	content := m.renderSegments(innerWidth, segments...)
+	fill := strings.Repeat("─", max(0, innerWidth-lipgloss.Width(content)))
+	return m.styles.rail.Render(left) + content + m.styles.rail.Render(fill+right)
+}
+
 func (m model) keycap(text string) styledSegment {
 	return styledSegment{text, m.styles.keycap}
 }
@@ -1477,12 +1488,6 @@ func (m model) renderSegments(width int, segments ...styledSegment) string {
 		}
 	}
 	return line.String()
-}
-
-func (m model) rule(start, fill string, width int, style lipgloss.Style) string {
-	start = truncate(start, width)
-	remaining := max(0, width-lipgloss.Width(start))
-	return style.Render(start + strings.Repeat(fill, remaining))
 }
 
 func (m model) line(value string, width int, style lipgloss.Style) string {

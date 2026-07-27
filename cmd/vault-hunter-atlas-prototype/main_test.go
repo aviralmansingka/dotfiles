@@ -85,12 +85,13 @@ func TestChromeAndSelection(t *testing.T) {
 			m.width, m.height = size.width, size.height
 			view := m.View()
 			assertFrame(t, view, size.width, size.height)
+			assertRoundedChrome(t, view, size.width, size.height)
 			for _, wanted := range []string{"VAULT HUNTER ATLAS", "TASK", "RUN", "GOAL", "GOALS", "LIFECYCLE", "EVIDENCE", "PARTICIPANTS", "↑↓", "Goal", "←→", "[]", "Run", "Enter", "Detail", "Tab", "Layout", "1 2 3", "q", "Quit", "READ ONLY", "╭─", "╰"} {
 				if !strings.Contains(view, wanted) {
 					t.Errorf("%s at %dx%d is missing chrome text %q:\n%s", variantNames[variant], size.width, size.height, wanted, view)
 				}
 			}
-			for _, unwanted := range []string{"# Operations", "##"} {
+			for _, unwanted := range []string{"# ", "##", "**", "__", "```"} {
 				if strings.Contains(view, unwanted) {
 					t.Errorf("%s at %dx%d retains Markdown syntax %q:\n%s", variantNames[variant], size.width, size.height, unwanted, view)
 				}
@@ -402,6 +403,40 @@ func assertFrame(t *testing.T, view string, width, height int) {
 		if got := lipgloss.Width(line); got != width {
 			t.Fatalf("row %d has width %d, want exactly %d: %q", row, got, width, line)
 		}
+	}
+}
+
+func assertRoundedChrome(t *testing.T, view string, width, height int) {
+	t.Helper()
+	lines := strings.Split(view, "\n")
+	rows := []struct {
+		index       int
+		left, right string
+	}{
+		{0, "╭", "╮"},
+		{1, "│", "│"},
+		{2, "│", "│"},
+		{3, "╰", "╯"},
+		{height - 4, "╭", "╮"},
+		{height - 3, "│", "│"},
+		{height - 2, "│", "│"},
+		{height - 1, "╰", "╯"},
+	}
+	for _, row := range rows {
+		line := lines[row.index]
+		if !strings.HasPrefix(line, row.left) || !strings.HasSuffix(line, row.right) {
+			t.Errorf("chrome row %d is not closed with %s…%s: %q", row.index, row.left, row.right, line)
+		}
+		inner := strings.TrimSuffix(strings.TrimPrefix(line, row.left), row.right)
+		if got := lipgloss.Width(inner); got != width-2 {
+			t.Errorf("chrome row %d inner width = %d, want %d: %q", row.index, got, width-2, line)
+		}
+	}
+	if strings.HasPrefix(lines[height-4], "├") {
+		t.Errorf("footer starts as a tree continuation:\n%s", strings.Join(lines[height-4:], "\n"))
+	}
+	if strings.HasPrefix(lines[height-1], "╰─") && !strings.HasSuffix(lines[height-1], "╯") {
+		t.Errorf("footer bottom is missing its right corner:\n%s", strings.Join(lines[height-4:], "\n"))
 	}
 }
 
