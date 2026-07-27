@@ -13,29 +13,7 @@ import (
 )
 
 func TestPrototypeSmoke(t *testing.T) {
-	exitZero := 0
-	run := vaultregistry.Run{
-		SchemaVersion: 1,
-		RunID:         "prototype-run",
-		Revision:      7,
-		InvokedAt:     "2026-02-20T10:00:00Z",
-		UpdatedAt:     "2026-02-20T10:09:00Z",
-		Task: vaultregistry.Task{
-			ID: "T22", Title: "Expanded Operations Board", Kind: "prototype",
-		},
-		Lifecycle: []vaultregistry.Lifecycle{
-			{ObservationID: "o1", ObservedAt: "2026-02-20T10:01:00Z", GoalID: "G01", Kind: "review", State: "done", Detail: "Reviewed the recorded shape."},
-			{ObservationID: "o2", ObservedAt: "2026-02-20T10:02:00Z", GoalID: "G02", Kind: "verifier", State: "pending"},
-			{ObservationID: "o3", ObservedAt: "2026-02-20T10:04:00Z", GoalID: "G02", Kind: "verifier", State: "active", Detail: "Comparing board structures."},
-			{ObservationID: "o4", ObservedAt: "2026-02-20T10:03:30Z", GoalID: "G03", Kind: "future-kind", State: "literal-unknown"},
-		},
-		Evidence: []vaultregistry.Evidence{
-			{ObservationID: "e1", ObservedAt: "2026-02-20T10:03:00Z", VerifierID: "G02", State: "passed", Command: "go test ./cmd/vault-hunter-atlas-prototype", ExitStatus: &exitZero, Detail: "Smoke evidence."},
-		},
-		Participants: []vaultregistry.Participant{
-			{ParticipantID: "writer", ObservedAt: "2026-02-20T10:03:00Z", GoalID: "G02", Role: "prototype-writer"},
-		},
-	}
+	run := chromeRun()
 
 	m, err := newModel([]vaultregistry.Run{run}, "", 0, "never")
 	if err != nil {
@@ -47,7 +25,7 @@ func TestPrototypeSmoke(t *testing.T) {
 		m.variant = variant
 		views[variant] = m.View()
 		assertBounded(t, views[variant], 120, 32)
-		for _, wanted := range []string{"prototype-run", "G02", variantNames[variant]} {
+		for _, wanted := range []string{"prototype-run", "G02", titleWords(variantNames[variant])} {
 			if !strings.Contains(strings.ToLower(views[variant]), strings.ToLower(wanted)) {
 				t.Fatalf("variant %s does not identify %q", variantNames[variant], wanted)
 			}
@@ -56,7 +34,15 @@ func TestPrototypeSmoke(t *testing.T) {
 	if views[0] == views[1] || views[0] == views[2] || views[1] == views[2] {
 		t.Fatal("variant frames must be pairwise distinct")
 	}
+	for _, size := range []struct{ width, height int }{{120, 32}, {160, 48}} {
+		m.width, m.height = size.width, size.height
+		for variant := range variantNames {
+			m.variant = variant
+			assertFrame(t, m.View(), size.width, size.height)
+		}
+	}
 
+	m.width, m.height = 120, 32
 	m.variant = 0
 	m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyTab})
 	if m.variant != 1 {
@@ -83,7 +69,64 @@ func TestPrototypeSmoke(t *testing.T) {
 	if m.goal != 1 || m.variant != 2 || m.showDetail {
 		t.Fatalf("recovery lost state: goal=%d variant=%d detail=%v", m.goal, m.variant, m.showDetail)
 	}
-	assertBounded(t, m.View(), 120, 32)
+	recovered := m.View()
+	assertBounded(t, recovered, 120, 32)
+	assertSelectedGoal(t, recovered, "G02")
+}
+
+func TestChromeAndSelection(t *testing.T) {
+	run := chromeRun()
+	for _, size := range []struct{ width, height int }{{120, 32}, {160, 48}} {
+		for variant := range variantNames {
+			m, err := newModel([]vaultregistry.Run{run}, "", variant, "never")
+			if err != nil {
+				t.Fatal(err)
+			}
+			m.width, m.height = size.width, size.height
+			view := m.View()
+			assertFrame(t, view, size.width, size.height)
+			for _, wanted := range []string{"VAULT HUNTER ATLAS", "TASK", "RUN", "GOAL", "GOALS", "LIFECYCLE", "EVIDENCE", "PARTICIPANTS", "↑↓", "Goal", "←→", "[]", "Run", "Enter", "Detail", "Tab", "Layout", "1 2 3", "q", "Quit", "READ ONLY", "╭─", "╰"} {
+				if !strings.Contains(view, wanted) {
+					t.Errorf("%s at %dx%d is missing chrome text %q:\n%s", variantNames[variant], size.width, size.height, wanted, view)
+				}
+			}
+			for _, unwanted := range []string{"# Operations", "##"} {
+				if strings.Contains(view, unwanted) {
+					t.Errorf("%s at %dx%d retains Markdown syntax %q:\n%s", variantNames[variant], size.width, size.height, unwanted, view)
+				}
+			}
+			assertSelectedGoal(t, view, "G02")
+
+			m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+			assertSelectedGoal(t, m.View(), "G03")
+			m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+			assertSelectedGoal(t, m.View(), "G02")
+			m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+			assertSelectedGoal(t, m.View(), "G02")
+		}
+	}
+
+	const selectedSGR = "\x1b[1;38;2;176;184;70;48;2;50;48;47m"
+	for _, size := range []struct{ width, height int }{{120, 32}, {160, 48}} {
+		for variant := range variantNames {
+			m, err := newModel([]vaultregistry.Run{run}, "", variant, "always")
+			if err != nil {
+				t.Fatal(err)
+			}
+			m.width, m.height = size.width, size.height
+			view := m.View()
+			assertFrame(t, view, size.width, size.height)
+			start := strings.Index(view, selectedSGR)
+			if start < 0 {
+				t.Fatalf("%s at %dx%d has no selected background SGR %q", variantNames[variant], size.width, size.height, selectedSGR)
+			}
+			selected := view[start+len(selectedSGR):]
+			end := strings.Index(selected, "\x1b[0m")
+			if end < 0 || !strings.Contains(selected[:end], "▶") || !strings.HasSuffix(selected[:end], " ") {
+				t.Fatalf("%s at %dx%d selected style does not span glyph and padded width: %q", variantNames[variant], size.width, size.height, selected[:max(0, end)])
+			}
+		}
+	}
 }
 
 func TestTrailTreeGroupsConsecutiveSubagentInvocations(t *testing.T) {
@@ -253,6 +296,32 @@ func TestPlainObservationsAreHumanizedWrappedAndCollapsible(t *testing.T) {
 	assertBounded(t, collapsed, 120, 32)
 }
 
+func chromeRun() vaultregistry.Run {
+	exitZero := 0
+	return vaultregistry.Run{
+		SchemaVersion: 1,
+		RunID:         "prototype-run",
+		Revision:      7,
+		InvokedAt:     "2026-02-20T10:00:00Z",
+		UpdatedAt:     "2026-02-20T10:09:00Z",
+		Task: vaultregistry.Task{
+			ID: "T22", Title: "Expanded Operations Board", Kind: "prototype",
+		},
+		Lifecycle: []vaultregistry.Lifecycle{
+			{ObservationID: "o1", ObservedAt: "2026-02-20T10:01:00Z", GoalID: "G01", Kind: "review", State: "done", Detail: "Reviewed the recorded shape."},
+			{ObservationID: "o2", ObservedAt: "2026-02-20T10:02:00Z", GoalID: "G02", Kind: "verifier", State: "pending"},
+			{ObservationID: "o3", ObservedAt: "2026-02-20T10:04:00Z", GoalID: "G02", Kind: "verifier", State: "active", Detail: "Comparing board structures."},
+			{ObservationID: "o4", ObservedAt: "2026-02-20T10:03:30Z", GoalID: "G03", Kind: "future-kind", State: "literal-unknown"},
+		},
+		Evidence: []vaultregistry.Evidence{
+			{ObservationID: "e1", ObservedAt: "2026-02-20T10:03:00Z", VerifierID: "G02", State: "passed", Command: "go test ./cmd/vault-hunter-atlas-prototype", ExitStatus: &exitZero, Detail: "Smoke evidence."},
+		},
+		Participants: []vaultregistry.Participant{
+			{ParticipantID: "writer", ObservedAt: "2026-02-20T10:03:00Z", GoalID: "G02", Role: "prototype-writer"},
+		},
+	}
+}
+
 func prototypeRun() vaultregistry.Run {
 	return vaultregistry.Run{
 		SchemaVersion: 1,
@@ -276,6 +345,16 @@ func prototypeView(t *testing.T, run vaultregistry.Run, variant int) (string, mo
 	}
 	m.width, m.height = 120, 32
 	return m.View(), m
+}
+
+func assertSelectedGoal(t *testing.T, view, goalID string) {
+	t.Helper()
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "▶") && strings.Contains(line, goalID) {
+			return
+		}
+	}
+	t.Fatalf("no selected row identifies %s:\n%s", goalID, view)
 }
 
 func assertNoRawSubagentFields(t *testing.T, view string) {
@@ -311,6 +390,19 @@ func updateModel(t *testing.T, m model, msg tea.Msg) model {
 		t.Fatalf("Update returned %T, want model", updated)
 	}
 	return result
+}
+
+func assertFrame(t *testing.T, view string, width, height int) {
+	t.Helper()
+	lines := strings.Split(view, "\n")
+	if len(lines) != height {
+		t.Fatalf("frame has %d rows, want exactly %d", len(lines), height)
+	}
+	for row, line := range lines {
+		if got := lipgloss.Width(line); got != width {
+			t.Fatalf("row %d has width %d, want exactly %d: %q", row, got, width, line)
+		}
+	}
 }
 
 func assertBounded(t *testing.T, view string, width, height int) {

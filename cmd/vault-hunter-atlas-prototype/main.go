@@ -95,11 +95,16 @@ type traceEntry struct {
 }
 
 type palette struct {
-	h1, h2, h3, h4, h5, h6 lipgloss.Style
-	fg, rail, muted        lipgloss.Style
-	selected               lipgloss.Style
-	success, warning       lipgloss.Style
-	narrative, empty       lipgloss.Style
+	h1, h2, h3, h4, h5, h6  lipgloss.Style
+	fg, rail, muted         lipgloss.Style
+	selected, badge, keycap lipgloss.Style
+	success, warning        lipgloss.Style
+	narrative, empty        lipgloss.Style
+}
+
+type styledSegment struct {
+	text  string
+	style lipgloss.Style
 }
 
 type model struct {
@@ -229,7 +234,9 @@ func makePalette(mode string) palette {
 		fg:        style("#ebdbb2"),
 		rail:      style("#504945"),
 		muted:     style("#928374"),
-		selected:  style("#b0b846").Bold(true),
+		selected:  style("#b0b846").Background(lipgloss.Color("#32302f")).Bold(true),
+		badge:     style("#928374").Background(lipgloss.Color("#3c3836")),
+		keycap:    style("#ebdbb2").Background(lipgloss.Color("#3c3836")).Bold(true),
 		success:   style("#b8bb26"),
 		warning:   style("#fabd2f"),
 		narrative: style("#ebdbb2").Italic(true),
@@ -398,16 +405,8 @@ func (m model) View() string {
 		return truncate(first, m.width) + "\n" + truncate("Resize terminal · q quit", m.width)
 	}
 	run := m.runs[m.run]
-	selectedID := "?"
-	if len(m.goals) != 0 {
-		selectedID = shown(m.goals[m.goal].id)
-	}
-	rows := []string{
-		m.line("# Operations Board · "+titleWords(variantNames[m.variant]), m.width, m.styles.h1),
-		m.line(fmt.Sprintf("# Run %s  [%d/%d]  ·  Goal %s  [%s]", shown(run.RunID), m.run+1, len(m.runs), selectedID, ordinal(m.goal, len(m.goals))), m.width, m.styles.h1),
-		m.treeLine("└─ ", fmt.Sprintf("## %s · %s", shown(run.Task.ID), shown(run.Task.Title)), m.width, m.styles.h2),
-	}
-	bodyHeight := m.height - 6
+	rows := m.header(run)
+	bodyHeight := m.height - len(rows) - 4
 	var body []string
 	switch m.variant {
 	case 0:
@@ -421,12 +420,69 @@ func (m model) View() string {
 		body = append(body, m.line("", m.width, m.styles.rail))
 	}
 	rows = append(rows, body[:bodyHeight]...)
-	rows = append(rows,
-		m.line(fmt.Sprintf("Goals %d  │  lifecycle %d  │  evidence %d  │  participants %d  │  revision %d  │  updated %s", len(m.goals), len(run.Lifecycle), len(run.Evidence), len(run.Participants), run.Revision, shown(run.UpdatedAt)), m.width, m.styles.muted),
-		m.line("[/] or h/l run  ·  k/j or ↑/↓ goal  ·  Enter detail  ·  Tab/Shift-Tab variant  ·  1/2/3 direct  ·  q quit", m.width, m.styles.fg),
-		m.line(fmt.Sprintf("Read-only Registry snapshot  │  %s  │  %d×%d", variantNames[m.variant], m.width, m.height), m.width, m.styles.muted),
-	)
+	rows = append(rows, m.footer(run)...)
 	return strings.Join(rows, "\n")
+}
+
+func (m model) header(run vaultregistry.Run) []string {
+	selectedID := "?"
+	if len(m.goals) != 0 {
+		selectedID = shown(m.goals[m.goal].id)
+	}
+	contextWidth := m.width - 2
+	runWidth := contextWidth * 56 / 100
+	goalWidth := contextWidth - runWidth
+	runOrdinal := "  " + ordinal(m.run, len(m.runs))
+	goalOrdinal := "  " + ordinal(m.goal, len(m.goals))
+	runID := truncate(shown(run.RunID), max(1, runWidth-lipgloss.Width("RUN  "+runOrdinal)))
+	goalID := truncate(selectedID, max(1, goalWidth-lipgloss.Width("GOAL  "+goalOrdinal)))
+	runPadding := strings.Repeat(" ", max(0, runWidth-lipgloss.Width("RUN  "+runID+runOrdinal)))
+	return []string{
+		m.segmentLine(m.width,
+			styledSegment{"╭─ ", m.styles.rail},
+			styledSegment{"VAULT HUNTER ATLAS", m.styles.h1},
+			styledSegment{"  " + titleWords(variantNames[m.variant]), m.styles.h2.Bold(false)},
+			styledSegment{"  READ ONLY ", m.styles.badge}),
+		m.segmentLine(m.width,
+			styledSegment{"│ ", m.styles.rail},
+			styledSegment{"TASK  ", m.styles.muted},
+			styledSegment{shown(run.Task.ID) + " · " + shown(run.Task.Title), m.styles.h2}),
+		m.segmentLine(m.width,
+			styledSegment{"│ ", m.styles.rail},
+			styledSegment{"RUN  ", m.styles.h4.Bold(false)},
+			styledSegment{runID, m.styles.h5},
+			styledSegment{runOrdinal, m.styles.h5},
+			styledSegment{runPadding, m.styles.muted},
+			styledSegment{"GOAL  ", m.styles.h3.Bold(false)},
+			styledSegment{goalID, m.styles.h3.Bold(false)},
+			styledSegment{goalOrdinal, m.styles.h3.Bold(false)}),
+		m.rule("╰", "─", m.width, m.styles.rail),
+	}
+}
+
+func (m model) footer(run vaultregistry.Run) []string {
+	return []string{
+		m.rule("├", "─", m.width, m.styles.rail),
+		m.segmentLine(m.width,
+			styledSegment{"│ ", m.styles.rail},
+			styledSegment{"GOALS ", m.styles.h3.Bold(false)}, styledSegment{fmt.Sprint(len(m.goals)), m.styles.h3.Bold(false)},
+			styledSegment{"   LIFECYCLE ", m.styles.h4.Bold(false)}, styledSegment{fmt.Sprint(len(run.Lifecycle)), m.styles.h4.Bold(false)},
+			styledSegment{"   EVIDENCE ", m.styles.h5}, styledSegment{fmt.Sprint(len(run.Evidence)), m.styles.h5},
+			styledSegment{"   PARTICIPANTS ", m.styles.h2.Bold(false)}, styledSegment{fmt.Sprint(len(run.Participants)), m.styles.h2.Bold(false)},
+			styledSegment{fmt.Sprintf("   rev %d · updated %s", run.Revision, shown(run.UpdatedAt)), m.styles.muted}),
+		m.segmentLine(m.width,
+			styledSegment{"│ ", m.styles.rail},
+			m.keycap(" ↑↓ "), styledSegment{" Goal   ", m.styles.muted},
+			m.keycap(" ←→ "), styledSegment{"/", m.styles.muted}, m.keycap(" [] "), styledSegment{" Run   ", m.styles.muted},
+			m.keycap(" Enter "), styledSegment{" Detail   ", m.styles.muted},
+			m.keycap(" Tab "), styledSegment{" Layout   ", m.styles.muted},
+			m.keycap(" 1 2 3 "), styledSegment{" Views   ", m.styles.muted},
+			m.keycap(" q "), styledSegment{" Quit", m.styles.muted}),
+		m.segmentLine(m.width,
+			styledSegment{"╰─ ", m.styles.rail},
+			styledSegment{strings.ToUpper(titleWords(variantNames[m.variant])), m.styles.muted},
+			styledSegment{fmt.Sprintf(" · %d×%d · READ ONLY", m.width, m.height), m.styles.muted}),
+	}
 }
 
 func ordinal(index, length int) string {
@@ -484,7 +540,14 @@ func (m model) goalTreeBlock(g goal, selected, last bool, limit int, base string
 			disclosure = "▶ ▸ "
 		}
 	}
-	rows := []string{m.treeLine(base+branch, disclosure+goalSummary(g), m.width, m.goalStyle(g, selected))}
+	heading := disclosure + goalSummary(g)
+	var first string
+	if selected {
+		first = m.selectedLine(base+branch, heading, m.width)
+	} else {
+		first = m.treeLine(base+branch, heading, m.width, m.goalStyle(g, false))
+	}
+	rows := []string{first}
 	if !m.showDetail {
 		return rows
 	}
@@ -543,7 +606,7 @@ func (m model) goalTreeBlock(g goal, selected, last bool, limit int, base string
 func (m model) timeRiver(limit int) []string {
 	leftWidth := m.width * 68 / 100
 	rightWidth := m.width - leftWidth - 1
-	left := []string{"### Timeline"}
+	left := []string{"TIMELINE"}
 	events := buildEvents(m.runs[m.run])
 	if len(events) == 0 {
 		left = append(left, "  no recorded observations")
@@ -594,13 +657,17 @@ func (m model) dossier(limit, width int) []string {
 		}
 	}
 	if len(m.goals) == 0 {
-		add("### Goal details", m.styles.h5)
+		add("GOAL DETAILS", m.styles.h5)
 		add("no recorded goals", m.styles.empty)
 		return rows
 	}
 	g := m.goals[m.goal]
-	add("### Goal details", m.styles.h5)
-	add(fmt.Sprintf("▶ %s", goalSummary(g)), m.goalStyle(g, true))
+	add("GOAL DETAILS", m.styles.h5)
+	disclosure := "▾"
+	if !m.showDetail {
+		disclosure = "▸"
+	}
+	add(fmt.Sprintf("▶ %s %s", disclosure, goalSummary(g)), m.styles.selected)
 	add(fmt.Sprintf("trace  %d lifecycle · %d evidence", len(g.lifecycle), len(g.evidence)), m.styles.muted)
 	add("", m.styles.fg)
 	add("Latest activity", m.styles.h3)
@@ -659,7 +726,11 @@ func (m model) stateDeck(limit int) []string {
 	for i, g := range m.goals {
 		entry := fmt.Sprintf("%s %s", stateGlyph(g.state), shown(g.id))
 		if i == m.goal {
-			entry = "▶ " + entry
+			disclosure := "▾"
+			if !m.showDetail {
+				disclosure = "▸"
+			}
+			entry = "▶ " + disclosure + " " + entry
 		}
 		lane := stateLane(g.state)
 		if lane < 0 {
@@ -668,7 +739,7 @@ func (m model) stateDeck(limit int) []string {
 			lanes[lane] = append(lanes[lane], entry)
 		}
 	}
-	rows := []string{m.line("### Goal states", m.width, m.styles.h4)}
+	rows := []string{m.line("GOAL STATES", m.width, m.styles.h4)}
 	widths := splitWidths(m.width, len(states))
 	for row := 0; row < laneHeight && len(rows) < limit; row++ {
 		var line strings.Builder
@@ -704,7 +775,7 @@ func (m model) stateDeck(limit int) []string {
 		rows = append(rows, m.line(text, m.width, style))
 	}
 	if len(rows) < limit {
-		rows = append(rows, m.line("### Selected trace", m.width, m.styles.h5))
+		rows = append(rows, m.line("SELECTED TRACE", m.width, m.styles.h5))
 	}
 	if len(rows) < limit {
 		if len(m.goals) == 0 {
@@ -1374,6 +1445,44 @@ func (m model) treeLine(prefix, value string, width int, style lipgloss.Style) s
 	value = truncate(value, available)
 	plainWidth := lipgloss.Width(prefix) + lipgloss.Width(value)
 	return m.styles.rail.Render(prefix) + style.Render(value) + strings.Repeat(" ", max(0, width-plainWidth))
+}
+
+func (m model) selectedLine(prefix, value string, width int) string {
+	text := truncate(clean(prefix)+clean(value), width)
+	text += strings.Repeat(" ", max(0, width-lipgloss.Width(text)))
+	return m.styles.selected.Render(text)
+}
+
+func (m model) segmentLine(width int, segments ...styledSegment) string {
+	content := m.renderSegments(width, segments...)
+	return content + strings.Repeat(" ", max(0, width-lipgloss.Width(content)))
+}
+
+func (m model) keycap(text string) styledSegment {
+	return styledSegment{text, m.styles.keycap}
+}
+
+func (m model) renderSegments(width int, segments ...styledSegment) string {
+	var line strings.Builder
+	remaining := width
+	for _, segment := range segments {
+		if remaining <= 0 {
+			break
+		}
+		text := truncate(segment.text, remaining)
+		line.WriteString(segment.style.Render(text))
+		remaining -= lipgloss.Width(text)
+		if lipgloss.Width(segment.text) > lipgloss.Width(text) {
+			break
+		}
+	}
+	return line.String()
+}
+
+func (m model) rule(start, fill string, width int, style lipgloss.Style) string {
+	start = truncate(start, width)
+	remaining := max(0, width-lipgloss.Width(start))
+	return style.Render(start + strings.Repeat(fill, remaining))
 }
 
 func (m model) line(value string, width int, style lipgloss.Style) string {
