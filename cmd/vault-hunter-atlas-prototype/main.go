@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	minWidth  = 120
-	minHeight = 32
+	minWidth               = 120
+	minHeight              = 32
+	outputTruncationMarker = "… output truncated"
 )
 
 var variantNames = []string{"trail-tree", "time-river", "state-deck"}
@@ -75,10 +76,11 @@ type subagentInvocation struct {
 }
 
 type traceDetail struct {
-	head     string
-	body     []string
-	style    lipgloss.Style
-	priority int
+	head            string
+	body            []string
+	style           lipgloss.Style
+	priority        int
+	outputTruncated bool
 }
 
 type traceItem struct {
@@ -527,7 +529,11 @@ func (m model) goalTreeBlock(g goal, selected, last bool, limit int, base string
 				if k == len(detail.body)-1 {
 					bodyBranch = "└─ "
 				}
-				rows = append(rows, m.treeLine(bodyBase+bodyBranch, line, m.width, detail.style))
+				style := detail.style
+				if detail.outputTruncated && k == len(detail.body)-1 {
+					style = m.styles.empty
+				}
+				rows = append(rows, m.treeLine(bodyBase+bodyBranch, line, m.width, style))
 			}
 		}
 	}
@@ -953,7 +959,13 @@ func fitTraceEntries(entries []traceEntry, limit int, omissionStyle lipgloss.Sty
 					continue
 				}
 				if priority == 0 && capacity >= 2 && len(detail.body) != 0 {
-					detail.body = append([]string(nil), detail.body[:capacity-1]...)
+					if detail.head == "Output" {
+						detail.body = append([]string(nil), detail.body[:capacity-2]...)
+						detail.body = append(detail.body, outputTruncationMarker)
+						detail.outputTruncated = true
+					} else {
+						detail.body = append([]string(nil), detail.body[:capacity-1]...)
+					}
 					selected[i] = append(selected[i], detail)
 					capacity = 0
 				}
@@ -963,7 +975,7 @@ func fitTraceEntries(entries []traceEntry, limit int, omissionStyle lipgloss.Sty
 	for i := range entries {
 		entries[i].details = selected[i]
 	}
-	entries = append(entries, traceEntry{summary: "… low-value details omitted", style: omissionStyle})
+	entries = append(entries, traceEntry{summary: "… additional details omitted", style: omissionStyle})
 	return entries
 }
 

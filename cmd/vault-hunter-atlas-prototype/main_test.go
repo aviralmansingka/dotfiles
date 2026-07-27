@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -173,6 +174,45 @@ func TestAgentFailuresAndFutureOutputStayVisibleUnderPressure(t *testing.T) {
 		if !strings.Contains(timeView, wanted) {
 			t.Errorf("time river dossier lost %q:\n%s", wanted, timeView)
 		}
+	}
+}
+
+func TestOverCapacityAgentOutputHasExplicitTruncationMarker(t *testing.T) {
+	output := "First retained output line.\n" + strings.Repeat("Additional output prose exceeds the visible board row budget.\n", 30) + "Hidden output ending."
+	detail, err := json.Marshal(map[string]any{
+		"schema":       "vault-hunter-subagent/v1",
+		"tool_call_id": "call-output",
+		"agent":        "context-builder",
+		"model":        "future-model",
+		"output":       output,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := prototypeRun()
+	run.Lifecycle = []vaultregistry.Lifecycle{
+		agentObservation("start-output", "2026-02-20T10:01:00Z", "subagent/started", "running", `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-output","agent":"context-builder","cwd":"/tmp/task-output"}`),
+		agentObservation("finish-output", "2026-02-20T10:02:00Z", "subagent/finished", "completed", string(detail)),
+	}
+
+	view, _ := prototypeView(t, run, 0)
+	assertBounded(t, view, 120, 32)
+	for _, wanted := range []string{"Output", "First retained output line.", "… additional details omitted"} {
+		if !strings.Contains(view, wanted) {
+			t.Errorf("over-capacity output does not contain %q:\n%s", wanted, view)
+		}
+	}
+	if got := strings.Count(view, "… output truncated"); got != 1 {
+		t.Fatalf("truncation marker count = %d, want 1:\n%s", got, view)
+	}
+	if !strings.Contains(view, "└─ … output truncated") {
+		t.Errorf("output does not end with the exact truncation marker:\n%s", view)
+	}
+	if strings.Contains(view, "low-value details omitted") {
+		t.Errorf("truncated output is mislabeled as low-value:\n%s", view)
+	}
+	if strings.Index(view, "First retained output line.") > strings.Index(view, "… output truncated") {
+		t.Errorf("truncation marker precedes retained output prose:\n%s", view)
 	}
 }
 
