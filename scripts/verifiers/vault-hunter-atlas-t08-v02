@@ -210,14 +210,14 @@ expect {
   timeout { fail "journal did not render initial attached-terminal D frame" }
 }
 expect {
-  -re {observation ID · life-later} {}
-  eof { fail "journal exited before initial D selected card" }
-  timeout { fail "journal did not render initial D selected card" }
-}
-expect {
   -re {8 recorded journal events omitted \(6 earlier, 0 later\)} {}
   eof { fail "journal exited before initial D omission row" }
   timeout { fail "journal did not render initial D omission row" }
+}
+expect {
+  -re {observation ID · life-later} {}
+  eof { fail "journal exited before initial D selected card" }
+  timeout { fail "journal did not render initial D selected card" }
 }
 expect {
   -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
