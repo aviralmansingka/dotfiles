@@ -767,8 +767,31 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 		const forwardUpdate = (update: any) => {
 			if (containsRawReasoning(update))
 				writeFixtureMarker("PI_VERIFY_REASONING_CONTAMINATION_MARKER", "contaminated");
-			const progress = update?.details?.results?.[0]?.progress;
+			const normalized = update?.details?.results?.[0];
+			const progress = normalized?.progress;
 			if (params.task === SUBAGENT_TASK) {
+				const rootSubagentEvents = (progress?.recentTools ?? [])
+					.filter((tool: any) => tool.toolCallId === "root-subagent");
+				const rootSubagent = rootSubagentEvents.find((tool: any) => tool.status === "done");
+				const boundaryPath = process.env.PI_VERIFY_NESTED_BOUNDARY_MARKER!;
+				if (rootSubagent && !existsSync(boundaryPath)) {
+					const researcher = rootSubagent.children
+						?.find((child: any) => child.agent === SUBAGENT_NESTED_AGENT);
+					writeFixtureMarker("PI_VERIFY_NESTED_BOUNDARY_MARKER", JSON.stringify({
+						rootEventCount: rootSubagentEvents.length,
+						tool: rootSubagent.tool,
+						toolCallId: rootSubagent.toolCallId,
+						args: rootSubagent.args,
+						status: rootSubagent.status,
+						childIdentities: rootSubagent.children?.map((child: any) => child.agent) ?? [],
+						researcherTools: researcher?.progress?.recentTools?.map((tool: any) => ({
+							tool: tool.tool,
+							toolCallId: tool.toolCallId,
+							args: tool.args,
+							status: tool.status,
+						})) ?? [],
+					}));
+				}
 				if ((progress?.recentTools?.length ?? 0) === 0)
 					writeFixtureMarker("PI_VERIFY_SUBAGENT_INITIAL_MARKER", "real execute initial update");
 				else

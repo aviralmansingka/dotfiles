@@ -108,6 +108,7 @@ real_child_marker="$verify_dir/real-child-coverage"
 real_main_spawn_marker="$verify_dir/real-main-spawn"
 real_event_marker="$verify_dir/real-event-normalization"
 nested_exit_only_marker="$verify_dir/nested-exit-only-state"
+nested_boundary_marker="$verify_dir/nested-normalization-boundary"
 reasoning_upstream_marker="$verify_dir/reasoning-upstream-input"
 reasoning_model_marker="$verify_dir/reasoning-render-model"
 reasoning_contamination_marker="$verify_dir/reasoning-contamination"
@@ -827,7 +828,7 @@ console.log("Pi work-step terminal state verified: prompt-scoped thinking remain
 NODE
 
 printf -v pi_command \
-	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_NESTED_EXIT_ONLY_MARKER=%q PI_VERIFY_REASONING_UPSTREAM_MARKER=%q PI_VERIFY_REASONING_MODEL_MARKER=%q PI_VERIFY_REASONING_CONTAMINATION_MARKER=%q PI_VERIFY_USAGE_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
+	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_NESTED_EXIT_ONLY_MARKER=%q PI_VERIFY_NESTED_BOUNDARY_MARKER=%q PI_VERIFY_REASONING_UPSTREAM_MARKER=%q PI_VERIFY_REASONING_MODEL_MARKER=%q PI_VERIFY_REASONING_CONTAMINATION_MARKER=%q PI_VERIFY_USAGE_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
 	"$agent_dir" \
 	"$subagent_release" \
 	"$subagent_progress_release" \
@@ -841,6 +842,7 @@ printf -v pi_command \
 	"$real_main_spawn_marker" \
 	"$real_event_marker" \
 	"$nested_exit_only_marker" \
+	"$nested_boundary_marker" \
 	"$reasoning_upstream_marker" \
 	"$reasoning_model_marker" \
 	"$reasoning_contamination_marker" \
@@ -967,6 +969,7 @@ wait_for_terminal \
 wait_for_fixture_file "$reasoning_upstream_marker" "Raw reasoning sentinel did not reach upstream execute input"
 wait_for_fixture_file "$reasoning_model_marker" "Raw reasoning was not discarded before render-model construction"
 wait_for_fixture_file "$usage_marker" "Native result usage/context normalization marker was not recorded"
+wait_for_fixture_file "$nested_boundary_marker" "Normalized nested ownership boundary marker was not recorded"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_collapsed_capture"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 C-o
 wait_for_terminal \
@@ -1032,7 +1035,7 @@ wait_for_terminal "23 ctx" "Restored old-shaped provider result lost its availab
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$provider_restored_capture"
 stop_tmux
 
-node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" "$nested_exit_only_marker" "$subagent_running_output_hidden_capture" "$subagent_running_output_restored_capture" "$subagent_running_thinking_hidden_o_then_t_capture" "$subagent_running_both_hidden_o_then_t_capture" "$subagent_running_both_restored_o_then_t_capture" "$subagent_running_thinking_hidden_t_then_o_capture" "$subagent_running_both_hidden_t_then_o_capture" "$subagent_running_output_hidden_t_then_o_capture" "$subagent_running_both_restored_t_then_o_capture" "$subagent_recollapsed_capture" "$reasoning_upstream_marker" "$reasoning_model_marker" "$reasoning_contamination_marker" "$usage_marker" "$provider_restored_capture" <<'NODE'
+node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" "$nested_exit_only_marker" "$subagent_running_output_hidden_capture" "$subagent_running_output_restored_capture" "$subagent_running_thinking_hidden_o_then_t_capture" "$subagent_running_both_hidden_o_then_t_capture" "$subagent_running_both_restored_o_then_t_capture" "$subagent_running_thinking_hidden_t_then_o_capture" "$subagent_running_both_hidden_t_then_o_capture" "$subagent_running_output_hidden_t_then_o_capture" "$subagent_running_both_restored_t_then_o_capture" "$subagent_recollapsed_capture" "$reasoning_upstream_marker" "$reasoning_model_marker" "$reasoning_contamination_marker" "$usage_marker" "$provider_restored_capture" "$nested_boundary_marker" <<'NODE'
 const fs = require("node:fs");
 
 const spec = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -1108,6 +1111,7 @@ const reasoningModelCoverage = fs.readFileSync(process.argv[30], "utf8").trim();
 const reasoningContaminationPath = process.argv[31];
 const usageCoverage = JSON.parse(fs.readFileSync(process.argv[32], "utf8"));
 const providerRestored = parseTerminal(process.argv[33]);
+const nestedBoundaryCoverage = JSON.parse(fs.readFileSync(process.argv[34], "utf8"));
 const failures = [];
 const check = (condition, message) => {
 	if (!condition) failures.push(message);
@@ -1380,6 +1384,26 @@ for (const [state, terminal] of [
 }
 
 const nested = spec.review.nested;
+const expectedNestedBoundary = {
+	rootEventCount: 1,
+	tool: "subagent",
+	toolCallId: "root-subagent",
+	args: nested.parentArgumentDecoy,
+	status: "done",
+	childIdentities: [nested.agent, nested.exitOnly.agent],
+	researcherTools: [{
+		tool: nested.shell,
+		toolCallId: "nested-zsh",
+		args: nested.command,
+		status: "done",
+	}],
+};
+check(
+	JSON.stringify(nestedBoundaryCoverage) === JSON.stringify(expectedNestedBoundary),
+	"Normalized nested ownership boundary lost exact root event, decoy args, child identities, or researcher zsh ownership",
+);
+if (JSON.stringify(nestedBoundaryCoverage) === JSON.stringify(expectedNestedBoundary))
+	console.log("Nested normalization boundary marker: root_event=1 status=done children=2 researcher_zsh=owned decoy_ui=hidden");
 check(
 	JSON.stringify(nestedExitOnlyCoverage) === JSON.stringify({
 		parentTool: "subagent",
@@ -1400,17 +1424,15 @@ const nestedHeaderLines = runningLines
 		/[⟳○✓✗] /u.test(line) &&
 		line.includes(`${nested.agent} · nested agent · completed`),
 	);
-check(running.plain.includes(nested.parentArgumentDecoy), "Nested placement fixture lost its parent-argument decoy");
+check(!running.plain.includes(nested.parentArgumentDecoy), "Nested parent-argument decoy leaked into the connected UI");
 check(nestedHeaderLines.length === 1, "Nested agent did not render exactly one fixture-specific child node");
 if (nestedHeaderLines.length === 1) {
 	const [{ index }] = nestedHeaderLines;
 	check(
 		isConnectedToolNode(runningLines[index + 1] ?? "", nested.shell, true) &&
-			runningLines[index + 2]?.includes(nested.command),
+			runningLines[index + 2] === `       │  │  │  └─ $ ${nested.command}`,
 		"Nested shell hierarchy did not bind to the exact fixture-specific child node",
 	);
-	const decoyLine = runningLines.findIndex((line) => line.includes(nested.parentArgumentDecoy));
-	check(decoyLine >= 0 && decoyLine < index, "Nested child node was confused with parent argument prose");
 }
 for (const [state, terminal] of [
 	["Collapsed", collapsed],
@@ -1425,7 +1447,7 @@ for (const [state, terminal] of [
 		);
 	check(
 		headers.length === 1 &&
-			lines[headers[0]?.index + 1]?.trim() === nested.exitOnly.narrative &&
+			lines[headers[0]?.index + 1] === `       │     └─ ${nested.exitOnly.narrative}` &&
 			count(terminal.plain, nested.exitOnly.narrative) === 1,
 		`${state} nested exit-only failure lost its one package-owned narrative directly beneath the exact child identity`,
 	);
