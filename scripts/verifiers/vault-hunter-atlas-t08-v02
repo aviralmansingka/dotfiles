@@ -79,6 +79,41 @@ cmp "$tmp/static-snapshot" "$tmp/static-redirected"
 cmp "$tmp/static-redirected" "$tmp/static-redirected-again"
 cmp "$tmp/static-redirected" "$tmp/static-dumb"
 
+set +e
+run_cli journal --journal=false --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --snapshot --color always --width 80 --height 24 >"$tmp/journal-alias.stdout" 2>"$tmp/journal-alias.stderr"
+journal_alias_status=$?
+set -e
+case "$journal_alias_status" in
+  0)
+    if ! cmp -s "$tmp/static-snapshot" "$tmp/journal-alias.stdout"; then
+      echo "journal --journal=false escaped authoritative journal mode" >&2
+      exit 1
+    fi
+    ;;
+  2)
+    test ! -s "$tmp/journal-alias.stdout"
+    test -s "$tmp/journal-alias.stderr"
+    ;;
+  *)
+    echo "journal --journal=false exited $journal_alias_status, want journal output or exit 2" >&2
+    exit 1
+    ;;
+esac
+
+set +e
+run_cli journal --journal=false --feature feature.md --vault-dir "$tmp/vault" \
+  --state-dir "$tmp/state" --snapshot --width 80 --height 24 \
+  >"$tmp/journal-alias-aggregate.stdout" 2>"$tmp/journal-alias-aggregate.stderr"
+journal_alias_aggregate_status=$?
+set -e
+if test "$journal_alias_aggregate_status" -ne 2 ||
+  test -s "$tmp/journal-alias-aggregate.stdout" ||
+  test ! -s "$tmp/journal-alias-aggregate.stderr"; then
+  echo "journal --journal=false reached aggregate routing" >&2
+  exit 1
+fi
+
 expect_exit journal-feature 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" \
   --feature feature.md --vault-dir "$tmp/vault"
 expect_exit journal-project 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" \

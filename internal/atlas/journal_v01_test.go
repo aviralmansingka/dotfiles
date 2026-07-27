@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/charmbracelet/lipgloss"
 
@@ -190,6 +191,161 @@ func TestT08V01SelectedEvidenceDetail(t *testing.T) {
 	}, "\n")
 	if !strings.Contains(view, want) {
 		t.Fatalf("selected evidence detail card missing recorded fields:\n%s", view)
+	}
+}
+
+func TestT08V01RegistryControlsAreVisiblyEscaped(t *testing.T) {
+	const (
+		source  = "A\n\r\t\x1b\x00\x7f\u0080\u009fZ"
+		escaped = `A\n\r\t\x1b\x00\x7f\u0080\u009fZ`
+	)
+	cases := []struct {
+		name     string
+		evidence bool
+		set      func(*vaultregistry.Run)
+	}{
+		{"task ID", false, func(run *vaultregistry.Run) { run.Task.ID = source }},
+		{"task title", false, func(run *vaultregistry.Run) { run.Task.Title = source }},
+		{"lifecycle observation ID", false, func(run *vaultregistry.Run) { run.Lifecycle[0].ObservationID = source }},
+		{"lifecycle goal ID", false, func(run *vaultregistry.Run) { run.Lifecycle[0].GoalID = source }},
+		{"lifecycle kind", false, func(run *vaultregistry.Run) { run.Lifecycle[0].Kind = source }},
+		{"lifecycle state", false, func(run *vaultregistry.Run) { run.Lifecycle[0].State = source }},
+		{"lifecycle detail", false, func(run *vaultregistry.Run) { run.Lifecycle[0].Detail = source }},
+		{"evidence observation ID", true, func(run *vaultregistry.Run) { run.Evidence[0].ObservationID = source }},
+		{"evidence verifier ID", true, func(run *vaultregistry.Run) { run.Evidence[0].VerifierID = source }},
+		{"evidence state", true, func(run *vaultregistry.Run) { run.Evidence[0].State = source }},
+		{"evidence command", true, func(run *vaultregistry.Run) { run.Evidence[0].Command = source }},
+		{"evidence implementation tree", true, func(run *vaultregistry.Run) { run.Evidence[0].ImplementationTree = source }},
+		{"evidence artifact SHA-256", true, func(run *vaultregistry.Run) { run.Evidence[0].ArtifactSHA256 = source }},
+		{"evidence detail", true, func(run *vaultregistry.Run) { run.Evidence[0].Detail = source }},
+	}
+
+	// Run IDs and timestamps have syntax validation; these are every displayed
+	// free-form Registry field that can contain controls in a valid Run.
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			run := controlCharacterRun(tc.evidence)
+			tc.set(&run)
+			plain := NewJournalModel(run, 80, 24).ViewColor(false)
+			colored := NewJournalModel(run, 80, 24).ViewColor(true)
+			if plain != NewJournalModel(run, 80, 24).ViewColor(false) ||
+				colored != NewJournalModel(run, 80, 24).ViewColor(true) {
+				t.Fatal("control escaping is not deterministic")
+			}
+			assertExpectedJournalSGR(t, colored)
+			if stripped := stripJournalANSI(colored); stripped != plain {
+				t.Fatal("stripped colored frame differs from plain frame")
+			}
+			if !strings.Contains(plain, escaped) {
+				t.Fatalf("frame does not visibly escape %s as %q:\n%s", tc.name, escaped, plain)
+			}
+			assertNoJournalControls(t, plain)
+			assertJournalBounds(t, plain, 80, 24)
+			lines := strings.Split(plain, "\n")
+			if got := lines[len(lines)-1]; got != "j/down k/up navigate · q quit · read-only · 80x24" {
+				t.Fatalf("footer = %q", got)
+			}
+		})
+	}
+}
+
+func TestT08V01MissingAndUnknownMarkers(t *testing.T) {
+	t.Run("missing lifecycle identity kind and state are question marks", func(t *testing.T) {
+		run := controlCharacterRun(false)
+		run.Lifecycle[0].GoalID = ""
+		run.Lifecycle[0].Kind = ""
+		run.Lifecycle[0].State = ""
+		view := NewJournalModel(run, 80, 24).View()
+		for _, want := range []string{"  Goal ID: ?", "  Kind: ?", "  State: ?"} {
+			if !strings.Contains(view, want) {
+				t.Errorf("missing exact marker %q:\n%s", want, view)
+			}
+		}
+	})
+
+	t.Run("missing evidence identity state and exit are explicit", func(t *testing.T) {
+		run := controlCharacterRun(true)
+		run.Evidence[0].VerifierID = ""
+		run.Evidence[0].State = ""
+		view := NewJournalModel(run, 80, 24).View()
+		for _, want := range []string{
+			"exit=none recorded",
+			"  Verifier ID: ?",
+			"  State: ?",
+			"  Exit status: none recorded",
+		} {
+			if !strings.Contains(view, want) {
+				t.Errorf("missing exact marker %q:\n%s", want, view)
+			}
+		}
+	})
+
+	t.Run("unknown kind and states have neutral visible markers", func(t *testing.T) {
+		lifecycle := controlCharacterRun(false)
+		lifecycle.Lifecycle[0].Kind = "future-kind"
+		lifecycle.Lifecycle[0].State = "future-state"
+		assertUnknownJournalMarker(t, NewJournalModel(lifecycle, 80, 24).View(), "future-kind")
+		assertUnknownJournalMarker(t, NewJournalModel(lifecycle, 80, 24).View(), "future-state")
+
+		evidence := controlCharacterRun(true)
+		evidence.Evidence[0].State = "future-evidence-state"
+		assertUnknownJournalMarker(t, NewJournalModel(evidence, 80, 24).View(), "future-evidence-state")
+	})
+}
+
+func controlCharacterRun(evidence bool) vaultregistry.Run {
+	run := vaultregistry.Run{
+		SchemaVersion: 1,
+		RunID:         "control-run",
+		Revision:      1,
+		InvokedAt:     "2026-07-26T09:59:00Z",
+		UpdatedAt:     "2026-07-26T10:00:00Z",
+		Task: vaultregistry.Task{
+			ID: "T08", Title: "control normalization", Path: "task.md",
+			FeaturePath: "feature.md", Kind: "task",
+		},
+	}
+	if evidence {
+		run.Evidence = []vaultregistry.Evidence{{
+			ObservationID: "evidence-control",
+			ObservedAt:    "2026-07-26T10:00:00Z",
+			VerifierID:    "T08.V01",
+			State:         "recorded",
+		}}
+	} else {
+		run.Lifecycle = []vaultregistry.Lifecycle{{
+			ObservationID: "lifecycle-control",
+			ObservedAt:    "2026-07-26T10:00:00Z",
+			GoalID:        "T08.V01",
+			Kind:          "verifier",
+			State:         "done",
+		}}
+	}
+	return run
+}
+
+func assertNoJournalControls(t *testing.T, text string) {
+	t.Helper()
+	for _, r := range text {
+		if r != '\n' && unicode.IsControl(r) {
+			t.Fatalf("journal contains source control rune U+%04X", r)
+		}
+	}
+}
+
+func assertUnknownJournalMarker(t *testing.T, view, value string) {
+	t.Helper()
+	found := false
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, value) {
+			found = true
+			if !strings.Contains(line, "?") {
+				t.Errorf("unknown value %q has no neutral visible marker in %q", value, line)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("unknown value %q is not visible", value)
 	}
 }
 
