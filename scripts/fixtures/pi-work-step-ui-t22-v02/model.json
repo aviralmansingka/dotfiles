@@ -1,10 +1,10 @@
 {
   "contract": {
     "width": 110,
+    "controlWidth": 111,
+    "widthProbeCase": "nested-ownership",
     "t0": 1700000000000,
     "t1": 1700000001000,
-    "parentCommit": "c412877967fa8c17abf7ab427b2cd8843b9e06b5",
-    "parentTree": "07051764c0e60029a09d7a8d66f78e5c6238ffa0",
     "reasoningSentinel": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER"
   },
   "call": {
@@ -18,8 +18,8 @@
     "ctrl-o-expanded": "c479cc5d5bc3179178b57195a6efe4043db4fcc5b70ac5987ea3d46be75d8300",
     "empty-success": "786d74cf160722ea1d145d24eee66daef8ed0d625ccea92ef7e8837f5d79a5f9",
     "nested-exit-only-failure": "6b66fa9637905ca37d910c305d7572cb0ff2469cef2d6a15b7af261fd8fa09c6",
-    "nested-ownership": "25c96b8df4470669f25b36ef9fe87ac7cdfb867d450ca8a469b5dce0e5656ead",
-    "root-failure": "e1e3aedcece5eb2b32866e86dbdd2761d29591fcda72310e4d4b1dabe7dd9e5c",
+    "nested-ownership": "817d9724e1530831ad25d28be997dfba3111b24638ba1c5acbde59735ff3f723",
+    "root-failure": "d7af94a7650d919d824771a6b9995c21700a487c1af6b543bacd7c94788c473f",
     "running-t0": "b1f6a559b3db28722036b9c39532866fbeaa06623d15b2e8293022cf4b63cc81",
     "running-t1": "41502b0f2021ab7906df246c302f31f4ccbf14c8b9831885ff718723794a9423"
   },
@@ -108,9 +108,38 @@
     {
       "name": "nested-ownership",
       "clock": 1700000000000,
-      "expanded": false,
-      "activity": { "title": "Reviewing repository changes", "status": "completed", "startedAt": 1699999991800, "completedAt": 1700000000000 },
-      "resultFrom": "completed-minimized-t0"
+      "expanded": true,
+      "activity": { "title": "Verifying unique nested ownership across a deliberately width-sensitive production composition boundary", "status": "completed", "startedAt": 1699999995000, "completedAt": 1700000000000 },
+      "call": {
+        "agent": "root-owner",
+        "task": "Dispatch nested-auditor (fixture/nested-owner) while retaining PARENT_PLACEMENT_DECOY outside the child node.",
+        "cwd": "~/dotfiles"
+      },
+      "result": {
+        "agent": "root-owner", "task": "Verify nested ownership", "output": "V02 root ownership summary.", "exitCode": 0, "model": "fixture/root-owner", "contextWindow": 200000,
+        "usage": { "input": 900, "output": 300, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 2 },
+        "progress": { "agent": "root-owner", "status": "completed", "task": "Verify nested ownership", "toolCount": 2, "tokens": 1200, "durationMs": 5000, "startedAt": 1699999995000, "completedAt": 1700000000000, "lastMessage": "V02 root ownership summary.", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER", "recentTools": [
+          {
+            "tool": "bash", "args": "printf V02_ROOT_WIDTH_PROBE_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789_abcdefghijklmnopqrstuvwxyz_tail", "toolCallId": "nested-root-bash", "status": "done", "startedAt": 1699999996000, "completedAt": 1699999997000,
+            "shellCommands": ["printf V02_ROOT_WIDTH_PROBE_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789_abcdefghijklmnopqrstuvwxyz_tail"]
+          },
+          {
+            "tool": "subagent", "args": "parent-decoy nested-auditor (fixture/nested-owner) PARENT_PLACEMENT_DECOY", "toolCallId": "nested-owner-call", "status": "done", "startedAt": 1699999997000, "completedAt": 1700000000000,
+            "children": [
+              {
+                "agent": "nested-auditor", "task": "Inspect exact nested ownership", "output": "V02 nested ownership summary.", "exitCode": 0, "model": "fixture/nested-owner",
+                "usage": { "input": 300, "output": 100, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
+                "progress": { "agent": "nested-auditor", "status": "completed", "task": "Inspect exact nested ownership", "toolCount": 1, "tokens": 400, "durationMs": 2000, "startedAt": 1699999998000, "completedAt": 1700000000000, "lastMessage": "V02 nested ownership summary.", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER", "recentTools": [
+                  {
+                    "tool": "zsh", "args": "V02_NESTED_ASSIGN=$(pwd) && printf V02_NESTED_COMMAND_TAIL", "toolCallId": "nested-auditor-zsh", "status": "done", "startedAt": 1699999998500, "completedAt": 1699999999500,
+                    "shellCommands": ["V02_NESTED_ASSIGN=$(pwd) && printf V02_NESTED_COMMAND_TAIL"]
+                  }
+                ] }
+              }
+            ]
+          }
+        ] }
+      }
     },
     {
       "name": "empty-success",

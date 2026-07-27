@@ -12,6 +12,9 @@ const modelPath = join(repoRoot, "scripts/fixtures/pi-work-step-ui-t22-v02/model
 const goldenDir = join(repoRoot, "scripts/goldens/pi-work-step-ui-t22-v02");
 const parentPath = join(repoRoot, "pi/.pi/agent/extensions/tool-call-renderer.ts");
 const productDir = process.env.PI_VERIFY_NATIVE_SUBAGENTS_DIR;
+const expectedParentCommit = process.env.PI_VERIFY_PARENT_EXPECTED_COMMIT;
+const expectedParentTree = process.env.PI_VERIFY_PARENT_EXPECTED_TREE;
+const expectedParentBlob = process.env.PI_VERIFY_PARENT_EXPECTED_RENDERER_BLOB;
 const expectedProductCommit = process.env.PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT;
 const expectedProductTree = process.env.PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE;
 const expectedProductBlob = process.env.PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB;
@@ -25,30 +28,39 @@ const fail = (message) => {
 	console.error(`T22.V02 setup failure: ${message}`);
 	process.exit(2);
 };
-if (!productDir || !expectedProductCommit || !expectedProductTree || !expectedProductBlob)
-	fail("explicit product dir/commit/tree/index blob are required");
+if (!productDir) fail("PI_VERIFY_NATIVE_SUBAGENTS_DIR is required");
+const requireCompleteTriple = (label, values) => {
+	if (values.some(Boolean) && !values.every(Boolean))
+		fail(`${label} expected identity requires commit/tree/blob together`);
+};
+requireCompleteTriple("parent", [expectedParentCommit, expectedParentTree, expectedParentBlob]);
+requireCompleteTriple("native", [expectedProductCommit, expectedProductTree, expectedProductBlob]);
 
 const model = JSON.parse(readFileSync(modelPath, "utf8"));
-const parentCommit = model.contract.parentCommit;
-const parentTree = model.contract.parentTree;
-const parentBlob = git(repoRoot, "rev-parse", `${parentCommit}:pi/.pi/agent/extensions/tool-call-renderer.ts`);
-const actualParentBlob = git(repoRoot, "hash-object", parentPath);
+const parentCommit = git(repoRoot, "rev-parse", "HEAD");
+const parentTree = git(repoRoot, "rev-parse", "HEAD^{tree}");
+const parentBlob = git(repoRoot, "rev-parse", "HEAD:pi/.pi/agent/extensions/tool-call-renderer.ts");
 if (
-	git(repoRoot, "rev-parse", `${parentCommit}^{tree}`) !== parentTree ||
-	actualParentBlob !== parentBlob
-) fail("parent production source identity differs");
+	git(repoRoot, "hash-object", parentPath) !== parentBlob ||
+	git(repoRoot, "status", "--porcelain=v1", "--untracked-files=all") !== ""
+) fail("parent Git source is not clean at HEAD");
+if (
+	expectedParentCommit &&
+	(parentCommit !== expectedParentCommit || parentTree !== expectedParentTree || parentBlob !== expectedParentBlob)
+) fail("parent explicit identity differs");
 
 const productPath = join(productDir, "index.ts");
 const productCommit = git(productDir, "rev-parse", "HEAD");
 const productTree = git(productDir, "rev-parse", "HEAD^{tree}");
 const productBlob = git(productDir, "rev-parse", "HEAD:index.ts");
 if (
-	productCommit !== expectedProductCommit ||
-	productTree !== expectedProductTree ||
-	productBlob !== expectedProductBlob ||
 	git(productDir, "hash-object", productPath) !== productBlob ||
 	git(productDir, "status", "--porcelain=v1", "--untracked-files=all") !== ""
-) fail("native product identity or cleanliness differs");
+) fail("native Git source is not clean at HEAD");
+if (
+	expectedProductCommit &&
+	(productCommit !== expectedProductCommit || productTree !== expectedProductTree || productBlob !== expectedProductBlob)
+) fail("native explicit identity differs");
 
 const piCli = realpathSync(execFileSync("command", ["-v", "pi"], { encoding: "utf8", shell: true }).trim());
 const piRoot = resolve(dirname(piCli), "..");
@@ -80,8 +92,6 @@ const { ToolExecutionComponent } = await import(pathToFileURL(toolModulePath).hr
 AssistantMessageComponent.prototype.updateContent = function (message) { this.lastMessage = message; };
 AssistantMessageComponent.prototype.invalidate = function () {};
 AssistantMessageComponent.prototype.render = function () { return []; };
-ToolExecutionComponent.prototype.updateDisplay = function () {};
-ToolExecutionComponent.prototype.render = function () { return this.v02NativeLines ?? []; };
 
 const handlers = new Map();
 let nativeTool;
@@ -96,8 +106,22 @@ nativeModule.default(nativeApi);
 process.argv[1] = originalArgv1;
 if (!nativeTool?.renderCall || !nativeTool?.renderResult)
 	fail("real native render callbacks were not registered");
+let nativeCallRenders = 0;
+let nativeResultRenders = 0;
+const nativeRenderCall = nativeTool.renderCall;
+const nativeRenderResult = nativeTool.renderResult;
+nativeTool = {
+	...nativeTool,
+	renderCall(...args) {
+		nativeCallRenders++;
+		return nativeRenderCall(...args);
+	},
+	renderResult(...args) {
+		nativeResultRenders++;
+		return nativeRenderResult(...args);
+	},
+};
 
-Object.defineProperty(process.stdout, "columns", { configurable: true, value: model.contract.width + 4 });
 const byName = new Map();
 for (const item of model.cases) {
 	const source = item.resultFrom ? byName.get(item.resultFrom)?.result : item.result;
@@ -105,48 +129,69 @@ for (const item of model.cases) {
 	item.result = structuredClone(source);
 	byName.set(item.name, item);
 }
+if (model.cases.length !== 9 || new Set(model.cases.map((item) => item.name)).size !== 9)
+	fail("canonical cases are not nine distinct declared states");
+const nestedOwnership = byName.get("nested-ownership");
+const nestedTools = nestedOwnership?.result?.progress?.recentTools;
+const nestedChild = nestedTools?.[1]?.children?.[0];
+if (
+	nestedOwnership.call?.task?.includes("PARENT_PLACEMENT_DECOY") !== true ||
+	nestedTools?.[0]?.tool !== "bash" ||
+	!nestedTools[0].shellCommands?.[0]?.includes("V02_ROOT_WIDTH_PROBE_") ||
+	nestedTools?.[1]?.tool !== "subagent" ||
+	!nestedTools[1].args?.includes("PARENT_PLACEMENT_DECOY") ||
+	nestedChild?.agent !== "nested-auditor" ||
+	nestedChild?.model !== "fixture/nested-owner" ||
+	nestedChild?.progress?.recentTools?.[0]?.tool !== "zsh" ||
+	!nestedChild.progress.recentTools[0].shellCommands?.[0]?.includes("V02_NESTED_COMMAND_TAIL") ||
+	nestedChild?.progress?.lastMessage !== "V02 nested ownership summary." ||
+	model.goldenSha256["nested-ownership"] === model.goldenSha256["completed-minimized-t0"]
+) fail("nested ownership fixture is not distinct and exact");
 
-const renderCase = (item) => {
+let lifecycleInvalidations = 0;
+const renderCase = (item, width = model.contract.width) => {
 	Date.now = () => item.clock;
+	Object.defineProperty(process.stdout, "columns", { configurable: true, value: width + 4 });
 	handlers.get("session_shutdown")?.();
 	handlers.get("agent_start")?.();
+	const call = item.call ?? model.call;
+	const toolCallId = `v02-${item.name}-${width}`;
 	const assistant = Object.create(AssistantMessageComponent.prototype);
 	assistant.updateContent({
 		role: "assistant",
 		content: [
 			{ type: "text", text: item.activity.title },
-			{ type: "toolCall", id: `v02-${item.name}`, name: "subagent", arguments: model.call },
+			{ type: "toolCall", id: toolCallId, name: "subagent", arguments: call },
 		],
 		stopReason: "toolUse",
 	});
-	const callComponent = nativeTool.renderCall(model.call, themeModule.theme, {
-		expanded: item.expanded,
-		lastComponent: undefined,
-	});
-	const resultComponent = nativeTool.renderResult(
+	const ui = { requestRender() { lifecycleInvalidations++; } };
+	const tool = new ToolExecutionComponent(
+		"subagent",
+		toolCallId,
+		call,
+		{ showImages: false },
+		nativeTool,
+		ui,
+		repoRoot,
+	);
+	tool.markExecutionStarted();
+	tool.setArgsComplete();
+	tool.setExpanded(item.expanded);
+	tool.updateResult(
 		{
 			content: [{ type: "text", text: item.result.output || "(no output)" }],
 			details: { results: [item.result] },
-			...(item.result.exitCode === 0 ? {} : { isError: true }),
+			isError: item.result.exitCode !== 0,
 		},
-		{ expanded: item.expanded },
-		themeModule.theme,
-		{ expanded: item.expanded },
+		item.activity.status === "running",
 	);
-	const tool = Object.create(ToolExecutionComponent.prototype);
-	tool.toolName = "subagent";
-	tool.toolCallId = `v02-${item.name}`;
-	tool.v02NativeLines = [
-		...callComponent.render(model.contract.width),
-		...resultComponent.render(model.contract.width),
-	];
-	tool.updateDisplay();
 	if (item.activity.status !== "running")
 		handlers.get("tool_execution_end")?.({
-			toolCallId: tool.toolCallId,
+			toolCallId,
 			isError: item.activity.status === "failed",
 		});
-	return Buffer.from(`${tool.render(model.contract.width).join("\n")}\n`, "utf8");
+	return Buffer.from(`${tool.render(width).join("\n")}\n`, "utf8");
 };
 
 const escaped = (buffer) => JSON.stringify(buffer.toString("utf8"));
@@ -185,12 +230,52 @@ for (const item of model.cases) {
 		`actual_escaped=${escaped(difference.actual.bytes)} actual_hex=${difference.actual.bytes.toString("hex")}`,
 	);
 }
+const stripAnsi = (value) => value.replace(/\x1b\[[0-9;]*m/gu, "");
+const nestedGolden = readFileSync(join(goldenDir, "nested-ownership.ansi"), "utf8");
+const nestedGoldenPlain = stripAnsi(nestedGolden);
+for (const token of [
+	"V02_ROOT_WIDTH_PROBE_",
+	"nested-auditor · nested agent · completed",
+	"zsh · 1 command · completed",
+	"V02_NESTED_COMMAND_TAIL",
+	"V02 nested ownership summary.",
+]) {
+	if (nestedGoldenPlain.split(token).length !== 2)
+		fail(`nested ownership golden cardinality differs for ${token}`);
+}
+const nestedOrder = [
+	"V02_ROOT_WIDTH_PROBE_",
+	"nested-auditor · nested agent · completed",
+	"zsh · 1 command · completed",
+	"V02_NESTED_COMMAND_TAIL",
+	"V02 nested ownership summary.",
+].map((token) => nestedGoldenPlain.indexOf(token));
+if (nestedOrder.some((index, position) => index < 0 || (position > 0 && index <= nestedOrder[position - 1])))
+	fail("nested ownership golden hierarchy/order differs");
+const widthLines = nestedGoldenPlain.split("\n").filter((line) => line.endsWith("…"));
+if (widthLines.length < 2 || widthLines.some((line) => [...line].length !== model.contract.width))
+	fail("width-sensitive golden does not cross exactly 110 columns");
+
+const rootFailure = readFileSync(join(goldenDir, "root-failure.ansi"), "utf8");
+const rootFailurePlain = stripAnsi(rootFailure);
+if (
+	!rootFailure.includes("\x1b[1;38;2;242;89;75mfailed") ||
+	!rootFailure.includes("\x1b[38;2;242;89;75m×\x1b[0m \x1b[1;38;2;242;89;75mReviewing failed child") ||
+	!rootFailurePlain.includes("       ├─ ✓ bash · 1 command · completed") ||
+	!rootFailurePlain.includes("       └─ ✗ Summary · Error: Root child failed.") ||
+	rootFailurePlain.indexOf("├─ ✓ bash") >= rootFailurePlain.indexOf("└─ ✗ Summary")
+) fail("root failure golden semantics/connectors differ");
 
 if (!actuals.get("completed-minimized-t0").equals(actuals.get("completed-minimized-t1")))
 	console.error("T22.V02 invariant failure: completed minimized frames are not byte-identical");
 if (actuals.get("running-t0").equals(actuals.get("running-t1")))
 	console.error("T22.V02 mismatch category=absent-clock-seam running frames are byte-identical");
-const plain = (name) => actuals.get(name).toString("utf8").replace(/\x1b\[[0-9;]*m/gu, "");
+const widthProbe = byName.get(model.contract.widthProbeCase);
+if (!widthProbe) fail("width probe case is missing");
+const widthControl = renderCase(widthProbe, model.contract.controlWidth);
+if (widthControl.equals(actuals.get(model.contract.widthProbeCase)))
+	fail("width probe did not differ at the control width");
+const plain = (name) => stripAnsi(actuals.get(name).toString("utf8"));
 if (plain("completed-minimized-t0").includes("git status --short"))
 	console.error("T22.V02 mismatch category=settled-leaves completed command leaves remain visible");
 if (
@@ -204,13 +289,35 @@ if (plain("completed-minimized-t0").includes("subagent reviewer"))
 	console.error("T22.V02 mismatch category=disconnected-composition parent Activity and native call/result headers remain separate");
 if ([...actuals.values()].some((frame) => frame.includes(model.contract.reasoningSentinel)))
 	fail("raw child reasoning sentinel leaked");
+if (
+	nativeCallRenders < model.cases.length ||
+	nativeResultRenders < model.cases.length ||
+	lifecycleInvalidations < model.cases.length ||
+	!plain("completed-minimized-t0").includes("1 step · 1 call") ||
+	!plain("completed-minimized-t0").includes("subagent reviewer")
+) fail("genuine production component lifecycle/composition was not observed");
 
 console.log(
-	`T22.V02 production seams loaded: parent_commit=${parentCommit} parent_tree=${parentTree} parent_blob=${parentBlob} ` +
-	`native_commit=${productCommit} native_tree=${productTree} native_blob=${productBlob}`,
+	`T22.V02 production lifecycle loaded: genuine_tool_execution_component=true parent_mode=${expectedParentCommit ? "explicit" : "derived"} ` +
+	`parent_commit=${parentCommit} parent_tree=${parentTree} parent_blob=${parentBlob} ` +
+	`native_mode=${expectedProductCommit ? "explicit" : "derived"} native_commit=${productCommit} native_tree=${productTree} native_blob=${productBlob} ` +
+	`native_render_call_count=${nativeCallRenders} native_render_result_count=${nativeResultRenders} lifecycle_invalidations=${lifecycleInvalidations}`,
 );
-console.log(`T22.V02 deterministic inputs: width=${model.contract.width} t0=${model.contract.t0} t1=${model.contract.t1}`);
+console.log(
+	`T22.V02 deterministic inputs: width=${model.contract.width} control_width=${model.contract.controlWidth} ` +
+	`t0=${model.contract.t0} t1=${model.contract.t1} width_probe_differs=true`,
+);
 console.log(`T22.V02 cases compared as raw UTF-8: ${model.cases.map((item) => item.name).join(",")}`);
+if (
+	git(repoRoot, "rev-parse", "HEAD") !== parentCommit ||
+	git(repoRoot, "rev-parse", "HEAD^{tree}") !== parentTree ||
+	git(repoRoot, "hash-object", parentPath) !== parentBlob ||
+	git(repoRoot, "status", "--porcelain=v1", "--untracked-files=all") !== "" ||
+	git(productDir, "rev-parse", "HEAD") !== productCommit ||
+	git(productDir, "rev-parse", "HEAD^{tree}") !== productTree ||
+	git(productDir, "hash-object", productPath) !== productBlob ||
+	git(productDir, "status", "--porcelain=v1", "--untracked-files=all") !== ""
+) fail("production identity or cleanliness changed after rendering");
 if (mismatches.length) {
 	console.error(`T22.V02 baseline mismatches (${mismatches.length}): ${mismatches.join(",")}`);
 	process.exit(1);
