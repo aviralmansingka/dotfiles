@@ -27,7 +27,7 @@ type orderedEntry struct {
 	order     int
 }
 
-func orderedEntries(lifecycle []vaultregistry.Lifecycle, evidence []vaultregistry.Evidence) []orderedEntry {
+func orderedEntries(lifecycle []vaultregistry.Lifecycle, evidence []vaultregistry.Evidence, chronological bool) []orderedEntry {
 	entries := make([]orderedEntry, 0, len(lifecycle)+len(evidence))
 	for i := range lifecycle {
 		entries = append(entries, orderedEntry{at: lifecycle[i].ObservedAt, lifecycle: &lifecycle[i], order: i})
@@ -36,6 +36,11 @@ func orderedEntries(lifecycle []vaultregistry.Lifecycle, evidence []vaultregistr
 		entries = append(entries, orderedEntry{at: evidence[i].ObservedAt, evidence: &evidence[i], order: i})
 	}
 	sort.SliceStable(entries, func(i, j int) bool {
+		if chronological {
+			left, leftOK := parsedObservation(entries[i].at)
+			right, rightOK := parsedObservation(entries[j].at)
+			return leftOK && rightOK && left.Before(right)
+		}
 		if entries[i].at != entries[j].at {
 			return entries[i].at < entries[j].at
 		}
@@ -45,6 +50,20 @@ func orderedEntries(lifecycle []vaultregistry.Lifecycle, evidence []vaultregistr
 		return entries[i].order < entries[j].order
 	})
 	return entries
+}
+
+func parsedObservation(observedAt string) (time.Time, bool) {
+	parsed, err := time.Parse(time.RFC3339Nano, observedAt)
+	return parsed, err == nil
+}
+
+func laterObservation(candidate, current string) bool {
+	candidateTime, candidateOK := parsedObservation(candidate)
+	currentTime, currentOK := parsedObservation(current)
+	if !candidateOK || !currentOK {
+		return true
+	}
+	return !candidateTime.Before(currentTime)
 }
 
 type Model struct {
@@ -67,13 +86,15 @@ func NewModel(run vaultregistry.Run, width, height int) Model {
 		detailVisible: true,
 		reducedMotion: os.Getenv("VAULT_HUNTER_REDUCED_MOTION") == "1",
 	}
-	m.goals = normalize(run)
+	m.goals = normalize(run, false)
 	m.selected = initialSelection(m.goals)
 	return m
 }
 
 func NewExpandedModel(run vaultregistry.Run, width, height int) Model {
 	m := NewModel(run, width, height)
+	m.goals = normalize(run, true)
+	m.selected = initialSelection(m.goals)
 	m.expanded = true
 	return m
 }
@@ -81,7 +102,7 @@ func NewExpandedModel(run vaultregistry.Run, width, height int) Model {
 // CompactView projects the same normalized goals and initial selection as the
 // standalone Atlas into the two rows available in Sidekick's preview.
 func CompactView(run vaultregistry.Run, participantID string, width, height int) string {
-	goals := normalize(run)
+	goals := normalize(run, false)
 	selected := initialSelection(goals)
 	goalID, kind, state := "?", "?", "?"
 	ordinal := "0/0"
@@ -231,7 +252,12 @@ func (m Model) ExpandedView() string {
 		selectedState = value(selected.state)
 	}
 
-	allEntries := orderedEntries(m.run.Lifecycle, m.run.Evidence)
+	leftWidth := m.width * 16 / 100
+	middleWidth := m.width * 52 / 100
+	evidenceWidth := m.width - leftWidth - 1 - middleWidth - 1
+	bodyRows := m.height - 4
+
+	allEntries := orderedEntries(m.run.Lifecycle, m.run.Evidence, true)
 	timelineEntries := timelineWindow(allEntries, selectedID, 8)
 	timelineLines := make([]string, 0, len(timelineEntries))
 	for _, entry := range timelineEntries {
@@ -246,27 +272,29 @@ func (m Model) ExpandedView() string {
 	if selected == nil {
 		ledgerLines = append(ledgerLines, " no recorded goals")
 	} else {
-		ledgerLines = append(ledgerLines, "SELECTED JOURNEY")
-		journey := orderedEntries(selected.lifecycle, selected.evidence)
+		journeyLines := []string{"SELECTED JOURNEY"}
+		journey := orderedEntries(selected.lifecycle, selected.evidence, true)
 		if len(journey) == 0 {
-			ledgerLines = append(ledgerLines, " no recorded journey")
+			journeyLines = append(journeyLines, " no recorded journey")
 		}
 		for _, entry := range journey {
-			ledgerLines = append(ledgerLines, journeyEntryLines(entry, m.detailVisible)...)
+			journeyLines = append(journeyLines, journeyEntryLines(entry, m.detailVisible)...)
 		}
 		for i := range selected.evidence {
 			evidence := &selected.evidence[i]
-			if latestEvidence == nil || evidence.ObservedAt >= latestEvidence.ObservedAt {
+			if latestEvidence == nil || laterObservation(evidence.ObservedAt, latestEvidence.ObservedAt) {
 				latestEvidence = evidence
 			}
 		}
+
+		var currentLines []string
 		if latestEvidence != nil {
-			ledgerLines = append(ledgerLines, "", "LATEST EVIDENCE COMMAND", " "+recorded(latestEvidence.Command))
+			currentLines = append(currentLines, "", "LATEST EVIDENCE COMMAND", " "+recorded(latestEvidence.Command))
 		}
 		if len(selected.participants) != 0 {
-			ledgerLines = append(ledgerLines, "", "ASSOCIATED PARTICIPANTS")
+			currentLines = append(currentLines, "", "ASSOCIATED PARTICIPANTS")
 			for _, participant := range selected.participants {
-				ledgerLines = append(ledgerLines, fmt.Sprintf(" %s · %s", value(participant.ParticipantID), value(participant.Role)))
+				currentLines = append(currentLines, fmt.Sprintf(" %s · %s", value(participant.ParticipantID), value(participant.Role)))
 				var identities []string
 				if participant.Herdr != nil {
 					identities = append(identities, fmt.Sprintf("Herdr %s/%s/%s/%s", participant.Herdr.WorkspaceID, participant.Herdr.TabID, participant.Herdr.PaneID, participant.Herdr.TerminalID))
@@ -275,24 +303,23 @@ func (m Model) ExpandedView() string {
 					identities = append(identities, fmt.Sprintf("agent session %s/%s/%s", participant.AgentSession.Source, participant.AgentSession.Kind, participant.AgentSession.Value))
 				}
 				if len(identities) != 0 {
-					ledgerLines = append(ledgerLines, "  "+strings.Join(identities, " · "))
+					currentLines = append(currentLines, "  "+strings.Join(identities, " · "))
 				}
 			}
 		}
 
-		var otherEntries []string
+		var recordedLines []string
 		for _, entry := range allEntries {
 			if entryGoalID(entry) != selected.id {
-				otherEntries = append(otherEntries, fullEntryLine(entry))
+				recordedLines = append(recordedLines, fullEntryLine(entry))
 			}
 		}
-		if len(otherEntries) != 0 {
-			ledgerLines = append(ledgerLines, "", "RECORDED LIFECYCLE")
-			ledgerLines = append(ledgerLines, otherEntries...)
+		if len(recordedLines) != 0 {
+			recordedLines = append([]string{"", "RECORDED LIFECYCLE"}, recordedLines...)
 		}
+		ledgerLines = boundedLedger(journeyLines, currentLines, recordedLines, bodyRows)
 	}
 
-	evidenceWidth := m.width - m.width*16/100 - 1 - m.width*52/100 - 1
 	evidenceLines := []string{"EVIDENCE"}
 	if latestEvidence == nil {
 		evidenceLines = append(evidenceLines, " none recorded")
@@ -312,9 +339,6 @@ func (m Model) ExpandedView() string {
 		evidenceLines = append(evidenceLines, wrappedField("detail", recorded(latestEvidence.Detail), evidenceWidth)...)
 	}
 
-	leftWidth := m.width * 16 / 100
-	middleWidth := m.width * 52 / 100
-	bodyRows := m.height - 4
 	heading := columnRow("TIMELINE", fmt.Sprintf("VERIFIER LEDGER · Goal %s · %s · %s", selectedID, selectedKind, selectedState), "EVIDENCE", leftWidth, middleWidth, evidenceWidth)
 	rows := []string{
 		truncate(clean(fmt.Sprintf("Run %s · Task %s · %s", value(m.run.RunID), value(m.run.Task.ID), value(m.run.Task.Title))), m.width),
@@ -336,6 +360,25 @@ func (m Model) ExpandedView() string {
 	}
 	rows = append(rows, truncate(fmt.Sprintf("↑/k ↓/j select · Enter detail · q quit · %d×%d", m.width, m.height), m.width))
 	return strings.Join(rows, "\n")
+}
+
+func boundedLedger(journey, current, recorded []string, limit int) []string {
+	all := append(append(append([]string(nil), journey...), current...), recorded...)
+	if len(all) <= limit {
+		return all
+	}
+
+	heading := journey[:min(1, len(journey))]
+	journey = journey[len(heading):]
+	available := max(limit-len(heading)-len(current), 0)
+	if len(journey) > available {
+		journey = journey[len(journey)-available:]
+	}
+	lines := append(append(append([]string(nil), heading...), journey...), current...)
+	if len(lines) > limit {
+		return lines[:limit]
+	}
+	return append(lines, recorded[:min(len(recorded), limit-len(lines))]...)
 }
 
 func timelineWindow(entries []orderedEntry, selectedID string, limit int) []orderedEntry {
@@ -478,7 +521,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 	} else {
 		g := m.goals[m.selected]
 		prefix := []string{fmt.Sprintf(" %s · %s · %s", g.id, value(g.kind), value(g.state)), ""}
-		journey := orderedEntries(g.lifecycle, g.evidence)
+		journey := orderedEntries(g.lifecycle, g.evidence, false)
 		var journeyLines []string
 		for _, entry := range journey {
 			if entry.lifecycle != nil {
@@ -556,7 +599,7 @@ func (m Model) panes(leftWidth, rightWidth int) ([]string, []string) {
 	return left, right
 }
 
-func normalize(run vaultregistry.Run) []goal {
+func normalize(run vaultregistry.Run, chronologicalParticipants bool) []goal {
 	byID := map[string]*goal{}
 	ensure := func(id, observed string) *goal {
 		if id == "" {
@@ -588,7 +631,7 @@ func normalize(run vaultregistry.Run) []goal {
 		if !ok {
 			participantOrder = append(participantOrder, p.ParticipantID)
 		}
-		if !ok || p.ObservedAt >= previous.ObservedAt {
+		if !chronologicalParticipants || !ok || laterObservation(p.ObservedAt, previous.ObservedAt) {
 			participants[p.ParticipantID] = p
 		}
 	}
@@ -698,7 +741,7 @@ func knownState(state string) bool {
 }
 
 func clock(timestamp string) string {
-	if parsed, err := time.Parse(time.RFC3339, timestamp); err == nil {
+	if parsed, err := time.Parse(time.RFC3339Nano, timestamp); err == nil {
 		return parsed.Format("15:04")
 	}
 	return "?"
