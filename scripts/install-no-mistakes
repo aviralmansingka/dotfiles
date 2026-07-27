@@ -35,15 +35,17 @@ manifest_value() {
 write_manifest() {
   wm_destination=$1
   wm_version=$2
-  wm_sha=$3
-  wm_platform=$4
-  wm_source=$5
-  wm_revision=$6
-  wm_checksums_sha=$7
+  wm_binary_sha=$3
+  wm_archive_sha=$4
+  wm_platform=$5
+  wm_source=$6
+  wm_revision=$7
+  wm_checksums_sha=$8
   wm_temporary=$wm_destination.tmp.$$
   {
     printf 'version=%s\n' "$wm_version"
-    printf 'sha256=%s\n' "$wm_sha"
+    printf 'binary_sha256=%s\n' "$wm_binary_sha"
+    printf 'archive_sha256=%s\n' "$wm_archive_sha"
     printf 'platform=%s\n' "$wm_platform"
     printf 'source=%s\n' "$wm_source"
     printf 'source_revision=%s\n' "$wm_revision"
@@ -110,7 +112,7 @@ case "$os/$arch" in
     ;;
   *) fail "unsupported platform: $os/$arch" ;;
 esac
-asset_name=no-mistakes-$platform
+asset_name=no-mistakes-$VERSION-$platform.tar.gz
 asset_url=$RELEASE_BASE/$asset_name
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
@@ -131,58 +133,86 @@ mkdir -p "$install_dir" "$state_dir/rollback" "$nm_home"
 lock=$state_dir/install.lock
 mkdir "$lock" 2>/dev/null || fail "another install or rollback holds $lock"
 temporary=$install_dir/.no-mistakes.install.$$
+archive=$install_dir/.no-mistakes.archive.$$
+archive_listing=$install_dir/.no-mistakes.archive-listing.$$
+archive_details=$install_dir/.no-mistakes.archive-details.$$
+extract_dir=$install_dir/.no-mistakes.extract.$$
 rollback_temporary=$state_dir/rollback/.no-mistakes.$$
 cleanup() {
-  rm -f "$temporary" "$temporary.download" "$rollback_temporary"
+  rm -f "$temporary" "$archive" "$archive.download" "$archive_listing" "$archive_details" \
+    "$rollback_temporary"
+  rm -rf "$extract_dir"
   rmdir "$lock" 2>/dev/null || true
 }
 trap cleanup EXIT HUP INT TERM
 
 if [ -n "${NO_MISTAKES_ASSET:-}" ]; then
   [ -f "$NO_MISTAKES_ASSET" ] || fail "asset does not exist: $NO_MISTAKES_ASSET"
-  cp "$NO_MISTAKES_ASSET" "$temporary"
+  cp "$NO_MISTAKES_ASSET" "$archive"
 else
   command -v curl >/dev/null 2>&1 || fail 'curl is required when NO_MISTAKES_ASSET is not set'
-  curl -fL --proto '=https' --tlsv1.2 "$asset_url" -o "$temporary.download"
-  mv "$temporary.download" "$temporary"
+  curl -fL --proto '=https' --tlsv1.2 "$asset_url" -o "$archive.download"
+  mv "$archive.download" "$archive"
 fi
+actual_archive_sha=$(sha256 "$archive")
+[ "$actual_archive_sha" = "$expected_sha" ] || \
+  fail "archive SHA-256 mismatch for $asset_name: expected $expected_sha, got $actual_archive_sha"
+
+command -v tar >/dev/null 2>&1 || fail 'tar is required to extract the release asset'
+tar -tzf "$archive" > "$archive_listing" || fail "could not list $asset_name"
+[ "$(awk '$0 == "no-mistakes" { count++ } END { print count + 0 }' "$archive_listing")" = 1 ] || \
+  fail "$asset_name must contain exactly one no-mistakes executable"
+tar -tvzf "$archive" > "$archive_details" || fail "could not inspect $asset_name"
+[ "$(awk '$1 ~ /^-/ && $NF == "no-mistakes" { count++ } END { print count + 0 }' \
+  "$archive_details")" = 1 ] || fail "$asset_name did not contain a regular no-mistakes executable"
+mkdir "$extract_dir" || fail "could not create private extraction directory: $extract_dir"
+chmod 0700 "$extract_dir"
+tar -xzf "$archive" -C "$extract_dir" no-mistakes || fail "could not extract no-mistakes from $asset_name"
+extracted=$extract_dir/no-mistakes
+[ -f "$extracted" ] && [ ! -L "$extracted" ] || \
+  fail "$asset_name did not contain a regular no-mistakes executable"
+mv "$extracted" "$temporary"
 chmod 0755 "$temporary"
-actual_sha=$(sha256 "$temporary")
-[ "$actual_sha" = "$expected_sha" ] || fail "SHA-256 mismatch for $asset_name: expected $expected_sha, got $actual_sha"
-has_exact_version "$temporary" "$VERSION" || fail "asset did not report exact version $VERSION"
+actual_binary_sha=$(sha256 "$temporary")
+has_exact_version "$temporary" "$VERSION" || fail "binary did not report exact version $VERSION"
 
 changed=1
-if [ -x "$target" ] && [ "$(sha256 "$target")" = "$expected_sha" ] && has_exact_version "$target" "$VERSION"; then
+if [ -x "$target" ] && [ "$(sha256 "$target")" = "$actual_binary_sha" ] && has_exact_version "$target" "$VERSION"; then
   changed=0
 fi
 
 if [ "$changed" = 1 ]; then
   if [ -e "$target" ]; then
     [ -f "$current_manifest" ] || fail 'existing binary has no verified current manifest; refusing replacement'
-    previous_sha=$(manifest_value sha256 "$current_manifest")
+    previous_binary_sha=$(manifest_value binary_sha256 "$current_manifest")
+    previous_archive_sha=$(manifest_value archive_sha256 "$current_manifest")
     previous_version=$(manifest_value version "$current_manifest")
     previous_platform=$(manifest_value platform "$current_manifest")
     previous_source=$(manifest_value source "$current_manifest")
     previous_revision=$(manifest_value source_revision "$current_manifest")
     previous_checksums_sha=$(manifest_value checksums_sha256 "$current_manifest")
-    [ -n "$previous_sha" ] && [ -n "$previous_version" ] && [ -n "$previous_platform" ] && \
+    [ -n "$previous_binary_sha" ] && [ -n "$previous_archive_sha" ] && \
+      [ -n "$previous_version" ] && [ -n "$previous_platform" ] && \
       [ -n "$previous_source" ] && [ -n "$previous_revision" ] && [ -n "$previous_checksums_sha" ] || \
       fail 'current manifest is incomplete; refusing replacement'
-    [ "$(sha256 "$target")" = "$previous_sha" ] || fail 'installed binary does not match its current manifest; refusing replacement'
+    [ "$(sha256 "$target")" = "$previous_binary_sha" ] || \
+      fail 'installed binary does not match its current manifest; refusing replacement'
     has_exact_version "$target" "$previous_version" || fail 'installed binary version does not match its current manifest'
     cp "$target" "$rollback_temporary"
     chmod 0755 "$rollback_temporary"
-    [ "$(sha256 "$rollback_temporary")" = "$previous_sha" ] || fail 'failed to preserve verified rollback binary'
+    [ "$(sha256 "$rollback_temporary")" = "$previous_binary_sha" ] || \
+      fail 'failed to preserve verified rollback binary'
     mv -f "$rollback_temporary" "$rollback_binary"
-    write_manifest "$rollback_manifest" "$previous_version" "$previous_sha" "$previous_platform" \
-      "$previous_source" "$previous_revision" "$previous_checksums_sha"
+    write_manifest "$rollback_manifest" "$previous_version" "$previous_binary_sha" \
+      "$previous_archive_sha" "$previous_platform" "$previous_source" "$previous_revision" \
+      "$previous_checksums_sha"
   fi
   mv -f "$temporary" "$target"
 fi
 # The exact pinned binary is sufficient to reconstruct missing/stale current
 # metadata after an interrupted install, without replacing the binary again.
-write_manifest "$current_manifest" "$VERSION" "$expected_sha" "$platform" "$asset_url" \
-  "$SOURCE_REVISION" "$CHECKSUMS_SHA256"
+write_manifest "$current_manifest" "$VERSION" "$actual_binary_sha" "$expected_sha" "$platform" \
+  "$asset_url" "$SOURCE_REVISION" "$CHECKSUMS_SHA256"
 
 config=$nm_home/config.yaml
 if [ ! -e "$config" ]; then
@@ -211,4 +241,5 @@ if [ "$changed" = 1 ] || [ "$initialized" = 1 ]; then
   restart_daemon "$target"
 fi
 
-printf 'no-mistakes %s installed for %s (%s)\n' "$VERSION" "$platform" "$expected_sha"
+printf 'no-mistakes %s installed for %s (archive sha256 %s)\n' \
+  "$VERSION" "$platform" "$expected_sha"

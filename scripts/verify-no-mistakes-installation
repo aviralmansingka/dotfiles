@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 from pathlib import Path
 import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -70,7 +72,40 @@ esac
     )
 
 
-def run(command: list[str | Path], env: dict[str, str], expected: int = 0) -> subprocess.CompletedProcess[str]:
+def add_bytes(archive: tarfile.TarFile, name: str, content: bytes, mode: int = 0o644) -> None:
+    member = tarfile.TarInfo(name)
+    member.size = len(content)
+    member.mode = mode
+    member.mtime = 0
+    archive.addfile(member, io.BytesIO(content))
+
+
+def binary_archive(path: Path, binary: Path, extras: bool = False) -> None:
+    with tarfile.open(path, "w:gz") as archive:
+        add_bytes(archive, "no-mistakes", binary.read_bytes(), 0o755)
+        if extras:
+            add_bytes(archive, "README.fixture", b"not selected by the installer\n")
+            decoy = tarfile.TarInfo("decoy-link")
+            decoy.type = tarfile.SYMTYPE
+            decoy.linkname = "../../escaped-by-archive"
+            decoy.mode = 0o777
+            decoy.mtime = 0
+            archive.addfile(decoy)
+
+
+def symlink_archive(path: Path) -> None:
+    with tarfile.open(path, "w:gz") as archive:
+        member = tarfile.TarInfo("no-mistakes")
+        member.type = tarfile.SYMTYPE
+        member.linkname = "../../victim"
+        member.mode = 0o777
+        member.mtime = 0
+        archive.addfile(member)
+
+
+def run(
+    command: list[str | Path], env: dict[str, str], expected: int = 0
+) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(
         [str(item) for item in command],
         cwd=ROOT,
@@ -102,7 +137,21 @@ def runtime_snapshot(nm_home: Path) -> dict[str, str]:
     return {name: digest(nm_home / name) for name in relative_paths}
 
 
-def fixture_environment(base: Path, platform: str, asset: Path) -> tuple[dict[str, str], dict[str, Path]]:
+def release_url(platform: str) -> str:
+    name = f"no-mistakes-{VERSION}-{platform}.tar.gz"
+    return f"https://github.com/kunchenguid/no-mistakes/releases/download/{VERSION}/{name}"
+
+
+def pin_fixture_archive(script: Path, platform: str, archive: Path) -> None:
+    text = script.read_text()
+    production_digest = PLATFORMS[platform]
+    assert text.count(production_digest) == 1
+    script.write_text(text.replace(production_digest, digest(archive), 1))
+
+
+def fixture_environment(
+    base: Path, platform: str, archive: Path, *, local_asset: bool = False
+) -> tuple[dict[str, str], dict[str, Path]]:
     home = base / "home"
     install_dir = home / ".local/bin"
     install_state = home / ".local/state/no-mistakes-installer"
@@ -128,9 +177,31 @@ def fixture_environment(base: Path, platform: str, asset: Path) -> tuple[dict[st
     fixture_rollback = repo_scripts / "rollback-no-mistakes"
     shutil.copy2(INSTALL, fixture_install)
     shutil.copy2(ROLLBACK, fixture_rollback)
+    pin_fixture_archive(fixture_install, platform, archive)
 
-    curl_log = base / "curl-was-called"
-    executable(command_bin / "curl", f"#!/bin/sh\nprintf called > {str(curl_log)!r}\nexit 99\n")
+    curl_log = base / "curl-invocations"
+    executable(
+        command_bin / "curl",
+        """#!/usr/bin/env python3
+import os
+from pathlib import Path
+import shutil
+import sys
+
+arguments = sys.argv[1:]
+try:
+    output = Path(arguments[arguments.index("-o") + 1])
+    url = next(item for item in arguments if item.startswith("https://"))
+except (ValueError, StopIteration, IndexError):
+    raise SystemExit(64)
+if url != os.environ["FIXTURE_EXPECTED_URL"]:
+    print(f"unexpected URL: {url}", file=sys.stderr)
+    raise SystemExit(65)
+shutil.copyfile(os.environ["FIXTURE_CURL_ASSET"], output)
+with open(os.environ["FIXTURE_CURL_LOG"], "a", encoding="utf-8") as log:
+    log.write(url + "\\n")
+""",
+    )
     executable(
         command_bin / "uname",
         """#!/bin/sh
@@ -145,37 +216,27 @@ esac
     )
     executable(command_bin / "launchctl", "#!/bin/sh\nexit 1\n")
     executable(command_bin / "systemctl", "#!/bin/sh\nexit 1\n")
-    executable(
-        command_bin / "sha256sum",
-        """#!/usr/bin/env python3
-import hashlib
-import os
-import sys
 
-path = sys.argv[-1]
-actual = hashlib.sha256(open(path, "rb").read()).hexdigest()
-reported = actual
-for pair in os.environ.get("FIXTURE_DIGEST_MAP", "").split(","):
-    if pair and pair.split("=", 1)[0] == actual:
-        reported = pair.split("=", 1)[1]
-        break
-print(f"{reported}  {path}")
-""",
-    )
-
-    env = {key: value for key, value in os.environ.items() if not key.startswith("NO_MISTAKES_") and key != "NM_HOME"}
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith("NO_MISTAKES_") and key != "NM_HOME"
+    }
     env.update(
         {
             "HOME": str(home),
             "NM_HOME": str(nm_home),
-            "NO_MISTAKES_ASSET": str(asset),
             "NO_MISTAKES_INSTALL_DIR": str(install_dir),
             "NO_MISTAKES_INSTALL_STATE_DIR": str(install_state),
             "FIXTURE_PLATFORM": platform,
-            "FIXTURE_DIGEST_MAP": "",
+            "FIXTURE_CURL_ASSET": str(archive),
+            "FIXTURE_EXPECTED_URL": release_url(platform),
+            "FIXTURE_CURL_LOG": str(curl_log),
             "PATH": f"{command_bin}:{os.environ.get('PATH', '/usr/bin:/bin')}",
         }
     )
+    if local_asset:
+        env["NO_MISTAKES_ASSET"] = str(archive)
     paths = {
         "home": home,
         "target": install_dir / "no-mistakes",
@@ -199,9 +260,10 @@ def seed_previous_release(paths: dict[str, Path], platform: str) -> bytes:
         "\n".join(
             (
                 "version=v1.40.0",
-                f"sha256={previous_sha}",
+                f"binary_sha256={previous_sha}",
+                f"archive_sha256={'0' * 64}",
                 f"platform={platform}",
-                "source=https://example.invalid/verified/v1.40.0/no-mistakes",
+                "source=https://example.invalid/verified/v1.40.0/no-mistakes-v1.40.0-fixture.tar.gz",
                 "source_revision=fixture-previous-revision",
                 "checksums_sha256=fixture-previous-checksums",
                 "",
@@ -223,39 +285,50 @@ def seed_previous_release(paths: dict[str, Path], platform: str) -> bytes:
     return previous
 
 
-def verify_platform(root: Path, platform: str, production_sha: str) -> None:
+def verify_platform(root: Path, platform: str) -> None:
     fixture = root / platform
     fixture.mkdir()
-    asset = fixture / "no-mistakes-fixture"
-    fake_binary(asset, VERSION)
-    env, paths = fixture_environment(fixture, platform, asset)
+    binary = fixture / "fixture-binary"
+    fake_binary(binary, VERSION)
+    archive = fixture / f"no-mistakes-{VERSION}-{platform}.tar.gz"
+    binary_archive(archive, binary, extras=True)
+    env, paths = fixture_environment(fixture, platform, archive)
     previous = seed_previous_release(paths, platform)
     preserved_before = runtime_snapshot(paths["nm_home"])
 
-    # Without the test-only fixture digest, selection must demand the exact
-    # production digest for this platform and leave the old install untouched.
+    # The installer must hash the tar.gz itself before extracting or replacing.
+    corrupt_archive = fixture / "corrupt.tar.gz"
+    corrupt_archive.write_bytes(archive.read_bytes() + b"corrupt")
+    env["FIXTURE_CURL_ASSET"] = str(corrupt_archive)
     mismatch = run([paths["install_script"]], env, expected=1)
-    assert production_sha in mismatch.stderr
+    assert digest(archive) in mismatch.stderr
     assert paths["target"].read_bytes() == previous
 
-    # The fixture checksum adapter makes deterministic stand-in bytes report
-    # the release digest selected above; the production installer has no
-    # digest or platform override.
-    env["FIXTURE_DIGEST_MAP"] = f"{digest(asset)}={production_sha}"
+    env["FIXTURE_CURL_ASSET"] = str(archive)
     installed = run([paths["install_script"]], env)
     assert VERSION in installed.stdout and platform in installed.stdout
-    assert paths["target"].read_bytes() == asset.read_bytes()
+    assert paths["target"].read_bytes() == binary.read_bytes()
     current = manifest(paths["state"] / "current.manifest")
     assert current == {
         "version": VERSION,
-        "sha256": production_sha,
+        "binary_sha256": digest(binary),
+        "archive_sha256": digest(archive),
         "platform": platform,
-        "source": f"https://github.com/kunchenguid/no-mistakes/releases/download/{VERSION}/no-mistakes-{platform}",
+        "source": release_url(platform),
         "source_revision": REVISION,
         "checksums_sha256": CHECKSUMS_SHA,
     }
+    assert paths["curl_log"].read_text().splitlines() == [
+        release_url(platform),
+        release_url(platform),
+    ]
+    assert not (fixture / "escaped-by-archive").exists()
+    assert not (paths["target"].parent / "README.fixture").exists()
+    assert not (paths["target"].parent / "decoy-link").exists()
     assert (paths["state"] / "rollback/no-mistakes").read_bytes() == previous
-    assert manifest(paths["state"] / "rollback/manifest")["version"] == "v1.40.0"
+    rollback_metadata = manifest(paths["state"] / "rollback/manifest")
+    assert rollback_metadata["version"] == "v1.40.0"
+    assert rollback_metadata["binary_sha256"] == hashlib.sha256(previous).hexdigest()
 
     skill = paths["home"] / ".agents/skills/no-mistakes/SKILL.md"
     assert skill.read_text() == SKILL
@@ -268,11 +341,10 @@ def verify_platform(root: Path, platform: str, production_sha: str) -> None:
     assert daemon_log.read_text().splitlines() == [
         f"start version={VERSION} telemetry=0 update=1"
     ]
-    assert not paths["curl_log"].exists(), "offline fixture attempted network access"
     assert runtime_snapshot(paths["nm_home"]) == preserved_before
     assert not list(paths["target"].parent.glob(".no-mistakes.*"))
 
-    # A second install is a true no-op: no replacement, re-init, or restart.
+    # A second install verifies the archive but does not replace or restart.
     installed_inode = paths["target"].stat().st_ino
     init_log = (paths["nm_home"] / "init-invocations").read_bytes()
     restart_log = daemon_log.read_bytes()
@@ -281,14 +353,14 @@ def verify_platform(root: Path, platform: str, production_sha: str) -> None:
     assert (paths["nm_home"] / "init-invocations").read_bytes() == init_log
     assert daemon_log.read_bytes() == restart_log
 
-    # A damaged rollback asset is rejected before replacement.
-    rollback_asset = paths["state"] / "rollback/no-mistakes"
-    rollback_bytes = rollback_asset.read_bytes()
-    rollback_asset.write_bytes(rollback_bytes + b"damaged")
+    # A damaged rollback binary is rejected before replacement.
+    rollback_binary = paths["state"] / "rollback/no-mistakes"
+    rollback_bytes = rollback_binary.read_bytes()
+    rollback_binary.write_bytes(rollback_bytes + b"damaged")
     run([paths["rollback_script"]], env, expected=1)
-    assert paths["target"].read_bytes() == asset.read_bytes()
-    rollback_asset.write_bytes(rollback_bytes)
-    rollback_asset.chmod(0o755)
+    assert paths["target"].read_bytes() == binary.read_bytes()
+    rollback_binary.write_bytes(rollback_bytes)
+    rollback_binary.chmod(0o755)
 
     run([paths["rollback_script"]], env)
     assert paths["target"].read_bytes() == previous
@@ -299,57 +371,67 @@ def verify_platform(root: Path, platform: str, production_sha: str) -> None:
         "start version=v1.40.0 telemetry=0 update=1"
     )
 
-    # Rollback is idempotent too.
     rolled_back_inode = paths["target"].stat().st_ino
     restart_log = daemon_log.read_bytes()
     run([paths["rollback_script"]], env)
     assert paths["target"].stat().st_ino == rolled_back_inode
     assert daemon_log.read_bytes() == restart_log
-    assert not paths["curl_log"].exists()
 
 
 def verify_rejections(root: Path) -> None:
-    fixture = root / "rejections"
-    fixture.mkdir()
-    good = fixture / "good"
-    fake_binary(good, VERSION)
-    env, paths = fixture_environment(fixture, "darwin-arm64", good)
+    wrong_fixture = root / "wrong-version"
+    wrong_fixture.mkdir()
+    wrong_binary = wrong_fixture / "binary"
+    fake_binary(wrong_binary, "v1.41.20")
+    wrong_archive = wrong_fixture / f"no-mistakes-{VERSION}-darwin-arm64.tar.gz"
+    binary_archive(wrong_archive, wrong_binary)
+    env, paths = fixture_environment(
+        wrong_fixture, "darwin-arm64", wrong_archive, local_asset=True
+    )
     previous = seed_previous_release(paths, "darwin-arm64")
-
-    corrupt = fixture / "corrupt"
-    corrupt.write_bytes(good.read_bytes() + b"corrupt")
-    corrupt.chmod(0o755)
-    env["FIXTURE_DIGEST_MAP"] = f"{digest(good)}={PLATFORMS['darwin-arm64']}"
-    env["NO_MISTAKES_ASSET"] = str(corrupt)
-    run([paths["install_script"]], env, expected=1)
-    assert paths["target"].read_bytes() == previous
-
-    wrong_version = fixture / "wrong-version"
-    fake_binary(wrong_version, "v1.41.20")
-    env["NO_MISTAKES_ASSET"] = str(wrong_version)
-    env["FIXTURE_DIGEST_MAP"] = f"{digest(wrong_version)}={PLATFORMS['darwin-arm64']}"
     result = run([paths["install_script"]], env, expected=1)
     assert f"exact version {VERSION}" in result.stderr
     assert paths["target"].read_bytes() == previous
+    assert not paths["curl_log"].exists()
+
+    unsafe_fixture = root / "unsafe-member"
+    unsafe_fixture.mkdir()
+    unsafe_archive = unsafe_fixture / f"no-mistakes-{VERSION}-darwin-arm64.tar.gz"
+    symlink_archive(unsafe_archive)
+    victim = unsafe_fixture / "victim"
+    victim.write_text("must remain untouched\n")
+    env, paths = fixture_environment(
+        unsafe_fixture, "darwin-arm64", unsafe_archive, local_asset=True
+    )
+    previous = seed_previous_release(paths, "darwin-arm64")
+    result = run([paths["install_script"]], env, expected=1)
+    assert "regular no-mistakes executable" in result.stderr
+    assert paths["target"].read_bytes() == previous
+    assert victim.read_text() == "must remain untouched\n"
+    assert not paths["curl_log"].exists()
 
 
 def main() -> int:
     install_text = INSTALL.read_text()
     for required in (VERSION, REVISION, CHECKSUMS_SHA, *PLATFORMS.values()):
         assert required in install_text
+    for platform in PLATFORMS:
+        assert f"no-mistakes-{platform}" not in install_text
+    assert "asset_name=no-mistakes-$VERSION-$platform.tar.gz" in install_text
     assert "TEST_SHA256" not in install_text and "TEST_PLATFORM" not in install_text
+    assert "FIXTURE_DIGEST" not in install_text
     assert "# No Mistakes" not in install_text and "cat >" not in install_text, \
         "installer must not carry a copied skill body"
 
     with tempfile.TemporaryDirectory(prefix="verify-no-mistakes-") as temporary:
         root = Path(temporary)
-        for platform, production_sha in PLATFORMS.items():
-            verify_platform(root, platform, production_sha)
+        for platform in PLATFORMS:
+            verify_platform(root, platform)
         verify_rejections(root)
 
-    print("ok: deterministic pinned No Mistakes install and rollback")
-    print("ok: darwin-arm64 and linux-amd64 exact production digests")
-    print("ok: generated skill, dotfiles-only init, disabled telemetry/updates")
+    print("ok: exact darwin-arm64 and linux-amd64 release tar.gz URLs selected")
+    print("ok: real archives hashed before safe executable-only extraction")
+    print("ok: installed binary digest/version and exact archive provenance recorded")
     print("ok: atomic idempotence and runtime-history-preserving rollback")
     return 0
 

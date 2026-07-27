@@ -22,6 +22,12 @@ sha256() {
   fi
 }
 
+manifest_value() {
+  mv_key=$1
+  mv_file=$2
+  awk -F= -v key="$mv_key" '$1 == key { print substr($0, length(key) + 2); exit }' "$mv_file"
+}
+
 has_exact_version() {
   hev_binary=$1
   hev_wanted=$2
@@ -114,16 +120,23 @@ grep -E 'NO_MISTAKES_TELEMETRY[[:space:]]*=>[[:space:]]*0([[:space:]]|$)' "$laun
 grep -E 'NO_MISTAKES_NO_UPDATE_CHECK[[:space:]]*=>[[:space:]]*1([[:space:]]|$)' "$launch_state" >/dev/null || \
   fail 'loaded job does not disable update checks'
 
+manifest_binary_sha=$(manifest_value binary_sha256 "$manifest")
+case "$manifest_binary_sha" in
+  ''|*[!0-9a-f]*) fail 'manifest has an invalid installed binary SHA-256' ;;
+esac
+[ "${#manifest_binary_sha}" -eq 64 ] || fail 'manifest has an invalid installed binary SHA-256'
 actual_binary_sha=$(sha256 "$no_mistakes")
-[ "$actual_binary_sha" = "$DARWIN_ARM64_SHA256" ] || \
-  fail "binary SHA-256 mismatch: expected $DARWIN_ARM64_SHA256, got $actual_binary_sha"
+[ "$actual_binary_sha" = "$manifest_binary_sha" ] || \
+  fail "binary SHA-256 mismatch: expected $manifest_binary_sha, got $actual_binary_sha"
 has_exact_version "$no_mistakes" "$VERSION" || fail "binary did not report exact version $VERSION"
 
 {
   printf 'version=%s\n' "$VERSION"
-  printf 'sha256=%s\n' "$DARWIN_ARM64_SHA256"
+  printf 'binary_sha256=%s\n' "$manifest_binary_sha"
+  printf 'archive_sha256=%s\n' "$DARWIN_ARM64_SHA256"
   printf 'platform=darwin-arm64\n'
-  printf 'source=https://github.com/kunchenguid/no-mistakes/releases/download/%s/no-mistakes-darwin-arm64\n' "$VERSION"
+  printf 'source=https://github.com/kunchenguid/no-mistakes/releases/download/%s/no-mistakes-%s-darwin-arm64.tar.gz\n' \
+    "$VERSION" "$VERSION"
   printf 'source_revision=%s\n' "$REVISION"
   printf 'checksums_sha256=%s\n' "$CHECKSUMS_SHA256"
 } > "$expected_manifest"

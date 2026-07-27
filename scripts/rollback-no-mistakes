@@ -40,7 +40,8 @@ write_current_manifest() {
   wcm_temporary=$wcm_destination.tmp.$$
   {
     printf 'version=%s\n' "$rollback_version"
-    printf 'sha256=%s\n' "$rollback_sha"
+    printf 'binary_sha256=%s\n' "$rollback_binary_sha"
+    printf 'archive_sha256=%s\n' "$rollback_archive_sha"
     printf 'platform=%s\n' "$rollback_platform"
     printf 'source=%s\n' "$rollback_source"
     printf 'source_revision=%s\n' "$rollback_revision"
@@ -87,16 +88,19 @@ rollback_manifest=$state_dir/rollback/manifest
 [ -f "$rollback_manifest" ] || fail "no verified rollback manifest at $rollback_manifest"
 [ -x "$rollback_binary" ] || fail "no verified rollback binary at $rollback_binary"
 rollback_version=$(manifest_value version "$rollback_manifest")
-rollback_sha=$(manifest_value sha256 "$rollback_manifest")
+rollback_binary_sha=$(manifest_value binary_sha256 "$rollback_manifest")
+rollback_archive_sha=$(manifest_value archive_sha256 "$rollback_manifest")
 rollback_platform=$(manifest_value platform "$rollback_manifest")
 rollback_source=$(manifest_value source "$rollback_manifest")
 rollback_revision=$(manifest_value source_revision "$rollback_manifest")
 rollback_checksums_sha=$(manifest_value checksums_sha256 "$rollback_manifest")
-[ -n "$rollback_version" ] && [ -n "$rollback_sha" ] && [ -n "$rollback_platform" ] && \
-  [ -n "$rollback_source" ] && [ -n "$rollback_revision" ] && [ -n "$rollback_checksums_sha" ] || \
-  fail 'rollback manifest is incomplete'
-[ "$(sha256 "$rollback_binary")" = "$rollback_sha" ] || fail 'rollback asset SHA-256 does not match its verified manifest'
-has_exact_version "$rollback_binary" "$rollback_version" || fail 'rollback asset version does not match its verified manifest'
+[ -n "$rollback_version" ] && [ -n "$rollback_binary_sha" ] && [ -n "$rollback_archive_sha" ] && \
+  [ -n "$rollback_platform" ] && [ -n "$rollback_source" ] && [ -n "$rollback_revision" ] && \
+  [ -n "$rollback_checksums_sha" ] || fail 'rollback manifest is incomplete'
+[ "$(sha256 "$rollback_binary")" = "$rollback_binary_sha" ] || \
+  fail 'rollback binary SHA-256 does not match its verified manifest'
+has_exact_version "$rollback_binary" "$rollback_version" || \
+  fail 'rollback binary version does not match its verified manifest'
 
 mkdir -p "$install_dir" "$state_dir"
 lock=$state_dir/install.lock
@@ -109,14 +113,14 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 changed=1
-if [ -x "$target" ] && [ "$(sha256 "$target")" = "$rollback_sha" ] && has_exact_version "$target" "$rollback_version"; then
+if [ -x "$target" ] && [ "$(sha256 "$target")" = "$rollback_binary_sha" ] && has_exact_version "$target" "$rollback_version"; then
   changed=0
 fi
 
 if [ "$changed" = 1 ]; then
   cp "$rollback_binary" "$temporary"
   chmod 0755 "$temporary"
-  [ "$(sha256 "$temporary")" = "$rollback_sha" ] || fail 'rollback copy failed verification'
+  [ "$(sha256 "$temporary")" = "$rollback_binary_sha" ] || fail 'rollback copy failed verification'
   mv -f "$temporary" "$target"
   write_current_manifest "$current_manifest"
 
@@ -126,4 +130,5 @@ if [ "$changed" = 1 ]; then
   restart_daemon "$target"
 fi
 
-printf 'no-mistakes rolled back to %s (%s)\n' "$rollback_version" "$rollback_sha"
+printf 'no-mistakes rolled back to %s (binary sha256 %s)\n' \
+  "$rollback_version" "$rollback_binary_sha"
