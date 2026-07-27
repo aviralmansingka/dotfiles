@@ -25,6 +25,7 @@ cp "$fixture" "$tmp/state/runs/"
 scripts/verifiers/vault-hunter-atlas-v01
 scripts/verifiers/vault-hunter-atlas-v02
 scripts/verifiers/vault-hunter-atlas-v03
+go build -o "$tmp/harness" ./scripts/verifiers/vault-hunter-atlas-t07-harness.go
 go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
 
 mkdir -p "$tmp/poison/registry/runs" \
@@ -154,6 +155,13 @@ expect_missing_state_dir() {
 }
 
 failures=0
+set +e
+"$tmp/harness" v01 "$tmp/state"
+harness_status=$?
+set -e
+if test "$harness_status" -ne 0; then
+  failures=1
+fi
 if ! expect_missing_state_dir omitted-state-dir; then
   failures=1
 fi

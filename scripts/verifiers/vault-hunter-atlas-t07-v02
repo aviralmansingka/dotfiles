@@ -40,7 +40,7 @@ set +e
 HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/xdg-must-not-exist" \
   VAULT_HUNTER_STATE_DIR="$tmp/home/fallback-registry-must-not-exist" \
   ATLAS_T07_TRAP_LOG="$tmp/invocations" PATH="$tmp/traps:$PATH" \
-  "$tmp/harness" "$tmp/state"
+  "$tmp/harness" v02 "$tmp/state"
 harness_status=$?
 set -e
 if test "$harness_status" -ne 0; then
@@ -57,6 +57,7 @@ import errno
 import fcntl
 import os
 import pty
+import re
 import select
 import signal
 import struct
@@ -70,6 +71,7 @@ master, slave = pty.openpty()
 fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 48, 160, 0, 0))
 env = os.environ.copy()
 env["TERM"] = "xterm-256color"
+env["VAULT_HUNTER_REDUCED_MOTION"] = "1"
 process = subprocess.Popen(
     [binary, "--expanded", "--run-id", "atlas-t07-rich", "--state-dir", state_dir],
     stdin=slave,
@@ -101,12 +103,46 @@ def alive(boundary):
     if status is not None:
         raise RuntimeError(f"interactive expanded CLI exited at {boundary} with status {status}")
 
+def plain(data):
+    data = re.sub(rb"\x1b\][^\x07]*(?:\x07|\x1b\\)", b"", data)
+    data = re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", data)
+    return data.replace(b"\r", b"").decode("utf-8", "replace")
+
+def repaint(boundary, action):
+    drain(0.08)
+    action()
+    rendered = plain(drain(0.30))
+    alive(boundary)
+    if not rendered:
+        raise RuntimeError(f"interactive expanded CLI emitted no rendered output after {boundary}")
+    return rendered
+
+def write_key(key):
+    try:
+        os.write(master, key)
+    except OSError as error:
+        if error.errno != errno.EIO:
+            raise
+        raise RuntimeError(f"interactive expanded CLI closed the PTY before key {key!r}") from error
+
+def expect(boundary, rendered, *required):
+    missing = [token for token in required if token not in rendered]
+    if missing:
+        raise RuntimeError(f"{boundary} render missing {missing!r}")
+
+def expect_absent(boundary, rendered, *forbidden):
+    present = [token for token in forbidden if token in rendered]
+    if present:
+        raise RuntimeError(f"{boundary} render retained {present!r}")
+
 def resize(rows, columns):
-    fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", rows, columns, 0, 0))
-    os.killpg(process.pid, signal.SIGWINCH)
-    time.sleep(0.05)
-    drain(0.05)
-    alive(f"{columns}x{rows} resize")
+    return repaint(
+        f"{columns}x{rows} resize",
+        lambda: (
+            fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", rows, columns, 0, 0)),
+            os.killpg(process.pid, signal.SIGWINCH),
+        ),
+    )
 
 status = 0
 try:
@@ -118,23 +154,46 @@ try:
         if time.monotonic() >= deadline:
             raise RuntimeError("interactive expanded CLI timed out before expanded board render")
         output += drain(0.1)
-
-    time.sleep(0.05)
+    initial = plain(output)
+    expect("initial", initial, "Selected Goal T07.V01 · verifier · active", "160×48")
     alive("before interactive input")
-    for key in (b"j", b"\x1b[B", b"\r", b"k", b"\x1b[A"):
-        try:
-            os.write(master, key)
-        except OSError as error:
-            if error.errno != errno.EIO:
-                raise
-            raise RuntimeError(f"interactive expanded CLI closed the PTY before key {key!r}") from error
-        time.sleep(0.03)
-        drain(0.03)
-        alive(f"key {key!r}")
-    resize(32, 120)
-    resize(31, 119)
-    resize(48, 160)
-    os.write(master, b"q")
+
+    rendered = repaint("j", lambda: write_key(b"j"))
+    expect("j", rendered, "Selected Goal review · review · pending")
+    rendered = repaint("Down", lambda: write_key(b"\x1b[B"))
+    expect("Down", rendered, "Selected Goal overflow-01 · review · done")
+    rendered = repaint("k", lambda: write_key(b"k"))
+    expect("k", rendered, "Selected Goal review · review · pending")
+    rendered = repaint("Up", lambda: write_key(b"\x1b[A"))
+    expect("Up", rendered, "Selected Goal T07.V01 · verifier · active")
+    rendered = repaint("k to first", lambda: write_key(b"k"))
+    expect("k to first", rendered, "Selected Goal checkpoint-one · checkpoint · done", "construction authorized")
+    drain(0.08)
+    write_key(b"\x1b[A")
+    time.sleep(0.08)
+    alive("Up clamped at first")
+    rendered = resize(48, 160)
+    expect("Up clamp", rendered, "Selected Goal checkpoint-one · checkpoint · done", "construction authorized")
+
+    rendered = repaint("Enter collapse", lambda: write_key(b"\r"))
+    expect("Enter collapse", rendered, "13:01 checkpoint · done")
+    expect_absent("Enter collapse", rendered, "construction authorized", "approved contract waiting for construction")
+
+    rendered = resize(32, 120)
+    expect("120x32 resize", rendered, "Selected Goal checkpoint-one · checkpoint · done", "120×32")
+    expect_absent("120x32 resize", rendered, "construction authorized", "approved contract waiting for construction")
+
+    rendered = resize(31, 119)
+    diagnostic = "terminal too small; minimum 120×32"
+    visible = [line.strip() for line in rendered.splitlines() if line.strip()]
+    if visible != [diagnostic]:
+        raise RuntimeError(f"119x31 resize render = {visible!r}, want only {diagnostic!r}")
+
+    rendered = resize(48, 160)
+    expect("160x48 recovery", rendered, "Selected Goal checkpoint-one · checkpoint · done", "160×48")
+    expect_absent("160x48 recovery", rendered, "construction authorized", "approved contract waiting for construction")
+
+    write_key(b"q")
     try:
         returncode = process.wait(timeout=1.5)
     except subprocess.TimeoutExpired as error:
