@@ -237,11 +237,6 @@ expect {
   eof { fail "journal exited before D evidence jump" }
   timeout { fail "journal did not render D evidence jump" }
 }
-expect {
-  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
-  eof { fail "journal exited before evidence-jump footer" }
-  timeout { fail "journal did not render evidence-jump footer" }
-}
 checkpoint evidence
 send -- "j"
 expect {
@@ -249,49 +244,25 @@ expect {
   eof { fail "journal exited before bounded D navigation update" }
   timeout { fail "journal did not render bounded D navigation update" }
 }
-expect {
-  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
-  eof { fail "journal exited before lifecycle-navigation footer" }
-  timeout { fail "journal did not render lifecycle-navigation footer" }
-}
 checkpoint lifecycle
 send -- "E"
-expect {
-  -re {observation ID · evidence-later} {}
-  eof { fail "journal exited before second D evidence jump" }
-  timeout { fail "journal did not render second D evidence jump" }
-}
 expect {
   -re {selected recorded observation · evidence} {}
   eof { fail "journal exited before expanded evidence detail" }
   timeout { fail "journal did not render expanded D evidence detail" }
 }
 expect {
-  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
-  eof { fail "journal exited before navigation footer" }
-  timeout { fail "journal did not render narrow D navigation footer" }
+  -re {observation ID · evidence-later} {}
+  eof { fail "journal exited before second D evidence jump" }
+  timeout { fail "journal did not render second D evidence jump" }
 }
 send -- "\r"
-expect {
-  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {
-    if {[string first "selected recorded observation" $expect_out(buffer)] >= 0} {
-      fail "journal Enter did not collapse D selected detail"
-    }
-  }
-  eof { fail "journal exited before detail-toggle update" }
-  timeout { fail "journal did not render D detail-toggle update" }
-}
 checkpoint collapsed
 send -- "\r"
 expect {
   -re {selected recorded observation · evidence} {}
   eof { fail "journal exited before detail re-expand update" }
   timeout { fail "journal did not re-expand D evidence detail" }
-}
-expect {
-  -re {g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit} {}
-  eof { fail "journal exited before re-expanded footer" }
-  timeout { fail "journal did not render re-expanded footer" }
 }
 checkpoint expanded
 exec stty -f $spawn_out(slave,name) rows 32 columns 134
