@@ -6,7 +6,9 @@ set -eu
 
 candidate=${NO_MISTAKES_CANDIDATE:-v1.41.2}
 real_pi_dir=${PI_CODING_AGENT_DIR:-/Users/aviral/.pi/agent}
-probe_root=$(mktemp -d /private/tmp/no-mistakes-p02.XXXXXX)
+runtime_bin_dir=${PI_RUNTIME_BIN_DIR:-/opt/homebrew/bin}
+probe_tmp=${TMPDIR:-/private/tmp}
+probe_root=$(mktemp -d "$probe_tmp/no-mistakes-p02.XXXXXX")
 probe_home=$probe_root/home
 probe_bin=$probe_root/bin
 probe_install=$probe_root/install
@@ -20,7 +22,7 @@ cleanup() {
       "$no_mistakes" daemon stop --force >/dev/null 2>&1 || true
   fi
   case "$probe_root" in
-    /private/tmp/no-mistakes-p02.*) find "$probe_root" -depth -delete ;;
+    "$probe_tmp"/no-mistakes-p02.*) find "$probe_root" -depth -delete ;;
     *) return 1 ;;
   esac
 }
@@ -36,13 +38,19 @@ export NO_MISTAKES_LINK_DIR=$probe_bin
 export NO_MISTAKES_TELEMETRY=0
 export NO_MISTAKES_NO_UPDATE_CHECK=1
 export PI_CODING_AGENT_DIR=$real_pi_dir
-export PATH=$probe_bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
+export PATH=$probe_bin:$runtime_bin_dir:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
 
 curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh \
   -o "$probe_root/install.sh"
 sh "$probe_root/install.sh"
 "$no_mistakes" --version | grep "$candidate"
 printf 'agent: pi\n' > "$probe_state/config.yaml"
+if [ -n "${PI_PROVIDER:-}" ]; then
+  printf 'agent_args_override:\n  pi:\n    - --provider\n    - %s\n' "$PI_PROVIDER" >> "$probe_state/config.yaml"
+  if [ -n "${PI_MODEL:-}" ]; then
+    printf '    - --model\n    - %s\n' "$PI_MODEL" >> "$probe_state/config.yaml"
+  fi
+fi
 
 git init -q --bare "$probe_root/origin.git"
 git init -q -b main "$probe_repo"
