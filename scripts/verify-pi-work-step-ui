@@ -909,7 +909,7 @@ wait_for_subagent_setup() {
 		fi
 		screen="$(tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0)"
 		if [[ -f "$subagent_update_marker" ]] \
-			&& grep -Fq "◉ Delegate deterministic subagent verification" <<<"$screen"; then
+			&& grep -Fq "⟳ Delegate deterministic subagent verification" <<<"$screen"; then
 			if [[ -f "$subagent_exception_marker" ]]; then
 				echo "Native subagent setup failure (fixture exception): $(tr '\n' ' ' < "$subagent_exception_marker")" >&2
 				return 1
@@ -921,7 +921,7 @@ wait_for_subagent_setup() {
 	done
 	if [[ ! -f "$subagent_update_marker" ]]; then
 		echo "Native subagent setup failure (update missing): deterministic execute did not emit its independent update marker" >&2
-	elif ! grep -Fq "◉ Delegate deterministic subagent verification" <<<"${screen:-}"; then
+	elif ! grep -Fq "⟳ Delegate deterministic subagent verification" <<<"${screen:-}"; then
 		echo "Native subagent setup failure (parent state): parent Activity did not reach its running title state" >&2
 	fi
 	return 1
@@ -1230,7 +1230,17 @@ if (
 	!fs.existsSync(reasoningContaminationPath)
 ) console.log("Reasoning boundary marker: upstream_sentinel=true all_updates_clean=true permanent_contamination=false");
 
-check(running.plain.includes("◉ Delegate deterministic subagent verification"), "T21 parent Activity disappeared while the subagent was running");
+const runningParentLines = running.plain.split(/\r?\n/u).map((line) => line.trimEnd());
+const runningActivityIndex = runningParentLines.findIndex((line) =>
+	/1 step · 1 call · running$/u.test(line),
+);
+check(
+	runningActivityIndex >= 0 &&
+		/└─ ⟳ Delegate deterministic subagent verification · (?:\d+ms|\d+\.\d+s|\d+m\d+s)$/u.test(
+			runningParentLines[runningActivityIndex + 1] ?? "",
+		),
+	"T21 running parent lost its approved Activity line, connected title, or dynamic timer",
+);
 check(collapsed.plain.includes("● Delegate deterministic subagent verification"), "T21 parent Activity disappeared after subagent completion");
 for (const [state, terminal, status] of [
 	["running-live", running, "running"],
