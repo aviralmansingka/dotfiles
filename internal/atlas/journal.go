@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 
@@ -90,10 +91,12 @@ func (s journalStyles) render(style journalStyle, text string) string {
 
 // JournalModel is a deterministic, read-only projection of a loaded Registry Run.
 type JournalModel struct {
-	run    vaultregistry.Run
-	events []journalEvent
-	width  int
-	height int
+	run           vaultregistry.Run
+	events        []journalEvent
+	selected      int
+	detailVisible bool
+	width         int
+	height        int
 }
 
 func NewJournalModel(run vaultregistry.Run, width, height int) JournalModel {
@@ -115,7 +118,84 @@ func NewJournalModel(run vaultregistry.Run, width, height int) JournalModel {
 		}
 		return events[i].order < events[j].order
 	})
-	return JournalModel{run: run, events: events, width: width, height: height}
+	return JournalModel{
+		run:           run,
+		events:        events,
+		selected:      max(len(events)-1, 0),
+		detailVisible: len(events) > 0,
+		width:         width,
+		height:        height,
+	}
+}
+
+// Init deliberately schedules no work: a journal is a projection of one
+// already-loaded Run and never polls or animates.
+func (m JournalModel) Init() tea.Cmd {
+	return nil
+}
+
+// Update applies bounded, read-only navigation to the in-memory projection.
+func (m JournalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width, m.height = msg.Width, msg.Height
+		m.clampSelection()
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "j", "down":
+			if m.selected < len(m.events)-1 {
+				m.selected++
+			}
+		case "k", "up":
+			if m.selected > 0 {
+				m.selected--
+			}
+		case "g":
+			if len(m.events) > 0 {
+				m.selected = 0
+			}
+		case "G":
+			if len(m.events) > 0 {
+				m.selected = len(m.events) - 1
+			}
+		case "v":
+			m.selectMatching(1, func(event journalEvent) bool {
+				return event.lifecycle != nil && event.lifecycle.Kind == "verifier"
+			})
+		case "V":
+			m.selectMatching(-1, func(event journalEvent) bool {
+				return event.lifecycle != nil && event.lifecycle.Kind == "verifier"
+			})
+		case "e":
+			m.selectMatching(1, func(event journalEvent) bool { return event.evidence != nil })
+		case "E":
+			m.selectMatching(-1, func(event journalEvent) bool { return event.evidence != nil })
+		case "enter":
+			if len(m.events) > 0 {
+				m.detailVisible = !m.detailVisible
+			}
+		case "q", "esc", "ctrl+c":
+			return m, tea.Quit
+		}
+	}
+	return m, nil
+}
+
+func (m *JournalModel) clampSelection() {
+	if len(m.events) == 0 {
+		m.selected = 0
+		return
+	}
+	m.selected = min(max(m.selected, 0), len(m.events)-1)
+}
+
+func (m *JournalModel) selectMatching(direction int, match func(journalEvent) bool) {
+	for i := m.selected + direction; i >= 0 && i < len(m.events); i += direction {
+		if match(m.events[i]) {
+			m.selected = i
+			return
+		}
+	}
 }
 
 func (m JournalModel) View() string {
@@ -130,10 +210,21 @@ func (m JournalModel) ViewColor(enabled bool) string {
 	}
 
 	lines := m.lines()
-	if len(lines) >= m.height {
-		lines = lines[:m.height-1]
+	headerRows := min(3, len(lines))
+	detailRows := m.detailRows()
+	eventEnd := max(headerRows, len(lines)-detailRows)
+	eventLines := lines[headerRows:eventEnd]
+	eventSlots := max(m.height-headerRows-detailRows-1, 0)
+	if len(eventLines) > eventSlots {
+		selectedEnd := m.selectedEventRow() + m.selectedEventRows()
+		start := max(selectedEnd-eventSlots, 0)
+		eventLines = eventLines[start:min(start+eventSlots, len(eventLines))]
 	}
-	lines = append(lines, journalLine{{
+	visible := make([]journalLine, 0, m.height)
+	visible = append(visible, lines[:headerRows]...)
+	visible = append(visible, eventLines...)
+	visible = append(visible, lines[eventEnd:]...)
+	lines = append(visible, journalLine{{
 		text:  fmt.Sprintf("j/down k/up navigate · q quit · read-only · %dx%d", m.width, m.height),
 		style: journalMuted,
 	}})
@@ -164,7 +255,7 @@ func (m JournalModel) lines() []journalLine {
 	for i, event := range m.events {
 		marker := " "
 		markerStyle := journalPlain
-		if i == len(m.events)-1 {
+		if i == m.selected {
 			marker = ">"
 			markerStyle = journalSelected
 		}
@@ -236,10 +327,10 @@ func (m JournalModel) lines() []journalLine {
 		)
 	}
 
-	if len(m.events) == 0 {
+	if len(m.events) == 0 || !m.detailVisible {
 		return lines
 	}
-	selected := m.events[len(m.events)-1]
+	selected := m.events[m.selected]
 	if selected.lifecycle != nil {
 		lifecycle := selected.lifecycle
 		return append(lines,
@@ -281,6 +372,35 @@ func (m JournalModel) lines() []journalLine {
 		journalDetailLine("Artifact SHA-256:", recorded(evidence.ArtifactSHA256), journalEvidence, journalReference),
 		journalDetailLine("Detail:", recorded(evidence.Detail), journalEvidence, journalOrdinary),
 	)
+}
+
+func (m JournalModel) detailRows() int {
+	if len(m.events) == 0 || !m.detailVisible {
+		return 0
+	}
+	if m.events[m.selected].lifecycle != nil {
+		return 6
+	}
+	return 9
+}
+
+func (m JournalModel) selectedEventRow() int {
+	row := 0
+	for i := 0; i < m.selected && i < len(m.events); i++ {
+		if m.events[i].evidence != nil {
+			row += 3
+		} else {
+			row++
+		}
+	}
+	return row
+}
+
+func (m JournalModel) selectedEventRows() int {
+	if len(m.events) > 0 && m.events[m.selected].evidence != nil {
+		return 3
+	}
+	return 1
 }
 
 func journalDetailLine(label, value string, labelStyle, valueStyle journalStyle) journalLine {
