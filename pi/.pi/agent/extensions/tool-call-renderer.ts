@@ -150,6 +150,17 @@ class ClockInvalidationScheduler {
     if (this.live.size === 0) this.clearTimer();
   }
 
+  transfer(
+    previous: any,
+    replacement: any,
+    bridge: ConnectedRenderBridge,
+  ): void {
+    if (this.live.get(previous) !== bridge) return;
+    this.live.delete(previous);
+    this.live.set(replacement, bridge);
+    if (!this.timer && !this.notifying) this.schedule();
+  }
+
   clear(): void {
     this.live.clear();
     this.clearTimer();
@@ -611,6 +622,29 @@ function toolCallsFrom(content: any[]): ToolCall[] {
     .filter((item): item is ToolCall => Boolean(item.id));
 }
 
+function resolveRebuiltStep(
+  toolCalls: ToolCall[],
+  state: RendererState,
+): WorkStep | undefined {
+  const toolCallIds = new Set(toolCalls.map((toolCall) => toolCall.id));
+  if (toolCallIds.size === 0 || toolCallIds.size !== toolCalls.length)
+    return undefined;
+
+  let resolved: WorkStep | undefined;
+  for (const toolCallId of toolCallIds) {
+    const component = state.toolComponents.get(toolCallId);
+    const step = component?.[WORK_STEP] as WorkStep | undefined;
+    if (!step || (resolved && resolved !== step)) return undefined;
+    resolved = step;
+  }
+  if (!resolved || resolved.toolCallIds.size !== toolCallIds.size)
+    return undefined;
+  for (const toolCallId of toolCallIds) {
+    if (!resolved.toolCallIds.has(toolCallId)) return undefined;
+  }
+  return resolved;
+}
+
 function releaseStep(state: RendererState, step: WorkStep): void {
   for (const toolCallId of step.toolCallIds) {
     if (state.pending.get(toolCallId) === step)
@@ -710,7 +744,9 @@ function updateAssistant(
     stepThinking.length > 0
       ? stepExplicitTitle ?? "Thinking"
       : stepExplicitTitle ?? fallbackTitle(toolCalls);
-  const existing = component[WORK_STEP] as WorkStep | undefined;
+  const existing =
+    (component[WORK_STEP] as WorkStep | undefined) ??
+    resolveRebuiltStep(toolCalls, state);
   const run = existing?.run ?? state.currentRun ?? { steps: [], groups: [] };
   const group =
     existing?.group ??
@@ -779,6 +815,47 @@ function updateAssistant(
   };
 }
 
+function transferToolComponentOwnership(
+  component: any,
+  step: WorkStep,
+  state: RendererState,
+): boolean {
+  const toolCallId = asString(component.toolCallId);
+  if (!toolCallId) return false;
+  const previous = state.toolComponents.get(toolCallId);
+  if (!previous || previous === component) return true;
+  if (previous[WORK_STEP] !== step) return false;
+
+  const connected = state.connected.get(previous);
+  if (
+    previous.toolName !== "subagent" ||
+    component.toolName !== "subagent" ||
+    !connected
+  )
+    return false;
+
+  state.connected.delete(previous);
+  connected.expandedInitialized = false;
+  state.connected.set(component, connected);
+  const rendererState = (component.rendererState ??= {}) as Record<
+    PropertyKey,
+    unknown
+  >;
+  rendererState[SUBAGENT_BRIDGE] = connected.bridge;
+  const previousRendererState = previous.rendererState as
+    | Record<PropertyKey, unknown>
+    | undefined;
+  if (previousRendererState?.[SUBAGENT_BRIDGE] === connected.bridge) {
+    previousRendererState[SUBAGENT_BRIDGE] = {
+      ...connected.bridge,
+      invalidate: undefined,
+    } satisfies ConnectedRenderBridge;
+  }
+  state.scheduler.transfer(previous, component, connected.bridge);
+  state.toolComponents.set(toolCallId, component);
+  return true;
+}
+
 function bindToolComponent(
   component: any,
   state: RendererState,
@@ -789,6 +866,8 @@ function bindToolComponent(
   const assembly = state.assembling;
   const existing = component[WORK_STEP] as WorkStep | undefined;
   if (existing) {
+    const owner = state.toolComponents.get(toolCallId);
+    if (owner && owner !== component) return undefined;
     if (assembly?.step === existing) {
       assembly.remaining.delete(toolCallId);
       if (assembly.remaining.size === 0) state.assembling = undefined;
@@ -799,7 +878,8 @@ function bindToolComponent(
   const step = assembly?.step.toolCallIds.has(toolCallId)
     ? assembly.step
     : state.pending.get(toolCallId);
-  if (!step) return undefined;
+  if (!step || !transferToolComponentOwnership(component, step, state))
+    return undefined;
 
   component[WORK_STEP] = step;
   if (assembly?.step === step) {
@@ -977,6 +1057,10 @@ function renderToolComponent(
   if (step !== owner) return [];
   const toolCallId = asString(component.toolCallId);
   if (toolCallId !== owner.toolCallIds.values().next().value) return [];
+  const toolOwner = toolCallId
+    ? state.toolComponents.get(toolCallId)
+    : undefined;
+  if (toolOwner && toolOwner !== component) return [];
 
   const bridge = ensureConnectedBridge(component, step, state);
   if (bridge) {
