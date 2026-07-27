@@ -10,6 +10,9 @@ const CONTROLLER = Symbol.for("aviral.pi.work-step-renderer.controller");
 const WORK_STEP = Symbol.for("aviral.pi.work-step-renderer.step");
 const WORK_STEP_ROW = Symbol.for("aviral.pi.work-step-renderer.row");
 const THINKING_DRAFT = Symbol.for("aviral.pi.work-step-renderer.thinking-draft");
+const SUBAGENT_BRIDGE = Symbol.for(
+  "aviral.pi.work-step-renderer.subagent-bridge",
+);
 const ASSISTANT_INVALIDATING = Symbol.for(
   "aviral.pi.work-step-renderer.assistant-invalidating",
 );
@@ -18,6 +21,32 @@ type ToolCall = {
   id: string;
   name: string;
   arguments: Record<string, unknown>;
+  startedAt?: number;
+  completedAt?: number;
+};
+
+type ConnectedOutputMode = "auto" | "hidden" | "expanded";
+
+type ConnectedRenderBridge = {
+  layout: "connected";
+  outputMode: ConnectedOutputMode;
+  thinkingVisible: boolean;
+  clock?: () => number;
+  invalidate?: () => void;
+  parentRail: string;
+  parentConnector: "├─" | "└─";
+  lifecycle: {
+    status: "pending" | "running" | "completed" | "failed";
+    startedAt?: number;
+    completedAt?: number;
+    thinking: string[];
+  };
+};
+
+type ConnectedComponentState = {
+  bridge: ConnectedRenderBridge;
+  expandedInitialized: boolean;
+  collapsedSource: Exclude<ConnectedOutputMode, "expanded">;
 };
 
 type PersistedOutcome = {
@@ -39,10 +68,13 @@ type WorkStep = {
   title: string;
   titleLocked: boolean;
   thinking: string[];
+  thinkingVisible: boolean;
   toolCalls: ToolCall[];
   toolCallIds: Set<string>;
   completedToolCallIds: Set<string>;
   failed: boolean;
+  startedAt?: number;
+  completedAt?: number;
   run: ActivityRun;
   group: ActivityGroup;
   row?: WorkStepRow;
@@ -63,19 +95,103 @@ type RendererState = {
   currentGroup?: ActivityGroup;
   currentRun?: ActivityRun;
   sessionId?: string;
+  restoredToolCallIds: Set<string>;
+  toolComponents: Map<string, any>;
+  connected: WeakMap<object, ConnectedComponentState>;
+  scheduler: ClockInvalidationScheduler;
 };
 
 type RendererController = {
   assistantNativeMessage(message: any): any;
   assistantUpdated(component: any, message: any): void;
+  assistantThinkingChanged(component: any, hidden: boolean): void;
   assistantHasStep(component: any): boolean;
   renderAssistant(component: any, lines: string[], width: number): string[];
   toolUpdated(component: any): void;
+  toolExpanded(component: any): void;
   renderTool(component: any, width: number): string[];
 };
 
 function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function finiteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function bridgeNow(bridge?: ConnectedRenderBridge): number {
+  const supplied = bridge?.clock?.();
+  return finiteNumber(supplied) ? supplied : Date.now();
+}
+
+function formatElapsed(milliseconds: number): string {
+  if (milliseconds < 1000) return `${milliseconds}ms`;
+  if (milliseconds < 60000) return `${(milliseconds / 1000).toFixed(1)}s`;
+  return `${Math.floor(milliseconds / 60000)}m${Math.floor((milliseconds % 60000) / 1000)}s`;
+}
+
+class ClockInvalidationScheduler {
+  private readonly live = new Map<any, ConnectedRenderBridge>();
+  private timer?: ReturnType<typeof setTimeout>;
+  private notifying = false;
+
+  arm(component: any, bridge: ConnectedRenderBridge): void {
+    if (bridge.lifecycle.status !== "running") {
+      this.remove(component);
+      return;
+    }
+    this.live.set(component, bridge);
+    if (!this.timer && !this.notifying) this.schedule();
+  }
+
+  remove(component: any): void {
+    this.live.delete(component);
+    if (this.live.size === 0) this.clearTimer();
+  }
+
+  clear(): void {
+    this.live.clear();
+    this.clearTimer();
+  }
+
+  private clearTimer(): void {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = undefined;
+  }
+
+  private schedule(): void {
+    if (this.live.size === 0 || this.timer) return;
+    let delay = 1000;
+    for (const bridge of this.live.values()) {
+      const now = bridgeNow(bridge);
+      const startedAt = bridge.lifecycle.startedAt;
+      const elapsed = finiteNumber(startedAt) ? Math.max(0, now - startedAt) : 0;
+      const precision = elapsed < 1000 ? 1 : elapsed < 60000 ? 100 : 1000;
+      const untilBoundary = precision - (elapsed % precision);
+      delay = Math.min(delay, Math.max(1, untilBoundary));
+    }
+    this.timer = setTimeout(() => this.tick(), delay);
+    this.timer.unref?.();
+  }
+
+  private tick(): void {
+    this.timer = undefined;
+    this.notifying = true;
+    try {
+      for (const [component, bridge] of [...this.live]) {
+        if (bridge.lifecycle.status !== "running") {
+          this.live.delete(component);
+          continue;
+        }
+        component.invalidate?.();
+        component.ui?.requestRender?.();
+      }
+    } finally {
+      this.notifying = false;
+    }
+    this.schedule();
+  }
 }
 
 function plural(count: number, singular: string): string {
@@ -315,6 +431,100 @@ function renderActivityHeader(theme: Theme, steps: WorkStep[]): string {
   );
 }
 
+const CONNECTED_RGB = {
+  muted: "146;131;116",
+  dim: "102;92;84",
+  text: "235;219;178",
+  warning: "250;189;47",
+  success: "184;187;38",
+  error: "242;89;75",
+} as const;
+
+function connectedColor(
+  color: keyof typeof CONNECTED_RGB,
+  text: string,
+  bold = false,
+): string {
+  return `\x1b[${bold ? "1;" : ""}38;2;${CONNECTED_RGB[color]}m${text}\x1b[0m`;
+}
+
+function connectedParentStatus(
+  step: WorkStep,
+): "running" | "completed" | "failed" {
+  const current = status(step);
+  return current === "pending"
+    ? "running"
+    : current === "failure"
+      ? "failed"
+      : "completed";
+}
+
+function renderConnectedActivityHeader(steps: WorkStep[]): string {
+  const calls = steps.reduce((count, step) => count + step.toolCalls.length, 0);
+  const failed = steps.some((step) => status(step) === "failure");
+  const running = steps.some((step) => status(step) === "pending");
+  const state = failed
+    ? connectedColor("error", "failed", true)
+    : running
+      ? connectedColor("warning", "running")
+      : connectedColor("success", "all passed", true);
+  return (
+    connectedColor("muted", " │  ") +
+    connectedColor(
+      "muted",
+      `${plural(steps.length, "step")} · ${plural(calls, "call")} · `,
+    ) +
+    state
+  );
+}
+
+function connectedStepElapsed(
+  step: WorkStep,
+  bridge: ConnectedRenderBridge,
+): number | undefined {
+  if (!finiteNumber(step.startedAt)) return undefined;
+  const end = finiteNumber(step.completedAt)
+    ? step.completedAt
+    : connectedParentStatus(step) === "running"
+      ? bridgeNow(bridge)
+      : undefined;
+  return finiteNumber(end) ? Math.max(0, end - step.startedAt) : undefined;
+}
+
+function renderConnectedParent(
+  step: WorkStep,
+  bridge: ConnectedRenderBridge,
+  nativeLines: string[],
+  width: number,
+): string[] {
+  const steps = step.group.steps;
+  const lines = [renderConnectedActivityHeader(steps)];
+  for (const [index, item] of steps.entries()) {
+    const current = connectedParentStatus(item);
+    const last = index === steps.length - 1;
+    const glyph =
+      current === "running"
+        ? connectedColor("warning", "⟳")
+        : current === "failed"
+          ? connectedColor("error", "×")
+          : connectedColor("success", "●");
+    const title = connectedColor(
+      current === "failed" ? "error" : "text",
+      item.title,
+      true,
+    );
+    const elapsed = item === step ? connectedStepElapsed(item, bridge) : undefined;
+    const timer = finiteNumber(elapsed)
+      ? connectedColor("dim", ` · ${formatElapsed(elapsed)}`)
+      : "";
+    lines.push(
+      `${connectedColor("muted", ` ${last ? "└─" : "├─"} `)}${glyph} ${title}${timer}`,
+    );
+    if (item === step) lines.push(...nativeLines);
+  }
+  return lines.map((line) => truncateToWidth(line, width));
+}
+
 function renderThinkingDraft(
   theme: Theme,
   draft: ThinkingDraft,
@@ -454,6 +664,7 @@ function updateAssistant(
           title: "Preparing response",
           titleLocked: true,
           thinking: stepThinking,
+          thinkingVisible: !component.hideThinkingBlock,
           toolCalls: [],
           toolCallIds: new Set<string>(),
           completedToolCallIds: new Set<string>(),
@@ -471,6 +682,7 @@ function updateAssistant(
         group.steps.push(step);
       }
       step.thinking = stepThinking;
+      step.thinkingVisible = !component.hideThinkingBlock;
       component[WORK_STEP] = step;
     }
     component[THINKING_DRAFT] = undefined;
@@ -501,6 +713,7 @@ function updateAssistant(
       title,
       titleLocked: Boolean(stepExplicitTitle),
       thinking: stepThinking,
+      thinkingVisible: !component.hideThinkingBlock,
       toolCalls: [],
       toolCallIds: new Set<string>(),
       completedToolCallIds: new Set<string>(),
@@ -519,6 +732,13 @@ function updateAssistant(
     group.steps.push(step);
   }
 
+  for (const toolCall of toolCalls) {
+    const previous = step.toolCalls.find((call) => call.id === toolCall.id);
+    if (previous) {
+      toolCall.startedAt = previous.startedAt;
+      toolCall.completedAt = previous.completedAt;
+    }
+  }
   step.toolCalls = toolCalls;
   step.toolCallIds = new Set(toolCalls.map((toolCall) => toolCall.id));
   if (!step.titleLocked) {
@@ -526,6 +746,7 @@ function updateAssistant(
     step.titleLocked = Boolean(stepExplicitTitle);
   }
   step.thinking = stepThinking;
+  step.thinkingVisible = !component.hideThinkingBlock;
   if (message.stopReason === "error" || message.stopReason === "aborted")
     step.failed = true;
 
@@ -576,6 +797,161 @@ function bindToolComponent(
   return step;
 }
 
+function rootProgress(component: any): Record<string, unknown> | undefined {
+  const result = component.result?.details?.results?.[0];
+  return result && typeof result === "object"
+    ? asRecord((result as Record<string, unknown>).progress)
+    : undefined;
+}
+
+function rootFailed(component: any, progress: Record<string, unknown>): boolean {
+  const result = component.result?.details?.results?.[0];
+  return (
+    component.result?.isError === true ||
+    progress.status === "failed" ||
+    (finiteNumber(result?.exitCode) && result.exitCode !== 0) ||
+    Boolean(progress.error)
+  );
+}
+
+function synchronizeConnectedObservation(
+  component: any,
+  step: WorkStep,
+  state: RendererState,
+  bridge?: ConnectedRenderBridge,
+): void {
+  const toolCallId = asString(component.toolCallId);
+  const toolCall = step.toolCalls.find((call) => call.id === toolCallId);
+  if (!toolCall) return;
+
+  const progress = rootProgress(component);
+  const observedStartedAt = progress?.startedAt;
+  if (finiteNumber(observedStartedAt)) {
+    toolCall.startedAt = observedStartedAt;
+    const starts = step.toolCalls
+      .map((call) => call.startedAt)
+      .filter(finiteNumber);
+    step.startedAt = starts.length > 0 ? Math.min(...starts) : observedStartedAt;
+  } else if (
+    component.executionStarted &&
+    !finiteNumber(toolCall.startedAt) &&
+    !state.restoredToolCallIds.has(toolCall.id)
+  ) {
+    const startedAt = bridgeNow(bridge);
+    toolCall.startedAt = startedAt;
+    if (!finiteNumber(step.startedAt) || startedAt < step.startedAt)
+      step.startedAt = startedAt;
+  }
+
+  const observedCompletedAt = progress?.completedAt;
+  if (finiteNumber(observedCompletedAt))
+    toolCall.completedAt ??= observedCompletedAt;
+
+  if (!component.result || component.isPartial) return;
+  toolCall.completedAt ??= state.restoredToolCallIds.has(toolCall.id)
+    ? undefined
+    : bridgeNow(bridge);
+  step.completedToolCallIds.add(toolCall.id);
+  step.failed ||= rootFailed(component, progress ?? {});
+  state.pending.delete(toolCall.id);
+  if (status(step) !== "pending") {
+    if (finiteNumber(toolCall.completedAt))
+      step.completedAt ??= toolCall.completedAt;
+    releaseStep(state, step);
+  }
+}
+
+function ensureConnectedBridge(
+  component: any,
+  step: WorkStep,
+  state: RendererState,
+): ConnectedRenderBridge | undefined {
+  if (component.toolName !== "subagent") return undefined;
+  const rendererState = (component.rendererState ??= {}) as Record<PropertyKey, unknown>;
+  let connected = state.connected.get(component);
+  if (!connected) {
+    const published = rendererState[SUBAGENT_BRIDGE] as
+      | ConnectedRenderBridge
+      | undefined;
+    const bridge: ConnectedRenderBridge =
+      published?.layout === "connected"
+        ? published
+        : {
+            layout: "connected",
+            outputMode: "auto",
+            thinkingVisible: true,
+            parentRail: "   ",
+            parentConnector: "└─",
+            lifecycle: {
+              status: "pending",
+              thinking: [],
+            },
+          };
+    connected = {
+      bridge,
+      expandedInitialized: false,
+      collapsedSource:
+        bridge.outputMode === "hidden" ? "hidden" : "auto",
+    };
+    state.connected.set(component, connected);
+    rendererState[SUBAGENT_BRIDGE] = bridge;
+    bridge.invalidate = () => state.scheduler.arm(component, bridge);
+  }
+
+  const bridge = connected.bridge;
+  synchronizeConnectedObservation(component, step, state, bridge);
+  const current = connectedParentStatus(step);
+  const progress = rootProgress(component);
+  const observedStatus = progress?.status;
+  bridge.lifecycle.status =
+    current === "failed"
+      ? "failed"
+      : current === "completed"
+        ? "completed"
+        : observedStatus === "pending"
+          ? "pending"
+          : "running";
+  bridge.lifecycle.startedAt = step.startedAt;
+  bridge.lifecycle.completedAt = step.completedAt;
+  bridge.lifecycle.thinking = step.thinking;
+  bridge.thinkingVisible = step.thinkingVisible;
+  const last = step.group.steps.at(-1) === step;
+  bridge.parentRail = last ? "   " : "│  ";
+  bridge.parentConnector = "└─";
+  state.toolComponents.set(component.toolCallId, component);
+  if (bridge.lifecycle.status !== "running") state.scheduler.remove(component);
+  return bridge;
+}
+
+function toggleConnectedOutput(component: any, state: RendererState): void {
+  const step = bindToolComponent(component, state);
+  if (!step) return;
+  const bridge = ensureConnectedBridge(component, step, state);
+  const connected = state.connected.get(component);
+  if (!bridge || !connected) return;
+  if (!connected.expandedInitialized) {
+    connected.expandedInitialized = true;
+    return;
+  }
+
+  if (connectedParentStatus(step) === "running") {
+    if (bridge.outputMode === "hidden") {
+      bridge.outputMode = connected.collapsedSource;
+    } else {
+      connected.collapsedSource = bridge.outputMode;
+      bridge.outputMode = "hidden";
+    }
+    return;
+  }
+
+  if (bridge.outputMode === "expanded") {
+    bridge.outputMode = connected.collapsedSource;
+  } else {
+    connected.collapsedSource = bridge.outputMode;
+    bridge.outputMode = "expanded";
+  }
+}
+
 function renderToolComponent(
   component: any,
   width: number,
@@ -590,6 +966,12 @@ function renderToolComponent(
   const toolCallId = asString(component.toolCallId);
   if (toolCallId !== owner.toolCallIds.values().next().value) return [];
 
+  const bridge = ensureConnectedBridge(component, step, state);
+  if (bridge) {
+    const native = component.resultRendererComponent?.render(width) ?? [];
+    return renderConnectedParent(step, bridge, native, width);
+  }
+
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
   if (!row) {
     row = new WorkStepRow(theme, step);
@@ -600,6 +982,7 @@ function renderToolComponent(
 }
 
 function disposeState(state: RendererState): void {
+  state.scheduler.clear();
   const steps = new Set(state.pending.values());
   if (state.assembling) steps.add(state.assembling.step);
   for (const step of steps) step.row = undefined;
@@ -609,6 +992,9 @@ function disposeState(state: RendererState): void {
   state.currentGroup = undefined;
   state.currentRun = undefined;
   state.sessionId = undefined;
+  state.restoredToolCallIds.clear();
+  state.toolComponents.clear();
+  state.connected = new WeakMap();
 }
 
 function failPendingSteps(state: RendererState): void {
@@ -616,6 +1002,17 @@ function failPendingSteps(state: RendererState): void {
   if (state.assembling) steps.add(state.assembling.step);
   for (const step of steps) {
     step.failed = true;
+    for (const toolCall of step.toolCalls) {
+      const component = state.toolComponents.get(toolCall.id);
+      const bridge = component
+        ? state.connected.get(component)?.bridge
+        : undefined;
+      if (!state.restoredToolCallIds.has(toolCall.id)) {
+        toolCall.completedAt ??= bridgeNow(bridge);
+        step.completedAt ??= toolCall.completedAt;
+      }
+      if (component) state.scheduler.remove(component);
+    }
     releaseStep(state, step);
   }
   state.pending.clear();
@@ -626,6 +1023,7 @@ function failPendingSteps(state: RendererState): void {
 
 function scanPersistedSession(state: RendererState, entries: any[]): void {
   state.persisted = new WeakMap();
+  state.restoredToolCallIds.clear();
   const messages = entries
     .filter((entry) => entry?.type === "message")
     .map((entry) => entry.message);
@@ -643,6 +1041,8 @@ function scanPersistedSession(state: RendererState, entries: any[]): void {
     const content = Array.isArray(message.content) ? message.content : [];
     const toolCalls = toolCallsFrom(content);
     if (toolCalls.length === 0) continue;
+    for (const toolCall of toolCalls)
+      state.restoredToolCallIds.add(toolCall.id);
 
     const completedToolCallIds = new Set<string>();
     let failed =
@@ -710,6 +1110,16 @@ function patchComponents(
       if (!this[ASSISTANT_INVALIDATING])
         assistantProto[CONTROLLER]?.assistantUpdated(this, message);
     };
+    const setHideThinkingBlock = assistantProto.setHideThinkingBlock;
+    assistantProto.setHideThinkingBlock = function (hidden: boolean) {
+      this[ASSISTANT_INVALIDATING] = true;
+      try {
+        setHideThinkingBlock.call(this, hidden);
+      } finally {
+        this[ASSISTANT_INVALIDATING] = false;
+      }
+      assistantProto[CONTROLLER]?.assistantThinkingChanged(this, hidden);
+    };
     const invalidate = assistantProto.invalidate;
     assistantProto.invalidate = function () {
       this[ASSISTANT_INVALIDATING] = true;
@@ -738,12 +1148,19 @@ function patchComponents(
       toolProto[CONTROLLER]?.toolUpdated(this);
       return updateDisplay.call(this);
     };
+    const setExpanded = toolProto.setExpanded;
+    toolProto.setExpanded = function (expanded: boolean) {
+      toolProto[CONTROLLER]?.toolExpanded(this);
+      return setExpanded.call(this, expanded);
+    };
     const render = toolProto.render;
     toolProto.render = function (width: number) {
       const activity = toolProto[CONTROLLER]?.renderTool(this, width) ?? [];
-      return this.toolName === "subagent"
-        ? [...activity, ...render.call(this, width)]
-        : activity;
+      if (this.toolName !== "subagent") return activity;
+      const connected = this.rendererState?.[SUBAGENT_BRIDGE];
+      return connected?.layout === "connected"
+        ? activity
+        : [...activity, ...render.call(this, width)];
     };
   }
 }
@@ -754,6 +1171,10 @@ export default async function (pi: ExtensionAPI) {
   const state: RendererState = {
     pending: new Map(),
     persisted: new WeakMap(),
+    restoredToolCallIds: new Set(),
+    toolComponents: new Map(),
+    connected: new WeakMap(),
+    scheduler: new ClockInvalidationScheduler(),
   };
   const controller: RendererController = {
     assistantNativeMessage(message) {
@@ -765,6 +1186,10 @@ export default async function (pi: ExtensionAPI) {
     },
     assistantUpdated(component, message) {
       updateAssistant(component, message, state);
+    },
+    assistantThinkingChanged(component, hidden) {
+      const step = component[WORK_STEP] as WorkStep | undefined;
+      if (step) step.thinkingVisible = !hidden;
     },
     assistantHasStep(component) {
       const step = component[WORK_STEP] as WorkStep | undefined;
@@ -786,7 +1211,11 @@ export default async function (pi: ExtensionAPI) {
       return lines.length > 0 ? [...activity, "", ...lines] : activity;
     },
     toolUpdated(component) {
-      bindToolComponent(component, state);
+      const step = bindToolComponent(component, state);
+      if (step) ensureConnectedBridge(component, step, state);
+    },
+    toolExpanded(component) {
+      toggleConnectedOutput(component, state);
     },
     renderTool(component, width) {
       return renderToolComponent(component, width, state, theme);
@@ -812,13 +1241,30 @@ export default async function (pi: ExtensionAPI) {
   });
 
   pi.on("tool_execution_end", (event) => {
-    const step = state.pending.get(event.toolCallId);
+    const component = state.toolComponents.get(event.toolCallId);
+    const step =
+      state.pending.get(event.toolCallId) ??
+      (component?.[WORK_STEP] as WorkStep | undefined);
     if (!step) return;
 
+    const toolCall = step.toolCalls.find((call) => call.id === event.toolCallId);
+    const bridge = component
+      ? state.connected.get(component)?.bridge
+      : undefined;
+    if (toolCall && !state.restoredToolCallIds.has(toolCall.id))
+      toolCall.completedAt ??= bridgeNow(bridge);
     step.completedToolCallIds.add(event.toolCallId);
     step.failed ||= event.isError;
     state.pending.delete(event.toolCallId);
-    if (status(step) !== "pending") releaseStep(state, step);
+    if (status(step) !== "pending") {
+      if (finiteNumber(toolCall?.completedAt))
+        step.completedAt ??= toolCall.completedAt;
+      releaseStep(state, step);
+    }
+    if (component) {
+      ensureConnectedBridge(component, step, state);
+      state.scheduler.remove(component);
+    }
   });
 
   pi.on("agent_end", () => {
