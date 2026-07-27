@@ -1,0 +1,44 @@
+Downloading no-mistakes v1.41.2 for darwin/arm64...
+no-mistakes v1.41.2 installed to /private/tmp/no-mistakes-p01.oIjPmI/install/no-mistakes
+Command path: /private/tmp/no-mistakes-p01.oIjPmI/bin/no-mistakes -> /private/tmp/no-mistakes-p01.oIjPmI/install/no-mistakes
+no-mistakes version v1.41.2 (867d64d) 2026-07-24T06:16:23Z
+_  _ ____    _  _ _ ____ ___ ____ _  _ ____ ____
+|\ | |  |    |\/| | [__   |  |__| |_/  |___ [__ 
+| \| |__|    |  | | ___]  |  |  | | \_ |___ ___]
+
+  ✓ Gate initialized
+
+    repo  /private/tmp/no-mistakes-p01.oIjPmI/repo
+    gate  no-mistakes → /private/tmp/no-mistakes-p01.oIjPmI/state/repos/dc383bf7e4e8.git
+  remote  /private/tmp/no-mistakes-p01.oIjPmI/origin.git
+   skill  /no-mistakes installed for agents at user level
+
+  Push through the gate with:
+  git push no-mistakes <branch>
+  System
+  ✓ git             git version 2.53.0
+  ✓ gh              ok
+  – az              not found (optional, needed for Azure DevOps PR/CI)
+  ✓ data directory  /private/tmp/no-mistakes-p01.oIjPmI/state
+  ✓ database        ok
+  ✓ daemon          running
+
+  Agents
+  – claude          not found
+  ✓ codex           /opt/homebrew/bin/codex
+  – rovodev         not found
+  – opencode        not found
+  ✓ pi              /opt/homebrew/bin/pi
+  – copilot         not found
+  – acpx            not found
+  – cursor          not found (cursor-agent, acpx)
+  ✓ gate validation  pi is runnable
+pi_skill=no-mistakes
+pi_skill_path=/private/tmp/no-mistakes-p01.oIjPmI/home/.agents/skills/no-mistakes/SKILL.md
+binary=/private/tmp/no-mistakes-p01.oIjPmI/install/no-mistakes
+link=/private/tmp/no-mistakes-p01.oIjPmI/install/no-mistakes
+state=/private/tmp/no-mistakes-p01.oIjPmI/state
+agent=pi
+repo_local_skill=absent
+skill_sha256=245b0b971c4064dfd6226b0d72f0c53da5fd115e1987cae4cda62c39f9f4dad7
+cleanup=trap removes the disposable home, daemon, gate, and repository
