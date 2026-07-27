@@ -16,6 +16,8 @@ const SUBAGENT_BRIDGE = Symbol.for(
 const ASSISTANT_INVALIDATING = Symbol.for(
   "aviral.pi.work-step-renderer.assistant-invalidating",
 );
+const CLOCK_SOURCE = Symbol.for("aviral.pi.work-step-renderer.clock-source");
+const DEFAULT_CLOCK = () => Date.now();
 
 type ToolCall = {
   id: string;
@@ -120,9 +122,26 @@ function finiteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function resolveConnectedClock(): () => number {
+  try {
+    const source = (globalThis as any)[CLOCK_SOURCE];
+    if (!source || typeof source !== "object") return DEFAULT_CLOCK;
+    const now = source.now;
+    return typeof now === "function" && finiteNumber(now())
+      ? now
+      : DEFAULT_CLOCK;
+  } catch {
+    return DEFAULT_CLOCK;
+  }
+}
+
 function bridgeNow(bridge?: ConnectedRenderBridge): number {
-  const supplied = bridge?.clock?.();
-  return finiteNumber(supplied) ? supplied : Date.now();
+  try {
+    const supplied = bridge?.clock?.();
+    return finiteNumber(supplied) ? supplied : DEFAULT_CLOCK();
+  } catch {
+    return DEFAULT_CLOCK();
+  }
 }
 
 function formatElapsed(milliseconds: number): string {
@@ -943,6 +962,8 @@ function transferToolComponentOwnership(
       invalidate: undefined,
     } satisfies ConnectedRenderBridge;
   }
+  connected.bridge.invalidate = () =>
+    state.scheduler.arm(component, connected.bridge);
   state.scheduler.transfer(previous, component, connected.bridge);
   state.toolComponents.set(toolCallId, component);
   return true;
@@ -1071,6 +1092,8 @@ function ensureConnectedBridge(
               thinking: [],
             },
           };
+    if (typeof bridge.clock !== "function")
+      bridge.clock = resolveConnectedClock();
     connected = {
       bridge,
       expandedInitialized: false,
