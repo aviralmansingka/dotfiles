@@ -731,6 +731,23 @@ wait_for_terminal() {
 	return 1
 }
 
+wait_for_prompt_terminal() {
+	local prompt="$1"
+	local expected="$2"
+	local failure="$3"
+	local screen
+	for _ in {1..200}; do
+		screen="$(tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0)"
+		if [[ "$screen" == *"$prompt"* ]] \
+			&& grep -Fq "$expected" <<<"${screen##*"$prompt"}"; then
+			return
+		fi
+		sleep 0.1
+	done
+	echo "$failure" >&2
+	return 1
+}
+
 wait_for_terminal "faux-work-step"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "plain assistant"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
@@ -989,18 +1006,19 @@ wait_for_terminal \
 wait_for_fixture_file "$subagent_concurrency_second_marker" "Real concurrency fixture never spawned the queued child"
 provider_prompt="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).provider.prompt);' "$subagent_spec")"
 provider_agent="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).provider.agent);' "$subagent_spec")"
+provider_failure_tail="$(node -e 'const fs = require("node:fs"); console.log(JSON.parse(fs.readFileSync(process.argv[1], "utf8")).review.failure.narrativeTail);' "$subagent_spec")"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "$provider_prompt"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
 wait_for_fixture_file "$provider_running_marker" "Provider compatibility fixture did not emit running state"
-wait_for_terminal "⟳ $provider_agent" "Provider compatibility running state did not reach the terminal"
+wait_for_prompt_terminal "$provider_prompt" "Thinking…" "Provider compatibility running state did not reach semantic Thinking…"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$provider_running_capture"
 touch "$provider_pending_release"
 wait_for_fixture_file "$provider_pending_marker" "Provider compatibility fixture did not emit pending state"
-wait_for_terminal "○ $provider_agent" "Provider compatibility pending state did not reach the terminal"
+wait_for_prompt_terminal "$provider_prompt" "Queued…" "Provider compatibility pending state did not reach semantic Queued…"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$provider_pending_capture"
 touch "$provider_failed_release"
 wait_for_fixture_file "$provider_failed_marker" "Provider compatibility fixture did not emit failed state"
-wait_for_terminal "✗ $provider_agent" "Provider compatibility failed state did not reach the terminal"
+wait_for_prompt_terminal "$provider_prompt" "$provider_failure_tail" "Provider compatibility failed state did not reach its failure narrative"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$provider_failed_capture"
 touch "$provider_final_release"
 wait_for_terminal \
