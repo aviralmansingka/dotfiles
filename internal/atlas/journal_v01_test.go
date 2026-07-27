@@ -516,7 +516,7 @@ func assertStyled(t *testing.T, text, sgr, token string) {
 func assertNodeStyle(t *testing.T, colored, marker, sgr string) {
 	t.Helper()
 	for _, line := range strings.Split(colored, "\n") {
-		if strings.Contains(stripJournalANSI(line), marker) {
+		if plain := stripJournalANSI(line); strings.Contains(plain, " UTC · ") && strings.Contains(plain, marker) {
 			if !strings.Contains(line, sgr+"●"+sgrReset) {
 				t.Errorf("node %q does not use expected status color", marker)
 			}
