@@ -2,7 +2,7 @@ import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 import { realpathSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { truncateToWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 const ASSISTANT_PATCHED = Symbol.for("aviral.pi.work-step-renderer.assistant");
 const TOOL_PATCHED = Symbol.for("aviral.pi.work-step-renderer.tool");
@@ -490,6 +490,32 @@ function connectedParentStatus(
       : "completed";
 }
 
+function truncateConnectedLine(text: string, maxWidth: number): string {
+  if (text.includes("\n") || text.includes("\r"))
+    text = text.replace(/\r?\n/g, "↵ ");
+  if (visibleWidth(text) <= maxWidth) return text;
+
+  let result = "";
+  let width = 0;
+  for (let index = 0; index < text.length; index++) {
+    if (width >= maxWidth - 1) {
+      const truncated = `${result}…`;
+      return truncated.includes("\x1b[") ? `${truncated}\x1b[0m` : truncated;
+    }
+    if (text[index] === "\x1b") {
+      const ansi = text.slice(index).match(/^\x1b\[[0-9;]*m/);
+      if (ansi) {
+        result += ansi[0];
+        index += ansi[0].length - 1;
+        continue;
+      }
+    }
+    result += text[index];
+    width++;
+  }
+  return result;
+}
+
 function renderConnectedActivityHeader(steps: WorkStep[]): string {
   const calls = steps.reduce((count, step) => count + step.toolCalls.length, 0);
   const failed = steps.some((step) => status(step) === "failure");
@@ -536,11 +562,13 @@ function renderConnectedInitialThinking(
 function renderConnectedParent(
   step: WorkStep,
   bridge: ConnectedRenderBridge,
-  nativeLines: string[],
+  nativeSubtrees: string[][],
   width: number,
 ): string[] {
   const steps = step.group.steps;
-  const lines = [renderConnectedActivityHeader(steps)];
+  const lines = [
+    truncateConnectedLine(renderConnectedActivityHeader(steps), width),
+  ];
   for (const [index, item] of steps.entries()) {
     const current = connectedParentStatus(item);
     const last = index === steps.length - 1;
@@ -555,16 +583,22 @@ function renderConnectedParent(
       item.title,
       true,
     );
-    const elapsed = item === step ? connectedStepElapsed(item, bridge) : undefined;
+    const elapsed =
+      item === step ? connectedStepElapsed(item, bridge) : undefined;
     const timer = finiteNumber(elapsed)
       ? connectedColor("dim", ` · ${formatElapsed(elapsed)}`)
       : "";
     lines.push(
-      `${connectedColor("muted", ` ${last ? "└─" : "├─"} `)}${glyph} ${title}${timer}`,
+      truncateConnectedLine(
+        `${connectedColor("muted", ` ${last ? "└─" : "├─"} `)}${glyph} ${title}${timer}`,
+        width,
+      ),
     );
-    if (item === step) lines.push(...nativeLines);
+    if (item === step) {
+      for (const nativeLines of nativeSubtrees) lines.push(...nativeLines);
+    }
   }
-  return lines.map((line) => truncateToWidth(line, width));
+  return lines;
 }
 
 function renderThinkingDraft(
@@ -1036,7 +1070,14 @@ function synchronizeConnectedObservation(
     const starts = step.toolCalls
       .map((call) => call.startedAt)
       .filter(finiteNumber);
-    step.startedAt = starts.length > 0 ? Math.min(...starts) : observedStartedAt;
+    step.startedAt =
+      starts.length > 0 ? Math.min(...starts) : observedStartedAt;
+  } else if (progress?.status === "pending") {
+    toolCall.startedAt = undefined;
+    const starts = step.toolCalls
+      .map((call) => call.startedAt)
+      .filter(finiteNumber);
+    step.startedAt = starts.length > 0 ? Math.min(...starts) : undefined;
   } else if (
     component.executionStarted &&
     !finiteNumber(toolCall.startedAt) &&
@@ -1107,24 +1148,40 @@ function ensureConnectedBridge(
 
   const bridge = connected.bridge;
   synchronizeConnectedObservation(component, step, state, bridge);
-  const current = connectedParentStatus(step);
+  const toolCall = step.toolCalls.find(
+    (call) => call.id === asString(component.toolCallId),
+  );
   const progress = rootProgress(component);
   const observedStatus = progress?.status;
-  bridge.lifecycle.status =
-    current === "failed"
-      ? "failed"
-      : current === "completed"
-        ? "completed"
-        : observedStatus === "pending"
-          ? "pending"
-          : "running";
-  bridge.lifecycle.startedAt = step.startedAt;
-  bridge.lifecycle.completedAt = step.completedAt;
+  const failed =
+    observedStatus === "failed" ||
+    Boolean(progress?.error) ||
+    (component.result != null &&
+      component.isPartial !== true &&
+      rootFailed(component, progress ?? {}));
+  bridge.lifecycle.status = failed
+    ? "failed"
+    : component.result != null && component.isPartial !== true
+      ? "completed"
+      : observedStatus === "pending" || observedStatus === "running"
+        ? observedStatus
+        : observedStatus === "completed" ||
+            (toolCall && step.completedToolCallIds.has(toolCall.id))
+          ? "completed"
+          : component.executionStarted
+            ? "running"
+            : "pending";
+  bridge.lifecycle.startedAt = toolCall?.startedAt;
+  bridge.lifecycle.completedAt = toolCall?.completedAt;
   bridge.lifecycle.thinking = step.thinking;
   bridge.thinkingVisible = step.thinkingVisible;
   const last = step.group.steps.at(-1) === step;
   bridge.parentRail = last ? "   " : "│  ";
-  bridge.parentConnector = "└─";
+  const connectedCalls = step.toolCalls.filter(
+    (call) => call.name === "subagent",
+  );
+  bridge.parentConnector =
+    connectedCalls.at(-1)?.id === component.toolCallId ? "└─" : "├─";
   state.toolComponents.set(component.toolCallId, component);
   if (bridge.lifecycle.status !== "running") state.scheduler.remove(component);
   return bridge;
@@ -1141,7 +1198,10 @@ function toggleConnectedOutput(component: any, state: RendererState): void {
     return;
   }
 
-  if (connectedParentStatus(step) === "running") {
+  if (
+    bridge.lifecycle.status === "pending" ||
+    bridge.lifecycle.status === "running"
+  ) {
     if (bridge.outputMode === "hidden") {
       bridge.outputMode = connected.collapsedSource;
     } else {
@@ -1177,22 +1237,62 @@ function renderToolComponent(
     : undefined;
   if (toolOwner && toolOwner !== component) return [];
 
-  const bridge = ensureConnectedBridge(component, step, state);
-  if (bridge) {
-    const native = component.resultRendererComponent?.render(width) ?? [];
-    const progress = rootProgress(component);
-    const hasChildProgress =
-      Array.isArray(progress?.recentTools) && progress.recentTools.length > 0;
-    const needsInitialThinking =
-      bridge.thinkingVisible &&
-      (bridge.lifecycle.status === "pending" ||
-        bridge.lifecycle.status === "running") &&
-      !hasChildProgress &&
-      !native.some((line: string) => line.includes(CONNECTED_THINKING));
-    const connected = needsInitialThinking
-      ? [renderConnectedInitialThinking(bridge, native), ...native]
-      : native;
-    return renderConnectedParent(step, bridge, connected, width);
+  const connectedComponents: Array<{
+    component: any;
+    bridge: ConnectedRenderBridge;
+  }> = [];
+  for (const call of step.toolCalls) {
+    const candidate = state.toolComponents.get(call.id);
+    if (candidate?.toolName !== "subagent" || candidate[WORK_STEP] !== step)
+      continue;
+    const candidateBridge = ensureConnectedBridge(candidate, step, state);
+    if (candidateBridge) {
+      const renderer = candidate.resultRendererComponent;
+      if (
+        typeof renderer?.render === "function" ||
+        candidateBridge.lifecycle.status === "running"
+      )
+        connectedComponents.push({
+          component: candidate,
+          bridge: candidateBridge,
+        });
+    }
+  }
+
+  if (connectedComponents.length > 0) {
+    const nativeSubtrees = connectedComponents.map(
+      ({ component: candidate, bridge: candidateBridge }, index) => {
+        candidateBridge.parentConnector =
+          index === connectedComponents.length - 1 ? "└─" : "├─";
+        const renderer = candidate.resultRendererComponent;
+        const native =
+          typeof renderer?.render === "function" ? renderer.render(width) : [];
+        const progress = rootProgress(candidate);
+        const hasChildProgress =
+          Array.isArray(progress?.recentTools) &&
+          progress.recentTools.length > 0;
+        const needsInitialThinking =
+          candidateBridge.thinkingVisible &&
+          candidateBridge.lifecycle.status === "running" &&
+          !hasChildProgress &&
+          !native.some((line: string) => line.includes(CONNECTED_THINKING));
+        return needsInitialThinking
+          ? [
+              truncateConnectedLine(
+                renderConnectedInitialThinking(candidateBridge, native),
+                width,
+              ),
+              ...native,
+            ]
+          : native;
+      },
+    );
+    return renderConnectedParent(
+      step,
+      connectedComponents[0].bridge,
+      nativeSubtrees,
+      width,
+    );
   }
 
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
