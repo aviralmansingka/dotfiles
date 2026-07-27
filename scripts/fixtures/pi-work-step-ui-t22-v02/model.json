@@ -1,0 +1,159 @@
+{
+  "contract": {
+    "width": 110,
+    "t0": 1700000000000,
+    "t1": 1700000001000,
+    "parentCommit": "c412877967fa8c17abf7ab427b2cd8843b9e06b5",
+    "parentTree": "07051764c0e60029a09d7a8d66f78e5c6238ffa0",
+    "reasoningSentinel": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER"
+  },
+  "call": {
+    "agent": "reviewer",
+    "task": "Review the implementation for correctness and regressions.",
+    "cwd": "~/dotfiles"
+  },
+  "goldenSha256": {
+    "completed-minimized-t0": "25c96b8df4470669f25b36ef9fe87ac7cdfb867d450ca8a469b5dce0e5656ead",
+    "completed-minimized-t1": "25c96b8df4470669f25b36ef9fe87ac7cdfb867d450ca8a469b5dce0e5656ead",
+    "ctrl-o-expanded": "c479cc5d5bc3179178b57195a6efe4043db4fcc5b70ac5987ea3d46be75d8300",
+    "empty-success": "786d74cf160722ea1d145d24eee66daef8ed0d625ccea92ef7e8837f5d79a5f9",
+    "nested-exit-only-failure": "6b66fa9637905ca37d910c305d7572cb0ff2469cef2d6a15b7af261fd8fa09c6",
+    "nested-ownership": "25c96b8df4470669f25b36ef9fe87ac7cdfb867d450ca8a469b5dce0e5656ead",
+    "root-failure": "e1e3aedcece5eb2b32866e86dbdd2761d29591fcda72310e4d4b1dabe7dd9e5c",
+    "running-t0": "b1f6a559b3db28722036b9c39532866fbeaa06623d15b2e8293022cf4b63cc81",
+    "running-t1": "41502b0f2021ab7906df246c302f31f4ccbf14c8b9831885ff718723794a9423"
+  },
+  "cases": [
+    {
+      "name": "running-t0",
+      "clock": 1700000000000,
+      "expanded": false,
+      "activity": { "title": "Reviewing repository changes", "status": "running", "startedAt": 1699999996800 },
+      "result": {
+        "agent": "reviewer",
+        "task": "Review the implementation for correctness and regressions.",
+        "output": "",
+        "exitCode": -1,
+        "model": "openai-codex/gpt-5.6",
+        "contextWindow": 200000,
+        "usage": { "input": 1200, "output": 300, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
+        "progress": {
+          "agent": "reviewer", "status": "running", "task": "Review the implementation for correctness and regressions.",
+          "toolCount": 2, "tokens": 1500, "durationMs": 3200, "startedAt": 1699999996800,
+          "lastMessage": "Thinking…", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER",
+          "recentTools": [
+            { "tool": "bash", "args": "git status --short && git diff --check", "toolCallId": "tool-1", "status": "done", "startedAt": 1699999998900, "completedAt": 1700000000000, "shellCommands": ["git status --short", "git diff --check"] },
+            { "tool": "subagent", "args": "reviewer: inspect correctness", "toolCallId": "tool-2", "status": "running", "startedAt": 1699999998600, "children": [
+              {
+                "agent": "reviewer", "task": "Inspect correctness", "output": "", "exitCode": -1, "model": "openai-codex/gpt-5.6",
+                "usage": { "input": 300, "output": 50, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
+                "progress": { "agent": "reviewer", "status": "running", "task": "Inspect correctness", "toolCount": 0, "tokens": 350, "durationMs": 900, "startedAt": 1699999999100, "lastMessage": "Thinking…", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER", "recentTools": [] }
+              }
+            ] }
+          ]
+        }
+      }
+    },
+    {
+      "name": "running-t1",
+      "clock": 1700000001000,
+      "expanded": false,
+      "activity": { "title": "Reviewing repository changes", "status": "running", "startedAt": 1699999996800 },
+      "resultFrom": "running-t0"
+    },
+    {
+      "name": "completed-minimized-t0",
+      "clock": 1700000000000,
+      "expanded": false,
+      "activity": { "title": "Reviewing repository changes", "status": "completed", "startedAt": 1699999991800, "completedAt": 1700000000000 },
+      "result": {
+        "agent": "reviewer",
+        "task": "Review the implementation for correctness and regressions.",
+        "output": "## Review result\n\n**No correctness risks found.**",
+        "exitCode": 0,
+        "model": "openai-codex/gpt-5.6",
+        "contextWindow": 200000,
+        "usage": { "input": 2400, "output": 1000, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 2 },
+        "progress": {
+          "agent": "reviewer", "status": "completed", "task": "Review the implementation for correctness and regressions.",
+          "toolCount": 2, "tokens": 3400, "durationMs": 8200, "startedAt": 1699999991800, "completedAt": 1700000000000,
+          "lastMessage": "No correctness risks found.", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER",
+          "recentTools": [
+            { "tool": "bash", "args": "git status --short && git diff --check", "toolCallId": "tool-1", "status": "done", "startedAt": 1699999996900, "completedAt": 1700000000000, "shellCommands": ["cd ~/dotfiles", "git status --short", "git diff --check"] },
+            { "tool": "subagent", "args": "reviewer: inspect correctness", "toolCallId": "tool-2", "status": "done", "startedAt": 1699999997400, "completedAt": 1700000000000, "children": [
+              {
+                "agent": "reviewer", "task": "Inspect correctness", "output": "No correctness risks found.", "exitCode": 0, "model": "openai-codex/gpt-5.6",
+                "usage": { "input": 500, "output": 200, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
+                "progress": { "agent": "reviewer", "status": "completed", "task": "Inspect correctness", "toolCount": 0, "tokens": 700, "durationMs": 2100, "startedAt": 1699999997900, "completedAt": 1700000000000, "lastMessage": "No correctness risks found.", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER", "recentTools": [] }
+              }
+            ] }
+          ]
+        }
+      }
+    },
+    {
+      "name": "completed-minimized-t1",
+      "clock": 1700000001000,
+      "expanded": false,
+      "activity": { "title": "Reviewing repository changes", "status": "completed", "startedAt": 1699999991800, "completedAt": 1700000000000 },
+      "resultFrom": "completed-minimized-t0"
+    },
+    {
+      "name": "ctrl-o-expanded",
+      "clock": 1700000001000,
+      "expanded": true,
+      "activity": { "title": "Reviewing repository changes", "status": "completed", "startedAt": 1699999991800, "completedAt": 1700000000000 },
+      "resultFrom": "completed-minimized-t0"
+    },
+    {
+      "name": "nested-ownership",
+      "clock": 1700000000000,
+      "expanded": false,
+      "activity": { "title": "Reviewing repository changes", "status": "completed", "startedAt": 1699999991800, "completedAt": 1700000000000 },
+      "resultFrom": "completed-minimized-t0"
+    },
+    {
+      "name": "empty-success",
+      "clock": 1700000000000,
+      "expanded": false,
+      "activity": { "title": "Checking empty completion", "status": "completed", "startedAt": 1699999999000, "completedAt": 1700000000000 },
+      "result": {
+        "agent": "reviewer", "task": "Return no final response", "output": "", "exitCode": 0, "model": "openai-codex/gpt-5.6", "contextWindow": 200000,
+        "usage": { "input": 100, "output": 0, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
+        "progress": { "agent": "reviewer", "status": "completed", "task": "Return no final response", "toolCount": 0, "tokens": 100, "durationMs": 1000, "startedAt": 1699999999000, "completedAt": 1700000000000, "lastMessage": "", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER", "recentTools": [] }
+      }
+    },
+    {
+      "name": "root-failure",
+      "clock": 1700000000000,
+      "expanded": false,
+      "activity": { "title": "Reviewing failed child", "status": "failed", "startedAt": 1699999998500, "completedAt": 1700000000000 },
+      "result": {
+        "agent": "reviewer", "task": "Report root failure", "output": "", "exitCode": 7, "model": "openai-codex/gpt-5.6", "contextWindow": 200000,
+        "usage": { "input": 200, "output": 20, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
+        "progress": { "agent": "reviewer", "status": "failed", "task": "Report root failure", "toolCount": 1, "tokens": 220, "durationMs": 1500, "startedAt": 1699999998500, "completedAt": 1700000000000, "lastMessage": "", "error": "Root child failed.", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER", "recentTools": [
+          { "tool": "bash", "args": "false", "toolCallId": "tool-fail", "status": "done", "startedAt": 1699999999500, "completedAt": 1700000000000, "shellCommands": ["false"] }
+        ] }
+      }
+    },
+    {
+      "name": "nested-exit-only-failure",
+      "clock": 1700000000000,
+      "expanded": true,
+      "activity": { "title": "Reviewing nested failure", "status": "completed", "startedAt": 1699999998000, "completedAt": 1700000000000 },
+      "result": {
+        "agent": "reviewer", "task": "Inspect nested exit-only failure", "output": "Nested delegation inspected.", "exitCode": 0, "model": "openai-codex/gpt-5.6", "contextWindow": 200000,
+        "usage": { "input": 400, "output": 80, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 1 },
+        "progress": { "agent": "reviewer", "status": "completed", "task": "Inspect nested exit-only failure", "toolCount": 1, "tokens": 480, "durationMs": 2000, "startedAt": 1699999998000, "completedAt": 1700000000000, "lastMessage": "Nested delegation inspected.", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER", "recentTools": [
+          { "tool": "subagent", "args": "exit-observer: inspect exit", "toolCallId": "tool-nested-fail", "status": "done", "startedAt": 1699999999000, "completedAt": 1700000000000, "children": [
+            {
+              "agent": "exit-observer", "task": "Inspect exit", "output": "", "exitCode": 23, "model": "fixture/exit-only",
+              "usage": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "cost": 0, "turns": 0 },
+              "progress": { "agent": "exit-observer", "status": "failed", "task": "Inspect exit", "toolCount": 0, "tokens": 0, "durationMs": 500, "startedAt": 1699999999500, "completedAt": 1700000000000, "lastMessage": "", "reasoning": "V02_RAW_CHILD_REASONING_MUST_NOT_RENDER", "recentTools": [] }
+            }
+          ] }
+        ] }
+      }
+    }
+  ]
+}

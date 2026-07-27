@@ -1,0 +1,218 @@
+#!/usr/bin/env node
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const scriptPath = fileURLToPath(import.meta.url);
+const repoRoot = resolve(dirname(scriptPath), "../..");
+const modelPath = join(repoRoot, "scripts/fixtures/pi-work-step-ui-t22-v02/model.json");
+const goldenDir = join(repoRoot, "scripts/goldens/pi-work-step-ui-t22-v02");
+const parentPath = join(repoRoot, "pi/.pi/agent/extensions/tool-call-renderer.ts");
+const productDir = process.env.PI_VERIFY_NATIVE_SUBAGENTS_DIR;
+const expectedProductCommit = process.env.PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_COMMIT;
+const expectedProductTree = process.env.PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_TREE;
+const expectedProductBlob = process.env.PI_VERIFY_NATIVE_SUBAGENTS_EXPECTED_INDEX_BLOB;
+const verifyDir = mkdtempSync(join(tmpdir(), "t22-v02-"));
+if (process.env.PI_VERIFY_TEMP_PATH_RECORD)
+	writeFileSync(process.env.PI_VERIFY_TEMP_PATH_RECORD, `${verifyDir}\n`);
+process.on("exit", () => rmSync(verifyDir, { recursive: true, force: true }));
+
+const git = (cwd, ...args) => execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8" }).trim();
+const fail = (message) => {
+	console.error(`T22.V02 setup failure: ${message}`);
+	process.exit(2);
+};
+if (!productDir || !expectedProductCommit || !expectedProductTree || !expectedProductBlob)
+	fail("explicit product dir/commit/tree/index blob are required");
+
+const model = JSON.parse(readFileSync(modelPath, "utf8"));
+const parentCommit = model.contract.parentCommit;
+const parentTree = model.contract.parentTree;
+const parentBlob = git(repoRoot, "rev-parse", `${parentCommit}:pi/.pi/agent/extensions/tool-call-renderer.ts`);
+const actualParentBlob = git(repoRoot, "hash-object", parentPath);
+if (
+	git(repoRoot, "rev-parse", `${parentCommit}^{tree}`) !== parentTree ||
+	actualParentBlob !== parentBlob
+) fail("parent production source identity differs");
+
+const productPath = join(productDir, "index.ts");
+const productCommit = git(productDir, "rev-parse", "HEAD");
+const productTree = git(productDir, "rev-parse", "HEAD^{tree}");
+const productBlob = git(productDir, "rev-parse", "HEAD:index.ts");
+if (
+	productCommit !== expectedProductCommit ||
+	productTree !== expectedProductTree ||
+	productBlob !== expectedProductBlob ||
+	git(productDir, "hash-object", productPath) !== productBlob ||
+	git(productDir, "status", "--porcelain=v1", "--untracked-files=all") !== ""
+) fail("native product identity or cleanliness differs");
+
+const piCli = realpathSync(execFileSync("command", ["-v", "pi"], { encoding: "utf8", shell: true }).trim());
+const piRoot = resolve(dirname(piCli), "..");
+const jitiPath = join(piRoot, "node_modules/jiti/lib/jiti.mjs");
+const piIndex = join(piRoot, "dist/index.js");
+const tuiIndex = join(piRoot, "node_modules/@earendil-works/pi-tui/dist/index.js");
+const typeboxIndex = join(piRoot, "node_modules/typebox/build/index.mjs");
+const themeModulePath = join(piRoot, "dist/modes/interactive/theme/theme.js");
+const assistantModulePath = join(piRoot, "dist/modes/interactive/components/assistant-message.js");
+const toolModulePath = join(piRoot, "dist/modes/interactive/components/tool-execution.js");
+const { createJiti } = await import(pathToFileURL(jitiPath).href);
+const jiti = createJiti(import.meta.url, {
+	moduleCache: false,
+	alias: {
+		"@earendil-works/pi-coding-agent": piIndex,
+		"@earendil-works/pi-tui": tuiIndex,
+		"@mariozechner/pi-coding-agent": piIndex,
+		"@mariozechner/pi-tui": tuiIndex,
+		"@sinclair/typebox": typeboxIndex,
+	},
+});
+
+const themeModule = await import(pathToFileURL(themeModulePath).href);
+themeModule.setThemeInstance(
+	themeModule.loadThemeFromPath(join(repoRoot, "pi/.pi/agent/themes/gruvbox-material.json"), "truecolor"),
+);
+const { AssistantMessageComponent } = await import(pathToFileURL(assistantModulePath).href);
+const { ToolExecutionComponent } = await import(pathToFileURL(toolModulePath).href);
+AssistantMessageComponent.prototype.updateContent = function (message) { this.lastMessage = message; };
+AssistantMessageComponent.prototype.invalidate = function () {};
+AssistantMessageComponent.prototype.render = function () { return []; };
+ToolExecutionComponent.prototype.updateDisplay = function () {};
+ToolExecutionComponent.prototype.render = function () { return this.v02NativeLines ?? []; };
+
+const handlers = new Map();
+let nativeTool;
+const parentApi = { on: (name, handler) => handlers.set(name, handler) };
+const nativeApi = { registerTool: (tool) => { if (tool.name === "subagent") nativeTool = tool; } };
+const originalArgv1 = process.argv[1];
+process.argv[1] = piCli;
+const parentModule = await jiti.import(parentPath);
+await parentModule.default(parentApi);
+const nativeModule = await jiti.import(productPath);
+nativeModule.default(nativeApi);
+process.argv[1] = originalArgv1;
+if (!nativeTool?.renderCall || !nativeTool?.renderResult)
+	fail("real native render callbacks were not registered");
+
+Object.defineProperty(process.stdout, "columns", { configurable: true, value: model.contract.width + 4 });
+const byName = new Map();
+for (const item of model.cases) {
+	const source = item.resultFrom ? byName.get(item.resultFrom)?.result : item.result;
+	if (!source) fail(`missing result source for ${item.name}`);
+	item.result = structuredClone(source);
+	byName.set(item.name, item);
+}
+
+const renderCase = (item) => {
+	Date.now = () => item.clock;
+	handlers.get("session_shutdown")?.();
+	handlers.get("agent_start")?.();
+	const assistant = Object.create(AssistantMessageComponent.prototype);
+	assistant.updateContent({
+		role: "assistant",
+		content: [
+			{ type: "text", text: item.activity.title },
+			{ type: "toolCall", id: `v02-${item.name}`, name: "subagent", arguments: model.call },
+		],
+		stopReason: "toolUse",
+	});
+	const callComponent = nativeTool.renderCall(model.call, themeModule.theme, {
+		expanded: item.expanded,
+		lastComponent: undefined,
+	});
+	const resultComponent = nativeTool.renderResult(
+		{
+			content: [{ type: "text", text: item.result.output || "(no output)" }],
+			details: { results: [item.result] },
+			...(item.result.exitCode === 0 ? {} : { isError: true }),
+		},
+		{ expanded: item.expanded },
+		themeModule.theme,
+		{ expanded: item.expanded },
+	);
+	const tool = Object.create(ToolExecutionComponent.prototype);
+	tool.toolName = "subagent";
+	tool.toolCallId = `v02-${item.name}`;
+	tool.v02NativeLines = [
+		...callComponent.render(model.contract.width),
+		...resultComponent.render(model.contract.width),
+	];
+	tool.updateDisplay();
+	if (item.activity.status !== "running")
+		handlers.get("tool_execution_end")?.({
+			toolCallId: tool.toolCallId,
+			isError: item.activity.status === "failed",
+		});
+	return Buffer.from(`${tool.render(model.contract.width).join("\n")}\n`, "utf8");
+};
+
+const escaped = (buffer) => JSON.stringify(buffer.toString("utf8"));
+const firstDifference = (expected, actual) => {
+	let offset = 0;
+	while (offset < expected.length && offset < actual.length && expected[offset] === actual[offset]) offset++;
+	const line = 1 + expected.subarray(0, Math.min(offset, expected.length)).filter((byte) => byte === 10).length;
+	const span = (buffer) => {
+		const point = Math.min(offset, buffer.length);
+		const start = buffer.lastIndexOf(10, Math.max(0, point - 1)) + 1;
+		const newline = buffer.indexOf(10, point);
+		const end = newline < 0 ? buffer.length : newline + 1;
+		return { start, end, bytes: buffer.subarray(start, end) };
+	};
+	return { line, expected: span(expected), actual: span(actual) };
+};
+
+const mismatches = [];
+const actuals = new Map();
+for (const item of model.cases) {
+	const actual = renderCase(item);
+	actuals.set(item.name, actual);
+	const expected = readFileSync(join(goldenDir, `${item.name}.ansi`));
+	const expectedHash = model.goldenSha256?.[item.name];
+	const actualHash = createHash("sha256").update(expected).digest("hex");
+	if (!expectedHash || actualHash !== expectedHash)
+		fail(`golden integrity mismatch for ${item.name}`);
+	if (expected.equals(actual)) continue;
+	const difference = firstDifference(expected, actual);
+	mismatches.push(item.name);
+	console.error(
+		`T22.V02 mismatch case=${item.name} line=${difference.line} ` +
+		`expected_span=[${difference.expected.start},${difference.expected.end}) ` +
+		`actual_span=[${difference.actual.start},${difference.actual.end}) ` +
+		`expected_escaped=${escaped(difference.expected.bytes)} expected_hex=${difference.expected.bytes.toString("hex")} ` +
+		`actual_escaped=${escaped(difference.actual.bytes)} actual_hex=${difference.actual.bytes.toString("hex")}`,
+	);
+}
+
+if (!actuals.get("completed-minimized-t0").equals(actuals.get("completed-minimized-t1")))
+	console.error("T22.V02 invariant failure: completed minimized frames are not byte-identical");
+if (actuals.get("running-t0").equals(actuals.get("running-t1")))
+	console.error("T22.V02 mismatch category=absent-clock-seam running frames are byte-identical");
+const plain = (name) => actuals.get(name).toString("utf8").replace(/\x1b\[[0-9;]*m/gu, "");
+if (plain("completed-minimized-t0").includes("git status --short"))
+	console.error("T22.V02 mismatch category=settled-leaves completed command leaves remain visible");
+if (
+	plain("ctrl-o-expanded").includes(model.call.task) &&
+	plain("ctrl-o-expanded").includes("Review result") &&
+	plain("completed-minimized-t0").includes("git diff --check")
+) console.error("T22.V02 mismatch category=ctrl-o-behavior task/final Markdown expand while settled leaves were never minimized");
+if (!plain("nested-ownership").includes("       └─"))
+	console.error("T22.V02 mismatch category=nested-hierarchy approved connected nested rail is absent");
+if (plain("completed-minimized-t0").includes("subagent reviewer"))
+	console.error("T22.V02 mismatch category=disconnected-composition parent Activity and native call/result headers remain separate");
+if ([...actuals.values()].some((frame) => frame.includes(model.contract.reasoningSentinel)))
+	fail("raw child reasoning sentinel leaked");
+
+console.log(
+	`T22.V02 production seams loaded: parent_commit=${parentCommit} parent_tree=${parentTree} parent_blob=${parentBlob} ` +
+	`native_commit=${productCommit} native_tree=${productTree} native_blob=${productBlob}`,
+);
+console.log(`T22.V02 deterministic inputs: width=${model.contract.width} t0=${model.contract.t0} t1=${model.contract.t1}`);
+console.log(`T22.V02 cases compared as raw UTF-8: ${model.cases.map((item) => item.name).join(",")}`);
+if (mismatches.length) {
+	console.error(`T22.V02 baseline mismatches (${mismatches.length}): ${mismatches.join(",")}`);
+	process.exit(1);
+}
+console.log("T22.V02 exact Option A ANSI verified.");

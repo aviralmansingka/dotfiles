@@ -6,6 +6,9 @@ export COLORTERM=truecolor
 export TERM=xterm-256color
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ "${1:-}" == "T22.V02" ]]; then
+	exec "$repo_root/scripts/verifiers/pi-work-step-ui-t22-v02"
+fi
 verify_dir="$(mktemp -d)"
 tmux_socket="pi-work-step-ui-verify-$$"
 if [[ -n "${PI_VERIFY_TEMP_PATH_RECORD:-}" ]]; then
