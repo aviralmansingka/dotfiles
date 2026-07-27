@@ -1,0 +1,108 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture=scripts/fixtures/vault-hunter-atlas/runs/atlas-journal-run.json
+tmp=$(mktemp -d)
+trap 'chmod -R u+rwX "$tmp"; rm -rf "$tmp"' EXIT
+
+manifest() {
+  (
+    cd "$1"
+    find . -type f -print | LC_ALL=C sort | while IFS= read -r file; do
+      shasum -a 256 "$file"
+    done
+  ) | shasum -a 256 | awk '{print $1}'
+}
+
+run_cli() {
+  HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" \
+    VAULT_HUNTER_STATE_DIR="$tmp/home/retained-registry-must-not-be-read" \
+    T08_V02_TRAP_LOG="$tmp/trap.log" PATH="$tmp/traps:$PATH" \
+    "$tmp/vault-hunter-atlas" "$@"
+}
+
+expect_exit() {
+  name=$1
+  want=$2
+  shift 2
+  set +e
+  run_cli "$@" >"$tmp/$name.stdout" 2>"$tmp/$name.stderr"
+  got=$?
+  set -e
+  test "$got" -eq "$want"
+  test ! -s "$tmp/$name.stdout"
+  test -s "$tmp/$name.stderr"
+}
+
+go build -o "$tmp/vault-hunter-atlas" ./cmd/vault-hunter-atlas
+mkdir -p "$tmp/state/runs" "$tmp/vault" "$tmp/traps" "$tmp/home"
+cp "$fixture" "$tmp/state/runs/"
+printf '{\n' >"$tmp/state/runs/malformed.json"
+printf '%s\n' \
+  '{"schema_version":2,"run_id":"unsupported","revision":1,"invoked_at":"2026-07-26T10:00:00Z","updated_at":"2026-07-26T10:00:00Z","task":{"id":"T08","title":"unsupported","path":"task.md","feature_path":"feature.md","kind":"task"},"participants":[],"lifecycle":[],"evidence":[]}' \
+  >"$tmp/state/runs/unsupported.json"
+printf '%s\n' "vault sentinel" >"$tmp/vault/sentinel"
+: >"$tmp/trap.log"
+printf '%s\n' \
+  '#!/bin/sh' \
+  'printf "%s\n" "$0 $*" >>"$T08_V02_TRAP_LOG"' \
+  'exit 99' >"$tmp/trap-command"
+chmod +x "$tmp/trap-command"
+for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
+  ln -s "$tmp/trap-command" "$tmp/traps/$command"
+done
+
+fixture_before=$(shasum -a 256 "$fixture" | awk '{print $1}')
+state_before=$(manifest "$tmp/state")
+vault_before=$(manifest "$tmp/vault")
+chmod 500 "$tmp/state" "$tmp/state/runs" "$tmp/vault"
+chmod 400 "$tmp/state/runs/"*.json "$tmp/vault/sentinel"
+
+run_cli journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --snapshot --color always --width 79 --height 23 >"$tmp/too-small"
+printf '%s\n' "terminal too small; minimum 80×24" >"$tmp/too-small.expected"
+cmp "$tmp/too-small.expected" "$tmp/too-small"
+test "$(wc -l <"$tmp/too-small" | tr -d ' ')" -eq 1
+test "$(LC_ALL=C tr -cd '\033' <"$tmp/too-small" | wc -c | tr -d ' ')" -eq 0
+
+expect_exit journal-feature 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --feature feature.md --vault-dir "$tmp/vault"
+expect_exit journal-project 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" \
+  --project project.md --vault-dir "$tmp/vault"
+expect_exit width-only 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" --width 80
+expect_exit height-only 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" --height 24
+expect_exit zero-size 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" --width 0 --height 0
+expect_exit negative-size 2 journal --run-id atlas-journal-run --state-dir "$tmp/state" --width=-1 --height=-1
+expect_exit missing 1 journal --run-id missing --state-dir "$tmp/state"
+expect_exit malformed 1 journal --run-id malformed --state-dir "$tmp/state"
+expect_exit unsupported 1 journal --run-id unsupported --state-dir "$tmp/state"
+
+state_after=$(manifest "$tmp/state")
+vault_after=$(manifest "$tmp/vault")
+test "$state_before" = "$state_after"
+test "$vault_before" = "$vault_after"
+test "$fixture_before" = "$(shasum -a 256 "$fixture" | awk '{print $1}')"
+test ! -s "$tmp/trap.log"
+test ! -e "$tmp/home/retained-registry-must-not-be-read"
+printf 'Registry manifest before/after: %s %s\n' "$state_before" "$state_after"
+printf 'Vault manifest before/after: %s %s\n' "$vault_before" "$vault_after"
+printf 'Orchestration trap bytes: 0\n'
+
+go test -count=1 ./internal/atlas -run '^TestT08V02'
+scripts/verify-vault-hunter-atlas T02.V01
+scripts/verify-vault-hunter-atlas T02.V02
+scripts/verify-vault-hunter-atlas T02.V03
+
+state_final=$(manifest "$tmp/state")
+vault_final=$(manifest "$tmp/vault")
+test "$state_before" = "$state_final"
+test "$vault_before" = "$vault_final"
+test "$fixture_before" = "$(shasum -a 256 "$fixture" | awk '{print $1}')"
+test ! -s "$tmp/trap.log"
+printf 'Final Registry manifest: %s\n' "$state_final"
+printf 'Final vault manifest: %s\n' "$vault_final"
+printf 'Final orchestration trap bytes: 0\n'
+
+echo "T08.V02 bounded journal interaction and read-only authority: PASS"
