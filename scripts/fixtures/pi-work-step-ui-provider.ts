@@ -139,6 +139,7 @@ const SUBAGENT_COMMANDS = [
 const SUBAGENT_SPEC = {
 	rootAgent: SUBAGENT_ROOT_AGENT,
 	nestedAgent: SUBAGENT_NESTED_AGENT,
+	parentThinking: "Exercise native subagent rendering inside the parent activity",
 	expandedTaskSentinel: "EXPANDED_TASK_DETAIL_SENTINEL",
 	finalHeading: SUBAGENT_FINAL_HEADING,
 	finalBoldText: SUBAGENT_FINAL_BOLD_TEXT,
@@ -584,6 +585,7 @@ async function main() {
 			totalTokens: 0,
 			cost: { total: 0 },
 		}));
+		mark("PI_VERIFY_REASONING_UPSTREAM_MARKER", spec.reasoningSentinel);
 		emit(message(spec.finalOutput));
 		return;
 	}
@@ -719,6 +721,13 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 					writeFixtureMarker("PI_VERIFY_SUBAGENT_INITIAL_MARKER", "real execute initial update");
 				else
 					writeFixtureMarker("PI_VERIFY_SUBAGENT_UPDATE_MARKER", "real child event normalized");
+				if (
+					existsSync(process.env.PI_VERIFY_REASONING_UPSTREAM_MARKER!) &&
+					!JSON.stringify(update.details.results[0]).includes(SUBAGENT_REASONING_SENTINEL)
+				) writeFixtureMarker(
+					"PI_VERIFY_REASONING_MODEL_MARKER",
+					"discarded-before-render-model",
+				);
 			}
 			onUpdate?.(update);
 		};

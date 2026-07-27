@@ -70,8 +70,18 @@ subagent_exception_marker="$verify_dir/subagent-fixture-exception"
 subagent_spec="$verify_dir/subagent-spec.json"
 subagent_initial_capture="$verify_dir/subagent-initial.raw"
 subagent_running_capture="$verify_dir/subagent-running.txt"
+subagent_running_output_hidden_capture="$verify_dir/subagent-running-output-hidden.txt"
+subagent_running_output_restored_capture="$verify_dir/subagent-running-output-restored.txt"
+subagent_running_thinking_hidden_o_then_t_capture="$verify_dir/subagent-running-thinking-hidden-o-then-t.txt"
+subagent_running_both_hidden_o_then_t_capture="$verify_dir/subagent-running-both-hidden-o-then-t.txt"
+subagent_running_both_restored_o_then_t_capture="$verify_dir/subagent-running-both-restored-o-then-t.txt"
+subagent_running_thinking_hidden_t_then_o_capture="$verify_dir/subagent-running-thinking-hidden-t-then-o.txt"
+subagent_running_both_hidden_t_then_o_capture="$verify_dir/subagent-running-both-hidden-t-then-o.txt"
+subagent_running_output_hidden_t_then_o_capture="$verify_dir/subagent-running-output-hidden-t-then-o.txt"
+subagent_running_both_restored_t_then_o_capture="$verify_dir/subagent-running-both-restored-t-then-o.txt"
 subagent_collapsed_capture="$verify_dir/subagent-collapsed.txt"
 subagent_expanded_capture="$verify_dir/subagent-expanded.txt"
+subagent_recollapsed_capture="$verify_dir/subagent-recollapsed.txt"
 subagent_empty_capture="$verify_dir/subagent-empty.txt"
 subagent_failed_empty_capture="$verify_dir/subagent-failed-empty.txt"
 subagent_concurrency_capture="$verify_dir/subagent-concurrency.txt"
@@ -97,6 +107,8 @@ real_child_marker="$verify_dir/real-child-coverage"
 real_main_spawn_marker="$verify_dir/real-main-spawn"
 real_event_marker="$verify_dir/real-event-normalization"
 nested_exit_only_marker="$verify_dir/nested-exit-only-state"
+reasoning_upstream_marker="$verify_dir/reasoning-upstream-input"
+reasoning_model_marker="$verify_dir/reasoning-render-model"
 
 if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
 	echo "Visible-thinking prompt customization is still installed" >&2
@@ -795,7 +807,7 @@ console.log("Pi work-step terminal state verified: prompt-scoped thinking remain
 NODE
 
 printf -v pi_command \
-	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_NESTED_EXIT_ONLY_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
+	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_NESTED_EXIT_ONLY_MARKER=%q PI_VERIFY_REASONING_UPSTREAM_MARKER=%q PI_VERIFY_REASONING_MODEL_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
 	"$agent_dir" \
 	"$subagent_release" \
 	"$subagent_progress_release" \
@@ -809,6 +821,8 @@ printf -v pi_command \
 	"$real_main_spawn_marker" \
 	"$real_event_marker" \
 	"$nested_exit_only_marker" \
+	"$reasoning_upstream_marker" \
+	"$reasoning_model_marker" \
 	"$subagent_concurrency_release" \
 	"$subagent_concurrency_first_marker" \
 	"$subagent_concurrency_second_marker" \
@@ -832,7 +846,7 @@ wait_for_subagent_initial() {
 		screen="$(tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 2>/dev/null || true)"
 		if [[ -f "$subagent_initial_marker" ]] \
 			&& grep -Fq "Thinking…" <<<"$screen" \
-			&& grep -Fq "◉ 1 call · subagent · running" <<<"$screen"; then
+			&& grep -Fq "◉ Delegate deterministic subagent verification" <<<"$screen"; then
 			return
 		fi
 		sleep 0.1
@@ -873,8 +887,7 @@ wait_for_subagent_setup() {
 		fi
 		screen="$(tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0)"
 		if [[ -f "$subagent_update_marker" ]] \
-			&& grep -Fq "◉ Delegate deterministic subagent verification" <<<"$screen" \
-			&& grep -Fq "◉ 1 call · subagent · running" <<<"$screen"; then
+			&& grep -Fq "◉ Delegate deterministic subagent verification" <<<"$screen"; then
 			if [[ -f "$subagent_exception_marker" ]]; then
 				echo "Native subagent setup failure (fixture exception): $(tr '\n' ' ' < "$subagent_exception_marker")" >&2
 				return 1
@@ -888,8 +901,6 @@ wait_for_subagent_setup() {
 		echo "Native subagent setup failure (update missing): deterministic execute did not emit its independent update marker" >&2
 	elif ! grep -Fq "◉ Delegate deterministic subagent verification" <<<"${screen:-}"; then
 		echo "Native subagent setup failure (parent state): parent Activity did not reach its running title state" >&2
-	else
-		echo "Native subagent setup failure (parent state): parent Activity did not retain its running call summary" >&2
 	fi
 	return 1
 }
@@ -908,10 +919,29 @@ wait_for_terminal \
 	"$subagent_long_head" \
 	"Native subagent composition assertion failed: real child shell events were not rendered"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_running_capture"
+toggle_and_capture() {
+	local key="$1"
+	local destination="$2"
+	tmux -L "$tmux_socket" send-keys -t verify:0.0 "$key"
+	sleep 0.2
+	tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$destination"
+}
+toggle_and_capture C-o "$subagent_running_output_hidden_capture"
+toggle_and_capture C-o "$subagent_running_output_restored_capture"
+toggle_and_capture C-t "$subagent_running_thinking_hidden_o_then_t_capture"
+toggle_and_capture C-o "$subagent_running_both_hidden_o_then_t_capture"
+toggle_and_capture C-o "$subagent_running_thinking_hidden_o_then_t_capture"
+toggle_and_capture C-t "$subagent_running_both_restored_o_then_t_capture"
+toggle_and_capture C-t "$subagent_running_thinking_hidden_t_then_o_capture"
+toggle_and_capture C-o "$subagent_running_both_hidden_t_then_o_capture"
+toggle_and_capture C-t "$subagent_running_output_hidden_t_then_o_capture"
+toggle_and_capture C-o "$subagent_running_both_restored_t_then_o_capture"
 touch "$subagent_release"
 wait_for_terminal \
 	"VERIFY_SUBAGENT_COMPOSITION_DONE" \
 	"Native subagent composition assertion failed: completed fixture turn did not settle"
+wait_for_fixture_file "$reasoning_upstream_marker" "Raw reasoning sentinel did not reach upstream execute input"
+wait_for_fixture_file "$reasoning_model_marker" "Raw reasoning was not discarded before render-model construction"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_collapsed_capture"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 C-o
 wait_for_terminal \
@@ -919,6 +949,8 @@ wait_for_terminal \
 	"Native subagent composition assertion failed: expanded task sentinel was not rendered"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_expanded_capture"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 C-o
+sleep 0.2
+tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_recollapsed_capture"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "subagent empty output"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
 wait_for_terminal \
@@ -968,7 +1000,7 @@ wait_for_terminal \
 	"Native subagent composition assertion failed: provider compatibility turn did not settle"
 stop_tmux
 
-node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" "$nested_exit_only_marker" <<'NODE'
+node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" "$nested_exit_only_marker" "$subagent_running_output_hidden_capture" "$subagent_running_output_restored_capture" "$subagent_running_thinking_hidden_o_then_t_capture" "$subagent_running_both_hidden_o_then_t_capture" "$subagent_running_both_restored_o_then_t_capture" "$subagent_running_thinking_hidden_t_then_o_capture" "$subagent_running_both_hidden_t_then_o_capture" "$subagent_running_output_hidden_t_then_o_capture" "$subagent_running_both_restored_t_then_o_capture" "$subagent_recollapsed_capture" "$reasoning_upstream_marker" "$reasoning_model_marker" <<'NODE'
 const fs = require("node:fs");
 
 const spec = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -1029,6 +1061,18 @@ const realChildCoverage = fs.readFileSync(process.argv[15], "utf8");
 const realMainSpawnCoverage = fs.readFileSync(process.argv[16], "utf8");
 const realEventCoverage = fs.readFileSync(process.argv[17], "utf8");
 const nestedExitOnlyCoverage = JSON.parse(fs.readFileSync(process.argv[18], "utf8"));
+const runningOutputHidden = parseTerminal(process.argv[19]);
+const runningOutputRestored = parseTerminal(process.argv[20]);
+const runningThinkingHiddenOThenT = parseTerminal(process.argv[21]);
+const runningBothHiddenOThenT = parseTerminal(process.argv[22]);
+const runningBothRestoredOThenT = parseTerminal(process.argv[23]);
+const runningThinkingHiddenTThenO = parseTerminal(process.argv[24]);
+const runningBothHiddenTThenO = parseTerminal(process.argv[25]);
+const runningOutputHiddenTThenO = parseTerminal(process.argv[26]);
+const runningBothRestoredTThenO = parseTerminal(process.argv[27]);
+const recollapsed = parseTerminal(process.argv[28]);
+const reasoningUpstreamCoverage = fs.readFileSync(process.argv[29], "utf8").trim();
+const reasoningModelCoverage = fs.readFileSync(process.argv[30], "utf8").trim();
 const failures = [];
 const check = (condition, message) => {
 	if (!condition) failures.push(message);
@@ -1074,13 +1118,46 @@ const checkAgentHeader = (terminal, agent, model, glyph, foreground, label) => {
 check(initial.plain.includes("Thinking…"), "Initial native state did not render semantic Thinking…");
 for (const command of spec.commands)
 	check(!initial.plain.includes(command.command), `Child command rendered before initial Thinking…: ${command.command}`);
-for (const screen of [initial, running, collapsed, expanded, empty, failedEmpty, concurrency, providerRunning, providerPending, providerFailed])
+for (const screen of [
+	initial,
+	running,
+	runningOutputHidden,
+	runningOutputRestored,
+	runningThinkingHiddenOThenT,
+	runningBothHiddenOThenT,
+	runningBothRestoredOThenT,
+	runningThinkingHiddenTThenO,
+	runningBothHiddenTThenO,
+	runningOutputHiddenTThenO,
+	runningBothRestoredTThenO,
+	collapsed,
+	expanded,
+	recollapsed,
+	empty,
+	failedEmpty,
+	concurrency,
+	providerRunning,
+	providerPending,
+	providerFailed,
+])
 	check(!screen.plain.includes(spec.reasoningSentinel), "Native reasoning sentinel leaked into visible UI");
+check(reasoningUpstreamCoverage === spec.reasoningSentinel, "Raw reasoning sentinel did not enter upstream execute input");
+check(reasoningModelCoverage === "discarded-before-render-model", "Raw reasoning was not proven discarded before render-model construction");
 
 check(running.plain.includes("◉ Delegate deterministic subagent verification"), "T21 parent Activity disappeared while the subagent was running");
-check(running.plain.includes("◉ 1 call · subagent · running"), "T21 parent Activity lost its running subagent summary");
 check(collapsed.plain.includes("● Delegate deterministic subagent verification"), "T21 parent Activity disappeared after subagent completion");
-check(collapsed.plain.includes("● 1 call · subagent · completed"), "T21 parent Activity lost its completed subagent summary");
+for (const [state, terminal, status] of [
+	["running-live", running, "running"],
+	["running-output-restored", runningOutputRestored, "running"],
+	["completed-collapsed", collapsed, "completed"],
+	["completed-expanded", expanded, "completed"],
+	["completed-recollapsed", recollapsed, "completed"],
+]) {
+	const connected = `subagent · ${spec.rootAgent} · ${status}`;
+	check(count(terminal.plain, connected) === 1, `${state} lost its one connected ${connected} node`);
+	check(!terminal.plain.includes(`subagent ${spec.rootAgent}`), `${state} retained the legacy separate native call header`);
+	check(agentHeaders(terminal, spec.rootAgent, spec.real.model).length === 0, `${state} retained a duplicate package-native agent header`);
+}
 
 let previous = -1;
 for (const event of spec.chronology) {
@@ -1098,7 +1175,15 @@ const expectedColors = {
 	operator: "rgb:233,177,67",
 };
 for (const command of spec.commands) {
-	for (const terminal of [running, collapsed, expanded])
+	for (const terminal of [
+		running,
+		runningOutputRestored,
+		runningThinkingHiddenOThenT,
+		runningBothRestoredOThenT,
+		runningThinkingHiddenTThenO,
+		runningBothRestoredTThenO,
+		expanded,
+	])
 		check(count(terminal.plain, command.command) === 1, `${command.shell} command was not rendered exactly once: ${command.command}`);
 	const lines = running.plain.split(/\r?\n/u);
 	const commandLine = lines.findIndex((line) => line.includes(command.command));
@@ -1151,9 +1236,13 @@ const expectedCommandLeaves = [
 	},
 ];
 for (const [state, terminal] of [
-	["running", running],
-	["completed-collapsed", collapsed],
-	["expanded", expanded],
+	["running-live", running],
+	["running-output-restored", runningOutputRestored],
+	["running-thinking-hidden-o-then-t", runningThinkingHiddenOThenT],
+	["running-both-restored-o-then-t", runningBothRestoredOThenT],
+	["running-thinking-hidden-t-then-o", runningThinkingHiddenTThenO],
+	["running-both-restored-t-then-o", runningBothRestoredTThenO],
+	["completed-expanded", expanded],
 ]) {
 	const lines = terminal.plain.split(/\r?\n/u);
 	let previousLine = -1;
@@ -1171,6 +1260,17 @@ for (const [state, terminal] of [
 		);
 		previousLine = index;
 	}
+}
+for (const [state, terminal] of [
+	["running-output-hidden", runningOutputHidden],
+	["running-both-hidden-o-then-t", runningBothHiddenOThenT],
+	["running-both-hidden-t-then-o", runningBothHiddenTThenO],
+	["running-output-hidden-t-then-o", runningOutputHiddenTThenO],
+	["completed-collapsed", collapsed],
+	["completed-recollapsed", recollapsed],
+]) {
+	for (const leaf of expectedCommandLeaves)
+		check(!terminal.plain.includes(leaf.command), `${state} leaked Ctrl+O-owned ${leaf.shell} command detail`);
 }
 
 const nested = spec.review.nested;
@@ -1209,6 +1309,7 @@ if (nestedHeaderLines.length === 1) {
 for (const [state, terminal] of [
 	["Collapsed", collapsed],
 	["Ctrl+O-expanded", expanded],
+	["Recollapsed", recollapsed],
 ]) {
 	const lines = terminal.plain.split(/\r?\n/u);
 	const headers = lines
@@ -1228,6 +1329,8 @@ check(collapsed.plain.includes(spec.collapsedProse), "Collapsed native completio
 check(!collapsed.plain.includes(spec.expandedTaskSentinel), "Collapsed native call leaked the full task");
 check(!collapsed.plain.includes(spec.finalHeading), "Collapsed native result leaked the expanded Markdown heading");
 check(!collapsed.plain.includes(spec.finalTail), "Collapsed native result leaked the complete expanded Markdown body");
+check(!recollapsed.plain.includes(spec.expandedTaskSentinel), "Recollapsed native call leaked the full task");
+check(!recollapsed.plain.includes(spec.finalHeading), "Recollapsed native result leaked expanded Markdown");
 check(expanded.plain.includes(spec.expandedTaskSentinel), "Ctrl+O-expanded native call lost the full task");
 check(expanded.plain.includes(spec.finalHeading), "Ctrl+O-expanded native result lost final Markdown");
 check(expanded.plain.includes(spec.finalBoldText), "Ctrl+O-expanded native Markdown lost semantic prose");
@@ -1236,7 +1339,62 @@ check(!expanded.plain.includes(`**${spec.finalBoldText}**`), "Ctrl+O-expanded fi
 check(new RegExp(`(?:^|\\s)${spec.usage.turns}(?:\\s+turns?|\\s*turns?)`, "mu").test(expanded.plain), "Expanded native usage lost fixture-derived turns");
 check(expanded.plain.includes(`in:${spec.usage.input}`), "Expanded native usage lost fixture-derived input tokens");
 check(expanded.plain.includes(`out:${spec.usage.output}`), "Expanded native usage lost fixture-derived output tokens");
-check(count(collapsed.plain, `subagent ${spec.rootAgent}`) === 1, "A competing renderer duplicated the native subagent call");
+const expandedTaskIndex = expanded.plain.indexOf(spec.expandedTaskSentinel);
+const expandedToolIndex = expanded.plain.indexOf(spec.commands[0].command);
+const expandedSummaryIndex = expanded.plain.indexOf("Summary");
+const expandedFinalIndex = expanded.plain.indexOf(spec.finalHeading);
+check(
+	expandedTaskIndex >= 0 && expandedTaskIndex < expandedToolIndex,
+	"Completed-expanded Task did not precede tool detail beneath the connected tree",
+);
+check(
+	expandedSummaryIndex >= 0 && expandedFinalIndex > expandedSummaryIndex,
+	"Completed-expanded final Markdown did not follow Summary beneath the connected tree",
+);
+for (const [state, terminal] of [
+	["running-output-hidden", runningOutputHidden],
+	["running-both-hidden-o-then-t", runningBothHiddenOThenT],
+	["running-both-hidden-t-then-o", runningBothHiddenTThenO],
+	["running-output-hidden-t-then-o", runningOutputHiddenTThenO],
+]) {
+	check(!terminal.plain.includes(spec.expandedTaskSentinel), `${state} leaked full Task`);
+	check(!terminal.plain.includes(spec.finalHeading), `${state} leaked final Markdown`);
+	check(terminal.plain.includes(spec.usage.input.toString()), `${state} lost usage while detail was hidden`);
+}
+for (const [state, terminal] of [
+	["running-live", running],
+	["running-output-hidden", runningOutputHidden],
+	["running-output-restored", runningOutputRestored],
+]) {
+	check(terminal.plain.includes(spec.parentThinking), `${state} lost parent thinking while Ctrl+T was visible`);
+	check(terminal.plain.includes(spec.real.thinkingText), `${state} lost safe semantic Thinking…`);
+}
+for (const [state, terminal] of [
+	["running-thinking-hidden-o-then-t", runningThinkingHiddenOThenT],
+	["running-both-hidden-o-then-t", runningBothHiddenOThenT],
+	["running-thinking-hidden-t-then-o", runningThinkingHiddenTThenO],
+	["running-both-hidden-t-then-o", runningBothHiddenTThenO],
+]) {
+	check(!terminal.plain.includes(spec.parentThinking), `${state} retained parent thinking after Ctrl+T`);
+	check(!terminal.plain.includes(spec.real.thinkingText), `${state} retained safe semantic Thinking… after Ctrl+T`);
+}
+check(running.raw === runningOutputRestored.raw, "Same-clock Ctrl+O restoration did not reproduce running-live bytes");
+check(running.raw === runningBothRestoredOThenT.raw, "Ctrl+O→Ctrl+T restoration did not reproduce running-live bytes");
+check(running.raw === runningBothRestoredTThenO.raw, "Ctrl+T→Ctrl+O restoration did not reproduce running-live bytes");
+check(runningBothHiddenOThenT.raw === runningBothHiddenTThenO.raw, "Both toggle orders did not commute to identical hidden bytes");
+check(collapsed.raw === recollapsed.raw, "Completed recollapse did not reproduce prior collapsed bytes");
+const withoutThinking = (value) => value
+	.split(/\r?\n/u)
+	.filter((line) => !line.includes(spec.parentThinking) && !line.includes(spec.real.thinkingText))
+	.join("\n");
+check(
+	withoutThinking(running.plain) === withoutThinking(runningThinkingHiddenOThenT.plain),
+	"Ctrl+T changed presentation outside owned thinking rows",
+);
+check(
+	withoutThinking(runningOutputHidden.plain) === withoutThinking(runningBothHiddenOThenT.plain),
+	"Ctrl+T changed output-hidden presentation outside owned thinking rows",
+);
 check(count(empty.plain, spec.emptyFallback) === 1, "Empty-output completion did not render the exact deterministic fallback once");
 check(!empty.plain.includes("(no output)"), "Empty-output completion leaked the legacy fallback");
 
@@ -1396,7 +1554,7 @@ if (failures.length) {
 	process.exit(1);
 }
 
-console.log("Pi native subagent V01 verified: safe initial state, chronological nested tools, syntax leaves, collapsed/expanded completion, usage, fallback, and renderer ownership compose with T21.");
+console.log("Pi native subagent V01 verified: connected ownership, independent same-instance Ctrl+O/Ctrl+T transitions, chronological detail, collapsed/expanded completion, pre-model reasoning rejection, usage, fallback, and T21 composition.");
 NODE
 
 if [[ "${PI_VERIFY_LIVE:-0}" == "1" ]]; then

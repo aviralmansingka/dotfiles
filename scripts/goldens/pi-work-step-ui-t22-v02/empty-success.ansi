@@ -1,5 +1,6 @@
 [38;2;146;131;116m │  [0m[38;2;146;131;116m1 step · 1 call · [0m[1;38;2;184;187;38mall passed[0m
 [38;2;146;131;116m └─ [0m[38;2;184;187;38m●[0m [1;38;2;235;219;178mChecking empty completion[0m[38;2;102;92;84m · 1.0s[0m
+[38;2;146;131;116m    ├─ [0m[38;2;146;131;116m•[0m [38;2;146;131;116mChecking empty completion semantics[0m
 [38;2;146;131;116m    └─ [0m[38;2;184;187;38m✓[0m [1;38;2;235;219;178msubagent · reviewer · completed[0m[38;2;102;92;84m · 1.0s[0m
 [38;2;146;131;116m       └─ [0m[38;2;184;187;38m✓[0m [1;38;2;235;219;178mSummary[0m[38;2;146;131;116m · Completed successfully; no final response was returned.[0m[38;2;102;92;84m · 1.0s[0m
 [38;2;146;131;116m          [0m[38;2;146;131;116m0 tools · 0 commands · 100 tokens · 1.0s[0m

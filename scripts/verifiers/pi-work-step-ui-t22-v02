@@ -89,9 +89,6 @@ themeModule.setThemeInstance(
 );
 const { AssistantMessageComponent } = await import(pathToFileURL(assistantModulePath).href);
 const { ToolExecutionComponent } = await import(pathToFileURL(toolModulePath).href);
-AssistantMessageComponent.prototype.updateContent = function (message) { this.lastMessage = message; };
-AssistantMessageComponent.prototype.invalidate = function () {};
-AssistantMessageComponent.prototype.render = function () { return []; };
 
 const handlers = new Map();
 let nativeTool;
@@ -129,8 +126,41 @@ for (const item of model.cases) {
 	item.result = structuredClone(source);
 	byName.set(item.name, item);
 }
-if (model.cases.length !== 9 || new Set(model.cases.map((item) => item.name)).size !== 9)
-	fail("canonical cases are not nine distinct declared states");
+const expectedCases = [
+	"running-live-t0",
+	"running-live-t1",
+	"running-output-hidden",
+	"running-output-restored",
+	"running-thinking-hidden-o-then-t",
+	"running-both-hidden-o-then-t",
+	"running-both-restored-o-then-t",
+	"running-thinking-hidden-t-then-o",
+	"running-both-hidden-t-then-o",
+	"running-output-hidden-t-then-o",
+	"running-both-restored-t-then-o",
+	"completed-collapsed-t0",
+	"completed-collapsed-t1",
+	"completed-expanded",
+	"completed-recollapsed",
+	"nested-ownership",
+	"empty-success",
+	"root-failure",
+	"nested-exit-only-failure",
+];
+if (
+	model.cases.length !== expectedCases.length ||
+	model.cases.some((item, index) => item.name !== expectedCases[index]) ||
+	new Set(model.cases.map((item) => item.name)).size !== expectedCases.length
+) fail("canonical toggle cases are not the exact declared state ledger");
+const reasoningSentinel = model.upstream?.reasoningSentinel;
+if (
+	!reasoningSentinel ||
+	!JSON.stringify(model.upstream?.executeUpdate).includes(reasoningSentinel) ||
+	JSON.stringify(model.cases).includes(reasoningSentinel)
+) fail("raw reasoning is not confined to upstream execute/onUpdate input");
+const forbiddenPrototype = ["/private/tmp/pi-subagent", "-render-slice/render.mjs"].join("");
+if (readFileSync(scriptPath, "utf8").includes(forbiddenPrototype))
+	fail("approved prototype was imported by the executable verifier");
 const nestedOwnership = byName.get("nested-ownership");
 const nestedTools = nestedOwnership?.result?.progress?.recentTools;
 const nestedChild = nestedTools?.[1]?.children?.[0];
@@ -145,26 +175,29 @@ if (
 	nestedChild?.progress?.recentTools?.[0]?.tool !== "zsh" ||
 	!nestedChild.progress.recentTools[0].shellCommands?.[0]?.includes("V02_NESTED_COMMAND_TAIL") ||
 	nestedChild?.progress?.lastMessage !== "V02 nested ownership summary." ||
-	model.goldenSha256["nested-ownership"] === model.goldenSha256["completed-minimized-t0"]
+	model.goldenSha256["nested-ownership"] === model.goldenSha256["completed-collapsed-t0"]
 ) fail("nested ownership fixture is not distinct and exact");
 
 let lifecycleInvalidations = 0;
-const renderCase = (item, width = model.contract.width) => {
+const workStepSymbol = Symbol.for("aviral.pi.work-step-renderer.step");
+const scenarios = new Map();
+const createScenario = (item, width = model.contract.width) => {
 	Date.now = () => item.clock;
 	Object.defineProperty(process.stdout, "columns", { configurable: true, value: width + 4 });
 	handlers.get("session_shutdown")?.();
 	handlers.get("agent_start")?.();
 	const call = item.call ?? model.call;
-	const toolCallId = `v02-${item.name}-${width}`;
-	const assistant = Object.create(AssistantMessageComponent.prototype);
-	assistant.updateContent({
+	const toolCallId = `v02-${item.sequence}-${width}`;
+	const message = {
 		role: "assistant",
 		content: [
+			{ type: "thinking", thinking: item.activity.thinking },
 			{ type: "text", text: item.activity.title },
 			{ type: "toolCall", id: toolCallId, name: "subagent", arguments: call },
 		],
 		stopReason: "toolUse",
-	});
+	};
+	const assistant = new AssistantMessageComponent(message, false);
 	const ui = { requestRender() { lifecycleInvalidations++; } };
 	const tool = new ToolExecutionComponent(
 		"subagent",
@@ -177,7 +210,6 @@ const renderCase = (item, width = model.contract.width) => {
 	);
 	tool.markExecutionStarted();
 	tool.setArgsComplete();
-	tool.setExpanded(item.expanded);
 	tool.updateResult(
 		{
 			content: [{ type: "text", text: item.result.output || "(no output)" }],
@@ -191,7 +223,75 @@ const renderCase = (item, width = model.contract.width) => {
 			toolCallId,
 			isError: item.activity.status === "failed",
 		});
-	return Buffer.from(`${tool.render(width).join("\n")}\n`, "utf8");
+	const initialOutputVisible = item.sequence.startsWith("running-")
+		? true
+		: item.sequence === "completed"
+			? false
+			: item.outputVisible;
+	tool.setExpanded(initialOutputVisible);
+	const step = assistant[workStepSymbol];
+	if (!step || tool[workStepSymbol] !== step)
+		fail(`real parent state did not bind the same work-step node for ${item.sequence}`);
+	return {
+		assistant,
+		tool,
+		result: item.result,
+		progress: item.result.progress,
+		recentTools: item.result.progress.recentTools,
+		usage: item.result.usage,
+		stateSnapshot: JSON.stringify({
+			status: item.result.progress.status,
+			startedAt: item.result.progress.startedAt,
+			completedAt: item.result.progress.completedAt,
+			durationMs: item.result.progress.durationMs,
+			recentTools: item.result.progress.recentTools,
+			usage: item.result.usage,
+		}),
+		step,
+		run: step.run,
+		group: step.group,
+		outputVisible: initialOutputVisible,
+		thinkingHidden: false,
+		width,
+	};
+};
+const assertScenarioIdentity = (scenario, item) => {
+	if (
+		scenario.progress !== scenario.result.progress ||
+		scenario.recentTools !== scenario.result.progress.recentTools ||
+		scenario.usage !== scenario.result.usage ||
+		scenario.assistant[workStepSymbol] !== scenario.step ||
+		scenario.tool[workStepSymbol] !== scenario.step ||
+		scenario.step.run !== scenario.run ||
+		scenario.step.group !== scenario.group ||
+		scenario.stateSnapshot !== JSON.stringify({
+			status: scenario.result.progress.status,
+			startedAt: scenario.result.progress.startedAt,
+			completedAt: scenario.result.progress.completedAt,
+			durationMs: scenario.result.progress.durationMs,
+			recentTools: scenario.result.progress.recentTools,
+			usage: scenario.result.usage,
+		})
+	) fail(`same-instance identity/state changed during ${item.name}`);
+};
+const renderCase = (item, width = model.contract.width, isolated = false) => {
+	let scenario = isolated ? undefined : scenarios.get(item.sequence);
+	if (!scenario) {
+		scenario = createScenario(item, width);
+		if (!isolated) scenarios.set(item.sequence, scenario);
+	}
+	Date.now = () => item.clock;
+	Object.defineProperty(process.stdout, "columns", { configurable: true, value: width + 4 });
+	if (scenario.outputVisible !== item.outputVisible) {
+		scenario.tool.setExpanded(item.outputVisible);
+		scenario.outputVisible = item.outputVisible;
+	}
+	if (scenario.thinkingHidden !== item.thinkingHidden) {
+		scenario.assistant.setHideThinkingBlock(item.thinkingHidden);
+		scenario.thinkingHidden = item.thinkingHidden;
+	}
+	assertScenarioIdentity(scenario, item);
+	return Buffer.from(`${scenario.tool.render(width).join("\n")}\n`, "utf8");
 };
 
 const escaped = (buffer) => JSON.stringify(buffer.toString("utf8"));
@@ -231,6 +331,8 @@ for (const item of model.cases) {
 	);
 }
 const stripAnsi = (value) => value.replace(/\x1b\[[0-9;]*m/gu, "");
+const golden = (name) => readFileSync(join(goldenDir, `${name}.ansi`));
+const goldenPlain = (name) => stripAnsi(golden(name).toString("utf8"));
 const nestedGolden = readFileSync(join(goldenDir, "nested-ownership.ansi"), "utf8");
 const nestedGoldenPlain = stripAnsi(nestedGolden);
 for (const token of [
@@ -266,35 +368,130 @@ if (
 	rootFailurePlain.indexOf("├─ ✓ bash") >= rootFailurePlain.indexOf("└─ ✗ Summary")
 ) fail("root failure golden semantics/connectors differ");
 
-if (!actuals.get("completed-minimized-t0").equals(actuals.get("completed-minimized-t1")))
-	console.error("T22.V02 invariant failure: completed minimized frames are not byte-identical");
-if (actuals.get("running-t0").equals(actuals.get("running-t1")))
+for (const restored of [
+	"running-output-restored",
+	"running-both-restored-o-then-t",
+	"running-both-restored-t-then-o",
+]) {
+	if (!golden(restored).equals(golden("running-live-t0")))
+		fail(`${restored} golden does not byte-restore running-live-t0`);
+}
+if (
+	!golden("completed-collapsed-t0").equals(golden("completed-collapsed-t1")) ||
+	!golden("completed-collapsed-t0").equals(golden("completed-recollapsed"))
+) fail("completed collapsed/frozen/recollapsed goldens are not byte-identical");
+if (!golden("running-both-hidden-o-then-t").equals(golden("running-both-hidden-t-then-o")))
+	fail("both toggle orders do not commute to identical hidden golden bytes");
+if (!actuals.get("completed-collapsed-t0").equals(actuals.get("completed-collapsed-t1")))
+	console.error("T22.V02 mismatch category=completed-clock completed collapsed frames are not byte-identical");
+if (!actuals.get("completed-collapsed-t0").equals(actuals.get("completed-recollapsed")))
+	console.error("T22.V02 mismatch category=completed-recollapse recollapse did not restore exact collapsed bytes");
+if (actuals.get("running-live-t0").equals(actuals.get("running-live-t1")))
 	console.error("T22.V02 mismatch category=absent-clock-seam running frames are byte-identical");
+for (const restored of [
+	"running-output-restored",
+	"running-both-restored-o-then-t",
+	"running-both-restored-t-then-o",
+]) {
+	if (!actuals.get(restored).equals(actuals.get("running-live-t0")))
+		console.error(`T22.V02 mismatch category=running-restoration ${restored} did not restore exact same-clock bytes`);
+}
+if (!actuals.get("running-both-hidden-o-then-t").equals(actuals.get("running-both-hidden-t-then-o")))
+	console.error("T22.V02 mismatch category=toggle-commutativity both hidden orders differ");
 const widthProbe = byName.get(model.contract.widthProbeCase);
 if (!widthProbe) fail("width probe case is missing");
-const widthControl = renderCase(widthProbe, model.contract.controlWidth);
+const widthControl = renderCase(widthProbe, model.contract.controlWidth, true);
 if (widthControl.equals(actuals.get(model.contract.widthProbeCase)))
 	fail("width probe did not differ at the control width");
 const plain = (name) => stripAnsi(actuals.get(name).toString("utf8"));
-if (plain("completed-minimized-t0").includes("git status --short"))
+if (plain("completed-collapsed-t0").includes("git status --short"))
 	console.error("T22.V02 mismatch category=settled-leaves completed command leaves remain visible");
 if (
-	plain("ctrl-o-expanded").includes(model.call.task) &&
-	plain("ctrl-o-expanded").includes("Review result") &&
-	plain("completed-minimized-t0").includes("git diff --check")
-) console.error("T22.V02 mismatch category=ctrl-o-behavior task/final Markdown expand while settled leaves were never minimized");
+	plain("running-output-hidden").includes("git status --short") ||
+	plain("running-output-hidden").includes(model.call.task)
+) console.error("T22.V02 mismatch category=running-ctrl-o output-hidden retained command/task detail");
+if (
+	!plain("completed-expanded").includes(model.call.task) ||
+	!plain("completed-expanded").includes("Review result") ||
+	!plain("completed-expanded").includes("No correctness risks found.") ||
+	plain("completed-expanded").indexOf(model.call.task) >= plain("completed-expanded").indexOf("git status --short") ||
+	plain("completed-expanded").indexOf("No correctness risks found.") <= plain("completed-expanded").indexOf("Summary")
+) console.error("T22.V02 mismatch category=expanded-placement Task/tool/final Markdown are not ordered beneath one tree");
+if (
+	actuals.get("running-thinking-hidden-o-then-t").equals(actuals.get("running-live-t0")) ||
+	plain("running-thinking-hidden-o-then-t").includes("Thinking…")
+) console.error("T22.V02 mismatch category=ctrl-t-thinking Ctrl+T did not independently hide thinking presentation");
 if (!plain("nested-ownership").includes("       └─"))
 	console.error("T22.V02 mismatch category=nested-hierarchy approved connected nested rail is absent");
-if (plain("completed-minimized-t0").includes("subagent reviewer"))
+if (plain("completed-collapsed-t0").includes("subagent reviewer"))
 	console.error("T22.V02 mismatch category=disconnected-composition parent Activity and native call/result headers remain separate");
-if ([...actuals.values()].some((frame) => frame.includes(model.contract.reasoningSentinel)))
+if ([...actuals.values()].some((frame) => frame.includes(reasoningSentinel)))
 	fail("raw child reasoning sentinel leaked");
+for (const name of [
+	"running-live-t0",
+	"running-live-t1",
+	"running-output-restored",
+	"running-thinking-hidden-o-then-t",
+	"running-thinking-hidden-t-then-o",
+	"completed-expanded",
+]) {
+	const expected = goldenPlain(name);
+	const commandsExpected = !name.includes("thinking-hidden") || name.startsWith("running-");
+	if (commandsExpected && !expected.includes("git status --short"))
+		fail(`${name} golden lost visible command detail`);
+}
+for (const name of [
+	"running-output-hidden",
+	"running-both-hidden-o-then-t",
+	"running-both-hidden-t-then-o",
+	"running-output-hidden-t-then-o",
+	"completed-collapsed-t0",
+	"completed-collapsed-t1",
+	"completed-recollapsed",
+]) {
+	const expected = goldenPlain(name);
+	if (expected.includes("git status --short") || expected.includes(model.call.task) || expected.includes("Review result"))
+		fail(`${name} golden leaked Ctrl+O-owned detail`);
+}
+for (const name of ["running-live-t0", "running-output-hidden"]) {
+	const expected = goldenPlain(name);
+	if (!expected.includes("Inspecting parent work-step state") || !expected.includes("Thinking…"))
+		fail(`${name} golden lost visible thinking presentation`);
+}
+for (const name of [
+	"running-thinking-hidden-o-then-t",
+	"running-both-hidden-o-then-t",
+	"running-thinking-hidden-t-then-o",
+	"running-both-hidden-t-then-o",
+]) {
+	const expected = goldenPlain(name);
+	if (expected.includes("Inspecting parent work-step state") || expected.includes("Thinking…"))
+		fail(`${name} golden leaked Ctrl+T-owned thinking presentation`);
+}
+const expandedGolden = goldenPlain("completed-expanded");
+for (const token of [model.call.task, "git status --short", "Summary · No correctness risks found.", "Review result"]) {
+	if (expandedGolden.split(token).length !== 2)
+		fail(`completed-expanded golden cardinality differs for ${token}`);
+}
+const expandedOrder = [
+	expandedGolden.indexOf(model.call.task),
+	expandedGolden.indexOf("git status --short"),
+	expandedGolden.indexOf("Summary · No correctness risks found."),
+	expandedGolden.indexOf("Review result"),
+	expandedGolden.lastIndexOf("No correctness risks found."),
+];
+if (expandedOrder.some((index, position) => index < 0 || (position > 0 && index <= expandedOrder[position - 1])))
+	fail("completed-expanded Task/tool/Summary/final Markdown order differs");
 if (
-	nativeCallRenders < model.cases.length ||
-	nativeResultRenders < model.cases.length ||
-	lifecycleInvalidations < model.cases.length ||
-	!plain("completed-minimized-t0").includes("1 step · 1 call") ||
-	!stripAnsi(readFileSync(join(goldenDir, "completed-minimized-t0.ansi"), "utf8")).includes("subagent · reviewer · completed")
+	goldenPlain("completed-collapsed-t0").split("subagent · reviewer · completed").length !== 2 ||
+	goldenPlain("completed-collapsed-t0").includes("subagent reviewer")
+) fail("canonical connected subagent golden header differs");
+if (
+	nativeCallRenders < scenarios.size ||
+	nativeResultRenders < scenarios.size ||
+	lifecycleInvalidations < scenarios.size ||
+	!plain("completed-collapsed-t0").includes("1 step · 1 call") ||
+	!goldenPlain("completed-collapsed-t0").includes("subagent · reviewer · completed")
 ) fail("genuine production component lifecycle/composition was not observed");
 
 console.log(
@@ -306,6 +503,10 @@ console.log(
 console.log(
 	`T22.V02 deterministic inputs: width=${model.contract.width} control_width=${model.contract.controlWidth} ` +
 	`t0=${model.contract.t0} t1=${model.contract.t1} width_probe_differs=true`,
+);
+console.log(
+	`T22.V02 same-instance toggles: sequences=${[...scenarios.keys()].join(",")} ` +
+	`ctrl_o=output-detail ctrl_t=thinking restored_bytes_checked=true identities_preserved=true reasoning_pre_model=true`,
 );
 console.log(`T22.V02 cases compared as raw UTF-8: ${model.cases.map((item) => item.name).join(",")}`);
 if (
