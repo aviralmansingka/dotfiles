@@ -581,6 +581,17 @@ for (const item of model.cases) {
 }
 const nestedGolden = readFileSync(join(goldenDir, "nested-ownership.ansi"), "utf8");
 const nestedGoldenPlain = stripAnsi(nestedGolden);
+const nestedAssignmentAnsi =
+	"\x1b[38;2;211;134;155mV02_NESTED_ASSIGN\x1b[0m" +
+	"\x1b[38;2;233;177;67m=$(\x1b[0m" +
+	"\x1b[38;2;242;133;52mpwd\x1b[0m" +
+	"\x1b[38;2;233;177;67m)\x1b[0m";
+const obsoleteNestedAssignmentAnsi =
+	"\x1b[38;2;242;133;52mV02_NESTED_ASSIGN=$(pwd)\x1b[0m";
+if (
+	nestedGolden.split(nestedAssignmentAnsi).length !== 2 ||
+	nestedGolden.includes(obsoleteNestedAssignmentAnsi)
+) fail("nested ownership golden assignment ANSI categories differ");
 for (const token of [
 	"V02_ROOT_WIDTH_PROBE_",
 	"nested-auditor · nested agent · completed",

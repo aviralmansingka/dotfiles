@@ -90,7 +90,7 @@
     "completed-recollapsed": "02a88da140bfcc47a68dc62c6b705f20c479dcca2b221c2756c8b030ab4b36d7",
     "empty-success": "fbfa7d03bfff03b4b114eb821482ddcc232bc8ae067aeec9c85baa67c21edc06",
     "nested-exit-only-failure": "b6b62bc02f76fff0a0a64457e1a002ac90a8fce11aa7028213443ceed1e06347",
-    "nested-ownership": "1f45f64836795ef643a86cff073d04a05a9d3f94a5b44e87ccd5199b30de3344",
+    "nested-ownership": "d66e206443f7e17edb40ac611d9ad7d23e9522ada2f3fa97f150e67292876e91",
     "root-failure": "c642281ac52ba4591554b98ec54b0529abe6fa8b49a1d1a88ea0f7e0dc1684f7"
   },
   "cases": [
