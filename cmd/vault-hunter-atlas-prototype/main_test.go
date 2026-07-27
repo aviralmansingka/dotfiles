@@ -85,104 +85,165 @@ func TestPrototypeSmoke(t *testing.T) {
 	assertBounded(t, m.View(), 120, 32)
 }
 
-func TestSubagentDetailsAreHumanizedInEveryVariant(t *testing.T) {
-	tests := []struct {
-		name    string
-		kind    string
-		state   string
-		detail  string
-		want    []string
-		notWant []string
-	}{
-		{
-			name:   "started",
-			kind:   "subagent/started",
-			state:  "running",
-			detail: `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-secret","parent_session_id":"session-secret","agent":"scout","task_sha256":"task-secret","cwd":"/tmp/prototype"}`,
-			want:   []string{"◉ scout is working…", "cwd prototype"},
-		},
-		{
-			name:   "successful finished hash only",
-			kind:   "subagent/finished",
-			state:  "completed",
-			detail: `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-secret","parent_session_id":"session-secret","agent":"writer","model":"gpt-test","result_sha256":"abcdef0123456789","duration_ms":1500,"exit_status":0,"tool_count":3,"usage":{"total_tokens":1234,"cost":0.125,"turns":4},"error":""}`,
-			want:   []string{"✓ writer completed", "model gpt-test", "duration 1.5s", "3 tools · 4 turns", "1234 tokens · $0.1250", "output sha abcdef012345"},
-		},
-		{
-			name:   "failed",
-			kind:   "subagent/finished",
-			state:  "failed",
-			detail: `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-secret","parent_session_id":"session-secret","agent":"reviewer","duration_ms":20,"exit_status":7,"tool_count":1,"usage":{"total_tokens":20,"cost":0,"turns":1},"error":"timed out"}`,
-			want:   []string{"× reviewer failed", "error timed out", "exit 7"},
-		},
-		{
-			name:    "future multiline output",
-			kind:    "subagent/finished",
-			state:   "completed",
-			detail:  `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-secret","parent_session_id":"session-secret","agent":"writer","result_sha256":"hash-must-not-stand-in-for-output","duration_ms":40,"exit_status":0,"tool_count":1,"usage":{"total_tokens":20,"cost":0.01,"turns":1},"output":"First actual line with enough prose to wrap within the narrow dossier.\nSecond actual line."}`,
-			want:    []string{"✓ writer completed", "Output", "First actual line", "dossier.", "Second actual line."},
-			notWant: []string{"output sha"},
-		},
-		{
-			name:   "plain detail",
-			kind:   "note",
-			state:  "active",
-			detail: "A plain lifecycle note remains visible.",
-			want:   []string{"A plain lifecycle note remains"},
-		},
-		{
-			name:    "unknown json",
-			kind:    "subagent/finished",
-			state:   "completed",
-			detail:  `{"schema":"some-future-schema/v9","tool_call_id":"do-not-show","payload":"a very long structured value that must not spread across the board"}`,
-			want:    []string{"structured detail recorded"},
-			notWant: []string{"some-future-schema", "very long structured value"},
-		},
+func TestTrailTreeGroupsConsecutiveSubagentInvocations(t *testing.T) {
+	run := prototypeRun()
+	run.Lifecycle = []vaultregistry.Lifecycle{
+		agentObservation("start-1", "2026-02-20T10:01:00Z", "subagent/started", "running", `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-one","agent":"context-builder","cwd":"/tmp/task-one"}`),
+		agentObservation("finish-1", "2026-02-20T10:01:50Z", "subagent/finished", "completed", `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-one","agent":"context-builder","model":"gpt-5.6-luna","result_sha256":"d2c34561abcdef","duration_ms":49500,"exit_status":0,"tool_count":10,"usage":{"total_tokens":51400,"cost":0.0272,"turns":7}}`),
+		agentObservation("start-2", "2026-02-20T10:02:00Z", "subagent/started", "running", `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-two","agent":"context-builder","cwd":"/tmp/task-two"}`),
+	}
+	run.Participants = []vaultregistry.Participant{
+		{ParticipantID: "headless-first", ObservedAt: "2026-02-20T10:01:01Z", GoalID: "subagent/context-builder", Role: "context-builder"},
+		{ParticipantID: "headless-second", ObservedAt: "2026-02-20T10:02:01Z", GoalID: "subagent/context-builder", Role: "context-builder"},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			run := vaultregistry.Run{
-				SchemaVersion: 1,
-				RunID:         "agent-presentation",
-				Revision:      1,
-				InvokedAt:     "2026-02-20T10:00:00Z",
-				UpdatedAt:     "2026-02-20T10:01:00Z",
-				Task:          vaultregistry.Task{ID: "T22", Title: "Agent output presentation", Kind: "prototype"},
-				Lifecycle: []vaultregistry.Lifecycle{{
-					ObservationID: "agent-observation",
-					ObservedAt:    "2026-02-20T10:01:00Z",
-					GoalID:        "subagent/test",
-					Kind:          test.kind,
-					State:         test.state,
-					Detail:        test.detail,
-				}},
+	view, m := prototypeView(t, run, 0)
+	assertBounded(t, view, 120, 32)
+	for _, wanted := range []string{
+		"└─ ▶ ▾ ◉ subagent/context-builder",
+		"├─ ✓ context-builder · completed · 49.5s",
+		"│  ├─ model gpt-5.6-luna",
+		"10 tools · 7 turns · 51.4k tokens · $0.0272",
+		"participant headless-first",
+		"Result digest d2c34561…",
+		"└─ ◉ context-builder · working…",
+		"participant headless-second",
+		"└─ cwd task-two",
+	} {
+		if !strings.Contains(view, wanted) {
+			t.Errorf("trail tree does not contain %q:\n%s", wanted, view)
+		}
+	}
+	if strings.Count(view, "context-builder · completed") != 1 || strings.Count(view, "context-builder · working…") != 1 {
+		t.Fatalf("invocation summaries were duplicated:\n%s", view)
+	}
+	if strings.Index(view, "context-builder · completed") > strings.Index(view, "context-builder · working…") {
+		t.Fatalf("invocations are not chronological:\n%s", view)
+	}
+	assertNoRawSubagentFields(t, view)
+
+	collapsed := updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter}).View()
+	assertBounded(t, collapsed, 120, 32)
+	if !strings.Contains(collapsed, "▶ ▸ ◉ subagent/context-builder") {
+		t.Fatalf("collapsed goal has no disclosure marker:\n%s", collapsed)
+	}
+	for _, hidden := range []string{"context-builder · completed", "headless-first", "cwd task-two"} {
+		if strings.Contains(collapsed, hidden) {
+			t.Errorf("collapsed goal retains %q:\n%s", hidden, collapsed)
+		}
+	}
+}
+
+func TestAgentFailuresAndFutureOutputStayVisibleUnderPressure(t *testing.T) {
+	run := prototypeRun()
+	run.Lifecycle = []vaultregistry.Lifecycle{
+		agentObservation("start-failed", "2026-02-20T10:01:00Z", "subagent/started", "running", `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-failed","agent":"context-builder","cwd":"/tmp/task-failed"}`),
+		agentObservation("finish-failed", "2026-02-20T10:01:03Z", "subagent/finished", "failed", `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-failed","agent":"context-builder","duration_ms":3200,"exit_status":7,"tool_count":2,"usage":{"total_tokens":900,"cost":0.001,"turns":2},"error":"Timed out while reading the bounded context and the complete error remains visible."}`),
+		agentObservation("start-output", "2026-02-20T10:02:00Z", "subagent/started", "running", `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-output","agent":"context-builder","cwd":"/tmp/task-output"}`),
+		agentObservation("finish-output", "2026-02-20T10:02:05Z", "subagent/finished", "completed", `{"schema":"vault-hunter-subagent/v1","tool_call_id":"call-output","agent":"context-builder","result_sha256":"hash-must-not-be-called-output","duration_ms":5000,"exit_status":0,"tool_count":3,"usage":{"total_tokens":1234,"cost":0.0125,"turns":4},"output":"First actual output line is deliberately long enough to wrap across the available nested tree width without clipping any meaningful report text, including this retained ending.\nSecond actual output line is preserved."}`),
+	}
+	run.Participants = []vaultregistry.Participant{{ParticipantID: "headless-failed", ObservedAt: "2026-02-20T10:01:01Z", GoalID: "subagent/context-builder", Role: "context-builder"}}
+
+	for _, variant := range []int{0, 2} {
+		view, _ := prototypeView(t, run, variant)
+		assertBounded(t, view, 120, 32)
+		for _, wanted := range []string{
+			"× context-builder · failed · 3.2s",
+			"Error · exit 7",
+			"complete error remains visible.",
+			"✓ context-builder · completed · 5s",
+			"Output",
+			"First actual output line",
+			"including this retained ending.",
+			"Second actual output line is preserved.",
+		} {
+			if !strings.Contains(view, wanted) {
+				t.Errorf("%s view does not contain %q:\n%s", variantNames[variant], wanted, view)
 			}
-			m, err := newModel([]vaultregistry.Run{run}, "", 0, "never")
-			if err != nil {
-				t.Fatal(err)
-			}
-			m.width, m.height = 120, 32
-			for variant := range variantNames {
-				m.variant = variant
-				view := m.View()
-				assertBounded(t, view, 120, 32)
-				for _, wanted := range test.want {
-					if !strings.Contains(view, wanted) {
-						t.Errorf("%s view does not contain %q:\n%s", variantNames[variant], wanted, view)
-					}
-				}
-				unwantedValues := append([]string{`"schema"`, "tool_call_id", "parent_session_id", "task-secret"}, test.notWant...)
-				if strings.HasPrefix(strings.TrimSpace(test.detail), "{") {
-					unwantedValues = append(unwantedValues, test.detail)
-				}
-				for _, unwanted := range unwantedValues {
-					if strings.Contains(view, unwanted) {
-						t.Errorf("%s view exposes %q:\n%s", variantNames[variant], unwanted, view)
-					}
-				}
-			}
-		})
+		}
+		if strings.Contains(view, "Result digest hash-must") {
+			t.Errorf("%s substitutes a digest for actual output:\n%s", variantNames[variant], view)
+		}
+		assertNoRawSubagentFields(t, view)
+	}
+
+	timeView, _ := prototypeView(t, run, 1)
+	assertBounded(t, timeView, 120, 32)
+	for _, wanted := range []string{"Output", "First actual output line", "Second actual output line is"} {
+		if !strings.Contains(timeView, wanted) {
+			t.Errorf("time river dossier lost %q:\n%s", wanted, timeView)
+		}
+	}
+}
+
+func TestPlainObservationsAreHumanizedWrappedAndCollapsible(t *testing.T) {
+	exitZero := 0
+	run := prototypeRun()
+	run.Lifecycle = []vaultregistry.Lifecycle{
+		{ObservationID: "review", ObservedAt: "2026-02-20T10:01:00Z", GoalID: "plain-goal", Kind: "review", State: "done", Detail: "Reviewed a meaningful lifecycle narrative that stays readable instead of becoming a raw tag chain."},
+		{ObservationID: "future", ObservedAt: "2026-02-20T10:03:00Z", GoalID: "plain-goal", Kind: "future-kind", State: "literal-unknown", Detail: `{"schema":"some-future-schema/v9","payload":"must remain hidden"}`},
+	}
+	run.Evidence = []vaultregistry.Evidence{{ObservationID: "evidence", ObservedAt: "2026-02-20T10:02:00Z", VerifierID: "plain-goal", State: "passed", Command: "go test ./cmd/vault-hunter-atlas-prototype", ExitStatus: &exitZero, Detail: "Evidence detail remains human-readable and wrapped."}}
+
+	view, m := prototypeView(t, run, 0)
+	assertBounded(t, view, 120, 32)
+	for _, wanted := range []string{
+		"▶ ▾ ? plain-goal · future-kind · literal-unknown",
+		"10:01:00  ✓ Review",
+		"Reviewed a meaningful lifecycle narrative",
+		"10:02:00  ✓ Verification passed · exit 0",
+		"Evidence detail remains human-readable and wrapped.",
+		"10:03:00  ? future-kind · literal-unknown",
+		"Structured detail recorded",
+	} {
+		if !strings.Contains(view, wanted) {
+			t.Errorf("plain trace does not contain %q:\n%s", wanted, view)
+		}
+	}
+	for _, unwanted := range []string{"plain-goal · review · done", "some-future-schema", "must remain hidden"} {
+		if strings.Contains(view, unwanted) {
+			t.Errorf("plain trace exposes %q:\n%s", unwanted, view)
+		}
+	}
+
+	collapsed := updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter}).View()
+	if !strings.Contains(collapsed, "▶ ▸ ? plain-goal · future-kind · literal-unknown") || strings.Contains(collapsed, "Reviewed a meaningful lifecycle") {
+		t.Fatalf("plain goal did not collapse cleanly:\n%s", collapsed)
+	}
+	assertBounded(t, collapsed, 120, 32)
+}
+
+func prototypeRun() vaultregistry.Run {
+	return vaultregistry.Run{
+		SchemaVersion: 1,
+		RunID:         "agent-presentation",
+		Revision:      1,
+		InvokedAt:     "2026-02-20T10:00:00Z",
+		UpdatedAt:     "2026-02-20T10:04:00Z",
+		Task:          vaultregistry.Task{ID: "T22", Title: "Agent tree presentation", Kind: "prototype"},
+	}
+}
+
+func agentObservation(id, at, kind, state, detail string) vaultregistry.Lifecycle {
+	return vaultregistry.Lifecycle{ObservationID: id, ObservedAt: at, GoalID: "subagent/context-builder", Kind: kind, State: state, Detail: detail}
+}
+
+func prototypeView(t *testing.T, run vaultregistry.Run, variant int) (string, model) {
+	t.Helper()
+	m, err := newModel([]vaultregistry.Run{run}, "", variant, "never")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.width, m.height = 120, 32
+	return m.View(), m
+}
+
+func assertNoRawSubagentFields(t *testing.T, view string) {
+	t.Helper()
+	for _, unwanted := range []string{"vault-hunter-subagent/v1", "tool_call_id", `"schema"`, "subagent/started", "subagent/finished", "call-one", "call-two"} {
+		if strings.Contains(view, unwanted) {
+			t.Errorf("view exposes %q:\n%s", unwanted, view)
+		}
 	}
 }
 

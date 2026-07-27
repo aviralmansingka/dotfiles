@@ -50,6 +50,7 @@ type event struct {
 
 type subagentDetail struct {
 	Schema       string `json:"schema"`
+	ToolCallID   string `json:"tool_call_id"`
 	Agent        string `json:"agent"`
 	CWD          string `json:"cwd"`
 	Model        string `json:"model"`
@@ -65,6 +66,30 @@ type subagentDetail struct {
 	Error  string  `json:"error"`
 	Output *string `json:"output"`
 	Result *string `json:"result"`
+}
+
+type subagentInvocation struct {
+	started      *event
+	finished     *event
+	participants []*event
+}
+
+type traceDetail struct {
+	head     string
+	body     []string
+	style    lipgloss.Style
+	priority int
+}
+
+type traceItem struct {
+	observation *event
+	invocation  *subagentInvocation
+}
+
+type traceEntry struct {
+	summary string
+	style   lipgloss.Style
+	details []traceDetail
 }
 
 type palette struct {
@@ -197,14 +222,14 @@ func makePalette(mode string) palette {
 		h2:        style("#e9b143").Bold(true),
 		h3:        style("#b0b846").Bold(true),
 		h4:        style("#80aa9e").Bold(true),
-		h5:        style("#d3869b").Bold(true),
-		h6:        style("#f2594b").Bold(true),
+		h5:        style("#d3869b"),
+		h6:        style("#f2594b"),
 		fg:        style("#ebdbb2"),
 		rail:      style("#504945"),
 		muted:     style("#928374"),
-		selected:  style("#ebdbb2").Background(lipgloss.Color("#45403d")).Bold(true),
-		success:   style("#b8bb26").Bold(true),
-		warning:   style("#fabd2f").Bold(true),
+		selected:  style("#b0b846").Bold(true),
+		success:   style("#b8bb26"),
+		warning:   style("#fabd2f"),
 		narrative: style("#ebdbb2").Italic(true),
 		empty:     style("#928374").Italic(true),
 	}
@@ -376,9 +401,9 @@ func (m model) View() string {
 		selectedID = shown(m.goals[m.goal].id)
 	}
 	rows := []string{
-		m.line("◆ OPERATIONS BOARD  /  "+strings.ToUpper(variantNames[m.variant]), m.width, m.styles.h1),
-		m.line(fmt.Sprintf("◉ Run %s  [%d/%d]  │  ▶ Goal %s  [%s]", shown(run.RunID), m.run+1, len(m.runs), selectedID, ordinal(m.goal, len(m.goals))), m.width, m.styles.h2),
-		m.line(fmt.Sprintf("├─ Task %s · %s  │  %s", shown(run.Task.ID), shown(run.Task.Title), shown(run.Task.Kind)), m.width, m.styles.h3),
+		m.line("# Operations Board · "+titleWords(variantNames[m.variant]), m.width, m.styles.h1),
+		m.line(fmt.Sprintf("# Run %s  [%d/%d]  ·  Goal %s  [%s]", shown(run.RunID), m.run+1, len(m.runs), selectedID, ordinal(m.goal, len(m.goals))), m.width, m.styles.h1),
+		m.treeLine("└─ ", fmt.Sprintf("## %s · %s", shown(run.Task.ID), shown(run.Task.Title)), m.width, m.styles.h2),
 	}
 	bodyHeight := m.height - 6
 	var body []string
@@ -391,7 +416,7 @@ func (m model) View() string {
 		body = m.stateDeck(bodyHeight)
 	}
 	for len(body) < bodyHeight {
-		body = append(body, m.line("│", m.width, m.styles.rail))
+		body = append(body, m.line("", m.width, m.styles.rail))
 	}
 	rows = append(rows, body[:bodyHeight]...)
 	rows = append(rows,
@@ -410,63 +435,109 @@ func ordinal(index, length int) string {
 }
 
 func (m model) trailTree(limit int) []string {
-	run := m.runs[m.run]
-	rows := []string{
-		m.line("HIERARCHY  /  Run → Task → Goal → recorded observations", m.width, m.styles.h4),
-		m.line("◉ "+shown(run.RunID), m.width, m.styles.fg),
-		m.line("│ └─ ◆ "+shown(run.Task.ID)+"  "+shown(run.Task.Title), m.width, m.styles.h3),
-	}
 	if len(m.goals) == 0 {
-		return append(rows, m.line("│    └─ no recorded goals", m.width, m.styles.empty))
+		return []string{m.treeLine("   └─ ", "No recorded goals", m.width, m.styles.empty)}
 	}
-	available := max(1, limit-len(rows))
-	selectedBlock := m.goalTreeBlock(m.goals[m.goal], true)
-	selectedBlock = boundWithOmission(selectedBlock, max(1, available-min(4, len(m.goals)-1)))
-	contextSlots := max(0, available-len(selectedBlock))
+
+	selectedBudget := max(1, limit-min(4, len(m.goals)-1))
+	selectedRows := m.goalTreeBlock(m.goals[m.goal], true, true, selectedBudget, "   ")
+	contextSlots := max(0, limit-len(selectedRows))
 	start := max(0, m.goal-contextSlots/2)
 	end := min(len(m.goals), start+contextSlots+1)
 	start = max(0, end-contextSlots-1)
-	for i := start; i < end && len(rows) < limit; i++ {
+	visible := make([]int, 0, end-start)
+	for i := start; i < end; i++ {
+		visible = append(visible, i)
+	}
+
+	rows := make([]string, 0, limit)
+	for position, i := range visible {
+		last := position == len(visible)-1
 		if i == m.goal {
-			rows = append(rows, selectedBlock...)
+			rows = append(rows, m.goalTreeBlock(m.goals[i], true, last, selectedBudget, "   ")...)
 			continue
 		}
+		branch := "├─ "
+		if last {
+			branch = "└─ "
+		}
 		g := m.goals[i]
-		rows = append(rows, m.line(fmt.Sprintf("│    ├─ %s %s · %s · %s", stateGlyph(g.state), shown(g.id), shown(g.kind), shown(g.state)), m.width, m.goalStyle(g, false)))
+		rows = append(rows, m.treeLine("   "+branch, goalSummary(g), m.width, m.goalStyle(g, false)))
 	}
 	return rows[:min(len(rows), limit)]
 }
 
-func (m model) goalTreeBlock(g goal, selected bool) []string {
-	prefix := "│    ├─"
+func (m model) goalTreeBlock(g goal, selected, last bool, limit int, base string) []string {
+	if limit <= 0 {
+		return nil
+	}
+	branch := "├─ "
+	if last {
+		branch = "└─ "
+	}
+	disclosure := ""
 	if selected {
-		prefix = "│    └─ ▶"
-	}
-	rows := []string{m.line(fmt.Sprintf("%s %s %s · %s · %s", prefix, stateGlyph(g.state), shown(g.id), shown(g.kind), shown(g.state)), m.width, m.goalStyle(g, selected))}
-	events := eventsForGoal(m.runs[m.run], g.id)
-	if len(events) == 0 {
-		return append(rows, m.line("│       └─ no recorded observations", m.width, m.styles.empty))
-	}
-	for i, observation := range events {
-		branch := "├─"
-		if i == len(events)-1 {
-			branch = "└─"
+		disclosure = "▶ ▾ "
+		if !m.showDetail {
+			disclosure = "▶ ▸ "
 		}
-		rows = append(rows, m.line("│       "+branch+" "+eventSummary(observation), m.width, m.eventStyle(observation)))
-		if m.showDetail {
-			rows = append(rows, m.eventDetailRows(observation, "│       │  ", m.width)...)
-			if observation.evidence != nil && observation.evidence.Command != "" {
-				rows = append(rows, m.line("│       │  $ "+observation.evidence.Command, m.width, m.styles.h5))
+	}
+	rows := []string{m.treeLine(base+branch, disclosure+goalSummary(g), m.width, m.goalStyle(g, selected))}
+	if !m.showDetail {
+		return rows
+	}
+
+	events := eventsForGoal(m.runs[m.run], g.id)
+	childBase := base + "│  "
+	if last {
+		childBase = base + "   "
+	}
+	if len(events) == 0 {
+		if len(rows) < limit {
+			rows = append(rows, m.treeLine(childBase+"└─ ", "No recorded observations", m.width, m.styles.empty))
+		}
+		return rows
+	}
+	entries := m.traceEntries(groupSubagentInvocations(events), max(1, m.width-lipgloss.Width(childBase)-9))
+	entries = fitTraceEntries(entries, limit-len(rows), m.styles.muted)
+	for i, entry := range entries {
+		entryLast := i == len(entries)-1
+		entryBranch := "├─ "
+		if entryLast {
+			entryBranch = "└─ "
+		}
+		rows = append(rows, m.treeLine(childBase+entryBranch, entry.summary, m.width, entry.style))
+		detailBase := childBase + "│  "
+		if entryLast {
+			detailBase = childBase + "   "
+		}
+		for j, detail := range entry.details {
+			detailLast := j == len(entry.details)-1
+			detailBranch := "├─ "
+			if detailLast {
+				detailBranch = "└─ "
+			}
+			rows = append(rows, m.treeLine(detailBase+detailBranch, detail.head, m.width, detail.style))
+			bodyBase := detailBase + "│  "
+			if detailLast {
+				bodyBase = detailBase + "   "
+			}
+			for k, line := range detail.body {
+				bodyBranch := "├─ "
+				if k == len(detail.body)-1 {
+					bodyBranch = "└─ "
+				}
+				rows = append(rows, m.treeLine(bodyBase+bodyBranch, line, m.width, detail.style))
 			}
 		}
 	}
-	return rows
+	return rows[:min(len(rows), limit)]
 }
 
 func (m model) timeRiver(limit int) []string {
 	leftWidth := m.width * 68 / 100
 	rightWidth := m.width - leftWidth - 1
-	left := []string{"TIME RIVER  /  global chronology"}
+	left := []string{"### Timeline"}
 	events := buildEvents(m.runs[m.run])
 	if len(events) == 0 {
 		left = append(left, "  no recorded observations")
@@ -478,7 +549,8 @@ func (m model) timeRiver(limit int) []string {
 			if events[i].goalID == selectedGoalID(m) {
 				marker = "◉"
 			}
-			left = append(left, fmt.Sprintf("  %s  │  %s  │  %s", marker, shown(events[i].at), eventSummary(events[i])))
+			summary := strings.TrimPrefix(eventSummary(events[i]), clockTime(observationTime(events[i]))+"  ")
+			left = append(left, fmt.Sprintf("  %s  │  %s  │  %s · %s", marker, clockTime(events[i].at), shown(events[i].goalID), summary))
 		}
 	}
 	right := m.dossier(limit, rightWidth)
@@ -510,19 +582,22 @@ func (m model) dossier(limit, width int) []string {
 			rows = append(rows, m.cell(text, width, style))
 		}
 	}
+	addWrapped := func(text string, style lipgloss.Style) {
+		for _, line := range wrapDisplay(text, max(1, width)) {
+			add(line, style)
+		}
+	}
 	if len(m.goals) == 0 {
-		add("STICKY DOSSIER", m.styles.h5)
+		add("### Goal details", m.styles.h5)
 		add("no recorded goals", m.styles.empty)
 		return rows
 	}
 	g := m.goals[m.goal]
-	add("STICKY DOSSIER", m.styles.h5)
-	add(fmt.Sprintf("▶ %s  %s", stateGlyph(g.state), shown(g.id)), m.goalStyle(g, true))
-	add("state  "+shown(g.state), m.styles.fg)
-	add("kind   "+shown(g.kind), m.styles.fg)
+	add("### Goal details", m.styles.h5)
+	add(fmt.Sprintf("▶ %s", goalSummary(g)), m.goalStyle(g, true))
 	add(fmt.Sprintf("trace  %d lifecycle · %d evidence", len(g.lifecycle), len(g.evidence)), m.styles.muted)
 	add("", m.styles.fg)
-	add("LATEST LIFECYCLE", m.styles.h3)
+	add("Latest activity", m.styles.h3)
 	if len(g.lifecycle) == 0 {
 		add("none recorded", m.styles.empty)
 	} else {
@@ -538,7 +613,7 @@ func (m model) dossier(limit, width int) []string {
 		}
 	}
 	add("", m.styles.fg)
-	add("PARTICIPANTS", m.styles.h4)
+	add("Participants", m.styles.h4)
 	if len(g.participants) == 0 {
 		add("none recorded", m.styles.empty)
 	} else {
@@ -547,7 +622,7 @@ func (m model) dossier(limit, width int) []string {
 		}
 	}
 	add("", m.styles.fg)
-	add("LATEST EVIDENCE", m.styles.h6)
+	add("Latest evidence", m.styles.h6)
 	if len(g.evidence) == 0 {
 		add("none recorded", m.styles.empty)
 	} else {
@@ -560,7 +635,7 @@ func (m model) dossier(limit, width int) []string {
 			add("$ "+evidence.Command, m.styles.h5)
 		}
 		if m.showDetail && evidence.Detail != "" {
-			add(evidence.Detail, m.styles.narrative)
+			addWrapped(evidence.Detail, m.styles.narrative)
 		}
 	}
 	return rows
@@ -580,14 +655,14 @@ func (m model) stateDeck(limit int) []string {
 		if i == m.goal {
 			entry = "▶ " + entry
 		}
-		lane := indexOf(states, g.state)
+		lane := stateLane(g.state)
 		if lane < 0 {
 			other = append(other, entry+" · "+shown(g.state))
 		} else {
 			lanes[lane] = append(lanes[lane], entry)
 		}
 	}
-	rows := []string{m.line("STATE DECK  /  six current-state lanes", m.width, m.styles.h4)}
+	rows := []string{m.line("### Goal states", m.width, m.styles.h4)}
 	widths := splitWidths(m.width, len(states))
 	for row := 0; row < laneHeight && len(rows) < limit; row++ {
 		var line strings.Builder
@@ -612,7 +687,7 @@ func (m model) stateDeck(limit int) []string {
 		rows = append(rows, line.String())
 	}
 	if len(rows) < limit {
-		rows = append(rows, m.line("OTHER BELT  ─────────────────────────────────────────────────────────────────────────────────────────────────────────", m.width, m.styles.h6))
+		rows = append(rows, m.line("Other states", m.width, m.styles.h6))
 	}
 	if len(rows) < limit {
 		text := "none recorded"
@@ -623,15 +698,13 @@ func (m model) stateDeck(limit int) []string {
 		rows = append(rows, m.line(text, m.width, style))
 	}
 	if len(rows) < limit {
-		rows = append(rows, m.line("LOWER TRACE TREE  /  selected goal", m.width, m.styles.h5))
+		rows = append(rows, m.line("### Selected trace", m.width, m.styles.h5))
 	}
 	if len(rows) < limit {
 		if len(m.goals) == 0 {
 			rows = append(rows, m.line("└─ no selected trace", m.width, m.styles.empty))
 		} else {
-			trace := m.goalTreeBlock(m.goals[m.goal], true)
-			trace = boundWithOmission(trace, limit-len(rows))
-			rows = append(rows, trace...)
+			rows = append(rows, m.goalTreeBlock(m.goals[m.goal], true, true, limit-len(rows), "")...)
 		}
 	}
 	return rows[:min(len(rows), limit)]
@@ -660,6 +733,240 @@ func eventsForGoal(run vaultregistry.Run, goalID string) []event {
 	return selected
 }
 
+func groupSubagentInvocations(events []event) []traceItem {
+	byCall := make(map[string]*subagentInvocation)
+	for i := range events {
+		detail, ok := lifecycleSubagent(events[i])
+		if !ok || detail.ToolCallID == "" {
+			continue
+		}
+		invocation := byCall[detail.ToolCallID]
+		if invocation == nil {
+			invocation = &subagentInvocation{}
+			byCall[detail.ToolCallID] = invocation
+		}
+		if events[i].lifecycle.Kind == "subagent/started" && invocation.started == nil {
+			invocation.started = &events[i]
+		}
+		if events[i].lifecycle.Kind == "subagent/finished" && invocation.finished == nil {
+			invocation.finished = &events[i]
+		}
+	}
+
+	items := make([]traceItem, 0, len(events))
+	emitted := make(map[string]bool)
+	active := make(map[string]*subagentInvocation)
+	for i := range events {
+		observation := &events[i]
+		detail, known := lifecycleSubagent(*observation)
+		if known && detail.ToolCallID != "" {
+			invocation := byCall[detail.ToolCallID]
+			if observation.lifecycle.Kind == "subagent/started" {
+				active[detail.ToolCallID] = invocation
+			}
+			if !emitted[detail.ToolCallID] {
+				items = append(items, traceItem{invocation: invocation})
+				emitted[detail.ToolCallID] = true
+			}
+			if observation.lifecycle.Kind == "subagent/finished" {
+				delete(active, detail.ToolCallID)
+			}
+			continue
+		}
+		if observation.participant != nil {
+			matches := make([]*subagentInvocation, 0, 1)
+			for _, invocation := range active {
+				if invocationAgent(invocation) == observation.participant.Role {
+					matches = append(matches, invocation)
+				}
+			}
+			if len(matches) == 1 {
+				matches[0].participants = append(matches[0].participants, observation)
+				continue
+			}
+		}
+		items = append(items, traceItem{observation: observation})
+	}
+	return items
+}
+
+func lifecycleSubagent(observation event) (subagentDetail, bool) {
+	if observation.lifecycle == nil {
+		return subagentDetail{}, false
+	}
+	return parseSubagentDetail(observation.lifecycle)
+}
+
+func invocationAgent(invocation *subagentInvocation) string {
+	for _, observation := range []*event{invocation.finished, invocation.started} {
+		if detail, ok := lifecycleSubagentValue(observation); ok && detail.Agent != "" {
+			return detail.Agent
+		}
+	}
+	return "?"
+}
+
+func lifecycleSubagentValue(observation *event) (subagentDetail, bool) {
+	if observation == nil {
+		return subagentDetail{}, false
+	}
+	return lifecycleSubagent(*observation)
+}
+
+func (m model) traceEntries(items []traceItem, wrapWidth int) []traceEntry {
+	entries := make([]traceEntry, 0, len(items))
+	for _, item := range items {
+		if item.invocation != nil {
+			entries = append(entries, m.invocationEntry(item.invocation, wrapWidth))
+			continue
+		}
+		entries = append(entries, m.observationEntry(*item.observation, wrapWidth))
+	}
+	return entries
+}
+
+func (m model) invocationEntry(invocation *subagentInvocation, wrapWidth int) traceEntry {
+	observation := invocation.finished
+	if observation == nil {
+		observation = invocation.started
+	}
+	detail, _ := lifecycleSubagentValue(observation)
+	started, _ := lifecycleSubagentValue(invocation.started)
+	agent := detail.Agent
+	if agent == "" {
+		agent = started.Agent
+	}
+	if agent == "" {
+		agent = "subagent"
+	}
+
+	entry := traceEntry{style: m.styles.h4}
+	switch {
+	case invocation.finished == nil:
+		entry.summary = "◉ " + agent + " · working…"
+	case subagentFailed(*invocation.finished.lifecycle, detail):
+		entry.summary = "× " + agent + " · failed" + durationSuffix(detail.DurationMS)
+		entry.style = m.styles.h6
+	default:
+		entry.summary = "✓ " + agent + " · completed" + durationSuffix(detail.DurationMS)
+	}
+
+	if detail.Model != "" {
+		entry.details = append(entry.details, traceDetail{head: "model " + detail.Model, style: m.styles.muted, priority: 2})
+	}
+	metrics := invocationMetrics(detail)
+	if metrics != "" {
+		entry.details = append(entry.details, traceDetail{head: metrics, style: m.styles.muted, priority: 1})
+	}
+	for _, participant := range invocation.participants {
+		entry.details = append(entry.details, traceDetail{head: "participant " + shown(participant.participant.ParticipantID), style: m.styles.h5, priority: 1})
+	}
+	if detail.Error != "" {
+		body := wrapDisplay(detail.Error, wrapWidth)
+		entry.details = append(entry.details, traceDetail{head: "Error" + exitSuffix(detail.ExitStatus), body: body, style: m.styles.h6, priority: 0})
+	} else if detail.ExitStatus != nil && *detail.ExitStatus != 0 {
+		entry.details = append(entry.details, traceDetail{head: fmt.Sprintf("exit %d", *detail.ExitStatus), style: m.styles.h6, priority: 0})
+	}
+	if output := subagentOutput(detail); output != nil {
+		body := wrapDisplay(*output, wrapWidth)
+		if len(body) == 0 {
+			body = []string{"(empty)"}
+		}
+		entry.details = append(entry.details, traceDetail{head: "Output", body: body, style: m.styles.narrative, priority: 0})
+	} else if detail.ResultSHA256 != "" {
+		entry.details = append(entry.details, traceDetail{head: "Result digest " + shortDigest(detail.ResultSHA256), style: m.styles.muted, priority: 2})
+	}
+	if invocation.finished == nil {
+		cwd := started.CWD
+		if cwd == "" {
+			cwd = detail.CWD
+		}
+		if cwd != "" {
+			entry.details = append(entry.details, traceDetail{head: "cwd " + filepath.Base(filepath.Clean(cwd)), style: m.styles.muted, priority: 2})
+		}
+	}
+	return entry
+}
+
+func (m model) observationEntry(observation event, wrapWidth int) traceEntry {
+	entry := traceEntry{summary: eventSummary(observation), style: m.eventStyle(observation)}
+	if observation.lifecycle != nil && observation.lifecycle.Detail != "" {
+		if _, known := parseSubagentDetail(observation.lifecycle); !known {
+			if json.Valid([]byte(strings.TrimSpace(observation.lifecycle.Detail))) {
+				entry.details = append(entry.details, traceDetail{head: "Structured detail recorded", style: m.styles.empty, priority: 2})
+			} else {
+				entry.details = append(entry.details, traceDetail{head: "Note", body: wrapDisplay(observation.lifecycle.Detail, wrapWidth), style: m.styles.narrative, priority: 1})
+			}
+		}
+	}
+	if observation.evidence != nil {
+		if observation.evidence.Detail != "" {
+			entry.details = append(entry.details, traceDetail{head: "Detail", body: wrapDisplay(observation.evidence.Detail, wrapWidth), style: m.styles.narrative, priority: 1})
+		}
+		if observation.evidence.Command != "" {
+			entry.details = append(entry.details, traceDetail{head: "$ " + observation.evidence.Command, style: m.styles.h5, priority: 2})
+		}
+	}
+	return entry
+}
+
+func fitTraceEntries(entries []traceEntry, limit int, omissionStyle lipgloss.Style) []traceEntry {
+	if limit <= 0 || len(entries) == 0 {
+		return nil
+	}
+	if len(entries) > limit {
+		if limit == 1 {
+			return []traceEntry{{summary: "… activity omitted", style: omissionStyle}}
+		}
+		entries = append([]traceEntry(nil), entries[len(entries)-limit+1:]...)
+		return append([]traceEntry{{summary: "… earlier activity omitted", style: omissionStyle}}, entries...)
+	}
+
+	total := len(entries)
+	for _, entry := range entries {
+		for _, detail := range entry.details {
+			total += 1 + len(detail.body)
+		}
+	}
+	if total <= limit {
+		return entries
+	}
+
+	if limit == len(entries) {
+		for i := range entries {
+			entries[i].details = nil
+		}
+		return entries
+	}
+	capacity := limit - len(entries) - 1
+	selected := make([][]traceDetail, len(entries))
+	for priority := 0; priority <= 2 && capacity > 0; priority++ {
+		for i := range entries {
+			for _, detail := range entries[i].details {
+				if detail.priority != priority {
+					continue
+				}
+				cost := 1 + len(detail.body)
+				if cost <= capacity {
+					selected[i] = append(selected[i], detail)
+					capacity -= cost
+					continue
+				}
+				if priority == 0 && capacity >= 2 && len(detail.body) != 0 {
+					detail.body = append([]string(nil), detail.body[:capacity-1]...)
+					selected[i] = append(selected[i], detail)
+					capacity = 0
+				}
+			}
+		}
+	}
+	for i := range entries {
+		entries[i].details = selected[i]
+	}
+	entries = append(entries, traceEntry{summary: "… low-value details omitted", style: omissionStyle})
+	return entries
+}
+
 func selectedGoalID(m model) string {
 	if len(m.goals) == 0 {
 		return ""
@@ -668,27 +975,33 @@ func selectedGoalID(m model) string {
 }
 
 func eventSummary(observation event) string {
+	at := clockTime(observationTime(observation)) + "  "
 	switch {
 	case observation.lifecycle != nil:
 		if detail, ok := parseSubagentDetail(observation.lifecycle); ok {
 			agent := shown(detail.Agent)
 			if observation.lifecycle.Kind == "subagent/started" {
-				return fmt.Sprintf("◉ %s is working…", agent)
+				return at + "◉ " + agent + " · working…"
 			}
 			if subagentFailed(*observation.lifecycle, detail) {
-				return fmt.Sprintf("× %s failed", agent)
+				return at + "× " + agent + " · failed" + durationSuffix(detail.DurationMS)
 			}
-			return fmt.Sprintf("✓ %s completed", agent)
+			return at + "✓ " + agent + " · completed" + durationSuffix(detail.DurationMS)
 		}
-		return fmt.Sprintf("%s %s · %s · %s", stateGlyph(observation.lifecycle.State), shown(observation.goalID), shown(observation.lifecycle.Kind), shown(observation.lifecycle.State))
+		glyph := stateGlyph(observation.lifecycle.State)
+		label := titleWords(observation.lifecycle.Kind)
+		if glyph == "?" {
+			return fmt.Sprintf("%s? %s · %s", at, shown(observation.lifecycle.Kind), shown(observation.lifecycle.State))
+		}
+		return at + glyph + " " + label
 	case observation.evidence != nil:
 		exit := ""
 		if observation.evidence.ExitStatus != nil {
 			exit = fmt.Sprintf(" · exit %d", *observation.evidence.ExitStatus)
 		}
-		return fmt.Sprintf("! %s · evidence · %s%s", shown(observation.goalID), shown(observation.evidence.State), exit)
+		return fmt.Sprintf("%s%s Verification %s%s", at, stateGlyph(observation.evidence.State), shown(observation.evidence.State), exit)
 	default:
-		return fmt.Sprintf("◆ %s · participant %s · %s", shown(observation.goalID), shown(observation.participant.ParticipantID), shown(observation.participant.Role))
+		return fmt.Sprintf("%s◆ Participant %s · %s", at, shown(observation.participant.ParticipantID), shown(observation.participant.Role))
 	}
 }
 
@@ -708,91 +1021,65 @@ func subagentFailed(lifecycle vaultregistry.Lifecycle, detail subagentDetail) bo
 }
 
 func (m model) eventDetailRows(observation event, prefix string, width int) []string {
+	rows := make([]string, 0, 8)
+	add := func(text string, style lipgloss.Style) {
+		rows = append(rows, m.line(prefix+text, width, style))
+	}
+	addWrapped := func(label, text string, style lipgloss.Style) {
+		if label != "" {
+			add(label, style)
+		}
+		indent := ""
+		if label != "" {
+			indent = "  "
+		}
+		contentWidth := max(1, width-lipgloss.Width(prefix+indent))
+		for _, line := range wrapDisplay(text, contentWidth) {
+			add(indent+line, style)
+		}
+	}
+
 	if observation.lifecycle == nil {
 		if observation.evidence != nil && observation.evidence.Detail != "" {
-			return []string{m.line(prefix+observation.evidence.Detail, width, m.styles.narrative)}
+			addWrapped("", observation.evidence.Detail, m.styles.narrative)
 		}
-		return nil
+		return rows
 	}
 	lifecycle := observation.lifecycle
 	detail, known := parseSubagentDetail(lifecycle)
 	if !known {
 		if lifecycle.Detail == "" {
-			return nil
+			return rows
 		}
 		if json.Valid([]byte(strings.TrimSpace(lifecycle.Detail))) {
-			return []string{m.line(prefix+"structured detail recorded", width, m.styles.empty)}
+			add("Structured detail recorded", m.styles.empty)
+			return rows
 		}
-		return []string{m.line(prefix+lifecycle.Detail, width, m.styles.narrative)}
+		addWrapped("", lifecycle.Detail, m.styles.narrative)
+		return rows
 	}
 
-	rows := make([]string, 0, 8)
-	add := func(text string, style lipgloss.Style) {
-		rows = append(rows, m.line(prefix+text, width, style))
-	}
 	if lifecycle.Kind == "subagent/started" {
 		if detail.CWD != "" {
-			add("└─ cwd "+filepath.Base(filepath.Clean(detail.CWD)), m.styles.muted)
+			add("cwd "+filepath.Base(filepath.Clean(detail.CWD)), m.styles.muted)
 		}
 		return rows
 	}
 	if detail.Model != "" {
-		add("├─ model "+detail.Model, m.styles.muted)
+		add("model "+detail.Model, m.styles.muted)
 	}
-	if detail.DurationMS != nil {
-		duration := time.Duration(*detail.DurationMS) * time.Millisecond
-		add("├─ duration "+duration.String(), m.styles.muted)
+	if metrics := invocationMetrics(detail); metrics != "" {
+		add(metrics, m.styles.muted)
 	}
-	tools, turns := "", ""
-	if detail.ToolCount != nil {
-		tools = fmt.Sprintf("%d tools", *detail.ToolCount)
+	if detail.Error != "" {
+		addWrapped("Error"+exitSuffix(detail.ExitStatus), detail.Error, m.styles.h6)
+	} else if detail.ExitStatus != nil && *detail.ExitStatus != 0 {
+		add(fmt.Sprintf("exit %d", *detail.ExitStatus), m.styles.h6)
 	}
-	if detail.Usage != nil && detail.Usage.Turns != nil {
-		turns = fmt.Sprintf("%d turns", *detail.Usage.Turns)
-	}
-	if tools != "" || turns != "" {
-		add("├─ "+strings.Trim(strings.Join([]string{tools, turns}, " · "), " ·"), m.styles.muted)
-	}
-	if detail.Usage != nil && (detail.Usage.TotalTokens != nil || detail.Usage.Cost != nil) {
-		usage := ""
-		if detail.Usage.TotalTokens != nil {
-			usage = fmt.Sprintf("%d tokens", *detail.Usage.TotalTokens)
-		}
-		if detail.Usage.Cost != nil {
-			if usage != "" {
-				usage += " · "
-			}
-			usage += fmt.Sprintf("$%.4f", *detail.Usage.Cost)
-		}
-		add("├─ "+usage, m.styles.muted)
-	}
-	if subagentFailed(*lifecycle, detail) {
-		if detail.Error != "" {
-			add("├─ error "+detail.Error, m.styles.h6)
-		}
-		if detail.ExitStatus != nil {
-			add(fmt.Sprintf("├─ exit %d", *detail.ExitStatus), m.styles.h6)
-		}
-	}
-
-	var output *string
-	if detail.Output != nil {
-		output = detail.Output
-	} else if detail.Result != nil {
-		output = detail.Result
-	}
-	if output != nil {
-		add("├─ Output", m.styles.fg.Bold(true))
-		contentWidth := max(1, width-lipgloss.Width(prefix+"│  "))
-		for _, line := range wrapDisplay(*output, contentWidth) {
-			add("│  "+line, m.styles.narrative)
-		}
+	if output := subagentOutput(detail); output != nil {
+		addWrapped("Output", *output, m.styles.narrative)
 	} else if detail.ResultSHA256 != "" {
-		hash := detail.ResultSHA256
-		if len(hash) > 12 {
-			hash = hash[:12]
-		}
-		add("└─ output sha "+hash, m.styles.muted)
+		add("Result digest "+shortDigest(detail.ResultSHA256), m.styles.muted)
 	}
 	return rows
 }
@@ -814,11 +1101,150 @@ func wrapDisplay(value string, width int) []string {
 			if end == 0 {
 				end = 1
 			}
-			lines = append(lines, string(runes[:end]))
-			source = string(runes[end:])
+			if end < len(runes) {
+				for candidate := end; candidate > 0; candidate-- {
+					if runes[candidate-1] == ' ' || runes[candidate-1] == '\t' {
+						end = candidate - 1
+						break
+					}
+				}
+				if end == 0 {
+					end = 1
+				}
+			}
+			lines = append(lines, strings.TrimRight(string(runes[:end]), " \t"))
+			source = strings.TrimLeft(string(runes[end:]), " \t")
 		}
 	}
 	return lines
+}
+
+func goalSummary(g goal) string {
+	summary := stateGlyph(g.state) + " " + shown(g.id)
+	if stateGlyph(g.state) == "?" {
+		summary += " · " + shown(g.kind) + " · " + shown(g.state)
+	}
+	return summary
+}
+
+func titleWords(value string) string {
+	words := strings.FieldsFunc(value, func(r rune) bool { return r == '-' || r == '/' || r == '_' })
+	for i, word := range words {
+		if word == "" {
+			continue
+		}
+		runes := []rune(word)
+		runes[0] = []rune(strings.ToUpper(string(runes[0])))[0]
+		words[i] = string(runes)
+	}
+	if len(words) == 0 {
+		return "Activity"
+	}
+	return strings.Join(words, " ")
+}
+
+func observationTime(observation event) string {
+	if observation.at != "" {
+		return observation.at
+	}
+	if observation.lifecycle != nil {
+		return observation.lifecycle.ObservedAt
+	}
+	if observation.evidence != nil {
+		return observation.evidence.ObservedAt
+	}
+	if observation.participant != nil {
+		return observation.participant.ObservedAt
+	}
+	return ""
+}
+
+func clockTime(value string) string {
+	instant, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return shown(value)
+	}
+	return instant.Format("15:04:05")
+}
+
+func durationSuffix(milliseconds *int64) string {
+	if milliseconds == nil {
+		return ""
+	}
+	duration := time.Duration(*milliseconds) * time.Millisecond
+	if duration >= time.Second {
+		duration = duration.Round(100 * time.Millisecond)
+	}
+	return " · " + duration.String()
+}
+
+func exitSuffix(status *int) string {
+	if status == nil {
+		return ""
+	}
+	return fmt.Sprintf(" · exit %d", *status)
+}
+
+func invocationMetrics(detail subagentDetail) string {
+	parts := make([]string, 0, 4)
+	if detail.ToolCount != nil {
+		parts = append(parts, fmt.Sprintf("%d tools", *detail.ToolCount))
+	}
+	if detail.Usage != nil {
+		if detail.Usage.Turns != nil {
+			parts = append(parts, fmt.Sprintf("%d turns", *detail.Usage.Turns))
+		}
+		if detail.Usage.TotalTokens != nil {
+			parts = append(parts, compactCount(*detail.Usage.TotalTokens)+" tokens")
+		}
+		if detail.Usage.Cost != nil {
+			parts = append(parts, fmt.Sprintf("$%.4f", *detail.Usage.Cost))
+		}
+	}
+	return strings.Join(parts, " · ")
+}
+
+func compactCount(value int64) string {
+	if value < 1000 {
+		return fmt.Sprintf("%d", value)
+	}
+	if value < 1_000_000 {
+		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(value)/1000), ".0") + "k"
+	}
+	return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(value)/1_000_000), ".0") + "m"
+}
+
+func subagentOutput(detail subagentDetail) *string {
+	if detail.Output != nil {
+		return detail.Output
+	}
+	return detail.Result
+}
+
+func shortDigest(value string) string {
+	if len(value) > 8 {
+		return value[:8] + "…"
+	}
+	return value
+}
+
+func stateLane(state string) int {
+	switch state {
+	case "pending", "queued":
+		return 0
+	case "running", "active", "activated", "in-progress", "resuming":
+		return 1
+	case "awaiting-human-evaluation":
+		return 2
+	case "blocked", "interrupted":
+		return 3
+	case "failed", "error", "rejected":
+		return 4
+	case "completed", "done", "passed", "success", "accepted":
+		return 5
+	default:
+		return -1
+	}
 }
 
 func stateGlyph(state string) string {
@@ -896,21 +1322,6 @@ func (m model) eventStyle(observation event) lipgloss.Style {
 	}
 }
 
-func boundWithOmission(lines []string, limit int) []string {
-	if limit <= 0 {
-		return nil
-	}
-	if len(lines) <= limit {
-		return lines
-	}
-	if limit == 1 {
-		return lines[:1]
-	}
-	result := append([]string(nil), lines[:limit-1]...)
-	result = append(result, "│       └─ … earlier/later recorded observations omitted")
-	return result
-}
-
 func shown(value string) string {
 	if value == "" {
 		return "?"
@@ -943,6 +1354,14 @@ func truncate(value string, width int) string {
 		runes = runes[:len(runes)-1]
 	}
 	return strings.TrimRight(string(runes), " ") + "…"
+}
+
+func (m model) treeLine(prefix, value string, width int, style lipgloss.Style) string {
+	prefix = clean(prefix)
+	available := max(0, width-lipgloss.Width(prefix))
+	value = truncate(value, available)
+	plainWidth := lipgloss.Width(prefix) + lipgloss.Width(value)
+	return m.styles.rail.Render(prefix) + style.Render(value) + strings.Repeat(" ", max(0, width-plainWidth))
 }
 
 func (m model) line(value string, width int, style lipgloss.Style) string {
