@@ -79,6 +79,10 @@ subagent_running_thinking_hidden_t_then_o_capture="$verify_dir/subagent-running-
 subagent_running_both_hidden_t_then_o_capture="$verify_dir/subagent-running-both-hidden-t-then-o.txt"
 subagent_running_output_hidden_t_then_o_capture="$verify_dir/subagent-running-output-hidden-t-then-o.txt"
 subagent_running_both_restored_t_then_o_capture="$verify_dir/subagent-running-both-restored-t-then-o.txt"
+subagent_running_t1_hidden_capture="$verify_dir/subagent-running-t1-hidden.txt"
+subagent_running_t1_capture="$verify_dir/subagent-running-t1.txt"
+subagent_running_t0_returned_hidden_capture="$verify_dir/subagent-running-t0-returned-hidden.txt"
+subagent_running_t0_returned_capture="$verify_dir/subagent-running-t0-returned.txt"
 subagent_collapsed_capture="$verify_dir/subagent-collapsed.txt"
 subagent_expanded_capture="$verify_dir/subagent-expanded.txt"
 subagent_recollapsed_capture="$verify_dir/subagent-recollapsed.txt"
@@ -113,6 +117,10 @@ reasoning_upstream_marker="$verify_dir/reasoning-upstream-input"
 reasoning_model_marker="$verify_dir/reasoning-render-model"
 reasoning_contamination_marker="$verify_dir/reasoning-contamination"
 usage_marker="$verify_dir/usage-normalization"
+clock_control="$verify_dir/clock-control"
+clock_applied_marker="$verify_dir/clock-applied"
+clock_provider_marker="$verify_dir/clock-provider"
+clock_bridge_marker="$verify_dir/clock-bridge"
 
 if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
 	echo "Visible-thinking prompt customization is still installed" >&2
@@ -828,7 +836,7 @@ console.log("Pi work-step terminal state verified: prompt-scoped thinking remain
 NODE
 
 printf -v pi_command \
-	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_NESTED_EXIT_ONLY_MARKER=%q PI_VERIFY_NESTED_BOUNDARY_MARKER=%q PI_VERIFY_REASONING_UPSTREAM_MARKER=%q PI_VERIFY_REASONING_MODEL_MARKER=%q PI_VERIFY_REASONING_CONTAMINATION_MARKER=%q PI_VERIFY_USAGE_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
+	'env PI_CODING_AGENT_DIR=%q PI_VERIFY_RESPONSE_INDEX=12 PI_VERIFY_SUBAGENT_RELEASE=%q PI_VERIFY_SUBAGENT_PROGRESS_RELEASE=%q PI_VERIFY_SUBAGENT_INITIAL_MARKER=%q PI_VERIFY_SUBAGENT_UPDATE_MARKER=%q PI_VERIFY_SUBAGENT_EXCEPTION_MARKER=%q PI_VERIFY_SUBAGENT_SPEC=%q PI_VERIFY_REAL_CHILD=%q PI_VERIFY_REAL_EXECUTE_MARKER=%q PI_VERIFY_REAL_CHILD_MARKER=%q PI_VERIFY_REAL_MAIN_SPAWN_MARKER=%q PI_VERIFY_REAL_EVENT_MARKER=%q PI_VERIFY_NESTED_EXIT_ONLY_MARKER=%q PI_VERIFY_NESTED_BOUNDARY_MARKER=%q PI_VERIFY_REASONING_UPSTREAM_MARKER=%q PI_VERIFY_REASONING_MODEL_MARKER=%q PI_VERIFY_REASONING_CONTAMINATION_MARKER=%q PI_VERIFY_USAGE_MARKER=%q PI_VERIFY_CLOCK_CONTROL=%q PI_VERIFY_CLOCK_APPLIED_MARKER=%q PI_VERIFY_CLOCK_PROVIDER_MARKER=%q PI_VERIFY_CLOCK_BRIDGE_MARKER=%q PI_VERIFY_CONCURRENCY_RELEASE=%q PI_VERIFY_CONCURRENCY_FIRST_MARKER=%q PI_VERIFY_CONCURRENCY_SECOND_MARKER=%q PI_VERIFY_PROVIDER_RUNNING_MARKER=%q PI_VERIFY_PROVIDER_PENDING_MARKER=%q PI_VERIFY_PROVIDER_FAILED_MARKER=%q PI_VERIFY_PROVIDER_PENDING_RELEASE=%q PI_VERIFY_PROVIDER_FAILED_RELEASE=%q PI_VERIFY_PROVIDER_FINAL_RELEASE=%q pi --offline --approve --no-context-files --no-skills --theme %q --session %q --model pi-work-step-ui-verify/faux-work-step' \
 	"$agent_dir" \
 	"$subagent_release" \
 	"$subagent_progress_release" \
@@ -847,6 +855,10 @@ printf -v pi_command \
 	"$reasoning_model_marker" \
 	"$reasoning_contamination_marker" \
 	"$usage_marker" \
+	"$clock_control" \
+	"$clock_applied_marker" \
+	"$clock_provider_marker" \
+	"$clock_bridge_marker" \
 	"$subagent_concurrency_release" \
 	"$subagent_concurrency_first_marker" \
 	"$subagent_concurrency_second_marker" \
@@ -858,6 +870,7 @@ printf -v pi_command \
 	"$provider_final_release" \
 	"$PI_VERIFY_THEME" \
 	"$verify_dir/subagent-session.jsonl"
+printf '%s\n' '1700000000000' > "$clock_control"
 tmux -L "$tmux_socket" new-session -d -s verify -x 120 -y 40 -c "$repo_root" "$pi_command"
 
 wait_for_subagent_initial() {
@@ -884,6 +897,20 @@ wait_for_fixture_file() {
 	local failure="$2"
 	for _ in {1..200}; do
 		if [[ -f "$path" ]]; then
+			return
+		fi
+		sleep 0.1
+	done
+	echo "$failure" >&2
+	return 1
+}
+
+wait_for_fixture_value() {
+	local path="$1"
+	local expected="$2"
+	local failure="$3"
+	for _ in {1..200}; do
+		if [[ -f "$path" && "$(tail -n 1 "$path")" == "$expected" ]]; then
 			return
 		fi
 		sleep 0.1
@@ -930,6 +957,8 @@ wait_for_subagent_setup() {
 }
 
 wait_for_terminal "faux-work-step" "Native subagent setup failure (process start): Pi did not reach the fixture model prompt"
+wait_for_fixture_file "$clock_provider_marker" "Verifier structural clock provider was not installed before the parent renderer"
+wait_for_fixture_value "$clock_applied_marker" "1700000000000" "Verifier clock did not apply t0"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "subagent composition"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
 wait_for_subagent_initial
@@ -962,6 +991,14 @@ toggle_and_capture C-t "$subagent_running_thinking_hidden_t_then_o_capture"
 toggle_and_capture C-o "$subagent_running_both_hidden_t_then_o_capture"
 toggle_and_capture C-t "$subagent_running_output_hidden_t_then_o_capture"
 toggle_and_capture C-o "$subagent_running_both_restored_t_then_o_capture"
+printf '%s\n' '1700000001000' > "$clock_control"
+wait_for_fixture_value "$clock_applied_marker" "1700000001000" "Verifier clock did not advance to t1"
+toggle_and_capture C-o "$subagent_running_t1_hidden_capture"
+toggle_and_capture C-o "$subagent_running_t1_capture"
+printf '%s\n' '1700000000000' > "$clock_control"
+wait_for_fixture_value "$clock_applied_marker" "1700000000000" "Verifier clock did not return to t0"
+toggle_and_capture C-o "$subagent_running_t0_returned_hidden_capture"
+toggle_and_capture C-o "$subagent_running_t0_returned_capture"
 touch "$subagent_release"
 wait_for_terminal \
 	"VERIFY_SUBAGENT_COMPOSITION_DONE" \
@@ -970,6 +1007,7 @@ wait_for_fixture_file "$reasoning_upstream_marker" "Raw reasoning sentinel did n
 wait_for_fixture_file "$reasoning_model_marker" "Raw reasoning was not discarded before render-model construction"
 wait_for_fixture_file "$usage_marker" "Native result usage/context normalization marker was not recorded"
 wait_for_fixture_file "$nested_boundary_marker" "Normalized nested ownership boundary marker was not recorded"
+wait_for_fixture_file "$clock_bridge_marker" "Connected bridge was not observed through the real native renderer"
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$subagent_collapsed_capture"
 tmux -L "$tmux_socket" send-keys -t verify:0.0 C-o
 wait_for_terminal \
@@ -1035,7 +1073,7 @@ wait_for_terminal "23 ctx" "Restored old-shaped provider result lost its availab
 tmux -L "$tmux_socket" capture-pane -e -p -S - -t verify:0.0 > "$provider_restored_capture"
 stop_tmux
 
-node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" "$nested_exit_only_marker" "$subagent_running_output_hidden_capture" "$subagent_running_output_restored_capture" "$subagent_running_thinking_hidden_o_then_t_capture" "$subagent_running_both_hidden_o_then_t_capture" "$subagent_running_both_restored_o_then_t_capture" "$subagent_running_thinking_hidden_t_then_o_capture" "$subagent_running_both_hidden_t_then_o_capture" "$subagent_running_output_hidden_t_then_o_capture" "$subagent_running_both_restored_t_then_o_capture" "$subagent_recollapsed_capture" "$reasoning_upstream_marker" "$reasoning_model_marker" "$reasoning_contamination_marker" "$usage_marker" "$provider_restored_capture" "$nested_boundary_marker" <<'NODE'
+node - "$subagent_spec" "$subagent_initial_capture" "$subagent_running_capture" "$subagent_collapsed_capture" "$subagent_expanded_capture" "$subagent_empty_capture" "$subagent_failed_empty_capture" "$subagent_concurrency_capture" "$subagent_concurrency_pre_release" "$provider_running_capture" "$provider_pending_capture" "$provider_failed_capture" "$real_execute_marker" "$real_child_marker" "$real_main_spawn_marker" "$real_event_marker" "$nested_exit_only_marker" "$subagent_running_output_hidden_capture" "$subagent_running_output_restored_capture" "$subagent_running_thinking_hidden_o_then_t_capture" "$subagent_running_both_hidden_o_then_t_capture" "$subagent_running_both_restored_o_then_t_capture" "$subagent_running_thinking_hidden_t_then_o_capture" "$subagent_running_both_hidden_t_then_o_capture" "$subagent_running_output_hidden_t_then_o_capture" "$subagent_running_both_restored_t_then_o_capture" "$subagent_recollapsed_capture" "$reasoning_upstream_marker" "$reasoning_model_marker" "$reasoning_contamination_marker" "$usage_marker" "$provider_restored_capture" "$nested_boundary_marker" "$subagent_running_t1_capture" "$subagent_running_t0_returned_capture" "$clock_provider_marker" "$clock_bridge_marker" "$clock_applied_marker" <<'NODE'
 const fs = require("node:fs");
 
 const spec = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
@@ -1112,6 +1150,11 @@ const reasoningContaminationPath = process.argv[31];
 const usageCoverage = JSON.parse(fs.readFileSync(process.argv[32], "utf8"));
 const providerRestored = parseTerminal(process.argv[33]);
 const nestedBoundaryCoverage = JSON.parse(fs.readFileSync(process.argv[34], "utf8"));
+const runningT1 = parseTerminal(process.argv[35]);
+const runningT0Returned = parseTerminal(process.argv[36]);
+const clockProviderCoverage = JSON.parse(fs.readFileSync(process.argv[37], "utf8"));
+const clockBridgeCoverage = fs.readFileSync(process.argv[38], "utf8").trim().split("\n").filter(Boolean).map(JSON.parse);
+const clockAppliedCoverage = fs.readFileSync(process.argv[39], "utf8").trim().split("\n").filter(Boolean).map(Number);
 const failures = [];
 const check = (condition, message) => {
 	if (!condition) failures.push(message);
@@ -1126,6 +1169,57 @@ const colorsInCommand = (terminal, command, token) => {
 		: Array.from({ length: token.length }, (_, offset) => terminal.foregrounds[index + offset]);
 };
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+const stripSgr = (value) => value.replace(/\u001b\[[0-9;]*m/gu, "");
+const connectedActivitySlice = (terminal, state, usage) => {
+	const rawLines = terminal.raw.split("\n");
+	const plainLines = rawLines.map((line) => stripSgr(line).replace(/\r$/u, ""));
+	const headers = plainLines
+		.map((line, index) => ({ line, index }))
+		.filter(({ line, index }) =>
+			/1 step · 1 call · (?:running|all passed|failed)$/u.test(line) &&
+			plainLines[index + 1]?.includes("Delegate deterministic subagent verification"),
+		);
+	check(headers.length === 1, `${state} did not expose exactly one structural connected Activity boundary`);
+	const start = headers[0]?.index ?? -1;
+	const end = plainLines.findIndex((line, index) =>
+		index >= start &&
+		line.includes(usage.tokenDisplay) &&
+		line.includes(usage.costDisplay) &&
+		line.includes(usage.contextDisplay),
+	);
+	check(start >= 0 && end >= start, `${state} did not end at its exact connected metrics/summary line`);
+	const boundedRawLines = start >= 0 && end >= start ? rawLines.slice(start, end + 1) : [];
+	const boundedPlainLines = start >= 0 && end >= start ? plainLines.slice(start, end + 1) : [];
+	check(
+		boundedRawLines.length > 0 && boundedRawLines.length < rawLines.length,
+		`${state} structural slice did not exclude unrelated whole-pane rows`,
+	);
+	return {
+		raw: boundedRawLines.join("\n"),
+		plainLines: boundedPlainLines,
+	};
+};
+const withoutThinkingRows = (slice) => slice.raw
+	.split("\n")
+	.filter((line) => {
+		const plain = stripSgr(line);
+		return !plain.includes(spec.parentThinking) && !plain.includes(spec.real.thinkingText);
+	})
+	.join("\n");
+const durationMs = (value) => {
+	if (/^\d+ms$/u.test(value)) return Number(value.slice(0, -2));
+	if (/^\d+\.\d+s$/u.test(value)) return Number(value.slice(0, -1)) * 1000;
+	const minutes = value.match(/^(\d+)m(\d+)s$/u);
+	return minutes ? Number(minutes[1]) * 60000 + Number(minutes[2]) * 1000 : Number.NaN;
+};
+const connectedTimers = (slice) => new Map(slice.plainLines.flatMap((line) => {
+	const match = line.match(/^(.*) · (\d+ms|\d+\.\d+s|\d+m\d+s)$/u);
+	if (!match || (!match[1].includes("⟳") && !match[1].includes("✓"))) return [];
+	return [[match[1], {
+		value: durationMs(match[2]),
+		running: match[1].includes("⟳") || match[1].includes("· running"),
+	}]];
+}));
 const isConnectedToolNode = (line, shell, nested = false) => new RegExp(
 	`^${nested ? "       │  │  " : "       "}[├└]─ (?:⟳ ${escapeRegExp(shell)} · 1 command · running|✓ ${escapeRegExp(shell)} · 1 command · completed) · (?:\\d+ms|\\d+\\.\\d+s|\\d+m\\d+s)$`,
 	"u",
@@ -1140,6 +1234,42 @@ const legacyPackageHeaders = (terminal, agent, model) => {
 		index: (match.index ?? 0) + match[0].indexOf(match[1]),
 	}));
 };
+check(
+	clockProviderCoverage.token === spec.clock.token &&
+	clockProviderCoverage.nowIdentityStable === true &&
+	clockProviderCoverage.value === spec.clock.t0 &&
+	clockProviderCoverage.finite === true,
+	"Verifier structural clock provider identity or initial finite value differed",
+);
+check(
+	clockBridgeCoverage.length > 0 &&
+	clockBridgeCoverage.every((observation) =>
+		observation.providerToken === spec.clock.token &&
+		observation.providerIdentityStable === true &&
+		observation.nowIdentityStable === true &&
+		observation.clockIdentityMatches === true &&
+		observation.clockValue === observation.expectedValue &&
+		observation.finite === true,
+	),
+	"Connected clock bridge did not bind the exact verifier-owned finite now function",
+);
+const firstClockToolCallId = clockBridgeCoverage[0]?.toolCallId;
+check(
+	Boolean(firstClockToolCallId) &&
+	clockBridgeCoverage.filter(({ toolCallId }) => toolCallId === firstClockToolCallId).length === 1,
+	"Connected clock bridge identity changed across the genuine live component lifecycle",
+);
+const appliedT0 = clockAppliedCoverage.indexOf(spec.clock.t0);
+const appliedT1 = clockAppliedCoverage.indexOf(spec.clock.t1, appliedT0 + 1);
+const returnedT0 = clockAppliedCoverage.indexOf(spec.clock.t0, appliedT1 + 1);
+check(
+	appliedT0 >= 0 && appliedT1 > appliedT0 && returnedT0 > appliedT1,
+	"Verifier clock did not apply the exact ordered t0→t1→t0 lifecycle",
+);
+console.log(
+	`Verifier structural clock marker: token=${spec.clock.token} t0=${spec.clock.t0} t1=${spec.clock.t1} ` +
+	`provider_identity=true whole_pane_acceptance=false`,
+);
 const connectedHeaders = (terminal, agent, status, nested = false) => {
 	const identity = nested
 		? `${agent} · nested agent · ${status}`
@@ -1560,22 +1690,56 @@ for (const [state, terminal] of [
 	check(!terminal.plain.includes(spec.parentThinking), `${state} retained parent thinking after Ctrl+T`);
 	check(!terminal.plain.includes(spec.real.thinkingText), `${state} retained safe semantic Thinking… after Ctrl+T`);
 }
-check(running.raw === runningOutputRestored.raw, "Same-clock Ctrl+O restoration did not reproduce running-live bytes");
-check(running.raw === runningBothRestoredOThenT.raw, "Ctrl+O→Ctrl+T restoration did not reproduce running-live bytes");
-check(running.raw === runningBothRestoredTThenO.raw, "Ctrl+T→Ctrl+O restoration did not reproduce running-live bytes");
-check(runningBothHiddenOThenT.raw === runningBothHiddenTThenO.raw, "Both toggle orders did not commute to identical hidden bytes");
-check(collapsed.raw === recollapsed.raw, "Completed recollapse did not reproduce prior collapsed bytes");
-const withoutThinking = (value) => value
-	.split(/\r?\n/u)
-	.filter((line) => !line.includes(spec.parentThinking) && !line.includes(spec.real.thinkingText))
-	.join("\n");
+const runningSlice = connectedActivitySlice(running, "running-live", spec.usage.running);
+const runningOutputHiddenSlice = connectedActivitySlice(runningOutputHidden, "running-output-hidden", spec.usage.running);
+const runningOutputRestoredSlice = connectedActivitySlice(runningOutputRestored, "running-output-restored", spec.usage.running);
+const runningThinkingHiddenOThenTSlice = connectedActivitySlice(runningThinkingHiddenOThenT, "running-thinking-hidden-o-then-t", spec.usage.running);
+const runningBothHiddenOThenTSlice = connectedActivitySlice(runningBothHiddenOThenT, "running-both-hidden-o-then-t", spec.usage.running);
+const runningBothRestoredOThenTSlice = connectedActivitySlice(runningBothRestoredOThenT, "running-both-restored-o-then-t", spec.usage.running);
+const runningThinkingHiddenTThenOSlice = connectedActivitySlice(runningThinkingHiddenTThenO, "running-thinking-hidden-t-then-o", spec.usage.running);
+const runningBothHiddenTThenOSlice = connectedActivitySlice(runningBothHiddenTThenO, "running-both-hidden-t-then-o", spec.usage.running);
+const runningOutputHiddenTThenOSlice = connectedActivitySlice(runningOutputHiddenTThenO, "running-output-hidden-t-then-o", spec.usage.running);
+const runningBothRestoredTThenOSlice = connectedActivitySlice(runningBothRestoredTThenO, "running-both-restored-t-then-o", spec.usage.running);
+const runningT1Slice = connectedActivitySlice(runningT1, "running-live-t1", spec.usage.running);
+const runningT0ReturnedSlice = connectedActivitySlice(runningT0Returned, "running-live-t0-returned", spec.usage.running);
+const collapsedSlice = connectedActivitySlice(collapsed, "completed-collapsed", spec.usage.settled);
+const recollapsedSlice = connectedActivitySlice(recollapsed, "completed-recollapsed", spec.usage.settled);
+check(runningSlice.raw === runningOutputRestoredSlice.raw, "Same-clock Ctrl+O Activity slice restoration did not reproduce running-live bytes");
+check(runningSlice.raw === runningBothRestoredOThenTSlice.raw, "Ctrl+O→Ctrl+T Activity slice restoration did not reproduce running-live bytes");
+check(runningSlice.raw === runningBothRestoredTThenOSlice.raw, "Ctrl+T→Ctrl+O Activity slice restoration did not reproduce running-live bytes");
+check(runningSlice.raw === runningT0ReturnedSlice.raw, "Returned-t0 genuine Activity slice did not reproduce running-live bytes");
+check(runningBothHiddenOThenTSlice.raw === runningBothHiddenTThenOSlice.raw, "Both toggle orders did not commute to identical hidden Activity bytes");
+check(collapsedSlice.raw === recollapsedSlice.raw, "Completed Activity recollapse did not reproduce prior collapsed bytes");
 check(
-	withoutThinking(running.plain) === withoutThinking(runningThinkingHiddenOThenT.plain),
-	"Ctrl+T changed presentation outside owned thinking rows",
+	withoutThinkingRows(runningSlice) === withoutThinkingRows(runningThinkingHiddenOThenTSlice),
+	"Ctrl+T changed Activity bytes outside owned thinking rows",
 );
 check(
-	withoutThinking(runningOutputHidden.plain) === withoutThinking(runningBothHiddenOThenT.plain),
-	"Ctrl+T changed output-hidden presentation outside owned thinking rows",
+	withoutThinkingRows(runningOutputHiddenSlice) === withoutThinkingRows(runningBothHiddenOThenTSlice),
+	"Ctrl+T changed output-hidden Activity bytes outside owned thinking rows",
+);
+const t0Timers = connectedTimers(runningSlice);
+const t1Timers = connectedTimers(runningT1Slice);
+const liveTimers = [...t0Timers].filter(([, timer]) => timer.running);
+const completedTimers = [...t0Timers].filter(([, timer]) => !timer.running);
+check(liveTimers.length >= 2, "Clock probe did not include multiple live connected timers");
+check(completedTimers.length >= 1, "Clock probe did not include a frozen completed child timer");
+check(
+	liveTimers.every(([identity, timer]) =>
+		t1Timers.has(identity) && t1Timers.get(identity).value === timer.value + 1000,
+	),
+	"Advancing verifier clock t0→t1 did not advance every live Activity timer exactly one second",
+);
+check(
+	completedTimers.every(([identity, timer]) =>
+		t1Timers.has(identity) && t1Timers.get(identity).value === timer.value,
+	),
+	"Advancing verifier clock changed a completed child timer",
+);
+check(runningSlice.raw !== runningT1Slice.raw, "Genuine t1 invalidation left the live Activity slice byte-identical");
+console.log(
+	`Connected Activity slice marker: raw_ansi=true bounded_header_to_metrics=true whole_pane=false ` +
+	`live_timers=${liveTimers.length} completed_timers=${completedTimers.length}`,
 );
 for (const [state, terminal] of [
 	["provider-running", providerRunning],

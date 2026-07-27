@@ -37,6 +37,18 @@ requireCompleteTriple("parent", [expectedParentCommit, expectedParentTree, expec
 requireCompleteTriple("native", [expectedProductCommit, expectedProductTree, expectedProductBlob]);
 
 const model = JSON.parse(readFileSync(modelPath, "utf8"));
+const clockSourceSymbol = Symbol.for("aviral.pi.work-step-renderer.clock-source");
+const clockSource = {
+	token: "T22.V02.structural-clock.v1",
+	value: model.contract.t0,
+	now: () => clockSource.value,
+};
+globalThis[clockSourceSymbol] = clockSource;
+if (
+	globalThis[clockSourceSymbol] !== clockSource ||
+	globalThis[clockSourceSymbol].now !== clockSource.now ||
+	!Number.isFinite(clockSource.now())
+) fail("verifier structural clock provider identity or initial value differs");
 const parentCommit = git(repoRoot, "rev-parse", "HEAD");
 const parentTree = git(repoRoot, "rev-parse", "HEAD^{tree}");
 const parentBlob = git(repoRoot, "rev-parse", "HEAD:pi/.pi/agent/extensions/tool-call-renderer.ts");
@@ -349,10 +361,14 @@ if (
 ) fail("nested ownership fixture is not distinct and exact");
 
 let lifecycleInvalidations = 0;
+let clockInvalidations = 0;
+let clockAdvances = 0;
+const clockBehaviorFailures = new Set();
 const workStepSymbol = Symbol.for("aviral.pi.work-step-renderer.step");
+const bridgeSymbol = Symbol.for("aviral.pi.work-step-renderer.subagent-bridge");
 const scenarios = new Map();
 const createScenario = (item, width = model.contract.width) => {
-	Date.now = () => item.clock;
+	clockSource.value = item.clock;
 	Object.defineProperty(process.stdout, "columns", { configurable: true, value: width + 4 });
 	handlers.get("session_shutdown")?.();
 	handlers.get("agent_start")?.();
@@ -402,6 +418,13 @@ const createScenario = (item, width = model.contract.width) => {
 	const step = assistant[workStepSymbol];
 	if (!step || tool[workStepSymbol] !== step)
 		fail(`real parent state did not bind the same work-step node for ${item.sequence}`);
+	const bridge = tool.rendererState?.[bridgeSymbol];
+	if (
+		bridge?.layout !== "connected" ||
+		bridge.clock !== clockSource.now ||
+		!Number.isFinite(bridge.clock?.()) ||
+		bridge.clock?.() !== item.clock
+	) clockBehaviorFailures.add("bridge-binding");
 	return {
 		assistant,
 		tool,
@@ -418,10 +441,12 @@ const createScenario = (item, width = model.contract.width) => {
 			usage: item.result.usage,
 		}),
 		step,
+		bridge,
 		run: step.run,
 		group: step.group,
 		outputVisible: initialOutputVisible,
 		thinkingHidden: false,
+		clockValue: item.clock,
 		width,
 	};
 };
@@ -432,6 +457,7 @@ const assertScenarioIdentity = (scenario, item) => {
 		scenario.usage !== scenario.result.usage ||
 		scenario.assistant[workStepSymbol] !== scenario.step ||
 		scenario.tool[workStepSymbol] !== scenario.step ||
+		scenario.tool.rendererState?.[bridgeSymbol] !== scenario.bridge ||
 		scenario.step.run !== scenario.run ||
 		scenario.step.group !== scenario.group ||
 		scenario.stateSnapshot !== JSON.stringify({
@@ -450,8 +476,20 @@ const renderCase = (item, width = model.contract.width, isolated = false) => {
 		scenario = createScenario(item, width);
 		if (!isolated) scenarios.set(item.sequence, scenario);
 	}
-	Date.now = () => item.clock;
+	const previousClock = scenario.clockValue;
+	clockSource.value = item.clock;
 	Object.defineProperty(process.stdout, "columns", { configurable: true, value: width + 4 });
+	if (previousClock !== item.clock) {
+		const renderCount = nativeCallRenders + nativeResultRenders;
+		scenario.tool.invalidate();
+		scenario.tool.ui.requestRender();
+		if (nativeCallRenders + nativeResultRenders <= renderCount)
+			fail(`genuine clock invalidation did not rebuild native renderers for ${item.name}`);
+		if (previousClock === model.contract.t0 && item.clock === model.contract.t1)
+			clockAdvances++;
+		clockInvalidations++;
+		scenario.clockValue = item.clock;
+	}
 	if (scenario.outputVisible !== item.outputVisible) {
 		scenario.tool.setExpanded(item.outputVisible);
 		scenario.outputVisible = item.outputVisible;
@@ -461,6 +499,11 @@ const renderCase = (item, width = model.contract.width, isolated = false) => {
 		scenario.thinkingHidden = item.thinkingHidden;
 	}
 	assertScenarioIdentity(scenario, item);
+	if (
+		scenario.bridge?.clock !== clockSource.now ||
+		!Number.isFinite(scenario.bridge?.clock?.()) ||
+		scenario.bridge?.clock?.() !== item.clock
+	) clockBehaviorFailures.add("bridge-value");
 	return Buffer.from(`${scenario.tool.render(width).join("\n")}\n`, "utf8");
 };
 
@@ -700,7 +743,9 @@ console.log(
 );
 console.log(
 	`T22.V02 deterministic inputs: width=${model.contract.width} control_width=${model.contract.controlWidth} ` +
-	`t0=${model.contract.t0} t1=${model.contract.t1} width_probe_differs=true`,
+	`t0=${model.contract.t0} t1=${model.contract.t1} width_probe_differs=true ` +
+	`clock_provider_token=${clockSource.token} date_now_authority=false ` +
+	`genuine_clock_invalidations=${clockInvalidations} t0_t1_advances=${clockAdvances}`,
 );
 console.log(
 	`T22.V02 same-instance toggles: sequences=${[...scenarios.keys()].join(",")} ` +
@@ -734,7 +779,11 @@ if (
 	git(productDir, "hash-object", productPath) !== productBlob ||
 	git(productDir, "status", "--porcelain=v1", "--untracked-files=all") !== ""
 ) fail("production identity or cleanliness changed after rendering");
-if (mismatches.length) {
+if (clockInvalidations < 2 || clockAdvances < 2)
+	fail("genuine same-component running/completed clock invalidation coverage was not observed");
+if (clockBehaviorFailures.size)
+	console.error(`T22.V02 mismatch category=clock-bridge failures=${[...clockBehaviorFailures].join(",")}`);
+if (mismatches.length || clockBehaviorFailures.size) {
 	console.error(`T22.V02 baseline mismatches (${mismatches.length}): ${mismatches.join(",")}`);
 	process.exit(1);
 }

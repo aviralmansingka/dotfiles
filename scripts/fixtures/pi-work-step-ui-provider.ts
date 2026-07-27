@@ -8,7 +8,7 @@ import {
 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { appendFileSync, existsSync, watch, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, watch, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { Type } from "typebox";
 import registerNativeSubagents from "../native/pi-subagents/index.ts";
@@ -16,6 +16,16 @@ import registerNativeSubagents from "../native/pi-subagents/index.ts";
 const PROVIDER = "pi-work-step-ui-verify";
 const MODEL = "faux-work-step";
 const STATE = Symbol.for("aviral.pi.work-step-verifier-state");
+const CLOCK_SOURCE = Symbol.for("aviral.pi.work-step-renderer.clock-source");
+const CLOCK_SOURCE_TOKEN = "T22.V01.structural-clock.v1";
+const CLOCK_T0 = 1700000000000;
+const CLOCK_T1 = 1700000001000;
+const verifierClock = {
+	token: CLOCK_SOURCE_TOKEN,
+	value: CLOCK_T0,
+	now: () => verifierClock.value,
+};
+(globalThis as any)[CLOCK_SOURCE] = verifierClock;
 
 type VerifyState = { responseIndex: number };
 
@@ -264,6 +274,11 @@ const SUBAGENT_SPEC = {
 		reasoningSentinel: SUBAGENT_PROVIDER_REASONING_SENTINEL,
 		falseSuccess: SUBAGENT_PROVIDER_FALSE_SUCCESS,
 		queuedText: "Queued…",
+	},
+	clock: {
+		token: CLOCK_SOURCE_TOKEN,
+		t0: CLOCK_T0,
+		t1: CLOCK_T1,
 	},
 };
 
@@ -672,6 +687,30 @@ function writeFixtureMarker(environmentName: string, value: string): void {
 	writeFileSync(markerPath, `${value}\n`, "utf8");
 }
 
+function installVerifierClockControl(): void {
+	const controlPath = process.env.PI_VERIFY_CLOCK_CONTROL;
+	const appliedPath = process.env.PI_VERIFY_CLOCK_APPLIED_MARKER;
+	if (!controlPath || !appliedPath) return;
+	writeFixtureMarker("PI_VERIFY_CLOCK_PROVIDER_MARKER", JSON.stringify({
+		token: verifierClock.token,
+		nowIdentityStable: (globalThis as any)[CLOCK_SOURCE]?.now === verifierClock.now,
+		value: verifierClock.now(),
+		finite: Number.isFinite(verifierClock.now()),
+	}));
+	const apply = () => {
+		if (!existsSync(controlPath)) return;
+		const value = Number(readFileSync(controlPath, "utf8").trim());
+		if (!Number.isFinite(value)) {
+			writeFixtureMarker("PI_VERIFY_SUBAGENT_EXCEPTION_MARKER", "Verifier clock control was not finite");
+			return;
+		}
+		verifierClock.value = value;
+		appendFileSync(appliedPath, `${value}\n`, "utf8");
+	};
+	watch(dirname(controlPath), apply);
+	apply();
+}
+
 function containsRawReasoning(value: unknown): boolean {
 	if (typeof value === "string")
 		return value.includes(SUBAGENT_REASONING_SENTINEL) ||
@@ -731,6 +770,33 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 	registerNativeSubagents(intercepted);
 	if (!nativeTool?.execute || !nativeTool?.renderCall || !nativeTool?.renderResult)
 		throw new Error("Active pi-subagents package did not register its native renderers");
+	const bridgeSymbol = Symbol.for("aviral.pi.work-step-renderer.subagent-bridge");
+	const observedBridges = new WeakSet<object>();
+	const observeClockBridge = (context: any) => {
+		const bridge = context?.state?.[bridgeSymbol];
+		const markerPath = process.env.PI_VERIFY_CLOCK_BRIDGE_MARKER;
+		if (!markerPath || !bridge || typeof bridge !== "object" || observedBridges.has(bridge)) return;
+		observedBridges.add(bridge);
+		const source = (globalThis as any)[CLOCK_SOURCE];
+		const clockValue = typeof bridge.clock === "function" ? bridge.clock() : null;
+		appendFileSync(markerPath, `${JSON.stringify({
+			toolCallId: context.toolCallId,
+			providerToken: source?.token,
+			providerIdentityStable: source === verifierClock,
+			nowIdentityStable: source?.now === verifierClock.now,
+			clockIdentityMatches: bridge.clock === verifierClock.now,
+			clockValue,
+			expectedValue: verifierClock.now(),
+			finite: Number.isFinite(clockValue),
+		})}\n`, "utf8");
+	};
+	for (const renderer of ["renderCall", "renderResult"] as const) {
+		const render = nativeTool[renderer];
+		nativeTool[renderer] = (...args: any[]) => {
+			observeClockBridge(args.at(-1));
+			return render.apply(nativeTool, args);
+		};
+	}
 	const childPath = process.env.PI_VERIFY_REAL_CHILD;
 	if (!childPath) return nativeTool;
 	writeFileSync(childPath, REAL_CHILD_SOURCE, { encoding: "utf8", mode: 0o700 });
@@ -860,6 +926,7 @@ function loadNativeSubagentTool(pi: ExtensionAPI): any {
 }
 
 export default function piWorkStepUiProvider(pi: ExtensionAPI) {
+	installVerifierClockControl();
 	const faux = fauxProvider({
 		provider: PROVIDER,
 		models: [{ id: MODEL, name: "Pi Work-Step UI Faux", reasoning: true, contextWindow: 8192 }],
