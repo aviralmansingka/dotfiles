@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.aviral.no-mistakes</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-c</string>
+    <string>exec "$HOME/bin/no-mistakes-daemon" daemon</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>NO_MISTAKES_TELEMETRY</key>
+    <string>0</string>
+    <key>NO_MISTAKES_NO_UPDATE_CHECK</key>
+    <string>1</string>
+  </dict>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+</dict>
+</plist>

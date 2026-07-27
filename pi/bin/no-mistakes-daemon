@@ -1,0 +1,40 @@
+#!/bin/sh
+set -eu
+
+fail() {
+  printf 'no-mistakes-daemon: %s\n' "$*" >&2
+  exit 1
+}
+
+# NO_MISTAKES_MANAGED_HOME lets the live verifier retain the installed Pi and
+# No Mistakes binaries while replacing HOME and NM_HOME with owned scratch
+# directories. The LaunchAgent leaves it unset, so its managed home is HOME.
+managed_home=${NO_MISTAKES_MANAGED_HOME:-$HOME}
+case "$managed_home" in
+  /*) ;;
+  *) fail 'managed home must be an absolute path' ;;
+esac
+
+export NO_MISTAKES_TELEMETRY=0
+export NO_MISTAKES_NO_UPDATE_CHECK=1
+export NM_HOME=${NM_HOME:-$managed_home/.no-mistakes}
+export PI_CODING_AGENT_DIR=$managed_home/.pi/agent
+export PATH=$managed_home/.local/bin:$managed_home/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
+
+no_mistakes=$managed_home/.local/bin/no-mistakes
+[ -x "$no_mistakes" ] || fail "pinned binary is not executable: $no_mistakes"
+
+case ${1:-} in
+  daemon)
+    [ "$#" -eq 1 ] || fail 'daemon takes no arguments'
+    exec "$no_mistakes" daemon start
+    ;;
+  exec)
+    shift
+    [ "$#" -gt 0 ] || fail 'exec requires a command'
+    exec "$@"
+    ;;
+  *)
+    fail 'usage: no-mistakes-daemon {daemon|exec COMMAND [ARG ...]}'
+    ;;
+esac

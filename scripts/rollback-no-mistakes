@@ -58,6 +58,13 @@ restart_daemon() {
         launchctl kickstart -k "$label"
         return
       fi
+      # Use the same owned environment wrapper as the LaunchAgent when it has
+      # been stowed but not yet bootstrapped.
+      wrapper=$HOME/bin/no-mistakes-daemon
+      if [ -x "$wrapper" ]; then
+        "$wrapper" daemon
+        return
+      fi
       ;;
     Linux)
       if command -v systemctl >/dev/null 2>&1 && systemctl --user is-enabled no-mistakes.service >/dev/null 2>&1; then

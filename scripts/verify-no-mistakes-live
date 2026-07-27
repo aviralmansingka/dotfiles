@@ -1,0 +1,236 @@
+#!/bin/sh
+set -eu
+
+VERSION=v1.41.2
+REVISION=867d64d9c2df89f3f204ad1f5528e5bf7b460caa
+CHECKSUMS_SHA256=e17cc7a246bc619f34d423848171e734c5fe033106562db8baeb20de2570a01b
+DARWIN_ARM64_SHA256=59c3963d925db27886dece99aef30e873b978cee1c297bac1f1632854271effe
+LABEL=com.aviral.no-mistakes
+
+fail() {
+  printf 'verify-no-mistakes-live: %s\n' "$*" >&2
+  exit 1
+}
+
+sha256() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    fail 'no SHA-256 implementation found'
+  fi
+}
+
+has_exact_version() {
+  hev_binary=$1
+  hev_wanted=$2
+  hev_output=$($hev_binary --version 2>/dev/null) || return 1
+  for hev_token in $hev_output; do
+    hev_token=$(printf '%s' "$hev_token" | tr -d ',;()[]')
+    if [ "$hev_token" = "$hev_wanted" ] || [ "$hev_token" = "${hev_wanted#v}" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+[ "${NO_MISTAKES_VERIFY_LIVE:-}" = 1 ] || \
+  fail 'refusing live verification unless NO_MISTAKES_VERIFY_LIVE=1'
+[ "$#" -eq 1 ] || fail 'usage: verify-no-mistakes-live macos'
+[ "$1" = macos ] || fail "unsupported live target: $1"
+[ "$(uname -s)" = Darwin ] || fail 'macos verification requires Darwin'
+[ "$(uname -m)" = arm64 ] || fail 'macos verification requires arm64'
+[ "$(id -u)" -ne 0 ] || fail 'refusing to run a user-service probe as root'
+command -v launchctl >/dev/null 2>&1 || fail 'launchctl is required'
+command -v plutil >/dev/null 2>&1 || fail 'plutil is required'
+command -v git >/dev/null 2>&1 || fail 'git is required'
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
+[ "$(git -C "$repo_root" rev-parse --show-toplevel 2>/dev/null)" = "$repo_root" ] || \
+  fail "not a Git worktree root: $repo_root"
+
+managed_home=$(CDPATH= cd -- "$HOME" && pwd -P)
+no_mistakes=$managed_home/.local/bin/no-mistakes
+manifest=$managed_home/.local/state/no-mistakes-installer/current.manifest
+canonical_skill=$managed_home/.agents/skills/no-mistakes/SKILL.md
+wrapper=$managed_home/bin/no-mistakes-daemon
+deployed_plist=$managed_home/Library/LaunchAgents/$LABEL.plist
+source_wrapper=$repo_root/pi/bin/no-mistakes-daemon
+source_plist=$repo_root/launchd/Library/LaunchAgents/$LABEL.plist
+service=gui/$(id -u)/$LABEL
+
+[ -x "$no_mistakes" ] || fail "pinned binary is not executable: $no_mistakes"
+[ -f "$manifest" ] || fail "installation manifest is missing: $manifest"
+[ -f "$canonical_skill" ] || fail "canonical generated skill is missing: $canonical_skill"
+[ -x "$wrapper" ] || fail "managed daemon wrapper is not deployed: $wrapper"
+[ -f "$deployed_plist" ] || fail "LaunchAgent is not deployed: $deployed_plist"
+cmp -s "$source_wrapper" "$wrapper" || fail 'deployed daemon wrapper differs from this worktree'
+cmp -s "$source_plist" "$deployed_plist" || fail 'deployed LaunchAgent differs from this worktree'
+plutil -lint "$deployed_plist" >/dev/null || fail 'deployed LaunchAgent is invalid'
+[ "$(plutil -extract EnvironmentVariables.NO_MISTAKES_TELEMETRY raw -o - "$deployed_plist")" = 0 ] || \
+  fail 'LaunchAgent does not disable telemetry'
+[ "$(plutil -extract EnvironmentVariables.NO_MISTAKES_NO_UPDATE_CHECK raw -o - "$deployed_plist")" = 1 ] || \
+  fail 'LaunchAgent does not disable update checks'
+
+launch_state=$(mktemp /private/tmp/no-mistakes-launch-state.XXXXXX)
+expected_manifest=$launch_state.manifest
+probe_root=
+probe_daemon=0
+cleanup() {
+  cleanup_status=$?
+  trap - EXIT HUP INT TERM
+  rm -f "$launch_state" "$expected_manifest"
+  if [ "$probe_daemon" = 1 ] && [ -n "$probe_root" ] && [ -x "$wrapper" ]; then
+    NO_MISTAKES_MANAGED_HOME=$managed_home \
+      HOME=$probe_root/home NM_HOME=$probe_root/state NM_TEST_START_DAEMON=1 \
+      "$wrapper" exec "$no_mistakes" daemon stop --force >/dev/null 2>&1 || cleanup_status=1
+  fi
+  if [ -n "$probe_root" ]; then
+    case "$probe_root" in
+      /private/tmp/no-mistakes-live-macos.*)
+        rm -rf "$probe_root" || cleanup_status=1
+        ;;
+      *)
+        printf 'verify-no-mistakes-live: refusing cleanup outside owned scratch root: %s\n' \
+          "$probe_root" >&2
+        cleanup_status=1
+        ;;
+    esac
+  fi
+  exit "$cleanup_status"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+launchctl print "$service" > "$launch_state" 2>&1 || fail "LaunchAgent is not loaded: $service"
+grep -F "$LABEL" "$launch_state" >/dev/null || fail 'loaded job has the wrong label'
+grep -F 'no-mistakes-daemon' "$launch_state" >/dev/null || fail 'loaded job does not use the owned wrapper'
+grep -E 'NO_MISTAKES_TELEMETRY[[:space:]]*=>[[:space:]]*0([[:space:]]|$)' "$launch_state" >/dev/null || \
+  fail 'loaded job does not disable telemetry'
+grep -E 'NO_MISTAKES_NO_UPDATE_CHECK[[:space:]]*=>[[:space:]]*1([[:space:]]|$)' "$launch_state" >/dev/null || \
+  fail 'loaded job does not disable update checks'
+
+actual_binary_sha=$(sha256 "$no_mistakes")
+[ "$actual_binary_sha" = "$DARWIN_ARM64_SHA256" ] || \
+  fail "binary SHA-256 mismatch: expected $DARWIN_ARM64_SHA256, got $actual_binary_sha"
+has_exact_version "$no_mistakes" "$VERSION" || fail "binary did not report exact version $VERSION"
+
+{
+  printf 'version=%s\n' "$VERSION"
+  printf 'sha256=%s\n' "$DARWIN_ARM64_SHA256"
+  printf 'platform=darwin-arm64\n'
+  printf 'source=https://github.com/kunchenguid/no-mistakes/releases/download/%s/no-mistakes-darwin-arm64\n' "$VERSION"
+  printf 'source_revision=%s\n' "$REVISION"
+  printf 'checksums_sha256=%s\n' "$CHECKSUMS_SHA256"
+} > "$expected_manifest"
+if ! cmp -s "$expected_manifest" "$manifest"; then
+  rm -f "$expected_manifest"
+  fail 'installed manifest does not exactly match the declared Darwin pin'
+fi
+rm -f "$expected_manifest"
+canonical_skill_sha=$(sha256 "$canonical_skill")
+
+probe_root=$(mktemp -d /private/tmp/no-mistakes-live-macos.XXXXXX)
+probe_home=$probe_root/home
+probe_state=$probe_root/state
+probe_repo=$probe_root/repo
+probe_origin=$probe_root/origin.git
+mkdir -p "$probe_home" "$probe_state"
+
+# Every live command below crosses the exact wrapper used by the loaded job.
+# Only HOME/NM_HOME are replaced, so the daemon, repository state, and skill
+# generated by init remain disposable while Pi's real installation is retained.
+run_managed() {
+  NO_MISTAKES_MANAGED_HOME=$managed_home \
+    HOME=$probe_home NM_HOME=$probe_state NM_TEST_START_DAEMON=1 \
+    PI_CODING_AGENT_DIR=$managed_home/.pi/agent \
+    GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND=/usr/bin/false \
+    GIT_CONFIG_COUNT=5 \
+    GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always \
+    GIT_CONFIG_KEY_1=protocol.http.allow GIT_CONFIG_VALUE_1=never \
+    GIT_CONFIG_KEY_2=protocol.https.allow GIT_CONFIG_VALUE_2=never \
+    GIT_CONFIG_KEY_3=protocol.ssh.allow GIT_CONFIG_VALUE_3=never \
+    GIT_CONFIG_KEY_4=protocol.git.allow GIT_CONFIG_VALUE_4=never \
+    "$wrapper" exec "$@"
+}
+
+run_managed /usr/bin/env > "$probe_root/managed-environment"
+grep -Fx 'NO_MISTAKES_TELEMETRY=0' "$probe_root/managed-environment" >/dev/null || \
+  fail 'managed probe environment did not disable telemetry'
+grep -Fx 'NO_MISTAKES_NO_UPDATE_CHECK=1' "$probe_root/managed-environment" >/dev/null || \
+  fail 'managed probe environment did not disable update checks'
+grep -Fx "PI_CODING_AGENT_DIR=$managed_home/.pi/agent" "$probe_root/managed-environment" >/dev/null || \
+  fail 'managed probe environment does not select the native Pi installation'
+grep -Fx "NM_HOME=$probe_state" "$probe_root/managed-environment" >/dev/null || \
+  fail 'managed probe environment escaped the scratch No Mistakes home'
+
+pi_path=$(run_managed /bin/sh -c 'command -v pi')
+[ -n "$pi_path" ] && [ -x "$pi_path" ] || fail 'native pi is not discoverable in the managed PATH'
+case "$pi_path" in
+  *acpx*|*codex*) fail "managed agent is not native pi: $pi_path" ;;
+esac
+run_managed "$pi_path" --version > "$probe_root/pi-version"
+
+printf 'agent: pi\n' > "$probe_state/config.yaml"
+git init -q --bare "$probe_origin"
+git init -q -b main "$probe_repo"
+git -C "$probe_repo" config user.name 'No Mistakes live verifier'
+git -C "$probe_repo" config user.email 'no-mistakes-live@example.invalid'
+printf 'one\n' > "$probe_repo/value.txt"
+git -C "$probe_repo" add value.txt
+git -C "$probe_repo" commit -qm 'add initial value'
+git -C "$probe_repo" remote add origin "$probe_origin"
+git -C "$probe_repo" push -qu origin main
+git -C "$probe_repo" switch -qc verify/no-mistakes-live
+printf 'two\n' >> "$probe_repo/value.txt"
+git -C "$probe_repo" commit -qam 'append second value'
+origin_before=$(git -C "$probe_origin" for-each-ref --format='%(refname) %(objectname)' | LC_ALL=C sort | sha256 /dev/stdin)
+
+probe_daemon=1
+(cd "$probe_repo" && run_managed "$no_mistakes" init) > "$probe_root/init.out" 2>&1 || {
+  cat "$probe_root/init.out" >&2
+  fail 'No Mistakes init failed in the managed environment'
+}
+probe_skill=$probe_home/.agents/skills/no-mistakes/SKILL.md
+[ -f "$probe_skill" ] || fail 'pinned init did not generate the canonical user-level skill'
+probe_skill_sha=$(sha256 "$probe_skill")
+[ "$probe_skill_sha" = "$canonical_skill_sha" ] || \
+  fail 'installed skill differs from the skill freshly generated by the pinned binary'
+[ ! -e "$probe_repo/.agents/skills/no-mistakes/SKILL.md" ] || \
+  fail 'init created a forbidden repository-local Pi skill'
+
+(cd "$probe_repo" && run_managed "$no_mistakes" doctor) > "$probe_root/doctor.out" 2>&1 || {
+  cat "$probe_root/doctor.out" >&2
+  fail 'no-mistakes doctor failed in the managed environment'
+}
+cat "$probe_root/doctor.out"
+
+if ! (cd "$probe_repo" && run_managed "$no_mistakes" axi run --yes \
+  --intent 'Append a second line containing two to value.txt while preserving the existing first line.' \
+  --skip test,document,lint,push,pr,ci) > "$probe_root/axi-run.out" 2>&1; then
+  cat "$probe_root/axi-run.out" >&2
+  fail 'synthetic native-Pi AXI review failed'
+fi
+cat "$probe_root/axi-run.out"
+(cd "$probe_repo" && run_managed "$no_mistakes" axi status) > "$probe_root/axi-status.out" 2>&1 || {
+  cat "$probe_root/axi-status.out" >&2
+  fail 'synthetic AXI status failed'
+}
+cat "$probe_root/axi-status.out"
+grep -F 'outcome: passed' "$probe_root/axi-status.out" >/dev/null || \
+  fail 'synthetic native-Pi AXI review did not pass'
+
+origin_after=$(git -C "$probe_origin" for-each-ref --format='%(refname) %(objectname)' | LC_ALL=C sort | sha256 /dev/stdin)
+[ "$origin_after" = "$origin_before" ] || fail 'AXI mutated the scratch remote despite push being skipped'
+[ "$(sha256 "$canonical_skill")" = "$canonical_skill_sha" ] || \
+  fail 'live probe mutated the installed canonical skill'
+
+printf 'ok: managed macOS LaunchAgent environment disables telemetry and update checks\n'
+printf 'ok: no-mistakes %s darwin-arm64 pin and source revision %s\n' "$VERSION" "$REVISION"
+printf 'ok: generated Pi skill provenance sha256=%s\n' "$canonical_skill_sha"
+printf 'ok: doctor, native Pi discovery (%s), and disposable AXI review passed\n' "$pi_path"
+printf 'ok: scratch-only local remote was unchanged; push, PR, and CI were skipped\n'
