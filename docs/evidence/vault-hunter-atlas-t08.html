@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>T08 D Faithful Journal · reviewed release evidence</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #282828;
+      --panel: #32302f;
+      --deep: #1d2021;
+      --text: #ebdbb2;
+      --bright: #fbf1c7;
+      --muted: #a89984;
+      --line: #665c54;
+      --orange: #f28534;
+      --yellow: #e9b143;
+      --green: #b8bb26;
+      --aqua: #80aa9e;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body {
+      min-width: 0;
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--text);
+      background: linear-gradient(180deg, #3c3836 0, var(--bg) 28rem), var(--bg);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      line-height: 1.5;
+    }
+
+    .shell {
+      width: min(calc(100% - 2rem), 112rem);
+      min-width: 0;
+      margin-inline: auto;
+      padding: 1rem 0 3rem;
+    }
+
+    .artifact-bar {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: .65rem .9rem;
+      border: 1px solid var(--line);
+      border-bottom-color: var(--aqua);
+      background: var(--deep);
+      color: var(--bright);
+      font-size: .78rem;
+    }
+    .artifact-bar span:last-child { color: var(--aqua); }
+
+    header, main, section, figure, .facts, .fact, .review-grid, .terminal,
+    .terminal-viewport, .integrity-list, .integrity-list div { min-width: 0; }
+
+    .hero {
+      padding: clamp(2rem, 6vw, 5rem) clamp(.75rem, 4vw, 4rem) 2.25rem;
+      border-inline: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(242, 133, 52, .07), transparent 55%);
+    }
+
+    .eyebrow {
+      margin: 0 0 .65rem;
+      color: var(--yellow);
+      font-size: .75rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p, dd, li { overflow-wrap: anywhere; }
+    h1 {
+      max-width: 31ch;
+      margin: 0;
+      color: var(--bright);
+      font-size: clamp(1.85rem, 4.7vw, 4.7rem);
+      line-height: 1.04;
+      letter-spacing: -.045em;
+    }
+    h2 {
+      margin: 0;
+      color: var(--bright);
+      font-size: clamp(1.4rem, 3vw, 2.4rem);
+      line-height: 1.15;
+    }
+    h3 { margin: 0 0 .85rem; color: var(--bright); font-size: 1rem; }
+    .green { color: var(--green); }
+    .pending { color: var(--yellow); }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1px;
+      margin: 2rem 0 0;
+      padding: 1px;
+      background: var(--line);
+    }
+    .fact { padding: .9rem 1rem; background: var(--panel); }
+    .fact dt, .integrity-list dt {
+      margin: 0 0 .3rem;
+      color: var(--aqua);
+      font-size: .7rem;
+      font-weight: 800;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .fact dd { margin: 0; color: var(--bright); font-size: .82rem; }
+
+    section {
+      padding: clamp(2.5rem, 6vw, 5rem) 0;
+      border-top: 1px solid var(--line);
+    }
+    .section-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .index { flex: none; color: var(--orange); font-size: .76rem; font-weight: 800; }
+
+    .reference {
+      margin: 0;
+      border: 1px solid var(--line);
+      background: var(--deep);
+      box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, .25);
+    }
+    .reference img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-bottom: 1px solid var(--line);
+    }
+    figcaption { padding: .8rem 1rem; color: var(--text); font-size: .8rem; }
+    .evidence-label {
+      color: var(--yellow);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .runtime-label { color: var(--green); }
+
+    .mapping-note, .capped-note {
+      margin: 0 0 1rem;
+      padding: .8rem 1rem;
+      border-left: .25rem solid var(--aqua);
+      background: var(--panel);
+      font-size: .82rem;
+    }
+    code { color: var(--bright); font: inherit; }
+    .goldens { display: grid; gap: 1.5rem; }
+    .golden { margin: 0; }
+
+    .terminal {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-top-color: var(--aqua);
+      background: var(--deep);
+      box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .18);
+    }
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: .58rem .75rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--bright);
+      font-size: .73rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+    .terminal-bar span:first-child { color: var(--green); }
+    .terminal-bar span:last-child { color: var(--aqua); text-align: right; }
+    .terminal-viewport {
+      max-width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scrollbar-color: var(--muted) var(--deep);
+    }
+    pre {
+      width: max-content;
+      min-width: 100%;
+      margin: 0;
+      padding: 1rem;
+      color: var(--text);
+      background: transparent;
+      font: 500 clamp(.66rem, .72vw, .82rem)/1.48 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      tab-size: 2;
+      white-space: pre;
+    }
+    .size-134 pre { min-width: max(100%, 134ch); }
+    .size-80 pre { min-width: max(100%, 80ch); }
+
+    .ansi-fg-128-170-158 { color: rgb(128, 170, 158); }
+    .ansi-fg-146-131-116 { color: rgb(146, 131, 116); }
+    .ansi-fg-184-187-38 { color: rgb(184, 187, 38); }
+    .ansi-fg-211-134-155 { color: rgb(211, 134, 155); }
+    .ansi-fg-233-177-67 { color: rgb(233, 177, 67); }
+    .ansi-fg-235-219-178 { color: rgb(235, 219, 178); }
+    .ansi-fg-242-89-75 { color: rgb(242, 89, 75); }
+    .ansi-fg-242-133-52 { color: rgb(242, 133, 52); }
+    .ansi-fg-251-241-199 { color: rgb(251, 241, 199); }
+    .golden figcaption { padding-inline: .25rem; }
+    a { color: var(--aqua); text-underline-offset: .18em; }
+    a:hover { color: var(--bright); }
+
+    .proof-stack { display: grid; gap: 1.5rem; }
+    .proof-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-top-color: var(--orange);
+      background: var(--panel);
+    }
+    .proof-head {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      padding: .85rem 1rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--deep);
+    }
+    .proof-id {
+      flex: none;
+      padding: .25rem .45rem;
+      border-radius: .2rem;
+      color: var(--deep);
+      background: var(--orange);
+      font-weight: 900;
+    }
+    .proof-head h3 { margin: 0; }
+    .proof-pass { margin-left: auto; color: var(--green); font-size: .78rem; font-weight: 800; }
+    .proof-diagram { padding: 1rem; overflow-x: auto; background: var(--bg); }
+    .proof-diagram svg { display: block; width: 100%; height: auto; min-width: 42rem; }
+    .svg-bg { fill: #282828; }
+    .svg-panel { fill: #32302f; stroke: #665c54; stroke-width: 2; }
+    .svg-pass { fill: #353d25; stroke: #b8bb26; stroke-width: 2; }
+    .svg-term { fill: #1d2021; stroke: #80aa9e; stroke-width: 2; }
+    .svg-title { fill: #fbf1c7; font: 700 17px ui-monospace, monospace; }
+    .svg-text { fill: #ebdbb2; font: 13px ui-monospace, monospace; }
+    .svg-small { fill: #a89984; font: 12px ui-monospace, monospace; }
+    .svg-green { fill: #b8bb26; font: 700 13px ui-monospace, monospace; }
+    .svg-aqua { fill: #80aa9e; font: 700 13px ui-monospace, monospace; }
+    .svg-orange { fill: #f28534; font: 700 13px ui-monospace, monospace; }
+    .svg-yellow { fill: #e9b143; font: 700 13px ui-monospace, monospace; }
+    .svg-line { fill: none; stroke: #80aa9e; stroke-width: 3; }
+    .proof-copy {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      padding: 1rem;
+      border-top: 1px solid var(--line);
+      font-size: .82rem;
+    }
+    .proof-copy h3 { margin: 0 0 .45rem; color: var(--yellow); font-size: .76rem; letter-spacing: .08em; text-transform: uppercase; }
+    .proof-copy p { margin: 0; }
+    .leave-out { padding-left: 1rem; border-left: 1px solid var(--line); }
+
+    .review-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+      gap: 1rem;
+    }
+    .panel {
+      min-width: 0;
+      padding: clamp(1rem, 3vw, 1.5rem);
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .72rem 1.2rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: .86rem;
+    }
+    .checklist li { position: relative; min-width: 0; padding-left: 1.15rem; }
+    .checklist li::before {
+      position: absolute;
+      left: 0;
+      content: "◆";
+      color: var(--yellow);
+      font-size: .62rem;
+      line-height: 2.2;
+    }
+    .integrity-list { display: grid; gap: .75rem; margin: 0; }
+    .integrity-list div { padding-bottom: .72rem; border-bottom: 1px solid var(--line); }
+    .integrity-list div:last-child { padding-bottom: 0; border: 0; }
+    .integrity-list dd { margin: 0; color: var(--bright); font-size: .77rem; }
+
+    .request {
+      padding: clamp(2rem, 5vw, 4rem);
+      border: 1px solid var(--orange);
+      background: var(--deep);
+      text-align: center;
+    }
+    .request p:last-child {
+      max-width: 52ch;
+      margin: .85rem auto 0;
+      color: var(--bright);
+      font-size: clamp(1rem, 2.2vw, 1.3rem);
+      font-weight: 800;
+    }
+    footer { padding-top: 1.2rem; color: var(--muted); font-size: .74rem; text-align: center; }
+
+    @media (max-width: 68rem) {
+      .review-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 46rem) {
+      .shell { width: min(calc(100% - 1rem), 112rem); padding-top: .5rem; }
+      .artifact-bar, .section-heading, .terminal-bar { align-items: flex-start; flex-direction: column; }
+      .artifact-bar span:last-child, .terminal-bar span:last-child { text-align: left; }
+      .hero { padding-inline: .75rem; }
+      .facts, .checklist, .proof-copy { grid-template-columns: minmax(0, 1fr); }
+      .proof-head { align-items: flex-start; flex-wrap: wrap; }
+      .proof-pass { width: 100%; margin-left: 0; }
+      .leave-out { padding: 1rem 0 0; border-left: 0; border-top: 1px solid var(--line); }
+      pre { padding: .75rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="artifact-bar" aria-label="Artifact context">
+      <span>vault-hunter · T08 · durable reviewed release evidence</span>
+      <span>standalone · dependency-free · read-only</span>
+    </div>
+
+    <header class="hero">
+      <p class="eyebrow">Reviewed production release evidence</p>
+      <h1>D Faithful Journal · <span class="green">V01/V02 green and human approved</span></h1>
+      <dl class="facts">
+        <div class="fact">
+          <dt>Reviewed product</dt>
+          <dd>38a5f8920a5bae76b19f02357a9be35b7fe93a79<br>tree 8da61d3027153654266b4223dca8e4de7d7d072f</dd>
+        </div>
+        <div class="fact">
+          <dt>Production checks</dt>
+          <dd><code>scripts/verify-vault-hunter-atlas T08.V01</code> · exit 0<br><code>scripts/verify-vault-hunter-atlas T08.V02</code> · exit 0</dd>
+        </div>
+        <div class="fact">
+          <dt>Decision state</dt>
+          <dd><span class="green">determinism, interaction, semantic color, bounds, and read-only authority green</span><br><span class="green">production D artifact human approved</span></dd>
+        </div>
+      </dl>
+    </header>
+
+    <main>
+      <section aria-labelledby="reference-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Original screenshot</p>
+            <h2 id="reference-heading">Composition target</h2>
+          </div>
+          <span class="index">01 / REFERENCE</span>
+        </div>
+        <figure class="reference">
+          <img src="../images/vault-hunter-tui/execution-journal.jpg" width="1342" height="672" alt="Original Execution Journal screenshot: a dark terminal journal with slim title and goal bars, a centered chronological rail, event details, and a keyboard footer.">
+          <figcaption><span class="evidence-label">V01 composition target — not runtime evidence</span> · <a href="../images/vault-hunter-tui/execution-journal.jpg">Exact unchanged tracked reference image</a> (SHA-256 <code>7d8a37d47971db2bb4993bdf2f20d3eae4930cfe446aaa3b4d7479fbc5c95801</code>), used only to review hierarchy, density, rail rhythm, selected-detail treatment, and footer composition.</figcaption>
+        </figure>
+      </section>
+
+      <section aria-labelledby="runtime-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Exact production output</p>
+            <h2 id="runtime-heading">D Faithful Journal raw ANSI goldens</h2>
+          </div>
+          <span class="index">02 / RUNTIME</span>
+        </div>
+        <p class="mapping-note"><span class="evidence-label runtime-label">V01 exact production runtime evidence · V02 visible-frame cross-check</span> · These frames are generated from the literal repository golden bytes. Every allowed <code>ESC[38;2;r;g;bm</code> opens the matching RGB CSS span and every <code>ESC[0m</code> resets it. No terminal text is inserted, removed, shortened, or normalized: each browser <code>pre</code> text equals its ANSI-stripped UTF-8 bytes exactly, including its final newline. V01 byte-compares both sizes twice; V02 reconstructs the attached PTY and requires the initial 80×24 visible frame to equal the approved static D semantics before navigation and 134×32 resize checks.</p>
+
+        <div class="goldens">
+          <figure class="golden size-134">
+            <div class="terminal">
+              <div class="terminal-bar"><span>PRODUCTION RUNTIME EVIDENCE · EXACT RAW ANSI MAPPING</span><span>journal-134x32.txt · 134×32</span></div>
+              <div class="terminal-viewport" role="region" aria-label="134 by 32 production journal golden; horizontally scrollable when needed">
+                <pre id="golden-134"><span class="ansi-fg-242-133-52">vault-hunter journal</span><span class="ansi-fg-235-219-178">  T08 Build the Execution Journal</span>                                                    <span class="ansi-fg-146-131-116">Run </span><span class="ansi-fg-235-219-178">atlas-journal-run</span><span class="ansi-fg-146-131-116"> · rev 8</span>
+<span class="ansi-fg-251-241-199">selected recorded journey · projection, not authority</span>                                               <span class="ansi-fg-146-131-116">5 lifecycle · 3 evidence · 8 total</span>
+<span class="ansi-fg-146-131-116">──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span>
+<span class="ansi-fg-242-133-52">/goal </span><span class="ansi-fg-235-219-178">T08.REVIEW</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-233-177-67">active</span>                                                                        <span class="ansi-fg-146-131-116">shown later: </span><span class="ansi-fg-235-219-178">T08.HIDDEN → T08.LANDING</span>
+<span class="ansi-fg-242-133-52">review</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">tie-life-second</span>
+<span class="ansi-fg-146-131-116">──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span>
+<span class="ansi-fg-146-131-116">Feature </span><span class="ansi-fg-235-219-178">1_projects/pi-agent/themes/pi-customization/features/vaul</span><span class="ansi-fg-235-219-178">…</span>     <span class="ansi-fg-146-131-116">updated_at 2026-07-26T10:04:00Z · timestamp gaps, not durations</span>
+                          <span class="ansi-fg-146-131-116">└─ … 8 recorded journal events omitted (3 earlier, 0 later)</span>
+                          <span class="ansi-fg-242-89-75">●</span><span class="ansi-fg-146-131-116">  Jul 26 10:01 UTC · </span><span class="ansi-fg-211-134-155">E</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-128-170-158">T08.V01</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-242-89-75">failed</span><span class="ansi-fg-146-131-116"> · +0s since prior</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-211-134-155">verifier</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-128-170-158">T08.V01</span>
+                          <span class="ansi-fg-146-131-116">│  └─ detail · </span><span class="ansi-fg-235-219-178">tie-evidence-first</span>
+                          <span class="ansi-fg-146-131-116">●</span><span class="ansi-fg-146-131-116">  Jul 26 10:01 UTC · </span><span class="ansi-fg-211-134-155">E</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-128-170-158">T08.V02</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-146-131-116">future-evidence-state</span><span class="ansi-fg-146-131-116"> ?</span><span class="ansi-fg-146-131-116"> · +0s since prior</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-211-134-155">verifier</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-128-170-158">T08.V02</span>
+                          <span class="ansi-fg-146-131-116">│  └─ detail · </span><span class="ansi-fg-235-219-178">tie-evidence-second</span>
+                          <span class="ansi-fg-233-177-67">●</span><span class="ansi-fg-146-131-116">  Jul 26 10:01 UTC · </span><span class="ansi-fg-242-133-52">L</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-242-133-52">checkpoint</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-233-177-67">pending</span><span class="ansi-fg-146-131-116"> · +30s since prior</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">goal</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">T08.HIDDEN</span>
+                          <span class="ansi-fg-146-131-116">│  └─ detail · </span><span class="ansi-fg-235-219-178">visible-hidden</span>
+                          <span class="ansi-fg-184-187-38">●</span><span class="ansi-fg-146-131-116">  Jul 26 10:02 UTC · </span><span class="ansi-fg-211-134-155">E</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-128-170-158">T08.V01</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-184-187-38">passed</span><span class="ansi-fg-146-131-116"> · +30s since prior</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-211-134-155">verifier</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-128-170-158">T08.V01</span>
+                          <span class="ansi-fg-146-131-116">│  └─ detail · </span><span class="ansi-fg-235-219-178">instant-middle</span>
+                          <span class="ansi-fg-233-177-67">●</span><span class="ansi-fg-146-131-116">  Jul 26 10:03 UTC · </span><span class="ansi-fg-242-133-52">L</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-242-133-52">landing</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-233-177-67">pending</span><span class="ansi-fg-146-131-116"> · +1m since prior</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-251-241-199">selected</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">goal</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">T08.LANDING</span>
+                          <span class="ansi-fg-146-131-116">│  └─ detail · </span><span class="ansi-fg-235-219-178">instant-later</span>
+                          <span class="ansi-fg-146-131-116">│  ┌─ </span><span class="ansi-fg-251-241-199">selected recorded observation</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-242-133-52">lifecycle</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">timestamp</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-146-131-116">2026-07-26T10:03:00Z</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">observation ID</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">life-later</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">Goal ID</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">T08.LANDING</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">kind</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-242-133-52">landing</span>
+                          <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">state</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-233-177-67">pending</span>
+                          <span class="ansi-fg-146-131-116">│  └─ </span><span class="ansi-fg-242-133-52">detail</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">instant-later</span>
+<span class="ansi-fg-146-131-116">──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span>
+<span class="ansi-fg-146-131-116">g/G first/last · j/k/↑/↓ records · v/V verifier · e/E evidence · enter detail · q/Esc quit</span>
+</pre>
+              </div>
+            </div>
+            <figcaption><strong>V01 + V02 · <a href="../../scripts/goldens/vault-hunter-atlas/journal-134x32.txt">134×32 production golden</a>.</strong> Preferred-width D composition with truthful active and shown-later goals, centered T22 rail, five visible status nodes, selected card, and full navigation footer. Raw SHA-256 <code>21b4fb3309cdd7a21addf75f8b898a1199f85f5f44104d5a68c322e7c1993ad5</code>; stripped <code>06bcfede2e10cc5e76059bb28679f92f2eb482471ccff6edac9fa87414c7d5aa</code>.</figcaption>
+          </figure>
+
+          <p class="capped-note"><strong>Why 80×24 is shorter:</strong> the production renderer intentionally caps the narrow terminal to 24 rows and preserves the selected D composition through a contiguous two-event viewport plus the exact omission count. It does not reproduce the throwaway prototype’s 46 rows; this is deliberate bounded production behavior, not missing evidence.</p>
+
+          <figure class="golden size-80">
+            <div class="terminal">
+              <div class="terminal-bar"><span>PRODUCTION RUNTIME EVIDENCE · EXACT RAW ANSI MAPPING</span><span>journal-80x24.txt · 80×24 capped</span></div>
+              <div class="terminal-viewport" role="region" aria-label="80 by 24 capped production journal golden; horizontally scrollable when needed">
+                <pre id="golden-80"><span class="ansi-fg-242-133-52">vault-hunter journal</span><span class="ansi-fg-235-219-178">  T08 Build the Ex</span><span class="ansi-fg-235-219-178">…</span>            <span class="ansi-fg-146-131-116">Run </span><span class="ansi-fg-235-219-178">atlas-journal-run</span><span class="ansi-fg-146-131-116"> · rev 8</span>
+<span class="ansi-fg-251-241-199">selected recorded journey · projection</span><span class="ansi-fg-251-241-199">…</span>       <span class="ansi-fg-146-131-116">5 lifecycle · 3 evidence · 8 total</span>
+<span class="ansi-fg-146-131-116">────────────────────────────────────────────────────────────────────────────────</span>
+<span class="ansi-fg-242-133-52">/goal </span><span class="ansi-fg-235-219-178">T08.REVIEW</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-233-177-67">active</span>                               <span class="ansi-fg-146-131-116">shown later: </span><span class="ansi-fg-235-219-178">T08.LANDING</span>
+<span class="ansi-fg-242-133-52">review</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">tie-life-second</span>
+<span class="ansi-fg-146-131-116">────────────────────────────────────────────────────────────────────────────────</span>
+<span class="ansi-fg-146-131-116">Feature </span><span class="ansi-fg-235-219-178">1_projects/pi-agent/themes/pi-</span><span class="ansi-fg-235-219-178">…</span> <span class="ansi-fg-146-131-116">updated_at 2026-07-26T10:04:00Z · times</span><span class="ansi-fg-146-131-116">…</span>
+ <span class="ansi-fg-146-131-116">└─ … 8 recorded journal events omitted (6 earlier, 0 later)</span>
+ <span class="ansi-fg-184-187-38">●</span><span class="ansi-fg-146-131-116">  Jul 26 10:02 UTC · </span><span class="ansi-fg-211-134-155">E</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-128-170-158">T08.V01</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-184-187-38">passed</span><span class="ansi-fg-146-131-116"> · +30s since prior</span>
+ <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-211-134-155">verifier</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-128-170-158">T08.V01</span>
+ <span class="ansi-fg-146-131-116">│  └─ detail · </span><span class="ansi-fg-235-219-178">instant-middle</span>
+ <span class="ansi-fg-233-177-67">●</span><span class="ansi-fg-146-131-116">  Jul 26 10:03 UTC · </span><span class="ansi-fg-242-133-52">L</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-242-133-52">landing</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-233-177-67">pending</span><span class="ansi-fg-146-131-116"> · +1m since prior</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-251-241-199">selected</span>
+ <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">goal</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">T08.LANDING</span>
+ <span class="ansi-fg-146-131-116">│  └─ detail · </span><span class="ansi-fg-235-219-178">instant-later</span>
+ <span class="ansi-fg-146-131-116">│  ┌─ </span><span class="ansi-fg-251-241-199">selected recorded observation</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-242-133-52">lifecycle</span>
+ <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">timestamp</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-146-131-116">2026-07-26T10:03:00Z</span>
+ <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">observation ID</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">life-later</span>
+ <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">Goal ID</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">T08.LANDING</span>
+ <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">kind</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-242-133-52">landing</span>
+ <span class="ansi-fg-146-131-116">│  ├─ </span><span class="ansi-fg-242-133-52">state</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-233-177-67">pending</span>
+ <span class="ansi-fg-146-131-116">│  └─ </span><span class="ansi-fg-242-133-52">detail</span><span class="ansi-fg-146-131-116"> · </span><span class="ansi-fg-235-219-178">instant-later</span>
+
+<span class="ansi-fg-146-131-116">────────────────────────────────────────────────────────────────────────────────</span>
+<span class="ansi-fg-146-131-116">g/G ends · j/k move · v/V verifier · e/E evidence · enter detail · q quit</span>
+</pre>
+              </div>
+            </div>
+            <figcaption><strong>V01 + V02 · <a href="../../scripts/goldens/vault-hunter-atlas/journal-80x24.txt">80×24 production golden</a>.</strong> Exact capped D composition: 24 rows, contiguous latest-event context, six-earlier/zero-later omission truth, selected card, and compact footer. Raw SHA-256 <code>ceb47f597b9be5c12f9fc55dfa1fc7ba75532b59271d918bed5d0bd00c832dd4</code>; stripped <code>4280501260629c501ca6279be981afcead8ade542eff2a78a5bea6ac58d49d62</code>.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section aria-labelledby="verifier-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Reviewed verifier explainer</p>
+            <h2 id="verifier-heading">What V01 and V02 actually prove</h2>
+          </div>
+          <span class="index">03 / VERIFIERS</span>
+        </div>
+
+        <div class="proof-stack">
+          <article class="proof-card" id="v01">
+            <div class="proof-head"><span class="proof-id">V01</span><h3>Exact deterministic D projection</h3><span class="proof-pass">● PASS · EXIT 0</span></div>
+            <div class="proof-diagram">
+              <svg viewBox="0 0 1000 320" role="img" aria-labelledby="v01-svg-title v01-svg-desc">
+                <title id="v01-svg-title">V01 deterministic projection flow</title>
+                <desc id="v01-svg-desc">The immutable run fixture is projected with deterministic ordering, omission counts, and timestamp gaps into exact 134 by 32 and 80 by 24 ANSI goldens; repeated output and pinned raw and stripped hashes must match.</desc>
+                <defs><marker id="v01-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#80aa9e"/></marker></defs>
+                <rect class="svg-bg" width="1000" height="320" rx="10"/>
+                <text class="svg-small" x="24" y="28">$ scripts/verify-vault-hunter-atlas T08.V01</text>
+                <rect class="svg-panel" x="24" y="58" width="245" height="150" rx="9"/>
+                <text class="svg-title" x="46" y="90">Run record</text>
+                <text class="svg-aqua" x="46" y="120">registry fixture · rev 8</text>
+                <text class="svg-text" x="46" y="148">5 lifecycle + 3 evidence</text>
+                <text class="svg-text" x="46" y="174">timestamps · goals · states</text>
+                <path class="svg-line" d="M269 133 L355 133" marker-end="url(#v01-arrow)"/>
+                <rect class="svg-term" x="367" y="45" width="266" height="176" rx="9"/>
+                <text class="svg-title" x="389" y="77">D projection</text>
+                <text class="svg-orange" x="389" y="107">stable observed-time order</text>
+                <text class="svg-text" x="389" y="135">truthful shown-later goals</text>
+                <text class="svg-text" x="389" y="161">exact omission counts</text>
+                <text class="svg-text" x="389" y="187">gaps, never durations</text>
+                <path class="svg-line" d="M633 133 L719 133" marker-end="url(#v01-arrow)"/>
+                <rect class="svg-pass" x="731" y="58" width="245" height="150" rx="9"/>
+                <text class="svg-title" x="753" y="90">Exact frames</text>
+                <text class="svg-green" x="753" y="120">134×32 · byte exact ✓</text>
+                <text class="svg-green" x="753" y="148">80×24 · byte exact ✓</text>
+                <text class="svg-text" x="753" y="176">raw + stripped pins ✓</text>
+                <rect class="svg-term" x="196" y="252" width="608" height="45" rx="7"/>
+                <text class="svg-green" x="218" y="280">PASS</text>
+                <text class="svg-text" x="274" y="280">render #1 == render #2 == repository golden</text>
+              </svg>
+            </div>
+            <div class="proof-copy">
+              <div><h3>Proof</h3><p><code>scripts/verify-vault-hunter-atlas T08.V01</code> exits 0. It validates only accepted true-color SGR, final-newline and row bounds, raw and stripped SHA-256 pins, focused Go projection tests, repeat determinism, and exact byte equality to both production goldens.</p></div>
+              <div class="leave-out"><h3>Deliberately leaves out</h3><p>V01 does not claim that the reference screenshot is runtime output, exercise attached-terminal keys, or grant write authority. Those interaction and authority boundaries belong to V02.</p></div>
+            </div>
+          </article>
+
+          <article class="proof-card" id="v02">
+            <div class="proof-head"><span class="proof-id">V02</span><h3>Bounded PTY navigation, semantic color, and read-only authority</h3><span class="proof-pass">● PASS · EXIT 0</span></div>
+            <div class="proof-diagram">
+              <svg viewBox="0 0 1000 340" role="img" aria-labelledby="v02-svg-title v02-svg-desc">
+                <title id="v02-svg-title">V02 interactive PTY and authority flow</title>
+                <desc id="v02-svg-desc">An attached 80 by 24 PTY checks the approved initial frame and semantic Gruvbox colors, navigates and toggles detail, resizes to 134 by 32, and quits; immutable Registry and vault manifests and zero-byte orchestration traps prove read-only authority, followed by T02 regression checks.</desc>
+                <defs><marker id="v02-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#80aa9e"/></marker></defs>
+                <rect class="svg-bg" width="1000" height="340" rx="10"/>
+                <text class="svg-small" x="24" y="28">$ scripts/verify-vault-hunter-atlas T08.V02</text>
+                <rect class="svg-term" x="24" y="54" width="282" height="205" rx="9"/>
+                <text class="svg-title" x="46" y="86">Attached PTY · 80×24</text>
+                <text class="svg-green" x="46" y="116">initial D frame exact ✓</text>
+                <text class="svg-aqua" x="46" y="144">semantic true-color ✓</text>
+                <text class="svg-text" x="46" y="172">E · j · E · enter ×2</text>
+                <text class="svg-text" x="46" y="198">resize 134×32 · q</text>
+                <text class="svg-text" x="46" y="226">selection + card bounded</text>
+                <path class="svg-line" d="M306 156 L357 156" marker-end="url(#v02-arrow)"/>
+                <rect class="svg-panel" x="369" y="54" width="262" height="205" rx="9"/>
+                <text class="svg-title" x="391" y="86">Visible semantics</text>
+                <text class="svg-orange" x="391" y="116">lifecycle · accent</text>
+                <text class="svg-aqua" x="391" y="144">verifier ID · info</text>
+                <text class="svg-green" x="391" y="172">passed · success</text>
+                <text class="svg-yellow" x="391" y="200">pending · attention</text>
+                <text class="svg-text" x="391" y="228">muted rail · bright select</text>
+                <path class="svg-line" d="M631 156 L682 156" marker-end="url(#v02-arrow)"/>
+                <rect class="svg-pass" x="694" y="54" width="282" height="205" rx="9"/>
+                <text class="svg-title" x="716" y="86">Authority boundary</text>
+                <text class="svg-green" x="716" y="116">Registry unchanged ✓</text>
+                <text class="svg-green" x="716" y="144">vault unchanged ✓</text>
+                <text class="svg-green" x="716" y="172">trap bytes = 0 ✓</text>
+                <text class="svg-text" x="716" y="200">T08 V01 rerun ✓</text>
+                <text class="svg-text" x="716" y="228">T02 V01/V02/V03 ✓</text>
+                <rect class="svg-term" x="180" y="286" width="640" height="38" rx="7"/>
+                <text class="svg-green" x="202" y="311">PASS</text>
+                <text class="svg-text" x="258" y="311">bounded observer; no Herdr, Pi, Git, feedback, or resume call</text>
+              </svg>
+            </div>
+            <div class="proof-copy">
+              <div><h3>Proof</h3><p><code>scripts/verify-vault-hunter-atlas T08.V02</code> exits 0. It covers too-small and redirected modes, color policy, invalid routing, the attached PTY key sequence and resize, accessible color-independent text, selected-card semantics, immutable fixture/Registry/vault manifests, zero orchestration traps, focused T08 tests, V01, and all T02 regressions.</p></div>
+              <div class="leave-out"><h3>Deliberately leaves out</h3><p>V02 observes a copied fixture in isolated temporary state. It does not mutate canonical Registry or vault data, invoke orchestration tools, resume work, submit feedback, or claim the journal is authority.</p></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="review-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Selected-D decision scope</p>
+            <h2 id="review-heading">Acceptance checklist and integrity</h2>
+          </div>
+          <span class="index">04 / REVIEW</span>
+        </div>
+
+        <div class="review-grid">
+          <div class="panel">
+            <h3>Selected-D acceptance checklist</h3>
+            <ul class="checklist">
+              <li>Slim screenshot-derived title, goal, and metadata bars</li>
+              <li><code>selected recorded journey</code> label states projection, not authority</li>
+              <li>Active goal and width-aware <code>shown later</code> labels remain truthful</li>
+              <li>Centered T22 rail and circular status nodes preserve journal rhythm</li>
+              <li>Contiguous viewport and exact earlier/later omission count</li>
+              <li>Selected event has an inset recorded-observation card</li>
+              <li>Displayed deltas are timestamp gaps since prior, never durations</li>
+              <li>Width-specific keyboard footer remains visible</li>
+              <li>ANSI-stripped text is complete and color-independent</li>
+              <li>80×24 minimum, bounded navigation, and read-only authority hold</li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <h3>Integrity</h3>
+            <dl class="integrity-list">
+              <div>
+                <dt>Reviewed product commit / tree</dt>
+                <dd>38a5f8920a5bae76b19f02357a9be35b7fe93a79<br>8da61d3027153654266b4223dca8e4de7d7d072f</dd>
+              </div>
+              <div>
+                <dt>Final green transcript SHA-256 · V01 + V02</dt>
+                <dd>7259fbe234f5878107b7c4f11c49b681f9d927f40c5f9da74ce063cc74f426ba</dd>
+              </div>
+              <div>
+                <dt>Human-approved production artifact source · V01/V02 review</dt>
+                <dd><code>.lavish/08-build-execution-journal.html</code><br>SHA-256 b5bdda60dba117f127fb1f242dc226ec1b5db4663d2ea7907918cbee294659ce<br><span class="green">human approved</span></dd>
+              </div>
+              <div>
+                <dt>134×32 raw / ANSI-stripped SHA-256</dt>
+                <dd>21b4fb3309cdd7a21addf75f8b898a1199f85f5f44104d5a68c322e7c1993ad5<br>06bcfede2e10cc5e76059bb28679f92f2eb482471ccff6edac9fa87414c7d5aa</dd>
+              </div>
+              <div>
+                <dt>80×24 raw / ANSI-stripped SHA-256</dt>
+                <dd>ceb47f597b9be5c12f9fc55dfa1fc7ba75532b59271d918bed5d0bd00c832dd4<br>4280501260629c501ca6279be981afcead8ade542eff2a78a5bea6ac58d49d62</dd>
+              </div>
+              <div>
+                <dt>V02 unchanged manifests / traps</dt>
+                <dd>Registry pre-PTY, before/after, and final: f1d9c41717e490da4e7cc43d7825753b7b684af4f123de57829517c496315fa0<br>Vault pre-PTY, before/after, and final: 6e2e504bd2040c71aeb4063cb07e99b19beec32e8cd1d150f98215794acf5d82<br>Orchestration trap bytes at every checkpoint: 0</dd>
+              </div>
+              <div>
+                <dt>Reference composition target · V01 only</dt>
+                <dd><a href="../images/vault-hunter-tui/execution-journal.jpg">docs/images/vault-hunter-tui/execution-journal.jpg</a><br>SHA-256 7d8a37d47971db2bb4993bdf2f20d3eae4930cfe446aaa3b4d7479fbc5c95801<br>design comparison only; not runtime evidence</dd>
+              </div>
+              <div>
+                <dt>Independent final review · V01 + V02</dt>
+                <dd><span class="green">No material findings.</span> Product and verifier review completed before this evidence-only publication.</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="request-heading">
+        <div class="request">
+          <p class="eyebrow">Human decision recorded</p>
+          <h2 id="request-heading">Production D visual approval · approved</h2>
+          <p>Both production D goldens are human approved: the exact 134×32 frame and the exact capped 80×24 frame.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>T08 D Faithful Journal · durable V01/V02 release evidence · human approved · no external dependencies</footer>
+  </div>
+</body>
+</html>
