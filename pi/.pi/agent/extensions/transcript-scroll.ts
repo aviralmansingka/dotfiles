@@ -91,7 +91,7 @@ function renderExplicitWikilinks(text: string, vaultRoot: string): string {
 		const file = resolve(vaultRoot, extname(note) ? note : `${note}.md`);
 		const url = pathToFileURL(file);
 		if (fragment) url.hash = fragment;
-		return `[${alias ?? destination}](${url.href})`;
+		return `\x1b]8;;${url.href}\x1b\\${alias ?? destination}\x1b]8;;\x1b\\`;
 	});
 }
 
@@ -286,13 +286,8 @@ function install(tui: TUI, dim: (text: string) => string, setStatus: (key: strin
 			state.viewportEnd = 0;
 		}
 
-		for (const child of tui.children as Array<Component & { text?: string; setText?(text: string): void }>) {
-			if (typeof child.text !== "string" || !child.setText || !child.text.includes("[[")) continue;
-			const text = renderExplicitWikilinks(child.text, adapterState.current.vaultRoot);
-			if (text !== child.text) child.setText(text);
-		}
 		const rendered = tui.children.map((child) => child.render(width));
-		const allLines = compactRenderedLinks(rendered.flat());
+		const allLines = compactRenderedLinks(rendered.flat().map((line) => renderExplicitWikilinks(line, adapterState.current.vaultRoot)));
 		const editorRoot = rendered.findIndex((lines) => lines.some((line) => line.includes(CURSOR_MARKER)));
 		if (editorRoot < 0) {
 			state.visibleLinks.clear();
