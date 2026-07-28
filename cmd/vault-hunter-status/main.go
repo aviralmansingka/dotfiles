@@ -66,7 +66,9 @@ func execute(args []string, output *os.File) (int, error) {
 		return err.code, err
 	}
 	if opts.command == "help" {
-		fmt.Fprint(output, usageText)
+		if _, err := fmt.Fprint(output, usageText); err != nil {
+			return 1, err
+		}
 		return 0, nil
 	}
 

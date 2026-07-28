@@ -132,7 +132,7 @@ export default function verifier(pi: ExtensionAPI) {
         const controller = new AbortController();
         const started = Date.now();
         const promise = rejected(() => tool.execute(id, params, controller.signal, undefined, approvedContext));
-        setTimeout(() => controller.abort(), 150);
+        setTimeout(() => controller.abort(), 1000);
         const error = await promise;
         return { error, elapsedMs: Date.now() - started };
       }

@@ -276,7 +276,7 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 		}
 		return Run{}, err
 	}
-	defer activeDir.Close()
+	defer func() { _ = activeDir.Close() }()
 	retiredDirFile, err := os.Open(retiredDir)
 	if err != nil {
 		if createdRetiredDir {
@@ -284,7 +284,7 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 		}
 		return Run{}, err
 	}
-	defer retiredDirFile.Close()
+	defer func() { _ = retiredDirFile.Close() }()
 
 	if err := renameNoReplace(activePath, retiredPath); err != nil {
 		if createdRetiredDir {
@@ -521,7 +521,7 @@ func (p *Producer) lock() (func(), error) {
 	}
 	if p.createLock {
 		if err := f.Chmod(0600); err != nil {
-			f.Close()
+			_ = f.Close()
 			return nil, err
 		}
 	}
