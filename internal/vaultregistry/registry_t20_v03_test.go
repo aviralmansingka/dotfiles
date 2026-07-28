@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -49,6 +50,12 @@ func TestT20V03ExactRevisionRetirementReplayAndWriteRejection(t *testing.T) {
 	t.Logf("T20.V03_REGISTRY_MANIFEST phase=before data=%s", registryBefore)
 	t.Logf("T20.V03_ISOLATION_MANIFEST phase=before data=%s", isolationBefore)
 
+	observationsBefore := t20V03Hash(t, active.Observations)
+	unknownBefore := t20V03Hash(t, []string{
+		t20V03Hash(t, active.Unknown),
+		t20V03Hash(t, active.WorkReference.Unknown),
+		t20V03Hash(t, active.Observations[0].Unknown),
+	})
 	retired, err := producer.Retire(active.RunID, active.Revision)
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +68,17 @@ func TestT20V03ExactRevisionRetirementReplayAndWriteRejection(t *testing.T) {
 		!reflect.DeepEqual(retired.Observations, active.Observations) || !reflect.DeepEqual(retired.Unknown, active.Unknown) {
 		t.Fatal("retirement changed immutable identity, stage, history, or unknown fields")
 	}
+	observationsAfter := t20V03Hash(t, retired.Observations)
+	unknownAfter := t20V03Hash(t, []string{
+		t20V03Hash(t, retired.Unknown),
+		t20V03Hash(t, retired.WorkReference.Unknown),
+		t20V03Hash(t, retired.Observations[0].Unknown),
+	})
+	if observationsAfter != observationsBefore || unknownAfter != unknownBefore {
+		t.Fatal("retirement changed history or unknown-field evidence hashes")
+	}
 	t.Logf("T20.V03_TRANSITION_RESPONSE run_id=%s revision=%d state=%s stage=%s retired_at=%s", retired.RunID, retired.Revision, retired.State, retired.Stage, *retired.RetiredAt)
+	t.Logf("T20.V03_RETIREMENT_PRESERVATION run_id=%s revision=%d observations_before_sha256=%s observations_after_sha256=%s observations_equal=true unknown_before_sha256=%s unknown_after_sha256=%s unknown_equal=true", retired.RunID, retired.Revision, observationsBefore, observationsAfter, unknownBefore, unknownAfter)
 
 	reader := mustReader(t, root)
 	if _, err := reader.Get(active.RunID); !errors.Is(err, vaultregistry.ErrNotFound) {
@@ -70,9 +87,11 @@ func TestT20V03ExactRevisionRetirementReplayAndWriteRejection(t *testing.T) {
 	if listed, err := reader.ListSummaries(vaultregistry.ListFilter{}); err != nil || len(listed) != 0 {
 		t.Fatalf("default active list = %#v, %v", listed, err)
 	}
-	if exact, err := reader.GetRetired(active.Name); err != nil || !reflect.DeepEqual(exact, retired) {
+	exact, err := reader.GetRetired(active.Name)
+	if err != nil || !reflect.DeepEqual(exact, retired) {
 		t.Fatalf("exact retired read = %#v, %v", exact, err)
 	}
+	t.Logf("T20.V03_RETIRED_EXACT_READ lookup=%s run_id=%s revision=%d state=%s result_sha256=%s", active.Name, exact.RunID, exact.Revision, exact.State, t20V03Hash(t, exact))
 
 	retiredPath := filepath.Join(root, "retired", active.RunID+".json")
 	beforeReplay, beforeInfo := t20V03BytesAndInfo(t, retiredPath)
@@ -167,6 +186,16 @@ func TestT20V03SchemaV1RetirementPreservesT09BytesAndRevision(t *testing.T) {
 		t.Fatal("schema-v1 retirement no longer preserves T09 bytes, inode, and revision")
 	}
 	t.Logf("T20.V03_V1_COMPAT run_id=%s revision=%d bytes_unchanged=true inode_same=true", retired.RunID, retired.Revision)
+}
+
+func t20V03Hash(t *testing.T, value any) string {
+	t.Helper()
+	data, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(data)
+	return hex.EncodeToString(digest[:])
 }
 
 func t20V03BytesAndInfo(t *testing.T, path string) ([]byte, os.FileInfo) {
