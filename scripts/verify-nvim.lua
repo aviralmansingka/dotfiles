@@ -1192,18 +1192,25 @@ local function validate_sidekick_herdr()
       fail("cwd picker should expose one agent-kill action from input and list")
     end
     local kill_prompt
+    local kill_picker_opts = picker_opts
+    local kill_picker_closed = false
     vim.fn.confirm = function(prompt)
       kill_prompt = prompt
       return 1
     end
-    picker_opts.actions[kill_action]({ close = function() end }, kill_item)
+    picker_opts.actions[kill_action]({ close = function() kill_picker_closed = true end }, kill_item)
     vim.fn.confirm = original_confirm
+    vim.wait(100, function() return picker_opts ~= kill_picker_opts end, 5)
+    local kill_picker_refreshed = picker_opts ~= kill_picker_opts
+    picker_opts = kill_picker_opts
     if not kill_prompt
       or not kill_prompt:find(kill_item.label, 1, true)
       or #closed_panes ~= 1
       or closed_panes[1] ~= kill_item.pane_id
+      or not kill_picker_closed
+      or not kill_picker_refreshed
     then
-      fail("agent kill should confirm the selected agent and close its pane exactly once")
+      fail("agent kill should confirm, close the selected pane, and refresh the picker")
     end
 
     if type(picker_opts.on_show) ~= "function" or type(picker_opts.on_close) ~= "function" then
@@ -2068,6 +2075,27 @@ local function validate_sidekick_herdr()
       fail("T04 V03 default control should render once without an Atlas lookup")
     end
     local v03_default_preview_bytes = preview_bytes()
+    local default_full_swaps = preview_swaps
+    local default_full_reads = async_reads
+    identity_picker_opts.actions.sidekick_preview_scroll_down()
+    vim.wait(1000, function()
+      local last_read = async_read_args[#async_read_args]
+      return last_read
+        and last_read.lines == 2147483647
+        and preview_swaps > default_full_swaps
+    end, 10)
+    local default_full_buf = fake_picker.preview.win.buf
+    local default_full_bytes = preview_bytes()
+    local default_layout_swaps = preview_swaps
+    identity_picker_opts.preview({ item = default_control, preview = fake_picker.preview })
+    vim.wait(200)
+    if async_reads <= default_full_reads
+      or preview_swaps ~= default_layout_swaps
+      or fake_picker.preview.win.buf ~= default_full_buf
+      or preview_bytes() ~= default_full_bytes
+    then
+      fail("T10 V03 ordinary full Preview should survive same-selection layout callbacks")
+    end
 
     local identity_cases = {
       {
@@ -2371,7 +2399,9 @@ local function validate_sidekick_herdr()
 
     local last_session = require("plugins.sidekick.last_session")
     last_session.label = nil
+    vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", done_item.workspace_id)
     picker_opts.confirm({ close = function() end }, done_item)
+    pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
     if #toggles ~= 1 or toggles[1].name ~= "pi-done" or toggles[1].focus ~= true then
       fail("confirm should focus the selected done session exactly once: " .. vim.inspect(toggles))
     end

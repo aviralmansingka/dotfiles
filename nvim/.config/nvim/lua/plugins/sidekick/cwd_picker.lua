@@ -1011,10 +1011,10 @@ function M.open(opts)
       transition_preview()
       preview_selection = item
       displayed_preview_item = item
-    elseif not atlas_eligible then
-      invalidate_preview()
     elseif item == displayed_preview_item and item == expanded_preview_item then
       return
+    elseif not atlas_eligible then
+      invalidate_preview()
     elseif atlas_phase == "active" and atlas_frame then
       restage_atlas_preview(item, preview_generation)
       return
@@ -1215,15 +1215,22 @@ function M.open(opts)
     internal.toggle_tool_session(target, true, item.terminal_id)
   end
 
-  local function kill_item(_, item)
+  local function kill_item(active_picker, item)
     if not item or item._empty or not item.pane_id then
       return
     end
     if vim.fn.confirm("Kill agent " .. item.label .. "?", "&Yes\n&No", 2) ~= 1 then
       return
     end
-    if herdr.close(item.pane_id) and opts.on_kill then
-      opts.on_kill(item)
+    if herdr.close(item.pane_id) then
+      if opts.on_kill then
+        opts.on_kill(item)
+      end
+      reopening = true
+      active_picker:close()
+      vim.schedule(function()
+        M.open(opts)
+      end)
     end
   end
 
