@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -14,8 +14,9 @@ const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
 const sandbox = mkdtempSync(join(process.env.TMPDIR ?? "/tmp", "pi-links-v02-"));
 const vaultRoot = join(sandbox, "vault"), notes = join(vaultRoot, "notes"), outsideRoot = join(sandbox, "outside");
 mkdirSync(notes, { recursive: true }); mkdirSync(outsideRoot);
-const canonicalFile = join(notes, "Alpha.md"), outsideFile = join(outsideRoot, "Outside.md");
+const canonicalFile = join(notes, "Alpha.md"), injectionFile = join(notes, "quote ' $(touch PWN).md"), outsideFile = join(outsideRoot, "Outside.md");
 writeFileSync(canonicalFile, "# Heading\n\nblock ^block-id\n");
+writeFileSync(injectionFile, "# Injection\n");
 writeFileSync(outsideFile, "# Outside\n");
 symlinkSync(canonicalFile, join(notes, "Alias.md"));
 symlinkSync(outsideRoot, join(vaultRoot, "escape"));
@@ -27,7 +28,8 @@ fixture.markdown = fixture.markdown
   .replace("{{CANONICAL_URL}}", url(join(notes, "Alias.md")))
   .replace("{{SYMLINK_ESCAPE_URL}}", url(join(vaultRoot, "escape", "Outside.md")))
   .replace("{{TRAVERSAL_URL}}", `file://${vaultRoot}/../outside/Outside.md`)
-  .replace("{{OUTSIDE_URL}}", url(outsideFile));
+  .replace("{{OUTSIDE_URL}}", url(outsideFile))
+  .replace("{{INJECTION_URL}}", url(injectionFile, "#Injection"));
 const git = (...args) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
 const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
 const head = git("rev-parse", "HEAD"), tree = git("rev-parse", "HEAD^{tree}");
@@ -111,9 +113,9 @@ framed.destroy();
 await send("x");
 
 fakeTui.render(fixture.width);
-const httpsSpan = findSpan("copy.example"), headingSpan = findSpan("#Heading"), blockSpan = findSpan("%5Eblock-id"), lineSpan = findSpan("#L7"), canonicalSpan = findSpan("Alias.md"), symlinkEscapeSpan = findSpan("/escape/"), traversalSpan = findSpan("/../outside/"), outsideSpan = findSpan("outside/Outside.md"), releaseSpan = findSpan("release.example"), modifiedSpan = findSpan("modified.example"), failSpan = findSpan("fail.example");
+const httpsSpan = findSpan("copy.example"), headingSpan = findSpan("#Heading"), blockSpan = findSpan("%5Eblock-id"), lineSpan = findSpan("#L7"), canonicalSpan = findSpan("Alias.md"), injectionSpan = findSpan("touch%20PWN"), symlinkEscapeSpan = findSpan("/escape/"), traversalSpan = findSpan("/../outside/"), outsideSpan = findSpan("outside/Outside.md"), releaseSpan = findSpan("release.example"), modifiedSpan = findSpan("modified.example"), failSpan = findSpan("fail.example");
 expect(httpsSpan && httpsSpan.startCell > 0, "ansi-wide-cell-hit-index");
-expect([headingSpan, blockSpan, lineSpan, canonicalSpan, symlinkEscapeSpan, outsideSpan, failSpan].every(Boolean), "all-action-spans-rendered", JSON.stringify([...(state?.visibleLinks?.values?.() ?? [])].flat().map((span) => span.destination)));
+expect([headingSpan, blockSpan, lineSpan, canonicalSpan, injectionSpan, symlinkEscapeSpan, outsideSpan, failSpan].every(Boolean), "all-action-spans-rendered", JSON.stringify([...(state?.visibleLinks?.values?.() ?? [])].flat().map((span) => span.destination)));
 const copyBefore = clipboard.length;
 if (httpsSpan) { await send(sgr(0, httpsSpan.startCell, httpsSpan.row + 1)); await send(sgr(0, httpsSpan.startCell + 1, httpsSpan.row + 1)); await send(sgr(0, httpsSpan.endCell + 1, httpsSpan.row + 1)); }
 expect(clipboard.length === copyBefore + 1 && clipboard.at(-1) === fixture.https, "https-boundaries-and-exact-single-copy", `writes=${JSON.stringify(clipboard)}`);
@@ -125,16 +127,18 @@ expect(timers.size === 1, "keyed-status-timer-replacement", `timers=${timers.siz
 await advance(1500);
 
 const nvimBefore = nvim.length;
-await click(headingSpan); await click(blockSpan); await click(lineSpan); await click(canonicalSpan);
-const expectedNvim = [
-  ["--server", "fake-nvim-server", "--remote", canonicalFile, ":heading:Heading"],
-  ["--server", "fake-nvim-server", "--remote", canonicalFile, ":block:block-id"],
-  ["--server", "fake-nvim-server", "--remote", canonicalFile, ":7"],
-  ["--server", "fake-nvim-server", "--remote", canonicalFile, ""],
-];
-expect(JSON.stringify(nvim.slice(nvimBefore)) === JSON.stringify(expectedNvim), "exact-neovim-argument-arrays-and-canonical-file", JSON.stringify(nvim.slice(nvimBefore)));
-const forbiddenFocus = new Set(["--remote-tab", "--remote-send", "--remote-expr", "--embed", "--listen", "--cmd", "-c"]);
-expect(nvim.slice(nvimBefore).every((argv) => argv.every((arg) => !forbiddenFocus.has(arg))), "vault-open-has-no-focus-changing-command-or-flag");
+await click(headingSpan); await click(blockSpan); await click(lineSpan); await click(canonicalSpan); await click(injectionSpan);
+const lua = "(function(d)local c=vim.api.nvim_get_current_win();local ok,r=xpcall(function()local w;for _,x in ipairs(vim.api.nvim_list_wins())do if x~=c and vim.bo[vim.api.nvim_win_get_buf(x)].buftype~='terminal'then w=x;break end end;if not w then vim.cmd('noautocmd keepalt botright new');w=vim.api.nvim_get_current_win()end;local b=vim.fn.bufadd(d.file);vim.fn.bufload(b);vim.api.nvim_win_set_buf(w,b);vim.api.nvim_win_call(w,function()if d.kind=='line'then vim.api.nvim_win_set_cursor(w,{d.target,0})elseif d.kind=='heading'then vim.fn.cursor(1,1);vim.fn.search('^\\\\s*#\\\\+\\\\s\\\\+\\\\V'..vim.fn.escape(d.target,'\\\\')..'\\\\m\\\\s*$','W')elseif d.kind=='block'then vim.fn.cursor(1,1);vim.fn.search('\\\\V^'..vim.fn.escape(d.target,'\\\\')..'\\\\m\\\\s*$','W')end end);return 1 end,debug.traceback);if vim.api.nvim_win_is_valid(c)then vim.api.nvim_set_current_win(c)end;if not ok then error(r)end;return r end)(_A)";
+const expected = [
+  { file: canonicalFile, kind: "heading", target: "Heading" },
+  { file: canonicalFile, kind: "block", target: "^block-id" },
+  { file: canonicalFile, kind: "line", target: 7 },
+  { file: canonicalFile, kind: "file", target: "" },
+  { file: injectionFile, kind: "heading", target: "Injection" },
+].map((payload) => ["--server", "fake-nvim-server", "--remote-expr", `luaeval(${JSON.stringify(lua)}, json_decode(${JSON.stringify(JSON.stringify(payload))}))`]);
+expect(JSON.stringify(nvim.slice(nvimBefore)) === JSON.stringify(expected), "exact-safe-neovim-remote-expr-argv", JSON.stringify(nvim.slice(nvimBefore)));
+expect(typeof extension.__transcriptLinks?.buildNvimArgs === "function" && expected.every((argv, i) => JSON.stringify(extension.__transcriptLinks.buildNvimArgs("fake-nvim-server", [{ file: canonicalFile, kind: "heading", target: "Heading" }, { file: canonicalFile, kind: "block", target: "^block-id" }, { file: canonicalFile, kind: "line", target: 7 }, { file: canonicalFile, kind: "file", target: "" }, { file: injectionFile, kind: "heading", target: "Injection" }][i])) === JSON.stringify(argv)), "production-buildNvimArgs-exact-contract");
+expect(!existsSync(join(sandbox, "PWN")), "argument-safe-path-and-target-no-shell-interpolation");
 const securityBefore = nvim.length;
 await click(symlinkEscapeSpan);
 expect(nvim.length === securityBefore, "canonical-symlink-escape-rejected");
@@ -174,7 +178,7 @@ expect(seamConfigured, "injected-action-adapters-bound-to-production", "missing 
 
 writeFileSync(join(artifact, "event-trace.json"), JSON.stringify({ checks, trace, renders }, null, 2) + "\n");
 writeFileSync(join(artifact, "clipboard.json"), JSON.stringify(clipboard, null, 2) + "\n");
-writeFileSync(join(artifact, "neovim-focus.json"), JSON.stringify({ invocations: nvim, forbiddenFocusFlags: [...forbiddenFocus] }, null, 2) + "\n");
+writeFileSync(join(artifact, "neovim-focus.json"), JSON.stringify({ invocations: nvim, expected }, null, 2) + "\n");
 writeFileSync(join(artifact, "status-clock.json"), JSON.stringify({ now, statuses, pendingTimers: [...timers.keys()] }, null, 2) + "\n");
 writeFileSync(join(artifact, "terminal-control.ansi"), terminal.join(""));
 const stable = ["event-trace.json", "clipboard.json", "neovim-focus.json", "status-clock.json", "terminal-control.ansi"];

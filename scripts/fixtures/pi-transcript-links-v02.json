@@ -1,7 +1,7 @@
 {
   "width": 120,
   "rows": 10,
-  "markdown": "old one\nold two\nANSI \u001b[31mred\u001b[0m 界 [https://copy.example/a?q=1#frag](https://copy.example/a?q=1#frag)\n[heading]({{HEADING_URL}}) [block]({{BLOCK_URL}}) [line]({{LINE_URL}}) [canonical]({{CANONICAL_URL}})\n[symlink-escape]({{SYMLINK_ESCAPE_URL}}) [traversal]({{TRAVERSAL_URL}}) [outside]({{OUTSIDE_URL}})\n[release](https://release.example/x) [modified](https://modified.example/x) [clipboard-fail](https://fail.example/x)",
+  "markdown": "old one\nold two\nANSI \u001b[31mred\u001b[0m 界 [https://copy.example/a?q=1#frag](https://copy.example/a?q=1#frag)\n[heading]({{HEADING_URL}}) [block]({{BLOCK_URL}}) [line]({{LINE_URL}}) [canonical]({{CANONICAL_URL}}) [injection]({{INJECTION_URL}})\n[symlink-escape]({{SYMLINK_ESCAPE_URL}}) [traversal]({{TRAVERSAL_URL}}) [outside]({{OUTSIDE_URL}})\n[release](https://release.example/x) [modified](https://modified.example/x) [clipboard-fail](https://fail.example/x)",
   "https": "https://copy.example/a?q=1#frag",
   "status": "Copied copy.example"
 }
