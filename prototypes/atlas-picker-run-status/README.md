@@ -43,9 +43,10 @@ Production `nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua` allocates a 1
 - A two-to-four-line header shows the Feature name, compact Task ID/title, and a derived `recorded done`, `recorded accepted`, `recorded in progress`, `recorded pending`, or `recorded needs attention` status.
 - The status is explicitly labelled `recorded` because Registry observations do not make Atlas canonical Task authority.
 - Five real Goal rows use the normal terminal background. The selected Goal changes to bright yellow foreground; navigation keeps it visible without adding a separate selected-detail row.
-- A muted `│` root now aligns with every `├─` branch and the closing `└─`; the redundant `RECORDED JOURNEY` label and viewport-dangling connector were removed.
+- Two Pi-style ghost-metric rows continue the muted `│` rail into every `├─` branch and the closing `└─`. They report the five visible steps, total recorded Goals, and typed unique verifiers; the verifier outcome (`all passed`, `in progress`, `needs attention`, or `incomplete`) gets the semantic foreground color.
+- The redundant `RECORDED JOURNEY` label and viewport-dangling connector remain removed.
 - Current time and `projection, not authority` no longer consume rows.
-- `N steps · selected X/Y` remains on the final row.
+- `N total · selected X/Y` remains on the final row.
 
 ## Pi Activity fidelity
 
@@ -54,6 +55,7 @@ The prototype follows the current Pi work-step renderer rather than the earlier 
 - muted `│`, `├─`, and `└─` connected rails;
 - `◉` active, `●` successful, `×` failed, and neutral `○`/`?` fallback states;
 - bold normal step titles and a distinct selected foreground;
+- muted ghost metrics followed by a semantic green/orange/red verifier outcome;
 - Gruvbox Material rail `#504945`, muted `#928374`, text `#ebdbb2`, selected yellow `#fabd2f`, active/accent `#f28534`, success `#b8bb26`, failure `#f2594b`, and feature heading `#83a597`.
 
 The Goal state glyph and selected ordinal remain readable without color; color provides the stronger interactive highlight requested during review.

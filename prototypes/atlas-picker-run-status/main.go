@@ -181,7 +181,7 @@ func (m model) frame(selectedDetail bool) []string {
 
 func (m model) lines(_ bool) []renderedLine {
 	lines := headerLines(m.run, m.goals, m.width, m.color)
-	lines = append(lines, segmentLine(" │", colorize(m.color, rail, " │")))
+	lines = append(lines, summaryLines(m.run, m.goals, m.width, m.color)...)
 
 	start, end := window(m.selected, len(m.goals), 5)
 	for index := start; index < end; index++ {
@@ -198,7 +198,7 @@ func (m model) lines(_ bool) []renderedLine {
 		lines = append(lines, cardLine("", m.width, m.color, text))
 	}
 
-	footer := fmt.Sprintf(" %d steps · selected %d/%d", len(m.goals), ordinal(m.selected, len(m.goals)), len(m.goals))
+	footer := fmt.Sprintf(" %d total · selected %d/%d", len(m.goals), ordinal(m.selected, len(m.goals)), len(m.goals))
 	for len(lines) < 11 {
 		lines = append(lines, segmentLine("", ""))
 	}
@@ -214,7 +214,7 @@ func headerLines(run vaultregistry.Run, goals []journeyGoal, width int, colors b
 		taskTitle = strings.TrimPrefix(taskTitle, prefix)
 	}
 	task := wrap(clean(taskID+" · "+taskTitle), width, 2)
-	for len(feature)+len(task) > 4 {
+	for len(feature)+len(task) > 3 {
 		if len(task) > 1 {
 			task = task[:1]
 		} else if len(feature) > 1 {
@@ -233,6 +233,70 @@ func headerLines(run vaultregistry.Run, goals []journeyGoal, width int, colors b
 	glyph, label, color := taskState(goals)
 	lines = append(lines, cardLine(glyph+" recorded "+label, width, colors, color+bold))
 	return lines
+}
+
+func summaryLines(run vaultregistry.Run, goals []journeyGoal, width int, colors bool) []renderedLine {
+	steps := min(5, len(goals))
+	verifiers, outcome, outcomeColor := verifierSummary(run, goals)
+	first := fmt.Sprintf(" │  %d steps · %d goals", steps, len(goals))
+	verifierLabel := fmt.Sprintf("%d verifiers", verifiers)
+	if width < 28 {
+		verifierLabel = fmt.Sprintf("%dV", verifiers)
+	}
+	secondMetric := " │  " + verifierLabel
+	second := clip(secondMetric+" · "+outcome, width)
+	styledSecond := colorize(colors, rail, " │  ") + colorize(colors, muted, verifierLabel)
+	if rest := strings.TrimPrefix(second, secondMetric); rest != "" {
+		separator, status := rest, ""
+		if index := strings.LastIndex(rest, " · "); index >= 0 {
+			separator, status = rest[:index+3], rest[index+3:]
+		}
+		styledSecond += colorize(colors, dim, separator) + colorize(colors, outcomeColor, status)
+	}
+	return []renderedLine{
+		segmentLine(clip(first, width), colorize(colors, rail, " │  ")+colorize(colors, muted, strings.TrimPrefix(clip(first, width), " │  "))),
+		segmentLine(second, styledSecond),
+	}
+}
+
+func verifierSummary(run vaultregistry.Run, goals []journeyGoal) (int, string, string) {
+	type observation struct{ state, at string }
+	latest := map[string]observation{}
+	record := func(id, state, at string) {
+		id, state = clean(id), clean(state)
+		if id != "" && (latest[id].at == "" || later(at, latest[id].at)) {
+			latest[id] = observation{state: state, at: at}
+		}
+	}
+	for _, evidence := range run.Evidence {
+		record(evidence.VerifierID, evidence.State, evidence.ObservedAt)
+	}
+	for _, item := range run.Observations {
+		if attempt := item.Payload.VerifierAttempt; attempt != nil {
+			record(attempt.Identity.VerifierID, string(item.State), item.ObservedAt)
+		}
+	}
+	if len(latest) == 0 {
+		_, state, color := taskState(goals)
+		if state == "done" || state == "accepted" {
+			return 0, "complete", success
+		}
+		return 0, state, color
+	}
+	allPassed := true
+	for _, item := range latest {
+		if activeState(item.state) {
+			return len(latest), "in progress", active
+		}
+		if glyph(item.state) == "×" {
+			return len(latest), "needs attention", failure
+		}
+		allPassed = allPassed && glyph(item.state) == "●"
+	}
+	if allPassed {
+		return len(latest), "all passed", success
+	}
+	return len(latest), "incomplete", attention
 }
 
 func goalLine(goal journeyGoal, connector string, selected bool, width int, colors bool) renderedLine {
