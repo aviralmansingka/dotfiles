@@ -17,11 +17,11 @@ B — Mini journey · 23×12 interior
 T21 · run-a17 · rev 7
 JOURNEY · selected 3/5
 │
-├─ ● admission · done
-├─ ● V01 · passed
-├─ ◉ V02 · active
-├─ ○ review · pending
-└─ ○ landing · pending
+ ├─ ● admission · done
+ ├─ ● V01 · passed
+▶├─ ◉ V02 · active
+ ├─ ○ review · pending
+ └─ ○ landing · pending
 
 driver · verifier-stew…
 latest 10:14 UTC

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -34,6 +35,8 @@ func main() {
 	stateDir := flag.String("state-dir", "", "Registry root (defaults to VAULT_HUNTER_STATE_DIR/XDG state)")
 	width := flag.Int("width", 30, "Atlas Preview interior width")
 	color := flag.String("color", "auto", "color mode: auto, always, never")
+	goal := flag.String("goal", "", "Goal ID or 1-based ordinal (defaults to active/latest)")
+	listGoals := flag.Bool("list-goals", false, "list recorded Goals for the Run")
 	flag.Parse()
 	if *runID == "" || *width < 1 || flag.NArg() != 0 || (*color != "auto" && *color != "always" && *color != "never") {
 		flag.Usage()
@@ -54,7 +57,18 @@ func main() {
 		fail(err)
 	}
 
-	for _, line := range render(run, retired, *width) {
+	goals := normalize(run)
+	if *listGoals {
+		for index, item := range goals {
+			fmt.Printf("%d\t%s\t%s\t%s\n", index+1, item.id, value(item.kind), value(item.state))
+		}
+		return
+	}
+	selected, err := selectRequestedGoal(goals, *goal)
+	if err != nil {
+		fail(err)
+	}
+	for _, line := range render(run, retired, *width, goals, selected) {
 		if colorEnabled(*color) && line != "" {
 			line = style(line) + reset
 		}
@@ -62,9 +76,7 @@ func main() {
 	}
 }
 
-func render(run vaultregistry.Run, retired bool, width int) []string {
-	goals := normalize(run)
-	selected := selectGoal(goals)
+func render(run vaultregistry.Run, retired bool, width int, goals []journeyGoal, selected int) []string {
 	lines := []string{
 		clip(clean(run.Task.ID+" · "+run.RunID), width),
 		clip(fmt.Sprintf("JOURNEY · selected %d/%d", ordinal(selected, len(goals)), len(goals)), width),
@@ -77,7 +89,11 @@ func render(run vaultregistry.Run, retired bool, width int) []string {
 		if i == len(goals)-1 {
 			connector = "└─"
 		}
-		lines = append(lines, clip(fmt.Sprintf("%s %s %s · %s", connector, glyph(goals[i].state), goals[i].id, value(goals[i].state)), width))
+		cursor := " "
+		if i == selected {
+			cursor = "▶"
+		}
+		lines = append(lines, clip(fmt.Sprintf("%s%s %s %s · %s", cursor, connector, glyph(goals[i].state), goals[i].id, value(goals[i].state)), width))
 	}
 	if len(goals) == 0 {
 		lines = append(lines, "└─ ? no recorded goals")
@@ -138,6 +154,24 @@ func normalize(run vaultregistry.Run) []journeyGoal {
 		return goals[i].id < goals[j].id
 	})
 	return goals
+}
+
+func selectRequestedGoal(goals []journeyGoal, requested string) (int, error) {
+	if requested == "" {
+		return selectGoal(goals), nil
+	}
+	if ordinal, err := strconv.Atoi(requested); err == nil {
+		if ordinal < 1 || ordinal > len(goals) {
+			return 0, fmt.Errorf("Goal ordinal %d outside 1..%d", ordinal, len(goals))
+		}
+		return ordinal - 1, nil
+	}
+	for index, goal := range goals {
+		if goal.id == requested {
+			return index, nil
+		}
+	}
+	return 0, fmt.Errorf("Goal not found: %s", requested)
 }
 
 func selectGoal(goals []journeyGoal) int {

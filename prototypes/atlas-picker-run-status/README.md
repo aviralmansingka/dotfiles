@@ -31,6 +31,16 @@ go run ./prototypes/atlas-picker-run-status \
 
 `--state-dir <registry-root>` is optional; without it the CLI uses the normal `VAULT_HUNTER_STATE_DIR`, `XDG_STATE_HOME`, or `~/.local/state/vault-hunter` resolution. An ID absent from active Runs is looked up in the retired namespace. Use `--width 23` for the minimum picker fixture and `--color always|never` for deterministic capture.
 
+List a Run's recorded Goals, then select one by ordinal or exact ID:
+
+```bash
+go run ./prototypes/atlas-picker-run-status --run-id <run-id> --list-goals
+go run ./prototypes/atlas-picker-run-status --run-id <run-id> --goal 3 --color always
+go run ./prototypes/atlas-picker-run-status --run-id <run-id> --goal V02 --color always
+```
+
+Without `--goal`, the CLI selects the latest active-like Goal, falling back to the final recorded Goal. The Neovim `Atlas Preview` pane itself remains non-focusable; interactive picker keybindings for changing Goal selection are not part of this prototype.
+
 Example against a checked-in fixture:
 
 ```bash

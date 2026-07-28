@@ -1,11 +1,11 @@
 [1;38;2;242;133;52mT21 · run-a17 · rev 7[0m
 [38;2;235;219;178mJOURNEY · selected 3/5[0m
 [38;2;146;131;116m│[0m
-[38;2;184;187;38m├─ ● admission · done[0m
-[38;2;184;187;38m├─ ● V01 · passed[0m
-[38;2;233;177;67m├─ ◉ V02 · active[0m
-[38;2;235;219;178m├─ ○ review · pending[0m
-[38;2;235;219;178m└─ ○ landing · pending[0m
+[38;2;184;187;38m ├─ ● admission · done[0m
+[38;2;184;187;38m ├─ ● V01 · passed[0m
+[38;2;233;177;67m▶├─ ◉ V02 · active[0m
+[38;2;235;219;178m ├─ ○ review · pending[0m
+[38;2;235;219;178m └─ ○ landing · pending[0m
 
 [38;2;235;219;178mdriver · verifier-steward[0m
 [38;2;235;219;178mlatest 10:14 UTC[0m
