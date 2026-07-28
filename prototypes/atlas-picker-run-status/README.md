@@ -18,15 +18,38 @@ The deterministic Neovim harness in `scripts/verify-nvim.lua` exercises exact in
 
 The rounded border is outside those lookup dimensions. The 30-column frame is the preferred desktop reference; every variant also renders at the 23-column minimum fixture.
 
-## Render
+## Generate a summary for any recorded Run
+
+From the repository root:
+
+```bash
+go run ./prototypes/atlas-picker-run-status \
+  --run-id <run-id> \
+  --width 30 \
+  --color auto
+```
+
+`--state-dir <registry-root>` is optional; without it the CLI uses the normal `VAULT_HUNTER_STATE_DIR`, `XDG_STATE_HOME`, or `~/.local/state/vault-hunter` resolution. An ID absent from active Runs is looked up in the retired namespace. Use `--width 23` for the minimum picker fixture and `--color always|never` for deterministic capture.
+
+Example against a checked-in fixture:
+
+```bash
+go run ./prototypes/atlas-picker-run-status \
+  --run-id atlas-rich-run \
+  --state-dir scripts/fixtures/vault-hunter-atlas \
+  --width 30 \
+  --color always
+```
+
+The CLI reads Registry schema v1 or v2 through `internal/vaultregistry`, derives Goal rows only from typed Goal/verifier IDs and states, sanitizes controls, and emits exactly 12 rows. It does not parse detail JSON or invent parent decisions, human gates, canonical completion, or live Herdr reconciliation.
+
+## Render the static design comparison
 
 ```bash
 python3 prototypes/atlas-picker-run-status/render.py --width 30
 python3 prototypes/atlas-picker-run-status/render.py --width 23
 python3 prototypes/atlas-picker-run-status/render.py --width 30 --no-color
 ```
-
-The data is a visual fixture constrained to fields available in the current compact Registry-v1 projection: Task identity, Run ID/revision, selected Goal ordinal/ID, recorded lifecycle kind/state, participant/role, Evidence state, and recorded update time. It does not invent parent decisions, human gates, canonical completion, or live Herdr reconciliation.
 
 ## Variants
 
