@@ -659,6 +659,40 @@ async function assertSoloTab(
     throw new Error(`Refusing to close ${tabId}: it is absent, moved, or no longer a dedicated one-pane tab.`);
 }
 
+async function waitForExactTermination(
+  pi: ExtensionAPI,
+  member: Pick<Member, "participantId" | "session">,
+  signal?: AbortSignal,
+): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    signal?.throwIfAborted();
+    const listed = await herdr(pi, ["agent", "list"], signal);
+    if (!Array.isArray(listed.agents))
+      throw new Error("Herdr returned a malformed agent list while awaiting child termination.");
+    if (!listed.agents.some((agent: any) => sameSession(agent.agent_session, member.session))) return;
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
+  }
+  throw new Error(`Exact child ${member.participantId} remained live after tab closure.`);
+}
+
+async function waitForTabTermination(
+  pi: ExtensionAPI,
+  tabId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    signal?.throwIfAborted();
+    const listed = await herdr(pi, ["agent", "list"], signal);
+    if (!Array.isArray(listed.agents))
+      throw new Error("Herdr returned a malformed agent list while awaiting tab termination.");
+    if (!listed.agents.some((agent: any) => agent.tab_id === tabId)) return;
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
+  }
+  throw new Error(`Child in exact tab ${tabId} remained live after tab closure.`);
+}
+
 async function sendPrompt(
   pi: ExtensionAPI,
   member: Member,
@@ -789,6 +823,7 @@ export default function (pi: ExtensionAPI) {
     const closed = await herdr(pi, ["tab", "close", member.herdr.tabId]);
     if (closed.type !== "tab_closed" || closed.tab_id !== member.herdr.tabId)
       throw new Error(`Herdr did not confirm exact tab closure for ${member.participantId}.`);
+    await waitForExactTermination(pi, member);
     cleanupJournal(member);
     member.status = "closed-unrecorded";
     await recordTerminal(pi, member, state, reason);
@@ -904,10 +939,32 @@ export default function (pi: ExtensionAPI) {
             if (!ROLES.includes(participant.role) || members.has(participant.participant_id)) continue;
             if ((run as any).lifecycle?.some((item: any) => item.observation_id === `${participant.participant_id}-terminal`)) continue;
             const live = agents.find((item: any) => sameSession(item.agent_session, participant.agent_session));
-            if (!live || !sameHerdr(participant.herdr, {
+            if (!live) {
+              if (participant.herdr?.workspace_id !== placement.herdr.workspaceId)
+                throw new Error(`Registry custody for ${participant.participant_id} is outside the driver workspace.`);
+              const stale: Member = {
+                runId: run.run_id, goalId: participant.goal_id,
+                participantId: participant.participant_id,
+                workerId: `${participant.participant_id}-worker`, role: participant.role,
+                name: participant.participant_id, cwd: ctx.cwd,
+                journal: journalPath(run.run_id, participant.participant_id),
+                session: participant.agent_session,
+                herdr: {
+                  workspaceId: participant.herdr.workspace_id, tabId: participant.herdr.tab_id,
+                  paneId: participant.herdr.pane_id, terminalId: participant.herdr.terminal_id,
+                },
+                startedAt: participant.observed_at, status: "closed-unrecorded", retained: false,
+                registered: true, workerRegistered: true, lifecycleOnly: true,
+              };
+              cleanupJournal(stale);
+              await recordTerminal(pi, stale, "interrupted", "exact-owned child was no longer live during recovery");
+              continue;
+            }
+            if (!sameHerdr(participant.herdr, {
               workspaceId: live.workspace_id, tabId: live.tab_id,
               paneId: live.pane_id, terminalId: live.terminal_id,
-            }) || live.workspace_id !== placement.herdr.workspaceId) continue;
+            }) || live.workspace_id !== placement.herdr.workspaceId)
+              throw new Error(`Live identity for ${participant.participant_id} contradicts Registry custody.`);
             members.set(participant.participant_id, {
               runId: run.run_id,
               goalId: participant.goal_id,
@@ -941,13 +998,35 @@ export default function (pi: ExtensionAPI) {
             item.payload?.registered_participant?.participant_id === participant.participant_id);
           if (terminal) continue;
           const live = agents.find((item: any) => sameSession(item.agent_session, participant.agent_session));
-          if (!live || !sameHerdr(participant.herdr, {
-            workspaceId: live.workspace_id, tabId: live.tab_id,
-            paneId: live.pane_id, terminalId: live.terminal_id,
-          }) || live.workspace_id !== placement.herdr.workspaceId) continue;
           const worker = run.observations?.find((item: any) =>
             item.kind === "worker" && item.state === "active" &&
             item.payload?.worker?.owner_participant_id === participant.participant_id)?.payload?.worker;
+          if (!live) {
+            if (participant.herdr?.workspace_id !== placement.herdr.workspaceId)
+              throw new Error(`Registry custody for ${participant.participant_id} is outside the driver workspace.`);
+            const stale: Member = {
+              runId: run.run_id, goalId: observation.goal_id,
+              participantId: participant.participant_id,
+              workerId: worker?.worker_id ?? `${participant.participant_id}-worker`, role: participant.role,
+              name: participant.participant_id, cwd: ctx.cwd,
+              journal: journalPath(run.run_id, participant.participant_id),
+              session: participant.agent_session,
+              herdr: {
+                workspaceId: participant.herdr.workspace_id, tabId: participant.herdr.tab_id,
+                paneId: participant.herdr.pane_id, terminalId: participant.herdr.terminal_id,
+              },
+              startedAt: observation.started_at, status: "closed-unrecorded", retained: false,
+              registered: true, workerRegistered: Boolean(worker), lifecycleOnly: true,
+            };
+            cleanupJournal(stale);
+            await recordTerminal(pi, stale, "interrupted", "exact-owned child was no longer live during recovery");
+            continue;
+          }
+          if (!sameHerdr(participant.herdr, {
+            workspaceId: live.workspace_id, tabId: live.tab_id,
+            paneId: live.pane_id, terminalId: live.terminal_id,
+          }) || live.workspace_id !== placement.herdr.workspaceId)
+            throw new Error(`Live identity for ${participant.participant_id} contradicts Registry custody.`);
           members.set(participant.participant_id, {
             runId: run.run_id,
             goalId: observation.goal_id,
@@ -1131,6 +1210,8 @@ export default function (pi: ExtensionAPI) {
             const closed = await herdr(pi, ["tab", "close", tabId]);
             if (closed.type !== "tab_closed" || closed.tab_id !== tabId)
               throw new Error(`Herdr did not confirm exact reserved tab closure for ${tabId}.`);
+            if (provisional) await waitForExactTermination(pi, provisional, signal);
+            else await waitForTabTermination(pi, tabId, signal);
           } catch (closeError) { cleanupError = closeError; }
         }
         if (provisional && !cleanupError) {
