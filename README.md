@@ -136,6 +136,8 @@ cd ~/.pi/agent/npm
 npm install
 ```
 
+Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`; the widget stays hidden when no run exists.
+
 For Pi over WhatsApp, copy `~/.config/pi-whatsapp.env.example` to `~/.config/pi-whatsapp.env`, fill in the allowed chat IDs, then enable the user services:
 
 ```sh
