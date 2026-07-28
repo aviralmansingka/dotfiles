@@ -8,11 +8,48 @@ import (
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
+func renderRunProjection(run vaultregistry.Run) vaultregistry.Run {
+	if run.SchemaVersion != 2 {
+		return run
+	}
+	if run.WorkReference != nil {
+		run.Task = vaultregistry.Task{ID: run.WorkReference.ID, Title: run.WorkReference.Title, Path: run.WorkReference.Path, FeaturePath: run.WorkReference.FeaturePath, Kind: run.WorkReference.Kind}
+	}
+	run.Participants, run.Lifecycle, run.Evidence = nil, nil, nil
+	for _, observation := range run.Observations {
+		if payload := observation.Payload.RegisteredParticipant; observation.Kind == vaultregistry.KindRegisteredParticipant && payload != nil {
+			session := payload.AgentSession
+			run.Participants = append(run.Participants, vaultregistry.Participant{ParticipantID: payload.ParticipantID, ObservedAt: observation.ObservedAt, Role: payload.Role, GoalID: observation.GoalID, Herdr: payload.Herdr, AgentSession: &session})
+		}
+		identity := attemptIdentity(observation)
+		if identity != nil {
+			evidence := vaultregistry.Evidence{ObservationID: observation.ObservationID, ObservedAt: observation.ObservedAt, VerifierID: identity.VerifierID, State: string(observation.State), Command: identity.Command, ImplementationTree: identity.ImplementationTree, Detail: observation.Summary}
+			if payload := observation.Payload.VerifierAttempt; payload != nil {
+				evidence.ExitStatus = payload.ExitStatus
+				manifest := payload.ResultManifest
+				if manifest == nil {
+					manifest = payload.PartialResultManifest
+				}
+				if manifest != nil {
+					evidence.ArtifactSHA256 = manifest.SHA256
+				}
+			}
+			run.Evidence = append(run.Evidence, evidence)
+			continue
+		}
+		run.Lifecycle = append(run.Lifecycle, vaultregistry.Lifecycle{ObservationID: observation.ObservationID, ObservedAt: observation.ObservedAt, Kind: string(observation.Kind), GoalID: observation.GoalID, State: string(observation.State), Detail: observation.Summary})
+	}
+	return run
+}
+
 // sanitizeRunProjection escapes Registry-owned controls before any Atlas
 // layout or truncation. Renderer-owned newlines, box drawing, and styling are
 // therefore left intact.
 func sanitizeRunProjection(run vaultregistry.Run) vaultregistry.Run {
+	run = renderRunProjection(run)
 	run.RunID = sanitizeRegistryString(run.RunID)
+	run.Name = sanitizeRegistryString(run.Name)
+	run.Stage = sanitizeRegistryString(run.Stage)
 	run.InvokedAt = sanitizeRegistryString(run.InvokedAt)
 	run.UpdatedAt = sanitizeRegistryString(run.UpdatedAt)
 	run.Task.ID = sanitizeRegistryString(run.Task.ID)

@@ -47,7 +47,7 @@
             "producer": {"kind": "participant", "id": "participant-004"}
           },
           "exit_status": 0,
-          "result_manifest": {"path": "manifests/attempt-016.json", "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "media_type": "application/json", "authenticated": true}
+          "result_manifest": {"path": "manifests/attempt-016.json", "sha256": "3c64b832df08264c968d5946832106e1e0f314ce8479f5bb34812acb54dee3d0", "media_type": "application/json", "authenticated": true}
         }
       }
     },

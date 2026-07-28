@@ -2,6 +2,8 @@ package atlas
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -133,6 +135,7 @@ type taskIdentity struct {
 
 type attemptProjection struct {
 	ID          string
+	GoalID      string
 	Revision    int
 	Outcome     string
 	Decision    string
@@ -483,12 +486,15 @@ func (s *store) loadNotes() error {
 }
 
 func (s *store) loadRuns() error {
-	active, err := scanRuns(filepath.Join(s.stateRoot, "runs"))
+	reader, err := vaultregistry.OpenReader(s.stateRoot)
 	if err != nil {
 		return err
 	}
-	retired, err := scanRuns(filepath.Join(s.stateRoot, "retired"))
+	active, retired, err := reader.Snapshot()
 	if err != nil {
+		return err
+	}
+	if err := validateManifestIntegrity(s.stateRoot, append(append([]vaultregistry.Run(nil), active...), retired...)); err != nil {
 		return err
 	}
 	s.activeRuns, s.retiredRuns = active, retired
@@ -509,31 +515,36 @@ func (s *store) loadRuns() error {
 	return nil
 }
 
-func scanRuns(dir string) ([]vaultregistry.Run, error) {
-	entries, err := os.ReadDir(dir)
-	if errors.Is(err, os.ErrNotExist) {
-		return []vaultregistry.Run{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	runs := make([]vaultregistry.Run, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-			continue
+func validateManifestIntegrity(stateRoot string, runs []vaultregistry.Run) error {
+	for _, run := range runs {
+		for _, observation := range run.Observations {
+			payload := observation.Payload.VerifierAttempt
+			if payload == nil {
+				continue
+			}
+			for _, manifest := range []*vaultregistry.ManifestMetadata{payload.ResultManifest, payload.PartialResultManifest} {
+				if manifest == nil || manifest.Path == "" {
+					continue
+				}
+				path := manifest.Path
+				if !filepath.IsAbs(path) {
+					path = filepath.Join(stateRoot, filepath.FromSlash(path))
+				}
+				data, err := os.ReadFile(path)
+				if errors.Is(err, os.ErrNotExist) {
+					continue
+				}
+				if err != nil {
+					return err
+				}
+				digest := sha256.Sum256(data)
+				if hex.EncodeToString(digest[:]) != strings.ToLower(manifest.SHA256) {
+					return fmt.Errorf("%w: evidence manifest %s failed SHA-256 verification", vaultregistry.ErrMalformed, manifest.Path)
+				}
+			}
 		}
-		data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
-		if err != nil {
-			return nil, err
-		}
-		var run vaultregistry.Run
-		if err := json.Unmarshal(data, &run); err != nil {
-			return nil, err
-		}
-		runs = append(runs, run)
 	}
-	sort.SliceStable(runs, func(i, j int) bool { return runs[i].RunID < runs[j].RunID })
-	return runs, nil
+	return nil
 }
 
 func readNote(path string) (note, error) {
@@ -1209,6 +1220,7 @@ func (s *store) runAttempts(run vaultregistry.Run) []attemptProjection {
 		if builder == nil {
 			builder = &attemptProjection{
 				ID:       identity.AttemptID,
+				GoalID:   observation.GoalID,
 				Revision: 1,
 				Decision: "pending",
 				RunID:    run.RunID,
@@ -1646,34 +1658,120 @@ func filterItems[T any](items []T, include func(T) bool) []T {
 }
 
 func observedEnvelope(kind string, data any) Envelope {
-	return Envelope{APIVersion: "atlas/v1", Kind: kind, Data: data, Meta: map[string]any{"observed_at": time.Now().UTC().Format(time.RFC3339)}}
+	return boundedEnvelope(Envelope{APIVersion: "atlas/v1", Kind: kind, Data: data, Meta: map[string]any{"observed_at": time.Now().UTC().Format(time.RFC3339)}})
 }
 
 func listEnvelope(kind string, data []map[string]any) Envelope {
 	return Envelope{APIVersion: "atlas/v1", Kind: kind, Data: data, Meta: map[string]any{"count": len(data), "truncated": false, "observed_at": time.Now().UTC().Format(time.RFC3339)}}
 }
 
-func boundedListEnvelope(kind string, data []map[string]any) Envelope {
+func envelopeByteLimit() int {
 	limit := defaultCollectionByteLimit
 	if raw := os.Getenv("ATLAS_MAX_COLLECTION_BYTES"); raw != "" {
 		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
 			limit = parsed
 		}
 	}
-	total := len(data)
+	return limit
+}
+
+func envelopeSize(envelope Envelope) int {
+	encoded, _ := json.Marshal(envelope)
+	return len(encoded) + 1
+}
+
+func boundedEnvelope(envelope Envelope) Envelope {
+	limit := envelopeByteLimit()
+	if envelopeSize(envelope) <= limit {
+		return envelope
+	}
+	encoded, err := json.Marshal(envelope.Data)
+	if err != nil {
+		return envelope
+	}
+	var normalized any
+	if json.Unmarshal(encoded, &normalized) != nil {
+		return envelope
+	}
+	envelope.Meta["truncated"] = true
+	arrayCap, stringCap := len(encoded), len(encoded)
+	if candidate := boundedEnvelopeValue(envelope, normalized, 0, stringCap); envelopeSize(candidate) <= limit {
+		low, high := 0, arrayCap
+		for low < high {
+			mid := (low + high + 1) / 2
+			if envelopeSize(boundedEnvelopeValue(envelope, normalized, mid, stringCap)) <= limit {
+				low = mid
+			} else {
+				high = mid - 1
+			}
+		}
+		return boundedEnvelopeValue(envelope, normalized, low, stringCap)
+	}
+	low, high := 0, stringCap
+	for low < high {
+		mid := (low + high + 1) / 2
+		if envelopeSize(boundedEnvelopeValue(envelope, normalized, 0, mid)) <= limit {
+			low = mid
+		} else {
+			high = mid - 1
+		}
+	}
+	stringCap = low
+	low, high = 0, arrayCap
+	for low < high {
+		mid := (low + high + 1) / 2
+		if envelopeSize(boundedEnvelopeValue(envelope, normalized, mid, stringCap)) <= limit {
+			low = mid
+		} else {
+			high = mid - 1
+		}
+	}
+	return boundedEnvelopeValue(envelope, normalized, low, stringCap)
+}
+
+func boundedEnvelopeValue(envelope Envelope, data any, arrayCap, stringCap int) Envelope {
+	envelope.Data = truncateEnvelopeValue(data, arrayCap, stringCap)
+	return envelope
+}
+func truncateEnvelopeValue(value any, arrayCap, stringCap int) any {
+	switch value := value.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(value))
+		for key, child := range value {
+			result[key] = truncateEnvelopeValue(child, arrayCap, stringCap)
+		}
+		return result
+	case []any:
+		limit := min(len(value), arrayCap)
+		result := make([]any, limit)
+		for i := range result {
+			result[i] = truncateEnvelopeValue(value[i], arrayCap, stringCap)
+		}
+		return result
+	case string:
+		runes := []rune(value)
+		if len(runes) > stringCap {
+			return string(runes[:stringCap])
+		}
+	}
+	return value
+}
+
+func boundedListEnvelope(kind string, data []map[string]any) Envelope {
+	limit, total := envelopeByteLimit(), len(data)
+	observedAt := time.Now().UTC().Format(time.RFC3339)
 	bounded := make([]map[string]any, 0, total)
 	truncated := false
 	for _, item := range data {
 		candidate := append(append([]map[string]any(nil), bounded...), item)
-		envelope := Envelope{APIVersion: "atlas/v1", Kind: kind, Data: candidate, Meta: map[string]any{"count": total, "truncated": false}}
-		encoded, _ := json.Marshal(envelope)
-		if len(encoded) > limit {
+		envelope := Envelope{APIVersion: "atlas/v1", Kind: kind, Data: candidate, Meta: map[string]any{"count": total, "truncated": false, "observed_at": observedAt}}
+		if envelopeSize(envelope) > limit {
 			truncated = true
 			break
 		}
 		bounded = candidate
 	}
-	return Envelope{APIVersion: "atlas/v1", Kind: kind, Data: bounded, Meta: map[string]any{"count": total, "truncated": truncated, "observed_at": time.Now().UTC().Format(time.RFC3339)}}
+	return Envelope{APIVersion: "atlas/v1", Kind: kind, Data: bounded, Meta: map[string]any{"count": total, "truncated": truncated, "observed_at": observedAt}}
 }
 
 func runTaskPath(run vaultregistry.Run) string {

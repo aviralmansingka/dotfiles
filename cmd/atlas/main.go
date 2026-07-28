@@ -545,7 +545,7 @@ func runObserve(command observeCommand, stdout io.Writer) error {
 		return err
 	}
 	if characterDevice(os.Stdin) && characterDevice(os.Stdout) {
-		model := atlaspkg.NewJournalModel(run, 80, 24)
+		model := atlaspkg.NewJournalModel(run, 80, 24).WithColor(interactiveColorEnabled()).WithReload(func() (vaultregistry.Run, error) { return readActiveRun(reader, command.selector) })
 		_, err := tea.NewProgram(model, tea.WithAltScreen()).Run()
 		return err
 	}
@@ -652,11 +652,7 @@ func runRevive(command reviveCommand, stdout io.Writer) error {
 }
 
 func readRunAny(reader *vaultregistry.Reader, selector selector) (vaultregistry.Run, error) {
-	active, err := reader.List()
-	if err != nil {
-		return vaultregistry.Run{}, err
-	}
-	retired, err := reader.ListRetired()
+	active, retired, err := reader.Snapshot()
 	if err != nil {
 		return vaultregistry.Run{}, err
 	}
@@ -728,11 +724,13 @@ func runBrowser(stdout io.Writer, reader *vaultregistry.Reader) error {
 	if err != nil {
 		return err
 	}
-	entries, err := buildBrowserEntries(vaultRoot, stateRoot, reader)
+	reload := func() ([]browserEntry, error) { return buildBrowserEntries(vaultRoot, stateRoot, reader) }
+	entries, err := reload()
 	if err != nil {
 		return err
 	}
-	_, err = tea.NewProgram(newBrowserModel(entries), tea.WithAltScreen()).Run()
+	model := newBrowserModel(entries).withReload(reload).withColor(interactiveColorEnabled())
+	_, err = tea.NewProgram(model, tea.WithAltScreen()).Run()
 	return err
 }
 
@@ -775,6 +773,11 @@ func runWatch(command getCommand, stdout io.Writer) error {
 func characterDevice(file *os.File) bool {
 	info, err := file.Stat()
 	return err == nil && info.Mode()&os.ModeCharDevice != 0
+}
+
+func interactiveColorEnabled() bool {
+	_, noColor := os.LookupEnv("NO_COLOR")
+	return atlaspkg.ColorEnabled("auto", false, true, strings.EqualFold(os.Getenv("TERM"), "dumb"), noColor)
 }
 
 func readActiveRun(reader *vaultregistry.Reader, selector selector) (vaultregistry.Run, error) {

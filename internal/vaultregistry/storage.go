@@ -609,6 +609,38 @@ func (r *Reader) ListRetired() ([]Run, error) {
 	return r.listNamespaceRuns("retired")
 }
 
+func (r *Reader) Snapshot() ([]Run, []Run, error) {
+	unlock, empty, err := r.lock()
+	if err != nil {
+		return nil, nil, err
+	}
+	if empty {
+		return []Run{}, []Run{}, nil
+	}
+	defer unlock()
+
+	active, err := r.namespaceRuns("runs")
+	if err != nil {
+		return nil, nil, err
+	}
+	retired, err := r.namespaceRuns("retired")
+	if err != nil {
+		return nil, nil, err
+	}
+	seen := make(map[string]struct{}, len(active))
+	for _, run := range active {
+		seen[run.RunID] = struct{}{}
+	}
+	for _, run := range retired {
+		if _, exists := seen[run.RunID]; exists {
+			return nil, nil, fmt.Errorf("%w: run %q exists in active and retired namespaces", ErrMalformed, run.RunID)
+		}
+	}
+	sort.Slice(active, func(i, j int) bool { return active[i].RunID < active[j].RunID })
+	sort.Slice(retired, func(i, j int) bool { return retired[i].RunID < retired[j].RunID })
+	return active, retired, nil
+}
+
 func (r *Reader) listNamespaceRuns(namespace string) ([]Run, error) {
 	unlock, empty, err := r.lock()
 	if err != nil {

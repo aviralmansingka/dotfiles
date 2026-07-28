@@ -2,7 +2,6 @@ package atlas
 
 import (
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
@@ -97,11 +96,11 @@ func loadStateStore(stateRoot string) (*store, error) {
 	if err != nil {
 		return nil, err
 	}
-	active, err := scanRuns(filepath.Join(resolved, "runs"))
+	reader, err := vaultregistry.OpenReader(resolved)
 	if err != nil {
 		return nil, err
 	}
-	retired, err := scanRuns(filepath.Join(resolved, "retired"))
+	active, retired, err := reader.Snapshot()
 	if err != nil {
 		return nil, err
 	}
@@ -160,9 +159,4 @@ func decisionObservation(attempt attemptProjection, decision vaultregistry.Obser
 	}
 }
 
-func decisionGoalID(attempt attemptProjection) string {
-	if attempt.Verifier.ID != "" {
-		return attempt.Verifier.ID
-	}
-	return attempt.Task.ID
-}
+func decisionGoalID(attempt attemptProjection) string { return attempt.GoalID }

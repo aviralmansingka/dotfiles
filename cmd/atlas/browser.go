@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	atlaspkg "github.com/aviral/dotfiles/internal/atlas"
 	"github.com/aviral/dotfiles/internal/vaultregistry"
@@ -34,22 +36,57 @@ const (
 )
 
 type browserModel struct {
-	entries   []browserEntry
-	selected  int
-	panel     browserPanel
-	width     int
-	height    int
-	emptyNote string
+	entries       []browserEntry
+	selected      int
+	panel         browserPanel
+	width, height int
+	emptyNote     string
+	colorEnabled  bool
+	reload        func() ([]browserEntry, error)
+}
+
+type browserRefreshMsg struct {
+	entries []browserEntry
+	err     error
 }
 
 func newBrowserModel(entries []browserEntry) browserModel {
 	return browserModel{entries: entries, panel: browserPanelRun, width: 120, height: 32, emptyNote: "no active Runs"}
 }
 
-func (m browserModel) Init() tea.Cmd { return nil }
+func (m browserModel) withReload(reload func() ([]browserEntry, error)) browserModel {
+	m.reload = reload
+	return m
+}
+func (m browserModel) withColor(enabled bool) browserModel { m.colorEnabled = enabled; return m }
+func (m browserModel) Init() tea.Cmd                       { return m.refreshCmd() }
+func (m browserModel) refreshCmd() tea.Cmd {
+	if m.reload == nil {
+		return nil
+	}
+	return tea.Tick(time.Second, func(time.Time) tea.Msg {
+		entries, err := m.reload()
+		return browserRefreshMsg{entries: entries, err: err}
+	})
+}
 
 func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case browserRefreshMsg:
+		if msg.err == nil {
+			selectedID := ""
+			if len(m.entries) != 0 {
+				selectedID = m.entries[m.selected].runID
+			}
+			m.entries, m.selected = msg.entries, 0
+			for i, entry := range m.entries {
+				if entry.runID == selectedID {
+					m.selected = i
+					break
+				}
+			}
+		}
+		return m, m.refreshCmd()
 	case tea.WindowSizeMsg:
 		if msg.Width > 0 {
 			m.width = msg.Width
@@ -118,15 +155,18 @@ func (m browserModel) leftPane(rows int) []string {
 		lines = append(lines, m.emptyNote)
 		return lines
 	}
-	for i, entry := range m.entries {
+	visible := maxInt((rows-len(lines))/2, 1)
+	start := maxInt(m.selected-visible/2, 0)
+	if start+visible > len(m.entries) {
+		start = maxInt(len(m.entries)-visible, 0)
+	}
+	for i := start; i < minInt(start+visible, len(m.entries)); i++ {
+		entry := m.entries[i]
 		marker := "  "
 		if i == m.selected {
 			marker = "> "
 		}
-		lines = append(lines,
-			fmt.Sprintf("%s%s · %s", marker, entry.runID, entry.runName),
-			fmt.Sprintf("  %s / %s / %s", entry.projectName, entry.featureName, entry.taskID),
-		)
+		lines = append(lines, fmt.Sprintf("%s%s · %s", marker, entry.runID, entry.runName), fmt.Sprintf("  %s / %s / %s", entry.projectName, entry.featureName, entry.taskID))
 	}
 	if len(lines) > rows {
 		lines = lines[:rows]
@@ -152,7 +192,7 @@ func (m browserModel) rightPane(width, rows int) []string {
 	case browserPanelTask:
 		body = entry.taskPreview
 	default:
-		body = atlaspkg.NewJournalModel(entry.run, width, maxInt(rows-len(heading), 24)).View()
+		body = atlaspkg.NewJournalModel(entry.run, width, maxInt(rows-len(heading), 24)).ViewColor(m.colorEnabled)
 	}
 	lines := append(heading, strings.Split(body, "\n")...)
 	if len(lines) > rows {
@@ -251,26 +291,33 @@ func clipText(text string, width int) string {
 	if width <= 0 {
 		return ""
 	}
-	runes := []rune(text)
-	if len(runes) <= width {
+	if ansi.StringWidth(text) <= width {
 		return text
 	}
 	if width == 1 {
 		return "…"
 	}
-	return string(runes[:width-1]) + "…"
+	return ansi.Truncate(text, width, "…")
 }
 
 func padText(text string, width int) string {
 	trimmed := clipText(text, width)
-	if width <= len([]rune(trimmed)) {
+	textWidth := ansi.StringWidth(trimmed)
+	if width <= textWidth {
 		return trimmed
 	}
-	return trimmed + strings.Repeat(" ", width-len([]rune(trimmed)))
+	return trimmed + strings.Repeat(" ", width-textWidth)
 }
 
 func maxInt(left, right int) int {
 	if left > right {
+		return left
+	}
+	return right
+}
+
+func minInt(left, right int) int {
+	if left < right {
 		return left
 	}
 	return right

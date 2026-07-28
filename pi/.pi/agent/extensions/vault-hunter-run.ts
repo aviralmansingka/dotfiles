@@ -151,6 +151,20 @@ async function runAtlas(argv: string[], signal?: AbortSignal, stdin?: string): P
   });
 }
 
+function requireInitialDriverPlacement(request: Record<string, unknown>, placement: DriverPlacement): void {
+  const initialDriver = ensureObject(request.initial_driver, "Atlas initial_driver");
+  const payload = ensureObject(initialDriver.payload, "Atlas initial_driver payload");
+  const participant = ensureObject(payload.registered_participant, "Atlas registered participant");
+  const session = ensureObject(participant.agent_session, "Atlas initial driver agent_session");
+  const herdr = ensureObject(participant.herdr, "Atlas initial driver herdr");
+  if (session.source !== placement.agentSession.source || session.kind !== placement.agentSession.kind || session.value !== placement.agentSession.value) {
+    throw new Error("Atlas initial_driver agent_session is not bound to this Pi session.");
+  }
+  if (herdr.workspace_id !== placement.herdr.workspaceId || herdr.tab_id !== placement.herdr.tabId || herdr.pane_id !== placement.herdr.paneId || herdr.terminal_id !== placement.herdr.terminalId) {
+    throw new Error("Atlas initial_driver Herdr identity is not bound to this Pi session.");
+  }
+}
+
 async function driverPlacement(pi: ExtensionAPI, ctx: ExtensionContext, signal?: AbortSignal): Promise<DriverPlacement | undefined> {
   if (ctx.mode !== "tui") return undefined;
   const paneId = process.env.HERDR_ENV === "1" ? process.env.HERDR_PANE_ID : undefined;
@@ -197,6 +211,7 @@ export default function (pi: ExtensionAPI) {
         sessionFile: ctx.sessionManager.getSessionFile(),
         cwd: ctx.cwd,
         herdr: placement?.herdr,
+        agentSession: placement?.agentSession,
         workerRuntime: "visible-herdr-pi",
       });
     },
@@ -225,8 +240,14 @@ export default function (pi: ExtensionAPI) {
     label: "Atlas Create",
     description: "Create one Atlas resource through the public machine grammar.",
     parameters: AtlasCreateSchema,
-    async execute(_id, params, signal) {
-      const details = await runAtlas([params.resource as CreateResource, "create", "--json"], signal, `${JSON.stringify(params.request)}\n`);
+    async execute(_id, params, signal, _update, ctx) {
+      const request = ensureObject(params.request, "Atlas create request");
+      if (Object.prototype.hasOwnProperty.call(request, "run")) {
+        const placement = await driverPlacement(pi, ctx, signal);
+        if (!placement) throw new Error("Atlas Run creation requires an interactive Herdr-bound Pi session.");
+        requireInitialDriverPlacement(request, placement);
+      }
+      const details = await runAtlas([params.resource as CreateResource, "create", "--json"], signal, `${JSON.stringify(request)}\n`);
       if (details.kind === "Run") {
         const data = details.data as { id?: unknown };
         if (typeof data?.id === "string" && data.id) activeRunId = data.id;

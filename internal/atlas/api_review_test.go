@@ -175,8 +175,8 @@ func TestT18V02GlobalizesDuplicateLocalTaskAndVerifierIDs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := updated.Observations[len(updated.Observations)-1].GoalID; got != verifierIDB {
-		t.Fatalf("decision goal id = %q, want %q", got, verifierIDB)
+	if got := updated.Observations[len(updated.Observations)-1].GoalID; got != "T01.V01" {
+		t.Fatalf("decision goal id = %q, want %q", got, "T01.V01")
 	}
 }
 

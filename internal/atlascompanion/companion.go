@@ -581,7 +581,7 @@ func shellCommand(tuple Tuple, atlas []string, env map[string]string) string {
 }
 
 func shellLiteral(value string) string {
-	return "'" + strings.ReplaceAll(value, "'", `"'"'"'`) + "'"
+	return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'"
 }
 
 func wrapperScript(env map[string]string) string {
@@ -607,22 +607,45 @@ func ownedProcess(processes []process, tuple Tuple, atlas []string, env map[stri
 		if len(process.Argv) != len(atlas)+4 || process.Argv[0] != "/bin/sh" || process.Argv[1] != "-c" || process.Argv[3] != marker(tuple) || !equalArgv(process.Argv[4:], atlas) {
 			continue
 		}
-		script := process.Argv[2]
-		if !strings.Contains(script, wrapper) {
-			continue
-		}
-		valid := true
-		for key := range env {
-			if !strings.Contains(script, key+"=") {
-				valid = false
-				break
-			}
-		}
-		if valid {
+		if exactWrapperScript(process.Argv[2], env) {
 			count++
 		}
 	}
 	return count == 1
+}
+
+func exactWrapperScript(script string, env map[string]string) bool {
+	if script == wrapperScript(env) {
+		return true
+	}
+	suffix := " " + wrapper
+	if !strings.HasSuffix(script, suffix) {
+		return false
+	}
+	assignments := strings.TrimSuffix(script, suffix)
+	keys := make([]string, 0, len(env))
+	for key := range env {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		matched := false
+		for _, value := range []string{shellLiteral(env[key]), env[key], `"` + env[key] + `"`} {
+			assignment := key + "=" + value
+			if assignments == assignment {
+				assignments, matched = "", true
+				break
+			}
+			if strings.HasPrefix(assignments, assignment+" ") {
+				assignments, matched = strings.TrimPrefix(assignments, assignment+" "), true
+				break
+			}
+		}
+		if !matched {
+			return false
+		}
+	}
+	return assignments == ""
 }
 
 func healthy(processes []process, atlas []string) bool {
