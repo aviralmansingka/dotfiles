@@ -203,6 +203,16 @@ func TestT19V02ProducerRejectsMalformedKnownHistoryWithoutWriting(t *testing.T) 
 	}
 	before := mustReadFile(t, path)
 	producer := mustProducer(t, root)
+	if _, err := producer.Get(run.RunID); !errors.Is(err, vaultregistry.ErrMalformed) {
+		t.Fatalf("Producer.Get error = %v, want ErrMalformed", err)
+	}
+	assertFileBytes(t, path, before)
+
+	if _, err := producer.AppendObservation(run.RunID, run.Revision, "2099-01-01T00:00:00Z", malformed); !errors.Is(err, vaultregistry.ErrMalformed) {
+		t.Fatalf("idempotent AppendObservation error = %v, want ErrMalformed", err)
+	}
+	assertFileBytes(t, path, before)
+
 	if _, err := producer.Update(run.RunID, run.Revision, func(next *vaultregistry.Run) error {
 		next.UpdatedAt = "2026-07-28T04:00:00Z"
 		return nil
@@ -215,6 +225,52 @@ func TestT19V02ProducerRejectsMalformedKnownHistoryWithoutWriting(t *testing.T) 
 		t.Fatalf("AppendObservation error = %v, want ErrMalformed", err)
 	}
 	assertFileBytes(t, path, before)
+
+	if _, err := producer.Retire(run.RunID, run.Revision); !errors.Is(err, vaultregistry.ErrMalformed) {
+		t.Fatalf("Retire error = %v, want ErrMalformed", err)
+	}
+	assertFileBytes(t, path, before)
+	if _, err := os.Stat(filepath.Join(root, "retired", run.RunID+".json")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("failed Retire created retired record: %v", err)
+	}
+}
+
+func TestT19V02ListSummariesMatchesTypedAgentSessions(t *testing.T) {
+	root := t.TempDir()
+	producer := mustProducer(t, root)
+	participantRun := v2Run("v2-participant-session", participant("participant", vaultregistry.StateActive, "parent"))
+	workerRun := v2Run(
+		"v2-worker-session",
+		participant("owner", vaultregistry.StateActive, "parent"),
+		worker("worker", vaultregistry.StateActive, "worker-1"),
+	)
+	workerRun.Observations[0].Payload.RegisteredParticipant.AgentSession.Value = "owner-session"
+	for _, run := range []vaultregistry.Run{participantRun, workerRun} {
+		if _, err := producer.Create(run); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	reader := mustReader(t, root)
+	cases := []struct {
+		name    string
+		session vaultregistry.AgentSession
+		want    []string
+	}{
+		{"participant", vaultregistry.AgentSession{Source: "pi", Kind: "session", Value: "session-1"}, []string{"v2-participant-session"}},
+		{"worker", vaultregistry.AgentSession{Source: "codex", Kind: "session", Value: "worker-session"}, []string{"v2-worker-session"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			summaries, err := reader.ListSummaries(vaultregistry.ListFilter{AgentSession: &tc.session})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := summaryIDs(summaries); !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("List IDs = %v, want %v", got, tc.want)
+			}
+		})
+	}
 }
 
 func TestT19V02ForwardReaderRewriteAndStrictProducer(t *testing.T) {

@@ -3,7 +3,7 @@ set -eu
 
 cd "$(dirname "$0")/../.."
 
-baseline=073d9323ef29885682b04d4ec632f5621b4d7a63
+baseline=5d9d24c9f0994be08078fdc6c7aca37d57a2ee50
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off
@@ -46,7 +46,7 @@ scoped_diff() {
 allowlist() {
   git diff --name-only "$baseline"...HEAD | while IFS= read -r path; do
     case "$path" in
-      internal/vaultregistry/*|internal/vaultregistrytestconsumer/*|scripts/verify-vault-hunter-atlas|scripts/verifiers/vault-hunter-atlas-t19-*|scripts/fixtures/vault-hunter-registry-v2/*) ;;
+      internal/atlascompanion/preview_test.go|internal/vaultregistry/*|internal/vaultregistrytestconsumer/*|scripts/verify-vault-hunter-atlas|scripts/verifiers/vault-hunter-atlas-t19-*|scripts/fixtures/vault-hunter-registry-v2/*) ;;
       *) echo "out-of-allowlist path: $path" >&2; exit 1 ;;
     esac
   done

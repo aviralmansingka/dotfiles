@@ -158,7 +158,7 @@ func (p *Producer) AppendObservation(runID string, expectedRevision uint64, upda
 		return Run{}, err
 	}
 	defer unlock()
-	current, err := load(p.path(runID), runID)
+	current, err := loadProducer(p.path(runID), runID)
 	if err != nil {
 		return Run{}, err
 	}
@@ -182,7 +182,7 @@ func (p *Producer) AppendObservation(runID string, expectedRevision uint64, upda
 }
 
 func (p *Producer) updateLocked(runID string, expectedRevision uint64, mutate func(*Run) error) (Run, error) {
-	current, err := load(p.path(runID), runID)
+	current, err := loadProducer(p.path(runID), runID)
 	if err != nil {
 		return Run{}, err
 	}
@@ -271,7 +271,7 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 		if !retiredInfo.Mode().IsRegular() {
 			return Run{}, fmt.Errorf("%w: retired destination collision", ErrConflict)
 		}
-		retired, err := load(retiredPath, runID)
+		retired, err := loadProducer(retiredPath, runID)
 		if err != nil {
 			return Run{}, err
 		}
@@ -283,7 +283,7 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 	if !activeInfo.Mode().IsRegular() {
 		return Run{}, fmt.Errorf("%w: %s: active record is not a regular file", ErrMalformed, activePath)
 	}
-	active, err := load(activePath, runID)
+	active, err := loadProducer(activePath, runID)
 	if err != nil {
 		return Run{}, err
 	}
@@ -344,7 +344,9 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 	return clone(active)
 }
 
-func (p *Producer) Get(runID string) (Run, error) { return load(p.path(runID), runID) }
+func (p *Producer) Get(runID string) (Run, error) {
+	return loadProducer(p.path(runID), runID)
+}
 func (r *Reader) Get(runID string) (Run, error) {
 	if err := validID(runID); err != nil {
 		return Run{}, err
@@ -513,11 +515,28 @@ func matchesListFilter(run Run, filter ListFilter, from, through *time.Time) boo
 	if wanted := filter.AgentSession; wanted != nil {
 		matched := false
 		for _, participant := range run.Participants {
-			session := participant.AgentSession
-			if session != nil && session.Source == wanted.Source &&
-				session.Kind == wanted.Kind && session.Value == wanted.Value {
+			if participant.AgentSession != nil && sameAgentSession(*participant.AgentSession, *wanted) {
 				matched = true
 				break
+			}
+		}
+		if !matched && run.SchemaVersion == 2 {
+			for _, observation := range run.Observations {
+				var session *AgentSession
+				switch observation.Kind {
+				case KindRegisteredParticipant:
+					if observation.Payload.RegisteredParticipant != nil {
+						session = &observation.Payload.RegisteredParticipant.AgentSession
+					}
+				case KindWorker:
+					if observation.Payload.Worker != nil {
+						session = &observation.Payload.Worker.AgentSession
+					}
+				}
+				if session != nil && sameAgentSession(*session, *wanted) {
+					matched = true
+					break
+				}
 			}
 		}
 		if !matched {
@@ -527,6 +546,10 @@ func matchesListFilter(run Run, filter ListFilter, from, through *time.Time) boo
 	updated, _ := time.Parse(time.RFC3339, run.UpdatedAt)
 	return (from == nil || !updated.Before(*from)) &&
 		(through == nil || !updated.After(*through))
+}
+
+func sameAgentSession(got, wanted AgentSession) bool {
+	return got.Source == wanted.Source && got.Kind == wanted.Kind && got.Value == wanted.Value
 }
 
 func summarize(run Run) RunSummary {
@@ -684,6 +707,17 @@ func load(path, requestedID string) (Run, error) {
 		return Run{}, fmt.Errorf("%w: %s: run_id mismatch", ErrMalformed, path)
 	}
 	if err := validateReader(run); err != nil {
+		return Run{}, fmt.Errorf("%s: %w", path, err)
+	}
+	return run, nil
+}
+
+func loadProducer(path, requestedID string) (Run, error) {
+	run, err := load(path, requestedID)
+	if err != nil {
+		return Run{}, err
+	}
+	if err := validateProducer(run, len(run.Observations)); err != nil {
 		return Run{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return run, nil

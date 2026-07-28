@@ -437,6 +437,9 @@ func TestT19V01AttemptAndLifecycleIdentityConflictsPreserveBytes(t *testing.T) {
 			o.StartedAt = strptr("2026-07-28T01:00:01Z")
 			return o
 		}()},
+		{"attempt reopens", v2Run("reopen-attempt", attempt("terminal", vaultregistry.StatePassed, "a1")), attempt("active", vaultregistry.StateActive, "a1")},
+		{"participant reopens", v2Run("reopen-participant", participant("terminal", vaultregistry.StateSucceeded, "parent")), participant("active", vaultregistry.StateActive, "parent")},
+		{"worker reopens", v2Run("reopen-worker", participant("participant", vaultregistry.StateActive, "parent"), worker("terminal", vaultregistry.StateSucceeded, "worker-1")), worker("active", vaultregistry.StateActive, "worker-1")},
 		{"participant role", v2Run("identity-participant", participant("active", vaultregistry.StateActive, "parent")), func() vaultregistry.Observation {
 			o := participant("terminal", vaultregistry.StateSucceeded, "parent")
 			o.Payload.RegisteredParticipant.Role = "reviewer"

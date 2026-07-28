@@ -470,8 +470,13 @@ func validateNewObservationRelations(run Run, index int) error {
 				prior.Kind == "verifier_attempt" && oneOf(prior.State, "passed", "failed", "interrupted") {
 				return fmt.Errorf("%w: attempt_id %q has multiple terminal outcomes", ErrConflict, identity.AttemptID)
 			}
-			if o.Kind == "verifier_attempt" && o.State == "active" && prior.Kind == "verifier_attempt" && prior.State == "active" {
-				return fmt.Errorf("%w: attempt_id %q has multiple active observations", ErrConflict, identity.AttemptID)
+			if o.Kind == "verifier_attempt" && o.State == "active" && prior.Kind == "verifier_attempt" {
+				if oneOf(prior.State, "passed", "failed", "interrupted") {
+					return fmt.Errorf("%w: attempt_id %q is terminal", ErrConflict, identity.AttemptID)
+				}
+				if prior.State == "active" {
+					return fmt.Errorf("%w: attempt_id %q has multiple active observations", ErrConflict, identity.AttemptID)
+				}
 			}
 			if o.Kind == "verifier_attempt" && oneOf(o.State, "passed", "failed", "interrupted") && prior.Kind == "verifier_attempt" && prior.State == "active" &&
 				(o.StartedAt == nil || prior.StartedAt == nil || *o.StartedAt != *prior.StartedAt) {
@@ -518,8 +523,13 @@ func validateNewObservationRelations(run Run, index int) error {
 			if prior.GoalID != o.GoalID || !sameParticipantIdentity(*prior.Payload.RegisteredParticipant, *p) {
 				return fmt.Errorf("%w: participant_id %q identity reuse", ErrConflict, p.ParticipantID)
 			}
-			if o.State == "active" && prior.State == "active" {
-				return fmt.Errorf("%w: participant_id %q has multiple active observations", ErrConflict, p.ParticipantID)
+			if o.State == "active" {
+				if oneOf(prior.State, "succeeded", "failed", "interrupted") {
+					return fmt.Errorf("%w: participant_id %q is terminal", ErrConflict, p.ParticipantID)
+				}
+				if prior.State == "active" {
+					return fmt.Errorf("%w: participant_id %q has multiple active observations", ErrConflict, p.ParticipantID)
+				}
 			}
 			if oneOf(o.State, "succeeded", "failed", "interrupted") && oneOf(prior.State, "succeeded", "failed", "interrupted") {
 				return fmt.Errorf("%w: participant_id %q has multiple terminal results", ErrConflict, p.ParticipantID)
@@ -542,8 +552,13 @@ func validateNewObservationRelations(run Run, index int) error {
 			if prior.GoalID != o.GoalID || !sameWorkerIdentity(*prior.Payload.Worker, *p) {
 				return fmt.Errorf("%w: worker_id %q identity reuse", ErrConflict, p.WorkerID)
 			}
-			if o.State == "active" && prior.State == "active" {
-				return fmt.Errorf("%w: worker_id %q has multiple active observations", ErrConflict, p.WorkerID)
+			if o.State == "active" {
+				if oneOf(prior.State, "succeeded", "failed", "interrupted") {
+					return fmt.Errorf("%w: worker_id %q is terminal", ErrConflict, p.WorkerID)
+				}
+				if prior.State == "active" {
+					return fmt.Errorf("%w: worker_id %q has multiple active observations", ErrConflict, p.WorkerID)
+				}
 			}
 			if oneOf(o.State, "succeeded", "failed", "interrupted") && oneOf(prior.State, "succeeded", "failed", "interrupted") {
 				return fmt.Errorf("%w: worker_id %q has multiple terminal results", ErrConflict, p.WorkerID)
