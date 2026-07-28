@@ -1,4 +1,8 @@
-import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+  Theme,
+} from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 
 const WIDGET_ID = "no-mistakes-timeline";
@@ -65,20 +69,29 @@ function table(output: string, name: string): Array<Record<string, string>> {
     new RegExp(`^${name}\\[\\d+\\]\\{([^}]+)\\}:$`).test(line.trim()),
   );
   if (headerIndex < 0) return [];
-  const header = lines[headerIndex]!.trim().match(/\{([^}]+)\}/)?.[1]?.split(",") ?? [];
+  const header =
+    lines[headerIndex]!.trim()
+      .match(/\{([^}]+)\}/)?.[1]
+      ?.split(",") ?? [];
   const rows: Array<Record<string, string>> = [];
   for (const line of lines.slice(headerIndex + 1)) {
     if (!/^\s{2,}\S/.test(line)) break;
     const values = splitRow(line.trim());
     if (values.length !== header.length) continue;
-    rows.push(Object.fromEntries(header.map((column, index) => [column, values[index] ?? ""])));
+    rows.push(
+      Object.fromEntries(
+        header.map((column, index) => [column, values[index] ?? ""]),
+      ),
+    );
   }
   return rows;
 }
 
 export function parseNoMistakesStatus(output: string): Snapshot | undefined {
   if (/^runs:\s*0 runs yet/m.test(output)) return undefined;
-  const active = new Map(table(output, "active_steps").map((row) => [row.step, row]));
+  const active = new Map(
+    table(output, "active_steps").map((row) => [row.step, row]),
+  );
   const steps = table(output, "steps").map((row): Step => {
     const live = active.get(row.step);
     const findings = Number(row.findings);
@@ -88,7 +101,10 @@ export function parseNoMistakesStatus(output: string): Snapshot | undefined {
       status: row.status || "pending",
       findings: Number.isFinite(findings) ? findings : undefined,
       durationMs: Number.isFinite(durationMs) ? durationMs : undefined,
-      activity: [live?.round, live?.active_for, live?.last_activity].filter(Boolean).join(" · ") || undefined,
+      activity:
+        [live?.round, live?.active_for, live?.last_activity]
+          .filter(Boolean)
+          .join(" · ") || undefined,
     };
   });
   if (steps.length === 0) return undefined;
@@ -96,7 +112,11 @@ export function parseNoMistakesStatus(output: string): Snapshot | undefined {
     id: scalar(output, "id"),
     branch: scalar(output, "branch"),
     head: scalar(output, "head"),
-    status: scalar(output, "outcome") ?? scalar(output, "status") ?? scalar(output, "gate") ?? "running",
+    status:
+      scalar(output, "outcome") ??
+      scalar(output, "status") ??
+      scalar(output, "gate") ??
+      "running",
     steps,
   };
 }
@@ -108,7 +128,10 @@ function duration(milliseconds?: number): string | undefined {
   return `${Math.floor(milliseconds / 60000)}m${Math.floor((milliseconds % 60000) / 1000)}s`;
 }
 
-function glyph(status: string): { symbol: string; color: "success" | "warning" | "error" | "dim" } {
+function glyph(status: string): {
+  symbol: string;
+  color: "success" | "warning" | "error" | "dim";
+} {
   switch (status) {
     case "completed":
     case "passed":
@@ -128,13 +151,19 @@ function glyph(status: string): { symbol: string; color: "success" | "warning" |
   }
 }
 
-export function renderNoMistakesTimeline(snapshot: Snapshot, theme: Theme, width: number): string[] {
+export function renderNoMistakesTimeline(
+  snapshot: Snapshot,
+  theme: Theme,
+  width: number,
+): string[] {
   const statusGlyph = glyph(snapshot.status);
   const title = [
     theme.fg("accent", theme.bold("No Mistakes")),
     snapshot.branch ? theme.fg("text", snapshot.branch) : undefined,
     theme.fg(statusGlyph.color, `${statusGlyph.symbol} ${snapshot.status}`),
-  ].filter(Boolean).join(theme.fg("dim", " · "));
+  ]
+    .filter(Boolean)
+    .join(theme.fg("dim", " · "));
   const lines = [truncateToWidth(title, width, "…")];
   snapshot.steps.forEach((step, index) => {
     const stepGlyph = glyph(step.status);
@@ -144,12 +173,16 @@ export function renderNoMistakesTimeline(snapshot: Snapshot, theme: Theme, width
       duration(step.durationMs),
       step.findings ? `${step.findings} findings` : undefined,
       step.activity,
-    ].filter(Boolean).join(" · ");
-    lines.push(truncateToWidth(
-      `${theme.fg("borderMuted", `  ${connector}`)} ${theme.fg(stepGlyph.color, stepGlyph.symbol)} ${theme.fg("text", theme.bold(step.name))}${details ? theme.fg("dim", ` · ${details}`) : ""}`,
-      width,
-      "…",
-    ));
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    lines.push(
+      truncateToWidth(
+        `${theme.fg("borderMuted", `  ${connector}`)} ${theme.fg(stepGlyph.color, stepGlyph.symbol)} ${theme.fg("text", theme.bold(step.name))}${details ? theme.fg("dim", ` · ${details}`) : ""}`,
+        width,
+        "…",
+      ),
+    );
   });
   return lines;
 }
@@ -171,17 +204,30 @@ export default function noMistakesTimeline(pi: ExtensionAPI) {
     ctx.ui.setWidget(
       WIDGET_ID,
       (_tui, theme) => ({
-        render: (width: number) => renderNoMistakesTimeline(snapshot!, theme, width),
+        render: (width: number) =>
+          renderNoMistakesTimeline(snapshot!, theme, width),
         invalidate() {},
       }),
       { placement: "belowEditor" },
     );
     const state = glyph(snapshot.status);
-    ctx.ui.setStatus(WIDGET_ID, themeStatus(ctx, state.symbol, snapshot.status, state.color));
+    ctx.ui.setStatus(
+      WIDGET_ID,
+      themeStatus(ctx, state.symbol, snapshot.status, state.color),
+    );
   };
 
-  const refresh = async (ctx: ExtensionContext, expectedGeneration = generation) => {
-    if (polling || !enabled || ctx.mode !== "tui" || expectedGeneration !== generation) return;
+  const refresh = async (
+    ctx: ExtensionContext,
+    expectedGeneration = generation,
+  ) => {
+    if (
+      polling ||
+      !enabled ||
+      ctx.mode !== "tui" ||
+      expectedGeneration !== generation
+    )
+      return;
     const controller = new AbortController();
     pollController = controller;
     polling = true;
@@ -191,17 +237,21 @@ export default function noMistakesTimeline(pi: ExtensionAPI) {
         signal: controller.signal,
         timeout: 5000,
       });
-      if (controller.signal.aborted || expectedGeneration !== generation) return;
-      snapshot = result.code === 0 ? parseNoMistakesStatus(result.stdout) : undefined;
+      if (controller.signal.aborted || expectedGeneration !== generation)
+        return;
+      snapshot =
+        result.code === 0 ? parseNoMistakesStatus(result.stdout) : undefined;
     } catch {
-      if (controller.signal.aborted || expectedGeneration !== generation) return;
+      if (controller.signal.aborted || expectedGeneration !== generation)
+        return;
       snapshot = undefined;
     } finally {
       if (pollController === controller) {
         pollController = undefined;
         polling = false;
       }
-      if (!controller.signal.aborted && expectedGeneration === generation) display(ctx);
+      if (!controller.signal.aborted && expectedGeneration === generation)
+        display(ctx);
     }
   };
 
