@@ -100,9 +100,16 @@ type JournalModel struct {
 	attached      bool
 	width         int
 	height        int
+	reload        func() (vaultregistry.Run, error)
+}
+
+type journalRefreshMsg struct {
+	run vaultregistry.Run
+	err error
 }
 
 func NewJournalModel(run vaultregistry.Run, width, height int) JournalModel {
+	run = renderRunProjection(run)
 	events := make([]journalEvent, 0, len(run.Lifecycle)+len(run.Evidence))
 	for i := range run.Lifecycle {
 		observedAt, _ := time.Parse(time.RFC3339, run.Lifecycle[i].ObservedAt)
@@ -140,12 +147,57 @@ func (m JournalModel) WithColor(enabled bool) JournalModel {
 	return m
 }
 
-// Init schedules no work. A journal is a static projection of one loaded Run.
-func (m JournalModel) Init() tea.Cmd { return nil }
+func (m JournalModel) WithReload(reload func() (vaultregistry.Run, error)) JournalModel {
+	m.reload = reload
+	return m
+}
+
+func (m JournalModel) Init() tea.Cmd { return m.refreshCmd() }
+
+func (m JournalModel) refreshCmd() tea.Cmd {
+	if m.reload == nil {
+		return nil
+	}
+	return tea.Tick(time.Second, func(time.Time) tea.Msg { run, err := m.reload(); return journalRefreshMsg{run: run, err: err} })
+}
+
+func (m JournalModel) refreshed(run vaultregistry.Run) JournalModel {
+	selectedID := ""
+	followTail := len(m.events) == 0 || m.selected == len(m.events)-1
+	if len(m.events) != 0 {
+		selectedID = journalEventID(m.events[m.selected])
+	}
+	next := NewJournalModel(run, m.width, m.height)
+	next.colorEnabled, next.attached, next.detailVisible, next.reload = m.colorEnabled, m.attached, m.detailVisible, m.reload
+	if !followTail && selectedID != "" {
+		for i, event := range next.events {
+			if journalEventID(event) == selectedID {
+				next.selected = i
+				break
+			}
+		}
+	}
+	return next
+}
+
+func journalEventID(event journalEvent) string {
+	if event.lifecycle != nil {
+		return event.lifecycle.ObservationID
+	}
+	if event.evidence != nil {
+		return event.evidence.ObservationID
+	}
+	return ""
+}
 
 // Update applies bounded, read-only navigation to the complete recorded stream.
 func (m JournalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case journalRefreshMsg:
+		if msg.err == nil {
+			m = m.refreshed(msg.run)
+		}
+		return m, m.refreshCmd()
 	case tea.WindowSizeMsg:
 		if msg.Width > 0 && msg.Height > 0 {
 			m.width, m.height = msg.Width, msg.Height

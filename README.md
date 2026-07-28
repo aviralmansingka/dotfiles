@@ -27,7 +27,7 @@ For manual installation:
 ```sh
 brew bundle
 stow nvim tmux zsh ghostty git starship agents pi herdr launchd
-GOBIN="$HOME/.local/bin" go install ./cmd/vault-hunter-atlas
+GOBIN="$HOME/.local/bin" go install ./cmd/atlas
 ```
 
 On Linux (systemd) systems, deploy the user services with:
@@ -126,6 +126,17 @@ stow pi agents
 The shared `vault` skill remains available for explicit project and knowledge-base work. Automatic vault detection
 and routing hooks are intentionally not installed. Use Neovim's `<leader>vf` picker and task-local `<C-a>` when a
 task should launch in a named Herdr feature workspace and isolated task worktree.
+
+Atlas is the public Vault Hunter state CLI:
+
+```sh
+atlas                           # interactive/status entry point
+atlas observe                   # human run overview
+atlas get runs                  # bounded machine reads
+atlas evidence get <id>         # evidence lookup
+atlas run retire <id> --expected-revision 7
+atlas capabilities --output json
+```
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 

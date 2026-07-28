@@ -50,10 +50,11 @@ if ! command -v herdr >/dev/null 2>&1; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
-echo "==> Installing Vault Hunter Atlas"
+echo "==> Installing Atlas"
+rm -f "$HOME/.local/bin/vault-hunter-atlas" "$HOME/.local/bin/vault-hunter-status" "$HOME/.local/bin/vault-hunter-observe"
 (
     cd "$DOTFILES_DIR"
-    GOBIN="$HOME/.local/bin" go install ./cmd/vault-hunter-atlas
+    GOBIN="$HOME/.local/bin" go install ./cmd/atlas
 )
 
 ####################

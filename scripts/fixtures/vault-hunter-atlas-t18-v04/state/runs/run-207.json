@@ -1,0 +1,68 @@
+{
+  "schema_version": 2,
+  "run_id": "run-207",
+  "name": "shared-b",
+  "run_kind": "hunter",
+  "work_reference": {
+    "id": "T18",
+    "title": "Parent decisions, Run retirement, and companion isolation",
+    "path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/18-parent-decisions.md",
+    "feature_path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md",
+    "kind": "task"
+  },
+  "revision": 1,
+  "state": "active",
+  "stage": "awaiting-parent",
+  "invoked_at": "2026-07-28T00:00:00Z",
+  "updated_at": "2026-07-28T01:10:00Z",
+  "observations": [
+    {
+      "observation_id": "attempt-shared-terminal",
+      "kind": "verifier_attempt",
+      "state": "passed",
+      "goal_id": "T18.V05",
+      "title": "V05 verifier passed",
+      "summary": "V05 verifier passed.",
+      "observed_at": "2026-07-28T01:10:00Z",
+      "correlation_id": "run-207",
+      "actor": {
+        "kind": "participant",
+        "id": "participant-parent"
+      },
+      "source": {
+        "kind": "producer",
+        "id": "fixture"
+      },
+      "redaction_class": "internal",
+      "started_at": "2026-07-28T01:09:00Z",
+      "finished_at": "2026-07-28T01:10:00Z",
+      "payload": {
+        "verifier_attempt": {
+          "identity": {
+            "attempt_id": "attempt-shared",
+            "verifier_id": "V05",
+            "specification_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "phase": "affected",
+            "invocation_id": "invoke-attempt-shared",
+            "command": "go test ./cmd/atlas",
+            "working_directory": "/worktrees/dotfiles",
+            "environment_contract_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "implementation_commit": "1111111111111111111111111111111111111111",
+            "implementation_tree": "2072072072072072072072072072072072072072",
+            "producer": {
+              "kind": "participant",
+              "id": "participant-parent"
+            }
+          },
+          "exit_status": 0,
+          "result_manifest": {
+            "path": "manifests/attempt-shared.json",
+            "sha256": "f9a34dd6e1323773f074fba8a440057dde393bad37993953c0602ff3af82a1c3",
+            "media_type": "application/json",
+            "authenticated": true
+          }
+        }
+      }
+    }
+  ]
+}

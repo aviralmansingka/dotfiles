@@ -1,0 +1,108 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture="$PWD/scripts/fixtures/vault-hunter-atlas-t18-v04"
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+chmod +x "$fixture/bin/atlas" "$fixture/bin/herdr"
+
+go test -count=1 ./internal/atlas ./internal/atlascompanion ./cmd/atlas -run 'TestT18V04'
+
+go build -o "$tmp/atlas-real" ./cmd/atlas
+
+cp -R "$fixture/state" "$tmp/cli-state"
+cp -R "$fixture/vault" "$tmp/cli-vault"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" accept verifierattempt --id attempt-201 --expected-revision 1 >"$tmp/accept.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" reject verifierattempt attempt-202 --expected-revision 1 --reason insufficient-evidence >"$tmp/reject.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" run retire retire-me --expected-revision 1 >"$tmp/retire.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" get runs --id run-204 >"$tmp/retired-read.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" get verifierattempts --run retire-me >"$tmp/retired-attempts.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" get participants --id participant-retired >"$tmp/retired-participant.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" get usage --id run-204 >"$tmp/retired-usage.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" capabilities --output json >"$tmp/capabilities.json"
+
+python3 - "$tmp" <<'PY'
+import json
+import sys
+from pathlib import Path
+root = Path(sys.argv[1])
+accept = json.loads((root / 'accept.json').read_text())
+reject = json.loads((root / 'reject.json').read_text())
+retire = json.loads((root / 'retire.json').read_text())
+retired = json.loads((root / 'retired-read.json').read_text())
+retired_attempts = json.loads((root / 'retired-attempts.json').read_text())
+retired_participant = json.loads((root / 'retired-participant.json').read_text())
+retired_usage = json.loads((root / 'retired-usage.json').read_text())
+capabilities = json.loads((root / 'capabilities.json').read_text())
+assert accept['data']['decision'] == 'accepted' and accept['meta']['operation'] == 'accept'
+assert reject['data']['decision'] == 'rejected' and reject['data']['reason'] == 'insufficient-evidence'
+assert retire['data']['state'] == 'retired' and retire['meta']['operation'] == 'retire'
+assert retired['data']['state'] == 'retired'
+assert retired_attempts['data'][0]['run']['id'] == 'run-204'
+assert retired_participant['data']['run']['id'] == 'run-204'
+assert retired_usage['data']['total_tokens'] == 75
+assert 'admin' not in capabilities['data']['agent_tools']
+print('T18.V04 real CLI accept/reject/retire and retired secondary reads: PASS')
+PY
+
+cp -R "$fixture/state" "$tmp/pi-state"
+cp -R "$fixture/vault" "$tmp/pi-vault"
+: >"$tmp/command.log"
+: >"$tmp/session.jsonl"
+PATH="$fixture/bin:$PATH" \
+  ATLAS_VAULT_ROOT="$tmp/pi-vault" \
+  VAULT_HUNTER_STATE_DIR="$tmp/pi-state" \
+  HERDR_ENV=1 HERDR_PANE_ID=pane-v04 \
+  T18_V04_REAL_ATLAS="$tmp/atlas-real" \
+  T18_V04_COMMAND_LOG="$tmp/command.log" \
+  T18_V04_RESULT="$tmp/pi-result.json" \
+  T18_V04_CWD="$PWD" \
+  T18_V04_SESSION_FILE="$tmp/session.jsonl" \
+  T18_V04_SOURCE="$PWD/pi/.pi/agent/extensions/vault-hunter-run.ts" \
+  pi --offline --no-session --no-extensions -e "$fixture/pi-harness.ts" -p probe >/dev/null
+
+python3 - "$tmp/pi-result.json" <<'PY'
+import json
+import sys
+
+result = json.load(open(sys.argv[1], encoding='utf-8'))
+assert result.get('ok') is True, result.get('error', result)
+assert {tool['name'] for tool in result['tools']} == {
+    'agent_run_preflight', 'atlas_accept_verifier_attempt', 'atlas_capabilities', 'atlas_create',
+    'atlas_evidence_get', 'atlas_get', 'atlas_reject_verifier_attempt', 'atlas_retire_run',
+}
+assert result['preflightResult']['details']['herdr']['paneId'] == 'pane-v04'
+for key in ('acceptResult', 'rejectResult', 'retireResult', 'retiredRead', 'retiredAttempts', 'retiredParticipant', 'retiredUsage', 'retryPending', 'capabilitiesResult'):
+    details = result[key]['details']
+    assert set(details) == {'api_version', 'kind', 'data', 'meta'}, (key, details)
+assert result['acceptResult']['details']['data']['decision'] == 'accepted'
+assert result['rejectResult']['details']['data']['decision'] == 'rejected'
+assert result['rejectResult']['details']['data']['reason'] == 'insufficient-evidence'
+assert result['retireResult']['details']['data']['state'] == 'retired'
+assert result['retiredRead']['details']['data']['state'] == 'retired'
+assert result['retiredAttempts']['details']['data'][0]['run']['id'] == 'run-204'
+assert result['retiredParticipant']['details']['data']['run']['id'] == 'run-204'
+assert result['retiredUsage']['details']['data']['total_tokens'] == 75
+assert result['retryPending']['details']['data'][0]['id'] == 'attempt-204'
+assert 'admin' not in result['capabilitiesResult']['details']['data']['agent_tools']
+assert 'retirement was declined' in result['declinedError']
+assert 'requires interactive confirmation' in result['noUIError']
+assert 'run is retired' in result['retiredWriteError']
+assert 'ambiguous run selector' in result['sharedAttemptError']
+assert result['beforeDecline'] == result['afterDecline']
+assert len(result['confirmations']) == 1 and 'retire-me' in result['confirmations'][0]['message']
+commands = [json.loads(line) for line in result['commandLog'].splitlines() if line.strip()]
+assert commands[0] == {'tool': 'herdr', 'argv': ['pane', 'get', 'pane-v04']}
+assert any(command['tool'] == 'atlas' and command['argv'][:3] == ['accept', 'verifierattempt', '--id'] for command in commands)
+assert any(command['tool'] == 'atlas' and command['argv'][:2] == ['reject', 'verifierattempt'] for command in commands)
+assert sum(1 for command in commands if command['tool'] == 'atlas' and command['argv'][:2] == ['run', 'retire']) == 1
+assert all('admin companion revive' not in json.dumps(command) for command in commands)
+source = result['source']
+assert 'atlas admin companion revive' not in source
+print('T18.V04 Pi adapter decisions, retired secondary reads, confirmation gate, and admin absence: PASS')
+PY
+
+echo 'T18.V04 parent decisions, Run retirement, and companion isolation: PASS'

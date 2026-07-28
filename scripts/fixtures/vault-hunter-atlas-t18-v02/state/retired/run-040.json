@@ -1,0 +1,69 @@
+{
+  "schema_version": 2,
+  "run_id": "run-040",
+  "name": "registry-list-bootstrap",
+  "run_kind": "hunter",
+  "work_reference": {
+    "id": "T09",
+    "title": "Add Run Registry list and retire actions",
+    "path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/09-list-retire.md",
+    "feature_path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md",
+    "kind": "task"
+  },
+  "revision": 2,
+  "state": "retired",
+  "stage": "awaiting-parent",
+  "invoked_at": "2026-07-27T12:00:00Z",
+  "updated_at": "2026-07-27T12:30:00Z",
+  "retired_at": "2026-07-27T12:30:00Z",
+  "observations": [
+    {
+      "observation_id": "attempt-016-terminal",
+      "kind": "verifier_attempt",
+      "state": "passed",
+      "goal_id": "T09.V01",
+      "title": "List active Runs",
+      "summary": "Bootstrap verifier passed.",
+      "observed_at": "2026-07-27T12:20:00Z",
+      "correlation_id": "run-040",
+      "actor": {"kind": "participant", "id": "participant-004"},
+      "source": {"kind": "producer", "id": "fixture"},
+      "redaction_class": "internal",
+      "started_at": "2026-07-27T12:19:00Z",
+      "finished_at": "2026-07-27T12:20:00Z",
+      "payload": {
+        "verifier_attempt": {
+          "identity": {
+            "attempt_id": "attempt-016",
+            "verifier_id": "V01",
+            "specification_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "phase": "affected",
+            "invocation_id": "invoke-attempt-016",
+            "command": "go test ./cmd/vault-hunter-registry",
+            "working_directory": "/worktrees/dotfiles",
+            "environment_contract_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "implementation_commit": "0000000000000000000000000000000000000000",
+            "implementation_tree": "6f2c8aa",
+            "producer": {"kind": "participant", "id": "participant-004"}
+          },
+          "exit_status": 0,
+          "result_manifest": {"path": "manifests/attempt-016.json", "sha256": "3c64b832df08264c968d5946832106e1e0f314ce8479f5bb34812acb54dee3d0", "media_type": "application/json", "authenticated": true}
+        }
+      }
+    },
+    {
+      "observation_id": "decision-attempt-016",
+      "kind": "verifier_decision",
+      "state": "accepted",
+      "goal_id": "T09.V01",
+      "title": "Parent accepted attempt 016",
+      "summary": "accepted",
+      "observed_at": "2026-07-27T12:25:00Z",
+      "correlation_id": "run-040",
+      "actor": {"kind": "participant", "id": "parent"},
+      "source": {"kind": "producer", "id": "fixture"},
+      "redaction_class": "internal",
+      "payload": {"verifier_decision": {"attempt_id": "attempt-016"}}
+    }
+  ]
+}

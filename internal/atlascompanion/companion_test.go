@@ -130,8 +130,9 @@ func TestMutationResponsesRequireExactIdentity(t *testing.T) {
 		})
 	}
 
-	atlas := []string{"atlas", "--run-id", "run", "--state-dir", "/state"}
-	wrapperProcess := append([]string{"/bin/sh", "-c", wrapper, marker(tuple)}, atlas...)
+	atlas := []string{"atlas"}
+	env := Client{Executable: "atlas"}.atlasEnv("run", "/state")
+	wrapperProcess := append([]string{"/bin/sh", "-c", wrapperScript(env), marker(tuple)}, atlas...)
 	tabs := herdrResponse(map[string]any{"type": "tab_list", "tabs": []any{map[string]any{"workspace_id": "ws", "tab_id": tuple.TabID, "label": label("run", "ws"), "pane_count": 1}}})
 	panes := herdrResponse(map[string]any{"type": "pane_list", "panes": []any{map[string]any{"workspace_id": "ws", "tab_id": tuple.TabID, "pane_id": tuple.PaneID, "terminal_id": tuple.TerminalID}}})
 	info := herdrResponse(map[string]any{"type": "pane_process_info", "process_info": map[string]any{"pane_id": tuple.PaneID, "foreground_processes": []any{map[string]any{"argv": wrapperProcess}}}})
@@ -241,6 +242,7 @@ func fakeHerdr(t *testing.T, tabs, panes, info, create string) (Client, string) 
 	contents := `#!/bin/sh
 printf '%s %s\n' "$1" "$2" >>"$HERDR_TEST_LOG"
 case "$1 $2" in
+  "agent list") printf '%s\n' "$HERDR_TEST_AGENTS" ;;
   "tab list")
     if [ -e "$HERDR_TEST_CREATED" ] && [ -n "${HERDR_TEST_AFTER_TABS-}" ]; then printf '%s\n' "$HERDR_TEST_AFTER_TABS"; else printf '%s\n' "$HERDR_TEST_TABS"; fi ;;
   "pane list")
@@ -259,6 +261,7 @@ esac
 	t.Setenv("HERDR_TEST_TABS", tabs)
 	t.Setenv("HERDR_TEST_PANES", panes)
 	t.Setenv("HERDR_TEST_INFO", info)
+	t.Setenv("HERDR_TEST_AGENTS", herdrResponse(map[string]any{"type": "agent_list", "agents": []any{}}))
 	t.Setenv("HERDR_TEST_CREATE", create)
 	t.Setenv("HERDR_TEST_RUN", herdrResponse(map[string]any{"type": "pane_run", "pane_id": "created-pane"}))
 	t.Setenv("HERDR_TEST_CLOSE", herdrResponse(map[string]any{"type": "tab_closed", "tab_id": "created-tab"}))
@@ -267,7 +270,8 @@ esac
 
 func TestExactOwnershipIdentity(t *testing.T) {
 	tuple := Tuple{RunID: "run ' one", WorkspaceID: "workspace", TabID: "tab", PaneID: "pane", TerminalID: "terminal"}
-	atlas := []string{"/tmp/vault hunter atlas", "--run-id", tuple.RunID, "--state-dir", "/tmp/state ' one"}
+	atlas := []string{"/tmp/vault hunter atlas"}
+	env := Client{Executable: atlas[0]}.atlasEnv(tuple.RunID, "/tmp/state ' one")
 	encoded := marker(tuple)
 	decoded, ok := decodeMarker(encoded)
 	if !ok || decoded != tuple {
@@ -277,20 +281,20 @@ func TestExactOwnershipIdentity(t *testing.T) {
 		t.Fatal("ownership label leaked the untrusted Run ID")
 	}
 	processes := []process{
-		{Argv: append([]string{"/bin/sh", "-c", wrapper, encoded}, atlas...)},
+		{Argv: append([]string{"/bin/sh", "-c", wrapperScript(env), encoded}, atlas...)},
 		{Argv: atlas},
 	}
-	if !ownedProcess(processes, tuple, atlas) || !healthy(processes, atlas) {
+	if !ownedProcess(processes, tuple, atlas, env) || !healthy(processes, atlas) {
 		t.Fatal("exact wrapper and Atlas process were not accepted")
 	}
 	forged := append([]process(nil), processes...)
 	forged[0].Argv = append([]string(nil), forged[0].Argv...)
 	forged[0].Argv[3] += "forged"
-	if ownedProcess(forged, tuple, atlas) {
+	if ownedProcess(forged, tuple, atlas, env) {
 		t.Fatal("forged ownership marker was accepted")
 	}
-	if got := shellCommand(tuple, atlas); !strings.Contains(got, `'run '\'' one'`) {
-		t.Fatalf("shell command did not quote untrusted input: %s", got)
+	if got := shellCommand(tuple, atlas, env); !strings.Contains(got, "ATLAS_INTERNAL_MODE") || !strings.Contains(got, "ATLAS_INTERNAL_RUN_ID") || !strings.Contains(got, atlas[0]) {
+		t.Fatalf("shell command did not encode the internal launch: %s", got)
 	}
 	if !reflect.DeepEqual(processes[1].Argv, atlas) {
 		t.Fatal("test setup changed Atlas argv")

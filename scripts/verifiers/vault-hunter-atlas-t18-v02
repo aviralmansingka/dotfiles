@@ -1,0 +1,231 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture="$PWD/scripts/fixtures/vault-hunter-atlas-t18-v02"
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+chmod +x "$fixture/bin/atlas" "$fixture/bin/herdr" "$fixture/bin/go"
+cp -R "$fixture/state" "$tmp/state"
+cp -R "$fixture/vault" "$tmp/vault"
+manifest_before=$(find "$tmp/state" "$tmp/vault" -type f -exec shasum -a 256 {} \; | sort | shasum -a 256 | awk '{print $1}')
+
+go build -o "$tmp/atlas" ./cmd/atlas
+export ATLAS_VAULT_ROOT="$tmp/vault"
+export VAULT_HUNTER_STATE_DIR="$tmp/state"
+export ATLAS_TASK_ID='1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/09-list-retire.md'
+export ATLAS_VERIFIER_ID="${ATLAS_TASK_ID}#V01"
+
+for resource in projects themes features tasks runs verifiers verifierattempts participants usage; do
+  "$tmp/atlas" get "$resource" >"$tmp/$resource.json"
+done
+"$tmp/atlas" get projects --name pi-agent >"$tmp/project.json"
+"$tmp/atlas" get themes theme-pi-customization >"$tmp/theme.json"
+"$tmp/atlas" get features --id feature-vault-hunter-atlas >"$tmp/feature.json"
+"$tmp/atlas" get tasks --id "$ATLAS_TASK_ID" >"$tmp/task.json"
+"$tmp/atlas" get runs --id run-041 >"$tmp/run.json"
+"$tmp/atlas" get verifiers --id "$ATLAS_VERIFIER_ID" >"$tmp/verifier.json"
+"$tmp/atlas" get verifierattempts attempt-017 >"$tmp/attempt.json"
+"$tmp/atlas" evidence get evidence-017 >"$tmp/evidence.json"
+"$tmp/atlas" get participants participant-003 >"$tmp/participant.json"
+"$tmp/atlas" get usage --id run-041 >"$tmp/usage-single.json"
+"$tmp/atlas" get verifierattempts --run registry-list-and-retire --pending >"$tmp/empty.json"
+"$tmp/atlas" get verifierattempts --run pending-review --pending >"$tmp/pending.json"
+ATLAS_MAX_COLLECTION_BYTES=500 "$tmp/atlas" get runs >"$tmp/truncated.json"
+
+python3 - "$tmp" <<'PY'
+import json
+import os
+import sys
+
+root = sys.argv[1]
+def load(name):
+    with open(os.path.join(root, name + ".json"), encoding="utf-8") as handle:
+        value = json.load(handle)
+    assert set(value) == {"api_version", "kind", "data", "meta"}, (name, value)
+    assert value["api_version"] == "atlas/v1"
+    assert isinstance(value["meta"], dict)
+    return value
+
+collections = {
+    "projects": "ProjectList",
+    "themes": "ThemeList",
+    "features": "FeatureList",
+    "tasks": "TaskList",
+    "runs": "RunList",
+    "verifiers": "VerifierList",
+    "verifierattempts": "VerifierAttemptList",
+    "participants": "ParticipantList",
+    "usage": "UsageList",
+}
+for name, kind in collections.items():
+    value = load(name)
+    assert value["kind"] == kind and isinstance(value["data"], list), (name, value)
+    assert value["meta"]["count"] == len(value["data"]), (name, value)
+    assert value["meta"]["truncated"] is False, (name, value)
+
+project = load("project")
+assert project["kind"] == "Project"
+assert project["data"]["working_directory"] == "/worktrees/dotfiles"
+assert project["data"]["repository"] == "git@github.com:aviralmansingka/dotfiles"
+assert project["data"]["themes"] == [{
+    "id": "theme-pi-customization",
+    "name": "pi-customization",
+    "description": "Customize Pi Agent and its surrounding workflows.",
+    "status": "active",
+}]
+
+theme = load("theme")
+assert theme["kind"] == "Theme" and theme["data"]["project"] == {"id": "project-pi-agent", "name": "pi-agent"}
+feature = load("feature")
+task_id = os.environ["ATLAS_TASK_ID"]
+verifier_id = os.environ["ATLAS_VERIFIER_ID"]
+assert feature["kind"] == "Feature" and feature["data"]["tasks"] == [{"id": task_id, "local_id": "T09", "name": "Add Run Registry list and retire actions", "status": "done"}]
+
+task = load("task")
+assert task["kind"] == "Task"
+assert task["data"]["id"] == task_id and task["data"]["local_id"] == "T09"
+assert task["data"]["intent"] == "Let operators discover and retire exact Vault Hunter Runs."
+assert task["data"]["verifiers"][0]["id"] == verifier_id and task["data"]["verifiers"][0]["local_id"] == "V01"
+assert task["data"]["verifiers"][0]["accepted_attempt"] == {
+    "id": "attempt-017", "run_id": "run-041", "outcome": "passed", "decision": "accepted", "evidence_ids": ["evidence-017"]
+}
+assert [row["id"] for row in task["data"]["runs"]] == ["run-040", "run-041", "run-042", "run-ambiguous"]
+
+run = load("run")
+assert run["kind"] == "Run" and run["data"]["task"] == {"id": task_id, "local_id": "T09", "name": "Add Run Registry list and retire actions", "status": "done"}
+assert run["data"]["verifier_attempts"][0]["verifier"]["id"] == verifier_id
+assert run["data"]["verifier_attempts"][0]["verifier"]["local_id"] == "V01"
+assert run["data"]["verifier_attempts"][0]["evidence"]["artifacts"] == [
+    {"type": "stdout", "content": "ok example.com/vault-hunter/registry 0.214s\n"},
+    {"type": "text", "content": "Manual inspection passed."},
+    {"type": "file", "path": "/private/tmp/atlas.svg"},
+]
+
+verifier = load("verifier")
+assert verifier["kind"] == "Verifier" and verifier["data"]["id"] == verifier_id and verifier["data"]["local_id"] == "V01" and verifier["data"]["status"] == "passed"
+attempt = load("attempt")
+assert attempt["kind"] == "VerifierAttempt" and attempt["data"]["revision"] == 2 and attempt["data"]["decision"] == "accepted"
+evidence = load("evidence")
+assert evidence["kind"] == "Evidence" and evidence["data"]["task"]["id"] == task_id and evidence["data"]["task"]["local_id"] == "T09"
+assert evidence["data"]["verifier"]["id"] == verifier_id and evidence["data"]["verifier"]["local_id"] == "V01"
+assert evidence["data"]["attempt"] == {"id": "attempt-017", "outcome": "passed", "decision": "accepted"}
+
+participant = load("participant")
+assert participant["kind"] == "Participant"
+assert participant["data"]["usage"] == {"input_tokens": 18420, "cached_input_tokens": 14100, "output_tokens": 3670, "total_tokens": 22090}
+usage = load("usage-single")
+assert usage["kind"] == "Usage"
+assert usage["data"]["input_tokens"] == 28410
+assert usage["data"]["cached_input_tokens"] == 16600
+assert usage["data"]["output_tokens"] == 5920
+assert usage["data"]["total_tokens"] == 34330
+assert usage["data"]["participants"][1]["input_tokens"] == 9990
+assert usage["data"]["participants"][1]["cached_input_tokens"] == 2500
+
+empty = load("empty")
+assert empty["kind"] == "VerifierAttemptList" and empty["data"] == [] and empty["meta"]["count"] == 0
+pending = load("pending")
+assert pending["kind"] == "VerifierAttemptList" and [row["id"] for row in pending["data"]] == ["attempt-018"]
+truncated = load("truncated")
+assert truncated["kind"] == "RunList" and truncated["meta"]["truncated"] is True
+assert truncated["meta"]["count"] > len(truncated["data"])
+
+print("T18.V02 typed reads, hydration, evidence, and usage: PASS")
+PY
+
+# Forced selectors resolve the intentional collision; positional identity fails as ambiguous.
+if "$tmp/atlas" get runs run-041 >"$tmp/ambiguous.stdout" 2>"$tmp/ambiguous.stderr"; then
+  echo 'positional ambiguity unexpectedly succeeded' >&2
+  exit 1
+fi
+test ! -s "$tmp/ambiguous.stdout"
+grep -Fq 'ambiguous run selector: "run-041"' "$tmp/ambiguous.stderr"
+"$tmp/atlas" get runs --id run-041 >/dev/null
+"$tmp/atlas" get runs --name run-041 >/dev/null
+
+# Read failures preserve all fixture bytes.
+for command in \
+  'get runs --id missing-run' \
+  'get tasks --name missing-task' \
+  'evidence get missing-evidence'; do
+  if sh -c '"$0" $1' "$tmp/atlas" "$command" >"$tmp/failure.stdout" 2>"$tmp/failure.stderr"; then
+    echo "negative read unexpectedly succeeded: $command" >&2
+    exit 1
+  fi
+  test ! -s "$tmp/failure.stdout"
+done
+manifest_after_reads=$(find "$tmp/state" "$tmp/vault" -type f -exec shasum -a 256 {} \; | sort | shasum -a 256 | awk '{print $1}')
+test "$manifest_before" = "$manifest_after_reads"
+
+# Strict creates are atomic; malformed, trailing, and validation failures preserve bytes.
+cp "$fixture/run-create.json" "$tmp/create.json"
+"$tmp/atlas" run create --json <"$tmp/create.json" >"$tmp/create-result.json"
+python3 - "$tmp/create-result.json" <<'PY'
+import json, sys
+value = json.load(open(sys.argv[1], encoding="utf-8"))
+assert value == {"api_version":"atlas/v1","kind":"Run","data":{"id":"run-043","name":"release-check","revision":1,"state":"active"},"meta":{"operation":"create"}}
+PY
+created_hash=$(shasum -a 256 "$tmp/state/runs/run-043.json" | awk '{print $1}')
+for payload in '{' '{} trailing' '{"run":null,"initial_driver":null}'; do
+  before=$(find "$tmp/state" -type f -exec shasum -a 256 {} \; | sort | shasum -a 256 | awk '{print $1}')
+  if printf '%s\n' "$payload" | "$tmp/atlas" run create --json >"$tmp/create-failure.stdout" 2>"$tmp/create-failure.stderr"; then
+    echo 'invalid create unexpectedly succeeded' >&2
+    exit 1
+  fi
+  test ! -s "$tmp/create-failure.stdout"
+  after=$(find "$tmp/state" -type f -exec shasum -a 256 {} \; | sort | shasum -a 256 | awk '{print $1}')
+  test "$before" = "$after"
+done
+test "$created_hash" = "$(shasum -a 256 "$tmp/state/runs/run-043.json" | awk '{print $1}')"
+echo 'T18.V02 strict atomic create and byte preservation: PASS'
+
+# The real extension loader proves unchanged envelopes and all adapter failure boundaries.
+: >"$tmp/command.log"
+session_file="$tmp/session.jsonl"
+: >"$session_file"
+PATH="$fixture/bin:$PATH" \
+  HERDR_ENV=1 HERDR_PANE_ID=pane-v02 \
+  T18_V02_COMMAND_LOG="$tmp/command.log" \
+  T18_V02_RESULT="$tmp/pi-result.json" \
+  T18_V02_CWD="$PWD" \
+  T18_V02_SESSION_FILE="$session_file" \
+  T18_V02_SOURCE="$PWD/pi/.pi/agent/extensions/vault-hunter-run.ts" \
+  pi --offline --no-session --no-extensions -e "$fixture/pi-harness.ts" -p probe >/dev/null
+
+python3 - "$tmp/pi-result.json" "$tmp/command.log" <<'PY'
+import json
+import sys
+
+result_path, log_path = sys.argv[1:]
+result = json.load(open(result_path, encoding="utf-8"))
+assert result.get("ok") is True, result.get("error", result)
+assert {tool["name"] for tool in result["tools"]} == {
+    "agent_run_preflight", "atlas_get", "atlas_create", "atlas_evidence_get",
+    "atlas_accept_verifier_attempt", "atlas_reject_verifier_attempt", "atlas_retire_run", "atlas_capabilities",
+}
+for key in ("getResult", "createResult", "evidenceResult", "acceptResult", "rejectResult", "retireResult", "capabilitiesResult"):
+    details = result[key]["details"]
+    assert set(details) == {"api_version", "kind", "data", "meta"}, (key, details)
+    assert details["api_version"] == "atlas/v1" and details["data"]["marker"] == "exact-envelope"
+assert result["loggedBeforeConflict"] == result["loggedAfterConflict"]
+assert "exactly one of identity, id, or name" in result["conflictingSelectorError"]
+assert result["malformedError"]
+assert result["trailingError"]
+assert "exceeded the Pi tool bound" in result["oversizeError"]
+assert "requires interactive confirmation" in result["noUIError"]
+assert "retirement was declined" in result["declinedError"]
+source = result["source"]
+assert 'toolName !== "vault_hunter_run"' in source
+assert 'runId: "restored-run-001"' not in source
+assert 'name: "vault_hunter_run"' not in source
+commands = [json.loads(line) for line in open(log_path, encoding="utf-8") if line.strip()]
+assert all(command["tool"] != "go" for command in commands)
+assert not any(command.get("argv", [])[:1] == ["vault_hunter_run"] for command in commands)
+print("T18.V02 Pi unchanged envelopes, failures, and historical restoration: PASS")
+PY
+
+go test -count=1 ./internal/atlas ./cmd/atlas -run 'T18V02'
+echo 'T18.V02 complete typed state API: PASS'
