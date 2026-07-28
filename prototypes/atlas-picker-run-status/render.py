@@ -55,7 +55,7 @@ def variants(width):
         ],
         "B — Mini journey": [
             "T21 · run-a17 · rev 7",
-            "RECORDED JOURNEY · 3/5",
+            "JOURNEY · selected 3/5",
             "│",
             "├─ ● admission · done",
             "├─ ● V01 · passed",

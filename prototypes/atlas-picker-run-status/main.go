@@ -67,7 +67,7 @@ func render(run vaultregistry.Run, retired bool, width int) []string {
 	selected := selectGoal(goals)
 	lines := []string{
 		clip(clean(run.Task.ID+" · "+run.RunID), width),
-		clip(fmt.Sprintf("RECORDED JOURNEY · %d/%d", ordinal(selected, len(goals)), len(goals)), width),
+		clip(fmt.Sprintf("JOURNEY · selected %d/%d", ordinal(selected, len(goals)), len(goals)), width),
 		"│",
 	}
 
