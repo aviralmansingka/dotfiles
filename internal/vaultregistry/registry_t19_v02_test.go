@@ -67,35 +67,25 @@ func TestT19V02VersionDispatchRoundTripsWithoutMigration(t *testing.T) {
 		}
 	})
 
-	t.Run("version 2 remains version 2 and append only", func(t *testing.T) {
-		root, _ := installV02Fixture(t, "version-2")
+	t.Run("legacy version 2 remains literal and read only", func(t *testing.T) {
+		root, path := installV02Fixture(t, "version-2")
 		before, err := mustReader(t, root).Get("t19-v02-version-2")
 		if err != nil {
 			t.Fatal(err)
 		}
+		stable := mustReadFile(t, path)
 		next := participant("participant-terminal", vaultregistry.StateSucceeded, "writer")
-		next.GoalID = "G02"
-		next.StartedAt = strptr("2026-07-28T00:00:01Z")
-		next.Payload.RegisteredParticipant.Role = "implementation"
-		next.Payload.RegisteredParticipant.AgentSession.Value = "fixture-session"
-		updated, err := mustProducer(t, root).AppendObservation(before.RunID, before.Revision, "2026-07-28T00:04:00Z", next)
-		if err != nil {
-			t.Fatal(err)
+		if _, err := mustProducer(t, root).AppendObservation(before.RunID, before.Revision, "2026-07-28T00:04:00Z", next); !errors.Is(err, vaultregistry.ErrMalformed) {
+			t.Fatalf("legacy append error = %v, want ErrMalformed", err)
 		}
-		if updated.SchemaVersion != 2 || len(updated.Observations) != 2 ||
-			!reflect.DeepEqual(before.Observations, updated.Observations[:1]) {
-			t.Fatalf("version-2 history was not append-only: %#v", updated)
-		}
-		if len(updated.Participants)+len(updated.Lifecycle)+len(updated.Evidence) != 0 {
-			t.Fatal("version-2 write synthesized version-1 history")
-		}
+		assertFileBytes(t, path, stable)
 	})
 }
 
 func TestT19V02IdempotencyConflictsConcurrencyAndAtomicity(t *testing.T) {
 	root := t.TempDir()
 	producer := mustProducer(t, root)
-	created, err := producer.Create(v2Run("t19-v02-conflicts"))
+	created, err := createV2WithProducer(producer, v2Run("t19-v02-conflicts"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +129,7 @@ func TestT19V02IdempotencyConflictsConcurrencyAndAtomicity(t *testing.T) {
 	}
 	assertFileBytes(t, path, stable)
 
-	concurrent, err := producer.Create(v2Run("t19-v02-concurrent"))
+	concurrent, err := createV2WithProducer(producer, v2Run("t19-v02-concurrent"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +164,7 @@ func TestT19V02IdempotencyConflictsConcurrencyAndAtomicity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if successes != 1 || conflicts != 1 || final.Revision != 2 || len(final.Observations) != 1 {
+	if successes != 1 || conflicts != 1 || final.Revision != 2 || len(final.Observations) != 2 {
 		t.Fatalf("concurrent result: successes=%d conflicts=%d run=%#v", successes, conflicts, final)
 	}
 }
@@ -246,7 +236,7 @@ func TestT19V02ListSummariesMatchesTypedAgentSessions(t *testing.T) {
 	)
 	workerRun.Observations[0].Payload.RegisteredParticipant.AgentSession.Value = "owner-session"
 	for _, run := range []vaultregistry.Run{participantRun, workerRun} {
-		if _, err := producer.Create(run); err != nil {
+		if _, err := createV2WithProducer(producer, run); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -258,7 +248,7 @@ func TestT19V02ListSummariesMatchesTypedAgentSessions(t *testing.T) {
 		want    []string
 	}{
 		{"participant", vaultregistry.AgentSession{Source: "pi", Kind: "session", Value: "session-1"}, []string{"v2-participant-session"}},
-		{"worker", vaultregistry.AgentSession{Source: "codex", Kind: "session", Value: "worker-session"}, []string{"v2-worker-session"}},
+		{"worker representation ignored", vaultregistry.AgentSession{Source: "codex", Kind: "session", Value: "worker-session"}, []string{}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -283,27 +273,18 @@ func TestT19V02ForwardReaderRewriteAndStrictProducer(t *testing.T) {
 		before.Observations[1].State != "sealed_v3" {
 		t.Fatalf("future kind/state literals changed: %#v", before.Observations)
 	}
-
-	rewritten, err := mustProducer(t, root).Update(before.RunID, before.Revision, func(next *vaultregistry.Run) error {
+	stable := mustReadFile(t, path)
+	if _, err := mustProducer(t, root).Update(before.RunID, before.Revision, func(next *vaultregistry.Run) error {
 		next.UpdatedAt = "2026-07-28T00:05:00Z"
 		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
+	}); !errors.Is(err, vaultregistry.ErrMalformed) {
+		t.Fatalf("legacy future update error = %v, want ErrMalformed", err)
 	}
-	markers := []string{"future_run", "future_task", "future_envelope", "future_payload_member", "future_attempt", "artifact_attestation_v3", "awaiting_artifact_v3", "sealed_v3"}
-	data := mustReadFile(t, path)
-	for _, marker := range markers {
-		if !bytes.Contains(data, []byte(`"`+marker+`"`)) {
-			t.Errorf("rewrite lost recursive future value %q", marker)
+	assertFileBytes(t, path, stable)
+	for _, marker := range []string{"future_run", "future_task", "future_envelope", "future_payload_member", "future_attempt", "artifact_attestation_v3", "awaiting_artifact_v3", "sealed_v3"} {
+		if !bytes.Contains(stable, []byte(`"`+marker+`"`)) {
+			t.Errorf("reader fixture lost recursive future value %q", marker)
 		}
-	}
-
-	known := gap("known-after-future", "attempt-after-future")
-	known.GoalID = "G02"
-	appended, err := mustProducer(t, root).AppendObservation(rewritten.RunID, rewritten.Revision, "2026-07-28T00:06:00Z", known)
-	if err != nil || len(appended.Observations) != 3 || appended.Observations[1].Kind != "artifact_attestation_v3" {
-		t.Fatalf("strict known append after future history failed: %v, %#v", err, appended)
 	}
 
 	futureState := attempt("future-state", "future_attempt_state", "strict-state")

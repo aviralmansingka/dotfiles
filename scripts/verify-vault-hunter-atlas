@@ -88,8 +88,62 @@ case "${1-}" in
   T20.V03)
     exec go test -v -count=1 ./internal/vaultregistry ./cmd/vault-hunter-registry -run '^TestT20V03'
     ;;
+  T20.V04)
+    baseline=7a59e2d
+    GOPATH=$(go env GOPATH)
+    GOMODCACHE=$(go env GOMODCACHE)
+    export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOPATH GOMODCACHE
+    echo 'T20.V04_CHECK consumer=begin'
+    go test -v -count=1 ./internal/vaultregistry -run '^TestT20V04'
+    echo 'T20.V04_CHECK consumer=pass'
+    echo 'T20.V04_CHECK unit_cli=begin'
+    go test -count=1 ./internal/vaultregistry ./cmd/vault-hunter-registry
+    echo 'T20.V04_CHECK unit_cli=pass'
+    echo 'T20.V04_CHECK race=begin'
+    go test -race -count=1 ./internal/vaultregistry ./cmd/vault-hunter-registry
+    echo 'T20.V04_CHECK race=pass'
+    echo 'T20.V04_CHECK vet=begin'
+    go vet ./internal/vaultregistry ./cmd/vault-hunter-registry
+    echo 'T20.V04_CHECK vet=pass'
+    echo 'T20.V04_CHECK compatibility=begin routes=T20.V01,T20.V02,T20.V03,T09.V04,T19.V01,T19.V02,T19.V03-consumer'
+    "$0" T20.V01
+    "$0" T20.V02
+    "$0" T20.V03
+    "$0" T09.V04
+    "$0" T19.V01
+    "$0" T19.V02
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    mkdir -p "$tmp/state/runs"
+    : >"$tmp/state/registry.lock"
+    cp scripts/fixtures/vault-hunter-registry-v2/version-1.json "$tmp/state/runs/t19-v02-version-1.json"
+    cp scripts/fixtures/vault-hunter-registry-v2/consumer-version-2.json "$tmp/state/runs/t19-v03-consumer.json"
+    go run ./internal/vaultregistrytestconsumer "$tmp/state" >"$tmp/consumer-output.json"
+    cmp scripts/fixtures/vault-hunter-registry-v2/consumer-output.json "$tmp/consumer-output.json"
+    echo 'T20.V04_CHECK compatibility=pass'
+    git diff --check "$baseline"..HEAD
+    git diff --check
+    paths=$(git diff --name-only "$baseline"..HEAD)
+    for path in $paths; do
+      case "$path" in
+        internal/vaultregistry/*|cmd/vault-hunter-registry/*|scripts/verify-vault-hunter-atlas|scripts/fixtures/vault-hunter-registry-v2/*|scripts/goldens/vault-hunter-registry-v2/*)
+          printf 'T20.V04_DIFF path=%s\n' "$path"
+          ;;
+        *)
+          echo "T20.V04_DIFF_BOUNDARY unexpected_path=$path" >&2
+          exit 1
+          ;;
+      esac
+    done
+    test -z "$(git status --porcelain)" || {
+      echo 'T20.V04_DIFF_BOUNDARY worktree=dirty' >&2
+      git status --short >&2
+      exit 1
+    }
+    echo 'T20.V04_CHECK diff_boundary=pass worktree=clean'
+    ;;
   *)
-    echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02|T02.V01|T02.V02|T02.V03|T03.V01|T03.V02|T03.V03|T03.V04|T06.V01|T06.V02|T06.V03|T06.V04|T07.V01|T07.V02|T07.V03|T08.V01|T08.V02|T09.V01|T09.V02|T09.V03|T09.V04|T19.V01|T19.V02|T19.V03|T20.V01|T20.V02|T20.V03" >&2
+    echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02|T02.V01|T02.V02|T02.V03|T03.V01|T03.V02|T03.V03|T03.V04|T06.V01|T06.V02|T06.V03|T06.V04|T07.V01|T07.V02|T07.V03|T08.V01|T08.V02|T09.V01|T09.V02|T09.V03|T09.V04|T19.V01|T19.V02|T19.V03|T20.V01|T20.V02|T20.V03|T20.V04" >&2
     exit 2
     ;;
 esac
