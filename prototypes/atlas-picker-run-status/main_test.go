@@ -51,6 +51,26 @@ func TestVerifierSummaryAggregatesTypedAttemptsDeterministically(t *testing.T) {
 	}
 }
 
+func TestSummaryMetricsReportGoalsVisibleStepsAndUniqueVerifiers(t *testing.T) {
+	run := vaultregistry.Run{
+		Evidence: []vaultregistry.Evidence{
+			{VerifierID: "v1", State: "passed"},
+			{VerifierID: "v1", State: "passed"},
+		},
+		Observations: []vaultregistry.Observation{{
+			State: vaultregistry.StatePassed,
+			Payload: vaultregistry.ObservationPayload{VerifierAttempt: &vaultregistry.VerifierAttemptPayload{
+				Identity: vaultregistry.VerifierAttemptIdentity{VerifierID: "v2"},
+			}},
+		}},
+	}
+	goals := make([]journeyGoal, 9)
+	got := summaryLines(run, goals, 30, false)[0].plain
+	if want := " │  G9 · S5 · V2  ●"; got != want {
+		t.Fatalf("summaryLines() = %q, want %q", got, want)
+	}
+}
+
 func TestFramesPreservePickerInteriors(t *testing.T) {
 	run := vaultregistry.Run{
 		Task: vaultregistry.Task{ID: "t02", Title: "T02: Build the Compact Atlas Renderer", FeaturePath: "features/vault-hunter-atlas/feature.md"},
@@ -72,7 +92,7 @@ func TestFramesPreservePickerInteriors(t *testing.T) {
 			"T02 · Build the Compact Atlas",
 			"Renderer",
 			"● recorded done",
-			" │  G · S · V  ◐◑",
+			" │  G5 · S5 · V2  ◐◑",
 			" ├─ ● refactor-gate · done",
 			" ├─ ● review-convergence · do…",
 			" ├─ ● implementation-pr · done",
@@ -86,7 +106,7 @@ func TestFramesPreservePickerInteriors(t *testing.T) {
 			"T02 · Build the Compact",
 			"Atlas Renderer",
 			"● recorded done",
-			" │  G · S · V  ◐◑",
+			" │  G5 · S5 · V2  ◐◑",
 			" ├─ ● refactor-gate · …",
 			" ├─ ● review-convergen…",
 			" ├─ ● implementation-p…",

@@ -245,11 +245,37 @@ func headerLines(run vaultregistry.Run, goals []journeyGoal, width int, colors b
 }
 
 func summaryLines(run vaultregistry.Run, goals []journeyGoal, width int, colors bool) []renderedLine {
-	prefix, legend := " │  ", "G · S · V  "
+	visibleSteps := len(goals)
+	if visibleSteps > 5 {
+		visibleSteps = 5
+	}
+	prefix := " │  "
+	legend := fmt.Sprintf("G%d · S%d · V%d  ", len(goals), visibleSteps, typedVerifierCount(run))
 	mark := milestoneMark(verifierSummary(run, goals), colors)
 	plain := clip(prefix+legend+mark.plain, width)
 	styled := colorize(colors, rail, prefix) + colorize(colors, muted, legend) + mark.styled
 	return []renderedLine{segmentLine(plain, styled)}
+}
+
+func typedVerifierCount(run vaultregistry.Run) int {
+	ids := map[string]struct{}{}
+	record := func(id string) {
+		if id = clean(id); id != "" {
+			ids[id] = struct{}{}
+		}
+	}
+	for _, evidence := range run.Evidence {
+		record(evidence.VerifierID)
+	}
+	for _, item := range run.Observations {
+		if attempt := item.Payload.VerifierAttempt; attempt != nil {
+			record(attempt.Identity.VerifierID)
+		}
+		if gap := item.Payload.VerifierAttemptGap; gap != nil {
+			record(gap.Identity.VerifierID)
+		}
+	}
+	return len(ids)
 }
 
 func verifierSummary(run vaultregistry.Run, goals []journeyGoal) milestoneState {
