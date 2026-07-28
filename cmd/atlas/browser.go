@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -201,7 +202,7 @@ func (m browserModel) rightPane(width, rows int) []string {
 	return lines
 }
 
-func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Reader) ([]browserEntry, error) {
+func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Reader, warnings io.Writer) ([]browserEntry, error) {
 	runs, err := reader.List()
 	if err != nil {
 		return nil, err
@@ -210,7 +211,7 @@ func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Read
 	for _, run := range runs {
 		runsByID[run.RunID] = run
 	}
-	summaries, err := atlaspkg.BuildActiveRunSummaries(vaultRoot, stateRoot)
+	summaries, err := atlaspkg.BuildRunSummaries(vaultRoot, stateRoot, runs)
 	if err != nil {
 		return nil, err
 	}
@@ -220,24 +221,24 @@ func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Read
 		if runID == "" {
 			continue
 		}
-		run, ok := runsByID[runID]
-		if !ok {
-			return nil, fmt.Errorf("atlas: run %s is missing from the active reader snapshot", runID)
-		}
+		run := runsByID[runID]
 		projectID, projectName := mapPair(item, "project")
 		featureID, featureName := mapPair(item, "feature")
 		taskID, taskName := mapPair(item, "task")
 		projectPreview, err := previewEnvelope(vaultRoot, stateRoot, "projects", atlaspkg.MachineSelector{ID: projectID})
 		if err != nil {
-			return nil, err
+			warnUnrenderableRun(warnings, run, err)
+			continue
 		}
 		featurePreview, err := previewEnvelope(vaultRoot, stateRoot, "features", atlaspkg.MachineSelector{ID: featureID})
 		if err != nil {
-			return nil, err
+			warnUnrenderableRun(warnings, run, err)
+			continue
 		}
 		taskPreview, err := previewEnvelope(vaultRoot, stateRoot, "tasks", atlaspkg.MachineSelector{ID: taskID})
 		if err != nil {
-			return nil, err
+			warnUnrenderableRun(warnings, run, err)
+			continue
 		}
 		entries = append(entries, browserEntry{
 			runID:          runID,
@@ -253,6 +254,14 @@ func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Read
 		})
 	}
 	return entries, nil
+}
+
+func warnUnrenderableRun(w io.Writer, run vaultregistry.Run, err error) {
+	path := run.Task.Path
+	if run.WorkReference != nil {
+		path = run.WorkReference.Path
+	}
+	fmt.Fprintf(w, "atlas: warning: skipping unrenderable run %s (%s): %v\n", run.RunID, path, err)
 }
 
 func previewEnvelope(vaultRoot, stateRoot, resource string, selector atlaspkg.MachineSelector) (string, error) {

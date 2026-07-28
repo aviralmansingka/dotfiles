@@ -724,11 +724,11 @@ func runBrowser(stdout io.Writer, reader *vaultregistry.Reader) error {
 	if err != nil {
 		return err
 	}
-	reload := func() ([]browserEntry, error) { return buildBrowserEntries(vaultRoot, stateRoot, reader) }
-	entries, err := reload()
+	entries, err := buildBrowserEntries(vaultRoot, stateRoot, reader, os.Stderr)
 	if err != nil {
 		return err
 	}
+	reload := func() ([]browserEntry, error) { return buildBrowserEntries(vaultRoot, stateRoot, reader, io.Discard) }
 	model := newBrowserModel(entries).withReload(reload).withColor(interactiveColorEnabled())
 	_, err = tea.NewProgram(model, tea.WithAltScreen()).Run()
 	return err
