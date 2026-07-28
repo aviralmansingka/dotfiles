@@ -31,7 +31,7 @@ The skill that routes a Vault Feature, Vault Task, or Wayfinder effort into its 
 _Avoid_: vault skill
 
 **Run Registry**:
-A versioned durable store of Run, participant, lifecycle, and evidence observations emitted by the active Vault Hunter driver. It exposes producer and reader APIs but never becomes the authority for vault lifecycle, goal advancement, acceptance, or completion.
+A versioned durable store of immutable Run observations emitted by the active Vault Hunter driver. Schema version 1 retains participant, lifecycle, and evidence histories; schema version 2 adds typed verifier attempts and parent decisions, participants and workers, runtime telemetry, and auditor verdicts. Reader APIs remain forward-readable while producer APIs strictly validate known contracts, and the Registry never becomes the authority for vault lifecycle, goal advancement, acceptance, or completion.
 _Avoid_: workflow engine, completion authority
 
 **Atlas**:

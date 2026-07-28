@@ -230,7 +230,7 @@ func TestT01V02ClassifiedReadsPreserveBytes(t *testing.T) {
 		want error
 	}{
 		{"malformed", []byte(`{"schema_version":`), vaultregistry.ErrMalformed},
-		{"unsupported", []byte("{\"schema_version\":2}\n"), vaultregistry.ErrUnsupportedVersion},
+		{"unsupported", []byte("{\"schema_version\":3}\n"), vaultregistry.ErrUnsupportedVersion},
 	}
 	for _, tc := range cases {
 		t.Run(tc.id, func(t *testing.T) {
@@ -333,7 +333,7 @@ func TestT01ListRejectsMalformedAndUnsupportedRecords(t *testing.T) {
 		want error
 	}{
 		{"malformed", []byte(`{"schema_version":`), vaultregistry.ErrMalformed},
-		{"unsupported", []byte(`{"schema_version":2}`), vaultregistry.ErrUnsupportedVersion},
+		{"unsupported", []byte(`{"schema_version":3}`), vaultregistry.ErrUnsupportedVersion},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

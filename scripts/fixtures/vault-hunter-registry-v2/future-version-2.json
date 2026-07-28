@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "run_id": "t19-v02-future",
+  "revision": 1,
+  "invoked_at": "2026-07-28T00:00:00Z",
+  "updated_at": "2026-07-28T00:00:00Z",
+  "task": {
+    "id": "T19",
+    "title": "Forward-readable version 2",
+    "path": "tasks/19.md",
+    "feature_path": "features/vault-hunter-atlas.md",
+    "kind": "task",
+    "future_task": {"level": {"kept": true}}
+  },
+  "observations": [
+    {
+      "observation_id": "known-kind-future-state",
+      "kind": "verifier_attempt",
+      "state": "awaiting_artifact_v3",
+      "goal_id": "G02",
+      "title": "Future attempt state",
+      "summary": "A future state remains literal for structural readers.",
+      "observed_at": "2026-07-28T00:01:00Z",
+      "correlation_id": "future-correlation",
+      "actor": {"kind": "participant", "id": "parent"},
+      "source": {"kind": "producer", "id": "future-producer"},
+      "redaction_class": "internal",
+      "payload": {
+        "verifier_attempt": {
+          "future_attempt": {"nested": [1, {"kept": true}]}
+        },
+        "future_payload_member": {"deep": {"kept": true}}
+      },
+      "future_envelope": {"deep": {"kept": true}}
+    },
+    {
+      "observation_id": "future-kind-state",
+      "kind": "artifact_attestation_v3",
+      "state": "sealed_v3",
+      "goal_id": "G02",
+      "title": "Future observation kind",
+      "summary": "A future kind and state remain literal for structural readers.",
+      "observed_at": "2026-07-28T00:02:00Z",
+      "correlation_id": "future-correlation",
+      "actor": {"kind": "participant", "id": "parent"},
+      "source": {"kind": "producer", "id": "future-producer"},
+      "redaction_class": "internal",
+      "payload": {
+        "artifact_attestation_v3": {"chain": [{"kept": true}]}
+      }
+    }
+  ],
+  "future_run": {"recursive": [{"kept": true}]}
+}

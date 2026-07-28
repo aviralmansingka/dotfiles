@@ -234,7 +234,7 @@ func (c Client) Attach(runID, workspaceID, stateDir string) (Tuple, error) {
 		return Tuple{}, err
 	}
 	if created.Tab == nil || created.RootPane == nil {
-		return Tuple{}, errors.New("Herdr returned an incomplete companion tuple")
+		return Tuple{}, errors.New("herdr returned an incomplete companion tuple")
 	}
 	tuple := Tuple{RunID: runID, WorkspaceID: workspaceID, TabID: created.Tab.TabID, PaneID: created.RootPane.PaneID, TerminalID: created.RootPane.TerminalID}
 	isNew := newTuple(s, tuple)
@@ -246,12 +246,12 @@ func (c Client) Attach(runID, workspaceID, stateDir string) (Tuple, error) {
 	}
 	if created.Type != "tab_created" || created.Tab.WorkspaceID != workspaceID || created.Tab.Label != label(runID, workspaceID) || created.Tab.PaneCount != 1 || created.RootPane.WorkspaceID != workspaceID || created.RootPane.TabID != created.Tab.TabID || !complete(tuple) || !isNew {
 		rollback()
-		return Tuple{}, errors.New("Herdr returned an incomplete companion tuple")
+		return Tuple{}, errors.New("herdr returned an incomplete companion tuple")
 	}
 	current, err := c.list(workspaceID)
 	if err != nil || !exactCreated(current, tuple, label(runID, workspaceID)) {
 		rollback()
-		return Tuple{}, errors.New("Herdr did not create the exact companion tuple")
+		return Tuple{}, errors.New("herdr did not create the exact companion tuple")
 	}
 	command := shellCommand(tuple, c.atlasArgv(runID, stateDir))
 	if err := c.runPane(tuple.PaneID, command); err != nil {
