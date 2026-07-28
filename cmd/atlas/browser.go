@@ -211,7 +211,7 @@ func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Read
 	for _, run := range runs {
 		runsByID[run.RunID] = run
 	}
-	summaries, err := atlaspkg.BuildActiveRunSummaries(vaultRoot, stateRoot)
+	summaries, err := atlaspkg.BuildRunSummaries(vaultRoot, stateRoot, runs)
 	if err != nil {
 		return nil, err
 	}
@@ -221,11 +221,7 @@ func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Read
 		if runID == "" {
 			continue
 		}
-		run, ok := runsByID[runID]
-		if !ok {
-			fmt.Fprintf(warnings, "atlas: warning: skipping unrenderable run %s: missing from active reader snapshot\n", runID)
-			continue
-		}
+		run := runsByID[runID]
 		projectID, projectName := mapPair(item, "project")
 		featureID, featureName := mapPair(item, "feature")
 		taskID, taskName := mapPair(item, "task")

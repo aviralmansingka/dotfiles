@@ -243,11 +243,23 @@ func BuildActiveRunSummaries(vaultRoot, stateRoot string) ([]map[string]any, err
 	if err != nil {
 		return nil, err
 	}
-	data := make([]map[string]any, 0, len(loaded.activeRuns))
-	for _, run := range loaded.activeRuns {
-		data = append(data, loaded.runSummaryObject(run))
+	return buildRunSummaries(loaded, loaded.activeRuns), nil
+}
+
+func BuildRunSummaries(vaultRoot, stateRoot string, runs []vaultregistry.Run) ([]map[string]any, error) {
+	loaded, err := loadStore(vaultRoot, stateRoot)
+	if err != nil {
+		return nil, err
 	}
-	return data, nil
+	return buildRunSummaries(loaded, runs), nil
+}
+
+func buildRunSummaries(loaded *store, runs []vaultregistry.Run) []map[string]any {
+	data := make([]map[string]any, 0, len(runs))
+	for _, run := range runs {
+		data = append(data, loaded.runSummaryObject(renderRunProjection(run)))
+	}
+	return data
 }
 
 func BuildEvidenceEnvelope(vaultRoot, stateRoot string, selector MachineSelector) (Envelope, error) {
