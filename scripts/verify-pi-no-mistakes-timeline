@@ -37,8 +37,11 @@ printf '%s\n' '{"theme":"gruvbox-material"}' > "$verify_dir/agent/settings.json"
 
 raw="$verify_dir/timeline.raw"
 plain="$verify_dir/timeline.txt"
+off_raw="$verify_dir/timeline-off.raw"
+off_plain="$verify_dir/timeline-off.txt"
 export PI_NM_AGENT_DIR="$verify_dir/agent"
 export PI_NM_RAW="$raw"
+export PI_NM_OFF_RAW="$off_raw"
 export PI_NM_PATH="$verify_dir/bin:$PATH"
 export PI_NM_THEME="$repo_root/pi/.pi/agent/themes/gruvbox-material.json"
 export PI_NM_SESSION="$verify_dir/session.jsonl"
@@ -54,12 +57,18 @@ expect "review"
 expect "round 1"
 send -- "/no-mistakes-timeline off\r"
 expect "No Mistakes timeline off"
+log_file
+log_file -a -noappend $env(PI_NM_OFF_RAW)
+send -- "\014"
+after 500
 send -- "/quit\r"
 expect eof
 EXPECT
 
 perl -pe 's/\e\][^\a]*(?:\a|\e\\)//g; s/\e\[[0-?]*[ -\/]*[@-~]//g; s/\r//g' \
   "$raw" > "$plain"
+perl -pe 's/\e\][^\a]*(?:\a|\e\\)//g; s/\e\[[0-?]*[ -\/]*[@-~]//g; s/\r//g' \
+  "$off_raw" > "$off_plain"
 for expected in \
   'No Mistakes' \
   'feature/no-mistakes-timeline' \
@@ -74,6 +83,12 @@ for expected in \
     exit 1
   }
 done
+
+if grep -F '✓ intent' "$off_plain" >/dev/null; then
+  printf 'timeline remained visible after toggling off\n' >&2
+  tail -120 "$off_plain" >&2
+  exit 1
+fi
 
 printf 'ok: No Mistakes TOON status renders in the Pi timeline rail\n'
 printf 'ok: completed, running, and pending phases use timeline status glyphs\n'

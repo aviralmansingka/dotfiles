@@ -158,6 +158,8 @@ export default function noMistakesTimeline(pi: ExtensionAPI) {
   let timer: ReturnType<typeof setInterval> | undefined;
   let enabled = true;
   let polling = false;
+  let generation = 0;
+  let pollController: AbortController | undefined;
   let snapshot: Snapshot | undefined;
 
   const display = (ctx: ExtensionContext) => {
@@ -178,31 +180,44 @@ export default function noMistakesTimeline(pi: ExtensionAPI) {
     ctx.ui.setStatus(WIDGET_ID, themeStatus(ctx, state.symbol, snapshot.status, state.color));
   };
 
-  const refresh = async (ctx: ExtensionContext) => {
-    if (polling || !enabled || ctx.mode !== "tui") return;
+  const refresh = async (ctx: ExtensionContext, expectedGeneration = generation) => {
+    if (polling || !enabled || ctx.mode !== "tui" || expectedGeneration !== generation) return;
+    const controller = new AbortController();
+    pollController = controller;
     polling = true;
     try {
       const result = await pi.exec("no-mistakes", ["axi", "status"], {
         cwd: ctx.cwd,
+        signal: controller.signal,
         timeout: 5000,
       });
+      if (controller.signal.aborted || expectedGeneration !== generation) return;
       snapshot = result.code === 0 ? parseNoMistakesStatus(result.stdout) : undefined;
     } catch {
+      if (controller.signal.aborted || expectedGeneration !== generation) return;
       snapshot = undefined;
     } finally {
-      polling = false;
-      display(ctx);
+      if (pollController === controller) {
+        pollController = undefined;
+        polling = false;
+      }
+      if (!controller.signal.aborted && expectedGeneration === generation) display(ctx);
     }
   };
 
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
-    void refresh(ctx);
-    timer = setInterval(() => void refresh(ctx), POLL_MS);
+    const sessionGeneration = ++generation;
+    void refresh(ctx, sessionGeneration);
+    timer = setInterval(() => void refresh(ctx, sessionGeneration), POLL_MS);
     timer.unref?.();
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
+    generation++;
+    pollController?.abort();
+    pollController = undefined;
+    polling = false;
     if (timer) clearInterval(timer);
     timer = undefined;
     ctx.ui.setWidget(WIDGET_ID, undefined);
@@ -217,9 +232,12 @@ export default function noMistakesTimeline(pi: ExtensionAPI) {
       else if (action === "on") enabled = true;
       else if (action === "refresh") enabled = true;
       else enabled = !enabled;
-      if (enabled) await refresh(ctx);
+      const commandGeneration = generation;
+      if (enabled) await refresh(ctx, commandGeneration);
       else display(ctx);
-      ctx.ui.notify(`No Mistakes timeline ${enabled ? "on" : "off"}`, "info");
+      if (commandGeneration === generation) {
+        ctx.ui.notify(`No Mistakes timeline ${enabled ? "on" : "off"}`, "info");
+      }
     },
   });
 }
