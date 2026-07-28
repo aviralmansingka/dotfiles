@@ -114,10 +114,15 @@ snapshot() {
   jq -s --argjson herdr "$herdr" '
     def decoded: try (.detail | fromjson) catch {};
     def dollars: if . == null then null else ((. * 100 | round) / 100) end;
+    def complete_herdr:
+      type == "object" and
+      all(.workspace_id, .tab_id, .pane_id, .terminal_id; type == "string" and length > 0);
+    def same_session($recorded; $live):
+      $recorded.source == $live.source and $recorded.kind == $live.kind and $recorded.value == $live.value;
     ($herdr.result.agents // []) as $agents |
     map(
       . as $run |
-      ([.participants[]? | select(.role == "driver") | .agent_session.value?] | map(select(. != null))) as $sessions |
+      ([.participants[]? | select(.role == "driver")]) as $drivers |
       ([.lifecycle[]? | select(.kind == "subagent/started") | .observation_id | sub("-started$"; "")]) as $started |
       ([.lifecycle[]? | select(.kind == "subagent/finished" or .kind == "subagent/interrupted") | .observation_id | sub("-(finished|interrupted)$"; "")]) as $terminal |
       ([.lifecycle[]? | select(.kind == "subagent/finished")]) as $finished |
@@ -131,7 +136,19 @@ snapshot() {
         state: ($frontier.state // "unknown"),
         stage: ($frontier.kind // "unknown"),
         goal: ($frontier.goal_id // ""),
-        driver: ([ $agents[] | select(.agent_session.value? as $value | $sessions | any(. == $value or ($value | contains(.)))) | .agent_status ] | last // "-"),
+        driver: ([
+          $drivers[] as $recorded |
+          ([$agents[] | select(
+            ($recorded.herdr | complete_herdr) and
+            .workspace_id == $recorded.herdr.workspace_id and
+            .tab_id == $recorded.herdr.tab_id and
+            .pane_id == $recorded.herdr.pane_id and
+            .terminal_id == $recorded.herdr.terminal_id and
+            (($recorded.agent_session == null or .agent_session == null) or
+              same_session($recorded.agent_session; .agent_session))
+          )]) as $matches |
+          select($matches | length == 1) | $matches[0].agent_status
+        ] | last // "-"),
         children: {
           active: ([$started[] | select(. as $key | ($terminal | index($key) | not))] | length),
           finished: ($finished | length),
@@ -179,10 +196,10 @@ render() {
 
   local title
   printf -v title ' Vault Hunter observations at %s ' "$(date -u +%FT%TZ)"
-  printf '%s%-118s%s\n' "$heading" "$title" "$reset"
-  printf '%s %-38s  %-7s  %-18s  %-20s  %7s  %8s  %7s %s\n' "$heading" TASK DRIVER STATE STAGE CHILD PARENT\$ CHILD\$ "$reset"
-  printf '%s %-38s  %-7s  %-18s  %-20s  %7s  %8s  %7s %s\n' "$divider" \
-    '──────────────────────────────────────' '───────' '──────────────────' '────────────────────' '───────' '────────' '───────' "$reset"
+  printf '%s%-132s%s\n' "$heading" "$title" "$reset"
+  printf '%s %-52s  %-7s  %-18s  %-20s  %7s  %8s  %7s %s\n' "$heading" RUN/TASK DRIVER STATE STAGE CHILD PARENT\$ CHILD\$ "$reset"
+  printf '%s %-52s  %-7s  %-18s  %-20s  %7s  %8s  %7s %s\n' "$divider" \
+    '────────────────────────────────────────────────────' '───────' '──────────────────' '────────────────────' '───────' '────────' '───────' "$reset"
 
   while IFS=$'\t' read -r task driver state stage children parent_cost child_cost; do
     local state_style=$normal
@@ -194,23 +211,24 @@ render() {
       accepted|approved) state_style=$special ;;
       unexpected*) state_style=$italic_warning ;;
     esac
-    printf '%s%s %-38s%s  %s%-7s%s  %s%-18s%s  %s%-20s%s  %s%7s%s  %s%8s%s  %s%7s%s %s\n' \
+    printf '%s%s %-52s%s  %s%-7s%s  %s%-18s%s  %s%-20s%s  %s%7s%s  %s%8s%s  %s%7s%s %s\n' \
       "$cell" "$task_style" "$task" "$normal" "$driver_style" "$driver" "$normal" \
       "$state_style" "$state" "$normal" "$stage_style" "$stage" "$normal" \
       "$number_style" "$children" "$normal" "$number_style" "$parent_cost" "$normal" \
       "$number_style" "$child_cost" "$normal" "$reset"
   done < <(printf '%s\n' "$data" | jq -r '
+    def human: gsub("[[:cntrl:]]"; " ");
     .[] | [
-      (.task | gsub("—"; "-") | gsub("×"; "x") | .[0:38]),
-      (.driver[0:7]),
-      (.state[0:18]),
-      (.stage[0:20]),
+      ((.run_id + " " + .task) | human | gsub("—"; "-") | gsub("×"; "x") | .[0:52]),
+      (.driver | human | .[0:7]),
+      (.state | human | .[0:18]),
+      (.stage | human | .[0:20]),
       ("\(.children.active)/\(.children.finished)"),
       (if .parent.cost == null then "-" else (.parent.cost | tostring) end),
       (.children.cost | tostring)
     ] | @tsv
   ')
-  printf '%s %-116s %s\n' "$foot" 'Child is active/finished. Costs cover automatically observed usage only; Registry observations are not canonical authority.' "$reset"
+  printf '%s %-130s %s\n' "$foot" 'Child is active/finished. Costs cover automatically observed usage only; Registry observations are not canonical authority.' "$reset"
 }
 
 while :; do

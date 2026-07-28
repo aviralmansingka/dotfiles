@@ -1,0 +1,273 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+fixture=scripts/fixtures/vault-hunter-atlas-t09-v01
+tmp=$(mktemp -d)
+trap 'chmod -R u+rwX "$tmp" 2>/dev/null || true; rm -rf "$tmp"' EXIT
+
+python3 - "$fixture/state" > "$tmp/source-before" <<'PY'
+import hashlib, os, stat, sys
+
+def manifest(root):
+    rows = []
+    for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
+        dirs.sort(); files.sort()
+        for name in ["."] if base == root else []:
+            path = base
+            rel = "."
+            info = os.lstat(path)
+            rows.append(f"d {stat.S_IMODE(info.st_mode):04o} {rel}")
+        for name in dirs + files:
+            path = os.path.join(base, name)
+            rel = os.path.relpath(path, root)
+            info = os.lstat(path)
+            mode = stat.S_IMODE(info.st_mode)
+            if stat.S_ISLNK(info.st_mode):
+                rows.append(f"l {mode:04o} {rel} -> {os.readlink(path)}")
+            elif stat.S_ISDIR(info.st_mode):
+                rows.append(f"d {mode:04o} {rel}")
+            elif stat.S_ISREG(info.st_mode):
+                with open(path, "rb") as handle:
+                    digest = hashlib.sha256(handle.read()).hexdigest()
+                rows.append(f"f {mode:04o} {rel} {digest}")
+            else:
+                rows.append(f"o {mode:04o} {rel}")
+    return hashlib.sha256(("\n".join(rows) + "\n").encode()).hexdigest()
+
+print(manifest(sys.argv[1]))
+PY
+
+go build -o "$tmp/vault-hunter-registry" ./cmd/vault-hunter-registry
+cp -R "$fixture/state" "$tmp/state"
+
+# This independent package pins the public API split: T06 Reader.List still
+# returns full Runs while T09 ListSummaries returns the bounded projection.
+T09_V01_STATE_DIR="$tmp/state" go test -count=1 -tags t09v01 "./$fixture/probe"
+
+python3 - "$fixture/state" "$tmp/state" "$tmp/vault-hunter-registry" "$(cat "$tmp/source-before")" <<'PY'
+import copy
+import fcntl
+import hashlib
+import json
+import os
+import shutil
+import stat
+import subprocess
+import sys
+import time
+
+source, state, binary, source_before = sys.argv[1:]
+work = os.path.dirname(state)
+FEATURE = "features/vault-hunter-atlas/feature.md"
+
+
+def manifest(root):
+    rows = []
+    for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
+        dirs.sort(); files.sort()
+        if base == root:
+            info = os.lstat(base)
+            rows.append(f"d {stat.S_IMODE(info.st_mode):04o} .")
+        for name in dirs + files:
+            path = os.path.join(base, name)
+            rel = os.path.relpath(path, root)
+            info = os.lstat(path)
+            mode = stat.S_IMODE(info.st_mode)
+            if stat.S_ISLNK(info.st_mode):
+                rows.append(f"l {mode:04o} {rel} -> {os.readlink(path)}")
+            elif stat.S_ISDIR(info.st_mode):
+                rows.append(f"d {mode:04o} {rel}")
+            elif stat.S_ISREG(info.st_mode):
+                with open(path, "rb") as handle:
+                    digest = hashlib.sha256(handle.read()).hexdigest()
+                rows.append(f"f {mode:04o} {rel} {digest}")
+            else:
+                rows.append(f"o {mode:04o} {rel}")
+    return hashlib.sha256(("\n".join(rows) + "\n").encode()).hexdigest()
+
+
+def request(root, filter_value=None):
+    value = {"action": "list", "root": root}
+    if filter_value is not None:
+        value["filter"] = filter_value
+    return value
+
+
+def invoke(value):
+    return subprocess.run(
+        [binary], input=(json.dumps(value, separators=(",", ":")) + "\n").encode(),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+    )
+
+
+def successful(value):
+    result = invoke(value)
+    if result.returncode != 0:
+        raise AssertionError(f"command failed ({result.returncode}): {result.stderr.decode()}")
+    try:
+        return result.stdout, json.loads(result.stdout)
+    except Exception as error:
+        raise AssertionError(f"invalid list JSON {result.stdout!r}: {error}") from error
+
+
+def ids(items):
+    return [item["run_id"] for item in items]
+
+
+def failed_classified(root, filter_value, classification, path_fragment=None):
+    before = manifest(root)
+    result = invoke(request(root, filter_value))
+    assert result.returncode == 1, (result.returncode, result.stdout, result.stderr)
+    assert result.stdout == b"", result.stdout
+    stderr = result.stderr.decode()
+    assert classification in stderr, stderr
+    if path_fragment is not None:
+        assert path_fragment in stderr, stderr
+    assert manifest(root) == before
+
+
+expected = [
+    {"schema_version": 1, "run_id": "run-a", "revision": 7,
+     "invoked_at": "2026-07-26T10:00:00Z", "updated_at": "2026-07-26T10:30:00Z",
+     "task": {"id": "T09", "title": "List active Runs", "path": "features/vault-hunter-atlas/tasks/09-list.md", "feature_path": FEATURE, "kind": "task"}},
+    {"schema_version": 1, "run_id": "run-m", "revision": 3,
+     "invoked_at": "2026-07-26T10:45:00Z", "updated_at": "2026-07-26T11:00:00Z",
+     "task": {"id": "T09", "title": "List active Runs", "path": "features/vault-hunter-atlas/tasks/09-list.md", "feature_path": FEATURE, "kind": "task"}},
+    {"schema_version": 1, "run_id": "run-z", "revision": 1,
+     "invoked_at": "2026-07-26T11:45:00Z", "updated_at": "2026-07-26T12:00:00Z",
+     "task": {"id": "T10", "title": "Another Task", "path": "features/other/tasks/10.md", "feature_path": "features/other/feature.md", "kind": "task"}},
+]
+
+# The complete active snapshot is deterministic and bounded. The fixture's
+# temporary file, non-JSON file, and .json directory do not enter it.
+state_before = manifest(state)
+first_bytes, first = successful(request(state))
+second_bytes, second = successful(request(state, {}))
+assert first == expected, first
+assert second == expected, second
+assert first_bytes == second_bytes
+for item in first:
+    assert set(item) == {"schema_version", "run_id", "revision", "invoked_at", "updated_at", "task"}
+    assert set(item["task"]) == {"id", "title", "path", "feature_path", "kind"}
+assert manifest(state) == state_before
+
+# Each exact filter works alone. All five combine conjunctively, and equal
+# updated-time bounds include the record on both boundaries.
+cases = [
+    ({"task_id": "T09"}, ["run-a", "run-m"]),
+    ({"feature_path": FEATURE}, ["run-a", "run-m"]),
+    ({"agent_session": {"source": "pi", "kind": "id", "value": "session-alpha"}}, ["run-a", "run-z"]),
+    ({"updated_at_from": "2026-07-26T11:00:00Z"}, ["run-m", "run-z"]),
+    ({"updated_at_through": "2026-07-26T11:00:00Z"}, ["run-a", "run-m"]),
+    ({"task_id": "T09", "feature_path": FEATURE,
+      "agent_session": {"source": "pi", "kind": "id", "value": "session-alpha"},
+      "updated_at_from": "2026-07-26T10:30:00Z", "updated_at_through": "2026-07-26T10:30:00Z"}, ["run-a"]),
+    ({"task_id": "T10", "feature_path": FEATURE,
+      "agent_session": {"source": "pi", "kind": "id", "value": "session-alpha"},
+      "updated_at_from": "2026-07-26T10:30:00Z", "updated_at_through": "2026-07-26T10:30:00Z"}, []),
+]
+for filter_value, wanted in cases:
+    _, items = successful(request(state, filter_value))
+    assert ids(items) == wanted, (filter_value, ids(items), wanted)
+assert manifest(state) == state_before
+
+# A list participates in the Registry lock instead of observing while an
+# exclusive producer snapshot is in progress.
+with open(os.path.join(state, "registry.lock"), "r+b") as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    process = subprocess.Popen(
+        [binary], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    process.stdin.write((json.dumps(request(state)) + "\n").encode())
+    process.stdin.close()
+    time.sleep(0.5)
+    assert process.poll() is None, "list did not wait for the Registry lock"
+    fcntl.flock(lock, fcntl.LOCK_UN)
+    output = process.stdout.read()
+    error = process.stderr.read()
+    status = process.wait(timeout=5)
+assert status == 0, (status, error)
+assert json.loads(output) == expected
+assert manifest(state) == state_before
+
+# An absent root and an existing empty root both return a JSON empty array and
+# create neither runs/ nor registry.lock.
+absent = os.path.join(work, "absent")
+output, value = successful(request(absent))
+assert value == [] and output.strip() == b"[]"
+assert not os.path.lexists(absent)
+empty = os.path.join(work, "empty")
+os.mkdir(empty)
+empty_before = manifest(empty)
+output, value = successful(request(empty))
+assert value == [] and output.strip() == b"[]"
+assert manifest(empty) == empty_before
+
+# Semantic filter errors are ErrMalformed, emit no partial snapshot, and do
+# not touch an otherwise valid Registry.
+invalid_filters = [
+    {"agent_session": {"kind": "id", "value": "session-alpha"}},
+    {"agent_session": {"source": "pi", "value": "session-alpha"}},
+    {"agent_session": {"source": "pi", "kind": "id"}},
+    {"updated_at_from": "not-rfc3339"},
+    {"updated_at_through": "not-rfc3339"},
+    {"updated_at_from": "2026-07-26T12:00:00Z", "updated_at_through": "2026-07-26T11:00:00Z"},
+]
+for filter_value in invalid_filters:
+    failed_classified(state, filter_value, "malformed run")
+invalid_absent = os.path.join(work, "invalid-absent")
+result = invoke(request(invalid_absent, {"updated_at_from": "not-rfc3339"}))
+assert result.returncode == 1 and result.stdout == b"", (result.returncode, result.stdout, result.stderr)
+assert "malformed run" in result.stderr.decode(), result.stderr
+assert not os.path.lexists(invalid_absent)
+
+# Every active .json record belongs to one complete snapshot and is validated
+# before filtering. Malformed, unsupported, and symlinked records therefore
+# fail with a classified path-bearing error and no partial stdout, even when
+# Task filtering would exclude them.
+def fresh_case(name):
+    root = os.path.join(work, name, "state")
+    shutil.copytree(source, root)
+    return root
+
+unlocked = fresh_case("unlocked")
+os.remove(os.path.join(unlocked, "registry.lock"))
+failed_classified(unlocked, None, "malformed run", "registry.lock")
+
+malformed = fresh_case("malformed")
+with open(os.path.join(malformed, "runs", "broken.json"), "wb") as handle:
+    handle.write(b"{not-json\n")
+failed_classified(malformed, {"task_id": "NO-MATCH"}, "malformed run", "broken.json")
+
+unsupported = fresh_case("unsupported")
+future_path = os.path.join(unsupported, "runs", "future.json")
+future = copy.deepcopy(expected[0])
+future["schema_version"] = 2
+future["run_id"] = "future"
+future["participants"] = []
+future["lifecycle"] = []
+future["evidence"] = []
+with open(future_path, "w", encoding="utf-8") as handle:
+    json.dump(future, handle, separators=(",", ":"))
+    handle.write("\n")
+failed_classified(unsupported, {"task_id": "NO-MATCH"}, "unsupported schema version", "future.json")
+
+symlinked = fresh_case("symlinked")
+target = os.path.join(work, "symlinked", "linked-target.json")
+linked = copy.deepcopy(expected[0])
+linked["run_id"] = "linked"
+linked["participants"] = []
+linked["lifecycle"] = []
+linked["evidence"] = []
+with open(target, "w", encoding="utf-8") as handle:
+    json.dump(linked, handle, separators=(",", ":"))
+    handle.write("\n")
+os.symlink(os.path.relpath(target, os.path.join(symlinked, "runs")), os.path.join(symlinked, "runs", "linked.json"))
+failed_classified(symlinked, {"task_id": "NO-MATCH"}, "malformed run", "linked.json")
+
+assert manifest(source) == source_before, "checked-in fixture changed"
+print(f"source fixture manifest: {source_before}")
+print(f"copied Registry before/after manifest: {state_before}")
+print("T09.V01 filtered deterministic read-only active Run summaries: PASS")
+PY

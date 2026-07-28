@@ -12,18 +12,73 @@ import (
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
-const maxConflictRetries = 8
+const (
+	maxConflictRetries = 8
+	maxRequestBytes    = 1 << 20
+)
 
-type request struct {
+var errMalformedRequest = errors.New("malformed request")
+
+// The command contract uses one strict request type per action. Root is
+// optional on every action and resolves through the Registry's normal state
+// directory rules when omitted.
+type createRequest struct {
+	Action string             `json:"action"`
+	Root   string             `json:"root,omitempty"`
+	Run    *vaultregistry.Run `json:"run"`
+}
+
+type getRequest struct {
+	Action    string  `json:"action"`
+	Root      string  `json:"root,omitempty"`
+	RunID     *string `json:"run_id"`
+	Namespace string  `json:"namespace,omitempty"`
+}
+
+type appendRequest struct {
 	Action      string                     `json:"action"`
-	Root        string                     `json:"root"`
-	RunID       string                     `json:"run_id"`
-	Run         *vaultregistry.Run         `json:"run,omitempty"`
-	UpdatedAt   string                     `json:"updated_at,omitempty"`
+	Root        string                     `json:"root,omitempty"`
+	RunID       *string                    `json:"run_id"`
+	UpdatedAt   *string                    `json:"updated_at"`
 	Participant *vaultregistry.Participant `json:"participant,omitempty"`
 	Lifecycle   *vaultregistry.Lifecycle   `json:"lifecycle,omitempty"`
 	Evidence    *vaultregistry.Evidence    `json:"evidence,omitempty"`
-	Filter      vaultregistry.ListFilter   `json:"filter,omitempty"`
+}
+
+type listAgentSessionFilter struct {
+	Source string `json:"source"`
+	Kind   string `json:"kind"`
+	Value  string `json:"value"`
+}
+
+type listFilterRequest struct {
+	TaskID           string                  `json:"task_id,omitempty"`
+	FeaturePath      string                  `json:"feature_path,omitempty"`
+	AgentSession     *listAgentSessionFilter `json:"agent_session,omitempty"`
+	UpdatedAtFrom    string                  `json:"updated_at_from,omitempty"`
+	UpdatedAtThrough string                  `json:"updated_at_through,omitempty"`
+}
+
+type listRequest struct {
+	Action string            `json:"action"`
+	Root   string            `json:"root,omitempty"`
+	Filter listFilterRequest `json:"filter,omitempty"`
+}
+
+type retireRequest struct {
+	Action           string  `json:"action"`
+	Root             string  `json:"root,omitempty"`
+	RunID            *string `json:"run_id"`
+	ExpectedRevision *uint64 `json:"expected_revision"`
+}
+
+// request is the normalized append input used by the idempotent update logic.
+type request struct {
+	RunID       string
+	UpdatedAt   string
+	Participant *vaultregistry.Participant
+	Lifecycle   *vaultregistry.Lifecycle
+	Evidence    *vaultregistry.Evidence
 }
 
 func main() {
@@ -33,40 +88,179 @@ func main() {
 }
 
 func serve(input io.Reader, output io.Writer) error {
-	var req request
-	if err := json.NewDecoder(io.LimitReader(input, 1<<20)).Decode(&req); err != nil {
-		return err
-	}
-	if req.Action == "list" {
-		reader, err := vaultregistry.OpenReader(req.Root)
-		if err != nil {
-			return err
-		}
-		summaries, err := reader.ListSummaries(req.Filter)
-		if err != nil {
-			return err
-		}
-		return json.NewEncoder(output).Encode(summaries)
-	}
-	producer, err := vaultregistry.OpenProducer(req.Root)
+	command, err := decodeRequest(input)
 	if err != nil {
 		return err
 	}
-	var run vaultregistry.Run
-	switch req.Action {
-	case "create":
-		run, err = create(producer, req.Run)
-	case "get":
-		run, err = producer.Get(req.RunID)
-	case "append":
-		run, err = appendObservation(producer, req)
+
+	var response any
+	switch req := command.(type) {
+	case createRequest:
+		producer, openErr := vaultregistry.OpenProducer(req.Root)
+		if openErr != nil {
+			return openErr
+		}
+		response, err = create(producer, req.Run)
+	case getRequest:
+		reader, openErr := vaultregistry.OpenReader(req.Root)
+		if openErr != nil {
+			return openErr
+		}
+		if req.Namespace == "retired" {
+			response, err = reader.GetRetired(*req.RunID)
+		} else {
+			response, err = reader.Get(*req.RunID)
+		}
+	case appendRequest:
+		producer, openErr := vaultregistry.OpenProducer(req.Root)
+		if openErr != nil {
+			return openErr
+		}
+		response, err = appendObservation(producer, request{
+			RunID: *req.RunID, UpdatedAt: *req.UpdatedAt,
+			Participant: req.Participant, Lifecycle: req.Lifecycle, Evidence: req.Evidence,
+		})
+	case listRequest:
+		reader, openErr := vaultregistry.OpenReader(req.Root)
+		if openErr != nil {
+			return openErr
+		}
+		filter := vaultregistry.ListFilter{
+			TaskID: req.Filter.TaskID, FeaturePath: req.Filter.FeaturePath,
+			UpdatedAtFrom: req.Filter.UpdatedAtFrom, UpdatedAtThrough: req.Filter.UpdatedAtThrough,
+		}
+		if session := req.Filter.AgentSession; session != nil {
+			filter.AgentSession = &vaultregistry.AgentSession{Source: session.Source, Kind: session.Kind, Value: session.Value}
+		}
+		response, err = reader.ListSummaries(filter)
+	case retireRequest:
+		response, err = retireRun(req.Root, *req.RunID, *req.ExpectedRevision)
 	default:
-		err = fmt.Errorf("unsupported action %q", req.Action)
+		return errors.New("unreachable command request")
 	}
 	if err != nil {
 		return err
 	}
-	return json.NewEncoder(output).Encode(run)
+	return json.NewEncoder(output).Encode(response)
+}
+
+func retireRun(root, runID string, expectedRevision uint64) (vaultregistry.Run, error) {
+	if expectedRevision == 0 {
+		return vaultregistry.Run{}, fmt.Errorf("%w: retire revision must be non-zero", vaultregistry.ErrMalformed)
+	}
+	if root == "" {
+		var err error
+		root, err = vaultregistry.ResolveRoot()
+		if err != nil {
+			return vaultregistry.Run{}, err
+		}
+	}
+	producer, err := vaultregistry.OpenExistingProducer(root)
+	if err != nil {
+		return vaultregistry.Run{}, err
+	}
+	if _, err := producer.Retire(runID, expectedRevision); err != nil {
+		return vaultregistry.Run{}, err
+	}
+	reader, err := vaultregistry.OpenReader(root)
+	if err != nil {
+		return vaultregistry.Run{}, err
+	}
+	return reader.GetRetired(runID)
+}
+
+func decodeRequest(input io.Reader) (any, error) {
+	data, err := io.ReadAll(io.LimitReader(input, maxRequestBytes+1))
+	if err != nil {
+		return nil, malformedRequest(err)
+	}
+	if len(data) > maxRequestBytes {
+		return nil, malformedRequest(errors.New("request exceeds 1 MiB"))
+	}
+
+	var envelope struct {
+		Action string `json:"action"`
+	}
+	if err := decodeSingleJSON(data, &envelope, false); err != nil {
+		return nil, malformedRequest(err)
+	}
+	if envelope.Action == "" {
+		return nil, malformedRequest(errors.New("action is required"))
+	}
+
+	var command any
+	switch envelope.Action {
+	case "create":
+		command = &createRequest{}
+	case "get":
+		command = &getRequest{}
+	case "append":
+		command = &appendRequest{}
+	case "list":
+		command = &listRequest{}
+	case "retire":
+		command = &retireRequest{}
+	default:
+		return nil, malformedRequest(fmt.Errorf("unsupported action %q", envelope.Action))
+	}
+	if err := decodeSingleJSON(data, command, true); err != nil {
+		return nil, malformedRequest(err)
+	}
+
+	switch req := command.(type) {
+	case *createRequest:
+		if req.Action != "create" || req.Run == nil {
+			return nil, malformedRequest(errors.New("create requires run"))
+		}
+		return *req, nil
+	case *getRequest:
+		if req.Action != "get" || req.RunID == nil {
+			return nil, malformedRequest(errors.New("get requires run_id"))
+		}
+		if req.Namespace != "" && req.Namespace != "active" && req.Namespace != "retired" {
+			return nil, malformedRequest(errors.New("get namespace must be active or retired"))
+		}
+		return *req, nil
+	case *appendRequest:
+		if req.Action != "append" || req.RunID == nil || req.UpdatedAt == nil {
+			return nil, malformedRequest(errors.New("append requires run_id and updated_at"))
+		}
+		return *req, nil
+	case *listRequest:
+		if req.Action != "list" {
+			return nil, malformedRequest(errors.New("invalid list action"))
+		}
+		return *req, nil
+	case *retireRequest:
+		if req.Action != "retire" || req.RunID == nil || req.ExpectedRevision == nil {
+			return nil, malformedRequest(errors.New("retire requires run_id and expected_revision"))
+		}
+		return *req, nil
+	default:
+		return nil, errors.New("unreachable decoded request")
+	}
+}
+
+func decodeSingleJSON(data []byte, destination any, strict bool) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	if strict {
+		decoder.DisallowUnknownFields()
+	}
+	if err := decoder.Decode(destination); err != nil {
+		return err
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return errors.New("multiple JSON values")
+		}
+		return err
+	}
+	return nil
+}
+
+func malformedRequest(err error) error {
+	return fmt.Errorf("%w: %v", errMalformedRequest, err)
 }
 
 func create(producer *vaultregistry.Producer, wanted *vaultregistry.Run) (vaultregistry.Run, error) {

@@ -1,0 +1,355 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+repo_root=$(pwd -P)
+fixture="$repo_root/scripts/fixtures/vault-hunter-atlas-t09-v03"
+tmp=$(mktemp -d)
+trap 'chmod -R u+rwX "$tmp" 2>/dev/null || true; rm -rf "$tmp"' EXIT
+
+manifest() {
+  python3 - "$1" <<'PY'
+import hashlib, os, stat, sys
+root = sys.argv[1]
+rows = []
+for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
+    dirs.sort(); files.sort()
+    if base == root:
+        info = os.lstat(base)
+        rows.append(f"d {stat.S_IMODE(info.st_mode):04o} .")
+    for name in dirs + files:
+        path = os.path.join(base, name)
+        rel = os.path.relpath(path, root)
+        info = os.lstat(path)
+        mode = stat.S_IMODE(info.st_mode)
+        if stat.S_ISLNK(info.st_mode):
+            rows.append(f"l {mode:04o} {rel} -> {os.readlink(path)}")
+        elif stat.S_ISDIR(info.st_mode):
+            rows.append(f"d {mode:04o} {rel}")
+        elif stat.S_ISREG(info.st_mode):
+            with open(path, "rb") as handle:
+                digest = hashlib.sha256(handle.read()).hexdigest()
+            rows.append(f"f {mode:04o} {rel} {digest}")
+        else:
+            rows.append(f"o {mode:04o} {rel}")
+print(hashlib.sha256(("\n".join(rows) + "\n").encode()).hexdigest())
+PY
+}
+
+source_before=$(manifest "$fixture/state")
+cp -R "$fixture/state" "$tmp/state"
+go build -o "$tmp/vault-hunter-registry" ./cmd/vault-hunter-registry
+
+python3 - "$fixture/state" "$tmp/state" "$tmp/vault-hunter-registry" "$source_before" <<'PY'
+import hashlib
+import json
+import os
+import shutil
+import stat
+import subprocess
+import sys
+
+source, state, binary, source_before = sys.argv[1:]
+work = os.path.dirname(state)
+
+
+def manifest(root):
+    rows = []
+    for base, dirs, files in os.walk(root, topdown=True, followlinks=False):
+        dirs.sort(); files.sort()
+        if base == root:
+            info = os.lstat(base)
+            rows.append(f"d {stat.S_IMODE(info.st_mode):04o} .")
+        for name in dirs + files:
+            path = os.path.join(base, name)
+            rel = os.path.relpath(path, root)
+            info = os.lstat(path)
+            mode = stat.S_IMODE(info.st_mode)
+            if stat.S_ISLNK(info.st_mode):
+                rows.append(f"l {mode:04o} {rel} -> {os.readlink(path)}")
+            elif stat.S_ISDIR(info.st_mode):
+                rows.append(f"d {mode:04o} {rel}")
+            elif stat.S_ISREG(info.st_mode):
+                with open(path, "rb") as handle:
+                    digest = hashlib.sha256(handle.read()).hexdigest()
+                rows.append(f"f {mode:04o} {rel} {digest}")
+            else:
+                rows.append(f"o {mode:04o} {rel}")
+    return hashlib.sha256(("\n".join(rows) + "\n").encode()).hexdigest()
+
+
+def invoke(value, root=state, raw=None):
+    if raw is None:
+        value = {**value, "root": root}
+        raw = json.dumps(value, separators=(",", ":")) + "\n"
+    return subprocess.run([binary], input=raw.encode(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+
+
+def success(value, root=state):
+    result = invoke(value, root)
+    assert result.returncode == 0, (value, result.returncode, result.stdout, result.stderr)
+    assert result.stderr == b"", result.stderr
+    return result.stdout, json.loads(result.stdout)
+
+
+def classified(value, classification, root=state, raw=None):
+    before = manifest(root) if os.path.lexists(root) else None
+    result = invoke(value, root, raw)
+    assert result.returncode == 1, (value, result.returncode, result.stdout, result.stderr)
+    assert result.stdout == b"", result.stdout
+    assert classification in result.stderr.decode(), (classification, result.stderr)
+    after = manifest(root) if os.path.lexists(root) else None
+    assert after == before, (before, after)
+
+
+def stable_retire_collision(root):
+    active = os.path.join(root, "runs", "run-retire.json")
+    destination = os.path.join(root, "retired", "run-retire.json")
+    before = manifest(root)
+    results = [invoke({"action": "retire", "run_id": "run-retire", "expected_revision": 7}, root) for _ in range(2)]
+    for result in results:
+        assert result.returncode == 1 and result.stdout == b"", (result.returncode, result.stdout, result.stderr)
+        diagnostic = result.stderr.decode()
+        assert "revision conflict" in diagnostic, f"destination collision was not classified conflict: {diagnostic.strip()}"
+    assert results[0].stderr == results[1].stderr
+    assert manifest(root) == before
+    assert os.path.lexists(active) and os.path.lexists(destination)
+
+
+def load_fixture(path):
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
+
+run_retire = load_fixture(os.path.join(source, "runs", "run-retire.json"))
+run_stable = load_fixture(os.path.join(source, "runs", "run-stable.json"))
+run_reserved = load_fixture(os.path.join(source, "retired", "run-reserved.json"))
+
+def summary(run):
+    return {key: run[key] for key in ("schema_version", "run_id", "revision", "invoked_at", "updated_at", "task")} | {
+        "task": {key: run["task"][key] for key in ("id", "title", "path", "feature_path", "kind")}
+    }
+
+# Typed list and explicit retired-read requests have deterministic result
+# shapes. Retired records never leak into the active summary snapshot.
+state_before = manifest(state)
+first_bytes, listed = success({"action": "list", "filter": {"task_id": "T09"}})
+second_bytes, listed_again = success({"action": "list", "filter": {"task_id": "T09"}})
+assert listed == [summary(run_retire), summary(run_stable)], listed
+assert first_bytes == second_bytes
+for item in listed:
+    assert set(item) == {"schema_version", "run_id", "revision", "invoked_at", "updated_at", "task"}
+    assert set(item["task"]) == {"id", "title", "path", "feature_path", "kind"}
+_, retired = success({"action": "get", "run_id": "run-reserved", "namespace": "retired"})
+assert retired == run_reserved
+assert manifest(state) == state_before
+
+# Each action is decoded as its own strict typed request. Unknown/cross-action
+# fields, wrong scalar types, missing required fields, and trailing JSON are
+# classified before storage is touched.
+malformed_requests = [
+    ({"action": "list", "filter": {}, "run_id": "cross-action"}, None),
+    ({"action": "list", "filter": {"task_id": 9}}, None),
+    ({"action": "get", "namespace": "retired"}, None),
+    ({"action": "get", "run_id": "run-reserved", "namespace": "retired", "filter": {}}, None),
+    ({"action": "get", "run_id": "run-reserved", "namespace": "unknown"}, None),
+    ({"action": "get_retired", "run_id": "run-reserved"}, None),
+    ({"action": "retire", "run_id": "run-retire"}, None),
+    ({"action": "retire", "run_id": "run-retire", "expected_revision": "7"}, None),
+    ({"action": "retire", "run_id": "run-retire", "expected_revision": 7, "unexpected": True}, None),
+    ({}, None),
+    (None, '{"action":"list","root":"%s"}\n{"action":"list","root":"%s"}\n' % (state, state)),
+]
+for value, raw in malformed_requests:
+    classified(value or {}, "malformed request", raw=raw)
+classified({"action": "get", "run_id": "../escape", "namespace": "retired"}, "invalid run id")
+classified({"action": "get", "run_id": "missing", "namespace": "retired"}, "run not found")
+classified({"action": "list", "filter": {"updated_at_from": "not-rfc3339"}}, "malformed run")
+classified({"action": "retire", "run_id": "run-retire", "expected_revision": 0}, "malformed run")
+classified({"action": "retire", "run_id": "run-retire", "expected_revision": 6}, "revision conflict")
+
+malformed_collision = os.path.join(work, "malformed-retire-collision")
+shutil.copytree(source, malformed_collision)
+with open(os.path.join(malformed_collision, "retired", "run-retire.json"), "wb") as handle:
+    handle.write(b"{not-json\n")
+stable_retire_collision(malformed_collision)
+
+directory_collision = os.path.join(work, "directory-retire-collision")
+shutil.copytree(source, directory_collision)
+os.mkdir(os.path.join(directory_collision, "retired", "run-retire.json"))
+stable_retire_collision(directory_collision)
+
+malformed_retired = os.path.join(work, "malformed-retired")
+shutil.copytree(source, malformed_retired)
+with open(os.path.join(malformed_retired, "retired", "broken.json"), "w", encoding="utf-8") as handle:
+    handle.write("{not-json\n")
+classified({"action": "get", "run_id": "broken", "namespace": "retired"}, "malformed run", malformed_retired)
+unsupported_retired = os.path.join(work, "unsupported-retired")
+shutil.copytree(source, unsupported_retired)
+future = dict(run_reserved)
+future["schema_version"] = 2
+future["run_id"] = "future"
+with open(os.path.join(unsupported_retired, "retired", "future.json"), "w", encoding="utf-8") as handle:
+    json.dump(future, handle, separators=(",", ":"))
+    handle.write("\n")
+classified({"action": "get", "run_id": "future", "namespace": "retired"}, "unsupported schema version", unsupported_retired)
+
+# The command remains noninteractive: exact retirement succeeds from one JSON
+# request with empty stderr, preserves the exact record, and retrying that
+# identity/revision is byte-for-byte idempotent.
+active_path = os.path.join(state, "runs", "run-retire.json")
+retired_path = os.path.join(state, "retired", "run-retire.json")
+with open(active_path, "rb") as handle:
+    active_bytes = handle.read()
+output, moved = success({"action": "retire", "run_id": "run-retire", "expected_revision": 7})
+assert moved == run_retire
+assert not os.path.lexists(active_path)
+with open(retired_path, "rb") as handle:
+    assert handle.read() == active_bytes
+_, active = success({"action": "list", "filter": {"task_id": "T09"}})
+assert active == [summary(run_stable)]
+classified({"action": "get", "run_id": "run-retire"}, "run not found")
+_, explicit = success({"action": "get", "run_id": "run-retire", "namespace": "retired"})
+assert explicit == run_retire
+retry_before = manifest(state)
+retry_output, retry = success({"action": "retire", "run_id": "run-retire", "expected_revision": 7})
+assert retry == run_retire and retry_output == output
+assert manifest(state) == retry_before
+classified({"action": "retire", "run_id": "run-retire", "expected_revision": 8}, "revision conflict")
+
+# Command-level concurrent retries have one exact effect and both observe the
+# same typed Run result.
+concurrent = os.path.join(work, "concurrent")
+shutil.copytree(source, concurrent)
+request = json.dumps({"action": "retire", "root": concurrent, "run_id": "run-retire", "expected_revision": 7}) + "\n"
+children = [subprocess.Popen([binary], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(2)]
+results = [child.communicate(request.encode(), timeout=5) + (child.returncode,) for child in children]
+for stdout, stderr, status in results:
+    assert status == 0 and stderr == b"" and json.loads(stdout) == run_retire, (status, stdout, stderr)
+assert not os.path.lexists(os.path.join(concurrent, "runs", "run-retire.json"))
+with open(os.path.join(concurrent, "retired", "run-retire.json"), "rb") as handle:
+    assert handle.read() == active_bytes
+
+assert manifest(source) == source_before, "checked-in command fixture changed"
+print("T09.V03 Registry administration command contract: PASS")
+PY
+
+# Load the real extension through Pi's loader. The harness captures actual tool
+# definitions and executes them against a command-contract fixture; the fake
+# Registry has no storage API and therefore cannot hide direct filesystem use.
+chmod +x "$fixture/bin/go"
+: > "$tmp/command.log"
+mkdir "$tmp/home" "$tmp/runtime"
+PATH="$fixture/bin:$PATH" HOME="$tmp/home" TMPDIR="$tmp/runtime" XDG_STATE_HOME="$tmp/home/state" \
+  VAULT_HUNTER_STATE_DIR="$tmp/no-direct-registry" \
+  T09_V03_COMMAND_LOG="$tmp/command.log" T09_V03_PI_RESULT="$tmp/pi-result.json" \
+  pi --offline --no-session --no-extensions -e "$fixture/pi-admin-harness.ts" -p probe >/dev/null
+
+python3 - "$tmp/pi-result.json" "$tmp/command.log" "pi/.pi/agent/extensions/vault-hunter-run.ts" <<'PY'
+import json
+import os
+import re
+import sys
+
+result_path, command_log, extension_path = sys.argv[1:]
+with open(result_path, encoding="utf-8") as handle:
+    result = json.load(handle)
+assert result.get("ok") is True, result.get("error", result)
+
+tools = {tool["name"]: tool for tool in result["tools"]}
+assert set(tools) == {"vault_hunter_list_runs", "vault_hunter_retire_run"}
+list_schema = tools["vault_hunter_list_runs"]["parameters"]
+retire_schema = tools["vault_hunter_retire_run"]["parameters"]
+assert list_schema["type"] == "object" and list_schema.get("additionalProperties") is False
+assert set(list_schema.get("properties", {})) == {
+    "taskId", "featurePath", "agentSession", "updatedAtFrom", "updatedAtThrough"
+}
+assert not list_schema.get("required")
+for name in ("taskId", "featurePath", "updatedAtFrom", "updatedAtThrough"):
+    assert list_schema["properties"][name]["type"] == "string"
+session = list_schema["properties"]["agentSession"]
+assert session["type"] == "object" and session.get("additionalProperties", False) is False
+assert set(session.get("properties", {})) == {"source", "kind", "value"}
+assert set(session.get("required", [])) == {"source", "kind", "value"}
+assert retire_schema["type"] == "object" and retire_schema.get("additionalProperties") is False
+assert set(retire_schema.get("properties", {})) == {"runId", "expectedRevision"}
+assert set(retire_schema.get("required", [])) == {"runId", "expectedRevision"}
+assert retire_schema["properties"]["runId"]["type"] == "string"
+revision = retire_schema["properties"]["expectedRevision"]
+assert revision["type"] == "integer" and revision.get("minimum") == 1
+
+summary_keys = {"schema_version", "run_id", "revision", "invoked_at", "updated_at", "task"}
+task_keys = {"id", "title", "path", "feature_path", "kind"}
+list_result = result["listResult"]
+assert set(list_result) == {"content", "details"}
+assert len(list_result["content"]) == 1 and list_result["content"][0]["type"] == "text"
+assert isinstance(list_result["content"][0]["text"], str)
+assert set(list_result["details"]) == {"runs"}
+assert len(list_result["details"]["runs"]) == 1
+summary = list_result["details"]["runs"][0]
+assert set(summary) == summary_keys and set(summary["task"]) == task_keys
+retire_result = result["retireResult"]
+assert set(retire_result) == {"content", "details"}
+assert len(retire_result["content"]) == 1 and retire_result["content"][0]["type"] == "text"
+assert isinstance(retire_result["content"][0]["text"], str)
+assert retire_result["details"] == {"runId": "run-a", "revision": 7}
+serialized_results = json.dumps([list_result, retire_result], sort_keys=True)
+assert "forbidden_history_sentinel" not in serialized_results
+assert "unknown_record_sentinel" not in serialized_results
+assert len(serialized_results.encode()) < 50_000
+
+for key in ("noUIError", "declinedError", "unavailableError"):
+    assert result[key], (key, result[key])
+assert "confirmation unavailable sentinel" in result["unavailableError"]
+confirmations = result["confirmations"]
+assert len(confirmations) == 2, confirmations
+assert "run-a" in confirmations[0]["message"] and "7" in confirmations[0]["message"]
+assert "wait-retire" in confirmations[1]["message"] and "9" in confirmations[1]["message"]
+for key in ("listCancellation", "retireCancellation"):
+    cancellation = result[key]
+    assert cancellation["error"], cancellation
+    assert cancellation["elapsedMs"] < 5_000, cancellation
+
+with open(command_log, encoding="utf-8") as handle:
+    requests = [json.loads(line) for line in handle if line.strip()]
+assert len(requests) == 4, requests
+root = requests[0]["root"]
+assert requests == [
+    {
+        "action": "list", "root": root,
+        "filter": {
+            "task_id": "T09", "feature_path": "features/vault-hunter-atlas/feature.md",
+            "agent_session": {"source": "pi", "kind": "id", "value": "session-alpha"},
+            "updated_at_from": "2026-07-26T10:00:00Z", "updated_at_through": "2026-07-26T11:00:00Z",
+        },
+    },
+    {"action": "retire", "root": requests[0]["root"], "run_id": "run-a", "expected_revision": 7},
+    {"action": "list", "root": requests[0]["root"], "filter": {"task_id": "WAIT"}},
+    {"action": "retire", "root": requests[0]["root"], "run_id": "wait-retire", "expected_revision": 9},
+], requests
+assert requests[0]["root"].endswith("/no-direct-registry"), requests[0]["root"]
+
+# Static boundary: existing launch/replay tools may own files, but the two
+# administration execute blocks may not call a filesystem primitive directly.
+# Their exact command-only behavior is established by the load harness above.
+with open(extension_path, encoding="utf-8") as handle:
+    source = handle.read()
+for name in ("vault_hunter_list_runs", "vault_hunter_retire_run"):
+    marker = f'name: "{name}"'
+    position = source.find(marker)
+    assert position >= 0, name
+    start = source.rfind("pi.registerTool({", 0, position)
+    end = source.find("\n  pi.registerTool({", position)
+    block = source[start: len(source) if end < 0 else end]
+    forbidden = re.findall(
+        r"\b(?:readFileSync|writeFileSync|readdirSync|existsSync|mkdirSync|renameSync|rmSync|realpathSync|"
+        r"readFile|writeFile|readdir|mkdir|rename|unlink|rm)\s*\(", block,
+    )
+    assert not forbidden, (name, forbidden)
+
+print("T09.V03 Pi Registry administration tools, confirmation, cancellation, and boundary: PASS")
+PY
+
+test ! -e "$tmp/no-direct-registry"
+test "$source_before" = "$(manifest "$fixture/state")"
+printf 'source fixture Registry manifest: %s\n' "$source_before"
+echo 'T09.V03 Registry list/retire administration command and Pi tools: PASS'

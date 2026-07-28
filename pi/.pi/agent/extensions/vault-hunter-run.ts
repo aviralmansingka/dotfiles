@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Type } from "typebox";
+import { Type, type Static } from "typebox";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { realpathSync } from "node:fs";
@@ -18,6 +18,7 @@ const TaskSchema = Type.Object({
   featurePath: Type.String(),
   kind: Type.String(),
 });
+
 const AgentSessionSchema = Type.Object({ source: Type.String(), kind: Type.String(), value: Type.String() });
 const HerdrSchema = Type.Object({
   workspaceId: Type.String(), tabId: Type.String(), paneId: Type.String(), terminalId: Type.String(),
@@ -35,6 +36,39 @@ const EvidenceSchema = Type.Object({
   command: Type.Optional(Type.String()), exitStatus: Type.Optional(Type.Integer()), implementationTree: Type.Optional(Type.String()),
   artifactSha256: Type.Optional(Type.String()), detail: Type.Optional(Type.String()),
 });
+
+const ListRunsSchema = Type.Object({
+  taskId: Type.Optional(Type.String()),
+  featurePath: Type.Optional(Type.String()),
+  agentSession: Type.Optional(AgentSessionSchema),
+  updatedAtFrom: Type.Optional(Type.String()),
+  updatedAtThrough: Type.Optional(Type.String()),
+}, { additionalProperties: false });
+
+const RetireRunSchema = Type.Object({
+  runId: Type.String(),
+  expectedRevision: Type.Integer({ minimum: 1 }),
+}, { additionalProperties: false });
+
+export type VaultHunterListRunsInput = Static<typeof ListRunsSchema>;
+export type VaultHunterRetireRunInput = Static<typeof RetireRunSchema>;
+
+type RegistryTaskSummary = {
+  id: string;
+  title: string;
+  path: string;
+  feature_path: string;
+  kind: string;
+};
+
+type RegistryRunSummary = {
+  schema_version: number;
+  run_id: string;
+  revision: number;
+  invoked_at: string;
+  updated_at: string;
+  task: RegistryTaskSummary;
+};
 
 type DriverPlacement = {
   observedAt: string;
@@ -92,6 +126,48 @@ function parentUsage(ctx: ExtensionContext) {
   }
   return { ...totals, models: [...models].sort() };
 }
+
+function registryString(record: any, field: string): string {
+  const value = record?.[field];
+  if (typeof value !== "string") throw new Error(`Registry returned an invalid ${field}.`);
+  return value;
+}
+
+function registryInteger(record: any, field: string): number {
+  const value = record?.[field];
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error(`Registry returned an invalid ${field}.`);
+  return value;
+}
+
+function projectRunSummary(record: any): RegistryRunSummary {
+  const task = record?.task;
+  if (!task || typeof task !== "object" || Array.isArray(task)) throw new Error("Registry returned an invalid task summary.");
+  return {
+    schema_version: registryInteger(record, "schema_version"),
+    run_id: registryString(record, "run_id"),
+    revision: registryInteger(record, "revision"),
+    invoked_at: registryString(record, "invoked_at"),
+    updated_at: registryString(record, "updated_at"),
+    task: {
+      id: registryString(task, "id"),
+      title: registryString(task, "title"),
+      path: registryString(task, "path"),
+      feature_path: registryString(task, "feature_path"),
+      kind: registryString(task, "kind"),
+    },
+  };
+}
+
+function boundedRunSummaries(records: RegistryRunSummary[]): RegistryRunSummary[] {
+  const bounded: RegistryRunSummary[] = [];
+  for (const record of records) {
+    const candidate = [...bounded, record];
+    if (Buffer.byteLength(JSON.stringify({ runs: candidate }), "utf8") > 40_000) break;
+    bounded.push(record);
+  }
+  return bounded;
+}
+
 function wireHerdr(input: any) {
   return input ? {
     workspace_id: input.workspaceId, tab_id: input.tabId,
@@ -425,6 +501,59 @@ export default function (pi: ExtensionAPI) {
         ...(params.evidence ? { evidence: wireEvidence(params.evidence) } : {}),
       }, signal);
       return text(`Recorded Vault Hunter observation at revision ${run.revision}.`, { runId: params.runId, revision: run.revision });
+    },
+  });
+
+  pi.registerTool({
+    name: "vault_hunter_list_runs",
+    label: "List Vault Hunter Runs",
+    description: "List active Vault Hunter Run summaries through the Registry command contract. Structured results are capped below 50KB and exclude observation histories.",
+    parameters: ListRunsSchema,
+    async execute(_id, params, signal) {
+      signal?.throwIfAborted();
+      const filter = {
+        ...(params.taskId !== undefined ? { task_id: params.taskId } : {}),
+        ...(params.featurePath !== undefined ? { feature_path: params.featurePath } : {}),
+        ...(params.agentSession !== undefined ? { agent_session: {
+          source: params.agentSession.source, kind: params.agentSession.kind, value: params.agentSession.value,
+        } } : {}),
+        ...(params.updatedAtFrom !== undefined ? { updated_at_from: params.updatedAtFrom } : {}),
+        ...(params.updatedAtThrough !== undefined ? { updated_at_through: params.updatedAtThrough } : {}),
+      };
+      const response = await registry({ action: "list", root: REGISTRY_ROOT, filter }, signal);
+      if (!Array.isArray(response)) throw new Error("Registry returned an invalid list response.");
+      const projected = response.map(projectRunSummary);
+      const runs = boundedRunSummaries(projected);
+      const suffix = runs.length === projected.length ? "" : ` ${projected.length - runs.length} additional summaries were omitted to bound the result.`;
+      return text(`Listed ${runs.length} active Vault Hunter Run summaries.${suffix}`, { runs });
+    },
+  });
+
+  pi.registerTool({
+    name: "vault_hunter_retire_run",
+    label: "Retire Vault Hunter Run",
+    description: "After interactive confirmation, retire one exact active Vault Hunter Run revision through the Registry command contract.",
+    parameters: RetireRunSchema,
+    async execute(_id, params, signal, _update, ctx) {
+      signal?.throwIfAborted();
+      if (!ctx.hasUI) throw new Error("Vault Hunter Run retirement requires interactive confirmation; no UI is available.");
+      const confirmed = await ctx.ui.confirm(
+        "Retire Vault Hunter Run?",
+        `Retire ${params.runId} at exact revision ${params.expectedRevision}? This removes it from active Run listings.`,
+        { signal },
+      );
+      if (!confirmed) throw new Error(`Vault Hunter Run ${params.runId} retirement was declined.`);
+      signal?.throwIfAborted();
+      const response = await registry({
+        action: "retire", root: REGISTRY_ROOT,
+        run_id: params.runId, expected_revision: params.expectedRevision,
+      }, signal);
+      const runId = registryString(response, "run_id");
+      const revision = registryInteger(response, "revision");
+      if (runId !== params.runId || revision !== params.expectedRevision) {
+        throw new Error("Registry returned a different retired Run identity or revision.");
+      }
+      return text(`Retired Vault Hunter Run ${runId} at revision ${revision}.`, { runId, revision });
     },
   });
 }

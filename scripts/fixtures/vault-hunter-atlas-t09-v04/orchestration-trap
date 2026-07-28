@@ -1,0 +1,4 @@
+#!/bin/sh
+printf '%s\n' "$0 $*" >> "$T09_V04_TRAP_LOG"
+echo "T09.V04 invoked forbidden orchestration command: $0" >&2
+exit 97

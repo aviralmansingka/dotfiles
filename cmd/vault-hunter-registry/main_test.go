@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
@@ -34,7 +36,7 @@ func TestCreateAndIdempotentAppend(t *testing.T) {
 	lifecycle := vaultregistry.Lifecycle{
 		ObservationID: "subagent-run-1-started", ObservedAt: participant.ObservedAt, Kind: "worker", GoalID: "context", State: "active",
 	}
-	req := request{Action: "append", RunID: run.RunID, UpdatedAt: participant.ObservedAt, Participant: &participant, Lifecycle: &lifecycle}
+	req := request{RunID: run.RunID, UpdatedAt: participant.ObservedAt, Participant: &participant, Lifecycle: &lifecycle}
 	first, err := appendObservation(producer, req)
 	if err != nil {
 		t.Fatal(err)
@@ -111,34 +113,141 @@ func TestCreateRejectsDifferentIdentity(t *testing.T) {
 	}
 }
 
-func TestListActionEmitsFilteredSummaryArray(t *testing.T) {
+func TestListUsesReaderAndDoesNotCreateState(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "absent")
+	input := bytes.NewBufferString(`{"action":"list","root":"` + root + `"}`)
+	var output bytes.Buffer
+	if err := serve(input, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.String() != "[]\n" {
+		t.Fatalf("list output = %q, want []", output.String())
+	}
+	if _, err := os.Lstat(root); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("list created state: %v", err)
+	}
+}
+
+func TestAdministrationRequestsAreStrictBeforeOpeningStorage(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "absent")
+	for _, input := range []string{
+		`{"action":"list","root":"` + root + `","run_id":"wrong"}`,
+		`{"action":"get","root":"` + root + `","namespace":"retired"}`,
+		`{"action":"get","root":"` + root + `","run_id":"run","namespace":"unknown"}`,
+		`{"action":"get_retired","root":"` + root + `","run_id":"run"}`,
+		`{"action":"retire","root":"` + root + `","run_id":"run","expected_revision":"1"}`,
+		`{"action":"retire","root":"` + root + `","run_id":"run","expected_revision":1,"extra":true}`,
+		`{"action":"list","root":"` + root + `"}{"action":"list","root":"` + root + `"}`,
+	} {
+		var output bytes.Buffer
+		if err := serve(bytes.NewBufferString(input), &output); !errors.Is(err, errMalformedRequest) {
+			t.Fatalf("serve(%s) error = %v, want malformed request", input, err)
+		}
+		if output.Len() != 0 {
+			t.Fatalf("malformed request emitted output %q", output.String())
+		}
+		if _, err := os.Lstat(root); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("malformed request opened storage: %v", err)
+		}
+	}
+}
+
+func TestRetireMissingRegistryDoesNotCreateState(t *testing.T) {
+	for _, existing := range []bool{false, true} {
+		root := filepath.Join(t.TempDir(), "registry")
+		if existing {
+			if err := os.MkdirAll(filepath.Join(root, "runs"), 0750); err != nil {
+				t.Fatal(err)
+			}
+		}
+		input := `{"action":"retire","root":"` + root + `","run_id":"missing","expected_revision":1}`
+		var output bytes.Buffer
+		if err := serve(bytes.NewBufferString(input), &output); !errors.Is(err, vaultregistry.ErrNotFound) {
+			t.Fatalf("retire missing Registry error = %v, want ErrNotFound", err)
+		}
+		if output.Len() != 0 {
+			t.Fatalf("retire missing Registry emitted output %q", output.String())
+		}
+		if !existing {
+			if _, err := os.Lstat(root); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("retire created absent Registry: %v", err)
+			}
+			continue
+		}
+		entries, err := os.ReadDir(root)
+		if err != nil || len(entries) != 1 || entries[0].Name() != "runs" {
+			t.Fatalf("retire changed empty Registry: entries=%v err=%v", entries, err)
+		}
+		for _, path := range []string{root, filepath.Join(root, "runs")} {
+			info, err := os.Stat(path)
+			if err != nil || info.Mode().Perm() != 0750 {
+				t.Fatalf("retire changed %s mode: %v, %v", path, info, err)
+			}
+		}
+	}
+}
+
+func TestRetireAndExplicitRetiredGetKeepActiveGetSeparate(t *testing.T) {
 	root := t.TempDir()
 	producer, err := vaultregistry.OpenProducer(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	run := vaultregistry.Run{
-		SchemaVersion: 1, RunID: "vh-T01-list", InvokedAt: "2026-07-26T12:00:00Z", UpdatedAt: "2026-07-26T12:00:00Z",
-		Task: vaultregistry.Task{ID: "T01", Title: "Test", Path: "task.md", FeaturePath: "feature.md", Kind: "task"},
+		SchemaVersion: 1, RunID: "retire-me", InvokedAt: "2026-07-26T12:00:00Z", UpdatedAt: "2026-07-26T12:00:00Z",
+		Task: vaultregistry.Task{ID: "T09", Title: "Retire", Path: "task.md", FeaturePath: "feature.md", Kind: "task"},
 	}
-	if _, err := producer.Create(run); err != nil {
-		t.Fatal(err)
-	}
-	input, err := json.Marshal(map[string]any{
-		"action": "list", "root": root, "filter": map[string]any{"task_id": "T01"},
-	})
+	created, err := producer.Create(run)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	var retiredOutput bytes.Buffer
+	retireInput := `{"action":"retire","root":"` + root + `","run_id":"retire-me","expected_revision":1}`
+	if err := serve(bytes.NewBufferString(retireInput), &retiredOutput); err != nil {
+		t.Fatal(err)
+	}
+	var retired vaultregistry.Run
+	if err := json.Unmarshal(retiredOutput.Bytes(), &retired); err != nil {
+		t.Fatal(err)
+	}
+	if retired.RunID != created.RunID || retired.Revision != created.Revision {
+		t.Fatalf("retire response = %#v, want %#v", retired, created)
+	}
+
+	var activeOutput bytes.Buffer
+	activeInput := `{"action":"get","root":"` + root + `","run_id":"retire-me"}`
+	if err := serve(bytes.NewBufferString(activeInput), &activeOutput); !errors.Is(err, vaultregistry.ErrNotFound) {
+		t.Fatalf("active get error = %v, want not found", err)
+	}
+	var explicitOutput bytes.Buffer
+	explicitInput := `{"action":"get","root":"` + root + `","run_id":"retire-me","namespace":"retired"}`
+	if err := serve(bytes.NewBufferString(explicitInput), &explicitOutput); err != nil {
+		t.Fatal(err)
+	}
+	var explicit vaultregistry.Run
+	if err := json.Unmarshal(explicitOutput.Bytes(), &explicit); err != nil {
+		t.Fatal(err)
+	}
+	if explicit.RunID != created.RunID || explicit.Revision != created.Revision {
+		t.Fatalf("retired get response = %#v, want %#v", explicit, created)
+	}
+}
+
+func TestListErrorEmitsNoPartialOutput(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "runs"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "runs", "broken.json"), []byte("{not-json\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	input := bytes.NewBufferString(`{"action":"list","root":"` + root + `","filter":{"task_id":"NO-MATCH"}}`)
 	var output bytes.Buffer
-	if err := serve(bytes.NewReader(input), &output); err != nil {
-		t.Fatal(err)
+	if err := serve(input, &output); !errors.Is(err, vaultregistry.ErrMalformed) {
+		t.Fatalf("serve error = %v, want ErrMalformed", err)
 	}
-	var summaries []vaultregistry.RunSummary
-	if err := json.Unmarshal(output.Bytes(), &summaries); err != nil {
-		t.Fatal(err)
-	}
-	if len(summaries) != 1 || summaries[0].RunID != run.RunID {
-		t.Fatalf("summaries = %#v", summaries)
+	if output.Len() != 0 {
+		t.Fatalf("list error emitted partial output %q", output.String())
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -13,7 +14,10 @@ import (
 	"time"
 )
 
-type Producer struct{ root string }
+type Producer struct {
+	root       string
+	createLock bool
+}
 type Reader struct{ root string }
 
 func ResolveRoot() (string, error) {
@@ -47,6 +51,45 @@ func OpenProducer(root string) (*Producer, error) {
 	if err := os.Chmod(filepath.Join(root, "runs"), 0700); err != nil {
 		return nil, err
 	}
+	return &Producer{root: root, createLock: true}, nil
+}
+
+func OpenExistingProducer(root string) (*Producer, error) {
+	var err error
+	if root == "" {
+		root, err = ResolveRoot()
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, path := range []string{root, filepath.Join(root, "runs")} {
+		info, statErr := os.Stat(path)
+		if errors.Is(statErr, os.ErrNotExist) {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, path)
+		}
+		if statErr != nil {
+			return nil, statErr
+		}
+		if !info.IsDir() {
+			return nil, fmt.Errorf("%w: %s: Registry path is not a directory", ErrMalformed, path)
+		}
+	}
+	lockPath := filepath.Join(root, "registry.lock")
+	if info, statErr := os.Stat(lockPath); statErr != nil {
+		if errors.Is(statErr, os.ErrNotExist) {
+			entries, readErr := os.ReadDir(filepath.Join(root, "runs"))
+			if readErr != nil {
+				return nil, readErr
+			}
+			if len(entries) == 0 {
+				return nil, fmt.Errorf("%w: Registry is empty", ErrNotFound)
+			}
+			return nil, fmt.Errorf("%w: %s: missing Registry lock", ErrMalformed, lockPath)
+		}
+		return nil, statErr
+	} else if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%w: %s: Registry lock is not a regular file", ErrMalformed, lockPath)
+	}
 	return &Producer{root: root}, nil
 }
 
@@ -73,10 +116,12 @@ func (p *Producer) Create(run Run) (Run, error) {
 		return Run{}, err
 	}
 	defer unlock()
-	if _, err := os.Stat(p.path(run.RunID)); err == nil {
-		return Run{}, fmt.Errorf("%w: run already exists", ErrConflict)
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return Run{}, err
+	for _, path := range []string{p.path(run.RunID), p.retiredPath(run.RunID)} {
+		if _, err := os.Lstat(path); err == nil {
+			return Run{}, fmt.Errorf("%w: run ID is reserved", ErrConflict)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return Run{}, err
+		}
 	}
 	run.Revision = 1
 	if err := validate(run); err != nil {
@@ -147,6 +192,117 @@ func historyPrefix[T any](current, next []T) bool {
 		slices.EqualFunc(current, next[:len(current)], equalJSON)
 }
 
+// Retire atomically moves an exact active Run revision into the reserved
+// retired namespace. A retry for the same retired revision is idempotent.
+func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
+	if err := validID(runID); err != nil {
+		return Run{}, err
+	}
+	if expectedRevision == 0 {
+		return Run{}, fmt.Errorf("%w: retire revision must be non-zero", ErrMalformed)
+	}
+	unlock, err := p.lock()
+	if err != nil {
+		return Run{}, err
+	}
+	defer unlock()
+
+	activePath := p.path(runID)
+	retiredPath := p.retiredPath(runID)
+	activeInfo, activeErr := os.Lstat(activePath)
+	retiredInfo, retiredErr := os.Lstat(retiredPath)
+	if activeErr != nil && !errors.Is(activeErr, os.ErrNotExist) {
+		return Run{}, activeErr
+	}
+	if retiredErr != nil && !errors.Is(retiredErr, os.ErrNotExist) {
+		return Run{}, retiredErr
+	}
+	activeExists := activeErr == nil
+	retiredExists := retiredErr == nil
+
+	if activeExists && retiredExists {
+		return Run{}, fmt.Errorf("%w: active and retired records both exist", ErrConflict)
+	}
+	if !activeExists {
+		if !retiredExists {
+			return Run{}, fmt.Errorf("%w: %s", ErrNotFound, activePath)
+		}
+		if !retiredInfo.Mode().IsRegular() {
+			return Run{}, fmt.Errorf("%w: retired destination collision", ErrConflict)
+		}
+		retired, err := load(retiredPath, runID)
+		if err != nil {
+			return Run{}, err
+		}
+		if retired.Revision != expectedRevision {
+			return Run{}, fmt.Errorf("%w: expected %d, retired %d", ErrConflict, expectedRevision, retired.Revision)
+		}
+		return clone(retired)
+	}
+	if !activeInfo.Mode().IsRegular() {
+		return Run{}, fmt.Errorf("%w: %s: active record is not a regular file", ErrMalformed, activePath)
+	}
+	active, err := load(activePath, runID)
+	if err != nil {
+		return Run{}, err
+	}
+	if active.Revision != expectedRevision {
+		return Run{}, fmt.Errorf("%w: expected %d, actual %d", ErrConflict, expectedRevision, active.Revision)
+	}
+
+	retiredDir := filepath.Join(p.root, "retired")
+	createdRetiredDir := false
+	if info, err := os.Lstat(retiredDir); errors.Is(err, os.ErrNotExist) {
+		if err := os.Mkdir(retiredDir, 0700); err != nil {
+			return Run{}, err
+		}
+		createdRetiredDir = true
+	} else if err != nil {
+		return Run{}, err
+	} else if !info.IsDir() {
+		return Run{}, fmt.Errorf("%w: retired namespace is not a directory", ErrConflict)
+	}
+	if err := os.Chmod(retiredDir, 0700); err != nil {
+		if createdRetiredDir {
+			_ = os.Remove(retiredDir)
+		}
+		return Run{}, err
+	}
+
+	activeDir, err := os.Open(filepath.Join(p.root, "runs"))
+	if err != nil {
+		if createdRetiredDir {
+			_ = os.Remove(retiredDir)
+		}
+		return Run{}, err
+	}
+	defer func() { _ = activeDir.Close() }()
+	retiredDirFile, err := os.Open(retiredDir)
+	if err != nil {
+		if createdRetiredDir {
+			_ = os.Remove(retiredDir)
+		}
+		return Run{}, err
+	}
+	defer func() { _ = retiredDirFile.Close() }()
+
+	if err := renameNoReplace(activePath, retiredPath); err != nil {
+		if createdRetiredDir {
+			_ = os.Remove(retiredDir)
+		}
+		if errors.Is(err, os.ErrExist) {
+			return Run{}, fmt.Errorf("%w: retired destination collision: %v", ErrConflict, err)
+		}
+		return Run{}, err
+	}
+	activeSyncErr := activeDir.Sync()
+	retiredSyncErr := retiredDirFile.Sync()
+	if err := errors.Join(activeSyncErr, retiredSyncErr); err != nil {
+		return Run{}, err
+	}
+	return clone(active)
+}
+
 func (p *Producer) Get(runID string) (Run, error) { return load(p.path(runID), runID) }
 func (r *Reader) Get(runID string) (Run, error) {
 	if err := validID(runID); err != nil {
@@ -155,8 +311,25 @@ func (r *Reader) Get(runID string) (Run, error) {
 	return load(filepath.Join(r.root, "runs", runID+".json"), runID)
 }
 
+// GetRetired reads only the explicit retired namespace without creating state.
+func (r *Reader) GetRetired(runID string) (Run, error) {
+	if err := validID(runID); err != nil {
+		return Run{}, err
+	}
+	return load(filepath.Join(r.root, "retired", runID+".json"), runID)
+}
+
 // List returns all recorded runs in deterministic Run ID order without creating state.
 func (r *Reader) List() ([]Run, error) {
+	unlock, empty, err := r.lock()
+	if err != nil {
+		return nil, err
+	}
+	if empty {
+		return []Run{}, nil
+	}
+	defer unlock()
+
 	entries, err := os.ReadDir(filepath.Join(r.root, "runs"))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -182,109 +355,219 @@ func (r *Reader) List() ([]Run, error) {
 	return runs, nil
 }
 
+// ListSummaries returns a complete, bounded snapshot of active Run records.
 func (r *Reader) ListSummaries(filter ListFilter) ([]RunSummary, error) {
-	from, to, err := listRange(filter)
+	from, through, err := validateListFilter(filter)
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(r.root, "runs")
-	entries, err := os.ReadDir(dir)
-	if errors.Is(err, os.ErrNotExist) {
+	unlock, empty, err := r.lock()
+	if err != nil {
+		return nil, err
+	}
+	if empty {
 		return []RunSummary{}, nil
 	}
+	defer unlock()
+
+	runs, err := r.activeRuns()
 	if err != nil {
 		return nil, err
 	}
-	summaries := []RunSummary{}
-	// ponytail: a full scan keeps discovery exact; add an index only if registry size makes this measurable.
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-		id := strings.TrimSuffix(entry.Name(), ".json")
-		if err := validID(id); err != nil {
-			return nil, fmt.Errorf("%w: %s: invalid run file name", ErrMalformed, filepath.Join(dir, entry.Name()))
-		}
-		run, err := load(filepath.Join(dir, entry.Name()), id)
-		if err != nil {
-			return nil, err
-		}
-		if listMatch(run, filter, from, to) {
+	summaries := make([]RunSummary, 0, len(runs))
+	for _, run := range runs {
+		if matchesListFilter(run, filter, from, through) {
 			summaries = append(summaries, summarize(run))
 		}
 	}
-	slices.SortFunc(summaries, func(a, b RunSummary) int { return strings.Compare(a.RunID, b.RunID) })
+	sort.Slice(summaries, func(i, j int) bool {
+		return summaries[i].RunID < summaries[j].RunID
+	})
 	return summaries, nil
 }
 
-func listRange(filter ListFilter) (*time.Time, *time.Time, error) {
-	if session := filter.AgentSession; session != nil && (session.Source == "" || session.Kind == "" || session.Value == "") {
-		return nil, nil, fmt.Errorf("%w: agent_session requires source, kind, and value", ErrMalformed)
+// activeRuns validates every active JSON record before ListSummaries applies
+// filters. Temporary files, non-JSON entries, and directories are not active.
+// ponytail: scan all records; add an index only if Registry size makes it measurable.
+func (r *Reader) activeRuns() ([]Run, error) {
+	dir := filepath.Join(r.root, "runs")
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return []Run{}, nil
 	}
-	var from, to *time.Time
-	if filter.UpdatedAtFrom != "" {
-		parsed, err := time.Parse(time.RFC3339, filter.UpdatedAtFrom)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: invalid updated_at_from: %v", ErrMalformed, err)
+	if err != nil {
+		return nil, err
+	}
+	runs := make([]Run, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
 		}
-		from = &parsed
-	}
-	if filter.UpdatedAtTo != "" {
-		parsed, err := time.Parse(time.RFC3339, filter.UpdatedAtTo)
+		path := filepath.Join(dir, entry.Name())
+		info, err := os.Lstat(path)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: invalid updated_at_to: %v", ErrMalformed, err)
+			return nil, err
 		}
-		to = &parsed
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil, fmt.Errorf("%w: %s: active record is a symlink", ErrMalformed, path)
+		}
+		if !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("%w: %s: active record is not a regular file", ErrMalformed, path)
+		}
+		id := strings.TrimSuffix(entry.Name(), ".json")
+		if err := validID(id); err != nil {
+			return nil, fmt.Errorf("%w: %s: invalid run file name", ErrMalformed, path)
+		}
+		run, err := load(path, id)
+		if err != nil {
+			return nil, err
+		}
+		runs = append(runs, run)
 	}
-	if from != nil && to != nil && from.After(*to) {
-		return nil, nil, fmt.Errorf("%w: updated_at_from is after updated_at_to", ErrMalformed)
-	}
-	return from, to, nil
+	return runs, nil
 }
 
-func listMatch(run Run, filter ListFilter, from, to *time.Time) bool {
+func validateListFilter(filter ListFilter) (*time.Time, *time.Time, error) {
+	if session := filter.AgentSession; session != nil &&
+		(session.Source == "" || session.Kind == "" || session.Value == "") {
+		return nil, nil, fmt.Errorf("%w: agent_session requires source, kind, and value", ErrMalformed)
+	}
+	from, err := parseListBoundary("updated_at_from", filter.UpdatedAtFrom)
+	if err != nil {
+		return nil, nil, err
+	}
+	if filter.UpdatedAtThrough != "" && filter.UpdatedAtTo != "" {
+		return nil, nil, fmt.Errorf("%w: updated_at_through and updated_at_to are mutually exclusive", ErrMalformed)
+	}
+	throughValue, throughName := filter.UpdatedAtThrough, "updated_at_through"
+	if throughValue == "" {
+		throughValue, throughName = filter.UpdatedAtTo, "updated_at_to"
+	}
+	through, err := parseListBoundary(throughName, throughValue)
+	if err != nil {
+		return nil, nil, err
+	}
+	if from != nil && through != nil && from.After(*through) {
+		return nil, nil, fmt.Errorf("%w: updated_at_from is after updated_at_through", ErrMalformed)
+	}
+	return from, through, nil
+}
+
+func parseListBoundary(name, value string) (*time.Time, error) {
+	if value == "" {
+		return nil, nil
+	}
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid %s: %v", ErrMalformed, name, err)
+	}
+	return &parsed, nil
+}
+
+func matchesListFilter(run Run, filter ListFilter, from, through *time.Time) bool {
 	if filter.TaskID != "" && run.Task.ID != filter.TaskID ||
 		filter.FeaturePath != "" && run.Task.FeaturePath != filter.FeaturePath {
 		return false
 	}
 	if wanted := filter.AgentSession; wanted != nil {
-		found := false
+		matched := false
 		for _, participant := range run.Participants {
 			session := participant.AgentSession
-			if session != nil && session.Source == wanted.Source && session.Kind == wanted.Kind && session.Value == wanted.Value {
-				found = true
+			if session != nil && session.Source == wanted.Source &&
+				session.Kind == wanted.Kind && session.Value == wanted.Value {
+				matched = true
 				break
 			}
 		}
-		if !found {
+		if !matched {
 			return false
 		}
 	}
 	updated, _ := time.Parse(time.RFC3339, run.UpdatedAt)
-	return (from == nil || !updated.Before(*from)) && (to == nil || !updated.After(*to))
+	return (from == nil || !updated.Before(*from)) &&
+		(through == nil || !updated.After(*through))
 }
 
 func summarize(run Run) RunSummary {
 	return RunSummary{
-		SchemaVersion: run.SchemaVersion, RunID: run.RunID, Revision: run.Revision,
-		InvokedAt: run.InvokedAt, UpdatedAt: run.UpdatedAt,
-		Task: TaskSummary{ID: run.Task.ID, Title: run.Task.Title, Path: run.Task.Path, FeaturePath: run.Task.FeaturePath, Kind: run.Task.Kind},
+		SchemaVersion: run.SchemaVersion,
+		RunID:         run.RunID,
+		Revision:      run.Revision,
+		InvokedAt:     run.InvokedAt,
+		UpdatedAt:     run.UpdatedAt,
+		Task: TaskSummary{
+			ID:          run.Task.ID,
+			Title:       run.Task.Title,
+			Path:        run.Task.Path,
+			FeaturePath: run.Task.FeaturePath,
+			Kind:        run.Task.Kind,
+		},
 	}
 }
 
 func (p *Producer) path(id string) string { return filepath.Join(p.root, "runs", id+".json") }
+func (p *Producer) retiredPath(id string) string {
+	return filepath.Join(p.root, "retired", id+".json")
+}
 
 func (p *Producer) lock() (func(), error) {
-	f, err := os.OpenFile(filepath.Join(p.root, "registry.lock"), os.O_CREATE|os.O_RDWR, 0600)
+	flags := os.O_RDWR
+	if p.createLock {
+		flags |= os.O_CREATE
+	}
+	f, err := os.OpenFile(filepath.Join(p.root, "registry.lock"), flags, 0600)
 	if err != nil {
 		return nil, err
 	}
-	if err := f.Chmod(0600); err != nil {
-		f.Close()
-		return nil, err
+	if p.createLock {
+		if err := f.Chmod(0600); err != nil {
+			_ = f.Close()
+			return nil, err
+		}
 	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		f.Close()
+	return flock(f, syscall.LOCK_EX)
+}
+
+// Reader locking is deliberately non-creating. A missing lock is an empty
+// Registry only while the active namespace is also absent or empty; records
+// without their coordinating lock are malformed and must not be scanned.
+func (r *Reader) lock() (func(), bool, error) {
+	lockPath := filepath.Join(r.root, "registry.lock")
+	f, err := os.Open(lockPath)
+	if errors.Is(err, os.ErrNotExist) {
+		runs, openErr := os.Open(filepath.Join(r.root, "runs"))
+		if errors.Is(openErr, os.ErrNotExist) {
+			return nil, true, nil
+		}
+		if openErr != nil {
+			return nil, false, openErr
+		}
+		_, readErr := runs.Readdirnames(1)
+		closeErr := runs.Close()
+		if errors.Is(readErr, io.EOF) {
+			if closeErr != nil {
+				return nil, false, closeErr
+			}
+			return nil, true, nil
+		}
+		if readErr != nil {
+			return nil, false, readErr
+		}
+		if closeErr != nil {
+			return nil, false, closeErr
+		}
+		return nil, false, fmt.Errorf("%w: %s: missing Registry lock", ErrMalformed, lockPath)
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	unlock, err := flock(f, syscall.LOCK_SH)
+	return unlock, false, err
+}
+
+func flock(f *os.File, mode int) (func(), error) {
+	if err := syscall.Flock(int(f.Fd()), mode); err != nil {
+		_ = f.Close()
 		return nil, err
 	}
 	return func() {
@@ -304,7 +587,7 @@ func (p *Producer) write(run Run) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(name)
+	defer func() { _ = os.Remove(name) }()
 	if err := os.Rename(name, p.path(run.RunID)); err != nil {
 		return err
 	}
@@ -312,7 +595,7 @@ func (p *Producer) write(run Run) error {
 	if err != nil {
 		return err
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 	return d.Sync()
 }
 
@@ -332,7 +615,7 @@ func writeTemp(dir string, data []byte) (string, error) {
 		err = closeErr
 	}
 	if err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return "", err
 	}
 	return name, nil

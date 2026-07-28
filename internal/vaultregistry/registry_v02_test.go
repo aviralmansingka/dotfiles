@@ -342,6 +342,7 @@ func TestT01ListRejectsMalformedAndUnsupportedRecords(t *testing.T) {
 			if err := os.Mkdir(runs, 0700); err != nil {
 				t.Fatal(err)
 			}
+			mustRegistryLock(t, root)
 			if err := os.WriteFile(filepath.Join(runs, tc.name+".json"), tc.data, 0600); err != nil {
 				t.Fatal(err)
 			}
