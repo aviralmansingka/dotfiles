@@ -188,6 +188,9 @@ func TestPreviewOutcomesFailClosedAndReadOnly(t *testing.T) {
 				t.Fatal(err)
 			}
 			if tc.registry != nil {
+				if err := os.WriteFile(filepath.Join(root, "registry.lock"), nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
 				if err := os.WriteFile(filepath.Join(root, "runs", tc.name+".json"), tc.registry, 0o600); err != nil {
 					t.Fatal(err)
 				}

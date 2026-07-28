@@ -79,6 +79,7 @@ type Model struct {
 }
 
 func NewModel(run vaultregistry.Run, width, height int) Model {
+	run = sanitizeRunProjection(run)
 	m := Model{
 		run:           run,
 		width:         width,
@@ -102,6 +103,8 @@ func NewExpandedModel(run vaultregistry.Run, width, height int) Model {
 // CompactView projects the same normalized goals and initial selection as the
 // standalone Atlas into the two rows available in Sidekick's preview.
 func CompactView(run vaultregistry.Run, participantID string, width, height int) string {
+	run = sanitizeRunProjection(run)
+	participantID = sanitizeRegistryString(participantID)
 	goals := normalize(run, false)
 	selected := initialSelection(goals)
 	goalID, kind, state := "?", "?", "?"

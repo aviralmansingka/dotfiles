@@ -54,9 +54,11 @@ go build -o "$tmp/vault-hunter-registry" ./cmd/vault-hunter-registry
 mkdir "$tmp/home" "$tmp/traps"
 : > "$tmp/orchestration-invocations"
 test -x "$fixture/orchestration-trap" && test -x "$fixture/watch-pty.py"
-for command in herdr pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
+for command in pi codex git feedback resume vault-hunter vault-hunter-feedback vault-hunter-resume; do
   ln -s "$fixture/orchestration-trap" "$tmp/traps/$command"
 done
+cp "$fixture/herdr-fixture" "$tmp/traps/herdr"
+chmod +x "$tmp/traps/herdr"
 if ! HOME="$tmp/home" PATH="$tmp/traps:$tmp:$PATH" T09_V04_TRAP_LOG="$tmp/orchestration-invocations" \
   scripts/test-vault-hunter-observe.sh; then
   echo 'T09.V04 semantic red: canonical vault-hunter-observe compatibility contract failed' >&2
@@ -176,12 +178,45 @@ assert b"run-observe" in colored and b"SECOND-RUN-ONLY-SENTINEL" not in colored
 assert b"FIXTURE-CONTROL" in colored
 assert SGR.sub(b"", colored) == run, (colored, run)
 
-canonical = subprocess.run(
-    [observer, "run", "run-observe", "--color=always"],
-    stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=30,
-)
-assert canonical.returncode == 0 and canonical.stderr == b"", (canonical.returncode, canonical.stderr)
-assert canonical.stdout == colored, (canonical.stdout, colored)
+def observer_success(*args):
+    result = subprocess.run(
+        [observer, *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=30,
+    )
+    assert result.returncode == 0 and result.stderr == b"", (args, result.returncode, result.stderr)
+    return result.stdout
+
+
+observer_list_json = observer_success("list", "--json")
+observer_run_json = observer_success("run", "run-observe", "--json")
+assert ESC not in observer_list_json and ESC not in observer_run_json
+list_projection = json.loads(observer_list_json)
+run_projection = json.loads(observer_run_json)
+assert len(run_projection) == 1 and run_projection[0]["run_id"] == "run-observe", run_projection
+selected_projection = run_projection[0]
+assert selected_projection["driver"] == "running", "canonical observer lost live Herdr driver status"
+assert selected_projection["children"] == {"active": 1, "finished": 1, "cost": 1.23}, selected_projection
+assert selected_projection["parent"] == {"cost": 2.35, "total_tokens": 12345, "requests": 6}, selected_projection
+assert any(item["run_id"] == "run-other" for item in list_projection)
+
+observer_list = observer_success("list", "--color=never")
+observer_run = observer_success("run", "run-observe", "--color=never")
+observer_ansi = observer_success("run", "run-observe", "--color=always")
+for output in (observer_list, observer_run, observer_ansi):
+    for token in (b"running", b"1/1", b"2.35", b"1.23"):
+        assert token in output, (token, output)
+    assert FIXTURE_CONTROL not in output and b"\x07" not in output, output
+assert ESC not in observer_list and ESC not in observer_run
+assert SGR.search(observer_ansi), observer_ansi
+assert b"run-observe" in observer_run and b"SECOND-RUN-ONLY-SENTINEL" not in observer_run
+
+observer_atlas = observer_success("atlas", "run-observe", "--snapshot", "--width", "100", "--height", "30")
+assert FIXTURE_CONTROL not in observer_atlas and b"\x07" not in observer_atlas, observer_atlas
+assert b"\nFIXTURE-MULTILINE" not in observer_atlas, observer_atlas
+assert b"FIXTURE-CONTROL" in observer_atlas and b"FIXTURE-MULTILINE" in observer_atlas, observer_atlas
+assert b"run-observe" in observer_atlas and b"SECOND-RUN-ONLY-SENTINEL" not in observer_atlas
+observer_atlas_lines = observer_atlas.splitlines()
+assert 10 <= len(observer_atlas_lines) <= 35, len(observer_atlas_lines)
+assert max(map(len, observer_atlas_lines)) <= 140, max(map(len, observer_atlas_lines))
 
 # Missing records, malformed IDs, invalid commands, and non-TTY watch calls
 # use stable classified exits and byte-for-byte repeatable diagnostics.
@@ -235,6 +270,9 @@ PY
 HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" VAULT_HUNTER_STATE_DIR="$tmp/state" \
   T09_V04_TRAP_LOG="$tmp/orchestration-invocations" PATH="$tmp/traps:$tmp:$PATH" TERM=xterm-256color \
   python3 "$fixture/watch-pty.py" "$tmp/vault-hunter-status" "$tmp/watch.pty"
+HOME="$tmp/home" XDG_STATE_HOME="$tmp/home/state" VAULT_HUNTER_STATE_DIR="$tmp/state" \
+  T09_V04_TRAP_LOG="$tmp/orchestration-invocations" PATH="$tmp/traps:$tmp:$PATH" TERM=xterm-256color \
+  python3 "$fixture/watch-pty.py" "$repo_root/scripts/vault-hunter-observe" "$tmp/observe-watch.pty" observer
 
 # Static command boundary: Registry reads go through the existing API/command,
 # never a status-owned scan or deletion primitive.

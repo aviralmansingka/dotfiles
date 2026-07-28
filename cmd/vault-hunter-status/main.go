@@ -227,10 +227,9 @@ func renderAtlas(run vaultregistry.Run) (string, error) {
 		}
 		return "", fmt.Errorf("vault-hunter-status: atlas: %s", message)
 	}
-	view := sanitizeAtlasRegistryStrings(stdout.String(), run)
 	// Keep the frame's geometry byte-bounded for logs while retaining the
 	// renderer's rows and any styling it generates.
-	view = strings.NewReplacer("─", "-", "│", "|", "┼", "+").Replace(view)
+	view := strings.NewReplacer("─", "-", "│", "|", "┼", "+").Replace(stdout.String())
 	return view, nil
 }
 
@@ -283,37 +282,6 @@ func escapeControls(value string) string {
 		}
 	}
 	return result.String()
-}
-
-func sanitizeAtlasRegistryStrings(view string, run vaultregistry.Run) string {
-	values := []string{
-		run.RunID, run.InvokedAt, run.UpdatedAt,
-		run.Task.ID, run.Task.Title, run.Task.Path, run.Task.FeaturePath, run.Task.Kind,
-	}
-	for _, participant := range run.Participants {
-		values = append(values, participant.ParticipantID, participant.ObservedAt, participant.Role, participant.GoalID)
-		if participant.Herdr != nil {
-			values = append(values, participant.Herdr.WorkspaceID, participant.Herdr.TabID, participant.Herdr.PaneID, participant.Herdr.TerminalID)
-		}
-		if participant.AgentSession != nil {
-			values = append(values, participant.AgentSession.Source, participant.AgentSession.Kind, participant.AgentSession.Value)
-		}
-	}
-	for _, observation := range run.Lifecycle {
-		values = append(values, observation.ObservationID, observation.ObservedAt, observation.Kind,
-			observation.GoalID, observation.State, observation.Detail)
-	}
-	for _, observation := range run.Evidence {
-		values = append(values, observation.ObservationID, observation.ObservedAt, observation.VerifierID,
-			observation.State, observation.Command, observation.ImplementationTree,
-			observation.ArtifactSHA256, observation.Detail)
-	}
-	for _, value := range values {
-		if escaped := escapeControls(value); escaped != value {
-			view = strings.ReplaceAll(view, value, escaped)
-		}
-	}
-	return view
 }
 
 func writeHuman(output io.Writer, body string, color bool) (int, error) {

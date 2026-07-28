@@ -394,7 +394,14 @@ func validateListFilter(filter ListFilter) (*time.Time, *time.Time, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	through, err := parseListBoundary("updated_at_through", filter.UpdatedAtThrough)
+	if filter.UpdatedAtThrough != "" && filter.UpdatedAtTo != "" {
+		return nil, nil, fmt.Errorf("%w: updated_at_through and updated_at_to are mutually exclusive", ErrMalformed)
+	}
+	throughValue, throughName := filter.UpdatedAtThrough, "updated_at_through"
+	if throughValue == "" {
+		throughValue, throughName = filter.UpdatedAtTo, "updated_at_to"
+	}
+	through, err := parseListBoundary(throughName, throughValue)
 	if err != nil {
 		return nil, nil, err
 	}

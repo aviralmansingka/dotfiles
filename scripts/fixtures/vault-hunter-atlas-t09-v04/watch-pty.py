@@ -11,11 +11,16 @@ import sys
 import termios
 import time
 
-binary, output_path = sys.argv[1:]
+binary, output_path, *mode = sys.argv[1:]
 started = time.monotonic()
 pid, master = pty.fork()
 if pid == 0:
-    os.execv(binary, [binary, "watch", "run-observe", "--interval=50ms"])
+    args = (
+        [binary, "run", "run-observe", "--watch", "1", "--color=always"]
+        if mode == ["observer"]
+        else [binary, "watch", "run-observe", "--interval=50ms"]
+    )
+    os.execv(binary, args)
 
 fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", 30, 100, 0, 0))
 data = bytearray()
@@ -53,6 +58,9 @@ assert interrupted, data[-1000:]
 assert elapsed < 5.0, elapsed
 assert data.count(b"run-observe") >= 2, data[-1000:]
 assert b"SECOND-RUN-ONLY-SENTINEL" not in data, data[-1000:]
+if mode == ["observer"]:
+    for token in (b"running", b"1/1", b"2.35", b"1.23"):
+        assert token in data, (token, data[-1000:])
 hide = data.find(b"\x1b[?25l")
 show = data.rfind(b"\x1b[?25h")
 assert hide >= 0 and show > hide, (hide, show, data[-1000:])

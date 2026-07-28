@@ -59,23 +59,19 @@ fi
 script=$(realpath "$0")
 repo=$(cd "$(dirname "$script")/.." && pwd -P)
 root=${VAULT_HUNTER_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/vault-hunter}
-tmp=$(mktemp -d)
 watch_ui=false
+if [[ -n "$watch_seconds" ]]; then
+  [[ -t 1 ]] || { echo "vault-hunter-observe: --watch requires a terminal" >&2; exit 64; }
+  watch_ui=true
+fi
+tmp=$(mktemp -d)
 cleanup() {
   $watch_ui && printf '\033[?25h\n'
   rm -rf "$tmp"
 }
 trap cleanup EXIT
-
-if ! (
-  cd "$repo"
-  go build -o "$tmp/registry" ./cmd/vault-hunter-registry
-  go build -o "$tmp/status" ./cmd/vault-hunter-status
-  go build -o "$tmp/atlas" ./cmd/vault-hunter-atlas
-) >"$tmp/build.log" 2>&1; then
-  cat "$tmp/build.log" >&2
-  exit 1
-fi
+$watch_ui && printf '\033[?25l'
+(cd "$repo" && go build -o "$tmp/registry" ./cmd/vault-hunter-registry)
 
 record() {
   jq -cn --arg root "$root" --arg run_id "$1" '{action:"get",root:$root,run_id:$run_id}' |
@@ -91,11 +87,15 @@ case "$command" in
     exit
     ;;
   evidence) record "$target" | jq '.evidence'; exit ;;
-  atlas) "$tmp/atlas" --run-id "$target" "$@"; exit ;;
+  atlas)
+    (cd "$repo" && go build -o "$tmp/atlas" ./cmd/vault-hunter-atlas)
+    view=$("$tmp/atlas" --run-id "$target" "$@")
+    view=${view//─/-}; view=${view//│/|}; view=${view//┼/+}
+    printf '%s\n' "$view"
+    exit
+    ;;
 esac
 
-# Keep the canonical observer's established JSON projection while obtaining
-# all Registry data through the read-only command surface.
 snapshot() {
   local records="$tmp/records.jsonl"
   : >"$records"
@@ -103,14 +103,23 @@ snapshot() {
     "$tmp/registry" |
     jq -r '.[].run_id' |
     while IFS= read -r run_id; do
-      record "$run_id" >>"$records"
+      jq -cn --arg root "$root" --arg run_id "$run_id" '{action:"get",root:$root,run_id:$run_id}' |
+        "$tmp/registry" >>"$records"
       printf '\n' >>"$records"
     done
 
-  jq -s '
+  local herdr='{"result":{"agents":[]}}'
+  if command -v herdr >/dev/null 2>&1; then
+    herdr=$(herdr agent list 2>/dev/null || printf '%s' "$herdr")
+  fi
+
+  jq -s --argjson herdr "$herdr" '
     def decoded: try (.detail | fromjson) catch {};
     def dollars: if . == null then null else ((. * 100 | round) / 100) end;
+    ($herdr.result.agents // []) as $agents |
     map(
+      . as $run |
+      ([.participants[]? | select(.role == "driver") | .agent_session.value?] | map(select(. != null))) as $sessions |
       ([.lifecycle[]? | select(.kind == "subagent/started") | .observation_id | sub("-started$"; "")]) as $started |
       ([.lifecycle[]? | select(.kind == "subagent/finished" or .kind == "subagent/interrupted") | .observation_id | sub("-(finished|interrupted)$"; "")]) as $terminal |
       ([.lifecycle[]? | select(.kind == "subagent/finished")]) as $finished |
@@ -124,7 +133,7 @@ snapshot() {
         state: ($frontier.state // "unknown"),
         stage: ($frontier.kind // "unknown"),
         goal: ($frontier.goal_id // ""),
-        driver: "-",
+        driver: ([ $agents[] | select(.agent_session.value? as $value | $sessions | any(. == $value or ($value | contains(.)))) | .agent_status ] | last // "-"),
         children: {
           active: ([$started[] | select(. as $key | ($terminal | index($key) | not))] | length),
           finished: ($finished | length),
@@ -140,29 +149,81 @@ snapshot() {
   ' "$records"
 }
 
-data=$(snapshot)
-if [[ "$command" == run ]]; then
-  data=$(jq -c --arg run_id "$target" '[.[] | select(.run_id == $run_id)]' <<<"$data")
-  [[ $(jq length <<<"$data") -eq 1 ]] || { echo "vault-hunter-observe: Run not found: $target" >&2; exit 66; }
-fi
-if $json; then
-  printf '%s\n' "$data"
-  exit
-fi
+render() {
+  local data=$1
+  if $json; then
+    printf '%s\n' "$data"
+    return
+  fi
 
-status_args=("$command")
-[[ "$command" == run ]] && status_args+=("$target")
-status_args+=("--color=$color")
-if [[ -z "$watch_seconds" ]]; then
-  "$tmp/status" "${status_args[@]}"
-  exit
-fi
+  local use_color=false
+  [[ "$color" == always || "$color" == auto && -t 1 && ${TERM:-} != dumb && -z ${NO_COLOR:-} ]] && use_color=true
+  local reset= cell= heading= divider= task_style= normal= driver_style= stage_style= number_style= foot=
+  local success= warning= error= special= strike_warning= italic_warning=
+  if $use_color; then
+    reset=$'\033[0m'
+    cell=$'\033[48;2;40;40;40m'
+    heading=$'\033[1;38;2;242;133;52;48;2;50;48;47m'
+    divider=$'\033[38;2;102;92;84;48;2;40;40;40m'
+    task_style=$'\033[1;38;2;251;241;199m'
+    normal=$'\033[22;23;29;38;2;235;219;178m'
+    driver_style=$'\033[38;2;137;180;130m'
+    stage_style=$'\033[3;38;2;128;170;158m'
+    number_style=$'\033[1;38;2;211;134;155m'
+    foot=$'\033[3;38;2;137;180;130;48;2;40;40;40m'
+    success=$'\033[1;38;2;184;187;38m'
+    warning=$'\033[1;38;2;250;189;47m'
+    error=$'\033[1;38;2;242;89;75m'
+    special=$'\033[1;38;2;211;134;155m'
+    strike_warning=$'\033[9;1;38;2;250;189;47m'
+    italic_warning=$'\033[3;1;38;2;250;189;47m'
+  fi
 
-[[ -t 1 ]] || { echo "vault-hunter-observe: --watch requires a terminal" >&2; exit 64; }
-watch_ui=true
-printf '\033[?25l'
+  local title
+  printf -v title ' Vault Hunter observations at %s ' "$(date -u +%FT%TZ)"
+  printf '%s%-132s%s\n' "$heading" "$title" "$reset"
+  printf '%s %-52s  %-7s  %-18s  %-20s  %7s  %8s  %7s %s\n' "$heading" RUN/TASK DRIVER STATE STAGE CHILD PARENT\$ CHILD\$ "$reset"
+  printf '%s %-52s  %-7s  %-18s  %-20s  %7s  %8s  %7s %s\n' "$divider" \
+    '────────────────────────────────────────────────────' '───────' '──────────────────' '────────────────────' '───────' '────────' '───────' "$reset"
+
+  while IFS=$'\t' read -r task driver state stage children parent_cost child_cost; do
+    local state_style=$normal
+    case "$state" in
+      done|completed) state_style=$success ;;
+      rejected|failed|blocked) state_style=$error ;;
+      superseded|interrupted) state_style=$strike_warning ;;
+      active|running|resuming) state_style=$warning ;;
+      accepted|approved) state_style=$special ;;
+      unexpected*) state_style=$italic_warning ;;
+    esac
+    printf '%s%s %-52s%s  %s%-7s%s  %s%-18s%s  %s%-20s%s  %s%7s%s  %s%8s%s  %s%7s%s %s\n' \
+      "$cell" "$task_style" "$task" "$normal" "$driver_style" "$driver" "$normal" \
+      "$state_style" "$state" "$normal" "$stage_style" "$stage" "$normal" \
+      "$number_style" "$children" "$normal" "$number_style" "$parent_cost" "$normal" \
+      "$number_style" "$child_cost" "$normal" "$reset"
+  done < <(printf '%s\n' "$data" | jq -r '
+    def human: gsub("[[:cntrl:]]"; " ");
+    .[] | [
+      ((.run_id + " " + .task) | human | gsub("—"; "-") | gsub("×"; "x") | .[0:52]),
+      (.driver | human | .[0:7]),
+      (.state | human | .[0:18]),
+      (.stage | human | .[0:20]),
+      ("\(.children.active)/\(.children.finished)"),
+      (if .parent.cost == null then "-" else (.parent.cost | tostring) end),
+      (.children.cost | tostring)
+    ] | @tsv
+  ')
+  printf '%s %-130s %s\n' "$foot" 'Child is active/finished. Costs cover automatically observed usage only; Registry observations are not canonical authority.' "$reset"
+}
+
 while :; do
-  printf '\033[H\033[2J'
-  "$tmp/status" "${status_args[@]}"
+  $watch_ui && printf '\033[H\033[2J'
+  data=$(snapshot)
+  if [[ "$command" == run ]]; then
+    data=$(jq -c --arg run_id "$target" '[.[] | select(.run_id == $run_id)]' <<<"$data")
+    [[ $(jq length <<<"$data") -eq 1 ]] || { echo "vault-hunter-observe: Run not found: $target" >&2; exit 66; }
+  fi
+  render "$data"
+  [[ -n "$watch_seconds" ]] || break
   sleep "$watch_seconds"
 done

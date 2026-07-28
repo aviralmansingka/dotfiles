@@ -72,6 +72,7 @@ type ListFilter struct {
 	AgentSession     *AgentSession `json:"agent_session,omitempty"`
 	UpdatedAtFrom    string        `json:"updated_at_from,omitempty"`
 	UpdatedAtThrough string        `json:"updated_at_through,omitempty"`
+	UpdatedAtTo      string        `json:"updated_at_to,omitempty"` // legacy Reader API alias
 }
 
 // TaskSummary is the bounded Task projection returned by ListSummaries.

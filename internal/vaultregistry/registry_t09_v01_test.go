@@ -80,6 +80,13 @@ func t09ListRun(id, taskID, featurePath, updatedAt, sessionValue string) vaultre
 	return run
 }
 
+func mustRegistryLock(t *testing.T, root string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(root, "registry.lock"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func t09SummaryIDs(summaries []vaultregistry.RunSummary) []string {
 	ids := make([]string, len(summaries))
 	for i := range summaries {
@@ -104,6 +111,7 @@ func TestT09V01ListSummariesValidatesActiveRecordsBeforeFiltering(t *testing.T) 
 			if err := os.Mkdir(runs, 0700); err != nil {
 				t.Fatal(err)
 			}
+			mustRegistryLock(t, root)
 			path := filepath.Join(runs, tc.name+".json")
 			if err := os.WriteFile(path, tc.data, 0600); err != nil {
 				t.Fatal(err)
@@ -122,6 +130,7 @@ func TestT09V01ListSummariesRejectsSymlinkAndIgnoresInactiveEntries(t *testing.T
 	if err := os.Mkdir(runs, 0700); err != nil {
 		t.Fatal(err)
 	}
+	mustRegistryLock(t, root)
 	if err := os.WriteFile(filepath.Join(runs, ".run-pending.tmp"), []byte("not JSON"), 0600); err != nil {
 		t.Fatal(err)
 	}
