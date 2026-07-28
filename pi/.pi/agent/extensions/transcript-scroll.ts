@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { readdir, realpath } from "node:fs/promises";
 import { spawn } from "node:child_process";
-import { basename, extname, isAbsolute, resolve, sep } from "node:path";
+import { basename, extname, isAbsolute, relative, resolve, sep } from "node:path";
 import { CURSOR_MARKER, truncateToWidth, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
 
 const WIDGET = "transcript-scroll";
@@ -219,16 +219,23 @@ function install(tui: TUI, dim: (text: string) => string, setStatus: (key: strin
 				report(`Copied ${url.hostname}`, true);
 				return;
 			}
-			if (url.protocol !== "file:") return;
-			const file = decodeURIComponent(url.pathname);
-			const root = resolve(adapters.vaultRoot);
+			if (url.protocol !== "file:" || url.hostname) return;
+			const rawPath = span.destination.slice("file://".length).split(/[?#]/u, 1)[0];
+			if (decodeURIComponent(rawPath).split("/").includes("..")) return;
+			let root: string, file: string;
+			try {
+				[root, file] = await Promise.all([realpath(adapters.vaultRoot), realpath(decodeURIComponent(url.pathname))]);
+			} catch {
+				return;
+			}
 			if (file !== root && !file.startsWith(`${root}${sep}`)) return;
 			if (!adapters.nvimServer) throw new Error("NVIM server unavailable");
 			const fragment = decodeURIComponent(url.hash.slice(1));
 			const location = fragment.startsWith("L") && /^L\d+$/u.test(fragment)
 				? `:${fragment.slice(1)}`
 				: fragment.startsWith("^") ? `:block:${fragment.slice(1)}` : fragment ? `:heading:${fragment}` : "";
-			await adapters.neovim.open(["--server", adapters.nvimServer, "--remote", file, location]);
+			const target = resolve(adapters.vaultRoot, relative(root, file));
+			await adapters.neovim.open(["--server", adapters.nvimServer, "--remote", target, location]);
 		} catch (error) {
 			report(error instanceof Error && /NVIM|nvim/u.test(error.message) ? `Neovim: ${error.message}` : "Clipboard unavailable");
 		}
@@ -302,7 +309,11 @@ function install(tui: TUI, dim: (text: string) => string, setStatus: (key: strin
 				if (mouse[4] === "M" && button === 0) {
 					const x = Number(mouse[2]) - 1;
 					const span = state.visibleLinks.get(Number(mouse[3]) - 1)?.find((item) => x >= item.startCell && x < item.endCell);
-					if (span) void act(span);
+					if (span) {
+						const action = act(span) as Promise<void> & { consume: boolean };
+						action.consume = true;
+						return action;
+					}
 				}
 				return { consume: true };
 			}
