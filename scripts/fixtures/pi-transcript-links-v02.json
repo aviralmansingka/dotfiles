@@ -1,0 +1,8 @@
+{
+  "width": 96,
+  "rows": 10,
+  "markdown": "old one\nold two\nANSI \u001b[31mred\u001b[0m 界 [https://copy.example/a?q=1#frag](https://copy.example/a?q=1#frag)\n[heading](file:///Users/aviral/vault/notes/Alpha.md#Heading) [block](file:///Users/aviral/vault/notes/Alpha.md#%5Eblock-id) [line](file:///Users/aviral/vault/notes/Alpha.md#L7)\n[outside](file:///tmp/outside.md) [release](https://release.example/x) [modified](https://modified.example/x) [clipboard-fail](https://fail.example/x)",
+  "https": "https://copy.example/a?q=1#frag",
+  "vaultFile": "/Users/aviral/vault/notes/Alpha.md",
+  "status": "Copied copy.example"
+}
