@@ -66,7 +66,7 @@ func main() {
 	listGoals := flag.Bool("list-goals", false, "list recorded Goals and exit")
 	snapshot := flag.Bool("snapshot", false, "print one 12-row picker frame")
 	flag.Usage = func() {
-		fmt.Fprintln(flag.CommandLine.Output(), "usage: go run ./prototypes/atlas-picker-run-status [flags] <task-id-or-run-id>")
+		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "usage: go run ./prototypes/atlas-picker-run-status [flags] <task-id-or-run-id>")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -137,6 +137,7 @@ func resolveRun(reader *vaultregistry.Reader, target string) (vaultregistry.Run,
 		for i, run := range matches {
 			ids[i] = run.RunID
 		}
+		//nolint:staticcheck // This top-level CLI message starts with the Task domain term.
 		return vaultregistry.Run{}, false, fmt.Errorf("Task %q matches multiple active Runs: %s", target, strings.Join(ids, ", "))
 	}
 	return vaultregistry.Run{}, false, fmt.Errorf("no active Task or recorded Run matches %q", target)
@@ -431,6 +432,7 @@ func selectRequestedGoal(goals []journeyGoal, requested string) (int, error) {
 	}
 	if ordinal, err := strconv.Atoi(requested); err == nil {
 		if ordinal < 1 || ordinal > len(goals) {
+			//nolint:staticcheck // This top-level CLI message starts with the Goal domain term.
 			return 0, fmt.Errorf("Goal ordinal %d outside 1..%d", ordinal, len(goals))
 		}
 		return ordinal - 1, nil
@@ -440,6 +442,7 @@ func selectRequestedGoal(goals []journeyGoal, requested string) (int, error) {
 			return index, nil
 		}
 	}
+	//nolint:staticcheck // This top-level CLI message starts with the Goal domain term.
 	return 0, fmt.Errorf("Goal not found: %s", requested)
 }
 
