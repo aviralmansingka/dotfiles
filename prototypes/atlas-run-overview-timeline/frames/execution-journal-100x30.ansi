@@ -1,0 +1,30 @@
+[38;2;242;133;52mEXECUTION JOURNAL · faithful chronology · projection, not authority[0m
+[38;2;211;134;155mRun run-retired · rev 9 · retired[0m
+[38;2;102;92;84m────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;2;184;187;38m● Jul 28 15:40 UTC · verifier_decision · accepted[0m
+[38;2;235;219;178m│  ├─ goal · V01[0m
+[38;2;184;187;38m│  └─ Evidence accepted · time unavailable[0m
+[38;2;211;134;155m◆ Jul 28 16:00 UTC · retirement · retired[0m
+[38;2;235;219;178m│  ├─ goal · retire[0m
+[38;2;235;219;178m│  └─ History retained · no agent termination inferred · time unavailable[0m
+
+[38;2;235;219;178mRun run-unknown · literal forward-compatible record[0m
+[38;2;146;131;116m? Jul 29 07:00 UTC · future_kind ? · future-paused ?[0m
+[38;2;235;219;178m   └─ Literal typed value retained; hydration unavailable[0m
+
+[38;2;235;219;178mTimestamp gaps are chronology only; no gap is presented as execution duration.[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

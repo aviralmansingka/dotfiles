@@ -1,0 +1,24 @@
+[38;2;242;133;52mATLAS RUN STATE MATRIX · typed values, no inferred completion[0m
+[38;2;102;92;84m────────────────────────────────────────────────────────────────────────────────[0m
+[38;2;250;189;47m◉ run-active       active         stage implementation  [0m
+[38;2;235;219;178m  └─ Human merge · pending · time unavailable[0m
+[38;2;242;89;75m× run-failed       failed         stage verification    [0m
+[38;2;242;89;75m  └─ Parent diagnosis · rejected · time unavailable[0m
+[38;2;184;187;38m● run-completed    completed      stage cleanup         [0m
+[38;2;184;187;38m  └─ Workspace cleanup · completed · 5m0s[0m
+[38;2;211;134;155m◆ run-retired      retired        stage retired         [0m
+[38;2;211;134;155m  └─ Run retired · retired · time unavailable[0m
+[38;2;250;189;47m◉ run-missing-time active         stage prototype       [0m
+[38;2;235;219;178m  └─ V01 snapshot verifier · pending · time unavailable[0m
+[38;2;146;131;116m? run-unknown      future-paused ? stage future-stage    [0m
+[38;2;235;219;178m  └─ Future observation · future-paused · time unavailable[0m
+
+[38;2;146;131;116m? unknown remains literal · missing bounds say time unavailable[0m
+[38;2;211;134;155mretired is recorded history; it does not imply agent termination[0m
+
+
+
+
+
+
+

@@ -1,0 +1,32 @@
+[38;2;242;133;52mEXPANDED OPERATIONS BOARD · run-failed[0m
+[38;2;242;89;75mT17 · Gate evaluator · rev 4 · verification · failed[0m
+[38;2;102;92;84m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;2;242;133;52mTIMELINE                │SELECTED RECORDED CONTEXT                                 │EVIDENCE / GATES[0m
+[38;2;184;187;38m● V01                   │V01 manifest validation · verifier_attempt · passed       │V01 accepted[0m
+[38;2;242;89;75m  passed                │  └─ attempt-020 · exit 0 · 1m0s                          │V02 failed · exit 1[0m
+[38;2;242;89;75m× V02                   │V02 gate evaluation · verifier_attempt · failed           │[0m
+[38;2;235;219;178m  failed                │  └─ attempt-021 · exit 1 · 19m0s                         │Parent decision[0m
+[38;2;242;89;75m× V02                   │Parent diagnosis · verifier_decision · rejected           │× rejected[0m
+[38;2;235;219;178m  rejected              │  └─ implementation_defect · time unavailable             │implementation_defect[0m
+[38;2;235;219;178m                        │                                                          │[0m
+[38;2;235;219;178m                        │                                                          │Authority[0m
+[38;2;235;219;178m                        │                                                          │projection, not completion[0m
+
+[38;2;235;219;178mRecorded chronology remains available in Journal · no live Herdr state hydrated in this fixture[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
