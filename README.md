@@ -138,8 +138,14 @@ atlas run retire <id> --expected-revision 7
 atlas capabilities --output json
 ```
 
-The interactive browser skips active Runs whose Project, Feature, or Task preview cannot be rendered and emits one
-startup warning with the Run ID and work-reference path. Machine-readable Run listings remain unchanged.
+The interactive browser groups canonical work as Project → Feature → Task → Run, including not-started Tasks even
+when they have no Run or exceed machine collection byte limits. Done Tasks are hidden by default; select a Feature
+and press Ctrl-D to toggle only that Feature's completed work. Press `p`, `f`, `t`, or `r` to switch previews. Feature
+previews summarize Now/Next work with the crew journey (activate, baseline, converge, review, land, cleanup), while
+Run previews retain the detailed lifecycle journal.
+
+The browser skips active Runs whose Project, Feature, or Task preview cannot be rendered and emits one startup
+warning with the Run ID and work-reference path. Machine-readable Run listings remain unchanged.
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
