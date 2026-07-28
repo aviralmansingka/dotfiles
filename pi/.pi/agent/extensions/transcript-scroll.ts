@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { readdir, realpath } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { basename, extname, isAbsolute, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 import { CURSOR_MARKER, truncateToWidth, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
 
 const WIDGET = "transcript-scroll";
@@ -47,7 +48,8 @@ const productionAdapters: Adapters = {
 	vaultRoot: "/Users/aviral/vault",
 	nvimServer: process.env.NVIM,
 };
-let adapters = productionAdapters;
+const ADAPTERS = Symbol.for("pi.transcript-links.adapters");
+const adapterState = ((globalThis as typeof globalThis & { [ADAPTERS]?: { current: Adapters } })[ADAPTERS] ??= { current: productionAdapters });
 
 interface LinkSpan {
 	destination: string;
@@ -75,6 +77,23 @@ type StatefulTui = TUI & { [key: symbol]: ScrollState | undefined };
 
 const OSC_LINK = /\x1b\]8;;([^\x1b]*)\x1b\\([\s\S]*?)\x1b\]8;;\x1b\\/gu;
 const ANSI = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]/gu;
+const NVIM_LUA = "(function(d)local c=vim.api.nvim_get_current_win();local ok,r=xpcall(function()local w;for _,x in ipairs(vim.api.nvim_list_wins())do if x~=c and vim.bo[vim.api.nvim_win_get_buf(x)].buftype~='terminal'then w=x;break end end;if not w then vim.cmd('noautocmd keepalt botright new');w=vim.api.nvim_get_current_win()end;local b=vim.fn.bufadd(d.file);vim.fn.bufload(b);vim.api.nvim_win_set_buf(w,b);vim.api.nvim_win_call(w,function()if d.kind=='line'then vim.api.nvim_win_set_cursor(w,{d.target,0})elseif d.kind=='heading'then vim.fn.cursor(1,1);vim.fn.search('^\\\\s*#\\\\+\\\\s\\\\+\\\\V'..vim.fn.escape(d.target,'\\\\')..'\\\\m\\\\s*$','W')elseif d.kind=='block'then vim.fn.cursor(1,1);vim.fn.search('\\\\V^'..vim.fn.escape(d.target,'\\\\')..'\\\\m\\\\s*$','W')end end);return 1 end,debug.traceback);if vim.api.nvim_win_is_valid(c)then vim.api.nvim_set_current_win(c)end;if not ok then error(r)end;return r end)(_A)";
+
+type NvimTarget = { file: string; kind: "file" | "line" | "heading" | "block"; target: string | number };
+function buildNvimArgs(server: string, target: NvimTarget): string[] {
+	return ["--server", server, "--remote-expr", `luaeval(${JSON.stringify(NVIM_LUA)}, json_decode(${JSON.stringify(JSON.stringify(target))}))`];
+}
+
+function renderExplicitWikilinks(text: string, vaultRoot: string): string {
+	return text.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/gu, (original, destination: string, alias?: string) => {
+		const [note, fragment = ""] = destination.split("#", 2);
+		if (!note.includes("/") || isAbsolute(note) || note.split(/[\\/]/u).includes("..")) return original;
+		const file = resolve(vaultRoot, extname(note) ? note : `${note}.md`);
+		const url = pathToFileURL(file);
+		if (fragment) url.hash = fragment;
+		return `[${alias ?? destination}](${url.href})`;
+	});
+}
 
 function destinationParts(destination: string): string[] {
 	try {
@@ -172,7 +191,10 @@ async function resolveWikilink({ text, vaultRoot, sourceFile }: { text: string; 
 
 export const __transcriptLinks = {
 	resolveWikilink,
-	configureForTest(injected: Adapters) { adapters = injected; },
+	buildNvimArgs,
+	configureForTest(injected: Adapters) {
+		adapterState.current = { ...productionAdapters, ...injected, neovim: injected.neovim ?? productionAdapters.neovim };
+	},
 };
 
 function isTerminalReply(data: string): boolean {
@@ -201,41 +223,43 @@ function install(tui: TUI, dim: (text: string) => string, setStatus: (key: strin
 	};
 
 	state.clearStatus = () => {
-		if (state.statusTimer !== undefined) adapters.clock.clearTimeout(state.statusTimer);
+		if (state.statusTimer !== undefined) adapterState.current.clock.clearTimeout(state.statusTimer);
 		state.statusTimer = undefined;
 		setStatus(STATUS, undefined);
 	};
 	const report = (message: string, transient = false) => {
 		state.clearStatus();
 		setStatus(STATUS, message);
-		if (transient) state.statusTimer = adapters.clock.setTimeout(state.clearStatus, 1500);
+		if (transient) state.statusTimer = adapterState.current.clock.setTimeout(state.clearStatus, 1500);
 	};
 
 	const act = async (span: LinkSpan) => {
 		try {
 			const url = new URL(span.destination);
 			if (url.protocol === "https:") {
-				await adapters.clipboard.write(span.destination);
+				await adapterState.current.clipboard.write(span.destination);
 				report(`Copied ${url.hostname}`, true);
 				return;
 			}
 			if (url.protocol !== "file:" || url.hostname) return;
-			const rawPath = span.destination.slice("file://".length).split(/[?#]/u, 1)[0];
+			const rawPath = url.pathname;
 			if (decodeURIComponent(rawPath).split("/").includes("..")) return;
 			let root: string, file: string;
 			try {
-				[root, file] = await Promise.all([realpath(adapters.vaultRoot), realpath(decodeURIComponent(url.pathname))]);
+				[root, file] = await Promise.all([realpath(adapterState.current.vaultRoot), realpath(decodeURIComponent(url.pathname))]);
 			} catch {
 				return;
 			}
 			if (file !== root && !file.startsWith(`${root}${sep}`)) return;
-			if (!adapters.nvimServer) throw new Error("NVIM server unavailable");
+			const { nvimServer, neovim, vaultRoot } = adapterState.current;
+			if (!nvimServer) throw new Error("NVIM server unavailable");
 			const fragment = decodeURIComponent(url.hash.slice(1));
-			const location = fragment.startsWith("L") && /^L\d+$/u.test(fragment)
-				? `:${fragment.slice(1)}`
-				: fragment.startsWith("^") ? `:block:${fragment.slice(1)}` : fragment ? `:heading:${fragment}` : "";
-			const target = resolve(adapters.vaultRoot, relative(root, file));
-			await adapters.neovim.open(["--server", adapters.nvimServer, "--remote", target, location]);
+			const targetFile = resolve(vaultRoot, relative(root, file));
+			const target: NvimTarget = fragment.startsWith("L") && /^L\d+$/u.test(fragment)
+				? { file: targetFile, kind: "line", target: Number(fragment.slice(1)) }
+				: fragment.startsWith("^") ? { file: targetFile, kind: "block", target: fragment } : fragment
+					? { file: targetFile, kind: "heading", target: fragment } : { file: targetFile, kind: "file", target: "" };
+			await neovim.open(buildNvimArgs(nvimServer, target));
 		} catch (error) {
 			report(error instanceof Error && /NVIM|nvim/u.test(error.message) ? `Neovim: ${error.message}` : "Clipboard unavailable");
 		}
@@ -262,6 +286,11 @@ function install(tui: TUI, dim: (text: string) => string, setStatus: (key: strin
 			state.viewportEnd = 0;
 		}
 
+		for (const child of tui.children as Array<Component & { text?: string; setText?(text: string): void }>) {
+			if (typeof child.text !== "string" || !child.setText || !child.text.includes("[[")) continue;
+			const text = renderExplicitWikilinks(child.text, adapterState.current.vaultRoot);
+			if (text !== child.text) child.setText(text);
+		}
 		const rendered = tui.children.map((child) => child.render(width));
 		const allLines = compactRenderedLinks(rendered.flat());
 		const editorRoot = rendered.findIndex((lines) => lines.some((line) => line.includes(CURSOR_MARKER)));
@@ -288,13 +317,14 @@ function install(tui: TUI, dim: (text: string) => string, setStatus: (key: strin
 			}
 		}
 		state.visibleLinks.clear();
-		for (let row = 0; row < output.length; row++) {
+		const screenOffset = Math.max(0, output.length - height);
+		for (let row = screenOffset; row < output.length; row++) {
 			const spans: LinkSpan[] = [];
 			for (const match of output[row].matchAll(OSC_LINK)) {
 				const startCell = visibleWidth(output[row].slice(0, match.index));
-				spans.push({ destination: match[1], row, startCell, endCell: startCell + visibleWidth(match[2]) });
+				spans.push({ destination: match[1], row: row - screenOffset, startCell, endCell: startCell + visibleWidth(match[2]) });
 			}
-			if (spans.length) state.visibleLinks.set(row, spans);
+			if (spans.length) state.visibleLinks.set(row - screenOffset, spans);
 		}
 		return output;
 	};
@@ -308,7 +338,8 @@ function install(tui: TUI, dim: (text: string) => string, setStatus: (key: strin
 			if (!wheel) {
 				if (mouse[4] === "M" && button === 0) {
 					const x = Number(mouse[2]) - 1;
-					const span = state.visibleLinks.get(Number(mouse[3]) - 1)?.find((item) => x >= item.startCell && x < item.endCell);
+					const row = Number(mouse[3]) - 1;
+					const span = state.visibleLinks.get(row)?.find((item) => x >= item.startCell && x < item.endCell);
 					if (span) {
 						const action = act(span) as Promise<void> & { consume: boolean };
 						action.consume = true;
