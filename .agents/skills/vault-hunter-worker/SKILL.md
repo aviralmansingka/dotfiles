@@ -1,6 +1,6 @@
 ---
 name: vault-hunter-worker
-description: Run and monitor one bounded Vault Hunter or Vault Scout Codex worker in an exact one-pane Herdr tab, capture its opaque ownership tuple, return its handoff, and close or preserve only that worker as directed. Use only when Vault Hunter or Vault Scout delegates an interactive worker lifecycle.
+description: Run and monitor one bounded Vault Hunter or Vault Scout Pi worker in an exact one-pane Herdr tab, capture its opaque ownership tuple, return its handoff, and close or preserve only that worker as directed. Use only when Vault Hunter or Vault Scout delegates a visible worker lifecycle.
 ---
 
 # Vault Hunter Worker
@@ -42,10 +42,12 @@ The prompt may explicitly permit narrow follow-up reads. Otherwise its path allo
 3. Use `herdr tab create` with the supplied workspace, cwd, label, `--no-focus`, and
    `SIDEKICK_NAMED_SESSION=<feature-slug>-<run-key>-<role>`. Capture its returned tab and root-pane IDs. Do not split
    beside another pane.
-4. Use `herdr pane run` on that root pane to start
-   `codex --dangerously-bypass-approvals-and-sandbox <prompt>` with the prompt-file contents.
+4. Use `herdr pane run` on that root pane to start the Pi coding agent as
+   `pi --name <feature-slug>-<run-key>-<role> <prompt>` with the prompt-file contents supplied as the initial message.
+   Do not substitute another agent runtime unless the delegating parent records an explicit user request or a required
+   capability exception, such as Codex computer use.
 5. Wait for that pane's agent detection, then use `herdr agent rename` to name it
-   `codex-<feature-slug>-<run-key>-<role>`. Failure to detect the agent is a failed launch.
+   `pi-<feature-slug>-<run-key>-<role>`. Failure to detect the agent is a failed launch.
 6. Return one JSON object containing the exact workspace, tab, pane, terminal, agent, session, cwd, branch, and
    `pane_count`. Accept the launch only when the tuple matches and `pane_count=1`.
 7. Delete the prompt file after confirmed launch. If validation fails, close only the returned malformed tab, verify
