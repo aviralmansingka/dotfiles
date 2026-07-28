@@ -82,6 +82,7 @@ func TestObserveAndGetRunsUseAtlasNameSelectors(t *testing.T) {
 		}
 	}
 	t.Setenv("VAULT_HUNTER_STATE_DIR", root)
+	t.Setenv("ATLAS_VAULT_ROOT", root)
 
 	var observeStdout, observeStderr bytes.Buffer
 	if code := execute([]string{"observe", "--name", "release-check"}, &observeStdout, &observeStderr); code != 0 {

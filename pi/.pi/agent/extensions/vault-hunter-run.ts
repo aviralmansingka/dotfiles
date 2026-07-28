@@ -39,12 +39,6 @@ const SelectorSchema = Type.Object({
   name: Type.Optional(Type.String()),
 }, { additionalProperties: false });
 
-const AgentSessionSchema = Type.Object({
-  source: Type.String(),
-  kind: Type.String(),
-  value: Type.String(),
-}, { additionalProperties: false });
-
 const AtlasGetSchema = Type.Object({
   resource: Type.Union(GET_RESOURCES.map((value) => Type.Literal(value))),
   identity: Type.Optional(Type.String()),
@@ -85,6 +79,15 @@ const AtlasRetireRunSchema = Type.Object({
 
 function text(content: string, details: unknown) {
   return { content: [{ type: "text" as const, text: content }], details };
+}
+
+function restoredRunId(ctx: ExtensionContext): string | undefined {
+  for (const entry of [...ctx.sessionManager.getBranch()].reverse()) {
+    if (entry.type !== "message" || entry.message.role !== "toolResult" || entry.message.toolName !== "vault_hunter_run") continue;
+    const runId = (entry.message.details as { runId?: unknown } | undefined)?.runId;
+    if (typeof runId === "string" && runId) return runId;
+  }
+  return undefined;
 }
 
 function selectorArgs(input: { identity?: string; id?: string; name?: string }): string[] {
@@ -176,6 +179,12 @@ async function driverPlacement(pi: ExtensionAPI, ctx: ExtensionContext, signal?:
 }
 
 export default function (pi: ExtensionAPI) {
+  let activeRunId: string | undefined;
+
+  pi.on("session_start", (_event, ctx) => {
+    activeRunId = restoredRunId(ctx);
+  });
+
   pi.registerTool({
     name: "agent_run_preflight",
     label: "Preflight Agent Run Driver",
@@ -218,6 +227,10 @@ export default function (pi: ExtensionAPI) {
     parameters: AtlasCreateSchema,
     async execute(_id, params, signal) {
       const details = await runAtlas([params.resource as CreateResource, "create", "--json"], signal, `${JSON.stringify(params.request)}\n`);
+      if (details.kind === "Run") {
+        const data = details.data as { id?: unknown };
+        if (typeof data?.id === "string" && data.id) activeRunId = data.id;
+      }
       return text(`Atlas created ${details.kind}.`, details);
     },
   });

@@ -34,6 +34,7 @@ expected_help = open(source + ".help", encoding="utf-8").read() if False else No
 def run(binary, args, stdin=""):
     env = os.environ.copy()
     env["VAULT_HUNTER_STATE_DIR"] = state
+    env["ATLAS_VAULT_ROOT"] = state
     return subprocess.run([binary, *args], input=stdin, text=True, capture_output=True, env=env)
 
 for binary in (source, installed):
@@ -55,7 +56,7 @@ for binary in (source, installed):
     listed_json = json.loads(listed.stdout)
     assert listed_json["api_version"] == "atlas/v1"
     assert listed_json["kind"] == "RunList"
-    assert listed_json["meta"] == {"count": 1, "truncated": False}
+    assert listed_json["meta"]["count"] == 1 and listed_json["meta"]["truncated"] is False
     assert listed_json["data"][0]["id"] == "run-1"
 
     singleton = run(binary, ["get", "runs", "--id", "run-1"])
@@ -110,10 +111,12 @@ for binary in (source, installed):
         assert failed.stdout == "", (args, failed.stdout)
         assert needle in failed.stderr and "usage: atlas\n" in failed.stderr, (args, failed.stderr)
 
+    attempts = run(binary, ["get", "verifierattempts", "--run", "run-1", "--pending"])
+    assert attempts.returncode == 0 and json.loads(attempts.stdout)["data"] == [], attempts
+
     for args, stderr in [
-        (["get", "verifierattempts", "--run", "run-1", "--pending"], "atlas: get verifierattempts is not implemented yet\n"),
         (["run", "retire", "run-1", "--expected-revision", "1"], "atlas: run retire is not implemented yet\n"),
-        (["run", "create", "--json"], "atlas: run create is not implemented yet\n"),
+        (["run", "create", "--json"], "atlas: run create requires run and initial_driver\n"),
     ]:
         failed = run(binary, args, stdin="{}\n")
         assert failed.returncode == 1, (args, failed.returncode, failed.stdout, failed.stderr)

@@ -8,8 +8,8 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"time"
 
+	atlaspkg "github.com/aviral/dotfiles/internal/atlas"
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
@@ -178,7 +178,7 @@ func run(command any, stdout io.Writer) error {
 	case getCommand:
 		return runGet(command, stdout)
 	case createCommand:
-		return fmt.Errorf("atlas: %s create is not implemented yet", command.resource)
+		return runCreate(command, os.Stdin, stdout)
 	case capabilitiesCommand:
 		return writeJSON(stdout, envelope{
 			APIVersion: "atlas/v1",
@@ -200,7 +200,7 @@ func run(command any, stdout io.Writer) error {
 			Meta: map[string]any{},
 		})
 	case evidenceGetCommand:
-		return fmt.Errorf("atlas: evidence get is not implemented yet")
+		return runEvidenceGet(command, stdout)
 	case acceptCommand:
 		return fmt.Errorf("atlas: accept verifierattempt is not implemented yet")
 	case rejectCommand:
@@ -421,68 +421,37 @@ func runGet(command getCommand, stdout io.Writer) error {
 	if command.watch {
 		return fmt.Errorf("atlas: get %s --watch is not implemented yet", command.resource)
 	}
-	if command.resource != "runs" {
-		if command.resource == "verifierattempts" {
-			return fmt.Errorf("atlas: get verifierattempts is not implemented yet")
-		}
-		return fmt.Errorf("atlas: get %s is not implemented yet", command.resource)
-	}
-	reader, err := vaultregistry.OpenReader("")
+	envelope, err := atlaspkg.BuildEnvelope("", "", command.resource, atlaspkg.MachineSelector(command.selector), atlaspkg.MachineGetOptions{
+		Run:     command.run,
+		Pending: command.pending,
+	})
 	if err != nil {
 		return err
 	}
-	if command.selector.any() == "" {
-		summaries, err := reader.ListSummaries(vaultregistry.ListFilter{})
-		if err != nil {
-			return err
-		}
-		data := make([]map[string]any, 0, len(summaries))
-		for _, summary := range summaries {
-			row := map[string]any{
-				"id":         summary.RunID,
-				"revision":   summary.Revision,
-				"invoked_at": summary.InvokedAt,
-				"updated_at": summary.UpdatedAt,
-			}
-			if summary.Name != "" {
-				row["name"] = summary.Name
-			}
-			if summary.State != "" {
-				row["state"] = summary.State
-			}
-			if summary.Stage != "" {
-				row["stage"] = summary.Stage
-			}
-			if task := summaryTask(summary); task != nil {
-				row["task"] = task
-			}
-			data = append(data, row)
-		}
-		return writeJSON(stdout, envelope{APIVersion: "atlas/v1", Kind: "RunList", Data: data, Meta: map[string]any{"count": len(data), "truncated": false}})
+	return writeJSON(stdout, envelope)
+}
+
+func runCreate(command createCommand, input io.Reader, stdout io.Writer) error {
+	if command.resource != "run" {
+		return fmt.Errorf("atlas: %s create is not implemented yet", command.resource)
 	}
-	run, err := readActiveRun(reader, command.selector)
+	data, err := io.ReadAll(input)
 	if err != nil {
 		return err
 	}
-	payload := map[string]any{
-		"id":         run.RunID,
-		"revision":   run.Revision,
-		"invoked_at": run.InvokedAt,
-		"updated_at": run.UpdatedAt,
+	envelope, err := atlaspkg.CreateRunEnvelope("", data)
+	if err != nil {
+		return err
 	}
-	if run.Name != "" {
-		payload["name"] = run.Name
+	return writeJSON(stdout, envelope)
+}
+
+func runEvidenceGet(command evidenceGetCommand, stdout io.Writer) error {
+	envelope, err := atlaspkg.BuildEvidenceEnvelope("", "", atlaspkg.MachineSelector(command.selector))
+	if err != nil {
+		return err
 	}
-	if run.State != "" {
-		payload["state"] = run.State
-	}
-	if run.Stage != "" {
-		payload["stage"] = run.Stage
-	}
-	if task := runTask(run); task != nil {
-		payload["task"] = task
-	}
-	return writeJSON(stdout, envelope{APIVersion: "atlas/v1", Kind: "Run", Data: payload, Meta: map[string]any{"observed_at": time.Now().UTC().Format(time.RFC3339)}})
+	return writeJSON(stdout, envelope)
 }
 
 func readActiveRun(reader *vaultregistry.Reader, selector selector) (vaultregistry.Run, error) {
@@ -541,26 +510,6 @@ func renderRun(run vaultregistry.Run) string {
 	builder.WriteString("RUN\tTASK\tSTATE\tSTAGE\tREVISION\tUPDATED\n")
 	fmt.Fprintf(&builder, "%s\t%s\t%s\t%s\t%d\t%s\n", run.RunID, title, state, stage, run.Revision, run.UpdatedAt)
 	return builder.String()
-}
-
-func summaryTask(run vaultregistry.RunSummary) map[string]any {
-	if run.Task != nil {
-		return map[string]any{"id": run.Task.ID, "title": run.Task.Title, "path": run.Task.Path, "feature_path": run.Task.FeaturePath, "kind": run.Task.Kind}
-	}
-	if run.WorkReference != nil {
-		return map[string]any{"id": run.WorkReference.ID, "title": run.WorkReference.Title, "path": run.WorkReference.Path, "feature_path": run.WorkReference.FeaturePath, "kind": run.WorkReference.Kind}
-	}
-	return nil
-}
-
-func runTask(run vaultregistry.Run) map[string]any {
-	if run.WorkReference != nil {
-		return map[string]any{"id": run.WorkReference.ID, "title": run.WorkReference.Title, "path": run.WorkReference.Path, "feature_path": run.WorkReference.FeaturePath, "kind": run.WorkReference.Kind}
-	}
-	if run.Task.ID == "" && run.Task.Title == "" && run.Task.Path == "" && run.Task.FeaturePath == "" && run.Task.Kind == "" {
-		return nil
-	}
-	return map[string]any{"id": run.Task.ID, "title": run.Task.Title, "path": run.Task.Path, "feature_path": run.Task.FeaturePath, "kind": run.Task.Kind}
 }
 
 type envelope struct {
