@@ -1,0 +1,216 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+fixture="scripts/fixtures/vault-hunter-atlas-t18-v01"
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+chmod +x "$fixture/bin/atlas" "$fixture/bin/herdr" "$fixture/bin/go"
+
+go build -o "$tmp/source-atlas" ./cmd/atlas
+mkdir -p "$tmp/bin"
+GOBIN="$tmp/bin" go install ./cmd/atlas
+
+test -x "$tmp/bin/atlas"
+test ! -e "$tmp/bin/vault-hunter-atlas"
+test ! -e "$tmp/bin/vault-hunter-status"
+test ! -e "$tmp/bin/vault-hunter-observe"
+
+"$tmp/source-atlas" --help >"$tmp/source.help"
+"$tmp/bin/atlas" --help >"$tmp/installed.help"
+cmp "$tmp/source.help" "$tmp/installed.help"
+
+python3 - "$tmp/source-atlas" "$tmp/bin/atlas" "$fixture/state" <<'PY'
+import json
+import os
+import subprocess
+import sys
+
+source, installed, state = sys.argv[1:]
+expected_help = open(source + ".help", encoding="utf-8").read() if False else None
+
+def run(binary, args, stdin=""):
+    env = os.environ.copy()
+    env["VAULT_HUNTER_STATE_DIR"] = state
+    return subprocess.run([binary, *args], input=stdin, text=True, capture_output=True, env=env)
+
+for binary in (source, installed):
+    help_run = run(binary, ["--help"])
+    assert help_run.returncode == 0, (binary, help_run)
+    assert help_run.stderr == "", help_run.stderr
+    assert help_run.stdout == run(source, ["--help"]).stdout
+
+    observe = run(binary, ["observe"])
+    assert observe.returncode == 0 and observe.stderr == "", observe
+    assert "ATLAS OBSERVE" in observe.stdout and "run-1" in observe.stdout, observe.stdout
+
+    selected = run(binary, ["observe", "--name", "release-check"])
+    assert selected.returncode == 0 and selected.stderr == "", selected
+    assert "run-1\tBuild Atlas" in selected.stdout, selected.stdout
+
+    listed = run(binary, ["get", "runs"])
+    assert listed.returncode == 0 and listed.stderr == "", listed
+    listed_json = json.loads(listed.stdout)
+    assert listed_json["api_version"] == "atlas/v1"
+    assert listed_json["kind"] == "RunList"
+    assert listed_json["meta"] == {"count": 1, "truncated": False}
+    assert listed_json["data"][0]["id"] == "run-1"
+
+    singleton = run(binary, ["get", "runs", "--id", "run-1"])
+    assert singleton.returncode == 0 and singleton.stderr == "", singleton
+    singleton_json = json.loads(singleton.stdout)
+    assert singleton_json["kind"] == "Run"
+    assert singleton_json["data"]["id"] == "run-1"
+    assert singleton_json["data"]["name"] == "release-check"
+
+    capabilities = run(binary, ["capabilities", "--output", "json"])
+    assert capabilities.returncode == 0 and capabilities.stderr == "", capabilities
+    capabilities_json = json.loads(capabilities.stdout)
+    assert capabilities_json == {
+        "api_version": "atlas/v1",
+        "kind": "Capabilities",
+        "data": {
+            "agent_tools": [
+                "agent_run_preflight",
+                "atlas_get",
+                "atlas_create",
+                "atlas_evidence_get",
+                "atlas_accept_verifier_attempt",
+                "atlas_reject_verifier_attempt",
+                "atlas_retire_run",
+                "atlas_capabilities",
+            ],
+            "create_resources": ["run"],
+            "get_resources": [
+                "features",
+                "participants",
+                "projects",
+                "runs",
+                "tasks",
+                "themes",
+                "usage",
+                "verifierattempts",
+                "verifiers",
+            ],
+        },
+        "meta": {},
+    }, capabilities_json
+
+    for args, needle in [
+        (["status"], 'atlas: unknown command "status"'),
+        (["describe"], 'atlas: unknown command "describe"'),
+        (["get", "evidence"], 'atlas: unknown get resource "evidence"'),
+        (["--run-id", "run-1"], 'atlas: unexpected option --run-id'),
+        (["observe", "run-1", "--name", "release-check"], 'atlas: selector accepts exactly one of <name-or-id>, --id, or --name'),
+    ]:
+        failed = run(binary, args)
+        assert failed.returncode == 2, (args, failed.returncode, failed.stdout, failed.stderr)
+        assert failed.stdout == "", (args, failed.stdout)
+        assert needle in failed.stderr and "usage: atlas\n" in failed.stderr, (args, failed.stderr)
+
+    for args, stderr in [
+        (["get", "verifierattempts", "--run", "run-1", "--pending"], "atlas: get verifierattempts is not implemented yet\n"),
+        (["run", "retire", "run-1", "--expected-revision", "1"], "atlas: run retire is not implemented yet\n"),
+        (["run", "create", "--json"], "atlas: run create is not implemented yet\n"),
+    ]:
+        failed = run(binary, args, stdin="{}\n")
+        assert failed.returncode == 1, (args, failed.returncode, failed.stdout, failed.stderr)
+        assert failed.stdout == "", (args, failed.stdout)
+        assert failed.stderr == stderr, (args, failed.stderr)
+
+print("T18.V01 CLI grammar and executable migration: PASS")
+PY
+
+grep -Fq 'go install ./cmd/atlas' README.md
+grep -Fq 'go install ./cmd/atlas' install.sh
+grep -Fq 'atlas capabilities --output json' README.md
+grep -Fq 'agent_run_preflight' .agents/skills/vault-hunter/SKILL.md
+test ! -e .agents/skills/vault-hunter-status/SKILL.md
+
+: >"$tmp/command.log"
+session_file="$tmp/session.jsonl"
+: >"$session_file"
+PATH="$fixture/bin:$tmp/bin:$PATH" \
+  HERDR_ENV=1 HERDR_PANE_ID=pane-123 \
+  T18_V01_COMMAND_LOG="$tmp/command.log" \
+  T18_V01_RESULT="$tmp/pi-result.json" \
+  T18_V01_CWD="$PWD" \
+  T18_V01_SESSION_FILE="$session_file" \
+  pi --offline --no-session --no-extensions -e "$fixture/pi-harness.ts" -p probe >/dev/null
+
+python3 - "$tmp/pi-result.json" "$tmp/command.log" <<'PY'
+import json
+import sys
+
+result_path, command_log = sys.argv[1:]
+with open(result_path, encoding="utf-8") as handle:
+    result = json.load(handle)
+assert result.get("ok") is True, result.get("error", result)
+
+wanted = {
+    "agent_run_preflight",
+    "atlas_get",
+    "atlas_create",
+    "atlas_evidence_get",
+    "atlas_accept_verifier_attempt",
+    "atlas_reject_verifier_attempt",
+    "atlas_retire_run",
+    "atlas_capabilities",
+}
+assert {tool["name"] for tool in result["tools"]} == wanted
+get_schema = next(tool["parameters"] for tool in result["tools"] if tool["name"] == "atlas_get")
+assert "watch" not in get_schema.get("properties", {})
+create_schema = next(tool["parameters"] for tool in result["tools"] if tool["name"] == "atlas_create")
+assert create_schema["properties"]["resource"].get("anyOf") == [{"const": "run", "type": "string"}]
+
+preflight = result["preflightResult"]
+assert preflight["details"]["cwd"]
+assert preflight["details"]["herdr"]["paneId"] == "pane-123"
+
+assert result["getResult"]["details"]["data"]["argv"] == ["get", "runs", "--id", "run-1"]
+assert result["attemptsResult"]["details"]["data"]["argv"] == ["get", "verifierattempts", "--run", "run-1", "--pending"]
+assert result["createResult"]["details"]["data"]["argv"] == ["run", "create", "--json"]
+assert result["createResult"]["details"]["data"]["request"] == {"name": "release-check", "run_kind": "hunter"}
+assert result["evidenceResult"]["details"]["data"]["argv"] == ["evidence", "get", "--name", "evidence-1"]
+assert result["acceptResult"]["details"]["data"]["argv"] == ["accept", "verifierattempt", "attempt-1", "--expected-revision", "7"]
+assert result["rejectResult"]["details"]["data"]["argv"] == ["reject", "verifierattempt", "--id", "attempt-2", "--expected-revision", "8", "--reason", "insufficient-evidence"]
+assert result["retireResult"]["details"]["data"]["argv"] == ["run", "retire", "run-2", "--expected-revision", "9"]
+assert result["capabilitiesResult"]["details"]["kind"] == "Capabilities"
+assert "exactly one of identity, id, or name" in result["conflictingSelectorError"]
+assert "only accepts run and pending for verifierattempts" in result["badFilterError"]
+assert "requires interactive confirmation" in result["noUIError"]
+assert "retirement was declined" in result["declinedError"]
+assert len(result["confirmations"]) == 1
+assert "run-2" in result["confirmations"][0]["message"] and "9" in result["confirmations"][0]["message"]
+
+with open(command_log, encoding="utf-8") as handle:
+    commands = [json.loads(line) for line in handle if line.strip()]
+assert [entry["tool"] for entry in commands] == [
+    "herdr",
+    "atlas",
+    "atlas",
+    "atlas",
+    "atlas",
+    "atlas",
+    "atlas",
+    "atlas",
+    "atlas",
+], commands
+assert commands[0]["argv"] == ["pane", "get", "pane-123"]
+assert commands[1] == {"tool": "atlas", "argv": ["get", "runs", "--id", "run-1"], "stdin": ""}
+assert commands[2] == {"tool": "atlas", "argv": ["get", "verifierattempts", "--run", "run-1", "--pending"], "stdin": ""}
+assert commands[3]["argv"] == ["run", "create", "--json"]
+assert json.loads(commands[3]["stdin"]) == {"name": "release-check", "run_kind": "hunter"}
+assert commands[4] == {"tool": "atlas", "argv": ["evidence", "get", "--name", "evidence-1"], "stdin": ""}
+assert commands[5] == {"tool": "atlas", "argv": ["accept", "verifierattempt", "attempt-1", "--expected-revision", "7"], "stdin": ""}
+assert commands[6] == {"tool": "atlas", "argv": ["reject", "verifierattempt", "--id", "attempt-2", "--expected-revision", "8", "--reason", "insufficient-evidence"], "stdin": ""}
+assert commands[7] == {"tool": "atlas", "argv": ["run", "retire", "run-2", "--expected-revision", "9"], "stdin": ""}
+assert commands[8] == {"tool": "atlas", "argv": ["capabilities", "--output", "json"], "stdin": ""}
+assert all(entry["tool"] != "go" for entry in commands)
+
+print("T18.V01 Pi Atlas adapter and preflight contract: PASS")
+PY
+
+echo 'T18.V01 grammar, migration, and Pi adapter: PASS'

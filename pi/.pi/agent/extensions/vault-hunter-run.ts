@@ -1,73 +1,30 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "typebox";
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
 import { realpathSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = dirname(dirname(dirname(dirname(dirname(realpathSync(fileURLToPath(import.meta.url)))))));
-const REGISTRY_ROOT = process.env.VAULT_HUNTER_STATE_DIR ||
-  (process.env.XDG_STATE_HOME ? join(process.env.XDG_STATE_HOME, "vault-hunter") : join(homedir(), ".local", "state", "vault-hunter"));
+const MAX_STDOUT_BYTES = 40_000;
+const GET_RESOURCES = [
+  "projects",
+  "themes",
+  "features",
+  "tasks",
+  "runs",
+  "verifiers",
+  "verifierattempts",
+  "participants",
+  "usage",
+] as const;
+const CREATE_RESOURCES = ["run"] as const;
 
-const TaskSchema = Type.Object({
-  id: Type.String(),
-  title: Type.String(),
-  path: Type.String(),
-  featurePath: Type.String(),
-  kind: Type.String(),
-});
+type GetResource = typeof GET_RESOURCES[number];
+type CreateResource = typeof CREATE_RESOURCES[number];
 
-const AgentSessionSchema = Type.Object({ source: Type.String(), kind: Type.String(), value: Type.String() });
-const HerdrSchema = Type.Object({
-  workspaceId: Type.String(), tabId: Type.String(), paneId: Type.String(), terminalId: Type.String(),
-});
-const ParticipantSchema = Type.Object({
-  participantId: Type.String(), observedAt: Type.Optional(Type.String()), role: Type.String(), goalId: Type.Optional(Type.String()),
-  agentSession: Type.Optional(AgentSessionSchema), herdr: Type.Optional(HerdrSchema),
-});
-const LifecycleSchema = Type.Object({
-  observationId: Type.String(), observedAt: Type.Optional(Type.String()), kind: Type.String(),
-  goalId: Type.Optional(Type.String()), state: Type.Optional(Type.String()), detail: Type.Optional(Type.String()),
-});
-const EvidenceSchema = Type.Object({
-  observationId: Type.String(), observedAt: Type.Optional(Type.String()), verifierId: Type.String(), state: Type.String(),
-  command: Type.Optional(Type.String()), exitStatus: Type.Optional(Type.Integer()), implementationTree: Type.Optional(Type.String()),
-  artifactSha256: Type.Optional(Type.String()), detail: Type.Optional(Type.String()),
-});
-
-const ListRunsSchema = Type.Object({
-  taskId: Type.Optional(Type.String()),
-  featurePath: Type.Optional(Type.String()),
-  agentSession: Type.Optional(AgentSessionSchema),
-  updatedAtFrom: Type.Optional(Type.String()),
-  updatedAtThrough: Type.Optional(Type.String()),
-}, { additionalProperties: false });
-
-const RetireRunSchema = Type.Object({
-  runId: Type.String(),
-  expectedRevision: Type.Integer({ minimum: 1 }),
-}, { additionalProperties: false });
-
-export type VaultHunterListRunsInput = Static<typeof ListRunsSchema>;
-export type VaultHunterRetireRunInput = Static<typeof RetireRunSchema>;
-
-type RegistryTaskSummary = {
-  id: string;
-  title: string;
-  path: string;
-  feature_path: string;
+type AtlasEnvelope = {
+  api_version: string;
   kind: string;
-};
-
-type RegistryRunSummary = {
-  schema_version: number;
-  run_id: string;
-  revision: number;
-  invoked_at: string;
-  updated_at: string;
-  task: RegistryTaskSummary;
+  data: unknown;
+  meta: Record<string, unknown>;
 };
 
 type DriverPlacement = {
@@ -75,117 +32,120 @@ type DriverPlacement = {
   herdr: { workspaceId: string; tabId: string; paneId: string; terminalId: string };
   agentSession: { source: string; kind: string; value: string };
 };
-function now(): string { return new Date().toISOString(); }
-function slug(value: string): string { return value.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "run"; }
-function sha256(value: string): string { return createHash("sha256").update(value).digest("hex"); }
-function text(content: string, details: unknown) { return { content: [{ type: "text" as const, text: content }], details }; }
-function restoredRunId(ctx: ExtensionContext): string | undefined {
-  for (const entry of [...ctx.sessionManager.getBranch()].reverse()) {
-    if (entry.type !== "message" || entry.message.role !== "toolResult" || entry.message.toolName !== "vault_hunter_run") continue;
-    const runId = (entry.message.details as { runId?: unknown } | undefined)?.runId;
-    if (typeof runId === "string" && runId) return runId;
-  }
-  return undefined;
-}
-function parentUsage(ctx: ExtensionContext) {
-  const totals = { input: 0, output: 0, cache_read: 0, cache_write: 0, total_tokens: 0, cost: 0, requests: 0 };
-  const models = new Set<string>();
-  for (const entry of ctx.sessionManager.getBranch()) {
-    if (entry.type !== "message" || entry.message.role !== "assistant") continue;
-    const usage = entry.message.usage;
-    totals.input += usage?.input ?? 0;
-    totals.output += usage?.output ?? 0;
-    totals.cache_read += usage?.cacheRead ?? 0;
-    totals.cache_write += usage?.cacheWrite ?? 0;
-    totals.total_tokens += usage?.totalTokens ?? (usage?.input ?? 0) + (usage?.output ?? 0) + (usage?.cacheRead ?? 0) + (usage?.cacheWrite ?? 0);
-    totals.cost += usage?.cost?.total ?? 0;
-    totals.requests++;
-    if (entry.message.model) models.add(entry.message.model);
-  }
-  return { ...totals, models: [...models].sort() };
+
+const SelectorSchema = Type.Object({
+  identity: Type.Optional(Type.String()),
+  id: Type.Optional(Type.String()),
+  name: Type.Optional(Type.String()),
+}, { additionalProperties: false });
+
+const AgentSessionSchema = Type.Object({
+  source: Type.String(),
+  kind: Type.String(),
+  value: Type.String(),
+}, { additionalProperties: false });
+
+const AtlasGetSchema = Type.Object({
+  resource: Type.Union(GET_RESOURCES.map((value) => Type.Literal(value))),
+  identity: Type.Optional(Type.String()),
+  id: Type.Optional(Type.String()),
+  name: Type.Optional(Type.String()),
+  run: Type.Optional(Type.String()),
+  pending: Type.Optional(Type.Boolean()),
+}, { additionalProperties: false });
+
+const AtlasCreateSchema = Type.Object({
+  resource: Type.Union(CREATE_RESOURCES.map((value) => Type.Literal(value))),
+  request: Type.Object({}, { additionalProperties: true }),
+}, { additionalProperties: false });
+
+const AtlasEvidenceGetSchema = SelectorSchema;
+
+const AtlasAcceptVerifierAttemptSchema = Type.Object({
+  identity: Type.Optional(Type.String()),
+  id: Type.Optional(Type.String()),
+  name: Type.Optional(Type.String()),
+  expectedRevision: Type.Integer({ minimum: 1 }),
+}, { additionalProperties: false });
+
+const AtlasRejectVerifierAttemptSchema = Type.Object({
+  identity: Type.Optional(Type.String()),
+  id: Type.Optional(Type.String()),
+  name: Type.Optional(Type.String()),
+  expectedRevision: Type.Integer({ minimum: 1 }),
+  reason: Type.String({ minLength: 1 }),
+}, { additionalProperties: false });
+
+const AtlasRetireRunSchema = Type.Object({
+  identity: Type.Optional(Type.String()),
+  id: Type.Optional(Type.String()),
+  name: Type.Optional(Type.String()),
+  expectedRevision: Type.Integer({ minimum: 1 }),
+}, { additionalProperties: false });
+
+function text(content: string, details: unknown) {
+  return { content: [{ type: "text" as const, text: content }], details };
 }
 
-function registryString(record: any, field: string): string {
-  const value = record?.[field];
-  if (typeof value !== "string") throw new Error(`Registry returned an invalid ${field}.`);
-  return value;
+function selectorArgs(input: { identity?: string; id?: string; name?: string }): string[] {
+  const values = [input.identity, input.id, input.name].filter((value): value is string => typeof value === "string" && value.length > 0);
+  if (values.length !== 1) throw new Error("atlas selector accepts exactly one of identity, id, or name.");
+  if (input.identity) return [input.identity];
+  if (input.id) return ["--id", input.id];
+  return ["--name", input.name!];
 }
 
-function registryInteger(record: any, field: string): number {
-  const value = record?.[field];
-  if (!Number.isSafeInteger(value) || value < 1) throw new Error(`Registry returned an invalid ${field}.`);
-  return value;
+function ensureObject(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be a JSON object.`);
+  return value as Record<string, unknown>;
 }
 
-function projectRunSummary(record: any): RegistryRunSummary {
-  const task = record?.task;
-  if (!task || typeof task !== "object" || Array.isArray(task)) throw new Error("Registry returned an invalid task summary.");
-  return {
-    schema_version: registryInteger(record, "schema_version"),
-    run_id: registryString(record, "run_id"),
-    revision: registryInteger(record, "revision"),
-    invoked_at: registryString(record, "invoked_at"),
-    updated_at: registryString(record, "updated_at"),
-    task: {
-      id: registryString(task, "id"),
-      title: registryString(task, "title"),
-      path: registryString(task, "path"),
-      feature_path: registryString(task, "feature_path"),
-      kind: registryString(task, "kind"),
-    },
-  };
+function parseEnvelope(stdout: string): AtlasEnvelope {
+  const parsed = JSON.parse(stdout) as unknown;
+  const envelope = ensureObject(parsed, "Atlas output") as AtlasEnvelope;
+  const keys = Object.keys(envelope).sort();
+  if (keys.join(",") !== "api_version,data,kind,meta") throw new Error("Atlas returned a malformed envelope.");
+  if (envelope.api_version !== "atlas/v1" || typeof envelope.kind !== "string") throw new Error("Atlas returned a malformed envelope.");
+  ensureObject(envelope.meta, "Atlas meta");
+  return envelope;
 }
 
-function boundedRunSummaries(records: RegistryRunSummary[]): RegistryRunSummary[] {
-  const bounded: RegistryRunSummary[] = [];
-  for (const record of records) {
-    const candidate = [...bounded, record];
-    if (Buffer.byteLength(JSON.stringify({ runs: candidate }), "utf8") > 40_000) break;
-    bounded.push(record);
-  }
-  return bounded;
-}
+async function runAtlas(argv: string[], signal?: AbortSignal, stdin?: string): Promise<AtlasEnvelope> {
+  signal?.throwIfAborted();
+  return await new Promise<AtlasEnvelope>((resolve, reject) => {
+    const child = spawn("atlas", argv, { stdio: ["pipe", "pipe", "pipe"], signal });
+    let stdout = "";
+    let stderr = "";
+    let stdoutBytes = 0;
 
-function wireHerdr(input: any) {
-  return input ? {
-    workspace_id: input.workspaceId, tab_id: input.tabId,
-    pane_id: input.paneId, terminal_id: input.terminalId,
-  } : null;
-}
-function wireParticipant(input: any) {
-  return {
-    participant_id: input.participantId,
-    observed_at: input.observedAt ?? now(),
-    role: input.role,
-    goal_id: input.goalId ?? "",
-    herdr: wireHerdr(input.herdr),
-    agent_session: input.agentSession ? {
-      source: input.agentSession.source, kind: input.agentSession.kind, value: input.agentSession.value,
-    } : null,
-  };
-}
-function wireLifecycle(input: any) {
-  return {
-    observation_id: input.observationId,
-    observed_at: input.observedAt ?? now(),
-    kind: input.kind,
-    goal_id: input.goalId ?? "",
-    state: input.state ?? "",
-    detail: input.detail ?? "",
-  };
-}
-function wireEvidence(input: any) {
-  return {
-    observation_id: input.observationId,
-    observed_at: input.observedAt ?? now(),
-    verifier_id: input.verifierId,
-    state: input.state,
-    command: input.command ?? "",
-    exit_status: input.exitStatus ?? null,
-    implementation_tree: input.implementationTree ?? "",
-    artifact_sha256: input.artifactSha256 ?? "",
-    detail: input.detail ?? "",
-  };
+    child.on("error", reject);
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdoutBytes += Buffer.byteLength(chunk, "utf8");
+      if (stdoutBytes > MAX_STDOUT_BYTES) {
+        child.kill();
+        reject(new Error("Atlas output exceeded the Pi tool bound."));
+        return;
+      }
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk: string) => { stderr += chunk; });
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr.trim() || `atlas exited ${code}`));
+        return;
+      }
+      try {
+        const trimmed = stdout.trim();
+        if (!trimmed) throw new Error("Atlas returned empty stdout.");
+        resolve(parseEnvelope(trimmed));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    child.stdin.end(stdin ?? "");
+  });
 }
 
 async function driverPlacement(pi: ExtensionAPI, ctx: ExtensionContext, signal?: AbortSignal): Promise<DriverPlacement | undefined> {
@@ -209,230 +169,147 @@ async function driverPlacement(pi: ExtensionAPI, ctx: ExtensionContext, signal?:
   if (!paneCwd || realpathSync(paneCwd) !== realpathSync(ctx.cwd)) throw new Error(`Herdr pane ${paneId} is not in this Pi session's cwd.`);
 
   return {
-    observedAt: now(),
+    observedAt: new Date().toISOString(),
     herdr: { workspaceId: pane.workspace_id, tabId: pane.tab_id, paneId: pane.pane_id, terminalId: pane.terminal_id },
     agentSession: { source: session.source, kind: session.kind, value: session.value },
   };
 }
 
-function sameDriver(input: any, participantId: string, herdr: any, agentSession: any): boolean {
-  return input?.participant_id === participantId &&
-    input?.herdr?.workspace_id === herdr?.workspace_id && input?.herdr?.tab_id === herdr?.tab_id &&
-    input?.herdr?.pane_id === herdr?.pane_id && input?.herdr?.terminal_id === herdr?.terminal_id &&
-    input?.agent_session?.source === agentSession.source && input?.agent_session?.kind === agentSession.kind &&
-    input?.agent_session?.value === agentSession.value;
-}
-
-function registry(input: Record<string, unknown>, signal?: AbortSignal): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const child = spawn("go", ["run", "./cmd/vault-hunter-registry"], {
-      cwd: REPO_ROOT, stdio: ["pipe", "pipe", "pipe"], signal,
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8").on("data", (chunk) => { stdout += chunk; });
-    child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code !== 0) return reject(new Error(stderr.trim() || `vault-hunter-registry exited ${code}`));
-      try { resolve(JSON.parse(stdout)); } catch (error) { reject(error); }
-    });
-    child.stdin.end(JSON.stringify(input));
-  });
-}
-
 export default function (pi: ExtensionAPI) {
-  let activeRunId: string | undefined;
-  let registrationQueue = Promise.resolve();
-
-  async function observe(input: Record<string, unknown>, ctx: ExtensionContext): Promise<void> {
-    try { await registry(input); }
-    catch (error) { if (ctx.hasUI) ctx.ui.notify(`Vault Hunter observation failed: ${String(error)}`, "warning"); }
-  }
-
-  async function recordParentUsage(runId: string, boundary: string, observationKey: string, ctx: ExtensionContext): Promise<void> {
-    const observedAt = now();
-    await observe({
-      action: "append", root: REGISTRY_ROOT, run_id: runId, updated_at: observedAt,
-      lifecycle: {
-        observation_id: `parent-usage-${observationKey}`, observed_at: observedAt, kind: "parent/usage", goal_id: "run", state: "observed",
-        detail: JSON.stringify({
-          schema: "vault-hunter-parent-usage/v1", boundary, parent_session_id: ctx.sessionManager.getSessionId(),
-          session_file: ctx.sessionManager.getSessionFile() ?? "", observed_at: observedAt, usage: parentUsage(ctx),
-        }),
-      },
-    }, ctx);
-  }
-
-  pi.on("session_start", (_event, ctx) => {
-    activeRunId = restoredRunId(ctx);
-  });
-
-  pi.on("session_shutdown", async (event, ctx) => {
-    if (!activeRunId) return;
-    const key = sha256(`${ctx.sessionManager.getSessionId()}:${event.reason}:${ctx.sessionManager.getLeafId() ?? "root"}`).slice(0, 20);
-    await recordParentUsage(activeRunId, `session/${event.reason}`, key, ctx);
-  });
-
-  async function serializeRegistration<T>(work: () => Promise<T>): Promise<T> {
-    const previous = registrationQueue;
-    let release!: () => void;
-    registrationQueue = new Promise<void>((resolve) => { release = resolve; });
-    await previous;
-    try { return await work(); }
-    finally { release(); }
-  }
-
   pi.registerTool({
-    name: "vault_hunter_preflight",
-    label: "Preflight Vault Hunter Driver",
-    description: "Validate this Pi driver's exact Herdr placement and cwd without creating or updating a Run.",
-    promptSnippet: "Preflight the interactive Vault Hunter driver before the invocation checkpoint.",
-    promptGuidelines: ["Call vault_hunter_preflight once before any Vault Hunter invocation vault edit; fix a failed host binding and restart the invocation instead of writing a blocker checkpoint."],
+    name: "agent_run_preflight",
+    label: "Preflight Agent Run Driver",
+    description: "Validate the current Pi session, cwd, and complete Herdr tuple without invoking Atlas.",
     parameters: Type.Object({}),
     async execute(_id, _params, signal, _update, ctx) {
       const placement = await driverPlacement(pi, ctx, signal);
-      return text("Vault Hunter driver preflight passed.", {
-        sessionId: ctx.sessionManager.getSessionId(), sessionFile: ctx.sessionManager.getSessionFile(),
-        cwd: ctx.cwd, herdr: placement?.herdr, workerRuntime: "visible-herdr-pi",
+      return text("Agent Run preflight passed.", {
+        sessionId: ctx.sessionManager.getSessionId(),
+        sessionFile: ctx.sessionManager.getSessionFile(),
+        cwd: ctx.cwd,
+        herdr: placement?.herdr,
+        workerRuntime: "visible-herdr-pi",
       });
     },
   });
 
   pi.registerTool({
-    name: "vault_hunter_run",
-    label: "Start Vault Hunter Run",
-    description: "Create or reopen one durable observational Vault Hunter Run Registry record and register this Pi driver.",
-    promptSnippet: "Create the observational Run Registry record before dispatching Vault Hunter children.",
-    promptGuidelines: ["Use vault_hunter_run once after the Vault Hunter invocation commit and before any formal child dispatch; interactive drivers are atomically registered with their current Herdr placement."],
-    parameters: Type.Object({
-      runId: Type.Optional(Type.String()), task: TaskSchema, invokedAt: Type.Optional(Type.String()),
-    }),
-    async execute(_id, params, signal, _update, ctx) {
-      return serializeRegistration(async () => {
-        const runId = params.runId ?? `vh-${slug(params.task.id)}-${Date.now()}`;
-        let existing: any;
-        if (params.runId) {
-          try { existing = await registry({ action: "get", root: REGISTRY_ROOT, run_id: runId }, signal); }
-          catch (error) { if (!String(error).includes("run not found")) throw error; }
-        }
-        if (existing && params.invokedAt && existing.invoked_at !== params.invokedAt) {
-          throw new Error(`Vault Hunter Run ${runId} has a different invocation timestamp.`);
-        }
-        const invokedAt = existing?.invoked_at ?? params.invokedAt ?? now();
-        const sessionId = ctx.sessionManager.getSessionId();
-        const placement = await driverPlacement(pi, ctx, signal);
-        const observedAt = placement?.observedAt ?? now();
-        const participantId = `pi-${sessionId}`;
-        const agentSession = placement?.agentSession ?? { source: "pi", kind: "session-id", value: sessionId };
-        const participant = {
-          participant_id: participantId, observed_at: observedAt, role: "driver", goal_id: "run",
-          herdr: wireHerdr(placement?.herdr),
-          agent_session: { source: agentSession.source, kind: agentSession.kind, value: agentSession.value },
-        };
-        let run = await registry({
-          action: "create", root: REGISTRY_ROOT, run: {
-            schema_version: 1, run_id: runId, revision: 0, invoked_at: invokedAt, updated_at: observedAt,
-            task: { id: params.task.id, title: params.task.title, path: params.task.path, feature_path: params.task.featurePath, kind: params.task.kind },
-            participants: [participant],
-            lifecycle: [{ observation_id: `${runId}-invoked`, observed_at: invokedAt, kind: "run", goal_id: "run", state: "active", detail: "Pi driver created the observational Run record." }],
-            evidence: [],
-          },
-        }, signal);
-        if (!(run.participants ?? []).some((item: any) => sameDriver(item, participantId, participant.herdr, participant.agent_session))) {
-          run = await registry({ action: "append", root: REGISTRY_ROOT, run_id: runId, updated_at: observedAt, participant }, signal);
-        }
-        activeRunId = runId;
-        return text(`Vault Hunter Run ${runId} is observable at revision ${run.revision}.`, {
-          runId, revision: run.revision, root: REGISTRY_ROOT, herdr: placement?.herdr,
-        });
-      });
-    },
-  });
-
-  pi.on("tool_result", async (event, ctx) => {
-    if (event.toolName !== "vault_hunter_record" || event.isError) return;
-    const input = event.input as { runId?: unknown; lifecycle?: { kind?: unknown; state?: unknown } };
-    const runId = typeof input.runId === "string" ? input.runId : activeRunId;
-    if (!runId) return;
-    const kind = typeof input.lifecycle?.kind === "string" ? input.lifecycle.kind : "";
-    const state = typeof input.lifecycle?.state === "string" ? input.lifecycle.state : "";
-    if (!/checkpoint|terminal|run\/done|cleanup/.test(kind) && !/^(done|completed|blocked|rejected|awaiting-human-evaluation)$/.test(state)) return;
-    const key = sha256(`${ctx.sessionManager.getSessionId()}:${event.toolCallId}`).slice(0, 20);
-    await recordParentUsage(runId, `vault_hunter_record/${kind || state}`, key, ctx);
-  });
-
-  pi.registerTool({
-    name: "vault_hunter_record",
-    label: "Record Vault Hunter Observation",
-    description: "Append one idempotent participant, lifecycle, or evidence observation to a Vault Hunter Run. This never advances canonical state.",
-    parameters: Type.Object({
-      runId: Type.String(), updatedAt: Type.Optional(Type.String()),
-      participant: Type.Optional(ParticipantSchema), lifecycle: Type.Optional(LifecycleSchema), evidence: Type.Optional(EvidenceSchema),
-    }),
+    name: "atlas_get",
+    label: "Atlas Get",
+    description: "Read one Atlas resource through the public machine grammar.",
+    parameters: AtlasGetSchema,
     async execute(_id, params, signal) {
-      if (!params.participant && !params.lifecycle && !params.evidence) throw new Error("At least one observation is required.");
-      const updatedAt = params.updatedAt ?? now();
-      const run = await registry({
-        action: "append", root: REGISTRY_ROOT, run_id: params.runId, updated_at: updatedAt,
-        ...(params.participant ? { participant: wireParticipant(params.participant) } : {}),
-        ...(params.lifecycle ? { lifecycle: wireLifecycle(params.lifecycle) } : {}),
-        ...(params.evidence ? { evidence: wireEvidence(params.evidence) } : {}),
-      }, signal);
-      return text(`Recorded Vault Hunter observation at revision ${run.revision}.`, { runId: params.runId, revision: run.revision });
+      const argv = ["get", params.resource as GetResource];
+      if (params.identity || params.id || params.name) argv.push(...selectorArgs(params));
+      if (params.run || params.pending) {
+        if (params.resource !== "verifierattempts") throw new Error("atlas_get only accepts run and pending for verifierattempts.");
+        if (typeof params.run === "string" && params.run.length > 0) argv.push("--run", params.run);
+        if (params.pending) argv.push("--pending");
+      }
+      const details = await runAtlas(argv, signal);
+      return text(`Atlas returned ${details.kind}.`, details);
     },
   });
 
   pi.registerTool({
-    name: "vault_hunter_list_runs",
-    label: "List Vault Hunter Runs",
-    description: "List active Vault Hunter Run summaries through the Registry command contract. Structured results are capped below 50KB and exclude observation histories.",
-    parameters: ListRunsSchema,
+    name: "atlas_create",
+    label: "Atlas Create",
+    description: "Create one Atlas resource through the public machine grammar.",
+    parameters: AtlasCreateSchema,
     async execute(_id, params, signal) {
-      signal?.throwIfAborted();
-      const filter = {
-        ...(params.taskId !== undefined ? { task_id: params.taskId } : {}),
-        ...(params.featurePath !== undefined ? { feature_path: params.featurePath } : {}),
-        ...(params.agentSession !== undefined ? { agent_session: {
-          source: params.agentSession.source, kind: params.agentSession.kind, value: params.agentSession.value,
-        } } : {}),
-        ...(params.updatedAtFrom !== undefined ? { updated_at_from: params.updatedAtFrom } : {}),
-        ...(params.updatedAtThrough !== undefined ? { updated_at_through: params.updatedAtThrough } : {}),
-      };
-      const response = await registry({ action: "list", root: REGISTRY_ROOT, filter }, signal);
-      if (!Array.isArray(response)) throw new Error("Registry returned an invalid list response.");
-      const projected = response.map(projectRunSummary);
-      const runs = boundedRunSummaries(projected);
-      const suffix = runs.length === projected.length ? "" : ` ${projected.length - runs.length} additional summaries were omitted to bound the result.`;
-      return text(`Listed ${runs.length} active Vault Hunter Run summaries.${suffix}`, { runs });
+      const details = await runAtlas([params.resource as CreateResource, "create", "--json"], signal, `${JSON.stringify(params.request)}\n`);
+      return text(`Atlas created ${details.kind}.`, details);
     },
   });
 
   pi.registerTool({
-    name: "vault_hunter_retire_run",
-    label: "Retire Vault Hunter Run",
-    description: "After interactive confirmation, retire one exact active Vault Hunter Run revision through the Registry command contract.",
-    parameters: RetireRunSchema,
+    name: "atlas_evidence_get",
+    label: "Atlas Evidence Get",
+    description: "Read one Atlas Evidence envelope through the public machine grammar.",
+    parameters: AtlasEvidenceGetSchema,
+    async execute(_id, params, signal) {
+      const details = await runAtlas(["evidence", "get", ...selectorArgs(params)], signal);
+      return text(`Atlas returned ${details.kind}.`, details);
+    },
+  });
+
+  pi.registerTool({
+    name: "atlas_accept_verifier_attempt",
+    label: "Atlas Accept Verifier Attempt",
+    description: "Accept one exact pending verifier attempt through the public Atlas grammar.",
+    parameters: AtlasAcceptVerifierAttemptSchema,
+    async execute(_id, params, signal) {
+      const details = await runAtlas([
+        "accept",
+        "verifierattempt",
+        ...selectorArgs(params),
+        "--expected-revision",
+        String(params.expectedRevision),
+      ], signal);
+      return text(`Atlas returned ${details.kind}.`, details);
+    },
+  });
+
+  pi.registerTool({
+    name: "atlas_reject_verifier_attempt",
+    label: "Atlas Reject Verifier Attempt",
+    description: "Reject one exact pending verifier attempt through the public Atlas grammar.",
+    parameters: AtlasRejectVerifierAttemptSchema,
+    async execute(_id, params, signal) {
+      const details = await runAtlas([
+        "reject",
+        "verifierattempt",
+        ...selectorArgs(params),
+        "--expected-revision",
+        String(params.expectedRevision),
+        "--reason",
+        params.reason,
+      ], signal);
+      return text(`Atlas returned ${details.kind}.`, details);
+    },
+  });
+
+  pi.registerTool({
+    name: "atlas_retire_run",
+    label: "Atlas Retire Run",
+    description: "After interactive confirmation, retire one exact Run through the public Atlas grammar.",
+    parameters: AtlasRetireRunSchema,
     async execute(_id, params, signal, _update, ctx) {
       signal?.throwIfAborted();
-      if (!ctx.hasUI) throw new Error("Vault Hunter Run retirement requires interactive confirmation; no UI is available.");
+      if (!ctx.hasUI) throw new Error("Atlas Run retirement requires interactive confirmation; no UI is available.");
+      const target = params.identity ?? params.id ?? params.name;
       const confirmed = await ctx.ui.confirm(
-        "Retire Vault Hunter Run?",
-        `Retire ${params.runId} at exact revision ${params.expectedRevision}? This removes it from active Run listings.`,
+        "Retire Atlas Run?",
+        `Retire ${target} at exact revision ${params.expectedRevision}? This removes it from active Run listings.`,
         { signal },
       );
-      if (!confirmed) throw new Error(`Vault Hunter Run ${params.runId} retirement was declined.`);
-      signal?.throwIfAborted();
-      const response = await registry({
-        action: "retire", root: REGISTRY_ROOT,
-        run_id: params.runId, expected_revision: params.expectedRevision,
-      }, signal);
-      const runId = registryString(response, "run_id");
-      const revision = registryInteger(response, "revision");
-      if (runId !== params.runId || revision !== params.expectedRevision) {
-        throw new Error("Registry returned a different retired Run identity or revision.");
-      }
-      return text(`Retired Vault Hunter Run ${runId} at revision ${revision}.`, { runId, revision });
+      if (!confirmed) throw new Error(`Atlas Run ${target} retirement was declined.`);
+      const details = await runAtlas([
+        "run",
+        "retire",
+        ...selectorArgs(params),
+        "--expected-revision",
+        String(params.expectedRevision),
+      ], signal);
+      return text(`Atlas returned ${details.kind}.`, details);
+    },
+  });
+
+  pi.registerTool({
+    name: "atlas_capabilities",
+    label: "Atlas Capabilities",
+    description: "Read Atlas capabilities through the public machine grammar.",
+    parameters: Type.Object({}),
+    async execute(_id, _params, signal) {
+      const details = await runAtlas(["capabilities", "--output", "json"], signal);
+      return text(`Atlas returned ${details.kind}.`, details);
     },
   });
 }
+
+export type AtlasGetInput = Static<typeof AtlasGetSchema>;
+export type AtlasCreateInput = Static<typeof AtlasCreateSchema>;
+export type AtlasEvidenceGetInput = Static<typeof AtlasEvidenceGetSchema>;
+export type AtlasAcceptVerifierAttemptInput = Static<typeof AtlasAcceptVerifierAttemptSchema>;
+export type AtlasRejectVerifierAttemptInput = Static<typeof AtlasRejectVerifierAttemptSchema>;
+export type AtlasRetireRunInput = Static<typeof AtlasRetireRunSchema>;

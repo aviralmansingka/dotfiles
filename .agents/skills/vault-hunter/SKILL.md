@@ -37,8 +37,8 @@ If any item is missing, invoke `$vault-scout` on the source Issue or supplied te
 ## Start the Run
 
 1. Resolve the canonical Task and owning Feature. Preserve unrelated state.
-2. Open or resume one Registry Run through the host's available adapter. In Pi, use `vault_hunter_preflight`,
-   `vault_hunter_run`, and `vault_hunter_record` as compatibility tools until generic Registry operations replace them.
+2. Open or resume one Registry Run through the host's available adapter. In Pi, use `agent_run_preflight`,
+   `atlas_create`, and the exact Atlas machine tools; do not revive the legacy `vault_hunter_*` compatibility tools.
 3. Bind the exact driver, repository, branch, worktree, and Herdr identity when present. A non-Pi or headless Run uses
    the same domain contract without inventing Herdr identity.
 4. The parent creates or reuses the Task-owned implementation worktree and a Herdr workspace for implementation,
@@ -101,8 +101,8 @@ After all verifiers first pass:
    `$vault-hunter-checkpoint` to complete the Task and backlog on vault `main`. Verify the merged ref only when the Task
    explicitly declares a post-merge verifier or the user requests it.
 
-Use `atlas` for Run status when available. Until Atlas reaches parity, `$vault-hunter-status` is a read-only
-compatibility surface. Neither status path may accept evidence or advance work.
+Use `atlas` for Run status and machine reads. The standalone `$vault-hunter-status` compatibility surface is removed.
+Atlas remains observational here; it does not accept evidence or advance work.
 
 ## Stop conditions
 

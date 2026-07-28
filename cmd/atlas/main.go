@@ -1,0 +1,592 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/aviral/dotfiles/internal/vaultregistry"
+)
+
+const usageText = `usage: atlas
+       atlas get projects|themes|features|tasks|runs|verifiers|verifierattempts|participants|usage
+       atlas get <resource> [<name-or-id> | --name <name> | --id <id>] [--watch]
+       atlas observe [<run-name-or-id> | --name <name> | --id <id>]
+       atlas <resource> create --json < request.json
+
+       atlas get verifierattempts --run <run> --pending
+       atlas evidence get [<name-or-id> | --name <name> | --id <id>]
+       atlas accept verifierattempt <attempt> --expected-revision <revision>
+       atlas reject verifierattempt <attempt> --expected-revision <revision> --reason <code>
+
+       atlas run retire [<name-or-id> | --name <name> | --id <id>] --expected-revision <revision>
+       atlas admin companion revive [<name-or-id> | --name <name> | --id <id>]
+       atlas capabilities --output json
+`
+
+var getResources = map[string]bool{
+	"projects": true, "themes": true, "features": true, "tasks": true,
+	"runs": true, "verifiers": true, "verifierattempts": true,
+	"participants": true, "usage": true,
+}
+
+var agentCreateResources = []string{"run"}
+
+type commandError struct {
+	code    int
+	message string
+	usage   bool
+}
+
+func (e *commandError) Error() string { return e.message }
+
+type selector struct {
+	Positional string
+	ID         string
+	Name       string
+}
+
+func (s selector) validate() error {
+	count := 0
+	for _, value := range []string{s.Positional, s.ID, s.Name} {
+		if value != "" {
+			count++
+		}
+	}
+	if count > 1 {
+		return usageError("selector accepts exactly one of <name-or-id>, --id, or --name")
+	}
+	return nil
+}
+
+func (s selector) any() string {
+	if s.Positional != "" {
+		return s.Positional
+	}
+	if s.ID != "" {
+		return s.ID
+	}
+	return s.Name
+}
+
+type observeCommand struct{ selector selector }
+type getCommand struct {
+	resource string
+	selector selector
+	watch    bool
+	run      string
+	pending  bool
+}
+type createCommand struct{ resource string }
+type capabilitiesCommand struct{}
+type evidenceGetCommand struct{ selector selector }
+type acceptCommand struct {
+	selector         selector
+	expectedRevision string
+}
+type rejectCommand struct {
+	selector         selector
+	expectedRevision string
+	reason           string
+}
+type retireCommand struct {
+	selector         selector
+	expectedRevision string
+}
+type reviveCommand struct{ selector selector }
+
+func main() {
+	code := execute(os.Args[1:], os.Stdout, os.Stderr)
+	os.Exit(code)
+}
+
+func execute(args []string, stdout, stderr io.Writer) int {
+	command, err := parse(args)
+	if err != nil {
+		var usage *commandError
+		if errors.As(err, &usage) {
+			if usage.message != "" {
+				_, _ = fmt.Fprintln(stderr, usage.message)
+			}
+			if usage.usage {
+				_, _ = io.WriteString(stderr, usageText)
+			}
+			return usage.code
+		}
+		_, _ = fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if err := run(command, stdout); err != nil {
+		_, _ = fmt.Fprintln(stderr, err)
+		return 1
+	}
+	return 0
+}
+
+func parse(args []string) (any, error) {
+	if len(args) == 0 {
+		return observeCommand{}, nil
+	}
+	if len(args) == 1 && (args[0] == "help" || args[0] == "--help" || args[0] == "-h") {
+		return usageHelp{}, nil
+	}
+	if strings.HasPrefix(args[0], "-") {
+		return nil, usageError("unexpected option " + args[0])
+	}
+	if len(args) >= 2 && args[1] == "create" {
+		return parseCreate(args[0], args[2:])
+	}
+
+	switch args[0] {
+	case "observe":
+		return parseObserve(args[1:])
+	case "get":
+		return parseGet(args[1:])
+	case "evidence":
+		return parseEvidence(args[1:])
+	case "accept":
+		return parseAccept(args[1:])
+	case "reject":
+		return parseReject(args[1:])
+	case "run":
+		return parseRun(args[1:])
+	case "admin":
+		return parseAdmin(args[1:])
+	case "capabilities":
+		return parseCapabilities(args[1:])
+	case "status", "describe":
+		return nil, usageError("unknown command " + quote(args[0]))
+	default:
+		return nil, usageError("unknown command " + quote(args[0]))
+	}
+}
+
+type usageHelp struct{}
+
+func run(command any, stdout io.Writer) error {
+	switch command := command.(type) {
+	case usageHelp:
+		_, err := io.WriteString(stdout, usageText)
+		return err
+	case observeCommand:
+		return runObserve(command, stdout)
+	case getCommand:
+		return runGet(command, stdout)
+	case createCommand:
+		return fmt.Errorf("atlas: %s create is not implemented yet", command.resource)
+	case capabilitiesCommand:
+		return writeJSON(stdout, envelope{
+			APIVersion: "atlas/v1",
+			Kind:       "Capabilities",
+			Data: map[string]any{
+				"agent_tools": []string{
+					"agent_run_preflight",
+					"atlas_get",
+					"atlas_create",
+					"atlas_evidence_get",
+					"atlas_accept_verifier_attempt",
+					"atlas_reject_verifier_attempt",
+					"atlas_retire_run",
+					"atlas_capabilities",
+				},
+				"create_resources": agentCreateResources,
+				"get_resources":    sortedKeys(getResources),
+			},
+			Meta: map[string]any{},
+		})
+	case evidenceGetCommand:
+		return fmt.Errorf("atlas: evidence get is not implemented yet")
+	case acceptCommand:
+		return fmt.Errorf("atlas: accept verifierattempt is not implemented yet")
+	case rejectCommand:
+		return fmt.Errorf("atlas: reject verifierattempt is not implemented yet")
+	case retireCommand:
+		return fmt.Errorf("atlas: run retire is not implemented yet")
+	case reviveCommand:
+		return fmt.Errorf("atlas: admin companion revive is not implemented yet")
+	default:
+		return errors.New("atlas: unreachable command")
+	}
+}
+
+func parseObserve(args []string) (observeCommand, error) {
+	selector, rest, err := parseSelector(args)
+	if err != nil {
+		return observeCommand{}, err
+	}
+	if len(rest) != 0 {
+		return observeCommand{}, usageError("unexpected observe argument " + quote(rest[0]))
+	}
+	return observeCommand{selector: selector}, selector.validate()
+}
+
+func parseGet(args []string) (getCommand, error) {
+	if len(args) == 0 {
+		return getCommand{}, usageError("get requires a resource")
+	}
+	resource := args[0]
+	if !getResources[resource] {
+		return getCommand{}, usageError("unknown get resource " + quote(resource))
+	}
+	args = args[1:]
+	selector, rest, err := parseSelector(args)
+	if err != nil {
+		return getCommand{}, err
+	}
+	command := getCommand{resource: resource, selector: selector}
+	for len(rest) > 0 {
+		switch rest[0] {
+		case "--watch":
+			command.watch = true
+			rest = rest[1:]
+		case "--pending":
+			command.pending = true
+			rest = rest[1:]
+		case "--run":
+			if len(rest) < 2 || strings.HasPrefix(rest[1], "-") {
+				return getCommand{}, usageError("--run requires a value")
+			}
+			command.run = rest[1]
+			rest = rest[2:]
+		default:
+			return getCommand{}, usageError("unexpected get argument " + quote(rest[0]))
+		}
+	}
+	if err := command.selector.validate(); err != nil {
+		return getCommand{}, err
+	}
+	if command.resource != "verifierattempts" && (command.run != "" || command.pending) {
+		return getCommand{}, usageError("only verifierattempts accepts --run or --pending")
+	}
+	if command.resource == "verifierattempts" && command.pending && command.run == "" {
+		return getCommand{}, usageError("verifierattempts --pending requires --run")
+	}
+	return command, nil
+}
+
+func parseCreate(resource string, args []string) (createCommand, error) {
+	if len(args) != 1 || args[0] != "--json" {
+		return createCommand{}, usageError(resource + " create requires exactly --json")
+	}
+	return createCommand{resource: resource}, nil
+}
+
+func parseEvidence(args []string) (evidenceGetCommand, error) {
+	if len(args) == 0 || args[0] != "get" {
+		return evidenceGetCommand{}, usageError("evidence requires get")
+	}
+	selector, rest, err := parseSelector(args[1:])
+	if err != nil {
+		return evidenceGetCommand{}, err
+	}
+	if len(rest) != 0 {
+		return evidenceGetCommand{}, usageError("unexpected evidence argument " + quote(rest[0]))
+	}
+	if err := selector.validate(); err != nil {
+		return evidenceGetCommand{}, err
+	}
+	return evidenceGetCommand{selector: selector}, nil
+}
+
+func parseAccept(args []string) (acceptCommand, error) {
+	if len(args) == 0 || args[0] != "verifierattempt" {
+		return acceptCommand{}, usageError("accept requires verifierattempt")
+	}
+	selector, rest, err := parseSelector(args[1:])
+	if err != nil {
+		return acceptCommand{}, err
+	}
+	if len(rest) != 2 || rest[0] != "--expected-revision" || rest[1] == "" {
+		return acceptCommand{}, usageError("accept verifierattempt requires --expected-revision <revision>")
+	}
+	if err := selector.validate(); err != nil {
+		return acceptCommand{}, err
+	}
+	return acceptCommand{selector: selector, expectedRevision: rest[1]}, nil
+}
+
+func parseReject(args []string) (rejectCommand, error) {
+	if len(args) == 0 || args[0] != "verifierattempt" {
+		return rejectCommand{}, usageError("reject requires verifierattempt")
+	}
+	selector, rest, err := parseSelector(args[1:])
+	if err != nil {
+		return rejectCommand{}, err
+	}
+	if len(rest) != 4 || rest[0] != "--expected-revision" || rest[2] != "--reason" || rest[1] == "" || rest[3] == "" {
+		return rejectCommand{}, usageError("reject verifierattempt requires --expected-revision <revision> --reason <code>")
+	}
+	if err := selector.validate(); err != nil {
+		return rejectCommand{}, err
+	}
+	return rejectCommand{selector: selector, expectedRevision: rest[1], reason: rest[3]}, nil
+}
+
+func parseRun(args []string) (retireCommand, error) {
+	if len(args) == 0 || args[0] != "retire" {
+		return retireCommand{}, usageError("run requires retire")
+	}
+	selector, rest, err := parseSelector(args[1:])
+	if err != nil {
+		return retireCommand{}, err
+	}
+	if len(rest) != 2 || rest[0] != "--expected-revision" || rest[1] == "" {
+		return retireCommand{}, usageError("run retire requires --expected-revision <revision>")
+	}
+	if err := selector.validate(); err != nil {
+		return retireCommand{}, err
+	}
+	return retireCommand{selector: selector, expectedRevision: rest[1]}, nil
+}
+
+func parseAdmin(args []string) (reviveCommand, error) {
+	if len(args) < 2 || args[0] != "companion" || args[1] != "revive" {
+		return reviveCommand{}, usageError("admin requires companion revive")
+	}
+	selector, rest, err := parseSelector(args[2:])
+	if err != nil {
+		return reviveCommand{}, err
+	}
+	if len(rest) != 0 {
+		return reviveCommand{}, usageError("unexpected admin argument " + quote(rest[0]))
+	}
+	if err := selector.validate(); err != nil {
+		return reviveCommand{}, err
+	}
+	return reviveCommand{selector: selector}, nil
+}
+
+func parseCapabilities(args []string) (capabilitiesCommand, error) {
+	if len(args) != 2 || args[0] != "--output" || args[1] != "json" {
+		return capabilitiesCommand{}, usageError("capabilities requires --output json")
+	}
+	return capabilitiesCommand{}, nil
+}
+
+func parseSelector(args []string) (selector, []string, error) {
+	var parsed selector
+	remaining := args
+	if len(remaining) > 0 && !strings.HasPrefix(remaining[0], "-") {
+		parsed.Positional = remaining[0]
+		remaining = remaining[1:]
+	}
+	for len(remaining) > 0 {
+		switch remaining[0] {
+		case "--id":
+			if len(remaining) < 2 || strings.HasPrefix(remaining[1], "-") {
+				return selector{}, nil, usageError("--id requires a value")
+			}
+			parsed.ID = remaining[1]
+			remaining = remaining[2:]
+		case "--name":
+			if len(remaining) < 2 || strings.HasPrefix(remaining[1], "-") {
+				return selector{}, nil, usageError("--name requires a value")
+			}
+			parsed.Name = remaining[1]
+			remaining = remaining[2:]
+		default:
+			return parsed, remaining, nil
+		}
+	}
+	return parsed, remaining, nil
+}
+
+func runObserve(command observeCommand, stdout io.Writer) error {
+	reader, err := vaultregistry.OpenReader("")
+	if err != nil {
+		return err
+	}
+	if command.selector.any() == "" {
+		summaries, err := reader.ListSummaries(vaultregistry.ListFilter{})
+		if err != nil {
+			return err
+		}
+		_, err = io.WriteString(stdout, renderRunList(summaries))
+		return err
+	}
+	run, err := readActiveRun(reader, command.selector)
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(stdout, renderRun(run))
+	return err
+}
+
+func runGet(command getCommand, stdout io.Writer) error {
+	if command.watch {
+		return fmt.Errorf("atlas: get %s --watch is not implemented yet", command.resource)
+	}
+	if command.resource != "runs" {
+		if command.resource == "verifierattempts" {
+			return fmt.Errorf("atlas: get verifierattempts is not implemented yet")
+		}
+		return fmt.Errorf("atlas: get %s is not implemented yet", command.resource)
+	}
+	reader, err := vaultregistry.OpenReader("")
+	if err != nil {
+		return err
+	}
+	if command.selector.any() == "" {
+		summaries, err := reader.ListSummaries(vaultregistry.ListFilter{})
+		if err != nil {
+			return err
+		}
+		data := make([]map[string]any, 0, len(summaries))
+		for _, summary := range summaries {
+			row := map[string]any{
+				"id":         summary.RunID,
+				"revision":   summary.Revision,
+				"invoked_at": summary.InvokedAt,
+				"updated_at": summary.UpdatedAt,
+			}
+			if summary.Name != "" {
+				row["name"] = summary.Name
+			}
+			if summary.State != "" {
+				row["state"] = summary.State
+			}
+			if summary.Stage != "" {
+				row["stage"] = summary.Stage
+			}
+			if task := summaryTask(summary); task != nil {
+				row["task"] = task
+			}
+			data = append(data, row)
+		}
+		return writeJSON(stdout, envelope{APIVersion: "atlas/v1", Kind: "RunList", Data: data, Meta: map[string]any{"count": len(data), "truncated": false}})
+	}
+	run, err := readActiveRun(reader, command.selector)
+	if err != nil {
+		return err
+	}
+	payload := map[string]any{
+		"id":         run.RunID,
+		"revision":   run.Revision,
+		"invoked_at": run.InvokedAt,
+		"updated_at": run.UpdatedAt,
+	}
+	if run.Name != "" {
+		payload["name"] = run.Name
+	}
+	if run.State != "" {
+		payload["state"] = run.State
+	}
+	if run.Stage != "" {
+		payload["stage"] = run.Stage
+	}
+	if task := runTask(run); task != nil {
+		payload["task"] = task
+	}
+	return writeJSON(stdout, envelope{APIVersion: "atlas/v1", Kind: "Run", Data: payload, Meta: map[string]any{"observed_at": time.Now().UTC().Format(time.RFC3339)}})
+}
+
+func readActiveRun(reader *vaultregistry.Reader, selector selector) (vaultregistry.Run, error) {
+	runs, err := reader.List()
+	if err != nil {
+		return vaultregistry.Run{}, err
+	}
+	matches := make([]vaultregistry.Run, 0, 2)
+	for _, run := range runs {
+		switch {
+		case selector.ID != "" && run.RunID == selector.ID:
+			matches = append(matches, run)
+		case selector.Name != "" && run.Name == selector.Name:
+			matches = append(matches, run)
+		case selector.Positional != "" && (run.RunID == selector.Positional || run.Name == selector.Positional):
+			matches = append(matches, run)
+		}
+	}
+	if len(matches) == 0 {
+		return vaultregistry.Run{}, fmt.Errorf("%w: %s", vaultregistry.ErrNotFound, selector.any())
+	}
+	if len(matches) != 1 {
+		return vaultregistry.Run{}, fmt.Errorf("%w: %q", vaultregistry.ErrAmbiguous, selector.any())
+	}
+	return matches[0], nil
+}
+
+func renderRunList(runs []vaultregistry.RunSummary) string {
+	var builder strings.Builder
+	builder.WriteString("ATLAS OBSERVE\n")
+	builder.WriteString("RUN\tTASK\tREVISION\tUPDATED\n")
+	for _, run := range runs {
+		title := ""
+		if run.Task != nil {
+			title = run.Task.Title
+		} else if run.WorkReference != nil {
+			title = run.WorkReference.Title
+		}
+		fmt.Fprintf(&builder, "%s\t%s\t%d\t%s\n", run.RunID, title, run.Revision, run.UpdatedAt)
+	}
+	return builder.String()
+}
+
+func renderRun(run vaultregistry.Run) string {
+	stage, state := run.Stage, ""
+	if stage == "" && len(run.Lifecycle) != 0 {
+		latest := run.Lifecycle[len(run.Lifecycle)-1]
+		stage, state = latest.Kind, latest.State
+	}
+	title := run.Task.Title
+	if title == "" && run.WorkReference != nil {
+		title = run.WorkReference.Title
+	}
+	var builder strings.Builder
+	builder.WriteString("ATLAS OBSERVE\n")
+	builder.WriteString("RUN\tTASK\tSTATE\tSTAGE\tREVISION\tUPDATED\n")
+	fmt.Fprintf(&builder, "%s\t%s\t%s\t%s\t%d\t%s\n", run.RunID, title, state, stage, run.Revision, run.UpdatedAt)
+	return builder.String()
+}
+
+func summaryTask(run vaultregistry.RunSummary) map[string]any {
+	if run.Task != nil {
+		return map[string]any{"id": run.Task.ID, "title": run.Task.Title, "path": run.Task.Path, "feature_path": run.Task.FeaturePath, "kind": run.Task.Kind}
+	}
+	if run.WorkReference != nil {
+		return map[string]any{"id": run.WorkReference.ID, "title": run.WorkReference.Title, "path": run.WorkReference.Path, "feature_path": run.WorkReference.FeaturePath, "kind": run.WorkReference.Kind}
+	}
+	return nil
+}
+
+func runTask(run vaultregistry.Run) map[string]any {
+	if run.WorkReference != nil {
+		return map[string]any{"id": run.WorkReference.ID, "title": run.WorkReference.Title, "path": run.WorkReference.Path, "feature_path": run.WorkReference.FeaturePath, "kind": run.WorkReference.Kind}
+	}
+	if run.Task.ID == "" && run.Task.Title == "" && run.Task.Path == "" && run.Task.FeaturePath == "" && run.Task.Kind == "" {
+		return nil
+	}
+	return map[string]any{"id": run.Task.ID, "title": run.Task.Title, "path": run.Task.Path, "feature_path": run.Task.FeaturePath, "kind": run.Task.Kind}
+}
+
+type envelope struct {
+	APIVersion string         `json:"api_version"`
+	Kind       string         `json:"kind"`
+	Data       any            `json:"data"`
+	Meta       map[string]any `json:"meta"`
+}
+
+func writeJSON(output io.Writer, value any) error {
+	encoder := json.NewEncoder(output)
+	encoder.SetEscapeHTML(false)
+	return encoder.Encode(value)
+}
+
+func sortedKeys(values map[string]bool) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func usageError(message string) error {
+	return &commandError{code: 2, message: "atlas: " + message, usage: true}
+}
+
+func quote(value string) string { return fmt.Sprintf("%q", value) }
