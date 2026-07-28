@@ -105,11 +105,12 @@ func (c Client) AttachRun(run vaultregistry.Run, workspaceID, stateDir string) (
 }
 
 func (c Client) correlate(run vaultregistry.Run, workspaceID string) ([]Correlation, []Agent, error) {
-	if run.Task.Kind != "task" {
+	if runTaskKind(run) != "task" {
 		return nil, nil, errors.New("only Task Runs can have an Atlas companion")
 	}
+	participants := runParticipants(run)
 	registered := false
-	for _, participant := range run.Participants {
+	for _, participant := range participants {
 		if participant.Herdr != nil && completeHerdr(*participant.Herdr) && participant.Herdr.WorkspaceID == workspaceID {
 			registered = true
 			break
@@ -123,7 +124,7 @@ func (c Client) correlate(run vaultregistry.Run, workspaceID string) ([]Correlat
 	if err != nil {
 		return nil, nil, err
 	}
-	correlations, liveOnly := correlate(run.Participants, agents)
+	correlations, liveOnly := correlate(participants, agents)
 	return correlations, liveOnly, nil
 }
 
@@ -145,6 +146,13 @@ func (c Client) listAgents() ([]Agent, error) {
 		}
 	}
 	return listed.Agents, nil
+}
+
+func runTaskKind(run vaultregistry.Run) string {
+	if run.WorkReference != nil && run.WorkReference.Kind != "" {
+		return run.WorkReference.Kind
+	}
+	return run.Task.Kind
 }
 
 func correlate(participants []vaultregistry.Participant, agents []Agent) ([]Correlation, []Agent) {

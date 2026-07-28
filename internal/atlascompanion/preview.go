@@ -51,13 +51,14 @@ func (c Client) Preview(reader *vaultregistry.Reader, selected Agent, width, hei
 	recorded, taskRecorded := false, false
 	stale, contradictory := false, false
 	for _, run := range runs {
-		correlations, _ := correlate(run.Participants, agents)
-		for index, participant := range run.Participants {
+		participants := runParticipants(run)
+		correlations, _ := correlate(participants, agents)
+		for index, participant := range participants {
 			if participant.Herdr == nil || !sameRecordedIdentity(*participant.Herdr, selected) {
 				continue
 			}
 			recorded = true
-			if run.Task.Kind != "task" {
+			if runTaskKind(run) != "task" {
 				continue
 			}
 			taskRecorded = true

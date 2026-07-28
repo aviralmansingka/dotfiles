@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -15,6 +16,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	atlaspkg "github.com/aviral/dotfiles/internal/atlas"
+	"github.com/aviral/dotfiles/internal/atlascompanion"
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
@@ -92,16 +94,16 @@ type capabilitiesCommand struct{}
 type evidenceGetCommand struct{ selector selector }
 type acceptCommand struct {
 	selector         selector
-	expectedRevision string
+	expectedRevision uint64
 }
 type rejectCommand struct {
 	selector         selector
-	expectedRevision string
+	expectedRevision uint64
 	reason           string
 }
 type retireCommand struct {
 	selector         selector
-	expectedRevision string
+	expectedRevision uint64
 }
 type reviveCommand struct{ selector selector }
 
@@ -207,13 +209,13 @@ func run(command any, stdout io.Writer) error {
 	case evidenceGetCommand:
 		return runEvidenceGet(command, stdout)
 	case acceptCommand:
-		return fmt.Errorf("atlas: accept verifierattempt is not implemented yet")
+		return runAccept(command, stdout)
 	case rejectCommand:
-		return fmt.Errorf("atlas: reject verifierattempt is not implemented yet")
+		return runReject(command, stdout)
 	case retireCommand:
-		return fmt.Errorf("atlas: run retire is not implemented yet")
+		return runRetire(command, stdout)
 	case reviveCommand:
-		return fmt.Errorf("atlas: admin companion revive is not implemented yet")
+		return runRevive(command, stdout)
 	default:
 		return errors.New("atlas: unreachable command")
 	}
@@ -309,10 +311,14 @@ func parseAccept(args []string) (acceptCommand, error) {
 	if len(rest) != 2 || rest[0] != "--expected-revision" || rest[1] == "" {
 		return acceptCommand{}, usageError("accept verifierattempt requires --expected-revision <revision>")
 	}
+	expectedRevision, err := parseExpectedRevision(rest[1])
+	if err != nil {
+		return acceptCommand{}, err
+	}
 	if err := selector.validate(); err != nil {
 		return acceptCommand{}, err
 	}
-	return acceptCommand{selector: selector, expectedRevision: rest[1]}, nil
+	return acceptCommand{selector: selector, expectedRevision: expectedRevision}, nil
 }
 
 func parseReject(args []string) (rejectCommand, error) {
@@ -326,10 +332,14 @@ func parseReject(args []string) (rejectCommand, error) {
 	if len(rest) != 4 || rest[0] != "--expected-revision" || rest[2] != "--reason" || rest[1] == "" || rest[3] == "" {
 		return rejectCommand{}, usageError("reject verifierattempt requires --expected-revision <revision> --reason <code>")
 	}
+	expectedRevision, err := parseExpectedRevision(rest[1])
+	if err != nil {
+		return rejectCommand{}, err
+	}
 	if err := selector.validate(); err != nil {
 		return rejectCommand{}, err
 	}
-	return rejectCommand{selector: selector, expectedRevision: rest[1], reason: rest[3]}, nil
+	return rejectCommand{selector: selector, expectedRevision: expectedRevision, reason: rest[3]}, nil
 }
 
 func parseRun(args []string) (retireCommand, error) {
@@ -343,10 +353,14 @@ func parseRun(args []string) (retireCommand, error) {
 	if len(rest) != 2 || rest[0] != "--expected-revision" || rest[1] == "" {
 		return retireCommand{}, usageError("run retire requires --expected-revision <revision>")
 	}
+	expectedRevision, err := parseExpectedRevision(rest[1])
+	if err != nil {
+		return retireCommand{}, err
+	}
 	if err := selector.validate(); err != nil {
 		return retireCommand{}, err
 	}
-	return retireCommand{selector: selector, expectedRevision: rest[1]}, nil
+	return retireCommand{selector: selector, expectedRevision: expectedRevision}, nil
 }
 
 func parseAdmin(args []string) (reviveCommand, error) {
@@ -467,6 +481,163 @@ func runEvidenceGet(command evidenceGetCommand, stdout io.Writer) error {
 	return writeJSON(stdout, envelope)
 }
 
+func runAccept(command acceptCommand, stdout io.Writer) error {
+	envelope, err := atlaspkg.AcceptVerifierAttemptEnvelope("", atlaspkg.MachineSelector(command.selector), command.expectedRevision)
+	if err != nil {
+		return err
+	}
+	return writeJSON(stdout, envelope)
+}
+
+func runReject(command rejectCommand, stdout io.Writer) error {
+	envelope, err := atlaspkg.RejectVerifierAttemptEnvelope("", atlaspkg.MachineSelector(command.selector), command.expectedRevision, command.reason)
+	if err != nil {
+		return err
+	}
+	return writeJSON(stdout, envelope)
+}
+
+func runRetire(command retireCommand, stdout io.Writer) error {
+	envelope, err := atlaspkg.RetireRunEnvelope("", atlaspkg.MachineSelector(command.selector), command.expectedRevision)
+	if err != nil {
+		return err
+	}
+	return writeJSON(stdout, envelope)
+}
+
+func runRevive(command reviveCommand, stdout io.Writer) error {
+	stateRoot, err := vaultregistry.ResolveRoot()
+	if err != nil {
+		return err
+	}
+	reader, err := vaultregistry.OpenReader(stateRoot)
+	if err != nil {
+		return err
+	}
+	run, err := readRunAny(reader, command.selector)
+	if err != nil {
+		return err
+	}
+	workspaceID, err := companionWorkspace(run)
+	if err != nil {
+		return err
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	if _, err := (atlascompanion.Client{Herdr: "herdr", Executable: executable}).AttachRun(run, workspaceID, stateRoot); err != nil {
+		return err
+	}
+	envelope := envelope{
+		APIVersion: "atlas/v1",
+		Kind:       "Companion",
+		Data: map[string]any{
+			"run":        map[string]any{"id": run.RunID, "name": runName(run)},
+			"state":      "active",
+			"revived_at": time.Now().UTC().Format(time.RFC3339),
+		},
+		Meta: map[string]any{"operation": "revive"},
+	}
+	return writeJSON(stdout, envelope)
+}
+
+func readRunAny(reader *vaultregistry.Reader, selector selector) (vaultregistry.Run, error) {
+	query := selector.any()
+	if query == "" {
+		return vaultregistry.Run{}, fmt.Errorf("%w: selector is required", vaultregistry.ErrNotFound)
+	}
+	active, activeErr := reader.Get(query)
+	retired, retiredErr := reader.GetRetired(query)
+	if selector.ID != "" || selector.Name != "" {
+		if activeErr == nil {
+			return active, nil
+		}
+		if retiredErr == nil {
+			return retired, nil
+		}
+		if activeErr != nil && !errors.Is(activeErr, vaultregistry.ErrNotFound) {
+			return vaultregistry.Run{}, activeErr
+		}
+		if retiredErr != nil && !errors.Is(retiredErr, vaultregistry.ErrNotFound) {
+			return vaultregistry.Run{}, retiredErr
+		}
+		return vaultregistry.Run{}, activeErr
+	}
+	if activeErr == nil && retiredErr == nil && active.RunID != retired.RunID {
+		return vaultregistry.Run{}, fmt.Errorf("%w: %q", vaultregistry.ErrAmbiguous, query)
+	}
+	if activeErr == nil {
+		return active, nil
+	}
+	if retiredErr == nil {
+		return retired, nil
+	}
+	if activeErr != nil && !errors.Is(activeErr, vaultregistry.ErrNotFound) {
+		return vaultregistry.Run{}, activeErr
+	}
+	if retiredErr != nil && !errors.Is(retiredErr, vaultregistry.ErrNotFound) {
+		return vaultregistry.Run{}, retiredErr
+	}
+	return vaultregistry.Run{}, activeErr
+}
+
+func companionWorkspace(run vaultregistry.Run) (string, error) {
+	participants := recordedParticipants(run)
+	workspace := ""
+	for _, participant := range participants {
+		if participant.Herdr == nil || !completeHerdr(*participant.Herdr) {
+			continue
+		}
+		if workspace == "" {
+			workspace = participant.Herdr.WorkspaceID
+			continue
+		}
+		if participant.Herdr.WorkspaceID != workspace {
+			return "", fmt.Errorf("%w: run %s has multiple registered workspaces", vaultregistry.ErrAmbiguous, run.RunID)
+		}
+	}
+	if workspace == "" {
+		return "", fmt.Errorf("%w: run %s has no complete registered workspace", vaultregistry.ErrMalformed, run.RunID)
+	}
+	return workspace, nil
+}
+
+func recordedParticipants(run vaultregistry.Run) []vaultregistry.Participant {
+	if run.SchemaVersion != 2 {
+		return append([]vaultregistry.Participant(nil), run.Participants...)
+	}
+	builders := map[string]vaultregistry.Participant{}
+	order := make([]string, 0)
+	for _, observation := range run.Observations {
+		if observation.Kind != vaultregistry.KindRegisteredParticipant || observation.Payload.RegisteredParticipant == nil {
+			continue
+		}
+		payload := observation.Payload.RegisteredParticipant
+		current, ok := builders[payload.ParticipantID]
+		if !ok {
+			order = append(order, payload.ParticipantID)
+		}
+		current.ParticipantID = payload.ParticipantID
+		current.ObservedAt = observation.ObservedAt
+		current.Role = payload.Role
+		current.GoalID = observation.GoalID
+		current.Herdr = payload.Herdr
+		session := payload.AgentSession
+		current.AgentSession = &session
+		builders[payload.ParticipantID] = current
+	}
+	participants := make([]vaultregistry.Participant, 0, len(order))
+	for _, id := range order {
+		participants = append(participants, builders[id])
+	}
+	return participants
+}
+
+func completeHerdr(identity vaultregistry.HerdrIdentity) bool {
+	return identity.WorkspaceID != "" && identity.TabID != "" && identity.PaneID != "" && identity.TerminalID != ""
+}
+
 func runBrowser(stdout io.Writer, reader *vaultregistry.Reader) error {
 	vaultRoot, err := atlaspkg.ResolveVaultRoot()
 	if err != nil {
@@ -583,6 +754,13 @@ func renderRun(run vaultregistry.Run) string {
 	return builder.String()
 }
 
+func runName(run vaultregistry.Run) string {
+	if run.Name != "" {
+		return run.Name
+	}
+	return run.RunID
+}
+
 type envelope struct {
 	APIVersion string         `json:"api_version"`
 	Kind       string         `json:"kind"`
@@ -603,6 +781,14 @@ func sortedKeys(values map[string]bool) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func parseExpectedRevision(raw string) (uint64, error) {
+	revision, err := strconv.ParseUint(raw, 10, 64)
+	if err != nil || revision == 0 {
+		return 0, usageError("expected revision must be a positive integer")
+	}
+	return revision, nil
 }
 
 func usageError(message string) error {

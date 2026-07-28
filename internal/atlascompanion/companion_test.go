@@ -241,6 +241,7 @@ func fakeHerdr(t *testing.T, tabs, panes, info, create string) (Client, string) 
 	contents := `#!/bin/sh
 printf '%s %s\n' "$1" "$2" >>"$HERDR_TEST_LOG"
 case "$1 $2" in
+  "agent list") printf '%s\n' "$HERDR_TEST_AGENTS" ;;
   "tab list")
     if [ -e "$HERDR_TEST_CREATED" ] && [ -n "${HERDR_TEST_AFTER_TABS-}" ]; then printf '%s\n' "$HERDR_TEST_AFTER_TABS"; else printf '%s\n' "$HERDR_TEST_TABS"; fi ;;
   "pane list")
@@ -259,6 +260,7 @@ esac
 	t.Setenv("HERDR_TEST_TABS", tabs)
 	t.Setenv("HERDR_TEST_PANES", panes)
 	t.Setenv("HERDR_TEST_INFO", info)
+	t.Setenv("HERDR_TEST_AGENTS", herdrResponse(map[string]any{"type": "agent_list", "agents": []any{}}))
 	t.Setenv("HERDR_TEST_CREATE", create)
 	t.Setenv("HERDR_TEST_RUN", herdrResponse(map[string]any{"type": "pane_run", "pane_id": "created-pane"}))
 	t.Setenv("HERDR_TEST_CLOSE", herdrResponse(map[string]any{"type": "tab_closed", "tab_id": "created-tab"}))

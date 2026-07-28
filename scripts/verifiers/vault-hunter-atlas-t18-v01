@@ -8,6 +8,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 chmod +x "$fixture/bin/atlas" "$fixture/bin/herdr" "$fixture/bin/go"
+cp -R "$fixture/state" "$tmp/state"
 
 go build -o "$tmp/source-atlas" ./cmd/atlas
 mkdir -p "$tmp/bin"
@@ -22,54 +23,59 @@ test ! -e "$tmp/bin/vault-hunter-observe"
 "$tmp/bin/atlas" --help >"$tmp/installed.help"
 cmp "$tmp/source.help" "$tmp/installed.help"
 
-python3 - "$tmp/source-atlas" "$tmp/bin/atlas" "$fixture/state" <<'PY'
+python3 - "$tmp/source-atlas" "$tmp/bin/atlas" "$tmp/state" <<'PY'
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 source, installed, state = sys.argv[1:]
 expected_help = open(source + ".help", encoding="utf-8").read() if False else None
 
-def run(binary, args, stdin=""):
+def run(binary, args, state_root, stdin=""):
     env = os.environ.copy()
-    env["VAULT_HUNTER_STATE_DIR"] = state
-    env["ATLAS_VAULT_ROOT"] = state
+    env["VAULT_HUNTER_STATE_DIR"] = state_root
+    env["ATLAS_VAULT_ROOT"] = state_root
     return subprocess.run([binary, *args], input=stdin, text=True, capture_output=True, env=env)
 
 for binary in (source, installed):
-    help_run = run(binary, ["--help"])
-    assert help_run.returncode == 0, (binary, help_run)
-    assert help_run.stderr == "", help_run.stderr
-    assert help_run.stdout == run(source, ["--help"]).stdout
+    with tempfile.TemporaryDirectory() as tempdir:
+        state_root = os.path.join(tempdir, 'state')
+        shutil.copytree(state, state_root)
+        help_run = run(binary, ["--help"], state_root)
+        assert help_run.returncode == 0, (binary, help_run)
+        assert help_run.stderr == "", help_run.stderr
+        assert help_run.stdout == run(source, ["--help"], state_root).stdout
 
-    observe = run(binary, ["observe"])
-    assert observe.returncode == 0 and observe.stderr == "", observe
-    assert "ATLAS OBSERVE" in observe.stdout and "run-1" in observe.stdout, observe.stdout
+        observe = run(binary, ["observe"], state_root)
+        assert observe.returncode == 0 and observe.stderr == "", observe
+        assert "ATLAS OBSERVE" in observe.stdout and "run-1" in observe.stdout, observe.stdout
 
-    selected = run(binary, ["observe", "--name", "release-check"])
-    assert selected.returncode == 0 and selected.stderr == "", selected
-    assert "run-1\tBuild Atlas" in selected.stdout, selected.stdout
+        selected = run(binary, ["observe", "--name", "release-check"], state_root)
+        assert selected.returncode == 0 and selected.stderr == "", selected
+        assert "run-1\tBuild Atlas" in selected.stdout, selected.stdout
 
-    listed = run(binary, ["get", "runs"])
-    assert listed.returncode == 0 and listed.stderr == "", listed
-    listed_json = json.loads(listed.stdout)
-    assert listed_json["api_version"] == "atlas/v1"
-    assert listed_json["kind"] == "RunList"
-    assert listed_json["meta"]["count"] == 1 and listed_json["meta"]["truncated"] is False
-    assert listed_json["data"][0]["id"] == "run-1"
+        listed = run(binary, ["get", "runs"], state_root)
+        assert listed.returncode == 0 and listed.stderr == "", listed
+        listed_json = json.loads(listed.stdout)
+        assert listed_json["api_version"] == "atlas/v1"
+        assert listed_json["kind"] == "RunList"
+        assert listed_json["meta"]["count"] == 1 and listed_json["meta"]["truncated"] is False
+        assert listed_json["data"][0]["id"] == "run-1"
 
-    singleton = run(binary, ["get", "runs", "--id", "run-1"])
-    assert singleton.returncode == 0 and singleton.stderr == "", singleton
-    singleton_json = json.loads(singleton.stdout)
-    assert singleton_json["kind"] == "Run"
-    assert singleton_json["data"]["id"] == "run-1"
-    assert singleton_json["data"]["name"] == "release-check"
+        singleton = run(binary, ["get", "runs", "--id", "run-1"], state_root)
+        assert singleton.returncode == 0 and singleton.stderr == "", singleton
+        singleton_json = json.loads(singleton.stdout)
+        assert singleton_json["kind"] == "Run"
+        assert singleton_json["data"]["id"] == "run-1"
+        assert singleton_json["data"]["name"] == "release-check"
 
-    capabilities = run(binary, ["capabilities", "--output", "json"])
-    assert capabilities.returncode == 0 and capabilities.stderr == "", capabilities
-    capabilities_json = json.loads(capabilities.stdout)
-    assert capabilities_json == {
+        capabilities = run(binary, ["capabilities", "--output", "json"], state_root)
+        assert capabilities.returncode == 0 and capabilities.stderr == "", capabilities
+        capabilities_json = json.loads(capabilities.stdout)
+        assert capabilities_json == {
         "api_version": "atlas/v1",
         "kind": "Capabilities",
         "data": {
@@ -97,31 +103,33 @@ for binary in (source, installed):
             ],
         },
         "meta": {},
-    }, capabilities_json
+        }, capabilities_json
 
-    for args, needle in [
+        for args, needle in [
         (["status"], 'atlas: unknown command "status"'),
         (["describe"], 'atlas: unknown command "describe"'),
         (["get", "evidence"], 'atlas: unknown get resource "evidence"'),
         (["--run-id", "run-1"], 'atlas: unexpected option --run-id'),
         (["observe", "run-1", "--name", "release-check"], 'atlas: selector accepts exactly one of <name-or-id>, --id, or --name'),
     ]:
-        failed = run(binary, args)
-        assert failed.returncode == 2, (args, failed.returncode, failed.stdout, failed.stderr)
-        assert failed.stdout == "", (args, failed.stdout)
-        assert needle in failed.stderr and "usage: atlas\n" in failed.stderr, (args, failed.stderr)
+            failed = run(binary, args, state_root)
+            assert failed.returncode == 2, (args, failed.returncode, failed.stdout, failed.stderr)
+            assert failed.stdout == "", (args, failed.stdout)
+            assert needle in failed.stderr and "usage: atlas\n" in failed.stderr, (args, failed.stderr)
 
-    attempts = run(binary, ["get", "verifierattempts", "--run", "run-1", "--pending"])
-    assert attempts.returncode == 0 and json.loads(attempts.stdout)["data"] == [], attempts
+        attempts = run(binary, ["get", "verifierattempts", "--run", "run-1", "--pending"], state_root)
+        assert attempts.returncode == 0 and json.loads(attempts.stdout)["data"] == [], attempts
 
-    for args, stderr in [
-        (["run", "retire", "run-1", "--expected-revision", "1"], "atlas: run retire is not implemented yet\n"),
-        (["run", "create", "--json"], "atlas: run create requires run and initial_driver\n"),
-    ]:
-        failed = run(binary, args, stdin="{}\n")
-        assert failed.returncode == 1, (args, failed.returncode, failed.stdout, failed.stderr)
-        assert failed.stdout == "", (args, failed.stdout)
-        assert failed.stderr == stderr, (args, failed.stderr)
+        retired = run(binary, ["run", "retire", "run-1", "--expected-revision", "1"], state_root)
+        assert retired.returncode == 0 and retired.stderr == "", retired
+        retired_json = json.loads(retired.stdout)
+        assert retired_json["kind"] == "Run"
+        assert retired_json["meta"] == {"operation": "retire"}
+
+        failed = run(binary, ["run", "create", "--json"], state_root, stdin="{}\n")
+        assert failed.returncode == 1, (failed.returncode, failed.stdout, failed.stderr)
+        assert failed.stdout == "", failed.stdout
+        assert failed.stderr == "atlas: run create requires run and initial_driver\n", failed.stderr
 
 print("T18.V01 CLI grammar and executable migration: PASS")
 PY

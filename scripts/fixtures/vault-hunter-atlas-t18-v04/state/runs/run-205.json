@@ -1,0 +1,57 @@
+{
+  "schema_version": 2,
+  "run_id": "run-205",
+  "name": "companion-me",
+  "run_kind": "hunter",
+  "work_reference": {
+    "id": "T18",
+    "title": "Parent decisions, Run retirement, and companion isolation",
+    "path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/18-parent-decisions.md",
+    "feature_path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md",
+    "kind": "task"
+  },
+  "revision": 1,
+  "state": "active",
+  "stage": "awaiting-parent",
+  "invoked_at": "2026-07-28T00:00:00Z",
+  "updated_at": "2026-07-28T00:50:00Z",
+  "observations": [
+    {
+      "observation_id": "participant-companion-start",
+      "kind": "registered_participant",
+      "state": "active",
+      "goal_id": "run",
+      "title": "driver registered",
+      "summary": "driver registered.",
+      "observed_at": "2026-07-28T00:50:00Z",
+      "correlation_id": "run-205",
+      "actor": {
+        "kind": "participant",
+        "id": "participant-companion"
+      },
+      "source": {
+        "kind": "producer",
+        "id": "fixture"
+      },
+      "redaction_class": "internal",
+      "started_at": "2026-07-28T00:50:00Z",
+      "payload": {
+        "registered_participant": {
+          "participant_id": "participant-companion",
+          "role": "driver",
+          "agent_session": {
+            "source": "pi",
+            "kind": "session",
+            "value": "session-companion"
+          },
+          "herdr": {
+            "workspace_id": "ws-companion",
+            "tab_id": "tab-driver",
+            "pane_id": "pane-driver",
+            "terminal_id": "term-driver"
+          }
+        }
+      }
+    }
+  ]
+}

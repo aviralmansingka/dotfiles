@@ -671,7 +671,7 @@ func (s *store) runsEnvelope(selector MachineSelector) (Envelope, error) {
 		}
 		return boundedListEnvelope("RunList", data), nil
 	}
-	run, err := resolveItem(selector, s.activeRuns, func(item vaultregistry.Run) string { return item.RunID }, func(item vaultregistry.Run) string { return runName(item) })
+	run, err := s.resolveRun(selector)
 	if err != nil {
 		return Envelope{}, err
 	}
@@ -1642,7 +1642,10 @@ func verifierStatus(attempts []attemptProjection) string {
 		return "pending"
 	}
 	last := attempts[len(attempts)-1]
-	if last.Decision == "rejected" || last.Outcome == "failed" {
+	if last.Decision == "rejected" {
+		return "pending"
+	}
+	if last.Outcome == "failed" {
 		return "failed"
 	}
 	return "pending"
