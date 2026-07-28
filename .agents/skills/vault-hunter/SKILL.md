@@ -41,8 +41,10 @@ If any item is missing, invoke `$vault-scout` on the source Issue or supplied te
    `vault_hunter_run`, and `vault_hunter_record` as compatibility tools until generic Registry operations replace them.
 3. Bind the exact driver, repository, branch, worktree, and Herdr identity when present. A non-Pi or headless Run uses
    the same domain contract without inventing Herdr identity.
-4. The parent creates or reuses the Task-owned implementation worktree and any Herdr workspace required for interactive
-   workers; `$vault-hunter-worker` receives those exact resources and never provisions a route itself.
+4. The parent creates or reuses the Task-owned implementation worktree and a Herdr workspace for implementation,
+   review, verification, and delivery workers; `$vault-hunter-worker` receives those exact resources and never
+   provisions a route itself. Use a headless route only when the user explicitly requests it or Herdr cannot represent
+   the work, and record that exception before launch.
 5. Mark only this Task and Feature checklist item in progress, add one weekly backlog timeline, and use
    `$vault-hunter-checkpoint` for serialized vault commits.
 
@@ -68,12 +70,16 @@ certify a verifier or update canonical Goal, Task, or Feature state.
 
 ## Agent routing
 
-- Use the cheapest capable bounded worker for mechanical discovery, implementation, checks, and release work.
+- Default every delegated worker to the Pi coding agent (`pi`). Do not substitute Codex, Claude, or another runtime
+  unless the user explicitly requests it or the task requires a capability Pi cannot provide, such as Codex computer
+  use; record the reason before launch.
+- Launch implementation, review, verification, and delivery workers as visible, Herdr-tracked `$vault-hunter-worker`
+  sessions by default. Headless subagents are the exception for tiny read-only work where visibility adds no value, or
+  when the user explicitly requests them; never use a headless writer by default.
 - Give every child one Goal, exact inputs, an allowlist, validations, output shape, and stop conditions.
-- Use a fresh read-only agent for independent diff review. Pin base, head, tree, and Task contract; require findings with
-  severity and path/line, or an explicit clean verdict.
-- Use Herdr-visible `$vault-hunter-worker` only for interactive prototypes, manual UI validation, or work that genuinely
-  benefits from steering and resumption. Name it `<runtime>-<feature-slug>-<run-key>-<role>`.
+- Use a fresh read-only Pi agent for independent diff review. Pin base, head, tree, and Task contract; require findings
+  with severity and path/line, or an explicit clean verdict.
+- Name visible sessions `pi-<feature-slug>-<run-key>-<role>`.
 - Never run parallel writers in one worktree. Children may produce repository changes and evidence, but not vault
   status, acceptance, or completion decisions.
 
