@@ -165,6 +165,9 @@ func (p *Producer) CreateRun(request CreateRequest) (Run, error) {
 		return Run{}, fmt.Errorf("%w: run ID exists in active and retired namespaces", ErrConflict)
 	}
 	if len(reserved) == 1 {
+		if reserved[0] == p.retiredPath(run.RunID) {
+			return Run{}, fmt.Errorf("%w: run ID is retired", ErrConflict)
+		}
 		existing, err := loadProducer(reserved[0], run.RunID)
 		if err != nil {
 			return Run{}, err
@@ -242,6 +245,9 @@ func (p *Producer) AppendObservation(runID string, expectedRevision uint64, upda
 		return Run{}, err
 	}
 	defer unlock()
+	if err := p.rejectRetiredV2(runID); err != nil {
+		return Run{}, err
+	}
 	current, err := loadProducer(p.path(runID), runID)
 	if err != nil {
 		return Run{}, err
@@ -266,6 +272,9 @@ func (p *Producer) AppendObservation(runID string, expectedRevision uint64, upda
 }
 
 func (p *Producer) updateLocked(runID string, expectedRevision uint64, mutate func(*Run) error) (Run, error) {
+	if err := p.rejectRetiredV2(runID); err != nil {
+		return Run{}, err
+	}
 	current, err := loadProducer(p.path(runID), runID)
 	if err != nil {
 		return Run{}, err
@@ -301,6 +310,7 @@ func validateUpdate(current, next Run) error {
 	unknownChanged := len(current.Unknown) > 0 && !equalJSON(current.Unknown, next.Unknown)
 	if current.SchemaVersion == 2 {
 		unknownChanged = !equalJSON(current.Unknown, next.Unknown)
+		scalarsChanged = scalarsChanged || next.State != current.State || !equalJSON(next.RetiredAt, current.RetiredAt)
 	}
 	historyChanged := !historyPrefix(current.Participants, next.Participants) ||
 		!historyPrefix(current.Lifecycle, next.Lifecycle) ||
@@ -317,8 +327,23 @@ func historyPrefix[T any](current, next []T) bool {
 		slices.EqualFunc(current, next[:len(current)], equalJSON)
 }
 
+func (p *Producer) rejectRetiredV2(runID string) error {
+	retired, err := loadProducer(p.retiredPath(runID), runID)
+	if errors.Is(err, ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if retired.SchemaVersion == 2 {
+		return fmt.Errorf("%w: run is retired", ErrConflict)
+	}
+	return nil
+}
+
 // Retire atomically moves an exact active Run revision into the reserved
-// retired namespace. A retry for the same retired revision is idempotent.
+// retired namespace. V2 increments the revision and replays only the original
+// expected revision; v1 preserves its byte-identical revision replay.
 func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 	if err := validID(runID); err != nil {
 		return Run{}, err
@@ -359,7 +384,11 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 		if err != nil {
 			return Run{}, err
 		}
-		if retired.Revision != expectedRevision {
+		if retired.SchemaVersion == 2 {
+			if retired.State != RunStateRetired || retired.Revision != expectedRevision+1 {
+				return Run{}, fmt.Errorf("%w: expected active revision %d, retired revision %d", ErrConflict, expectedRevision, retired.Revision)
+			}
+		} else if retired.Revision != expectedRevision {
 			return Run{}, fmt.Errorf("%w: expected %d, retired %d", ErrConflict, expectedRevision, retired.Revision)
 		}
 		return clone(retired)
@@ -373,6 +402,20 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 	}
 	if active.Revision != expectedRevision {
 		return Run{}, fmt.Errorf("%w: expected %d, actual %d", ErrConflict, expectedRevision, active.Revision)
+	}
+	result := active
+	if active.SchemaVersion == 2 {
+		if active.State != RunStateActive {
+			return Run{}, fmt.Errorf("%w: schema-version-2 Run is not active", ErrConflict)
+		}
+		retiredAt := retirementTimestamp(active.UpdatedAt)
+		result.Revision++
+		result.State = RunStateRetired
+		result.UpdatedAt = retiredAt
+		result.RetiredAt = &retiredAt
+		if err := validateProducer(result, len(result.Observations)); err != nil {
+			return Run{}, err
+		}
 	}
 
 	retiredDir := filepath.Join(p.root, "retired")
@@ -411,6 +454,11 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 	}
 	defer func() { _ = retiredDirFile.Close() }()
 
+	if active.SchemaVersion == 2 {
+		if err := p.write(result); err != nil {
+			return Run{}, err
+		}
+	}
 	if err := renameNoReplace(activePath, retiredPath); err != nil {
 		if createdRetiredDir {
 			_ = os.Remove(retiredDir)
@@ -425,7 +473,15 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 	if err := errors.Join(activeSyncErr, retiredSyncErr); err != nil {
 		return Run{}, err
 	}
-	return clone(active)
+	return clone(result)
+}
+
+func retirementTimestamp(updatedAt string) string {
+	now := time.Now().UTC()
+	if previous, err := time.Parse(time.RFC3339, updatedAt); err == nil && !now.After(previous) {
+		now = previous.Add(time.Nanosecond)
+	}
+	return now.Format(time.RFC3339Nano)
 }
 
 func (p *Producer) Get(runID string) (Run, error) {
