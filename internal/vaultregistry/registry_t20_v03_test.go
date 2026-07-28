@@ -81,12 +81,16 @@ func TestT20V03ExactRevisionRetirementReplayAndWriteRejection(t *testing.T) {
 	t.Logf("T20.V03_RETIREMENT_PRESERVATION run_id=%s revision=%d observations_before_sha256=%s observations_after_sha256=%s observations_equal=true unknown_before_sha256=%s unknown_after_sha256=%s unknown_equal=true", retired.RunID, retired.Revision, observationsBefore, observationsAfter, unknownBefore, unknownAfter)
 
 	reader := mustReader(t, root)
-	if _, err := reader.Get(active.RunID); !errors.Is(err, vaultregistry.ErrNotFound) {
-		t.Fatalf("active exact read error = %v, want ErrNotFound", err)
+	_, activeReadErr := reader.Get(active.RunID)
+	if !errors.Is(activeReadErr, vaultregistry.ErrNotFound) {
+		t.Fatalf("active exact read error = %v, want ErrNotFound", activeReadErr)
 	}
-	if listed, err := reader.ListSummaries(vaultregistry.ListFilter{}); err != nil || len(listed) != 0 {
+	t.Logf("T20.V03_ACTIVE_EXACT_READ lookup=%s outcome=not_found error=ErrNotFound", active.RunID)
+	listed, err := reader.ListSummaries(vaultregistry.ListFilter{})
+	if err != nil || len(listed) != 0 {
 		t.Fatalf("default active list = %#v, %v", listed, err)
 	}
+	t.Logf("T20.V03_DEFAULT_ACTIVE_LIST outcome=success count=%d", len(listed))
 	exact, err := reader.GetRetired(active.Name)
 	if err != nil || !reflect.DeepEqual(exact, retired) {
 		t.Fatalf("exact retired read = %#v, %v", exact, err)
