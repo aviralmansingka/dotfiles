@@ -31,6 +31,7 @@ consumer_import_boundary() {
 
 consumer_semantics() {
   mkdir -p "$tmp/state/runs"
+  : >"$tmp/state/registry.lock"
   cp scripts/fixtures/vault-hunter-registry-v2/version-1.json "$tmp/state/runs/t19-v02-version-1.json"
   cp scripts/fixtures/vault-hunter-registry-v2/consumer-version-2.json "$tmp/state/runs/t19-v03-consumer.json"
   go build -o "$tmp/consumer" ./internal/vaultregistrytestconsumer
