@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -157,12 +158,50 @@ func TestT18V03BrowserCompletenessIgnoresMachineByteCap(t *testing.T) {
 	if !listEnvelope.Meta["truncated"].(bool) || listEnvelope.Meta["count"].(int) != 6 || len(listData) >= 6 {
 		t.Fatalf("bounded run list = %#v", listEnvelope)
 	}
-	entries, err := buildBrowserEntries(vaultRoot, stateRoot, reader)
+	entries, err := buildBrowserEntries(vaultRoot, stateRoot, reader, io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(entries) != 6 || entries[0].runID != "run-01" || entries[len(entries)-1].runID != "run-06" {
 		t.Fatalf("browser entries = %#v", entries)
+	}
+}
+
+func TestBrowserSkipsUnrenderableRunsWithWarning(t *testing.T) {
+	vaultRoot := t.TempDir()
+	stateRoot := t.TempDir()
+	const taskPath = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/18-build-atlas.md"
+	const featurePath = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md"
+	writeBrowserFile(t, vaultRoot, "1_projects/pi-agent/README.md", "---\nworking_directory: /worktrees/dotfiles\nrepository: git@example.test/dotfiles\n---\n# pi-agent\n")
+	writeBrowserFile(t, vaultRoot, "1_projects/pi-agent/themes/pi-customization/theme.md", "---\n---\n# pi-customization\n")
+	writeBrowserFile(t, vaultRoot, featurePath, "---\n---\n# vault-hunter-atlas\n")
+	writeBrowserFile(t, vaultRoot, taskPath, "---\nstatus: in-progress\n---\n# T18: Build Atlas\n")
+	producer, err := vaultregistry.OpenProducer(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := producer.CreateRun(browserRunRequest("renderable", "renderable", taskPath, featurePath)); err != nil {
+		t.Fatal(err)
+	}
+	unsupported := browserRunRequest("feature-run", "feature-run", featurePath, featurePath)
+	if _, err := producer.CreateRun(unsupported); err != nil {
+		t.Fatal(err)
+	}
+	reader, err := vaultregistry.OpenReader(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var warnings bytes.Buffer
+	entries, err := buildBrowserEntries(vaultRoot, stateRoot, reader, &warnings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].runID != "renderable" {
+		t.Fatalf("entries = %#v", entries)
+	}
+	warning := warnings.String()
+	if !strings.Contains(warning, "skipping unrenderable run feature-run") || !strings.Contains(warning, featurePath) {
+		t.Fatalf("warning = %q", warning)
 	}
 }
 
