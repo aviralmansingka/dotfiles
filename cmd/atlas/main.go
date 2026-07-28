@@ -6,8 +6,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	atlaspkg "github.com/aviral/dotfiles/internal/atlas"
 	"github.com/aviral/dotfiles/internal/vaultregistry"
@@ -402,6 +407,9 @@ func runObserve(command observeCommand, stdout io.Writer) error {
 		return err
 	}
 	if command.selector.any() == "" {
+		if characterDevice(os.Stdin) && characterDevice(os.Stdout) {
+			return runBrowser(stdout, reader)
+		}
 		summaries, err := reader.ListSummaries(vaultregistry.ListFilter{})
 		if err != nil {
 			return err
@@ -413,13 +421,18 @@ func runObserve(command observeCommand, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if characterDevice(os.Stdin) && characterDevice(os.Stdout) {
+		model := atlaspkg.NewJournalModel(run, 80, 24)
+		_, err := tea.NewProgram(model, tea.WithAltScreen()).Run()
+		return err
+	}
 	_, err = io.WriteString(stdout, renderRun(run))
 	return err
 }
 
 func runGet(command getCommand, stdout io.Writer) error {
 	if command.watch {
-		return fmt.Errorf("atlas: get %s --watch is not implemented yet", command.resource)
+		return runWatch(command, stdout)
 	}
 	envelope, err := atlaspkg.BuildEnvelope("", "", command.resource, atlaspkg.MachineSelector(command.selector), atlaspkg.MachineGetOptions{
 		Run:     command.run,
@@ -452,6 +465,64 @@ func runEvidenceGet(command evidenceGetCommand, stdout io.Writer) error {
 		return err
 	}
 	return writeJSON(stdout, envelope)
+}
+
+func runBrowser(stdout io.Writer, reader *vaultregistry.Reader) error {
+	vaultRoot, err := atlaspkg.ResolveVaultRoot()
+	if err != nil {
+		return err
+	}
+	stateRoot, err := vaultregistry.ResolveRoot()
+	if err != nil {
+		return err
+	}
+	entries, err := buildBrowserEntries(vaultRoot, stateRoot, reader)
+	if err != nil {
+		return err
+	}
+	_, err = tea.NewProgram(newBrowserModel(entries), tea.WithAltScreen()).Run()
+	return err
+}
+
+func runWatch(command getCommand, stdout io.Writer) error {
+	options := atlaspkg.MachineGetOptions{Run: command.run, Pending: command.pending}
+	if times := strings.TrimSpace(os.Getenv("ATLAS_WATCH_FAKE_TIMES")); times != "" {
+		for _, raw := range strings.Split(times, ",") {
+			observedAt := strings.TrimSpace(raw)
+			envelope, err := atlaspkg.BuildEnvelope("", "", command.resource, atlaspkg.MachineSelector(command.selector), options)
+			if err != nil {
+				return err
+			}
+			envelope.Meta["observed_at"] = observedAt
+			if err := writeJSON(stdout, envelope); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	interrupts := make(chan os.Signal, 1)
+	signal.Notify(interrupts, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(interrupts)
+	for {
+		envelope, err := atlaspkg.BuildEnvelope("", "", command.resource, atlaspkg.MachineSelector(command.selector), options)
+		if err != nil {
+			return err
+		}
+		envelope.Meta["observed_at"] = time.Now().UTC().Format(time.RFC3339)
+		if err := writeJSON(stdout, envelope); err != nil {
+			return err
+		}
+		select {
+		case <-interrupts:
+			return nil
+		case <-time.After(time.Second):
+		}
+	}
+}
+
+func characterDevice(file *os.File) bool {
+	info, err := file.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
 
 func readActiveRun(reader *vaultregistry.Reader, selector selector) (vaultregistry.Run, error) {

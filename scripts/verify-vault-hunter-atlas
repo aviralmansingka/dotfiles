@@ -94,6 +94,9 @@ case "${1-}" in
   T18.V02)
     exec scripts/verifiers/vault-hunter-atlas-t18-v02
     ;;
+  T18.V03)
+    exec scripts/verifiers/vault-hunter-atlas-t18-v03
+    ;;
   T20.V04)
     baseline=7a59e2d
     GOPATH=$(go env GOPATH)
@@ -149,7 +152,7 @@ case "${1-}" in
     echo 'T20.V04_CHECK diff_boundary=pass worktree=clean'
     ;;
   *)
-    echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02|T02.V01|T02.V02|T02.V03|T03.V01|T03.V02|T03.V03|T03.V04|T06.V01|T06.V02|T06.V03|T06.V04|T07.V01|T07.V02|T07.V03|T08.V01|T08.V02|T09.V01|T09.V02|T09.V03|T09.V04|T18.V01|T18.V02|T19.V01|T19.V02|T19.V03|T20.V01|T20.V02|T20.V03|T20.V04" >&2
+    echo "usage: scripts/verify-vault-hunter-atlas T01.V01|T01.V02|T02.V01|T02.V02|T02.V03|T03.V01|T03.V02|T03.V03|T03.V04|T06.V01|T06.V02|T06.V03|T06.V04|T07.V01|T07.V02|T07.V03|T08.V01|T08.V02|T09.V01|T09.V02|T09.V03|T09.V04|T18.V01|T18.V02|T18.V03|T19.V01|T19.V02|T19.V03|T20.V01|T20.V02|T20.V03|T20.V04" >&2
     exit 2
     ;;
 esac
