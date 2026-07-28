@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -uo pipefail
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$repo"
+implementation_commit=9dd6cf41cf802cc216df752d3ded161e3875dac4
+implementation_tree=a6555d0bc086058fbb6f23322bc4894f8f89e03e
+root="artifacts/pi-transcript-links/V03/$implementation_tree"
+mkdir -p "$root"
+attempt="$(mktemp -d "$root/attempt-XXXXXX")"
+sandbox="$(mktemp -d "${TMPDIR:-/tmp}/pi-links-v03-XXXXXX")"
+mkdir -p "$sandbox/vault/notes" "$sandbox/xdg-data" "$sandbox/xdg-state" "$sandbox/xdg-cache"
+printf '# Target\n\n## Chosen Heading\n\nfixture body\n' > "$sandbox/vault/notes/Target.md"
+: > "$attempt/fake-clipboard.log"
+: > "$attempt/fixture-trace.log"
+server="$sandbox/nvim.sock"
+command='XDG_CONFIG_HOME="$PWD/nvim/.config" scripts/verify-nvim pi-transcript-links'
+printf '$ %s\n' "$command" > "$attempt/command-transcript.txt"
+printf 'implementation_commit=%s\nimplementation_tree=%s\nproduct_blob=%s\nverifier_head=%s\n' "$implementation_commit" "$implementation_tree" "$(git rev-parse "$implementation_commit:pi/.pi/agent/extensions/transcript-scroll.ts")" "$(git rev-parse HEAD)" > "$attempt/implementation-identity.txt"
+{
+  nvim --version | head -1
+  pi --version | sed 's/^/Pi /'
+  /usr/bin/script --version 2>&1 | head -1 || true
+} > "$attempt/versions.txt"
+export V03_ATTEMPT="$attempt" V03_REPO="$repo" V03_VAULT_ROOT="$sandbox/vault" V03_CLIPBOARD_LOG="$attempt/fake-clipboard.log" V03_FIXTURE_TRACE="$attempt/fixture-trace.log"
+export XDG_DATA_HOME="$sandbox/xdg-data" XDG_STATE_HOME="$sandbox/xdg-state" XDG_CACHE_HOME="$sandbox/xdg-cache"
+set +e
+nvim --clean --headless --listen "$server" "+luafile scripts/fixtures/pi-transcript-links-v03-harness.lua" >> "$attempt/command-transcript.txt" 2>&1
+status=$?
+set -e
+printf 'exit_status=%s\n' "$status" >> "$attempt/command-transcript.txt"
+printf '%s\n' "$status" > "$attempt/exit-status.txt"
+cp "$attempt/fake-clipboard.log" "$attempt/fake-clipboard-final.log"
+find "$attempt" -type f ! -name SHA256SUMS -exec shasum -a 256 {} + | sed "s#$attempt/##" | sort -k2 > "$attempt/SHA256SUMS"
+printf 'V03 immutable baseline attempt: %s\nexit status: %s\nSHA256SUMS: %s\n' "$attempt" "$status" "$(shasum -a 256 "$attempt/SHA256SUMS" | cut -d' ' -f1)"
+rm -rf "$sandbox"
+exit "$status"
