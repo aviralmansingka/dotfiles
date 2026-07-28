@@ -38,4 +38,6 @@ The data is a visual fixture constrained to fields available in the current comp
 
 The user selected **B — Mini journey**. Its connected recorded-journey rail communicates current position and surrounding work better than the status card or metric dashboard within the picker pane. Preserve its Task/Run header, explicit recorded-journey label, semantic glyphs, participant/role footer, timestamp, and `projection, not authority` boundary. Production still requires final typed Atlas hydration and a deliberate 23-column truncation policy.
 
+The selected canonical prototype capture is `selected-mini-journey-30x12.ansi`; `selected-mini-journey-30x12.txt` is its exact SGR-stripped semantic frame.
+
 These are disposable UI sketches, not production renderer behavior.
