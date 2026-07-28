@@ -75,24 +75,6 @@ type DriverPlacement = {
   herdr: { workspaceId: string; tabId: string; paneId: string; terminalId: string };
   agentSession: { source: string; kind: string; value: string };
 };
-type PendingSubagent = {
-  runId: string;
-  startedAt: string;
-  agent: string;
-  taskSha256: string;
-  cwd: string;
-  observationKey: string;
-  parentSessionId: string;
-};
-type SubagentResult = {
-  agent?: string;
-  output?: string;
-  exitCode?: number;
-  model?: string;
-  usage?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number; cost?: number; turns?: number };
-  progress?: { durationMs?: number; toolCount?: number; error?: string };
-};
-
 function now(): string { return new Date().toISOString(); }
 function slug(value: string): string { return value.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "run"; }
 function sha256(value: string): string { return createHash("sha256").update(value).digest("hex"); }
@@ -104,10 +86,6 @@ function restoredRunId(ctx: ExtensionContext): string | undefined {
     if (typeof runId === "string" && runId) return runId;
   }
   return undefined;
-}
-function subagentResult(details: unknown): SubagentResult | undefined {
-  const results = (details as { results?: unknown } | undefined)?.results;
-  return Array.isArray(results) ? results[0] as SubagentResult | undefined : undefined;
 }
 function parentUsage(ctx: ExtensionContext) {
   const totals = { input: 0, output: 0, cache_read: 0, cache_write: 0, total_tokens: 0, cost: 0, requests: 0 };
@@ -266,7 +244,6 @@ function registry(input: Record<string, unknown>, signal?: AbortSignal): Promise
 export default function (pi: ExtensionAPI) {
   let activeRunId: string | undefined;
   let registrationQueue = Promise.resolve();
-  const pendingSubagents = new Map<string, PendingSubagent>();
 
   async function observe(input: Record<string, unknown>, ctx: ExtensionContext): Promise<void> {
     try { await registry(input); }
@@ -287,50 +264,12 @@ export default function (pi: ExtensionAPI) {
     }, ctx);
   }
 
-  async function reconcileInterrupted(runId: string, ctx: ExtensionContext): Promise<void> {
-    let run: any;
-    try { run = await registry({ action: "get", root: REGISTRY_ROOT, run_id: runId }); }
-    catch { return; }
-    const parentSessionId = ctx.sessionManager.getSessionId();
-    const terminal = new Set((run.lifecycle ?? []).map((item: any) => item.observation_id));
-    for (const item of run.lifecycle ?? []) {
-      if (item.kind !== "subagent/started") continue;
-      let detail: any;
-      try { detail = JSON.parse(item.detail); } catch { continue; }
-      if (detail?.parent_session_id !== parentSessionId) continue;
-      const match = String(item.observation_id).match(/^subagent-(.+)-started$/);
-      if (!match || terminal.has(`subagent-${match[1]}-finished`) || terminal.has(`subagent-${match[1]}-interrupted`)) continue;
-      const observedAt = now();
-      await observe({
-        action: "append", root: REGISTRY_ROOT, run_id: runId, updated_at: observedAt,
-        lifecycle: {
-          observation_id: `subagent-${match[1]}-interrupted`, observed_at: observedAt, kind: "subagent/interrupted",
-          goal_id: item.goal_id, state: "interrupted",
-          detail: JSON.stringify({ schema: "vault-hunter-subagent/v1", tool_call_id: detail.tool_call_id, parent_session_id: parentSessionId, started_at: item.observed_at, ended_at: observedAt, reason: "session-recovery" }),
-        },
-      }, ctx);
-    }
-  }
-
-  pi.on("session_start", async (_event, ctx) => {
+  pi.on("session_start", (_event, ctx) => {
     activeRunId = restoredRunId(ctx);
-    if (activeRunId) await reconcileInterrupted(activeRunId, ctx);
   });
 
   pi.on("session_shutdown", async (event, ctx) => {
     if (!activeRunId) return;
-    for (const [toolCallId, pending] of pendingSubagents) {
-      const observedAt = now();
-      await observe({
-        action: "append", root: REGISTRY_ROOT, run_id: pending.runId, updated_at: observedAt,
-        lifecycle: {
-          observation_id: `subagent-${pending.observationKey}-interrupted`, observed_at: observedAt, kind: "subagent/interrupted",
-          goal_id: `subagent/${pending.agent}`, state: "interrupted",
-          detail: JSON.stringify({ schema: "vault-hunter-subagent/v1", tool_call_id: toolCallId, parent_session_id: pending.parentSessionId, started_at: pending.startedAt, ended_at: observedAt, reason: `session-${event.reason}` }),
-        },
-      }, ctx);
-    }
-    pendingSubagents.clear();
     const key = sha256(`${ctx.sessionManager.getSessionId()}:${event.reason}:${ctx.sessionManager.getLeafId() ?? "root"}`).slice(0, 20);
     await recordParentUsage(activeRunId, `session/${event.reason}`, key, ctx);
   });
@@ -353,10 +292,9 @@ export default function (pi: ExtensionAPI) {
     parameters: Type.Object({}),
     async execute(_id, _params, signal, _update, ctx) {
       const placement = await driverPlacement(pi, ctx, signal);
-      if (!pi.getActiveTools().includes("subagent")) throw new Error("The required synchronous subagent tool is not active.");
       return text("Vault Hunter driver preflight passed.", {
         sessionId: ctx.sessionManager.getSessionId(), sessionFile: ctx.sessionManager.getSessionFile(),
-        cwd: ctx.cwd, herdr: placement?.herdr, subagent: "active",
+        cwd: ctx.cwd, herdr: placement?.herdr, workerRuntime: "visible-herdr-pi",
       });
     },
   });
@@ -410,65 +348,6 @@ export default function (pi: ExtensionAPI) {
         });
       });
     },
-  });
-
-  pi.on("tool_call", async (event, ctx) => {
-    if (event.toolName !== "subagent" || !activeRunId) return;
-    const agent = typeof event.input.agent === "string" ? event.input.agent : "unknown";
-    const task = typeof event.input.task === "string" ? event.input.task : "";
-    const startedAt = now();
-    const parentSessionId = ctx.sessionManager.getSessionId();
-    const observationKey = sha256(`${parentSessionId}:${event.toolCallId}`).slice(0, 20);
-    const pending = {
-      runId: activeRunId, startedAt, agent, taskSha256: sha256(task),
-      cwd: typeof event.input.cwd === "string" ? event.input.cwd : ctx.cwd,
-      observationKey, parentSessionId,
-    };
-    pendingSubagents.set(event.toolCallId, pending);
-    await observe({
-      action: "append", root: REGISTRY_ROOT, run_id: pending.runId, updated_at: startedAt,
-      participant: {
-        participant_id: `headless-${observationKey}`, observed_at: startedAt, role: agent, goal_id: `subagent/${agent}`,
-        herdr: null, agent_session: { source: "pi-subagents", kind: "tool-call", value: event.toolCallId },
-      },
-      lifecycle: {
-        observation_id: `subagent-${observationKey}-started`, observed_at: startedAt, kind: "subagent/started",
-        goal_id: `subagent/${agent}`, state: "running",
-        detail: JSON.stringify({ schema: "vault-hunter-subagent/v1", tool_call_id: event.toolCallId, parent_session_id: parentSessionId, agent, task_sha256: pending.taskSha256, cwd: pending.cwd }),
-      },
-    }, ctx);
-  });
-
-  pi.on("tool_result", async (event, ctx) => {
-    if (event.toolName !== "subagent") return;
-    const pending = pendingSubagents.get(event.toolCallId);
-    if (!pending) return;
-    pendingSubagents.delete(event.toolCallId);
-    const endedAt = now();
-    const result = subagentResult(event.details);
-    const usage = result?.usage;
-    const output = result?.output ?? event.content.filter((item) => item.type === "text").map((item) => item.text).join("\n");
-    const failed = event.isError || result?.exitCode !== undefined && result.exitCode !== 0 || !!result?.progress?.error;
-    await observe({
-      action: "append", root: REGISTRY_ROOT, run_id: pending.runId, updated_at: endedAt,
-      lifecycle: {
-        observation_id: `subagent-${pending.observationKey}-finished`, observed_at: endedAt, kind: "subagent/finished",
-        goal_id: `subagent/${pending.agent}`, state: failed ? "failed" : "completed",
-        detail: JSON.stringify({
-          schema: "vault-hunter-subagent/v1", tool_call_id: event.toolCallId, parent_session_id: pending.parentSessionId,
-          agent: pending.agent, model: result?.model ?? "", task_sha256: pending.taskSha256, result_sha256: sha256(output),
-          cwd: pending.cwd, started_at: pending.startedAt, ended_at: endedAt,
-          duration_ms: result?.progress?.durationMs ?? Date.parse(endedAt) - Date.parse(pending.startedAt),
-          exit_status: result?.exitCode ?? (failed ? 1 : 0), tool_count: result?.progress?.toolCount ?? 0,
-          usage: {
-            input: usage?.input ?? 0, output: usage?.output ?? 0, cache_read: usage?.cacheRead ?? 0,
-            cache_write: usage?.cacheWrite ?? 0, total_tokens: (usage?.input ?? 0) + (usage?.output ?? 0) + (usage?.cacheRead ?? 0) + (usage?.cacheWrite ?? 0),
-            cost: usage?.cost ?? 0, turns: usage?.turns ?? 0,
-          },
-          error: result?.progress?.error ?? "",
-        }),
-      },
-    }, ctx);
   });
 
   pi.on("tool_result", async (event, ctx) => {

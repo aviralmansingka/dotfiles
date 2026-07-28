@@ -38,15 +38,6 @@ const agents: Agent[] = [
     filePath,
   },
   {
-    name: "worker",
-    description: "Implement one bounded change in the supplied worktree.",
-    tools: ["read", "write", "edit", "bash", "grep", "find", "ls"],
-    model: "openai-codex/gpt-5.6-sol",
-    thinking: "high",
-    systemPrompt: "Implement only the bounded task in the supplied worktree. Follow repository instructions, preserve unrelated state, run the requested checks, and report changed paths, commands, exit statuses, commit/tree, and remaining risks.",
-    filePath,
-  },
-  {
     name: "reviewer",
     description: "Independently review a bounded change without editing it.",
     tools: readOnlyTools,
@@ -68,7 +59,7 @@ export default function (pi: ExtensionAPI) {
       installed = true;
     }
     return {
-      systemPrompt: `${event.systemPrompt}\n\nThe only configured subagents are delegate, context-builder, worker, and reviewer. Use only those exact names.`,
+      systemPrompt: `${event.systemPrompt}\n\nThe only configured headless subagents are delegate, context-builder, and reviewer, and they are read-only. Use visible Herdr-tracked Pi sessions for implementation, verification, review, and delivery unless the user explicitly authorizes a headless exception.`,
     };
   });
 }

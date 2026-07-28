@@ -1,8 +1,8 @@
 /**
- * Minimal subagents extension.
+ * Minimal headless subagents extension.
  *
- * Registers a single `subagent` tool with three agents: scout, researcher, worker.
- * Supports single and parallel execution. Output is verbal only (no file handoff).
+ * Registers one configurable `subagent` tool for bounded read-only work.
+ * Write-capable agent configurations are rejected in favor of visible Herdr Pi sessions.
  */
 import { spawn } from "node:child_process";
 import * as fs from "node:fs";
@@ -1442,7 +1442,7 @@ export default function (pi: ExtensionAPI) {
 		promptSnippet: "Run subagents for delegated tasks",
 		promptGuidelines: [
 			"Parallel tool calls are your primary parallelism mechanism — put multiple independent read/fetch/search calls in one function_calls block. Don't use subagents to parallelize simple I/O.",
-			"Use subagent to delegate *reasoning and decisions*: codebase exploration (scout), web research (researcher), or isolated code changes (worker)",
+			"Use subagent only for bounded read-only reasoning or research. Launch implementation, verification, review, and delivery work as visible Herdr-tracked Pi sessions unless the user explicitly authorizes a headless exception.",
 			"For multiple independent subagent tasks, emit multiple `subagent` tool calls in the same turn — they run in parallel automatically.",
 			"Subagents run in the background; continue the driving conversation instead of waiting or polling for them.",
 			"Subagent completion is delivered back into the driving conversation automatically.",
@@ -1465,6 +1465,9 @@ export default function (pi: ExtensionAPI) {
 			if (!agent) {
 				const available = agents.map((a) => a.name).join(", ") || "none";
 				throw new Error(`Unknown agent: ${params.agent}. Available agents: ${available}`);
+			}
+			if (agent.tools.some((tool) => tool === "write" || tool === "edit")) {
+				throw new Error(`Headless writer ${params.agent} is disabled. Launch a visible Herdr-tracked Pi session instead.`);
 			}
 
 			const [provider, modelId] = (agent.model || "").split("/");
