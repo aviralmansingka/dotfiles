@@ -18,8 +18,9 @@ The driving parent owns the Run, routing, evidence acceptance, and canonical vau
 - A **Run** records one attempt to execute a Task.
 
 The vault is canonical for hierarchy and status. The Run Registry records attempts, participants, evidence metadata,
-parent decisions, and cost. Atlas displays that state but never advances it. Herdr owns visible process, workspace, and
-worktree custody. No Mistakes-style delivery supplies independent diff review, targeted tests, and landing confidence;
+parent decisions, and cost. Atlas reads that state and records explicit parent attempt decisions and exact-revision Run
+retirement; it does not accept verifier evidence or change canonical vault status. Herdr owns visible process, workspace,
+and worktree custody. No Mistakes-style delivery supplies independent diff review, targeted tests, and landing confidence;
 it does not replace Hunter authority.
 
 ## Admission gate
@@ -109,8 +110,9 @@ After all verifiers first pass:
    `$vault-hunter-checkpoint` to complete the Task and backlog on vault `main`. Verify the merged ref only when the Task
    explicitly declares a post-merge verifier or the user requests it.
 
-Use `atlas` for Run status and machine reads. The standalone compatibility status surface is removed.
-Atlas remains observational here; it does not accept evidence or advance work.
+Use `atlas` for Run status, machine reads, explicit parent attempt decisions, and exact-revision Run retirement. The
+standalone compatibility status surface is removed. Atlas does not accept verifier evidence or change canonical vault
+status.
 
 ## Stop conditions
 
