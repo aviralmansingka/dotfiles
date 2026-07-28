@@ -138,6 +138,9 @@ atlas run retire <id> --expected-revision 7
 atlas capabilities --output json
 ```
 
+The interactive browser skips active Runs whose Project, Feature, or Task preview cannot be rendered and emits one
+startup warning with the Run ID and work-reference path. Machine-readable Run listings remain unchanged.
+
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
 Install/update Pi packages from the checked-in manifest:
