@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const scriptPath = fileURLToPath(import.meta.url);
@@ -23,8 +23,10 @@ const tuiRoot = join(piRoot, "node_modules/@earendil-works/pi-tui");
 const tuiIndex = join(tuiRoot, "dist/index.js");
 const markdownPath = join(tuiRoot, "dist/components/markdown.js");
 const tuiPackage = JSON.parse(readFileSync(join(tuiRoot, "package.json"), "utf8"));
-const artifact = join(root, "artifacts/pi-transcript-links/V01", tree);
-mkdirSync(artifact, { recursive: true });
+const artifactRoot = join(root, "artifacts/pi-transcript-links/V01", tree);
+mkdirSync(artifactRoot, { recursive: true });
+const artifact = mkdtempSync(join(artifactRoot, "attempt-"));
+const attemptIdentity = basename(artifact);
 
 const failures = [];
 const pass = (name, detail = "") => console.log(`PASS ${name}${detail ? `: ${detail}` : ""}`);
@@ -130,7 +132,7 @@ const moduleBinding = {
 };
 const metadata = {
   command: "./scripts/verify-pi-transcript-links V01", exitStatus: failures.length ? 1 : 0,
-  implementationCommit: head, implementationTree: tree, productBlob, moduleBinding,
+  implementationCommit: head, implementationTree: tree, attemptIdentity, artifactPath: artifact, productBlob, moduleBinding,
   fixtureSha256: sha(fixturePath), verifierSha256: sha(scriptPath), wrapperSha256: sha(join(root, "scripts/verify-pi-transcript-links")),
   artifactFiles: ["raw.ansi", "semantic.json", "resolver.json"], failures,
 };
@@ -139,11 +141,12 @@ const manifestFiles = ["raw.ansi", "semantic.json", "resolver.json", "metadata.j
 writeFileSync(join(artifact, "SHA256SUMS"), manifestFiles.map((name) => `${sha(join(artifact, name))}  ${name}`).join("\n") + "\n");
 const transcript = [
   `$ ${metadata.command}`, `implementation_commit=${head}`, `implementation_tree=${tree}`,
-  `pi_version=${piPackage.version}`, ...failures.map((f) => `FAIL ${f.name}: ${f.detail}`),
-  `exit_status=${metadata.exitStatus}`, `artifact=${artifact}`,
+  `attempt_identity=${attemptIdentity}`, `artifact=${artifact}`, `pi_version=${piPackage.version}`,
+  ...failures.map((f) => `FAIL ${f.name}: ${f.detail}`),
+  `exit_status=${metadata.exitStatus}`,
 ].join("\n") + "\n";
 writeFileSync(join(artifact, "command.txt"), transcript);
 writeFileSync(join(artifact, "SHA256SUMS"), [...manifestFiles, "command.txt"].map((name) => `${sha(join(artifact, name))}  ${name}`).join("\n") + "\n");
-console.log(`V01 fixtures complete: markdown=${links.length} wikilinks=${resolverOutcomes.length} artifact=${artifact}`);
+console.log(`V01 fixtures complete: markdown=${links.length} wikilinks=${resolverOutcomes.length} attempt=${attemptIdentity} artifact=${artifact}`);
 console.log(`V01 artifact SHA-256: ${sha(join(artifact, "SHA256SUMS"))}`);
 process.exit(metadata.exitStatus);
