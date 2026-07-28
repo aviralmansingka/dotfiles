@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
@@ -20,25 +21,47 @@ type journeyGoal struct {
 	id, kind, state, first, latest string
 }
 
+type renderedLine struct {
+	plain, styled string
+}
+
+type model struct {
+	run      vaultregistry.Run
+	goals    []journeyGoal
+	selected int
+	width    int
+	color    bool
+	retired  bool
+}
+
 const (
-	reset   = "\x1b[0m"
-	accent  = "\x1b[1;38;2;242;133;52m"
-	text    = "\x1b[38;2;235;219;178m"
-	muted   = "\x1b[38;2;146;131;116m"
-	active  = "\x1b[38;2;233;177;67m"
-	success = "\x1b[38;2;184;187;38m"
-	failure = "\x1b[38;2;242;89;75m"
+	reset     = "\x1b[0m"
+	bold      = "\x1b[1m"
+	accent    = "\x1b[38;2;242;133;52m"
+	text      = "\x1b[38;2;235;219;178m"
+	bright    = "\x1b[38;2;251;241;199m"
+	rail      = "\x1b[38;2;80;73;69m"
+	muted     = "\x1b[38;2;146;131;116m"
+	dim       = "\x1b[38;2;102;92;84m"
+	active    = "\x1b[38;2;242;133;52m"
+	success   = "\x1b[38;2;184;187;38m"
+	failure   = "\x1b[38;2;242;89;75m"
+	attention = "\x1b[38;2;250;189;47m"
 )
 
 func main() {
-	runID := flag.String("run-id", "", "Run ID to summarize")
-	stateDir := flag.String("state-dir", "", "Registry root (defaults to VAULT_HUNTER_STATE_DIR/XDG state)")
+	stateDir := flag.String("state-dir", "", "Registry root (defaults to normal Vault Hunter state resolution)")
 	width := flag.Int("width", 30, "Atlas Preview interior width")
 	color := flag.String("color", "auto", "color mode: auto, always, never")
-	goal := flag.String("goal", "", "Goal ID or 1-based ordinal (defaults to active/latest)")
-	listGoals := flag.Bool("list-goals", false, "list recorded Goals for the Run")
+	goal := flag.String("goal", "", "initial Goal ID or 1-based ordinal")
+	listGoals := flag.Bool("list-goals", false, "list recorded Goals and exit")
+	snapshot := flag.Bool("snapshot", false, "print one 12-row picker frame")
+	flag.Usage = func() {
+		fmt.Fprintln(flag.CommandLine.Output(), "usage: go run ./prototypes/atlas-picker-run-status [flags] <task-id-or-run-id>")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
-	if *runID == "" || *width < 1 || flag.NArg() != 0 || (*color != "auto" && *color != "always" && *color != "never") {
+	if flag.NArg() != 1 || *width < 1 || (*color != "auto" && *color != "always" && *color != "never") {
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -47,16 +70,10 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
-	run, err := reader.Get(*runID)
-	retired := false
-	if errors.Is(err, vaultregistry.ErrNotFound) {
-		run, err = reader.GetRetired(*runID)
-		retired = err == nil
-	}
+	run, retired, err := resolveRun(reader, flag.Arg(0))
 	if err != nil {
 		fail(err)
 	}
-
 	goals := normalize(run)
 	if *listGoals {
 		for index, item := range goals {
@@ -68,46 +85,191 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
-	for _, line := range render(run, retired, *width, goals, selected) {
-		if colorEnabled(*color) && line != "" {
-			line = style(line) + reset
-		}
-		fmt.Println(line)
+
+	colors := colorEnabled(*color)
+	m := model{run: run, goals: goals, selected: selected, width: *width, color: colors, retired: retired}
+	interactive := !*snapshot && characterDevice(os.Stdin) && characterDevice(os.Stdout) && os.Getenv("TERM") != "dumb"
+	if !interactive {
+		fmt.Println(strings.Join(m.frame(false), "\n"))
+		return
+	}
+	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
+		fail(err)
 	}
 }
 
-func render(run vaultregistry.Run, retired bool, width int, goals []journeyGoal, selected int) []string {
-	lines := []string{
-		clip(clean(run.Task.ID+" · "+run.RunID), width),
-		clip(fmt.Sprintf("JOURNEY · selected %d/%d", ordinal(selected, len(goals)), len(goals)), width),
-		"│",
+func resolveRun(reader *vaultregistry.Reader, target string) (vaultregistry.Run, bool, error) {
+	if run, err := reader.Get(target); err == nil {
+		return run, false, nil
+	} else if !errors.Is(err, vaultregistry.ErrNotFound) && !errors.Is(err, vaultregistry.ErrInvalidID) {
+		return vaultregistry.Run{}, false, err
+	}
+	if run, err := reader.GetRetired(target); err == nil {
+		return run, true, nil
+	} else if !errors.Is(err, vaultregistry.ErrNotFound) && !errors.Is(err, vaultregistry.ErrInvalidID) {
+		return vaultregistry.Run{}, false, err
 	}
 
-	start, end := window(selected, len(goals), 5)
+	runs, err := reader.List()
+	if err != nil {
+		return vaultregistry.Run{}, false, err
+	}
+	var matches []vaultregistry.Run
+	for _, run := range runs {
+		if strings.EqualFold(run.Task.ID, target) {
+			matches = append(matches, run)
+		}
+	}
+	if len(matches) == 1 {
+		return matches[0], false, nil
+	}
+	if len(matches) > 1 {
+		ids := make([]string, len(matches))
+		for i, run := range matches {
+			ids[i] = run.RunID
+		}
+		return vaultregistry.Run{}, false, fmt.Errorf("Task %q matches multiple active Runs: %s", target, strings.Join(ids, ", "))
+	}
+	return vaultregistry.Run{}, false, fmt.Errorf("no active Task or recorded Run matches %q", target)
+}
+
+func (m model) Init() tea.Cmd { return nil }
+
+func (m model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
+	key, ok := message.(tea.KeyMsg)
+	if !ok {
+		return m, nil
+	}
+	switch key.String() {
+	case "j", "down":
+		if m.selected < len(m.goals)-1 {
+			m.selected++
+		}
+	case "k", "up":
+		if m.selected > 0 {
+			m.selected--
+		}
+	case "g":
+		if len(m.goals) != 0 {
+			m.selected = 0
+		}
+	case "G":
+		if len(m.goals) != 0 {
+			m.selected = len(m.goals) - 1
+		}
+	case "q", "esc", "ctrl+c":
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m model) View() string {
+	return panel(m.frame(true), m.width, m.color) + "\n" + colorize(m.color, muted, "j/k select · g/G ends · q quit")
+}
+
+func (m model) frame(selectedDetail bool) []string {
+	rows := m.lines(selectedDetail)
+	result := make([]string, len(rows))
+	for i, row := range rows {
+		result[i] = row.plain
+		if m.color {
+			result[i] = row.styled
+		}
+	}
+	return result
+}
+
+func (m model) lines(selectedDetail bool) []renderedLine {
+	lines := []renderedLine{
+		titleLine(m.run, m.width, m.color),
+		headerLine(len(m.goals), m.selected, m.width, m.color),
+		segmentLine("│", colorize(m.color, rail, "│")),
+	}
+	start, end := window(m.selected, len(m.goals), 5)
 	for i := start; i < end; i++ {
+		last := i == len(m.goals)-1
 		connector := "├─"
-		if i == len(goals)-1 {
+		if last {
 			connector = "└─"
 		}
-		cursor := " "
-		if i == selected {
-			cursor = "▶"
-		}
-		lines = append(lines, clip(fmt.Sprintf("%s%s %s %s · %s", cursor, connector, glyph(goals[i].state), goals[i].id, value(goals[i].state)), width))
+		lines = append(lines, goalLine(m.goals[i], connector, i == m.selected, m.width, m.color))
 	}
-	if len(goals) == 0 {
-		lines = append(lines, "└─ ? no recorded goals")
+	if len(m.goals) == 0 {
+		lines = append(lines, segmentLine("└─ ○ no recorded goals", colorize(m.color, muted, "└─ ○ no recorded goals")))
 	}
 	for len(lines) < 8 {
-		lines = append(lines, "│")
+		lines = append(lines, segmentLine("│", colorize(m.color, rail, "│")))
 	}
-	lines = append(lines, "", clip(participant(run, selectedGoalID(goals, selected)), width))
-	stamp := "latest " + clock(run.UpdatedAt)
-	if retired {
-		stamp = "retired · " + clock(run.UpdatedAt)
+
+	goalID := selectedGoalID(m.goals, m.selected)
+	detailPlain := participant(m.run, goalID)
+	if selectedDetail && len(m.goals) != 0 {
+		detailPlain = "• selected · " + value(m.goals[m.selected].kind) + " · " + participant(m.run, goalID)
 	}
-	lines = append(lines, clip(stamp, width), clip("projection, not authority", width))
+	lines = append(lines,
+		segmentLine("", ""),
+		clippedLine(detailPlain, m.width, m.color, muted),
+		clippedLine(statusTime(m.run.UpdatedAt, m.retired), m.width, m.color, dim),
+		clippedLine("projection, not authority", m.width, m.color, muted),
+	)
 	return lines[:12]
+}
+
+func titleLine(run vaultregistry.Run, width int, colors bool) renderedLine {
+	plain := clip(clean(run.Task.ID+" · "+run.RunID), width)
+	id := clip(clean(run.Task.ID), width)
+	rest := strings.TrimPrefix(plain, id)
+	styled := colorize(colors, accent+bold, id) + colorize(colors, text, rest)
+	return segmentLine(plain, styled)
+}
+
+func headerLine(total, selected, width int, colors bool) renderedLine {
+	plain := clip(fmt.Sprintf(" │  %d steps · selected %d/%d", total, ordinal(selected, total), total), width)
+	styled := colorize(colors, rail, " │  ") + colorize(colors, muted, strings.TrimPrefix(plain, " │  "))
+	return segmentLine(plain, styled)
+}
+
+func goalLine(goal journeyGoal, connector string, selected bool, width int, colors bool) renderedLine {
+	glyph := glyph(goal.state)
+	plain := clip(fmt.Sprintf(" %s %s %s · %s", connector, glyph, goal.id, value(goal.state)), width)
+	prefix := " " + connector + " "
+	rest := strings.TrimPrefix(plain, prefix+glyph+" ")
+	name, detail := rest, ""
+	if index := strings.Index(rest, " · "); index >= 0 {
+		name, detail = rest[:index], rest[index:]
+	}
+	stateColor := statusColor(goal.state)
+	nameColor := text
+	if selected {
+		nameColor = bright
+	}
+	styled := colorize(colors, rail, prefix) + colorize(colors, stateColor, glyph) + " " + colorize(colors, nameColor+bold, name) + colorize(colors, dim, detail)
+	return segmentLine(plain, styled)
+}
+
+func segmentLine(plain, styled string) renderedLine {
+	return renderedLine{plain: plain, styled: styled}
+}
+
+func clippedLine(plain string, width int, colors bool, color string) renderedLine {
+	plain = clip(clean(plain), width)
+	return segmentLine(plain, colorize(colors, color, plain))
+}
+
+func panel(lines []string, width int, colors bool) string {
+	label := " Atlas Preview "
+	if lipgloss.Width(label) > width {
+		label = clip(label, width)
+	}
+	top := "╭" + label + strings.Repeat("─", max(0, width-lipgloss.Width(label))) + "╮"
+	bottom := "╰" + strings.Repeat("─", width) + "╯"
+	out := []string{colorize(colors, rail, top)}
+	for _, line := range lines {
+		padding := strings.Repeat(" ", max(0, width-lipgloss.Width(stripSGR(line))))
+		out = append(out, colorize(colors, rail, "│")+line+padding+colorize(colors, rail, "│"))
+	}
+	out = append(out, colorize(colors, rail, bottom))
+	return strings.Join(out, "\n")
 }
 
 func normalize(run vaultregistry.Run) []journeyGoal {
@@ -270,21 +432,25 @@ func glyph(state string) string {
 	}
 }
 
-func style(line string) string {
-	switch {
-	case strings.HasPrefix(line, "RECORDED JOURNEY"), strings.Contains(line, " · ") && !strings.Contains(line, "─") && !strings.Contains(line, "◉") && !strings.Contains(line, "●") && !strings.Contains(line, "×"):
-		return accent + line
-	case strings.Contains(line, "◉"):
-		return active + line
-	case strings.Contains(line, "●"):
-		return success + line
-	case strings.Contains(line, "×"):
-		return failure + line
-	case line == "│" || strings.Contains(line, "projection, not authority"):
-		return muted + line
+func statusColor(state string) string {
+	switch glyph(state) {
+	case "●":
+		return success
+	case "◉":
+		return active
+	case "×":
+		return failure
 	default:
-		return text + line
+		return dim
 	}
+}
+
+func statusTime(updatedAt string, retired bool) string {
+	prefix := "latest "
+	if retired {
+		prefix = "retired · "
+	}
+	return prefix + clock(updatedAt)
 }
 
 func colorEnabled(mode string) bool {
@@ -297,8 +463,33 @@ func colorEnabled(mode string) bool {
 	if _, disabled := os.LookupEnv("NO_COLOR"); disabled {
 		return false
 	}
-	info, err := os.Stdout.Stat()
+	return characterDevice(os.Stdout)
+}
+
+func characterDevice(file *os.File) bool {
+	info, err := file.Stat()
 	return err == nil && info.Mode()&os.ModeCharDevice != 0
+}
+
+func colorize(enabled bool, color, value string) string {
+	if !enabled || value == "" {
+		return value
+	}
+	return color + value + reset
+}
+
+func stripSGR(value string) string {
+	for {
+		start := strings.IndexByte(value, '\x1b')
+		if start < 0 {
+			return value
+		}
+		end := strings.IndexByte(value[start:], 'm')
+		if end < 0 {
+			return value[:start]
+		}
+		value = value[:start] + value[start+end+1:]
+	}
 }
 
 func clean(value string) string {

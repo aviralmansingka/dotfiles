@@ -1,12 +1,12 @@
-T21 · run-a17 · rev 7
-JOURNEY · selected 3/5
+T02 · vault-hunter-atlas-t02
+ │  9 steps · selected 9/9
 │
- ├─ ● admission · done
- ├─ ● V01 · passed
-▶├─ ◉ V02 · active
- ├─ ○ review · pending
- └─ ○ landing · pending
+ ├─ ● refactor-gate · done
+ ├─ ● review-convergence · do…
+ ├─ ● implementation-pr · done
+ ├─ ● landing · done
+ └─ ● cleanup · done
 
-driver · verifier-steward
-latest 10:14 UTC
+t02-driver · driver
+latest 11:10 UTC
 projection, not authority
