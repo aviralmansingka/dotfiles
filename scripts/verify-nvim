@@ -31,6 +31,10 @@ fi
 
 cd "$repo_root"
 
+if [[ "$case_name" == "pi-transcript-links" ]]; then
+  exec scripts/verifiers/pi-transcript-links-v03
+fi
+
 if [[ "$case_name" == "weekly-backlog" ]]; then
   TZ=America/New_York VERIFY_NVIM_CASE="$case_name" "$nvim_bin" --headless \
     '+luafile scripts/verify-nvim.lua' \

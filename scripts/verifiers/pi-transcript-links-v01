@@ -1,0 +1,180 @@
+#!/usr/bin/env node
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const scriptPath = fileURLToPath(import.meta.url);
+const root = resolve(dirname(scriptPath), "../..");
+const fixturePath = join(root, "scripts/fixtures/pi-transcript-links-v01.json");
+const productPath = join(root, "pi/.pi/agent/extensions/transcript-scroll.ts");
+const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+const git = (...args) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
+const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+const head = git("rev-parse", "HEAD");
+const tree = git("rev-parse", "HEAD^{tree}");
+const productBlob = git("rev-parse", "HEAD:pi/.pi/agent/extensions/transcript-scroll.ts");
+const piCli = realpathSync(execFileSync("command", ["-v", "pi"], { encoding: "utf8", shell: true }).trim());
+const piRoot = resolve(dirname(piCli), "..");
+const piPackage = JSON.parse(readFileSync(join(piRoot, "package.json"), "utf8"));
+const tuiRoot = join(piRoot, "node_modules/@earendil-works/pi-tui");
+const tuiIndex = join(tuiRoot, "dist/index.js");
+const markdownPath = join(tuiRoot, "dist/components/markdown.js");
+const tuiPackage = JSON.parse(readFileSync(join(tuiRoot, "package.json"), "utf8"));
+const artifactRoot = join(root, "artifacts/pi-transcript-links/V01", tree);
+mkdirSync(artifactRoot, { recursive: true });
+const artifact = mkdtempSync(join(artifactRoot, "attempt-"));
+const attemptIdentity = basename(artifact);
+
+const failures = [];
+const pass = (name, detail = "") => console.log(`PASS ${name}${detail ? `: ${detail}` : ""}`);
+const miss = (name, detail) => { failures.push({ name, detail }); console.error(`FAIL ${name}: ${detail}`); };
+const expect = (condition, name, detail) => condition ? pass(name) : miss(name, detail);
+
+expect(piPackage.version === "0.82.1", "installed-pi-version", `expected 0.82.1, got ${piPackage.version}`);
+expect(git("hash-object", productPath) === productBlob, "production-source-binding", "worktree product differs from HEAD");
+let preservesAcceptedBaseline = true;
+try { execFileSync("git", ["-C", root, "merge-base", "--is-ancestor", "425c18aaa42b06e54f9778872ab6a62bbde79fd2", "HEAD"]); }
+catch { preservesAcceptedBaseline = false; }
+expect(preservesAcceptedBaseline, "accepted-scroll-baseline-ancestry", "HEAD does not descend from accepted baseline 425c18a");
+const baselineSource = execFileSync("git", ["-C", root, "show", "425c18aaa42b06e54f9778872ab6a62bbde79fd2:pi/.pi/agent/extensions/transcript-scroll.ts"]);
+expect(createHash("sha256").update(baselineSource).digest("hex") === "f670db154956364f6cd696cb3ce34475d2582904880761e3861787f68893a11f", "accepted-scroll-baseline-blob", "accepted commit transcript-scroll hash differs");
+const prototypePath = ["prototypes", "pi-link-research"].join("/");
+expect(!readFileSync(scriptPath, "utf8").includes(prototypePath), "prototype-isolation", "prototype import/reference found");
+
+const { createJiti } = await import(pathToFileURL(join(piRoot, "node_modules/jiti/lib/jiti.mjs")).href);
+const jiti = createJiti(import.meta.url, { moduleCache: false, alias: {
+  "@earendil-works/pi-coding-agent": join(piRoot, "dist/index.js"),
+  "@earendil-works/pi-tui": tuiIndex,
+} });
+const tui = await import(pathToFileURL(tuiIndex).href);
+tui.setCapabilities({ images: null, trueColor: true, hyperlinks: true });
+const theme = Object.fromEntries(["heading","link","linkUrl","code","codeBlock","codeBlockBorder","quote","quoteBorder","hr","listBullet","bold","italic","strikethrough","underline"].map((key) => [key, key === "underline" ? (s) => `\x1b[4m${s}\x1b[24m` : (s) => s]));
+const markdown = new tui.Markdown(fixture.markdown, 0, 0, theme);
+const editor = { render: () => [`${tui.CURSOR_MARKER} prompt`], invalidate() {} };
+let widgetFactory;
+const handlers = new Map();
+const api = { on: (name, fn) => handlers.set(name, fn) };
+const extension = await jiti.import(productPath);
+extension.default(api);
+handlers.get("session_start")?.({}, { mode: "tui", ui: { setWidget: (_key, value) => { if (value) widgetFactory = value; } } });
+expect(typeof widgetFactory === "function", "real-extension-loaded", "production session_start did not register its root widget");
+
+const writes = [];
+const listeners = [];
+const fakeTui = {
+  children: [markdown, editor], terminal: { rows: 4, write: (value) => writes.push(value) },
+  render(width) { return this.children.flatMap((child) => child.render(width)); },
+  addInputListener(fn) { listeners.push(fn); return () => listeners.splice(listeners.indexOf(fn), 1); },
+  requestRender() {}, hasOverlay() { return false; },
+};
+const capture = widgetFactory(fakeTui, { fg: (_kind, text) => text });
+const allLines = fakeTui.render(fixture.width);
+const viewportLines = allLines.slice(fixture.viewportStart);
+const raw = `${viewportLines.join("\n")}\n`;
+writeFileSync(join(artifact, "raw.ansi"), raw);
+
+const strip = (value) => value.replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/gu, "").replace(/\x1b\[[0-?]*[ -/]*[@-~]/gu, "").replaceAll(tui.CURSOR_MARKER, "");
+const fragments = [];
+for (let row = 0; row < viewportLines.length; row++) {
+  const line = viewportLines[row];
+  const re = /\x1b\]8;;([^\x1b]*)\x1b\\([\s\S]*?)\x1b\]8;;\x1b\\/gu;
+  for (const match of line.matchAll(re)) {
+    const before = line.slice(0, match.index);
+    const label = strip(match[2]);
+    fragments.push({ destination: match[1], label, row, startCell: tui.visibleWidth(strip(before)), endCell: tui.visibleWidth(strip(before)) + tui.visibleWidth(label) });
+  }
+}
+const links = [];
+for (const fragment of fragments) {
+  const prior = links.at(-1);
+  if (prior?.destination === fragment.destination) {
+    prior.label += fragment.label;
+    prior.spans.push({ row: fragment.row, startCell: fragment.startCell, endCell: fragment.endCell });
+  } else links.push({ destination: fragment.destination, label: fragment.label, spans: [{ row: fragment.row, startCell: fragment.startCell, endCell: fragment.endCell }] });
+}
+const semantic = { width: fixture.width, viewportStart: fixture.viewportStart, lines: viewportLines.map(strip), fragments, links };
+writeFileSync(join(artifact, "semantic.json"), `${JSON.stringify(semantic, null, 2)}\n`);
+expect(links.length === fixture.expectedDestinations.length, "markdown-osc-link-count", `expected ${fixture.expectedDestinations.length}, got ${links.length}`);
+expect(JSON.stringify(links.map((x) => x.destination)) === JSON.stringify(fixture.expectedDestinations), "exact-osc8-destinations", "OSC 8 destinations changed or disappeared");
+expect(JSON.stringify(links.map((x) => x.label)) === JSON.stringify(fixture.expectedLabels), "compact-and-authored-labels", `got ${JSON.stringify(links.map((x) => x.label))}`);
+expect(fragments.filter((x) => x.label).every((x) => Number.isInteger(x.startCell) && x.endCell > x.startCell && x.row >= 0), "ansi-wide-combining-cell-spans", "semantic spans were not cell-based");
+expect(fragments.some((x) => x.row > 0) && links.some((x) => x.spans.length > 1), "wrapping-viewport-coordinates", "fixture did not retain wrapped viewport-relative rows");
+const state = fakeTui[Symbol.for("pi.transcript-scroll")];
+expect(state && Object.values(state).some((value) => value instanceof Map), "viewport-link-index", "production root has no managed visible-link index");
+
+let mismatchClosed = true;
+try {
+  const incompatible = { ...fakeTui, children: undefined, render: fakeTui.render };
+  const mismatchCapture = widgetFactory(incompatible, { fg: (_kind, text) => text });
+  incompatible.render(fixture.width);
+  mismatchCapture.dispose();
+} catch { mismatchClosed = false; }
+expect(mismatchClosed, "contract-mismatch-fail-closed", "incompatible Pi root contract threw instead of retaining native rendering and disabling indexing");
+
+const fakeVault = mkdtempSync(join(tmpdir(), "pi-links-v01-vault-"));
+mkdirSync(join(fakeVault, "notes"), { recursive: true });
+mkdirSync(join(fakeVault, "one"), { recursive: true });
+mkdirSync(join(fakeVault, "two"), { recursive: true });
+writeFileSync(join(fakeVault, "notes/Alpha.md"), "# Heading\nblock ^block-id\n");
+writeFileSync(join(fakeVault, "one/Unique.md"), "# Unique\n");
+writeFileSync(join(fakeVault, "one/Common.md"), "# One\n");
+writeFileSync(join(fakeVault, "two/Common.md"), "# Two\n");
+const outsideVault = mkdtempSync(join(tmpdir(), "pi-links-v01-outside-"));
+writeFileSync(join(outsideVault, "Outside.md"), "# Outside\n");
+symlinkSync(outsideVault, join(fakeVault, "escape"));
+const resolver = extension.__transcriptLinks?.resolveWikilink;
+expect(typeof resolver === "function", "production-wikilink-resolver-seam", "production extension must export __transcriptLinks.resolveWikilink");
+const normalizeResolverOutcome = (value) => {
+  if (!value || typeof value !== "object") return { status: "unsupported" };
+  const normalized = { status: value.status };
+  const file = value.file ?? value.path;
+  if (file) normalized.file = realpathSync(file).startsWith(`${realpathSync(fakeVault)}/`) ? realpathSync(file).slice(realpathSync(fakeVault).length + 1) : file;
+  if (value.target != null) normalized.target = value.target;
+  if (value.display != null) normalized.display = value.display;
+  return normalized;
+};
+const resolverOutcomes = [];
+for (const item of fixture.wikilinks) {
+  let actual;
+  try {
+    actual = typeof resolver === "function"
+      ? normalizeResolverOutcome(await resolver({ text: item.text, vaultRoot: fakeVault, sourceFile: join(fakeVault, "notes/Alpha.md") }))
+      : { status: "unsupported" };
+  } catch (error) { actual = { status: "threw", error: String(error) }; }
+  const expected = Object.fromEntries(["status", "file", "target", "display"].filter((key) => item[key] != null).map((key) => [key, item[key]]));
+  resolverOutcomes.push({ name: item.name, input: item.text, expected, actual });
+  expect(JSON.stringify(actual) === JSON.stringify(expected), `wikilink-${item.name}`, `expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+}
+writeFileSync(join(artifact, "resolver.json"), `${JSON.stringify({ fakeVault, outcomes: resolverOutcomes }, null, 2)}\n`);
+expect(resolverOutcomes.length === 10, "bounded-wikilink-fixtures-ran", `expected 10, got ${resolverOutcomes.length}`);
+
+capture.dispose();
+const moduleBinding = {
+  pi: `${piPackage.name}@${piPackage.version}`, tui: `${tuiPackage.name}@${tuiPackage.version}`,
+  markdownSha256: sha(markdownPath), tuiIndexSha256: sha(tuiIndex), productSha256: sha(productPath),
+};
+const evidenceSnapshot = Object.fromEntries(["raw.ansi", "semantic.json", "resolver.json"].map((name) => [name, sha(join(artifact, name))]));
+expect(Object.entries(evidenceSnapshot).every(([name, digest]) => sha(join(artifact, name)) === digest), "immutable-attempt-evidence", "generated evidence changed within the attempt");
+const metadata = {
+  command: "./scripts/verify-pi-transcript-links V01", exitStatus: failures.length ? 1 : 0,
+  implementationCommit: head, implementationTree: tree, attemptIdentity, artifactPath: artifact, productBlob, moduleBinding,
+  fixtureSha256: sha(fixturePath), verifierSha256: sha(scriptPath), wrapperSha256: sha(join(root, "scripts/verify-pi-transcript-links")),
+  artifactFiles: ["raw.ansi", "semantic.json", "resolver.json"], failures,
+};
+writeFileSync(join(artifact, "metadata.json"), `${JSON.stringify(metadata, null, 2)}\n`);
+const manifestFiles = ["raw.ansi", "semantic.json", "resolver.json", "metadata.json"];
+writeFileSync(join(artifact, "SHA256SUMS"), manifestFiles.map((name) => `${sha(join(artifact, name))}  ${name}`).join("\n") + "\n");
+const transcript = [
+  `$ ${metadata.command}`, `implementation_commit=${head}`, `implementation_tree=${tree}`,
+  `attempt_identity=${attemptIdentity}`, `artifact=${artifact}`, `pi_version=${piPackage.version}`,
+  ...failures.map((f) => `FAIL ${f.name}: ${f.detail}`),
+  `exit_status=${metadata.exitStatus}`,
+].join("\n") + "\n";
+writeFileSync(join(artifact, "command.txt"), transcript);
+writeFileSync(join(artifact, "SHA256SUMS"), [...manifestFiles, "command.txt"].map((name) => `${sha(join(artifact, name))}  ${name}`).join("\n") + "\n");
+console.log(`V01 fixtures complete: markdown=${links.length} wikilinks=${resolverOutcomes.length} attempt=${attemptIdentity} artifact=${artifact}`);
+console.log(`V01 artifact SHA-256: ${sha(join(artifact, "SHA256SUMS"))}`);
+process.exit(metadata.exitStatus);

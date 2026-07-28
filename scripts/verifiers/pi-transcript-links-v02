@@ -1,0 +1,192 @@
+#!/usr/bin/env node
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const scriptPath = fileURLToPath(import.meta.url);
+const root = resolve(dirname(scriptPath), "../..");
+const fixturePath = join(root, "scripts/fixtures/pi-transcript-links-v02.json");
+const productPath = join(root, "pi/.pi/agent/extensions/transcript-scroll.ts");
+const wrapperPath = join(root, "scripts/verify-pi-transcript-links");
+const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+const sandbox = mkdtempSync(join(process.env.TMPDIR ?? "/tmp", "pi-links-v02-"));
+const vaultRoot = join(sandbox, "vault"), notes = join(vaultRoot, "notes"), outsideRoot = join(sandbox, "outside");
+mkdirSync(notes, { recursive: true }); mkdirSync(outsideRoot);
+const canonicalFile = join(notes, "Alpha.md"), injectionFile = join(notes, "quote ' $(touch PWN).md"), outsideFile = join(outsideRoot, "Outside.md");
+writeFileSync(canonicalFile, "# Heading\n\nblock ^block-id\n");
+writeFileSync(injectionFile, "# Injection\n");
+writeFileSync(outsideFile, "# Outside\n");
+symlinkSync(canonicalFile, join(notes, "Alias.md"));
+symlinkSync(outsideRoot, join(vaultRoot, "escape"));
+const url = (path, hash = "") => `${pathToFileURL(path).href}${hash}`;
+fixture.markdown = fixture.markdown
+  .replace("{{HEADING_URL}}", url(canonicalFile, "#Heading"))
+  .replace("{{BLOCK_URL}}", url(canonicalFile, "#%5Eblock-id"))
+  .replace("{{LINE_URL}}", url(canonicalFile, "#L7"))
+  .replace("{{CANONICAL_URL}}", url(join(notes, "Alias.md")))
+  .replace("{{SYMLINK_ESCAPE_URL}}", url(join(vaultRoot, "escape", "Outside.md")))
+  .replace("{{TRAVERSAL_URL}}", `file://${vaultRoot}/../outside/Outside.md`)
+  .replace("{{OUTSIDE_URL}}", url(outsideFile))
+  .replace("{{INJECTION_URL}}", url(injectionFile, "#Injection"));
+const git = (...args) => execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
+const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+const head = git("rev-parse", "HEAD"), tree = git("rev-parse", "HEAD^{tree}");
+const productBlob = git("rev-parse", "HEAD:pi/.pi/agent/extensions/transcript-scroll.ts");
+const piCli = realpathSync(execFileSync("command", ["-v", "pi"], { encoding: "utf8", shell: true }).trim());
+const piRoot = resolve(dirname(piCli), "..");
+const piPackage = JSON.parse(readFileSync(join(piRoot, "package.json"), "utf8"));
+const artifactRoot = join(root, "artifacts/pi-transcript-links/V02", tree);
+mkdirSync(artifactRoot, { recursive: true });
+const artifact = mkdtempSync(join(artifactRoot, "attempt-"));
+const attemptIdentity = basename(artifact);
+const failures = [], checks = [], trace = [];
+const expect = (ok, name, detail = "") => { checks.push({ name, ok: !!ok, detail }); console[ok ? "log" : "error"](`${ok ? "PASS" : "FAIL"} ${name}${detail ? `: ${detail}` : ""}`); if (!ok) failures.push({ name, detail }); };
+
+expect(piPackage.version === "0.82.1", "installed-pi-version", `got ${piPackage.version}`);
+expect(git("hash-object", productPath) === productBlob, "production-source-binding", "worktree product differs from HEAD");
+expect(!readFileSync(scriptPath, "utf8").includes(["prototypes", "pi-link-research"].join("/")), "prototype-isolation");
+const { createJiti } = await import(pathToFileURL(join(piRoot, "node_modules/jiti/lib/jiti.mjs")).href);
+const tuiIndex = join(piRoot, "node_modules/@earendil-works/pi-tui/dist/index.js");
+const jiti = createJiti(import.meta.url, { moduleCache: false, alias: { "@earendil-works/pi-coding-agent": join(piRoot, "dist/index.js"), "@earendil-works/pi-tui": tuiIndex } });
+const tuiModule = await import(pathToFileURL(tuiIndex).href);
+tuiModule.setCapabilities({ images: null, trueColor: true, hyperlinks: true });
+const extension = await jiti.import(productPath);
+
+let now = 0, nextTimer = 1;
+const timers = new Map(), clipboard = [], nvim = [], statuses = [];
+const adapters = {
+  clipboard: { write: async (value) => { clipboard.push(value); trace.push({ type: "clipboard", value }); if (value.includes("fail.example")) throw new Error("fake clipboard failure"); } },
+  neovim: { open: async (argv) => { nvim.push(argv); trace.push({ type: "nvim", argv }); if (adapters.nvimServer === "unreachable") throw new Error("fake nvim unreachable"); } },
+  clock: { setTimeout(fn, delay) { const id = nextTimer++; timers.set(id, { at: now + delay, fn }); return id; }, clearTimeout(id) { timers.delete(id); } },
+  vaultRoot, nvimServer: "fake-nvim-server",
+};
+const advance = async (ms) => { now += ms; for (const [id, timer] of [...timers]) if (timer.at <= now) { timers.delete(id); timer.fn(); await Promise.resolve(); } };
+let seamConfigured = false;
+try { if (typeof extension.__transcriptLinks?.configureForTest === "function") { extension.__transcriptLinks.configureForTest(adapters); seamConfigured = true; } } catch (error) { trace.push({ type: "configure-error", error: String(error) }); }
+
+const handlers = new Map();
+extension.default({ on: (name, fn) => handlers.set(name, fn) });
+let widgetFactory;
+const ui = { setWidget: (_key, value) => { if (value) widgetFactory = value; }, setStatus: (key, value) => { statuses.push({ at: now, key, value: value == null ? null : String(value) }); trace.push({ type: "status", at: now, key, value }); } };
+handlers.get("session_start")?.({}, { mode: "tui", ui });
+expect(typeof widgetFactory === "function", "real-extension-loaded");
+const theme = Object.fromEntries(["heading","link","linkUrl","code","codeBlock","codeBlockBorder","quote","quoteBorder","hr","listBullet","bold","italic","strikethrough","underline"].map((k) => [k, (s) => s]));
+const markdown = new tuiModule.Markdown(fixture.markdown, 0, 0, theme);
+const editor = { render: () => [`${tuiModule.CURSOR_MARKER} prompt`], invalidate() {} };
+const terminal = [], listeners = [], renders = [];
+let overlay = false;
+const fakeTui = { children: [markdown, editor], terminal: { rows: fixture.rows, write: (s) => terminal.push(s) }, render(width) { return this.children.flatMap((c) => c.render(width)); }, addInputListener(fn) { listeners.push(fn); return () => listeners.splice(listeners.indexOf(fn), 1); }, requestRender(force) { renders.push({ force: !!force }); }, hasOverlay() { return overlay; } };
+const originalRender = fakeTui.render;
+let capture = widgetFactory(fakeTui, { fg: (_k, s) => s });
+fakeTui.render(fixture.width);
+const state = fakeTui[Symbol.for("pi.transcript-scroll")];
+let listenerCalls = 0;
+const send = async (data) => { listenerCalls++; const result = listeners.at(-1)?.(data); await Promise.resolve(); await Promise.resolve(); return result; };
+const sgr = (button, x, y, release = false) => `\x1b[<${button};${x};${y}${release ? "m" : "M"}`;
+const findSpan = (needle) => [...(fakeTui[Symbol.for("pi.transcript-scroll")]?.visibleLinks?.values?.() ?? [])].flat().find((s) => s.destination.includes(needle));
+const click = async (span, button = 0, release = false) => span && send(sgr(button, span.startCell + 1, span.row + 1, release));
+
+const beforeWheel = renders.length;
+await send(sgr(64, 1, 1));
+expect(state?.follow === false && renders.length > beforeWheel, "wheel-up-detaches-viewport");
+const detachedEnd = state?.viewportEnd;
+fakeTui.children.unshift({ render: () => ["appended output"], invalidate() {} });
+fakeTui.render(fixture.width);
+expect(state?.follow === false && state?.viewportEnd === detachedEnd, "detached-viewport-stable-under-append");
+await send(sgr(65, 1, 1));
+expect(renders.length > beforeWheel + 1, "wheel-down-dispatches");
+state.follow = false; state.viewportEnd = Math.max(1, state.transcriptLines - 1);
+const typed = await send("x");
+expect(typed === undefined && state.follow === true, "typing-to-follow-pass-through");
+const framed = new tuiModule.StdinBuffer({ timeout: 1000 });
+const framedReports = [];
+framed.on("data", (sequence) => { framedReports.push(sequence); void send(sequence); });
+const callsBeforeFragment = listenerCalls, renderBeforeFragment = renders.length;
+framed.process("\x1b[<64;");
+expect(listenerCalls === callsBeforeFragment && framedReports.length === 0 && renders.length === renderBeforeFragment, "stdin-buffer-withholds-partial-sgr");
+framed.process("1;1M");
+await Promise.resolve(); await Promise.resolve();
+expect(framedReports.length === 1 && framedReports[0] === sgr(64, 1, 1) && listenerCalls === callsBeforeFragment + 1 && renders.length === renderBeforeFragment + 1, "stdin-buffer-emits-one-complete-report-without-partial-key-effect");
+framed.destroy();
+await send("x");
+
+fakeTui.render(fixture.width);
+const httpsSpan = findSpan("copy.example"), headingSpan = findSpan("#Heading"), blockSpan = findSpan("%5Eblock-id"), lineSpan = findSpan("#L7"), canonicalSpan = findSpan("Alias.md"), injectionSpan = findSpan("touch%20PWN"), symlinkEscapeSpan = findSpan("/escape/"), traversalSpan = findSpan("/../outside/"), outsideSpan = findSpan("outside/Outside.md"), releaseSpan = findSpan("release.example"), modifiedSpan = findSpan("modified.example"), failSpan = findSpan("fail.example");
+expect(httpsSpan && httpsSpan.startCell > 0, "ansi-wide-cell-hit-index");
+expect([headingSpan, blockSpan, lineSpan, canonicalSpan, injectionSpan, symlinkEscapeSpan, outsideSpan, failSpan].every(Boolean), "all-action-spans-rendered", JSON.stringify([...(state?.visibleLinks?.values?.() ?? [])].flat().map((span) => span.destination)));
+const copyBefore = clipboard.length;
+if (httpsSpan) { await send(sgr(0, httpsSpan.startCell, httpsSpan.row + 1)); await send(sgr(0, httpsSpan.startCell + 1, httpsSpan.row + 1)); await send(sgr(0, httpsSpan.endCell + 1, httpsSpan.row + 1)); }
+expect(clipboard.length === copyBefore + 1 && clipboard.at(-1) === fixture.https, "https-boundaries-and-exact-single-copy", `writes=${JSON.stringify(clipboard)}`);
+expect(statuses.some((s) => s.value === fixture.status), "copy-success-status");
+await advance(1499); expect(statuses.at(-1)?.value === fixture.status, "status-retained-before-1500ms");
+await advance(1); expect(statuses.at(-1)?.value === null, "status-clears-at-1500ms");
+if (httpsSpan) { await click(httpsSpan); await advance(500); await click(httpsSpan); }
+expect(timers.size === 1, "keyed-status-timer-replacement", `timers=${timers.size}`);
+await advance(1500);
+
+const nvimBefore = nvim.length;
+await click(headingSpan); await click(blockSpan); await click(lineSpan); await click(canonicalSpan); await click(injectionSpan);
+const lua = "(function(d)local c=vim.api.nvim_get_current_win();local ok,r=xpcall(function()local w;for _,x in ipairs(vim.api.nvim_list_wins())do if x~=c and vim.bo[vim.api.nvim_win_get_buf(x)].buftype~='terminal'then w=x;break end end;if not w then vim.cmd('noautocmd keepalt botright new');w=vim.api.nvim_get_current_win()end;local b=vim.fn.bufadd(d.file);vim.fn.bufload(b);vim.api.nvim_win_set_buf(w,b);vim.api.nvim_win_call(w,function()if d.kind=='line'then vim.api.nvim_win_set_cursor(w,{d.target,0})elseif d.kind=='heading'then vim.fn.cursor(1,1);vim.fn.search('^\\\\s*#\\\\+\\\\s\\\\+\\\\V'..vim.fn.escape(d.target,'\\\\')..'\\\\m\\\\s*$','W')elseif d.kind=='block'then vim.fn.cursor(1,1);vim.fn.search('\\\\V^'..vim.fn.escape(d.target,'\\\\')..'\\\\m\\\\s*$','W')end end);return 1 end,debug.traceback);if vim.api.nvim_win_is_valid(c)then vim.api.nvim_set_current_win(c)end;if not ok then error(r)end;return r end)(_A)";
+const expected = [
+  { file: canonicalFile, kind: "heading", target: "Heading" },
+  { file: canonicalFile, kind: "block", target: "^block-id" },
+  { file: canonicalFile, kind: "line", target: 7 },
+  { file: canonicalFile, kind: "file", target: "" },
+  { file: injectionFile, kind: "heading", target: "Injection" },
+].map((payload) => ["--server", "fake-nvim-server", "--remote-expr", `luaeval(${JSON.stringify(lua)}, json_decode(${JSON.stringify(JSON.stringify(payload))}))`]);
+expect(JSON.stringify(nvim.slice(nvimBefore)) === JSON.stringify(expected), "exact-safe-neovim-remote-expr-argv", JSON.stringify(nvim.slice(nvimBefore)));
+expect(typeof extension.__transcriptLinks?.buildNvimArgs === "function" && expected.every((argv, i) => JSON.stringify(extension.__transcriptLinks.buildNvimArgs("fake-nvim-server", [{ file: canonicalFile, kind: "heading", target: "Heading" }, { file: canonicalFile, kind: "block", target: "^block-id" }, { file: canonicalFile, kind: "line", target: 7 }, { file: canonicalFile, kind: "file", target: "" }, { file: injectionFile, kind: "heading", target: "Injection" }][i])) === JSON.stringify(argv)), "production-buildNvimArgs-exact-contract");
+expect(!existsSync(join(sandbox, "PWN")), "argument-safe-path-and-target-no-shell-interpolation");
+const securityBefore = nvim.length;
+await click(symlinkEscapeSpan);
+expect(nvim.length === securityBefore, "canonical-symlink-escape-rejected");
+await click(traversalSpan);
+expect(nvim.length === securityBefore, "traversal-file-url-rejected");
+const successfulBefore = clipboard.length + nvim.length;
+await click(outsideSpan); await click(releaseSpan, 0, true); await click(modifiedSpan, 4); if (httpsSpan) await send(sgr(0, httpsSpan.endCell + 2, httpsSpan.row + 1));
+overlay = true; await click(httpsSpan); overlay = false;
+expect(clipboard.length + nvim.length === successfulBefore, "suppression-release-modified-miss-overlay-nonvault");
+const resolver = extension.__transcriptLinks?.resolveWikilink;
+let ambiguous, missing;
+try { ambiguous = resolver && await resolver({ text: "[[Common]]", vaultRoot: "/nonexistent" }); missing = resolver && await resolver({ text: "[[Missing]]", vaultRoot: "/nonexistent" }); } catch {}
+expect((ambiguous?.status === "ambiguous" || ambiguous == null) && clipboard.length + nvim.length === successfulBefore, "ambiguous-missing-no-success-action");
+await click(failSpan);
+expect(statuses.at(-1)?.value === "Clipboard unavailable" && !statuses.slice(-2).some((s) => s.value?.startsWith("Copied fail.example")), "clipboard-failure-bounded-and-never-claims-copy");
+const savedServer = adapters.nvimServer; adapters.nvimServer = undefined; await click(headingSpan); adapters.nvimServer = "unreachable"; await click(headingSpan); adapters.nvimServer = savedServer;
+expect(statuses.slice(-4).some((s) => /^Neovim: .{1,100}$/u.test(s.value ?? "")) && !statuses.slice(-4).some((s) => /^Copied /u.test(s.value ?? "")), "bounded-adapter-failure-feedback-without-false-success");
+const followBeforeResize = state?.follow; fakeTui.terminal.rows++; fakeTui.render(fixture.width - 5);
+expect(state?.follow === true && (followBeforeResize === true || state?.viewportEnd === 0), "resize-restores-follow");
+
+const cycleCalls = [0, 0];
+for (let cycle = 0; cycle < 2; cycle++) {
+  capture.dispose();
+  const cycleAdapters = { ...adapters, clipboard: { write: async () => { cycleCalls[cycle]++; } } };
+  extension.__transcriptLinks.configureForTest(cycleAdapters);
+  capture = widgetFactory(fakeTui, { fg: (_k, s) => s }); fakeTui.render(fixture.width);
+  await click(findSpan("copy.example"));
+  expect(cycleCalls[cycle] === 1 && cycleCalls.reduce((a, b) => a + b, 0) === cycle + 1, `cycle-${cycle + 1}-uses-only-current-injected-adapter`);
+}
+expect(listeners.length === 1, "two-reloads-one-active-listener", `listeners=${listeners.length}`);
+handlers.get("session_shutdown")?.({}, { mode: "tui", ui });
+expect(listeners.length === 0, "shutdown-clears-listener");
+expect(terminal.filter((s) => s.includes("?1000h") && s.includes("?1006h")).length === terminal.filter((s) => s.includes("?1000l") && s.includes("?1006l")).length, "balanced-1000-1006-modes");
+expect(fakeTui.render === originalRender, "restored-render-identity");
+expect(!fakeTui[Symbol.for("pi.transcript-scroll")] && timers.size === 0 && statuses.at(-1)?.value === null, "cleanup-clears-maps-status-timers");
+expect(seamConfigured, "injected-action-adapters-bound-to-production", "missing __transcriptLinks.configureForTest");
+
+writeFileSync(join(artifact, "event-trace.json"), JSON.stringify({ checks, trace, renders }, null, 2) + "\n");
+writeFileSync(join(artifact, "clipboard.json"), JSON.stringify(clipboard, null, 2) + "\n");
+writeFileSync(join(artifact, "neovim-focus.json"), JSON.stringify({ invocations: nvim, expected }, null, 2) + "\n");
+writeFileSync(join(artifact, "status-clock.json"), JSON.stringify({ now, statuses, pendingTimers: [...timers.keys()] }, null, 2) + "\n");
+writeFileSync(join(artifact, "terminal-control.ansi"), terminal.join(""));
+const stable = ["event-trace.json", "clipboard.json", "neovim-focus.json", "status-clock.json", "terminal-control.ansi"];
+const metadata = { command: "./scripts/verify-pi-transcript-links V02", exitStatus: failures.length ? 1 : 0, implementationCommit: head, implementationTree: tree, productBlob, attemptIdentity, artifactPath: artifact, piVersion: piPackage.version, fixtureSha256: sha(fixturePath), verifierSha256: sha(scriptPath), wrapperSha256: sha(wrapperPath), failures };
+writeFileSync(join(artifact, "metadata.json"), JSON.stringify(metadata, null, 2) + "\n");
+writeFileSync(join(artifact, "command.txt"), `$ ${metadata.command}\nimplementation_commit=${head}\nimplementation_tree=${tree}\nattempt_identity=${attemptIdentity}\nartifact=${artifact}\npi_version=${piPackage.version}\nexit_status=${metadata.exitStatus}\n`);
+const manifest = [...stable, "metadata.json", "command.txt"];
+writeFileSync(join(artifact, "SHA256SUMS"), manifest.map((name) => `${sha(join(artifact, name))}  ${name}`).join("\n") + "\n");
+console.log(`V02 fixtures complete: attempt=${attemptIdentity} artifact=${artifact} implementation=${head} tree=${tree}`);
+console.log(`V02 artifact SHA-256: ${sha(join(artifact, "SHA256SUMS"))}`);
+process.exit(metadata.exitStatus);

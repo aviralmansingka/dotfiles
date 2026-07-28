@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -uo pipefail
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$repo"
+product_path=pi/.pi/agent/extensions/transcript-scroll.ts
+implementation_commit="$(git rev-parse HEAD)"
+implementation_tree="$(git rev-parse HEAD^{tree})"
+product_blob="$(git rev-parse "HEAD:$product_path")"
+[[ "$(git hash-object "$product_path")" == "$product_blob" ]] || {
+  printf 'production-source-binding failed: worktree product differs from HEAD\n' >&2
+  exit 2
+}
+root="artifacts/pi-transcript-links/V03/$implementation_tree"
+mkdir -p "$root"
+attempt="$(mktemp -d "$root/attempt-XXXXXX")"
+sandbox="$(mktemp -d "${TMPDIR:-/tmp}/pi-links-v03-XXXXXX")"
+mkdir -p "$sandbox/vault/notes" "$sandbox/xdg-data" "$sandbox/xdg-state" "$sandbox/xdg-cache"
+printf '# Target\n\n## Chosen Heading\n\nfixture body\n' > "$sandbox/vault/notes/Target.md"
+: > "$attempt/fake-clipboard.log"
+: > "$attempt/fixture-trace.log"
+server="$sandbox/nvim.sock"
+command='XDG_CONFIG_HOME="$PWD/nvim/.config" scripts/verify-nvim pi-transcript-links'
+printf '$ %s\n' "$command" > "$attempt/command-transcript.txt"
+printf 'implementation_commit=%s\nimplementation_tree=%s\nproduct_blob=%s\nverifier_head=%s\n' "$implementation_commit" "$implementation_tree" "$product_blob" "$implementation_commit" > "$attempt/implementation-identity.txt"
+{
+  nvim --version | head -1
+  pi --version | sed 's/^/Pi /'
+  /usr/bin/script --version 2>&1 | head -1 || true
+} > "$attempt/versions.txt"
+export V03_ATTEMPT="$attempt" V03_REPO="$repo" V03_VAULT_ROOT="$sandbox/vault" V03_CLIPBOARD_LOG="$attempt/fake-clipboard.log" V03_FIXTURE_TRACE="$attempt/fixture-trace.log"
+export XDG_DATA_HOME="$sandbox/xdg-data" XDG_STATE_HOME="$sandbox/xdg-state" XDG_CACHE_HOME="$sandbox/xdg-cache"
+set +e
+/usr/bin/script -q /dev/null nvim --clean --listen "$server" "+lua vim.schedule(function() dofile('scripts/fixtures/pi-transcript-links-v03-harness.lua') end)" >> "$attempt/command-transcript.txt" 2>&1
+status=$?
+set -e
+printf 'exit_status=%s\n' "$status" >> "$attempt/command-transcript.txt"
+printf '%s\n' "$status" > "$attempt/exit-status.txt"
+cp "$attempt/fake-clipboard.log" "$attempt/fake-clipboard-final.log"
+find "$attempt" -type f ! -name SHA256SUMS -exec shasum -a 256 {} + | sed "s#$attempt/##" | sort -k2 > "$attempt/SHA256SUMS"
+printf 'V03 immutable baseline attempt: %s\nexit status: %s\nSHA256SUMS: %s\n' "$attempt" "$status" "$(shasum -a 256 "$attempt/SHA256SUMS" | cut -d' ' -f1)"
+rm -rf "$sandbox"
+exit "$status"

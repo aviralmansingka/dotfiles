@@ -1,0 +1,19 @@
+{
+  "width": 34,
+  "viewportStart": 0,
+  "markdown": "Prefix \u001b[31mred\u001b[0m é界 [report.md](file:///Users/aviral/vault/alpha/report.md?download=1#L7) [report.md](file:///Users/aviral/vault/beta/report.md#Heading) [Guide for humans](file:///Users/aviral/vault/docs/guide.md) <https://example.com> [https://example.com/a/manual.pdf?x=1#part](https://example.com/a/manual.pdf?x=1#part) [again](file:///Users/aviral/vault/alpha/report.md?download=1#L7)",
+  "expectedLabels": ["alpha/report.md", "beta/report.md", "Guide for humans", "example.com", "manual.pdf", "again"],
+  "expectedDestinations": ["file:///Users/aviral/vault/alpha/report.md?download=1#L7", "file:///Users/aviral/vault/beta/report.md#Heading", "file:///Users/aviral/vault/docs/guide.md", "https://example.com", "https://example.com/a/manual.pdf?x=1#part", "file:///Users/aviral/vault/alpha/report.md?download=1#L7"],
+  "wikilinks": [
+    {"name":"alias","text":"[[notes/Alpha|Visible alias]]","status":"resolved","display":"Visible alias","file":"notes/Alpha.md"},
+    {"name":"explicit-omitted-md","text":"[[notes/Alpha]]","status":"resolved","file":"notes/Alpha.md"},
+    {"name":"unique-basename","text":"[[Unique]]","status":"resolved","file":"one/Unique.md"},
+    {"name":"ambiguous-basename","text":"[[Common]]","status":"ambiguous"},
+    {"name":"missing","text":"[[Missing]]","status":"missing"},
+    {"name":"heading","text":"[[notes/Alpha#Heading]]","status":"resolved","target":"Heading"},
+    {"name":"block","text":"[[notes/Alpha#^block-id]]","status":"resolved","target":"^block-id"},
+    {"name":"same-note-heading","text":"[[#Local Heading]]","status":"resolved","target":"Local Heading"},
+    {"name":"traversal","text":"[[../../outside]]","status":"rejected"},
+    {"name":"symlink-escape","text":"[[escape/Outside]]","status":"rejected"}
+  ]
+}
