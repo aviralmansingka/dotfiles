@@ -70,28 +70,28 @@ terraform -chdir=ops/devbox destroy \
 
 ## Stow Packages
 
-| Package | Description |
-|---------|-------------|
-| `aerospace` | AeroSpace tiling window manager |
-| `agents` | Shared agent skills |
-| `blinksh` | Blink Shell (iOS terminal) config |
-| `claude` | Claude AI context files |
-| `code` | Code snippets (Golang, Lua) |
-| `ghostty` | Ghostty terminal emulator |
-| `herdr` | Agent workspaces, notifications, and sound configuration |
-| `git` | Git configuration |
-| `kube` | Kubernetes configuration |
-| `launchd` | macOS user LaunchAgents (vault and dotfiles auto-sync) |
-| `neovide` | Neovide (Neovim GUI) config |
-| `nvim` | Neovim with LazyVim |
-| `ssh` | SSH configuration |
-| `starship` | Starship prompt |
-| `systemd` | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
-| `pi` | Pi agent config, packages, themes, and messaging daemons |
-| `terminfo` | Custom terminfo entries |
-| `tmux` | Tmux configuration |
-| `tmuxinator` | Tmuxinator session templates |
-| `zsh` | Zsh shell configuration |
+| Package      | Description                                                                 |
+| ------------ | --------------------------------------------------------------------------- |
+| `aerospace`  | AeroSpace tiling window manager                                             |
+| `agents`     | Shared agent skills                                                         |
+| `blinksh`    | Blink Shell (iOS terminal) config                                           |
+| `claude`     | Claude AI context files                                                     |
+| `code`       | Code snippets (Golang, Lua)                                                 |
+| `ghostty`    | Ghostty terminal emulator                                                   |
+| `herdr`      | Agent workspaces, notifications, and sound configuration                    |
+| `git`        | Git configuration                                                           |
+| `kube`       | Kubernetes configuration                                                    |
+| `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
+| `neovide`    | Neovide (Neovim GUI) config                                                 |
+| `nvim`       | Neovim with LazyVim                                                         |
+| `ssh`        | SSH configuration                                                           |
+| `starship`   | Starship prompt                                                             |
+| `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
+| `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
+| `terminfo`   | Custom terminfo entries                                                     |
+| `tmux`       | Tmux configuration                                                          |
+| `tmuxinator` | Tmuxinator session templates                                                |
+| `zsh`        | Zsh shell configuration                                                     |
 
 ## Git auto-sync services
 

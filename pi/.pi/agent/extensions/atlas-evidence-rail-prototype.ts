@@ -39,7 +39,10 @@ const POLL_MS = 1000;
 const VIRTUAL_STEP_LIMIT = 8;
 const REGISTRY_ROOT =
   process.env.VAULT_HUNTER_STATE_DIR ??
-  join(process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), "vault-hunter");
+  join(
+    process.env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"),
+    "vault-hunter",
+  );
 
 const EMPTY_STAGES: Stage[] = [
   {
@@ -83,8 +86,11 @@ class EvidenceRailPrototype {
       const selectedStage = stages[this.selected];
       this.showAllSteps = !this.showAllSteps;
       const nextStages = this.stages();
-      const nextSelected = selectedStage ? nextStages.indexOf(selectedStage) : -1;
-      this.selected = nextSelected >= 0 ? nextSelected : Math.max(0, nextStages.length - 1);
+      const nextSelected = selectedStage
+        ? nextStages.indexOf(selectedStage)
+        : -1;
+      this.selected =
+        nextSelected >= 0 ? nextSelected : Math.max(0, nextStages.length - 1);
       this.requestRender();
       return;
     }
@@ -160,7 +166,10 @@ class EvidenceRailPrototype {
     const title =
       this.theme.fg("accent", this.theme.bold("VAULT HUNTER")) +
       "  " +
-      this.theme.fg("text", this.theme.bold(snapshot?.title ?? "No registered Run")) +
+      this.theme.fg(
+        "text",
+        this.theme.bold(snapshot?.title ?? "No registered Run"),
+      ) +
       this.theme.fg(
         "muted",
         ` · ${snapshot ? `${snapshot.runId} · r${snapshot.revision}` : "Registry unavailable"}`,
@@ -173,10 +182,7 @@ class EvidenceRailPrototype {
 
     row(
       this.theme.fg("warning", this.theme.bold("Run timeline")),
-      this.theme.fg(
-        "warning",
-        this.theme.bold(`Selected · ${selected.label}`),
-      ),
+      this.theme.fg("warning", this.theme.bold(`Selected · ${selected.label}`)),
     );
     row(
       this.theme.fg(
@@ -195,20 +201,38 @@ class EvidenceRailPrototype {
     row(this.theme.fg("dim", " │"), rightRows[rightIndex++] ?? "");
     if (hiddenSteps > 0) {
       row(
-        this.theme.fg("dim", ` ├─ …  ${hiddenSteps} earlier ${hiddenSteps === 1 ? "step" : "steps"} · expand with <c-v>`),
+        this.theme.fg(
+          "dim",
+          ` ├─ …  ${hiddenSteps} earlier ${hiddenSteps === 1 ? "step" : "steps"} · expand with <c-v>`,
+        ),
         "",
       );
     }
-    const stageLabelWidth = Math.max(...stages.map((stage) => visibleWidth(stage.label)));
+    const stageLabelWidth = Math.max(
+      ...stages.map((stage) => visibleWidth(stage.label)),
+    );
     stages.forEach((stage, index) => {
       const last = index === stages.length - 1;
       const connector = last ? " └─ " : " ├─ ";
-      const glyph = stage.state === "done" ? "✓" : stage.state === "active" ? "◉" : stage.state === "failed" ? "!" : "○";
-      const color = stage.state === "done" ? "success" : stage.state === "active" ? "warning" : stage.state === "failed" ? "error" : "muted";
+      const glyph =
+        stage.state === "done"
+          ? "✓"
+          : stage.state === "active"
+            ? "◉"
+            : stage.state === "failed"
+              ? "!"
+              : "○";
+      const color =
+        stage.state === "done"
+          ? "success"
+          : stage.state === "active"
+            ? "warning"
+            : stage.state === "failed"
+              ? "error"
+              : "muted";
       const badge = ` ${glyph} ${pad(stage.label, stageLabelWidth)} `;
       let stageText =
-        this.theme.fg("dim", connector) +
-        this.theme.fg(color, badge);
+        this.theme.fg("dim", connector) + this.theme.fg(color, badge);
       if (index === this.selected) {
         stageText =
           this.theme.fg("dim", connector) +
@@ -222,7 +246,10 @@ class EvidenceRailPrototype {
       const childConnector = last ? "     " : " │   ";
       row(
         this.theme.fg("dim", childConnector + "└─ ") +
-          this.theme.fg(index === this.selected ? "accent" : "muted", stage.summary),
+          this.theme.fg(
+            index === this.selected ? "accent" : "muted",
+            stage.summary,
+          ),
         rightRows[rightIndex++] ?? "",
       );
     });
@@ -248,26 +275,49 @@ class EvidenceRailPrototype {
 
   private detailRows(stage: Stage): string[] {
     const th = this.theme;
-    const color = stage.state === "done" ? "success" : stage.state === "active" ? "warning" : stage.state === "failed" ? "error" : "muted";
+    const color =
+      stage.state === "done"
+        ? "success"
+        : stage.state === "active"
+          ? "warning"
+          : stage.state === "failed"
+            ? "error"
+            : "muted";
 
     if (stage.kind) {
       const rows = [
-        th.bg("customMessageBg", th.fg("customMessageLabel", th.bold(" Registry entry "))),
+        th.bg(
+          "customMessageBg",
+          th.fg("customMessageLabel", th.bold(" Registry entry ")),
+        ),
         th.fg("muted", " kind        ") + th.fg("syntaxNumber", stage.kind),
         th.fg("muted", " state       ") + th.fg(color, th.bold(stage.state)),
-        th.fg("muted", " observed    ") + th.fg("text", stage.observedAt ?? "unknown"),
+        th.fg("muted", " observed    ") +
+          th.fg("text", stage.observedAt ?? "unknown"),
         th.fg("muted", " summary     ") + th.fg("text", stage.summary),
       ];
       if (!this.expanded) return rows;
-      if (stage.detail) rows.push(th.fg("muted", " detail      ") + th.fg("text", stage.detail));
+      if (stage.detail)
+        rows.push(
+          th.fg("muted", " detail      ") + th.fg("text", stage.detail),
+        );
       if (stage.command) {
         rows.push(th.fg("muted", " reproduce"));
         rows.push(th.fg("mdLink", ` ${stage.command}`));
       }
       if (stage.exitStatus !== undefined) {
-        rows.push(th.fg("muted", " exit        ") + th.fg(stage.exitStatus === 0 ? "success" : "error", String(stage.exitStatus)));
+        rows.push(
+          th.fg("muted", " exit        ") +
+            th.fg(
+              stage.exitStatus === 0 ? "success" : "error",
+              String(stage.exitStatus),
+            ),
+        );
       }
-      rows.push(th.fg("muted", " authority   ") + th.fg("mdLink", "Registry observation"));
+      rows.push(
+        th.fg("muted", " authority   ") +
+          th.fg("mdLink", "Registry observation"),
+      );
       return rows;
     }
 
@@ -289,14 +339,19 @@ function restoredRunId(ctx: ExtensionContext): string | undefined {
       entry.message.role !== "toolResult" ||
       entry.message.toolName !== "vault_hunter_run" ||
       entry.message.isError === true
-    ) continue;
-    const runId = (entry.message.details as { runId?: unknown } | undefined)?.runId;
+    )
+      continue;
+    const runId = (entry.message.details as { runId?: unknown } | undefined)
+      ?.runId;
     if (typeof runId === "string" && runId) return runId;
   }
   return undefined;
 }
 
-function registry(input: Record<string, unknown>, signal?: AbortSignal): Promise<any> {
+function registry(
+  input: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<any> {
   return new Promise((resolve, reject) => {
     const child = spawn("vault-hunter-registry", [], {
       stdio: ["pipe", "pipe", "pipe"],
@@ -304,12 +359,23 @@ function registry(input: Record<string, unknown>, signal?: AbortSignal): Promise
     });
     let stdout = "";
     let stderr = "";
-    child.stdout.setEncoding("utf8").on("data", (chunk) => { stdout += chunk; });
-    child.stderr.setEncoding("utf8").on("data", (chunk) => { stderr += chunk; });
+    child.stdout.setEncoding("utf8").on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.setEncoding("utf8").on("data", (chunk) => {
+      stderr += chunk;
+    });
     child.on("error", reject);
     child.on("close", (code) => {
-      if (code !== 0) return reject(new Error(stderr.trim() || `vault-hunter-registry exited ${code}`));
-      try { resolve(JSON.parse(stdout)); } catch (error) { reject(error); }
+      if (code !== 0)
+        return reject(
+          new Error(stderr.trim() || `vault-hunter-registry exited ${code}`),
+        );
+      try {
+        resolve(JSON.parse(stdout));
+      } catch (error) {
+        reject(error);
+      }
     });
     child.stdin.end(JSON.stringify(input));
   });
@@ -319,13 +385,36 @@ function sessionIdentity(ctx: ExtensionContext) {
   const sessionFile = ctx.sessionManager.getSessionFile();
   return sessionFile
     ? { source: "herdr:pi", kind: "path", value: sessionFile }
-    : { source: "pi", kind: "session-id", value: ctx.sessionManager.getSessionId() };
+    : {
+        source: "pi",
+        kind: "session-id",
+        value: ctx.sessionManager.getSessionId(),
+      };
 }
 
 function stageState(value: unknown): Stage["state"] {
-  if (["red", "failed", "rejected", "interrupted", "error"].includes(String(value))) return "failed";
-  if (["active", "running", "invoked", "in-progress"].includes(String(value))) return "active";
-  if (["green", "passed", "accepted", "completed", "finished", "observed", "succeeded", "recorded", "supports"].includes(String(value))) return "done";
+  if (
+    ["red", "failed", "rejected", "interrupted", "error"].includes(
+      String(value),
+    )
+  )
+    return "failed";
+  if (["active", "running", "invoked", "in-progress"].includes(String(value)))
+    return "active";
+  if (
+    [
+      "green",
+      "passed",
+      "accepted",
+      "completed",
+      "finished",
+      "observed",
+      "succeeded",
+      "recorded",
+      "supports",
+    ].includes(String(value))
+  )
+    return "done";
   return "pending";
 }
 
@@ -348,7 +437,9 @@ function usageSummary(detail: unknown): string | undefined {
       Number.isFinite(requests) ? `${requests} requests` : undefined,
       Number.isFinite(tokens) ? formatTokens(tokens) : undefined,
       Number.isFinite(cost) ? `$${cost.toFixed(2)}` : undefined,
-    ].filter(Boolean).join(" · ");
+    ]
+      .filter(Boolean)
+      .join(" · ");
   } catch {
     return undefined;
   }
@@ -377,8 +468,12 @@ function telemetrySummary(payload: any): string | undefined {
     tokens !== undefined ? formatTokens(tokens) : undefined,
     Number.isFinite(turns) ? `${turns} turns` : undefined,
     Number.isFinite(tools) ? `${tools} tools` : undefined,
-    typeof amount === "string" && typeof currency === "string" ? `${amount} ${currency}` : undefined,
-  ].filter(Boolean).join(" · ");
+    typeof amount === "string" && typeof currency === "string"
+      ? `${amount} ${currency}`
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return summary || undefined;
 }
 
@@ -388,7 +483,10 @@ function projectStages(record: any): Stage[] {
     const session = participant?.agent_session;
     const herdr = participant?.herdr;
     stages.push({
-      label: participant?.role === "driver" ? "Driver" : String(participant?.role ?? "Participant"),
+      label:
+        participant?.role === "driver"
+          ? "Driver"
+          : String(participant?.role ?? "Participant"),
       state: "active",
       summary: String(participant?.participant_id ?? "registered participant"),
       observedAt: participant?.observed_at,
@@ -396,30 +494,46 @@ function projectStages(record: any): Stage[] {
       detail: [
         session ? `${session.source}/${session.kind}` : undefined,
         herdr?.pane_id ? `pane ${herdr.pane_id}` : undefined,
-      ].filter(Boolean).join(" · "),
+      ]
+        .filter(Boolean)
+        .join(" · "),
     });
   }
   for (const event of record?.lifecycle ?? []) {
     const usage = usageSummary(event?.detail);
     stages.push({
-      label: event?.kind === "run" ? "Run" : event?.kind === "parent/usage" ? "Parent usage" : String(event?.kind ?? "Lifecycle"),
+      label:
+        event?.kind === "run"
+          ? "Run"
+          : event?.kind === "parent/usage"
+            ? "Parent usage"
+            : String(event?.kind ?? "Lifecycle"),
       state: stageState(event?.state),
       summary: usage ?? String(event?.detail || event?.state || "recorded"),
       observedAt: event?.observed_at,
       kind: String(event?.kind ?? "lifecycle"),
-      detail: usage ? `boundary telemetry · ${event?.state ?? "observed"}` : String(event?.detail ?? ""),
+      detail: usage
+        ? `boundary telemetry · ${event?.state ?? "observed"}`
+        : String(event?.detail ?? ""),
     });
   }
   for (const evidence of record?.evidence ?? []) {
     stages.push({
       label: String(evidence?.verifier_id ?? "Evidence"),
       state: stageState(evidence?.state),
-      summary: String(evidence?.detail || evidence?.state || "recorded evidence"),
+      summary: String(
+        evidence?.detail || evidence?.state || "recorded evidence",
+      ),
       observedAt: evidence?.observed_at,
       kind: "evidence",
-      detail: evidence?.artifact_sha256 ? `artifact ${String(evidence.artifact_sha256).slice(0, 12)}…` : "",
-      command: typeof evidence?.command === "string" ? evidence.command : undefined,
-      exitStatus: Number.isInteger(evidence?.exit_status) ? evidence.exit_status : undefined,
+      detail: evidence?.artifact_sha256
+        ? `artifact ${String(evidence.artifact_sha256).slice(0, 12)}…`
+        : "",
+      command:
+        typeof evidence?.command === "string" ? evidence.command : undefined,
+      exitStatus: Number.isInteger(evidence?.exit_status)
+        ? evidence.exit_status
+        : undefined,
     });
   }
   for (const observation of record?.observations ?? []) {
@@ -427,29 +541,50 @@ function projectStages(record: any): Stage[] {
     stages.push({
       label: String(observation?.title || observation?.kind || "Observation"),
       state: stageState(observation?.state),
-      summary: telemetry ?? String(observation?.summary || observation?.state || "recorded observation"),
+      summary:
+        telemetry ??
+        String(
+          observation?.summary || observation?.state || "recorded observation",
+        ),
       observedAt: observation?.observed_at,
       kind: String(observation?.kind ?? "observation"),
       detail: telemetry
-        ? [observation?.summary, observation?.payload?.runtime_telemetry?.boundary].filter(Boolean).join(" · ")
-        : typeof observation?.detail === "string" ? observation.detail : "",
+        ? [
+            observation?.summary,
+            observation?.payload?.runtime_telemetry?.boundary,
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : typeof observation?.detail === "string"
+          ? observation.detail
+          : "",
     });
   }
-  stages.sort((left, right) => String(left.observedAt ?? "").localeCompare(String(right.observedAt ?? "")));
-  return stages.length ? stages : [{
-    label: "Run",
-    state: "active",
-    summary: "Registry record loaded",
-    observedAt: record?.updated_at,
-    kind: "run",
-  }];
+  stages.sort((left, right) =>
+    String(left.observedAt ?? "").localeCompare(String(right.observedAt ?? "")),
+  );
+  return stages.length
+    ? stages
+    : [
+        {
+          label: "Run",
+          state: "active",
+          summary: "Registry record loaded",
+          observedAt: record?.updated_at,
+          kind: "run",
+        },
+      ];
 }
 
 function projectSnapshot(record: any): RunSnapshot {
   const runId = record?.run_id;
   const revision = record?.revision;
   const title = record?.task?.title ?? record?.work_reference?.title;
-  if (typeof runId !== "string" || !Number.isSafeInteger(revision) || typeof title !== "string") {
+  if (
+    typeof runId !== "string" ||
+    !Number.isSafeInteger(revision) ||
+    typeof title !== "string"
+  ) {
     throw new Error("Registry returned an incomplete Run.");
   }
   return {
@@ -479,11 +614,13 @@ export default function atlasEvidenceRailPrototype(pi: ExtensionAPI) {
     ctx.ui.setWidget(
       WIDGET_ID,
       (_tui, theme) => ({
-        render: (width: number) => [truncateToWidth(
-          `${theme.fg("accent", theme.bold("Vault Hunter"))}${theme.fg("dim", " · ")}${theme.fg("text", snapshot!.title)}${theme.fg("dim", ` · r${snapshot!.revision} · ${snapshot!.stage}`)}`,
-          width,
-          "…",
-        )],
+        render: (width: number) => [
+          truncateToWidth(
+            `${theme.fg("accent", theme.bold("Vault Hunter"))}${theme.fg("dim", " · ")}${theme.fg("text", snapshot!.title)}${theme.fg("dim", ` · r${snapshot!.revision} · ${snapshot!.stage}`)}`,
+            width,
+            "…",
+          ),
+        ],
         invalidate() {},
       }),
       { placement: "belowEditor" },
@@ -494,38 +631,64 @@ export default function atlasEvidenceRailPrototype(pi: ExtensionAPI) {
     );
   };
 
-  const refresh = async (ctx: ExtensionContext, expectedGeneration = generation) => {
-    if (polling || !candidateRunId || ctx.mode !== "tui" || expectedGeneration !== generation) return;
+  const refresh = async (
+    ctx: ExtensionContext,
+    expectedGeneration = generation,
+  ) => {
+    if (
+      polling ||
+      !candidateRunId ||
+      ctx.mode !== "tui" ||
+      expectedGeneration !== generation
+    )
+      return;
     const refreshController = new AbortController();
     controller = refreshController;
     polling = true;
     let changed = false;
     try {
-      const runs = await registry({
-        action: "list",
-        root: REGISTRY_ROOT,
-        filter: {
-          participant_id: `pi-${ctx.sessionManager.getSessionId()}`,
-          agent_session: sessionIdentity(ctx),
+      const runs = await registry(
+        {
+          action: "list",
+          root: REGISTRY_ROOT,
+          filter: {
+            participant_id: `pi-${ctx.sessionManager.getSessionId()}`,
+            agent_session: sessionIdentity(ctx),
+          },
         },
-      }, refreshController.signal);
-      if (refreshController.signal.aborted || expectedGeneration !== generation) return;
-      if (!Array.isArray(runs) || runs.length !== 1 || runs[0]?.run_id !== candidateRunId) {
+        refreshController.signal,
+      );
+      if (refreshController.signal.aborted || expectedGeneration !== generation)
+        return;
+      if (
+        !Array.isArray(runs) ||
+        runs.length !== 1 ||
+        runs[0]?.run_id !== candidateRunId
+      ) {
         if (snapshot) {
           snapshot = undefined;
           changed = true;
         }
         return;
       }
-      if (snapshot?.runId === candidateRunId && snapshot.revision === runs[0]?.revision) return;
-      const record = await registry({
-        action: "get",
-        root: REGISTRY_ROOT,
-        run_id: candidateRunId,
-      }, refreshController.signal);
-      if (refreshController.signal.aborted || expectedGeneration !== generation) return;
+      if (
+        snapshot?.runId === candidateRunId &&
+        snapshot.revision === runs[0]?.revision
+      )
+        return;
+      const record = await registry(
+        {
+          action: "get",
+          root: REGISTRY_ROOT,
+          run_id: candidateRunId,
+        },
+        refreshController.signal,
+      );
+      if (refreshController.signal.aborted || expectedGeneration !== generation)
+        return;
       const next = projectSnapshot(record);
-      if (next.runId !== candidateRunId) throw new Error("Registry returned a different Run.");
+      if (next.runId !== candidateRunId)
+        throw new Error("Registry returned a different Run.");
       snapshot = next;
       changed = true;
     } catch {
@@ -533,7 +696,12 @@ export default function atlasEvidenceRailPrototype(pi: ExtensionAPI) {
     } finally {
       if (controller === refreshController) controller = undefined;
       polling = false;
-      if (!refreshController.signal.aborted && expectedGeneration === generation && changed) display(ctx);
+      if (
+        !refreshController.signal.aborted &&
+        expectedGeneration === generation &&
+        changed
+      )
+        display(ctx);
     }
   };
 
@@ -547,7 +715,12 @@ export default function atlasEvidenceRailPrototype(pi: ExtensionAPI) {
   });
 
   pi.on("tool_result", async (event, ctx) => {
-    if (event.toolName !== "vault_hunter_run" || event.isError || ctx.mode !== "tui") return;
+    if (
+      event.toolName !== "vault_hunter_run" ||
+      event.isError ||
+      ctx.mode !== "tui"
+    )
+      return;
     const runId = (event.details as { runId?: unknown } | undefined)?.runId;
     if (typeof runId !== "string" || !runId) return;
     if (candidateRunId !== runId) {
@@ -575,12 +748,21 @@ export default function atlasEvidenceRailPrototype(pi: ExtensionAPI) {
     description: "Open the disposable Atlas evidence-forward rail",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       if (ctx.mode !== "tui") {
-        ctx.ui.notify("The Atlas rail prototype requires interactive TUI mode.", "warning");
+        ctx.ui.notify(
+          "The Atlas rail prototype requires interactive TUI mode.",
+          "warning",
+        );
         return;
       }
 
-      await ctx.ui.custom<void>((tui, theme, _keybindings, done) =>
-        new EvidenceRailPrototype(theme, () => tui.requestRender(), done, () => snapshot),
+      await ctx.ui.custom<void>(
+        (tui, theme, _keybindings, done) =>
+          new EvidenceRailPrototype(
+            theme,
+            () => tui.requestRender(),
+            done,
+            () => snapshot,
+          ),
       );
     },
   });
