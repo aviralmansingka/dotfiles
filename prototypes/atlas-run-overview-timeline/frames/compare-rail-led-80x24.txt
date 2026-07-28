@@ -1,7 +1,7 @@
 RAIL-LED COMPACT · run-active
 T21 · Align Atlas timeline language · rev 7 · implementation · active
 ────────────────────────────────────────────────────────────────────────────────
- │  6 stages · implementation · Goal G02
+ │  5 recorded milestones · implementation · Goal G02
  ├─ ● Admission · completed
  │   └─ recorded observation · Task contract admitted · 18s
  ├─ ● V01 semantic projection · passed

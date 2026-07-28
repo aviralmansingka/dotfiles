@@ -62,7 +62,7 @@ const (
 	success = "\x1b[38;2;184;187;38m"
 	info    = "\x1b[38;2;128;170;158m"
 	special = "\x1b[38;2;211;134;155m"
-	warning = "\x1b[38;2;250;189;47m"
+	warning = "\x1b[38;2;233;177;67m"
 	failure = "\x1b[38;2;242;89;75m"
 )
 
@@ -115,7 +115,7 @@ func frame(name string, width, height int, lines []string) Frame {
 
 func railLed(r Run, width, height int) []string {
 	lines := header(r, "RAIL-LED COMPACT", width)
-	lines = append(lines, fmt.Sprintf(" │  %d stages · %s · Goal %s", len(r.Goals), r.Stage, activeGoal(r)))
+	lines = append(lines, fmt.Sprintf(" │  %d recorded milestones · %s · Goal %s", len(r.Events), r.Stage, activeGoal(r)))
 	for i, event := range r.Events {
 		connector := "├─"
 		if i == len(r.Events)-1 {
@@ -217,7 +217,7 @@ func expandedBoard(r Run, width, height int) []string {
 	for _, e := range r.Events {
 		context = append(context, fmt.Sprintf("%s · %s · %s", e.Label, e.Kind, e.State), "  └─ "+e.Summary+" · "+timing(e))
 	}
-	evidence = []string{"V01 accepted", "V02 failed · exit 1", "", "Parent decision", "× rejected", "implementation_defect", "", "Authority", "projection, not completion"}
+	evidence = []string{"V01 passed", "decision unavailable", "V02 failed · exit 1", "", "Recorded decision", "× rejected", "implementation_defect", "", "Authority", "projection, not completion"}
 	for i := 0; i < max(len(timeline), max(len(context), len(evidence))); i++ {
 		lines = append(lines, columns3(at(timeline, i), at(context, i), at(evidence, i), left, middle, right))
 	}
@@ -251,7 +251,7 @@ func sidekick(r Run, width, height int) []string {
 		fmt.Sprintf("%s %s · %s", glyph(r.State), r.Stage, stateLabel(r.State)),
 		fmt.Sprintf("├─ %s %s · %s", glyph(active.State), active.GoalID, active.State),
 		"│  └─ " + short(active.Summary, width-6),
-		"├─ ◆ V01 accepted · V02 pending",
+		"├─ ● V01 accepted · V02 pending",
 		"└─ ○ Human merge · parent gate",
 		"time " + timing(active),
 		"recorded snapshot · no live hydration",
@@ -316,11 +316,7 @@ func timing(e Event) string {
 }
 
 func eventTime(e Event) string {
-	value := e.ObservedAt
-	if value == "" {
-		value = e.StartedAt
-	}
-	parsed, err := time.Parse(time.RFC3339, value)
+	parsed, err := time.Parse(time.RFC3339, e.ObservedAt)
 	if err != nil {
 		return "time ?"
 	}
@@ -447,7 +443,7 @@ func checkFrames(f Fixture, frames []Frame, out string) error {
 	for _, frame := range frames {
 		all += frame.Plain
 	}
-	for _, required := range []string{"run-active", "run-failed", "run-completed", "run-retired", "run-missing-time", "run-unknown", "future-paused ?", "time unavailable", "18s", "4s", "Human merge", "parent-owned", "V01 accepted", "G02", "▶", "projection, not authority"} {
+	for _, required := range []string{"run-active", "run-failed", "run-completed", "run-retired", "run-missing-time", "run-unknown", "future-paused ?", "time unavailable", "18s", "4s", "Human merge", "parent-owned", "decision unavailable", "G02", "▶", "projection, not authority"} {
 		if !strings.Contains(all, required) {
 			return fmt.Errorf("missing semantic assertion %q", required)
 		}
@@ -463,10 +459,10 @@ func checkFrames(f Fixture, frames []Frame, out string) error {
 		names[i] = frames[i].Name
 	}
 	sort.Strings(names)
-	fmt.Println("ok: 6 typed Run fixtures cover active, failed, completed, retired, missing-time, and unknown state")
-	fmt.Println("ok: 9 bounded surfaces compare rail-led and Goal-preview compact IA plus browser, board, journal, and Sidekick")
+	fmt.Println("ok: 6 presentation sketches cover active, failed, completed, retired, missing-time, and unknown conditions")
+	fmt.Println("ok: 9 bounded visual surfaces compare rail-led and Goal-preview compact IA plus browser, board, journal, and Sidekick")
 	fmt.Println("ok: accepted SGR stripping is byte-identical to no-color frames")
-	fmt.Println("ok: glyphs, labels, ordering, selection, time availability, evidence, and parent gate survive without color")
+	fmt.Println("ok: sketched glyphs, labels, ordering, selection, time availability, evidence, and gate text survive without color")
 	return nil
 }
 

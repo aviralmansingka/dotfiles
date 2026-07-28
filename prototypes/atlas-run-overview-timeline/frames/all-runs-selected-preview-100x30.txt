@@ -2,7 +2,7 @@ ATLAS · ALL RUNS · 6 recorded · selected run-active
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 RUNS                                   │SELECTED TIMELINE PREVIEW
 ▶ ◉ run-active · active                │────────────────────────────────────────────────────────────
-    T21 · Align Atlas timeline language│ │  6 stages · implementation · Goal G02
+    T21 · Align Atlas timeline language│ │  5 recorded milestones · implementation · Goal G02
   × run-failed · failed                │ ├─ ● Admission · completed
     T17 · Gate evaluator               │ │   └─ recorded observation · Task contract admitted · 18s
   ● run-completed · completed          │ ├─ ● V01 semantic projection · passed

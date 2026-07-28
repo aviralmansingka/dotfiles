@@ -1,6 +1,6 @@
-# Atlas Run Overview Timeline Scout Prototype
+# Atlas Run Overview Timeline Scout Sketch
 
-Disposable design evidence for the Issue **Align Atlas Run Overviews With The Pi Activity Timeline**. This path is not a production package or verifier route.
+Disposable visual exploration for **Align Atlas Run Overviews With The Pi Activity Timeline**. This path is not a production package, verifier route, Registry-v2 fixture, or accepted `atlas/v1` contract.
 
 ## Reproduce
 
@@ -10,97 +10,84 @@ go run . --out frames --check
 find frames -type f -maxdepth 1 -print | sort | xargs shasum -a 256 > SHA256SUMS
 ```
 
-The generator uses only the Go standard library. `fixtures.json` is frozen, typed prototype input; no renderer parses prose or detail JSON to invent structure.
+The generator uses only the Go standard library. `fixtures.json` is a bespoke presentation sketch. It deliberately does not parse prose/detail JSON, but its `Run`, `Goal`, and `Event` shapes are **not** existing Registry-v2 or accepted T18 envelopes. Canonical-looking Goal, gate, and Run-state values therefore illustrate desired density only; they do not prove current hydration or authority.
 
-## Artifacts
+## What the artifacts prove
 
 Each surface has matching `.ansi` and `.txt` output under `frames/`:
 
 - `compare-rail-led-{80x24,100x30}` — compact single rail;
 - `compare-goal-preview-{80x24,100x30}` — Goal selection plus selected-Goal preview;
-- `state-matrix-80x24` — active, failed, completed, retired, missing-time, and unknown-state Runs;
-- `all-runs-selected-preview-100x30` — selected Run in the all-Runs browser;
-- `expanded-board-120x32` — timeline, selected context, and evidence/gates;
-- `execution-journal-100x30` — faithful chronology, retirement, and literal unknown values;
-- `sidekick-44x12` — narrow selected-participant density.
+- `state-matrix-80x24` — visual treatment for six candidate Run conditions;
+- `all-runs-selected-preview-100x30` — selected Run in a browser sketch;
+- `expanded-board-120x32` — timeline, selected context, and evidence area;
+- `execution-journal-100x30` — retirement and literal unknown-value treatment;
+- `sidekick-44x12` — narrow-density sketch.
 
-`SHA256SUMS` identifies every frame. The self-check rejects unaccepted SGR, proves accepted-SGR stripping is byte-for-byte equal to the no-color frame, checks dimensions, and asserts identity, selection, state, evidence, parent-gate, unknown-value, and timing semantics.
+`SHA256SUMS` identifies every frame. The self-check proves deterministic generation, dimensions, accepted-SGR stripping, and matching no-color bytes. It does **not** prove compatibility with Registry-v2, T18, current Atlas renderers, interactive behavior, sanitization, or canonical ownership.
 
-## Compact IA decision
+## Independent review disposition
 
-Choose the **single rail-led timeline** for direct compact Atlas and selected-Run previews.
+The first comparison is directionally useful but does not settle the compact IA:
 
-At `80×24`, the rail keeps Run/Task identity, current stage and Goal, accepted V01, active G02, the pending human merge gate, source labels, evidence summary, and honest timing in one scan. The Goal-selection alternative spends 31 columns on a duplicate Goal index and shows only G02's local event. It hides admission and the accepted parent decision unless the operator changes selection. At `100×30` it gains breathing room but not more global meaning.
+- the rail receives every candidate event plus summary rows;
+- the Goal preview filters to G02 and does not demonstrate alternate selection;
+- overflow, omission, empty state, and constrained density are not exercised;
+- the rail labels five rendered milestones rather than claiming six durable stages after review correction;
+- current Pi Activity and No Mistakes references were inspected in source, but no matching captured reference frame is included here.
 
-Goal selection remains useful as navigation in expanded views. It should not be the primary compact information architecture.
+Therefore **rail-led compact remains the preferred hypothesis, not a settled decision**. A fair follow-up must render equivalent information budgets, alternate Goal selections, overflow/omission, and the same Run cases from final typed T18 envelopes.
 
-## Semantic projection
+## Candidate semantic hierarchy
 
-### Top-level milestone rows
+This hierarchy is proposed for later validation, not claimed as currently hydrated:
 
-Use only hydrated typed fields for:
+### Candidate top-level rows
 
 1. ordered durable stage or Goal state;
-2. current or terminal verifier attempts;
-3. explicit parent decisions;
-4. explicit human gates;
+2. current or terminal verifier attempt;
+3. explicit recorded verifier decision;
+4. explicit human gate, if T18 defines one;
 5. retirement;
-6. a current durable worker milestone only when Atlas exposes its typed Goal/stage association.
+6. worker milestone only with typed Goal/stage association.
 
-The compact rail is a milestone projection, not the faithful observation journal. It does not render every Registry observation.
+A passed attempt is not accepted evidence. The failed-Run board now says `V01 passed · decision unavailable` unless an explicit decision exists.
 
-### Nested detail
+### Candidate nested detail
 
-Nest the latest typed attempt outcome, decision summary, worker/participant role, evidence identity, and valid timing under its milestone. Label source classes as `recorded observation`, `parent decision`, `human gate`, or `live Herdr`. Never merge live Herdr status into recorded lifecycle state.
+Latest typed attempt outcome, decision identity, worker/participant role, Evidence identity, and valid timing. Actor/source identity must remain literal; a producer or actor named `parent` does not by itself grant canonical authority.
 
-### Summary only
+### Candidate summary and expanded detail
 
-Participant active/total counts, verifier passed/pending/failed counts, Evidence count/state, and bounded Usage belong in headers or summary rows when hydrated.
+Participant/verifier/Evidence/Usage counts may appear in headers when hydrated. Commands, diagnostics, trees, hashes, artifacts, participant identities, auditor rationale, telemetry, raw sanitized typed fields, and complete chronology remain expanded-only.
 
-### Expanded only
+Unknown typed values stay literal with `?`. Missing hydration says unavailable; it never becomes inferred state.
 
-Commands, exit diagnostics, trees, hashes, artifacts, complete participant identities, auditor rationale, telemetry, raw sanitized typed fields, and full observation chronology remain in the Operations Board or Execution Journal.
-
-Unknown typed values stay literal with `?`. Missing hydration says `unavailable` or `none recorded`; it never becomes inferred state.
-
-## Density rules
-
-- **Sidekick / narrow:** Run identity, recorded Run state/stage, active Goal, verifier summary, parent/human gate, and timing availability. No raw journey or participant roster.
-- **80×24 compact:** one bounded milestone rail plus evidence and gate summary. Omit older settled detail before current or gate rows; disclose omission count.
-- **100×30 compact / browser preview:** same semantics with one nested detail per visible milestone.
-- **Expanded board:** rail plus selected typed context and evidence/gates. Goal selection is navigation here.
-- **Execution Journal:** complete faithful chronology with source/type labels and selected cards. Density changes viewport, never meaning or ordering.
-
-Selection uses a visible `▶`; state uses `◉` active, `●` successful/accepted/completed, `×` failed/rejected/blocked, `○` pending, `◆` retired, and `?` unknown. Color supplements these labels and glyphs.
-
-## Timing decision
+## Timing boundary
 
 - Terminal duration requires validated `started_at` and `finished_at`.
-- Active elapsed may use only `started_at` and the complete envelope's recorded snapshot/as-of timestamp, and updates only when a new complete envelope arrives.
+- Point chronology uses `observed_at` only; the renderer no longer substitutes `started_at` for a missing observation timestamp.
 - Static snapshots never tick from local wall time.
-- Missing or invalid bounds render `time unavailable`.
-- `observed_at` gaps remain chronology and are never execution duration.
-
-The prototype intentionally shows unavailable active timing because its fixture has no typed snapshot/as-of bound.
+- Active elapsed remains unresolved until T18 defines a recorded snapshot/as-of bound. Without one, it is unavailable.
+- Observation gaps are chronology, never execution duration.
 
 ## Pi and No Mistakes boundary
 
-Pi Activity is prompt-scoped: every user prompt creates a fresh Activity, and rows summarize transient thinking/tool calls. No Mistakes is pipeline-scoped: its nine ordered phases are controlled by No Mistakes and polled by a read-only Pi widget.
+Pi Activity is prompt-scoped and summarizes transient thinking/tool calls. No Mistakes is pipeline-scoped and displays phases controlled by No Mistakes. Vault Hunter Runs are durable observations across participants, attempts, decisions, delivery, retirement, and restarts.
 
-Vault Hunter is different. Its Run is durable and observational across participants, verifier attempts, parent decisions, human gates, delivery, retirement, and restarts. Atlas may reuse rail geometry, spacing, truncation, glyphs, and Gruvbox roles, but it must not copy prompt ownership, thinking/tool rows, pipeline completion, or transient tool-call timing into Run semantics.
+Atlas may reuse rail geometry, spacing, truncation, and Gruvbox roles. It must not copy prompt ownership, thinking/tool rows, pipeline completion, or transient timing into Run semantics.
 
-## Gruvbox Material roles exercised
+## Palette correction
 
-The ANSI frames use accepted foreground/reset SGR only: bright `#fbf1c7`, accent `#f28534`, text `#ebdbb2`, warning `#fabd2f`, success `#b8bb26`, info `#80aa9e`, special `#d3869b`, error `#f2594b`, muted `#928374`, and dim `#665c54`. No-color output carries all state and selection semantics.
+The ANSI sketch now uses T11's accepted active/in-progress foreground `#e9b143`, not `#fabd2f`. Accepted evidence uses `●`; `◆` remains reserved for retirement in this sketch. Generated selection still needs a future fair prototype to exercise selected emphasis independently from active-state color.
 
-## Ownership recommendation
+## Ownership and blockers
 
-- **T13:** unchanged. Finish the isolated current-renderer ANSI/sanitization patch; do not absorb this prototype.
-- **T11:** retain all-Runs composition, refresh, navigation, and shared color policy. Amend its selected preview target from a full T08 Journal rendering to the bounded rail-led Run projection once that shared projection exists. Until then, do not build a second preview model.
-- **T14:** remove stale claims already delivered by T08 (explicit omission counts and type-specific selected cards). Retain Journal event-position, non-color state glyphs, responsive density, provenance, time modes, raw inspection, and landmark navigation.
-- **T15:** retain Goal Forest and Evidence Story as optional expanded Journal projections. They are not compact defaults.
-- **T17:** retain certification-state derivation and its own domain labels. The shared Atlas projection may render those typed results but must not derive them.
-- **T18:** amend the accepted Run envelope before implementation to hydrate ordered Goals/stages, explicit parent/human gates, source class, valid interval fields, and one recorded snapshot/as-of bound. Its current reference Run exposes stage/state and attempts but not enough typed data to render the accepted compact rail without guessing.
-- **Native Pi timeline Issue:** unchanged and downstream of merged T18. It consumes Atlas envelopes and Pi theme styling; it does not own Atlas terminal views.
+- **T13:** unchanged; owns the isolated current ANSI/sanitization patch.
+- **T11:** canonically requires an Execution Journal preview and keeps compact Atlas unchanged. Replacing that preview is an unresolved ownership decision, not an approved amendment.
+- **T14:** still canonically claims omission counts, cards, provenance, timing, and navigation even where T08 appears to provide related behavior. Parent reconciliation is required.
+- **T15:** owns Goal Forest and Evidence Story.
+- **T18:** depends on T20 and owns the final grammar/envelopes under one-writer custody. Its current reference Run lacks ordered Goals and explicit human gates needed by this sketch.
+- **Native Pi timeline Issue:** remains separate and downstream of merged T18.
 
-After T18's final envelope is merged and T11/T13 integration identities are known, create one cross-surface Task for the shared semantic Run projection and migration of compact, selected-preview, expanded-board, and Journal vocabulary. T14/T15 should follow that Task. No autonomous Task is ready from this Scout snapshot because the exact T18 hydration and future implementation baseline do not yet exist.
+No autonomous Task is ready. Required next steps are canonical ownership reconciliation, final T18 hydration and merged identity, a fair prototype against that exact envelope, explicit migration order, and one future implementation writer.

@@ -2,18 +2,18 @@ EXPANDED OPERATIONS BOARD · run-failed
 T17 · Gate evaluator · rev 4 · verification · failed
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 TIMELINE                │SELECTED RECORDED CONTEXT                                 │EVIDENCE / GATES
-● V01                   │V01 manifest validation · verifier_attempt · passed       │V01 accepted
-  passed                │  └─ attempt-020 · exit 0 · 1m0s                          │V02 failed · exit 1
-× V02                   │V02 gate evaluation · verifier_attempt · failed           │
-  failed                │  └─ attempt-021 · exit 1 · 19m0s                         │Parent decision
-× V02                   │Parent diagnosis · verifier_decision · rejected           │× rejected
-  rejected              │  └─ implementation_defect · time unavailable             │implementation_defect
+● V01                   │V01 manifest validation · verifier_attempt · passed       │V01 passed
+  passed                │  └─ attempt-020 · exit 0 · 1m0s                          │decision unavailable
+× V02                   │V02 gate evaluation · verifier_attempt · failed           │V02 failed · exit 1
+  failed                │  └─ attempt-021 · exit 1 · 19m0s                         │
+× V02                   │Parent diagnosis · verifier_decision · rejected           │Recorded decision
+  rejected              │  └─ implementation_defect · time unavailable             │× rejected
+                        │                                                          │implementation_defect
                         │                                                          │
                         │                                                          │Authority
                         │                                                          │projection, not completion
 
 Recorded chronology remains available in Journal · no live Herdr state hydrated in this fixture
-
 
 
 

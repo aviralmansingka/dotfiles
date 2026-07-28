@@ -1,14 +1,14 @@
 [38;2;242;133;52mRAIL-LED COMPACT · run-active[0m
-[38;2;250;189;47mT21 · Align Atlas timeline language · rev 7 · implementation · active[0m
+[38;2;233;177;67mT21 · Align Atlas timeline language · rev 7 · implementation · active[0m
 [38;2;102;92;84m────────────────────────────────────────────────────────────────────────────────────────────────────[0m
-[38;2;235;219;178m │  6 stages · implementation · Goal G02[0m
+[38;2;128;170;158m │  5 recorded milestones · implementation · Goal G02[0m
 [38;2;184;187;38m ├─ ● Admission · completed[0m
 [38;2;128;170;158m │   └─ recorded observation · Task contract admitted · 18s[0m
 [38;2;184;187;38m ├─ ● V01 semantic projection · passed[0m
 [38;2;128;170;158m │   └─ recorded observation · attempt-017 · exit 0 · 4s[0m
 [38;2;184;187;38m ├─ ● V01 parent decision · accepted[0m
 [38;2;184;187;38m │   └─ parent decision · Evidence accepted for tree 7a3d9f1 · time unavailable[0m
-[38;2;250;189;47m ├─ ◉ G02 implementation · active[0m
+[38;2;233;177;67m ├─ ◉ G02 implementation · active[0m
 [38;2;128;170;158m │   └─ recorded observation · worker-03 · implementation · time unavailable[0m
 [38;2;235;219;178m └─ ○ Human merge · pending[0m
 [38;2;128;170;158m     └─ parent decision · Parent-owned gate · time unavailable[0m
