@@ -2,8 +2,14 @@
 set -uo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo"
-implementation_commit=9dd6cf41cf802cc216df752d3ded161e3875dac4
-implementation_tree=a6555d0bc086058fbb6f23322bc4894f8f89e03e
+product_path=pi/.pi/agent/extensions/transcript-scroll.ts
+implementation_commit="$(git rev-parse HEAD)"
+implementation_tree="$(git rev-parse HEAD^{tree})"
+product_blob="$(git rev-parse "HEAD:$product_path")"
+[[ "$(git hash-object "$product_path")" == "$product_blob" ]] || {
+  printf 'production-source-binding failed: worktree product differs from HEAD\n' >&2
+  exit 2
+}
 root="artifacts/pi-transcript-links/V03/$implementation_tree"
 mkdir -p "$root"
 attempt="$(mktemp -d "$root/attempt-XXXXXX")"
@@ -15,7 +21,7 @@ printf '# Target\n\n## Chosen Heading\n\nfixture body\n' > "$sandbox/vault/notes
 server="$sandbox/nvim.sock"
 command='XDG_CONFIG_HOME="$PWD/nvim/.config" scripts/verify-nvim pi-transcript-links'
 printf '$ %s\n' "$command" > "$attempt/command-transcript.txt"
-printf 'implementation_commit=%s\nimplementation_tree=%s\nproduct_blob=%s\nverifier_head=%s\n' "$implementation_commit" "$implementation_tree" "$(git rev-parse "$implementation_commit:pi/.pi/agent/extensions/transcript-scroll.ts")" "$(git rev-parse HEAD)" > "$attempt/implementation-identity.txt"
+printf 'implementation_commit=%s\nimplementation_tree=%s\nproduct_blob=%s\nverifier_head=%s\n' "$implementation_commit" "$implementation_tree" "$product_blob" "$implementation_commit" > "$attempt/implementation-identity.txt"
 {
   nvim --version | head -1
   pi --version | sed 's/^/Pi /'
