@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { readdir, realpath } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { basename, extname, isAbsolute, resolve, sep } from "node:path";
 import { CURSOR_MARKER, truncateToWidth, visibleWidth, type Component, type TUI } from "@earendil-works/pi-tui";
 
@@ -7,7 +8,46 @@ const WIDGET = "transcript-scroll";
 const STATE = Symbol.for("pi.transcript-scroll");
 const ENABLE_MOUSE = "\x1b[?1000h\x1b[?1006h";
 const DISABLE_MOUSE = "\x1b[?1006l\x1b[?1000l";
-const MOUSE = /^\x1b\[<(\d+);\d+;\d+[Mm]$/;
+const MOUSE = /^\x1b\[<(\d+);(\d+);(\d+)([Mm])$/;
+const STATUS = "transcript-link";
+
+type Timer = ReturnType<typeof setTimeout>;
+type Adapters = {
+	clipboard: { write(value: string): Promise<void> };
+	neovim: { open(argv: string[]): Promise<void> };
+	clock: { setTimeout(fn: () => void, delay: number): Timer; clearTimeout(timer: Timer): void };
+	vaultRoot: string;
+	nvimServer?: string;
+};
+
+function run(argv: string[], input?: string): Promise<void> {
+	return new Promise((resolveRun, reject) => {
+		const child = spawn(argv[0], argv.slice(1), { stdio: [input === undefined ? "ignore" : "pipe", "ignore", "ignore"] });
+		const timer = setTimeout(() => child.kill(), 1000);
+		child.once("error", reject);
+		child.once("exit", (code) => code === 0 ? resolveRun() : reject(new Error(`${argv[0]} exited ${code}`)));
+		child.once("close", () => clearTimeout(timer));
+		if (input !== undefined) child.stdin.end(input);
+	});
+}
+
+const productionAdapters: Adapters = {
+	clipboard: {
+		async write(value) {
+			if (process.platform === "darwin") return run(["pbcopy"], value);
+			if (process.stdout.isTTY) {
+				process.stdout.write(`\x1b]52;c;${Buffer.from(value).toString("base64")}\x07`);
+				return;
+			}
+			throw new Error("Clipboard unavailable");
+		},
+	},
+	neovim: { open: (argv) => run(["nvim", ...argv]) },
+	clock: { setTimeout, clearTimeout },
+	vaultRoot: "/Users/aviral/vault",
+	nvimServer: process.env.NVIM,
+};
+let adapters = productionAdapters;
 
 interface LinkSpan {
 	destination: string;
@@ -23,6 +63,8 @@ interface ScrollState {
 	viewportEnd: number;
 	transcriptLines: number;
 	pageLines: number;
+	statusTimer?: Timer;
+	clearStatus(): void;
 	width?: number;
 	height?: number;
 	originalRender: TUI["render"];
@@ -128,7 +170,10 @@ async function resolveWikilink({ text, vaultRoot, sourceFile }: { text: string; 
 		: { status: "resolved", file, ...(match[2] ? { display: match[2] } : {}) };
 }
 
-export const __transcriptLinks = { resolveWikilink };
+export const __transcriptLinks = {
+	resolveWikilink,
+	configureForTest(injected: Adapters) { adapters = injected; },
+};
 
 function isTerminalReply(data: string): boolean {
 	return (
@@ -138,7 +183,7 @@ function isTerminalReply(data: string): boolean {
 	);
 }
 
-function install(tui: TUI, dim: (text: string) => string): () => void {
+function install(tui: TUI, dim: (text: string) => string, setStatus: (key: string, value?: string) => void): () => void {
 	const target = tui as StatefulTui;
 	target[STATE]?.cleanup();
 
@@ -149,9 +194,44 @@ function install(tui: TUI, dim: (text: string) => string): () => void {
 		viewportEnd: 0,
 		transcriptLines: 0,
 		pageLines: 3,
+		clearStatus: () => {},
 		originalRender: tui.render,
 		patchedRender: () => [],
 		cleanup: () => {},
+	};
+
+	state.clearStatus = () => {
+		if (state.statusTimer !== undefined) adapters.clock.clearTimeout(state.statusTimer);
+		state.statusTimer = undefined;
+		setStatus(STATUS, undefined);
+	};
+	const report = (message: string, transient = false) => {
+		state.clearStatus();
+		setStatus(STATUS, message);
+		if (transient) state.statusTimer = adapters.clock.setTimeout(state.clearStatus, 1500);
+	};
+
+	const act = async (span: LinkSpan) => {
+		try {
+			const url = new URL(span.destination);
+			if (url.protocol === "https:") {
+				await adapters.clipboard.write(span.destination);
+				report(`Copied ${url.hostname}`, true);
+				return;
+			}
+			if (url.protocol !== "file:") return;
+			const file = decodeURIComponent(url.pathname);
+			const root = resolve(adapters.vaultRoot);
+			if (file !== root && !file.startsWith(`${root}${sep}`)) return;
+			if (!adapters.nvimServer) throw new Error("NVIM server unavailable");
+			const fragment = decodeURIComponent(url.hash.slice(1));
+			const location = fragment.startsWith("L") && /^L\d+$/u.test(fragment)
+				? `:${fragment.slice(1)}`
+				: fragment.startsWith("^") ? `:block:${fragment.slice(1)}` : fragment ? `:heading:${fragment}` : "";
+			await adapters.neovim.open(["--server", adapters.nvimServer, "--remote", file, location]);
+		} catch (error) {
+			report(error instanceof Error && /NVIM|nvim/u.test(error.message) ? `Neovim: ${error.message}` : "Clipboard unavailable");
+		}
 	};
 
 	const resumeFollow = (force: boolean) => {
@@ -177,18 +257,11 @@ function install(tui: TUI, dim: (text: string) => string): () => void {
 
 		const rendered = tui.children.map((child) => child.render(width));
 		const allLines = compactRenderedLinks(rendered.flat());
-		state.visibleLinks.clear();
-		for (let row = 0; row < allLines.length; row++) {
-			const spans: LinkSpan[] = [];
-			for (const match of allLines[row].matchAll(OSC_LINK)) {
-				const before = allLines[row].slice(0, match.index).replace(ANSI, "");
-				const label = match[2].replace(ANSI, "");
-				spans.push({ destination: match[1], row, startCell: visibleWidth(before), endCell: visibleWidth(before) + visibleWidth(label) });
-			}
-			if (spans.length) state.visibleLinks.set(row, spans);
-		}
 		const editorRoot = rendered.findIndex((lines) => lines.some((line) => line.includes(CURSOR_MARKER)));
-		if (editorRoot < 0) return allLines;
+		if (editorRoot < 0) {
+			state.visibleLinks.clear();
+			return allLines;
+		}
 
 		const transcriptLength = rendered.slice(0, editorRoot).flat().length;
 		const transcript = allLines.slice(0, transcriptLength);
@@ -196,23 +269,27 @@ function install(tui: TUI, dim: (text: string) => string): () => void {
 		state.transcriptLines = transcript.length;
 		state.pageLines = Math.max(3, height - fixed.length - 1);
 
-		if (state.follow || tui.hasOverlay()) return allLines;
-		if (state.viewportEnd > transcript.length) {
-			state.follow = true;
-			state.viewportEnd = 0;
-			return allLines;
+		let output = allLines;
+		if (!state.follow && !tui.hasOverlay()) {
+			if (state.viewportEnd > transcript.length || transcript.length - state.viewportEnd <= 0) {
+				state.follow = true;
+				state.viewportEnd = 0;
+			} else {
+				const start = Math.max(0, state.viewportEnd - state.pageLines);
+				const indicator = truncateToWidth(dim(`↓ ${transcript.length - state.viewportEnd} lines below`), width, "");
+				output = [...transcript.slice(start, state.viewportEnd), indicator, ...fixed];
+			}
 		}
-
-		const below = transcript.length - state.viewportEnd;
-		if (below <= 0) {
-			state.follow = true;
-			state.viewportEnd = 0;
-			return allLines;
+		state.visibleLinks.clear();
+		for (let row = 0; row < output.length; row++) {
+			const spans: LinkSpan[] = [];
+			for (const match of output[row].matchAll(OSC_LINK)) {
+				const startCell = visibleWidth(output[row].slice(0, match.index));
+				spans.push({ destination: match[1], row, startCell, endCell: startCell + visibleWidth(match[2]) });
+			}
+			if (spans.length) state.visibleLinks.set(row, spans);
 		}
-
-		const start = Math.max(0, state.viewportEnd - state.pageLines);
-		const indicator = truncateToWidth(dim(`↓ ${below} lines below`), width, "");
-		return [...transcript.slice(start, state.viewportEnd), indicator, ...fixed];
+		return output;
 	};
 
 	const removeInputListener = tui.addInputListener((data) => {
@@ -221,7 +298,14 @@ function install(tui: TUI, dim: (text: string) => string): () => void {
 			if (tui.hasOverlay()) return { consume: true };
 			const button = Number(mouse[1]);
 			const wheel = button & 64;
-			if (!wheel) return { consume: true };
+			if (!wheel) {
+				if (mouse[4] === "M" && button === 0) {
+					const x = Number(mouse[2]) - 1;
+					const span = state.visibleLinks.get(Number(mouse[3]) - 1)?.find((item) => x >= item.startCell && x < item.endCell);
+					if (span) void act(span);
+				}
+				return { consume: true };
+			}
 			const amount = button & 4 ? state.pageLines : 3;
 			const direction = button & 3;
 
@@ -253,6 +337,7 @@ function install(tui: TUI, dim: (text: string) => string): () => void {
 		cleaned = true;
 		removeInputListener();
 		state.visibleLinks.clear();
+		state.clearStatus();
 		tui.terminal.write(DISABLE_MOUSE);
 		if (tui.render === state.patchedRender) tui.render = state.originalRender;
 		if (target[STATE] === state) delete target[STATE];
@@ -286,7 +371,7 @@ export default function transcriptScroll(pi: ExtensionAPI): void {
 		if (ctx.mode !== "tui") return;
 		ctx.ui.setWidget(WIDGET, (tui, theme) => {
 			activeTui = tui;
-			const cleanup = install(tui, (text) => theme.fg("dim", text));
+			const cleanup = install(tui, (text) => theme.fg("dim", text), (key, value) => ctx.ui.setStatus?.(key, value));
 			return new CaptureWidget(() => {
 				cleanup();
 				if (activeTui === tui) activeTui = undefined;
