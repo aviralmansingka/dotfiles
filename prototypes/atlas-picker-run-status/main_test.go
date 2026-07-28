@@ -51,7 +51,17 @@ func TestVerifierSummaryAggregatesTypedAttemptsDeterministically(t *testing.T) {
 	}
 }
 
-func TestSummaryMetricsReportGoalsVisibleStepsAndUniqueVerifiers(t *testing.T) {
+func TestIntermediateMilestoneUsesGreenAndOrangeHalves(t *testing.T) {
+	mark := milestoneMark(milestoneIntermediate, true)
+	if mark.plain != "◐◑" {
+		t.Fatalf("milestoneMark() plain = %q, want %q", mark.plain, "◐◑")
+	}
+	if want := colorize(true, success, "◐") + colorize(true, active, "◑"); mark.styled != want {
+		t.Fatalf("milestoneMark() styled = %q, want %q", mark.styled, want)
+	}
+}
+
+func TestSummaryMetricsUseFixedPrototypeLegend(t *testing.T) {
 	run := vaultregistry.Run{
 		Evidence: []vaultregistry.Evidence{
 			{VerifierID: "v1", State: "passed"},
@@ -66,7 +76,7 @@ func TestSummaryMetricsReportGoalsVisibleStepsAndUniqueVerifiers(t *testing.T) {
 	}
 	goals := make([]journeyGoal, 9)
 	got := summaryLines(run, goals, 30, false)[0].plain
-	if want := " │  G9 · S5 · V2  ●"; got != want {
+	if want := " │  3 G · 5 S · 2 V  ●"; got != want {
 		t.Fatalf("summaryLines() = %q, want %q", got, want)
 	}
 }
@@ -92,7 +102,7 @@ func TestFramesPreservePickerInteriors(t *testing.T) {
 			"T02 · Build the Compact Atlas",
 			"Renderer",
 			"● recorded done",
-			" │  G5 · S5 · V2  ◐◑",
+			" │  3 G · 5 S · 2 V  ◐◑",
 			" ├─ ● refactor-gate · done",
 			" ├─ ● review-convergence · do…",
 			" ├─ ● implementation-pr · done",
@@ -106,7 +116,7 @@ func TestFramesPreservePickerInteriors(t *testing.T) {
 			"T02 · Build the Compact",
 			"Atlas Renderer",
 			"● recorded done",
-			" │  G5 · S5 · V2  ◐◑",
+			" │  3 G · 5 S · 2 V  ◐◑",
 			" ├─ ● refactor-gate · …",
 			" ├─ ● review-convergen…",
 			" ├─ ● implementation-p…",

@@ -43,7 +43,7 @@ Production `nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua` allocates a 1
 - A two-to-four-line header shows the Feature name, compact Task ID/title, and a derived `recorded done`, `recorded accepted`, `recorded in progress`, `recorded pending`, or `recorded needs attention` status.
 - The status is explicitly labelled `recorded` because Registry observations do not make Atlas canonical Task authority.
 - Five real Goal rows use the normal terminal background. The selected Goal changes to bright yellow foreground; navigation keeps it visible without adding a separate selected-detail row.
-- One compact ghost metric row continues the muted `│` rail into every `├─` branch and the closing `└─`. Its `G# · S# · V#` values report total Goals, up to five visible steps, and typed unique verifiers. The milestone mark is green when complete, orange when no evidence has completed yet, split green/orange when completed and incomplete evidence coexist, and red on any failure.
+- One compact ghost metric row continues the muted `│` rail into every `├─` branch and the closing `└─`. This disposable iteration always shows `3 G · 5 S · 2 V`, where G, S, and V stand for Goals, Steps, and Verifiers. The milestone mark is green when complete, orange when no evidence has completed yet, split green/orange when completed and incomplete evidence coexist, and red on any failure.
 - The redundant `RECORDED JOURNEY` label and viewport-dangling connector remain removed.
 - Current time and `projection, not authority` no longer consume rows.
 - `N total · selected X/Y` remains on the final row.
@@ -55,7 +55,7 @@ The prototype follows the current Pi work-step renderer rather than the earlier 
 - muted `│`, `├─`, and `└─` connected rails;
 - `◉` active, `●` successful, `×` failed, and neutral `○`/`?` fallback states;
 - bold normal step titles and a distinct selected foreground;
-- muted `G# · S# · V#` metrics followed by a semantic green/orange/split/red milestone mark;
+- muted `3 G · 5 S · 2 V` metrics followed by a semantic green/orange/split/red milestone mark;
 - Gruvbox Material rail `#504945`, muted `#928374`, text `#ebdbb2`, selected yellow `#fabd2f`, active/accent `#f28534`, success `#b8bb26`, failure `#f2594b`, and feature heading `#83a597`.
 
 The Goal state glyph and selected ordinal remain readable without color; color provides the stronger interactive highlight requested during review.
