@@ -1,0 +1,42 @@
+
+A — Status card · 30×12 interior
+[1;38;2;242;133;52mT21  Atlas timeline[0m
+[38;2;235;219;178mrun-a17 · rev 7[0m
+
+[38;2;233;177;67m◉ verifier · active[0m
+[38;2;128;170;158mGoal 3/5 · V02[0m
+
+[38;2;128;170;158mParticipant driver[0m
+[38;2;235;219;178mRole verifier-steward[0m
+[38;2;184;187;38mEvidence V01 · passed[0m
+
+[38;2;235;219;178mupdated 10:14 UTC[0m
+[38;2;235;219;178mrecorded snapshot[0m
+
+B — Mini journey · 30×12 interior
+[1;38;2;242;133;52mT21 · run-a17 · rev 7[0m
+[1;38;2;242;133;52mRECORDED JOURNEY · 3/5[0m
+[38;2;146;131;116m│[0m
+[38;2;184;187;38m├─ ● admission · done[0m
+[38;2;184;187;38m├─ ● V01 · passed[0m
+[38;2;233;177;67m├─ ◉ V02 · active[0m
+[38;2;235;219;178m├─ ○ review · pending[0m
+[38;2;235;219;178m└─ ○ landing · pending[0m
+
+[38;2;235;219;178mdriver · verifier-steward[0m
+[38;2;235;219;178mlatest 10:14 UTC[0m
+[38;2;235;219;178mprojection, not authority[0m
+
+C — Run dashboard · 30×12 interior
+[1;38;2;242;133;52mRUN STATUS · T21[0m
+[38;2;235;219;178mAtlas timeline[0m
+
+[38;2;233;177;67m◉ ACTIVE · verifier[0m
+
+[38;2;128;170;158mGoal         3/5 · V02[0m
+[38;2;184;187;38mEvidence     1 passed[0m
+[38;2;128;170;158mParticipants 3 recorded[0m
+[38;2;235;219;178mRevision     7[0m
+
+[38;2;233;177;67mLatest  verifier active[0m
+[38;2;235;219;178m10:14 UTC · recorded[0m
