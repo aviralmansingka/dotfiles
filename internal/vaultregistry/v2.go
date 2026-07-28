@@ -56,8 +56,13 @@ func validateProducer(run Run, strictFrom int) error {
 		if strictFrom < 0 || strictFrom > len(run.Observations) {
 			strictFrom = 0
 		}
-		for i := strictFrom; i < len(run.Observations); i++ {
-			if err := validateKnownObservation(run.Observations[i]); err != nil {
+		for i, observation := range run.Observations {
+			// Existing future kinds and states remain rewritable; every known
+			// contract, including existing history, receives strict validation.
+			if i < strictFrom && (!knownObservationKinds[observation.Kind] || !knownObservationState(observation)) {
+				continue
+			}
+			if err := validateKnownObservation(observation); err != nil {
 				return fmt.Errorf("observation %d: %w", i, err)
 			}
 			if err := validateNewObservationRelations(run, i); err != nil {
@@ -196,6 +201,27 @@ func payloadCount(payload ObservationPayload) int {
 		}
 	}
 	return count
+}
+
+func knownObservationState(o Observation) bool {
+	switch o.Kind {
+	case KindVerifierAttempt:
+		return oneOf(o.State, StateActive, StatePassed, StateFailed, StateInterrupted)
+	case KindVerifierAttemptGap:
+		return o.State == StateIncomplete
+	case KindVerifierAttemptRelation:
+		return o.State == StateRetried
+	case KindVerifierDecision:
+		return oneOf(o.State, StateAccepted, StateRejected, StateSuperseded)
+	case KindRegisteredParticipant, KindWorker:
+		return oneOf(o.State, StateActive, StateSucceeded, StateFailed, StateInterrupted)
+	case KindRuntimeTelemetry:
+		return o.State == StateRecorded
+	case KindAuditorVerdict:
+		return oneOf(o.State, StateSupports, StateDoesNotSupport, StateInconclusive, StateError)
+	default:
+		return false
+	}
 }
 
 func validateKnownObservation(o Observation) error {

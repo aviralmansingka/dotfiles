@@ -179,6 +179,44 @@ func TestT19V02IdempotencyConflictsConcurrencyAndAtomicity(t *testing.T) {
 	}
 }
 
+func TestT19V02ProducerRejectsMalformedKnownHistoryWithoutWriting(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "runs"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	malformed := attempt("malformed-active", vaultregistry.StateActive, "malformed-attempt")
+	malformed.FinishedAt = strptr(v2Finish)
+	run := v2Run("t19-v02-malformed-history", malformed)
+	run.Revision = 1
+	data, err := json.Marshal(run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "runs", run.RunID+".json")
+	if err := os.WriteFile(path, append(data, '\n'), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	read, err := mustReader(t, root).Get(run.RunID)
+	if err != nil || len(read.Observations) != 1 {
+		t.Fatalf("structural Reader rejected known malformed history: %v, %#v", err, read)
+	}
+	before := mustReadFile(t, path)
+	producer := mustProducer(t, root)
+	if _, err := producer.Update(run.RunID, run.Revision, func(next *vaultregistry.Run) error {
+		next.UpdatedAt = "2026-07-28T04:00:00Z"
+		return nil
+	}); !errors.Is(err, vaultregistry.ErrMalformed) {
+		t.Fatalf("Update error = %v, want ErrMalformed", err)
+	}
+	assertFileBytes(t, path, before)
+
+	if _, err := producer.AppendObservation(run.RunID, run.Revision, "2026-07-28T04:00:00Z", gap("never-appended", "new-attempt")); !errors.Is(err, vaultregistry.ErrMalformed) {
+		t.Fatalf("AppendObservation error = %v, want ErrMalformed", err)
+	}
+	assertFileBytes(t, path, before)
+}
+
 func TestT19V02ForwardReaderRewriteAndStrictProducer(t *testing.T) {
 	root, path := installV02Fixture(t, "future-version-2")
 	before, err := mustReader(t, root).Get("t19-v02-future")
