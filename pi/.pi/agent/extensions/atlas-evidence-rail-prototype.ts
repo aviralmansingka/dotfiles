@@ -199,20 +199,22 @@ class EvidenceRailPrototype {
         "",
       );
     }
+    const stageLabelWidth = Math.max(...stages.map((stage) => visibleWidth(stage.label)));
     stages.forEach((stage, index) => {
       const last = index === stages.length - 1;
       const connector = last ? " └─ " : " ├─ ";
       const glyph = stage.state === "done" ? "✓" : stage.state === "active" ? "◉" : stage.state === "failed" ? "!" : "○";
       const color = stage.state === "done" ? "success" : stage.state === "active" ? "warning" : stage.state === "failed" ? "error" : "muted";
+      const badge = ` ${glyph} ${pad(stage.label, stageLabelWidth)} `;
       let stageText =
         this.theme.fg("dim", connector) +
-        this.theme.fg(color, ` ${glyph} ${stage.label} `);
+        this.theme.fg(color, badge);
       if (index === this.selected) {
         stageText =
           this.theme.fg("dim", connector) +
           this.theme.bg(
             "selectedBg",
-            this.theme.fg(color, this.theme.bold(` ${glyph} ${stage.label} `)),
+            this.theme.fg(color, this.theme.bold(badge)),
           );
       }
       row(stageText, rightRows[rightIndex++] ?? "");
@@ -321,10 +323,16 @@ function sessionIdentity(ctx: ExtensionContext) {
 }
 
 function stageState(value: unknown): Stage["state"] {
-  if (["failed", "rejected", "interrupted", "error"].includes(String(value))) return "failed";
+  if (["red", "failed", "rejected", "interrupted", "error"].includes(String(value))) return "failed";
   if (["active", "running", "invoked", "in-progress"].includes(String(value))) return "active";
-  if (["passed", "accepted", "completed", "finished", "observed"].includes(String(value))) return "done";
+  if (["green", "passed", "accepted", "completed", "finished", "observed"].includes(String(value))) return "done";
   return "pending";
+}
+
+function formatTokens(tokens: number): string {
+  return tokens >= 1_000_000
+    ? `${(tokens / 1_000_000).toFixed(1)}m tokens`
+    : `${tokens.toLocaleString("en-US")} tokens`;
 }
 
 function usageSummary(detail: unknown): string | undefined {
@@ -338,12 +346,40 @@ function usageSummary(detail: unknown): string | undefined {
     const cost = Number(usage.cost);
     return [
       Number.isFinite(requests) ? `${requests} requests` : undefined,
-      Number.isFinite(tokens) ? `${(tokens / 1_000_000).toFixed(1)}m tokens` : undefined,
+      Number.isFinite(tokens) ? formatTokens(tokens) : undefined,
       Number.isFinite(cost) ? `$${cost.toFixed(2)}` : undefined,
     ].filter(Boolean).join(" · ");
   } catch {
     return undefined;
   }
+}
+
+function telemetrySummary(payload: any): string | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  const usage = payload.usage;
+  const providerTotal = Number(usage?.provider_reported_total);
+  const inputTokens = Number(usage?.input_tokens);
+  const outputTokens = Number(usage?.output_tokens);
+  const derivedTotal =
+    Number.isFinite(inputTokens) && Number.isFinite(outputTokens)
+      ? inputTokens + outputTokens
+      : undefined;
+  const tokens = Number.isFinite(providerTotal) ? providerTotal : derivedTotal;
+  const requests = Number(usage?.requests);
+  const turns = Number(usage?.turns);
+  const tools = Number(usage?.tool_count);
+  const amount = payload.cost?.amount;
+  const currency = payload.cost?.currency;
+  const model = typeof payload.model === "string" ? payload.model : undefined;
+  const summary = [
+    model,
+    Number.isFinite(requests) ? `${requests} requests` : undefined,
+    tokens !== undefined ? formatTokens(tokens) : undefined,
+    Number.isFinite(turns) ? `${turns} turns` : undefined,
+    Number.isFinite(tools) ? `${tools} tools` : undefined,
+    typeof amount === "string" && typeof currency === "string" ? `${amount} ${currency}` : undefined,
+  ].filter(Boolean).join(" · ");
+  return summary || undefined;
 }
 
 function projectStages(record: any): Stage[] {
@@ -387,13 +423,16 @@ function projectStages(record: any): Stage[] {
     });
   }
   for (const observation of record?.observations ?? []) {
+    const telemetry = telemetrySummary(observation?.payload?.runtime_telemetry);
     stages.push({
       label: String(observation?.title || observation?.kind || "Observation"),
       state: stageState(observation?.state),
-      summary: String(observation?.summary || observation?.state || "recorded observation"),
+      summary: telemetry ?? String(observation?.summary || observation?.state || "recorded observation"),
       observedAt: observation?.observed_at,
       kind: String(observation?.kind ?? "observation"),
-      detail: typeof observation?.detail === "string" ? observation.detail : "",
+      detail: telemetry
+        ? [observation?.summary, observation?.payload?.runtime_telemetry?.boundary].filter(Boolean).join(" · ")
+        : typeof observation?.detail === "string" ? observation.detail : "",
     });
   }
   stages.sort((left, right) => String(left.observedAt ?? "").localeCompare(String(right.observedAt ?? "")));
