@@ -24,42 +24,71 @@ local function wait_for(needle, timeout)
   end, 25)
   return ok, lines
 end
-local function send(data) vim.api.nvim_chan_send(vim.bo.channel, data) end
+local function input(data)
+  vim.api.nvim_feedkeys(data, "t", false)
+end
+local function mouse(button, action, row, col)
+  vim.api.nvim_input_mouse(button, action, "", 1, row - 1, col - 1)
+end
+local function target_cell(row, col)
+  local pos = vim.fn.screenpos(0, row, col)
+  local origin = vim.fn.win_screenpos(0)
+  local height, width = vim.api.nvim_win_get_height(0), vim.api.nvim_win_get_width(0)
+  local visible = pos.row >= origin[1] and pos.row < origin[1] + height
+    and pos.col >= origin[2] and pos.col < origin[2] + width
+  return pos.row, pos.col, visible
+end
 local pi = vim.fn.exepath("pi")
 local raw = out .. "/terminal.ansi"
+vim.o.mouse = "a"
 local cmd = { "/usr/bin/script", "-q", raw, pi, "--no-session", "--no-extensions", "--no-skills", "--no-prompt-templates", "--no-context-files", "--offline", "--extension", repo .. "/pi/.pi/agent/extensions/transcript-scroll.ts", "--extension", repo .. "/scripts/fixtures/pi-transcript-links-v03-extension.ts" }
 vim.cmd("enew")
 vim.fn.termopen(cmd, { cwd = repo, env = { NVIM = vim.v.servername } })
-vim.cmd("startinsert")
+vim.schedule(function() vim.cmd.startinsert() end)
+vim.defer_fn(function()
+local co
+co = coroutine.create(function()
+local function pause(ms)
+  vim.defer_fn(function() assert(coroutine.resume(co)) end, ms)
+  coroutine.yield()
+end
+local entered = vim.wait(1000, function() return vim.api.nvim_get_mode().mode == "t" end, 10)
 local ready = wait_for("[Extensions]", 12000)
 record("pi-prompt-visible", ready and vim.bo.buftype == "terminal")
 trace[#trace + 1] = { step = "startup", mode = vim.api.nvim_get_mode().mode, buffer = vim.api.nvim_get_current_buf(), window = vim.api.nvim_get_current_win() }
-record("neovim-terminal-mode", vim.api.nvim_get_mode().mode == "t")
-send("/v03-fixture\r")
-local fixture, lines = wait_for("fixture.example", 5000)
+record("neovim-terminal-mode", entered and vim.api.nvim_get_mode().mode == "t")
+pause(500)
+-- Deterministic fixture setup only; interaction evidence below uses Neovim input APIs.
+vim.api.nvim_chan_send(vim.bo.channel, "\21/v03-fixture\r")
+pause(100)
+local fixture, lines = wait_for("HTTPS path", 5000)
 record("fixture-rendered-by-real-pi", fixture)
 snap("fixture")
 local before = table.concat(lines or {}, "\n")
-send("\27[<64;2;2M")
-vim.wait(250)
+local origin = vim.fn.win_screenpos(0)
+mouse("wheel", "up", origin[1] + math.floor(vim.api.nvim_win_get_height(0) / 2), origin[2] + math.floor(vim.api.nvim_win_get_width(0) / 2))
+pause(250)
 local wheel_lines = snap("wheel")
 local after = table.concat(wheel_lines, "\n")
 record("wheel-changes-transcript-history", before ~= after)
 record("wheel-preserves-prompt", after:find("gpt%-5%.6%-sol") ~= nil)
 record("wheel-preserves-terminal-mode", vim.api.nvim_get_mode().mode == "t")
-send("x")
-vim.wait(100)
+input("x")
+pause(100)
 local typed_editor = table.concat(snap("typed-character"), "\n")
 record("typed-character-reaches-pi-editor", typed_editor:find("x", 1, true) ~= nil)
-send("\21/v03-typed\r")
+input("\21/v03-typed\r")
+pause(100)
 local typed = wait_for("Typed input reached Pi", 3000)
 record("typed-command-reaches-pi", typed)
 lines = snap("before-clicks")
 local hrow, hcol = find(lines, "HTTPS path")
 if hrow then
-  local screen_row = hrow - vim.fn.line("w0") + 1
-  send(string.format("\27[<0;%d;%dM", hcol + 6, screen_row))
+  local screen_row, screen_col, visible = target_cell(hrow, hcol + 6)
+  record("https-target-cell-visible", visible, vim.inspect({ row = screen_row, col = screen_col }))
+  if visible then mouse("left", "press", screen_row, screen_col) end
 end
+pause(100)
 local copied = wait_for("Copied fixture.example", 3000)
 record("https-click-shows-confirmation", copied)
 snap("copied-status")
@@ -72,10 +101,11 @@ lines = snap("wikilink-click-target")
 local wrow, wcol = find(lines, "Target heading")
 record("wikilink-visible", wrow ~= nil)
 if wrow then
-  local screen_row = wrow - vim.fn.line("w0") + 1
-  send(string.format("\27[<0;%d;%dM", wcol, screen_row))
+  local screen_row, screen_col, visible = target_cell(wrow, wcol)
+  record("wikilink-target-cell-visible", visible, vim.inspect({ row = screen_row, col = screen_col }))
+  if visible then mouse("left", "press", screen_row, screen_col) end
 end
-vim.wait(1000)
+pause(1000)
 local current = vim.api.nvim_get_current_buf()
 local opened, cursor
 for _, buf in ipairs(vim.api.nvim_list_bufs()) do
@@ -92,8 +122,11 @@ trace[#trace + 1] = { step = "final", mode = vim.api.nvim_get_mode().mode, curre
 vim.fn.writefile({ vim.json.encode(assertions) }, out .. "/semantic-assertions.json")
 vim.fn.writefile({ vim.json.encode(trace) }, out .. "/mode-input-focus-trace.json")
 vim.fn.writefile({ vim.json.encode({ openedBuffer = opened, cursor = cursor, currentBuffer = vim.api.nvim_get_current_buf() }) }, out .. "/opened-buffer-cursor-trace.json")
-send("\3\3")
+input("\3\3")
 vim.wait(500)
 local failed = false
 for _, a in ipairs(assertions) do if not a.ok then failed = true end end
 if failed then vim.cmd("cquit 1") else vim.cmd("qa!") end
+end)
+assert(coroutine.resume(co))
+end, 50)

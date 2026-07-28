@@ -24,7 +24,7 @@ printf 'implementation_commit=%s\nimplementation_tree=%s\nproduct_blob=%s\nverif
 export V03_ATTEMPT="$attempt" V03_REPO="$repo" V03_VAULT_ROOT="$sandbox/vault" V03_CLIPBOARD_LOG="$attempt/fake-clipboard.log" V03_FIXTURE_TRACE="$attempt/fixture-trace.log"
 export XDG_DATA_HOME="$sandbox/xdg-data" XDG_STATE_HOME="$sandbox/xdg-state" XDG_CACHE_HOME="$sandbox/xdg-cache"
 set +e
-nvim --clean --headless --listen "$server" "+luafile scripts/fixtures/pi-transcript-links-v03-harness.lua" >> "$attempt/command-transcript.txt" 2>&1
+/usr/bin/script -q /dev/null nvim --clean --listen "$server" "+lua vim.schedule(function() dofile('scripts/fixtures/pi-transcript-links-v03-harness.lua') end)" >> "$attempt/command-transcript.txt" 2>&1
 status=$?
 set -e
 printf 'exit_status=%s\n' "$status" >> "$attempt/command-transcript.txt"
