@@ -23,6 +23,7 @@ func TestT18V03BrowserNavigation(t *testing.T) {
 		projectName:    "pi-agent",
 		featureName:    "vault-hunter-atlas",
 		taskID:         "T09",
+		taskStatus:     "in-progress",
 		projectPreview: "project-preview",
 		featurePreview: "feature-preview",
 		taskPreview:    "task-preview",
@@ -34,8 +35,9 @@ func TestT18V03BrowserNavigation(t *testing.T) {
 		runName:     "pending-review",
 		projectName: "pi-agent",
 		featureName: "vault-hunter-atlas",
-		taskID:      "T09",
-		run:         vaultregistry.Run{RunID: "run-042", Task: vaultregistry.Task{ID: "T09", Title: "Pending review"}},
+		taskID:      "T10",
+		taskStatus:  "in-progress",
+		run:         vaultregistry.Run{RunID: "run-042", Task: vaultregistry.Task{ID: "T10", Title: "Pending review"}},
 	}})
 	model.width, model.height = 140, 32
 	if !strings.Contains(model.View(), "vault-hunter journal") {
@@ -82,14 +84,14 @@ func TestT18V03BrowserNavigation(t *testing.T) {
 
 func TestBrowserHierarchyRowsShowLifecycleStatus(t *testing.T) {
 	entries := []browserEntry{{
-		runID: "run-active-123", projectName: "pi-agent", featureName: "vault-hunter-atlas",
-		taskName: "Build Atlas Browser", run: vaultregistry.Run{Revision: 12, Lifecycle: []vaultregistry.Lifecycle{{GoalID: "T18.V02", State: "active"}}},
+		runID: "run-active-123", taskID: "task-browser", projectName: "pi-agent", featureName: "vault-hunter-atlas",
+		taskName: "Build Atlas Browser", taskStatus: "in-progress", run: vaultregistry.Run{Revision: 12, Lifecycle: []vaultregistry.Lifecycle{{GoalID: "T18.V02", State: "active"}}},
 	}, {
-		runID: "run-done-456", projectName: "pi-agent", featureName: "vault-hunter-atlas",
+		runID: "run-done-456", taskID: "task-journal", projectName: "pi-agent", featureName: "vault-hunter-atlas",
 		taskName: "Build Execution Journal", taskStatus: "done", run: vaultregistry.Run{Revision: 8},
 	}, {
-		runID: "run-failed-789", projectName: "neovim", featureName: "agent-context-management",
-		taskName: "Sync Context", run: vaultregistry.Run{Revision: 3, Lifecycle: []vaultregistry.Lifecycle{{GoalID: "T03.V04", State: "failed"}}},
+		runID: "run-failed-789", taskID: "task-sync", projectName: "neovim", featureName: "agent-context-management",
+		taskName: "Sync Context", taskStatus: "in-progress", run: vaultregistry.Run{Revision: 3, Lifecycle: []vaultregistry.Lifecycle{{GoalID: "T03.V04", State: "failed"}}},
 	}}
 	model := newBrowserModel(entries).withColor(true)
 	model.width, model.height = 140, 32
