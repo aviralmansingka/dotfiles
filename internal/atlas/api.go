@@ -532,7 +532,7 @@ func validateManifestIntegrity(stateRoot string, runs []vaultregistry.Run) error
 				}
 				data, err := os.ReadFile(path)
 				if errors.Is(err, os.ErrNotExist) {
-					continue
+					return fmt.Errorf("%w: evidence manifest %s is missing", vaultregistry.ErrMalformed, manifest.Path)
 				}
 				if err != nil {
 					return err

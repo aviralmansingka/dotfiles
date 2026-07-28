@@ -1,7 +1,9 @@
 package atlas
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -266,6 +268,20 @@ func writeAtlasRun(t *testing.T, stateRoot, namespace string, run vaultregistry.
 	if err := os.WriteFile(filepath.Join(stateRoot, "registry.lock"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	for i := range run.Observations {
+		attempt := run.Observations[i].Payload.VerifierAttempt
+		if attempt == nil {
+			continue
+		}
+		for _, manifest := range []*vaultregistry.ManifestMetadata{attempt.ResultManifest, attempt.PartialResultManifest} {
+			if manifest == nil || manifest.Path == "" {
+				continue
+			}
+			content := []byte("{}\n")
+			manifest.SHA256 = fmt.Sprintf("%x", sha256.Sum256(content))
+			writeAtlasTestFile(t, stateRoot, manifest.Path, string(content))
+		}
+	}
 	path := filepath.Join(stateRoot, namespace, run.RunID+".json")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
@@ -344,6 +360,25 @@ func atlasTestRun(runID, runName, localTaskID, taskTitle, taskPath, featurePath,
 		InvokedAt:     startedAt,
 		UpdatedAt:     updatedAt,
 		Observations:  observations,
+	}
+}
+
+func TestMissingAuthenticatedEvidenceManifestFailsClosed(t *testing.T) {
+	vaultRoot := t.TempDir()
+	stateRoot := t.TempDir()
+	const taskPath = "1_projects/alpha/themes/core/features/atlas/tasks/01-shared.md"
+	const featurePath = "1_projects/alpha/themes/core/features/atlas/feature.md"
+	writeAtlasTaskFixture(t, vaultRoot, "alpha", taskPath, featurePath, "T01", "Alpha task", "Alpha verifier")
+	run := atlasTestRun("run-a", "alpha-run", "T01", "Alpha task", taskPath, featurePath, "V01", "attempt-a", "participant-a", false)
+	writeAtlasRun(t, stateRoot, "runs", run)
+	manifestPath := filepath.Join(stateRoot, filepath.FromSlash(run.Observations[0].Payload.VerifierAttempt.ResultManifest.Path))
+	if err := os.Remove(manifestPath); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := BuildEnvelope(vaultRoot, stateRoot, "runs", MachineSelector{}, MachineGetOptions{})
+	if err == nil || !errors.Is(err, vaultregistry.ErrMalformed) || !strings.Contains(err.Error(), "is missing") {
+		t.Fatalf("missing manifest error = %v", err)
 	}
 }
 
