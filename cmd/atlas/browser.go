@@ -91,16 +91,61 @@ func entryKey(entry browserEntry) string {
 	}
 	return entry.taskID
 }
+func isDoneStatus(status string) bool    { return status == "done" || status == "completed" }
+func isPendingStatus(status string) bool { return status == "pending" || status == "pending-work" }
+func browserTaskKey(entry browserEntry) string {
+	id := canonicalTaskID(entry.taskID)
+	if id == "" {
+		id = entry.taskName
+	}
+	if id == "" {
+		id = entry.runID
+	}
+	return featureKey(entry) + "/" + id
+}
+
 func (m browserModel) visibleEntries() []browserEntry {
 	visible := make([]browserEntry, 0, len(m.entries))
+	seenTasks, seenFeatures := map[string]bool{}, map[string]bool{}
 	for _, entry := range m.entries {
-		if entry.taskStatus == "done" || entry.taskStatus == "completed" {
-			if !m.showDone[featureKey(entry)] {
-				continue
-			}
+		key := featureKey(entry)
+		seenFeatures[key] = true
+		if isDoneStatus(entry.taskStatus) && !m.showDone[key] {
+			continue
 		}
+		taskKey := browserTaskKey(entry)
+		if seenTasks[taskKey] {
+			continue
+		}
+		seenTasks[taskKey] = true
 		visible = append(visible, entry)
 	}
+	for _, entry := range m.entries {
+		key := featureKey(entry)
+		if !seenFeatures[key] {
+			continue
+		}
+		hasVisibleTask := false
+		for _, item := range visible {
+			if featureKey(item) == key {
+				hasVisibleTask = true
+				break
+			}
+		}
+		if !hasVisibleTask {
+			visible = append(visible, browserEntry{projectName: entry.projectName, featureName: entry.featureName, featurePreview: entry.featurePreview})
+		}
+		delete(seenFeatures, key)
+	}
+	sort.SliceStable(visible, func(i, j int) bool {
+		if visible[i].projectName != visible[j].projectName {
+			return visible[i].projectName < visible[j].projectName
+		}
+		if visible[i].featureName != visible[j].featureName {
+			return visible[i].featureName < visible[j].featureName
+		}
+		return visible[i].taskID == ""
+	})
 	return visible
 }
 
@@ -241,13 +286,21 @@ func (m browserModel) leftPane(rows int) []string {
 				branch = "├─ "
 			}
 			line := branch + feature
+			featureSelected := i == m.selected && entry.taskID == ""
 			if m.colorEnabled {
-				line = styles.tree.Render(branch) + styles.feature.Render(feature)
+				if featureSelected {
+					line = styles.selected.Render(branch + feature)
+				} else {
+					line = styles.tree.Render(branch) + styles.feature.Render(feature)
+				}
 			}
 			lines = append(lines, line)
 		}
 		if i == m.selected {
-			selectedLine = len(lines)
+			selectedLine = len(lines) - 1
+		}
+		if entry.taskID == "" {
+			continue
 		}
 		outer := "   "
 		if featureContinues {
@@ -259,7 +312,7 @@ func (m browserModel) leftPane(rows int) []string {
 		if taskContinues {
 			taskBranch, childBranch = outer+"├─ ", outer+"│  └─ "
 		}
-		lines = append(lines, renderBrowserRun(entry, i == m.selected, width, m.colorEnabled, styles, taskBranch, childBranch)...)
+		lines = append(lines, renderBrowserTask(entry, m.taskRuns(entry), i == m.selected, width, m.colorEnabled, styles, taskBranch, childBranch)...)
 	}
 	start := maxInt(selectedLine-rows/2, 0)
 	if start+rows > len(lines) {
@@ -283,25 +336,42 @@ func laterTaskInFeature(entries []browserEntry, index int) bool {
 	return index+1 < len(entries) && entries[index+1].projectName == current.projectName && entries[index+1].featureName == current.featureName
 }
 
-func renderBrowserRun(entry browserEntry, selected bool, width int, color bool, styles browserStyles, taskBranch, childBranch string) []string {
+func (m browserModel) taskRuns(task browserEntry) []browserEntry {
+	runs := []browserEntry{}
+	for _, entry := range m.entries {
+		if browserTaskKey(entry) == browserTaskKey(task) && entry.runID != "" {
+			runs = append(runs, entry)
+		}
+	}
+	return runs
+}
+
+func renderBrowserTask(entry browserEntry, runs []browserEntry, selected bool, width int, color bool, styles browserStyles, taskBranch, childBranch string) []string {
 	taskState, taskBadge := "yellow", "in progress"
-	if entry.taskStatus == "pending-work" {
+	if isPendingStatus(entry.taskStatus) {
 		taskState, taskBadge = "blue", "not started"
 	}
-	if entry.taskStatus == "done" || entry.taskStatus == "completed" {
+	if isDoneStatus(entry.taskStatus) {
 		taskState, taskBadge = "green", "done"
 	}
 	title := entry.taskName
 	if title == "" {
 		title = entry.runName
 	}
-	first := treeRow(taskBranch, title, taskBadge, taskState, selected, width, color, styles)
-	if entry.runID == "" {
-		return []string{first, treeRow(childBranch, "no Run registered", "", "blue", selected, width, color, styles)}
+	lines := []string{treeRow(taskBranch, title, taskBadge, taskState, selected, width, color, styles)}
+	if len(runs) == 0 {
+		return append(lines, treeRow(childBranch, "no Run registered", "", "blue", false, width, color, styles))
 	}
-	runState, runBadge := browserRunStatus(entry)
-	runText := fmt.Sprintf("%s · rev %d", shortBrowserID(entry.runID), entry.run.Revision)
-	return []string{first, treeRow(childBranch, runText, runBadge, runState, selected, width, color, styles)}
+	for i, run := range runs {
+		branch := strings.TrimSuffix(childBranch, "└─ ") + "├─ "
+		if i == len(runs)-1 {
+			branch = childBranch
+		}
+		runState, runBadge := browserRunStatus(run)
+		runText := fmt.Sprintf("%s · rev %d", shortBrowserID(run.runID), run.run.Revision)
+		lines = append(lines, treeRow(branch, runText, runBadge, runState, false, width, color, styles))
+	}
+	return lines
 }
 
 func treeRow(branch, text, badge, state string, selected bool, width int, color bool, styles browserStyles) string {
@@ -403,7 +473,7 @@ func renderFeatureFocus(selected browserEntry, entries []browserEntry, width, ro
 		switch task.Status {
 		case "in-progress":
 			active = append(active, item)
-		case "pending-work":
+		case "pending", "pending-work":
 			next = append(next, item)
 		default:
 			done++
@@ -419,9 +489,8 @@ func renderFeatureFocus(selected browserEntry, entries []browserEntry, width, ro
 		for _, task := range tasks {
 			var run *browserEntry
 			for i := range entries {
-				if entries[i].taskID == task.ID {
+				if canonicalTaskID(entries[i].taskID) == canonicalTaskID(task.ID) && entries[i].runID != "" {
 					run = &entries[i]
-					break
 				}
 			}
 			lines = append(lines, renderFeatureTask(task, run, selected.runID, width, color, styles)...)
@@ -458,9 +527,9 @@ func renderFeatureTask(task featureTask, run *browserEntry, selectedRunID string
 	if stateColor == "blue" {
 		dotStyle = styles.blue
 	}
-	primary, meta, badgeStyle := styles.row, styles.rowMeta, styles.badge
+	primary, badgeStyle := styles.row, styles.badge
 	if selected {
-		primary, meta = styles.selected, styles.selectedMeta
+		primary = styles.selected
 		dotStyle = dotStyle.Background(lipgloss.Color("#45403d"))
 		badgeStyle = badgeStyle.Background(lipgloss.Color("#45403d"))
 	}
@@ -470,8 +539,8 @@ func renderFeatureTask(task featureTask, run *browserEntry, selectedRunID string
 	}
 	first := primary.Render(prefix) + dotStyle.Render(dot) + primary.Render(" "+title+gap) + badgeStyle.Render(badge)
 	stage := "    " + featureStages(run)
-	if selected {
-		stage = meta.Render(padText(stage, width))
+	if color {
+		stage = styles.rowMeta.Render(stage)
 	}
 	return []string{first, stage}
 }

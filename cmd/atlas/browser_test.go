@@ -94,7 +94,7 @@ func TestBrowserHierarchyRowsShowLifecycleStatus(t *testing.T) {
 	model := newBrowserModel(entries).withColor(true)
 	model.width, model.height = 140, 32
 	view := model.View()
-	for _, want := range []string{"pi-agent", "vault-hunter-atlas", "Build Atlas Browser", "V02", "done", "neovim", "Sync Context", "V04", "48;2;69;64;60m"} {
+	for _, want := range []string{"pi-agent", "vault-hunter-atlas", "Build Atlas Browser", "V02", "neovim", "Sync Context", "V04", "48;2;69;64;60m"} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("view missing %q: %q", want, view)
 		}
@@ -107,6 +107,36 @@ func TestBrowserHierarchyRowsShowLifecycleStatus(t *testing.T) {
 	}
 }
 
+func TestBrowserGroupsRunsUnderOneTask(t *testing.T) {
+	model := newBrowserModel([]browserEntry{
+		{runID: "run-1", taskID: "task", taskName: "Task", projectName: "p", featureName: "f"},
+		{runID: "run-2", taskID: "task", taskName: "Task", projectName: "p", featureName: "f"},
+	})
+	if got := model.visibleEntries(); len(got) != 1 {
+		t.Fatalf("visible task rows = %d, want 1", len(got))
+	}
+	view := strings.Join(model.leftPane(20), "\n")
+	if strings.Count(view, "Task") != 1 || !strings.Contains(view, "run-1") || !strings.Contains(view, "run-2") {
+		t.Fatalf("runs were not grouped beneath Task: %q", view)
+	}
+}
+
+func TestBrowserCtrlDTogglesDoneOnlyFeature(t *testing.T) {
+	model := newBrowserModel([]browserEntry{
+		{taskID: "a-done", taskName: "A done", taskStatus: "done", projectName: "p", featureName: "a"},
+		{taskID: "b-active", taskName: "B active", taskStatus: "in-progress", projectName: "p", featureName: "b"},
+	})
+	visible := model.visibleEntries()
+	if len(visible) != 2 || visible[0].taskID != "" || visible[0].featureName != "a" {
+		t.Fatalf("done-only Feature is not selectable: %#v", visible)
+	}
+	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	visible = next.(browserModel).visibleEntries()
+	if len(visible) != 2 || visible[0].taskID != "a-done" {
+		t.Fatalf("done-only Feature did not expand locally: %#v", visible)
+	}
+}
+
 func TestBrowserCtrlDTogglesDoneWithinSelectedFeature(t *testing.T) {
 	model := newBrowserModel([]browserEntry{
 		{taskID: "a-active", taskName: "A active", taskStatus: "in-progress", projectName: "p", featureName: "a"},
@@ -114,19 +144,32 @@ func TestBrowserCtrlDTogglesDoneWithinSelectedFeature(t *testing.T) {
 		{taskID: "a-next", taskName: "A next", taskStatus: "pending-work", projectName: "p", featureName: "a"},
 		{taskID: "b-done", taskName: "B done", taskStatus: "done", projectName: "p", featureName: "b"},
 	})
-	if got := model.visibleEntries(); len(got) != 2 || got[0].taskID != "a-active" || got[1].taskID != "a-next" {
+	if got := model.visibleEntries(); len(got) != 3 || got[0].taskID != "a-active" || got[1].taskID != "a-next" || got[2].featureName != "b" || got[2].taskID != "" {
 		t.Fatalf("default visible = %#v", got)
 	}
 	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
 	model = next.(browserModel)
 	got := model.visibleEntries()
-	if len(got) != 3 || got[1].taskID != "a-done" {
+	if len(got) != 4 || got[1].taskID != "a-done" {
 		t.Fatalf("feature-local expanded visible = %#v", got)
 	}
 	for _, entry := range got {
 		if entry.taskID == "b-done" {
 			t.Fatalf("Ctrl-D expanded another Feature: %#v", got)
 		}
+	}
+}
+
+func TestCanonicalPendingStatusIsNotStarted(t *testing.T) {
+	styles := newBrowserStyles()
+	view := strings.Join(renderBrowserTask(browserEntry{taskName: "Pending", taskStatus: "pending"}, nil, false, 80, false, styles, "└─ ", "   └─ "), "\n")
+	if !strings.Contains(view, "○ Pending") || !strings.Contains(view, "not started") {
+		t.Fatalf("canonical pending Task rendered incorrectly: %q", view)
+	}
+	featureJSON := `{"data":{"name":"feature","tasks":[{"id":"task","local_id":"T1","name":"Pending","status":"pending"}]}}`
+	focus := renderFeatureFocus(browserEntry{featurePreview: featureJSON}, nil, 80, 20, false)
+	if !strings.Contains(focus, "1 next") || strings.Contains(focus, "1 complete") {
+		t.Fatalf("canonical pending Task classified incorrectly: %q", focus)
 	}
 }
 
