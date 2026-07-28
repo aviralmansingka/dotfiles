@@ -124,7 +124,7 @@ func (p *Producer) Create(run Run) (Run, error) {
 		}
 	}
 	run.Revision = 1
-	if err := validate(run); err != nil {
+	if err := validateProducer(run, 0); err != nil {
 		return Run{}, err
 	}
 	if err := p.write(run); err != nil {
@@ -145,6 +145,42 @@ func (p *Producer) Update(runID string, expectedRevision uint64, mutate func(*Ru
 	return p.updateLocked(runID, expectedRevision, mutate)
 }
 
+// AppendObservation atomically appends one strict schema-version-2
+// observation. Replaying canonical byte-equivalent content is a no-write
+// success, even when the caller's expected revision is stale. Reusing an ID
+// for different content is a classified conflict.
+func (p *Producer) AppendObservation(runID string, expectedRevision uint64, updatedAt string, observation Observation) (Run, error) {
+	if err := validID(runID); err != nil {
+		return Run{}, err
+	}
+	unlock, err := p.lock()
+	if err != nil {
+		return Run{}, err
+	}
+	defer unlock()
+	current, err := load(p.path(runID), runID)
+	if err != nil {
+		return Run{}, err
+	}
+	if current.SchemaVersion != 2 {
+		return Run{}, fmt.Errorf("%w: observations require schema version 2", ErrUnsupportedVersion)
+	}
+	for _, existing := range current.Observations {
+		if existing.ObservationID != observation.ObservationID {
+			continue
+		}
+		if equalJSON(existing, observation) {
+			return clone(current)
+		}
+		return Run{}, fmt.Errorf("%w: observation_id %q content differs", ErrConflict, observation.ObservationID)
+	}
+	return p.updateLocked(runID, expectedRevision, func(next *Run) error {
+		next.UpdatedAt = updatedAt
+		next.Observations = append(next.Observations, observation)
+		return nil
+	})
+}
+
 func (p *Producer) updateLocked(runID string, expectedRevision uint64, mutate func(*Run) error) (Run, error) {
 	current, err := load(p.path(runID), runID)
 	if err != nil {
@@ -163,8 +199,9 @@ func (p *Producer) updateLocked(runID string, expectedRevision uint64, mutate fu
 	if err := validateUpdate(current, next); err != nil {
 		return Run{}, err
 	}
+	strictFrom := len(current.Observations)
 	next.Revision = expectedRevision + 1
-	if err := validate(next); err != nil {
+	if err := validateProducer(next, strictFrom); err != nil {
 		return Run{}, err
 	}
 	if err := p.write(next); err != nil {
@@ -178,9 +215,13 @@ func validateUpdate(current, next Run) error {
 		next.RunID != current.RunID || next.Revision != current.Revision ||
 		next.InvokedAt != current.InvokedAt || !equalJSON(current.Task, next.Task)
 	unknownChanged := len(current.Unknown) > 0 && !equalJSON(current.Unknown, next.Unknown)
+	if current.SchemaVersion == 2 {
+		unknownChanged = !equalJSON(current.Unknown, next.Unknown)
+	}
 	historyChanged := !historyPrefix(current.Participants, next.Participants) ||
 		!historyPrefix(current.Lifecycle, next.Lifecycle) ||
-		!historyPrefix(current.Evidence, next.Evidence)
+		!historyPrefix(current.Evidence, next.Evidence) ||
+		!historyPrefix(current.Observations, next.Observations)
 	if scalarsChanged || unknownChanged || historyChanged {
 		return fmt.Errorf("%w: immutable fields or history prefixes changed", ErrMalformed)
 	}
@@ -642,8 +683,8 @@ func load(path, requestedID string) (Run, error) {
 	if run.RunID != requestedID {
 		return Run{}, fmt.Errorf("%w: %s: run_id mismatch", ErrMalformed, path)
 	}
-	if err := validate(run); err != nil {
-		return Run{}, fmt.Errorf("%w: %s: %v", ErrMalformed, path, err)
+	if err := validateReader(run); err != nil {
+		return Run{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return run, nil
 }
@@ -659,7 +700,7 @@ func checkVersion(data []byte, path string) error {
 	if len(version.SchemaVersion) == 0 || json.Unmarshal(version.SchemaVersion, &n) != nil || n == 0 {
 		return fmt.Errorf("%w: %s: invalid schema_version", ErrMalformed, path)
 	}
-	if n != 1 {
+	if n != 1 && n != 2 {
 		return fmt.Errorf("%w: %s: version %d", ErrUnsupportedVersion, path, n)
 	}
 	return nil

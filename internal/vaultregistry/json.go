@@ -3,6 +3,7 @@ package vaultregistry
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 )
 
 func clone[T any](value T) (T, error) {
@@ -158,7 +159,17 @@ func (v *Evidence) UnmarshalJSON(data []byte) error {
 }
 
 func (v Run) MarshalJSON() ([]byte, error) {
-	return marshalObject(v.Unknown, map[string]any{"schema_version": v.SchemaVersion, "run_id": v.RunID, "revision": v.Revision, "invoked_at": v.InvokedAt, "updated_at": v.UpdatedAt, "task": v.Task, "participants": v.Participants, "lifecycle": v.Lifecycle, "evidence": v.Evidence})
+	known := map[string]any{"schema_version": v.SchemaVersion, "run_id": v.RunID, "revision": v.Revision, "invoked_at": v.InvokedAt, "updated_at": v.UpdatedAt, "task": v.Task}
+	if v.SchemaVersion == 2 {
+		observations := v.Observations
+		if observations == nil {
+			observations = []Observation{}
+		}
+		known["observations"] = observations
+	} else {
+		known["participants"], known["lifecycle"], known["evidence"] = v.Participants, v.Lifecycle, v.Evidence
+	}
+	return marshalObject(v.Unknown, known)
 }
 func (v *Run) UnmarshalJSON(data []byte) error {
 	var w struct {
@@ -171,11 +182,26 @@ func (v *Run) UnmarshalJSON(data []byte) error {
 		Participants  []Participant
 		Lifecycle     []Lifecycle
 		Evidence      []Evidence
+		Observations  json.RawMessage
 	}
 	if err := json.Unmarshal(data, &w); err != nil {
 		return err
 	}
-	v.SchemaVersion, v.RunID, v.Revision, v.InvokedAt, v.UpdatedAt, v.Task, v.Participants, v.Lifecycle, v.Evidence = w.SchemaVersion, w.RunID, w.Revision, w.InvokedAt, w.UpdatedAt, w.Task, w.Participants, w.Lifecycle, w.Evidence
-	v.Unknown, _ = unknownFields(data, "schema_version", "run_id", "revision", "invoked_at", "updated_at", "task", "participants", "lifecycle", "evidence")
+	v.SchemaVersion, v.RunID, v.Revision, v.InvokedAt, v.UpdatedAt, v.Task = w.SchemaVersion, w.RunID, w.Revision, w.InvokedAt, w.UpdatedAt, w.Task
+	known := []string{"schema_version", "run_id", "revision", "invoked_at", "updated_at", "task"}
+	if w.SchemaVersion == 2 {
+		v.Participants, v.Lifecycle, v.Evidence = nil, nil, nil
+		if trimmed := bytes.TrimSpace(w.Observations); len(trimmed) == 0 || trimmed[0] != '[' {
+			return fmt.Errorf("observations must be an array")
+		}
+		if err := json.Unmarshal(w.Observations, &v.Observations); err != nil {
+			return err
+		}
+		known = append(known, "observations")
+	} else {
+		v.Participants, v.Lifecycle, v.Evidence, v.Observations = w.Participants, w.Lifecycle, w.Evidence, nil
+		known = append(known, "participants", "lifecycle", "evidence")
+	}
+	v.Unknown, _ = unknownFields(data, known...)
 	return nil
 }

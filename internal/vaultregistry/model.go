@@ -62,6 +62,7 @@ type Run struct {
 	Participants  []Participant
 	Lifecycle     []Lifecycle
 	Evidence      []Evidence
+	Observations  []Observation
 	Unknown       map[string]json.RawMessage
 }
 
@@ -101,7 +102,7 @@ func validID(id string) error {
 	return nil
 }
 
-func validate(run Run) error {
+func validateV1(run Run) error {
 	if run.SchemaVersion != 1 || run.Revision == 0 {
 		return fmt.Errorf("%w: invalid schema or revision", ErrMalformed)
 	}
