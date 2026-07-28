@@ -71,6 +71,62 @@ func TestRetireV2FaultBoundariesRollbackOrReplay(t *testing.T) {
 		})
 	}
 
+	t.Run("registry root sync preserves active record", func(t *testing.T) {
+		root := t.TempDir()
+		producer, err := OpenProducer(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		created, err := producer.CreateRun(t20InternalRequest(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		activePath := producer.path(created.RunID)
+		before, err := os.ReadFile(activePath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		priorSync := retireSyncDirectory
+		priorRemove := retireRemove
+		rootSyncCalls := 0
+		activeRemoveCalls := 0
+		retireSyncDirectory = func(path string) error {
+			if path == root {
+				rootSyncCalls++
+				if rootSyncCalls == 1 {
+					return fault
+				}
+			}
+			return priorSync(path)
+		}
+		retireRemove = func(path string) error {
+			activeRemoveCalls++
+			return priorRemove(path)
+		}
+		_, retireErr := producer.Retire(created.RunID, created.Revision)
+		retireSyncDirectory = priorSync
+		retireRemove = priorRemove
+		if !errors.Is(retireErr, fault) {
+			t.Fatalf("root sync error = %v, want injected fault", retireErr)
+		}
+		if rootSyncCalls != 2 || activeRemoveCalls != 0 {
+			t.Fatalf("root sync calls = %d, active remove calls = %d", rootSyncCalls, activeRemoveCalls)
+		}
+		after, err := os.ReadFile(activePath)
+		if err != nil || string(after) != string(before) {
+			t.Fatalf("active record changed: %v", err)
+		}
+		if _, err := os.Stat(producer.retiredPath(created.RunID)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("failed retirement left retired record: %v", err)
+		}
+		if _, err := os.Stat(filepath.Join(root, "retired")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("failed retirement left retired namespace: %v", err)
+		}
+		if got, err := producer.Retire(created.RunID, created.Revision); err != nil || got.State != RunStateRetired {
+			t.Fatalf("retry = %#v, %v", got, err)
+		}
+	})
+
 	t.Run("active directory sync is replayable", func(t *testing.T) {
 		root := t.TempDir()
 		producer, err := OpenProducer(root)
@@ -84,9 +140,11 @@ func TestRetireV2FaultBoundariesRollbackOrReplay(t *testing.T) {
 		prior := retireSyncDirectory
 		calls := 0
 		retireSyncDirectory = func(path string) error {
-			calls++
-			if calls == 2 {
-				return fault
+			if path == filepath.Join(root, "runs") {
+				calls++
+				if calls == 1 {
+					return fault
+				}
 			}
 			return prior(path)
 		}

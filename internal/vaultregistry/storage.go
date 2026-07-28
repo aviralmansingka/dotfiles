@@ -449,6 +449,13 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 		}
 		return Run{}, err
 	}
+	if createdRetiredDir {
+		if err := retireSyncDirectory(p.root); err != nil {
+			removeErr := os.Remove(retiredDir)
+			syncErr := retireSyncDirectory(p.root)
+			return Run{}, errors.Join(err, removeErr, syncErr)
+		}
+	}
 
 	if active.SchemaVersion == 2 {
 		if err := retireV2(activePath, retiredPath, result); err != nil {
