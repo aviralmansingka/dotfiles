@@ -1,6 +1,6 @@
 # Atlas Run Overview Timeline Scout Sketch
 
-Disposable visual exploration for **Align Atlas Run Overviews With The Pi Activity Timeline**. This path is not a production package, verifier route, Registry-v2 fixture, or accepted `atlas/v1` contract.
+Disposable visual exploration for **Align Atlas Run Overviews With The Pi Activity Timeline**. This path is not a production package, verifier route, Registry-v2 fixture, or accepted `atlas/v1` contract. The later user-selected direction is owned by [`../atlas-picker-run-status/README.md`](../atlas-picker-run-status/README.md).
 
 ## Reproduce
 
@@ -36,7 +36,7 @@ The first comparison is directionally useful but does not settle the compact IA:
 - the rail labels five rendered milestones rather than claiming six durable stages after review correction;
 - current Pi Activity and No Mistakes references were inspected in source, but no matching captured reference frame is included here.
 
-Therefore **rail-led compact remains the preferred hypothesis, not a settled decision**. A fair follow-up must render equivalent information budgets, alternate Goal selections, overflow/omission, and the same Run cases from final typed T18 envelopes.
+This comparison did not settle the compact IA. The later picker prototype linked above records the selected mini-journey direction and its current contract.
 
 ## Candidate semantic hierarchy
 
@@ -79,15 +79,8 @@ Atlas may reuse rail geometry, spacing, truncation, and Gruvbox roles. It must n
 
 ## Palette correction
 
-The ANSI sketch now uses T11's accepted active/in-progress foreground `#e9b143`, not `#fabd2f`. Accepted evidence uses `●`; `◆` remains reserved for retirement in this sketch. Generated selection still needs a future fair prototype to exercise selected emphasis independently from active-state color.
+The ANSI sketch uses T11's accepted active/in-progress foreground `#e9b143`, not `#fabd2f`. Accepted evidence uses `●`; `◆` remains reserved for retirement in this sketch. Selection emphasis is exercised by the later picker prototype linked above.
 
-## Ownership and blockers
+## Disposition
 
-- **T13:** unchanged; owns the isolated current ANSI/sanitization patch.
-- **T11:** canonically requires an Execution Journal preview and keeps compact Atlas unchanged. Replacing that preview is an unresolved ownership decision, not an approved amendment.
-- **T14:** still canonically claims omission counts, cards, provenance, timing, and navigation even where T08 appears to provide related behavior. Parent reconciliation is required.
-- **T15:** owns Goal Forest and Evidence Story.
-- **T18:** depends on T20 and owns the final grammar/envelopes under one-writer custody. Its current reference Run lacks ordered Goals and explicit human gates needed by this sketch.
-- **Native Pi timeline Issue:** remains separate and downstream of merged T18.
-
-No autonomous Task is ready. Required next steps are canonical ownership reconciliation, final T18 hydration and merged identity, a fair prototype against that exact envelope, explicit migration order, and one future implementation writer.
+This initial exploration is retained only to reproduce its comparison artifacts. The later picker prototype linked above owns the selected direction; neither prototype changes production Atlas behavior or claims canonical Task authority.

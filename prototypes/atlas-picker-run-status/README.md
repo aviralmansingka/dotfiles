@@ -1,6 +1,6 @@
 # Pi-Style Atlas Picker Timeline Prototype
 
-One throwaway interactive prototype for the Sidekick agent picker's bottom-right `Atlas Preview` pane. The user selected the mini-journey direction; the older status-card and dashboard variants were removed.
+One throwaway, read-only interactive prototype for the Sidekick agent picker's bottom-right `Atlas Preview` pane. The user selected the mini-journey direction; the older status-card and dashboard variants were removed.
 
 ## Run it
 
