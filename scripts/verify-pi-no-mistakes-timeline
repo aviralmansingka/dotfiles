@@ -24,7 +24,7 @@ run:
     review,running,0,12000
     test,pending,0,0
     document,pending,0,0
-    lint,pending,0,0
+    lint,failed,1,0
     push,pending,0,0
     pr,pending,0,0
     ci,pending,0,0
@@ -72,9 +72,10 @@ perl -pe 's/\e\][^\a]*(?:\a|\e\\)//g; s/\e\[[0-?]*[ -\/]*[@-~]//g; s/\r//g' \
 for expected in \
   'No Mistakes' \
   'feature/no-mistakes-timeline' \
-  '✓ intent' \
+  '● intent' \
   '⟳ review' \
   'round 1' \
+  '× lint' \
   '○ ci' \
   'No Mistakes timeline off'; do
   grep -F "$expected" "$plain" >/dev/null || {
@@ -84,7 +85,7 @@ for expected in \
   }
 done
 
-if grep -F '✓ intent' "$off_plain" >/dev/null; then
+if grep -F '● intent' "$off_plain" >/dev/null; then
   printf 'timeline remained visible after toggling off\n' >&2
   tail -120 "$off_plain" >&2
   exit 1

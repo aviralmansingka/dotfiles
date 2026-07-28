@@ -113,14 +113,14 @@ function glyph(status: string): { symbol: string; color: "success" | "warning" |
     case "completed":
     case "passed":
     case "checks-passed":
-      return { symbol: "✓", color: "success" };
+      return { symbol: "●", color: "success" };
     case "running":
     case "fixing":
     case "awaiting":
       return { symbol: "⟳", color: "warning" };
     case "failed":
     case "cancelled":
-      return { symbol: "✗", color: "error" };
+      return { symbol: "×", color: "error" };
     case "skipped":
       return { symbol: "–", color: "dim" };
     default:
@@ -146,7 +146,7 @@ export function renderNoMistakesTimeline(snapshot: Snapshot, theme: Theme, width
       step.activity,
     ].filter(Boolean).join(" · ");
     lines.push(truncateToWidth(
-      `${theme.fg("dim", `  ${connector}`)} ${theme.fg(stepGlyph.color, stepGlyph.symbol)} ${theme.fg("text", theme.bold(step.name))}${details ? theme.fg("dim", ` · ${details}`) : ""}`,
+      `${theme.fg("borderMuted", `  ${connector}`)} ${theme.fg(stepGlyph.color, stepGlyph.symbol)} ${theme.fg("text", theme.bold(step.name))}${details ? theme.fg("dim", ` · ${details}`) : ""}`,
       width,
       "…",
     ));
