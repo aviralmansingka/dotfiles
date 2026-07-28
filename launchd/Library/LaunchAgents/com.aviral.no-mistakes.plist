@@ -21,6 +21,8 @@
   <string>Background</string>
   <key>RunAtLoad</key>
   <true/>
+  <key>KeepAlive</key>
+  <true/>
   <key>ThrottleInterval</key>
   <integer>30</integer>
 </dict>

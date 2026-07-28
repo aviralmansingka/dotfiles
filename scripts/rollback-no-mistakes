@@ -54,21 +54,32 @@ restart_daemon() {
   binary=$1
   case $(uname -s) in
     Darwin)
-      label=gui/$(id -u)/com.aviral.no-mistakes
-      if command -v launchctl >/dev/null 2>&1 && launchctl print "$label" >/dev/null 2>&1; then
-        launchctl kickstart -k "$label"
-        return
+      plist=$HOME/Library/LaunchAgents/com.aviral.no-mistakes.plist
+      domain=gui/$(id -u)
+      label=$domain/com.aviral.no-mistakes
+      command -v launchctl >/dev/null 2>&1 || fail 'launchctl is required on Darwin'
+      [ -f "$plist" ] || fail "owned LaunchAgent is not deployed: $plist"
+      if launchctl print "$label" >/dev/null 2>&1; then
+        launchctl bootout "$label"
       fi
+      # KeepAlive must be unloaded before the pinned binary stops any detached
+      # daemon still holding NM_HOME from an earlier lifecycle operation.
+      "$binary" daemon stop --force >/dev/null 2>&1 || true
+      launchctl bootstrap "$domain" "$plist"
+      launchctl print "$label" >/dev/null 2>&1 || fail "owned LaunchAgent is not loaded: $label"
+      launchctl kickstart -k "$label"
+      return 0
       ;;
     Linux)
       if command -v systemctl >/dev/null 2>&1 && systemctl --user is-enabled no-mistakes.service >/dev/null 2>&1; then
         systemctl --user restart no-mistakes.service
         return
       fi
+      "$binary" daemon stop --force >/dev/null 2>&1 || true
+      "$binary" daemon start >/dev/null
       ;;
+    *) fail "unsupported daemon platform: $(uname -s)" ;;
   esac
-  "$binary" daemon stop --force >/dev/null 2>&1 || true
-  "$binary" daemon start >/dev/null
 }
 
 install_dir=${NO_MISTAKES_INSTALL_DIR:-$HOME/.local/bin}
@@ -115,13 +126,14 @@ if [ "$changed" = 1 ]; then
   chmod 0755 "$temporary"
   [ "$(sha256 "$temporary")" = "$rollback_binary_sha" ] || fail 'rollback copy failed verification'
   mv -f "$temporary" "$target"
-  write_current_manifest "$current_manifest"
-
-  export NO_MISTAKES_TELEMETRY=0
-  export NO_MISTAKES_NO_UPDATE_CHECK=1
-  export NM_HOME=${NM_HOME:-$HOME/.no-mistakes}
-  restart_daemon "$target"
 fi
+# Repair metadata and reconcile the service even when a retry finds that the
+# rollback binary was already moved into place before an interruption.
+write_current_manifest "$current_manifest"
+export NO_MISTAKES_TELEMETRY=0
+export NO_MISTAKES_NO_UPDATE_CHECK=1
+export NM_HOME=${NM_HOME:-$HOME/.no-mistakes}
+restart_daemon "$target"
 
 printf 'no-mistakes rolled back to %s (binary sha256 %s)\n' \
   "$rollback_version" "$rollback_binary_sha"

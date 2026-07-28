@@ -79,6 +79,8 @@ plutil -lint "$deployed_plist" >/dev/null || fail 'deployed LaunchAgent is inval
   fail 'LaunchAgent does not disable telemetry'
 [ "$(plutil -extract EnvironmentVariables.NO_MISTAKES_NO_UPDATE_CHECK raw -o - "$deployed_plist")" = 1 ] || \
   fail 'LaunchAgent does not disable update checks'
+[ "$(plutil -extract KeepAlive raw -o - "$deployed_plist")" = true ] || \
+  fail 'LaunchAgent does not keep the foreground daemon alive'
 
 launch_state=$(mktemp /private/tmp/no-mistakes-launch-state.XXXXXX)
 expected_manifest=$launch_state.manifest
@@ -200,6 +202,15 @@ case "$pi_path" in
   *acpx*|*codex*) fail "managed agent is not native pi: $pi_path" ;;
 esac
 run_managed "$pi_path" --version > "$probe_root/pi-version"
+node_path=$(run_managed /bin/sh -c 'command -v node')
+[ -n "$node_path" ] && [ -x "$node_path" ] || fail 'Pi Node.js runtime is not discoverable'
+pi_module=$(run_managed "$node_path" -e '
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const cli = fs.realpathSync(process.argv[1]);
+  process.stdout.write(path.join(path.dirname(cli), "index.js"));
+' "$pi_path")
+[ -f "$pi_module" ] || fail "Pi SDK entry point is missing: $pi_module"
 
 printf 'agent: pi\n' > "$probe_state/config.yaml"
 git init -q --bare "$probe_origin"
@@ -229,6 +240,41 @@ probe_skill_sha=$(sha256 "$probe_skill")
 [ ! -e "$probe_repo/.agents/skills/no-mistakes/SKILL.md" ] || \
   fail 'init created a forbidden repository-local Pi skill'
 
+# Use Pi's supported SDK resource loader without a model call. This proves the
+# real Pi installation discovers the generated user-level skill, rather than
+# merely proving that the file exists.
+probe_agent_dir=$probe_home/.pi/agent
+mkdir -p "$probe_agent_dir"
+cat > "$probe_root/verify-pi-skill.mjs" <<'JAVASCRIPT'
+import fs from "node:fs";
+import { pathToFileURL } from "node:url";
+
+const [modulePath, cwd, agentDir, expectedPath] = process.argv.slice(2);
+const { DefaultResourceLoader } = await import(pathToFileURL(modulePath).href);
+const loader = new DefaultResourceLoader({ cwd, agentDir });
+await loader.reload();
+const { skills, diagnostics } = loader.getSkills();
+const expected = fs.realpathSync(expectedPath);
+const matches = skills.filter(
+  (skill) => skill.name === "no-mistakes" && fs.realpathSync(skill.filePath) === expected,
+);
+if (matches.length !== 1) {
+  console.error(JSON.stringify({
+    discovered: skills.map((skill) => ({ name: skill.name, filePath: skill.filePath })),
+    diagnostics,
+  }, null, 2));
+  process.exit(1);
+}
+console.log(`discovered no-mistakes at ${matches[0].filePath}`);
+JAVASCRIPT
+if ! (cd "$probe_repo" && run_managed "$node_path" \
+  "$probe_root/verify-pi-skill.mjs" "$pi_module" "$probe_repo" \
+  "$probe_agent_dir" "$probe_skill") > "$probe_root/pi-skill-discovery.out" 2>&1; then
+  cat "$probe_root/pi-skill-discovery.out" >&2
+  fail 'Pi DefaultResourceLoader did not discover the generated no-mistakes skill'
+fi
+cat "$probe_root/pi-skill-discovery.out"
+
 if ! (cd "$probe_repo" && run_managed "$no_mistakes" axi run --yes \
   --intent 'Append a second line containing two to value.txt while preserving the existing first line.' \
   --skip test,document,lint,push,pr,ci) > "$probe_root/axi-run.out" 2>&1; then
@@ -253,5 +299,6 @@ printf 'ok: managed macOS LaunchAgent is running with pid %s; doctor passed\n' "
 printf 'ok: managed macOS LaunchAgent environment disables telemetry and update checks\n'
 printf 'ok: no-mistakes %s darwin-arm64 pin and source revision %s\n' "$VERSION" "$REVISION"
 printf 'ok: generated Pi skill provenance sha256=%s\n' "$canonical_skill_sha"
+printf 'ok: Pi DefaultResourceLoader discovered the generated no-mistakes skill\n'
 printf 'ok: doctor, native Pi discovery (%s), and disposable AXI review passed\n' "$pi_path"
 printf 'ok: scratch-only local remote was unchanged; push, PR, and CI were skipped\n'

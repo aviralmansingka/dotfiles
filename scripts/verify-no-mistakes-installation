@@ -7,6 +7,7 @@ import hashlib
 import io
 import os
 from pathlib import Path
+import plistlib
 import shutil
 import stat
 import subprocess
@@ -15,9 +16,12 @@ import tarfile
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+ROOT_INSTALL = ROOT / "install.sh"
 INSTALL = ROOT / "scripts/install-no-mistakes"
 ROLLBACK = ROOT / "scripts/rollback-no-mistakes"
+LIVE_VERIFY = ROOT / "scripts/verify-no-mistakes-live"
 DAEMON_WRAPPER = ROOT / "pi/bin/no-mistakes-daemon"
+LAUNCHD_PLIST = ROOT / "launchd/Library/LaunchAgents/com.aviral.no-mistakes.plist"
 VERSION = "v1.41.2"
 REVISION = "867d64d9c2df89f3f204ad1f5528e5bf7b460caa"
 CHECKSUMS_SHA = "e17cc7a246bc619f34d423848171e734c5fe033106562db8baeb20de2570a01b"
@@ -55,10 +59,19 @@ case "${{1:-}}" in
 {SKILL.rstrip()}
 SKILL
     printf '%s\\n' "$PWD" >> "$NM_HOME/init-invocations"
+    : > "$FIXTURE_DETACHED_DAEMON_STATE"
     ;;
   daemon)
     case "${{2:-}}" in
-      stop) exit 0 ;;
+      stop)
+        test "${{3:-}}" = --force
+        test ! -e "$FIXTURE_LAUNCHCTL_STATE"
+        printf 'daemon stop --force version=%s telemetry=%s update=%s nm_home=%s\\n' \\
+          "$version" "${{NO_MISTAKES_TELEMETRY:-missing}}" \\
+          "${{NO_MISTAKES_NO_UPDATE_CHECK:-missing}}" "$NM_HOME" \\
+          >> "$FIXTURE_SERVICE_LOG"
+        rm -f "$FIXTURE_DETACHED_DAEMON_STATE"
+        ;;
       start)
         printf 'start version=%s telemetry=%s update=%s\\n' \\
           "$version" "${{NO_MISTAKES_TELEMETRY:-missing}}" \\
@@ -167,6 +180,8 @@ def fixture_environment(
         install_state / "rollback",
         nm_home,
         repo_scripts,
+        repo / "launchd/Library/LaunchAgents",
+        home / "Library/LaunchAgents",
         unrelated,
         command_bin,
     ):
@@ -179,8 +194,15 @@ def fixture_environment(
     shutil.copy2(INSTALL, fixture_install)
     shutil.copy2(ROLLBACK, fixture_rollback)
     pin_fixture_archive(fixture_install, platform, archive)
+    source_plist = repo / "launchd/Library/LaunchAgents/com.aviral.no-mistakes.plist"
+    deployed_plist = home / "Library/LaunchAgents/com.aviral.no-mistakes.plist"
+    shutil.copy2(LAUNCHD_PLIST, source_plist)
+    shutil.copy2(LAUNCHD_PLIST, deployed_plist)
 
     curl_log = base / "curl-invocations"
+    service_log = base / "service-lifecycle"
+    launchctl_state = base / "launchctl-loaded"
+    detached_daemon_state = base / "detached-daemon"
     executable(
         command_bin / "curl",
         """#!/usr/bin/env python3
@@ -215,7 +237,55 @@ case "$FIXTURE_PLATFORM:$1" in
 esac
 """,
     )
-    executable(command_bin / "launchctl", "#!/bin/sh\nexit 1\n")
+    executable(
+        command_bin / "id",
+        "#!/bin/sh\n[ \"${1:-}\" = -u ] || exit 64\nprintf '501\\n'\n",
+    )
+    executable(
+        command_bin / "launchctl",
+        """#!/usr/bin/env python3
+import os
+from pathlib import Path
+import plistlib
+import sys
+
+arguments = sys.argv[1:]
+state = Path(os.environ["FIXTURE_LAUNCHCTL_STATE"])
+log_path = Path(os.environ["FIXTURE_SERVICE_LOG"])
+label = "gui/501/com.aviral.no-mistakes"
+domain = "gui/501"
+
+
+def record(message: str) -> None:
+    with log_path.open("a", encoding="utf-8") as log:
+        log.write(message + "\\n")
+
+
+if arguments == ["print", label]:
+    loaded = state.exists()
+    record(f"print {label} {'loaded' if loaded else 'missing'}")
+    raise SystemExit(0 if loaded else 1)
+if arguments == ["bootout", label] and state.exists():
+    state.unlink()
+    record(f"bootout {label}")
+    raise SystemExit(0)
+if len(arguments) == 3 and arguments[:2] == ["bootstrap", domain]:
+    plist = Path(arguments[2])
+    if state.exists():
+        raise SystemExit(67)
+    if plist != Path(os.environ["FIXTURE_DEPLOYED_PLIST"]):
+        raise SystemExit(65)
+    if plistlib.loads(plist.read_bytes()).get("Label") != "com.aviral.no-mistakes":
+        raise SystemExit(66)
+    state.write_text(label + "\\n")
+    record(f"bootstrap {domain} {plist}")
+    raise SystemExit(0)
+if arguments == ["kickstart", "-k", label] and state.exists():
+    record(f"kickstart -k {label}")
+    raise SystemExit(0)
+raise SystemExit(64)
+""",
+    )
     executable(command_bin / "systemctl", "#!/bin/sh\nexit 1\n")
 
     env = {
@@ -233,6 +303,10 @@ esac
             "FIXTURE_CURL_ASSET": str(archive),
             "FIXTURE_EXPECTED_URL": release_url(platform),
             "FIXTURE_CURL_LOG": str(curl_log),
+            "FIXTURE_DEPLOYED_PLIST": str(deployed_plist),
+            "FIXTURE_DETACHED_DAEMON_STATE": str(detached_daemon_state),
+            "FIXTURE_LAUNCHCTL_STATE": str(launchctl_state),
+            "FIXTURE_SERVICE_LOG": str(service_log),
             "PATH": f"{command_bin}:{os.environ.get('PATH', '/usr/bin:/bin')}",
         }
     )
@@ -246,6 +320,10 @@ esac
         "repo": repo,
         "unrelated": unrelated,
         "curl_log": curl_log,
+        "deployed_plist": deployed_plist,
+        "detached_daemon_state": detached_daemon_state,
+        "launchctl_state": launchctl_state,
+        "service_log": service_log,
         "install_script": fixture_install,
         "rollback_script": fixture_rollback,
     }
@@ -286,6 +364,25 @@ def seed_previous_release(paths: dict[str, Path], platform: str) -> bytes:
     return previous
 
 
+def darwin_reconcile_log(
+    paths: dict[str, Path], version: str, *, initially_loaded: bool
+) -> list[str]:
+    label = "gui/501/com.aviral.no-mistakes"
+    entries = [f"print {label} {'loaded' if initially_loaded else 'missing'}"]
+    if initially_loaded:
+        entries.append(f"bootout {label}")
+    entries.extend(
+        (
+            "daemon stop --force "
+            f"version={version} telemetry=0 update=1 nm_home={paths['nm_home']}",
+            f"bootstrap gui/501 {paths['deployed_plist']}",
+            f"print {label} loaded",
+            f"kickstart -k {label}",
+        )
+    )
+    return entries
+
+
 def verify_platform(root: Path, platform: str) -> None:
     fixture = root / platform
     fixture.mkdir()
@@ -296,6 +393,9 @@ def verify_platform(root: Path, platform: str) -> None:
     env, paths = fixture_environment(fixture, platform, archive)
     previous = seed_previous_release(paths, platform)
     preserved_before = runtime_snapshot(paths["nm_home"])
+    skill = paths["home"] / ".agents/skills/no-mistakes/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("stale skill that must not suppress dotfiles init\n")
 
     # The installer must hash the tar.gz itself before extracting or replacing.
     corrupt_archive = fixture / "corrupt.tar.gz"
@@ -331,28 +431,46 @@ def verify_platform(root: Path, platform: str) -> None:
     assert rollback_metadata["version"] == "v1.40.0"
     assert rollback_metadata["binary_sha256"] == hashlib.sha256(previous).hexdigest()
 
-    skill = paths["home"] / ".agents/skills/no-mistakes/SKILL.md"
     assert skill.read_text() == SKILL
     assert not (paths["repo"] / ".agents/skills/no-mistakes/SKILL.md").exists()
     assert not (paths["unrelated"] / ".agents/skills/no-mistakes/SKILL.md").exists()
-    assert (paths["nm_home"] / "init-invocations").read_text().splitlines() == [
-        str(paths["repo"].resolve())
-    ]
+    repo_init = str(paths["repo"].resolve())
+    init_log = paths["nm_home"] / "init-invocations"
+    assert init_log.read_text().splitlines() == [repo_init]
     daemon_log = paths["nm_home"] / "daemon-invocations"
-    assert daemon_log.read_text().splitlines() == [
-        f"start version={VERSION} telemetry=0 update=1"
-    ]
+    if platform == "darwin-arm64":
+        darwin_lifecycle = darwin_reconcile_log(
+            paths, VERSION, initially_loaded=False
+        )
+        assert paths["service_log"].read_text().splitlines() == darwin_lifecycle
+        assert not paths["detached_daemon_state"].exists()
+        assert not daemon_log.exists(), "Darwin must not fall back to upstream daemon ownership"
+    else:
+        assert daemon_log.read_text().splitlines() == [
+            f"start version={VERSION} telemetry=0 update=1"
+        ]
     assert runtime_snapshot(paths["nm_home"]) == preserved_before
     assert not list(paths["target"].parent.glob(".no-mistakes.*"))
 
-    # A second install verifies the archive but does not replace or restart.
+    # A retry keeps the verified inode but repeats repo init and service
+    # reconciliation in case the prior run was interrupted after replacement.
     installed_inode = paths["target"].stat().st_ino
-    init_log = (paths["nm_home"] / "init-invocations").read_bytes()
-    restart_log = daemon_log.read_bytes()
+    (paths["state"] / "current.manifest").write_text("interrupted=after-binary-move\n")
     run([paths["install_script"]], env)
     assert paths["target"].stat().st_ino == installed_inode
-    assert (paths["nm_home"] / "init-invocations").read_bytes() == init_log
-    assert daemon_log.read_bytes() == restart_log
+    assert manifest(paths["state"] / "current.manifest") == current
+    assert init_log.read_text().splitlines() == [repo_init, repo_init]
+    if platform == "darwin-arm64":
+        darwin_lifecycle += darwin_reconcile_log(
+            paths, VERSION, initially_loaded=True
+        )
+        assert paths["service_log"].read_text().splitlines() == darwin_lifecycle
+        assert not paths["detached_daemon_state"].exists()
+    else:
+        assert daemon_log.read_text().splitlines()[-1] == (
+            f"start version={VERSION} telemetry=0 update=1"
+        )
+        assert len(daemon_log.read_text().splitlines()) == 2
 
     # A damaged rollback binary is rejected before replacement.
     rollback_binary = paths["state"] / "rollback/no-mistakes"
@@ -368,15 +486,60 @@ def verify_platform(root: Path, platform: str) -> None:
     assert manifest(paths["state"] / "current.manifest")["version"] == "v1.40.0"
     assert runtime_snapshot(paths["nm_home"]) == preserved_before
     assert skill.read_text() == SKILL
-    assert daemon_log.read_text().splitlines()[-1] == (
-        "start version=v1.40.0 telemetry=0 update=1"
-    )
+    if platform == "darwin-arm64":
+        darwin_lifecycle += darwin_reconcile_log(
+            paths, "v1.40.0", initially_loaded=True
+        )
+        assert paths["service_log"].read_text().splitlines() == darwin_lifecycle
+    else:
+        assert daemon_log.read_text().splitlines()[-1] == (
+            "start version=v1.40.0 telemetry=0 update=1"
+        )
+        assert len(daemon_log.read_text().splitlines()) == 3
 
     rolled_back_inode = paths["target"].stat().st_ino
-    restart_log = daemon_log.read_bytes()
+    (paths["state"] / "current.manifest").write_text("interrupted=after-binary-move\n")
     run([paths["rollback_script"]], env)
     assert paths["target"].stat().st_ino == rolled_back_inode
-    assert daemon_log.read_bytes() == restart_log
+    assert manifest(paths["state"] / "current.manifest")["version"] == "v1.40.0"
+    if platform == "darwin-arm64":
+        darwin_lifecycle += darwin_reconcile_log(
+            paths, "v1.40.0", initially_loaded=True
+        )
+        assert paths["service_log"].read_text().splitlines() == darwin_lifecycle
+    else:
+        assert daemon_log.read_text().splitlines()[-1] == (
+            "start version=v1.40.0 telemetry=0 update=1"
+        )
+        assert len(daemon_log.read_text().splitlines()) == 4
+
+
+def verify_fresh_darwin_bootstrap(root: Path) -> None:
+    fixture = root / "fresh-darwin-bootstrap"
+    fixture.mkdir()
+    binary = fixture / "fixture-binary"
+    fake_binary(binary, VERSION)
+    archive = fixture / f"no-mistakes-{VERSION}-darwin-arm64.tar.gz"
+    binary_archive(archive, binary)
+    env, paths = fixture_environment(
+        fixture, "darwin-arm64", archive, local_asset=True
+    )
+
+    run([paths["install_script"]], env)
+    assert paths["target"].read_bytes() == binary.read_bytes()
+    assert not (paths["state"] / "rollback/no-mistakes").exists()
+    assert manifest(paths["state"] / "current.manifest")["version"] == VERSION
+    assert (paths["nm_home"] / "config.yaml").read_text() == "agent: pi\n"
+    assert (paths["home"] / ".agents/skills/no-mistakes/SKILL.md").read_text() == SKILL
+    assert paths["launchctl_state"].read_text().strip() == (
+        "gui/501/com.aviral.no-mistakes"
+    )
+    assert paths["service_log"].read_text().splitlines() == darwin_reconcile_log(
+        paths, VERSION, initially_loaded=False
+    )
+    assert not paths["detached_daemon_state"].exists()
+    assert not (paths["nm_home"] / "daemon-invocations").exists()
+    assert not paths["curl_log"].exists()
 
 
 def verify_rejections(root: Path) -> None:
@@ -413,16 +576,41 @@ def verify_rejections(root: Path) -> None:
 
 
 def main() -> int:
+    root_install_text = ROOT_INSTALL.read_text()
     install_text = INSTALL.read_text()
     rollback_text = ROLLBACK.read_text()
+    live_verify_text = LIVE_VERIFY.read_text()
     wrapper_text = DAEMON_WRAPPER.read_text()
+    launchd = plistlib.loads(LAUNCHD_PLIST.read_bytes())
     assert 'exec "$no_mistakes" daemon run --root "$NM_HOME"' in wrapper_text
     assert 'daemon start' not in wrapper_text
     for lifecycle_text in (install_text, rollback_text):
         assert '$HOME/bin/no-mistakes-daemon' not in lifecycle_text
-        assert 'launchctl kickstart -k "$label"' in lifecycle_text
-        assert '"$binary" daemon stop --force' in lifecycle_text
+        bootout = lifecycle_text.index('launchctl bootout "$label"')
+        detached_stop = lifecycle_text.index('"$binary" daemon stop --force')
+        bootstrap = lifecycle_text.index('launchctl bootstrap "$domain" "$plist"')
+        loaded = lifecycle_text.index(
+            'launchctl print "$label" >/dev/null 2>&1 || fail', bootstrap
+        )
+        kickstart = lifecycle_text.index('launchctl kickstart -k "$label"', loaded)
+        assert bootout < detached_stop < bootstrap < loaded < kickstart
         assert '"$binary" daemon start >/dev/null' in lifecycle_text
+    assert launchd["Label"] == "com.aviral.no-mistakes"
+    assert launchd["RunAtLoad"] is True and launchd["KeepAlive"] is True
+    assert "DefaultResourceLoader" in live_verify_text
+    assert "loader.getSkills()" in live_verify_text
+    assert 'skill.name === "no-mistakes"' in live_verify_text
+    pi_stow = root_install_text.index('stow -d "$DOTFILES_DIR" -t "$HOME" pi')
+    launchd_stow = root_install_text.index(
+        'stow -d "$DOTFILES_DIR" -t "$HOME" launchd', pi_stow
+    )
+    owned_install = root_install_text.index(
+        '"$DOTFILES_DIR/scripts/install-no-mistakes"', launchd_stow
+    )
+    assert pi_stow < launchd_stow < owned_install
+    assert root_install_text.count('"$DOTFILES_DIR/scripts/install-no-mistakes"') == 1
+    assert '(cd "$dotfiles_repo" && "$target" init)' in install_text
+    assert 'if [ ! -f "$skill" ]' not in install_text
     for required in (VERSION, REVISION, CHECKSUMS_SHA, *PLATFORMS.values()):
         assert required in install_text
     for platform in PLATFORMS:
@@ -437,9 +625,13 @@ def main() -> int:
         root = Path(temporary)
         for platform in PLATFORMS:
             verify_platform(root, platform)
+        verify_fresh_darwin_bootstrap(root)
         verify_rejections(root)
 
-    print("ok: foreground wrapper and non-blocking restart fallbacks are owned")
+    print("ok: root macOS install invokes the pin after Pi/LaunchAgent deployment")
+    print("ok: Darwin reconciliation unloads KeepAlive before stopping detached ownership")
+    print("ok: fresh/retry install and rollback bootstrap, require, and kickstart the owned job")
+    print("ok: foreground wrapper and non-blocking Linux fallback are owned")
     print("ok: exact darwin-arm64 and linux-amd64 release tar.gz URLs selected")
     print("ok: real archives hashed before safe executable-only extraction")
     print("ok: installed binary digest/version and exact archive provenance recorded")

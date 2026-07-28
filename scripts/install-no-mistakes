@@ -75,21 +75,32 @@ restart_daemon() {
   binary=$1
   case $(uname -s) in
     Darwin)
-      label=gui/$(id -u)/com.aviral.no-mistakes
-      if command -v launchctl >/dev/null 2>&1 && launchctl print "$label" >/dev/null 2>&1; then
-        launchctl kickstart -k "$label"
-        return
+      plist=$2
+      domain=gui/$(id -u)
+      label=$domain/com.aviral.no-mistakes
+      command -v launchctl >/dev/null 2>&1 || fail 'launchctl is required on Darwin'
+      [ -f "$plist" ] || fail "owned LaunchAgent is not deployed: $plist"
+      if launchctl print "$label" >/dev/null 2>&1; then
+        launchctl bootout "$label"
       fi
+      # Init can leave an upstream detached daemon holding NM_HOME. KeepAlive
+      # must be unloaded before the pinned binary stops that remaining owner.
+      "$binary" daemon stop --force >/dev/null 2>&1 || true
+      launchctl bootstrap "$domain" "$plist"
+      launchctl print "$label" >/dev/null 2>&1 || fail "owned LaunchAgent is not loaded: $label"
+      launchctl kickstart -k "$label"
+      return 0
       ;;
     Linux)
       if command -v systemctl >/dev/null 2>&1 && systemctl --user is-enabled no-mistakes.service >/dev/null 2>&1; then
         systemctl --user restart no-mistakes.service
         return
       fi
+      "$binary" daemon stop --force >/dev/null 2>&1 || true
+      "$binary" daemon start >/dev/null
       ;;
+    *) fail "unsupported daemon platform: $(uname -s)" ;;
   esac
-  "$binary" daemon stop --force >/dev/null 2>&1 || true
-  "$binary" daemon start >/dev/null
 }
 
 os=$(uname -s)
@@ -121,6 +132,8 @@ rollback_binary=$state_dir/rollback/no-mistakes
 rollback_manifest=$state_dir/rollback/manifest
 nm_home=${NM_HOME:-$HOME/.no-mistakes}
 skill=$HOME/.agents/skills/no-mistakes/SKILL.md
+source_plist=$dotfiles_repo/launchd/Library/LaunchAgents/com.aviral.no-mistakes.plist
+deployed_plist=$HOME/Library/LaunchAgents/com.aviral.no-mistakes.plist
 
 mkdir -p "$install_dir" "$state_dir/rollback" "$nm_home"
 lock=$state_dir/install.lock
@@ -216,23 +229,23 @@ elif ! awk '$1 == "agent:" && $2 == "pi" { found=1 } END { exit !found }' "$conf
   fail "$config must select native Pi with 'agent: pi'"
 fi
 
-initialized=0
-if [ ! -f "$skill" ]; then
-  export NO_MISTAKES_TELEMETRY=0
-  export NO_MISTAKES_NO_UPDATE_CHECK=1
-  export NM_HOME="$nm_home"
-  (cd "$dotfiles_repo" && "$target" init)
-  initialized=1
-fi
+export NO_MISTAKES_TELEMETRY=0
+export NO_MISTAKES_NO_UPDATE_CHECK=1
+export NM_HOME="$nm_home"
+# Init is idempotent and repository-sensitive. Always run it from this exact
+# dotfiles worktree so a pre-existing or stale global skill cannot mask missing
+# repository initialization, and so the pinned binary refreshes the skill.
+(cd "$dotfiles_repo" && "$target" init)
 [ -f "$skill" ] || fail "upstream init did not generate canonical skill at $skill"
 [ ! -e "$dotfiles_repo/.agents/skills/no-mistakes/SKILL.md" ] || fail 'repository-local Pi skill is forbidden'
 
-if [ "$changed" = 1 ] || [ "$initialized" = 1 ]; then
-  export NO_MISTAKES_TELEMETRY=0
-  export NO_MISTAKES_NO_UPDATE_CHECK=1
-  export NM_HOME="$nm_home"
-  restart_daemon "$target"
+if [ "$os" = Darwin ]; then
+  [ -f "$source_plist" ] || fail "owned LaunchAgent source is missing: $source_plist"
+  [ -f "$deployed_plist" ] || fail "owned LaunchAgent is not deployed: $deployed_plist"
+  cmp -s "$source_plist" "$deployed_plist" || fail 'deployed LaunchAgent differs from this dotfiles worktree'
 fi
+# Always reconcile the service, including a retry after binary replacement.
+restart_daemon "$target" "$deployed_plist"
 
 printf 'no-mistakes %s installed for %s (archive sha256 %s)\n' \
   "$VERSION" "$platform" "$expected_sha"
