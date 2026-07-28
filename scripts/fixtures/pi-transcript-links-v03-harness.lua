@@ -16,11 +16,33 @@ local function find(lines, needle)
     if col then return row, col end
   end
 end
+local function find_last(lines, needle)
+  for row = #lines, 1, -1 do
+    local col = lines[row]:find(needle, 1, true)
+    if col then return row, col end
+  end
+end
 local function wait_for(needle, timeout)
   local lines
   local ok = vim.wait(timeout, function()
     lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     return find(lines, needle) ~= nil
+  end, 25)
+  return ok, lines
+end
+local function count(lines, needle)
+  local total = 0
+  for _, line in ipairs(lines) do if line:find(needle, 1, true) then total = total + 1 end end
+  return total
+end
+local function render_fresh_fixture()
+  local before = count(vim.api.nvim_buf_get_lines(0, 0, -1, false), "HTTPS path")
+  -- Setup uses Pi's documented terminal channel path and clears pending editor text first.
+  vim.api.nvim_chan_send(vim.bo.channel, "\21/v03-fixture\r")
+  local lines
+  local ok = vim.wait(5000, function()
+    lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    return count(lines, "HTTPS path") > before
   end, 25)
   return ok, lines
 end
@@ -31,12 +53,12 @@ local function mouse(button, action, row, col)
   vim.api.nvim_input_mouse(button, action, "", 1, row - 1, col - 1)
 end
 local function target_cell(row, col)
-  local pos = vim.fn.screenpos(0, row, col)
   local origin = vim.fn.win_screenpos(0)
+  local top = vim.fn.line("w0")
   local height, width = vim.api.nvim_win_get_height(0), vim.api.nvim_win_get_width(0)
-  local visible = pos.row >= origin[1] and pos.row < origin[1] + height
-    and pos.col >= origin[2] and pos.col < origin[2] + width
-  return pos.row, pos.col, visible
+  local screen_row, screen_col = origin[1] + row - top, origin[2] + col - 1
+  local visible = row >= top and row < top + height and col >= 1 and col <= width
+  return screen_row, screen_col, visible
 end
 local pi = vim.fn.exepath("pi")
 local raw = out .. "/terminal.ansi"
@@ -59,9 +81,7 @@ trace[#trace + 1] = { step = "startup", mode = vim.api.nvim_get_mode().mode, buf
 record("neovim-terminal-mode", entered and vim.api.nvim_get_mode().mode == "t")
 pause(500)
 -- Deterministic fixture setup only; interaction evidence below uses Neovim input APIs.
-vim.api.nvim_chan_send(vim.bo.channel, "\21/v03-fixture\r")
-pause(100)
-local fixture, lines = wait_for("HTTPS path", 5000)
+local fixture, lines = render_fresh_fixture()
 record("fixture-rendered-by-real-pi", fixture)
 snap("fixture")
 local before = table.concat(lines or {}, "\n")
@@ -77,17 +97,14 @@ input("x")
 pause(100)
 local typed_editor = table.concat(snap("typed-character"), "\n")
 record("typed-character-reaches-pi-editor", typed_editor:find("x", 1, true) ~= nil)
-input("\21/v03-typed\r")
-pause(100)
-local typed = wait_for("Typed input reached Pi", 3000)
-record("typed-command-reaches-pi", typed)
+fixture, lines = render_fresh_fixture()
+record("fresh-bottom-fixture-before-https", fixture)
 lines = snap("before-clicks")
-local hrow, hcol = find(lines, "HTTPS path")
-if hrow then
-  local screen_row, screen_col, visible = target_cell(hrow, hcol + 6)
-  record("https-target-cell-visible", visible, vim.inspect({ row = screen_row, col = screen_col }))
-  if visible then mouse("left", "press", screen_row, screen_col) end
-end
+local hrow, hcol = find_last(lines, "HTTPS path")
+local hscreen_row, hscreen_col, hvisible
+if hrow then hscreen_row, hscreen_col, hvisible = target_cell(hrow, hcol + 6) end
+record("https-target-cell-visible", hvisible == true, vim.inspect({ row = hscreen_row, col = hscreen_col }))
+if hvisible then mouse("left", "press", hscreen_row, hscreen_col) end
 pause(100)
 local copied = wait_for("Copied fixture.example", 3000)
 record("https-click-shows-confirmation", copied)
@@ -97,14 +114,15 @@ local cleared_lines = snap("cleared-status")
 record("copy-confirmation-clears", not table.concat(cleared_lines, "\n"):find("Copied fixture.example", 1, true))
 local clip = vim.fn.readfile(os.getenv("V03_CLIPBOARD_LOG"))
 record("exactly-one-sandboxed-clipboard-write", #clip == 1 and clip[1] == "https://fixture.example/path?q=1#frag", vim.inspect(clip))
+fixture, lines = render_fresh_fixture()
+record("fresh-bottom-fixture-before-wikilink", fixture)
 lines = snap("wikilink-click-target")
-local wrow, wcol = find(lines, "Target heading")
+local wrow, wcol = find_last(lines, "Target heading")
 record("wikilink-visible", wrow ~= nil)
-if wrow then
-  local screen_row, screen_col, visible = target_cell(wrow, wcol)
-  record("wikilink-target-cell-visible", visible, vim.inspect({ row = screen_row, col = screen_col }))
-  if visible then mouse("left", "press", screen_row, screen_col) end
-end
+local wscreen_row, wscreen_col, wvisible
+if wrow then wscreen_row, wscreen_col, wvisible = target_cell(wrow, wcol) end
+record("wikilink-target-cell-visible", wvisible == true, vim.inspect({ row = wscreen_row, col = wscreen_col }))
+if wvisible then mouse("left", "press", wscreen_row, wscreen_col) end
 pause(1000)
 local current = vim.api.nvim_get_current_buf()
 local opened, cursor

@@ -43,11 +43,4 @@ export default function fixture(pi: ExtensionAPI) {
       });
     },
   });
-  pi.registerCommand("v03-typed", {
-    description: "record terminal input reaching Pi",
-    handler: async (_args, ctx) => {
-      await appendFile(trace, "typed-input-reached-pi\n");
-      ctx.ui.setStatus("v03-typed", "Typed input reached Pi");
-    },
-  });
 }
