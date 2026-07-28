@@ -76,6 +76,7 @@ interface ScrollState {
 type StatefulTui = TUI & { [key: symbol]: ScrollState | undefined };
 
 const OSC_LINK = /\x1b\]8;;([^\x1b]*)\x1b\\([\s\S]*?)\x1b\]8;;\x1b\\/gu;
+const MANAGED_LINK = /\x1b\]8;pi=(\d{1,4});([^\x1b]*)\x1b\\\x1b\]8;;\x1b\\/gu;
 const ANSI = /\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]/gu;
 const NVIM_LUA = "(function(d)local c=vim.api.nvim_get_current_win();local ok,r=xpcall(function()local w;for _,x in ipairs(vim.api.nvim_list_wins())do if x~=c and vim.bo[vim.api.nvim_win_get_buf(x)].buftype~='terminal'then w=x;break end end;if not w then vim.cmd('noautocmd keepalt botright new');w=vim.api.nvim_get_current_win()end;local b=vim.fn.bufadd(d.file);vim.fn.bufload(b);vim.api.nvim_win_set_buf(w,b);vim.api.nvim_win_call(w,function()if d.kind=='line'then vim.api.nvim_win_set_cursor(w,{d.target,0})elseif d.kind=='heading'then vim.fn.cursor(1,1);vim.fn.search('^\\\\s*#\\\\+\\\\s\\\\+\\\\V'..vim.fn.escape(d.target,'\\\\')..'\\\\m\\\\s*$','W')elseif d.kind=='block'then vim.fn.cursor(1,1);vim.fn.search('\\\\V^'..vim.fn.escape(d.target,'\\\\')..'\\\\m\\\\s*$','W')end end);return 1 end,debug.traceback);if vim.api.nvim_win_is_valid(c)then vim.api.nvim_set_current_win(c)end;if not ok then error(r)end;return r end)(_A)";
 
@@ -91,7 +92,9 @@ function renderExplicitWikilinks(text: string, vaultRoot: string): string {
 		const file = resolve(vaultRoot, extname(note) ? note : `${note}.md`);
 		const url = pathToFileURL(file);
 		if (fragment) url.hash = fragment;
-		return `\x1b]8;;${url.href}\x1b\\${alias ?? destination}\x1b]8;;\x1b\\`;
+		const label = alias ?? destination;
+		const width = visibleWidth(label);
+		return width > 0 && width <= 9999 ? `${label}\x1b]8;pi=${width};${url.href}\x1b\\\x1b]8;;\x1b\\` : original;
 	});
 }
 
@@ -318,6 +321,11 @@ function install(tui: TUI, dim: (text: string) => string, setStatus: (key: strin
 			for (const match of output[row].matchAll(OSC_LINK)) {
 				const startCell = visibleWidth(output[row].slice(0, match.index));
 				spans.push({ destination: match[1], row: row - screenOffset, startCell, endCell: startCell + visibleWidth(match[2]) });
+			}
+			for (const match of output[row].matchAll(MANAGED_LINK)) {
+				const width = Number(match[1]);
+				const endCell = visibleWidth(output[row].slice(0, match.index));
+				if (width <= endCell) spans.push({ destination: match[2], row: row - screenOffset, startCell: endCell - width, endCell });
 			}
 			if (spans.length) state.visibleLinks.set(row - screenOffset, spans);
 		}
