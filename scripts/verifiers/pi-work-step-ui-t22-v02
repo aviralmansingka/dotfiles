@@ -1,0 +1,979 @@
+#!/usr/bin/env node
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const scriptPath = fileURLToPath(import.meta.url);
+const repoRoot = resolve(dirname(scriptPath), "../..");
+const modelPath = join(repoRoot, "scripts/fixtures/pi-work-step-ui-t22-v02/model.json");
+const goldenDir = join(repoRoot, "scripts/goldens/pi-work-step-ui-t22-v02");
+const parentPath = join(repoRoot, "pi/.pi/agent/extensions/tool-call-renderer.ts");
+const productPath = join(repoRoot, "pi/.pi/agent/extensions/subagent.ts");
+const expectedParentCommit = process.env.PI_VERIFY_PARENT_EXPECTED_COMMIT;
+const expectedParentTree = process.env.PI_VERIFY_PARENT_EXPECTED_TREE;
+const expectedParentBlob = process.env.PI_VERIFY_PARENT_EXPECTED_RENDERER_BLOB;
+const verifyDir = mkdtempSync(join(tmpdir(), "t22-v02-"));
+if (process.env.PI_VERIFY_TEMP_PATH_RECORD)
+	writeFileSync(process.env.PI_VERIFY_TEMP_PATH_RECORD, `${verifyDir}\n`);
+process.on("exit", () => rmSync(verifyDir, { recursive: true, force: true }));
+
+const git = (cwd, ...args) => execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8" }).trim();
+const fail = (message) => {
+	console.error(`T22.V02 setup failure: ${message}`);
+	process.exit(2);
+};
+const requireCompleteTriple = (label, values) => {
+	if (values.some(Boolean) && !values.every(Boolean))
+		fail(`${label} expected identity requires commit/tree/blob together`);
+};
+requireCompleteTriple("parent", [expectedParentCommit, expectedParentTree, expectedParentBlob]);
+
+const model = JSON.parse(readFileSync(modelPath, "utf8"));
+const clockSourceSymbol = Symbol.for("aviral.pi.work-step-renderer.clock-source");
+const clockSource = {
+	token: "T22.V02.structural-clock.v1",
+	value: model.contract.t0,
+	now: () => clockSource.value,
+};
+globalThis[clockSourceSymbol] = clockSource;
+if (
+	globalThis[clockSourceSymbol] !== clockSource ||
+	globalThis[clockSourceSymbol].now !== clockSource.now ||
+	!Number.isFinite(clockSource.now())
+) fail("verifier structural clock provider identity or initial value differs");
+const parentCommit = git(repoRoot, "rev-parse", "HEAD");
+const parentTree = git(repoRoot, "rev-parse", "HEAD^{tree}");
+const parentBlob = git(repoRoot, "rev-parse", "HEAD:pi/.pi/agent/extensions/tool-call-renderer.ts");
+if (
+	git(repoRoot, "hash-object", parentPath) !== parentBlob ||
+	git(repoRoot, "status", "--porcelain=v1", "--untracked-files=all") !== ""
+) fail("parent Git source is not clean at HEAD");
+if (
+	expectedParentCommit &&
+	(parentCommit !== expectedParentCommit || parentTree !== expectedParentTree || parentBlob !== expectedParentBlob)
+) fail("parent explicit identity differs");
+
+const productCommit = parentCommit;
+const productTree = parentTree;
+const productBlob = git(repoRoot, "rev-parse", "HEAD:pi/.pi/agent/extensions/subagent.ts");
+if (
+	git(repoRoot, "hash-object", productPath) !== productBlob
+) fail("repository-owned subagent source differs from HEAD");
+
+const piCli = realpathSync(execFileSync("command", ["-v", "pi"], { encoding: "utf8", shell: true }).trim());
+const piRoot = resolve(dirname(piCli), "..");
+const jitiPath = join(piRoot, "node_modules/jiti/lib/jiti.mjs");
+const piIndex = join(piRoot, "dist/index.js");
+const tuiIndex = join(piRoot, "node_modules/@earendil-works/pi-tui/dist/index.js");
+const typeboxIndex = join(piRoot, "node_modules/typebox/build/index.mjs");
+const themeModulePath = join(piRoot, "dist/modes/interactive/theme/theme.js");
+const assistantModulePath = join(piRoot, "dist/modes/interactive/components/assistant-message.js");
+const toolModulePath = join(piRoot, "dist/modes/interactive/components/tool-execution.js");
+const piPackagePath = join(piRoot, "package.json");
+const tuiRoot = resolve(dirname(tuiIndex), "..");
+const tuiPackagePath = join(tuiRoot, "package.json");
+const piPackage = JSON.parse(readFileSync(piPackagePath, "utf8"));
+const tuiPackage = JSON.parse(readFileSync(tuiPackagePath, "utf8"));
+const sha256File = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+const productionModuleFiles = {
+	core: [
+		["dist/index.js", piIndex],
+		["theme/theme.js", themeModulePath],
+		["components/assistant-message.js", assistantModulePath],
+		["components/tool-execution.js", toolModulePath],
+	],
+	tui: [["dist/index.js", tuiIndex]],
+};
+const moduleBinding = () => {
+	const digest = (entries) => {
+		const files = entries.map(([label, path]) => [label, sha256File(path)]);
+		return {
+			files,
+			sha256: createHash("sha256")
+				.update(files.map(([label, hash]) => `${label}\0${hash}\n`).join(""))
+				.digest("hex"),
+		};
+	};
+	const core = digest(productionModuleFiles.core);
+	const tui = digest(productionModuleFiles.tui);
+	return {
+		piVersion: `${piPackage.name}@${piPackage.version}`,
+		tuiVersion: `${tuiPackage.name}@${tuiPackage.version}`,
+		core,
+		tui,
+		combinedSha256: createHash("sha256")
+			.update(`core\0${core.sha256}\ntui\0${tui.sha256}\n`)
+			.digest("hex"),
+	};
+};
+const initialModuleBinding = moduleBinding();
+for (const [env, actual] of [
+	["PI_VERIFY_PI_CORE_EXPECTED_VERSION", initialModuleBinding.piVersion],
+	["PI_VERIFY_PI_TUI_EXPECTED_VERSION", initialModuleBinding.tuiVersion],
+	["PI_VERIFY_PI_CORE_EXPECTED_SHA256", initialModuleBinding.core.sha256],
+	["PI_VERIFY_PI_TUI_EXPECTED_SHA256", initialModuleBinding.tui.sha256],
+	["PI_VERIFY_PI_CORE_TUI_EXPECTED_SHA256", initialModuleBinding.combinedSha256],
+]) {
+	if (process.env[env] && process.env[env] !== actual)
+		fail(`${env} differs from directly loaded production modules`);
+}
+const { createJiti } = await import(pathToFileURL(jitiPath).href);
+const jiti = createJiti(import.meta.url, {
+	moduleCache: false,
+	alias: {
+		"@earendil-works/pi-coding-agent": piIndex,
+		"@earendil-works/pi-tui": tuiIndex,
+		"@mariozechner/pi-coding-agent": piIndex,
+		"@mariozechner/pi-tui": tuiIndex,
+		"@sinclair/typebox": typeboxIndex,
+		typebox: typeboxIndex,
+	},
+});
+
+const themeModule = await import(pathToFileURL(themeModulePath).href);
+themeModule.setThemeInstance(
+	themeModule.loadThemeFromPath(join(repoRoot, "pi/.pi/agent/themes/gruvbox-material.json"), "truecolor"),
+);
+const { AssistantMessageComponent } = await import(pathToFileURL(assistantModulePath).href);
+const { ToolExecutionComponent } = await import(pathToFileURL(toolModulePath).href);
+
+const handlers = new Map();
+const nativeHandlers = new Map();
+const eventHandlers = new Map();
+const sentMessages = [];
+const events = {
+	on(name, handler) {
+		const listeners = eventHandlers.get(name) ?? [];
+		listeners.push(handler);
+		eventHandlers.set(name, listeners);
+	},
+	emit(name, data) {
+		for (const handler of eventHandlers.get(name) ?? []) handler(data);
+	},
+};
+let nativeTool;
+const parentApi = { on: (name, handler) => handlers.set(name, handler), events };
+const nativeApi = {
+	on: (name, handler) => nativeHandlers.set(name, handler),
+	events,
+	sendMessage: (message, options) => sentMessages.push({ message, options }),
+	registerTool: (tool) => { if (tool.name === "subagent") nativeTool = tool; },
+};
+const originalArgv1 = process.argv[1];
+process.argv[1] = piCli;
+const parentModule = await jiti.import(parentPath);
+await parentModule.default(parentApi);
+const nativeModule = await jiti.import(productPath);
+nativeModule.default(nativeApi);
+nativeHandlers.get("session_start")?.({}, { sessionManager: { getEntries: () => [] } });
+process.argv[1] = originalArgv1;
+if (!nativeTool?.renderCall || !nativeTool?.renderResult)
+	fail("real native render callbacks were not registered");
+const reasoningSentinel = model.upstream?.reasoningSentinel;
+if (
+	!reasoningSentinel ||
+	!JSON.stringify(model.upstream?.executeUpdate).includes(reasoningSentinel) ||
+	JSON.stringify(model.cases).includes(reasoningSentinel)
+) fail("raw reasoning is not confined to upstream execute/onUpdate input");
+const normalizationChildPath = join(verifyDir, "normalization-child.cjs");
+const normalizationFirstUsage = {
+	input: 101,
+	output: 29,
+	cacheRead: 13,
+	cacheWrite: 7,
+	totalTokens: 150,
+};
+const normalizationUsage = { input: 37, output: 11, cacheRead: 5, cacheWrite: 2 };
+const normalizationContextTokens = Object.values(normalizationUsage).reduce((sum, value) => sum + value, 0);
+const normalizationCumulativeUsage = Object.fromEntries(
+	["input", "output", "cacheRead", "cacheWrite"].map((key) => [
+		key,
+		normalizationFirstUsage[key] + normalizationUsage[key],
+	]),
+);
+const normalizationCumulativeTokens = Object.values(normalizationCumulativeUsage)
+	.reduce((sum, value) => sum + value, 0);
+writeFileSync(
+	normalizationChildPath,
+	`const events=${JSON.stringify([
+		{
+			type: "message_end",
+			message: {
+				role: "assistant",
+				model: "fixture/v02-normalizer",
+				content: [
+					{ type: "thinking", thinking: reasoningSentinel },
+					{ type: "text", text: "Intermediate normalized response." },
+				],
+				usage: { ...normalizationFirstUsage, cost: { total: 0.0031 } },
+			},
+		},
+		{
+			type: "message_end",
+			message: {
+				role: "assistant",
+				model: "fixture/v02-normalizer",
+				content: [
+					{ type: "thinking", thinking: reasoningSentinel },
+					{ type: "text", text: "Normalized final response." },
+				],
+				usage: { ...normalizationUsage, cost: { total: 0.0067 } },
+			},
+		},
+	])};setTimeout(()=>{for(const event of events)process.stdout.write(JSON.stringify(event)+"\\n");},100);\n`,
+);
+globalThis.__pi_subagents.registerAgent({
+	name: "v02-normalizer",
+	description: "Exercise real native event normalization",
+	tools: [],
+	model: "fixture/v02-normalizer",
+	thinking: "off",
+	systemPrompt: "Normalize the supplied deterministic child event.",
+	filePath: normalizationChildPath,
+});
+const containsRawReasoning = (value) => {
+	if (typeof value === "string") return value.includes(reasoningSentinel);
+	if (Array.isArray(value)) return value.some(containsRawReasoning);
+	if (!value || typeof value !== "object") return false;
+	return Object.entries(value).some(([key, child]) =>
+		key === "reasoning" ||
+		key === "thinking" ||
+		(key === "type" && child === "thinking") ||
+		containsRawReasoning(child)
+	);
+};
+const normalizationUpdates = [];
+let normalizationContaminated = false;
+let normalizationDone = false;
+let resolveNormalization;
+const normalizationCompletion = new Promise((resolve) => { resolveNormalization = resolve; });
+events.on("subagent:background-update", (update) => {
+	if (update.toolCallId !== "v02-normalization") return;
+	normalizationUpdates.push(update);
+	if (containsRawReasoning(update)) normalizationContaminated = true;
+	if (update.done) {
+		normalizationDone = true;
+		resolveNormalization(update.result);
+	}
+});
+process.argv[1] = normalizationChildPath;
+let normalizationLaunchResult;
+let normalizedResult;
+try {
+	normalizationLaunchResult = await nativeTool.execute(
+		"v02-normalization",
+		{ agent: "v02-normalizer", task: "Normalize upstream reasoning sentinel", cwd: repoRoot },
+		undefined,
+		(update) => {
+			normalizationUpdates.push(update);
+			if (containsRawReasoning(update)) normalizationContaminated = true;
+		},
+		{ cwd: repoRoot, modelRegistry: { find: () => ({ contextWindow: 4096 }) } },
+	);
+	if (normalizationDone) fail("native subagent execute waited for the background child");
+	normalizedResult = await normalizationCompletion;
+	await new Promise((resolve) => setTimeout(resolve, 0));
+} finally {
+	process.argv[1] = originalArgv1;
+	globalThis.__pi_subagents.unregisterAgent("v02-normalizer");
+}
+if (
+	!normalizationLaunchResult?.content?.[0]?.text?.includes("started in the background") ||
+	normalizationUpdates.length < 3 ||
+	normalizationContaminated ||
+	containsRawReasoning(normalizationLaunchResult) ||
+	normalizedResult?.progress?.tokens !== normalizationContextTokens ||
+	normalizedResult?.usage?.input !== normalizationCumulativeUsage.input ||
+	normalizedResult?.usage?.output !== normalizationCumulativeUsage.output ||
+	normalizedResult?.usage?.cacheRead !== normalizationCumulativeUsage.cacheRead ||
+	normalizedResult?.usage?.cacheWrite !== normalizationCumulativeUsage.cacheWrite ||
+	normalizedResult?.usage?.turns !== 2 ||
+	normalizationContextTokens === normalizationCumulativeTokens ||
+	sentMessages.length !== 1 ||
+	sentMessages[0].message.customType !== "subagent-background-result" ||
+	sentMessages[0].message.display !== false ||
+	sentMessages[0].message.details?.result !== normalizedResult ||
+	sentMessages[0].options?.deliverAs !== "followUp" ||
+	sentMessages[0].options?.triggerTurn !== true
+) fail("real native background execute did not return promptly, normalize safely, or deliver completion to the driver");
+let nativeCallRenders = 0;
+let nativeResultRenders = 0;
+const nativeRenderCall = nativeTool.renderCall;
+const nativeRenderResult = nativeTool.renderResult;
+nativeTool = {
+	...nativeTool,
+	renderCall(...args) {
+		nativeCallRenders++;
+		return nativeRenderCall(...args);
+	},
+	renderResult(...args) {
+		nativeResultRenders++;
+		return nativeRenderResult(...args);
+	},
+};
+
+const byName = new Map();
+for (const item of model.cases) {
+	const source = item.resultFrom ? byName.get(item.resultFrom)?.result : item.result;
+	if (!source) fail(`missing result source for ${item.name}`);
+	item.result = structuredClone(source);
+	byName.set(item.name, item);
+}
+const expectedCases = [
+	"running-live-t0",
+	"running-live-t1",
+	"running-output-hidden",
+	"running-output-restored",
+	"running-thinking-hidden-o-then-t",
+	"running-both-hidden-o-then-t",
+	"running-both-restored-o-then-t",
+	"running-thinking-hidden-t-then-o",
+	"running-both-hidden-t-then-o",
+	"running-output-hidden-t-then-o",
+	"running-both-restored-t-then-o",
+	"completed-collapsed-t0",
+	"completed-collapsed-t1",
+	"completed-expanded",
+	"completed-recollapsed",
+	"nested-ownership",
+	"empty-success",
+	"root-failure",
+	"nested-exit-only-failure",
+];
+if (
+	model.cases.length !== expectedCases.length ||
+	model.cases.some((item, index) => item.name !== expectedCases[index]) ||
+	new Set(model.cases.map((item) => item.name)).size !== expectedCases.length
+) fail("canonical toggle cases are not the exact declared state ledger");
+const usageProfileFor = (item) =>
+	model.contract.usageProfiles[
+		item.sequence.startsWith("running-") ? "running" : item.sequence
+	];
+for (const item of model.cases) {
+	const profile = usageProfileFor(item);
+	const cumulativeTokens = ["input", "output", "cacheRead", "cacheWrite"]
+		.reduce((sum, key) => sum + (item.result.usage[key] ?? 0), 0);
+	const contextPercent = Number(
+		((item.result.progress.tokens / item.result.contextWindow) * 100).toFixed(1),
+	);
+	if (
+		!profile ||
+		cumulativeTokens !== profile.cumulativeTokens ||
+		item.result.usage.cost !== profile.accumulatedCost ||
+		item.result.progress.tokens !== profile.latestContextTokens ||
+		item.result.contextWindow !== profile.contextWindow ||
+		contextPercent !== profile.contextPercent ||
+		cumulativeTokens === item.result.progress.tokens ||
+		!profile.display.includes(" tokens · $") ||
+		!profile.display.includes("%/")
+	) fail(`usage fixture/formula differs for ${item.name}`);
+}
+const forbiddenPrototype = ["/private/tmp/pi-subagent", "-render-slice/render.mjs"].join("");
+if (readFileSync(scriptPath, "utf8").includes(forbiddenPrototype))
+	fail("approved prototype was imported by the executable verifier");
+const nestedOwnership = byName.get("nested-ownership");
+const nestedTools = nestedOwnership?.result?.progress?.recentTools;
+const nestedChild = nestedTools?.[1]?.children?.[0];
+if (
+	nestedOwnership.call?.task?.includes("PARENT_PLACEMENT_DECOY") !== true ||
+	nestedTools?.[0]?.tool !== "bash" ||
+	!nestedTools[0].shellCommands?.[0]?.includes("V02_ROOT_WIDTH_PROBE_") ||
+	nestedTools?.[1]?.tool !== "subagent" ||
+	!nestedTools[1].args?.includes("PARENT_PLACEMENT_DECOY") ||
+	nestedChild?.agent !== "nested-auditor" ||
+	nestedChild?.model !== "fixture/nested-owner" ||
+	nestedChild?.progress?.recentTools?.[0]?.tool !== "zsh" ||
+	!nestedChild.progress.recentTools[0].shellCommands?.[0]?.includes("V02_NESTED_COMMAND_TAIL") ||
+	nestedChild?.progress?.lastMessage !== "V02 nested ownership summary." ||
+	model.goldenSha256["nested-ownership"] === model.goldenSha256["completed-collapsed-t0"]
+) fail("nested ownership fixture is not distinct and exact");
+
+let lifecycleInvalidations = 0;
+let clockInvalidations = 0;
+let clockAdvances = 0;
+let thinkingInvalidations = 0;
+let settledExpandedTransitions = 0;
+const clockBehaviorFailures = new Set();
+const workStepSymbol = Symbol.for("aviral.pi.work-step-renderer.step");
+const bridgeSymbol = Symbol.for("aviral.pi.work-step-renderer.subagent-bridge");
+const scenarios = new Map();
+const createScenario = (item, width = model.contract.width, recordTransition = true) => {
+	clockSource.value = item.clock;
+	Object.defineProperty(process.stdout, "columns", { configurable: true, value: width + 4 });
+	handlers.get("session_shutdown")?.();
+	handlers.get("agent_start")?.();
+	const call = item.call ?? model.call;
+	const toolCallId = `v02-${item.sequence}-${width}`;
+	const message = {
+		role: "assistant",
+		content: [
+			{ type: "thinking", thinking: item.activity.thinking },
+			{ type: "text", text: item.activity.title },
+			{ type: "toolCall", id: toolCallId, name: "subagent", arguments: call },
+		],
+		stopReason: "toolUse",
+	};
+	const assistant = new AssistantMessageComponent(message, false);
+	const ui = { requestRender() { lifecycleInvalidations++; } };
+	const tool = new ToolExecutionComponent(
+		"subagent",
+		toolCallId,
+		call,
+		{ showImages: false },
+		nativeTool,
+		ui,
+		repoRoot,
+	);
+	tool.markExecutionStarted();
+	tool.setArgsComplete();
+	tool.updateResult(
+		{
+			content: [{ type: "text", text: item.result.output || "(no output)" }],
+			details: { results: [item.result] },
+			isError: item.result.exitCode !== 0,
+		},
+		item.activity.status === "running",
+	);
+	if (item.activity.status !== "running")
+		handlers.get("tool_execution_end")?.({
+			toolCallId,
+			isError: item.activity.status === "failed",
+		});
+	const initialOutputVisible = item.sequence.startsWith("running-")
+		? true
+		: item.sequence === "completed"
+			? false
+			: item.outputVisible;
+	tool.setExpanded(initialOutputVisible);
+	if (item.activity.status !== "running" && initialOutputVisible) {
+		const renderCount = nativeCallRenders + nativeResultRenders;
+		tool.setExpanded(true);
+		if (nativeCallRenders + nativeResultRenders <= renderCount)
+			fail(`settled Ctrl+O transition did not rebuild native renderers for ${item.name}`);
+		if (recordTransition) settledExpandedTransitions++;
+	}
+	const step = assistant[workStepSymbol];
+	if (!step || tool[workStepSymbol] !== step)
+		fail(`real parent state did not bind the same work-step node for ${item.sequence}`);
+	const bridge = tool.rendererState?.[bridgeSymbol];
+	if (
+		bridge?.layout !== "connected" ||
+		bridge.clock !== clockSource.now ||
+		!Number.isFinite(bridge.clock?.()) ||
+		bridge.clock?.() !== item.clock
+	) clockBehaviorFailures.add("bridge-binding");
+	return {
+		assistant,
+		tool,
+		result: item.result,
+		progress: item.result.progress,
+		recentTools: item.result.progress.recentTools,
+		usage: item.result.usage,
+		stateSnapshot: JSON.stringify({
+			status: item.result.progress.status,
+			startedAt: item.result.progress.startedAt,
+			completedAt: item.result.progress.completedAt,
+			durationMs: item.result.progress.durationMs,
+			recentTools: item.result.progress.recentTools,
+			usage: item.result.usage,
+		}),
+		step,
+		bridge,
+		run: step.run,
+		group: step.group,
+		outputVisible: initialOutputVisible,
+		thinkingHidden: false,
+		clockValue: item.clock,
+		width,
+	};
+};
+const assertScenarioIdentity = (scenario, item) => {
+	if (
+		scenario.progress !== scenario.result.progress ||
+		scenario.recentTools !== scenario.result.progress.recentTools ||
+		scenario.usage !== scenario.result.usage ||
+		scenario.assistant[workStepSymbol] !== scenario.step ||
+		scenario.tool[workStepSymbol] !== scenario.step ||
+		scenario.tool.rendererState?.[bridgeSymbol] !== scenario.bridge ||
+		scenario.step.run !== scenario.run ||
+		scenario.step.group !== scenario.group ||
+		scenario.stateSnapshot !== JSON.stringify({
+			status: scenario.result.progress.status,
+			startedAt: scenario.result.progress.startedAt,
+			completedAt: scenario.result.progress.completedAt,
+			durationMs: scenario.result.progress.durationMs,
+			recentTools: scenario.result.progress.recentTools,
+			usage: scenario.result.usage,
+		})
+	) fail(`same-instance identity/state changed during ${item.name}`);
+};
+const renderCase = (item, width = model.contract.width, isolated = false) => {
+	let scenario = isolated ? undefined : scenarios.get(item.sequence);
+	if (!scenario) {
+		scenario = createScenario(item, width, !isolated);
+		if (!isolated) scenarios.set(item.sequence, scenario);
+	}
+	const previousClock = scenario.clockValue;
+	clockSource.value = item.clock;
+	Object.defineProperty(process.stdout, "columns", { configurable: true, value: width + 4 });
+	if (previousClock !== item.clock) {
+		const renderCount = nativeCallRenders + nativeResultRenders;
+		scenario.tool.invalidate();
+		scenario.tool.ui.requestRender();
+		if (nativeCallRenders + nativeResultRenders <= renderCount)
+			fail(`genuine clock invalidation did not rebuild native renderers for ${item.name}`);
+		if (previousClock === model.contract.t0 && item.clock === model.contract.t1)
+			clockAdvances++;
+		clockInvalidations++;
+		scenario.clockValue = item.clock;
+	}
+	if (scenario.outputVisible !== item.outputVisible) {
+		scenario.tool.setExpanded(item.outputVisible);
+		scenario.outputVisible = item.outputVisible;
+	}
+	if (scenario.thinkingHidden !== item.thinkingHidden) {
+		const renderCount = nativeCallRenders + nativeResultRenders;
+		scenario.assistant.setHideThinkingBlock(item.thinkingHidden);
+		scenario.tool.invalidate();
+		scenario.tool.ui.requestRender();
+		if (nativeCallRenders + nativeResultRenders <= renderCount)
+			fail(`Ctrl+T invalidation did not rebuild native renderers for ${item.name}`);
+		thinkingInvalidations++;
+		scenario.thinkingHidden = item.thinkingHidden;
+	}
+	assertScenarioIdentity(scenario, item);
+	if (
+		scenario.bridge?.clock !== clockSource.now ||
+		!Number.isFinite(scenario.bridge?.clock?.()) ||
+		scenario.bridge?.clock?.() !== item.clock
+	) clockBehaviorFailures.add("bridge-value");
+	return Buffer.from(`${scenario.tool.render(width).join("\n")}\n`, "utf8");
+};
+
+const escaped = (buffer) => JSON.stringify(buffer.toString("utf8"));
+const firstDifference = (expected, actual) => {
+	let offset = 0;
+	while (offset < expected.length && offset < actual.length && expected[offset] === actual[offset]) offset++;
+	const line = 1 + expected.subarray(0, Math.min(offset, expected.length)).filter((byte) => byte === 10).length;
+	const span = (buffer) => {
+		const point = Math.min(offset, buffer.length);
+		const start = buffer.lastIndexOf(10, Math.max(0, point - 1)) + 1;
+		const newline = buffer.indexOf(10, point);
+		const end = newline < 0 ? buffer.length : newline + 1;
+		return { start, end, bytes: buffer.subarray(start, end) };
+	};
+	return { line, expected: span(expected), actual: span(actual) };
+};
+
+const mismatches = [];
+const actuals = new Map();
+for (const item of model.cases) {
+	const actual = renderCase(item);
+	actuals.set(item.name, actual);
+	const expected = readFileSync(join(goldenDir, `${item.name}.ansi`));
+	const expectedHash = model.goldenSha256?.[item.name];
+	const actualHash = createHash("sha256").update(expected).digest("hex");
+	if (!expectedHash || actualHash !== expectedHash)
+		fail(`golden integrity mismatch for ${item.name}`);
+	if (expected.equals(actual)) continue;
+	const difference = firstDifference(expected, actual);
+	mismatches.push(item.name);
+	console.error(
+		`T22.V02 mismatch case=${item.name} line=${difference.line} ` +
+		`expected_span=[${difference.expected.start},${difference.expected.end}) ` +
+		`actual_span=[${difference.actual.start},${difference.actual.end}) ` +
+		`expected_escaped=${escaped(difference.expected.bytes)} expected_hex=${difference.expected.bytes.toString("hex")} ` +
+		`actual_escaped=${escaped(difference.actual.bytes)} actual_hex=${difference.actual.bytes.toString("hex")}`,
+	);
+}
+const stripAnsi = (value) => value.replace(/\x1b\[[0-9;]*m/gu, "");
+
+// Native tool completion only acknowledges that the background child launched.
+// The parent Activity remains running until the extension-owned completion event.
+const backgroundSource = byName.get("running-live-t0");
+const backgroundScenario = createScenario(backgroundSource, model.contract.width, false);
+handlers.get("tool_execution_end")?.({
+	toolCallId: backgroundScenario.tool.toolCallId,
+	toolName: "subagent",
+	result: backgroundScenario.tool.result,
+	isError: false,
+});
+const backgroundAfterLaunch = stripAnsi(backgroundScenario.tool.render(model.contract.width).join("\n"));
+const backgroundCompletedResult = structuredClone(byName.get("completed-collapsed-t0").result);
+events.emit("subagent:background-update", {
+	toolCallId: backgroundScenario.tool.toolCallId,
+	result: backgroundCompletedResult,
+	done: true,
+});
+const backgroundAfterCompletion = stripAnsi(backgroundScenario.tool.render(model.contract.width).join("\n"));
+if (
+	!backgroundAfterLaunch.includes("1 step · 1 call · running") ||
+	!backgroundAfterLaunch.includes("subagent · reviewer · running") ||
+	!backgroundAfterCompletion.includes("1 step · 1 call · all passed") ||
+	!backgroundAfterCompletion.includes("subagent · reviewer · completed") ||
+	!backgroundAfterCompletion.includes("Summary · No correctness risks found.")
+) fail("background subagent lifecycle did not remain live independently of the driving agent turn");
+
+// Auto/running detail is a bounded recent-command summary. Ctrl+O-expanded
+// settled detail remains the explicit path to the complete command history.
+const commandNames = Array.from({ length: 12 }, (_, index) => `printf V02_COMMAND_${String(index + 1).padStart(2, "0")}`);
+const limitedRunning = structuredClone(backgroundSource);
+limitedRunning.name = "running-command-limit";
+limitedRunning.sequence = "running-command-limit";
+limitedRunning.result.progress.toolCount = 1;
+limitedRunning.result.progress.recentTools = [{
+	tool: "bash",
+	args: commandNames.join(" && "),
+	status: "running",
+	shellCommands: commandNames,
+}];
+const limitedRunningPlain = stripAnsi(renderCase(limitedRunning, model.contract.width, true).toString("utf8"));
+const fullCompleted = structuredClone(byName.get("completed-expanded"));
+fullCompleted.name = "completed-command-history";
+fullCompleted.sequence = "completed-command-history";
+fullCompleted.outputVisible = true;
+fullCompleted.result.progress.toolCount = 1;
+fullCompleted.result.progress.recentTools = [{
+	tool: "bash",
+	args: commandNames.join(" && "),
+	status: "done",
+	shellCommands: commandNames,
+}];
+const fullCompletedPlain = stripAnsi(renderCase(fullCompleted, model.contract.width, true).toString("utf8"));
+if (
+	limitedRunningPlain.includes("V02_COMMAND_01") ||
+	limitedRunningPlain.includes("V02_COMMAND_02") ||
+	!limitedRunningPlain.includes("V02_COMMAND_03") ||
+	!limitedRunningPlain.includes("V02_COMMAND_12") ||
+	!limitedRunningPlain.includes("1 tools · 12 commands") ||
+	commandNames.some((command) => !fullCompletedPlain.includes(command.split(" ")[1]))
+) fail("default command summary is not the most recent 10 commands or expanded history lost commands");
+
+// A settled chat rebuild creates a replacement root component after the first
+// one already owns the connected Activity. It must inherit that ownership,
+// rather than falling back to Pi's standalone green tool shell.
+const dedupSource = byName.get("completed-collapsed-t0");
+const dedupScenario = createScenario(dedupSource, model.contract.width, false);
+const dedupBefore = stripAnsi(dedupScenario.tool.render(model.contract.width).join("\n"));
+const dedupTool = new ToolExecutionComponent(
+	"subagent",
+	dedupScenario.tool.toolCallId,
+	model.call,
+	{ showImages: false },
+	nativeTool,
+	{ requestRender() {} },
+	repoRoot,
+);
+dedupTool.markExecutionStarted();
+dedupTool.setArgsComplete();
+dedupTool.updateResult(
+	{
+		content: [{ type: "text", text: dedupSource.result.output }],
+		details: { results: [dedupSource.result] },
+		isError: false,
+	},
+	false,
+);
+const dedupPlain = stripAnsi([
+	...dedupScenario.tool.render(model.contract.width),
+	...dedupTool.render(model.contract.width),
+].join("\n"));
+const finalResponseText = "V02_PARENT_FINAL_RESPONSE_PRESERVED";
+const finalResponse = new AssistantMessageComponent({
+	role: "assistant",
+	content: [{ type: "text", text: finalResponseText }],
+	stopReason: "stop",
+	usage: { totalTokens: 1 },
+}, false);
+const finalResponsePlain = stripAnsi(finalResponse.render(model.contract.width).join("\n"));
+const standaloneTool = new ToolExecutionComponent(
+	"subagent",
+	"v02-standalone-control",
+	model.call,
+	{ showImages: false },
+	nativeTool,
+	{ requestRender() {} },
+	repoRoot,
+);
+standaloneTool.updateResult(
+	{
+		content: [{ type: "text", text: dedupSource.result.output }],
+		details: { results: [dedupSource.result] },
+		isError: false,
+	},
+	false,
+);
+const standalonePlain = stripAnsi(standaloneTool.render(model.contract.width).join("\n"));
+for (const token of [
+	"1 step · 1 call",
+	"subagent · reviewer · completed",
+	"Summary · No correctness risks found.",
+	model.contract.usageProfiles.completed.display,
+]) {
+	if (!dedupBefore.includes(token) || dedupPlain.split(token).length !== 2)
+		fail(`settled root replacement did not preserve exactly one connected Activity token: ${token}`);
+}
+if (
+	dedupPlain.includes("subagent reviewer") ||
+	!finalResponsePlain.includes(finalResponseText) ||
+	!standalonePlain.includes("subagent reviewer")
+) fail("settled root replacement suppression escaped its redundant component boundary");
+
+const restoredSource = byName.get("completed-collapsed-t0");
+const restoredOldShape = structuredClone(restoredSource);
+restoredOldShape.name = "restored-old-shaped-result";
+restoredOldShape.sequence = "restored-old-shaped-result";
+delete restoredOldShape.result.contextWindow;
+restoredOldShape.result.usage = { input: 17, turns: 1 };
+restoredOldShape.result.progress.tokens = 23;
+const restoredOldShapePlain = stripAnsi(renderCase(restoredOldShape, model.contract.width, true).toString("utf8"));
+if (
+	!restoredOldShapePlain.includes("↑17") ||
+	!restoredOldShapePlain.includes("23 ctx") ||
+	["$0.000", "0%", "NaN", "Infinity"].some((token) => restoredOldShapePlain.includes(token))
+) fail("restored old-shaped production result lost available metrics or fabricated missing metadata");
+const golden = (name) => readFileSync(join(goldenDir, `${name}.ansi`));
+const goldenPlain = (name) => stripAnsi(golden(name).toString("utf8"));
+for (const item of model.cases) {
+	const display = usageProfileFor(item).display;
+	if (goldenPlain(item.name).split(display).length !== 2)
+		fail(`${item.name} golden lost its one exact cumulative token, cost, and latest-turn context metric`);
+}
+const nestedGolden = readFileSync(join(goldenDir, "nested-ownership.ansi"), "utf8");
+const nestedGoldenPlain = stripAnsi(nestedGolden);
+const nestedAssignmentAnsi =
+	"\x1b[38;2;211;134;155mV02_NESTED_ASSIGN\x1b[0m" +
+	"\x1b[38;2;233;177;67m=$(\x1b[0m" +
+	"\x1b[38;2;242;133;52mpwd\x1b[0m" +
+	"\x1b[38;2;233;177;67m)\x1b[0m";
+const obsoleteNestedAssignmentAnsi =
+	"\x1b[38;2;242;133;52mV02_NESTED_ASSIGN=$(pwd)\x1b[0m";
+if (
+	nestedGolden.split(nestedAssignmentAnsi).length !== 2 ||
+	nestedGolden.includes(obsoleteNestedAssignmentAnsi)
+) fail("nested ownership golden assignment ANSI categories differ");
+for (const token of [
+	"V02_ROOT_WIDTH_PROBE_",
+	"nested-auditor · nested agent · completed",
+	"zsh · 1 command · completed",
+	"V02_NESTED_COMMAND_TAIL",
+	"V02 nested ownership summary.",
+]) {
+	if (nestedGoldenPlain.split(token).length !== 2)
+		fail(`nested ownership golden cardinality differs for ${token}`);
+}
+const nestedOrder = [
+	"V02_ROOT_WIDTH_PROBE_",
+	"nested-auditor · nested agent · completed",
+	"zsh · 1 command · completed",
+	"V02_NESTED_COMMAND_TAIL",
+	"V02 nested ownership summary.",
+].map((token) => nestedGoldenPlain.indexOf(token));
+if (nestedOrder.some((index, position) => index < 0 || (position > 0 && index <= nestedOrder[position - 1])))
+	fail("nested ownership golden hierarchy/order differs");
+const widthLines = nestedGoldenPlain.split("\n").filter((line) => line.endsWith("…"));
+if (widthLines.length < 2 || widthLines.some((line) => [...line].length !== model.contract.width))
+	fail("width-sensitive golden does not cross exactly 110 columns");
+
+const rootFailure = readFileSync(join(goldenDir, "root-failure.ansi"), "utf8");
+const rootFailurePlain = stripAnsi(rootFailure);
+if (
+	!rootFailure.includes("\x1b[1;38;2;242;89;75mfailed") ||
+	!rootFailure.includes("\x1b[38;2;242;89;75m×\x1b[0m \x1b[1;38;2;242;89;75mReviewing failed child") ||
+	!rootFailurePlain.includes("       ├─ ✓ bash · 1 command · completed") ||
+	!rootFailurePlain.includes("       └─ ✗ Summary · Error: Root child failed.") ||
+	rootFailurePlain.indexOf("├─ ✓ bash") >= rootFailurePlain.indexOf("└─ ✗ Summary")
+) fail("root failure golden semantics/connectors differ");
+
+for (const restored of [
+	"running-output-restored",
+	"running-both-restored-o-then-t",
+	"running-both-restored-t-then-o",
+]) {
+	if (!golden(restored).equals(golden("running-live-t0")))
+		fail(`${restored} golden does not byte-restore running-live-t0`);
+}
+if (
+	!golden("completed-collapsed-t0").equals(golden("completed-collapsed-t1")) ||
+	!golden("completed-collapsed-t0").equals(golden("completed-recollapsed"))
+) fail("completed collapsed/frozen/recollapsed goldens are not byte-identical");
+if (!golden("running-both-hidden-o-then-t").equals(golden("running-both-hidden-t-then-o")))
+	fail("both toggle orders do not commute to identical hidden golden bytes");
+if (!actuals.get("completed-collapsed-t0").equals(actuals.get("completed-collapsed-t1")))
+	console.error("T22.V02 mismatch category=completed-clock completed collapsed frames are not byte-identical");
+if (!actuals.get("completed-collapsed-t0").equals(actuals.get("completed-recollapsed")))
+	console.error("T22.V02 mismatch category=completed-recollapse recollapse did not restore exact collapsed bytes");
+if (actuals.get("running-live-t0").equals(actuals.get("running-live-t1")))
+	console.error("T22.V02 mismatch category=absent-clock-seam running frames are byte-identical");
+for (const restored of [
+	"running-output-restored",
+	"running-both-restored-o-then-t",
+	"running-both-restored-t-then-o",
+]) {
+	if (!actuals.get(restored).equals(actuals.get("running-live-t0")))
+		console.error(`T22.V02 mismatch category=running-restoration ${restored} did not restore exact same-clock bytes`);
+}
+if (!actuals.get("running-both-hidden-o-then-t").equals(actuals.get("running-both-hidden-t-then-o")))
+	console.error("T22.V02 mismatch category=toggle-commutativity both hidden orders differ");
+const widthProbe = byName.get(model.contract.widthProbeCase);
+if (!widthProbe) fail("width probe case is missing");
+const widthControl = renderCase(widthProbe, model.contract.controlWidth, true);
+if (widthControl.equals(actuals.get(model.contract.widthProbeCase)))
+	fail("width probe did not differ at the control width");
+const plain = (name) => stripAnsi(actuals.get(name).toString("utf8"));
+if (plain("completed-collapsed-t0").includes("git status --short"))
+	console.error("T22.V02 mismatch category=settled-leaves completed command leaves remain visible");
+if (
+	plain("running-output-hidden").includes("git status --short") ||
+	plain("running-output-hidden").includes(model.call.task)
+) console.error("T22.V02 mismatch category=running-ctrl-o output-hidden retained command/task detail");
+if (
+	!plain("completed-expanded").includes(model.call.task) ||
+	!plain("completed-expanded").includes("Review result") ||
+	!plain("completed-expanded").includes("No correctness risks found.") ||
+	plain("completed-expanded").indexOf(model.call.task) >= plain("completed-expanded").indexOf("git status --short") ||
+	plain("completed-expanded").lastIndexOf("No correctness risks found.") <= plain("completed-expanded").indexOf("Summary")
+) console.error("T22.V02 mismatch category=expanded-placement Task/tool/final Markdown are not ordered beneath one tree");
+if (
+	actuals.get("running-thinking-hidden-o-then-t").equals(actuals.get("running-live-t0")) ||
+	plain("running-thinking-hidden-o-then-t").includes("Thinking…")
+) console.error("T22.V02 mismatch category=ctrl-t-thinking Ctrl+T did not independently hide thinking presentation");
+if (!plain("nested-ownership").includes("       └─"))
+	console.error("T22.V02 mismatch category=nested-hierarchy approved connected nested rail is absent");
+if (plain("completed-collapsed-t0").includes("subagent reviewer"))
+	console.error("T22.V02 mismatch category=disconnected-composition parent Activity and native call/result headers remain separate");
+for (const item of model.cases) {
+	const actual = plain(item.name);
+	const profile = usageProfileFor(item);
+	const cost = `$${profile.accumulatedCost.toFixed(3)}`;
+	const context = profile.display.split(" · ").at(-1);
+	if (!actual.includes(cost) || !actual.includes(context))
+		console.error(`T22.V02 mismatch category=usage-retention ${item.name} lost native cost/context metrics`);
+	if (!actual.includes(profile.display))
+		console.error(`T22.V02 mismatch category=usage-summary ${item.name} lost exact cumulative token/cost/context summary`);
+}
+if ([...actuals.values()].some((frame) => frame.includes(reasoningSentinel)))
+	fail("raw child reasoning sentinel leaked");
+for (const name of [
+	"running-live-t0",
+	"running-live-t1",
+	"running-output-restored",
+	"running-thinking-hidden-o-then-t",
+	"running-thinking-hidden-t-then-o",
+	"completed-expanded",
+]) {
+	const expected = goldenPlain(name);
+	const commandsExpected = !name.includes("thinking-hidden") || name.startsWith("running-");
+	if (commandsExpected && !expected.includes("git status --short"))
+		fail(`${name} golden lost visible command detail`);
+}
+for (const name of [
+	"running-output-hidden",
+	"running-both-hidden-o-then-t",
+	"running-both-hidden-t-then-o",
+	"running-output-hidden-t-then-o",
+	"completed-collapsed-t0",
+	"completed-collapsed-t1",
+	"completed-recollapsed",
+]) {
+	const expected = goldenPlain(name);
+	if (expected.includes("git status --short") || expected.includes(model.call.task) || expected.includes("Review result"))
+		fail(`${name} golden leaked Ctrl+O-owned detail`);
+}
+for (const name of ["running-live-t0", "running-output-hidden"]) {
+	const expected = goldenPlain(name);
+	if (!expected.includes("Inspecting parent work-step state") || !expected.includes("Thinking…"))
+		fail(`${name} golden lost visible thinking presentation`);
+}
+for (const name of [
+	"running-thinking-hidden-o-then-t",
+	"running-both-hidden-o-then-t",
+	"running-thinking-hidden-t-then-o",
+	"running-both-hidden-t-then-o",
+]) {
+	const expected = goldenPlain(name);
+	if (expected.includes("Inspecting parent work-step state") || expected.includes("Thinking…"))
+		fail(`${name} golden leaked Ctrl+T-owned thinking presentation`);
+}
+const expandedGolden = goldenPlain("completed-expanded");
+for (const token of [model.call.task, "git status --short", "Summary · No correctness risks found.", "Review result"]) {
+	if (expandedGolden.split(token).length !== 2)
+		fail(`completed-expanded golden cardinality differs for ${token}`);
+}
+const expandedOrder = [
+	expandedGolden.indexOf(model.call.task),
+	expandedGolden.indexOf("git status --short"),
+	expandedGolden.indexOf("Summary · No correctness risks found."),
+	expandedGolden.indexOf("Review result"),
+	expandedGolden.lastIndexOf("No correctness risks found."),
+];
+if (expandedOrder.some((index, position) => index < 0 || (position > 0 && index <= expandedOrder[position - 1])))
+	fail("completed-expanded Task/tool/Summary/final Markdown order differs");
+if (
+	goldenPlain("completed-collapsed-t0").split("subagent · reviewer · completed").length !== 2 ||
+	goldenPlain("completed-collapsed-t0").includes("subagent reviewer")
+) fail("canonical connected subagent golden header differs");
+if (
+	nativeCallRenders < scenarios.size ||
+	nativeResultRenders < scenarios.size ||
+	lifecycleInvalidations < scenarios.size ||
+	!plain("completed-collapsed-t0").includes("1 step · 1 call") ||
+	!goldenPlain("completed-collapsed-t0").includes("subagent · reviewer · completed")
+) fail("genuine production component lifecycle/composition was not observed");
+
+console.log(
+	`T22.V02 production lifecycle loaded: genuine_tool_execution_component=true parent_mode=${expectedParentCommit ? "explicit" : "derived"} ` +
+	`parent_commit=${parentCommit} parent_tree=${parentTree} parent_blob=${parentBlob} ` +
+	`subagent_source=repository-owned subagent_commit=${productCommit} subagent_tree=${productTree} subagent_blob=${productBlob} ` +
+	`native_render_call_count=${nativeCallRenders} native_render_result_count=${nativeResultRenders} lifecycle_invalidations=${lifecycleInvalidations}`,
+);
+console.log(
+	`T22.V02 deterministic inputs: width=${model.contract.width} control_width=${model.contract.controlWidth} ` +
+		`t0=${model.contract.t0} t1=${model.contract.t1} width_probe_differs=true ` +
+		`clock_provider_token=${clockSource.token} date_now_authority=false ` +
+		`genuine_clock_invalidations=${clockInvalidations} t0_t1_advances=${clockAdvances} ` +
+		`thinking_invalidations=${thinkingInvalidations} settled_expanded_transitions=${settledExpandedTransitions}`,
+);
+console.log(
+	`T22.V02 same-instance toggles: sequences=${[...scenarios.keys()].join(",")} ` +
+	`ctrl_o=output-detail ctrl_t=thinking restored_bytes_checked=true identities_preserved=true ` +
+	`reasoning_real_normalization=true normalization_updates=${normalizationUpdates.length} ` +
+	`fallback_context_tokens=${normalizationContextTokens} cumulative_tokens=${normalizationCumulativeTokens} ` +
+	`restored_old_shape=true`,
+);
+console.log(
+	`T22.V02 usage contract: running=${model.contract.usageProfiles.running.display} ` +
+	`completed=${model.contract.usageProfiles.completed.display} cumulative_tokens_differ_from_latest_context=true ` +
+	`cost_nonzero=true context_formula=latest_turn_totalTokens_over_contextWindow`,
+);
+console.log(`T22.V02 cases compared as raw UTF-8: ${model.cases.map((item) => item.name).join(",")}`);
+const finalModuleBinding = moduleBinding();
+if (JSON.stringify(finalModuleBinding) !== JSON.stringify(initialModuleBinding))
+	fail("directly loaded Pi core/TUI module binding changed after rendering");
+console.log(
+	`T22.V02 core/TUI binding: mode=${process.env.PI_VERIFY_PI_CORE_TUI_EXPECTED_SHA256 ? "explicit" : "derived"} ` +
+	`pi_root=${piRoot} pi_package=${initialModuleBinding.piVersion} tui_root=${tuiRoot} ` +
+	`tui_package=${initialModuleBinding.tuiVersion} core_sha256=${initialModuleBinding.core.sha256} ` +
+	`tui_sha256=${initialModuleBinding.tui.sha256} combined_sha256=${initialModuleBinding.combinedSha256} unchanged=true`,
+);
+if (
+	git(repoRoot, "rev-parse", "HEAD") !== parentCommit ||
+	git(repoRoot, "rev-parse", "HEAD^{tree}") !== parentTree ||
+	git(repoRoot, "hash-object", parentPath) !== parentBlob ||
+	git(repoRoot, "hash-object", productPath) !== productBlob ||
+	git(repoRoot, "status", "--porcelain=v1", "--untracked-files=all") !== ""
+) fail("production identity or cleanliness changed after rendering");
+if (clockInvalidations < 2 || clockAdvances < 2)
+	fail("genuine same-component running/completed clock invalidation coverage was not observed");
+if (thinkingInvalidations !== 4 || settledExpandedTransitions !== 2)
+	fail("genuine Ctrl+T or standalone settled Ctrl+O transition coverage differed");
+if (clockBehaviorFailures.size)
+	console.error(`T22.V02 mismatch category=clock-bridge failures=${[...clockBehaviorFailures].join(",")}`);
+if (mismatches.length || clockBehaviorFailures.size) {
+	console.error(`T22.V02 baseline mismatches (${mismatches.length}): ${mismatches.join(",")}`);
+	process.exit(1);
+}
+console.log("T22.V02 exact Option A ANSI verified.");

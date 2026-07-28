@@ -1,0 +1,17 @@
+[38;2;146;131;116m │  [0m[38;2;146;131;116m1 step · 1 call · [0m[1;38;2;184;187;38mall passed[0m
+[38;2;146;131;116m └─ [0m[38;2;184;187;38m●[0m [1;38;2;235;219;178mVerifying unique nested ownership across a deliberately width-sensitive production composition boundary…[0m
+[38;2;146;131;116m    ├─ [0m[38;2;146;131;116m•[0m [38;2;146;131;116mChecking exact nested ownership[0m
+[38;2;146;131;116m    └─ [0m[38;2;184;187;38m✓[0m [1;38;2;235;219;178msubagent · root-owner · completed[0m[38;2;102;92;84m · 5.0s[0m
+[38;2;146;131;116m       ├─ [0m[1;38;2;235;219;178mTask[0m
+[38;2;146;131;116m       │  └─ [0m[38;2;235;219;178mDispatch nested-auditor fixture/nested-owner; keep PARENT_PLACEMENT_DECOY.[0m
+[38;2;146;131;116m       ├─ [0m[38;2;184;187;38m✓[0m [38;2;128;170;158mbash · 1 command · completed[0m[38;2;102;92;84m[0m[38;2;102;92;84m · 1.0s[0m
+[38;2;146;131;116m       │  └─ [0m[38;2;102;92;84m$ [0m[38;2;242;133;52mprintf[0m [38;2;235;219;178mV02_ROOT_WIDTH_PROBE_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789_abcdefghijklmnopqrstuvwxyz_t…[0m
+[38;2;146;131;116m       ├─ [0m[38;2;184;187;38m✓[0m [38;2;128;170;158msubagent · done[0m[38;2;102;92;84m[0m[38;2;102;92;84m · 3.0s[0m
+[38;2;146;131;116m       │  └─ [0m[38;2;184;187;38m✓[0m [38;2;211;134;155mnested-auditor · nested agent · completed[0m[38;2;102;92;84m · 2.0s[0m
+[38;2;146;131;116m       │     ├─ [0m[38;2;184;187;38m✓[0m [38;2;128;170;158mzsh · 1 command · completed[0m[38;2;102;92;84m[0m[38;2;102;92;84m · 1.0s[0m
+[38;2;146;131;116m       │     │  └─ [0m[38;2;102;92;84m$ [0m[38;2;211;134;155mV02_NESTED_ASSIGN[0m[38;2;233;177;67m=$([0m[38;2;242;133;52mpwd[0m[38;2;233;177;67m)[0m [38;2;233;177;67m&&[0m [38;2;242;133;52mprintf[0m [38;2;235;219;178mV02_NESTED_COMMAND_TAIL[0m
+[38;2;146;131;116m       │     └─ [0m[38;2;235;219;178mV02 nested ownership summary.[0m
+[38;2;146;131;116m       └─ [0m[38;2;184;187;38m✓[0m [1;38;2;235;219;178mSummary[0m[38;2;146;131;116m · V02 root ownership summary.[0m[38;2;102;92;84m · 5.0s[0m
+[38;2;146;131;116m          ├─ [0m[1;38;2;235;219;178mNested result[0m
+[38;2;146;131;116m          └─ [0m[38;2;235;219;178mV02 root ownership final Markdown.[0m
+[38;2;146;131;116m          [0m[38;2;146;131;116m2 tools · 2 commands · 6.3k tokens · $0.111 · 25.0%/8k · 5.0s[0m
