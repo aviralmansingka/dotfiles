@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/termenv"
 
 	atlaspkg "github.com/aviral/dotfiles/internal/atlas"
 	"github.com/aviral/dotfiles/internal/vaultregistry"
@@ -22,9 +25,34 @@ type browserEntry struct {
 	featureName    string
 	taskID         string
 	taskName       string
+	taskStatus     string
 	projectPreview string
 	featurePreview string
 	taskPreview    string
+}
+
+type browserStyles struct {
+	project, feature, tree, row, rowMeta, selected, selectedMeta lipgloss.Style
+	green, yellow, red, blue, badge                              lipgloss.Style
+}
+
+func newBrowserStyles() browserStyles {
+	renderer := lipgloss.NewRenderer(io.Discard)
+	renderer.SetColorProfile(termenv.TrueColor)
+	return browserStyles{
+		project:      renderer.NewStyle().Bold(true).Foreground(lipgloss.Color("#fbf1c7")),
+		feature:      renderer.NewStyle().Foreground(lipgloss.Color("#e9b143")),
+		tree:         renderer.NewStyle().Foreground(lipgloss.Color("#e9b143")),
+		row:          renderer.NewStyle().Foreground(lipgloss.Color("#ebdbb2")),
+		rowMeta:      renderer.NewStyle().Foreground(lipgloss.Color("#928374")),
+		selected:     renderer.NewStyle().Bold(true).Foreground(lipgloss.Color("#fbf1c7")).Background(lipgloss.Color("#45403d")),
+		selectedMeta: renderer.NewStyle().Foreground(lipgloss.Color("#80aa9e")).Background(lipgloss.Color("#45403d")),
+		green:        renderer.NewStyle().Foreground(lipgloss.Color("#b8bb26")),
+		yellow:       renderer.NewStyle().Foreground(lipgloss.Color("#e9b143")),
+		red:          renderer.NewStyle().Foreground(lipgloss.Color("#f2594b")),
+		blue:         renderer.NewStyle().Foreground(lipgloss.Color("#80aa9e")),
+		badge:        renderer.NewStyle().Bold(true).Foreground(lipgloss.Color("#80aa9e")).Padding(0, 1),
+	}
 }
 
 type browserPanel string
@@ -43,6 +71,7 @@ type browserModel struct {
 	width, height int
 	emptyNote     string
 	colorEnabled  bool
+	showDone      map[string]bool
 	reload        func() ([]browserEntry, error)
 }
 
@@ -52,7 +81,27 @@ type browserRefreshMsg struct {
 }
 
 func newBrowserModel(entries []browserEntry) browserModel {
-	return browserModel{entries: entries, panel: browserPanelRun, width: 120, height: 32, emptyNote: "no active Runs"}
+	return browserModel{entries: entries, panel: browserPanelRun, width: 120, height: 32, emptyNote: "no active or not-started Tasks", showDone: map[string]bool{}}
+}
+
+func featureKey(entry browserEntry) string { return entry.projectName + "/" + entry.featureName }
+func entryKey(entry browserEntry) string {
+	if entry.runID != "" {
+		return entry.runID
+	}
+	return entry.taskID
+}
+func (m browserModel) visibleEntries() []browserEntry {
+	visible := make([]browserEntry, 0, len(m.entries))
+	for _, entry := range m.entries {
+		if entry.taskStatus == "done" || entry.taskStatus == "completed" {
+			if !m.showDone[featureKey(entry)] {
+				continue
+			}
+		}
+		visible = append(visible, entry)
+	}
+	return visible
 }
 
 func (m browserModel) withReload(reload func() ([]browserEntry, error)) browserModel {
@@ -76,12 +125,13 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case browserRefreshMsg:
 		if msg.err == nil {
 			selectedID := ""
-			if len(m.entries) != 0 {
-				selectedID = m.entries[m.selected].runID
+			visible := m.visibleEntries()
+			if len(visible) != 0 {
+				selectedID = entryKey(visible[m.selected])
 			}
 			m.entries, m.selected = msg.entries, 0
-			for i, entry := range m.entries {
-				if entry.runID == selectedID {
+			for i, entry := range m.visibleEntries() {
+				if entryKey(entry) == selectedID {
 					m.selected = i
 					break
 				}
@@ -98,7 +148,7 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "j", "down":
-			if m.selected < len(m.entries)-1 {
+			if m.selected < len(m.visibleEntries())-1 {
 				m.selected++
 			}
 		case "k", "up":
@@ -110,8 +160,21 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selected = 0
 			}
 		case "G":
-			if len(m.entries) != 0 {
-				m.selected = len(m.entries) - 1
+			if visible := m.visibleEntries(); len(visible) != 0 {
+				m.selected = len(visible) - 1
+			}
+		case "ctrl+d":
+			visible := m.visibleEntries()
+			if len(visible) != 0 {
+				key, selectedID := featureKey(visible[m.selected]), entryKey(visible[m.selected])
+				m.showDone[key] = !m.showDone[key]
+				m.selected = 0
+				for i, entry := range m.visibleEntries() {
+					if entryKey(entry) == selectedID {
+						m.selected = i
+						break
+					}
+				}
 			}
 		case "p":
 			m.panel = browserPanelProject
@@ -141,8 +204,8 @@ func (m browserModel) View() string {
 	left := m.leftPane(bodyRows)
 	right := m.rightPane(rightWidth, bodyRows)
 	rows := []string{
-		clipText(fmt.Sprintf("ATLAS · %d active Runs · %s preview", len(m.entries), strings.ToUpper(string(m.panel))), m.width),
-		clipText("j/k select · g/G ends · p project · f feature · t task · r run · q quit", m.width),
+		clipText(fmt.Sprintf("ATLAS · %d visible Tasks · %s preview", len(m.visibleEntries()), strings.ToUpper(string(m.panel))), m.width),
+		clipText("j/k select · g/G ends · Ctrl-D done · p project · f feature · t task · r run · q quit", m.width),
 	}
 	for i := 0; i < bodyRows; i++ {
 		rows = append(rows, padText(valueAt(left, i), leftWidth)+"│"+clipText(valueAt(right, i), rightWidth))
@@ -151,35 +214,342 @@ func (m browserModel) View() string {
 }
 
 func (m browserModel) leftPane(rows int) []string {
-	lines := []string{"RUNS", strings.Repeat("─", maxInt(m.width*32/100, 28))}
-	if len(m.entries) == 0 {
-		lines = append(lines, m.emptyNote)
-		return lines
+	width := maxInt(m.width*32/100, 28)
+	entries := m.visibleEntries()
+	if len(entries) == 0 {
+		return []string{"RUNS", strings.Repeat("─", width), m.emptyNote}
 	}
-	visible := maxInt((rows-len(lines))/2, 1)
-	start := maxInt(m.selected-visible/2, 0)
-	if start+visible > len(m.entries) {
-		start = maxInt(len(m.entries)-visible, 0)
-	}
-	for i := start; i < minInt(start+visible, len(m.entries)); i++ {
-		entry := m.entries[i]
-		marker := "  "
-		if i == m.selected {
-			marker = "> "
+	styles := newBrowserStyles()
+	lines := []string{"RUNS", strings.Repeat("─", width)}
+	selectedLine := 0
+	project, feature := "", ""
+	featureContinues := false
+	for i, entry := range entries {
+		if entry.projectName != project {
+			project, feature = entry.projectName, ""
+			line := project
+			if m.colorEnabled {
+				line = styles.project.Render(line)
+			}
+			lines = append(lines, line)
 		}
-		lines = append(lines, fmt.Sprintf("%s%s · %s", marker, entry.runID, entry.runName), fmt.Sprintf("  %s / %s / %s", entry.projectName, entry.featureName, entry.taskID))
+		if entry.featureName != feature {
+			feature = entry.featureName
+			featureContinues = laterFeatureInProject(entries, i)
+			branch := "└─ "
+			if featureContinues {
+				branch = "├─ "
+			}
+			line := branch + feature
+			if m.colorEnabled {
+				line = styles.tree.Render(branch) + styles.feature.Render(feature)
+			}
+			lines = append(lines, line)
+		}
+		if i == m.selected {
+			selectedLine = len(lines)
+		}
+		outer := "   "
+		if featureContinues {
+			outer = "│  "
+		}
+		taskContinues := laterTaskInFeature(entries, i)
+		taskBranch := outer + "└─ "
+		childBranch := outer + "   └─ "
+		if taskContinues {
+			taskBranch, childBranch = outer+"├─ ", outer+"│  └─ "
+		}
+		lines = append(lines, renderBrowserRun(entry, i == m.selected, width, m.colorEnabled, styles, taskBranch, childBranch)...)
 	}
+	start := maxInt(selectedLine-rows/2, 0)
+	if start+rows > len(lines) {
+		start = maxInt(len(lines)-rows, 0)
+	}
+	return lines[start:minInt(start+rows, len(lines))]
+}
+
+func laterFeatureInProject(entries []browserEntry, index int) bool {
+	current := entries[index]
+	for i := index + 1; i < len(entries) && entries[i].projectName == current.projectName; i++ {
+		if entries[i].featureName != current.featureName {
+			return true
+		}
+	}
+	return false
+}
+
+func laterTaskInFeature(entries []browserEntry, index int) bool {
+	current := entries[index]
+	return index+1 < len(entries) && entries[index+1].projectName == current.projectName && entries[index+1].featureName == current.featureName
+}
+
+func renderBrowserRun(entry browserEntry, selected bool, width int, color bool, styles browserStyles, taskBranch, childBranch string) []string {
+	taskState, taskBadge := "yellow", "in progress"
+	if entry.taskStatus == "pending-work" {
+		taskState, taskBadge = "blue", "not started"
+	}
+	if entry.taskStatus == "done" || entry.taskStatus == "completed" {
+		taskState, taskBadge = "green", "done"
+	}
+	title := entry.taskName
+	if title == "" {
+		title = entry.runName
+	}
+	first := treeRow(taskBranch, title, taskBadge, taskState, selected, width, color, styles)
+	if entry.runID == "" {
+		return []string{first, treeRow(childBranch, "no Run registered", "", "blue", selected, width, color, styles)}
+	}
+	runState, runBadge := browserRunStatus(entry)
+	runText := fmt.Sprintf("%s · rev %d", shortBrowserID(entry.runID), entry.run.Revision)
+	return []string{first, treeRow(childBranch, runText, runBadge, runState, selected, width, color, styles)}
+}
+
+func treeRow(branch, text, badge, state string, selected bool, width int, color bool, styles browserStyles) string {
+	marker := "● "
+	if state == "blue" {
+		marker = "○ "
+	}
+	badgeWidth := 0
+	if badge != "" {
+		badgeWidth = len([]rune(badge)) + 2
+	}
+	available := maxInt(width-ansi.StringWidth(branch)-2-badgeWidth, 1)
+	text = clipText(text, available)
+	gap := strings.Repeat(" ", maxInt(1, available-ansi.StringWidth(text)))
+	if !color {
+		return branch + marker + text + gap + badge
+	}
+	treeStyle, textStyle, badgeStyle := styles.tree, styles.row, styles.badge
+	dotStyle := styles.yellow
+	if state == "green" {
+		dotStyle = styles.green
+	}
+	if state == "red" {
+		dotStyle = styles.red
+	}
+	if state == "blue" {
+		dotStyle = styles.blue
+	}
+	if selected {
+		bg := lipgloss.Color("#45403d")
+		treeStyle, dotStyle, badgeStyle = treeStyle.Background(bg), dotStyle.Background(bg), badgeStyle.Background(bg)
+		textStyle = styles.selected
+	}
+	result := treeStyle.Render(branch) + dotStyle.Render(marker[:len([]byte(marker))-1]) + textStyle.Render(" "+text+gap)
+	if badge != "" {
+		result += badgeStyle.Render(badge)
+	}
+	return result
+}
+
+func browserRunStatus(entry browserEntry) (string, string) {
+	if entry.taskStatus == "done" {
+		return "green", "done"
+	}
+	goal, state := "", "active"
+	for i := len(entry.run.Lifecycle) - 1; i >= 0; i-- {
+		if entry.run.Lifecycle[i].GoalID != "" {
+			goal, state = entry.run.Lifecycle[i].GoalID, entry.run.Lifecycle[i].State
+			break
+		}
+	}
+	for i := len(entry.run.Observations) - 1; i >= 0 && goal == ""; i-- {
+		if entry.run.Observations[i].GoalID != "" {
+			goal, state = entry.run.Observations[i].GoalID, string(entry.run.Observations[i].State)
+		}
+	}
+	lower := strings.ToLower(state)
+	color := "yellow"
+	if strings.Contains(lower, "fail") || strings.Contains(lower, "block") || strings.Contains(lower, "reject") || lower == "red" {
+		color = "red"
+	}
+	if strings.Contains(lower, "complete") || strings.Contains(lower, "accept") || lower == "done" || lower == "passed" || lower == "green" {
+		color = "green"
+	}
+	badge := state
+	parts := strings.Split(goal, ".")
+	for i := len(parts) - 1; i >= 0; i-- {
+		if strings.HasPrefix(parts[i], "V") {
+			badge = parts[i]
+			break
+		}
+	}
+	if badge == "" {
+		badge = "run"
+	}
+	return color, clipText(badge, 8)
+}
+
+type featureTask struct{ ID, LocalID, Name, Status string }
+
+func renderFeatureFocus(selected browserEntry, entries []browserEntry, width, rows int, color bool) string {
+	var envelope struct {
+		Data struct {
+			Name  string `json:"name"`
+			Tasks []struct {
+				ID      string `json:"id"`
+				LocalID string `json:"local_id"`
+				Name    string `json:"name"`
+				Status  string `json:"status"`
+			} `json:"tasks"`
+		} `json:"data"`
+	}
+	if json.Unmarshal([]byte(selected.featurePreview), &envelope) != nil {
+		return selected.featurePreview
+	}
+	active, next, done := []featureTask{}, []featureTask{}, 0
+	for _, task := range envelope.Data.Tasks {
+		item := featureTask{task.ID, task.LocalID, task.Name, task.Status}
+		switch task.Status {
+		case "in-progress":
+			active = append(active, item)
+		case "pending-work":
+			next = append(next, item)
+		default:
+			done++
+		}
+	}
+	styles := newBrowserStyles()
+	lines := []string{fmt.Sprintf("%s · %d now · %d next · %d complete", envelope.Data.Name, len(active), len(next), done), ""}
+	appendLane := func(label string, tasks []featureTask) {
+		if color {
+			label = styles.feature.Bold(true).Render(label)
+		}
+		lines = append(lines, label)
+		for _, task := range tasks {
+			var run *browserEntry
+			for i := range entries {
+				if entries[i].taskID == task.ID {
+					run = &entries[i]
+					break
+				}
+			}
+			lines = append(lines, renderFeatureTask(task, run, selected.runID, width, color, styles)...)
+		}
+	}
+	appendLane(fmt.Sprintf("NOW · %d", len(active)), active)
+	lines = append(lines, "")
+	appendLane(fmt.Sprintf("NEXT · %d", len(next)), next)
 	if len(lines) > rows {
 		lines = lines[:rows]
 	}
-	return lines
+	return strings.Join(lines, "\n")
+}
+
+func renderFeatureTask(task featureTask, run *browserEntry, selectedRunID string, width int, color bool, styles browserStyles) []string {
+	badge, dot, stateColor := "not started", "○", "blue"
+	selected := false
+	if run != nil {
+		stateColor, badge = browserRunStatus(*run)
+		dot, selected = "●", run.runID == selectedRunID
+	}
+	title := clipText(task.LocalID+" · "+task.Name, maxInt(width-len([]rune(badge))-6, 1))
+	gap := strings.Repeat(" ", maxInt(1, width-2-ansi.StringWidth(title)-len([]rune(badge))-2))
+	if !color {
+		return []string{"  " + dot + " " + title + gap + badge, "    " + featureStages(run)}
+	}
+	dotStyle := styles.yellow
+	if stateColor == "green" {
+		dotStyle = styles.green
+	}
+	if stateColor == "red" {
+		dotStyle = styles.red
+	}
+	if stateColor == "blue" {
+		dotStyle = styles.blue
+	}
+	primary, meta, badgeStyle := styles.row, styles.rowMeta, styles.badge
+	if selected {
+		primary, meta = styles.selected, styles.selectedMeta
+		dotStyle = dotStyle.Background(lipgloss.Color("#45403d"))
+		badgeStyle = badgeStyle.Background(lipgloss.Color("#45403d"))
+	}
+	prefix := "  "
+	if selected {
+		prefix = "▌ "
+	}
+	first := primary.Render(prefix) + dotStyle.Render(dot) + primary.Render(" "+title+gap) + badgeStyle.Render(badge)
+	stage := "    " + featureStages(run)
+	if selected {
+		stage = meta.Render(padText(stage, width))
+	}
+	return []string{first, stage}
+}
+
+func featureStages(entry *browserEntry) string {
+	phases := []string{"activate", "baseline", "converge", "review", "land", "cleanup"}
+	if entry == nil {
+		parts := make([]string, len(phases))
+		for i, phase := range phases {
+			parts[i] = phase + " ○"
+		}
+		return strings.Join(parts, " ─ ")
+	}
+	current, failed := 0, false
+	observe := func(goal, kind, state string) {
+		phase := crewPhase(goal + " " + kind)
+		if phase > current {
+			current, failed = phase, false
+		}
+		if phase == current {
+			lower := strings.ToLower(state)
+			failed = strings.Contains(lower, "fail") || strings.Contains(lower, "block") || strings.Contains(lower, "reject")
+		}
+	}
+	for _, life := range entry.run.Lifecycle {
+		observe(life.GoalID, life.Kind, life.State)
+	}
+	for _, observation := range entry.run.Observations {
+		observe(observation.GoalID, string(observation.Kind), string(observation.State))
+	}
+	parts := make([]string, len(phases))
+	for i, phase := range phases {
+		mark := "○"
+		if i < current {
+			mark = "✓"
+		}
+		if i == current {
+			mark = "●"
+			if failed {
+				mark = "!"
+			}
+		}
+		parts[i] = phase + " " + mark
+	}
+	return strings.Join(parts, " ─ ")
+}
+
+func crewPhase(value string) int {
+	value = strings.ToLower(value)
+	switch {
+	case strings.Contains(value, "cleanup"), strings.Contains(value, "checkpoint-two"):
+		return 5
+	case strings.Contains(value, "delivery"), strings.Contains(value, "merge"), strings.Contains(value, "pull-request"), strings.Contains(value, " ci"), strings.Contains(value, "land"):
+		return 4
+	case strings.Contains(value, "review"), strings.Contains(value, "refactor"):
+		return 3
+	case strings.Contains(value, "baseline"):
+		return 1
+	case strings.Contains(value, "implement"), strings.Contains(value, "convergence"), strings.Contains(value, "verifier"), strings.Contains(value, ".v"), strings.Contains(value, "worker"), strings.Contains(value, "subagent"):
+		return 2
+	default:
+		return 0
+	}
+}
+
+func shortBrowserID(id string) string {
+	if len(id) <= 8 {
+		return id
+	}
+	return id[:8]
 }
 
 func (m browserModel) rightPane(width, rows int) []string {
-	if len(m.entries) == 0 {
-		return []string{"PREVIEW", strings.Repeat("─", maxInt(width, 1)), "No active Run selected."}
+	visible := m.visibleEntries()
+	if len(visible) == 0 {
+		return []string{"PREVIEW", strings.Repeat("─", maxInt(width, 1)), "No visible Task selected."}
 	}
-	entry := m.entries[m.selected]
+	entry := visible[m.selected]
 	heading := []string{
 		fmt.Sprintf("%s · %s", strings.ToUpper(string(m.panel)), entry.runID),
 		strings.Repeat("─", maxInt(width, 1)),
@@ -189,11 +559,15 @@ func (m browserModel) rightPane(width, rows int) []string {
 	case browserPanelProject:
 		body = entry.projectPreview
 	case browserPanelFeature:
-		body = entry.featurePreview
+		body = renderFeatureFocus(entry, m.entries, width, rows-len(heading), m.colorEnabled)
 	case browserPanelTask:
 		body = entry.taskPreview
 	default:
-		body = atlaspkg.NewJournalModel(entry.run, width, maxInt(rows-len(heading), 24)).ViewColor(m.colorEnabled)
+		if entry.runID == "" {
+			body = renderNotStartedTask(entry, width, m.colorEnabled)
+		} else {
+			body = atlaspkg.NewJournalModel(entry.run, width, maxInt(rows-len(heading), 24)).ViewColor(m.colorEnabled)
+		}
 	}
 	lines := append(heading, strings.Split(body, "\n")...)
 	if len(lines) > rows {
@@ -201,6 +575,36 @@ func (m browserModel) rightPane(width, rows int) []string {
 	}
 	return lines
 }
+
+func renderNotStartedTask(entry browserEntry, width int, color bool) string {
+	var envelope struct {
+		Data struct {
+			LocalID   string `json:"local_id"`
+			Name      string `json:"name"`
+			Status    string `json:"status"`
+			Intent    string `json:"intent"`
+			Verifiers []any  `json:"verifiers"`
+			Evidence  []any  `json:"evidence"`
+		} `json:"data"`
+	}
+	if json.Unmarshal([]byte(entry.taskPreview), &envelope) != nil {
+		return entry.taskPreview
+	}
+	styles := newBrowserStyles()
+	lines := []string{envelope.Data.LocalID + " · " + envelope.Data.Name, "status · " + envelope.Data.Status, "", "STAGES", "activate ○ ─ baseline ○ ─ converge ○ ─ review ○ ─ land ○ ─ cleanup ○", "", "PROVENANCE PREVIEW", "intent · " + envelope.Data.Intent, fmt.Sprintf("verifiers · %d · evidence · %d", len(envelope.Data.Verifiers), len(envelope.Data.Evidence)), "", "No Run has been registered for this Task."}
+	if color {
+		lines[0] = styles.feature.Bold(true).Render(lines[0])
+		lines[1] = styles.selectedMeta.Render(lines[1])
+		lines[3] = styles.feature.Render(lines[3])
+		lines[6] = styles.feature.Render(lines[6])
+	}
+	for i := range lines {
+		lines[i] = clipText(lines[i], width)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func canonicalTaskID(id string) string { return strings.TrimPrefix(id, "/Users/aviral/vault/") }
 
 func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Reader, warnings io.Writer) ([]browserEntry, error) {
 	runs, err := reader.List()
@@ -225,6 +629,7 @@ func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Read
 		projectID, projectName := mapPair(item, "project")
 		featureID, featureName := mapPair(item, "feature")
 		taskID, taskName := mapPair(item, "task")
+		taskValue, _ := item["task"].(map[string]any)
 		projectPreview, err := previewEnvelope(vaultRoot, stateRoot, "projects", atlaspkg.MachineSelector{ID: projectID})
 		if err != nil {
 			warnUnrenderableRun(warnings, run, err)
@@ -248,11 +653,48 @@ func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Read
 			featureName:    featureName,
 			taskID:         taskID,
 			taskName:       taskName,
+			taskStatus:     mapString(taskValue, "status"),
 			projectPreview: projectPreview,
 			featurePreview: featurePreview,
 			taskPreview:    taskPreview,
 		})
 	}
+	existing := map[string]bool{}
+	for _, entry := range entries {
+		existing[canonicalTaskID(entry.taskID)] = true
+	}
+	tasks, err := atlaspkg.BuildTaskSummaries(vaultRoot, stateRoot)
+	if err != nil {
+		return nil, err
+	}
+	for _, task := range tasks {
+		taskID := mapString(task, "id")
+		if existing[canonicalTaskID(taskID)] {
+			continue
+		}
+		projectID, projectName := mapPair(task, "project")
+		featureID, featureName := mapPair(task, "feature")
+		projectPreview, projectErr := previewEnvelope(vaultRoot, stateRoot, "projects", atlaspkg.MachineSelector{ID: projectID})
+		featurePreview, featureErr := previewEnvelope(vaultRoot, stateRoot, "features", atlaspkg.MachineSelector{ID: featureID})
+		taskPreview, taskErr := previewEnvelope(vaultRoot, stateRoot, "tasks", atlaspkg.MachineSelector{ID: taskID})
+		if projectErr != nil || featureErr != nil || taskErr != nil {
+			continue
+		}
+		entries = append(entries, browserEntry{runName: mapString(task, "name"), projectName: projectName, featureName: featureName, taskID: taskID, taskName: mapString(task, "name"), taskStatus: mapString(task, "status"), projectPreview: projectPreview, featurePreview: featurePreview, taskPreview: taskPreview})
+	}
+	sort.SliceStable(entries, func(i, j int) bool {
+		left, right := entries[i], entries[j]
+		if left.projectName != right.projectName {
+			return left.projectName < right.projectName
+		}
+		if left.featureName != right.featureName {
+			return left.featureName < right.featureName
+		}
+		if left.taskName != right.taskName {
+			return left.taskName < right.taskName
+		}
+		return left.runID < right.runID
+	})
 	return entries, nil
 }
 
