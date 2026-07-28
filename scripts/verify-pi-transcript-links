@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+case "${1:-}" in
+	V01) exec node "$repo_root/scripts/verifiers/pi-transcript-links-v01" ;;
+	*) printf 'usage: %s V01\n' "$0" >&2; exit 2 ;;
+esac
