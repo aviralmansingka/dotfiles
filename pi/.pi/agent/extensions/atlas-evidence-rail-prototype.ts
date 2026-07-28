@@ -124,10 +124,7 @@ class EvidenceRailPrototype {
 
     row(
       this.theme.fg("warning", this.theme.bold("Run timeline")),
-      this.theme.fg(
-        "warning",
-        this.theme.bold(`Selected · ${selected.label}`),
-      ),
+      this.theme.fg("warning", this.theme.bold(`Selected · ${selected.label}`)),
     );
     row(
       this.theme.fg("muted", "2 complete · 1 active · 2 pending"),
@@ -142,8 +139,14 @@ class EvidenceRailPrototype {
     STAGES.forEach((stage, index) => {
       const last = index === STAGES.length - 1;
       const connector = last ? " └─ " : " ├─ ";
-      const glyph = stage.state === "done" ? "✓" : stage.state === "active" ? "◉" : "○";
-      const color = stage.state === "done" ? "success" : stage.state === "active" ? "warning" : "muted";
+      const glyph =
+        stage.state === "done" ? "✓" : stage.state === "active" ? "◉" : "○";
+      const color =
+        stage.state === "done"
+          ? "success"
+          : stage.state === "active"
+            ? "warning"
+            : "muted";
       let stageText =
         this.theme.fg("dim", connector) +
         this.theme.fg(color, ` ${glyph} ${stage.label} `);
@@ -160,7 +163,10 @@ class EvidenceRailPrototype {
       const childConnector = last ? "     " : " │   ";
       row(
         this.theme.fg("dim", childConnector + "└─ ") +
-          this.theme.fg(index === this.selected ? "accent" : "muted", stage.summary),
+          this.theme.fg(
+            index === this.selected ? "accent" : "muted",
+            stage.summary,
+          ),
         rightRows[rightIndex++] ?? "",
       );
     });
@@ -172,7 +178,10 @@ class EvidenceRailPrototype {
     lines.push(rule());
     row(
       this.theme.fg("dim", "j/k select · Enter expand · q quit"),
-      this.theme.fg("dim", `recorded snapshot · ${frameWidth}×${lines.length + 2}`),
+      this.theme.fg(
+        "dim",
+        `recorded snapshot · ${frameWidth}×${lines.length + 2}`,
+      ),
     );
 
     return lines.map((line) => truncateToWidth(line, width, ""));
@@ -181,7 +190,9 @@ class EvidenceRailPrototype {
   private detailRows(stage: Stage): string[] {
     const th = this.theme;
     const rows = [
-      th.fg("muted", "12:01  ") + th.fg("syntaxNumber", " ○ ") + "verifier queued ",
+      th.fg("muted", "12:01  ") +
+        th.fg("syntaxNumber", " ○ ") +
+        "verifier queued ",
       th.fg("muted", "12:05  ") +
         th.bg("selectedBg", th.fg("warning", th.bold(" ◉ verifier active "))),
       th.fg("accent", "       Rendering deterministic snapshots"),
@@ -198,21 +209,38 @@ class EvidenceRailPrototype {
     if (stage.label !== "T02.V01") {
       return [
         th.fg("muted", "Recorded stage"),
-        th.bg("customMessageBg", th.fg("customMessageLabel", ` ${stage.label} `)),
-        th.fg("muted", " state       ") + th.fg(stage.state === "done" ? "success" : stage.state === "active" ? "warning" : "muted", stage.state),
+        th.bg(
+          "customMessageBg",
+          th.fg("customMessageLabel", ` ${stage.label} `),
+        ),
+        th.fg("muted", " state       ") +
+          th.fg(
+            stage.state === "done"
+              ? "success"
+              : stage.state === "active"
+                ? "warning"
+                : "muted",
+            stage.state,
+          ),
         th.fg("muted", " summary     ") + th.fg("text", stage.summary),
       ];
     }
 
     return [
       ...rows,
-      th.bg("customMessageBg", th.fg("customMessageLabel", th.bold(" Result capsule "))),
+      th.bg(
+        "customMessageBg",
+        th.fg("customMessageLabel", th.bold(" Result capsule ")),
+      ),
       th.fg("muted", " outcome     ") + th.fg("error", th.bold("failed")),
       th.fg("muted", " phase       ") + th.fg("syntaxNumber", "baseline"),
       th.fg("muted", " reproduce"),
       th.fg("mdLink", " scripts/verify-vault-hunter-atlas T02.V01"),
       th.fg("muted", " artifact    ") + th.fg("syntaxNumber", "aaaaaaaaaaaa…"),
-      th.bg("customMessageBg", th.fg("customMessageLabel", th.bold(" Ownership "))),
+      th.bg(
+        "customMessageBg",
+        th.fg("customMessageLabel", th.bold(" Ownership ")),
+      ),
       th.fg("muted", " driver      ") + "implementer",
       th.fg("muted", " review      ") + "reviewer",
       th.fg("muted", " authority   ") + th.fg("mdLink", "observation only"),
@@ -227,12 +255,16 @@ export default function atlasEvidenceRailPrototype(pi: ExtensionAPI) {
     description: "Open the disposable Atlas evidence-forward rail",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       if (ctx.mode !== "tui") {
-        ctx.ui.notify("The Atlas rail prototype requires interactive TUI mode.", "warning");
+        ctx.ui.notify(
+          "The Atlas rail prototype requires interactive TUI mode.",
+          "warning",
+        );
         return;
       }
 
-      await ctx.ui.custom<void>((tui, theme, _keybindings, done) =>
-        new EvidenceRailPrototype(theme, () => tui.requestRender(), done),
+      await ctx.ui.custom<void>(
+        (tui, theme, _keybindings, done) =>
+          new EvidenceRailPrototype(theme, () => tui.requestRender(), done),
       );
     },
   });

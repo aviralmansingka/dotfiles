@@ -136,6 +136,10 @@ cd ~/.pi/agent/npm
 npm install
 ```
 
+Use `/atlas-rail-prototype` in Pi's interactive TUI to open the disposable Atlas T02.V01 evidence-rail fixture. It
+uses the active theme, requires at least 80 columns, and never persists data or mutates the Run Registry. Navigate
+stages with `j`/`k` or the arrow keys, toggle details with Enter, and close with `q` or Escape.
+
 Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`; the widget stays hidden when no run exists.
 
 For Pi over WhatsApp, copy `~/.config/pi-whatsapp.env.example` to `~/.config/pi-whatsapp.env`, fill in the allowed chat IDs, then enable the user services:
