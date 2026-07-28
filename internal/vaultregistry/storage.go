@@ -777,9 +777,13 @@ func summarize(run Run) RunSummary {
 		Stage:         run.Stage,
 		InvokedAt:     run.InvokedAt,
 		UpdatedAt:     run.UpdatedAt,
-		WorkReference: run.WorkReference,
 	}
-	if run.WorkReference == nil {
+	if run.WorkReference != nil {
+		summary.WorkReference = &WorkReferenceSummary{
+			ID: run.WorkReference.ID, Title: run.WorkReference.Title, Path: run.WorkReference.Path,
+			FeaturePath: run.WorkReference.FeaturePath, Kind: run.WorkReference.Kind,
+		}
+	} else {
 		summary.Task = &TaskSummary{
 			ID: run.Task.ID, Title: run.Task.Title, Path: run.Task.Path,
 			FeaturePath: run.Task.FeaturePath, Kind: run.Task.Kind,

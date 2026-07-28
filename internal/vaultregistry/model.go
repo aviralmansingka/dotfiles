@@ -115,19 +115,28 @@ type TaskSummary struct {
 	Kind        string `json:"kind"`
 }
 
+// WorkReferenceSummary is the bounded work identity returned by ListSummaries.
+type WorkReferenceSummary struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Path        string `json:"path"`
+	FeaturePath string `json:"feature_path"`
+	Kind        string `json:"kind"`
+}
+
 // RunSummary excludes observation histories and unknown extension fields.
 type RunSummary struct {
-	SchemaVersion uint64         `json:"schema_version"`
-	RunID         string         `json:"run_id"`
-	Name          string         `json:"name,omitempty"`
-	RunKind       RunKind        `json:"run_kind,omitempty"`
-	Revision      uint64         `json:"revision"`
-	State         RunState       `json:"state,omitempty"`
-	Stage         string         `json:"stage,omitempty"`
-	InvokedAt     string         `json:"invoked_at"`
-	UpdatedAt     string         `json:"updated_at"`
-	Task          *TaskSummary   `json:"task,omitempty"`
-	WorkReference *WorkReference `json:"work_reference,omitempty"`
+	SchemaVersion uint64                `json:"schema_version"`
+	RunID         string                `json:"run_id"`
+	Name          string                `json:"name,omitempty"`
+	RunKind       RunKind               `json:"run_kind,omitempty"`
+	Revision      uint64                `json:"revision"`
+	State         RunState              `json:"state,omitempty"`
+	Stage         string                `json:"stage,omitempty"`
+	InvokedAt     string                `json:"invoked_at"`
+	UpdatedAt     string                `json:"updated_at"`
+	Task          *TaskSummary          `json:"task,omitempty"`
+	WorkReference *WorkReferenceSummary `json:"work_reference,omitempty"`
 }
 
 func validID(id string) error {

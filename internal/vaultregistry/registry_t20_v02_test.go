@@ -186,6 +186,57 @@ func TestT20V02SelectorsActiveOrderingAndExplicitRetiredRead(t *testing.T) {
 	t.Log("T20.V02_SELECTOR selector=shared-selector outcome=ambiguous id=shared-selector name=t20-v02-reconciled-version-2")
 }
 
+func TestT20V02WorkReferenceSummaryIsBounded(t *testing.T) {
+	root := t.TempDir()
+	request := t20CreateFixture(t, "hunter")
+	request.Run.WorkReference.Unknown = unknown("future_work_reference", `{"preserved":true}`)
+	created, err := mustProducer(t, root).CreateRun(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exact, err := mustReader(t, root).Get(created.RunID)
+	if err != nil || exact.WorkReference == nil || exact.WorkReference.Unknown["future_work_reference"] == nil {
+		t.Fatalf("exact read lost work-reference extension: %#v, %v", exact.WorkReference, err)
+	}
+	persisted, err := os.ReadFile(filepath.Join(root, "runs", created.RunID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var persistedRun struct {
+		WorkReference map[string]json.RawMessage `json:"work_reference"`
+	}
+	if err := json.Unmarshal(persisted, &persistedRun); err != nil || persistedRun.WorkReference["future_work_reference"] == nil {
+		t.Fatalf("persisted record lost work-reference extension: %v", err)
+	}
+
+	summaries, err := mustReader(t, root).ListSummaries(vaultregistry.ListFilter{})
+	if err != nil || len(summaries) != 1 {
+		t.Fatalf("summaries = %#v, %v", summaries, err)
+	}
+	want := &vaultregistry.WorkReferenceSummary{
+		ID: request.Run.WorkReference.ID, Title: request.Run.WorkReference.Title, Path: request.Run.WorkReference.Path,
+		FeaturePath: request.Run.WorkReference.FeaturePath, Kind: request.Run.WorkReference.Kind,
+	}
+	if summaries[0].Task != nil || !reflect.DeepEqual(summaries[0].WorkReference, want) {
+		t.Fatalf("bounded identity = %#v, want %#v with omitted task", summaries[0], want)
+	}
+	data, err := json.Marshal(summaries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wire []struct {
+		WorkReference map[string]json.RawMessage `json:"work_reference"`
+		Task          json.RawMessage            `json:"task"`
+	}
+	if err := json.Unmarshal(data, &wire); err != nil {
+		t.Fatal(err)
+	}
+	if len(wire[0].WorkReference) != 5 || wire[0].WorkReference["future_work_reference"] != nil || wire[0].Task != nil {
+		t.Fatalf("unbounded summary JSON: %s", data)
+	}
+}
+
 func TestT20V02ParticipantAndSessionFiltersAreTypedAndConjunctive(t *testing.T) {
 	root := t20V02Install(t, t20V02Fixtures[:3], nil)
 	reader := mustReader(t, root)
