@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -173,4 +175,217 @@ func TestHiddenRenderRunUsesAtlasBinary(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Run run-a") {
 		t.Fatalf("render stdout = %q", stdout.String())
 	}
+}
+
+func TestT18V04HiddenRenderRunRendersRetiredRuns(t *testing.T) {
+	root := t.TempDir()
+	producer, err := vaultregistry.OpenProducer(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created, err := producer.CreateRun(testCompanionRequest("run-retired", "retired-render", "Retired render", "ws-retired"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := producer.Retire(created.RunID, created.Revision); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute([]string{"render", "run", "--id", "run-retired", "--state-dir", root}, &stdout, &stderr); code != 0 {
+		t.Fatalf("retired render exit = %d stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Run run-retired") {
+		t.Fatalf("retired render stdout = %q", stdout.String())
+	}
+}
+
+func TestT18V04ReviveForcedSelectorsAcrossActiveAndRetired(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		args      []string
+		wantRunID string
+		wantErr   string
+	}{
+		{name: "forced id prefers active id across namespaces", args: []string{"admin", "companion", "revive", "--id", "selector-shared"}, wantRunID: "selector-shared"},
+		{name: "forced name finds retired name across namespaces", args: []string{"admin", "companion", "revive", "--name", "selector-shared"}, wantRunID: "retired-collision"},
+		{name: "positional stays ambiguous across id and name namespaces", args: []string{"admin", "companion", "revive", "selector-shared"}, wantErr: "ambiguous run selector"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			producer, err := vaultregistry.OpenProducer(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := producer.CreateRun(testCompanionRequest("selector-shared", "active-collision", "Active collision", "ws-active")); err != nil {
+				t.Fatal(err)
+			}
+			retired, err := producer.CreateRun(testCompanionRequest("retired-collision", "selector-shared", "Retired collision", "ws-retired"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := producer.Retire(retired.RunID, retired.Revision); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("VAULT_HUNTER_STATE_DIR", root)
+
+			binDir, logPath := installReviveHerdr(t)
+			t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+			var stdout, stderr bytes.Buffer
+			code := execute(tc.args, &stdout, &stderr)
+			if tc.wantErr != "" {
+				if code == 0 {
+					t.Fatalf("execute(%v) unexpectedly succeeded: %s", tc.args, stdout.String())
+				}
+				if !strings.Contains(stderr.String(), tc.wantErr) {
+					t.Fatalf("stderr = %q, want substring %q", stderr.String(), tc.wantErr)
+				}
+				if stdout.Len() != 0 {
+					t.Fatalf("stdout = %q, want empty", stdout.String())
+				}
+				return
+			}
+			if code != 0 {
+				t.Fatalf("execute(%v) exit = %d stderr = %q", tc.args, code, stderr.String())
+			}
+			var envelope map[string]any
+			if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil {
+				t.Fatalf("revive json: %v\n%s", err, stdout.String())
+			}
+			data := envelope["data"].(map[string]any)
+			run := data["run"].(map[string]any)
+			if run["id"] != tc.wantRunID {
+				t.Fatalf("revived run = %#v, want id %q", run, tc.wantRunID)
+			}
+			logBytes, err := os.ReadFile(logPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(logBytes), "\"pane\", \"run\"") || !strings.Contains(string(logBytes), tc.wantRunID) {
+				t.Fatalf("revive log missing pane run for %q:\n%s", tc.wantRunID, logBytes)
+			}
+		})
+	}
+}
+
+func testCompanionRequest(runID, name, title, workspaceID string) vaultregistry.CreateRequest {
+	observedAt := "2026-07-28T00:00:00Z"
+	startedAt := observedAt
+	herdr := &vaultregistry.HerdrIdentity{WorkspaceID: workspaceID, TabID: "tab-" + runID, PaneID: "pane-" + runID, TerminalID: "term-" + runID}
+	return vaultregistry.CreateRequest{
+		Run: vaultregistry.Run{
+			SchemaVersion: 2,
+			RunID:         runID,
+			Name:          name,
+			RunKind:       vaultregistry.RunKindHunter,
+			WorkReference: &vaultregistry.WorkReference{ID: "T18", Title: title, Path: "tasks/18.md", FeaturePath: "features/atlas.md", Kind: "task"},
+			State:         vaultregistry.RunStateActive,
+			Stage:         "awaiting-parent",
+			InvokedAt:     observedAt,
+			UpdatedAt:     observedAt,
+		},
+		InitialDriver: vaultregistry.Observation{
+			ObservationID:  "driver-" + runID,
+			Kind:           vaultregistry.KindRegisteredParticipant,
+			State:          vaultregistry.StateActive,
+			GoalID:         "T18.V04",
+			Title:          "Driver",
+			Summary:        "Registered by cmd/atlas tests.",
+			ObservedAt:     observedAt,
+			CorrelationID:  runID,
+			StartedAt:      &startedAt,
+			Actor:          vaultregistry.Identity{Kind: "participant", ID: "driver-" + runID},
+			Source:         vaultregistry.Identity{Kind: "test", ID: "cmd-atlas"},
+			RedactionClass: "internal",
+			Payload: vaultregistry.ObservationPayload{RegisteredParticipant: &vaultregistry.RegisteredParticipantPayload{
+				ParticipantID: "driver-" + runID,
+				Role:          "driver",
+				AgentSession:  vaultregistry.AgentSession{Source: "pi", Kind: "session", Value: runID},
+				Herdr:         herdr,
+			}},
+		},
+	}
+}
+
+func installReviveHerdr(t *testing.T) (string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "commands.jsonl")
+	statePath := filepath.Join(dir, "state.json")
+	script := filepath.Join(dir, "herdr")
+	const source = `#!/usr/bin/env python3
+import json
+import os
+import shlex
+import sys
+
+state_path = os.environ["TEST_HERDR_STATE"]
+if os.path.exists(state_path):
+    with open(state_path, encoding="utf-8") as handle:
+        state = json.load(handle)
+else:
+    state = {}
+
+with open(os.environ["TEST_HERDR_LOG"], "a", encoding="utf-8") as handle:
+    handle.write(json.dumps(sys.argv[1:]) + "\n")
+
+argv = sys.argv[1:]
+result = None
+if argv[:2] == ["agent", "list"]:
+    result = {"type": "agent_list", "agents": []}
+elif argv[:2] == ["tab", "list"]:
+    workspace = argv[argv.index("--workspace") + 1]
+    tabs = []
+    if state.get("workspace_id") == workspace:
+        tabs.append({"workspace_id": workspace, "tab_id": state["tab_id"], "label": state["label"], "pane_count": 1})
+    result = {"type": "tab_list", "tabs": tabs}
+elif argv[:2] == ["pane", "list"]:
+    workspace = argv[argv.index("--workspace") + 1]
+    panes = []
+    if state.get("workspace_id") == workspace:
+        panes.append({"workspace_id": workspace, "tab_id": state["tab_id"], "pane_id": state["pane_id"], "terminal_id": state["terminal_id"]})
+    result = {"type": "pane_list", "panes": panes}
+elif argv[:2] == ["tab", "create"]:
+    workspace = argv[argv.index("--workspace") + 1]
+    label = argv[argv.index("--label") + 1]
+    state = {
+        "workspace_id": workspace,
+        "label": label,
+        "tab_id": "created-tab",
+        "pane_id": "created-pane",
+        "terminal_id": "created-terminal",
+    }
+    with open(state_path, "w", encoding="utf-8") as handle:
+        json.dump(state, handle)
+    result = {
+        "type": "tab_created",
+        "tab": {"workspace_id": workspace, "tab_id": state["tab_id"], "label": label, "pane_count": 1},
+        "root_pane": {"workspace_id": workspace, "tab_id": state["tab_id"], "pane_id": state["pane_id"], "terminal_id": state["terminal_id"]},
+    }
+elif argv[:2] == ["pane", "run"]:
+    state["pane_run"] = argv[3]
+    with open(state_path, "w", encoding="utf-8") as handle:
+        json.dump(state, handle)
+    result = {"type": "pane_run", "pane_id": argv[2]}
+elif argv[:2] == ["pane", "process-info"]:
+    pane_id = argv[argv.index("--pane") + 1]
+    processes = []
+    command = state.get("pane_run", "")
+    if pane_id == state.get("pane_id") and command:
+        wrapped = shlex.split(command)
+        processes = [{"argv": wrapped}, {"argv": wrapped[4:]}]
+    result = {"type": "pane_process_info", "process_info": {"pane_id": pane_id, "foreground_processes": processes}}
+elif argv[:2] == ["tab", "close"]:
+    result = {"type": "tab_closed", "tab_id": argv[2]}
+else:
+    raise SystemExit(f"unexpected herdr argv: {argv}")
+
+print(json.dumps({"id": "fake", "result": result}))
+`
+	if err := os.WriteFile(script, []byte(source), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TEST_HERDR_LOG", logPath)
+	t.Setenv("TEST_HERDR_STATE", statePath)
+	return dir, logPath
 }

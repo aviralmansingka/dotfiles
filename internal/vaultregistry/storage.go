@@ -599,8 +599,17 @@ func (r *Reader) resolve(namespace, selector string) (Run, error) {
 	panic("unreachable")
 }
 
-// List returns all recorded runs in deterministic Run ID order without creating state.
+// List returns all recorded active runs in deterministic Run ID order without creating state.
 func (r *Reader) List() ([]Run, error) {
+	return r.listNamespaceRuns("runs")
+}
+
+// ListRetired returns all recorded retired runs in deterministic Run ID order without creating state.
+func (r *Reader) ListRetired() ([]Run, error) {
+	return r.listNamespaceRuns("retired")
+}
+
+func (r *Reader) listNamespaceRuns(namespace string) ([]Run, error) {
 	unlock, empty, err := r.lock()
 	if err != nil {
 		return nil, err
@@ -610,7 +619,7 @@ func (r *Reader) List() ([]Run, error) {
 	}
 	defer unlock()
 
-	runs, err := r.activeRuns()
+	runs, err := r.namespaceRuns(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -653,7 +662,11 @@ func (r *Reader) ListSummaries(filter ListFilter) ([]RunSummary, error) {
 // filters. Temporary files, non-JSON entries, and directories are not active.
 // ponytail: scan all records; add an index only if Registry size makes it measurable.
 func (r *Reader) activeRuns() ([]Run, error) {
-	dir := filepath.Join(r.root, "runs")
+	return r.namespaceRuns("runs")
+}
+
+func (r *Reader) namespaceRuns(namespace string) ([]Run, error) {
+	dir := filepath.Join(r.root, namespace)
 	entries, err := os.ReadDir(dir)
 	if errors.Is(err, os.ErrNotExist) {
 		return []Run{}, nil
@@ -672,10 +685,10 @@ func (r *Reader) activeRuns() ([]Run, error) {
 			return nil, err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("%w: %s: active record is a symlink", ErrMalformed, path)
+			return nil, fmt.Errorf("%w: %s: %s record is a symlink", ErrMalformed, path, namespace)
 		}
 		if !info.Mode().IsRegular() {
-			return nil, fmt.Errorf("%w: %s: active record is not a regular file", ErrMalformed, path)
+			return nil, fmt.Errorf("%w: %s: %s record is not a regular file", ErrMalformed, path, namespace)
 		}
 		id := strings.TrimSuffix(entry.Name(), ".json")
 		if err := validID(id); err != nil {

@@ -514,7 +514,7 @@ func runRender(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	run, err := readActiveRun(reader, selector)
+	run, err := readRunAny(reader, selector)
 	if err != nil {
 		return err
 	}
@@ -659,43 +659,15 @@ func runRevive(command reviveCommand, stdout io.Writer) error {
 }
 
 func readRunAny(reader *vaultregistry.Reader, selector selector) (vaultregistry.Run, error) {
-	query := selector.any()
-	if query == "" {
-		return vaultregistry.Run{}, fmt.Errorf("%w: selector is required", vaultregistry.ErrNotFound)
+	active, err := reader.List()
+	if err != nil {
+		return vaultregistry.Run{}, err
 	}
-	active, activeErr := reader.Get(query)
-	retired, retiredErr := reader.GetRetired(query)
-	if selector.ID != "" || selector.Name != "" {
-		if activeErr == nil {
-			return active, nil
-		}
-		if retiredErr == nil {
-			return retired, nil
-		}
-		if activeErr != nil && !errors.Is(activeErr, vaultregistry.ErrNotFound) {
-			return vaultregistry.Run{}, activeErr
-		}
-		if retiredErr != nil && !errors.Is(retiredErr, vaultregistry.ErrNotFound) {
-			return vaultregistry.Run{}, retiredErr
-		}
-		return vaultregistry.Run{}, activeErr
+	retired, err := reader.ListRetired()
+	if err != nil {
+		return vaultregistry.Run{}, err
 	}
-	if activeErr == nil && retiredErr == nil && active.RunID != retired.RunID {
-		return vaultregistry.Run{}, fmt.Errorf("%w: %q", vaultregistry.ErrAmbiguous, query)
-	}
-	if activeErr == nil {
-		return active, nil
-	}
-	if retiredErr == nil {
-		return retired, nil
-	}
-	if activeErr != nil && !errors.Is(activeErr, vaultregistry.ErrNotFound) {
-		return vaultregistry.Run{}, activeErr
-	}
-	if retiredErr != nil && !errors.Is(retiredErr, vaultregistry.ErrNotFound) {
-		return vaultregistry.Run{}, retiredErr
-	}
-	return vaultregistry.Run{}, activeErr
+	return resolveRun(selector, append(active, retired...))
 }
 
 func companionWorkspace(run vaultregistry.Run) (string, error) {
@@ -817,24 +789,59 @@ func readActiveRun(reader *vaultregistry.Reader, selector selector) (vaultregist
 	if err != nil {
 		return vaultregistry.Run{}, err
 	}
+	return resolveRun(selector, runs)
+}
+
+func resolveRun(selector selector, runs []vaultregistry.Run) (vaultregistry.Run, error) {
+	var zero vaultregistry.Run
+	if selector.ID != "" {
+		matches := filterRuns(runs, func(run vaultregistry.Run) bool { return run.RunID == selector.ID })
+		if len(matches) == 0 {
+			return zero, fmt.Errorf("%w: %s", vaultregistry.ErrNotFound, selector.ID)
+		}
+		if len(matches) != 1 {
+			return zero, fmt.Errorf("%w: %q", vaultregistry.ErrAmbiguous, selector.ID)
+		}
+		return matches[0], nil
+	}
+	if selector.Name != "" {
+		matches := filterRuns(runs, func(run vaultregistry.Run) bool { return run.Name == selector.Name })
+		if len(matches) == 0 {
+			return zero, fmt.Errorf("%w: %s", vaultregistry.ErrNotFound, selector.Name)
+		}
+		if len(matches) != 1 {
+			return zero, fmt.Errorf("%w: %q", vaultregistry.ErrAmbiguous, selector.Name)
+		}
+		return matches[0], nil
+	}
+	if selector.Positional == "" {
+		return zero, fmt.Errorf("%w: selector is required", vaultregistry.ErrNotFound)
+	}
+	idMatches := filterRuns(runs, func(run vaultregistry.Run) bool { return run.RunID == selector.Positional })
+	nameMatches := filterRuns(runs, func(run vaultregistry.Run) bool { return run.Name == selector.Positional })
+	if len(idMatches) == 0 && len(nameMatches) == 0 {
+		return zero, fmt.Errorf("%w: %s", vaultregistry.ErrNotFound, selector.Positional)
+	}
+	if len(idMatches) > 1 || len(nameMatches) > 1 {
+		return zero, fmt.Errorf("%w: %q", vaultregistry.ErrAmbiguous, selector.Positional)
+	}
+	if len(idMatches) == 1 && len(nameMatches) == 1 && idMatches[0].RunID != nameMatches[0].RunID {
+		return zero, fmt.Errorf("%w: %q", vaultregistry.ErrAmbiguous, selector.Positional)
+	}
+	if len(idMatches) == 1 {
+		return idMatches[0], nil
+	}
+	return nameMatches[0], nil
+}
+
+func filterRuns(runs []vaultregistry.Run, include func(vaultregistry.Run) bool) []vaultregistry.Run {
 	matches := make([]vaultregistry.Run, 0, 2)
 	for _, run := range runs {
-		switch {
-		case selector.ID != "" && run.RunID == selector.ID:
-			matches = append(matches, run)
-		case selector.Name != "" && run.Name == selector.Name:
-			matches = append(matches, run)
-		case selector.Positional != "" && (run.RunID == selector.Positional || run.Name == selector.Positional):
+		if include(run) {
 			matches = append(matches, run)
 		}
 	}
-	if len(matches) == 0 {
-		return vaultregistry.Run{}, fmt.Errorf("%w: %s", vaultregistry.ErrNotFound, selector.any())
-	}
-	if len(matches) != 1 {
-		return vaultregistry.Run{}, fmt.Errorf("%w: %q", vaultregistry.ErrAmbiguous, selector.any())
-	}
-	return matches[0], nil
+	return matches
 }
 
 func renderRunList(runs []vaultregistry.RunSummary) string {
