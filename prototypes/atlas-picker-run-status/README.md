@@ -19,7 +19,7 @@ Controls:
 - `g` / `G` — select the first / final Goal;
 - `q`, Escape, or Ctrl-C — quit.
 
-The standalone TUI draws the 30×12 Atlas interior inside its rounded `Atlas Preview` border. Use `--width 23` to exercise the minimum picker fixture.
+The selected Goal changes to bright Gruvbox yellow foreground while all five Goal rows retain the dark Gruvbox blue visual background. The standalone TUI draws the 30×12 Atlas interior inside its rounded `Atlas Preview` border. Use `--width 23` to exercise the minimum picker fixture.
 
 ## Static capture and Goal selection
 
@@ -38,23 +38,30 @@ Production `nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua` allocates a 1
 - `100×30` host grid → `30×12` Atlas interior;
 - `80×24` host grid → `23×12` Atlas interior.
 
+## Current composition
+
+- A two-to-four-line blue header shows the Feature name, compact Task ID/title, and a derived `recorded done`, `recorded accepted`, `recorded in progress`, `recorded pending`, or `recorded needs attention` status.
+- The status is explicitly labelled `recorded` because Registry observations do not make Atlas canonical Task authority.
+- Five real Goal rows use dark Gruvbox `bg_visual_blue` (`#2e3b3b`) cards. The selected Goal changes to bright yellow foreground; navigation keeps it visible without adding a separate selected-detail row.
+- The disconnected standalone rail and viewport-dangling connector were removed. Each visible journey uses Pi's `│`, `├─`, and closing `└─` geometry.
+- Current time and `projection, not authority` no longer consume rows.
+- `N steps · selected X/Y` moved to the final row.
+
 ## Pi Activity fidelity
 
 The prototype follows the current Pi work-step renderer rather than the earlier generic Atlas sketch:
 
 - muted `│`, `├─`, and `└─` connected rails;
 - `◉` active, `●` successful, `×` failed, and neutral `○`/`?` fallback states;
-- muted `•` selected-detail child;
-- bold normal step titles and bright selected title;
-- Gruvbox Material rail `#504945`, muted `#928374`, text `#ebdbb2`, selected `#fbf1c7`, active/accent `#f28534`, success `#b8bb26`, failure `#f2594b`, and dim `#665c54`;
-- one compact metrics header beginning on the connected `│` rail.
+- bold normal step titles and a distinct selected foreground;
+- Gruvbox Material rail `#504945`, muted `#928374`, text `#ebdbb2`, selected yellow `#fabd2f`, active/accent `#f28534`, success `#b8bb26`, failure `#f2594b`, blue `#80aa9e`, and blue visual background `#2e3b3b`.
 
-Color is supplementary. The metrics header and selected-detail child identify selection in plain output.
+The Goal state glyph and selected ordinal remain readable without color; color provides the stronger interactive highlight requested during review.
 
 ## Data boundary
 
 The CLI reads Registry schema v1 or v2 through `internal/vaultregistry`. Goal rows come only from typed lifecycle `goal_id`, Evidence `verifier_id`, participant `goal_id`, or schema-v2 observation `goal_id` fields. It sanitizes controls and does not parse detail JSON or infer parent decisions, human gates, canonical completion, or live Herdr state.
 
-The selected canonical capture is `selected-mini-journey-30x12.ansi`; `selected-mini-journey-30x12.txt` is its exact SGR-stripped frame.
+The selected canonical capture is `selected-mini-journey-30x12.ansi`; it records T02 Goal 7 as the highlighted third row of five. `selected-mini-journey-30x12.txt` is its exact SGR-stripped frame.
 
 This remains disposable prototype code, not production Atlas behavior.

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,22 +32,23 @@ type model struct {
 	selected int
 	width    int
 	color    bool
-	retired  bool
 }
 
 const (
-	reset     = "\x1b[0m"
-	bold      = "\x1b[1m"
-	accent    = "\x1b[38;2;242;133;52m"
-	text      = "\x1b[38;2;235;219;178m"
-	bright    = "\x1b[38;2;251;241;199m"
-	rail      = "\x1b[38;2;80;73;69m"
-	muted     = "\x1b[38;2;146;131;116m"
-	dim       = "\x1b[38;2;102;92;84m"
-	active    = "\x1b[38;2;242;133;52m"
-	success   = "\x1b[38;2;184;187;38m"
-	failure   = "\x1b[38;2;242;89;75m"
-	attention = "\x1b[38;2;250;189;47m"
+	reset      = "\x1b[0m"
+	bold       = "\x1b[1m"
+	text       = "\x1b[38;2;235;219;178m"
+	bright     = "\x1b[38;2;251;241;199m"
+	rail       = "\x1b[38;2;80;73;69m"
+	muted      = "\x1b[38;2;146;131;116m"
+	dim        = "\x1b[38;2;102;92;84m"
+	active     = "\x1b[38;2;242;133;52m"
+	success    = "\x1b[38;2;184;187;38m"
+	failure    = "\x1b[38;2;242;89;75m"
+	attention  = "\x1b[38;2;250;189;47m"
+	blue       = "\x1b[38;2;128;170;158m"
+	blueBright = "\x1b[38;2;131;165;151m"
+	blueBG     = "\x1b[48;2;46;59;59m"
 )
 
 func main() {
@@ -70,7 +72,7 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
-	run, retired, err := resolveRun(reader, flag.Arg(0))
+	run, _, err := resolveRun(reader, flag.Arg(0))
 	if err != nil {
 		fail(err)
 	}
@@ -87,7 +89,7 @@ func main() {
 	}
 
 	colors := colorEnabled(*color)
-	m := model{run: run, goals: goals, selected: selected, width: *width, color: colors, retired: retired}
+	m := model{run: run, goals: goals, selected: selected, width: *width, color: colors}
 	interactive := !*snapshot && characterDevice(os.Stdin) && characterDevice(os.Stdout) && os.Getenv("TERM") != "dumb"
 	if !interactive {
 		fmt.Println(strings.Join(m.frame(false), "\n"))
@@ -179,81 +181,87 @@ func (m model) frame(selectedDetail bool) []string {
 	return result
 }
 
-func (m model) lines(selectedDetail bool) []renderedLine {
-	lines := []renderedLine{
-		titleLine(m.run, m.width, m.color),
-		headerLine(len(m.goals), m.selected, m.width, m.color),
-		segmentLine("│", colorize(m.color, rail, "│")),
-	}
+func (m model) lines(_ bool) []renderedLine {
+	lines := headerLines(m.run, m.goals, m.width, m.color)
+	lines = append(lines, cardLine(" │  RECORDED JOURNEY", m.width, m.color, blue+bold))
+
 	start, end := window(m.selected, len(m.goals), 5)
-	for i := start; i < end; i++ {
-		last := i == len(m.goals)-1
+	for index := start; index < end; index++ {
 		connector := "├─"
-		if last {
+		if index == end-1 {
 			connector = "└─"
 		}
-		lines = append(lines, goalLine(m.goals[i], connector, i == m.selected, m.width, m.color))
+		lines = append(lines, goalLine(m.goals[index], connector, index == m.selected, m.width, m.color))
 	}
 	if len(m.goals) == 0 {
-		lines = append(lines, segmentLine("└─ ○ no recorded goals", colorize(m.color, muted, "└─ ○ no recorded goals")))
+		lines = append(lines, cardLine(" └─ ○ no recorded goals", m.width, m.color, muted))
 	}
-	for len(lines) < 8 {
-		lines = append(lines, segmentLine("│", colorize(m.color, rail, "│")))
+	for len(lines) < len(headerLines(m.run, m.goals, m.width, m.color))+6 {
+		lines = append(lines, cardLine("", m.width, m.color, text))
 	}
 
-	goalID := selectedGoalID(m.goals, m.selected)
-	detailPlain := participant(m.run, goalID)
-	if selectedDetail && len(m.goals) != 0 {
-		detailPlain = "• selected · " + value(m.goals[m.selected].kind) + " · " + participant(m.run, goalID)
+	footer := fmt.Sprintf(" %d steps · selected %d/%d", len(m.goals), ordinal(m.selected, len(m.goals)), len(m.goals))
+	for len(lines) < 11 {
+		lines = append(lines, segmentLine("", ""))
 	}
-	lines = append(lines,
-		segmentLine("", ""),
-		clippedLine(detailPlain, m.width, m.color, muted),
-		clippedLine(statusTime(m.run.UpdatedAt, m.retired), m.width, m.color, dim),
-		clippedLine("projection, not authority", m.width, m.color, muted),
-	)
+	lines = append(lines, cardLine(footer, m.width, m.color, muted))
 	return lines[:12]
 }
 
-func titleLine(run vaultregistry.Run, width int, colors bool) renderedLine {
-	plain := clip(clean(run.Task.ID+" · "+run.RunID), width)
-	id := clip(clean(run.Task.ID), width)
-	rest := strings.TrimPrefix(plain, id)
-	styled := colorize(colors, accent+bold, id) + colorize(colors, text, rest)
-	return segmentLine(plain, styled)
-}
-
-func headerLine(total, selected, width int, colors bool) renderedLine {
-	plain := clip(fmt.Sprintf(" │  %d steps · selected %d/%d", total, ordinal(selected, total), total), width)
-	styled := colorize(colors, rail, " │  ") + colorize(colors, muted, strings.TrimPrefix(plain, " │  "))
-	return segmentLine(plain, styled)
+func headerLines(run vaultregistry.Run, goals []journeyGoal, width int, colors bool) []renderedLine {
+	feature := wrap(clean(featureLabel(run.Task.FeaturePath)), width, 2)
+	taskID := shortTaskID(run.Task.ID, run.Task.Title)
+	taskTitle := clean(run.Task.Title)
+	for _, prefix := range []string{taskID + ": ", taskID + " · ", run.Task.ID + ": ", run.Task.ID + " · "} {
+		taskTitle = strings.TrimPrefix(taskTitle, prefix)
+	}
+	task := wrap(clean(taskID+" · "+taskTitle), width, 2)
+	for len(feature)+len(task) > 4 {
+		if len(task) > 1 {
+			task = task[:1]
+		} else if len(feature) > 1 {
+			feature = feature[:1]
+		} else {
+			break
+		}
+	}
+	lines := make([]renderedLine, 0, 5)
+	for _, line := range feature {
+		lines = append(lines, cardLine(line, width, colors, blueBright+bold))
+	}
+	for _, line := range task {
+		lines = append(lines, cardLine(line, width, colors, bright+bold))
+	}
+	glyph, label, color := taskState(goals)
+	lines = append(lines, cardLine(glyph+" recorded "+label, width, colors, color+bold))
+	return lines
 }
 
 func goalLine(goal journeyGoal, connector string, selected bool, width int, colors bool) renderedLine {
-	glyph := glyph(goal.state)
-	plain := clip(fmt.Sprintf(" %s %s %s · %s", connector, glyph, goal.id, value(goal.state)), width)
+	statusGlyph := glyph(goal.state)
+	raw := clip(fmt.Sprintf(" %s %s %s · %s", connector, statusGlyph, goal.id, value(goal.state)), width)
+	plain := raw
 	prefix := " " + connector + " "
-	rest := strings.TrimPrefix(plain, prefix+glyph+" ")
+	rest := strings.TrimPrefix(raw, prefix+statusGlyph+" ")
 	name, detail := rest, ""
 	if index := strings.Index(rest, " · "); index >= 0 {
 		name, detail = rest[:index], rest[index:]
 	}
-	stateColor := statusColor(goal.state)
-	nameColor := text
+	nameColor, detailColor := text, muted
 	if selected {
-		nameColor = bright
+		nameColor, detailColor = attention, attention
 	}
-	styled := colorize(colors, rail, prefix) + colorize(colors, stateColor, glyph) + " " + colorize(colors, nameColor+bold, name) + colorize(colors, dim, detail)
+	styled := colorizeBG(colors, rail, blueBG, prefix) + colorizeBG(colors, statusColor(goal.state), blueBG, statusGlyph) + colorizeBG(colors, text, blueBG, " ") + colorizeBG(colors, nameColor+bold, blueBG, name) + colorizeBG(colors, detailColor, blueBG, detail)
 	return segmentLine(plain, styled)
+}
+
+func cardLine(value string, width int, colors bool, foreground string) renderedLine {
+	raw := clip(clean(value), width)
+	return segmentLine(raw, colorizeBG(colors, foreground, blueBG, raw))
 }
 
 func segmentLine(plain, styled string) renderedLine {
 	return renderedLine{plain: plain, styled: styled}
-}
-
-func clippedLine(plain string, width int, colors bool, color string) renderedLine {
-	plain = clip(clean(plain), width)
-	return segmentLine(plain, colorize(colors, color, plain))
 }
 
 func panel(lines []string, width int, colors bool) string {
@@ -349,25 +357,6 @@ func selectGoal(goals []journeyGoal) int {
 	return selected
 }
 
-func participant(run vaultregistry.Run, goalID string) string {
-	id, role, latest := "", "", ""
-	for _, item := range run.Participants {
-		if item.GoalID == goalID && later(item.ObservedAt, latest) {
-			id, role, latest = clean(item.ParticipantID), clean(item.Role), item.ObservedAt
-		}
-	}
-	for _, observation := range run.Observations {
-		payload := observation.Payload.RegisteredParticipant
-		if observation.GoalID == goalID && payload != nil && later(observation.ObservedAt, latest) {
-			id, role, latest = clean(payload.ParticipantID), clean(payload.Role), observation.ObservedAt
-		}
-	}
-	if id == "" {
-		return "participant unavailable"
-	}
-	return id + " · " + value(role)
-}
-
 func window(selected, total, limit int) (int, int) {
 	if total <= limit {
 		return 0, total
@@ -387,13 +376,6 @@ func ordinal(selected, total int) int {
 		return 0
 	}
 	return selected + 1
-}
-
-func selectedGoalID(goals []journeyGoal, selected int) string {
-	if len(goals) == 0 {
-		return ""
-	}
-	return goals[selected].id
 }
 
 func later(candidate, current string) bool {
@@ -432,6 +414,98 @@ func glyph(state string) string {
 	}
 }
 
+func taskState(goals []journeyGoal) (string, string, string) {
+	if len(goals) == 0 {
+		return "○", "state unavailable", muted
+	}
+	allSuccessful, hasAccepted, hasPending, hasActive, hasFailure := true, false, false, false, false
+	for _, goal := range goals {
+		hasActive = hasActive || activeState(goal.state)
+		switch glyph(goal.state) {
+		case "×":
+			hasFailure = true
+			allSuccessful = false
+		case "○", "?":
+			allSuccessful = false
+			hasPending = true
+		}
+		hasAccepted = hasAccepted || goal.state == "accepted"
+	}
+	if hasActive {
+		return "◉", "in progress", active
+	}
+	if hasFailure {
+		return "×", "needs attention", failure
+	}
+	if allSuccessful {
+		if hasAccepted {
+			return "●", "accepted", success
+		}
+		return "●", "done", success
+	}
+	if hasPending {
+		return "○", "pending", attention
+	}
+	return "?", "state unavailable", muted
+}
+
+func shortTaskID(id, title string) string {
+	if prefix, _, ok := strings.Cut(clean(title), ":"); ok && len(prefix) > 1 && (prefix[0] == 'T' || prefix[0] == 't') {
+		if _, err := strconv.Atoi(prefix[1:]); err == nil {
+			return strings.ToUpper(prefix)
+		}
+	}
+	if len(id) > 1 && (id[0] == 'T' || id[0] == 't') {
+		if _, err := strconv.Atoi(id[1:]); err == nil {
+			return strings.ToUpper(id)
+		}
+	}
+	parts := strings.Split(strings.ToLower(id), "-")
+	if len(parts) >= 2 && parts[len(parts)-2] == "task" {
+		if _, err := strconv.Atoi(parts[len(parts)-1]); err == nil {
+			return "T" + parts[len(parts)-1]
+		}
+	}
+	return id
+}
+
+func featureLabel(path string) string {
+	base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	if base == "feature" {
+		base = filepath.Base(filepath.Dir(path))
+	}
+	if base == "" || base == "." {
+		return "Feature unavailable"
+	}
+	words := strings.Fields(strings.NewReplacer("-", " ", "_", " ").Replace(base))
+	for i, word := range words {
+		if word != "" {
+			words[i] = strings.ToUpper(word[:1]) + word[1:]
+		}
+	}
+	return strings.Join(words, " ")
+}
+
+func wrap(value string, width, limit int) []string {
+	words := strings.Fields(value)
+	if len(words) == 0 {
+		return []string{"?"}
+	}
+	var lines []string
+	for _, word := range words {
+		if len(lines) == 0 || lipgloss.Width(lines[len(lines)-1]+" "+word) > width {
+			lines = append(lines, clip(word, width))
+		} else {
+			lines[len(lines)-1] += " " + word
+		}
+	}
+	if len(lines) > limit {
+		lines = lines[:limit]
+		lines[limit-1] = clip(lines[limit-1]+"…", width)
+	}
+	return lines
+}
+
 func statusColor(state string) string {
 	switch glyph(state) {
 	case "●":
@@ -443,14 +517,6 @@ func statusColor(state string) string {
 	default:
 		return dim
 	}
-}
-
-func statusTime(updatedAt string, retired bool) string {
-	prefix := "latest "
-	if retired {
-		prefix = "retired · "
-	}
-	return prefix + clock(updatedAt)
 }
 
 func colorEnabled(mode string) bool {
@@ -476,6 +542,13 @@ func colorize(enabled bool, color, value string) string {
 		return value
 	}
 	return color + value + reset
+}
+
+func colorizeBG(enabled bool, foreground, background, value string) string {
+	if !enabled || value == "" {
+		return value
+	}
+	return background + foreground + value + reset
 }
 
 func stripSGR(value string) string {
@@ -516,14 +589,6 @@ func clip(value string, width int) string {
 		runes = runes[:len(runes)-1]
 	}
 	return string(runes) + "…"
-}
-
-func clock(value string) string {
-	parsed, err := time.Parse(time.RFC3339Nano, value)
-	if err != nil {
-		return "time unavailable"
-	}
-	return parsed.UTC().Format("15:04 UTC")
 }
 
 func value(value string) string {

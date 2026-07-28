@@ -1,12 +1,12 @@
-T02 · vault-hunter-atlas-t02
- │  9 steps · selected 9/9
-│
+Vault Hunter Atlas
+T02 · Build the Compact Atlas
+Renderer
+● recorded done
+│  RECORDED JOURNEY
  ├─ ● refactor-gate · done
  ├─ ● review-convergence · do…
  ├─ ● implementation-pr · done
  ├─ ● landing · done
  └─ ● cleanup · done
 
-t02-driver · driver
-latest 11:10 UTC
-projection, not authority
+9 steps · selected 7/9
