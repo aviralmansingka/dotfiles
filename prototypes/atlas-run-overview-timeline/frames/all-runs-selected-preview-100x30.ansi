@@ -1,0 +1,30 @@
+[38;2;242;133;52mATLAS · ALL RUNS · 6 recorded · selected run-active[0m
+[38;2;102;92;84m────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+[38;2;242;133;52mRUNS                                   │SELECTED TIMELINE PREVIEW[0m
+[38;2;233;177;67m▶ ◉ run-active · active                │────────────────────────────────────────────────────────────[0m
+[38;2;128;170;158m    T21 · Align Atlas timeline language│ │  5 recorded milestones · implementation · Goal G02[0m
+[38;2;242;89;75m  × run-failed · failed                │ ├─ ● Admission · completed[0m
+[38;2;128;170;158m    T17 · Gate evaluator               │ │   └─ recorded observation · Task contract admitted · 18s[0m
+[38;2;184;187;38m  ● run-completed · completed          │ ├─ ● V01 semantic projection · passed[0m
+[38;2;128;170;158m    T19 · Registry v2 contracts        │ │   └─ recorded observation · attempt-017 · exit 0 · 4s[0m
+[38;2;184;187;38m  ◆ run-retired · retired              │ ├─ ● V01 parent decision · accepted[0m
+[38;2;184;187;38m    T09 · Registry retirement          │ │   └─ parent decision · Evidence accepted for tree 7a3d9f…[0m
+[38;2;233;177;67m  ◉ run-missing-time · active          │ ├─ ◉ G02 implementation · active[0m
+[38;2;128;170;158m    T14 · Journal density              │ │   └─ recorded observation · worker-03 · implementation ·…[0m
+[38;2;146;131;116m  ? run-unknown · future-paused ?      │ └─ ○ Human merge · pending[0m
+[38;2;128;170;158m    T99 · Future producer              │     └─ parent decision · Parent-owned gate · time unavaila…[0m
+[38;2;102;92;84m                                       │[0m
+[38;2;184;187;38m                                       │ Evidence  V01 accepted · V02 pending[0m
+[38;2;128;170;158m                                       │ Gate      Human merge pending · parent-owned[0m
+[38;2;128;170;158m                                       │ Source    recorded Atlas envelope · static snapshot[0m
+[38;2;235;219;178m                                       │ j/k records · Enter detail · q quit[0m
+[38;2;235;219;178mj/k Runs · r refresh                   │Enter board · q quit[0m
+
+
+
+
+
+
+
+
+

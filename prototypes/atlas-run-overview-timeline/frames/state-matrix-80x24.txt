@@ -1,0 +1,24 @@
+ATLAS RUN STATE MATRIX · typed values, no inferred completion
+────────────────────────────────────────────────────────────────────────────────
+◉ run-active       active         stage implementation  
+  └─ Human merge · pending · time unavailable
+× run-failed       failed         stage verification    
+  └─ Parent diagnosis · rejected · time unavailable
+● run-completed    completed      stage cleanup         
+  └─ Workspace cleanup · completed · 5m0s
+◆ run-retired      retired        stage retired         
+  └─ Run retired · retired · time unavailable
+◉ run-missing-time active         stage prototype       
+  └─ V01 snapshot verifier · pending · time unavailable
+? run-unknown      future-paused ? stage future-stage    
+  └─ Future observation · future-paused · time unavailable
+
+? unknown remains literal · missing bounds say time unavailable
+retired is recorded history; it does not imply agent termination
+
+
+
+
+
+
+
