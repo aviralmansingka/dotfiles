@@ -39,8 +39,9 @@ func TestVerifierSummaryAggregatesTypedAttemptsDeterministically(t *testing.T) {
 		{name: "complete", observations: []vaultregistry.Observation{attempt("v1", "passed", "2026-01-01T00:00:00Z")}, want: milestoneComplete},
 		{name: "in progress", observations: []vaultregistry.Observation{attempt("v1", "active", "2026-01-01T00:00:00Z")}, want: milestoneInProgress},
 		{name: "gap is intermediate evidence", observations: []vaultregistry.Observation{attempt("v1", "passed", "2026-01-01T00:00:00Z"), gap("v2", "2026-01-01T00:00:01Z")}, want: milestoneIntermediate},
+		{name: "same verifier milestones coexist", observations: []vaultregistry.Observation{attempt("v1", "passed", "2026-01-01T00:00:00Z"), gap("v1", "2026-01-01T00:00:01Z")}, want: milestoneIntermediate},
+		{name: "completion preserves prior gap", observations: []vaultregistry.Observation{gap("v1", "2026-01-01T00:00:00Z"), attempt("v1", "passed", "2026-01-01T00:00:01Z")}, want: milestoneIntermediate},
 		{name: "failure precedes active", observations: []vaultregistry.Observation{attempt("v1", "active", "2026-01-01T00:00:00Z"), attempt("v2", "failed", "2026-01-01T00:00:01Z")}, want: milestoneFailed},
-		{name: "latest unique verifier state wins", observations: []vaultregistry.Observation{gap("v1", "2026-01-01T00:00:00Z"), attempt("v1", "passed", "2026-01-01T00:00:01Z")}, want: milestoneComplete},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

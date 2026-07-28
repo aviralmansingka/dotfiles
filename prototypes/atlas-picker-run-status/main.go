@@ -254,41 +254,36 @@ func summaryLines(run vaultregistry.Run, goals []journeyGoal, width int, colors 
 }
 
 func verifierSummary(run vaultregistry.Run, goals []journeyGoal) milestoneState {
-	type observation struct{ state, at string }
-	latest := map[string]observation{}
-	record := func(id, state, at string) {
-		id, state = clean(id), clean(state)
-		if id != "" && (latest[id].at == "" || later(at, latest[id].at)) {
-			latest[id] = observation{state: state, at: at}
+	hasRecords, hasComplete, hasIncomplete, hasFailure := false, false, false, false
+	record := func(id, state string) {
+		if clean(id) == "" {
+			return
+		}
+		hasRecords = true
+		switch glyph(clean(state)) {
+		case "●":
+			hasComplete = true
+		case "×":
+			hasFailure = true
+		default:
+			hasIncomplete = true
 		}
 	}
 	for _, evidence := range run.Evidence {
-		record(evidence.VerifierID, evidence.State, evidence.ObservedAt)
+		record(evidence.VerifierID, evidence.State)
 	}
 	for _, item := range run.Observations {
 		if attempt := item.Payload.VerifierAttempt; attempt != nil {
-			record(attempt.Identity.VerifierID, string(item.State), item.ObservedAt)
+			record(attempt.Identity.VerifierID, string(item.State))
 		}
 		if gap := item.Payload.VerifierAttemptGap; gap != nil {
-			record(gap.Identity.VerifierID, string(item.State), item.ObservedAt)
+			record(gap.Identity.VerifierID, string(item.State))
 		}
 	}
 
-	hasComplete, hasIncomplete, hasFailure := false, false, false
-	if len(latest) == 0 {
+	if !hasRecords {
 		for _, goal := range goals {
 			switch glyph(goal.state) {
-			case "●":
-				hasComplete = true
-			case "×":
-				hasFailure = true
-			default:
-				hasIncomplete = true
-			}
-		}
-	} else {
-		for _, item := range latest {
-			switch glyph(item.state) {
 			case "●":
 				hasComplete = true
 			case "×":
