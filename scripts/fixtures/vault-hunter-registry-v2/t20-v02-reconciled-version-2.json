@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "run_id": "t20-v02-reconciled-version-2",
+  "name": "shared-selector",
+  "run_kind": "hunter",
+  "work_reference": {
+    "id": "T20",
+    "title": "Reconcile Runtime-Neutral Run Contracts",
+    "path": "tasks/20.md",
+    "feature_path": "features/vault-hunter-atlas.md",
+    "kind": "task"
+  },
+  "revision": 1,
+  "state": "active",
+  "stage": "invoked",
+  "invoked_at": "2026-07-30T00:00:00Z",
+  "updated_at": "2026-07-30T00:03:00Z",
+  "observations": [
+    {
+      "observation_id": "v2-driver-active",
+      "kind": "registered_participant",
+      "state": "active",
+      "goal_id": "G02",
+      "title": "Driver registered",
+      "summary": "The driver is active.",
+      "observed_at": "2026-07-30T00:00:01Z",
+      "correlation_id": "t20-v02-driver",
+      "actor": {"kind": "participant", "id": "parent"},
+      "source": {"kind": "producer", "id": "fixture"},
+      "redaction_class": "internal",
+      "started_at": "2026-07-30T00:00:01Z",
+      "payload": {
+        "registered_participant": {
+          "participant_id": "v2-driver",
+          "role": "driver",
+          "agent_session": {"source": "pi", "kind": "session", "value": "v2-session"}
+        }
+      }
+    },
+    {
+      "observation_id": "v2-reviewer-active",
+      "kind": "registered_participant",
+      "state": "active",
+      "goal_id": "G02",
+      "title": "Reviewer registered",
+      "summary": "A second participant proves conjunctive filtering.",
+      "observed_at": "2026-07-30T00:00:02Z",
+      "correlation_id": "t20-v02-reviewer",
+      "actor": {"kind": "participant", "id": "parent"},
+      "source": {"kind": "producer", "id": "fixture"},
+      "redaction_class": "internal",
+      "started_at": "2026-07-30T00:00:02Z",
+      "payload": {
+        "registered_participant": {
+          "participant_id": "v2-reviewer",
+          "role": "reviewer",
+          "agent_session": {"source": "pi", "kind": "session", "value": "reviewer-session"}
+        }
+      }
+    }
+  ],
+  "fixture_marker": "T20.V02_RECONCILED_VERSION_2"
+}

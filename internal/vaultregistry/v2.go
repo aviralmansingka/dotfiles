@@ -50,6 +50,9 @@ func validateProducer(run Run, strictFrom int) error {
 		if err := validateV2Reader(run); err != nil {
 			return err
 		}
+		if run.WorkReference == nil {
+			return malformed("legacy schema-version-2 identity is read-only")
+		}
 		if len(run.Participants) != 0 || len(run.Lifecycle) != 0 || len(run.Evidence) != 0 {
 			return malformed("schema version 2 cannot produce version-1 histories")
 		}

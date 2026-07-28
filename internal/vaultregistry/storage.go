@@ -105,8 +105,8 @@ func OpenReader(root string) (*Reader, error) {
 }
 
 func (p *Producer) Create(run Run) (Run, error) {
-	if run.WorkReference != nil {
-		return Run{}, fmt.Errorf("%w: reconciled schema-version-2 Runs require CreateRun", ErrMalformed)
+	if run.SchemaVersion == 2 {
+		return Run{}, fmt.Errorf("%w: schema-version-2 Runs require reconciled CreateRun", ErrMalformed)
 	}
 	if run.Revision != 0 {
 		return Run{}, fmt.Errorf("%w: create revision must be zero", ErrMalformed)
@@ -431,19 +431,52 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 func (p *Producer) Get(runID string) (Run, error) {
 	return loadProducer(p.path(runID), runID)
 }
-func (r *Reader) Get(runID string) (Run, error) {
-	if err := validID(runID); err != nil {
-		return Run{}, err
-	}
-	return load(filepath.Join(r.root, "runs", runID+".json"), runID)
+func (r *Reader) Get(selector string) (Run, error) {
+	return r.resolve("runs", selector)
 }
 
 // GetRetired reads only the explicit retired namespace without creating state.
-func (r *Reader) GetRetired(runID string) (Run, error) {
-	if err := validID(runID); err != nil {
+func (r *Reader) GetRetired(selector string) (Run, error) {
+	return r.resolve("retired", selector)
+}
+
+// resolve accepts either stable Run ID or name. A selector that identifies
+// different Runs in the ID and name namespaces is ambiguous rather than ID-preferred.
+func (r *Reader) resolve(namespace, selector string) (Run, error) {
+	if err := validID(selector); err != nil {
 		return Run{}, err
 	}
-	return load(filepath.Join(r.root, "retired", runID+".json"), runID)
+	entries, err := os.ReadDir(filepath.Join(r.root, namespace))
+	if errors.Is(err, os.ErrNotExist) {
+		return Run{}, fmt.Errorf("%w: %s", ErrNotFound, selector)
+	}
+	if err != nil {
+		return Run{}, err
+	}
+	matches := map[string]Run{}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+		id := strings.TrimSuffix(entry.Name(), ".json")
+		run, err := load(filepath.Join(r.root, namespace, entry.Name()), id)
+		if err != nil {
+			return Run{}, err
+		}
+		if run.RunID == selector || run.Name == selector {
+			matches[run.RunID] = run
+		}
+	}
+	if len(matches) == 0 {
+		return Run{}, fmt.Errorf("%w: %s", ErrNotFound, selector)
+	}
+	if len(matches) != 1 {
+		return Run{}, fmt.Errorf("%w: %q", ErrAmbiguous, selector)
+	}
+	for _, run := range matches {
+		return run, nil
+	}
+	panic("unreachable")
 }
 
 // List returns all recorded runs in deterministic Run ID order without creating state.
@@ -457,28 +490,11 @@ func (r *Reader) List() ([]Run, error) {
 	}
 	defer unlock()
 
-	entries, err := os.ReadDir(filepath.Join(r.root, "runs"))
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
+	runs, err := r.activeRuns()
 	if err != nil {
 		return nil, err
 	}
-	var ids []string
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
-			ids = append(ids, strings.TrimSuffix(entry.Name(), ".json"))
-		}
-	}
-	sort.Strings(ids)
-	runs := make([]Run, 0, len(ids))
-	for _, id := range ids {
-		run, err := r.Get(id)
-		if err != nil {
-			return nil, err
-		}
-		runs = append(runs, run)
-	}
+	sort.Slice(runs, func(i, j int) bool { return runs[i].RunID < runs[j].RunID })
 	return runs, nil
 }
 
@@ -592,32 +608,29 @@ func parseListBoundary(name, value string) (*time.Time, error) {
 }
 
 func matchesListFilter(run Run, filter ListFilter, from, through *time.Time) bool {
-	if filter.TaskID != "" && run.Task.ID != filter.TaskID ||
-		filter.FeaturePath != "" && run.Task.FeaturePath != filter.FeaturePath {
+	workID, featurePath := run.Task.ID, run.Task.FeaturePath
+	if run.WorkReference != nil {
+		workID, featurePath = run.WorkReference.ID, run.WorkReference.FeaturePath
+	}
+	if filter.TaskID != "" && workID != filter.TaskID || filter.FeaturePath != "" && featurePath != filter.FeaturePath {
 		return false
 	}
-	if wanted := filter.AgentSession; wanted != nil {
+	if filter.ParticipantID != "" || filter.AgentSession != nil {
 		matched := false
-		for _, participant := range run.Participants {
-			if participant.AgentSession != nil && sameAgentSession(*participant.AgentSession, *wanted) {
-				matched = true
-				break
-			}
-		}
-		if !matched && run.SchemaVersion == 2 {
-			for _, observation := range run.Observations {
-				var session *AgentSession
-				switch observation.Kind {
-				case KindRegisteredParticipant:
-					if observation.Payload.RegisteredParticipant != nil {
-						session = &observation.Payload.RegisteredParticipant.AgentSession
-					}
-				case KindWorker:
-					if observation.Payload.Worker != nil {
-						session = &observation.Payload.Worker.AgentSession
-					}
+		if run.SchemaVersion == 1 {
+			for _, participant := range run.Participants {
+				if participantMatches(participant.ParticipantID, participant.AgentSession, filter) {
+					matched = true
+					break
 				}
-				if session != nil && sameAgentSession(*session, *wanted) {
+			}
+		} else {
+			for _, observation := range run.Observations {
+				if observation.Kind != KindRegisteredParticipant || observation.Payload.RegisteredParticipant == nil {
+					continue
+				}
+				participant := observation.Payload.RegisteredParticipant
+				if participantMatches(participant.ParticipantID, &participant.AgentSession, filter) {
 					matched = true
 					break
 				}
@@ -628,8 +641,12 @@ func matchesListFilter(run Run, filter ListFilter, from, through *time.Time) boo
 		}
 	}
 	updated, _ := time.Parse(time.RFC3339, run.UpdatedAt)
-	return (from == nil || !updated.Before(*from)) &&
-		(through == nil || !updated.After(*through))
+	return (from == nil || !updated.Before(*from)) && (through == nil || !updated.After(*through))
+}
+
+func participantMatches(id string, session *AgentSession, filter ListFilter) bool {
+	return (filter.ParticipantID == "" || id == filter.ParticipantID) &&
+		(filter.AgentSession == nil || session != nil && sameAgentSession(*session, *filter.AgentSession))
 }
 
 func sameAgentSession(got, wanted AgentSession) bool {
@@ -640,9 +657,14 @@ func summarize(run Run) RunSummary {
 	return RunSummary{
 		SchemaVersion: run.SchemaVersion,
 		RunID:         run.RunID,
+		Name:          run.Name,
+		RunKind:       run.RunKind,
 		Revision:      run.Revision,
+		State:         run.State,
+		Stage:         run.Stage,
 		InvokedAt:     run.InvokedAt,
 		UpdatedAt:     run.UpdatedAt,
+		WorkReference: run.WorkReference,
 		Task: TaskSummary{
 			ID:          run.Task.ID,
 			Title:       run.Task.Title,

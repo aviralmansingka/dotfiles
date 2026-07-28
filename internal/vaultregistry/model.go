@@ -14,6 +14,7 @@ var (
 	ErrMalformed          = errors.New("malformed run")
 	ErrUnsupportedVersion = errors.New("unsupported schema version")
 	ErrInvalidID          = errors.New("invalid run id")
+	ErrAmbiguous          = errors.New("ambiguous run selector")
 	runIDPattern          = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 )
 
@@ -98,6 +99,7 @@ type CreateRequest struct {
 type ListFilter struct {
 	TaskID           string        `json:"task_id,omitempty"`
 	FeaturePath      string        `json:"feature_path,omitempty"`
+	ParticipantID    string        `json:"participant_id,omitempty"`
 	AgentSession     *AgentSession `json:"agent_session,omitempty"`
 	UpdatedAtFrom    string        `json:"updated_at_from,omitempty"`
 	UpdatedAtThrough string        `json:"updated_at_through,omitempty"`
@@ -115,12 +117,17 @@ type TaskSummary struct {
 
 // RunSummary excludes observation histories and unknown extension fields.
 type RunSummary struct {
-	SchemaVersion uint64      `json:"schema_version"`
-	RunID         string      `json:"run_id"`
-	Revision      uint64      `json:"revision"`
-	InvokedAt     string      `json:"invoked_at"`
-	UpdatedAt     string      `json:"updated_at"`
-	Task          TaskSummary `json:"task"`
+	SchemaVersion uint64         `json:"schema_version"`
+	RunID         string         `json:"run_id"`
+	Name          string         `json:"name,omitempty"`
+	RunKind       RunKind        `json:"run_kind,omitempty"`
+	Revision      uint64         `json:"revision"`
+	State         RunState       `json:"state,omitempty"`
+	Stage         string         `json:"stage,omitempty"`
+	InvokedAt     string         `json:"invoked_at"`
+	UpdatedAt     string         `json:"updated_at"`
+	Task          TaskSummary    `json:"task"`
+	WorkReference *WorkReference `json:"work_reference,omitempty"`
 }
 
 func validID(id string) error {

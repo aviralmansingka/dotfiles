@@ -55,6 +55,7 @@ type listAgentSessionFilter struct {
 type listFilterRequest struct {
 	TaskID           string                  `json:"task_id,omitempty"`
 	FeaturePath      string                  `json:"feature_path,omitempty"`
+	ParticipantID    string                  `json:"participant_id,omitempty"`
 	AgentSession     *listAgentSessionFilter `json:"agent_session,omitempty"`
 	UpdatedAtFrom    string                  `json:"updated_at_from,omitempty"`
 	UpdatedAtThrough string                  `json:"updated_at_through,omitempty"`
@@ -127,7 +128,7 @@ func serve(input io.Reader, output io.Writer) error {
 			return openErr
 		}
 		filter := vaultregistry.ListFilter{
-			TaskID: req.Filter.TaskID, FeaturePath: req.Filter.FeaturePath,
+			TaskID: req.Filter.TaskID, FeaturePath: req.Filter.FeaturePath, ParticipantID: req.Filter.ParticipantID,
 			UpdatedAtFrom: req.Filter.UpdatedAtFrom, UpdatedAtThrough: req.Filter.UpdatedAtThrough,
 		}
 		if session := req.Filter.AgentSession; session != nil {
