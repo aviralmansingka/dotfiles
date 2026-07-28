@@ -66,6 +66,9 @@ SKILL
       stop)
         test "${{3:-}}" = --force
         test ! -e "$FIXTURE_LAUNCHCTL_STATE"
+        if [ "${{FIXTURE_DAEMON_STOP_FAIL:-0}}" = 1 ]; then
+          exit 75
+        fi
         printf 'daemon stop --force version=%s telemetry=%s update=%s nm_home=%s\\n' \\
           "$version" "${{NO_MISTAKES_TELEMETRY:-missing}}" \\
           "${{NO_MISTAKES_NO_UPDATE_CHECK:-missing}}" "$NM_HOME" \\
@@ -205,7 +208,7 @@ def fixture_environment(
     detached_daemon_state = base / "detached-daemon"
     executable(
         command_bin / "curl",
-        """#!/usr/bin/env python3
+        f"""#!{sys.executable}
 import os
 from pathlib import Path
 import shutil
@@ -218,7 +221,7 @@ try:
 except (ValueError, StopIteration, IndexError):
     raise SystemExit(64)
 if url != os.environ["FIXTURE_EXPECTED_URL"]:
-    print(f"unexpected URL: {url}", file=sys.stderr)
+    print(f"unexpected URL: {{url}}", file=sys.stderr)
     raise SystemExit(65)
 shutil.copyfile(os.environ["FIXTURE_CURL_ASSET"], output)
 with open(os.environ["FIXTURE_CURL_LOG"], "a", encoding="utf-8") as log:
@@ -243,7 +246,7 @@ esac
     )
     executable(
         command_bin / "launchctl",
-        """#!/usr/bin/env python3
+        f"""#!{sys.executable}
 import os
 from pathlib import Path
 import plistlib
@@ -263,11 +266,21 @@ def record(message: str) -> None:
 
 if arguments == ["print", label]:
     loaded = state.exists()
-    record(f"print {label} {'loaded' if loaded else 'missing'}")
+    record(f"print {{label}} {{'loaded' if loaded else 'missing'}}")
+    if loaded:
+        phase = state.read_text().strip()
+        running = phase == "running" and os.environ.get(
+            "FIXTURE_LAUNCHCTL_NOT_RUNNING", "0"
+        ) != "1"
+        print("{{")
+        print(f"\\tstate = {{'running' if running else 'waiting'}}")
+        if running:
+            print("\\tpid = 4242")
+        print("}}")
     raise SystemExit(0 if loaded else 1)
 if arguments == ["bootout", label] and state.exists():
     state.unlink()
-    record(f"bootout {label}")
+    record(f"bootout {{label}}")
     raise SystemExit(0)
 if len(arguments) == 3 and arguments[:2] == ["bootstrap", domain]:
     plist = Path(arguments[2])
@@ -277,16 +290,19 @@ if len(arguments) == 3 and arguments[:2] == ["bootstrap", domain]:
         raise SystemExit(65)
     if plistlib.loads(plist.read_bytes()).get("Label") != "com.aviral.no-mistakes":
         raise SystemExit(66)
-    state.write_text(label + "\\n")
-    record(f"bootstrap {domain} {plist}")
+    state.write_text("loaded\\n")
+    record(f"bootstrap {{domain}} {{plist}}")
     raise SystemExit(0)
 if arguments == ["kickstart", "-k", label] and state.exists():
-    record(f"kickstart -k {label}")
+    state.write_text("running\\n")
+    record(f"kickstart -k {{label}}")
     raise SystemExit(0)
 raise SystemExit(64)
 """,
     )
     executable(command_bin / "systemctl", "#!/bin/sh\nexit 1\n")
+    executable(command_bin / "sleep", "#!/bin/sh\nexit 0\n")
+    executable(command_bin / "pi", "#!/bin/sh\nexit 0\n")
 
     env = {
         key: value
@@ -307,7 +323,7 @@ raise SystemExit(64)
             "FIXTURE_DETACHED_DAEMON_STATE": str(detached_daemon_state),
             "FIXTURE_LAUNCHCTL_STATE": str(launchctl_state),
             "FIXTURE_SERVICE_LOG": str(service_log),
-            "PATH": f"{command_bin}:{os.environ.get('PATH', '/usr/bin:/bin')}",
+            "PATH": f"{command_bin}:/usr/bin:/bin",
         }
     )
     if local_asset:
@@ -378,6 +394,7 @@ def darwin_reconcile_log(
             f"bootstrap gui/501 {paths['deployed_plist']}",
             f"print {label} loaded",
             f"kickstart -k {label}",
+            f"print {label} loaded",
         )
     )
     return entries
@@ -531,15 +548,97 @@ def verify_fresh_darwin_bootstrap(root: Path) -> None:
     assert manifest(paths["state"] / "current.manifest")["version"] == VERSION
     assert (paths["nm_home"] / "config.yaml").read_text() == "agent: pi\n"
     assert (paths["home"] / ".agents/skills/no-mistakes/SKILL.md").read_text() == SKILL
-    assert paths["launchctl_state"].read_text().strip() == (
-        "gui/501/com.aviral.no-mistakes"
-    )
+    assert paths["launchctl_state"].read_text().strip() == "running"
     assert paths["service_log"].read_text().splitlines() == darwin_reconcile_log(
         paths, VERSION, initially_loaded=False
     )
     assert not paths["detached_daemon_state"].exists()
     assert not (paths["nm_home"] / "daemon-invocations").exists()
     assert not paths["curl_log"].exists()
+
+
+def verify_locking_and_pi_prerequisite(root: Path) -> None:
+    fixture = root / "lock-ownership"
+    fixture.mkdir()
+    binary = fixture / "fixture-binary"
+    fake_binary(binary, VERSION)
+    archive = fixture / f"no-mistakes-{VERSION}-darwin-arm64.tar.gz"
+    binary_archive(archive, binary)
+    env, paths = fixture_environment(
+        fixture, "darwin-arm64", archive, local_asset=True
+    )
+    previous = seed_previous_release(paths, "darwin-arm64")
+    lock = paths["state"] / "install.lock"
+
+    # A hard interruption can leave the mkdir behind before owner publication.
+    lock.mkdir()
+    run([paths["install_script"]], env)
+    assert not lock.exists()
+    assert paths["target"].read_bytes() == binary.read_bytes()
+
+    # Rollback must likewise atomically reclaim a lock whose recorded owner died.
+    lock.mkdir()
+    (lock / "owner.pid").write_text("2147483647\n")
+    run([paths["rollback_script"]], env)
+    assert not lock.exists()
+    assert paths["target"].read_bytes() == previous
+
+    # Both entry points reject a live owner and leave that owner's lock intact.
+    lock.mkdir()
+    (lock / "owner.pid").write_text(f"{os.getpid()}\n")
+    for script in (paths["install_script"], paths["rollback_script"]):
+        rejected = run([script], env, expected=1)
+        assert "another install or rollback holds" in rejected.stderr
+        assert f"pid {os.getpid()}" in rejected.stderr
+        assert (lock / "owner.pid").read_text() == f"{os.getpid()}\n"
+    shutil.rmtree(lock)
+
+    missing_fixture = root / "missing-pi"
+    missing_fixture.mkdir()
+    missing_binary = missing_fixture / "fixture-binary"
+    fake_binary(missing_binary, VERSION)
+    missing_archive = (
+        missing_fixture / f"no-mistakes-{VERSION}-darwin-arm64.tar.gz"
+    )
+    binary_archive(missing_archive, missing_binary)
+    missing_env, missing_paths = fixture_environment(
+        missing_fixture, "darwin-arm64", missing_archive, local_asset=True
+    )
+    (missing_fixture / "commands/pi").unlink()
+    rejected = run([missing_paths["install_script"]], missing_env, expected=1)
+    assert "native pi is required" in rejected.stderr
+    assert "agent: pi" in rejected.stderr
+    assert not missing_paths["target"].exists()
+    assert not (missing_paths["state"] / "current.manifest").exists()
+    assert not (missing_paths["state"] / "install.lock").exists()
+
+
+def verify_darwin_reconciliation_rejections(root: Path) -> None:
+    for name, variable, message in (
+        (
+            "detached-stop-failure",
+            "FIXTURE_DAEMON_STOP_FAIL",
+            "failed to stop detached no-mistakes daemon",
+        ),
+        (
+            "launchagent-not-running",
+            "FIXTURE_LAUNCHCTL_NOT_RUNNING",
+            "did not reach running state with PID",
+        ),
+    ):
+        fixture = root / name
+        fixture.mkdir()
+        binary = fixture / "fixture-binary"
+        fake_binary(binary, VERSION)
+        archive = fixture / f"no-mistakes-{VERSION}-darwin-arm64.tar.gz"
+        binary_archive(archive, binary)
+        env, paths = fixture_environment(
+            fixture, "darwin-arm64", archive, local_asset=True
+        )
+        env[variable] = "1"
+        rejected = run([paths["install_script"]], env, expected=1)
+        assert message in rejected.stderr
+        assert not (paths["state"] / "install.lock").exists()
 
 
 def verify_rejections(root: Path) -> None:
@@ -593,7 +692,15 @@ def main() -> int:
             'launchctl print "$label" >/dev/null 2>&1 || fail', bootstrap
         )
         kickstart = lifecycle_text.index('launchctl kickstart -k "$label"', loaded)
-        assert bootout < detached_stop < bootstrap < loaded < kickstart
+        running = lifecycle_text.index("if launchd_job_is_running", kickstart)
+        assert bootout < detached_stop < bootstrap < loaded < kickstart < running
+        assert lifecycle_text.count(
+            'daemon stop --force >/dev/null 2>&1 || true'
+        ) == 1, "only the Linux fallback may tolerate an absent detached daemon"
+        assert 'did not reach running state with PID' in lifecycle_text
+        assert 'kill -0 "$recorded_pid"' in lifecycle_text
+        assert 'mv "$lock" "$lock_reclaim"' in lifecycle_text
+        assert '[ "$cleanup_owner" = "$$" ]' in lifecycle_text
         assert '"$binary" daemon start >/dev/null' in lifecycle_text
     assert launchd["Label"] == "com.aviral.no-mistakes"
     assert launchd["RunAtLoad"] is True and launchd["KeepAlive"] is True
@@ -609,6 +716,8 @@ def main() -> int:
     )
     assert pi_stow < launchd_stow < owned_install
     assert root_install_text.count('"$DOTFILES_DIR/scripts/install-no-mistakes"') == 1
+    assert 'command -v pi >/dev/null 2>&1' in install_text
+    assert 'native pi is required' in install_text
     assert '(cd "$dotfiles_repo" && "$target" init)' in install_text
     assert 'if [ ! -f "$skill" ]' not in install_text
     for required in (VERSION, REVISION, CHECKSUMS_SHA, *PLATFORMS.values()):
@@ -626,11 +735,15 @@ def main() -> int:
         for platform in PLATFORMS:
             verify_platform(root, platform)
         verify_fresh_darwin_bootstrap(root)
+        verify_locking_and_pi_prerequisite(root)
+        verify_darwin_reconciliation_rejections(root)
         verify_rejections(root)
 
     print("ok: root macOS install invokes the pin after Pi/LaunchAgent deployment")
-    print("ok: Darwin reconciliation unloads KeepAlive before stopping detached ownership")
-    print("ok: fresh/retry install and rollback bootstrap, require, and kickstart the owned job")
+    print("ok: stale shared locks recover and live owners reject install/rollback")
+    print("ok: fixture-provided native Pi is required before agent initialization")
+    print("ok: Darwin detached-stop failures are fatal before bootstrap")
+    print("ok: fresh/retry install and rollback require a running LaunchAgent PID")
     print("ok: foreground wrapper and non-blocking Linux fallback are owned")
     print("ok: exact darwin-arm64 and linux-amd64 release tar.gz URLs selected")
     print("ok: real archives hashed before safe executable-only extraction")
