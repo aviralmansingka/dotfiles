@@ -1,0 +1,74 @@
+#!/bin/sh
+set -eu
+
+cd "$(dirname "$0")/../.."
+
+baseline=073d9323ef29885682b04d4ec632f5621b4d7a63
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off
+
+check() {
+  number=$1
+  command=$2
+  shift 2
+  printf 'command.%02d=%s\n' "$number" "$command"
+  if "$@" >"$tmp/check-$number.log" 2>&1; then
+    printf 'result.%02d=0\n' "$number"
+  else
+    status=$?
+    cat "$tmp/check-$number.log" >&2
+    printf 'result.%02d=%d\n' "$number" "$status" >&2
+    exit "$status"
+  fi
+}
+
+consumer_import_boundary() {
+  imports=$(go list -f '{{range .Imports}}{{println .}}{{end}}' ./internal/vaultregistrytestconsumer)
+  project_imports=$(printf '%s\n' "$imports" | grep '^github.com/aviral/dotfiles/' || true)
+  test "$project_imports" = 'github.com/aviral/dotfiles/internal/vaultregistry'
+}
+
+consumer_semantics() {
+  mkdir -p "$tmp/state/runs"
+  cp scripts/fixtures/vault-hunter-registry-v2/version-1.json "$tmp/state/runs/t19-v02-version-1.json"
+  cp scripts/fixtures/vault-hunter-registry-v2/consumer-version-2.json "$tmp/state/runs/t19-v03-consumer.json"
+  go build -o "$tmp/consumer" ./internal/vaultregistrytestconsumer
+  "$tmp/consumer" "$tmp/state" >"$tmp/consumer-output.json"
+  cmp scripts/fixtures/vault-hunter-registry-v2/consumer-output.json "$tmp/consumer-output.json"
+}
+
+scoped_diff() {
+  git merge-base --is-ancestor "$baseline" HEAD
+  git diff --check "$baseline"...HEAD
+}
+
+allowlist() {
+  git diff --name-only "$baseline"...HEAD | while IFS= read -r path; do
+    case "$path" in
+      internal/vaultregistry/*|internal/vaultregistrytestconsumer/*|scripts/verify-vault-hunter-atlas|scripts/verifiers/vault-hunter-atlas-t19-*|scripts/fixtures/vault-hunter-registry-v2/*) ;;
+      *) echo "out-of-allowlist path: $path" >&2; exit 1 ;;
+    esac
+  done
+}
+
+clean_head() {
+  test -z "$(git status --short)"
+}
+
+check 1 'consumer project imports = internal/vaultregistry' consumer_import_boundary
+check 2 'standalone Reader consumer output matches isolated v1/v2 fixtures' consumer_semantics
+printf 'consumer.output='
+cat "$tmp/consumer-output.json"
+check 3 'scripts/verify-vault-hunter-atlas T19.V01' scripts/verify-vault-hunter-atlas T19.V01
+check 4 'scripts/verify-vault-hunter-atlas T19.V02' scripts/verify-vault-hunter-atlas T19.V02
+check 5 'go test -count=1 ./internal/vaultregistry' go test -count=1 ./internal/vaultregistry
+check 6 'go test -count=1 ./cmd/vault-hunter-registry' go test -count=1 ./cmd/vault-hunter-registry
+check 7 'go test -race -count=1 ./internal/vaultregistry' go test -race -count=1 ./internal/vaultregistry
+check 8 'go vet ./internal/vaultregistry' go vet ./internal/vaultregistry
+check 9 'go vet ./cmd/vault-hunter-registry' go vet ./cmd/vault-hunter-registry
+check 10 'git diff --check' git diff --check
+check 11 "git diff --check $baseline...HEAD" scoped_diff
+check 12 "changed paths since $baseline match T19 allowlist" allowlist
+check 13 'git status --short is empty' clean_head
+printf '%s\n' 'T19.V03 Reader-only consumer and complete Registry regression: PASS'
