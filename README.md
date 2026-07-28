@@ -70,28 +70,28 @@ terraform -chdir=ops/devbox destroy \
 
 ## Stow Packages
 
-| Package | Description |
-|---------|-------------|
-| `aerospace` | AeroSpace tiling window manager |
-| `agents` | Shared agent skills |
-| `blinksh` | Blink Shell (iOS terminal) config |
-| `claude` | Claude AI context files |
-| `code` | Code snippets (Golang, Lua) |
-| `ghostty` | Ghostty terminal emulator |
-| `herdr` | Agent workspaces, notifications, and sound configuration |
-| `git` | Git configuration |
-| `kube` | Kubernetes configuration |
-| `launchd` | macOS user LaunchAgents (vault and dotfiles auto-sync) |
-| `neovide` | Neovide (Neovim GUI) config |
-| `nvim` | Neovim with LazyVim |
-| `ssh` | SSH configuration |
-| `starship` | Starship prompt |
-| `systemd` | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
-| `pi` | Pi agent config, packages, themes, and messaging daemons |
-| `terminfo` | Custom terminfo entries |
-| `tmux` | Tmux configuration |
-| `tmuxinator` | Tmuxinator session templates |
-| `zsh` | Zsh shell configuration |
+| Package      | Description                                                                 |
+| ------------ | --------------------------------------------------------------------------- |
+| `aerospace`  | AeroSpace tiling window manager                                             |
+| `agents`     | Shared agent skills                                                         |
+| `blinksh`    | Blink Shell (iOS terminal) config                                           |
+| `claude`     | Claude AI context files                                                     |
+| `code`       | Code snippets (Golang, Lua)                                                 |
+| `ghostty`    | Ghostty terminal emulator                                                   |
+| `herdr`      | Agent workspaces, notifications, and sound configuration                    |
+| `git`        | Git configuration                                                           |
+| `kube`       | Kubernetes configuration                                                    |
+| `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
+| `neovide`    | Neovide (Neovim GUI) config                                                 |
+| `nvim`       | Neovim with LazyVim                                                         |
+| `ssh`        | SSH configuration                                                           |
+| `starship`   | Starship prompt                                                             |
+| `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
+| `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
+| `terminfo`   | Custom terminfo entries                                                     |
+| `tmux`       | Tmux configuration                                                          |
+| `tmuxinator` | Tmuxinator session templates                                                |
+| `zsh`        | Zsh shell configuration                                                     |
 
 ## Git auto-sync services
 
@@ -135,6 +135,11 @@ Install/update Pi packages from the checked-in manifest:
 cd ~/.pi/agent/npm
 npm install
 ```
+
+Use `/atlas-rail-prototype` in Pi's interactive TUI to open the disposable Atlas evidence rail for the active Vault
+Hunter Run bound to the current Pi session. It uses the active theme, requires at least 80 columns, and reads without
+mutating the Run Registry. Navigate stages with `j`/`k` or the arrow keys, toggle details with Enter, toggle the latest
+eight versus all steps locally with Ctrl+V, and close with `q` or Escape.
 
 Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`; the widget stays hidden when no run exists.
 
