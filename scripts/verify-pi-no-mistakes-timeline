@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+verify_dir="$(mktemp -d)"
+cleanup() { rm -rf -- "$verify_dir"; }
+trap cleanup EXIT
+
+mkdir -p "$verify_dir/bin" "$verify_dir/agent/extensions"
+cat > "$verify_dir/bin/no-mistakes" <<'FAKE'
+#!/bin/sh
+cat <<'TOON'
+run:
+  id: "01TESTTIMELINE"
+  branch: feature/no-mistakes-timeline
+  status: running
+  head: abc12345
+  findings: none
+  active_steps[1]{step,active_for,last_activity,agent_pid,round}:
+    review,12s,"quiet 2s",4242,"round 1"
+  steps[9]{step,status,findings,duration_ms}:
+    intent,completed,0,0
+    rebase,completed,0,210
+    review,running,0,12000
+    test,pending,0,0
+    document,pending,0,0
+    lint,pending,0,0
+    push,pending,0,0
+    pr,pending,0,0
+    ci,pending,0,0
+TOON
+FAKE
+chmod +x "$verify_dir/bin/no-mistakes"
+ln -s "$repo_root/pi/.pi/agent/extensions/no-mistakes-timeline.ts" \
+  "$verify_dir/agent/extensions/no-mistakes-timeline.ts"
+printf '%s\n' '{"theme":"gruvbox-material"}' > "$verify_dir/agent/settings.json"
+
+raw="$verify_dir/timeline.raw"
+plain="$verify_dir/timeline.txt"
+export PI_NM_AGENT_DIR="$verify_dir/agent"
+export PI_NM_RAW="$raw"
+export PI_NM_PATH="$verify_dir/bin:$PATH"
+export PI_NM_THEME="$repo_root/pi/.pi/agent/themes/gruvbox-material.json"
+export PI_NM_SESSION="$verify_dir/session.jsonl"
+
+expect <<'EXPECT'
+set timeout 20
+log_user 0
+log_file -a -noappend $env(PI_NM_RAW)
+spawn env PATH=$env(PI_NM_PATH) PI_CODING_AGENT_DIR=$env(PI_NM_AGENT_DIR) pi --offline --approve --no-context-files --no-skills --theme $env(PI_NM_THEME) --session $env(PI_NM_SESSION)
+expect "No Mistakes"
+expect "feature/no-mistakes-timeline"
+expect "review"
+expect "round 1"
+send -- "/no-mistakes-timeline off\r"
+expect "No Mistakes timeline off"
+send -- "/quit\r"
+expect eof
+EXPECT
+
+perl -pe 's/\e\][^\a]*(?:\a|\e\\)//g; s/\e\[[0-?]*[ -\/]*[@-~]//g; s/\r//g' \
+  "$raw" > "$plain"
+for expected in \
+  'No Mistakes' \
+  'feature/no-mistakes-timeline' \
+  '✓ intent' \
+  '⟳ review' \
+  'round 1' \
+  '○ ci' \
+  'No Mistakes timeline off'; do
+  grep -F "$expected" "$plain" >/dev/null || {
+    printf 'missing timeline text: %s\n' "$expected" >&2
+    tail -120 "$plain" >&2
+    exit 1
+  }
+done
+
+printf 'ok: No Mistakes TOON status renders in the Pi timeline rail\n'
+printf 'ok: completed, running, and pending phases use timeline status glyphs\n'
+printf 'ok: /no-mistakes-timeline toggles the live widget\n'
