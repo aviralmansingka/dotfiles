@@ -31,8 +31,8 @@ local cmd = { "/usr/bin/script", "-q", raw, pi, "--no-session", "--no-extensions
 vim.cmd("enew")
 vim.fn.termopen(cmd, { cwd = repo, env = { NVIM = vim.v.servername } })
 vim.cmd("startinsert")
-local ready = wait_for("Type your message", 12000)
-record("pi-prompt-visible", ready)
+local ready = wait_for("[Extensions]", 12000)
+record("pi-prompt-visible", ready and vim.bo.buftype == "terminal")
 trace[#trace + 1] = { step = "startup", mode = vim.api.nvim_get_mode().mode, buffer = vim.api.nvim_get_current_buf(), window = vim.api.nvim_get_current_win() }
 record("neovim-terminal-mode", vim.api.nvim_get_mode().mode == "t")
 send("/v03-fixture\r")
@@ -45,7 +45,7 @@ vim.wait(250)
 local wheel_lines = snap("wheel")
 local after = table.concat(wheel_lines, "\n")
 record("wheel-changes-transcript-history", before ~= after)
-record("wheel-preserves-prompt", after:find("Type your message", 1, true) ~= nil)
+record("wheel-preserves-prompt", after:find("gpt%-5%.6%-sol") ~= nil)
 record("wheel-preserves-terminal-mode", vim.api.nvim_get_mode().mode == "t")
 send("x")
 vim.wait(100)
@@ -55,8 +55,11 @@ send("\21/v03-typed\r")
 local typed = wait_for("Typed input reached Pi", 3000)
 record("typed-command-reaches-pi", typed)
 lines = snap("before-clicks")
-local hrow, hcol = find(lines, "fixture.example")
-if hrow then send(string.format("\27[<0;%d;%dM", hcol, hrow)) end
+local hrow, hcol = find(lines, "HTTPS path")
+if hrow then
+  local screen_row = hrow - vim.fn.line("w0") + 1
+  send(string.format("\27[<0;%d;%dM", hcol + 6, screen_row))
+end
 local copied = wait_for("Copied fixture.example", 3000)
 record("https-click-shows-confirmation", copied)
 snap("copied-status")
@@ -68,7 +71,10 @@ record("exactly-one-sandboxed-clipboard-write", #clip == 1 and clip[1] == "https
 lines = snap("wikilink-click-target")
 local wrow, wcol = find(lines, "Target heading")
 record("wikilink-visible", wrow ~= nil)
-if wrow then send(string.format("\27[<0;%d;%dM", wcol, wrow)) end
+if wrow then
+  local screen_row = wrow - vim.fn.line("w0") + 1
+  send(string.format("\27[<0;%d;%dM", wcol, screen_row))
+end
 vim.wait(1000)
 local current = vim.api.nvim_get_current_buf()
 local opened, cursor
