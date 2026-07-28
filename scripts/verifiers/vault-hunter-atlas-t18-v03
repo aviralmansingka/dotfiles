@@ -116,7 +116,11 @@ status: in-progress
 Render the execution journal.
 """)
     for source in RUN_FIXTURES:
-        shutil.copy2(source, state / "runs" / source.name)
+        destination = state / "runs" / source.name
+        shutil.copy2(source, destination)
+        run = json.loads(destination.read_text(encoding="utf-8"))
+        run["task"]["feature_path"] = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md"
+        destination.write_text(json.dumps(run, indent=2) + "\n", encoding="utf-8")
     (state / "registry.lock").write_text("", encoding="utf-8")
     return state, vault
 
@@ -322,7 +326,7 @@ def main():
 
         artifacts = tmp / "artifacts"
         artifacts.mkdir()
-        sh("go", "test", "-count=1", "./cmd/atlas", "-run", "^TestT18V03")
+        sh("go", "test", "-count=1", "./cmd/atlas", "-run", "^(TestT18V03|TestFeaturePreviewFocusesNowNextAndStages)$")
         sh("go", "build", "-o", str(tmp / "atlas"), "./cmd/atlas")
         atlas = tmp / "atlas"
 
@@ -360,8 +364,8 @@ def main():
             40,
             [
                 {"name": "initial", "wait_for": b"vault-hunter journal", "send": b"p"},
-                {"name": "project", "wait_for": b'"kind": "Project"', "send": b"f"},
-                {"name": "feature", "wait_for": b'"kind": "Feature"', "send": b"t"},
+                {"name": "project", "wait_for": b"PROJECT \xc2\xb7", "require_growth": True, "send": b"f"},
+                {"name": "feature", "wait_for": b"NEXT", "require_growth": True, "send": b"t"},
                 {"name": "task", "wait_for": b'"kind": "Task"', "send": b"r"},
                 {"name": "run", "wait_for": b"vault-hunter journal", "send": b"j"},
                 {"name": "selection", "wait_for": b"j/k select", "require_growth": True},
@@ -370,12 +374,16 @@ def main():
         (artifacts / "session.ansi").write_bytes(raw)
         bare_initial = screenshot(checkpoints["initial"], 140, 40)
         (artifacts / "browser-screenshot.txt").write_text(bare_initial + "\n", encoding="utf-8")
-        transcript.append("bare atlas: initial browser, project/feature/task/run navigation, run selection, clean exit")
-        assert "ATLAS · 3 active Runs · RUN preview" in bare_initial
-        assert "atlas-journal-run · atlas-journal-run" in bare_initial
+        transcript.append("bare atlas: Option 2 hierarchy, project/feature/task/run navigation, run selection, clean exit")
+        assert "ATLAS · 3 visible Tasks · RUN preview" in bare_initial
+        assert "pi-agent" in bare_initial
+        assert "vault-hunter-atlas" in bare_initial
         assert "vault-hunter journal" in bare_initial
-        assert '"kind": "Project"' in screenshot(checkpoints["project"], 140, 40)
-        assert '"kind": "Feature"' in screenshot(checkpoints["feature"], 140, 40)
+        assert "PROJECT ·" in screenshot(checkpoints["project"], 140, 40)
+        feature_screen = screenshot(checkpoints["feature"], 140, 40)
+        assert "NOW · 0" in feature_screen
+        assert "NEXT · 0" in feature_screen
+        assert '"kind": "Feature"' not in feature_screen
         assert '"kind": "Task"' in screenshot(checkpoints["task"], 140, 40)
         selection_screen = screenshot(checkpoints["selection"], 140, 40)
         assert selection_screen != bare_initial

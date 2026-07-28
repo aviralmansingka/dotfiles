@@ -254,6 +254,20 @@ func BuildRunSummaries(vaultRoot, stateRoot string, runs []vaultregistry.Run) ([
 	return buildRunSummaries(loaded, runs), nil
 }
 
+// BuildTaskSummaries returns the complete canonical Task collection for the
+// interactive browser; machine envelopes remain independently bounded.
+func BuildTaskSummaries(vaultRoot, stateRoot string) ([]map[string]any, error) {
+	loaded, err := loadStore(vaultRoot, stateRoot)
+	if err != nil {
+		return nil, err
+	}
+	tasks := make([]map[string]any, 0, len(loaded.tasks))
+	for _, task := range loaded.tasks {
+		tasks = append(tasks, loaded.taskObject(task))
+	}
+	return tasks, nil
+}
+
 func buildRunSummaries(loaded *store, runs []vaultregistry.Run) []map[string]any {
 	data := make([]map[string]any, 0, len(runs))
 	for _, run := range runs {

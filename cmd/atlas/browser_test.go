@@ -23,6 +23,7 @@ func TestT18V03BrowserNavigation(t *testing.T) {
 		projectName:    "pi-agent",
 		featureName:    "vault-hunter-atlas",
 		taskID:         "T09",
+		taskStatus:     "in-progress",
 		projectPreview: "project-preview",
 		featurePreview: "feature-preview",
 		taskPreview:    "task-preview",
@@ -34,8 +35,9 @@ func TestT18V03BrowserNavigation(t *testing.T) {
 		runName:     "pending-review",
 		projectName: "pi-agent",
 		featureName: "vault-hunter-atlas",
-		taskID:      "T09",
-		run:         vaultregistry.Run{RunID: "run-042", Task: vaultregistry.Task{ID: "T09", Title: "Pending review"}},
+		taskID:      "T10",
+		taskStatus:  "in-progress",
+		run:         vaultregistry.Run{RunID: "run-042", Task: vaultregistry.Task{ID: "T10", Title: "Pending review"}},
 	}})
 	model.width, model.height = 140, 32
 	if !strings.Contains(model.View(), "vault-hunter journal") {
@@ -77,6 +79,124 @@ func TestT18V03BrowserNavigation(t *testing.T) {
 	}
 	if _, ok := quit().(tea.QuitMsg); !ok {
 		t.Fatal("q returned non-quit command")
+	}
+}
+
+func TestBrowserHierarchyRowsShowLifecycleStatus(t *testing.T) {
+	entries := []browserEntry{{
+		runID: "run-active-123", taskID: "task-browser", projectName: "pi-agent", featureName: "vault-hunter-atlas",
+		taskName: "Build Atlas Browser", taskStatus: "in-progress", run: vaultregistry.Run{Revision: 12, Lifecycle: []vaultregistry.Lifecycle{{GoalID: "T18.V02", State: "active"}}},
+	}, {
+		runID: "run-done-456", taskID: "task-journal", projectName: "pi-agent", featureName: "vault-hunter-atlas",
+		taskName: "Build Execution Journal", taskStatus: "done", run: vaultregistry.Run{Revision: 8},
+	}, {
+		runID: "run-failed-789", taskID: "task-sync", projectName: "neovim", featureName: "agent-context-management",
+		taskName: "Sync Context", taskStatus: "in-progress", run: vaultregistry.Run{Revision: 3, Lifecycle: []vaultregistry.Lifecycle{{GoalID: "T03.V04", State: "failed"}}},
+	}}
+	model := newBrowserModel(entries).withColor(true)
+	model.width, model.height = 140, 32
+	view := model.View()
+	for _, want := range []string{"pi-agent", "vault-hunter-atlas", "Build Atlas Browser", "V02", "neovim", "Sync Context", "V04", "48;2;69;64;60m"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("view missing %q: %q", want, view)
+		}
+	}
+	if strings.Index(view, "pi-agent") > strings.Index(view, "vault-hunter-atlas") || strings.Index(view, "vault-hunter-atlas") > strings.Index(view, "Build Atlas Browser") {
+		t.Fatalf("hierarchy order is not Project, Feature, Run: %q", view)
+	}
+	if strings.Contains(view, "48;2;50;48;47m") || strings.Contains(view, "48;2;60;56;54m") {
+		t.Fatalf("unselected hierarchy rows use a background: %q", view)
+	}
+}
+
+func TestBrowserGroupsRunsUnderOneTask(t *testing.T) {
+	model := newBrowserModel([]browserEntry{
+		{runID: "run-1", taskID: "task", taskName: "Task", projectName: "p", featureName: "f"},
+		{runID: "run-2", taskID: "task", taskName: "Task", projectName: "p", featureName: "f"},
+	})
+	if got := model.visibleEntries(); len(got) != 1 {
+		t.Fatalf("visible task rows = %d, want 1", len(got))
+	}
+	view := strings.Join(model.leftPane(20), "\n")
+	if strings.Count(view, "Task") != 1 || !strings.Contains(view, "run-1") || !strings.Contains(view, "run-2") {
+		t.Fatalf("runs were not grouped beneath Task: %q", view)
+	}
+}
+
+func TestBrowserCtrlDTogglesDoneOnlyFeature(t *testing.T) {
+	model := newBrowserModel([]browserEntry{
+		{taskID: "a-done", taskName: "A done", taskStatus: "done", projectName: "p", featureName: "a"},
+		{taskID: "b-active", taskName: "B active", taskStatus: "in-progress", projectName: "p", featureName: "b"},
+	})
+	visible := model.visibleEntries()
+	if len(visible) != 2 || visible[0].taskID != "" || visible[0].featureName != "a" {
+		t.Fatalf("done-only Feature is not selectable: %#v", visible)
+	}
+	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	visible = next.(browserModel).visibleEntries()
+	if len(visible) != 2 || visible[0].taskID != "a-done" {
+		t.Fatalf("done-only Feature did not expand locally: %#v", visible)
+	}
+}
+
+func TestBrowserCtrlDTogglesDoneWithinSelectedFeature(t *testing.T) {
+	model := newBrowserModel([]browserEntry{
+		{taskID: "a-active", taskName: "A active", taskStatus: "in-progress", projectName: "p", featureName: "a"},
+		{taskID: "a-done", taskName: "A done", taskStatus: "done", projectName: "p", featureName: "a"},
+		{taskID: "a-next", taskName: "A next", taskStatus: "pending-work", projectName: "p", featureName: "a"},
+		{taskID: "b-done", taskName: "B done", taskStatus: "done", projectName: "p", featureName: "b"},
+	})
+	if got := model.visibleEntries(); len(got) != 3 || got[0].taskID != "a-active" || got[1].taskID != "a-next" || got[2].featureName != "b" || got[2].taskID != "" {
+		t.Fatalf("default visible = %#v", got)
+	}
+	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	model = next.(browserModel)
+	got := model.visibleEntries()
+	if len(got) != 4 || got[1].taskID != "a-done" {
+		t.Fatalf("feature-local expanded visible = %#v", got)
+	}
+	for _, entry := range got {
+		if entry.taskID == "b-done" {
+			t.Fatalf("Ctrl-D expanded another Feature: %#v", got)
+		}
+	}
+}
+
+func TestCanonicalPendingStatusIsNotStarted(t *testing.T) {
+	styles := newBrowserStyles()
+	view := strings.Join(renderBrowserTask(browserEntry{taskName: "Pending", taskStatus: "pending"}, nil, false, 80, false, styles, "└─ ", "   └─ "), "\n")
+	if !strings.Contains(view, "○ Pending") || !strings.Contains(view, "not started") {
+		t.Fatalf("canonical pending Task rendered incorrectly: %q", view)
+	}
+	featureJSON := `{"data":{"name":"feature","tasks":[{"id":"task","local_id":"T1","name":"Pending","status":"pending"}]}}`
+	focus := renderFeatureFocus(browserEntry{featurePreview: featureJSON}, nil, 80, 20, false)
+	if !strings.Contains(focus, "1 next") || strings.Contains(focus, "1 complete") {
+		t.Fatalf("canonical pending Task classified incorrectly: %q", focus)
+	}
+}
+
+func TestPendingFeatureTaskIsUnfilledAndUnhighlighted(t *testing.T) {
+	lines := renderFeatureTask(featureTask{LocalID: "T14", Name: "Harden Journal", Status: "pending-work"}, nil, "selected-run", 80, true, newBrowserStyles())
+	view := strings.Join(lines, "\n")
+	if !strings.Contains(view, "○") {
+		t.Fatalf("pending Task lacks empty circle: %q", view)
+	}
+	if strings.Contains(view, "48;2;69;64;60m") {
+		t.Fatalf("pending Task inherited selected background: %q", view)
+	}
+}
+
+func TestFeaturePreviewFocusesNowNextAndStages(t *testing.T) {
+	featureJSON := `{"data":{"name":"vault-hunter-atlas","tasks":[{"id":"task-active","local_id":"T11","name":"Build Browser","status":"in-progress"},{"id":"task-next","local_id":"T14","name":"Harden Journal","status":"pending-work"},{"id":"task-done","local_id":"T08","name":"Execution Journal","status":"done"}]}}`
+	entries := []browserEntry{{runID: "run-11", taskID: "task-active", taskName: "Build Browser", featurePreview: featureJSON, run: vaultregistry.Run{Revision: 2, Lifecycle: []vaultregistry.Lifecycle{{GoalID: "T11.V01", State: "done"}, {GoalID: "T11.V02", State: "active"}}}}}
+	view := renderFeatureFocus(entries[0], entries, 80, 24, false)
+	for _, want := range []string{"1 now · 1 next · 1 complete", "NOW · 1", "T11 · Build Browser", "activate ✓ ─ baseline ✓ ─ converge ● ─ review ○ ─ land ○ ─ cleanup ○", "NEXT · 1", "T14 · Harden Journal", "activate ○ ─ baseline ○ ─ converge ○ ─ review ○ ─ land ○ ─ cleanup ○"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("feature view missing %q: %q", want, view)
+		}
+	}
+	if strings.Contains(view, "Execution Journal") {
+		t.Fatalf("completed Task was not collapsed: %q", view)
 	}
 }
 
@@ -130,11 +250,13 @@ func TestT18V03BrowserCompletenessIgnoresMachineByteCap(t *testing.T) {
 	vaultRoot := t.TempDir()
 	stateRoot := t.TempDir()
 	const taskPath = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/18-build-atlas.md"
+	const pendingTaskPath = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/19-not-started.md"
 	const featurePath = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md"
 	writeBrowserFile(t, vaultRoot, "1_projects/pi-agent/README.md", "---\nworking_directory: /worktrees/dotfiles\nrepository: git@github.com:aviralmansingka/dotfiles\n---\n# pi-agent\n")
 	writeBrowserFile(t, vaultRoot, "1_projects/pi-agent/themes/pi-customization/theme.md", "---\ndescription: Customize Pi Agent and its surrounding workflows.\n---\n# pi-customization\n")
 	writeBrowserFile(t, vaultRoot, featurePath, "---\ndescription: Provide a unified Atlas interface.\n---\n# vault-hunter-atlas\n")
 	writeBrowserFile(t, vaultRoot, taskPath, "---\nstatus: in-progress\n---\n# T18: Build Atlas\n\n## Intent\nRender Atlas.\n")
+	writeBrowserFile(t, vaultRoot, pendingTaskPath, "---\nstatus: pending-work\n---\n# T19: Not Started\n\n## Intent\nShow pending work.\n")
 	producer, err := vaultregistry.OpenProducer(stateRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -162,8 +284,17 @@ func TestT18V03BrowserCompletenessIgnoresMachineByteCap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) != 6 || entries[0].runID != "run-01" || entries[len(entries)-1].runID != "run-06" {
-		t.Fatalf("browser entries = %#v", entries)
+	if len(entries) != 7 {
+		t.Fatalf("browser entries = %d, want six Runs plus one unstarted Task: %#v", len(entries), entries)
+	}
+	foundPending := false
+	for _, entry := range entries {
+		if entry.taskID == pendingTaskPath && entry.runID == "" {
+			foundPending = true
+		}
+	}
+	if !foundPending {
+		t.Fatalf("browser omitted unstarted Task beyond machine byte cap: %#v", entries)
 	}
 }
 
