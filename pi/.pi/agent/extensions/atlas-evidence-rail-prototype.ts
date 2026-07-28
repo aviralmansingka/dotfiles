@@ -325,7 +325,7 @@ function sessionIdentity(ctx: ExtensionContext) {
 function stageState(value: unknown): Stage["state"] {
   if (["red", "failed", "rejected", "interrupted", "error"].includes(String(value))) return "failed";
   if (["active", "running", "invoked", "in-progress"].includes(String(value))) return "active";
-  if (["green", "passed", "accepted", "completed", "finished", "observed"].includes(String(value))) return "done";
+  if (["green", "passed", "accepted", "completed", "finished", "observed", "succeeded", "recorded", "supports"].includes(String(value))) return "done";
   return "pending";
 }
 
