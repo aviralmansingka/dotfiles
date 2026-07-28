@@ -26,15 +26,16 @@ func t20InternalRequest(t *testing.T) CreateRequest {
 
 func TestT20V01PersistenceFailuresRollbackEveryByte(t *testing.T) {
 	for _, tc := range []struct {
-		name  string
-		fault func() func()
+		name         string
+		evidenceCase string
+		fault        func() func()
 	}{
-		{"interrupted rename", func() func() {
+		{"interrupted rename", "persistence-interrupted-rename", func() func() {
 			prior := createRename
 			createRename = func(string, string) error { return errors.New("interrupted create") }
 			return func() { createRename = prior }
 		}},
-		{"directory fsync", func() func() {
+		{"directory fsync", "persistence-directory-fsync", func() func() {
 			prior := syncCreateDirectory
 			syncCreateDirectory = func(string) error { return errors.New("directory fsync failed") }
 			return func() { syncCreateDirectory = prior }
@@ -53,6 +54,7 @@ func TestT20V01PersistenceFailuresRollbackEveryByte(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			t.Logf("T20.V01_REGISTRY_MANIFEST case=%s phase=before data=%q", tc.evidenceCase, before)
 			restore := tc.fault()
 			defer restore()
 			if _, err := producer.CreateRun(t20InternalRequest(t)); err == nil {
@@ -62,6 +64,7 @@ func TestT20V01PersistenceFailuresRollbackEveryByte(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			t.Logf("T20.V01_REGISTRY_MANIFEST case=%s phase=after data=%q", tc.evidenceCase, after)
 			if after != before {
 				t.Fatalf("failed create changed Registry\nbefore=%q\nafter=%q", before, after)
 			}
