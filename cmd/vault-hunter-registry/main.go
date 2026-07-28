@@ -23,9 +23,10 @@ var errMalformedRequest = errors.New("malformed request")
 // optional on every action and resolves through the Registry's normal state
 // directory rules when omitted.
 type createRequest struct {
-	Action string             `json:"action"`
-	Root   string             `json:"root,omitempty"`
-	Run    *vaultregistry.Run `json:"run"`
+	Action        string                     `json:"action"`
+	Root          string                     `json:"root,omitempty"`
+	Run           *vaultregistry.Run         `json:"run"`
+	InitialDriver *vaultregistry.Observation `json:"initial_driver,omitempty"`
 }
 
 type getRequest struct {
@@ -54,6 +55,7 @@ type listAgentSessionFilter struct {
 type listFilterRequest struct {
 	TaskID           string                  `json:"task_id,omitempty"`
 	FeaturePath      string                  `json:"feature_path,omitempty"`
+	ParticipantID    string                  `json:"participant_id,omitempty"`
 	AgentSession     *listAgentSessionFilter `json:"agent_session,omitempty"`
 	UpdatedAtFrom    string                  `json:"updated_at_from,omitempty"`
 	UpdatedAtThrough string                  `json:"updated_at_through,omitempty"`
@@ -100,7 +102,7 @@ func serve(input io.Reader, output io.Writer) error {
 		if openErr != nil {
 			return openErr
 		}
-		response, err = create(producer, req.Run)
+		response, err = create(producer, req.Run, req.InitialDriver)
 	case getRequest:
 		reader, openErr := vaultregistry.OpenReader(req.Root)
 		if openErr != nil {
@@ -126,7 +128,7 @@ func serve(input io.Reader, output io.Writer) error {
 			return openErr
 		}
 		filter := vaultregistry.ListFilter{
-			TaskID: req.Filter.TaskID, FeaturePath: req.Filter.FeaturePath,
+			TaskID: req.Filter.TaskID, FeaturePath: req.Filter.FeaturePath, ParticipantID: req.Filter.ParticipantID,
 			UpdatedAtFrom: req.Filter.UpdatedAtFrom, UpdatedAtThrough: req.Filter.UpdatedAtThrough,
 		}
 		if session := req.Filter.AgentSession; session != nil {
@@ -263,9 +265,22 @@ func malformedRequest(err error) error {
 	return fmt.Errorf("%w: %v", errMalformedRequest, err)
 }
 
-func create(producer *vaultregistry.Producer, wanted *vaultregistry.Run) (vaultregistry.Run, error) {
+func create(producer *vaultregistry.Producer, wanted *vaultregistry.Run, drivers ...*vaultregistry.Observation) (vaultregistry.Run, error) {
 	if wanted == nil {
 		return vaultregistry.Run{}, errors.New("create requires run")
+	}
+	var driver *vaultregistry.Observation
+	if len(drivers) > 0 {
+		driver = drivers[0]
+	}
+	if wanted.WorkReference != nil {
+		if driver == nil {
+			return vaultregistry.Run{}, fmt.Errorf("%w: reconciled create requires initial_driver", vaultregistry.ErrMalformed)
+		}
+		return producer.CreateRun(vaultregistry.CreateRequest{Run: *wanted, InitialDriver: *driver})
+	}
+	if driver != nil {
+		return vaultregistry.Run{}, fmt.Errorf("%w: initial_driver requires a reconciled schema-version-2 Run", vaultregistry.ErrMalformed)
 	}
 	created, err := producer.Create(*wanted)
 	if !errors.Is(err, vaultregistry.ErrConflict) {

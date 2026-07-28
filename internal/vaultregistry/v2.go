@@ -50,6 +50,9 @@ func validateProducer(run Run, strictFrom int) error {
 		if err := validateV2Reader(run); err != nil {
 			return err
 		}
+		if run.WorkReference == nil {
+			return malformed("legacy schema-version-2 identity is read-only")
+		}
 		if len(run.Participants) != 0 || len(run.Lifecycle) != 0 || len(run.Evidence) != 0 {
 			return malformed("schema version 2 cannot produce version-1 histories")
 		}
@@ -133,11 +136,51 @@ func validRunIdentity(run Run) error {
 	if err := validID(run.RunID); err != nil {
 		return err
 	}
-	if !timestamp(run.InvokedAt) || !timestamp(run.UpdatedAt) ||
-		run.Task.ID == "" || run.Task.Title == "" || run.Task.Path == "" || run.Task.FeaturePath == "" || run.Task.Kind == "" {
+	if !timestamp(run.InvokedAt) || !timestamp(run.UpdatedAt) {
 		return malformed("invalid run identity")
 	}
+	if run.WorkReference == nil {
+		if run.Name != "" || run.RunKind != "" || run.State != "" || run.Stage != "" || run.RetiredAt != nil ||
+			run.Task.ID == "" || run.Task.Title == "" || run.Task.Path == "" || run.Task.FeaturePath == "" || run.Task.Kind == "" {
+			return malformed("invalid legacy run identity")
+		}
+		return nil
+	}
+	if err := validID(run.Name); err != nil {
+		return malformed("invalid run name")
+	}
+	work := run.WorkReference
+	if !oneOf(run.RunKind, RunKindScout, RunKindHunter) || run.Stage == "" ||
+		work.ID == "" || work.Title == "" || work.Path == "" || work.FeaturePath == "" || !oneOf(work.Kind, "issue", "task") ||
+		run.Task.ID != "" || run.Task.Title != "" || run.Task.Path != "" || run.Task.FeaturePath != "" || run.Task.Kind != "" {
+		return malformed("invalid reconciled run identity")
+	}
+	switch run.State {
+	case RunStateActive:
+		if run.RetiredAt != nil {
+			return malformed("active run has retired_at")
+		}
+	case RunStateRetired:
+		if run.RetiredAt == nil || !timestamp(*run.RetiredAt) {
+			return malformed("retired run requires retired_at")
+		}
+	default:
+		return malformed("invalid run state")
+	}
 	return nil
+}
+
+func validateInitialCreate(run Run, driver Observation) error {
+	if run.SchemaVersion != 2 || run.WorkReference == nil || run.Revision != 1 || run.State != RunStateActive || run.RetiredAt != nil || len(run.Observations) != 0 {
+		return malformed("reconciled create requires one separate initial driver")
+	}
+	if driver.Kind != KindRegisteredParticipant || driver.State != StateActive || driver.Payload.RegisteredParticipant == nil ||
+		driver.Payload.RegisteredParticipant.Role != "driver" {
+		return malformed("initial observation must be an active driver")
+	}
+	next := run
+	next.Observations = []Observation{driver}
+	return validateProducer(next, 0)
 }
 
 func validSession(session AgentSession) bool {

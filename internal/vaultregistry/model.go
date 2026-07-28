@@ -14,6 +14,7 @@ var (
 	ErrMalformed          = errors.New("malformed run")
 	ErrUnsupportedVersion = errors.New("unsupported schema version")
 	ErrInvalidID          = errors.New("invalid run id")
+	ErrAmbiguous          = errors.New("ambiguous run selector")
 	runIDPattern          = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 )
 
@@ -21,6 +22,22 @@ type Task struct {
 	ID, Title, Path, FeaturePath, Kind string
 	Unknown                            map[string]json.RawMessage
 }
+
+// WorkReference identifies runtime-neutral work without assigning workflow authority.
+type WorkReference struct {
+	ID, Title, Path, FeaturePath, Kind string
+	Unknown                            map[string]json.RawMessage
+}
+
+type RunKind string
+type RunState string
+
+const (
+	RunKindScout    RunKind  = "scout"
+	RunKindHunter   RunKind  = "hunter"
+	RunStateActive  RunState = "active"
+	RunStateRetired RunState = "retired"
+)
 
 type HerdrIdentity struct {
 	WorkspaceID, TabID, PaneID, TerminalID string
@@ -55,9 +72,15 @@ type Evidence struct {
 type Run struct {
 	SchemaVersion uint64
 	RunID         string
+	Name          string
+	RunKind       RunKind
+	WorkReference *WorkReference
 	Revision      uint64
+	State         RunState
+	Stage         string
 	InvokedAt     string
 	UpdatedAt     string
+	RetiredAt     *string
 	Task          Task
 	Participants  []Participant
 	Lifecycle     []Lifecycle
@@ -66,10 +89,17 @@ type Run struct {
 	Unknown       map[string]json.RawMessage
 }
 
+// CreateRequest is the one atomic schema-version-2 Run and driver transaction.
+type CreateRequest struct {
+	Run           Run
+	InitialDriver Observation
+}
+
 // ListFilter selects Runs by exact identity and an inclusive update-time range.
 type ListFilter struct {
 	TaskID           string        `json:"task_id,omitempty"`
 	FeaturePath      string        `json:"feature_path,omitempty"`
+	ParticipantID    string        `json:"participant_id,omitempty"`
 	AgentSession     *AgentSession `json:"agent_session,omitempty"`
 	UpdatedAtFrom    string        `json:"updated_at_from,omitempty"`
 	UpdatedAtThrough string        `json:"updated_at_through,omitempty"`
@@ -85,14 +115,28 @@ type TaskSummary struct {
 	Kind        string `json:"kind"`
 }
 
+// WorkReferenceSummary is the bounded work identity returned by ListSummaries.
+type WorkReferenceSummary struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Path        string `json:"path"`
+	FeaturePath string `json:"feature_path"`
+	Kind        string `json:"kind"`
+}
+
 // RunSummary excludes observation histories and unknown extension fields.
 type RunSummary struct {
-	SchemaVersion uint64      `json:"schema_version"`
-	RunID         string      `json:"run_id"`
-	Revision      uint64      `json:"revision"`
-	InvokedAt     string      `json:"invoked_at"`
-	UpdatedAt     string      `json:"updated_at"`
-	Task          TaskSummary `json:"task"`
+	SchemaVersion uint64                `json:"schema_version"`
+	RunID         string                `json:"run_id"`
+	Name          string                `json:"name,omitempty"`
+	RunKind       RunKind               `json:"run_kind,omitempty"`
+	Revision      uint64                `json:"revision"`
+	State         RunState              `json:"state,omitempty"`
+	Stage         string                `json:"stage,omitempty"`
+	InvokedAt     string                `json:"invoked_at"`
+	UpdatedAt     string                `json:"updated_at"`
+	Task          *TaskSummary          `json:"task,omitempty"`
+	WorkReference *WorkReferenceSummary `json:"work_reference,omitempty"`
 }
 
 func validID(id string) error {

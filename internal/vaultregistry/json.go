@@ -64,6 +64,23 @@ func (v *Task) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (v WorkReference) MarshalJSON() ([]byte, error) {
+	return marshalObject(v.Unknown, map[string]any{"id": v.ID, "title": v.Title, "path": v.Path, "feature_path": v.FeaturePath, "kind": v.Kind})
+}
+func (v *WorkReference) UnmarshalJSON(data []byte) error {
+	type wire struct {
+		ID, Title, Path, Kind string
+		FeaturePath           string `json:"feature_path"`
+	}
+	var w wire
+	if err := json.Unmarshal(data, &w); err != nil {
+		return err
+	}
+	v.ID, v.Title, v.Path, v.FeaturePath, v.Kind = w.ID, w.Title, w.Path, w.FeaturePath, w.Kind
+	v.Unknown, _ = unknownFields(data, "id", "title", "path", "feature_path", "kind")
+	return nil
+}
+
 func (v HerdrIdentity) MarshalJSON() ([]byte, error) {
 	return marshalObject(v.Unknown, map[string]any{"workspace_id": v.WorkspaceID, "tab_id": v.TabID, "pane_id": v.PaneID, "terminal_id": v.TerminalID})
 }
@@ -159,14 +176,24 @@ func (v *Evidence) UnmarshalJSON(data []byte) error {
 }
 
 func (v Run) MarshalJSON() ([]byte, error) {
-	known := map[string]any{"schema_version": v.SchemaVersion, "run_id": v.RunID, "revision": v.Revision, "invoked_at": v.InvokedAt, "updated_at": v.UpdatedAt, "task": v.Task}
+	known := map[string]any{"schema_version": v.SchemaVersion, "run_id": v.RunID, "revision": v.Revision, "invoked_at": v.InvokedAt, "updated_at": v.UpdatedAt}
 	if v.SchemaVersion == 2 {
 		observations := v.Observations
 		if observations == nil {
 			observations = []Observation{}
 		}
 		known["observations"] = observations
+		if v.WorkReference != nil {
+			known["name"], known["run_kind"], known["work_reference"] = v.Name, v.RunKind, v.WorkReference
+			known["state"], known["stage"] = v.State, v.Stage
+			if v.RetiredAt != nil {
+				known["retired_at"] = v.RetiredAt
+			}
+		} else {
+			known["task"] = v.Task
+		}
 	} else {
+		known["task"] = v.Task
 		known["participants"], known["lifecycle"], known["evidence"] = v.Participants, v.Lifecycle, v.Evidence
 	}
 	return marshalObject(v.Unknown, known)
@@ -175,10 +202,16 @@ func (v *Run) UnmarshalJSON(data []byte) error {
 	var w struct {
 		SchemaVersion uint64 `json:"schema_version"`
 		RunID         string `json:"run_id"`
+		Name          string
+		RunKind       RunKind         `json:"run_kind"`
+		WorkReference json.RawMessage `json:"work_reference"`
 		Revision      uint64
-		InvokedAt     string `json:"invoked_at"`
-		UpdatedAt     string `json:"updated_at"`
-		Task          Task
+		State         RunState
+		Stage         string
+		InvokedAt     string  `json:"invoked_at"`
+		UpdatedAt     string  `json:"updated_at"`
+		RetiredAt     *string `json:"retired_at"`
+		Task          json.RawMessage
 		Participants  []Participant
 		Lifecycle     []Lifecycle
 		Evidence      []Evidence
@@ -187,8 +220,24 @@ func (v *Run) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &w); err != nil {
 		return err
 	}
-	v.SchemaVersion, v.RunID, v.Revision, v.InvokedAt, v.UpdatedAt, v.Task = w.SchemaVersion, w.RunID, w.Revision, w.InvokedAt, w.UpdatedAt, w.Task
-	known := []string{"schema_version", "run_id", "revision", "invoked_at", "updated_at", "task"}
+	if len(w.Task) > 0 && len(w.WorkReference) > 0 {
+		return fmt.Errorf("task and work_reference are mutually exclusive")
+	}
+	v.SchemaVersion, v.RunID, v.Name, v.RunKind = w.SchemaVersion, w.RunID, w.Name, w.RunKind
+	v.Revision, v.State, v.Stage = w.Revision, w.State, w.Stage
+	v.InvokedAt, v.UpdatedAt, v.RetiredAt = w.InvokedAt, w.UpdatedAt, w.RetiredAt
+	if len(w.Task) > 0 {
+		if err := json.Unmarshal(w.Task, &v.Task); err != nil {
+			return err
+		}
+	}
+	if len(w.WorkReference) > 0 {
+		v.WorkReference = &WorkReference{}
+		if err := json.Unmarshal(w.WorkReference, v.WorkReference); err != nil {
+			return err
+		}
+	}
+	known := []string{"schema_version", "run_id", "name", "run_kind", "work_reference", "revision", "state", "stage", "invoked_at", "updated_at", "retired_at", "task"}
 	if w.SchemaVersion == 2 {
 		v.Participants, v.Lifecycle, v.Evidence = nil, nil, nil
 		if trimmed := bytes.TrimSpace(w.Observations); len(trimmed) == 0 || trimmed[0] != '[' {

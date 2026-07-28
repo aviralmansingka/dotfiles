@@ -26,12 +26,14 @@ func v2Run(id string, observations ...vaultregistry.Observation) vaultregistry.R
 	return vaultregistry.Run{
 		SchemaVersion: 2,
 		RunID:         id,
-		InvokedAt:     "2026-07-28T00:00:00Z",
-		UpdatedAt:     "2026-07-28T02:00:00Z",
-		Task: vaultregistry.Task{
+		Name:          id + "-run",
+		RunKind:       vaultregistry.RunKindHunter,
+		WorkReference: &vaultregistry.WorkReference{
 			ID: "T19", Title: "Structured observations", Path: "tasks/19.md",
 			FeaturePath: "features/vault-hunter-atlas.md", Kind: "task",
 		},
+		State: vaultregistry.RunStateActive, Stage: "invoked",
+		InvokedAt: "2026-07-28T00:00:00Z", UpdatedAt: "2026-07-28T02:00:00Z",
 		Observations: observations,
 	}
 }
@@ -146,11 +148,33 @@ func auditor(runID string, state vaultregistry.ObservationState, classification 
 	return o
 }
 
+func initialV2Driver(id string) vaultregistry.Observation {
+	driver := participant("driver-"+id, vaultregistry.StateActive, "driver-"+id)
+	driver.Payload.RegisteredParticipant.Role = "driver"
+	driver.Payload.RegisteredParticipant.AgentSession.Value = "driver-session-" + id
+	return driver
+}
+
+func createV2WithProducer(producer *vaultregistry.Producer, run vaultregistry.Run) (vaultregistry.Run, error) {
+	observations := run.Observations
+	run.Observations = nil
+	created, err := producer.CreateRun(vaultregistry.CreateRequest{Run: run, InitialDriver: initialV2Driver(run.RunID)})
+	if err != nil {
+		return vaultregistry.Run{}, err
+	}
+	for _, observation := range observations {
+		created, err = producer.AppendObservation(created.RunID, created.Revision, run.UpdatedAt, observation)
+		if err != nil {
+			return vaultregistry.Run{}, err
+		}
+	}
+	return created, nil
+}
+
 func createV2(t *testing.T, run vaultregistry.Run) (string, vaultregistry.Run, error) {
 	t.Helper()
 	root := t.TempDir()
-	producer := mustProducer(t, root)
-	created, err := producer.Create(run)
+	created, err := createV2WithProducer(mustProducer(t, root), run)
 	return root, created, err
 }
 
@@ -223,7 +247,7 @@ func TestT19V01KnownStateMatrix(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if created.Revision != 1 || len(created.Observations) == 0 {
+			if created.Revision != uint64(len(tc.run(id).Observations)+1) || len(created.Observations) != len(tc.run(id).Observations)+1 {
 				t.Fatalf("case %d did not round-trip: %#v", i, created)
 			}
 			read, err := mustReader(t, root).Get(id)
@@ -376,19 +400,32 @@ func TestT19V01RejectsCommonEnvelopeAndStateMatricesWithoutWrites(t *testing.T) 
 func assertRejectedCreateNoWrite(t *testing.T, run vaultregistry.Run, want error) {
 	t.Helper()
 	root := t.TempDir()
-	_, err := mustProducer(t, root).Create(run)
+	producer := mustProducer(t, root)
+	observations := run.Observations
+	run.Observations = nil
+	created, err := producer.CreateRun(vaultregistry.CreateRequest{Run: run, InitialDriver: initialV2Driver(run.RunID)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "runs", run.RunID+".json")
+	before := mustReadFile(t, path)
+	for _, observation := range observations {
+		created, err = producer.AppendObservation(created.RunID, created.Revision, run.UpdatedAt, observation)
+		if err != nil {
+			break
+		}
+		before = mustReadFile(t, path)
+	}
 	if !errors.Is(err, want) {
-		t.Fatalf("Create error = %v, want %v", err, want)
+		t.Fatalf("producer error = %v, want %v", err, want)
 	}
-	if _, statErr := os.Stat(filepath.Join(root, "runs", run.RunID+".json")); !errors.Is(statErr, os.ErrNotExist) {
-		t.Fatalf("rejected create wrote a Run: %v", statErr)
-	}
+	assertFileBytes(t, path, before)
 }
 
 func TestT19V01ObservationReplayConflictAndAtomicFailure(t *testing.T) {
 	root := t.TempDir()
 	producer := mustProducer(t, root)
-	created, err := producer.Create(v2Run("append-run"))
+	created, err := createV2WithProducer(producer, v2Run("append-run"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -494,13 +531,13 @@ func TestT19V01DurationAndRecursiveUnknownRetention(t *testing.T) {
 	run := v2Run("unknown-retention", o)
 	run.Unknown = unknown("run_v2_future", `{"kept":true}`)
 	run.Unknown["participants"] = json.RawMessage(`[{"future_participant":{"kept":true}}]`)
-	run.Task.Unknown = unknown("task_v2_future", `{"kept":true}`)
+	run.WorkReference.Unknown = unknown("work_v2_future", `{"kept":true}`)
 	root, _, err := createV2(t, run)
 	if err != nil {
 		t.Fatal(err)
 	}
 	data := mustReadFile(t, filepath.Join(root, "runs", run.RunID+".json"))
-	for _, marker := range []string{"observation_future", "session_future", "identity_future", "payload_future", "attempt_future", "attempt_identity_future", "manifest_future", "value_future", "detail_future", "run_v2_future", "future_participant", "task_v2_future"} {
+	for _, marker := range []string{"observation_future", "session_future", "identity_future", "payload_future", "attempt_future", "attempt_identity_future", "manifest_future", "value_future", "detail_future", "run_v2_future", "future_participant", "work_v2_future"} {
 		if !bytes.Contains(data, []byte(`"`+marker+`"`)) {
 			t.Errorf("lost recursive unknown field %q", marker)
 		}
@@ -542,6 +579,7 @@ func TestT19V01ReaderIsForwardReadableWhileProducerStaysStrict(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(root, "runs"), 0700); err != nil {
 		t.Fatal(err)
 	}
+	mustRegistryLock(t, root)
 	data, err := json.Marshal(run)
 	if err != nil {
 		t.Fatal(err)

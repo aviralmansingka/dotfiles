@@ -251,3 +251,110 @@ func TestListErrorEmitsNoPartialOutput(t *testing.T) {
 		t.Fatalf("list error emitted partial output %q", output.String())
 	}
 }
+
+func TestT20V02ReaderAdapterSelectorsAndParticipantFilter(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "runs"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"t20-v02-version-1.json", "t20-v02-reconciled-version-2.json"} {
+		data, err := os.ReadFile(filepath.Join("../../scripts/fixtures/vault-hunter-registry-v2", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var identity struct {
+			RunID string `json:"run_id"`
+		}
+		if err := json.Unmarshal(data, &identity); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, "runs", identity.RunID+".json"), data, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "registry.lock"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	var exact bytes.Buffer
+	if err := serve(bytes.NewBufferString(`{"action":"get","root":"`+root+`","run_id":"shared-selector"}`), &exact); err != nil {
+		t.Fatal(err)
+	}
+	var run vaultregistry.Run
+	if err := json.Unmarshal(exact.Bytes(), &run); err != nil || run.RunID != "t20-v02-reconciled-version-2" {
+		t.Fatalf("name get = %#v, %v", run, err)
+	}
+
+	var listed bytes.Buffer
+	input := `{"action":"list","root":"` + root + `","filter":{"participant_id":"v1-driver","agent_session":{"source":"pi","kind":"session","value":"v1-session"}}}`
+	if err := serve(bytes.NewBufferString(input), &listed); err != nil {
+		t.Fatal(err)
+	}
+	var summaries []vaultregistry.RunSummary
+	if err := json.Unmarshal(listed.Bytes(), &summaries); err != nil || len(summaries) != 1 || summaries[0].RunID != "t20-v02-version-1" {
+		t.Fatalf("filtered list = %#v, %v", summaries, err)
+	}
+}
+
+func TestT20V01AtomicCreateAdapter(t *testing.T) {
+	fixture, err := os.ReadFile("../../scripts/fixtures/vault-hunter-registry-v2/t20-v01-hunter-create.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var request map[string]any
+	if err := json.Unmarshal(fixture, &request); err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	request["action"], request["root"] = "create", root
+	encode := func(value any) []byte {
+		data, err := json.Marshal(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return data
+	}
+
+	var first bytes.Buffer
+	if err := serve(bytes.NewReader(encode(request)), &first); err != nil {
+		t.Fatal(err)
+	}
+	golden, err := os.ReadFile("../../scripts/goldens/vault-hunter-registry-v2/t20-v01-hunter-response.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first.Bytes(), golden) {
+		t.Fatalf("response differs from golden\nactual: %s\ngolden: %s", first.Bytes(), golden)
+	}
+	path := filepath.Join(root, "runs", "run-hunter-043.json")
+	stable, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var replay bytes.Buffer
+	if err := serve(bytes.NewReader(encode(request)), &replay); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := os.ReadFile(path)
+	if !bytes.Equal(replay.Bytes(), golden) || !bytes.Equal(after, stable) {
+		t.Fatal("adapter replay wrote bytes or changed response")
+	}
+
+	conflict := map[string]any{}
+	if err := json.Unmarshal(encode(request), &conflict); err != nil {
+		t.Fatal(err)
+	}
+	driver := conflict["initial_driver"].(map[string]any)
+	payload := driver["payload"].(map[string]any)
+	participant := payload["registered_participant"].(map[string]any)
+	participant["participant_id"] = "different-driver"
+	var output bytes.Buffer
+	if err := serve(bytes.NewReader(encode(conflict)), &output); !errors.Is(err, vaultregistry.ErrConflict) {
+		t.Fatalf("conflicting adapter replay error = %v, want ErrConflict", err)
+	}
+	after, _ = os.ReadFile(path)
+	if output.Len() != 0 || !bytes.Equal(after, stable) {
+		t.Fatal("failed adapter create emitted output or changed Run bytes")
+	}
+}

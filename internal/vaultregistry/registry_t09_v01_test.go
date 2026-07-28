@@ -102,7 +102,7 @@ func TestT09V01ListSummariesValidatesActiveRecordsBeforeFiltering(t *testing.T) 
 		want error
 	}{
 		{name: "broken", data: []byte("{not-json\n"), want: vaultregistry.ErrMalformed},
-		{name: "future", data: []byte("{\"schema_version\":2}\n"), want: vaultregistry.ErrUnsupportedVersion},
+		{name: "future", data: []byte("{\"schema_version\":2}\n"), want: vaultregistry.ErrMalformed},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

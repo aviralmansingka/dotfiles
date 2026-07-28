@@ -220,10 +220,6 @@ func mustReader(t *testing.T, root string) *vaultregistry.Reader {
 }
 
 func TestT01V02ClassifiedReadsPreserveBytes(t *testing.T) {
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "runs"), 0700); err != nil {
-		t.Fatal(err)
-	}
 	cases := []struct {
 		id   string
 		data []byte
@@ -234,12 +230,17 @@ func TestT01V02ClassifiedReadsPreserveBytes(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.id, func(t *testing.T) {
+			root := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(root, "runs"), 0700); err != nil {
+				t.Fatal(err)
+			}
 			assertClassifiedRead(t, root, tc.id, tc.data, tc.want)
 		})
 	}
 }
 
 func assertClassifiedRead(t *testing.T, root, id string, data []byte, want error) {
+	mustRegistryLock(t, root)
 	path := filepath.Join(root, "runs", id+".json")
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)

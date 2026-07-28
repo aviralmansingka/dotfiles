@@ -1,0 +1,42 @@
+{
+  "run": {
+    "schema_version": 2,
+    "run_id": "run-scout-043",
+    "name": "atlas-scout-cutover",
+    "run_kind": "scout",
+    "work_reference": {
+      "id": "I18",
+      "title": "Explore Atlas cutover",
+      "path": "1_projects/pi-agent/issues/18-explore-atlas-cutover.md",
+      "feature_path": "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md",
+      "kind": "issue"
+    },
+    "revision": 0,
+    "state": "active",
+    "stage": "invoked",
+    "invoked_at": "2026-07-29T12:00:00Z",
+    "updated_at": "2026-07-29T12:00:00Z",
+    "observations": []
+  },
+  "initial_driver": {
+    "observation_id": "driver-registered",
+    "kind": "registered_participant",
+    "state": "active",
+    "goal_id": "G01",
+    "title": "Scout driver registered",
+    "summary": "The Scout driver has custody of this Run.",
+    "observed_at": "2026-07-29T12:00:00Z",
+    "correlation_id": "run-scout-043",
+    "actor": {"kind": "participant", "id": "driver-scout"},
+    "source": {"kind": "producer", "id": "registry-v2"},
+    "redaction_class": "internal",
+    "started_at": "2026-07-29T12:00:00Z",
+    "payload": {
+      "registered_participant": {
+        "participant_id": "driver-scout",
+        "role": "driver",
+        "agent_session": {"source": "pi", "kind": "session", "value": "session-scout"}
+      }
+    }
+  }
+}
