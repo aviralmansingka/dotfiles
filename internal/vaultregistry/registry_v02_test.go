@@ -240,6 +240,7 @@ func TestT01V02ClassifiedReadsPreserveBytes(t *testing.T) {
 }
 
 func assertClassifiedRead(t *testing.T, root, id string, data []byte, want error) {
+	mustRegistryLock(t, root)
 	path := filepath.Join(root, "runs", id+".json")
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)

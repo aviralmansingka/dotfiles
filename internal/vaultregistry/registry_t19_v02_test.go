@@ -31,6 +31,7 @@ func installV02Fixture(t *testing.T, name string) (string, string) {
 	if err := os.Mkdir(filepath.Join(root, "runs"), 0700); err != nil {
 		t.Fatal(err)
 	}
+	mustRegistryLock(t, root)
 	path := filepath.Join(root, "runs", identity.RunID+".json")
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)
@@ -174,6 +175,7 @@ func TestT19V02ProducerRejectsMalformedKnownHistoryWithoutWriting(t *testing.T) 
 	if err := os.Mkdir(filepath.Join(root, "runs"), 0700); err != nil {
 		t.Fatal(err)
 	}
+	mustRegistryLock(t, root)
 	malformed := attempt("malformed-active", vaultregistry.StateActive, "malformed-attempt")
 	malformed.FinishedAt = strptr(v2Finish)
 	run := v2Run("t19-v02-malformed-history", malformed)

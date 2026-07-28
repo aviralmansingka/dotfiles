@@ -579,6 +579,7 @@ func TestT19V01ReaderIsForwardReadableWhileProducerStaysStrict(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(root, "runs"), 0700); err != nil {
 		t.Fatal(err)
 	}
+	mustRegistryLock(t, root)
 	data, err := json.Marshal(run)
 	if err != nil {
 		t.Fatal(err)

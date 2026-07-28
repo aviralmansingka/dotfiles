@@ -126,7 +126,7 @@ type RunSummary struct {
 	Stage         string         `json:"stage,omitempty"`
 	InvokedAt     string         `json:"invoked_at"`
 	UpdatedAt     string         `json:"updated_at"`
-	Task          TaskSummary    `json:"task"`
+	Task          *TaskSummary   `json:"task,omitempty"`
 	WorkReference *WorkReference `json:"work_reference,omitempty"`
 }
 

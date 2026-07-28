@@ -371,7 +371,20 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 	retiredExists := retiredErr == nil
 
 	if activeExists && retiredExists {
-		return Run{}, fmt.Errorf("%w: active and retired records both exist", ErrConflict)
+		active, activeLoadErr := loadProducer(activePath, runID)
+		retired, retiredLoadErr := loadProducer(retiredPath, runID)
+		if activeLoadErr != nil || retiredLoadErr != nil || !sameRetirement(active, retired, expectedRevision) {
+			return Run{}, fmt.Errorf("%w: active and retired records both exist", ErrConflict)
+		}
+		// A crash can leave the durable retired record beside the still-valid
+		// active record. Exact replay completes that one safe intermediate state.
+		if err := retireRemove(activePath); err != nil {
+			return Run{}, err
+		}
+		if err := retireSyncDirectory(filepath.Dir(activePath)); err != nil {
+			return Run{}, err
+		}
+		return clone(retired)
 	}
 	if !activeExists {
 		if !retiredExists {
@@ -437,29 +450,18 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 		return Run{}, err
 	}
 
-	activeDir, err := os.Open(filepath.Join(p.root, "runs"))
-	if err != nil {
-		if createdRetiredDir {
-			_ = os.Remove(retiredDir)
-		}
-		return Run{}, err
-	}
-	defer func() { _ = activeDir.Close() }()
-	retiredDirFile, err := os.Open(retiredDir)
-	if err != nil {
-		if createdRetiredDir {
-			_ = os.Remove(retiredDir)
-		}
-		return Run{}, err
-	}
-	defer func() { _ = retiredDirFile.Close() }()
-
 	if active.SchemaVersion == 2 {
-		if err := p.write(result); err != nil {
+		if err := retireV2(activePath, retiredPath, result); err != nil {
+			if createdRetiredDir {
+				_ = os.Remove(retiredDir)
+			}
 			return Run{}, err
 		}
+		return clone(result)
 	}
-	if err := renameNoReplace(activePath, retiredPath); err != nil {
+
+	// Schema v1 keeps the historical byte- and inode-preserving move contract.
+	if err := retireRename(activePath, retiredPath); err != nil {
 		if createdRetiredDir {
 			_ = os.Remove(retiredDir)
 		}
@@ -468,12 +470,59 @@ func (p *Producer) Retire(runID string, expectedRevision uint64) (Run, error) {
 		}
 		return Run{}, err
 	}
-	activeSyncErr := activeDir.Sync()
-	retiredSyncErr := retiredDirFile.Sync()
-	if err := errors.Join(activeSyncErr, retiredSyncErr); err != nil {
+	if err := errors.Join(retireSyncDirectory(filepath.Dir(activePath)), retireSyncDirectory(retiredDir)); err != nil {
 		return Run{}, err
 	}
 	return clone(result)
+}
+
+// retireV2 commits the retired bytes before removing the active bytes. The
+// crash states are therefore active-only, both (recovered by exact Retire
+// replay), or retired-only; a Run is never absent from both namespaces and an
+// active path never contains retired-state bytes. Ordinary pre-remove failures
+// roll back the retired record. A post-remove active-directory sync failure is
+// replayable because the retired directory was already synced.
+func retireV2(activePath, retiredPath string, result Run) error {
+	data, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	retiredDir := filepath.Dir(retiredPath)
+	tmp, err := retireWriteTemp(retiredDir, data)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(tmp) }()
+	if err := retireRename(tmp, retiredPath); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return fmt.Errorf("%w: retired destination collision: %v", ErrConflict, err)
+		}
+		return err
+	}
+	rollback := func(cause error) error {
+		removeErr := os.Remove(retiredPath)
+		syncErr := retireSyncDirectory(retiredDir)
+		return errors.Join(cause, removeErr, syncErr)
+	}
+	if err := retireSyncDirectory(retiredDir); err != nil {
+		return rollback(err)
+	}
+	if err := retireRemove(activePath); err != nil {
+		return rollback(err)
+	}
+	return retireSyncDirectory(filepath.Dir(activePath))
+}
+
+func sameRetirement(active, retired Run, expectedRevision uint64) bool {
+	if active.SchemaVersion != 2 || active.State != RunStateActive || active.Revision != expectedRevision ||
+		retired.SchemaVersion != 2 || retired.State != RunStateRetired || retired.Revision != expectedRevision+1 ||
+		retired.RetiredAt == nil || retired.UpdatedAt != *retired.RetiredAt {
+		return false
+	}
+	active.Revision, active.State = retired.Revision, retired.State
+	active.UpdatedAt, active.RetiredAt = retired.UpdatedAt, retired.RetiredAt
+	return equalJSON(active, retired)
 }
 
 func retirementTimestamp(updatedAt string) string {
@@ -502,6 +551,14 @@ func (r *Reader) resolve(namespace, selector string) (Run, error) {
 	if err := validID(selector); err != nil {
 		return Run{}, err
 	}
+	unlock, empty, err := r.lock()
+	if err != nil {
+		return Run{}, err
+	}
+	if empty {
+		return Run{}, fmt.Errorf("%w: %s", ErrNotFound, selector)
+	}
+	defer unlock()
 	entries, err := os.ReadDir(filepath.Join(r.root, namespace))
 	if errors.Is(err, os.ErrNotExist) {
 		return Run{}, fmt.Errorf("%w: %s", ErrNotFound, selector)
@@ -710,7 +767,7 @@ func sameAgentSession(got, wanted AgentSession) bool {
 }
 
 func summarize(run Run) RunSummary {
-	return RunSummary{
+	summary := RunSummary{
 		SchemaVersion: run.SchemaVersion,
 		RunID:         run.RunID,
 		Name:          run.Name,
@@ -721,14 +778,14 @@ func summarize(run Run) RunSummary {
 		InvokedAt:     run.InvokedAt,
 		UpdatedAt:     run.UpdatedAt,
 		WorkReference: run.WorkReference,
-		Task: TaskSummary{
-			ID:          run.Task.ID,
-			Title:       run.Task.Title,
-			Path:        run.Task.Path,
-			FeaturePath: run.Task.FeaturePath,
-			Kind:        run.Task.Kind,
-		},
 	}
+	if run.WorkReference == nil {
+		summary.Task = &TaskSummary{
+			ID: run.Task.ID, Title: run.Task.Title, Path: run.Task.Path,
+			FeaturePath: run.Task.FeaturePath, Kind: run.Task.Kind,
+		}
+	}
+	return summary
 }
 
 func (p *Producer) path(id string) string { return filepath.Join(p.root, "runs", id+".json") }
@@ -761,34 +818,41 @@ func (r *Reader) lock() (func(), bool, error) {
 	lockPath := filepath.Join(r.root, "registry.lock")
 	f, err := os.Open(lockPath)
 	if errors.Is(err, os.ErrNotExist) {
-		runs, openErr := os.Open(filepath.Join(r.root, "runs"))
-		if errors.Is(openErr, os.ErrNotExist) {
-			return nil, true, nil
-		}
-		if openErr != nil {
-			return nil, false, openErr
-		}
-		_, readErr := runs.Readdirnames(1)
-		closeErr := runs.Close()
-		if errors.Is(readErr, io.EOF) {
-			if closeErr != nil {
-				return nil, false, closeErr
+		for _, namespace := range []string{"runs", "retired"} {
+			empty, checkErr := directoryEmpty(filepath.Join(r.root, namespace))
+			if checkErr != nil {
+				return nil, false, checkErr
 			}
-			return nil, true, nil
+			if !empty {
+				return nil, false, fmt.Errorf("%w: %s: missing Registry lock", ErrMalformed, lockPath)
+			}
 		}
-		if readErr != nil {
-			return nil, false, readErr
-		}
-		if closeErr != nil {
-			return nil, false, closeErr
-		}
-		return nil, false, fmt.Errorf("%w: %s: missing Registry lock", ErrMalformed, lockPath)
+		return nil, true, nil
 	}
 	if err != nil {
 		return nil, false, err
 	}
 	unlock, err := flock(f, syscall.LOCK_SH)
 	return unlock, false, err
+}
+
+func directoryEmpty(path string) (bool, error) {
+	dir, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	_, readErr := dir.Readdirnames(1)
+	closeErr := dir.Close()
+	if errors.Is(readErr, io.EOF) {
+		return true, closeErr
+	}
+	if readErr != nil {
+		return false, readErr
+	}
+	return false, closeErr
 }
 
 func flock(f *os.File, mode int) (func(), error) {
@@ -803,6 +867,14 @@ func flock(f *os.File, mode int) (func(), error) {
 }
 
 var createRename = renameNoReplace
+
+// Retirement hooks make every persistence boundary deterministic in tests.
+var (
+	retireWriteTemp     = writeTemp
+	retireRename        = renameNoReplace
+	retireSyncDirectory = syncCreateDirectory
+	retireRemove        = os.Remove
+)
 
 var syncCreateDirectory = func(path string) error {
 	dir, err := os.Open(path)
