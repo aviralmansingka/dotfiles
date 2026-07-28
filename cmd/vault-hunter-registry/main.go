@@ -23,9 +23,10 @@ var errMalformedRequest = errors.New("malformed request")
 // optional on every action and resolves through the Registry's normal state
 // directory rules when omitted.
 type createRequest struct {
-	Action string             `json:"action"`
-	Root   string             `json:"root,omitempty"`
-	Run    *vaultregistry.Run `json:"run"`
+	Action        string                     `json:"action"`
+	Root          string                     `json:"root,omitempty"`
+	Run           *vaultregistry.Run         `json:"run"`
+	InitialDriver *vaultregistry.Observation `json:"initial_driver,omitempty"`
 }
 
 type getRequest struct {
@@ -100,7 +101,7 @@ func serve(input io.Reader, output io.Writer) error {
 		if openErr != nil {
 			return openErr
 		}
-		response, err = create(producer, req.Run)
+		response, err = create(producer, req.Run, req.InitialDriver)
 	case getRequest:
 		reader, openErr := vaultregistry.OpenReader(req.Root)
 		if openErr != nil {
@@ -263,9 +264,22 @@ func malformedRequest(err error) error {
 	return fmt.Errorf("%w: %v", errMalformedRequest, err)
 }
 
-func create(producer *vaultregistry.Producer, wanted *vaultregistry.Run) (vaultregistry.Run, error) {
+func create(producer *vaultregistry.Producer, wanted *vaultregistry.Run, drivers ...*vaultregistry.Observation) (vaultregistry.Run, error) {
 	if wanted == nil {
 		return vaultregistry.Run{}, errors.New("create requires run")
+	}
+	var driver *vaultregistry.Observation
+	if len(drivers) > 0 {
+		driver = drivers[0]
+	}
+	if wanted.WorkReference != nil {
+		if driver == nil {
+			return vaultregistry.Run{}, fmt.Errorf("%w: reconciled create requires initial_driver", vaultregistry.ErrMalformed)
+		}
+		return producer.CreateRun(vaultregistry.CreateRequest{Run: *wanted, InitialDriver: *driver})
+	}
+	if driver != nil {
+		return vaultregistry.Run{}, fmt.Errorf("%w: initial_driver requires a reconciled schema-version-2 Run", vaultregistry.ErrMalformed)
 	}
 	created, err := producer.Create(*wanted)
 	if !errors.Is(err, vaultregistry.ErrConflict) {

@@ -105,6 +105,9 @@ func OpenReader(root string) (*Reader, error) {
 }
 
 func (p *Producer) Create(run Run) (Run, error) {
+	if run.WorkReference != nil {
+		return Run{}, fmt.Errorf("%w: reconciled schema-version-2 Runs require CreateRun", ErrMalformed)
+	}
 	if run.Revision != 0 {
 		return Run{}, fmt.Errorf("%w: create revision must be zero", ErrMalformed)
 	}
@@ -131,6 +134,87 @@ func (p *Producer) Create(run Run) (Run, error) {
 		return Run{}, err
 	}
 	return clone(run)
+}
+
+// CreateRun atomically persists one reconciled schema-version-2 Run and its
+// initial driver. Exact identity-and-driver replay is a no-write success.
+func (p *Producer) CreateRun(request CreateRequest) (Run, error) {
+	run := request.Run
+	if run.Revision != 0 {
+		return Run{}, fmt.Errorf("%w: create revision must be zero", ErrMalformed)
+	}
+	run.Revision = 1
+	if err := validateInitialCreate(run, request.InitialDriver); err != nil {
+		return Run{}, err
+	}
+	unlock, err := p.lock()
+	if err != nil {
+		return Run{}, err
+	}
+	defer unlock()
+
+	var reserved []string
+	for _, path := range []string{p.path(run.RunID), p.retiredPath(run.RunID)} {
+		if _, err := os.Lstat(path); err == nil {
+			reserved = append(reserved, path)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return Run{}, err
+		}
+	}
+	if len(reserved) > 1 {
+		return Run{}, fmt.Errorf("%w: run ID exists in active and retired namespaces", ErrConflict)
+	}
+	if len(reserved) == 1 {
+		existing, err := loadProducer(reserved[0], run.RunID)
+		if err != nil {
+			return Run{}, err
+		}
+		if sameCreateReplay(existing, run, request.InitialDriver) {
+			return clone(existing)
+		}
+		return Run{}, fmt.Errorf("%w: run identity or initial driver differs", ErrConflict)
+	}
+	if err := p.reserveName(run.Name, run.RunID); err != nil {
+		return Run{}, err
+	}
+	run.Observations = []Observation{request.InitialDriver}
+	if err := p.writeCreate(run); err != nil {
+		return Run{}, err
+	}
+	return clone(run)
+}
+
+func sameCreateReplay(existing, wanted Run, driver Observation) bool {
+	return existing.SchemaVersion == wanted.SchemaVersion && existing.RunID == wanted.RunID && existing.Name == wanted.Name &&
+		existing.RunKind == wanted.RunKind && existing.InvokedAt == wanted.InvokedAt && equalJSON(existing.WorkReference, wanted.WorkReference) &&
+		len(existing.Observations) > 0 && equalJSON(existing.Observations[0], driver)
+}
+
+func (p *Producer) reserveName(name, runID string) error {
+	for _, namespace := range []string{"runs", "retired"} {
+		dir := filepath.Join(p.root, namespace)
+		entries, err := os.ReadDir(dir)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+				continue
+			}
+			id := strings.TrimSuffix(entry.Name(), ".json")
+			existing, err := load(filepath.Join(dir, entry.Name()), id)
+			if err != nil {
+				return err
+			}
+			if existing.RunID != runID && existing.Name == name {
+				return fmt.Errorf("%w: run name is reserved", ErrConflict)
+			}
+		}
+	}
+	return nil
 }
 
 func (p *Producer) Update(runID string, expectedRevision uint64, mutate func(*Run) error) (Run, error) {
@@ -212,8 +296,8 @@ func (p *Producer) updateLocked(runID string, expectedRevision uint64, mutate fu
 
 func validateUpdate(current, next Run) error {
 	scalarsChanged := next.SchemaVersion != current.SchemaVersion ||
-		next.RunID != current.RunID || next.Revision != current.Revision ||
-		next.InvokedAt != current.InvokedAt || !equalJSON(current.Task, next.Task)
+		next.RunID != current.RunID || next.Name != current.Name || next.RunKind != current.RunKind || next.Revision != current.Revision ||
+		next.InvokedAt != current.InvokedAt || !equalJSON(current.Task, next.Task) || !equalJSON(current.WorkReference, next.WorkReference)
 	unknownChanged := len(current.Unknown) > 0 && !equalJSON(current.Unknown, next.Unknown)
 	if current.SchemaVersion == 2 {
 		unknownChanged = !equalJSON(current.Unknown, next.Unknown)
@@ -638,6 +722,46 @@ func flock(f *os.File, mode int) (func(), error) {
 		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
 		_ = f.Close()
 	}, nil
+}
+
+var createRename = renameNoReplace
+
+var syncCreateDirectory = func(path string) error {
+	dir, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	if err = dir.Sync(); err != nil {
+		_ = dir.Close()
+		return err
+	}
+	return dir.Close()
+}
+
+func (p *Producer) writeCreate(run Run) error {
+	data, err := json.Marshal(run)
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	dir := filepath.Join(p.root, "runs")
+	name, err := writeTemp(dir, data)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(name) }()
+	if err := createRename(name, p.path(run.RunID)); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return fmt.Errorf("%w: run ID is reserved", ErrConflict)
+		}
+		return err
+	}
+	if err := syncCreateDirectory(dir); err != nil {
+		_ = os.Remove(p.path(run.RunID))
+		_ = syncCreateDirectory(dir)
+		return err
+	}
+	return nil
 }
 
 func (p *Producer) write(run Run) error {

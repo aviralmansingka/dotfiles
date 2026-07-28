@@ -22,6 +22,22 @@ type Task struct {
 	Unknown                            map[string]json.RawMessage
 }
 
+// WorkReference identifies runtime-neutral work without assigning workflow authority.
+type WorkReference struct {
+	ID, Title, Path, FeaturePath, Kind string
+	Unknown                            map[string]json.RawMessage
+}
+
+type RunKind string
+type RunState string
+
+const (
+	RunKindScout    RunKind  = "scout"
+	RunKindHunter   RunKind  = "hunter"
+	RunStateActive  RunState = "active"
+	RunStateRetired RunState = "retired"
+)
+
 type HerdrIdentity struct {
 	WorkspaceID, TabID, PaneID, TerminalID string
 	Unknown                                map[string]json.RawMessage
@@ -55,15 +71,27 @@ type Evidence struct {
 type Run struct {
 	SchemaVersion uint64
 	RunID         string
+	Name          string
+	RunKind       RunKind
+	WorkReference *WorkReference
 	Revision      uint64
+	State         RunState
+	Stage         string
 	InvokedAt     string
 	UpdatedAt     string
+	RetiredAt     *string
 	Task          Task
 	Participants  []Participant
 	Lifecycle     []Lifecycle
 	Evidence      []Evidence
 	Observations  []Observation
 	Unknown       map[string]json.RawMessage
+}
+
+// CreateRequest is the one atomic schema-version-2 Run and driver transaction.
+type CreateRequest struct {
+	Run           Run
+	InitialDriver Observation
 }
 
 // ListFilter selects Runs by exact identity and an inclusive update-time range.

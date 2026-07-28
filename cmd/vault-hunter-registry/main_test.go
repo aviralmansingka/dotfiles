@@ -251,3 +251,66 @@ func TestListErrorEmitsNoPartialOutput(t *testing.T) {
 		t.Fatalf("list error emitted partial output %q", output.String())
 	}
 }
+
+func TestT20V01AtomicCreateAdapter(t *testing.T) {
+	fixture, err := os.ReadFile("../../scripts/fixtures/vault-hunter-registry-v2/t20-v01-hunter-create.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var request map[string]any
+	if err := json.Unmarshal(fixture, &request); err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	request["action"], request["root"] = "create", root
+	encode := func(value any) []byte {
+		data, err := json.Marshal(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return data
+	}
+
+	var first bytes.Buffer
+	if err := serve(bytes.NewReader(encode(request)), &first); err != nil {
+		t.Fatal(err)
+	}
+	golden, err := os.ReadFile("../../scripts/goldens/vault-hunter-registry-v2/t20-v01-hunter-response.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first.Bytes(), golden) {
+		t.Fatalf("response differs from golden\nactual: %s\ngolden: %s", first.Bytes(), golden)
+	}
+	path := filepath.Join(root, "runs", "run-hunter-043.json")
+	stable, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var replay bytes.Buffer
+	if err := serve(bytes.NewReader(encode(request)), &replay); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := os.ReadFile(path)
+	if !bytes.Equal(replay.Bytes(), golden) || !bytes.Equal(after, stable) {
+		t.Fatal("adapter replay wrote bytes or changed response")
+	}
+
+	conflict := map[string]any{}
+	if err := json.Unmarshal(encode(request), &conflict); err != nil {
+		t.Fatal(err)
+	}
+	driver := conflict["initial_driver"].(map[string]any)
+	payload := driver["payload"].(map[string]any)
+	participant := payload["registered_participant"].(map[string]any)
+	participant["participant_id"] = "different-driver"
+	var output bytes.Buffer
+	if err := serve(bytes.NewReader(encode(conflict)), &output); !errors.Is(err, vaultregistry.ErrConflict) {
+		t.Fatalf("conflicting adapter replay error = %v, want ErrConflict", err)
+	}
+	after, _ = os.ReadFile(path)
+	if output.Len() != 0 || !bytes.Equal(after, stable) {
+		t.Fatal("failed adapter create emitted output or changed Run bytes")
+	}
+}
