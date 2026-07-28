@@ -97,8 +97,9 @@ After all verifiers first pass:
    terminal screenshot in addition to semantic assertions and transcripts.
 5. Open or update the implementation PR with `## Verifiers` and `## Evidence`, mapping every artifact to a stable
    verifier and reviewed commit/tree. Do not bypass required human merge approval.
-6. After merge, verify the fetched merged ref, record post-merge evidence, clean only Run-owned resources, and use
-   `$vault-hunter-checkpoint` to complete the Task and backlog on vault `main`.
+6. After merge, record the merged PR and commit identity, clean only Run-owned resources, and use
+   `$vault-hunter-checkpoint` to complete the Task and backlog on vault `main`. Verify the merged ref only when the Task
+   explicitly declares a post-merge verifier or the user requests it.
 
 Use `atlas` for Run status when available. Until Atlas reaches parity, `$vault-hunter-status` is a read-only
 compatibility surface. Neither status path may accept evidence or advance work.
