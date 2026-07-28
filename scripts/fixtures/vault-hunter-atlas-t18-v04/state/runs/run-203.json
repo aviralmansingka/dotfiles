@@ -57,7 +57,7 @@
           "exit_status": 0,
           "result_manifest": {
             "path": "manifests/attempt-203.json",
-            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "sha256": "57dfd7d68db1d4c7e5a17e789278f88f4999d7e9991d28231b9642e4dfc5412a",
             "media_type": "application/json",
             "authenticated": true
           }
@@ -129,7 +129,7 @@
           "exit_status": 0,
           "result_manifest": {
             "path": "manifests/attempt-204.json",
-            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "sha256": "9d09c6f4f6264656b4b8ed5589c0a224e8a301ffaaa99c94faf88707895809f4",
             "media_type": "application/json",
             "authenticated": true
           }

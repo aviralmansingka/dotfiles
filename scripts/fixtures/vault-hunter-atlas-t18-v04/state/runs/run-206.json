@@ -57,7 +57,7 @@
           "exit_status": 0,
           "result_manifest": {
             "path": "manifests/attempt-shared.json",
-            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "sha256": "f9a34dd6e1323773f074fba8a440057dde393bad37993953c0602ff3af82a1c3",
             "media_type": "application/json",
             "authenticated": true
           }

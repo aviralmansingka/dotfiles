@@ -400,7 +400,7 @@ def main():
             100,
             30,
             [
-                {"name": "initial", "wait_for": b"selected recorded observation", "send": b"g"},
+                {"name": "initial", "wait_for": b"g/G first/last", "send": b"g"},
                 {"name": "first", "wait_for": b"checkpoint-one", "send": b"e"},
                 {"name": "evidence", "wait_for": b"scripts/verify-vault-hunter-atlas T08.V01", "send": b"\r"},
                 {"name": "collapsed", "wait_for": b"g/G first/last", "require_growth": True},
