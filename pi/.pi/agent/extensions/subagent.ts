@@ -94,6 +94,16 @@ interface Details {
 	results: AgentResult[];
 }
 
+interface BackgroundUpdate {
+	toolCallId: string;
+	result: AgentResult;
+	done: boolean;
+}
+
+const BACKGROUND_UPDATE_EVENT = "subagent:background-update";
+const BACKGROUND_RESULT_MESSAGE = "subagent-background-result";
+const DEFAULT_COMMAND_SUMMARY_LIMIT = 10;
+
 // ── Config ─────────────────────────────────────────────────────────────
 
 interface ExtensionConfig {
@@ -1135,6 +1145,20 @@ function countShellCommands(r: AgentResult): number {
 	return count;
 }
 
+type CommandWindow = { skip: number; remaining: number };
+
+function recentCommands(commands: string[], window: CommandWindow | undefined): string[] {
+	if (!window) return commands;
+	if (window.skip >= commands.length) {
+		window.skip -= commands.length;
+		return [];
+	}
+	const visible = commands.slice(window.skip, window.skip + window.remaining);
+	window.skip = 0;
+	window.remaining -= visible.length;
+	return visible;
+}
+
 function connectedSummaryMessage(r: AgentResult, status: AgentProgress["status"]): string {
 	if (status === "pending") return QUEUED_MESSAGE;
 	if (status === "running") return RUNNING_MESSAGE;
@@ -1185,6 +1209,7 @@ function renderConnectedTool(
 	treeRunning: boolean,
 	thinkingVisible: boolean,
 	now: number,
+	commandWindow?: CommandWindow,
 ): void {
 	const shellCommands = tool.shellCommands ?? extractShellCommands(tool.tool, { command: tool.args }) ?? [];
 	const running = tool.status === "running";
@@ -1210,7 +1235,7 @@ function renderConnectedTool(
 	);
 
 	const childPrefix = prefix + (isLast ? "   " : "│  ");
-	const visibleCommands = detailVisible ? shellCommands : [];
+	const visibleCommands = detailVisible ? recentCommands(shellCommands, commandWindow) : [];
 	const nestedAgents = tool.children ?? [];
 	const childCount = visibleCommands.length + nestedAgents.length;
 	let childIndex = 0;
@@ -1224,7 +1249,7 @@ function renderConnectedTool(
 	}
 	for (const child of nestedAgents) {
 		const last = ++childIndex === childCount;
-		renderConnectedNestedAgent(c, child, theme, width, childPrefix, last, detailVisible, treeRunning, thinkingVisible, now);
+		renderConnectedNestedAgent(c, child, theme, width, childPrefix, last, detailVisible, treeRunning, thinkingVisible, now, commandWindow);
 	}
 }
 
@@ -1239,6 +1264,7 @@ function renderConnectedNestedAgent(
 	treeRunning: boolean,
 	thinkingVisible: boolean,
 	now: number,
+	commandWindow?: CommandWindow,
 ): void {
 	const status = connectedStatus(r);
 	const running = status === "running";
@@ -1257,7 +1283,7 @@ function renderConnectedNestedAgent(
 	const tools = r.progress.recentTools;
 	for (const [index, tool] of tools.entries()) {
 		const isLastTool = !showMessage && index === tools.length - 1;
-		renderConnectedTool(c, tool, theme, width, childPrefix, isLastTool, detailVisible, treeRunning, thinkingVisible, now);
+		renderConnectedTool(c, tool, theme, width, childPrefix, isLastTool, detailVisible, treeRunning, thinkingVisible, now, commandWindow);
 	}
 	if (showMessage && message) {
 		addConnectedLine(c, `${connectedPrefix(theme, childPrefix + "└─ ")}${connectedColor("text", message)}`, width);
@@ -1330,6 +1356,10 @@ function renderConnectedTree(
 
 	const childPrefix = ` ${rail}${bridge.parentConnector === "└─" ? "   " : "│  "}`;
 	const detailVisible = bridge.outputMode === "expanded" || (bridge.outputMode === "auto" && running);
+	const commandCount = countShellCommands(r);
+	const commandWindow = bridge.outputMode === "auto" && running
+		? { skip: Math.max(0, commandCount - DEFAULT_COMMAND_SUMMARY_LIMIT), remaining: DEFAULT_COMMAND_SUMMARY_LIMIT }
+		: undefined;
 	const suppliedTask = typeof args.task === "string" ? args.task : undefined;
 	const nestedAgents = r.progress.recentTools.flatMap((tool) => tool.children ?? []);
 	const task = suppliedTask && (suppliedTask === r.task || nestedAgents.some((child) => suppliedTask.includes(child.agent)))
@@ -1340,7 +1370,7 @@ function renderConnectedTree(
 		addConnectedLine(c, `${connectedPrefix(theme, childPrefix + "│  └─ ")}${connectedColor("text", task)}`, width);
 	}
 	for (const tool of r.progress.recentTools) {
-		renderConnectedTool(c, tool, theme, width, childPrefix, false, detailVisible, running, bridge.thinkingVisible, now);
+		renderConnectedTool(c, tool, theme, width, childPrefix, false, detailVisible, running, bridge.thinkingVisible, now, commandWindow);
 	}
 
 	const message = connectedSummaryMessage(r, status);
@@ -1362,7 +1392,7 @@ function renderConnectedTree(
 	const toolCount = finiteNumber(r.progress.toolCount) && r.progress.toolCount >= 0
 		? r.progress.toolCount
 		: r.progress.recentTools.length;
-	const metrics = `${toolCount} tools · ${countShellCommands(r)} commands · ${connectedUsage(r, duration)}`;
+	const metrics = `${toolCount} tools · ${commandCount} commands · ${connectedUsage(r, duration)}`;
 	addConnectedLine(c, `${connectedPrefix(theme, summaryPrefix)}${connectedColor("muted", metrics)}`, width);
 	if (running) bridge.invalidate?.();
 	return c;
@@ -1373,7 +1403,28 @@ function renderConnectedTree(
 export default function (pi: ExtensionAPI) {
 	const config = loadConfig();
 	const semaphore = new Semaphore(config.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY);
+	const completedResults = new Map<string, AgentResult>();
+	const backgroundControllers = new Set<AbortController>();
+	let shuttingDown = false;
 	agents = loadAgents();
+
+	pi.on("session_start", (_event, ctx) => {
+		shuttingDown = false;
+		completedResults.clear();
+		for (const entry of ctx.sessionManager.getEntries()) {
+			const message = entry?.type === "message" ? entry.message : undefined;
+			if (message?.role !== "custom" || message.customType !== BACKGROUND_RESULT_MESSAGE) continue;
+			const toolCallId = message.details?.toolCallId;
+			const result = message.details?.result;
+			if (typeof toolCallId === "string" && result?.progress) completedResults.set(toolCallId, result as AgentResult);
+		}
+	});
+
+	pi.on("session_shutdown", () => {
+		shuttingDown = true;
+		for (const controller of backgroundControllers) controller.abort();
+		backgroundControllers.clear();
+	});
 
 	// If spawned as a child by a parent subagent process, PI_SUBAGENT_ALLOWED
 	// pins which agents we're allowed to expose. Filter the registry now, before
@@ -1387,12 +1438,14 @@ export default function (pi: ExtensionAPI) {
 		name: "subagent",
 		label: "Subagent",
 		description:
-			"Run a subagent to complete a task. Subagents have NO context from the current conversation — include all necessary context in the task description.",
+			"Launch a subagent in the background. The driving agent remains available for new user prompts; completion is delivered back into its conversation. Subagents have NO context from the current conversation — include all necessary context in the task description.",
 		promptSnippet: "Run subagents for delegated tasks",
 		promptGuidelines: [
 			"Parallel tool calls are your primary parallelism mechanism — put multiple independent read/fetch/search calls in one function_calls block. Don't use subagents to parallelize simple I/O.",
 			"Use subagent to delegate *reasoning and decisions*: codebase exploration (scout), web research (researcher), or isolated code changes (worker)",
 			"For multiple independent subagent tasks, emit multiple `subagent` tool calls in the same turn — they run in parallel automatically.",
+			"Subagents run in the background; continue the driving conversation instead of waiting or polling for them.",
+			"Subagent completion is delivered back into the driving conversation automatically.",
 			"Subagents have NO context from the current conversation — include ALL necessary context in the task description",
 		],
 		parameters: Type.Object({
@@ -1401,7 +1454,7 @@ export default function (pi: ExtensionAPI) {
 			cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
 		}),
 
-		async execute(toolCallId, params, signal, onUpdate, ctx) {
+		async execute(toolCallId, params, _signal, onUpdate, ctx) {
 			const cwd = ctx.cwd;
 
 			if (!params.agent || !params.task) {
@@ -1433,31 +1486,57 @@ export default function (pi: ExtensionAPI) {
 				details: { results: [liveResult] },
 			});
 
-			const result = await semaphore.run(() => {
-				// A child becomes running only after semaphore acquisition, before its
-				// process can emit the first tool event.
+			const controller = new AbortController();
+			const publishCompletion = (result: AgentResult) => {
+				completedResults.set(toolCallId, result);
+				pi.events.emit(BACKGROUND_UPDATE_EVENT, { toolCallId, result, done: true } satisfies BackgroundUpdate);
+				if (shuttingDown) return;
+				pi.sendMessage({
+					customType: BACKGROUND_RESULT_MESSAGE,
+					content: [
+						`Background subagent ${result.progress.status}: ${result.agent}.`,
+						`Task: ${result.task}`,
+						"Use this result in the driving conversation:",
+						result.output || "(no output)",
+					].join("\n\n"),
+					display: false,
+					details: { toolCallId, result },
+				}, { deliverAs: "followUp", triggerTurn: true });
+			};
+			backgroundControllers.add(controller);
+			void semaphore.run(async () => {
+				// The tool returns immediately; this independently-owned controller keeps
+				// the child alive while the driving conversation accepts more prompts.
 				const startedAt = Date.now();
 				liveResult.progress = { ...liveResult.progress, status: "running", startedAt, lastMessage: RUNNING_MESSAGE };
-				onUpdate?.({
-					content: [{ type: "text", text: "(running...)" }],
-					details: { results: [liveResult] },
-				});
-				return runSubagent(agent, params.task!, params.cwd ?? cwd, signal, (progress, usage) => {
+				pi.events.emit(BACKGROUND_UPDATE_EVENT, { toolCallId, result: liveResult, done: false } satisfies BackgroundUpdate);
+				const result = await runSubagent(agent, params.task!, params.cwd ?? cwd, controller.signal, (progress, usage) => {
 					liveResult.progress = progress;
 					liveResult.usage = { ...usage };
-					onUpdate?.({
-						content: [{ type: "text", text: "(running...)" }],
-						details: { results: [liveResult] },
-					});
+					pi.events.emit(BACKGROUND_UPDATE_EVENT, { toolCallId, result: liveResult, done: false } satisfies BackgroundUpdate);
 				}, startedAt);
-			});
+				result.contextWindow = contextWindow;
+				publishCompletion(result);
+			}).catch((error) => {
+				const message = error instanceof Error ? error.message : String(error);
+				const completedAt = Date.now();
+				liveResult.exitCode = 1;
+				liveResult.output = `Error: ${message}`;
+				liveResult.contextWindow = contextWindow;
+				liveResult.progress = {
+					...liveResult.progress,
+					status: "failed",
+					error: message,
+					lastMessage: liveResult.output,
+					completedAt,
+					durationMs: liveResult.progress.startedAt ? completedAt - liveResult.progress.startedAt : 0,
+				};
+				publishCompletion(liveResult);
+			}).finally(() => backgroundControllers.delete(controller));
 
-			result.contextWindow = contextWindow;
-			const isError = result.exitCode !== 0 || !!result.progress.error;
 			return {
-				content: [{ type: "text", text: result.output || "(no output)" }],
-				details: { results: [result] },
-				...(isError ? { isError: true } : {}),
+				content: [{ type: "text", text: `Subagent ${params.agent} started in the background.` }],
+				details: { results: [liveResult] },
 			};
 		},
 
@@ -1507,6 +1586,8 @@ export default function (pi: ExtensionAPI) {
 		// ── Render: result ──
 		renderResult(result, options, theme, context) {
 			const details = result.details as Details | undefined;
+			const completed = completedResults.get(context.toolCallId);
+			if (completed && details?.results?.length) details.results[0] = completed;
 			const bridge = connectedRenderBridge(context);
 			if (bridge && details?.results?.length) {
 				return renderAgentProgress(

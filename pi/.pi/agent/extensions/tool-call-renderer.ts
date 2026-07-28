@@ -18,6 +18,7 @@ const ASSISTANT_INVALIDATING = Symbol.for(
 );
 const CLOCK_SOURCE = Symbol.for("aviral.pi.work-step-renderer.clock-source");
 const DEFAULT_CLOCK = () => Date.now();
+const BACKGROUND_UPDATE_EVENT = "subagent:background-update";
 
 type ToolCall = {
   id: string;
@@ -1024,7 +1025,8 @@ function bindToolComponent(
 
   const step = assembly?.step.toolCallIds.has(toolCallId)
     ? assembly.step
-    : state.pending.get(toolCallId);
+    : state.pending.get(toolCallId) ??
+      (state.toolComponents.get(toolCallId)?.[WORK_STEP] as WorkStep | undefined);
   if (!step || !transferToolComponentOwnership(component, step, state))
     return undefined;
 
@@ -1092,6 +1094,14 @@ function synchronizeConnectedObservation(
   const observedCompletedAt = progress?.completedAt;
   if (finiteNumber(observedCompletedAt))
     toolCall.completedAt ??= observedCompletedAt;
+
+  if (progress?.status === "pending" || progress?.status === "running") {
+    toolCall.completedAt = undefined;
+    step.completedAt = undefined;
+    step.completedToolCallIds.delete(toolCall.id);
+    state.pending.set(toolCall.id, step);
+    return;
+  }
 
   if (!component.result || component.isPartial) return;
   toolCall.completedAt ??= state.restoredToolCallIds.has(toolCall.id)
@@ -1161,10 +1171,10 @@ function ensureConnectedBridge(
       rootFailed(component, progress ?? {}));
   bridge.lifecycle.status = failed
     ? "failed"
-    : component.result != null && component.isPartial !== true
-      ? "completed"
-      : observedStatus === "pending" || observedStatus === "running"
-        ? observedStatus
+    : observedStatus === "pending" || observedStatus === "running"
+      ? observedStatus
+      : component.result != null && component.isPartial !== true
+        ? "completed"
         : observedStatus === "completed" ||
             (toolCall && step.completedToolCallIds.has(toolCall.id))
           ? "completed"
@@ -1324,6 +1334,12 @@ function failPendingSteps(state: RendererState): void {
   const steps = new Set(state.pending.values());
   if (state.assembling) steps.add(state.assembling.step);
   for (const step of steps) {
+    const hasBackgroundSubagent = step.toolCalls.some((toolCall) => {
+      if (toolCall.name !== "subagent") return false;
+      const progress = rootProgress(state.toolComponents.get(toolCall.id));
+      return progress?.status === "pending" || progress?.status === "running";
+    });
+    if (hasBackgroundSubagent) continue;
     step.failed = true;
     for (const toolCall of step.toolCalls) {
       const component = state.toolComponents.get(toolCall.id);
@@ -1563,6 +1579,41 @@ export default async function (pi: ExtensionAPI) {
     state.currentRun = undefined;
   });
 
+  pi.events.on(BACKGROUND_UPDATE_EVENT, (data: unknown) => {
+    const update = asRecord(data);
+    const toolCallId = asString(update.toolCallId);
+    const result = update.result;
+    const done = update.done === true;
+    if (!toolCallId || !result || typeof result !== "object") return;
+    const component = state.toolComponents.get(toolCallId);
+    if (!component) return;
+    const progress = asRecord((result as any).progress);
+    const output = asString((result as any).output);
+    component.updateResult?.(
+      {
+        content: [
+          {
+            type: "text",
+            text: output || (done ? "(no output)" : "(running...)"),
+          },
+        ],
+        details: { results: [result] },
+        isError:
+          done &&
+          rootFailed(
+            { result: { details: { results: [result] } } },
+            progress,
+          ),
+      },
+      !done,
+    );
+    const step = component[WORK_STEP] as WorkStep | undefined;
+    if (!step) return;
+    ensureConnectedBridge(component, step, state);
+    component.invalidate?.();
+    component.ui?.requestRender?.();
+  });
+
   pi.on("tool_execution_end", (event) => {
     const component = state.toolComponents.get(event.toolCallId);
     const step =
@@ -1574,6 +1625,13 @@ export default async function (pi: ExtensionAPI) {
     const bridge = component
       ? state.connected.get(component)?.bridge
       : undefined;
+    const progress = component ? rootProgress(component) : undefined;
+    if (progress?.status === "pending" || progress?.status === "running") {
+      step.completedToolCallIds.delete(event.toolCallId);
+      state.pending.set(event.toolCallId, step);
+      if (component) ensureConnectedBridge(component, step, state);
+      return;
+    }
     if (toolCall && !state.restoredToolCallIds.has(toolCall.id))
       toolCall.completedAt ??= bridgeNow(bridge);
     step.completedToolCallIds.add(event.toolCallId);
