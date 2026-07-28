@@ -165,7 +165,7 @@ for output in (listed, run, record, registry, atlas):
 for output in (listed, run, record, registry):
     assert b"\\nFIXTURE-MULTILINE" in output, output
     assert b"\nFIXTURE-MULTILINE" not in output, output
-atlas_lines = atlas.splitlines()
+atlas_lines = atlas.decode("utf-8").splitlines()
 assert 10 <= len(atlas_lines) <= 40, len(atlas_lines)
 assert max(map(len, atlas_lines)) <= 160, max(map(len, atlas_lines))
 
@@ -193,7 +193,8 @@ list_projection = json.loads(observer_list_json)
 run_projection = json.loads(observer_run_json)
 assert len(run_projection) == 1 and run_projection[0]["run_id"] == "run-observe", run_projection
 selected_projection = run_projection[0]
-assert selected_projection["driver"] == "running", "canonical observer lost live Herdr driver status"
+assert selected_projection["driver"] == "running", "canonical observer lost exact live Herdr driver status"
+assert selected_projection["driver"] != "impostor", "canonical observer accepted an inexact live Herdr identity"
 assert selected_projection["children"] == {"active": 1, "finished": 1, "cost": 1.23}, selected_projection
 assert selected_projection["parent"] == {"cost": 2.35, "total_tokens": 12345, "requests": 6}, selected_projection
 assert any(item["run_id"] == "run-other" for item in list_projection)
@@ -214,7 +215,7 @@ assert FIXTURE_CONTROL not in observer_atlas and b"\x07" not in observer_atlas, 
 assert b"\nFIXTURE-MULTILINE" not in observer_atlas, observer_atlas
 assert b"FIXTURE-CONTROL" in observer_atlas and b"FIXTURE-MULTILINE" in observer_atlas, observer_atlas
 assert b"run-observe" in observer_atlas and b"SECOND-RUN-ONLY-SENTINEL" not in observer_atlas
-observer_atlas_lines = observer_atlas.splitlines()
+observer_atlas_lines = observer_atlas.decode("utf-8").splitlines()
 assert 10 <= len(observer_atlas_lines) <= 35, len(observer_atlas_lines)
 assert max(map(len, observer_atlas_lines)) <= 140, max(map(len, observer_atlas_lines))
 

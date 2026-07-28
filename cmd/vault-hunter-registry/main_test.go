@@ -152,6 +152,41 @@ func TestAdministrationRequestsAreStrictBeforeOpeningStorage(t *testing.T) {
 	}
 }
 
+func TestRetireMissingRegistryDoesNotCreateState(t *testing.T) {
+	for _, existing := range []bool{false, true} {
+		root := filepath.Join(t.TempDir(), "registry")
+		if existing {
+			if err := os.MkdirAll(filepath.Join(root, "runs"), 0750); err != nil {
+				t.Fatal(err)
+			}
+		}
+		input := `{"action":"retire","root":"` + root + `","run_id":"missing","expected_revision":1}`
+		var output bytes.Buffer
+		if err := serve(bytes.NewBufferString(input), &output); !errors.Is(err, vaultregistry.ErrNotFound) {
+			t.Fatalf("retire missing Registry error = %v, want ErrNotFound", err)
+		}
+		if output.Len() != 0 {
+			t.Fatalf("retire missing Registry emitted output %q", output.String())
+		}
+		if !existing {
+			if _, err := os.Lstat(root); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("retire created absent Registry: %v", err)
+			}
+			continue
+		}
+		entries, err := os.ReadDir(root)
+		if err != nil || len(entries) != 1 || entries[0].Name() != "runs" {
+			t.Fatalf("retire changed empty Registry: entries=%v err=%v", entries, err)
+		}
+		for _, path := range []string{root, filepath.Join(root, "runs")} {
+			info, err := os.Stat(path)
+			if err != nil || info.Mode().Perm() != 0750 {
+				t.Fatalf("retire changed %s mode: %v, %v", path, info, err)
+			}
+		}
+	}
+}
+
 func TestRetireAndExplicitRetiredGetKeepActiveGetSeparate(t *testing.T) {
 	root := t.TempDir()
 	producer, err := vaultregistry.OpenProducer(root)

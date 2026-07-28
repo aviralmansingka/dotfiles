@@ -14,7 +14,10 @@ import (
 	"time"
 )
 
-type Producer struct{ root string }
+type Producer struct {
+	root       string
+	createLock bool
+}
 type Reader struct{ root string }
 
 func ResolveRoot() (string, error) {
@@ -47,6 +50,45 @@ func OpenProducer(root string) (*Producer, error) {
 	}
 	if err := os.Chmod(filepath.Join(root, "runs"), 0700); err != nil {
 		return nil, err
+	}
+	return &Producer{root: root, createLock: true}, nil
+}
+
+func OpenExistingProducer(root string) (*Producer, error) {
+	var err error
+	if root == "" {
+		root, err = ResolveRoot()
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, path := range []string{root, filepath.Join(root, "runs")} {
+		info, statErr := os.Stat(path)
+		if errors.Is(statErr, os.ErrNotExist) {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, path)
+		}
+		if statErr != nil {
+			return nil, statErr
+		}
+		if !info.IsDir() {
+			return nil, fmt.Errorf("%w: %s: Registry path is not a directory", ErrMalformed, path)
+		}
+	}
+	lockPath := filepath.Join(root, "registry.lock")
+	if info, statErr := os.Stat(lockPath); statErr != nil {
+		if errors.Is(statErr, os.ErrNotExist) {
+			entries, readErr := os.ReadDir(filepath.Join(root, "runs"))
+			if readErr != nil {
+				return nil, readErr
+			}
+			if len(entries) == 0 {
+				return nil, fmt.Errorf("%w: Registry is empty", ErrNotFound)
+			}
+			return nil, fmt.Errorf("%w: %s: missing Registry lock", ErrMalformed, lockPath)
+		}
+		return nil, statErr
+	} else if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%w: %s: Registry lock is not a regular file", ErrMalformed, lockPath)
 	}
 	return &Producer{root: root}, nil
 }
@@ -469,13 +511,19 @@ func (p *Producer) retiredPath(id string) string {
 }
 
 func (p *Producer) lock() (func(), error) {
-	f, err := os.OpenFile(filepath.Join(p.root, "registry.lock"), os.O_CREATE|os.O_RDWR, 0600)
+	flags := os.O_RDWR
+	if p.createLock {
+		flags |= os.O_CREATE
+	}
+	f, err := os.OpenFile(filepath.Join(p.root, "registry.lock"), flags, 0600)
 	if err != nil {
 		return nil, err
 	}
-	if err := f.Chmod(0600); err != nil {
-		f.Close()
-		return nil, err
+	if p.createLock {
+		if err := f.Chmod(0600); err != nil {
+			f.Close()
+			return nil, err
+		}
 	}
 	return flock(f, syscall.LOCK_EX)
 }

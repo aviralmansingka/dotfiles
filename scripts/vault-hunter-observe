@@ -89,9 +89,7 @@ case "$command" in
   evidence) record "$target" | jq '.evidence'; exit ;;
   atlas)
     (cd "$repo" && go build -o "$tmp/atlas" ./cmd/vault-hunter-atlas)
-    view=$("$tmp/atlas" --run-id "$target" "$@")
-    view=${view//─/-}; view=${view//│/|}; view=${view//┼/+}
-    printf '%s\n' "$view"
+    "$tmp/atlas" --run-id "$target" "$@"
     exit
     ;;
 esac
@@ -116,10 +114,15 @@ snapshot() {
   jq -s --argjson herdr "$herdr" '
     def decoded: try (.detail | fromjson) catch {};
     def dollars: if . == null then null else ((. * 100 | round) / 100) end;
+    def complete_herdr:
+      type == "object" and
+      all(.workspace_id, .tab_id, .pane_id, .terminal_id; type == "string" and length > 0);
+    def same_session($recorded; $live):
+      $recorded.source == $live.source and $recorded.kind == $live.kind and $recorded.value == $live.value;
     ($herdr.result.agents // []) as $agents |
     map(
       . as $run |
-      ([.participants[]? | select(.role == "driver") | .agent_session.value?] | map(select(. != null))) as $sessions |
+      ([.participants[]? | select(.role == "driver")]) as $drivers |
       ([.lifecycle[]? | select(.kind == "subagent/started") | .observation_id | sub("-started$"; "")]) as $started |
       ([.lifecycle[]? | select(.kind == "subagent/finished" or .kind == "subagent/interrupted") | .observation_id | sub("-(finished|interrupted)$"; "")]) as $terminal |
       ([.lifecycle[]? | select(.kind == "subagent/finished")]) as $finished |
@@ -133,7 +136,19 @@ snapshot() {
         state: ($frontier.state // "unknown"),
         stage: ($frontier.kind // "unknown"),
         goal: ($frontier.goal_id // ""),
-        driver: ([ $agents[] | select(.agent_session.value? as $value | $sessions | any(. == $value or ($value | contains(.)))) | .agent_status ] | last // "-"),
+        driver: ([
+          $drivers[] as $recorded |
+          ([$agents[] | select(
+            ($recorded.herdr | complete_herdr) and
+            .workspace_id == $recorded.herdr.workspace_id and
+            .tab_id == $recorded.herdr.tab_id and
+            .pane_id == $recorded.herdr.pane_id and
+            .terminal_id == $recorded.herdr.terminal_id and
+            (($recorded.agent_session == null or .agent_session == null) or
+              same_session($recorded.agent_session; .agent_session))
+          )]) as $matches |
+          select($matches | length == 1) | $matches[0].agent_status
+        ] | last // "-"),
         children: {
           active: ([$started[] | select(. as $key | ($terminal | index($key) | not))] | length),
           finished: ($finished | length),

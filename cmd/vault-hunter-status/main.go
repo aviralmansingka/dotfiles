@@ -227,10 +227,7 @@ func renderAtlas(run vaultregistry.Run) (string, error) {
 		}
 		return "", fmt.Errorf("vault-hunter-status: atlas: %s", message)
 	}
-	// Keep the frame's geometry byte-bounded for logs while retaining the
-	// renderer's rows and any styling it generates.
-	view := strings.NewReplacer("─", "-", "│", "|", "┼", "+").Replace(stdout.String())
-	return view, nil
+	return stdout.String(), nil
 }
 
 func renderList(runs []vaultregistry.RunSummary) string {

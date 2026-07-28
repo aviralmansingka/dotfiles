@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
@@ -156,14 +155,11 @@ func retireRun(root, runID string, expectedRevision uint64) (vaultregistry.Run, 
 			return vaultregistry.Run{}, err
 		}
 	}
-	permissions := captureRetirePermissions(root)
-	producer, err := vaultregistry.OpenProducer(root)
+	producer, err := vaultregistry.OpenExistingProducer(root)
 	if err != nil {
-		restoreRetirePermissions(permissions)
 		return vaultregistry.Run{}, err
 	}
 	if _, err := producer.Retire(runID, expectedRevision); err != nil {
-		restoreRetirePermissions(permissions)
 		return vaultregistry.Run{}, err
 	}
 	reader, err := vaultregistry.OpenReader(root)
@@ -171,27 +167,6 @@ func retireRun(root, runID string, expectedRevision uint64) (vaultregistry.Run, 
 		return vaultregistry.Run{}, err
 	}
 	return reader.GetRetired(runID)
-}
-
-type retirePermission struct {
-	path string
-	mode os.FileMode
-}
-
-func captureRetirePermissions(root string) []retirePermission {
-	var permissions []retirePermission
-	for _, path := range []string{root, filepath.Join(root, "runs"), filepath.Join(root, "registry.lock")} {
-		if info, err := os.Stat(path); err == nil {
-			permissions = append(permissions, retirePermission{path: path, mode: info.Mode().Perm()})
-		}
-	}
-	return permissions
-}
-
-func restoreRetirePermissions(permissions []retirePermission) {
-	for _, permission := range permissions {
-		_ = os.Chmod(permission.path, permission.mode)
-	}
 }
 
 func decodeRequest(input io.Reader) (any, error) {
