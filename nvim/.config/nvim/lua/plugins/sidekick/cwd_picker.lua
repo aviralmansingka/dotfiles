@@ -1093,7 +1093,12 @@ function M.open(opts)
     local item = current_preview_item()
     if preview_loading
       or not item
-      or item.status ~= "working"
+      or (
+        item.status ~= "working"
+        and not vim.iter(items):any(function(candidate)
+          return candidate.agent_name == item.agent_name and candidate.status == "working"
+        end)
+      )
       or item == expanded_preview_item
     then
       return
