@@ -101,6 +101,8 @@ fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
     stow -d "$DOTFILES_DIR" -t "$HOME" launchd
+    echo "==> Installing pinned No Mistakes and reconciling its LaunchAgent"
+    "$DOTFILES_DIR/scripts/install-no-mistakes"
 fi
 
 # Optional Linux-only systemd units

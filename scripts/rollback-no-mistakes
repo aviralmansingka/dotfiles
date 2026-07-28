@@ -1,0 +1,194 @@
+#!/bin/sh
+set -eu
+
+fail() {
+  printf 'rollback-no-mistakes: %s\n' "$*" >&2
+  exit 1
+}
+
+sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    fail 'no SHA-256 implementation found'
+  fi
+}
+
+manifest_value() {
+  key=$1
+  file=$2
+  awk -F= -v key="$key" '$1 == key { print substr($0, length(key) + 2); exit }' "$file"
+}
+
+has_exact_version() {
+  binary=$1
+  wanted=$2
+  output=$($binary --version 2>/dev/null) || return 1
+  for token in $output; do
+    token=$(printf '%s' "$token" | tr -d ',;()[]')
+    if [ "$token" = "$wanted" ] || [ "$token" = "${wanted#v}" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+write_current_manifest() {
+  wcm_destination=$1
+  wcm_temporary=$wcm_destination.tmp.$$
+  {
+    printf 'version=%s\n' "$rollback_version"
+    printf 'binary_sha256=%s\n' "$rollback_binary_sha"
+    printf 'archive_sha256=%s\n' "$rollback_archive_sha"
+    printf 'platform=%s\n' "$rollback_platform"
+    printf 'source=%s\n' "$rollback_source"
+    printf 'source_revision=%s\n' "$rollback_revision"
+    printf 'checksums_sha256=%s\n' "$rollback_checksums_sha"
+  } > "$wcm_temporary"
+  mv -f "$wcm_temporary" "$wcm_destination"
+}
+
+launchd_job_is_running() {
+  launchd_status=$(launchctl print "$label" 2>/dev/null) || return 1
+  printf '%s\n' "$launchd_status" | awk '
+    $1 == "state" && $2 == "=" && $3 == "running" { running=1 }
+    $1 == "pid" && $2 == "=" && $3 ~ /^[0-9]+$/ && $3 > 0 { pid=1 }
+    END { exit !(running && pid) }
+  '
+}
+
+restart_daemon() {
+  binary=$1
+  case $(uname -s) in
+    Darwin)
+      plist=$HOME/Library/LaunchAgents/com.aviral.no-mistakes.plist
+      domain=gui/$(id -u)
+      label=$domain/com.aviral.no-mistakes
+      command -v launchctl >/dev/null 2>&1 || fail 'launchctl is required on Darwin'
+      [ -f "$plist" ] || fail "owned LaunchAgent is not deployed: $plist"
+      if launchctl print "$label" >/dev/null 2>&1; then
+        launchctl bootout "$label"
+      fi
+      # KeepAlive must be unloaded before the pinned binary stops any detached
+      # daemon still holding NM_HOME from an earlier lifecycle operation.
+      if ! "$binary" daemon stop --force >/dev/null 2>&1; then
+        fail 'failed to stop detached no-mistakes daemon before LaunchAgent bootstrap'
+      fi
+      launchctl bootstrap "$domain" "$plist"
+      launchctl print "$label" >/dev/null 2>&1 || fail "owned LaunchAgent is not loaded: $label"
+      launchctl kickstart -k "$label"
+      launchd_attempt=1
+      while [ "$launchd_attempt" -le 10 ]; do
+        if launchd_job_is_running; then
+          return 0
+        fi
+        sleep 1
+        launchd_attempt=$((launchd_attempt + 1))
+      done
+      fail "owned LaunchAgent did not reach running state with PID: $label"
+      ;;
+    Linux)
+      if command -v systemctl >/dev/null 2>&1 && systemctl --user is-enabled no-mistakes.service >/dev/null 2>&1; then
+        systemctl --user restart no-mistakes.service
+        return
+      fi
+      "$binary" daemon stop --force >/dev/null 2>&1 || true
+      "$binary" daemon start >/dev/null
+      ;;
+    *) fail "unsupported daemon platform: $(uname -s)" ;;
+  esac
+}
+
+install_dir=${NO_MISTAKES_INSTALL_DIR:-$HOME/.local/bin}
+target=$install_dir/no-mistakes
+state_dir=${NO_MISTAKES_INSTALL_STATE_DIR:-$HOME/.local/state/no-mistakes-installer}
+current_manifest=$state_dir/current.manifest
+rollback_binary=$state_dir/rollback/no-mistakes
+rollback_manifest=$state_dir/rollback/manifest
+
+mkdir -p "$install_dir" "$state_dir"
+lock=$state_dir/install.lock
+lock_owner=$lock/owner.pid
+lock_reclaim=$state_dir/.install.lock.reclaim.$$
+lock_owned=0
+temporary=$install_dir/.no-mistakes.rollback.$$
+cleanup() {
+  rm -f "$temporary"
+  rm -rf "$lock_reclaim"
+  if [ "$lock_owned" = 1 ]; then
+    cleanup_owner=
+    if [ -f "$lock_owner" ]; then
+      IFS= read -r cleanup_owner < "$lock_owner" || cleanup_owner=
+    fi
+    if [ "$cleanup_owner" = "$$" ]; then
+      rm -f "$lock_owner"
+      rmdir "$lock" 2>/dev/null || true
+    fi
+    lock_owned=0
+  fi
+}
+trap cleanup EXIT HUP INT TERM
+
+# This is the same portable ownership protocol used by the installer. Rename
+# stale state before retrying mkdir so competing reclaimers cannot both write.
+while ! mkdir "$lock" 2>/dev/null; do
+  recorded_pid=
+  if [ -f "$lock_owner" ]; then
+    IFS= read -r recorded_pid < "$lock_owner" || recorded_pid=
+  fi
+  case "$recorded_pid" in
+    ''|0|*[!0-9]*) ;;
+    *)
+      if kill -0 "$recorded_pid" 2>/dev/null; then
+        fail "another install or rollback holds $lock (pid $recorded_pid)"
+      fi
+      ;;
+  esac
+  rm -rf "$lock_reclaim"
+  if mv "$lock" "$lock_reclaim" 2>/dev/null; then
+    rm -rf "$lock_reclaim"
+  fi
+done
+printf '%s\n' "$$" > "$lock_owner" || fail "could not record lock owner in $lock_owner"
+lock_owned=1
+
+[ -f "$rollback_manifest" ] || fail "no verified rollback manifest at $rollback_manifest"
+[ -x "$rollback_binary" ] || fail "no verified rollback binary at $rollback_binary"
+rollback_version=$(manifest_value version "$rollback_manifest")
+rollback_binary_sha=$(manifest_value binary_sha256 "$rollback_manifest")
+rollback_archive_sha=$(manifest_value archive_sha256 "$rollback_manifest")
+rollback_platform=$(manifest_value platform "$rollback_manifest")
+rollback_source=$(manifest_value source "$rollback_manifest")
+rollback_revision=$(manifest_value source_revision "$rollback_manifest")
+rollback_checksums_sha=$(manifest_value checksums_sha256 "$rollback_manifest")
+[ -n "$rollback_version" ] && [ -n "$rollback_binary_sha" ] && [ -n "$rollback_archive_sha" ] && \
+  [ -n "$rollback_platform" ] && [ -n "$rollback_source" ] && [ -n "$rollback_revision" ] && \
+  [ -n "$rollback_checksums_sha" ] || fail 'rollback manifest is incomplete'
+[ "$(sha256 "$rollback_binary")" = "$rollback_binary_sha" ] || \
+  fail 'rollback binary SHA-256 does not match its verified manifest'
+has_exact_version "$rollback_binary" "$rollback_version" || \
+  fail 'rollback binary version does not match its verified manifest'
+
+changed=1
+if [ -x "$target" ] && [ "$(sha256 "$target")" = "$rollback_binary_sha" ] && has_exact_version "$target" "$rollback_version"; then
+  changed=0
+fi
+
+if [ "$changed" = 1 ]; then
+  cp "$rollback_binary" "$temporary"
+  chmod 0755 "$temporary"
+  [ "$(sha256 "$temporary")" = "$rollback_binary_sha" ] || fail 'rollback copy failed verification'
+  mv -f "$temporary" "$target"
+fi
+# Repair metadata and reconcile the service even when a retry finds that the
+# rollback binary was already moved into place before an interruption.
+write_current_manifest "$current_manifest"
+export NO_MISTAKES_TELEMETRY=0
+export NO_MISTAKES_NO_UPDATE_CHECK=1
+export NM_HOME=${NM_HOME:-$HOME/.no-mistakes}
+restart_daemon "$target"
+
+printf 'no-mistakes rolled back to %s (binary sha256 %s)\n' \
+  "$rollback_version" "$rollback_binary_sha"
