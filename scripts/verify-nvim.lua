@@ -1066,7 +1066,8 @@ local function validate_sidekick_herdr()
       fail("unbound cwd picker title should retain cwd scope: " .. vim.inspect(picker_opts.title))
     end
     local layout = picker_opts.layout.layout
-    if layout.box ~= "vertical"
+    if
+      layout.box ~= "vertical"
       or layout[1].win ~= "preview"
       or layout[2].win ~= "input"
       or layout[2].height ~= 1
@@ -1159,9 +1160,15 @@ local function validate_sidekick_herdr()
       end
       callback("Renamed Session")
     end
-    picker_opts.actions.sidekick_rename_session({ close = function() rename_closed = true end }, rename_item)
+    picker_opts.actions.sidekick_rename_session({
+      close = function()
+        rename_closed = true
+      end,
+    }, rename_item)
     vim.ui.input = original_ui_input
-    vim.wait(100, function() return picker_opts ~= rename_picker_opts end, 5)
+    vim.wait(100, function()
+      return picker_opts ~= rename_picker_opts
+    end, 5)
     if
       not rename_closed
       or not vim.deep_equal(
@@ -1184,7 +1191,8 @@ local function validate_sidekick_herdr()
     local kill_list = picker_opts.win.list.keys["<c-x>"]
     local kill_action = type(kill_input) == "table" and kill_input[1] or kill_input
     local kill_list_action = type(kill_list) == "table" and kill_list[1] or kill_list
-    if not kill_item
+    if
+      not kill_item
       or type(kill_action) ~= "string"
       or kill_list_action ~= kill_action
       or type(picker_opts.actions[kill_action]) ~= "function"
@@ -1198,12 +1206,19 @@ local function validate_sidekick_herdr()
       kill_prompt = prompt
       return 1
     end
-    picker_opts.actions[kill_action]({ close = function() kill_picker_closed = true end }, kill_item)
+    picker_opts.actions[kill_action]({
+      close = function()
+        kill_picker_closed = true
+      end,
+    }, kill_item)
     vim.fn.confirm = original_confirm
-    vim.wait(100, function() return picker_opts ~= kill_picker_opts end, 5)
+    vim.wait(100, function()
+      return picker_opts ~= kill_picker_opts
+    end, 5)
     local kill_picker_refreshed = picker_opts ~= kill_picker_opts
     picker_opts = kill_picker_opts
-    if not kill_prompt
+    if
+      not kill_prompt
       or not kill_prompt:find(kill_item.label, 1, true)
       or #closed_panes ~= 1
       or closed_panes[1] ~= kill_item.pane_id
@@ -1250,7 +1265,9 @@ local function validate_sidekick_herdr()
           win = vim.api.nvim_get_current_win(),
           map = function() end,
           on = function() end,
-          win_valid = function() return true end,
+          win_valid = function()
+            return true
+          end,
         },
         set_buf = function(self, buf)
           local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
@@ -1268,7 +1285,9 @@ local function validate_sidekick_herdr()
       },
       list = {
         win = {
-          valid = function() return false end,
+          valid = function()
+            return false
+          end,
           on = function() end,
         },
         move = function(_, step)
@@ -1299,7 +1318,8 @@ local function validate_sidekick_herdr()
       fail("agent picker should keep keyboard focus in its input")
     end
     local workspace_two_row = vim.fn.index(global_lines, "▾ Workspace Two · ● 0")
-    if not vim.startswith(global_lines[1], "▾ Workspace One · ")
+    if
+      not vim.startswith(global_lines[1], "▾ Workspace One · ")
       or workspace_two_row < 1
       or global_lines[workspace_two_row + 2] ~= "  └─ · pi-other-workspace · 42.5%"
     then
@@ -1320,11 +1340,15 @@ local function validate_sidekick_herdr()
     input_pattern = "pother"
     input_changed()
     global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
-    if global_lines[1] ~= "▾ Workspace Two · ● 0"
+    if
+      global_lines[1] ~= "▾ Workspace Two · ● 0"
       or global_lines[2] ~= "  └─ · pi-other-workspace · 42.5%"
       or vim.api.nvim_win_get_cursor(global_win.win)[1] ~= 2
     then
-      fail("workspace fuzzy search should select the agent while retaining its workspace parent: " .. vim.inspect(global_lines))
+      fail(
+        "workspace fuzzy search should select the agent while retaining its workspace parent: "
+          .. vim.inspect(global_lines)
+      )
     end
     input_pattern = ""
     input_changed()
@@ -1385,7 +1409,8 @@ local function validate_sidekick_herdr()
       return last_read and last_read.lines == 2147483647
     end, 10)
     local full_read = async_read_args[#async_read_args]
-    if not full_read
+    if
+      not full_read
       or full_read.target ~= "codex-full-preview"
       or full_read.source ~= "recent-unwrapped"
       or full_read.lines ~= 2147483647
@@ -1404,11 +1429,7 @@ local function validate_sidekick_herdr()
     local stopped_reads = async_reads
     local stopped_preview_swaps = preview_swaps
     vim.wait(250)
-    if
-      spinner_updates ~= stopped_updates
-      or async_reads ~= stopped_reads
-      or preview_swaps ~= stopped_preview_swaps
-    then
+    if spinner_updates ~= stopped_updates or async_reads ~= stopped_reads or preview_swaps ~= stopped_preview_swaps then
       fail("closing the cwd picker should stop spinner and preview redraws")
     end
 
@@ -1428,7 +1449,9 @@ local function validate_sidekick_herdr()
       if fake_picker.preview.win.buf ~= previous_buf then
         fail("hover preview should keep the current buffer visible while its replacement renders")
       end
-      vim.wait(1000, function() return preview_swaps > previous_swaps end, 10)
+      vim.wait(1000, function()
+        return preview_swaps > previous_swaps
+      end, 10)
       if preview_swaps ~= previous_swaps + 1 then
         fail("hover preview should swap its completed staging buffer exactly once")
       end
@@ -1436,7 +1459,8 @@ local function validate_sidekick_herdr()
     end
 
     local buf = render_preview(done_item)
-    if not read_args
+    if
+      not read_args
       or read_args.target ~= "pi-done"
       or read_args.source ~= "recent-unwrapped"
       or read_args.lines ~= vim.api.nvim_win_get_height(fake_picker.preview.win.win) * 2
@@ -1475,7 +1499,9 @@ local function validate_sidekick_herdr()
     local sized_buf = render_preview(sized_item, {
       win = {
         win = sized_win,
-        win_valid = function() return true end,
+        win_valid = function()
+          return true
+        end,
       },
     })
     local sized_lines = vim.api.nvim_buf_get_lines(sized_buf, 0, 2, false)
@@ -1530,7 +1556,8 @@ local function validate_sidekick_herdr()
     }, "\r\n")
     local pi_scrub_buf = render_preview(done_item)
     local pi_scrubbed = table.concat(vim.api.nvim_buf_get_lines(pi_scrub_buf, 0, -1, false), "\n")
-    if pi_scrubbed:find("Working", 1, true)
+    if
+      pi_scrubbed:find("Working", 1, true)
       or pi_scrubbed:find("~/vault", 1, true)
       or pi_scrubbed:find("MCP:", 1, true)
     then
@@ -1590,10 +1617,9 @@ local function validate_sidekick_herdr()
       local layout = atlas_picker_opts.layout.layout
       local bottom = layout[3]
       local atlas_layout = bottom and bottom[3]
-      local atlas_preview = atlas_layout
-        and atlas_layout.win
-        and atlas_picker_opts.layout.wins[atlas_layout.win]
-      if layout.box ~= "vertical"
+      local atlas_preview = atlas_layout and atlas_layout.win and atlas_picker_opts.layout.wins[atlas_layout.win]
+      if
+        layout.box ~= "vertical"
         or layout[1].win ~= "preview"
         or layout[1].title ~= " Preview "
         or layout[1].width ~= nil
@@ -1638,10 +1664,7 @@ local function validate_sidekick_herdr()
       vim.api.nvim_win_set_height(atlas_preview.win, math.min(12, host_height - 2))
       atlas_picker_opts.on_show(fake_picker)
       local expected_preview_buf = render_preview(done_item)
-      expected_preview = table.concat(
-        vim.api.nvim_buf_get_lines(expected_preview_buf, 0, -1, false),
-        "\n"
-      )
+      expected_preview = table.concat(vim.api.nvim_buf_get_lines(expected_preview_buf, 0, -1, false), "\n")
       current_fake_item = atlas_item
       input_pattern = "pblocked"
       input_changed()
@@ -1652,8 +1675,11 @@ local function validate_sidekick_herdr()
       local move_down = atlas_picker_opts.win.input.keys["<Down>"]
       local heading_setup_swaps = preview_swaps
       move_up[1]()
-      vim.wait(1000, function() return preview_swaps > heading_setup_swaps end, 10)
-      if preview_swaps ~= heading_setup_swaps + 1
+      vim.wait(1000, function()
+        return preview_swaps > heading_setup_swaps
+      end, 10)
+      if
+        preview_swaps ~= heading_setup_swaps + 1
         or table.concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n") ~= "(no session)"
       then
         fail("T04 V01 workspace heading should render its empty default preview")
@@ -1663,20 +1689,20 @@ local function validate_sidekick_herdr()
       vim.wait(1000, function()
         return #lookup_calls > 0
           and preview_swaps > swaps_before
-          and table.concat(vim.api.nvim_buf_get_lines(atlas_preview.buf, 0, -1, false), "\n")
-            :find("Run atlas-rich-run", 1, true) ~= nil
+          and table
+              .concat(vim.api.nvim_buf_get_lines(atlas_preview.buf, 0, -1, false), "\n")
+              :find("Run atlas-rich-run", 1, true)
+            ~= nil
       end, 10)
 
       if #lookup_calls ~= 1 then
         fail(
-          "T10 V01 exact participant at "
-            .. size
-            .. " should invoke Atlas lookup exactly once; got "
-            .. #lookup_calls
+          "T10 V01 exact participant at " .. size .. " should invoke Atlas lookup exactly once; got " .. #lookup_calls
         )
       end
       local lookup = lookup_calls[1]
-      if lookup.item.workspace_id ~= "w1"
+      if
+        lookup.item.workspace_id ~= "w1"
         or lookup.item.tab_id ~= "w1:t5"
         or lookup.item.pane_id ~= "w1:p5"
         or lookup.item.terminal_id ~= "term-5"
@@ -1698,7 +1724,8 @@ local function validate_sidekick_herdr()
       local atlas_buf = atlas_preview.buf
       local rendered = table.concat(vim.api.nvim_buf_get_lines(atlas_buf, 0, -1, false), "\n")
       local rendered_fields = rendered:gsub("\n", "")
-      if vim.bo[atlas_buf].buftype ~= "terminal"
+      if
+        vim.bo[atlas_buf].buftype ~= "terminal"
         or not rendered_fields:find("Run atlas-rich-run", 1, true)
         or not rendered_fields:find("Goal 3/5", 1, true)
         or not rendered_fields:find("T10.V01", 1, true)
@@ -1709,7 +1736,8 @@ local function validate_sidekick_herdr()
       then
         fail("T10 V01 bottom-right Atlas preview is incomplete at " .. size .. ": " .. vim.inspect(rendered))
       end
-      if top_rendered ~= expected_preview
+      if
+        top_rendered ~= expected_preview
         or top_rendered:find("atlas-rich-run", 1, true)
         or top_rendered:find("T10.V01", 1, true)
         or top_rendered:find("verifier-steward", 1, true)
@@ -1730,15 +1758,14 @@ local function validate_sidekick_herdr()
       local layout_swaps = preview_swaps
       atlas_picker_opts.preview({ item = lookup.item, preview = fake_picker.preview })
       vim.wait(1000, function()
-        return table.concat(vim.api.nvim_buf_get_lines(atlas_preview.buf, 0, -1, false), "\n")
+        return table
+          .concat(vim.api.nvim_buf_get_lines(atlas_preview.buf, 0, -1, false), "\n")
           :find("Run atlas-rich-run", 1, true) ~= nil
       end, 10)
-      local layout_rendered = table.concat(
-        vim.api.nvim_buf_get_lines(atlas_preview.buf, 0, -1, false),
-        "\n"
-      )
+      local layout_rendered = table.concat(vim.api.nvim_buf_get_lines(atlas_preview.buf, 0, -1, false), "\n")
       local layout_fields = layout_rendered:gsub("\n", "")
-      if preview_swaps ~= layout_swaps
+      if
+        preview_swaps ~= layout_swaps
         or fake_picker.preview.win.buf ~= top_buf
         or atlas_preview.buf == blank_layout_buf
         or not layout_fields:find("Run atlas-rich-run", 1, true)
@@ -1753,21 +1780,20 @@ local function validate_sidekick_herdr()
       end
 
       local active_atlas_buf = atlas_preview.buf
-      local active_atlas_bytes = table.concat(
-        vim.api.nvim_buf_get_lines(active_atlas_buf, 0, -1, false),
-        "\n"
-      )
+      local active_atlas_bytes = table.concat(vim.api.nvim_buf_get_lines(active_atlas_buf, 0, -1, false), "\n")
       local active_poll_swaps = preview_swaps
       read_result = "\27[32mT10 V03 active poll refresh\27[0m"
       vim.wait(1000, function()
         return preview_swaps > active_poll_swaps
-          and table.concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n")
-            :find("T10 V03 active poll refresh", 1, true) ~= nil
+          and table
+              .concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n")
+              :find("T10 V03 active poll refresh", 1, true)
+            ~= nil
       end, 10)
-      if preview_swaps <= active_poll_swaps
+      if
+        preview_swaps <= active_poll_swaps
         or atlas_preview.buf ~= active_atlas_buf
-        or table.concat(vim.api.nvim_buf_get_lines(active_atlas_buf, 0, -1, false), "\n")
-          ~= active_atlas_bytes
+        or table.concat(vim.api.nvim_buf_get_lines(active_atlas_buf, 0, -1, false), "\n") ~= active_atlas_bytes
       then
         fail("T10 V03 active Atlas should allow top Preview polling without changing its frame at " .. size)
       end
@@ -1781,15 +1807,17 @@ local function validate_sidekick_herdr()
         return last_read
           and last_read.lines == 2147483647
           and preview_swaps > active_full_swaps
-          and table.concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n")
-            :find("T10 V03 active full preview", 1, true) ~= nil
+          and table
+              .concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n")
+              :find("T10 V03 active full preview", 1, true)
+            ~= nil
       end, 10)
       atlas_picker_opts.actions.sidekick_preview_scroll_up()
-      if async_reads <= active_full_reads
+      if
+        async_reads <= active_full_reads
         or preview_swaps <= active_full_swaps
         or atlas_preview.buf ~= active_atlas_buf
-        or table.concat(vim.api.nvim_buf_get_lines(active_atlas_buf, 0, -1, false), "\n")
-          ~= active_atlas_bytes
+        or table.concat(vim.api.nvim_buf_get_lines(active_atlas_buf, 0, -1, false), "\n") ~= active_atlas_bytes
         or #lookup_calls ~= 1
       then
         fail("T10 V03 active full Preview should change without changing or repeating Atlas at " .. size)
@@ -1801,11 +1829,9 @@ local function validate_sidekick_herdr()
         return preview_swaps > heading_swaps
           and table.concat(vim.api.nvim_buf_get_lines(atlas_preview.buf, 0, -1, false), "\n") == ""
       end, 10)
-      local heading_bytes = table.concat(
-        vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
-        "\n"
-      )
-      if preview_swaps ~= heading_swaps + 1
+      local heading_bytes = table.concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n")
+      if
+        preview_swaps ~= heading_swaps + 1
         or heading_bytes ~= "(no session)"
         or table.concat(vim.api.nvim_buf_get_lines(atlas_preview.buf, 0, -1, false), "\n") ~= ""
         or #lookup_calls ~= 1
@@ -1829,14 +1855,8 @@ local function validate_sidekick_herdr()
     local protected_paths = {
       "nvim/.config/nvim/lua/plugins/sidekick/registry.lua",
     }
-    vim.list_extend(
-      protected_paths,
-      vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/runs/*.json", false, true)
-    )
-    vim.list_extend(
-      protected_paths,
-      vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/vault/**/*.md", false, true)
-    )
+    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/runs/*.json", false, true))
+    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/vault/**/*.md", false, true))
     local protected_bytes = {}
     for _, path in ipairs(protected_paths) do
       protected_bytes[path] = table.concat(vim.fn.readfile(path, "b"), "\n")
@@ -1891,14 +1911,14 @@ local function validate_sidekick_herdr()
     fallback_atlas:show()
     fallback_picker_opts.on_show(fake_picker)
     fallback_picker_opts.win.input.keys["<c-w>"][1]()
-    vim.wait(1000, function() return preview_swaps > baseline_swaps end, 10)
+    vim.wait(1000, function()
+      return preview_swaps > baseline_swaps
+    end, 10)
     if preview_swaps ~= baseline_swaps + 1 then
       fail("T04 V02 could not capture the unchanged default preview")
     end
-    local default_preview_bytes = table.concat(
-      vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
-      "\n"
-    )
+    local default_preview_bytes =
+      table.concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n")
 
     local fallback_cases = {
       "unregistered",
@@ -1924,23 +1944,14 @@ local function validate_sidekick_herdr()
         return preview_swaps > swaps_before
       end, 10)
       if fallback_calls[fallback_case] ~= 1 then
-        fallback_failures[#fallback_failures + 1] = string.format(
-          "%s invoked Atlas %d times",
-          fallback_case,
-          fallback_calls[fallback_case] or 0
-        )
+        fallback_failures[#fallback_failures + 1] =
+          string.format("%s invoked Atlas %d times", fallback_case, fallback_calls[fallback_case] or 0)
       end
       if preview_swaps ~= swaps_before + 1 then
-        fallback_failures[#fallback_failures + 1] = string.format(
-          "%s swapped the default preview %d times",
-          fallback_case,
-          preview_swaps - swaps_before
-        )
+        fallback_failures[#fallback_failures + 1] =
+          string.format("%s swapped the default preview %d times", fallback_case, preview_swaps - swaps_before)
       else
-        local actual = table.concat(
-          vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
-          "\n"
-        )
+        local actual = table.concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n")
         if actual ~= default_preview_bytes then
           fallback_failures[#fallback_failures + 1] = fallback_case .. " changed the default preview bytes"
         end
@@ -1956,14 +1967,17 @@ local function validate_sidekick_herdr()
     local fallback_layout_calls = fallback_calls.unregistered
     local fallback_layout_swaps = preview_swaps
     fallback_picker_opts.preview({ item = fallback_layout_item, preview = fake_picker.preview })
-    vim.wait(1000, function() return preview_swaps > fallback_layout_swaps end, 10)
+    vim.wait(1000, function()
+      return preview_swaps > fallback_layout_swaps
+    end, 10)
     fallback_picker_opts.preview({ item = fallback_layout_item, preview = fake_picker.preview })
-    vim.wait(1000, function() return preview_swaps > fallback_layout_swaps + 1 end, 10)
-    local fallback_layout_bytes = table.concat(
-      vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false),
-      "\n"
-    )
-    if fallback_calls.unregistered ~= fallback_layout_calls + 1
+    vim.wait(1000, function()
+      return preview_swaps > fallback_layout_swaps + 1
+    end, 10)
+    local fallback_layout_bytes =
+      table.concat(vim.api.nvim_buf_get_lines(fake_picker.preview.win.buf, 0, -1, false), "\n")
+    if
+      fallback_calls.unregistered ~= fallback_layout_calls + 1
       or preview_swaps ~= fallback_layout_swaps + 2
       or fallback_layout_bytes ~= default_preview_bytes
     then
@@ -2070,7 +2084,9 @@ local function validate_sidekick_herdr()
     current_fake_item = default_control
     local default_control_swaps = preview_swaps
     identity_picker_opts.preview({ item = default_control, preview = fake_picker.preview })
-    vim.wait(1000, function() return preview_swaps > default_control_swaps end, 10)
+    vim.wait(1000, function()
+      return preview_swaps > default_control_swaps
+    end, 10)
     if (identity_calls["default-control"] or 0) ~= 0 or preview_swaps ~= default_control_swaps + 1 then
       fail("T04 V03 default control should render once without an Atlas lookup")
     end
@@ -2080,16 +2096,15 @@ local function validate_sidekick_herdr()
     identity_picker_opts.actions.sidekick_preview_scroll_down()
     vim.wait(1000, function()
       local last_read = async_read_args[#async_read_args]
-      return last_read
-        and last_read.lines == 2147483647
-        and preview_swaps > default_full_swaps
+      return last_read and last_read.lines == 2147483647 and preview_swaps > default_full_swaps
     end, 10)
     local default_full_buf = fake_picker.preview.win.buf
     local default_full_bytes = preview_bytes()
     local default_layout_swaps = preview_swaps
     identity_picker_opts.preview({ item = default_control, preview = fake_picker.preview })
     vim.wait(200)
-    if async_reads <= default_full_reads
+    if
+      async_reads <= default_full_reads
       or preview_swaps ~= default_layout_swaps
       or fake_picker.preview.win.buf ~= default_full_buf
       or preview_bytes() ~= default_full_bytes
@@ -2100,44 +2115,64 @@ local function validate_sidekick_herdr()
     local identity_cases = {
       {
         label = "empty",
-        mutate = function(item) item._empty = true end,
+        mutate = function(item)
+          item._empty = true
+        end,
         expected = "(no session)",
       },
       {
         label = "workspace",
-        mutate = function(item) item._workspace = true end,
+        mutate = function(item)
+          item._workspace = true
+        end,
       },
       {
         label = "missing-workspace-id",
-        mutate = function(item) item.workspace_id = nil end,
+        mutate = function(item)
+          item.workspace_id = nil
+        end,
       },
       {
         label = "missing-tab-id",
-        mutate = function(item) item.tab_id = nil end,
+        mutate = function(item)
+          item.tab_id = nil
+        end,
       },
       {
         label = "missing-pane-id",
-        mutate = function(item) item.pane_id = nil end,
+        mutate = function(item)
+          item.pane_id = nil
+        end,
       },
       {
         label = "missing-terminal-id",
-        mutate = function(item) item.terminal_id = nil end,
+        mutate = function(item)
+          item.terminal_id = nil
+        end,
       },
       {
         label = "missing-session",
-        mutate = function(item) item.agent_session = nil end,
+        mutate = function(item)
+          item.agent_session = nil
+        end,
       },
       {
         label = "missing-session-source",
-        mutate = function(item) item.agent_session.source = nil end,
+        mutate = function(item)
+          item.agent_session.source = nil
+        end,
       },
       {
         label = "missing-session-kind",
-        mutate = function(item) item.agent_session.kind = nil end,
+        mutate = function(item)
+          item.agent_session.kind = nil
+        end,
       },
       {
         label = "missing-session-value",
-        mutate = function(item) item.agent_session.value = nil end,
+        mutate = function(item)
+          item.agent_session.value = nil
+        end,
       },
     }
     for _, identity_case in ipairs(identity_cases) do
@@ -2147,7 +2182,9 @@ local function validate_sidekick_herdr()
       current_fake_item = item
       local swaps_before = preview_swaps
       identity_picker_opts.preview({ item = item, preview = fake_picker.preview })
-      vim.wait(1000, function() return preview_swaps > swaps_before end, 10)
+      vim.wait(1000, function()
+        return preview_swaps > swaps_before
+      end, 10)
       if (identity_calls[identity_case.label] or 0) ~= 0 then
         fail("T04 V03 " .. identity_case.label .. " identity should perform zero Atlas lookups")
       end
@@ -2157,10 +2194,7 @@ local function validate_sidekick_herdr()
       local expected = identity_case.expected or v03_default_preview_bytes
       if preview_bytes() ~= expected then
         fail(
-          "T04 V03 "
-            .. identity_case.label
-            .. " identity changed the default preview: "
-            .. vim.inspect(preview_bytes())
+          "T04 V03 " .. identity_case.label .. " identity changed the default preview: " .. vim.inspect(preview_bytes())
         )
       end
     end
@@ -2176,16 +2210,20 @@ local function validate_sidekick_herdr()
     vim.wait(1000, function()
       return preview_swaps > control_swaps
         and control_atlas.buf ~= control_atlas_buf
-        and table.concat(vim.api.nvim_buf_get_lines(control_atlas.buf, 0, -1, false), "\n")
-          :find("Run atlas-v03-complete", 1, true) ~= nil
+        and table
+            .concat(vim.api.nvim_buf_get_lines(control_atlas.buf, 0, -1, false), "\n")
+            :find("Run atlas-v03-complete", 1, true)
+          ~= nil
     end, 10)
     if (identity_calls.complete or 0) ~= 1 or not identity_callbacks.complete then
       fail("T04 V03 complete identity control should perform exactly one Atlas lookup")
     end
-    if preview_swaps ~= control_swaps + 1
+    if
+      preview_swaps ~= control_swaps + 1
       or preview_bytes() ~= v03_default_preview_bytes
       or control_atlas.buf == control_atlas_buf
-      or not table.concat(vim.api.nvim_buf_get_lines(control_atlas.buf, 0, -1, false), "\n")
+      or not table
+        .concat(vim.api.nvim_buf_get_lines(control_atlas.buf, 0, -1, false), "\n")
         :find("Run atlas-v03-complete", 1, true)
     then
       fail("T04 V03 complete identity control should swap one matched dedicated Atlas preview")
@@ -2200,14 +2238,15 @@ local function validate_sidekick_herdr()
     if table.concat(vim.api.nvim_buf_get_lines(ordinary_atlas_buf, 0, -1, false), "\n") ~= "" then
       fail("T10 V02 matched-to-ordinary selection should clear Atlas immediately")
     end
-    vim.wait(1000, function() return preview_swaps > ordinary_swaps end, 10)
-    if (identity_calls["matched-to-ordinary"] or 0) ~= 0
+    vim.wait(1000, function()
+      return preview_swaps > ordinary_swaps
+    end, 10)
+    if
+      (identity_calls["matched-to-ordinary"] or 0) ~= 0
       or preview_swaps ~= ordinary_swaps + 1
       or preview_bytes() ~= v03_default_preview_bytes
-      or table.concat(
-        vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(control_atlas.win), 0, -1, false),
-        "\n"
-      ) ~= ""
+      or table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(control_atlas.win), 0, -1, false), "\n")
+        ~= ""
     then
       fail("T10 V02 matched-to-ordinary selection should preserve ordinary top preview and empty Atlas")
     end
@@ -2237,21 +2276,17 @@ local function validate_sidekick_herdr()
     end
     local selection_atlas = selection_picker_opts.layout.wins.atlas
     local pending_atlas_buf = vim.api.nvim_win_get_buf(selection_atlas.win)
-    local pending_atlas_bytes = table.concat(
-      vim.api.nvim_buf_get_lines(pending_atlas_buf, 0, -1, false),
-      "\n"
-    )
+    local pending_atlas_bytes = table.concat(vim.api.nvim_buf_get_lines(pending_atlas_buf, 0, -1, false), "\n")
     local pending_poll_swaps = preview_swaps
     read_result = "\27[36mT10 V03 pending poll refresh\27[0m"
     vim.wait(1000, function()
-      return preview_swaps > pending_poll_swaps
-        and preview_bytes():find("T10 V03 pending poll refresh", 1, true) ~= nil
+      return preview_swaps > pending_poll_swaps and preview_bytes():find("T10 V03 pending poll refresh", 1, true) ~= nil
     end, 10)
-    if preview_swaps <= pending_poll_swaps
+    if
+      preview_swaps <= pending_poll_swaps
       or pending_atlas_bytes ~= ""
       or vim.api.nvim_win_get_buf(selection_atlas.win) ~= pending_atlas_buf
-      or table.concat(vim.api.nvim_buf_get_lines(pending_atlas_buf, 0, -1, false), "\n")
-        ~= pending_atlas_bytes
+      or table.concat(vim.api.nvim_buf_get_lines(pending_atlas_buf, 0, -1, false), "\n") ~= pending_atlas_bytes
     then
       fail("T10 V03 pending Atlas should allow top Preview polling while staying empty")
     end
@@ -2268,11 +2303,11 @@ local function validate_sidekick_herdr()
         and preview_bytes():find("T10 V03 pending full preview", 1, true) ~= nil
     end, 10)
     selection_picker_opts.actions.sidekick_preview_scroll_up()
-    if async_reads <= pending_full_reads
+    if
+      async_reads <= pending_full_reads
       or preview_swaps <= pending_full_swaps
       or vim.api.nvim_win_get_buf(selection_atlas.win) ~= pending_atlas_buf
-      or table.concat(vim.api.nvim_buf_get_lines(pending_atlas_buf, 0, -1, false), "\n")
-        ~= pending_atlas_bytes
+      or table.concat(vim.api.nvim_buf_get_lines(pending_atlas_buf, 0, -1, false), "\n") ~= pending_atlas_bytes
     then
       fail("T10 V03 pending full Preview should change while displayed Atlas stays empty")
     end
@@ -2283,14 +2318,17 @@ local function validate_sidekick_herdr()
     current_fake_item = selection_default
     local selection_swaps = preview_swaps
     selection_picker_opts.preview({ item = selection_default, preview = fake_picker.preview })
-    vim.wait(1000, function() return preview_swaps > selection_swaps end, 10)
+    vim.wait(1000, function()
+      return preview_swaps > selection_swaps
+    end, 10)
     local selected_bytes = preview_bytes()
     local selected_atlas_buf = vim.api.nvim_win_get_buf(selection_atlas.win)
     local selected_buffers = valid_buffer_set()
     local selected_swaps = preview_swaps
     selection_callbacks["selection-late"](v03_result("selection-late"))
     vim.wait(100)
-    if (selection_cancels["selection-late"] or 0) ~= 1
+    if
+      (selection_cancels["selection-late"] or 0) ~= 1
       or preview_swaps ~= selected_swaps
       or preview_bytes() ~= selected_bytes
       or vim.api.nvim_win_get_buf(selection_atlas.win) ~= selected_atlas_buf
@@ -2314,7 +2352,9 @@ local function validate_sidekick_herdr()
     current_fake_item = after_stage_default
     selection_swaps = preview_swaps
     selection_picker_opts.preview({ item = after_stage_default, preview = fake_picker.preview })
-    vim.wait(1000, function() return preview_swaps > selection_swaps end, 10)
+    vim.wait(1000, function()
+      return preview_swaps > selection_swaps
+    end, 10)
     for _, buf in ipairs(selection_staging_buffers) do
       if vim.api.nvim_buf_is_valid(buf) then
         fail("T04 V03 selection change should delete an obsolete Atlas staging buffer")
@@ -2348,7 +2388,8 @@ local function validate_sidekick_herdr()
     close_v03_picker(close_picker_opts, close_workspace)
     close_callbacks["close-late"](v03_result("close-late"))
     vim.wait(100)
-    if (close_cancels["close-late"] or 0) ~= 1
+    if
+      (close_cancels["close-late"] or 0) ~= 1
       or preview_swaps ~= close_swaps
       or preview_bytes() ~= close_bytes
       or close_atlas:valid()
@@ -2381,10 +2422,7 @@ local function validate_sidekick_herdr()
         fail("T04 V03 picker close should delete an obsolete Atlas staging buffer")
       end
     end
-    if preview_swaps ~= close_swaps
-      or preview_bytes() ~= close_bytes
-      or staged_close_atlas:valid()
-    then
+    if preview_swaps ~= close_swaps or preview_bytes() ~= close_bytes or staged_close_atlas:valid() then
       fail("T04 V03 picker close should not swap an obsolete Atlas staging buffer")
     end
 
@@ -2431,7 +2469,8 @@ local function validate_sidekick_herdr()
     vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "missing")
     vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_label", "Empty Workspace")
     cwd_picker.open()
-    if picker_opts.title ~= "Sidekick Sessions in Workspace: Empty Workspace"
+    if
+      picker_opts.title ~= "Sidekick Sessions in Workspace: Empty Workspace"
       or not picker_opts.items[1]
       or picker_opts.items[1].text ~= "(no named sessions in workspace)"
     then

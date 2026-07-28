@@ -622,10 +622,12 @@ function M.open(opts)
   local groups = workspace_groups(local_workspace_id, metric_cache)
   local workspace_matcher = require("snacks.picker.core.matcher").new({ sort = false })
   if #items == 0 then
-    items = { {
-      text = workspace_id and "(no named sessions in workspace)" or "(no named sessions in cwd)",
-      _empty = true,
-    } }
+    items = {
+      {
+        text = workspace_id and "(no named sessions in workspace)" or "(no named sessions in cwd)",
+        _empty = true,
+      },
+    }
   end
 
   local workspace_rows = {}
@@ -914,7 +916,8 @@ function M.open(opts)
   end
 
   local function swap_preview_buffer(buf, staging_win, item, rendered, generation, on_swap, previous_tick)
-    if generation ~= preview_generation
+    if
+      generation ~= preview_generation
       or item ~= preview_selection
       or not picker
       or picker.closed
@@ -957,7 +960,8 @@ function M.open(opts)
   end
 
   local function swap_atlas_buffer(buf, staging_win, item, generation, previous_tick)
-    if generation ~= preview_generation
+    if
+      generation ~= preview_generation
       or item ~= preview_selection
       or not picker
       or picker.closed
@@ -996,7 +1000,9 @@ function M.open(opts)
     local preview = {
       win = {
         win = atlas_win.win,
-        win_valid = function() return atlas_win:valid() end,
+        win_valid = function()
+          return atlas_win:valid()
+        end,
       },
     }
     local buf, staging_win = prepare_preview_buffer(frame, nil, preview)
@@ -1030,8 +1036,7 @@ function M.open(opts)
       return
     end
     atlas_attempted = true
-    local lookup_win = atlas_win and atlas_win:valid() and atlas_win.win
-      or (preview_window(preview) or {}).win
+    local lookup_win = atlas_win and atlas_win:valid() and atlas_win.win or (preview_window(preview) or {}).win
     if not lookup_win then
       return
     end
@@ -1040,7 +1045,8 @@ function M.open(opts)
     local height = vim.api.nvim_win_get_height(lookup_win)
     local lookup = opts.atlas_lookup or atlas_lookup
     atlas_process = lookup(item, width, height, function(result)
-      if generation ~= preview_generation
+      if
+        generation ~= preview_generation
         or item ~= preview_selection
         or not picker
         or picker.closed
@@ -1059,7 +1065,8 @@ function M.open(opts)
       restage_atlas_preview(item, generation)
     end)
     vim.defer_fn(function()
-      if generation ~= preview_generation
+      if
+        generation ~= preview_generation
         or item ~= preview_selection
         or not picker
         or picker.closed
@@ -1091,14 +1098,12 @@ function M.open(opts)
 
   local function refresh_preview()
     local item = current_preview_item()
-    if preview_loading
+    if
+      preview_loading
       or not item
-      or (
-        item.status ~= "working"
-        and not vim.iter(items):any(function(candidate)
-          return candidate.agent_name == item.agent_name and candidate.status == "working"
-        end)
-      )
+      or (item.status ~= "working" and not vim.iter(items):any(function(candidate)
+        return candidate.agent_name == item.agent_name and candidate.status == "working"
+      end))
       or item == expanded_preview_item
     then
       return
@@ -1171,11 +1176,7 @@ function M.open(opts)
       if generation ~= preview_generation or item ~= preview_selection then
         return
       end
-      if not picker
-        or picker.closed
-        or item ~= current_preview_item()
-        or item ~= expanded_preview_item
-      then
+      if not picker or picker.closed or item ~= current_preview_item() or item ~= expanded_preview_item then
         return
       end
       output = scrub_preview_output(item, output)
@@ -1317,8 +1318,12 @@ function M.open(opts)
       ["<c-w>"] = focus_input,
       ["<c-u>"] = clear_input,
       ["<c-x>"] = workspace_delete,
-      ["<c-b>"] = function() scroll_preview(true) end,
-      ["<c-f>"] = function() scroll_preview(false) end,
+      ["<c-b>"] = function()
+        scroll_preview(true)
+      end,
+      ["<c-f>"] = function()
+        scroll_preview(false)
+      end,
       ["<esc>"] = focus_input,
     },
   })
@@ -1336,10 +1341,14 @@ function M.open(opts)
   local agent_float = require("sidekick.config").cli.win.float
   -- Sidekick sizes the float's content first; its rounded border then adds one
   -- cell on every side. The borderless picker root must include those cells.
-  local picker_width =
-    math.max(agent_float.width <= 1 and math.floor(vim.o.columns * agent_float.width) or agent_float.width, 80) + 2
-  local picker_height =
-    math.max(agent_float.height <= 1 and math.floor(vim.o.lines * agent_float.height) or agent_float.height, 10) + 2
+  local picker_width = math.max(
+    agent_float.width <= 1 and math.floor(vim.o.columns * agent_float.width) or agent_float.width,
+    80
+  ) + 2
+  local picker_height = math.max(
+    agent_float.height <= 1 and math.floor(vim.o.lines * agent_float.height) or agent_float.height,
+    10
+  ) + 2
   local winhl = "Normal:SidekickPickerTransparent"
     .. ",NormalFloat:SidekickPickerTransparent"
     .. ",NormalNC:SidekickPickerTransparent"
@@ -1435,17 +1444,21 @@ function M.open(opts)
       focus_input()
       if has_working then
         spinner_timer = vim.uv.new_timer()
-        spinner_timer:start(spinner_refresh_ms, spinner_refresh_ms, vim.schedule_wrap(function()
-          if picker.closed then
-            stop_spinner()
-          else
-            picker.list:update({ force = true })
-            if has_workspace_working then
-              render_workspace()
+        spinner_timer:start(
+          spinner_refresh_ms,
+          spinner_refresh_ms,
+          vim.schedule_wrap(function()
+            if picker.closed then
+              stop_spinner()
+            else
+              picker.list:update({ force = true })
+              if has_workspace_working then
+                render_workspace()
+              end
+              refresh_preview()
             end
-            refresh_preview()
-          end
-        end))
+          end)
+        )
       end
     end,
     on_close = function(active_picker)

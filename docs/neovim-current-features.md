@@ -363,11 +363,16 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - `<C-.>` toggles the last picker-selected Sidekick session, falling back to the cwd session picker.
 - `<C-;>` opens the local session picker.
 - `<C-r>` renames the selected session in the picker.
+- `<C-x>` confirms before closing the selected agent from the local session picker.
 - `<leader>at` sends the current context/object through Sidekick's native `{this}` placeholder.
 - `<leader>ap` opens prompt selection.
 - Sidekick supports sending context, prompting, toggling float/split, opening local sessions, and creating named sessions.
 - Sidekick keymaps include ask/edit/apply/reject/yank, context/prompt sending, the local picker, and named-session creation.
-- Sidekick cwd session picker includes previews.
+- Sidekick cwd session picker keeps the ordinary conversation preview full-width above its input, with Workspaces,
+  Agents, and Atlas Preview panes across the bottom.
+- For an exactly registered participant, the bottom-right pane shows the compact read-only Atlas projection without
+  replacing the ordinary conversation preview; incomplete or unmatched identity leaves the Atlas pane empty.
+- Ordinary preview polling and full-history scrolling continue while Atlas lookup is pending or displayed.
 - Sidekick global named-session picker includes previews.
 - Sidekick session pickers support killing sessions.
 - Sidekick can search captured named-session pane contents with ripgrep.
