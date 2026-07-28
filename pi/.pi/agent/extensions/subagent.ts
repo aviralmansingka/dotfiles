@@ -1,8 +1,8 @@
 /**
- * Minimal headless subagents extension.
+ * Full Pi subagents extension.
  *
- * Registers one configurable `subagent` tool for bounded read-only work.
- * Write-capable agent configurations are rejected in favor of visible Herdr Pi sessions.
+ * Launches normal session-backed Pi agents with discovered skills, extensions,
+ * context, and tools while streaming their lifecycle into the parent timeline.
  */
 import { spawn } from "node:child_process";
 import * as fs from "node:fs";
@@ -112,7 +112,6 @@ interface ExtensionConfig {
 
 const EXT_DIR = path.dirname(new URL(import.meta.url).pathname);
 const AGENTS_DIR = path.join(EXT_DIR, "subagent-agents");
-const TOOLS_DIR = path.join(EXT_DIR, "subagent-tools");
 const CONFIG_PATH = path.join(EXT_DIR, "subagent.config.json");
 const DEFAULT_MAX_CONCURRENCY = 4;
 
@@ -124,25 +123,6 @@ function loadConfig(): ExtensionConfig {
 	} catch {}
 	return {};
 }
-
-// Built-in tools that pi provides natively (no extension needed)
-const BUILTIN_TOOLS = new Set(["read", "write", "edit", "bash", "grep", "find", "ls"]);
-
-// Custom tools that require loading an extension into the subagent process
-const EXT_BASE = path.join(process.env.HOME || "~", ".pi", "agent", "extensions");
-const CUSTOM_TOOL_EXTENSIONS: Record<string, string> = {
-	web_search: path.join(EXT_BASE, "web-search", "index.ts"),
-	web_fetch: path.join(EXT_BASE, "web-fetch", "index.ts"),
-	safe_bash: path.join(TOOLS_DIR, "safe-bash.ts"),
-	video_extract: path.join(EXT_BASE, "video-extract", "index.ts"),
-	youtube_search: path.join(EXT_BASE, "youtube-search", "index.ts"),
-	google_image_search: path.join(EXT_BASE, "google-image-search", "index.ts"),
-	// `subagent` is the tool this very extension registers. Listing it here lets
-	// a parent agent grant it to a child agent — the child pi process loads this
-	// same index.ts via `--extension`, sees its own subagent tool, and (if
-	// PI_SUBAGENT_ALLOWED is set) only registers the allowlisted agents.
-	subagent: path.join(EXT_DIR, "subagent.ts"),
-};
 
 // ── Agent Discovery & Registration ────────────────────────────────────
 
@@ -315,38 +295,12 @@ async function buildPiArgs(
 		await fs.promises.writeFile(promptPath, agent.systemPrompt, { encoding: "utf-8", mode: 0o600 });
 	});
 
-	const args = [...piBin.baseArgs, "--mode", "json", "-p", "--no-session", "--no-skills"];
-
-	// Separate builtin tools from custom tools. Both kinds share the same
-	// --tools allowlist in pi; --no-tools would disable extension tools too.
-	const allowlist: string[] = [];
-	const extensionPaths = new Set<string>();
-
-	for (const tool of agent.tools) {
-		if (BUILTIN_TOOLS.has(tool)) {
-			allowlist.push(tool);
-		} else if (CUSTOM_TOOL_EXTENSIONS[tool]) {
-			allowlist.push(tool);
-			extensionPaths.add(CUSTOM_TOOL_EXTENSIONS[tool]);
-		}
-	}
-
-	// Use --no-extensions then add only what we need
-	args.push("--no-extensions");
-
-	if (allowlist.length > 0) {
-		// --tools is a unified allowlist that applies to built-in, extension, and custom tools.
-		args.push("--tools", allowlist.join(","));
-	} else {
-		// Agent declared no tools — disable everything.
-		args.push("--no-tools");
-	}
-
-	for (const extPath of extensionPaths) {
-		args.push("--extension", extPath);
-	}
-
-	args.push("--models", agent.model);
+	// JSON print mode is only the transport back to the parent timeline. Unlike
+	// the old mini-agent path, the child keeps a real session and normal Pi
+	// discovery for project context, skills, extensions, and tools.
+	const args = [...piBin.baseArgs, "--mode", "json", "-p", "--approve"];
+	args.push("--name", `subagent-${agent.name}`);
+	args.push("--model", agent.model);
 	args.push("--thinking", agent.thinking);
 	args.push("--append-system-prompt", promptPath);
 
@@ -1442,7 +1396,7 @@ export default function (pi: ExtensionAPI) {
 		promptSnippet: "Run subagents for delegated tasks",
 		promptGuidelines: [
 			"Parallel tool calls are your primary parallelism mechanism — put multiple independent read/fetch/search calls in one function_calls block. Don't use subagents to parallelize simple I/O.",
-			"Use subagent only for bounded read-only reasoning or research. Launch implementation, verification, review, and delivery work as visible Herdr-tracked Pi sessions unless the user explicitly authorizes a headless exception.",
+			"Subagent launches a real session-backed Pi agent with normal skills, extensions, context, and tools; use it for delegated reasoning or bounded implementation when inline parent-session observation is desired.",
 			"For multiple independent subagent tasks, emit multiple `subagent` tool calls in the same turn — they run in parallel automatically.",
 			"Subagents run in the background; continue the driving conversation instead of waiting or polling for them.",
 			"Subagent completion is delivered back into the driving conversation automatically.",
@@ -1466,10 +1420,6 @@ export default function (pi: ExtensionAPI) {
 				const available = agents.map((a) => a.name).join(", ") || "none";
 				throw new Error(`Unknown agent: ${params.agent}. Available agents: ${available}`);
 			}
-			if (agent.tools.some((tool) => tool === "write" || tool === "edit")) {
-				throw new Error(`Headless writer ${params.agent} is disabled. Launch a visible Herdr-tracked Pi session instead.`);
-			}
-
 			const [provider, modelId] = (agent.model || "").split("/");
 			const contextWindow = provider && modelId ? ctx.modelRegistry.find(provider, modelId)?.contextWindow : undefined;
 			const liveResult: AgentResult = {

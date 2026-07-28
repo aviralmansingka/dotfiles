@@ -62,6 +62,19 @@ const productBlob = git(repoRoot, "rev-parse", "HEAD:pi/.pi/agent/extensions/sub
 if (
 	git(repoRoot, "hash-object", productPath) !== productBlob
 ) fail("repository-owned subagent source differs from HEAD");
+const productSource = readFileSync(productPath, "utf8");
+for (const forbidden of ["--no-session", "--no-skills", "--no-extensions", "--no-tools"]) {
+	if (productSource.includes(forbidden)) fail(`subagent still disables full Pi capability with ${forbidden}`);
+}
+for (const required of [
+	'[...piBin.baseArgs, "--mode", "json", "-p", "--approve"]',
+	'args.push("--name", `subagent-${agent.name}`)',
+	'args.push("--model", agent.model)',
+	"const DEFAULT_COMMAND_SUMMARY_LIMIT = 10",
+	"Math.max(0, commandCount - DEFAULT_COMMAND_SUMMARY_LIMIT)",
+]) {
+	if (!productSource.includes(required)) fail(`subagent full-agent/timeline contract missing: ${required}`);
+}
 
 const piCli = realpathSync(execFileSync("command", ["-v", "pi"], { encoding: "utf8", shell: true }).trim());
 const piRoot = resolve(dirname(piCli), "..");
