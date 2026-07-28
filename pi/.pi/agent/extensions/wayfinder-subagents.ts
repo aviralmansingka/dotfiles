@@ -20,7 +20,7 @@ const TaskSchema = Type.Object({
   title: Type.String({ description: "Human-readable Wayfinder ticket title." }),
   prompt: Type.String({ description: "Complete prompt for the sub-agent" }),
   cwd: Type.Optional(Type.String({ description: "Working directory for this sub-agent. Defaults to current cwd." })),
-  model: Type.Optional(Type.String({ description: "Optional Codex model ID." })),
+  model: Type.Optional(Type.String({ description: "Optional Pi model ID." })),
 });
 
 const ParamsSchema = Type.Object({
@@ -98,13 +98,13 @@ function names(map: Params["map"], task: Params["tasks"][number]) {
     workspaceLabel: `Wayfinder · ${map.title}`,
     tabLabel: `${typeLabel} · ${task.ticketId} · ${shorten(task.title)}`,
     slug,
-    agentName: `codex-${slug}`,
+    agentName: `pi-${slug}`,
   };
 }
 
 function makePrompt(map: Params["map"], task: Params["tasks"][number]): string {
   return [
-    "You are a Wayfinder sub-agent running in your own Codex session.",
+    "You are a Wayfinder sub-agent running in your own visible Pi coding-agent session.",
     "Resolve exactly the task below. Do not broaden scope.",
     "If this is a Wayfinder research ticket, record findings on the ticket/map exactly as the Wayfinder skill requires.",
     "If blocked, keep the ticket and session open and begin your final response with `BLOCKED:` followed by the reason.",
@@ -266,13 +266,13 @@ export default function (pi: ExtensionAPI) {
     name: "wayfinder_subagents",
     label: "Wayfinder Subagents",
     description: [
-      "Launch Wayfinder sub-agent Codex sessions with the full interactive TUI through Herdr.",
+      "Launch Wayfinder sub-agent Pi coding-agent sessions with the full interactive TUI through Herdr.",
       "Use this after creating Wayfinder research/task tickets that can run AFK in parallel.",
       "Each map gets a dedicated Herdr workspace and each ticket gets its own tab.",
-      "Sessions use deterministic codex-wf-<map>-<type>-<ticket>-<title> names for Neovim Sidekick.",
+      "Sessions use deterministic pi-wf-<map>-<type>-<ticket>-<title> names for Neovim Sidekick.",
       "Completed sessions are terminated after evidence capture; blocked sessions remain open and the parent receives a summary.",
     ].join(" "),
-    promptSnippet: "Launch AFK Wayfinder research/task sub-agents as full interactive Herdr Codex sessions.",
+    promptSnippet: "Launch AFK Wayfinder research/task sub-agents as full interactive Herdr Pi sessions.",
     promptGuidelines: [
       "Use wayfinder_subagents only for AFK Wayfinder research/task tickets; do not use it for HITL grilling/prototype tickets.",
       "When using wayfinder_subagents, pass the map title plus each ticket's type and tracker ID as structured fields.",
@@ -297,7 +297,7 @@ export default function (pi: ExtensionAPI) {
         const identity = names(params.map, task);
         const cwd = task.cwd ?? ctx.cwd;
         const placement = await preparePlacement(identity.workspaceLabel, identity.tabLabel, cwd, signal);
-        const command = ["codex", "--dangerously-bypass-approvals-and-sandbox"];
+        const command = ["pi", "--name", identity.slug];
         if (task.model) command.push("--model", task.model);
         command.push(makePrompt(params.map, task));
 
