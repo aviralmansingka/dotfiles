@@ -26,6 +26,15 @@ type renderedLine struct {
 	plain, styled string
 }
 
+type milestoneState int
+
+const (
+	milestoneInProgress milestoneState = iota
+	milestoneIntermediate
+	milestoneComplete
+	milestoneFailed
+)
+
 type model struct {
 	run      vaultregistry.Run
 	goals    []journeyGoal
@@ -236,30 +245,14 @@ func headerLines(run vaultregistry.Run, goals []journeyGoal, width int, colors b
 }
 
 func summaryLines(run vaultregistry.Run, goals []journeyGoal, width int, colors bool) []renderedLine {
-	steps := min(5, len(goals))
-	verifiers, outcome, outcomeColor := verifierSummary(run, goals)
-	first := fmt.Sprintf(" │  %d steps · %d goals", steps, len(goals))
-	verifierLabel := fmt.Sprintf("%d verifiers", verifiers)
-	if width < 28 {
-		verifierLabel = fmt.Sprintf("%dV", verifiers)
-	}
-	secondMetric := " │  " + verifierLabel
-	second := clip(secondMetric+" · "+outcome, width)
-	styledSecond := colorize(colors, rail, " │  ") + colorize(colors, muted, verifierLabel)
-	if rest := strings.TrimPrefix(second, secondMetric); rest != "" {
-		separator, status := rest, ""
-		if index := strings.LastIndex(rest, " · "); index >= 0 {
-			separator, status = rest[:index+3], rest[index+3:]
-		}
-		styledSecond += colorize(colors, dim, separator) + colorize(colors, outcomeColor, status)
-	}
-	return []renderedLine{
-		segmentLine(clip(first, width), colorize(colors, rail, " │  ")+colorize(colors, muted, strings.TrimPrefix(clip(first, width), " │  "))),
-		segmentLine(second, styledSecond),
-	}
+	prefix, legend := " │  ", "G · S · V  "
+	mark := milestoneMark(verifierSummary(run, goals), colors)
+	plain := clip(prefix+legend+mark.plain, width)
+	styled := colorize(colors, rail, prefix) + colorize(colors, muted, legend) + mark.styled
+	return []renderedLine{segmentLine(plain, styled)}
 }
 
-func verifierSummary(run vaultregistry.Run, goals []journeyGoal) (int, string, string) {
+func verifierSummary(run vaultregistry.Run, goals []journeyGoal) milestoneState {
 	type observation struct{ state, at string }
 	latest := map[string]observation{}
 	record := func(id, state, at string) {
@@ -275,28 +268,58 @@ func verifierSummary(run vaultregistry.Run, goals []journeyGoal) (int, string, s
 		if attempt := item.Payload.VerifierAttempt; attempt != nil {
 			record(attempt.Identity.VerifierID, string(item.State), item.ObservedAt)
 		}
+		if gap := item.Payload.VerifierAttemptGap; gap != nil {
+			record(gap.Identity.VerifierID, string(item.State), item.ObservedAt)
+		}
 	}
+
+	hasComplete, hasIncomplete, hasFailure := false, false, false
 	if len(latest) == 0 {
-		_, state, color := taskState(goals)
-		if state == "done" || state == "accepted" {
-			return 0, "complete", success
+		for _, goal := range goals {
+			switch glyph(goal.state) {
+			case "●":
+				hasComplete = true
+			case "×":
+				hasFailure = true
+			default:
+				hasIncomplete = true
+			}
 		}
-		return 0, state, color
-	}
-	allPassed := true
-	for _, item := range latest {
-		if activeState(item.state) {
-			return len(latest), "in progress", active
+	} else {
+		for _, item := range latest {
+			switch glyph(item.state) {
+			case "●":
+				hasComplete = true
+			case "×":
+				hasFailure = true
+			default:
+				hasIncomplete = true
+			}
 		}
-		if glyph(item.state) == "×" {
-			return len(latest), "needs attention", failure
-		}
-		allPassed = allPassed && glyph(item.state) == "●"
 	}
-	if allPassed {
-		return len(latest), "all passed", success
+	if hasFailure {
+		return milestoneFailed
 	}
-	return len(latest), "incomplete", attention
+	if hasComplete && !hasIncomplete {
+		return milestoneComplete
+	}
+	if hasComplete {
+		return milestoneIntermediate
+	}
+	return milestoneInProgress
+}
+
+func milestoneMark(state milestoneState, colors bool) renderedLine {
+	switch state {
+	case milestoneComplete:
+		return segmentLine("●", colorize(colors, success, "●"))
+	case milestoneIntermediate:
+		return segmentLine("◐◑", colorize(colors, success, "◐")+colorize(colors, active, "◑"))
+	case milestoneFailed:
+		return segmentLine("×", colorize(colors, failure, "×"))
+	default:
+		return segmentLine("●", colorize(colors, active, "●"))
+	}
 }
 
 func goalLine(goal journeyGoal, connector string, selected bool, width int, colors bool) renderedLine {
@@ -493,11 +516,11 @@ func taskState(goals []journeyGoal) (string, string, string) {
 		}
 		hasAccepted = hasAccepted || goal.state == "accepted"
 	}
-	if hasActive {
-		return "◉", "in progress", active
-	}
 	if hasFailure {
 		return "×", "needs attention", failure
+	}
+	if hasActive {
+		return "◉", "in progress", active
 	}
 	if allSuccessful {
 		if hasAccepted {

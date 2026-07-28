@@ -2,11 +2,11 @@ Vault Hunter Atlas
 T02 · Build the Compact Atlas
 Renderer
 ● recorded done
- │  5 steps · 9 goals
- │  3 verifiers · all passed
+ │  G · S · V  ●
  ├─ ● refactor-gate · done
  ├─ ● review-convergence · do…
  ├─ ● implementation-pr · done
  ├─ ● landing · done
  └─ ● cleanup · done
+
 9 total · selected 7/9
