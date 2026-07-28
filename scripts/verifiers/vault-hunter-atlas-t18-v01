@@ -110,6 +110,8 @@ for binary in (source, installed):
         (["describe"], 'atlas: unknown command "describe"'),
         (["get", "evidence"], 'atlas: unknown get resource "evidence"'),
         (["--run-id", "run-1"], 'atlas: unexpected option --run-id'),
+        (["preview"], 'atlas: unknown command "preview"'),
+        (["render", "run"], 'atlas: unknown command "render"'),
         (["observe", "run-1", "--name", "release-check"], 'atlas: selector accepts exactly one of <name-or-id>, --id, or --name'),
     ]:
             failed = run(binary, args, state_root)

@@ -235,6 +235,18 @@ func BuildEnvelope(vaultRoot, stateRoot, resource string, selector MachineSelect
 	}
 }
 
+func BuildActiveRunSummaries(vaultRoot, stateRoot string) ([]map[string]any, error) {
+	loaded, err := loadStore(vaultRoot, stateRoot)
+	if err != nil {
+		return nil, err
+	}
+	data := make([]map[string]any, 0, len(loaded.activeRuns))
+	for _, run := range loaded.activeRuns {
+		data = append(data, loaded.runSummaryObject(run))
+	}
+	return data, nil
+}
+
 func BuildEvidenceEnvelope(vaultRoot, stateRoot string, selector MachineSelector) (Envelope, error) {
 	loaded, err := loadStore(vaultRoot, stateRoot)
 	if err != nil {
@@ -645,7 +657,7 @@ func (s *store) projectsEnvelope(selector MachineSelector) (Envelope, error) {
 		for _, project := range s.projects {
 			data = append(data, s.projectObject(project))
 		}
-		return listEnvelope("ProjectList", data), nil
+		return boundedListEnvelope("ProjectList", data), nil
 	}
 	project, err := resolveItem(selector, s.projects, func(item projectRecord) string { return item.ID }, func(item projectRecord) string { return item.Name })
 	if err == nil {
@@ -664,7 +676,7 @@ func (s *store) themesEnvelope(selector MachineSelector) (Envelope, error) {
 		for _, theme := range s.themes {
 			data = append(data, s.themeObject(theme))
 		}
-		return listEnvelope("ThemeList", data), nil
+		return boundedListEnvelope("ThemeList", data), nil
 	}
 	theme, err := resolveItem(selector, s.themes, func(item themeRecord) string { return item.ID }, func(item themeRecord) string { return item.Name })
 	if err != nil {
@@ -679,7 +691,7 @@ func (s *store) featuresEnvelope(selector MachineSelector) (Envelope, error) {
 		for _, feature := range s.features {
 			data = append(data, s.featureObject(feature))
 		}
-		return listEnvelope("FeatureList", data), nil
+		return boundedListEnvelope("FeatureList", data), nil
 	}
 	feature, err := resolveItem(selector, s.features, func(item featureRecord) string { return item.ID }, func(item featureRecord) string { return item.Name })
 	if err != nil {
@@ -694,7 +706,7 @@ func (s *store) tasksEnvelope(selector MachineSelector) (Envelope, error) {
 		for _, task := range s.tasks {
 			data = append(data, s.taskObject(task))
 		}
-		return listEnvelope("TaskList", data), nil
+		return boundedListEnvelope("TaskList", data), nil
 	}
 	task, err := resolveItem(selector, s.tasks, func(item taskRecord) string { return item.ID }, func(item taskRecord) string { return item.Name })
 	if err != nil {
@@ -1648,11 +1660,12 @@ func boundedListEnvelope(kind string, data []map[string]any) Envelope {
 			limit = parsed
 		}
 	}
-	bounded := make([]map[string]any, 0, len(data))
+	total := len(data)
+	bounded := make([]map[string]any, 0, total)
 	truncated := false
 	for _, item := range data {
 		candidate := append(append([]map[string]any(nil), bounded...), item)
-		envelope := Envelope{APIVersion: "atlas/v1", Kind: kind, Data: candidate, Meta: map[string]any{"count": len(candidate), "truncated": false}}
+		envelope := Envelope{APIVersion: "atlas/v1", Kind: kind, Data: candidate, Meta: map[string]any{"count": total, "truncated": false}}
 		encoded, _ := json.Marshal(envelope)
 		if len(encoded) > limit {
 			truncated = true
@@ -1660,7 +1673,7 @@ func boundedListEnvelope(kind string, data []map[string]any) Envelope {
 		}
 		bounded = candidate
 	}
-	return Envelope{APIVersion: "atlas/v1", Kind: kind, Data: bounded, Meta: map[string]any{"count": len(bounded), "truncated": truncated, "observed_at": time.Now().UTC().Format(time.RFC3339)}}
+	return Envelope{APIVersion: "atlas/v1", Kind: kind, Data: bounded, Meta: map[string]any{"count": total, "truncated": truncated, "observed_at": time.Now().UTC().Format(time.RFC3339)}}
 }
 
 func runTaskPath(run vaultregistry.Run) string {

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -114,7 +113,7 @@ func main() {
 }
 
 func execute(args []string, stdout, stderr io.Writer) int {
-	if handled, code := executeHidden(args, stdout, stderr); handled {
+	if handled, code := executeInternal(stdout, stderr); handled {
 		return code
 	}
 	command, err := parse(args)
@@ -139,26 +138,16 @@ func execute(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func executeHidden(args []string, stdout, stderr io.Writer) (bool, int) {
-	if len(args) == 0 {
+func executeInternal(stdout, stderr io.Writer) (bool, int) {
+	mode := strings.TrimSpace(os.Getenv("ATLAS_INTERNAL_MODE"))
+	if mode == "" {
 		return false, 0
 	}
-	switch args[0] {
-	case "preview":
-		if err := runPreview(args[1:], stdout, stderr); err != nil {
-			_, _ = fmt.Fprintln(stderr, err)
-			return true, 1
-		}
-		return true, 0
-	case "render":
-		if err := runRender(args[1:], stdout, stderr); err != nil {
-			_, _ = fmt.Fprintln(stderr, err)
-			return true, 1
-		}
-		return true, 0
-	default:
-		return false, 0
+	if err := runInternal(mode, stdout); err != nil {
+		_, _ = fmt.Fprintln(stderr, err)
+		return true, 1
 	}
+	return true, 0
 }
 
 func parse(args []string) (any, error) {
@@ -441,94 +430,98 @@ func parseSelector(args []string) (selector, []string, error) {
 	return parsed, remaining, nil
 }
 
-func runPreview(args []string, stdout, stderr io.Writer) error {
-	flags := flag.NewFlagSet("preview", flag.ContinueOnError)
-	flags.SetOutput(stderr)
-	workspaceID := flags.String("workspace-id", "", "Herdr workspace ID")
-	tabID := flags.String("tab-id", "", "Herdr tab ID")
-	paneID := flags.String("pane-id", "", "Herdr pane ID")
-	terminalID := flags.String("terminal-id", "", "Herdr terminal ID")
-	sessionSource := flags.String("agent-session-source", "", "agent-session source")
-	sessionKind := flags.String("agent-session-kind", "", "agent-session kind")
-	sessionValue := flags.String("agent-session-value", "", "agent-session value")
-	width := flags.Int("width", 0, "preview width")
-	height := flags.Int("height", 0, "preview height")
-	stateDir := flags.String("state-dir", "", "Vault Hunter state directory")
-	if err := flags.Parse(args); err != nil {
+func runInternal(mode string, stdout io.Writer) error {
+	switch mode {
+	case "preview":
+		return runInternalPreview(stdout)
+	case "render-run":
+		return runInternalRender(stdout)
+	default:
+		return fmt.Errorf("atlas: unknown internal mode %q", mode)
+	}
+}
+
+func runInternalPreview(stdout io.Writer) error {
+	reader, err := vaultregistry.OpenReader(strings.TrimSpace(os.Getenv("ATLAS_INTERNAL_STATE_DIR")))
+	if err != nil {
 		return err
 	}
-	if flags.NArg() != 0 {
-		return errors.New("unexpected preview arguments")
+	width, err := internalPositiveInt("ATLAS_INTERNAL_WIDTH")
+	if err != nil {
+		return err
 	}
-	reader, err := vaultregistry.OpenReader(*stateDir)
+	height, err := internalPositiveInt("ATLAS_INTERNAL_HEIGHT")
 	if err != nil {
 		return err
 	}
 	selected := atlascompanion.Agent{
-		WorkspaceID: *workspaceID,
-		TabID:       *tabID,
-		PaneID:      *paneID,
-		TerminalID:  *terminalID,
+		WorkspaceID: internalString("ATLAS_INTERNAL_WORKSPACE_ID"),
+		TabID:       internalString("ATLAS_INTERNAL_TAB_ID"),
+		PaneID:      internalString("ATLAS_INTERNAL_PANE_ID"),
+		TerminalID:  internalString("ATLAS_INTERNAL_TERMINAL_ID"),
 		AgentSession: &vaultregistry.AgentSession{
-			Source: *sessionSource,
-			Kind:   *sessionKind,
-			Value:  *sessionValue,
+			Source: internalString("ATLAS_INTERNAL_AGENT_SESSION_SOURCE"),
+			Kind:   internalString("ATLAS_INTERNAL_AGENT_SESSION_KIND"),
+			Value:  internalString("ATLAS_INTERNAL_AGENT_SESSION_VALUE"),
 		},
 	}
-	result, err := (atlascompanion.Client{Herdr: "herdr"}).Preview(reader, selected, *width, *height)
+	result, err := (atlascompanion.Client{Herdr: "herdr"}).Preview(reader, selected, width, height)
 	if err != nil {
 		return err
 	}
 	return json.NewEncoder(stdout).Encode(result)
 }
 
-func runRender(args []string, stdout, stderr io.Writer) error {
-	if len(args) == 0 || args[0] != "run" {
-		return errors.New("render requires run")
-	}
-	flags := flag.NewFlagSet("render run", flag.ContinueOnError)
-	flags.SetOutput(stderr)
-	stateDir := flags.String("state-dir", "", "Vault Hunter state directory")
-	id := flags.String("id", "", "Run ID")
-	name := flags.String("name", "", "Run name")
-	width := flags.Int("width", 0, "frame width")
-	height := flags.Int("height", 0, "frame height")
-	snapshot := flags.Bool("snapshot", false, "print one deterministic frame")
-	if err := flags.Parse(args[1:]); err != nil {
+func runInternalRender(stdout io.Writer) error {
+	reader, err := vaultregistry.OpenReader(strings.TrimSpace(os.Getenv("ATLAS_INTERNAL_STATE_DIR")))
+	if err != nil {
 		return err
 	}
-	selector := selector{ID: *id, Name: *name}
-	if rest := flags.Args(); len(rest) > 0 {
-		if selector.any() != "" {
-			return errors.New("render run accepts exactly one selector")
-		}
-		selector.Positional = rest[0]
-		if len(rest) > 1 {
-			return errors.New("unexpected render argument " + quote(rest[1]))
-		}
-	}
+	selector := selector{ID: internalString("ATLAS_INTERNAL_RUN_ID"), Name: internalString("ATLAS_INTERNAL_RUN_NAME")}
 	if err := selector.validate(); err != nil {
 		return err
 	}
-	reader, err := vaultregistry.OpenReader(*stateDir)
-	if err != nil {
-		return err
+	if selector.any() == "" {
+		return errors.New("atlas: internal render requires a run selector")
 	}
 	run, err := readRunAny(reader, selector)
 	if err != nil {
 		return err
 	}
-	if *width <= 0 || *height <= 0 {
-		*width, *height = 80, 24
+	width, height := 80, 24
+	if raw := strings.TrimSpace(os.Getenv("ATLAS_INTERNAL_WIDTH")); raw != "" {
+		width, err = strconv.Atoi(raw)
+		if err != nil || width <= 0 {
+			return fmt.Errorf("atlas: ATLAS_INTERNAL_WIDTH must be a positive integer")
+		}
 	}
-	static := *snapshot || os.Getenv("TERM") == "dumb" || !characterDevice(os.Stdin) || !characterDevice(os.Stdout)
-	model := atlaspkg.NewModel(run, *width, *height)
+	if raw := strings.TrimSpace(os.Getenv("ATLAS_INTERNAL_HEIGHT")); raw != "" {
+		height, err = strconv.Atoi(raw)
+		if err != nil || height <= 0 {
+			return fmt.Errorf("atlas: ATLAS_INTERNAL_HEIGHT must be a positive integer")
+		}
+	}
+	static := os.Getenv("ATLAS_INTERNAL_SNAPSHOT") == "1" || os.Getenv("TERM") == "dumb" || !characterDevice(os.Stdin) || !characterDevice(os.Stdout)
+	model := atlaspkg.NewModel(run, width, height)
 	if static {
 		_, err = fmt.Fprintln(stdout, model.View())
 		return err
 	}
 	_, err = tea.NewProgram(model, tea.WithAltScreen()).Run()
 	return err
+}
+
+func internalString(name string) string {
+	return strings.TrimSpace(os.Getenv(name))
+}
+
+func internalPositiveInt(name string) (int, error) {
+	value := internalString(name)
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return 0, fmt.Errorf("atlas: %s must be a positive integer", name)
+	}
+	return parsed, nil
 }
 
 func runObserve(command observeCommand, stdout io.Writer) error {

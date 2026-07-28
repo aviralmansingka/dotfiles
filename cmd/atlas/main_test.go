@@ -25,7 +25,7 @@ func TestHelpSurface(t *testing.T) {
 }
 
 func TestLegacyCommandsAreRejected(t *testing.T) {
-	for _, args := range [][]string{{"status"}, {"describe"}, {"get", "evidence"}, {"--run-id", "run-a"}} {
+	for _, args := range [][]string{{"status"}, {"describe"}, {"get", "evidence"}, {"--run-id", "run-a"}, {"preview"}, {"render", "run"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
 			if code := execute(args, &stdout, &stderr); code == 0 {
@@ -159,7 +159,47 @@ func TestSelectorConflictsFailClosed(t *testing.T) {
 	}
 }
 
-func TestHiddenRenderRunUsesAtlasBinary(t *testing.T) {
+func TestInternalPreviewUsesAtlasBinary(t *testing.T) {
+	root := t.TempDir()
+	producer, err := vaultregistry.OpenProducer(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := producer.CreateRun(testCompanionRequest("run-preview", "preview-check", "Preview Atlas", "ws-preview")); err != nil {
+		t.Fatal(err)
+	}
+	binDir, _ := installReviveHerdr(t)
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("TEST_HERDR_AGENT_LIST", herdrAgentListJSON("ws-preview", "tab-run-preview", "pane-run-preview", "term-run-preview", "pi", "session", "run-preview"))
+	t.Setenv("ATLAS_INTERNAL_MODE", "preview")
+	t.Setenv("ATLAS_INTERNAL_STATE_DIR", root)
+	t.Setenv("ATLAS_INTERNAL_WORKSPACE_ID", "ws-preview")
+	t.Setenv("ATLAS_INTERNAL_TAB_ID", "tab-run-preview")
+	t.Setenv("ATLAS_INTERNAL_PANE_ID", "pane-run-preview")
+	t.Setenv("ATLAS_INTERNAL_TERMINAL_ID", "term-run-preview")
+	t.Setenv("ATLAS_INTERNAL_AGENT_SESSION_SOURCE", "pi")
+	t.Setenv("ATLAS_INTERNAL_AGENT_SESSION_KIND", "session")
+	t.Setenv("ATLAS_INTERNAL_AGENT_SESSION_VALUE", "run-preview")
+	t.Setenv("ATLAS_INTERNAL_WIDTH", "90")
+	t.Setenv("ATLAS_INTERNAL_HEIGHT", "24")
+
+	var stdout, stderr bytes.Buffer
+	if code := execute(nil, &stdout, &stderr); code != 0 {
+		t.Fatalf("preview exit = %d stderr = %q", code, stderr.String())
+	}
+	var result map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("preview json: %v\n%s", err, stdout.String())
+	}
+	if result["outcome"] != "matched" || result["run_id"] != "run-preview" || result["participant_id"] != "driver-run-preview" {
+		t.Fatalf("preview result = %#v", result)
+	}
+	if !strings.Contains(result["frame"].(string), "Run run-preview") {
+		t.Fatalf("preview frame = %q", result["frame"])
+	}
+}
+
+func TestInternalRenderRunUsesAtlasBinary(t *testing.T) {
 	root := t.TempDir()
 	producer, err := vaultregistry.OpenProducer(root)
 	if err != nil {
@@ -168,8 +208,12 @@ func TestHiddenRenderRunUsesAtlasBinary(t *testing.T) {
 	if _, err := producer.CreateRun(testV2Request("run-a", "release-check", "Build Atlas")); err != nil {
 		t.Fatal(err)
 	}
+	t.Setenv("ATLAS_INTERNAL_MODE", "render-run")
+	t.Setenv("ATLAS_INTERNAL_STATE_DIR", root)
+	t.Setenv("ATLAS_INTERNAL_RUN_ID", "run-a")
+
 	var stdout, stderr bytes.Buffer
-	if code := execute([]string{"render", "run", "--id", "run-a", "--state-dir", root}, &stdout, &stderr); code != 0 {
+	if code := execute(nil, &stdout, &stderr); code != 0 {
 		t.Fatalf("render exit = %d stderr = %q", code, stderr.String())
 	}
 	if !strings.Contains(stdout.String(), "Run run-a") {
@@ -177,7 +221,7 @@ func TestHiddenRenderRunUsesAtlasBinary(t *testing.T) {
 	}
 }
 
-func TestT18V04HiddenRenderRunRendersRetiredRuns(t *testing.T) {
+func TestT18V04InternalRenderRunRendersRetiredRuns(t *testing.T) {
 	root := t.TempDir()
 	producer, err := vaultregistry.OpenProducer(root)
 	if err != nil {
@@ -190,8 +234,11 @@ func TestT18V04HiddenRenderRunRendersRetiredRuns(t *testing.T) {
 	if _, err := producer.Retire(created.RunID, created.Revision); err != nil {
 		t.Fatal(err)
 	}
+	t.Setenv("ATLAS_INTERNAL_MODE", "render-run")
+	t.Setenv("ATLAS_INTERNAL_STATE_DIR", root)
+	t.Setenv("ATLAS_INTERNAL_RUN_ID", "run-retired")
 	var stdout, stderr bytes.Buffer
-	if code := execute([]string{"render", "run", "--id", "run-retired", "--state-dir", root}, &stdout, &stderr); code != 0 {
+	if code := execute(nil, &stdout, &stderr); code != 0 {
 		t.Fatalf("retired render exit = %d stderr = %q", code, stderr.String())
 	}
 	if !strings.Contains(stdout.String(), "Run run-retired") {
@@ -307,6 +354,24 @@ func testCompanionRequest(runID, name, title, workspaceID string) vaultregistry.
 	}
 }
 
+func herdrAgentListJSON(workspaceID, tabID, paneID, terminalID, source, kind, value string) string {
+	payload, _ := json.Marshal(map[string]any{"type": "agent_list", "agents": []map[string]any{{
+		"name":         "pi-companion",
+		"agent":        "pi",
+		"agent_status": "working",
+		"workspace_id": workspaceID,
+		"tab_id":       tabID,
+		"pane_id":      paneID,
+		"terminal_id":  terminalID,
+		"agent_session": map[string]any{
+			"source": source,
+			"kind":   kind,
+			"value":  value,
+		},
+	}}})
+	return string(payload)
+}
+
 func installReviveHerdr(t *testing.T) (string, string) {
 	t.Helper()
 	dir := t.TempDir()
@@ -332,7 +397,10 @@ with open(os.environ["TEST_HERDR_LOG"], "a", encoding="utf-8") as handle:
 argv = sys.argv[1:]
 result = None
 if argv[:2] == ["agent", "list"]:
-    result = {"type": "agent_list", "agents": []}
+    if os.environ.get("TEST_HERDR_AGENT_LIST"):
+        result = json.loads(os.environ["TEST_HERDR_AGENT_LIST"])
+    else:
+        result = {"type": "agent_list", "agents": []}
 elif argv[:2] == ["tab", "list"]:
     workspace = argv[argv.index("--workspace") + 1]
     tabs = []

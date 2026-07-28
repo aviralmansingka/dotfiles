@@ -115,7 +115,7 @@ if inventory["unexpected"]:
 print("T18.V05 inventory and removal proof: PASS")
 PY
 
-run_check preview-go-test go test -count=1 ./cmd/atlas -run '^TestHiddenRenderRunUsesAtlasBinary$'
+run_check internal-preview-go-test go test -count=1 ./cmd/atlas -run '^TestInternalPreviewUsesAtlasBinary$'
 run_check atlas-go-tests go test -count=1 ./cmd/atlas ./internal/atlas ./internal/atlascompanion ./internal/vaultregistry
 run_check atlas-go-race go test -race -count=1 ./cmd/atlas ./internal/atlas ./internal/atlascompanion ./internal/vaultregistry
 run_check atlas-go-vet go vet ./cmd/atlas ./internal/atlas ./internal/atlascompanion ./internal/vaultregistry
@@ -136,17 +136,19 @@ JSON
 SH
   chmod +x "$0/herdr"
   GOFLAGS= go build -o "$0/atlas" ./cmd/atlas
-  PATH="$0:$PATH" "$0/atlas" preview \
-    --state-dir "$0/preview-state" \
-    --workspace-id ws-companion \
-    --tab-id tab-driver \
-    --pane-id pane-driver \
-    --terminal-id term-driver \
-    --agent-session-source pi \
-    --agent-session-kind session \
-    --agent-session-value session-companion \
-    --width 90 \
-    --height 24 >"$1/embedded-preview.json"
+  PATH="$0:$PATH" \
+  ATLAS_INTERNAL_MODE=preview \
+  ATLAS_INTERNAL_STATE_DIR="$0/preview-state" \
+  ATLAS_INTERNAL_WORKSPACE_ID=ws-companion \
+  ATLAS_INTERNAL_TAB_ID=tab-driver \
+  ATLAS_INTERNAL_PANE_ID=pane-driver \
+  ATLAS_INTERNAL_TERMINAL_ID=term-driver \
+  ATLAS_INTERNAL_AGENT_SESSION_SOURCE=pi \
+  ATLAS_INTERNAL_AGENT_SESSION_KIND=session \
+  ATLAS_INTERNAL_AGENT_SESSION_VALUE=session-companion \
+  ATLAS_INTERNAL_WIDTH=90 \
+  ATLAS_INTERNAL_HEIGHT=24 \
+  "$0/atlas" >"$1/embedded-preview.json"
   python3 - "$1/embedded-preview.json" <<"PY"
 import json, sys
 preview = json.load(open(sys.argv[1], encoding="utf-8"))

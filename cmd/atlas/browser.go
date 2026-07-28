@@ -162,23 +162,27 @@ func (m browserModel) rightPane(width, rows int) []string {
 }
 
 func buildBrowserEntries(vaultRoot, stateRoot string, reader *vaultregistry.Reader) ([]browserEntry, error) {
-	envelope, err := atlaspkg.BuildEnvelope(vaultRoot, stateRoot, "runs", atlaspkg.MachineSelector{}, atlaspkg.MachineGetOptions{})
+	runs, err := reader.List()
 	if err != nil {
 		return nil, err
 	}
-	data, ok := envelope.Data.([]map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("atlas: runs envelope payload is malformed")
+	runsByID := make(map[string]vaultregistry.Run, len(runs))
+	for _, run := range runs {
+		runsByID[run.RunID] = run
 	}
-	entries := make([]browserEntry, 0, len(data))
-	for _, item := range data {
+	summaries, err := atlaspkg.BuildActiveRunSummaries(vaultRoot, stateRoot)
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]browserEntry, 0, len(summaries))
+	for _, item := range summaries {
 		runID := mapString(item, "id")
 		if runID == "" {
 			continue
 		}
-		run, err := reader.Get(runID)
-		if err != nil {
-			return nil, err
+		run, ok := runsByID[runID]
+		if !ok {
+			return nil, fmt.Errorf("atlas: run %s is missing from the active reader snapshot", runID)
 		}
 		projectID, projectName := mapPair(item, "project")
 		featureID, featureName := mapPair(item, "feature")

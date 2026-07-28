@@ -329,7 +329,14 @@ def main():
         env = os.environ.copy()
         env["ATLAS_VAULT_ROOT"] = str(vault)
         env["VAULT_HUNTER_STATE_DIR"] = str(state)
+        env["ATLAS_MAX_COLLECTION_BYTES"] = "1"
         env["TERM"] = "xterm-256color"
+
+        truncated = json.loads(sh(str(atlas), "get", "runs", env=env).stdout)
+        assert truncated["kind"] == "RunList"
+        assert truncated["meta"]["truncated"] is True
+        assert truncated["meta"]["count"] == 3
+        assert len(truncated["data"]) < 3
 
         watch_times = ["2026-07-27T14:00:00Z", "2026-07-27T14:00:01Z", "2026-07-27T14:00:02Z"]
         watch_env = dict(env)

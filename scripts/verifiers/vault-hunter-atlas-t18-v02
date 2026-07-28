@@ -131,7 +131,7 @@ pending = load("pending")
 assert pending["kind"] == "VerifierAttemptList" and [row["id"] for row in pending["data"]] == ["attempt-018"]
 truncated = load("truncated")
 assert truncated["kind"] == "RunList" and truncated["meta"]["truncated"] is True
-assert truncated["meta"]["count"] == len(truncated["data"])
+assert truncated["meta"]["count"] > len(truncated["data"])
 
 print("T18.V02 typed reads, hydration, evidence, and usage: PASS")
 PY

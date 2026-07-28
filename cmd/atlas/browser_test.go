@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	atlaspkg "github.com/aviral/dotfiles/internal/atlas"
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
@@ -122,6 +125,47 @@ func TestT18V03WatchEmitsCompleteEnvelopes(t *testing.T) {
 	}
 }
 
+func TestT18V03BrowserCompletenessIgnoresMachineByteCap(t *testing.T) {
+	vaultRoot := t.TempDir()
+	stateRoot := t.TempDir()
+	const taskPath = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/18-build-atlas.md"
+	const featurePath = "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/feature.md"
+	writeBrowserFile(t, vaultRoot, "1_projects/pi-agent/README.md", "---\nworking_directory: /worktrees/dotfiles\nrepository: git@github.com:aviralmansingka/dotfiles\n---\n# pi-agent\n")
+	writeBrowserFile(t, vaultRoot, "1_projects/pi-agent/themes/pi-customization/theme.md", "---\ndescription: Customize Pi Agent and its surrounding workflows.\n---\n# pi-customization\n")
+	writeBrowserFile(t, vaultRoot, featurePath, "---\ndescription: Provide a unified Atlas interface.\n---\n# vault-hunter-atlas\n")
+	writeBrowserFile(t, vaultRoot, taskPath, "---\nstatus: in-progress\n---\n# T18: Build Atlas\n\n## Intent\nRender Atlas.\n")
+	producer, err := vaultregistry.OpenProducer(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 1; i <= 6; i++ {
+		runID := fmt.Sprintf("run-%02d", i)
+		if _, err := producer.CreateRun(browserRunRequest(runID, fmt.Sprintf("browser-%02d", i), taskPath, featurePath)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reader, err := vaultregistry.OpenReader(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("ATLAS_MAX_COLLECTION_BYTES", "1")
+	listEnvelope, err := atlaspkg.BuildEnvelope(vaultRoot, stateRoot, "runs", atlaspkg.MachineSelector{}, atlaspkg.MachineGetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	listData := listEnvelope.Data.([]map[string]any)
+	if !listEnvelope.Meta["truncated"].(bool) || listEnvelope.Meta["count"].(int) != 6 || len(listData) >= 6 {
+		t.Fatalf("bounded run list = %#v", listEnvelope)
+	}
+	entries, err := buildBrowserEntries(vaultRoot, stateRoot, reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 6 || entries[0].runID != "run-01" || entries[len(entries)-1].runID != "run-06" {
+		t.Fatalf("browser entries = %#v", entries)
+	}
+}
+
 func browserUpdate(t *testing.T, model browserModel, key rune) browserModel {
 	t.Helper()
 	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
@@ -133,6 +177,54 @@ func browserUpdate(t *testing.T, model browserModel, key rune) browserModel {
 		t.Fatalf("Update returned %T", next)
 	}
 	return updated
+}
+
+func writeBrowserFile(t *testing.T, root, rel, content string) {
+	t.Helper()
+	path := filepath.Join(root, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func browserRunRequest(runID, name, taskPath, featurePath string) vaultregistry.CreateRequest {
+	observedAt := "2026-07-28T00:00:00Z"
+	startedAt := observedAt
+	return vaultregistry.CreateRequest{
+		Run: vaultregistry.Run{
+			SchemaVersion: 2,
+			RunID:         runID,
+			Name:          name,
+			RunKind:       vaultregistry.RunKindHunter,
+			WorkReference: &vaultregistry.WorkReference{ID: "T18", Title: "Build Atlas", Path: taskPath, FeaturePath: featurePath, Kind: "task"},
+			State:         vaultregistry.RunStateActive,
+			Stage:         "invoked",
+			InvokedAt:     observedAt,
+			UpdatedAt:     observedAt,
+		},
+		InitialDriver: vaultregistry.Observation{
+			ObservationID:  "driver-" + runID,
+			Kind:           vaultregistry.KindRegisteredParticipant,
+			State:          vaultregistry.StateActive,
+			GoalID:         "T18.V03",
+			Title:          "Driver",
+			Summary:        "Registered by browser tests.",
+			ObservedAt:     observedAt,
+			CorrelationID:  runID,
+			StartedAt:      &startedAt,
+			Actor:          vaultregistry.Identity{Kind: "participant", ID: "driver"},
+			Source:         vaultregistry.Identity{Kind: "test", ID: "cmd-atlas-browser"},
+			RedactionClass: "internal",
+			Payload: vaultregistry.ObservationPayload{RegisteredParticipant: &vaultregistry.RegisteredParticipantPayload{
+				ParticipantID: "driver",
+				Role:          "driver",
+				AgentSession:  vaultregistry.AgentSession{Source: "pi", Kind: "session", Value: runID},
+			}},
+		},
+	}
 }
 
 func mapKeys(value map[string]any) string {

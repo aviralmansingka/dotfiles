@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"sort"
 	"strings"
 
 	"github.com/aviral/dotfiles/internal/vaultregistry"
@@ -261,7 +262,7 @@ func (c Client) Attach(runID, workspaceID, stateDir string) (Tuple, error) {
 		rollback()
 		return Tuple{}, errors.New("herdr did not create the exact companion tuple")
 	}
-	command := shellCommand(tuple, c.atlasArgv(runID, stateDir))
+	command := shellCommand(tuple, c.atlasArgv(runID, stateDir), c.atlasEnv(runID, stateDir))
 	if err := c.runPane(tuple.PaneID, command); err != nil {
 		rollback()
 		return Tuple{}, err
@@ -482,7 +483,8 @@ func (c Client) exactOwned(s snapshot, runID, workspaceID, stateDir string) ([]T
 		}
 		tuple := Tuple{RunID: runID, WorkspaceID: workspaceID, TabID: tabID, PaneID: matching[0].PaneID, TerminalID: matching[0].TerminalID}
 		atlas := c.atlasArgv(runID, stateDir)
-		if matching[0].WorkspaceID != workspaceID || !complete(tuple) || !ownedProcess(s.processes[tuple.PaneID], tuple, atlas) || ambiguousAtlas(s.processes[tuple.PaneID], atlas) {
+		env := c.atlasEnv(runID, stateDir)
+		if matching[0].WorkspaceID != workspaceID || !complete(tuple) || !ownedProcess(s.processes[tuple.PaneID], tuple, atlas, env) || ambiguousAtlas(s.processes[tuple.PaneID], atlas) {
 			return nil, errors.New("ambiguous or forged companion candidate")
 		}
 		owned = append(owned, tuple)
@@ -494,7 +496,18 @@ func (c Client) exactOwned(s snapshot, runID, workspaceID, stateDir string) ([]T
 }
 
 func (c Client) atlasArgv(runID, stateDir string) []string {
-	return []string{c.Executable, "render", "run", "--id", runID, "--state-dir", stateDir}
+	return []string{c.Executable}
+}
+
+func (c Client) atlasEnv(runID, stateDir string) map[string]string {
+	env := map[string]string{
+		"ATLAS_INTERNAL_MODE":   "render-run",
+		"ATLAS_INTERNAL_RUN_ID": runID,
+	}
+	if stateDir != "" {
+		env["ATLAS_INTERNAL_STATE_DIR"] = stateDir
+	}
+	return env
 }
 
 func (c Client) call(result any, args ...string) error {
@@ -558,20 +571,54 @@ func decodeMarker(value string) (Tuple, bool) {
 	return tuple, true
 }
 
-func shellCommand(tuple Tuple, atlas []string) string {
-	args := append([]string{"/bin/sh", "-c", wrapper, marker(tuple)}, atlas...)
+func shellCommand(tuple Tuple, atlas []string, env map[string]string) string {
+	args := append([]string{"/bin/sh", "-c", wrapperScript(env), marker(tuple)}, atlas...)
 	quoted := make([]string, len(args))
 	for i, arg := range args {
-		quoted[i] = "'" + strings.ReplaceAll(arg, "'", `'\''`) + "'"
+		quoted[i] = shellLiteral(arg)
 	}
 	return strings.Join(quoted, " ")
 }
 
-func ownedProcess(processes []process, tuple Tuple, atlas []string) bool {
-	want := append([]string{"/bin/sh", "-c", wrapper, marker(tuple)}, atlas...)
+func shellLiteral(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", `"'"'"'`) + "'"
+}
+
+func wrapperScript(env map[string]string) string {
+	script := wrapper
+	if len(env) == 0 {
+		return script
+	}
+	keys := make([]string, 0, len(env))
+	for key := range env {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	assignments := make([]string, 0, len(keys))
+	for _, key := range keys {
+		assignments = append(assignments, key+"="+shellLiteral(env[key]))
+	}
+	return strings.Join(assignments, " ") + " " + script
+}
+
+func ownedProcess(processes []process, tuple Tuple, atlas []string, env map[string]string) bool {
 	count := 0
 	for _, process := range processes {
-		if equalArgv(process.Argv, want) {
+		if len(process.Argv) != len(atlas)+4 || process.Argv[0] != "/bin/sh" || process.Argv[1] != "-c" || process.Argv[3] != marker(tuple) || !equalArgv(process.Argv[4:], atlas) {
+			continue
+		}
+		script := process.Argv[2]
+		if !strings.Contains(script, wrapper) {
+			continue
+		}
+		valid := true
+		for key := range env {
+			if !strings.Contains(script, key+"=") {
+				valid = false
+				break
+			}
+		}
+		if valid {
 			count++
 		}
 	}

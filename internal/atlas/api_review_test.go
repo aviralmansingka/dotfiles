@@ -2,6 +2,7 @@ package atlas
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -345,5 +346,137 @@ func atlasTestRun(runID, runName, localTaskID, taskTitle, taskPath, featurePath,
 		Observations:  observations,
 	}
 }
+
+func TestT18V02BoundedCollectionResources(t *testing.T) {
+	vaultRoot := t.TempDir()
+	stateRoot := t.TempDir()
+
+	for i := 1; i <= 8; i++ {
+		project := fmt.Sprintf("proj-%02d", i)
+		taskPath := fmt.Sprintf("1_projects/%s/themes/core/features/atlas/tasks/01-shared.md", project)
+		featurePath := fmt.Sprintf("1_projects/%s/themes/core/features/atlas/feature.md", project)
+		writeAtlasTaskFixture(t, vaultRoot, project, taskPath, featurePath, "T01", strings.Repeat("Atlas task ", 8)+project, strings.Repeat("Verifier ", 8)+project)
+		run := atlasTestRun(
+			fmt.Sprintf("run-%02d", i),
+			fmt.Sprintf("run-name-%02d", i),
+			"T01",
+			strings.Repeat("Atlas task ", 8)+project,
+			taskPath,
+			featurePath,
+			"V01",
+			fmt.Sprintf("attempt-%02d", i),
+			fmt.Sprintf("participant-%02d", i),
+			i%2 == 0,
+		)
+		run.Observations = append([]vaultregistry.Observation{
+			atlasParticipantObservation(run.RunID, fmt.Sprintf("participant-%02d", i), fmt.Sprintf("2026-07-29T09:%02d:00Z", i)),
+			atlasTelemetryObservation(run.RunID, fmt.Sprintf("participant-%02d", i), fmt.Sprintf("2026-07-29T09:%02d:30Z", i), int64(100+i), int64(10+i), int64(40+i)),
+		}, run.Observations...)
+		writeAtlasRun(t, stateRoot, "runs", run)
+	}
+
+	specs := []struct {
+		resource string
+		id       func(map[string]any) string
+	}{
+		{resource: "projects", id: func(item map[string]any) string { return item["id"].(string) }},
+		{resource: "themes", id: func(item map[string]any) string { return item["id"].(string) }},
+		{resource: "features", id: func(item map[string]any) string { return item["id"].(string) }},
+		{resource: "tasks", id: func(item map[string]any) string { return item["id"].(string) }},
+		{resource: "runs", id: func(item map[string]any) string { return item["id"].(string) }},
+		{resource: "verifiers", id: func(item map[string]any) string { return item["id"].(string) }},
+		{resource: "verifierattempts", id: func(item map[string]any) string { return item["id"].(string) }},
+		{resource: "participants", id: func(item map[string]any) string { return item["id"].(string) }},
+		{resource: "usage", id: func(item map[string]any) string { return item["run"].(map[string]any)["id"].(string) }},
+	}
+
+	for _, spec := range specs {
+		t.Run(spec.resource, func(t *testing.T) {
+			t.Setenv("ATLAS_MAX_COLLECTION_BYTES", "1000000")
+			full, err := BuildEnvelope(vaultRoot, stateRoot, spec.resource, MachineSelector{}, MachineGetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			fullData := full.Data.([]map[string]any)
+			if len(fullData) != 8 || full.Meta["count"] != 8 || full.Meta["truncated"].(bool) {
+				t.Fatalf("full %s envelope = %#v", spec.resource, full)
+			}
+			fullIDs := make([]string, 0, len(fullData))
+			for _, item := range fullData {
+				fullIDs = append(fullIDs, spec.id(item))
+			}
+			sortedIDs := append([]string(nil), fullIDs...)
+			sort.Strings(sortedIDs)
+			if strings.Join(fullIDs, ",") != strings.Join(sortedIDs, ",") {
+				t.Fatalf("full %s ids = %v, want deterministic order %v", spec.resource, fullIDs, sortedIDs)
+			}
+
+			t.Setenv("ATLAS_MAX_COLLECTION_BYTES", "700")
+			bounded, err := BuildEnvelope(vaultRoot, stateRoot, spec.resource, MachineSelector{}, MachineGetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			boundedData := bounded.Data.([]map[string]any)
+			if !bounded.Meta["truncated"].(bool) || bounded.Meta["count"] != 8 || len(boundedData) >= len(fullData) {
+				t.Fatalf("bounded %s envelope = %#v", spec.resource, bounded)
+			}
+			for i, item := range boundedData {
+				if got, want := spec.id(item), fullIDs[i]; got != want {
+					t.Fatalf("bounded %s prefix[%d] = %q, want %q", spec.resource, i, got, want)
+				}
+			}
+		})
+	}
+}
+
+func atlasParticipantObservation(runID, participantID, observedAt string) vaultregistry.Observation {
+	startedAt := observedAt
+	return vaultregistry.Observation{
+		ObservationID:  "participant-" + participantID,
+		Kind:           vaultregistry.KindRegisteredParticipant,
+		State:          vaultregistry.StateActive,
+		GoalID:         "T18.V02",
+		Title:          "participant",
+		Summary:        "participant registered",
+		ObservedAt:     observedAt,
+		CorrelationID:  runID,
+		StartedAt:      &startedAt,
+		Actor:          vaultregistry.Identity{Kind: "participant", ID: participantID},
+		Source:         vaultregistry.Identity{Kind: "fixture", ID: "fixture"},
+		RedactionClass: "internal",
+		Payload: vaultregistry.ObservationPayload{RegisteredParticipant: &vaultregistry.RegisteredParticipantPayload{
+			ParticipantID: participantID,
+			Role:          "worker",
+			AgentSession:  vaultregistry.AgentSession{Source: "pi", Kind: "session", Value: runID},
+		}},
+	}
+}
+
+func atlasTelemetryObservation(runID, participantID, observedAt string, input, cached, output int64) vaultregistry.Observation {
+	return vaultregistry.Observation{
+		ObservationID:  "usage-" + participantID,
+		Kind:           vaultregistry.KindRuntimeTelemetry,
+		State:          vaultregistry.StateActive,
+		GoalID:         "T18.V02",
+		Title:          "usage",
+		Summary:        "usage recorded",
+		ObservedAt:     observedAt,
+		CorrelationID:  runID,
+		Actor:          vaultregistry.Identity{Kind: "participant", ID: participantID},
+		Source:         vaultregistry.Identity{Kind: "fixture", ID: "fixture"},
+		RedactionClass: "internal",
+		Payload: vaultregistry.ObservationPayload{RuntimeTelemetry: &vaultregistry.RuntimeTelemetryPayload{
+			ParticipantID: participantID,
+			Usage: &vaultregistry.UsageCounters{
+				Scope:           vaultregistry.UsageDelta,
+				InputTokens:     i64ptr(input),
+				CacheReadTokens: i64ptr(cached),
+				OutputTokens:    i64ptr(output),
+			},
+		}},
+	}
+}
+
+func i64ptr(value int64) *int64 { return &value }
 
 func stringPointer(value string) *string { return &value }

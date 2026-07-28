@@ -62,20 +62,19 @@ local function atlas_lookup(item, width, height, callback)
     return
   end
   local session = item.agent_session
-  local command = {
-    executable,
-    "preview",
-    "--workspace-id", item.workspace_id,
-    "--tab-id", item.tab_id,
-    "--pane-id", item.pane_id,
-    "--terminal-id", item.terminal_id,
-    "--agent-session-source", session.source,
-    "--agent-session-kind", session.kind,
-    "--agent-session-value", session.value,
-    "--width", tostring(width),
-    "--height", tostring(height),
-  }
-  return vim.system(command, { text = true, timeout = 1000 }, vim.schedule_wrap(function(result)
+  local env = vim.tbl_extend("force", vim.fn.environ(), {
+    ATLAS_INTERNAL_MODE = "preview",
+    ATLAS_INTERNAL_WORKSPACE_ID = item.workspace_id,
+    ATLAS_INTERNAL_TAB_ID = item.tab_id,
+    ATLAS_INTERNAL_PANE_ID = item.pane_id,
+    ATLAS_INTERNAL_TERMINAL_ID = item.terminal_id,
+    ATLAS_INTERNAL_AGENT_SESSION_SOURCE = session.source,
+    ATLAS_INTERNAL_AGENT_SESSION_KIND = session.kind,
+    ATLAS_INTERNAL_AGENT_SESSION_VALUE = session.value,
+    ATLAS_INTERNAL_WIDTH = tostring(width),
+    ATLAS_INTERNAL_HEIGHT = tostring(height),
+  })
+  return vim.system({ executable }, { env = env, text = true, timeout = 1000 }, vim.schedule_wrap(function(result)
     if result.code ~= 0 then
       callback(nil)
       return
