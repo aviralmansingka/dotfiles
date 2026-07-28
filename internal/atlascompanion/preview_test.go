@@ -122,7 +122,7 @@ func TestPreviewOutcomesFailClosedAndReadOnly(t *testing.T) {
 			name: "malformed", outcome: "malformed", registry: []byte(`{"schema_version":`),
 		},
 		{
-			name: "unsupported", outcome: "unsupported", registry: []byte("{\"schema_version\":2}\n"),
+			name: "incomplete schema v2", outcome: "malformed", registry: []byte("{\"schema_version\":2}\n"),
 		},
 		{
 			name: "ambiguous", outcome: "ambiguous",
