@@ -96,9 +96,9 @@ func serve(input io.Reader, output io.Writer) error {
 	var response any
 	switch req := command.(type) {
 	case createRequest:
-		producer, err := vaultregistry.OpenProducer(req.Root)
-		if err != nil {
-			return err
+		producer, openErr := vaultregistry.OpenProducer(req.Root)
+		if openErr != nil {
+			return openErr
 		}
 		response, err = create(producer, req.Run)
 	case getRequest:

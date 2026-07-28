@@ -567,7 +567,7 @@ func (r *Reader) lock() (func(), bool, error) {
 
 func flock(f *os.File, mode int) (func(), error) {
 	if err := syscall.Flock(int(f.Fd()), mode); err != nil {
-		f.Close()
+		_ = f.Close()
 		return nil, err
 	}
 	return func() {
@@ -587,7 +587,7 @@ func (p *Producer) write(run Run) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(name)
+	defer func() { _ = os.Remove(name) }()
 	if err := os.Rename(name, p.path(run.RunID)); err != nil {
 		return err
 	}
@@ -595,7 +595,7 @@ func (p *Producer) write(run Run) error {
 	if err != nil {
 		return err
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 	return d.Sync()
 }
 
@@ -615,7 +615,7 @@ func writeTemp(dir string, data []byte) (string, error) {
 		err = closeErr
 	}
 	if err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return "", err
 	}
 	return name, nil
