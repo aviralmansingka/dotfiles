@@ -23,13 +23,18 @@ func TestT18V02TypedReadsAndUsage(t *testing.T) {
 		t.Fatalf("project = %#v", project)
 	}
 
+	globalTaskID := atlasTaskID("T09", "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/09-list-retire.md")
+	globalVerifierID := atlasVerifierID(globalTaskID, "V01")
+
 	run, err := BuildEnvelope(vaultRoot, stateRoot, "runs", MachineSelector{ID: "run-041"}, MachineGetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	runData := run.Data.(map[string]any)
 	attempts := runData["verifier_attempts"].([]map[string]any)
-	if run.Kind != "Run" || runData["name"] != "registry-list-and-retire" || len(attempts) != 1 {
+	task := runData["task"].(map[string]any)
+	verifier := attempts[0]["verifier"].(map[string]any)
+	if run.Kind != "Run" || runData["name"] != "registry-list-and-retire" || len(attempts) != 1 || task["id"] != globalTaskID || task["local_id"] != "T09" || verifier["id"] != globalVerifierID || verifier["local_id"] != "V01" {
 		t.Fatalf("run = %#v", run)
 	}
 
@@ -63,7 +68,7 @@ func TestT18V02TypedReadsAndUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 	evidenceData := evidence.Data.(map[string]any)
-	if evidence.Kind != "Evidence" || evidenceData["implementation_tree"] != "7a3d9f1" {
+	if evidence.Kind != "Evidence" || evidenceData["implementation_tree"] != "7a3d9f1" || evidenceData["task"].(map[string]any)["id"] != globalTaskID || evidenceData["verifier"].(map[string]any)["id"] != globalVerifierID {
 		t.Fatalf("evidence = %#v", evidence)
 	}
 }

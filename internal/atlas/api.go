@@ -60,6 +60,7 @@ type projectRecord struct {
 	WorkingDirectory string
 	Repository       string
 	Path             string
+	MissingMetadata  []string
 }
 
 type themeRecord struct {
@@ -83,6 +84,7 @@ type featureRecord struct {
 
 type verifierDefinition struct {
 	ID       string
+	LocalID  string
 	Name     string
 	Command  string
 	Expected string
@@ -90,6 +92,7 @@ type verifierDefinition struct {
 
 type taskRecord struct {
 	ID          string
+	LocalID     string
 	Name        string
 	Intent      string
 	Status      string
@@ -109,21 +112,23 @@ type note struct {
 }
 
 type store struct {
-	vaultRoot   string
-	stateRoot   string
-	projects    []projectRecord
-	themes      []themeRecord
-	features    []featureRecord
-	tasks       []taskRecord
-	activeRuns  []vaultregistry.Run
-	retiredRuns []vaultregistry.Run
-	runsByTask  map[string][]vaultregistry.Run
+	vaultRoot          string
+	stateRoot          string
+	projects           []projectRecord
+	incompleteProjects []projectRecord
+	themes             []themeRecord
+	features           []featureRecord
+	tasks              []taskRecord
+	activeRuns         []vaultregistry.Run
+	retiredRuns        []vaultregistry.Run
+	runsByTask         map[string][]vaultregistry.Run
 }
 
 type taskIdentity struct {
-	ID   string
-	Name string
-	Path string
+	ID      string
+	LocalID string
+	Name    string
+	Path    string
 }
 
 type attemptProjection struct {
@@ -146,6 +151,7 @@ type evidenceProjection struct {
 	RunID              string
 	RunName            string
 	VerifierID         string
+	VerifierLocalID    string
 	VerifierName       string
 	AttemptID          string
 	AttemptOutcome     string
@@ -239,11 +245,19 @@ func BuildEvidenceEnvelope(vaultRoot, stateRoot string, selector MachineSelector
 	if err != nil {
 		return Envelope{}, err
 	}
+	taskRef := map[string]any{"id": picked.Task.ID, "name": picked.Task.Name}
+	if picked.Task.LocalID != "" {
+		taskRef["local_id"] = picked.Task.LocalID
+	}
+	verifier := map[string]any{"id": picked.VerifierID, "name": picked.VerifierName}
+	if picked.VerifierLocalID != "" {
+		verifier["local_id"] = picked.VerifierLocalID
+	}
 	data := map[string]any{
 		"id":                  picked.ID,
-		"task":                map[string]any{"id": picked.Task.ID, "name": picked.Task.Name},
+		"task":                taskRef,
 		"run":                 map[string]any{"id": picked.RunID, "name": picked.RunName},
-		"verifier":            map[string]any{"id": picked.VerifierID, "name": picked.VerifierName},
+		"verifier":            verifier,
 		"attempt":             map[string]any{"id": picked.AttemptID, "outcome": picked.AttemptOutcome, "decision": picked.AttemptDecision},
 		"command":             picked.Command,
 		"implementation_tree": picked.ImplementationTree,
@@ -333,10 +347,7 @@ func (s *store) loadNotes() error {
 			return err
 		}
 		name := filepath.Base(rel)
-		if note.Frontmatter["working_directory"] == "" || note.Frontmatter["repository"] == "" {
-			return fmt.Errorf("atlas: Project %s requires working_directory and repository frontmatter", name)
-		}
-		s.projects = append(s.projects, projectRecord{
+		record := projectRecord{
 			ID:               valueOr(note.Frontmatter["id"], "project-"+name),
 			Name:             name,
 			Description:      valueOr(note.Frontmatter["description"], note.Paragraph),
@@ -344,7 +355,18 @@ func (s *store) loadNotes() error {
 			WorkingDirectory: note.Frontmatter["working_directory"],
 			Repository:       note.Frontmatter["repository"],
 			Path:             normalizePath(filepath.ToSlash(rel)),
-		})
+		}
+		if record.WorkingDirectory == "" {
+			record.MissingMetadata = append(record.MissingMetadata, "working_directory")
+		}
+		if record.Repository == "" {
+			record.MissingMetadata = append(record.MissingMetadata, "repository")
+		}
+		if len(record.MissingMetadata) != 0 {
+			s.incompleteProjects = append(s.incompleteProjects, record)
+			continue
+		}
+		s.projects = append(s.projects, record)
 	}
 	themes, err := filepath.Glob(filepath.Join(s.vaultRoot, "1_projects", "*", "themes", "*", "theme.md"))
 	if err != nil {
@@ -356,18 +378,22 @@ func (s *store) loadNotes() error {
 		if err != nil {
 			return err
 		}
+		normalized := normalizePath(filepath.ToSlash(rel))
+		parts := strings.Split(normalized, "/")
+		if !s.hasProjectPath(strings.Join(parts[:2], "/")) {
+			continue
+		}
 		note, err := readNote(path)
 		if err != nil {
 			return err
 		}
-		parts := strings.Split(normalizePath(filepath.ToSlash(rel)), "/")
 		name := parts[3]
 		s.themes = append(s.themes, themeRecord{
 			ID:          valueOr(note.Frontmatter["id"], "theme-"+name),
 			Name:        name,
 			Description: valueOr(note.Frontmatter["description"], note.Paragraph),
 			Status:      valueOr(note.Frontmatter["status"], "active"),
-			Path:        normalizePath(filepath.ToSlash(rel)),
+			Path:        normalized,
 			ProjectPath: strings.Join(parts[:2], "/"),
 		})
 	}
@@ -381,18 +407,22 @@ func (s *store) loadNotes() error {
 		if err != nil {
 			return err
 		}
+		normalized := normalizePath(filepath.ToSlash(rel))
+		parts := strings.Split(normalized, "/")
+		if !s.hasProjectPath(strings.Join(parts[:2], "/")) {
+			continue
+		}
 		note, err := readNote(path)
 		if err != nil {
 			return err
 		}
-		parts := strings.Split(normalizePath(filepath.ToSlash(rel)), "/")
 		name := parts[5]
 		s.features = append(s.features, featureRecord{
 			ID:          valueOr(note.Frontmatter["id"], "feature-"+name),
 			Name:        name,
 			Description: valueOr(note.Frontmatter["description"], note.Paragraph),
 			Status:      valueOr(note.Frontmatter["status"], "active"),
-			Path:        normalizePath(filepath.ToSlash(rel)),
+			Path:        normalized,
 			ProjectPath: strings.Join(parts[:2], "/"),
 			ThemePath:   strings.Join(parts[:4], "/") + "/theme.md",
 		})
@@ -407,21 +437,26 @@ func (s *store) loadNotes() error {
 		if err != nil {
 			return err
 		}
+		normalized := normalizePath(filepath.ToSlash(rel))
+		parts := strings.Split(normalized, "/")
+		if !s.hasProjectPath(strings.Join(parts[:2], "/")) {
+			continue
+		}
 		note, err := readNote(path)
 		if err != nil {
 			return err
 		}
-		normalized := normalizePath(filepath.ToSlash(rel))
-		parts := strings.Split(normalized, "/")
-		id, title := splitIdentity(note.Title)
-		if id == "" {
-			id = valueOr(note.Frontmatter["id"], strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)))
+		localID, title := splitIdentity(note.Title)
+		if localID == "" {
+			localID = valueOr(note.Frontmatter["id"], strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)))
 		}
 		if title == "" {
 			title = note.Title
 		}
+		taskID := atlasTaskID(localID, normalized)
 		s.tasks = append(s.tasks, taskRecord{
-			ID:          id,
+			ID:          taskID,
+			LocalID:     localID,
 			Name:        title,
 			Intent:      valueOr(note.Sections["intent"], note.Paragraph),
 			Status:      valueOr(note.Frontmatter["status"], "pending"),
@@ -429,7 +464,7 @@ func (s *store) loadNotes() error {
 			ProjectPath: strings.Join(parts[:2], "/"),
 			ThemePath:   strings.Join(parts[:4], "/") + "/theme.md",
 			FeaturePath: strings.Join(parts[:6], "/") + "/feature.md",
-			Verifiers:   parseVerifiers(note.Body),
+			Verifiers:   parseVerifiers(note.Body, taskID),
 		})
 	}
 	return nil
@@ -558,7 +593,7 @@ func parseNote(data string) note {
 	return result
 }
 
-func parseVerifiers(body string) []verifierDefinition {
+func parseVerifiers(body, taskID string) []verifierDefinition {
 	const itemPrefix = "- ["
 	itemPattern := regexpMustCompile(`^\s*-\s*\[[ xX-]\]\s*\*\*(V[0-9]+)\s*[—-]\s*(.*?)\*\*`)
 	commandPattern := regexpMustCompile(`\*\*Command:\*\*\s*(.+)$`)
@@ -585,7 +620,8 @@ func parseVerifiers(body string) []verifierDefinition {
 		}
 		if strings.HasPrefix(trimmed, itemPrefix) {
 			if match := itemPattern.FindStringSubmatch(trimmed); match != nil {
-				verifiers = append(verifiers, verifierDefinition{ID: match[1], Name: strings.TrimSpace(match[2])})
+				localID := strings.ToUpper(match[1])
+				verifiers = append(verifiers, verifierDefinition{ID: atlasVerifierID(taskID, localID), LocalID: localID, Name: strings.TrimSpace(match[2])})
 				current = &verifiers[len(verifiers)-1]
 				continue
 			}
@@ -612,10 +648,14 @@ func (s *store) projectsEnvelope(selector MachineSelector) (Envelope, error) {
 		return listEnvelope("ProjectList", data), nil
 	}
 	project, err := resolveItem(selector, s.projects, func(item projectRecord) string { return item.ID }, func(item projectRecord) string { return item.Name })
-	if err != nil {
-		return Envelope{}, err
+	if err == nil {
+		return observedEnvelope("Project", s.projectObject(project)), nil
 	}
-	return observedEnvelope("Project", s.projectObject(project)), nil
+	incomplete, incompleteErr := resolveItem(selector, s.incompleteProjects, func(item projectRecord) string { return item.ID }, func(item projectRecord) string { return item.Name })
+	if incompleteErr == nil {
+		return Envelope{}, incomplete.metadataError()
+	}
+	return Envelope{}, err
 }
 
 func (s *store) themesEnvelope(selector MachineSelector) (Envelope, error) {
@@ -697,7 +737,8 @@ func (s *store) verifiersEnvelope(selector MachineSelector) (Envelope, error) {
 func (s *store) verifierAttemptsEnvelope(selector MachineSelector, options MachineGetOptions) (Envelope, error) {
 	attempts := s.allAttempts()
 	if options.Run != "" {
-		run, err := resolveItem(MachineSelector{Positional: options.Run}, s.activeRuns, func(item vaultregistry.Run) string { return item.RunID }, func(item vaultregistry.Run) string { return runName(item) })
+		runs := append(append([]vaultregistry.Run(nil), s.activeRuns...), s.retiredRuns...)
+		run, err := resolveItem(MachineSelector{Positional: options.Run}, runs, func(item vaultregistry.Run) string { return item.RunID }, func(item vaultregistry.Run) string { return runName(item) })
 		if err != nil {
 			return Envelope{}, err
 		}
@@ -724,14 +765,15 @@ func (s *store) verifierAttemptsEnvelope(selector MachineSelector, options Machi
 }
 
 func (s *store) participantsEnvelope(selector MachineSelector) (Envelope, error) {
-	participants := s.allParticipants()
 	if selector.any() == "" {
+		participants := s.allParticipants(s.activeRuns)
 		data := make([]map[string]any, 0, len(participants))
 		for _, participant := range participants {
 			data = append(data, participantObject(participant))
 		}
 		return boundedListEnvelope("ParticipantList", data), nil
 	}
+	participants := s.allParticipants(append(append([]vaultregistry.Run(nil), s.activeRuns...), s.retiredRuns...))
 	picked, err := resolveItem(selector, participants, func(item participantProjection) string { return item.ID }, func(item participantProjection) string { return item.Name })
 	if err != nil {
 		return Envelope{}, err
@@ -740,14 +782,15 @@ func (s *store) participantsEnvelope(selector MachineSelector) (Envelope, error)
 }
 
 func (s *store) usageEnvelope(selector MachineSelector) (Envelope, error) {
-	usage := s.allUsage()
 	if selector.any() == "" {
+		usage := s.allUsage(s.activeRuns)
 		data := make([]map[string]any, 0, len(usage))
 		for _, item := range usage {
 			data = append(data, usageObject(item))
 		}
 		return boundedListEnvelope("UsageList", data), nil
 	}
+	usage := s.allUsage(append(append([]vaultregistry.Run(nil), s.activeRuns...), s.retiredRuns...))
 	picked, err := resolveItem(selector, usage, func(item usageProjection) string { return item.RunID }, func(item usageProjection) string { return item.RunName })
 	if err != nil {
 		return Envelope{}, err
@@ -797,7 +840,11 @@ func (s *store) featureObject(feature featureRecord) map[string]any {
 	tasks := make([]map[string]any, 0)
 	for _, task := range s.tasks {
 		if task.FeaturePath == feature.Path {
-			tasks = append(tasks, map[string]any{"id": task.ID, "name": task.Name, "status": task.Status})
+			entry := map[string]any{"id": task.ID, "name": task.Name, "status": task.Status}
+			if task.LocalID != "" {
+				entry["local_id"] = task.LocalID
+			}
+			tasks = append(tasks, entry)
 		}
 	}
 	return map[string]any{
@@ -830,6 +877,9 @@ func (s *store) taskObject(task taskRecord) map[string]any {
 			"definition": map[string]any{"command": def.Command, "expected": def.Expected},
 			"status":     verifierStatus(attempts),
 		}
+		if def.LocalID != "" {
+			verifier["local_id"] = def.LocalID
+		}
 		if accepted := acceptedAttempt(attempts); accepted != nil {
 			verifier["accepted_attempt"] = map[string]any{
 				"id":           accepted.ID,
@@ -843,7 +893,7 @@ func (s *store) taskObject(task taskRecord) map[string]any {
 	}
 	evidence := make([]map[string]any, 0)
 	for _, attempt := range s.taskAttempts(task) {
-		evidence = append(evidence, map[string]any{
+		entry := map[string]any{
 			"id":                  attempt.Evidence.ID,
 			"verifier_id":         attempt.Verifier.ID,
 			"attempt_id":          attempt.ID,
@@ -851,10 +901,14 @@ func (s *store) taskObject(task taskRecord) map[string]any {
 			"command":             attempt.Evidence.Command,
 			"implementation_tree": attempt.Evidence.ImplementationTree,
 			"artifacts":           attempt.Evidence.Artifacts,
-		})
-		if attempt.Evidence.ExitStatus != nil {
-			evidence[len(evidence)-1]["exit_status"] = *attempt.Evidence.ExitStatus
 		}
+		if attempt.Verifier.LocalID != "" {
+			entry["verifier_local_id"] = attempt.Verifier.LocalID
+		}
+		if attempt.Evidence.ExitStatus != nil {
+			entry["exit_status"] = *attempt.Evidence.ExitStatus
+		}
+		evidence = append(evidence, entry)
 	}
 	runs := make([]map[string]any, 0, len(taskRuns))
 	for _, run := range taskRuns {
@@ -866,7 +920,7 @@ func (s *store) taskObject(task taskRecord) map[string]any {
 			"evidence_ids":         evidenceIDsForRun(s.taskAttempts(task), run.RunID),
 		})
 	}
-	return map[string]any{
+	data := map[string]any{
 		"id":        task.ID,
 		"name":      task.Name,
 		"intent":    task.Intent,
@@ -878,6 +932,10 @@ func (s *store) taskObject(task taskRecord) map[string]any {
 		"evidence":  evidence,
 		"runs":      runs,
 	}
+	if task.LocalID != "" {
+		data["local_id"] = task.LocalID
+	}
+	return data
 }
 
 func (s *store) runSummaryObject(run vaultregistry.Run) map[string]any {
@@ -906,9 +964,13 @@ func (s *store) runObject(run vaultregistry.Run) map[string]any {
 	attempts := s.runAttempts(run)
 	items := make([]map[string]any, 0, len(attempts))
 	for _, attempt := range attempts {
+		verifier := map[string]any{"id": attempt.Verifier.ID, "name": attempt.Verifier.Name, "definition": map[string]any{"command": attempt.Verifier.Command, "expected": attempt.Verifier.Expected}}
+		if attempt.Verifier.LocalID != "" {
+			verifier["local_id"] = attempt.Verifier.LocalID
+		}
 		item := map[string]any{
 			"id":       attempt.ID,
-			"verifier": map[string]any{"id": attempt.Verifier.ID, "name": attempt.Verifier.Name, "definition": map[string]any{"command": attempt.Verifier.Command, "expected": attempt.Verifier.Expected}},
+			"verifier": verifier,
 			"outcome":  attempt.Outcome,
 			"decision": attempt.Decision,
 			"evidence": map[string]any{
@@ -957,9 +1019,15 @@ func (s *store) runContext(run vaultregistry.Run) (map[string]any, map[string]an
 	themeObj := map[string]any{"id": theme.ID, "name": theme.Name}
 	featureObj := map[string]any{"id": feature.ID, "name": feature.Name}
 	taskObj := map[string]any{"id": task.ID, "name": task.Name, "status": task.Status}
+	if task.LocalID != "" {
+		taskObj["local_id"] = task.LocalID
+	}
 	if task.ID == "" {
 		identity := runTaskIdentity(run)
 		taskObj = map[string]any{"id": identity.ID, "name": identity.Name}
+		if identity.LocalID != "" {
+			taskObj["local_id"] = identity.LocalID
+		}
 	}
 	return projectObj, themeObj, featureObj, taskObj
 }
@@ -1013,21 +1081,32 @@ func (s *store) allVerifiers() []map[string]any {
 	for _, task := range s.tasks {
 		for _, def := range task.Verifiers {
 			attempts := s.taskVerifierAttempts(task, def.ID)
+			taskRef := map[string]any{"id": task.ID, "name": task.Name}
+			if task.LocalID != "" {
+				taskRef["local_id"] = task.LocalID
+			}
 			item := map[string]any{
 				"id":         def.ID,
 				"name":       def.Name,
 				"status":     verifierStatus(attempts),
-				"task":       map[string]any{"id": task.ID, "name": task.Name},
+				"task":       taskRef,
 				"definition": map[string]any{"command": def.Command, "expected": def.Expected},
+			}
+			if def.LocalID != "" {
+				item["local_id"] = def.LocalID
 			}
 			rows := make([]map[string]any, 0, len(attempts))
 			for _, attempt := range attempts {
+				evidence := map[string]any{"id": attempt.Evidence.ID, "implementation_tree": attempt.Evidence.ImplementationTree, "artifacts": attempt.Evidence.Artifacts}
+				if attempt.Verifier.LocalID != "" {
+					evidence["verifier_local_id"] = attempt.Verifier.LocalID
+				}
 				entry := map[string]any{
 					"id":           attempt.ID,
 					"run":          map[string]any{"id": attempt.RunID, "name": attempt.RunName},
 					"outcome":      attempt.Outcome,
 					"decision":     attempt.Decision,
-					"evidence":     map[string]any{"id": attempt.Evidence.ID, "implementation_tree": attempt.Evidence.ImplementationTree, "artifacts": attempt.Evidence.Artifacts},
+					"evidence":     evidence,
 					"attempted_at": attempt.AttemptedAt,
 				}
 				if attempt.Evidence.ExitStatus != nil {
@@ -1087,7 +1166,11 @@ func (s *store) runAttempts(run vaultregistry.Run) []attemptProjection {
 		for _, task := range s.tasks {
 			if task.Path == path {
 				for _, verifier := range task.Verifiers {
-					definitions[verifier.ID] = verifier
+					key := verifier.LocalID
+					if key == "" {
+						key = verifier.ID
+					}
+					definitions[key] = verifier
 				}
 				break
 			}
@@ -1122,7 +1205,7 @@ func (s *store) runAttempts(run vaultregistry.Run) []attemptProjection {
 				Verifier: definitions[identity.VerifierID],
 			}
 			if builder.Verifier.ID == "" {
-				builder.Verifier = verifierDefinition{ID: identity.VerifierID, Name: identity.VerifierID, Command: identity.Command}
+				builder.Verifier = verifierDefinition{ID: atlasVerifierID(builder.Task.ID, identity.VerifierID), LocalID: strings.ToUpper(identity.VerifierID), Name: identity.VerifierID, Command: identity.Command}
 			}
 			builders[identity.AttemptID] = builder
 		}
@@ -1167,6 +1250,7 @@ func deriveEvidence(stateRoot string, run vaultregistry.Run, observation vaultre
 		RunID:              run.RunID,
 		RunName:            runName(run),
 		VerifierID:         verifier.ID,
+		VerifierLocalID:    verifier.LocalID,
 		VerifierName:       verifier.Name,
 		AttemptID:          identity.AttemptID,
 		Command:            identity.Command,
@@ -1234,14 +1318,22 @@ func (s *store) allAttempts() []attemptProjection {
 }
 
 func attemptObject(attempt attemptProjection) map[string]any {
+	taskRef := map[string]any{"id": attempt.Task.ID, "name": attempt.Task.Name}
+	if attempt.Task.LocalID != "" {
+		taskRef["local_id"] = attempt.Task.LocalID
+	}
+	verifier := map[string]any{"id": attempt.Verifier.ID, "name": attempt.Verifier.Name, "definition": map[string]any{"command": attempt.Verifier.Command, "expected": attempt.Verifier.Expected}}
+	if attempt.Verifier.LocalID != "" {
+		verifier["local_id"] = attempt.Verifier.LocalID
+	}
 	data := map[string]any{
 		"id":           attempt.ID,
 		"revision":     attempt.Revision,
 		"outcome":      attempt.Outcome,
 		"decision":     attempt.Decision,
 		"run":          map[string]any{"id": attempt.RunID, "name": attempt.RunName},
-		"task":         map[string]any{"id": attempt.Task.ID, "name": attempt.Task.Name},
-		"verifier":     map[string]any{"id": attempt.Verifier.ID, "name": attempt.Verifier.Name, "definition": map[string]any{"command": attempt.Verifier.Command, "expected": attempt.Verifier.Expected}},
+		"task":         taskRef,
+		"verifier":     verifier,
 		"evidence":     map[string]any{"id": attempt.Evidence.ID, "command": attempt.Evidence.Command, "implementation_tree": attempt.Evidence.ImplementationTree, "artifacts": attempt.Evidence.Artifacts},
 		"attempted_at": attempt.AttemptedAt,
 	}
@@ -1272,9 +1364,9 @@ func (s *store) allEvidence() []evidenceProjection {
 	return evidence
 }
 
-func (s *store) allParticipants() []participantProjection {
+func (s *store) allParticipants(runs []vaultregistry.Run) []participantProjection {
 	var participants []participantProjection
-	for _, run := range s.activeRuns {
+	for _, run := range runs {
 		participants = append(participants, participantsForRun(run)...)
 	}
 	sort.SliceStable(participants, func(i, j int) bool {
@@ -1434,9 +1526,9 @@ func participantObject(participant participantProjection) map[string]any {
 	}
 }
 
-func (s *store) allUsage() []usageProjection {
+func (s *store) allUsage(runs []vaultregistry.Run) []usageProjection {
 	var usage []usageProjection
-	for _, run := range s.activeRuns {
+	for _, run := range runs {
 		participants := participantsForRun(run)
 		item := usageProjection{RunID: run.RunID, RunName: runName(run), ObservedAt: run.UpdatedAt}
 		for _, participant := range participants {
@@ -1585,11 +1677,32 @@ func runFeaturePath(run vaultregistry.Run) string {
 	return normalizePath(run.Task.FeaturePath)
 }
 
+func atlasTaskID(localID, path string) string {
+	normalized := normalizePath(path)
+	if normalized != "" {
+		return normalized
+	}
+	return strings.ToUpper(localID)
+}
+
+func atlasVerifierID(taskID, localID string) string {
+	localID = strings.ToUpper(localID)
+	if taskID == "" {
+		return localID
+	}
+	if localID == "" {
+		return taskID + "#verifier"
+	}
+	return taskID + "#" + localID
+}
+
 func runTaskIdentity(run vaultregistry.Run) taskIdentity {
 	if run.WorkReference != nil {
-		return taskIdentity{ID: run.WorkReference.ID, Name: run.WorkReference.Title, Path: normalizePath(run.WorkReference.Path)}
+		path := normalizePath(run.WorkReference.Path)
+		return taskIdentity{ID: atlasTaskID(run.WorkReference.ID, path), LocalID: run.WorkReference.ID, Name: run.WorkReference.Title, Path: path}
 	}
-	return taskIdentity{ID: run.Task.ID, Name: run.Task.Title, Path: normalizePath(run.Task.Path)}
+	path := normalizePath(run.Task.Path)
+	return taskIdentity{ID: atlasTaskID(run.Task.ID, path), LocalID: run.Task.ID, Name: run.Task.Title, Path: path}
 }
 
 func runName(run vaultregistry.Run) string {
@@ -1677,6 +1790,25 @@ func valueAt(value *string) string {
 		return ""
 	}
 	return *value
+}
+
+func (s *store) hasProjectPath(path string) bool {
+	for _, project := range s.projects {
+		if project.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func (p projectRecord) metadataError() error {
+	if len(p.MissingMetadata) == 0 {
+		return nil
+	}
+	if len(p.MissingMetadata) == 1 {
+		return fmt.Errorf("atlas: Project %s requires %s frontmatter", p.Name, p.MissingMetadata[0])
+	}
+	return fmt.Errorf("atlas: Project %s requires %s frontmatter", p.Name, strings.Join(p.MissingMetadata, " and "))
 }
 
 func (s *store) projectByPath(path string) projectRecord {

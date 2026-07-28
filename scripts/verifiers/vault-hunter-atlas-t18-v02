@@ -15,6 +15,8 @@ manifest_before=$(find "$tmp/state" "$tmp/vault" -type f -exec shasum -a 256 {} 
 go build -o "$tmp/atlas" ./cmd/atlas
 export ATLAS_VAULT_ROOT="$tmp/vault"
 export VAULT_HUNTER_STATE_DIR="$tmp/state"
+export ATLAS_TASK_ID='1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/09-list-retire.md'
+export ATLAS_VERIFIER_ID="${ATLAS_TASK_ID}#V01"
 
 for resource in projects themes features tasks runs verifiers verifierattempts participants usage; do
   "$tmp/atlas" get "$resource" >"$tmp/$resource.json"
@@ -22,9 +24,9 @@ done
 "$tmp/atlas" get projects --name pi-agent >"$tmp/project.json"
 "$tmp/atlas" get themes theme-pi-customization >"$tmp/theme.json"
 "$tmp/atlas" get features --id feature-vault-hunter-atlas >"$tmp/feature.json"
-"$tmp/atlas" get tasks T09 >"$tmp/task.json"
+"$tmp/atlas" get tasks --id "$ATLAS_TASK_ID" >"$tmp/task.json"
 "$tmp/atlas" get runs --id run-041 >"$tmp/run.json"
-"$tmp/atlas" get verifiers --name 'List active Runs' >"$tmp/verifier.json"
+"$tmp/atlas" get verifiers --id "$ATLAS_VERIFIER_ID" >"$tmp/verifier.json"
 "$tmp/atlas" get verifierattempts attempt-017 >"$tmp/attempt.json"
 "$tmp/atlas" evidence get evidence-017 >"$tmp/evidence.json"
 "$tmp/atlas" get participants participant-003 >"$tmp/participant.json"
@@ -78,18 +80,24 @@ assert project["data"]["themes"] == [{
 theme = load("theme")
 assert theme["kind"] == "Theme" and theme["data"]["project"] == {"id": "project-pi-agent", "name": "pi-agent"}
 feature = load("feature")
-assert feature["kind"] == "Feature" and feature["data"]["tasks"] == [{"id": "T09", "name": "Add Run Registry list and retire actions", "status": "done"}]
+task_id = os.environ["ATLAS_TASK_ID"]
+verifier_id = os.environ["ATLAS_VERIFIER_ID"]
+assert feature["kind"] == "Feature" and feature["data"]["tasks"] == [{"id": task_id, "local_id": "T09", "name": "Add Run Registry list and retire actions", "status": "done"}]
 
 task = load("task")
 assert task["kind"] == "Task"
+assert task["data"]["id"] == task_id and task["data"]["local_id"] == "T09"
 assert task["data"]["intent"] == "Let operators discover and retire exact Vault Hunter Runs."
+assert task["data"]["verifiers"][0]["id"] == verifier_id and task["data"]["verifiers"][0]["local_id"] == "V01"
 assert task["data"]["verifiers"][0]["accepted_attempt"] == {
     "id": "attempt-017", "run_id": "run-041", "outcome": "passed", "decision": "accepted", "evidence_ids": ["evidence-017"]
 }
 assert [row["id"] for row in task["data"]["runs"]] == ["run-040", "run-041", "run-042", "run-ambiguous"]
 
 run = load("run")
-assert run["kind"] == "Run" and run["data"]["task"]["id"] == "T09"
+assert run["kind"] == "Run" and run["data"]["task"] == {"id": task_id, "local_id": "T09", "name": "Add Run Registry list and retire actions", "status": "done"}
+assert run["data"]["verifier_attempts"][0]["verifier"]["id"] == verifier_id
+assert run["data"]["verifier_attempts"][0]["verifier"]["local_id"] == "V01"
 assert run["data"]["verifier_attempts"][0]["evidence"]["artifacts"] == [
     {"type": "stdout", "content": "ok example.com/vault-hunter/registry 0.214s\n"},
     {"type": "text", "content": "Manual inspection passed."},
@@ -97,11 +105,13 @@ assert run["data"]["verifier_attempts"][0]["evidence"]["artifacts"] == [
 ]
 
 verifier = load("verifier")
-assert verifier["kind"] == "Verifier" and verifier["data"]["status"] == "passed"
+assert verifier["kind"] == "Verifier" and verifier["data"]["id"] == verifier_id and verifier["data"]["local_id"] == "V01" and verifier["data"]["status"] == "passed"
 attempt = load("attempt")
 assert attempt["kind"] == "VerifierAttempt" and attempt["data"]["revision"] == 2 and attempt["data"]["decision"] == "accepted"
 evidence = load("evidence")
-assert evidence["kind"] == "Evidence" and evidence["data"]["attempt"] == {"id": "attempt-017", "outcome": "passed", "decision": "accepted"}
+assert evidence["kind"] == "Evidence" and evidence["data"]["task"]["id"] == task_id and evidence["data"]["task"]["local_id"] == "T09"
+assert evidence["data"]["verifier"]["id"] == verifier_id and evidence["data"]["verifier"]["local_id"] == "V01"
+assert evidence["data"]["attempt"] == {"id": "attempt-017", "outcome": "passed", "decision": "accepted"}
 
 participant = load("participant")
 assert participant["kind"] == "Participant"

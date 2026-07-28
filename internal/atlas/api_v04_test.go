@@ -22,6 +22,10 @@ func TestT18V04AcceptRejectRetryAndRetire(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	globalTaskID := atlasTaskID("T18", "1_projects/pi-agent/themes/pi-customization/features/vault-hunter-atlas/tasks/18-parent-decisions.md")
+	globalV02 := atlasVerifierID(globalTaskID, "V02")
+	globalV03 := atlasVerifierID(globalTaskID, "V03")
+
 	accepted, err := AcceptVerifierAttemptEnvelope(stateRoot, MachineSelector{ID: "attempt-201"}, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +35,7 @@ func TestT18V04AcceptRejectRetryAndRetire(t *testing.T) {
 		t.Fatalf("accepted envelope = %#v", accepted)
 	}
 
-	taskEnvelope, err := BuildEnvelope(vaultRoot, stateRoot, "tasks", MachineSelector{ID: "T18"}, MachineGetOptions{})
+	taskEnvelope, err := BuildEnvelope(vaultRoot, stateRoot, "tasks", MachineSelector{ID: globalTaskID}, MachineGetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,10 +47,10 @@ func TestT18V04AcceptRejectRetryAndRetire(t *testing.T) {
 	for _, raw := range taskData["verifiers"].([]map[string]any) {
 		verifiers[raw["id"].(string)] = raw
 	}
-	if verifiers["V01"]["status"] != "passed" {
-		t.Fatalf("V01 status = %#v", verifiers["V01"])
+	if verifiers[atlasVerifierID(globalTaskID, "V01")]["status"] != "passed" {
+		t.Fatalf("V01 status = %#v", verifiers[atlasVerifierID(globalTaskID, "V01")])
 	}
-	if verifiers["V02"]["status"] != "pending" || verifiers["V03"]["status"] != "pending" || verifiers["V04"]["status"] != "pending" {
+	if verifiers[globalV02]["status"] != "pending" || verifiers[globalV03]["status"] != "pending" || verifiers[atlasVerifierID(globalTaskID, "V04")]["status"] != "pending" {
 		t.Fatalf("unexpected verifier statuses = %#v", verifiers)
 	}
 	runs := map[string]map[string]any{}
@@ -72,7 +76,7 @@ func TestT18V04AcceptRejectRetryAndRetire(t *testing.T) {
 	if rejected.Kind != "VerifierAttempt" || rejected.Meta["operation"] != "reject" || rejectedData["decision"] != "rejected" || rejectedData["reason"] != "insufficient-evidence" {
 		t.Fatalf("rejected envelope = %#v", rejected)
 	}
-	verifierEnvelope, err := BuildEnvelope(vaultRoot, stateRoot, "verifiers", MachineSelector{ID: "V02"}, MachineGetOptions{})
+	verifierEnvelope, err := BuildEnvelope(vaultRoot, stateRoot, "verifiers", MachineSelector{ID: globalV02}, MachineGetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +103,7 @@ func TestT18V04AcceptRejectRetryAndRetire(t *testing.T) {
 	if len(pendingData) != 1 || pendingData[0]["id"] != "attempt-204" {
 		t.Fatalf("retry pending attempts = %#v", pendingData)
 	}
-	verifierEnvelope, err = BuildEnvelope(vaultRoot, stateRoot, "verifiers", MachineSelector{ID: "V03"}, MachineGetOptions{})
+	verifierEnvelope, err = BuildEnvelope(vaultRoot, stateRoot, "verifiers", MachineSelector{ID: globalV03}, MachineGetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,6 +149,48 @@ func TestT18V04AcceptRejectRetryAndRetire(t *testing.T) {
 	explicitData := explicitRetired.Data.(map[string]any)
 	if explicitData["state"] != string(vaultregistry.RunStateRetired) {
 		t.Fatalf("explicit retired read = %#v", explicitRetired)
+	}
+	retiredAttempts, err := BuildEnvelope(vaultRoot, stateRoot, "verifierattempts", MachineSelector{}, MachineGetOptions{Run: "retire-me"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	attemptRows := retiredAttempts.Data.([]map[string]any)
+	if len(attemptRows) != 1 || attemptRows[0]["run"].(map[string]any)["id"] != "run-204" {
+		t.Fatalf("retired attempt history = %#v", attemptRows)
+	}
+	retiredParticipant, err := BuildEnvelope(vaultRoot, stateRoot, "participants", MachineSelector{ID: "participant-retired"}, MachineGetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	participantData := retiredParticipant.Data.(map[string]any)
+	if participantData["run"].(map[string]any)["id"] != "run-204" || participantData["usage"].(map[string]any)["total_tokens"] != int64(75) {
+		t.Fatalf("retired participant read = %#v", participantData)
+	}
+	retiredUsage, err := BuildEnvelope(vaultRoot, stateRoot, "usage", MachineSelector{ID: "run-204"}, MachineGetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	usageData := retiredUsage.Data.(map[string]any)
+	if usageData["total_tokens"] != int64(75) {
+		t.Fatalf("retired usage read = %#v", usageData)
+	}
+	usageList, err := BuildEnvelope(vaultRoot, stateRoot, "usage", MachineSelector{}, MachineGetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, raw := range usageList.Data.([]map[string]any) {
+		if raw["run"].(map[string]any)["id"] == "run-204" {
+			t.Fatalf("retired usage leaked into active list: %#v", usageList)
+		}
+	}
+	participantList, err := BuildEnvelope(vaultRoot, stateRoot, "participants", MachineSelector{}, MachineGetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, raw := range participantList.Data.([]map[string]any) {
+		if raw["id"] == "participant-retired" {
+			t.Fatalf("retired participant leaked into active list: %#v", participantList)
+		}
 	}
 	beforeFailedWrite, err := treeHash(stateRoot)
 	if err != nil {

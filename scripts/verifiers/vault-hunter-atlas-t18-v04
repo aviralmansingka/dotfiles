@@ -19,6 +19,9 @@ ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/
 ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" reject verifierattempt attempt-202 --expected-revision 1 --reason insufficient-evidence >"$tmp/reject.json"
 ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" run retire retire-me --expected-revision 1 >"$tmp/retire.json"
 ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" get runs --id run-204 >"$tmp/retired-read.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" get verifierattempts --run retire-me >"$tmp/retired-attempts.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" get participants --id participant-retired >"$tmp/retired-participant.json"
+ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" get usage --id run-204 >"$tmp/retired-usage.json"
 ATLAS_VAULT_ROOT="$tmp/cli-vault" VAULT_HUNTER_STATE_DIR="$tmp/cli-state" "$tmp/atlas-real" capabilities --output json >"$tmp/capabilities.json"
 
 python3 - "$tmp" <<'PY'
@@ -30,13 +33,19 @@ accept = json.loads((root / 'accept.json').read_text())
 reject = json.loads((root / 'reject.json').read_text())
 retire = json.loads((root / 'retire.json').read_text())
 retired = json.loads((root / 'retired-read.json').read_text())
+retired_attempts = json.loads((root / 'retired-attempts.json').read_text())
+retired_participant = json.loads((root / 'retired-participant.json').read_text())
+retired_usage = json.loads((root / 'retired-usage.json').read_text())
 capabilities = json.loads((root / 'capabilities.json').read_text())
 assert accept['data']['decision'] == 'accepted' and accept['meta']['operation'] == 'accept'
 assert reject['data']['decision'] == 'rejected' and reject['data']['reason'] == 'insufficient-evidence'
 assert retire['data']['state'] == 'retired' and retire['meta']['operation'] == 'retire'
 assert retired['data']['state'] == 'retired'
+assert retired_attempts['data'][0]['run']['id'] == 'run-204'
+assert retired_participant['data']['run']['id'] == 'run-204'
+assert retired_usage['data']['total_tokens'] == 75
 assert 'admin' not in capabilities['data']['agent_tools']
-print('T18.V04 real CLI accept/reject/retire and retired read: PASS')
+print('T18.V04 real CLI accept/reject/retire and retired secondary reads: PASS')
 PY
 
 cp -R "$fixture/state" "$tmp/pi-state"
@@ -66,7 +75,7 @@ assert {tool['name'] for tool in result['tools']} == {
     'atlas_evidence_get', 'atlas_get', 'atlas_reject_verifier_attempt', 'atlas_retire_run',
 }
 assert result['preflightResult']['details']['herdr']['paneId'] == 'pane-v04'
-for key in ('acceptResult', 'rejectResult', 'retireResult', 'retiredRead', 'retryPending', 'capabilitiesResult'):
+for key in ('acceptResult', 'rejectResult', 'retireResult', 'retiredRead', 'retiredAttempts', 'retiredParticipant', 'retiredUsage', 'retryPending', 'capabilitiesResult'):
     details = result[key]['details']
     assert set(details) == {'api_version', 'kind', 'data', 'meta'}, (key, details)
 assert result['acceptResult']['details']['data']['decision'] == 'accepted'
@@ -74,6 +83,9 @@ assert result['rejectResult']['details']['data']['decision'] == 'rejected'
 assert result['rejectResult']['details']['data']['reason'] == 'insufficient-evidence'
 assert result['retireResult']['details']['data']['state'] == 'retired'
 assert result['retiredRead']['details']['data']['state'] == 'retired'
+assert result['retiredAttempts']['details']['data'][0]['run']['id'] == 'run-204'
+assert result['retiredParticipant']['details']['data']['run']['id'] == 'run-204'
+assert result['retiredUsage']['details']['data']['total_tokens'] == 75
 assert result['retryPending']['details']['data'][0]['id'] == 'attempt-204'
 assert 'admin' not in result['capabilitiesResult']['details']['data']['agent_tools']
 assert 'retirement was declined' in result['declinedError']
@@ -90,7 +102,7 @@ assert sum(1 for command in commands if command['tool'] == 'atlas' and command['
 assert all('admin companion revive' not in json.dumps(command) for command in commands)
 source = result['source']
 assert 'atlas admin companion revive' not in source
-print('T18.V04 Pi adapter decisions, confirmation gate, and admin absence: PASS')
+print('T18.V04 Pi adapter decisions, retired secondary reads, confirmation gate, and admin absence: PASS')
 PY
 
 echo 'T18.V04 parent decisions, Run retirement, and companion isolation: PASS'

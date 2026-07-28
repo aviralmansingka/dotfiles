@@ -17,6 +17,103 @@
   "updated_at": "2026-07-28T00:40:00Z",
   "observations": [
     {
+      "observation_id": "participant-retired-start",
+      "kind": "registered_participant",
+      "state": "active",
+      "goal_id": "run",
+      "title": "retired verifier registered",
+      "summary": "retired verifier registered.",
+      "observed_at": "2026-07-28T00:35:00Z",
+      "correlation_id": "run-204",
+      "actor": {
+        "kind": "participant",
+        "id": "participant-retired"
+      },
+      "source": {
+        "kind": "producer",
+        "id": "fixture"
+      },
+      "redaction_class": "internal",
+      "started_at": "2026-07-28T00:35:00Z",
+      "payload": {
+        "registered_participant": {
+          "participant_id": "participant-retired",
+          "role": "verifier",
+          "agent_session": {
+            "source": "pi",
+            "kind": "session",
+            "value": "session-retired"
+          }
+        }
+      }
+    },
+    {
+      "observation_id": "worker-retired-start",
+      "kind": "worker",
+      "state": "active",
+      "goal_id": "run",
+      "title": "retired verifier worker",
+      "summary": "retired verifier worker.",
+      "observed_at": "2026-07-28T00:35:30Z",
+      "correlation_id": "run-204",
+      "actor": {
+        "kind": "participant",
+        "id": "participant-retired"
+      },
+      "source": {
+        "kind": "producer",
+        "id": "fixture"
+      },
+      "redaction_class": "internal",
+      "started_at": "2026-07-28T00:35:30Z",
+      "payload": {
+        "worker": {
+          "worker_id": "retired-worker",
+          "role": "verifier",
+          "stage": "verification",
+          "owner_participant_id": "participant-retired",
+          "agent_session": {
+            "source": "pi",
+            "kind": "session",
+            "value": "session-retired"
+          }
+        }
+      }
+    },
+    {
+      "observation_id": "participant-retired-usage",
+      "kind": "runtime_telemetry",
+      "state": "recorded",
+      "goal_id": "run",
+      "title": "retired verifier usage",
+      "summary": "retired verifier usage.",
+      "observed_at": "2026-07-28T00:36:00Z",
+      "correlation_id": "run-204",
+      "actor": {
+        "kind": "participant",
+        "id": "participant-retired"
+      },
+      "source": {
+        "kind": "producer",
+        "id": "fixture"
+      },
+      "redaction_class": "internal",
+      "payload": {
+        "runtime_telemetry": {
+          "participant_id": "participant-retired",
+          "worker_id": "retired-worker",
+          "boundary": "session/end",
+          "usage": {
+            "scope": "cumulative",
+            "input_tokens": 40,
+            "cache_read_tokens": 10,
+            "cache_write_tokens": 20,
+            "output_tokens": 5
+          }
+        }
+      }
+    },
+    {
       "observation_id": "attempt-205-terminal",
       "kind": "verifier_attempt",
       "state": "passed",

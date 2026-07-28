@@ -161,9 +161,6 @@ func decisionObservation(attempt attemptProjection, decision vaultregistry.Obser
 }
 
 func decisionGoalID(attempt attemptProjection) string {
-	if attempt.Task.ID != "" && attempt.Verifier.ID != "" {
-		return attempt.Task.ID + "." + attempt.Verifier.ID
-	}
 	if attempt.Verifier.ID != "" {
 		return attempt.Verifier.ID
 	}

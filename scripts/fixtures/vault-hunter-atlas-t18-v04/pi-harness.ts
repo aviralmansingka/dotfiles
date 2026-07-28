@@ -95,6 +95,9 @@ export default function verifier(pi: ExtensionAPI) {
       const rejectResult = await atlasReject.execute("reject", { identity: "attempt-202", expectedRevision: 1, reason: "insufficient-evidence" }, new AbortController().signal, undefined, approvedContext);
       const retireResult = await atlasRetire.execute("retire", { name: "retire-me", expectedRevision: 1 }, new AbortController().signal, undefined, approvedContext);
       const retiredRead = await atlasGet.execute("retired-read", { resource: "runs", id: "run-204" }, new AbortController().signal, undefined, approvedContext);
+      const retiredAttempts = await atlasGet.execute("retired-attempts", { resource: "verifierattempts", run: "retire-me" }, new AbortController().signal, undefined, approvedContext);
+      const retiredParticipant = await atlasGet.execute("retired-participant", { resource: "participants", id: "participant-retired" }, new AbortController().signal, undefined, approvedContext);
+      const retiredUsage = await atlasGet.execute("retired-usage", { resource: "usage", id: "run-204" }, new AbortController().signal, undefined, approvedContext);
       const retryPending = await atlasGet.execute("retry-pending", { resource: "verifierattempts", run: "retry-me", pending: true }, new AbortController().signal, undefined, approvedContext);
       const capabilitiesResult = await atlasCapabilities.execute("capabilities", {}, new AbortController().signal, undefined, approvedContext);
       const retiredWriteError = await rejected(() => atlasReject.execute("retired-write", { id: "attempt-205", expectedRevision: 1, reason: "too-late" }, new AbortController().signal, undefined, approvedContext));
@@ -128,6 +131,9 @@ export default function verifier(pi: ExtensionAPI) {
         rejectResult,
         retireResult,
         retiredRead,
+        retiredAttempts,
+        retiredParticipant,
+        retiredUsage,
         retryPending,
         capabilitiesResult,
         retiredWriteError,
