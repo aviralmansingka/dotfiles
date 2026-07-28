@@ -34,4 +34,8 @@ The data is a visual fixture constrained to fields available in the current comp
 - **B — Mini journey:** strongest Pi-like visual continuity; more truncation pressure at 23 columns.
 - **C — Run dashboard:** best for stable counts and provenance; chronology is reduced to one latest row.
 
+## Verdict
+
+The user selected **B — Mini journey**. Its connected recorded-journey rail communicates current position and surrounding work better than the status card or metric dashboard within the picker pane. Preserve its Task/Run header, explicit recorded-journey label, semantic glyphs, participant/role footer, timestamp, and `projection, not authority` boundary. Production still requires final typed Atlas hydration and a deliberate 23-column truncation policy.
+
 These are disposable UI sketches, not production renderer behavior.
