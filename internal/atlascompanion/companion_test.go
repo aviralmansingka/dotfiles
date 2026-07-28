@@ -130,7 +130,7 @@ func TestMutationResponsesRequireExactIdentity(t *testing.T) {
 		})
 	}
 
-	atlas := []string{"atlas", "--run-id", "run", "--state-dir", "/state"}
+	atlas := []string{"atlas", "render", "run", "--id", "run", "--state-dir", "/state"}
 	wrapperProcess := append([]string{"/bin/sh", "-c", wrapper, marker(tuple)}, atlas...)
 	tabs := herdrResponse(map[string]any{"type": "tab_list", "tabs": []any{map[string]any{"workspace_id": "ws", "tab_id": tuple.TabID, "label": label("run", "ws"), "pane_count": 1}}})
 	panes := herdrResponse(map[string]any{"type": "pane_list", "panes": []any{map[string]any{"workspace_id": "ws", "tab_id": tuple.TabID, "pane_id": tuple.PaneID, "terminal_id": tuple.TerminalID}}})
@@ -269,7 +269,7 @@ esac
 
 func TestExactOwnershipIdentity(t *testing.T) {
 	tuple := Tuple{RunID: "run ' one", WorkspaceID: "workspace", TabID: "tab", PaneID: "pane", TerminalID: "terminal"}
-	atlas := []string{"/tmp/vault hunter atlas", "--run-id", tuple.RunID, "--state-dir", "/tmp/state ' one"}
+	atlas := []string{"/tmp/vault hunter atlas", "render", "run", "--id", tuple.RunID, "--state-dir", "/tmp/state ' one"}
 	encoded := marker(tuple)
 	decoded, ok := decodeMarker(encoded)
 	if !ok || decoded != tuple {

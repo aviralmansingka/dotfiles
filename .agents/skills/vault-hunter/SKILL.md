@@ -43,8 +43,9 @@ If any item is missing, invoke `$vault-scout` on the source Issue or supplied te
    the same domain contract without inventing Herdr identity.
 4. The parent creates or reuses the Task-owned implementation worktree and a Herdr workspace for implementation,
    review, verification, and delivery workers; `$vault-hunter-worker` receives those exact resources and never
-   provisions a route itself. Use a headless route only when the user explicitly requests it or Herdr cannot represent
-   the work, and record that exception before launch.
+   provisions a route itself. Visible children keep one dedicated tab each, and the parent records their exact
+   workspace, tab, pane, terminal, and agent-session binding before relying on output. Use a headless route only when
+   the user explicitly requests it or Herdr cannot represent the work, and record that exception before launch.
 5. Mark only this Task and Feature checklist item in progress, add one weekly backlog timeline, and use
    `$vault-hunter-checkpoint` for serialized vault commits.
 
@@ -59,11 +60,14 @@ Work one Goal and one verifier gate at a time:
    and SHA-256. Do not require a persistent verifier steward.
 3. Launch one bounded implementation worker for the smallest slice that can satisfy the active verifier.
 4. Run targeted checks, then the active complete verifier set, against an immutable head/tree.
-5. Require every verifier execution—pass, fail, interruption, or retry—to write an immutable Registry attempt.
-6. Read the compact Registry result capsule, not raw verifier output. Accept, reject, or supersede the exact attempt.
+5. If a worker must be replaced because a verifier context changes, safe bounds are reached, or `/handoff` is required,
+   capture one bounded handoff with the exact Goal, base, head/tree, changed paths, verifier matrix, validations,
+   risks, and stop reason, then continue in a fresh `/new` session that consumes only that handoff.
+6. Require every verifier execution—pass, fail, interruption, or retry—to write an immutable Registry attempt.
+7. Read the compact Registry result capsule, not raw verifier output. Accept, reject, or supersede the exact attempt.
    If the capsule is insufficient, launch a cheap read-only certification auditor; record its own traced Run and verdict
    before the parent decides.
-7. Update Task evidence only after acceptance, then activate the next gate.
+8. Update Task evidence only after acceptance, then activate the next gate.
 
 An audit-ready signal means sufficient evidence exists to inspect. An auditor verdict is advisory. Only the parent may
 certify a verifier or update canonical Goal, Task, or Feature state.
@@ -80,6 +84,10 @@ certify a verifier or update canonical Goal, Task, or Feature state.
 - Use a fresh read-only Pi agent for independent diff review. Pin base, head, tree, and Task contract; require findings
   with severity and path/line, or an explicit clean verdict.
 - Name visible sessions `pi-<feature-slug>-<run-key>-<role>`.
+- Consume each accepted child handoff as bounded context, not as a prompt to reopen settled design or rediscover the
+  repository.
+- After a child finishes, the parent inspects the handoff, records attempts, makes the parent decision, and advances
+  autonomously without asking the user to resume while safe progress remains.
 - Never run parallel writers in one worktree. Children may produce repository changes and evidence, but not vault
   status, acceptance, or completion decisions.
 
@@ -101,7 +109,7 @@ After all verifiers first pass:
    `$vault-hunter-checkpoint` to complete the Task and backlog on vault `main`. Verify the merged ref only when the Task
    explicitly declares a post-merge verifier or the user requests it.
 
-Use `atlas` for Run status and machine reads. The standalone `$vault-hunter-status` compatibility surface is removed.
+Use `atlas` for Run status and machine reads. The standalone compatibility status surface is removed.
 Atlas remains observational here; it does not accept evidence or advance work.
 
 ## Stop conditions

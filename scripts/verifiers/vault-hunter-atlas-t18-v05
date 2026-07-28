@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/../.."
+
+repo_root="$PWD"
+tmp="$(mktemp -d)"
+artifacts="$(mktemp -d "${TMPDIR:-/tmp}/t18-v05-artifacts.XXXXXX")"
+trap 'rm -rf "$tmp"' EXIT
+
+log="$artifacts/full-suite.txt"
+exec > >(tee "$log") 2>&1
+
+run_check() {
+  local label="$1"
+  shift
+  echo "T18.V05_CHECK ${label}=begin"
+  "$@"
+  echo "T18.V05_CHECK ${label}=pass"
+}
+
+python3 - "$repo_root" "$artifacts" <<'PY'
+from __future__ import annotations
+import json
+import sys
+from pathlib import Path
+
+repo = Path(sys.argv[1])
+artifacts = Path(sys.argv[2])
+patterns = [
+    "cmd/vault-hunter-atlas",
+    "cmd/vault-hunter-status",
+    "scripts/vault-hunter-observe",
+    "test-vault-hunter-observe",
+    "verify-vault-hunter-runtime",
+    "vault_hunter_run",
+    "vault_hunter_record",
+    "vault_hunter_list_runs",
+    "vault_hunter_retire_run",
+    "vault-hunter-status",
+    "vault-hunter-observe",
+    "go run ./cmd/vault-hunter-registry",
+]
+allow_live = {
+    "install.sh": "install-time cleanup proof",
+    "pi/.pi/agent/extensions/vault-hunter-run.ts": "covered historical vault_hunter_run restoration parsing",
+    "scripts/verifiers/vault-hunter-atlas-t18-v01": "negative-test coverage for removed binaries and legacy commands",
+    "scripts/verifiers/vault-hunter-atlas-t18-v02": "negative-test coverage for restoration-only legacy tool parsing",
+    "scripts/verifiers/vault-hunter-atlas-t18-v05": "final migration inventory verifier",
+}
+history_roots = (
+    "docs/evidence/",
+    ".lavish/",
+    "scripts/fixtures/",
+    "scripts/goldens/",
+)
+history_prefixes = (
+    "scripts/verifiers/vault-hunter-atlas-v",
+    "scripts/verifiers/vault-hunter-atlas-t03-",
+    "scripts/verifiers/vault-hunter-atlas-t06-",
+    "scripts/verifiers/vault-hunter-atlas-t07-",
+    "scripts/verifiers/vault-hunter-atlas-t08-",
+    "scripts/verifiers/vault-hunter-atlas-t09-",
+)
+
+def is_history(rel: str) -> bool:
+    return rel.startswith(history_roots) or rel.startswith(history_prefixes)
+
+inventory = {"live_allowlisted": [], "history_only": [], "unexpected": []}
+for path in sorted(repo.rglob("*")):
+    if not path.is_file():
+        continue
+    rel = path.relative_to(repo).as_posix()
+    if "/.git/" in f"/{rel}/":
+        continue
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        continue
+    matched = [pattern for pattern in patterns if pattern in text]
+    if not matched:
+        continue
+    entry = {"path": rel, "patterns": matched}
+    if rel in allow_live:
+        entry["scope"] = allow_live[rel]
+        inventory["live_allowlisted"].append(entry)
+    elif is_history(rel):
+        entry["scope"] = "history-only verifier or fixture coverage"
+        inventory["history_only"].append(entry)
+    else:
+        inventory["unexpected"].append(entry)
+
+removed_paths = [
+    "cmd/vault-hunter-atlas",
+    "cmd/vault-hunter-status",
+    "scripts/vault-hunter-observe",
+    "scripts/test-vault-hunter-observe.sh",
+    "scripts/verify-vault-hunter-runtime",
+]
+missing = []
+for rel in removed_paths:
+    path = repo / rel
+    if path.exists():
+        missing.append(rel)
+if missing:
+    inventory["unexpected"].append({"path": "<removed-paths>", "patterns": missing, "scope": "expected deleted"})
+
+(artifacts / "reference-inventory.json").write_text(json.dumps(inventory, indent=2) + "\n", encoding="utf-8")
+removal_lines = ["Removed legacy paths:"]
+for rel in removed_paths:
+    removal_lines.append(f"- {rel}: {'absent' if not (repo / rel).exists() else 'PRESENT'}")
+(artifacts / "removal-proof.txt").write_text("\n".join(removal_lines) + "\n", encoding="utf-8")
+if inventory["unexpected"]:
+    raise SystemExit("unexpected legacy Atlas/Vault Hunter refs remain; see reference-inventory.json")
+print("T18.V05 inventory and removal proof: PASS")
+PY
+
+run_check preview-go-test go test -count=1 ./cmd/atlas -run '^TestHiddenRenderRunUsesAtlasBinary$'
+run_check atlas-go-tests go test -count=1 ./cmd/atlas ./internal/atlas ./internal/atlascompanion ./internal/vaultregistry
+run_check atlas-go-race go test -race -count=1 ./cmd/atlas ./internal/atlas ./internal/atlascompanion ./internal/vaultregistry
+run_check atlas-go-vet go vet ./cmd/atlas ./internal/atlas ./internal/atlascompanion ./internal/vaultregistry
+
+run_check t18-v01 scripts/verify-vault-hunter-atlas T18.V01
+run_check t18-v02 scripts/verify-vault-hunter-atlas T18.V02
+run_check t18-v03 scripts/verify-vault-hunter-atlas T18.V03
+run_check t18-v04 scripts/verify-vault-hunter-atlas T18.V04
+run_check nvim-sidekick-live scripts/verify-nvim sidekick-herdr-live
+
+run_check embedded-preview bash -lc '
+  cp -R scripts/fixtures/vault-hunter-atlas-t18-v04/state "$0/preview-state"
+  cat >"$0/herdr" <<"SH"
+#!/usr/bin/env bash
+cat <<JSON
+{"id":"preview","result":{"type":"agent_list","agents":[{"name":"pi-companion","agent":"pi","agent_status":"working","workspace_id":"ws-companion","tab_id":"tab-driver","pane_id":"pane-driver","terminal_id":"term-driver","agent_session":{"source":"pi","kind":"session","value":"session-companion"}}]}}
+JSON
+SH
+  chmod +x "$0/herdr"
+  GOFLAGS= go build -o "$0/atlas" ./cmd/atlas
+  PATH="$0:$PATH" "$0/atlas" preview \
+    --state-dir "$0/preview-state" \
+    --workspace-id ws-companion \
+    --tab-id tab-driver \
+    --pane-id pane-driver \
+    --terminal-id term-driver \
+    --agent-session-source pi \
+    --agent-session-kind session \
+    --agent-session-value session-companion \
+    --width 90 \
+    --height 24 >"$1/embedded-preview.json"
+  python3 - "$1/embedded-preview.json" <<"PY"
+import json, sys
+preview = json.load(open(sys.argv[1], encoding="utf-8"))
+assert preview["outcome"] == "matched", preview
+assert preview["run_id"] == "run-205", preview
+assert preview["participant_id"] == "participant-companion", preview
+assert "Run run-205" in preview["frame"], preview["frame"]
+print("T18.V05 embedded atlas preview: PASS")
+PY
+' "$tmp" "$artifacts"
+
+mkdir -p "${artifacts}/bin"
+GOBIN="${artifacts}/bin" go install ./cmd/atlas
+installed_atlas="${artifacts}/bin/atlas"
+test -f "$installed_atlas"
+python3 - "$repo_root" "$installed_atlas" "$artifacts" <<'PY'
+from __future__ import annotations
+import hashlib
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+repo = Path(sys.argv[1])
+installed = Path(sys.argv[2])
+artifacts = Path(sys.argv[3])
+files = [
+    installed,
+    repo / "pi/.pi/agent/extensions/vault-hunter-run.ts",
+    repo / "pi/.pi/agent/extensions/vault-hunter-agents.ts",
+    repo / "pi/.pi/agent/settings.json",
+    repo / "nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua",
+    repo / "README.md",
+    repo / "install.sh",
+]
+manifest = {
+    "accepted_pi_tools": [
+        "agent_run_preflight",
+        "atlas_get",
+        "atlas_create",
+        "atlas_evidence_get",
+        "atlas_accept_verifier_attempt",
+        "atlas_reject_verifier_attempt",
+        "atlas_retire_run",
+        "atlas_capabilities",
+    ],
+    "installed_atlas": {
+        "path": str(installed),
+        "sha256": hashlib.sha256(installed.read_bytes()).hexdigest(),
+        "help_sha256": hashlib.sha256(subprocess.check_output([str(installed), "--help"])).hexdigest(),
+    },
+    "tree_files": [
+        {
+            "path": str(path.relative_to(repo)) if path.is_relative_to(repo) else str(path),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+        for path in files[1:]
+    ],
+    "proof": "scripts/verify-vault-hunter-atlas T18.V01 covers the installed eight-tool Pi contract from the same tree.",
+}
+(artifacts / "installed-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+print("T18.V05 installed manifest: PASS")
+PY
+
+run_check diff-check git diff --check
+
+python3 - "$artifacts" <<'PY'
+from __future__ import annotations
+import hashlib
+import sys
+from pathlib import Path
+artifacts = Path(sys.argv[1])
+with (artifacts / "SHA256SUMS").open("w", encoding="utf-8") as handle:
+    for path in sorted(artifacts.rglob("*")):
+        if path.name == "SHA256SUMS" or not path.is_file():
+            continue
+        handle.write(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(artifacts).as_posix()}\n")
+print(f"T18.V05 artifacts: {artifacts}")
+PY
+
+echo 'T18.V05 workflow parity, migration, removal, and full regression: PASS'

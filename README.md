@@ -27,7 +27,6 @@ For manual installation:
 ```sh
 brew bundle
 stow nvim tmux zsh ghostty git starship agents pi herdr launchd
-rm -f ~/.local/bin/vault-hunter-atlas ~/.local/bin/vault-hunter-status ~/.local/bin/vault-hunter-observe
 GOBIN="$HOME/.local/bin" go install ./cmd/atlas
 ```
 

@@ -18,7 +18,7 @@ func TestT18V04AttachRunDerivesV2ParticipantsAndCreatesMissingCompanion(t *testi
 	})
 	afterTabs := herdrResponse(map[string]any{"type": "tab_list", "tabs": []any{map[string]any{"workspace_id": tuple.WorkspaceID, "tab_id": tuple.TabID, "label": label(tuple.RunID, tuple.WorkspaceID), "pane_count": 1}}})
 	afterPanes := herdrResponse(map[string]any{"type": "pane_list", "panes": []any{map[string]any{"workspace_id": tuple.WorkspaceID, "tab_id": tuple.TabID, "pane_id": tuple.PaneID, "terminal_id": tuple.TerminalID}}})
-	atlas := []string{"atlas-bin", "--run-id", tuple.RunID, "--state-dir", "/state"}
+	atlas := []string{"atlas-bin", "render", "run", "--id", tuple.RunID, "--state-dir", "/state"}
 	info := herdrResponse(map[string]any{"type": "pane_process_info", "process_info": map[string]any{"pane_id": tuple.PaneID, "foreground_processes": []any{
 		map[string]any{"argv": append([]string{"/bin/sh", "-c", wrapper, marker(tuple)}, atlas...)},
 		map[string]any{"argv": atlas},
@@ -50,7 +50,7 @@ func TestT18V04AttachRunKeepsHealthyV2Companion(t *testing.T) {
 	tuple := Tuple{RunID: "run-v2", WorkspaceID: "ws-companion", TabID: "created-tab", PaneID: "created-pane", TerminalID: "created-terminal"}
 	tabs := herdrResponse(map[string]any{"type": "tab_list", "tabs": []any{map[string]any{"workspace_id": tuple.WorkspaceID, "tab_id": tuple.TabID, "label": label(tuple.RunID, tuple.WorkspaceID), "pane_count": 1}}})
 	panes := herdrResponse(map[string]any{"type": "pane_list", "panes": []any{map[string]any{"workspace_id": tuple.WorkspaceID, "tab_id": tuple.TabID, "pane_id": tuple.PaneID, "terminal_id": tuple.TerminalID}}})
-	atlas := []string{"atlas-bin", "--run-id", tuple.RunID, "--state-dir", "/state"}
+	atlas := []string{"atlas-bin", "render", "run", "--id", tuple.RunID, "--state-dir", "/state"}
 	info := herdrResponse(map[string]any{"type": "pane_process_info", "process_info": map[string]any{"pane_id": tuple.PaneID, "foreground_processes": []any{
 		map[string]any{"argv": append([]string{"/bin/sh", "-c", wrapper, marker(tuple)}, atlas...)},
 		map[string]any{"argv": atlas},

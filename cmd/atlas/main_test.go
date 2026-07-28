@@ -156,3 +156,21 @@ func TestSelectorConflictsFailClosed(t *testing.T) {
 		t.Fatalf("stderr = %q", stderr.String())
 	}
 }
+
+func TestHiddenRenderRunUsesAtlasBinary(t *testing.T) {
+	root := t.TempDir()
+	producer, err := vaultregistry.OpenProducer(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := producer.CreateRun(testV2Request("run-a", "release-check", "Build Atlas")); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := execute([]string{"render", "run", "--id", "run-a", "--state-dir", root}, &stdout, &stderr); code != 0 {
+		t.Fatalf("render exit = %d stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Run run-a") {
+		t.Fatalf("render stdout = %q", stdout.String())
+	}
+}

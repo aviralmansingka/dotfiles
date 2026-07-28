@@ -56,7 +56,7 @@ local function atlas_result_frame(result)
 end
 
 local function atlas_lookup(item, width, height, callback)
-  local executable = vim.fn.exepath("vault-hunter-atlas")
+  local executable = vim.fn.exepath("atlas")
   if executable == "" then
     vim.schedule(function() callback(nil) end)
     return

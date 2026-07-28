@@ -494,7 +494,7 @@ func (c Client) exactOwned(s snapshot, runID, workspaceID, stateDir string) ([]T
 }
 
 func (c Client) atlasArgv(runID, stateDir string) []string {
-	return []string{c.Executable, "--run-id", runID, "--state-dir", stateDir}
+	return []string{c.Executable, "render", "run", "--id", runID, "--state-dir", stateDir}
 }
 
 func (c Client) call(result any, args ...string) error {
