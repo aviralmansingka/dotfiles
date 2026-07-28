@@ -31,7 +31,7 @@ The skill that routes a Vault Feature, Vault Task, or Wayfinder effort into its 
 _Avoid_: vault skill
 
 **Run Registry**:
-A versioned durable store of immutable Run observations emitted by the active Vault Hunter driver. Schema version 1 retains participant, lifecycle, and evidence histories; schema version 2 adds typed verifier attempts and parent decisions, participants and workers, runtime telemetry, and auditor verdicts. Reader APIs remain forward-readable while producer APIs strictly validate known contracts, and the Registry never becomes the authority for vault lifecycle, goal advancement, acceptance, or completion.
+A versioned durable store of immutable Run observations emitted by the active Scout or Hunter driver. Schema version 1 retains Task-scoped participant, lifecycle, and evidence histories. Schema version 2 uses one runtime-neutral Scout/Hunter Run identity and typed observations for participants and workers, verifier attempts and parent decisions, runtime telemetry, and auditor verdicts; legacy Task-only schema-version-2 records remain readable but read-only. Reader APIs remain forward-readable while producer APIs strictly validate known contracts, and the Registry never becomes the authority for vault lifecycle, goal advancement, acceptance, or completion.
 _Avoid_: workflow engine, completion authority
 
 **Atlas**:
@@ -39,7 +39,7 @@ A read-only projection of Run Registry observations and live Herdr status. When 
 _Avoid_: run controller, registry writer
 
 **Registered Participant**:
-A Task Run participant whose exact Herdr and agent-session identities are recorded in the Run Registry and can therefore be correlated with Atlas.
+A Run participant whose exact Herdr and agent-session identities are recorded in the Run Registry and can therefore be correlated with Atlas.
 _Avoid_: any Sidekick row, inferred participant
 
 **Atlas Companion**:

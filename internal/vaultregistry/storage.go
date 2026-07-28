@@ -816,8 +816,8 @@ func (p *Producer) lock() (func(), error) {
 }
 
 // Reader locking is deliberately non-creating. A missing lock is an empty
-// Registry only while the active namespace is also absent or empty; records
-// without their coordinating lock are malformed and must not be scanned.
+// Registry only while both active and retired namespaces are absent or empty;
+// records without their coordinating lock are malformed and must not be scanned.
 func (r *Reader) lock() (func(), bool, error) {
 	lockPath := filepath.Join(r.root, "registry.lock")
 	f, err := os.Open(lockPath)
