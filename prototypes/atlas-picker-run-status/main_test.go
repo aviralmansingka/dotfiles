@@ -9,24 +9,24 @@ import (
 )
 
 func TestVerifierSummaryAggregatesTypedAttemptsDeterministically(t *testing.T) {
-	identity := func(id string) vaultregistry.VerifierAttemptIdentity {
-		return vaultregistry.VerifierAttemptIdentity{VerifierID: id}
+	identity := func(verifierID, attemptID string) vaultregistry.VerifierAttemptIdentity {
+		return vaultregistry.VerifierAttemptIdentity{VerifierID: verifierID, AttemptID: attemptID}
 	}
-	attempt := func(id, state, at string) vaultregistry.Observation {
+	attempt := func(verifierID, attemptID, state, at string) vaultregistry.Observation {
 		return vaultregistry.Observation{
 			State:      vaultregistry.ObservationState(state),
 			ObservedAt: at,
 			Payload: vaultregistry.ObservationPayload{VerifierAttempt: &vaultregistry.VerifierAttemptPayload{
-				Identity: identity(id),
+				Identity: identity(verifierID, attemptID),
 			}},
 		}
 	}
-	gap := func(id, at string) vaultregistry.Observation {
+	gap := func(verifierID, attemptID, at string) vaultregistry.Observation {
 		return vaultregistry.Observation{
 			State:      vaultregistry.StateIncomplete,
 			ObservedAt: at,
 			Payload: vaultregistry.ObservationPayload{VerifierAttemptGap: &vaultregistry.VerifierAttemptGapPayload{
-				Identity: identity(id),
+				Identity: identity(verifierID, attemptID),
 			}},
 		}
 	}
@@ -36,12 +36,15 @@ func TestVerifierSummaryAggregatesTypedAttemptsDeterministically(t *testing.T) {
 		observations []vaultregistry.Observation
 		want         milestoneState
 	}{
-		{name: "complete", observations: []vaultregistry.Observation{attempt("v1", "passed", "2026-01-01T00:00:00Z")}, want: milestoneComplete},
-		{name: "in progress", observations: []vaultregistry.Observation{attempt("v1", "active", "2026-01-01T00:00:00Z")}, want: milestoneInProgress},
-		{name: "gap is intermediate evidence", observations: []vaultregistry.Observation{attempt("v1", "passed", "2026-01-01T00:00:00Z"), gap("v2", "2026-01-01T00:00:01Z")}, want: milestoneIntermediate},
-		{name: "same verifier milestones coexist", observations: []vaultregistry.Observation{attempt("v1", "passed", "2026-01-01T00:00:00Z"), gap("v1", "2026-01-01T00:00:01Z")}, want: milestoneIntermediate},
-		{name: "completion preserves prior gap", observations: []vaultregistry.Observation{gap("v1", "2026-01-01T00:00:00Z"), attempt("v1", "passed", "2026-01-01T00:00:01Z")}, want: milestoneIntermediate},
-		{name: "failure precedes active", observations: []vaultregistry.Observation{attempt("v1", "active", "2026-01-01T00:00:00Z"), attempt("v2", "failed", "2026-01-01T00:00:01Z")}, want: milestoneFailed},
+		{name: "complete", observations: []vaultregistry.Observation{attempt("v1", "a1", "passed", "2026-01-01T00:00:00Z")}, want: milestoneComplete},
+		{name: "in progress", observations: []vaultregistry.Observation{attempt("v1", "a1", "active", "2026-01-01T00:00:00Z")}, want: milestoneInProgress},
+		{name: "terminal attempt replaces active state", observations: []vaultregistry.Observation{attempt("v1", "a1", "active", "2026-01-01T00:00:00Z"), attempt("v1", "a1", "passed", "2026-01-01T00:00:01Z")}, want: milestoneComplete},
+		{name: "observation time determines latest attempt state", observations: []vaultregistry.Observation{attempt("v1", "a1", "passed", "2026-01-01T00:00:01Z"), attempt("v1", "a1", "active", "2026-01-01T00:00:00Z")}, want: milestoneComplete},
+		{name: "gap is intermediate evidence", observations: []vaultregistry.Observation{attempt("v1", "a1", "passed", "2026-01-01T00:00:00Z"), gap("v2", "a2", "2026-01-01T00:00:01Z")}, want: milestoneIntermediate},
+		{name: "same verifier attempts coexist", observations: []vaultregistry.Observation{attempt("v1", "a1", "passed", "2026-01-01T00:00:00Z"), gap("v1", "a2", "2026-01-01T00:00:01Z")}, want: milestoneIntermediate},
+		{name: "terminal attempt replaces its gap", observations: []vaultregistry.Observation{gap("v1", "a1", "2026-01-01T00:00:00Z"), attempt("v1", "a1", "passed", "2026-01-01T00:00:01Z")}, want: milestoneComplete},
+		{name: "completion preserves distinct prior gap", observations: []vaultregistry.Observation{gap("v1", "a1", "2026-01-01T00:00:00Z"), attempt("v1", "a2", "passed", "2026-01-01T00:00:01Z")}, want: milestoneIntermediate},
+		{name: "failure precedes active", observations: []vaultregistry.Observation{attempt("v1", "a1", "active", "2026-01-01T00:00:00Z"), attempt("v2", "a2", "failed", "2026-01-01T00:00:01Z")}, want: milestoneFailed},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -86,8 +89,8 @@ func TestFramesPreservePickerInteriors(t *testing.T) {
 	run := vaultregistry.Run{
 		Task: vaultregistry.Task{ID: "t02", Title: "T02: Build the Compact Atlas Renderer", FeaturePath: "features/vault-hunter-atlas/feature.md"},
 		Observations: []vaultregistry.Observation{
-			{State: vaultregistry.StatePassed, ObservedAt: "2026-01-01T00:00:00Z", Payload: vaultregistry.ObservationPayload{VerifierAttempt: &vaultregistry.VerifierAttemptPayload{Identity: vaultregistry.VerifierAttemptIdentity{VerifierID: "v1"}}}},
-			{State: vaultregistry.StateIncomplete, ObservedAt: "2026-01-01T00:00:01Z", Payload: vaultregistry.ObservationPayload{VerifierAttemptGap: &vaultregistry.VerifierAttemptGapPayload{Identity: vaultregistry.VerifierAttemptIdentity{VerifierID: "v2"}}}},
+			{State: vaultregistry.StatePassed, ObservedAt: "2026-01-01T00:00:00Z", Payload: vaultregistry.ObservationPayload{VerifierAttempt: &vaultregistry.VerifierAttemptPayload{Identity: vaultregistry.VerifierAttemptIdentity{VerifierID: "v1", AttemptID: "a1"}}}},
+			{State: vaultregistry.StateIncomplete, ObservedAt: "2026-01-01T00:00:01Z", Payload: vaultregistry.ObservationPayload{VerifierAttemptGap: &vaultregistry.VerifierAttemptGapPayload{Identity: vaultregistry.VerifierAttemptIdentity{VerifierID: "v2", AttemptID: "a2"}}}},
 		},
 	}
 	goals := []journeyGoal{

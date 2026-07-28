@@ -254,6 +254,9 @@ func summaryLines(run vaultregistry.Run, goals []journeyGoal, width int, colors 
 }
 
 func verifierSummary(run vaultregistry.Run, goals []journeyGoal) milestoneState {
+	type attemptState struct {
+		verifierID, state, observedAt string
+	}
 	hasRecords, hasComplete, hasIncomplete, hasFailure := false, false, false, false
 	record := func(id, state string) {
 		if clean(id) == "" {
@@ -272,13 +275,28 @@ func verifierSummary(run vaultregistry.Run, goals []journeyGoal) milestoneState 
 	for _, evidence := range run.Evidence {
 		record(evidence.VerifierID, evidence.State)
 	}
+	attempts := map[string]attemptState{}
 	for _, item := range run.Observations {
+		var identity *vaultregistry.VerifierAttemptIdentity
 		if attempt := item.Payload.VerifierAttempt; attempt != nil {
-			record(attempt.Identity.VerifierID, string(item.State))
+			identity = &attempt.Identity
+		} else if gap := item.Payload.VerifierAttemptGap; gap != nil {
+			identity = &gap.Identity
 		}
-		if gap := item.Payload.VerifierAttemptGap; gap != nil {
-			record(gap.Identity.VerifierID, string(item.State))
+		if identity == nil || clean(identity.AttemptID) == "" || clean(identity.VerifierID) == "" {
+			continue
 		}
+		current, exists := attempts[identity.AttemptID]
+		if !exists || later(item.ObservedAt, current.observedAt) {
+			attempts[identity.AttemptID] = attemptState{
+				verifierID: identity.VerifierID,
+				state:      string(item.State),
+				observedAt: item.ObservedAt,
+			}
+		}
+	}
+	for _, attempt := range attempts {
+		record(attempt.verifierID, attempt.state)
 	}
 
 	if !hasRecords {
