@@ -46,9 +46,7 @@ const (
 	success    = "\x1b[38;2;184;187;38m"
 	failure    = "\x1b[38;2;242;89;75m"
 	attention  = "\x1b[38;2;250;189;47m"
-	blue       = "\x1b[38;2;128;170;158m"
 	blueBright = "\x1b[38;2;131;165;151m"
-	blueBG     = "\x1b[48;2;46;59;59m"
 )
 
 func main() {
@@ -183,7 +181,7 @@ func (m model) frame(selectedDetail bool) []string {
 
 func (m model) lines(_ bool) []renderedLine {
 	lines := headerLines(m.run, m.goals, m.width, m.color)
-	lines = append(lines, cardLine(" │  RECORDED JOURNEY", m.width, m.color, blue+bold))
+	lines = append(lines, segmentLine(" │", colorize(m.color, rail, " │")))
 
 	start, end := window(m.selected, len(m.goals), 5)
 	for index := start; index < end; index++ {
@@ -251,13 +249,13 @@ func goalLine(goal journeyGoal, connector string, selected bool, width int, colo
 	if selected {
 		nameColor, detailColor = attention, attention
 	}
-	styled := colorizeBG(colors, rail, blueBG, prefix) + colorizeBG(colors, statusColor(goal.state), blueBG, statusGlyph) + colorizeBG(colors, text, blueBG, " ") + colorizeBG(colors, nameColor+bold, blueBG, name) + colorizeBG(colors, detailColor, blueBG, detail)
+	styled := colorize(colors, rail, prefix) + colorize(colors, statusColor(goal.state), statusGlyph) + colorize(colors, text, " ") + colorize(colors, nameColor+bold, name) + colorize(colors, detailColor, detail)
 	return segmentLine(plain, styled)
 }
 
 func cardLine(value string, width int, colors bool, foreground string) renderedLine {
 	raw := clip(clean(value), width)
-	return segmentLine(raw, colorizeBG(colors, foreground, blueBG, raw))
+	return segmentLine(raw, colorize(colors, foreground, raw))
 }
 
 func segmentLine(plain, styled string) renderedLine {
@@ -542,13 +540,6 @@ func colorize(enabled bool, color, value string) string {
 		return value
 	}
 	return color + value + reset
-}
-
-func colorizeBG(enabled bool, foreground, background, value string) string {
-	if !enabled || value == "" {
-		return value
-	}
-	return background + foreground + value + reset
 }
 
 func stripSGR(value string) string {

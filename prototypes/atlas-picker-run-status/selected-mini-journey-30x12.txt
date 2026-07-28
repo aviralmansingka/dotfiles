@@ -2,7 +2,7 @@ Vault Hunter Atlas
 T02 · Build the Compact Atlas
 Renderer
 ● recorded done
-│  RECORDED JOURNEY
+ │
  ├─ ● refactor-gate · done
  ├─ ● review-convergence · do…
  ├─ ● implementation-pr · done

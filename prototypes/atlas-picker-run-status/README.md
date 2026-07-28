@@ -19,7 +19,7 @@ Controls:
 - `g` / `G` — select the first / final Goal;
 - `q`, Escape, or Ctrl-C — quit.
 
-The selected Goal changes to bright Gruvbox yellow foreground while all five Goal rows retain the dark Gruvbox blue visual background. The standalone TUI draws the 30×12 Atlas interior inside its rounded `Atlas Preview` border. Use `--width 23` to exercise the minimum picker fixture.
+The selected Goal changes to bright Gruvbox yellow foreground. The standalone TUI draws the 30×12 Atlas interior inside its rounded `Atlas Preview` border. Use `--width 23` to exercise the minimum picker fixture.
 
 ## Static capture and Goal selection
 
@@ -40,12 +40,12 @@ Production `nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua` allocates a 1
 
 ## Current composition
 
-- A two-to-four-line blue header shows the Feature name, compact Task ID/title, and a derived `recorded done`, `recorded accepted`, `recorded in progress`, `recorded pending`, or `recorded needs attention` status.
+- A two-to-four-line header shows the Feature name, compact Task ID/title, and a derived `recorded done`, `recorded accepted`, `recorded in progress`, `recorded pending`, or `recorded needs attention` status.
 - The status is explicitly labelled `recorded` because Registry observations do not make Atlas canonical Task authority.
-- Five real Goal rows use dark Gruvbox `bg_visual_blue` (`#2e3b3b`) cards. The selected Goal changes to bright yellow foreground; navigation keeps it visible without adding a separate selected-detail row.
-- The disconnected standalone rail and viewport-dangling connector were removed. Each visible journey uses Pi's `│`, `├─`, and closing `└─` geometry.
+- Five real Goal rows use the normal terminal background. The selected Goal changes to bright yellow foreground; navigation keeps it visible without adding a separate selected-detail row.
+- A muted `│` root now aligns with every `├─` branch and the closing `└─`; the redundant `RECORDED JOURNEY` label and viewport-dangling connector were removed.
 - Current time and `projection, not authority` no longer consume rows.
-- `N steps · selected X/Y` moved to the final row.
+- `N steps · selected X/Y` remains on the final row.
 
 ## Pi Activity fidelity
 
@@ -54,7 +54,7 @@ The prototype follows the current Pi work-step renderer rather than the earlier 
 - muted `│`, `├─`, and `└─` connected rails;
 - `◉` active, `●` successful, `×` failed, and neutral `○`/`?` fallback states;
 - bold normal step titles and a distinct selected foreground;
-- Gruvbox Material rail `#504945`, muted `#928374`, text `#ebdbb2`, selected yellow `#fabd2f`, active/accent `#f28534`, success `#b8bb26`, failure `#f2594b`, blue `#80aa9e`, and blue visual background `#2e3b3b`.
+- Gruvbox Material rail `#504945`, muted `#928374`, text `#ebdbb2`, selected yellow `#fabd2f`, active/accent `#f28534`, success `#b8bb26`, failure `#f2594b`, and feature heading `#83a597`.
 
 The Goal state glyph and selected ordinal remain readable without color; color provides the stronger interactive highlight requested during review.
 
