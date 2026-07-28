@@ -68,7 +68,7 @@ export default function (pi: ExtensionAPI) {
       installed = true;
     }
     return {
-      systemPrompt: `${event.systemPrompt}\n\nThe configured subagents are delegate, context-builder, worker, and reviewer. Each launch is a full session-backed Pi agent observed inline in this session. Vault Hunter still defaults implementation, verification, review, and delivery to visible Herdr Pi sessions unless the user explicitly requests inline subagents.`,
+      systemPrompt: `${event.systemPrompt}\n\nThe configured inline subagents are the generic delegate, context-builder, worker, and reviewer capabilities. They are distinct from Vault Hunter's visible Herdr verifier-builder, convergence-engineer, and delivery-steward crew. Vault Hunter must not use the generic reviewer as its independent-review stage because No Mistakes owns review and verifier certification.`,
     };
   });
 }

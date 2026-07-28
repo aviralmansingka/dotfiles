@@ -50,6 +50,75 @@ func TestCreateAndIdempotentAppend(t *testing.T) {
 	}
 }
 
+func TestAppendObservationCommandWritesStrictV2AndReplaysIdempotently(t *testing.T) {
+	root := t.TempDir()
+	producer, err := vaultregistry.OpenProducer(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := "2026-07-28T12:00:00Z"
+	session := vaultregistry.AgentSession{Source: "herdr:pi", Kind: "path", Value: "/tmp/driver.jsonl"}
+	driver := vaultregistry.Observation{
+		ObservationID: "driver-started", Kind: vaultregistry.KindRegisteredParticipant, State: vaultregistry.StateActive,
+		GoalID: "run", Title: "driver started", Summary: "driver started.", ObservedAt: started, CorrelationID: "crew-v2",
+		Actor:  vaultregistry.Identity{Kind: "participant", ID: "driver", AgentSession: &session},
+		Source: vaultregistry.Identity{Kind: "producer", ID: "test"}, RedactionClass: "internal", StartedAt: &started,
+		Payload: vaultregistry.ObservationPayload{RegisteredParticipant: &vaultregistry.RegisteredParticipantPayload{
+			ParticipantID: "driver", Role: "driver", AgentSession: session,
+		}},
+	}
+	run := vaultregistry.Run{
+		SchemaVersion: 2, RunID: "crew-v2", Name: "crew-v2", RunKind: vaultregistry.RunKindHunter,
+		WorkReference: &vaultregistry.WorkReference{ID: "T01", Title: "Crew", Path: "task.md", FeaturePath: "feature.md", Kind: "task"},
+		Revision:      0, State: vaultregistry.RunStateActive, Stage: "invoked", InvokedAt: started, UpdatedAt: started,
+	}
+	created, err := producer.CreateRun(vaultregistry.CreateRequest{Run: run, InitialDriver: driver})
+	if err != nil {
+		t.Fatal(err)
+	}
+	observed := "2026-07-28T12:01:00Z"
+	childSession := vaultregistry.AgentSession{Source: "herdr:pi", Kind: "path", Value: "/tmp/child.jsonl"}
+	observation := vaultregistry.Observation{
+		ObservationID: "child-started", Kind: vaultregistry.KindRegisteredParticipant, State: vaultregistry.StateActive,
+		GoalID: "G01", Title: "child started", Summary: "child started.", ObservedAt: observed, CorrelationID: run.RunID,
+		Actor:  vaultregistry.Identity{Kind: "participant", ID: "child", AgentSession: &childSession},
+		Source: vaultregistry.Identity{Kind: "producer", ID: "vault-hunter-crew"}, RedactionClass: "internal", StartedAt: &observed,
+		Payload: vaultregistry.ObservationPayload{RegisteredParticipant: &vaultregistry.RegisteredParticipantPayload{
+			ParticipantID: "child", Role: "verifier-builder", AgentSession: childSession,
+		}},
+	}
+	request := map[string]any{
+		"action": "append_observation", "root": root, "run_id": run.RunID,
+		"expected_revision": created.Revision, "updated_at": observed, "observation": observation,
+	}
+	encoded, err := json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var firstOutput bytes.Buffer
+	if err := serve(bytes.NewReader(encoded), &firstOutput); err != nil {
+		t.Fatal(err)
+	}
+	var first vaultregistry.Run
+	if err := json.Unmarshal(firstOutput.Bytes(), &first); err != nil {
+		t.Fatal(err)
+	}
+	if first.Revision != 2 || len(first.Observations) != 2 {
+		t.Fatalf("first append = revision %d observations %d", first.Revision, len(first.Observations))
+	}
+	var replayOutput bytes.Buffer
+	if err := serve(bytes.NewReader(encoded), &replayOutput); err != nil {
+		t.Fatal(err)
+	}
+	var replay vaultregistry.Run
+	if err := json.Unmarshal(replayOutput.Bytes(), &replay); err != nil {
+		t.Fatal(err)
+	}
+	if replay.Revision != first.Revision || len(replay.Observations) != len(first.Observations) {
+		t.Fatalf("replay changed Run: %#v", replay)
+	}
+}
+
 func TestAppendRejectsIdentityCollisionsAndKeepsNewestUpdateTime(t *testing.T) {
 	producer, err := vaultregistry.OpenProducer(t.TempDir())
 	if err != nil {
@@ -137,6 +206,8 @@ func TestAdministrationRequestsAreStrictBeforeOpeningStorage(t *testing.T) {
 		`{"action":"get_retired","root":"` + root + `","run_id":"run"}`,
 		`{"action":"retire","root":"` + root + `","run_id":"run","expected_revision":"1"}`,
 		`{"action":"retire","root":"` + root + `","run_id":"run","expected_revision":1,"extra":true}`,
+		`{"action":"append_observation","root":"` + root + `","run_id":"run","updated_at":"2026-07-28T00:00:00Z","observation":{}}`,
+		`{"action":"append_observation","root":"` + root + `","run_id":"run","expected_revision":1,"updated_at":"2026-07-28T00:00:00Z","observation":{},"extra":true}`,
 		`{"action":"list","root":"` + root + `"}{"action":"list","root":"` + root + `"}`,
 	} {
 		var output bytes.Buffer

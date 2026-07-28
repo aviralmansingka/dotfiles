@@ -46,6 +46,15 @@ type appendRequest struct {
 	Evidence    *vaultregistry.Evidence    `json:"evidence,omitempty"`
 }
 
+type appendObservationRequest struct {
+	Action           string                     `json:"action"`
+	Root             string                     `json:"root,omitempty"`
+	RunID            *string                    `json:"run_id"`
+	ExpectedRevision *uint64                    `json:"expected_revision"`
+	UpdatedAt        *string                    `json:"updated_at"`
+	Observation      *vaultregistry.Observation `json:"observation"`
+}
+
 type listAgentSessionFilter struct {
 	Source string `json:"source"`
 	Kind   string `json:"kind"`
@@ -122,6 +131,14 @@ func serve(input io.Reader, output io.Writer) error {
 			RunID: *req.RunID, UpdatedAt: *req.UpdatedAt,
 			Participant: req.Participant, Lifecycle: req.Lifecycle, Evidence: req.Evidence,
 		})
+	case appendObservationRequest:
+		producer, openErr := vaultregistry.OpenExistingProducer(req.Root)
+		if openErr != nil {
+			return openErr
+		}
+		response, err = producer.AppendObservation(
+			*req.RunID, *req.ExpectedRevision, *req.UpdatedAt, *req.Observation,
+		)
 	case listRequest:
 		reader, openErr := vaultregistry.OpenReader(req.Root)
 		if openErr != nil {
@@ -198,6 +215,8 @@ func decodeRequest(input io.Reader) (any, error) {
 		command = &getRequest{}
 	case "append":
 		command = &appendRequest{}
+	case "append_observation":
+		command = &appendObservationRequest{}
 	case "list":
 		command = &listRequest{}
 	case "retire":
@@ -226,6 +245,12 @@ func decodeRequest(input io.Reader) (any, error) {
 	case *appendRequest:
 		if req.Action != "append" || req.RunID == nil || req.UpdatedAt == nil {
 			return nil, malformedRequest(errors.New("append requires run_id and updated_at"))
+		}
+		return *req, nil
+	case *appendObservationRequest:
+		if req.Action != "append_observation" || req.RunID == nil || req.ExpectedRevision == nil ||
+			req.UpdatedAt == nil || req.Observation == nil {
+			return nil, malformedRequest(errors.New("append_observation requires run_id, expected_revision, updated_at, and observation"))
 		}
 		return *req, nil
 	case *listRequest:
