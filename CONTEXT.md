@@ -27,8 +27,8 @@ _Avoid_: workspace
 ## Vault Work
 
 **Vault Hunter**:
-The skill that routes a Vault Feature, Vault Task, or Wayfinder effort into its appropriate planning or execution flow.
-_Avoid_: vault skill
+The skill that routes ambiguous work to Vault Scout and executes an autonomous-ready Vault Task with a registered, sequential Herdr crew. The driving parent owns Run sequencing and canonical vault mutations; No Mistakes owns independent review and final verifier certification.
+_Avoid_: vault skill, parent-owned review or verifier certification
 
 **Run Registry**:
 A versioned durable store of immutable Run observations emitted by the active Vault Hunter driver. Schema version 1 retains participant, lifecycle, and evidence histories; schema version 2 adds typed verifier attempts and parent decisions, participants and workers, runtime telemetry, and auditor verdicts. Reader APIs remain forward-readable while producer APIs strictly validate known contracts, and the Registry never becomes the authority for vault lifecycle, goal advancement, acceptance, or completion.
@@ -41,6 +41,10 @@ _Avoid_: run controller, registry writer
 **Registered Participant**:
 A Task Run participant whose exact Herdr and agent-session identities are recorded in the Run Registry and can therefore be correlated with Atlas.
 _Avoid_: any Sidekick row, inferred participant
+
+**Vault Hunter Crew**:
+The sequential `verifier-builder`, `convergence-engineer`, and `delivery-steward` processes whose exact Run, Pi session, and Herdr custody is owned by the production crew extension. The Run Registry adapter remains separate, and process completion or telemetry never implies evidence acceptance.
+_Avoid_: generic inline subagents, Registry adapter, acceptance authority
 
 **Atlas Companion**:
 The read-only Atlas process attached exactly once to an eligible Task Run. T16 owns starting and stopping it; Atlas T03 owns its command and attachment semantics.
@@ -59,12 +63,12 @@ The To Spec structure stored in the canonical Vault Task note before execution. 
 _Avoid_: GitHub execution issue, duplicate spec
 
 **Task Goal Timeline**:
-The continuous Task Run timeline whose restartable Codex goals cover vault checkpoint one; each Verifier Entry; Refactor Gate; Review Convergence; opening the implementation pull request while capturing final evidence; CI, repairs, merge, and merged-main checks; then workspace and vault cleanup. Final evidence is part of the pull-request goal, not a separate goal. Goal boundaries do not need ordinal labels.
-_Avoid_: one monolithic task goal, final-evidence-only goal
+The continuous Task Run timeline covers checkpoint one; verifier construction; single-writer implementation convergence; No Mistakes review, documentation, lint, tests, and final verifier certification; push, pull request, CI, and merge; then exact resource cleanup and checkpoint two. Crew personas hand off and close sequentially.
+_Avoid_: parallel crew writers, parent-owned delivery review, uncertified landing
 
 **Verifier Cycle**:
-One independent Codex goal in a Task Goal Timeline: prove one planned verifier red against the baseline, then update the current verifier and implementation until the complete active verifier set is green. A verifier that already passes on the current implementation remains valid when its baseline-red evidence is preserved.
-_Avoid_: artificial failure
+The convergence engineer works against a frozen ordered verifier manifest and returns results for a named candidate. No Mistakes later executes the complete manifest against one frozen commit and tree in its dedicated certification phase; any fix invalidates that certification candidate.
+_Avoid_: affected-check-only certification, ordinary test success as certification
 
 **Verifier Entry**:
 A stable `V01`, `V02`, … item in a Vault Task note recording one externally observable behavior, its exact check, baseline-red proof, and latest result.
@@ -75,12 +79,12 @@ The point after every Verifier Entry has reached green once. Refactoring may imp
 _Avoid_: feature expansion
 
 **Review Refactor**:
-The post-review pass that fixes every bug found by local code review before the complete verifier set runs again.
-_Avoid_: review-only report
+The No Mistakes fix pass that addresses accepted independent-review findings before the candidate returns through review and final verifier certification.
+_Avoid_: Hunter parent review, review-only report
 
-**Review Convergence Loop**:
-The dedicated Task Goal that repeats local review, Review Refactor, and the complete active-verifier run until no bugs or major spec or architecture violations remain. It may use separate coding and reviewing subagents, and review may add a stable Verifier Entry for newly uncovered behavior; the implementation pull request opens only after convergence.
-_Avoid_: one-shot review, opening a pull request with relevant findings
+**Review and Certification Loop**:
+The No Mistakes-owned loop that settles review findings and fixes, then certifies the complete declared verifier manifest on one frozen candidate tree before push, pull request, or CI. The external No Mistakes binary does not yet implement the required `certify` phase, so Vault Hunter delivery remains blocked at that boundary rather than emulating certification.
+_Avoid_: generic reviewer substitution, parent acceptance of verifier attempts, claiming current certification support
 
 **Pull Request Evidence**:
 The links to every implementation pull request created during a Task Run, preserved in the canonical Vault Task note with final merge evidence. Vault updates are committed and pushed directly without a vault pull request.
@@ -91,8 +95,8 @@ One of two pushed Task Run states: the in-progress Task Spec and verifier plan b
 _Avoid_: per-cycle vault commit
 
 **Landing Gate**:
-The always-present post-PR Task Goal that owns required CI, repairs, auto-merge, and merged-main checks, or mergeable status plus the complete local verifier set when no CI exists. Vault Hunter never bypasses repository protections.
-_Avoid_: manual protection bypass
+The No Mistakes-owned delivery boundary after successful final verifier certification, covering push, pull request, required CI, repairs, merge, and declared merged-main checks. Vault Hunter never bypasses repository protections, and certification must precede push, pull request, or CI.
+_Avoid_: manual protection bypass, landing without certification
 
 **Workspace Cleanup Gate**:
 The final Task Goal where Vault Hunter closes every Herdr tab in the task's Herdr Workspace and every Neovim Workspace Tab bound to it, verifies they are gone, records final task evidence, and pushes the completed vault checkpoint. Other Herdr Workspaces and Unbound Tabs remain untouched.
