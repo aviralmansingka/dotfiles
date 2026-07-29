@@ -274,14 +274,11 @@ func (m JournalModel) View() string { return m.ViewColor(m.colorEnabled) }
 // ViewColor renders deterministic foreground-only true color. Stripping its
 // SGR sequences yields exactly the uncolored semantic frame.
 func (m JournalModel) ViewColor(enabled bool) string {
-	if m.crewTimeline {
-		if m.width < 40 || m.height < 12 {
-			return truncate("terminal too small; minimum 40×12", m.width)
-		}
-		return m.crewTimelineView(enabled)
-	}
 	if m.width < 80 || m.height < 24 {
 		return truncate("terminal too small; minimum 80×24", m.width)
+	}
+	if m.crewTimeline {
+		return m.crewTimelineView(enabled)
 	}
 
 	start, end, capped := m.journalWindow()

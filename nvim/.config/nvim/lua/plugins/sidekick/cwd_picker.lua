@@ -661,11 +661,8 @@ function M.open(opts)
   local atlas_attempted = false
   local atlas_phase
   local atlas_frame
-  local atlas_run_id
   local atlas_workspace_id
   local atlas_process
-  local atlas_terminal_active = false
-  local atlas_preview_config
   local staging_buffers = {}
   local transition_preview
   local has_local_working = vim.iter(items):any(function(item)
@@ -942,7 +939,6 @@ function M.open(opts)
     discard_staging_buffers()
     atlas_phase = nil
     atlas_frame = nil
-    atlas_run_id = nil
     atlas_workspace_id = nil
     atlas_attempted = false
     clear_atlas_preview()
@@ -1119,13 +1115,11 @@ function M.open(opts)
       end
       atlas_process = nil
       local frame = atlas_result_frame(result)
-      if not frame or result.projection ~= "workspace-task" or type(result.run_id) ~= "string" or result.run_id == "" then
+      if not frame or result.projection ~= "workspace-task" then
         atlas_phase = nil
-        atlas_run_id = nil
         clear_atlas_preview()
         return
       end
-      atlas_run_id = result.run_id
       atlas_workspace_id = item.workspace_id
       atlas_frame = frame
       restage_atlas_preview(item, generation)
@@ -1330,58 +1324,7 @@ function M.open(opts)
     focus_input()
   end
 
-  local function open_atlas_terminal()
-    local item = current_preview_item()
-    local preview = picker and picker.preview and picker.preview.win
-    local executable = vim.fn.exepath("atlas")
-    if
-      atlas_terminal_active
-      or not atlas_run_id
-      or executable == ""
-      or not preview
-      or not preview:win_valid()
-    then
-      return false
-    end
-    atlas_terminal_active = true
-    stop_spinner()
-    atlas_preview_config = vim.api.nvim_win_get_config(preview.win)
-    vim.api.nvim_win_set_config(preview.win, {
-      relative = "editor",
-      row = 0,
-      col = 0,
-      width = math.max(vim.o.columns - 2, 1),
-      height = math.max(vim.o.lines - 3, 1),
-      border = "rounded",
-      zindex = 250,
-    })
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_win_set_buf(preview.win, buf)
-    vim.api.nvim_set_current_win(preview.win)
-    vim.fn.termopen({ executable, "observe", "--id", atlas_run_id }, {
-      on_exit = function()
-        vim.schedule(function()
-          atlas_terminal_active = false
-          if picker and not picker.closed and item == current_preview_item() then
-            if atlas_preview_config and preview:win_valid() then
-              vim.api.nvim_win_set_config(preview.win, atlas_preview_config)
-            end
-            atlas_preview_config = nil
-            transition_preview()
-            show_preview(item)
-            focus_input()
-          end
-        end)
-      end,
-    })
-    vim.cmd.startinsert()
-    return true
-  end
-
   local function toggle_selector()
-    if workspace_active and open_atlas_terminal() then
-      return
-    end
     transition_preview()
     rendered_workspace_item = nil
     pending_workspace_item = nil

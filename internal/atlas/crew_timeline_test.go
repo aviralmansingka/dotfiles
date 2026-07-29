@@ -54,17 +54,6 @@ func TestCrewTimelineQualifiedRegistryFallbackAndFailureLegend(t *testing.T) {
 	}
 }
 
-func TestCrewTimelineSupportsEmbeddedViewport(t *testing.T) {
-	run := vaultregistry.Run{Task: vaultregistry.Task{ID: "T12"}, RunID: "run", Revision: 1}
-	view := NewJournalModel(run, 78, 21).WithCrewTimeline().ViewColor(false)
-	if strings.Contains(view, "terminal too small") || !strings.Contains(view, "CREW TIMELINE") {
-		t.Fatalf("embedded crew timeline = %q", view)
-	}
-	if got := NewJournalModel(run, 39, 12).WithCrewTimeline().ViewColor(false); got != "terminal too small; minimum 40×12" {
-		t.Fatalf("small embedded viewport = %q", got)
-	}
-}
-
 func TestImplementationPullRequestRequiresCanonicalLocation(t *testing.T) {
 	body := "Dependency: https://github.com/acme/dependency/pull/7\n"
 	if got := implementationPullRequest(body); got != "" {
