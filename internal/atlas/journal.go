@@ -271,47 +271,6 @@ func (m JournalModel) ViewColor(enabled bool) string {
 	}
 	return m.crewTimelineView(enabled)
 
-	start, end, capped := m.journalWindow()
-	lines := m.headerLines(start, end)
-	margin := strings.Repeat(" ", (m.width-min(82, m.width-2))/2)
-	if len(m.events) == 0 {
-		lines = append(lines, m.journalRailLine(margin, journalLine{{text: margin}, {text: "no recorded journal events", style: journalOrdinary}}))
-	} else {
-		omission := m.journalRailLine(margin, journalLine{
-			{text: margin},
-			{text: fmt.Sprintf("└─ … %d recorded journal events omitted (%d earlier, %d later)", len(m.events), start, len(m.events)-end), style: journalMuted},
-		})
-		if capped {
-			lines = append(lines, omission)
-		}
-		for i := start; i < end; i++ {
-			lines = append(lines, m.journalRailLines(margin, m.eventLines(i, margin))...)
-		}
-		if m.detailVisible {
-			lines = append(lines, m.journalRailLines(margin, m.selectedCard(margin))...)
-		}
-	}
-
-	for len(lines) < m.height-2 {
-		lines = append(lines, nil)
-	}
-	if len(lines) > m.height-2 {
-		lines = lines[:m.height-2]
-	}
-	lines = append(lines,
-		journalLine{{text: strings.Repeat("─", m.width), style: journalMuted}},
-		journalLine{{text: journalFooter(m.width), style: journalMuted}},
-	)
-
-	var styles journalStyles
-	if enabled {
-		styles = newJournalStyles()
-	}
-	rendered := make([]string, len(lines))
-	for i, line := range lines {
-		rendered[i] = renderJournalLine(line, m.width, enabled, styles)
-	}
-	return strings.Join(rendered, "\n")
 }
 
 func (m JournalModel) journalWindow() (start, end int, capped bool) {

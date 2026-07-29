@@ -142,7 +142,9 @@ The interactive browser groups canonical work as Project → Feature → Task �
 when they have no Run or exceed machine collection byte limits. Done Tasks are hidden by default; select a Feature
 and press Ctrl-D to toggle only that Feature's completed work. Press `p`, `f`, `t`, or `r` to switch previews. Feature
 previews summarize Now/Next work with the crew journey (activate, baseline, converge, review, land, cleanup), while
-Run previews retain the detailed lifecycle journal.
+Run previews render the connected Parent → Verifier → Convergence → Delivery → Parent closure crew timeline. See
+[`docs/vault-hunter-atlas-crew-timeline.md`](docs/vault-hunter-atlas-crew-timeline.md) for its canonical signal and role
+projection rules.
 
 The browser skips active Runs whose Project, Feature, or Task preview cannot be rendered and emits one startup
 warning with the Run ID and work-reference path. Machine-readable Run listings remain unchanged.
@@ -155,11 +157,6 @@ Install/update Pi packages from the checked-in manifest:
 cd ~/.pi/agent/npm
 npm install
 ```
-
-Use `/atlas-rail-prototype` in Pi's interactive TUI to open the disposable Atlas evidence rail for the active Vault
-Hunter Run bound to the current Pi session. It uses the active theme, requires at least 80 columns, and reads without
-mutating the Run Registry. Navigate stages with `j`/`k` or the arrow keys, toggle details with Enter, toggle the latest
-eight versus all steps locally with Ctrl+V, and close with `q` or Escape.
 
 Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`; the widget stays hidden when no run exists.
 

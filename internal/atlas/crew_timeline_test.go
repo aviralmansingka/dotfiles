@@ -20,6 +20,10 @@ func TestCrewTimelineCanonicalSignalsAndRoles(t *testing.T) {
 	if role != "Delivery Steward" {
 		t.Fatalf("compatibility role = %q", role)
 	}
+	role, source = participantCrewRole(vaultregistry.Participant{Role: "legacy-observer"})
+	if role != "Unassigned" || source != "inferred/v1-role" {
+		t.Fatalf("unmapped role custody = %q, %q", role, source)
+	}
 
 	vault := t.TempDir()
 	t.Setenv("VAULT_ROOT", vault)

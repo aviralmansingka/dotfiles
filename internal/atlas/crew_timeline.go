@@ -86,10 +86,12 @@ func participantCrewRole(participant vaultregistry.Participant) (string, string)
 	if role == "" && participant.Role != "" {
 		role, source = participant.Role, "inferred/v1-role"
 	}
-	if role == "" {
-		role = "Unassigned"
+	switch role {
+	case "Verifier Builder", "Convergence Engineer", "Delivery Steward":
+		return role, source
+	default:
+		return "Unassigned", source
 	}
-	return role, source
 }
 
 func inferredMark(inferred bool) string {
