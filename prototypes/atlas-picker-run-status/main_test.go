@@ -8,6 +8,32 @@ import (
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
+func TestNormalizeUsesCurrentVaultHunterCrewStages(t *testing.T) {
+	run := vaultregistry.Run{
+		Stage: "parent/usage",
+		Participants: []vaultregistry.Participant{
+			{Role: "Verifier Builder"},
+			{Role: "Convergence Engineer"},
+		},
+	}
+	got := normalize(run)
+	want := []struct{ id, state string }{
+		{"Parent", "completed"},
+		{"Verifier", "active"},
+		{"Convergence", "active"},
+		{"Delivery", "pending"},
+		{"Parent closure", "active"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("normalize() returned %d stages, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i].id != want[i].id || got[i].state != want[i].state {
+			t.Fatalf("stage %d = %q/%q, want %q/%q", i, got[i].id, got[i].state, want[i].id, want[i].state)
+		}
+	}
+}
+
 func TestVerifierSummaryAggregatesTypedAttemptsDeterministically(t *testing.T) {
 	identity := func(verifierID, attemptID string) vaultregistry.VerifierAttemptIdentity {
 		return vaultregistry.VerifierAttemptIdentity{VerifierID: verifierID, AttemptID: attemptID}

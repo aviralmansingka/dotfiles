@@ -10,9 +10,68 @@ import (
 // PreviewResult is the single read-only response consumed by Sidekick.
 type PreviewResult struct {
 	Outcome       string `json:"outcome"`
+	Projection    string `json:"projection,omitempty"`
 	RunID         string `json:"run_id,omitempty"`
 	ParticipantID string `json:"participant_id,omitempty"`
 	Frame         string `json:"frame,omitempty"`
+}
+
+// WorkspacePreview resolves exact registered workspace custody or shows honest Herdr tabs.
+func (c Client) WorkspacePreview(reader *vaultregistry.Reader, workspaceID, workspaceLabel string, width, height int) (PreviewResult, error) {
+	if reader == nil || workspaceID == "" || width <= 0 || height <= 0 {
+		return PreviewResult{}, errors.New("workspace preview requires an exact workspace and positive dimensions")
+	}
+	runs, err := reader.List()
+	if err != nil {
+		return PreviewResult{}, err
+	}
+	matches := make([]vaultregistry.Run, 0, 1)
+	for _, run := range runs {
+		for _, participant := range runParticipants(run) {
+			if participant.Herdr != nil && participant.Herdr.WorkspaceID == workspaceID {
+				matches = append(matches, run)
+				break
+			}
+		}
+	}
+	if len(matches) > 1 {
+		return PreviewResult{Outcome: "ambiguous"}, nil
+	}
+	if len(matches) == 1 {
+		run := matches[0]
+		if runTaskKind(run) != "task" {
+			return PreviewResult{Outcome: "ineligible"}, nil
+		}
+		return PreviewResult{Outcome: "matched", Projection: "workspace-task", RunID: run.RunID, Frame: atlas.PickerCrewPreview(run, width, height)}, nil
+	}
+	tabs, err := c.workspaceTabs(workspaceID)
+	if err != nil {
+		return PreviewResult{}, err
+	}
+	labels := make([]string, len(tabs))
+	for i, tab := range tabs {
+		labels[i] = tab.Label
+	}
+	return PreviewResult{Outcome: "matched", Projection: "workspace-tabs", Frame: atlas.PickerTabsPreview(workspaceLabel, labels, width, height)}, nil
+}
+
+func (c Client) workspaceTabs(workspaceID string) ([]tab, error) {
+	var response struct {
+		Type string `json:"type"`
+		Tabs []tab  `json:"tabs"`
+	}
+	if err := c.call(&response, "tab", "list", "--workspace", workspaceID); err != nil {
+		return nil, err
+	}
+	if response.Type != "tab_list" || response.Tabs == nil {
+		return nil, errors.New("invalid Herdr tab list result")
+	}
+	for _, tab := range response.Tabs {
+		if tab.WorkspaceID != workspaceID || tab.TabID == "" || tab.Label == "" || tab.PaneCount < 1 {
+			return nil, errors.New("invalid Herdr tab list result")
+		}
+	}
+	return response.Tabs, nil
 }
 
 // Preview performs a read-only reverse lookup of one complete live identity.

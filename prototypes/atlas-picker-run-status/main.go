@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -62,8 +61,8 @@ func main() {
 	stateDir := flag.String("state-dir", "", "Registry root (defaults to normal Vault Hunter state resolution)")
 	width := flag.Int("width", 30, "Atlas Preview interior width")
 	color := flag.String("color", "auto", "color mode: auto, always, never")
-	goal := flag.String("goal", "", "initial Goal ID or 1-based ordinal")
-	listGoals := flag.Bool("list-goals", false, "list recorded Goals and exit")
+	goal := flag.String("goal", "", "initial crew stage name or 1-based ordinal")
+	listGoals := flag.Bool("list-goals", false, "list recorded crew stages and exit")
 	snapshot := flag.Bool("snapshot", false, "print one 12-row picker frame")
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "usage: go run ./prototypes/atlas-picker-run-status [flags] <task-id-or-run-id>")
@@ -202,7 +201,7 @@ func (m model) lines(_ bool) []renderedLine {
 		lines = append(lines, goalLine(m.goals[index], connector, index == m.selected, m.width, m.color))
 	}
 	if len(m.goals) == 0 {
-		lines = append(lines, cardLine(" └─ ○ no recorded goals", m.width, m.color, muted))
+		lines = append(lines, cardLine(" └─ ○ no recorded crew stages", m.width, m.color, muted))
 	}
 	for len(lines) < len(headerLines(m.run, m.goals, m.width, m.color))+6 {
 		lines = append(lines, cardLine("", m.width, m.color, text))
@@ -381,49 +380,66 @@ func panel(lines []string, width int, colors bool) string {
 }
 
 func normalize(run vaultregistry.Run) []journeyGoal {
-	byID := map[string]*journeyGoal{}
-	ensure := func(id, at string) *journeyGoal {
-		id = clean(id)
-		if id == "" {
-			return nil
-		}
-		if byID[id] == nil {
-			byID[id] = &journeyGoal{id: id, first: at}
-		}
-		if byID[id].first == "" || at != "" && at < byID[id].first {
-			byID[id].first = at
-		}
-		return byID[id]
-	}
-	for _, observation := range run.Lifecycle {
-		if goal := ensure(observation.GoalID, observation.ObservedAt); goal != nil && later(observation.ObservedAt, goal.latest) {
-			goal.kind, goal.state, goal.latest = clean(observation.Kind), clean(observation.State), observation.ObservedAt
-		}
-	}
-	for _, evidence := range run.Evidence {
-		if goal := ensure(evidence.VerifierID, evidence.ObservedAt); goal != nil && goal.latest == "" {
-			goal.kind, goal.state, goal.latest = "evidence", clean(evidence.State), evidence.ObservedAt
-		}
-	}
+	roles := map[string]bool{}
 	for _, participant := range run.Participants {
-		ensure(participant.GoalID, participant.ObservedAt)
+		roles[strings.ToLower(clean(participant.Role))] = true
 	}
 	for _, observation := range run.Observations {
-		if goal := ensure(observation.GoalID, observation.ObservedAt); goal != nil && later(observation.ObservedAt, goal.latest) {
-			goal.kind, goal.state, goal.latest = clean(string(observation.Kind)), clean(string(observation.State)), observation.ObservedAt
+		if participant := observation.Payload.RegisteredParticipant; participant != nil {
+			roles[strings.ToLower(clean(participant.Role))] = true
+		}
+		if worker := observation.Payload.Worker; worker != nil {
+			roles[strings.ToLower(clean(worker.Role))] = true
 		}
 	}
-	goals := make([]journeyGoal, 0, len(byID))
-	for _, goal := range byID {
-		goals = append(goals, *goal)
-	}
-	sort.Slice(goals, func(i, j int) bool {
-		if goals[i].first != goals[j].first {
-			return goals[i].first < goals[j].first
+
+	hasRole := func(names ...string) bool {
+		for _, name := range names {
+			if roles[name] {
+				return true
+			}
 		}
-		return goals[i].id < goals[j].id
-	})
-	return goals
+		return false
+	}
+	verifier := milestoneStateName(verifierSummary(run, nil))
+	verifierPresent := hasRole("verifier builder", "verifier-builder", "verifier")
+	convergencePresent := hasRole("convergence engineer", "convergence-engineer", "implementation")
+	deliveryPresent := hasRole("delivery steward", "delivery-steward", "delivery")
+	stage := strings.ToLower(clean(run.Stage))
+	closed := run.State == "retired" || strings.Contains(stage, "done") || strings.Contains(stage, "complete") || strings.Contains(stage, "closure")
+
+	stages := []journeyGoal{
+		{id: "Parent", kind: "crew-stage", state: "completed", first: "1"},
+		{id: "Verifier", kind: "crew-stage", state: stageState(verifier == "completed", verifier == "failed", verifierPresent), first: "2"},
+		{id: "Convergence", kind: "crew-stage", state: stageState(deliveryPresent || closed, false, convergencePresent), first: "3"},
+		{id: "Delivery", kind: "crew-stage", state: stageState(closed, false, deliveryPresent), first: "4"},
+		{id: "Parent closure", kind: "crew-stage", state: stageState(closed, false, strings.Contains(stage, "parent") && (verifierPresent || convergencePresent || deliveryPresent)), first: "5"},
+	}
+	return stages
+}
+
+func milestoneStateName(state milestoneState) string {
+	switch state {
+	case milestoneComplete:
+		return "completed"
+	case milestoneFailed:
+		return "failed"
+	default:
+		return "active"
+	}
+}
+
+func stageState(done, failed, active bool) string {
+	if done {
+		return "completed"
+	}
+	if failed {
+		return "failed"
+	}
+	if active {
+		return "active"
+	}
+	return "pending"
 }
 
 func selectRequestedGoal(goals []journeyGoal, requested string) (int, error) {
@@ -432,8 +448,7 @@ func selectRequestedGoal(goals []journeyGoal, requested string) (int, error) {
 	}
 	if ordinal, err := strconv.Atoi(requested); err == nil {
 		if ordinal < 1 || ordinal > len(goals) {
-			//nolint:staticcheck // This top-level CLI message starts with the Goal domain term.
-			return 0, fmt.Errorf("Goal ordinal %d outside 1..%d", ordinal, len(goals))
+			return 0, fmt.Errorf("crew stage ordinal %d outside 1..%d", ordinal, len(goals))
 		}
 		return ordinal - 1, nil
 	}
@@ -442,8 +457,7 @@ func selectRequestedGoal(goals []journeyGoal, requested string) (int, error) {
 			return index, nil
 		}
 	}
-	//nolint:staticcheck // This top-level CLI message starts with the Goal domain term.
-	return 0, fmt.Errorf("Goal not found: %s", requested)
+	return 0, fmt.Errorf("crew stage not found: %s", requested)
 }
 
 func selectGoal(goals []journeyGoal) int {
