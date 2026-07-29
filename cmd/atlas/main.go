@@ -545,7 +545,7 @@ func runObserve(command observeCommand, stdout io.Writer) error {
 		return err
 	}
 	if characterDevice(os.Stdin) && characterDevice(os.Stdout) {
-		model := atlaspkg.NewJournalModel(run, 80, 24).WithColor(interactiveColorEnabled()).WithReload(func() (vaultregistry.Run, error) { return readActiveRun(reader, command.selector) })
+		model := atlaspkg.NewJournalModel(run, 80, 24).WithCrewTimeline().WithColor(interactiveColorEnabled()).WithReload(func() (vaultregistry.Run, error) { return readActiveRun(reader, command.selector) })
 		_, err := tea.NewProgram(model, tea.WithAltScreen()).Run()
 		return err
 	}
