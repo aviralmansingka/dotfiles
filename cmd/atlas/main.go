@@ -454,8 +454,16 @@ func runInternalPreview(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	workspaceID := internalString("ATLAS_INTERNAL_WORKSPACE_ID")
+	if internalString("ATLAS_INTERNAL_SELECTION_KIND") == "workspace" {
+		result, err := (atlascompanion.Client{Herdr: "herdr"}).WorkspacePreview(reader, workspaceID, internalString("ATLAS_INTERNAL_WORKSPACE_LABEL"), width, height)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(stdout).Encode(result)
+	}
 	selected := atlascompanion.Agent{
-		WorkspaceID: internalString("ATLAS_INTERNAL_WORKSPACE_ID"),
+		WorkspaceID: workspaceID,
 		TabID:       internalString("ATLAS_INTERNAL_TAB_ID"),
 		PaneID:      internalString("ATLAS_INTERNAL_PANE_ID"),
 		TerminalID:  internalString("ATLAS_INTERNAL_TERMINAL_ID"),

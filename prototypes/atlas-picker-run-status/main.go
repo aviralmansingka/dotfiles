@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -381,49 +380,66 @@ func panel(lines []string, width int, colors bool) string {
 }
 
 func normalize(run vaultregistry.Run) []journeyGoal {
-	byID := map[string]*journeyGoal{}
-	ensure := func(id, at string) *journeyGoal {
-		id = clean(id)
-		if id == "" {
-			return nil
-		}
-		if byID[id] == nil {
-			byID[id] = &journeyGoal{id: id, first: at}
-		}
-		if byID[id].first == "" || at != "" && at < byID[id].first {
-			byID[id].first = at
-		}
-		return byID[id]
-	}
-	for _, observation := range run.Lifecycle {
-		if goal := ensure(observation.GoalID, observation.ObservedAt); goal != nil && later(observation.ObservedAt, goal.latest) {
-			goal.kind, goal.state, goal.latest = clean(observation.Kind), clean(observation.State), observation.ObservedAt
-		}
-	}
-	for _, evidence := range run.Evidence {
-		if goal := ensure(evidence.VerifierID, evidence.ObservedAt); goal != nil && goal.latest == "" {
-			goal.kind, goal.state, goal.latest = "evidence", clean(evidence.State), evidence.ObservedAt
-		}
-	}
+	roles := map[string]bool{}
 	for _, participant := range run.Participants {
-		ensure(participant.GoalID, participant.ObservedAt)
+		roles[strings.ToLower(clean(participant.Role))] = true
 	}
 	for _, observation := range run.Observations {
-		if goal := ensure(observation.GoalID, observation.ObservedAt); goal != nil && later(observation.ObservedAt, goal.latest) {
-			goal.kind, goal.state, goal.latest = clean(string(observation.Kind)), clean(string(observation.State)), observation.ObservedAt
+		if participant := observation.Payload.RegisteredParticipant; participant != nil {
+			roles[strings.ToLower(clean(participant.Role))] = true
+		}
+		if worker := observation.Payload.Worker; worker != nil {
+			roles[strings.ToLower(clean(worker.Role))] = true
 		}
 	}
-	goals := make([]journeyGoal, 0, len(byID))
-	for _, goal := range byID {
-		goals = append(goals, *goal)
-	}
-	sort.Slice(goals, func(i, j int) bool {
-		if goals[i].first != goals[j].first {
-			return goals[i].first < goals[j].first
+
+	hasRole := func(names ...string) bool {
+		for _, name := range names {
+			if roles[name] {
+				return true
+			}
 		}
-		return goals[i].id < goals[j].id
-	})
-	return goals
+		return false
+	}
+	verifier := milestoneStateName(verifierSummary(run, nil))
+	verifierPresent := hasRole("verifier builder", "verifier-builder", "verifier")
+	convergencePresent := hasRole("convergence engineer", "convergence-engineer", "implementation")
+	deliveryPresent := hasRole("delivery steward", "delivery-steward", "delivery")
+	stage := strings.ToLower(clean(run.Stage))
+	closed := run.State == "retired" || strings.Contains(stage, "done") || strings.Contains(stage, "complete") || strings.Contains(stage, "closure")
+
+	stages := []journeyGoal{
+		{id: "Parent", kind: "crew-stage", state: "completed", first: "1"},
+		{id: "Verifier", kind: "crew-stage", state: stageState(verifier == "completed", verifier == "failed", verifierPresent), first: "2"},
+		{id: "Convergence", kind: "crew-stage", state: stageState(deliveryPresent || closed, false, convergencePresent), first: "3"},
+		{id: "Delivery", kind: "crew-stage", state: stageState(closed, false, deliveryPresent), first: "4"},
+		{id: "Parent closure", kind: "crew-stage", state: stageState(closed, false, strings.Contains(stage, "parent") && (verifierPresent || convergencePresent || deliveryPresent)), first: "5"},
+	}
+	return stages
+}
+
+func milestoneStateName(state milestoneState) string {
+	switch state {
+	case milestoneComplete:
+		return "completed"
+	case milestoneFailed:
+		return "failed"
+	default:
+		return "active"
+	}
+}
+
+func stageState(done, failed, active bool) string {
+	if done {
+		return "completed"
+	}
+	if failed {
+		return "failed"
+	}
+	if active {
+		return "active"
+	}
+	return "pending"
 }
 
 func selectRequestedGoal(goals []journeyGoal, requested string) (int, error) {
