@@ -1,0 +1,3 @@
+Canonical ANSI capture excerpt from the focused crew timeline fixture at 100x24. The stripped semantic footer follows on the second line.
+
+[38;2;184;187;38m● complete[0m[38;2;146;131;116m · [0m[38;2;233;177;67m⟳ active[0m[38;2;146;131;116m · ○ waiting · [0m[38;2;242;89;75m× failed[0m[38;2;146;131;116m · ≈ inferred role[0m
