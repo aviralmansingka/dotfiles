@@ -27,8 +27,8 @@ func (m JournalModel) crewTimelineView(enabled bool) string {
 	verifiers := map[string]bool{}
 	latestTree := "not recorded"
 	for _, evidence := range m.run.Evidence {
-		if evidence.VerifierID != "" {
-			verifiers[evidence.VerifierID] = true
+		if id := localVerifierID(evidence.VerifierID); id != "" {
+			verifiers[id] = true
 		}
 		if evidence.ImplementationTree != "" {
 			latestTree = evidence.ImplementationTree
@@ -39,39 +39,31 @@ func (m JournalModel) crewTimelineView(enabled bool) string {
 		verifierIDs = append(verifierIDs, verifier)
 	}
 	sort.Strings(verifierIDs)
-	signals := readPrototypeTaskSignals(m.run, verifierIDs)
+	signals := readTaskSignals(m.run, verifierIDs)
 	verifierSummary := fmt.Sprintf("%d/%d verifiers complete · %d evidence", signals.completeVerifiers, signals.totalVerifiers, len(m.run.Evidence))
-	verifierStage := prototypeStageFor(signals.verifiersComplete, roles["Verifier Builder"] > 0, "handoff", "verifying")
-	convergenceStage := prototypeStageFor(signals.verifiersComplete, roles["Convergence Engineer"] > 0, "handoff", "working")
-	deliveryStage := prototypeStageFor(signals.pullRequest != "", roles["Delivery Steward"] > 0, "pushed", "preparing")
-	closureStage := prototypeStageFor(signals.taskDone, false, "closed", "closure")
+	verifierStage := timelineStageFor(signals.verifiersComplete, signals.verifiersFailed, roles["Verifier Builder"] > 0, "handoff", "verifying")
+	convergenceStage := timelineStageFor(signals.verifiersComplete, signals.verifiersFailed, roles["Convergence Engineer"] > 0, "handoff", "working")
+	deliveryStage := timelineStageFor(signals.pullRequest != "", signals.deliveryFailed, roles["Delivery Steward"] > 0, "pushed", "preparing")
+	closureStage := timelineStageFor(signals.taskDone, signals.taskFailed, false, "closed", "closure")
 
 	lines := []journalLine{
 		journalSideLine(m.width, journalLine{{text: "vault-hunter journal", style: journalHeading}, {text: "  " + journalValue(m.run.Task.ID) + " · Goal " + goalID, style: journalOrdinary}}, journalLine{{text: "Run " + journalValue(m.run.RunID) + fmt.Sprintf(" · rev %d", m.run.Revision), style: journalMuted}}),
 		journalSideLine(m.width, journalLine{{text: goalDetail, style: journalOrdinary}}, journalLine{{text: goalState, style: journalAttention}}),
-		{{text: strings.Repeat("─", m.width), style: journalMuted}},
-		nil,
-		{{text: "CREW TIMELINE", style: journalHeading}},
+		{{text: strings.Repeat("─", m.width), style: journalMuted}}, nil, {{text: "CREW TIMELINE", style: journalHeading}},
 	}
-	lines = append(lines, prototypeTimelineStage(false, prototypeStage{"●", "invoked", journalSuccess}, "Parent", false, "Task and Goal accepted", "canonical context")...)
-	lines = append(lines, prototypeTimelineStage(false, verifierStage, "Verifier", inferred["Verifier Builder"], verifierSummary, verifierList(verifierIDs))...)
-	lines = append(lines, prototypeTimelineStage(false, convergenceStage, "Convergence", inferred["Convergence Engineer"], "candidate tree "+shortTree(latestTree), fmt.Sprintf("%d participant observations", roles["Convergence Engineer"]))...)
-	lines = append(lines, prototypeTimelineStage(false, deliveryStage, "Delivery", inferred["Delivery Steward"], deliveryDeliverable(signals.pullRequest), "review · checks · PR/CI")...)
-	lines = append(lines, prototypeTimelineStage(true, closureStage, "Parent closure", false, "accepted evidence checkpoint", "canonical decision · cleanup")...)
-	lines = append(lines,
-		nil,
-		journalLine{{text: "  └─ ", style: journalMuted}, {text: "UNASSIGNED", style: journalMuted}, {text: fmt.Sprintf(" · %d participant observations", roles["Unassigned"]), style: journalAttention}, {text: " · outside crew custody", style: journalMuted}},
-	)
+	lines = append(lines, timelineStageLines(false, timelineStage{"●", "invoked", journalSuccess}, "Parent", false, "Task and Goal accepted", "canonical context")...)
+	lines = append(lines, timelineStageLines(false, verifierStage, "Verifier", inferred["Verifier Builder"], verifierSummary, verifierList(verifierIDs))...)
+	lines = append(lines, timelineStageLines(false, convergenceStage, "Convergence", inferred["Convergence Engineer"], "candidate tree "+shortTree(latestTree), fmt.Sprintf("%d participant observations", roles["Convergence Engineer"]))...)
+	lines = append(lines, timelineStageLines(false, deliveryStage, "Delivery", inferred["Delivery Steward"], deliveryDeliverable(signals.pullRequest), "review · checks · PR/CI")...)
+	lines = append(lines, timelineStageLines(true, closureStage, "Parent closure", false, "accepted evidence checkpoint", "canonical decision · cleanup")...)
+	lines = append(lines, nil, journalLine{{text: "  └─ ", style: journalMuted}, {text: "UNASSIGNED", style: journalMuted}, {text: fmt.Sprintf(" · %d participant observations", roles["Unassigned"]), style: journalAttention}, {text: " · outside crew custody", style: journalMuted}})
 	for len(lines) < m.height-2 {
 		lines = append(lines, nil)
 	}
 	if len(lines) > m.height-2 {
 		lines = lines[:m.height-2]
 	}
-	lines = append(lines,
-		journalLine{{text: strings.Repeat("─", m.width), style: journalMuted}},
-		journalLine{{text: "● complete · ⟳ active · ○ waiting · ≈ inferred role", style: journalMuted}},
-	)
+	lines = append(lines, journalLine{{text: strings.Repeat("─", m.width), style: journalMuted}}, journalLine{{text: "● complete · ⟳ active · ○ waiting · × failed · ≈ inferred role", style: journalMuted}})
 	var styles journalStyles
 	if enabled {
 		styles = newJournalStyles()
@@ -91,6 +83,9 @@ func participantCrewRole(participant vaultregistry.Participant) (string, string)
 	if raw := participant.Unknown["crew_role_source"]; raw != nil {
 		_ = json.Unmarshal(raw, &source)
 	}
+	if role == "" && participant.Role != "" {
+		role, source = participant.Role, "inferred/v1-role"
+	}
 	if role == "" {
 		role = "Unassigned"
 	}
@@ -104,22 +99,25 @@ func inferredMark(inferred bool) string {
 	return ""
 }
 
-type prototypeStage struct {
+type timelineStage struct {
 	mark, word string
 	style      journalStyle
 }
 
-func prototypeStageFor(done, active bool, doneWord, activeWord string) prototypeStage {
+func timelineStageFor(done, failed, active bool, doneWord, activeWord string) timelineStage {
 	if done {
-		return prototypeStage{"●", doneWord, journalSuccess}
+		return timelineStage{"●", doneWord, journalSuccess}
+	}
+	if failed {
+		return timelineStage{"×", "failed", journalFailure}
 	}
 	if active {
-		return prototypeStage{"⟳", activeWord, journalAttention}
+		return timelineStage{"⟳", activeWord, journalAttention}
 	}
-	return prototypeStage{"○", "waiting", journalMuted}
+	return timelineStage{"○", "waiting", journalMuted}
 }
 
-func prototypeTimelineStage(last bool, stage prototypeStage, role string, inferred bool, deliverable, detail string) []journalLine {
+func timelineStageLines(last bool, stage timelineStage, role string, inferred bool, deliverable, detail string) []journalLine {
 	connector, rail := "├─", "│ "
 	if last {
 		connector, rail = "└─", "  "
@@ -130,16 +128,27 @@ func prototypeTimelineStage(last bool, stage prototypeStage, role string, inferr
 	}
 }
 
-type prototypeTaskSignals struct {
-	totalVerifiers, completeVerifiers int
-	verifiersComplete, taskDone       bool
-	pullRequest                       string
+type taskSignals struct {
+	totalVerifiers, completeVerifiers    int
+	verifiersComplete, verifiersFailed   bool
+	pullRequest                          string
+	deliveryFailed, taskDone, taskFailed bool
 }
 
-var prototypeVerifierPattern = regexp.MustCompile(`(?m)^- \[([ xX-])\] (?:\*\*)?(V[0-9]+)\b`)
-var prototypePRPattern = regexp.MustCompile(`https://github\.com/[^[:space:]>)]+/pull/[0-9]+`)
+var verifierPattern = regexp.MustCompile(`(?m)^- \[([ xX-])\] (?:\*\*)?(V[0-9]+)\b`)
+var verifierIDPattern = regexp.MustCompile(`(?i)(?:^|\.)(V[0-9]+)$`)
+var pullRequestPattern = regexp.MustCompile(`https://github\.com/[^[:space:]>)]+/pull/[0-9]+`)
+var statusPattern = regexp.MustCompile(`(?mi)^status:\s*([^\r\n]+)\s*$`)
 
-func readPrototypeTaskSignals(run vaultregistry.Run, registryVerifiers []string) prototypeTaskSignals {
+func localVerifierID(id string) string {
+	match := verifierIDPattern.FindStringSubmatch(strings.TrimSpace(id))
+	if match == nil {
+		return ""
+	}
+	return strings.ToUpper(match[1])
+}
+
+func readTaskSignals(run vaultregistry.Run, registryVerifiers []string) taskSignals {
 	path := run.Task.Path
 	if !filepath.IsAbs(path) {
 		root := os.Getenv("VAULT_ROOT")
@@ -149,42 +158,75 @@ func readPrototypeTaskSignals(run vaultregistry.Run, registryVerifiers []string)
 		path = filepath.Join(root, filepath.FromSlash(path))
 	}
 	body, _ := os.ReadFile(path)
-	signal := prototypeTaskSignals{}
-	matches := prototypeVerifierPattern.FindAllSubmatch(body, -1)
-	for _, match := range matches {
+	signal := taskSignals{}
+	for _, match := range verifierPattern.FindAllSubmatch(body, -1) {
 		signal.totalVerifiers++
 		if strings.EqualFold(string(match[1]), "x") {
 			signal.completeVerifiers++
 		}
+		if string(match[1]) == "-" {
+			signal.verifiersFailed = true
+		}
 	}
 	if signal.totalVerifiers == 0 {
-		signal.totalVerifiers = len(registryVerifiers)
 		latest := map[string]vaultregistry.Evidence{}
 		for _, evidence := range run.Evidence {
-			if !regexp.MustCompile(`^V[0-9]+$`).MatchString(evidence.VerifierID) {
-				continue
+			if id := localVerifierID(evidence.VerifierID); id != "" {
+				latest[id] = evidence
 			}
-			latest[evidence.VerifierID] = evidence
 		}
+		signal.totalVerifiers = len(registryVerifiers)
 		for _, evidence := range latest {
 			state := strings.ToLower(evidence.State)
-			if evidence.ExitStatus != nil && *evidence.ExitStatus == 0 && (strings.Contains(state, "accept") || strings.Contains(state, "pass") || strings.Contains(state, "green")) {
+			passed := evidence.ExitStatus != nil && *evidence.ExitStatus == 0 && (strings.Contains(state, "accept") || strings.Contains(state, "pass") || strings.Contains(state, "green"))
+			failed := (evidence.ExitStatus != nil && *evidence.ExitStatus != 0) || strings.Contains(state, "fail") || strings.Contains(state, "reject")
+			if passed {
 				signal.completeVerifiers++
+			}
+			if failed {
+				signal.verifiersFailed = true
 			}
 		}
 	}
 	signal.verifiersComplete = signal.totalVerifiers > 0 && signal.completeVerifiers == signal.totalVerifiers
-	if pr := prototypePRPattern.Find(body); pr != nil {
-		signal.pullRequest = string(pr)
-	}
+	signal.pullRequest = implementationPullRequest(string(body))
 	frontmatter := string(body)
 	if strings.HasPrefix(frontmatter, "---") && len(frontmatter) > 3 {
 		if end := strings.Index(frontmatter[3:], "---"); end >= 0 {
 			frontmatter = frontmatter[:end+3]
 		}
 	}
-	signal.taskDone = regexp.MustCompile(`(?mi)^status:\s*(done|complete|completed)\s*$`).MatchString(frontmatter)
+	if match := statusPattern.FindStringSubmatch(frontmatter); match != nil {
+		status := strings.ToLower(strings.TrimSpace(match[1]))
+		signal.taskDone = status == "done" || status == "complete" || status == "completed"
+		signal.taskFailed = status == "failed" || status == "rejected" || status == "blocked"
+	}
+	for _, evidence := range run.Evidence {
+		state := strings.ToLower(evidence.State + " " + evidence.Detail)
+		if strings.Contains(state, "delivery") && (strings.Contains(state, "fail") || strings.Contains(state, "reject")) {
+			signal.deliveryFailed = true
+		}
+	}
 	return signal
+}
+
+func implementationPullRequest(body string) string {
+	lines := strings.Split(body, "\n")
+	inEvidence := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			inEvidence = strings.EqualFold(strings.TrimSpace(strings.TrimLeft(trimmed, "#")), "Pull Request Evidence")
+			continue
+		}
+		canonicalField := regexp.MustCompile(`(?i)^(?:[-*]\s*)?(?:pushed\s+)?implementation\s+(?:pr|pull request)(?:\s+url)?\s*:`).MatchString(trimmed)
+		if inEvidence || canonicalField {
+			if pr := pullRequestPattern.FindString(trimmed); pr != "" {
+				return pr
+			}
+		}
+	}
+	return ""
 }
 
 func deliveryDeliverable(pr string) string {
@@ -194,7 +236,6 @@ func deliveryDeliverable(pr string) string {
 	parts := strings.Split(strings.TrimSuffix(pr, "/"), "/")
 	return "implementation PR #" + parts[len(parts)-1] + " pushed"
 }
-
 func shortTree(tree string) string {
 	if len(tree) > 8 {
 		return tree[:8]

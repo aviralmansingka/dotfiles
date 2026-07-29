@@ -1,0 +1,3 @@
+Canonical ANSI capture is produced by the focused crew timeline test fixture at 100x24. The colored render uses foreground-only Gruvbox SGR sequences; its stripped semantic footer is:
+
+● complete · ⟳ active · ○ waiting · × failed · ≈ inferred role
