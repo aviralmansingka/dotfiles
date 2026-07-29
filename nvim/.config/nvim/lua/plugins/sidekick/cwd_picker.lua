@@ -662,6 +662,7 @@ function M.open(opts)
   local atlas_phase
   local atlas_frame
   local atlas_run_id
+  local atlas_workspace_id
   local atlas_process
   local atlas_terminal_active = false
   local staging_buffers = {}
@@ -941,6 +942,7 @@ function M.open(opts)
     atlas_phase = nil
     atlas_frame = nil
     atlas_run_id = nil
+    atlas_workspace_id = nil
     atlas_attempted = false
     clear_atlas_preview()
   end
@@ -1055,6 +1057,19 @@ function M.open(opts)
   show_preview = function(item, preview)
     local atlas_eligible = workspace_preview_enabled and workspace_active and item and item.workspace_id
       or not workspace_preview_enabled and complete_atlas_identity(item)
+    local same_active_task = workspace_preview_enabled
+      and atlas_phase == "active"
+      and atlas_frame
+      and atlas_workspace_id
+      and item
+      and item.workspace_id == atlas_workspace_id
+    if item ~= preview_selection and same_active_task then
+      preview_selection = item
+      displayed_preview_item = item
+      expanded_preview_item = nil
+      render_default_preview(item, preview, preview_generation)
+      return
+    end
     if item ~= preview_selection then
       transition_preview()
       preview_selection = item
@@ -1064,7 +1079,6 @@ function M.open(opts)
     elseif not atlas_eligible then
       invalidate_preview()
     elseif atlas_phase == "active" and atlas_frame then
-      restage_atlas_preview(item, preview_generation)
       return
     elseif atlas_phase == "pending" or atlas_phase == "staging" then
       return
@@ -1111,6 +1125,7 @@ function M.open(opts)
         return
       end
       atlas_run_id = result.run_id
+      atlas_workspace_id = item.workspace_id
       atlas_frame = frame
       restage_atlas_preview(item, generation)
     end)
@@ -1439,7 +1454,7 @@ function M.open(opts)
       border = "rounded",
     },
     {
-      width = workspace_preview_enabled and nil or 0.333,
+      width = workspace_preview_enabled and 0.5 or 0.333,
       win = "list",
       height = 12,
       title = " Agents / Run ",
