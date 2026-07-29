@@ -665,6 +665,7 @@ function M.open(opts)
   local atlas_workspace_id
   local atlas_process
   local atlas_terminal_active = false
+  local atlas_preview_config
   local staging_buffers = {}
   local transition_preview
   local has_local_working = vim.iter(items):any(function(item)
@@ -1344,6 +1345,16 @@ function M.open(opts)
     end
     atlas_terminal_active = true
     stop_spinner()
+    atlas_preview_config = vim.api.nvim_win_get_config(preview.win)
+    vim.api.nvim_win_set_config(preview.win, {
+      relative = "editor",
+      row = 0,
+      col = 0,
+      width = math.max(vim.o.columns - 2, 1),
+      height = math.max(vim.o.lines - 3, 1),
+      border = "rounded",
+      zindex = 250,
+    })
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_win_set_buf(preview.win, buf)
     vim.api.nvim_set_current_win(preview.win)
@@ -1352,6 +1363,10 @@ function M.open(opts)
         vim.schedule(function()
           atlas_terminal_active = false
           if picker and not picker.closed and item == current_preview_item() then
+            if atlas_preview_config and preview:win_valid() then
+              vim.api.nvim_win_set_config(preview.win, atlas_preview_config)
+            end
+            atlas_preview_config = nil
             transition_preview()
             show_preview(item)
             focus_input()
@@ -1413,6 +1428,10 @@ function M.open(opts)
     bo = { buftype = "nofile", bufhidden = "wipe", modifiable = false },
     wo = {
       cursorline = true,
+      number = false,
+      relativenumber = false,
+      signcolumn = "no",
+      foldcolumn = "0",
       winhighlight = "Normal:SidekickPickerTransparent,NormalNC:SidekickPickerTransparent",
     },
     keys = {
