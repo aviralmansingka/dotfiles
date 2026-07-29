@@ -1,7 +1,9 @@
 # Pi-Style Atlas Picker Timeline Prototype
 
-One throwaway, read-only interactive prototype for the Sidekick agent picker's bottom-right `Atlas Preview` pane. The
-user selected the mini-journey direction; the older status-card and dashboard variants were removed.
+One throwaway, read-only interactive prototype for the Sidekick agent picker's Atlas mini-journey. The standalone CLI
+renders the old bottom-right `Atlas Preview` frame; the guarded Neovim experiment replaces the existing Agents pane
+buffer without creating another visible pane. The user selected the mini-journey direction; the older status-card and
+dashboard variants were removed.
 
 ## Run it
 
@@ -54,8 +56,9 @@ retains T10's shipped three-pane behavior while this Scout prototype is reviewed
 
 ## Picker geometry
 
-Production `nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua` allocates a 14-row bordered bottom section and a
-12-row Atlas interior. The deterministic Neovim harness exercises:
+Without `SIDEKICK_ATLAS_WORKSPACE_PROTOTYPE=1`, production `nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua`
+keeps the shipped three-pane bottom section and a 12-row Atlas interior. With the flag set, the preview uses the same
+12-row bottom interior while replacing the Agents pane buffer. The deterministic Neovim harness exercises:
 
 - `100×30` host grid → `30×12` Atlas interior;
 - `80×24` host grid → `23×12` Atlas interior.
