@@ -1,4 +1,3 @@
-// PROTOTYPE: throwaway Handoff Rail B projection for evaluation against real Runs.
 package atlas
 
 import (
@@ -13,9 +12,7 @@ import (
 	"github.com/aviral/dotfiles/internal/vaultregistry"
 )
 
-func crewRailPrototypeEnabled() bool { return os.Getenv("ATLAS_CREW_RAIL_PROTOTYPE") == "1" }
-
-func (m JournalModel) crewRailPrototypeView(enabled bool) string {
+func (m JournalModel) crewTimelineView(enabled bool) string {
 	goalID, goalDetail, goalState := "?", "No active Goal recorded", "UNKNOWN"
 	if goal := m.activeGoal(); goal.index >= 0 {
 		goalID, goalDetail, goalState = journalValue(goal.lifecycle.GoalID), journalRecorded(goal.lifecycle.Detail), strings.ToUpper(journalValue(goal.lifecycle.State))
@@ -181,8 +178,10 @@ func readPrototypeTaskSignals(run vaultregistry.Run, registryVerifiers []string)
 		signal.pullRequest = string(pr)
 	}
 	frontmatter := string(body)
-	if end := strings.Index(frontmatter[3:], "---"); strings.HasPrefix(frontmatter, "---") && end >= 0 {
-		frontmatter = frontmatter[:end+3]
+	if strings.HasPrefix(frontmatter, "---") && len(frontmatter) > 3 {
+		if end := strings.Index(frontmatter[3:], "---"); end >= 0 {
+			frontmatter = frontmatter[:end+3]
+		}
 	}
 	signal.taskDone = regexp.MustCompile(`(?mi)^status:\s*(done|complete|completed)\s*$`).MatchString(frontmatter)
 	return signal
@@ -210,8 +209,4 @@ func verifierList(ids []string) string {
 		return strings.Join(ids[:3], ", ") + "…"
 	}
 	return strings.Join(ids, ", ")
-}
-
-func crewDeliverable(mark string, style journalStyle, role string, inferred bool, deliverable, detail string) journalLine {
-	return journalLine{{text: mark, style: style}, {text: " " + role, style: style}, {text: " " + inferredMark(inferred), style: journalMuted}, {text: "  " + deliverable, style: journalOrdinary}, {text: "  " + detail, style: journalMuted}}
 }

@@ -269,9 +269,7 @@ func (m JournalModel) ViewColor(enabled bool) string {
 	if m.width < 80 || m.height < 24 {
 		return truncate("terminal too small; minimum 80×24", m.width)
 	}
-	if crewRailPrototypeEnabled() {
-		return m.crewRailPrototypeView(enabled)
-	}
+	return m.crewTimelineView(enabled)
 
 	start, end, capped := m.journalWindow()
 	lines := m.headerLines(start, end)
