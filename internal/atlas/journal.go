@@ -140,13 +140,15 @@ func NewJournalModel(run vaultregistry.Run, width, height int) JournalModel {
 	}
 }
 
-// WithColor configures the attached-terminal View without changing the
-// journal projection.
+// WithCrewTimeline selects the compact crew timeline projection. By default,
+// JournalModel renders the complete recorded journal.
 func (m JournalModel) WithCrewTimeline() JournalModel {
 	m.crewTimeline = true
 	return m
 }
 
+// WithColor configures the attached-terminal View without changing the
+// journal projection.
 func (m JournalModel) WithColor(enabled bool) JournalModel {
 	m.colorEnabled = enabled
 	m.attached = true
