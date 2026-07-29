@@ -61,8 +61,8 @@ func main() {
 	stateDir := flag.String("state-dir", "", "Registry root (defaults to normal Vault Hunter state resolution)")
 	width := flag.Int("width", 30, "Atlas Preview interior width")
 	color := flag.String("color", "auto", "color mode: auto, always, never")
-	goal := flag.String("goal", "", "initial Goal ID or 1-based ordinal")
-	listGoals := flag.Bool("list-goals", false, "list recorded Goals and exit")
+	goal := flag.String("goal", "", "initial crew stage name or 1-based ordinal")
+	listGoals := flag.Bool("list-goals", false, "list recorded crew stages and exit")
 	snapshot := flag.Bool("snapshot", false, "print one 12-row picker frame")
 	flag.Usage = func() {
 		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "usage: go run ./prototypes/atlas-picker-run-status [flags] <task-id-or-run-id>")
@@ -201,7 +201,7 @@ func (m model) lines(_ bool) []renderedLine {
 		lines = append(lines, goalLine(m.goals[index], connector, index == m.selected, m.width, m.color))
 	}
 	if len(m.goals) == 0 {
-		lines = append(lines, cardLine(" └─ ○ no recorded goals", m.width, m.color, muted))
+		lines = append(lines, cardLine(" └─ ○ no recorded crew stages", m.width, m.color, muted))
 	}
 	for len(lines) < len(headerLines(m.run, m.goals, m.width, m.color))+6 {
 		lines = append(lines, cardLine("", m.width, m.color, text))
@@ -448,8 +448,7 @@ func selectRequestedGoal(goals []journeyGoal, requested string) (int, error) {
 	}
 	if ordinal, err := strconv.Atoi(requested); err == nil {
 		if ordinal < 1 || ordinal > len(goals) {
-			//nolint:staticcheck // This top-level CLI message starts with the Goal domain term.
-			return 0, fmt.Errorf("Goal ordinal %d outside 1..%d", ordinal, len(goals))
+			return 0, fmt.Errorf("crew stage ordinal %d outside 1..%d", ordinal, len(goals))
 		}
 		return ordinal - 1, nil
 	}
@@ -458,8 +457,7 @@ func selectRequestedGoal(goals []journeyGoal, requested string) (int, error) {
 			return index, nil
 		}
 	}
-	//nolint:staticcheck // This top-level CLI message starts with the Goal domain term.
-	return 0, fmt.Errorf("Goal not found: %s", requested)
+	return 0, fmt.Errorf("crew stage not found: %s", requested)
 }
 
 func selectGoal(goals []journeyGoal) int {
