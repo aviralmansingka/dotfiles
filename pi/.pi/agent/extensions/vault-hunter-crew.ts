@@ -1548,11 +1548,31 @@ export default function (pi: ExtensionAPI) {
     renderWidget(ctx);
   }
 
+  async function reconnectAfterHerdrBinding(
+    ctx: ExtensionContext,
+  ): Promise<void> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        await reconnect(ctx);
+        return;
+      } catch (error) {
+        if (
+          attempt >= 19 ||
+          !String(error).includes(
+            "current Herdr pane is not bound to this Pi session",
+          )
+        )
+          throw error;
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
+      }
+    }
+  }
+
   pi.on("session_start", async (_event, ctx) => {
     currentCtx = ctx;
     recoveryHealthy = false;
     try {
-      await reconnect(ctx);
+      await reconnectAfterHerdrBinding(ctx);
       recoveryHealthy = true;
     } catch (error) {
       ctx.ui.notify(
