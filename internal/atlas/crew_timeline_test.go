@@ -48,7 +48,7 @@ func TestCrewTimelineQualifiedRegistryFallbackAndFailureLegend(t *testing.T) {
 	if !signals.verifiersComplete || signals.completeVerifiers != 1 {
 		t.Fatalf("fallback = %#v", signals)
 	}
-	view := NewJournalModel(run, 100, 24).ViewColor(false)
+	view := NewJournalModel(run, 100, 24).WithCrewTimeline().ViewColor(false)
 	if !strings.Contains(view, "× failed") {
 		t.Fatalf("failure legend missing from %q", view)
 	}

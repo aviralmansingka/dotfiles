@@ -635,7 +635,7 @@ func (m browserModel) rightPane(width, rows int) []string {
 		if entry.runID == "" {
 			body = renderNotStartedTask(entry, width, m.colorEnabled)
 		} else {
-			body = atlaspkg.NewJournalModel(entry.run, width, maxInt(rows-len(heading), 24)).ViewColor(m.colorEnabled)
+			body = atlaspkg.NewJournalModel(entry.run, width, maxInt(rows-len(heading), 24)).WithCrewTimeline().ViewColor(m.colorEnabled)
 		}
 	}
 	lines := append(heading, strings.Split(body, "\n")...)
