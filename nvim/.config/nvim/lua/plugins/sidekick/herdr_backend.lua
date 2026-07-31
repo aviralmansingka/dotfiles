@@ -79,7 +79,8 @@ end
 
 function M:start()
   local scope = self.tool.herdr_workspace_id and { workspace_id = self.tool.herdr_workspace_id } or nil
-  local agent = Herdr.start(self.herdr_agent_name, self.cwd, self.tool.cmd, self.tool.env, scope)
+  local command = self.tool.raw_cmd or self.tool.cmd
+  local agent = Herdr.start(self.herdr_agent_name, self.cwd, command, self.tool.env, scope)
   if not agent then
     error("failed to start Herdr agent " .. self.herdr_agent_name)
   end

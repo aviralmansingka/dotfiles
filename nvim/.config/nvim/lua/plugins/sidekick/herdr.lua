@@ -106,11 +106,12 @@ end
 
 ---@param cwd string
 ---@param scope? string|{ workspace_id?: string }
+---@param env? table<string, string|boolean>
 ---@return string|nil workspace_id
 ---@return string|nil root_pane_id
 ---@return boolean created
 ---@return string|nil root_tab_id
-function M.ensure_workspace(cwd, scope)
+function M.ensure_workspace(cwd, scope, env)
   if type(scope) == "table" and scope.workspace_id then
     return scope.workspace_id, nil, false
   end
@@ -130,7 +131,9 @@ function M.ensure_workspace(cwd, scope)
   end
   local normalized = M.normalize_cwd(cwd)
   workspace_label = workspace_label or vim.fn.fnamemodify(normalized, ":t")
-  local result = M.call({ "workspace", "create", "--cwd", normalized, "--label", workspace_label, "--no-focus" })
+  local create_args = { "workspace", "create", "--cwd", normalized, "--label", workspace_label, "--no-focus" }
+  vim.list_extend(create_args, env_args(env))
+  local result = M.call(create_args)
   if not result or not result.workspace then
     return nil, nil, false
   end
@@ -139,6 +142,16 @@ function M.ensure_workspace(cwd, scope)
     result.root_pane and result.root_pane.pane_id or nil,
     true,
     result.root_pane and result.root_pane.tab_id or nil
+end
+
+local function env_args(env)
+  local out = {}
+  for key, value in pairs(env or {}) do
+    if value ~= false then
+      vim.list_extend(out, { "--env", string.format("%s=%s", key, tostring(value)) })
+    end
+  end
+  return out
 end
 
 local function worktree_for_branch(worktrees, branch)
@@ -341,39 +354,73 @@ end
 
 ---@param name string
 ---@param cwd string
----@param command string[]
+---@param command string[] raw argv; command[1] is the herdr agent kind
 ---@param env? table<string, string|boolean>
 ---@param scope? string|{ workspace_id?: string }
 ---@param tab_label? string
 ---@return table|nil agent
 function M.start(name, cwd, command, env, scope, tab_label)
   local normalized = M.normalize_cwd(cwd)
-  local resolved_id, _, workspace_created, bootstrap_tab_id = M.ensure_workspace(cwd, scope)
+  local resolved_id, bootstrap_pane_id, workspace_created, bootstrap_tab_id =
+    M.ensure_workspace(cwd, scope, env)
   if not resolved_id then
     return nil
   end
-  local args = {
-    "agent",
-    "start",
-    name,
-    "--cwd",
-    normalized,
-    "--workspace",
-    resolved_id,
-    "--no-focus",
-  }
-  for key, value in pairs(env or {}) do
-    if value ~= false then
-      vim.list_extend(args, { "--env", string.format("%s=%s", key, tostring(value)) })
+
+  -- herdr 0.7.5 launches the agent inside an existing pane at a shell prompt.
+  -- For a freshly created workspace the root pane is that pane (env was set on
+  -- it via `workspace create --env`). For an existing workspace, split a new
+  -- pane with the right cwd + env.
+  local pane_id = bootstrap_pane_id
+  if not pane_id then
+    local panes = M.call({ "pane", "list", "--workspace", resolved_id }, true)
+    local source = panes and panes.panes and panes.panes[1]
+    if not source then
+      if workspace_created then
+        M.call({ "workspace", "close", resolved_id }, true)
+      end
+      return nil
+    end
+    local split_args = {
+      "pane",
+      "split",
+      source.pane_id,
+      "--direction",
+      "right",
+      "--cwd",
+      normalized,
+      "--no-focus",
+    }
+    vim.list_extend(split_args, env_args(env))
+    local split = M.call(split_args)
+    pane_id = split and split.pane and split.pane.pane_id
+    if not pane_id then
+      if workspace_created then
+        M.call({ "workspace", "close", resolved_id }, true)
+      end
+      return nil
     end
   end
-  args[#args + 1] = "--"
-  vim.list_extend(args, command)
-  local result = M.call(args)
+
+  -- `agent start --kind` launches the kind's canonical executable, so pass
+  -- only the args after the executable name as agent args.
+  local kind = command[1]
+  local agent_args = {}
+  for i = 2, #command do
+    agent_args[#agent_args + 1] = command[i]
+  end
+  local start_args = { "agent", "start", name, "--kind", kind, "--pane", pane_id }
+  if #agent_args > 0 then
+    start_args[#start_args + 1] = "--"
+    vim.list_extend(start_args, agent_args)
+  end
+  local result = M.call(start_args)
   local agent = result and result.agent or nil
   if not terminal_agent(agent) or agent.name ~= name then
     if agent and agent.pane_id then
       M.call({ "pane", "close", agent.pane_id }, true)
+    else
+      M.call({ "pane", "close", pane_id }, true)
     end
     if workspace_created then
       M.call({ "workspace", "close", resolved_id }, true)
@@ -390,6 +437,7 @@ function M.start(name, cwd, command, env, scope, tab_label)
   end
   if
     workspace_created
+    and bootstrap_pane_id
     and bootstrap_tab_id
     and bootstrap_tab_id ~= agent.tab_id
     and not M.call({ "tab", "close", bootstrap_tab_id }, true)

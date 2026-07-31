@@ -110,6 +110,9 @@ function M.make_tool(cmd, cwd, url, extra)
   else
     out = { cmd = { cmd }, url = url }
   end
+  -- Unwrapped argv (executable + args) for backends like Herdr that launch the
+  -- kind's canonical executable themselves and set cwd on the pane.
+  out.raw_cmd = type(cmd) == "table" and vim.deepcopy(cmd) or { cmd }
   if extra then
     out = vim.tbl_deep_extend("force", out, extra)
   end
