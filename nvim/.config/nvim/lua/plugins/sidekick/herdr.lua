@@ -104,6 +104,16 @@ function M.workspace_for_label(label)
   return nil, true
 end
 
+local function env_args(env)
+  local out = {}
+  for key, value in pairs(env or {}) do
+    if value ~= false then
+      vim.list_extend(out, { "--env", string.format("%s=%s", key, tostring(value)) })
+    end
+  end
+  return out
+end
+
 ---@param cwd string
 ---@param scope? string|{ workspace_id?: string }
 ---@param env? table<string, string|boolean>
@@ -142,16 +152,6 @@ function M.ensure_workspace(cwd, scope, env)
     result.root_pane and result.root_pane.pane_id or nil,
     true,
     result.root_pane and result.root_pane.tab_id or nil
-end
-
-local function env_args(env)
-  local out = {}
-  for key, value in pairs(env or {}) do
-    if value ~= false then
-      vim.list_extend(out, { "--env", string.format("%s=%s", key, tostring(value)) })
-    end
-  end
-  return out
 end
 
 local function worktree_for_branch(worktrees, branch)
