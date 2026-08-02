@@ -60,10 +60,6 @@ PROMPT_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_PROMPT_TIMEOUT_SECONDS"
 POLL_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_POLL_TIMEOUT_SECONDS", "50"))
 RETRY_SECONDS = float(os.environ.get("PI_TELEGRAM_RETRY_SECONDS", "5"))
 TYPING_INTERVAL_SECONDS = float(os.environ.get("PI_TELEGRAM_TYPING_INTERVAL_SECONDS", "4"))
-THINKING_STREAM_ENABLED = os.environ.get("PI_TELEGRAM_THINKING_STREAM", "1") == "1"
-MAX_TRACE_CHARS = int(os.environ.get("PI_TELEGRAM_MAX_TRACE_CHARS", "200"))
-STATUS_EDIT_INTERVAL = float(os.environ.get("PI_TELEGRAM_STATUS_EDIT_INTERVAL", "1.0"))
-STATUS_FINAL_PAUSE = float(os.environ.get("PI_TELEGRAM_STATUS_FINAL_PAUSE", "0.3"))
 
 VOICE_TRANSCRIPTION_PROVIDER = os.environ.get("PI_TELEGRAM_VOICE_TRANSCRIPTION_PROVIDER", "auto").strip().lower()
 VOICE_TRANSCRIPTION_CMD = os.environ.get("PI_TELEGRAM_VOICE_TRANSCRIPTION_CMD", "").strip()
@@ -105,162 +101,6 @@ class IncomingMessage:
     entities: list[dict[str, Any]] = field(default_factory=list)
     reply_to_sender_id: Optional[int] = None
     reply_to_sender_is_bot: bool = False
-
-
-class ThinkingTreeBuilder:
-    """Accumulate a goal→traces tree from RPC streaming events.
-
-    Each turn (work step) produces one goal node. The assistant message's
-    text block is the goal label; each thinking block under it is a leaf trace.
-    The partial.content array from message_update is cumulative, so we replace
-    (not append) on each update.
-    """
-
-    def __init__(self) -> None:
-        self.goals: list[dict[str, Any]] = []
-
-    def on_turn_start(self) -> None:
-        self.goals.append({"label": "working…", "traces": [], "done": False})
-
-    def on_message_update(self, content: list[dict[str, Any]]) -> None:
-        if not self.goals:
-            self.on_turn_start()
-        goal = self.goals[-1]
-        label = ""
-        traces: list[str] = []
-        for block in content:
-            bt = block.get("type")
-            if bt == "text" and (block.get("text") or "").strip():
-                label = block["text"].strip()
-            elif bt == "thinking" and (block.get("thinking") or "").strip():
-                traces.append(block["thinking"].strip())
-        if label:
-            goal["label"] = label
-        goal["traces"] = traces
-
-    def on_turn_end(self) -> None:
-        if self.goals:
-            self.goals[-1]["done"] = True
-
-    def render(self, elapsed: int) -> str:
-        header = f"thinking · 0:{elapsed:02d}"
-        lines: list[str] = [header]
-        for goal in self.goals:
-            marker = "✓" if goal["done"] else "▸"
-            lines.append(f"{marker} <b>{html.escape(goal['label'])}</b>")
-            for trace in goal["traces"]:
-                t = trace[:MAX_TRACE_CHARS]
-                if len(trace) > MAX_TRACE_CHARS:
-                    t += "…"
-                lines.append(f"┊ <i>{html.escape(t)}</i>")
-        text = "\n".join(lines)
-        if len(text) > MAX_REPLY_CHARS:
-            cut = text[:MAX_REPLY_CHARS]
-            last_nl = cut.rfind("\n")
-            if last_nl > len(header):
-                text = cut[:last_nl] + "\n…"
-            else:
-                text = cut[:-1] + "…"
-        return text
-
-
-class StatusMessenger:
-    """Manage one live Telegram status message that shows the thinking tree.
-
-    Created on the first thinking update, edited in place (coalesced to
-    STATUS_EDIT_INTERVAL), and deleted when the agent settles. The final
-    reply is then sent as a separate normal message.
-    """
-
-    def __init__(self, chat_id: str, reply_to: Optional[int] = None) -> None:
-        self.chat_id = chat_id
-        self.reply_to = reply_to
-        self.message_id: Optional[int] = None
-        self.tree = ThinkingTreeBuilder()
-        self.last_edit = 0.0
-        self.dirty = False
-        self.start_time = time.monotonic()
-
-    def on_event(self, ev: dict[str, Any]) -> None:
-        et = ev.get("type")
-        if et == "turn_start":
-            self.tree.on_turn_start()
-            self.dirty = True
-        elif et == "message_update":
-            ame = ev.get("assistantMessageEvent") or {}
-            partial = ame.get("partial") or {}
-            content = partial.get("content") or []
-            if content:
-                self.tree.on_message_update(content)
-                self.dirty = True
-        elif et == "turn_end":
-            self.tree.on_turn_end()
-            self.dirty = True
-        self._maybe_flush()
-
-    def flush(self) -> None:
-        """Force a pending edit through the throttle (used on idle gaps)."""
-        self._maybe_flush(force=True)
-
-    def _maybe_flush(self, force: bool = False) -> None:
-        if not self.dirty:
-            return
-        now = time.monotonic()
-        if self.message_id is None:
-            self._create()
-            self.dirty = False
-            self.last_edit = now
-            return
-        if not force and now - self.last_edit < STATUS_EDIT_INTERVAL:
-            return
-        self._edit()
-        self.dirty = False
-        self.last_edit = now
-
-    def _create(self) -> None:
-        text = self.tree.render(self._elapsed())
-        payload: dict[str, Any] = {"chat_id": self.chat_id, "text": text, "parse_mode": "HTML"}
-        if self.reply_to is not None:
-            payload["reply_parameters"] = {"message_id": self.reply_to, "allow_sending_without_reply": True}
-        try:
-            result = telegram_api("sendMessage", payload, timeout=30)
-            self.message_id = result.get("message_id")
-        except Exception as e:
-            log(f"Status create failed: {e}")
-
-    def _edit(self) -> None:
-        if self.message_id is None:
-            return
-        text = self.tree.render(self._elapsed())
-        try:
-            telegram_api(
-                "editMessageText",
-                {"chat_id": self.chat_id, "message_id": self.message_id, "text": text, "parse_mode": "HTML"},
-                timeout=30,
-            )
-        except Exception as e:
-            log(f"Status edit failed: {e}")
-
-    def finalize(self) -> None:
-        """Final edit (if dirty), brief pause, then delete the status message."""
-        if self.dirty:
-            self._edit()
-            self.dirty = False
-        if STATUS_FINAL_PAUSE > 0 and self.message_id is not None:
-            time.sleep(STATUS_FINAL_PAUSE)
-        self._delete()
-
-    def _delete(self) -> None:
-        if self.message_id is None:
-            return
-        try:
-            telegram_api("deleteMessage", {"chat_id": self.chat_id, "message_id": self.message_id}, timeout=10)
-        except Exception as e:
-            log(f"Status delete failed: {e}")
-        self.message_id = None
-
-    def _elapsed(self) -> int:
-        return int(time.monotonic() - self.start_time)
 
 
 class PiRPC:
@@ -368,11 +208,8 @@ class PiRPC:
         elif ev.get("type") == "extension_error":
             log(f"pi extension error: {ev}")
 
-    def ask(self, message: str, chat_id: Optional[str] = None, reply_to: Optional[int] = None) -> str:
+    def ask(self, message: str) -> str:
         with self.lock:
-            status: Optional[StatusMessenger] = None
-            if chat_id and THINKING_STREAM_ENABLED:
-                status = StatusMessenger(chat_id, reply_to)
             request_id = str(uuid.uuid4())
             self._send({"id": request_id, "type": "prompt", "message": message})
             accepted = False
@@ -382,30 +219,17 @@ class PiRPC:
                     ev = self.lines.get(timeout=1)
                 except queue.Empty:
                     if self.proc and self.proc.poll() is not None:
-                        if status:
-                            status.finalize()
                         raise RuntimeError("pi RPC exited while processing prompt")
-                    if status:
-                        status.flush()
                     continue
                 self._handle_event(ev)
-                if status:
-                    status.on_event(ev)
                 if ev.get("type") == "response" and ev.get("id") == request_id:
                     if not ev.get("success"):
-                        if status:
-                            status.finalize()
                         raise RuntimeError(ev.get("error", "pi rejected prompt"))
                     accepted = True
                 if accepted and ev.get("type") == "agent_end":
                     break
             else:
-                if status:
-                    status.finalize()
                 raise TimeoutError("Timed out waiting for pi to finish")
-
-            if status:
-                status.finalize()
 
             response_id = str(uuid.uuid4())
             self._send({"id": response_id, "type": "get_last_assistant_text"})
@@ -1016,7 +840,7 @@ def main() -> int:
                             f"by {msg.sender} at unix timestamp {msg.timestamp}:\n\n{prompt}"
                         )
                         with ChatActionLoop(msg.chat_id):
-                            reply = pi.ask(full_prompt, chat_id=msg.chat_id, reply_to=msg.message_id)
+                            reply = pi.ask(full_prompt)
                     send_telegram(msg.chat_id, reply, reply_to_message_id=msg.message_id)
                 except Exception as e:
                     log(f"Command failed: {e}")
