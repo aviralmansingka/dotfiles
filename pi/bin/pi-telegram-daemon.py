@@ -25,7 +25,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
@@ -45,6 +45,15 @@ PREFIX = os.environ.get("PI_TELEGRAM_PREFIX", "!pi")
 ALLOWED_CHATS = {
     x.strip() for x in os.environ.get("PI_TELEGRAM_ALLOWED_CHATS", "").split(",") if x.strip()
 }
+# In group/supergroup chats, only respond when this bot is explicitly @mentioned
+# (or replied to). Prevents double-answering when two bots share a group. DMs are
+# never affected by this flag. Default on so adding a group to ALLOWED_CHATS is safe.
+REQUIRE_MENTION = os.environ.get("PI_TELEGRAM_REQUIRE_MENTION", "1").strip().lower() in ("1", "true", "yes", "on")
+MENTION_STRIP = os.environ.get("PI_TELEGRAM_MENTION_STRIP", "1").strip().lower() in ("1", "true", "yes", "on")
+
+# Populated at startup via getMe so we can match @mentions and replies-to-bot.
+BOT_ID: Optional[int] = None
+BOT_USERNAME: str = ""
 PROCESS_EXISTING = os.environ.get("PI_TELEGRAM_PROCESS_EXISTING", "0") == "1"
 MAX_REPLY_CHARS = int(os.environ.get("PI_TELEGRAM_MAX_REPLY_CHARS", "3900"))
 PROMPT_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_PROMPT_TIMEOUT_SECONDS", "900"))
@@ -88,6 +97,10 @@ class IncomingMessage:
     audio_file_size: int = 0
     audio_mime_type: str = ""
     audio_kind: str = ""
+    chat_type: str = ""
+    entities: list[dict[str, Any]] = field(default_factory=list)
+    reply_to_sender_id: Optional[int] = None
+    reply_to_sender_is_bot: bool = False
 
 
 class PiRPC:
@@ -520,6 +533,10 @@ def parse_message(update: dict[str, Any]) -> Optional[IncomingMessage]:
         audio_obj = document
         audio_kind = "document"
 
+    entities = message.get("entities") or message.get("caption_entities") or []
+    reply_msg = message.get("reply_to_message") or {}
+    reply_sender = reply_msg.get("from") or {}
+
     return IncomingMessage(
         update_id=int(update.get("update_id", 0)),
         message_id=int(message_id),
@@ -534,6 +551,10 @@ def parse_message(update: dict[str, Any]) -> Optional[IncomingMessage]:
         audio_file_size=int(audio_obj.get("file_size") or 0),
         audio_mime_type=str(audio_obj.get("mime_type", "")),
         audio_kind=audio_kind,
+        chat_type=str(chat.get("type", "")),
+        entities=[dict(e) for e in entities if isinstance(e, dict)],
+        reply_to_sender_id=int(reply_sender.get("id")) if reply_sender.get("id") is not None else None,
+        reply_to_sender_is_bot=bool(reply_sender.get("is_bot")),
     )
 
 
@@ -646,6 +667,59 @@ def is_allowed(msg: IncomingMessage) -> bool:
     return bool(identifiers & ALLOWED_CHATS)
 
 
+def fetch_bot_identity() -> None:
+    """Populate BOT_ID / BOT_USERNAME via getMe so group mentions can be matched."""
+    global BOT_ID, BOT_USERNAME
+    try:
+        me = telegram_api("getMe", {}, timeout=10) or {}
+        BOT_ID = int(me.get("id")) if me.get("id") is not None else None
+        BOT_USERNAME = str(me.get("username") or "").lstrip("@").lower()
+        log(f"Bot identity: id={BOT_ID} username=@{BOT_USERNAME or '?'}")
+    except Exception as e:
+        log(f"Failed to fetch bot identity via getMe: {e}")
+
+
+def is_group_chat(msg: IncomingMessage) -> bool:
+    return msg.chat_type.lower() in ("group", "supergroup")
+
+
+def message_mentions_bot(msg: IncomingMessage) -> bool:
+    """True if the message explicitly @mentions or commands this bot."""
+    if BOT_ID is None and not BOT_USERNAME:
+        return False
+    expected = f"@{BOT_USERNAME}" if BOT_USERNAME else None
+    text = msg.content or ""
+    for ent in msg.entities:
+        etype = str(ent.get("type", "")).split(".")[-1].lower()
+        offset = int(ent.get("offset", -1))
+        length = int(ent.get("length", 0))
+        if offset < 0 or length <= 0:
+            continue
+        span = text[offset:offset + length]
+        if etype == "mention" and expected and span.strip().lower() == expected:
+            return True
+        if etype == "text_mention":
+            user = ent.get("user") or {}
+            if user.get("id") == BOT_ID:
+                return True
+        if etype == "bot_command" and expected:
+            at = span.find("@")
+            if at >= 0 and span[at:].strip().lower() == expected:
+                return True
+    return False
+
+
+def is_reply_to_bot(msg: IncomingMessage) -> bool:
+    return BOT_ID is not None and msg.reply_to_sender_id == BOT_ID
+
+
+def strip_bot_mention(text: str) -> str:
+    if not BOT_USERNAME:
+        return text
+    cleaned = re.sub(rf"(?i)@{re.escape(BOT_USERNAME)}\b[,\-:\s]*", "", text).strip()
+    return cleaned or text
+
+
 def strip_command_prefix(content: str, is_voice: bool) -> Optional[str]:
     content = content.strip()
     if not content:
@@ -689,6 +763,17 @@ def should_handle(msg: IncomingMessage) -> Optional[str]:
         )
         return None
 
+    # Shared-group safety: in group/supergroup chats, only respond when this
+    # bot is explicitly @mentioned or replied to. Keeps two bots in one group
+    # from double-answering every human message. DMs are never gated here.
+    if REQUIRE_MENTION and is_group_chat(msg):
+        if not (message_mentions_bot(msg) or is_reply_to_bot(msg)):
+            return None
+        if MENTION_STRIP:
+            prompt = strip_bot_mention(prompt)
+            if not prompt:
+                prompt = "status"
+
     return prompt
 
 
@@ -698,7 +783,8 @@ def main() -> int:
         return 1
     if not ALLOWED_CHATS:
         log("PI_TELEGRAM_ALLOWED_CHATS is empty; all Telegram commands will be ignored")
-    log(f"Watching Telegram bot updates; allowed chats: {', '.join(sorted(ALLOWED_CHATS)) or '(none)'}; prefix: {PREFIX!r}")
+    log(f"Watching Telegram bot updates; allowed chats: {', '.join(sorted(ALLOWED_CHATS)) or '(none)'}; prefix: {PREFIX!r}; require_mention={REQUIRE_MENTION}")
+    fetch_bot_identity()
 
     state = load_state()
     if "last_update_id" not in state:
