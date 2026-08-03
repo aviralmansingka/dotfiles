@@ -4,7 +4,7 @@
       "command": "bash",
       "args": [
         "-lc",
-        "source \"$HOME/.config/pi-google-workspace.env\" && exec uvx workspace-mcp --single-user --tools sheets forms gmail"
+        "source \"$HOME/.config/pi-google-workspace.env\" && exec uvx workspace-mcp --single-user --tools sheets forms gmail calendar"
       ]
     },
     "whatsapp": {
