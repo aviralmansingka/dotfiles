@@ -152,6 +152,8 @@ class ThinkingTreeBuilder:
             goal["label_derived"] = False
         elif not goal.get("label_derived") and traces:
             goal["label"] = _strip_markdown(traces[0][:GOAL_LABEL_CHARS])
+            if len(traces[0]) > GOAL_LABEL_CHARS:
+                goal["label"] += "…"
             goal["label_derived"] = True
         goal["traces"] = traces
 
@@ -166,12 +168,6 @@ class ThinkingTreeBuilder:
             marker = "✓" if goal["done"] else "▸"
             label = _strip_markdown(goal["label"])
             lines.append(f"{marker} <b>{html.escape(label)}</b>")
-            if not goal["done"]:
-                for trace in goal["traces"]:
-                    t = _strip_markdown(trace[:MAX_TRACE_CHARS])
-                    if len(trace) > MAX_TRACE_CHARS:
-                        t += "…"
-                    lines.append(f"┊ <i>{html.escape(t)}</i>")
         text = "\n".join(lines)
         if len(text) > MAX_REPLY_CHARS:
             cut = text[:MAX_REPLY_CHARS]

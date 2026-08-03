@@ -46,16 +46,19 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertIn("▸ <b>Find the open issues</b>", text)
         self.assertNotIn("working…", text)
 
-    def test_thinking_block_adds_trace(self):
+    def test_thinking_block_derives_goal_label(self):
+        """Thinking blocks no longer render as traces; they derive the goal label."""
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
             {"type": "thinking", "thinking": "I need to list the issues directory"},
         ])
         text = tree.render(3)
-        self.assertIn("┊ <i>I need to list the issues directory</i>", text)
+        self.assertIn("I need to list the issues directory", text)
+        self.assertNotIn("┊", text)
 
-    def test_multiple_thinking_blocks_are_separate_traces(self):
+    def test_multiple_thinking_blocks_derive_single_label(self):
+        """Multiple thinking blocks → one derived label (from the first), no trace lines."""
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
@@ -64,24 +67,23 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         ])
         text = tree.render(4)
         self.assertIn("First thought", text)
-        self.assertIn("Second thought", text)
+        self.assertNotIn("┊", text)
+        self.assertNotIn("Second thought", text)
 
     def test_partial_is_cumulative_replace_not_append(self):
-        """message_update gives the full partial each time, so traces replace."""
+        """message_update gives the full partial each time, so label replaces."""
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
-        # First update: one thinking block
         tree.on_message_update([
             {"type": "thinking", "thinking": "First thought"},
         ])
-        # Second update: two thinking blocks (cumulative)
         tree.on_message_update([
             {"type": "thinking", "thinking": "First thought"},
             {"type": "thinking", "thinking": "Second thought"},
         ])
         text = tree.render(5)
-        # Should have exactly 2 traces, not 3 (no duplication)
-        self.assertEqual(text.count("┊"), 2)
+        # No trace lines rendered at all
+        self.assertEqual(text.count("┊"), 0)
 
     def test_multiple_turns_create_multiple_goals(self):
         tree = daemon.ThinkingTreeBuilder()
@@ -112,17 +114,17 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertIn("&lt;b&gt;", text)
         self.assertIn("&amp;", text)
 
-    def test_long_trace_is_truncated(self):
+    def test_long_thinking_derived_label_is_truncated(self):
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         long_text = "x" * 500
         tree.on_message_update([{"type": "thinking", "thinking": long_text}])
         text = tree.render(1)
+        # Derived label is truncated to GOAL_LABEL_CHARS
         self.assertIn("…", text)
-        # The trace should be truncated to MAX_TRACE_CHARS + ellipsis
         self.assertLess(text.count("x"), 500)
 
-    def test_empty_thinking_block_is_skipped(self):
+    def test_empty_thinking_block_falls_back_to_working(self):
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
@@ -131,6 +133,7 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         ])
         text = tree.render(1)
         self.assertEqual(text.count("┊"), 0)
+        self.assertIn("working…", text)
 
     def test_toolcall_block_is_ignored(self):
         tree = daemon.ThinkingTreeBuilder()
@@ -142,6 +145,8 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         text = tree.render(1)
         self.assertNotIn("toolCall", text)
         self.assertNotIn("bash", text)
+        # Thinking still derives a label
+        self.assertIn("A thought", text)
         self.assertIn("A thought", text)
 
     def test_message_update_without_turn_start_auto_creates_goal(self):
@@ -175,8 +180,8 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertIn("✓ <b>Done goal</b>", text)
         self.assertNotIn("▸ <b>Done goal</b>", text)
 
-    def test_completed_goal_traces_are_collapsed(self):
-        """Completed goals show only their label, not their traces."""
+    def test_completed_goals_show_only_labels(self):
+        """All goals (done or live) show only their label — no traces rendered."""
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
@@ -185,11 +190,12 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         ])
         tree.on_turn_end()
         tree.on_turn_start()
-        tree.on_message_update([{"type": "thinking", "thinking": "live trace"}])
+        tree.on_message_update([{"type": "thinking", "thinking": "a live thought about the server"}])
         text = tree.render(5)
         self.assertIn("✓ <b>Completed goal</b>", text)
         self.assertNotIn("old trace that should be hidden", text)
-        self.assertIn("live trace", text)
+        self.assertNotIn("┊", text)
+        self.assertIn("a live thought", text)
 
     def test_goal_label_derived_from_first_thinking(self):
         """When no text block, goal label comes from the first thinking trace."""
@@ -226,7 +232,7 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertNotIn("**", text)
         self.assertNotIn("`", text)
 
-    def test_markdown_stripped_from_traces(self):
+    def test_markdown_stripped_from_derived_label(self):
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
