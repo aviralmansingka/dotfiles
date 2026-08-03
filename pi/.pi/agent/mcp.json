@@ -8,7 +8,8 @@
         "--tools",
         "sheets",
         "forms",
-        "gmail"
+        "gmail",
+        "calendar"
       ],
       "env": {
         "GOOGLE_OAUTH_CLIENT_ID": "",

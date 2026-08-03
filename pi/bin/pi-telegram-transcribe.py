@@ -30,7 +30,14 @@ def main() -> int:
     compute_type = os.environ.get("PI_TELEGRAM_WHISPER_COMPUTE_TYPE", "int8")
     language = os.environ.get("PI_TELEGRAM_WHISPER_LANGUAGE", "en") or None
 
-    model = WhisperModel(model_name, device=device, compute_type=compute_type)
+    try:
+        model = WhisperModel(model_name, device=device, compute_type=compute_type)
+    except RuntimeError as e:
+        if device != "cuda" or "CUDA" not in str(e):
+            raise
+        print(f"CUDA transcription unavailable, falling back to CPU: {e}", file=sys.stderr)
+        model = WhisperModel(model_name, device="cpu", compute_type="int8")
+
     segments, _info = model.transcribe(
         str(audio_path),
         language=language,
