@@ -58,6 +58,8 @@ PROCESS_EXISTING = os.environ.get("PI_TELEGRAM_PROCESS_EXISTING", "0") == "1"
 MAX_REPLY_CHARS = int(os.environ.get("PI_TELEGRAM_MAX_REPLY_CHARS", "3900"))
 PROMPT_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_PROMPT_TIMEOUT_SECONDS", "900"))
 POLL_TIMEOUT_SECONDS = int(os.environ.get("PI_TELEGRAM_POLL_TIMEOUT_SECONDS", "50"))
+SESSIONS_DIR = Path(os.environ.get("PI_TELEGRAM_SESSIONS_DIR", str(HOME / ".pi/agent/sessions")))
+MAX_SESSION_LIST = int(os.environ.get("PI_TELEGRAM_MAX_SESSION_LIST", "12"))
 RETRY_SECONDS = float(os.environ.get("PI_TELEGRAM_RETRY_SECONDS", "5"))
 TYPING_INTERVAL_SECONDS = float(os.environ.get("PI_TELEGRAM_TYPING_INTERVAL_SECONDS", "4"))
 
@@ -245,6 +247,18 @@ class PiRPC:
             if response.get("success"):
                 return "Started a fresh pi session."
             return f"Failed to start a fresh pi session: {response.get('error')}"
+
+    def switch_session(self, session_path: str) -> Optional[str]:
+        """Load a different session file. Returns None on success, else an error message."""
+        with self.lock:
+            request_id = str(uuid.uuid4())
+            self._send({"id": request_id, "type": "switch_session", "sessionPath": session_path})
+            response = self._wait_response(request_id)
+            if not response.get("success"):
+                return f"Failed to switch session: {response.get('error')}"
+            if (response.get("data") or {}).get("cancelled"):
+                return "Session switch was cancelled by a pi extension."
+            return None
 
     def status(self) -> str:
         with self.lock:
@@ -749,6 +763,102 @@ def strip_command_prefix(content: str, is_voice: bool) -> Optional[str]:
     return None
 
 
+def scan_session(path: Path) -> tuple[str, str]:
+    """Return (cwd, label) for a session file. Label = first user-message snippet."""
+    cwd, name = "", ""
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as f:
+            for i, line in enumerate(f):
+                if i > 400:
+                    break
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                rtype = rec.get("type")
+                if rtype == "session":
+                    cwd = str(rec.get("cwd") or "")
+                elif rtype == "session_info" and rec.get("name") and not name:
+                    name = str(rec["name"])
+                elif rtype == "message" and (rec.get("message") or {}).get("role") == "user":
+                    content = rec["message"].get("content")
+                    if isinstance(content, str):
+                        text = content
+                    elif isinstance(content, list):
+                        text = " ".join(
+                            str(c.get("text", ""))
+                            for c in content
+                            if isinstance(c, dict) and c.get("type") == "text"
+                        )
+                    else:
+                        text = ""
+                    text = text.strip()
+                    # Drop this daemon's own bridge header from Telegram-originated sessions.
+                    if text.startswith(("Telegram command from chat", "Telegram voice-note transcript")) and "\n\n" in text:
+                        text = text.split("\n\n", 1)[1].strip()
+                    if text:
+                        return cwd, " ".join(text.split())[:60]
+    except OSError:
+        pass
+    return cwd, name or path.stem.split("_")[-1][:8]
+
+
+def list_pi_sessions() -> list[tuple[Path, str, str, float]]:
+    """Every pi session on this host, newest first: (path, cwd, label, mtime)."""
+    if not SESSIONS_DIR.is_dir():
+        return []
+    files = sorted(SESSIONS_DIR.glob("*/*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+    sessions = []
+    for p in files[:MAX_SESSION_LIST]:
+        cwd, label = scan_session(p)
+        sessions.append((p, cwd, label, p.stat().st_mtime))
+    return sessions
+
+
+def format_age(mtime: float) -> str:
+    mins = max(0, int((time.time() - mtime) / 60))
+    if mins < 60:
+        return f"{mins}m ago"
+    hours = mins // 60
+    if hours < 48:
+        return f"{hours}h ago"
+    return f"{hours // 24}d ago"
+
+
+def format_session_list() -> str:
+    sessions = list_pi_sessions()
+    if not sessions:
+        return "No pi sessions found on this host."
+    lines = ["Recent pi chats on homelab (newest first):"]
+    for i, (_p, cwd, label, mtime) in enumerate(sessions, 1):
+        lines.append(f"{i}. {label} · {Path(cwd).name if cwd else '?'} · {format_age(mtime)}")
+    lines.append("Reply with: switch N")
+    return "\n".join(lines)
+
+
+def handle_switch(pi: "PiRPC", arg: str) -> str:
+    sessions = list_pi_sessions()
+    if not sessions:
+        return "No pi sessions found on this host."
+    target = None
+    if arg.isdigit():
+        idx = int(arg)
+        if 1 <= idx <= len(sessions):
+            target = sessions[idx - 1]
+    else:
+        matches = [s for s in sessions if arg in s[0].name or arg.lower() in s[2].lower()]
+        if len(matches) == 1:
+            target = matches[0]
+        elif len(matches) > 1:
+            return f"'{arg}' matches {len(matches)} chats — use the number from 'chats'."
+    if target is None:
+        return f"No chat '{arg}'. Send 'chats' to list sessions, then 'switch N'."
+    err = pi.switch_session(str(target[0]))
+    if err:
+        return err
+    return f"Switched to: {target[2]} · {Path(target[1]).name if target[1] else '?'} · {format_age(target[3])}"
+
+
 def should_handle(msg: IncomingMessage) -> Optional[str]:
     if msg.sender_is_bot:
         return None
@@ -829,10 +939,15 @@ def main() -> int:
                     if prompt is None:
                         continue
                     log(f"Handling Telegram command from chat={msg.chat_id} update={msg.update_id}: {prompt[:120]!r}")
-                    if prompt.lower() in {"status", "ping"}:
+                    cmd = prompt.lower().lstrip("/").strip()
+                    if cmd in {"status", "ping"}:
                         reply = pi.status()
-                    elif prompt.lower() in {"reset", "new", "new session"}:
+                    elif cmd in {"reset", "new", "new session"}:
                         reply = pi.new_session()
+                    elif cmd in {"chats", "sessions", "switch", "resume"}:
+                        reply = format_session_list()
+                    elif cmd.startswith(("switch ", "resume ")):
+                        reply = handle_switch(pi, cmd.split(None, 1)[1].strip())
                     else:
                         source_note = "Telegram voice-note transcript" if msg.audio_kind else "Telegram command"
                         full_prompt = (
