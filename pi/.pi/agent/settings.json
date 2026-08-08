@@ -8,9 +8,9 @@
     "git/github.com/amosblomqvist/pi-config/extensions/youtube-search/index.ts"
   ],
   "lastChangelogVersion": "0.82.1",
-  "defaultProvider": "fireworks",
-  "defaultModel": "accounts/fireworks/routers/glm-5p2-fast",
-  "defaultThinkingLevel": "medium",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultThinkingLevel": "high",
   "theme": "gruvbox-material",
   "transport": "websocket-cached"
 }
