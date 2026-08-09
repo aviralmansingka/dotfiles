@@ -529,6 +529,55 @@ local function validate_sidekick_herdr()
   local source_backend = dofile(source_root .. "herdr_backend.lua")
   package.loaded["plugins.sidekick.herdr"] = loaded_herdr
 
+  local original_system = vim.system
+  local system_calls = {}
+  local raw_read = "\27[32mHerdr 0.8 terminal output\27[0m\n"
+  vim.system = function(cmd, _, callback)
+    system_calls[#system_calls + 1] = vim.deepcopy(cmd)
+    local result = {
+      code = 0,
+      stdout = cmd[2] == "agent" and cmd[3] == "read"
+          and raw_read
+        or '{"result":{"type":"ok"}}',
+      stderr = "",
+    }
+    if callback then
+      callback(result)
+      return {}
+    end
+    return { wait = function() return result end }
+  end
+  local read = source_herdr.read("pi-example", "visible", 12, true)
+  local async_read
+  source_herdr.read_async("pi-example", "recent", 6, false, function(output) async_read = output end)
+  local sent = source_herdr.send("pi-example", "hello")
+  vim.wait(1000, function() return async_read ~= nil end, 10)
+  vim.system = original_system
+  if read ~= raw_read or async_read ~= raw_read then
+    fail("Herdr 0.8 reads should return raw terminal output")
+  end
+  assert_sequence(
+    system_calls[1],
+    { "herdr", "agent", "read", "pi-example", "--source", "visible", "--lines", "12", "--ansi" },
+    "synchronous Herdr 0.8 read"
+  )
+  assert_sequence(
+    system_calls[2],
+    { "herdr", "agent", "read", "pi-example", "--source", "recent", "--lines", "6" },
+    "asynchronous Herdr 0.8 read"
+  )
+  assert_sequence(
+    system_calls[3],
+    { "herdr", "agent", "prompt", "pi-example", "hello" },
+    "Herdr 0.8 prompt"
+  )
+  if not sent then
+    fail("Herdr 0.8 prompt should report success")
+  end
+  if case == "sidekick-herdr-compat" then
+    return
+  end
+
   local current_tab = vim.api.nvim_get_current_tabpage()
   vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w-bound")
   local original_toggle_named = source_internal.toggle_tool_session
@@ -3272,16 +3321,7 @@ local function validate_sidekick_herdr_live()
 
   local internal = require("plugins.sidekick.internal")
   local config = require("sidekick.config")
-  local command = {
-    "sh",
-    "-c",
-    string.format(
-      "printf '%s\\n'; while IFS= read -r line; do printf 'ECHO:%%s\\n' \"$line\"; done",
-      sentinel
-    ),
-  }
   config.cli.tools[label] = internal.merged_tool_config("pi", {
-    cmd = command,
     url = internal.tool_urls.pi,
   })
 
@@ -3308,12 +3348,12 @@ local function validate_sidekick_herdr_live()
   local dump = ""
   local echoed = vim.wait(3000, function()
     dump = session:dump() or ""
-    return dump:gsub("%s", ""):find("ECHO:" .. sentinel, 1, true) ~= nil
+    return dump:gsub("%s", ""):find(sentinel, 1, true) ~= nil
   end, 50)
   if not echoed then
     fail("Herdr send/submit output missing sentinel; dump=" .. vim.inspect(dump))
   end
-  if not dump:gsub("%s", ""):find("ECHO:" .. sentinel, 1, true) then
+  if not dump:gsub("%s", ""):find(sentinel, 1, true) then
     fail("Sidekick Herdr dump missing sentinel: " .. vim.inspect(dump))
   end
   if herdr.workspace_for_cwd(vim.fn.getcwd()) ~= session.herdr_workspace_id then
@@ -3328,7 +3368,7 @@ local function validate_sidekick_herdr_live()
   local local_items = require("plugins.sidekick.cwd_picker").list_items()
   local found = false
   for _, item in ipairs(local_items) do
-    if item.label == label and item.status == "unknown" then
+    if item.label == label and item.status == "idle" then
       found = true
     end
   end
@@ -4893,6 +4933,7 @@ local cases = {
   ["inline-ask-edit"] = validate_inline_ask_edit,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
+  ["sidekick-herdr-compat"] = validate_sidekick_herdr,
   ["herdr-workspaces"] = validate_herdr_workspaces,
   ["sidekick-herdr-live"] = validate_sidekick_herdr_live,
   ["vault-features"] = validate_vault_features,

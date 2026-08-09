@@ -452,7 +452,7 @@ end
 ---@param text string
 ---@return boolean
 function M.send(target, text)
-  return M.call({ "agent", "send", target, text }) ~= nil
+  return M.call({ "agent", "prompt", target, text }) ~= nil
 end
 
 ---@param pane_id string
@@ -482,8 +482,14 @@ function M.read(target, source, lines, ansi)
   if ansi then
     args[#args + 1] = "--ansi"
   end
-  local result = M.call(args)
-  return result and result.read and result.read.text or nil
+  local cmd = { "herdr" }
+  vim.list_extend(cmd, args)
+  local result = vim.system(cmd, { text = true }):wait()
+  if result.code ~= 0 then
+    decode(cmd, result)
+    return nil
+  end
+  return result.stdout or ""
 end
 
 ---@param target string
@@ -502,8 +508,12 @@ function M.read_async(target, source, lines, ansi, callback)
   local cmd = { "herdr" }
   vim.list_extend(cmd, args)
   vim.system(cmd, { text = true }, vim.schedule_wrap(function(result)
-    local decoded = decode(cmd, result)
-    callback(decoded and decoded.read and decoded.read.text or nil)
+    if result.code ~= 0 then
+      decode(cmd, result)
+      callback(nil)
+      return
+    end
+    callback(result.stdout or "")
   end))
 end
 
