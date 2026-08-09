@@ -8,6 +8,8 @@
 
 **Tech Stack:** Lua, Neovim headless verification, Sidekick.nvim session API, Herdr 0.7.1 JSON CLI, Bash integration harness.
 
+> **Status note (updated for Herdr 0.8):** This plan was written against the Herdr 0.7.1 CLI contract. The Sidekick adapter has since moved to Herdr 0.8: prompts use `agent prompt` (not `agent send`) and `agent read` returns raw terminal text (not a JSON `read.text` envelope). The authoritative adapter contract now lives in the doc comments of `nvim/.config/nvim/lua/plugins/sidekick/herdr.lua`; the 0.7.1 details below are retained as the original design record.
+
 ## Global Constraints
 
 - The installed Herdr 0.7.1 CLI is authoritative: `agent start NAME --cwd PATH --workspace ID --no-focus -- <argv>`, `agent send`, `pane send-keys`, and JSON `agent read`.

@@ -414,8 +414,25 @@ function M.start(name, cwd, command, env, scope, tab_label)
     start_args[#start_args + 1] = "--"
     vim.list_extend(start_args, agent_args)
   end
-  local result = M.call(start_args)
+  -- Herdr 0.8 may return `agent_pane_busy` for a freshly created or split
+  -- pane whose shell has not yet reached its interactive prompt; `agent start
+  -- --timeout` does not cover this case. Poll the start until the pane is
+  -- ready or a bounded readiness window elapses.
+  local result, err = M.call(start_args, true)
+  local readiness_deadline = vim.uv.hrtime() + 10e9
+  while
+    not result
+    and err
+    and err:find("agent_pane_busy", 1, true)
+    and vim.uv.hrtime() < readiness_deadline
+  do
+    vim.uv.sleep(200)
+    result, err = M.call(start_args, true)
+  end
   local agent = result and result.agent or nil
+  if not result and err and err ~= "" then
+    notify(err)
+  end
   if not terminal_agent(agent) or agent.name ~= name then
     if agent and agent.pane_id then
       M.call({ "pane", "close", agent.pane_id }, true)
@@ -452,7 +469,7 @@ end
 ---@param text string
 ---@return boolean
 function M.send(target, text)
-  return M.call({ "agent", "send", target, text }) ~= nil
+  return M.call({ "agent", "prompt", target, text }) ~= nil
 end
 
 ---@param pane_id string
@@ -482,8 +499,14 @@ function M.read(target, source, lines, ansi)
   if ansi then
     args[#args + 1] = "--ansi"
   end
-  local result = M.call(args)
-  return result and result.read and result.read.text or nil
+  local cmd = { "herdr" }
+  vim.list_extend(cmd, args)
+  local result = vim.system(cmd, { text = true }):wait()
+  if result.code ~= 0 then
+    decode(cmd, result)
+    return nil
+  end
+  return result.stdout or ""
 end
 
 ---@param target string
@@ -502,8 +525,12 @@ function M.read_async(target, source, lines, ansi, callback)
   local cmd = { "herdr" }
   vim.list_extend(cmd, args)
   vim.system(cmd, { text = true }, vim.schedule_wrap(function(result)
-    local decoded = decode(cmd, result)
-    callback(decoded and decoded.read and decoded.read.text or nil)
+    if result.code ~= 0 then
+      decode(cmd, result)
+      callback(nil)
+      return
+    end
+    callback(result.stdout or "")
   end))
 end
 
