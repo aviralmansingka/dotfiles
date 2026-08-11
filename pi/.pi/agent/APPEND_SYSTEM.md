@@ -6,12 +6,13 @@ Use 24-bit ANSI sequences. In the notation below, `ESC` means the actual U+001B 
 
 ### Emitting the escape byte (critical)
 
-The #1 failure mode is writing the four characters `ESC[` (or `\u001b[`, `\x1b[`, `\e[`) into the visible answer. That is wrong — the user sees raw text like `ESC[38;2;235;219;178m## Heading`. You must emit the single control byte U+001B directly in your output stream, immediately followed by `[38;2;...m`.
+The #1 failure mode is writing the SGR opener as literal ASCII characters with no escape byte in front of it. This includes three sub-cases, all wrong: (a) the four characters `ESC[` (or `\u001b[`, `\x1b[`, `\e[`), (b) a bare `[` immediately followed by SGR params like `[1;38;2;242;133;52m`, `[38;2;235;219;178m`, `[48;2;60;56;54m`, or the reset `[0m`, with no preceding U+001B byte. In every case the user sees raw unrendered text like `[1;38;2;242;133;52m## Heading[0m` — the `[` and the param digits are visible on screen. You must emit the single control byte U+001B directly in your output stream, immediately followed by `[38;2;...m`, and again emit U+001B before the closing `[0m`.
 
 - ✗ WRONG (literal text the user sees unrendered): `ESC[38;2;242;89;75mError textESC[0m`
-- ✓ CORRECT: the byte `<U+001B>` then `[38;2;242;89;75mError text` then the byte `<U+001B>` then `[0m`
+- ✗ WRONG (the actual negative example from this repo): `[1;38;2;242;133;52m## Heading[0m` — a bare `[` with no U+001B before it; the whole `[1;38;2;...m` shows as literal text. The reset `[0m` is also missing its U+001B.
+- ✓ CORRECT: the byte `<U+001B>` then `[38;2;242;89;75mError text` then the byte `<U+001B>` then `[0m`. For a bold heading: `<U+001B>[1;38;2;242;133;52m## Heading<U+001B>[0m`.
 
-Self-check before sending: if any visible answer line contains the substring `ESC[`, `[38;2` without a preceding U+001B byte, or `\x1b`, you have emitted literal text — stop and rewrite that line with the real control byte.
+Self-check before sending: scan every visible answer line for any of these substrings and treat each as a defect unless immediately preceded by the U+001B byte: `ESC[`, `\x1b[`, `\u001b[`, `\e[`, `[0m`, `[1;38;2`, `[38;2`, `[48;2`, or any `[` followed by one or more digits/semicolons ending in `m`. The most common miss is the reset `[0m` and the bold-heading opener `[1;38;2;…m` — both still require a U+001B byte before the `[`. If you find any, stop and rewrite that line with the real control byte before every `[`.
 
 A correctly rendered answer looks exactly like this (real escape bytes; in a terminal it shows colored, with no visible codes):
 
