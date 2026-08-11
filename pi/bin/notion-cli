@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+"""notion-cli: minimal Notion API wrapper for agent use.
+
+Auth: internal integration token (ntn_...) in NOTION_TOKEN, via env or
+~/.config/notion-cli/env. Share pages/databases with the integration in
+Notion or they stay invisible to every command.
+
+All output is raw Notion API JSON on stdout. Pipe through jq as needed.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+API = "https://api.notion.com/v1"
+NOTION_VERSION = "2022-06-28"
+CONFIG_DIR = Path(os.environ.get("NOTION_CLI_CONFIG_DIR", Path.home() / ".config" / "notion-cli"))
+ENV_FILE = CONFIG_DIR / "env"
+
+DASHED_RE = re.compile(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", re.IGNORECASE)
+PLAIN_RE = re.compile(r"(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])", re.IGNORECASE)
+
+
+def load_env() -> None:
+    if not ENV_FILE.exists():
+        return
+    for raw in ENV_FILE.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+def token() -> str:
+    value = os.environ.get("NOTION_TOKEN")
+    if not value:
+        raise SystemExit(f"Missing NOTION_TOKEN. Put it in {ENV_FILE} or export it.")
+    return value
+
+
+def nid(raw: str) -> str:
+    """Accept a bare id, dashed id, or full Notion URL; return dashed id."""
+    match = DASHED_RE.search(raw) or PLAIN_RE.search(raw)
+    if not match:
+        raise SystemExit(f"Not a Notion id or URL: {raw}")
+    hexid = match.group(0).replace("-", "").lower()
+    return f"{hexid[0:8]}-{hexid[8:12]}-{hexid[12:16]}-{hexid[16:20]}-{hexid[20:32]}"
+
+
+def call(method: str, path: str, payload: dict | None = None) -> dict:
+    req = urllib.request.Request(
+        API + path,
+        data=json.dumps(payload).encode() if payload is not None else None,
+        headers={
+            "Authorization": f"Bearer {token()}",
+            "Notion-Version": NOTION_VERSION,
+            "Content-Type": "application/json",
+        },
+        method=method,
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as res:
+            return json.loads(res.read().decode())
+    except urllib.error.HTTPError as exc:
+        text = exc.read().decode(errors="replace")
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            payload = {"raw": text}
+        raise SystemExit(f"Notion API error {exc.code}: {json.dumps(payload)}")
+
+
+def collect(path: str, payload: dict | None = None) -> dict:
+    """Run a paginated list endpoint to completion, returning merged results."""
+    results: list = []
+    body = dict(payload or {})
+    while True:
+        page = call("POST" if payload is not None else "GET", path, body if payload is not None else None)
+        results.extend(page.get("results", []))
+        if not page.get("has_more"):
+            break
+        body["start_cursor"] = page["next_cursor"]
+        if payload is None:  # GET pagination via query string
+            sep = "&" if "?" in path else "?"
+            path = f"{path}{sep}start_cursor={page['next_cursor']}"
+    return {"object": "list", "results": results, "count": len(results)}
+
+
+def para(text: str) -> dict:
+    return {"object": "block", "type": "paragraph", "paragraph": {"rich_text": [{"type": "text", "text": {"content": text}}]}}
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(prog="notion-cli", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p = sub.add_parser("search", help="Search pages/databases shared with the integration")
+    p.add_argument("query", nargs="?", default="")
+    p.add_argument("--type", choices=["page", "database"])
+
+    p = sub.add_parser("get-page", help="Get page metadata (properties, not content)")
+    p.add_argument("id")
+
+    p = sub.add_parser("get-blocks", help="Get a page/block's content blocks (all pages)")
+    p.add_argument("id")
+
+    p = sub.add_parser("query-db", help="Query a database; optional raw body via --body")
+    p.add_argument("id")
+    p.add_argument("--body", help="JSON merged into the query body (filter, sorts, ...)")
+
+    p = sub.add_parser("create-page", help="Create a page under a parent page")
+    p.add_argument("--parent", required=True, help="Parent page id or URL")
+    p.add_argument("--title", required=True)
+    p.add_argument("--text", help="Optional single-paragraph body")
+
+    p = sub.add_parser("append", help="Append a paragraph to a page/block")
+    p.add_argument("id")
+    p.add_argument("--text", required=True)
+
+    args = parser.parse_args()
+
+    if args.cmd == "search":
+        body: dict = {"query": args.query, "page_size": 100}
+        if args.type:
+            body["filter"] = {"property": "object", "value": args.type}
+        out = collect("/search", body)
+    elif args.cmd == "get-page":
+        out = call("GET", f"/pages/{nid(args.id)}")
+    elif args.cmd == "get-blocks":
+        out = collect(f"/blocks/{nid(args.id)}/children?page_size=100")
+    elif args.cmd == "query-db":
+        body = json.loads(args.body) if args.body else {}
+        out = collect(f"/databases/{nid(args.id)}/query", body)
+    elif args.cmd == "create-page":
+        page: dict = {
+            "parent": {"page_id": nid(args.parent)},
+            "properties": {"title": {"title": [{"text": {"content": args.title}}]}},
+        }
+        if args.text:
+            page["children"] = [para(args.text)]
+        out = call("POST", "/pages", page)
+    elif args.cmd == "append":
+        out = call("PATCH", f"/blocks/{nid(args.id)}/children", {"children": [para(args.text)]})
+    else:  # pragma: no cover
+        parser.error(f"unknown command {args.cmd}")
+        return
+
+    json.dump(out, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+
+
+if __name__ == "__main__":
+    load_env()
+    main()

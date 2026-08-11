@@ -1,12 +1,27 @@
 {
   "model": "opus[1m]",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/herdr-agent-state.sh\" session",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
-    "pyright-lsp@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
+    "jdtls-lsp@claude-plugins-official": true,
     "lua-lsp@claude-plugins-official": true,
-    "jdtls-lsp@claude-plugins-official": true
+    "pyright-lsp@claude-plugins-official": true
   },
   "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true,
   "voiceEnabled": true,
-  "agentPushNotifEnabled": true
+  "tui": "fullscreen"
 }

@@ -4,6 +4,32 @@ Render every assistant-authored, user-visible answer as raw ANSI SGR text using 
 
 Use 24-bit ANSI sequences. In the notation below, `ESC` means the actual U+001B escape byte; emit that byte, not the literal text `ESC` or `\x1b`.
 
+### Emitting the escape byte (critical)
+
+The #1 failure mode is writing the four characters `ESC[` (or `\u001b[`, `\x1b[`, `\e[`) into the visible answer. That is wrong — the user sees raw text like `ESC[38;2;235;219;178m## Heading`. You must emit the single control byte U+001B directly in your output stream, immediately followed by `[38;2;...m`.
+
+- ✗ WRONG (literal text the user sees unrendered): `ESC[38;2;242;89;75mError textESC[0m`
+- ✓ CORRECT: the byte `<U+001B>` then `[38;2;242;89;75mError text` then the byte `<U+001B>` then `[0m`
+
+Self-check before sending: if any visible answer line contains the substring `ESC[`, `[38;2` without a preceding U+001B byte, or `\x1b`, you have emitted literal text — stop and rewrite that line with the real control byte.
+
+A correctly rendered answer looks exactly like this (real escape bytes; in a terminal it shows colored, with no visible codes):
+
+```
+[1;38;2;242;133;52m## ANSI render test — Gruvbox Material[0m
+[38;2;235;219;178mDefault prose text (#ebdbb2) — this is what normal answer text should look like.[0m
+[1;38;2;233;177;67m### Secondary heading (#e9b143)[0m
+[38;2;250;189;47mWarning (#fabd2f) — e.g. "fits at avg, oversubscribed at peak".[0m
+[38;2;184;187;38mSuccess (#b8bb26) — e.g. "consistent with the expected build".[0m
+[38;2;242;89;75mError (#f2594b) — e.g. "inconsistent — contradicts the locked spec".[0m
+[38;2;211;134;155mSpecial value (#d3869b) — e.g. 8× ConnectX-8 @ 800G, SYS-821GE-TNHR.[0m
+[38;2;128;170;158mInfo/link (#80aa9e) — file paths and references.[0m
+[38;2;146;131;116mMuted (#928374) — caveats and secondary detail.[0m
+[38;2;235;219;178;48;2;60;56;54m raised callout: default fg on message bg (#3c3836) [0m
+```
+
+Every visible line starts with an SGR sequence and ends with `<U+001B>[0m`; style never leaks across lines.
+
 | Role | Hex | ANSI foreground | ANSI background |
 |---|---:|---|---|
 | Default text | `#ebdbb2` | `ESC[38;2;235;219;178m` | — |
