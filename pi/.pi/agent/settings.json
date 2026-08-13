@@ -7,6 +7,9 @@
     },
     "git/github.com/amosblomqvist/pi-config/extensions/youtube-search/index.ts"
   ],
+  "extensions": [
+    "-extensions/transcript-scroll.ts"
+  ],
   "lastChangelogVersion": "0.82.1",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
