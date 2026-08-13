@@ -1057,7 +1057,7 @@ local function validate_sidekick_herdr()
       if not rename_succeeds then
         return nil, "agent name already exists"
       end
-      if picker_actions_only and args[3] == "term-6" then
+      if picker_actions_only and args[3] == "pi-other-workspace" then
         other_agent_name = args[4]
       end
       return { agent = { name = args[4] } }
@@ -1260,11 +1260,11 @@ local function validate_sidekick_herdr()
       not rename_closed
       or not vim.deep_equal(
         rename_args,
-        { "agent", "rename", rename_item.terminal_id, rename_item.tool .. "-renamed-session" }
+        { "agent", "rename", rename_item.agent_name, rename_item.tool .. "-renamed-session" }
       )
       or picker_opts == rename_picker_opts
     then
-      fail("session rename should rename the selected Herdr agent and reopen the picker")
+      fail("session rename should target the selected Herdr agent name: " .. vim.inspect(rename_args))
     end
 
     local kill_item
@@ -1504,7 +1504,7 @@ local function validate_sidekick_herdr()
       rename_args = nil
       run_input_action("<c-r>")
       if not rename_prompt or rename_prompt.default ~= "other-workspace" or rename_args then
-        target_errors[#target_errors + 1] = "Ctrl-R did not target pi-other-workspace (term-6)"
+        target_errors[#target_errors + 1] = "Ctrl-R did not target agent pi-other-workspace"
       end
       kill_prompt = nil
       closed_panes = {}
@@ -1545,7 +1545,7 @@ local function validate_sidekick_herdr()
       rename_args = nil
       run_input_action("<c-r>")
       if
-        not vim.deep_equal(rename_args, { "agent", "rename", "term-6", "pi-taken-label" })
+        not vim.deep_equal(rename_args, { "agent", "rename", "pi-other-workspace", "pi-taken-label" })
         or fake_picker.closed
         or not notifications[1]
         or not notifications[1].message:find("session rename failed", 1, true)
@@ -1584,7 +1584,7 @@ local function validate_sidekick_herdr()
         return picker_opts ~= rename_picker_opts
       end, 5)
       if
-        not vim.deep_equal(rename_args, { "agent", "rename", "term-6", "pi-workspace-renamed" })
+        not vim.deep_equal(rename_args, { "agent", "rename", "pi-other-workspace", "pi-workspace-renamed" })
         or picker_opts == rename_picker_opts
         or not fake_picker.closed
       then

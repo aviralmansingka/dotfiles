@@ -1288,7 +1288,7 @@ function M.open(opts)
       if slug == "" or slug == current_slug then
         return
       end
-      local result, err = herdr.call({ "agent", "rename", item.terminal_id or item.agent_name, name }, true)
+      local result, err = herdr.call({ "agent", "rename", item.agent_name, name }, true)
       if not result then
         vim.notify("Sidekick: session rename failed: " .. (err or "unknown error"), vim.log.levels.ERROR)
         return
