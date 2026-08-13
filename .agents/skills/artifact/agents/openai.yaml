@@ -1,0 +1,4 @@
+interface:
+  display_name: "Artifact"
+  short_description: "Turn source files into polished HTML"
+  default_prompt: "Use $artifact path/to/file.md to create and deliver a polished HTML artifact."
