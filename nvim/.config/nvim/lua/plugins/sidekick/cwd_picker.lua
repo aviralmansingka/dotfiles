@@ -508,6 +508,7 @@ local function workspace_groups(first_workspace_id, metric_cache)
         label = parsed and parsed.label
           or (agent.name and not agent.name:match("^sk%-") and agent.name)
           or tool,
+        slug = parsed and parsed.slug,
         toggle_name = parsed and parsed.label or tool,
         tool = tool,
         pane_id = agent.pane_id,
@@ -1276,6 +1277,30 @@ function M.open(opts)
     internal.toggle_tool_session(target, true, item.terminal_id)
   end
 
+  local function rename_item(active_picker, item)
+    if not item or item._empty or not item.agent_name or not item.tool then
+      return
+    end
+    local current_slug = internal.normalize_label(item.slug or item.label)
+    vim.ui.input({ prompt = item.tool .. " session label: ", default = item.slug or item.label }, function(input)
+      local slug = internal.normalize_label(input)
+      local name = item.tool .. "-" .. slug
+      if slug == "" or slug == current_slug then
+        return
+      end
+      local result, err = herdr.call({ "agent", "rename", item.terminal_id or item.agent_name, name }, true)
+      if not result then
+        vim.notify("Sidekick: session rename failed: " .. (err or "unknown error"), vim.log.levels.ERROR)
+        return
+      end
+      reopening = true
+      active_picker:close()
+      vim.schedule(function()
+        M.open(opts)
+      end)
+    end)
+  end
+
   local function kill_item(active_picker, item)
     if not item or item._empty or not item.pane_id then
       return
@@ -1283,16 +1308,33 @@ function M.open(opts)
     if vim.fn.confirm("Kill agent " .. item.label .. "?", "&Yes\n&No", 2) ~= 1 then
       return
     end
-    if herdr.close(item.pane_id) then
-      if opts.on_kill then
-        opts.on_kill(item)
-      end
-      reopening = true
-      active_picker:close()
-      vim.schedule(function()
-        M.open(opts)
-      end)
+    if not herdr.close(item.pane_id) then
+      vim.notify("Sidekick: session close failed: " .. item.label, vim.log.levels.ERROR)
+      return
     end
+    if opts.on_kill then
+      opts.on_kill(item)
+    end
+    reopening = true
+    active_picker:close()
+    vim.schedule(function()
+      M.open(opts)
+    end)
+  end
+
+  local function active_item()
+    if workspace_active and workspace_win and workspace_win:valid() then
+      return workspace_rows[vim.api.nvim_win_get_cursor(workspace_win.win)[1]]
+    end
+    return picker and picker:current() or nil
+  end
+
+  local function rename_active_item()
+    rename_item(picker, active_item())
+  end
+
+  local function kill_active_item()
+    kill_item(picker, active_item())
   end
 
   local function focus_input()
@@ -1313,10 +1355,6 @@ function M.open(opts)
     else
       activate(picker, item)
     end
-  end
-
-  local function workspace_delete()
-    kill_item(picker, workspace_rows[vim.api.nvim_win_get_cursor(workspace_win.win)[1]])
   end
 
   local function clear_input()
@@ -1381,7 +1419,7 @@ function M.open(opts)
       ["<cr>"] = workspace_enter,
       ["<c-w>"] = focus_input,
       ["<c-u>"] = clear_input,
-      ["<c-x>"] = workspace_delete,
+      ["<c-x>"] = kill_active_item,
       ["<c-b>"] = function()
         scroll_preview(true)
       end,
@@ -1563,8 +1601,8 @@ function M.open(opts)
           ["<c-u>"] = { clear_input, mode = { "n", "i" } },
           ["<c-b>"] = { "sidekick_preview_scroll_up", mode = { "n", "i" } },
           ["<c-f>"] = { "sidekick_preview_scroll_down", mode = { "n", "i" } },
-          ["<c-r>"] = { "sidekick_rename_session", mode = { "n", "i" } },
-          ["<c-x>"] = { "sidekick_kill_session", mode = { "n", "i" } },
+          ["<c-r>"] = { rename_active_item, mode = { "n", "i" } },
+          ["<c-x>"] = { kill_active_item, mode = { "n", "i" } },
         },
       },
       list = {
@@ -1575,8 +1613,8 @@ function M.open(opts)
           ["<c-u>"] = clear_input,
           ["<c-b>"] = "sidekick_preview_scroll_up",
           ["<c-f>"] = "sidekick_preview_scroll_down",
-          ["<c-r>"] = { "sidekick_rename_session", mode = { "n" } },
-          ["<c-x>"] = { "sidekick_kill_session", mode = { "n" } },
+          ["<c-r>"] = { rename_active_item, mode = { "n" } },
+          ["<c-x>"] = { kill_active_item, mode = { "n" } },
         },
       },
       preview = {
@@ -1595,26 +1633,7 @@ function M.open(opts)
         scroll_preview(false)
       end,
       sidekick_rename_session = function(active_picker, item)
-        if not item or item._empty or not item.agent_name or not item.tool then
-          return
-        end
-        vim.ui.input({ prompt = item.tool .. " session label: ", default = item.slug }, function(input)
-          local slug = internal.normalize_label(input)
-          local name = item.tool .. "-" .. slug
-          if slug == "" or name == item.agent_name then
-            return
-          end
-          local result, err = herdr.call({ "agent", "rename", item.terminal_id or item.agent_name, name }, true)
-          if not result then
-            vim.notify("Sidekick: session rename failed: " .. (err or "unknown error"), vim.log.levels.ERROR)
-            return
-          end
-          reopening = true
-          active_picker:close()
-          vim.schedule(function()
-            M.open(opts)
-          end)
-        end)
+        rename_item(active_picker, item)
       end,
       sidekick_kill_session = function(active_picker, item)
         kill_item(active_picker, item)

@@ -489,6 +489,7 @@ local function validate_sidekick_pi()
 end
 
 local function validate_sidekick_herdr()
+  local picker_actions_only = case == "sidekick-picker-actions"
   load_plugin("sidekick.nvim")
 
   local config = require("sidekick.config")
@@ -652,7 +653,11 @@ local function validate_sidekick_herdr()
   local start_calls = {}
   source_herdr.call = function(args)
     start_calls[#start_calls + 1] = args
-    if args[1] == "agent" and args[2] == "start" then
+    if args[1] == "pane" and args[2] == "list" then
+      return { panes = { { pane_id = "w-bound:p0", workspace_id = "w-bound" } } }
+    elseif args[1] == "pane" and args[2] == "split" then
+      return { pane = { pane_id = "w-bound:p1" } }
+    elseif args[1] == "agent" and args[2] == "start" then
       return {
         agent = {
           name = "codex-workspace-session",
@@ -677,15 +682,21 @@ local function validate_sidekick_herdr()
     { workspace_id = "w-bound" }
   )
   source_herdr.call = original_call
+  local pane_list
+  local pane_split
   local agent_start
   local tab_rename
   for _, call in ipairs(start_calls) do
-    if call[1] == "workspace" or (call[1] == "pane" and call[2] == "list") then
+    if call[1] == "workspace" then
       fail("an exact workspace ID should bypass cwd workspace lookup: " .. vim.inspect(start_calls))
     elseif call[1] == "tab" and call[2] == "create" then
       fail("worker start must not precreate a blank root tab: " .. vim.inspect(start_calls))
     elseif call[1] == "pane" and call[2] == "move" and vim.fn.index(call, "--split") >= 0 then
       fail("worker start must not use a split: " .. vim.inspect(start_calls))
+    elseif call[1] == "pane" and call[2] == "list" then
+      pane_list = call
+    elseif call[1] == "pane" and call[2] == "split" then
+      pane_split = call
     elseif call[1] == "agent" and call[2] == "start" then
       agent_start = call
     elseif call[1] == "tab" and call[2] == "rename" then
@@ -693,8 +704,16 @@ local function validate_sidekick_herdr()
     end
   end
   if not started
+    or not vim.deep_equal(pane_list, { "pane", "list", "--workspace", "w-bound" })
+    or not vim.deep_equal(
+      pane_split,
+      { "pane", "split", "w-bound:p0", "--direction", "right", "--cwd", cwd, "--no-focus" }
+    )
     or not agent_start
-    or agent_start[7] ~= "w-bound"
+    or not vim.deep_equal(
+      agent_start,
+      { "agent", "start", "codex-workspace-session", "--kind", "codex", "--pane", "w-bound:p1" }
+    )
     or vim.fn.index(agent_start, "--tab") >= 0
     or not tab_rename
     or tab_rename[3] ~= "w-bound:t1"
@@ -916,6 +935,8 @@ local function validate_sidekick_herdr()
   end
 
   local original_list_agents = herdr.list_agents
+  local other_agent_name = "pi-other-workspace"
+  local removed_pane_id
   local function named_agent(name, status, index, workspace_id, agent_cwd)
     return {
       name = name,
@@ -934,7 +955,7 @@ local function validate_sidekick_herdr()
     }
   end
   herdr.list_agents = function()
-    return {
+    local agents = {
       {
         name = "sk-codex-deadbeef",
         agent = "codex",
@@ -948,9 +969,12 @@ local function validate_sidekick_herdr()
       named_agent("pi-working", "working", 3),
       named_agent("pi-done", "done", 4),
       named_agent("pi-blocked", "blocked", 5),
-      named_agent("pi-other-workspace", "idle", 6, "w2"),
+      named_agent(other_agent_name, "idle", 6, "w2"),
       named_agent("pi-workspace-only", "idle", 7, "w1", cwd .. "-unrelated"),
     }
+    return vim.tbl_filter(function(agent)
+      return agent.pane_id ~= removed_pane_id
+    end, agents)
   end
 
   local source_registry = dofile(source_root .. "registry.lua")
@@ -1018,6 +1042,7 @@ local function validate_sidekick_herdr()
 
   local original_herdr_call = herdr.call
   local rename_args
+  local rename_succeeds = true
   herdr.call = function(args, quiet)
     if args[1] == "workspace" and args[2] == "list" then
       return {
@@ -1029,6 +1054,12 @@ local function validate_sidekick_herdr()
     end
     if args[1] == "agent" and args[2] == "rename" then
       rename_args = args
+      if not rename_succeeds then
+        return nil, "agent name already exists"
+      end
+      if picker_actions_only and args[3] == "term-6" then
+        other_agent_name = args[4]
+      end
       return { agent = { name = args[4] } }
     end
     return original_herdr_call(args, quiet)
@@ -1042,6 +1073,7 @@ local function validate_sidekick_herdr()
   local original_toggle = internal.toggle_tool_session
   local original_ui_input = vim.ui.input
   local original_confirm = vim.fn.confirm
+  local original_picker_notify = vim.notify
   local picker_opts
   local read_args
   local read_result = "\27[31mfirst logical line\27[0m"
@@ -1056,6 +1088,8 @@ local function validate_sidekick_herdr()
   local focused = {}
   local toggles = {}
   local closed_panes = {}
+  local close_succeeds = true
+  local killed_item
   Snacks.picker.pick = function(opts)
     picker_opts = opts
   end
@@ -1100,6 +1134,12 @@ local function validate_sidekick_herdr()
   end
   herdr.close = function(pane_id)
     closed_panes[#closed_panes + 1] = pane_id
+    if not close_succeeds then
+      return false
+    end
+    if picker_actions_only then
+      removed_pane_id = pane_id
+    end
     return true
   end
   internal.toggle_tool_session = function(name, focus, terminal_id)
@@ -1107,7 +1147,11 @@ local function validate_sidekick_herdr()
   end
 
   local picker_ok, picker_err = xpcall(function()
-    cwd_picker.open()
+    cwd_picker.open(picker_actions_only and {
+      on_kill = function(item)
+        killed_item = item
+      end,
+    } or nil)
     if not picker_opts then
       fail("cwd picker did not open Snacks picker")
     end
@@ -1164,12 +1208,6 @@ local function validate_sidekick_herdr()
       if item.label == "pi-done" and not rendered:find(" · 12s · 42.5%", 1, true) then
         fail("done rows should retain their completed run time: " .. vim.inspect(rendered))
       end
-    end
-    if
-      picker_opts.win.input.keys["<c-r>"][1] ~= "sidekick_rename_session"
-      or picker_opts.win.list.keys["<c-r>"][1] ~= "sidekick_rename_session"
-    then
-      fail("cwd picker should map <c-r> to session rename in its input and list")
     end
     if
       not picker_opts.win.input.keys["<c-w>"]
@@ -1236,14 +1274,9 @@ local function validate_sidekick_herdr()
         break
       end
     end
-    local kill_input = picker_opts.win.input.keys["<c-x>"]
-    local kill_list = picker_opts.win.list.keys["<c-x>"]
-    local kill_action = type(kill_input) == "table" and kill_input[1] or kill_input
-    local kill_list_action = type(kill_list) == "table" and kill_list[1] or kill_list
+    local kill_action = "sidekick_kill_session"
     if
       not kill_item
-      or type(kill_action) ~= "string"
-      or kill_list_action ~= kill_action
       or type(picker_opts.actions[kill_action]) ~= "function"
     then
       fail("cwd picker should expose one agent-kill action from input and list")
@@ -1355,6 +1388,9 @@ local function validate_sidekick_herdr()
           vim.api.nvim_set_current_win(input_win)
         end
       end,
+      close = function(self)
+        self.closed = true
+      end,
       action = function(_, action)
         confirmed_action = action
       end,
@@ -1379,6 +1415,234 @@ local function validate_sidekick_herdr()
     end
     if type(input_changed) ~= "function" then
       fail("agent picker input should update workspace fuzzy results")
+    end
+    if picker_actions_only then
+      removed_pane_id = nil
+
+      local function run_input_action(lhs)
+        local spec = picker_opts.win.input.keys[lhs]
+        local action = type(spec) == "table" and spec[1] or spec
+        if type(action) == "function" then
+          action()
+        elseif type(action) == "string" and type(picker_opts.actions[action]) == "function" then
+          -- Snacks resolves named actions with picker:current(), which is the
+          -- local list item even while the workspace selector is active.
+          picker_opts.actions[action](fake_picker, fake_picker:current())
+        else
+          fail("missing picker input action for " .. lhs)
+        end
+      end
+
+      for _, lhs in ipairs({ "<c-r>", "<c-x>" }) do
+        local spec = picker_opts.win.input.keys[lhs]
+        if
+          type(spec) ~= "table"
+          or not vim.tbl_contains(spec.mode or {}, "n")
+          or not vim.tbl_contains(spec.mode or {}, "i")
+        then
+          fail(lhs .. " should be available from picker normal and insert modes")
+        end
+      end
+
+      local rename_response
+      local rename_prompt
+      local kill_choice = 2
+      local kill_prompt
+      local notifications = {}
+      vim.ui.input = function(opts, callback)
+        rename_prompt = opts
+        callback(rename_response)
+      end
+      vim.fn.confirm = function(prompt)
+        kill_prompt = prompt
+        return kill_choice
+      end
+      vim.notify = function(message, level)
+        notifications[#notifications + 1] = { message = message, level = level }
+      end
+
+      local toggle_selector = picker_opts.win.input.keys["<c-w>"][1]
+      toggle_selector()
+      rename_response = nil
+      rename_prompt = nil
+      rename_args = nil
+      run_input_action("<c-r>")
+      if
+        not rename_prompt
+        or rename_prompt.default ~= current_fake_item.slug
+        or rename_args
+        or fake_picker.closed
+      then
+        fail("local Ctrl-R should prompt for the selected local session and cancel without mutation")
+      end
+      kill_prompt = nil
+      closed_panes = {}
+      run_input_action("<c-x>")
+      if
+        not kill_prompt
+        or not kill_prompt:find(current_fake_item.label, 1, true)
+        or #closed_panes ~= 0
+        or fake_picker.closed
+      then
+        fail("local Ctrl-X should confirm the selected local session and cancel without mutation")
+      end
+      toggle_selector()
+
+      input_pattern = "pother"
+      input_changed()
+      global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
+      if
+        global_lines[1] ~= "▾ Workspace Two · ● 0"
+        or global_lines[2] ~= "  └─ · pi-other-workspace · 42.5%"
+        or vim.api.nvim_win_get_cursor(global_win.win)[1] ~= 2
+      then
+        fail("Ctrl-R/Ctrl-X verifier should highlight pi-other-workspace")
+      end
+
+      local target_errors = {}
+      rename_prompt = nil
+      rename_args = nil
+      run_input_action("<c-r>")
+      if not rename_prompt or rename_prompt.default ~= "other-workspace" or rename_args then
+        target_errors[#target_errors + 1] = "Ctrl-R did not target pi-other-workspace (term-6)"
+      end
+      kill_prompt = nil
+      closed_panes = {}
+      run_input_action("<c-x>")
+      if not kill_prompt or not kill_prompt:find("pi-other-workspace", 1, true) or #closed_panes ~= 0 then
+        target_errors[#target_errors + 1] = "Ctrl-X did not target pi-other-workspace (w1:p6)"
+      end
+      if #target_errors > 0 then
+        fail(table.concat(target_errors, "; "))
+      end
+
+      input_pattern = ""
+      input_changed()
+      vim.api.nvim_win_set_cursor(global_win.win, { 1, 0 })
+      rename_prompt = nil
+      kill_prompt = nil
+      run_input_action("<c-r>")
+      run_input_action("<c-x>")
+      if rename_prompt or kill_prompt then
+        fail("Ctrl-R and Ctrl-X should do nothing on a workspace heading")
+      end
+
+      input_pattern = "pother"
+      input_changed()
+      for _, response in ipairs({ "   ", "other-workspace" }) do
+        rename_response = response
+        rename_prompt = nil
+        rename_args = nil
+        run_input_action("<c-r>")
+        if not rename_prompt or rename_args or fake_picker.closed then
+          fail("Ctrl-R should leave blank and unchanged workspace labels untouched")
+        end
+      end
+
+      notifications = {}
+      rename_succeeds = false
+      rename_response = "Taken Label"
+      rename_args = nil
+      run_input_action("<c-r>")
+      if
+        not vim.deep_equal(rename_args, { "agent", "rename", "term-6", "pi-taken-label" })
+        or fake_picker.closed
+        or not notifications[1]
+        or not notifications[1].message:find("session rename failed", 1, true)
+      then
+        fail("failed Ctrl-R should report the exact workspace-session rename without refreshing")
+      end
+
+      notifications = {}
+      close_succeeds = false
+      kill_choice = 1
+      kill_prompt = nil
+      closed_panes = {}
+      run_input_action("<c-x>")
+      if
+        not kill_prompt
+        or not kill_prompt:find("pi-other-workspace", 1, true)
+        or not vim.deep_equal(closed_panes, { "w1:p6" })
+        or fake_picker.closed
+        or removed_pane_id
+        or not notifications[1]
+        or not notifications[1].message:find("session close failed", 1, true)
+      then
+        fail("failed Ctrl-X should report the exact workspace pane without removing or refreshing it")
+      end
+
+      rename_succeeds = true
+      rename_response = "Workspace Renamed"
+      rename_args = nil
+      notifications = {}
+      local rename_picker_opts = picker_opts
+      run_input_action("<c-r>")
+      if global_win:valid() then
+        global_win:close()
+      end
+      vim.wait(200, function()
+        return picker_opts ~= rename_picker_opts
+      end, 5)
+      if
+        not vim.deep_equal(rename_args, { "agent", "rename", "term-6", "pi-workspace-renamed" })
+        or picker_opts == rename_picker_opts
+        or not fake_picker.closed
+      then
+        fail("successful Ctrl-R should rename the exact workspace session and refresh the picker")
+      end
+
+      fake_picker.closed = false
+      global_win = picker_opts.layout.wins.workspace
+      global_win:show()
+      picker_opts.on_show(fake_picker)
+      input_pattern = "prenamed"
+      input_changed()
+      global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
+      if not vim.iter(global_lines):any(function(line)
+        return line:find("pi-workspace-renamed", 1, true) ~= nil
+      end) then
+        fail("successful Ctrl-R should display the renamed workspace session")
+      end
+
+      close_succeeds = true
+      kill_choice = 1
+      kill_prompt = nil
+      closed_panes = {}
+      local kill_picker_opts = picker_opts
+      run_input_action("<c-x>")
+      if global_win:valid() then
+        global_win:close()
+      end
+      vim.wait(200, function()
+        return picker_opts ~= kill_picker_opts
+      end, 5)
+      if
+        not kill_prompt
+        or not kill_prompt:find("pi-workspace-renamed", 1, true)
+        or not vim.deep_equal(closed_panes, { "w1:p6" })
+        or removed_pane_id ~= "w1:p6"
+        or not killed_item
+        or killed_item.terminal_id ~= "term-6"
+        or picker_opts == kill_picker_opts
+      then
+        fail("successful Ctrl-X should close the exact renamed workspace pane and refresh the picker")
+      end
+
+      fake_picker.closed = false
+      global_win = picker_opts.layout.wins.workspace
+      global_win:show()
+      picker_opts.on_show(fake_picker)
+      input_pattern = "prenamed"
+      input_changed()
+      global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
+      if not vim.deep_equal(global_lines, { "(no matching workspace agents)" }) then
+        fail("successful Ctrl-X should remove the killed workspace session from refreshed results")
+      end
+
+      fake_picker.closed = true
+      picker_opts.on_close(fake_picker)
+      global_win:close()
+      return
     end
     input_pattern = "notfound"
     input_changed()
@@ -2539,10 +2803,15 @@ local function validate_sidekick_herdr()
   internal.toggle_tool_session = original_toggle
   vim.ui.input = original_ui_input
   vim.fn.confirm = original_confirm
+  vim.notify = original_picker_notify
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
   if not picker_ok then
     error(picker_err, 0)
+  end
+  if picker_actions_only then
+    herdr.list_agents = original_list_agents
+    return
   end
 
   local starship = require("plugins.sidekick.starship")
@@ -4934,6 +5203,7 @@ local cases = {
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
   ["sidekick-herdr-compat"] = validate_sidekick_herdr,
+  ["sidekick-picker-actions"] = validate_sidekick_herdr,
   ["herdr-workspaces"] = validate_herdr_workspaces,
   ["sidekick-herdr-live"] = validate_sidekick_herdr_live,
   ["vault-features"] = validate_vault_features,
@@ -4945,7 +5215,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
+      .. "; expected one of: agent-keymaps, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
   )
 end
 
