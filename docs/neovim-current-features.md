@@ -242,8 +242,9 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - PR review picker includes recently merged or closed assigned PRs.
 - Opening a top-level PR (smart entry, PR list or review picker confirm, or `Octo pr edit`) creates or reopens an
   isolated Herdr worktree workspace with a local `review/<repo>-<number>` branch.
-- Refreshing an updated PR head commits local review edits and rebases them onto the new head; a conflicted rebase
-  is handed to the review agent for semantic resolution and validation, with a recovery ref preserved.
+- Refreshing an updated PR head commits local review edits, records the exact pending head plus a recovery ref, and
+  rebases onto it; the same pending head is resumable, a different head is blocked, and the refs remain until the
+  review agent finishes any semantic conflict resolution and validates the rebased tree.
 - The review workspace tab shows a fixed 60-column presentation-only wrapped Markdown PR description on the left
   and the dedicated Sidekick review agent on the right.
 - The review agent is primed with PR metadata, diff, checks, reviews, and comments and asked for a context summary

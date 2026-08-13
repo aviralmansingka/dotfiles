@@ -499,6 +499,7 @@ end
 
 local function validate_sidekick_herdr()
   local picker_actions_only = case == "sidekick-picker-actions"
+  local anchoring_only = case == "sidekick-worktree-anchor"
   load_plugin("sidekick.nvim")
 
   local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
@@ -1068,6 +1069,9 @@ local function validate_sidekick_herdr()
     or anchored[1].herdr_workspace_id ~= "w-opened"
   then
     fail("discovery should preserve the moved session identity: " .. vim.inspect(discovered))
+  end
+  if anchoring_only then
+    return
   end
 
   original_workspace_for_repository = source_herdr.workspace_for_repository
@@ -4855,10 +4859,26 @@ local function validate_octo_review_agent()
     reviews = {},
     statusCheckRollup = { { name = "test", conclusion = "SUCCESS" } },
   }
-  local changed_pr = vim.deepcopy(base_pr)
-  changed_pr.comments = { { id = "new" } }
-  if review.fingerprint(base_pr) == review.fingerprint(changed_pr) then
-    fail("new PR comments should change the unseen-activity fingerprint")
+  local fingerprint_changes = {
+    commits = function(pr)
+      pr.headRefOid = "def"
+    end,
+    checks = function(pr)
+      pr.statusCheckRollup[1].conclusion = "FAILURE"
+    end,
+    reviews = function(pr)
+      pr.reviews = { { id = "new-review" } }
+    end,
+    comments = function(pr)
+      pr.comments = { { id = "new-comment" } }
+    end,
+  }
+  for label, mutate in pairs(fingerprint_changes) do
+    local changed_pr = vim.deepcopy(base_pr)
+    mutate(changed_pr)
+    if review.fingerprint(base_pr) == review.fingerprint(changed_pr) then
+      fail("new PR " .. label .. " should change the unseen-activity fingerprint")
+    end
   end
 
   local terminal = {
@@ -4908,6 +4928,321 @@ local function validate_octo_review_agent()
   vim.api.nvim_win_set_var(sidekick_win, "sidekick_cli", { name = agent_name })
   if not review.restore(context) or vim.api.nvim_win_is_valid(sidekick_win) then
     fail("review re-entry should rebuild from a non-Sidekick window")
+  end
+
+  local function git(root, args, expected)
+    local command = { "git", "-C", root }
+    vim.list_extend(command, args)
+    local result = vim.system(command, { text = true }):wait()
+    if result.code ~= (expected or 0) then
+      fail(string.format("%s failed (%d): %s", table.concat(command, " "), result.code, result.stderr or ""))
+    end
+    return vim.trim(result.stdout or "")
+  end
+
+  local function commit(root, contents, message)
+    vim.fn.writefile(contents, root .. "/review.txt")
+    git(root, { "add", "review.txt" })
+    git(root, { "commit", "-q", "-m", message })
+    return git(root, { "rev-parse", "HEAD" })
+  end
+
+  local function repository()
+    local root = vim.fn.tempname() .. "-octo-review"
+    vim.fn.mkdir(root, "p")
+    git(root, { "init", "-q", "--initial-branch", "review" })
+    git(root, { "config", "user.name", "Octo verifier" })
+    git(root, { "config", "user.email", "octo-verifier@example.invalid" })
+    commit(root, { "base" }, "base")
+    vim.fn.writefile({ "seed" }, root .. "/local.txt")
+    git(root, { "add", "local.txt" })
+    git(root, { "commit", "-q", "--amend", "--no-edit" })
+    return root, git(root, { "rev-parse", "HEAD" })
+  end
+
+  local refresh_root, refresh_base = repository()
+  git(refresh_root, { "switch", "-q", "-c", "upstream", refresh_base })
+  local refresh_head = commit(refresh_root, { "base", "upstream addition" }, "upstream")
+  git(refresh_root, { "switch", "-q", "review" })
+  vim.fn.writefile({ "local review edit" }, refresh_root .. "/local.txt")
+  vim.fn.writefile({ "untracked review note" }, refresh_root .. "/note.txt")
+  git(refresh_root, { "update-ref", "refs/octo-review/base/owner-repo-42", refresh_base })
+  local refresh, conflict, base_ref, recovery_ref, pending_ref = review._test.sync_branch({
+    cwd = refresh_root,
+    repo = "owner/repo",
+    number = 42,
+  }, refresh_head)
+  if not refresh or conflict then
+    fail("clean PR-head advance should require validation without reporting a conflict")
+  end
+  if git(refresh_root, { "rev-parse", base_ref }) ~= refresh_base then
+    fail("clean refresh must not advance the accepted base before validation")
+  end
+  if git(refresh_root, { "rev-parse", pending_ref }) ~= refresh_head then
+    fail("clean refresh should record the exact pending PR head")
+  end
+  local recovery_head = git(refresh_root, { "rev-parse", recovery_ref })
+  if
+    git(refresh_root, { "show", recovery_head .. ":local.txt" }) ~= "local review edit"
+    or git(refresh_root, { "show", recovery_head .. ":note.txt" }) ~= "untracked review note"
+  then
+    fail("refresh should commit tracked and untracked local review edits before rebasing")
+  end
+  local refresh_context = { cwd = refresh_root, repo = "owner/repo", number = 42 }
+  if review._test.refresh_complete(refresh_context, refresh_head, base_ref, recovery_ref, pending_ref) then
+    fail("refresh must remain incomplete while its recovery ref is retained")
+  end
+  local pending_head = git(refresh_root, { "rev-parse", "HEAD" })
+  local resumed_refresh, resumed_conflict = review._test.sync_branch(refresh_context, refresh_head)
+  if not resumed_refresh or resumed_conflict or git(refresh_root, { "rev-parse", "HEAD" }) ~= pending_head then
+    fail("reopening a pending clean refresh should validate the existing rebase without replaying it")
+  end
+  git(refresh_root, { "switch", "-q", "upstream" })
+  local newer_head = commit(refresh_root, { "base", "newer upstream addition" }, "newer upstream")
+  git(refresh_root, { "switch", "-q", "review" })
+  local function blocked_refresh(head)
+    local original_notify = vim.notify
+    local notice
+    vim.notify = function(message)
+      notice = message
+    end
+    local result = review._test.sync_branch(refresh_context, head)
+    vim.notify = original_notify
+    return result, notice
+  end
+  local older_refresh, older_notice = blocked_refresh(refresh_base)
+  if older_refresh ~= nil or not (older_notice or ""):find("pending PR refresh", 1, true) then
+    fail("an older ancestor must not be mistaken for the exact pending PR head")
+  end
+  local newer_refresh, pending_notice = blocked_refresh(newer_head)
+  if newer_refresh ~= nil or not (pending_notice or ""):find("pending PR refresh", 1, true) then
+    fail("a newer PR head should wait until the pending refresh has been validated")
+  end
+  local refresh_prompt = review._test.prompt_text(
+    refresh_context,
+    true,
+    false,
+    refresh_head,
+    base_ref,
+    recovery_ref,
+    pending_ref
+  )
+  if
+    not refresh_prompt:find("Run relevant tests plus git diff", 1, true)
+    or not refresh_prompt:find("git update-ref " .. base_ref .. " " .. refresh_head, 1, true)
+    or not refresh_prompt:find("git update-ref -d " .. pending_ref, 1, true)
+  then
+    fail("clean refresh prompt should require validation before accepting the new PR head")
+  end
+  git(refresh_root, { "update-ref", base_ref, refresh_head })
+  git(refresh_root, { "update-ref", "-d", recovery_ref })
+  git(refresh_root, { "update-ref", "-d", pending_ref })
+  if not review._test.refresh_complete(refresh_context, refresh_head, base_ref, recovery_ref, pending_ref) then
+    fail("validated refresh should complete only after base advancement and recovery cleanup")
+  end
+  local unchanged, unchanged_conflict = review._test.sync_branch(refresh_context, refresh_head)
+  if unchanged or unchanged_conflict then
+    fail("an unchanged PR head should not enter refresh validation")
+  end
+
+  local conflict_root, conflict_base = repository()
+  commit(conflict_root, { "local" }, "local review edit")
+  git(conflict_root, { "switch", "-q", "-c", "upstream", conflict_base })
+  local conflict_head = commit(conflict_root, { "upstream" }, "upstream conflict")
+  git(conflict_root, { "switch", "-q", "review" })
+  git(conflict_root, { "update-ref", "refs/octo-review/base/owner-repo-42", conflict_base })
+  local needs_refresh, has_conflict, conflict_base_ref, conflict_recovery_ref, conflict_pending_ref =
+    review._test.sync_branch({
+      cwd = conflict_root,
+      repo = "owner/repo",
+      number = 42,
+    }, conflict_head)
+  if not needs_refresh or not has_conflict then
+    fail("conflicted PR-head advance should be handed to the review agent")
+  end
+  local resumed_conflicted_refresh, resumed_has_conflict = review._test.sync_branch({
+    cwd = conflict_root,
+    repo = "owner/repo",
+    number = 42,
+  }, conflict_head)
+  if not resumed_conflicted_refresh or not resumed_has_conflict then
+    fail("reopening a pending conflicted refresh should resume the existing rebase")
+  end
+  local conflict_prompt = review._test.prompt_text(
+    { cwd = conflict_root, repo = "owner/repo", number = 42 },
+    true,
+    true,
+    conflict_head,
+    conflict_base_ref,
+    conflict_recovery_ref,
+    conflict_pending_ref
+  )
+  if not conflict_prompt:find("Resolve every conflict semantically", 1, true) then
+    fail("conflicted refresh prompt should require semantic rebase completion")
+  end
+  git(conflict_root, { "rebase", "--abort" })
+  vim.fn.delete(refresh_root, "rf")
+  vim.fn.delete(conflict_root, "rf")
+
+  do
+    local verifier_cwd = vim.fn.getcwd(-1, 0)
+    local route_root, route_head = repository()
+    git(route_root, { "remote", "add", "origin", route_root })
+    git(route_root, { "update-ref", "refs/pull/42/head", route_head })
+    vim.g.octo_review_agent_state_path = route_root .. "/state.json"
+
+    local module_names = {
+      "plugins.octo.review_agent",
+      "plugins.sidekick.herdr",
+      "plugins.herdr.workspaces",
+      "plugins.sidekick.internal",
+      "octo",
+      "octo.utils",
+      "octo.uri",
+    }
+    local original_modules = {}
+    for _, name in ipairs(module_names) do
+      original_modules[name] = package.loaded[name]
+    end
+    local original_system = vim.system
+    local calls = { opens = {} }
+    local fake_herdr = {}
+    function fake_herdr.call(args)
+      if args[1] == "worktree" and args[2] == "list" then
+        return {
+          worktrees = {
+            {
+              branch = "review/owner-repo-42",
+              is_linked_worktree = true,
+              open_workspace_id = "w-review",
+              path = route_root,
+            },
+          },
+        }
+      end
+      if args[1] == "workspace" and args[2] == "rename" then
+        calls.rename = vim.deepcopy(args)
+        return {}
+      end
+      fail("unexpected fake Herdr call: " .. vim.inspect(args))
+    end
+    function fake_herdr.get_agent(name)
+      return name == "codex-pr-repo-42" and { name = name } or nil
+    end
+
+    package.loaded["plugins.octo.review_agent"] = nil
+    package.loaded["plugins.sidekick.herdr"] = fake_herdr
+    package.loaded["plugins.herdr.workspaces"] = {
+      focus = function(workspace_id)
+        calls.focus = workspace_id
+        vim.cmd("tcd " .. vim.fn.fnameescape(route_root))
+        return true
+      end,
+    }
+    package.loaded["plugins.sidekick.internal"] = {
+      start_named_session = function(tool, slug, cwd)
+        calls.start = { tool = tool, slug = slug, cwd = cwd }
+      end,
+    }
+    vim.system = function(command, opts, callback)
+      if command[1] == "herdr" and command[2] == "agent" and command[3] == "prompt" then
+        calls.prompt = vim.deepcopy(command)
+        local result = { code = 0, stdout = "", stderr = "" }
+        if callback then
+          callback(result)
+        end
+        return { wait = function() return result end }
+      end
+      return original_system(command, opts, callback)
+    end
+
+    local routed_review = require("plugins.octo.review_agent")
+    local route_pr = vim.deepcopy(base_pr)
+    route_pr.title = "Route verifier"
+    route_pr.body = "Review route body"
+    route_pr.author = { login = "author" }
+    route_pr.baseRefName = "main"
+    route_pr.headRefName = "feature"
+    routed_review._test.activate(route_pr, {
+      cwd = route_root,
+      root = route_root,
+      remote = "origin",
+      host = "github.com",
+      repo = "owner/repo",
+      number = 42,
+    })
+    if not vim.wait(1000, function() return calls.prompt ~= nil end, 10) then
+      fail("review route did not submit its initial context prompt")
+    end
+    local route_context = vim.api.nvim_tabpage_get_var(0, "octo_review_context")
+    if
+      calls.focus ~= "w-review"
+      or not vim.deep_equal(calls.rename, { "workspace", "rename", "w-review", "repo · #42" })
+      or not vim.deep_equal(calls.start, { tool = "codex", slug = "pr-repo-42", cwd = route_root })
+      or vim.uv.fs_realpath(vim.fn.getcwd(-1, 0)) ~= vim.uv.fs_realpath(route_root)
+      or route_context.workspace_id ~= "w-review"
+      or route_context.cwd ~= route_root
+      or not calls.prompt[5]:find("context summary of at most", 1, true)
+    then
+      fail("top-level PR route did not align workspace, tab cwd, review agent cwd, and prompt: " .. vim.inspect(calls))
+    end
+    local saved_review
+    local seen_persisted = vim.wait(1000, function()
+      local ok, saved = pcall(
+        vim.json.decode,
+        table.concat(vim.fn.readfile(vim.g.octo_review_agent_state_path), "\n")
+      )
+      saved_review = ok and saved.reviews and saved.reviews["github.com/owner/repo#42"] or nil
+      return saved_review
+        and saved_review.seen_fingerprint == saved_review.fingerprint
+        and not saved_review.unseen
+    end, 10)
+    if not seen_persisted then
+      fail("successful initial context refresh should persist the PR as seen")
+    end
+
+    local fake_octo = { load_buffer = function() calls.original_load = true end }
+    local fake_utils = { get_pull_request = function() calls.original_get = true end }
+    local fake_uri = {
+      get_repo_number_from_varargs = function() return "owner/repo", 42 end,
+      parse = function()
+        return { kind = "pull", hostname = "github.com", repo = "owner/repo", id = 42 }
+      end,
+    }
+    package.loaded["octo"] = fake_octo
+    package.loaded["octo.utils"] = fake_utils
+    package.loaded["octo.uri"] = fake_uri
+    local routed_open = routed_review.open
+    routed_review.open = function(opts)
+      calls.opens[#calls.opens + 1] = opts
+    end
+    routed_review.setup()
+    fake_utils.get_pull_request("owner/repo", 42)
+    local route_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_name(route_buf, "octo://github.com/owner/repo/pull/42")
+    fake_octo.load_buffer({ bufnr = route_buf })
+    vim.wait(1000, function() return not vim.api.nvim_buf_is_valid(route_buf) end, 10)
+    if
+      #calls.opens ~= 2
+      or calls.opens[1].repo ~= "owner/repo"
+      or calls.opens[1].number ~= 42
+      or calls.opens[2].host ~= "github.com"
+      or calls.opens[2].repo ~= "owner/repo"
+      or calls.opens[2].number ~= 42
+      or calls.original_get
+      or calls.original_load
+    then
+      fail("Octo PR command and URI routes should both enter the review-agent flow: " .. vim.inspect(calls.opens))
+    end
+    routed_review.open = routed_open
+
+    vim.system = original_system
+    for _, name in ipairs(module_names) do
+      package.loaded[name] = original_modules[name]
+    end
+    vim.g.octo_review_agent_state_path = nil
+    vim.cmd("tcd " .. vim.fn.fnameescape(verifier_cwd))
+    vim.fn.delete(route_root, "rf")
   end
 
   local original_internal = package.loaded["plugins.sidekick.internal"]
@@ -4966,6 +5301,7 @@ local cases = {
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
   ["sidekick-herdr-compat"] = validate_sidekick_herdr,
+  ["sidekick-worktree-anchor"] = validate_sidekick_herdr,
   ["sidekick-picker-actions"] = validate_sidekick_herdr,
   ["herdr-workspaces"] = validate_herdr_workspaces,
   ["sidekick-herdr-live"] = validate_sidekick_herdr_live,
@@ -4978,7 +5314,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, octo-review-agent, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
+      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, octo-review-agent, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-worktree-anchor, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
   )
 end
 

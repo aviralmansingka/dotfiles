@@ -235,11 +235,8 @@ function M.start_named_session(tool, label, cwd)
   local name = tool .. "-" .. slug
   local config = require("sidekick.config")
   local command = M.tool_command_for_named_session(tool, slug)
-  local workspace_ok, workspace_id = pcall(
-    vim.api.nvim_tabpage_get_var,
-    vim.api.nvim_get_current_tabpage(),
-    "herdr_workspace_id"
-  )
+  local workspace_ok, workspace_id =
+    pcall(vim.api.nvim_tabpage_get_var, vim.api.nvim_get_current_tabpage(), "herdr_workspace_id")
   local extra = {
     env = { [M.named_env_var] = slug },
     herdr_workspace_id = workspace_ok and type(workspace_id) == "string" and workspace_id or nil,

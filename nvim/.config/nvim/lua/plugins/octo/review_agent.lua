@@ -2,8 +2,12 @@ local herdr = require("plugins.sidekick.herdr")
 
 local M = {}
 
-local state_path = vim.fn.stdpath("state") .. "/octo-review-agents.json"
+local default_state_path = vim.fn.stdpath("state") .. "/octo-review-agents.json"
 local context_var = "octo_review_context"
+
+local function state_path()
+  return vim.g.octo_review_agent_state_path or default_state_path
+end
 
 local function notify(message, level)
   vim.notify("Octo review: " .. message, level or vim.log.levels.ERROR)
@@ -46,10 +50,11 @@ local function set_tab_context(tab, context)
 end
 
 local function load_state()
-  if vim.fn.filereadable(state_path) ~= 1 then
+  local path = state_path()
+  if vim.fn.filereadable(path) ~= 1 then
     return { reviews = {} }
   end
-  local ok, decoded = pcall(vim.json.decode, table.concat(vim.fn.readfile(state_path), "\n"))
+  local ok, decoded = pcall(vim.json.decode, table.concat(vim.fn.readfile(path), "\n"))
   if not ok or type(decoded) ~= "table" then
     return { reviews = {} }
   end
@@ -58,12 +63,13 @@ local function load_state()
 end
 
 local function save_state(state)
-  vim.fn.mkdir(vim.fn.fnamemodify(state_path, ":h"), "p")
-  local temporary = state_path .. ".tmp"
+  local path = state_path()
+  vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
+  local temporary = path .. ".tmp"
   if vim.fn.writefile({ vim.json.encode(state) }, temporary) ~= 0 then
     return false
   end
-  return vim.uv.fs_rename(temporary, state_path) ~= nil
+  return vim.uv.fs_rename(temporary, path) ~= nil
 end
 
 local function review_key(host, repo, number)
@@ -340,16 +346,37 @@ local function resolve_repository(cwd, host, repo)
   end
 end
 
-local function has_rebase(cwd)
+local function git_directory(cwd)
   local git_dir = trim(git(cwd, { "rev-parse", "--git-dir" }).stdout)
   if git_dir == "" then
-    return false
+    return nil
   end
   if not vim.startswith(git_dir, "/") then
     git_dir = vim.fs.joinpath(cwd, git_dir)
   end
+  return git_dir
+end
+
+local function has_rebase(cwd)
+  local git_dir = git_directory(cwd)
+  if not git_dir then
+    return false
+  end
   return vim.fn.isdirectory(vim.fs.joinpath(git_dir, "rebase-merge")) == 1
     or vim.fn.isdirectory(vim.fs.joinpath(git_dir, "rebase-apply")) == 1
+end
+
+local function rebase_target(cwd)
+  local git_dir = git_directory(cwd)
+  if not git_dir then
+    return nil
+  end
+  for _, path in ipairs({ "rebase-merge/onto", "rebase-apply/onto" }) do
+    local target = vim.fs.joinpath(git_dir, path)
+    if vim.fn.filereadable(target) == 1 then
+      return trim(table.concat(vim.fn.readfile(target), "\n"))
+    end
+  end
 end
 
 local function preserve_local_changes(cwd)
@@ -368,8 +395,24 @@ local function sync_branch(context, new_head)
   local slug = ref_slug(context.repo, context.number)
   local base_ref = "refs/octo-review/base/" .. slug
   local recovery_ref = "refs/octo-review/recovery/" .. slug
-  if has_rebase(cwd) then
-    return true, base_ref, recovery_ref
+  local pending_ref = "refs/octo-review/pending/" .. slug
+  local rebasing = has_rebase(cwd)
+  local recovery = git(cwd, { "rev-parse", "--verify", recovery_ref })
+  local pending = git(cwd, { "rev-parse", "--verify", pending_ref })
+  if recovery.code == 0 or pending.code == 0 then
+    local pending_head = trim(pending.stdout)
+    local target = rebasing and rebase_target(cwd) or nil
+    local same_refresh = pending_head == new_head and (not rebasing or target == new_head)
+      or pending_head == "" and target == new_head
+    if not same_refresh then
+      notify("finish validating the pending PR refresh before applying a different PR head", vim.log.levels.WARN)
+      return nil
+    end
+    return true, rebasing, base_ref, recovery_ref, pending_ref
+  end
+  if rebasing then
+    notify("the review branch already has an unrelated rebase in progress", vim.log.levels.WARN)
+    return nil
   end
   if not preserve_local_changes(cwd) then
     notify("could not commit local changes before refreshing the PR")
@@ -377,24 +420,34 @@ local function sync_branch(context, new_head)
   end
   local old_head = trim(git(cwd, { "rev-parse", "--verify", base_ref }).stdout)
   if old_head == "" then
-    git(cwd, { "update-ref", base_ref, new_head })
-    return false, base_ref, recovery_ref
+    if git(cwd, { "update-ref", base_ref, new_head }).code ~= 0 then
+      notify("could not record the initial PR head")
+      return nil
+    end
+    return false, false, base_ref, recovery_ref, pending_ref
   end
   if old_head == new_head then
-    return false, base_ref, recovery_ref
+    return false, false, base_ref, recovery_ref, pending_ref
   end
   local current = trim(git(cwd, { "rev-parse", "HEAD" }).stdout)
+  if git(cwd, { "update-ref", pending_ref, new_head }).code ~= 0 then
+    notify("could not record the pending PR head before rebase")
+    return nil
+  end
   if git(cwd, { "update-ref", recovery_ref, current }).code ~= 0 then
+    git(cwd, { "update-ref", "-d", pending_ref })
     notify("could not create the recovery ref before rebase")
     return nil
   end
   local rebased = git(cwd, { "-c", "core.editor=true", "rebase", "--onto", new_head, old_head })
-  if rebased.code ~= 0 then
-    return true, base_ref, recovery_ref
-  end
-  git(cwd, { "update-ref", base_ref, new_head })
-  git(cwd, { "update-ref", "-d", recovery_ref })
-  return false, base_ref, recovery_ref
+  return true, rebased.code ~= 0, base_ref, recovery_ref, pending_ref
+end
+
+local function refresh_complete(context, head, base_ref, recovery_ref, pending_ref)
+  local base = git(context.cwd, { "rev-parse", "--verify", base_ref })
+  local recovery = git(context.cwd, { "rev-parse", "--verify", recovery_ref })
+  local pending = git(context.cwd, { "rev-parse", "--verify", pending_ref })
+  return not has_rebase(context.cwd) and trim(base.stdout) == head and recovery.code ~= 0 and pending.code ~= 0
 end
 
 local function ensure_scope(root, remote, context)
@@ -441,35 +494,47 @@ local function ensure_scope(root, remote, context)
     notify("could not create or reopen the PR worktree workspace")
     return nil
   end
+  if not herdr.call({ "workspace", "rename", workspace_id, context.label }) then
+    notify("could not update the PR workspace label")
+    return nil
+  end
   context.cwd = found.path
   context.branch = branch
   context.workspace_id = workspace_id
-  local conflict, base_ref, recovery_ref = sync_branch(context, head)
-  if conflict == nil then
+  local refresh, conflict, base_ref, recovery_ref, pending_ref = sync_branch(context, head)
+  if refresh == nil then
     return nil
   end
-  return context, conflict, head, base_ref, recovery_ref
+  return context, refresh, conflict, head, base_ref, recovery_ref, pending_ref
 end
 
-local function prompt_text(context, conflict, head, base_ref, recovery_ref)
-  local conflict_instructions = ""
+local function prompt_text(context, refresh, conflict, head, base_ref, recovery_ref, pending_ref)
+  local refresh_instructions = ""
   local mutation_instructions = [[This first pass is read-only: do not edit files, post comments, push,
 approve, merge, or otherwise mutate GitHub unless the user explicitly asks.]]
-  if conflict then
-    conflict_instructions = string.format(
+  if refresh then
+    local conflict_step = conflict
+        and [[Resolve every conflict semantically, stage the resolutions, and finish the rebase with
+GIT_EDITOR=true git rebase --continue. ]]
+      or ""
+    refresh_instructions = string.format(
       [[
 
-A git rebase is currently conflicted. Resolve every conflict semantically, stage the resolutions,
-and finish the rebase yourself with GIT_EDITOR=true git rebase --continue. Run relevant tests plus
-git diff --check. Only after they pass, run:
+The PR head changed and the local review branch was rebased. %sRun relevant tests plus git diff
+--check against the rebased tree. Only after the rebase is complete and every validation passes, run:
   git update-ref %s %s
   git update-ref -d %s
-If resolution or validation fails, leave the recovery ref intact and explain the blocker.]],
+  git update-ref -d %s
+If the rebase, resolution, or validation fails, leave the recovery and pending refs intact and explain
+the blocker.]],
+      conflict_step,
       base_ref,
       head,
-      recovery_ref
+      recovery_ref,
+      pending_ref
     )
-    mutation_instructions = [[Apart from the required conflict resolution, do not make unrelated edits,
+    mutation_instructions =
+      [[Apart from the required rebase validation and conflict resolution, do not make unrelated edits,
 post comments, push, approve, merge, or otherwise mutate GitHub unless the user explicitly asks.]]
   end
   return string.format(
@@ -493,7 +558,7 @@ summary, wait for instructions. %s%s]],
     context.number,
     context.repo,
     mutation_instructions,
-    conflict_instructions
+    refresh_instructions
   )
 end
 
@@ -512,12 +577,12 @@ local function mark_seen(key, fingerprint, tab)
   end
 end
 
-local function start_agent(context, conflict, head, base_ref, recovery_ref)
+local function start_agent(context, refresh, conflict, head, base_ref, recovery_ref, pending_ref)
   local internal = require("plugins.sidekick.internal")
   local slug = context.agent_name:sub(#"codex-" + 1)
   internal.start_named_session("codex", slug, context.cwd)
   local tab = vim.api.nvim_get_current_tabpage()
-  local prompt = prompt_text(context, conflict, head, base_ref, recovery_ref)
+  local prompt = prompt_text(context, refresh, conflict, head, base_ref, recovery_ref, pending_ref)
   local function submit(remaining)
     if not herdr.get_agent(context.agent_name) then
       if remaining > 0 then
@@ -534,10 +599,8 @@ local function start_agent(context, conflict, head, base_ref, recovery_ref)
       { text = true },
       vim.schedule_wrap(function(result)
         local refreshed = result.code == 0
-        if refreshed and conflict then
-          local base = git(context.cwd, { "rev-parse", "--verify", base_ref })
-          local recovery = git(context.cwd, { "rev-parse", "--verify", recovery_ref })
-          refreshed = not has_rebase(context.cwd) and trim(base.stdout) == head and recovery.code ~= 0
+        if refreshed and refresh then
+          refreshed = refresh_complete(context, head, base_ref, recovery_ref, pending_ref)
         end
         if refreshed then
           mark_seen(context.key, context.fingerprint, tab)
@@ -554,7 +617,10 @@ local function activate(pr, opts)
   local host = opts.host or "github.com"
   local repo = opts.repo
   local number = tonumber(opts.number)
-  local root, remote = resolve_repository(opts.cwd, host, repo)
+  local root, remote = opts.root, opts.remote
+  if not root then
+    root, remote = resolve_repository(opts.cwd, host, repo)
+  end
   if not root then
     notify(string.format("no local clone for %s/%s; open the PR from a matching checkout", host, repo))
     return
@@ -583,7 +649,7 @@ local function activate(pr, opts)
     agent_name = M.agent_name(repo, number),
   }
 
-  local scoped, conflict, head, base_ref, recovery_ref = ensure_scope(root, remote, context)
+  local scoped, refresh, conflict, head, base_ref, recovery_ref, pending_ref = ensure_scope(root, remote, context)
   if not scoped then
     return
   end
@@ -597,7 +663,7 @@ local function activate(pr, opts)
   local tab = vim.api.nvim_get_current_tabpage()
   set_tab_context(tab, scoped)
   M.restore(scoped)
-  start_agent(scoped, conflict, head, base_ref, recovery_ref)
+  start_agent(scoped, refresh, conflict, head, base_ref, recovery_ref, pending_ref)
 end
 
 function M.open(opts)
@@ -705,5 +771,12 @@ function M.setup()
     return original_load_buffer(opts)
   end
 end
+
+M._test = {
+  activate = activate,
+  prompt_text = prompt_text,
+  refresh_complete = refresh_complete,
+  sync_branch = sync_branch,
+}
 
 return M

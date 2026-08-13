@@ -12,7 +12,9 @@ end
 ---@param cb fun(prs: table[])
 local function gh_search(flags, cb)
   local cmd = { "gh", "search", "prs" }
-  for _, f in ipairs(flags) do table.insert(cmd, f) end
+  for _, f in ipairs(flags) do
+    table.insert(cmd, f)
+  end
   table.insert(cmd, "--json")
   table.insert(cmd, JSON_FIELDS)
   table.insert(cmd, "--limit")
@@ -20,8 +22,10 @@ local function gh_search(flags, cb)
   vim.system(cmd, { text = true }, function(out)
     if out.code ~= 0 then
       vim.schedule(function()
-        vim.notify("pr_review_picker: gh search failed (" .. table.concat(flags, " ") ..
-          "): " .. (out.stderr or ""), vim.log.levels.ERROR)
+        vim.notify(
+          "pr_review_picker: gh search failed (" .. table.concat(flags, " ") .. "): " .. (out.stderr or ""),
+          vim.log.levels.ERROR
+        )
       end)
       return cb({})
     end
@@ -51,8 +55,8 @@ local function to_item(pr, reason)
 end
 
 local REASON_LABEL = {
-  ["review"]          = "review-requested",
-  ["assigned"]        = "assigned (open)",
+  ["review"] = "review-requested",
+  ["assigned"] = "assigned (open)",
   ["assigned-merged"] = "assigned (merged)",
 }
 
@@ -104,7 +108,9 @@ local function show(items)
     end,
     confirm = function(picker, item)
       picker:close()
-      if not item then return end
+      if not item then
+        return
+      end
       require("plugins.octo.review_agent").open({ repo = item.repo, number = item.number })
     end,
     win = {
@@ -127,8 +133,8 @@ end
 function M.open()
   local since = iso_days_ago(RECENT_DAYS)
   local queries = {
-    { reason = "review",          flags = { "--review-requested=@me", "--state=open" } },
-    { reason = "assigned",        flags = { "--assignee=@me", "--state=open" } },
+    { reason = "review", flags = { "--review-requested=@me", "--state=open" } },
+    { reason = "assigned", flags = { "--assignee=@me", "--state=open" } },
     { reason = "assigned-merged", flags = { "--assignee=@me", "--merged", "--merged-at=>=" .. since } },
   }
 
@@ -137,7 +143,9 @@ function M.open()
 
   local function done()
     pending = pending - 1
-    if pending > 0 then return end
+    if pending > 0 then
+      return
+    end
     vim.schedule(function()
       if #items == 0 then
         vim.notify("pr_review_picker: nothing to show", vim.log.levels.INFO)

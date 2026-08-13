@@ -16,7 +16,7 @@ local function html_to_markdown(text)
   text = text:gsub('<a[^>]-href="([^"]*)"[^>]*>(.-)</a>', "[%2](%1)")
 
   -- Standalone images: <img alt="text" ...>
-  text = text:gsub('<img[^>]-alt="([^"]*)"[^>]*/?>',"%1")
+  text = text:gsub('<img[^>]-alt="([^"]*)"[^>]*/?>', "%1")
 
   -- Bold
   text = text:gsub("<strong>(.-)</strong>", "**%1**")
@@ -42,7 +42,24 @@ local function html_to_markdown(text)
   text = text:gsub("<summary>(.-)</summary>", "**%1**")
 
   -- Strip container tags but keep content
-  for _, tag in ipairs({ "details", "div", "span", "table", "thead", "tbody", "tr", "t" .. "d", "th", "ul", "ol", "li", "section", "nav", "header", "footer" }) do
+  for _, tag in ipairs({
+    "details",
+    "div",
+    "span",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "t" .. "d",
+    "th",
+    "ul",
+    "ol",
+    "li",
+    "section",
+    "nav",
+    "header",
+    "footer",
+  }) do
     text = text:gsub("<" .. tag .. "[^>]*>", "")
     text = text:gsub("</" .. tag .. ">", "")
   end
@@ -206,24 +223,76 @@ return {
     { "<leader>gr", false },
     { "<leader>gS", false },
     -- <leader>O Octo namespace
-    { "<leader>O",  "",                                                                 desc = "+octo" },
-    { "<leader>OO", smart_entry,                                                        desc = "Smart entry (review/list)" },
-    { "<leader>Op", "<cmd>Octo pr list<CR>",                                            desc = "PR list" },
-    { "<leader>OP", "<cmd>Octo pr search<CR>",                                          desc = "PR search" },
-    { "<leader>Om", "<cmd>Octo pr search author:@me state:open<CR>",                    desc = "My PRs" },
-    { "<leader>Or", function() require("plugins.octo.pr_review_picker").open() end,    desc = "PRs to review + assigned (incl. merged <1w)" },
-    { "<leader>OA", prompt_author,                                                      desc = "PRs by author..." },
-    { "<leader>OT", function() require("plugins.octo.threads_picker").open() end,       desc = "Threads picker" },
-    { "<leader>Oc", "<cmd>Octo pr checkout<CR>",                                        desc = "Checkout PR" },
-    { "<leader>OC", "<cmd>Octo pr create<CR>",                                          desc = "Create PR from current branch" },
-    { "<leader>Ob", open_browser_and_copy,                                              desc = "Open PR in browser + copy URL" },
+    { "<leader>O", "", desc = "+octo" },
+    {
+      "<leader>OO",
+      smart_entry,
+      desc = "Smart entry (review/list)",
+    },
+    { "<leader>Op", "<cmd>Octo pr list<CR>", desc = "PR list" },
+    { "<leader>OP", "<cmd>Octo pr search<CR>", desc = "PR search" },
+    { "<leader>Om", "<cmd>Octo pr search author:@me state:open<CR>", desc = "My PRs" },
+    {
+      "<leader>Or",
+      function()
+        require("plugins.octo.pr_review_picker").open()
+      end,
+      desc = "PRs to review + assigned (incl. merged <1w)",
+    },
+    { "<leader>OA", prompt_author, desc = "PRs by author..." },
+    {
+      "<leader>OT",
+      function()
+        require("plugins.octo.threads_picker").open()
+      end,
+      desc = "Threads picker",
+    },
+    { "<leader>Oc", "<cmd>Octo pr checkout<CR>", desc = "Checkout PR" },
+    {
+      "<leader>OC",
+      "<cmd>Octo pr create<CR>",
+      desc = "Create PR from current branch",
+    },
+    {
+      "<leader>Ob",
+      open_browser_and_copy,
+      desc = "Open PR in browser + copy URL",
+    },
     -- Collapse review's two-pane split into the right buffer + gitsigns gutter
     { "<localleader>u", unify_review_view, desc = "unify review view (drop left, gitsigns the right)" },
     -- Comment-prefix templates (active when inside a review session; no-op otherwise)
-    { "<localleader>cn", function() require("plugins.octo.comment_templates").compose("nit") end, mode = { "n", "x" }, desc = "nit comment" },
-    { "<localleader>cq", function() require("plugins.octo.comment_templates").compose("q")   end, mode = { "n", "x" }, desc = "question comment" },
-    { "<localleader>cb", function() require("plugins.octo.comment_templates").compose("b")   end, mode = { "n", "x" }, desc = "blocker comment" },
-    { "<localleader>c+", function() require("plugins.octo.comment_templates").compose("+")   end, mode = { "n", "x" }, desc = "praise comment" },
+    {
+      "<localleader>cn",
+      function()
+        require("plugins.octo.comment_templates").compose("nit")
+      end,
+      mode = { "n", "x" },
+      desc = "nit comment",
+    },
+    {
+      "<localleader>cq",
+      function()
+        require("plugins.octo.comment_templates").compose("q")
+      end,
+      mode = { "n", "x" },
+      desc = "question comment",
+    },
+    {
+      "<localleader>cb",
+      function()
+        require("plugins.octo.comment_templates").compose("b")
+      end,
+      mode = { "n", "x" },
+      desc = "blocker comment",
+    },
+    {
+      "<localleader>c+",
+      function()
+        require("plugins.octo.comment_templates").compose("+")
+      end,
+      mode = { "n", "x" },
+      desc = "praise comment",
+    },
   },
   opts = {
     -- Disable Projects v2 fields in PR/issue queries; the gh token does not
