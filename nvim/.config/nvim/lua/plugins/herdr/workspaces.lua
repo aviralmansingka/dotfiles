@@ -263,6 +263,29 @@ function M.focus(workspace_id)
   return true
 end
 
+function M.agent_closed(workspace_id)
+  if not workspace_id then
+    return
+  end
+
+  close_tab(workspace_id)
+  local result, err = herdr.call({ "agent", "list" }, true)
+  if not result or type(result.agents) ~= "table" then
+    command_error("agent list", err or "invalid response")
+    return
+  end
+  for _, agent in ipairs(result.agents) do
+    if agent.workspace_id == workspace_id then
+      return
+    end
+  end
+
+  local closed, close_err = herdr.call({ "workspace", "close", workspace_id }, true)
+  if not closed and not is_missing_error(close_err) then
+    command_error("empty workspace close", close_err)
+  end
+end
+
 local function reopen(picker, preferred_id)
   picker:close()
   vim.schedule(function()

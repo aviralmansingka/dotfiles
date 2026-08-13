@@ -45,9 +45,8 @@ function M.mark_seen(buf)
 end
 
 function M:init()
-  -- Herdr forwards the attached program's native mouse protocol. Let Pi own
-  -- transcript scrolling instead of replacing the live terminal with Sidekick's
-  -- terminal-normal scrollback buffer on the first wheel event.
+  -- Keep native PTY scrollback during the P0 rollback. Pi's custom transcript
+  -- scroller is disabled; moving history ownership to Sidekick remains P1.
   self.tool.native_scroll = true
   self.herdr_agent_name = self.herdr_agent_name or Herdr.agent_name(self.tool.name, self.cwd)
   self.mux_session = self.herdr_agent_name

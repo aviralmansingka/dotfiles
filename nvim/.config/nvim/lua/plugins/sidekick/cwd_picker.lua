@@ -1317,6 +1317,7 @@ function M.open(opts)
     end
     reopening = true
     active_picker:close()
+    require("plugins.herdr.workspaces").agent_closed(item.workspace_id)
     vim.schedule(function()
       M.open(opts)
     end)

@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidekick picker — Neovim-native prototype</title>
+<style>
+  /* gruvbox-material, medium background, MIX foreground, low UI contrast
+     (matches nvim/.config/nvim/lua/plugins/colorscheme.lua) */
+  :root{
+    --bg_dim:#1b1b1b; --bg0:#282828; --bg1:#32302f; --bg2:#32302f;
+    --bg3:#45403d; --bg4:#45403d; --bg5:#5a524c;
+    --fg0:#e2cca9; --fg1:#e2cca9;
+    --red:#f2594b; --orange:#f28534; --yellow:#e9b143; --green:#b0b846;
+    --aqua:#8bba7f; --blue:#80aa9e; --purple:#d3869b; --grey:#928374;
+    --sl1:#32302f; --sl2:#3a3735; --sl3:#504945;
+    --mono:"JetBrainsMono Nerd Font","JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg0);color:var(--fg0);
+    font-family:var(--mono);font-size:13px;line-height:1.34;overflow:hidden}
+  .screen{height:100vh;display:flex;flex-direction:column;position:relative}
+  /* ---- background buffer (normal split window) ---- */
+  .buffer{flex:1 1 auto;min-height:0;overflow:hidden;padding:8px 12px 0;white-space:pre}
+  .bufrow{display:flex;white-space:pre;line-height:1.34}
+  .bufrow .ln{color:var(--grey);flex:0 0 4ch;text-align:right;padding-right:1ch;user-select:none}
+  .bufrow .tilde{color:var(--bg4);flex:0 0 auto}
+  .bufrow .src{flex:1 1 auto;min-width:0;overflow:hidden;white-space:pre}
+  .src .kw{color:var(--red)} .src .fn{color:var(--yellow)} .src .str{color:var(--green)}
+  .src .cm{color:var(--grey);font-style:italic} .src .num{color:var(--purple)}
+  .src .br{color:var(--orange)}
+  /* ---- lualine statusline (exact hexes from plugins/lualine.lua) ---- */
+  .statusline{flex:0 0 auto;display:flex;align-items:stretch;font-size:12px;line-height:1;
+    background:var(--bg0);z-index:5;white-space:pre;height:20px}
+  .sl{display:flex;align-items:stretch;white-space:pre;width:100%}
+  .sl .mode{background:var(--green);color:var(--bg0);font-weight:700;padding:4px 10px 4px 8px}
+  .sl .mode.insert{background:var(--blue)}
+  .sl .wslab{background:var(--sl3);color:var(--yellow);padding:4px 10px 4px 10px}
+  .sl .branch{background:var(--sl3);color:var(--orange);padding:4px 10px 4px 0}
+  .sl .bseg{background:var(--sl3);color:var(--fg0);padding:4px 10px 4px 10px}
+  .sl .sep{background:var(--sl3);color:var(--sl3);padding:4px 0;width:4px}
+  .sl .spacer{flex:1 1 auto;background:var(--sl3)}
+  .sl .rpurple{background:var(--sl3);color:var(--purple);padding:4px 10px 4px 10px}
+  .sl .rorange{background:var(--sl3);color:var(--orange);padding:4px 10px 4px 0}
+  .sl .rho{background:var(--sl3);color:var(--fg0);padding:4px 10px 4px 0}
+  .sl .prot{background:var(--sl3);color:var(--grey);padding:4px 10px 4px 10px}
+  /* ---- the picker float (opaque, like a real Neovim float window) ---- */
+  .floatwrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:8;pointer-events:none}
+  .float{pointer-events:auto;display:flex;flex-direction:column;background:var(--bg0);overflow:hidden;width:min(92vw,118ch)}
+  .pane{display:flex;flex-direction:column;width:100%;background:var(--bg0)}
+  .prow{display:flex;white-space:pre;width:100%;line-height:1.34}
+  .lb,.rb{flex:0 0 1ch;color:var(--fg0)}
+  .pbody{flex:1 1 auto;min-width:0;color:var(--fg0);white-space:pre-wrap;word-break:break-word;overflow:hidden}
+  .pbody.nw{white-space:pre;overflow:hidden;text-overflow:clip}
+  .ptop,.pbot{display:flex;align-items:stretch;white-space:pre;width:100%;color:var(--fg0)}
+  .ptop .corner,.pbot .corner{flex:0 0 auto}
+  .ptop .fill,.pbot .fill{flex:1 1 auto;min-width:0;overflow:hidden;white-space:pre}
+  .ptop .title,.pbot .ftext{flex:0 0 auto;white-space:pre}
+  .pane.inactive .lb,.pane.inactive .rb,.pane.inactive .ptop,.pane.inactive .pbot{color:var(--sl3)}
+  .pane.inactive .title,.pane.inactive .footer{color:var(--sl3)}
+  .title{color:var(--fg0);font-weight:700}
+  .footer{color:var(--grey)}
+  /* highlights (gruvbox-material mix) */
+  .diag-err{color:var(--red)} .diag-warn{color:var(--yellow)} .diag-info{color:var(--blue)}
+  .cm{color:var(--grey)} .dir{color:var(--green)} .tree{color:var(--fg1)}
+  .t-codex{color:var(--aqua);font-weight:700} .t-pi{color:var(--yellow);font-weight:700}
+  .selrow{background:var(--bg1)}
+  /* preview tokens */
+  .pv-m{color:var(--fg0)} .pv-dim{color:var(--grey)} .pv-warn{color:var(--yellow)}
+  .pv-info{color:var(--blue)} .pv-ok{color:var(--green)}
+  /* input cursor */
+  .cursor-block{display:inline-block;width:1ch;background:var(--fg0);color:var(--bg0);
+    animation:blink 1.06s step-end infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  .msg{color:var(--blue);font-weight:700}
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="buffer" id="buffer"></div>
+  <div class="statusline"><div class="sl" id="slbar"></div></div>
+  <div class="floatwrap"><div class="float" id="float"></div></div>
+</div>
+<script>
+"use strict";
+/* =================================================================
+   Sidekick Herdr Picker — Neovim-native prototype (v3)
+   Faithful re-render of the real Snacks layout from
+   nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua, using the
+   EXACT gruvbox-material "mix" palette your colorscheme.lua selects.
+   Seeded with live Herdr data (herdr agent list + api snapshot).
+   ================================================================= */
+
+const SPINNER = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"];
+const tilde = p => (p==null?"":p.replace(/^\/Users\/aviral/, "~"));
+
+const RANK = {working:1, blocked:2, done:3, idle:4};
+const STATE = {
+  working: {hl:"diag-info", glyph:()=>SPINNER[Math.floor(performance.now()/80)%SPINNER.length]},
+  blocked: {hl:"diag-err",  glyph:()=>"!"},
+  done:    {hl:"diag-warn", glyph:()=>"●"},
+  idle:    {hl:"cm",        glyph:()=>"·"},
+};
+const TOOL_HL = {codex:"t-codex", pi:"t-pi"};
+const TOOL_ORDER = {codex:1, pi:2};
+
+/* ---- live-seeded agents (dotfiles cwd scope) ---- */
+const LOCAL = [
+  {name:"codex-chennai-site", tool:"codex", status:"working", label:"codex-chennai-site",
+   ws:"dotfiles", elapsed:14, context:43, transcript:[
+     ["m","⠋ Working…"],["",""],
+     ["m","• Editing ghostty/.config/ghostty/config — font family"],
+     ["dim","    └ JetBrainsMono Nerd Font · 14pt · ligatures on"],
+     ["m","• Ran rg 'chennai' docs/ — 3 hits in site index"],
+     ["dim","    └ docs/chennai-site/landing.md · schedule.md · venue.md"],
+     ["m","• Rewriting landing hero copy"],
+     ["dim","    └ applied edit; 18 lines changed"],
+     ["warn","⠋ Running scripts/verify-nvim … (still in flight)"],
+     ["",""],["dim","─ Working (14s • esc to interrupt) ─"],
+  ]},
+  {name:"pi-sidekick", tool:"pi", status:"working", label:"pi-sidekick",
+   ws:"dotfiles", elapsed:193, context:2.6, transcript:[
+     ["m","├─ ● Read design spec + live herdr data for the picker prototype."],
+     ["dim","│  └─ ● 2026-07-22-sidekick-herdr-picker-design.md · read · completed"],
+     ["dim","│  └─ ● pulled workspace list + agent list + snapshot"],
+     ["m","├─ ● Seeding prototype with 7 live agents (working→blocked→done→idle)."],
+     ["dim","│  └─ ● captured real recent-unwrapped output for 3 sessions"],
+     ["m","└─ ◉ Rebuilding the artifact — Neovim-native rendering."],
+     ["dim","   └─ ◉ writing cell-grid HTML + gruvbox material colors · running"],
+     ["",""],["warn","⠋ Working…"],
+     ["dim","─────────────────────────────────────────────────────────────"],
+     ["m","~/dotfiles (main) • sidekick"],
+     ["dim","↑27k ↓2.1k R94k CH97.9% $0.090 2.6%/1.0M · fireworks glm-5p2"],
+  ]},
+  {name:"codex-pi-ui", tool:"codex", status:"idle", label:"codex-pi-ui",
+   ws:"dotfiles", elapsed:1864, context:27, transcript:[
+     ["m","─ Worked for 31m 04s ─────────────────────────────────────────"],
+     ["",""],
+     ["m","  Reviewed the pi-coding-agent TUI component surface and drafted"],
+     ["m","  a sketch of a status-line extension. No code landed yet."],
+     ["",""],
+     ["m","  ## Suggested follow-up questions"],
+     ["m","  - \"Implement the status-line extension prototype.\""],
+     ["m","  - \"Compare against the existing Tabby tabline.\""],
+     ["",""],
+     ["m","» Find and fix a bug in @filename"],
+     ["dim","  gpt-5.6-sol ultra fast · dotfiles · main · focused"],
+  ]},
+  {name:"codex-session-cleanup", tool:"codex", status:"idle", label:"codex-session-cleanup",
+   ws:"dotfiles", elapsed:492, context:14, transcript:[
+     ["m","─ Worked for 8m 12s ──────────────────────────────────────────"],
+     ["",""],
+     ["m","  Cleaned up 3 stale sidekick sessions and removed their tmux"],
+     ["m","  panes. No dotfiles were modified."],
+     ["",""],
+     ["m","  ## Suggested follow-up questions"],
+     ["m","  - \"List remaining sidekick sessions.\""],
+     ["",""],
+     ["m","» Find and fix a bug in @filename"],
+     ["dim","  gpt-5.6-sol ultra fast · dotfiles · main"],
+  ]},
+];
+const OTHER = [
+  {name:"codex-journal", tool:"codex", status:"done", label:"codex-journal",
+   ws:"vault", wsId:"w5J", elapsed:1413, context:27, transcript:[
+     ["m","  The disposable test workspaces and branches were removed afterward."],["",""],
+     ["m","  The real SOC 2 driver remains open and focused in workspace w5M,"],
+     ["m","  on wayfinder/soc-2-readiness, with agent pi-soc2-wayfinder idle and ready."],
+     ["m","  No commits were created."],["",""],
+     ["m","  ## Suggested follow-up questions"],
+     ["m","  - \"Show me the final Wayfinder diff.\""],
+     ["m","  - \"Commit the Wayfinder skill changes safely.\""],["",""],
+     ["dim","─ Worked for 23m 33s ────────────────────────────────────"],
+  ]},
+  {name:"codex-ansi-rendering-scout", tool:"codex", status:"blocked", label:"codex-ansi-rendering-scout",
+   ws:"ansi-rendering-scout", wsId:"w5N", elapsed:null, context:null, transcript:[
+     ["dim","  └ 78f8f321509f9845e4d6bb5c124e98646b2c64ac"],
+     ["m","• Ran herdr workspace create --help"],["dim","  └ Create a workspace"],
+     ["dim","    … +15 lines (ctrl + t to view transcript)"],["",""],
+     ["m","  Would you like to run the following command?"],
+     ["m","  Thread: Agent (019ffc3d)"],["m","  Environment: local"],
+     ["dim","  Reason: Allow a read-only fetch of Herdr v0.8.0's official pane CLI"],
+     ["dim","         source to document exact `--ansi` and `--raw` semantics?"],["",""],
+     ["info","  $ gh api 'repos/ogulancelik/herdr/contents/src/cli/pane.rs?ref=v0.8.0'"],
+     ["info","      --jq .content | base64 --decode | nl -ba | sed -n '420,620p'"],["",""],
+     ["warn","› 1. Yes, proceed (y)"],
+     ["dim","  2. Yes, and don't ask again for commands that start with `gh api …` (p)"],
+     ["dim","  3. No, and tell Codex what to do differently (esc)"],["",""],
+     ["dim","  Press enter to confirm or esc to cancel or o to open thread"],
+  ]},
+  {name:"pi-soc2-wayfinder", tool:"pi", status:"idle", label:"pi-soc2-wayfinder",
+   ws:"soc2-wayfinder", wsId:"w5M", elapsed:761, context:34, transcript:[
+     ["m","  Wayfinder SOC 2 readiness — control gap analysis complete."],["",""],
+     ["m","  ├─ ● Mapped 14 SOC 2 controls to current vault evidence."],
+     ["dim","  │  └─ ● 9 satisfied · 3 partial · 2 missing"],
+     ["m","  ├─ ● Drafted gap remediation tasks (T01–T03)."],
+     ["dim","  │  └─ ● T01 evidence template · T02 control narrative · T03 monitor"],
+     ["m","  └─ ◉ Awaiting convergence review of remediation plan."],["",""],
+     ["dim","──────────────────────────────────────────────────────────"],
+     ["dim","~/.../wayfinder-soc-2-readiness (main) • wayfinder"],
+     ["dim","idle · ready for next prompt"],
+  ]},
+];
+const ALL = [...LOCAL, ...OTHER];
+
+/* ---- workspace groups (herdr workspace list order) ---- */
+const WS_ORDER = ["dotfiles","vault","soc2-wayfinder","ansi-rendering-scout"];
+function buildGroups(){
+  const map={};
+  for(const a of ALL){
+    const key=a.ws;
+    if(!map[key]) map[key]={label:a.ws, agents:[], done:0};
+    if(a.status==="done") map[key].done++;
+    map[key].agents.push(a);
+  }
+  const arr=[];
+  for(const id of WS_ORDER) if(map[id]) arr.push(map[id]);
+  for(const k of Object.keys(map).sort()) if(!arr.includes(map[k])) arr.push(map[k]);
+  for(const g of arr) g.agents.sort(cmp);
+  return arr;
+}
+function cmp(a,b){
+  return (RANK[a.status]||5)-(RANK[b.status]||5)
+    || (TOOL_ORDER[a.tool]||9)-(TOOL_ORDER[b.tool]||9)
+    || a.label.localeCompare(b.label);
+}
+
+const PREVIEW_H = 13;
+const BOTTOM_H = 11;
+const TERM_ROWS = 40;
+// Border lines are flex-based: corner glyphs are fixed 1ch spans and the `─`
+// filler stretches (overflow:hidden) to exactly the box width, so corners always
+// land on the pane edge at any width or zoom — no measurement needed.
+
+/* ---- state ---- */
+const S = {
+  ws:false,
+  filter:"",
+  agentSel:0,
+  wsSel:0,
+  collapsed:{},
+  scrolled:0,
+  msg:"", msgUntil:0,
+};
+
+/* ============================ helpers ============================ */
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function fmtElapsed(sec){
+  if(sec==null) return null;
+  sec=Math.floor(sec);
+  if(sec<60) return sec+"s";
+  const m=Math.floor(sec/60);
+  if(m<60) return (m+"m "+(sec%60)+"s").replace(/0s$/,"");
+  return Math.floor(m/60)+"h "+(m%60)+"m";
+}
+const DASHES = "─".repeat(400);
+function borderTop(title){
+  const t = title==null ? "" : `<span class="title">${esc(title)}</span>`;
+  return `<span class="corner">╭</span>${t}<span class="fill">${DASHES}</span><span class="corner">╮</span>`;
+}
+function borderBot(footer){
+  if(footer==null) return `<span class="corner">╰</span><span class="fill">${DASHES}</span><span class="corner">╯</span>`;
+  const f = `<span class="ftext">${esc(String(footer))}</span>`;
+  return `<span class="corner">╰</span><span class="fill">${DASHES}</span>${f}<span class="fill">${DASHES}</span><span class="corner">╯</span>`;
+}
+function workspaceRows(){
+  const rows=[];
+  GROUPS.forEach((g,gi)=>{
+    rows.push({kind:"group", gi, g});
+    if(!S.collapsed[gi]){
+      g.agents.forEach((a,ai)=> rows.push({kind:"agent", gi, ai, a, g}));
+    }
+  });
+  return rows;
+}
+function selectedAgent(){
+  if(!S.ws) return LOCAL[Math.min(S.agentSel, LOCAL.length-1)];
+  const rows=workspaceRows();
+  const r=rows[Math.min(S.wsSel, rows.length-1)];
+  if(!r) return LOCAL[0];
+  if(r.kind==="agent") return r.a;
+  return r.g.agents[0];
+}
+
+/* ============================ rendering ============================ */
+const $buf=document.getElementById("buffer");
+const $float=document.getElementById("float");
+const $slbar=document.getElementById("slbar");
+
+/* ---- background buffer: authentic excerpt + line numbers + ~ filler ---- */
+const SRC=[
+[["cm","-- nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua"],],
+[["cm","-- Cwd-scoped peek picker for sidekick named sessions. Bound to <c-.>."],],
+[["kw","local "],["br","status_rank"],["br"," = "],["br","{"],["kw","working"],["br"," = "],["num","1"],["br",", "],["kw","blocked"],["br"," = "],["num","2"],["br",", "],["kw","done"],["br"," = "],["num","3"],["br",", "],["kw","idle"],["br"," = "],["num","4"],["br","}"],],
+[[""],],
+[["kw","local "],["br","status_display"],["br"," = "],["br","{"],],
+[["   "],["kw","blocked"],["br"," = "],["br","{"],["str","'!'"],["br",", "],["str","'DiagnosticError'"],["br","}"],],
+[["   "],["kw","done"],["br"," = "],["br","{"],["str","'●'"],["br",", "],["str","'DiagnosticWarn'"],["br","}"],],
+[["   "],["kw","working"],["br"," = "],["br","{"],["str","'›'"],["br",", "],["str","'DiagnosticInfo'"],["br","}"],],
+[["   "],["kw","idle"],["br"," = "],["br","{"],["str","'·'"],["br",", "],["str","'Comment'"],["br","}"],],
+[["br","}"],],
+[[""],],
+[["kw","local "],["br","M"],["br"," = "],["br","{"],["br","}"],],
+[[""],],
+[["kw","local "],["kw","function "],["br","M"],["br","."],["br","open"],["br","("],["br","opts"],["br",")"],],
+[["  "],["kw","local "],["br","items"],["br"," = "],["br","M"],["br","."],["br","list_items"],["br","("],["br","metric_cache"],["br",")"],],
+[["  "],["br","table"],["br","."],["br","sort"],["br","("],["br","items"],["br",", "],["br","compare_items"],["br",")"],],
+[["  "],["kw","local "],["br","layout"],["br"," = "],["br","{"],],
+[["    "],["br","box"],["br"," = "],["str","'vertical'"],],
+[["    "],["br","{"],["br","win"],["br"," = "],["str","'preview'"],["br",", "],["br","title"],["br"," = "],["str","' Preview '"],["br","}"],],
+[["    "],["br","{"],["br","win"],["br"," = "],["str","'input'"],["br",", "],["br","height"],["br"," = "],["num","1"],["br","}"],],
+[["    "],["br","{"],["br","box"],["br"," = "],["str","'horizontal'"],["br","}"],],
+[["  "],["br","}"],],
+[["br","}"],],
+[[""],],
+[["kw","return "],["br","M"],]
+];
+function renderBuffer(){
+  const rows=[];
+  for(let i=0;i<TERM_ROWS;i++){
+    const toks=SRC[i]||null;
+    const n=(i+1).toString().padStart(3," ");
+    if(!toks){
+      rows.push(`<div class="bufrow"><span class="ln">${n}</span><span class="tilde">~</span></div>`);
+      continue;
+    }
+    if(toks.length===0 || (toks.length===1 && toks[0][0]==="" && toks[0][1]==="")){
+      rows.push(`<div class="bufrow"><span class="ln">${n}</span></div>`);
+      continue;
+    }
+    const spans=toks.map(t=>{
+      if(!t) return "";
+      if(t[0]==="") return esc(t[1]==null?"":t[1]);
+      return `<span class="${t[0]}">${esc(t[1])}</span>`;
+    }).join("");
+    rows.push(`<div class="bufrow"><span class="ln">${n}</span><span class="src">${spans}</span></div>`);
+  }
+  $buf.innerHTML=rows.join("");
+}
+
+/* ---- lualine (exact hexes from plugins/lualine.lua) ---- */
+function renderStatus(){
+  $slbar.innerHTML =
+    `<span class="mode insert">󰏫 I</span>`+
+    `<span class="wslab">dotfiles</span>`+
+    `<span class="sep"></span>`+
+    `<span class="branch">󰊢 main</span>`+
+    `<span class="sep"></span>`+
+    `<span class="bseg">+0 ~0 -0</span>`+
+    `<span class="bseg">cwd_picker.lua</span>`+
+    `<span class="spacer"></span>`+
+    `<span class="rpurple">lua</span>`+
+    `<span class="rorange">42%</span>`+
+    `<span class="rho">12:1</span>`+
+    `<span class="prot">⟐ prototype</span>`;
+}
+
+/* ---- row builders ---- */
+function metricsHtml(a){
+  let h="";
+  const e=fmtElapsed(a.elapsed);
+  if(e) h+=`<span class="cm"> · ${esc(e)}</span>`;
+  h+=`<span class="cm"> · ${esc(a.context==null?"?":a.context+"%")}</span>`;
+  return h;
+}
+function symbol(a){ const s=STATE[a.status]; return `<span class="${s.hl}">${esc(s.glyph())} </span>`; }
+function label(a){ return `<span class="${TOOL_HL[a.tool]||"hl"}">${esc(a.label)}</span>`; }
+
+/* ---- float ---- */
+function renderFloat(){
+  const rows=workspaceRows();
+
+  /* preview */
+  const a=selectedAgent();
+  let pv = a ? [...a.transcript] : [["dim","(no matching session)"],["",""]];
+  const pvPage=pv.slice(S.scrolled, S.scrolled+PREVIEW_H);
+  while(pvPage.length<PREVIEW_H) pvPage.push(["",""]);
+  const pvRows=pvPage.map(l=>{
+    const cls=l[0]?("pv-"+l[0]):"";
+    const txt=l[1]==null?"":l[1];
+    const inner=cls?`<span class="${cls}">${esc(txt)}</span>`:esc(txt);
+    return `<div class="prow"><span class="lb">│</span><span class="pbody">${inner}${""}</span><span class="rb">│</span></div>`;
+  }).join("");
+  const preview=
+    `<div class="pane preview"><div class="ptop">${borderTop(" Preview ")}</div>`+pvRows+
+    `<div class="pbot">${borderBot(null)}</div></div>`;
+
+  /* input */
+  const prompt="❯ ";
+  const txt=S.filter;
+  const cursor=`<span class="cursor-block"> </span>`;
+  const hasMsg = S.msg && performance.now()<S.msgUntil;
+  const inputBottom = hasMsg
+    ? `<span class="corner">╰</span><span class="fill">${DASHES}</span><span class="ftext msg"> ${esc(S.msg)} </span><span class="fill">${DASHES}</span><span class="corner">╯</span>`
+    : borderBot(null);
+  const input=
+    `<div class="pane input ${S.ws?"inactive":""}"><div class="ptop">${borderTop(" Sidekick Sessions in Workspace: dotfiles ")}</div>`+
+    `<div class="prow"><span class="lb">│</span><span class="pbody nw"><span class="hl">${esc(prompt)}</span>${esc(txt)}</span>${cursor}<span class="rb">│</span></div>`+
+    `<div class="pbot">${inputBottom}</div></div>`;
+
+  /* workspaces pane */
+  const wsPanes=[];
+  for(let i=0;i<BOTTOM_H;i++){
+    const r=rows[i];
+    if(!r){ wsPanes.push(`<div class="prow"><span class="lb">│</span><span class="pbody nw">&nbsp;</span><span class="rb">│</span></div>`); continue; }
+    const on = S.ws && i===S.wsSel;
+    let line;
+    if(r.kind==="group"){
+      const collapsed=!!S.collapsed[r.gi];
+      line=`<span class="tree">${collapsed?"▸ ":"▾ "}</span><span class="dir">${esc(r.g.label)}</span>`+
+        `<span class="cm"> · </span><span class="${r.g.done>0?"diag-warn":"cm"}">● </span><span class="cm">${r.g.done}</span>`;
+    } else {
+      const last = r.ai === r.g.agents.length-1;
+      line=`<span class="tree">${last?"  └─ ":"  ├─ "}</span>${symbol(r.a)}${label(r.a)}${metricsHtml(r.a)}`;
+    }
+    wsPanes.push(`<div class="prow"><span class="lb">│</span><span class="pbody nw ${on?"selrow":""}">${line}</span><span class="rb">│</span></div>`);
+  }
+  const wsPane=
+    `<div class="pane ws ${S.ws?"":"inactive"}"><div class="ptop">${borderTop(" Workspaces ")}</div>`+
+    wsPanes.join("")+
+    `<div class="pbot">${borderBot(" <C-w> Agents · <Enter> Expand/Open ")}</div></div>`;
+
+  /* agents pane */
+  const agentPanes=[];
+  for(let i=0;i<BOTTOM_H;i++){
+    const item=LOCAL[i];
+    const on = !S.ws && i===S.agentSel;
+    if(!item){ agentPanes.push(`<div class="prow"><span class="lb">│</span><span class="pbody nw">&nbsp;</span><span class="rb">│</span></div>`); continue; }
+    agentPanes.push(`<div class="prow"><span class="lb">│</span><span class="pbody nw ${on?"selrow":""}">${symbol(item)}${label(item)}${metricsHtml(item)}</span><span class="rb">│</span></div>`);
+  }
+  const listPane=
+    `<div class="pane list ${S.ws?"inactive":""}"><div class="ptop">${borderTop(" Agents / Run ")}</div>`+
+    agentPanes.join("")+
+    `<div class="pbot">${borderBot(" <C-w> Workspaces ")}</div></div>`;
+
+  const bottom=`<div style="display:flex;width:100%;gap:0"><div style="flex:1;min-width:0">${wsPane}</div><div style="flex:1;min-width:0">${listPane}</div></div>`;
+  $float.innerHTML = preview + input + bottom;
+}
+
+// Flex-based borders mean resize/zoom needs no re-render or re-measure:
+// corners track the pane edge automatically. Nothing to hook here.
+
+/* ============================ interactions ============================ */
+document.addEventListener("keydown", e=>{
+  const k=e.key;
+  const ctrl=e.ctrlKey||e.metaKey;
+  if(k==="ArrowDown"||(!ctrl&&k==="j")){ e.preventDefault(); move(1); }
+  else if(k==="ArrowUp"||(!ctrl&&k==="k")){ e.preventDefault(); move(-1); }
+  else if(k==="Enter"){ e.preventDefault(); confirmSel(); }
+  else if(ctrl&&(k==="w"||k==="W")){ e.preventDefault(); S.ws=!S.ws; S.scrolled=0; S.msg=""; }
+  else if(ctrl&&(k==="u"||k==="U")){ e.preventDefault(); S.filter=""; }
+  else if(ctrl&&(k==="f"||k==="F")){ e.preventDefault(); scrollPv(1); }
+  else if(ctrl&&(k==="b"||k==="B")){ e.preventDefault(); scrollPv(-1); }
+  else if(!ctrl&&k.length===1){ S.filter=(S.filter+k).toLowerCase(); }
+  else if(k==="Backspace"){ e.preventDefault(); S.filter=S.filter.slice(0,-1); }
+});
+function move(d){
+  if(S.ws){ const rows=workspaceRows(); S.wsSel=Math.max(0,Math.min(rows.length-1,S.wsSel+d)); }
+  else S.agentSel=Math.max(0,Math.min(LOCAL.length-1,S.agentSel+d));
+}
+function scrollPv(d){
+  const a=selectedAgent();
+  const max=a?Math.max(0,(a.transcript||[]).length-PREVIEW_H):0;
+  S.scrolled=Math.max(0,Math.min(max,S.scrolled+d));
+}
+function confirmSel(){
+  const a=selectedAgent();
+  if(!a) return;
+  S.msg=`focusing ${a.label} · done→idle owned by Herdr`;
+  S.msgUntil=performance.now()+2500;
+}
+document.addEventListener("click", e=>{
+  const prow=e.target.closest(".prow");
+  if(!prow) return;
+  const pane=prow.closest(".pane");
+  if(!pane) return;
+  const idx=[...pane.querySelectorAll(".prow")].indexOf(prow);
+  if(pane.classList.contains("list")){ S.ws=false; S.agentSel=Math.max(0,Math.min(LOCAL.length-1,idx)); }
+  else if(pane.classList.contains("ws")){ S.ws=true; S.wsSel=idx; }
+});
+
+/* ============================ bootstrap ============================ */
+const GROUPS=buildGroups();
+renderBuffer();
+renderStatus();
+renderFloat();
+// In-place updates only: spinner glyphs every 100ms, one full re-render per
+// second for the elapsed tick (1 Hz is imperceptible; the 100ms path never
+// rebuilds the DOM, so the cursor blink and pane borders stay stable). Full
+// renderFloat() still runs on explicit user actions and window resize.
+const ticks = { lastSec: 0 };
+function updateDynamic(){
+  const now = performance.now();
+  if(now - ticks.lastSec >= 1000){
+    ticks.lastSec = now;
+    for(const a of ALL){ if(a.status === "working") a.elapsed++; }
+    renderFloat();
+    return;
+  }
+  // 100ms tick: swap only the spinner glyph characters
+  const spin = SPINNER[Math.floor(now/80) % SPINNER.length] + " ";
+  document.querySelectorAll('.pbody .diag-info').forEach(g=>{ g.textContent = spin; });
+}
+setInterval(updateDynamic, 100);
+</script>
+</body>
+</html>
