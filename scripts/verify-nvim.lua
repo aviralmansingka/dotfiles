@@ -998,6 +998,16 @@ local function validate_sidekick_herdr()
 
   local loaded_registry = package.loaded["plugins.sidekick.registry"]
   package.loaded["plugins.sidekick.registry"] = source_registry
+  local original_workspace_tabs = package.loaded["plugins.herdr.workspaces"]
+  local released_workspaces = {}
+  package.loaded["plugins.herdr.workspaces"] = {
+    focus = function()
+      return true
+    end,
+    agent_closed = function(workspace_id)
+      released_workspaces[#released_workspaces + 1] = workspace_id
+    end,
+  }
   local cwd_picker = dofile(source_root .. "cwd_picker.lua")
   package.loaded["plugins.sidekick.registry"] = loaded_registry
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
@@ -1304,10 +1314,11 @@ local function validate_sidekick_herdr()
       or not kill_prompt:find(kill_item.label, 1, true)
       or #closed_panes ~= 1
       or closed_panes[1] ~= kill_item.pane_id
+      or released_workspaces[1] ~= kill_item.workspace_id
       or not kill_picker_closed
       or not kill_picker_refreshed
     then
-      fail("agent kill should confirm, close the selected pane, and refresh the picker")
+      fail("agent kill should close the selected pane, release its workspace tab, and refresh the picker")
     end
 
     if type(picker_opts.on_show) ~= "function" or type(picker_opts.on_close) ~= "function" then
@@ -1609,6 +1620,7 @@ local function validate_sidekick_herdr()
       kill_prompt = nil
       closed_panes = {}
       local kill_picker_opts = picker_opts
+      local released_before = #released_workspaces
       run_input_action("<c-x>")
       if global_win:valid() then
         global_win:close()
@@ -1623,9 +1635,11 @@ local function validate_sidekick_herdr()
         or removed_pane_id ~= "w1:p6"
         or not killed_item
         or killed_item.terminal_id ~= "term-6"
+        or #released_workspaces ~= released_before + 1
+        or released_workspaces[#released_workspaces] ~= "w2"
         or picker_opts == kill_picker_opts
       then
-        fail("successful Ctrl-X should close the exact renamed workspace pane and refresh the picker")
+        fail("successful Ctrl-X should close the exact pane, release workspace w2, and refresh the picker")
       end
 
       fake_picker.closed = false
@@ -2804,6 +2818,7 @@ local function validate_sidekick_herdr()
   vim.ui.input = original_ui_input
   vim.fn.confirm = original_confirm
   vim.notify = original_picker_notify
+  package.loaded["plugins.herdr.workspaces"] = original_workspace_tabs
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
   if not picker_ok then
@@ -2901,6 +2916,9 @@ local function validate_herdr_workspaces()
     { pane_id = "p-done", workspace_id = "w-done", cwd = root },
     { pane_id = "p-unknown", workspace_id = "w-unknown", cwd = root },
   }
+  local agents = {
+    { name = "keep-idle", workspace_id = "w-idle" },
+  }
 
   local function eq(actual, expected, label)
     if not vim.deep_equal(actual, expected) then
@@ -2953,6 +2971,12 @@ local function validate_herdr_workspaces()
         return nil, "pane list failed"
       end
       return { panes = vim.deepcopy(panes) }
+    end
+    if family == "agent" and action == "list" then
+      if failures.agent_list then
+        return nil, "agent list failed"
+      end
+      return { agents = vim.deepcopy(agents) }
     end
     if family == "workspace" and action == "focus" then
       if failures.focus == args[3] then
@@ -3020,8 +3044,8 @@ local function validate_herdr_workspaces()
     if not loaded then
       fail("plugins.herdr.workspaces module missing: " .. tostring(workspace_tabs))
     end
-    if type(workspace_tabs.open) ~= "function" then
-      fail("plugins.herdr.workspaces.open missing")
+    if type(workspace_tabs.open) ~= "function" or type(workspace_tabs.agent_closed) ~= "function" then
+      fail("plugins.herdr.workspaces lifecycle API missing")
     end
 
     vim.cmd("silent! tabonly")
@@ -3473,6 +3497,31 @@ local function validate_herdr_workspaces()
       fail("Herdr query failure should show a clear error")
     end
     eq(#agent_picker_opens, after_detached_selection, "workspace query failures must not open the agent picker")
+
+    local closes_before_release = count_calls("workspace", "close")
+    workspace_tabs.agent_closed("w-idle")
+    if vim.api.nvim_tabpage_is_valid(idle_tab) then
+      fail("closing an agent should close its mapped Neovim workspace tab")
+    end
+    eq(count_calls("workspace", "close"), closes_before_release, "non-empty workspace close count")
+    local retained = open_picker()
+    item_by_id(retained, "w-idle")
+
+    vim.cmd("tabnew")
+    local empty_workspace_tab = vim.api.nvim_get_current_tabpage()
+    vim.api.nvim_tabpage_set_var(empty_workspace_tab, "herdr_workspace_id", "w-done")
+    vim.api.nvim_tabpage_set_var(empty_workspace_tab, "herdr_workspace_label", "Duplicate")
+    workspace_tabs.agent_closed("w-done")
+    if vim.api.nvim_tabpage_is_valid(empty_workspace_tab) then
+      fail("last-agent cleanup should close the mapped Neovim workspace tab")
+    end
+    eq(last_call("workspace", "close"), { "workspace", "close", "w-done" }, "empty workspace close command")
+    local pruned = open_picker()
+    for _, item in ipairs(pruned.items or {}) do
+      if item.workspace_id == "w-done" then
+        fail("empty workspace should disappear from <leader>fw")
+      end
+    end
 
     local project_spec = dofile(root .. "/nvim/.config/nvim/lua/plugins/project.lua")
     local project_config
