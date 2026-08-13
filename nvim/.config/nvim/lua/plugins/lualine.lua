@@ -87,14 +87,8 @@ return {
     })
 
     local function workspace_label()
-      local tab = vim.api.nvim_get_current_tabpage()
-      local bound = pcall(vim.api.nvim_tabpage_get_var, tab, "herdr_workspace_id")
-      if not bound then
-        return ""
-      end
-      local ok, label =
-        pcall(vim.api.nvim_tabpage_get_var, tab, "herdr_workspace_label")
-      return ok and type(label) == "string" and label or ""
+      local workspace = require("helpers.workspace").get()
+      return workspace and workspace.label or ""
     end
 
     require("lualine").setup({

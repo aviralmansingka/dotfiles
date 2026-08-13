@@ -8,8 +8,22 @@ return {
     event = "VimEnter",
     dependencies = "nvim-tree/nvim-web-devicons",
     keys = {
-      { "<S-h>", "<cmd>bprevious<cr>", desc = "Prev Buffer" },
-      { "<S-l>", "<cmd>bnext<cr>", desc = "Next Buffer" },
+      {
+        "<S-h>",
+        function()
+          require("helpers.workspace").cycle(-1)
+        end,
+        desc = "Prev Tab Buffer",
+      },
+      {
+        "<S-l>",
+        function()
+          require("helpers.workspace").cycle(1)
+        end,
+        desc = "Next Tab Buffer",
+      },
+      { "[b", "<cmd>bprevious<cr>", desc = "Prev Global Buffer" },
+      { "]b", "<cmd>bnext<cr>", desc = "Next Global Buffer" },
       {
         "<S-q>",
         function()
@@ -66,7 +80,7 @@ return {
             " ",
             line.tabs().foreach(function(tab)
               local hl = tab.is_current() and theme.current_tab or theme.tab
-              local ok, workspace_label = pcall(vim.api.nvim_tabpage_get_var, tab.id, "herdr_workspace_label")
+              local workspace = require("helpers.workspace").get(tab.id)
               return {
                 line.sep(right_sep, hl, theme.fill),
                 tab.in_jump_mode() and tab.jump_key() or {
@@ -74,7 +88,7 @@ return {
                   tab.number(),
                   margin = " ",
                 },
-                ok and workspace_label or tab.name(),
+                workspace and workspace.label or tab.name(),
                 tab.close_btn(close_icon),
                 line.sep(left_sep, hl, theme.fill),
                 hl = hl,
@@ -85,7 +99,7 @@ return {
             line
               .bufs()
               .filter(function(buf)
-                return buf.type() == ""
+                return buf.type() == "" and require("helpers.workspace").contains(buf.id)
               end)
               .foreach(function(buf)
                 local hl = buf.is_current() and theme.current_buf or theme.buf
