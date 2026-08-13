@@ -270,6 +270,10 @@ function M.setup()
     callback = function()
       local snapshot = vim.g[session_global]
       vim.g[session_global] = nil
+      if type(snapshot) == "string" then
+        local ok, decoded = pcall(vim.json.decode, snapshot)
+        snapshot = ok and decoded or nil
+      end
       M.restore(snapshot)
     end,
   })

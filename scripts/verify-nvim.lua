@@ -5526,15 +5526,70 @@ local function validate_workspace_session()
   end
   spec.opts.pre_save()
   local saved = vim.g.NvimWorkspaceTabs
-  if type(saved) ~= "table" or #saved ~= 2 or saved[2].label ~= "Scripts Tab" then
-    fail("pre_save should store the workspace snapshot: " .. vim.inspect(saved))
+  if type(saved) ~= "string" then
+    fail("pre_save should store the workspace snapshot as a string global: " .. vim.inspect(saved))
   end
-  vim.g.NvimWorkspaceTabs = nil
+  local decoded_ok, decoded = pcall(vim.json.decode, saved)
+  if not decoded_ok or type(decoded) ~= "table" or #decoded ~= 2 or decoded[2].label ~= "Scripts Tab" then
+    fail("pre_save snapshot should survive JSON encoding: " .. vim.inspect(decoded))
+  end
 
+  local session_file = vim.fn.tempname() .. ".vim"
+  local sessionoptions = vim.o.sessionoptions
+  vim.o.sessionoptions = table.concat(spec.opts.options, ",")
+  local mksession_ok = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(session_file))
+  vim.o.sessionoptions = sessionoptions
+  if not mksession_ok then
+    fail("mksession should succeed for the workspace session round trip")
+  end
+  if not table.concat(vim.fn.readfile(session_file), "\n"):find("NvimWorkspaceTabs", 1, true) then
+    fail("mksession should persist the workspace snapshot global")
+  end
+
+  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+    for _, name in ipairs({
+      "workspace_cwd",
+      "workspace_label",
+      "workspace_buffers",
+      "herdr_workspace_id",
+      "herdr_workspace_label",
+    }) do
+      pcall(vim.api.nvim_tabpage_del_var, tab, name)
+    end
+  end
   vim.api.nvim_set_current_tabpage(tab_one)
-  pcall(vim.cmd, "tabclose " .. vim.api.nvim_tabpage_get_number(tab_two))
-  pcall(vim.cmd, "bwipeout " .. buf_one)
-  pcall(vim.cmd, "bwipeout " .. buf_two)
+  vim.cmd("tabonly")
+  vim.cmd("silent! %bwipeout!")
+  if not pcall(vim.cmd, "source " .. vim.fn.fnameescape(session_file)) then
+    fail("sourcing the saved session should succeed")
+  end
+  if vim.g.NvimWorkspaceTabs ~= nil then
+    fail("SessionLoadPost should consume the restored workspace snapshot")
+  end
+
+  local round_trip_tabs = vim.api.nvim_list_tabpages()
+  if #round_trip_tabs ~= 2 then
+    fail("session source should restore both workspace tabs: " .. #round_trip_tabs)
+  end
+  local round_trip_one = workspace.get(round_trip_tabs[1])
+  local round_trip_two = workspace.get(round_trip_tabs[2])
+  if not round_trip_one or round_trip_one.cwd ~= bound_one.cwd or round_trip_one.label ~= "Root Tab" then
+    fail("first tab identity should survive a real session round trip: " .. vim.inspect(round_trip_one))
+  end
+  if not round_trip_two or round_trip_two.label ~= "Scripts Tab" or round_trip_two.herdr_workspace_id ~= "w-session" then
+    fail("second tab identity should survive a real session round trip: " .. vim.inspect(round_trip_two))
+  end
+  if not vim.tbl_contains(workspace.buffers(round_trip_tabs[2]), vim.fn.bufnr(root .. "/scripts/verify-nvim.lua")) then
+    fail("restored tab should remap its buffers after a real session round trip")
+  end
+  if vim.fn.getcwd(-1, 2) ~= bound_two.cwd then
+    fail("restored tab should re-apply its tab-local cwd after a real session round trip")
+  end
+
+  os.remove(session_file)
+  vim.api.nvim_set_current_tabpage(round_trip_tabs[1])
+  vim.cmd("tabonly")
+  vim.cmd("silent! %bwipeout!")
 end
 
 local cases = {
