@@ -218,6 +218,10 @@ local function bind_tab(workspace, reuse_empty)
     vim.cmd.redrawtabline()
   end
 
+  pcall(function()
+    require("plugins.octo.review_agent").bind_workspace(tab, workspace)
+  end)
+
   local current = vim.api.nvim_get_current_tabpage()
   if current == tab then
     focus_tab(tab)

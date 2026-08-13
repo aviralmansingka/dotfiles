@@ -81,6 +81,15 @@ return {
             line.tabs().foreach(function(tab)
               local hl = tab.is_current() and theme.current_tab or theme.tab
               local workspace = require("helpers.workspace").get(tab.id)
+              local state_ok, review_state = pcall(vim.api.nvim_tabpage_get_var, tab.id, "octo_review_state")
+              local unseen_ok, unseen = pcall(vim.api.nvim_tabpage_get_var, tab.id, "octo_review_unseen")
+              local review = state_ok and ({
+                open = { "\u{f407}", colors.green },
+                merged = { "\u{f419}", colors.purple },
+                closed = { "\u{f4dc}", colors.red },
+                draft = { "\u{f4dd}", colors.fg4 },
+              })[review_state] or nil
+              local tab_bg = tab.is_current() and colors.yellow or colors.bg1
               return {
                 line.sep(right_sep, hl, theme.fill),
                 tab.in_jump_mode() and tab.jump_key() or {
@@ -88,7 +97,9 @@ return {
                   tab.number(),
                   margin = " ",
                 },
+                review and { review[1] .. " ", hl = { fg = review[2], bg = tab_bg, style = "bold" } } or "",
                 workspace and workspace.label or tab.name(),
+                unseen_ok and unseen and { " ●", hl = { fg = colors.yellow, bg = tab_bg, style = "bold" } } or "",
                 tab.close_btn(close_icon),
                 line.sep(left_sep, hl, theme.fill),
                 hl = hl,
