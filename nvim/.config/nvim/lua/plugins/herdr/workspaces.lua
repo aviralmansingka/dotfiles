@@ -86,7 +86,10 @@ local function focus_tab(tab)
   end
   if not tab_get(tab, vars.warned) then
     local label = tab_get(tab, vars.label) or workspace_id
-    notify(string.format('could not focus "%s"%s', label, err and err ~= "" and (": " .. err) or ""), vim.log.levels.WARN)
+    notify(
+      string.format('could not focus "%s"%s', label, err and err ~= "" and (": " .. err) or ""),
+      vim.log.levels.WARN
+    )
     tab_set(tab, vars.warned, true)
   end
 end
@@ -274,8 +277,7 @@ local function create_workspace(picker)
     if label == "" then
       return
     end
-    local result, err =
-      herdr.call({ "workspace", "create", "--cwd", cwd, "--label", label, "--no-focus" }, true)
+    local result, err = herdr.call({ "workspace", "create", "--cwd", cwd, "--label", label, "--no-focus" }, true)
     local workspace_id = result and result.workspace and result.workspace.workspace_id
     if not workspace_id then
       command_error("workspace create", err or "invalid response")

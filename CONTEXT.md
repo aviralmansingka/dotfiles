@@ -111,8 +111,8 @@ The No Mistakes-owned delivery boundary after successful final verifier certific
 _Avoid_: manual protection bypass, landing without certification
 
 **Workspace Cleanup Gate**:
-The final Task Goal where Vault Hunter closes every Herdr tab in the task's Herdr Workspace and every Neovim Workspace Tab bound to it, verifies they are gone, records final task evidence, and pushes the completed vault checkpoint. Other Herdr Workspaces and Unbound Tabs remain untouched.
-_Avoid_: closing only the active feature tab, closing unrelated tabs
+The final Task Goal where Vault Hunter performs exact task-owned resource teardown in three verified layers: close and clean up every task-owned Herdr resource (the task's Herdr Workspace and its Herdr tabs), remove that workspace's Herdr Bindings from Neovim, then close the corresponding Neovim Workspace Tabs and verify all three layers are gone. This is the deliberate exception to ordinary Herdr closure, which only unbinds a tab and preserves the folder-owned Workspace Tab. Other Herdr Workspaces and Unbound Tabs remain untouched. Vault Hunter records final task evidence and pushes the completed vault checkpoint.
+_Avoid_: closing only the active feature tab, closing unrelated tabs, ordinary closure that preserves the Workspace Tab
 
 **Feature Issue**:
 A temporary decision or investigation note stored under the owning Vault Feature's `issues/` directory. A Wayfinder effort groups its `map.md` and numbered decision tickets under `issues/<effort>/`; these are Feature Issues, not implementation tasks.

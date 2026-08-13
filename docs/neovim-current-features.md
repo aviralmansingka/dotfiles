@@ -587,6 +587,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
   not affect Herdr.
 - Workspace tabs initialize from stable Herdr pane cwd and preserve later tab-local cwd/layout changes.
 - Closing a Herdr workspace from the picker unbinds its Neovim tab, which keeps its folder identity.
+- Vault Hunter's Workspace Cleanup Gate is the deliberate exception: it tears down task-owned Herdr resources, removes
+  their Herdr bindings, and closes the corresponding workspace tabs.
 - `<S-h>` and `<S-l>` cycle the current tab's buffers; `[b` and `]b` navigate global buffers.
 - `<S-q>` closes the current buffer.
 - Dashboard actions include finding files, creating a new file, restoring the last session, opening Herdr workspaces,
