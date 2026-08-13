@@ -202,6 +202,36 @@ end
 ---@param label string
 ---@param cwd? string
 function M.start_named_session(tool, label, cwd)
+  local requested_cwd = M.normalize_cwd(cwd) or vim.fn.getcwd()
+  local herdr = require("plugins.sidekick.herdr")
+  local existing, listed = herdr.agent_for_worktree(requested_cwd)
+  if listed == false then
+    vim.notify(
+      "Sidekick: could not verify whether this worktree already owns a durable session",
+      vim.log.levels.ERROR
+    )
+    return
+  end
+  if existing then
+    local target = existing.agent
+    if not (existing.name or ""):match("^sk%-") then
+      local registry = require("plugins.sidekick.registry")
+      registry.rehydrate()
+      local parsed = registry.parse_session_name(existing.name)
+      target = parsed and parsed.label or target
+    end
+    if target then
+      M.toggle_tool_session(target, true, existing.terminal_id)
+      require("plugins.sidekick.last_session").record(target)
+      vim.notify(
+        string.format("Sidekick: reusing %s for this worktree", existing.name or target),
+        vim.log.levels.INFO
+      )
+      return
+    end
+    vim.notify("Sidekick: this worktree already owns a session", vim.log.levels.WARN)
+    return
+  end
   local slug = M.normalize_label(label)
   if slug == "" then
     vim.notify("Sidekick: session label cannot be empty", vim.log.levels.WARN)

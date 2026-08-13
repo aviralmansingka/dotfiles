@@ -234,12 +234,32 @@ local function unbind(tab)
   vim.cmd.redrawtabline()
 end
 
-local function close_tab(workspace_id)
-  local tab = workspace_tab(workspace_id)
-  if not tab then
-    return
+local function close_tabs(workspace_id, cwd)
+  local wanted = cwd and herdr.normalize_cwd(cwd) or nil
+  local targets = {}
+  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+    local workspace = workspace_tabs.get(tab)
+    if
+      tab_get(tab, vars.id) == workspace_id
+      and (not wanted or (workspace and herdr.normalize_cwd(workspace.cwd) == wanted))
+    then
+      targets[#targets + 1] = tab
+    end
   end
-  unbind(tab)
+  for _, tab in ipairs(targets) do
+    if vim.api.nvim_tabpage_is_valid(tab) then
+      unbind(tab)
+      close_tabpage(tab)
+    end
+  end
+end
+
+local function unbind_tabs(workspace_id)
+  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+    if tab_get(tab, vars.id) == workspace_id then
+      unbind(tab)
+    end
+  end
 end
 
 local function find_workspace(workspaces, workspace_id)
@@ -263,21 +283,32 @@ function M.focus(workspace_id)
   return true
 end
 
-function M.agent_closed(workspace_id)
+function M.agent_closed(workspace_id, cwd)
   if not workspace_id then
     return
   end
 
-  close_tab(workspace_id)
   local result, err = herdr.call({ "agent", "list" }, true)
   if not result or type(result.agents) ~= "table" then
     command_error("agent list", err or "invalid response")
     return
   end
+
+  local wanted = cwd and herdr.normalize_cwd(cwd) or nil
+  local workspace_has_agents = false
   for _, agent in ipairs(result.agents) do
     if agent.workspace_id == workspace_id then
-      return
+      workspace_has_agents = true
+      local agent_cwd = agent.foreground_cwd or agent.cwd
+      if wanted and agent_cwd and herdr.normalize_cwd(agent_cwd) == wanted then
+        return
+      end
     end
+  end
+
+  close_tabs(workspace_id, wanted)
+  if workspace_has_agents then
+    return
   end
 
   local closed, close_err = herdr.call({ "workspace", "close", workspace_id }, true)
@@ -359,7 +390,7 @@ local function close_workspace(picker, item)
     return
   end
   picker:close()
-  close_tab(item.workspace_id)
+  unbind_tabs(item.workspace_id)
   vim.schedule(M.open)
 end
 

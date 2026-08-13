@@ -21,11 +21,11 @@ A normal listed buffer in Neovim's process-wide buffer registry, regardless of W
 _Avoid_: tab buffer
 
 **Herdr Workspace**:
-A runtime project context created or reused when an agent launches from a Workspace Tab, identified by its Herdr workspace ID. It may outlive the Workspace Tab that caused its creation.
-_Avoid_: Neovim workspace, workspace tab, worktree
+A repository-level runtime context identified by its Herdr workspace ID. Every Git repository has one shared Herdr Workspace across its primary checkout and linked worktrees; a non-Git folder may use its exact folder identity instead.
+_Avoid_: Neovim workspace, workspace tab, worktree workspace, session workspace
 
 **Herdr Binding**:
-The optional runtime association from a Workspace Tab to the Herdr Workspace selected or created for its agents.
+The optional runtime association from a Workspace Tab to its repository's Herdr Workspace. Multiple worktree-scoped Workspace Tabs may share one Herdr Binding target.
 _Avoid_: workspace tab identity
 
 **Workspace State**:
@@ -33,8 +33,12 @@ The aggregate agent state reported for a Herdr Workspace by Herdr itself. Neovim
 _Avoid_: Neovim status, inferred status
 
 **Worktree**:
-A Git checkout whose creation, opening, and removal are owned entirely by Herdr. Neovim does not expose or manage the worktree lifecycle.
+A Git checkout whose creation, opening, and removal are owned entirely by Herdr. A Worktree owns at most one Durable Sidekick Session.
 _Avoid_: workspace
+
+**Durable Sidekick Session**:
+The one user-addressable Sidekick session owned by a Worktree and shown in session pickers. Short-lived child agents are not Durable Sidekick Sessions.
+_Avoid_: workspace, spinoff session, picker child
 
 ## Vault Work
 

@@ -36,6 +36,73 @@ function M.normalize_cwd(path)
   return normalized == "/" and normalized or normalized:gsub("/$", "")
 end
 
+---@class SidekickGitContext
+---@field repository string
+---@field repository_label string
+---@field worktree string
+---@field worktree_label string
+
+---@param cwd string
+---@return SidekickGitContext|nil
+function M.git_context(cwd)
+  local normalized = M.normalize_cwd(cwd)
+  if normalized == "" then
+    return nil
+  end
+  local result = vim.system({
+    "git",
+    "-C",
+    normalized,
+    "rev-parse",
+    "--path-format=absolute",
+    "--show-toplevel",
+    "--git-common-dir",
+    "--abbrev-ref",
+    "HEAD",
+  }, { text = true }):wait()
+  if result.code ~= 0 then
+    return nil
+  end
+  local lines = vim.split((result.stdout or ""):gsub("%s+$", ""), "\n", { plain = true })
+  local worktree = M.normalize_cwd(lines[1])
+  local common_dir = M.normalize_cwd(lines[2])
+  if worktree == "" or common_dir == "" then
+    return nil
+  end
+  local repository = M.normalize_cwd(vim.fn.fnamemodify(common_dir, ":h"))
+  local branch = vim.trim(lines[3] or "")
+  return {
+    repository = repository,
+    repository_label = vim.fn.fnamemodify(repository, ":t"),
+    worktree = worktree,
+    worktree_label = branch ~= "" and branch ~= "HEAD" and branch or vim.fn.fnamemodify(worktree, ":t"),
+  }
+end
+
+---@param cwd string
+---@param baseline? string
+---@return { added: integer, removed: integer }|nil
+function M.git_diff_stats(cwd, baseline)
+  local context = M.git_context(cwd)
+  if not context then
+    return nil
+  end
+  local result = vim.system(
+    { "git", "-C", context.worktree, "diff", "--numstat", baseline or "main", "--" },
+    { text = true }
+  ):wait()
+  if result.code ~= 0 then
+    return nil
+  end
+  local added, removed = 0, 0
+  for line in (result.stdout or ""):gmatch("[^\n]+") do
+    local line_added, line_removed = line:match("^(%d+)%s+(%d+)%s+")
+    added = added + (tonumber(line_added) or 0)
+    removed = removed + (tonumber(line_removed) or 0)
+  end
+  return { added = added, removed = removed }
+end
+
 ---@param args string[]
 ---@param quiet? boolean
 ---@return table|nil result
@@ -58,6 +125,17 @@ function M.list_panes()
   return result and result.panes or {}
 end
 
+---@param agent table|nil
+---@return boolean
+function M.is_durable_agent(agent)
+  local kind = agent and agent.agent
+  local name = agent and agent.name
+  if (kind ~= "codex" and kind ~= "pi") or type(name) ~= "string" then
+    return false
+  end
+  return name:match("^sk%-" .. kind .. "%-") ~= nil or name:match("^" .. kind .. "%-") ~= nil
+end
+
 ---@param target string
 ---@return table|nil
 function M.get_agent(target)
@@ -77,28 +155,61 @@ end
 
 ---@param cwd string
 ---@return string|nil workspace_id
+---@return boolean listed
 function M.workspace_for_cwd(cwd)
   local wanted = M.normalize_cwd(cwd)
-  for _, pane in ipairs(M.list_panes()) do
-    local pane_cwd = M.normalize_cwd(pane.foreground_cwd or pane.cwd)
-    if pane_cwd == wanted then
-      return pane.workspace_id
-    end
-  end
-end
-
----@param label string
----@return string|nil workspace_id
----@return boolean listed
-function M.workspace_for_label(label)
-  local result = M.call({ "workspace", "list" })
-  if not result then
+  local result = M.call({ "pane", "list" }, true)
+  if not result or type(result.panes) ~= "table" then
     return nil, false
   end
-  local wanted = vim.trim(label):lower()
-  for _, workspace in ipairs(result.workspaces or {}) do
-    if vim.trim(workspace.label or ""):lower() == wanted then
-      return workspace.workspace_id, true
+  for _, pane in ipairs(result.panes) do
+    local pane_cwd = M.normalize_cwd(pane.foreground_cwd or pane.cwd)
+    if pane_cwd == wanted then
+      return pane.workspace_id, true
+    end
+  end
+  return nil, true
+end
+
+---@param repository string
+---@return string|nil workspace_id
+---@return boolean listed
+function M.workspace_for_repository(repository)
+  local wanted = M.normalize_cwd(repository)
+  local result = M.call({ "pane", "list" }, true)
+  if not result or type(result.panes) ~= "table" then
+    return nil, false
+  end
+  for _, pane in ipairs(result.panes) do
+    local pane_cwd = pane.foreground_cwd or pane.cwd
+    local context = M.git_context(pane_cwd)
+    if (context and context.repository == wanted) or (not context and M.normalize_cwd(pane_cwd) == wanted) then
+      return pane.workspace_id, true
+    end
+  end
+  return nil, true
+end
+
+---@param cwd string
+---@return table|nil agent
+---@return boolean listed
+function M.agent_for_worktree(cwd)
+  local wanted = M.git_context(cwd)
+  local wanted_cwd = wanted and wanted.worktree or M.normalize_cwd(cwd)
+  local result = M.call({ "agent", "list" }, true)
+  if not result or type(result.agents) ~= "table" then
+    return nil, false
+  end
+  for _, agent in ipairs(result.agents) do
+    if M.is_durable_agent(agent) then
+      local agent_cwd = agent.foreground_cwd or agent.cwd
+      local context = M.git_context(agent_cwd)
+      if
+        (context and context.worktree == wanted_cwd)
+        or (not context and M.normalize_cwd(agent_cwd) == wanted_cwd)
+      then
+        return agent, true
+      end
     end
   end
   return nil, true
@@ -122,30 +233,29 @@ end
 ---@return boolean created
 ---@return string|nil root_tab_id
 function M.ensure_workspace(cwd, scope, env)
-  if type(scope) == "table" and scope.workspace_id then
-    return scope.workspace_id, nil, false
-  end
+  local scoped_workspace_id = type(scope) == "table" and scope.workspace_id or nil
   local workspace_cwd = type(scope) == "table" and scope.cwd or cwd
   local workspace_label = type(scope) == "table" and scope.label or (type(scope) == "string" and scope or nil)
+  local git = M.git_context(workspace_cwd)
+  if git then
+    workspace_cwd = git.repository
+    workspace_label = git.repository_label
+  end
   local workspace_id
-  if type(scope) == "string" then
-    local listed
-    workspace_id, listed = M.workspace_for_label(workspace_label)
-    if not listed then
-      return nil, nil, false
-    end
+  local listed = true
+  if git then
+    workspace_id, listed = M.workspace_for_repository(workspace_cwd)
   else
-    workspace_id = M.workspace_for_cwd(workspace_cwd)
-    if not workspace_id and workspace_label then
-      local listed
-      workspace_id, listed = M.workspace_for_label(workspace_label)
-      if not listed then
-        return nil, nil, false
-      end
-    end
+    workspace_id, listed = M.workspace_for_cwd(workspace_cwd)
+  end
+  if listed == false then
+    return nil, nil, false
   end
   if workspace_id then
     return workspace_id, nil, false
+  end
+  if scoped_workspace_id then
+    return scoped_workspace_id, nil, false
   end
   local normalized = M.normalize_cwd(workspace_cwd)
   workspace_label = workspace_label or vim.fn.fnamemodify(normalized, ":t")
@@ -175,18 +285,23 @@ end
 ---@return table|nil scope
 function M.ensure_feature_scope(repository, workspace_label, feature_branch)
   local normalized = M.normalize_cwd(repository)
+  local repository_workspace_id = M.ensure_workspace(normalized)
+  if not repository_workspace_id then
+    return nil
+  end
   local listed = M.call({ "worktree", "list", "--cwd", normalized })
   if not listed then
     return nil
   end
 
   local feature = worktree_for_branch(listed.worktrees, feature_branch)
-  local workspace_id = feature and feature.open_workspace_id or nil
-  if not workspace_id then
+  if not feature or feature.open_workspace_id ~= repository_workspace_id then
     local action = feature and "open" or "create"
     local result = M.call({
       "worktree",
       action,
+      "--workspace",
+      repository_workspace_id,
       "--cwd",
       normalized,
       "--branch",
@@ -196,16 +311,12 @@ function M.ensure_feature_scope(repository, workspace_label, feature_branch)
       "--no-focus",
     })
     feature = result and result.worktree or nil
-    workspace_id = result and result.workspace and result.workspace.workspace_id or nil
   end
-  if not feature or not workspace_id then
-    return nil
-  end
-  if not M.call({ "workspace", "rename", workspace_id, workspace_label }) then
+  if not feature then
     return nil
   end
 
-  return feature.path and { workspace_id = workspace_id, cwd = feature.path } or nil
+  return feature.path and { workspace_id = repository_workspace_id, cwd = feature.path } or nil
 end
 
 ---@param repository string
@@ -215,6 +326,10 @@ end
 ---@return table|nil scope
 function M.ensure_task_scope(repository, workspace_label, feature_branch, task_branch)
   local normalized = M.normalize_cwd(repository)
+  local repository_workspace_id = M.ensure_workspace(normalized)
+  if not repository_workspace_id then
+    return nil
+  end
   local listed = M.call({ "worktree", "list", "--cwd", normalized })
   if not listed then
     return nil
@@ -225,6 +340,8 @@ function M.ensure_task_scope(repository, workspace_label, feature_branch, task_b
     local result = M.call({
       "worktree",
       "create",
+      "--workspace",
+      repository_workspace_id,
       "--cwd",
       normalized,
       "--branch",
@@ -234,19 +351,19 @@ function M.ensure_task_scope(repository, workspace_label, feature_branch, task_b
       "--no-focus",
     })
     feature = result and result.worktree or nil
-    local temporary_workspace_id = result and result.workspace and result.workspace.workspace_id or nil
-    if not feature or not temporary_workspace_id or not M.call({ "workspace", "close", temporary_workspace_id }) then
+    if not feature then
       return nil
     end
   end
 
   local task = worktree_for_branch(listed.worktrees, task_branch)
-  local workspace_id = task and task.open_workspace_id or nil
-  if not workspace_id then
+  if not task or task.open_workspace_id ~= repository_workspace_id then
     local action = task and "open" or "create"
     local result = M.call({
       "worktree",
       action,
+      "--workspace",
+      repository_workspace_id,
       "--cwd",
       normalized,
       "--branch",
@@ -256,13 +373,12 @@ function M.ensure_task_scope(repository, workspace_label, feature_branch, task_b
       "--no-focus",
     })
     task = result and result.worktree or nil
-    workspace_id = result and result.workspace and result.workspace.workspace_id or nil
   end
-  if not task or not workspace_id or not M.call({ "workspace", "rename", workspace_id, workspace_label }) then
+  if not task then
     return nil
   end
 
-  return task.path and { workspace_id = workspace_id, cwd = task.path } or nil
+  return task.path and { workspace_id = repository_workspace_id, cwd = task.path } or nil
 end
 
 ---@param agent? table
@@ -338,6 +454,15 @@ function M.place_agent(agent, scope, tab_label)
     notify("worker must be a full Herdr Codex session")
     return nil
   end
+  local owner, listed = M.agent_for_worktree(scope.cwd)
+  if listed == false then
+    notify("could not verify whether this worktree already owns a durable session")
+    return nil
+  end
+  if owner and owner.name ~= agent.name then
+    notify("feature worktree already owns a different durable session")
+    return nil
+  end
   local cwd = M.normalize_cwd(agent.foreground_cwd or agent.cwd)
   if cwd ~= M.normalize_cwd(scope.cwd) then
     notify("existing agent cwd does not match its feature worktree")
@@ -355,6 +480,25 @@ end
 ---@return table|nil agent
 function M.start(name, cwd, command, env, scope, tab_label)
   local normalized = M.normalize_cwd(cwd)
+  local existing, listed = M.agent_for_worktree(normalized)
+  if listed == false then
+    notify("could not verify whether this worktree already owns a durable session")
+    return nil
+  end
+  if existing then
+    if existing.name == name then
+      return existing
+    end
+    local context = M.git_context(normalized)
+    notify(
+      string.format(
+        "worktree %s already owns session %s; use a separate worktree for another durable session",
+        context and context.worktree_label or normalized,
+        existing.name or existing.pane_id or "unknown"
+      )
+    )
+    return nil
+  end
   local resolved_id, bootstrap_pane_id, workspace_created, bootstrap_tab_id = M.ensure_workspace(cwd, scope, env)
   if not resolved_id then
     return nil
