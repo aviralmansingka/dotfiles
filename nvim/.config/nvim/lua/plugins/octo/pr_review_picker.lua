@@ -105,7 +105,7 @@ local function show(items)
     confirm = function(picker, item)
       picker:close()
       if not item then return end
-      vim.cmd(string.format("Octo pr edit %d %s", item.number, item.repo))
+      require("plugins.octo.review_agent").open({ repo = item.repo, number = item.number })
     end,
     win = {
       input = {

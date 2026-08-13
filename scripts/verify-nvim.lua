@@ -4659,12 +4659,157 @@ local function validate_workspace_session()
   vim.cmd("silent! %bwipeout!")
 end
 
+local function validate_octo_review_agent()
+  package.path = table.concat({
+    vim.fn.getcwd() .. "/nvim/.config/nvim/lua/?.lua",
+    vim.fn.getcwd() .. "/nvim/.config/nvim/lua/?/init.lua",
+    package.path,
+  }, ";")
+  local review = require("plugins.octo.review_agent")
+  local table_line = "workflow with a deliberately wide name | status | duration | required"
+  local code_line = "command " .. string.rep("argument ", 10)
+  local body = table.concat({
+    "This ordinary prose paragraph is deliberately long enough to need several presentation-only lines in the fixed review column.",
+    "",
+    table_line,
+    "",
+    "```sh",
+    code_line,
+    "```",
+  }, "\n")
+  local wrapped = review.wrap_markdown(body, 60)
+  if vim.fn.index(wrapped, table_line) < 0 or vim.fn.index(wrapped, code_line) < 0 then
+    fail("review presentation should leave Markdown tables and fenced code unchanged: " .. vim.inspect(wrapped))
+  end
+  for _, line in ipairs(wrapped) do
+    if line == "" then
+      break
+    end
+    if vim.fn.strdisplaywidth(line) > 60 then
+      fail("ordinary PR prose should be wrapped to 60 columns: " .. vim.inspect(line))
+    end
+  end
+
+  local agent_name = review.agent_name("owner/a-very-long-repository-name-for-review", 12345)
+  if #agent_name > 32 or not review.is_session(agent_name) then
+    fail("review agent name should be a valid, recognizable Herdr name: " .. vim.inspect(agent_name))
+  end
+
+  local base_pr = {
+    headRefOid = "abc",
+    updatedAt = "2026-08-13T12:00:00Z",
+    state = "OPEN",
+    comments = {},
+    reviews = {},
+    statusCheckRollup = { { name = "test", conclusion = "SUCCESS" } },
+  }
+  local changed_pr = vim.deepcopy(base_pr)
+  changed_pr.comments = { { id = "new" } }
+  if review.fingerprint(base_pr) == review.fingerprint(changed_pr) then
+    fail("new PR comments should change the unseen-activity fingerprint")
+  end
+
+  local terminal = {
+    tool = { name = agent_name },
+    opts = { layout = "float", split = { width = 1 } },
+  }
+  review.configure_terminal(terminal)
+  local expected_agent_width = math.max(vim.o.columns - 61, 40)
+  if terminal.opts.layout ~= "right" or terminal.opts.split.width ~= expected_agent_width then
+    fail("review agent should open as the flexible right split: " .. vim.inspect(terminal.opts))
+  end
+
+  local context = {
+    key = "github.com/owner/repo#42",
+    host = "github.com",
+    repo = "owner/repo",
+    number = 42,
+    title = "Review agent verifier",
+    state = "open",
+    author = "author",
+    head_ref = "feature",
+    base_ref = "main",
+    body = body,
+  }
+  if not review.restore(context) then
+    fail("review description pane did not open")
+  end
+  local buf = vim.api.nvim_get_current_buf()
+  if
+    vim.bo[buf].buflisted
+    or vim.bo[buf].modifiable
+    or vim.bo[buf].filetype ~= "markdown"
+    or vim.b[buf].octo_review_body ~= body
+    or vim.wo.wrap
+  then
+    fail("review description buffer contract is wrong: " .. vim.inspect({
+      buflisted = vim.bo[buf].buflisted,
+      modifiable = vim.bo[buf].modifiable,
+      filetype = vim.bo[buf].filetype,
+      body_matches = vim.b[buf].octo_review_body == body,
+      wrap = vim.wo.wrap,
+    }))
+  end
+
+  vim.cmd("rightbelow vnew")
+  local sidekick_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_var(sidekick_win, "sidekick_cli", { name = agent_name })
+  if not review.restore(context) or vim.api.nvim_win_is_valid(sidekick_win) then
+    fail("review re-entry should rebuild from a non-Sidekick window")
+  end
+
+  local original_internal = package.loaded["plugins.sidekick.internal"]
+  local original_picker = package.loaded["plugins.sidekick.cwd_picker"]
+  local opened, picker_opens = {}, 0
+  package.loaded["plugins.sidekick.internal"] = {
+    toggle_tool_session = function(label, _, terminal_id)
+      opened[#opened + 1] = { label, terminal_id }
+    end,
+  }
+  package.loaded["plugins.sidekick.cwd_picker"] = {
+    open = function()
+      picker_opens = picker_opens + 1
+    end,
+  }
+  local last_session = dofile("nvim/.config/nvim/lua/plugins/sidekick/last_session.lua")
+  local first_tab = vim.api.nvim_get_current_tabpage()
+  last_session.record("codex-pr-one-1", "term-one")
+  vim.cmd.tabnew()
+  local second_tab = vim.api.nvim_get_current_tabpage()
+  last_session.record("codex-pr-two-2", "term-two")
+  vim.api.nvim_set_current_tabpage(first_tab)
+  last_session.open()
+  vim.api.nvim_set_current_tabpage(second_tab)
+  last_session.open()
+  vim.cmd.tabnew()
+  last_session.open()
+  if
+    not vim.deep_equal(opened, {
+      { "codex-pr-one-1", "term-one" },
+      { "codex-pr-two-2", "term-two" },
+    })
+    or picker_opens ~= 1
+  then
+    fail("Sidekick last-session routing should be tab-scoped: " .. vim.inspect(opened))
+  end
+  package.loaded["plugins.sidekick.internal"] = original_internal
+  package.loaded["plugins.sidekick.cwd_picker"] = original_picker
+  vim.api.nvim_set_current_tabpage(first_tab)
+  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+    if tab ~= first_tab then
+      vim.api.nvim_set_current_tabpage(tab)
+      vim.cmd.tabclose()
+    end
+  end
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
   ["workspace-session"] = validate_workspace_session,
   ["weekly-backlog"] = validate_weekly_backlog,
   ["markdown-formatting"] = validate_markdown_formatting,
   ["markdown-ansi"] = validate_markdown_ansi,
+  ["octo-review-agent"] = validate_octo_review_agent,
   ["inline-ask-edit"] = validate_inline_ask_edit,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
@@ -4681,7 +4826,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
+      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, octo-review-agent, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
   )
 end
 

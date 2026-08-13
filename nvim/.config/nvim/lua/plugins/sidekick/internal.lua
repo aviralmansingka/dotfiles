@@ -76,6 +76,7 @@ end
 ---@param terminal_id? string
 function M.toggle_tool_session(name, focus, terminal_id)
   M.hide_tool_sessions(name)
+  require("plugins.octo.review_agent").restore_for_session(name)
   local filter = terminal_id and { session = "herdr:" .. terminal_id } or nil
   require("sidekick.cli").toggle({ name = name, focus = focus ~= false, filter = filter })
 end

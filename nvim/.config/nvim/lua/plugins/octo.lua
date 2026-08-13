@@ -68,7 +68,7 @@ local function html_to_markdown(text)
 end
 
 local function smart_entry()
-  require("octo.reviews").start_or_resume_review()
+  require("plugins.octo.review_agent").open_current()
 end
 
 --- Toggle the review between Octo's stock vertical split (base | head, both in
@@ -424,6 +424,15 @@ query(
             end
             return ret
           end
+          pick_opts.confirm = function(picker, item)
+            picker:close()
+            if item then
+              require("plugins.octo.review_agent").open({
+                repo = item.repository.nameWithOwner,
+                number = item.number,
+              })
+            end
+          end
         end
 
         -- Restore and call original
@@ -436,6 +445,8 @@ query(
 
     -- Also patch the picker module reference
     snacks_provider.picker.prs = snacks_provider.pull_requests
+
+    require("plugins.octo.review_agent").setup()
 
     -- Monkey-patch octo writers to convert HTML → markdown before rendering
     local writers = require("octo.ui.writers")

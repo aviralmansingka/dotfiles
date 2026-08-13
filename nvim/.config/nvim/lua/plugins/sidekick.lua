@@ -10,6 +10,7 @@ return {
     cli = {
       win = {
         config = function(terminal)
+          require("plugins.octo.review_agent").configure_terminal(terminal)
           require("plugins.sidekick.branding").apply(terminal)
         end,
         layout = "float",
