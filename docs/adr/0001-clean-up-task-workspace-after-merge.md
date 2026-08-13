@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0002
+---
+
 # Clean up the task workspace after merge
 
 After merged-main checks pass, Vault Hunter closes every Herdr tab in the task's Herdr Workspace and every Neovim

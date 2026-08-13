@@ -118,19 +118,30 @@ local function normalize(p)
 end
 
 ---@param path string|nil
----@return string|nil
-local function git_common_dir(path)
+---@param cache table<string, SidekickGitContext|false>
+---@return SidekickGitContext|nil
+local function git_context(path, cache)
   if not path or path == "" then
     return nil
   end
-  local result = vim.system(
-    { "git", "-C", path, "rev-parse", "--path-format=absolute", "--git-common-dir" },
-    { text = true }
-  ):wait()
-  if result.code ~= 0 then
+  local key = normalize(path)
+  if cache[key] == nil then
+    cache[key] = herdr.git_context(key) or false
+  end
+  return cache[key] or nil
+end
+
+---@param context SidekickGitContext|nil
+---@param cache table<string, { added: integer, removed: integer }|false>
+---@return { added: integer, removed: integer }|nil
+local function diff_stats(context, cache)
+  if not context then
     return nil
   end
-  return normalize((result.stdout or ""):gsub("%s+$", ""))
+  if cache[context.worktree] == nil then
+    cache[context.worktree] = herdr.git_diff_stats(context.worktree, "main") or false
+  end
+  return cache[context.worktree] or nil
 end
 
 ---@param entry_cwd string|nil
@@ -169,18 +180,6 @@ local function parse_elapsed(value)
   local minutes = tonumber(value:match("(%d+)%s*m")) or 0
   local seconds = tonumber(value:match("(%d+)%s*s")) or 0
   return hours * 3600 + minutes * 60 + seconds
-end
-
-local function format_elapsed(seconds)
-  seconds = math.max(0, math.floor(seconds))
-  if seconds < 60 then
-    return seconds .. "s"
-  end
-  local minutes = math.floor(seconds / 60)
-  if minutes < 60 then
-    return string.format("%dm %ds", minutes, seconds % 60)
-  end
-  return string.format("%dh %dm", math.floor(minutes / 60), minutes % 60)
 end
 
 local function context_used(output)
@@ -288,19 +287,20 @@ local function agent_metrics(agent_name, agent_session, status, cache)
   return metrics
 end
 
-local function metric_chunks(item)
-  local chunks = {}
-  local function add(value)
-    chunks[#chunks + 1] = { " · ", "Comment" }
-    chunks[#chunks + 1] = { value, "Comment" }
+local function diff_chunks(item)
+  local diff = item.diff
+  if not diff then
+    return {}
   end
-  if item.status == "working" and item.working_since then
-    add(format_elapsed((vim.uv.now() - item.working_since) / 1000))
-  elseif item.running_seconds then
-    add(format_elapsed(item.running_seconds))
+  if diff.added == 0 and diff.removed == 0 then
+    return { { " · clean", "Comment" } }
   end
-  add((item.context_used or "?") .. "%")
-  return chunks
+  return {
+    { " · ", "Comment" },
+    { "+" .. tostring(diff.added), "DiagnosticOk" },
+    { " ", "Comment" },
+    { "−" .. tostring(diff.removed), "DiagnosticError" },
+  }
 end
 
 local function scrub_codex_prompt(output)
@@ -431,33 +431,47 @@ end
 function M.list_items(metric_cache)
   local workspace_id = workspace_scope()
   local root = normalize(vim.fn.getcwd())
-  local root_repo = not workspace_id and git_common_dir(root) or nil
-  local repo_cache = {}
+  local context_cache = {}
+  local stats_cache = {}
+  local root_context = git_context(root, context_cache)
   local items = {}
 
   local function is_local(entry)
-    if workspace_id then
-      return entry.workspace_id == workspace_id
-    end
     local entry_cwd = entry.cwd
-    if in_cwd_subtree(entry_cwd, root) then
-      return true
+    local entry_context = git_context(entry_cwd, context_cache)
+    if root_context then
+      return entry_context and entry_context.worktree == root_context.worktree
     end
-    if not root_repo or not entry_cwd or entry_cwd == "" then
-      return false
+    if workspace_id then
+      return entry.workspace_id == workspace_id and in_cwd_subtree(entry_cwd, root)
     end
-    if repo_cache[entry_cwd] == nil then
-      repo_cache[entry_cwd] = git_common_dir(entry_cwd) or false
-    end
-    return repo_cache[entry_cwd] == root_repo
+    return in_cwd_subtree(entry_cwd, root)
   end
 
-  for label, entry in pairs(registry.discover()) do
-    if is_local(entry) then
+  for _, agent in ipairs(herdr.list_agents()) do
+    local parsed = registry.parse_session_name(agent.name)
+    local tool = parsed and parsed.tool or agent.agent
+    local entry = {
+      label = parsed and parsed.label or tool,
+      tool = tool,
+      slug = parsed and parsed.slug or nil,
+      pane_id = agent.pane_id,
+      tab_id = agent.tab_id,
+      workspace_id = agent.workspace_id,
+      terminal_id = agent.terminal_id,
+      agent_name = agent.name,
+      agent_session = agent.agent_session,
+      status = agent.agent_status or "unknown",
+      cwd = agent.foreground_cwd or agent.cwd or "",
+    }
+    local label = entry.label
+    if herdr.is_durable_agent(agent) and tool and internal.tool_commands[tool] and is_local(entry) then
+      local context = git_context(entry.cwd, context_cache)
       local metrics = agent_metrics(entry.agent_name, entry.agent_session, entry.status, metric_cache)
       items[#items + 1] = {
-        text = string.format("%s  [%s]", label, entry.status),
+        text = string.format("%s  [%s]", context and context.worktree_label or label, entry.status),
         label = label,
+        display_label = context and context.worktree_label or label,
         tool = entry.tool,
         slug = entry.slug,
         pane_id = entry.pane_id,
@@ -468,6 +482,9 @@ function M.list_items(metric_cache)
         agent_session = entry.agent_session,
         status = entry.status,
         cwd = entry.cwd,
+        repository = context and context.repository or nil,
+        worktree = context and context.worktree or entry.cwd,
+        diff = diff_stats(context, stats_cache),
         working_since = metrics.working_since,
         running_seconds = metrics.running_seconds,
         context_used = metrics.context_used,
@@ -483,31 +500,52 @@ local function status_icon(status)
   return status == "working" and Snacks.util.spinner() or display[1], display[2]
 end
 
-local function workspace_groups(first_workspace_id, metric_cache)
+local function workspace_groups(first_repository, metric_cache)
   local grouped = {}
+  local context_cache = {}
+  local stats_cache = {}
+  local workspace_labels = {}
+  for _, workspace in ipairs(workspace_list()) do
+    workspace_labels[workspace.workspace_id] = workspace.label
+  end
   for _, agent in ipairs(herdr.list_agents()) do
     local parsed = registry.parse_session_name(agent.name)
     local tool = parsed and parsed.tool or agent.agent
-    if tool and internal.tool_commands[tool] then
+    if herdr.is_durable_agent(agent) and tool and internal.tool_commands[tool] then
       local workspace_id = agent.workspace_id or "unknown"
-      local group = grouped[workspace_id]
+      local context = git_context(agent.foreground_cwd or agent.cwd, context_cache)
+      local group_key = context and ("repository:" .. context.repository) or ("workspace:" .. workspace_id)
+      local group = grouped[group_key]
       if not group then
         group = {
-          item = { _workspace = true, workspace_id = workspace_id },
+          item = {
+            _workspace = true,
+            group_key = group_key,
+            repository = context and context.repository or nil,
+            workspace_id = workspace_id,
+            workspace_label = context and context.repository_label
+              or workspace_labels[workspace_id]
+              or workspace_id,
+          },
           running = 0,
           done = 0,
           agents = {},
+          worktrees = {},
         }
-        grouped[workspace_id] = group
+        grouped[group_key] = group
       end
       local status = agent.agent_status or "unknown"
       local metrics = agent_metrics(agent.name, agent.agent_session, status, metric_cache)
       group.running = group.running + (status == "working" and 1 or 0)
       group.done = group.done + (status == "done" and 1 or 0)
+      local worktree = context and context.worktree or (agent.foreground_cwd or agent.cwd or agent.name)
+      group.worktrees[worktree] = true
       group.agents[#group.agents + 1] = {
         label = parsed and parsed.label
           or (agent.name and not agent.name:match("^sk%-") and agent.name)
           or tool,
+        display_label = context and context.worktree_label
+          or vim.fn.fnamemodify(agent.foreground_cwd or agent.cwd or agent.name or tool, ":t"),
         slug = parsed and parsed.slug,
         toggle_name = parsed and parsed.label or tool,
         tool = tool,
@@ -518,6 +556,10 @@ local function workspace_groups(first_workspace_id, metric_cache)
         agent_name = agent.name,
         agent_session = agent.agent_session,
         status = status,
+        cwd = agent.foreground_cwd or agent.cwd,
+        repository = context and context.repository or nil,
+        worktree = context and context.worktree or nil,
+        diff = diff_stats(context, stats_cache),
         working_since = metrics.working_since,
         running_seconds = metrics.running_seconds,
         context_used = metrics.context_used,
@@ -525,46 +567,34 @@ local function workspace_groups(first_workspace_id, metric_cache)
     end
   end
 
-  local groups, seen = {}, {}
-  local function add_workspace(workspace_id, label)
-    seen[workspace_id] = true
-    local group = grouped[workspace_id]
-    if not group then
-      return
+  local groups = {}
+  local function add_group(group)
+    local key = group.item.group_key
+    if collapsed[key] == nil then
+      collapsed[key] = false
     end
-    group.item.workspace_label = label
-    if collapsed[workspace_id] == nil then
-      collapsed[workspace_id] = false
-    end
-    group.item._collapsed = collapsed[workspace_id]
+    group.item._collapsed = collapsed[key]
+    group.worktree_count = vim.tbl_count(group.worktrees)
     table.sort(group.agents, compare_items)
     groups[#groups + 1] = group
   end
 
-  local workspaces = workspace_list()
-  local first_workspace_label
-  for _, workspace in ipairs(workspaces) do
-    if workspace.workspace_id == first_workspace_id then
-      first_workspace_label = workspace.label
+  local keys = vim.tbl_keys(grouped)
+  table.sort(keys, function(a, b)
+    local left = grouped[a].item
+    local right = grouped[b].item
+    if first_repository and left.repository ~= right.repository then
+      if left.repository == first_repository then
+        return true
+      end
+      if right.repository == first_repository then
+        return false
+      end
     end
-  end
-  if first_workspace_id then
-    add_workspace(first_workspace_id, first_workspace_label or first_workspace_id)
-  end
-  for _, workspace in ipairs(workspaces) do
-    if workspace.workspace_id ~= first_workspace_id and workspace.workspace_id then
-      add_workspace(workspace.workspace_id, workspace.label or workspace.workspace_id)
-    end
-  end
-  local orphan_ids = {}
-  for workspace_id in pairs(grouped) do
-    if not seen[workspace_id] then
-      orphan_ids[#orphan_ids + 1] = workspace_id
-    end
-  end
-  table.sort(orphan_ids)
-  for _, workspace_id in ipairs(orphan_ids) do
-    add_workspace(workspace_id, workspace_id)
+    return (left.workspace_label or a) < (right.workspace_label or b)
+  end)
+  for _, key in ipairs(keys) do
+    add_group(grouped[key])
   end
   return groups
 end
@@ -576,20 +606,19 @@ local function format_local(item)
   local symbol, symbol_hl = status_icon(item.status)
   local chunks = {
     { symbol .. " ", symbol_hl },
-    { item.label or "", branding.hl_groups(branding.tool_of(item.tool)).title },
+    { item.display_label or item.label or "", branding.hl_groups(branding.tool_of(item.tool)).title },
   }
-  vim.list_extend(chunks, metric_chunks(item))
+  vim.list_extend(chunks, diff_chunks(item))
   return chunks
 end
 
 local function workspace_chunks(group)
   local item = group.item
+  local count = group.worktree_count or #group.agents
   return {
     { item._collapsed and "▸ " or "▾ ", "SnacksPickerTree" },
     { item.workspace_label or item.workspace_id or "unknown", "Directory" },
-    { " · ", "Comment" },
-    { "● ", group.done > 0 and "DiagnosticWarn" or "Comment" },
-    { tostring(group.done), "Comment" },
+    { string.format(" · %d worktree%s", count, count == 1 and "" or "s"), "Comment" },
   }
 end
 
@@ -598,9 +627,12 @@ local function workspace_agent_chunks(item, last)
   local chunks = {
     { last and "  └─ " or "  ├─ ", "SnacksPickerTree" },
     { symbol .. " ", symbol_hl },
-    { item.label or item.agent_name or "unknown", branding.hl_groups(branding.tool_of(item.tool)).title },
+    {
+      item.display_label or item.label or item.agent_name or "unknown",
+      branding.hl_groups(branding.tool_of(item.tool)).title,
+    },
   }
-  vim.list_extend(chunks, metric_chunks(item))
+  vim.list_extend(chunks, diff_chunks(item))
   return chunks
 end
 
@@ -618,22 +650,15 @@ function M.open(opts)
 
   local metric_cache = {}
   local workspace_id, workspace_label = workspace_scope()
+  local current_git = herdr.git_context(vim.fn.getcwd())
   local items = M.list_items(metric_cache)
-  local local_workspace_id = workspace_id
-  if not local_workspace_id then
-    for _, item in ipairs(items) do
-      if item.workspace_id then
-        local_workspace_id = item.workspace_id
-        break
-      end
-    end
-  end
-  local groups = workspace_groups(local_workspace_id, metric_cache)
+  local groups = workspace_groups(current_git and current_git.repository or nil, metric_cache)
   local workspace_matcher = require("snacks.picker.core.matcher").new({ sort = false })
   if #items == 0 then
     items = {
       {
-        text = workspace_id and "(no named sessions in workspace)" or "(no named sessions in cwd)",
+        text = current_git and "(no session in worktree)"
+          or (workspace_id and "(no named sessions in workspace)" or "(no named sessions in cwd)"),
         _empty = true,
       },
     }
@@ -715,7 +740,12 @@ function M.open(opts)
       local workspace_matches = matches(label)
       local agents = vim.tbl_filter(function(agent)
         return workspace_matches
-          or matches(table.concat({ agent.label or "", agent.agent_name or "", agent.tool or "" }, " "))
+          or matches(table.concat({
+            agent.display_label or "",
+            agent.label or "",
+            agent.agent_name or "",
+            agent.tool or "",
+          }, " "))
       end, group.agents)
       if workspace_matches or #agents > 0 then
         local chunks = workspace_chunks(group)
@@ -743,7 +773,7 @@ function M.open(opts)
       end
     end
     if #lines == 0 then
-      lines = { pattern == "" and "(no other workspaces with agents)" or "(no matching workspace agents)" }
+      lines = { pattern == "" and "(no repositories with sessions)" or "(no matching worktrees)" }
       highlights = { { 0, 0, -1, "Comment" } }
     end
 
@@ -1317,7 +1347,7 @@ function M.open(opts)
     end
     reopening = true
     active_picker:close()
-    require("plugins.herdr.workspaces").agent_closed(item.workspace_id)
+    require("plugins.herdr.workspaces").agent_closed(item.workspace_id, item.cwd)
     vim.schedule(function()
       M.open(opts)
     end)
@@ -1349,8 +1379,8 @@ function M.open(opts)
       return
     end
     if item._workspace then
-      collapsed[item.workspace_id] = not collapsed[item.workspace_id]
-      item._collapsed = collapsed[item.workspace_id]
+      collapsed[item.group_key] = not collapsed[item.group_key]
+      item._collapsed = collapsed[item.group_key]
       render_workspace()
       focus_input()
     else
@@ -1449,8 +1479,8 @@ function M.open(opts)
       width = workspace_preview_enabled and 0.5 or 0.333,
       win = "workspace",
       height = 12,
-      title = " Workspaces ",
-      footer = " <C-w> Agents · <Enter> Expand/Open ",
+      title = " Repositories / Worktrees ",
+      footer = " <C-w> Current Worktree · <Enter> Expand/Open ",
       footer_pos = "center",
       border = "rounded",
     },
@@ -1458,14 +1488,15 @@ function M.open(opts)
       width = workspace_preview_enabled and 0.5 or 0.333,
       win = "list",
       height = 12,
-      title = " Agents / Run ",
-      footer = " <C-w> Workspaces ",
+      title = " Current Worktree ",
+      footer = " <C-w> Repositories ",
       footer_pos = "center",
       border = "rounded",
     },
   }
   if not workspace_preview_enabled then
     bottom_layout[#bottom_layout + 1] = {
+      width = 0.333,
       win = "atlas",
       height = 12,
       title = " Atlas Preview ",
@@ -1494,7 +1525,8 @@ function M.open(opts)
 
   picker = Snacks.picker.pick({
     source = "sidekick_cwd_peek",
-    title = workspace_id and ("Sidekick Sessions in Workspace: " .. workspace_label) or "Sidekick Sessions in Cwd",
+    title = current_git and ("Sidekick Session in Worktree: " .. current_git.worktree_label)
+      or (workspace_id and ("Sidekick Sessions in Workspace: " .. workspace_label) or "Sidekick Sessions in Cwd"),
     items = items,
     format = format_local,
     auto_close = false,

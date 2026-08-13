@@ -1,7 +1,7 @@
 # Neovim–Herdr Workspace Integration — Design
 
 **Date:** 2026-07-24
-**Status:** Approved through interactive specification
+**Status:** Superseded in part by ADR-0002 repository-scoped Herdr workspaces
 **Scope:** Personal Neovim configuration in `~/dotfiles`; workspace selection and lifecycle through `<leader>fw`.
 
 ## Goal

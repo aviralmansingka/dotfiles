@@ -98,7 +98,8 @@ function M:start()
   self.herdr_terminal_id = agent.terminal_id
   self.herdr_workspace_id = agent.workspace_id
   if workspace and vim.api.nvim_tabpage_is_valid(tab) then
-    Workspace.bind_herdr(tab, agent.workspace_id, workspace.label)
+    local context = Herdr.git_context(workspace.cwd)
+    Workspace.bind_herdr(tab, agent.workspace_id, context and context.repository_label or workspace.label)
   end
   self.started = true
   return self:attach()
