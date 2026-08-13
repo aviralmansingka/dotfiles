@@ -189,7 +189,7 @@ def run_agent(context: str, command: str, question: str | None = None) -> dict[s
             input=question,
             text=True,
             capture_output=True,
-            timeout=330,
+            timeout=700,
             check=False,
         )
     try:

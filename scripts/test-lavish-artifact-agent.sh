@@ -163,6 +163,66 @@ assert history["workspace"] == "Artifact-sample-artifact"
 assert retire == {"context_id": context, "retired": True}
 assert not (state_path.parent / "artifacts/_contexts" / context).exists()
 assert set(state) == {"artifact-1111111111111111", "artifact-2222222222222222"}
+
+path_worktree = root / "path-worktree"
+path_worktree.mkdir()
+(path_worktree / "inside.html").write_text("inside")
+outside = root / "outside.html"
+outside.write_text("outside")
+(path_worktree / "escaped.html").symlink_to(outside)
+assert module["contained_file"](path_worktree, "inside.html", "artifact path").read_text() == "inside"
+try:
+    module["contained_file"](path_worktree, "escaped.html", "artifact path")
+except module["ArtifactAgentError"] as error:
+    assert "outside" in str(error)
+else:
+    raise AssertionError("out-of-worktree symlink was accepted")
+
+agent_globals = module["start_agent"].__globals__
+close_calls = []
+def fail_after_create(record, created):
+    created.append("workspace-created")
+    raise module["ArtifactAgentError"]("initialization failed")
+def close_created(args, **kwargs):
+    close_calls.append(args)
+    return {}
+agent_globals["start_agent_unchecked"] = fail_after_create
+agent_globals["herdr_json"] = close_created
+try:
+    module["start_agent"]({})
+except module["ArtifactAgentError"]:
+    pass
+else:
+    raise AssertionError("initialization failure was swallowed")
+assert close_calls == [["workspace", "close", "workspace-created"]]
+
+pending_context = "artifact-3333333333333333"
+pending_root = root / "pending-contexts"
+pending_state = root / "pending-state.json"
+(pending_root / pending_context).mkdir(parents=True)
+pending_state.write_text(json.dumps({pending_context: {
+    "context_id": pending_context,
+    "phase": "active",
+    "workspace_id": "workspace-pending",
+}}))
+agent_globals["CONTEXT_ROOT"] = pending_root
+agent_globals["STATE_FILE"] = pending_state
+def fail_close(args, **kwargs):
+    raise module["ArtifactAgentError"]("close failed")
+agent_globals["herdr_json"] = fail_close
+try:
+    module["retire_context"](pending_context)
+except module["ArtifactAgentError"]:
+    pass
+else:
+    raise AssertionError("retirement failure was swallowed")
+assert json.loads(pending_state.read_text())[pending_context]["phase"] == "retiring"
+agent_globals["herdr_json"] = lambda args, **kwargs: {}
+pending = module["command_retire_pending"](None)
+assert pending == {"retired": [pending_context], "errors": {}}
+assert json.loads(pending_state.read_text()) == {}
+assert not (pending_root / pending_context).exists()
+
 assert module["reflow_terminal_wraps"](
     "First wrapped\n  paragraph.\n\n```python\ndef f():\n    return 1\n```\n\n- long item\n  continuation\n- next\n\n> quoted\n  continuation\n\nLast wrapped\nline."
 ) == "First wrapped paragraph.\n\n```python\ndef f():\n    return 1\n```\n\n- long item continuation\n- next\n\n> quoted continuation\n\nLast wrapped line."

@@ -64,6 +64,26 @@ sync_remote_runtime() {
   fi
 }
 
+retry_pending_retirements() {
+  ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") retire-pending" >/dev/null || true
+}
+
+publish_alias() {
+  local alias=$1 target=$2 context=${3:-} command result previous_context
+  command="$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$target") --print-previous-context"
+  if [[ -n "$context" ]]; then
+    command+=" --context $(quote_remote "$context")"
+  fi
+  result=$(ssh -n "$REMOTE_HOST" "$command")
+  ALIAS_URL=$(printf '%s\n' "$result" | sed -n '1p')
+  previous_context=$(printf '%s\n' "$result" | sed -n '2p')
+  if [[ -n "$previous_context" && "$previous_context" != "$context" ]]; then
+    if ! ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") retire --context $(quote_remote "$previous_context")" >/dev/null; then
+      echo "Artifact context retirement is pending: $previous_context" >&2
+    fi
+  fi
+}
+
 find_git_root() {
   local path=$1 dir
   dir=$(dirname "$path")
@@ -261,17 +281,14 @@ case "$action" in
       alias=$(alias_for "$source_file" "$source_markdown" "$explicit_alias")
       if [[ "$action" == render ]]; then
         sync_remote_runtime
+        retry_pending_retirements
         ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") check $(quote_remote "$alias")"
         prepare_artifact_context "$source_file" "$source_markdown" "$alias"
-        alias_result=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$ARTIFACT_CONTEXT_FILE") --context $(quote_remote "$ARTIFACT_CONTEXT_ID") --print-previous-context")
-        alias_url=$(printf '%s\n' "$alias_result" | sed -n '1p')
-        previous_context=$(printf '%s\n' "$alias_result" | sed -n '2p')
-        if [[ -n "$previous_context" && "$previous_context" != "$ARTIFACT_CONTEXT_ID" ]]; then
-          ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") retire --context $(quote_remote "$previous_context")" >/dev/null
-        fi
-        printf 'alias_url: "%s"\nartifact_path: "%s"\nartifact_context: "%s"\n' "$alias_url" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"
+        publish_alias "$alias" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"
+        printf 'alias_url: "%s"\nartifact_path: "%s"\nartifact_context: "%s"\n' "$ALIAS_URL" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"
         exit 0
       fi
+      retry_pending_retirements
       if [[ ${#lavish_args[@]} -gt 0 ]]; then
         output=$(run_remote_lavish open "$remote_file" --no-open "${lavish_args[@]}")
       else
@@ -283,8 +300,8 @@ case "$action" in
       session_id=${session_url##*/}
       artifact_url="${PUBLIC_URL}/artifact/${session_id}/index.html"
       target_url=$session_url
-      alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$target_url")")
-      printf 'alias_url: "%s"\nartifact_url: "%s"\nsession_url: "%s"\n' "$alias_url" "$artifact_url" "$session_url"
+      publish_alias "$alias" "$target_url"
+      printf 'alias_url: "%s"\nartifact_url: "%s"\nsession_url: "%s"\n' "$ALIAS_URL" "$artifact_url" "$session_url"
     else
       if [[ ${#lavish_args[@]} -gt 0 ]]; then
         run_remote_lavish "$action" "$remote_file" "${lavish_args[@]}"
