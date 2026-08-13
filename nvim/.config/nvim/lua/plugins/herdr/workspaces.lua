@@ -45,14 +45,18 @@ local function workspace_tab(workspace_id)
   end
 end
 
+local function apply_label(tab, label)
+  tab_set(tab, vars.label, label)
+  local workspace = workspace_tabs.get(tab)
+  if workspace then
+    workspace_tabs.bind(tab, workspace.cwd, label)
+  end
+end
+
 local function set_label(workspace_id, label)
   local tab = workspace_tab(workspace_id)
   if tab then
-    tab_set(tab, vars.label, label)
-    local workspace = workspace_tabs.get(tab)
-    if workspace then
-      workspace_tabs.bind(tab, workspace.cwd, label)
-    end
+    apply_label(tab, label)
     vim.cmd.redrawtabline()
   end
 end
@@ -100,7 +104,7 @@ local function reconcile(workspaces)
       local workspace = live[workspace_id]
       if workspace then
         if tab_get(tab, vars.label) ~= workspace.label then
-          tab_set(tab, vars.label, workspace.label)
+          apply_label(tab, workspace.label)
           redraw = true
         end
         tab_set(tab, vars.detached, false)

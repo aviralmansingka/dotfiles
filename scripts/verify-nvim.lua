@@ -3568,6 +3568,22 @@ local function validate_herdr_workspaces()
     eq(tab_var(focused_tab, "herdr_workspace_label"), "Renamed", "successful rename should update mapped tab")
     eq(#agent_picker_opens, lifecycle_picker_count, "workspace rename must not open the agent picker")
 
+    for _, item in ipairs(workspaces) do
+      if item.workspace_id == "w-idle" then
+        item.label = "Externally renamed"
+      end
+    end
+    open_picker()
+    eq(tab_var(idle_tab, "herdr_workspace_label"), "Externally renamed", "external rename should refresh Herdr tab label")
+    eq(tab_var(idle_tab, "workspace_label"), "Externally renamed", "external rename should refresh workspace tab label")
+    for _, item in ipairs(workspaces) do
+      if item.workspace_id == "w-idle" then
+        item.label = "Zebra"
+      end
+    end
+    open_picker()
+    eq(tab_var(idle_tab, "workspace_label"), "Zebra", "restored external label should refresh workspace tab label")
+
     local close_opts = open_picker()
     local close_item = item_by_id(close_opts, "w-focused")
     local confirmations, confirm_close = 0, false
