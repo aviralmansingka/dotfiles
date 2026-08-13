@@ -6,8 +6,11 @@ export COLORTERM=truecolor
 export TERM=xterm-256color
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+p0_only=false
 if [[ "${1:-}" == "T22.V02" ]]; then
 	exec "$repo_root/scripts/verifiers/pi-work-step-ui-t22-v02"
+elif [[ "${1:-}" == "P0" ]]; then
+	p0_only=true
 fi
 verify_dir="$(mktemp -d)"
 tmux_socket="pi-work-step-ui-verify-$$"
@@ -125,6 +128,72 @@ clock_invalidation_marker="$verify_dir/clock-invalidation"
 if grep -Fq '# Visible thinking updates' "$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"; then
 	echo "Visible-thinking prompt customization is still installed" >&2
 	exit 1
+fi
+
+append_system="$repo_root/pi/.pi/agent/APPEND_SYSTEM.md"
+if LC_ALL=C grep -q $'\033' "$append_system" || grep -Eiq 'ANSI|U\+001B|escape byte|SGR|terminal control' "$append_system"; then
+	echo "Semantic prompt safety failure: ANSI-generation guidance remains in APPEND_SYSTEM.md" >&2
+	exit 1
+fi
+for heading in '# Response shape' '# Tool-call activity titles'; do
+	if ! grep -Fqx "$heading" "$append_system"; then
+		echo "Semantic prompt safety failure: required section missing: $heading" >&2
+		exit 1
+	fi
+done
+
+node - \
+	"$repo_root/pi/.pi/agent/settings.json" \
+	"$repo_root/pi/.pi/agent/extensions/transcript-scroll.ts" <<'NODE'
+const fs = require("node:fs");
+const [settingsPath, extensionPath] = process.argv.slice(2);
+const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+const exclusion = "-extensions/transcript-scroll.ts";
+if (!(settings.extensions ?? []).includes(exclusion)) {
+	console.error(`Pi extension safety failure: missing exact force-exclude ${exclusion}`);
+	process.exit(1);
+}
+if (!fs.existsSync(extensionPath)) {
+	console.error(`Pi extension safety failure: explicit-load fixture source missing: ${extensionPath}`);
+	process.exit(1);
+}
+console.log("Pi P0 terminal safety verified: semantic prompt and transcript-scroll exclusion present.");
+NODE
+
+pi_cli="$(realpath "$(command -v pi)")"
+pi_package_root="$(cd "$(dirname "$pi_cli")/.." && pwd)"
+PI_OFFLINE=1 node --input-type=module - \
+	"$repo_root" \
+	"$verify_dir/p0-resolver" \
+	"$pi_package_root" <<'NODE'
+import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+
+const [repoRoot, sandboxRoot, piRoot] = process.argv.slice(2);
+const sourceAgentDir = `${repoRoot}/pi/.pi/agent`;
+const agentDir = `${sandboxRoot}/agent`;
+const cwd = `${sandboxRoot}/cwd`;
+mkdirSync(agentDir, { recursive: true });
+mkdirSync(cwd, { recursive: true });
+symlinkSync(`${sourceAgentDir}/extensions`, `${agentDir}/extensions`);
+const sourceSettings = JSON.parse(readFileSync(`${sourceAgentDir}/settings.json`, "utf8"));
+writeFileSync(`${agentDir}/settings.json`, `${JSON.stringify({ extensions: sourceSettings.extensions })}\n`);
+
+const { DefaultPackageManager } = await import(pathToFileURL(`${piRoot}/dist/core/package-manager.js`).href);
+const { SettingsManager } = await import(pathToFileURL(`${piRoot}/dist/core/settings-manager.js`).href);
+const settings = SettingsManager.create(cwd, agentDir);
+await settings.reload();
+const manager = new DefaultPackageManager({ cwd, agentDir, settingsManager: settings });
+const matches = (await manager.resolve()).extensions.filter(({ path }) => path.endsWith("/transcript-scroll.ts"));
+if (matches.length !== 1 || matches[0].enabled !== false) {
+	console.error(`Pi extension safety failure: expected one disabled transcript-scroll resource, got ${JSON.stringify(matches)}`);
+	process.exit(1);
+}
+console.log(`Pi transcript-scroll resolver verified: enabled=${matches[0].enabled}.`);
+NODE
+
+if [[ "$p0_only" == true ]]; then
+	exit 0
 fi
 
 subagent_entry_relative="pi/.pi/agent/extensions/subagent.ts"
