@@ -492,6 +492,10 @@ local function validate_sidekick_herdr()
   local picker_actions_only = case == "sidekick-picker-actions"
   load_plugin("sidekick.nvim")
 
+  local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
+  package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
+  package.loaded["helpers.workspace"] = nil
+
   local config = require("sidekick.config")
   local internal = require("plugins.sidekick.internal")
   if config.cli.mux.backend ~= "herdr" then
@@ -2959,6 +2963,10 @@ end
 local function validate_herdr_workspaces()
   load_plugin("snacks.nvim")
   load_plugin("tabby.nvim")
+
+  local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
+  package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
+  package.loaded["helpers.workspace"] = nil
   local mapping = vim.fn.maparg("<leader>fw", "n", false, true)
   if type(mapping) ~= "table" or not (mapping.desc or ""):find("Workspace", 1, true) then
     fail("<leader>fw live mapping missing or mislabeled: " .. vim.inspect(mapping))
@@ -3114,6 +3122,20 @@ local function validate_herdr_workspaces()
       fail("plugins.herdr.workspaces.open missing")
     end
     local nvim_workspaces = require("helpers.workspace")
+    nvim_workspaces.setup()
+
+    -- tabby.nvim loads from the live config's spec; apply the worktree tabline
+    -- spec's keys so mapping assertions exercise this change's tabline.
+    local tabline_spec = dofile(root .. "/nvim/.config/nvim/lua/plugins/tabline.lua")
+    for _, spec in ipairs(tabline_spec) do
+      if spec[1] == "nanozuki/tabby.nvim" then
+        for _, key in ipairs(spec.keys or {}) do
+          if type(key[2]) == "string" then
+            vim.keymap.set("n", key[1], key[2], { desc = key.desc })
+          end
+        end
+      end
+    end
 
     vim.cmd("silent! tabonly")
     vim.cmd("silent! only")

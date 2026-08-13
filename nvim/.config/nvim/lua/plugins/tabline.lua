@@ -8,8 +8,20 @@ return {
     event = "VimEnter",
     dependencies = "nvim-tree/nvim-web-devicons",
     keys = {
-      { "<S-h>", function() require("helpers.workspace").cycle(-1) end, desc = "Prev Tab Buffer" },
-      { "<S-l>", function() require("helpers.workspace").cycle(1) end, desc = "Next Tab Buffer" },
+      {
+        "<S-h>",
+        function()
+          require("helpers.workspace").cycle(-1)
+        end,
+        desc = "Prev Tab Buffer",
+      },
+      {
+        "<S-l>",
+        function()
+          require("helpers.workspace").cycle(1)
+        end,
+        desc = "Next Tab Buffer",
+      },
       { "[b", "<cmd>bprevious<cr>", desc = "Prev Global Buffer" },
       { "]b", "<cmd>bnext<cr>", desc = "Next Global Buffer" },
       {

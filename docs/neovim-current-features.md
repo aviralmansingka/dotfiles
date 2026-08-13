@@ -512,6 +512,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Project handling syncs cwd/root, respects buffer cwd, and updates focused file.
 - Project/root behavior is pinned to the current working directory by default.
 - Sessions persist buffers, current directory, tabs, windows, folds, and globals.
+- Workspace tab identity (folder, label, tab buffers, and Herdr binding) is snapshotted into session globals and
+  restored on load.
 - Sessions are stored under Neovim state.
 - `<leader>qs` restores the current session.
 - `<leader>ql` restores the last session.
@@ -566,13 +568,16 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 ### Statusline, tabline, dashboard, and GUI
 
 - Lualine provides a custom statusline theme.
-- Lualine shows mode, bound Herdr workspace label, branch, diff, diagnostics, filename, filetype, progress, and
-  location.
+- Lualine shows mode, workspace tab label, branch, diff, diagnostics, filename, filetype, progress, and location.
 - Global statusline is enabled.
 - Statusline is hidden in dashboard and terminal buffers.
 - Tabby replaces Bufferline for tab and buffer display.
 - Bufferline is explicitly disabled.
-- Tabline shows tabs and buffers with custom separators and modified indicators.
+- Tabline shows tabs and the current tab's buffers with custom separators and modified indicators.
+- Workspace tabs own a folder identity independent of Herdr; launching Neovim binds the initial tab to the launch
+  folder, reusing an existing workspace tab that matches by path, then name.
+- Launching an agent from a workspace tab resolves or creates its Herdr workspace from the tab's folder, then label,
+  and binds the tab to that Herdr workspace.
 - `<leader>fw` opens a fresh, compact Herdr workspace picker titled `spaces`.
 - Herdr workspaces can be created, renamed, selected, and confirmed-closed from the picker; each selected workspace is
   represented by at most one runtime Neovim tab keyed by its Herdr workspace ID.
@@ -581,7 +586,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Entering a bound workspace tab focuses the corresponding Herdr workspace; ordinary tabs and manually closed tabs do
   not affect Herdr.
 - Workspace tabs initialize from stable Herdr pane cwd and preserve later tab-local cwd/layout changes.
-- `<S-h>` and `<S-l>` navigate buffers.
+- Closing a Herdr workspace from the picker unbinds its Neovim tab, which keeps its folder identity.
+- `<S-h>` and `<S-l>` cycle the current tab's buffers; `[b` and `]b` navigate global buffers.
 - `<S-q>` closes the current buffer.
 - Dashboard actions include finding files, creating a new file, restoring the last session, opening Herdr workspaces,
   opening LazyGit, and quitting.

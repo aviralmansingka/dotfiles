@@ -81,11 +81,13 @@ end
 function M:start()
   local tab = vim.api.nvim_get_current_tabpage()
   local workspace = Workspace.get(tab)
-  local scope = workspace and {
-    workspace_id = workspace.herdr_workspace_id,
-    cwd = workspace.cwd,
-    label = workspace.label,
-  } or (self.tool.herdr_workspace_id and { workspace_id = self.tool.herdr_workspace_id } or nil)
+  local scope = workspace
+      and {
+        workspace_id = workspace.herdr_workspace_id,
+        cwd = workspace.cwd,
+        label = workspace.label,
+      }
+    or (self.tool.herdr_workspace_id and { workspace_id = self.tool.herdr_workspace_id } or nil)
   local command = self.tool.raw_cmd or self.tool.cmd
   local agent = Herdr.start(self.herdr_agent_name, self.cwd, command, self.tool.env, scope)
   if not agent then

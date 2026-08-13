@@ -197,10 +197,7 @@ local function bind_tab(workspace, reuse_empty)
   local is_new = not tab
   if not tab then
     local current = vim.api.nvim_get_current_tabpage()
-    if reuse_empty
-      and #vim.api.nvim_list_tabpages() == 1
-      and disposable_unbound_tab(current)
-    then
+    if reuse_empty and #vim.api.nvim_list_tabpages() == 1 and disposable_unbound_tab(current) then
       tab = current
     else
       vim.cmd.tabnew()

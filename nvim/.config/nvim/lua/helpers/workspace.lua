@@ -110,8 +110,7 @@ function M.cycle(direction)
     return
   end
   local current_index = vim.fn.index(buffers, current)
-  local index = current_index < 0 and (direction > 0 and 1 or #buffers)
-    or ((current_index + direction) % #buffers) + 1
+  local index = current_index < 0 and (direction > 0 and 1 or #buffers) or ((current_index + direction) % #buffers) + 1
   vim.api.nvim_set_current_buf(buffers[index])
 end
 
