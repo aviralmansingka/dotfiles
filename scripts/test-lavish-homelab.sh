@@ -169,11 +169,27 @@ with tempfile.TemporaryDirectory() as temporary:
     assert previous == "artifact-context"
     assert saved == {"demo": {"target": str(artifact), "context": "replacement-context"}}
     assert all(call[:4] == ["tailscale", "serve", "status", "--json"] for call in calls)
+
+    before_failure = state.read_text()
+    def fail_route(args, **kwargs):
+        if args[:4] == ["tailscale", "serve", "status", "--json"]:
+            return type("Result", (), {"stdout": '{"Web": {}}'})()
+        raise module["subprocess"].CalledProcessError(1, args)
+    module["set_alias"].__globals__["subprocess"].run = fail_route
+    try:
+        module["set_alias"]("new-demo", str(artifact), "new-context")
+    except module["subprocess"].CalledProcessError:
+        pass
+    else:
+        raise AssertionError("failed route publication was accepted")
+    assert state.read_text() == before_failure
 PY
-grep -F 'rsync -azR --exclude .git/ "./$artifact_dir_relative/"' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'rsync -azR --exclude .git --exclude .git/ "./$artifact_dir_relative/"' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F '"$(quote_remote "$REMOTE_ALIASES") check $(quote_remote "$alias")"' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'retire --context $(quote_remote "$previous_context")' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'publish_alias "$alias" "$target_url"' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'if ! publish_alias "$alias" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"; then' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'rsync -az --delete --exclude .git --exclude .git/' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'retire-pending' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'timeout=700' "$repo_dir/scripts/lavish-aliases" >/dev/null
 remote_path=$("$repo_dir/scripts/lavish-homelab" remote-path "$test_dir/example.html")

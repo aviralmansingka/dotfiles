@@ -179,22 +179,41 @@ else:
     raise AssertionError("out-of-worktree symlink was accepted")
 
 agent_globals = module["start_agent"].__globals__
+agent_globals["STATE_FILE"] = state_path
+agent_globals["CONTEXT_ROOT"] = state_path.parent / "artifacts/_contexts"
+initializing_context = "artifact-0000000000000000"
+initializing_record = {
+    "context_id": initializing_context,
+    "slug": "initializing",
+    "phase": "prepared",
+    "worktree": str(root / "initializing-worktree"),
+    "replies": str(root / "initializing-replies"),
+}
+state[initializing_context] = initializing_record
+agent_globals["save_state"](state)
 close_calls = []
-def fail_after_create(record, created):
-    created.append("workspace-created")
-    raise module["ArtifactAgentError"]("initialization failed")
-def close_created(args, **kwargs):
-    close_calls.append(args)
-    return {}
-agent_globals["start_agent_unchecked"] = fail_after_create
-agent_globals["herdr_json"] = close_created
+def fail_after_create(args, **kwargs):
+    if args[:2] == ["workspace", "create"]:
+        return {"workspace": {"workspace_id": "workspace-created"}, "root_pane": {"pane_id": "pane-created"}}
+    if args[:2] == ["agent", "start"]:
+        raise module["ArtifactAgentError"]("initialization failed")
+    if args[:2] == ["workspace", "close"]:
+        close_calls.append(args)
+        raise module["ArtifactAgentError"]("close failed")
+    raise AssertionError(args)
+agent_globals["herdr_json"] = fail_after_create
 try:
-    module["start_agent"]({})
+    module["start_agent"](initializing_record, state)
 except module["ArtifactAgentError"]:
     pass
 else:
     raise AssertionError("initialization failure was swallowed")
+saved_initializing = json.loads(state_path.read_text())[initializing_context]
+assert saved_initializing["phase"] == "retiring"
+assert saved_initializing["workspace_id"] == "workspace-created"
 assert close_calls == [["workspace", "close", "workspace-created"]]
+state.pop(initializing_context)
+agent_globals["save_state"](state)
 
 pending_context = "artifact-3333333333333333"
 pending_root = root / "pending-contexts"
@@ -217,6 +236,24 @@ except module["ArtifactAgentError"]:
 else:
     raise AssertionError("retirement failure was swallowed")
 assert json.loads(pending_state.read_text())[pending_context]["phase"] == "retiring"
+later_context = "artifact-4444444444444444"
+(pending_root / later_context).mkdir()
+pending_data = json.loads(pending_state.read_text())
+pending_data[later_context] = {
+    "context_id": later_context,
+    "phase": "retiring",
+    "workspace_id": "workspace-later",
+}
+pending_state.write_text(json.dumps(pending_data))
+def timeout_then_close(args, **kwargs):
+    if args[-1] == "workspace-pending":
+        raise module["subprocess"].TimeoutExpired(args, 120)
+    return {}
+agent_globals["herdr_json"] = timeout_then_close
+pending = module["command_retire_pending"](None)
+assert pending["retired"] == [later_context]
+assert pending_context in pending["errors"]
+assert later_context not in json.loads(pending_state.read_text())
 agent_globals["herdr_json"] = lambda args, **kwargs: {}
 pending = module["command_retire_pending"](None)
 assert pending == {"retired": [pending_context], "errors": {}}
@@ -224,8 +261,8 @@ assert json.loads(pending_state.read_text()) == {}
 assert not (pending_root / pending_context).exists()
 
 assert module["reflow_terminal_wraps"](
-    "First wrapped\n  paragraph.\n\n```python\ndef f():\n    return 1\n```\n\n- long item\n  continuation\n- next\n\n> quoted\n  continuation\n\nLast wrapped\nline."
-) == "First wrapped paragraph.\n\n```python\ndef f():\n    return 1\n```\n\n- long item continuation\n- next\n\n> quoted continuation\n\nLast wrapped line."
+    "First wrapped\n  paragraph.\n\n```python\ndef f():\n    return 1\n```\n\n- long item\n  continuation\n  - nested item\n    continuation\n- next\n\n> quoted\n  continuation\n\nLast wrapped\nline."
+) == "First wrapped paragraph.\n\n```python\ndef f():\n    return 1\n```\n\n- long item continuation\n  - nested item continuation\n- next\n\n> quoted continuation\n\nLast wrapped line."
 PY
 
 echo "lavish-artifact-agent: ok"

@@ -74,7 +74,9 @@ publish_alias() {
   if [[ -n "$context" ]]; then
     command+=" --context $(quote_remote "$context")"
   fi
-  result=$(ssh -n "$REMOTE_HOST" "$command")
+  if ! result=$(ssh -n "$REMOTE_HOST" "$command"); then
+    return 1
+  fi
   ALIAS_URL=$(printf '%s\n' "$result" | sed -n '1p')
   previous_context=$(printf '%s\n' "$result" | sed -n '2p')
   if [[ -n "$previous_context" && "$previous_context" != "$context" ]]; then
@@ -175,12 +177,12 @@ prepare_artifact_context() {
     return 1
   fi
   artifact_dir_relative=$(dirname "$artifact_relative")
-  if ! (cd "$repo_root" && rsync -azR --exclude .git/ "./$artifact_dir_relative/" "${REMOTE_HOST}:${incoming}/"); then
+  if ! (cd "$repo_root" && rsync -azR --exclude .git --exclude .git/ "./$artifact_dir_relative/" "${REMOTE_HOST}:${incoming}/"); then
     ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
     return 1
   fi
   if [[ -n "$source_relative" && "$source_relative" != "$artifact_relative" ]]; then
-    if ! (cd "$repo_root" && rsync -azR "./$source_relative" "${REMOTE_HOST}:${incoming}/"); then
+    if ! (cd "$repo_root" && rsync -azR --exclude .git --exclude .git/ "./$source_relative" "${REMOTE_HOST}:${incoming}/"); then
       ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
       return 1
     fi
@@ -275,7 +277,7 @@ case "$action" in
     if [[ "$action" != end ]]; then
       remote_dir=$(dirname "$remote_file")
       ssh -n "$REMOTE_HOST" "mkdir -p $(quote_remote "$remote_dir")"
-      rsync -az --delete --exclude .git/ "$(dirname "$source_file")/" "${REMOTE_HOST}:${remote_dir}/"
+      rsync -az --delete --exclude .git --exclude .git/ "$(dirname "$source_file")/" "${REMOTE_HOST}:${remote_dir}/"
     fi
     if [[ "$action" == render || "$action" == review || "$action" == open ]]; then
       alias=$(alias_for "$source_file" "$source_markdown" "$explicit_alias")
@@ -284,7 +286,12 @@ case "$action" in
         retry_pending_retirements
         ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") check $(quote_remote "$alias")"
         prepare_artifact_context "$source_file" "$source_markdown" "$alias"
-        publish_alias "$alias" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"
+        if ! publish_alias "$alias" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"; then
+          if ! ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") retire --context $(quote_remote "$ARTIFACT_CONTEXT_ID")" >/dev/null; then
+            echo "Artifact context retirement is pending: $ARTIFACT_CONTEXT_ID" >&2
+          fi
+          exit 1
+        fi
         printf 'alias_url: "%s"\nartifact_path: "%s"\nartifact_context: "%s"\n' "$ALIAS_URL" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"
         exit 0
       fi

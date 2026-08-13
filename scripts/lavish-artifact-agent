@@ -246,6 +246,8 @@ def sync_snapshot(incoming: Path, worktree: Path) -> None:
             "-a",
             "--delete",
             "--exclude",
+            ".git",
+            "--exclude",
             ".git/",
             f"{incoming}/",
             f"{worktree}/",
@@ -254,21 +256,45 @@ def sync_snapshot(incoming: Path, worktree: Path) -> None:
     )
 
 
-def start_agent(record: dict[str, object]) -> dict[str, object]:
-    created: list[str] = []
+def reset_started_workspace(
+    record: dict[str, object], state: dict[str, dict[str, object]]
+) -> None:
+    workspace_id = str(record.get("workspace_id", ""))
+    if not workspace_id:
+        return
     try:
-        return start_agent_unchecked(record, created)
+        herdr_json(["workspace", "close", workspace_id])
+    except (ArtifactAgentError, subprocess.TimeoutExpired):
+        record["phase"] = "retiring"
+        record["retirement_requested_at"] = now()
+        save_state(state)
+        return
+    record["phase"] = "prepared"
+    for key in (
+        "workspace_label",
+        "workspace_id",
+        "tab_id",
+        "pane_id",
+        "terminal_id",
+        "agent_name",
+        "agent_session",
+    ):
+        record.pop(key, None)
+    save_state(state)
+
+
+def start_agent(
+    record: dict[str, object], state: dict[str, dict[str, object]]
+) -> dict[str, object]:
+    try:
+        return start_agent_unchecked(record, state)
     except Exception:
-        if created and created[0]:
-            try:
-                herdr_json(["workspace", "close", created[0]])
-            except ArtifactAgentError:
-                pass
+        reset_started_workspace(record, state)
         raise
 
 
 def start_agent_unchecked(
-    record: dict[str, object], created: list[str]
+    record: dict[str, object], state: dict[str, dict[str, object]]
 ) -> dict[str, object]:
     worktree = Path(str(record["worktree"]))
     replies = Path(str(record["replies"]))
@@ -291,11 +317,20 @@ def start_agent_unchecked(
     workspace_data = workspace.get("workspace")
     pane_data = workspace.get("root_pane")
     workspace_id = str(workspace_data.get("workspace_id", "")) if isinstance(workspace_data, dict) else ""
-    created.append(workspace_id)
-    if not isinstance(workspace_data, dict) or not isinstance(pane_data, dict):
-        raise ArtifactAgentError("Herdr did not return the created workspace and root pane")
+    if not workspace_id:
+        raise ArtifactAgentError("Herdr did not return the created workspace identity")
+    record.update(
+        {
+            "phase": "initializing",
+            "workspace_label": label,
+            "workspace_id": workspace_id,
+        }
+    )
+    save_state(state)
+    if not isinstance(pane_data, dict):
+        raise ArtifactAgentError("Herdr did not return the created workspace root pane")
     pane_id = str(pane_data.get("pane_id", ""))
-    if not workspace_id or not pane_id:
+    if not pane_id:
         raise ArtifactAgentError("Herdr returned incomplete workspace identity")
 
     agent_name = f"artifact-{hashlib.sha256(context_id.encode()).hexdigest()[:16]}"
@@ -383,22 +418,27 @@ def command_activate(args: argparse.Namespace) -> dict[str, object]:
 
         original = context_dir(args.context) / "original-artifact.html"
         shutil.copy2(artifact, original)
-        identity = start_agent(record)
-        record.update(
-            {
-                "phase": "active",
-                "artifact_relative": artifact_relative,
-                "artifact": str(worktree / artifact_relative),
-                "original_artifact": str(original),
-                "source_relative": source_relative,
-                "source": str(worktree / source_relative) if source else "",
-                "activated_at": now(),
-                **identity,
-            }
-        )
-        shutil.rmtree(incoming)
-        save_state(state)
-        atomic_json(context_dir(args.context) / "chat.json", {"messages": []})
+        try:
+            identity = start_agent(record, state)
+            record.update(
+                {
+                    "phase": "active",
+                    "artifact_relative": artifact_relative,
+                    "artifact": str(worktree / artifact_relative),
+                    "original_artifact": str(original),
+                    "source_relative": source_relative,
+                    "source": str(worktree / source_relative) if source else "",
+                    "activated_at": now(),
+                    **identity,
+                }
+            )
+            shutil.rmtree(incoming)
+            save_state(state)
+            atomic_json(context_dir(args.context) / "chat.json", {"messages": []})
+        except Exception:
+            if record.get("phase") in {"initializing", "active"}:
+                reset_started_workspace(record, state)
+            raise
         return {
             "context_id": args.context,
             "artifact": str(artifact),
@@ -552,7 +592,7 @@ def reflow_terminal_wraps(markdown: str) -> str:
         is_list = line.startswith(("- ", "* ", "+ ")) or bool(re.match(r"^\d+[.)]\s", line))
         if is_list or line.startswith(">"):
             flush()
-            result.append(line)
+            result.append(raw.rstrip())
             structured = True
             continue
         if line.startswith(("#", "|")):
@@ -764,15 +804,19 @@ def command_reflow_history(args: argparse.Namespace) -> dict[str, object]:
 
 
 def command_abandon(args: argparse.Namespace) -> dict[str, object]:
-    with state_transaction() as state:
-        record = state_record(state, args.context)
-        if record.get("phase") != "prepared":
-            raise ArtifactAgentError("Only a prepared context with no running agent can be abandoned")
-        root = context_dir(args.context)
-        shutil.rmtree(root)
-        state.pop(args.context, None)
-        save_state(state)
-        return {"context_id": args.context, "abandoned": True}
+    phase = str(record_for(args.context).get("phase", ""))
+    if phase in {"initializing", "retiring", "retired"}:
+        return retire_context(args.context)
+    with context_lock(args.context):
+        with state_transaction() as state:
+            record = state_record(state, args.context)
+            if record.get("phase") != "prepared":
+                raise ArtifactAgentError("Only a prepared context with no running agent can be abandoned")
+            root = context_dir(args.context)
+            shutil.rmtree(root)
+            state.pop(args.context, None)
+            save_state(state)
+            return {"context_id": args.context, "abandoned": True}
 
 
 def retire_context(context_id: str) -> dict[str, object]:
@@ -781,12 +825,12 @@ def retire_context(context_id: str) -> dict[str, object]:
         with state_transaction() as state:
             record = state_record(state, context_id)
             phase = str(record.get("phase", ""))
-            if phase not in {"active", "retiring", "retired"}:
-                raise ArtifactAgentError("Only an active artifact context can be retired")
+            if phase not in {"initializing", "active", "retiring", "retired"}:
+                raise ArtifactAgentError("Artifact context has no running workspace to retire")
             workspace_id = str(record.get("workspace_id", ""))
             if not workspace_id:
                 raise ArtifactAgentError("Artifact context has no Herdr workspace")
-            if phase == "active":
+            if phase in {"initializing", "active"}:
                 record["phase"] = "retiring"
                 record["retirement_requested_at"] = now()
                 save_state(state)
@@ -813,7 +857,7 @@ def command_retire_pending(args: argparse.Namespace) -> dict[str, object]:
     pending = [
         context_id
         for context_id, record in load_state().items()
-        if isinstance(record, dict) and record.get("phase") in {"retiring", "retired"}
+        if isinstance(record, dict) and record.get("phase") in {"initializing", "retiring", "retired"}
     ]
     retired: list[str] = []
     errors: dict[str, str] = {}
@@ -821,7 +865,7 @@ def command_retire_pending(args: argparse.Namespace) -> dict[str, object]:
         try:
             retire_context(context_id)
             retired.append(context_id)
-        except ArtifactAgentError as error:
+        except (ArtifactAgentError, subprocess.TimeoutExpired) as error:
             errors[context_id] = str(error)
     return {"retired": retired, "errors": errors}
 
@@ -868,7 +912,7 @@ def main() -> None:
         "retire-pending": command_retire_pending,
     }[args.command]
     try:
-        if args.command in {"chat", "check", "history"}:
+        if args.command in {"activate", "chat", "check", "history"}:
             with context_lock(args.context):
                 result = command(args)
         else:

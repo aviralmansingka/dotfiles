@@ -152,27 +152,27 @@ def set_alias(slug: str, target_url: str, context: str | None = None) -> str | N
     if target_file and not target_file.is_file():
         raise SystemExit(f"Static artifact does not exist: {target_file}")
 
-    existing, path, proxy = alias_owner(slug)
     with alias_transaction() as aliases:
+        existing, path, proxy = alias_owner(slug)
         previous_context = aliases.get(slug, {}).get("context")
+        if not existing:
+            subprocess.run(
+                [
+                    "tailscale",
+                    "serve",
+                    "--bg",
+                    "--https=443",
+                    "--set-path",
+                    path,
+                    proxy,
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
         aliases[slug] = {"target": target_url}
         if context:
             aliases[slug]["context"] = context
         save_aliases(aliases)
-    if not existing:
-        subprocess.run(
-            [
-                "tailscale",
-                "serve",
-                "--bg",
-                "--https=443",
-                "--set-path",
-                path,
-                proxy,
-            ],
-            check=True,
-            stdout=subprocess.DEVNULL,
-        )
     print(f"https://{HOSTNAME}/{slug}")
     return previous_context
 
