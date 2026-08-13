@@ -160,16 +160,22 @@ if (!fs.existsSync(extensionPath)) {
 console.log("Pi P0 terminal safety verified: semantic prompt and transcript-scroll exclusion present.");
 NODE
 
-pi_cli="$(realpath "$(command -v pi)")"
+if ! pi_bin="$(command -v pi)"; then
+	echo "Pi extension safety failure: pi is not on PATH; this verifier requires an installed pi CLI" >&2
+	exit 1
+fi
+pi_cli="$(realpath "$pi_bin")"
 pi_package_root="$(cd "$(dirname "$pi_cli")/.." && pwd)"
+pi_version="$(pi --version 2>/dev/null)" || pi_version="unknown"
 PI_OFFLINE=1 node --input-type=module - \
 	"$repo_root" \
 	"$verify_dir/p0-resolver" \
-	"$pi_package_root" <<'NODE'
+	"$pi_package_root" \
+	"$pi_version" <<'NODE'
 import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-const [repoRoot, sandboxRoot, piRoot] = process.argv.slice(2);
+const [repoRoot, sandboxRoot, piRoot, piVersion] = process.argv.slice(2);
 const sourceAgentDir = `${repoRoot}/pi/.pi/agent`;
 const agentDir = `${sandboxRoot}/agent`;
 const cwd = `${sandboxRoot}/cwd`;
@@ -179,12 +185,34 @@ symlinkSync(`${sourceAgentDir}/extensions`, `${agentDir}/extensions`);
 const sourceSettings = JSON.parse(readFileSync(`${sourceAgentDir}/settings.json`, "utf8"));
 writeFileSync(`${agentDir}/settings.json`, `${JSON.stringify({ extensions: sourceSettings.extensions })}\n`);
 
-const { DefaultPackageManager } = await import(pathToFileURL(`${piRoot}/dist/core/package-manager.js`).href);
-const { SettingsManager } = await import(pathToFileURL(`${piRoot}/dist/core/settings-manager.js`).href);
-const settings = SettingsManager.create(cwd, agentDir);
-await settings.reload();
-const manager = new DefaultPackageManager({ cwd, agentDir, settingsManager: settings });
-const matches = (await manager.resolve()).extensions.filter(({ path }) => path.endsWith("/transcript-scroll.ts"));
+function failLayout(error) {
+	console.error(
+		`Pi extension safety failure: installed pi internals changed or failed to load ` +
+			`(pi version ${piVersion}, package root ${piRoot}): ${error instanceof Error ? error.message : String(error)}. ` +
+			`Update scripts/verify-pi-work-step-ui to the new pi internal layout or to a supported pi interface.`,
+	);
+	process.exit(1);
+}
+
+let DefaultPackageManager;
+let SettingsManager;
+try {
+	({ DefaultPackageManager } = await import(pathToFileURL(`${piRoot}/dist/core/package-manager.js`).href));
+	({ SettingsManager } = await import(pathToFileURL(`${piRoot}/dist/core/settings-manager.js`).href));
+} catch (error) {
+	failLayout(error);
+}
+if (typeof DefaultPackageManager !== "function" || typeof SettingsManager?.create !== "function")
+	failLayout(new Error("DefaultPackageManager or SettingsManager.create export is missing"));
+let matches;
+try {
+	const settings = SettingsManager.create(cwd, agentDir);
+	await settings.reload();
+	const manager = new DefaultPackageManager({ cwd, agentDir, settingsManager: settings });
+	matches = (await manager.resolve()).extensions.filter(({ path }) => path.endsWith("/transcript-scroll.ts"));
+} catch (error) {
+	failLayout(error);
+}
 if (matches.length !== 1 || matches[0].enabled !== false) {
 	console.error(`Pi extension safety failure: expected one disabled transcript-scroll resource, got ${JSON.stringify(matches)}`);
 	process.exit(1);
