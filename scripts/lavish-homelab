@@ -78,12 +78,37 @@ cleanup_remote_context() {
   return 1
 }
 
-publish_alias() {
-  local alias=$1 target=$2 context=${3:-} publication=${3:-$2} command result status attempt
-  command="$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$target") --publication $(quote_remote "$publication")"
+publication_status() {
+  ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") publication-status $(quote_remote "$1") $(quote_remote "$2")"
+}
+
+begin_alias_publication() {
+  local alias=$1 target=$2 context=${3:-} publication=${3:-$2} command status attempt
+  command="$(quote_remote "$REMOTE_ALIASES") publication-begin $(quote_remote "$alias") $(quote_remote "$target") --publication $(quote_remote "$publication")"
   if [[ -n "$context" ]]; then
     command+=" --context $(quote_remote "$context")"
   fi
+  for attempt in 1 2 3; do
+    ssh -n "$REMOTE_HOST" "$command" >/dev/null && return 0
+    sleep 1
+  done
+  status=$(publication_status "$alias" "$publication") || return 1
+  [[ "$status" == pending || "$status" == published ]]
+}
+
+cancel_alias_publication() {
+  local publication=$1 attempt
+  for attempt in 1 2 3; do
+    ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") publication-cancel $(quote_remote "$publication")" >/dev/null && return 0
+    sleep 1
+  done
+  return 1
+}
+
+publish_alias() {
+  local alias=$1 target=$2 context=${3:-} publication=${3:-$2} command result status attempt
+  begin_alias_publication "$alias" "$target" "$context" || return 1
+  command="$(quote_remote "$REMOTE_ALIASES") publication-commit $(quote_remote "$publication")"
   for attempt in 1 2 3; do
     if result=$(ssh -n "$REMOTE_HOST" "$command"); then
       ALIAS_URL=$(printf '%s\n' "$result" | sed -n '1p')
@@ -91,13 +116,14 @@ publish_alias() {
     fi
     sleep 1
   done
-  if ! status=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") publication-status $(quote_remote "$alias") $(quote_remote "$publication")"); then
+  if ! status=$(publication_status "$alias" "$publication"); then
     return 2
   fi
   if [[ "$status" == published ]]; then
     ALIAS_URL="https://homelab.tail1b3b66.ts.net/$alias"
     return 0
   fi
+  [[ "$status" == pending ]] && return 2
   return 1
 }
 
@@ -142,7 +168,7 @@ git_repo() {
 
 prepare_artifact_context() {
   local html_file=$1 markdown_file=$2 alias=$3 candidate repo_root branch repo_url
-  local artifact_relative artifact_dir_relative source_relative context_seed context_id incoming worktree activate_command
+  local artifact_relative artifact_dir_relative source_relative context_seed context_id incoming worktree activate_command prepare_command prepared attempt
   candidate=${markdown_file:-$html_file}
   repo_root=$(find_git_root "$candidate") || {
     echo "Artifact chat requires the source or HTML file to live in a Git worktree: $candidate" >&2
@@ -177,9 +203,19 @@ prepare_artifact_context() {
   incoming="${REMOTE_CONTEXT_ROOT}/${context_id}/incoming"
   worktree="${REMOTE_CONTEXT_ROOT}/${context_id}/worktree"
 
-  ssh -n "$REMOTE_HOST" \
-    "$(quote_remote "$REMOTE_ARTIFACT_AGENT") prepare --context $(quote_remote "$context_id") --slug $(quote_remote "$alias") --repo-url $(quote_remote "$repo_url") --branch $(quote_remote "$branch")" \
-    >/dev/null
+  prepare_command="$(quote_remote "$REMOTE_ARTIFACT_AGENT") prepare --context $(quote_remote "$context_id") --slug $(quote_remote "$alias") --repo-url $(quote_remote "$repo_url") --branch $(quote_remote "$branch")"
+  prepared=false
+  for attempt in 1 2 3; do
+    if ssh -n "$REMOTE_HOST" "$prepare_command" >/dev/null; then
+      prepared=true
+      break
+    fi
+    sleep 1
+  done
+  if [[ "$prepared" != true ]]; then
+    cleanup_remote_context "$context_id" || true
+    return 1
+  fi
 
   if ! git_repo ls-files -co --exclude-standard -z \
     | while IFS= read -r -d '' path; do
@@ -203,11 +239,16 @@ prepare_artifact_context() {
     fi
   fi
 
+  if ! begin_alias_publication "$alias" "$worktree/$artifact_relative" "$context_id"; then
+    cleanup_remote_context "$context_id" || true
+    return 1
+  fi
   activate_command="$(quote_remote "$REMOTE_ARTIFACT_AGENT") activate --context $(quote_remote "$context_id") --artifact-relative $(quote_remote "$artifact_relative")"
   if [[ -n "$source_relative" ]]; then
     activate_command+=" --source-relative $(quote_remote "$source_relative")"
   fi
   if ! ssh -n "$REMOTE_HOST" "$activate_command" >/dev/null; then
+    cancel_alias_publication "$context_id" || true
     cleanup_remote_context "$context_id" || true
     return 1
   fi

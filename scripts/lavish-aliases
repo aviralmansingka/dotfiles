@@ -28,6 +28,12 @@ CONTEXT_FILE = Path(
         Path.home() / ".local/state/lavish-artifact-contexts.json",
     )
 )
+PUBLICATION_FILE = Path(
+    os.environ.get(
+        "LAVISH_ARTIFACT_PUBLICATION_STATE",
+        Path.home() / ".local/state/lavish-artifact-publications.json",
+    )
+)
 ARTIFACT_ROOT = Path(
     os.environ.get(
         "LAVISH_ARTIFACT_ROOT",
@@ -94,6 +100,26 @@ def save_aliases(aliases: dict[str, dict[str, object]]) -> None:
     save_json(STATE_FILE, aliases, ".lavish-aliases-")
 
 
+def load_publications() -> dict[str, dict[str, str]]:
+    try:
+        data = json.loads(PUBLICATION_FILE.read_text())
+    except FileNotFoundError:
+        return {}
+    if not isinstance(data, dict) or not all(
+        isinstance(key, str)
+        and isinstance(value, dict)
+        and all(isinstance(value.get(field), str) for field in ("slug", "target", "publication"))
+        and ("context" not in value or isinstance(value.get("context"), str))
+        for key, value in data.items()
+    ):
+        raise SystemExit(f"Invalid artifact publication state: {PUBLICATION_FILE}")
+    return data
+
+
+def save_publications(publications: dict[str, dict[str, str]]) -> None:
+    save_json(PUBLICATION_FILE, publications, ".lavish-publications-")
+
+
 @contextmanager
 def alias_transaction():
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -101,6 +127,15 @@ def alias_transaction():
     with lock_path.open("a+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         yield load_aliases()
+
+
+@contextmanager
+def publication_transaction():
+    PUBLICATION_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = PUBLICATION_FILE.with_name(f".{PUBLICATION_FILE.name}.lock")
+    with lock_path.open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield load_publications()
 
 
 def load_contexts() -> dict[str, str]:
@@ -191,17 +226,21 @@ def retry_retirements(slug: str | None = None) -> dict[str, str]:
     return errors
 
 
+def validate_target(target_url: str, require_file: bool = True) -> None:
+    target_file = static_target(target_url)
+    if not TARGET_RE.fullmatch(target_url) and not target_file:
+        raise SystemExit(f"Invalid Lavish target URL: {target_url}")
+    if require_file and target_file and not target_file.is_file():
+        raise SystemExit(f"Static artifact does not exist: {target_file}")
+
+
 def set_alias(
     slug: str,
     target_url: str,
     context: str | None = None,
     publication: str | None = None,
 ) -> str | None:
-    target_file = static_target(target_url)
-    if not TARGET_RE.fullmatch(target_url) and not target_file:
-        raise SystemExit(f"Invalid Lavish target URL: {target_url}")
-    if target_file and not target_file.is_file():
-        raise SystemExit(f"Static artifact does not exist: {target_file}")
+    validate_target(target_url)
     publication = publication or context or target_url
 
     with alias_transaction() as aliases:
@@ -238,9 +277,64 @@ def set_alias(
     return previous_context
 
 
+def begin_publication(
+    slug: str,
+    target_url: str,
+    context: str | None,
+    publication: str,
+) -> None:
+    if not SLUG_RE.fullmatch(slug):
+        raise SystemExit(f"Invalid alias: {slug}")
+    validate_target(target_url, require_file=False)
+    candidate = {"slug": slug, "target": target_url, "publication": publication}
+    if context:
+        candidate["context"] = context
+    with publication_transaction() as publications:
+        existing = publications.get(publication)
+        if existing and existing != candidate:
+            raise SystemExit(f"Conflicting artifact publication: {publication}")
+        publications[publication] = candidate
+        save_publications(publications)
+
+
+def commit_publication(publication: str) -> str | None:
+    with publication_transaction() as publications:
+        record = publications.get(publication)
+        if not record:
+            raise SystemExit(f"Unknown artifact publication: {publication}")
+        previous = set_alias(
+            record["slug"],
+            record["target"],
+            record.get("context"),
+            record["publication"],
+        )
+        publications.pop(publication, None)
+        save_publications(publications)
+        return previous
+
+
+def cancel_publication(publication: str) -> None:
+    with publication_transaction() as publications:
+        publications.pop(publication, None)
+        save_publications(publications)
+
+
 def publication_status(slug: str, publication: str) -> str:
     record = load_aliases().get(slug)
-    return "published" if record and record.get("publication") == publication else "absent"
+    if record and record.get("publication") == publication:
+        return "published"
+    pending = load_publications().get(publication)
+    return "pending" if pending and pending.get("slug") == slug else "absent"
+
+
+def retry_publications() -> dict[str, str]:
+    errors: dict[str, str] = {}
+    for publication in list(load_publications()):
+        try:
+            commit_publication(publication)
+        except (Exception, SystemExit) as error:
+            errors[publication] = str(error)
+    return errors
 
 
 def agent_lock(context: str) -> threading.Lock:
@@ -379,11 +473,13 @@ def artifact_shell(slug: str) -> bytes:
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }}
   function mdInline(text) {{
-    return escapeMd(text)
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
-      .replace(/\\*([^*\\n]+)\\*/g, '<em>$1</em>')
-      .replace(/\\[([^\\]]+)\\]\\((https?:[^)\\s]+)\\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+    return escapeMd(text).split(/(`[^`]+`)/g).map(part => {{
+      if (part.startsWith('`') && part.endsWith('`')) return '<code>' + part.slice(1, -1) + '</code>';
+      return part
+        .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
+        .replace(/\\*([^*\\n]+)\\*/g, '<em>$1</em>')
+        .replace(/\\[([^\\]]+)\\]\\((https?:[^)\\s]+)\\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+    }}).join('');
   }}
   function md(source) {{
     const lines = source.split('\\n');
@@ -790,6 +886,15 @@ def main() -> None:
     set_parser.add_argument("--context")
     set_parser.add_argument("--publication")
     set_parser.add_argument("--print-previous-context", action="store_true")
+    begin_parser = subparsers.add_parser("publication-begin")
+    begin_parser.add_argument("slug")
+    begin_parser.add_argument("target_url")
+    begin_parser.add_argument("--context")
+    begin_parser.add_argument("--publication", required=True)
+    commit_parser = subparsers.add_parser("publication-commit")
+    commit_parser.add_argument("publication")
+    cancel_parser = subparsers.add_parser("publication-cancel")
+    cancel_parser.add_argument("publication")
     status_parser = subparsers.add_parser("publication-status")
     status_parser.add_argument("slug")
     status_parser.add_argument("publication")
@@ -801,11 +906,20 @@ def main() -> None:
         if args.print_previous_context:
             print(previous_context or "")
         return
+    if args.command == "publication-begin":
+        begin_publication(args.slug, args.target_url, args.context, args.publication)
+        return
+    if args.command == "publication-commit":
+        commit_publication(args.publication)
+        return
+    if args.command == "publication-cancel":
+        cancel_publication(args.publication)
+        return
     if args.command == "publication-status":
         print(publication_status(args.slug, args.publication))
         return
     if args.command == "retire-pending":
-        errors = retry_retirements()
+        errors = {**retry_publications(), **retry_retirements()}
         if errors:
             raise SystemExit(json.dumps(errors, sort_keys=True))
         return

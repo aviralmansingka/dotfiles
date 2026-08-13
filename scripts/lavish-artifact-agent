@@ -182,7 +182,20 @@ def command_prepare(args: argparse.Namespace) -> dict[str, object]:
         raise ArtifactAgentError("Repository URL is required")
     run(["git", "check-ref-format", "--branch", args.branch])
     with state_transaction() as state:
-        if context_id in state:
+        existing = state.get(context_id)
+        if isinstance(existing, dict):
+            if (
+                existing.get("phase") == "prepared"
+                and existing.get("slug") == args.slug
+                and existing.get("repo_url") == args.repo_url
+                and existing.get("branch") == args.branch
+            ):
+                return {
+                    "context_id": context_id,
+                    "baseline_commit": existing["baseline_commit"],
+                    "worktree": existing["worktree"],
+                    "incoming": existing["incoming"],
+                }
             raise ArtifactAgentError(f"Artifact context already exists: {context_id}")
 
         root = context_dir(context_id)
@@ -803,6 +816,27 @@ def command_reflow_history(args: argparse.Namespace) -> dict[str, object]:
     return {"reflowed": results}
 
 
+def remove_context_files(context_id: str) -> None:
+    root = context_dir(context_id)
+    try:
+        shutil.rmtree(root)
+    except FileNotFoundError:
+        pass
+    except OSError as error:
+        raise ArtifactAgentError(f"Could not remove artifact context files: {error}") from error
+    if root.exists():
+        raise ArtifactAgentError(f"Artifact context files remain: {root}")
+
+
+def mark_cleanup_pending(context_id: str, error: Exception) -> None:
+    with state_transaction() as state:
+        record = state.setdefault(context_id, {"context_id": context_id})
+        record["phase"] = "cleanup-pending"
+        record["cleanup_error"] = str(error)
+        record["cleanup_requested_at"] = now()
+        save_state(state)
+
+
 def retire_context_locked(context_id: str) -> dict[str, object]:
     with state_transaction() as state:
         record = state_record(state, context_id)
@@ -824,7 +858,11 @@ def retire_context_locked(context_id: str) -> dict[str, object]:
             record["phase"] = "retired"
             save_state(state)
 
-    shutil.rmtree(context_dir(context_id), ignore_errors=True)
+    try:
+        remove_context_files(context_id)
+    except ArtifactAgentError as error:
+        mark_cleanup_pending(context_id, error)
+        raise
     with state_transaction() as state:
         state.pop(context_id, None)
         save_state(state)
@@ -842,17 +880,19 @@ def cleanup_context(context_id: str) -> dict[str, object]:
     with context_lock(context_id):
         with state_transaction() as state:
             record = state.get(context_id)
-            if record is None:
-                shutil.rmtree(context_dir(context_id), ignore_errors=True)
-                return {"context_id": context_id, "cleaned": True}
-            if not isinstance(record, dict):
+            if record is not None and not isinstance(record, dict):
                 raise ArtifactAgentError(f"Invalid artifact context: {context_id}")
-            phase = str(record.get("phase", ""))
-            if phase == "prepared":
-                shutil.rmtree(context_dir(context_id), ignore_errors=True)
-                state.pop(context_id)
+            phase = str(record.get("phase", "")) if record else ""
+        if record is None or phase in {"prepared", "retired", "cleanup-pending"}:
+            try:
+                remove_context_files(context_id)
+            except ArtifactAgentError as error:
+                mark_cleanup_pending(context_id, error)
+                raise
+            with state_transaction() as state:
+                state.pop(context_id, None)
                 save_state(state)
-                return {"context_id": context_id, "cleaned": True}
+            return {"context_id": context_id, "cleaned": True}
         return retire_context_locked(context_id)
 
 
@@ -872,13 +912,14 @@ def command_retire_pending(args: argparse.Namespace) -> dict[str, object]:
     pending = [
         context_id
         for context_id, record in load_state().items()
-        if isinstance(record, dict) and record.get("phase") in {"initializing", "retiring", "retired"}
+        if isinstance(record, dict)
+        and record.get("phase") in {"initializing", "retiring", "retired", "cleanup-pending"}
     ]
     retired: list[str] = []
     errors: dict[str, str] = {}
     for context_id in pending:
         try:
-            retire_context(context_id)
+            cleanup_context(context_id)
             retired.append(context_id)
         except (ArtifactAgentError, subprocess.TimeoutExpired) as error:
             errors[context_id] = str(error)

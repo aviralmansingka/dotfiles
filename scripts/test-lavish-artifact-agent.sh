@@ -87,6 +87,12 @@ env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
   --slug sample-artifact \
   --repo-url "$origin" \
   --branch main > "$test_dir/prepare.json"
+env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
+  --context "$context" \
+  --slug sample-artifact \
+  --repo-url "$origin" \
+  --branch main > "$test_dir/prepare-retry.json"
+cmp "$test_dir/prepare.json" "$test_dir/prepare-retry.json"
 
 worktree="$runtime/artifacts/_contexts/$context/worktree"
 incoming="$runtime/artifacts/_contexts/$context/incoming"
@@ -270,12 +276,43 @@ pending_state.write_text(json.dumps({prepared_context: {
     "context_id": prepared_context,
     "phase": "prepared",
 }}))
+original_rmtree = agent_globals["shutil"].rmtree
+def fail_remove(path, *args, **kwargs):
+    if Path(path).resolve() == prepared_root.resolve():
+        raise PermissionError("remove failed")
+    return original_rmtree(path, *args, **kwargs)
+agent_globals["shutil"].rmtree = fail_remove
+try:
+    module["cleanup_context"](prepared_context)
+except module["ArtifactAgentError"]:
+    pass
+else:
+    raise AssertionError("failed prepared cleanup was accepted")
+assert json.loads(pending_state.read_text())[prepared_context]["phase"] == "cleanup-pending"
+agent_globals["shutil"].rmtree = original_rmtree
 assert module["cleanup_context"](prepared_context) == {
     "context_id": prepared_context,
     "cleaned": True,
 }
 assert json.loads(pending_state.read_text()) == {}
 assert not prepared_root.exists()
+
+unknown_context = "artifact-7777777777777777"
+(unknown_root := pending_root / unknown_context).mkdir()
+def fail_unknown(path, *args, **kwargs):
+    if Path(path).resolve() == unknown_root.resolve():
+        raise PermissionError("remove failed")
+    return original_rmtree(path, *args, **kwargs)
+agent_globals["shutil"].rmtree = fail_unknown
+try:
+    module["cleanup_context"](unknown_context)
+except module["ArtifactAgentError"]:
+    pass
+else:
+    raise AssertionError("failed unknown cleanup was accepted")
+assert json.loads(pending_state.read_text())[unknown_context]["phase"] == "cleanup-pending"
+agent_globals["shutil"].rmtree = original_rmtree
+assert module["cleanup_context"](unknown_context)["cleaned"] is True
 
 active_context = "artifact-6666666666666666"
 (active_root := pending_root / active_context).mkdir()

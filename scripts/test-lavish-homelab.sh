@@ -40,9 +40,12 @@ with tempfile.TemporaryDirectory() as temporary:
     state.write_text(json.dumps({"demo": str(artifact)}))
     contexts = Path(temporary) / "contexts.json"
     contexts.write_text("{}")
+    publications = Path(temporary) / "publications.json"
+    publications.write_text("{}")
     static_target.__globals__["ARTIFACT_ROOT"] = root
     static_target.__globals__["STATE_FILE"] = state
     static_target.__globals__["CONTEXT_FILE"] = contexts
+    static_target.__globals__["PUBLICATION_FILE"] = publications
 
     server = module["ThreadingHTTPServer"](("127.0.0.1", 0), module["RedirectHandler"])
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -116,13 +119,14 @@ with tempfile.TemporaryDirectory() as temporary:
             [
                 "node",
                 "-e",
-                renderer + "\nconsole.log(JSON.stringify([md('- parent\\n  - child\\n- next'), md('> outer\\n> > inner'), md('<unsafe>')]))",
+                renderer + "\nconsole.log(JSON.stringify([md('- parent\\n  - child\\n- next'), md('> outer\\n> > inner'), md('<unsafe>'), md('`**code** [x](https://example.com)` and **bold**')]))",
             ],
             text=True,
         ))
         assert rendered[0] == "<ul><li>parent<ul><li>child</li></ul></li><li>next</li></ul>"
         assert rendered[1] == "<blockquote><p>outer</p><blockquote><p>inner</p></blockquote></blockquote>"
         assert rendered[2] == "<p>&lt;unsafe&gt;</p>"
+        assert rendered[3] == "<p><code>**code** [x](https://example.com)</code> and <strong>bold</strong></p>"
 
         connection.request("GET", "/demo/__artifact/content/")
         response = connection.getresponse()
@@ -193,6 +197,12 @@ with tempfile.TemporaryDirectory() as temporary:
     }}
     assert [module["ARTIFACT_AGENT"], "cleanup", "--context", "artifact-context"] in calls
 
+    module["begin_publication"]("demo", str(artifact), "transaction-context", "transaction-context")
+    assert module["publication_status"]("demo", "transaction-context") == "pending"
+    module["commit_publication"]("transaction-context")
+    assert module["publication_status"]("demo", "transaction-context") == "published"
+    assert json.loads(publications.read_text()) == {}
+
     def fail_cleanup(args, **kwargs):
         if args[0] == module["ARTIFACT_AGENT"]:
             return type("Result", (), {"stdout": "", "stderr": "close failed", "returncode": 1})()
@@ -200,7 +210,7 @@ with tempfile.TemporaryDirectory() as temporary:
     module["set_alias"].__globals__["subprocess"].run = fail_cleanup
     module["set_alias"]("demo", str(artifact), "next-context", "publish-next")
     saved = json.loads(state.read_text())
-    assert saved["demo"]["pending_retirements"] == ["replacement-context"]
+    assert saved["demo"]["pending_retirements"] == ["transaction-context"]
     assert saved["demo"]["publication"] == "publish-next"
     assert module["publication_status"]("demo", "publish-next") == "published"
     module["set_alias"].__globals__["subprocess"].run = fake_run
@@ -223,7 +233,9 @@ with tempfile.TemporaryDirectory() as temporary:
 PY
 grep -F 'rsync -azR --exclude .git --exclude .git/ "./$artifact_dir_relative/"' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F '"$(quote_remote "$REMOTE_ALIASES") check $(quote_remote "$alias")"' "$repo_dir/scripts/lavish-homelab" >/dev/null
-grep -F 'publication-status $(quote_remote "$alias") $(quote_remote "$publication")' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'publication-status $(quote_remote "$1") $(quote_remote "$2")' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'publication-begin $(quote_remote "$alias") $(quote_remote "$target")' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'publication-commit $(quote_remote "$publication")' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'publish_alias "$alias" "$target_url"' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'if publish_alias "$alias" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"; then' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'rsync -az --delete --exclude .git --exclude .git/' "$repo_dir/scripts/lavish-homelab" >/dev/null
