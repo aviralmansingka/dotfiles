@@ -115,7 +115,7 @@ local function env_args(env)
 end
 
 ---@param cwd string
----@param scope? string|{ workspace_id?: string }
+---@param scope? string|{ workspace_id?: string, cwd?: string, label?: string }
 ---@param env? table<string, string|boolean>
 ---@return string|nil workspace_id
 ---@return string|nil root_pane_id
@@ -125,21 +125,21 @@ function M.ensure_workspace(cwd, scope, env)
   if type(scope) == "table" and scope.workspace_id then
     return scope.workspace_id, nil, false
   end
-  local workspace_label = type(scope) == "string" and scope or nil
-  local workspace_id
-  if workspace_label then
+  local workspace_cwd = type(scope) == "table" and scope.cwd or cwd
+  local workspace_label =
+    type(scope) == "table" and scope.label or (type(scope) == "string" and scope or nil)
+  local workspace_id = M.workspace_for_cwd(workspace_cwd)
+  if not workspace_id and workspace_label then
     local listed
     workspace_id, listed = M.workspace_for_label(workspace_label)
     if not listed then
       return nil, nil, false
     end
-  else
-    workspace_id = M.workspace_for_cwd(cwd)
   end
   if workspace_id then
     return workspace_id, nil, false
   end
-  local normalized = M.normalize_cwd(cwd)
+  local normalized = M.normalize_cwd(workspace_cwd)
   workspace_label = workspace_label or vim.fn.fnamemodify(normalized, ":t")
   local create_args = { "workspace", "create", "--cwd", normalized, "--label", workspace_label, "--no-focus" }
   vim.list_extend(create_args, env_args(env))

@@ -1,5 +1,6 @@
 local Config = require("sidekick.config")
 local Herdr = require("plugins.sidekick.herdr")
+local Workspace = require("helpers.workspace")
 
 local M = {}
 M.__index = M
@@ -78,7 +79,13 @@ function M.sessions()
 end
 
 function M:start()
-  local scope = self.tool.herdr_workspace_id and { workspace_id = self.tool.herdr_workspace_id } or nil
+  local tab = vim.api.nvim_get_current_tabpage()
+  local workspace = Workspace.get(tab)
+  local scope = workspace and {
+    workspace_id = workspace.herdr_workspace_id,
+    cwd = workspace.cwd,
+    label = workspace.label,
+  } or (self.tool.herdr_workspace_id and { workspace_id = self.tool.herdr_workspace_id } or nil)
   local command = self.tool.raw_cmd or self.tool.cmd
   local agent = Herdr.start(self.herdr_agent_name, self.cwd, command, self.tool.env, scope)
   if not agent then
@@ -89,6 +96,9 @@ function M:start()
   self.herdr_tab_id = agent.tab_id
   self.herdr_terminal_id = agent.terminal_id
   self.herdr_workspace_id = agent.workspace_id
+  if workspace and vim.api.nvim_tabpage_is_valid(tab) then
+    Workspace.bind_herdr(tab, agent.workspace_id, workspace.label)
+  end
   self.started = true
   return self:attach()
 end

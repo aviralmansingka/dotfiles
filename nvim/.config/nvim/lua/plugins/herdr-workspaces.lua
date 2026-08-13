@@ -1,6 +1,7 @@
 return {
   "folke/snacks.nvim",
   init = function()
+    require("helpers.workspace").setup()
     require("plugins.herdr.workspaces").setup()
   end,
   keys = {

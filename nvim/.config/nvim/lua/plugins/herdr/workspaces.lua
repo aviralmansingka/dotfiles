@@ -1,4 +1,5 @@
 local herdr = require("plugins.sidekick.herdr")
+local workspace_tabs = require("helpers.workspace")
 
 local M = {}
 
@@ -48,6 +49,10 @@ local function set_label(workspace_id, label)
   local tab = workspace_tab(workspace_id)
   if tab then
     tab_set(tab, vars.label, label)
+    local workspace = workspace_tabs.get(tab)
+    if workspace then
+      workspace_tabs.bind(tab, workspace.cwd, label)
+    end
     vim.cmd.redrawtabline()
   end
 end
@@ -152,7 +157,7 @@ local function snapshot()
 end
 
 local function disposable_unbound_tab(tab)
-  if tab_get(tab, vars.id) then
+  if workspace_tabs.get(tab) then
     return false
   end
   local window
@@ -187,11 +192,12 @@ local function bind_tab(workspace, reuse_empty)
   local tab = workspace_tab(workspace.workspace_id)
   local is_new = not tab
   if not tab then
+    local current = vim.api.nvim_get_current_tabpage()
     if reuse_empty
       and #vim.api.nvim_list_tabpages() == 1
-      and disposable_unbound_tab(vim.api.nvim_get_current_tabpage())
+      and disposable_unbound_tab(current)
     then
-      tab = vim.api.nvim_get_current_tabpage()
+      tab = current
     else
       vim.cmd.tabnew()
       tab = vim.api.nvim_get_current_tabpage()
@@ -200,9 +206,9 @@ local function bind_tab(workspace, reuse_empty)
     tab_set(tab, vars.label, workspace.label)
     tab_set(tab, vars.detached, false)
     tab_set(tab, vars.warned, false)
-    if workspace.cwd then
-      vim.cmd("tcd " .. vim.fn.fnameescape(workspace.cwd))
-    else
+    local cwd = workspace.cwd or vim.fn.getcwd(-1, vim.api.nvim_tabpage_get_number(tab))
+    workspace_tabs.bind(tab, cwd, workspace.label)
+    if not workspace.cwd then
       notify(string.format('"%s" has no pane cwd; keeping the current tab cwd', workspace.label), vim.log.levels.WARN)
     end
     vim.cmd.redrawtabline()
@@ -229,14 +235,7 @@ local function close_tab(workspace_id)
   if not tab then
     return
   end
-  if #vim.api.nvim_list_tabpages() == 1 then
-    unbind(tab)
-    return
-  end
-  local ok, err = close_tabpage(tab)
-  if not ok then
-    notify("workspace closed, but its Neovim tab stayed open: " .. tostring(err), vim.log.levels.WARN)
-  end
+  unbind(tab)
 end
 
 local function find_workspace(workspaces, workspace_id)
