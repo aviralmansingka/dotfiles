@@ -5,7 +5,9 @@ return {
     -- Persistence options
     dir = vim.fn.stdpath("state") .. "/sessions/", -- directory where session files are saved
     options = { "buffers", "curdir", "tabpages", "winsize", "winpos", "folds", "globals" }, -- sessionoptions
-    pre_save = nil, -- function to call before saving the session
+    pre_save = function() -- capture Workspace Tab identity into the session globals
+      vim.g.NvimWorkspaceTabs = require("helpers.workspace").snapshot()
+    end,
   },
   -- setup keymaps
   config = function(_, opts)

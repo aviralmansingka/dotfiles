@@ -1,5 +1,7 @@
 local M = {}
 
+local session_global = "NvimWorkspaceTabs"
+
 local vars = {
   cwd = "workspace_cwd",
   label = "workspace_label",
@@ -164,6 +166,68 @@ function M.startup(cwd)
   return true
 end
 
+function M.snapshot()
+  local tabs = {}
+  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+    local workspace = M.get(tab)
+    if workspace then
+      local buffers = {}
+      for _, buf in ipairs(M.buffers(tab)) do
+        local name = vim.api.nvim_buf_get_name(buf)
+        if name ~= "" then
+          buffers[#buffers + 1] = name
+        end
+      end
+      tabs[#tabs + 1] = {
+        tab = vim.api.nvim_tabpage_get_number(tab),
+        cwd = workspace.cwd,
+        label = workspace.label,
+        buffers = buffers,
+        herdr_workspace_id = workspace.herdr_workspace_id,
+        herdr_workspace_label = tab_get(tab, vars.herdr_label),
+      }
+    end
+  end
+  return tabs
+end
+
+function M.restore(snapshot)
+  if type(snapshot) ~= "table" then
+    return 0
+  end
+  local tabs = vim.api.nvim_list_tabpages()
+  local current = vim.api.nvim_get_current_tabpage()
+  local restored = 0
+  for _, entry in ipairs(snapshot) do
+    local tab = type(entry) == "table" and type(entry.tab) == "number" and tabs[entry.tab] or nil
+    if tab and type(entry.cwd) == "string" and entry.cwd ~= "" then
+      if pcall(vim.api.nvim_set_current_tabpage, tab) then
+        M.bind(tab, entry.cwd, entry.label)
+        local buffers = {}
+        for _, name in ipairs(type(entry.buffers) == "table" and entry.buffers or {}) do
+          local buf = type(name) == "string" and vim.fn.bufnr(name) or -1
+          if buf > 0 and is_tab_buffer(buf) then
+            buffers[#buffers + 1] = buf
+          end
+        end
+        tab_set(tab, vars.buffers, buffers)
+        if type(entry.herdr_workspace_id) == "string" and entry.herdr_workspace_id ~= "" then
+          tab_set(tab, vars.herdr_id, entry.herdr_workspace_id)
+          tab_set(tab, vars.herdr_label, entry.herdr_workspace_label or entry.label)
+        end
+        restored = restored + 1
+      end
+    end
+  end
+  if vim.api.nvim_tabpage_is_valid(current) then
+    pcall(vim.api.nvim_set_current_tabpage, current)
+  end
+  if restored > 0 then
+    vim.cmd.redrawtabline()
+  end
+  return restored
+end
+
 function M.setup()
   local group = vim.api.nvim_create_augroup("NvimWorkspaceTabs", { clear = true })
   local started = false
@@ -199,6 +263,14 @@ function M.setup()
       if workspace then
         vim.cmd("tcd " .. vim.fn.fnameescape(workspace.cwd))
       end
+    end,
+  })
+  vim.api.nvim_create_autocmd("SessionLoadPost", {
+    group = group,
+    callback = function()
+      local snapshot = vim.g[session_global]
+      vim.g[session_global] = nil
+      M.restore(snapshot)
     end,
   })
   vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {

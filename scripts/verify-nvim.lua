@@ -5440,8 +5440,106 @@ local function validate_markdown_ansi()
   vim.api.nvim_buf_delete(buf, { force = true })
 end
 
+local function validate_workspace_session()
+  local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
+  package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
+  package.loaded["helpers.workspace"] = nil
+  local workspace = require("helpers.workspace")
+  workspace.setup()
+
+  local load_autocmds = vim.api.nvim_get_autocmds({ group = "NvimWorkspaceTabs", event = "SessionLoadPost" })
+  if #load_autocmds == 0 then
+    fail("workspace tabs should restore identity on SessionLoadPost")
+  end
+
+  local root = vim.fn.getcwd()
+  local tab_one = vim.api.nvim_get_current_tabpage()
+  vim.cmd("edit " .. vim.fn.fnameescape(root .. "/README.md"))
+  local buf_one = vim.api.nvim_get_current_buf()
+  local bound_one = workspace.bind(tab_one, root, "Root Tab")
+
+  vim.cmd("tabnew " .. vim.fn.fnameescape(root .. "/scripts/verify-nvim.lua"))
+  local tab_two = vim.api.nvim_get_current_tabpage()
+  local buf_two = vim.api.nvim_get_current_buf()
+  local bound_two = workspace.bind(tab_two, root .. "/scripts", "Scripts Tab")
+  workspace.bind_herdr(tab_two, "w-session", "Herdr Scripts")
+
+  local snapshot = workspace.snapshot()
+  if #snapshot ~= 2 then
+    fail("snapshot should capture both workspace tabs: " .. vim.inspect(snapshot))
+  end
+  if snapshot[1].cwd ~= bound_one.cwd or snapshot[1].label ~= "Root Tab" then
+    fail("snapshot should capture the first tab identity: " .. vim.inspect(snapshot[1]))
+  end
+  if snapshot[2].label ~= "Scripts Tab" or snapshot[2].herdr_workspace_id ~= "w-session" then
+    fail("snapshot should capture the Herdr binding: " .. vim.inspect(snapshot[2]))
+  end
+  if not vim.tbl_contains(snapshot[2].buffers, root .. "/scripts/verify-nvim.lua") then
+    fail("snapshot should record buffer paths: " .. vim.inspect(snapshot[2].buffers))
+  end
+
+  for _, tab in ipairs({ tab_one, tab_two }) do
+    for _, name in ipairs({
+      "workspace_cwd",
+      "workspace_label",
+      "workspace_buffers",
+      "herdr_workspace_id",
+      "herdr_workspace_label",
+    }) do
+      pcall(vim.api.nvim_tabpage_del_var, tab, name)
+    end
+    pcall(vim.api.nvim_set_current_tabpage, tab)
+    vim.cmd("tcd " .. vim.fn.fnameescape(root))
+  end
+  pcall(vim.api.nvim_set_current_tabpage, tab_one)
+  if workspace.get(tab_one) or workspace.get(tab_two) then
+    fail("wiped tabs should lose their workspace identity")
+  end
+
+  vim.g.NvimWorkspaceTabs = snapshot
+  vim.api.nvim_exec_autocmds("SessionLoadPost", { group = "NvimWorkspaceTabs" })
+  if vim.g.NvimWorkspaceTabs ~= nil then
+    fail("session restore should consume the workspace snapshot")
+  end
+
+  local restored_one = workspace.get(tab_one)
+  local restored_two = workspace.get(tab_two)
+  if not restored_one or restored_one.cwd ~= bound_one.cwd or restored_one.label ~= "Root Tab" then
+    fail("first tab identity should survive the session round trip: " .. vim.inspect(restored_one))
+  end
+  if not restored_two or restored_two.label ~= "Scripts Tab" or restored_two.herdr_workspace_id ~= "w-session" then
+    fail("second tab identity should survive the session round trip: " .. vim.inspect(restored_two))
+  end
+  if not vim.tbl_contains(workspace.buffers(tab_two), buf_two) then
+    fail("restored tab should remap its buffers by path: " .. vim.inspect(workspace.buffers(tab_two)))
+  end
+  if vim.fn.getcwd(-1, vim.api.nvim_tabpage_get_number(tab_two)) ~= bound_two.cwd then
+    fail("restored tab should re-apply its tab-local cwd: " .. vim.fn.getcwd(-1, vim.api.nvim_tabpage_get_number(tab_two)))
+  end
+
+  local spec = dofile("nvim/.config/nvim/lua/plugins/persistence.lua")
+  if type(spec.opts.pre_save) ~= "function" then
+    fail("persistence pre_save should snapshot workspace tabs")
+  end
+  if not vim.tbl_contains(spec.opts.options, "globals") then
+    fail("persistence sessionoptions should keep globals so the snapshot persists")
+  end
+  spec.opts.pre_save()
+  local saved = vim.g.NvimWorkspaceTabs
+  if type(saved) ~= "table" or #saved ~= 2 or saved[2].label ~= "Scripts Tab" then
+    fail("pre_save should store the workspace snapshot: " .. vim.inspect(saved))
+  end
+  vim.g.NvimWorkspaceTabs = nil
+
+  vim.api.nvim_set_current_tabpage(tab_one)
+  pcall(vim.cmd, "tabclose " .. vim.api.nvim_tabpage_get_number(tab_two))
+  pcall(vim.cmd, "bwipeout " .. buf_one)
+  pcall(vim.cmd, "bwipeout " .. buf_two)
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
+  ["workspace-session"] = validate_workspace_session,
   ["weekly-backlog"] = validate_weekly_backlog,
   ["markdown-formatting"] = validate_markdown_formatting,
   ["markdown-ansi"] = validate_markdown_ansi,
@@ -5461,7 +5559,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
+      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
   )
 end
 
