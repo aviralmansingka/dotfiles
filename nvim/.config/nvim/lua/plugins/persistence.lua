@@ -13,6 +13,15 @@ return {
   config = function(_, opts)
     require("persistence").setup(opts)
 
+    -- persistence.nvim (>= b20b2a7) no longer calls opts.pre_save; hook the
+    -- snapshot into the User autocmd it fires before mksession instead.
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "PersistenceSavePre",
+      callback = function()
+        opts.pre_save()
+      end,
+    })
+
     -- Keymaps for saving/loading sessions
     vim.keymap.set("n", "<leader>qs", function()
       require("persistence").load()
