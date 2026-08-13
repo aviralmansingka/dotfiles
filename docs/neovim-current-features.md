@@ -224,7 +224,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Git toggles include current-line blame and deleted-line display.
 - Octo is namespaced under `<leader>O`.
 - LazyVim default Octo `<leader>g*` mappings are disabled.
-- Octo supports smart entry.
+- Octo smart entry opens the current branch's PR review-agent workspace instead of Octo's built-in review.
 - Octo supports PR list, search, my PRs, review picker, author picker, thread picker, checkout, create, browser open, and URL copy.
 - Octo browser open also copies the PR URL and can fall back to `gh pr view` outside Octo PR buffers.
 - Octo avoids Projects v2 token-scope failures by not defaulting to Projects v2.
@@ -240,6 +240,15 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Octo unified review view is reversible and changes the Gitsigns base to the PR base commit while active.
 - PR review picker searches PRs to review and assigned PRs.
 - PR review picker includes recently merged or closed assigned PRs.
+- Opening a top-level PR (smart entry, PR list or review picker confirm, or `Octo pr edit`) creates or reopens an
+  isolated Herdr worktree workspace with a local `review/<repo>-<number>` branch.
+- Refreshing an updated PR head commits local review edits and rebases them onto the new head; a conflicted rebase
+  is handed to the review agent for semantic resolution and validation, with a recovery ref preserved.
+- The review workspace tab shows a fixed 60-column presentation-only wrapped Markdown PR description on the left
+  and the dedicated Sidekick review agent on the right.
+- The review agent is primed with PR metadata, diff, checks, reviews, and comments and asked for a context summary
+  of at most 30 lines.
+- Selecting a PR's review agent restores its two-column review view.
 - Review thread picker lists review threads.
 - Review thread picker defaults to unresolved threads and marks resolved or outdated threads in display text.
 - Review thread picker can open a thread in the browser.
@@ -361,7 +370,9 @@ workflow area rather than plugin files, Lua modules, or implementation structure
   session with a redundant label.
 - Pi named sessions receive native `--name <slug>` command arguments.
 - Sidekick branch metadata is stored in tmux environment.
-- `<C-.>` toggles the last picker-selected Sidekick session, falling back to the cwd session picker.
+- `<C-.>` toggles the current tab's last picker-selected Sidekick session, falling back to the cwd session picker.
+- Named Sidekick sessions started or listed inside a linked worktree are anchored to that worktree's Herdr
+  workspace.
 - `<C-;>` opens the local session picker.
 - `<C-r>` renames the selected session in the picker.
 - `<C-x>` confirms before closing the selected agent from the local session picker.
@@ -570,8 +581,11 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Tabline shows tabs and the current tab's buffers with custom separators and modified indicators.
 - Workspace tabs own a folder identity independent of Herdr; launching Neovim binds the initial tab to the launch
   folder, reusing an existing workspace tab that matches by path, then name.
-- Launching an agent from a workspace tab resolves or creates its Herdr workspace from the tab's folder, then label,
-  and binds the tab to that Herdr workspace.
+- Launching an agent from a Git-backed workspace tab resolves or creates the repository's Herdr workspace from Git's
+  shared common directory, keeps the agent cwd on the exact worktree, and binds the tab to the repository workspace.
+- Multiple worktree-scoped Workspace Tabs may bind to the same repository-scoped Herdr Workspace.
+- Workspace tabs bound to a PR review show GitHub-style open/merged/closed/draft status and an unseen-activity
+  marker in the tabline.
 - `<leader>fw` opens a fresh, compact Herdr workspace picker titled `spaces`.
 - Herdr workspaces can be created, renamed, selected, and confirmed-closed from the picker; each selected workspace is
   represented by at most one runtime Neovim tab keyed by its Herdr workspace ID.
@@ -580,7 +594,9 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Entering a bound workspace tab focuses the corresponding Herdr workspace; ordinary tabs and manually closed tabs do
   not affect Herdr.
 - Workspace tabs initialize from stable Herdr pane cwd and preserve later tab-local cwd/layout changes.
-- Closing a Herdr workspace from the picker unbinds its Neovim tab, which keeps its folder identity.
+- Closing a Herdr workspace from the picker unbinds its Neovim tabs, which keep their folder identity.
+- Killing an agent from the session picker closes its workspace tab and closes the Herdr workspace once no agents
+  remain.
 - `<S-h>` and `<S-l>` cycle the current tab's buffers; `[b` and `]b` navigate global buffers.
 - `<S-q>` closes the current buffer.
 - Dashboard actions include finding files, creating a new file, restoring the last session, opening Herdr workspaces,
