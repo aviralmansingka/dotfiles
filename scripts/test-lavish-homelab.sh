@@ -101,6 +101,8 @@ with tempfile.TemporaryDirectory() as temporary:
         shell = response.read()
         assert response.status == 200
         assert b"Ask about this" in shell and b"Check changes" in shell
+        assert b'aria-hidden="true" inert' in shell
+        assert b"drawer.inert = !open" in shell
         assert b"join(String.fromCharCode(10))" in shell
         assert b"event.metaKey || event.altKey) return" in shell
         assert b"event.altKey || event.shiftKey" not in shell
@@ -162,13 +164,15 @@ with tempfile.TemporaryDirectory() as temporary:
 
     module["set_alias"].__globals__["subprocess"].run = fake_run
     module["alias_owner"]("demo")
-    module["set_alias"]("demo", str(artifact), "replacement-context")
+    previous = module["set_alias"]("demo", str(artifact), "replacement-context")
     saved = json.loads(state.read_text())
+    assert previous == "artifact-context"
     assert saved == {"demo": {"target": str(artifact), "context": "replacement-context"}}
     assert all(call[:4] == ["tailscale", "serve", "status", "--json"] for call in calls)
 PY
 grep -F 'rsync -azR --exclude .git/ "./$artifact_dir_relative/"' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F '"$(quote_remote "$REMOTE_ALIASES") check $(quote_remote "$alias")"' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'retire --context $(quote_remote "$previous_context")' "$repo_dir/scripts/lavish-homelab" >/dev/null
 remote_path=$("$repo_dir/scripts/lavish-homelab" remote-path "$test_dir/example.html")
 [[ "$remote_path" =~ ^/home/avirus/\.local/share/lavish/artifacts/[A-Za-z0-9._-]+/[a-f0-9]{16}/example\.html$ ]]
 [[ "$("$repo_dir/scripts/lavish-homelab" alias-for "$test_dir/example.html" --source-markdown "$test_dir/WBJ Payments.md")" == wbj-payments ]]

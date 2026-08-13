@@ -263,7 +263,12 @@ case "$action" in
         sync_remote_runtime
         ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") check $(quote_remote "$alias")"
         prepare_artifact_context "$source_file" "$source_markdown" "$alias"
-        alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$ARTIFACT_CONTEXT_FILE") --context $(quote_remote "$ARTIFACT_CONTEXT_ID")")
+        alias_result=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$ARTIFACT_CONTEXT_FILE") --context $(quote_remote "$ARTIFACT_CONTEXT_ID") --print-previous-context")
+        alias_url=$(printf '%s\n' "$alias_result" | sed -n '1p')
+        previous_context=$(printf '%s\n' "$alias_result" | sed -n '2p')
+        if [[ -n "$previous_context" && "$previous_context" != "$ARTIFACT_CONTEXT_ID" ]]; then
+          ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") retire --context $(quote_remote "$previous_context")" >/dev/null
+        fi
         printf 'alias_url: "%s"\nartifact_path: "%s"\nartifact_context: "%s"\n' "$alias_url" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"
         exit 0
       fi

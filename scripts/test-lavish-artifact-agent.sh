@@ -56,6 +56,8 @@ case "$1 $2" in
     else
       [[ "$4" == *"Changed artifact"* ]]
       [[ "$4" == *"A concise source."* ]]
+      [[ "$4" == *"If and only if the user explicitly asks to change"* ]]
+      [[ "$4" == *"Never read or write outside that worktree"* ]]
       token=$(printf '%s\n' "$4" | sed -n 's/^Reply token: //p')
       printf 'ARTIFACT_RESPONSE_%s_B\n  EGIN\nThe artifact says **Original artifact**.\nARTIFACT_RESPONSE_%s\n  _END\n' "$token" "$token" > "$FAKE_TERMINAL"
     fi
@@ -110,6 +112,8 @@ printf 'What does the heading say?\n' | env "${agent_env[@]}" FAKE_WORKTREE="$wo
   "$repo_dir/scripts/lavish-artifact-agent" chat --context "$context" > "$test_dir/chat.json"
 env "${agent_env[@]}" FAKE_WORKTREE="$worktree" \
   "$repo_dir/scripts/lavish-artifact-agent" history --context "$context" > "$test_dir/history.json"
+env "${agent_env[@]}" FAKE_WORKTREE="$worktree" \
+  "$repo_dir/scripts/lavish-artifact-agent" retire --context "$context" > "$test_dir/retire.json"
 
 context_b=artifact-1111111111111111
 context_c=artifact-2222222222222222
@@ -138,8 +142,10 @@ clean = json.loads((root / "check-clean.json").read_text())
 changed = json.loads((root / "check-changed.json").read_text())
 chat = json.loads((root / "chat.json").read_text())
 history = json.loads((root / "history.json").read_text())
+retire = json.loads((root / "retire.json").read_text())
 module = runpy.run_path(sys.argv[5])
-state = json.loads(Path(sys.argv[6]).read_text())
+state_path = Path(sys.argv[6])
+state = json.loads(state_path.read_text())
 
 assert prepare["context_id"] == context
 assert activate["workspace_label"] == "Artifact-sample-artifact"
@@ -154,10 +160,12 @@ assert after == " M artifact.html"
 assert "Original artifact" in chat["answer"]
 assert [message["role"] for message in history["messages"]] == ["user", "assistant"]
 assert history["workspace"] == "Artifact-sample-artifact"
-assert set(state) == {context, "artifact-1111111111111111", "artifact-2222222222222222"}
+assert retire == {"context_id": context, "retired": True}
+assert not (state_path.parent / "artifacts/_contexts" / context).exists()
+assert set(state) == {"artifact-1111111111111111", "artifact-2222222222222222"}
 assert module["reflow_terminal_wraps"](
-    "First wrapped\n  paragraph.\n\n```python\ndef f():\n    return 1\n```\n\nLast wrapped\nline."
-) == "First wrapped paragraph.\n\n```python\ndef f():\n    return 1\n```\n\nLast wrapped line."
+    "First wrapped\n  paragraph.\n\n```python\ndef f():\n    return 1\n```\n\n- long item\n  continuation\n- next\n\n> quoted\n  continuation\n\nLast wrapped\nline."
+) == "First wrapped paragraph.\n\n```python\ndef f():\n    return 1\n```\n\n- long item continuation\n- next\n\n> quoted continuation\n\nLast wrapped line."
 PY
 
 echo "lavish-artifact-agent: ok"

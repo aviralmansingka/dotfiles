@@ -2,6 +2,7 @@
 """Serve stable, collision-safe names for homelab Lavish artifacts or sessions."""
 
 import argparse
+import fcntl
 import html
 import json
 import mimetypes
@@ -10,6 +11,7 @@ import re
 import subprocess
 import tempfile
 import threading
+from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -83,6 +85,15 @@ def save_aliases(aliases: dict[str, dict[str, str]]) -> None:
     save_json(STATE_FILE, aliases, ".lavish-aliases-")
 
 
+@contextmanager
+def alias_transaction():
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = STATE_FILE.with_name(f".{STATE_FILE.name}.lock")
+    with lock_path.open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield load_aliases()
+
+
 def load_contexts() -> dict[str, str]:
     try:
         data = json.loads(CONTEXT_FILE.read_text())
@@ -134,7 +145,7 @@ def alias_owner(slug: str) -> tuple[str | None, str, str]:
     return existing, path, proxy
 
 
-def set_alias(slug: str, target_url: str, context: str | None = None) -> None:
+def set_alias(slug: str, target_url: str, context: str | None = None) -> str | None:
     target_file = static_target(target_url)
     if not TARGET_RE.fullmatch(target_url) and not target_file:
         raise SystemExit(f"Invalid Lavish target URL: {target_url}")
@@ -142,11 +153,12 @@ def set_alias(slug: str, target_url: str, context: str | None = None) -> None:
         raise SystemExit(f"Static artifact does not exist: {target_file}")
 
     existing, path, proxy = alias_owner(slug)
-    aliases = load_aliases()
-    aliases[slug] = {"target": target_url}
-    if context:
-        aliases[slug]["context"] = context
-    save_aliases(aliases)
+    with alias_transaction() as aliases:
+        previous_context = aliases.get(slug, {}).get("context")
+        aliases[slug] = {"target": target_url}
+        if context:
+            aliases[slug]["context"] = context
+        save_aliases(aliases)
     if not existing:
         subprocess.run(
             [
@@ -162,6 +174,7 @@ def set_alias(slug: str, target_url: str, context: str | None = None) -> None:
             stdout=subprocess.DEVNULL,
         )
     print(f"https://{HOSTNAME}/{slug}")
+    return previous_context
 
 
 def agent_lock(context: str) -> threading.Lock:
@@ -254,7 +267,7 @@ def artifact_shell(slug: str) -> bytes:
 <body>
 <iframe src="/{safe_slug}/__artifact/content/" title="Rendered artifact"></iframe>
 <button class="ask" id="ask" type="button" aria-expanded="false" aria-controls="drawer">✦ Ask about this</button>
-<aside class="drawer" id="drawer" aria-label="Artifact conversation" aria-hidden="true">
+<aside class="drawer" id="drawer" aria-label="Artifact conversation" aria-hidden="true" inert>
   <div class="grip" id="grip" role="separator" aria-orientation="vertical" aria-label="Resize chat" title="Drag to resize"></div>
   <header class="head"><div><strong>Ask this artifact</strong><span>Answers come from its Artifact Herdr workspace</span></div><button class="icon" id="close" type="button" aria-label="Close chat">×</button></header>
   <main class="messages" id="messages"><p class="empty">Ask about a term, number, decision, or anything currently on screen.</p></main>
@@ -282,6 +295,7 @@ def artifact_shell(slug: str) -> bytes:
   function setOpen(open) {{
     drawer.classList.toggle('open', open);
     drawer.setAttribute('aria-hidden', String(!open));
+    drawer.inert = !open;
     ask.setAttribute('aria-expanded', String(open));
     ask.style.right = open ? (Math.min(drawer.getBoundingClientRect().width, innerWidth - 14) + 14) + 'px' : '';
     if (open) question.focus(); else ask.focus();
@@ -684,10 +698,13 @@ def main() -> None:
     set_parser.add_argument("slug")
     set_parser.add_argument("target_url")
     set_parser.add_argument("--context")
+    set_parser.add_argument("--print-previous-context", action="store_true")
     args = parser.parse_args()
 
     if args.command == "set":
-        set_alias(args.slug, args.target_url, args.context)
+        previous_context = set_alias(args.slug, args.target_url, args.context)
+        if args.print_previous_context:
+            print(previous_context or "")
         return
     if args.command == "check":
         alias_owner(args.slug)
