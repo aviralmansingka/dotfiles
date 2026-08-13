@@ -392,10 +392,6 @@ local function sync_branch(context, new_head)
   if rebased.code ~= 0 then
     return true, base_ref, recovery_ref
   end
-  if git(cwd, { "diff", "--check" }).code ~= 0 then
-    notify("rebased branch failed git diff --check; recovery ref retained")
-    return nil
-  end
   git(cwd, { "update-ref", base_ref, new_head })
   git(cwd, { "update-ref", "-d", recovery_ref })
   return false, base_ref, recovery_ref

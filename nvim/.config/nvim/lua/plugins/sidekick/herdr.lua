@@ -213,6 +213,51 @@ function M.agent_for_worktree(cwd)
   return nil, true
 end
 
+---@param cwd string
+---@return table|nil worktree
+---@return string|nil path
+local function containing_linked_worktree(cwd)
+  local normalized = M.normalize_cwd(cwd)
+  if normalized == "" then
+    return nil
+  end
+  local listed = M.call({ "worktree", "list", "--cwd", normalized }, true)
+  if not listed then
+    return nil
+  end
+  local match, match_path
+  for _, worktree in ipairs(listed.worktrees or {}) do
+    local path = worktree.path and M.normalize_cwd(worktree.path) or ""
+    if
+      worktree.is_linked_worktree
+      and path ~= ""
+      and (normalized == path or vim.startswith(normalized, path .. "/"))
+      and (not match_path or #path > #match_path)
+    then
+      match, match_path = worktree, path
+    end
+  end
+  return match, match_path
+end
+
+---@param cwd string
+---@return table|nil scope { workspace_id: string, cwd: string }
+function M.worktree_scope(cwd)
+  local worktree, path = containing_linked_worktree(cwd)
+  if not worktree or not path then
+    return nil
+  end
+  local workspace_id = worktree.open_workspace_id
+  if not workspace_id then
+    local result = M.call({ "worktree", "open", "--path", path, "--no-focus" })
+    workspace_id = result and result.workspace and result.workspace.workspace_id or nil
+  end
+  if not workspace_id then
+    return nil
+  end
+  return { workspace_id = workspace_id, cwd = path }
+end
+
 local function env_args(env)
   local out = {}
   for key, value in pairs(env or {}) do
@@ -327,6 +372,70 @@ local function own_tab(agent, scope, tab_label)
     or placed.workspace_id ~= scope.workspace_id
     or not placed_tab
     or placed_tab.pane_count ~= 1
+  then
+    return nil
+  end
+  return placed
+end
+
+---@param agent table
+---@param scope table
+---@param tab_label string
+---@return table|nil agent
+function M.place_agent(agent, scope, tab_label)
+  if not full_agent(agent) then
+    notify("worker must be a full Herdr Codex session")
+    return nil
+  end
+  local owner, listed = M.agent_for_worktree(scope.cwd)
+  if listed == false then
+    notify("could not verify whether this worktree already owns a durable session")
+    return nil
+  end
+  if owner and owner.name ~= agent.name then
+    notify("feature worktree already owns a different durable session")
+    return nil
+  end
+  local cwd = M.normalize_cwd(agent.foreground_cwd or agent.cwd)
+  if cwd ~= M.normalize_cwd(scope.cwd) then
+    notify("existing agent cwd does not match its feature worktree")
+    return nil
+  end
+  return own_tab(agent, scope, tab_label)
+end
+
+---@param agent table
+---@return table|nil agent
+function M.anchor_agent_worktree(agent)
+  if not terminal_agent(agent) then
+    return nil
+  end
+  local scope = M.worktree_scope(agent.foreground_cwd or agent.cwd)
+  if not scope or scope.workspace_id == agent.workspace_id then
+    return agent
+  end
+  local moved = M.call({
+    "pane",
+    "move",
+    agent.pane_id,
+    "--new-tab",
+    "--workspace",
+    scope.workspace_id,
+    "--label",
+    agent.name,
+    "--no-focus",
+  })
+  if not moved then
+    return nil
+  end
+  local placed = M.get_agent(agent.name)
+  local require_session = full_agent(agent)
+  if
+    not terminal_agent(placed)
+    or placed.name ~= agent.name
+    or placed.terminal_id ~= agent.terminal_id
+    or placed.workspace_id ~= scope.workspace_id
+    or (require_session and (not full_agent(placed) or not same_session(agent.agent_session, placed.agent_session)))
   then
     return nil
   end
