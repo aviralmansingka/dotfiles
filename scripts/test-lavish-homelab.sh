@@ -37,8 +37,11 @@ with tempfile.TemporaryDirectory() as temporary:
     (artifact.parent / "app.css").write_text("body{}")
     state = Path(temporary) / "aliases.json"
     state.write_text(json.dumps({"demo": str(artifact)}))
+    contexts = Path(temporary) / "contexts.json"
+    contexts.write_text("{}")
     static_target.__globals__["ARTIFACT_ROOT"] = root
     static_target.__globals__["STATE_FILE"] = state
+    static_target.__globals__["CONTEXT_FILE"] = contexts
 
     server = module["ThreadingHTTPServer"](("127.0.0.1", 0), module["RedirectHandler"])
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -66,6 +69,81 @@ with tempfile.TemporaryDirectory() as temporary:
         response = connection.getresponse()
         assert response.status == 404
         response.read()
+
+        calls = []
+        def fake_agent(context, command, question=None):
+            calls.append((context, command, question))
+            if command == "history":
+                return {"messages": [], "agent_status": "idle", "workspace": "Artifact-demo"}
+            if command == "check":
+                return {
+                    "artifact_changed_since_launch": False,
+                    "artifact_added_lines": 0,
+                    "artifact_removed_lines": 0,
+                    "branch": "main",
+                    "baseline_commit": "a" * 40,
+                    "workspace": "Artifact-demo",
+                    "git_status": [],
+                }
+            return {
+                "answer": "A bounded answer",
+                "messages": [
+                    {"role": "user", "text": question},
+                    {"role": "assistant", "text": "A bounded answer"},
+                ],
+            }
+
+        static_target.__globals__["run_agent"] = fake_agent
+        contexts.write_text(json.dumps({"demo": "artifact-context"}))
+
+        connection.request("GET", "/demo/")
+        response = connection.getresponse()
+        shell = response.read()
+        assert response.status == 200
+        assert b"Ask about this" in shell and b"Check changes" in shell
+        assert b"join(String.fromCharCode(10))" in shell
+
+        connection.request("GET", "/demo/__artifact/content/")
+        response = connection.getresponse()
+        assert response.status == 200
+        assert response.read() == b"<h1>plain artifact</h1>"
+
+        connection.request("GET", "/demo/__artifact/content/app.css")
+        response = connection.getresponse()
+        assert response.status == 200
+        assert response.read() == b"body{}"
+
+        connection.request("GET", "/demo/__artifact/api/history")
+        response = connection.getresponse()
+        assert response.status == 200
+        assert json.loads(response.read())["workspace"] == "Artifact-demo"
+
+        body = json.dumps({"message": "What is this?"}).encode()
+        connection.request(
+            "POST",
+            "/demo/__artifact/api/chat",
+            body=body,
+            headers={"Content-Type": "application/json", "Content-Length": str(len(body))},
+        )
+        response = connection.getresponse()
+        assert response.status == 200
+        assert json.loads(response.read())["answer"] == "A bounded answer"
+        assert calls[-1] == ("artifact-context", "chat", "What is this?")
+
+        connection.request(
+            "POST",
+            "/demo/__artifact/api/chat",
+            body=b"not-json",
+            headers={"Content-Type": "application/json", "Content-Length": "8"},
+        )
+        response = connection.getresponse()
+        assert response.status == 400
+        response.read()
+
+        connection.request("GET", "/demo/__artifact/api/check")
+        response = connection.getresponse()
+        assert response.status == 200
+        assert json.loads(response.read())["artifact_changed_since_launch"] is False
     finally:
         connection.close()
         server.shutdown()

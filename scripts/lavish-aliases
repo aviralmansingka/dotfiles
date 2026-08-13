@@ -2,12 +2,14 @@
 """Serve stable, collision-safe names for homelab Lavish artifacts or sessions."""
 
 import argparse
+import html
 import json
 import mimetypes
 import os
 import re
 import subprocess
 import tempfile
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -17,7 +19,25 @@ HOSTNAME = "homelab.tail1b3b66.ts.net"
 LISTEN_HOST = "127.0.0.1"
 LISTEN_PORT = 4388
 STATE_FILE = Path.home() / ".local/state/lavish-aliases.json"
-ARTIFACT_ROOT = Path.home() / ".local/share/lavish/artifacts"
+CONTEXT_FILE = Path(
+    os.environ.get(
+        "LAVISH_ARTIFACT_CONTEXT_STATE",
+        Path.home() / ".local/state/lavish-artifact-contexts.json",
+    )
+)
+ARTIFACT_ROOT = Path(
+    os.environ.get(
+        "LAVISH_ARTIFACT_ROOT",
+        Path.home() / ".local/share/lavish/artifacts",
+    )
+)
+ARTIFACT_AGENT = os.environ.get(
+    "LAVISH_ARTIFACT_AGENT_BIN",
+    str(Path.home() / ".local/bin/lavish-artifact-agent"),
+)
+MAX_CHAT_BYTES = 16_384
+AGENT_LOCKS: dict[str, threading.Lock] = {}
+AGENT_LOCKS_GUARD = threading.Lock()
 SLUG_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 TARGET_RE = re.compile(
     rf"https://{re.escape(HOSTNAME)}:8443/"
@@ -45,20 +65,40 @@ def load_aliases() -> dict[str, str]:
 
 
 def save_aliases(aliases: dict[str, str]) -> None:
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(dir=STATE_FILE.parent, prefix=".lavish-aliases-")
+    save_json(STATE_FILE, aliases, ".lavish-aliases-")
+
+
+def load_contexts() -> dict[str, str]:
+    try:
+        data = json.loads(CONTEXT_FILE.read_text())
+    except FileNotFoundError:
+        return {}
+    if not isinstance(data, dict) or not all(
+        isinstance(key, str) and isinstance(value, str) for key, value in data.items()
+    ):
+        raise SystemExit(f"Invalid artifact context state: {CONTEXT_FILE}")
+    return data
+
+
+def save_contexts(contexts: dict[str, str]) -> None:
+    save_json(CONTEXT_FILE, contexts, ".lavish-artifact-contexts-")
+
+
+def save_json(path: Path, value: object, prefix: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(dir=path.parent, prefix=prefix)
     try:
         with os.fdopen(fd, "w") as file:
-            json.dump(aliases, file, indent=2, sort_keys=True)
+            json.dump(value, file, indent=2, sort_keys=True)
             file.write("\n")
         os.chmod(temporary, 0o600)
-        os.replace(temporary, STATE_FILE)
+        os.replace(temporary, path)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
 
 
-def set_alias(slug: str, target_url: str) -> None:
+def set_alias(slug: str, target_url: str, context: str | None = None) -> None:
     if not SLUG_RE.fullmatch(slug):
         raise SystemExit(f"Invalid alias: {slug}")
     target_file = static_target(target_url)
@@ -90,6 +130,12 @@ def set_alias(slug: str, target_url: str) -> None:
     aliases = load_aliases()
     aliases[slug] = target_url
     save_aliases(aliases)
+    contexts = load_contexts()
+    if context:
+        contexts[slug] = context
+    else:
+        contexts.pop(slug, None)
+    save_contexts(contexts)
     if not existing:
         subprocess.run(
             [
@@ -107,11 +153,313 @@ def set_alias(slug: str, target_url: str) -> None:
     print(f"https://{HOSTNAME}/{slug}")
 
 
+def agent_lock(context: str) -> threading.Lock:
+    with AGENT_LOCKS_GUARD:
+        return AGENT_LOCKS.setdefault(context, threading.Lock())
+
+
+def run_agent(context: str, command: str, question: str | None = None) -> dict[str, object]:
+    with agent_lock(context):
+        result = subprocess.run(
+            [ARTIFACT_AGENT, command, "--context", context],
+            input=question,
+            text=True,
+            capture_output=True,
+            timeout=330,
+            check=False,
+        )
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        detail = result.stderr.strip() or result.stdout.strip() or f"exit {result.returncode}"
+        raise RuntimeError(f"Artifact agent returned invalid data: {detail[:1000]}") from error
+    if result.returncode != 0:
+        raise RuntimeError(str(payload.get("error") or "Artifact agent request failed"))
+    if not isinstance(payload, dict):
+        raise RuntimeError("Artifact agent returned invalid data")
+    return payload
+
+
+def artifact_shell(slug: str) -> bytes:
+    safe_slug = html.escape(slug, quote=True)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artifact</title>
+<style>
+  * {{ box-sizing: border-box; }}
+  html, body {{ width: 100%; height: 100%; margin: 0; overflow: hidden; background: #1d2021; color: #ebdbb2; font: 14px/1.45 system-ui, sans-serif; }}
+  iframe {{ width: 100%; height: 100%; border: 0; background: #fff; }}
+  .ask {{ position: fixed; z-index: 20; top: 14px; right: 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #665c54; border-radius: 999px; padding: 9px 14px; color: #1d2021; background: #fabd2f; box-shadow: 0 8px 28px #0008; font-weight: 750; cursor: pointer; }}
+  .ask[aria-expanded="true"] {{ right: min(434px, calc(100vw - 14px)); }}
+  .drawer {{ position: fixed; z-index: 30; inset: 0 0 0 auto; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(420px, 100vw); border-left: 1px solid #504945; background: #1d2021; box-shadow: -20px 0 50px #0008; transform: translateX(102%); transition: transform .18s ease; }}
+  .drawer.open {{ transform: translateX(0); }}
+  .grip {{ position: absolute; top: 0; bottom: 0; left: -5px; width: 9px; cursor: ew-resize; touch-action: none; }}
+  .grip:hover, .grip.drag {{ background: rgb(250 189 47 / 35%); }}
+  .drawer.dragging {{ transition: none; }}
+  .message.pending {{ border-style: dashed; opacity: .88; }}
+  .message .tag {{ display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; opacity: .75; }}
+  .message .cancel {{ border: 0; padding: 0 2px; color: inherit; background: none; font: inherit; cursor: pointer; }}
+  .head {{ display: flex; align-items: center; gap: 12px; padding: 15px 16px; border-bottom: 1px solid #504945; background: #282828; }}
+  .head strong {{ flex: 1; color: #fbf1c7; font-size: 15px; }}
+  .head span {{ display: block; color: #a89984; font-size: 11px; font-weight: 500; }}
+  button {{ font: inherit; }}
+  .icon, .check, .send {{ border: 1px solid #665c54; border-radius: 8px; color: #ebdbb2; background: #32302f; cursor: pointer; }}
+  .icon {{ width: 34px; height: 34px; }}
+  .messages {{ min-height: 0; overflow-y: auto; padding: 16px; }}
+  .empty {{ color: #a89984; }}
+  .message {{ max-width: 92%; margin: 0 0 12px; border: 1px solid #504945; border-radius: 12px; padding: 10px 12px; overflow-wrap: anywhere; }}
+  .message.user {{ margin-left: auto; color: #1d2021; border-color: #d8a657; background: #d8a657; white-space: pre-wrap; }}
+  .message.assistant {{ color: #ebdbb2; background: #282828; }}
+  .message.assistant > :first-child {{ margin-top: 0; }}
+  .message.assistant > :last-child {{ margin-bottom: 0; }}
+  .message.assistant p {{ margin: 6px 0; }}
+  .message.assistant h3, .message.assistant h4, .message.assistant h5 {{ margin: 10px 0 4px; color: #8ec07c; font-size: 14px; line-height: 1.3; }}
+  .message.assistant h4 {{ font-size: 13px; }}
+  .message.assistant h5 {{ font-size: 12px; }}
+  .message.assistant strong {{ color: #fbf1c7; }}
+  .message.assistant em {{ color: #bdae93; }}
+  .message.assistant code {{ color: #d8a657; font: .92em ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }}
+  .message.assistant pre {{ margin: 8px 0; padding: 8px 10px; border: 1px solid #504945; border-radius: 8px; background: #171918; overflow-x: auto; }}
+  .message.assistant pre code {{ color: #ebdbb2; }}
+  .message.assistant ul, .message.assistant ol {{ margin: 6px 0; padding-left: 20px; }}
+  .message.assistant li {{ margin: 3px 0; }}
+  .message.assistant a {{ color: #7daea3; text-underline-offset: 2px; }}
+  .delta {{ margin: 0 16px 12px; border: 1px solid #504945; border-radius: 10px; padding: 10px; color: #bdae93; background: #282828; white-space: pre-wrap; overflow: auto; max-height: 32vh; }}
+  .composer {{ border-top: 1px solid #504945; padding: 12px 16px 16px; background: #282828; }}
+  .tools {{ display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 9px; }}
+  .check {{ padding: 7px 10px; }}
+  .status {{ color: #a89984; font-size: 11px; text-align: right; }}
+  form {{ display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }}
+  textarea {{ min-height: 74px; max-height: 180px; resize: vertical; border: 1px solid #665c54; border-radius: 10px; padding: 10px; color: #fbf1c7; background: #1d2021; font: inherit; }}
+  textarea:focus, button:focus-visible {{ outline: 3px solid #fabd2f; outline-offset: 2px; }}
+  .send {{ padding: 10px 13px; color: #1d2021; border-color: #a9b665; background: #a9b665; font-weight: 750; }}
+  button:disabled {{ cursor: wait; opacity: .62; }}
+  @media (max-width: 540px) {{ .ask[aria-expanded="true"] {{ display: none; }} .drawer {{ width: 100vw; }} }}
+</style>
+</head>
+<body>
+<iframe src="/{safe_slug}/__artifact/content/" title="Rendered artifact"></iframe>
+<button class="ask" id="ask" type="button" aria-expanded="false" aria-controls="drawer">✦ Ask about this</button>
+<aside class="drawer" id="drawer" aria-label="Artifact conversation" aria-hidden="true">
+  <div class="grip" id="grip" role="separator" aria-orientation="vertical" aria-label="Resize chat" title="Drag to resize"></div>
+  <header class="head"><div><strong>Ask this artifact</strong><span>Answers come from its Artifact Herdr workspace</span></div><button class="icon" id="close" type="button" aria-label="Close chat">×</button></header>
+  <main class="messages" id="messages"><p class="empty">Ask about a term, number, decision, or anything currently on screen.</p></main>
+  <section>
+    <pre class="delta" id="delta" hidden></pre>
+    <div class="composer">
+      <div class="tools"><button class="check" id="check" type="button">Check changes</button><span class="status" id="status" role="status"></span></div>
+      <form id="form"><textarea id="question" aria-label="Question" placeholder="What does this mean?" required></textarea><button class="send" id="send" type="submit">Ask</button></form>
+    </div>
+  </section>
+</aside>
+<script>
+  const ask = document.querySelector('#ask');
+  const drawer = document.querySelector('#drawer');
+  const close = document.querySelector('#close');
+  const messages = document.querySelector('#messages');
+  const form = document.querySelector('#form');
+  const question = document.querySelector('#question');
+  const send = document.querySelector('#send');
+  const check = document.querySelector('#check');
+  const delta = document.querySelector('#delta');
+  const status = document.querySelector('#status');
+  const api = '__artifact/api/';
+
+  function setOpen(open) {{
+    drawer.classList.toggle('open', open);
+    drawer.setAttribute('aria-hidden', String(!open));
+    ask.setAttribute('aria-expanded', String(open));
+    ask.style.right = open ? (Math.min(drawer.getBoundingClientRect().width, innerWidth - 14) + 14) + 'px' : '';
+    if (open) question.focus(); else ask.focus();
+  }}
+  ask.addEventListener('click', () => setOpen(ask.getAttribute('aria-expanded') !== 'true'));
+  close.addEventListener('click', () => setOpen(false));
+  addEventListener('keydown', event => {{
+    if (event.key !== 'Escape' || !drawer.classList.contains('open')) return;
+    if (cancelNewest()) return;
+    setOpen(false);
+  }});
+
+  function mdInline(text) {{
+    return text
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
+      .replace(/\\*([^*\\n]+)\\*/g, '<em>$1</em>')
+      .replace(/\\[([^\\]]+)\\]\\((https?:[^)\\s]+)\\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  }}
+  function md(source) {{
+    const escaped = source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const out = []; let para = []; let list = null; let code = null;
+    const flushPara = () => {{ if (para.length) {{ out.push(`<p>${{mdInline(para.join(' '))}}</p>`); para = []; }} }};
+    const flushList = () => {{ if (list) {{ out.push(`<${{list.tag}}>${{list.items.map(item => `<li>${{mdInline(item)}}</li>`).join('')}}</${{list.tag}}>`); list = null; }} }};
+    for (const raw of escaped.split('\\n')) {{
+      const line = raw.trim();
+      if (code !== null) {{
+        if (line.startsWith('```')) {{ out.push(`<pre><code>${{code.join('\\n')}}</code></pre>`); code = null; }}
+        else code.push(raw);
+        continue;
+      }}
+      if (line.startsWith('```')) {{ flushPara(); flushList(); code = []; continue; }}
+      if (!line) {{ flushPara(); flushList(); continue; }}
+      const heading = line.match(/^(#{{1,3}})\\s+(.*)$/);
+      if (heading) {{ flushPara(); flushList(); const level = heading[1].length + 2; out.push(`<h${{level}}>${{mdInline(heading[2])}}</h${{level}}>`); continue; }}
+      const unordered = line.match(/^[-*+]\\s+(.*)$/);
+      const ordered = line.match(/^\\d+[.)]\\s+(.*)$/);
+      if (unordered || ordered) {{
+        flushPara();
+        const tag = unordered ? 'ul' : 'ol';
+        if (!list || list.tag !== tag) {{ flushList(); list = {{ tag, items: [] }}; }}
+        list.items.push((unordered || ordered)[1]); continue;
+      }}
+      flushList(); para.push(line);
+    }}
+    flushPara(); flushList();
+    if (code !== null) out.push(`<pre><code>${{code.join('\\n')}}</code></pre>`);
+    return out.join('');
+  }}
+  function render(items) {{
+    messages.replaceChildren();
+    if (!items.length && !queue.length) {{ const p = document.createElement('p'); p.className = 'empty'; p.textContent = 'Ask about a term, number, decision, or anything currently on screen.'; messages.append(p); return; }}
+    for (const item of items) {{
+      const p = document.createElement('div');
+      p.className = `message ${{item.role === 'user' ? 'user' : 'assistant'}}`;
+      if (item.role === 'user') p.textContent = item.text; else p.innerHTML = md(item.text);
+      messages.append(p);
+    }}
+    for (const entry of queue) messages.append(entry.el);
+    messages.scrollTop = messages.scrollHeight;
+  }}
+  async function json(url, options) {{
+    const response = await fetch(url, options);
+    const body = await response.json().catch(() => ({{ error: `HTTP ${{response.status}}` }}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${{response.status}}`);
+    return body;
+  }}
+  const queue = [];
+  let serving = null;
+
+  function makeEntry(text) {{
+    const el = document.createElement('div');
+    el.className = 'message user pending';
+    el.textContent = text;
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    const label = document.createElement('span');
+    label.textContent = 'queued';
+    const cancel = document.createElement('button');
+    cancel.className = 'cancel'; cancel.type = 'button'; cancel.textContent = '×';
+    cancel.title = 'Cancel this message (Esc)';
+    tag.append(label, cancel); el.append(tag);
+    const entry = {{ text, el, label, controller: null }};
+    cancel.addEventListener('click', () => cancelEntry(entry));
+    return entry;
+  }}
+  function cancelEntry(entry) {{
+    if (!queue.includes(entry)) return;
+    if (entry.controller) {{ entry.controller.abort(); return; }}
+    queue.splice(queue.indexOf(entry), 1); entry.el.remove();
+    updateStatus('Canceled queued message');
+  }}
+  function cancelNewest() {{
+    if (!queue.length) return false;
+    cancelEntry(queue[queue.length - 1]);
+    return true;
+  }}
+  function updateStatus(note) {{
+    if (serving) {{ status.textContent = 'Artifact agent is thinking…' + (queue.length > 1 ? ` · ${{queue.length - 1}} queued` : ''); return; }}
+    status.textContent = note || '';
+  }}
+  async function serve() {{
+    if (serving || !queue.length) return;
+    const entry = queue[0]; serving = entry;
+    entry.controller = new AbortController();
+    entry.label.textContent = 'thinking…';
+    updateStatus();
+    try {{
+      const body = await json(api + 'chat', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({{ message: entry.text }}), signal: entry.controller.signal }});
+      queue.shift(); entry.el.remove(); render(body.messages || []);
+      serving = null; updateStatus('Answered');
+    }} catch (error) {{
+      queue.shift(); entry.el.remove();
+      serving = null;
+      updateStatus(error.name === 'AbortError' ? 'Canceled' : error.message);
+    }}
+    question.focus(); serve();
+  }}
+  json(api + 'history').then(body => render(body.messages || [])).catch(error => status.textContent = error.message);
+  form.addEventListener('submit', event => {{
+    event.preventDefault(); const text = question.value.trim(); if (!text) return;
+    const entry = makeEntry(text); queue.push(entry); messages.append(entry.el);
+    messages.scrollTop = messages.scrollHeight;
+    question.value = ''; updateStatus(); serve();
+  }});
+  question.addEventListener('keydown', event => {{ if (event.key === 'Enter' && !event.shiftKey) {{ event.preventDefault(); form.requestSubmit(); }} }});
+  check.addEventListener('click', async () => {{
+    check.disabled = true; status.textContent = 'Checking…';
+    try {{ const body = await json(api + 'check'); const changed = body.artifact_changed_since_launch ? `Changed since launch (+${{body.artifact_added_lines}} / -${{body.artifact_removed_lines}} lines)` : 'Artifact matches its launch snapshot'; const repo = body.git_status.length ? body.git_status.join(String.fromCharCode(10)) : 'Clean against pushed baseline'; delta.textContent = `${{changed}}\nBranch: ${{body.branch}}\nBaseline: ${{body.baseline_commit.slice(0, 12)}}\nWorkspace: ${{body.workspace}}\n\nGit status\n${{repo}}`; delta.hidden = false; status.textContent = 'Checked'; }}
+    catch (error) {{ status.textContent = error.message; }} finally {{ check.disabled = false; }}
+  }});
+
+  const grip = document.querySelector('#grip');
+  function applyWidth(width) {{
+    const clamped = Math.min(Math.max(width, 300), innerWidth);
+    drawer.style.width = clamped + 'px';
+    if (drawer.classList.contains('open')) ask.style.right = (Math.min(clamped, innerWidth - 14) + 14) + 'px';
+  }}
+  const savedWidth = Number(localStorage.getItem('lavishChatWidth') || 0);
+  if (savedWidth) applyWidth(savedWidth);
+  grip.addEventListener('pointerdown', event => {{
+    event.preventDefault(); grip.setPointerCapture(event.pointerId);
+    grip.classList.add('drag'); drawer.classList.add('dragging');
+    const move = moveEvent => applyWidth(innerWidth - moveEvent.clientX);
+    const stop = () => {{
+      grip.classList.remove('drag'); drawer.classList.remove('dragging');
+      grip.removeEventListener('pointermove', move);
+      localStorage.setItem('lavishChatWidth', String(drawer.getBoundingClientRect().width));
+    }};
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', stop, {{ once: true }});
+    grip.addEventListener('pointercancel', stop, {{ once: true }});
+  }});
+
+  // Vimium-style scrolling: the shell itself never scrolls (overflow hidden), so when the
+  // top frame has focus, drive the artifact iframe's scroller for unhandled j / k / gg / G.
+  const frame = document.querySelector('iframe');
+  let gPending = false;
+  addEventListener('keydown', event => {{
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+    if (event.target.closest && event.target.closest('textarea, input, select, [contenteditable]')) return;
+    const doc = frame.contentDocument;
+    const scroller = doc && doc.scrollingElement;
+    if (!scroller) return;
+    if (event.key === 'j') {{ scroller.scrollBy({{ top: 70, behavior: 'instant' }}); }}
+    else if (event.key === 'k') {{ scroller.scrollBy({{ top: -70, behavior: 'instant' }}); }}
+    else if (event.key === 'G') {{ scroller.scrollTo({{ top: scroller.scrollHeight, behavior: 'instant' }}); }}
+    else if (event.key === 'g') {{
+      if (gPending) {{ scroller.scrollTo({{ top: 0, behavior: 'instant' }}); gPending = false; event.preventDefault(); }}
+      else {{ gPending = true; setTimeout(() => {{ gPending = false; }}, 800); }}
+      return;
+    }}
+    else return;
+    gPending = false;
+    event.preventDefault();
+  }});
+</script>
+</body>
+</html>""".encode()
+
+
 class RedirectHandler(BaseHTTPRequestHandler):
     def do_HEAD(self) -> None:
         self.respond(send_body=False)
 
     def do_GET(self) -> None:
+        self.respond(send_body=True)
+
+    def do_POST(self) -> None:
         self.respond(send_body=True)
 
     def respond(self, send_body: bool) -> None:
@@ -122,6 +470,18 @@ class RedirectHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Unknown Lavish alias")
             return
         target_file = static_target(target)
+        context = load_contexts().get(slug)
+        if target_file and context:
+            self.serve_context(
+                slug,
+                relative_path,
+                request.path.endswith("/"),
+                request.query,
+                target_file,
+                context,
+                send_body,
+            )
+            return
         if target_file:
             self.serve_static(
                 slug,
@@ -138,6 +498,115 @@ class RedirectHandler(BaseHTTPRequestHandler):
         self.send_header("Location", location)
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if send_body:
+            self.wfile.write(body)
+
+    def serve_context(
+        self,
+        slug: str,
+        relative_path: str,
+        has_trailing_slash: bool,
+        query: str,
+        target_file: Path,
+        context: str,
+        send_body: bool,
+    ) -> None:
+        if not relative_path:
+            if not has_trailing_slash:
+                self.redirect(f"/{slug}/" + (f"?{query}" if query else ""), send_body)
+                return
+            body = artifact_shell(slug)
+            self.send_bytes(body, "text/html; charset=utf-8", send_body, cache="no-store")
+            return
+        if relative_path == "__artifact/content":
+            self.redirect(f"/{slug}/__artifact/content/", send_body)
+            return
+        if relative_path.startswith("__artifact/content/"):
+            asset = relative_path.removeprefix("__artifact/content/")
+            self.serve_static(slug, asset, True, query, target_file, send_body)
+            return
+        if relative_path == "__artifact/api/history" and self.command in {"GET", "HEAD"}:
+            self.agent_json(context, "history", send_body=send_body)
+            return
+        if relative_path == "__artifact/api/check" and self.command in {"GET", "HEAD"}:
+            self.agent_json(context, "check", send_body=send_body)
+            return
+        if relative_path == "__artifact/api/chat" and self.command == "POST":
+            self.chat(context, send_body)
+            return
+        self.send_error(404)
+
+    def chat(self, context: str, send_body: bool) -> None:
+        content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json":
+            self.send_json({"error": "Content-Type must be application/json"}, 415, send_body)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0 or length > MAX_CHAT_BYTES:
+            self.send_json({"error": "Question is empty or too large"}, 413, send_body)
+            return
+        try:
+            payload = json.loads(self.rfile.read(length))
+            message = payload.get("message", "") if isinstance(payload, dict) else ""
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self.send_json({"error": "Invalid JSON"}, 400, send_body)
+            return
+        if not isinstance(message, str) or not message.strip():
+            self.send_json({"error": "Question is empty"}, 400, send_body)
+            return
+        self.agent_json(context, "chat", message.strip(), send_body)
+
+    def agent_json(
+        self,
+        context: str,
+        command: str,
+        question: str | None = None,
+        send_body: bool = True,
+    ) -> None:
+        try:
+            payload = run_agent(context, command, question)
+        except (RuntimeError, subprocess.TimeoutExpired) as error:
+            self.send_json({"error": str(error)}, 502, send_body)
+            return
+        self.send_json(payload, 200, send_body)
+
+    def send_json(self, payload: object, status: int, send_body: bool) -> None:
+        body = (json.dumps(payload) + "\n").encode()
+        self.send_response(status)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if send_body:
+            self.wfile.write(body)
+
+    def redirect(self, location: str, send_body: bool) -> None:
+        body = f"Redirecting to {location}\n".encode()
+        self.send_response(308)
+        self.send_header("Location", location)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if send_body:
+            self.wfile.write(body)
+
+    def send_bytes(
+        self,
+        body: bytes,
+        content_type: str,
+        send_body: bool,
+        *,
+        cache: str = "no-cache",
+    ) -> None:
+        self.send_response(200)
+        self.send_header("Cache-Control", cache)
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         if send_body:
@@ -200,10 +669,11 @@ def main() -> None:
     set_parser = subparsers.add_parser("set")
     set_parser.add_argument("slug")
     set_parser.add_argument("target_url")
+    set_parser.add_argument("--context")
     args = parser.parse_args()
 
     if args.command == "set":
-        set_alias(args.slug, args.target_url)
+        set_alias(args.slug, args.target_url, args.context)
         return
     ThreadingHTTPServer((LISTEN_HOST, LISTEN_PORT), RedirectHandler).serve_forever()
 

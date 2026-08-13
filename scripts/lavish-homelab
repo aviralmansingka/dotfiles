@@ -6,8 +6,11 @@ readonly REMOTE_HOME="/home/avirus"
 readonly REMOTE_ROOT="${REMOTE_HOME}/.local/share/lavish/artifacts"
 readonly REMOTE_BIN="${REMOTE_HOME}/.local/bin/lavish-axi"
 readonly REMOTE_ALIASES="${REMOTE_HOME}/.local/bin/lavish-aliases"
+readonly REMOTE_ARTIFACT_AGENT="${REMOTE_HOME}/.local/bin/lavish-artifact-agent"
 readonly REMOTE_PATH="${REMOTE_HOME}/.nvm/versions/node/v22.22.3/bin:${REMOTE_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin"
 readonly PUBLIC_URL="https://homelab.tail1b3b66.ts.net:8443"
+readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
+readonly REMOTE_CONTEXT_ROOT="${REMOTE_ROOT}/_contexts"
 
 usage() {
   echo "Usage: lavish-homelab [render|review|open|poll|end|remote-path|alias-for] <html-file> [--source-markdown <file> | --alias <name>] [lavish options]" >&2
@@ -41,6 +44,137 @@ run_remote_lavish() {
   ssh -n "$REMOTE_HOST" "$command" | sed \
     -e "s#http://127.0.0.1:4387#${PUBLIC_URL}#g" \
     -e "s#http://homelab.tail1b3b66.ts.net:4387#${PUBLIC_URL}#g"
+}
+
+sync_remote_runtime() {
+  local local_file remote_file local_sha remote_sha changed=0
+  ssh -n "$REMOTE_HOST" "mkdir -p $(quote_remote "${REMOTE_HOME}/.local/bin")"
+  for local_file in "$SCRIPT_DIR/lavish-aliases" "$SCRIPT_DIR/lavish-artifact-agent"; do
+    remote_file="${REMOTE_HOME}/.local/bin/$(basename "$local_file")"
+    local_sha=$(shasum -a 256 "$local_file" | awk '{print $1}')
+    remote_sha=$(ssh -n "$REMOTE_HOST" "sha256sum $(quote_remote "$remote_file") 2>/dev/null" | awk '{print $1}' || true)
+    if [[ "$local_sha" != "$remote_sha" ]]; then
+      rsync -az "$local_file" "${REMOTE_HOST}:${remote_file}"
+      ssh -n "$REMOTE_HOST" "chmod 755 $(quote_remote "$remote_file")"
+      changed=1
+    fi
+  done
+  if [[ "$changed" == 1 ]]; then
+    ssh -n "$REMOTE_HOST" "systemctl --user restart lavish-aliases.service"
+  fi
+}
+
+find_git_root() {
+  local path=$1 dir
+  dir=$(dirname "$path")
+  while [[ "$dir" != / ]]; do
+    if [[ -e "$dir/.git" ]]; then
+      printf '%s\n' "$dir"
+      return 0
+    fi
+    dir=$(dirname "$dir")
+  done
+  return 1
+}
+
+git_context() {
+  local root=$1 git_spec git_dir
+  GIT_ROOT=$root
+  GIT_DIR=
+  if ! git -C "$GIT_ROOT" ls-files -co --exclude-standard -z >/dev/null 2>&1; then
+    [[ -f "$GIT_ROOT/.git" ]] || return 1
+    git_spec=$(sed -n 's/^gitdir: //p' "$GIT_ROOT/.git")
+    [[ -n "$git_spec" ]] || return 1
+    if [[ "$git_spec" == /* ]]; then
+      git_dir=$git_spec
+    else
+      git_dir="$GIT_ROOT/$git_spec"
+    fi
+    GIT_DIR=$(cd "$(dirname "$git_dir")" && printf '%s/%s\n' "$PWD" "$(basename "$git_dir")")
+    git --git-dir="$GIT_DIR" --work-tree="$GIT_ROOT" rev-parse --is-inside-work-tree >/dev/null
+  fi
+}
+
+git_repo() {
+  if [[ -n "${GIT_DIR:-}" ]]; then
+    git --git-dir="$GIT_DIR" --work-tree="$GIT_ROOT" "$@"
+  else
+    git -C "$GIT_ROOT" "$@"
+  fi
+}
+
+prepare_artifact_context() {
+  local html_file=$1 markdown_file=$2 alias=$3 candidate repo_root branch repo_url
+  local artifact_relative source_relative context_seed context_id incoming worktree activate_command
+  candidate=${markdown_file:-$html_file}
+  repo_root=$(find_git_root "$candidate") || {
+    echo "Artifact chat requires the source or HTML file to live in a Git worktree: $candidate" >&2
+    exit 1
+  }
+  git_context "$repo_root" || {
+    echo "Could not inspect the artifact Git worktree: $repo_root" >&2
+    exit 1
+  }
+  branch=$(git_repo symbolic-ref --quiet --short HEAD) || {
+    echo "Artifact chat requires a named Git branch, not detached HEAD: $repo_root" >&2
+    exit 1
+  }
+  repo_url=$(git_repo remote get-url origin) || {
+    echo "Artifact chat requires an origin remote: $repo_root" >&2
+    exit 1
+  }
+  case "$html_file" in
+    "$repo_root"/*) artifact_relative=${html_file#"$repo_root"/} ;;
+    *) echo "Artifact HTML is outside its source repository: $html_file" >&2; exit 1 ;;
+  esac
+  source_relative=
+  if [[ -n "$markdown_file" ]]; then
+    case "$markdown_file" in
+      "$repo_root"/*) source_relative=${markdown_file#"$repo_root"/} ;;
+      *) echo "Artifact source is outside its repository: $markdown_file" >&2; exit 1 ;;
+    esac
+  fi
+
+  context_seed="$alias|$repo_url|$branch|$artifact_relative|$(date -u +%Y%m%dT%H%M%S)|$$|$RANDOM"
+  context_id="artifact-$(printf '%s' "$context_seed" | shasum -a 256 | awk '{print substr($1,1,20)}')"
+  incoming="${REMOTE_CONTEXT_ROOT}/${context_id}/incoming"
+  worktree="${REMOTE_CONTEXT_ROOT}/${context_id}/worktree"
+
+  ssh -n "$REMOTE_HOST" \
+    "$(quote_remote "$REMOTE_ARTIFACT_AGENT") prepare --context $(quote_remote "$context_id") --slug $(quote_remote "$alias") --repo-url $(quote_remote "$repo_url") --branch $(quote_remote "$branch")" \
+    >/dev/null
+
+  if ! git_repo ls-files -co --exclude-standard -z \
+    | while IFS= read -r -d '' path; do
+        if [[ -e "$repo_root/$path" || -L "$repo_root/$path" ]]; then
+          printf '%s\0' "$path"
+        fi
+      done \
+    | rsync -az --from0 --files-from=- --relative "$repo_root/" "${REMOTE_HOST}:${incoming}/"; then
+    ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
+    return 1
+  fi
+  if ! (cd "$repo_root" && rsync -azR "./$artifact_relative" "${REMOTE_HOST}:${incoming}/"); then
+    ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
+    return 1
+  fi
+  if [[ -n "$source_relative" && "$source_relative" != "$artifact_relative" ]]; then
+    if ! (cd "$repo_root" && rsync -azR "./$source_relative" "${REMOTE_HOST}:${incoming}/"); then
+      ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
+      return 1
+    fi
+  fi
+
+  activate_command="$(quote_remote "$REMOTE_ARTIFACT_AGENT") activate --context $(quote_remote "$context_id") --artifact-relative $(quote_remote "$artifact_relative")"
+  if [[ -n "$source_relative" ]]; then
+    activate_command+=" --source-relative $(quote_remote "$source_relative")"
+  fi
+  if ! ssh -n "$REMOTE_HOST" "$activate_command" >/dev/null; then
+    ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
+    return 1
+  fi
+  ARTIFACT_CONTEXT_ID=$context_id
+  ARTIFACT_CONTEXT_FILE="$worktree/$artifact_relative"
 }
 
 slugify() {
@@ -109,6 +243,9 @@ case "$action" in
       alias_for "$source_file" "$source_markdown" "$explicit_alias"
       exit 0
     fi
+    if [[ -n "$source_markdown" ]]; then
+      source_markdown=$(resolve_file "$source_markdown")
+    fi
     remote_file=$(remote_file_for "$source_file")
     if [[ "$action" == remote-path ]]; then
       printf '%s\n' "$remote_file"
@@ -122,8 +259,10 @@ case "$action" in
     if [[ "$action" == render || "$action" == review || "$action" == open ]]; then
       alias=$(alias_for "$source_file" "$source_markdown" "$explicit_alias")
       if [[ "$action" == render ]]; then
-        alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$remote_file")")
-        printf 'alias_url: "%s"\nartifact_path: "%s"\n' "$alias_url" "$remote_file"
+        sync_remote_runtime
+        prepare_artifact_context "$source_file" "$source_markdown" "$alias"
+        alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$ARTIFACT_CONTEXT_FILE") --context $(quote_remote "$ARTIFACT_CONTEXT_ID")")
+        printf 'alias_url: "%s"\nartifact_path: "%s"\nartifact_context: "%s"\n' "$alias_url" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"
         exit 0
       fi
       if [[ ${#lavish_args[@]} -gt 0 ]]; then
