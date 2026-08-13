@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import difflib
+import fcntl
 import hashlib
 import json
 import os
@@ -15,6 +16,7 @@ import subprocess
 import sys
 import time
 import uuid
+from contextlib import contextmanager
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 
@@ -68,6 +70,15 @@ def load_state() -> dict[str, dict[str, object]]:
 
 def save_state(state: dict[str, dict[str, object]]) -> None:
     atomic_json(STATE_FILE, state)
+
+
+@contextmanager
+def state_transaction():
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = STATE_FILE.with_name(f".{STATE_FILE.name}.lock")
+    with lock_path.open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield load_state()
 
 
 def validate_context(value: str) -> str:
@@ -130,12 +141,17 @@ def herdr_text(args: list[str], *, timeout: int = 120) -> str:
     return run([HERDR, *args], timeout=timeout).stdout
 
 
-def record_for(context_id: str) -> tuple[dict[str, dict[str, object]], dict[str, object]]:
-    state = load_state()
+def state_record(
+    state: dict[str, dict[str, object]], context_id: str
+) -> dict[str, object]:
     record = state.get(validate_context(context_id))
     if not isinstance(record, dict):
         raise ArtifactAgentError(f"Unknown artifact context: {context_id}")
-    return state, record
+    return record
+
+
+def record_for(context_id: str) -> dict[str, object]:
+    return state_record(load_state(), context_id)
 
 
 def command_prepare(args: argparse.Namespace) -> dict[str, object]:
@@ -143,60 +159,60 @@ def command_prepare(args: argparse.Namespace) -> dict[str, object]:
     if not args.repo_url.strip():
         raise ArtifactAgentError("Repository URL is required")
     run(["git", "check-ref-format", "--branch", args.branch])
-    state = load_state()
-    if context_id in state:
-        raise ArtifactAgentError(f"Artifact context already exists: {context_id}")
+    with state_transaction() as state:
+        if context_id in state:
+            raise ArtifactAgentError(f"Artifact context already exists: {context_id}")
 
-    root = context_dir(context_id)
-    worktree = root / "worktree"
-    incoming = root / "incoming"
-    replies = root / "replies"
-    if root.exists():
-        raise ArtifactAgentError(f"Artifact context directory already exists: {root}")
-    root.mkdir(parents=True)
-    try:
-        run(
-            [
-                "git",
-                "clone",
-                "--origin",
-                "origin",
-                "--branch",
-                args.branch,
-                "--single-branch",
-                "--no-tags",
-                "--",
-                args.repo_url,
-                str(worktree),
-            ],
-            timeout=300,
-        )
-        baseline_commit = run(["git", "rev-parse", "HEAD"], cwd=worktree).stdout.strip()
-        incoming.mkdir()
-        replies.mkdir()
-        record: dict[str, object] = {
-            "context_id": context_id,
-            "slug": args.slug,
-            "phase": "prepared",
-            "repo_url": args.repo_url,
-            "branch": args.branch,
-            "baseline_commit": baseline_commit,
-            "worktree": str(worktree),
-            "incoming": str(incoming),
-            "replies": str(replies),
-            "created_at": now(),
-        }
-        state[context_id] = record
-        save_state(state)
-        return {
-            "context_id": context_id,
-            "baseline_commit": baseline_commit,
-            "worktree": str(worktree),
-            "incoming": str(incoming),
-        }
-    except Exception:
-        shutil.rmtree(root, ignore_errors=True)
-        raise
+        root = context_dir(context_id)
+        worktree = root / "worktree"
+        incoming = root / "incoming"
+        replies = root / "replies"
+        if root.exists():
+            raise ArtifactAgentError(f"Artifact context directory already exists: {root}")
+        root.mkdir(parents=True)
+        try:
+            run(
+                [
+                    "git",
+                    "clone",
+                    "--origin",
+                    "origin",
+                    "--branch",
+                    args.branch,
+                    "--single-branch",
+                    "--no-tags",
+                    "--",
+                    args.repo_url,
+                    str(worktree),
+                ],
+                timeout=300,
+            )
+            baseline_commit = run(["git", "rev-parse", "HEAD"], cwd=worktree).stdout.strip()
+            incoming.mkdir()
+            replies.mkdir()
+            record: dict[str, object] = {
+                "context_id": context_id,
+                "slug": args.slug,
+                "phase": "prepared",
+                "repo_url": args.repo_url,
+                "branch": args.branch,
+                "baseline_commit": baseline_commit,
+                "worktree": str(worktree),
+                "incoming": str(incoming),
+                "replies": str(replies),
+                "created_at": now(),
+            }
+            state[context_id] = record
+            save_state(state)
+            return {
+                "context_id": context_id,
+                "baseline_commit": baseline_commit,
+                "worktree": str(worktree),
+                "incoming": str(incoming),
+            }
+        except Exception:
+            shutil.rmtree(root, ignore_errors=True)
+            raise
 
 
 def sync_snapshot(incoming: Path, worktree: Path) -> None:
@@ -317,48 +333,49 @@ def start_agent(record: dict[str, object]) -> dict[str, object]:
 
 
 def command_activate(args: argparse.Namespace) -> dict[str, object]:
-    state, record = record_for(args.context)
-    if record.get("phase") != "prepared":
-        raise ArtifactAgentError(f"Artifact context is not prepared: {args.context}")
-    artifact_relative = validate_relative(args.artifact_relative, "artifact path")
-    source_relative = (
-        validate_relative(args.source_relative, "source path") if args.source_relative else ""
-    )
-    worktree = Path(str(record["worktree"]))
-    incoming = Path(str(record["incoming"]))
-    sync_snapshot(incoming, worktree)
-    artifact = worktree / artifact_relative
-    if not artifact.is_file():
-        raise ArtifactAgentError(f"Artifact was not present in the local repository snapshot: {artifact_relative}")
-    source = worktree / source_relative if source_relative else None
-    if source and not source.is_file():
-        raise ArtifactAgentError(f"Source was not present in the local repository snapshot: {source_relative}")
+    with state_transaction() as state:
+        record = state_record(state, args.context)
+        if record.get("phase") != "prepared":
+            raise ArtifactAgentError(f"Artifact context is not prepared: {args.context}")
+        artifact_relative = validate_relative(args.artifact_relative, "artifact path")
+        source_relative = (
+            validate_relative(args.source_relative, "source path") if args.source_relative else ""
+        )
+        worktree = Path(str(record["worktree"]))
+        incoming = Path(str(record["incoming"]))
+        sync_snapshot(incoming, worktree)
+        artifact = worktree / artifact_relative
+        if not artifact.is_file():
+            raise ArtifactAgentError(f"Artifact was not present in the local repository snapshot: {artifact_relative}")
+        source = worktree / source_relative if source_relative else None
+        if source and not source.is_file():
+            raise ArtifactAgentError(f"Source was not present in the local repository snapshot: {source_relative}")
 
-    original = context_dir(args.context) / "original-artifact.html"
-    shutil.copy2(artifact, original)
-    identity = start_agent(record)
-    record.update(
-        {
-            "phase": "active",
-            "artifact_relative": artifact_relative,
+        original = context_dir(args.context) / "original-artifact.html"
+        shutil.copy2(artifact, original)
+        identity = start_agent(record)
+        record.update(
+            {
+                "phase": "active",
+                "artifact_relative": artifact_relative,
+                "artifact": str(artifact),
+                "original_artifact": str(original),
+                "source_relative": source_relative,
+                "source": str(source) if source else "",
+                "activated_at": now(),
+                **identity,
+            }
+        )
+        shutil.rmtree(incoming)
+        save_state(state)
+        atomic_json(context_dir(args.context) / "chat.json", {"messages": []})
+        return {
+            "context_id": args.context,
             "artifact": str(artifact),
-            "original_artifact": str(original),
-            "source_relative": source_relative,
-            "source": str(source) if source else "",
-            "activated_at": now(),
+            "branch": record["branch"],
+            "baseline_commit": record["baseline_commit"],
             **identity,
         }
-    )
-    shutil.rmtree(incoming)
-    save_state(state)
-    atomic_json(context_dir(args.context) / "chat.json", {"messages": []})
-    return {
-        "context_id": args.context,
-        "artifact": str(artifact),
-        "branch": record["branch"],
-        "baseline_commit": record["baseline_commit"],
-        **identity,
-    }
 
 
 def live_agent(record: dict[str, object]) -> dict[str, object]:
@@ -474,6 +491,7 @@ def reflow_terminal_wraps(markdown: str) -> str:
     # can wrap text to their own width.
     result: list[str] = []
     paragraph = ""
+    in_fence = False
 
     def flush() -> None:
         nonlocal paragraph
@@ -483,11 +501,19 @@ def reflow_terminal_wraps(markdown: str) -> str:
 
     for raw in markdown.splitlines():
         line = raw.strip()
+        if line.startswith("```"):
+            flush()
+            result.append(raw)
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            result.append(raw)
+            continue
         if not line:
             flush()
             result.append("")
             continue
-        if line.startswith(("- ", "* ", "#", "```", "|", ">")) or re.match(r"^\d+[.)]\s", line):
+        if line.startswith(("- ", "* ", "#", "|", ">")) or re.match(r"^\d+[.)]\s", line):
             flush()
             result.append(line)
             continue
@@ -522,7 +548,7 @@ def wait_for_marked_reply(
 
 
 def command_chat(args: argparse.Namespace) -> dict[str, object]:
-    _, record = record_for(args.context)
+    record = record_for(args.context)
     if record.get("phase") != "active":
         raise ArtifactAgentError(f"Artifact context is not active: {args.context}")
     question = sys.stdin.read().strip()
@@ -610,7 +636,7 @@ def git_output(worktree: Path, args: list[str]) -> str:
 
 
 def command_check(args: argparse.Namespace) -> dict[str, object]:
-    _, record = record_for(args.context)
+    record = record_for(args.context)
     worktree = Path(str(record["worktree"]))
     artifact = Path(str(record["artifact"]))
     original = Path(str(record["original_artifact"]))
@@ -657,7 +683,7 @@ def command_check(args: argparse.Namespace) -> dict[str, object]:
 
 
 def command_history(args: argparse.Namespace) -> dict[str, object]:
-    _, record = record_for(args.context)
+    record = record_for(args.context)
     agent = live_agent(record)
     return {
         "messages": load_chat(args.context)["messages"],
@@ -690,14 +716,15 @@ def command_reflow_history(args: argparse.Namespace) -> dict[str, object]:
 
 
 def command_abandon(args: argparse.Namespace) -> dict[str, object]:
-    state, record = record_for(args.context)
-    if record.get("phase") != "prepared":
-        raise ArtifactAgentError("Only a prepared context with no running agent can be abandoned")
-    root = context_dir(args.context)
-    shutil.rmtree(root)
-    state.pop(args.context, None)
-    save_state(state)
-    return {"context_id": args.context, "abandoned": True}
+    with state_transaction() as state:
+        record = state_record(state, args.context)
+        if record.get("phase") != "prepared":
+            raise ArtifactAgentError("Only a prepared context with no running agent can be abandoned")
+        root = context_dir(args.context)
+        shutil.rmtree(root)
+        state.pop(args.context, None)
+        save_state(state)
+        return {"context_id": args.context, "abandoned": True}
 
 
 def build_parser() -> argparse.ArgumentParser:

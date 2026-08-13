@@ -54,17 +54,32 @@ def static_target(target: str) -> Path | None:
     return path if path.suffix.lower() in {".html", ".htm"} else None
 
 
-def load_aliases() -> dict[str, str]:
+def load_aliases() -> dict[str, dict[str, str]]:
     try:
         data = json.loads(STATE_FILE.read_text())
     except FileNotFoundError:
         return {}
     if not isinstance(data, dict):
         raise SystemExit(f"Invalid alias state: {STATE_FILE}")
-    return data
+    legacy_contexts = load_contexts()
+    aliases: dict[str, dict[str, str]] = {}
+    for slug, value in data.items():
+        if isinstance(value, str):
+            aliases[slug] = {"target": value}
+            if slug in legacy_contexts:
+                aliases[slug]["context"] = legacy_contexts[slug]
+        elif (
+            isinstance(value, dict)
+            and isinstance(value.get("target"), str)
+            and ("context" not in value or isinstance(value.get("context"), str))
+        ):
+            aliases[slug] = dict(value)
+        else:
+            raise SystemExit(f"Invalid alias state: {STATE_FILE}")
+    return aliases
 
 
-def save_aliases(aliases: dict[str, str]) -> None:
+def save_aliases(aliases: dict[str, dict[str, str]]) -> None:
     save_json(STATE_FILE, aliases, ".lavish-aliases-")
 
 
@@ -78,10 +93,6 @@ def load_contexts() -> dict[str, str]:
     ):
         raise SystemExit(f"Invalid artifact context state: {CONTEXT_FILE}")
     return data
-
-
-def save_contexts(contexts: dict[str, str]) -> None:
-    save_json(CONTEXT_FILE, contexts, ".lavish-artifact-contexts-")
 
 
 def save_json(path: Path, value: object, prefix: str) -> None:
@@ -98,15 +109,9 @@ def save_json(path: Path, value: object, prefix: str) -> None:
             os.unlink(temporary)
 
 
-def set_alias(slug: str, target_url: str, context: str | None = None) -> None:
+def alias_owner(slug: str) -> tuple[str | None, str, str]:
     if not SLUG_RE.fullmatch(slug):
         raise SystemExit(f"Invalid alias: {slug}")
-    target_file = static_target(target_url)
-    if not TARGET_RE.fullmatch(target_url) and not target_file:
-        raise SystemExit(f"Invalid Lavish target URL: {target_url}")
-    if target_file and not target_file.is_file():
-        raise SystemExit(f"Static artifact does not exist: {target_file}")
-
     path = f"/{slug}"
     proxy = f"http://{LISTEN_HOST}:{LISTEN_PORT}/{slug}"
     status = subprocess.run(
@@ -126,16 +131,22 @@ def set_alias(slug: str, target_url: str, context: str | None = None) -> None:
         raise SystemExit(
             f"Alias {path} is already owned by {existing}; choose another --alias"
         )
+    return existing, path, proxy
 
+
+def set_alias(slug: str, target_url: str, context: str | None = None) -> None:
+    target_file = static_target(target_url)
+    if not TARGET_RE.fullmatch(target_url) and not target_file:
+        raise SystemExit(f"Invalid Lavish target URL: {target_url}")
+    if target_file and not target_file.is_file():
+        raise SystemExit(f"Static artifact does not exist: {target_file}")
+
+    existing, path, proxy = alias_owner(slug)
     aliases = load_aliases()
-    aliases[slug] = target_url
-    save_aliases(aliases)
-    contexts = load_contexts()
+    aliases[slug] = {"target": target_url}
     if context:
-        contexts[slug] = context
-    else:
-        contexts.pop(slug, None)
-    save_contexts(contexts)
+        aliases[slug]["context"] = context
+    save_aliases(aliases)
     if not existing:
         subprocess.run(
             [
@@ -430,7 +441,7 @@ def artifact_shell(slug: str) -> bytes:
   const frame = document.querySelector('iframe');
   let gPending = false;
   addEventListener('keydown', event => {{
-    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.target.closest && event.target.closest('textarea, input, select, [contenteditable]')) return;
     const doc = frame.contentDocument;
     const scroller = doc && doc.scrollingElement;
@@ -465,12 +476,13 @@ class RedirectHandler(BaseHTTPRequestHandler):
     def respond(self, send_body: bool) -> None:
         request = urlsplit(self.path)
         slug, _, relative_path = request.path.removeprefix("/").partition("/")
-        target = load_aliases().get(slug)
-        if not target:
+        alias = load_aliases().get(slug)
+        if not alias:
             self.send_error(404, "Unknown Lavish alias")
             return
+        target = alias["target"]
         target_file = static_target(target)
-        context = load_contexts().get(slug)
+        context = alias.get("context")
         if target_file and context:
             self.serve_context(
                 slug,
@@ -666,6 +678,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("serve")
+    check_parser = subparsers.add_parser("check")
+    check_parser.add_argument("slug")
     set_parser = subparsers.add_parser("set")
     set_parser.add_argument("slug")
     set_parser.add_argument("target_url")
@@ -674,6 +688,9 @@ def main() -> None:
 
     if args.command == "set":
         set_alias(args.slug, args.target_url, args.context)
+        return
+    if args.command == "check":
+        alias_owner(args.slug)
         return
     ThreadingHTTPServer((LISTEN_HOST, LISTEN_PORT), RedirectHandler).serve_forever()
 

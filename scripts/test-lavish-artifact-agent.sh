@@ -111,8 +111,21 @@ printf 'What does the heading say?\n' | env "${agent_env[@]}" FAKE_WORKTREE="$wo
 env "${agent_env[@]}" FAKE_WORKTREE="$worktree" \
   "$repo_dir/scripts/lavish-artifact-agent" history --context "$context" > "$test_dir/history.json"
 
-uv run python - "$test_dir" "$context" "$before" "$after" <<'PY'
+context_b=artifact-1111111111111111
+context_c=artifact-2222222222222222
+env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
+  --context "$context_b" --slug concurrent-b --repo-url "$origin" --branch main > "$test_dir/prepare-b.json" &
+pid_b=$!
+env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
+  --context "$context_c" --slug concurrent-c --repo-url "$origin" --branch main > "$test_dir/prepare-c.json" &
+pid_c=$!
+wait "$pid_b"
+wait "$pid_c"
+
+uv run python - "$test_dir" "$context" "$before" "$after" \
+  "$repo_dir/scripts/lavish-artifact-agent" "$runtime/state.json" <<'PY'
 import json
+import runpy
 import sys
 from pathlib import Path
 
@@ -125,6 +138,8 @@ clean = json.loads((root / "check-clean.json").read_text())
 changed = json.loads((root / "check-changed.json").read_text())
 chat = json.loads((root / "chat.json").read_text())
 history = json.loads((root / "history.json").read_text())
+module = runpy.run_path(sys.argv[5])
+state = json.loads(Path(sys.argv[6]).read_text())
 
 assert prepare["context_id"] == context
 assert activate["workspace_label"] == "Artifact-sample-artifact"
@@ -139,6 +154,10 @@ assert after == " M artifact.html"
 assert "Original artifact" in chat["answer"]
 assert [message["role"] for message in history["messages"]] == ["user", "assistant"]
 assert history["workspace"] == "Artifact-sample-artifact"
+assert set(state) == {context, "artifact-1111111111111111", "artifact-2222222222222222"}
+assert module["reflow_terminal_wraps"](
+    "First wrapped\n  paragraph.\n\n```python\ndef f():\n    return 1\n```\n\nLast wrapped\nline."
+) == "First wrapped paragraph.\n\n```python\ndef f():\n    return 1\n```\n\nLast wrapped line."
 PY
 
 echo "lavish-artifact-agent: ok"

@@ -105,7 +105,7 @@ git_repo() {
 
 prepare_artifact_context() {
   local html_file=$1 markdown_file=$2 alias=$3 candidate repo_root branch repo_url
-  local artifact_relative source_relative context_seed context_id incoming worktree activate_command
+  local artifact_relative artifact_dir_relative source_relative context_seed context_id incoming worktree activate_command
   candidate=${markdown_file:-$html_file}
   repo_root=$(find_git_root "$candidate") || {
     echo "Artifact chat requires the source or HTML file to live in a Git worktree: $candidate" >&2
@@ -154,7 +154,8 @@ prepare_artifact_context() {
     ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
     return 1
   fi
-  if ! (cd "$repo_root" && rsync -azR "./$artifact_relative" "${REMOTE_HOST}:${incoming}/"); then
+  artifact_dir_relative=$(dirname "$artifact_relative")
+  if ! (cd "$repo_root" && rsync -azR --exclude .git/ "./$artifact_dir_relative/" "${REMOTE_HOST}:${incoming}/"); then
     ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
     return 1
   fi
@@ -260,6 +261,7 @@ case "$action" in
       alias=$(alias_for "$source_file" "$source_markdown" "$explicit_alias")
       if [[ "$action" == render ]]; then
         sync_remote_runtime
+        ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") check $(quote_remote "$alias")"
         prepare_artifact_context "$source_file" "$source_markdown" "$alias"
         alias_url=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$ARTIFACT_CONTEXT_FILE") --context $(quote_remote "$ARTIFACT_CONTEXT_ID")")
         printf 'alias_url: "%s"\nartifact_path: "%s"\nartifact_context: "%s"\n' "$alias_url" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"
