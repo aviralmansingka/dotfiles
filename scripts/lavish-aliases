@@ -9,6 +9,7 @@ import mimetypes
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 from contextlib import contextmanager
@@ -56,7 +57,7 @@ def static_target(target: str) -> Path | None:
     return path if path.suffix.lower() in {".html", ".htm"} else None
 
 
-def load_aliases() -> dict[str, dict[str, str]]:
+def load_aliases() -> dict[str, dict[str, object]]:
     try:
         data = json.loads(STATE_FILE.read_text())
     except FileNotFoundError:
@@ -64,7 +65,7 @@ def load_aliases() -> dict[str, dict[str, str]]:
     if not isinstance(data, dict):
         raise SystemExit(f"Invalid alias state: {STATE_FILE}")
     legacy_contexts = load_contexts()
-    aliases: dict[str, dict[str, str]] = {}
+    aliases: dict[str, dict[str, object]] = {}
     for slug, value in data.items():
         if isinstance(value, str):
             aliases[slug] = {"target": value}
@@ -74,6 +75,14 @@ def load_aliases() -> dict[str, dict[str, str]]:
             isinstance(value, dict)
             and isinstance(value.get("target"), str)
             and ("context" not in value or isinstance(value.get("context"), str))
+            and ("publication" not in value or isinstance(value.get("publication"), str))
+            and (
+                "pending_retirements" not in value
+                or (
+                    isinstance(value.get("pending_retirements"), list)
+                    and all(isinstance(item, str) for item in value["pending_retirements"])
+                )
+            )
         ):
             aliases[slug] = dict(value)
         else:
@@ -81,7 +90,7 @@ def load_aliases() -> dict[str, dict[str, str]]:
     return aliases
 
 
-def save_aliases(aliases: dict[str, dict[str, str]]) -> None:
+def save_aliases(aliases: dict[str, dict[str, object]]) -> None:
     save_json(STATE_FILE, aliases, ".lavish-aliases-")
 
 
@@ -145,16 +154,63 @@ def alias_owner(slug: str) -> tuple[str | None, str, str]:
     return existing, path, proxy
 
 
-def set_alias(slug: str, target_url: str, context: str | None = None) -> str | None:
+def retry_retirements(slug: str | None = None) -> dict[str, str]:
+    aliases = load_aliases()
+    pending = [
+        (name, context)
+        for name, record in aliases.items()
+        if slug in {None, name}
+        for context in record.get("pending_retirements", [])
+    ]
+    errors: dict[str, str] = {}
+    for name, context in pending:
+        try:
+            result = subprocess.run(
+                [ARTIFACT_AGENT, "cleanup", "--context", context],
+                capture_output=True,
+                text=True,
+                timeout=300,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            errors[context] = str(error)
+            continue
+        if result.returncode:
+            errors[context] = result.stderr.strip() or result.stdout.strip() or f"exit {result.returncode}"
+            continue
+        with alias_transaction() as current:
+            record = current.get(name)
+            if not record:
+                continue
+            record["pending_retirements"] = [
+                item for item in record.get("pending_retirements", []) if item != context
+            ]
+            if not record["pending_retirements"]:
+                record.pop("pending_retirements", None)
+            save_aliases(current)
+    return errors
+
+
+def set_alias(
+    slug: str,
+    target_url: str,
+    context: str | None = None,
+    publication: str | None = None,
+) -> str | None:
     target_file = static_target(target_url)
     if not TARGET_RE.fullmatch(target_url) and not target_file:
         raise SystemExit(f"Invalid Lavish target URL: {target_url}")
     if target_file and not target_file.is_file():
         raise SystemExit(f"Static artifact does not exist: {target_file}")
+    publication = publication or context or target_url
 
     with alias_transaction() as aliases:
         existing, path, proxy = alias_owner(slug)
-        previous_context = aliases.get(slug, {}).get("context")
+        current = aliases.get(slug, {})
+        previous_context = current.get("context")
+        pending = list(current.get("pending_retirements", []))
+        if previous_context and previous_context != context and previous_context not in pending:
+            pending.append(previous_context)
         if not existing:
             subprocess.run(
                 [
@@ -169,12 +225,22 @@ def set_alias(slug: str, target_url: str, context: str | None = None) -> str | N
                 check=True,
                 stdout=subprocess.DEVNULL,
             )
-        aliases[slug] = {"target": target_url}
+        aliases[slug] = {"target": target_url, "publication": publication}
         if context:
             aliases[slug]["context"] = context
+        if pending:
+            aliases[slug]["pending_retirements"] = pending
         save_aliases(aliases)
+    errors = retry_retirements(slug)
+    for retired_context, detail in errors.items():
+        print(f"Artifact context retirement is pending: {retired_context}: {detail}", file=sys.stderr)
     print(f"https://{HOSTNAME}/{slug}")
     return previous_context
+
+
+def publication_status(slug: str, publication: str) -> str:
+    record = load_aliases().get(slug)
+    return "published" if record and record.get("publication") == publication else "absent"
 
 
 def agent_lock(context: str) -> threading.Lock:
@@ -189,7 +255,7 @@ def run_agent(context: str, command: str, question: str | None = None) -> dict[s
             input=question,
             text=True,
             capture_output=True,
-            timeout=700,
+            timeout=1200,
             check=False,
         )
     try:
@@ -218,7 +284,7 @@ def artifact_shell(slug: str) -> bytes:
   iframe {{ width: 100%; height: 100%; border: 0; background: #fff; }}
   .ask {{ position: fixed; z-index: 20; top: 14px; right: 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #665c54; border-radius: 999px; padding: 9px 14px; color: #1d2021; background: #fabd2f; box-shadow: 0 8px 28px #0008; font-weight: 750; cursor: pointer; }}
   .ask[aria-expanded="true"] {{ right: min(434px, calc(100vw - 14px)); }}
-  .drawer {{ position: fixed; z-index: 30; inset: 0 0 0 auto; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(420px, 100vw); border-left: 1px solid #504945; background: #1d2021; box-shadow: -20px 0 50px #0008; transform: translateX(102%); transition: transform .18s ease; }}
+  .drawer {{ position: fixed; z-index: 30; inset: 0 0 0 auto; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(420px, 100vw); max-width: 100vw; border-left: 1px solid #504945; background: #1d2021; box-shadow: -20px 0 50px #0008; transform: translateX(102%); transition: transform .18s ease; }}
   .drawer.open {{ transform: translateX(0); }}
   .grip {{ position: absolute; top: 0; bottom: 0; left: -5px; width: 9px; cursor: ew-resize; touch-action: none; }}
   .grip:hover, .grip.drag {{ background: rgb(250 189 47 / 35%); }}
@@ -250,6 +316,7 @@ def artifact_shell(slug: str) -> bytes:
   .message.assistant pre code {{ color: #ebdbb2; }}
   .message.assistant ul, .message.assistant ol {{ margin: 6px 0; padding-left: 20px; }}
   .message.assistant li {{ margin: 3px 0; }}
+  .message.assistant blockquote {{ margin: 8px 0; border-left: 3px solid #665c54; padding-left: 10px; color: #bdae93; }}
   .message.assistant a {{ color: #7daea3; text-underline-offset: 2px; }}
   .delta {{ margin: 0 16px 12px; border: 1px solid #504945; border-radius: 10px; padding: 10px; color: #bdae93; background: #282828; white-space: pre-wrap; overflow: auto; max-height: 32vh; }}
   .composer {{ border-top: 1px solid #504945; padding: 12px 16px 16px; background: #282828; }}
@@ -308,41 +375,64 @@ def artifact_shell(slug: str) -> bytes:
     setOpen(false);
   }});
 
+  function escapeMd(text) {{
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }}
   function mdInline(text) {{
-    return text
+    return escapeMd(text)
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
       .replace(/\\*([^*\\n]+)\\*/g, '<em>$1</em>')
       .replace(/\\[([^\\]]+)\\]\\((https?:[^)\\s]+)\\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
   }}
   function md(source) {{
-    const escaped = source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const out = []; let para = []; let list = null; let code = null;
+    const lines = source.split('\\n');
+    const marker = raw => raw.match(/^(\\s*)([-*+]|\\d+[.)])\\s+(.*)$/);
+    function renderList(start) {{
+      const first = marker(lines[start]);
+      const indent = first[1].length;
+      const tag = /^\\d/.test(first[2]) ? 'ol' : 'ul';
+      const items = [];
+      let index = start;
+      while (index < lines.length) {{
+        const item = marker(lines[index]);
+        if (!item || item[1].length !== indent || (/^\\d/.test(item[2]) ? 'ol' : 'ul') !== tag) break;
+        const chunks = [mdInline(item[3])];
+        index += 1;
+        while (index < lines.length) {{
+          const child = marker(lines[index]);
+          if (child && child[1].length > indent) {{ const rendered = renderList(index); chunks.push(rendered.html); index = rendered.index; continue; }}
+          if (child || !lines[index].trim() || lines[index].search(/\\S/) <= indent) break;
+          chunks.push(' ' + mdInline(lines[index].trim())); index += 1;
+        }}
+        items.push(`<li>${{chunks.join('')}}</li>`);
+      }}
+      return {{ html: `<${{tag}}>${{items.join('')}}</${{tag}}>`, index }};
+    }}
+    const out = []; let para = []; let code = null;
     const flushPara = () => {{ if (para.length) {{ out.push(`<p>${{mdInline(para.join(' '))}}</p>`); para = []; }} }};
-    const flushList = () => {{ if (list) {{ out.push(`<${{list.tag}}>${{list.items.map(item => `<li>${{mdInline(item)}}</li>`).join('')}}</${{list.tag}}>`); list = null; }} }};
-    for (const raw of escaped.split('\\n')) {{
+    for (let index = 0; index < lines.length;) {{
+      const raw = lines[index];
       const line = raw.trim();
       if (code !== null) {{
-        if (line.startsWith('```')) {{ out.push(`<pre><code>${{code.join('\\n')}}</code></pre>`); code = null; }}
+        if (line.startsWith('```')) {{ out.push(`<pre><code>${{escapeMd(code.join('\\n'))}}</code></pre>`); code = null; }}
         else code.push(raw);
-        continue;
+        index += 1; continue;
       }}
-      if (line.startsWith('```')) {{ flushPara(); flushList(); code = []; continue; }}
-      if (!line) {{ flushPara(); flushList(); continue; }}
+      if (line.startsWith('```')) {{ flushPara(); code = []; index += 1; continue; }}
+      if (!line) {{ flushPara(); index += 1; continue; }}
       const heading = line.match(/^(#{{1,3}})\\s+(.*)$/);
-      if (heading) {{ flushPara(); flushList(); const level = heading[1].length + 2; out.push(`<h${{level}}>${{mdInline(heading[2])}}</h${{level}}>`); continue; }}
-      const unordered = line.match(/^[-*+]\\s+(.*)$/);
-      const ordered = line.match(/^\\d+[.)]\\s+(.*)$/);
-      if (unordered || ordered) {{
-        flushPara();
-        const tag = unordered ? 'ul' : 'ol';
-        if (!list || list.tag !== tag) {{ flushList(); list = {{ tag, items: [] }}; }}
-        list.items.push((unordered || ordered)[1]); continue;
+      if (heading) {{ flushPara(); const level = heading[1].length + 2; out.push(`<h${{level}}>${{mdInline(heading[2])}}</h${{level}}>`); index += 1; continue; }}
+      if (/^\\s*>/.test(raw)) {{
+        flushPara(); const quoted = [];
+        while (index < lines.length && /^\\s*>/.test(lines[index])) {{ quoted.push(lines[index].replace(/^\\s*>\\s?/, '')); index += 1; }}
+        out.push(`<blockquote>${{md(quoted.join('\\n'))}}</blockquote>`); continue;
       }}
-      flushList(); para.push(line);
+      if (marker(raw)) {{ flushPara(); const rendered = renderList(index); out.push(rendered.html); index = rendered.index; continue; }}
+      para.push(line); index += 1;
     }}
-    flushPara(); flushList();
-    if (code !== null) out.push(`<pre><code>${{code.join('\\n')}}</code></pre>`);
+    flushPara();
+    if (code !== null) out.push(`<pre><code>${{escapeMd(code.join('\\n'))}}</code></pre>`);
     return out.join('');
   }}
   function render(items) {{
@@ -698,13 +788,26 @@ def main() -> None:
     set_parser.add_argument("slug")
     set_parser.add_argument("target_url")
     set_parser.add_argument("--context")
+    set_parser.add_argument("--publication")
     set_parser.add_argument("--print-previous-context", action="store_true")
+    status_parser = subparsers.add_parser("publication-status")
+    status_parser.add_argument("slug")
+    status_parser.add_argument("publication")
+    subparsers.add_parser("retire-pending")
     args = parser.parse_args()
 
     if args.command == "set":
-        previous_context = set_alias(args.slug, args.target_url, args.context)
+        previous_context = set_alias(args.slug, args.target_url, args.context, args.publication)
         if args.print_previous_context:
             print(previous_context or "")
+        return
+    if args.command == "publication-status":
+        print(publication_status(args.slug, args.publication))
+        return
+    if args.command == "retire-pending":
+        errors = retry_retirements()
+        if errors:
+            raise SystemExit(json.dumps(errors, sort_keys=True))
         return
     if args.command == "check":
         alias_owner(args.slug)

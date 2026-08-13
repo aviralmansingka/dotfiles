@@ -11,6 +11,7 @@ readonly REMOTE_PATH="${REMOTE_HOME}/.nvm/versions/node/v22.22.3/bin:${REMOTE_HO
 readonly PUBLIC_URL="https://homelab.tail1b3b66.ts.net:8443"
 readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
 readonly REMOTE_CONTEXT_ROOT="${REMOTE_ROOT}/_contexts"
+readonly REMOTE_RESTART_MARKER="${REMOTE_HOME}/.local/state/lavish-runtime-restart-needed"
 
 usage() {
   echo "Usage: lavish-homelab [render|review|open|poll|end|remote-path|alias-for] <html-file> [--source-markdown <file> | --alias <name>] [lavish options]" >&2
@@ -47,43 +48,57 @@ run_remote_lavish() {
 }
 
 sync_remote_runtime() {
-  local local_file remote_file local_sha remote_sha changed=0
-  ssh -n "$REMOTE_HOST" "mkdir -p $(quote_remote "${REMOTE_HOME}/.local/bin")"
+  local local_file remote_file local_sha remote_sha
+  ssh -n "$REMOTE_HOST" "mkdir -p $(quote_remote "${REMOTE_HOME}/.local/bin") $(quote_remote "${REMOTE_HOME}/.local/state")"
   for local_file in "$SCRIPT_DIR/lavish-aliases" "$SCRIPT_DIR/lavish-artifact-agent"; do
     remote_file="${REMOTE_HOME}/.local/bin/$(basename "$local_file")"
     local_sha=$(shasum -a 256 "$local_file" | awk '{print $1}')
     remote_sha=$(ssh -n "$REMOTE_HOST" "sha256sum $(quote_remote "$remote_file") 2>/dev/null" | awk '{print $1}' || true)
     if [[ "$local_sha" != "$remote_sha" ]]; then
+      ssh -n "$REMOTE_HOST" "touch $(quote_remote "$REMOTE_RESTART_MARKER")"
       rsync -az "$local_file" "${REMOTE_HOST}:${remote_file}"
       ssh -n "$REMOTE_HOST" "chmod 755 $(quote_remote "$remote_file")"
-      changed=1
     fi
   done
-  if [[ "$changed" == 1 ]]; then
-    ssh -n "$REMOTE_HOST" "systemctl --user restart lavish-aliases.service"
-  fi
+  ssh -n "$REMOTE_HOST" "if test -e $(quote_remote "$REMOTE_RESTART_MARKER"); then systemctl --user restart lavish-aliases.service && rm -f $(quote_remote "$REMOTE_RESTART_MARKER"); fi"
 }
 
 retry_pending_retirements() {
   ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") retire-pending" >/dev/null || true
+  ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") retire-pending" >/dev/null || true
+}
+
+cleanup_remote_context() {
+  local context=$1 attempt
+  for attempt in 1 2 3; do
+    ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") cleanup --context $(quote_remote "$context")" >/dev/null && return 0
+    sleep 1
+  done
+  echo "Artifact context cleanup is pending: $context" >&2
+  return 1
 }
 
 publish_alias() {
-  local alias=$1 target=$2 context=${3:-} command result previous_context
-  command="$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$target") --print-previous-context"
+  local alias=$1 target=$2 context=${3:-} publication=${3:-$2} command result status attempt
+  command="$(quote_remote "$REMOTE_ALIASES") set $(quote_remote "$alias") $(quote_remote "$target") --publication $(quote_remote "$publication")"
   if [[ -n "$context" ]]; then
     command+=" --context $(quote_remote "$context")"
   fi
-  if ! result=$(ssh -n "$REMOTE_HOST" "$command"); then
-    return 1
-  fi
-  ALIAS_URL=$(printf '%s\n' "$result" | sed -n '1p')
-  previous_context=$(printf '%s\n' "$result" | sed -n '2p')
-  if [[ -n "$previous_context" && "$previous_context" != "$context" ]]; then
-    if ! ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") retire --context $(quote_remote "$previous_context")" >/dev/null; then
-      echo "Artifact context retirement is pending: $previous_context" >&2
+  for attempt in 1 2 3; do
+    if result=$(ssh -n "$REMOTE_HOST" "$command"); then
+      ALIAS_URL=$(printf '%s\n' "$result" | sed -n '1p')
+      return 0
     fi
+    sleep 1
+  done
+  if ! status=$(ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") publication-status $(quote_remote "$alias") $(quote_remote "$publication")"); then
+    return 2
   fi
+  if [[ "$status" == published ]]; then
+    ALIAS_URL="https://homelab.tail1b3b66.ts.net/$alias"
+    return 0
+  fi
+  return 1
 }
 
 find_git_root() {
@@ -173,17 +188,17 @@ prepare_artifact_context() {
         fi
       done \
     | rsync -az --from0 --files-from=- --relative "$repo_root/" "${REMOTE_HOST}:${incoming}/"; then
-    ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
+    cleanup_remote_context "$context_id" || true
     return 1
   fi
   artifact_dir_relative=$(dirname "$artifact_relative")
   if ! (cd "$repo_root" && rsync -azR --exclude .git --exclude .git/ "./$artifact_dir_relative/" "${REMOTE_HOST}:${incoming}/"); then
-    ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
+    cleanup_remote_context "$context_id" || true
     return 1
   fi
   if [[ -n "$source_relative" && "$source_relative" != "$artifact_relative" ]]; then
     if ! (cd "$repo_root" && rsync -azR --exclude .git --exclude .git/ "./$source_relative" "${REMOTE_HOST}:${incoming}/"); then
-      ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
+      cleanup_remote_context "$context_id" || true
       return 1
     fi
   fi
@@ -193,7 +208,7 @@ prepare_artifact_context() {
     activate_command+=" --source-relative $(quote_remote "$source_relative")"
   fi
   if ! ssh -n "$REMOTE_HOST" "$activate_command" >/dev/null; then
-    ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") abandon --context $(quote_remote "$context_id")" >/dev/null || true
+    cleanup_remote_context "$context_id" || true
     return 1
   fi
   ARTIFACT_CONTEXT_ID=$context_id
@@ -281,21 +296,25 @@ case "$action" in
     fi
     if [[ "$action" == render || "$action" == review || "$action" == open ]]; then
       alias=$(alias_for "$source_file" "$source_markdown" "$explicit_alias")
+      sync_remote_runtime
+      retry_pending_retirements
       if [[ "$action" == render ]]; then
-        sync_remote_runtime
-        retry_pending_retirements
         ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ALIASES") check $(quote_remote "$alias")"
         prepare_artifact_context "$source_file" "$source_markdown" "$alias"
-        if ! publish_alias "$alias" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"; then
-          if ! ssh -n "$REMOTE_HOST" "$(quote_remote "$REMOTE_ARTIFACT_AGENT") retire --context $(quote_remote "$ARTIFACT_CONTEXT_ID")" >/dev/null; then
-            echo "Artifact context retirement is pending: $ARTIFACT_CONTEXT_ID" >&2
+        if publish_alias "$alias" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"; then
+          :
+        else
+          publish_status=$?
+          if [[ "$publish_status" == 1 ]]; then
+            cleanup_remote_context "$ARTIFACT_CONTEXT_ID" || true
+          else
+            echo "Artifact publication outcome is pending: $ARTIFACT_CONTEXT_ID" >&2
           fi
           exit 1
         fi
         printf 'alias_url: "%s"\nartifact_path: "%s"\nartifact_context: "%s"\n' "$ALIAS_URL" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"
         exit 0
       fi
-      retry_pending_retirements
       if [[ ${#lavish_args[@]} -gt 0 ]]; then
         output=$(run_remote_lavish open "$remote_file" --no-open "${lavish_args[@]}")
       else

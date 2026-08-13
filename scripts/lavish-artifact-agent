@@ -803,54 +803,69 @@ def command_reflow_history(args: argparse.Namespace) -> dict[str, object]:
     return {"reflowed": results}
 
 
-def command_abandon(args: argparse.Namespace) -> dict[str, object]:
-    phase = str(record_for(args.context).get("phase", ""))
-    if phase in {"initializing", "retiring", "retired"}:
-        return retire_context(args.context)
-    with context_lock(args.context):
-        with state_transaction() as state:
-            record = state_record(state, args.context)
-            if record.get("phase") != "prepared":
-                raise ArtifactAgentError("Only a prepared context with no running agent can be abandoned")
-            root = context_dir(args.context)
-            shutil.rmtree(root)
-            state.pop(args.context, None)
+def retire_context_locked(context_id: str) -> dict[str, object]:
+    with state_transaction() as state:
+        record = state_record(state, context_id)
+        phase = str(record.get("phase", ""))
+        if phase not in {"initializing", "active", "retiring", "retired"}:
+            raise ArtifactAgentError("Artifact context has no running workspace to retire")
+        workspace_id = str(record.get("workspace_id", ""))
+        if not workspace_id:
+            raise ArtifactAgentError("Artifact context has no Herdr workspace")
+        if phase in {"initializing", "active"}:
+            record["phase"] = "retiring"
+            record["retirement_requested_at"] = now()
             save_state(state)
-            return {"context_id": args.context, "abandoned": True}
+
+    if phase != "retired":
+        herdr_json(["workspace", "close", workspace_id])
+        with state_transaction() as state:
+            record = state_record(state, context_id)
+            record["phase"] = "retired"
+            save_state(state)
+
+    shutil.rmtree(context_dir(context_id), ignore_errors=True)
+    with state_transaction() as state:
+        state.pop(context_id, None)
+        save_state(state)
+    return {"context_id": context_id, "retired": True}
 
 
 def retire_context(context_id: str) -> dict[str, object]:
     context_id = validate_context(context_id)
     with context_lock(context_id):
+        return retire_context_locked(context_id)
+
+
+def cleanup_context(context_id: str) -> dict[str, object]:
+    context_id = validate_context(context_id)
+    with context_lock(context_id):
         with state_transaction() as state:
-            record = state_record(state, context_id)
+            record = state.get(context_id)
+            if record is None:
+                shutil.rmtree(context_dir(context_id), ignore_errors=True)
+                return {"context_id": context_id, "cleaned": True}
+            if not isinstance(record, dict):
+                raise ArtifactAgentError(f"Invalid artifact context: {context_id}")
             phase = str(record.get("phase", ""))
-            if phase not in {"initializing", "active", "retiring", "retired"}:
-                raise ArtifactAgentError("Artifact context has no running workspace to retire")
-            workspace_id = str(record.get("workspace_id", ""))
-            if not workspace_id:
-                raise ArtifactAgentError("Artifact context has no Herdr workspace")
-            if phase in {"initializing", "active"}:
-                record["phase"] = "retiring"
-                record["retirement_requested_at"] = now()
+            if phase == "prepared":
+                shutil.rmtree(context_dir(context_id), ignore_errors=True)
+                state.pop(context_id)
                 save_state(state)
+                return {"context_id": context_id, "cleaned": True}
+        return retire_context_locked(context_id)
 
-        if phase != "retired":
-            herdr_json(["workspace", "close", workspace_id])
-            with state_transaction() as state:
-                record = state_record(state, context_id)
-                record["phase"] = "retired"
-                save_state(state)
 
-        shutil.rmtree(context_dir(context_id), ignore_errors=True)
-        with state_transaction() as state:
-            state.pop(context_id, None)
-            save_state(state)
-        return {"context_id": context_id, "retired": True}
+def command_abandon(args: argparse.Namespace) -> dict[str, object]:
+    return cleanup_context(args.context)
 
 
 def command_retire(args: argparse.Namespace) -> dict[str, object]:
     return retire_context(args.context)
+
+
+def command_cleanup(args: argparse.Namespace) -> dict[str, object]:
+    return cleanup_context(args.context)
 
 
 def command_retire_pending(args: argparse.Namespace) -> dict[str, object]:
@@ -894,6 +909,8 @@ def build_parser() -> argparse.ArgumentParser:
     abandon.add_argument("--context", required=True)
     retire = commands.add_parser("retire")
     retire.add_argument("--context", required=True)
+    cleanup = commands.add_parser("cleanup")
+    cleanup.add_argument("--context", required=True)
     commands.add_parser("retire-pending")
     return parser
 
@@ -909,6 +926,7 @@ def main() -> None:
         "reflow-history": command_reflow_history,
         "abandon": command_abandon,
         "retire": command_retire,
+        "cleanup": command_cleanup,
         "retire-pending": command_retire_pending,
     }[args.command]
     try:

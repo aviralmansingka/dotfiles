@@ -259,6 +259,37 @@ pending = module["command_retire_pending"](None)
 assert pending == {"retired": [pending_context], "errors": {}}
 assert json.loads(pending_state.read_text()) == {}
 assert not (pending_root / pending_context).exists()
+assert module["cleanup_context"](pending_context) == {
+    "context_id": pending_context,
+    "cleaned": True,
+}
+
+prepared_context = "artifact-5555555555555555"
+(prepared_root := pending_root / prepared_context).mkdir()
+pending_state.write_text(json.dumps({prepared_context: {
+    "context_id": prepared_context,
+    "phase": "prepared",
+}}))
+assert module["cleanup_context"](prepared_context) == {
+    "context_id": prepared_context,
+    "cleaned": True,
+}
+assert json.loads(pending_state.read_text()) == {}
+assert not prepared_root.exists()
+
+active_context = "artifact-6666666666666666"
+(active_root := pending_root / active_context).mkdir()
+pending_state.write_text(json.dumps({active_context: {
+    "context_id": active_context,
+    "phase": "active",
+    "workspace_id": "workspace-active",
+}}))
+assert module["cleanup_context"](active_context) == {
+    "context_id": active_context,
+    "retired": True,
+}
+assert json.loads(pending_state.read_text()) == {}
+assert not active_root.exists()
 
 assert module["reflow_terminal_wraps"](
     "First wrapped\n  paragraph.\n\n```python\ndef f():\n    return 1\n```\n\n- long item\n  continuation\n  - nested item\n    continuation\n- next\n\n> quoted\n  continuation\n\nLast wrapped\nline."

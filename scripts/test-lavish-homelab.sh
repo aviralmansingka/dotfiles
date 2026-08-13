@@ -13,6 +13,7 @@ uv run python - "$repo_dir/scripts/lavish-aliases" <<'PY'
 import http.client
 import json
 import runpy
+import subprocess
 import sys
 import tempfile
 import threading
@@ -106,6 +107,22 @@ with tempfile.TemporaryDirectory() as temporary:
         assert b"join(String.fromCharCode(10))" in shell
         assert b"event.metaKey || event.altKey) return" in shell
         assert b"event.altKey || event.shiftKey" not in shell
+        assert b"max-width: 100vw" in shell
+        shell_text = shell.decode()
+        renderer = shell_text[
+            shell_text.index("function escapeMd") : shell_text.index("function render(items)")
+        ]
+        rendered = json.loads(subprocess.check_output(
+            [
+                "node",
+                "-e",
+                renderer + "\nconsole.log(JSON.stringify([md('- parent\\n  - child\\n- next'), md('> outer\\n> > inner'), md('<unsafe>')]))",
+            ],
+            text=True,
+        ))
+        assert rendered[0] == "<ul><li>parent<ul><li>child</li></ul></li><li>next</li></ul>"
+        assert rendered[1] == "<blockquote><p>outer</p><blockquote><p>inner</p></blockquote></blockquote>"
+        assert rendered[2] == "<p>&lt;unsafe&gt;</p>"
 
         connection.request("GET", "/demo/__artifact/content/")
         response = connection.getresponse()
@@ -156,6 +173,8 @@ with tempfile.TemporaryDirectory() as temporary:
     calls = []
     def fake_run(args, **kwargs):
         calls.append(args)
+        if args[0] == module["ARTIFACT_AGENT"]:
+            return type("Result", (), {"stdout": "{}", "stderr": "", "returncode": 0})()
         return type("Result", (), {"stdout": json.dumps({
             "Web": {f"{module['HOSTNAME']}:443": {"Handlers": {
                 "/demo": {"Proxy": f"http://{module['LISTEN_HOST']}:{module['LISTEN_PORT']}/demo"}
@@ -167,8 +186,26 @@ with tempfile.TemporaryDirectory() as temporary:
     previous = module["set_alias"]("demo", str(artifact), "replacement-context")
     saved = json.loads(state.read_text())
     assert previous == "artifact-context"
-    assert saved == {"demo": {"target": str(artifact), "context": "replacement-context"}}
-    assert all(call[:4] == ["tailscale", "serve", "status", "--json"] for call in calls)
+    assert saved == {"demo": {
+        "target": str(artifact),
+        "context": "replacement-context",
+        "publication": "replacement-context",
+    }}
+    assert [module["ARTIFACT_AGENT"], "cleanup", "--context", "artifact-context"] in calls
+
+    def fail_cleanup(args, **kwargs):
+        if args[0] == module["ARTIFACT_AGENT"]:
+            return type("Result", (), {"stdout": "", "stderr": "close failed", "returncode": 1})()
+        return fake_run(args, **kwargs)
+    module["set_alias"].__globals__["subprocess"].run = fail_cleanup
+    module["set_alias"]("demo", str(artifact), "next-context", "publish-next")
+    saved = json.loads(state.read_text())
+    assert saved["demo"]["pending_retirements"] == ["replacement-context"]
+    assert saved["demo"]["publication"] == "publish-next"
+    assert module["publication_status"]("demo", "publish-next") == "published"
+    module["set_alias"].__globals__["subprocess"].run = fake_run
+    assert module["retry_retirements"]() == {}
+    assert "pending_retirements" not in json.loads(state.read_text())["demo"]
 
     before_failure = state.read_text()
     def fail_route(args, **kwargs):
@@ -186,12 +223,13 @@ with tempfile.TemporaryDirectory() as temporary:
 PY
 grep -F 'rsync -azR --exclude .git --exclude .git/ "./$artifact_dir_relative/"' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F '"$(quote_remote "$REMOTE_ALIASES") check $(quote_remote "$alias")"' "$repo_dir/scripts/lavish-homelab" >/dev/null
-grep -F 'retire --context $(quote_remote "$previous_context")' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'publication-status $(quote_remote "$alias") $(quote_remote "$publication")' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'publish_alias "$alias" "$target_url"' "$repo_dir/scripts/lavish-homelab" >/dev/null
-grep -F 'if ! publish_alias "$alias" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"; then' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'if publish_alias "$alias" "$ARTIFACT_CONTEXT_FILE" "$ARTIFACT_CONTEXT_ID"; then' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'rsync -az --delete --exclude .git --exclude .git/' "$repo_dir/scripts/lavish-homelab" >/dev/null
 grep -F 'retire-pending' "$repo_dir/scripts/lavish-homelab" >/dev/null
-grep -F 'timeout=700' "$repo_dir/scripts/lavish-aliases" >/dev/null
+grep -F 'touch $(quote_remote "$REMOTE_RESTART_MARKER")' "$repo_dir/scripts/lavish-homelab" >/dev/null
+grep -F 'timeout=1200' "$repo_dir/scripts/lavish-aliases" >/dev/null
 remote_path=$("$repo_dir/scripts/lavish-homelab" remote-path "$test_dir/example.html")
 [[ "$remote_path" =~ ^/home/avirus/\.local/share/lavish/artifacts/[A-Za-z0-9._-]+/[a-f0-9]{16}/example\.html$ ]]
 [[ "$("$repo_dir/scripts/lavish-homelab" alias-for "$test_dir/example.html" --source-markdown "$test_dir/WBJ Payments.md")" == wbj-payments ]]
