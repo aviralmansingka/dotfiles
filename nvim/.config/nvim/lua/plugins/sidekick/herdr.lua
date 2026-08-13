@@ -128,12 +128,21 @@ function M.ensure_workspace(cwd, scope, env)
   local workspace_cwd = type(scope) == "table" and scope.cwd or cwd
   local workspace_label =
     type(scope) == "table" and scope.label or (type(scope) == "string" and scope or nil)
-  local workspace_id = M.workspace_for_cwd(workspace_cwd)
-  if not workspace_id and workspace_label then
+  local workspace_id
+  if type(scope) == "string" then
     local listed
     workspace_id, listed = M.workspace_for_label(workspace_label)
     if not listed then
       return nil, nil, false
+    end
+  else
+    workspace_id = M.workspace_for_cwd(workspace_cwd)
+    if not workspace_id and workspace_label then
+      local listed
+      workspace_id, listed = M.workspace_for_label(workspace_label)
+      if not listed then
+        return nil, nil, false
+      end
     end
   end
   if workspace_id then

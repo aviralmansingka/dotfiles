@@ -620,6 +620,41 @@ local function validate_sidekick_herdr()
   if tab_workspace_id ~= "w-tab" or resolved_cwd ~= tab_scope_cwd then
     fail("tab authority should override agent cwd for Herdr workspace resolution")
   end
+
+  local original_workspace_for_label = source_herdr.workspace_for_label
+  source_herdr.workspace_for_cwd = function()
+    return "w-cwd-match"
+  end
+  source_herdr.workspace_for_label = function(label)
+    if label == "backlog" then
+      return "w-backlog", true
+    end
+    return nil, true
+  end
+  local string_workspace_id = source_herdr.ensure_workspace(cwd, "backlog")
+  source_herdr.workspace_for_cwd = original_workspace_for_cwd
+  source_herdr.workspace_for_label = original_workspace_for_label
+  if string_workspace_id ~= "w-backlog" then
+    fail("string scopes should resolve by label before cwd: " .. vim.inspect(string_workspace_id))
+  end
+
+  local table_label_lookups = 0
+  source_herdr.workspace_for_cwd = function()
+    return nil
+  end
+  source_herdr.workspace_for_label = function(label)
+    if label == "nvim" then
+      table_label_lookups = table_label_lookups + 1
+      return "w-label-fallback", true
+    end
+    return nil, true
+  end
+  local table_fallback_id = source_herdr.ensure_workspace(cwd, { cwd = cwd, label = "nvim" })
+  source_herdr.workspace_for_cwd = original_workspace_for_cwd
+  source_herdr.workspace_for_label = original_workspace_for_label
+  if table_fallback_id ~= "w-label-fallback" or table_label_lookups ~= 1 then
+    fail("table scopes should fall back to label resolution: " .. vim.inspect(table_fallback_id))
+  end
   for _, name in ipairs({ "workspace_cwd", "workspace_label", "workspace_buffers", "herdr_workspace_id", "herdr_workspace_label" }) do
     pcall(vim.api.nvim_tabpage_del_var, authority_tab, name)
   end
