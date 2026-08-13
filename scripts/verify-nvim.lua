@@ -218,9 +218,7 @@ local function validate_weekly_backlog()
     vim.cmd("enew!")
     backlog.yesterday()
     assert_exists(root .. "/3_logs/2026-W10/backlog.md")
-    if vim.fn.expand("%:t") ~= "backlog.md"
-      or vim.fn.search("^### Sunday, 2026-03-08$", "nw") == 0
-    then
+    if vim.fn.expand("%:t") ~= "backlog.md" or vim.fn.search("^### Sunday, 2026-03-08$", "nw") == 0 then
       fail("yesterday should select the adjacent local date across spring DST")
     end
 
@@ -421,7 +419,8 @@ local function validate_sidekick_pi()
     fail("branding.tool_of should recognize named Pi sessions")
   end
 
-  local last_session_src = table.concat(vim.fn.readfile("nvim/.config/nvim/lua/plugins/sidekick/last_session.lua"), "\n")
+  local last_session_src =
+    table.concat(vim.fn.readfile("nvim/.config/nvim/lua/plugins/sidekick/last_session.lua"), "\n")
   if not last_session_src:find("cwd_picker", 1, true) then
     fail("<c-.> fallback should use cwd_picker")
   end
@@ -434,18 +433,28 @@ local function validate_sidekick_pi()
   local current = {
     tool = { name = "pi-current" },
     open = true,
-    is_open = function(self) return self.open end,
-    hide = function(self) self.open = false end,
+    is_open = function(self)
+      return self.open
+    end,
+    hide = function(self)
+      self.open = false
+    end,
   }
   local other = {
     tool = { name = "codex-other" },
     open = true,
-    is_open = function(self) return self.open end,
-    hide = function(self) self.open = false end,
+    is_open = function(self)
+      return self.open
+    end,
+    hide = function(self)
+      self.open = false
+    end,
   }
   local picker_opts
   local fake_picker = {}
-  Terminal.sessions = function() return { current, other } end
+  Terminal.sessions = function()
+    return { current, other }
+  end
   cwd_picker.open = function(opts)
     picker_opts = opts
     fake_picker.close = function()
@@ -492,6 +501,10 @@ local function validate_sidekick_herdr()
   local picker_actions_only = case == "sidekick-picker-actions"
   load_plugin("sidekick.nvim")
 
+  local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
+  package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
+  package.loaded["helpers.workspace"] = nil
+
   local config = require("sidekick.config")
   local internal = require("plugins.sidekick.internal")
   if config.cli.mux.backend ~= "herdr" then
@@ -537,22 +550,28 @@ local function validate_sidekick_herdr()
     system_calls[#system_calls + 1] = vim.deepcopy(cmd)
     local result = {
       code = 0,
-      stdout = cmd[2] == "agent" and cmd[3] == "read"
-          and raw_read
-        or '{"result":{"type":"ok"}}',
+      stdout = cmd[2] == "agent" and cmd[3] == "read" and raw_read or '{"result":{"type":"ok"}}',
       stderr = "",
     }
     if callback then
       callback(result)
       return {}
     end
-    return { wait = function() return result end }
+    return {
+      wait = function()
+        return result
+      end,
+    }
   end
   local read = source_herdr.read("pi-example", "visible", 12, true)
   local async_read
-  source_herdr.read_async("pi-example", "recent", 6, false, function(output) async_read = output end)
+  source_herdr.read_async("pi-example", "recent", 6, false, function(output)
+    async_read = output
+  end)
   local sent = source_herdr.send("pi-example", "hello")
-  vim.wait(1000, function() return async_read ~= nil end, 10)
+  vim.wait(1000, function()
+    return async_read ~= nil
+  end, 10)
   vim.system = original_system
   if read ~= raw_read or async_read ~= raw_read then
     fail("Herdr 0.8 reads should return raw terminal output")
@@ -567,14 +586,101 @@ local function validate_sidekick_herdr()
     { "herdr", "agent", "read", "pi-example", "--source", "recent", "--lines", "6" },
     "asynchronous Herdr 0.8 read"
   )
-  assert_sequence(
-    system_calls[3],
-    { "herdr", "agent", "prompt", "pi-example", "hello" },
-    "Herdr 0.8 prompt"
-  )
+  assert_sequence(system_calls[3], { "herdr", "agent", "prompt", "pi-example", "hello" }, "Herdr 0.8 prompt")
   if not sent then
     fail("Herdr 0.8 prompt should report success")
   end
+
+  local authority_tab = vim.api.nvim_get_current_tabpage()
+  local nvim_workspaces = require("helpers.workspace")
+  nvim_workspaces.bind(authority_tab, cwd, "Tab Authority")
+  local authority_scope
+  local original_authority_start = source_herdr.start
+  source_herdr.start = function(_, _, _, _, scope)
+    authority_scope = vim.deepcopy(scope)
+    return {
+      terminal_id = "term-tab-authority",
+      pane_id = "w-tab:p1",
+      tab_id = "w-tab:t1",
+      workspace_id = "w-tab",
+    }
+  end
+  source_backend.start({
+    herdr_agent_name = "codex-tab-authority",
+    cwd = cwd,
+    tool = require("sidekick.cli.tool").get("codex"),
+    attach = function()
+      return {}
+    end,
+  })
+  source_herdr.start = original_authority_start
+  if
+    not authority_scope
+    or authority_scope.workspace_id ~= nil
+    or authority_scope.cwd ~= cwd
+    or authority_scope.label ~= "Tab Authority"
+    or vim.api.nvim_tabpage_get_var(authority_tab, "herdr_workspace_id") ~= "w-tab"
+  then
+    fail("agent launch should derive and bind Herdr scope from its Neovim tab: " .. vim.inspect(authority_scope))
+  end
+
+  local original_workspace_for_cwd = source_herdr.workspace_for_cwd
+  local tab_scope_cwd = cwd .. "/nvim"
+  local resolved_cwd
+  source_herdr.workspace_for_cwd = function(path)
+    resolved_cwd = path
+    return "w-tab"
+  end
+  local tab_workspace_id = source_herdr.ensure_workspace(cwd, { cwd = tab_scope_cwd, label = "nvim" })
+  source_herdr.workspace_for_cwd = original_workspace_for_cwd
+  if tab_workspace_id ~= "w-tab" or resolved_cwd ~= tab_scope_cwd then
+    fail("tab authority should override agent cwd for Herdr workspace resolution")
+  end
+
+  local original_workspace_for_label = source_herdr.workspace_for_label
+  source_herdr.workspace_for_cwd = function()
+    return "w-cwd-match"
+  end
+  source_herdr.workspace_for_label = function(label)
+    if label == "backlog" then
+      return "w-backlog", true
+    end
+    return nil, true
+  end
+  local string_workspace_id = source_herdr.ensure_workspace(cwd, "backlog")
+  source_herdr.workspace_for_cwd = original_workspace_for_cwd
+  source_herdr.workspace_for_label = original_workspace_for_label
+  if string_workspace_id ~= "w-backlog" then
+    fail("string scopes should resolve by label before cwd: " .. vim.inspect(string_workspace_id))
+  end
+
+  local table_label_lookups = 0
+  source_herdr.workspace_for_cwd = function()
+    return nil
+  end
+  source_herdr.workspace_for_label = function(label)
+    if label == "nvim" then
+      table_label_lookups = table_label_lookups + 1
+      return "w-label-fallback", true
+    end
+    return nil, true
+  end
+  local table_fallback_id = source_herdr.ensure_workspace(cwd, { cwd = cwd, label = "nvim" })
+  source_herdr.workspace_for_cwd = original_workspace_for_cwd
+  source_herdr.workspace_for_label = original_workspace_for_label
+  if table_fallback_id ~= "w-label-fallback" or table_label_lookups ~= 1 then
+    fail("table scopes should fall back to label resolution: " .. vim.inspect(table_fallback_id))
+  end
+  for _, name in ipairs({
+    "workspace_cwd",
+    "workspace_label",
+    "workspace_buffers",
+    "herdr_workspace_id",
+    "herdr_workspace_label",
+  }) do
+    pcall(vim.api.nvim_tabpage_del_var, authority_tab, name)
+  end
+
   if case == "sidekick-herdr-compat" then
     return
   end
@@ -600,11 +706,11 @@ local function validate_sidekick_herdr()
   end
 
   local original_start = source_herdr.start
-  local forwarded_workspace_id
+  local forwarded_scope
   local forwarded_starts = 0
   source_herdr.start = function(_, _, _, _, scope)
     forwarded_starts = forwarded_starts + 1
-    forwarded_workspace_id = scope and scope.workspace_id
+    forwarded_scope = vim.deepcopy(scope)
     return {
       terminal_id = "term-workspace",
       pane_id = "w-bound:p1",
@@ -620,7 +726,7 @@ local function validate_sidekick_herdr()
       return {}
     end,
   })
-  if forwarded_workspace_id ~= "w-bound" then
+  if not forwarded_scope or forwarded_scope.workspace_id ~= "w-bound" then
     fail("Herdr backend should forward the named session workspace ID")
   end
 
@@ -632,12 +738,15 @@ local function validate_sidekick_herdr()
       return {}
     end,
   })
+  if forwarded_scope ~= nil then
+    fail("an unbound tab should retain cwd-based Herdr fallback: " .. vim.inspect(forwarded_scope))
+  end
   source_herdr.start = original_start
-  if forwarded_starts ~= 2 or forwarded_workspace_id ~= nil then
+  if forwarded_starts ~= 2 or forwarded_scope ~= nil then
     fail("unbound named sessions should not override cwd workspace resolution")
   end
 
-  local original_workspace_for_cwd = source_herdr.workspace_for_cwd
+  original_workspace_for_cwd = source_herdr.workspace_for_cwd
   local fallback_cwd
   source_herdr.workspace_for_cwd = function(path)
     fallback_cwd = path
@@ -654,9 +763,9 @@ local function validate_sidekick_herdr()
   source_herdr.call = function(args)
     start_calls[#start_calls + 1] = args
     if args[1] == "pane" and args[2] == "list" then
-      return { panes = { { pane_id = "w-bound:p0", workspace_id = "w-bound" } } }
+      return { panes = { { pane_id = "w-bound:p0", workspace_id = "w-bound", cwd = cwd } } }
     elseif args[1] == "pane" and args[2] == "split" then
-      return { pane = { pane_id = "w-bound:p1" } }
+      return { pane = { pane_id = "w-bound:p1", workspace_id = "w-bound", cwd = cwd } }
     elseif args[1] == "agent" and args[2] == "start" then
       return {
         agent = {
@@ -674,13 +783,7 @@ local function validate_sidekick_herdr()
     end
     return {}
   end
-  local started = source_herdr.start(
-    "codex-workspace-session",
-    cwd,
-    { "codex" },
-    {},
-    { workspace_id = "w-bound" }
-  )
+  local started = source_herdr.start("codex-workspace-session", cwd, { "codex" }, {}, { workspace_id = "w-bound" })
   source_herdr.call = original_call
   local pane_list
   local pane_split
@@ -689,6 +792,8 @@ local function validate_sidekick_herdr()
   for _, call in ipairs(start_calls) do
     if call[1] == "workspace" then
       fail("an exact workspace ID should bypass cwd workspace lookup: " .. vim.inspect(start_calls))
+    elseif call[1] == "pane" and call[2] == "list" and call[4] ~= "w-bound" then
+      fail("an exact workspace ID should scope its pane lookup: " .. vim.inspect(start_calls))
     elseif call[1] == "tab" and call[2] == "create" then
       fail("worker start must not precreate a blank root tab: " .. vim.inspect(start_calls))
     elseif call[1] == "pane" and call[2] == "move" and vim.fn.index(call, "--split") >= 0 then
@@ -703,7 +808,8 @@ local function validate_sidekick_herdr()
       tab_rename = call
     end
   end
-  if not started
+  if
+    not started
     or not vim.deep_equal(pane_list, { "pane", "list", "--workspace", "w-bound" })
     or not vim.deep_equal(
       pane_split,
@@ -746,8 +852,7 @@ local function validate_sidekick_herdr()
   local renamed_workspace = false
   local created_branches = {}
   for _, call in ipairs(routing_calls) do
-    renamed_workspace = renamed_workspace
-      or (call[1] == "workspace" and call[2] == "rename" and call[3] == "w-feature")
+    renamed_workspace = renamed_workspace or (call[1] == "workspace" and call[2] == "rename" and call[3] == "w-feature")
     if call[1] == "worktree" and call[2] == "create" then
       created_branches[#created_branches + 1] = call[6]
     end
@@ -774,17 +879,8 @@ local function validate_sidekick_herdr()
     end
     return {}
   end
-  local task_scope = source_herdr.ensure_task_scope(
-    cwd,
-    "T01 Example task",
-    "feature/example",
-    "task/example-t01"
-  )
-  if
-    not task_scope
-    or task_scope.workspace_id ~= "w-task"
-    or task_scope.cwd ~= "/worktrees/task-example-t01"
-  then
+  local task_scope = source_herdr.ensure_task_scope(cwd, "T01 Example task", "feature/example", "task/example-t01")
+  if not task_scope or task_scope.workspace_id ~= "w-task" or task_scope.cwd ~= "/worktrees/task-example-t01" then
     fail("task scope should use its own workspace and worktree: " .. vim.inspect(task_scope))
   end
   local task_workspace_renamed = false
@@ -1024,7 +1120,8 @@ local function validate_sidekick_herdr()
   end
   local picker_status_rank = { working = 1, blocked = 2, done = 3, idle = 4 }
   for index = 2, #ordered_statuses do
-    if (picker_status_rank[ordered_statuses[index - 1]] or math.huge)
+    if
+      (picker_status_rank[ordered_statuses[index - 1]] or math.huge)
       > (picker_status_rank[ordered_statuses[index]] or math.huge)
     then
       fail("cwd picker Herdr status order mismatch: " .. vim.inspect(ordered_statuses))
@@ -1285,10 +1382,7 @@ local function validate_sidekick_herdr()
       end
     end
     local kill_action = "sidekick_kill_session"
-    if
-      not kill_item
-      or type(picker_opts.actions[kill_action]) ~= "function"
-    then
+    if not kill_item or type(picker_opts.actions[kill_action]) ~= "function" then
       fail("cwd picker should expose one agent-kill action from input and list")
     end
     local kill_prompt
@@ -1478,12 +1572,7 @@ local function validate_sidekick_herdr()
       rename_prompt = nil
       rename_args = nil
       run_input_action("<c-r>")
-      if
-        not rename_prompt
-        or rename_prompt.default ~= current_fake_item.slug
-        or rename_args
-        or fake_picker.closed
-      then
+      if not rename_prompt or rename_prompt.default ~= current_fake_item.slug or rename_args or fake_picker.closed then
         fail("local Ctrl-R should prompt for the selected local session and cancel without mutation")
       end
       kill_prompt = nil
@@ -1609,9 +1698,11 @@ local function validate_sidekick_herdr()
       input_pattern = "prenamed"
       input_changed()
       global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
-      if not vim.iter(global_lines):any(function(line)
-        return line:find("pi-workspace-renamed", 1, true) ~= nil
-      end) then
+      if
+        not vim.iter(global_lines):any(function(line)
+          return line:find("pi-workspace-renamed", 1, true) ~= nil
+        end)
+      then
         fail("successful Ctrl-R should display the renamed workspace session")
       end
 
@@ -2884,6 +2975,11 @@ end
 
 local function validate_herdr_workspaces()
   load_plugin("snacks.nvim")
+  load_plugin("tabby.nvim")
+
+  local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
+  package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
+  package.loaded["helpers.workspace"] = nil
   local mapping = vim.fn.maparg("<leader>fw", "n", false, true)
   if type(mapping) ~= "table" or not (mapping.desc or ""):find("Workspace", 1, true) then
     fail("<leader>fw live mapping missing or mislabeled: " .. vim.inspect(mapping))
@@ -2953,8 +3049,12 @@ local function validate_herdr_workspaces()
   end
 
   local function remove_workspace(id)
-    workspaces = vim.tbl_filter(function(item) return item.workspace_id ~= id end, workspaces)
-    panes = vim.tbl_filter(function(item) return item.workspace_id ~= id end, panes)
+    workspaces = vim.tbl_filter(function(item)
+      return item.workspace_id ~= id
+    end, workspaces)
+    panes = vim.tbl_filter(function(item)
+      return item.workspace_id ~= id
+    end, panes)
   end
 
   herdr.call = function(args)
@@ -3039,13 +3139,27 @@ local function validate_herdr_workspaces()
   }
 
   local ok, err = xpcall(function()
-    local loaded, workspace_tabs =
-      pcall(dofile, root .. "/nvim/.config/nvim/lua/plugins/herdr/workspaces.lua")
+    local loaded, workspace_tabs = pcall(dofile, root .. "/nvim/.config/nvim/lua/plugins/herdr/workspaces.lua")
     if not loaded then
       fail("plugins.herdr.workspaces module missing: " .. tostring(workspace_tabs))
     end
     if type(workspace_tabs.open) ~= "function" or type(workspace_tabs.agent_closed) ~= "function" then
       fail("plugins.herdr.workspaces lifecycle API missing")
+    end
+    local nvim_workspaces = require("helpers.workspace")
+    nvim_workspaces.setup()
+
+    -- tabby.nvim loads from the live config's spec; apply the worktree tabline
+    -- spec's keys so mapping assertions exercise this change's tabline.
+    local tabline_spec = dofile(root .. "/nvim/.config/nvim/lua/plugins/tabline.lua")
+    for _, spec in ipairs(tabline_spec) do
+      if spec[1] == "nanozuki/tabby.nvim" then
+        for _, key in ipairs(spec.keys or {}) do
+          if type(key[2]) == "string" then
+            vim.keymap.set("n", key[1], key[2], { desc = key.desc })
+          end
+        end
+      end
     end
 
     vim.cmd("silent! tabonly")
@@ -3058,7 +3172,9 @@ local function validate_herdr_workspaces()
     local function open_picker()
       local before = picker_count
       workspace_tabs.open()
-      vim.wait(100, function() return picker_count > before end, 5)
+      vim.wait(100, function()
+        return picker_count > before
+      end, 5)
       if picker_count ~= before + 1 then
         fail("workspace open should create exactly one fresh picker")
       end
@@ -3129,6 +3245,144 @@ local function validate_herdr_workspaces()
     local function tab_cwd(tab)
       return vim.fn.getcwd(-1, vim.api.nvim_tabpage_get_number(tab))
     end
+
+    for _, event in ipairs({ "VimEnter", "UIEnter", "BufEnter", "TabEnter" }) do
+      if #vim.api.nvim_get_autocmds({ group = "NvimWorkspaceTabs", event = event }) == 0 then
+        fail("Neovim workspace lifecycle autocmd missing for " .. event)
+      end
+    end
+    if #vim.api.nvim_get_autocmds({ group = "HerdrWorkspaceTabs", event = "TabEnter" }) == 0 then
+      fail("Herdr binding lifecycle autocmd missing for TabEnter")
+    end
+
+    local startup_tab = vim.api.nvim_get_current_tabpage()
+    local startup_herdr_calls = #calls
+    eq(nvim_workspaces.startup(root), true, "startup local workspace")
+    eq(vim.api.nvim_get_current_tabpage(), startup_tab, "startup should bind the initial tab in place")
+    eq(tab_var(startup_tab, "workspace_cwd"), root, "startup workspace cwd")
+    eq(tab_var(startup_tab, "workspace_label"), vim.fn.fnamemodify(root, ":t"), "startup workspace label")
+    eq(tab_var(startup_tab, "herdr_workspace_id"), nil, "startup must not bind Herdr")
+    eq(#calls, startup_herdr_calls, "startup must not query or create Herdr state")
+
+    vim.cmd.tabnew()
+    local startup_source = vim.api.nvim_get_current_tabpage()
+    local startup_source_buffer = vim.api.nvim_get_current_buf()
+    vim.api.nvim_buf_set_name(startup_source_buffer, root .. "/startup-file.lua")
+    vim.api.nvim_buf_set_lines(startup_source_buffer, 0, -1, false, { "opened in an existing workspace" })
+    vim.bo[startup_source_buffer].modified = false
+    eq(nvim_workspaces.startup(root), true, "startup existing-tab file workspace")
+    eq(vim.api.nvim_get_current_tabpage(), startup_tab, "startup should focus the existing workspace tab")
+    if vim.api.nvim_tabpage_is_valid(startup_source) then
+      fail("startup should discard its unbound file source tab")
+    end
+    eq(
+      vim.api.nvim_win_get_buf(vim.api.nvim_tabpage_get_win(startup_tab)),
+      startup_source_buffer,
+      "startup should move its file into the existing workspace tab"
+    )
+    vim.cmd.enew()
+    vim.api.nvim_buf_delete(startup_source_buffer, { force = true })
+
+    vim.cmd.tabnew()
+    startup_source = vim.api.nvim_get_current_tabpage()
+    eq(nvim_workspaces.startup(root), true, "startup existing-tab empty workspace")
+    if vim.api.nvim_tabpage_is_valid(startup_source) then
+      fail("startup should discard its empty unbound source tab")
+    end
+
+    vim.cmd.tabnew()
+    startup_source = vim.api.nvim_get_current_tabpage()
+    local same_name_cwd = root .. "/virtual/" .. vim.fn.fnamemodify(root, ":t")
+    eq(nvim_workspaces.startup(same_name_cwd), true, "startup folder-label workspace")
+    eq(vim.api.nvim_get_current_tabpage(), startup_tab, "startup should reuse a same-name workspace tab")
+    if vim.api.nvim_tabpage_is_valid(startup_source) then
+      fail("same-name startup should discard its unbound source tab")
+    end
+    eq(tab_var(startup_tab, "workspace_cwd"), root, "same-name reuse should preserve authoritative cwd")
+
+    local initial_buffers = nvim_workspaces.buffers(startup_tab)
+    local tab_a = vim.api.nvim_create_buf(true, false)
+    local tab_b = vim.api.nvim_create_buf(true, false)
+    local other_tab_buffer = vim.api.nvim_create_buf(true, false)
+    vim.api.nvim_buf_set_name(tab_a, root .. "/tab-a.lua")
+    vim.api.nvim_buf_set_name(tab_b, root .. "/tab-b.lua")
+    vim.api.nvim_buf_set_name(other_tab_buffer, root .. "/other-tab.lua")
+    vim.api.nvim_set_current_buf(tab_a)
+    nvim_workspaces.track(tab_a)
+    for _, buf in ipairs(initial_buffers) do
+      if vim.api.nvim_buf_is_valid(buf) then
+        vim.api.nvim_buf_delete(buf, { force = true })
+      end
+    end
+    vim.api.nvim_set_current_buf(tab_b)
+    nvim_workspaces.track(tab_b)
+    vim.api.nvim_set_current_buf(tab_a)
+
+    vim.cmd.tabnew()
+    local buffer_scope_tab = vim.api.nvim_get_current_tabpage()
+    local other_initial = vim.api.nvim_get_current_buf()
+    nvim_workspaces.bind(buffer_scope_tab, root .. "/scripts", "scripts")
+    vim.api.nvim_set_current_buf(other_tab_buffer)
+    nvim_workspaces.track(other_tab_buffer)
+    if vim.api.nvim_buf_is_valid(other_initial) then
+      vim.api.nvim_buf_delete(other_initial, { force = true })
+    end
+    vim.api.nvim_set_current_tabpage(startup_tab)
+    eq(vim.fn.getcwd(), root, "entering a workspace tab should restore its cwd")
+    vim.api.nvim_set_current_tabpage(buffer_scope_tab)
+    eq(vim.fn.getcwd(), root .. "/scripts", "entering another workspace tab should update cwd")
+    vim.cmd("tcd " .. vim.fn.fnameescape(root))
+    vim.api.nvim_set_current_tabpage(startup_tab)
+    vim.api.nvim_set_current_tabpage(buffer_scope_tab)
+    eq(vim.fn.getcwd(), root .. "/scripts", "TabEnter should repair a changed workspace cwd")
+    vim.api.nvim_set_current_tabpage(startup_tab)
+    nvim_workspaces.cycle(1)
+    eq(vim.api.nvim_get_current_buf(), tab_b, "next tab buffer")
+    nvim_workspaces.cycle(1)
+    eq(vim.api.nvim_get_current_buf(), tab_a, "wrapped next tab buffer")
+    nvim_workspaces.cycle(-1)
+    eq(vim.api.nvim_get_current_buf(), tab_b, "previous tab buffer")
+    if nvim_workspaces.contains(other_tab_buffer, startup_tab) then
+      fail("tab-local cycling must not import another tab's buffer")
+    end
+    for lhs, command in pairs({ ["[b"] = "<cmd>bprevious<cr>", ["]b"] = "<cmd>bnext<cr>" }) do
+      local mapping = vim.fn.maparg(lhs, "n", false, true)
+      eq(mapping.rhs, command, lhs .. " global buffer mapping")
+    end
+    vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(buffer_scope_tab))
+    if vim.api.nvim_buf_is_valid(other_tab_buffer) then
+      vim.api.nvim_buf_delete(other_tab_buffer, { force = true })
+    end
+
+    local local_workspace_cwd = root .. "/nvim/.config"
+    local before_local_tab = #vim.api.nvim_list_tabpages()
+    eq(nvim_workspaces.startup(local_workspace_cwd), true, "startup local tab creation")
+    local local_workspace_tab = vim.api.nvim_get_current_tabpage()
+    eq(#vim.api.nvim_list_tabpages(), before_local_tab + 1, "bound source should create a new local tab")
+    eq(tab_var(local_workspace_tab, "workspace_cwd"), local_workspace_cwd, "created local workspace cwd")
+    eq(tab_var(local_workspace_tab, "workspace_label"), ".config", "created local workspace label")
+    eq(tab_var(local_workspace_tab, "herdr_workspace_id"), nil, "created local tab must remain Herdr-free")
+    eq(#calls, startup_herdr_calls, "local tab creation must not call Herdr")
+    vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(local_workspace_tab))
+    vim.api.nvim_set_current_tabpage(startup_tab)
+    vim.cmd.enew()
+    for _, buf in ipairs({ tab_a, tab_b }) do
+      if vim.api.nvim_buf_is_valid(buf) then
+        vim.api.nvim_buf_delete(buf, { force = true })
+      end
+    end
+    for _, name in ipairs({
+      "workspace_cwd",
+      "workspace_label",
+      "workspace_buffers",
+      "herdr_workspace_id",
+      "herdr_workspace_label",
+      "herdr_workspace_detached",
+      "herdr_workspace_warned",
+    }) do
+      pcall(vim.api.nvim_tabpage_del_var, startup_tab, name)
+    end
+    vim.cmd("tcd " .. vim.fn.fnameescape(root))
 
     local function confirm_workspace(opts, id, source, close_source)
       local item = item_by_id(opts, id)
@@ -3209,7 +3463,8 @@ local function validate_herdr_workspaces()
         fail(id .. " row should use marker " .. marker .. ": " .. vim.inspect(chunks))
       end
     end
-    if not marker_highlights["w-focused"]
+    if
+      not marker_highlights["w-focused"]
       or marker_highlights["w-focused"] == marker_highlights["w-working"]
       or marker_highlights["w-focused"] == marker_highlights["w-done"]
       or marker_highlights["w-working"] == marker_highlights["w-done"]
@@ -3240,7 +3495,10 @@ local function validate_herdr_workspaces()
     end, 5)
     eq(shown.selected_target, 2, "Herdr focused workspace initial selection")
     if second.title ~= "spaces" or second.preview ~= false or type(second.on_close) ~= "function" then
-      fail("workspace picker should be titled spaces, have no preview, and restore picker highlights: " .. vim.inspect(second))
+      fail(
+        "workspace picker should be titled spaces, have no preview, and restore picker highlights: "
+          .. vim.inspect(second)
+      )
     end
     if second.layout.reverse ~= false or second.layout.layout.height < #second.items + 2 then
       fail("workspace picker should render Herdr order top-down without clipping rows: " .. vim.inspect(second.layout))
@@ -3256,7 +3514,8 @@ local function validate_herdr_workspaces()
       style = "minimal",
     })
     local idle_tab = confirm_workspace(first, "w-idle", initial_tab, true)
-    if idle_tab == initial_tab
+    if
+      idle_tab == initial_tab
       or vim.api.nvim_tabpage_is_valid(initial_tab)
       or vim.api.nvim_win_is_valid(picker_float)
       or #vim.api.nvim_list_tabpages() ~= initial_tab_count
@@ -3268,15 +3527,15 @@ local function validate_herdr_workspaces()
       fail("foreground_cwd must not initialize a workspace tab")
     end
 
-    local preserved_cwd = root .. "/scripts"
-    vim.cmd("tcd " .. vim.fn.fnameescape(preserved_cwd))
+    local drifted_cwd = root .. "/scripts"
+    vim.cmd("tcd " .. vim.fn.fnameescape(drifted_cwd))
     vim.cmd("tabnew")
     local empty_source = vim.api.nvim_get_current_tabpage()
     local before_reselect = #vim.api.nvim_list_tabpages()
     local reselect = open_picker()
     eq(confirm_workspace(reselect, "w-idle", empty_source, true), idle_tab, "reselected workspace tab")
     eq(#vim.api.nvim_list_tabpages(), before_reselect - 1, "reselect should remove its empty source tab")
-    eq(agent_picker_opens[#agent_picker_opens].cwd, preserved_cwd, "reused workspace picker cwd")
+    eq(agent_picker_opens[#agent_picker_opens].cwd, root .. "/nvim", "reused workspace picker cwd")
 
     vim.cmd("tabnew")
     local dashboard_source = vim.api.nvim_get_current_tabpage()
@@ -3286,11 +3545,7 @@ local function validate_herdr_workspaces()
     vim.bo.modified = false
     local before_dashboard = #vim.api.nvim_list_tabpages()
     local dashboard_select = open_picker()
-    eq(
-      confirm_workspace(dashboard_select, "w-idle", dashboard_source, true),
-      idle_tab,
-      "dashboard source target"
-    )
+    eq(confirm_workspace(dashboard_select, "w-idle", dashboard_source, true), idle_tab, "dashboard source target")
     eq(
       #vim.api.nvim_list_tabpages(),
       before_dashboard - 1,
@@ -3338,11 +3593,7 @@ local function validate_herdr_workspaces()
     eq(tab_var(idle_tab, "herdr_workspace_label"), "Zebra", "first workspace tab label")
     eq(tab_var(focused_tab, "herdr_workspace_label"), "Duplicate", "duplicate workspace tab label")
     local bound_source_opts = open_picker()
-    eq(
-      confirm_workspace(bound_source_opts, "w-idle", focused_tab, false),
-      idle_tab,
-      "workspace-bound source target"
-    )
+    eq(confirm_workspace(bound_source_opts, "w-idle", focused_tab, false), idle_tab, "workspace-bound source target")
     if not vim.api.nvim_tabpage_is_valid(focused_tab) then
       fail("workspace-bound source tab must be preserved")
     end
@@ -3359,7 +3610,7 @@ local function validate_herdr_workspaces()
 
     vim.api.nvim_set_current_tabpage(unbound_tab)
     vim.api.nvim_set_current_tabpage(idle_tab)
-    eq(tab_cwd(idle_tab), preserved_cwd, "existing tab-local cwd should survive switching")
+    eq(tab_cwd(idle_tab), root .. "/nvim", "workspace cwd should be restored when switching")
 
     vim.api.nvim_set_current_tabpage(unbound_tab)
     vim.cmd("enew")
@@ -3368,9 +3619,13 @@ local function validate_herdr_workspaces()
     local create_cwd = root .. "/scripts"
     vim.cmd("tcd " .. vim.fn.fnameescape(create_cwd))
     local create_opts = open_picker()
-    vim.ui.input = function(_, callback) callback("Created") end
+    vim.ui.input = function(_, callback)
+      callback("Created")
+    end
     local create_picker = run_action(create_opts, "<c-n>", item_by_id(create_opts, "w-idle"))
-    vim.wait(100, function() return tab_for("w-created") ~= nil end, 5)
+    vim.wait(100, function()
+      return tab_for("w-created") ~= nil
+    end, 5)
     eq(
       last_call("workspace", "create"),
       { "workspace", "create", "--cwd", create_cwd, "--label", "Created", "--no-focus" },
@@ -3387,16 +3642,42 @@ local function validate_herdr_workspaces()
     local rename_opts = open_picker()
     local rename_item = item_by_id(rename_opts, "w-focused")
     failures.rename = true
-    vim.ui.input = function(_, callback) callback("Rejected rename") end
+    vim.ui.input = function(_, callback)
+      callback("Rejected rename")
+    end
     run_action(rename_opts, "<c-r>", rename_item)
     eq(tab_var(focused_tab, "herdr_workspace_label"), "Duplicate", "failed rename must preserve mapped tab label")
     failures.rename = nil
-    vim.ui.input = function(_, callback) callback("Renamed") end
+    vim.ui.input = function(_, callback)
+      callback("Renamed")
+    end
     run_action(rename_opts, "<c-r>", rename_item)
-    vim.wait(100, function() return tab_var(focused_tab, "herdr_workspace_label") == "Renamed" end, 5)
+    vim.wait(100, function()
+      return tab_var(focused_tab, "herdr_workspace_label") == "Renamed"
+    end, 5)
     eq(last_call("workspace", "rename"), { "workspace", "rename", "w-focused", "Renamed" }, "workspace rename command")
     eq(tab_var(focused_tab, "herdr_workspace_label"), "Renamed", "successful rename should update mapped tab")
     eq(#agent_picker_opens, lifecycle_picker_count, "workspace rename must not open the agent picker")
+
+    for _, item in ipairs(workspaces) do
+      if item.workspace_id == "w-idle" then
+        item.label = "Externally renamed"
+      end
+    end
+    open_picker()
+    eq(
+      tab_var(idle_tab, "herdr_workspace_label"),
+      "Externally renamed",
+      "external rename should refresh Herdr tab label"
+    )
+    eq(tab_var(idle_tab, "workspace_label"), "Externally renamed", "external rename should refresh workspace tab label")
+    for _, item in ipairs(workspaces) do
+      if item.workspace_id == "w-idle" then
+        item.label = "Zebra"
+      end
+    end
+    open_picker()
+    eq(tab_var(idle_tab, "workspace_label"), "Zebra", "restored external label should refresh workspace tab label")
 
     local close_opts = open_picker()
     local close_item = item_by_id(close_opts, "w-focused")
@@ -3411,19 +3692,14 @@ local function validate_herdr_workspaces()
     end
     local close_calls = count_calls("workspace", "close")
     run_action(close_opts, "<c-x>", close_item)
-    if confirmations ~= 1 or count_calls("workspace", "close") ~= close_calls or not vim.api.nvim_tabpage_is_valid(focused_tab) then
+    if
+      confirmations ~= 1
+      or count_calls("workspace", "close") ~= close_calls
+      or not vim.api.nvim_tabpage_is_valid(focused_tab)
+    then
       fail("workspace close should require confirmation before changing Herdr or Neovim")
     end
 
-    local order = {}
-    local close_group = vim.api.nvim_create_augroup("VerifyHerdrWorkspaceClose", { clear = true })
-    vim.api.nvim_create_autocmd("TabClosed", {
-      group = close_group,
-      once = true,
-      callback = function()
-        order[#order + 1] = "tab-close"
-      end,
-    })
     confirm_close = true
     failures.close = true
     run_action(close_opts, "<c-x>", close_item)
@@ -3432,19 +3708,19 @@ local function validate_herdr_workspaces()
     end
     failures.close = nil
     local before_close_call = #calls
+    local workspace_cwd_before_close = tab_var(focused_tab, "workspace_cwd")
     local original_mock_call = herdr.call
     herdr.call = function(args, quiet)
-      if args[1] == "workspace" and args[2] == "close" then
-        order[#order + 1] = "herdr-close"
-      end
       return original_mock_call(args, quiet)
     end
     run_action(close_opts, "<c-x>", close_item)
-    vim.wait(100, function() return not vim.api.nvim_tabpage_is_valid(focused_tab) end, 5)
-    eq(order, { "herdr-close", "tab-close" }, "confirmed close ordering")
     eq(calls[before_close_call + 1], { "workspace", "close", "w-focused" }, "workspace close command")
     herdr.call = original_mock_call
-    vim.api.nvim_del_augroup_by_id(close_group)
+    if not vim.api.nvim_tabpage_is_valid(focused_tab) then
+      fail("closing Herdr must preserve its Neovim-authoritative workspace tab")
+    end
+    eq(tab_var(focused_tab, "herdr_workspace_id"), nil, "closed Herdr binding should be removed")
+    eq(tab_var(focused_tab, "workspace_cwd"), workspace_cwd_before_close, "workspace tab cwd after Herdr close")
     eq(#agent_picker_opens, lifecycle_picker_count, "workspace close must not open the agent picker")
 
     local manual_opts = open_picker()
@@ -3467,7 +3743,8 @@ local function validate_herdr_workspaces()
     local detached_cwd = tab_cwd(detached_tab)
     remove_workspace("w-working")
     open_picker()
-    if not vim.api.nvim_tabpage_is_valid(detached_tab)
+    if
+      not vim.api.nvim_tabpage_is_valid(detached_tab)
       or tab_var(detached_tab, "herdr_workspace_detached") ~= true
       or tab_cwd(detached_tab) ~= detached_cwd
     then
@@ -3526,7 +3803,11 @@ local function validate_herdr_workspaces()
     local project_spec = dofile(root .. "/nvim/.config/nvim/lua/plugins/project.lua")
     local project_config
     local original_project = package.loaded.project_nvim
-    package.loaded.project_nvim = { setup = function(opts) project_config = opts end }
+    package.loaded.project_nvim = {
+      setup = function(opts)
+        project_config = opts
+      end,
+    }
     project_spec.config()
     package.loaded.project_nvim = original_project
     eq(project_config and project_config.scope_chdir, "tab", "project.nvim scope_chdir")
@@ -3539,7 +3820,8 @@ local function validate_herdr_workspaces()
         break
       end
     end
-    if not dashboard_workspace
+    if
+      not dashboard_workspace
       or dashboard_workspace.desc ~= "Workspaces"
       or type(dashboard_workspace.action) ~= "function"
     then
@@ -3583,18 +3865,19 @@ local function validate_herdr_workspaces()
       fail("lualine workspace component missing")
     end
     vim.api.nvim_set_current_tabpage(unbound_tab)
+    pcall(vim.api.nvim_tabpage_del_var, unbound_tab, "workspace_cwd")
+    pcall(vim.api.nvim_tabpage_del_var, unbound_tab, "workspace_label")
     pcall(vim.api.nvim_tabpage_del_var, unbound_tab, "herdr_workspace_id")
     pcall(vim.api.nvim_tabpage_del_var, unbound_tab, "herdr_workspace_label")
     eq(workspace_component[1](), "", "unbound statusline workspace label")
     eq(workspace_component.cond(), false, "unbound statusline workspace visibility")
-    vim.api.nvim_tabpage_set_var(unbound_tab, "herdr_workspace_id", "w-status")
-    vim.api.nvim_tabpage_set_var(unbound_tab, "herdr_workspace_label", "Status Workspace")
+    vim.api.nvim_tabpage_set_var(unbound_tab, "workspace_cwd", root .. "/status")
+    vim.api.nvim_tabpage_set_var(unbound_tab, "workspace_label", "Status Workspace")
     eq(workspace_component[1](), "Status Workspace", "bound statusline workspace label")
     eq(workspace_component.cond(), true, "bound statusline workspace visibility")
-    pcall(vim.api.nvim_tabpage_del_var, unbound_tab, "herdr_workspace_id")
-    pcall(vim.api.nvim_tabpage_del_var, unbound_tab, "herdr_workspace_label")
-    local lualine_source =
-      table.concat(vim.fn.readfile(root .. "/nvim/.config/nvim/lua/plugins/lualine.lua"), "\n")
+    pcall(vim.api.nvim_tabpage_del_var, unbound_tab, "workspace_cwd")
+    pcall(vim.api.nvim_tabpage_del_var, unbound_tab, "workspace_label")
+    local lualine_source = table.concat(vim.fn.readfile(root .. "/nvim/.config/nvim/lua/plugins/lualine.lua"), "\n")
     if lualine_source:find("plugins.sidekick.herdr", 1, true) or lualine_source:find("herdr.call", 1, true) then
       fail("lualine workspace component must use tab variables without querying Herdr")
     end
@@ -3605,13 +3888,20 @@ local function validate_herdr_workspaces()
       end
     end
     local source = table.concat(vim.fn.readfile(root .. "/nvim/.config/nvim/lua/plugins/herdr/workspaces.lua"), "\n")
-    if source:match('call%s*%(%s*{%s*["\']worktree')
-      or source:match('vim%.system%s*%(%s*{%s*["\']git')
-    then
+    if source:match("call%s*%(%s*{%s*[\"']worktree") or source:match("vim%.system%s*%(%s*{%s*[\"']git") then
       fail("Herdr workspace module must not contain git/worktree commands")
     end
     if source:find("nvim_tabpage_close", 1, true) then
       fail("Herdr workspace tabs must close through the supported :tabclose command")
+    end
+    local nvim_workspace_source =
+      table.concat(vim.fn.readfile(root .. "/nvim/.config/nvim/lua/helpers/workspace.lua"), "\n")
+    if
+      nvim_workspace_source:find("plugins.sidekick.herdr", 1, true)
+      or nvim_workspace_source:find("herdr.call", 1, true)
+      or nvim_workspace_source:find("ensure_workspace", 1, true)
+    then
+      fail("Neovim workspace startup must not depend on or create Herdr state")
     end
   end, debug.traceback)
 
@@ -3946,16 +4236,8 @@ local function validate_vault_work_items()
         fail("daily backlog agent start arguments are wrong: " .. vim.inspect(started))
       end
       assert_sequence(started.command, { "pi", "--name", "friday-2026-07-24" }, "daily backlog agent command")
-      assert_sequence(
-        renamed,
-        { "tab", "rename", "backlog-tab", "Friday, 2026-07-24" },
-        "daily backlog tab title"
-      )
-      if
-        not sent
-        or sent.target ~= "pi-friday-2026-07-24"
-        or sent.text ~= root .. "/3_logs/2026-W30/backlog.md:4"
-      then
+      assert_sequence(renamed, { "tab", "rename", "backlog-tab", "Friday, 2026-07-24" }, "daily backlog tab title")
+      if not sent or sent.target ~= "pi-friday-2026-07-24" or sent.text ~= root .. "/3_logs/2026-W30/backlog.md:4" then
         fail("daily backlog agent should receive the exact source link: " .. vim.inspect(sent))
       end
 
@@ -3995,8 +4277,7 @@ local function validate_vault_work_items()
       activation_events[#activation_events + 1] = "record:" .. name .. ":" .. terminal_id
     end
     internal.toggle_tool_session = function(name, focus, terminal_id)
-      activation_events[#activation_events + 1] =
-        string.format("toggle:%s:%s:%s", name, tostring(focus), terminal_id)
+      activation_events[#activation_events + 1] = string.format("toggle:%s:%s:%s", name, tostring(focus), terminal_id)
     end
     local activation_ok, activation_err = xpcall(function()
       work_items.activate_backlog_agent({
@@ -4135,8 +4416,12 @@ local function validate_inline_ask_edit()
       on_exit({ code = 0, stdout = "", stderr = "" })
       return { kill = function() end }
     end
-    real_cli.spawn("controlled prompt", function(result) cli_result = result end, { mode = "ask" })
-    if not vim.wait(1000, function() return cli_result ~= nil end, 10) then
+    real_cli.spawn("controlled prompt", function(result)
+      cli_result = result
+    end, { mode = "ask" })
+    if not vim.wait(1000, function()
+      return cli_result ~= nil
+    end, 10) then
       fail("Codex adapter callback did not run")
     end
     vim.system = original_system
@@ -4164,8 +4449,12 @@ local function validate_inline_ask_edit()
     local cli_calls = {}
     local diff_clears = 0
     local ui = {
-      open_prompt = function(opts) prompts[#prompts + 1] = opts end,
-      clear_diff_inline = function() diff_clears = diff_clears + 1 end,
+      open_prompt = function(opts)
+        prompts[#prompts + 1] = opts
+      end,
+      clear_diff_inline = function()
+        diff_clears = diff_clears + 1
+      end,
       close_hover = function() end,
       open_hover = function() end,
       render_diff_inline = function() end,
@@ -4293,11 +4582,17 @@ local function validate_inline_ask_edit()
     assert_equal(normal_ask_context.start_line, 0, "normal ask start line")
     assert_equal(normal_ask_context.end_line, 3, "normal ask end line")
     assert_equal(normal_ask_context.code, table.concat(vim.list_slice(original_lines, 1, 4), "\n"), "normal ask code")
-    assert_sequence(vim.tbl_map(function(symbol) return symbol.name end, normal_ask_context.symbols), {
-      "greeting",
-      "name",
-      "message",
-    }, "normal ask symbols")
+    assert_sequence(
+      vim.tbl_map(function(symbol)
+        return symbol.name
+      end, normal_ask_context.symbols),
+      {
+        "greeting",
+        "name",
+        "message",
+      },
+      "normal ask symbols"
+    )
     for _, symbol in ipairs(normal_ask_context.symbols) do
       assert_equal(symbol.hover, "mocked LSP hover", "normal ask symbol hover")
     end
@@ -4340,11 +4635,7 @@ local function validate_inline_ask_edit()
       range = { start_line = 1, end_line = 2 },
     })
     assert_equal(visual_ask_context.scope_kind, "selection", "visual ask scope")
-    assert_equal(
-      visual_ask_context.code,
-      '  local message = "Hello, " .. name\n  return message',
-      "visual ask code"
-    )
+    assert_equal(visual_ask_context.code, '  local message = "Hello, " .. name\n  return message', "visual ask code")
     assert_equal(
       visual_ask_call.prompt,
       context.render_prompt(visual_ask_question, visual_ask_context),
@@ -4770,11 +5061,7 @@ local function validate_vault_features()
       if not features.send_to_agent(linked_task) or started then
         fail("the same feature task should reuse its existing named agent")
       end
-      if
-        not placed
-        or placed.scope.workspace_id ~= "w-task"
-        or placed.tab_label ~= "T01 Build tree picker."
-      then
+      if not placed or placed.scope.workspace_id ~= "w-task" or placed.tab_label ~= "T01 Build tree picker." then
         fail("reused feature task agent should move into its named task tab: " .. vim.inspect(placed))
       end
       if not ran or ran.pane_id ~= "feature-pane" or ran.text ~= linked_prompt then
@@ -4883,8 +5170,7 @@ local function validate_vault_features()
       activation_events[#activation_events + 1] = "record:" .. name .. ":" .. terminal_id
     end
     internal.toggle_tool_session = function(name, focus, terminal_id)
-      activation_events[#activation_events + 1] =
-        string.format("toggle:%s:%s:%s", name, tostring(focus), terminal_id)
+      activation_events[#activation_events + 1] = string.format("toggle:%s:%s:%s", name, tostring(focus), terminal_id)
     end
     local activation_ok, activation_err = xpcall(function()
       features.activate_agent({
@@ -5078,24 +5364,30 @@ local function validate_markdown_formatting()
     { "--config", vim.fn.expand("~/.markdownlint-cli2.yaml"), "-" },
     "markdownlint arguments"
   )
-  local lint = vim.system(
-    vim.list_extend({ vim.fn.exepath(linter.cmd) }, linter.args),
-    { stdin = table.concat(formatted, "\n") .. "\n", text = true }
-  ):wait()
+  local lint = vim
+    .system(
+      vim.list_extend({ vim.fn.exepath(linter.cmd) }, linter.args),
+      { stdin = table.concat(formatted, "\n") .. "\n", text = true }
+    )
+    :wait()
   if lint.code ~= 0 then
     fail("formatted Markdown should pass Markdownlint:\n" .. (lint.stderr or "") .. (lint.stdout or ""))
   end
-  local short_visible = vim.system(
-    vim.list_extend({ vim.fn.exepath(linter.cmd) }, linter.args),
-    { stdin = "Read the [guide](" .. long_url .. ") next.\n", text = true }
-  ):wait()
+  local short_visible = vim
+    .system(
+      vim.list_extend({ vim.fn.exepath(linter.cmd) }, linter.args),
+      { stdin = "Read the [guide](" .. long_url .. ") next.\n", text = true }
+    )
+    :wait()
   if short_visible.code ~= 0 then
     fail("a long link destination should not count toward line length:\n" .. (short_visible.stderr or ""))
   end
-  local long_visible = vim.system(
-    vim.list_extend({ vim.fn.exepath(linter.cmd) }, linter.args),
-    { stdin = vim.trim(string.rep("visible words ", 12)) .. "\n", text = true }
-  ):wait()
+  local long_visible = vim
+    .system(
+      vim.list_extend({ vim.fn.exepath(linter.cmd) }, linter.args),
+      { stdin = vim.trim(string.rep("visible words ", 12)) .. "\n", text = true }
+    )
+    :wait()
   if long_visible.code == 0 or not (long_visible.stderr or ""):find("AV001", 1, true) then
     fail("overlong visible prose should report AV001:\n" .. (long_visible.stderr or ""))
   end
@@ -5170,11 +5462,9 @@ local function validate_markdown_ansi()
     return false
   end
 
-  if
-    not has_highlight(1, function(item)
-      return item.attrs.bold and item.attrs.fg == 0x928374
-    end)
-  then
+  if not has_highlight(1, function(item)
+    return item.attrs.bold and item.attrs.fg == 0x928374
+  end) then
     fail("truecolor foreground and bold should render")
   end
   if
@@ -5209,11 +5499,9 @@ local function validate_markdown_ansi()
   if reloaded.fg ~= 0x123456 then
     fail("classic ANSI colors should refresh from the active terminal palette")
   end
-  if
-    not has_highlight(4, function(item)
-      return item.attrs.fg == 0xff0000 and item.attrs.bg == 0x00005f
-    end)
-  then
+  if not has_highlight(4, function(item)
+    return item.attrs.fg == 0xff0000 and item.attrs.bg == 0x00005f
+  end) then
     fail("indexed 256-color foreground and background should render")
   end
 
@@ -5243,8 +5531,167 @@ local function validate_markdown_ansi()
   vim.api.nvim_buf_delete(buf, { force = true })
 end
 
+local function validate_workspace_session()
+  local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
+  package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
+  package.loaded["helpers.workspace"] = nil
+  local workspace = require("helpers.workspace")
+  workspace.setup()
+
+  local load_autocmds = vim.api.nvim_get_autocmds({ group = "NvimWorkspaceTabs", event = "SessionLoadPost" })
+  if #load_autocmds == 0 then
+    fail("workspace tabs should restore identity on SessionLoadPost")
+  end
+
+  local root = vim.fn.getcwd()
+  local tab_one = vim.api.nvim_get_current_tabpage()
+  vim.cmd("edit " .. vim.fn.fnameescape(root .. "/README.md"))
+  local buf_one = vim.api.nvim_get_current_buf()
+  local bound_one = workspace.bind(tab_one, root, "Root Tab")
+
+  vim.cmd("tabnew " .. vim.fn.fnameescape(root .. "/scripts/verify-nvim.lua"))
+  local tab_two = vim.api.nvim_get_current_tabpage()
+  local buf_two = vim.api.nvim_get_current_buf()
+  local bound_two = workspace.bind(tab_two, root .. "/scripts", "Scripts Tab")
+  workspace.bind_herdr(tab_two, "w-session", "Herdr Scripts")
+
+  local snapshot = workspace.snapshot()
+  if #snapshot ~= 2 then
+    fail("snapshot should capture both workspace tabs: " .. vim.inspect(snapshot))
+  end
+  if snapshot[1].cwd ~= bound_one.cwd or snapshot[1].label ~= "Root Tab" then
+    fail("snapshot should capture the first tab identity: " .. vim.inspect(snapshot[1]))
+  end
+  if snapshot[2].label ~= "Scripts Tab" or snapshot[2].herdr_workspace_id ~= "w-session" then
+    fail("snapshot should capture the Herdr binding: " .. vim.inspect(snapshot[2]))
+  end
+  if not vim.tbl_contains(snapshot[2].buffers, root .. "/scripts/verify-nvim.lua") then
+    fail("snapshot should record buffer paths: " .. vim.inspect(snapshot[2].buffers))
+  end
+
+  for _, tab in ipairs({ tab_one, tab_two }) do
+    for _, name in ipairs({
+      "workspace_cwd",
+      "workspace_label",
+      "workspace_buffers",
+      "herdr_workspace_id",
+      "herdr_workspace_label",
+    }) do
+      pcall(vim.api.nvim_tabpage_del_var, tab, name)
+    end
+    pcall(vim.api.nvim_set_current_tabpage, tab)
+    vim.cmd("tcd " .. vim.fn.fnameescape(root))
+  end
+  pcall(vim.api.nvim_set_current_tabpage, tab_one)
+  if workspace.get(tab_one) or workspace.get(tab_two) then
+    fail("wiped tabs should lose their workspace identity")
+  end
+
+  vim.g.NvimWorkspaceTabs = snapshot
+  vim.api.nvim_exec_autocmds("SessionLoadPost", { group = "NvimWorkspaceTabs" })
+  if vim.g.NvimWorkspaceTabs ~= nil then
+    fail("session restore should consume the workspace snapshot")
+  end
+
+  local restored_one = workspace.get(tab_one)
+  local restored_two = workspace.get(tab_two)
+  if not restored_one or restored_one.cwd ~= bound_one.cwd or restored_one.label ~= "Root Tab" then
+    fail("first tab identity should survive the session round trip: " .. vim.inspect(restored_one))
+  end
+  if not restored_two or restored_two.label ~= "Scripts Tab" or restored_two.herdr_workspace_id ~= "w-session" then
+    fail("second tab identity should survive the session round trip: " .. vim.inspect(restored_two))
+  end
+  if not vim.tbl_contains(workspace.buffers(tab_two), buf_two) then
+    fail("restored tab should remap its buffers by path: " .. vim.inspect(workspace.buffers(tab_two)))
+  end
+  if vim.fn.getcwd(-1, vim.api.nvim_tabpage_get_number(tab_two)) ~= bound_two.cwd then
+    fail(
+      "restored tab should re-apply its tab-local cwd: " .. vim.fn.getcwd(-1, vim.api.nvim_tabpage_get_number(tab_two))
+    )
+  end
+
+  local spec = dofile("nvim/.config/nvim/lua/plugins/persistence.lua")
+  if type(spec.opts.pre_save) ~= "function" then
+    fail("persistence pre_save should snapshot workspace tabs")
+  end
+  if not vim.tbl_contains(spec.opts.options, "globals") then
+    fail("persistence sessionoptions should keep globals so the snapshot persists")
+  end
+  spec.opts.pre_save()
+  local saved = vim.g.NvimWorkspaceTabs
+  if type(saved) ~= "string" then
+    fail("pre_save should store the workspace snapshot as a string global: " .. vim.inspect(saved))
+  end
+  local decoded_ok, decoded = pcall(vim.json.decode, saved)
+  if not decoded_ok or type(decoded) ~= "table" or #decoded ~= 2 or decoded[2].label ~= "Scripts Tab" then
+    fail("pre_save snapshot should survive JSON encoding: " .. vim.inspect(decoded))
+  end
+
+  local session_file = vim.fn.tempname() .. ".vim"
+  local sessionoptions = vim.o.sessionoptions
+  vim.o.sessionoptions = table.concat(spec.opts.options, ",")
+  local mksession_ok = pcall(vim.cmd, "mksession! " .. vim.fn.fnameescape(session_file))
+  vim.o.sessionoptions = sessionoptions
+  if not mksession_ok then
+    fail("mksession should succeed for the workspace session round trip")
+  end
+  if not table.concat(vim.fn.readfile(session_file), "\n"):find("NvimWorkspaceTabs", 1, true) then
+    fail("mksession should persist the workspace snapshot global")
+  end
+
+  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+    for _, name in ipairs({
+      "workspace_cwd",
+      "workspace_label",
+      "workspace_buffers",
+      "herdr_workspace_id",
+      "herdr_workspace_label",
+    }) do
+      pcall(vim.api.nvim_tabpage_del_var, tab, name)
+    end
+  end
+  vim.api.nvim_set_current_tabpage(tab_one)
+  vim.cmd("tabonly")
+  vim.cmd("silent! %bwipeout!")
+  if not pcall(vim.cmd, "source " .. vim.fn.fnameescape(session_file)) then
+    fail("sourcing the saved session should succeed")
+  end
+  if vim.g.NvimWorkspaceTabs ~= nil then
+    fail("SessionLoadPost should consume the restored workspace snapshot")
+  end
+
+  local round_trip_tabs = vim.api.nvim_list_tabpages()
+  if #round_trip_tabs ~= 2 then
+    fail("session source should restore both workspace tabs: " .. #round_trip_tabs)
+  end
+  local round_trip_one = workspace.get(round_trip_tabs[1])
+  local round_trip_two = workspace.get(round_trip_tabs[2])
+  if not round_trip_one or round_trip_one.cwd ~= bound_one.cwd or round_trip_one.label ~= "Root Tab" then
+    fail("first tab identity should survive a real session round trip: " .. vim.inspect(round_trip_one))
+  end
+  if
+    not round_trip_two
+    or round_trip_two.label ~= "Scripts Tab"
+    or round_trip_two.herdr_workspace_id ~= "w-session"
+  then
+    fail("second tab identity should survive a real session round trip: " .. vim.inspect(round_trip_two))
+  end
+  if not vim.tbl_contains(workspace.buffers(round_trip_tabs[2]), vim.fn.bufnr(root .. "/scripts/verify-nvim.lua")) then
+    fail("restored tab should remap its buffers after a real session round trip")
+  end
+  if vim.fn.getcwd(-1, 2) ~= bound_two.cwd then
+    fail("restored tab should re-apply its tab-local cwd after a real session round trip")
+  end
+
+  os.remove(session_file)
+  vim.api.nvim_set_current_tabpage(round_trip_tabs[1])
+  vim.cmd("tabonly")
+  vim.cmd("silent! %bwipeout!")
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
+  ["workspace-session"] = validate_workspace_session,
   ["weekly-backlog"] = validate_weekly_backlog,
   ["markdown-formatting"] = validate_markdown_formatting,
   ["markdown-ansi"] = validate_markdown_ansi,
@@ -5264,7 +5711,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
+      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
   )
 end
 

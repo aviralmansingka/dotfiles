@@ -1,20 +1,32 @@
 # Development Workspace Context
 
-Terms for coordinating Herdr and Neovim while keeping Herdr authoritative for terminal workspace state.
+Terms for coordinating Neovim workspace tabs with Herdr runtime state while keeping Neovim authoritative for interactive workspace identity.
 
 ## Language
 
-**Herdr Workspace**:
-A project context owned by Herdr, identified by its Herdr workspace ID. It may represent a Git worktree, a primary checkout, or a non-Git directory.
-_Avoid_: Neovim workspace, project, worktree when referring to the Herdr object
-
 **Workspace Tab**:
-A Neovim tab bound at runtime to exactly one Herdr Workspace. At most one Workspace Tab may be bound to a given Herdr Workspace in a Neovim process.
+A Neovim tab that owns a folder identity and its Tab Buffers. It exists independently of Herdr and is the authority used when launching an agent.
 _Avoid_: project tab, worktree tab
 
 **Unbound Tab**:
-A normal Neovim tab with no Herdr Workspace identity. It never causes Herdr focus changes.
+A normal Neovim tab with no folder identity. It never creates or focuses Herdr state.
 _Avoid_: workspace tab
+
+**Tab Buffer**:
+A normal listed buffer recorded as a member of a Workspace Tab. Membership is established by entering the buffer from that tab and remains until the buffer is deleted.
+_Avoid_: global buffer, visible buffer
+
+**Global Buffer**:
+A normal listed buffer in Neovim's process-wide buffer registry, regardless of Workspace Tab membership.
+_Avoid_: tab buffer
+
+**Herdr Workspace**:
+A runtime project context created or reused when an agent launches from a Workspace Tab, identified by its Herdr workspace ID. It may outlive the Workspace Tab that caused its creation.
+_Avoid_: Neovim workspace, workspace tab, worktree
+
+**Herdr Binding**:
+The optional runtime association from a Workspace Tab to the Herdr Workspace selected or created for its agents.
+_Avoid_: workspace tab identity
 
 **Workspace State**:
 The aggregate agent state reported for a Herdr Workspace by Herdr itself. Neovim displays this state but never derives it from individual agents.
@@ -99,8 +111,8 @@ The No Mistakes-owned delivery boundary after successful final verifier certific
 _Avoid_: manual protection bypass, landing without certification
 
 **Workspace Cleanup Gate**:
-The final Task Goal where Vault Hunter closes every Herdr tab in the task's Herdr Workspace and every Neovim Workspace Tab bound to it, verifies they are gone, records final task evidence, and pushes the completed vault checkpoint. Other Herdr Workspaces and Unbound Tabs remain untouched.
-_Avoid_: closing only the active feature tab, closing unrelated tabs
+The final Task Goal where Vault Hunter performs exact task-owned resource teardown in three verified layers: close and clean up every task-owned Herdr resource (the task's Herdr Workspace and its Herdr tabs), remove that workspace's Herdr Bindings from Neovim, then close the corresponding Neovim Workspace Tabs and verify all three layers are gone. This is the deliberate exception to ordinary Herdr closure, which only unbinds a tab and preserves the folder-owned Workspace Tab. Other Herdr Workspaces and Unbound Tabs remain untouched. Vault Hunter records final task evidence and pushes the completed vault checkpoint.
+_Avoid_: closing only the active feature tab, closing unrelated tabs, ordinary closure that preserves the Workspace Tab
 
 **Feature Issue**:
 A temporary decision or investigation note stored under the owning Vault Feature's `issues/` directory. A Wayfinder effort groups its `map.md` and numbered decision tickets under `issues/<effort>/`; these are Feature Issues, not implementation tasks.

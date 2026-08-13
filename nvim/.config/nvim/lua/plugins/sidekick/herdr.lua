@@ -115,7 +115,7 @@ local function env_args(env)
 end
 
 ---@param cwd string
----@param scope? string|{ workspace_id?: string }
+---@param scope? string|{ workspace_id?: string, cwd?: string, label?: string }
 ---@param env? table<string, string|boolean>
 ---@return string|nil workspace_id
 ---@return string|nil root_pane_id
@@ -125,21 +125,29 @@ function M.ensure_workspace(cwd, scope, env)
   if type(scope) == "table" and scope.workspace_id then
     return scope.workspace_id, nil, false
   end
-  local workspace_label = type(scope) == "string" and scope or nil
+  local workspace_cwd = type(scope) == "table" and scope.cwd or cwd
+  local workspace_label = type(scope) == "table" and scope.label or (type(scope) == "string" and scope or nil)
   local workspace_id
-  if workspace_label then
+  if type(scope) == "string" then
     local listed
     workspace_id, listed = M.workspace_for_label(workspace_label)
     if not listed then
       return nil, nil, false
     end
   else
-    workspace_id = M.workspace_for_cwd(cwd)
+    workspace_id = M.workspace_for_cwd(workspace_cwd)
+    if not workspace_id and workspace_label then
+      local listed
+      workspace_id, listed = M.workspace_for_label(workspace_label)
+      if not listed then
+        return nil, nil, false
+      end
+    end
   end
   if workspace_id then
     return workspace_id, nil, false
   end
-  local normalized = M.normalize_cwd(cwd)
+  local normalized = M.normalize_cwd(workspace_cwd)
   workspace_label = workspace_label or vim.fn.fnamemodify(normalized, ":t")
   local create_args = { "workspace", "create", "--cwd", normalized, "--label", workspace_label, "--no-focus" }
   vim.list_extend(create_args, env_args(env))
@@ -147,8 +155,7 @@ function M.ensure_workspace(cwd, scope, env)
   if not result or not result.workspace then
     return nil, nil, false
   end
-  return
-    result.workspace.workspace_id,
+  return result.workspace.workspace_id,
     result.root_pane and result.root_pane.pane_id or nil,
     true,
     result.root_pane and result.root_pane.tab_id or nil
@@ -261,31 +268,18 @@ end
 ---@param agent? table
 ---@return boolean
 local function terminal_agent(agent)
-  return not not (agent
-    and agent.name
-    and agent.pane_id
-    and agent.tab_id
-    and agent.workspace_id
-    and agent.terminal_id)
+  return not not (agent and agent.name and agent.pane_id and agent.tab_id and agent.workspace_id and agent.terminal_id)
 end
 
 ---@param agent? table
 ---@return boolean
 local function full_agent(agent)
   local session = agent and agent.agent_session
-  return not not (terminal_agent(agent)
-    and session
-    and session.source
-    and session.kind
-    and session.value)
+  return not not (terminal_agent(agent) and session and session.source and session.kind and session.value)
 end
 
 local function same_session(left, right)
-  return left
-    and right
-    and left.source == right.source
-    and left.kind == right.kind
-    and left.value == right.value
+  return left and right and left.source == right.source and left.kind == right.kind and left.value == right.value
 end
 
 local function tab_info(tab_id)
@@ -361,8 +355,7 @@ end
 ---@return table|nil agent
 function M.start(name, cwd, command, env, scope, tab_label)
   local normalized = M.normalize_cwd(cwd)
-  local resolved_id, bootstrap_pane_id, workspace_created, bootstrap_tab_id =
-    M.ensure_workspace(cwd, scope, env)
+  local resolved_id, bootstrap_pane_id, workspace_created, bootstrap_tab_id = M.ensure_workspace(cwd, scope, env)
   if not resolved_id then
     return nil
   end
@@ -420,12 +413,7 @@ function M.start(name, cwd, command, env, scope, tab_label)
   -- ready or a bounded readiness window elapses.
   local result, err = M.call(start_args, true)
   local readiness_deadline = vim.uv.hrtime() + 10e9
-  while
-    not result
-    and err
-    and err:find("agent_pane_busy", 1, true)
-    and vim.uv.hrtime() < readiness_deadline
-  do
+  while not result and err and err:find("agent_pane_busy", 1, true) and vim.uv.hrtime() < readiness_deadline do
     vim.uv.sleep(200)
     result, err = M.call(start_args, true)
   end
@@ -524,14 +512,18 @@ function M.read_async(target, source, lines, ansi, callback)
   end
   local cmd = { "herdr" }
   vim.list_extend(cmd, args)
-  vim.system(cmd, { text = true }, vim.schedule_wrap(function(result)
-    if result.code ~= 0 then
-      decode(cmd, result)
-      callback(nil)
-      return
-    end
-    callback(result.stdout or "")
-  end))
+  vim.system(
+    cmd,
+    { text = true },
+    vim.schedule_wrap(function(result)
+      if result.code ~= 0 then
+        decode(cmd, result)
+        callback(nil)
+        return
+      end
+      callback(result.stdout or "")
+    end)
+  )
 end
 
 ---@param target string
