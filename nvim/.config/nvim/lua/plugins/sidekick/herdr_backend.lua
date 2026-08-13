@@ -54,12 +54,25 @@ function M:init()
   self.priority = 50
 end
 
+---@param name any
+---@return boolean
+local function named_session(name)
+  if type(name) ~= "string" then
+    return false
+  end
+  local ok, registry = pcall(require, "plugins.sidekick.registry")
+  return ok and registry.parse_session_name(name) ~= nil
+end
+
 function M.sessions()
   local sessions = {}
   local tools = Config.tools()
   for _, agent in ipairs(Herdr.list_agents()) do
     local tool = (agent.name and tools[agent.name]) or (agent.agent and tools[agent.agent])
     if tool then
+      if named_session(agent.name) then
+        agent = Herdr.anchor_agent_worktree(agent) or agent
+      end
       sessions[#sessions + 1] = {
         id = "herdr:" .. agent.terminal_id,
         cwd = agent.foreground_cwd or agent.cwd,
@@ -87,6 +100,9 @@ function M:start()
         label = workspace.label,
       }
     or (self.tool.herdr_workspace_id and { workspace_id = self.tool.herdr_workspace_id } or nil)
+  if named_session(self.tool.name) then
+    scope = Herdr.worktree_scope(self.cwd) or scope
+  end
   local command = self.tool.raw_cmd or self.tool.cmd
   local agent = Herdr.start(self.herdr_agent_name, self.cwd, command, self.tool.env, scope)
   if not agent then

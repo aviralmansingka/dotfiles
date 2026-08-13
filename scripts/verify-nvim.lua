@@ -877,6 +877,7 @@ local function validate_sidekick_herdr()
   end
 
   local original_start = source_herdr.start
+  local original_worktree_scope = source_herdr.worktree_scope
   local forwarded_scope
   local forwarded_starts = 0
   source_herdr.start = function(_, _, _, _, scope)
@@ -888,6 +889,9 @@ local function validate_sidekick_herdr()
       tab_id = "w-bound:t1",
       workspace_id = "w-bound",
     }
+  end
+  source_herdr.worktree_scope = function()
+    return nil
   end
   source_backend.start({
     herdr_agent_name = "codex-workspace-session",
@@ -913,8 +917,157 @@ local function validate_sidekick_herdr()
     fail("an unbound tab should retain cwd-based Herdr fallback: " .. vim.inspect(forwarded_scope))
   end
   source_herdr.start = original_start
+  source_herdr.worktree_scope = original_worktree_scope
   if forwarded_starts ~= 2 or forwarded_scope ~= nil then
     fail("unbound named sessions should not override cwd workspace resolution")
+  end
+
+  local worktree_scope_lookups = 0
+  source_herdr.worktree_scope = function(path)
+    worktree_scope_lookups = worktree_scope_lookups + 1
+    if path == cwd then
+      return { workspace_id = "w-worktree", cwd = cwd }
+    end
+  end
+  forwarded_scope = nil
+  source_herdr.start = function(_, _, _, _, scope)
+    forwarded_scope = vim.deepcopy(scope)
+    return {
+      terminal_id = "term-worktree",
+      pane_id = "w-worktree:p1",
+      tab_id = "w-worktree:t1",
+      workspace_id = "w-worktree",
+    }
+  end
+  source_backend.start({
+    herdr_agent_name = "codex-workspace-session",
+    cwd = cwd,
+    tool = require("sidekick.cli.tool").get("codex-workspace-session"),
+    attach = function()
+      return {}
+    end,
+  })
+  if not forwarded_scope or forwarded_scope.workspace_id ~= "w-worktree" then
+    fail("linked worktree workspace should override a mismatched tab binding: " .. vim.inspect(forwarded_scope))
+  end
+  forwarded_scope = nil
+  source_backend.start({
+    herdr_agent_name = "sk-codex-base",
+    cwd = cwd,
+    tool = require("sidekick.cli.tool").get("codex"),
+    attach = function()
+      return {}
+    end,
+  })
+  source_herdr.start = original_start
+  source_herdr.worktree_scope = original_worktree_scope
+  if forwarded_scope ~= nil or worktree_scope_lookups ~= 1 then
+    fail("base sessions should bypass the linked worktree override: " .. vim.inspect(forwarded_scope))
+  end
+
+  local original_call = source_herdr.call
+  local scope_calls = {}
+  source_herdr.call = function(args)
+    scope_calls[#scope_calls + 1] = vim.deepcopy(args)
+    if args[1] == "worktree" and args[2] == "list" then
+      return {
+        worktrees = {
+          { path = cwd, is_linked_worktree = false },
+          { path = cwd .. "/feature", is_linked_worktree = true },
+        },
+      }
+    elseif args[1] == "worktree" and args[2] == "open" then
+      return { workspace = { workspace_id = "w-opened" } }
+    end
+    return {}
+  end
+  local opened_scope = source_herdr.worktree_scope(cwd .. "/feature/inner")
+  local main_scope = source_herdr.worktree_scope(cwd)
+  source_herdr.call = original_call
+  local open_call
+  for _, call in ipairs(scope_calls) do
+    if call[1] == "worktree" and call[2] == "open" then
+      open_call = call
+    end
+  end
+  if
+    not opened_scope
+    or opened_scope.workspace_id ~= "w-opened"
+    or opened_scope.cwd ~= cwd .. "/feature"
+    or not vim.deep_equal(open_call, { "worktree", "open", "--path", cwd .. "/feature", "--no-focus" })
+  then
+    fail("linked worktree scope should open the anchored workspace: " .. vim.inspect(scope_calls))
+  end
+  if main_scope ~= nil then
+    fail("main checkout cwd should keep tab and cwd workspace resolution: " .. vim.inspect(main_scope))
+  end
+
+  source_herdr.call = function()
+    return nil, "not a git worktree"
+  end
+  local non_git_scope = source_herdr.worktree_scope(cwd)
+  source_herdr.call = original_call
+  if non_git_scope ~= nil then
+    fail("non-Git cwd should keep existing workspace behavior: " .. vim.inspect(non_git_scope))
+  end
+
+  local moved = false
+  local move_calls = 0
+  local move_args
+  local function discovery_agent()
+    return {
+      name = "codex-workspace-session",
+      cwd = cwd,
+      foreground_cwd = cwd .. "/feature/inner",
+      terminal_id = "term-moved",
+      pane_id = "p-moved",
+      tab_id = moved and "t-new" or "t-old",
+      workspace_id = moved and "w-opened" or "w-bound",
+      agent_session = { source = "codex", kind = "thread", value = "thread-1" },
+    }
+  end
+  source_herdr.call = function(args)
+    local family, action = args[1], args[2]
+    if family == "agent" and action == "list" then
+      return { agents = { discovery_agent() } }
+    elseif family == "worktree" and action == "list" then
+      return {
+        worktrees = {
+          { path = cwd, is_linked_worktree = false },
+          { path = cwd .. "/feature", is_linked_worktree = true, open_workspace_id = "w-opened" },
+        },
+      }
+    elseif family == "pane" and action == "move" then
+      move_calls = move_calls + 1
+      move_args = vim.deepcopy(args)
+      moved = true
+      return { pane = { pane_id = "p-moved" } }
+    elseif family == "agent" and action == "get" then
+      return { agent = discovery_agent() }
+    end
+    return {}
+  end
+  local discovered = source_backend.sessions()
+  local anchored = source_backend.sessions()
+  source_herdr.call = original_call
+  if
+    move_calls ~= 1
+    or not vim.deep_equal(
+      move_args,
+      { "pane", "move", "p-moved", "--new-tab", "--workspace", "w-opened", "--label", "codex-workspace-session", "--no-focus" }
+    )
+  then
+    fail("discovery should move a drifted named session into its worktree workspace once: " .. vim.inspect(move_args))
+  end
+  if
+    #discovered ~= 1
+    or discovered[1].herdr_workspace_id ~= "w-opened"
+    or discovered[1].herdr_tab_id ~= "t-new"
+    or discovered[1].herdr_terminal_id ~= "term-moved"
+    or #anchored ~= 1
+    or anchored[1].herdr_workspace_id ~= "w-opened"
+  then
+    fail("discovery should preserve the moved session identity: " .. vim.inspect(discovered))
   end
 
   original_workspace_for_repository = source_herdr.workspace_for_repository
@@ -934,7 +1087,7 @@ local function validate_sidekick_herdr()
     fail("unbound named sessions should resolve their workspace from the repository")
   end
 
-  local original_call = source_herdr.call
+  original_call = source_herdr.call
   local start_calls = {}
   source_herdr.call = function(args)
     start_calls[#start_calls + 1] = args
