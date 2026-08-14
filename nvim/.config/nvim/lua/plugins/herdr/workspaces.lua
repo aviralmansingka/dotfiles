@@ -234,22 +234,29 @@ local function unbind(tab)
   vim.cmd.redrawtabline()
 end
 
+local function resolve_cwd_target(cwd)
+  local context = cwd and herdr.git_context(cwd) or nil
+  return context and context.worktree or (cwd and herdr.normalize_cwd(cwd) or nil)
+end
+
+local function cwd_matches_target(cwd, wanted)
+  if not cwd or not wanted then
+    return false
+  end
+  local context = herdr.git_context(cwd)
+  if context then
+    return context.worktree == wanted
+  end
+  return herdr.normalize_cwd(cwd) == wanted
+end
+
 local function close_tabs(workspace_id, cwd)
-  local wanted_context = cwd and herdr.git_context(cwd) or nil
-  local wanted = wanted_context and wanted_context.worktree or (cwd and herdr.normalize_cwd(cwd) or nil)
+  local wanted = resolve_cwd_target(cwd)
   local targets = {}
   for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
     local workspace = workspace_tabs.get(tab)
     local tab_cwd = workspace and workspace.cwd or nil
-    local tab_context = tab_cwd and herdr.git_context(tab_cwd) or nil
-    if
-      tab_get(tab, vars.id) == workspace_id
-      and (
-        not wanted
-        or (tab_context and tab_context.worktree == wanted)
-        or (not tab_context and tab_cwd and herdr.normalize_cwd(tab_cwd) == wanted)
-      )
-    then
+    if tab_get(tab, vars.id) == workspace_id and (not wanted or cwd_matches_target(tab_cwd, wanted)) then
       targets[#targets + 1] = tab
     end
   end
@@ -301,19 +308,19 @@ function M.agent_closed(workspace_id, cwd)
     return
   end
 
-  local wanted = cwd and herdr.normalize_cwd(cwd) or nil
+  local wanted = resolve_cwd_target(cwd)
   local workspace_has_agents = false
   for _, agent in ipairs(result.agents) do
     if agent.workspace_id == workspace_id then
       workspace_has_agents = true
       local agent_cwd = agent.foreground_cwd or agent.cwd
-      if wanted and agent_cwd and herdr.normalize_cwd(agent_cwd) == wanted then
+      if cwd_matches_target(agent_cwd, wanted) then
         return
       end
     end
   end
 
-  close_tabs(workspace_id, wanted)
+  close_tabs(workspace_id, cwd)
   if workspace_has_agents then
     return
   end
