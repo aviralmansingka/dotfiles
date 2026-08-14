@@ -92,6 +92,18 @@ terraform -chdir=ops/devbox destroy \
 | `tmuxinator` | Tmuxinator session templates                                                |
 | `zsh`        | Zsh shell configuration                                                     |
 
+## Herdr server handoff
+
+When replacing a Herdr server from a Codex tool subprocess, run:
+
+```sh
+herdr-clean-handoff
+```
+
+This performs a live handoff, preserving the repository workspace, exact worktree pane, and resumed Codex session.
+It removes Codex's inherited `NO_COLOR` only from the replacement Herdr server; the invoking process and its other
+subprocesses keep their existing environment.
+
 ## Git auto-sync services
 
 The shared implementation is `scripts/auto-git-sync`. It fetches and merges the remote branch before committing local edits, then asks Pi to resolve Git conflict files if a merge or stash apply leaves conflicts.

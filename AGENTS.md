@@ -10,8 +10,8 @@
 
 Treat repository, worktree, and session identity as three distinct concepts:
 
-- When replacing a Herdr server from Codex, use `herdr-clean-handoff`. Codex tool subprocesses set `NO_COLOR=1`;
-  the helper removes it only from the replacement server while preserving live panes and sessions.
+- For Herdr server replacement from Codex, follow the
+  [color-safe live handoff procedure](README.md#herdr-server-handoff).
 - A Git repository owns exactly one Herdr Workspace. Resolve repository identity from Git's shared common directory,
   so the primary checkout and every linked worktree reuse that same Herdr Workspace.
 - A Git worktree owns at most one durable Sidekick session. The session runs with that worktree as its cwd, inside the
