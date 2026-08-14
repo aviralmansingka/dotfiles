@@ -1058,6 +1058,7 @@ local function validate_sidekick_herdr()
       named_agent(other_agent_name, "idle", 6, "w2", "/worktrees/vault/journal"),
       named_agent("pi-workspace-only", "idle", 7, "w1", "/worktrees/dotfiles/workspace-only"),
       named_agent("review-child", "working", 8, "w1", cwd),
+      named_agent("pi-non-git-session", "idle", 9, "w3", "/tmp/sidekick-non-git/exact-cwd"),
     }
     return vim.tbl_filter(function(agent)
       return agent.pane_id ~= removed_pane_id
@@ -1192,6 +1193,7 @@ local function validate_sidekick_herdr()
         workspaces = {
           { workspace_id = "w1", label = "Workspace One" },
           { workspace_id = "w2", label = "Workspace Two" },
+          { workspace_id = "w3", label = "Non-Git Workspace" },
         },
       }
     end
@@ -1556,9 +1558,11 @@ local function validate_sidekick_herdr()
       end)
       or not vim.tbl_contains(global_lines, "▾ vault · 1 worktree")
       or not vim.tbl_contains(global_lines, "  └─ ·  feature/journal · +21 −9")
+      or not vim.tbl_contains(global_lines, "▾ Non-Git Workspace · 1 worktree")
+      or not vim.tbl_contains(global_lines, "  └─ · exact-cwd")
     then
       fail(
-        "repository rows should mark non-main branches, show the main session name without diff stats, and start expanded: "
+        "repository rows should distinguish branch, main-session, and non-Git cwd labels: "
           .. vim.inspect(global_lines)
       )
     end

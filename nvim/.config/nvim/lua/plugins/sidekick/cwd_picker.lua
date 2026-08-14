@@ -76,8 +76,8 @@ local function diff_stats(context, cache)
   return cache[context.worktree] or nil
 end
 
-local function session_display_label(context, label)
-  return context and context.branch ~= "main" and context.worktree_label or label
+local function session_display_label(context, label, non_git_label)
+  return context and context.branch ~= "main" and context.worktree_label or context and label or non_git_label or label
 end
 
 ---@param entry_cwd string|nil
@@ -487,7 +487,11 @@ local function workspace_groups(first_repository, metric_cache)
       group.worktrees[worktree] = true
       group.agents[#group.agents + 1] = {
         label = label,
-        display_label = session_display_label(context, label),
+        display_label = session_display_label(
+          context,
+          label,
+          vim.fn.fnamemodify(agent.foreground_cwd or agent.cwd or agent.name or tool, ":t")
+        ),
         slug = parsed and parsed.slug,
         toggle_name = parsed and parsed.label or tool,
         tool = tool,
