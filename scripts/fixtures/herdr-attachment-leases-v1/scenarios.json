@@ -1,0 +1,519 @@
+{
+  "schema": "herdr-attachment-leases-v1-scenarios",
+  "version": 1,
+  "lease_duration_ticks": 4,
+  "scenarios": [
+    {
+      "id": "approved_transfer",
+      "purpose": "Replay the user-approved prototype journey from observer request through holder approval.",
+      "setup": {
+        "attached": ["nvim", "web"],
+        "focused": ["nvim"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "request", "surface": "web"},
+          "expect": {
+            "result": "accepted",
+            "lease_state": "transfer_requested",
+            "holder": "nvim",
+            "requester": "web",
+            "deadline": 4
+          }
+        },
+        {
+          "action": {"event": "live_input", "surface": "web"},
+          "expect": {
+            "result": "rejected",
+            "reason": "observer has no live authority",
+            "transcript_revision": 12,
+            "holder": "nvim",
+            "requester": "web"
+          }
+        },
+        {
+          "action": {"event": "approve", "surface": "nvim"},
+          "expect": {
+            "result": "accepted",
+            "lease_state": "held",
+            "holder": "web",
+            "requester": null,
+            "deadline": 4
+          }
+        },
+        {
+          "action": {"event": "live_input", "surface": "web"},
+          "expect": {
+            "result": "accepted",
+            "transcript_revision": 13,
+            "holder": "web"
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "lease_state": "held",
+        "holder": "web",
+        "requester": null,
+        "transcript_revision": 13
+      }
+    },
+    {
+      "id": "denied_transfer_and_renewal",
+      "purpose": "A healthy holder may deny, then renew later without clearing a new pending request.",
+      "setup": {
+        "attached": ["nvim", "web"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "request", "surface": "web"},
+          "expect": {"result": "accepted", "requester": "web"}
+        },
+        {
+          "action": {"event": "tick"},
+          "expect": {"result": "accepted", "clock": 1, "deadline": 4}
+        },
+        {
+          "action": {"event": "deny", "surface": "nvim"},
+          "expect": {
+            "result": "accepted",
+            "lease_state": "held",
+            "holder": "nvim",
+            "requester": null,
+            "deadline": 4
+          }
+        },
+        {
+          "action": {"event": "request", "surface": "web"},
+          "expect": {"result": "accepted", "requester": "web"}
+        },
+        {
+          "action": {"event": "renew", "surface": "nvim"},
+          "expect": {
+            "result": "accepted",
+            "lease_state": "transfer_requested",
+            "holder": "nvim",
+            "requester": "web",
+            "deadline": 5
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "clock": 1,
+        "holder": "nvim",
+        "requester": "web",
+        "deadline": 5
+      }
+    },
+    {
+      "id": "release_promotes_requester",
+      "purpose": "Explicit release promotes the requester while the old holder remains attached as Observer.",
+      "setup": {
+        "attached": ["nvim", "web"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "request", "surface": "web"},
+          "expect": {"result": "accepted", "requester": "web"}
+        },
+        {
+          "action": {"event": "release", "surface": "nvim"},
+          "expect": {
+            "result": "accepted",
+            "lease_state": "held",
+            "holder": "web",
+            "requester": null,
+            "attached": ["nvim", "web"],
+            "deadline": 4
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "holder": "web",
+        "attached": ["nvim", "web"]
+      }
+    },
+    {
+      "id": "close_promotes_requester",
+      "purpose": "Closing the holder unregisters it and promotes the requester.",
+      "setup": {
+        "attached": ["nvim", "web"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "request", "surface": "web"},
+          "expect": {"result": "accepted", "requester": "web"}
+        },
+        {
+          "action": {"event": "close", "surface": "nvim"},
+          "expect": {
+            "result": "accepted",
+            "holder": "web",
+            "requester": null,
+            "attached": ["web"],
+            "deadline": 4
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "lease_state": "held",
+        "holder": "web",
+        "attached": ["web"]
+      }
+    },
+    {
+      "id": "hide_promotes_requester",
+      "purpose": "Hiding the holder releases immediately, unregisters it, and promotes the requester.",
+      "setup": {
+        "attached": ["nvim", "web"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "request", "surface": "web"},
+          "expect": {"result": "accepted", "requester": "web"}
+        },
+        {
+          "action": {"event": "hide", "surface": "nvim"},
+          "expect": {
+            "result": "accepted",
+            "holder": "web",
+            "requester": null,
+            "attached": ["web"]
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "lease_state": "held",
+        "holder": "web"
+      }
+    },
+    {
+      "id": "detach_promotes_requester",
+      "purpose": "Detaching the holder releases immediately and promotes the requester.",
+      "setup": {
+        "attached": ["nvim", "term"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "request", "surface": "term"},
+          "expect": {"result": "accepted", "requester": "term"}
+        },
+        {
+          "action": {"event": "detach", "surface": "nvim"},
+          "expect": {
+            "result": "accepted",
+            "holder": "term",
+            "requester": null,
+            "attached": ["term"]
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "lease_state": "held",
+        "holder": "term"
+      }
+    },
+    {
+      "id": "switch_promotes_requester",
+      "purpose": "An explicit switch is a deliberate holder release to the pending requester.",
+      "setup": {
+        "attached": ["nvim", "term"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "request", "surface": "term"},
+          "expect": {"result": "accepted", "requester": "term"}
+        },
+        {
+          "action": {"event": "explicit_switch", "surface": "nvim"},
+          "expect": {
+            "result": "accepted",
+            "holder": "term",
+            "requester": null,
+            "attached": ["nvim", "term"],
+            "deadline": 4
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "lease_state": "held",
+        "holder": "term"
+      }
+    },
+    {
+      "id": "expiry_promotes_requester",
+      "purpose": "A stale holder expires at the deterministic deadline and the requester self-heals into authority.",
+      "setup": {
+        "attached": ["nvim", "term"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "request", "surface": "term"},
+          "expect": {"result": "accepted", "requester": "term"}
+        },
+        {"action": {"event": "tick"}, "expect": {"clock": 1, "holder": "nvim"}},
+        {"action": {"event": "tick"}, "expect": {"clock": 2, "holder": "nvim"}},
+        {"action": {"event": "tick"}, "expect": {"clock": 3, "holder": "nvim"}},
+        {
+          "action": {"event": "tick"},
+          "expect": {
+            "result": "accepted",
+            "reason": "expired",
+            "clock": 4,
+            "holder": "term",
+            "requester": null,
+            "deadline": 8
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "lease_state": "held",
+        "holder": "term",
+        "deadline": 8
+      }
+    },
+    {
+      "id": "expiry_without_requester_unholds",
+      "purpose": "A stale holder with no requester expires to the valid zero-holder state.",
+      "setup": {
+        "attached": ["nvim"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {"action": {"event": "tick"}, "expect": {"clock": 1}},
+        {"action": {"event": "tick"}, "expect": {"clock": 2}},
+        {"action": {"event": "tick"}, "expect": {"clock": 3}},
+        {
+          "action": {"event": "tick"},
+          "expect": {
+            "result": "accepted",
+            "reason": "expired",
+            "clock": 4,
+            "lease_state": "unheld",
+            "holder": null,
+            "requester": null,
+            "deadline": null
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "lease_state": "unheld",
+        "attached": ["nvim"]
+      }
+    },
+    {
+      "id": "second_request_rejected",
+      "purpose": "Exactly one requester may wait; closing it cancels only the request.",
+      "setup": {
+        "attached": ["nvim", "web"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "open", "surface": "term"},
+          "expect": {
+            "result": "accepted",
+            "holder": "nvim",
+            "attached": ["nvim", "web", "term"]
+          }
+        },
+        {
+          "action": {"event": "request", "surface": "web"},
+          "expect": {"result": "accepted", "requester": "web"}
+        },
+        {
+          "action": {"event": "request", "surface": "term"},
+          "expect": {
+            "result": "rejected",
+            "reason": "request already pending",
+            "holder": "nvim",
+            "requester": "web",
+            "deadline": 4
+          }
+        },
+        {
+          "action": {"event": "close", "surface": "web"},
+          "expect": {
+            "result": "accepted",
+            "lease_state": "held",
+            "holder": "nvim",
+            "requester": null,
+            "attached": ["nvim", "term"],
+            "deadline": 4
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "holder": "nvim",
+        "requester": null
+      }
+    },
+    {
+      "id": "observer_mutations_rejected",
+      "purpose": "Observer input and mouse attempts cannot mutate authority or transcript state.",
+      "setup": {
+        "attached": ["nvim", "web"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "live_input", "surface": "web"},
+          "expect": {
+            "result": "rejected",
+            "reason": "observer has no live authority",
+            "transcript_revision": 12,
+            "holder": "nvim"
+          }
+        },
+        {
+          "action": {"event": "interactive_mouse", "surface": "web"},
+          "expect": {
+            "result": "rejected",
+            "reason": "observer has no live authority",
+            "transcript_revision": 12,
+            "holder": "nvim"
+          }
+        },
+        {
+          "action": {"event": "live_input", "surface": "nvim"},
+          "expect": {"result": "accepted", "transcript_revision": 13}
+        },
+        {
+          "action": {"event": "interactive_mouse", "surface": "nvim"},
+          "expect": {"result": "accepted", "transcript_revision": 13}
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "holder": "nvim",
+        "transcript_revision": 13
+      }
+    },
+    {
+      "id": "focus_and_history_are_non_authoritative",
+      "purpose": "Focus and history projection update surface state without granting live authority.",
+      "setup": {
+        "attached": ["nvim", "web"],
+        "focused": ["nvim"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "focus", "surface": "web"},
+          "expect": {
+            "result": "accepted",
+            "focused": ["nvim", "web"],
+            "holder": "nvim",
+            "lease_state": "held"
+          }
+        },
+        {
+          "action": {"event": "read_history", "surface": "web"},
+          "expect": {
+            "result": "accepted",
+            "holder": "nvim",
+            "requester": null,
+            "transcript_revision": 12
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "holder": "nvim",
+        "focused": ["nvim", "web"]
+      }
+    },
+    {
+      "id": "all_surfaces_close_session_continues",
+      "purpose": "Closing every surface leaves the Agent Session durable and allows the same surface to reopen it.",
+      "setup": {
+        "attached": ["nvim", "web"],
+        "holder": "nvim"
+      },
+      "steps": [
+        {
+          "action": {"event": "close", "surface": "web"},
+          "expect": {"result": "accepted", "attached": ["nvim"], "holder": "nvim"}
+        },
+        {
+          "action": {"event": "close", "surface": "nvim"},
+          "expect": {
+            "result": "accepted",
+            "attached": [],
+            "lease_state": "unheld",
+            "holder": null,
+            "deadline": null
+          }
+        },
+        {
+          "action": {"event": "open", "surface": "web"},
+          "expect": {
+            "result": "accepted",
+            "attached": ["web"],
+            "holder": "web",
+            "deadline": 4,
+            "session_id": "agent-session-42"
+          }
+        },
+        {
+          "action": {"event": "close", "surface": "web"},
+          "expect": {
+            "result": "accepted",
+            "attached": [],
+            "lease_state": "unheld",
+            "session_id": "agent-session-42"
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "lease_state": "unheld",
+        "attached": [],
+        "transcript_revision": 12
+      }
+    },
+    {
+      "id": "unheld_request_grants_immediately",
+      "purpose": "An attached Observer can acquire an unheld lease without transfer choreography.",
+      "setup": {
+        "attached": ["web"],
+        "holder": null
+      },
+      "steps": [
+        {
+          "action": {"event": "request", "surface": "web"},
+          "expect": {
+            "result": "accepted",
+            "reason": "granted unheld lease",
+            "lease_state": "held",
+            "holder": "web",
+            "requester": null,
+            "deadline": 4
+          }
+        }
+      ],
+      "final": {
+        "session_id": "agent-session-42",
+        "lease_state": "held",
+        "holder": "web"
+      }
+    }
+  ]
+}

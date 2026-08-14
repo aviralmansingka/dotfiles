@@ -1,0 +1,267 @@
+{
+  "schema": "herdr-attachment-leases-v2-plans",
+  "version": 1,
+  "cases": [
+    {
+      "id": "nvim_holder",
+      "session": {
+        "identity": {
+          "agent": "codex",
+          "kind": "id",
+          "source": "herdr:codex",
+          "value": "codex-session-42"
+        },
+        "agent_provider": "Codex",
+        "tui_provider": "Codex TUI"
+      },
+      "surface": {"id": "attachment-nvim", "kind": "nvim", "attached": true},
+      "lease": {
+        "state": "held",
+        "holder_id": "attachment-nvim",
+        "requester_id": null,
+        "deadline": {"kind": "fixture_tick", "value": 4}
+      },
+      "revision": 7,
+      "expected": {
+        "role": "lease_holder",
+        "request_pending": false,
+        "live_input": "allow",
+        "interactive_mouse": "allow",
+        "history_provider": "Sidekick buffer",
+        "search_copy_provider": "Neovim",
+        "opener_provider": "Neovim navigation",
+        "paste_provider": "Neovim normalization"
+      }
+    },
+    {
+      "id": "terminal_observer",
+      "session": {
+        "identity": {
+          "agent": "codex",
+          "kind": "id",
+          "source": "herdr:codex",
+          "value": "codex-session-42"
+        },
+        "agent_provider": "Codex",
+        "tui_provider": "Codex TUI"
+      },
+      "surface": {"id": "attachment-terminal", "kind": "terminal", "attached": true},
+      "lease": {
+        "state": "held",
+        "holder_id": "attachment-nvim",
+        "requester_id": null,
+        "deadline": {"kind": "fixture_tick", "value": 4}
+      },
+      "revision": 7,
+      "expected": {
+        "role": "observer",
+        "request_pending": false,
+        "live_input": "deny",
+        "interactive_mouse": "deny",
+        "history_provider": "Herdr copy mode",
+        "search_copy_provider": "Herdr / host terminal",
+        "opener_provider": "host terminal",
+        "paste_provider": "terminal input normalization"
+      }
+    },
+    {
+      "id": "nvim_holder_during_transfer",
+      "session": {
+        "identity": {
+          "agent": "pi",
+          "kind": "path",
+          "source": "herdr:pi",
+          "value": "/fixtures/pi-session.jsonl"
+        },
+        "agent_provider": "Pi",
+        "tui_provider": "Pi TUI"
+      },
+      "surface": {"id": "attachment-nvim", "kind": "nvim", "attached": true},
+      "lease": {
+        "state": "transfer_requested",
+        "holder_id": "attachment-nvim",
+        "requester_id": "attachment-terminal",
+        "deadline": {"kind": "fixture_tick", "value": 4}
+      },
+      "revision": 8,
+      "expected": {
+        "role": "lease_holder",
+        "request_pending": false,
+        "live_input": "allow",
+        "interactive_mouse": "allow",
+        "history_provider": "Sidekick buffer",
+        "search_copy_provider": "Neovim",
+        "opener_provider": "Neovim navigation",
+        "paste_provider": "Neovim normalization"
+      }
+    },
+    {
+      "id": "terminal_pending_requester",
+      "session": {
+        "identity": {
+          "agent": "pi",
+          "kind": "path",
+          "source": "herdr:pi",
+          "value": "/fixtures/pi-session.jsonl"
+        },
+        "agent_provider": "Pi",
+        "tui_provider": "Pi TUI"
+      },
+      "surface": {"id": "attachment-terminal", "kind": "terminal", "attached": true},
+      "lease": {
+        "state": "transfer_requested",
+        "holder_id": "attachment-nvim",
+        "requester_id": "attachment-terminal",
+        "deadline": {"kind": "fixture_tick", "value": 4}
+      },
+      "revision": 8,
+      "expected": {
+        "role": "observer",
+        "request_pending": true,
+        "live_input": "deny",
+        "interactive_mouse": "deny",
+        "history_provider": "Herdr copy mode",
+        "search_copy_provider": "Herdr / host terminal",
+        "opener_provider": "host terminal",
+        "paste_provider": "terminal input normalization"
+      }
+    },
+    {
+      "id": "terminal_holder_after_transfer",
+      "session": {
+        "identity": {
+          "agent": "pi",
+          "kind": "path",
+          "source": "herdr:pi",
+          "value": "/fixtures/pi-session.jsonl"
+        },
+        "agent_provider": "Pi",
+        "tui_provider": "Pi TUI"
+      },
+      "surface": {"id": "attachment-terminal", "kind": "terminal", "attached": true},
+      "lease": {
+        "state": "held",
+        "holder_id": "attachment-terminal",
+        "requester_id": null,
+        "deadline": {"kind": "fixture_tick", "value": 8}
+      },
+      "revision": 9,
+      "expected": {
+        "role": "lease_holder",
+        "request_pending": false,
+        "live_input": "allow",
+        "interactive_mouse": "allow",
+        "history_provider": "Herdr copy mode",
+        "search_copy_provider": "Herdr / host terminal",
+        "opener_provider": "host terminal",
+        "paste_provider": "terminal input normalization"
+      }
+    },
+    {
+      "id": "nvim_observer_after_transfer",
+      "session": {
+        "identity": {
+          "agent": "pi",
+          "kind": "path",
+          "source": "herdr:pi",
+          "value": "/fixtures/pi-session.jsonl"
+        },
+        "agent_provider": "Pi",
+        "tui_provider": "Pi TUI"
+      },
+      "surface": {"id": "attachment-nvim", "kind": "nvim", "attached": true},
+      "lease": {
+        "state": "held",
+        "holder_id": "attachment-terminal",
+        "requester_id": null,
+        "deadline": {"kind": "fixture_tick", "value": 8}
+      },
+      "revision": 9,
+      "expected": {
+        "role": "observer",
+        "request_pending": false,
+        "live_input": "deny",
+        "interactive_mouse": "deny",
+        "history_provider": "Sidekick buffer",
+        "search_copy_provider": "Neovim",
+        "opener_provider": "Neovim navigation",
+        "paste_provider": "Neovim normalization"
+      }
+    },
+    {
+      "id": "nvim_observer_unheld",
+      "session": {
+        "identity": {
+          "agent": "codex",
+          "kind": "id",
+          "source": "herdr:codex",
+          "value": "codex-session-42"
+        },
+        "agent_provider": "Codex",
+        "tui_provider": "Codex TUI"
+      },
+      "surface": {"id": "attachment-nvim", "kind": "nvim", "attached": true},
+      "lease": {
+        "state": "unheld",
+        "holder_id": null,
+        "requester_id": null,
+        "deadline": null
+      },
+      "revision": 10,
+      "expected": {
+        "role": "observer",
+        "request_pending": false,
+        "live_input": "deny",
+        "interactive_mouse": "deny",
+        "history_provider": "Sidekick buffer",
+        "search_copy_provider": "Neovim",
+        "opener_provider": "Neovim navigation",
+        "paste_provider": "Neovim normalization"
+      }
+    },
+    {
+      "id": "detached_surface_rejected",
+      "session": {
+        "identity": {
+          "agent": "codex",
+          "kind": "id",
+          "source": "herdr:codex",
+          "value": "codex-session-42"
+        },
+        "agent_provider": "Codex",
+        "tui_provider": "Codex TUI"
+      },
+      "surface": {"id": "attachment-nvim", "kind": "nvim", "attached": false},
+      "lease": {
+        "state": "unheld",
+        "holder_id": null,
+        "requester_id": null,
+        "deadline": null
+      },
+      "revision": 10,
+      "expected_error": "surface_detached"
+    },
+    {
+      "id": "unknown_profile_rejected",
+      "session": {
+        "identity": {
+          "agent": "codex",
+          "kind": "id",
+          "source": "herdr:codex",
+          "value": "codex-session-42"
+        },
+        "agent_provider": "Codex",
+        "tui_provider": "Codex TUI"
+      },
+      "surface": {"id": "attachment-web", "kind": "web", "attached": true},
+      "lease": {
+        "state": "unheld",
+        "holder_id": null,
+        "requester_id": null,
+        "deadline": null
+      },
+      "revision": 10,
+      "expected_error": "unknown surface profile: web"
+    }
+  ]
+}

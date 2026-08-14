@@ -35,3 +35,29 @@ _Avoid_: Neovim status, inferred status
 **Worktree**:
 A Git checkout whose creation, opening, and removal are owned entirely by Herdr. Neovim does not expose or manage the worktree lifecycle.
 _Avoid_: workspace
+
+## Agent Attachments
+
+**Agent Session**:
+A durable identity for one running agent whose conversation continues independently of any user-interface surface.
+_Avoid_: Neovim session, terminal session, pane when referring to the agent
+
+**Surface Attachment**:
+A client's view of an Agent Session with a declared set of surface capabilities.
+_Avoid_: attached session, client session
+
+**Attachment Lease**:
+Herdr's time-bounded grant giving one Surface Attachment exclusive authority for live input and interactive mouse routing.
+_Avoid_: takeover
+
+**Lease Holder**:
+The Surface Attachment that currently holds the Attachment Lease. An Agent Session may have no Lease Holder.
+_Avoid_: owner, active attachment
+
+**Observer**:
+A Surface Attachment that can read session status and history without authority for live input or interactive mouse routing.
+_Avoid_: secondary attachment, passive holder
+
+**Capability Plan**:
+The inspectable assignment of session and surface capabilities to their canonical authorities for one Surface Attachment.
+_Avoid_: profile, backend settings

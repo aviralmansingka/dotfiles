@@ -1,0 +1,331 @@
+#!/usr/bin/env python3
+"""Verify the Phase 1 V2 Capability Plan contract and fixtures."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any, NoReturn
+
+
+REPO = Path(__file__).resolve().parent.parent
+CONTRACT_DOC = REPO / "docs/herdr-attachment-leases-v2.md"
+CONTRACT_JSON = REPO / "docs/contracts/herdr-attachment-leases-v2.json"
+V0_JSON = REPO / "docs/contracts/herdr-attachment-leases-v0.json"
+PLANS = REPO / "scripts/fixtures/herdr-attachment-leases-v2/plans.json"
+
+CAPABILITY_KEYS = [
+    "session_identity_and_lifecycle",
+    "conversation_and_model_state",
+    "live_rendering",
+    "transcript_storage",
+    "historical_view",
+    "search_selection_and_copy",
+    "live_input",
+    "interactive_mouse_routing",
+    "link_and_file_opening",
+    "paste_and_file_ingestion",
+    "seen_and_unseen_state",
+]
+
+EXPECTED_CONTRACT = {
+    "contract": "herdr-attachment-leases",
+    "phase": 1,
+    "milestone": "V2",
+    "status": "frozen",
+    "extends": {
+        "milestone": "V1",
+        "contract": "docs/contracts/herdr-attachment-leases-v1.json",
+    },
+    "schema": {"name": "herdr.capability-plan", "major": 1},
+    "inspect_command": {
+        "human": "herdr attachment plan <attachment-id>",
+        "json": "herdr attachment plan <attachment-id> --format json",
+        "success_envelope": "result.capability_plan",
+        "errors": ["attachment_not_found", "surface_detached", "plan_unavailable"],
+    },
+    "required_fields": [
+        "schema",
+        "version",
+        "revision",
+        "agent_session",
+        "surface_attachment",
+        "lease",
+        "capabilities",
+        "compatibility",
+    ],
+    "resolution_inputs": [
+        "V0 authority contract",
+        "V1 lease snapshot",
+        "surface declaration",
+        "agent provider",
+    ],
+    "surface_profiles": {
+        "nvim": {
+            "historical_view": "Sidekick buffer",
+            "search_selection_and_copy": "Neovim",
+            "live_event_router": "Sidekick adapter",
+            "link_and_file_opening": "Neovim navigation",
+            "paste_and_file_ingestion": "Neovim normalization",
+        },
+        "terminal": {
+            "historical_view": "Herdr copy mode",
+            "search_selection_and_copy": "Herdr / host terminal",
+            "live_event_router": "Herdr terminal adapter",
+            "link_and_file_opening": "host terminal",
+            "paste_and_file_ingestion": "terminal input normalization",
+        },
+    },
+    "compatibility": {
+        "same_major_unknown_fields": "ignore",
+        "missing_required_fields": "reject",
+        "unsupported_major": "reject",
+        "unknown_surface_profile": "reject before attachment",
+        "missing_plan": "fail closed for live input and interactive mouse; never fall back to takeover",
+        "stale_revision": "refresh before live input or interactive mouse",
+        "herdr_0_8_sidekick": "unchanged in Phase 1; does not emit or consume Capability Plans",
+    },
+    "invariants": [
+        "Every attached surface receives one complete plan for one Agent Session and one Surface Attachment.",
+        "Each V0 capability appears exactly once with its V0 canonical authority.",
+        "Only the Lease Holder plan allows live input and interactive mouse routing.",
+        "A pending requester remains an Observer until promotion.",
+        "History, search, copy, open, paste, and focus providers are surface-native and do not grant lease authority.",
+        "A plan is a revisioned snapshot and must be refreshed after lease state changes.",
+        "Missing, stale, malformed, or unsupported plans fail closed for live authority.",
+    ],
+    "out_of_scope": [
+        "V3 Pi and Codex executable surface scenarios",
+        "runtime implementation of attachment plan commands",
+        "migration of Herdr 0.8 or Sidekick from unconditional takeover",
+    ],
+}
+
+CASES = {
+    "V2.1": "Capability Plan schema and command contract",
+    "V2.2": "surface plan resolution",
+    "V2.3": "compatibility and V1 regression",
+}
+
+
+def fail(message: str) -> NoReturn:
+    raise AssertionError(message)
+
+
+def run(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        args,
+        cwd=REPO,
+        check=check,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+
+def require_text(path: Path) -> str:
+    if not path.is_file():
+        fail(f"required V2 artifact is missing: {path.relative_to(REPO)}")
+    return path.read_text()
+
+
+def authority_map() -> dict[str, str]:
+    contract = json.loads(require_text(V0_JSON))
+    if len(contract["capabilities"]) != len(CAPABILITY_KEYS):
+        fail("V0 authority capability count differs from the V2 key set")
+    return {
+        key: capability["canonical_authority"]
+        for key, capability in zip(CAPABILITY_KEYS, contract["capabilities"])
+    }
+
+
+def resolve_plan(case: dict[str, Any]) -> dict[str, Any]:
+    session = case["session"]
+    surface = case["surface"]
+    lease = case["lease"]
+    profile = EXPECTED_CONTRACT["surface_profiles"].get(surface["kind"])
+    if profile is None:
+        fail(f"unknown surface profile: {surface['kind']}")
+    if not surface.get("attached"):
+        fail("surface_detached")
+
+    holder = lease["holder_id"] == surface["id"]
+    requester = lease["requester_id"] == surface["id"]
+    role = "lease_holder" if holder else "observer"
+    authorities = authority_map()
+    providers = {
+        "session_identity_and_lifecycle": "Herdr",
+        "conversation_and_model_state": session["agent_provider"],
+        "live_rendering": session["tui_provider"],
+        "transcript_storage": "Herdr",
+        "historical_view": profile["historical_view"],
+        "search_selection_and_copy": profile["search_selection_and_copy"],
+        "live_input": profile["live_event_router"],
+        "interactive_mouse_routing": profile["live_event_router"],
+        "link_and_file_opening": profile["link_and_file_opening"],
+        "paste_and_file_ingestion": profile["paste_and_file_ingestion"],
+        "seen_and_unseen_state": "Herdr",
+    }
+    modes = {
+        "session_identity_and_lifecycle": "request_or_reopen",
+        "conversation_and_model_state": "same_running_agent",
+        "live_rendering": "display",
+        "transcript_storage": "read_snapshot",
+        "historical_view": "native",
+        "search_selection_and_copy": "native",
+        "live_input": "allow" if holder else "deny",
+        "interactive_mouse_routing": "allow" if holder else "deny",
+        "link_and_file_opening": "native",
+        "paste_and_file_ingestion": "native",
+        "seen_and_unseen_state": "report_focus",
+    }
+    capabilities = [
+        {
+            "key": key,
+            "canonical_authority": authorities[key],
+            "provider": providers[key],
+            "mode": modes[key],
+        }
+        for key in CAPABILITY_KEYS
+    ]
+    return {
+        "schema": "herdr.capability-plan",
+        "version": 1,
+        "revision": case["revision"],
+        "agent_session": session["identity"],
+        "surface_attachment": {"id": surface["id"], "kind": surface["kind"]},
+        "lease": {
+            "state": lease["state"],
+            "role": role,
+            "holder_id": lease["holder_id"],
+            "requester_id": lease["requester_id"],
+            "deadline": lease["deadline"],
+            "request_pending": requester,
+        },
+        "capabilities": capabilities,
+        "compatibility": {
+            "mode": "lease_aware",
+            "unknown_fields": "ignore_same_major",
+            "live_authority_on_error": "fail_closed",
+        },
+    }
+
+
+def summary(plan: dict[str, Any]) -> dict[str, Any]:
+    capabilities = {item["key"]: item for item in plan["capabilities"]}
+    return {
+        "role": plan["lease"]["role"],
+        "request_pending": plan["lease"]["request_pending"],
+        "live_input": capabilities["live_input"]["mode"],
+        "interactive_mouse": capabilities["interactive_mouse_routing"]["mode"],
+        "history_provider": capabilities["historical_view"]["provider"],
+        "search_copy_provider": capabilities["search_selection_and_copy"]["provider"],
+        "opener_provider": capabilities["link_and_file_opening"]["provider"],
+        "paste_provider": capabilities["paste_and_file_ingestion"]["provider"],
+    }
+
+
+def verify_schema() -> None:
+    contract = json.loads(require_text(CONTRACT_JSON))
+    if contract != EXPECTED_CONTRACT:
+        fail(
+            "machine-readable V2 Capability Plan contract differs from the frozen contract\n"
+            f"expected={json.dumps(EXPECTED_CONTRACT, indent=2)}\n"
+            f"actual={json.dumps(contract, indent=2)}"
+        )
+    doc = require_text(CONTRACT_DOC)
+    for command in EXPECTED_CONTRACT["inspect_command"].values():
+        if isinstance(command, str) and command not in doc:
+            fail(f"V2 document is missing inspect command contract: {command}")
+    for invariant in EXPECTED_CONTRACT["invariants"]:
+        if invariant not in doc:
+            fail(f"V2 document is missing invariant: {invariant}")
+
+
+def verify_plans() -> None:
+    fixture = json.loads(require_text(PLANS))
+    if fixture.get("schema") != "herdr-attachment-leases-v2-plans" or fixture.get("version") != 1:
+        fail("plan fixture has the wrong schema or version")
+    cases = fixture.get("cases")
+    if not isinstance(cases, list) or len(cases) < 6:
+        fail("plan fixture must contain at least six representative cases")
+    seen: set[str] = set()
+    resolved: dict[str, dict[str, Any]] = {}
+    for case in cases:
+        case_id = case["id"]
+        if case_id in seen:
+            fail(f"duplicate plan case: {case_id}")
+        seen.add(case_id)
+        try:
+            plan = resolve_plan(case)
+        except AssertionError as error:
+            expected_error = case.get("expected_error")
+            if str(error) != expected_error:
+                fail(f"{case_id}: expected_error={expected_error!r} actual={str(error)!r}")
+            continue
+        if case.get("expected_error"):
+            fail(f"{case_id}: expected error but plan resolved")
+        if [item["key"] for item in plan["capabilities"]] != CAPABILITY_KEYS:
+            fail(f"{case_id}: capabilities are incomplete or out of order")
+        if len({item["key"] for item in plan["capabilities"]}) != len(CAPABILITY_KEYS):
+            fail(f"{case_id}: duplicate capabilities")
+        if summary(plan) != case["expected"]:
+            fail(
+                f"{case_id}: plan summary mismatch\n"
+                f"expected={json.dumps(case['expected'], indent=2)}\n"
+                f"actual={json.dumps(summary(plan), indent=2)}"
+            )
+        resolved[case_id] = plan
+
+    holder = resolved.get("nvim_holder")
+    doc = require_text(CONTRACT_DOC)
+    match = re.search(r"```json capability-plan-example\n(?P<json>.*?)\n```", doc, re.DOTALL)
+    if not match:
+        fail("V2 document lacks the representative capability-plan-example block")
+    example = json.loads(match.group("json"))
+    if example != holder:
+        fail("representative V2 JSON output differs from the executable nvim_holder plan")
+
+
+def verify_compatibility() -> None:
+    doc = require_text(CONTRACT_DOC)
+    for behavior in EXPECTED_CONTRACT["compatibility"].values():
+        if behavior not in doc:
+            fail(f"V2 document is missing compatibility behavior: {behavior}")
+    v1 = run("scripts/verify-herdr-attachment-leases-v1", check=False)
+    if v1.returncode:
+        fail(f"V1 regression failed:\n{v1.stdout}")
+    expected = [
+        "V1.1 lifecycle contract: PASS",
+        "V1.2 executable transition journeys: PASS",
+        "V1.3 V0 regression and unchanged runtime: PASS",
+    ]
+    if v1.stdout.strip().splitlines() != expected:
+        fail(f"V1 regression output differs:\n{v1.stdout}")
+
+
+VERIFY = {"V2.1": verify_schema, "V2.2": verify_plans, "V2.3": verify_compatibility}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("case", nargs="?", choices=CASES)
+    args = parser.parse_args()
+    selected = [args.case] if args.case else list(CASES)
+    for case in selected:
+        try:
+            VERIFY[case]()
+        except (AssertionError, json.JSONDecodeError, OSError, subprocess.CalledProcessError) as error:
+            print(f"{case} {CASES[case]}: FAIL", file=sys.stderr)
+            print(error, file=sys.stderr)
+            return 1
+        print(f"{case} {CASES[case]}: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

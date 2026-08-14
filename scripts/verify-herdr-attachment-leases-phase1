@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+for case in V0.1 V0.2 V0.3; do
+  scripts/verify-herdr-attachment-leases-v0 "$case"
+done
+for case in V1.1 V1.2 V1.3; do
+  scripts/verify-herdr-attachment-leases-v1 "$case"
+done
+for case in V2.1 V2.2 V2.3; do
+  scripts/verify-herdr-attachment-leases-v2 "$case"
+done
+for case in V3.1 V3.2 V3.3; do
+  scripts/verify-herdr-attachment-leases-v3 "$case"
+done

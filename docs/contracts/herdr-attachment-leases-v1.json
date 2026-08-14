@@ -1,0 +1,147 @@
+{
+  "contract": "herdr-attachment-leases",
+  "phase": 1,
+  "milestone": "V1",
+  "status": "frozen",
+  "extends": {
+    "milestone": "V0",
+    "contract": "docs/contracts/herdr-attachment-leases-v0.json"
+  },
+  "prototype_evidence": {
+    "branch": "prototype/herdr-attachment-leases",
+    "commit": "02a7cf94c22509da4944be4582952bd90bdbee46"
+  },
+  "lease_states": [
+    {
+      "state": "unheld",
+      "holder": "absent",
+      "requester": "absent",
+      "deadline": "absent"
+    },
+    {
+      "state": "held",
+      "holder": "required",
+      "requester": "absent",
+      "deadline": "required"
+    },
+    {
+      "state": "transfer_requested",
+      "holder": "required",
+      "requester": "required and different from holder",
+      "deadline": "required"
+    }
+  ],
+  "attachment_roles": [
+    {
+      "role": "Lease Holder",
+      "live_input": true,
+      "interactive_mouse": true
+    },
+    {
+      "role": "Observer",
+      "live_input": false,
+      "interactive_mouse": false
+    }
+  ],
+  "timing": {
+    "fixture_clock": "deterministic integer ticks",
+    "fixture_lease_duration_ticks": 4,
+    "production_duration": "deferred to Phase 2 measurement"
+  },
+  "decisions": [
+    "A request for an unheld Attachment Lease is granted immediately.",
+    "Exactly one transfer request may wait behind a healthy Lease Holder.",
+    "The Lease Holder retains live authority while transfer is requested.",
+    "Only the Lease Holder may approve or deny a healthy transfer request.",
+    "Release, hide, close, detach, explicit switch, or expiry promotes the pending requester; without one the lease becomes unheld.",
+    "A Lease Holder may renew while a transfer request is pending, without clearing that request."
+  ],
+  "events": [
+    {
+      "event": "open",
+      "actor": "detached Surface Attachment",
+      "effect": "Attach; grant immediately when unheld, otherwise become Observer."
+    },
+    {
+      "event": "request",
+      "actor": "Observer",
+      "effect": "Grant when unheld; otherwise record one pending requester without displacing the Lease Holder."
+    },
+    {
+      "event": "approve",
+      "actor": "Lease Holder",
+      "effect": "Promote the requester and start a fresh lease deadline."
+    },
+    {
+      "event": "deny",
+      "actor": "Lease Holder",
+      "effect": "Clear the requester while preserving the holder and existing deadline."
+    },
+    {
+      "event": "renew",
+      "actor": "Lease Holder",
+      "effect": "Start a fresh deadline and preserve any pending requester."
+    },
+    {
+      "event": "release",
+      "actor": "Lease Holder",
+      "effect": "Promote the requester or make the lease unheld; the releasing surface remains an Observer."
+    },
+    {
+      "event": "hide_or_close_or_detach",
+      "actor": "attached Surface Attachment",
+      "effect": "Unregister the surface; if it held the lease, promote the requester or make the lease unheld."
+    },
+    {
+      "event": "explicit_switch",
+      "actor": "Lease Holder",
+      "effect": "Release deliberately and promote the pending requester."
+    },
+    {
+      "event": "tick",
+      "actor": "Herdr clock",
+      "effect": "Advance deterministic time; at the deadline, expire and promote the requester or make the lease unheld."
+    },
+    {
+      "event": "live_input",
+      "actor": "Surface Attachment",
+      "effect": "Advance the transcript only for the Lease Holder; reject Observer input without state mutation."
+    },
+    {
+      "event": "interactive_mouse",
+      "actor": "Surface Attachment",
+      "effect": "Route only for the Lease Holder; reject Observer mouse events without state mutation."
+    },
+    {
+      "event": "read_history_or_focus",
+      "actor": "attached Surface Attachment",
+      "effect": "Update surface projection state without changing lease authority."
+    }
+  ],
+  "release_causes": [
+    "explicit release",
+    "hide",
+    "close",
+    "detach",
+    "explicit switch",
+    "expiry"
+  ],
+  "invariants": [
+    "Agent Session identity never changes across attachment or lease transitions.",
+    "There are zero or one Lease Holders and zero or one pending requesters.",
+    "The Lease Holder and pending requester are attached and are different Surface Attachments.",
+    "Every held lease has one finite deadline; an unheld lease has none.",
+    "A pending transfer does not reduce the Lease Holder's live authority.",
+    "Observer live-input and interactive-mouse attempts are rejected without authoritative state mutation.",
+    "History reads and focus reports never grant or transfer an Attachment Lease.",
+    "Release and expiry promote the pending requester; without one they leave the lease unheld.",
+    "Renewal preserves a pending requester while replacing the deadline.",
+    "Only accepted Lease Holder live input advances the canonical transcript revision."
+  ],
+  "out_of_scope": [
+    "V2 Capability Plan schema, commands, and compatibility behavior",
+    "V3 Pi and Codex executable surface integration",
+    "production heartbeat and expiry durations",
+    "runtime changes to Herdr, Sidekick, Pi, or Codex"
+  ]
+}

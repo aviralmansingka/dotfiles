@@ -1,0 +1,316 @@
+#!/usr/bin/env python3
+"""Verify the Phase 1 V0 attachment-lease language and authority boundary."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import NoReturn
+
+
+REPO = Path(__file__).resolve().parent.parent
+BASELINE = "11cdc2ccf076c898092ba1b5fd19c40cc25ab777"
+CONTEXT = REPO / "CONTEXT.md"
+CONTRACT_DOC = REPO / "docs/herdr-attachment-leases-v0.md"
+CONTRACT_JSON = REPO / "docs/contracts/herdr-attachment-leases-v0.json"
+ADR = REPO / "docs/adr/0003-keep-attachment-authority-in-herdr.md"
+BACKEND = Path("nvim/.config/nvim/lua/plugins/sidekick/herdr_backend.lua")
+
+EXPECTED_TERMS = {
+    "Agent Session": (
+        "A durable identity for one running agent whose conversation continues independently of any user-interface surface.",
+        "Neovim session, terminal session, pane when referring to the agent",
+    ),
+    "Surface Attachment": (
+        "A client's view of an Agent Session with a declared set of surface capabilities.",
+        "attached session, client session",
+    ),
+    "Attachment Lease": (
+        "Herdr's time-bounded grant giving one Surface Attachment exclusive authority for live input and interactive mouse routing.",
+        "takeover",
+    ),
+    "Lease Holder": (
+        "The Surface Attachment that currently holds the Attachment Lease. An Agent Session may have no Lease Holder.",
+        "owner, active attachment",
+    ),
+    "Observer": (
+        "A Surface Attachment that can read session status and history without authority for live input or interactive mouse routing.",
+        "secondary attachment, passive holder",
+    ),
+    "Capability Plan": (
+        "The inspectable assignment of session and surface capabilities to their canonical authorities for one Surface Attachment.",
+        "profile, backend settings",
+    ),
+}
+
+EXPECTED_CONTRACT = {
+    "contract": "herdr-attachment-leases",
+    "phase": 1,
+    "milestone": "V0",
+    "status": "frozen",
+    "terms": list(EXPECTED_TERMS),
+    "capabilities": [
+        {
+            "capability": "Session identity and lifecycle",
+            "canonical_authority": "Herdr Agent Session",
+            "surface_responsibility": "Request or reopen",
+        },
+        {
+            "capability": "Conversation and model state",
+            "canonical_authority": "Pi or Codex",
+            "surface_responsibility": "Use the same running agent",
+        },
+        {
+            "capability": "Live rendering",
+            "canonical_authority": "Agent TUI",
+            "surface_responsibility": "Display the running agent",
+        },
+        {
+            "capability": "Transcript storage",
+            "canonical_authority": "Herdr Agent Session",
+            "surface_responsibility": "Read snapshots",
+        },
+        {
+            "capability": "Historical view",
+            "canonical_authority": "Capability Plan",
+            "surface_responsibility": "Use surface-native history",
+        },
+        {
+            "capability": "Search, selection, and copy",
+            "canonical_authority": "Surface Attachment",
+            "surface_responsibility": "Use surface-native controls",
+        },
+        {
+            "capability": "Live input",
+            "canonical_authority": "Attachment Lease",
+            "surface_responsibility": "Lease Holder only",
+        },
+        {
+            "capability": "Interactive mouse routing",
+            "canonical_authority": "Attachment Lease",
+            "surface_responsibility": "Lease Holder's Surface Attachment routes surface-native events",
+        },
+        {
+            "capability": "Link and file opening",
+            "canonical_authority": "Surface Attachment",
+            "surface_responsibility": "Use the surface-native opener",
+        },
+        {
+            "capability": "Paste and file ingestion",
+            "canonical_authority": "Surface Attachment",
+            "surface_responsibility": "Use surface-native normalization",
+        },
+        {
+            "capability": "Seen and unseen state",
+            "canonical_authority": "Herdr Agent Session",
+            "surface_responsibility": "Report focus to Herdr",
+        },
+    ],
+    "cardinality": {
+        "lease_holders": {"minimum": 0, "maximum": 1},
+        "observers": {"minimum": 0, "maximum": None},
+    },
+    "invariants": [
+        "Opening or closing a Surface Attachment never changes Agent Session identity.",
+        "An Agent Session may continue with no Surface Attachments and no Lease Holder.",
+        "An Observer cannot send live input or route interactive mouse events.",
+        "Transcript history is stored once by Herdr; surface history views are projections.",
+        "Every Surface Attachment receives an inspectable Capability Plan.",
+    ],
+    "out_of_scope": [
+        "V1 lease states, transitions, renewal, release, expiry, and transfer",
+        "V2 Capability Plan schema, commands, and compatibility behavior",
+        "V3 Pi and Codex executable surface scenarios",
+        "runtime changes to Herdr, Sidekick, Pi, or Codex",
+    ],
+}
+
+CASES = {
+    "V0.1": "canonical vocabulary",
+    "V0.2": "authority boundary",
+    "V0.3": "scope and unchanged runtime seam",
+}
+
+
+def fail(message: str) -> NoReturn:
+    raise AssertionError(message)
+
+
+def run(
+    *args: str,
+    check: bool = True,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        args,
+        cwd=REPO,
+        check=check,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+
+def require_text(path: Path) -> str:
+    if not path.is_file():
+        fail(f"required V0 artifact is missing: {path.relative_to(REPO)}")
+    return path.read_text()
+
+
+def verify_vocabulary() -> None:
+    context = require_text(CONTEXT)
+    match = re.search(r"^## Agent Attachments\n(?P<body>.*?)(?=^## |\Z)", context, re.MULTILINE | re.DOTALL)
+    if not match:
+        fail("CONTEXT.md is missing the Agent Attachments language section")
+
+    blocks = re.findall(
+        r"^\*\*(?P<term>[^*]+)\*\*:\n(?P<definition>.+)\n_Avoid_: (?P<avoid>.+)$",
+        match.group("body"),
+        re.MULTILINE,
+    )
+    actual = {term: (definition, avoid) for term, definition, avoid in blocks}
+    if actual != EXPECTED_TERMS:
+        fail(
+            "Agent Attachments vocabulary differs from the frozen V0 contract\n"
+            f"expected={json.dumps(EXPECTED_TERMS, indent=2)}\n"
+            f"actual={json.dumps(actual, indent=2)}"
+        )
+    if list(actual) != list(EXPECTED_TERMS):
+        fail("Agent Attachments terms are not in canonical V0 order")
+
+
+def verify_boundary() -> None:
+    contract = json.loads(require_text(CONTRACT_JSON))
+    if contract != EXPECTED_CONTRACT:
+        fail(
+            "machine-readable V0 authority contract differs from the frozen contract\n"
+            f"expected={json.dumps(EXPECTED_CONTRACT, indent=2)}\n"
+            f"actual={json.dumps(contract, indent=2)}"
+        )
+
+    doc = require_text(CONTRACT_DOC)
+    adr = require_text(ADR)
+    normalized_adr = re.sub(r"\s+", " ", adr)
+    for term in EXPECTED_TERMS:
+        if term not in doc:
+            fail(f"human-readable V0 contract does not use canonical term: {term}")
+    for capability in contract["capabilities"]:
+        expected_row = (
+            f"| {capability['capability']} | {capability['canonical_authority']} | "
+            f"{capability['surface_responsibility']} |"
+        )
+        if expected_row not in doc:
+            fail(f"human-readable V0 contract is missing authority row: {expected_row}")
+    for invariant in contract["invariants"]:
+        if invariant not in doc:
+            fail(f"human-readable V0 contract is missing invariant: {invariant}")
+    required_decisions = (
+        "Herdr owns Agent Session identity, lifecycle, transcript storage, and attachment arbitration.",
+        "Pi or Codex owns conversation and model state, and the Agent TUI owns live rendering.",
+        "An Attachment Lease alone grants live-input and interactive-mouse authority.",
+        "Surface Attachments own surface-native history, search, selection, clipboard, opening, paste, and routing mechanics.",
+        "A second Surface Attachment is an Observer unless it becomes the explicit Lease Holder.",
+    )
+    for decision in required_decisions:
+        if decision not in normalized_adr:
+            fail(f"ADR is missing authority decision: {decision}")
+
+
+def allowed_phase_path(path: str) -> bool:
+    return (
+        path == "CONTEXT.md"
+        or path == "docs/adr/0003-keep-attachment-authority-in-herdr.md"
+        or path == "docs/adr/0004-require-holder-consent-for-healthy-lease-transfer.md"
+        or (path.startswith("docs/") and "herdr-attachment-leases-" in path)
+        or path.startswith("scripts/verify-herdr-attachment-leases-")
+        or path.startswith("scripts/fixtures/herdr-attachment-leases-")
+    )
+
+
+def verify_scope() -> None:
+    if run("git", "cat-file", "-e", f"{BASELINE}^{{commit}}", check=False).returncode:
+        fail(f"V0 baseline commit is unavailable: {BASELINE}")
+
+    changed = set(run("git", "diff", "--name-only", BASELINE).stdout.splitlines())
+    changed.update(run("git", "ls-files", "--others", "--exclude-standard").stdout.splitlines())
+    unexpected = sorted(path for path in changed if not allowed_phase_path(path))
+    if unexpected:
+        fail(f"Phase 1 changed runtime or unrelated paths: {unexpected}")
+    for relative in sorted(changed):
+        path = REPO / relative
+        if not path.is_file():
+            continue
+        text = path.read_text()
+        for number, line in enumerate(text.splitlines(), start=1):
+            if line.endswith((" ", "\t")):
+                fail(f"Phase 1 artifact has trailing whitespace: {relative}:{number}")
+        if text and not text.endswith("\n"):
+            fail(f"Phase 1 artifact lacks a final newline: {relative}")
+
+    diff_check = run("git", "diff", "--check", check=False)
+    if diff_check.returncode:
+        fail(f"git diff --check failed:\n{diff_check.stdout}")
+
+    current = (REPO / BACKEND).read_bytes()
+    baseline = run("git", "show", f"{BASELINE}:{BACKEND.as_posix()}").stdout.encode()
+    if hashlib.sha256(current).digest() != hashlib.sha256(baseline).digest():
+        fail("Sidekick Herdr backend differs from the unchanged Phase 1 baseline")
+
+    source = current.decode()
+    if "self.tool.native_scroll = true" not in source:
+        fail("current native-scroll baseline is no longer present")
+    if '{ "herdr", "agent", "attach", self.herdr_agent_name, "--takeover" }' not in source:
+        fail("current unconditional takeover baseline is no longer present")
+
+    nvim = shutil.which("nvim")
+    if not nvim:
+        fail("retained Sidekick/Herdr compatibility verifier requires nvim")
+    compat = run(
+        nvim,
+        "--headless",
+        "-i",
+        "NONE",
+        "+luafile scripts/verify-nvim.lua",
+        "+qa",
+        check=False,
+        env={
+            **os.environ,
+            "NVIM_LOG_FILE": os.devnull,
+            "VERIFY_NVIM_CASE": "sidekick-herdr-compat",
+        },
+    )
+    expected = "PASS verify-nvim sidekick-herdr-compat"
+    if compat.returncode or compat.stdout.strip() != expected:
+        fail(f"retained Sidekick/Herdr compatibility verifier failed:\n{compat.stdout}")
+
+
+VERIFY = {"V0.1": verify_vocabulary, "V0.2": verify_boundary, "V0.3": verify_scope}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("case", nargs="?", choices=CASES)
+    args = parser.parse_args()
+    selected = [args.case] if args.case else list(CASES)
+
+    for case in selected:
+        try:
+            VERIFY[case]()
+        except (AssertionError, json.JSONDecodeError, OSError, subprocess.CalledProcessError) as error:
+            print(f"{case} {CASES[case]}: FAIL", file=sys.stderr)
+            print(error, file=sys.stderr)
+            return 1
+        print(f"{case} {CASES[case]}: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,79 @@
+{
+  "contract": "herdr-attachment-leases",
+  "phase": 1,
+  "milestone": "V2",
+  "status": "frozen",
+  "extends": {
+    "milestone": "V1",
+    "contract": "docs/contracts/herdr-attachment-leases-v1.json"
+  },
+  "schema": {
+    "name": "herdr.capability-plan",
+    "major": 1
+  },
+  "inspect_command": {
+    "human": "herdr attachment plan <attachment-id>",
+    "json": "herdr attachment plan <attachment-id> --format json",
+    "success_envelope": "result.capability_plan",
+    "errors": [
+      "attachment_not_found",
+      "surface_detached",
+      "plan_unavailable"
+    ]
+  },
+  "required_fields": [
+    "schema",
+    "version",
+    "revision",
+    "agent_session",
+    "surface_attachment",
+    "lease",
+    "capabilities",
+    "compatibility"
+  ],
+  "resolution_inputs": [
+    "V0 authority contract",
+    "V1 lease snapshot",
+    "surface declaration",
+    "agent provider"
+  ],
+  "surface_profiles": {
+    "nvim": {
+      "historical_view": "Sidekick buffer",
+      "search_selection_and_copy": "Neovim",
+      "live_event_router": "Sidekick adapter",
+      "link_and_file_opening": "Neovim navigation",
+      "paste_and_file_ingestion": "Neovim normalization"
+    },
+    "terminal": {
+      "historical_view": "Herdr copy mode",
+      "search_selection_and_copy": "Herdr / host terminal",
+      "live_event_router": "Herdr terminal adapter",
+      "link_and_file_opening": "host terminal",
+      "paste_and_file_ingestion": "terminal input normalization"
+    }
+  },
+  "compatibility": {
+    "same_major_unknown_fields": "ignore",
+    "missing_required_fields": "reject",
+    "unsupported_major": "reject",
+    "unknown_surface_profile": "reject before attachment",
+    "missing_plan": "fail closed for live input and interactive mouse; never fall back to takeover",
+    "stale_revision": "refresh before live input or interactive mouse",
+    "herdr_0_8_sidekick": "unchanged in Phase 1; does not emit or consume Capability Plans"
+  },
+  "invariants": [
+    "Every attached surface receives one complete plan for one Agent Session and one Surface Attachment.",
+    "Each V0 capability appears exactly once with its V0 canonical authority.",
+    "Only the Lease Holder plan allows live input and interactive mouse routing.",
+    "A pending requester remains an Observer until promotion.",
+    "History, search, copy, open, paste, and focus providers are surface-native and do not grant lease authority.",
+    "A plan is a revisioned snapshot and must be refreshed after lease state changes.",
+    "Missing, stale, malformed, or unsupported plans fail closed for live authority."
+  ],
+  "out_of_scope": [
+    "V3 Pi and Codex executable surface scenarios",
+    "runtime implementation of attachment plan commands",
+    "migration of Herdr 0.8 or Sidekick from unconditional takeover"
+  ]
+}
