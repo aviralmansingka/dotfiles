@@ -1,0 +1,11 @@
+#!/bin/zsh
+set -euo pipefail
+
+herdr_bin=$(command -v herdr)
+
+if [[ ${1-} == server && ${2-} == --handoff-import ]]; then
+  unset NO_COLOR
+  exec "$herdr_bin" "$@"
+fi
+
+exec "$herdr_bin" server live-handoff --import-exe "${0:A}" "$@"
