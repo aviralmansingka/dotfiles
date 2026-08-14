@@ -11,6 +11,6 @@ beneath the owning session.
 
 Task cleanup therefore closes task-owned tabs, panes, bindings, and worktree views without closing a repository's
 shared Herdr Workspace while other worktree sessions remain. The Sidekick picker presents repository headings and
-Gruvbox-pink `` branch rows with tracked line additions and removals against `main`; the neutral `main` checkout has
-backend chrome but neither marker nor diff totals. Non-Git sessions also retain backend chrome. Internal agent names
-remain routing identities rather than display identities.
+Gruvbox-pink `` branch rows with tracked line additions and removals against `main`; the neutral `main` checkout shows
+its durable Sidekick session name with backend chrome but neither marker nor diff totals. Non-Git sessions also retain
+backend chrome. Internal Herdr agent names remain routing identities rather than display identities.

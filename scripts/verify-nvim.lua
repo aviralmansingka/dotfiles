@@ -1043,7 +1043,7 @@ local function validate_sidekick_herdr()
   herdr.list_agents = function()
     local agents = {
       {
-        name = "sk-codex-deadbeef",
+        name = "codex-main-hello",
         agent = "codex",
         agent_status = "working",
         cwd = "/worktrees/dotfiles/main",
@@ -1058,6 +1058,7 @@ local function validate_sidekick_herdr()
       named_agent(other_agent_name, "idle", 6, "w2", "/worktrees/vault/journal"),
       named_agent("pi-workspace-only", "idle", 7, "w1", "/worktrees/dotfiles/workspace-only"),
       named_agent("review-child", "working", 8, "w1", cwd),
+      named_agent("pi-non-git-session", "idle", 9, "w3", "/tmp/sidekick-non-git/exact-cwd"),
     }
     return vim.tbl_filter(function(agent)
       return agent.pane_id ~= removed_pane_id
@@ -1113,7 +1114,7 @@ local function validate_sidekick_herdr()
   package.loaded["plugins.sidekick.herdr"] = source_herdr
   local source_registry = dofile(source_root .. "registry.lua")
   local discovered = source_registry.discover()
-  if discovered["sk-codex-deadbeef"] then
+  if source_registry.parse_session_name("sk-codex-deadbeef") then
     fail("base Herdr sessions must not appear as named sessions")
   end
   local entry = discovered["pi-blocked"]
@@ -1192,6 +1193,7 @@ local function validate_sidekick_herdr()
         workspaces = {
           { workspace_id = "w1", label = "Workspace One" },
           { workspace_id = "w2", label = "Workspace Two" },
+          { workspace_id = "w3", label = "Non-Git Workspace" },
         },
       }
     end
@@ -1290,6 +1292,65 @@ local function validate_sidekick_herdr()
   end
 
   local picker_ok, picker_err = xpcall(function()
+    local fixture_list_agents = herdr.list_agents
+    local fixture_git_context = herdr.git_context
+    local fixture_diff_stats = herdr.git_diff_stats
+    local main_diff_calls = 0
+    herdr.list_agents = function()
+      return {
+        {
+          name = "codex-main-hello",
+          agent = "codex",
+          agent_status = "working",
+          cwd = cwd,
+          pane_id = "w1:p1",
+          terminal_id = "term-main",
+          workspace_id = "w1",
+        },
+      }
+    end
+    herdr.git_context = function(path)
+      path = vim.fs.normalize(path or "")
+      if path == cwd or vim.startswith(path, cwd .. "/") then
+        return {
+          repository = "/repos/dotfiles",
+          repository_label = "dotfiles",
+          worktree = cwd,
+          worktree_label = "main",
+          branch = "main",
+        }
+      end
+    end
+    herdr.git_diff_stats = function()
+      main_diff_calls = main_diff_calls + 1
+      return { added = 999, removed = 999 }
+    end
+    cwd_picker.open()
+    local main_item = picker_opts and picker_opts.items[1]
+    local main_chunks = main_item and picker_opts.format(main_item) or {}
+    if
+      picker_opts.title ~= "Sidekick Session in Worktree: main"
+      or #picker_opts.items ~= 1
+      or main_item.display_label ~= "codex-main-hello"
+      or main_item.cwd ~= cwd
+      or main_item.diff ~= nil
+      or main_diff_calls ~= 0
+      or not vim.deep_equal(main_chunks, {
+        { "S ", "DiagnosticInfo" },
+        { "codex-main-hello", "SidekickTitleCodex" },
+      })
+    then
+      fail("main checkout local row should show the friendly session name with backend chrome only: " .. vim.inspect({
+        title = picker_opts and picker_opts.title,
+        item = main_item,
+        chunks = main_chunks,
+        diff_calls = main_diff_calls,
+      }))
+    end
+    herdr.list_agents = fixture_list_agents
+    herdr.git_context = fixture_git_context
+    herdr.git_diff_stats = fixture_diff_stats
+
     cwd_picker.open(picker_actions_only and {
       on_kill = function(item)
         killed_item = item
@@ -1549,28 +1610,29 @@ local function validate_sidekick_herdr()
       or not vim.tbl_contains(global_lines, "  ├─ S  feature/working · +88 −12")
       or not vim.tbl_contains(global_lines, "  ├─ !  feat/sidekick-repo-session-grouping · +142 −38")
       or not vim.iter(global_lines):any(function(line)
-        return line:find("S main", 1, true) ~= nil
-          and line:find(" main", 1, true) == nil
+        return line:find("S codex-main-hello", 1, true) ~= nil
+          and line:find(" codex-main-hello", 1, true) == nil
           and line:find("+999", 1, true) == nil
           and line:find("−999", 1, true) == nil
       end)
       or not vim.tbl_contains(global_lines, "▾ vault · 1 worktree")
       or not vim.tbl_contains(global_lines, "  └─ ·  feature/journal · +21 −9")
+      or not vim.tbl_contains(global_lines, "▾ Non-Git Workspace · 1 worktree")
+      or not vim.tbl_contains(global_lines, "  └─ · exact-cwd")
     then
       fail(
-        "repository rows should mark non-main branches, suppress main diff stats, and start expanded: "
-          .. vim.inspect(global_lines)
+        "repository rows should distinguish branch, main-session, and non-Git cwd labels: " .. vim.inspect(global_lines)
       )
     end
     local main_row
     for row, line in ipairs(global_lines) do
-      if line:find("S main", 1, true) then
+      if line:find("S codex-main-hello", 1, true) then
         main_row = row
         break
       end
     end
     local main_hl
-    local main_col = assert(global_lines[main_row]:find("main", 1, true)) - 1
+    local main_col = assert(global_lines[main_row]:find("codex-main-hello", 1, true)) - 1
     local workspace_ns = vim.api.nvim_get_namespaces().sidekick_workspace_picker
     for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(global_win.buf, workspace_ns, 0, -1, { details = true })) do
       local details = mark[4]

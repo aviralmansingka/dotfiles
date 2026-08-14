@@ -1,12 +1,13 @@
 # Sidekick repository/worktree picker evidence
 
 This original implementation capture shows repositories expanding into worktrees, with one durable Sidekick session
-per row and the current worktree isolated in the bottom-right pane. The current verifier supersedes its row styling:
-non-`main` branches use a Gruvbox-pink `` marker and diff totals, while `main` has neither marker nor diff totals.
+per row and the current worktree isolated in the bottom-right pane. The authoritative current behavior is documented in
+[Neovim current features](../../neovim-current-features.md#agent-sessions-and-routing); the verifier supersedes the
+historical row labels and styling shown here.
 
 ![Rendered Sidekick repository/worktree picker](picker.svg)
 
-The ANSI row content and layout labels use the deterministic fixtures asserted by:
+Current behavior is asserted by:
 
 ```sh
 scripts/verify-nvim sidekick-herdr

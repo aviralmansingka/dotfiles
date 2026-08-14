@@ -76,6 +76,10 @@ local function diff_stats(context, cache)
   return cache[context.worktree] or nil
 end
 
+local function session_display_label(context, label, non_git_label)
+  return context and context.branch ~= "main" and context.worktree_label or context and label or non_git_label or label
+end
+
 ---@param entry_cwd string|nil
 ---@param root string  already normalized
 ---@return boolean
@@ -401,9 +405,9 @@ function M.list_items(metric_cache)
       local context = git_context(entry.cwd, context_cache)
       local metrics = agent_metrics(entry.agent_name, entry.agent_session, entry.status, metric_cache)
       items[#items + 1] = {
-        text = string.format("%s  [%s]", context and context.worktree_label or label, entry.status),
+        text = string.format("%s  [%s]", session_display_label(context, label), entry.status),
         label = label,
-        display_label = context and context.worktree_label or label,
+        display_label = session_display_label(context, label),
         tool = entry.tool,
         slug = entry.slug,
         pane_id = entry.pane_id,
@@ -477,13 +481,15 @@ local function workspace_groups(first_repository, metric_cache)
       group.running = group.running + (status == "working" and 1 or 0)
       group.done = group.done + (status == "done" and 1 or 0)
       local worktree = context and context.worktree or (agent.foreground_cwd or agent.cwd or agent.name)
+      local label = parsed and parsed.label or (agent.name and not agent.name:match("^sk%-") and agent.name) or tool
       group.worktrees[worktree] = true
       group.agents[#group.agents + 1] = {
-        label = parsed and parsed.label
-          or (agent.name and not agent.name:match("^sk%-") and agent.name)
-          or tool,
-        display_label = context and context.worktree_label
-          or vim.fn.fnamemodify(agent.foreground_cwd or agent.cwd or agent.name or tool, ":t"),
+        label = label,
+        display_label = session_display_label(
+          context,
+          label,
+          vim.fn.fnamemodify(agent.foreground_cwd or agent.cwd or agent.name or tool, ":t")
+        ),
         slug = parsed and parsed.slug,
         toggle_name = parsed and parsed.label or tool,
         tool = tool,

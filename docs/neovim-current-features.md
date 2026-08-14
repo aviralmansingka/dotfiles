@@ -347,7 +347,6 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Sidekick floats use per-agent colored titles.
 - Sidekick splits use per-agent colored winbars.
 - Sidekick splits use per-agent colored window separators.
-- Sidekick session pickers render worktree names with matching per-agent colors.
 - Sidekick cwd session picker uses transparent picker backgrounds so terminal previews stay visible.
 - Sidekick CLI picker shows right-aligned cwd.
 
@@ -371,11 +370,11 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Sidekick keymaps include ask/edit/apply/reject/yank, context/prompt sending, the local picker, and named-session creation.
 - Sidekick cwd session picker keeps the ordinary conversation preview full-width above its input, with
   `Repositories / Worktrees` and `Current Worktree` panes across the bottom.
-- Repository headings expand into one row per durable worktree session. Rows use the Git branch as worktree identity,
-  retain Herdr state, and prefix non-`main` branches with a Gruvbox-pink `` marker instead of backend color.
+- Repository headings expand into one row per durable worktree session. Non-`main` rows use the Git branch as worktree
+  identity, retain Herdr state, and prefix it with a Gruvbox-pink `` marker instead of backend color.
 - Non-`main` branch rows show tracked `+added −removed` totals against local `main`; the neutral `main` checkout row
-  retains agent backend chrome but has neither the branch marker nor diff totals. Non-Git rows also retain backend
-  chrome.
+  shows its durable Sidekick session name with agent backend chrome but has neither the branch marker nor diff totals.
+  Non-Git rows also retain backend chrome.
 - The current-worktree pane shows only that worktree's one durable session. Internal Herdr agent names remain available
   for exact routing, rename, kill, and focus actions without being repeated in the row.
 - Ordinary preview polling and full-history scrolling continue while navigating either pane.

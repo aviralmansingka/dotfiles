@@ -29,8 +29,9 @@ Treat repository, worktree, and session identity as three distinct concepts:
 - Prefix every non-`main` Git branch row with `` and color both the marker and branch name with the existing Gruvbox
   pink `SidekickBranch` highlight; do not color non-`main` branch identity by agent backend. Retain the Herdr status
   glyph.
-- Treat a `main` branch row as the neutral checkout: retain its agent backend chrome, but render it without the branch
-  marker and without line-diff totals. Non-Git session rows also retain their agent backend chrome.
+- Treat a `main` branch row as the neutral checkout: show its durable Sidekick session name with agent backend chrome,
+  but render it without the branch marker and without line-diff totals. Non-Git session rows also retain their agent
+  backend chrome.
 - For non-`main` branches, show tracked line additions and removals against local `main` as `+<added> −<removed>`;
   show `clean` when both are zero.
 - Keep the current-worktree row in the picker alongside the repository hierarchy. Selection, preview, rename, kill,
