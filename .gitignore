@@ -31,3 +31,6 @@ ops/terraform/.terraform/
 ops/terraform/.terraform.lock.hcl
 ops/terraform/terraform.tfstate*
 .td-root
+.nvimlog
+test-results/
+artifacts/pi-transcript-links/
