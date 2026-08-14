@@ -3,6 +3,7 @@
 -- Bound to <c-.> in plugins/sidekick.lua.
 local internal = require("plugins.sidekick.internal")
 local registry = require("plugins.sidekick.registry")
+local branding = require("plugins.sidekick.branding")
 local herdr = require("plugins.sidekick.herdr")
 
 local M = {}
@@ -432,6 +433,13 @@ local function status_icon(status)
   return status == "working" and Snacks.util.spinner() or display[1], display[2]
 end
 
+local function identity_hl(item)
+  if item.branch and item.branch ~= "main" then
+    return "SidekickBranch"
+  end
+  return branding.hl_groups(branding.tool_of(item.tool)).title
+end
+
 local function workspace_groups(first_repository, metric_cache)
   local grouped = {}
   local context_cache = {}
@@ -541,7 +549,7 @@ local function format_local(item)
   end
   chunks[#chunks + 1] = {
     item.display_label or item.label or "",
-    item.branch and item.branch ~= "main" and "SidekickBranch" or "Normal",
+    identity_hl(item),
   }
   vim.list_extend(chunks, diff_chunks(item))
   return chunks
@@ -568,7 +576,7 @@ local function workspace_agent_chunks(item, last)
   end
   chunks[#chunks + 1] = {
     item.display_label or item.label or item.agent_name or "unknown",
-    item.branch and item.branch ~= "main" and "SidekickBranch" or "Normal",
+    identity_hl(item),
   }
   vim.list_extend(chunks, diff_chunks(item))
   return chunks
