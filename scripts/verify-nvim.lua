@@ -3309,7 +3309,7 @@ local function validate_herdr_workspaces()
     { pane_id = "p-unknown", workspace_id = "w-unknown", cwd = root },
   }
   local agents = {
-    { name = "keep-idle", workspace_id = "w-idle", foreground_cwd = root .. "/scripts" },
+    { name = "keep-idle", workspace_id = "w-idle", foreground_cwd = vim.fn.tempname() },
   }
 
   local function eq(actual, expected, label)
@@ -4079,6 +4079,18 @@ local function validate_herdr_workspaces()
     eq(count_calls("workspace", "close"), closes_before_release, "non-empty workspace close count")
     local retained = open_picker()
     item_by_id(retained, "w-idle")
+
+    vim.cmd("tabnew")
+    local guarded_tab = vim.api.nvim_get_current_tabpage()
+    vim.api.nvim_tabpage_set_var(guarded_tab, "herdr_workspace_id", "w-focused")
+    vim.api.nvim_tabpage_set_var(guarded_tab, "herdr_workspace_label", "Duplicate")
+    vim.api.nvim_tabpage_set_var(guarded_tab, "workspace_cwd", root)
+    vim.api.nvim_tabpage_set_var(guarded_tab, "workspace_label", vim.fn.fnamemodify(root, ":t"))
+    agents[#agents + 1] = { name = "keep-focused", workspace_id = "w-focused", foreground_cwd = root .. "/scripts" }
+    workspace_tabs.agent_closed("w-focused", root .. "/nvim")
+    if not vim.api.nvim_tabpage_is_valid(guarded_tab) then
+      fail("same-worktree survivor must keep its mapped Neovim workspace tab")
+    end
 
     vim.cmd("tabnew")
     local empty_workspace_tab = vim.api.nvim_get_current_tabpage()
