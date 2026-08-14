@@ -1,1 +1,0 @@
-verifier sentinel: V01 evidence and planned entries remain unchanged

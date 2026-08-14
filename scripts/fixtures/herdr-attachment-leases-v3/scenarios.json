@@ -1,0 +1,325 @@
+{
+  "schema": "herdr-attachment-leases-v3-scenarios",
+  "version": 1,
+  "scenarios": [
+    {
+      "id": "pi_nvim_launch_and_input",
+      "agent_kind": "pi",
+      "agent_session": {
+        "agent": "pi",
+        "kind": "path",
+        "source": "herdr:pi",
+        "value": "/fixtures/pi/launch.jsonl"
+      },
+      "transcript_revision": 20,
+      "steps": [
+        {
+          "action": {"event": "open", "surface": "nvim", "kind": "nvim"},
+          "expect": {"result": "accepted", "holder": "nvim", "deadline": 4, "attached": ["nvim"]}
+        },
+        {
+          "action": {"event": "live_input", "surface": "nvim"},
+          "expect": {"result": "accepted", "transcript_revision": 21, "holder": "nvim"}
+        },
+        {
+          "action": {"event": "agent_output"},
+          "expect": {"result": "accepted", "transcript_revision": 22, "holder": "nvim"}
+        }
+      ],
+      "final": {
+        "agent_session": {
+          "agent": "pi",
+          "kind": "path",
+          "source": "herdr:pi",
+          "value": "/fixtures/pi/launch.jsonl"
+        },
+        "holder": "nvim",
+        "transcript_revision": 22
+      }
+    },
+    {
+      "id": "pi_terminal_continue_after_hide",
+      "agent_kind": "pi",
+      "agent_session": {
+        "agent": "pi",
+        "kind": "path",
+        "source": "herdr:pi",
+        "value": "/fixtures/pi/continue.jsonl"
+      },
+      "transcript_revision": 30,
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {
+          "action": {"event": "open", "surface": "terminal", "kind": "terminal"},
+          "expect": {"holder": "nvim", "attached": ["nvim", "terminal"]}
+        },
+        {
+          "action": {"event": "hide", "surface": "nvim"},
+          "expect": {"result": "accepted", "holder": null, "deadline": null, "attached": ["terminal"]}
+        },
+        {
+          "action": {"event": "request", "surface": "terminal"},
+          "expect": {"result": "accepted", "reason": "granted unheld lease", "holder": "terminal", "deadline": 4}
+        },
+        {
+          "action": {"event": "live_input", "surface": "terminal"},
+          "expect": {"result": "accepted", "transcript_revision": 31}
+        }
+      ],
+      "final": {"holder": "terminal", "attached": ["terminal"], "transcript_revision": 31}
+    },
+    {
+      "id": "pi_observer_rejection",
+      "agent_kind": "pi",
+      "agent_session": {
+        "agent": "pi",
+        "kind": "path",
+        "source": "herdr:pi",
+        "value": "/fixtures/pi/observer.jsonl"
+      },
+      "transcript_revision": 40,
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "open", "surface": "terminal", "kind": "terminal"}, "expect": {"holder": "nvim"}},
+        {
+          "action": {"event": "live_input", "surface": "terminal"},
+          "expect": {
+            "result": "rejected",
+            "reason": "observer has no live authority",
+            "transcript_revision": 40,
+            "plans": {
+              "nvim": {
+                "kind": "nvim",
+                "role": "lease_holder",
+                "live_input": "allow",
+                "interactive_mouse": "allow",
+                "request_pending": false,
+                "revision": 2
+              },
+              "terminal": {
+                "kind": "terminal",
+                "role": "observer",
+                "live_input": "deny",
+                "interactive_mouse": "deny",
+                "request_pending": false,
+                "revision": 2
+              }
+            }
+          }
+        },
+        {
+          "action": {"event": "interactive_mouse", "surface": "terminal"},
+          "expect": {"result": "rejected", "reason": "observer has no live authority", "transcript_revision": 40}
+        },
+        {
+          "action": {"event": "read_history", "surface": "terminal"},
+          "expect": {"result": "accepted", "holder": "nvim", "transcript_revision": 40}
+        }
+      ],
+      "final": {"holder": "nvim", "transcript_revision": 40}
+    },
+    {
+      "id": "pi_stale_holder_recovery",
+      "agent_kind": "pi",
+      "agent_session": {
+        "agent": "pi",
+        "kind": "path",
+        "source": "herdr:pi",
+        "value": "/fixtures/pi/recovery.jsonl"
+      },
+      "transcript_revision": 50,
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "open", "surface": "terminal", "kind": "terminal"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "request", "surface": "terminal"}, "expect": {"requester": "terminal"}},
+        {"action": {"event": "tick"}, "expect": {"clock": 1, "holder": "nvim"}},
+        {"action": {"event": "tick"}, "expect": {"clock": 2, "holder": "nvim"}},
+        {"action": {"event": "tick"}, "expect": {"clock": 3, "holder": "nvim"}},
+        {
+          "action": {"event": "tick"},
+          "expect": {"result": "accepted", "reason": "expired", "clock": 4, "holder": "terminal", "deadline": 8}
+        },
+        {
+          "action": {"event": "live_input", "surface": "terminal"},
+          "expect": {"result": "accepted", "transcript_revision": 51}
+        }
+      ],
+      "final": {"holder": "terminal", "requester": null, "transcript_revision": 51}
+    },
+    {
+      "id": "pi_background_completion",
+      "agent_kind": "pi",
+      "agent_session": {
+        "agent": "pi",
+        "kind": "path",
+        "source": "herdr:pi",
+        "value": "/fixtures/pi/background.jsonl"
+      },
+      "transcript_revision": 60,
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "live_input", "surface": "nvim"}, "expect": {"transcript_revision": 61}},
+        {
+          "action": {"event": "close", "surface": "nvim"},
+          "expect": {"attached": [], "holder": null, "deadline": null}
+        },
+        {"action": {"event": "agent_output"}, "expect": {"transcript_revision": 62, "attached": []}},
+        {"action": {"event": "complete"}, "expect": {"agent_status": "done", "attached": []}},
+        {
+          "action": {"event": "open", "surface": "terminal", "kind": "terminal"},
+          "expect": {"agent_status": "done", "holder": "terminal", "transcript_revision": 62}
+        },
+        {"action": {"event": "read_history", "surface": "terminal"}, "expect": {"transcript_revision": 62}}
+      ],
+      "final": {"agent_status": "done", "holder": "terminal", "transcript_revision": 62}
+    },
+    {
+      "id": "codex_nvim_launch_and_input",
+      "agent_kind": "codex",
+      "agent_session": {
+        "agent": "codex",
+        "kind": "id",
+        "source": "herdr:codex",
+        "value": "00000000-0000-7000-8000-000000000101"
+      },
+      "transcript_revision": 100,
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "live_input", "surface": "nvim"}, "expect": {"transcript_revision": 101}},
+        {"action": {"event": "agent_output"}, "expect": {"transcript_revision": 102}}
+      ],
+      "final": {"holder": "nvim", "transcript_revision": 102}
+    },
+    {
+      "id": "codex_approved_terminal_transfer",
+      "agent_kind": "codex",
+      "agent_session": {
+        "agent": "codex",
+        "kind": "id",
+        "source": "herdr:codex",
+        "value": "00000000-0000-7000-8000-000000000102"
+      },
+      "transcript_revision": 110,
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "open", "surface": "terminal", "kind": "terminal"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "request", "surface": "terminal"}, "expect": {"holder": "nvim", "requester": "terminal"}},
+        {"action": {"event": "approve", "surface": "nvim"}, "expect": {"holder": "terminal", "requester": null}},
+        {"action": {"event": "live_input", "surface": "terminal"}, "expect": {"transcript_revision": 111}}
+      ],
+      "final": {"holder": "terminal", "transcript_revision": 111}
+    },
+    {
+      "id": "codex_denied_transfer_and_renewal",
+      "agent_kind": "codex",
+      "agent_session": {
+        "agent": "codex",
+        "kind": "id",
+        "source": "herdr:codex",
+        "value": "00000000-0000-7000-8000-000000000103"
+      },
+      "transcript_revision": 120,
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "open", "surface": "terminal", "kind": "terminal"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "request", "surface": "terminal"}, "expect": {"requester": "terminal"}},
+        {"action": {"event": "tick"}, "expect": {"clock": 1, "deadline": 4}},
+        {"action": {"event": "deny", "surface": "nvim"}, "expect": {"holder": "nvim", "requester": null}},
+        {"action": {"event": "request", "surface": "terminal"}, "expect": {"requester": "terminal"}},
+        {"action": {"event": "renew", "surface": "nvim"}, "expect": {"deadline": 5, "requester": "terminal"}},
+        {"action": {"event": "tick"}, "expect": {"clock": 2, "holder": "nvim"}},
+        {"action": {"event": "tick"}, "expect": {"clock": 3, "holder": "nvim"}},
+        {"action": {"event": "tick"}, "expect": {"clock": 4, "holder": "nvim", "requester": "terminal"}}
+      ],
+      "final": {"holder": "nvim", "requester": "terminal", "deadline": 5}
+    },
+    {
+      "id": "codex_release_promotes_terminal",
+      "agent_kind": "codex",
+      "agent_session": {
+        "agent": "codex",
+        "kind": "id",
+        "source": "herdr:codex",
+        "value": "00000000-0000-7000-8000-000000000104"
+      },
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "open", "surface": "terminal", "kind": "terminal"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "request", "surface": "terminal"}, "expect": {"requester": "terminal"}},
+        {
+          "action": {"event": "release", "surface": "nvim"},
+          "expect": {"holder": "terminal", "requester": null, "attached": ["nvim", "terminal"]}
+        }
+      ],
+      "final": {"holder": "terminal", "attached": ["nvim", "terminal"]}
+    },
+    {
+      "id": "codex_explicit_switch_promotes_terminal",
+      "agent_kind": "codex",
+      "agent_session": {
+        "agent": "codex",
+        "kind": "id",
+        "source": "herdr:codex",
+        "value": "00000000-0000-7000-8000-000000000105"
+      },
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "open", "surface": "terminal", "kind": "terminal"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "request", "surface": "terminal"}, "expect": {"requester": "terminal"}},
+        {
+          "action": {"event": "explicit_switch", "surface": "nvim"},
+          "expect": {"holder": "terminal", "requester": null, "attached": ["nvim", "terminal"]}
+        }
+      ],
+      "final": {"holder": "terminal", "attached": ["nvim", "terminal"]}
+    },
+    {
+      "id": "codex_second_request_rejected",
+      "agent_kind": "codex",
+      "agent_session": {
+        "agent": "codex",
+        "kind": "id",
+        "source": "herdr:codex",
+        "value": "00000000-0000-7000-8000-000000000106"
+      },
+      "steps": [
+        {"action": {"event": "open", "surface": "nvim", "kind": "nvim"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "open", "surface": "terminal-a", "kind": "terminal"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "open", "surface": "terminal-b", "kind": "terminal"}, "expect": {"holder": "nvim"}},
+        {"action": {"event": "request", "surface": "terminal-a"}, "expect": {"requester": "terminal-a"}},
+        {
+          "action": {"event": "request", "surface": "terminal-b"},
+          "expect": {"result": "rejected", "reason": "request already pending", "holder": "nvim", "requester": "terminal-a"}
+        }
+      ],
+      "final": {"holder": "nvim", "requester": "terminal-a"}
+    },
+    {
+      "id": "codex_background_completion",
+      "agent_kind": "codex",
+      "agent_session": {
+        "agent": "codex",
+        "kind": "id",
+        "source": "herdr:codex",
+        "value": "00000000-0000-7000-8000-000000000107"
+      },
+      "transcript_revision": 140,
+      "steps": [
+        {"action": {"event": "open", "surface": "terminal", "kind": "terminal"}, "expect": {"holder": "terminal"}},
+        {"action": {"event": "live_input", "surface": "terminal"}, "expect": {"transcript_revision": 141}},
+        {
+          "action": {"event": "detach", "surface": "terminal"},
+          "expect": {"attached": [], "holder": null, "deadline": null}
+        },
+        {"action": {"event": "agent_output"}, "expect": {"transcript_revision": 142, "attached": []}},
+        {"action": {"event": "complete"}, "expect": {"agent_status": "done", "attached": []}},
+        {
+          "action": {"event": "open", "surface": "nvim", "kind": "nvim"},
+          "expect": {"agent_status": "done", "holder": "nvim", "transcript_revision": 142}
+        },
+        {"action": {"event": "read_history", "surface": "nvim"}, "expect": {"transcript_revision": 142}}
+      ],
+      "final": {"agent_status": "done", "holder": "nvim", "transcript_revision": 142}
+    }
+  ]
+}

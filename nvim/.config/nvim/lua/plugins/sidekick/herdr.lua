@@ -49,17 +49,19 @@ function M.git_context(cwd)
   if normalized == "" then
     return nil
   end
-  local result = vim.system({
-    "git",
-    "-C",
-    normalized,
-    "rev-parse",
-    "--path-format=absolute",
-    "--show-toplevel",
-    "--git-common-dir",
-    "--abbrev-ref",
-    "HEAD",
-  }, { text = true }):wait()
+  local result = vim
+    .system({
+      "git",
+      "-C",
+      normalized,
+      "rev-parse",
+      "--path-format=absolute",
+      "--show-toplevel",
+      "--git-common-dir",
+      "--abbrev-ref",
+      "HEAD",
+    }, { text = true })
+    :wait()
   if result.code ~= 0 then
     return nil
   end
@@ -87,10 +89,9 @@ function M.git_diff_stats(cwd, baseline)
   if not context then
     return nil
   end
-  local result = vim.system(
-    { "git", "-C", context.worktree, "diff", "--numstat", baseline or "main", "--" },
-    { text = true }
-  ):wait()
+  local result = vim
+    .system({ "git", "-C", context.worktree, "diff", "--numstat", baseline or "main", "--" }, { text = true })
+    :wait()
   if result.code ~= 0 then
     return nil
   end
@@ -204,10 +205,7 @@ function M.agent_for_worktree(cwd)
     if M.is_durable_agent(agent) then
       local agent_cwd = agent.foreground_cwd or agent.cwd
       local context = M.git_context(agent_cwd)
-      if
-        (context and context.worktree == wanted_cwd)
-        or (not context and M.normalize_cwd(agent_cwd) == wanted_cwd)
-      then
+      if (context and context.worktree == wanted_cwd) or (not context and M.normalize_cwd(agent_cwd) == wanted_cwd) then
         return agent, true
       end
     end
@@ -269,116 +267,6 @@ function M.ensure_workspace(cwd, scope, env)
     result.root_pane and result.root_pane.pane_id or nil,
     true,
     result.root_pane and result.root_pane.tab_id or nil
-end
-
-local function worktree_for_branch(worktrees, branch)
-  for _, worktree in ipairs(worktrees or {}) do
-    if worktree.branch == branch then
-      return worktree
-    end
-  end
-end
-
----@param repository string
----@param workspace_label string
----@param feature_branch string
----@return table|nil scope
-function M.ensure_feature_scope(repository, workspace_label, feature_branch)
-  local normalized = M.normalize_cwd(repository)
-  local repository_workspace_id = M.ensure_workspace(normalized)
-  if not repository_workspace_id then
-    return nil
-  end
-  local listed = M.call({ "worktree", "list", "--cwd", normalized })
-  if not listed then
-    return nil
-  end
-
-  local feature = worktree_for_branch(listed.worktrees, feature_branch)
-  if not feature or feature.open_workspace_id ~= repository_workspace_id then
-    local action = feature and "open" or "create"
-    local result = M.call({
-      "worktree",
-      action,
-      "--workspace",
-      repository_workspace_id,
-      "--cwd",
-      normalized,
-      "--branch",
-      feature_branch,
-      "--label",
-      workspace_label,
-      "--no-focus",
-    })
-    feature = result and result.worktree or nil
-  end
-  if not feature then
-    return nil
-  end
-
-  return feature.path and { workspace_id = repository_workspace_id, cwd = feature.path } or nil
-end
-
----@param repository string
----@param workspace_label string
----@param feature_branch string
----@param task_branch string
----@return table|nil scope
-function M.ensure_task_scope(repository, workspace_label, feature_branch, task_branch)
-  local normalized = M.normalize_cwd(repository)
-  local repository_workspace_id = M.ensure_workspace(normalized)
-  if not repository_workspace_id then
-    return nil
-  end
-  local listed = M.call({ "worktree", "list", "--cwd", normalized })
-  if not listed then
-    return nil
-  end
-
-  local feature = worktree_for_branch(listed.worktrees, feature_branch)
-  if not feature then
-    local result = M.call({
-      "worktree",
-      "create",
-      "--workspace",
-      repository_workspace_id,
-      "--cwd",
-      normalized,
-      "--branch",
-      feature_branch,
-      "--label",
-      workspace_label,
-      "--no-focus",
-    })
-    feature = result and result.worktree or nil
-    if not feature then
-      return nil
-    end
-  end
-
-  local task = worktree_for_branch(listed.worktrees, task_branch)
-  if not task or task.open_workspace_id ~= repository_workspace_id then
-    local action = task and "open" or "create"
-    local result = M.call({
-      "worktree",
-      action,
-      "--workspace",
-      repository_workspace_id,
-      "--cwd",
-      normalized,
-      "--branch",
-      task_branch,
-      "--label",
-      workspace_label,
-      "--no-focus",
-    })
-    task = result and result.worktree or nil
-  end
-  if not task then
-    return nil
-  end
-
-  return task.path and { workspace_id = repository_workspace_id, cwd = task.path } or nil
 end
 
 ---@param agent? table
@@ -443,32 +331,6 @@ local function own_tab(agent, scope, tab_label)
     return nil
   end
   return placed
-end
-
----@param agent table
----@param scope table
----@param tab_label string
----@return table|nil agent
-function M.place_agent(agent, scope, tab_label)
-  if not full_agent(agent) then
-    notify("worker must be a full Herdr Codex session")
-    return nil
-  end
-  local owner, listed = M.agent_for_worktree(scope.cwd)
-  if listed == false then
-    notify("could not verify whether this worktree already owns a durable session")
-    return nil
-  end
-  if owner and owner.name ~= agent.name then
-    notify("feature worktree already owns a different durable session")
-    return nil
-  end
-  local cwd = M.normalize_cwd(agent.foreground_cwd or agent.cwd)
-  if cwd ~= M.normalize_cwd(scope.cwd) then
-    notify("existing agent cwd does not match its feature worktree")
-    return nil
-  end
-  return own_tab(agent, scope, tab_label)
 end
 
 ---@param name string

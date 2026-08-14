@@ -40,88 +40,28 @@ _Avoid_: workspace
 The one user-addressable Sidekick session owned by a Worktree and shown in session pickers. Short-lived child agents are not Durable Sidekick Sessions.
 _Avoid_: workspace, spinoff session, picker child
 
-## Vault Work
+## Agent Attachments
 
-**Vault Hunter**:
-The skill that routes ambiguous work to Vault Scout and executes an autonomous-ready Vault Task with a registered, sequential Herdr crew. The driving parent owns Run sequencing and canonical vault mutations; No Mistakes owns independent review and final verifier certification.
-_Avoid_: vault skill, parent-owned review or verifier certification
+**Agent Session**:
+A durable identity for one running agent whose conversation continues independently of any user-interface surface.
+_Avoid_: Neovim session, terminal session, pane when referring to the agent
 
-**Run Registry**:
-A versioned durable store of immutable Run observations emitted by the active Vault Hunter driver. Schema version 1 retains participant, lifecycle, and evidence histories; schema version 2 adds typed verifier attempts and parent decisions, participants and workers, runtime telemetry, and auditor verdicts. Reader APIs remain forward-readable while producer APIs strictly validate known contracts, and the Registry never becomes the authority for vault lifecycle, goal advancement, acceptance, or completion.
-_Avoid_: workflow engine, completion authority
+**Surface Attachment**:
+A client's view of an Agent Session with a declared set of surface capabilities.
+_Avoid_: attached session, client session
 
-**Atlas**:
-A read-only projection of Run Registry observations and live Herdr status. When those sources disagree, Atlas labels recorded and live state separately instead of reconciling or advancing either source.
-_Avoid_: run controller, registry writer
+**Attachment Lease**:
+Herdr's time-bounded grant giving one Surface Attachment exclusive authority for live input and interactive mouse routing.
+_Avoid_: takeover
 
-**Registered Participant**:
-A Task Run participant whose exact Herdr and agent-session identities are recorded in the Run Registry and can therefore be correlated with Atlas.
-_Avoid_: any Sidekick row, inferred participant
+**Lease Holder**:
+The Surface Attachment that currently holds the Attachment Lease. An Agent Session may have no Lease Holder.
+_Avoid_: owner, active attachment
 
-**Vault Hunter Crew**:
-The sequential `verifier-builder`, `convergence-engineer`, and `delivery-steward` processes whose exact Run, Pi session, and Herdr custody is owned by the production crew extension. The Run Registry adapter remains separate, and process completion or telemetry never implies evidence acceptance.
-_Avoid_: generic inline subagents, Registry adapter, acceptance authority
+**Observer**:
+A Surface Attachment that can read session status and history without authority for live input or interactive mouse routing.
+_Avoid_: secondary attachment, passive holder
 
-**Atlas Companion**:
-The read-only Atlas process attached exactly once to an eligible Task Run. T16 owns starting and stopping it; Atlas T03 owns its command and attachment semantics.
-_Avoid_: driver, orchestrator
-
-**Feature Run**:
-A Vault Hunter run that refines a Vault Feature into an ordered, verifier-backed task plan and stops before task implementation.
-_Avoid_: feature execution
-
-**Task Run**:
-A Vault Hunter run that executes one Vault Task. A checkbox-only task is first refined from its checkbox and nested bullets through Grill with Docs into a durable task note.
-_Avoid_: feature run, raw checkbox execution
-
-**Task Spec**:
-The To Spec structure stored in the canonical Vault Task note before execution. It is not published as a separate tracker issue.
-_Avoid_: GitHub execution issue, duplicate spec
-
-**Task Goal Timeline**:
-The continuous Task Run timeline covers checkpoint one; verifier construction; single-writer implementation convergence; No Mistakes review, documentation, lint, tests, and final verifier certification; push, pull request, CI, and merge; then exact resource cleanup and checkpoint two. Crew personas hand off and close sequentially.
-_Avoid_: parallel crew writers, parent-owned delivery review, uncertified landing
-
-**Verifier Cycle**:
-The convergence engineer works against a frozen ordered verifier manifest and returns results for a named candidate. No Mistakes later executes the complete manifest against one frozen commit and tree in its dedicated certification phase; any fix invalidates that certification candidate.
-_Avoid_: affected-check-only certification, ordinary test success as certification
-
-**Verifier Entry**:
-A stable `V01`, `V02`, … item in a Vault Task note recording one externally observable behavior, its exact check, baseline-red proof, and latest result.
-_Avoid_: unnumbered acceptance note
-
-**Refactor Gate**:
-The point after every Verifier Entry has reached green once. Refactoring may improve implementation or verifier structure without changing behavior or weakening checks, and the full verifier set must return to green afterward.
-_Avoid_: feature expansion
-
-**Review Refactor**:
-The No Mistakes fix pass that addresses accepted independent-review findings before the candidate returns through review and final verifier certification.
-_Avoid_: Hunter parent review, review-only report
-
-**Review and Certification Loop**:
-The No Mistakes-owned loop that settles review findings and fixes, then certifies the complete declared verifier manifest on one frozen candidate tree before push, pull request, or CI. The external No Mistakes binary does not yet implement the required `certify` phase, so Vault Hunter delivery remains blocked at that boundary rather than emulating certification.
-_Avoid_: generic reviewer substitution, parent acceptance of verifier attempts, claiming current certification support
-
-**Pull Request Evidence**:
-The links to every implementation pull request created during a Task Run, preserved in the canonical Vault Task note with final merge evidence. Vault updates are committed and pushed directly without a vault pull request.
-_Avoid_: terminal-only PR report, vault PR
-
-**Vault Checkpoint**:
-One of two pushed Task Run states: the in-progress Task Spec and verifier plan before coding, or the completed evidence after the implementation pull request merges.
-_Avoid_: per-cycle vault commit
-
-**Landing Gate**:
-The No Mistakes-owned delivery boundary after successful final verifier certification, covering push, pull request, required CI, repairs, merge, and declared merged-main checks. Vault Hunter never bypasses repository protections, and certification must precede push, pull request, or CI.
-_Avoid_: manual protection bypass, landing without certification
-
-**Workspace Cleanup Gate**:
-The final Task Goal where Vault Hunter performs exact task-owned resource teardown in three verified layers: close and clean up every task-owned Herdr resource (the task's Herdr Workspace and its Herdr tabs), remove that workspace's Herdr Bindings from Neovim, then close the corresponding Neovim Workspace Tabs and verify all three layers are gone. This is the deliberate exception to ordinary Herdr closure, which only unbinds a tab and preserves the folder-owned Workspace Tab. Other Herdr Workspaces and Unbound Tabs remain untouched. Vault Hunter records final task evidence and pushes the completed vault checkpoint.
-_Avoid_: closing only the active feature tab, closing unrelated tabs, ordinary closure that preserves the Workspace Tab
-
-**Feature Issue**:
-A temporary decision or investigation note stored under the owning Vault Feature's `issues/` directory. A Wayfinder effort groups its `map.md` and numbered decision tickets under `issues/<effort>/`; these are Feature Issues, not implementation tasks.
-_Avoid_: task, project-wide issue when ownership is known
-
-**Project Issue**:
-A temporary issue stored under a Vault Project while its feature ownership is unknown or genuinely cross-feature. Move a Wayfinder effort intact to its owning feature once that ownership becomes clear.
-_Avoid_: permanent home for owned work
+**Capability Plan**:
+The inspectable assignment of session and surface capabilities to their canonical authorities for one Surface Attachment.
+_Avoid_: profile, backend settings

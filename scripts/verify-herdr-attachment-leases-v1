@@ -1,0 +1,523 @@
+#!/usr/bin/env python3
+"""Verify the Phase 1 V1 attachment-lease lifecycle contract."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import subprocess
+import sys
+from copy import deepcopy
+from pathlib import Path
+from typing import Any, NoReturn
+
+
+REPO = Path(__file__).resolve().parent.parent
+BASELINE = "11cdc2ccf076c898092ba1b5fd19c40cc25ab777"
+BACKEND = Path("nvim/.config/nvim/lua/plugins/sidekick/herdr_backend.lua")
+CONTRACT_DOC = REPO / "docs/herdr-attachment-leases-v1.md"
+CONTRACT_JSON = REPO / "docs/contracts/herdr-attachment-leases-v1.json"
+ADR = REPO / "docs/adr/0004-require-holder-consent-for-healthy-lease-transfer.md"
+SCENARIOS = REPO / "scripts/fixtures/herdr-attachment-leases-v1/scenarios.json"
+
+PROTOTYPE_BRANCH = "prototype/herdr-attachment-leases"
+PROTOTYPE_COMMIT = "02a7cf94c22509da4944be4582952bd90bdbee46"
+LEASE_DURATION = 4
+
+EXPECTED_CONTRACT = {
+    "contract": "herdr-attachment-leases",
+    "phase": 1,
+    "milestone": "V1",
+    "status": "frozen",
+    "extends": {
+        "milestone": "V0",
+        "contract": "docs/contracts/herdr-attachment-leases-v0.json",
+    },
+    "prototype_evidence": {
+        "branch": PROTOTYPE_BRANCH,
+        "commit": PROTOTYPE_COMMIT,
+    },
+    "lease_states": [
+        {
+            "state": "unheld",
+            "holder": "absent",
+            "requester": "absent",
+            "deadline": "absent",
+        },
+        {
+            "state": "held",
+            "holder": "required",
+            "requester": "absent",
+            "deadline": "required",
+        },
+        {
+            "state": "transfer_requested",
+            "holder": "required",
+            "requester": "required and different from holder",
+            "deadline": "required",
+        },
+    ],
+    "attachment_roles": [
+        {
+            "role": "Lease Holder",
+            "live_input": True,
+            "interactive_mouse": True,
+        },
+        {
+            "role": "Observer",
+            "live_input": False,
+            "interactive_mouse": False,
+        },
+    ],
+    "timing": {
+        "fixture_clock": "deterministic integer ticks",
+        "fixture_lease_duration_ticks": LEASE_DURATION,
+        "production_duration": "deferred to Phase 2 measurement",
+    },
+    "decisions": [
+        "A request for an unheld Attachment Lease is granted immediately.",
+        "Exactly one transfer request may wait behind a healthy Lease Holder.",
+        "The Lease Holder retains live authority while transfer is requested.",
+        "Only the Lease Holder may approve or deny a healthy transfer request.",
+        "Release, hide, close, detach, explicit switch, or expiry promotes the pending requester; without one the lease becomes unheld.",
+        "A Lease Holder may renew while a transfer request is pending, without clearing that request.",
+    ],
+    "events": [
+        {
+            "event": "open",
+            "actor": "detached Surface Attachment",
+            "effect": "Attach; grant immediately when unheld, otherwise become Observer.",
+        },
+        {
+            "event": "request",
+            "actor": "Observer",
+            "effect": "Grant when unheld; otherwise record one pending requester without displacing the Lease Holder.",
+        },
+        {
+            "event": "approve",
+            "actor": "Lease Holder",
+            "effect": "Promote the requester and start a fresh lease deadline.",
+        },
+        {
+            "event": "deny",
+            "actor": "Lease Holder",
+            "effect": "Clear the requester while preserving the holder and existing deadline.",
+        },
+        {
+            "event": "renew",
+            "actor": "Lease Holder",
+            "effect": "Start a fresh deadline and preserve any pending requester.",
+        },
+        {
+            "event": "release",
+            "actor": "Lease Holder",
+            "effect": "Promote the requester or make the lease unheld; the releasing surface remains an Observer.",
+        },
+        {
+            "event": "hide_or_close_or_detach",
+            "actor": "attached Surface Attachment",
+            "effect": "Unregister the surface; if it held the lease, promote the requester or make the lease unheld.",
+        },
+        {
+            "event": "explicit_switch",
+            "actor": "Lease Holder",
+            "effect": "Release deliberately and promote the pending requester.",
+        },
+        {
+            "event": "tick",
+            "actor": "Herdr clock",
+            "effect": "Advance deterministic time; at the deadline, expire and promote the requester or make the lease unheld.",
+        },
+        {
+            "event": "live_input",
+            "actor": "Surface Attachment",
+            "effect": "Advance the transcript only for the Lease Holder; reject Observer input without state mutation.",
+        },
+        {
+            "event": "interactive_mouse",
+            "actor": "Surface Attachment",
+            "effect": "Route only for the Lease Holder; reject Observer mouse events without state mutation.",
+        },
+        {
+            "event": "read_history_or_focus",
+            "actor": "attached Surface Attachment",
+            "effect": "Update surface projection state without changing lease authority.",
+        },
+    ],
+    "release_causes": [
+        "explicit release",
+        "hide",
+        "close",
+        "detach",
+        "explicit switch",
+        "expiry",
+    ],
+    "invariants": [
+        "Agent Session identity never changes across attachment or lease transitions.",
+        "There are zero or one Lease Holders and zero or one pending requesters.",
+        "The Lease Holder and pending requester are attached and are different Surface Attachments.",
+        "Every held lease has one finite deadline; an unheld lease has none.",
+        "A pending transfer does not reduce the Lease Holder's live authority.",
+        "Observer live-input and interactive-mouse attempts are rejected without authoritative state mutation.",
+        "History reads and focus reports never grant or transfer an Attachment Lease.",
+        "Release and expiry promote the pending requester; without one they leave the lease unheld.",
+        "Renewal preserves a pending requester while replacing the deadline.",
+        "Only accepted Lease Holder live input advances the canonical transcript revision.",
+    ],
+    "out_of_scope": [
+        "V2 Capability Plan schema, commands, and compatibility behavior",
+        "V3 Pi and Codex executable surface integration",
+        "production heartbeat and expiry durations",
+        "runtime changes to Herdr, Sidekick, Pi, or Codex",
+    ],
+}
+
+EXPECTED_SCENARIOS = {
+    "approved_transfer",
+    "denied_transfer_and_renewal",
+    "release_promotes_requester",
+    "close_promotes_requester",
+    "hide_promotes_requester",
+    "detach_promotes_requester",
+    "switch_promotes_requester",
+    "expiry_promotes_requester",
+    "expiry_without_requester_unholds",
+    "second_request_rejected",
+    "observer_mutations_rejected",
+    "focus_and_history_are_non_authoritative",
+    "all_surfaces_close_session_continues",
+    "unheld_request_grants_immediately",
+}
+
+CASES = {
+    "V1.1": "lifecycle contract",
+    "V1.2": "executable transition journeys",
+    "V1.3": "V0 regression and unchanged runtime",
+}
+
+
+def fail(message: str) -> NoReturn:
+    raise AssertionError(message)
+
+
+def run(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        args,
+        cwd=REPO,
+        check=check,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+
+def require_text(path: Path) -> str:
+    if not path.is_file():
+        fail(f"required V1 artifact is missing: {path.relative_to(REPO)}")
+    return path.read_text()
+
+
+def lease_state(state: dict[str, Any]) -> str:
+    if state["holder"] is None:
+        return "unheld"
+    if state["requester"] is None:
+        return "held"
+    return "transfer_requested"
+
+
+def initial_state(setup: dict[str, Any]) -> dict[str, Any]:
+    attached = list(setup.get("attached", []))
+    holder = setup.get("holder")
+    if holder and holder not in attached:
+        fail(f"fixture holder {holder!r} is not attached")
+    deadline = setup.get("deadline")
+    if holder and deadline is None:
+        deadline = setup.get("clock", 0) + LEASE_DURATION
+    return {
+        "session_id": setup.get("session_id", "agent-session-42"),
+        "clock": setup.get("clock", 0),
+        "transcript_revision": setup.get("transcript_revision", 12),
+        "attached": attached,
+        "focused": list(setup.get("focused", [])),
+        "seen": {surface: setup.get("transcript_revision", 12) for surface in attached},
+        "holder": holder,
+        "requester": setup.get("requester"),
+        "deadline": deadline,
+        "duration": LEASE_DURATION,
+    }
+
+
+def grant(state: dict[str, Any], surface: str) -> None:
+    state["holder"] = surface
+    state["requester"] = None
+    state["deadline"] = state["clock"] + state["duration"]
+
+
+def promote_or_unhold(state: dict[str, Any]) -> None:
+    requester = state["requester"]
+    if requester is not None:
+        grant(state, requester)
+        return
+    state["holder"] = None
+    state["requester"] = None
+    state["deadline"] = None
+
+
+def reject(state: dict[str, Any], before: dict[str, Any], reason: str) -> tuple[str, str]:
+    if state != before:
+        fail(f"rejected action mutated authoritative state: reason={reason}")
+    return "rejected", reason
+
+
+def apply_action(state: dict[str, Any], action: dict[str, Any]) -> tuple[str, str]:
+    before = deepcopy(state)
+    event = action["event"]
+    surface = action.get("surface")
+
+    if event == "open":
+        if surface in state["attached"]:
+            return "no_op", "already attached"
+        state["attached"].append(surface)
+        state["seen"][surface] = state["transcript_revision"]
+        if state["holder"] is None:
+            grant(state, surface)
+        return "accepted", "opened"
+
+    if event == "request":
+        if surface not in state["attached"]:
+            return reject(state, before, "detached")
+        if state["holder"] == surface:
+            return "no_op", "already holder"
+        if state["holder"] is None:
+            grant(state, surface)
+            return "accepted", "granted unheld lease"
+        if state["requester"] is not None:
+            return reject(state, before, "request already pending")
+        state["requester"] = surface
+        return "accepted", "transfer requested"
+
+    if event in {"approve", "deny", "renew", "release", "explicit_switch"}:
+        if surface != state["holder"]:
+            return reject(state, before, "not holder")
+        if event in {"approve", "deny", "explicit_switch"} and state["requester"] is None:
+            return "no_op", "no requester"
+        if event == "approve":
+            grant(state, state["requester"])
+        elif event == "deny":
+            state["requester"] = None
+        elif event == "renew":
+            state["deadline"] = state["clock"] + state["duration"]
+        else:
+            promote_or_unhold(state)
+        return "accepted", event
+
+    if event in {"close", "hide", "detach"}:
+        if surface not in state["attached"]:
+            return "no_op", "already detached"
+        state["attached"].remove(surface)
+        state["focused"] = [item for item in state["focused"] if item != surface]
+        state["seen"].pop(surface, None)
+        if state["holder"] == surface:
+            promote_or_unhold(state)
+        elif state["requester"] == surface:
+            state["requester"] = None
+        return "accepted", event
+
+    if event == "tick":
+        state["clock"] += 1
+        if state["holder"] is not None and state["clock"] >= state["deadline"]:
+            promote_or_unhold(state)
+            return "accepted", "expired"
+        return "accepted", "tick"
+
+    if event in {"live_input", "interactive_mouse"}:
+        if surface != state["holder"]:
+            return reject(state, before, "observer has no live authority")
+        if event == "live_input":
+            state["transcript_revision"] += 1
+            state["seen"][surface] = state["transcript_revision"]
+        return "accepted", event
+
+    if event == "read_history":
+        if surface not in state["attached"]:
+            return reject(state, before, "detached")
+        state["seen"][surface] = state["transcript_revision"]
+        return "accepted", event
+
+    if event == "focus":
+        if surface not in state["attached"]:
+            return reject(state, before, "detached")
+        if surface in state["focused"]:
+            state["focused"].remove(surface)
+        else:
+            state["focused"].append(surface)
+            state["seen"][surface] = state["transcript_revision"]
+        return "accepted", event
+
+    fail(f"unknown fixture event: {event}")
+
+
+def assert_invariants(state: dict[str, Any], expected_session_id: str) -> None:
+    if state["session_id"] != expected_session_id:
+        fail("Agent Session identity changed")
+    if state["holder"] is None:
+        if state["deadline"] is not None or state["requester"] is not None:
+            fail("unheld lease retained holder-only fields")
+    else:
+        if state["holder"] not in state["attached"]:
+            fail("Lease Holder is detached")
+        if not isinstance(state["deadline"], int) or state["deadline"] <= state["clock"]:
+            fail("held lease lacks a future finite deadline")
+    if state["requester"] is not None:
+        if state["requester"] not in state["attached"]:
+            fail("pending requester is detached")
+        if state["requester"] == state["holder"]:
+            fail("Lease Holder is also requester")
+
+
+def actual_snapshot(state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "session_id": state["session_id"],
+        "clock": state["clock"],
+        "transcript_revision": state["transcript_revision"],
+        "attached": state["attached"],
+        "focused": state["focused"],
+        "holder": state["holder"],
+        "requester": state["requester"],
+        "deadline": state["deadline"],
+        "lease_state": lease_state(state),
+    }
+
+
+def assert_expected(actual: dict[str, Any], expected: dict[str, Any], context: str) -> None:
+    mismatches = {
+        key: {"expected": value, "actual": actual.get(key)}
+        for key, value in expected.items()
+        if actual.get(key) != value
+    }
+    if mismatches:
+        fail(f"{context} mismatch:\n{json.dumps(mismatches, indent=2)}")
+
+
+def verify_contract() -> None:
+    contract = json.loads(require_text(CONTRACT_JSON))
+    if contract != EXPECTED_CONTRACT:
+        fail(
+            "machine-readable V1 lifecycle contract differs from the frozen contract\n"
+            f"expected={json.dumps(EXPECTED_CONTRACT, indent=2)}\n"
+            f"actual={json.dumps(contract, indent=2)}"
+        )
+    if run("git", "rev-parse", PROTOTYPE_BRANCH).stdout.strip() != PROTOTYPE_COMMIT:
+        fail("approved prototype branch no longer points at the recorded evidence commit")
+
+    doc = require_text(CONTRACT_DOC)
+    adr = " ".join(require_text(ADR).split())
+    for decision in contract["decisions"]:
+        if decision not in doc:
+            fail(f"human-readable V1 contract is missing approved decision: {decision}")
+    for state in contract["lease_states"]:
+        if f"| `{state['state']}` |" not in doc:
+            fail(f"human-readable V1 contract is missing lease state: {state['state']}")
+    required_adr_text = (
+        "Only the Lease Holder may approve or deny a healthy transfer request. "
+        "A healthy holder cannot be forcibly displaced in V1"
+    )
+    if required_adr_text not in adr:
+        fail("ADR 0004 does not record the accepted healthy-transfer authority")
+
+
+def verify_journeys() -> None:
+    payload = json.loads(require_text(SCENARIOS))
+    if payload.get("schema") != "herdr-attachment-leases-v1-scenarios" or payload.get("version") != 1:
+        fail("scenario fixture has the wrong schema or version")
+    scenarios = payload.get("scenarios")
+    if not isinstance(scenarios, list):
+        fail("scenario fixture must contain a scenarios list")
+    ids = {scenario.get("id") for scenario in scenarios}
+    if ids != EXPECTED_SCENARIOS or len(ids) != len(scenarios):
+        fail(f"scenario coverage differs from V1 contract: expected={sorted(EXPECTED_SCENARIOS)} actual={sorted(ids)}")
+
+    for scenario in scenarios:
+        state = initial_state(scenario["setup"])
+        session_id = state["session_id"]
+        assert_invariants(state, session_id)
+        for index, step in enumerate(scenario["steps"], start=1):
+            result, reason = apply_action(state, step["action"])
+            assert_invariants(state, session_id)
+            expected = dict(step.get("expect", {}))
+            expected_result = expected.pop("result", None)
+            expected_reason = expected.pop("reason", None)
+            if expected_result is not None and result != expected_result:
+                fail(f"{scenario['id']} step {index} result: expected={expected_result} actual={result}")
+            if expected_reason is not None and reason != expected_reason:
+                fail(f"{scenario['id']} step {index} reason: expected={expected_reason} actual={reason}")
+            assert_expected(actual_snapshot(state), expected, f"{scenario['id']} step {index}")
+        assert_expected(actual_snapshot(state), scenario["final"], f"{scenario['id']} final")
+
+
+def allowed_phase_path(path: str) -> bool:
+    return (
+        path == "CONTEXT.md"
+        or path == "docs/adr/0003-keep-attachment-authority-in-herdr.md"
+        or path == "docs/adr/0004-require-holder-consent-for-healthy-lease-transfer.md"
+        or (path.startswith("docs/") and "herdr-attachment-leases-" in path)
+        or path.startswith("scripts/verify-herdr-attachment-leases-")
+        or path.startswith("scripts/fixtures/herdr-attachment-leases-")
+    )
+
+
+def verify_regression() -> None:
+    v0 = run("scripts/verify-herdr-attachment-leases-v0", check=False)
+    if v0.returncode:
+        fail(f"V0 regression failed:\n{v0.stdout}")
+    expected_v0 = [
+        "V0.1 canonical vocabulary: PASS",
+        "V0.2 authority boundary: PASS",
+        "V0.3 scope and unchanged runtime seam: PASS",
+    ]
+    if v0.stdout.strip().splitlines() != expected_v0:
+        fail(f"V0 regression output differs:\n{v0.stdout}")
+
+    changed = set(run("git", "diff", "--name-only", BASELINE).stdout.splitlines())
+    changed.update(run("git", "ls-files", "--others", "--exclude-standard").stdout.splitlines())
+    unexpected = sorted(path for path in changed if not allowed_phase_path(path))
+    if unexpected:
+        fail(f"Phase 1 changed runtime or unrelated paths: {unexpected}")
+
+    current = (REPO / BACKEND).read_bytes()
+    baseline = run("git", "show", f"{BASELINE}:{BACKEND.as_posix()}").stdout.encode()
+    if hashlib.sha256(current).digest() != hashlib.sha256(baseline).digest():
+        fail("Sidekick Herdr backend differs from the unchanged Phase 1 baseline")
+
+    diff_check = run("git", "diff", "--check", check=False)
+    if diff_check.returncode:
+        fail(f"git diff --check failed:\n{diff_check.stdout}")
+
+
+VERIFY = {
+    "V1.1": verify_contract,
+    "V1.2": verify_journeys,
+    "V1.3": verify_regression,
+}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("case", nargs="?", choices=CASES)
+    args = parser.parse_args()
+    selected = [args.case] if args.case else list(CASES)
+
+    for case in selected:
+        try:
+            VERIFY[case]()
+        except (AssertionError, json.JSONDecodeError, OSError, subprocess.CalledProcessError) as error:
+            print(f"{case} {CASES[case]}: FAIL", file=sys.stderr)
+            print(error, file=sys.stderr)
+            return 1
+        print(f"{case} {CASES[case]}: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

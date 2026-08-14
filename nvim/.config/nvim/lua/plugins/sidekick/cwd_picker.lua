@@ -14,8 +14,6 @@ local session_paths = {}
 local spinner_refresh_ms = 80
 local preview_debounce_ms = 400
 local preview_settle_ms = 16
-local atlas_lookup_timeout_ms = 1000
-local workspace_preview_enabled = true
 local full_preview_lines = 2147483647 -- Herdr clamps this to the available scrollback.
 local workspace_ns = vim.api.nvim_create_namespace("sidekick_workspace_picker")
 local status_rank = { working = 1, blocked = 2, done = 3, idle = 4 }
@@ -25,73 +23,6 @@ local status_display = {
   working = { "›", "DiagnosticInfo" },
   idle = { "·", "Comment" },
 }
-
-local function complete_atlas_identity(item)
-  local session = item and item.agent_session
-  return not not (item
-    and not item._empty
-    and not item._workspace
-    and type(item.workspace_id) == "string" and item.workspace_id ~= ""
-    and type(item.tab_id) == "string" and item.tab_id ~= ""
-    and type(item.pane_id) == "string" and item.pane_id ~= ""
-    and type(item.terminal_id) == "string" and item.terminal_id ~= ""
-    and session
-    and type(session.source) == "string" and session.source ~= ""
-    and type(session.kind) == "string" and session.kind ~= ""
-    and type(session.value) == "string" and session.value ~= "")
-end
-
-local function atlas_result_frame(result)
-  if type(result) ~= "table"
-    or result.outcome ~= "matched"
-    or type(result.frame) ~= "string"
-    or result.frame == ""
-  then
-    return nil
-  end
-  if result.projection == "workspace-task" then
-    return result.frame
-  end
-  if type(result.run_id) ~= "string"
-    or result.run_id == ""
-    or type(result.participant_id) ~= "string"
-    or result.participant_id == ""
-  then
-    return nil
-  end
-  return result.frame
-end
-
-local function atlas_lookup(item, width, height, callback)
-  local executable = vim.fn.exepath("atlas")
-  if executable == "" then
-    vim.schedule(function() callback(nil) end)
-    return
-  end
-  local session = item.agent_session or {}
-  local env = vim.tbl_extend("force", vim.fn.environ(), {
-    ATLAS_INTERNAL_MODE = "preview",
-    ATLAS_INTERNAL_SELECTION_KIND = (item._workspace or item._atlas_workspace_preview) and "workspace" or "agent",
-    ATLAS_INTERNAL_WORKSPACE_ID = item.workspace_id,
-    ATLAS_INTERNAL_WORKSPACE_LABEL = item.workspace_label or "",
-    ATLAS_INTERNAL_TAB_ID = item.tab_id or "",
-    ATLAS_INTERNAL_PANE_ID = item.pane_id or "",
-    ATLAS_INTERNAL_TERMINAL_ID = item.terminal_id or "",
-    ATLAS_INTERNAL_AGENT_SESSION_SOURCE = session.source or "",
-    ATLAS_INTERNAL_AGENT_SESSION_KIND = session.kind or "",
-    ATLAS_INTERNAL_AGENT_SESSION_VALUE = session.value or "",
-    ATLAS_INTERNAL_WIDTH = tostring(width),
-    ATLAS_INTERNAL_HEIGHT = tostring(height),
-  })
-  return vim.system({ executable }, { env = env, text = true, timeout = 1000 }, vim.schedule_wrap(function(result)
-    if result.code ~= 0 then
-      callback(nil)
-      return
-    end
-    local ok, decoded = pcall(vim.json.decode, result.stdout or "")
-    callback(ok and decoded or nil)
-  end))
-end
 
 local function workspace_scope()
   local tab = vim.api.nvim_get_current_tabpage()
@@ -523,9 +454,7 @@ local function workspace_groups(first_repository, metric_cache)
             group_key = group_key,
             repository = context and context.repository or nil,
             workspace_id = workspace_id,
-            workspace_label = context and context.repository_label
-              or workspace_labels[workspace_id]
-              or workspace_id,
+            workspace_label = context and context.repository_label or workspace_labels[workspace_id] or workspace_id,
           },
           running = 0,
           done = 0,
@@ -669,8 +598,6 @@ function M.open(opts)
   local picker
   local spinner_timer
   local workspace_win
-  local atlas_win
-  local agent_list_buf
   local rendered_workspace_item
   local pending_workspace_item
   local workspace_active = false
@@ -684,11 +611,6 @@ function M.open(opts)
   local reopening = false
   local preview_generation = 0
   local preview_selection
-  local atlas_attempted = false
-  local atlas_phase
-  local atlas_frame
-  local atlas_workspace_id
-  local atlas_process
   local staging_buffers = {}
   local transition_preview
   local has_local_working = vim.iter(items):any(function(item)
@@ -921,58 +843,9 @@ function M.open(opts)
     end
   end
 
-  local function stop_atlas_lookup()
-    local process = atlas_process
-    atlas_process = nil
-    if type(process) == "function" then
-      pcall(process)
-    elseif process and type(process.kill) == "function" then
-      pcall(process.kill, process, 15)
-    end
-  end
-
-  local function clear_atlas_preview()
-    if not atlas_win or not atlas_win:valid() then
-      return
-    end
-    if workspace_preview_enabled then
-      if not agent_list_buf or not vim.api.nvim_buf_is_valid(agent_list_buf) then
-        return
-      end
-      atlas_win.buf = agent_list_buf
-      vim.api.nvim_win_set_buf(atlas_win.win, agent_list_buf)
-      return
-    end
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.bo[buf].buftype = "nofile"
-    vim.bo[buf].bufhidden = "wipe"
-    vim.bo[buf].modifiable = false
-    atlas_win.buf = buf
-    vim.api.nvim_win_set_buf(atlas_win.win, buf)
-  end
-
-  local function show_atlas_loading()
-    if not atlas_win or not atlas_win:valid() then
-      return
-    end
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.bo[buf].buftype = "nofile"
-    vim.bo[buf].bufhidden = "wipe"
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "Loading task journey…" })
-    vim.bo[buf].modifiable = false
-    atlas_win.buf = buf
-    vim.api.nvim_win_set_buf(atlas_win.win, buf)
-  end
-
   local function invalidate_preview()
     preview_generation = preview_generation + 1
-    stop_atlas_lookup()
     discard_staging_buffers()
-    atlas_phase = nil
-    atlas_frame = nil
-    atlas_workspace_id = nil
-    atlas_attempted = false
-    clear_atlas_preview()
   end
 
   transition_preview = function()
@@ -1027,148 +900,15 @@ function M.open(opts)
     end)
   end
 
-  local function swap_atlas_buffer(buf, staging_win, item, generation, previous_tick)
-    if
-      generation ~= preview_generation
-      or item ~= preview_selection
-      or not picker
-      or picker.closed
-      or item ~= current_preview_item()
-      or atlas_phase ~= "staging"
-      or not atlas_win
-      or not atlas_win:valid()
-    then
-      discard_preview_buffer(buf, staging_win)
-      return
-    end
-    local ready, tick = preview_buffer_ready(buf, previous_tick)
-    if not ready then
-      vim.defer_fn(function()
-        swap_atlas_buffer(buf, staging_win, item, generation, tick)
-      end, preview_settle_ms)
-      return
-    end
-    atlas_win.buf = buf
-    vim.api.nvim_win_set_buf(atlas_win.win, buf)
-    staging_buffers[buf] = nil
-    if staging_win and vim.api.nvim_win_is_valid(staging_win) then
-      vim.api.nvim_win_close(staging_win, true)
-    end
-    atlas_phase = "active"
-  end
-
-  local function restage_atlas_preview(item, generation)
-    if not atlas_frame then
-      atlas_phase = nil
-      return
-    end
-    if not atlas_win or not atlas_win:valid() then
-      atlas_phase = "ready"
-      return
-    end
-    atlas_phase = "staging"
-    local frame = atlas_frame
-    local preview = {
-      win = {
-        win = atlas_win.win,
-        win_valid = function()
-          return atlas_win:valid()
-        end,
-      },
-    }
-    local buf, staging_win = prepare_preview_buffer(frame, nil, preview)
-    vim.schedule(function()
-      swap_atlas_buffer(buf, staging_win, item, generation)
-    end)
-  end
-
   show_preview = function(item, preview)
-    local atlas_eligible = workspace_preview_enabled and workspace_active and item and item.workspace_id
-      or not workspace_preview_enabled and complete_atlas_identity(item)
-    local same_active_task = workspace_preview_enabled
-      and atlas_phase == "active"
-      and atlas_frame
-      and atlas_workspace_id
-      and item
-      and item.workspace_id == atlas_workspace_id
-    if item ~= preview_selection and same_active_task then
-      preview_selection = item
-      displayed_preview_item = item
-      expanded_preview_item = nil
-      render_default_preview(item, preview, preview_generation)
-      return
-    end
     if item ~= preview_selection then
       transition_preview()
       preview_selection = item
       displayed_preview_item = item
     elseif item == displayed_preview_item and item == expanded_preview_item then
       return
-    elseif not atlas_eligible then
-      invalidate_preview()
-    elseif atlas_phase == "active" and atlas_frame then
-      return
-    elseif atlas_phase == "pending" or atlas_phase == "staging" then
-      return
-    elseif atlas_attempted then
-      render_default_preview(item, preview, preview_generation)
-      return
     end
-    local generation = preview_generation
-    render_default_preview(item, preview, generation)
-    if not atlas_eligible then
-      return
-    end
-    atlas_attempted = true
-    local lookup_win = atlas_win and atlas_win:valid() and atlas_win.win or (preview_window(preview) or {}).win
-    if not lookup_win then
-      return
-    end
-    atlas_phase = "pending"
-    if workspace_preview_enabled then
-      show_atlas_loading()
-    end
-    local width = vim.api.nvim_win_get_width(lookup_win)
-    local height = vim.api.nvim_win_get_height(lookup_win)
-    local lookup = opts.atlas_lookup or atlas_lookup
-    local lookup_item = workspace_preview_enabled
-        and vim.tbl_extend("force", {}, item, { _atlas_workspace_preview = true })
-      or item
-    atlas_process = lookup(lookup_item, width, height, function(result)
-      if
-        generation ~= preview_generation
-        or item ~= preview_selection
-        or not picker
-        or picker.closed
-        or atlas_phase ~= "pending"
-      then
-        return
-      end
-      atlas_process = nil
-      local frame = atlas_result_frame(result)
-      if not frame or result.projection ~= "workspace-task" then
-        atlas_phase = nil
-        clear_atlas_preview()
-        return
-      end
-      atlas_workspace_id = item.workspace_id
-      atlas_frame = frame
-      restage_atlas_preview(item, generation)
-    end)
-    vim.defer_fn(function()
-      if
-        generation ~= preview_generation
-        or item ~= preview_selection
-        or not picker
-        or picker.closed
-        or atlas_phase ~= "pending"
-      then
-        return
-      end
-      stop_atlas_lookup()
-      atlas_phase = nil
-      clear_atlas_preview()
-    end, atlas_lookup_timeout_ms)
+    render_default_preview(item, preview, preview_generation)
   end
 
   local function move_workspace_selection(step)
@@ -1181,10 +921,12 @@ function M.open(opts)
       return
     end
     vim.api.nvim_win_set_cursor(workspace_win.win, { row, 0 })
-    rendered_workspace_item = item
+    rendered_workspace_item = item._workspace and nil or item
     pending_workspace_item = nil
     set_active_selector(true)
-    show_preview(item)
+    if not item._workspace then
+      show_preview(item)
+    end
   end
 
   local function refresh_preview()
@@ -1400,7 +1142,7 @@ function M.open(opts)
     set_active_selector(not workspace_active)
     if workspace_active then
       local item = workspace_rows[vim.api.nvim_win_get_cursor(workspace_win.win)[1]]
-      if item then
+      if item and not item._workspace then
         rendered_workspace_item = item
         show_preview(item)
       end
@@ -1460,23 +1202,11 @@ function M.open(opts)
       ["<esc>"] = focus_input,
     },
   })
-  if not workspace_preview_enabled then
-    atlas_win = Snacks.win({
-      show = false,
-      focusable = false,
-      bo = { buftype = "nofile", bufhidden = "wipe", modifiable = false },
-      wo = {
-        winhighlight = "Normal:SidekickPickerTransparent,NormalNC:SidekickPickerTransparent",
-        wrap = true,
-        linebreak = true,
-      },
-    })
-  end
   local bottom_layout = {
     box = "horizontal",
     height = 14,
     {
-      width = workspace_preview_enabled and 0.5 or 0.333,
+      width = 0.5,
       win = "workspace",
       height = 12,
       title = " Repositories / Worktrees ",
@@ -1485,7 +1215,7 @@ function M.open(opts)
       border = "rounded",
     },
     {
-      width = workspace_preview_enabled and 0.5 or 0.333,
+      width = 0.5,
       win = "list",
       height = 12,
       title = " Current Worktree ",
@@ -1494,19 +1224,7 @@ function M.open(opts)
       border = "rounded",
     },
   }
-  if not workspace_preview_enabled then
-    bottom_layout[#bottom_layout + 1] = {
-      width = 0.333,
-      win = "atlas",
-      height = 12,
-      title = " Atlas Preview ",
-      border = "rounded",
-    }
-  end
   local layout_wins = { workspace = workspace_win }
-  if atlas_win then
-    layout_wins.atlas = atlas_win
-  end
 
   local agent_float = require("sidekick.config").cli.win.float
   -- Sidekick sizes the float's content first; its rounded border then adds one
@@ -1561,10 +1279,6 @@ function M.open(opts)
       if preview_selection then
         transition_preview()
       end
-      if workspace_preview_enabled then
-        atlas_win = active_picker.list.win
-        agent_list_buf = active_picker.list.win.buf
-      end
       render_workspace()
       set_active_selector(true)
       if opts.on_show then
@@ -1599,9 +1313,7 @@ function M.open(opts)
             if picker.closed then
               stop_spinner()
             else
-              if not (workspace_preview_enabled and workspace_active and atlas_phase) then
-                picker.list:update({ force = true })
-              end
+              picker.list:update({ force = true })
               if has_workspace_working then
                 render_workspace()
               end

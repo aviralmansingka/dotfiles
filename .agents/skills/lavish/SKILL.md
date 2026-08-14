@@ -38,8 +38,10 @@ Use lavish-axi when the user asks for a visual artifact, HTML explainer, interac
 1. Create a standalone HTML artifact first (default location `.lavish/<markdown-stem>.html` in the working directory).
    It must contain no annotation UI, editor chrome, feedback controls, or review-session dependency. When it comes from
    a Markdown file, give the HTML the same filename stem.
-2. Run `~/dotfiles/scripts/lavish-homelab render <html-file> --source-markdown <markdown-file>` to sync it and point
-   its stable alias at the plain rendered artifact. Share the returned `alias_url`. Stop here by default.
+2. Run `~/dotfiles/scripts/lavish-homelab render <html-file> --source-markdown <markdown-file>` to sync it, create an
+   isolated clone of the current pushed branch on the homelab, overlay local Git-visible files, launch its persistent
+   `Artifact-` Herdr workspace, and point the stable alias at the rendered artifact with its chat drawer. Share the
+   returned `alias_url`. Stop here by default.
 3. Only for an explicitly requested collaborative review, run
    `~/dotfiles/scripts/lavish-homelab review <html-file> --source-markdown <markdown-file>` to point the alias at the
    Lavish Editor session, then run `~/dotfiles/scripts/lavish-homelab poll <html-file>` for annotations, queued
@@ -52,12 +54,13 @@ Use lavish-axi when the user asks for a visual artifact, HTML explainer, interac
 
 ## Homelab hosting
 
-- The homelab owns the artifact copy, optional Lavish session state, and Tailscale Serve endpoint. Client devices edit
-  locally and sync through the wrapper.
+- The homelab owns the artifact worktree, persistent Herdr chat agent, optional Lavish session state, and Tailscale Serve
+  endpoint. Client devices generate locally and sync Git-visible files through the wrapper.
 - Never configure Tailscale Serve on the client or fall back to a device URL without explicit user approval. If the
   homelab is unavailable, report that blocker and keep the artifact local until it returns.
-- Share the stable port-443 `alias_url`. In default `render` mode it serves the synced artifact directly; in explicit
-  `review` mode it redirects to the editor shell.
+- Share the stable port-443 `alias_url`. In default `render` mode it serves a minimal shell with the unchanged artifact in
+  a frame, a top-right chat button, a right-side conversation drawer, and a read-only **Check changes** action. In
+  explicit `review` mode it redirects to the Lavish Editor shell.
 - Named aliases are collision-safe. The wrapper will never replace an existing port-443 route; if the Markdown-derived name is already owned, choose another explicit `--alias` or keep using that existing site as appropriate.
 - Keep every local asset beside the HTML file and use relative references. The wrapper syncs the entire containing
   directory to a device-and-path-scoped directory on the homelab before `render`, `review`, and `poll`.
@@ -90,13 +93,15 @@ For flows, architecture, state, or sequence diagrams, do not hand-build boxes-an
 
 ## Commands & rules
 
-- Run `~/dotfiles/scripts/lavish-homelab render <html-file> --source-markdown <markdown-file>` by default. It syncs
-  the artifact and returns a stable `alias_url` that opens the rendered HTML directly
+- Run `~/dotfiles/scripts/lavish-homelab render <html-file> --source-markdown <markdown-file>` by default. It returns a
+  stable `alias_url` backed by a homelab worktree and persistent `Artifact-` Herdr agent. Do not embed another chat UI in
+  the artifact HTML; the gateway supplies it consistently.
 - Run `~/dotfiles/scripts/lavish-homelab review <html-file> --source-markdown <markdown-file>` only when the user
   explicitly asks for the editor or annotation workflow. `open` remains a backward-compatible synonym for `review`
 - Unless the user specifies another location, create HTML artifacts in the current working directory under `.lavish/`
 - Lavish serves the html file through a local express.js server. If your html needs to reference other filesystem assets such as images, CSS, fonts, and local scripts, copy them into the same directory as the HTML file, then reference them with relative paths from that directory. Never prepend `/` to those asset paths - root paths won't work
-- Use `poll` only during an explicit interactive review. Plain rendered artifacts do not start a feedback poll
+- Use `poll` only during an explicit interactive review. Plain rendered artifacts route their drawer directly to their
+  homelab Herdr agent and do not need a client-side feedback poll.
 - Run `~/dotfiles/scripts/lavish-homelab end <html-file>` to end a session as the agent - ending it this way still allows a plain reopen later. When the user ends it from the browser instead, pass `--reopen` only when reopening is warranted
 - Run `npx -y lavish-axi export <html-file> [--out <path>]` to write a portable copy of the artifact - one HTML file with its LOCAL assets inlined - so it opens with no Lavish server and no sibling files. Remote CDN/font references are left as links, so it needs network to render those. Users can also export from the browser chrome's overflow menu
 - Do not run `lavish-axi share` or publish to another host unless the user explicitly asks for external publishing; the default and canonical review host is the homelab

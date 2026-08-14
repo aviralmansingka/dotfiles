@@ -1,0 +1,72 @@
+{
+  "contract": "herdr-attachment-leases",
+  "phase": 1,
+  "milestone": "V3",
+  "status": "frozen",
+  "extends": {
+    "milestone": "V2",
+    "contract": "docs/contracts/herdr-attachment-leases-v2.json"
+  },
+  "scenario_schema": {
+    "name": "herdr-attachment-leases-v3-scenarios",
+    "version": 1
+  },
+  "agent_kinds": {
+    "pi": {
+      "session_source": "herdr:pi",
+      "session_kind": "path",
+      "provider": "Pi"
+    },
+    "codex": {
+      "session_source": "herdr:codex",
+      "session_kind": "id",
+      "provider": "Codex"
+    }
+  },
+  "surface_kinds": [
+    "nvim",
+    "terminal"
+  ],
+  "required_scenarios": {
+    "pi": [
+      "pi_nvim_launch_and_input",
+      "pi_terminal_continue_after_hide",
+      "pi_observer_rejection",
+      "pi_stale_holder_recovery",
+      "pi_background_completion"
+    ],
+    "codex": [
+      "codex_nvim_launch_and_input",
+      "codex_approved_terminal_transfer",
+      "codex_denied_transfer_and_renewal",
+      "codex_release_promotes_terminal",
+      "codex_explicit_switch_promotes_terminal",
+      "codex_second_request_rejected",
+      "codex_background_completion"
+    ]
+  },
+  "required_outcomes": [
+    "Launching once preserves one Agent Session identity across all surface transitions.",
+    "Exactly one Surface Attachment has a Lease Holder plan whenever the lease is held.",
+    "Concurrent non-holders receive Observer plans and cannot send live input or interactive mouse events.",
+    "Hide, close, detach, release, and explicit switch relinquish live authority immediately.",
+    "Expiry recovers from a stale holder and promotes a pending requester without restarting the agent.",
+    "The Agent Session can produce output and complete with no Surface Attachments.",
+    "Reopening after background completion projects the same transcript revision and session identity.",
+    "Only accepted Lease Holder input and agent output advance the canonical transcript revision.",
+    "A second pending transfer request is rejected without changing authority.",
+    "Pi and Codex use identical lease semantics despite different session identity shapes."
+  ],
+  "fixture_boundary": {
+    "agent_processes": "modeled identities and transcript events; no real Pi or Codex process is launched",
+    "clock": "deterministic integer ticks",
+    "capability_plans": "role and live-authority projection from the frozen V2 contract",
+    "runtime": "unchanged"
+  },
+  "out_of_scope": [
+    "real Pi or Codex runtime attachment",
+    "Herdr attachment controller implementation",
+    "Sidekick adapter migration",
+    "production heartbeat duration"
+  ]
+}

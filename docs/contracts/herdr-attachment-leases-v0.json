@@ -1,0 +1,94 @@
+{
+  "contract": "herdr-attachment-leases",
+  "phase": 1,
+  "milestone": "V0",
+  "status": "frozen",
+  "terms": [
+    "Agent Session",
+    "Surface Attachment",
+    "Attachment Lease",
+    "Lease Holder",
+    "Observer",
+    "Capability Plan"
+  ],
+  "capabilities": [
+    {
+      "capability": "Session identity and lifecycle",
+      "canonical_authority": "Herdr Agent Session",
+      "surface_responsibility": "Request or reopen"
+    },
+    {
+      "capability": "Conversation and model state",
+      "canonical_authority": "Pi or Codex",
+      "surface_responsibility": "Use the same running agent"
+    },
+    {
+      "capability": "Live rendering",
+      "canonical_authority": "Agent TUI",
+      "surface_responsibility": "Display the running agent"
+    },
+    {
+      "capability": "Transcript storage",
+      "canonical_authority": "Herdr Agent Session",
+      "surface_responsibility": "Read snapshots"
+    },
+    {
+      "capability": "Historical view",
+      "canonical_authority": "Capability Plan",
+      "surface_responsibility": "Use surface-native history"
+    },
+    {
+      "capability": "Search, selection, and copy",
+      "canonical_authority": "Surface Attachment",
+      "surface_responsibility": "Use surface-native controls"
+    },
+    {
+      "capability": "Live input",
+      "canonical_authority": "Attachment Lease",
+      "surface_responsibility": "Lease Holder only"
+    },
+    {
+      "capability": "Interactive mouse routing",
+      "canonical_authority": "Attachment Lease",
+      "surface_responsibility": "Lease Holder's Surface Attachment routes surface-native events"
+    },
+    {
+      "capability": "Link and file opening",
+      "canonical_authority": "Surface Attachment",
+      "surface_responsibility": "Use the surface-native opener"
+    },
+    {
+      "capability": "Paste and file ingestion",
+      "canonical_authority": "Surface Attachment",
+      "surface_responsibility": "Use surface-native normalization"
+    },
+    {
+      "capability": "Seen and unseen state",
+      "canonical_authority": "Herdr Agent Session",
+      "surface_responsibility": "Report focus to Herdr"
+    }
+  ],
+  "cardinality": {
+    "lease_holders": {
+      "minimum": 0,
+      "maximum": 1
+    },
+    "observers": {
+      "minimum": 0,
+      "maximum": null
+    }
+  },
+  "invariants": [
+    "Opening or closing a Surface Attachment never changes Agent Session identity.",
+    "An Agent Session may continue with no Surface Attachments and no Lease Holder.",
+    "An Observer cannot send live input or route interactive mouse events.",
+    "Transcript history is stored once by Herdr; surface history views are projections.",
+    "Every Surface Attachment receives an inspectable Capability Plan."
+  ],
+  "out_of_scope": [
+    "V1 lease states, transitions, renewal, release, expiry, and transfer",
+    "V2 Capability Plan schema, commands, and compatibility behavior",
+    "V3 Pi and Codex executable surface scenarios",
+    "runtime changes to Herdr, Sidekick, Pi, or Codex"
+  ]
+}

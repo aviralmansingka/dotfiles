@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Evidence-to-artifact architecture</title>
+  <style>
+    :root {
+      --bg0: #171918;
+      --bg1: #1d2021;
+      --bg2: #282828;
+      --bg3: #32302f;
+      --border: #504945;
+      --ghost: #665c54;
+      --muted: #a89984;
+      --fg0: #fbf1c7;
+      --fg1: #ebdbb2;
+      --red: #ea6962;
+      --red-bg: #3d2424;
+      --green: #a9b665;
+      --green-bg: #293126;
+      --yellow: #d8a657;
+      --yellow-bg: #353025;
+      --blue: #7daea3;
+      --blue-bg: #253033;
+      --aqua: #89b482;
+      --purple: #d3869b;
+      --orange: #e78a4e;
+      --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --shadow: 0 30px 100px rgb(0 0 0 / 48%);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg0); scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      color: var(--fg1);
+      font-family: var(--sans);
+      background:
+        linear-gradient(rgb(235 219 178 / 2.2%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(235 219 178 / 1.6%) 1px, transparent 1px),
+        radial-gradient(circle at 10% 0%, rgb(231 138 78 / 13%), transparent 31rem),
+        radial-gradient(circle at 96% 8%, rgb(125 174 163 / 10%), transparent 28rem),
+        var(--bg0);
+      background-size: 24px 24px, 24px 24px, auto, auto, auto;
+    }
+
+    a { color: var(--blue); text-underline-offset: 3px; }
+    a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
+    code, .gaa-mono { font-family: var(--mono); }
+    code { overflow-wrap: anywhere; color: var(--yellow); font-size: .92em; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { text-wrap: balance; }
+
+    .gaa-page {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: rgb(29 32 33 / 97%);
+      box-shadow: var(--shadow);
+    }
+    .gaa-terminal, .gaa-status {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      background: var(--bg3);
+      color: var(--muted);
+      font: 11px/1.3 var(--mono);
+    }
+    .gaa-terminal { border-bottom: 1px solid var(--border); }
+    .gaa-status { border-top: 1px solid var(--border); }
+    .gaa-terminal-title { overflow: hidden; color: var(--fg1); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+    .gaa-lights { color: var(--red); letter-spacing: 4px; }
+    .gaa-lights span:nth-child(1) { color: var(--yellow); }
+    .gaa-lights span:nth-child(2) { color: var(--green); }
+    .gaa-command {
+      display: flex;
+      gap: 10px;
+      min-width: 0;
+      padding: 12px 16px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+      background: #242424;
+      font: 12px/1.3 var(--mono);
+    }
+    .gaa-prompt { flex: 0 0 auto; color: var(--green); font-weight: 800; }
+    .gaa-command-text { overflow: hidden; color: var(--fg0); text-overflow: ellipsis; white-space: nowrap; }
+
+    .gaa-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 410px);
+      gap: 42px;
+      padding: 52px 46px 44px;
+      border-bottom: 1px solid var(--border);
+    }
+    .gaa-eyebrow { margin-bottom: 13px; color: var(--orange); font: 800 11px/1.3 var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+    h1 { max-width: 900px; margin-bottom: 18px; color: var(--fg0); font-size: clamp(38px, 5.4vw, 74px); letter-spacing: -.055em; line-height: .96; }
+    .gaa-lead { max-width: 860px; margin: 0; color: var(--muted); font-size: clamp(14px, 1.4vw, 17px); line-height: 1.75; }
+    .gaa-meta { display: grid; align-content: start; gap: 10px; }
+    .gaa-meta-card { min-width: 0; padding: 14px 15px; border: 1px solid var(--border); background: var(--bg2); color: var(--muted); font: 11px/1.55 var(--mono); }
+    .gaa-meta-card strong { display: block; margin-bottom: 5px; color: var(--fg0); font-size: 12px; }
+    .gaa-meta-card.evidence { border-left: 3px solid var(--blue); }
+    .gaa-meta-card.decision { border-left: 3px solid var(--green); }
+    .gaa-meta-card.attention { border-left: 3px solid var(--yellow); }
+    .gaa-meta-card.risk { border-left: 3px solid var(--red); }
+
+    .gaa-jumpbar { display: flex; gap: 8px; padding: 12px 18px; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--bg2); scrollbar-width: thin; }
+    .gaa-jumpbar a { flex: 0 0 auto; padding: 7px 10px; border: 1px solid var(--border); background: var(--bg1); color: var(--muted); font: 10px/1 var(--mono); letter-spacing: .07em; text-decoration: none; text-transform: uppercase; }
+    .gaa-jumpbar a:hover { border-color: var(--blue); color: var(--fg0); }
+
+    main { padding: 36px 34px 48px; }
+    section + section { margin-top: 48px; }
+    .gaa-section-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 17px; }
+    h2 { margin-bottom: 5px; color: var(--aqua); font-size: clamp(21px, 2.3vw, 30px); letter-spacing: -.035em; }
+    .gaa-section-kicker { margin: 0; color: var(--muted); font: 11px/1.55 var(--mono); text-align: right; }
+
+    .gaa-summary, .gaa-roadmap, .gaa-decisions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .gaa-card { min-width: 0; padding: 18px; border: 1px solid var(--border); background: var(--bg2); }
+    .gaa-card.current { border-top: 3px solid var(--red); }
+    .gaa-card.target, .gaa-card.recommended { border-top: 3px solid var(--green); }
+    .gaa-card.rule { border-top: 3px solid var(--yellow); }
+    .gaa-label { margin-bottom: 11px; color: var(--blue); font: 800 10px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .gaa-card.current .gaa-label { color: var(--red); }
+    .gaa-card.target .gaa-label { color: var(--green); }
+    .gaa-card.rule .gaa-label { color: var(--yellow); }
+    .gaa-card h3 { margin-bottom: 8px; color: var(--fg0); font-size: 15px; }
+    .gaa-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
+
+    .gaa-panel { min-width: 0; border: 1px solid var(--border); background: var(--bg2); }
+    .gaa-panel-title { display: flex; justify-content: space-between; gap: 14px; padding: 10px 13px; border-bottom: 1px solid var(--border); background: var(--bg3); color: var(--fg0); font: 11px/1.3 var(--mono); }
+    .gaa-panel-title span:last-child { color: var(--muted); text-align: right; }
+    .gaa-diagram { padding: 18px; overflow-x: auto; }
+    .gaa-diagram svg { display: block; width: 100%; min-width: 900px; height: auto; }
+    .gaa-node text, .gaa-scope text { font-family: var(--mono); }
+    .gaa-edge { fill: none; stroke-width: 2; marker-end: url(#gaa-arrow); }
+    .gaa-edge.control { stroke: var(--yellow); }
+    .gaa-edge.evidence { stroke: var(--blue); stroke-dasharray: 6 5; }
+    .gaa-edge.complete { stroke: var(--green); stroke-dasharray: 6 5; }
+    .gaa-edge.reject { stroke: var(--red); stroke-dasharray: 3 5; }
+    .gaa-scope > rect { fill: var(--yellow-bg); fill-opacity: .16; stroke: var(--yellow); stroke-width: 1.2; stroke-dasharray: 7 5; }
+    .gaa-edge-label { fill: var(--muted); font: 10px var(--mono); text-anchor: middle; paint-order: stroke; stroke: var(--bg2); stroke-width: 5px; stroke-linejoin: round; }
+    .gaa-caption { fill: var(--muted); font: 11px var(--mono); }
+
+    .gaa-legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 14px 18px 18px; border-top: 1px solid var(--border); background: var(--bg1); }
+    .gaa-legend-title { grid-column: 1 / -1; margin-bottom: 2px; color: var(--fg0); font: 800 10px/1.3 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .gaa-key { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; min-width: 0; color: var(--muted); font: 10px/1.45 var(--mono); }
+    .gaa-key strong { display: block; color: var(--fg1); font-size: 10px; }
+    .gaa-swatch { display: block; width: 26px; height: 14px; margin-top: 2px; }
+    .gaa-swatch.blue { border: 2px solid var(--blue); background: var(--blue-bg); }
+    .gaa-swatch.yellow { border: 2px solid var(--yellow); background: var(--yellow-bg); }
+    .gaa-swatch.green { border: 2px solid var(--green); background: var(--green-bg); }
+    .gaa-swatch.red { border: 2px dashed var(--red); background: var(--red-bg); }
+    .gaa-swatch.control { height: 8px; border-top: 2px solid var(--yellow); }
+    .gaa-swatch.evidence { height: 8px; border-top: 2px dashed var(--blue); }
+    .gaa-swatch.complete { height: 8px; border-top: 2px dashed var(--green); }
+    .gaa-swatch.reject { height: 8px; border-top: 2px dotted var(--red); }
+
+    .gaa-table-wrap { overflow-x: auto; border: 1px solid var(--border); background: var(--bg2); }
+    table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 11px; line-height: 1.55; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { background: var(--bg3); color: var(--fg0); font: 800 10px/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    td { color: var(--muted); }
+    td:first-child { color: var(--fg0); font-family: var(--mono); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .gaa-owner { color: var(--green); font-weight: 700; }
+    .gaa-proof { color: var(--blue); font-weight: 700; }
+
+    .gaa-roadmap { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .gaa-phase { margin-bottom: 10px; color: var(--yellow); font: 800 10px/1 var(--mono); letter-spacing: .08em; }
+    .gaa-decisions .gaa-card { border-left: 3px solid var(--yellow); }
+    .gaa-decisions .gaa-card.recommended { border-top: 1px solid var(--border); border-left-color: var(--green); }
+    .gaa-decisions .gaa-card.risk { border-left-color: var(--red); }
+    .gaa-state { margin-bottom: 10px; color: var(--yellow); font: 800 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .gaa-card.recommended .gaa-state { color: var(--green); }
+    .gaa-card.risk .gaa-state { color: var(--red); }
+    .gaa-acceptance { margin-top: 12px; padding: 18px; border: 1px solid var(--green); background: var(--green-bg); color: var(--fg0); font: 800 clamp(14px, 1.8vw, 20px)/1.55 var(--mono); text-align: center; }
+    .gaa-ok { color: var(--green); }
+
+    @media (max-width: 1050px) {
+      body { padding: 0; }
+      .gaa-page { border-left: 0; border-right: 0; }
+      .gaa-hero { grid-template-columns: 1fr; padding: 38px 26px 32px; }
+      main { padding: 28px 18px 38px; }
+      .gaa-summary, .gaa-decisions, .gaa-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .gaa-roadmap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 650px) {
+      .gaa-terminal, .gaa-status { grid-template-columns: 1fr auto; }
+      .gaa-terminal-title { display: none; }
+      .gaa-hero { padding: 32px 20px 28px; }
+      .gaa-section-head, .gaa-panel-title { display: block; }
+      .gaa-panel-title span { display: block; }
+      .gaa-section-kicker, .gaa-panel-title span + span { margin-top: 8px; text-align: left; }
+      .gaa-summary, .gaa-roadmap, .gaa-decisions, .gaa-legend { grid-template-columns: 1fr; }
+    }
+    @media print {
+      :root { --bg0: #fff; --bg1: #fff; --bg2: #fff; --bg3: #f1f1f1; --border: #bbb; --ghost: #777; --muted: #444; --fg0: #000; --fg1: #111; --red-bg: #fff; --green-bg: #fff; --yellow-bg: #fff; --blue-bg: #fff; }
+      body { padding: 0; background: #fff; color: #111; }
+      .gaa-page { width: 100%; border: 0; box-shadow: none; }
+      .gaa-jumpbar, .gaa-command, .gaa-terminal, .gaa-status { display: none; }
+      main { padding: 20px; }
+      section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="gaa-page">
+    <header>
+      <div class="gaa-terminal">
+        <div class="gaa-lights">● <span>●</span> <span>●</span></div>
+        <div class="gaa-terminal-title">evidence-to-artifact — architecture review</div>
+        <div>read-only proof</div>
+      </div>
+      <div class="gaa-command"><span class="gaa-prompt">$</span><span class="gaa-command-text">artifact explain --from verified-evidence --format architecture</span></div>
+      <div class="gaa-hero">
+        <div>
+          <div class="gaa-eyebrow">Reference artifact · standalone HTML</div>
+          <h1>Evidence becomes a page only after it becomes a model.</h1>
+          <p class="gaa-lead">A small reasoning seam turns verified sources into stable terminology and ownership. The visual layer then renders topology, proof, and delivery status without pretending decoration is evidence.</p>
+        </div>
+        <div class="gaa-meta">
+          <div class="gaa-meta-card evidence"><strong>Evidence</strong>Source claims remain traceable to files, commands, or measurements.</div>
+          <div class="gaa-meta-card decision"><strong>Decision</strong>The first visual answers one architectural question.</div>
+          <div class="gaa-meta-card attention"><strong>Semantic color</strong>Every accent has one documented meaning.</div>
+          <div class="gaa-meta-card risk"><strong>Failure boundary</strong>HTTP success never substitutes for content and layout proof.</div>
+        </div>
+      </div>
+      <nav class="gaa-jumpbar" aria-label="Page sections">
+        <a href="#summary">Summary</a><a href="#architecture">Architecture</a><a href="#evidence">Evidence</a><a href="#delivery">Delivery</a><a href="#decisions">Decisions</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="summary">
+        <div class="gaa-section-head">
+          <div><h2>Decision frame</h2><p class="gaa-mono">Reason first; render second; prove last.</p></div>
+          <p class="gaa-section-kicker">The page is a review surface, not the source of truth.</p>
+        </div>
+        <div class="gaa-summary">
+          <article class="gaa-card current"><div class="gaa-label">Current failure</div><h3>Visuals outrun evidence</h3><p>Unverified claims and decorative colors make a polished page difficult to trust.</p></article>
+          <article class="gaa-card target"><div class="gaa-label">Target behavior</div><h3>One traceable narrative</h3><p>Stable terms, explicit owners, and small diagrams connect each conclusion to proof.</p></article>
+          <article class="gaa-card rule"><div class="gaa-label">Governing rule</div><h3>Meaning before ornament</h3><p>Color, line style, component shape, and hierarchy must each carry a named job.</p></article>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <div class="gaa-section-head">
+          <div><h2>Evidence-to-artifact seam</h2><p class="gaa-mono">The model protects the visual layer from invention.</p></div>
+          <p class="gaa-section-kicker">Topology stays small; dense proof follows below.</p>
+        </div>
+        <div class="gaa-panel">
+          <div class="gaa-panel-title"><span>Verified sources → reasoning seam → tested delivery</span><span>one claim model · two proof loops</span></div>
+          <div class="gaa-diagram">
+            <svg viewBox="0 0 1100 470" role="img" aria-labelledby="gaa-arch-title gaa-arch-desc">
+              <title id="gaa-arch-title">Evidence-to-artifact architecture</title>
+              <desc id="gaa-arch-desc">Verified source files and runtime observations flow into an evidence model. The model drives a standalone HTML artifact. Browser quality assurance either approves the artifact for homelab delivery or returns layout and content failures to the builder.</desc>
+              <defs><marker id="gaa-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+
+              <g class="gaa-node" transform="translate(35 135)">
+                <rect width="220" height="120" rx="9" fill="#253033" stroke="#7daea3" stroke-width="1.3"/>
+                <text x="110" y="34" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Verified sources</text>
+                <text x="110" y="62" text-anchor="middle" fill="#7daea3" font-size="10">code · notes · commands</text>
+                <text x="110" y="82" text-anchor="middle" fill="#7daea3" font-size="10">runtime observations</text>
+                <text x="110" y="102" text-anchor="middle" fill="#a89984" font-size="10">claims remain traceable</text>
+              </g>
+
+              <g class="gaa-scope">
+                <rect x="325" y="55" width="430" height="285" rx="12"/>
+                <text x="347" y="84" fill="#d8a657" font-size="11" font-weight="700">REASONING SEAM · STABLE LANGUAGE + OWNERSHIP</text>
+              </g>
+              <g class="gaa-node" transform="translate(365 115)">
+                <rect width="350" height="88" rx="9" fill="#353025" stroke="#d8a657" stroke-width="1.3"/>
+                <text x="175" y="32" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Evidence model</text>
+                <text x="175" y="58" text-anchor="middle" fill="#d8a657" font-size="10">terms · owners · boundaries · invariants</text>
+                <text x="175" y="75" text-anchor="middle" fill="#a89984" font-size="10">inference stays visibly marked</text>
+              </g>
+              <g class="gaa-node" transform="translate(365 230)">
+                <rect width="350" height="78" rx="9" fill="#293126" stroke="#a9b665" stroke-width="1.3"/>
+                <text x="175" y="30" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Standalone artifact</text>
+                <text x="175" y="55" text-anchor="middle" fill="#a9b665" font-size="10">topology · evidence · decisions · plan</text>
+              </g>
+
+              <g class="gaa-node" transform="translate(830 105)">
+                <rect width="235" height="105" rx="9" fill="#293126" stroke="#a9b665" stroke-width="1.3"/>
+                <text x="118" y="34" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Browser QA</text>
+                <text x="118" y="61" text-anchor="middle" fill="#a9b665" font-size="10">desktop · 390px · a11y</text>
+                <text x="118" y="82" text-anchor="middle" fill="#a89984" font-size="10">content and layout proof</text>
+              </g>
+              <g class="gaa-node" transform="translate(830 265)">
+                <rect width="235" height="105" rx="9" fill="#3d2424" stroke="#ea6962" stroke-width="1.3" stroke-dasharray="6 5"/>
+                <text x="118" y="34" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Rejected build</text>
+                <text x="118" y="61" text-anchor="middle" fill="#ea6962" font-size="10">overflow · collision · stale claim</text>
+                <text x="118" y="82" text-anchor="middle" fill="#a89984" font-size="10">returns to the artifact</text>
+              </g>
+
+              <path class="gaa-edge evidence" d="M255 195 H365"/>
+              <path class="gaa-edge control" d="M540 203 V230"/>
+              <path class="gaa-edge complete" d="M715 269 C775 255 785 178 830 160"/>
+              <path class="gaa-edge reject" d="M948 210 V265"/>
+              <path class="gaa-edge reject" d="M830 318 C775 360 730 330 690 308"/>
+              <text x="310" y="181" class="gaa-edge-label">ground</text>
+              <text x="585" y="222" class="gaa-edge-label">render</text>
+              <text x="778" y="224" class="gaa-edge-label">inspect</text>
+              <text x="995" y="241" class="gaa-edge-label">fail</text>
+              <text x="753" y="350" class="gaa-edge-label">repair</text>
+              <text x="550" y="438" text-anchor="middle" class="gaa-caption">Content quality comes from the model. Visual consistency comes from the scaffold. Browser proof closes the loop.</text>
+            </svg>
+          </div>
+          <div class="gaa-legend" aria-label="Architecture diagram legend">
+            <div class="gaa-legend-title">Legend · node color is role; line style is relationship</div>
+            <div class="gaa-key"><span class="gaa-swatch blue" aria-hidden="true"></span><span><strong>Blue · evidence</strong>Durable source material and read-only facts.</span></div>
+            <div class="gaa-key"><span class="gaa-swatch yellow" aria-hidden="true"></span><span><strong>Yellow · control</strong>The reasoning seam that governs the page.</span></div>
+            <div class="gaa-key"><span class="gaa-swatch green" aria-hidden="true"></span><span><strong>Green · verified</strong>Rendered output or successful quality gate.</span></div>
+            <div class="gaa-key"><span class="gaa-swatch red" aria-hidden="true"></span><span><strong>Red dashed · rejected</strong>A visible failure that must return for repair.</span></div>
+            <div class="gaa-key"><span class="gaa-swatch control" aria-hidden="true"></span><span><strong>Solid yellow · control</strong>The model drives rendering.</span></div>
+            <div class="gaa-key"><span class="gaa-swatch evidence" aria-hidden="true"></span><span><strong>Dashed blue · grounding</strong>Evidence supports a claim.</span></div>
+            <div class="gaa-key"><span class="gaa-swatch complete" aria-hidden="true"></span><span><strong>Dashed green · proof</strong>A build enters verification.</span></div>
+            <div class="gaa-key"><span class="gaa-swatch reject" aria-hidden="true"></span><span><strong>Dotted red · failure</strong>A failed gate returns to its owner.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="evidence">
+        <div class="gaa-section-head">
+          <div><h2>Layer ownership</h2><p class="gaa-mono">Each layer earns its place with a distinct proof.</p></div>
+          <p class="gaa-section-kicker">No layer may silently cover for another.</p>
+        </div>
+        <div class="gaa-table-wrap">
+          <table>
+            <thead><tr><th>Layer</th><th>Owns</th><th>Evidence</th><th>Done when</th></tr></thead>
+            <tbody>
+              <tr><td>Reasoning</td><td class="gaa-owner">Terms, seams, invariants</td><td class="gaa-proof">Code and source notes</td><td>Claims are traceable and uncertainty is labeled.</td></tr>
+              <tr><td>Visual template</td><td class="gaa-owner">Tokens, components, diagram grammar</td><td class="gaa-proof">Retained reference</td><td>Color and line style have one visible meaning.</td></tr>
+              <tr><td>Lavish</td><td class="gaa-owner">Artifact routing and delivery</td><td class="gaa-proof">Playbooks and render output</td><td>The plain page is available at its stable alias.</td></tr>
+              <tr><td>Browser QA</td><td class="gaa-owner">Rendered behavior</td><td class="gaa-proof">Desktop and mobile inspection</td><td>No collision, clipping, or root overflow remains.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="delivery">
+        <div class="gaa-section-head">
+          <div><h2>Delivery loop</h2><p class="gaa-mono">Small phases keep the artifact auditable.</p></div>
+          <p class="gaa-section-kicker">The quality gate is part of the work.</p>
+        </div>
+        <div class="gaa-roadmap">
+          <article class="gaa-card recommended"><div class="gaa-phase">PHASE 01</div><h3>Ground</h3><p>Collect source evidence and settle the decision the page must support.</p></article>
+          <article class="gaa-card"><div class="gaa-phase">PHASE 02</div><h3>Model</h3><p>Name roles, owners, boundaries, state changes, and important uncertainty.</p></article>
+          <article class="gaa-card"><div class="gaa-phase">PHASE 03</div><h3>Render</h3><p>Use the smallest visual vocabulary that exposes topology and dense proof.</p></article>
+          <article class="gaa-card"><div class="gaa-phase">PHASE 04</div><h3>Prove</h3><p>Inspect desktop and mobile, serve the exact file, and compare checksums.</p></article>
+        </div>
+        <div class="gaa-acceptance">Verified claims in. Stable model through. Accessible page out. Desktop, mobile, and checksum proof attached.</div>
+      </section>
+
+      <section id="decisions">
+        <div class="gaa-section-head">
+          <div><h2>Decisions and failure modes</h2><p class="gaa-mono">A polished artifact still shows what could invalidate it.</p></div>
+          <p class="gaa-section-kicker">Resolved choices and risks look different.</p>
+        </div>
+        <div class="gaa-decisions">
+          <article class="gaa-card recommended"><div class="gaa-state">Recommended</div><h3>Keep topology small</h3><p>Use the first diagram for the core relationship and move raw evidence below it.</p></article>
+          <article class="gaa-card"><div class="gaa-state">Measure</div><h3>Diagram density</h3><p>If labels shrink or cross, split topology and lifecycle rather than adding more canvas.</p></article>
+          <article class="gaa-card risk"><div class="gaa-state">Verification risk</div><h3>Trusting status alone</h3><p>A 200 response or successful publish command does not prove the intended page is visible.</p></article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="gaa-status">
+      <div><span class="gaa-ok">● reference ready</span></div>
+      <div class="gaa-terminal-title">reasoning creates truth · the template creates consistency · QA creates confidence</div>
+      <div>mode: standalone</div>
+    </footer>
+  </div>
+</body>
+</html>
