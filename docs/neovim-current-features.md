@@ -356,8 +356,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Sidekick can match existing tmux panes to tools.
 - Sidekick can rehydrate its registry from tmux panes.
 - Sidekick named sessions are stored and identified through session labels and tmux environment.
-- Sidekick named-session prompts reuse the current worktree's existing durable session instead of creating a second
-  session with a redundant label.
+- Sidekick named-session prompts reuse a non-`main` worktree's existing durable session. The `main` checkout permits
+  multiple named durable sessions and reuses only an exact session-name match.
 - Pi named sessions receive native `--name <slug>` command arguments.
 - Sidekick branch metadata is stored in tmux environment.
 - `<C-.>` toggles the last picker-selected Sidekick session, falling back to the cwd session picker.
@@ -372,11 +372,11 @@ workflow area rather than plugin files, Lua modules, or implementation structure
   `Repositories / Worktrees` and `Current Worktree` panes across the bottom.
 - Repository headings expand into one row per durable worktree session. Non-`main` rows use the Git branch as worktree
   identity, retain Herdr state, and prefix it with a Gruvbox-pink `` marker instead of backend color.
-- Non-`main` branch rows show tracked `+added −removed` totals against local `main`; the neutral `main` checkout row
-  shows its durable Sidekick session name with agent backend chrome but has neither the branch marker nor diff totals.
+- Non-`main` branch rows show tracked `+added −removed` totals against local `main`; neutral `main` checkout rows show
+  their durable Sidekick session names with agent backend chrome but have neither branch markers nor diff totals.
   Non-Git rows also retain backend chrome.
-- The current-worktree pane shows only that worktree's one durable session. Internal Herdr agent names remain available
-  for exact routing, rename, kill, and focus actions without being repeated in the row.
+- The current-worktree pane shows the worktree's durable sessions: one for non-`main`, potentially multiple for `main`.
+  Internal Herdr agent names remain available for exact routing, rename, kill, and focus actions.
 - Ordinary preview polling and full-history scrolling continue while navigating either pane.
 - Sidekick global named-session picker includes previews.
 - Sidekick session pickers support killing sessions.

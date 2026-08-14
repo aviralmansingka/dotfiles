@@ -14,12 +14,13 @@ Treat repository, worktree, and session identity as three distinct concepts:
   [color-safe live handoff procedure](README.md#herdr-server-handoff).
 - A Git repository owns exactly one Herdr Workspace. Resolve repository identity from Git's shared common directory,
   so the primary checkout and every linked worktree reuse that same Herdr Workspace.
-- A Git worktree owns at most one durable Sidekick session. The session runs with that worktree as its cwd, inside the
-  repository's Herdr Workspace.
-- If a user asks to launch a session in a worktree that already owns one, focus and reuse the existing session. Do not
-  create a differently named duplicate.
-- If a user needs another durable session, create or select a different worktree first. Short-lived subagents may run
-  beneath the owning session, but they do not become additional durable Sidekick picker sessions for that worktree.
+- A non-`main` Git worktree owns at most one durable Sidekick session. The session runs with that worktree as its cwd,
+  inside the repository's Herdr Workspace. The `main` checkout may own multiple named durable sessions.
+- If a user asks to launch a session in a non-`main` worktree that already owns one, focus and reuse the existing
+  session. On `main`, reuse only an exact session-name match.
+- If a user needs another durable session from a non-`main` worktree, create or select a different worktree first.
+  Short-lived subagents may run beneath the owning session, but they do not become additional durable Sidekick picker
+  sessions for that worktree.
 - Do not create one Herdr Workspace per worktree, branch, feature, task, backend, or session label.
 - Keep internal Herdr agent names available for routing and lifecycle operations, but do not use them as the primary
   picker identity.
@@ -27,7 +28,8 @@ Treat repository, worktree, and session identity as three distinct concepts:
 ## Sidekick picker presentation
 
 - Group durable sessions as `repository -> worktree`.
-- Render one worktree row for its one durable session; do not repeat a session name that restates the worktree name.
+- Render one row per durable session. Non-`main` worktrees have one row; `main` may have multiple session-named rows.
+  Do not repeat a session name that restates a non-`main` worktree name.
 - Prefix every non-`main` Git branch row with `` and color both the marker and branch name with the existing Gruvbox
   pink `SidekickBranch` highlight; do not color non-`main` branch identity by agent backend. Retain the Herdr status
   glyph.
@@ -36,6 +38,6 @@ Treat repository, worktree, and session identity as three distinct concepts:
   backend chrome.
 - For non-`main` branches, show tracked line additions and removals against local `main` as `+<added> −<removed>`;
   show `clean` when both are zero.
-- Keep the current-worktree row in the picker alongside the repository hierarchy. Selection, preview, rename, kill,
-  and focus actions must continue to target the exact underlying Herdr agent identity.
+- Keep the current-worktree session rows in the picker alongside the repository hierarchy. Selection, preview, rename,
+  kill, and focus actions must continue to target the exact underlying Herdr agent identity.
 - Preserve exact cwd behavior for non-Git directories instead of inventing repository identity.

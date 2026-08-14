@@ -194,9 +194,10 @@ function M.workspace_for_repository(repository)
 end
 
 ---@param cwd string
+---@param name? string exact agent name to find
 ---@return table|nil agent
 ---@return boolean listed
-function M.agent_for_worktree(cwd)
+function M.agent_for_worktree(cwd, name)
   local wanted = M.git_context(cwd)
   local wanted_cwd = wanted and wanted.worktree or M.normalize_cwd(cwd)
   local result = M.call({ "agent", "list" }, true)
@@ -204,7 +205,7 @@ function M.agent_for_worktree(cwd)
     return nil, false
   end
   for _, agent in ipairs(result.agents) do
-    if M.is_durable_agent(agent) then
+    if M.is_durable_agent(agent) and (not name or agent.name == name) then
       local agent_cwd = agent.foreground_cwd or agent.cwd
       local context = M.git_context(agent_cwd)
       if (context and context.worktree == wanted_cwd) or (not context and M.normalize_cwd(agent_cwd) == wanted_cwd) then
@@ -344,7 +345,8 @@ end
 ---@return table|nil agent
 function M.start(name, cwd, command, env, scope, tab_label)
   local normalized = M.normalize_cwd(cwd)
-  local existing, listed = M.agent_for_worktree(normalized)
+  local context = M.git_context(normalized)
+  local existing, listed = M.agent_for_worktree(normalized, context and context.branch == "main" and name or nil)
   if listed == false then
     notify("could not verify whether this worktree already owns a durable session")
     return nil
@@ -353,7 +355,6 @@ function M.start(name, cwd, command, env, scope, tab_label)
     if existing.name == name then
       return existing
     end
-    local context = M.git_context(normalized)
     notify(
       string.format(
         "worktree %s already owns session %s; use a separate worktree for another durable session",

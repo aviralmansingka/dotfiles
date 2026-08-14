@@ -72,7 +72,8 @@ function M.send_to_backlog_agent(item, root)
   local slug = internal.normalize_label(item.day)
   local name = "pi-" .. slug
   local launch_cwd = root or vim.fn.expand("~/vault")
-  local agent, listed = herdr.agent_for_worktree(launch_cwd)
+  local context = herdr.git_context(launch_cwd)
+  local agent, listed = herdr.agent_for_worktree(launch_cwd, context and context.branch == "main" and name or nil)
   if listed == false then
     vim.notify("Could not verify the durable session for this worktree", vim.log.levels.ERROR)
     return nil

@@ -202,9 +202,12 @@ end
 ---@param label string
 ---@param cwd? string
 function M.start_named_session(tool, label, cwd)
+  local slug = M.normalize_label(label)
+  local name = tool .. "-" .. slug
   local requested_cwd = M.normalize_cwd(cwd) or vim.fn.getcwd()
   local herdr = require("plugins.sidekick.herdr")
-  local existing, listed = herdr.agent_for_worktree(requested_cwd)
+  local context = herdr.git_context(requested_cwd)
+  local existing, listed = herdr.agent_for_worktree(requested_cwd, context and context.branch == "main" and name or nil)
   if listed == false then
     vim.notify("Sidekick: could not verify whether this worktree already owns a durable session", vim.log.levels.ERROR)
     return
@@ -226,12 +229,10 @@ function M.start_named_session(tool, label, cwd)
     vim.notify("Sidekick: this worktree already owns a session", vim.log.levels.WARN)
     return
   end
-  local slug = M.normalize_label(label)
   if slug == "" then
     vim.notify("Sidekick: session label cannot be empty", vim.log.levels.WARN)
     return
   end
-  local name = tool .. "-" .. slug
   local config = require("sidekick.config")
   local command = M.tool_command_for_named_session(tool, slug)
   local workspace_ok, workspace_id = pcall(
