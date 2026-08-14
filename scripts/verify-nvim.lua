@@ -2282,6 +2282,16 @@ local function validate_sidekick_herdr()
     end
 
     local original_columns, original_lines = vim.o.columns, vim.o.lines
+    local protected_paths = {
+      "nvim/.config/nvim/lua/plugins/sidekick/registry.lua",
+    }
+    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/runs/*.json", false, true))
+    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/vault/**/*.md", false, true))
+    local protected_bytes = {}
+    for _, path in ipairs(protected_paths) do
+      protected_bytes[path] = table.concat(vim.fn.readfile(path, "b"), "\n")
+    end
+    local registered_tools = vim.deepcopy(config.cli.tools)
     if picker_opts.layout.wins.atlas then
       local function verify_atlas_preview(host_width, host_height)
       vim.o.columns = host_width
@@ -2560,16 +2570,6 @@ local function validate_sidekick_herdr()
       verify_atlas_preview(80, 24)
     vim.o.columns, vim.o.lines = original_columns, original_lines
 
-    local protected_paths = {
-      "nvim/.config/nvim/lua/plugins/sidekick/registry.lua",
-    }
-    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/runs/*.json", false, true))
-    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/vault/**/*.md", false, true))
-    local protected_bytes = {}
-    for _, path in ipairs(protected_paths) do
-      protected_bytes[path] = table.concat(vim.fn.readfile(path, "b"), "\n")
-    end
-    local registered_tools = vim.deepcopy(config.cli.tools)
     local fallback_calls = {}
     local fallback_results = {
       unregistered = { outcome = "unregistered" },
@@ -3134,13 +3134,14 @@ local function validate_sidekick_herdr()
       fail("T04 V03 picker close should not swap an obsolete Atlas staging buffer")
     end
 
-      if not vim.deep_equal(config.cli.tools, registered_tools) then
-        fail("T04 V03 deterministic preview checks changed the Sidekick Registry")
-      end
-      for _, path in ipairs(protected_paths) do
-        if table.concat(vim.fn.readfile(path, "b"), "\n") ~= protected_bytes[path] then
-          fail("T04 V03 deterministic preview checks changed protected manifest " .. path)
-        end
+    end
+
+    if not vim.deep_equal(config.cli.tools, registered_tools) then
+      fail("T04 V03 deterministic preview checks changed the Sidekick Registry")
+    end
+    for _, path in ipairs(protected_paths) do
+      if table.concat(vim.fn.readfile(path, "b"), "\n") ~= protected_bytes[path] then
+        fail("T04 V03 deterministic preview checks changed protected manifest " .. path)
       end
     end
 
@@ -3277,6 +3278,10 @@ local function validate_herdr_workspaces()
   end
 
   local herdr = require("plugins.sidekick.herdr")
+  local original_git_context = herdr.git_context
+  if type(original_git_context) ~= "function" then
+    herdr.git_context = dofile(config_lua .. "/plugins/sidekick/herdr.lua").git_context
+  end
   local original_call = herdr.call
   local original_pick = Snacks.picker.pick
   local original_input = vim.ui.input
@@ -4206,6 +4211,7 @@ local function validate_herdr_workspaces()
   vim.notify = original_notify
   vim.schedule = original_schedule
   package.loaded["plugins.sidekick.cwd_picker"] = original_cwd_picker
+  herdr.git_context = original_git_context
   if not ok then
     error(err, 0)
   end

@@ -235,13 +235,20 @@ local function unbind(tab)
 end
 
 local function close_tabs(workspace_id, cwd)
-  local wanted = cwd and herdr.normalize_cwd(cwd) or nil
+  local wanted_context = cwd and herdr.git_context(cwd) or nil
+  local wanted = wanted_context and wanted_context.worktree or (cwd and herdr.normalize_cwd(cwd) or nil)
   local targets = {}
   for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
     local workspace = workspace_tabs.get(tab)
+    local tab_cwd = workspace and workspace.cwd or nil
+    local tab_context = tab_cwd and herdr.git_context(tab_cwd) or nil
     if
       tab_get(tab, vars.id) == workspace_id
-      and (not wanted or (workspace and herdr.normalize_cwd(workspace.cwd) == wanted))
+      and (
+        not wanted
+        or (tab_context and tab_context.worktree == wanted)
+        or (not tab_context and tab_cwd and herdr.normalize_cwd(tab_cwd) == wanted)
+      )
     then
       targets[#targets + 1] = tab
     end
