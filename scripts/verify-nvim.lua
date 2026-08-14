@@ -695,6 +695,25 @@ local function validate_sidekick_herdr()
     fail("durable Sidekick identity should exclude transient child agents")
   end
 
+  local original_lookup_call = source_herdr.call
+  source_herdr.git_context = function()
+    return { worktree = "/repos/dotfiles", branch = "main" }
+  end
+  source_herdr.call = function()
+    return {
+      agents = {
+        { agent = "codex", name = "codex-first", cwd = "/repos/dotfiles" },
+        { agent = "pi", name = "pi-second", cwd = "/repos/dotfiles" },
+      },
+    }
+  end
+  local exact_main_agent = source_herdr.agent_for_worktree("/repos/dotfiles", "pi-second")
+  source_herdr.call = original_lookup_call
+  source_herdr.git_context = original_git_context
+  if not exact_main_agent or exact_main_agent.name ~= "pi-second" then
+    fail("main session lookup should filter by exact agent name")
+  end
+
   local diff_command
   source_herdr.git_context = function()
     return {
@@ -785,6 +804,7 @@ local function validate_sidekick_herdr()
       repository_label = "dotfiles",
       worktree = "/worktrees/feature-one",
       worktree_label = "feature/one",
+      branch = "feature/one",
     }
   end
   source_herdr.call = function()
@@ -799,12 +819,36 @@ local function validate_sidekick_herdr()
     return nil, false
   end
   local unverified = source_herdr.start("pi-unverified", "/worktrees/feature-one", { "pi" })
+  local main_launch_attempts = 0
+  local original_ensure_workspace = source_herdr.ensure_workspace
+  source_herdr.git_context = function()
+    return {
+      repository = "/repos/dotfiles",
+      repository_label = "dotfiles",
+      worktree = "/repos/dotfiles",
+      worktree_label = "main",
+      branch = "main",
+    }
+  end
+  source_herdr.agent_for_worktree = function(_, name)
+    return name == occupied.name and occupied or nil, true
+  end
+  source_herdr.ensure_workspace = function()
+    main_launch_attempts = main_launch_attempts + 1
+    return nil
+  end
+  local reused_main = source_herdr.start("codex-existing", "/repos/dotfiles", { "codex" })
+  source_herdr.start("pi-spinoff", "/repos/dotfiles", { "pi" })
   vim.notify = original_invariant_notify
   source_herdr.agent_for_worktree = original_agent_for_worktree
   source_herdr.git_context = original_git_context
   source_herdr.call = original_call_for_invariant
+  source_herdr.ensure_workspace = original_ensure_workspace
   if reused ~= occupied or rejected ~= nil or unverified ~= nil or invariant_calls ~= 0 then
-    fail("a worktree should reuse its one session and reject durable or unverified spinoffs")
+    fail("a non-main worktree should reuse its one session and reject durable or unverified spinoffs")
+  end
+  if reused_main ~= occupied or main_launch_attempts ~= 1 then
+    fail("main should reuse an exact session name while allowing differently named durable sessions")
   end
   for _, name in ipairs({
     "workspace_cwd",
@@ -847,6 +891,9 @@ local function validate_sidekick_herdr()
   end
 
   local reused_named_target
+  source_herdr.git_context = function()
+    return { branch = "feature/test" }
+  end
   source_herdr.agent_for_worktree = function()
     return {
       name = "sk-codex-existing",
@@ -863,8 +910,6 @@ local function validate_sidekick_herdr()
   source_internal.start_named_session("pi", "must-not-start", cwd)
   vim.notify = original_named_notify
   source_internal.toggle_tool_session = original_toggle_named
-  source_herdr.agent_for_worktree = original_named_agent_for_worktree
-  package.loaded["plugins.sidekick.herdr"] = loaded_named_herdr
   if
     not vim.deep_equal(reused_named_target, {
       name = "codex",
@@ -873,7 +918,28 @@ local function validate_sidekick_herdr()
     })
     or config.cli.tools["pi-must-not-start"] ~= nil
   then
-    fail("named-session launch should reuse the worktree's existing durable session")
+    fail("named-session launch should reuse a non-main worktree's existing durable session")
+  end
+
+  local main_lookup
+  local main_target
+  source_herdr.git_context = function()
+    return { branch = "main" }
+  end
+  source_herdr.agent_for_worktree = function(_, name)
+    main_lookup = name
+    return nil, true
+  end
+  source_internal.toggle_tool_session = function(name)
+    main_target = name
+  end
+  source_internal.start_named_session("pi", "main parallel", cwd)
+  source_internal.toggle_tool_session = original_toggle_named
+  source_herdr.agent_for_worktree = original_named_agent_for_worktree
+  source_herdr.git_context = original_git_context
+  package.loaded["plugins.sidekick.herdr"] = loaded_named_herdr
+  if main_lookup ~= "pi-main-parallel" or main_target ~= "pi-main-parallel" then
+    fail("main should allow a differently named durable session")
   end
 
   local original_start = source_herdr.start
