@@ -1,1 +1,0 @@
-terminal too small; minimum 80×24

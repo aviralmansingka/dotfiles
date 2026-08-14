@@ -181,24 +181,6 @@ push_if_needed() {
   git push "$REMOTE_NAME" "$TARGET_BRANCH"
 }
 
-checkpoint_lock_dir=""
-
-acquire_checkpoint_lock() {
-  checkpoint_lock_dir="$(git rev-parse --path-format=absolute --git-common-dir)/vault-hunter-checkpoint.lock"
-  if ! mkdir "$checkpoint_lock_dir" 2>/dev/null; then
-    log "Vault checkpoint lock is held; skipping this sync cycle."
-    return 1
-  fi
-  printf 'auto-git-sync-%s\n' "$$" >"$checkpoint_lock_dir/owner"
-  printf '*\n' >"$checkpoint_lock_dir/paths"
-}
-
-release_checkpoint_lock() {
-  rm -f "$checkpoint_lock_dir/paths" "$checkpoint_lock_dir/owner"
-  rmdir "$checkpoint_lock_dir"
-  checkpoint_lock_dir=""
-}
-
 run_locked() {
   if ! git fetch "$REMOTE_NAME" "$TARGET_BRANCH" --prune; then
     log "Fetch failed; skipping commit until remote state is available."
@@ -230,12 +212,7 @@ run_once() {
 
   cd "$repo_abs"
   log "Starting sync cycle."
-  acquire_checkpoint_lock || return 0
-
-  local result=0
-  run_locked || result=$?
-  release_checkpoint_lock
-  return "$result"
+  run_locked
 }
 
 run_loop() {

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Vault Hunter"
-  short_description: "Execute autonomous tasks with recorded evidence"
-  default_prompt: "Use $vault-hunter to execute this ready Task through its Goals, Verifiers, Evidence, review, and landing."
