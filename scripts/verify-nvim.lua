@@ -4930,6 +4930,45 @@ local function validate_octo_review_agent()
     fail("review re-entry should rebuild from a non-Sidekick window")
   end
 
+  local restore_context = vim.tbl_extend("force", context, { agent_name = agent_name })
+  vim.api.nvim_tabpage_set_var(0, "octo_review_context", restore_context)
+  vim.cmd("rightbelow vnew")
+  local extra_win = vim.api.nvim_get_current_win()
+  if review.restore_for_session(agent_name) or not vim.api.nvim_win_is_valid(extra_win) then
+    fail("toggle with the review view visible should leave the existing layout alone")
+  end
+  vim.api.nvim_win_close(extra_win, true)
+  vim.cmd("enew")
+  vim.cmd("rightbelow vnew")
+  local user_win = vim.api.nvim_get_current_win()
+  if
+    not review.restore_for_session(agent_name)
+    or vim.api.nvim_win_is_valid(user_win)
+    or vim.b[vim.api.nvim_get_current_buf()].octo_review_key ~= context.key
+  then
+    fail("toggle without the review view should rebuild the review layout")
+  end
+  vim.cmd("tabnew")
+  local plain_win = vim.api.nvim_get_current_win()
+  local unbound_ok = pcall(vim.api.nvim_tabpage_get_var, 0, "octo_review_context")
+  if
+    review.restore_for_session(agent_name)
+    or not vim.api.nvim_win_is_valid(plain_win)
+    or #vim.api.nvim_tabpage_list_wins(0) ~= 1
+    or pcall(vim.api.nvim_tabpage_get_var, 0, "octo_review_context") ~= unbound_ok
+  then
+    fail("toggling from an unrelated tab should not rebind or replace its layout")
+  end
+  vim.api.nvim_tabpage_set_var(
+    0,
+    "octo_review_context",
+    vim.tbl_extend("force", restore_context, { agent_name = "codex-pr-repo-43" })
+  )
+  if review.restore_for_session(agent_name) or not vim.api.nvim_win_is_valid(plain_win) then
+    fail("toggling another PR's agent should not replace this tab's review layout")
+  end
+  vim.cmd("tabclose!")
+
   local function git(root, args, expected)
     local command = { "git", "-C", root }
     vim.list_extend(command, args)
@@ -5017,6 +5056,15 @@ local function validate_octo_review_agent()
   local newer_refresh, pending_notice = blocked_refresh(newer_head)
   if newer_refresh ~= nil or not (pending_notice or ""):find("pending PR refresh", 1, true) then
     fail("a newer PR head should wait until the pending refresh has been validated")
+  end
+  git(refresh_root, { "update-ref", "-d", pending_ref })
+  local orphan_refresh, orphan_conflict = review._test.sync_branch(refresh_context, refresh_head)
+  if not orphan_refresh or orphan_conflict or git(refresh_root, { "rev-parse", "HEAD" }) ~= pending_head then
+    fail("an orphaned recovery ref should resume validation for the same PR head")
+  end
+  local orphan_newer, orphan_notice = blocked_refresh(newer_head)
+  if orphan_newer ~= nil or not (orphan_notice or ""):find("pending PR refresh", 1, true) then
+    fail("an orphaned recovery ref must still block a different PR head")
   end
   local refresh_prompt = review._test.prompt_text(
     refresh_context,

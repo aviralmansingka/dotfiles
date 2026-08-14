@@ -237,13 +237,14 @@ function M.restore(context)
   return true
 end
 
-local function record_for_session(name)
-  local state = load_state()
-  for _, record in pairs(state.reviews) do
-    if record.agent_name == name then
-      return record
+local function review_view_present(context)
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local ok, key = pcall(vim.api.nvim_buf_get_var, vim.api.nvim_win_get_buf(win), "octo_review_key")
+    if ok and key == context.key then
+      return true
     end
   end
+  return false
 end
 
 function M.restore_for_session(name)
@@ -251,11 +252,10 @@ function M.restore_for_session(name)
     return false
   end
   local tab = vim.api.nvim_get_current_tabpage()
-  local context = tab_context(tab) or record_for_session(name)
-  if not context then
+  local context = tab_context(tab)
+  if not context or context.agent_name ~= name or review_view_present(context) then
     return false
   end
-  set_tab_context(tab, context)
   return M.restore(context)
 end
 
@@ -402,8 +402,10 @@ local function sync_branch(context, new_head)
   if recovery.code == 0 or pending.code == 0 then
     local pending_head = trim(pending.stdout)
     local target = rebasing and rebase_target(cwd) or nil
+    local orphaned_recovery = pending_head == "" and not rebasing and recovery.code == 0
     local same_refresh = pending_head == new_head and (not rebasing or target == new_head)
       or pending_head == "" and target == new_head
+      or orphaned_recovery and git(cwd, { "merge-base", "--is-ancestor", new_head, "HEAD" }).code == 0
     if not same_refresh then
       notify("finish validating the pending PR refresh before applying a different PR head", vim.log.levels.WARN)
       return nil

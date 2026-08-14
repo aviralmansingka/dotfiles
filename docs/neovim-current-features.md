@@ -244,12 +244,14 @@ workflow area rather than plugin files, Lua modules, or implementation structure
   isolated Herdr worktree workspace with a local `review/<repo>-<number>` branch.
 - Refreshing an updated PR head commits local review edits, records the exact pending head plus a recovery ref, and
   rebases onto it; the same pending head is resumable, a different head is blocked, and the refs remain until the
-  review agent finishes any semantic conflict resolution and validates the rebased tree.
+  review agent finishes any semantic conflict resolution and validates the rebased tree. An orphaned recovery ref
+  without a pending ref or active rebase resumes validation when the fetched head matches the rebased state.
 - The review workspace tab shows a fixed 60-column presentation-only wrapped Markdown PR description on the left
   and the dedicated Sidekick review agent on the right.
 - The review agent is primed with PR metadata, diff, checks, reviews, and comments and asked for a context summary
   of at most 30 lines.
-- Selecting a PR's review agent restores its two-column review view.
+- Selecting a PR's review agent restores its two-column review view when that view is missing; toggling an already
+  visible review agent hides it and preserves user-created splits, and unrelated tabs are left untouched.
 - Review thread picker lists review threads.
 - Review thread picker defaults to unresolved threads and marks resolved or outdated threads in display text.
 - Review thread picker can open a thread in the browser.
