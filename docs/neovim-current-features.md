@@ -374,7 +374,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Repository headings expand into one row per durable worktree session. Rows use the Git branch as worktree identity,
   retain Herdr state, and prefix non-`main` branches with a Gruvbox-pink `` marker instead of backend color.
 - Non-`main` branch rows show tracked `+added −removed` totals against local `main`; the neutral `main` checkout row
-  has neither the branch marker nor diff totals.
+  retains agent backend chrome but has neither the branch marker nor diff totals. Non-Git rows also retain backend
+  chrome.
 - The current-worktree pane shows only that worktree's one durable session. Internal Herdr agent names remain available
   for exact routing, rename, kill, and focus actions without being repeated in the row.
 - Ordinary preview polling and full-history scrolling continue while navigating either pane.
