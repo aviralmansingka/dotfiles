@@ -26,9 +26,11 @@ Treat repository, worktree, and session identity as three distinct concepts:
 
 - Group durable sessions as `repository -> worktree`.
 - Render one worktree row for its one durable session; do not repeat a session name that restates the worktree name.
-- Color the worktree name with the existing Sidekick backend color and retain the Herdr status glyph.
-- Show tracked line additions and removals against local `main` as `+<added> −<removed>`; show `clean` when both are
-  zero.
+- Prefix every non-`main` Git branch row with `` and color both the marker and branch name with the existing Gruvbox
+  pink `SidekickBranch` highlight; do not color branch identity by agent backend. Retain the Herdr status glyph.
+- Treat a `main` branch row as the neutral checkout: render it without the branch marker and without line-diff totals.
+- For non-`main` branches, show tracked line additions and removals against local `main` as `+<added> −<removed>`;
+  show `clean` when both are zero.
 - Keep the current-worktree row in the picker alongside the repository hierarchy. Selection, preview, rename, kill,
   and focus actions must continue to target the exact underlying Herdr agent identity.
 - Preserve exact cwd behavior for non-Git directories instead of inventing repository identity.

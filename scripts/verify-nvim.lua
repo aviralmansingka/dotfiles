@@ -1046,7 +1046,7 @@ local function validate_sidekick_herdr()
         name = "sk-codex-deadbeef",
         agent = "codex",
         agent_status = "working",
-        cwd = "/worktrees/dotfiles/base",
+        cwd = "/worktrees/dotfiles/main",
         pane_id = "w1:p1",
         terminal_id = "term-base",
         workspace_id = "w1",
@@ -1071,15 +1071,18 @@ local function validate_sidekick_herdr()
         repository_label = "dotfiles",
         worktree = cwd,
         worktree_label = "feat/sidekick-repo-session-grouping",
+        branch = "feat/sidekick-repo-session-grouping",
       }
     end
     local dotfiles_worktree = path:match("^/worktrees/dotfiles/([^/]+)")
     if dotfiles_worktree then
+      local branch = dotfiles_worktree == "main" and "main" or "feature/" .. dotfiles_worktree
       return {
         repository = "/repos/dotfiles",
         repository_label = "dotfiles",
         worktree = "/worktrees/dotfiles/" .. dotfiles_worktree,
-        worktree_label = "feature/" .. dotfiles_worktree,
+        worktree_label = branch,
+        branch = branch,
       }
     end
     local vault_worktree = path:match("^/worktrees/vault/([^/]+)")
@@ -1089,6 +1092,7 @@ local function validate_sidekick_herdr()
         repository_label = "vault",
         worktree = "/worktrees/vault/" .. vault_worktree,
         worktree_label = "feature/" .. vault_worktree,
+        branch = "feature/" .. vault_worktree,
       }
     end
   end
@@ -1099,7 +1103,7 @@ local function validate_sidekick_herdr()
       ["/worktrees/dotfiles/working"] = { added = 88, removed = 12 },
       ["/worktrees/dotfiles/done"] = { added = 18, removed = 4 },
       ["/worktrees/dotfiles/workspace-only"] = { added = 7, removed = 0 },
-      ["/worktrees/dotfiles/base"] = { added = 0, removed = 0 },
+      ["/worktrees/dotfiles/main"] = { added = 999, removed = 999 },
       ["/worktrees/vault/journal"] = { added = 21, removed = 9 },
     }
     return values[path] or { added = 0, removed = 0 }
@@ -1343,6 +1347,14 @@ local function validate_sidekick_herdr()
       if not rendered:find(item.display_label, 1, true) or rendered:find(item.label, 1, true) then
         fail("picker rows should use worktree identity without repeating the session name: " .. vim.inspect(rendered))
       end
+      if not rendered:find(" " .. item.display_label, 1, true) then
+        fail("non-main picker rows should show the Git branch marker: " .. vim.inspect(rendered))
+      end
+      for _, chunk in ipairs(chunks) do
+        if (chunk[1] == " " or chunk[1] == item.display_label) and chunk[2] ~= "SidekickBranch" then
+          fail("branch marker and label should use Gruvbox pink instead of agent color: " .. vim.inspect(chunks))
+        end
+      end
       if not rendered:find(" · +142 −38", 1, true) then
         fail("picker rows should show added and removed lines against main: " .. vim.inspect(rendered))
       end
@@ -1534,13 +1546,19 @@ local function validate_sidekick_herdr()
     end
     if
       global_lines[1] ~= "▾ dotfiles · 6 worktrees"
-      or not vim.tbl_contains(global_lines, "  ├─ S feature/working · +88 −12")
-      or not vim.tbl_contains(global_lines, "  ├─ ! feat/sidekick-repo-session-grouping · +142 −38")
+      or not vim.tbl_contains(global_lines, "  ├─ S  feature/working · +88 −12")
+      or not vim.tbl_contains(global_lines, "  ├─ !  feat/sidekick-repo-session-grouping · +142 −38")
+      or not vim.iter(global_lines):any(function(line)
+        return line:find("S main", 1, true) ~= nil
+          and line:find(" main", 1, true) == nil
+          and line:find("+999", 1, true) == nil
+          and line:find("−999", 1, true) == nil
+      end)
       or not vim.tbl_contains(global_lines, "▾ vault · 1 worktree")
-      or not vim.tbl_contains(global_lines, "  └─ · feature/journal · +21 −9")
+      or not vim.tbl_contains(global_lines, "  └─ ·  feature/journal · +21 −9")
     then
       fail(
-        "repository rows should start locally, group worktrees, show main diff stats, and start expanded: "
+        "repository rows should mark non-main branches, suppress main diff stats, and start expanded: "
           .. vim.inspect(global_lines)
       )
     end
@@ -1619,7 +1637,7 @@ local function validate_sidekick_herdr()
       global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
       if
         global_lines[1] ~= "▾ vault · 1 worktree"
-        or global_lines[2] ~= "  └─ · feature/journal · +21 −9"
+        or global_lines[2] ~= "  └─ ·  feature/journal · +21 −9"
         or vim.api.nvim_win_get_cursor(global_win.win)[1] ~= 2
       then
         fail("Ctrl-R/Ctrl-X verifier should highlight pi-other-workspace")
@@ -1786,7 +1804,7 @@ local function validate_sidekick_herdr()
     global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
     if
       global_lines[1] ~= "▾ vault · 1 worktree"
-      or global_lines[2] ~= "  └─ · feature/journal · +21 −9"
+      or global_lines[2] ~= "  └─ ·  feature/journal · +21 −9"
       or vim.api.nvim_win_get_cursor(global_win.win)[1] ~= 2
     then
       fail(

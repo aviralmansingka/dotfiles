@@ -3,7 +3,6 @@
 -- Bound to <c-.> in plugins/sidekick.lua.
 local internal = require("plugins.sidekick.internal")
 local registry = require("plugins.sidekick.registry")
-local branding = require("plugins.sidekick.branding")
 local herdr = require("plugins.sidekick.herdr")
 
 local M = {}
@@ -15,6 +14,7 @@ local spinner_refresh_ms = 80
 local preview_debounce_ms = 400
 local preview_settle_ms = 16
 local full_preview_lines = 2147483647 -- Herdr clamps this to the available scrollback.
+local branch_glyph = ""
 local workspace_ns = vim.api.nvim_create_namespace("sidekick_workspace_picker")
 local status_rank = { working = 1, blocked = 2, done = 3, idle = 4 }
 local status_display = {
@@ -66,7 +66,7 @@ end
 ---@param cache table<string, { added: integer, removed: integer }|false>
 ---@return { added: integer, removed: integer }|nil
 local function diff_stats(context, cache)
-  if not context then
+  if not context or context.branch == "main" then
     return nil
   end
   if cache[context.worktree] == nil then
@@ -415,6 +415,7 @@ function M.list_items(metric_cache)
         cwd = entry.cwd,
         repository = context and context.repository or nil,
         worktree = context and context.worktree or entry.cwd,
+        branch = context and context.branch or nil,
         diff = diff_stats(context, stats_cache),
         working_since = metrics.working_since,
         running_seconds = metrics.running_seconds,
@@ -488,6 +489,7 @@ local function workspace_groups(first_repository, metric_cache)
         cwd = agent.foreground_cwd or agent.cwd,
         repository = context and context.repository or nil,
         worktree = context and context.worktree or nil,
+        branch = context and context.branch or nil,
         diff = diff_stats(context, stats_cache),
         working_since = metrics.working_since,
         running_seconds = metrics.running_seconds,
@@ -533,9 +535,13 @@ local function format_local(item)
     return { { item.text or "", "Comment" } }
   end
   local symbol, symbol_hl = status_icon(item.status)
-  local chunks = {
-    { symbol .. " ", symbol_hl },
-    { item.display_label or item.label or "", branding.hl_groups(branding.tool_of(item.tool)).title },
+  local chunks = { { symbol .. " ", symbol_hl } }
+  if item.branch and item.branch ~= "main" then
+    chunks[#chunks + 1] = { branch_glyph .. " ", "SidekickBranch" }
+  end
+  chunks[#chunks + 1] = {
+    item.display_label or item.label or "",
+    item.branch and item.branch ~= "main" and "SidekickBranch" or "Normal",
   }
   vim.list_extend(chunks, diff_chunks(item))
   return chunks
@@ -556,10 +562,13 @@ local function workspace_agent_chunks(item, last)
   local chunks = {
     { last and "  └─ " or "  ├─ ", "SnacksPickerTree" },
     { symbol .. " ", symbol_hl },
-    {
-      item.display_label or item.label or item.agent_name or "unknown",
-      branding.hl_groups(branding.tool_of(item.tool)).title,
-    },
+  }
+  if item.branch and item.branch ~= "main" then
+    chunks[#chunks + 1] = { branch_glyph .. " ", "SidekickBranch" }
+  end
+  chunks[#chunks + 1] = {
+    item.display_label or item.label or item.agent_name or "unknown",
+    item.branch and item.branch ~= "main" and "SidekickBranch" or "Normal",
   }
   vim.list_extend(chunks, diff_chunks(item))
   return chunks
