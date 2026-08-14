@@ -1055,7 +1055,17 @@ local function validate_sidekick_herdr()
     move_calls ~= 1
     or not vim.deep_equal(
       move_args,
-      { "pane", "move", "p-moved", "--new-tab", "--workspace", "w-opened", "--label", "codex-workspace-session", "--no-focus" }
+      {
+        "pane",
+        "move",
+        "p-moved",
+        "--new-tab",
+        "--workspace",
+        "w-opened",
+        "--label",
+        "codex-workspace-session",
+        "--no-focus",
+      }
     )
   then
     fail("discovery should move a drifted named session into its worktree workspace once: " .. vim.inspect(move_args))
