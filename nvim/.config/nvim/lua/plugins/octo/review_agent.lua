@@ -267,6 +267,12 @@ function M.configure_terminal(terminal)
   terminal.opts.split.width = math.max(vim.o.columns - 61, 40)
 end
 
+function M.unbind_workspace(tab)
+  for _, name in ipairs({ context_var, "octo_review_state", "octo_review_unseen" }) do
+    pcall(vim.api.nvim_tabpage_del_var, tab, name)
+  end
+end
+
 function M.bind_workspace(tab, workspace)
   if not workspace or not workspace.workspace_id then
     return false
@@ -321,15 +327,18 @@ local function repository_candidates(cwd, repo)
     end
   end
   add(cwd)
-  if vim.fn.executable("ghq") == 1 then
+  local name = repo:match("/([^/]+)$")
+  if name and vim.fn.executable("ghq") == 1 then
     local ghq = command({ "ghq", "list", "-p" })
     if ghq.code == 0 then
       for _, path in ipairs(vim.split(trim(ghq.stdout), "\n", { plain = true, trimempty = true })) do
-        add(path)
+        local basename = (path:gsub("/+$", "")):match("([^/]+)$")
+        if basename and basename:lower() == name:lower() then
+          add(path)
+        end
       end
     end
   end
-  local name = repo:match("/([^/]+)$")
   local home = vim.fn.expand("~")
   for _, parent in ipairs({ "", "projects", "tools", "playground", "modal-projects" }) do
     add(vim.fs.joinpath(home, parent, name))
@@ -776,6 +785,7 @@ end
 
 M._test = {
   activate = activate,
+  candidates = repository_candidates,
   prompt_text = prompt_text,
   refresh_complete = refresh_complete,
   sync_branch = sync_branch,

@@ -235,6 +235,9 @@ local function unbind(tab)
   for _, name in pairs(vars) do
     tab_del(tab, name)
   end
+  pcall(function()
+    require("plugins.octo.review_agent").unbind_workspace(tab)
+  end)
   vim.cmd.redrawtabline()
 end
 

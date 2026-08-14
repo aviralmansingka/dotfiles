@@ -4969,6 +4969,64 @@ local function validate_octo_review_agent()
   end
   vim.cmd("tabclose!")
 
+  vim.cmd("tabnew")
+  local teardown_tab = vim.api.nvim_get_current_tabpage()
+  vim.api.nvim_tabpage_set_var(teardown_tab, "octo_review_context", restore_context)
+  vim.api.nvim_tabpage_set_var(teardown_tab, "octo_review_state", "open")
+  vim.api.nvim_tabpage_set_var(teardown_tab, "octo_review_unseen", true)
+  review.unbind_workspace(teardown_tab)
+  for _, name in ipairs({ "octo_review_context", "octo_review_state", "octo_review_unseen" }) do
+    if pcall(vim.api.nvim_tabpage_get_var, teardown_tab, name) then
+      fail("unbind_workspace should clear the review tab variable " .. name)
+    end
+  end
+  vim.cmd("tabclose!")
+
+  local candidates_root = vim.fn.tempname() .. "-candidates"
+  local cwd_clone = candidates_root .. "/cwd"
+  local matching_clone = candidates_root .. "/ghq/github.com/owner/repo"
+  local renamed_clone = candidates_root .. "/ghq/github.com/owner/repo-fork"
+  local other_clone = candidates_root .. "/ghq/github.com/owner/notrepo"
+  for _, path in ipairs({ cwd_clone, matching_clone, renamed_clone, other_clone }) do
+    vim.fn.mkdir(path, "p")
+  end
+  local original_executable = vim.fn.executable
+  local original_system = vim.system
+  vim.fn.executable = function(binary)
+    if binary == "ghq" then
+      return 1
+    end
+    return original_executable(binary)
+  end
+  vim.system = function(args)
+    if args[1] == "ghq" then
+      return {
+        wait = function()
+          return { code = 0, stdout = table.concat({ matching_clone, renamed_clone, other_clone }, "\n") }
+        end,
+      }
+    end
+    return original_system(args)
+  end
+  local candidates_ok, candidates = pcall(review._test.candidates, cwd_clone, "owner/repo")
+  vim.fn.executable = original_executable
+  vim.system = original_system
+  if not candidates_ok then
+    fail("repository candidate enumeration failed: " .. tostring(candidates))
+  end
+  local function normalized(path)
+    return vim.fs.normalize(vim.fn.fnamemodify(path, ":p"))
+  end
+  if
+    candidates[1] ~= normalized(cwd_clone)
+    or not vim.tbl_contains(candidates, normalized(matching_clone))
+    or vim.tbl_contains(candidates, normalized(renamed_clone))
+    or vim.tbl_contains(candidates, normalized(other_clone))
+  then
+    fail("ghq clones should be pre-filtered to the repo basename: " .. vim.inspect(candidates))
+  end
+  vim.fn.delete(candidates_root, "rf")
+
   local function git(root, args, expected)
     local command = { "git", "-C", root }
     vim.list_extend(command, args)
