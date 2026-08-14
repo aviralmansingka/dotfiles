@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+# nvimr — neovim remote control via RPC socket.
+# Discovers the running nvim socket and runs lua against it.
+#
+# Usage:
+#   nvimr socket              Print discovered socket path
+#   nvimr state               Current buf, cursor, mode, cwd
+#   nvimr buffers             List listed, loaded buffers
+#   nvimr open <path> [line]  Open file in an editable window, goto line
+#   nvimr goto <line> [col]   Move cursor in current editable window
+#   nvimr read [buf] [n]      Print first n lines (default 50) of buf (default current)
+#   nvimr diag [buf]          Diagnostics for buffer (default current)
+#   nvimr cmd <ex>            Run ex command in an editable window (vim.cmd)
+#   nvimr lua <file>          Run lua file, print return value
+#   nvimr keys <keys>         Send raw keystrokes (unreliable if terminal has focus)
+set -euo pipefail
+
+# NOTE: nvim sets $NVIM to its socket path at runtime, so do NOT use
+# it for the binary. Use NVIM_BIN= to override the binary path.
+NV="${NVIM_BIN:-$(command -v nvim)}"
+if [[ -z "$NV" ]]; then
+  echo "nvimr: nvim binary not found (set NVIM_BIN= or add to PATH)" >&2
+  exit 1
+fi
+
+# --- Socket discovery -------------------------------------------------------
+find_socket() {
+  # 1. Explicit env
+  if [[ -n "${NVIM_LISTEN_ADDRESS:-}" && -S "$NVIM_LISTEN_ADDRESS" ]]; then
+    if "$NV" --server "$NVIM_LISTEN_ADDRESS" --remote-expr '1' >/dev/null 2>&1; then
+      echo "$NVIM_LISTEN_ADDRESS"; return 0
+    fi
+  fi
+  # 2. Glob all nvim sockets, newest mtime first, return first live one
+  local user sock
+  user="$(id -un)"
+  for sock in "${TMPDIR:-/tmp}"nvim."$user"/*/nvim.*.0; do
+    [[ -S "$sock" ]] || continue
+    if "$NV" --server "$sock" --remote-expr '1' >/dev/null 2>&1; then
+      echo "$sock"; return 0
+    fi
+  done 2>/dev/null
+  return 0
+}
+
+SOCK="$(find_socket)"
+if [[ -z "$SOCK" || ! -S "$SOCK" ]]; then
+  echo "nvimr: no nvim RPC socket found (is nvim running with --listen?)" >&2
+  exit 1
+fi
+
+# --- Lua runner -------------------------------------------------------------
+# Uses the load(...)() trick: --remote-expr evaluates a vim expression,
+# so we pass the file contents as a string argument to load().
+run_lua() {
+  local luafile="$1"
+  "$NV" --server "$SOCK" --remote-expr \
+    'luaeval("load(...)()", join(readfile("'"$luafile"'"), "\n"))' 2>&1
+}
+
+# Wrap user lua in a print-capturing harness so --remote-expr returns
+# the printed output as a string instead of vim.NIL.
+lua_cmd() {
+  local tmp; tmp="$(mktemp -t nvimr.XXXXXX.lua)"
+  {
+    printf 'local __out={}
+'
+    printf 'local __print=print
+'
+    printf 'print=function(...) __out[#__out+1]=table.concat({...},"\t") end
+'
+    printf '%s\n' "$1"
+    printf 'print=__print
+'
+    printf 'return table.concat(__out,"\\n")\n'
+  } > "$tmp"
+  run_lua "$tmp"
+  rm -f "$tmp"
+}
+
+# --- Window selection: prefer non-terminal editable window ------------------
+# Returns lua that sets a variable `w` to a usable window id.
+WIN_PICK='
+local w = vim.api.nvim_get_current_win()
+local function bt(win)
+  local b = vim.api.nvim_win_get_buf(win)
+  return vim.bo[b].buftype
+end
+if bt(w) == "terminal" or bt(w) == "nofile" then
+  for _, ww in ipairs(vim.api.nvim_list_wins()) do
+    local t = bt(ww)
+    if t ~= "terminal" and t ~= "nofile" and t ~= "quickfix" then
+      w = ww; break
+    end
+  end
+end
+'
+
+# --- Subcommands ------------------------------------------------------------
+cmd="${1:-state}"; shift || true
+
+case "$cmd" in
+  socket)
+    echo "$SOCK"
+    ;;
+
+  state)
+    lua_cmd '
+local b = vim.api.nvim_get_current_buf()
+local w = vim.api.nvim_get_current_win()
+local c = vim.api.nvim_win_get_cursor(w)
+local mode = vim.api.nvim_get_mode().mode
+local wins = {}
+for _, ww in ipairs(vim.api.nvim_list_wins()) do
+  local bb = vim.api.nvim_win_get_buf(ww)
+  wins[#wins+1] = string.format("  win %d buf %d %s [%s]",
+    ww, bb, vim.api.nvim_buf_get_name(bb), vim.bo[bb].buftype)
+end
+print(string.format("buf: %s", vim.api.nvim_buf_get_name(b)))
+print(string.format("cursor: line %d col %d", c[1], c[2]+1))
+print(string.format("mode: %s", mode))
+print(string.format("cwd: %s", vim.fn.getcwd()))
+print(string.format("windows (%d):", #wins))
+print(table.concat(wins, "\n"))
+'
+    ;;
+
+  buffers)
+    lua_cmd '
+local out = {}
+for _, b in ipairs(vim.api.nvim_list_bufs()) do
+  if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buflisted then
+    local name = vim.api.nvim_buf_get_name(b)
+    if name ~= "" then
+      out[#out+1] = string.format("%3d  %s  %s", b,
+        vim.bo[b].modified and "+" or " ",
+        name)
+    end
+  end
+end
+print(table.concat(out, "\n"))
+'
+    ;;
+
+  open)
+    path="${1:?nvimr open: path required}"
+    line="${2:-}"
+    lua_cmd "$WIN_PICK
+vim.api.nvim_set_current_win(w)
+vim.cmd.edit('$path')
+if ${line:-0} > 0 then
+  vim.api.nvim_win_set_cursor(0, {tonumber('$line'), 0})
+  vim.cmd('normal! zz')
+end
+print(vim.api.nvim_buf_get_name(0) .. ':' .. vim.api.nvim_win_get_cursor(0)[1])
+"
+    ;;
+
+  goto)
+    line="${1:?nvimr goto: line required}"
+    col="${2:-0}"
+    lua_cmd "$WIN_PICK
+vim.api.nvim_set_current_win(w)
+vim.api.nvim_win_set_cursor(0, {tonumber('$line'), tonumber('$col')})
+vim.cmd('normal! zz')
+print('cursor: ' .. vim.api.nvim_win_get_cursor(0)[1])
+"
+    ;;
+
+  read)
+    buf="${1:-0}"
+    n="${2:-50}"
+    lua_cmd '
+local b = tonumber("'$buf'") or 0
+if b == 0 then b = vim.api.nvim_get_current_buf() end
+local n = tonumber("'$n'") or 50
+local total = vim.api.nvim_buf_line_count(b)
+local lines = vim.api.nvim_buf_get_lines(b, 0, math.min(n, total), false)
+print(string.format("[buf %d  %d/%d lines]", b, #lines, total))
+print(table.concat(lines, "\n"))
+'
+    ;;
+
+  diag)
+    buf="${1:-0}"
+    lua_cmd '
+local b = tonumber("'$buf'") or 0
+if b == 0 then b = vim.api.nvim_get_current_buf() end
+local diags = vim.diagnostic.get(b)
+if #diags == 0 then print("no diagnostics") return end
+local sev = {[1]="E",[2]="W",[3]="I",[4]="H"}
+local out = {}
+for _, d in ipairs(diags) do
+  out[#out+1] = string.format("%s L%d: %s", sev[d.severity] or "?", d.lnum+1, d.message)
+end
+print(table.concat(out, "\n"))
+'
+    ;;
+
+  cmd)
+    ex="${1:?nvimr cmd: ex command required}"
+    lua_cmd "$WIN_PICK
+vim.api.nvim_set_current_win(w)
+vim.cmd([[$ex]])
+print('ok')
+"
+    ;;
+
+  lua)
+    file="${1:?nvimr lua: file required}"
+    run_lua "$file"
+    ;;
+
+  keys)
+    keys="${1:?nvimr keys: key string required}"
+    "$NV" --server "$SOCK" --remote-send "$keys"
+    echo "sent (unreliable if terminal buffer has focus)"
+    ;;
+
+  *)
+    echo "nvimr: unknown command '$cmd'" >&2
+    echo "commands: socket state buffers open goto read diag cmd lua keys" >&2
+    exit 1
+    ;;
+esac
