@@ -71,12 +71,17 @@ function M.send_to_backlog_agent(item, root)
   local internal = require("plugins.sidekick.internal")
   local slug = internal.normalize_label(item.day)
   local name = "pi-" .. slug
-  local agent = herdr.get_agent(name)
+  local launch_cwd = root or vim.fn.expand("~/vault")
+  local agent, listed = herdr.agent_for_worktree(launch_cwd)
+  if listed == false then
+    vim.notify("Could not verify the durable session for this worktree", vim.log.levels.ERROR)
+    return nil
+  end
 
   if not agent then
     agent = herdr.start(
       name,
-      root or vim.fn.expand("~/vault"),
+      launch_cwd,
       internal.tool_command_for_named_session("pi", slug),
       { [internal.named_env_var] = slug },
       "backlog"

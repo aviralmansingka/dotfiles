@@ -347,7 +347,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Sidekick floats use per-agent colored titles.
 - Sidekick splits use per-agent colored winbars.
 - Sidekick splits use per-agent colored window separators.
-- Sidekick session pickers render agent labels with matching per-agent colors.
+- Sidekick session pickers render worktree names with matching per-agent colors.
 - Sidekick cwd session picker uses transparent picker backgrounds so terminal previews stay visible.
 - Sidekick CLI picker shows right-aligned cwd.
 
@@ -357,7 +357,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Sidekick can match existing tmux panes to tools.
 - Sidekick can rehydrate its registry from tmux panes.
 - Sidekick named sessions are stored and identified through session labels and tmux environment.
-- Sidekick named-session prompts collect both a session label and working directory.
+- Sidekick named-session prompts reuse the current worktree's existing durable session instead of creating a second
+  session with a redundant label.
 - Pi named sessions receive native `--name <slug>` command arguments.
 - Sidekick branch metadata is stored in tmux environment.
 - `<C-.>` toggles the last picker-selected Sidekick session, falling back to the cwd session picker.
@@ -368,10 +369,14 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - `<leader>ap` opens prompt selection.
 - Sidekick supports sending context, prompting, toggling float/split, opening local sessions, and creating named sessions.
 - Sidekick keymaps include ask/edit/apply/reject/yank, context/prompt sending, the local picker, and named-session creation.
-- Sidekick cwd session picker keeps the ordinary conversation preview full-width above its input, with Workspaces,
-  Agents, and Atlas Preview panes across the bottom.
-- For an exactly registered participant, the bottom-right pane shows the compact read-only Atlas projection without
-  replacing the ordinary conversation preview; incomplete or unmatched identity leaves the Atlas pane empty.
+- Sidekick cwd session picker keeps the ordinary conversation preview full-width above its input, with
+  `Repositories / Worktrees` and `Current Worktree` panes across the bottom.
+- Repository headings expand into one row per durable worktree session. Rows use the Git branch as worktree identity,
+  retain backend color and Herdr state, and show tracked `+added −removed` totals against local `main`.
+- The current-worktree pane shows only that worktree's one durable session. Internal Herdr agent names remain available
+  for exact routing, rename, kill, and focus actions without being repeated in the row.
+- Atlas projections may replace the ordinary preview while a repository/worktree selection is active; incomplete or
+  unmatched identity retains the ordinary preview.
 - Ordinary preview polling and full-history scrolling continue while Atlas lookup is pending or displayed.
 - Sidekick global named-session picker includes previews.
 - Sidekick session pickers support killing sessions.
@@ -447,14 +452,13 @@ workflow area rather than plugin files, Lua modules, or implementation structure
   previews or opens every row at its exact source location. Completed `[x]` tasks are hidden.
 - Inside the `<leader>vf` picker, `<C-a>` is `(Vault hunter) Action` for Feature and Task rows. It launches
   `$vault-hunter <path:line>` in a stable Codex session, then closes the picker and focuses Sidekick. Feature rows use
-  the selected `Project · Feature` Herdr workspace without a task worktree. Each Task row creates or reuses its own
-  Herdr workspace named exactly after the displayed Task name, isolated `task/<task-slug>` worktree, and task-named
-  driver tab.
+  the repository's shared Herdr workspace and feature worktree. Each Task row creates or reuses an isolated
+  `task/<task-slug>` worktree and task-named driver tab inside that same repository workspace.
 - `<leader>vt` opens unchecked items from `3_logs/*/backlog.md` only when they are under an exact
   `### Weekday, YYYY-MM-DD` heading; rows show the inferred date and todo text while retaining source preview.
-- Inside the `<leader>vt` picker, `<C-a>` creates or reuses a dated Pi agent in the `backlog` Herdr workspace and
-  pastes the selected item's exact `backlog.md:line` link without submitting it, then closes the picker and focuses
-  that agent's Sidekick window.
+- Inside the `<leader>vt` picker, `<C-a>` reuses the durable session already owned by the vault worktree; if none
+  exists, it starts the dated Pi agent in the vault repository's shared Herdr workspace. It pastes the selected
+  item's exact `backlog.md:line` link without submitting it, then closes the picker and focuses that Sidekick window.
 - `<leader>ot` opens vault tags across frontmatter array tags, frontmatter list tags, and inline tags while skipping headings and code fences.
 - `<leader>ob` opens case-insensitive backlinks to the current note, including aliased wiki links.
 - `<leader>ol` opens outgoing wiki links from the current note, including unsaved-buffer and missing-target handling.
@@ -576,19 +580,20 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Tabline shows tabs and the current tab's buffers with custom separators and modified indicators.
 - Workspace tabs own a folder identity independent of Herdr; launching Neovim binds the initial tab to the launch
   folder, reusing an existing workspace tab that matches by path, then name.
-- Launching an agent from a workspace tab resolves or creates its Herdr workspace from the tab's folder, then label,
-  and binds the tab to that Herdr workspace.
+- Launching an agent from a Git-backed workspace tab resolves or creates the repository's Herdr workspace from Git's
+  shared common directory, keeps the agent cwd on the exact worktree, and binds the tab to the repository workspace.
+- Multiple worktree-scoped Workspace Tabs may bind to the same repository-scoped Herdr Workspace.
 - `<leader>fw` opens a fresh, compact Herdr workspace picker titled `spaces`.
-- Herdr workspaces can be created, renamed, selected, and confirmed-closed from the picker; each selected workspace is
-  represented by at most one runtime Neovim tab keyed by its Herdr workspace ID.
+- Herdr workspaces can be created, renamed, selected, and confirmed-closed from the picker; repository workspaces may
+  be represented by multiple runtime Neovim tabs distinguished by worktree cwd.
 - Confirming a workspace creates or enters its tab, removes a truly empty unbound launch tab, then opens the scoped
   Sidekick agent picker; meaningful source tabs are preserved.
 - Entering a bound workspace tab focuses the corresponding Herdr workspace; ordinary tabs and manually closed tabs do
   not affect Herdr.
 - Workspace tabs initialize from stable Herdr pane cwd and preserve later tab-local cwd/layout changes.
-- Closing a Herdr workspace from the picker unbinds its Neovim tab, which keeps its folder identity.
-- Vault Hunter's Workspace Cleanup Gate is the deliberate exception: it tears down task-owned Herdr resources, removes
-  their Herdr bindings, and closes the corresponding workspace tabs.
+- Closing a Herdr workspace from the picker unbinds its Neovim tabs, which keep their folder identity.
+- Vault Hunter's Workspace Cleanup Gate tears down task-owned Herdr tabs, panes, bindings, and worktree views while
+  preserving the shared repository workspace when other worktree sessions remain.
 - `<S-h>` and `<S-l>` cycle the current tab's buffers; `[b` and `]b` navigate global buffers.
 - `<S-q>` closes the current buffer.
 - Dashboard actions include finding files, creating a new file, restoring the last session, opening Herdr workspaces,

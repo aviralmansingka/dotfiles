@@ -624,52 +624,187 @@ local function validate_sidekick_herdr()
     fail("agent launch should derive and bind Herdr scope from its Neovim tab: " .. vim.inspect(authority_scope))
   end
 
-  local original_workspace_for_cwd = source_herdr.workspace_for_cwd
+  local original_git_context = source_herdr.git_context
+  local original_workspace_for_repository = source_herdr.workspace_for_repository
   local tab_scope_cwd = cwd .. "/nvim"
-  local resolved_cwd
-  source_herdr.workspace_for_cwd = function(path)
-    resolved_cwd = path
+  local resolved_repository
+  source_herdr.git_context = function(path)
+    return {
+      repository = "/repos/dotfiles",
+      repository_label = "dotfiles",
+      worktree = path,
+      worktree_label = "feat/repository-sessions",
+    }
+  end
+  source_herdr.workspace_for_repository = function(path)
+    resolved_repository = path
     return "w-tab"
   end
   local tab_workspace_id = source_herdr.ensure_workspace(cwd, { cwd = tab_scope_cwd, label = "nvim" })
-  source_herdr.workspace_for_cwd = original_workspace_for_cwd
-  if tab_workspace_id ~= "w-tab" or resolved_cwd ~= tab_scope_cwd then
-    fail("tab authority should override agent cwd for Herdr workspace resolution")
+  source_herdr.git_context = original_git_context
+  source_herdr.workspace_for_repository = original_workspace_for_repository
+  if tab_workspace_id ~= "w-tab" or resolved_repository ~= "/repos/dotfiles" then
+    fail("worktree tabs should resolve through their repository-level Herdr workspace")
   end
 
-  local original_workspace_for_label = source_herdr.workspace_for_label
-  source_herdr.workspace_for_cwd = function()
-    return "w-cwd-match"
-  end
-  source_herdr.workspace_for_label = function(label)
-    if label == "backlog" then
-      return "w-backlog", true
-    end
-    return nil, true
-  end
-  local string_workspace_id = source_herdr.ensure_workspace(cwd, "backlog")
-  source_herdr.workspace_for_cwd = original_workspace_for_cwd
-  source_herdr.workspace_for_label = original_workspace_for_label
-  if string_workspace_id ~= "w-backlog" then
-    fail("string scopes should resolve by label before cwd: " .. vim.inspect(string_workspace_id))
-  end
-
-  local table_label_lookups = 0
-  source_herdr.workspace_for_cwd = function()
+  local original_workspace_for_cwd = source_herdr.workspace_for_cwd
+  local exact_cwd_lookup
+  source_herdr.git_context = function()
     return nil
   end
-  source_herdr.workspace_for_label = function(label)
-    if label == "nvim" then
-      table_label_lookups = table_label_lookups + 1
-      return "w-label-fallback", true
-    end
-    return nil, true
+  source_herdr.workspace_for_cwd = function(path)
+    exact_cwd_lookup = path
+    return "w-cwd-match"
   end
-  local table_fallback_id = source_herdr.ensure_workspace(cwd, { cwd = cwd, label = "nvim" })
+  local string_workspace_id = source_herdr.ensure_workspace("/tmp/sidekick-non-git", "backlog")
+  source_herdr.git_context = original_git_context
   source_herdr.workspace_for_cwd = original_workspace_for_cwd
-  source_herdr.workspace_for_label = original_workspace_for_label
-  if table_fallback_id ~= "w-label-fallback" or table_label_lookups ~= 1 then
-    fail("table scopes should fall back to label resolution: " .. vim.inspect(table_fallback_id))
+  if string_workspace_id ~= "w-cwd-match" or exact_cwd_lookup ~= "/tmp/sidekick-non-git" then
+    fail("named scopes should preserve exact non-Git cwd identity: " .. vim.inspect(string_workspace_id))
+  end
+
+  source_herdr.workspace_for_cwd = function()
+    return nil, false
+  end
+  source_herdr.git_context = function()
+    return nil
+  end
+  local unverified_non_git_workspace = source_herdr.ensure_workspace(
+    "/tmp/sidekick-non-git",
+    { cwd = "/tmp/sidekick-non-git", label = "nvim" }
+  )
+  source_herdr.git_context = original_git_context
+  source_herdr.workspace_for_cwd = original_workspace_for_cwd
+  if unverified_non_git_workspace ~= nil then
+    fail("non-Git workspace lookup failures should reject launch")
+  end
+
+  if
+    type(source_herdr.git_context) ~= "function"
+    or type(source_herdr.workspace_for_repository) ~= "function"
+    or type(source_herdr.git_diff_stats) ~= "function"
+    or type(source_herdr.is_durable_agent) ~= "function"
+  then
+    fail("Herdr adapter should expose repository, worktree, and main-diff identity helpers")
+  end
+  if
+    not source_herdr.is_durable_agent({ agent = "codex", name = "sk-codex-deadbeef" })
+    or not source_herdr.is_durable_agent({ agent = "pi", name = "pi-friday-2026-07-24" })
+    or source_herdr.is_durable_agent({ agent = "pi", name = "review-child" })
+  then
+    fail("durable Sidekick identity should exclude transient child agents")
+  end
+
+  local diff_command
+  source_herdr.git_context = function()
+    return {
+      repository = "/repos/dotfiles",
+      repository_label = "dotfiles",
+      worktree = "/worktrees/feature-one",
+      worktree_label = "feature/one",
+    }
+  end
+  vim.system = function(cmd)
+    diff_command = vim.deepcopy(cmd)
+    return {
+      wait = function()
+        return { code = 0, stdout = "12\t3\ttracked.lua\n-\t-\tbinary.dat\n4\t2\tdocs.md\n", stderr = "" }
+      end,
+    }
+  end
+  local parsed_diff = source_herdr.git_diff_stats("/worktrees/feature-one")
+  vim.system = original_system
+  source_herdr.git_context = original_git_context
+  assert_sequence(
+    diff_command,
+    { "git", "-C", "/worktrees/feature-one", "diff", "--numstat", "main", "--" },
+    "worktree diff command"
+  )
+  if not vim.deep_equal(parsed_diff, { added = 16, removed = 5 }) then
+    fail("worktree diff should sum tracked text lines and ignore binary entries: " .. vim.inspect(parsed_diff))
+  end
+
+  local repository_lookups = {}
+  source_herdr.git_context = function(path)
+    local branch = path:match("([^/]+)$")
+    return {
+      repository = "/repos/dotfiles",
+      repository_label = "dotfiles",
+      worktree = path,
+      worktree_label = branch,
+    }
+  end
+  source_herdr.workspace_for_repository = function(repository)
+    repository_lookups[#repository_lookups + 1] = repository
+    return "w-repository"
+  end
+  local first_repository_workspace = source_herdr.ensure_workspace(
+    "/worktrees/feature-one",
+    { cwd = "/worktrees/feature-one", label = "feature-one" }
+  )
+  local second_repository_workspace = source_herdr.ensure_workspace(
+    "/worktrees/feature-two",
+    { cwd = "/worktrees/feature-two", label = "feature-two" }
+  )
+  source_herdr.workspace_for_repository = function()
+    return nil, false
+  end
+  local unverified_repository_workspace = source_herdr.ensure_workspace(
+    "/worktrees/feature-three",
+    { cwd = "/worktrees/feature-three", label = "feature-three" }
+  )
+  source_herdr.git_context = original_git_context
+  source_herdr.workspace_for_repository = original_workspace_for_repository
+  if
+    first_repository_workspace ~= "w-repository"
+    or second_repository_workspace ~= "w-repository"
+    or unverified_repository_workspace ~= nil
+    or not vim.deep_equal(repository_lookups, { "/repos/dotfiles", "/repos/dotfiles" })
+  then
+    fail("worktrees from one repository should reuse one Herdr workspace: " .. vim.inspect(repository_lookups))
+  end
+
+  local original_agent_for_worktree = source_herdr.agent_for_worktree
+  local original_call_for_invariant = source_herdr.call
+  local occupied = {
+    name = "codex-existing",
+    cwd = "/worktrees/feature-one",
+    foreground_cwd = "/worktrees/feature-one",
+    pane_id = "w-repository:p1",
+    tab_id = "w-repository:t1",
+    terminal_id = "term-existing",
+    workspace_id = "w-repository",
+  }
+  local invariant_calls = 0
+  source_herdr.agent_for_worktree = function()
+    return occupied
+  end
+  source_herdr.git_context = function()
+    return {
+      repository = "/repos/dotfiles",
+      repository_label = "dotfiles",
+      worktree = "/worktrees/feature-one",
+      worktree_label = "feature/one",
+    }
+  end
+  source_herdr.call = function()
+    invariant_calls = invariant_calls + 1
+    return {}
+  end
+  local original_invariant_notify = vim.notify
+  vim.notify = function() end
+  local reused = source_herdr.start("codex-existing", "/worktrees/feature-one", { "codex" })
+  local rejected = source_herdr.start("pi-spinoff", "/worktrees/feature-one", { "pi" })
+  source_herdr.agent_for_worktree = function()
+    return nil, false
+  end
+  local unverified = source_herdr.start("pi-unverified", "/worktrees/feature-one", { "pi" })
+  vim.notify = original_invariant_notify
+  source_herdr.agent_for_worktree = original_agent_for_worktree
+  source_herdr.git_context = original_git_context
+  source_herdr.call = original_call_for_invariant
+  if reused ~= occupied or rejected ~= nil or unverified ~= nil or invariant_calls ~= 0 then
+    fail("a worktree should reuse its one session and reject durable or unverified spinoffs")
   end
   for _, name in ipairs({
     "workspace_cwd",
@@ -685,6 +820,12 @@ local function validate_sidekick_herdr()
     return
   end
 
+  local loaded_named_herdr = package.loaded["plugins.sidekick.herdr"]
+  local original_named_agent_for_worktree = source_herdr.agent_for_worktree
+  package.loaded["plugins.sidekick.herdr"] = source_herdr
+  source_herdr.agent_for_worktree = function()
+    return nil
+  end
   local current_tab = vim.api.nvim_get_current_tabpage()
   vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w-bound")
   local original_toggle_named = source_internal.toggle_tool_session
@@ -703,6 +844,36 @@ local function validate_sidekick_herdr()
   local cwd_tool = config.cli.tools["codex-cwd-session"]
   if not cwd_tool or cwd_tool.herdr_workspace_id ~= nil then
     fail("unbound named sessions should retain cwd workspace fallback: " .. vim.inspect(cwd_tool))
+  end
+
+  local reused_named_target
+  source_herdr.agent_for_worktree = function()
+    return {
+      name = "sk-codex-existing",
+      agent = "codex",
+      terminal_id = "term-existing",
+      foreground_cwd = cwd,
+    }
+  end
+  source_internal.toggle_tool_session = function(name, focus, terminal_id)
+    reused_named_target = { name = name, focus = focus, terminal_id = terminal_id }
+  end
+  local original_named_notify = vim.notify
+  vim.notify = function() end
+  source_internal.start_named_session("pi", "must-not-start", cwd)
+  vim.notify = original_named_notify
+  source_internal.toggle_tool_session = original_toggle_named
+  source_herdr.agent_for_worktree = original_named_agent_for_worktree
+  package.loaded["plugins.sidekick.herdr"] = loaded_named_herdr
+  if
+    not vim.deep_equal(reused_named_target, {
+      name = "codex",
+      focus = true,
+      terminal_id = "term-existing",
+    })
+    or config.cli.tools["pi-must-not-start"] ~= nil
+  then
+    fail("named-session launch should reuse the worktree's existing durable session")
   end
 
   local original_start = source_herdr.start
@@ -746,23 +917,30 @@ local function validate_sidekick_herdr()
     fail("unbound named sessions should not override cwd workspace resolution")
   end
 
-  original_workspace_for_cwd = source_herdr.workspace_for_cwd
-  local fallback_cwd
-  source_herdr.workspace_for_cwd = function(path)
-    fallback_cwd = path
-    return "w-cwd"
+  original_workspace_for_repository = source_herdr.workspace_for_repository
+  local fallback_repository
+  source_herdr.workspace_for_repository = function(path)
+    fallback_repository = path
+    return "w-repository"
   end
   local fallback_workspace_id = source_herdr.ensure_workspace(cwd)
-  source_herdr.workspace_for_cwd = original_workspace_for_cwd
-  if fallback_workspace_id ~= "w-cwd" or fallback_cwd ~= cwd then
-    fail("unbound named sessions should resolve their workspace from cwd")
+  source_herdr.workspace_for_repository = original_workspace_for_repository
+  local live_context = source_herdr.git_context(cwd)
+  if
+    fallback_workspace_id ~= "w-repository"
+    or not live_context
+    or fallback_repository ~= live_context.repository
+  then
+    fail("unbound named sessions should resolve their workspace from the repository")
   end
 
   local original_call = source_herdr.call
   local start_calls = {}
   source_herdr.call = function(args)
     start_calls[#start_calls + 1] = args
-    if args[1] == "pane" and args[2] == "list" then
+    if args[1] == "agent" and args[2] == "list" then
+      return { agents = {} }
+    elseif args[1] == "pane" and args[2] == "list" then
       return { panes = { { pane_id = "w-bound:p0", workspace_id = "w-bound", cwd = cwd } } }
     elseif args[1] == "pane" and args[2] == "split" then
       return { pane = { pane_id = "w-bound:p1", workspace_id = "w-bound", cwd = cwd } }
@@ -792,13 +970,18 @@ local function validate_sidekick_herdr()
   for _, call in ipairs(start_calls) do
     if call[1] == "workspace" then
       fail("an exact workspace ID should bypass cwd workspace lookup: " .. vim.inspect(start_calls))
-    elseif call[1] == "pane" and call[2] == "list" and call[4] ~= "w-bound" then
+    elseif
+      call[1] == "pane"
+      and call[2] == "list"
+      and call[3] == "--workspace"
+      and call[4] ~= "w-bound"
+    then
       fail("an exact workspace ID should scope its pane lookup: " .. vim.inspect(start_calls))
     elseif call[1] == "tab" and call[2] == "create" then
       fail("worker start must not precreate a blank root tab: " .. vim.inspect(start_calls))
     elseif call[1] == "pane" and call[2] == "move" and vim.fn.index(call, "--split") >= 0 then
       fail("worker start must not use a split: " .. vim.inspect(start_calls))
-    elseif call[1] == "pane" and call[2] == "list" then
+    elseif call[1] == "pane" and call[2] == "list" and call[3] == "--workspace" then
       pane_list = call
     elseif call[1] == "pane" and call[2] == "split" then
       pane_split = call
@@ -828,14 +1011,18 @@ local function validate_sidekick_herdr()
     fail("named session should attach before Codex reports its session identity: " .. vim.inspect(start_calls))
   end
 
+  local original_ensure_workspace = source_herdr.ensure_workspace
+  source_herdr.ensure_workspace = function()
+    return "w-repository"
+  end
   local routing_calls = {}
   source_herdr.call = function(args)
     routing_calls[#routing_calls + 1] = args
     if args[1] == "worktree" and args[2] == "list" then
       return { worktrees = {} }
-    elseif args[1] == "worktree" and args[2] == "create" and args[6] == "feature/example" then
+    elseif args[1] == "worktree" and args[2] == "create" and args[8] == "feature/example" then
       return {
-        workspace = { workspace_id = "w-feature" },
+        workspace = { workspace_id = "w-repository" },
         worktree = { branch = "feature/example", path = "/worktrees/feature-example" },
       }
     end
@@ -844,21 +1031,20 @@ local function validate_sidekick_herdr()
   local feature_scope = source_herdr.ensure_feature_scope(cwd, "Neovim · Example", "feature/example")
   if
     not feature_scope
-    or feature_scope.workspace_id ~= "w-feature"
+    or feature_scope.workspace_id ~= "w-repository"
     or feature_scope.cwd ~= "/worktrees/feature-example"
   then
-    fail("feature scope should use the feature workspace and worktree: " .. vim.inspect(feature_scope))
+    fail("feature scope should use the repository workspace and feature worktree: " .. vim.inspect(feature_scope))
   end
-  local renamed_workspace = false
   local created_branches = {}
   for _, call in ipairs(routing_calls) do
-    renamed_workspace = renamed_workspace or (call[1] == "workspace" and call[2] == "rename" and call[3] == "w-feature")
     if call[1] == "worktree" and call[2] == "create" then
-      created_branches[#created_branches + 1] = call[6]
+      local branch_index = vim.fn.index(call, "--branch")
+      created_branches[#created_branches + 1] = call[branch_index + 2]
+      if call[4] ~= "w-repository" then
+        fail("feature worktree should open inside the repository workspace: " .. vim.inspect(call))
+      end
     end
-  end
-  if not renamed_workspace then
-    fail("feature routing should name the feature workspace")
   end
   assert_sequence(created_branches, { "feature/example" }, "feature routing branches")
 
@@ -868,50 +1054,61 @@ local function validate_sidekick_herdr()
     if args[1] == "worktree" and args[2] == "list" then
       return {
         worktrees = {
-          { branch = "feature/example", path = "/worktrees/feature-example" },
+          {
+            branch = "feature/example",
+            path = "/worktrees/feature-example",
+            open_workspace_id = "w-repository",
+          },
         },
       }
-    elseif args[1] == "worktree" and args[2] == "create" and args[6] == "task/example-t01" then
+    elseif args[1] == "worktree" and args[2] == "create" and args[8] == "task/example-t01" then
       return {
-        workspace = { workspace_id = "w-task" },
+        workspace = { workspace_id = "w-repository" },
         worktree = { branch = "task/example-t01", path = "/worktrees/task-example-t01" },
       }
     end
     return {}
   end
   local task_scope = source_herdr.ensure_task_scope(cwd, "T01 Example task", "feature/example", "task/example-t01")
-  if not task_scope or task_scope.workspace_id ~= "w-task" or task_scope.cwd ~= "/worktrees/task-example-t01" then
-    fail("task scope should use its own workspace and worktree: " .. vim.inspect(task_scope))
+  if
+    not task_scope
+    or task_scope.workspace_id ~= "w-repository"
+    or task_scope.cwd ~= "/worktrees/task-example-t01"
+  then
+    fail("task scope should use the repository workspace and task worktree: " .. vim.inspect(task_scope))
   end
-  local task_workspace_renamed = false
   for _, call in ipairs(routing_calls) do
-    task_workspace_renamed = task_workspace_renamed
-      or (call[1] == "workspace" and call[2] == "rename" and call[3] == "w-task")
-  end
-  if not task_workspace_renamed then
-    fail("task routing should name its dedicated workspace")
+    if call[1] == "worktree" and call[2] == "create" and call[4] ~= "w-repository" then
+      fail("task worktrees should open inside the repository workspace: " .. vim.inspect(call))
+    end
   end
 
   routing_calls = {}
   source_herdr.call = function(args)
     routing_calls[#routing_calls + 1] = args
-    if args[1] == "tab" and args[2] == "list" then
+    if args[1] == "agent" and args[2] == "list" then
+      return {
+        agents = {
+          { agent = "codex", name = "codex-example", foreground_cwd = "/worktrees/feature-example" },
+        },
+      }
+    elseif args[1] == "tab" and args[2] == "list" then
       return {
         tabs = {
           { tab_id = "w-old:t1", workspace_id = "w-old", pane_count = 1 },
-          { tab_id = "w-feature:t2", workspace_id = "w-feature", pane_count = 1 },
+          { tab_id = "w-repository:t2", workspace_id = "w-repository", pane_count = 1 },
         },
       }
     elseif args[1] == "pane" and args[2] == "move" then
-      return { pane = { pane_id = "w-feature:p1", tab_id = "w-feature:t2" } }
+      return { pane = { pane_id = "w-repository:p1", tab_id = "w-repository:t2" } }
     elseif args[1] == "agent" and args[2] == "get" then
       return {
         agent = {
           name = "codex-example",
           terminal_id = "term-example",
-          pane_id = "w-feature:p1",
-          tab_id = "w-feature:t2",
-          workspace_id = "w-feature",
+          pane_id = "w-repository:p1",
+          tab_id = "w-repository:t2",
+          workspace_id = "w-repository",
           foreground_cwd = "/worktrees/feature-example",
           agent_session = {
             source = "herdr:codex",
@@ -938,7 +1135,7 @@ local function validate_sidekick_herdr()
   }, feature_scope, "T01 Example task")
   if
     not placed_agent
-    or placed_agent.tab_id ~= "w-feature:t2"
+    or placed_agent.tab_id ~= "w-repository:t2"
     or placed_agent.agent_session.value ~= "session-example"
   then
     fail("existing task agent should move to its feature-worktree tab: " .. vim.inspect(placed_agent))
@@ -955,7 +1152,7 @@ local function validate_sidekick_herdr()
     not task_pane_move
     or vim.fn.index(task_pane_move, "--new-tab") < 0
     or vim.fn.index(task_pane_move, "--split") >= 0
-    or task_pane_move[6] ~= "w-feature"
+    or task_pane_move[6] ~= "w-repository"
     or task_pane_move[8] ~= "T01 Example task"
   then
     fail("task agent should move directly into its named one-pane tab: " .. vim.inspect(routing_calls))
@@ -964,23 +1161,29 @@ local function validate_sidekick_herdr()
   routing_calls = {}
   source_herdr.call = function(args)
     routing_calls[#routing_calls + 1] = args
-    if args[1] == "tab" and args[2] == "list" then
+    if args[1] == "agent" and args[2] == "list" then
+      return {
+        agents = {
+          { agent = "codex", name = "codex-shared", foreground_cwd = "/worktrees/feature-example" },
+        },
+      }
+    elseif args[1] == "tab" and args[2] == "list" then
       return {
         tabs = {
-          { tab_id = "w-feature:shared", workspace_id = "w-feature", pane_count = 2 },
-          { tab_id = "w-feature:worker", workspace_id = "w-feature", pane_count = 1 },
+          { tab_id = "w-repository:shared", workspace_id = "w-repository", pane_count = 2 },
+          { tab_id = "w-repository:worker", workspace_id = "w-repository", pane_count = 1 },
         },
       }
     elseif args[1] == "pane" and args[2] == "move" then
-      return { pane = { pane_id = "w-feature:p2", tab_id = "w-feature:worker" } }
+      return { pane = { pane_id = "w-repository:p2", tab_id = "w-repository:worker" } }
     elseif args[1] == "agent" and args[2] == "get" then
       return {
         agent = {
           name = "codex-shared",
           terminal_id = "term-shared",
-          pane_id = "w-feature:p2",
-          tab_id = "w-feature:worker",
-          workspace_id = "w-feature",
+          pane_id = "w-repository:p2",
+          tab_id = "w-repository:worker",
+          workspace_id = "w-repository",
           foreground_cwd = "/worktrees/feature-example",
           agent_session = {
             source = "herdr:codex",
@@ -995,9 +1198,9 @@ local function validate_sidekick_herdr()
   local restored_agent = source_herdr.place_agent({
     name = "codex-shared",
     terminal_id = "term-shared",
-    pane_id = "w-feature:p2",
-    tab_id = "w-feature:shared",
-    workspace_id = "w-feature",
+    pane_id = "w-repository:p2",
+    tab_id = "w-repository:shared",
+    workspace_id = "w-repository",
     foreground_cwd = "/worktrees/feature-example",
     agent_session = {
       source = "herdr:codex",
@@ -1005,13 +1208,45 @@ local function validate_sidekick_herdr()
       value = "session-shared",
     },
   }, feature_scope, "T01 Restored worker")
-  if not restored_agent or restored_agent.tab_id ~= "w-feature:worker" then
+  if not restored_agent or restored_agent.tab_id ~= "w-repository:worker" then
     fail("same-workspace reuse should restore a one-pane worker tab: " .. vim.inspect(restored_agent))
   end
   for _, call in ipairs(routing_calls) do
     if call[1] == "pane" and call[2] == "close" then
       fail("one-pane restoration must preserve unrelated shared panes: " .. vim.inspect(routing_calls))
     end
+  end
+
+  routing_calls = {}
+  source_herdr.call = function(args)
+    routing_calls[#routing_calls + 1] = args
+    if args[1] == "agent" and args[2] == "list" then
+      return {
+        agents = {
+          { agent = "pi", name = "pi-existing-owner", foreground_cwd = "/worktrees/feature-example" },
+        },
+      }
+    end
+    return {}
+  end
+  local original_owner_notify = vim.notify
+  vim.notify = function() end
+  local ownership_conflict = source_herdr.place_agent({
+    name = "codex-shared",
+    terminal_id = "term-shared",
+    pane_id = "w-repository:p2",
+    tab_id = "w-repository:shared",
+    workspace_id = "w-repository",
+    foreground_cwd = "/worktrees/feature-example",
+    agent_session = {
+      source = "herdr:codex",
+      kind = "id",
+      value = "session-shared",
+    },
+  }, feature_scope, "T01 Conflicting worker")
+  vim.notify = original_owner_notify
+  if ownership_conflict or #routing_calls ~= 1 or routing_calls[1][1] ~= "agent" then
+    fail("worker placement should reject a worktree owned by another durable session")
   end
 
   local calls_before_invalid = #routing_calls
@@ -1021,24 +1256,34 @@ local function validate_sidekick_herdr()
     name = "codex-background",
     pane_id = "background",
     tab_id = "inherited",
-    workspace_id = "w-feature",
+    workspace_id = "w-repository",
     foreground_cwd = "/worktrees/feature-example",
   }, feature_scope, "invalid")
   vim.notify = original_notify
+  source_herdr.ensure_workspace = original_ensure_workspace
   source_herdr.call = original_call
   if invalid_agent or #routing_calls ~= calls_before_invalid then
     fail("background or inherited-pane agents without full session identity must be rejected")
   end
 
+  herdr = source_herdr
   local original_list_agents = herdr.list_agents
+  local original_picker_git_context = herdr.git_context
+  local original_picker_diff_stats = herdr.git_diff_stats
   local other_agent_name = "pi-other-workspace"
   local removed_pane_id
+  local agent_cwds = {
+    [2] = "/worktrees/dotfiles/idle",
+    [3] = "/worktrees/dotfiles/working",
+    [4] = "/worktrees/dotfiles/done",
+    [5] = cwd,
+  }
   local function named_agent(name, status, index, workspace_id, agent_cwd)
     return {
       name = name,
       agent = "pi",
       agent_status = status,
-      foreground_cwd = agent_cwd or cwd,
+      foreground_cwd = agent_cwd or agent_cwds[index] or cwd,
       pane_id = "w1:p" .. index,
       tab_id = "w1:t" .. index,
       terminal_id = "term-" .. index,
@@ -1056,7 +1301,7 @@ local function validate_sidekick_herdr()
         name = "sk-codex-deadbeef",
         agent = "codex",
         agent_status = "working",
-        cwd = cwd,
+        cwd = "/worktrees/dotfiles/base",
         pane_id = "w1:p1",
         terminal_id = "term-base",
         workspace_id = "w1",
@@ -1065,14 +1310,58 @@ local function validate_sidekick_herdr()
       named_agent("pi-working", "working", 3),
       named_agent("pi-done", "done", 4),
       named_agent("pi-blocked", "blocked", 5),
-      named_agent(other_agent_name, "idle", 6, "w2"),
-      named_agent("pi-workspace-only", "idle", 7, "w1", cwd .. "-unrelated"),
+      named_agent(other_agent_name, "idle", 6, "w2", "/worktrees/vault/journal"),
+      named_agent("pi-workspace-only", "idle", 7, "w1", "/worktrees/dotfiles/workspace-only"),
+      named_agent("review-child", "working", 8, "w1", cwd),
     }
     return vim.tbl_filter(function(agent)
       return agent.pane_id ~= removed_pane_id
     end, agents)
   end
+  herdr.git_context = function(path)
+    path = vim.fs.normalize(path or "")
+    if path == cwd or vim.startswith(path, cwd .. "/") then
+      return {
+        repository = "/repos/dotfiles",
+        repository_label = "dotfiles",
+        worktree = cwd,
+        worktree_label = "feat/sidekick-repo-session-grouping",
+      }
+    end
+    local dotfiles_worktree = path:match("^/worktrees/dotfiles/([^/]+)")
+    if dotfiles_worktree then
+      return {
+        repository = "/repos/dotfiles",
+        repository_label = "dotfiles",
+        worktree = "/worktrees/dotfiles/" .. dotfiles_worktree,
+        worktree_label = "feature/" .. dotfiles_worktree,
+      }
+    end
+    local vault_worktree = path:match("^/worktrees/vault/([^/]+)")
+    if vault_worktree then
+      return {
+        repository = "/repos/vault",
+        repository_label = "vault",
+        worktree = "/worktrees/vault/" .. vault_worktree,
+        worktree_label = "feature/" .. vault_worktree,
+      }
+    end
+  end
+  herdr.git_diff_stats = function(path)
+    local values = {
+      [cwd] = { added = 142, removed = 38 },
+      ["/worktrees/dotfiles/idle"] = { added = 3, removed = 1 },
+      ["/worktrees/dotfiles/working"] = { added = 88, removed = 12 },
+      ["/worktrees/dotfiles/done"] = { added = 18, removed = 4 },
+      ["/worktrees/dotfiles/workspace-only"] = { added = 7, removed = 0 },
+      ["/worktrees/dotfiles/base"] = { added = 0, removed = 0 },
+      ["/worktrees/vault/journal"] = { added = 21, removed = 9 },
+    }
+    return values[path] or { added = 0, removed = 0 }
+  end
 
+  local loaded_picker_herdr = package.loaded["plugins.sidekick.herdr"]
+  package.loaded["plugins.sidekick.herdr"] = source_herdr
   local source_registry = dofile(source_root .. "registry.lua")
   local discovered = source_registry.discover()
   if discovered["sk-codex-deadbeef"] then
@@ -1105,6 +1394,7 @@ local function validate_sidekick_herdr()
     end,
   }
   local cwd_picker = dofile(source_root .. "cwd_picker.lua")
+  package.loaded["plugins.sidekick.herdr"] = loaded_picker_herdr
   package.loaded["plugins.sidekick.registry"] = loaded_registry
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
@@ -1127,8 +1417,8 @@ local function validate_sidekick_herdr()
       fail("cwd picker Herdr status order mismatch: " .. vim.inspect(ordered_statuses))
     end
   end
-  if not unbound_labels["pi-other-workspace"] or unbound_labels["pi-workspace-only"] then
-    fail("unbound cwd picker should retain cwd/repository filtering: " .. vim.inspect(local_items))
+  if not unbound_labels["pi-blocked"] or vim.tbl_count(unbound_labels) ~= 1 then
+    fail("cwd picker should show only the one session owned by the current worktree: " .. vim.inspect(local_items))
   end
 
   vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w1")
@@ -1137,12 +1427,9 @@ local function validate_sidekick_herdr()
   local bound_labels = {}
   for _, item in ipairs(bound_items) do
     bound_labels[item.label] = true
-    if item.workspace_id ~= "w1" then
-      fail("bound cwd picker must use exact workspace ID: " .. vim.inspect(bound_items))
-    end
   end
-  if bound_labels["pi-other-workspace"] or not bound_labels["pi-workspace-only"] then
-    fail("bound cwd picker should ignore cwd and match only workspace ID: " .. vim.inspect(bound_items))
+  if not bound_labels["pi-blocked"] or vim.tbl_count(bound_labels) ~= 1 then
+    fail("repository-bound picker should retain exact worktree scope: " .. vim.inspect(bound_items))
   end
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
   pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
@@ -1262,8 +1549,8 @@ local function validate_sidekick_herdr()
     if not picker_opts then
       fail("cwd picker did not open Snacks picker")
     end
-    if picker_opts.title ~= "Sidekick Sessions in Cwd" then
-      fail("unbound cwd picker title should retain cwd scope: " .. vim.inspect(picker_opts.title))
+    if picker_opts.title ~= "Sidekick Session in Worktree: feat/sidekick-repo-session-grouping" then
+      fail("cwd picker title should name the current worktree: " .. vim.inspect(picker_opts.title))
     end
     local layout = picker_opts.layout.layout
     if
@@ -1275,13 +1562,16 @@ local function validate_sidekick_herdr()
       or layout[3].height ~= 14
       or layout[3][1].win ~= "workspace"
       or layout[3][1].height ~= 12
+      or layout[3][1].title ~= " Repositories / Worktrees "
       or layout[3][2].win ~= "list"
       or layout[3][2].height ~= 12
+      or layout[3][2].title ~= " Current Worktree "
+      or #layout[3] ~= 2
       or not picker_opts.layout.wins.workspace
       or layout.width ~= math.max(math.floor(vim.o.columns * config.cli.win.float.width), 80) + 2
       or layout.height ~= math.max(math.floor(vim.o.lines * config.cli.win.float.height), 10) + 2
     then
-      fail("agent picker should place the workspace pane left of the local-session pane")
+      fail("agent picker should place repositories left and the current worktree at bottom-right")
     end
     if not picker_opts.win.preview.wo.wrap or not picker_opts.win.preview.wo.linebreak then
       fail("cwd picker preview should wrap unwrapped logical lines")
@@ -1305,15 +1595,11 @@ local function validate_sidekick_herdr()
       if rendered:find(item.cwd, 1, true) or item.text:find(item.cwd, 1, true) then
         fail("cwd picker rows should not show the session working directory: " .. vim.inspect(rendered))
       end
-      local expected_context = item.label == "pi-working" and "49%" or "42.5%"
-      if not rendered:find(" · " .. expected_context, 1, true) then
-        fail("cwd picker rows should show context used after a floating-dot divider: " .. vim.inspect(rendered))
+      if not rendered:find(item.display_label, 1, true) or rendered:find(item.label, 1, true) then
+        fail("picker rows should use worktree identity without repeating the session name: " .. vim.inspect(rendered))
       end
-      if item.label == "pi-working" and not rendered:match(" · %d+s · 49%%") then
-        fail("working rows should show current run time before context usage: " .. vim.inspect(rendered))
-      end
-      if item.label == "pi-done" and not rendered:find(" · 12s · 42.5%", 1, true) then
-        fail("done rows should retain their completed run time: " .. vim.inspect(rendered))
+      if not rendered:find(" · +142 −38", 1, true) then
+        fail("picker rows should show added and removed lines against main: " .. vim.inspect(rendered))
       end
     end
     if
@@ -1374,13 +1660,7 @@ local function validate_sidekick_herdr()
       fail("session rename should target the selected Herdr agent name: " .. vim.inspect(rename_args))
     end
 
-    local kill_item
-    for _, item in ipairs(picker_opts.items) do
-      if item.label == "pi-done" then
-        kill_item = item
-        break
-      end
-    end
+    local kill_item = picker_opts.items[1]
     local kill_action = "sidekick_kill_session"
     if not kill_item or type(picker_opts.actions[kill_action]) ~= "function" then
       fail("cwd picker should expose one agent-kill action from input and list")
@@ -1507,14 +1787,15 @@ local function validate_sidekick_herdr()
     if focused_target ~= "input" or vim.api.nvim_get_current_win() ~= input_win then
       fail("agent picker should keep keyboard focus in its input")
     end
-    local workspace_two_row = vim.fn.index(global_lines, "▾ Workspace Two · ● 0")
     if
-      not vim.startswith(global_lines[1], "▾ Workspace One · ")
-      or workspace_two_row < 1
-      or global_lines[workspace_two_row + 2] ~= "  └─ · pi-other-workspace · 42.5%"
+      global_lines[1] ~= "▾ dotfiles · 6 worktrees"
+      or not vim.tbl_contains(global_lines, "  ├─ S feature/working · +88 −12")
+      or not vim.tbl_contains(global_lines, "  ├─ ! feat/sidekick-repo-session-grouping · +142 −38")
+      or not vim.tbl_contains(global_lines, "▾ vault · 1 worktree")
+      or not vim.tbl_contains(global_lines, "  └─ · feature/journal · +21 −9")
     then
       fail(
-        "workspace rows should start with the local workspace, preserve metric order, and start expanded: "
+        "repository rows should start locally, group worktrees, show main diff stats, and start expanded: "
           .. vim.inspect(global_lines)
       )
     end
@@ -1592,8 +1873,8 @@ local function validate_sidekick_herdr()
       input_changed()
       global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
       if
-        global_lines[1] ~= "▾ Workspace Two · ● 0"
-        or global_lines[2] ~= "  └─ · pi-other-workspace · 42.5%"
+        global_lines[1] ~= "▾ vault · 1 worktree"
+        or global_lines[2] ~= "  └─ · feature/journal · +21 −9"
         or vim.api.nvim_win_get_cursor(global_win.win)[1] ~= 2
       then
         fail("Ctrl-R/Ctrl-X verifier should highlight pi-other-workspace")
@@ -1700,10 +1981,10 @@ local function validate_sidekick_herdr()
       global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
       if
         not vim.iter(global_lines):any(function(line)
-          return line:find("pi-workspace-renamed", 1, true) ~= nil
+          return line:find("feature/journal", 1, true) ~= nil
         end)
       then
-        fail("successful Ctrl-R should display the renamed workspace session")
+        fail("successful Ctrl-R should retain the session's worktree row")
       end
 
       close_succeeds = true
@@ -1740,8 +2021,8 @@ local function validate_sidekick_herdr()
       input_pattern = "prenamed"
       input_changed()
       global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
-      if not vim.deep_equal(global_lines, { "(no matching workspace agents)" }) then
-        fail("successful Ctrl-X should remove the killed workspace session from refreshed results")
+      if not vim.deep_equal(global_lines, { "(no matching worktrees)" }) then
+        fail("successful Ctrl-X should remove the killed worktree session from refreshed results")
       end
 
       fake_picker.closed = true
@@ -1752,19 +2033,19 @@ local function validate_sidekick_herdr()
     input_pattern = "notfound"
     input_changed()
     global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
-    if not vim.deep_equal(global_lines, { "(no matching workspace agents)" }) then
-      fail("workspace fuzzy search should hide non-matches: " .. vim.inspect(global_lines))
+    if not vim.deep_equal(global_lines, { "(no matching worktrees)" }) then
+      fail("worktree fuzzy search should hide non-matches: " .. vim.inspect(global_lines))
     end
     input_pattern = "pother"
     input_changed()
     global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
     if
-      global_lines[1] ~= "▾ Workspace Two · ● 0"
-      or global_lines[2] ~= "  └─ · pi-other-workspace · 42.5%"
+      global_lines[1] ~= "▾ vault · 1 worktree"
+      or global_lines[2] ~= "  └─ · feature/journal · +21 −9"
       or vim.api.nvim_win_get_cursor(global_win.win)[1] ~= 2
     then
       fail(
-        "workspace fuzzy search should select the agent while retaining its workspace parent: "
+        "worktree fuzzy search should select the session while retaining its repository parent: "
           .. vim.inspect(global_lines)
       )
     end
@@ -1778,7 +2059,7 @@ local function validate_sidekick_herdr()
     end
     confirm_active[1]()
     global_lines = vim.api.nvim_buf_get_lines(global_win.buf, 0, -1, false)
-    if not vim.startswith(global_lines[1], "▸ Workspace One · ") then
+    if global_lines[1] ~= "▸ dotfiles · 6 worktrees" then
       fail("<Enter> should act on the global selector while the input keeps focus")
     end
     confirm_active[1]()
@@ -1851,13 +2132,21 @@ local function validate_sidekick_herdr()
       fail("closing the cwd picker should stop spinner and preview redraws")
     end
 
-    local done_item
-    for _, item in ipairs(picker_opts.items) do
-      if item.status == "done" then
-        done_item = item
-        break
-      end
-    end
+    local done_item = vim.tbl_extend("force", {}, picker_opts.items[1], {
+      agent_name = "pi-done",
+      label = "pi-done",
+      slug = "done",
+      status = "done",
+      cwd = "/worktrees/dotfiles/done",
+      worktree = "/worktrees/dotfiles/done",
+      display_label = "feature/done",
+      diff = { added = 18, removed = 4 },
+      pane_id = "w1:p4",
+      tab_id = "w1:t4",
+      terminal_id = "term-4",
+      workspace_id = "w1",
+    })
+    done_item.agent_session = nil
     fake_picker.closed = false
     local function render_preview(item, preview)
       current_fake_item = item
@@ -1993,7 +2282,18 @@ local function validate_sidekick_herdr()
     end
 
     local original_columns, original_lines = vim.o.columns, vim.o.lines
-    local function verify_atlas_preview(host_width, host_height)
+    local protected_paths = {
+      "nvim/.config/nvim/lua/plugins/sidekick/registry.lua",
+    }
+    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/runs/*.json", false, true))
+    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/vault/**/*.md", false, true))
+    local protected_bytes = {}
+    for _, path in ipairs(protected_paths) do
+      protected_bytes[path] = table.concat(vim.fn.readfile(path, "b"), "\n")
+    end
+    local registered_tools = vim.deepcopy(config.cli.tools)
+    if picker_opts.layout.wins.atlas then
+      local function verify_atlas_preview(host_width, host_height)
       vim.o.columns = host_width
       vim.o.lines = host_height
       local preview_width = host_width - 4
@@ -2047,9 +2347,9 @@ local function validate_sidekick_herdr()
         or bottom.box ~= "horizontal"
         or #bottom ~= 3
         or bottom[1].win ~= "workspace"
-        or bottom[1].title ~= " Workspaces "
+        or bottom[1].title ~= " Repositories / Worktrees "
         or bottom[2].win ~= "list"
-        or bottom[2].title ~= " Agents "
+        or bottom[2].title ~= " Current Worktree "
         or not atlas_layout
         or atlas_layout.title ~= " Atlas Preview "
         or not atlas_preview
@@ -2057,7 +2357,7 @@ local function validate_sidekick_herdr()
         fail(
           "T10 V01 picker layout at "
             .. size
-            .. " should be full-width Preview, input, then Workspaces | Agents | Atlas Preview: "
+            .. " should be full-width Preview, input, then Repositories | Current Worktree | Atlas: "
             .. vim.inspect(layout)
         )
       end
@@ -2266,20 +2566,10 @@ local function validate_sidekick_herdr()
       vim.api.nvim_win_close(preview_win, true)
     end
 
-    verify_atlas_preview(100, 30)
-    verify_atlas_preview(80, 24)
+      verify_atlas_preview(100, 30)
+      verify_atlas_preview(80, 24)
     vim.o.columns, vim.o.lines = original_columns, original_lines
 
-    local protected_paths = {
-      "nvim/.config/nvim/lua/plugins/sidekick/registry.lua",
-    }
-    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/runs/*.json", false, true))
-    vim.list_extend(protected_paths, vim.fn.glob("scripts/fixtures/vault-hunter-atlas*/vault/**/*.md", false, true))
-    local protected_bytes = {}
-    for _, path in ipairs(protected_paths) do
-      protected_bytes[path] = table.concat(vim.fn.readfile(path, "b"), "\n")
-    end
-    local registered_tools = vim.deepcopy(config.cli.tools)
     local fallback_calls = {}
     local fallback_results = {
       unregistered = { outcome = "unregistered" },
@@ -2844,6 +3134,8 @@ local function validate_sidekick_herdr()
       fail("T04 V03 picker close should not swap an obsolete Atlas staging buffer")
     end
 
+    end
+
     if not vim.deep_equal(config.cli.tools, registered_tools) then
       fail("T04 V03 deterministic preview checks changed the Sidekick Registry")
     end
@@ -2875,24 +3167,22 @@ local function validate_sidekick_herdr()
     vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "w1")
     vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_label", "Workspace One")
     cwd_picker.open()
-    if picker_opts.title ~= "Sidekick Sessions in Workspace: Workspace One" then
-      fail("bound cwd picker title should name its workspace: " .. vim.inspect(picker_opts.title))
+    if picker_opts.title ~= "Sidekick Session in Worktree: feat/sidekick-repo-session-grouping" then
+      fail("bound picker title should retain worktree identity: " .. vim.inspect(picker_opts.title))
     end
-    for _, item in ipairs(picker_opts.items) do
-      if item.workspace_id ~= "w1" then
-        fail("automatically opened bound picker must use exact workspace ID: " .. vim.inspect(picker_opts.items))
-      end
+    if #picker_opts.items ~= 1 or picker_opts.items[1].display_label ~= "feat/sidekick-repo-session-grouping" then
+      fail("bound picker should show the current worktree's one session: " .. vim.inspect(picker_opts.items))
     end
 
     vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_id", "missing")
     vim.api.nvim_tabpage_set_var(current_tab, "herdr_workspace_label", "Empty Workspace")
     cwd_picker.open()
     if
-      picker_opts.title ~= "Sidekick Sessions in Workspace: Empty Workspace"
-      or not picker_opts.items[1]
-      or picker_opts.items[1].text ~= "(no named sessions in workspace)"
+      picker_opts.title ~= "Sidekick Session in Worktree: feat/sidekick-repo-session-grouping"
+      or #picker_opts.items ~= 1
+      or picker_opts.items[1].display_label ~= "feat/sidekick-repo-session-grouping"
     then
-      fail("empty bound picker should retain workspace scope: " .. vim.inspect(picker_opts))
+      fail("stale workspace bindings must not replace current worktree scope: " .. vim.inspect(picker_opts))
     end
     pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_id")
     pcall(vim.api.nvim_tabpage_del_var, current_tab, "herdr_workspace_label")
@@ -2905,6 +3195,8 @@ local function validate_sidekick_herdr()
   herdr.focus = original_focus
   herdr.close = original_close
   herdr.call = original_herdr_call
+  herdr.git_context = original_picker_git_context
+  herdr.git_diff_stats = original_picker_diff_stats
   internal.toggle_tool_session = original_toggle
   vim.ui.input = original_ui_input
   vim.fn.confirm = original_confirm
@@ -2915,10 +3207,11 @@ local function validate_sidekick_herdr()
   if not picker_ok then
     error(picker_err, 0)
   end
+  source_herdr.list_agents = original_list_agents
   if picker_actions_only then
-    herdr.list_agents = original_list_agents
     return
   end
+  herdr = loaded_picker_herdr
 
   local starship = require("plugins.sidekick.starship")
   if starship.cwd_for_terminal({ cwd = cwd }) ~= cwd then
@@ -2970,7 +3263,6 @@ local function validate_sidekick_herdr()
   if branch and not title:find(branch, 1, true) then
     fail("Sidekick branding should derive the branch from the Herdr terminal cwd: " .. title)
   end
-  herdr.list_agents = original_list_agents
 end
 
 local function validate_herdr_workspaces()
@@ -2986,6 +3278,10 @@ local function validate_herdr_workspaces()
   end
 
   local herdr = require("plugins.sidekick.herdr")
+  local original_git_context = herdr.git_context
+  if type(original_git_context) ~= "function" then
+    herdr.git_context = dofile(config_lua .. "/plugins/sidekick/herdr.lua").git_context
+  end
   local original_call = herdr.call
   local original_pick = Snacks.picker.pick
   local original_input = vim.ui.input
@@ -3013,7 +3309,7 @@ local function validate_herdr_workspaces()
     { pane_id = "p-unknown", workspace_id = "w-unknown", cwd = root },
   }
   local agents = {
-    { name = "keep-idle", workspace_id = "w-idle" },
+    { name = "keep-idle", workspace_id = "w-idle", foreground_cwd = vim.fn.tempname() },
   }
 
   local function eq(actual, expected, label)
@@ -3776,7 +4072,7 @@ local function validate_herdr_workspaces()
     eq(#agent_picker_opens, after_detached_selection, "workspace query failures must not open the agent picker")
 
     local closes_before_release = count_calls("workspace", "close")
-    workspace_tabs.agent_closed("w-idle")
+    workspace_tabs.agent_closed("w-idle", root .. "/nvim")
     if vim.api.nvim_tabpage_is_valid(idle_tab) then
       fail("closing an agent should close its mapped Neovim workspace tab")
     end
@@ -3785,10 +4081,24 @@ local function validate_herdr_workspaces()
     item_by_id(retained, "w-idle")
 
     vim.cmd("tabnew")
+    local guarded_tab = vim.api.nvim_get_current_tabpage()
+    vim.api.nvim_tabpage_set_var(guarded_tab, "herdr_workspace_id", "w-focused")
+    vim.api.nvim_tabpage_set_var(guarded_tab, "herdr_workspace_label", "Duplicate")
+    vim.api.nvim_tabpage_set_var(guarded_tab, "workspace_cwd", root)
+    vim.api.nvim_tabpage_set_var(guarded_tab, "workspace_label", vim.fn.fnamemodify(root, ":t"))
+    agents[#agents + 1] = { name = "keep-focused", workspace_id = "w-focused", foreground_cwd = root .. "/scripts" }
+    workspace_tabs.agent_closed("w-focused", root .. "/nvim")
+    if not vim.api.nvim_tabpage_is_valid(guarded_tab) then
+      fail("same-worktree survivor must keep its mapped Neovim workspace tab")
+    end
+
+    vim.cmd("tabnew")
     local empty_workspace_tab = vim.api.nvim_get_current_tabpage()
     vim.api.nvim_tabpage_set_var(empty_workspace_tab, "herdr_workspace_id", "w-done")
     vim.api.nvim_tabpage_set_var(empty_workspace_tab, "herdr_workspace_label", "Duplicate")
-    workspace_tabs.agent_closed("w-done")
+    vim.api.nvim_tabpage_set_var(empty_workspace_tab, "workspace_cwd", root)
+    vim.api.nvim_tabpage_set_var(empty_workspace_tab, "workspace_label", vim.fn.fnamemodify(root, ":t"))
+    workspace_tabs.agent_closed("w-done", root)
     if vim.api.nvim_tabpage_is_valid(empty_workspace_tab) then
       fail("last-agent cleanup should close the mapped Neovim workspace tab")
     end
@@ -3913,6 +4223,7 @@ local function validate_herdr_workspaces()
   vim.notify = original_notify
   vim.schedule = original_schedule
   package.loaded["plugins.sidekick.cwd_picker"] = original_cwd_picker
+  herdr.git_context = original_git_context
   if not ok then
     error(err, 0)
   end
@@ -4063,6 +4374,14 @@ end
 
 local function validate_vault_work_items()
   local root = vim.fn.tempname() .. "-vault-work-items"
+  local loaded_herdr = package.loaded["plugins.sidekick.herdr"]
+  package.loaded["plugins.sidekick.herdr"] = dofile(
+    vim.fn.getcwd() .. "/nvim/.config/nvim/lua/plugins/sidekick/herdr.lua"
+  )
+  local loaded_work_items = package.loaded["helpers.vault_work_items"]
+  package.loaded["helpers.vault_work_items"] = dofile(
+    vim.fn.getcwd() .. "/nvim/.config/nvim/lua/helpers/vault_work_items.lua"
+  )
   vim.fn.mkdir(root .. "/0_inbox/nested", "p")
   vim.fn.mkdir(root .. "/3_logs/2026-W30", "p")
   vim.fn.mkdir(root .. "/projects", "p")
@@ -4141,8 +4460,14 @@ local function validate_vault_work_items()
     local workspace_calls = {}
     herdr.call = function(args)
       workspace_calls[#workspace_calls + 1] = args
-      if args[1] == "workspace" and args[2] == "list" then
+      if args[1] == "agent" and args[2] == "list" then
+        return { agents = {} }
+      elseif args[1] == "workspace" and args[2] == "list" then
         return { workspaces = { { label = "Backlog", workspace_id = "backlog-workspace" } } }
+      elseif args[1] == "pane" and args[2] == "list" then
+        return { panes = { { pane_id = "backlog-source", workspace_id = "backlog-workspace", cwd = root } } }
+      elseif args[1] == "pane" and args[2] == "split" then
+        return { pane = { pane_id = "backlog-agent", workspace_id = "backlog-workspace", cwd = root } }
       elseif args[1] == "agent" and args[2] == "start" then
         return {
           agent = {
@@ -4170,21 +4495,25 @@ local function validate_vault_work_items()
       if not agent or agent.workspace_id ~= "backlog-workspace" then
         fail("named workspace start should use the matching backlog workspace")
       end
-      assert_sequence(workspace_calls[1], { "workspace", "list" }, "backlog workspace lookup")
-      if
-        workspace_calls[2][1] ~= "agent"
-        or workspace_calls[2][2] ~= "start"
-        or workspace_calls[2][7] ~= "backlog-workspace"
-      then
-        fail("daily agent should start in the backlog workspace: " .. vim.inspect(workspace_calls[2]))
-      end
-      if
-        workspace_calls[3][1] ~= "tab"
-        or workspace_calls[3][2] ~= "list"
-        or workspace_calls[4][1] ~= "tab"
-        or workspace_calls[4][2] ~= "rename"
-        or workspace_calls[4][3] ~= "backlog-tab"
-      then
+      local expected_commands = {
+        { "agent", "list" },
+        { "pane", "list" },
+        { "pane", "list", "--workspace", "backlog-workspace" },
+        {
+          "pane",
+          "split",
+          "backlog-source",
+          "--direction",
+          "right",
+          "--cwd",
+          herdr.normalize_cwd(root),
+          "--no-focus",
+        },
+        { "agent", "start", "pi-friday-2026-07-24", "--kind", "pi", "--pane", "backlog-agent" },
+        { "tab", "list" },
+        { "tab", "rename", "backlog-tab", "pi-friday-2026-07-24" },
+      }
+      if not vim.deep_equal(workspace_calls, expected_commands) then
         fail("daily agent should keep its own named tab: " .. vim.inspect(workspace_calls))
       end
     end, debug.traceback)
@@ -4197,11 +4526,15 @@ local function validate_vault_work_items()
     local original_start = herdr.start
     local original_call = herdr.call
     local original_send = herdr.send
+    local original_agent_for_worktree = herdr.agent_for_worktree
     local started
     local renamed
     local sent
     herdr.get_agent = function()
       return nil
+    end
+    herdr.agent_for_worktree = function()
+      return nil, true
     end
     herdr.start = function(name, cwd, command, env, workspace_label)
       started = {
@@ -4243,11 +4576,25 @@ local function validate_vault_work_items()
 
       started = nil
       renamed = nil
-      herdr.get_agent = function(name)
-        return { name = name, tab_id = "backlog-tab" }
+      herdr.agent_for_worktree = function()
+        return { name = "pi-friday-2026-07-24", tab_id = "backlog-tab" }, true
       end
       if not work_items.send_to_backlog_agent(items[1], root) or started or renamed then
         fail("a second item from the same day should reuse its existing agent")
+      end
+
+      sent = nil
+      herdr.agent_for_worktree = function()
+        return { name = "codex-worktree-owner", tab_id = "worktree-tab" }, true
+      end
+      if
+        not work_items.send_to_backlog_agent(items[1], root)
+        or started
+        or renamed
+        or not sent
+        or sent.target ~= "codex-worktree-owner"
+      then
+        fail("a backlog launch should reuse the worktree's existing durable session")
       end
     end, debug.traceback)
 
@@ -4255,6 +4602,7 @@ local function validate_vault_work_items()
     herdr.start = original_start
     herdr.call = original_call
     herdr.send = original_send
+    herdr.agent_for_worktree = original_agent_for_worktree
     if not agent_ok then
       fail(agent_err)
     end
@@ -4362,6 +4710,8 @@ local function validate_vault_work_items()
     assert_sequence(action_events, { "send", "close", "activate" }, "vault picker backlog agent action")
   end, debug.traceback)
 
+  package.loaded["plugins.sidekick.herdr"] = loaded_herdr
+  package.loaded["helpers.vault_work_items"] = loaded_work_items
   vim.fn.delete(root, "rf")
   if not ok then
     fail(err)

@@ -125,7 +125,7 @@ stow pi agents
 
 The shared `vault` skill remains available for explicit project and knowledge-base work. Automatic vault detection
 and routing hooks are intentionally not installed. Use Neovim's `<leader>vf` picker and task-local `<C-a>` when a
-task should launch in a named Herdr feature workspace and isolated task worktree.
+task should launch in the repository's shared Herdr workspace and an isolated task worktree.
 
 Atlas is the public Vault Hunter state CLI:
 
