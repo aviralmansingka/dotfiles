@@ -1,8 +1,8 @@
 # Sidekick repository/worktree picker evidence
 
-This capture shows the implemented picker contract: repositories expand into worktrees, each worktree row represents
-its one durable Sidekick session, the worktree name uses the agent backend color, and tracked line changes against
-local `main` appear as `+added −removed`. The bottom-right pane shows only the current worktree.
+This original implementation capture shows repositories expanding into worktrees, with one durable Sidekick session
+per row and the current worktree isolated in the bottom-right pane. The current verifier supersedes its row styling:
+non-`main` branches use a Gruvbox-pink `` marker and diff totals, while `main` has neither marker nor diff totals.
 
 ![Rendered Sidekick repository/worktree picker](picker.svg)
 

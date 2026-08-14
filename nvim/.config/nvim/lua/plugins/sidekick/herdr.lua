@@ -41,6 +41,7 @@ end
 ---@field repository_label string
 ---@field worktree string
 ---@field worktree_label string
+---@field branch string
 
 ---@param cwd string
 ---@return SidekickGitContext|nil
@@ -78,6 +79,7 @@ function M.git_context(cwd)
     repository_label = vim.fn.fnamemodify(repository, ":t"),
     worktree = worktree,
     worktree_label = branch ~= "" and branch ~= "HEAD" and branch or vim.fn.fnamemodify(worktree, ":t"),
+    branch = branch,
   }
 end
 

@@ -372,7 +372,9 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Sidekick cwd session picker keeps the ordinary conversation preview full-width above its input, with
   `Repositories / Worktrees` and `Current Worktree` panes across the bottom.
 - Repository headings expand into one row per durable worktree session. Rows use the Git branch as worktree identity,
-  retain backend color and Herdr state, and show tracked `+added −removed` totals against local `main`.
+  retain Herdr state, and prefix non-`main` branches with a Gruvbox-pink `` marker instead of backend color.
+- Non-`main` branch rows show tracked `+added −removed` totals against local `main`; the neutral `main` checkout row
+  has neither the branch marker nor diff totals.
 - The current-worktree pane shows only that worktree's one durable session. Internal Herdr agent names remain available
   for exact routing, rename, kill, and focus actions without being repeated in the row.
 - Ordinary preview polling and full-history scrolling continue while navigating either pane.
