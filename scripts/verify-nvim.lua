@@ -1292,6 +1292,65 @@ local function validate_sidekick_herdr()
   end
 
   local picker_ok, picker_err = xpcall(function()
+    local fixture_list_agents = herdr.list_agents
+    local fixture_git_context = herdr.git_context
+    local fixture_diff_stats = herdr.git_diff_stats
+    local main_diff_calls = 0
+    herdr.list_agents = function()
+      return {
+        {
+          name = "codex-main-hello",
+          agent = "codex",
+          agent_status = "working",
+          cwd = cwd,
+          pane_id = "w1:p1",
+          terminal_id = "term-main",
+          workspace_id = "w1",
+        },
+      }
+    end
+    herdr.git_context = function(path)
+      path = vim.fs.normalize(path or "")
+      if path == cwd or vim.startswith(path, cwd .. "/") then
+        return {
+          repository = "/repos/dotfiles",
+          repository_label = "dotfiles",
+          worktree = cwd,
+          worktree_label = "main",
+          branch = "main",
+        }
+      end
+    end
+    herdr.git_diff_stats = function()
+      main_diff_calls = main_diff_calls + 1
+      return { added = 999, removed = 999 }
+    end
+    cwd_picker.open()
+    local main_item = picker_opts and picker_opts.items[1]
+    local main_chunks = main_item and picker_opts.format(main_item) or {}
+    if
+      picker_opts.title ~= "Sidekick Session in Worktree: main"
+      or #picker_opts.items ~= 1
+      or main_item.display_label ~= "codex-main-hello"
+      or main_item.cwd ~= cwd
+      or main_item.diff ~= nil
+      or main_diff_calls ~= 0
+      or not vim.deep_equal(main_chunks, {
+        { "S ", "DiagnosticInfo" },
+        { "codex-main-hello", "SidekickTitleCodex" },
+      })
+    then
+      fail("main checkout local row should show the friendly session name with backend chrome only: " .. vim.inspect({
+        title = picker_opts and picker_opts.title,
+        item = main_item,
+        chunks = main_chunks,
+        diff_calls = main_diff_calls,
+      }))
+    end
+    herdr.list_agents = fixture_list_agents
+    herdr.git_context = fixture_git_context
+    herdr.git_diff_stats = fixture_diff_stats
+
     cwd_picker.open(picker_actions_only and {
       on_kill = function(item)
         killed_item = item
@@ -1562,8 +1621,7 @@ local function validate_sidekick_herdr()
       or not vim.tbl_contains(global_lines, "  └─ · exact-cwd")
     then
       fail(
-        "repository rows should distinguish branch, main-session, and non-Git cwd labels: "
-          .. vim.inspect(global_lines)
+        "repository rows should distinguish branch, main-session, and non-Git cwd labels: " .. vim.inspect(global_lines)
       )
     end
     local main_row

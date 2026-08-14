@@ -481,9 +481,7 @@ local function workspace_groups(first_repository, metric_cache)
       group.running = group.running + (status == "working" and 1 or 0)
       group.done = group.done + (status == "done" and 1 or 0)
       local worktree = context and context.worktree or (agent.foreground_cwd or agent.cwd or agent.name)
-      local label = parsed and parsed.label
-        or (agent.name and not agent.name:match("^sk%-") and agent.name)
-        or tool
+      local label = parsed and parsed.label or (agent.name and not agent.name:match("^sk%-") and agent.name) or tool
       group.worktrees[worktree] = true
       group.agents[#group.agents + 1] = {
         label = label,
