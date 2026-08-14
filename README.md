@@ -27,7 +27,6 @@ For manual installation:
 ```sh
 brew bundle
 stow nvim tmux zsh ghostty git starship agents pi herdr launchd
-GOBIN="$HOME/.local/bin" go install ./cmd/atlas
 ```
 
 On Linux (systemd) systems, deploy the user services with:
@@ -123,31 +122,9 @@ Pi config and shared skills are deployed with:
 stow pi agents
 ```
 
-The shared `vault` skill remains available for explicit project and knowledge-base work. Automatic vault detection
-and routing hooks are intentionally not installed. Use Neovim's `<leader>vf` picker and task-local `<C-a>` when a
-task should launch in the repository's shared Herdr workspace and an isolated task worktree.
-
-Atlas is the public Vault Hunter state CLI:
-
-```sh
-atlas                           # interactive/status entry point
-atlas observe                   # human run overview
-atlas get runs                  # bounded machine reads
-atlas evidence get <id>         # evidence lookup
-atlas run retire <id> --expected-revision 7
-atlas capabilities --output json
-```
-
-The interactive browser groups canonical work as Project → Feature → Task → Run, including not-started Tasks even
-when they have no Run or exceed machine collection byte limits. Done Tasks are hidden by default; select a Feature
-and press Ctrl-D to toggle only that Feature's completed work. Press `p`, `f`, `t`, or `r` to switch previews. Feature
-previews summarize Now/Next work with the crew journey (activate, baseline, converge, review, land, cleanup), while
-Run previews render the connected Parent → Verifier → Convergence → Delivery → Parent closure crew timeline. See
-[`docs/vault-hunter-atlas-crew-timeline.md`](docs/vault-hunter-atlas-crew-timeline.md) for its canonical signal and role
-projection rules.
-
-The browser skips active Runs whose Project, Feature, or Task preview cannot be rendered and emits one startup
-warning with the Run ID and work-reference path. Machine-readable Run listings remain unchanged.
+The shared `vault` skill supports explicit project and knowledge-base lookup, note summaries, project overviews, and
+Wayfinder overviews. It preserves the vault's Project → Theme → Feature → Task ontology without installing an
+execution workflow. Neovim's `<leader>vf` picker remains a read-only navigation surface for active vault work.
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 

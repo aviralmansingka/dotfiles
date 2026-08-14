@@ -1,1 +1,0 @@
-Task sentinel: T09 canonical note and checkbox remain unchanged

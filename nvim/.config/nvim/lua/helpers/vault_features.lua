@@ -276,101 +276,6 @@ function M.format(item)
   }
 end
 
-function M.agent_prompt(item)
-  if
-    not item
-    or (item.kind ~= "feature" and item.kind ~= "task")
-    or not item.file
-    or not item.pos
-    or not item.pos[1]
-  then
-    return nil
-  end
-  return string.format("$vault-hunter %s:%d", item.file, item.pos[1])
-end
-
-function M.agent_scope(item)
-  local feature = item and (item.kind == "feature" and item or item.parent)
-  if not feature or feature.kind ~= "feature" then
-    return nil
-  end
-  local feature_slug = vim.fs.basename(vim.fs.dirname(feature.file))
-  local task_slug = item.kind == "task"
-      and (item.linked and vim.fs.basename(item.file):gsub("%.md$", "")
-        or string.format("%s-%s", feature_slug, item.task_id:lower()))
-    or nil
-  return {
-    feature_branch = "feature/" .. feature_slug,
-    tab_label = item.kind == "task" and string.format("%s %s", item.task_id, item.task) or item.feature,
-    task_branch = task_slug and "task/" .. task_slug or nil,
-    workspace_label = item.kind == "task" and item.label or string.format("%s · %s", item.project, item.feature),
-  }
-end
-
-function M.send_to_agent(item)
-  local agent_scope = M.agent_scope(item)
-  if
-    not item
-    or (item.kind ~= "feature" and item.kind ~= "task")
-    or not item.file
-    or not item.pos
-    or not item.pos[1]
-    or not item.repository
-    or not M.agent_prompt(item)
-    or not agent_scope
-  then
-    vim.notify("Select a vault feature or task", vim.log.levels.WARN)
-    return nil
-  end
-
-  local herdr = require("plugins.sidekick.herdr")
-  local internal = require("plugins.sidekick.internal")
-  local suffix = item.kind == "task" and item.task_id or nil
-  local slug = internal.normalize_label(
-    suffix and string.format("%s-%s-%s", item.project, item.feature, suffix)
-      or string.format("%s-%s", item.project, item.feature)
-  )
-  local name = "pi-" .. slug
-  local scope = item.kind == "task"
-      and herdr.ensure_task_scope(
-        item.repository,
-        agent_scope.workspace_label,
-        agent_scope.feature_branch,
-        agent_scope.task_branch
-      )
-    or herdr.ensure_feature_scope(item.repository, agent_scope.workspace_label, agent_scope.feature_branch)
-  if not scope then
-    return nil
-  end
-  local agent = herdr.get_agent(name)
-
-  if not agent then
-    local command = internal.tool_command_for_named_session("pi", slug)
-    command[#command + 1] = M.agent_prompt(item)
-    return herdr.start(
-      name,
-      scope.cwd,
-      command,
-      { [internal.named_env_var] = slug },
-      { workspace_id = scope.workspace_id },
-      agent_scope.tab_label
-    )
-  end
-
-  agent = herdr.place_agent(agent, scope, agent_scope.tab_label)
-  if not agent or not agent.pane_id or not herdr.run(agent.pane_id, M.agent_prompt(item)) then
-    return nil
-  end
-  return agent
-end
-
-function M.activate_agent(agent)
-  require("lazy").load({ plugins = { "sidekick.nvim" } })
-  require("plugins.sidekick.registry").rehydrate()
-  require("plugins.sidekick.last_session").record(agent.name, agent.terminal_id)
-  require("plugins.sidekick.internal").toggle_tool_session(agent.name, true, agent.terminal_id)
-end
-
 function M.open()
   local items = M.collect()
   local feature_count = 0
@@ -397,31 +302,6 @@ function M.open()
     layout = {
       preset = "telescope",
       reverse = false,
-    },
-    actions = {
-      vault_hunter = {
-        desc = "(Vault hunter) Action",
-        action = function(picker, item)
-          local agent = M.send_to_agent(item)
-          if agent then
-            picker:close()
-            M.activate_agent(agent)
-            vim.notify("Started Vault Hunter for " .. item.label, vim.log.levels.INFO)
-          end
-        end,
-      },
-    },
-    win = {
-      input = {
-        keys = {
-          ["<c-a>"] = { "vault_hunter", mode = { "i", "n" } },
-        },
-      },
-      list = {
-        keys = {
-          ["<c-a>"] = "vault_hunter",
-        },
-      },
     },
   })
 end

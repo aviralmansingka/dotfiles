@@ -1,3 +1,0 @@
-#!/bin/sh
-printf '%s\n' "$0 $*" >>"$ATLAS_T07_TRAP_LOG"
-exit 97

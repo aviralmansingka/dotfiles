@@ -1,6 +1,6 @@
 ---
 name: vault
-description: "Navigate, create, and organize notes in the Obsidian vault at ~/vault. Use for searching notes, reading topics, creating tasks, logging work to the weekly backlog, and managing the Project → Theme → Feature → Task hierarchy."
+description: "Navigate and explain the Obsidian vault at ~/vault. Use for finding information, reading or summarizing notes, producing project and Wayfinder overviews, creating tasks, logging work, and maintaining the Project → Theme → Feature → Task hierarchy."
 ---
 
 # Vault Access
@@ -25,14 +25,47 @@ Treat `journal/`, `3_log/`, and `5_modal/logs/` as legacy locations. Do not writ
 ## Searching notes
 
 1. Search file names first: `fd '<query>' --extension md` under `~/vault`
-2. If no name match, search content: `rg '<query>' --type md` under `~/vault`
-3. Return matching paths and snippets. Prefer: system-cards → knowledge → wip → logs → projects.
+2. Search frontmatter, headings, aliases, and content: `rg '<query>' --type md` under `~/vault`
+3. Follow relevant wikilinks and backlinks only after locating the likely canonical note.
+4. Return matching paths and short snippets unless the user asked for the note itself or a synthesis.
+
+Choose authority by the question instead of using one global directory order:
+
+- Project questions: project `CONTEXT.md`, relevant ADRs, README, theme, feature, task, then issues.
+- System questions: `5_modal/system-cards/`, then `2_knowledge/` and `1_wip/`.
+- Recent activity: `3_logs/`, then the canonical project notes linked from those entries.
+- General knowledge: `2_knowledge/`, then `1_wip/`, project reference notes, and logs.
+
+Treat logs and issue comments as time-stamped evidence, not automatically as the latest canonical state. When sources
+disagree, say which note is canonical and identify the conflicting or stale source.
 
 ## Reading a note
 
 1. Find by name or content (above).
 2. Read and output the full note. Do not summarize unless asked.
 3. If multiple matches, prefer the order above and list the candidates.
+
+## Summaries and overviews
+
+When the user asks for a summary, overview, status, or "what do I know about" a topic:
+
+1. Resolve the canonical owner first; do not summarize search snippets in isolation.
+2. Read the owner plus directly relevant context, decisions, active work, and recent evidence.
+3. Separate settled facts, current state, open questions, and historical context.
+4. Cite vault-relative paths or wikilinks for every material conclusion. Include heading names when useful.
+5. State when a conclusion is inferred or when a note's status may be stale.
+
+For a project overview, read `1_projects/projects.md`, the project `CONTEXT.md` or `CONTEXT-MAP.md`, README, relevant
+ADRs, and active theme/feature/task notes. Summarize:
+
+- purpose and vocabulary;
+- current state and recent evidence;
+- settled decisions;
+- active features and tasks;
+- open issues and risks;
+- canonical source notes.
+
+Do not turn an overview request into edits, task creation, a worktree, or an execution workflow.
 
 ## Weekly backlog logging
 
@@ -128,20 +161,38 @@ Each note type uses a fixed frontmatter shape and body section order so the vaul
 
 **Glossary** — a project's ubiquitous language, recorded in `CONTEXT.md` at the project root (or per-context when a `CONTEXT-MAP.md` exists). The glossary is pure vocabulary — no implementation details. `grill-with-docs` updates it inline as terms crystallize.
 
-**Research** (`issues/<effort>/`) — a folder for resolving ambiguity larger than one question. The effort owns:
-- `map.md` — frontmatter `id: <project>-<effort>-map`, `tags: [project, issue, wayfinder]`. Body: `## Question`, `## Answer`, `## Decision Tickets` (wikilinks to each numbered ticket).
-- `<NN>-<decision>.md` — one per decision. Frontmatter `tags: [project, issue, wayfinder]`, `Type: grilling|prototype`, `Status: open|resolved`, `Blocked by:` (comma-separated ticket IDs or `none`). Body: `## Question`, then `## Answer` for a grilling, or `## Prototype` (linking the artifact in `docs/`) then `## Answer` for a prototype.
-- `docs/` — optional subfolder for prototype artifacts (HTML, scripts, diagrams) that support a specific decision ticket. These are disposable evidence, not shipping code. Link each artifact from its decision ticket so the vault stays navigable. Do not confuse this with the project-level `docs/adr/` where durable ADRs live.
+**Wayfinder effort** — a project-scale decision map. The current local-markdown layout is:
 
-When `grill-with-docs` is active, it runs the `grilling` interview while `domain-modeling` writes resolved terms to the project `CONTEXT.md` and offers ADRs into the project `docs/adr/` — both at the project level, not inside the research folder. The research folder's `map.md` and decision tickets record the questions and answers; `CONTEXT.md` and `docs/adr/` record the durable vocabulary and architecture that survive the effort.
+- `1_projects/<project>/map.md` — frontmatter `status: open|done`, `epic: <project>`, and tags containing `wayfinder` and
+  `map`. Body: `## Destination`, `## Notes`, `## Decisions so far`, `## Not yet specified`, `## Out of scope`.
+- `1_projects/<project>/issues/<NN>-<decision>.md` — frontmatter `status: proposed|in-progress|resolved|wontfix`,
+  `type: research|prototype|grilling|task`, `epic: <project>`, optional `blocked_by: [NN, ...]`, and a `wayfinder` tag.
+  Body: `## Question`, then `## Answer` when resolved; prototypes may link supporting artifacts.
+- Older feature-owned efforts may keep `map.md`, decision tickets, and optional `docs/` together under
+  `themes/<theme>/features/<feature>/issues/<effort>/`. Read them in place; do not migrate them during lookup.
+
+The map is the index, tickets own decision detail, `CONTEXT.md` owns durable vocabulary, and `docs/adr/` owns durable
+architecture. Weekly backlogs record sessions and may link the effort, but they do not replace the map.
+
+### Wayfinder overview
+
+When asked to summarize or overview a Wayfinder session or effort:
+
+1. Find candidate `map.md` files by name and then by `wayfinder`/`map` tags; list candidates if the title is ambiguous.
+2. Read the map first, then resolve its decision wikilinks and scan the owning `issues/` directory for Wayfinder
+   tickets whose `epic` matches.
+3. Derive counts from frontmatter: resolved, in-progress, proposed, and wontfix. Do not infer status from prose.
+4. Compute the frontier as proposed tickets whose `blocked_by` entries are all resolved or wontfix; list unresolved
+   blockers separately.
+5. Read linked prototype artifacts only when needed to explain a decision; otherwise cite the ticket that owns them.
+6. Check the project's `CONTEXT.md` and relevant ADRs for durable outputs from resolved decisions.
+
+Return: destination, effort status, decisions reached, current frontier/in-progress work, blocked work, remaining fog,
+out-of-scope boundaries, durable outputs, and source links. If the user says "session," also search recent weekly
+backlogs for activity linked to the map or its tickets and distinguish that activity log from the effort's canonical
+state.
 
 **Verifier** (inside a task's `## Verifiers` section, not a separate file) — stable `V01`, `V02`, … entries. Each entry: `### Vnn: <name>`, `- **Behavior:**`, `- **Observation:**` or `- **Command and manual observation:**`, `- **Baseline red:**`, `- **Latest:**`, `- **Evidence ID:**` `Tnn.Vnn.EX01` (immutable, one per verifier). Never renumber verifier entries or add `EX02`.
-
-### Run Registry and the Atlas CLI
-
-The Run Registry is the machine-readable runtime record of Vault Hunter Run identity, participants, lifecycle, and evidence. It is authoritative for what it durably recorded, but not for actual lifecycle position, acceptance, or completion; the canonical Task note and the active Vault Hunter parent retain that authority.
-
-Read and write to the Run Registry through the `atlas` CLI (`atlas get`, `atlas create`, `atlas evidence get`, `atlas accept verifier-attempt`, `atlas reject verifier-attempt`, `atlas retire run`, `atlas capabilities`). The atlas tools are available as Pi extension tools (`atlas_get`, `atlas_create`, `atlas_evidence_get`, `atlas_accept_verifier_attempt`, `atlas_reject_verifier_attempt`, `atlas_retire_run`, `atlas_capabilities`). Use the CLI or tools to reconcile run state without treating registry observations as canonical acceptance.
 
 ### Page conventions
 
@@ -163,8 +214,9 @@ Read and write to the Run Registry through the `atlas` CLI (`atlas get`, `atlas 
 - Create `issues/` under a feature lazily for temporary decisions and investigations with known ownership.
 - Keep cross-feature or not-yet-owned issues under the project's `issues/`, then move them under the owning feature once ownership becomes clear.
 - A resolved issue that produced a durable change should be absorbed into the owning feature or task note; close the issue once the decision is recorded elsewhere.
-- Store research efforts (Wayfinder or otherwise) under `issues/<effort>/` with a `map.md`, numbered decision tickets, and an optional `docs/` folder for prototype artifacts.
-- `grill-with-docs` writes durable vocabulary to the project `CONTEXT.md` and ADRs to the project `docs/adr/`, both at the project level. The research folder records questions and answers; `CONTEXT.md` and `docs/adr/` record what survives the effort.
+- Store new Wayfinder maps and numbered tickets in the current local-markdown layout above. Preserve older nested
+  research efforts in place unless the user explicitly requests a migration.
+- Durable vocabulary belongs in the project `CONTEXT.md`; durable architectural decisions belong in project ADRs.
 
 ### After structure changes
 
@@ -172,7 +224,9 @@ Run `~/vault/scripts/verify-project-structure` after any project-structure chang
 
 ## Scope boundary
 
-This skill retrieves and edits vault content only. It never infers scope from arbitrary prompts, creates worktrees, moves panes, or renames Herdr workspaces, tabs, or agents. Vault Hunter execution details (verifiers, checkpoints, refactor gates, evidence) belong in the `vault-hunter` skill, not here.
+This skill retrieves and edits vault content only. It never infers work from arbitrary prompts, creates worktrees,
+moves panes, launches execution crews, or renames Herdr workspaces, tabs, or agents. Use ordinary repository workflows
+when the user explicitly asks to implement something described by a vault note.
 
 ## System cards
 
