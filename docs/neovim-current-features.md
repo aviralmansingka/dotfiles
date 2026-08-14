@@ -591,7 +591,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Entering a bound workspace tab focuses the corresponding Herdr workspace; ordinary tabs and manually closed tabs do
   not affect Herdr.
 - Workspace tabs initialize from stable Herdr pane cwd and preserve later tab-local cwd/layout changes.
-- Closing a Herdr workspace from the picker unbinds its Neovim tab, which keeps its folder identity.
+- Closing a Herdr workspace from the picker unbinds its Neovim tabs, which keep their folder identity.
 - Vault Hunter's Workspace Cleanup Gate tears down task-owned Herdr tabs, panes, bindings, and worktree views while
   preserving the shared repository workspace when other worktree sessions remain.
 - `<S-h>` and `<S-l>` cycle the current tab's buffers; `[b` and `]b` navigate global buffers.

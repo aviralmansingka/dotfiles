@@ -49,17 +49,19 @@ function M.git_context(cwd)
   if normalized == "" then
     return nil
   end
-  local result = vim.system({
-    "git",
-    "-C",
-    normalized,
-    "rev-parse",
-    "--path-format=absolute",
-    "--show-toplevel",
-    "--git-common-dir",
-    "--abbrev-ref",
-    "HEAD",
-  }, { text = true }):wait()
+  local result = vim
+    .system({
+      "git",
+      "-C",
+      normalized,
+      "rev-parse",
+      "--path-format=absolute",
+      "--show-toplevel",
+      "--git-common-dir",
+      "--abbrev-ref",
+      "HEAD",
+    }, { text = true })
+    :wait()
   if result.code ~= 0 then
     return nil
   end
@@ -87,10 +89,9 @@ function M.git_diff_stats(cwd, baseline)
   if not context then
     return nil
   end
-  local result = vim.system(
-    { "git", "-C", context.worktree, "diff", "--numstat", baseline or "main", "--" },
-    { text = true }
-  ):wait()
+  local result = vim
+    .system({ "git", "-C", context.worktree, "diff", "--numstat", baseline or "main", "--" }, { text = true })
+    :wait()
   if result.code ~= 0 then
     return nil
   end
@@ -204,10 +205,7 @@ function M.agent_for_worktree(cwd)
     if M.is_durable_agent(agent) then
       local agent_cwd = agent.foreground_cwd or agent.cwd
       local context = M.git_context(agent_cwd)
-      if
-        (context and context.worktree == wanted_cwd)
-        or (not context and M.normalize_cwd(agent_cwd) == wanted_cwd)
-      then
+      if (context and context.worktree == wanted_cwd) or (not context and M.normalize_cwd(agent_cwd) == wanted_cwd) then
         return agent, true
       end
     end

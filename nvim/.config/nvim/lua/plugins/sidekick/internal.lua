@@ -206,10 +206,7 @@ function M.start_named_session(tool, label, cwd)
   local herdr = require("plugins.sidekick.herdr")
   local existing, listed = herdr.agent_for_worktree(requested_cwd)
   if listed == false then
-    vim.notify(
-      "Sidekick: could not verify whether this worktree already owns a durable session",
-      vim.log.levels.ERROR
-    )
+    vim.notify("Sidekick: could not verify whether this worktree already owns a durable session", vim.log.levels.ERROR)
     return
   end
   if existing then
@@ -223,10 +220,7 @@ function M.start_named_session(tool, label, cwd)
     if target then
       M.toggle_tool_session(target, true, existing.terminal_id)
       require("plugins.sidekick.last_session").record(target)
-      vim.notify(
-        string.format("Sidekick: reusing %s for this worktree", existing.name or target),
-        vim.log.levels.INFO
-      )
+      vim.notify(string.format("Sidekick: reusing %s for this worktree", existing.name or target), vim.log.levels.INFO)
       return
     end
     vim.notify("Sidekick: this worktree already owns a session", vim.log.levels.WARN)

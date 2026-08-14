@@ -523,9 +523,7 @@ local function workspace_groups(first_repository, metric_cache)
             group_key = group_key,
             repository = context and context.repository or nil,
             workspace_id = workspace_id,
-            workspace_label = context and context.repository_label
-              or workspace_labels[workspace_id]
-              or workspace_id,
+            workspace_label = context and context.repository_label or workspace_labels[workspace_id] or workspace_id,
           },
           running = 0,
           done = 0,
