@@ -1,0 +1,6 @@
+# Patterns are regex, matched against basenames unless anchored with /.
+# Keep the captain-facing guide and the validation script repo-only;
+# `stow ccgram-prototype` should only deploy the unit and env template.
+^README\.md$
+^validate\.sh$
+^\.stow-local-ignore$
