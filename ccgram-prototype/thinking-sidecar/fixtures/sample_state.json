@@ -1,0 +1,23 @@
+{
+  "window_states": {
+    "herdr-session-v1-aaaa": {
+      "session_id": "11111111-2222-4333-8444-555555555555",
+      "cwd": "/tmp/demo",
+      "window_name": "firstmate ▸ fm-demo",
+      "transcript_path": "TRANSCRIPT_PLACEHOLDER",
+      "provider_name": "pi"
+    },
+    "herdr-session-v1-bbbb": {
+      "session_id": "99999999-8888-4777-8666-555555555555",
+      "cwd": "/tmp/other",
+      "window_name": "claude ▸ misc",
+      "transcript_path": "/tmp/other/transcript.jsonl",
+      "provider_name": "claude"
+    }
+  },
+  "chat_thread_bindings": {
+    "7083277039:-1001234567890:46": "herdr-session-v1-aaaa",
+    "7083277039:-1001234567890:47": "herdr-session-v1-bbbb",
+    "7083277039:-1009999999999:48": "herdr-session-v1-aaaa"
+  }
+}

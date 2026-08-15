@@ -1,0 +1,27 @@
+# PROTOTYPE — temporary Pi thinking traces for the ccgram evaluation.
+# Companion to ccgram-prototype.service; see ccgram-prototype/README.md
+# ("Thinking sidecar") for semantics, validation, and rollback. Delete with:
+#   systemctl --user disable --now ccgram-thinking-sidecar.service
+#   stow -D ccgram-prototype   (from ~/dotfiles)
+#   rm -f ~/.ccgram-prototype/thinking-sidecar-state.json
+[Unit]
+Description=ccgram thinking sidecar - temporary tree-style Pi thinking traces in topics (prototype)
+# Runs alongside ccgram but does not strictly require it: without ccgram's
+# state.json the sidecar simply finds no bound topics and idles.
+After=ccgram-prototype.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Same env file as the prototype: TELEGRAM_BOT_TOKEN + CCGRAM_GROUP_ID.
+# The sidecar only calls sendMessage/editMessageText/deleteMessage — never
+# getUpdates — so it does not conflict with ccgram's long poll on the token.
+Environment=CCGRAM_DIR=%h/.ccgram-prototype
+EnvironmentFile=%h/.config/ccgram-prototype.env
+ExecStart=%h/.local/bin/ccgram-thinking-sidecar
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

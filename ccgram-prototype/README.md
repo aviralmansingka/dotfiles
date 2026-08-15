@@ -34,8 +34,11 @@ already publish agent sessions that ccgram discovers with zero code changes.
 | Path | Purpose |
 | ---- | ------- |
 | `.config/systemd/user/ccgram-prototype.service` | User unit running ccgram against Herdr. Deployed by `stow ccgram-prototype`. |
-| `.config/ccgram-prototype.env.example` | Env template (multiplexer, status mode, autoclose, placeholders for secrets). |
-| `validate.sh` | Offline checks: systemd unit syntax + no committed secrets. Not deployed by stow. |
+| `.config/systemd/user/ccgram-thinking-sidecar.service` | User unit for the thinking sidecar (see below). Deployed by stow; **not enabled by default**. |
+| `.local/bin/ccgram-thinking-sidecar` | Stdlib-only Python sidecar: temporary tree-style Pi thinking traces in topics. Deployed by stow to `~/.local/bin`. |
+| `.config/ccgram-prototype.env.example` | Env template (multiplexer, status mode, autoclose, placeholders for secrets, optional sidecar tuning). |
+| `thinking-sidecar/` | Sidecar unit tests + JSONL/state fixtures. Not deployed by stow. |
+| `validate.sh` | Offline checks: systemd unit syntax + sidecar unit tests + no committed secrets. Not deployed by stow. |
 | `README.md` | This guide. Not deployed by stow. |
 
 Local (untracked) state the prototype creates:
@@ -43,7 +46,7 @@ Local (untracked) state the prototype creates:
 | Path | Purpose |
 | ---- | ------- |
 | `~/.config/ccgram-prototype.env` | Your filled-in env file (secrets). A real file, not a symlink — the filled-in secrets never live inside the repo tree. |
-| `~/.ccgram-prototype/` | ccgram state dir (`CCGRAM_DIR`): state.json, session_map.json, events.jsonl. Safe to wipe; topics rebind by discovery/name on restart. |
+| `~/.ccgram-prototype/` | ccgram state dir (`CCGRAM_DIR`): state.json, session_map.json, events.jsonl. Safe to wipe; topics rebind by discovery/name on restart. Also holds `thinking-sidecar-state.json` (temp message ids for orphan cleanup). |
 
 ## Onboarding
 
@@ -128,6 +131,79 @@ errors, no restart loop.
    Verify ccgram never creates a replacement tab itself.
 5. Done evaluating? Follow the rollback below.
 
+## Thinking sidecar — temporary Pi thinking traces
+
+ccgram 4.5.2's Pi formatter (`ccgram/providers/pi_format.py` in the installed uv
+tool) parses `text` and `toolCall` blocks but silently drops `thinking` blocks,
+so Pi reasoning never reaches the topics. Rather than hot-patching the installed
+uv tool (untracked, non-repeatable), the prototype ships a **tracked companion
+sidecar** that needs no ccgram modification at all.
+
+**Semantics** (what the captain asked for):
+
+1. It reads ccgram's `state.json` (`chat_thread_bindings` + `window_states`) to
+   map each bound Pi session transcript to its Telegram forum topic.
+2. It tails each Pi session JSONL for `thinking` blocks. While the model is
+   thinking, it keeps **one temporary message per topic** showing the trace as a
+   compact tree — one `├─` node per thinking block (first line only, most recent
+   steps last, overflow folded into `… (N earlier steps)`), ending in a
+   `└─ ⏳ still thinking…` spinner.
+3. New thinking steps **edit that same message in place**, rate-limited
+   (`THINKING_SIDECAR_EDIT_MIN_SECS`, default 3s) — never a message per step.
+4. When the **final assistant text response** lands (a text block with a
+   terminal `stopReason` — not `toolUse`), the temporary message is **deleted**,
+   leaving ccgram's own final answer in the topic. The same deletion happens on
+   `stopReason: error` and after `THINKING_SIDECAR_IDLE_DELETE_SECS` (default
+   600s) of transcript silence, so aborted turns never leave clutter behind.
+
+Safety posture (unchanged, still observe-only):
+
+- The sidecar never sends input to any session and never touches Herdr/Firstmate.
+- It only calls `sendMessage` / `editMessageText` / `deleteMessage` — **never
+  `getUpdates`** — so it does not conflict with ccgram's long poll on the shared
+  prototype bot token.
+- Posting is restricted to `CCGRAM_GROUP_ID` (the throwaway test group).
+- It is stdlib-only Python; no new dependencies, no ccgram patch.
+
+### Activate (after the base prototype from steps 1–6 is running)
+
+```sh
+cd ~/dotfiles && stow ccgram-prototype   # deploys ~/.local/bin/ccgram-thinking-sidecar + unit
+systemctl --user daemon-reload
+systemctl --user enable --now ccgram-thinking-sidecar.service
+journalctl --user -u ccgram-thinking-sidecar.service -f
+```
+
+The sidecar reuses `~/.config/ccgram-prototype.env` (`TELEGRAM_BOT_TOKEN`,
+`CCGRAM_GROUP_ID`); no new secrets. Optional tuning vars
+(`THINKING_SIDECAR_POLL_SECS`, `THINKING_SIDECAR_EDIT_MIN_SECS`,
+`THINKING_SIDECAR_IDLE_DELETE_SECS`, `THINKING_SIDECAR_MAX_STEPS`) can be added
+to that env file; see the `.example`.
+
+### Validate without Telegram
+
+```sh
+# Unit tests (offline fixtures only):
+python3 -m unittest discover -s ccgram-prototype/thinking-sidecar -v
+
+# Dry-run harness — prints the send/edit/delete calls it WOULD make against the
+# live ccgram state dir, without calling the Bot API or writing any state:
+~/.local/bin/ccgram-thinking-sidecar --dry-run --once --replay --edit-min-secs 0
+```
+
+### Deactivate / rollback (sidecar only)
+
+```sh
+systemctl --user disable --now ccgram-thinking-sidecar.service
+rm -f ~/.ccgram-prototype/thinking-sidecar-state.json
+cd ~/dotfiles && stow -D ccgram-prototype && stow ccgram-prototype  # or leave deployed, disabled
+```
+
+Known limitation: Pi writes an assistant message to the JSONL when that step
+finishes, so a thinking node appears when its step completes rather than
+letter-by-letter while the model generates it. The tree is therefore a
+step-granularity live trace, which matches the temporary-render goal.
+
 ## Rollback — deleting the prototype
 
 Everything is scoped to one stow package plus two local paths:
@@ -141,6 +217,7 @@ systemctl --user daemon-reload
 cd ~/dotfiles && stow -D ccgram-prototype
 
 # 3. Remove local state and secrets
+systemctl --user disable --now ccgram-thinking-sidecar.service 2>/dev/null || true
 rm -rf ~/.ccgram-prototype
 rm -f ~/.config/ccgram-prototype.env
 
@@ -159,8 +236,9 @@ Offline checks only (no live services touched):
 ./ccgram-prototype/validate.sh
 ```
 
-Verifies the systemd unit parses (`systemd-analyze verify`) and that no real
-tokens/chat IDs are committed in this package.
+Verifies the systemd units parse (`systemd-analyze verify`), the thinking
+sidecar compiles and its unit tests pass, and that no real tokens/chat IDs are
+committed in this package.
 
 ## Known limitations (from the scout report)
 
