@@ -1,0 +1,15 @@
+[Unit]
+Description=Flight check-in Gmail scan and Telegram reminders
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/vault
+# Invoke the vault script through an explicit interpreter: the vault checkout
+# does not guarantee the executable bit, so direct execution fails with
+# status=203/EXEC.
+ExecStart=/usr/bin/python3 %h/vault/scripts/flight-checkin-reminders.py
+TimeoutStartSec=45min
+Environment=PATH=%h/.nvm/versions/node/v22.22.3/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-%h/.config/pi-telegram.env

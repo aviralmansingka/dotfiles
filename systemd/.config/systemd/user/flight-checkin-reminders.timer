@@ -1,0 +1,12 @@
+[Unit]
+Description=12-hour timer for flight check-in Telegram reminders
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=12h
+AccuracySec=5m
+Persistent=true
+Unit=flight-checkin-reminders.service
+
+[Install]
+WantedBy=timers.target
