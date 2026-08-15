@@ -85,7 +85,7 @@ terraform -chdir=ops/devbox destroy \
 | `nvim`       | Neovim with LazyVim                                                         |
 | `ssh`        | SSH configuration                                                           |
 | `starship`   | Starship prompt                                                             |
-| `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges) |
+| `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges, flight check-in reminders) |
 | `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
 | `terminfo`   | Custom terminfo entries                                                     |
 | `tmux`       | Tmux configuration                                                          |
@@ -162,6 +162,13 @@ For Pi over Telegram, create a bot with `@BotFather`, copy `~/.config/pi-telegra
 systemctl --user daemon-reload
 systemctl --user enable --now pi-telegram.service
 ```
+
+The `flight-checkin-reminders.timer` user unit (every 12h) scans Gmail for upcoming flight check-in windows via Pi and sends Telegram reminders. It runs `%h/vault/scripts/flight-checkin-reminders.py` through an explicit `/usr/bin/python3` because the vault checkout does not guarantee the executable bit; direct execution fails with `status=203/EXEC`. Enable it with `systemctl --user enable --now flight-checkin-reminders.timer`.
+
+Retired reminder timers, kept out of the tracked units on purpose:
+
+- `honeymoon-message-drafts.timer` — built for the July 2026 honeymoon message plan; the trip is over, so the live unit was retired (see the disable/remove commands in the PR that tracked these notes).
+- `aug18-trip-flight-reminder.timer` — its script self-disables after its 2026-08-18 cutoff; remove the live unit after that date.
 
 ## Infrastructure
 
