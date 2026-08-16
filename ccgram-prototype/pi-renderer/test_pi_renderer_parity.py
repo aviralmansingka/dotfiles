@@ -20,11 +20,14 @@ Coverage:
   4. Wiring: patched message_routing routes pi-live/pi-final phases and
      flags user echoes silent; the status bubble send honors quiet_progress.
   5. Thinking-tree liveness (patch layer 4): live elapsed timer in the
-     tree header; CCGRAM_PI_TRACE_EDIT_SECS/_TICK_SECS/_IDLE_SECS env knobs;
-     mid-turn assistant text (stopReason toolUse) stamped pi-live-goal and
-     folded into the tree as the bold goal line (no separate message, no
-     notification); ticker timer refresh without new steps; idle-timeout
-     deletion of stale trace bubbles.
+     tree header; CCGRAM_PI_TRACE_EDIT_SECS/_TICK_SECS/_IDLE_SECS/_WRAP_CHARS
+     env knobs; mid-turn assistant text (stopReason toolUse) stamped
+     pi-live-goal and folded into the tree as the bold goal line (no
+     separate message, no notification); same-message goal/thinking
+     paraphrase dedupe (a thinking block whose first line near-duplicates
+     the goal text is dropped, so the pair renders once); ticker timer
+     refresh without new steps; idle-timeout deletion of stale trace
+     bubbles; mobile-safe 36-column wrap.
 """
 
 from __future__ import annotations
@@ -61,7 +64,7 @@ os.environ.setdefault("CCGRAM_QUIET_PROGRESS", "true")
 # drive tick_once() directly); idle-timeout deletion stays at the default.
 os.environ.setdefault("CCGRAM_PI_TRACE_EDIT_SECS", "1.0")
 os.environ.setdefault("CCGRAM_PI_TRACE_TICK_SECS", "3600")
-os.environ.setdefault("CCGRAM_PI_TRACE_WRAP_CHARS", "48")
+os.environ.setdefault("CCGRAM_PI_TRACE_WRAP_CHARS", "36")
 
 
 def _find_site_packages() -> Path:
@@ -101,12 +104,18 @@ def _prepare_patched_copy() -> Path:
         return "CCGRAM_QUIET_PROGRESS" in cfg and "silent: bool = False" in task
 
     def thinking_tree_live_applied(root: Path) -> bool:
+        # The dedupe helper doubles as the revision marker: an installed
+        # tool carrying an OLDER layer-4 revision (goal folding without
+        # same-message goal/thinking dedupe) fails this check, so the copy
+        # is NOT mistaken for the tracked stack and the suite skips with a
+        # clear reason instead of silently testing stale code.
         live = root / "ccgram/handlers/messaging_pipeline/pi_live_transcript.py"
         fmt = root / "ccgram/providers/pi_format.py"
         return (
             live.exists()
             and "CCGRAM_PI_TRACE_EDIT_SECS" in live.read_text(encoding="utf-8")
             and "pi-live-goal" in fmt.read_text(encoding="utf-8")
+            and "_drop_goal_thinking_duplicates" in fmt.read_text(encoding="utf-8")
         )
 
     marker_checks = [
@@ -127,7 +136,9 @@ def _prepare_patched_copy() -> Path:
         if dry.returncode != 0:
             raise unittest.SkipTest(
                 f"{patch_file.name} does not apply cleanly; installed ccgram "
-                "version differs from the patch target"
+                "version differs from the patch target, or the installed "
+                "tool carries an older revision of this patch layer (apply "
+                "the updated patch stack to run these tests)"
             )
         with open(patch_file, "rb") as fh:
             subprocess.run(
@@ -364,13 +375,13 @@ class PiRendererParityTest(unittest.TestCase):
     # ── 5. Thinking-tree liveness (patch layer 4) ────────────────────────
 
     def test_liveness_env_knobs(self):
-        # CCGRAM_PI_TRACE_EDIT_SECS=1.0 / _TICK_SECS=3600 / _WRAP_CHARS=48
+        # CCGRAM_PI_TRACE_EDIT_SECS=1.0 / _TICK_SECS=3600 / _WRAP_CHARS=36
         # set at module import (top of file); the idle-timeout default is
         # 10 minutes.
         self.assertEqual(self.trace.EDIT_MIN_SECS, 1.0)
         self.assertEqual(self.trace.TICK_SECS, 3600.0)
         self.assertEqual(self.trace.IDLE_SECS, 600.0)
-        self.assertEqual(self.trace.WRAP_CHARS, 48)
+        self.assertEqual(self.trace.WRAP_CHARS, 36)
 
     def test_header_shows_live_elapsed_timer(self):
         tree = self.trace.render_thinking_tree(["step"], elapsed=42.7)
@@ -480,8 +491,10 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(len(client.edited), 1)
         self.assertEqual(client.edited[0]["message_id"], 1001)
         # convert_to_entities strips the markdown into bold entities, so
-        # the plain text carries the stripped goal…
-        self.assertIn("▸ I found the cause; patching it now.", client.edited[0]["text"])
+        # the plain text carries the stripped goal (word-wrapped at the
+        # 36-column mobile width)…
+        self.assertIn("▸ I found the cause; patching it", client.edited[0]["text"])
+        self.assertIn("now.", client.edited[0]["text"])
         # …and the goal line is rendered bold via entities.
         entities = client.edited[0].get("entities") or []
         self.assertTrue(
@@ -536,6 +549,212 @@ class PiRendererParityTest(unittest.TestCase):
         run(trace.tick_once())
         self.assertEqual(len(client.edited), 0)
         trace.clear_all_traces()
+
+    # ── 6. Same-message goal/thinking dedupe + mobile wrap width ───────
+
+    # The captain's 2026-08-16 mobile screenshot (scout report
+    # ccgram-tree-regression-scout): transcript line 14 of the
+    # fm-vault-next-work-scout session paired this visible text block…
+    _LINE14_GOAL = (
+        "Now let me check the vault's current state and recent activity "
+        "since the prior scouts."
+    )
+    # …with this thinking block in the SAME assistant message — a
+    # paraphrase ("check" vs "look at"), which the tree rendered as
+    # adjacent goal + step twins.
+    _LINE14_THINKING = (
+        "Now let me look at the vault's current state to verify whether "
+        "anything has changed since the prior scouts (auto-commits, weekly "
+        "backlog W33/W34). Today is Sun Aug 16, 2026 (W33).\nSecond line "
+        "of private reasoning the tree never shows."
+    )
+
+    def _parse_assistant_blocks(self, blocks, stop_reason="toolUse"):
+        line = json.dumps(
+            {
+                "type": "message",
+                "id": "mx",
+                "parentId": None,
+                "timestamp": "2026-08-16T04:17:27.100Z",
+                "message": {
+                    "role": "assistant",
+                    "content": blocks,
+                    "stopReason": stop_reason,
+                },
+            }
+        )
+        entry = self.provider.parse_transcript_line(line)
+        self.assertIsNotNone(entry)
+        messages, _pending = self.provider.parse_transcript_entries([entry], {})
+        return messages
+
+    def test_same_message_goal_thinking_paraphrase_deduped(self):
+        # Line-14 scenario: the paraphrasing thinking block is dropped at
+        # parse time; only the goal text survives (plus tool calls).
+        messages = self._parse_assistant_blocks(
+            [
+                {"type": "thinking", "thinking": self._LINE14_THINKING},
+                {"type": "text", "text": self._LINE14_GOAL},
+                {
+                    "type": "toolCall",
+                    "id": "call_x",
+                    "name": "read",
+                    "arguments": {"path": "note.md"},
+                },
+            ]
+        )
+        goals = [m for m in messages if m.phase == "pi-live-goal"]
+        thinking = [m for m in messages if m.content_type == "thinking"]
+        self.assertEqual([m.text for m in goals], [self._LINE14_GOAL])
+        self.assertEqual(thinking, [])  # paraphrase suppressed
+        tools = [m for m in messages if m.content_type == "tool_use"]
+        self.assertEqual(len(tools), 1)  # tool calls unaffected
+
+    def test_same_message_divergent_thinking_kept(self):
+        # Same shape as line 14, but the thinking's first line is genuinely
+        # different content: both the goal and the step must survive.
+        messages = self._parse_assistant_blocks(
+            [
+                {
+                    "type": "thinking",
+                    "thinking": "The reminder script state looks stale; the "
+                    "daemon may have skipped its tick.\nMore detail.",
+                },
+                {"type": "text", "text": self._LINE14_GOAL},
+            ]
+        )
+        self.assertEqual(
+            len([m for m in messages if m.phase == "pi-live-goal"]), 1
+        )
+        self.assertEqual(
+            len([m for m in messages if m.content_type == "thinking"]), 1
+        )
+
+    def test_dedupe_leaves_other_message_shapes_untouched(self):
+        # Thinking-only mid-turn messages still produce a step.
+        thinking_only = self._parse_assistant_blocks(
+            [{"type": "thinking", "thinking": self._LINE14_THINKING}]
+        )
+        self.assertEqual(
+            [m.phase for m in thinking_only if m.content_type == "thinking"],
+            ["pi-live"],
+        )
+        # Final answers (stopReason != toolUse) are never deduped: the
+        # text is the delivered answer, not a tree goal line.
+        final = self._parse_assistant_blocks(
+            [
+                {"type": "thinking", "thinking": self._LINE14_THINKING},
+                {"type": "text", "text": self._LINE14_GOAL},
+            ],
+            stop_reason="stop",
+        )
+        self.assertEqual(
+            len([m for m in final if m.content_type == "thinking"]), 1
+        )
+        self.assertEqual(
+            [m.phase for m in final if m.content_type == "text"], ["pi-final"]
+        )
+
+    def test_dedupe_heuristic_boundaries(self):
+        dup = self.pi_format._is_goal_thinking_duplicate
+        # The line-14 paraphrase pair.
+        self.assertTrue(dup(self._LINE14_GOAL, self._LINE14_THINKING))
+        # Exact prefix of a longer thinking line.
+        self.assertTrue(
+            dup(
+                "Now let me check the vault state.",
+                "Now let me check the vault state and then the trip plan.",
+            )
+        )
+        # Different opening: not a duplicate even with topical overlap.
+        self.assertFalse(
+            dup(
+                "Now I will run the test suite to verify the fix.",
+                "The parser probably races on the tmp dir; serializing.",
+            )
+        )
+        # Same opening but no substantial shared phrase.
+        self.assertFalse(
+            dup("Now let me see.", "Now let me try a completely different angle.")
+        )
+
+    def test_paraphrase_pair_renders_once_in_tree(self):
+        # End-to-end golden: line-14 blocks routed through the trace state
+        # machine render the statement once (bold goal), with no adjacent
+        # near-duplicate `├─` step.
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        run = asyncio.run
+
+        messages = self._parse_assistant_blocks(
+            [
+                {"type": "thinking", "thinking": self._LINE14_THINKING},
+                {"type": "text", "text": self._LINE14_GOAL},
+            ]
+        )
+        for msg in messages:
+            if msg.content_type == "thinking":
+                run(
+                    trace.handle_pi_thinking(client, 1, 42, -100999, msg.text)
+                )
+            elif msg.phase == "pi-live-goal":
+                run(trace.handle_pi_goal(client, 1, 42, -100999, msg.text))
+        self.assertEqual(len(client.sent), 1)
+        bubble = client.sent[0]["text"]
+        # The goal renders once, directly under the header (convert_to_entities
+        # turns the ** markers into bold entities, and the line word-wraps
+        # at the 36-column mobile width)…
+        self.assertIn("▸ Now let me check the vault's", bubble)
+        self.assertTrue(bubble.splitlines()[1].startswith("▸ "))
+        # …and no `├─` step echoes the paraphrase.
+        step_lines = [l for l in bubble.splitlines() if l.startswith("├─")]
+        self.assertEqual(step_lines, [])
+        self.assertNotIn("look at the vault", bubble)
+        trace.clear_all_traces()
+
+    def test_mobile_wrap_width_36_keeps_tree_shape(self):
+        # The 2026-08-16 screenshot regression: at 48 columns every
+        # intentional line outlived a phone bubble's pixel capacity and
+        # Telegram's re-wrap shattered the tree. 36 stays ahead of the
+        # client-side wrap on typical phones.
+        goal = (
+            "Now let me check the vault's current state and recent "
+            "activity since the prior scouts."
+        )
+        step = (
+            "Now check the trip plan note for the current state, the "
+            "reminder script state, and daemon health."
+        )
+        tree = self.trace.render_thinking_tree(
+            [step], goal=goal, elapsed=14, wrap_chars=36
+        )
+        lines = tree.splitlines()
+        self.assertEqual(lines[0], "🧠 Thinking… · 0:14")
+        for line in lines[1:]:
+            display = line.replace("**", "")  # ** renders as bold entities
+            self.assertLessEqual(len(display), 36, line)
+        # Wrapped continuation lines keep the hanging indent, and the
+        # connector prefixes survive on the first segment of each node.
+        goal_lines = [l for l in lines if "**" in l]
+        self.assertGreater(len(goal_lines), 1)
+        self.assertTrue(goal_lines[0].startswith("▸ **"))
+        for cont in goal_lines[1:]:
+            self.assertTrue(cont.startswith("  **"), cont)
+        step_lines = [
+            l for l in lines if l.startswith("├─") or l.startswith("   ")
+        ]
+        self.assertGreater(len(step_lines), 1)
+        self.assertTrue(step_lines[0].startswith("├─ "))
+        # No text lost across the wrap.
+        reassembled_goal = " ".join(
+            l.removeprefix("▸ ").strip().strip("*") for l in goal_lines
+        )
+        self.assertEqual(reassembled_goal, goal)
+        reassembled_step = " ".join(
+            l.removeprefix("├─ ").strip() for l in step_lines
+        )
+        self.assertEqual(reassembled_step, step)
 
     def test_idle_cleanup_deletes_stale_bubble(self):
         trace = self.trace

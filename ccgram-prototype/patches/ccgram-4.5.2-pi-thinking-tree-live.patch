@@ -1,6 +1,6 @@
 diff -ruN a/ccgram/handlers/messaging_pipeline/message_routing.py b/ccgram/handlers/messaging_pipeline/message_routing.py
---- a/ccgram/handlers/messaging_pipeline/message_routing.py	2026-08-15 23:31:24.824132529 -0400
-+++ b/ccgram/handlers/messaging_pipeline/message_routing.py	2026-08-15 23:31:58.460833554 -0400
+--- a/ccgram/handlers/messaging_pipeline/message_routing.py	2026-08-16 11:01:54.968490468 -0400
++++ b/ccgram/handlers/messaging_pipeline/message_routing.py	2026-08-16 11:02:41.281276117 -0400
 @@ -28,8 +28,10 @@
  from .message_queue import enqueue_content_message, get_message_queue
  from .pi_live_transcript import (
@@ -31,9 +31,9 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/message_routing.py b/ccgram/handl
              stripped = (msg.text or "").strip()
              if len(stripped) < _MIN_THINKING_LENGTH:
 diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
---- a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-15 23:31:24.824153468 -0400
-+++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-15 23:40:43.935912786 -0400
-@@ -13,17 +13,42 @@
+--- a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-16 11:01:54.968652031 -0400
++++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-16 11:03:42.372474875 -0400
+@@ -13,17 +13,46 @@
  Messages are marked by the Pi formatter via ``AgentMessage.phase``:
  
  - ``PI_LIVE_PHASE``  — a thinking block; folded into the temporary tree.
@@ -60,10 +60,14 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +- ``CCGRAM_PI_TRACE_TICK_SECS`` — liveness ticker period (default 1.0).
 +- ``CCGRAM_PI_TRACE_IDLE_SECS`` — idle-timeout deletion (default 600 =
 +  10 minutes).
-+- ``CCGRAM_PI_TRACE_WRAP_CHARS`` — mobile wrap width (default 48).  Goal
++- ``CCGRAM_PI_TRACE_WRAP_CHARS`` — mobile wrap width (default 36).  Goal
 +  and step lines are word-wrapped to this many columns with a hanging
 +  indent under the node prefix, so the tree shape survives Telegram's
-+  phone-width line wrapping.  0 disables intentional wrapping.
++  phone-width line wrapping.  Telegram mobile lays text out in a
++  proportional font and wraps by pixels; a phone bubble fits roughly
++  35–44 Latin characters, so 36 keeps intentional breaks ahead of
++  Telegram's own re-wrap (48 was wider than a phone bubble and shattered
++  the tree on mobile).  0 disables intentional wrapping.
 +
 +State is in-memory per (user_id, thread_id): rendered steps, the current
 +goal label, and the Telegram message id of the temporary trace bubble.
@@ -78,7 +82,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  import time
  from dataclasses import dataclass, field
  
-@@ -38,15 +63,34 @@
+@@ -38,15 +67,34 @@
  logger = structlog.get_logger()
  
  PI_LIVE_PHASE = "pi-live"
@@ -95,7 +99,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +EDIT_MIN_SECS = float(os.getenv("CCGRAM_PI_TRACE_EDIT_SECS", "2.0"))
 +TICK_SECS = float(os.getenv("CCGRAM_PI_TRACE_TICK_SECS", "1.0"))
 +IDLE_SECS = float(os.getenv("CCGRAM_PI_TRACE_IDLE_SECS", "600"))
-+WRAP_CHARS = int(os.getenv("CCGRAM_PI_TRACE_WRAP_CHARS", "48"))
++WRAP_CHARS = int(os.getenv("CCGRAM_PI_TRACE_WRAP_CHARS", "36"))
  
  _TREE_HEADER = "\U0001f9e0 Thinking\u2026"
  _TREE_SPINNER = "\u2514\u2500 \u23f3 still thinking\u2026"
@@ -114,7 +118,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  
  
  @dataclass
-@@ -54,14 +98,22 @@
+@@ -54,14 +102,22 @@
      """Per-topic temporary thinking trace state."""
  
      steps: list[str] = field(default_factory=list)
@@ -137,7 +141,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  
  def normalize_step(text: str, max_chars: int = MAX_STEP_CHARS) -> str:
      """Reduce a thinking block to one compact tree node (first line)."""
-@@ -71,77 +123,277 @@
+@@ -71,77 +127,277 @@
      return first_line
  
  
@@ -443,7 +447,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  async def clear_pi_thinking(
      client: TelegramClient,
      user_id: int,
-@@ -170,5 +422,9 @@
+@@ -170,5 +426,9 @@
  
  
  def clear_all_traces() -> None:
@@ -455,30 +459,139 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +        _tick_task.cancel()
 +    _tick_task = None
 diff -ruN a/ccgram/providers/pi_format.py b/ccgram/providers/pi_format.py
---- a/ccgram/providers/pi_format.py	2026-08-15 23:31:24.813745884 -0400
-+++ b/ccgram/providers/pi_format.py	2026-08-15 23:31:54.644833142 -0400
-@@ -22,6 +22,10 @@
+--- a/ccgram/providers/pi_format.py	2026-08-16 11:01:54.968744163 -0400
++++ b/ccgram/providers/pi_format.py	2026-08-16 11:03:36.800471735 -0400
+@@ -22,11 +22,20 @@
  stamped ``phase="pi-final"`` when the message carries a terminal stopReason
  (anything but ``toolUse``), which is the signal to delete that trace before
  the answer is delivered — matching Pi's own live-transcript behaviour.
 +Mid-turn assistant text (stopReason ``toolUse``) is stamped
 +``phase="pi-live-goal"`` so the pipeline folds it into the tree as the bold
 +goal/top line instead of a separate notifying progress message (dotfiles
-+thinking-tree-live patch).
++thinking-tree-live patch).  When the same message also carries a thinking
++block whose first line paraphrases that goal text, the thinking block is
++dropped here — the goal already narrates the step, so rendering both makes
++the mobile tree show the same statement twice, adjacently.
  """
  
  from __future__ import annotations
-@@ -205,9 +209,11 @@
+ 
++import difflib
+ import json
++import re
+ from typing import Any
+ 
+ from ccgram.expandable_quote import format_expandable_quote
+@@ -195,6 +204,83 @@
+     )
+ 
+ 
++# Same-message goal/thinking paraphrase dedupe thresholds (mobile tree
++# fix).  A thinking first line is a near-duplicate of the goal when the
++# normalized texts share an opening of at least this many words AND one
++# common phrase of at least this many characters.  Requiring both keeps
++# genuinely distinct thinking+text messages (different opening, or only a
++# short incidental overlap) rendering as separate goal + step.
++_DEDUPE_PREFIX_WORDS = 3
++_DEDUPE_COMMON_CHARS = 20
++_DEDUPE_NORM_RE = re.compile(r"[^a-z0-9]+")
++
++
++def _normalize_dedupe(text: str) -> str:
++    """Lowercase, alphanumeric-only, single-spaced text for comparison."""
++    return " ".join(_DEDUPE_NORM_RE.sub(" ", text.lower()).split())
++
++
++def _common_word_prefix(a: str, b: str) -> int:
++    """Count the leading words two normalized strings share."""
++    shared = 0
++    for x, y in zip(a.split(), b.split()):
++        if x != y:
++            break
++        shared += 1
++    return shared
++
++
++def _is_goal_thinking_duplicate(goal: str, thinking: str) -> bool:
++    """True when a thinking block's first line paraphrases the goal text.
++
++    Some models emit a mid-turn visible text block that is a compressed
++    paraphrase of their own thinking block in the same assistant message
++    (e.g. goal ``Now let me check the vault's current state…`` beside
++    thinking ``Now let me look at the vault's current state…``).  Folded
++    into the tree, the pair renders as a bold goal line immediately
++    followed by a near-identical ``├─`` step.  Only the thinking's first
++    line is compared because that is all the tree step ever shows.
++    """
++    g = _normalize_dedupe(goal)
++    first_line = thinking.splitlines()[0] if thinking else ""
++    t = _normalize_dedupe(first_line)
++    if not g or not t:
++        return False
++    if _common_word_prefix(g, t) < _DEDUPE_PREFIX_WORDS:
++        return False
++    match = difflib.SequenceMatcher(None, g, t).find_longest_match(
++        0, len(g), 0, len(t)
++    )
++    return match.size >= _DEDUPE_COMMON_CHARS
++
++
++def _drop_goal_thinking_duplicates(
++    messages: list[AgentMessage],
++) -> list[AgentMessage]:
++    """Suppress thinking steps that paraphrase a same-message goal text.
++
++    Runs on one assistant message's parsed blocks (the only place both
++    blocks are visible together), so thinking-only and text-only messages
++    are unaffected, and a thinking block whose first line diverges from
++    the goal is kept as its own tree step.
++    """
++    goals = [
++        m.text
++        for m in messages
++        if m.content_type == "text" and m.phase == "pi-live-goal"
++    ]
++    if not goals:
++        return messages
++    return [
++        m
++        for m in messages
++        if not (
++            m.content_type == "thinking"
++            and any(_is_goal_thinking_duplicate(g, m.text) for g in goals)
++        )
++    ]
++
++
+ def _parse_assistant_content(
+     content: Any,
+     pending: Pending,
+@@ -205,9 +291,14 @@
  
      ``final`` marks the message as turn-terminal (stopReason != "toolUse");
      text messages then carry ``phase="pi-final"`` so the pipeline can retire
 -    the temporary thinking trace before delivering the answer.
 +    the temporary thinking trace before delivering the answer.  Mid-turn
 +    text carries ``phase="pi-live-goal"`` so it folds into the tree as the
-+    goal/top line (thinking-tree-live patch).
++    goal/top line (thinking-tree-live patch).  A mid-turn thinking block
++    whose first line paraphrases the same message's goal text is dropped
++    (``_drop_goal_thinking_duplicates``) so the tree does not render the
++    same statement as both the bold goal line and an adjacent step.
      """
 -    text_phase = "pi-final" if final else None
 +    text_phase = "pi-final" if final else "pi-live-goal"
      if isinstance(content, str):
          if content.strip():
              return [
+@@ -253,6 +344,11 @@
+                 )
+         elif btype == "toolCall":
+             messages.append(_tool_call_block_to_message(block, pending, timestamp))
++    if not final:
++        # Same-message goal/thinking paraphrase dedupe (mobile tree fix):
++        # the goal already narrates this step, so a paraphrasing thinking
++        # block must not also render as an adjacent ``├─`` step.
++        messages = _drop_goal_thinking_duplicates(messages)
+     return messages
+ 
+ 
