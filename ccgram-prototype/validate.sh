@@ -49,7 +49,28 @@ else
     fail=1
 fi
 
-echo "==> Pi patch stack (renderer parity + low-noise): applies cleanly + offline fixture tests"
+echo "==> Pi hook shim: syntax + hooks.json parse (offline)"
+SHIM="$PKG_DIR/.local/bin/ccgram-pi-hook"
+HOOKS_JSON="$PKG_DIR/.pi/agent/extensions/hooks.json"
+if command -v python3 >/dev/null 2>&1; then
+    if python3 -m py_compile "$SHIM" \
+        && python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$HOOKS_JSON"; then
+        echo "    ok: shim compiles and hooks.json parses"
+    else
+        echo "    FAIL: shim compile or hooks.json parse failed"
+        fail=1
+    fi
+else
+    echo "    skipped: python3 not available on this host"
+fi
+if [[ -x "$SHIM" ]]; then
+    echo "    ok: shim is executable (stow will deploy it to ~/.local/bin)"
+else
+    echo "    FAIL: $SHIM is not executable"
+    fail=1
+fi
+
+echo "==> Pi patch stack (renderer parity + low-noise + transcript binding): applies cleanly + offline fixture tests"
 PATCH_SH="$PKG_DIR/pi-renderer-patch.sh"
 CCGRAM_PY="$HOME/.local/share/uv/tools/ccgram/bin/python"
 if [[ ! -x "$CCGRAM_PY" ]]; then
@@ -71,6 +92,14 @@ if [[ -x "$CCGRAM_PY" ]]; then
     else
         echo "    FAIL: patch-stack tests failed; run:"
         echo "        $CCGRAM_PY -m unittest discover -s ccgram-prototype/pi-renderer -v"
+        fail=1
+    fi
+    if "$CCGRAM_PY" -m unittest discover -s "$PKG_DIR/transcript-binding" \
+        -t "$PKG_DIR/transcript-binding" >/dev/null 2>&1; then
+        echo "    ok: transcript-binding race tests pass (patched copy, reused-directory fixture)"
+    else
+        echo "    FAIL: transcript-binding tests failed; run:"
+        echo "        $CCGRAM_PY -m unittest discover -s ccgram-prototype/transcript-binding -v"
         fail=1
     fi
 else

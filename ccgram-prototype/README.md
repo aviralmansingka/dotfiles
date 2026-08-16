@@ -39,8 +39,12 @@ already publish agent sessions that ccgram discovers with zero code changes.
 | `.config/ccgram-prototype.env.example` | Env template (multiplexer, status mode, autoclose, low-noise notification knobs, placeholders for secrets, optional sidecar fallback tuning). |
 | `patches/ccgram-4.5.2-pi-renderer-parity.patch` | Tracked unified diff, layer 1: patches the installed ccgram 4.5.2 Pi renderer (thinking + tool-call + final-answer flow). Not deployed by stow. |
 | `patches/ccgram-4.5.2-low-noise-notifications.patch` | Tracked unified diff, layer 2 (applies on top of layer 1): final-answer-only notifications (silent thinking trace, quiet-progress mode). Not deployed by stow. |
+| `patches/ccgram-4.5.2-pi-transcript-binding.patch` | Tracked unified diff, layer 3 (disjoint files): fixes the SessionStart transcript-binding race for reused session directories (exact-match-only binding, deferred pending resolution, offset reset on path change). Not deployed by stow. |
+| `.local/bin/ccgram-pi-hook` | Pi hook shim: waits (self-bounded) for the session's OWN transcript file at SessionStart, injects the exact `transcript_path`, delegates to `ccgram hook --provider pi`. Deployed by stow. |
+| `.pi/agent/extensions/hooks.json` | cc-thingz hook-runner wiring (SessionStart/Stop/SessionEnd → shim, async; SessionStart timeout raised to 20s to cover slow transcript creation). Deployed by stow. |
 | `pi-renderer-patch.sh` | Idempotent `status`/`check`/`apply`/`rollback` for the whole patch stack, with file-level backups. Not deployed by stow. |
 | `pi-renderer/` | Patch-stack fixture tests (JSONL turn with thinking + tool calls + final text; low-noise notification behavior). Not deployed by stow. |
+| `transcript-binding/` | Transcript-binding race fixture tests (reused-directory/off-by-one reproduction; shim behavior). Not deployed by stow. |
 | `thinking-sidecar/` | Sidecar unit tests + JSONL/state fixtures (deprecated fallback). Not deployed by stow. |
 | `validate.sh` | Offline checks: systemd unit syntax + sidecar unit tests + renderer patch state and fixture tests + no committed secrets. Not deployed by stow. |
 | `README.md` | This guide. Not deployed by stow. |
@@ -188,6 +192,83 @@ Rollback (exact reverse of apply, whole stack in reverse order):
 ./pi-renderer-patch.sh rollback   # reverse-patches (idempotent)
 systemctl --user restart ccgram-prototype.service
 ```
+
+## Pi transcript-binding race — exact-match-or-defer (patch layer 3 + shim)
+
+The bug: Pi's SessionStart hook fires **before** Pi creates the session
+JSONL (observed ~4.2s on reused Firstmate/treehouse leases). Stock ccgram
+then fell back to the **newest existing transcript in the reused session
+directory** — the previous worker's file — so a new worker's topic watched
+its predecessor's transcript until a later hook event self-healed the
+binding (minutes late, with "Corrupted offset"/"File truncated" warnings
+and replay risk). A prior audit measured the off-by-one on 5/5 consecutive
+workers sharing one lease.
+
+Layer 3 (`patches/ccgram-4.5.2-pi-transcript-binding.patch`) plus the
+tracked hook shim close the race at every binding vector, without any
+launch/kill/recovery behavior (observe-only posture unchanged):
+
+| Vector | Fix |
+| ------ | --- |
+| `hook.py` SessionStart resolution | **Exact match only**: a Pi transcript is eligible only when its filename contains the session id. No newest-file fallback; a mismatched payload path is refused. When the file doesn't exist yet, the session_map entry records the session with an **empty transcript_path (pending)**. |
+| `session_monitor.py` poll loop | Pending Pi sessions are re-resolved **every poll** by exact session-id match; the session binds its own file as soon as Pi creates it (seconds, not minutes). |
+| `transcript_reader.py` offsets | Whenever a session's transcript **path changes**, the tracked byte offset is dropped and the session rebinds fresh — no mid-file corruption, no full stale replay. |
+| `session_map.py` primary preservation | The nested-session "preserve existing primary" guard (tmux/claude observer pattern) no longer pins **Pi** windows: a new Pi SessionStart is always the window's new primary. Claude behavior unchanged. Stale transcript paths are cleared from window state when the session changes without a replacement. |
+| `session_resolver.py` history reads | A persisted transcript path whose filename doesn't name the session is treated as absent for Pi, so `/last`/summary reads can't bind the prior tenant's file. |
+| `~/.local/bin/ccgram-pi-hook` (shim) | Waits for the session's OWN `*_<session_id>.jsonl` to exist **and be non-empty** before injecting `transcript_path` — fastest correct binding in the common case. The wait self-bounds to the hook runner's `PI_HOOK_TIMEOUT_SEC` (minus margin; `CCGRAM_PI_HOOK_WAIT_SECS` overrides; hard cap 30s) and **never** injects a prior tenant's file. |
+| `hooks.json` | SessionStart hook timeout raised 5s → 20s (still `async: true`, so Pi never blocks) to cover slow transcript creation; the shim exits well before the runner's SIGTERM. |
+
+Defense in depth: if the shim times out, ccgram defers (pending) instead
+of binding wrong, and the poll loop binds the exact file when it appears.
+If a later hook event re-resolves first, the offset reset keeps the handoff
+clean.
+
+### Deploy / redeploy the shim (tracked since this PR)
+
+The shim and `hooks.json` were previously untracked live files. stow will
+not overwrite real files, so redeploy once by hand:
+
+```sh
+rm -f ~/.local/bin/ccgram-pi-hook ~/.pi/agent/extensions/hooks.json
+cd ~/dotfiles && stow ccgram-prototype
+```
+
+### Live smoke plan for the race fix (only when explicitly authorized)
+
+Offline tests reproduce the race fully. To smoke live after applying layer
+3, redeploying the shim, and restarting the service:
+
+1. Let Firstmate dispatch two consecutive small worker tasks into the SAME
+   treehouse lease (the reused-directory case).
+2. `jq -r '.[] | [.session_id, .transcript_path] | @tsv' ~/.ccgram-prototype/session_map.json`
+   — the second worker's entry must name its OWN transcript from spawn
+   (filename contains its session id), or sit pending (`""`) for at most a
+   few seconds.
+3. `jq '.tracked_sessions' ~/.ccgram-prototype/monitor_state.json` — no
+   session id mapped to a file naming a different session id (the old
+   off-by-one pattern).
+4. `journalctl --user -u ccgram-prototype.service` shows zero "Corrupted
+   offset" / "File truncated" lines for the new worker; "Transcript path
+   changed … resetting read offset" may appear if a pending binding
+   hand-off happened (benign, one line).
+5. The second worker's topic shows thinking/final text from its own turn
+   within seconds of spawn — no multi-minute dead window.
+
+### Offline tests for the race
+
+```sh
+~/.local/share/uv/tools/ccgram/bin/python \
+    -m unittest discover -s ccgram-prototype/transcript-binding -v
+```
+
+The tests copy the installed package to a temp dir, apply the tracked
+patch stack there, redirect HOME to a fixture reused session directory
+containing only transcript A, and assert: SessionStart for B does not bind
+A (hook + monitor level), B binds its own file once it appears with a
+clean offset, a pre-seeded stale A→B binding resets without corruption or
+replay, primary preservation is skipped for pi but intact for claude, and
+the shim waits for the exact non-empty file and never returns a prior
+tenant's transcript.
 
 `apply` copies each pre-existing modified file to
 `~/.ccgram-prototype/renderer-patch-backup/4.5.2/` before patching; if
