@@ -34,11 +34,14 @@ already publish agent sessions that ccgram discovers with zero code changes.
 | Path | Purpose |
 | ---- | ------- |
 | `.config/systemd/user/ccgram-prototype.service` | User unit running ccgram against Herdr. Deployed by `stow ccgram-prototype`. |
-| `.config/systemd/user/ccgram-thinking-sidecar.service` | User unit for the thinking sidecar (see below). Deployed by stow; **not enabled by default**. |
-| `.local/bin/ccgram-thinking-sidecar` | Stdlib-only Python sidecar: temporary tree-style Pi thinking traces in topics. Deployed by stow to `~/.local/bin`. |
-| `.config/ccgram-prototype.env.example` | Env template (multiplexer, status mode, autoclose, placeholders for secrets, optional sidecar tuning). |
-| `thinking-sidecar/` | Sidecar unit tests + JSONL/state fixtures. Not deployed by stow. |
-| `validate.sh` | Offline checks: systemd unit syntax + sidecar unit tests + no committed secrets. Not deployed by stow. |
+| `.config/systemd/user/ccgram-thinking-sidecar.service` | User unit for the **deprecated** thinking sidecar (see below). Deployed by stow; **not enabled by default**; do not enable alongside the renderer patch. |
+| `.local/bin/ccgram-thinking-sidecar` | Stdlib-only Python sidecar (deprecated fallback). Deployed by stow to `~/.local/bin`. |
+| `.config/ccgram-prototype.env.example` | Env template (multiplexer, status mode, autoclose, placeholders for secrets, optional sidecar fallback tuning). |
+| `patches/ccgram-4.5.2-pi-renderer-parity.patch` | Tracked unified diff that patches the installed ccgram 4.5.2 Pi renderer (thinking + tool-call + final-answer flow). Not deployed by stow. |
+| `pi-renderer-patch.sh` | Idempotent `status`/`check`/`apply`/`rollback` for the renderer patch, with file-level backups. Not deployed by stow. |
+| `pi-renderer/` | Renderer-parity fixture tests (JSONL turn with thinking + tool calls + final text). Not deployed by stow. |
+| `thinking-sidecar/` | Sidecar unit tests + JSONL/state fixtures (deprecated fallback). Not deployed by stow. |
+| `validate.sh` | Offline checks: systemd unit syntax + sidecar unit tests + renderer patch state and fixture tests + no committed secrets. Not deployed by stow. |
 | `README.md` | This guide. Not deployed by stow. |
 
 Local (untracked) state the prototype creates:
@@ -131,11 +134,102 @@ errors, no restart loop.
    Verify ccgram never creates a replacement tab itself.
 5. Done evaluating? Follow the rollback below.
 
-## Thinking sidecar — temporary Pi thinking traces
+## Pi renderer parity patch — one pipeline owns the Pi transcript
 
 ccgram 4.5.2's Pi formatter (`ccgram/providers/pi_format.py` in the installed uv
 tool) parses `text` and `toolCall` blocks but silently drops `thinking` blocks,
-so Pi reasoning never reaches the topics. Rather than hot-patching the installed
+so Pi reasoning never reaches the topics. The previous iteration worked around
+this with a companion sidecar; this prototype now prefers **patching ccgram's
+own Pi rendering path** so a single pipeline owns thinking, tool-call display,
+and final-answer rendering — no sidecar layering, no duplicate thinking output.
+
+What the patch does (all inside ccgram, against the installed uv tool):
+
+1. **`providers/pi_format.py`** — `thinking` blocks are emitted as
+   `content_type="thinking"` messages stamped `phase="pi-live"`. Assistant text
+   with a terminal `stopReason` (anything but `toolUse`, including errors) is
+   stamped `phase="pi-final"`. Tool calls/results are untouched.
+2. **`handlers/messaging_pipeline/pi_live_transcript.py`** (new) — owns the
+   temporary thinking trace: one message per topic, rendered as a compact
+   tree (`├─` node per thinking step, first line only, overflow folded into
+   `… (N earlier steps)`, `└─ ⏳ still thinking…` spinner), edited in place
+   with a 2s rate limit, and **deleted** when the final answer (or terminal
+   error) arrives — the same temporary-render semantics as Pi's tree-style
+   live transcript.
+3. **`handlers/messaging_pipeline/message_routing.py`** — routes `pi-live`
+   thinking into the trace (never to permanent "Thinking" messages) and
+   retires the trace before delivering `pi-final` answers.
+
+Tool calls need no patch: ccgram's default `batch_mode=ephemeral` already
+collapses each run of tool calls into one compact bubble that is edited in
+place as results land and **deleted** when the turn's final content flushes —
+consistent with Pi's collapsed tool display. Leave the batch mode at its
+default (or set it per window with `/verbose`) for the Pi-like presentation.
+
+### Apply / validate / roll back
+
+```sh
+cd ~/dotfiles/ccgram-prototype
+./pi-renderer-patch.sh status     # applied | not-applied | unknown
+./pi-renderer-patch.sh check      # dry-run against the installed tool
+
+# If the deprecated sidecar fallback is running, stop it FIRST — running
+# both would double the thinking output.
+systemctl --user disable --now ccgram-thinking-sidecar.service 2>/dev/null || true
+
+./pi-renderer-patch.sh apply      # backs up originals, then patches (idempotent)
+systemctl --user restart ccgram-prototype.service
+```
+
+Rollback (exact reverse of apply):
+
+```sh
+./pi-renderer-patch.sh rollback   # reverse-patches (idempotent)
+systemctl --user restart ccgram-prototype.service
+```
+
+`apply` copies the two modified files to
+`~/.ccgram-prototype/renderer-patch-backup/4.5.2/` before patching; if
+`rollback` ever fails, restore those two paths by hand. The script refuses to
+touch any ccgram version other than 4.5.2 (set `CCGRAM_PATCH_FORCE=1` to
+override after regenerating the patch) and refuses to patch a dirty tree.
+
+Offline tests (no Telegram, no live state):
+
+```sh
+~/.local/share/uv/tools/ccgram/bin/python \
+    -m unittest discover -s ccgram-prototype/pi-renderer -v
+```
+
+The tests copy the installed package to a temp dir, apply the tracked patch
+there, and drive a synthetic JSONL turn (thinking + tool calls + final text +
+error) through the real parser and the trace state machine with a fake
+Telegram client.
+
+### Remaining parity gaps (vs the Pi TUI)
+
+- **No idle-timeout deletion.** If a turn dies mid-thinking with no terminal
+  message (kill -9, network drop), the trace bubble stays until the next
+  turn's first thinking step overwrites it. ccgram's routing path has no
+  per-topic timer to hook; the retired sidecar's 600s idle sweep covered
+  this.
+- **Step-granularity trace.** Pi writes an assistant message to the JSONL
+  when that step finishes, so tree nodes appear per completed step, not
+  token-by-token (same limitation the sidecar had; it matches the
+  temporary-render goal).
+- **Tool calls vanish rather than collapse.** In the Pi TUI, finished tool
+  calls stay in scrollback as collapsed lines; ccgram's ephemeral batch
+  deletes the bubble entirely on flush. Switch a window to `batched` mode
+  (`/verbose`) if you prefer the collapsed-but-kept variant.
+
+## Thinking sidecar (deprecated fallback)
+
+> **Deprecated.** With the renderer-parity patch applied, the sidecar
+> duplicates thinking output — **never run both**. It remains tracked (and
+> its service remains unshipped-by-default) purely as a fallback for running
+> an unpatched ccgram. New work should extend the patch, not the sidecar.
+
+Rather than hot-patching the installed
 uv tool (untracked, non-repeatable), the prototype ships a **tracked companion
 sidecar** that needs no ccgram modification at all.
 
@@ -165,7 +259,7 @@ Safety posture (unchanged, still observe-only):
 - Posting is restricted to `CCGRAM_GROUP_ID` (the throwaway test group).
 - It is stdlib-only Python; no new dependencies, no ccgram patch.
 
-### Activate (after the base prototype from steps 1–6 is running)
+### Activate the fallback (only when the renderer patch is NOT applied)
 
 ```sh
 cd ~/dotfiles && stow ccgram-prototype   # deploys ~/.local/bin/ccgram-thinking-sidecar + unit
@@ -213,6 +307,9 @@ Everything is scoped to one stow package plus two local paths:
 systemctl --user disable --now ccgram-prototype.service
 systemctl --user daemon-reload
 
+# 1b. If the renderer patch was applied, reverse it first
+./ccgram-prototype/pi-renderer-patch.sh rollback
+
 # 2. Unstow (removes the unit + env example symlinks from ~)
 cd ~/dotfiles && stow -D ccgram-prototype
 
@@ -237,8 +334,10 @@ Offline checks only (no live services touched):
 ```
 
 Verifies the systemd units parse (`systemd-analyze verify`), the thinking
-sidecar compiles and its unit tests pass, and that no real tokens/chat IDs are
-committed in this package.
+sidecar compiles and its unit tests pass, the renderer patch is in a
+consistent state (`pi-renderer-patch.sh check`) and its offline fixture tests
+pass against a patched temp copy of the installed tool, and that no real
+tokens/chat IDs are committed in this package.
 
 ## Known limitations (from the scout report)
 

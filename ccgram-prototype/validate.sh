@@ -49,6 +49,34 @@ else
     fail=1
 fi
 
+echo "==> Pi renderer patch: applies cleanly + offline fixture tests"
+PATCH_SH="$PKG_DIR/pi-renderer-patch.sh"
+CCGRAM_PY="$HOME/.local/share/uv/tools/ccgram/bin/python"
+if [[ ! -x "$CCGRAM_PY" ]]; then
+    CCGRAM_PY="$(printf '%s\n' "$HOME"/.local/share/uv/tools/ccgram/bin/python* 2>/dev/null | head -1)"
+fi
+if [[ ! -x "$CCGRAM_PY" ]] && command -v uv >/dev/null 2>&1; then
+    CCGRAM_PY="$(uv tool dir 2>/dev/null)/ccgram/bin/python"
+fi
+if [[ -x "$CCGRAM_PY" ]]; then
+    if bash "$PATCH_SH" check >/dev/null 2>&1; then
+        echo "    ok: patch state is consistent (applied or cleanly applicable)"
+    else
+        echo "    FAIL: pi-renderer-patch.sh check failed (dirty tree or version mismatch)"
+        fail=1
+    fi
+    if "$CCGRAM_PY" -m unittest discover -s "$PKG_DIR/pi-renderer" \
+        -t "$PKG_DIR/pi-renderer" >/dev/null 2>&1; then
+        echo "    ok: renderer-parity fixture tests pass (patched copy, no Telegram)"
+    else
+        echo "    FAIL: renderer-parity tests failed; run:"
+        echo "        $CCGRAM_PY -m unittest discover -s ccgram-prototype/pi-renderer -v"
+        fail=1
+    fi
+else
+    echo "    skipped: ccgram uv tool python not found on this host"
+fi
+
 echo "==> secret scan: $PKG_DIR"
 # Telegram bot tokens look like 123456789:AAE... (digits:35+ url-safe chars).
 # Only placeholder-shaped values may appear in tracked files.
