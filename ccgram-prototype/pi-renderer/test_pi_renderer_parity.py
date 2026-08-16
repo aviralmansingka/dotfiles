@@ -24,17 +24,19 @@ Coverage:
      silent and notifying tasks never merge.
   4. Wiring: patched message_routing routes pi-live/pi-final phases and
      flags user echoes silent; the status bubble send honors quiet_progress.
-  5. No-tree live status bubble (patch layer 4): live elapsed timer in
-     the header; CCGRAM_PI_TRACE_EDIT_SECS/_TICK_SECS/_IDLE_SECS/_WRAP_CHARS
-     env knobs; mid-turn assistant text (stopReason toolUse) stamped
-     pi-live-goal and folded into the bubble as the bold goal line (no
-     separate message, no notification); same-message goal/thinking
-     paraphrase dedupe (token-overlap heuristic) plus render-level
-     suppression of a latest step that paraphrases the current goal, so
-     the bubble never states the same progress twice; no tree connectors
-     or hanging indents anywhere in the bubble; ticker timer refresh
-     without new steps; idle-timeout deletion of stale trace bubbles;
-     mobile-safe 36-column wrap.
+  5. Frontdoor-style goal-line status bubble (patch layer 4): live elapsed
+     timer in the header; one bold goal line per goal — `▸` active, `✓`
+     done — matching pi/bin/pi-telegram-daemon.py's ThinkingTreeBuilder
+     (thinking blocks can derive the active goal's label but never render
+     as lines of their own; no ├─/└─ tree connectors, no prose
+     paragraphs); CCGRAM_PI_TRACE_EDIT_SECS/_TICK_SECS/_IDLE_SECS/
+     _WRAP_CHARS env knobs; mid-turn assistant text (stopReason toolUse)
+     stamped pi-live-goal and folded into the bubble as the goal label
+     (no separate message, no notification); same-message goal/thinking
+     paraphrase dedupe (token-overlap heuristic), so the screenshot case
+     displays the concise goal once; ticker timer refresh without new
+     steps; idle-timeout deletion of stale trace bubbles; mobile-safe
+     36-column label wrap with a blank hanging indent under the bullet.
 """
 
 from __future__ import annotations
@@ -335,20 +337,25 @@ class PiRendererParityTest(unittest.TestCase):
 
     # ── 2. Live trace rendering + temporary-bubble state machine ─────────
 
-    def test_status_bubble_renders_latest_step_only(self):
-        # No tree, no overflow fold: the bubble shows the header, the
-        # LATEST step as one plain summary line, and the spinner.
-        steps = [f"step {i}" for i in range(1, 12)]
-        bubble = self.trace.render_thinking_status(steps)
+    def test_goal_lines_render_active_and_done_bullets(self):
+        # Frontdoor shape: header + one bold line per goal (▸ active, ✓
+        # done). No tree connectors, no prose lines, no spinner footer.
+        node = self.trace._GoalNode
+        bubble = self.trace.render_thinking_status(
+            [node("first goal", done=True), node("current goal")]
+        )
         lines = bubble.splitlines()
         self.assertEqual(lines[0], "🧠 Thinking…")
-        self.assertEqual(lines[1], "step 11")
-        self.assertNotIn("step 10", bubble)
-        self.assertNotIn("step 3\n", bubble)
-        self.assertEqual(lines[-1], "⏳ still thinking…")
-        # No tree connectors anywhere.
-        for connector in ("├─", "└─", "▸"):
+        self.assertEqual(lines[1], "✓ **first goal**")
+        self.assertEqual(lines[2], "▸ **current goal**")
+        self.assertEqual(len(lines), 3)
+        for connector in ("├─", "└─", "⏳"):
             self.assertNotIn(connector, bubble)
+        # A single active goal renders exactly one bullet line.
+        bubble = self.trace.render_thinking_status([node("only goal")])
+        self.assertEqual(
+            bubble.splitlines(), ["🧠 Thinking…", "▸ **only goal**"]
+        )
 
     def test_normalize_step_first_line_and_truncation(self):
         self.assertEqual(
@@ -370,24 +377,27 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(len(client.sent), 1)
         self.assertEqual(client.sent[0]["chat_id"], -100999)
         self.assertEqual(client.sent[0].get("message_thread_id"), 42)
-        self.assertIn("first step", client.sent[0]["text"])
+        # A thinking-only start derives the active goal's ▸ label.
+        self.assertIn("▸ first step", client.sent[0]["text"])
         self.assertNotIn("├─", client.sent[0]["text"])
         # Low-noise: the temporary trace is silent on first send — it is
         # edited in place and deleted on final, so it must never notify.
         self.assertIs(client.sent[0].get("disable_notification"), True)
 
-        # Rate limit: an immediate second step does not edit yet.
-        run(trace.handle_pi_thinking(client, 1, 42, -100999, "second step"))
+        # Rate limit: an immediate goal update does not edit yet.
+        run(trace.handle_pi_goal(client, 1, 42, -100999, "second step"))
         self.assertEqual(len(client.edited), 0)
 
-        # After the edit window, the same bubble is edited in place.
+        # After the edit window, the same bubble is edited in place.  A
+        # second text goal completes the first (✓) and takes over the ▸.
         key = (1, 42)
         trace._traces[key].last_edit_ts -= trace.EDIT_MIN_SECS + 1
-        run(trace.handle_pi_thinking(client, 1, 42, -100999, "third step"))
+        run(trace.handle_pi_goal(client, 1, 42, -100999, "third step"))
         self.assertEqual(len(client.edited), 1)
         self.assertEqual(client.edited[0]["message_id"], 1001)
-        self.assertIn("third step", client.edited[0]["text"])
-        # Only the latest step shows: the earlier one is gone.
+        self.assertIn("✓ second step", client.edited[0]["text"])
+        self.assertIn("▸ third step", client.edited[0]["text"])
+        # The thinking-derived label was replaced, never ✓-retained.
         self.assertNotIn("first step", client.edited[0]["text"])
 
         # Final answer retires the bubble.
@@ -466,10 +476,11 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(self.trace.WRAP_CHARS, 36)
 
     def test_header_shows_live_elapsed_timer(self):
-        bubble = self.trace.render_thinking_status(["step"], elapsed=42.7)
+        node = self.trace._GoalNode
+        bubble = self.trace.render_thinking_status([node("step")], elapsed=42.7)
         self.assertEqual(bubble.splitlines()[0], "🧠 Thinking… · 0:42")
         # Without elapsed the header is unchanged (static render).
-        bare = self.trace.render_thinking_status(["step"])
+        bare = self.trace.render_thinking_status([node("step")])
         self.assertEqual(bare.splitlines()[0], "🧠 Thinking…")
         self.assertEqual(self.trace.format_elapsed(0), "0:00")
         self.assertEqual(self.trace.format_elapsed(65), "1:05")
@@ -481,14 +492,11 @@ class PiRendererParityTest(unittest.TestCase):
             "Fix parser race now",
         )
         bubble = self.trace.render_thinking_status(
-            ["step"], goal="Fix parser race now", elapsed=1
+            [self.trace._GoalNode("Fix parser race now")], elapsed=1
         )
-        self.assertIn("**Fix parser race now**", bubble)
-        # Goal sits directly under the header, above the step line, with
-        # no connector prefix.
+        self.assertIn("▸ **Fix parser race now**", bubble)
         lines = bubble.splitlines()
-        self.assertEqual(lines[1], "**Fix parser race now**")
-        self.assertEqual(lines[2], "step")
+        self.assertEqual(lines[1], "▸ **Fix parser race now**")
 
     def test_wrap_segments_word_wraps_and_hard_cuts(self):
         ws = self.trace.wrap_segments
@@ -504,48 +512,58 @@ class PiRendererParityTest(unittest.TestCase):
         # Width 0 disables wrapping.
         self.assertEqual(ws(3, "a " * 50, 0), ["a " * 50])
 
-    def test_long_step_wraps_plain_without_indent(self):
-        step = (
+    def test_long_label_wraps_subordinate_to_bullet(self):
+        label = (
             "Checking whether the transcript binding race fix holds for "
             "reused session directories across consecutive worker spawns"
         )
-        bubble = self.trace.render_thinking_status([step], wrap_chars=48)
-        step_lines = [
-            l
-            for l in bubble.splitlines()
-            if l not in ("🧠 Thinking…", "⏳ still thinking…")
-        ]
-        self.assertGreater(len(step_lines), 1)  # actually wrapped
-        for line in step_lines:
-            # No connector, no hanging indent: plain column-0 wrap.
-            self.assertLessEqual(len(line), 48, line)
-            self.assertEqual(line, line.lstrip(), line)
+        bubble = self.trace.render_thinking_status(
+            [self.trace._GoalNode(label)], wrap_chars=48
+        )
+        label_lines = bubble.splitlines()[1:]
+        self.assertGreater(len(label_lines), 1)  # actually wrapped
+        self.assertTrue(label_lines[0].startswith("▸ **"))
+        for cont in label_lines[1:]:
+            # Continuation hangs under the label text: visually
+            # subordinate to the bullet, with no tree connector.
+            self.assertTrue(cont.startswith("  **"), cont)
+            self.assertNotIn("▸", cont)
+        for line in label_lines:
+            # Displayed width excludes the non-rendering ** markers.
+            self.assertLessEqual(len(line) - 4, 48, line)
+        for connector in ("├─", "└─"):
+            self.assertNotIn(connector, bubble)
         # No text lost across the wrap.
-        self.assertEqual(" ".join(step_lines), step)
+        reassembled = " ".join(
+            l.removeprefix("▸ ").strip().strip("*") for l in label_lines
+        )
+        self.assertEqual(reassembled, label)
 
-    def test_long_goal_wraps_bold_segments_without_indent(self):
-        goal = (
+    def test_done_goal_wraps_with_check_bullet(self):
+        label = (
             "Refactoring the message routing pipeline so mid-turn assistant "
             "text folds into the status bubble instead of notifying"
         )
         bubble = self.trace.render_thinking_status(
-            ["step"], goal=goal, wrap_chars=48
+            [self.trace._GoalNode(label, done=True)], wrap_chars=48
         )
-        goal_lines = [l for l in bubble.splitlines() if "**" in l]
-        self.assertGreater(len(goal_lines), 1)
-        for line in goal_lines:
-            self.assertTrue(line.startswith("**"), line)
-            self.assertTrue(line.endswith("**"), line)
-            # Displayed width excludes the non-rendering ** markers.
-            self.assertLessEqual(len(line) - 4, 48, line)
-        reassembled = " ".join(l.strip("*") for l in goal_lines)
-        self.assertEqual(reassembled, goal)
+        label_lines = bubble.splitlines()[1:]
+        self.assertGreater(len(label_lines), 1)
+        self.assertTrue(label_lines[0].startswith("✓ **"))
+        for cont in label_lines[1:]:
+            self.assertTrue(cont.startswith("  **"), cont)
+            self.assertNotIn("✓", cont)
+        reassembled = " ".join(
+            l.removeprefix("✓ ").strip().strip("*") for l in label_lines
+        )
+        self.assertEqual(reassembled, label)
 
     def test_wrap_disabled_keeps_single_lines(self):
+        node = self.trace._GoalNode
         bubble = self.trace.render_thinking_status(
-            ["s " * 60], goal="g " * 60, wrap_chars=0
+            [node("g " * 60), node("s " * 60)], wrap_chars=0
         )
-        self.assertEqual(len(bubble.splitlines()), 4)  # header, goal, step, spinner
+        self.assertEqual(len(bubble.splitlines()), 3)  # header + 2 goal lines
 
     def test_mid_turn_text_folds_into_goal_line_no_new_message(self):
         trace = self.trace
@@ -557,7 +575,8 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(len(client.sent), 1)
 
         # Mid-turn assistant text (stopReason toolUse) edits the SAME
-        # bubble's goal line: no separate message, no notification.
+        # bubble's goal line: no separate message, no notification.  The
+        # text label replaces the thinking-derived one (same goal node).
         key = (1, 42)
         trace._traces[key].last_edit_ts -= trace.EDIT_MIN_SECS + 1
         run(
@@ -569,10 +588,13 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(len(client.edited), 1)
         self.assertEqual(client.edited[0]["message_id"], 1001)
         # convert_to_entities strips the markdown into bold entities, so
-        # the plain text carries the stripped goal (word-wrapped at the
-        # 36-column mobile width)…
-        self.assertIn("I found the cause; patching it now.", client.edited[0]["text"])
-        self.assertNotIn("▸", client.edited[0]["text"])
+        # the plain text carries the ▸ bullet and the stripped goal
+        # (word-wrapped at the 36-column mobile width)…
+        self.assertIn("▸ I found the cause; patching it", client.edited[0]["text"])
+        self.assertIn("now.", client.edited[0]["text"])
+        # …and the derived label is gone (replaced, not ✓-retained).
+        self.assertNotIn("first step", client.edited[0]["text"])
+        self.assertNotIn("✓", client.edited[0]["text"])
         # …and the goal line is rendered bold via entities.
         entities = client.edited[0].get("entities") or []
         self.assertTrue(
@@ -591,8 +613,7 @@ class PiRendererParityTest(unittest.TestCase):
         client = _FakeClient()
         asyncio.run(trace.handle_pi_goal(client, 1, 42, -100999, "working on it"))
         self.assertEqual(len(client.sent), 1)
-        self.assertIn("working on it", client.sent[0]["text"])
-        self.assertNotIn("▸", client.sent[0]["text"])
+        self.assertIn("▸ working on it", client.sent[0]["text"])
         self.assertIs(client.sent[0].get("disable_notification"), True)
         trace.clear_all_traces()
 
@@ -769,22 +790,41 @@ class PiRendererParityTest(unittest.TestCase):
         # The line-19 follow-up is topically related but not a paraphrase.
         self.assertFalse(dup(self._LINE14_GOAL, self._LINE19_THINKING))
 
-    def test_render_suppresses_latest_step_paraphrasing_goal(self):
-        # Render-level belt-and-braces: even if a paraphrasing step made
-        # it into trace state (e.g. it arrived in an EARLIER message than
-        # the goal), the bubble never shows it beside its goal twin.
-        render = self.trace.render_thinking_status
-        bubble = render(
-            [self.trace.normalize_step(self._LINE14_THINKING)],
-            goal=self._LINE14_GOAL,
-            elapsed=14,
-        )
-        self.assertNotIn("look at the vault", bubble)
-        # A genuinely different latest step still shows.
-        bubble = render(
-            [self._LINE19_THINKING], goal=self._LINE14_GOAL, elapsed=14
-        )
-        self.assertIn("Now check the trip plan note", bubble)
+    def test_thinking_after_goal_never_renders_prose_line(self):
+        # A thinking block arriving while a text goal is active changes
+        # NOTHING visible: the label is not rewritten and the thinking
+        # never appears as a prose line below the bullet (this is what
+        # keeps the screenshot case showing the concise goal once even
+        # if a paraphrasing thinking block slipped past parse dedupe).
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        run = asyncio.run
+        run(trace.handle_pi_goal(client, 1, 42, -100999, self._LINE14_GOAL))
+        self.assertEqual(len(client.sent), 1)
+        trace._traces[(1, 42)].last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, self._LINE14_THINKING))
+        latest = client.edited[-1]["text"] if client.edited else client.sent[0]["text"]
+        self.assertIn("▸ Now let me check the vault's", latest)
+        self.assertNotIn("look at the vault", latest)
+        trace.clear_all_traces()
+
+    def test_derived_label_is_sticky_until_text_arrives(self):
+        # Frontdoor label_derived semantics: a thinking-only turn derives
+        # the active goal's label from its FIRST thinking block; later
+        # thinking blocks never rewrite it (tracked, not rendered).
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        run = asyncio.run
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, "Reading the prior reports first."))
+        self.assertIn("▸ Reading the prior reports first.", client.sent[0]["text"])
+        trace._traces[(1, 42)].last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, "Now checking daemon health instead."))
+        latest = client.edited[-1]["text"] if client.edited else client.sent[0]["text"]
+        self.assertIn("▸ Reading the prior reports first.", latest)
+        self.assertNotIn("daemon health", latest)
+        trace.clear_all_traces()
 
     def test_paraphrase_pair_renders_once_in_bubble(self):
         # End-to-end golden for the original screenshot scenario: the
@@ -811,25 +851,24 @@ class PiRendererParityTest(unittest.TestCase):
                 run(trace.handle_pi_goal(client, 1, 42, -100999, msg.text))
         self.assertEqual(len(client.sent), 1)
         bubble = client.sent[0]["text"]
-        # The goal renders once, directly under the header, word-wrapped
-        # at the 36-column mobile width (convert_to_entities strips the
-        # ** markers into bold entities)…
-        self.assertIn("Now let me check the vault's", bubble)
-        # …and no step echoes the paraphrase.
+        # The goal renders once as a ▸ bullet under the header,
+        # word-wrapped at the 36-column mobile width
+        # (convert_to_entities strips the ** markers into bold entities)…
+        self.assertIn("▸ Now let me check the vault's", bubble)
+        self.assertTrue(bubble.splitlines()[1].startswith("▸ "))
+        # …and the thinking paraphrase appears nowhere: no prose line.
         self.assertNotIn("look at the vault", bubble)
-        # No tree connectors or hanging indents survive anywhere.
-        for connector in ("├─", "└─", "▸"):
+        # No tree connectors anywhere.
+        for connector in ("├─", "└─"):
             self.assertNotIn(connector, bubble)
-        for line in bubble.splitlines():
-            self.assertEqual(line, line.lstrip(), line)
         trace.clear_all_traces()
 
-    def test_smoke_turn_bubble_lifecycle_no_tree(self):
+    def test_smoke_turn_bubble_lifecycle_goal_lines(self):
         # Live-smoke scenario (firstmate ▸ fm-ccgram-live-smoke-test):
-        # a thinking-only message starts the bubble, a mid-turn text sets
-        # the goal line, a divergent thinking replaces the step, and the
-        # final answer deletes the bubble — one message throughout, no
-        # connectors, never notifying.
+        # a thinking-only message starts the bubble with a derived ▸
+        # label, a mid-turn text replaces it, a later text goal completes
+        # it (✓), and the final answer deletes the bubble — one message
+        # throughout, no connectors, never notifying.
         trace = self.trace
         trace.clear_all_traces()
         client = _FakeClient()
@@ -837,60 +876,55 @@ class PiRendererParityTest(unittest.TestCase):
 
         run(trace.handle_pi_thinking(client, 1, 42, -100999, "Reading the worker brief and prior reports."))
         self.assertEqual(len(client.sent), 1)
-        first = client.sent[0]["text"]
-        self.assertIn("Reading the worker brief", first)
+        self.assertIn("▸ Reading the worker brief", client.sent[0]["text"])
         self.assertIs(client.sent[0].get("disable_notification"), True)
 
         key = (1, 42)
         trace._traces[key].last_edit_ts -= trace.EDIT_MIN_SECS + 1
         run(trace.handle_pi_goal(client, 1, 42, -100999, "Verifying the mirrored topic renders cleanly."))
         trace._traces[key].last_edit_ts -= trace.EDIT_MIN_SECS + 1
-        run(trace.handle_pi_thinking(client, 1, 42, -100999, "Checking service logs for errors during the turn."))
+        run(trace.handle_pi_goal(client, 1, 42, -100999, "Wrapping up the smoke verification."))
         self.assertEqual(len(client.sent), 1)  # still one bubble
         self.assertEqual(len(client.edited), 2)
         latest = client.edited[-1]["text"]
-        self.assertIn("Verifying the mirrored topic", latest)
-        self.assertIn("Checking service logs", latest)
-        # Earlier step replaced; nothing tree-shaped anywhere.
+        self.assertIn("✓ Verifying the mirrored topic", latest)
+        self.assertIn("▸ Wrapping up the smoke", latest)
+        self.assertIn("verification.", latest)
+        # The thinking-derived label was replaced, never ✓-retained, and
+        # nothing tree-shaped or prose-like appears.
         self.assertNotIn("Reading the worker brief", latest)
-        for connector in ("├─", "└─", "▸"):
+        for connector in ("├─", "└─", "⏳"):
             self.assertNotIn(connector, latest)
 
         run(trace.clear_pi_thinking(client, 1, 42))
         self.assertEqual(client.deleted, [{"chat_id": -100999, "message_id": 1001}])
         trace.clear_all_traces()
 
-    def test_mobile_wrap_width_36_keeps_status_shape(self):
-        # The 2026-08-16 screenshot regression, restated for the no-tree
+    def test_mobile_wrap_width_36_keeps_bullet_shape(self):
+        # The 2026-08-16 screenshot regression, restated for the bullet
         # bubble: 36 columns keeps intentional breaks ahead of Telegram's
-        # own pixel wrap on typical phones, and with no connector column
-        # or hanging indent there is nothing for a re-wrap to shatter.
+        # own pixel wrap on typical phones, and the blank hanging indent
+        # keeps continuations visually subordinate to the ▸ bullet.
         bubble = self.trace.render_thinking_status(
-            [self._LINE19_THINKING], goal=self._LINE14_GOAL, elapsed=14,
+            [self.trace._GoalNode(self._LINE14_GOAL)], elapsed=14,
             wrap_chars=36,
         )
         lines = bubble.splitlines()
         self.assertEqual(lines[0], "🧠 Thinking… · 0:14")
+        self.assertEqual(len(lines), 1 + 3)  # header + 3 wrapped segments
+        self.assertTrue(lines[1].startswith("▸ **"))
         for line in lines[1:]:
             display = line.replace("**", "")  # ** renders as bold entities
             self.assertLessEqual(len(display), 36, line)
-            self.assertEqual(line, line.lstrip(), line)  # no indent
-        goal_lines = [l for l in lines if "**" in l]
-        self.assertGreater(len(goal_lines), 1)
-        for line in goal_lines:
-            self.assertTrue(line.startswith("**") and line.endswith("**"), line)
-        step_lines = [
-            l
-            for l in lines
-            if "**" not in l
-            and l not in ("🧠 Thinking… · 0:14", "⏳ still thinking…")
-        ]
-        self.assertGreater(len(step_lines), 1)
+        for cont in lines[2:]:
+            self.assertTrue(cont.startswith("  **"), cont)
+        for connector in ("├─", "└─"):
+            self.assertNotIn(connector, bubble)
         # No text lost across the wrap.
-        reassembled_goal = " ".join(l.strip("*") for l in goal_lines)
-        self.assertEqual(reassembled_goal, self._LINE14_GOAL)
-        self.assertEqual(" ".join(step_lines), self._LINE19_THINKING)
-        self.assertEqual(lines[-1], "⏳ still thinking…")
+        reassembled = " ".join(
+            l.removeprefix("▸ ").strip().strip("*") for l in lines[1:]
+        )
+        self.assertEqual(reassembled, self._LINE14_GOAL)
 
     def test_idle_cleanup_deletes_stale_bubble(self):
         trace = self.trace

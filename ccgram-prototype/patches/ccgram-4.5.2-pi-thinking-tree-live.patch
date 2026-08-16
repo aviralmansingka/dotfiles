@@ -32,8 +32,8 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/message_routing.py b/ccgram/handl
              if len(stripped) < _MIN_THINKING_LENGTH:
 diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
 --- a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-16 12:23:28.800045847 -0400
-+++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-16 12:24:12.614650215 -0400
-@@ -1,29 +1,67 @@
++++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-16 12:39:33.157817656 -0400
+@@ -1,29 +1,74 @@
 -"""Pi live thinking transcript — temporary tree-style trace per topic.
 +"""Pi live thinking status — temporary live status bubble per topic.
  
@@ -55,17 +55,24 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +here, tool calls in tool_batch, final answers through the normal content
 +queue.
 +
-+The bubble is deliberately NOT a tree (dotfiles no-tree live status
-+revision): no ``├─``/``└─``/``▸`` connectors and no hanging indents —
-+Telegram mobile wraps by pixels in a proportional font, so connector
-+columns shattered on phone-width bubbles.  It renders:
++The bubble mirrors the Pi Telegram frontdoor daemon's goal-line
++rendering (``pi/bin/pi-telegram-daemon.py`` ``ThinkingTreeBuilder``):
 +
 +1. a header with a live elapsed timer (``🧠 Thinking… · 0:42``),
-+2. one bold current-goal line (the model's mid-turn narration), and
-+3. optionally the latest thinking summary as one plain line — omitted
-+   when it merely paraphrases the goal, so the same statement never
-+   shows twice,
-+4. a plain ``⏳ still thinking…`` footer.
++2. one bold goal line per goal — ``▸ **label**`` while the goal is
++   active, ``✓ **label**`` once a newer goal supersedes it.
++
++No ``├─``/``└─`` tree connectors and no prose thinking-summary lines:
++thinking blocks are tracked (a thinking-only turn derives the active
++goal's label from its first thinking block, like the frontdoor's
++``label_derived`` path) but never rendered as lines of their own — the
++``▸`` bullet is the only progress marker.  A thinking block whose first
++line paraphrases the same message's goal text is dropped in pi_format,
++so the screenshot case displays the concise goal once.
++
++Wrapped goal labels hang their continuation lines under the label text
++(a blank indent the width of the ``▸ ``/``✓ `` prefix), so wrapped lines
++stay visually subordinate to the bullet without any tree connector.
  
  Messages are marked by the Pi formatter via ``AgentMessage.phase``:
  
@@ -94,14 +101,14 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +- ``CCGRAM_PI_TRACE_IDLE_SECS`` — idle-timeout deletion (default 600 =
 +  10 minutes).
 +- ``CCGRAM_PI_TRACE_WRAP_CHARS`` — mobile wrap width (default 36).  Goal
-+  and step lines are word-wrapped to this many columns, no indentation.
-+  Telegram mobile lays text out in a proportional font and wraps by
-+  pixels; a phone bubble fits roughly 35–44 Latin characters, so 36
-+  keeps intentional breaks ahead of Telegram's own re-wrap.  0 disables
-+  intentional wrapping.
++  labels are word-wrapped to this many columns with a blank hanging
++  indent under the bullet.  Telegram mobile lays text out in a
++  proportional font and wraps by pixels; a phone bubble fits roughly
++  35–44 Latin characters, so 36 keeps intentional breaks ahead of
++  Telegram's own re-wrap.  0 disables intentional wrapping.
 +
-+State is in-memory per (user_id, thread_id): recent steps, the current
-+goal label, and the Telegram message id of the temporary status bubble.
++State is in-memory per (user_id, thread_id): the goal nodes (active +
++completed), and the Telegram message id of the temporary status bubble.
  """
  
  from __future__ import annotations
@@ -113,12 +120,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  import time
  from dataclasses import dataclass, field
  
-@@ -34,19 +72,31 @@
- from ...topic_state_registry import topic_state
- from .message_sender import edit_with_fallback, safe_send
- from .message_task import thread_key
-+from ccgram.providers.pi_format import is_goal_thinking_duplicate
- 
+@@ -38,110 +83,381 @@
  logger = structlog.get_logger()
  
  PI_LIVE_PHASE = "pi-live"
@@ -131,9 +133,10 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +# Status-bubble presentation knobs.
  MAX_STEP_CHARS = 120
 +MAX_GOAL_CHARS = 120
- 
--_TREE_HEADER = "\U0001f9e0 Thinking\u2026"
--_TREE_SPINNER = "\u2514\u2500 \u23f3 still thinking\u2026"
++# Completed (✓) goal lines retained above the active one; older ones are
++# dropped (the bubble is a compact current-status view, not a scrollback).
++MAX_GOAL_LINES = 8
++
 +# Liveness knobs (dotfiles thinking-tree-live patch), env-configurable.
 +EDIT_MIN_SECS = float(os.getenv("CCGRAM_PI_TRACE_EDIT_SECS", "2.0"))
 +TICK_SECS = float(os.getenv("CCGRAM_PI_TRACE_TICK_SECS", "1.0"))
@@ -141,20 +144,42 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +WRAP_CHARS = int(os.getenv("CCGRAM_PI_TRACE_WRAP_CHARS", "36"))
 +
 +_STATUS_HEADER = "\U0001f9e0 Thinking\u2026"
-+_STATUS_SPINNER = "\u23f3 still thinking\u2026"
++_GOAL_ACTIVE_PREFIX = "\u25b8 "  # ▸ + space
++_GOAL_DONE_PREFIX = "\u2713 "  # ✓ + space
++# Blank indent for wrapped label continuations: same column width as the
++# bullet prefixes, so a wrapped label stays visually subordinate to its
++# bullet (matching the PR148 wrap mechanics — without any tree connector).
++_GOAL_CONT_INDENT = " " * len(_GOAL_ACTIVE_PREFIX)
 +
 +# Markdown metacharacters stripped from goal labels (mirrors the frontdoor
 +# daemon's _strip_markdown) so model markdown cannot leak literal markup or
 +# skew the bold entity offsets of the rendered goal line.
 +_MD_STRIP_RE = re.compile(r"(\*\*|__|~~|`)")
++
++
++@dataclass
++class _GoalNode:
++    """One goal line: a mid-turn narration, or derived from thinking.
+ 
+-_TREE_HEADER = "\U0001f9e0 Thinking\u2026"
+-_TREE_SPINNER = "\u2514\u2500 \u23f3 still thinking\u2026"
++    ``derived`` marks a label taken from a thinking block's first line
++    (frontdoor ``label_derived``): it sticks until a text block in the
++    same turn replaces it, and only a text-derived goal starts a new
++    node (completing the previous one as ✓).
++    """
++
++    label: str
++    derived: bool = False
++    done: bool = False
  
  
  @dataclass
-@@ -54,94 +104,297 @@
+ class _LiveTrace:
      """Per-topic temporary thinking trace state."""
  
-     steps: list[str] = field(default_factory=list)
-+    goal: str | None = None
+-    steps: list[str] = field(default_factory=list)
++    goals: list[_GoalNode] = field(default_factory=list)
      message_id: int | None = None
      chat_id: int | None = None
 +    client: TelegramClient | None = None
@@ -185,10 +210,10 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +def _strip_markdown(text: str) -> str:
 +    """Remove markdown emphasis/code markers from a goal label."""
 +    return _MD_STRIP_RE.sub("", text)
++
  
 -    Overflow folds into a ``\u2026 (N earlier steps)`` node, matching the
 -    step-granularity live trace of the Pi TUI.
-+
 +def wrap_segments(prefix_width: int, text: str, width: int) -> list[str]:
 +    """Word-wrap ``text`` so ``prefix_width + segment`` fits ``width``.
 +
@@ -199,7 +224,15 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +    <= 0 disables wrapping (single segment).  Width is counted in
 +    characters — Telegram wraps by pixels with a proportional font, so
 +    this is an intentional mobile-column approximation, not an exact fit.
-+    """
+     """
+-    lines = [_TREE_HEADER]
+-    shown = steps[-max_steps:] if max_steps > 0 else []
+-    hidden = len(steps) - len(shown)
+-    if hidden > 0:
+-        lines.append(f"\u251c\u2500 \u2026 ({hidden} earlier steps)")
+-    for step in shown:
+-        lines.append(f"\u251c\u2500 {step}")
+-    lines.append(_TREE_SPINNER)
 +    if width <= 0:
 +        return [text]
 +    avail = max(1, width - prefix_width)
@@ -224,44 +257,34 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +
 +
 +def render_thinking_status(
-+    steps: list[str],
-+    goal: str | None = None,
++    goals: list[_GoalNode],
 +    elapsed: float | None = None,
 +    wrap_chars: int = WRAP_CHARS,
 +) -> str:
-+    """Render the trace as a compact live status bubble (no tree).
++    """Render the trace as a frontdoor-style goal-line status bubble.
 +
-+    ``elapsed`` adds the liveness timer to the header (``· 0:42``); ``goal``
-+    renders as a bold line under the header.  Only the LATEST step shows,
-+    as one plain summary line — and only when it is not a paraphrase of
-+    the current goal, so the bubble never states the same progress twice.
-+    Goal and step lines are word-wrapped at ``wrap_chars`` with no
-+    connector prefix and no hanging indent (``wrap_chars`` <= 0 disables
++    Mirrors ``ThinkingTreeBuilder.render`` in the Pi Telegram frontdoor
++    daemon: header with the live elapsed timer, then one bold line per
++    goal — ``▸`` while the goal is active, ``✓`` once done.  No thinking
++    leaves, no tree connectors, no prose paragraphs.  Labels wrap at
++    ``wrap_chars`` with a blank hanging indent under the bullet so
++    continuations stay visually subordinate (``wrap_chars`` <= 0 disables
 +    intentional wrapping).
-     """
--    lines = [_TREE_HEADER]
--    shown = steps[-max_steps:] if max_steps > 0 else []
--    hidden = len(steps) - len(shown)
--    if hidden > 0:
--        lines.append(f"\u251c\u2500 \u2026 ({hidden} earlier steps)")
--    for step in shown:
--        lines.append(f"\u251c\u2500 {step}")
--    lines.append(_TREE_SPINNER)
++    """
 +    header = _STATUS_HEADER
 +    if elapsed is not None:
 +        header = f"{header} \u00b7 {format_elapsed(elapsed)}"
 +    lines = [header]
-+    if goal:
++    for node in goals:
++        bullet = _GOAL_DONE_PREFIX if node.done else _GOAL_ACTIVE_PREFIX
 +        # Bold each wrapped segment separately; the ``**`` markers are
 +        # converted to entities (not displayed), so width is counted on
-+        # the plain goal text.
-+        for seg in wrap_segments(0, goal, wrap_chars):
-+            lines.append(f"**{seg}**")
-+    step = steps[-1] if steps else ""
-+    if step and not (goal and is_goal_thinking_duplicate(goal, step)):
-+        for seg in wrap_segments(0, step, wrap_chars):
-+            lines.append(seg)
-+    lines.append(_STATUS_SPINNER)
++        # the plain label text.
++        for i, seg in enumerate(
++            wrap_segments(len(bullet), node.label, wrap_chars)
++        ):
++            prefix = bullet if i == 0 else _GOAL_CONT_INDENT
++            lines.append(f"{prefix}**{seg}**")
      return "\n".join(lines)
  
  
@@ -269,8 +292,19 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +def _render(trace: _LiveTrace, now: float) -> str:
 +    """Render a trace's current status text, including the live timer."""
 +    return render_thinking_status(
-+        trace.steps, goal=trace.goal, elapsed=now - trace.started_ts
++        trace.goals, elapsed=now - trace.started_ts
 +    )
++
++
++def _trim_goals(trace: _LiveTrace) -> None:
++    """Cap retained goal lines, dropping the oldest completed ones."""
++    while len(trace.goals) > MAX_GOAL_LINES:
++        for i, node in enumerate(trace.goals[:-1]):
++            if node.done:
++                del trace.goals[i]
++                break
++        else:
++            del trace.goals[0]
 +
 +
 +def _touch_trace(
@@ -443,12 +477,22 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +    First block sends the bubble; later blocks edit it in place, rate-limited
 +    by EDIT_MIN_SECS (the final delete is never rate-limited).
 +    """
-+    step = normalize_step(step_text)
-+    if not step:
++    label = normalize_step(step_text)
++    if not label:
 +        return
 +
 +    _key, trace, now = _touch_trace(client, user_id, thread_id, chat_id)
-+    trace.steps.append(step)
++    node = trace.goals[-1] if trace.goals else None
++    if node is None or node.done:
++        # Thinking-only activity with no live goal: derive the active
++        # goal's label from this thinking block's first line (frontdoor
++        # ``label_derived`` path).  The label is sticky — later thinking
++        # blocks in the same goal never rewrite it, and thinking never
++        # renders as a line of its own.
++        trace.goals.append(
++            _GoalNode(label=_strip_markdown(label), derived=True)
++        )
++        _trim_goals(trace)
 +    _ensure_ticker()
 +    await _push_update(trace, thread_id, now)
 +
@@ -460,12 +504,15 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +    chat_id: int,
 +    goal_text: str,
 +) -> None:
-+    """Fold mid-turn assistant text into the bubble as the bold goal line.
++    """Fold mid-turn assistant text into the bubble as the goal label.
 +
 +    The text block of a ``stopReason="toolUse"`` assistant message is the
-+    model narrating its current step; it updates the bubble's goal line
-+    (markdown-stripped, single-line) instead of becoming a separate
-+    notifying progress message.
++    model narrating its current step; it becomes the active ``▸`` goal
++    label (markdown-stripped, single-line) instead of a separate
++    notifying progress message.  A text block in the same turn as a
++    thinking-derived label REPLACES that label (frontdoor
++    ``label_derived``); a text block following a text-set goal completes
++    it (``✓``) and starts a new goal line.
 +    """
 +    goal = " ".join(_strip_markdown(goal_text or "").split())
 +    if not goal:
@@ -474,9 +521,22 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +        goal = goal[:MAX_GOAL_CHARS].rstrip() + "\u2026"
 +
 +    _key, trace, now = _touch_trace(client, user_id, thread_id, chat_id)
-+    if goal == trace.goal:
-+        return
-+    trace.goal = goal
++    node = trace.goals[-1] if trace.goals else None
++    if node is not None and not node.done and node.derived:
++        # The visible text block wins over the thinking-derived label in
++        # the same goal node.
++        if node.label == goal:
++            node.derived = False
++            return
++        node.label = goal
++        node.derived = False
++    else:
++        if node is not None and not node.done and node.label == goal:
++            return
++        if node is not None:
++            node.done = True
++        trace.goals.append(_GoalNode(label=goal))
++        _trim_goals(trace)
 +    _ensure_ticker()
 +    await _push_update(trace, thread_id, now)
 +
@@ -484,7 +544,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  async def clear_pi_thinking(
      client: TelegramClient,
      user_id: int,
-@@ -150,8 +403,8 @@
+@@ -150,8 +466,8 @@
      """Delete the topic's temporary trace bubble, if any.
  
      Called when the final assistant answer (or a terminal error notice) is
@@ -495,7 +555,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
      """
      key = (user_id, thread_key(thread_id))
      trace = _traces.pop(key, None)
-@@ -170,5 +423,9 @@
+@@ -170,5 +486,9 @@
  
  
  def clear_all_traces() -> None:

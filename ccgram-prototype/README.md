@@ -40,7 +40,7 @@ already publish agent sessions that ccgram discovers with zero code changes.
 | `patches/ccgram-4.5.2-pi-renderer-parity.patch` | Tracked unified diff, layer 1: patches the installed ccgram 4.5.2 Pi renderer (thinking + tool-call + final-answer flow). Not deployed by stow. |
 | `patches/ccgram-4.5.2-low-noise-notifications.patch` | Tracked unified diff, layer 2 (applies on top of layer 1): final-answer-only notifications (silent thinking trace, quiet-progress mode). Not deployed by stow. |
 | `patches/ccgram-4.5.2-pi-transcript-binding.patch` | Tracked unified diff, layer 3 (disjoint files): fixes the SessionStart transcript-binding race for reused session directories (exact-match-only binding, deferred pending resolution, offset reset on path change). Not deployed by stow. |
-| `patches/ccgram-4.5.2-pi-thinking-tree-live.patch` | Tracked unified diff, layer 4 (edits layer-1 files): no-tree live status bubble — live elapsed timer + ticker, `CCGRAM_PI_TRACE_*` cadence/idle/wrap knobs, mid-turn text folded into the bubble as the bold goal line, goal/thinking paraphrase dedupe (parse-level + render-level), no tree connectors, idle-timeout bubble deletion. Not deployed by stow. |
+| `patches/ccgram-4.5.2-pi-thinking-tree-live.patch` | Tracked unified diff, layer 4 (edits layer-1 files): frontdoor-style live status bubble — live elapsed timer + ticker, one bold goal line per goal (`▸` active / `✓` done, matching the Pi Telegram frontdoor daemon; thinking blocks derive labels but never render as lines), `CCGRAM_PI_TRACE_*` cadence/idle/wrap knobs, same-message goal/thinking paraphrase dedupe, idle-timeout bubble deletion. Not deployed by stow. |
 | `.local/bin/ccgram-pi-hook` | Pi hook shim: waits (self-bounded) for the session's OWN transcript file at SessionStart, injects the exact `transcript_path`, delegates to `ccgram hook --provider pi`. Deployed by stow. |
 | `.pi/agent/extensions/hooks.json` | cc-thingz hook-runner wiring (SessionStart/Stop/SessionEnd → shim, async; SessionStart timeout raised to 20s to cover slow transcript creation). Deployed by stow. |
 | `pi-renderer-patch.sh` | Idempotent `status`/`check`/`apply`/`rollback` for the whole patch stack, with file-level backups. Not deployed by stow. |
@@ -159,16 +159,18 @@ What the patch does (all inside ccgram, against the installed uv tool):
    temporary thinking trace: one message per topic, edited in place with a
    2s rate limit, and **deleted** when the final answer (or terminal
    error) arrives. Patch layer 4 replaces layer 1's compact-tree rendering
-   with a **no-tree live status bubble** (see "No-tree live status bubble"
-   below): header with live elapsed timer, one bold goal line, an optional
-   latest-step summary line, and a plain `⏳ still thinking…` footer — no
-   `├─`/`└─`/`▸` connectors.
+   with a **frontdoor-style goal-line status bubble** (see "Frontdoor-style
+   live status bubble" below): header with live elapsed timer, then one
+   bold line per goal — `▸ **label**` while active, `✓ **label**` when
+   done. Thinking blocks never render as lines of their own (no `├─`/`└─`
+   tree connectors, no prose paragraphs); a thinking-only turn derives
+   the active goal's label from its first thinking block.
 3. **`handlers/messaging_pipeline/message_routing.py`** — routes `pi-live`
    thinking into the trace (never to permanent "Thinking" messages) and
    retires the trace before delivering `pi-final` answers.
 
 Patch layer 4 (`patches/ccgram-4.5.2-pi-thinking-tree-live.patch`) extends
-the same three files — see "No-tree live status bubble" below.
+the same three files — see "Frontdoor-style live status bubble" below.
 
 Tool calls need no patch: ccgram's default `batch_mode=ephemeral` already
 collapses each run of tool calls into one compact bubble that is edited in
@@ -295,18 +297,21 @@ Telegram client. They also assert the low-noise behavior: the trace bubble is
 sent with `disable_notification=True`, silent user-echo tasks send without
 notification while the final answer still notifies, and silent/notifying
 tasks never merge. Layer 4 adds status-bubble coverage: the header elapsed
-timer, the `CCGRAM_PI_TRACE_*` knobs, mid-turn text folding into the bold
-goal line (no separate message, no notification), ticker timer refresh with
-no new steps, edit-throttle respect, idle-timeout bubble deletion,
-goal/thinking paraphrase dedupe with the EXACT line-14 transcript text
-(the paraphrasing thinking block is dropped at parse time; a render-level
-check also suppresses a latest step that paraphrases the current goal; a
-divergent thinking+text pair keeps both), and no-tree mobile rendering
-(long goal/step lines word-wrap plain at the 36-char phone-safe width
-with no connector prefixes or hanging indents; wrapping disabled at
-width 0). The fixture suite builds its patched copy from the pristine
-4.5.2 wheel in the uv cache when available, so it always exercises the
-tracked stack even when the live install carries an older patch revision.
+timer, the `CCGRAM_PI_TRACE_*` knobs, mid-turn text folding into the `▸`
+goal label (no separate message, no notification), `✓` completion when a
+newer text goal supersedes the active one, thinking-derived labels
+(sticky until text arrives; thinking never renders as a prose line),
+ticker timer refresh with no new steps, edit-throttle respect,
+idle-timeout bubble deletion, goal/thinking paraphrase dedupe with the
+EXACT line-14 transcript text (the paraphrasing thinking block is
+dropped at parse time so the screenshot case shows the concise goal
+once; a divergent thinking+text pair keeps both), and mobile rendering
+(long goal labels word-wrap at the 36-char phone-safe width with a blank
+hanging indent under the bullet — visually subordinate, no tree
+connectors; wrapping disabled at width 0). The fixture suite builds its
+patched copy from the pristine 4.5.2 wheel in the uv cache when
+available, so it always exercises the tracked stack even when the live
+install carries an older patch revision.
 
 ### Live smoke plan (only when explicitly authorized)
 
@@ -319,11 +324,12 @@ live after applying the stack and restarting the service:
    notification**; the 🧠 status bubble appears/updates **without a
    notification**; its header timer (`· 0:42`) visibly advances at ~1s
    cadence even while no new step arrives; mid-turn narration text shows up
-   as the bubble's bold goal line instead of a separate message; the same
-   statement never appears twice (a paraphrasing thinking block is
-   suppressed); long goal/step lines wrap plain (no tree connectors, no
-   hanging indents) so nothing shatters on a phone; no tool-call messages
-   at all; the status bubble (if it appears) is silent; when the turn
+   as the bubble's bold `▸` goal line instead of a separate message; the
+   same statement never appears twice (a paraphrasing thinking block is
+   suppressed); completed goals show as `✓` lines above the active `▸`;
+   long goal labels wrap with a blank hanging indent under the bullet
+   (no tree connectors) so nothing shatters on a phone; no tool-call
+   messages at all; the status bubble (if it appears) is silent; when the turn
    ends, the trace bubble is deleted and **exactly one final-answer
    message notifies**.
 4. Kill a worker mid-turn (`herdr` pane kill or `kill -9` its pi process):
@@ -364,18 +370,29 @@ Notes:
   (`shown`/`hidden`) beats the global default — don't set per-window
   overrides on worker topics.
 
-### No-tree live status bubble — closer to the frontdoor on mobile (patch layer 4)
+### Frontdoor-style live status bubble (patch layer 4)
 
-`patches/ccgram-4.5.2-pi-thinking-tree-live.patch` closes the cheap
-presentation gaps vs the `avirus` Firstmate Telegram frontdoor identified in
-the tree-rendering audit (the token-streaming gap is structural — JSONL only
-ever contains complete messages — and stays out of scope). The bubble is
-deliberately **not a tree**: Telegram mobile wraps by pixels in a
-proportional font, so connector columns (`├─`/`└─`/`▸`) and hanging
-indents shattered on phone-width bubbles. It renders a header with a live
-elapsed timer, one bold goal line, an optional latest-step summary line
-(suppressed when it paraphrases the goal), and a plain `⏳ still
-thinking…` footer.
+`patches/ccgram-4.5.2-pi-thinking-tree-live.patch` mirrors the Pi Telegram
+frontdoor daemon's live status rendering (`pi/bin/pi-telegram-daemon.py`,
+`ThinkingTreeBuilder.render`): a header with a live elapsed timer, then
+**one bold goal line per goal** — `▸ **label**` while the goal is active,
+`✓ **label**` once a newer goal supersedes it. Thinking blocks are
+tracked but **never rendered as lines of their own** (no `├─`/`└─` tree
+connectors, no prose thinking-summary paragraphs): a thinking-only turn
+derives the active goal's label from its first thinking block, exactly
+like the frontdoor's `label_derived` path (sticky until a text block in
+the same turn replaces it). Up to 8 goal lines are retained; older
+completed ones drop off.
+
+```
+🧠 Thinking… · 0:14
+✓ **Now let me check the vault's**
+  **current state and recent activity**
+  **since the prior scouts.**
+▸ **All prior findings remain**
+  **unresolved. Let me read the**
+  **completion-gate skill…**
+```
 
 - **Live elapsed timer.** The bubble header is `🧠 Thinking… · 0:42` and a
   per-trace background ticker re-renders the bubble at the edit cadence even
@@ -384,42 +401,43 @@ thinking…` footer.
 - **1s edit cadence knob.** `CCGRAM_PI_TRACE_EDIT_SECS` (default `2.0`)
   controls the minimum gap between trace edits; the prototype env sets
   `1.0`, matching the frontdoor's coalescing interval.
-- **Mid-turn text folds into the bubble.** Assistant text blocks from Pi
+- **Mid-turn text becomes the goal label.** Assistant text blocks from Pi
   messages with `stopReason="toolUse"` are stamped `phase="pi-live-goal"`
-  and update the bubble's bold goal line (`**…**`, markdown-stripped)
-  instead of becoming separate — and notifying — progress messages. This
-  also removes the last interim-notification gap: during a worker turn,
-  only the final answer notifies.
+  and become the active `▸` label (markdown-stripped, single-line)
+  instead of becoming separate — and notifying — progress messages. A
+  text block in the same turn as a thinking-derived label replaces it;
+  a text block following a text-set goal completes it (`✓`) and starts
+  a new goal line. This also removes the last interim-notification gap:
+  during a worker turn, only the final answer notifies.
 - **Idle-timeout deletion.** If a turn dies mid-thinking (kill -9, network
   drop) and no final answer arrives, the stale bubble is deleted after
   `CCGRAM_PI_TRACE_IDLE_SECS` (default `600` = 10 minutes).
-- **Goal/thinking paraphrase dedupe, two layers.** Some models emit a
+- **Same-message goal/thinking paraphrase dedupe.** Some models emit a
   mid-turn visible text block that paraphrases their own thinking block in
-  the same assistant message. At parse time, `pi_format` drops a thinking
-  block whose first line near-duplicates the same message's goal text
-  (token-based rule: shared opening of 3+ words plus a shared 4+ word
-  contiguous phrase — the earlier character-level SequenceMatcher rule
-  silently collapsed on long thinking lines via difflib autojunk, which is
-  why the exact line-14 transcript pair slipped through PR150). At render
-  time, `pi_live_transcript` additionally hides the latest step when it
-  paraphrases the current goal (covers a paraphrase arriving in an earlier
-  message than the goal). Thinking-only messages and genuinely distinct
-  thinking+text messages keep both entries.
-- **No-tree mobile wrap.** Goal and step lines are word-wrapped at
+  the same assistant message. `pi_format` drops a thinking block whose
+  first line near-duplicates the same message's goal text (token-based
+  rule: shared opening of 3+ words plus a shared 4+ word contiguous
+  phrase — the earlier character-level SequenceMatcher rule silently
+  collapsed on long thinking lines via difflib autojunk, which is why
+  the exact line-14 transcript pair slipped through PR150), so the
+  screenshot case displays the concise goal once. Thinking-only messages
+  and genuinely distinct thinking+text messages keep both entries.
+- **Mobile bullet-safe wrap.** Goal labels are word-wrapped at
   `CCGRAM_PI_TRACE_WRAP_CHARS` columns (default `36`; Telegram mobile
   wraps by pixels in a proportional font and a phone bubble fits roughly
   35–44 Latin chars, so 36 keeps intentional breaks ahead of Telegram's
-  own re-wrap) with NO connector prefix and NO hanging indent — there is
-  no tree shape left for Telegram's re-wrap to shatter. `0` disables
-  intentional wrapping. The 120-char per-line caps still apply as the hard
-  truncation ceiling above this soft wrap.
+  own re-wrap) with a blank hanging indent under the bullet: wrapped
+  continuations align under the label text, visually subordinate to the
+  `▸`/`✓` marker, with no tree connector to shatter. `0` disables
+  intentional wrapping. The 120-char per-label caps still apply as the
+  hard truncation ceiling above this soft wrap.
 
 | Env knob | Default | Prototype setting | Meaning |
 | -------- | ------- | ----------------- | ------- |
 | `CCGRAM_PI_TRACE_EDIT_SECS` | `2.0` | `1.0` | Minimum seconds between trace-bubble edits (applies to step/goal updates and the timer ticker). |
 | `CCGRAM_PI_TRACE_TICK_SECS` | `1.0` | unset | Liveness ticker period (timer refresh + idle sweep granularity). |
 | `CCGRAM_PI_TRACE_IDLE_SECS` | `600` | unset | Delete a trace bubble with no thinking/goal activity for this long (killed-turn cleanup). |
-| `CCGRAM_PI_TRACE_WRAP_CHARS` | `36` | unset | Soft word-wrap width (in characters) for goal/step lines, plain column-0 wrap (no connectors/indents); `0` disables. |
+| `CCGRAM_PI_TRACE_WRAP_CHARS` | `36` | unset | Soft word-wrap width (in characters) for goal labels, blank hanging indent under the bullet; `0` disables. |
 
 ### Remaining parity gaps (vs the Pi TUI)
 
@@ -429,7 +447,7 @@ thinking…` footer.
   cannot show new content. Closing this needs an upstream streaming event
   source (Pi-side partial entries or an attachable event subscription).
 - **Step-granularity trace.** Pi writes an assistant message to the JSONL
-  when that step finishes, so the status bubble's step line updates per
+  when that step finishes, so the status bubble's goal lines update per
   completed step, not token-by-token (same limitation the sidecar had; it
   matches the temporary-render goal).
 - **Tool calls vanish rather than collapse.** In the Pi TUI, finished tool
