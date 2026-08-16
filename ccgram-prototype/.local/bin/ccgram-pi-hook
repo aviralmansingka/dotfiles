@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""ccgram Pi hook shim for the local prototype.
+
+Pi's SessionStart hook can fire before the JSONL transcript file exists
+(observed ~4.2s delay on reused Firstmate/treehouse session directories).
+ccgram's patched resolver never falls back to the newest file in the
+directory, but binding is fastest when the hook payload already carries the
+exact transcript path. This shim waits for the session's OWN file — named
+``*_<session_id>.jsonl`` and non-empty — injects ``transcript_path`` when
+found, and then delegates to ccgram's hook processor.
+
+Safety invariants:
+  - NEVER injects a transcript whose filename does not contain the session
+    id. On timeout the payload is forwarded untouched; ccgram then defers
+    binding (pending) until the exact file appears instead of binding the
+    previous tenant's transcript.
+  - The wait is self-bounded: the cc-thingz hook runner exports
+    ``PI_HOOK_TIMEOUT_SEC`` and SIGTERMs stragglers, so the shim always
+    returns before that deadline. ``CCGRAM_PI_HOOK_WAIT_SECS`` overrides
+    the budget explicitly.
+"""
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+CCGRAM = "/home/avirus/.local/bin/ccgram"
+CCGRAM_DIR = "/home/avirus/.ccgram-prototype"
+
+# Absolute ceiling for the wait; the effective budget is the smallest of
+# the override, the runner timeout minus a safety margin, and this cap.
+_MAX_WAIT_SECS = 30.0
+_RUNNER_TIMEOUT_MARGIN_SECS = 0.5
+_DEFAULT_WAIT_SECS = 4.5
+
+
+def wait_budget() -> float:
+    """Effective wait deadline in seconds (never exceeds the runner's)."""
+    override = os.environ.get("CCGRAM_PI_HOOK_WAIT_SECS")
+    if override:
+        try:
+            return max(0.0, min(float(override), _MAX_WAIT_SECS))
+        except ValueError:
+            pass
+    hint = os.environ.get("PI_HOOK_TIMEOUT_SEC")
+    if hint:
+        try:
+            budget = float(hint) - _RUNNER_TIMEOUT_MARGIN_SECS
+        except ValueError:
+            budget = _DEFAULT_WAIT_SECS
+    else:
+        budget = _DEFAULT_WAIT_SECS
+    return max(1.0, min(budget, _MAX_WAIT_SECS))
+
+
+def encode_pi_cwd(cwd: str) -> str:
+    stripped = cwd.strip("/\\")
+    return "--" + stripped.replace("/", "-").replace("\\", "-").replace(":", "-") + "--"
+
+
+def find_transcript(cwd: str, session_id: str, deadline: float) -> str:
+    """Return the exact transcript for session_id once it exists and is
+    non-empty, or "" on timeout. Never returns another session's file."""
+    if not cwd or not session_id:
+        return ""
+    directory = Path.home() / ".pi" / "agent" / "sessions" / encode_pi_cwd(cwd)
+    end = time.time() + deadline
+    while True:
+        if directory.is_dir():
+            matches = sorted(
+                directory.glob(f"*_{session_id}.jsonl"),
+                key=lambda p: p.stat().st_mtime if p.exists() else 0,
+                reverse=True,
+            )
+            for match in matches:
+                try:
+                    if match.stat().st_size > 0:
+                        return str(match)
+                except OSError:
+                    continue
+        if time.time() >= end:
+            return ""
+        time.sleep(0.1)
+
+
+def main() -> int:
+    raw = sys.stdin.read()
+    try:
+        payload = json.loads(raw) if raw.strip() else {}
+    except json.JSONDecodeError:
+        payload = {}
+    if isinstance(payload, dict) and payload.get("hook_event_name") == "SessionStart" and not payload.get("transcript_path"):
+        transcript = find_transcript(
+            str(payload.get("cwd") or ""),
+            str(payload.get("session_id") or ""),
+            wait_budget(),
+        )
+        if transcript:
+            payload["transcript_path"] = transcript
+            raw = json.dumps(payload, separators=(",", ":"))
+    env = os.environ.copy()
+    env["CCGRAM_DIR"] = CCGRAM_DIR
+    proc = subprocess.run([CCGRAM, "hook", "--provider", "pi"], input=raw, text=True, env=env)
+    return proc.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

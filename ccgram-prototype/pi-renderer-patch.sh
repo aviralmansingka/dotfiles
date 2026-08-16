@@ -14,9 +14,18 @@
 #      user transcript echoes (Firstmate worker briefs) are sent with
 #      disable_notification=True. Tool calls need no patch — config
 #      (CCGRAM_HIDE_TOOL_CALLS=true) suppresses them upstream.
+#   3. ccgram-4.5.2-pi-transcript-binding.patch
+#      Transcript-binding race fix: Pi SessionStart never binds a transcript
+#      whose filename does not contain the session id (no newest-file
+#      fallback — deferred Pi bindings stay pending until the exact file
+#      appears and the monitor re-resolves them every poll), tracked read
+#      offsets reset whenever a session's transcript path changes, and the
+#      nested-session primary preservation no longer pins reused Pi windows
+#      to the previous tenant's transcript.
 #
 # Patch 2's context includes files added/edited by patch 1, so patch 2 only
-# applies on top of patch 1; rollback reverses the stack in reverse order.
+# applies on top of patch 1; patch 3 touches disjoint files and applies on
+# top of either. Rollback reverses the stack in reverse order.
 # This script makes the hot-patches tracked, idempotent, and reversible.
 #
 # Usage:
@@ -43,6 +52,7 @@ EXPECTED_VERSION="4.5.2"
 PATCH_NAMES=(
     ccgram-4.5.2-pi-renderer-parity.patch
     ccgram-4.5.2-low-noise-notifications.patch
+    ccgram-4.5.2-pi-transcript-binding.patch
 )
 
 patch_file() { printf '%s/patches/%s\n' "$PKG_DIR" "$1"; }
@@ -57,6 +67,12 @@ TARGET_FILES=(
     ccgram/handlers/messaging_pipeline/message_task.py
     ccgram/handlers/status/status_bubble.py
     ccgram/config.py
+    ccgram/hook.py
+    ccgram/providers/pi.py
+    ccgram/session_monitor.py
+    ccgram/session_map.py
+    ccgram/session_resolver.py
+    ccgram/transcript_reader.py
 )
 
 site_packages() {
@@ -130,11 +146,32 @@ has_no_markers_low_noise() {
             "$sp/ccgram/handlers/messaging_pipeline/message_task.py"
 }
 
+has_markers_transcript_binding() {
+    local sp="$1"
+    grep -q 'Refusing Pi transcript path' "$sp/ccgram/hook.py" \
+        && grep -q 'def resolve_session_transcript' "$sp/ccgram/providers/pi.py" \
+        && grep -q 'resolve_session_transcript' "$sp/ccgram/session_monitor.py" \
+        && grep -q 'Transcript path changed for session' "$sp/ccgram/transcript_reader.py" \
+        && grep -q 'pi has no nested-observer' "$sp/ccgram/session_map.py" \
+        && grep -q 'Stale path from a previous session' "$sp/ccgram/session_resolver.py"
+}
+
+has_no_markers_transcript_binding() {
+    local sp="$1"
+    ! grep -q 'Refusing Pi transcript path' "$sp/ccgram/hook.py" \
+        && ! grep -q 'def resolve_session_transcript' "$sp/ccgram/providers/pi.py" \
+        && ! grep -q 'resolve_session_transcript' "$sp/ccgram/session_monitor.py" \
+        && ! grep -q 'Transcript path changed for session' "$sp/ccgram/transcript_reader.py" \
+        && ! grep -q 'pi has no nested-observer' "$sp/ccgram/session_map.py" \
+        && ! grep -q 'Stale path from a previous session' "$sp/ccgram/session_resolver.py"
+}
+
 marker_fn() {
     # Echo the marker function base name for a patch file name.
     case "$1" in
         ccgram-4.5.2-pi-renderer-parity.patch) echo "renderer_parity" ;;
         ccgram-4.5.2-low-noise-notifications.patch) echo "low_noise" ;;
+        ccgram-4.5.2-pi-transcript-binding.patch) echo "transcript_binding" ;;
         *) echo "FAIL: no marker functions registered for patch '$1'" >&2; exit 2 ;;
     esac
 }
