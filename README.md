@@ -156,7 +156,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now whatsapp-bridge.service pi-whatsapp.service
 ```
 
-For Pi over Telegram, create a bot with `@BotFather`, copy `~/.config/pi-telegram.env.example` to `~/.config/pi-telegram.env`, fill in the bot token and allowed chat IDs, and set `PI_TELEGRAM_PREFIX=` if you want normal prefixless chat. Telegram replies default to `openai-codex/gpt-5.5` via `PI_TELEGRAM_MODEL`; `PI_TELEGRAM_TYPING_INTERVAL_SECONDS` controls the typing indicator refresh while Pi is generating. Then enable the user service:
+For Pi over Telegram, create a bot with `@BotFather`, copy `~/.config/pi-telegram.env.example` to `~/.config/pi-telegram.env`, fill in the bot token and allowed chat IDs, and set `PI_TELEGRAM_PREFIX=` if you want normal prefixless chat. Telegram replies default to `openai-codex/gpt-5.5` via `PI_TELEGRAM_MODEL`; `PI_TELEGRAM_TYPING_INTERVAL_SECONDS` controls the typing indicator refresh while Pi is generating. Photos/screenshots and image documents are downloaded and passed to Pi as image attachments; captions follow the existing prefix rules, while bare images are accepted. `PI_TELEGRAM_MAX_IMAGE_BYTES` (default 10 MiB) caps the accepted size. Then enable the user service:
 
 ```sh
 systemctl --user daemon-reload

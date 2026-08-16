@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Tests for the thinking-trace streaming feature in pi-telegram-daemon.
+"""Tests for pi-telegram-daemon.
 
 Run with: python3 -m unittest test_pi_telegram_daemon -v
 """
 
 from __future__ import annotations
 
+import base64
 import importlib.util
-import os
 import sys
-import time
+import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Load the daemon module (hyphen in filename requires importlib)
 _DAEMON_PATH = Path(__file__).parent / "pi-telegram-daemon.py"
@@ -462,6 +462,302 @@ class TestAskIntegration(unittest.TestCase):
             calls = [c[0][0] for c in mock_tg.call_args_list]
             # No status message was created (no events), so no delete
             self.assertNotIn("deleteMessage", calls)
+
+
+def _make_update(message: dict) -> dict:
+    """Build a minimal Telegram update wrapping the given message fields."""
+    base = {
+        "message_id": 10,
+        "date": 1700000000,
+        "chat": {"id": 123, "type": "private", "username": "owner"},
+        "from": {"id": 456, "is_bot": False, "username": "owner"},
+    }
+    base.update(message)
+    return {"update_id": 1, "message": base}
+
+
+class TestParseMessageImages(unittest.TestCase):
+    """parse_message recognizes photo payloads and image documents."""
+
+    def test_photo_with_caption(self):
+        update = _make_update({
+            "caption": "!pi what's in this screenshot?",
+            "photo": [
+                {"file_id": "small", "width": 90, "height": 90, "file_size": 1000},
+                {"file_id": "large", "width": 800, "height": 600, "file_size": 50000},
+            ],
+        })
+        msg = daemon.parse_message(update)
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.image_kind, "photo")
+        self.assertEqual(msg.image_file_id, "large")  # largest variant selected
+        self.assertEqual(msg.image_file_size, 50000)
+        self.assertEqual(msg.image_mime_type, "image/jpeg")
+        self.assertEqual(msg.content, "!pi what's in this screenshot?")
+        self.assertEqual(msg.audio_kind, "")
+
+    def test_photo_without_caption(self):
+        update = _make_update({
+            "photo": [{"file_id": "p1", "width": 100, "height": 100, "file_size": 2000}],
+        })
+        msg = daemon.parse_message(update)
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.image_kind, "photo")
+        self.assertEqual(msg.image_file_id, "p1")
+        self.assertEqual(msg.content, "")
+
+    def test_photo_selects_largest_dimensions_when_file_sizes_disagree(self):
+        update = _make_update({
+            "photo": [
+                {"file_id": "more-bytes", "width": 320, "height": 240, "file_size": 9000},
+                {"file_id": "largest", "width": 1280, "height": 720, "file_size": 8000},
+            ],
+        })
+        msg = daemon.parse_message(update)
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.image_file_id, "largest")
+
+    def test_image_document(self):
+        update = _make_update({
+            "caption": "!pi describe this",
+            "document": {
+                "file_id": "doc1",
+                "file_size": 12345,
+                "mime_type": "image/png",
+                "file_name": "shot.png",
+            },
+        })
+        msg = daemon.parse_message(update)
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.image_kind, "document")
+        self.assertEqual(msg.image_file_id, "doc1")
+        self.assertEqual(msg.image_file_size, 12345)
+        self.assertEqual(msg.image_mime_type, "image/png")
+        self.assertEqual(msg.audio_kind, "")
+
+    def test_non_image_document_ignored(self):
+        update = _make_update({
+            "document": {
+                "file_id": "pdf1",
+                "file_size": 999,
+                "mime_type": "application/pdf",
+                "file_name": "spec.pdf",
+            },
+        })
+        msg = daemon.parse_message(update)
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.image_file_id, "")
+        self.assertEqual(msg.image_kind, "")
+        self.assertEqual(msg.audio_file_id, "")
+
+    def test_voice_behavior_unchanged(self):
+        update = _make_update({
+            "voice": {"file_id": "v1", "file_size": 3000, "mime_type": "audio/ogg"},
+        })
+        msg = daemon.parse_message(update)
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.audio_kind, "voice")
+        self.assertEqual(msg.audio_file_id, "v1")
+        self.assertEqual(msg.image_file_id, "")
+
+    def test_audio_document_still_audio_not_image(self):
+        update = _make_update({
+            "document": {"file_id": "a1", "file_size": 3000, "mime_type": "audio/mpeg"},
+        })
+        msg = daemon.parse_message(update)
+        self.assertEqual(msg.audio_kind, "document")
+        self.assertEqual(msg.image_file_id, "")
+
+
+class TestShouldHandleImages(unittest.TestCase):
+    """Bare images are forwarded; caption prefix rules still apply."""
+
+    def setUp(self):
+        self._saved = (daemon.ALLOWED_CHATS, daemon.PREFIX, daemon.REQUIRE_MENTION)
+        daemon.ALLOWED_CHATS = {"123"}
+        daemon.PREFIX = "!pi"
+        daemon.REQUIRE_MENTION = True  # DMs are never mention-gated
+
+    def tearDown(self):
+        daemon.ALLOWED_CHATS, daemon.PREFIX, daemon.REQUIRE_MENTION = self._saved
+
+    def _photo_msg(self, caption: str = "") -> object:
+        message = {
+            "photo": [{"file_id": "p1", "width": 10, "height": 10, "file_size": 100}],
+        }
+        if caption:
+            message["caption"] = caption
+        return daemon.parse_message(_make_update(message))
+
+    def test_bare_photo_no_caption_is_forwarded(self):
+        prompt = daemon.should_handle(self._photo_msg())
+        self.assertEqual(prompt, "")
+
+    def test_photo_with_prefixed_caption(self):
+        prompt = daemon.should_handle(self._photo_msg("!pi what is this?"))
+        self.assertEqual(prompt, "what is this?")
+
+    def test_photo_with_unprefixed_caption_ignored(self):
+        self.assertIsNone(daemon.should_handle(self._photo_msg("just a photo")))
+
+    def test_photo_from_unauthorized_chat_ignored(self):
+        daemon.ALLOWED_CHATS = {"999"}
+        self.assertIsNone(daemon.should_handle(self._photo_msg()))
+
+
+class TestDownloadTelegramImage(unittest.TestCase):
+    """download_telegram_image: size limits, suffix handling, temp files."""
+
+    def _msg(self, **kwargs) -> object:
+        msg = daemon.parse_message(_make_update({
+            "photo": [{"file_id": "p1", "width": 10, "height": 10, "file_size": 100}],
+        }))
+        for key, value in kwargs.items():
+            setattr(msg, key, value)
+        return msg
+
+    def test_refuses_oversized_image_from_message_size(self):
+        msg = self._msg(image_file_size=daemon.MAX_IMAGE_BYTES + 1)
+        with patch.object(daemon, "telegram_api") as mock_api:
+            with self.assertRaises(RuntimeError) as ctx:
+                daemon.download_telegram_image(msg)
+            self.assertIn("too large", str(ctx.exception))
+            mock_api.assert_not_called()  # refused before hitting Telegram
+
+    def test_refuses_oversized_image_from_getfile_size(self):
+        msg = self._msg(image_file_size=0)
+        with patch.object(daemon, "telegram_api") as mock_api:
+            mock_api.return_value = {
+                "file_path": "photos/big.jpg",
+                "file_size": daemon.MAX_IMAGE_BYTES + 1,
+            }
+            with self.assertRaises(RuntimeError) as ctx:
+                daemon.download_telegram_image(msg)
+            self.assertIn("too large", str(ctx.exception))
+
+    def test_downloads_to_temp_file_with_suffix(self):
+        msg = self._msg()
+        with patch.object(daemon, "telegram_api") as mock_api, \
+             patch.object(daemon, "telegram_download", return_value=b"\xff\xd8jpeg") as mock_dl:
+            mock_api.return_value = {"file_path": "photos/file_1.jpg", "file_size": 5}
+            tmp = daemon.download_telegram_image(msg)
+            try:
+                self.assertTrue(tmp.exists())
+                self.assertEqual(tmp.suffix, ".jpg")
+                self.assertEqual(tmp.read_bytes(), b"\xff\xd8jpeg")
+                mock_dl.assert_called_once_with("photos/file_1.jpg", timeout=120)
+            finally:
+                tmp.unlink(missing_ok=True)
+
+    def test_suffix_falls_back_to_mime_type(self):
+        msg = self._msg(image_mime_type="image/png")
+        with patch.object(daemon, "telegram_api") as mock_api, \
+             patch.object(daemon, "telegram_download", return_value=b"png"):
+            mock_api.return_value = {"file_path": "photos/noext", "file_size": 3}
+            tmp = daemon.download_telegram_image(msg)
+            try:
+                self.assertEqual(tmp.suffix, ".png")
+            finally:
+                tmp.unlink(missing_ok=True)
+
+    def test_unsafe_remote_suffix_falls_back_to_mime_type(self):
+        msg = self._msg(image_mime_type="image/jpeg")
+        with patch.object(daemon, "telegram_api") as mock_api, \
+             patch.object(daemon, "telegram_download", return_value=b"jpeg"):
+            mock_api.return_value = {"file_path": "photos/file.jpg?token=secret", "file_size": 4}
+            tmp = daemon.download_telegram_image(msg)
+            try:
+                self.assertEqual(tmp.suffix, ".jpg")
+                self.assertNotIn("?", tmp.name)
+            finally:
+                tmp.unlink(missing_ok=True)
+
+    def test_refuses_download_larger_than_reported_size(self):
+        msg = self._msg(image_file_size=1)
+        with patch.object(daemon, "MAX_IMAGE_BYTES", 4), \
+             patch.object(daemon, "telegram_api") as mock_api, \
+             patch.object(daemon, "telegram_download", return_value=b"12345"):
+            mock_api.return_value = {"file_path": "photos/file.jpg", "file_size": 1}
+            with self.assertRaises(RuntimeError) as ctx:
+                daemon.download_telegram_image(msg)
+            self.assertIn("too large", str(ctx.exception))
+
+    def test_missing_file_path_raises(self):
+        msg = self._msg()
+        with patch.object(daemon, "telegram_api", return_value={}):
+            with self.assertRaises(RuntimeError):
+                daemon.download_telegram_image(msg)
+
+
+class TestImageRpcPayload(unittest.TestCase):
+    def test_payload_format(self):
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+            f.write(b"fake-png-bytes")
+            tmp = Path(f.name)
+        try:
+            payload = daemon.image_rpc_payload(tmp, "image/png")
+            self.assertEqual(payload["type"], "image")
+            self.assertEqual(payload["mimeType"], "image/png")
+            self.assertEqual(payload["data"], base64.b64encode(b"fake-png-bytes").decode("ascii"))
+        finally:
+            tmp.unlink(missing_ok=True)
+
+
+class TestAskWithImages(unittest.TestCase):
+    """ask() forwards ImageContent blocks on the RPC prompt command."""
+
+    def _make_pi(self) -> object:
+        pi = daemon.PiRPC.__new__(daemon.PiRPC)
+        pi.proc = MagicMock()
+        pi.proc.poll.return_value = None
+        pi.proc.stdin = MagicMock()
+        pi.lines = __import__("queue").Queue()
+        pi.lock = __import__("threading").Lock()
+        pi.reader_thread = None
+        pi.stderr_thread = None
+        return pi
+
+    def test_prompt_includes_images(self):
+        with patch.object(daemon, "THINKING_STREAM_ENABLED", False):
+            pi = self._make_pi()
+            sent: list[dict] = []
+
+            def fake_send(cmd):
+                sent.append(cmd)
+                if cmd.get("type") == "prompt":
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True})
+                    pi.lines.put({"type": "agent_end", "messages": []})
+                elif cmd.get("type") == "get_last_assistant_text":
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
+                                 "data": {"text": "It's a screenshot of a terminal."}})
+
+            pi._send = MagicMock(side_effect=fake_send)
+            images = [{"type": "image", "data": "Zm9v", "mimeType": "image/jpeg"}]
+            result = pi.ask("Telegram image from chat x", images=images)
+
+            self.assertEqual(result, "It's a screenshot of a terminal.")
+            prompt_cmd = next(c for c in sent if c.get("type") == "prompt")
+            self.assertEqual(prompt_cmd["images"], images)
+
+    def test_prompt_without_images_omits_field(self):
+        with patch.object(daemon, "THINKING_STREAM_ENABLED", False):
+            pi = self._make_pi()
+            sent: list[dict] = []
+
+            def fake_send(cmd):
+                sent.append(cmd)
+                if cmd.get("type") == "prompt":
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True})
+                    pi.lines.put({"type": "agent_end", "messages": []})
+                elif cmd.get("type") == "get_last_assistant_text":
+                    pi.lines.put({"type": "response", "id": cmd["id"], "success": True,
+                                 "data": {"text": "ok"}})
+
+            pi._send = MagicMock(side_effect=fake_send)
+            pi.ask("plain prompt")
+
+            prompt_cmd = next(c for c in sent if c.get("type") == "prompt")
+            self.assertNotIn("images", prompt_cmd)
 
 
 if __name__ == "__main__":

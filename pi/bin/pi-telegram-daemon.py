@@ -5,17 +5,18 @@ Default behavior is intentionally conservative:
 - Requires PI_TELEGRAM_BOT_TOKEN.
 - Only watches configured allowlisted chat IDs/usernames.
 - Only allowlisted chats are handled.
-- When PI_TELEGRAM_PREFIX is set, only messages with that prefix are sent to pi.
+- When PI_TELEGRAM_PREFIX is set, text and caption messages require it; bare images are accepted.
 - Replies are sent back to the same Telegram chat.
 """
 
 from __future__ import annotations
 
+import base64
 import html
 import json
+import mimetypes
 import os
 import queue
-import mimetypes
 import re
 import signal
 import subprocess
@@ -74,6 +75,7 @@ VOICE_OPENAI_API_KEY = os.environ.get("PI_TELEGRAM_OPENAI_API_KEY", os.environ.g
 VOICE_OPENAI_API_BASE = os.environ.get("PI_TELEGRAM_OPENAI_API_BASE", "https://api.openai.com/v1").rstrip("/")
 VOICE_OPENAI_MODEL = os.environ.get("PI_TELEGRAM_OPENAI_TRANSCRIBE_MODEL", "whisper-1").strip()
 MAX_AUDIO_BYTES = int(os.environ.get("PI_TELEGRAM_MAX_AUDIO_BYTES", str(20 * 1024 * 1024)))
+MAX_IMAGE_BYTES = int(os.environ.get("PI_TELEGRAM_MAX_IMAGE_BYTES", str(10 * 1024 * 1024)))
 
 SYSTEM_PROMPT = """
 You are Pi, running headlessly behind the owner's Telegram bot.
@@ -104,6 +106,10 @@ class IncomingMessage:
     audio_file_size: int = 0
     audio_mime_type: str = ""
     audio_kind: str = ""
+    image_file_id: str = ""
+    image_file_size: int = 0
+    image_mime_type: str = ""
+    image_kind: str = ""
     chat_type: str = ""
     entities: list[dict[str, Any]] = field(default_factory=list)
     reply_to_sender_id: Optional[int] = None
@@ -383,13 +389,22 @@ class PiRPC:
         elif ev.get("type") == "extension_error":
             log(f"pi extension error: {ev}")
 
-    def ask(self, message: str, chat_id: Optional[str] = None, reply_to: Optional[int] = None) -> str:
+    def ask(
+        self,
+        message: str,
+        chat_id: Optional[str] = None,
+        reply_to: Optional[int] = None,
+        images: Optional[list[dict[str, Any]]] = None,
+    ) -> str:
         with self.lock:
             status: Optional[StatusMessenger] = None
             if chat_id and THINKING_STREAM_ENABLED:
                 status = StatusMessenger(chat_id, reply_to)
             request_id = str(uuid.uuid4())
-            self._send({"id": request_id, "type": "prompt", "message": message})
+            cmd: dict[str, Any] = {"id": request_id, "type": "prompt", "message": message}
+            if images:
+                cmd["images"] = images
+            self._send(cmd)
             accepted = False
             deadline = time.time() + PROMPT_TIMEOUT_SECONDS
             while time.time() < deadline:
@@ -551,6 +566,45 @@ def download_telegram_audio(msg: IncomingMessage) -> Path:
             raise
 
 
+def download_telegram_image(msg: IncomingMessage) -> Path:
+    """Download the selected Telegram photo/image document to a temp file."""
+    if not msg.image_file_id:
+        raise RuntimeError("Telegram message has no photo/image file")
+    if msg.image_file_size and msg.image_file_size > MAX_IMAGE_BYTES:
+        raise RuntimeError(
+            f"Telegram image is too large ({msg.image_file_size} bytes > {MAX_IMAGE_BYTES} byte limit)"
+        )
+
+    file_info = telegram_api("getFile", {"file_id": msg.image_file_id}, timeout=30)
+    file_path = str((file_info or {}).get("file_path") or "")
+    if not file_path:
+        raise RuntimeError("Telegram getFile did not return file_path")
+    size = int((file_info or {}).get("file_size") or msg.image_file_size or 0)
+    if size and size > MAX_IMAGE_BYTES:
+        raise RuntimeError(f"Telegram image is too large ({size} bytes > {MAX_IMAGE_BYTES} byte limit)")
+
+    suffix = Path(file_path).suffix.lower()
+    if not re.fullmatch(r"\.[a-z0-9]{1,10}", suffix):
+        suffix = mimetypes.guess_extension(msg.image_mime_type or "") or ".jpg"
+    image_bytes = telegram_download(file_path, timeout=120)
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise RuntimeError(
+            f"Telegram image is too large ({len(image_bytes)} bytes > {MAX_IMAGE_BYTES} byte limit)"
+        )
+
+    fd, tmp_name = tempfile.mkstemp(prefix="pi-telegram-image-", suffix=suffix)
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(image_bytes)
+        return tmp_path
+    except Exception:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        finally:
+            raise
+
+
 def _shell_quote(value: str) -> str:
     # Avoid importing shlex solely for one POSIX quote operation.
     return "'" + value.replace("'", "'\\''") + "'"
@@ -634,6 +688,16 @@ def transcribe_with_openai(audio_path: Path, mime_type: str) -> str:
     if not transcript:
         raise RuntimeError("OpenAI transcription returned an empty transcript")
     return transcript
+
+
+def image_rpc_payload(image_path: Path, mime_type: str) -> dict[str, Any]:
+    """Build the pi RPC ImageContent block for a downloaded Telegram image."""
+    mime = mime_type or mimetypes.guess_type(image_path.name)[0] or "image/jpeg"
+    return {
+        "type": "image",
+        "data": base64.b64encode(image_path.read_bytes()).decode("ascii"),
+        "mimeType": mime,
+    }
 
 
 def transcribe_telegram_audio(msg: IncomingMessage) -> str:
@@ -736,6 +800,29 @@ def parse_message(update: dict[str, Any]) -> Optional[IncomingMessage]:
         audio_obj = document
         audio_kind = "document"
 
+    image_obj: dict[str, Any] = {}
+    image_kind = ""
+    image_mime_type = ""
+    photo_sizes = message.get("photo")
+    if isinstance(photo_sizes, list) and photo_sizes:
+        # Telegram sends several resolutions; pick the largest variant.
+        def _photo_area(p: dict[str, Any]) -> int:
+            return int(p.get("width") or 0) * int(p.get("height") or 0)
+
+        best = max(
+            (p for p in photo_sizes if isinstance(p, dict) and p.get("file_id")),
+            key=lambda p: (_photo_area(p), int(p.get("file_size") or 0)),
+            default=None,
+        )
+        if best:
+            image_obj = best
+            image_kind = "photo"
+            image_mime_type = "image/jpeg"  # Telegram photo payloads are always JPEG
+    if not image_obj and isinstance(document, dict) and str(document.get("mime_type", "")).startswith("image/"):
+        image_obj = document
+        image_kind = "document"
+        image_mime_type = str(document.get("mime_type", ""))
+
     entities = message.get("entities") or message.get("caption_entities") or []
     reply_msg = message.get("reply_to_message") or {}
     reply_sender = reply_msg.get("from") or {}
@@ -754,6 +841,10 @@ def parse_message(update: dict[str, Any]) -> Optional[IncomingMessage]:
         audio_file_size=int(audio_obj.get("file_size") or 0),
         audio_mime_type=str(audio_obj.get("mime_type", "")),
         audio_kind=audio_kind,
+        image_file_id=str(image_obj.get("file_id", "")),
+        image_file_size=int(image_obj.get("file_size") or 0),
+        image_mime_type=image_mime_type,
+        image_kind=image_kind,
         chat_type=str(chat.get("type", "")),
         entities=[dict(e) for e in entities if isinstance(e, dict)],
         reply_to_sender_id=int(reply_sender.get("id")) if reply_sender.get("id") is not None else None,
@@ -983,7 +1074,7 @@ def scan_session(path: Path) -> tuple[str, str]:
                         text = ""
                     text = text.strip()
                     # Drop this daemon's own bridge header from Telegram-originated sessions.
-                    if text.startswith(("Telegram command from chat", "Telegram voice-note transcript")) and "\n\n" in text:
+                    if text.startswith(("Telegram command from chat", "Telegram voice-note transcript", "Telegram image from chat")) and "\n\n" in text:
                         text = text.split("\n\n", 1)[1].strip()
                     if text:
                         return cwd, " ".join(text.split())[:60]
@@ -1053,7 +1144,11 @@ def should_handle(msg: IncomingMessage) -> Optional[str]:
         return None
     prompt = strip_command_prefix(msg.content or "", is_voice=bool(msg.audio_kind))
     if prompt is None:
-        return None
+        if msg.image_file_id and not (msg.content or "").strip():
+            # Bare photo/screenshot with no caption: forward it to pi directly.
+            prompt = ""
+        else:
+            return None
 
     if not is_allowed(msg):
         log(
@@ -1138,13 +1233,33 @@ def main() -> int:
                     elif cmd.startswith(("switch ", "resume ")):
                         reply = handle_switch(pi, cmd.split(None, 1)[1].strip())
                     else:
-                        source_note = "Telegram voice-note transcript" if msg.audio_kind else "Telegram command"
-                        full_prompt = (
-                            f"{source_note} from chat {msg.chat_name or msg.chat_id} "
-                            f"by {msg.sender} at unix timestamp {msg.timestamp}:\n\n{prompt}"
-                        )
-                        with ChatActionLoop(msg.chat_id):
-                            reply = pi.ask(full_prompt, chat_id=msg.chat_id, reply_to=msg.message_id)
+                        image_path: Optional[Path] = None
+                        try:
+                            images: Optional[list[dict[str, Any]]] = None
+                            if msg.image_file_id:
+                                log(
+                                    "Downloading Telegram image "
+                                    f"chat={msg.chat_id} update={msg.update_id} kind={msg.image_kind} size={msg.image_file_size}"
+                                )
+                                image_path = download_telegram_image(msg)
+                                images = [image_rpc_payload(image_path, msg.image_mime_type)]
+                            if msg.image_kind:
+                                source_note = "Telegram image"
+                            elif msg.audio_kind:
+                                source_note = "Telegram voice-note transcript"
+                            else:
+                                source_note = "Telegram command"
+                            full_prompt = (
+                                f"{source_note} from chat {msg.chat_name or msg.chat_id} "
+                                f"by {msg.sender} at unix timestamp {msg.timestamp}:\n\n{prompt}"
+                            )
+                            with ChatActionLoop(msg.chat_id):
+                                reply = pi.ask(full_prompt, chat_id=msg.chat_id, reply_to=msg.message_id, images=images)
+                        finally:
+                            # Deleted only after pi.ask returns, so pi has already
+                            # received the base64 payload.
+                            if image_path is not None:
+                                image_path.unlink(missing_ok=True)
                     send_telegram(msg.chat_id, reply, reply_to_message_id=msg.message_id)
                 except Exception as e:
                     log(f"Command failed: {e}")
