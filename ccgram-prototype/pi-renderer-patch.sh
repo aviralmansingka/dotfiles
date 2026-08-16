@@ -22,10 +22,20 @@
 #      offsets reset whenever a session's transcript path changes, and the
 #      nested-session primary preservation no longer pins reused Pi windows
 #      to the previous tenant's transcript.
+#   4. ccgram-4.5.2-pi-thinking-tree-live.patch
+#      Thinking-tree liveness: live elapsed timer in the trace header plus a
+#      background ticker that re-renders the bubble at the edit cadence even
+#      when no new JSONL message arrived; CCGRAM_PI_TRACE_EDIT_SECS /
+#      _TICK_SECS / _IDLE_SECS env knobs; mid-turn assistant text
+#      (stopReason=toolUse) folds into the tree as the bold goal line
+#      instead of a separate notifying message; idle-timeout deletion of
+#      stale trace bubbles (default 10 min).
 #
 # Patch 2's context includes files added/edited by patch 1, so patch 2 only
 # applies on top of patch 1; patch 3 touches disjoint files and applies on
-# top of either. Rollback reverses the stack in reverse order.
+# top of either; patch 4 edits files from patch 1, so it applies on top of
+# patch 1 (with or without 2 and 3). Rollback reverses the stack in reverse
+# order.
 # This script makes the hot-patches tracked, idempotent, and reversible.
 #
 # Usage:
@@ -53,6 +63,7 @@ PATCH_NAMES=(
     ccgram-4.5.2-pi-renderer-parity.patch
     ccgram-4.5.2-low-noise-notifications.patch
     ccgram-4.5.2-pi-transcript-binding.patch
+    ccgram-4.5.2-pi-thinking-tree-live.patch
 )
 
 patch_file() { printf '%s/patches/%s\n' "$PKG_DIR" "$1"; }
@@ -166,12 +177,32 @@ has_no_markers_transcript_binding() {
         && ! grep -q 'Stale path from a previous session' "$sp/ccgram/session_resolver.py"
 }
 
+has_markers_thinking_tree_live() {
+    local sp="$1"
+    grep -q 'CCGRAM_PI_TRACE_EDIT_SECS' \
+            "$sp/ccgram/handlers/messaging_pipeline/pi_live_transcript.py" 2>/dev/null \
+        && grep -q 'pi-live-goal' "$sp/ccgram/providers/pi_format.py" \
+        && grep -q 'handle_pi_goal' \
+            "$sp/ccgram/handlers/messaging_pipeline/message_routing.py"
+}
+
+has_no_markers_thinking_tree_live() {
+    local sp="$1"
+    ! { [[ -f "$sp/ccgram/handlers/messaging_pipeline/pi_live_transcript.py" ]] \
+            && grep -q 'CCGRAM_PI_TRACE_EDIT_SECS' \
+                "$sp/ccgram/handlers/messaging_pipeline/pi_live_transcript.py"; } \
+        && ! grep -q 'pi-live-goal' "$sp/ccgram/providers/pi_format.py" \
+        && ! grep -q 'handle_pi_goal' \
+            "$sp/ccgram/handlers/messaging_pipeline/message_routing.py"
+}
+
 marker_fn() {
     # Echo the marker function base name for a patch file name.
     case "$1" in
         ccgram-4.5.2-pi-renderer-parity.patch) echo "renderer_parity" ;;
         ccgram-4.5.2-low-noise-notifications.patch) echo "low_noise" ;;
         ccgram-4.5.2-pi-transcript-binding.patch) echo "transcript_binding" ;;
+        ccgram-4.5.2-pi-thinking-tree-live.patch) echo "thinking_tree_live" ;;
         *) echo "FAIL: no marker functions registered for patch '$1'" >&2; exit 2 ;;
     esac
 }
