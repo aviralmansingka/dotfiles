@@ -40,7 +40,7 @@ already publish agent sessions that ccgram discovers with zero code changes.
 | `patches/ccgram-4.5.2-pi-renderer-parity.patch` | Tracked unified diff, layer 1: patches the installed ccgram 4.5.2 Pi renderer (thinking + tool-call + final-answer flow). Not deployed by stow. |
 | `patches/ccgram-4.5.2-low-noise-notifications.patch` | Tracked unified diff, layer 2 (applies on top of layer 1): final-answer-only notifications (silent thinking trace, quiet-progress mode). Not deployed by stow. |
 | `patches/ccgram-4.5.2-pi-transcript-binding.patch` | Tracked unified diff, layer 3 (disjoint files): fixes the SessionStart transcript-binding race for reused session directories (exact-match-only binding, deferred pending resolution, offset reset on path change). Not deployed by stow. |
-| `patches/ccgram-4.5.2-pi-thinking-tree-live.patch` | Tracked unified diff, layer 4 (edits layer-1 files): thinking-tree liveness — live elapsed timer + ticker, `CCGRAM_PI_TRACE_*` cadence/idle knobs, mid-turn text folded into the tree as the goal line, idle-timeout bubble deletion. Not deployed by stow. |
+| `patches/ccgram-4.5.2-pi-thinking-tree-live.patch` | Tracked unified diff, layer 4 (edits layer-1 files): thinking-tree liveness — live elapsed timer + ticker, `CCGRAM_PI_TRACE_*` cadence/idle/wrap knobs, mid-turn text folded into the tree as the goal line, same-message goal/thinking paraphrase dedupe, idle-timeout bubble deletion. Not deployed by stow. |
 | `.local/bin/ccgram-pi-hook` | Pi hook shim: waits (self-bounded) for the session's OWN transcript file at SessionStart, injects the exact `transcript_path`, delegates to `ccgram hook --provider pi`. Deployed by stow. |
 | `.pi/agent/extensions/hooks.json` | cc-thingz hook-runner wiring (SessionStart/Stop/SessionEnd → shim, async; SessionStart timeout raised to 20s to cover slow transcript creation). Deployed by stow. |
 | `pi-renderer-patch.sh` | Idempotent `status`/`check`/`apply`/`rollback` for the whole patch stack, with file-level backups. Not deployed by stow. |
@@ -296,9 +296,12 @@ notification while the final answer still notifies, and silent/notifying
 tasks never merge. Layer 4 adds liveness coverage: the header elapsed timer,
 the `CCGRAM_PI_TRACE_*` knobs, mid-turn text folding into the bold goal line
 (no separate message, no notification), ticker timer refresh with no new
-steps, edit-throttle respect, idle-timeout bubble deletion, and mobile
-wrap-aware rendering (long goal/step lines word-wrap with a hanging indent
-that preserves the tree shape; wrapping disabled at width 0).
+steps, edit-throttle respect, idle-timeout bubble deletion, same-message
+goal/thinking paraphrase dedupe (a line-14-style thinking+text paraphrase
+renders once, as the goal; a divergent thinking+text pair keeps both), and
+mobile wrap-aware rendering (long goal/step lines word-wrap with a hanging
+indent that preserves the tree shape at the 36-char phone-safe width;
+wrapping disabled at width 0).
 
 ### Live smoke plan (only when explicitly authorized)
 
@@ -377,10 +380,20 @@ ever contains complete messages — and stays out of scope):
 - **Idle-timeout deletion.** If a turn dies mid-thinking (kill -9, network
   drop) and no final answer arrives, the stale bubble is deleted after
   `CCGRAM_PI_TRACE_IDLE_SECS` (default `600` = 10 minutes).
+- **Same-message goal/thinking dedupe.** Some models emit a mid-turn
+  visible text block that paraphrases their own thinking block in the same
+  assistant message. `pi_format` compares the two blocks of each message
+  and drops a thinking block whose first line near-duplicates the goal
+  text (shared opening of 3+ words plus a shared 20+ char phrase), so the
+  tree shows the statement once — as the bold goal line — instead of as
+  adjacent goal + `├─` step twins. Thinking-only messages and genuinely
+  distinct thinking+text messages keep both entries.
 - **Mobile wrap-aware tree.** Goal and step lines are word-wrapped at
-  `CCGRAM_PI_TRACE_WRAP_CHARS` columns (default `48`, a phone-width
-  approximation — Telegram wraps by pixels with a proportional font) with a
-  hanging indent under the node prefix: a wrapped step continues aligned
+  `CCGRAM_PI_TRACE_WRAP_CHARS` columns (default `36`; Telegram mobile
+  wraps by pixels in a proportional font and a phone bubble fits roughly
+  35–44 Latin chars, so 36 keeps intentional breaks ahead of Telegram's
+  own re-wrap — 48 was wider than a phone bubble and shattered the tree)
+  with a hanging indent under the node prefix: a wrapped step continues aligned
   under its `├─` text column and a wrapped goal under its `▸` text column
   (bold per segment), so the tree shape survives Telegram's own line
   wrapping instead of breaking into ragged full-width lines. `0` disables
@@ -392,7 +405,7 @@ ever contains complete messages — and stays out of scope):
 | `CCGRAM_PI_TRACE_EDIT_SECS` | `2.0` | `1.0` | Minimum seconds between trace-bubble edits (applies to step/goal updates and the timer ticker). |
 | `CCGRAM_PI_TRACE_TICK_SECS` | `1.0` | unset | Liveness ticker period (timer refresh + idle sweep granularity). |
 | `CCGRAM_PI_TRACE_IDLE_SECS` | `600` | unset | Delete a trace bubble with no thinking/goal activity for this long (killed-turn cleanup). |
-| `CCGRAM_PI_TRACE_WRAP_CHARS` | `48` | unset | Soft word-wrap width (in characters) for goal/step lines, with hanging indent under the node prefix; `0` disables. |
+| `CCGRAM_PI_TRACE_WRAP_CHARS` | `36` | unset | Soft word-wrap width (in characters) for goal/step lines, with hanging indent under the node prefix; `0` disables. |
 
 ### Remaining parity gaps (vs the Pi TUI)
 

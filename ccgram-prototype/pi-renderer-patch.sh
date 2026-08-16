@@ -26,10 +26,15 @@
 #      Thinking-tree liveness: live elapsed timer in the trace header plus a
 #      background ticker that re-renders the bubble at the edit cadence even
 #      when no new JSONL message arrived; CCGRAM_PI_TRACE_EDIT_SECS /
-#      _TICK_SECS / _IDLE_SECS env knobs; mid-turn assistant text
-#      (stopReason=toolUse) folds into the tree as the bold goal line
-#      instead of a separate notifying message; idle-timeout deletion of
-#      stale trace bubbles (default 10 min).
+#      _TICK_SECS / _IDLE_SECS / _WRAP_CHARS env knobs; mid-turn assistant
+#      text (stopReason=toolUse) folds into the tree as the bold goal line
+#      instead of a separate notifying message, with same-message
+#      goal/thinking paraphrase dedupe in pi_format (a thinking block whose
+#      first line near-duplicates the goal text is dropped so the pair does
+#      not render as adjacent twins); mobile-safe wrap default (36 columns —
+#      48 was wider than a phone bubble's pixel capacity and shattered the
+#      tree on Telegram mobile); idle-timeout deletion of stale trace
+#      bubbles (default 10 min).
 #
 # Patch 2's context includes files added/edited by patch 1, so patch 2 only
 # applies on top of patch 1; patch 3 touches disjoint files and applies on
