@@ -1,0 +1,484 @@
+diff -ruN a/ccgram/handlers/messaging_pipeline/message_routing.py b/ccgram/handlers/messaging_pipeline/message_routing.py
+--- a/ccgram/handlers/messaging_pipeline/message_routing.py	2026-08-15 23:31:24.824132529 -0400
++++ b/ccgram/handlers/messaging_pipeline/message_routing.py	2026-08-15 23:31:58.460833554 -0400
+@@ -28,8 +28,10 @@
+ from .message_queue import enqueue_content_message, get_message_queue
+ from .pi_live_transcript import (
+     PI_FINAL_PHASE,
++    PI_GOAL_PHASE,
+     PI_LIVE_PHASE,
+     clear_pi_thinking,
++    handle_pi_goal,
+     handle_pi_thinking,
+ )
+ 
+@@ -90,6 +92,17 @@
+         ):
+             await clear_pi_thinking(client, user_id, thread_id)
+ 
++        # Pi mid-turn assistant text (stopReason="toolUse"): fold it into
++        # the thinking tree as the bold goal/top line instead of a separate
++        # (notifying) progress message (thinking-tree-live patch).
++        if (
++            msg.content_type == "text"
++            and msg.role == "assistant"
++            and msg.phase == PI_GOAL_PHASE
++        ):
++            await handle_pi_goal(client, user_id, thread_id, chat_id, msg.text)
++            continue
++
+         if msg.content_type == "thinking":
+             stripped = (msg.text or "").strip()
+             if len(stripped) < _MIN_THINKING_LENGTH:
+diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
+--- a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-15 23:31:24.824153468 -0400
++++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-15 23:40:43.935912786 -0400
+@@ -13,17 +13,42 @@
+ Messages are marked by the Pi formatter via ``AgentMessage.phase``:
+ 
+ - ``PI_LIVE_PHASE``  — a thinking block; folded into the temporary tree.
++- ``PI_GOAL_PHASE``  — mid-turn assistant text (stopReason ``toolUse``);
++  folded into the tree as the bold goal/top line instead of becoming a
++  separate (notifying) progress message.
+ - ``PI_FINAL_PHASE`` — assistant text with a terminal stopReason (anything
+   but ``toolUse``); triggers deletion of the temporary trace before the
+   answer is delivered through the normal path.
+ 
+-State is in-memory per (user_id, thread_id): rendered steps plus the
+-Telegram message id of the temporary trace bubble.
++Liveness (dotfiles thinking-tree-live patch): the tree header carries a
++live elapsed timer (``🧠 Thinking… · 0:42``) and a per-trace background
++ticker re-renders the bubble at the edit cadence even when no new
++completed JSONL message has arrived, so the trace always looks alive.
++The same sweep deletes a stale bubble when no thinking/goal activity has
++arrived for ``IDLE_SECS`` (a killed turn leaves no orphan).
++
++Knobs (env, read at import):
++
++- ``CCGRAM_PI_TRACE_EDIT_SECS`` — minimum seconds between trace edits
++  (default 2.0; the prototype env sets 1.0, matching the frontdoor).
++- ``CCGRAM_PI_TRACE_TICK_SECS`` — liveness ticker period (default 1.0).
++- ``CCGRAM_PI_TRACE_IDLE_SECS`` — idle-timeout deletion (default 600 =
++  10 minutes).
++- ``CCGRAM_PI_TRACE_WRAP_CHARS`` — mobile wrap width (default 48).  Goal
++  and step lines are word-wrapped to this many columns with a hanging
++  indent under the node prefix, so the tree shape survives Telegram's
++  phone-width line wrapping.  0 disables intentional wrapping.
++
++State is in-memory per (user_id, thread_id): rendered steps, the current
++goal label, and the Telegram message id of the temporary trace bubble.
+ """
+ 
+ from __future__ import annotations
+ 
++import asyncio
+ import contextlib
++import os
++import re
+ import time
+ from dataclasses import dataclass, field
+ 
+@@ -38,15 +63,34 @@
+ logger = structlog.get_logger()
+ 
+ PI_LIVE_PHASE = "pi-live"
++PI_GOAL_PHASE = "pi-live-goal"
+ PI_FINAL_PHASE = "pi-final"
+ 
+ # Tree presentation knobs (mirror the retired sidecar defaults).
+ MAX_TREE_STEPS = 8
+-EDIT_MIN_SECS = 2.0
+ MAX_STEP_CHARS = 120
++MAX_GOAL_CHARS = 120
++
++# Liveness knobs (dotfiles thinking-tree-live patch), env-configurable.
++EDIT_MIN_SECS = float(os.getenv("CCGRAM_PI_TRACE_EDIT_SECS", "2.0"))
++TICK_SECS = float(os.getenv("CCGRAM_PI_TRACE_TICK_SECS", "1.0"))
++IDLE_SECS = float(os.getenv("CCGRAM_PI_TRACE_IDLE_SECS", "600"))
++WRAP_CHARS = int(os.getenv("CCGRAM_PI_TRACE_WRAP_CHARS", "48"))
+ 
+ _TREE_HEADER = "\U0001f9e0 Thinking\u2026"
+ _TREE_SPINNER = "\u2514\u2500 \u23f3 still thinking\u2026"
++_GOAL_PREFIX = "\u25b8 "  # ▸ + space
++_STEP_PREFIX = "\u251c\u2500 "  # ├─ + space
++# Hanging indents for wrapped continuation lines: same column width as the
++# node prefixes, so a wrapped line aligns under its node's text and the
++# tree shape survives Telegram's phone-width wrapping.
++_GOAL_INDENT = " " * len(_GOAL_PREFIX)
++_STEP_INDENT = " " * len(_STEP_PREFIX)
++
++# Markdown metacharacters stripped from goal labels (mirrors the frontdoor
++# daemon's _strip_markdown) so model markdown cannot leak literal markup or
++# skew the bold entity offsets of the rendered goal line.
++_MD_STRIP_RE = re.compile(r"(\*\*|__|~~|`)")
+ 
+ 
+ @dataclass
+@@ -54,14 +98,22 @@
+     """Per-topic temporary thinking trace state."""
+ 
+     steps: list[str] = field(default_factory=list)
++    goal: str | None = None
+     message_id: int | None = None
+     chat_id: int | None = None
++    client: TelegramClient | None = None
++    started_ts: float = 0.0
+     last_edit_ts: float = 0.0
++    last_activity_ts: float = 0.0
++    last_rendered: str = ""
+ 
+ 
+ # Active traces: (user_id, thread_id_or_0) -> _LiveTrace
+ _traces: dict[tuple[int, int], _LiveTrace] = {}
+ 
++# The single liveness ticker task (runs while any trace is active).
++_tick_task: asyncio.Task | None = None
++
+ 
+ def normalize_step(text: str, max_chars: int = MAX_STEP_CHARS) -> str:
+     """Reduce a thinking block to one compact tree node (first line)."""
+@@ -71,77 +123,277 @@
+     return first_line
+ 
+ 
+-def render_thinking_tree(steps: list[str], max_steps: int = MAX_TREE_STEPS) -> str:
++def _strip_markdown(text: str) -> str:
++    """Remove markdown emphasis/code markers from a goal label."""
++    return _MD_STRIP_RE.sub("", text)
++
++
++def wrap_segments(prefix_width: int, text: str, width: int) -> list[str]:
++    """Word-wrap ``text`` so ``prefix_width + segment`` fits ``width``.
++
++    Continuation segments share the first line's available width because
++    the renderer hangs them under a same-width blank indent.  Breaks
++    prefer spaces; an unbreakable over-long word is hard-cut.  ``width``
++    <= 0 disables wrapping (single segment).  Width is counted in
++    characters — Telegram wraps by pixels with a proportional font, so
++    this is an intentional mobile-column approximation, not an exact fit.
++    """
++    if width <= 0:
++        return [text]
++    avail = max(1, width - prefix_width)
++    segments: list[str] = []
++    remaining = text
++    while remaining:
++        if len(remaining) <= avail:
++            segments.append(remaining)
++            break
++        cut = remaining.rfind(" ", 0, avail + 1)
++        if cut <= 0:
++            cut = avail
++        segments.append(remaining[:cut].rstrip())
++        remaining = remaining[cut:].lstrip()
++    return segments
++
++
++def format_elapsed(seconds: float) -> str:
++    """Format elapsed seconds as ``M:SS`` (frontdoor-style timer)."""
++    total = max(0, int(seconds))
++    return f"{total // 60}:{total % 60:02d}"
++
++
++def render_thinking_tree(
++    steps: list[str],
++    goal: str | None = None,
++    elapsed: float | None = None,
++    max_steps: int = MAX_TREE_STEPS,
++    wrap_chars: int = WRAP_CHARS,
++) -> str:
+     """Render the trace as a compact tree, newest steps last.
+ 
+-    Overflow folds into a ``\u2026 (N earlier steps)`` node, matching the
+-    step-granularity live trace of the Pi TUI.
++    ``elapsed`` adds the liveness timer to the header (``· 0:42``); ``goal``
++    renders as a bold top line under the header.  Overflow folds into a
++    ``… (N earlier steps)`` node, matching the step-granularity live trace
++    of the Pi TUI.  Goal and step lines are word-wrapped at ``wrap_chars``
++    with a hanging indent under their node prefix, so the tree shape
++    survives Telegram's phone-width wrapping (``wrap_chars`` <= 0 disables
++    intentional wrapping).
+     """
+-    lines = [_TREE_HEADER]
++    header = _TREE_HEADER
++    if elapsed is not None:
++        header = f"{header} \u00b7 {format_elapsed(elapsed)}"
++    lines = [header]
++    if goal:
++        # Bold each wrapped segment separately; the ``**`` markers are
++        # converted to entities (not displayed), so width is counted on
++        # the plain goal text.
++        for i, seg in enumerate(wrap_segments(len(_GOAL_PREFIX), goal, wrap_chars)):
++            prefix = _GOAL_PREFIX if i == 0 else _GOAL_INDENT
++            lines.append(f"{prefix}**{seg}**")
+     shown = steps[-max_steps:] if max_steps > 0 else []
+     hidden = len(steps) - len(shown)
+     if hidden > 0:
+         lines.append(f"\u251c\u2500 \u2026 ({hidden} earlier steps)")
+     for step in shown:
+-        lines.append(f"\u251c\u2500 {step}")
++        for i, seg in enumerate(wrap_segments(len(_STEP_PREFIX), step, wrap_chars)):
++            prefix = _STEP_PREFIX if i == 0 else _STEP_INDENT
++            lines.append(f"{prefix}{seg}")
+     lines.append(_TREE_SPINNER)
+     return "\n".join(lines)
+ 
+ 
+-async def handle_pi_thinking(
++def _render(trace: _LiveTrace, now: float) -> str:
++    """Render a trace's current tree text, including the live timer."""
++    return render_thinking_tree(
++        trace.steps, goal=trace.goal, elapsed=now - trace.started_ts
++    )
++
++
++def _touch_trace(
+     client: TelegramClient,
+     user_id: int,
+     thread_id: int | None,
+     chat_id: int,
+-    step_text: str,
+-) -> None:
+-    """Fold one thinking block into the topic's temporary trace bubble.
+-
+-    First block sends the bubble; later blocks edit it in place, rate-limited
+-    by EDIT_MIN_SECS (the final delete is never rate-limited).
+-    """
+-    step = normalize_step(step_text)
+-    if not step:
+-        return
+-
++) -> tuple[tuple[int, int], _LiveTrace, float]:
++    """Fetch-or-create the topic trace and stamp liveness fields."""
+     key = (user_id, thread_key(thread_id))
+     trace = _traces.setdefault(key, _LiveTrace())
+-    trace.steps.append(step)
++    now = time.monotonic()
++    if trace.started_ts == 0.0:
++        trace.started_ts = now
++    trace.last_activity_ts = now
++    trace.client = client
+     trace.chat_id = chat_id
++    return key, trace, now
+ 
+-    text = render_thinking_tree(trace.steps)
+ 
++async def _push_update(
++    trace: _LiveTrace, thread_id: int | None, now: float
++) -> None:
++    """Send the trace bubble on first content, else edit it in place.
++
++    First send is silent (dotfiles low-noise patch): the trace is ephemeral
++    by design — edited in place, deleted when the final answer lands — so it
++    must never notify.  Edits are rate-limited by EDIT_MIN_SECS and skipped
++    when the rendered text is unchanged (the final delete is never
++    rate-limited).
++    """
++    text = _render(trace, now)
+     if trace.message_id is None:
+-        # Silent on first send (dotfiles low-noise patch): the trace is
+-        # ephemeral by design — edited in place, deleted when the final
+-        # answer lands — so it must never notify. Edits and deletes do not
+-        # notify either; only the final answer (normal path) may notify.
+         sent = await safe_send(
+-            client,
+-            chat_id,
++            trace.client,
++            trace.chat_id,
+             text,
+             message_thread_id=thread_id,
+             disable_notification=True,
+         )
+         if sent is not None:
+             trace.message_id = sent.message_id
+-            trace.last_edit_ts = time.monotonic()
++            trace.last_edit_ts = now
++            trace.last_rendered = text
+         return
+ 
+-    now = time.monotonic()
++    if text == trace.last_rendered:
++        return
+     if now - trace.last_edit_ts < EDIT_MIN_SECS:
+         return
+     edited = await edit_with_fallback(
+-        client, chat_id, trace.message_id, text
++        trace.client, trace.chat_id, trace.message_id, text
+     )
+     if edited:
+         trace.last_edit_ts = now
++        trace.last_rendered = text
+     else:
+         # Bubble vanished (topic cleaned, message deleted); resend fresh.
+         trace.message_id = None
+         trace.last_edit_ts = 0.0
+ 
+ 
++def _ensure_ticker() -> None:
++    """Start the liveness ticker if it is not running (needs a live loop)."""
++    global _tick_task
++    try:
++        loop = asyncio.get_running_loop()
++    except RuntimeError:
++        return
++    if _tick_task is None or _tick_task.done():
++        _tick_task = loop.create_task(_ticker())
++
++
++async def _ticker() -> None:
++    """Refresh live traces (timer) and sweep idle ones until none remain."""
++    global _tick_task
++    try:
++        while _traces:
++            await asyncio.sleep(TICK_SECS)
++            await tick_once()
++    except Exception:
++        logger.exception("Pi thinking trace ticker crashed")
++    finally:
++        _tick_task = None
++
++
++async def tick_once(now: float | None = None) -> None:
++    """One liveness sweep over all traces.
++
++    - Idle sweep: a trace with no thinking/goal activity for IDLE_SECS has
++      its bubble deleted and its state dropped (killed turns leave no
++      orphan bubble).
++    - Timer refresh: a live trace whose edit throttle has elapsed is
++      re-rendered (the header timer advances even when no new JSONL
++      message arrived).  Edits never notify.
++    """
++    now = time.monotonic() if now is None else now
++    for key, trace in list(_traces.items()):
++        if now - trace.last_activity_ts > IDLE_SECS:
++            _traces.pop(key, None)
++            if (
++                trace.client is not None
++                and trace.message_id is not None
++                and trace.chat_id is not None
++            ):
++                with contextlib.suppress(TelegramError):
++                    await trace.client.delete_message(
++                        chat_id=trace.chat_id, message_id=trace.message_id
++                    )
++            logger.info(
++                "Deleted idle Pi thinking trace",
++                user_id=key[0],
++                thread_id=key[1],
++            )
++            continue
++        if (
++            trace.client is None
++            or trace.message_id is None
++            or trace.chat_id is None
++        ):
++            continue
++        if now - trace.last_edit_ts < EDIT_MIN_SECS:
++            continue
++        text = _render(trace, now)
++        if text == trace.last_rendered:
++            continue
++        edited = await edit_with_fallback(
++            trace.client, trace.chat_id, trace.message_id, text
++        )
++        if edited:
++            trace.last_edit_ts = now
++            trace.last_rendered = text
++        else:
++            # Bubble vanished; the next activity resends it fresh.
++            trace.message_id = None
++            trace.last_edit_ts = 0.0
++
++
++async def handle_pi_thinking(
++    client: TelegramClient,
++    user_id: int,
++    thread_id: int | None,
++    chat_id: int,
++    step_text: str,
++) -> None:
++    """Fold one thinking block into the topic's temporary trace bubble.
++
++    First block sends the bubble; later blocks edit it in place, rate-limited
++    by EDIT_MIN_SECS (the final delete is never rate-limited).
++    """
++    step = normalize_step(step_text)
++    if not step:
++        return
++
++    _key, trace, now = _touch_trace(client, user_id, thread_id, chat_id)
++    trace.steps.append(step)
++    _ensure_ticker()
++    await _push_update(trace, thread_id, now)
++
++
++async def handle_pi_goal(
++    client: TelegramClient,
++    user_id: int,
++    thread_id: int | None,
++    chat_id: int,
++    goal_text: str,
++) -> None:
++    """Fold mid-turn assistant text into the tree as the bold goal line.
++
++    The text block of a ``stopReason="toolUse"`` assistant message is the
++    model narrating its current step; it updates the tree's top line
++    (markdown-stripped, single-line) instead of becoming a separate
++    notifying progress message.
++    """
++    goal = " ".join(_strip_markdown(goal_text or "").split())
++    if not goal:
++        return
++    if len(goal) > MAX_GOAL_CHARS:
++        goal = goal[:MAX_GOAL_CHARS].rstrip() + "\u2026"
++
++    _key, trace, now = _touch_trace(client, user_id, thread_id, chat_id)
++    if goal == trace.goal:
++        return
++    trace.goal = goal
++    _ensure_ticker()
++    await _push_update(trace, thread_id, now)
++
++
+ async def clear_pi_thinking(
+     client: TelegramClient,
+     user_id: int,
+@@ -170,5 +422,9 @@
+ 
+ 
+ def clear_all_traces() -> None:
+-    """Drop all trace state (called on shutdown / in tests)."""
++    """Drop all trace state and stop the ticker (shutdown / tests)."""
++    global _tick_task
+     _traces.clear()
++    if _tick_task is not None and not _tick_task.done():
++        _tick_task.cancel()
++    _tick_task = None
+diff -ruN a/ccgram/providers/pi_format.py b/ccgram/providers/pi_format.py
+--- a/ccgram/providers/pi_format.py	2026-08-15 23:31:24.813745884 -0400
++++ b/ccgram/providers/pi_format.py	2026-08-15 23:31:54.644833142 -0400
+@@ -22,6 +22,10 @@
+ stamped ``phase="pi-final"`` when the message carries a terminal stopReason
+ (anything but ``toolUse``), which is the signal to delete that trace before
+ the answer is delivered — matching Pi's own live-transcript behaviour.
++Mid-turn assistant text (stopReason ``toolUse``) is stamped
++``phase="pi-live-goal"`` so the pipeline folds it into the tree as the bold
++goal/top line instead of a separate notifying progress message (dotfiles
++thinking-tree-live patch).
+ """
+ 
+ from __future__ import annotations
+@@ -205,9 +209,11 @@
+ 
+     ``final`` marks the message as turn-terminal (stopReason != "toolUse");
+     text messages then carry ``phase="pi-final"`` so the pipeline can retire
+-    the temporary thinking trace before delivering the answer.
++    the temporary thinking trace before delivering the answer.  Mid-turn
++    text carries ``phase="pi-live-goal"`` so it folds into the tree as the
++    goal/top line (thinking-tree-live patch).
+     """
+-    text_phase = "pi-final" if final else None
++    text_phase = "pi-final" if final else "pi-live-goal"
+     if isinstance(content, str):
+         if content.strip():
+             return [

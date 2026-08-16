@@ -70,7 +70,7 @@ else
     fail=1
 fi
 
-echo "==> Pi patch stack (renderer parity + low-noise + transcript binding): applies cleanly + offline fixture tests"
+echo "==> Pi patch stack (renderer parity + low-noise + transcript binding + thinking-tree-live): applies cleanly + offline fixture tests"
 PATCH_SH="$PKG_DIR/pi-renderer-patch.sh"
 CCGRAM_PY="$HOME/.local/share/uv/tools/ccgram/bin/python"
 if [[ ! -x "$CCGRAM_PY" ]]; then
