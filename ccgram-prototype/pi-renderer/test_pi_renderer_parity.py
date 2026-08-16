@@ -1,33 +1,40 @@
 """Offline fixture tests for the ccgram Pi renderer-parity patch.
 
-Runs against a THROWAWAY COPY of the installed ccgram package with the
-tracked patch stack applied (the live uv tool is never touched). Requires
-the ccgram uv tool's python (deps: telegram, structlog, dotenv) —
-validate.sh invokes this with `~/.local/share/uv/tools/ccgram/bin/python`.
+Runs against a THROWAWAY COPY of ccgram with the tracked patch stack
+applied (the live uv tool is never touched).  The copy is built from the
+PRISTINE 4.5.2 wheel in the uv cache when available (so the suite always
+exercises the tracked stack, even when the live install carries an older
+patch revision); otherwise it falls back to copying the installed package
+and applying whatever layers are missing.  Requires the ccgram uv tool's
+python (deps: telegram, structlog, dotenv) — validate.sh invokes this
+with `~/.local/share/uv/tools/ccgram/bin/python`.
 
 Coverage:
   1. pi_format: thinking blocks -> content_type "thinking", phase "pi-live";
      turn-terminal assistant text -> phase "pi-final"; mid-turn text
      (stopReason toolUse) and tool_use/tool_result stay phase-free so the
      existing ephemeral tool_batch keeps owning tool-call display.
-  2. pi_live_transcript: tree rendering (folding, first-line nodes) and the
-     temporary-bubble state machine (silent send -> rate-limited edit ->
-     delete) against a fake TelegramClient. No Bot API calls are made.
+  2. pi_live_transcript: status-bubble rendering (header timer, bold goal
+     line, latest-step summary line) and the temporary-bubble state
+     machine (silent send -> rate-limited edit -> delete) against a fake
+     TelegramClient. No Bot API calls are made.
   3. Low-noise notifications: the thinking trace is silent on first send;
      under CCGRAM_QUIET_PROGRESS user-echo content tasks are delivered with
      disable_notification=True while the final answer still notifies;
      silent and notifying tasks never merge.
   4. Wiring: patched message_routing routes pi-live/pi-final phases and
      flags user echoes silent; the status bubble send honors quiet_progress.
-  5. Thinking-tree liveness (patch layer 4): live elapsed timer in the
-     tree header; CCGRAM_PI_TRACE_EDIT_SECS/_TICK_SECS/_IDLE_SECS/_WRAP_CHARS
+  5. No-tree live status bubble (patch layer 4): live elapsed timer in
+     the header; CCGRAM_PI_TRACE_EDIT_SECS/_TICK_SECS/_IDLE_SECS/_WRAP_CHARS
      env knobs; mid-turn assistant text (stopReason toolUse) stamped
-     pi-live-goal and folded into the tree as the bold goal line (no
+     pi-live-goal and folded into the bubble as the bold goal line (no
      separate message, no notification); same-message goal/thinking
-     paraphrase dedupe (a thinking block whose first line near-duplicates
-     the goal text is dropped, so the pair renders once); ticker timer
-     refresh without new steps; idle-timeout deletion of stale trace
-     bubbles; mobile-safe 36-column wrap.
+     paraphrase dedupe (token-overlap heuristic) plus render-level
+     suppression of a latest step that paraphrases the current goal, so
+     the bubble never states the same progress twice; no tree connectors
+     or hanging indents anywhere in the bubble; ticker timer refresh
+     without new steps; idle-timeout deletion of stale trace bubbles;
+     mobile-safe 36-column wrap.
 """
 
 from __future__ import annotations
@@ -67,6 +74,9 @@ os.environ.setdefault("CCGRAM_PI_TRACE_TICK_SECS", "3600")
 os.environ.setdefault("CCGRAM_PI_TRACE_WRAP_CHARS", "36")
 
 
+EXPECTED_VERSION = "4.5.2"
+
+
 def _find_site_packages() -> Path:
     candidates = glob.glob(
         os.path.expanduser("~/.local/share/uv/tools/ccgram/lib/python*/site-packages")
@@ -77,8 +87,114 @@ def _find_site_packages() -> Path:
     raise unittest.SkipTest("ccgram uv tool not installed; cannot run patch tests")
 
 
+def _find_pristine_source() -> Path | None:
+    """Locate a pristine ccgram wheel unpack in the uv cache, if present.
+
+    Testing the tracked patch stack against the INSTALLED package breaks
+    down when the live install carries an older revision of a patch layer
+    (the new revision neither applies on top nor should be forced over
+    live code).  uv keeps the pristine wheel unpacked under
+    ``~/.cache/uv/archive-v0/*/``; a pristine 4.5.2 there lets the suite
+    apply the full tracked stack from scratch — hermetic, and never
+    touching the live install.
+    """
+    for dist_info in sorted(
+        glob.glob(
+            os.path.expanduser(
+                f"~/.cache/uv/archive-v0/*/ccgram-{EXPECTED_VERSION}.dist-info"
+            )
+        )
+    ):
+        root = Path(dist_info).parent
+        pkg = root / "ccgram"
+        fmt = pkg / "providers" / "pi_format.py"
+        if pkg.is_dir() and fmt.is_file():
+            # Purity check: a patched unpack would carry layer-1 markers.
+            if 'phase="pi-live"' not in fmt.read_text(encoding="utf-8"):
+                return root
+    return None
+
+
+def _renderer_parity_applied(root: Path) -> bool:
+    # Marker-based detection: `patch -R --dry-run` auto-detects unreversed
+    # patches and ignores -R, so it cannot tell applied from pristine.
+    new_file = root / "ccgram/handlers/messaging_pipeline/pi_live_transcript.py"
+    fmt = root / "ccgram/providers/pi_format.py"
+    return new_file.exists() and 'phase="pi-live"' in fmt.read_text(
+        encoding="utf-8"
+    )
+
+
+def _low_noise_applied(root: Path) -> bool:
+    cfg = (root / "ccgram/config.py").read_text(encoding="utf-8")
+    task = (root / "ccgram/handlers/messaging_pipeline/message_task.py").read_text(
+        encoding="utf-8"
+    )
+    return "CCGRAM_QUIET_PROGRESS" in cfg and "silent: bool = False" in task
+
+
+def _thinking_tree_live_applied(root: Path) -> bool:
+    # Revision markers: an installed tool carrying an OLDER layer-4
+    # revision (tree renderer, or goal folding without the same-message
+    # goal/thinking dedupe) fails this check, so the copy is NOT mistaken
+    # for the tracked stack and the suite skips with a clear reason
+    # instead of silently testing stale code.
+    live = root / "ccgram/handlers/messaging_pipeline/pi_live_transcript.py"
+    fmt = root / "ccgram/providers/pi_format.py"
+    return (
+        live.exists()
+        and "render_thinking_status" in live.read_text(encoding="utf-8")
+        and "pi-live-goal" in fmt.read_text(encoding="utf-8")
+        and "is_goal_thinking_duplicate" in fmt.read_text(encoding="utf-8")
+    )
+
+
+_MARKER_CHECKS = [
+    _renderer_parity_applied,
+    _low_noise_applied,
+    _thinking_tree_live_applied,
+]
+
+
+def _apply_patch_file(patch_file: Path, tmp: Path) -> None:
+    with open(patch_file, "rb") as fh:
+        subprocess.run(
+            ["patch", "-p1", "--batch", "-s", "-d", str(tmp)],
+            stdin=fh,
+            check=True,
+        )
+
+
+def _prepare_from_pristine(src: Path) -> Path:
+    """Apply the full tracked patch stack to a pristine wheel unpack copy.
+
+    A patch that fails against pristine 4.5.2 is a hard error here (not a
+    skip): this path proves the tracked stack applies cleanly from
+    scratch.
+    """
+    tmp = Path(tempfile.mkdtemp(prefix="ccgram-pristine-"))
+    shutil.copytree(
+        src / "ccgram",
+        tmp / "ccgram",
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
+    for patch_file, applied_check in zip(PATCH_FILES, _MARKER_CHECKS):
+        _apply_patch_file(patch_file, tmp)
+        if not applied_check(tmp):
+            raise RuntimeError(f"{patch_file.name} applied but markers missing")
+    return tmp
+
+
 def _prepare_patched_copy() -> Path:
-    """Copy the installed ccgram package to a temp dir and apply the patch."""
+    """Copy ccgram to a temp dir and apply the tracked patch stack.
+
+    Prefers a pristine wheel unpack from the uv cache (full stack applied
+    from scratch); falls back to the installed package with only the
+    missing layers applied.
+    """
+    pristine = _find_pristine_source()
+    if pristine is not None:
+        return _prepare_from_pristine(pristine)
     sp = _find_site_packages()
     tmp = Path(tempfile.mkdtemp(prefix="ccgram-patched-"))
     shutil.copytree(
@@ -87,44 +203,7 @@ def _prepare_patched_copy() -> Path:
         ignore=shutil.ignore_patterns("__pycache__"),
     )
 
-    def renderer_parity_applied(root: Path) -> bool:
-        # Marker-based detection: `patch -R --dry-run` auto-detects unreversed
-        # patches and ignores -R, so it cannot tell applied from pristine.
-        new_file = root / "ccgram/handlers/messaging_pipeline/pi_live_transcript.py"
-        fmt = root / "ccgram/providers/pi_format.py"
-        return new_file.exists() and 'phase="pi-live"' in fmt.read_text(
-            encoding="utf-8"
-        )
-
-    def low_noise_applied(root: Path) -> bool:
-        cfg = (root / "ccgram/config.py").read_text(encoding="utf-8")
-        task = (
-            root / "ccgram/handlers/messaging_pipeline/message_task.py"
-        ).read_text(encoding="utf-8")
-        return "CCGRAM_QUIET_PROGRESS" in cfg and "silent: bool = False" in task
-
-    def thinking_tree_live_applied(root: Path) -> bool:
-        # The dedupe helper doubles as the revision marker: an installed
-        # tool carrying an OLDER layer-4 revision (goal folding without
-        # same-message goal/thinking dedupe) fails this check, so the copy
-        # is NOT mistaken for the tracked stack and the suite skips with a
-        # clear reason instead of silently testing stale code.
-        live = root / "ccgram/handlers/messaging_pipeline/pi_live_transcript.py"
-        fmt = root / "ccgram/providers/pi_format.py"
-        return (
-            live.exists()
-            and "CCGRAM_PI_TRACE_EDIT_SECS" in live.read_text(encoding="utf-8")
-            and "pi-live-goal" in fmt.read_text(encoding="utf-8")
-            and "_drop_goal_thinking_duplicates" in fmt.read_text(encoding="utf-8")
-        )
-
-    marker_checks = [
-        renderer_parity_applied,
-        low_noise_applied,
-        thinking_tree_live_applied,
-    ]
-
-    for patch_file, applied_check in zip(PATCH_FILES, marker_checks):
+    for patch_file, applied_check in zip(PATCH_FILES, _MARKER_CHECKS):
         if applied_check(tmp):
             continue  # live tool already patched; the copy is too
         with open(patch_file, "rb") as fh:
@@ -140,12 +219,7 @@ def _prepare_patched_copy() -> Path:
                 "tool carries an older revision of this patch layer (apply "
                 "the updated patch stack to run these tests)"
             )
-        with open(patch_file, "rb") as fh:
-            subprocess.run(
-                ["patch", "-p1", "--batch", "-s", "-d", str(tmp)],
-                stdin=fh,
-                check=True,
-            )
+        _apply_patch_file(patch_file, tmp)
         if not applied_check(tmp):
             raise RuntimeError(f"{patch_file.name} applied but markers missing")
     return tmp
@@ -238,7 +312,7 @@ class PiRendererParityTest(unittest.TestCase):
 
     def test_mid_turn_text_is_stamped_pi_live_goal(self):
         # Layer 4: mid-turn assistant text (stopReason toolUse) folds into
-        # the thinking tree as the goal line instead of a separate message.
+        # the status bubble as the goal line instead of a separate message.
         msgs = self._parse_fixture()
         mid_turn = [
             m
@@ -261,15 +335,20 @@ class PiRendererParityTest(unittest.TestCase):
 
     # ── 2. Live trace rendering + temporary-bubble state machine ─────────
 
-    def test_tree_rendering_folds_overflow(self):
+    def test_status_bubble_renders_latest_step_only(self):
+        # No tree, no overflow fold: the bubble shows the header, the
+        # LATEST step as one plain summary line, and the spinner.
         steps = [f"step {i}" for i in range(1, 12)]
-        tree = self.trace.render_thinking_tree(steps, max_steps=8)
-        lines = tree.splitlines()
+        bubble = self.trace.render_thinking_status(steps)
+        lines = bubble.splitlines()
         self.assertEqual(lines[0], "🧠 Thinking…")
-        self.assertIn("… (3 earlier steps)", lines[1])
-        self.assertIn("step 11", tree)
-        self.assertNotIn("step 3\n", tree)
-        self.assertTrue(lines[-1].startswith("└─ ⏳ still thinking"))
+        self.assertEqual(lines[1], "step 11")
+        self.assertNotIn("step 10", bubble)
+        self.assertNotIn("step 3\n", bubble)
+        self.assertEqual(lines[-1], "⏳ still thinking…")
+        # No tree connectors anywhere.
+        for connector in ("├─", "└─", "▸"):
+            self.assertNotIn(connector, bubble)
 
     def test_normalize_step_first_line_and_truncation(self):
         self.assertEqual(
@@ -291,7 +370,8 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(len(client.sent), 1)
         self.assertEqual(client.sent[0]["chat_id"], -100999)
         self.assertEqual(client.sent[0].get("message_thread_id"), 42)
-        self.assertIn("├─ first step", client.sent[0]["text"])
+        self.assertIn("first step", client.sent[0]["text"])
+        self.assertNotIn("├─", client.sent[0]["text"])
         # Low-noise: the temporary trace is silent on first send — it is
         # edited in place and deleted on final, so it must never notify.
         self.assertIs(client.sent[0].get("disable_notification"), True)
@@ -306,7 +386,9 @@ class PiRendererParityTest(unittest.TestCase):
         run(trace.handle_pi_thinking(client, 1, 42, -100999, "third step"))
         self.assertEqual(len(client.edited), 1)
         self.assertEqual(client.edited[0]["message_id"], 1001)
-        self.assertIn("├─ third step", client.edited[0]["text"])
+        self.assertIn("third step", client.edited[0]["text"])
+        # Only the latest step shows: the earlier one is gone.
+        self.assertNotIn("first step", client.edited[0]["text"])
 
         # Final answer retires the bubble.
         run(trace.clear_pi_thinking(client, 1, 42))
@@ -372,7 +454,7 @@ class PiRendererParityTest(unittest.TestCase):
         other_silent = ct(window_id="w", parts=("c",), silent=True)
         self.assertTrue(self.message_queue._can_merge_tasks(silent, other_silent))
 
-    # ── 5. Thinking-tree liveness (patch layer 4) ────────────────────────
+    # ── 5. No-tree live status bubble (patch layer 4) ─────────────────
 
     def test_liveness_env_knobs(self):
         # CCGRAM_PI_TRACE_EDIT_SECS=1.0 / _TICK_SECS=3600 / _WRAP_CHARS=36
@@ -384,10 +466,10 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(self.trace.WRAP_CHARS, 36)
 
     def test_header_shows_live_elapsed_timer(self):
-        tree = self.trace.render_thinking_tree(["step"], elapsed=42.7)
-        self.assertEqual(tree.splitlines()[0], "🧠 Thinking… · 0:42")
+        bubble = self.trace.render_thinking_status(["step"], elapsed=42.7)
+        self.assertEqual(bubble.splitlines()[0], "🧠 Thinking… · 0:42")
         # Without elapsed the header is unchanged (static render).
-        bare = self.trace.render_thinking_tree(["step"])
+        bare = self.trace.render_thinking_status(["step"])
         self.assertEqual(bare.splitlines()[0], "🧠 Thinking…")
         self.assertEqual(self.trace.format_elapsed(0), "0:00")
         self.assertEqual(self.trace.format_elapsed(65), "1:05")
@@ -398,14 +480,15 @@ class PiRendererParityTest(unittest.TestCase):
             self.trace._strip_markdown("Fix **parser** `race` ~~now~~"),
             "Fix parser race now",
         )
-        tree = self.trace.render_thinking_tree(
+        bubble = self.trace.render_thinking_status(
             ["step"], goal="Fix parser race now", elapsed=1
         )
-        self.assertIn("▸ **Fix parser race now**", tree)
-        # Goal sits directly under the header, above the step nodes.
-        lines = tree.splitlines()
-        self.assertTrue(lines[1].startswith("▸ **"))
-        self.assertTrue(lines[2].startswith("├─"))
+        self.assertIn("**Fix parser race now**", bubble)
+        # Goal sits directly under the header, above the step line, with
+        # no connector prefix.
+        lines = bubble.splitlines()
+        self.assertEqual(lines[1], "**Fix parser race now**")
+        self.assertEqual(lines[2], "step")
 
     def test_wrap_segments_word_wraps_and_hard_cuts(self):
         ws = self.trace.wrap_segments
@@ -421,53 +504,48 @@ class PiRendererParityTest(unittest.TestCase):
         # Width 0 disables wrapping.
         self.assertEqual(ws(3, "a " * 50, 0), ["a " * 50])
 
-    def test_long_step_wraps_with_hanging_indent(self):
+    def test_long_step_wraps_plain_without_indent(self):
         step = (
             "Checking whether the transcript binding race fix holds for "
             "reused session directories across consecutive worker spawns"
         )
-        tree = self.trace.render_thinking_tree([step], wrap_chars=48)
-        step_lines = [l for l in tree.splitlines() if "Checking" in l or l.startswith("   ")]
+        bubble = self.trace.render_thinking_status([step], wrap_chars=48)
+        step_lines = [
+            l
+            for l in bubble.splitlines()
+            if l not in ("🧠 Thinking…", "⏳ still thinking…")
+        ]
         self.assertGreater(len(step_lines), 1)  # actually wrapped
-        self.assertTrue(step_lines[0].startswith("├─ "))
-        for cont in step_lines[1:]:
-            # Continuation aligns under the node's text column, so the
-            # tree shape survives Telegram's phone-width wrapping.
-            self.assertTrue(cont.startswith("   "), cont)
-            self.assertNotIn("├─", cont)
         for line in step_lines:
+            # No connector, no hanging indent: plain column-0 wrap.
             self.assertLessEqual(len(line), 48, line)
-        # No text lost: stripping prefixes/indent reassembles the step.
-        reassembled = " ".join(
-            l.removeprefix("├─ ").strip() for l in step_lines
-        )
-        self.assertEqual(reassembled, step)
+            self.assertEqual(line, line.lstrip(), line)
+        # No text lost across the wrap.
+        self.assertEqual(" ".join(step_lines), step)
 
-    def test_long_goal_wraps_bold_segments_with_hanging_indent(self):
+    def test_long_goal_wraps_bold_segments_without_indent(self):
         goal = (
             "Refactoring the message routing pipeline so mid-turn assistant "
-            "text folds into the thinking tree instead of notifying"
+            "text folds into the status bubble instead of notifying"
         )
-        tree = self.trace.render_thinking_tree(["step"], goal=goal, wrap_chars=48)
-        goal_lines = [l for l in tree.splitlines() if "**" in l]
+        bubble = self.trace.render_thinking_status(
+            ["step"], goal=goal, wrap_chars=48
+        )
+        goal_lines = [l for l in bubble.splitlines() if "**" in l]
         self.assertGreater(len(goal_lines), 1)
-        self.assertTrue(goal_lines[0].startswith("▸ **"))
-        for cont in goal_lines[1:]:
-            self.assertTrue(cont.startswith("  **"), cont)
-            self.assertNotIn("▸", cont)
         for line in goal_lines:
+            self.assertTrue(line.startswith("**"), line)
+            self.assertTrue(line.endswith("**"), line)
             # Displayed width excludes the non-rendering ** markers.
             self.assertLessEqual(len(line) - 4, 48, line)
-        reassembled = " ".join(
-            l.removeprefix("▸ ").strip().strip("*") for l in goal_lines
-        )
+        reassembled = " ".join(l.strip("*") for l in goal_lines)
         self.assertEqual(reassembled, goal)
 
     def test_wrap_disabled_keeps_single_lines(self):
-        tree = self.trace.render_thinking_tree(
+        bubble = self.trace.render_thinking_status(
             ["s " * 60], goal="g " * 60, wrap_chars=0
         )
-        self.assertEqual(len(tree.splitlines()), 4)  # header, goal, step, spinner
+        self.assertEqual(len(bubble.splitlines()), 4)  # header, goal, step, spinner
 
     def test_mid_turn_text_folds_into_goal_line_no_new_message(self):
         trace = self.trace
@@ -493,8 +571,8 @@ class PiRendererParityTest(unittest.TestCase):
         # convert_to_entities strips the markdown into bold entities, so
         # the plain text carries the stripped goal (word-wrapped at the
         # 36-column mobile width)…
-        self.assertIn("▸ I found the cause; patching it", client.edited[0]["text"])
-        self.assertIn("now.", client.edited[0]["text"])
+        self.assertIn("I found the cause; patching it now.", client.edited[0]["text"])
+        self.assertNotIn("▸", client.edited[0]["text"])
         # …and the goal line is rendered bold via entities.
         entities = client.edited[0].get("entities") or []
         self.assertTrue(
@@ -513,7 +591,8 @@ class PiRendererParityTest(unittest.TestCase):
         client = _FakeClient()
         asyncio.run(trace.handle_pi_goal(client, 1, 42, -100999, "working on it"))
         self.assertEqual(len(client.sent), 1)
-        self.assertIn("▸ working on it", client.sent[0]["text"])
+        self.assertIn("working on it", client.sent[0]["text"])
+        self.assertNotIn("▸", client.sent[0]["text"])
         self.assertIs(client.sent[0].get("disable_notification"), True)
         trace.clear_all_traces()
 
@@ -550,7 +629,7 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(len(client.edited), 0)
         trace.clear_all_traces()
 
-    # ── 6. Same-message goal/thinking dedupe + mobile wrap width ───────
+    # ── 6. Goal/thinking dedupe + no-tree mobile wrap ──────────────────
 
     # The captain's 2026-08-16 mobile screenshot (scout report
     # ccgram-tree-regression-scout): transcript line 14 of the
@@ -560,13 +639,23 @@ class PiRendererParityTest(unittest.TestCase):
         "since the prior scouts."
     )
     # …with this thinking block in the SAME assistant message — a
-    # paraphrase ("check" vs "look at"), which the tree rendered as
-    # adjacent goal + step twins.
+    # paraphrase ("check" vs "look at").  This is the EXACT thinking text
+    # from the transcript (one long line, 250 chars): the PR150
+    # character-level dedupe rule silently collapsed on it (difflib
+    # autojunk) and the post-PR150 live smoke/replay still rendered the
+    # pair twice, which is why the heuristic is now token-based.
     _LINE14_THINKING = (
         "Now let me look at the vault's current state to verify whether "
         "anything has changed since the prior scouts (auto-commits, weekly "
-        "backlog W33/W34). Today is Sun Aug 16, 2026 (W33).\nSecond line "
-        "of private reasoning the tree never shows."
+        "backlog W33/W34). Today is Sun Aug 16, 2026 (W33). Check recent "
+        "git activity in the vault, the weekly backlog, WIP items."
+    )
+    # The next thinking block in that transcript (line 19) — topically
+    # related but NOT a paraphrase of the goal; it must survive as the
+    # bubble's step line.
+    _LINE19_THINKING = (
+        "Now check the trip plan note for the current state (booked or "
+        "not), the reminder script state, daemon health, recruiting audit."
     )
 
     def _parse_assistant_blocks(self, blocks, stop_reason="toolUse"):
@@ -640,7 +729,7 @@ class PiRendererParityTest(unittest.TestCase):
             ["pi-live"],
         )
         # Final answers (stopReason != toolUse) are never deduped: the
-        # text is the delivered answer, not a tree goal line.
+        # text is the delivered answer, not a bubble goal line.
         final = self._parse_assistant_blocks(
             [
                 {"type": "thinking", "thinking": self._LINE14_THINKING},
@@ -656,8 +745,8 @@ class PiRendererParityTest(unittest.TestCase):
         )
 
     def test_dedupe_heuristic_boundaries(self):
-        dup = self.pi_format._is_goal_thinking_duplicate
-        # The line-14 paraphrase pair.
+        dup = self.pi_format.is_goal_thinking_duplicate
+        # The exact line-14 paraphrase pair (the PR150 live-replay miss).
         self.assertTrue(dup(self._LINE14_GOAL, self._LINE14_THINKING))
         # Exact prefix of a longer thinking line.
         self.assertTrue(
@@ -677,11 +766,31 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertFalse(
             dup("Now let me see.", "Now let me try a completely different angle.")
         )
+        # The line-19 follow-up is topically related but not a paraphrase.
+        self.assertFalse(dup(self._LINE14_GOAL, self._LINE19_THINKING))
 
-    def test_paraphrase_pair_renders_once_in_tree(self):
-        # End-to-end golden: line-14 blocks routed through the trace state
-        # machine render the statement once (bold goal), with no adjacent
-        # near-duplicate `├─` step.
+    def test_render_suppresses_latest_step_paraphrasing_goal(self):
+        # Render-level belt-and-braces: even if a paraphrasing step made
+        # it into trace state (e.g. it arrived in an EARLIER message than
+        # the goal), the bubble never shows it beside its goal twin.
+        render = self.trace.render_thinking_status
+        bubble = render(
+            [self.trace.normalize_step(self._LINE14_THINKING)],
+            goal=self._LINE14_GOAL,
+            elapsed=14,
+        )
+        self.assertNotIn("look at the vault", bubble)
+        # A genuinely different latest step still shows.
+        bubble = render(
+            [self._LINE19_THINKING], goal=self._LINE14_GOAL, elapsed=14
+        )
+        self.assertIn("Now check the trip plan note", bubble)
+
+    def test_paraphrase_pair_renders_once_in_bubble(self):
+        # End-to-end golden for the original screenshot scenario: the
+        # exact line-14 blocks routed through the trace state machine
+        # render the statement ONCE (bold goal line), with no duplicate
+        # step and no tree connectors anywhere in the bubble.
         trace = self.trace
         trace.clear_all_traces()
         client = _FakeClient()
@@ -702,59 +811,86 @@ class PiRendererParityTest(unittest.TestCase):
                 run(trace.handle_pi_goal(client, 1, 42, -100999, msg.text))
         self.assertEqual(len(client.sent), 1)
         bubble = client.sent[0]["text"]
-        # The goal renders once, directly under the header (convert_to_entities
-        # turns the ** markers into bold entities, and the line word-wraps
-        # at the 36-column mobile width)…
-        self.assertIn("▸ Now let me check the vault's", bubble)
-        self.assertTrue(bubble.splitlines()[1].startswith("▸ "))
-        # …and no `├─` step echoes the paraphrase.
-        step_lines = [l for l in bubble.splitlines() if l.startswith("├─")]
-        self.assertEqual(step_lines, [])
+        # The goal renders once, directly under the header, word-wrapped
+        # at the 36-column mobile width (convert_to_entities strips the
+        # ** markers into bold entities)…
+        self.assertIn("Now let me check the vault's", bubble)
+        # …and no step echoes the paraphrase.
         self.assertNotIn("look at the vault", bubble)
+        # No tree connectors or hanging indents survive anywhere.
+        for connector in ("├─", "└─", "▸"):
+            self.assertNotIn(connector, bubble)
+        for line in bubble.splitlines():
+            self.assertEqual(line, line.lstrip(), line)
         trace.clear_all_traces()
 
-    def test_mobile_wrap_width_36_keeps_tree_shape(self):
-        # The 2026-08-16 screenshot regression: at 48 columns every
-        # intentional line outlived a phone bubble's pixel capacity and
-        # Telegram's re-wrap shattered the tree. 36 stays ahead of the
-        # client-side wrap on typical phones.
-        goal = (
-            "Now let me check the vault's current state and recent "
-            "activity since the prior scouts."
+    def test_smoke_turn_bubble_lifecycle_no_tree(self):
+        # Live-smoke scenario (firstmate ▸ fm-ccgram-live-smoke-test):
+        # a thinking-only message starts the bubble, a mid-turn text sets
+        # the goal line, a divergent thinking replaces the step, and the
+        # final answer deletes the bubble — one message throughout, no
+        # connectors, never notifying.
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        run = asyncio.run
+
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, "Reading the worker brief and prior reports."))
+        self.assertEqual(len(client.sent), 1)
+        first = client.sent[0]["text"]
+        self.assertIn("Reading the worker brief", first)
+        self.assertIs(client.sent[0].get("disable_notification"), True)
+
+        key = (1, 42)
+        trace._traces[key].last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.handle_pi_goal(client, 1, 42, -100999, "Verifying the mirrored topic renders cleanly."))
+        trace._traces[key].last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, "Checking service logs for errors during the turn."))
+        self.assertEqual(len(client.sent), 1)  # still one bubble
+        self.assertEqual(len(client.edited), 2)
+        latest = client.edited[-1]["text"]
+        self.assertIn("Verifying the mirrored topic", latest)
+        self.assertIn("Checking service logs", latest)
+        # Earlier step replaced; nothing tree-shaped anywhere.
+        self.assertNotIn("Reading the worker brief", latest)
+        for connector in ("├─", "└─", "▸"):
+            self.assertNotIn(connector, latest)
+
+        run(trace.clear_pi_thinking(client, 1, 42))
+        self.assertEqual(client.deleted, [{"chat_id": -100999, "message_id": 1001}])
+        trace.clear_all_traces()
+
+    def test_mobile_wrap_width_36_keeps_status_shape(self):
+        # The 2026-08-16 screenshot regression, restated for the no-tree
+        # bubble: 36 columns keeps intentional breaks ahead of Telegram's
+        # own pixel wrap on typical phones, and with no connector column
+        # or hanging indent there is nothing for a re-wrap to shatter.
+        bubble = self.trace.render_thinking_status(
+            [self._LINE19_THINKING], goal=self._LINE14_GOAL, elapsed=14,
+            wrap_chars=36,
         )
-        step = (
-            "Now check the trip plan note for the current state, the "
-            "reminder script state, and daemon health."
-        )
-        tree = self.trace.render_thinking_tree(
-            [step], goal=goal, elapsed=14, wrap_chars=36
-        )
-        lines = tree.splitlines()
+        lines = bubble.splitlines()
         self.assertEqual(lines[0], "🧠 Thinking… · 0:14")
         for line in lines[1:]:
             display = line.replace("**", "")  # ** renders as bold entities
             self.assertLessEqual(len(display), 36, line)
-        # Wrapped continuation lines keep the hanging indent, and the
-        # connector prefixes survive on the first segment of each node.
+            self.assertEqual(line, line.lstrip(), line)  # no indent
         goal_lines = [l for l in lines if "**" in l]
         self.assertGreater(len(goal_lines), 1)
-        self.assertTrue(goal_lines[0].startswith("▸ **"))
-        for cont in goal_lines[1:]:
-            self.assertTrue(cont.startswith("  **"), cont)
+        for line in goal_lines:
+            self.assertTrue(line.startswith("**") and line.endswith("**"), line)
         step_lines = [
-            l for l in lines if l.startswith("├─") or l.startswith("   ")
+            l
+            for l in lines
+            if "**" not in l
+            and l not in ("🧠 Thinking… · 0:14", "⏳ still thinking…")
         ]
         self.assertGreater(len(step_lines), 1)
-        self.assertTrue(step_lines[0].startswith("├─ "))
         # No text lost across the wrap.
-        reassembled_goal = " ".join(
-            l.removeprefix("▸ ").strip().strip("*") for l in goal_lines
-        )
-        self.assertEqual(reassembled_goal, goal)
-        reassembled_step = " ".join(
-            l.removeprefix("├─ ").strip() for l in step_lines
-        )
-        self.assertEqual(reassembled_step, step)
+        reassembled_goal = " ".join(l.strip("*") for l in goal_lines)
+        self.assertEqual(reassembled_goal, self._LINE14_GOAL)
+        self.assertEqual(" ".join(step_lines), self._LINE19_THINKING)
+        self.assertEqual(lines[-1], "⏳ still thinking…")
 
     def test_idle_cleanup_deletes_stale_bubble(self):
         trace = self.trace
@@ -787,8 +923,8 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertIn('msg.phase == PI_LIVE_PHASE', src)
         self.assertIn('msg.phase == PI_FINAL_PHASE', src)
 
-    def test_routing_folds_mid_turn_text_into_tree(self):
-        # Layer 4: pi-live-goal text routes into the tree (and continues,
+    def test_routing_folds_mid_turn_text_into_bubble(self):
+        # Layer 4: pi-live-goal text routes into the bubble (and continues,
         # so it never becomes a separate progress message).
         src = (
             self.tmp / "ccgram/handlers/messaging_pipeline/message_routing.py"
