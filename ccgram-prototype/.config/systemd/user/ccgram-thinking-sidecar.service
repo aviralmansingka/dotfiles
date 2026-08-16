@@ -5,7 +5,7 @@
 #   stow -D ccgram-prototype   (from ~/dotfiles)
 #   rm -f ~/.ccgram-prototype/thinking-sidecar-state.json
 [Unit]
-Description=ccgram thinking sidecar - temporary tree-style Pi thinking traces in topics (prototype)
+Description=ccgram thinking sidecar - DEPRECATED fallback for unpatched ccgram; do not run alongside the renderer-parity patch (prototype)
 # Runs alongside ccgram but does not strictly require it: without ccgram's
 # state.json the sidecar simply finds no bound topics and idles.
 After=ccgram-prototype.service network-online.target

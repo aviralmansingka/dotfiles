@@ -1,0 +1,295 @@
+diff --git a/ccgram/handlers/messaging_pipeline/message_routing.py b/ccgram/handlers/messaging_pipeline/message_routing.py
+index 94e7656..5a92eb4 100644
+--- a/ccgram/handlers/messaging_pipeline/message_routing.py
++++ b/ccgram/handlers/messaging_pipeline/message_routing.py
+@@ -25,6 +25,12 @@ from ..interactive import (
+ from ..response_builder import build_response_parts
+ from ..telegram_origin import consume_telegram_injection
+ from .message_queue import enqueue_content_message, get_message_queue
++from .pi_live_transcript import (
++    PI_FINAL_PHASE,
++    PI_LIVE_PHASE,
++    clear_pi_thinking,
++    handle_pi_thinking,
++)
+ 
+ logger = structlog.get_logger()
+ 
+@@ -67,6 +73,22 @@ async def handle_new_message(msg: NewMessage, client: TelegramClient) -> None:
+             logger.debug("Suppressed Telegram-originated user transcript message")
+             continue
+ 
++        # Pi renderer parity: thinking blocks fold into one temporary
++        # tree-style trace bubble per topic (edited in place, deleted when
++        # the final answer lands) instead of permanent Thinking messages.
++        if msg.content_type == "thinking" and msg.phase == PI_LIVE_PHASE:
++            await handle_pi_thinking(client, user_id, thread_id, chat_id, msg.text)
++            continue
++
++        # Pi turn-terminal assistant text: retire the temporary thinking
++        # trace first, then deliver the answer through the normal path.
++        if (
++            msg.content_type == "text"
++            and msg.role == "assistant"
++            and msg.phase == PI_FINAL_PHASE
++        ):
++            await clear_pi_thinking(client, user_id, thread_id)
++
+         if msg.content_type == "thinking":
+             stripped = (msg.text or "").strip()
+             if len(stripped) < _MIN_THINKING_LENGTH:
+diff --git a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
+new file mode 100644
+index 0000000..5e67d3b
+--- /dev/null
++++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
+@@ -0,0 +1,164 @@
++"""Pi live thinking transcript — temporary tree-style trace per topic.
++
++Renderer-parity layer for the Pi provider (dotfiles ccgram-prototype patch).
++Owns Pi thinking presentation so Pi sessions match the Pi TUI: while the
++model works, ONE temporary message per topic shows the thinking trace as a
++compact tree; when the final assistant answer is ready the trace is deleted
++and only the answer remains.  Tool-call display stays with tool_batch
++(ephemeral mode already collapses each run of tool calls into one edited
++bubble and deletes it on flush), so a single pipeline owns the whole
++Pi transcript flow: thinking here, tool calls in tool_batch, final answers
++through the normal content queue.
++
++Messages are marked by the Pi formatter via ``AgentMessage.phase``:
++
++- ``PI_LIVE_PHASE``  — a thinking block; folded into the temporary tree.
++- ``PI_FINAL_PHASE`` — assistant text with a terminal stopReason (anything
++  but ``toolUse``); triggers deletion of the temporary trace before the
++  answer is delivered through the normal path.
++
++State is in-memory per (user_id, thread_id): rendered steps plus the
++Telegram message id of the temporary trace bubble.
++"""
++
++from __future__ import annotations
++
++import contextlib
++import time
++from dataclasses import dataclass, field
++
++import structlog
++from telegram.error import TelegramError
++
++from ...telegram_client import TelegramClient
++from ...topic_state_registry import topic_state
++from .message_sender import edit_with_fallback, safe_send
++from .message_task import thread_key
++
++logger = structlog.get_logger()
++
++PI_LIVE_PHASE = "pi-live"
++PI_FINAL_PHASE = "pi-final"
++
++# Tree presentation knobs (mirror the retired sidecar defaults).
++MAX_TREE_STEPS = 8
++EDIT_MIN_SECS = 2.0
++MAX_STEP_CHARS = 120
++
++_TREE_HEADER = "\U0001f9e0 Thinking\u2026"
++_TREE_SPINNER = "\u2514\u2500 \u23f3 still thinking\u2026"
++
++
++@dataclass
++class _LiveTrace:
++    """Per-topic temporary thinking trace state."""
++
++    steps: list[str] = field(default_factory=list)
++    message_id: int | None = None
++    chat_id: int | None = None
++    last_edit_ts: float = 0.0
++
++
++# Active traces: (user_id, thread_id_or_0) -> _LiveTrace
++_traces: dict[tuple[int, int], _LiveTrace] = {}
++
++
++def normalize_step(text: str, max_chars: int = MAX_STEP_CHARS) -> str:
++    """Reduce a thinking block to one compact tree node (first line)."""
++    first_line = (text or "").strip().splitlines()[0] if text and text.strip() else ""
++    if len(first_line) > max_chars:
++        first_line = first_line[:max_chars].rstrip() + "\u2026"
++    return first_line
++
++
++def render_thinking_tree(steps: list[str], max_steps: int = MAX_TREE_STEPS) -> str:
++    """Render the trace as a compact tree, newest steps last.
++
++    Overflow folds into a ``\u2026 (N earlier steps)`` node, matching the
++    step-granularity live trace of the Pi TUI.
++    """
++    lines = [_TREE_HEADER]
++    shown = steps[-max_steps:] if max_steps > 0 else []
++    hidden = len(steps) - len(shown)
++    if hidden > 0:
++        lines.append(f"\u251c\u2500 \u2026 ({hidden} earlier steps)")
++    for step in shown:
++        lines.append(f"\u251c\u2500 {step}")
++    lines.append(_TREE_SPINNER)
++    return "\n".join(lines)
++
++
++async def handle_pi_thinking(
++    client: TelegramClient,
++    user_id: int,
++    thread_id: int | None,
++    chat_id: int,
++    step_text: str,
++) -> None:
++    """Fold one thinking block into the topic's temporary trace bubble.
++
++    First block sends the bubble; later blocks edit it in place, rate-limited
++    by EDIT_MIN_SECS (the final delete is never rate-limited).
++    """
++    step = normalize_step(step_text)
++    if not step:
++        return
++
++    key = (user_id, thread_key(thread_id))
++    trace = _traces.setdefault(key, _LiveTrace())
++    trace.steps.append(step)
++    trace.chat_id = chat_id
++
++    text = render_thinking_tree(trace.steps)
++
++    if trace.message_id is None:
++        sent = await safe_send(client, chat_id, text, message_thread_id=thread_id)
++        if sent is not None:
++            trace.message_id = sent.message_id
++            trace.last_edit_ts = time.monotonic()
++        return
++
++    now = time.monotonic()
++    if now - trace.last_edit_ts < EDIT_MIN_SECS:
++        return
++    edited = await edit_with_fallback(
++        client, chat_id, trace.message_id, text
++    )
++    if edited:
++        trace.last_edit_ts = now
++    else:
++        # Bubble vanished (topic cleaned, message deleted); resend fresh.
++        trace.message_id = None
++        trace.last_edit_ts = 0.0
++
++
++async def clear_pi_thinking(
++    client: TelegramClient,
++    user_id: int,
++    thread_id: int | None,
++) -> None:
++    """Delete the topic's temporary trace bubble, if any.
++
++    Called when the final assistant answer (or a terminal error notice) is
++    about to be delivered, so the trace disappears exactly like Pi's
++    tree-style live transcript.
++    """
++    key = (user_id, thread_key(thread_id))
++    trace = _traces.pop(key, None)
++    if trace is None or trace.message_id is None or trace.chat_id is None:
++        return
++    with contextlib.suppress(TelegramError):
++        await client.delete_message(
++            chat_id=trace.chat_id, message_id=trace.message_id
++        )
++
++
++@topic_state.register("topic")
++def clear_trace_for_topic(user_id: int, thread_id: int | None = None) -> None:
++    """Drop trace state for a topic (called on topic cleanup)."""
++    _traces.pop((user_id, thread_key(thread_id)), None)
++
++
++def clear_all_traces() -> None:
++    """Drop all trace state (called on shutdown / in tests)."""
++    _traces.clear()
+diff --git a/ccgram/providers/pi_format.py b/ccgram/providers/pi_format.py
+index 12962ea..67c42b0 100644
+--- a/ccgram/providers/pi_format.py
++++ b/ccgram/providers/pi_format.py
+@@ -13,6 +13,15 @@ an assistant message are ``text``, ``thinking`` (with ``thinkingSignature``),
+ Parsers return ``(messages, pending)`` tuples so callers can chain pending-tool
+ state across batches exactly like the Claude/Codex providers.  ``pending``
+ maps ``toolCallId -> (raw_name, display_name)``.
++
++Renderer parity (dotfiles ccgram-prototype patch): ``thinking`` blocks are
++no longer dropped.  They are emitted as ``content_type="thinking"`` messages
++stamped ``phase="pi-live"`` so the messaging pipeline can fold them into one
++temporary tree-style trace per topic (see
++``handlers/messaging_pipeline/pi_live_transcript.py``).  Assistant text is
++stamped ``phase="pi-final"`` when the message carries a terminal stopReason
++(anything but ``toolUse``), which is the signal to delete that trace before
++the answer is delivered — matching Pi's own live-transcript behaviour.
+ """
+ 
+ from __future__ import annotations
+@@ -190,8 +199,15 @@ def _parse_assistant_content(
+     content: Any,
+     pending: Pending,
+     timestamp: str | None,
++    final: bool = False,
+ ) -> list[AgentMessage]:
+-    """Extract text and tool_use messages from assistant content."""
++    """Extract text, thinking, and tool_use messages from assistant content.
++
++    ``final`` marks the message as turn-terminal (stopReason != "toolUse");
++    text messages then carry ``phase="pi-final"`` so the pipeline can retire
++    the temporary thinking trace before delivering the answer.
++    """
++    text_phase = "pi-final" if final else None
+     if isinstance(content, str):
+         if content.strip():
+             return [
+@@ -199,6 +215,7 @@ def _parse_assistant_content(
+                     text=content.strip(),
+                     role="assistant",
+                     content_type="text",
++                    phase=text_phase,
+                     timestamp=timestamp,
+                 )
+             ]
+@@ -218,6 +235,19 @@ def _parse_assistant_content(
+                         text=text.strip(),
+                         role="assistant",
+                         content_type="text",
++                        phase=text_phase,
++                        timestamp=timestamp,
++                    )
++                )
++        elif btype == "thinking":
++            thinking = block.get("thinking")
++            if isinstance(thinking, str) and thinking.strip():
++                messages.append(
++                    AgentMessage(
++                        text=thinking.strip(),
++                        role="assistant",
++                        content_type="thinking",
++                        phase="pi-live",
+                         timestamp=timestamp,
+                     )
+                 )
+@@ -236,9 +266,18 @@ def parse_assistant(
+     the failure.
+     """
+     content = msg.get("content", [])
+-    messages = _parse_assistant_content(content, pending, timestamp)
++    final = msg.get("stopReason") != "toolUse"
++    messages = _parse_assistant_content(content, pending, timestamp, final=final)
+     err_msg = _assistant_error_message(msg, timestamp)
+     if err_msg is not None:
++        # Terminal error notices also retire the temporary thinking trace.
++        err_msg = AgentMessage(
++            text=err_msg.text,
++            role=err_msg.role,
++            content_type=err_msg.content_type,
++            phase="pi-final",
++            timestamp=err_msg.timestamp,
++        )
+         messages.append(err_msg)
+ 
+     return messages, pending

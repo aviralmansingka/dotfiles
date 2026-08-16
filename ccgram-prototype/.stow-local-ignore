@@ -4,3 +4,8 @@
 ^README\.md$
 ^validate\.sh$
 ^\.stow-local-ignore$
+# Repo-only: renderer patch, tests, fixtures, and the sidecar test dir.
+^patches$
+^pi-renderer$
+^pi-renderer-patch\.sh$
+^thinking-sidecar$
