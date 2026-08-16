@@ -32,8 +32,8 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/message_routing.py b/ccgram/handl
              if len(stripped) < _MIN_THINKING_LENGTH:
 diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
 --- a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-15 23:31:24.824153468 -0400
-+++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-15 23:31:48.658832502 -0400
-@@ -13,17 +13,38 @@
++++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-15 23:40:43.935912786 -0400
+@@ -13,17 +13,42 @@
  Messages are marked by the Pi formatter via ``AgentMessage.phase``:
  
  - ``PI_LIVE_PHASE``  — a thinking block; folded into the temporary tree.
@@ -60,6 +60,10 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +- ``CCGRAM_PI_TRACE_TICK_SECS`` — liveness ticker period (default 1.0).
 +- ``CCGRAM_PI_TRACE_IDLE_SECS`` — idle-timeout deletion (default 600 =
 +  10 minutes).
++- ``CCGRAM_PI_TRACE_WRAP_CHARS`` — mobile wrap width (default 48).  Goal
++  and step lines are word-wrapped to this many columns with a hanging
++  indent under the node prefix, so the tree shape survives Telegram's
++  phone-width line wrapping.  0 disables intentional wrapping.
 +
 +State is in-memory per (user_id, thread_id): rendered steps, the current
 +goal label, and the Telegram message id of the temporary trace bubble.
@@ -74,7 +78,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  import time
  from dataclasses import dataclass, field
  
-@@ -38,30 +59,49 @@
+@@ -38,15 +63,34 @@
  logger = structlog.get_logger()
  
  PI_LIVE_PHASE = "pi-live"
@@ -91,18 +95,26 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +EDIT_MIN_SECS = float(os.getenv("CCGRAM_PI_TRACE_EDIT_SECS", "2.0"))
 +TICK_SECS = float(os.getenv("CCGRAM_PI_TRACE_TICK_SECS", "1.0"))
 +IDLE_SECS = float(os.getenv("CCGRAM_PI_TRACE_IDLE_SECS", "600"))
++WRAP_CHARS = int(os.getenv("CCGRAM_PI_TRACE_WRAP_CHARS", "48"))
  
  _TREE_HEADER = "\U0001f9e0 Thinking\u2026"
  _TREE_SPINNER = "\u2514\u2500 \u23f3 still thinking\u2026"
- 
++_GOAL_PREFIX = "\u25b8 "  # ▸ + space
++_STEP_PREFIX = "\u251c\u2500 "  # ├─ + space
++# Hanging indents for wrapped continuation lines: same column width as the
++# node prefixes, so a wrapped line aligns under its node's text and the
++# tree shape survives Telegram's phone-width wrapping.
++_GOAL_INDENT = " " * len(_GOAL_PREFIX)
++_STEP_INDENT = " " * len(_STEP_PREFIX)
++
 +# Markdown metacharacters stripped from goal labels (mirrors the frontdoor
 +# daemon's _strip_markdown) so model markdown cannot leak literal markup or
 +# skew the bold entity offsets of the rendered goal line.
 +_MD_STRIP_RE = re.compile(r"(\*\*|__|~~|`)")
-+
+ 
  
  @dataclass
- class _LiveTrace:
+@@ -54,14 +98,22 @@
      """Per-topic temporary thinking trace state."""
  
      steps: list[str] = field(default_factory=list)
@@ -125,7 +137,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  
  def normalize_step(text: str, max_chars: int = MAX_STEP_CHARS) -> str:
      """Reduce a thinking block to one compact tree node (first line)."""
-@@ -71,13 +111,36 @@
+@@ -71,77 +123,277 @@
      return first_line
  
  
@@ -133,6 +145,33 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +def _strip_markdown(text: str) -> str:
 +    """Remove markdown emphasis/code markers from a goal label."""
 +    return _MD_STRIP_RE.sub("", text)
++
++
++def wrap_segments(prefix_width: int, text: str, width: int) -> list[str]:
++    """Word-wrap ``text`` so ``prefix_width + segment`` fits ``width``.
++
++    Continuation segments share the first line's available width because
++    the renderer hangs them under a same-width blank indent.  Breaks
++    prefer spaces; an unbreakable over-long word is hard-cut.  ``width``
++    <= 0 disables wrapping (single segment).  Width is counted in
++    characters — Telegram wraps by pixels with a proportional font, so
++    this is an intentional mobile-column approximation, not an exact fit.
++    """
++    if width <= 0:
++        return [text]
++    avail = max(1, width - prefix_width)
++    segments: list[str] = []
++    remaining = text
++    while remaining:
++        if len(remaining) <= avail:
++            segments.append(remaining)
++            break
++        cut = remaining.rfind(" ", 0, avail + 1)
++        if cut <= 0:
++            cut = avail
++        segments.append(remaining[:cut].rstrip())
++        remaining = remaining[cut:].lstrip()
++    return segments
 +
 +
 +def format_elapsed(seconds: float) -> str:
@@ -146,6 +185,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +    goal: str | None = None,
 +    elapsed: float | None = None,
 +    max_steps: int = MAX_TREE_STEPS,
++    wrap_chars: int = WRAP_CHARS,
 +) -> str:
      """Render the trace as a compact tree, newest steps last.
  
@@ -154,7 +194,10 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +    ``elapsed`` adds the liveness timer to the header (``· 0:42``); ``goal``
 +    renders as a bold top line under the header.  Overflow folds into a
 +    ``… (N earlier steps)`` node, matching the step-granularity live trace
-+    of the Pi TUI.
++    of the Pi TUI.  Goal and step lines are word-wrapped at ``wrap_chars``
++    with a hanging indent under their node prefix, so the tree shape
++    survives Telegram's phone-width wrapping (``wrap_chars`` <= 0 disables
++    intentional wrapping).
      """
 -    lines = [_TREE_HEADER]
 +    header = _TREE_HEADER
@@ -162,11 +205,22 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +        header = f"{header} \u00b7 {format_elapsed(elapsed)}"
 +    lines = [header]
 +    if goal:
-+        lines.append(f"\u25b8 **{goal}**")
++        # Bold each wrapped segment separately; the ``**`` markers are
++        # converted to entities (not displayed), so width is counted on
++        # the plain goal text.
++        for i, seg in enumerate(wrap_segments(len(_GOAL_PREFIX), goal, wrap_chars)):
++            prefix = _GOAL_PREFIX if i == 0 else _GOAL_INDENT
++            lines.append(f"{prefix}**{seg}**")
      shown = steps[-max_steps:] if max_steps > 0 else []
      hidden = len(steps) - len(shown)
      if hidden > 0:
-@@ -88,60 +151,199 @@
+         lines.append(f"\u251c\u2500 \u2026 ({hidden} earlier steps)")
+     for step in shown:
+-        lines.append(f"\u251c\u2500 {step}")
++        for i, seg in enumerate(wrap_segments(len(_STEP_PREFIX), step, wrap_chars)):
++            prefix = _STEP_PREFIX if i == 0 else _STEP_INDENT
++            lines.append(f"{prefix}{seg}")
+     lines.append(_TREE_SPINNER)
      return "\n".join(lines)
  
  
@@ -206,14 +260,14 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +    trace.client = client
      trace.chat_id = chat_id
 +    return key, trace, now
-+
  
 -    text = render_thinking_tree(trace.steps)
+ 
 +async def _push_update(
 +    trace: _LiveTrace, thread_id: int | None, now: float
 +) -> None:
 +    """Send the trace bubble on first content, else edit it in place.
- 
++
 +    First send is silent (dotfiles low-noise patch): the trace is ephemeral
 +    by design — edited in place, deleted when the final answer lands — so it
 +    must never notify.  Edits are rate-limited by EDIT_MIN_SECS and skipped
@@ -389,7 +443,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  async def clear_pi_thinking(
      client: TelegramClient,
      user_id: int,
-@@ -170,5 +372,9 @@
+@@ -170,5 +422,9 @@
  
  
  def clear_all_traces() -> None:

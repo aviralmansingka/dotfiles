@@ -296,7 +296,9 @@ notification while the final answer still notifies, and silent/notifying
 tasks never merge. Layer 4 adds liveness coverage: the header elapsed timer,
 the `CCGRAM_PI_TRACE_*` knobs, mid-turn text folding into the bold goal line
 (no separate message, no notification), ticker timer refresh with no new
-steps, edit-throttle respect, and idle-timeout bubble deletion.
+steps, edit-throttle respect, idle-timeout bubble deletion, and mobile
+wrap-aware rendering (long goal/step lines word-wrap with a hanging indent
+that preserves the tree shape; wrapping disabled at width 0).
 
 ### Live smoke plan (only when explicitly authorized)
 
@@ -309,10 +311,11 @@ live after applying the stack and restarting the service:
    notification**; the 🧠 thinking tree appears/updates **without a
    notification**; its header timer (`· 0:42`) visibly advances at ~1s
    cadence even while no new step arrives; mid-turn narration text shows up
-   as the tree's bold `▸` goal line instead of a separate message; no
-   tool-call messages at all; the status bubble (if it appears) is silent;
-   when the turn ends, the trace bubble is deleted and **exactly one
-   final-answer message notifies**.
+   as the tree's bold `▸` goal line instead of a separate message; long
+   goal/step lines wrap with a hanging indent that keeps the tree shape
+   intact on a phone; no tool-call messages at all; the status bubble (if
+   it appears) is silent; when the turn ends, the trace bubble is deleted
+   and **exactly one final-answer message notifies**.
 4. Kill a worker mid-turn (`herdr` pane kill or `kill -9` its pi process):
    the orphaned trace bubble is deleted within `CCGRAM_PI_TRACE_IDLE_SECS`
    (default 10 min) without a new turn.
@@ -374,12 +377,22 @@ ever contains complete messages — and stays out of scope):
 - **Idle-timeout deletion.** If a turn dies mid-thinking (kill -9, network
   drop) and no final answer arrives, the stale bubble is deleted after
   `CCGRAM_PI_TRACE_IDLE_SECS` (default `600` = 10 minutes).
+- **Mobile wrap-aware tree.** Goal and step lines are word-wrapped at
+  `CCGRAM_PI_TRACE_WRAP_CHARS` columns (default `48`, a phone-width
+  approximation — Telegram wraps by pixels with a proportional font) with a
+  hanging indent under the node prefix: a wrapped step continues aligned
+  under its `├─` text column and a wrapped goal under its `▸` text column
+  (bold per segment), so the tree shape survives Telegram's own line
+  wrapping instead of breaking into ragged full-width lines. `0` disables
+  intentional wrapping. The 120-char per-node caps still apply as the hard
+  truncation ceiling above this soft wrap.
 
 | Env knob | Default | Prototype setting | Meaning |
 | -------- | ------- | ----------------- | ------- |
 | `CCGRAM_PI_TRACE_EDIT_SECS` | `2.0` | `1.0` | Minimum seconds between trace-bubble edits (applies to step/goal updates and the timer ticker). |
 | `CCGRAM_PI_TRACE_TICK_SECS` | `1.0` | unset | Liveness ticker period (timer refresh + idle sweep granularity). |
 | `CCGRAM_PI_TRACE_IDLE_SECS` | `600` | unset | Delete a trace bubble with no thinking/goal activity for this long (killed-turn cleanup). |
+| `CCGRAM_PI_TRACE_WRAP_CHARS` | `48` | unset | Soft word-wrap width (in characters) for goal/step lines, with hanging indent under the node prefix; `0` disables. |
 
 ### Remaining parity gaps (vs the Pi TUI)
 

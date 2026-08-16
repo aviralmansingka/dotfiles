@@ -61,6 +61,7 @@ os.environ.setdefault("CCGRAM_QUIET_PROGRESS", "true")
 # drive tick_once() directly); idle-timeout deletion stays at the default.
 os.environ.setdefault("CCGRAM_PI_TRACE_EDIT_SECS", "1.0")
 os.environ.setdefault("CCGRAM_PI_TRACE_TICK_SECS", "3600")
+os.environ.setdefault("CCGRAM_PI_TRACE_WRAP_CHARS", "48")
 
 
 def _find_site_packages() -> Path:
@@ -363,11 +364,13 @@ class PiRendererParityTest(unittest.TestCase):
     # ── 5. Thinking-tree liveness (patch layer 4) ────────────────────────
 
     def test_liveness_env_knobs(self):
-        # CCGRAM_PI_TRACE_EDIT_SECS=1.0 / _TICK_SECS=3600 set at module
-        # import (top of file); the idle-timeout default is 10 minutes.
+        # CCGRAM_PI_TRACE_EDIT_SECS=1.0 / _TICK_SECS=3600 / _WRAP_CHARS=48
+        # set at module import (top of file); the idle-timeout default is
+        # 10 minutes.
         self.assertEqual(self.trace.EDIT_MIN_SECS, 1.0)
         self.assertEqual(self.trace.TICK_SECS, 3600.0)
         self.assertEqual(self.trace.IDLE_SECS, 600.0)
+        self.assertEqual(self.trace.WRAP_CHARS, 48)
 
     def test_header_shows_live_elapsed_timer(self):
         tree = self.trace.render_thinking_tree(["step"], elapsed=42.7)
@@ -392,6 +395,68 @@ class PiRendererParityTest(unittest.TestCase):
         lines = tree.splitlines()
         self.assertTrue(lines[1].startswith("▸ **"))
         self.assertTrue(lines[2].startswith("├─"))
+
+    def test_wrap_segments_word_wraps_and_hard_cuts(self):
+        ws = self.trace.wrap_segments
+        # Fits: single segment.
+        self.assertEqual(ws(3, "short", 48), ["short"])
+        # Word-boundary break: never splits a word that fits.
+        segs = ws(3, "alpha beta gamma delta epsilon", 14)
+        self.assertTrue(all(len(seg) <= 11 for seg in segs))
+        self.assertEqual(" ".join(segs), "alpha beta gamma delta epsilon")
+        # Unbreakable over-long word: hard-cut at the available width.
+        segs = ws(3, "x" * 30, 13)
+        self.assertEqual(segs, ["x" * 10, "x" * 10, "x" * 10])
+        # Width 0 disables wrapping.
+        self.assertEqual(ws(3, "a " * 50, 0), ["a " * 50])
+
+    def test_long_step_wraps_with_hanging_indent(self):
+        step = (
+            "Checking whether the transcript binding race fix holds for "
+            "reused session directories across consecutive worker spawns"
+        )
+        tree = self.trace.render_thinking_tree([step], wrap_chars=48)
+        step_lines = [l for l in tree.splitlines() if "Checking" in l or l.startswith("   ")]
+        self.assertGreater(len(step_lines), 1)  # actually wrapped
+        self.assertTrue(step_lines[0].startswith("├─ "))
+        for cont in step_lines[1:]:
+            # Continuation aligns under the node's text column, so the
+            # tree shape survives Telegram's phone-width wrapping.
+            self.assertTrue(cont.startswith("   "), cont)
+            self.assertNotIn("├─", cont)
+        for line in step_lines:
+            self.assertLessEqual(len(line), 48, line)
+        # No text lost: stripping prefixes/indent reassembles the step.
+        reassembled = " ".join(
+            l.removeprefix("├─ ").strip() for l in step_lines
+        )
+        self.assertEqual(reassembled, step)
+
+    def test_long_goal_wraps_bold_segments_with_hanging_indent(self):
+        goal = (
+            "Refactoring the message routing pipeline so mid-turn assistant "
+            "text folds into the thinking tree instead of notifying"
+        )
+        tree = self.trace.render_thinking_tree(["step"], goal=goal, wrap_chars=48)
+        goal_lines = [l for l in tree.splitlines() if "**" in l]
+        self.assertGreater(len(goal_lines), 1)
+        self.assertTrue(goal_lines[0].startswith("▸ **"))
+        for cont in goal_lines[1:]:
+            self.assertTrue(cont.startswith("  **"), cont)
+            self.assertNotIn("▸", cont)
+        for line in goal_lines:
+            # Displayed width excludes the non-rendering ** markers.
+            self.assertLessEqual(len(line) - 4, 48, line)
+        reassembled = " ".join(
+            l.removeprefix("▸ ").strip().strip("*") for l in goal_lines
+        )
+        self.assertEqual(reassembled, goal)
+
+    def test_wrap_disabled_keeps_single_lines(self):
+        tree = self.trace.render_thinking_tree(
+            ["s " * 60], goal="g " * 60, wrap_chars=0
+        )
+        self.assertEqual(len(tree.splitlines()), 4)  # header, goal, step, spinner
 
     def test_mid_turn_text_folds_into_goal_line_no_new_message(self):
         trace = self.trace
