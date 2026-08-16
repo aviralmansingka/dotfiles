@@ -38,7 +38,11 @@
 #      immune to the difflib autojunk collapse that let the real line-14
 #      pair through the earlier character-level rule); mobile-safe label
 #      wrap default (36 columns, blank hanging indent under the bullet);
-#      idle-timeout deletion of stale trace bubbles (default 10 min).
+#      idle-timeout deletion of stale trace bubbles (default 10 min);
+#      self-healing ticker — a failed tick is logged and the loop
+#      continues, Telegram RetryAfter becomes a per-trace backoff, and a
+#      bubble whose edits keep failing is resent fresh from the ticker
+#      (the timer never freezes waiting for the next transcript event).
 #
 # Patch 2's context includes files added/edited by patch 1, so patch 2 only
 # applies on top of patch 1; patch 3 touches disjoint files and applies on
