@@ -1,9 +1,9 @@
 """Offline fixture tests for the ccgram Pi renderer-parity patch.
 
 Runs against a THROWAWAY COPY of the installed ccgram package with the
-tracked patch applied (the live uv tool is never touched). Requires the
-ccgram uv tool's python (deps: telegram, structlog, dotenv) — validate.sh
-invokes this with `~/.local/share/uv/tools/ccgram/bin/python`.
+tracked patch stack applied (the live uv tool is never touched). Requires
+the ccgram uv tool's python (deps: telegram, structlog, dotenv) —
+validate.sh invokes this with `~/.local/share/uv/tools/ccgram/bin/python`.
 
 Coverage:
   1. pi_format: thinking blocks -> content_type "thinking", phase "pi-live";
@@ -11,9 +11,14 @@ Coverage:
      (stopReason toolUse) and tool_use/tool_result stay phase-free so the
      existing ephemeral tool_batch keeps owning tool-call display.
   2. pi_live_transcript: tree rendering (folding, first-line nodes) and the
-     temporary-bubble state machine (send -> rate-limited edit -> delete)
-     against a fake TelegramClient. No Bot API calls are made.
-  3. Wiring: patched message_routing routes pi-live/pi-final phases.
+     temporary-bubble state machine (silent send -> rate-limited edit ->
+     delete) against a fake TelegramClient. No Bot API calls are made.
+  3. Low-noise notifications: the thinking trace is silent on first send;
+     under CCGRAM_QUIET_PROGRESS user-echo content tasks are delivered with
+     disable_notification=True while the final answer still notifies;
+     silent and notifying tasks never merge.
+  4. Wiring: patched message_routing routes pi-live/pi-final phases and
+     flags user echoes silent; the status bubble send honors quiet_progress.
 """
 
 from __future__ import annotations
@@ -30,13 +35,19 @@ import unittest
 from pathlib import Path
 
 PKG_DIR = Path(__file__).resolve().parent.parent
-PATCH_FILE = PKG_DIR / "patches" / "ccgram-4.5.2-pi-renderer-parity.patch"
+# Patch stack, in apply order (patch 2's context depends on patch 1).
+PATCH_FILES = [
+    PKG_DIR / "patches" / "ccgram-4.5.2-pi-renderer-parity.patch",
+    PKG_DIR / "patches" / "ccgram-4.5.2-low-noise-notifications.patch",
+]
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "pi_turn.jsonl"
 
 # ccgram.config constructs at import time and requires a token; give it a
 # placeholder (not a real token, never used — no Bot API calls happen here).
 os.environ.setdefault("TELEGRAM_BOT_TOKEN", "0:offline-fixture-placeholder")
 os.environ.setdefault("ALLOWED_USERS", "123")
+# Low-noise mode under test: user echoes + status bubble go silent.
+os.environ.setdefault("CCGRAM_QUIET_PROGRESS", "true")
 
 
 def _find_site_packages() -> Path:
@@ -59,7 +70,7 @@ def _prepare_patched_copy() -> Path:
         ignore=shutil.ignore_patterns("__pycache__"),
     )
 
-    def already_patched(root: Path) -> bool:
+    def renderer_parity_applied(root: Path) -> bool:
         # Marker-based detection: `patch -R --dry-run` auto-detects unreversed
         # patches and ignores -R, so it cannot tell applied from pristine.
         new_file = root / "ccgram/handlers/messaging_pipeline/pi_live_transcript.py"
@@ -68,10 +79,19 @@ def _prepare_patched_copy() -> Path:
             encoding="utf-8"
         )
 
-    if already_patched(tmp):
-        pass  # live tool already patched; the copy is too
-    else:
-        with open(PATCH_FILE, "rb") as fh:
+    def low_noise_applied(root: Path) -> bool:
+        cfg = (root / "ccgram/config.py").read_text(encoding="utf-8")
+        task = (
+            root / "ccgram/handlers/messaging_pipeline/message_task.py"
+        ).read_text(encoding="utf-8")
+        return "CCGRAM_QUIET_PROGRESS" in cfg and "silent: bool = False" in task
+
+    marker_checks = [renderer_parity_applied, low_noise_applied]
+
+    for patch_file, applied_check in zip(PATCH_FILES, marker_checks):
+        if applied_check(tmp):
+            continue  # live tool already patched; the copy is too
+        with open(patch_file, "rb") as fh:
             dry = subprocess.run(
                 ["patch", "-p1", "--dry-run", "--batch", "-s", "-d", str(tmp)],
                 stdin=fh,
@@ -79,17 +99,17 @@ def _prepare_patched_copy() -> Path:
             )
         if dry.returncode != 0:
             raise unittest.SkipTest(
-                "patch does not apply cleanly; installed ccgram version "
-                "differs from the patch target"
+                f"{patch_file.name} does not apply cleanly; installed ccgram "
+                "version differs from the patch target"
             )
-        with open(PATCH_FILE, "rb") as fh:
+        with open(patch_file, "rb") as fh:
             subprocess.run(
                 ["patch", "-p1", "--batch", "-s", "-d", str(tmp)],
                 stdin=fh,
                 check=True,
             )
-        if not already_patched(tmp):
-            raise RuntimeError("patch applied but markers missing")
+        if not applied_check(tmp):
+            raise RuntimeError(f"{patch_file.name} applied but markers missing")
     return tmp
 
 
@@ -131,10 +151,15 @@ class PiRendererParityTest(unittest.TestCase):
             if mod == "ccgram" or mod.startswith("ccgram."):
                 del sys.modules[mod]
 
+        from ccgram.config import config
+        from ccgram.handlers.messaging_pipeline import message_queue, message_task
         from ccgram.handlers.messaging_pipeline import pi_live_transcript
         from ccgram.providers import pi_format
         from ccgram.providers.pi import PiProvider
 
+        cls.config = config
+        cls.message_queue = message_queue
+        cls.message_task = message_task
         cls.pi_format = pi_format
         cls.trace = pi_live_transcript
         cls.provider = PiProvider()
@@ -227,6 +252,9 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(client.sent[0]["chat_id"], -100999)
         self.assertEqual(client.sent[0].get("message_thread_id"), 42)
         self.assertIn("├─ first step", client.sent[0]["text"])
+        # Low-noise: the temporary trace is silent on first send — it is
+        # edited in place and deleted on final, so it must never notify.
+        self.assertIs(client.sent[0].get("disable_notification"), True)
 
         # Rate limit: an immediate second step does not edit yet.
         run(trace.handle_pi_thinking(client, 1, 42, -100999, "second step"))
@@ -260,7 +288,51 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertEqual(len(client.deleted), 1)
         self.assertIn((1, 77), trace._traces)
 
-    # ── 3. Routing wiring ────────────────────────────────────────────────
+    # ── 3. Low-noise notifications ───────────────────────────────────────
+
+    def test_quiet_progress_config_flag(self):
+        # CCGRAM_QUIET_PROGRESS=true is set at module import (top of file).
+        self.assertTrue(self.config.quiet_progress)
+
+    def test_silent_user_echo_sends_without_notification(self):
+        client = _FakeClient()
+        task = self.message_task.ContentTask(
+            window_id="w1",
+            parts=("\U0001f464 FIRSTMATE_OP: launch-brief",),
+            role="user",
+            thread_id=42,
+            chat_id=-100999,
+            silent=True,
+        )
+        asyncio.run(self.message_queue._process_content_task(client, 1, task))
+        self.assertEqual(len(client.sent), 1)
+        self.assertIs(client.sent[0].get("disable_notification"), True)
+
+    def test_final_answer_still_notifies(self):
+        client = _FakeClient()
+        task = self.message_task.ContentTask(
+            window_id="w1",
+            parts=("Fixed the flaky parser test.",),
+            role="assistant",
+            thread_id=42,
+            chat_id=-100999,
+        )
+        asyncio.run(self.message_queue._process_content_task(client, 1, task))
+        self.assertEqual(len(client.sent), 1)
+        self.assertIn(client.sent[0].get("disable_notification"), (None, False))
+
+    def test_silent_and_notifying_tasks_never_merge(self):
+        ct = self.message_task.ContentTask
+        silent = ct(window_id="w", parts=("a",), silent=True)
+        notifying = ct(window_id="w", parts=("b",), silent=False)
+        # A silent user echo must never fold into the notifying final
+        # answer (that would mute the answer's notification).
+        self.assertFalse(self.message_queue._can_merge_tasks(silent, notifying))
+        self.assertFalse(self.message_queue._can_merge_tasks(notifying, silent))
+        other_silent = ct(window_id="w", parts=("c",), silent=True)
+        self.assertTrue(self.message_queue._can_merge_tasks(silent, other_silent))
+
+    # ── 4. Routing wiring ────────────────────────────────────────────────
 
     def test_routing_wires_pi_phases(self):
         src = (
@@ -270,6 +342,20 @@ class PiRendererParityTest(unittest.TestCase):
         self.assertIn("clear_pi_thinking(client, user_id, thread_id)", src)
         self.assertIn('msg.phase == PI_LIVE_PHASE', src)
         self.assertIn('msg.phase == PI_FINAL_PHASE', src)
+
+    def test_routing_flags_user_echoes_silent_under_quiet_progress(self):
+        src = (
+            self.tmp / "ccgram/handlers/messaging_pipeline/message_routing.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn('silent=config.quiet_progress and msg.role == "user"', src)
+
+    def test_status_bubble_send_honors_quiet_progress(self):
+        # Functional coverage of send_status_text needs a wired SessionManager
+        # (thread_router); assert the wiring instead.
+        src = (self.tmp / "ccgram/handlers/status/status_bubble.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("disable_notification=config.quiet_progress", src)
 
 
 if __name__ == "__main__":

@@ -36,10 +36,11 @@ already publish agent sessions that ccgram discovers with zero code changes.
 | `.config/systemd/user/ccgram-prototype.service` | User unit running ccgram against Herdr. Deployed by `stow ccgram-prototype`. |
 | `.config/systemd/user/ccgram-thinking-sidecar.service` | User unit for the **deprecated** thinking sidecar (see below). Deployed by stow; **not enabled by default**; do not enable alongside the renderer patch. |
 | `.local/bin/ccgram-thinking-sidecar` | Stdlib-only Python sidecar (deprecated fallback). Deployed by stow to `~/.local/bin`. |
-| `.config/ccgram-prototype.env.example` | Env template (multiplexer, status mode, autoclose, placeholders for secrets, optional sidecar fallback tuning). |
-| `patches/ccgram-4.5.2-pi-renderer-parity.patch` | Tracked unified diff that patches the installed ccgram 4.5.2 Pi renderer (thinking + tool-call + final-answer flow). Not deployed by stow. |
-| `pi-renderer-patch.sh` | Idempotent `status`/`check`/`apply`/`rollback` for the renderer patch, with file-level backups. Not deployed by stow. |
-| `pi-renderer/` | Renderer-parity fixture tests (JSONL turn with thinking + tool calls + final text). Not deployed by stow. |
+| `.config/ccgram-prototype.env.example` | Env template (multiplexer, status mode, autoclose, low-noise notification knobs, placeholders for secrets, optional sidecar fallback tuning). |
+| `patches/ccgram-4.5.2-pi-renderer-parity.patch` | Tracked unified diff, layer 1: patches the installed ccgram 4.5.2 Pi renderer (thinking + tool-call + final-answer flow). Not deployed by stow. |
+| `patches/ccgram-4.5.2-low-noise-notifications.patch` | Tracked unified diff, layer 2 (applies on top of layer 1): final-answer-only notifications (silent thinking trace, quiet-progress mode). Not deployed by stow. |
+| `pi-renderer-patch.sh` | Idempotent `status`/`check`/`apply`/`rollback` for the whole patch stack, with file-level backups. Not deployed by stow. |
+| `pi-renderer/` | Patch-stack fixture tests (JSONL turn with thinking + tool calls + final text; low-noise notification behavior). Not deployed by stow. |
 | `thinking-sidecar/` | Sidecar unit tests + JSONL/state fixtures (deprecated fallback). Not deployed by stow. |
 | `validate.sh` | Offline checks: systemd unit syntax + sidecar unit tests + renderer patch state and fixture tests + no committed secrets. Not deployed by stow. |
 | `README.md` | This guide. Not deployed by stow. |
@@ -170,27 +171,27 @@ default (or set it per window with `/verbose`) for the Pi-like presentation.
 
 ```sh
 cd ~/dotfiles/ccgram-prototype
-./pi-renderer-patch.sh status     # applied | not-applied | unknown
-./pi-renderer-patch.sh check      # dry-run against the installed tool
+./pi-renderer-patch.sh status     # per-patch: applied | not-applied | unknown
+./pi-renderer-patch.sh check      # verifies the missing layers apply cleanly
 
 # If the deprecated sidecar fallback is running, stop it FIRST — running
 # both would double the thinking output.
 systemctl --user disable --now ccgram-thinking-sidecar.service 2>/dev/null || true
 
-./pi-renderer-patch.sh apply      # backs up originals, then patches (idempotent)
+./pi-renderer-patch.sh apply      # backs up originals, applies missing layers in order (idempotent)
 systemctl --user restart ccgram-prototype.service
 ```
 
-Rollback (exact reverse of apply):
+Rollback (exact reverse of apply, whole stack in reverse order):
 
 ```sh
 ./pi-renderer-patch.sh rollback   # reverse-patches (idempotent)
 systemctl --user restart ccgram-prototype.service
 ```
 
-`apply` copies the two modified files to
+`apply` copies each pre-existing modified file to
 `~/.ccgram-prototype/renderer-patch-backup/4.5.2/` before patching; if
-`rollback` ever fails, restore those two paths by hand. The script refuses to
+`rollback` ever fails, restore those paths by hand. The script refuses to
 touch any ccgram version other than 4.5.2 (set `CCGRAM_PATCH_FORCE=1` to
 override after regenerating the patch) and refuses to patch a dirty tree.
 
@@ -202,9 +203,58 @@ Offline tests (no Telegram, no live state):
 ```
 
 The tests copy the installed package to a temp dir, apply the tracked patch
-there, and drive a synthetic JSONL turn (thinking + tool calls + final text +
-error) through the real parser and the trace state machine with a fake
-Telegram client.
+stack there, and drive a synthetic JSONL turn (thinking + tool calls + final
+text + error) through the real parser and the trace state machine with a fake
+Telegram client. They also assert the low-noise behavior: the trace bubble is
+sent with `disable_notification=True`, silent user-echo tasks send without
+notification while the final answer still notifies, and silent/notifying
+tasks never merge.
+
+### Live smoke plan (only when explicitly authorized)
+
+Offline validation never touches Telegram. To smoke the low-noise behavior
+live after applying the stack and restarting the service:
+
+1. Confirm env: `grep -E 'HIDE_TOOL_CALLS|QUIET_PROGRESS|HIDE_THINKING|EPHEMERAL' ~/.config/ccgram-prototype.env`.
+2. Let Firstmate dispatch one small worker task (or wait for the next one).
+3. Expected in the worker's topic: the 👤 brief echo appears **without a
+   notification**; the 🧠 thinking tree appears/updates **without a
+   notification**; no tool-call messages at all; the status bubble (if it
+   appears) is silent; when the turn ends, the trace bubble is deleted and
+   **exactly one final-answer message notifies**.
+4. `journalctl --user -u ccgram-prototype.service -f` shows no patch-related
+   tracebacks.
+
+### Low-noise notifications — final-answer-only (patch layer 2)
+
+Captain preference: **while a Firstmate worker runs, nothing in its topic
+notifies; when the turn completes, one normal final-answer message
+notifies.** `patches/ccgram-4.5.2-low-noise-notifications.patch` (applied
+by the same `pi-renderer-patch.sh`, on top of the renderer-parity layer)
+plus env config implement that:
+
+| Transcript element during a run | Behavior | Mechanism |
+| ------------------------------- | -------- | --------- |
+| Tool calls / results | **No message at all** | `CCGRAM_HIDE_TOOL_CALLS=true` (upstream config, no patch; `message_queue` drops `tool_use`/`tool_result` tasks before batching) |
+| Thinking trace (tree bubble) | Visible, **silent on first send**, edited in place, deleted on final | Patch: `disable_notification=True` in `pi_live_transcript.handle_pi_thinking` |
+| Status bubble ("working…") | Visible, **silent on first send**, edited in place, cleared on done | Patch + `CCGRAM_QUIET_PROGRESS=true`: `disable_notification` in `status_bubble.send_status_text` |
+| User transcript echoes (Firstmate launch brief) | Visible (👤), **silent** | Patch + `CCGRAM_QUIET_PROGRESS=true`: `ContentTask.silent` flag, set in `message_routing` for `role="user"` |
+| Final assistant answer | **Normal message — notifies** | Unchanged normal path |
+
+Notes:
+
+- Edits and deletes never notify in Telegram, so only first sends need
+  the flag.
+- The thinking trace is silent unconditionally (it is ephemeral by design);
+  the status bubble and user echoes are gated on `CCGRAM_QUIET_PROGRESS`
+  (default off upstream-style, set `true` in the prototype env).
+- Silent and notifying content tasks never merge (`_can_merge_tasks`
+  guard), so a silent user echo can never fold into — and mute — the
+  final answer.
+- Tool calls need no patch: `CCGRAM_HIDE_TOOL_CALLS=true` suppresses them
+  in stock ccgram. Caveat: a per-window `/verbose` override
+  (`shown`/`hidden`) beats the global default — don't set per-window
+  overrides on worker topics.
 
 ### Remaining parity gaps (vs the Pi TUI)
 
@@ -334,9 +384,9 @@ Offline checks only (no live services touched):
 ```
 
 Verifies the systemd units parse (`systemd-analyze verify`), the thinking
-sidecar compiles and its unit tests pass, the renderer patch is in a
-consistent state (`pi-renderer-patch.sh check`) and its offline fixture tests
-pass against a patched temp copy of the installed tool, and that no real
+sidecar compiles and its unit tests pass, the patch stack is in a consistent
+state (`pi-renderer-patch.sh check`) and its offline fixture tests pass
+against a patched temp copy of the installed tool, and that no real
 tokens/chat IDs are committed in this package.
 
 ## Known limitations (from the scout report)
