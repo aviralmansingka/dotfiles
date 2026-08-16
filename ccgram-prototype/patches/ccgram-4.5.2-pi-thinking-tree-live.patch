@@ -1,6 +1,6 @@
 diff -ruN a/ccgram/handlers/messaging_pipeline/message_routing.py b/ccgram/handlers/messaging_pipeline/message_routing.py
---- a/ccgram/handlers/messaging_pipeline/message_routing.py	2026-08-16 12:23:28.799903842 -0400
-+++ b/ccgram/handlers/messaging_pipeline/message_routing.py	2026-08-16 12:23:28.812342247 -0400
+--- a/ccgram/handlers/messaging_pipeline/message_routing.py
++++ b/ccgram/handlers/messaging_pipeline/message_routing.py
 @@ -28,8 +28,10 @@
  from .message_queue import enqueue_content_message, get_message_queue
  from .pi_live_transcript import (
@@ -31,9 +31,9 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/message_routing.py b/ccgram/handl
              stripped = (msg.text or "").strip()
              if len(stripped) < _MIN_THINKING_LENGTH:
 diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
---- a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-16 12:23:28.800045847 -0400
-+++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py	2026-08-16 12:39:33.157817656 -0400
-@@ -1,29 +1,74 @@
+--- a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
++++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
+@@ -1,34 +1,84 @@
 -"""Pi live thinking transcript — temporary tree-style trace per topic.
 +"""Pi live thinking status — temporary live status bubble per topic.
  
@@ -89,9 +89,14 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 -Telegram message id of the temporary trace bubble.
 +Liveness: a per-trace background ticker re-renders the bubble at the edit
 +cadence even when no new completed JSONL message has arrived, so the
-+timer always advances.  The same sweep deletes a stale bubble when no
-+thinking/goal activity has arrived for ``IDLE_SECS`` (a killed turn
-+leaves no orphan).
++timer always advances.  The ticker is self-healing: a failing tick is
++logged and the loop keeps running (one escaped exception must never
++freeze the timer for the rest of a long tool call), a Telegram
++``RetryAfter`` sets a per-trace backoff instead of killing the sweep,
++and a bubble whose edits keep failing is resent fresh from the ticker —
++the live timer never waits for the next transcript event to reappear.
++The same sweep deletes a stale bubble when no thinking/goal activity
++has arrived for ``IDLE_SECS`` (a killed turn leaves no orphan).
 +
 +Knobs (env, read at import):
 +
@@ -120,7 +125,13 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
  import time
  from dataclasses import dataclass, field
  
-@@ -38,110 +83,381 @@
+ import structlog
+-from telegram.error import TelegramError
++from telegram.error import RetryAfter, TelegramError
+ 
+ from ...telegram_client import TelegramClient
+ from ...topic_state_registry import topic_state
+@@ -38,108 +88,445 @@
  logger = structlog.get_logger()
  
  PI_LIVE_PHASE = "pi-live"
@@ -160,15 +171,15 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +@dataclass
 +class _GoalNode:
 +    """One goal line: a mid-turn narration, or derived from thinking.
- 
--_TREE_HEADER = "\U0001f9e0 Thinking\u2026"
--_TREE_SPINNER = "\u2514\u2500 \u23f3 still thinking\u2026"
++
 +    ``derived`` marks a label taken from a thinking block's first line
 +    (frontdoor ``label_derived``): it sticks until a text block in the
 +    same turn replaces it, and only a text-derived goal starts a new
 +    node (completing the previous one as ✓).
 +    """
-+
+ 
+-_TREE_HEADER = "\U0001f9e0 Thinking\u2026"
+-_TREE_SPINNER = "\u2514\u2500 \u23f3 still thinking\u2026"
 +    label: str
 +    derived: bool = False
 +    done: bool = False
@@ -183,10 +194,17 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
      message_id: int | None = None
      chat_id: int | None = None
 +    client: TelegramClient | None = None
++    thread_id: int | None = None
 +    started_ts: float = 0.0
      last_edit_ts: float = 0.0
 +    last_activity_ts: float = 0.0
 +    last_rendered: str = ""
++    # Telegram flood-control backoff (RetryAfter): skip edits until this
++    # monotonic timestamp; the timer catches up on the first tick after.
++    backoff_until: float = 0.0
++    # Consecutive tick-edit failures; two in a row means the bubble is
++    # gone (one may be a transient network error) and it is resent fresh.
++    edit_failures: int = 0
  
  
  # Active traces: (user_id, thread_id_or_0) -> _LiveTrace
@@ -334,20 +352,52 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +    trace.last_activity_ts = now
 +    trace.client = client
      trace.chat_id = chat_id
++    trace.thread_id = thread_id
 +    return key, trace, now
  
 -    text = render_thinking_tree(trace.steps)
  
-+async def _push_update(
-+    trace: _LiveTrace, thread_id: int | None, now: float
-+) -> None:
++def _retry_after_secs(exc: RetryAfter) -> float:
++    """Telegram's requested flood-control wait, as a float (>= 1s)."""
++    return max(1.0, float(getattr(exc, "retry_after", 1.0) or 1.0))
++
++
++async def _send_bubble(trace: _LiveTrace, now: float) -> bool:
++    """Send (or resend) the trace bubble silently; True when sent.
++
++    Used on first content and by the ticker's self-healing resend.  The
++    bubble is ephemeral by design — edited in place, deleted when the
++    final answer lands — so the (re)send must never notify.
++    """
++    if trace.client is None or trace.chat_id is None:
++        return False
++    text = _render(trace, now)
++    sent = await safe_send(
++        trace.client,
++        trace.chat_id,
++        text,
++        message_thread_id=trace.thread_id,
++        disable_notification=True,
++    )
++    if sent is None:
++        return False
++    trace.message_id = sent.message_id
++    trace.last_edit_ts = now
++    trace.last_rendered = text
++    trace.edit_failures = 0
++    return True
++
++
++async def _push_update(trace: _LiveTrace, now: float) -> None:
 +    """Send the trace bubble on first content, else edit it in place.
 +
 +    First send is silent (dotfiles low-noise patch): the trace is ephemeral
 +    by design — edited in place, deleted when the final answer lands — so it
 +    must never notify.  Edits are rate-limited by EDIT_MIN_SECS and skipped
 +    when the rendered text is unchanged (the final delete is never
-+    rate-limited).
++    rate-limited).  A Telegram RetryAfter sets a per-trace backoff instead
++    of propagating — the ticker renders the latest state once the backoff
++    elapses, so a throttled update is delayed, never lost.
 +    """
 +    text = _render(trace, now)
      if trace.message_id is None:
@@ -355,40 +405,49 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 -        # ephemeral by design — edited in place, deleted when the final
 -        # answer lands — so it must never notify. Edits and deletes do not
 -        # notify either; only the final answer (normal path) may notify.
-         sent = await safe_send(
+-        sent = await safe_send(
 -            client,
 -            chat_id,
-+            trace.client,
-+            trace.chat_id,
-             text,
-             message_thread_id=thread_id,
-             disable_notification=True,
-         )
-         if sent is not None:
-             trace.message_id = sent.message_id
+-            text,
+-            message_thread_id=thread_id,
+-            disable_notification=True,
+-        )
+-        if sent is not None:
+-            trace.message_id = sent.message_id
 -            trace.last_edit_ts = time.monotonic()
-+            trace.last_edit_ts = now
-+            trace.last_rendered = text
++        await _send_bubble(trace, now)
          return
  
 -    now = time.monotonic()
 +    if text == trace.last_rendered:
 +        return
++    if now < trace.backoff_until:
++        return
      if now - trace.last_edit_ts < EDIT_MIN_SECS:
          return
-     edited = await edit_with_fallback(
+-    edited = await edit_with_fallback(
 -        client, chat_id, trace.message_id, text
-+        trace.client, trace.chat_id, trace.message_id, text
-     )
+-    )
++    try:
++        edited = await edit_with_fallback(
++            trace.client, trace.chat_id, trace.message_id, text
++        )
++    except RetryAfter as exc:
++        trace.backoff_until = now + _retry_after_secs(exc)
++        return
      if edited:
          trace.last_edit_ts = now
 +        trace.last_rendered = text
++        trace.edit_failures = 0
      else:
-         # Bubble vanished (topic cleaned, message deleted); resend fresh.
+-        # Bubble vanished (topic cleaned, message deleted); resend fresh.
++        # Bubble vanished (topic cleaned, message deleted); resend fresh
++        # right away so the new content stays visible.
          trace.message_id = None
-         trace.last_edit_ts = 0.0
- 
- 
+-        trace.last_edit_ts = 0.0
++        await _send_bubble(trace, now)
++
++
 +def _ensure_ticker() -> None:
 +    """Start the liveness ticker if it is not running (needs a live loop)."""
 +    global _tick_task
@@ -401,14 +460,21 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +
 +
 +async def _ticker() -> None:
-+    """Refresh live traces (timer) and sweep idle ones until none remain."""
++    """Refresh live traces (timer) and sweep idle ones until none remain.
++
++    A failing tick is logged and the loop CONTINUES: a single escaped
++    exception must never kill the ticker — ``_ensure_ticker`` only runs
++    on new transcript activity, so a dead ticker freezes the live timer
++    for the rest of a long tool call (the PR151 visible-smoke failure).
++    """
 +    global _tick_task
 +    try:
 +        while _traces:
 +            await asyncio.sleep(TICK_SECS)
-+            await tick_once()
-+    except Exception:
-+        logger.exception("Pi thinking trace ticker crashed")
++            try:
++                await tick_once()
++            except Exception:
++                logger.exception("Pi thinking trace tick failed")
 +    finally:
 +        _tick_task = None
 +
@@ -422,6 +488,10 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +    - Timer refresh: a live trace whose edit throttle has elapsed is
 +      re-rendered (the header timer advances even when no new JSONL
 +      message arrived).  Edits never notify.
++    - Self-healing: a trace whose bubble vanished is resent from here,
++      and a Telegram RetryAfter becomes a per-trace backoff — neither
++      aborts the sweep, so the timer keeps ticking through long tool
++      calls with no transcript activity.
 +    """
 +    now = time.monotonic() if now is None else now
 +    for key, trace in list(_traces.items()):
@@ -442,27 +512,45 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +                thread_id=key[1],
 +            )
 +            continue
-+        if (
-+            trace.client is None
-+            or trace.message_id is None
-+            or trace.chat_id is None
-+        ):
++        if trace.client is None or trace.chat_id is None:
++            continue
++        if now < trace.backoff_until:
++            # Telegram flood-control backoff; the timer catches up on the
++            # first tick after it elapses.
++            continue
++        if trace.message_id is None:
++            # The bubble vanished (or a previous send/edit failed): resend
++            # it from the ticker so the live timer never waits for the
++            # next transcript event to reappear.
++            await _send_bubble(trace, now)
 +            continue
 +        if now - trace.last_edit_ts < EDIT_MIN_SECS:
 +            continue
 +        text = _render(trace, now)
 +        if text == trace.last_rendered:
 +            continue
-+        edited = await edit_with_fallback(
-+            trace.client, trace.chat_id, trace.message_id, text
-+        )
++        try:
++            edited = await edit_with_fallback(
++                trace.client, trace.chat_id, trace.message_id, text
++            )
++        except RetryAfter as exc:
++            # Flood control: honor Telegram's backoff and keep ticking.
++            trace.backoff_until = now + _retry_after_secs(exc)
++            continue
 +        if edited:
 +            trace.last_edit_ts = now
 +            trace.last_rendered = text
++            trace.edit_failures = 0
 +        else:
-+            # Bubble vanished; the next activity resends it fresh.
-+            trace.message_id = None
-+            trace.last_edit_ts = 0.0
++            # Both edit attempts failed.  One failure may be transient
++            # (network); two in a row means the bubble is gone — resend
++            # it fresh so the timer keeps ticking through long tool calls
++            # instead of freezing until the next transcript event.
++            trace.edit_failures += 1
++            if trace.edit_failures >= 2:
++                trace.edit_failures = 0
++                trace.message_id = None
++                await _send_bubble(trace, now)
 +
 +
 +async def handle_pi_thinking(
@@ -494,7 +582,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +        )
 +        _trim_goals(trace)
 +    _ensure_ticker()
-+    await _push_update(trace, thread_id, now)
++    await _push_update(trace, now)
 +
 +
 +async def handle_pi_goal(
@@ -538,13 +626,11 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +        trace.goals.append(_GoalNode(label=goal))
 +        _trim_goals(trace)
 +    _ensure_ticker()
-+    await _push_update(trace, thread_id, now)
-+
-+
++    await _push_update(trace, now)
+ 
+ 
  async def clear_pi_thinking(
-     client: TelegramClient,
-     user_id: int,
-@@ -150,8 +466,8 @@
+@@ -150,8 +537,8 @@
      """Delete the topic's temporary trace bubble, if any.
  
      Called when the final assistant answer (or a terminal error notice) is
@@ -555,7 +641,7 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
      """
      key = (user_id, thread_key(thread_id))
      trace = _traces.pop(key, None)
-@@ -170,5 +486,9 @@
+@@ -170,5 +557,9 @@
  
  
  def clear_all_traces() -> None:
@@ -567,8 +653,8 @@ diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/ha
 +        _tick_task.cancel()
 +    _tick_task = None
 diff -ruN a/ccgram/providers/pi_format.py b/ccgram/providers/pi_format.py
---- a/ccgram/providers/pi_format.py	2026-08-16 12:23:28.798744933 -0400
-+++ b/ccgram/providers/pi_format.py	2026-08-16 12:24:52.846657139 -0400
+--- a/ccgram/providers/pi_format.py
++++ b/ccgram/providers/pi_format.py
 @@ -17,16 +17,25 @@
  Renderer parity (dotfiles ccgram-prototype patch): ``thinking`` blocks are
  no longer dropped.  They are emitted as ``content_type="thinking"`` messages

@@ -40,7 +40,7 @@ already publish agent sessions that ccgram discovers with zero code changes.
 | `patches/ccgram-4.5.2-pi-renderer-parity.patch` | Tracked unified diff, layer 1: patches the installed ccgram 4.5.2 Pi renderer (thinking + tool-call + final-answer flow). Not deployed by stow. |
 | `patches/ccgram-4.5.2-low-noise-notifications.patch` | Tracked unified diff, layer 2 (applies on top of layer 1): final-answer-only notifications (silent thinking trace, quiet-progress mode). Not deployed by stow. |
 | `patches/ccgram-4.5.2-pi-transcript-binding.patch` | Tracked unified diff, layer 3 (disjoint files): fixes the SessionStart transcript-binding race for reused session directories (exact-match-only binding, deferred pending resolution, offset reset on path change). Not deployed by stow. |
-| `patches/ccgram-4.5.2-pi-thinking-tree-live.patch` | Tracked unified diff, layer 4 (edits layer-1 files): frontdoor-style live status bubble — live elapsed timer + ticker, one bold goal line per goal (`▸` active / `✓` done, matching the Pi Telegram frontdoor daemon; thinking blocks derive labels but never render as lines), `CCGRAM_PI_TRACE_*` cadence/idle/wrap knobs, same-message goal/thinking paraphrase dedupe, idle-timeout bubble deletion. Not deployed by stow. |
+| `patches/ccgram-4.5.2-pi-thinking-tree-live.patch` | Tracked unified diff, layer 4 (edits layer-1 files): frontdoor-style live status bubble — live elapsed timer + ticker, one bold goal line per goal (`▸` active / `✓` done, matching the Pi Telegram frontdoor daemon; thinking blocks derive labels but never render as lines), `CCGRAM_PI_TRACE_*` cadence/idle/wrap knobs, same-message goal/thinking paraphrase dedupe, idle-timeout bubble deletion, self-healing ticker (RetryAfter backoff + resend of a vanished bubble, so the timer never freezes mid-tool-call). Not deployed by stow. |
 | `.local/bin/ccgram-pi-hook` | Pi hook shim: waits (self-bounded) for the session's OWN transcript file at SessionStart, injects the exact `transcript_path`, delegates to `ccgram hook --provider pi`. Deployed by stow. |
 | `.pi/agent/extensions/hooks.json` | cc-thingz hook-runner wiring (SessionStart/Stop/SessionEnd → shim, async; SessionStart timeout raised to 20s to cover slow transcript creation). Deployed by stow. |
 | `pi-renderer-patch.sh` | Idempotent `status`/`check`/`apply`/`rollback` for the whole patch stack, with file-level backups. Not deployed by stow. |
@@ -283,6 +283,18 @@ tenant's transcript.
 touch any ccgram version other than 4.5.2 (set `CCGRAM_PATCH_FORCE=1` to
 override after regenerating the patch) and refuses to patch a dirty tree.
 
+Updating an existing patch layer: never hand-edit the `.patch` file.
+Build two scratch trees from the pristine 4.5.2 wheel in the uv cache —
+base = the layers below the one being changed, head = base + the current
+layer — edit the head tree's files, then regenerate with
+`diff -ruN --label a/<rel> --label b/<rel> base/<rel> head/<rel>` per
+touched file (one `diff -ruN a/... b/...` header line each, matching the
+tracked format) and verify the new patch applied to the base tree
+reproduces the edited head exactly. A layer revision never applies on
+top of its older revision on the live install: reverse the old revision
+first (`git show <old-rev>:ccgram-prototype/patches/<layer>.patch |
+patch -R -p1 -d "$SP"`), then `pi-renderer-patch.sh apply`.
+
 Offline tests (no Telegram, no live state):
 
 ```sh
@@ -397,7 +409,13 @@ completed ones drop off.
 - **Live elapsed timer.** The bubble header is `🧠 Thinking… · 0:42` and a
   per-trace background ticker re-renders the bubble at the edit cadence even
   when no new completed JSONL message has arrived, so the bubble always
-  looks alive. The ticker stops when no traces remain; edits never notify.
+  looks alive. The ticker is self-healing: a failing tick is logged and the
+  loop keeps running (one escaped exception never freezes the timer for the
+  rest of a long tool call), a Telegram `RetryAfter` becomes a per-trace
+  backoff instead of killing the sweep, and a bubble whose edits keep
+  failing is resent fresh from the ticker — the live timer never waits for
+  the next transcript event to reappear. The ticker stops when no traces
+  remain; edits (and resends) never notify.
 - **1s edit cadence knob.** `CCGRAM_PI_TRACE_EDIT_SECS` (default `2.0`)
   controls the minimum gap between trace edits; the prototype env sets
   `1.0`, matching the frontdoor's coalescing interval.

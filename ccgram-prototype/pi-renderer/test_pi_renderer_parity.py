@@ -36,7 +36,14 @@ Coverage:
      paraphrase dedupe (token-overlap heuristic), so the screenshot case
      displays the concise goal once; ticker timer refresh without new
      steps; idle-timeout deletion of stale trace bubbles; mobile-safe
-     36-column label wrap with a blank hanging indent under the bullet.
+     36-column label wrap with a blank hanging indent under the bullet;
+     ticker resilience (PR151 visible-smoke regression): RetryAfter on a
+     timer/goal edit becomes a per-trace backoff (throttled updates are
+     delayed, never lost), a vanished bubble is resent fresh after two
+     consecutive failed tick edits (one failure never resends — no
+     duplicate bubbles on transient errors), and the real _ticker loop
+     survives an exploded tick while editing with zero transcript
+     updates.
 """
 
 from __future__ import annotations
@@ -233,13 +240,21 @@ class _FakeMessage:
 
 
 class _FakeClient:
-    """Records the Bot API calls pi_live_transcript would make."""
+    """Records the Bot API calls pi_live_transcript would make.
+
+    Failure injection for the ticker-resilience tests: ``edit_error``
+    (an exception instance or a callable returning one/None per call) is
+    raised from edit_message_text, simulating Telegram flood control
+    (RetryAfter) or a vanished bubble (BadRequest) without any Bot API
+    calls.
+    """
 
     def __init__(self) -> None:
         self.sent: list[dict] = []
         self.edited: list[dict] = []
         self.deleted: list[dict] = []
         self._next_id = 1000
+        self.edit_error = None
 
     async def send_message(self, chat_id, text, **kwargs):
         self._next_id += 1
@@ -247,6 +262,9 @@ class _FakeClient:
         return _FakeMessage(self._next_id)
 
     async def edit_message_text(self, chat_id, message_id, text, **kwargs):
+        err = self.edit_error() if callable(self.edit_error) else self.edit_error
+        if err is not None:
+            raise err
         self.edited.append(
             {"chat_id": chat_id, "message_id": message_id, "text": text, **kwargs}
         )
@@ -648,6 +666,244 @@ class PiRendererParityTest(unittest.TestCase):
         tr.started_ts -= 65
         run(trace.tick_once())
         self.assertEqual(len(client.edited), 0)
+        trace.clear_all_traces()
+
+    # ── 5b. Ticker resilience (PR151 visible-smoke regression) ─────────
+    # The captain's smoke: a long `sleep 90` tool call with no transcript
+    # activity — the bubble's timer must keep editing on the ticker's own
+    # cadence, and no single edit failure may freeze it for the rest of
+    # the tool call.
+
+    def test_tick_survives_retry_after_and_honors_backoff(self):
+        from telegram.error import RetryAfter
+
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        run = asyncio.run
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, "first step"))
+        key = (1, 42)
+        tr = trace._traces[key]
+
+        # Telegram flood control on the timer edit: RetryAfter must NOT
+        # propagate out of tick_once (it killed the ticker before the
+        # fix); it becomes a per-trace backoff instead.
+        client.edit_error = RetryAfter(30)
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        tr.started_ts -= 65
+        run(trace.tick_once())  # must not raise
+        self.assertEqual(len(client.edited), 0)
+        self.assertGreater(tr.backoff_until, 0.0)
+
+        # Ticks during the backoff are skipped (no hammering)…
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.tick_once())
+        self.assertEqual(len(client.edited), 0)
+
+        # …and the timer catches up on the first tick after the backoff
+        # elapses — the trace and ticker state survive intact.
+        client.edit_error = None
+        tr.backoff_until = 0.0
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.tick_once())
+        self.assertEqual(len(client.edited), 1)
+        self.assertIn("🧠 Thinking… · 1:05", client.edited[0]["text"])
+        trace.clear_all_traces()
+
+    def test_push_update_retry_after_delays_but_never_loses_goal(self):
+        from telegram.error import RetryAfter
+
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        run = asyncio.run
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, "first step"))
+        tr = trace._traces[(1, 42)]
+
+        # A goal update whose edit hits flood control is NOT lost: the
+        # RetryAfter sets a backoff and the ticker renders the latest
+        # state once it elapses.
+        client.edit_error = RetryAfter(30)
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.handle_pi_goal(client, 1, 42, -100999, "the real goal"))
+        self.assertEqual(len(client.edited), 0)  # edit attempt flooded
+        self.assertGreater(tr.backoff_until, 0.0)
+
+        client.edit_error = None
+        tr.backoff_until = 0.0
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.tick_once())
+        self.assertEqual(len(client.edited), 1)
+        self.assertIn("▸ the real goal", client.edited[0]["text"])
+        trace.clear_all_traces()
+
+    def test_tick_resends_bubble_after_repeated_edit_failure(self):
+        from telegram.error import BadRequest
+
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        run = asyncio.run
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, "first step"))
+        self.assertEqual(len(client.sent), 1)
+        tr = trace._traces[(1, 42)]
+
+        # The bubble vanished (topic cleaned / message deleted): both the
+        # entity edit and the plain retry fail with "not found".
+        client.edit_error = BadRequest("Bad Request: message to edit not found")
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        tr.started_ts -= 65
+        run(trace.tick_once())
+        # One failure may be transient: no resend yet, but the failure is
+        # counted and the trace survives.
+        self.assertEqual(len(client.sent), 1)
+        self.assertEqual(tr.edit_failures, 1)
+        self.assertIsNotNone(tr.message_id)
+
+        # The second consecutive failed tick resends the bubble fresh —
+        # silently, in the same topic — so the live timer keeps ticking
+        # through a long tool call instead of freezing until the next
+        # transcript event.
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.tick_once())
+        self.assertEqual(len(client.sent), 2)
+        self.assertIs(client.sent[1].get("disable_notification"), True)
+        self.assertEqual(client.sent[1].get("message_thread_id"), 42)
+        self.assertEqual(tr.message_id, 1002)
+        self.assertEqual(tr.edit_failures, 0)
+        self.assertIn("🧠 Thinking… · 1:05", client.sent[1]["text"])
+
+        # …and later ticks edit the RESENT bubble.
+        client.edit_error = None
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        tr.started_ts -= 1  # advance the timer so the text changes
+        run(trace.tick_once())
+        self.assertEqual(len(client.edited), 1)
+        self.assertEqual(client.edited[0]["message_id"], 1002)
+        self.assertIn("🧠 Thinking… · 1:06", client.edited[0]["text"])
+        trace.clear_all_traces()
+
+    def test_tick_single_edit_failure_does_not_resend_or_freeze(self):
+        from telegram.error import BadRequest
+
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        run = asyncio.run
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, "first step"))
+        tr = trace._traces[(1, 42)]
+
+        # One transient failure (network blip): no duplicate resend, and
+        # the next healthy tick edits the SAME bubble — no freeze.
+        errors = iter([BadRequest("Timed out"), None])
+        client.edit_error = lambda: next(errors, None)
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        tr.started_ts -= 65
+        run(trace.tick_once())
+        self.assertEqual(len(client.sent), 1)  # no duplicate bubble
+        tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.tick_once())
+        self.assertEqual(len(client.edited), 1)
+        self.assertEqual(client.edited[0]["message_id"], 1001)
+        self.assertIn("🧠 Thinking… · 1:05", client.edited[0]["text"])
+        trace.clear_all_traces()
+
+    def test_ticker_loop_survives_tick_error_and_ticks_without_content(self):
+        # The smoke scenario end-to-end against the REAL _ticker task
+        # (not direct tick_once calls): with no new transcript content
+        # the background ticker edits the bubble at its own cadence, and
+        # one exploded tick does not kill the loop.
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        real_tick_once = trace.tick_once
+        state = {"calls": 0}
+
+        async def flaky_tick_once(now=None):
+            state["calls"] += 1
+            if state["calls"] == 1:
+                raise RuntimeError("boom")
+            await real_tick_once(now)
+
+        async def main():
+            saved_tick = trace.TICK_SECS
+            trace.TICK_SECS = 0.05
+            trace.tick_once = flaky_tick_once
+            try:
+                await trace.handle_pi_thinking(
+                    client, 1, 42, -100999, "first step"
+                )
+                self.assertIsNotNone(trace._tick_task)
+                # ~8 ticks, no new content; first tick explodes.
+                for _ in range(8):
+                    tr = trace._traces.get((1, 42))
+                    if tr is not None:
+                        tr.started_ts -= 1.0  # keep the timer advancing
+                        tr.last_edit_ts -= 1.0  # stay outside the throttle
+                    await asyncio.sleep(0.06)
+            finally:
+                trace.tick_once = real_tick_once
+                trace.TICK_SECS = saved_tick
+                trace.clear_all_traces()
+            await asyncio.sleep(0.05)  # let the cancelled ticker settle
+
+        asyncio.run(main())
+        # The exploded tick was logged and the loop CONTINUED: timer
+        # edits accumulated with zero transcript updates.
+        self.assertGreaterEqual(state["calls"], 3)
+        self.assertGreaterEqual(len(client.edited), 2)
+        self.assertIn("🧠 Thinking… ·", client.edited[-1]["text"])
+
+    def test_goal_sequence_updates_through_long_tool_call(self):
+        # The captain's enumerated frontdoor flow on the JSONL state
+        # machine: thinking-only derives ▸; a mid-turn text for the same
+        # step REPLACES the derived label (visible promptly via the
+        # ticker even when throttled at arrival); a genuinely new goal
+        # completes the prior one (✓) and takes the ▸; then a long
+        # no-content window (the sleep-90 tool call) keeps the timer
+        # editing with the active goal still visible.
+        trace = self.trace
+        trace.clear_all_traces()
+        client = _FakeClient()
+        run = asyncio.run
+        key = (1, 42)
+
+        run(trace.handle_pi_thinking(client, 1, 42, -100999, "Checking the worktree state first."))
+        self.assertEqual(len(client.sent), 1)
+        self.assertIn("▸ Checking the worktree state first.", client.sent[0]["text"])
+
+        # Mid-turn text for the same step arrives while the edit
+        # throttle is hot: no immediate edit, but the ticker makes the
+        # replacement visible promptly (derived label REPLACED, no ✓).
+        run(trace.handle_pi_goal(client, 1, 42, -100999, "Running the 90-second smoke wait."))
+        self.assertEqual(len(client.edited), 0)  # throttled at arrival
+        trace._traces[key].last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.tick_once())
+        self.assertEqual(len(client.edited), 1)
+        self.assertIn("▸ Running the 90-second smoke wait.", client.edited[0]["text"])
+        self.assertNotIn("✓", client.edited[0]["text"])
+        self.assertNotIn("Checking the worktree", client.edited[0]["text"])
+
+        # A genuinely new goal completes the prior one.
+        trace._traces[key].last_edit_ts -= trace.EDIT_MIN_SECS + 1
+        run(trace.handle_pi_goal(client, 1, 42, -100999, "Writing the smoke report."))
+        self.assertIn("✓ Running the 90-second smoke wait.", client.edited[-1]["text"])
+        self.assertIn("▸ Writing the smoke report.", client.edited[-1]["text"])
+
+        # Long tool call, no transcript updates: timer-only ticks keep
+        # editing the same bubble and the active goal stays visible.
+        for elapsed in (61.4, 62.4, 63.4):
+            tr = trace._traces[key]
+            tr.last_edit_ts -= trace.EDIT_MIN_SECS + 1
+            tr.started_ts = trace.time.monotonic() - elapsed
+            run(trace.tick_once())
+        texts = [e["text"] for e in client.edited[-3:]]
+        self.assertIn("· 1:01", texts[0])
+        self.assertIn("· 1:02", texts[1])
+        self.assertIn("· 1:03", texts[2])
+        for t in texts:
+            self.assertIn("▸ Writing the smoke report.", t)
+            self.assertEqual(e_msg := client.edited[-1]["message_id"], 1001)
         trace.clear_all_traces()
 
     # ── 6. Goal/thinking dedupe + no-tree mobile wrap ──────────────────
