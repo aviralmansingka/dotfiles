@@ -5,7 +5,7 @@ Default behavior is intentionally conservative:
 - Requires PI_TELEGRAM_BOT_TOKEN.
 - Only watches configured allowlisted chat IDs/usernames.
 - Only allowlisted chats are handled.
-- When PI_TELEGRAM_PREFIX is set, only messages with that prefix are sent to pi.
+- When PI_TELEGRAM_PREFIX is set, text and caption messages require it; bare images are accepted.
 - Replies are sent back to the same Telegram chat.
 """
 
@@ -14,9 +14,9 @@ from __future__ import annotations
 import base64
 import html
 import json
+import mimetypes
 import os
 import queue
-import mimetypes
 import re
 import signal
 import subprocess
@@ -583,12 +583,20 @@ def download_telegram_image(msg: IncomingMessage) -> Path:
     if size and size > MAX_IMAGE_BYTES:
         raise RuntimeError(f"Telegram image is too large ({size} bytes > {MAX_IMAGE_BYTES} byte limit)")
 
-    suffix = Path(file_path).suffix or mimetypes.guess_extension(msg.image_mime_type or "") or ".jpg"
+    suffix = Path(file_path).suffix.lower()
+    if not re.fullmatch(r"\.[a-z0-9]{1,10}", suffix):
+        suffix = mimetypes.guess_extension(msg.image_mime_type or "") or ".jpg"
+    image_bytes = telegram_download(file_path, timeout=120)
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise RuntimeError(
+            f"Telegram image is too large ({len(image_bytes)} bytes > {MAX_IMAGE_BYTES} byte limit)"
+        )
+
     fd, tmp_name = tempfile.mkstemp(prefix="pi-telegram-image-", suffix=suffix)
     tmp_path = Path(tmp_name)
     try:
         with os.fdopen(fd, "wb") as f:
-            f.write(telegram_download(file_path, timeout=120))
+            f.write(image_bytes)
         return tmp_path
     except Exception:
         try:
@@ -803,7 +811,7 @@ def parse_message(update: dict[str, Any]) -> Optional[IncomingMessage]:
 
         best = max(
             (p for p in photo_sizes if isinstance(p, dict) and p.get("file_id")),
-            key=lambda p: (int(p.get("file_size") or 0), _photo_area(p)),
+            key=lambda p: (_photo_area(p), int(p.get("file_size") or 0)),
             default=None,
         )
         if best:

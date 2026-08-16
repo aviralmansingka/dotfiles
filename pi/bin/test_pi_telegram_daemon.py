@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the thinking-trace streaming feature in pi-telegram-daemon.
+"""Tests for pi-telegram-daemon.
 
 Run with: python3 -m unittest test_pi_telegram_daemon -v
 """
@@ -8,13 +8,11 @@ from __future__ import annotations
 
 import base64
 import importlib.util
-import os
 import sys
 import tempfile
-import time
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Load the daemon module (hyphen in filename requires importlib)
 _DAEMON_PATH = Path(__file__).parent / "pi-telegram-daemon.py"
@@ -508,6 +506,17 @@ class TestParseMessageImages(unittest.TestCase):
         self.assertEqual(msg.image_file_id, "p1")
         self.assertEqual(msg.content, "")
 
+    def test_photo_selects_largest_dimensions_when_file_sizes_disagree(self):
+        update = _make_update({
+            "photo": [
+                {"file_id": "more-bytes", "width": 320, "height": 240, "file_size": 9000},
+                {"file_id": "largest", "width": 1280, "height": 720, "file_size": 8000},
+            ],
+        })
+        msg = daemon.parse_message(update)
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.image_file_id, "largest")
+
     def test_image_document(self):
         update = _make_update({
             "caption": "!pi describe this",
@@ -650,6 +659,28 @@ class TestDownloadTelegramImage(unittest.TestCase):
                 self.assertEqual(tmp.suffix, ".png")
             finally:
                 tmp.unlink(missing_ok=True)
+
+    def test_unsafe_remote_suffix_falls_back_to_mime_type(self):
+        msg = self._msg(image_mime_type="image/jpeg")
+        with patch.object(daemon, "telegram_api") as mock_api, \
+             patch.object(daemon, "telegram_download", return_value=b"jpeg"):
+            mock_api.return_value = {"file_path": "photos/file.jpg?token=secret", "file_size": 4}
+            tmp = daemon.download_telegram_image(msg)
+            try:
+                self.assertEqual(tmp.suffix, ".jpg")
+                self.assertNotIn("?", tmp.name)
+            finally:
+                tmp.unlink(missing_ok=True)
+
+    def test_refuses_download_larger_than_reported_size(self):
+        msg = self._msg(image_file_size=1)
+        with patch.object(daemon, "MAX_IMAGE_BYTES", 4), \
+             patch.object(daemon, "telegram_api") as mock_api, \
+             patch.object(daemon, "telegram_download", return_value=b"12345"):
+            mock_api.return_value = {"file_path": "photos/file.jpg", "file_size": 1}
+            with self.assertRaises(RuntimeError) as ctx:
+                daemon.download_telegram_image(msg)
+            self.assertIn("too large", str(ctx.exception))
 
     def test_missing_file_path_raises(self):
         msg = self._msg()
