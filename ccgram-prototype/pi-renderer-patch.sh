@@ -1,17 +1,29 @@
 #!/usr/bin/env bash
-# Apply / roll back the ccgram Pi renderer-parity patch.
+# Apply / roll back the ccgram Pi patch stack.
 #
-# The patch lives at patches/ccgram-4.5.2-pi-renderer-parity.patch and edits
-# the INSTALLED ccgram uv tool (4.5.2) so its own Pi rendering pipeline owns
-# thinking (temporary tree-style trace), tool-call display (existing
-# ephemeral batch), and final-answer delivery. This script makes that
-# hot-patch tracked, idempotent, and reversible.
+# The stack (applied IN ORDER) lives at patches/ and edits the INSTALLED
+# ccgram uv tool (4.5.2) so its own Pi rendering pipeline owns the whole
+# topic transcript flow:
+#
+#   1. ccgram-4.5.2-pi-renderer-parity.patch
+#      Thinking (temporary tree-style trace), tool-call display (existing
+#      ephemeral batch), final-answer delivery, phase stamping in pi_format.
+#   2. ccgram-4.5.2-low-noise-notifications.patch
+#      Final-answer-only notifications: the thinking trace bubble is silent
+#      on first send; under CCGRAM_QUIET_PROGRESS=true the status bubble and
+#      user transcript echoes (Firstmate worker briefs) are sent with
+#      disable_notification=True. Tool calls need no patch — config
+#      (CCGRAM_HIDE_TOOL_CALLS=true) suppresses them upstream.
+#
+# Patch 2's context includes files added/edited by patch 1, so patch 2 only
+# applies on top of patch 1; rollback reverses the stack in reverse order.
+# This script makes the hot-patches tracked, idempotent, and reversible.
 #
 # Usage:
-#   ./pi-renderer-patch.sh status     # applied | not-applied | unknown
-#   ./pi-renderer-patch.sh check      # dry-run: would the patch apply cleanly?
+#   ./pi-renderer-patch.sh status     # per-patch: applied | not-applied | unknown
+#   ./pi-renderer-patch.sh check      # dry-run: would the missing patches apply cleanly?
 #   ./pi-renderer-patch.sh apply      # backup originals, then patch (idempotent)
-#   ./pi-renderer-patch.sh rollback   # reverse the patch (idempotent)
+#   ./pi-renderer-patch.sh rollback   # reverse the whole stack (idempotent)
 #
 # Safety:
 #   - Refuses to touch a ccgram version other than 4.5.2 unless
@@ -25,13 +37,26 @@
 set -euo pipefail
 
 PKG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PATCH_FILE="$PKG_DIR/patches/ccgram-4.5.2-pi-renderer-parity.patch"
 EXPECTED_VERSION="4.5.2"
 
+# Patch stack, in apply order. Rollback walks this list in reverse.
+PATCH_NAMES=(
+    ccgram-4.5.2-pi-renderer-parity.patch
+    ccgram-4.5.2-low-noise-notifications.patch
+)
+
+patch_file() { printf '%s/patches/%s\n' "$PKG_DIR" "$1"; }
+
+# Files pre-existing in pristine ccgram that the stack modifies — backed up
+# before the first patch that touches them. (pi_live_transcript.py is ADDED
+# by patch 1, so there is no pristine original to back up.)
 TARGET_FILES=(
     ccgram/providers/pi_format.py
     ccgram/handlers/messaging_pipeline/message_routing.py
-    ccgram/handlers/messaging_pipeline/pi_live_transcript.py  # added by patch
+    ccgram/handlers/messaging_pipeline/message_queue.py
+    ccgram/handlers/messaging_pipeline/message_task.py
+    ccgram/handlers/status/status_bubble.py
+    ccgram/config.py
 )
 
 site_packages() {
@@ -67,34 +92,112 @@ check_version() {
     fi
 }
 
-has_markers() {
-    # Marker-based applied detection: `patch -R --dry-run` auto-detects
-    # unreversed patches and silently ignores -R, so it cannot distinguish
-    # applied from pristine. The patch's own fingerprints can.
+# --- Marker-based applied detection ---------------------------------------
+# `patch -R --dry-run` auto-detects unreversed patches and silently ignores
+# -R, so it cannot distinguish applied from pristine. Each patch's own
+# fingerprints can.
+
+has_markers_renderer_parity() {
     local sp="$1"
     [[ -f "$sp/ccgram/handlers/messaging_pipeline/pi_live_transcript.py" ]] \
         && grep -q 'phase="pi-live"' "$sp/ccgram/providers/pi_format.py" \
         && grep -q 'handle_pi_thinking' "$sp/ccgram/handlers/messaging_pipeline/message_routing.py"
 }
 
-has_no_markers() {
+has_no_markers_renderer_parity() {
     local sp="$1"
     [[ ! -e "$sp/ccgram/handlers/messaging_pipeline/pi_live_transcript.py" ]] \
         && ! grep -q 'phase="pi-live"' "$sp/ccgram/providers/pi_format.py" \
         && ! grep -q 'handle_pi_thinking' "$sp/ccgram/handlers/messaging_pipeline/message_routing.py"
 }
 
-is_applied() {
-    # 0 = applied, 1 = cleanly applicable (not applied), 2 = neither (dirty tree)
+has_markers_low_noise() {
     local sp="$1"
-    if has_markers "$sp"; then
+    grep -q 'CCGRAM_QUIET_PROGRESS' "$sp/ccgram/config.py" \
+        && grep -q 'disable_notification=True' \
+            "$sp/ccgram/handlers/messaging_pipeline/pi_live_transcript.py" 2>/dev/null \
+        && grep -q 'silent: bool = False' \
+            "$sp/ccgram/handlers/messaging_pipeline/message_task.py"
+}
+
+has_no_markers_low_noise() {
+    local sp="$1"
+    ! grep -q 'CCGRAM_QUIET_PROGRESS' "$sp/ccgram/config.py" \
+        && ! { [[ -f "$sp/ccgram/handlers/messaging_pipeline/pi_live_transcript.py" ]] \
+            && grep -q 'disable_notification=True' \
+                "$sp/ccgram/handlers/messaging_pipeline/pi_live_transcript.py"; } \
+        && ! grep -q 'silent: bool = False' \
+            "$sp/ccgram/handlers/messaging_pipeline/message_task.py"
+}
+
+marker_fn() {
+    # Echo the marker function base name for a patch file name.
+    case "$1" in
+        ccgram-4.5.2-pi-renderer-parity.patch) echo "renderer_parity" ;;
+        ccgram-4.5.2-low-noise-notifications.patch) echo "low_noise" ;;
+        *) echo "FAIL: no marker functions registered for patch '$1'" >&2; exit 2 ;;
+    esac
+}
+
+patch_state() {
+    # 0 = applied, 1 = not applied, 2 = partially applied (dirty tree)
+    local sp="$1" name="$2" base
+    base="$(marker_fn "$name")"
+    if "has_markers_$base" "$sp"; then
         return 0
     fi
-    if has_no_markers "$sp" \
-        && (cd "$sp" && patch -p1 --dry-run --batch -s < "$PATCH_FILE") >/dev/null 2>&1; then
+    if "has_no_markers_$base" "$sp"; then
         return 1
     fi
     return 2
+}
+
+stack_state() {
+    # Echoes per-patch state lines; overall rc 0 when every patch is in a
+    # definite state (applied or cleanly not-applied), 2 otherwise.
+    local sp="$1" rc=0 name st
+    for name in "${PATCH_NAMES[@]}"; do
+        st=0
+        patch_state "$sp" "$name" || st=$?
+        case "$st" in
+            0) echo "  $name: applied" ;;
+            1) echo "  $name: not-applied" ;;
+            *) echo "  $name: unknown (partial markers — dirty tree)"; rc=2 ;;
+        esac
+    done
+    return "$rc"
+}
+
+# Scratch-verify that the missing tail of the stack applies from the live
+# tree's current state: copy the affected files to a temp dir and really
+# apply the missing patches there (dry-run alone can't validate a sequence).
+verify_stack_applies() {
+    local sp="$1"
+    local tmp rel name st
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' RETURN
+    for rel in "${TARGET_FILES[@]}" \
+        ccgram/handlers/messaging_pipeline/pi_live_transcript.py; do
+        if [[ -f "$sp/$rel" ]]; then
+            mkdir -p "$tmp/$(dirname "$rel")"
+            cp -p "$sp/$rel" "$tmp/$rel"
+        fi
+    done
+    for name in "${PATCH_NAMES[@]}"; do
+        st=0
+        patch_state "$tmp" "$name" || st=$?
+        if [[ $st -eq 0 ]]; then
+            continue  # already applied; skip
+        fi
+        if [[ $st -ne 1 ]]; then
+            echo "FAIL: $name is partially applied; tree is dirty" >&2
+            return 1
+        fi
+        if ! (cd "$tmp" && patch -p1 --batch -s < "$(patch_file "$name")"); then
+            echo "FAIL: $name does not apply cleanly from the current state" >&2
+            return 1
+        fi
+    done
 }
 
 cmd="${1:-}"
@@ -102,65 +205,82 @@ SP="$(site_packages)" || { echo "FAIL: cannot locate ccgram uv tool site-package
 
 case "$cmd" in
     status)
-        rc=0
-        is_applied "$SP" || rc=$?
-        case "$rc" in
-            0) echo "applied ($SP)" ;;
-            1) echo "not-applied ($SP)" ;;
-            *) echo "unknown ($SP — tree matches neither pristine nor patched)" ;;
-        esac
+        echo "patch stack state ($SP):"
+        stack_state "$SP"
         ;;
     check)
         check_version "$SP"
-        if has_markers "$SP"; then
-            echo "ok: patch is applied (markers present in $SP)"
-        elif (cd "$SP" && patch -p1 --dry-run --batch -s < "$PATCH_FILE") >/dev/null 2>&1; then
-            echo "ok: patch would apply cleanly to $SP"
+        rc=0
+        stack_state "$SP" >/dev/null || rc=$?
+        if [[ $rc -ne 0 ]]; then
+            stack_state "$SP" >&2
+            echo "FAIL: patch stack is in a partial/dirty state" >&2
+            exit 1
+        fi
+        if verify_stack_applies "$SP"; then
+            echo "ok: patch stack state is consistent; missing patches apply cleanly ($SP)"
         else
-            echo "FAIL: patch does not apply cleanly; tree is dirty or version-mismatched" >&2
             exit 1
         fi
         ;;
     apply)
         check_version "$SP"
         rc=0
-        is_applied "$SP" || rc=$?
-        if [[ $rc -eq 0 ]]; then
-            echo "ok: already applied; nothing to do"
-            exit 0
-        fi
-        if [[ $rc -ne 1 ]]; then
-            echo "FAIL: $SP matches neither pristine nor patched state; refusing to patch a dirty tree" >&2
+        stack_state "$SP" >/dev/null || rc=$?
+        if [[ $rc -ne 0 ]]; then
+            stack_state "$SP" >&2
+            echo "FAIL: $SP has a partially applied stack; refusing to patch a dirty tree" >&2
             exit 1
         fi
         backup_dir="$HOME/.ccgram-prototype/renderer-patch-backup/$(installed_version "$SP")"
-        for rel in "${TARGET_FILES[@]}"; do
-            if [[ -f "$SP/$rel" && ! -f "$backup_dir/$rel" ]]; then
-                mkdir -p "$backup_dir/$(dirname "$rel")"
-                cp -p "$SP/$rel" "$backup_dir/$rel"
+        applied_any=0
+        for name in "${PATCH_NAMES[@]}"; do
+            st=0
+            patch_state "$SP" "$name" || st=$?
+            if [[ $st -eq 0 ]]; then
+                echo "ok: $name already applied; skipping"
+                continue
             fi
+            for rel in "${TARGET_FILES[@]}"; do
+                if [[ -f "$SP/$rel" && ! -f "$backup_dir/$rel" ]]; then
+                    mkdir -p "$backup_dir/$(dirname "$rel")"
+                    cp -p "$SP/$rel" "$backup_dir/$rel"
+                fi
+            done
+            (cd "$SP" && patch -p1 --batch -s < "$(patch_file "$name")")
+            if ! "has_markers_$(marker_fn "$name")" "$SP"; then
+                echo "FAIL: $name ran but markers are missing; restore the backup:" >&2
+                echo "      $backup_dir" >&2
+                exit 1
+            fi
+            echo "applied: $name -> $SP"
+            applied_any=1
         done
-        echo "backup: $backup_dir"
-        (cd "$SP" && patch -p1 --batch -s < "$PATCH_FILE")
-        if ! has_markers "$SP"; then
-            echo "FAIL: patch ran but markers are missing; restore the backup:" >&2
-            echo "      $backup_dir" >&2
-            exit 1
+        if [[ $applied_any -eq 1 ]]; then
+            echo "backup: $backup_dir"
+            echo "restart: systemctl --user restart ccgram-prototype.service"
         fi
-        echo "applied: $PATCH_FILE -> $SP"
-        echo "restart: systemctl --user restart ccgram-prototype.service"
         ;;
     rollback)
-        if ! is_applied "$SP"; then
-            echo "ok: not applied; nothing to do"
-            exit 0
-        fi
-        (cd "$SP" && patch -R -p1 --batch -s < "$PATCH_FILE")
-        if ! has_no_markers "$SP"; then
-            echo "FAIL: reverse patch ran but markers remain; tree may be dirty" >&2
-            exit 1
-        fi
-        echo "rolled back: $SP"
+        for ((i=${#PATCH_NAMES[@]}-1; i>=0; i--)); do
+            name="${PATCH_NAMES[$i]}"
+            st=0
+            patch_state "$SP" "$name" || st=$?
+            if [[ $st -eq 1 ]]; then
+                echo "ok: $name not applied; skipping"
+                continue
+            fi
+            if [[ $st -ne 0 ]]; then
+                echo "FAIL: $name is partially applied; refusing to roll back a dirty tree" >&2
+                exit 1
+            fi
+            (cd "$SP" && patch -R -p1 --batch -s < "$(patch_file "$name")")
+            if ! "has_no_markers_$(marker_fn "$name")" "$SP"; then
+                echo "FAIL: reverse patch ran but markers remain; tree may be dirty" >&2
+                exit 1
+            fi
+            echo "rolled back: $name"
+        done
         echo "restart: systemctl --user restart ccgram-prototype.service"
         ;;
     *)

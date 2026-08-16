@@ -1,0 +1,160 @@
+diff -ruN a/ccgram/config.py b/ccgram/config.py
+--- a/ccgram/config.py
++++ b/ccgram/config.py
+@@ -173,6 +173,16 @@
+             "CCGRAM_EPHEMERAL_TOOLS", ""
+         ).lower() in ("1", "true", "yes")
+ 
++        # Low-noise "quiet progress" mode (dotfiles ccgram-prototype
++        # low-noise patch): while a run is in flight, progress chrome —
++        # the per-topic status bubble and user transcript echoes (e.g. the
++        # Firstmate worker brief) — is sent with disable_notification=True,
++        # so the ONLY message that notifies is the final assistant answer.
++        # Off by default; the prototype env sets CCGRAM_QUIET_PROGRESS=true.
++        self.quiet_progress: bool = os.getenv(
++            "CCGRAM_QUIET_PROGRESS", "false"
++        ).lower() in ("1", "true", "yes")
++
+         # Color mapping for the topic state emoji prefix.
+         # "system" (default): green=active, yellow=idle (system POV: green=working).
+         # "user": green=idle, yellow=active (user POV: green=ready for me).
+diff -ruN a/ccgram/handlers/messaging_pipeline/message_queue.py b/ccgram/handlers/messaging_pipeline/message_queue.py
+--- a/ccgram/handlers/messaging_pipeline/message_queue.py
++++ b/ccgram/handlers/messaging_pipeline/message_queue.py
+@@ -178,6 +178,11 @@
+     # different chats, and merged text is delivered to a single destination.
+     if base.thread_id != candidate.thread_id or base.chat_id != candidate.chat_id:
+         return False
++    # Never merge silent with notifying tasks (dotfiles low-noise patch):
++    # a merged message carries one notification setting — mixing a silent
++    # user echo into the final answer would mute the answer's notification.
++    if base.silent != candidate.silent:
++        return False
+     if base.content_type in ("tool_use", "tool_result"):
+         return False
+     return candidate.content_type not in ("tool_use", "tool_result")
+@@ -237,6 +242,7 @@
+             role=first.role,
+             thread_id=first.thread_id,
+             chat_id=first.chat_id,
++            silent=first.silent,
+         ),
+         merge_count,
+     )
+@@ -460,7 +466,11 @@
+             first_part = False
+ 
+         sent = await rate_limit_send_message(
+-            client, chat_id, part, **send_kwargs(task.thread_id)
++            client,
++            chat_id,
++            part,
++            disable_notification=task.silent,
++            **send_kwargs(task.thread_id),
+         )
+ 
+         if sent:
+@@ -490,6 +500,7 @@
+     role: MessageRole = "assistant",
+     thread_id: int | None = None,
+     chat_id: int | None = None,
++    silent: bool = False,
+ ) -> None:
+     """Enqueue a content message task."""
+     if _is_ghost_window_task_at_enqueue(window_id):
+@@ -505,6 +516,7 @@
+         role=role,
+         thread_id=thread_id,
+         chat_id=chat_id,
++        silent=silent,
+     )
+     queue.put_nowait(task)
+ 
+diff -ruN a/ccgram/handlers/messaging_pipeline/message_routing.py b/ccgram/handlers/messaging_pipeline/message_routing.py
+--- a/ccgram/handlers/messaging_pipeline/message_routing.py
++++ b/ccgram/handlers/messaging_pipeline/message_routing.py
+@@ -11,6 +11,7 @@
+ import structlog
+ 
+ from ... import session_query
++from ...config import config
+ from ...session_monitor import NewMessage
+ from ...telegram_client import TelegramClient
+ from ...user_preferences import user_preferences
+@@ -137,6 +138,11 @@
+                 role=msg.role,  # type: ignore[arg-type]  # NewMessage.role is str, narrows at runtime
+                 thread_id=thread_id,
+                 chat_id=chat_id,
++                # Quiet-progress (dotfiles low-noise patch): user transcript
++                # echoes — e.g. the Firstmate brief that starts a worker
++                # run — stay visible in the topic but do not notify; only
++                # the final assistant answer does.
++                silent=config.quiet_progress and msg.role == "user",
+             )
+ 
+             session = await session_query.resolve_session_for_window(window_id)
+diff -ruN a/ccgram/handlers/messaging_pipeline/message_task.py b/ccgram/handlers/messaging_pipeline/message_task.py
+--- a/ccgram/handlers/messaging_pipeline/message_task.py
++++ b/ccgram/handlers/messaging_pipeline/message_task.py
+@@ -24,6 +24,10 @@
+     tool_name: str | None = None
+     thread_id: int | None = None
+     chat_id: int | None = None
++    # Quiet-progress (dotfiles low-noise patch): deliver with
++    # disable_notification=True. Used for user transcript echoes so a
++    # Firstmate worker brief does not notify — only the final answer does.
++    silent: bool = False
+ 
+ 
+ @dataclass(frozen=True, slots=True)
+diff -ruN a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
+--- a/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
++++ b/ccgram/handlers/messaging_pipeline/pi_live_transcript.py
+@@ -112,7 +112,17 @@
+     text = render_thinking_tree(trace.steps)
+ 
+     if trace.message_id is None:
+-        sent = await safe_send(client, chat_id, text, message_thread_id=thread_id)
++        # Silent on first send (dotfiles low-noise patch): the trace is
++        # ephemeral by design — edited in place, deleted when the final
++        # answer lands — so it must never notify. Edits and deletes do not
++        # notify either; only the final answer (normal path) may notify.
++        sent = await safe_send(
++            client,
++            chat_id,
++            text,
++            message_thread_id=thread_id,
++            disable_notification=True,
++        )
+         if sent is not None:
+             trace.message_id = sent.message_id
+             trace.last_edit_ts = time.monotonic()
+Binary files a/ccgram/handlers/messaging_pipeline/__pycache__/message_queue.cpython-314.pyc and b/ccgram/handlers/messaging_pipeline/__pycache__/message_queue.cpython-314.pyc differ
+Binary files a/ccgram/handlers/messaging_pipeline/__pycache__/message_routing.cpython-314.pyc and b/ccgram/handlers/messaging_pipeline/__pycache__/message_routing.cpython-314.pyc differ
+Binary files a/ccgram/handlers/messaging_pipeline/__pycache__/message_task.cpython-314.pyc and b/ccgram/handlers/messaging_pipeline/__pycache__/message_task.cpython-314.pyc differ
+Binary files a/ccgram/handlers/messaging_pipeline/__pycache__/pi_live_transcript.cpython-314.pyc and b/ccgram/handlers/messaging_pipeline/__pycache__/pi_live_transcript.cpython-314.pyc differ
+Binary files a/ccgram/handlers/status/__pycache__/status_bubble.cpython-314.pyc and b/ccgram/handlers/status/__pycache__/status_bubble.cpython-314.pyc differ
+diff -ruN a/ccgram/handlers/status/status_bubble.py b/ccgram/handlers/status/status_bubble.py
+--- a/ccgram/handlers/status/status_bubble.py
++++ b/ccgram/handlers/status/status_bubble.py
+@@ -18,6 +18,7 @@
+ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+ from telegram.error import TelegramError
+ 
++from ...config import config
+ from ...session_state_ports.live_session_state import get_task_snapshot, get_wait_header
+ from ...expandable_quote import format_expandable_quote
+ from ...telegram_client import TelegramClient
+@@ -341,6 +342,11 @@
+         text,
+         message_thread_id=thread_id,
+         reply_markup=keyboard,
++        # Quiet-progress (dotfiles low-noise patch): the status bubble is
++        # run-progress chrome — edited in place while the run continues,
++        # cleared when it ends — so under CCGRAM_QUIET_PROGRESS its first
++        # send must not notify; only the final answer does.
++        disable_notification=config.quiet_progress,
+     )
+     if msg is not None:
+         _status_msg_info[skey] = (msg.message_id, window_id, text, chat_id)
+Binary files a/ccgram/__pycache__/config.cpython-314.pyc and b/ccgram/__pycache__/config.cpython-314.pyc differ
