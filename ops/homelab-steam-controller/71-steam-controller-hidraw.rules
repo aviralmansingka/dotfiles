@@ -1,0 +1,26 @@
+# Seat-independent hidraw access for Sony game controllers on the homelab.
+#
+# Stock /usr/lib/udev/rules.d/60-steam-input.rules grants these hidraw nodes
+# access only via TAG+="uaccess" (base mode stays 0600 root:root). The uaccess
+# builtin depends on a logind round-trip from the udev worker; when logind is
+# slow (e.g. udevd flooded by another device's event storm) or when the GDM
+# greeter owns the seat, no ACL lands and Steam's SDL gets EACCES opening the
+# hidraw node. SDL then permanently disables the hidapi driver for that
+# controller ("driver = NONE (DISABLED)") until Steam restarts, and the
+# controller never registers in Steam.
+#
+# GROUP=input is applied locally by udevd in the same rule pass that creates
+# the node and emits the uevent -- no logind dependency -- so hotplug works
+# regardless of seat state or logind health. Requires the gaming user in
+# group "input" (see apply.sh).
+#
+# KERNELS matches the parent HID device name (<bus>:<vid>:<pid>.<n>):
+#   0003 = USB HID, 0005 = Bluetooth HID, 054C = Sony Interactive Entertainment.
+# ATTRS{idVendor} is NOT used: for Bluetooth the sysfs parent chain ends at the
+# BT adapter's USB vendor, so vendor-based rules silently never match BT gamepads.
+#
+# Covers DS3 (0268), DS4 (05c4/09cc), DualSense (0ce6), DualSense Edge (0df2)
+# and any future 054c controller, over both USB and Bluetooth.
+
+ACTION=="add|change", SUBSYSTEM=="hidraw", KERNELS=="0003:054C:*", GROUP="input", MODE="0660", TAG+="uaccess"
+ACTION=="add|change", SUBSYSTEM=="hidraw", KERNELS=="0005:054C:*", GROUP="input", MODE="0660", TAG+="uaccess"
