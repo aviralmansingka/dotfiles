@@ -78,8 +78,13 @@ if [[ $(driver_of "$GPU_VIDEO") != nvidia ]]; then
   modprobe nvidia_drm 2>/dev/null || true
 fi
 
+# modprobe is a no-op when snd_hda_intel is already loaded (e.g. for the iGPU
+# audio), so bind the HDMI-audio function explicitly when it is driverless.
 if [[ $(driver_of "$GPU_AUDIO") != snd_hda_intel ]]; then
   modprobe snd_hda_intel 2>/dev/null || true
+  if [[ ! -e /sys/bus/pci/devices/$GPU_AUDIO/driver && -d /sys/bus/pci/drivers/snd_hda_intel ]]; then
+    printf '%s\n' "$GPU_AUDIO" > /sys/bus/pci/drivers/snd_hda_intel/bind 2>/dev/null || true
+  fi
 fi
 
 printf '%s driver=%s\n' "$GPU_VIDEO" "$(driver_of "$GPU_VIDEO")"
@@ -90,6 +95,13 @@ if [[ $(driver_of "$GPU_VIDEO") != nvidia ]]; then
   exit 1
 fi
 
+# RM initialization trails module load; nvidia-smi can fail if called instantly.
+for _ in $(seq 1 10); do
+  if sudo -u "$operator" nvidia-smi >/dev/null 2>&1; then
+    break
+  fi
+  sleep 3
+done
 sudo -u "$operator" nvidia-smi
 printf '\nGPU is back on the host NVIDIA driver. Reboot is not required for this\n'
 printf 'session; the initramfs/modprobe.d changes govern the next boot.\n'
