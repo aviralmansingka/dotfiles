@@ -33,9 +33,12 @@ split_vertical = "prefix+|"
 split_horizontal = "prefix+minus"
 
 [ui]
+# Zellij-style pane framing
+pane_scrollbars = false
+
 mouse_capture = true
 pane_borders = true
-pane_gaps = false
+pane_gaps = true
 show_agent_labels_on_pane_borders = true
 accent = "#d8a657"
 
