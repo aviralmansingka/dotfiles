@@ -34,7 +34,9 @@ split_horizontal = "prefix+minus"
 
 [ui]
 # Zellij-style pane framing
-pane_scrollbars = false
+# pane_scrollbars is valid in herdr 0.8.0+ (release-notes #2167);
+# commented out on 0.7.5 to fix the unknown-key warning. Uncomment after upgrading.
+# pane_scrollbars = false
 
 mouse_capture = true
 pane_borders = true
