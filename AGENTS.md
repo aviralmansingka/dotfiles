@@ -25,6 +25,14 @@ Treat repository, worktree, and session identity as three distinct concepts:
 - Keep internal Herdr agent names available for routing and lifecycle operations, but do not use them as the primary
   picker identity.
 
+## Homelab STT and the RTX 3060
+
+The pi-stt speech-to-text worker runs natively on the homelab host; the libvirt VM / vfio-pci passthrough path was
+decommissioned. The RTX 3060 belongs to the host NVIDIA driver and is shared between native CUDA STT and Steam.
+See `ops/pi-stt/README.md` for the runbook, GPU-return script, and the VM preservation/rollback contract
+(`/var/lib/libvirt/images/pi-stt.qcow2` and `~/homelab-pi-stt-decommission/` are preserved; deleting them needs
+captain approval).
+
 ## Sidekick picker presentation
 
 - Group durable sessions as `repository -> worktree`.
@@ -41,3 +49,10 @@ Treat repository, worktree, and session identity as three distinct concepts:
 - Keep the current-worktree session rows in the picker alongside the repository hierarchy. Selection, preview, rename,
   kill, and focus actions must continue to target the exact underlying Herdr agent identity.
 - Preserve exact cwd behavior for non-Git directories instead of inventing repository identity.
+
+## Maintaining this file
+
+Keep this file for knowledge useful to almost every future agent session in this project.
+Do not repeat what the codebase already shows; point to the authoritative file or command instead.
+Prefer rewriting or pruning existing entries over appending new ones.
+When updating this file, preserve this bar for all agents and keep entries concise.
