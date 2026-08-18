@@ -64,6 +64,11 @@ return {
         pattern = "markdown",
         callback = function()
           vim.cmd("PencilSoft")
+          -- Disable wrap and line numbering for markdown buffers.
+          -- Set after PencilSoft so soft-wrap does not re-enable `wrap`.
+          vim.wo.wrap = false
+          vim.wo.number = false
+          vim.wo.relativenumber = false
           vim.opt_local.formatexpr = "v:lua.require'conform'.formatexpr()"
           require("helpers.markdown_links").setup()
         end,
