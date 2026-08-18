@@ -1,0 +1,251 @@
+#!/usr/bin/env bash
+# Verify the pi decision-queue extension's collector against synthetic fixtures,
+# and against firstmate's authoritative status fold when firstmate is present.
+#
+# The collector (pi/.pi/agent/extensions/decision-queue/collect.ts) is a
+# TypeScript port of the open-decisions fold in firstmate's
+# bin/fm-classify-lib.sh. A port can silently drift from its original, so the
+# parity block below runs BOTH folds over the same fixture status files and
+# diffs them. Fixtures are used rather than live state/ because the real queue
+# churns between runs (observed twice in one hour during development).
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ext_dir="$repo_root/pi/.pi/agent/extensions/decision-queue"
+collect_ts="$ext_dir/collect.ts"
+index_ts="$ext_dir/index.ts"
+for f in "$collect_ts" "$index_ts"; do
+  [ -f "$f" ] || { echo "missing $f" >&2; exit 1; }
+done
+
+pi_bin="$(command -v pi || true)"
+[ -n "$pi_bin" ] || { echo "SKIP: pi is not installed; nothing to load collect.ts with" >&2; exit 0; }
+pi_root="$(dirname "$(dirname "$(readlink -f "$pi_bin")")")"
+jiti_main="$pi_root/node_modules/jiti"
+[ -d "$jiti_main" ] || { echo "SKIP: jiti not found under $pi_root" >&2; exit 0; }
+
+verify_dir="$(mktemp -d "${TMPDIR:-/tmp}/pi-decision-queue-verify.XXXXXX")"
+trap 'rm -rf "$verify_dir"' EXIT
+fm_home="$verify_dir/fm"
+mkdir -p "$fm_home/state" "$fm_home/data"
+
+# --- fixtures ---------------------------------------------------------------
+# Every documented shape of the key grammar, plus the traps that bit us.
+cat >"$fm_home/state/alpha.status" <<'EOF'
+working: started
+needs-decision [key=api-shape]: pick a shape
+resolved [key=api-shape]: went with b
+needs-decision [key=still-open]: this one stays open
+done: shipped anyway
+EOF
+
+cat >"$fm_home/state/beta.status" <<'EOF'
+needs-decision: [key=note-head] key stated at the note head
+resolved: [key=note-head] closed from the note-head position
+blocked [key=trailing]: this closing line puts the key in PROSE
+resolved: fixed it [key=trailing]
+EOF
+
+cat >"$fm_home/state/gamma.status" <<'EOF'
+needs-decision: unkeyed, so key=default
+working: a later unrelated line must NOT close it
+EOF
+
+cat >"$fm_home/state/delta.status" <<'EOF'
+needs-decision [key=bad key!]: malformed slug, line is skipped entirely
+needs-decision [key=held]: closed by a captain-held transfer
+captain-held [key=held]: transferred to the backlog
+needs-decision [key=pending-reply-99]: reserved namespace, wrong vocabulary
+EOF
+
+# Filename == task id, and "parked" is keyed on the task id matching a held
+# backlog slug, so this file must be named for the held slug below.
+cat >"$fm_home/state/parked-lane.status" <<'EOF'
+needs-decision [key=on-hold]: owning task is on hold in the backlog
+EOF
+
+ln -s alpha.status "$fm_home/state/symlinked.status"
+
+cat >"$fm_home/data/backlog.md" <<'EOF'
+# Backlog
+- [ ] real-decision - A genuine captain call (repo: vault) (kind: captain) (since 2026-08-15) (hold: Needs his word; see report (section 4) - then book.) (hold-kind: captain)
+- [ ] held-ship-task - Ship task parked behind him (repo: firstmate) (kind: ship) (since 2026-08-16) (hold: Closed by captain order - already settled.) (hold-kind: captain)
+- [ ] parked-lane - Lane whose task is on hold (repo: dotfiles) (kind: ship) (since 2026-08-17) (hold: waiting on hardware) (hold-kind: captain)
+- [x] already-done - A settled captain call (repo: vault) (kind: captain) (since 2026-08-10) (hold: whatever) (hold-kind: captain)
+- [ ] plain-scout - No hold at all (repo: vault) (kind: scout) (since 2026-08-18)
+EOF
+
+# --- collector assertions ---------------------------------------------------
+cat >"$verify_dir/check.cjs" <<'EOF'
+const jiti = require(process.env.JITI_MAIN)(__filename, { interopDefault: true });
+const c = jiti(process.env.COLLECT_TS);
+const fmHome = process.env.FM_HOME;
+
+let failed = 0;
+const ok = (name, cond, detail) => {
+  console.log(`  ${cond ? "ok  " : "FAIL"}  ${name}${cond || !detail ? "" : `  -> ${detail}`}`);
+  if (!cond) failed++;
+};
+
+const items = c.collectDecisions(fmHome);
+const lanes = items.filter((i) => i.source === "lane");
+const backlog = items.filter((i) => i.source === "backlog");
+const laneKey = (lane, key) => lanes.find((i) => i.lane === lane && i.key === key);
+
+console.log("collector:");
+ok("resolved keyed decision does not resurface", !laneKey("alpha", "api-shape"));
+ok("still-open keyed decision is listed", !!laneKey("alpha", "still-open"));
+ok("later done: does not close an open decision", !!laneKey("alpha", "still-open"));
+ok("note-head close position works", !laneKey("beta", "note-head"));
+ok("trailing [key=] in prose does NOT close", !!laneKey("beta", "trailing"));
+ok("unkeyed decision uses key=default", !!laneKey("gamma", "default"));
+ok("malformed slug line is skipped", !lanes.some((i) => i.lane === "delta" && i.key.includes(" ")));
+ok("captain-held closes the decision", !laneKey("delta", "held"));
+ok("reserved key needs its own vocabulary", !laneKey("delta", "pending-reply-99"));
+ok("symlinked status file is rejected", !lanes.some((i) => i.lane === "symlinked"));
+
+console.log("backlog selection (kind, not hold-kind):");
+ok("kind: captain item is listed", backlog.some((i) => i.lane === "real-decision"));
+ok("held kind: ship task is NOT listed", !backlog.some((i) => i.lane === "held-ship-task"));
+ok("checked-off captain item is NOT listed", !backlog.some((i) => i.lane === "already-done"));
+ok("unheld non-captain task is NOT listed", !backlog.some((i) => i.lane === "plain-scout"));
+ok("a held task still parks its lane's decisions", laneKey("parked-lane", "on-hold")?.parked === true);
+ok("an unheld lane is not parked", laneKey("gamma", "default")?.parked === false);
+
+console.log("tag parsing:");
+const line = require("node:fs")
+  .readFileSync(`${fmHome}/data/backlog.md`, "utf8")
+  .split("\n")
+  .find((l) => l.includes("real-decision"));
+const { tags } = c.parseTags(line);
+ok("colon-form tag", tags.get("kind") === "captain", tags.get("kind"));
+ok("space-form tag does not swallow its neighbour", tags.get("since") === "2026-08-15", tags.get("since"));
+ok("hold prose keeps inner parens", (tags.get("hold") || "").includes("(section 4)"), tags.get("hold"));
+ok("hold prose is not truncated at hold-kind", (tags.get("hold") || "").endsWith("then book."), tags.get("hold"));
+const item = backlog.find((i) => i.lane === "real-decision");
+ok("title stops before the tag run", item.note.startsWith("A genuine captain call"), item.note);
+
+console.log("answer guidance round-trip:");
+// What the extension prefills MUST close the very item it was generated from,
+// or the captain answers a decision and it keeps coming back.
+for (const key of ["api-shape", "default"]) {
+  const it = { source: "lane", lane: "demo", key, verb: "needs-decision", note: "n", parked: false };
+  const opened = key === "default" ? "needs-decision: n" : `needs-decision [key=${key}]: n`;
+  const log = `${opened}\n${c.editorTemplate(it)}chose b\n`;
+  ok(`editorTemplate closes key=${key}`, c.foldStatusText(log).length === 0);
+}
+// Byte-parity with what fm-send.sh --resolve-key appends.
+ok("fm-send closing line is recognised", c.foldStatusText("needs-decision [key=k]: n\nresolved [key=k]: answered: y\n").length === 0);
+const hint = c.answerHint({ source: "lane", lane: "demo", key: "k3", verb: "needs-decision", note: "n", parked: false });
+ok("hint teaches the before-colon position", /resolved \[key=k3\]:/.test(hint), hint);
+ok("hint offers the sanctioned fm-send path", /--resolve-key k3/.test(hint), hint);
+
+// Emit the lane fold for the shell-parity diff.
+require("node:fs").writeFileSync(
+  process.env.TS_FOLD_OUT,
+  lanes
+    .map((i) => `${i.lane}\t${i.key}\t${i.verb}\t${i.note}`)
+    .sort()
+    .join("\n") + "\n",
+);
+
+process.exit(failed ? 1 : 0);
+EOF
+
+JITI_MAIN="$jiti_main" COLLECT_TS="$collect_ts" FM_HOME="$fm_home" \
+  TS_FOLD_OUT="$verify_dir/ts-fold.txt" node "$verify_dir/check.cjs"
+
+# --- render contract -------------------------------------------------------
+# The TUI draws a fixed-width 2-column frame, so any line wider than the
+# terminal wraps and corrupts the whole box. index.ts imports typebox and
+# pi-tui, which resolve only inside pi's own module scope, hence NODE_PATH.
+cat >"$verify_dir/render.cjs" <<'EOF'
+const jiti = require(process.env.JITI_MAIN)(__filename, { interopDefault: true });
+const { visibleWidth } = require("@earendil-works/pi-tui");
+const mod = jiti(process.env.INDEX_TS);
+
+let failed = 0;
+const ok = (name, cond, detail) => {
+  console.log(`  ${cond ? "ok  " : "FAIL"}  ${name}${cond || !detail ? "" : `  -> ${detail}`}`);
+  if (!cond) failed++;
+};
+
+const commands = new Map();
+const tools = [];
+mod.default({
+  registerCommand: (n, s) => commands.set(n, s),
+  registerTool: (t) => tools.push(t.name),
+  sendUserMessage: () => {},
+});
+
+console.log("registration:");
+ok("/decisions registered", commands.has("decisions"));
+ok("/reload-runtime registered", commands.has("reload-runtime"));
+ok("reload_runtime tool registered", tools.includes("reload_runtime"));
+
+// Minimal theme: identity styling, so visibleWidth measures real content.
+const theme = { fg: (_c, s) => s, bg: (_c, s) => s, bold: (s) => s, italic: (s) => s };
+let component = null;
+const ctx = {
+  mode: "tui",
+  ui: {
+    notify: () => {},
+    setEditorText: () => {},
+    custom: async (factory) => {
+      component = factory({ requestRender: () => {} }, theme, {}, () => {});
+      return null;
+    },
+  },
+};
+
+console.log("render contract:");
+(async () => {
+  await commands.get("decisions").handler("", ctx);
+  if (!component) {
+    ok("component built (queue non-empty for fixture FM_HOME)", false);
+    process.exit(1);
+  }
+  for (const width of [60, 80, 100, 120, 200]) {
+    component.invalidate();
+    const lines = component.render(width);
+    const over = lines.filter((l) => visibleWidth(l) > width);
+    ok(`width ${width}: no line exceeds the terminal`, over.length === 0,
+      over.length ? `${over.length} line(s), widest ${Math.max(...over.map(visibleWidth))}` : "");
+  }
+  // Navigation must not crash or escape the list bounds.
+  component.invalidate();
+  const before = component.render(100).join("\n");
+  for (const k of ["j", "j", "k", "\u001b[B", "\u001b[A", "r"]) component.handleInput(k);
+  const after = component.render(100);
+  ok("navigation + refresh keep rendering", after.length > 0 && typeof before === "string");
+  ok("still within width after navigation", after.every((l) => visibleWidth(l) <= 100));
+  process.exit(failed ? 1 : 0);
+})();
+EOF
+
+JITI_MAIN="$jiti_main" INDEX_TS="$index_ts" FM_HOME="$fm_home" \
+  NODE_PATH="$pi_root/node_modules" node "$verify_dir/render.cjs"
+
+# --- parity against firstmate's authoritative fold --------------------------
+fm_lib="${FIRSTMATE_HOME:-$HOME/projects/firstmate}/bin/fm-classify-lib.sh"
+if [ ! -r "$fm_lib" ]; then
+  echo "parity: SKIP (firstmate not on this host: $fm_lib)"
+  echo "verify-pi-decision-queue: OK (collector assertions only)"
+  exit 0
+fi
+
+# scan_open_decisions prints "<task>\t<key>\t<verb>\t<note>" for the directory.
+# shellcheck disable=SC1090
+( set +u; source "$fm_lib"; scan_open_decisions "$fm_home/state" ) \
+  | sed '/^$/d' | LC_ALL=C sort >"$verify_dir/sh-fold.txt"
+LC_ALL=C sort "$verify_dir/ts-fold.txt" | sed '/^$/d' >"$verify_dir/ts-fold.sorted"
+
+if diff -u "$verify_dir/sh-fold.txt" "$verify_dir/ts-fold.sorted" >"$verify_dir/parity.diff"; then
+  echo "parity: ok  TypeScript fold matches fm-classify-lib.sh on $(wc -l <"$verify_dir/sh-fold.txt" | tr -d ' ') open record(s)"
+else
+  echo "parity: FAIL  the port drifted from firstmate's authoritative fold:" >&2
+  cat "$verify_dir/parity.diff" >&2
+  exit 1
+fi
+
+echo "verify-pi-decision-queue: OK"
