@@ -1,12 +1,14 @@
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { userInfo } from "node:os";
-import { join, resolve, isAbsolute } from "node:path";
+import { join, resolve, isAbsolute, relative } from "node:path";
 
 const HERDR_TIMEOUT_MS = 5000;
 const NVIM_TIMEOUT_MS = 4000;
+const LLM_TIMEOUT_MS = 30000;
+const MAX_FILE_LIST = 200;
 
 // ---------------------------------------------------------------------------
 // Herdr helpers
@@ -101,14 +103,17 @@ interface NvimPane {
 	pid: number;
 }
 
-/** Search all panes in the current tab for one whose foreground process is nvim. */
-function findNvimPane(currentTabId: string): NvimPane | null {
+/** Search all panes in the current tab for one whose foreground process is vim/nvim. */
+function findEditorPane(currentTabId: string): NvimPane | null {
 	const panes = listPanes().filter((p) => p.tab_id === currentTabId);
 	for (const pane of panes) {
 		const info = getProcessInfo(pane.pane_id);
 		if (!info) continue;
 		for (const proc of info.foreground_processes ?? []) {
-			if (proc.name === "vim" || proc.argv?.[0] === "vim" || proc.name === "nvim" || proc.argv?.[0] === "nvim") {
+			if (
+				proc.name === "vim" || proc.argv?.[0] === "vim" ||
+				proc.name === "nvim" || proc.argv?.[0] === "nvim"
+			) {
 				return { paneId: pane.pane_id, pid: proc.pid };
 			}
 		}
@@ -148,7 +153,7 @@ function sendFilesViaRpc(socket: string, files: string[]): boolean {
 	}
 }
 
-/** Fallback: send `:e <file>` keystrokes to the nvim pane via herdr send-text. */
+/** Fallback: send `:e <file>` keystrokes to the editor pane via herdr send-text. */
 function sendFilesViaText(paneId: string, files: string[]): void {
 	for (const file of files) {
 		// Escape to exit insert mode, then :e with the path, then Enter.
@@ -168,8 +173,8 @@ function sendFilesViaText(paneId: string, files: string[]): void {
 // launch & focus
 // ---------------------------------------------------------------------------
 
-/** Split the current pane to the right and launch nvim in the new pane. */
-function launchNvim(cwd: string, files: string[]): string | null {
+/** Split the current pane to the right and launch vim in the new pane. */
+function launchEditor(cwd: string, files: string[]): string | null {
 	const splitRes = herdrJson([
 		"pane",
 		"split",
@@ -189,8 +194,8 @@ function launchNvim(cwd: string, files: string[]): string | null {
 	return newPaneId;
 }
 
-/** Best-effort focus of the pane below the current one. */
-function focusPaneDown(): void {
+/** Best-effort focus of the pane to the right of the current one. */
+function focusPaneRight(): void {
 	herdrOk(["pane", "focus", "--current", "--direction", "right"]);
 }
 
@@ -200,10 +205,10 @@ function focusPaneDown(): void {
 
 function tmuxFallback(cwd: string, files: string[]): boolean {
 	try {
-		const fileArgs = files.length > 0 ? files : ["."];
+		const fileArgs = files.length > 0 ? files : [];
 		execFileSync(
 			"tmux",
-			["split-window", "-v", "-c", cwd, "vim", ...fileArgs],
+			["split-window", "-h", "-c", cwd, "vim", ...fileArgs],
 			{ timeout: HERDR_TIMEOUT_MS, stdio: "ignore" },
 		);
 		return true;
@@ -213,53 +218,328 @@ function tmuxFallback(cwd: string, files: string[]): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// file listing for LLM resolution
+// ---------------------------------------------------------------------------
+
+/** Recursively list files under cwd (limited depth/count), returning relative paths. */
+function listFilesForLlm(cwd: string): string[] {
+	const results: string[] = [];
+	const skipDirs = new Set([
+		".git", "node_modules", ".venv", "__pycache__", ".pi", ".agents",
+		"target", "dist", "build", ".cache", ".treehouse",
+	]);
+
+	function walk(dir: string, depth: number) {
+		if (depth > 3 || results.length >= MAX_FILE_LIST) return;
+		let entries: string[];
+		try {
+			entries = readdirSync(dir);
+		} catch {
+			return;
+		}
+		for (const entry of entries) {
+			if (results.length >= MAX_FILE_LIST) return;
+			const full = join(dir, entry);
+			try {
+				const st = statSync(full);
+				if (st.isDirectory()) {
+					if (!skipDirs.has(entry) && !entry.startsWith(".")) {
+						walk(full, depth + 1);
+					}
+				} else {
+					results.push(relative(cwd, full));
+				}
+			} catch {
+				// skip
+			}
+		}
+	}
+
+	walk(cwd, 0);
+	return results.sort();
+}
+
+// ---------------------------------------------------------------------------
+// LLM-based file resolution
+// ---------------------------------------------------------------------------
+
+interface LlmResolution {
+	/** Resolved file paths (relative to cwd), or empty if uncertain. */
+	files: string[];
+	/** Whether the LLM was confident. */
+	confident: boolean;
+	/** Candidate options for multiple-choice (when not confident). */
+	candidates: string[];
+}
+
+/** Extract the assistant text from pi --mode json -p output (NDJSON lines). */
+function extractAssistantText(jsonOutput: string): string {
+	for (const line of jsonOutput.split("\n")) {
+		const trimmed = line.trim();
+		if (!trimmed) continue;
+		try {
+			const obj = JSON.parse(trimmed);
+			if (obj.type === "turn_end" && obj.message?.role === "assistant") {
+				const content = obj.message.content;
+				if (Array.isArray(content)) {
+					return content
+						.filter((c: any) => c.type === "text")
+						.map((c: any) => c.text)
+						.join("");
+				}
+				if (typeof content === "string") return content;
+			}
+		} catch {
+			// not JSON, skip
+		}
+	}
+	return "";
+}
+
+/** Resolve a natural-language file query using a small LLM call via pi print mode. */
+function resolveFilesWithLlm(cwd: string, query: string): Promise<LlmResolution> {
+	const fileList = listFilesForLlm(cwd);
+
+	const systemPrompt = `You resolve natural-language file references to actual file paths.
+Given a list of files in the working directory and a user's request, determine which file(s) to open.
+
+Respond in ONE of these formats:
+1. If you are confident, reply with EXACTLY: CONFIDENT: <file1> [file2 ...]
+2. If you are uncertain, reply with EXACTLY: UNCERTAIN: <option1> | <option2> | <option3>
+   List 2-5 candidate files separated by " | ".
+
+Rules:
+- File paths must be relative paths from the working directory, matching the file list exactly.
+- If the user's request doesn't match any file, reply with: UNCERTAIN: (no matches)
+- Reply with only the format line, no explanation.`;
+
+	const userPrompt = `Working directory: ${cwd}
+
+Available files (relative paths):
+${fileList.length > 0 ? fileList.join("\n") : "(no files found)"}
+
+User request: "${query}"
+
+Which file(s) should be opened?`;
+
+	return new Promise<LlmResolution>((resolve) => {
+		const piBin = resolvePiBinary();
+		const args = [
+			...piBin.baseArgs,
+			"--mode", "json",
+			"-p",
+			"--no-skills",
+			"--no-extensions",
+			"--no-context-files",
+			"--no-prompt-templates",
+			"--no-themes",
+			"--tools", "read",
+			"--system-prompt", systemPrompt,
+			userPrompt,
+		];
+
+		let stdout = "";
+		let stderr = "";
+		const child = spawn(piBin.command, args, {
+			stdio: ["pipe", "pipe", "pipe"],
+			timeout: LLM_TIMEOUT_MS,
+			env: process.env,
+		});
+
+		child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
+		child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+		child.on("error", () =>
+			resolve({ files: [], confident: false, candidates: [] }),
+		);
+		child.on("close", () => {
+			const text = extractAssistantText(stdout).trim();
+
+			if (text.startsWith("CONFIDENT:")) {
+				const paths = text
+					.slice("CONFIDENT:".length)
+					.trim()
+					.split(/\s+/)
+					.filter(Boolean);
+				resolve({ files: paths, confident: true, candidates: [] });
+			} else if (text.startsWith("UNCERTAIN:")) {
+				const rest = text.slice("UNCERTAIN:".length).trim();
+				if (rest === "(no matches)") {
+					resolve({ files: [], confident: false, candidates: [] });
+				} else {
+					const candidates = rest
+						.split("|")
+						.map((s) => s.trim())
+						.filter(Boolean);
+					resolve({ files: [], confident: false, candidates });
+				}
+			} else {
+				resolve({ files: [], confident: false, candidates: [] });
+			}
+		});
+	});
+}
+
+function resolvePiBinary(): { command: string; baseArgs: string[] } {
+	const entry = process.argv[1];
+	if (entry) {
+		try {
+			const realEntry = require("node:fs").realpathSync(entry);
+			if (/\.(?:mjs|cjs|js)$/i.test(realEntry)) {
+				return { command: process.execPath, baseArgs: [realEntry] };
+			}
+		} catch {}
+	}
+	return { command: "pi", baseArgs: [] };
+}
+
+// ---------------------------------------------------------------------------
+// multiple-choice selection via terminal
+// ---------------------------------------------------------------------------
+
+/** Present a numbered multiple-choice menu and wait for the user's selection. */
+function presentChoice(
+	ctx: { ui: { notify: (msg: string, level: string) => void; onTerminalInput: (cb: (data: string) => { consume?: boolean } | undefined) => () => void } },
+	prompt: string,
+	candidates: string[],
+): Promise<string | null> {
+	return new Promise((resolve) => {
+		const lines = [
+			prompt,
+			"",
+			...candidates.map((c, i) => `  ${i + 1}. ${c}`),
+			"",
+			"Enter a number (or press Enter to cancel):",
+		];
+		ctx.ui.notify(lines.join("\n"), "info");
+
+		const stop = ctx.ui.onTerminalInput((data: string) => {
+			const trimmed = data.trim();
+			if (!trimmed) {
+				stop?.();
+				resolve(null);
+				return;
+			}
+			const num = parseInt(trimmed, 10);
+			if (Number.isFinite(num) && num >= 1 && num <= candidates.length) {
+				stop?.();
+				resolve(candidates[num - 1]);
+				return { consume: true };
+			}
+			ctx.ui.notify(`Invalid choice "${trimmed}". Enter 1-${candidates.length} or press Enter to cancel.`, "warn");
+			return { consume: true };
+		});
+
+		// Timeout after 30s
+		const timer = setTimeout(() => {
+			stop?.();
+			resolve(null);
+		}, 30000);
+		timer.unref?.();
+	});
+}
+
+// ---------------------------------------------------------------------------
 // core orchestration
 // ---------------------------------------------------------------------------
 
-function resolveFiles(cwd: string, files: string[]): string[] {
+function resolveFilePaths(cwd: string, files: string[]): string[] {
 	return files.map((f) => (isAbsolute(f) ? f : resolve(cwd, f)));
 }
 
-function openNvim(cwd: string, files: string[]): { message: string; launched: boolean } {
-	const resolvedFiles = resolveFiles(cwd, files);
+/** Check if a string is a direct file path that exists on disk. */
+function isDirectFilePath(cwd: string, arg: string): boolean {
+	const full = isAbsolute(arg) ? arg : resolve(cwd, arg);
+	return existsSync(full);
+}
+
+async function openEditor(
+	cwd: string,
+	rawArgs: string[],
+	ctx?: { ui: { notify: (msg: string, level: string) => void; onTerminalInput: (cb: (data: string) => { consume?: boolean } | undefined) => () => void } },
+): Promise<{ message: string; launched: boolean }> {
+	// Classify args: direct file paths vs natural-language queries
+	const directFiles: string[] = [];
+	const naturalLanguage: string[] = [];
+
+	for (const arg of rawArgs) {
+		if (isDirectFilePath(cwd, arg)) {
+			directFiles.push(arg);
+		} else {
+			naturalLanguage.push(arg);
+		}
+	}
+
+	// Resolve natural-language args via LLM
+	let resolvedFiles = [...directFiles];
+
+	if (naturalLanguage.length > 0) {
+		const query = naturalLanguage.join(" ");
+		ctx?.ui?.notify(`Resolving "${query}" ...`, "info");
+		const resolution = await resolveFilesWithLlm(cwd, query);
+
+		if (resolution.confident && resolution.files.length > 0) {
+			resolvedFiles.push(...resolution.files);
+		} else if (!resolution.confident && resolution.candidates.length > 0 && ctx) {
+			const choice = await presentChoice(
+				ctx,
+				`Which file did you mean by "${query}"?`,
+				resolution.candidates,
+			);
+			if (choice) {
+				resolvedFiles.push(choice);
+			} else {
+				return {
+					message: "Cancelled — no file selected.",
+					launched: false,
+				};
+			}
+		} else if (!resolution.confident && ctx) {
+			ctx.ui.notify(
+				`Could not resolve "${query}" to any file. Launching vim with no file.`,
+				"warn",
+			);
+		}
+	}
+
+	const finalFiles = resolveFilePaths(cwd, resolvedFiles);
 
 	if (herdrAvailable()) {
 		const current = getCurrentPane();
 		if (current) {
-			const existing = findNvimPane(current.tab_id);
+			const existing = findEditorPane(current.tab_id);
 			if (existing) {
-				if (resolvedFiles.length > 0) {
+				if (finalFiles.length > 0) {
 					const sock = findNvimSocket(existing.pid);
-					if (sock && sendFilesViaRpc(sock, resolvedFiles)) {
-						focusPaneDown();
+					if (sock && sendFilesViaRpc(sock, finalFiles)) {
+						focusPaneRight();
 						return {
-							message: `Opened ${resolvedFiles.length} file(s) in existing nvim (pane ${existing.paneId}) via RPC.`,
+							message: `Opened ${finalFiles.length} file(s) in existing editor (pane ${existing.paneId}) via RPC.`,
 							launched: false,
 						};
 					}
-					sendFilesViaText(existing.paneId, resolvedFiles);
-					focusPaneDown();
+					sendFilesViaText(existing.paneId, finalFiles);
+					focusPaneRight();
 					return {
-						message: `Sent ${resolvedFiles.length} file(s) to existing nvim (pane ${existing.paneId}) via send-text.`,
+						message: `Sent ${finalFiles.length} file(s) to existing editor (pane ${existing.paneId}) via send-text.`,
 						launched: false,
 					};
 				}
-				focusPaneDown();
+				focusPaneRight();
 				return {
-					message: `Focused existing nvim pane (${existing.paneId}).`,
+					message: `Focused existing editor pane (${existing.paneId}).`,
 					launched: false,
 				};
 			}
 
-			// No existing nvim in this tab — launch a new vertical split.
-			const newPane = launchNvim(cwd, resolvedFiles);
+			// No existing editor in this tab — launch a new vertical split.
+			const newPane = launchEditor(cwd, finalFiles);
 			if (newPane) {
 				const fileNote =
-					resolvedFiles.length > 0
-						? ` with ${resolvedFiles.length} file(s)`
+					finalFiles.length > 0
+						? ` with ${finalFiles.length} file(s)`
 						: "";
 				return {
-					message: `Launched nvim in a vertical split (pane ${newPane}) at ${cwd}${fileNote}.`,
+					message: `Launched vim in a vertical split (pane ${newPane}) at ${cwd}${fileNote}.`,
 					launched: true,
 				};
 			}
@@ -267,15 +547,15 @@ function openNvim(cwd: string, files: string[]): { message: string; launched: bo
 	}
 
 	// Herdr unavailable or failed — try tmux.
-	if (tmuxFallback(cwd, resolvedFiles)) {
+	if (tmuxFallback(cwd, finalFiles)) {
 		return {
-			message: `Launched nvim in a tmux split at ${cwd}.`,
+			message: `Launched vim in a tmux split at ${cwd}.`,
 			launched: true,
 		};
 	}
 
 	return {
-		message: `Could not launch nvim automatically. Run manually: cd ${cwd} && vim ${resolvedFiles.join(" ")}`,
+		message: `Could not launch vim automatically. Run manually: cd ${cwd} && vim ${finalFiles.join(" ")}`,
 		launched: false,
 	};
 }
@@ -286,47 +566,55 @@ function openNvim(cwd: string, files: string[]): { message: string; launched: bo
 
 const nvimOpenTool = defineTool({
 	name: "nvim_open",
-	label: "Open Neovim",
+	label: "Open Editor",
 	description:
-		"Open Neovim as a vertical split in the current Herdr tab, or send files to an existing Neovim instance in the current tab. If nvim is already running in the current tab, files are sent to the existing instance instead of launching a new one. With no files, opens nvim at the agent's cwd.",
-	promptSnippet: "Open Neovim in the current Herdr tab as a vertical split",
+		"Open vim as a vertical split in the current Herdr tab, or send files to an existing editor instance in the current tab. If an editor is already running in the current tab, files are sent to the existing instance instead of launching a new one. With no files, opens vim at the agent's cwd.",
+	promptSnippet: "Open vim in the current Herdr tab as a vertical split",
 	promptGuidelines: [
-		"Use nvim_open when the user wants to open Neovim (nvim) for editing, either at the current working directory or for specific files.",
-		"If nvim is already running in the current Herdr tab, this tool sends files to the existing instance rather than launching a duplicate.",
-		"With no files provided, it opens nvim at the agent's cwd. With file paths, it opens those specific files.",
-		"The split is vertical (to the right of the agent pane) and focus moves to the nvim pane so the captain can see the editor.",
+		"Use nvim_open when the user wants to open an editor (vim) for editing, either at the current working directory or for specific files.",
+		"If an editor is already running in the current Herdr tab, this tool sends files to the existing instance rather than launching a duplicate.",
+		"With no files provided, it opens vim at the agent's cwd. With file paths, it opens those specific files.",
+		"The split is vertical (to the right of the agent pane) and focus moves to the editor pane so the captain can see it.",
 	],
 	parameters: Type.Object({
 		cwd: Type.String({
-			description: "The working directory to open nvim in. Defaults to the agent's cwd.",
+			description: "The working directory to open vim in. Defaults to the agent's cwd.",
 		}),
 		files: Type.Optional(
 			Type.Array(Type.String(), {
-				description: "Optional list of file paths to open in nvim. Relative paths are resolved against cwd.",
+				description: "Optional list of file paths to open in vim. Relative paths are resolved against cwd.",
 			}),
 		),
 	}),
 	async execute(_toolCallId, params) {
 		const cwd = params.cwd ?? process.cwd();
 		const files = params.files ?? [];
-		const result = openNvim(cwd, files);
+		const result = await openEditor(cwd, files);
 		return { content: [{ type: "text", text: result.message }] };
 	},
 });
+
+interface CommandCtx {
+	cwd?: string;
+	ui: {
+		notify: (msg: string, level: string) => void;
+		onTerminalInput: (cb: (data: string) => { consume?: boolean } | undefined) => () => void;
+	};
+}
 
 export default function (pi: ExtensionAPI) {
 	pi.registerTool(nvimOpenTool);
 
 	pi.registerCommand("nvim", {
-		description: "Open Neovim in the current Herdr tab as a vertical split",
-		handler: async (args: unknown, ctx: { cwd?: string; ui: { notify: (msg: string, level: string) => void } }) => {
+		description: "Open vim in the current Herdr tab as a vertical split",
+		handler: async (args: unknown, ctx: CommandCtx) => {
 			const cwd = ctx?.cwd ?? process.cwd();
 			const fileList: string[] = (() => {
 				if (Array.isArray(args)) return args.map(String);
 				if (typeof args === "string") return args.trim() ? args.trim().split(/\s+/) : [];
 				return [];
 			})();
-			const result = openNvim(cwd, fileList);
+			const result = await openEditor(cwd, fileList, ctx);
 			ctx?.ui?.notify(result.message, "info");
 		},
 	});
