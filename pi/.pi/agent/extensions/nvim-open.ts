@@ -108,7 +108,7 @@ function findNvimPane(currentTabId: string): NvimPane | null {
 		const info = getProcessInfo(pane.pane_id);
 		if (!info) continue;
 		for (const proc of info.foreground_processes ?? []) {
-			if (proc.name === "nvim" || proc.argv?.[0] === "nvim") {
+			if (proc.name === "vim" || proc.argv?.[0] === "vim" || proc.name === "nvim" || proc.argv?.[0] === "nvim") {
 				return { paneId: pane.pane_id, pid: proc.pid };
 			}
 		}
@@ -184,7 +184,7 @@ function launchNvim(cwd: string, files: string[]): string | null {
 	const newPaneId = splitRes?.result?.pane?.pane_id;
 	if (!newPaneId) return null;
 
-	const cmd = files.length > 0 ? ["nvim", ...files] : ["nvim", "."];
+	const cmd = files.length > 0 ? ["vim", ...files] : ["vim", "."];
 	herdrOk(["pane", "run", newPaneId, ...cmd]);
 	return newPaneId;
 }
@@ -203,7 +203,7 @@ function tmuxFallback(cwd: string, files: string[]): boolean {
 		const fileArgs = files.length > 0 ? files : ["."];
 		execFileSync(
 			"tmux",
-			["split-window", "-v", "-c", cwd, "nvim", ...fileArgs],
+			["split-window", "-v", "-c", cwd, "vim", ...fileArgs],
 			{ timeout: HERDR_TIMEOUT_MS, stdio: "ignore" },
 		);
 		return true;
