@@ -1,6 +1,6 @@
 ---
 name: professor
-description: Run an interactive tutoring session where the human types every command and you teach one concept at a time. When invoked, launch a fresh Amp agent in a new Herdr tab named to the task — all lesson planning and teaching interactions happen inside that Amp session. Lessons live in markdown files as the source of truth — never dump lesson content into the console. Validate markdown conformance and test that lab commands actually work before presenting a lesson. Quiz one question at a time against bounded terminology, correcting the human's language until they can talk about it precisely. Use when the user wants to learn a topic hands-on, mentions "professor", "teach me", "tutor", or you are briefing a tutoring crewmate.
+description: Run an interactive tutoring session where the human types every command and you teach one concept at a time. When invoked, launch a fresh Amp agent in a new Herdr tab named to the task — all lesson planning and teaching interactions happen inside that Amp session. Lessons live in markdown files as the source of truth — never dump lesson content into the console. Validate markdown conformance and test that lab commands actually work before presenting a lesson. Quiz one question at a time against bounded terminology, correcting the human's language until they can talk about it precisely. The goal is kernel-level understanding — for every state-modifying command, the human must be able to name the kernel construct it touches, not just reproduce the command. Use when the user wants to learn a topic hands-on, mentions "professor", "teach me", "tutor", or you are briefing a tutoring crewmate.
 ---
 
 # professor
@@ -14,12 +14,14 @@ When this skill is invoked — whether by Firstmate or directly in a pi session 
 ## Launch procedure
 
 1. **Derive a task name** from the topic (e.g. `vfio-theory`, `dhcp-dns`, `libvirt-basics`).
-2. **Create a new Herdr tab** labeled with that task name:
+2. **Resolve the target workspace** and create a new Herdr tab labeled with the task name. Get the workspace id from `herdr workspace list` (the `workspace_id` field, e.g. `w20` — it is a generated slug, not the literal string `default`). Then:
    ```bash
-   herdr tab create --workspace default --label "<task-name>" --cwd "<lesson-artifacts-dir>" --no-focus
+   herdr tab create --workspace <workspace-id> --label "<task-name>" \
+     --cwd "<lesson-artifacts-dir>" --no-focus
    ```
    Use `--no-focus` so the invoking session keeps focus; the human switches to the new tab when ready.
-3. **Launch Amp in the new tab's root pane** with the teaching prompt:
+3. **Extract the new pane id** from the `tab create` JSON response. The response is JSON; the new tab's root pane id is at `result.root_pane.pane_id` (e.g. `w20:p1J`). Use that as `<new-pane-id>` in step 4.
+4. **Launch Amp in the new tab's root pane** with the teaching prompt:
    ```bash
    herdr pane run <new-pane-id> -- amp --execute "$(cat <prompt-file>)"
    ```
@@ -28,12 +30,16 @@ When this skill is invoked — whether by Firstmate or directly in a pi session 
    herdr pane run <new-pane-id> -- amp
    ```
    Then send the initial teaching prompt via `herdr pane send-text`.
-4. **The Amp session owns everything from here**: lesson file generation, markdown validation, lab command testing, the quiz loop, and all conversation with the human. The invoking session's only job is the launch — it does not teach.
-5. **The tab name is the task name** — so the human can find the session in the Herdr tab bar by topic.
+5. **The Amp session owns everything from here**: lesson file generation, markdown validation, lab command testing, the quiz loop, and all conversation with the human. The invoking session's only job is the launch — it does not teach.
+6. **The tab name is the task name** — so the human can find the session in the Herdr tab bar by topic.
 
 ### If Herdr is not available
 
 Fall back to launching `amp` in a new tmux window or the current terminal. The key requirement is a **fresh Amp session** dedicated to the tutoring task — do not teach in the invoking session.
+
+### If Amp is not available
+
+Fall back to a plain pi session in a new tmux window or terminal. The teaching protocol still applies; only the agent harness changes. If neither Amp nor pi is available, do not run the skill — report back to the invoker.
 
 ## Teaching protocol (enforced inside the Amp session)
 
@@ -115,7 +121,7 @@ Inspired by the Socratic teaching loop: **one question at a time, evaluate again
 - **Correct assumptions explicitly.** If their answer reveals a misconception, name the misconception, explain why it's wrong, and re-ask in a different form before moving on.
 - **Drill into why, not just what.** Ask follow-up "why" questions before confirming mastery. "Why does the interface need to be admin-up before it can report carrier?" not just "What flag does ip link set?"
 - **Don't move on until confirmed.** If they miss, explain and re-ask differently. Only mark confirmed when they can articulate it in the correct terminology.
-- **Show progress.** After every few exchanges, note how many concepts are confirmed vs remaining.
+- **Show progress.** After every few exchanges, note how many concepts are confirmed vs remaining. Record confirmed concepts in the lesson file's Check Questions section (mark each `[x]`) or in the session log, so progress survives a context reset.
 
 ### Flow
 
@@ -133,7 +139,7 @@ Only declare the lesson complete when every check question is confirmed and the 
 
 ### Parking
 
-When waiting for the human to paste lab output or answer a quiz question, park — say you're waiting and stop. Don't fill the silence with prose. If you have a status file to append to, append `paused: waiting on human for {specific item}` so monitoring knows it's a deliberate wait, not a wedge.
+When waiting for the human to paste lab output or answer a quiz question, park — say you're waiting and stop. Don't fill the silence with prose. If running under Firstmate, append `paused: waiting on human for {item}` to the task's status file so monitoring treats the wait as deliberate, not a wedge.
 
 ### Resumption
 
@@ -141,7 +147,7 @@ If resuming after a context reset, read any handoff notes and existing lesson fi
 
 ### Lesson artifacts
 
-Write lesson files to a location agreed at session start (e.g. a `data/<session>/` directory or the current repo). Each lesson is one markdown file. A session log tracking the overall arc is optional but helpful for resumption.
+Write lesson files to a location agreed at session start (e.g. a `data/<session>/` directory or the current repo). If no location is agreed at session start, default to `./professor-lessons/<task-name>/` under the current repo. Each lesson is one markdown file. A session log tracking the overall arc is optional but helpful for resumption.
 
 ## What this skill does not do
 
