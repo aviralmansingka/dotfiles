@@ -274,6 +274,9 @@ interface LlmResolution {
 
 /** Extract the assistant text from pi --mode json -p output (NDJSON lines). */
 function extractAssistantText(jsonOutput: string): string {
+	// Track the LAST turn_end — tool calls produce multiple turns, and the
+	// final assistant message (after any tool results) is the one we want.
+	let lastText = "";
 	for (const line of jsonOutput.split("\n")) {
 		const trimmed = line.trim();
 		if (!trimmed) continue;
@@ -282,18 +285,19 @@ function extractAssistantText(jsonOutput: string): string {
 			if (obj.type === "turn_end" && obj.message?.role === "assistant") {
 				const content = obj.message.content;
 				if (Array.isArray(content)) {
-					return content
+					lastText = content
 						.filter((c: any) => c.type === "text")
 						.map((c: any) => c.text)
 						.join("");
+				} else if (typeof content === "string") {
+					lastText = content;
 				}
-				if (typeof content === "string") return content;
 			}
 		} catch {
 			// not JSON, skip
 		}
 	}
-	return "";
+	return lastText;
 }
 
 /** Resolve a natural-language file query using a small LLM call via pi print mode. */
@@ -333,7 +337,6 @@ Which file(s) should be opened?`;
 			"--no-context-files",
 			"--no-prompt-templates",
 			"--no-themes",
-			"--tools", "read",
 			"--system-prompt", systemPrompt,
 			userPrompt,
 		];
@@ -345,6 +348,9 @@ Which file(s) should be opened?`;
 			timeout: LLM_TIMEOUT_MS,
 			env: process.env,
 		});
+
+		// Close stdin so pi print mode does not wait for input.
+		child.stdin.end();
 
 		child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
 		child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
