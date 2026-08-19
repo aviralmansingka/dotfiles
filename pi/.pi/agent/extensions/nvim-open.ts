@@ -185,7 +185,7 @@ function launchNvim(cwd: string, files: string[]): string | null {
 	if (!newPaneId) return null;
 
 	const cmd = files.length > 0 ? ["nvim", ...files] : ["nvim", "."];
-	herdrOk(["pane", "run", newPaneId, "--", ...cmd]);
+	herdrOk(["pane", "run", newPaneId, ...cmd]);
 	return newPaneId;
 }
 
@@ -203,7 +203,7 @@ function tmuxFallback(cwd: string, files: string[]): boolean {
 		const fileArgs = files.length > 0 ? files : ["."];
 		execFileSync(
 			"tmux",
-			["split-window", "-v", "-c", cwd, "--", "nvim", ...fileArgs],
+			["split-window", "-v", "-c", cwd, "nvim", ...fileArgs],
 			{ timeout: HERDR_TIMEOUT_MS, stdio: "ignore" },
 		);
 		return true;
