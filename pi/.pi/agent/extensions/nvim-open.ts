@@ -184,7 +184,7 @@ function launchNvim(cwd: string, files: string[]): string | null {
 	const newPaneId = splitRes?.result?.pane?.pane_id;
 	if (!newPaneId) return null;
 
-	const cmd = files.length > 0 ? ["vim", ...files] : ["vim", "."];
+	const cmd = files.length > 0 ? ["vim", ...files] : ["vim"];
 	herdrOk(["pane", "run", newPaneId, ...cmd]);
 	return newPaneId;
 }
@@ -275,7 +275,7 @@ function openNvim(cwd: string, files: string[]): { message: string; launched: bo
 	}
 
 	return {
-		message: `Could not launch nvim automatically. Run manually: cd ${cwd} && nvim ${resolvedFiles.join(" ") || "."}`,
+		message: `Could not launch nvim automatically. Run manually: cd ${cwd} && vim ${resolvedFiles.join(" ")}`,
 		launched: false,
 	};
 }
