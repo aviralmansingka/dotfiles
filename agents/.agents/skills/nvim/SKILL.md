@@ -1,12 +1,12 @@
 ---
 name: nvim
-description: "Open a Neovim editor session in the folder the agent is working with. Launches nvim as a horizontal split in the current Herdr tab. If nvim is already running in that tab, sends files to the existing instance instead of launching a new one. Use when the user wants to open nvim for the current workspace or specific files, says 'open in nvim', 'edit in neovim', or types /nvim."
+description: "Open a Neovim editor session in the folder the agent is working with. Launches nvim as a vertical split in the current Herdr tab. If nvim is already running in that tab, sends files to the existing instance instead of launching a new one. Use when the user wants to open nvim for the current workspace or specific files, says 'open in nvim', 'edit in neovim', or types /nvim."
 ---
 
 # Open Neovim
 
 Open a Neovim session for the current workspace or specific files. Neovim
-launches as a **horizontal split below the agent pane** in the current Herdr
+launches as a **vertical split to the right of the agent pane** in the current Herdr
 tab. If nvim is already running in the current tab, files are sent to the
 existing instance — a second instance is never launched.
 
@@ -43,6 +43,6 @@ working directory as `cwd`.
    socket, discovered by PID, with a `herdr pane send-text` fallback). With no
    files, the existing nvim pane is focused. No second instance is launched.
 3. **If no nvim exists:** a new pane is created with
-   `herdr pane split --current --direction down` and `nvim` is launched in it.
+   `herdr pane split --current --direction right` and `nvim` is launched in it.
    Focus moves to the nvim pane.
 4. **No Herdr:** falls back to a tmux vertical split, or prints a manual command.

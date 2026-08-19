@@ -168,14 +168,14 @@ function sendFilesViaText(paneId: string, files: string[]): void {
 // launch & focus
 // ---------------------------------------------------------------------------
 
-/** Split the current pane downward and launch nvim in the new pane. */
+/** Split the current pane to the right and launch nvim in the new pane. */
 function launchNvim(cwd: string, files: string[]): string | null {
 	const splitRes = herdrJson([
 		"pane",
 		"split",
 		"--current",
 		"--direction",
-		"down",
+		"right",
 		"--cwd",
 		cwd,
 		"--focus",
@@ -191,7 +191,7 @@ function launchNvim(cwd: string, files: string[]): string | null {
 
 /** Best-effort focus of the pane below the current one. */
 function focusPaneDown(): void {
-	herdrOk(["pane", "focus", "--current", "--direction", "down"]);
+	herdrOk(["pane", "focus", "--current", "--direction", "right"]);
 }
 
 // ---------------------------------------------------------------------------
@@ -251,7 +251,7 @@ function openNvim(cwd: string, files: string[]): { message: string; launched: bo
 				};
 			}
 
-			// No existing nvim in this tab — launch a new horizontal split.
+			// No existing nvim in this tab — launch a new vertical split.
 			const newPane = launchNvim(cwd, resolvedFiles);
 			if (newPane) {
 				const fileNote =
@@ -259,7 +259,7 @@ function openNvim(cwd: string, files: string[]): { message: string; launched: bo
 						? ` with ${resolvedFiles.length} file(s)`
 						: "";
 				return {
-					message: `Launched nvim in a horizontal split (pane ${newPane}) at ${cwd}${fileNote}.`,
+					message: `Launched nvim in a vertical split (pane ${newPane}) at ${cwd}${fileNote}.`,
 					launched: true,
 				};
 			}
@@ -288,13 +288,13 @@ const nvimOpenTool = defineTool({
 	name: "nvim_open",
 	label: "Open Neovim",
 	description:
-		"Open Neovim as a horizontal split in the current Herdr tab, or send files to an existing Neovim instance in the current tab. If nvim is already running in the current tab, files are sent to the existing instance instead of launching a new one. With no files, opens nvim at the agent's cwd.",
-	promptSnippet: "Open Neovim in the current Herdr tab as a horizontal split",
+		"Open Neovim as a vertical split in the current Herdr tab, or send files to an existing Neovim instance in the current tab. If nvim is already running in the current tab, files are sent to the existing instance instead of launching a new one. With no files, opens nvim at the agent's cwd.",
+	promptSnippet: "Open Neovim in the current Herdr tab as a vertical split",
 	promptGuidelines: [
 		"Use nvim_open when the user wants to open Neovim (nvim) for editing, either at the current working directory or for specific files.",
 		"If nvim is already running in the current Herdr tab, this tool sends files to the existing instance rather than launching a duplicate.",
 		"With no files provided, it opens nvim at the agent's cwd. With file paths, it opens those specific files.",
-		"The split is horizontal (below the agent pane) and focus moves to the nvim pane so the captain can see the editor.",
+		"The split is vertical (to the right of the agent pane) and focus moves to the nvim pane so the captain can see the editor.",
 	],
 	parameters: Type.Object({
 		cwd: Type.String({
@@ -318,7 +318,7 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool(nvimOpenTool);
 
 	pi.registerCommand("nvim", {
-		description: "Open Neovim in the current Herdr tab as a horizontal split",
+		description: "Open Neovim in the current Herdr tab as a vertical split",
 		handler: async (args: unknown, ctx: { cwd?: string; ui: { notify: (msg: string, level: string) => void } }) => {
 			const cwd = ctx?.cwd ?? process.cwd();
 			const fileList: string[] = (() => {
