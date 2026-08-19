@@ -1,14 +1,44 @@
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
-import { userInfo } from "node:os";
+import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { join, resolve, isAbsolute, relative } from "node:path";
 
 const HERDR_TIMEOUT_MS = 5000;
 const NVIM_TIMEOUT_MS = 4000;
-const LLM_TIMEOUT_MS = 30000;
+const LLM_TIMEOUT_MS = 20000;
 const MAX_FILE_LIST = 200;
+
+// ---------------------------------------------------------------------------
+// binary discovery
+// ---------------------------------------------------------------------------
+
+/** Find the nvim binary, checking PATH and common bob install locations. */
+function findNvimBinary(): string | null {
+	// 1. On PATH directly
+	try {
+		const path = execFileSync("which", ["nvim"], { encoding: "utf-8", timeout: 2000, stdio: ["pipe", "pipe", "pipe"] }).trim();
+		if (path) return path;
+	} catch {}
+
+	// 2. bob-managed nightly (most common on this homelab)
+	const bobCandidates = [
+		`${process.env.HOME}/.local/share/bob/nightly/bin/nvim`,
+		`${process.env.HOME}/.local/share/bob/stable/bin/nvim`,
+	];
+	for (const c of bobCandidates) {
+		if (existsSync(c)) return c;
+	}
+
+	// 3. Fallback to "nvim" and hope the shell resolves it
+	return "nvim";
+}
+
+let _nvimBin: string | null | undefined;
+function nvimBin(): string {
+	if (_nvimBin === undefined) _nvimBin = findNvimBinary();
+	return _nvimBin ?? "nvim";
+}
 
 // ---------------------------------------------------------------------------
 // Herdr helpers
@@ -61,18 +91,6 @@ function herdrOk(args: string[]): boolean {
 	}
 }
 
-function herdrAvailable(): boolean {
-	try {
-		execFileSync("herdr", ["workspace", "list"], {
-			timeout: 3000,
-			stdio: ["pipe", "pipe", "pipe"],
-		});
-		return true;
-	} catch {
-		return false;
-	}
-}
-
 function getCurrentPane(): PaneInfo | null {
 	const res = herdrJson(["pane", "current"]) as
 		| { result?: { pane?: PaneInfo } }
@@ -95,16 +113,16 @@ function getProcessInfo(paneId: string): ProcessInfo | null {
 }
 
 // ---------------------------------------------------------------------------
-// nvim detection & communication
+// editor detection & communication
 // ---------------------------------------------------------------------------
 
-interface NvimPane {
+interface EditorPane {
 	paneId: string;
 	pid: number;
 }
 
 /** Search all panes in the current tab for one whose foreground process is vim/nvim. */
-function findEditorPane(currentTabId: string): NvimPane | null {
+function findEditorPane(currentTabId: string): EditorPane | null {
 	const panes = listPanes().filter((p) => p.tab_id === currentTabId);
 	for (const pane of panes) {
 		const info = getProcessInfo(pane.pane_id);
@@ -121,28 +139,58 @@ function findEditorPane(currentTabId: string): NvimPane | null {
 	return null;
 }
 
-/** Discover the nvim RPC socket for a given PID by globbing the nvim temp dir. */
-function findNvimSocket(pid: number): string | null {
-	const user = userInfo().username;
+/**
+ * Discover a live nvim RPC socket. Nvim puts sockets in $XDG_RUNTIME_DIR
+ * (typically /run/user/<uid> on Linux) or $TMPDIR/nvim.<user>/ on macOS.
+ * The socket filename uses nvim's own PID, which may differ slightly from the
+ * process PID reported by the OS, so we glob all sockets and test for liveness.
+ */
+function findNvimSocket(): string | null {
+	const bin = nvimBin();
+	const searchDirs: string[] = [];
+
+	// Linux: $XDG_RUNTIME_DIR
+	if (process.env.XDG_RUNTIME_DIR) {
+		searchDirs.push(process.env.XDG_RUNTIME_DIR);
+	}
+	// macOS / fallback: $TMPDIR/nvim.<user>/
+	const user = process.env.USER ?? "unknown";
 	const tmp = process.env.TMPDIR ?? "/tmp";
-	const nvimDir = join(tmp, `nvim.${user}`);
-	if (!existsSync(nvimDir)) return null;
-	try {
-		for (const sub of readdirSync(nvimDir)) {
-			const sock = join(nvimDir, sub, `nvim.${pid}.0`);
-			if (existsSync(sock)) return sock;
+	searchDirs.push(join(tmp, `nvim.${user}`));
+
+	for (const dir of searchDirs) {
+		if (!existsSync(dir)) continue;
+		try {
+			const entries = readdirSync(dir);
+			// Collect nvim socket files (nvim.<pid>.0)
+			const sockets = entries
+				.filter((e) => /^nvim\.\d+\.0$/.test(e))
+				.map((e) => join(dir, e));
+			// Test each for liveness — return the first live one
+			for (const sock of sockets) {
+				try {
+					execFileSync(bin, ["--server", sock, "--remote-expr", "1"], {
+						timeout: 1000,
+						stdio: "ignore",
+					});
+					return sock;
+				} catch {
+					// stale socket, skip
+				}
+			}
+		} catch {
+			// ignore
 		}
-	} catch {
-		// ignore
 	}
 	return null;
 }
 
 /** Open files in an existing nvim instance via its RPC socket. Returns true on success. */
 function sendFilesViaRpc(socket: string, files: string[]): boolean {
+	const bin = nvimBin();
 	try {
 		for (const file of files) {
-			execFileSync("nvim", ["--server", socket, "--remote", file], {
+			execFileSync(bin, ["--server", socket, "--remote", file], {
 				timeout: NVIM_TIMEOUT_MS,
 				stdio: "ignore",
 			});
@@ -156,8 +204,10 @@ function sendFilesViaRpc(socket: string, files: string[]): boolean {
 /** Fallback: send `:e <file>` keystrokes to the editor pane via herdr send-text. */
 function sendFilesViaText(paneId: string, files: string[]): void {
 	for (const file of files) {
+		// Escape spaces in the path for the ex command
+		const escaped = file.replace(/ /g, "\\ ");
 		// Escape to exit insert mode, then :e with the path, then Enter.
-		const text = `\x1b:e ${file}\r`;
+		const text = `\x1b:e ${escaped}\r`;
 		try {
 			execFileSync("herdr", ["pane", "send-text", paneId, text], {
 				timeout: HERDR_TIMEOUT_MS,
@@ -194,9 +244,9 @@ function launchEditor(cwd: string, files: string[]): string | null {
 	return newPaneId;
 }
 
-/** Best-effort focus of the pane to the right of the current one. */
-function focusPaneRight(): void {
-	herdrOk(["pane", "focus", "--current", "--direction", "right"]);
+/** Focus a specific pane by ID. */
+function focusPane(paneId: string): void {
+	herdrOk(["pane", "focus", "--pane", paneId]);
 }
 
 // ---------------------------------------------------------------------------
@@ -243,10 +293,12 @@ function listFilesForLlm(cwd: string): string[] {
 			try {
 				const st = statSync(full);
 				if (st.isDirectory()) {
+					// Skip hidden directories and known large dirs
 					if (!skipDirs.has(entry) && !entry.startsWith(".")) {
 						walk(full, depth + 1);
 					}
 				} else {
+					// Include regular files (including dotfiles)
 					results.push(relative(cwd, full));
 				}
 			} catch {
@@ -300,9 +352,23 @@ function extractAssistantText(jsonOutput: string): string {
 	return lastText;
 }
 
+function resolvePiBinary(): { command: string; baseArgs: string[] } {
+	const entry = process.argv[1];
+	if (entry) {
+		try {
+			const realEntry = realpathSync(entry);
+			if (/\.(?:mjs|cjs|js)$/i.test(realEntry)) {
+				return { command: process.execPath, baseArgs: [realEntry] };
+			}
+		} catch {}
+	}
+	return { command: "pi", baseArgs: [] };
+}
+
 /** Resolve a natural-language file query using a small LLM call via pi print mode. */
 function resolveFilesWithLlm(cwd: string, query: string): Promise<LlmResolution> {
 	const fileList = listFilesForLlm(cwd);
+	const fileSet = new Set(fileList);
 
 	const systemPrompt = `You resolve natural-language file references to actual file paths.
 Given a list of files in the working directory and a user's request, determine which file(s) to open.
@@ -341,12 +407,20 @@ Which file(s) should be opened?`;
 			userPrompt,
 		];
 
+		// Strip Herdr env vars so the child pi process doesn't try to report to Herdr
+		const childEnv: Record<string, string> = {};
+		for (const [key, val] of Object.entries(process.env)) {
+			if (val !== undefined && !key.startsWith("HERDR_")) {
+				childEnv[key] = val;
+			}
+		}
+
 		let stdout = "";
 		let stderr = "";
 		const child = spawn(piBin.command, args, {
 			stdio: ["pipe", "pipe", "pipe"],
 			timeout: LLM_TIMEOUT_MS,
-			env: process.env,
+			env: childEnv,
 		});
 
 		// Close stdin so pi print mode does not wait for input.
@@ -365,7 +439,9 @@ Which file(s) should be opened?`;
 					.slice("CONFIDENT:".length)
 					.trim()
 					.split(/\s+/)
-					.filter(Boolean);
+					.filter(Boolean)
+					// Validate that resolved paths actually exist in the file list
+					.filter((p) => fileSet.has(p));
 				resolve({ files: paths, confident: true, candidates: [] });
 			} else if (text.startsWith("UNCERTAIN:")) {
 				const rest = text.slice("UNCERTAIN:".length).trim();
@@ -375,7 +451,9 @@ Which file(s) should be opened?`;
 					const candidates = rest
 						.split("|")
 						.map((s) => s.trim())
-						.filter(Boolean);
+						.filter(Boolean)
+						// Validate candidates too
+						.filter((c) => fileSet.has(c));
 					resolve({ files: [], confident: false, candidates });
 				}
 			} else {
@@ -385,26 +463,18 @@ Which file(s) should be opened?`;
 	});
 }
 
-function resolvePiBinary(): { command: string; baseArgs: string[] } {
-	const entry = process.argv[1];
-	if (entry) {
-		try {
-			const realEntry = require("node:fs").realpathSync(entry);
-			if (/\.(?:mjs|cjs|js)$/i.test(realEntry)) {
-				return { command: process.execPath, baseArgs: [realEntry] };
-			}
-		} catch {}
-	}
-	return { command: "pi", baseArgs: [] };
-}
-
 // ---------------------------------------------------------------------------
 // multiple-choice selection via terminal
 // ---------------------------------------------------------------------------
 
+interface UIContext {
+	notify: (msg: string, level: string) => void;
+	onTerminalInput: (cb: (data: string) => { consume?: boolean } | undefined) => () => void;
+}
+
 /** Present a numbered multiple-choice menu and wait for the user's selection. */
 function presentChoice(
-	ctx: { ui: { notify: (msg: string, level: string) => void; onTerminalInput: (cb: (data: string) => { consume?: boolean } | undefined) => () => void } },
+	ctx: UIContext,
 	prompt: string,
 	candidates: string[],
 ): Promise<string | null> {
@@ -461,7 +531,7 @@ function isDirectFilePath(cwd: string, arg: string): boolean {
 async function openEditor(
 	cwd: string,
 	rawArgs: string[],
-	ctx?: { ui: { notify: (msg: string, level: string) => void; onTerminalInput: (cb: (data: string) => { consume?: boolean } | undefined) => () => void } },
+	ctx?: { ui?: UIContext },
 ): Promise<{ message: string; launched: boolean }> {
 	// Classify args: direct file paths vs natural-language queries
 	const directFiles: string[] = [];
@@ -485,9 +555,9 @@ async function openEditor(
 
 		if (resolution.confident && resolution.files.length > 0) {
 			resolvedFiles.push(...resolution.files);
-		} else if (!resolution.confident && resolution.candidates.length > 0 && ctx) {
+		} else if (!resolution.confident && resolution.candidates.length > 0 && ctx?.ui) {
 			const choice = await presentChoice(
-				ctx,
+				ctx.ui,
 				`Which file did you mean by "${query}"?`,
 				resolution.candidates,
 			);
@@ -499,7 +569,7 @@ async function openEditor(
 					launched: false,
 				};
 			}
-		} else if (!resolution.confident && ctx) {
+		} else if (!resolution.confident && ctx?.ui) {
 			ctx.ui.notify(
 				`Could not resolve "${query}" to any file. Launching vim with no file.`,
 				"warn",
@@ -509,46 +579,46 @@ async function openEditor(
 
 	const finalFiles = resolveFilePaths(cwd, resolvedFiles);
 
-	if (herdrAvailable()) {
-		const current = getCurrentPane();
-		if (current) {
-			const existing = findEditorPane(current.tab_id);
-			if (existing) {
-				if (finalFiles.length > 0) {
-					const sock = findNvimSocket(existing.pid);
-					if (sock && sendFilesViaRpc(sock, finalFiles)) {
-						focusPaneRight();
-						return {
-							message: `Opened ${finalFiles.length} file(s) in existing editor (pane ${existing.paneId}) via RPC.`,
-							launched: false,
-						};
-					}
-					sendFilesViaText(existing.paneId, finalFiles);
-					focusPaneRight();
+	// Try Herdr — getCurrentPane returns null if herdr is unavailable
+	const current = getCurrentPane();
+	if (current) {
+		const existing = findEditorPane(current.tab_id);
+		if (existing) {
+			if (finalFiles.length > 0) {
+				// Try RPC first, fall back to send-text
+				const sock = findNvimSocket();
+				if (sock && sendFilesViaRpc(sock, finalFiles)) {
+					focusPane(existing.paneId);
 					return {
-						message: `Sent ${finalFiles.length} file(s) to existing editor (pane ${existing.paneId}) via send-text.`,
+						message: `Opened ${finalFiles.length} file(s) in existing editor (pane ${existing.paneId}) via RPC.`,
 						launched: false,
 					};
 				}
-				focusPaneRight();
+				sendFilesViaText(existing.paneId, finalFiles);
+				focusPane(existing.paneId);
 				return {
-					message: `Focused existing editor pane (${existing.paneId}).`,
+					message: `Sent ${finalFiles.length} file(s) to existing editor (pane ${existing.paneId}) via send-text.`,
 					launched: false,
 				};
 			}
+			focusPane(existing.paneId);
+			return {
+				message: `Focused existing editor pane (${existing.paneId}).`,
+				launched: false,
+			};
+		}
 
-			// No existing editor in this tab — launch a new vertical split.
-			const newPane = launchEditor(cwd, finalFiles);
-			if (newPane) {
-				const fileNote =
-					finalFiles.length > 0
-						? ` with ${finalFiles.length} file(s)`
-						: "";
-				return {
-					message: `Launched vim in a vertical split (pane ${newPane}) at ${cwd}${fileNote}.`,
-					launched: true,
-				};
-			}
+		// No existing editor in this tab — launch a new vertical split.
+		const newPane = launchEditor(cwd, finalFiles);
+		if (newPane) {
+			const fileNote =
+				finalFiles.length > 0
+					? ` with ${finalFiles.length} file(s)`
+					: "";
+			return {
+				message: `Launched vim in a vertical split (pane ${newPane}) at ${cwd}${fileNote}.`,
+				launched: true,
+			};
 		}
 	}
 
@@ -592,28 +662,20 @@ const nvimOpenTool = defineTool({
 			}),
 		),
 	}),
-	async execute(_toolCallId, params) {
+	async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 		const cwd = params.cwd ?? process.cwd();
 		const files = params.files ?? [];
-		const result = await openEditor(cwd, files);
+		const result = await openEditor(cwd, files, ctx as { ui?: UIContext });
 		return { content: [{ type: "text", text: result.message }] };
 	},
 });
-
-interface CommandCtx {
-	cwd?: string;
-	ui: {
-		notify: (msg: string, level: string) => void;
-		onTerminalInput: (cb: (data: string) => { consume?: boolean } | undefined) => () => void;
-	};
-}
 
 export default function (pi: ExtensionAPI) {
 	pi.registerTool(nvimOpenTool);
 
 	pi.registerCommand("nvim", {
 		description: "Open vim in the current Herdr tab as a vertical split",
-		handler: async (args: unknown, ctx: CommandCtx) => {
+		handler: async (args: unknown, ctx: { cwd?: string; ui: UIContext }) => {
 			const cwd = ctx?.cwd ?? process.cwd();
 			const fileList: string[] = (() => {
 				if (Array.isArray(args)) return args.map(String);
