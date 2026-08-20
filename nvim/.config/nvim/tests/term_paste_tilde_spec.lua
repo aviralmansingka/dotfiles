@@ -68,7 +68,9 @@ function tests.test_markers_sent_when_bp_enabled()
     vim.fn.shellescape(tmp)
   ))
   vim.wait(800) -- wait for BP enable to be detected via on_stdout
-  vim.paste({ "echo hello" }, -1)
+  vim.paste({ "echo " }, 1)
+  vim.paste({ "hello" }, 2)
+  vim.paste({ "" }, 3)
   vim.wait(300)
   close_term(buf, chan)
 
@@ -82,6 +84,35 @@ function tests.test_markers_sent_when_bp_enabled()
   assert(content:find("\27[201~", 1, true), "end marker missing in paste output")
   assert(content:find("echo hello", 1, true), "paste content missing")
   print("PASS: bracketed-paste markers sent when inner program enables BP")
+end
+
+function tests.test_jobstart_tracks_ordered_split_bp_output()
+  local tmp = vim.fn.tempname()
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_set_current_buf(buf)
+  local chan = vim.fn.jobstart({
+    "bash",
+    "-c",
+    string.format(
+      "printf '\\033[?2004h\\033[?2004l\\033[?20'; sleep 0.2; printf '04h'; cat > %s",
+      vim.fn.shellescape(tmp)
+    ),
+  }, { term = true })
+  vim.cmd("startinsert")
+  vim.wait(800)
+  vim.paste({ "echo hello" }, -1)
+  vim.wait(300)
+  close_term(buf, chan)
+
+  local f = io.open(tmp, "rb")
+  assert(f, "output file not created")
+  local content = f:read("*a")
+  f:close()
+  vim.fn.delete(tmp)
+
+  assert(content:find("\27[200~", 1, true), "start marker missing after split enable sequence")
+  assert(content:find("\27[201~", 1, true), "end marker missing after split enable sequence")
+  print("PASS: jobstart tracks ordered split bracketed-paste output")
 end
 
 --- Pasting into a regular (non-terminal) buffer should use the default handler.

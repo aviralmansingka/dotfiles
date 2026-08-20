@@ -50,55 +50,85 @@ end
 -- to raw mode (disabling echo), so the markers are never echoed and no
 -- tildes appear.
 --
--- We track bracketed-paste mode by wrapping vim.fn.termopen with an on_stdout
--- callback that scans the program's raw output for \27[?2004h / \27[?2004l.
--- Snacks.terminal (and any other caller) goes through vim.fn.termopen, so the
--- tracking covers every :term buffer.
+-- We track bracketed-paste mode by wrapping terminal job callbacks and scanning
+-- the program's raw output for \27[?2004h / \27[?2004l.
+local BP_ENABLE = "\27[?2004h"
+local BP_DISABLE = "\27[?2004l"
 local term_bp_mode = {} -- chan → boolean (inner program has BP enabled)
 local paste_buf = {}
 local default_paste = vim.paste
 
 do
   local original_termopen = vim.fn.termopen
-  if original_termopen then
-    vim.fn.termopen = function(cmd, opts)
-      opts = opts or {}
-      local user_on_stdout = opts.on_stdout
-      opts.on_stdout = function(job_id, data, event)
-        if type(data) == "table" then
-          for _, chunk in ipairs(data) do
-            -- plain=true: literal substring search, not a Lua pattern.
-            if chunk:find("\27[?2004h", 1, true) then
-              term_bp_mode[job_id] = true
-            end
-            if chunk:find("\27[?2004l", 1, true) then
-              term_bp_mode[job_id] = false
-            end
+  local original_jobstart = vim.fn.jobstart
+
+  local function tracked_opts(opts)
+    opts = vim.tbl_extend("force", {}, opts or {})
+    local user_on_stdout = opts.on_stdout
+    local tail = ""
+    opts.on_stdout = function(job_id, data, event)
+      if type(data) == "table" then
+        local output = tail .. table.concat(data, "\n")
+        local offset = 1
+        while true do
+          local enabled_at = output:find(BP_ENABLE, offset, true)
+          local disabled_at = output:find(BP_DISABLE, offset, true)
+          if enabled_at and (not disabled_at or enabled_at < disabled_at) then
+            term_bp_mode[job_id] = true
+            offset = enabled_at + #BP_ENABLE
+          elseif disabled_at then
+            term_bp_mode[job_id] = false
+            offset = disabled_at + #BP_DISABLE
+          else
+            break
           end
         end
-        if user_on_stdout then
-          user_on_stdout(job_id, data, event)
+
+        tail = ""
+        for length = math.min(#output, #BP_ENABLE - 1), 1, -1 do
+          local suffix = output:sub(-length)
+          if BP_ENABLE:sub(1, length) == suffix or BP_DISABLE:sub(1, length) == suffix then
+            tail = suffix
+            break
+          end
         end
       end
-      local chan = original_termopen(cmd, opts)
-      if chan and chan ~= 0 then
-        term_bp_mode[chan] = false
+      if user_on_stdout then
+        user_on_stdout(job_id, data, event)
       end
-      return chan
     end
+    return opts
+  end
+
+  local function tracked_start(start, cmd, opts)
+    local chan = start(cmd, tracked_opts(opts))
+    if chan and chan ~= 0 then
+      term_bp_mode[chan] = false
+    end
+    return chan
+  end
+
+  if original_termopen then
+    vim.fn.termopen = function(cmd, opts)
+      return tracked_start(original_termopen, cmd, opts)
+    end
+  end
+
+  vim.fn.jobstart = function(cmd, opts)
+    if type(opts) == "table" and opts.term == true then
+      return tracked_start(original_jobstart, cmd, opts)
+    end
+    return original_jobstart(cmd, opts)
   end
 end
 
 vim.paste = function(lines, phase)
   if vim.bo.buftype == "terminal" and vim.b.terminal_job_id then
     local chan = vim.b.terminal_job_id
-    local use_markers = term_bp_mode[chan] == true
-    if use_markers then
-      local START, END = "\27[200~", "\27[201~"
-      if phase == -1 then
-        vim.api.nvim_chan_send(chan, START .. table.concat(lines, "\n") .. END)
-        return true
-      end
+    local content
+    if phase == -1 then
+      content = table.concat(lines, "\n")
+    else
       if phase == 1 then
         paste_buf = vim.deepcopy(lines)
       elseif #paste_buf > 0 and #lines > 0 then
@@ -112,35 +142,18 @@ vim.paste = function(lines, phase)
         vim.list_extend(paste_buf, lines)
       end
       if phase == 3 then
-        vim.api.nvim_chan_send(chan, START .. table.concat(paste_buf, "\n") .. END)
+        content = table.concat(paste_buf, "\n")
         paste_buf = {}
       end
-      return true
-    else
-      -- Inner program has not enabled bracketed paste: send raw content.
-      -- No markers means no ESC bytes, so echoctl cannot mangle them into
-      -- visible tildes.  The \n → `j` problem does not apply because programs
-      -- that interpret \n as a motion (vim) always enable bracketed paste.
-      if phase == -1 then
-        vim.api.nvim_chan_send(chan, table.concat(lines, "\n"))
-        return true
-      end
-      if phase == 1 then
-        paste_buf = vim.deepcopy(lines)
-      elseif #paste_buf > 0 and #lines > 0 then
-        paste_buf[#paste_buf] = paste_buf[#paste_buf] .. lines[1]
-        for i = 2, #lines do
-          table.insert(paste_buf, lines[i])
-        end
-      else
-        vim.list_extend(paste_buf, lines)
-      end
-      if phase == 3 then
-        vim.api.nvim_chan_send(chan, table.concat(paste_buf, "\n"))
-        paste_buf = {}
-      end
-      return true
     end
+
+    if content then
+      if term_bp_mode[chan] == true then
+        content = "\27[200~" .. content .. "\27[201~"
+      end
+      vim.api.nvim_chan_send(chan, content)
+    end
+    return true
   end
   return default_paste(lines, phase)
 end
