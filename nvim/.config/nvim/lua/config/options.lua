@@ -122,6 +122,16 @@ do
   end
 end
 
+vim.api.nvim_create_autocmd("TermOpen", {
+  callback = function(args)
+    local chan = vim.b[args.buf].terminal_job_id
+    if chan then
+      -- Vimscript :terminal bypasses tracked callbacks, so its BP mode cannot be tracked and paste stays raw.
+      term_bp_mode[chan] = false
+    end
+  end,
+})
+
 vim.paste = function(lines, phase)
   if vim.bo.buftype == "terminal" and vim.b.terminal_job_id then
     local chan = vim.b.terminal_job_id

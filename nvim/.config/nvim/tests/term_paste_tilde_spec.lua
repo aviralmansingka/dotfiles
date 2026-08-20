@@ -27,6 +27,15 @@ local function make_term(cmd)
   return buf, chan
 end
 
+local function make_builtin_term(cmd)
+  vim.cmd("terminal " .. cmd)
+  local buf = vim.api.nvim_get_current_buf()
+  local chan = vim.b[buf].terminal_job_id
+  vim.cmd("startinsert")
+  vim.wait(500)
+  return buf, chan
+end
+
 local function close_term(buf, chan)
   vim.api.nvim_chan_send(chan, "\4") -- Ctrl-D: EOF for cat
   vim.wait(300)
@@ -61,6 +70,16 @@ end
 
 --- When the inner program HAS enabled bracketed paste mode, the markers must
 --- still be sent so programs like vim handle the paste correctly.
+function tests.test_builtin_terminal_uses_raw_paste()
+  local buf, chan = make_builtin_term("cat")
+  vim.paste({ "echo hello", "ls -la" }, -1)
+  vim.wait(300)
+  local has_tilde = buf_has_tilde(buf)
+  close_term(buf, chan)
+  assert(not has_tilde, "expected no tildes in built-in :terminal buffer with cat")
+  print("PASS: built-in :terminal uses raw paste")
+end
+
 function tests.test_markers_sent_when_bp_enabled()
   local tmp = vim.fn.tempname()
   local buf, chan = make_term(string.format(
