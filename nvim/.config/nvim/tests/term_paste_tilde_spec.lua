@@ -1,0 +1,138 @@
+--- Tests for the vim.paste override that prevents tilde artifacts when pasting
+--- into :term buffers. See lua/config/options.lua.
+---
+--- Root cause: the old override always wrapped :term pastes with bracketed-paste
+--- markers (\27[200~ … \27[201~).  The :term PTY has echo + echoctl enabled by
+--- default, so the kernel echoes the ESC byte as literal "^[" (caret notation),
+--- preventing libvterm from recognising the CSI sequence.  The "~" in the markers
+--- then appears as a literal tilde.
+---
+--- Fix: only wrap with markers when the inner program has enabled bracketed
+--- paste mode (sent \27[?2004h).  Track the mode via an on_stdout callback
+--- injected through a vim.fn.termopen wrapper.
+
+-- Tests are run from the nvim config root (nvim/.config/nvim/).
+local config_root = vim.fn.getcwd()
+package.path = config_root .. "/lua/?.lua;" .. config_root .. "/lua/?/init.lua;" .. package.path
+
+-- Load options.lua (defines the vim.paste override and termopen wrapper)
+dofile(config_root .. "/lua/config/options.lua")
+
+local function make_term(cmd)
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_set_current_buf(buf)
+  local chan = vim.fn.termopen(cmd, { bufnr = buf })
+  vim.cmd("startinsert")
+  vim.wait(500)
+  return buf, chan
+end
+
+local function close_term(buf, chan)
+  vim.api.nvim_chan_send(chan, "\4") -- Ctrl-D: EOF for cat
+  vim.wait(300)
+  pcall(vim.fn.chanclose, chan)
+  vim.wait(300)
+  pcall(vim.cmd, "bdelete! " .. buf)
+end
+
+local function buf_has_tilde(buf)
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  for _, line in ipairs(lines) do
+    if line:find("~", 1, true) then
+      return true
+    end
+  end
+  return false
+end
+
+local tests = {}
+
+--- Pasting into a :term running cat (no bracketed paste) must not produce
+--- visible tilde characters from bracketed-paste markers.
+function tests.test_no_tildes_when_bp_disabled()
+  local buf, chan = make_term("cat")
+  vim.paste({ "echo hello", "ls -la" }, -1)
+  vim.wait(300)
+  local has_tilde = buf_has_tilde(buf)
+  close_term(buf, chan)
+  assert(not has_tilde, "expected no tildes in :term buffer with cat")
+  print("PASS: no tildes when bracketed paste is not enabled")
+end
+
+--- When the inner program HAS enabled bracketed paste mode, the markers must
+--- still be sent so programs like vim handle the paste correctly.
+function tests.test_markers_sent_when_bp_enabled()
+  local tmp = vim.fn.tempname()
+  local buf, chan = make_term(string.format(
+    "bash -c 'printf \"\\x1b[?2004h\"; cat > %s'",
+    vim.fn.shellescape(tmp)
+  ))
+  vim.wait(800) -- wait for BP enable to be detected via on_stdout
+  vim.paste({ "echo hello" }, -1)
+  vim.wait(300)
+  close_term(buf, chan)
+
+  local f = io.open(tmp, "rb")
+  assert(f, "output file not created")
+  local content = f:read("*a")
+  f:close()
+  vim.fn.delete(tmp)
+
+  assert(content:find("\27[200~", 1, true), "start marker missing in paste output")
+  assert(content:find("\27[201~", 1, true), "end marker missing in paste output")
+  assert(content:find("echo hello", 1, true), "paste content missing")
+  print("PASS: bracketed-paste markers sent when inner program enables BP")
+end
+
+--- Pasting into a regular (non-terminal) buffer should use the default handler.
+function tests.test_regular_buffer_uses_default_paste()
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_set_current_buf(buf)
+  vim.bo[buf].buftype = ""
+  vim.paste({ "hello world" }, -1)
+  local line = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
+  assert(line == "hello world", "regular buffer paste failed: got " .. tostring(line))
+  vim.cmd("bdelete! " .. buf)
+  print("PASS: regular buffer paste uses default handler")
+end
+
+--- Multi-phase paste (simulates SSH chunked delivery) must reassemble content
+--- correctly without tildes when BP is not enabled.
+function tests.test_multiphase_no_tildes_when_bp_disabled()
+  local tmp = vim.fn.tempname()
+  local buf, chan = make_term(string.format("cat > %s", vim.fn.shellescape(tmp)))
+  vim.paste({ "ech" }, 1)
+  vim.wait(100)
+  vim.paste({ "o hello" }, 2)
+  vim.wait(100)
+  vim.paste({ "" }, 3)
+  vim.wait(300)
+  close_term(buf, chan)
+
+  local f = io.open(tmp, "r")
+  assert(f, "output file not created")
+  local content = f:read("*a")
+  f:close()
+  vim.fn.delete(tmp)
+
+  assert(content:find("echo hello", 1, true), "multi-phase paste content mismatch: " .. vim.inspect(content))
+  assert(not content:find("~", 1, true), "tildes found in multi-phase paste output")
+  print("PASS: multi-phase paste reassembles correctly without tildes")
+end
+
+-- Run all tests
+local failures = 0
+for name, fn in pairs(tests) do
+  local ok, err = pcall(fn)
+  if not ok then
+    print("FAIL: " .. name .. " — " .. tostring(err))
+    failures = failures + 1
+  end
+end
+
+if failures > 0 then
+  print(string.format("\n%d test(s) failed", failures))
+  vim.cmd("cquit 1")
+else
+  print(string.format("\nAll %d tests passed", #vim.tbl_keys(tests)))
+end
