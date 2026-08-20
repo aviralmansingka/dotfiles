@@ -93,8 +93,10 @@ do
           end
         end
       end
-      if user_on_stdout then
+      if type(user_on_stdout) == "function" then
         user_on_stdout(job_id, data, event)
+      elseif user_on_stdout then
+        vim.fn.call(user_on_stdout, { job_id, data, event }, opts)
       end
     end
     return opts

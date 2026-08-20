@@ -105,6 +105,35 @@ function tests.test_markers_sent_when_bp_enabled()
   print("PASS: bracketed-paste markers sent when inner program enables BP")
 end
 
+function tests.test_vimscript_stdout_callback_receives_job_options()
+  vim.g.term_paste_callback_state = nil
+  vim.cmd([[
+    function! TermPasteTestCallback(job_id, data, event) dict
+      let g:term_paste_callback_state = self.callback_state
+    endfunction
+  ]])
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_set_current_buf(buf)
+  local chan = vim.fn.jobstart({ "sh", "-c", "printf callback" }, {
+    term = true,
+    callback_state = "preserved",
+    on_stdout = "TermPasteTestCallback",
+  })
+  vim.wait(1000, function()
+    return vim.g.term_paste_callback_state ~= nil
+  end)
+
+  local state = vim.g.term_paste_callback_state
+  pcall(vim.fn.jobstop, chan)
+  pcall(vim.cmd, "bdelete! " .. buf)
+  vim.cmd("delfunction TermPasteTestCallback")
+  vim.g.term_paste_callback_state = nil
+
+  assert(state == "preserved", "Vimscript callback did not receive its job options dictionary")
+  print("PASS: Vimscript stdout callback receives job options")
+end
+
 function tests.test_jobstart_tracks_ordered_split_bp_output()
   local tmp = vim.fn.tempname()
   local buf = vim.api.nvim_create_buf(false, true)
