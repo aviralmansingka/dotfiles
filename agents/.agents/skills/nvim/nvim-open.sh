@@ -12,6 +12,62 @@ CWD="${1:-$(pwd)}"
 shift || true
 FILES=("$@")
 
+# Add common nvim installation paths that may not be on PATH
+# (bob version manager, homebrew on Linux/macOS).
+if ! command -v nvim >/dev/null 2>&1; then
+	for _p in \
+		"$HOME/.local/share/bob/nightly/bin" \
+		"$HOME/.local/share/bob/stable/bin" \
+		"/home/linuxbrew/.linuxbrew/bin" \
+		"/opt/homebrew/bin"; do
+		[[ -d "$_p" ]] && PATH="$_p:$PATH"
+	done
+	unset _p
+fi
+
+# Check for vim or nvim before doing anything else.
+# If neither is installed, fail fast with a useful fallback.
+if ! command -v vim >/dev/null 2>&1 && ! command -v nvim >/dev/null 2>&1; then
+	echo "Error: neither vim nor nvim is installed on this host." >&2
+	echo "Fallback: use 'less <file>' for read-only viewing or 'vi -R <file>' for vi." >&2
+	echo "Files requested: ${FILES[*]:-$CWD}" >&2
+	exit 1
+fi
+
+# Pick whichever editor is available (prefer nvim, fall back to vim).
+EDITOR_CMD="vim"
+if command -v nvim >/dev/null 2>&1; then
+	EDITOR_CMD="nvim"
+fi
+
+# ── Dotfiles worktree config detection ──────────────────────────────
+# When the cwd is inside a dotfiles checkout (or a git worktree of it),
+# detect the local nvim config and use it instead of ~/.config/nvim.
+# The signal is a `nvim/.config/nvim/init.lua` file in a parent dir.
+DOTFILES_XDG_CONFIG_HOME=""
+detect_dotfiles_config() {
+	local dir="$CWD"
+	# Walk up the directory tree (max 20 levels to avoid infinite loops).
+	for _ in $(seq 1 20); do
+		if [[ -f "$dir/nvim/.config/nvim/init.lua" ]]; then
+			DOTFILES_XDG_CONFIG_HOME="$dir/nvim/.config"
+			return 0
+		fi
+		[[ "$dir" == "/" ]] && return 1
+		dir=$(dirname "$dir")
+	done
+	return 1
+}
+if detect_dotfiles_config; then
+	echo "Dotfiles config detected: $DOTFILES_XDG_CONFIG_HOME/nvim/init.lua"
+fi
+
+# Build the env prefix for launching nvim with the worktree config.
+ENV_PREFIX=""
+if [[ -n "$DOTFILES_XDG_CONFIG_HOME" ]]; then
+	ENV_PREFIX="env XDG_CONFIG_HOME=$DOTFILES_XDG_CONFIG_HOME"
+fi
+
 HERDR_TIMEOUT=5
 
 # Escape a file path for Vim :e ex command (fnameescape semantics)
@@ -37,14 +93,14 @@ if ! herdr_json workspace list >/dev/null 2>&1; then
 	if command -v tmux >/dev/null 2>&1; then
 		if [[ ${#FILES[@]} -gt 0 ]]; then
 			quoted=$(printf "'%s' " "${FILES[@]}")
-			tmux split-window -h -c "$CWD" "vim $quoted"
+			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD $quoted"
 		else
-			tmux split-window -h -c "$CWD" "vim"
+			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD"
 		fi
-		echo "Launched vim in a tmux split at $CWD."
+		echo "Launched $EDITOR_CMD in a tmux split at $CWD."
 		exit 0
 	fi
-	echo "Could not launch vim. Run manually: cd $CWD && vim ${FILES[*]}"
+	echo "Could not launch $EDITOR_CMD. Run manually: cd $CWD && $ENV_PREFIX $EDITOR_CMD ${FILES[*]}"
 	exit 1
 fi
 
@@ -112,8 +168,16 @@ for p in procs:
 	fi
 fi
 
-# If editor exists, send files to it
+# If editor exists, send files to it.
+# When a dotfiles config was detected, warn that the existing editor
+# may be running with a different config — the captain can close and
+# relaunch to pick up the worktree config.
 if [[ "$EDITOR_FOUND" == "true" ]]; then
+	if [[ -n "$DOTFILES_XDG_CONFIG_HOME" ]]; then
+		echo "Note: dotfiles config detected at $DOTFILES_XDG_CONFIG_HOME but" >&2
+		echo "      existing editor may be using a different config. Close and" >&2
+		echo "      relaunch /nvim to use the worktree config." >&2
+	fi
 	if [[ ${#FILES[@]} -gt 0 ]]; then
 		for file in "${FILES[@]}"; do
 			escaped=$(fnameescape "$file")
@@ -141,11 +205,11 @@ if [[ "$SCAN_ERROR" == "true" ]]; then
 	if command -v tmux >/dev/null 2>&1; then
 		if [[ ${#FILES[@]} -gt 0 ]]; then
 			quoted=$(printf "'%s' " "${FILES[@]}")
-			tmux split-window -h -c "$CWD" "vim $quoted"
+			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD $quoted"
 		else
-			tmux split-window -h -c "$CWD" "vim"
+			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD"
 		fi
-		echo "Launched vim in a tmux split at $CWD."
+		echo "Launched $EDITOR_CMD in a tmux split at $CWD."
 		exit 0
 	fi
 fi
@@ -159,19 +223,21 @@ if [[ -z "$NEW_PANE_ID" ]]; then
 	exit 1
 fi
 
-# Launch vim in the new pane
+# Launch $EDITOR_CMD in the new pane.
+# When a dotfiles config was detected, prefix with env XDG_CONFIG_HOME=...
+# so nvim reads the worktree's config instead of ~/.config/nvim.
 if [[ ${#FILES[@]} -gt 0 ]]; then
-	if herdr_ok pane run "$NEW_PANE_ID" vim "${FILES[@]}"; then
-		echo "Launched vim in a vertical split (pane $NEW_PANE_ID) at $CWD with ${#FILES[@]} file(s)."
+	if herdr_ok pane run "$NEW_PANE_ID" $ENV_PREFIX $EDITOR_CMD "${FILES[@]}"; then
+		echo "Launched $EDITOR_CMD in a vertical split (pane $NEW_PANE_ID) at $CWD with ${#FILES[@]} file(s)."
 	else
-		echo "Failed to launch vim in pane $NEW_PANE_ID."
+		echo "Failed to launch $EDITOR_CMD in pane $NEW_PANE_ID."
 		exit 1
 	fi
 else
-	if herdr_ok pane run "$NEW_PANE_ID" vim; then
-		echo "Launched vim in a vertical split (pane $NEW_PANE_ID) at $CWD."
+	if herdr_ok pane run "$NEW_PANE_ID" $ENV_PREFIX $EDITOR_CMD; then
+		echo "Launched $EDITOR_CMD in a vertical split (pane $NEW_PANE_ID) at $CWD."
 	else
-		echo "Failed to launch vim in pane $NEW_PANE_ID."
+		echo "Failed to launch $EDITOR_CMD in pane $NEW_PANE_ID."
 		exit 1
 	fi
 fi
