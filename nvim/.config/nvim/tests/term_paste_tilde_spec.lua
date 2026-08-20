@@ -1,21 +1,10 @@
---- Tests for the vim.paste override that prevents tilde artifacts when pasting
---- into :term buffers. See lua/config/options.lua.
----
---- Root cause: the old override always wrapped :term pastes with bracketed-paste
---- markers (\27[200~ … \27[201~).  The :term PTY has echo + echoctl enabled by
---- default, so the kernel echoes the ESC byte as literal "^[" (caret notation),
---- preventing libvterm from recognising the CSI sequence.  The "~" in the markers
---- then appears as a literal tilde.
----
---- Fix: only wrap with markers when the inner program has enabled bracketed
---- paste mode (sent \27[?2004h).  Track the mode via an on_stdout callback
---- injected through a vim.fn.termopen wrapper.
+--- Regression coverage for terminal paste behavior. See lua/config/options.lua.
 
 -- Tests are run from the nvim config root (nvim/.config/nvim/).
 local config_root = vim.fn.getcwd()
 package.path = config_root .. "/lua/?.lua;" .. config_root .. "/lua/?/init.lua;" .. package.path
 
--- Load options.lua (defines the vim.paste override and termopen wrapper)
+-- Load options.lua (defines the vim.paste override and terminal-job wrappers)
 dofile(config_root .. "/lua/config/options.lua")
 
 local function make_term(cmd)
@@ -68,8 +57,7 @@ function tests.test_no_tildes_when_bp_disabled()
   print("PASS: no tildes when bracketed paste is not enabled")
 end
 
---- When the inner program HAS enabled bracketed paste mode, the markers must
---- still be sent so programs like vim handle the paste correctly.
+--- Vimscript :terminal bypasses tracked callbacks, so paste remains raw.
 function tests.test_builtin_terminal_uses_raw_paste()
   local buf, chan = make_builtin_term("cat")
   vim.paste({ "echo hello", "ls -la" }, -1)
@@ -82,10 +70,7 @@ end
 
 function tests.test_markers_sent_when_bp_enabled()
   local tmp = vim.fn.tempname()
-  local buf, chan = make_term(string.format(
-    "bash -c 'printf \"\\x1b[?2004h\"; cat > %s'",
-    vim.fn.shellescape(tmp)
-  ))
+  local buf, chan = make_term(string.format("bash -c 'printf \"\\x1b[?2004h\"; cat > %s'", vim.fn.shellescape(tmp)))
   vim.wait(800) -- wait for BP enable to be detected via on_stdout
   vim.paste({ "echo " }, 1)
   vim.paste({ "hello" }, 2)

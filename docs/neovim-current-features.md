@@ -563,7 +563,8 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - The system clipboard is the default unnamed clipboard.
 - SSH clipboard copy works through OSC52.
 - SSH paste avoids remote terminal paste timeouts by using local Neovim registers.
-- Terminal-buffer paste uses bracketed-paste wrapping so pasted newlines are not interpreted as keystrokes by nested terminal programs.
+- Terminal-buffer paste honors nested bracketed-paste mode: opted-in programs receive markers so pasted newlines remain
+  paste text; other programs receive raw text without control-sequence artifacts.
 
 ### Statusline, tabline, dashboard, and GUI
 
