@@ -8,7 +8,8 @@
     "git/github.com/amosblomqvist/pi-config/extensions/youtube-search/index.ts"
   ],
   "extensions": [
-    "-extensions/transcript-scroll.ts"
+    "-extensions/transcript-scroll.ts",
+    "+extensions/mobile-mode.ts"
   ],
   "lastChangelogVersion": "0.82.1",
   "defaultProvider": "openai-codex",
