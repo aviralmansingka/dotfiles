@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Verify Ctrl+T hides/restores thinking for ordinary (non-subagent) work steps.
+# Verify Ctrl+T hides/restores the entire activity tree for ordinary
+# (non-subagent) work steps.
 #
 # Uses the faux provider fixture from the main work-step verifier. Response 0
 # emits thinking + text with no tool calls, so the WorkStepRow path is exercised
 # directly — not the connected-subagent bridge.
 #
 # Checks:
-#   1. Thinking sentinel appears after the first response.
-#   2. Ctrl+T removes the thinking sentinel from the visible pane.
-#   3. Ctrl+T again restores the thinking sentinel.
+#   1. Activity tree appears after the first response.
+#   2. Ctrl+T removes the entire tree (header, step, thinking) from the pane.
+#   3. Ctrl+T again restores the entire tree.
 
 set -euo pipefail
 
@@ -85,31 +86,57 @@ tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
 # Wait for the response to complete.
 wait_for "NON_TOOL_RENDERING_SENTINEL" "Response 0 text did not appear"
 
-# Check 1: thinking sentinel should be visible initially.
+# Check 1: activity tree should be visible initially.
 # The renderer sanitizes thinking text: underscores are stripped, so
 # NON_TOOL_THINKING_SENTINEL becomes NONTOOLTHINKINGSENTINEL.
 thinking_sentinel="NONTOOLTHINKINGSENTINEL"
+activity_header="1 step · 0 calls · all passed"
+step_title="Preparing response"
 if ! pane_text | grep -Fq "$thinking_sentinel"; then
 	echo "FAIL: thinking sentinel was not visible before Ctrl+T" >&2
 	exit 1
 fi
-echo "PASS: thinking sentinel visible before Ctrl+T"
+if ! pane_text | grep -Fq "$activity_header"; then
+	echo "FAIL: activity header was not visible before Ctrl+T" >&2
+	exit 1
+fi
+if ! pane_text | grep -Fq "$step_title"; then
+	echo "FAIL: step title was not visible before Ctrl+T" >&2
+	exit 1
+fi
+echo "PASS: activity tree visible before Ctrl+T"
 
-# Check 2: Ctrl+T should remove the thinking sentinel.
+# Check 2: Ctrl+T should remove the entire tree.
 toggle_thinking
 if pane_text | grep -Fq "$thinking_sentinel"; then
 	echo "FAIL: thinking sentinel remained visible after Ctrl+T" >&2
 	exit 1
 fi
-echo "PASS: thinking sentinel hidden after Ctrl+T"
+if pane_text | grep -Fq "$activity_header"; then
+	echo "FAIL: activity header remained visible after Ctrl+T" >&2
+	exit 1
+fi
+if pane_text | grep -Fq "$step_title"; then
+	echo "FAIL: step title remained visible after Ctrl+T" >&2
+	exit 1
+fi
+echo "PASS: entire tree hidden after Ctrl+T"
 
-# Check 3: Ctrl+T again should restore the thinking sentinel.
+# Check 3: Ctrl+T again should restore the entire tree.
 toggle_thinking
 if ! pane_text | grep -Fq "$thinking_sentinel"; then
 	echo "FAIL: thinking sentinel did not return after second Ctrl+T" >&2
 	exit 1
 fi
-echo "PASS: thinking sentinel restored after second Ctrl+T"
+if ! pane_text | grep -Fq "$activity_header"; then
+	echo "FAIL: activity header did not return after second Ctrl+T" >&2
+	exit 1
+fi
+if ! pane_text | grep -Fq "$step_title"; then
+	echo "FAIL: step title did not return after second Ctrl+T" >&2
+	exit 1
+fi
+echo "PASS: entire tree restored after second Ctrl+T"
 
 echo ""
-echo "Ctrl+T non-subagent thinking visibility: all checks passed."
+echo "Ctrl+T non-subagent tree visibility: all checks passed."

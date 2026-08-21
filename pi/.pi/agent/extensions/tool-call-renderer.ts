@@ -646,7 +646,7 @@ class WorkStepRow {
         lines.push(
           ` ${outer} ${resultGlyph} ${this.theme.fg("text", this.theme.bold(step.title))}`,
         );
-        if (step.thinkingVisible && step.thinking.length > 0) {
+        if (step.thinking.length > 0) {
           for (const [thoughtIndex, thought] of step.thinking.entries()) {
             const finalThought = thoughtIndex === step.thinking.length - 1;
             const connector =
@@ -1305,6 +1305,7 @@ function renderToolComponent(
     );
   }
 
+  if (component.hideThinkingBlock) return [];
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
   if (!row) {
     row = new WorkStepRow(theme, step);
@@ -1544,6 +1545,7 @@ export default async function (pi: ExtensionAPI) {
       const step = component[WORK_STEP] as WorkStep | undefined;
       if (!step || step.run.steps.some((item) => item.toolCalls.length > 0))
         return lines;
+      if (component.hideThinkingBlock) return lines;
       let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
       if (!row) {
         row = new WorkStepRow(theme, step);
