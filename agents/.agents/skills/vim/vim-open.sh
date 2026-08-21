@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# nvim-open.sh — open vim in the current Herdr tab as a vertical split,
+# vim-open.sh — open vim in the current Herdr tab as a vertical split,
 # or send files to an existing editor instance.
 #
 # Usage:
-#   nvim-open.sh [cwd] [file1] [file2] ...
-#   nvim-open.sh /path/to/cwd           # open vim at cwd
-#   nvim-open.sh /path/to/cwd file.ts   # open file in vim
+#   vim-open.sh [cwd] [file1] [file2] ...
+#   vim-open.sh /path/to/cwd           # open vim at cwd
+#   vim-open.sh /path/to/cwd file.ts   # open file in vim
 set -euo pipefail
 
 CWD="${1:-$(pwd)}"
 shift || true
 FILES=("$@")
 
-# Add common nvim installation paths that may not be on PATH
+# Add common nvim/vim installation paths that may not be on PATH
 # (bob version manager, homebrew on Linux/macOS).
-if ! command -v nvim >/dev/null 2>&1; then
+if ! command -v vim >/dev/null 2>&1 && ! command -v nvim >/dev/null 2>&1; then
 	for _p in \
 		"$HOME/.local/share/bob/nightly/bin" \
 		"$HOME/.local/share/bob/stable/bin" \
@@ -25,18 +25,20 @@ if ! command -v nvim >/dev/null 2>&1; then
 	unset _p
 fi
 
-# Check for vim or nvim before doing anything else.
-# If neither is installed, fail fast with a useful fallback.
-if ! command -v vim >/dev/null 2>&1 && ! command -v nvim >/dev/null 2>&1; then
-	echo "Error: neither vim nor nvim is installed on this host." >&2
-	echo "Fallback: use 'less <file>' for read-only viewing or 'vi -R <file>' for vi." >&2
+# Check for vim, nvim, or vi before doing anything else.
+# If none is installed, fail fast with a useful fallback.
+if ! command -v vim >/dev/null 2>&1 && ! command -v nvim >/dev/null 2>&1 && ! command -v vi >/dev/null 2>&1; then
+	echo "Error: neither vim, nvim, nor vi is installed on this host." >&2
+	echo "Fallback: use 'less <file>' for read-only viewing." >&2
 	echo "Files requested: ${FILES[*]:-$CWD}" >&2
 	exit 1
 fi
 
-# Pick whichever editor is available (prefer nvim, fall back to vim).
-EDITOR_CMD="vim"
-if command -v nvim >/dev/null 2>&1; then
+# Pick whichever editor is available (prefer vim, then nvim, then vi).
+EDITOR_CMD="vi"
+if command -v vim >/dev/null 2>&1; then
+	EDITOR_CMD="vim"
+elif command -v nvim >/dev/null 2>&1; then
 	EDITOR_CMD="nvim"
 fi
 
@@ -44,6 +46,7 @@ fi
 # When the cwd is inside a dotfiles checkout (or a git worktree of it),
 # detect the local nvim config and use it instead of ~/.config/nvim.
 # The signal is a `nvim/.config/nvim/init.lua` file in a parent dir.
+# Only applies when nvim is the selected editor.
 DOTFILES_XDG_CONFIG_HOME=""
 detect_dotfiles_config() {
 	local dir="$CWD"
@@ -58,11 +61,12 @@ detect_dotfiles_config() {
 	done
 	return 1
 }
-if detect_dotfiles_config; then
+if [[ "$EDITOR_CMD" == "nvim" ]] && detect_dotfiles_config; then
 	echo "Dotfiles config detected: $DOTFILES_XDG_CONFIG_HOME/nvim/init.lua"
 fi
 
 # Build the env prefix for launching nvim with the worktree config.
+# Only relevant when nvim is the selected editor.
 ENV_PREFIX=""
 if [[ -n "$DOTFILES_XDG_CONFIG_HOME" ]]; then
 	ENV_PREFIX="env XDG_CONFIG_HOME=$DOTFILES_XDG_CONFIG_HOME"
@@ -87,31 +91,17 @@ herdr_ok() {
 	timeout "$HERDR_TIMEOUT" herdr "$@" >/dev/null 2>&1
 }
 
-# Create a listen socket dir so the neovim-remote skill (nvimr) can
-# interact with the launched nvim session via RPC. The socket path
-# matches nvimr's discovery glob: ${TMPDIR}nvim.<user>/<dir>/nvim.*.0
-LISTEN_ARGS=""
-if [[ "$EDITOR_CMD" == "nvim" ]]; then
-	mkdir -p "${TMPDIR:-/tmp}nvim.$(id -un)" 2>/dev/null || true
-	_SOCKET_DIR="$(mktemp -d "${TMPDIR:-/tmp}nvim.$(id -un)/nvim.XXXXXX")" 2>/dev/null || true
-	if [[ -n "$_SOCKET_DIR" && -d "$_SOCKET_DIR" ]]; then
-		_SOCKET_PATH="$_SOCKET_DIR/nvim.$(date +%s).0"
-		LISTEN_ARGS="--listen $_SOCKET_PATH"
-	fi
-fi
-
 # Check if herdr is available
 if ! herdr_json workspace list >/dev/null 2>&1; then
 	# No herdr — try tmux
 	if command -v tmux >/dev/null 2>&1; then
 		if [[ ${#FILES[@]} -gt 0 ]]; then
 			quoted=$(printf "'%s' " "${FILES[@]}")
-			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD $LISTEN_ARGS $quoted"
+			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD $quoted"
 		else
-			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD $LISTEN_ARGS"
+			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD"
 		fi
 		echo "Launched $EDITOR_CMD in a tmux split at $CWD."
-		[[ -n "${_SOCKET_PATH:-}" ]] && echo "Listen socket: $_SOCKET_PATH"
 		exit 0
 	fi
 	echo "Could not launch $EDITOR_CMD. Run manually: cd $CWD && $ENV_PREFIX $EDITOR_CMD ${FILES[*]}"
@@ -160,7 +150,7 @@ print('\n'.join(panes))
 				SCAN_ERROR=true
 				continue
 			fi
-			# Check if foreground process is vim or nvim
+			# Check if foreground process is vim, nvim, or vi
 			IS_EDITOR=$(echo "$PROC_JSON" | python3 -c "
 import sys,json
 data=json.load(sys.stdin)
@@ -168,7 +158,7 @@ procs=data.get('result',{}).get('process_info',{}).get('foreground_processes',[]
 for p in procs:
     name=p.get('name','')
     argv0=(p.get('argv',[''])[0]) if p.get('argv') else ''
-    if name in ('vim','nvim') or argv0 in ('vim','nvim'):
+    if name in ('vim','nvim','vi') or argv0 in ('vim','nvim','vi'):
         print('yes')
         break
 " 2>/dev/null || echo "")
@@ -190,7 +180,7 @@ if [[ "$EDITOR_FOUND" == "true" ]]; then
 	if [[ -n "$DOTFILES_XDG_CONFIG_HOME" ]]; then
 		echo "Note: dotfiles config detected at $DOTFILES_XDG_CONFIG_HOME but" >&2
 		echo "      existing editor may be using a different config. Close and" >&2
-		echo "      relaunch /nvim to use the worktree config." >&2
+		echo "      relaunch /vim to use the worktree config." >&2
 	fi
 	if [[ ${#FILES[@]} -gt 0 ]]; then
 		for file in "${FILES[@]}"; do
@@ -219,12 +209,11 @@ if [[ "$SCAN_ERROR" == "true" ]]; then
 	if command -v tmux >/dev/null 2>&1; then
 		if [[ ${#FILES[@]} -gt 0 ]]; then
 			quoted=$(printf "'%s' " "${FILES[@]}")
-			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD $LISTEN_ARGS $quoted"
+			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD $quoted"
 		else
-			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD $LISTEN_ARGS"
+			tmux split-window -h -c "$CWD" "$ENV_PREFIX $EDITOR_CMD"
 		fi
 		echo "Launched $EDITOR_CMD in a tmux split at $CWD."
-		[[ -n "${_SOCKET_PATH:-}" ]] && echo "Listen socket: $_SOCKET_PATH"
 		exit 0
 	fi
 fi
@@ -239,25 +228,20 @@ if [[ -z "$NEW_PANE_ID" ]]; then
 fi
 
 # Launch $EDITOR_CMD in the new pane.
-# When a dotfiles config was detected, prefix with env XDG_CONFIG_HOME=...
-# so nvim reads the worktree's config instead of ~/.config/nvim.
+# When a dotfiles config was detected and nvim is the editor, prefix
+# with env XDG_CONFIG_HOME=... so nvim reads the worktree config.
 if [[ ${#FILES[@]} -gt 0 ]]; then
-	if herdr_ok pane run "$NEW_PANE_ID" $ENV_PREFIX $EDITOR_CMD $LISTEN_ARGS "${FILES[@]}"; then
+	if herdr_ok pane run "$NEW_PANE_ID" $ENV_PREFIX $EDITOR_CMD "${FILES[@]}"; then
 		echo "Launched $EDITOR_CMD in a vertical split (pane $NEW_PANE_ID) at $CWD with ${#FILES[@]} file(s)."
 	else
 		echo "Failed to launch $EDITOR_CMD in pane $NEW_PANE_ID."
 		exit 1
 	fi
 else
-	if herdr_ok pane run "$NEW_PANE_ID" $ENV_PREFIX $EDITOR_CMD $LISTEN_ARGS; then
+	if herdr_ok pane run "$NEW_PANE_ID" $ENV_PREFIX $EDITOR_CMD; then
 		echo "Launched $EDITOR_CMD in a vertical split (pane $NEW_PANE_ID) at $CWD."
 	else
 		echo "Failed to launch $EDITOR_CMD in pane $NEW_PANE_ID."
 		exit 1
 	fi
-fi
-
-# Print the listen socket path if created, so the agent knows where it is.
-if [[ -n "${_SOCKET_PATH:-}" ]]; then
-	echo "Listen socket: $_SOCKET_PATH"
 fi

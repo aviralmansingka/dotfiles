@@ -22,11 +22,10 @@
       ]
     },
     "browserbase": {
-      "command": "npx",
+      "command": "bash",
       "args": [
-        "-y",
-        "mcp-remote",
-        "https://mcp.browserbase.com/mcp"
+        "-lc",
+        "source \"$HOME/.config/pi-browserbase.env\" && exec npx -y mcp-remote \"https://mcp.browserbase.com/mcp?browserbaseApiKey=${BROWSERBASE_API_KEY}\""
       ]
     }
   }

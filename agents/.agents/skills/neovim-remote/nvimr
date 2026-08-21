@@ -34,7 +34,12 @@ find_socket() {
   # 2. Glob all nvim sockets, newest mtime first, return first live one
   local user sock
   user="$(id -un)"
-  for sock in "${TMPDIR:-/tmp}"nvim."$user"/*/nvim.*.0; do
+  local sockets=()
+  while IFS= read -r sock; do
+    sockets+=("$sock")
+  done < <(ls -t "${TMPDIR:-/tmp}"nvim."$user"/*/nvim.*.0 \
+             "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/nvim.*.0 2>/dev/null)
+  for sock in "${sockets[@]}"; do
     [[ -S "$sock" ]] || continue
     if "$NV" --server "$sock" --remote-expr '1' >/dev/null 2>&1; then
       echo "$sock"; return 0

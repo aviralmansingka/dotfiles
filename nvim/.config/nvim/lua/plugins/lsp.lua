@@ -2,9 +2,11 @@ return {
   -- Extend LazyVim's LSP configuration
   "neovim/nvim-lspconfig",
   opts = function(_, opts)
-    vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
-      border = "rounded",
-    })
+    vim.lsp.handlers["textDocument/signatureHelp"] = function(err, result, ctx, config)
+      vim.lsp.handlers.signature_help(err, result, ctx, vim.tbl_deep_extend("force", config or {}, {
+        border = "rounded",
+      }))
+    end
 
     -- Custom server configurations using LazyVim's approach
     opts.servers = opts.servers or {}
