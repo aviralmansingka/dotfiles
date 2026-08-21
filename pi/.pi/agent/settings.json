@@ -9,7 +9,8 @@
   ],
   "extensions": [
     "-extensions/transcript-scroll.ts",
-    "+extensions/mobile-mode.ts"
+    "+extensions/mobile-mode.ts",
+    "+extensions/rounded-bar-footer.ts"
   ],
   "lastChangelogVersion": "0.82.1",
   "defaultProvider": "openai-codex",
