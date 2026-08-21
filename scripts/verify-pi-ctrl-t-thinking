@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# Verify Ctrl+T hides/restores thinking for ordinary (non-subagent) work steps.
+#
+# Uses the faux provider fixture from the main work-step verifier. Response 0
+# emits thinking + text with no tool calls, so the WorkStepRow path is exercised
+# directly — not the connected-subagent bridge.
+#
+# Checks:
+#   1. Thinking sentinel appears after the first response.
+#   2. Ctrl+T removes the thinking sentinel from the visible pane.
+#   3. Ctrl+T again restores the thinking sentinel.
+
+set -euo pipefail
+
+unset NO_COLOR
+export COLORTERM=truecolor
+export TERM=xterm-256color
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+verify_dir="$(mktemp -d)"
+tmux_socket="pi-ctrl-t-verify-$$"
+
+cleanup() {
+	local status=$?
+	trap - EXIT
+	set +e
+	tmux -L "$tmux_socket" kill-server >/dev/null 2>&1 || true
+	rm -rf -- "$verify_dir"
+	exit "$status"
+}
+trap cleanup EXIT
+
+agent_dir="$verify_dir/agent"
+mkdir -p "$agent_dir/extensions" "$agent_dir/native"
+
+# Minimal settings — no extensions array means pi auto-loads all .ts in extensions/.
+printf '%s\n' '{"theme":"gruvbox-material"}' > "$agent_dir/settings.json"
+
+# Install the faux provider fixture.
+cp "$repo_root/scripts/fixtures/pi-work-step-ui-provider.ts" "$agent_dir/extensions/00-provider.ts"
+
+# Install the native subagent fixture (the provider imports it).
+cp "$repo_root/pi/.pi/agent/extensions/subagent.ts" "$agent_dir/native/subagent.ts"
+printf '%s\n' '{"maxConcurrency":1}' > "$agent_dir/native/subagent.config.json"
+
+# Install only the renderer under test.
+ln -s "$repo_root/pi/.pi/agent/extensions/tool-call-renderer.ts" "$agent_dir/extensions/10-renderer.ts"
+
+theme="$repo_root/pi/.pi/agent/themes/gruvbox-material.json"
+session_file="$verify_dir/session.jsonl"
+
+# Start pi in tmux with the faux model.
+pi_command="env PI_CODING_AGENT_DIR=$agent_dir pi --offline --approve --no-context-files --no-skills --theme $theme --session $session_file --model pi-work-step-ui-verify/faux-work-step"
+tmux -L "$tmux_socket" new-session -d -s verify -x 120 -y 40 -c "$repo_root" "$pi_command"
+
+wait_for() {
+	local expected="$1"
+	local failure="${2:-Timed out waiting for: $expected}"
+	for _ in {1..200}; do
+		if tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0 | grep -Fq "$expected"; then
+			return
+		fi
+		sleep 0.1
+	done
+	echo "FAIL: $failure" >&2
+	return 1
+}
+
+pane_text() {
+	tmux -L "$tmux_socket" capture-pane -p -S - -t verify:0.0
+}
+
+toggle_thinking() {
+	tmux -L "$tmux_socket" send-keys -t verify:0.0 C-t
+	sleep 0.3
+}
+
+# Wait for pi to reach the prompt.
+wait_for "faux-work-step" "Pi did not start with the faux model"
+
+# Send a message that triggers response 0 (thinking + text, no tools).
+tmux -L "$tmux_socket" send-keys -t verify:0.0 -l "plain assistant"
+tmux -L "$tmux_socket" send-keys -t verify:0.0 Enter
+
+# Wait for the response to complete.
+wait_for "NON_TOOL_RENDERING_SENTINEL" "Response 0 text did not appear"
+
+# Check 1: thinking sentinel should be visible initially.
+# The renderer sanitizes thinking text: underscores are stripped, so
+# NON_TOOL_THINKING_SENTINEL becomes NONTOOLTHINKINGSENTINEL.
+thinking_sentinel="NONTOOLTHINKINGSENTINEL"
+if ! pane_text | grep -Fq "$thinking_sentinel"; then
+	echo "FAIL: thinking sentinel was not visible before Ctrl+T" >&2
+	exit 1
+fi
+echo "PASS: thinking sentinel visible before Ctrl+T"
+
+# Check 2: Ctrl+T should remove the thinking sentinel.
+toggle_thinking
+if pane_text | grep -Fq "$thinking_sentinel"; then
+	echo "FAIL: thinking sentinel remained visible after Ctrl+T" >&2
+	exit 1
+fi
+echo "PASS: thinking sentinel hidden after Ctrl+T"
+
+# Check 3: Ctrl+T again should restore the thinking sentinel.
+toggle_thinking
+if ! pane_text | grep -Fq "$thinking_sentinel"; then
+	echo "FAIL: thinking sentinel did not return after second Ctrl+T" >&2
+	exit 1
+fi
+echo "PASS: thinking sentinel restored after second Ctrl+T"
+
+echo ""
+echo "Ctrl+T non-subagent thinking visibility: all checks passed."
