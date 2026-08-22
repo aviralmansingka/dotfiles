@@ -170,7 +170,8 @@ class ThinkingTreeBuilder:
             self.goals[-1]["done"] = True
 
     def render(self, elapsed: int) -> str:
-        header = f"thinking · 0:{elapsed:02d}"
+        minutes, seconds = divmod(elapsed, 60)
+        header = f"thinking · {minutes}:{seconds:02d}"
         lines: list[str] = [header]
         for goal in self.goals:
             marker = "✓" if goal["done"] else "▸"

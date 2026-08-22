@@ -30,6 +30,12 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         text = tree.render(5)
         self.assertIn("thinking · 0:05", text)
 
+    def test_elapsed_rolls_over_to_minutes(self):
+        tree = daemon.ThinkingTreeBuilder()
+        text = tree.render(75)
+        self.assertIn("thinking · 1:15", text)
+        self.assertNotIn("0:75", text)
+
     def test_turn_start_creates_placeholder_goal(self):
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
