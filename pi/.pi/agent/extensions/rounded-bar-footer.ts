@@ -78,8 +78,14 @@ class RoundedEditor extends CustomEditor {
 
 		return inner.map((line, i) => {
 			if (i === 0) {
-				// Top border: round the corners.
-				return this.borderColor("╭") + padInner(line) + this.borderColor("╮");
+				// Top border: round the corners and place the token speedometer at right.
+				const label = ` ${tokenSpeedLabel()} `;
+				if (visibleWidth(label) >= width - 2) {
+					return this.borderColor("╭") + padInner(line) + this.borderColor("╮");
+				}
+				const remaining = width - 2 - visibleWidth(label);
+				const border = this.borderColor("─".repeat(remaining) + label);
+				return this.borderColor("╭") + border + this.borderColor("╮");
 			}
 			if (i === bottomIdx) {
 				// Bottom border: round the corners.
@@ -103,6 +109,41 @@ interface UsageTotals {
 	cacheRead: number;
 	cacheWrite: number;
 	cost: number;
+}
+
+interface TokenSpeed {
+	startedAt: number;
+	rate?: number;
+	exact: boolean;
+}
+
+const tokenSpeed: TokenSpeed = { startedAt: 0, exact: false };
+let requestPromptRender: (() => void) | undefined;
+
+function outputTokenEstimate(message: any): { tokens: number; exact: boolean } {
+	const output = message.usage?.output;
+	if (Number.isFinite(output) && output > 0) return { tokens: output, exact: true };
+
+	const chars = (message.content ?? []).reduce((total: number, block: any) => {
+		if (block.type === "text") return total + (block.text?.length ?? 0);
+		if (block.type === "thinking") return total + (block.thinking?.length ?? 0);
+		if (block.type === "toolCall") return total + JSON.stringify(block.arguments ?? {}).length;
+		return total;
+	}, 0);
+	return { tokens: Math.ceil(chars / 4), exact: false };
+}
+
+function updateTokenSpeed(message: any): void {
+	const estimate = outputTokenEstimate(message);
+	if (estimate.tokens <= 0) return;
+	const elapsed = Math.max(0.25, (Date.now() - tokenSpeed.startedAt) / 1000);
+	tokenSpeed.rate = estimate.tokens / elapsed;
+	tokenSpeed.exact = estimate.exact;
+}
+
+function tokenSpeedLabel(): string {
+	if (tokenSpeed.rate == null) return "⚡ -- tok/s";
+	return `⚡ ${tokenSpeed.exact ? "" : "~"}${Math.max(1, Math.round(tokenSpeed.rate))} tok/s`;
 }
 
 function computeUsage(entries: Iterable<{ type: string; message?: any; usage?: any }>): UsageTotals {
@@ -136,6 +177,29 @@ function computeUsage(entries: Iterable<{ type: string; message?: any; usage?: a
 
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", (_event, ctx) => {
+		tokenSpeed.startedAt = 0;
+		tokenSpeed.rate = undefined;
+		tokenSpeed.exact = false;
+
+		pi.on("message_start", (event) => {
+			if (event.message.role !== "assistant") return;
+			tokenSpeed.startedAt = Date.now();
+			tokenSpeed.rate = undefined;
+			tokenSpeed.exact = false;
+			requestPromptRender?.();
+		});
+		pi.on("message_update", (event) => {
+			if (event.message.role !== "assistant") return;
+			if (!tokenSpeed.startedAt) tokenSpeed.startedAt = Date.now();
+			updateTokenSpeed(event.message);
+			requestPromptRender?.();
+		});
+		pi.on("message_end", (event) => {
+			if (event.message.role !== "assistant") return;
+			updateTokenSpeed(event.message);
+			requestPromptRender?.();
+		});
+
 		// Rounded input bar. Use paddingX=1 so text breathes inside the walls.
 		ctx.ui.setEditorComponent((tui, _theme, keybindings) => {
 			const ed = new RoundedEditor(tui, _theme, keybindings);
@@ -145,6 +209,7 @@ export default function (pi: ExtensionAPI) {
 
 		// Single-line footer.
 		ctx.ui.setFooter((_tui, theme, footerData) => {
+			requestPromptRender = () => _tui.requestRender();
 			const unsub = footerData.onBranchChange(() => _tui.requestRender());
 			return {
 				dispose: unsub,
