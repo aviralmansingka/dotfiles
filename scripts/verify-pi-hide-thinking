@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify Ctrl+T hides/restores the entire activity tree for ordinary
+# Verify Ctrl+T toggles between full tree and compact summary for ordinary
 # (non-subagent) work steps.
 #
 # Uses the faux provider fixture from the main work-step verifier. Response 0
@@ -7,9 +7,9 @@
 # directly — not the connected-subagent bridge.
 #
 # Checks:
-#   1. Activity tree appears after the first response.
-#   2. Ctrl+T removes the entire tree (header, step, thinking) from the pane.
-#   3. Ctrl+T again restores the entire tree.
+#   1. Full activity tree appears after the first response.
+#   2. Ctrl+T collapses to compact summary (step count + active thinking bullet).
+#   3. Ctrl+T again restores the full tree.
 
 set -euo pipefail
 
@@ -106,21 +106,26 @@ if ! pane_text | grep -Fq "$step_title"; then
 fi
 echo "PASS: activity tree visible before Ctrl+T"
 
-# Check 2: Ctrl+T should remove the entire tree.
+# Check 2: Ctrl+T should collapse to compact summary.
+# Compact shows step count + active thinking bullet, but NOT the full tree
+# (no activity header with call count, no step title).
 toggle_thinking
-if pane_text | grep -Fq "$thinking_sentinel"; then
-	echo "FAIL: thinking sentinel remained visible after Ctrl+T" >&2
+# Compact should still show the thinking sentinel as the active bullet
+if ! pane_text | grep -Fq "$thinking_sentinel"; then
+	echo "FAIL: thinking sentinel not visible in compact summary" >&2
 	exit 1
 fi
+# Compact should NOT show the full activity header (with call count)
 if pane_text | grep -Fq "$activity_header"; then
-	echo "FAIL: activity header remained visible after Ctrl+T" >&2
+	echo "FAIL: full activity header remained visible in compact mode" >&2
 	exit 1
 fi
+# Compact should NOT show the step title
 if pane_text | grep -Fq "$step_title"; then
-	echo "FAIL: step title remained visible after Ctrl+T" >&2
+	echo "FAIL: step title remained visible in compact mode" >&2
 	exit 1
 fi
-echo "PASS: entire tree hidden after Ctrl+T"
+echo "PASS: compact summary shown after Ctrl+T (step count + active thinking)"
 
 # Check 3: Ctrl+T again should restore the entire tree.
 toggle_thinking

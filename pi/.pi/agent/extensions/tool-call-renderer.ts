@@ -462,6 +462,51 @@ function renderActivityHeader(theme: Theme, steps: WorkStep[]): string {
   );
 }
 
+function renderCompactSummary(theme: Theme, run: ActivityRun, width: number): string[] {
+  const groups = renderedGroups(run);
+  const allSteps = groups.flat();
+  const total = allSteps.length;
+  const completed = allSteps.filter((s) => status(s) === "success").length;
+  const failed = allSteps.some((s) => status(s) === "failure");
+  const settled = completed === total;
+  const state = failed
+    ? theme.fg("error", theme.bold("failed"))
+    : settled
+      ? theme.fg("success", theme.bold("all passed"))
+      : theme.fg("warning", theme.bold(`${completed}/${total} complete`));
+
+  const lines: string[] = [
+    ` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", `${plural(total, "step")} · `)}${state}`,
+  ];
+
+  // Show the active (latest) thinking bullet from the last step that has thinking.
+  for (let i = allSteps.length - 1; i >= 0; i--) {
+    const step = allSteps[i];
+    if (step.thinking.length > 0) {
+      const lastThought = step.thinking[step.thinking.length - 1];
+      lines.push(
+        ` ${theme.fg("borderMuted", "└─")} ${theme.fg("muted", "•")} ${theme.fg("muted", lastThought)}`,
+      );
+      break;
+    }
+  }
+
+  return lines.map((line) => truncateToWidth(line, width));
+}
+
+function renderCompactDraft(theme: Theme, draft: ThinkingDraft, width: number): string[] {
+  const lines: string[] = [
+    ` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", "thinking…")}`,
+  ];
+  if (draft.thinking.length > 0) {
+    const lastThought = draft.thinking[draft.thinking.length - 1];
+    lines.push(
+      ` ${theme.fg("borderMuted", "└─")} ${theme.fg("muted", "•")} ${theme.fg("muted", lastThought)}`,
+    );
+  }
+  return lines.map((line) => truncateToWidth(line, width));
+}
+
 const CONNECTED_THINKING = "Thinking…";
 const CONNECTED_RGB = {
   muted: "146;131;116",
@@ -1270,7 +1315,7 @@ function renderToolComponent(
   }
 
   if (connectedComponents.length > 0) {
-    if (!step.thinkingVisible) return [];
+    if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
     const nativeSubtrees = connectedComponents.map(
       ({ component: candidate, bridge: candidateBridge }, index) => {
         candidateBridge.parentConnector =
@@ -1306,7 +1351,7 @@ function renderToolComponent(
     );
   }
 
-  if (!step.thinkingVisible) return [];
+  if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
   if (!row) {
     row = new WorkStepRow(theme, step);
@@ -1539,14 +1584,14 @@ export default async function (pi: ExtensionAPI) {
     renderAssistant(component, lines, width) {
       const draft = component[THINKING_DRAFT] as ThinkingDraft | undefined;
       if (draft) {
-        if (component.hideThinkingBlock) return lines;
+        if (component.hideThinkingBlock) return renderCompactDraft(theme, draft, width);
         return renderThinkingDraft(theme, draft, width);
       }
 
       const step = component[WORK_STEP] as WorkStep | undefined;
       if (!step || step.run.steps.some((item) => item.toolCalls.length > 0))
         return lines;
-      if (component.hideThinkingBlock) return lines;
+      if (component.hideThinkingBlock) return renderCompactSummary(theme, step.run, width);
       let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
       if (!row) {
         row = new WorkStepRow(theme, step);
