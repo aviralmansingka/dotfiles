@@ -85,6 +85,25 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         # No trace lines rendered at all
         self.assertEqual(text.count("┊"), 0)
 
+    def test_streaming_thinking_updates_derived_label(self):
+        """Derived label must update as thinking streams in, not freeze on first token."""
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        # First token — short incomplete thought
+        tree.on_message_update([
+            {"type": "thinking", "thinking": "I need"},
+        ])
+        # More tokens stream in — fuller thought
+        tree.on_message_update([
+            {"type": "thinking", "thinking": "I need to check the server cache configuration"},
+        ])
+        text = tree.render(3)
+        self.assertIn("I need to check the server cache", text)
+        self.assertNotIn("I need\n", text)
+        # The label should not be stuck at the first token
+        first_line = text.split("\n")[1]
+        self.assertNotEqual(first_line.strip(), "▸ <b>I need</b>")
+
     def test_multiple_turns_create_multiple_goals(self):
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()

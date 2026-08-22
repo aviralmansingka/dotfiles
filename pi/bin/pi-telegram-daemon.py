@@ -158,7 +158,7 @@ class ThinkingTreeBuilder:
         if label:
             goal["label"] = label
             goal["label_derived"] = False
-        elif not goal.get("label_derived") and traces:
+        elif traces:
             goal["label"] = _strip_markdown(traces[0][:GOAL_LABEL_CHARS])
             if len(traces[0]) > GOAL_LABEL_CHARS:
                 goal["label"] += "…"
