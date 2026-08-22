@@ -1270,6 +1270,7 @@ function renderToolComponent(
   }
 
   if (connectedComponents.length > 0) {
+    if (!step.thinkingVisible) return [];
     const nativeSubtrees = connectedComponents.map(
       ({ component: candidate, bridge: candidateBridge }, index) => {
         candidateBridge.parentConnector =
@@ -1305,7 +1306,7 @@ function renderToolComponent(
     );
   }
 
-  if (component.hideThinkingBlock) return [];
+  if (!step.thinkingVisible) return [];
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
   if (!row) {
     row = new WorkStepRow(theme, step);
