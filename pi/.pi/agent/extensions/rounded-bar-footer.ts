@@ -176,29 +176,29 @@ function computeUsage(entries: Iterable<{ type: string; message?: any; usage?: a
 }
 
 export default function (pi: ExtensionAPI) {
+	pi.on("message_start", (event) => {
+		if (event.message.role !== "assistant") return;
+		tokenSpeed.startedAt = Date.now();
+		tokenSpeed.rate = undefined;
+		tokenSpeed.exact = false;
+		requestPromptRender?.();
+	});
+	pi.on("message_update", (event) => {
+		if (event.message.role !== "assistant") return;
+		if (!tokenSpeed.startedAt) tokenSpeed.startedAt = Date.now();
+		updateTokenSpeed(event.message);
+		requestPromptRender?.();
+	});
+	pi.on("message_end", (event) => {
+		if (event.message.role !== "assistant") return;
+		updateTokenSpeed(event.message);
+		requestPromptRender?.();
+	});
+
 	pi.on("session_start", (_event, ctx) => {
 		tokenSpeed.startedAt = 0;
 		tokenSpeed.rate = undefined;
 		tokenSpeed.exact = false;
-
-		pi.on("message_start", (event) => {
-			if (event.message.role !== "assistant") return;
-			tokenSpeed.startedAt = Date.now();
-			tokenSpeed.rate = undefined;
-			tokenSpeed.exact = false;
-			requestPromptRender?.();
-		});
-		pi.on("message_update", (event) => {
-			if (event.message.role !== "assistant") return;
-			if (!tokenSpeed.startedAt) tokenSpeed.startedAt = Date.now();
-			updateTokenSpeed(event.message);
-			requestPromptRender?.();
-		});
-		pi.on("message_end", (event) => {
-			if (event.message.role !== "assistant") return;
-			updateTokenSpeed(event.message);
-			requestPromptRender?.();
-		});
 
 		// Rounded input bar. Use paddingX=1 so text breathes inside the walls.
 		ctx.ui.setEditorComponent((tui, _theme, keybindings) => {
