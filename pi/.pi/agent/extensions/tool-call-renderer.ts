@@ -475,36 +475,11 @@ function renderCompactSummary(theme: Theme, run: ActivityRun, width: number): st
       ? theme.fg("success", theme.bold("all passed"))
       : theme.fg("warning", theme.bold(`${completed}/${total} complete`));
 
-  const lines: string[] = [
-    ` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", `${plural(total, "step")} · `)}${state}`,
-  ];
-
-  // Show the active (latest) thinking bullet from the last step that has thinking.
-  for (let i = allSteps.length - 1; i >= 0; i--) {
-    const step = allSteps[i];
-    if (step.thinking.length > 0) {
-      const lastThought = step.thinking[step.thinking.length - 1];
-      lines.push(
-        ` ${theme.fg("borderMuted", "└─")} ${theme.fg("muted", "•")} ${theme.fg("muted", lastThought)}`,
-      );
-      break;
-    }
-  }
-
-  return lines.map((line) => truncateToWidth(line, width));
+  return [truncateToWidth(` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", `${plural(total, "step")} · `)}${state}`, width)];
 }
 
-function renderCompactDraft(theme: Theme, draft: ThinkingDraft, width: number): string[] {
-  const lines: string[] = [
-    ` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", "thinking…")}`,
-  ];
-  if (draft.thinking.length > 0) {
-    const lastThought = draft.thinking[draft.thinking.length - 1];
-    lines.push(
-      ` ${theme.fg("borderMuted", "└─")} ${theme.fg("muted", "•")} ${theme.fg("muted", lastThought)}`,
-    );
-  }
-  return lines.map((line) => truncateToWidth(line, width));
+function renderCompactDraft(theme: Theme, width: number): string[] {
+  return [truncateToWidth(` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", "thinking…")}`, width)];
 }
 
 const CONNECTED_THINKING = "Thinking…";
@@ -658,6 +633,28 @@ function renderThinkingDraft(
   ];
   for (const [index, thought] of draft.thinking.entries()) {
     const connector = index === draft.thinking.length - 1 ? "└─" : "├─";
+    lines.push(
+      `   ${theme.fg("borderMuted", connector)} ${theme.fg("muted", "•")} ${theme.fg("muted", thought)}`,
+    );
+  }
+  return lines.map((line) => truncateToWidth(line, width));
+}
+
+function renderThinkingStep(
+  theme: Theme,
+  step: WorkStep,
+  width: number,
+): string[] {
+  const glyph =
+    step.failed
+      ? theme.fg("error", "×")
+      : theme.fg("success", "●");
+  const lines = [
+    "",
+    ` ${glyph} ${theme.fg("text", theme.bold(step.title))}`,
+  ];
+  for (const [index, thought] of step.thinking.entries()) {
+    const connector = index === step.thinking.length - 1 ? "└─" : "├─";
     lines.push(
       `   ${theme.fg("borderMuted", connector)} ${theme.fg("muted", "•")} ${theme.fg("muted", thought)}`,
     );
@@ -1584,14 +1581,30 @@ export default async function (pi: ExtensionAPI) {
     renderAssistant(component, lines, width) {
       const draft = component[THINKING_DRAFT] as ThinkingDraft | undefined;
       if (draft) {
-        if (component.hideThinkingBlock) return renderCompactDraft(theme, draft, width);
-        return renderThinkingDraft(theme, draft, width);
+        const activity = component.hideThinkingBlock
+          ? renderCompactDraft(theme, width)
+          : renderThinkingDraft(theme, draft, width);
+        return lines.length > 0 ? [...activity, "", ...lines] : activity;
       }
 
       const step = component[WORK_STEP] as WorkStep | undefined;
-      if (!step || step.run.steps.some((item) => item.toolCalls.length > 0))
+      if (!step) return lines;
+
+      const runHasToolCalls = step.run.steps.some((item) => item.toolCalls.length > 0);
+      if (runHasToolCalls) {
+        // Tool component owns the run's activity. Show this step's thinking
+        // (if visible) alongside the user-facing text.
+        if (!component.hideThinkingBlock && step.thinking.length > 0) {
+          const activity = renderThinkingStep(theme, step, width);
+          return lines.length > 0 ? [...activity, "", ...lines] : activity;
+        }
         return lines;
-      if (component.hideThinkingBlock) return renderCompactSummary(theme, step.run, width);
+      }
+
+      if (component.hideThinkingBlock) {
+        const activity = renderCompactSummary(theme, step.run, width);
+        return lines.length > 0 ? [...activity, "", ...lines] : activity;
+      }
       let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
       if (!row) {
         row = new WorkStepRow(theme, step);
