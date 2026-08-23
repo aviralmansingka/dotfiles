@@ -304,6 +304,7 @@ log_file -a -noappend $env(PI_VERIFY_MAIN_RAW)
 spawn env PI_CODING_AGENT_DIR=$env(PI_VERIFY_AGENT_DIR) pi --offline --approve --no-context-files --no-skills --theme $env(PI_VERIFY_THEME) --session $env(PI_VERIFY_SESSION) --model pi-work-step-ui-verify/faux-work-step
 expect "faux-work-step"
 send -- "plain assistant\r"
+after 100
 expect "NON_TOOL_RENDERING_SENTINEL"
 after 300
 send -- "same-name success\r"

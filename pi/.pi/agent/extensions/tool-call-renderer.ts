@@ -478,10 +478,6 @@ function renderCompactSummary(theme: Theme, run: ActivityRun, width: number): st
   return [truncateToWidth(` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", `${plural(total, "step")} · `)}${state}`, width)];
 }
 
-function renderCompactDraft(theme: Theme, width: number): string[] {
-  return [truncateToWidth(` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", "thinking…")}`, width)];
-}
-
 const CONNECTED_THINKING = "Thinking…";
 const CONNECTED_RGB = {
   muted: "146;131;116",
@@ -1581,9 +1577,8 @@ export default async function (pi: ExtensionAPI) {
     renderAssistant(component, lines, width) {
       const draft = component[THINKING_DRAFT] as ThinkingDraft | undefined;
       if (draft) {
-        const activity = component.hideThinkingBlock
-          ? renderCompactDraft(theme, width)
-          : renderThinkingDraft(theme, draft, width);
+        if (component.hideThinkingBlock) return lines;
+        const activity = renderThinkingDraft(theme, draft, width);
         return lines.length > 0 ? [...activity, "", ...lines] : activity;
       }
 
@@ -1601,10 +1596,7 @@ export default async function (pi: ExtensionAPI) {
         return lines;
       }
 
-      if (component.hideThinkingBlock) {
-        const activity = renderCompactSummary(theme, step.run, width);
-        return lines.length > 0 ? [...activity, "", ...lines] : activity;
-      }
+      if (component.hideThinkingBlock) return lines;
       let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
       if (!row) {
         row = new WorkStepRow(theme, step);
