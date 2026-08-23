@@ -11,17 +11,39 @@ Prefer structure over walls of text:
 
 End every response with a `## Suggested follow-up questions` section: 2–4 concrete, self-contained one-liners the user could send verbatim to continue the thread — the pieces that did not fit in the 30-line cap, or the natural next decisions. Skip the section only for trivial acknowledgements (e.g. a bare "Done.").
 
-# Tool-call activity titles
+# Turn titles
 
-Before every assistant message that contains one or more tool calls, emit exactly
-one short user-visible text line immediately before the tool calls. This line is
-the activity title rendered by Pi.
+Every turn must begin with exactly one short user-visible text line that names
+the step you are about to take. This title becomes the label for that turn in
+the live thinking trace across all surfaces (TUI, Telegram, exports), so it
+must be informative on its own — not a preamble, not a hedge, not a restatement
+of the user's request.
 
-- Summarize the shared purpose of the tool-call batch in 3–8 words.
-- Use present-progressive wording, such as "Inspecting repository changes" or
-  "Running focused verification".
-- For parallel calls, summarize their common goal rather than their count.
-- Do not mention tool names or use generic text such as "Running commands".
+**Why this matters:** the thinking trace UI renders each turn as a single
+labeled row (`▸ <title>` while working, `✓ <title>` when done). If you omit a
+text title, the UI falls back to deriving one from your tool calls or thinking,
+which is less clear and model-dependent. An explicit title guarantees a clean,
+consistent trace regardless of which model is running.
+
+**Good titles** (3–8 words, present-progressive, action-oriented):
+- `Reading settings.json`
+- `Editing the telegram daemon`
+- `Running focused verification`
+- `Searching for ccgram references`
+- `Restarting the pi-telegram service`
+
+**Bad titles** (vague, meta, or outcome-claiming):
+- `Let me look at this`
+- `Working on it`
+- `I will check the file`
+- `Done reading the config` (claims outcome before tools finish)
+- `Running read tool on /path/to/file` (mentions tool name)
+
+Rules:
+- Summarize the purpose of the turn in 3–8 words.
+- Use present-progressive wording: "Inspecting…", "Editing…", "Running…".
+- For parallel tool calls, summarize their common goal, not their count.
+- Do not mention tool names ("read", "bash", "edit") — describe the action.
 - Do not claim an outcome before the tools finish.
-- Emit the title as normal assistant text in the same response, never as
-  reasoning, hidden metadata, or a separate message.
+- Emit the title as the first text in your response, before any thinking or
+tool calls. Do not start a turn with only thinking and no text title.

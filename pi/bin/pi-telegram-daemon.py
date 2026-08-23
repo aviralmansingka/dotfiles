@@ -128,20 +128,120 @@ def _strip_markdown(text: str) -> str:
     return text
 
 
+# Filler patterns that make thinking-derived labels read poorly.
+# Stripped from the beginning of a thinking snippet before truncation.
+# Only clearly-filler phrases are included; ambiguous words like "first",
+# "now", "so" require a trailing comma to be stripped.
+_THINKING_FILLER_RE = re.compile(
+    r"^(?:let me|i need to|i should|i'll|i will|i want to|i'd like to|let's|we need to|we should|first,\s*|now,\s*|so,\s*|ok,\s*|okay,\s*|alright,\s*|well,\s*|hmm,\s*|the user|the owner)\s+",
+    re.IGNORECASE,
+)
+
+# Map tool names to human-readable verb phrases for derived labels.
+# When a turn has tool calls but no text block, we synthesize a label
+# from the tool name and its primary argument.
+_TOOL_LABEL_TEMPLATES: dict[str, str] = {
+    "read": "Reading {path}",
+    "bash": "Running {command}",
+    "edit": "Editing {path}",
+    "write": "Writing {path}",
+    "nvim_open": "Opening editor",
+    "plaid_transactions": "Fetching transactions",
+    "plaid_status": "Checking Plaid status",
+    "mcp": "Calling MCP tool",
+    "mcpScript": "Running MCP script",
+}
+
+
+def _short_path(path: str) -> str:
+    """Shorten a file path for display in a goal label."""
+    # Keep last two segments if path is long.
+    parts = path.strip().strip("'").strip('"').split("/")
+    if len(parts) <= 2:
+        return path.strip().strip("'").strip('"')
+    return "/".join(parts[-2:])
+
+
+def _derive_tool_label(tool_calls: list[dict[str, Any]]) -> str:
+    """Build a human-readable label from the tool calls in a turn.
+
+    Falls back gracefully when tool arguments are incomplete (during streaming).
+    """
+    if not tool_calls:
+        return ""
+    first = tool_calls[0]
+    name = first.get("name", "") or first.get("toolName", "") or ""
+    args = first.get("arguments", {}) or first.get("args", {}) or first.get("input", {}) or {}
+    template = _TOOL_LABEL_TEMPLATES.get(name)
+    if template:
+        try:
+            if "{path}" in template:
+                path = _short_path(str(args.get("path", args.get("file", ""))))
+                return template.format(path=path) if path else template.replace(" {path}", "")
+            if "{command}" in template:
+                cmd = str(args.get("command", ""))[:60].strip()
+                # Take just the first meaningful part of the command.
+                cmd = cmd.split("\n")[0].strip()
+                return template.format(command=cmd) if cmd else "Running command"
+            return template
+        except Exception:
+            return template
+    # Unknown tool: use a generic label with the tool name.
+    if name:
+        return f"Calling {name}"
+    if len(tool_calls) > 1:
+        return f"Running {len(tool_calls)} tools"
+    return "working…"
+
+
+def _clean_thinking_label(raw: str) -> str:
+    """Extract a clean, short label from a thinking block.
+
+    Takes the first sentence, strips filler words, and truncates.
+    """
+    text = raw.strip()
+    # Take first sentence or first line, whichever is shorter.
+    for sep in (". ", ".\n", "\n", "; "):
+        idx = text.find(sep)
+        if 0 < idx < GOAL_LABEL_CHARS:
+            text = text[:idx]
+            break
+    text = _strip_markdown(text)
+    # Strip leading filler words.
+    for _ in range(3):
+        new = _THINKING_FILLER_RE.sub("", text, count=1)
+        if new == text:
+            break
+        text = new
+    # Capitalize first letter.
+    if text:
+        text = text[0].upper() + text[1:]
+    if len(text) > GOAL_LABEL_CHARS:
+        text = text[:GOAL_LABEL_CHARS].rstrip() + "…"
+    return text or "working…"
+
+
 class ThinkingTreeBuilder:
     """Accumulate a goal→traces tree from RPC streaming events.
 
-    Each turn (work step) produces one goal node. The assistant message's
-    text block is the goal label; each thinking block under it is a leaf trace.
-    The partial.content array from message_update is cumulative, so we replace
-    (not append) on each update.
+    Each turn (work step) produces one goal node. The label is derived via
+    a fallback chain that works across models with different output patterns:
+
+    1. Text block content (explicit title from the model) — preferred.
+    2. Tool-call summary (e.g. "Reading settings.json") — when the model
+       emits tool calls without a text title.
+    3. Cleaned first thinking sentence — when only thinking blocks are present.
+    4. "working…" — last resort.
+
+    The partial.content array from message_update is cumulative, so we
+    replace (not append) on each update.
     """
 
     def __init__(self) -> None:
         self.goals: list[dict[str, Any]] = []
 
     def on_turn_start(self) -> None:
-        self.goals.append({"label": "working…", "traces": [], "done": False})
+        self.goals.append({"label": "working…", "traces": [], "tool_calls": [], "done": False})
 
     def on_message_update(self, content: list[dict[str, Any]]) -> None:
         if not self.goals:
@@ -149,21 +249,35 @@ class ThinkingTreeBuilder:
         goal = self.goals[-1]
         label = ""
         traces: list[str] = []
+        tool_calls: list[dict[str, Any]] = []
         for block in content:
             bt = block.get("type")
             if bt == "text" and (block.get("text") or "").strip():
                 label = block["text"].strip()
             elif bt == "thinking" and (block.get("thinking") or "").strip():
                 traces.append(block["thinking"].strip())
+            elif bt in ("toolCall", "tool_call") and block.get("name"):
+                tool_calls.append(block)
+        # Fallback chain: text → tool-call summary → cleaned thinking → working…
         if label:
             goal["label"] = label
             goal["label_derived"] = False
+        elif tool_calls:
+            derived = _derive_tool_label(tool_calls)
+            if derived and derived != "working…":
+                goal["label"] = derived
+                goal["label_derived"] = True
+            elif traces:
+                goal["label"] = _clean_thinking_label(traces[0])
+                goal["label_derived"] = True
+            else:
+                goal["label"] = "working…"
+                goal["label_derived"] = False
         elif traces:
-            goal["label"] = _strip_markdown(traces[0][:GOAL_LABEL_CHARS])
-            if len(traces[0]) > GOAL_LABEL_CHARS:
-                goal["label"] += "…"
+            goal["label"] = _clean_thinking_label(traces[0])
             goal["label_derived"] = True
         goal["traces"] = traces
+        goal["tool_calls"] = tool_calls
 
     def on_turn_end(self) -> None:
         if self.goals:

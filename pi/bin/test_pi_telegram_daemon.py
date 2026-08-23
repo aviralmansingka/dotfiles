@@ -53,14 +53,16 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertNotIn("working…", text)
 
     def test_thinking_block_derives_goal_label(self):
-        """Thinking blocks no longer render as traces; they derive the goal label."""
+        """Thinking blocks derive the goal label, with filler words stripped."""
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
             {"type": "thinking", "thinking": "I need to list the issues directory"},
         ])
         text = tree.render(3)
-        self.assertIn("I need to list the issues directory", text)
+        # Filler "I need to" is stripped, first letter capitalized
+        self.assertIn("List the issues directory", text)
+        self.assertNotIn("I need to", text)
         self.assertNotIn("┊", text)
 
     def test_multiple_thinking_blocks_derive_single_label(self):
@@ -104,7 +106,8 @@ class TestThinkingTreeBuilder(unittest.TestCase):
             {"type": "thinking", "thinking": "I need to check the server cache configuration"},
         ])
         text = tree.render(3)
-        self.assertIn("I need to check the server cache", text)
+        # Filler "I need to" stripped, capitalized
+        self.assertIn("Check the server cache", text)
         self.assertNotIn("I need\n", text)
         # The label should not be stuck at the first token
         first_line = text.split("\n")[1]
@@ -160,7 +163,8 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertEqual(text.count("┊"), 0)
         self.assertIn("working…", text)
 
-    def test_toolcall_block_is_ignored(self):
+    def test_toolcall_block_derives_label(self):
+        """Tool calls derive a label from tool name and args when no text block."""
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
@@ -169,10 +173,9 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         ])
         text = tree.render(1)
         self.assertNotIn("toolCall", text)
-        self.assertNotIn("bash", text)
-        # Thinking still derives a label
-        self.assertIn("A thought", text)
-        self.assertIn("A thought", text)
+        # Tool-call label takes priority over thinking-derived label
+        self.assertIn("Running ls", text)
+        self.assertNotIn("A thought", text)
 
     def test_message_update_without_turn_start_auto_creates_goal(self):
         tree = daemon.ThinkingTreeBuilder()
@@ -180,6 +183,65 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         text = tree.render(1)
         # Goal label is derived from the thinking trace, not "working…"
         self.assertIn("Thought", text)
+
+    def test_toolcall_read_derives_reading_label(self):
+        """read tool with path arg derives 'Reading <path>' label."""
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_message_update([
+            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "/home/avirus/dotfiles/settings.json"}},
+        ])
+        text = tree.render(1)
+        self.assertIn("Reading", text)
+        self.assertIn("settings.json", text)
+
+    def test_toolcall_edit_derives_editing_label(self):
+        """edit tool with path arg derives 'Editing <path>' label."""
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_message_update([
+            {"type": "toolCall", "id": "c1", "name": "edit", "arguments": {"path": "config.toml"}},
+        ])
+        text = tree.render(1)
+        self.assertIn("Editing", text)
+        self.assertIn("config.toml", text)
+
+    def test_toolcall_bash_long_command_truncates(self):
+        """bash tool with long command shows a truncated command in label."""
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_message_update([
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "find / -name '*.json' -type f 2>/dev/null | head -100"}},
+        ])
+        text = tree.render(1)
+        self.assertIn("Running", text)
+        # Should contain part of the command but not the full thing
+        self.assertIn("find", text)
+
+    def test_toolcall_unknown_tool_uses_generic_label(self):
+        """Unknown tool name gets a 'Calling <name>' label."""
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_message_update([
+            {"type": "toolCall", "id": "c1", "name": "custom_tool", "arguments": {}},
+        ])
+        text = tree.render(1)
+        self.assertIn("Calling custom_tool", text)
+
+    def test_text_block_overrides_toolcall_label(self):
+        """When a text block arrives, it replaces the tool-call-derived label."""
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_message_update([
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
+        ])
+        tree.on_message_update([
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
+            {"type": "text", "text": "Real goal label"},
+        ])
+        text = tree.render(3)
+        self.assertIn("Real goal label", text)
+        self.assertNotIn("Running ls", text.split("\n")[1])
 
     def test_total_message_truncation(self):
         """When total exceeds MAX_REPLY_CHARS, it's truncated with ellipsis."""
@@ -220,7 +282,8 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertIn("✓ <b>Completed goal</b>", text)
         self.assertNotIn("old trace that should be hidden", text)
         self.assertNotIn("┊", text)
-        self.assertIn("a live thought", text)
+        # Thinking-derived label is capitalized
+        self.assertIn("A live thought", text)
 
     def test_goal_label_derived_from_first_thinking(self):
         """When no text block, goal label comes from the first thinking trace."""
@@ -230,7 +293,9 @@ class TestThinkingTreeBuilder(unittest.TestCase):
             {"type": "thinking", "thinking": "I need to check the server cache first"},
         ])
         text = tree.render(3)
-        self.assertIn("I need to check the server cache", text)
+        # Filler stripped, capitalized
+        self.assertIn("Check the server cache", text)
+        self.assertNotIn("I need to", text)
         self.assertNotIn("working…", text)
 
     def test_text_block_overrides_derived_label(self):
