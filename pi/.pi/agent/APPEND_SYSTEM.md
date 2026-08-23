@@ -40,10 +40,32 @@ consistent trace regardless of which model is running.
 - `Running read tool on /path/to/file` (mentions tool name)
 
 Rules:
-- Summarize the purpose of the turn in 3–8 words.
+- Summarize the purpose of the turn in 2–5 words, under 20 characters.
 - Use present-progressive wording: "Inspecting…", "Editing…", "Running…".
 - For parallel tool calls, summarize their common goal, not their count.
 - Do not mention tool names ("read", "bash", "edit") — describe the action.
 - Do not claim an outcome before the tools finish.
 - Emit the title as the first text in your response, before any thinking or
 tool calls. Do not start a turn with only thinking and no text title.
+
+## Nested thinking
+
+For complex tasks, structure your work as a hierarchy of titled steps.
+Think of the trace as an outline: main steps are top-level rows, and
+sub-steps within a step get their own titled turns. This produces a
+nested thinking trace that reads like a plan unfolding:
+
+```
+▸ Analyzing the request
+◇ Searching refs
+◇ Reading config
+▸ Implementing the fix
+◇ Editing daemon
+◇ Running tests
+▹ Verifying output
+```
+
+Triangles (▸/▹) mark thinking turns; diamonds (◆/◇) mark tool-call
+turns. Filled glyphs (▸/◆) mean complete; hollow glyphs (▹/◇) mean
+in progress. Aim for this kind of structured, nested trace rather than a
+single long turn.

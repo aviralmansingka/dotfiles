@@ -18,6 +18,12 @@ const ASSISTANT_INVALIDATING = Symbol.for(
 );
 const CLOCK_SOURCE = Symbol.for("aviral.pi.work-step-renderer.clock-source");
 const DEFAULT_CLOCK = () => Date.now();
+const TITLE_MAX = 20;
+
+function truncateTitle(title: string): string {
+  if (title.length <= TITLE_MAX) return title;
+  return title.slice(0, TITLE_MAX).trimEnd() + "…";
+}
 const BACKGROUND_UPDATE_EVENT = "subagent:background-update";
 
 type ToolCall = {
@@ -591,13 +597,13 @@ function renderConnectedParent(
     const last = index === steps.length - 1;
     const glyph =
       current === "running"
-        ? connectedColor("warning", "⟳")
+        ? connectedColor("warning", "◇")
         : current === "failed"
           ? connectedColor("error", "×")
-          : connectedColor("success", "●");
+          : connectedColor("success", "◆");
     const title = connectedColor(
       current === "failed" ? "error" : "text",
-      item.title,
+      truncateTitle(item.title),
       true,
     );
     const elapsed =
@@ -625,7 +631,7 @@ function renderThinkingDraft(
 ): string[] {
   const lines = [
     "",
-    ` ${theme.fg("accent", "◉")} ${theme.fg("text", theme.bold(draft.title ?? "Thinking"))}`,
+    ` ${theme.fg("accent", "▹")} ${theme.fg("text", theme.bold(truncateTitle(draft.title ?? "Thinking")))}`,
   ];
   for (const [index, thought] of draft.thinking.entries()) {
     const connector = index === draft.thinking.length - 1 ? "└─" : "├─";
@@ -644,10 +650,10 @@ function renderThinkingStep(
   const glyph =
     step.failed
       ? theme.fg("error", "×")
-      : theme.fg("success", "●");
+      : theme.fg("muted", "▸");
   const lines = [
     "",
-    ` ${glyph} ${theme.fg("text", theme.bold(step.title))}`,
+    ` ${glyph} ${theme.fg("text", theme.bold(truncateTitle(step.title)))}`,
   ];
   for (const [index, thought] of step.thinking.entries()) {
     const connector = index === step.thinking.length - 1 ? "└─" : "├─";
@@ -671,18 +677,27 @@ class WorkStepRow {
       lines.push(renderActivityHeader(this.theme, steps));
       for (const [stepIndex, step] of steps.entries()) {
         const currentStatus = status(step);
-        const resultGlyph =
+        const hasTools = step.toolCalls.length > 0;
+        // Step title: triangle (thinking happened)
+        const stepGlyph =
           currentStatus === "pending"
-            ? this.theme.fg("accent", "◉")
+            ? this.theme.fg("accent", "▹")
             : currentStatus === "failure"
               ? this.theme.fg("error", "×")
-              : this.theme.fg("success", "●");
+              : this.theme.fg("muted", "▸");
+        // Tool summary: diamond (tools ran)
+        const toolGlyph =
+          currentStatus === "pending"
+            ? this.theme.fg("accent", "◇")
+            : currentStatus === "failure"
+              ? this.theme.fg("error", "×")
+              : this.theme.fg("success", "◆");
         const finalStep = stepIndex === steps.length - 1;
         const outer = this.theme.fg("borderMuted", finalStep ? "└─" : "├─");
         const rail = this.theme.fg("borderMuted", finalStep ? "   " : "│  ");
         const inner = this.theme.fg("borderMuted", "└─");
         lines.push(
-          ` ${outer} ${resultGlyph} ${this.theme.fg("text", this.theme.bold(step.title))}`,
+          ` ${outer} ${stepGlyph} ${this.theme.fg("text", this.theme.bold(truncateTitle(step.title)))}`,
         );
         if (step.thinking.length > 0) {
           for (const [thoughtIndex, thought] of step.thinking.entries()) {
@@ -695,7 +710,7 @@ class WorkStepRow {
           }
         }
         if (step.toolCalls.length > 0)
-          lines.push(` ${rail}${inner} ${resultGlyph} ${renderSummary(this.theme, step)}`);
+          lines.push(` ${rail}${inner} ${toolGlyph} ${renderSummary(this.theme, step)}`);
       }
       if (groupIndex < groups.length - 1) lines.push("");
     }

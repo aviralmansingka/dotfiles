@@ -40,7 +40,7 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         text = tree.render(1)
-        self.assertIn("▸ <b>working…</b>", text)
+        self.assertIn("◇ <b>working…</b>", text)
 
     def test_text_block_sets_goal_label(self):
         tree = daemon.ThinkingTreeBuilder()
@@ -49,7 +49,7 @@ class TestThinkingTreeBuilder(unittest.TestCase):
             {"type": "text", "text": "Find the open issues"},
         ])
         text = tree.render(2)
-        self.assertIn("▸ <b>Find the open issues</b>", text)
+        self.assertIn("◇ <b>Find the open issues</b>", text)
         self.assertNotIn("working…", text)
 
     def test_thinking_block_derives_goal_label(self):
@@ -112,7 +112,7 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertNotIn("I need\n", text)
         # The label should not be stuck at the first token
         first_line = text.split("\n")[1]
-        self.assertNotEqual(first_line.strip(), "▸ <b>I need</b>")
+        self.assertNotEqual(first_line.strip(), "▹ <b>Need</b>")
 
     def test_multiple_turns_create_multiple_goals(self):
         tree = daemon.ThinkingTreeBuilder()
@@ -122,8 +122,8 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         tree.on_turn_start()
         tree.on_message_update([{"type": "text", "text": "Goal 2"}])
         text = tree.render(10)
-        self.assertIn("✓ <b>Goal 1</b>", text)
-        self.assertIn("▸ <b>Goal 2</b>", text)
+        self.assertIn("◆ <b>Goal 1</b>", text)
+        self.assertIn("◇ <b>Goal 2</b>", text)
 
     def test_html_escaping_in_goal_label(self):
         tree = daemon.ThinkingTreeBuilder()
@@ -175,8 +175,10 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         text = tree.render(1)
         self.assertNotIn("toolCall", text)
         # Tool-call label takes priority over thinking-derived label
-        self.assertIn("Running ls", text)
+        self.assertIn("Listing files", text)
         self.assertNotIn("A thought", text)
+        # Has thinking content, so uses triangle marker
+        self.assertIn("▹", text)
 
     def test_message_update_without_turn_start_auto_creates_goal(self):
         tree = daemon.ThinkingTreeBuilder()
@@ -208,16 +210,16 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertIn("config.toml", text)
 
     def test_toolcall_bash_long_command_truncates(self):
-        """bash tool with long command shows a truncated command in label."""
+        """bash tool with long command shows a summarized label."""
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
             {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "find / -name '*.json' -type f 2>/dev/null | head -100"}},
         ])
         text = tree.render(1)
-        self.assertIn("Running", text)
-        # Should contain part of the command but not the full thing
-        self.assertIn("find", text)
+        # Should show a human-readable summary, not the raw command
+        self.assertIn("Finding files", text)
+        self.assertNotIn("find /", text)
 
     def test_toolcall_unknown_tool_uses_generic_label(self):
         """Unknown tool name gets a 'Calling <name>' label."""
@@ -265,8 +267,8 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         tree.on_message_update([{"type": "text", "text": "Done goal"}])
         tree.on_turn_end()
         text = tree.render(5)
-        self.assertIn("✓ <b>Done goal</b>", text)
-        self.assertNotIn("▸ <b>Done goal</b>", text)
+        self.assertIn("◆ <b>Done goal</b>", text)
+        self.assertNotIn("◇ <b>Done goal</b>", text)
 
     def test_completed_goals_show_only_labels(self):
         """All goals (done or live) show only their label — no traces rendered."""
@@ -280,7 +282,7 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         tree.on_turn_start()
         tree.on_message_update([{"type": "thinking", "thinking": "a live thought about the server"}])
         text = tree.render(5)
-        self.assertIn("✓ <b>Completed goal</b>", text)
+        self.assertIn("▸ <b>Completed goal</b>", text)
         self.assertNotIn("old trace that should be hidden", text)
         self.assertNotIn("┊", text)
         # Thinking-derived label is capitalized

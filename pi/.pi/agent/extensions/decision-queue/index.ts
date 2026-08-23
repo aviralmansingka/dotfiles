@@ -11,10 +11,6 @@
  *   Q5 interactive 2-column list with active element (approved ANSI mock)
  *   + captain styling order: "stylize it and make it have more colors"
  *     (v2: full gruvbox frame, per-verb colors, pink/purple accents)
- *
- * Also carries the documented reload-runtime plumbing (pi docs
- * extensions.md → ctx.reload) so the agent can hot-reload extensions
- * after edits via the reload_runtime tool.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -314,32 +310,6 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.setEditorText(editorTemplate(picked));
 				ctx.ui.notify(answerHint(picked), "info");
 			}
-		},
-	});
-
-	// Documented reload plumbing (pi docs → ExtensionCommandContext.reload):
-	// /reload-runtime runs the same flow as /reload; the reload_runtime tool
-	// lets the agent queue that command after editing extension sources.
-	pi.registerCommand("reload-runtime", {
-		description: "Reload extensions, skills, prompts, themes, and context files",
-		handler: async (_args, ctx) => {
-			await ctx.reload();
-			return;
-		},
-	});
-
-	pi.registerTool({
-		name: "reload_runtime",
-		label: "Reload Runtime",
-		description:
-			"Reload pi extensions, skills, prompts, themes, and context files. Use after editing extension source files so the running session picks up the changes.",
-		parameters: Type.Object({}),
-		async execute() {
-			pi.sendUserMessage("/reload-runtime", { deliverAs: "followUp" });
-			return {
-				content: [{ type: "text", text: "Queued /reload-runtime as a follow-up command." }],
-				details: {},
-			};
 		},
 	});
 }

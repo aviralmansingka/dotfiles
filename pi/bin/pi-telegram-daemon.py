@@ -142,7 +142,7 @@ _THINKING_FILLER_RE = re.compile(
 # from the tool name and its primary argument.
 _TOOL_LABEL_TEMPLATES: dict[str, str] = {
     "read": "Reading {path}",
-    "bash": "Running {command}",
+    "bash": "Running command",  # overridden by _summarize_command in _derive_tool_label
     "edit": "Editing {path}",
     "write": "Writing {path}",
     "nvim_open": "Opening editor",
@@ -162,10 +162,197 @@ def _short_path(path: str) -> str:
     return "/".join(parts[-2:])
 
 
+def _summarize_command(command: str) -> str:
+    """Generate a human-readable summary of a bash command.
+
+    Instead of showing the raw command, describe the intent.
+    """
+    cmd = command.strip().split("\n")[0].strip()
+    if not cmd:
+        return "Running command"
+    parts = cmd.split()
+    # Strip env var assignments and common prefixes.
+    while parts and ("=" in parts[0] or parts[0] in ("sudo", "env", "time", "nohup", "exec", "bash", "sh", "source")):
+        parts = parts[1:]
+    if not parts:
+        return "Running command"
+    base = parts[0]
+    # Strip path prefix (e.g. /usr/bin/git → git).
+    base = base.rsplit("/", 1)[-1]
+    args = parts[1:]
+    # Filter out flags for the summary subject.
+    positional = [a for a in args if not a.startswith("-")]
+    _COMMAND_SUMMARIES: dict[str, str] = {
+        "ls": "Listing files",
+        "cat": "Reading file",
+        "head": "Reading file head",
+        "tail": "Reading file tail",
+        "less": "Viewing file",
+        "more": "Viewing file",
+        "find": "Finding files",
+        "locate": "Finding files",
+        "grep": "Searching text",
+        "rg": "Searching text",
+        "ag": "Searching text",
+        "sed": "Transforming text",
+        "awk": "Processing text",
+        "sort": "Sorting",
+        "uniq": "Deduplicating",
+        "wc": "Counting",
+        "diff": "Comparing files",
+        "mkdir": "Creating directory",
+        "rmdir": "Removing directory",
+        "rm": "Removing files",
+        "cp": "Copying files",
+        "mv": "Moving files",
+        "ln": "Linking files",
+        "chmod": "Changing permissions",
+        "chown": "Changing ownership",
+        "touch": "Creating file",
+        "tar": "Archiving",
+        "zip": "Compressing",
+        "unzip": "Extracting",
+        "gzip": "Compressing",
+        "gunzip": "Decompressing",
+        "echo": "Printing",
+        "printf": "Printing",
+        "test": "Testing condition",
+        "true": "No-op",
+        "false": "No-op",
+        "which": "Finding command",
+        "whereis": "Finding command",
+        "whoami": "Checking user",
+        "hostname": "Checking hostname",
+        "uname": "Checking system",
+        "date": "Checking date",
+        "uptime": "Checking uptime",
+        "df": "Checking disk",
+        "du": "Checking disk usage",
+        "free": "Checking memory",
+        "top": "Checking processes",
+        "ps": "Listing processes",
+        "kill": "Killing process",
+        "killall": "Killing processes",
+        "pkill": "Killing process",
+        "curl": "Fetching URL",
+        "wget": "Downloading",
+        "ssh": "Connecting via SSH",
+        "scp": "Copying via SSH",
+        "rsync": "Syncing files",
+        "ping": "Pinging host",
+        "nc": "Checking connection",
+        "docker": "Running Docker",
+        "kubectl": "Running kubectl",
+        "helm": "Running Helm",
+        "terraform": "Running Terraform",
+        "ansible": "Running Ansible",
+        "vagrant": "Running Vagrant",
+        "virsh": "Managing VMs",
+        "systemctl": "Managing service",
+        "service": "Managing service",
+        "journalctl": "Reading logs",
+        "dmesg": "Reading kernel logs",
+        "log": "Reading logs",
+        "git": "Git operation",
+        "gh": "GitHub operation",
+        "npm": "Running npm",
+        "npx": "Running npx",
+        "yarn": "Running yarn",
+        "pnpm": "Running pnpm",
+        "bun": "Running bun",
+        "node": "Running Node",
+        "deno": "Running Deno",
+        "python": "Running Python",
+        "python3": "Running Python",
+        "pip": "Running pip",
+        "pip3": "Running pip",
+        "uv": "Running uv",
+        "poetry": "Running Poetry",
+        "pytest": "Running tests",
+        "jest": "Running tests",
+        "vitest": "Running tests",
+        "mocha": "Running tests",
+        "cargo": "Running Cargo",
+        "go": "Running Go",
+        "rustc": "Compiling Rust",
+        "gcc": "Compiling",
+        "make": "Building",
+        "cmake": "Building",
+        "javac": "Compiling Java",
+        "java": "Running Java",
+        "gradle": "Running Gradle",
+        "mvn": "Running Maven",
+        "ruby": "Running Ruby",
+        "bundle": "Running Bundler",
+        "gem": "Running gem",
+        "rails": "Running Rails",
+        "rake": "Running Rake",
+        "stow": "Running stow",
+        "home-manager": "Running Home Manager",
+        "nix": "Running Nix",
+        "nixos-rebuild": "Rebuilding NixOS",
+        "apt": "Managing packages",
+        "apt-get": "Managing packages",
+        "dpkg": "Managing packages",
+        "dnf": "Managing packages",
+        "yum": "Managing packages",
+        "pacman": "Managing packages",
+        "brew": "Running Homebrew",
+        "mas": "Managing Mac apps",
+        "launchctl": "Managing service",
+        "defaults": "Reading config",
+        "plutil": "Editing plist",
+        "xcodebuild": "Building Xcode",
+        "xcrun": "Running Xcode tool",
+        "simctl": "Managing simulator",
+        "xctest": "Running tests",
+        "swift": "Running Swift",
+        "swiftc": "Compiling Swift",
+        "ffmpeg": "Processing media",
+        "convert": "Converting image",
+        "magick": "Processing image",
+        "notify-send": "Sending notification",
+        "crontab": "Editing cron",
+        "at": "Scheduling task",
+        "watch": "Watching",
+        "timeout": "Running with timeout",
+        "xargs": "Batch processing",
+        "parallel": "Parallel processing",
+        "seq": "Generating sequence",
+        "yes": "Generating input",
+        "env": "Checking environment",
+        "export": "Setting variable",
+        "set": "Setting shell",
+        "unset": "Unsetting variable",
+        "source": "Sourcing script",
+        "cd": "Changing directory",
+        "pwd": "Checking directory",
+        "pushd": "Changing directory",
+        "popd": "Changing directory",
+        "dirs": "Checking directory stack",
+    }
+    summary = _COMMAND_SUMMARIES.get(base)
+    if summary:
+        # Try to add context from first positional arg.
+        if positional:
+            subject = positional[0].rsplit("/", 1)[-1]
+            if len(summary) + 1 + len(subject) <= GOAL_LABEL_CHARS:
+                return f"{summary} {subject}"
+        return summary
+    # Subcommand detection (git status, npm install, systemctl restart, etc.)
+    if base in ("git", "npm", "npx", "yarn", "pnpm", "docker", "kubectl", "systemctl", "service", "apt", "apt-get", "brew", "cargo", "go", "uv", "pip", "pip3") and positional:
+        sub = positional[0]
+        if len(sub) <= GOAL_LABEL_CHARS:
+            return f"{base} {sub}"
+    # Fallback: use the base command name.
+    return base[:GOAL_LABEL_CHARS] if base else "Running command"
+
+
 def _derive_tool_label(tool_calls: list[dict[str, Any]]) -> str:
     """Build a human-readable label from the tool calls in a turn.
 
     Falls back gracefully when tool arguments are incomplete (during streaming).
+    Uses _summarize_command for bash tool calls to show intent, not raw command.
     """
     if not tool_calls:
         return ""
@@ -175,12 +362,15 @@ def _derive_tool_label(tool_calls: list[dict[str, Any]]) -> str:
     template = _TOOL_LABEL_TEMPLATES.get(name)
     if template:
         try:
+            if name == "bash":
+                cmd = str(args.get("command", ""))[:120].strip()
+                cmd = cmd.split("\n")[0].strip()
+                return _summarize_command(cmd) if cmd else "Running command"
             if "{path}" in template:
                 path = _short_path(str(args.get("path", args.get("file", ""))))
                 return template.format(path=path) if path else template.replace(" {path}", "")
             if "{command}" in template:
                 cmd = str(args.get("command", ""))[:60].strip()
-                # Take just the first meaningful part of the command.
                 cmd = cmd.split("\n")[0].strip()
                 return template.format(command=cmd) if cmd else "Running command"
             return template
@@ -288,7 +478,11 @@ class ThinkingTreeBuilder:
         header = f"thinking · {minutes}:{seconds:02d}"
         lines: list[str] = [header]
         for goal in self.goals:
-            marker = "✓" if goal["done"] else "▸"
+            has_thinking = bool(goal.get("traces"))
+            if has_thinking:
+                marker = "▸" if goal["done"] else "▹"
+            else:
+                marker = "◆" if goal["done"] else "◇"
             label = _strip_markdown(goal["label"])
             if len(label) > GOAL_LABEL_CHARS:
                 label = label[:GOAL_LABEL_CHARS].rstrip() + "…"
