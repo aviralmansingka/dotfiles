@@ -15,6 +15,19 @@ from pathlib import Path
 from faster_whisper import WhisperModel
 
 
+def transcribe_once(audio_path: Path, *, model_name: str, device: str, compute_type: str, language: str | None) -> str:
+    model = WhisperModel(model_name, device=device, compute_type=compute_type)
+    segments, _info = model.transcribe(
+        str(audio_path),
+        language=language,
+        vad_filter=True,
+        beam_size=5,
+    )
+    # faster-whisper does most of the actual inference while this generator is
+    # consumed, so CUDA failures can happen here rather than during model init.
+    return " ".join(segment.text.strip() for segment in segments if segment.text.strip()).strip()
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("usage: pi-telegram-transcribe.py <audio-file>", file=sys.stderr)
@@ -31,20 +44,24 @@ def main() -> int:
     language = os.environ.get("PI_TELEGRAM_WHISPER_LANGUAGE", "en") or None
 
     try:
-        model = WhisperModel(model_name, device=device, compute_type=compute_type)
-    except RuntimeError as e:
-        if device != "cuda" or "CUDA" not in str(e):
+        transcript = transcribe_once(
+            audio_path,
+            model_name=model_name,
+            device=device,
+            compute_type=compute_type,
+            language=language,
+        )
+    except Exception as e:
+        if device.lower() != "cuda":
             raise
-        print(f"CUDA transcription unavailable, falling back to CPU: {e}", file=sys.stderr)
-        model = WhisperModel(model_name, device="cpu", compute_type="int8")
-
-    segments, _info = model.transcribe(
-        str(audio_path),
-        language=language,
-        vad_filter=True,
-        beam_size=5,
-    )
-    transcript = " ".join(segment.text.strip() for segment in segments if segment.text.strip()).strip()
+        print(f"CUDA transcription failed, falling back to CPU: {e}", file=sys.stderr)
+        transcript = transcribe_once(
+            audio_path,
+            model_name=model_name,
+            device="cpu",
+            compute_type="int8",
+            language=language,
+        )
     if not transcript:
         print("no speech detected", file=sys.stderr)
         return 1
