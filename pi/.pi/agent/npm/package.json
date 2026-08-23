@@ -2,7 +2,7 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "pi-mcp-adapter": "^2.11.0",
-    "pi-subagents": "^0.37.0"
+    "@zackify/pi-wafer": "^0.1.2",
+    "pi-mcp-adapter": "^2.27.0"
   }
 }
