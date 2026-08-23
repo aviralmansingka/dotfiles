@@ -65,7 +65,7 @@ RETRY_SECONDS = float(os.environ.get("PI_TELEGRAM_RETRY_SECONDS", "5"))
 TYPING_INTERVAL_SECONDS = float(os.environ.get("PI_TELEGRAM_TYPING_INTERVAL_SECONDS", "4"))
 THINKING_STREAM_ENABLED = os.environ.get("PI_TELEGRAM_THINKING_STREAM", "1") == "1"
 MAX_TRACE_CHARS = int(os.environ.get("PI_TELEGRAM_MAX_TRACE_CHARS", "200"))
-GOAL_LABEL_CHARS = int(os.environ.get("PI_TELEGRAM_GOAL_LABEL_CHARS", "80"))
+GOAL_LABEL_CHARS = int(os.environ.get("PI_TELEGRAM_GOAL_LABEL_CHARS", "20"))
 STATUS_EDIT_INTERVAL = float(os.environ.get("PI_TELEGRAM_STATUS_EDIT_INTERVAL", "1.0"))
 STATUS_FINAL_PAUSE = float(os.environ.get("PI_TELEGRAM_STATUS_FINAL_PAUSE", "0.3"))
 
@@ -290,6 +290,8 @@ class ThinkingTreeBuilder:
         for goal in self.goals:
             marker = "✓" if goal["done"] else "▸"
             label = _strip_markdown(goal["label"])
+            if len(label) > GOAL_LABEL_CHARS:
+                label = label[:GOAL_LABEL_CHARS].rstrip() + "…"
             lines.append(f"{marker} <b>{html.escape(label)}</b>")
         text = "\n".join(lines)
         if len(text) > MAX_REPLY_CHARS:

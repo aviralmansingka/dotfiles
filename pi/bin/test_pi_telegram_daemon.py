@@ -61,7 +61,7 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         ])
         text = tree.render(3)
         # Filler "I need to" is stripped, first letter capitalized
-        self.assertIn("List the issues directory", text)
+        self.assertIn("List the issues", text)
         self.assertNotIn("I need to", text)
         self.assertNotIn("┊", text)
 
@@ -107,7 +107,8 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         ])
         text = tree.render(3)
         # Filler "I need to" stripped, capitalized
-        self.assertIn("Check the server cache", text)
+        self.assertIn("Check the server", text)
+        self.assertNotIn("I need", text)
         self.assertNotIn("I need\n", text)
         # The label should not be stuck at the first token
         first_line = text.split("\n")[1]
@@ -189,11 +190,11 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
-            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "/home/avirus/dotfiles/settings.json"}},
+            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "config.toml"}},
         ])
         text = tree.render(1)
         self.assertIn("Reading", text)
-        self.assertIn("settings.json", text)
+        self.assertIn("config.toml", text)
 
     def test_toolcall_edit_derives_editing_label(self):
         """edit tool with path arg derives 'Editing <path>' label."""
@@ -294,7 +295,7 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         ])
         text = tree.render(3)
         # Filler stripped, capitalized
-        self.assertIn("Check the server cache", text)
+        self.assertIn("Check the server", text)
         self.assertNotIn("I need to", text)
         self.assertNotIn("working…", text)
 
