@@ -9,16 +9,13 @@
   ],
   "extensions": [
     "-extensions/transcript-scroll.ts",
-    "+extensions/mobile-mode.ts",
     "+extensions/rounded-bar-footer.ts"
   ],
-  "lastChangelogVersion": "0.82.1",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol",
+  "lastChangelogVersion": "0.84.2",
+  "defaultProvider": "fireworks",
+  "defaultModel": "firerouter",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-material",
   "transport": "websocket-cached",
-  "markdown": {
-    "codeBlockIndent": ""
-  }
+  "hideThinkingBlock": false
 }
