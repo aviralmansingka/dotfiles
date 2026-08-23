@@ -1,5 +1,7 @@
 vim.opt.termguicolors = true
 vim.opt.number = true
+vim.opt.signcolumn = "yes:1"
+vim.opt.numberwidth = 3
 
 -- Fully disable swap files and the "swap file found" recovery prompt.
 vim.opt.swapfile = false
