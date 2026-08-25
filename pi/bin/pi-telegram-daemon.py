@@ -427,16 +427,25 @@ def _try_json_object(raw: str) -> Optional[dict[str, Any]]:
 
 
 class TraceBuilder:
-    """Reassemble the live assistant message from RPC deltas and track
-    work-step lifecycle, then render a tree matching the TUI trace."""
+    """Reassemble the live assistant message from RPC deltas, track work-step
+    lifecycle, and render a compact one-line-per-step trace.
 
-    def __init__(self) -> None:
+    Telegram is a mobile-first surface, so the render is deliberately flatter
+    than the TUI tree: only step titles and per-step elapsed time. The TUI
+    (pi/.pi/agent/extensions/tool-call-renderer.ts) keeps the full tree with
+    tool summaries and thinking bullets; the model here stays faithful to it so
+    a richer render can be restored without rework.
+    """
+
+    def __init__(self, clock: Optional[Any] = None) -> None:
         self.steps: list[WorkStep] = []
         self.blocks: dict[int, dict[str, Any]] = {}
         self.current_step: Optional[WorkStep] = None
         self.thinking_draft_title: Optional[str] = None
         self.thinking_draft_thinking: list[str] = []
-        self.start_time: float = time.monotonic()
+        # Injectable so step/tool timestamps line up with render(now) in tests.
+        self.clock = clock or time.monotonic
+        self.start_time: float = self.clock()
 
     # -- lifecycle --------------------------------------------------------
 
@@ -575,6 +584,9 @@ class TraceBuilder:
                 title=title,
                 title_locked=bool(step_explicit_title),
                 thinking=step_thinking,
+                # Stamp at creation so every step has a timer, even before
+                # its first tool starts executing.
+                started_at=self.clock(),
             )
             self.steps.append(step)
             self.current_step = step
@@ -598,7 +610,7 @@ class TraceBuilder:
         tc = next((c for c in step.tool_calls if c.id == tool_call_id), None)
         if not tc:
             return
-        now = time.monotonic()
+        now = self.clock()
         if tc.started_at is None:
             tc.started_at = now
         if step.started_at is None or now < step.started_at:
@@ -610,98 +622,57 @@ class TraceBuilder:
             return
         tc = next((c for c in step.tool_calls if c.id == tool_call_id), None)
         if tc and tc.completed_at is None:
-            tc.completed_at = time.monotonic()
+            tc.completed_at = self.clock()
         step.completed_tool_call_ids.add(tool_call_id)
         if is_error:
             step.failed = True
-        if _step_status(step) != "pending" and step.completed_at is None and tc:
-            step.completed_at = tc.completed_at
+        if _step_status(step) != "pending" and step.completed_at is None:
+            step.completed_at = (tc.completed_at if tc else None) or self.clock()
 
-    # -- rendering (mirrors TUI WorkStepRow.render) ----------------------
+    # -- rendering --------------------------------------------------------
+    # Mobile-first: one line per step, title plus elapsed. Tool summaries and
+    # thinking bullets stay in the model but are not rendered here.
+
+    def _step_elapsed(self, step: WorkStep, now: float) -> Optional[float]:
+        if step.started_at is None:
+            return None
+        end = step.completed_at if step.completed_at is not None else now
+        return max(0.0, end - step.started_at)
+
+    def _step_line(self, step: WorkStep, now: float) -> str:
+        status = _step_status(step)
+        glyph = "▹" if status == "pending" else ("×" if status == "failure" else "▸")
+        title = html.escape(_truncate_title(step.title))
+        elapsed = self._step_elapsed(step, now)
+        timer = f" · {_format_elapsed(elapsed * 1000)}" if elapsed is not None else ""
+        return f"{glyph} <b>{title}</b>{timer}"
 
     def render(self, now: float) -> str:
         elapsed = int(now - self.start_time)
         minutes, seconds = divmod(elapsed, 60)
         header = f"thinking · {minutes}:{seconds:02d}"
 
-        # If we have a thinking draft (no tools yet), show it standalone.
-        if not self.steps and (self.thinking_draft_thinking or self.thinking_draft_title):
-            return self._render_thinking_draft(header, now)
-
-        if not self.steps:
-            return header
-
         lines: list[str] = [header]
+        for step in self.steps:
+            lines.append(self._step_line(step, now))
 
-        # Activity header
-        all_steps = self.steps
-        total_calls = sum(len(s.tool_calls) for s in all_steps)
-        completed = sum(1 for s in all_steps if _step_status(s) == "success")
-        failed = any(_step_status(s) == "failure" for s in all_steps)
-        settled = completed == len(all_steps)
-        if failed:
-            state = "failed"
-        elif settled:
-            state = "all passed"
-        else:
-            state = f"{completed}/{len(all_steps)} complete"
-        lines.append(f" {_plural(len(all_steps), 'step')} · {_plural(total_calls, 'call')} · {state}")
-
-        # Steps (all in one group — RPC stream is sequential)
-        for step_idx, step in enumerate(all_steps):
-            final_step = step_idx == len(all_steps) - 1
-            outer = "└─" if final_step else "├─"
-            rail = "   " if final_step else "│  "
-            current_status = _step_status(step)
-
-            step_glyph = "▹" if current_status == "pending" else ("×" if current_status == "failure" else "▸")
-            title = _truncate_title(step.title)
-            lines.append(f" {outer} {step_glyph} <b>{html.escape(title)}</b>")
-
-            # Thinking bullets
-            if step.thinking:
-                for thought_idx, thought in enumerate(step.thinking):
-                    final_thought = thought_idx == len(step.thinking) - 1
-                    connector = "└─" if (not step.tool_calls and final_thought) else "├─"
-                    lines.append(f" {rail}{connector} • {html.escape(thought)}")
-
-            # Tool summary
-            if step.tool_calls:
-                tool_glyph = "◇" if current_status == "pending" else ("×" if current_status == "failure" else "◆")
-                all_bash = all(tc.name == "bash" for tc in step.tool_calls)
-                if all_bash and len(step.tool_calls) > 1:
-                    for call_idx, call in enumerate(step.tool_calls):
-                        final_call = call_idx == len(step.tool_calls) - 1
-                        call_status = _step_status(step)
-                        call_glyph = "◇" if call_status == "pending" else ("×" if call_status == "failure" else "◆")
-                        call_inner = "└─" if final_call else "├─"
-                        lines.append(f" {rail}{call_inner} {call_glyph} {html.escape(_bash_call_text(call, step, now))}")
-                else:
-                    inner = "└─"
-                    lines.append(f" {rail}{inner} {tool_glyph} {html.escape(_summary_text(step, now))}")
+        # No step yet (streaming text or thinking before the first tool call).
+        if not self.steps and (self.thinking_draft_title or self.thinking_draft_thinking):
+            title = html.escape(_truncate_title(self.thinking_draft_title or "Thinking"))
+            lines.append(f"▹ <b>{title}</b>")
 
         text = "\n".join(lines)
         if len(text) > MAX_REPLY_CHARS:
             cut = text[:MAX_REPLY_CHARS]
             last_nl = cut.rfind("\n")
-            if last_nl > len(header):
-                text = cut[:last_nl] + "\n…"
-            else:
-                text = cut[:-1] + "…"
+            text = (cut[:last_nl] + "\n…") if last_nl > len(header) else (cut[:-1] + "…")
         return text
-
-    def _render_thinking_draft(self, header: str, now: float) -> str:
-        title = _truncate_title(self.thinking_draft_title or "Thinking")
-        lines = [header, "", f" ▹ <b>{html.escape(title)}</b>"]
-        for thought_idx, thought in enumerate(self.thinking_draft_thinking):
-            final_thought = thought_idx == len(self.thinking_draft_thinking) - 1
-            connector = "└─" if final_thought else "├─"
-            lines.append(f"   {connector} • {html.escape(thought)}")
-        return "\n".join(lines)
 
 
 # Kept for backward compatibility with tests and external callers.
 ThinkingTreeBuilder = TraceBuilder
+
+
 class StatusMessenger:
     """Manage one live Telegram status message that shows the thinking tree.
 

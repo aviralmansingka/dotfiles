@@ -93,9 +93,10 @@ class TestTraceBuilder(unittest.TestCase):
         text = tree.render(2)
         self.assertIn("Reading config", text)
         self.assertIn("▹", text)  # pending step (tool not completed)
-        self.assertIn("config.toml", text)
+        # Compact render: no tool detail, only title + timer
+        self.assertNotIn("config.toml", text)
 
-    def test_tool_call_completed_shows_diamond(self):
+    def test_completed_step_shows_filled_triangle(self):
         tree = self._new_tree()
         tree.on_agent_start()
         tree.on_turn_start()
@@ -107,9 +108,11 @@ class TestTraceBuilder(unittest.TestCase):
         tree.on_tool_execution_end("c1", False)
         tree.on_turn_end()
         text = tree.render(3)
-        self.assertIn("◆", text)  # completed tool
         self.assertIn("▸", text)  # completed step
-        self.assertIn("loaded", text)
+        self.assertNotIn("▹", text)
+        # Tool glyphs and summaries are not rendered on mobile
+        self.assertNotIn("◆", text)
+        self.assertNotIn("loaded", text)
 
     # -- fallback titles (no explicit text) -------------------------------
 
@@ -122,7 +125,7 @@ class TestTraceBuilder(unittest.TestCase):
         ]})
         text = tree.render(1)
         self.assertIn("Reading", text)
-        self.assertIn("config.toml", text)
+        self.assertIn("config.toml", text)  # part of the derived title
 
     def test_fallback_title_edit(self):
         tree = self._new_tree()
@@ -145,8 +148,8 @@ class TestTraceBuilder(unittest.TestCase):
         text = tree.render(1)
         self.assertIn("Running", text)
         self.assertIn("command", text)
-        # Tool summary shows the command
-        self.assertIn("$ echo hello", text)
+        # Compact render: no tool summary line
+        self.assertNotIn("$ echo hello", text)
 
     def test_fallback_title_checks(self):
         tree = self._new_tree()
@@ -157,6 +160,33 @@ class TestTraceBuilder(unittest.TestCase):
         ]})
         text = tree.render(1)
         self.assertIn("Running checks", text)
+
+    # -- summary helpers (not rendered, but tracked in the model) ---------
+
+    def test_summary_text_edit_count(self):
+        """_summary_text still formats tool summaries for potential future use."""
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "edit", "arguments": {
+                "path": "daemon.py", "edits": [{"oldText": "a", "newText": "b"}]}},
+        ]})
+        tree.on_tool_execution_end("c1", False)
+        tree.on_turn_end()
+        summary = daemon._summary_text(tree.steps[0], 0.0)
+        self.assertIn("1 edit", summary)
+        self.assertIn("updated", summary)
+
+    def test_summary_text_bash_command(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "git status"}},
+        ]})
+        summary = daemon._summary_text(tree.steps[0], 0.0)
+        self.assertIn("$ git status", summary)
 
     # -- thinking ---------------------------------------------------------
 
@@ -169,10 +199,11 @@ class TestTraceBuilder(unittest.TestCase):
         tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
                                  "delta": "I need to check the config"})
         text = tree.render(1)
+        # Compact render: thinking draft shows title only, no bullets
         self.assertIn("Thinking", text)
         self.assertIn("▹", text)
-        self.assertIn("•", text)  # thinking bullet
-        self.assertIn("check the config", text)
+        self.assertNotIn("•", text)
+        self.assertNotIn("check the config", text)
 
     def test_thinking_with_tools_shows_bullets(self):
         """Thinking + tool calls: title from text, thinking shown as bullets."""
@@ -186,9 +217,10 @@ class TestTraceBuilder(unittest.TestCase):
         ]})
         text = tree.render(1)
         self.assertIn("Analyzing the request", text)
-        self.assertIn("•", text)  # thinking bullet
-        self.assertIn("Need to check the config", text)
-        self.assertIn("◇", text)  # pending tool
+        # Compact render: no thinking bullets or tool glyphs
+        self.assertNotIn("•", text)
+        self.assertNotIn("Need to check the config", text)
+        self.assertNotIn("◇", text)
 
     def test_thinking_no_text_shows_thinking_title(self):
         """Thinking + tools but no text: title defaults to 'Thinking'."""
@@ -201,7 +233,8 @@ class TestTraceBuilder(unittest.TestCase):
         ]})
         text = tree.render(1)
         self.assertIn("Thinking", text)
-        self.assertIn("•", text)
+        # No thinking bullets in compact render
+        self.assertNotIn("•", text)
 
     # -- tree structure ---------------------------------------------------
 
@@ -224,10 +257,10 @@ class TestTraceBuilder(unittest.TestCase):
         text = tree.render(5)
         self.assertIn("Step 1", text)
         self.assertIn("Step 2", text)
-        self.assertIn("├─", text)  # non-last step
-        self.assertIn("└─", text)  # last step
-        self.assertIn("│  ", text)  # rail for non-last step
-        self.assertIn("steps", text)  # activity header
+        # Compact render: no tree connectors
+        self.assertNotIn("├─", text)
+        self.assertNotIn("└─", text)
+        self.assertNotIn("│", text)
 
     def test_activity_header_shows_counts(self):
         tree = self._new_tree()
@@ -239,9 +272,9 @@ class TestTraceBuilder(unittest.TestCase):
             {"type": "toolCall", "id": "c2", "name": "read", "arguments": {"path": "b.py"}},
         ]})
         text = tree.render(1)
-        self.assertIn("1 step", text)
-        self.assertIn("2 calls", text)
-        self.assertIn("0/1 complete", text)
+        # Compact render: no activity header
+        self.assertNotIn("step", text)
+        self.assertNotIn("call", text)
 
     def test_activity_header_all_passed(self):
         tree = self._new_tree()
@@ -253,7 +286,7 @@ class TestTraceBuilder(unittest.TestCase):
         tree.on_tool_execution_end("c1", False)
         tree.on_turn_end()
         text = tree.render(1)
-        self.assertIn("all passed", text)
+        self.assertNotIn("all passed", text)
 
     def test_activity_header_failed(self):
         tree = self._new_tree()
@@ -265,8 +298,7 @@ class TestTraceBuilder(unittest.TestCase):
         tree.on_tool_execution_end("c1", True)
         tree.on_turn_end()
         text = tree.render(1)
-        self.assertIn("failed", text)
-        self.assertIn("×", text)
+        self.assertIn("×", text)  # failed step glyph
 
     # -- tool summary format ----------------------------------------------
 
@@ -281,8 +313,8 @@ class TestTraceBuilder(unittest.TestCase):
         tree.on_tool_execution_end("c1", False)
         tree.on_turn_end()
         text = tree.render(1)
-        self.assertIn("1 edit", text)
-        self.assertIn("updated", text)
+        self.assertNotIn("1 edit", text)
+        self.assertNotIn("updated", text)
 
     def test_bash_summary_shows_command(self):
         tree = self._new_tree()
@@ -292,8 +324,8 @@ class TestTraceBuilder(unittest.TestCase):
             {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "git status"}},
         ]})
         text = tree.render(1)
-        self.assertIn("$ git status", text)
-        self.assertIn("running", text)
+        self.assertNotIn("$ git status", text)
+        self.assertNotIn("running", text)
 
     def test_multiple_bash_shows_per_call_lines(self):
         tree = self._new_tree()
@@ -304,8 +336,8 @@ class TestTraceBuilder(unittest.TestCase):
             {"type": "toolCall", "id": "c2", "name": "bash", "arguments": {"command": "echo b"}},
         ]})
         text = tree.render(1)
-        self.assertIn("$ echo a", text)
-        self.assertIn("$ echo b", text)
+        self.assertNotIn("$ echo a", text)
+        self.assertNotIn("$ echo b", text)
 
     # -- elapsed timers ---------------------------------------------------
 
@@ -349,12 +381,9 @@ class TestTraceBuilder(unittest.TestCase):
         tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
                                  "delta": "Use <b> & <i> tags"})
         text = tree.render(1)
-        # sanitizeTitle strips HTML tags from thinking content; & is HTML-escaped
-        self.assertIn("&amp;", text)
-        # The thinking bullet line should not contain raw HTML tags from content
-        bullet_lines = [l for l in text.split("\n") if "•" in l]
-        self.assertTrue(any("Use" in l for l in bullet_lines))
-        self.assertTrue(all("<i>" not in l for l in bullet_lines))
+        # Compact render: thinking draft title only, no bullet lines
+        self.assertNotIn("•", text)
+        self.assertNotIn("&amp;", text)
 
     def test_html_escaping_in_command(self):
         tree = self._new_tree()
@@ -364,7 +393,8 @@ class TestTraceBuilder(unittest.TestCase):
             {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo '<x>'"}},
         ]})
         text = tree.render(1)
-        self.assertIn("&lt;x&gt;", text)
+        # Title is derived from fallback, not the command; no command in render
+        self.assertNotIn("<x>", text)
 
     # -- title truncation -------------------------------------------------
 
@@ -420,7 +450,9 @@ class TestTraceBuilder(unittest.TestCase):
             "name": "bash", "arguments": '{"command": "git status"}',
         }})
         text = tree.render(1)
-        self.assertIn("git status", text)
+        # Compact render: title is fallback (Running 1 command), no command detail
+        self.assertIn("Running", text)
+        self.assertNotIn("git status", text)
 
     def test_message_end_applies_authoritative_content(self):
         """Non-streaming providers only emit message_start/message_end."""
@@ -465,9 +497,8 @@ class TestTraceBuilder(unittest.TestCase):
         }})
         text = tree.render(1)
         self.assertIn("New", text)
-        # Both steps visible in the tree (matching TUI trace)
+        # Both steps visible (compact render still shows all steps)
         self.assertIn("Old", text)
-        self.assertIn("2 steps", text)
 
     # -- agent_end fails pending ------------------------------------------
 
@@ -481,8 +512,7 @@ class TestTraceBuilder(unittest.TestCase):
         # Don't complete the tool — agent_end should mark it failed
         tree.on_agent_end()
         text = tree.render(1)
-        self.assertIn("failed", text)
-        self.assertIn("×", text)
+        self.assertIn("×", text)  # failed step glyph
 
     # -- markdown stripping in titles -------------------------------------
 
