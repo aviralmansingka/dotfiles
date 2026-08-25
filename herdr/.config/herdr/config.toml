@@ -33,6 +33,9 @@ focus_pane_left = "prefix+h"
 focus_pane_down = "prefix+j"
 focus_pane_up = "prefix+k"
 focus_pane_right = "prefix+l"
+# tmux parity: prefix+. toggles focus to the last pane (back-and-forth between
+# agent and nvim). Stays zoomed when zoomed, just swaps the zoomed pane.
+last_pane = "prefix+."
 split_vertical = "prefix+|"
 split_horizontal = "prefix+minus"
 
