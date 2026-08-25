@@ -419,6 +419,22 @@ function summaryParts(step: WorkStep, now: number): SummaryPart[] {
     return parts;
   }
 
+  if (calls.length === 1 && calls[0].name === "bash") {
+    const command =
+      asString(calls[0].arguments.command)?.split("\n")[0].trim() ?? "";
+    if (command.length > 0) {
+      const [head, ...rest] = command.split(/\s+/);
+      parts.push({ text: "$ ", role: "prompt" });
+      parts.push({ text: head, role: "strong" });
+      if (rest.length > 0)
+        parts.push({ text: ` ${rest.join(" ")}`, role: "plain" });
+    } else {
+      add({ text: "1 command", role: "strong" });
+    }
+    add(outcomePart(step, "completed", now));
+    return parts;
+  }
+
   if (calls.every(isCheckCommand)) {
     add({ text: plural(calls.length, "check"), role: "strong" });
     add(outcomePart(step, "passed", now));
@@ -426,21 +442,7 @@ function summaryParts(step: WorkStep, now: number): SummaryPart[] {
   }
 
   if (calls.every((call) => call.name === "bash")) {
-    if (calls.length === 1) {
-      const command =
-        asString(calls[0].arguments.command)?.split("\n")[0].trim() ?? "";
-      if (command.length > 0) {
-        const [head, ...rest] = command.split(/\s+/);
-        parts.push({ text: "$ ", role: "prompt" });
-        parts.push({ text: head, role: "strong" });
-        if (rest.length > 0)
-          parts.push({ text: ` ${rest.join(" ")}`, role: "plain" });
-      } else {
-        add({ text: "1 command", role: "strong" });
-      }
-    } else {
-      add({ text: plural(calls.length, "command"), role: "strong" });
-    }
+    add({ text: plural(calls.length, "command"), role: "strong" });
     add(outcomePart(step, "completed", now));
     return parts;
   }
@@ -1738,6 +1740,21 @@ export default async function (pi: ExtensionAPI) {
       const step = bindToolComponent(component, state);
       if (step) ensureConnectedBridge(component, step, state);
       if (step && component.toolName !== "subagent") {
+        if (component.executionStarted) {
+          const toolCall = step.toolCalls.find(
+            (call) => call.id === asString(component.toolCallId),
+          );
+          if (
+            toolCall &&
+            !finiteNumber(toolCall.startedAt) &&
+            !state.restoredToolCallIds.has(toolCall.id)
+          ) {
+            const now = resolveConnectedClock()();
+            toolCall.startedAt = now;
+            const current = step.startedAt;
+            if (!finiteNumber(current) || now < current) step.startedAt = now;
+          }
+        }
         if (status(step) === "pending" && finiteNumber(step.startedAt)) {
           state.scheduler.arm(component, ensurePlainBridge(component, state));
         } else {
