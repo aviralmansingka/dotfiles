@@ -273,6 +273,72 @@ def _is_check_command(tool_call: ToolCall) -> bool:
     return bool(re.search(r"(?:^|[\s/.-])(?:test|tests|verify|check|lint|typecheck|tsc)(?:[\s/.-]|$)", command, re.IGNORECASE))
 
 
+_COMMAND_SUMMARIES: dict[str, str] = {
+    "ls": "Listing files", "find": "Finding files", "grep": "Searching text",
+    "rg": "Searching text", "cat": "Reading file", "head": "Reading file",
+    "tail": "Reading file", "wc": "Counting", "diff": "Comparing files",
+    "mkdir": "Creating directory", "rm": "Removing files", "cp": "Copying files",
+    "mv": "Moving files", "ln": "Linking files", "chmod": "Changing permissions",
+    "touch": "Creating file", "tar": "Archiving", "zip": "Compressing",
+    "unzip": "Extracting", "echo": "Printing", "curl": "Fetching URL",
+    "wget": "Downloading", "ssh": "Connecting via SSH", "scp": "Copying via SSH",
+    "rsync": "Syncing files", "ping": "Pinging host", "docker": "Running Docker",
+    "kubectl": "Running kubectl", "systemctl": "Managing service",
+    "journalctl": "Reading logs", "git": "Git operation", "gh": "GitHub operation",
+    "npm": "Running npm", "npx": "Running npx", "yarn": "Running yarn",
+    "pnpm": "Running pnpm", "bun": "Running bun", "node": "Running Node",
+    "python": "Running Python", "python3": "Running Python", "pip": "Running pip",
+    "uv": "Running uv", "pytest": "Running tests", "jest": "Running tests",
+    "vitest": "Running tests", "cargo": "Running Cargo", "go": "Running Go",
+    "make": "Building", "brew": "Running Homebrew", "stow": "Running stow",
+    "nix": "Running Nix", "nixos-rebuild": "Rebuilding NixOS",
+    "apt": "Managing packages", "apt-get": "Managing packages",
+    "ffmpeg": "Processing media", "ps": "Listing processes",
+    "kill": "Killing process", "df": "Checking disk", "du": "Checking disk usage",
+    "free": "Checking memory", "date": "Checking date",
+    "hostname": "Checking hostname", "uname": "Checking system",
+    "whoami": "Checking user", "pwd": "Checking directory",
+    "cd": "Changing directory", "which": "Finding command",
+    "test": "Testing condition", "true": "No-op", "false": "No-op",
+}
+
+_SUBCOMMAND_TOOLS = {"git", "npm", "npx", "yarn", "pnpm", "docker", "kubectl", "systemctl", "service", "apt", "apt-get", "brew", "cargo", "go", "uv", "pip", "pip3", "gh"}
+
+
+def _summarize_command(command: str) -> str:
+    """Describe a bash command's intent for use as a step title."""
+    cmd = command.strip().split("\n")[0].strip()
+    if not cmd:
+        return "Running command"
+    parts = cmd.split()
+    # Strip env var assignments and common prefixes.
+    while parts and ("=" in parts[0] or parts[0] in ("sudo", "env", "time", "nohup", "exec", "bash", "sh", "source")):
+        parts = parts[1:]
+    if not parts:
+        return "Running command"
+    base = parts[0].rsplit("/", 1)[-1]
+    positional = [a for a in parts[1:] if not a.startswith("-")]
+    summary = _COMMAND_SUMMARIES.get(base)
+    # Subcommand tools (git, npm, etc.) read better as "git status" than
+    # "Git operation status" — prefer the subcommand form when available.
+    if base in _SUBCOMMAND_TOOLS and positional:
+        sub = positional[0]
+        if len(sub) <= TITLE_MAX:
+            return f"{base} {sub}"
+    if summary:
+        if positional:
+            subject = positional[0].rsplit("/", 1)[-1]
+            combined = f"{summary} {subject}".strip()
+            if len(combined) <= TITLE_MAX:
+                return combined
+        return summary
+    if base in _SUBCOMMAND_TOOLS and positional:
+        sub = positional[0]
+        if len(sub) <= TITLE_MAX:
+            return f"{base} {sub}"
+    return base[:TITLE_MAX] if base else "Running command"
+
+
 def _fallback_title(tool_calls: list[ToolCall]) -> str:
     targets = _unique_targets(tool_calls)
     target = _format_targets(targets)
@@ -284,7 +350,8 @@ def _fallback_title(tool_calls: list[ToolCall]) -> str:
     if all(_is_check_command(tc) for tc in tool_calls):
         return "Running checks"
     if all(n == "bash" for n in names):
-        return f"Running {_plural(len(tool_calls), 'command')}"
+        first_cmd = _as_str(tool_calls[0].arguments.get("command")) or ""
+        return _summarize_command(first_cmd)
     if target:
         return f"Working with {target}"
     return f"Using {', '.join(_group_tools(tool_calls))}"

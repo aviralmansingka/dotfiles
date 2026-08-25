@@ -146,8 +146,8 @@ class TestTraceBuilder(unittest.TestCase):
             {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo hello"}},
         ]})
         text = tree.render(1)
-        self.assertIn("Running", text)
-        self.assertIn("command", text)
+        # Fallback title summarizes the command intent
+        self.assertIn("Printing", text)
         # Compact render: no tool summary line
         self.assertNotIn("$ echo hello", text)
 
@@ -450,9 +450,9 @@ class TestTraceBuilder(unittest.TestCase):
             "name": "bash", "arguments": '{"command": "git status"}',
         }})
         text = tree.render(1)
-        # Compact render: title is fallback (Running 1 command), no command detail
-        self.assertIn("Running", text)
-        self.assertNotIn("git status", text)
+        # Fallback title summarizes: git status → "Git status"
+        self.assertIn("git status", text)
+        self.assertNotIn("$ git status", text)
 
     def test_message_end_applies_authoritative_content(self):
         """Non-streaming providers only emit message_start/message_end."""
