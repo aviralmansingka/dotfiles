@@ -780,7 +780,11 @@ function renderThinkingDraft(
       `   ${theme.fg("borderMuted", connector)} ${theme.fg("muted", "•")} ${theme.fg("muted", thought)}`,
     );
   }
-  return lines.map((line) => truncateToWidth(line, width));
+  // Title line (index 1) is truncated only by truncateTitle (title length),
+  // not by the line-width pass, so a <=40-char title always shows in full.
+  return lines.map((line, index) =>
+    index === 1 ? line : truncateToWidth(line, width),
+  );
 }
 
 function renderThinkingStep(
@@ -802,7 +806,11 @@ function renderThinkingStep(
       `   ${theme.fg("borderMuted", connector)} ${theme.fg("muted", "•")} ${theme.fg("muted", thought)}`,
     );
   }
-  return lines.map((line) => truncateToWidth(line, width));
+  // Title line (index 1) is truncated only by truncateTitle (title length),
+  // not by the line-width pass, so a <=40-char title always shows in full.
+  return lines.map((line, index) =>
+    index === 1 ? line : truncateToWidth(line, width),
+  );
 }
 
 class WorkStepRow {
@@ -813,6 +821,7 @@ class WorkStepRow {
 
   render(width: number): string[] {
     const lines: string[] = [];
+    const titleLines = new Set<number>();
     const groups = renderedGroups(this.step.run);
     for (const [groupIndex, steps] of groups.entries()) {
       lines.push(renderActivityHeader(this.theme, steps));
@@ -837,6 +846,7 @@ class WorkStepRow {
         lines.push(
           ` ├─ ${mergedGlyph} ${this.theme.fg("text", this.theme.bold(mergedTitle))}`,
         );
+        titleLines.add(lines.length - 1);
         for (const [stepIndex, step] of steps.entries()) {
           const currentStatus = status(step);
           const toolGlyph =
@@ -879,6 +889,7 @@ class WorkStepRow {
         lines.push(
           ` ${outer} ${stepGlyph} ${this.theme.fg("text", this.theme.bold(truncateTitle(step.title)))}`,
         );
+        titleLines.add(lines.length - 1);
         if (step.thinking.length > 0) {
           for (const [thoughtIndex, thought] of step.thinking.entries()) {
             const finalThought = thoughtIndex === step.thinking.length - 1;
@@ -924,7 +935,12 @@ class WorkStepRow {
       }
       if (groupIndex < groups.length - 1) lines.push("");
     }
-    return lines.map((line) => truncateToWidth(line, width));
+    // Title lines are truncated only by truncateTitle (title length, 40),
+    // not by the line-width pass, so a <=40-char title always shows in full
+    // even when the pane is narrow.
+    return lines.map((line, index) =>
+      titleLines.has(index) ? line : truncateToWidth(line, width),
+    );
   }
 }
 
