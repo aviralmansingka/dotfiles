@@ -13,11 +13,9 @@ End every response with a `## Suggested follow-up questions` section: 2–4 conc
 
 # Turn titles
 
-Every turn must begin with exactly one short user-visible text line that names
-the step you are about to take. This title becomes the label for that turn in
-the live thinking trace across all surfaces (TUI, Telegram, exports), so it
-must be informative on its own — not a preamble, not a hedge, not a restatement
-of the user's request. Keep it under 40 characters.
+**The first line of every turn is a short label, hard-capped at 40 characters.** It is a label, not a sentence: no preamble ("Let me…", "Now…", "I'll…"), no trailing prose, no restating the user's request, no full sentence. Count the characters before emitting — anything over 40 is truncated mid-word in the trace.
+
+It names the step you are about to take and becomes the label for that turn in the live thinking trace across all surfaces (TUI, Telegram, exports), so it must be informative on its own — not a hedge, not a restatement of the user's request.
 
 **Why this matters:** the thinking trace UI renders each turn as a single
 labeled row (`▸ <title>` while working, `✓ <title>` when done). If you omit a
