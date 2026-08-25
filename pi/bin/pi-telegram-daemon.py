@@ -35,7 +35,7 @@ HOME = Path.home()
 DEFAULT_STATE = HOME / ".pi/agent/pi-telegram-state.json"
 DEFAULT_PI = "pi"
 DEFAULT_CWD = HOME / "vault"
-DEFAULT_MODEL = "openai-codex/gpt-5.5"
+DEFAULT_MODEL = "openai-codex/gpt-5.6-luna:high"
 
 BOT_TOKEN = os.environ.get("PI_TELEGRAM_BOT_TOKEN", "").strip()
 API_BASE = os.environ.get("PI_TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/")
