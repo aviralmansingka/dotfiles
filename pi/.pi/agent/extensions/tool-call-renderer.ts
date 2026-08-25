@@ -517,9 +517,8 @@ function summaryParts(step: WorkStep, now: number): SummaryPart[] {
   return parts;
 }
 
-function renderSummary(theme: Theme, step: WorkStep): string {
-  const now = resolveConnectedClock()();
-  return summaryParts(step, now)
+function renderParts(theme: Theme, parts: SummaryPart[]): string {
+  return parts
     .map((part) => {
       if (part.role === "detail") return theme.fg("muted", part.text);
       if (part.role === "plain" || part.role === "arg")
@@ -534,6 +533,45 @@ function renderSummary(theme: Theme, step: WorkStep): string {
       return theme.fg(color, theme.bold(part.text));
     })
     .join("");
+}
+
+function callOutcomePart(
+  call: ToolCall,
+  step: WorkStep,
+  now: number,
+): SummaryPart {
+  if (step.failed && !step.completedToolCallIds.has(call.id))
+    return { text: "failed", role: "error" };
+  if (step.completedToolCallIds.has(call.id))
+    return { text: "completed", role: "success" };
+  if (finiteNumber(call.startedAt)) {
+    const elapsed = Math.max(0, now - call.startedAt);
+    return { text: `running ${formatElapsed(elapsed)}`, role: "warning" };
+  }
+  return { text: "running", role: "warning" };
+}
+
+function bashCallSummary(
+  call: ToolCall,
+  step: WorkStep,
+  now: number,
+): SummaryPart[] {
+  const parts: SummaryPart[] = [{ text: "$ ", role: "prompt" }];
+  const command =
+    asString(call.arguments.command)?.split("\n")[0].trim() ?? "";
+  if (command.length > 0) {
+    parts.push(...commandParts(command));
+  } else {
+    parts.push({ text: "1 command", role: "strong" });
+  }
+  parts.push({ text: " · ", role: "detail" });
+  parts.push(callOutcomePart(call, step, now));
+  return parts;
+}
+
+function renderSummary(theme: Theme, step: WorkStep): string {
+  const now = resolveConnectedClock()();
+  return renderParts(theme, summaryParts(step, now));
 }
 
 function renderedGroups(run: ActivityRun): WorkStep[][] {
@@ -851,8 +889,38 @@ class WorkStepRow {
             );
           }
         }
-        if (step.toolCalls.length > 0)
-          lines.push(` ${rail}${inner} ${toolGlyph} ${renderSummary(this.theme, step)}`);
+        if (step.toolCalls.length > 0) {
+          const allBash = step.toolCalls.every((call) => call.name === "bash");
+          if (allBash && step.toolCalls.length > 1) {
+            const now = resolveConnectedClock()();
+            for (const [callIndex, call] of step.toolCalls.entries()) {
+              const finalCall = callIndex === step.toolCalls.length - 1;
+              const callStatus =
+                step.failed && !step.completedToolCallIds.has(call.id)
+                  ? "failure"
+                  : step.completedToolCallIds.has(call.id)
+                    ? "success"
+                    : "pending";
+              const callGlyph =
+                callStatus === "pending"
+                  ? this.theme.fg("accent", "◇")
+                  : callStatus === "failure"
+                    ? this.theme.fg("error", "×")
+                    : this.theme.fg("success", "◆");
+              const callInner = this.theme.fg(
+                "borderMuted",
+                finalCall ? "└─" : "├─",
+              );
+              lines.push(
+                ` ${rail}${callInner} ${callGlyph} ${renderParts(this.theme, bashCallSummary(call, step, now))}`,
+              );
+            }
+          } else {
+            lines.push(
+              ` ${rail}${inner} ${toolGlyph} ${renderSummary(this.theme, step)}`,
+            );
+          }
+        }
       }
       if (groupIndex < groups.length - 1) lines.push("");
     }
