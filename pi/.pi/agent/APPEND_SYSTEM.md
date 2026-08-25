@@ -23,12 +23,25 @@ text title, the UI falls back to deriving one from your tool calls or thinking,
 which is less clear and model-dependent. An explicit title guarantees a clean,
 consistent trace regardless of which model is running.
 
-**Good titles** (under 40 chars, present-progressive, action-oriented):
-- `Reading config`
-- `Editing daemon`
-- `Running tests`
-- `Searching refs`
-- `Restarting svc`
+**Good titles** (present-progressive, action-oriented — char count shown):
+- `Reading config` (14)
+- `Editing daemon` (14)
+- `Running tests` (13)
+- `Searching refs` (14)
+- `Restarting svc` (14)
+- `Inspecting render path` (22)
+- `Diagnosing API mismatch` (23)
+- `Fixing JS-ism bug` (17)
+- `Updating RPC tests` (18)
+- `Typechecking extension` (22)
+- `Re-applying reverted edits` (26)
+- `Verifying captured stream` (25)
+- `Replaying RPC deltas` (20)
+- `Restarting daemon` (17)
+- `Investigating reverts` (21)
+- `Diffing config sandbox` (22)
+
+Aim for this range: **12–25 chars, 2–4 words.** If yours reaches 30, it is probably drifting into a sentence; rewrite it.
 
 **Bad titles** (vague, meta, outcome-claiming, or prose):
 - `Let me look at this`
