@@ -361,7 +361,10 @@ node - "$main_raw" "$missing_raw" "$resumed_raw" <<'NODE'
 const fs = require("node:fs");
 
 const [mainPath, missingPath, resumedPath] = process.argv.slice(2);
-const activeGlyph = "◉";
+const titleActiveGlyph = "▹";
+const titleDoneGlyph = "▸";
+const toolActiveGlyph = "◇";
+const toolDoneGlyph = "◆";
 const accentForeground = "rgb:242,133,52";
 const textForeground = "rgb:235,219,178";
 const mutedForeground = "rgb:146,131,116";
@@ -449,7 +452,7 @@ function escapeRegExp(value) {
 
 function rowsFor(terminal, summary) {
 	const pattern = new RegExp(
-		` (?:(├─|└─) )?([●×${activeGlyph}]) ([^\\r\\n]+)\\r*\\n ((?:│  |   )?)(└─) ([●×${activeGlyph}]) (${escapeRegExp(summary)})`,
+		` (?:(├─|└─) )?([▸▹×]) ([^\\r\\n]+)\\r*\\n ((?:│  |   )?)(└─) ([◇◆×]) (${escapeRegExp(summary)})`,
 		"gu",
 	);
 	return Array.from(terminal.plain.matchAll(pattern), (match) => ({
@@ -469,7 +472,7 @@ function rowsFor(terminal, summary) {
 
 function thinkingRowsFor(terminal, summary) {
 	const pattern = new RegExp(
-		` (├─|└─) ([●×${activeGlyph}]) ([^\\r\\n]+)\\r*\\n((?: (?:│  |   )├─ • [^\\r\\n]+\\r*\\n)+) ((?:│  |   ))└─ ([●×${activeGlyph}]) (${escapeRegExp(summary)})`,
+		` (├─|└─) ([▸▹×]) ([^\\r\\n]+)\\r*\\n((?: (?:│  |   )├─ • [^\\r\\n]+\\r*\\n)+) ((?:│  |   ))└─ ([◇◆×]) (${escapeRegExp(summary)})`,
 		"gu",
 	);
 	return Array.from(terminal.plain.matchAll(pattern), (match) => {
@@ -541,11 +544,11 @@ function colorsFor(terminal, text, index) {
 
 function assertForeground(terminal, row) {
 	const expectedGlyph =
-		row.glyph === activeGlyph
+		row.glyph === titleActiveGlyph
 			? accentForeground
 			: row.glyph === "×"
 				? errorForeground
-				: successForeground;
+				: mutedForeground;
 	const titleColors = new Set(
 		Array.from({ length: row.title.length }, (_, index) => row.titleIndex + index)
 			.filter((index) => !/\s/u.test(terminal.plain[index]))
@@ -565,7 +568,7 @@ function assertForeground(terminal, row) {
 			`Expected connector foreground ${borderForeground}; got ${terminal.foregrounds[row.connectorIndex]}`,
 		);
 	const expectedOutcome =
-		row.glyph === activeGlyph
+		row.glyph === titleActiveGlyph
 			? warningForeground
 			: row.glyph === "×"
 				? errorForeground
@@ -584,13 +587,19 @@ function assertForeground(terminal, row) {
 }
 
 function assertThinkingForeground(terminal, row) {
-	const expectedResult =
-		row.glyph === activeGlyph
+	const expectedTool =
+		row.glyph === toolActiveGlyph
 			? accentForeground
 			: row.glyph === "×"
 				? errorForeground
 				: successForeground;
-	if (terminal.foregrounds[row.titleGlyphIndex] !== expectedResult)
+	const expectedTitle =
+		row.glyph === toolActiveGlyph
+			? accentForeground
+			: row.glyph === "×"
+				? errorForeground
+				: mutedForeground;
+	if (terminal.foregrounds[row.titleGlyphIndex] !== expectedTitle)
 		fail(`Expected semantic activity glyph; got ${terminal.foregrounds[row.titleGlyphIndex]}`);
 	const titleColors = colorsFor(terminal, row.title, row.titleIndex);
 	if (titleColors.size !== 1 || !titleColors.has(textForeground))
@@ -616,8 +625,8 @@ function assertThinkingForeground(terminal, row) {
 	}
 	if (terminal.foregrounds[row.connectorIndex] !== borderForeground)
 		fail(`Expected result connector foreground ${borderForeground}`);
-	if (terminal.foregrounds[row.resultGlyphIndex] !== expectedResult)
-		fail(`Expected result glyph foreground ${expectedResult}`);
+	if (terminal.foregrounds[row.resultGlyphIndex] !== expectedTool)
+		fail(`Expected result glyph foreground ${expectedTool}`);
 }
 
 function assertHeaderRail(terminal) {
@@ -658,13 +667,13 @@ if (main.plain.includes("NON_TOOL_THINKING_SENTINEL"))
 	fail("Native thinking leaked outside the prompt-owned activity");
 if (main.plain.includes("⋯"))
 	fail("The removed ellipsis marker is still rendered");
-if (!/│  1 step · 0 calls · all passed[\s\S]*└─ ● Preparing response[\s\S]*└─ • NONTOOLTHINKINGSENTINEL/u.test(main.plain))
+if (!/│  1 step · 0 calls · all passed[\s\S]*└─ ▸ Preparing response[\s\S]*└─ • NONTOOLTHINKINGSENTINEL/u.test(main.plain))
 	fail("A thinking-only response did not create its own prompt-scoped activity");
 const resumedPrompt = resumed.plain.lastIndexOf("resumed activity");
 const resumedMarker = resumed.plain.indexOf("│  ", resumedPrompt);
 if (resumedPrompt < 0 || resumedMarker < 0)
 	fail("A resumed session did not render the activity rail for its new agent turn");
-const draftMarker = main.plain.indexOf("◉ Run grouped verification");
+const draftMarker = main.plain.indexOf("▹ Run grouped verification");
 const settledHeader = main.plain.indexOf("│  1 step · 2 calls", draftMarker);
 if (draftMarker < 0 || settledHeader < 0)
 	fail("Thinking step did not transition from the standalone orange dot to the tool-owned timeline");
@@ -700,28 +709,28 @@ const restoreFailureSummary = "1 call · noisy_verify_tool · failed";
 const noTitleSummary = "1 call · noisy_verify_tool · completed";
 const pendingSummary = "2 calls · noisy_verify_tool ×2 · running";
 
-const pending = requireThinkingRow(main, pendingSummary, activeGlyph, "Run grouped verification", "└─");
-const same = requireThinkingRow(main, sameSummary, "●", "Run grouped verification", "├─");
+const pending = requireThinkingRow(main, pendingSummary, toolActiveGlyph, "Run grouped verification", "└─");
+const same = requireThinkingRow(main, sameSummary, toolDoneGlyph, "Run grouped verification", "├─");
 const sameFollowup = requireThinkingRow(
 	main,
 	sameFollowupSummary,
-	"●",
+	toolDoneGlyph,
 	"Continue grouped verification",
 	"├─",
 );
 const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─", "└─");
-const noTitle = requireThinkingRow(main, noTitleSummary, "●", "Thinking", "└─");
+const noTitle = requireThinkingRow(main, noTitleSummary, toolDoneGlyph, "Thinking", "└─");
 const restoredSource = requireThinkingRow(
 	main,
 	restoreSuccessSummary,
-	"●",
+	toolDoneGlyph,
 	"Reconcile persisted tool result",
 	"└─",
 );
 const afterReload = requireThinkingRow(
 	main,
 	restoreSuccessSummary,
-	"●",
+	toolDoneGlyph,
 	"Run post-reload verification",
 	"└─",
 );
@@ -731,14 +740,14 @@ for (const row of [pending, same, sameFollowup, noTitle, restoredSource, afterRe
 	assertThinkingForeground(main, row);
 assertHeaderRail(main);
 const nestedSteps = new RegExp(
-	`${escapeRegExp(sameSummary)}\r*\n ├─ ● Continue grouped verification`,
+	`${escapeRegExp(sameSummary)}\r*\n ├─ ▸ Continue grouped verification`,
 	"u",
 );
 if (!nestedSteps.test(main.plain)) fail("Continuous steps do not form a compact inner timeline");
 if (same.rail !== "│  " || sameFollowup.rail !== "│  ")
 	fail("Nested timeline rails do not connect and terminate correctly");
 const responseThinking = new RegExp(
-	`${escapeRegExp(sameFollowupSummary)}\\r*\\n └─ ● Preparing response\\r*\\n    └─ • Prepare grouped verification response`,
+	`${escapeRegExp(sameFollowupSummary)}\\r*\\n └─ ▸ Preparing response\\r*\\n    └─ • Prepare grouped verification response`,
 	"u",
 );
 if (!responseThinking.test(main.plain))
@@ -753,13 +762,13 @@ for (const header of [
 ])
 	if (!missing.plain.includes(header)) fail(`Restored prompt-scoped timeline header is incorrect: ${header}`);
 const sameHeader = missing.plain.indexOf("│  3 steps · 6 calls · all passed");
-const sameFirst = missing.plain.indexOf("├─ ● Run grouped verification", sameHeader);
-const sameSecond = missing.plain.indexOf("├─ ● Continue grouped verification", sameFirst);
-const sameResponse = missing.plain.indexOf("└─ ● Preparing response", sameSecond);
+const sameFirst = missing.plain.indexOf("├─ ▸ Run grouped verification", sameHeader);
+const sameSecond = missing.plain.indexOf("├─ ▸ Continue grouped verification", sameFirst);
+const sameResponse = missing.plain.indexOf("└─ ▸ Preparing response", sameSecond);
 const mixedHeader = missing.plain.indexOf("│  1 step · 2 calls · failed", sameResponse);
 const mixedStep = missing.plain.indexOf("└─ × Working with settings.json", mixedHeader);
 const noTitleHeader = missing.plain.indexOf("│  1 step · 1 call · all passed", mixedStep);
-const noTitleStep = missing.plain.indexOf("└─ ● Thinking", noTitleHeader);
+const noTitleStep = missing.plain.indexOf("└─ ▸ Thinking", noTitleHeader);
 const restoreHeader = missing.plain.indexOf("│  1 step · 1 call · failed", noTitleStep);
 const restoreStep = missing.plain.indexOf("└─ × Reconcile persisted tool result", restoreHeader);
 const restoredOrder = [
@@ -782,7 +791,7 @@ const missingRows = thinkingRowsFor(missing, restoreFailureSummary).filter(
 	(row) => row.title === "Reconcile persisted tool result",
 );
 if (missingRows.length === 0) fail("Missing restored work step was not rendered");
-if (missingRows.some((row) => row.glyph === "●"))
+if (missingRows.some((row) => row.glyph === toolDoneGlyph))
 	fail("Restored work step without a matching tool result was rendered as successful");
 const missingFailure = missingRows.find((row) => row.glyph === "×");
 if (!missingFailure) fail("Restored work step without a matching tool result was not marked failed");
@@ -865,7 +874,7 @@ function fail(message) {
 
 function indexOfRow(title) {
 	const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	return terminal.search(new RegExp(`^.*[●×◉] ${escaped}$`, "mu"));
+	return terminal.search(new RegExp(`^.*[▸▹◇◆×] ${escaped}$`, "mu"));
 }
 
 for (const [prompt, title] of [
@@ -881,7 +890,7 @@ for (const [prompt, title] of [
 }
 
 const draftLines = draft.split("\n");
-const draftTitle = draftLines.findLastIndex((line) => line.includes("◉ Thinking"));
+const draftTitle = draftLines.findLastIndex((line) => line.includes("▹ Thinking"));
 if (draftTitle < 1 || draftLines[draftTitle - 1].trim() !== "")
 	fail("Current thinking did not leave one blank line after the previous activity");
 if (draft.includes("⋯"))
@@ -889,16 +898,16 @@ if (draft.includes("⋯"))
 
 const promotedTitleLines = terminal
 	.split("\n")
-	.filter((line) => line.includes("● Run grouped verification"));
+	.filter((line) => line.includes("▸ Run grouped verification"));
 if (promotedTitleLines.length !== 1)
 	fail(`Promoted title rendered ${promotedTitleLines.length} times in the settled terminal`);
-if (!pending.includes("◉ Run grouped verification"))
+if (!pending.includes("▹ Run grouped verification"))
 	fail("Live activity did not promote thinking into a running agent step");
-if (!pending.includes("◉ 2 calls · noisy_verify_tool ×2 · running"))
+if (!pending.includes("◇ 2 calls · noisy_verify_tool ×2 · running"))
 	fail("Tool calls were not visible while they were running");
-if (!narrow.includes("● Thinking"))
+if (!narrow.includes("▸ Thinking"))
 	fail("Narrow terminal lost the no-title agent step");
-if (!narrow.includes("└─ ● 1 call"))
+if (!narrow.includes("└─ ◆ 1 call"))
 	fail("Narrow terminal broke or lost the final result rail");
 const overflowing = narrow.split("\n").find((line) => [...line.replace(/\r$/, "")].length > 38);
 if (overflowing) fail(`Narrow terminal overflowed 38 columns: ${overflowing}`);
@@ -1511,7 +1520,7 @@ check(
 		),
 	"T21 running parent lost its approved Activity line, connected title, or dynamic timer",
 );
-check(collapsed.plain.includes("● Delegate deterministic subagent verification"), "T21 parent Activity disappeared after subagent completion");
+check(collapsed.plain.includes("◆ Delegate deterministic subagent verification"), "T21 parent Activity disappeared after subagent completion");
 for (const [state, terminal, status] of [
 	["running-live", running, "running"],
 	["running-output-restored", runningOutputRestored, "running"],
@@ -2139,7 +2148,7 @@ log_user 0
 log_file -a -noappend $env(PI_VERIFY_LIVE_RAW)
 spawn pi --offline --approve --no-session --model $env(PI_VERIFY_MODEL) $env(PI_VERIFY_PROMPT)
 expect {
-  -re {◉[^\r\n]+} {}
+  -re {▹[^\r\n]+} {}
   timeout { exit 124 }
 }
 close
