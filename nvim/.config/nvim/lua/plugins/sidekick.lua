@@ -149,9 +149,11 @@ return {
       end,
       desc = "Ask: yank answer on current line",
     },
-    -- <leader>at is intentionally NOT bound here: it is overridden in
-    -- plugins/herdr-agent.lua to send the buffer/selection to the agent pane in
-    -- the same Herdr tab instead of sidekick's floating CLI terminal.
+    -- <leader>at and <leader>tt are intentionally NOT bound here: they are
+    -- overridden in plugins/herdr-agent.lua. <leader>at sends to the agent pane
+    -- in the same Herdr tab, falling back to sidekick's "Send This" stack
+    -- (require("sidekick.cli").send({ msg = "{this}" })) when no agent pane
+    -- shares the tab. <leader>tt sends to the terminal pane in the same tab.
     {
       "<leader>av",
       function()

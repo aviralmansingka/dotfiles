@@ -95,7 +95,7 @@ end
 ---@param bufnr integer
 ---@return integer start_line 1-indexed inclusive
 ---@return integer end_line 1-indexed inclusive
-local function visual_range(bufnr)
+function M.visual_range(bufnr)
   local mode = vim.fn.mode()
   local first, last
   if mode == "v" or mode == "V" or mode == "\22" then
@@ -123,7 +123,7 @@ function M.build_payload(bufnr, visual)
   local label = name ~= "" and vim.fn.fnamemodify(name, ":~:.") or "[No Name]"
   local first, last
   if visual then
-    first, last = visual_range(bufnr)
+    first, last = M.visual_range(bufnr)
   else
     first, last = 1, vim.api.nvim_buf_line_count(bufnr)
   end
@@ -143,13 +143,18 @@ function M.build_payload(bufnr, visual)
   return text, label
 end
 
----@param opts? { visual?: boolean, bufnr?: integer }
+---@param opts? { visual?: boolean, bufnr?: integer, fallback?: fun():boolean }
 ---@return boolean sent
 function M.send(opts)
   opts = opts or {}
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
   local pane, err = M.resolve_target()
   if not pane then
+    -- When no agent pane shares this tab, hand off to the caller's fallback
+    -- (e.g. the original sidekick "Send This" stack) instead of warning.
+    if opts.fallback then
+      return opts.fallback() == true
+    end
     notify(err or "No agent pane found in this tab")
     return false
   end
