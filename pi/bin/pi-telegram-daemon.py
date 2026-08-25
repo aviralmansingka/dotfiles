@@ -122,6 +122,8 @@ def _strip_markdown(text: str) -> str:
     Telegram HTML mode doesn't parse markdown, so raw **bold** or `code`
     in thinking text renders as literal asterisks/backticks.
     """
+    text = re.sub(r"^\s{0,3}```+[^\n]*$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^\s{0,3}#{1,6}\s+", "", text, flags=re.MULTILINE)
     text = re.sub(r"\*{1,3}([^*\n]+)\*{1,3}", r"\1", text)
     text = re.sub(r"`([^`\n]+)`", r"\1", text)
     text = re.sub(r"\s+", " ", text).strip()
@@ -384,6 +386,15 @@ def _derive_tool_label(tool_calls: list[dict[str, Any]]) -> str:
     return "working…"
 
 
+def _try_json_object(raw: str) -> Optional[dict[str, Any]]:
+    """Parse a JSON object, tolerating the partial fragments seen mid-stream."""
+    try:
+        parsed = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def _clean_thinking_label(raw: str) -> str:
     """Extract a clean, short label from a thinking block.
 
@@ -423,15 +434,81 @@ class ThinkingTreeBuilder:
     3. Cleaned first thinking sentence — when only thinking blocks are present.
     4. "working…" — last resort.
 
-    The partial.content array from message_update is cumulative, so we
-    replace (not append) on each update.
+    The RPC stream sends deltas without a cumulative snapshot, so this class
+    reassembles the in-flight assistant message from `contentIndex`-keyed
+    blocks (see docs/rpc.md "message_update (Streaming)") and re-derives the
+    label on every delta.
     """
 
     def __init__(self) -> None:
         self.goals: list[dict[str, Any]] = []
+        self.blocks: dict[int, dict[str, Any]] = {}
 
     def on_turn_start(self) -> None:
+        self.blocks = {}
         self.goals.append({"label": "working…", "traces": [], "tool_calls": [], "done": False})
+
+    def on_message_start(self, message: dict[str, Any]) -> None:
+        """Reset the block buffer when a new assistant message begins.
+
+        Ignores user/toolResult messages, which also emit message_start.
+        """
+        if (message.get("role") or "assistant") == "assistant":
+            self.blocks = {}
+
+    def on_message_end(self, message: dict[str, Any]) -> None:
+        """Apply the authoritative final content of an assistant message.
+
+        Providers that do not stream deltas only produce message_start /
+        message_end, so this is the fallback that keeps labels correct.
+        """
+        if (message.get("role") or "assistant") != "assistant":
+            return
+        content = message.get("content") or []
+        if not content:
+            return
+        self.blocks = {i: dict(block) for i, block in enumerate(content) if isinstance(block, dict)}
+        self.on_message_update(self._content())
+
+    def _content(self) -> list[dict[str, Any]]:
+        return [self.blocks[i] for i in sorted(self.blocks)]
+
+    def on_assistant_event(self, ame: dict[str, Any]) -> None:
+        """Fold one streaming delta into the in-flight message, then relabel."""
+        et = ame.get("type") or ""
+        idx = ame.get("contentIndex")
+        if not isinstance(idx, int):
+            return
+        if et.startswith("text_"):
+            block = self.blocks.setdefault(idx, {"type": "text", "text": ""})
+            if et == "text_delta":
+                block["text"] = (block.get("text") or "") + (ame.get("delta") or "")
+            elif et == "text_end":
+                block["text"] = ame.get("content") or block.get("text") or ""
+        elif et.startswith("thinking_"):
+            block = self.blocks.setdefault(idx, {"type": "thinking", "thinking": ""})
+            if et == "thinking_delta":
+                block["thinking"] = (block.get("thinking") or "") + (ame.get("delta") or "")
+            elif et == "thinking_end":
+                block["thinking"] = ame.get("content") or block.get("thinking") or ""
+        elif et.startswith("toolcall_"):
+            block = self.blocks.setdefault(idx, {"type": "toolCall", "name": "", "arguments": {}, "raw_args": ""})
+            if et == "toolcall_delta":
+                block["raw_args"] = (block.get("raw_args") or "") + (ame.get("delta") or "")
+                parsed = _try_json_object(block["raw_args"])
+                if parsed is not None:
+                    block["arguments"] = parsed
+            elif et == "toolcall_end":
+                call = ame.get("toolCall") or {}
+                block["name"] = call.get("name") or block.get("name") or ""
+                args = call.get("arguments")
+                if isinstance(args, str):
+                    args = _try_json_object(args)
+                if isinstance(args, dict):
+                    block["arguments"] = args
+        else:
+            return
+        self.on_message_update(self._content())
 
     def on_message_update(self, content: list[dict[str, Any]]) -> None:
         if not self.goals:
@@ -520,13 +597,16 @@ class StatusMessenger:
         if et == "turn_start":
             self.tree.on_turn_start()
             self.dirty = True
+        elif et == "message_start":
+            self.tree.on_message_start(ev.get("message") or {})
         elif et == "message_update":
             ame = ev.get("assistantMessageEvent") or {}
-            partial = ame.get("partial") or {}
-            content = partial.get("content") or []
-            if content:
-                self.tree.on_message_update(content)
+            if ame:
+                self.tree.on_assistant_event(ame)
                 self.dirty = True
+        elif et == "message_end":
+            self.tree.on_message_end(ev.get("message") or {})
+            self.dirty = True
         elif et == "turn_end":
             self.tree.on_turn_end()
             self.dirty = True

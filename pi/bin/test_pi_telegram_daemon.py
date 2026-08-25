@@ -22,6 +22,16 @@ sys.modules["pi_telegram_daemon"] = daemon  # dataclass needs this
 _spec.loader.exec_module(daemon)
 
 
+class TestStripMarkdown(unittest.TestCase):
+    """Telegram HTML mode shows raw markdown literally, so labels are stripped."""
+
+    def test_strips_headings_fences_and_emphasis(self):
+        self.assertEqual(
+            daemon._strip_markdown("## Output\n```sh\nhello\n```\nDone **now** with `x`"),
+            "Output hello Done now with x",
+        )
+
+
 class TestThinkingTreeBuilder(unittest.TestCase):
     """Unit tests for ThinkingTreeBuilder — pure logic, no I/O."""
 
@@ -78,8 +88,8 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertNotIn("┊", text)
         self.assertNotIn("Second thought", text)
 
-    def test_partial_is_cumulative_replace_not_append(self):
-        """message_update gives the full partial each time, so label replaces."""
+    def test_content_snapshot_replaces_rather_than_appends(self):
+        """on_message_update takes a full snapshot each time, so labels replace."""
         tree = daemon.ThinkingTreeBuilder()
         tree.on_turn_start()
         tree.on_message_update([
@@ -246,6 +256,70 @@ class TestThinkingTreeBuilder(unittest.TestCase):
         self.assertIn("Real goal label", text)
         self.assertNotIn("Running ls", text.split("\n")[1])
 
+    def test_text_deltas_accumulate_into_label(self):
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_assistant_event({"type": "text_start", "contentIndex": 0})
+        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "Editing "})
+        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "daemon"})
+        self.assertIn("Editing daemon", tree.render(1))
+        tree.on_assistant_event({"type": "text_end", "contentIndex": 0, "content": "Editing daemon"})
+        self.assertIn("◇ <b>Editing daemon</b>", tree.render(1))
+
+    def test_thinking_deltas_derive_label_and_marker(self):
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
+                                 "delta": "I need to check the systemd unit"})
+        text = tree.render(1)
+        self.assertIn("Check the systemd", text)
+        self.assertIn("▹", text)  # thinking marker, not the tool marker
+
+    def test_toolcall_end_derives_label_from_tool_call(self):
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_assistant_event({"type": "toolcall_start", "contentIndex": 0})
+        tree.on_assistant_event({"type": "toolcall_delta", "contentIndex": 0, "delta": ""})
+        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 0, "toolCall": {
+            "type": "toolCall", "id": "t1", "name": "read", "arguments": {"path": "/etc/hosts"},
+        }})
+        self.assertIn("Reading etc/hosts", tree.render(1))
+
+    def test_toolcall_arguments_as_json_string(self):
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 0, "toolCall": {
+            "name": "bash", "arguments": '{"command": "git status"}',
+        }})
+        self.assertIn("status", tree.render(1).lower())
+
+    def test_message_end_applies_authoritative_content(self):
+        """Non-streaming providers only emit message_start/message_end."""
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "Final label"},
+        ]})
+        self.assertIn("Final label", tree.render(1))
+
+    def test_non_assistant_messages_do_not_reset_blocks(self):
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "Kept label"})
+        tree.on_message_start({"role": "toolResult"})
+        tree.on_message_end({"role": "toolResult", "content": [{"type": "toolResult", "output": "x"}]})
+        self.assertIn("Kept label", tree.render(1))
+
+    def test_assistant_message_start_resets_blocks(self):
+        tree = daemon.ThinkingTreeBuilder()
+        tree.on_turn_start()
+        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "Old label"})
+        tree.on_message_start({"role": "assistant"})
+        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "New label"})
+        text = tree.render(1)
+        self.assertIn("New label", text)
+        self.assertNotIn("Old label", text)
+
     def test_total_message_truncation(self):
         """When total exceeds MAX_REPLY_CHARS, it's truncated with ellipsis."""
         tree = daemon.ThinkingTreeBuilder()
@@ -382,9 +456,8 @@ class TestStatusMessenger(unittest.TestCase):
                     "type": "message_update",
                     "assistantMessageEvent": {
                         "type": "thinking_delta",
-                        "partial": {
-                            "content": [{"type": "thinking", "thinking": f"thought {i}"}],
-                        },
+                        "contentIndex": 0,
+                        "delta": f"thought {i} ",
                     },
                 })
             # Should still be 1 call (the create); edits are throttled
@@ -413,7 +486,9 @@ class TestStatusMessenger(unittest.TestCase):
             sm.on_event({
                 "type": "message_update",
                 "assistantMessageEvent": {
-                    "partial": {"content": [{"type": "thinking", "thinking": "last thought"}]},
+                    "type": "thinking_delta",
+                    "contentIndex": 0,
+                    "delta": "last thought",
                 },
             })
             sm.finalize()
@@ -437,14 +512,29 @@ class TestStatusMessenger(unittest.TestCase):
             calls = [c[0][0] for c in mock_api.call_args_list]
             self.assertNotIn("deleteMessage", calls)
 
-    def test_message_update_without_partial_is_safe(self):
+    def test_malformed_message_update_is_safe(self):
         with patch.object(daemon, "telegram_api") as mock_api:
             mock_api.return_value = {"message_id": 1}
             sm = daemon.StatusMessenger("123")
             sm.on_event({"type": "turn_start"})
-            # Malformed event with no partial
+            # Events with no delta type and no contentIndex must be ignored.
             sm.on_event({"type": "message_update", "assistantMessageEvent": {}})
+            sm.on_event({"type": "message_update", "assistantMessageEvent": {"type": "text_delta"}})
             sm.finalize()  # should not crash
+
+    def test_streaming_deltas_replace_placeholder_label(self):
+        """Regression: labels stayed "working…" when deltas were ignored."""
+        with patch.object(daemon, "telegram_api") as mock_api:
+            mock_api.return_value = {"message_id": 1}
+            sm = daemon.StatusMessenger("123")
+            sm.on_event({"type": "turn_start"})
+            sm.on_event({"type": "message_start", "message": {"role": "assistant"}})
+            sm.on_event({"type": "message_update", "assistantMessageEvent": {
+                "type": "text_delta", "contentIndex": 0, "delta": "Reading config",
+            }})
+            text = sm.tree.render(3)
+            self.assertIn("Reading config", text)
+            self.assertNotIn("working…", text)
 
 
 class TestAskIntegration(unittest.TestCase):
@@ -479,10 +569,10 @@ class TestAskIntegration(unittest.TestCase):
                     rid = cmd["id"]
                     pi.lines.put({"type": "response", "id": rid, "success": True, "command": "prompt"})
                     pi.lines.put({"type": "turn_start"})
+                    pi.lines.put({"type": "message_start", "message": {"role": "assistant"}})
                     pi.lines.put({"type": "message_update", "assistantMessageEvent": {
-                        "partial": {"content": [
-                            {"type": "thinking", "thinking": "I should look at the issues"},
-                        ]},
+                        "type": "thinking_delta", "contentIndex": 0,
+                        "delta": "I should look at the issues",
                     }})
                     pi.lines.put({"type": "turn_end"})
                     pi.lines.put({"type": "agent_end", "messages": []})
