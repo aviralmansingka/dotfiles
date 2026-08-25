@@ -17,7 +17,7 @@ Every turn must begin with exactly one short user-visible text line that names
 the step you are about to take. This title becomes the label for that turn in
 the live thinking trace across all surfaces (TUI, Telegram, exports), so it
 must be informative on its own — not a preamble, not a hedge, not a restatement
-of the user's request. Keep it under 20 characters.
+of the user's request. Keep it under 40 characters.
 
 **Why this matters:** the thinking trace UI renders each turn as a single
 labeled row (`▸ <title>` while working, `✓ <title>` when done). If you omit a
@@ -25,7 +25,7 @@ text title, the UI falls back to deriving one from your tool calls or thinking,
 which is less clear and model-dependent. An explicit title guarantees a clean,
 consistent trace regardless of which model is running.
 
-**Good titles** (under 20 chars, present-progressive, action-oriented):
+**Good titles** (under 40 chars, present-progressive, action-oriented):
 - `Reading config`
 - `Editing daemon`
 - `Running tests`
@@ -40,7 +40,7 @@ consistent trace regardless of which model is running.
 - `Running read tool on /path/to/file` (mentions tool name)
 
 Rules:
-- Summarize the purpose of the turn in 2–5 words, under 20 characters.
+- Summarize the purpose of the turn in 2–5 words, under 40 characters.
 - Use present-progressive wording: "Inspecting…", "Editing…", "Running…".
 - For parallel tool calls, summarize their common goal, not their count.
 - Do not mention tool names ("read", "bash", "edit") — describe the action.
