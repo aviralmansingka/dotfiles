@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+extension="$root/pi/.pi/agent/extensions/codex-fast-mode.ts"
+footer="$root/pi/.pi/agent/extensions/rounded-bar-footer.ts"
+
+node --no-warnings --experimental-strip-types --input-type=module - "$extension" <<'NODE'
+import assert from "node:assert/strict";
+import { pathToFileURL } from "node:url";
+
+const { applyFastMode, parseFastModeArgument } = await import(pathToFileURL(process.argv[2]));
+const responses = { model: "gpt-5.6-sol", stream: true, input: [] };
+const completions = { model: "firerouter", stream: true, messages: [] };
+
+assert.equal(applyFastMode(responses, "openai-codex", true).service_tier, "priority");
+assert.equal(applyFastMode(responses, "openai", false).service_tier, "default");
+assert.equal(applyFastMode(completions, "fireworks", true).service_tier, "priority");
+assert.equal(applyFastMode(responses, "anthropic", true), responses);
+assert.equal(parseFastModeArgument("", true), false);
+assert.equal(parseFastModeArgument("on", false), true);
+assert.equal(parseFastModeArgument("status", false), "status");
+assert.equal(parseFastModeArgument("wat", false), undefined);
+NODE
+
+grep -Fq 'fastModeEnabled ? "⚡ " : ""' "$footer"
+grep -Fq 'pi.events.on("fast-mode:changed"' "$footer"
+printf 'pi fast mode: ok\n'
