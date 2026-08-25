@@ -668,16 +668,21 @@ class TraceBuilder:
 
         step = self.current_step
         if step is None:
-            step = WorkStep(
-                title=title,
-                title_locked=bool(step_explicit_title),
-                thinking=step_thinking,
-                # Stamp at creation so every step has a timer, even before
-                # its first tool starts executing.
-                started_at=self.clock(),
-            )
-            self.steps.append(step)
-            self.current_step = step
+            # Dedup: if the last step has the same title, merge into it
+            # instead of showing a duplicate line.
+            if self.steps and self.steps[-1].title == title:
+                step = self.steps[-1]
+                step.completed_at = None  # reopen for new tool calls
+                self.current_step = step
+            else:
+                step = WorkStep(
+                    title=title,
+                    title_locked=bool(step_explicit_title),
+                    thinking=step_thinking,
+                    started_at=self.clock(),
+                )
+                self.steps.append(step)
+                self.current_step = step
         else:
             if not step.title_locked and step_explicit_title:
                 step.title = title

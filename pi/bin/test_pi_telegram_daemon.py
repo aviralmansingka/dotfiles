@@ -506,6 +506,48 @@ class TestTraceBuilder(unittest.TestCase):
         # Both steps visible (compact render still shows all steps)
         self.assertIn("Old", text)
 
+    # -- dedup -----------------------------------------------------------
+
+    def test_same_title_steps_merge(self):
+        """Two consecutive steps with the same title merge into one line."""
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "grep -r cache /etc"}},
+        ]})
+        tree.on_tool_execution_end("c1", False)
+        tree.on_turn_end()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "thinking", "thinking": "Let me also check the cache config"},
+            {"type": "toolCall", "id": "c2", "name": "bash", "arguments": {"command": "grep -r cache /var"}},
+        ]})
+        text = tree.render(5)
+        # Only one "Searching text cache" line, not two
+        self.assertEqual(text.count("Searching text cache"), 1)
+        self.assertEqual(len([l for l in text.split("\n") if "▸" in l or "▹" in l]), 1)
+
+    def test_different_title_steps_do_not_merge(self):
+        """Steps with different titles stay as separate lines."""
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "grep -r cache /etc"}},
+        ]})
+        tree.on_tool_execution_end("c1", False)
+        tree.on_turn_end()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c2", "name": "read", "arguments": {"path": "config.toml"}},
+        ]})
+        tree.on_tool_execution_end("c2", False)
+        tree.on_turn_end()
+        text = tree.render(5)
+        self.assertIn("Searching text cache", text)
+        self.assertIn("Reading config.toml", text)
+
     # -- agent_end fails pending ------------------------------------------
 
     def test_agent_end_fails_pending_steps(self):
