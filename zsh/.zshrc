@@ -19,6 +19,15 @@ plugins=(
 
 source $ZSH/oh-my-zsh.sh
 
+# Inside nvim :term, disable ZLE bracketed paste: nvim's terminal input layer
+# throttles PTY writes and can stall mid-marker; when the gap exceeds ZLE's
+# KEYTIMEOUT the torn marker leaks a literal '~'. With BP off, nvim's vim.paste
+# override (nvim/.config/nvim/lua/config/options.lua) sends pastes raw.
+# Trade-off: multi-line pastes execute line-by-line.
+if [[ -n $NVIM ]]; then
+  unset zle_bracketed_paste
+fi
+
 vim() {
   if [ -n "$TMUX" ]; then
     local session=$(tmux display-message -p '#S')
