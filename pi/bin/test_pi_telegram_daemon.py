@@ -22,396 +22,499 @@ sys.modules["pi_telegram_daemon"] = daemon  # dataclass needs this
 _spec.loader.exec_module(daemon)
 
 
-class TestStripMarkdown(unittest.TestCase):
-    """Telegram HTML mode shows raw markdown literally, so labels are stripped."""
+class TestSanitizeTitle(unittest.TestCase):
+    """Port of TUI sanitizeTitle — strips ANSI, markdown, HTML, collapses whitespace."""
 
     def test_strips_headings_fences_and_emphasis(self):
         self.assertEqual(
-            daemon._strip_markdown("## Output\n```sh\nhello\n```\nDone **now** with `x`"),
-            "Output hello Done now with x",
+            daemon._sanitize_title("## Output\n```sh\nhello\n```\nDone **now** with `x`"),
+            "Output",
         )
 
+    def test_strips_markdown_link(self):
+        self.assertEqual(daemon._sanitize_title("See [docs](https://x.com)"), "See docs")
 
-class TestThinkingTreeBuilder(unittest.TestCase):
-    """Unit tests for ThinkingTreeBuilder — pure logic, no I/O."""
+    def test_strips_ansi_escapes(self):
+        self.assertEqual(daemon._sanitize_title("\x1b[32mGreen text\x1b[0m"), "Green text")
+
+    def test_first_non_empty_line(self):
+        self.assertEqual(daemon._sanitize_title("\n\n  \nActual title"), "Actual title")
+
+    def test_empty_returns_none(self):
+        self.assertIsNone(daemon._sanitize_title(""))
+        self.assertIsNone(daemon._sanitize_title("   \n  "))
+
+    def test_strips_html_tags(self):
+        self.assertEqual(daemon._sanitize_title("<b>Bold</b> text"), "Bold text")
+
+
+class TestTraceBuilder(unittest.TestCase):
+    """Unit tests for TraceBuilder — pure logic, no I/O."""
+
+    def _new_tree(self):
+        tree = daemon.TraceBuilder()
+        tree.start_time = 0.0  # deterministic: render(N) → elapsed=N
+        return tree
+
+    # -- header / empty ---------------------------------------------------
 
     def test_empty_render_shows_only_header(self):
-        tree = daemon.ThinkingTreeBuilder()
+        tree = self._new_tree()
         text = tree.render(5)
         self.assertIn("thinking · 0:05", text)
 
     def test_elapsed_rolls_over_to_minutes(self):
-        tree = daemon.ThinkingTreeBuilder()
+        tree = self._new_tree()
         text = tree.render(75)
         self.assertIn("thinking · 1:15", text)
         self.assertNotIn("0:75", text)
 
-    def test_turn_start_creates_placeholder_goal(self):
-        tree = daemon.ThinkingTreeBuilder()
+    def test_turn_start_alone_shows_only_header(self):
+        """No content yet — just the header, no steps."""
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
         text = tree.render(1)
-        self.assertIn("◇ <b>working…</b>", text)
+        self.assertIn("thinking · 0:01", text)
+        # No step lines yet (no content assembled)
+        self.assertNotIn("▸", text)
+        self.assertNotIn("▹", text)
 
-    def test_text_block_sets_goal_label(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "text", "text": "Find the open issues"},
-        ])
-        text = tree.render(2)
-        self.assertIn("◇ <b>Find the open issues</b>", text)
-        self.assertNotIn("working…", text)
+    # -- text title + tool calls ------------------------------------------
 
-    def test_thinking_block_derives_goal_label(self):
-        """Thinking blocks derive the goal label, with filler words stripped."""
-        tree = daemon.ThinkingTreeBuilder()
+    def test_text_title_with_tool_call(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "I need to list the issues directory"},
-        ])
-        text = tree.render(3)
-        # Filler "I need to" is stripped, first letter capitalized
-        self.assertIn("List the issues", text)
-        self.assertNotIn("I need to", text)
-        self.assertNotIn("┊", text)
-
-    def test_multiple_thinking_blocks_derive_single_label(self):
-        """Multiple thinking blocks → one derived label (from the first), no trace lines."""
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "First thought"},
-            {"type": "thinking", "thinking": "Second thought"},
-        ])
-        text = tree.render(4)
-        self.assertIn("First thought", text)
-        self.assertNotIn("┊", text)
-        self.assertNotIn("Second thought", text)
-
-    def test_content_snapshot_replaces_rather_than_appends(self):
-        """on_message_update takes a full snapshot each time, so labels replace."""
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "First thought"},
-        ])
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "First thought"},
-            {"type": "thinking", "thinking": "Second thought"},
-        ])
-        text = tree.render(5)
-        # No trace lines rendered at all
-        self.assertEqual(text.count("┊"), 0)
-
-    def test_streaming_thinking_updates_derived_label(self):
-        """Derived label must update as thinking streams in, not freeze on first token."""
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        # First token — short incomplete thought
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "I need"},
-        ])
-        # More tokens stream in — fuller thought
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "I need to check the server cache configuration"},
-        ])
-        text = tree.render(3)
-        # Filler "I need to" stripped, capitalized
-        self.assertIn("Check the server", text)
-        self.assertNotIn("I need", text)
-        self.assertNotIn("I need\n", text)
-        # The label should not be stuck at the first token
-        first_line = text.split("\n")[1]
-        self.assertNotEqual(first_line.strip(), "▹ <b>Need</b>")
-
-    def test_multiple_turns_create_multiple_goals(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([{"type": "text", "text": "Goal 1"}])
-        tree.on_turn_end()
-        tree.on_turn_start()
-        tree.on_message_update([{"type": "text", "text": "Goal 2"}])
-        text = tree.render(10)
-        self.assertIn("◆ <b>Goal 1</b>", text)
-        self.assertIn("◇ <b>Goal 2</b>", text)
-
-    def test_html_escaping_in_goal_label(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([{"type": "text", "text": "<script>alert(1)</script>"}])
-        text = tree.render(1)
-        self.assertIn("&lt;script&gt;", text)
-        self.assertNotIn("<script>", text)
-
-    def test_html_escaping_in_trace(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "Use <b> & <i> tags"},
-        ])
-        text = tree.render(1)
-        self.assertIn("&lt;b&gt;", text)
-        self.assertIn("&amp;", text)
-
-    def test_long_thinking_derived_label_is_truncated(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        long_text = "x" * 500
-        tree.on_message_update([{"type": "thinking", "thinking": long_text}])
-        text = tree.render(1)
-        # Derived label is truncated to GOAL_LABEL_CHARS
-        self.assertIn("…", text)
-        self.assertLess(text.count("x"), 500)
-
-    def test_empty_thinking_block_falls_back_to_working(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "thinking", "thinking": ""},
-            {"type": "thinking", "thinking": "   "},
-        ])
-        text = tree.render(1)
-        self.assertEqual(text.count("┊"), 0)
-        self.assertIn("working…", text)
-
-    def test_toolcall_block_derives_label(self):
-        """Tool calls derive a label from tool name and args when no text block."""
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "toolCall", "id": "call_1", "name": "bash", "arguments": {"command": "ls"}},
-            {"type": "thinking", "thinking": "A thought"},
-        ])
-        text = tree.render(1)
-        self.assertNotIn("toolCall", text)
-        # Tool-call label takes priority over thinking-derived label
-        self.assertIn("Listing files", text)
-        self.assertNotIn("A thought", text)
-        # Has thinking content, so uses triangle marker
-        self.assertIn("▹", text)
-
-    def test_message_update_without_turn_start_auto_creates_goal(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_message_update([{"type": "thinking", "thinking": "Thought"}])
-        text = tree.render(1)
-        # Goal label is derived from the thinking trace, not "working…"
-        self.assertIn("Thought", text)
-
-    def test_toolcall_read_derives_reading_label(self):
-        """read tool with path arg derives 'Reading <path>' label."""
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "Reading config"},
             {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "config.toml"}},
-        ])
+        ]})
+        text = tree.render(2)
+        self.assertIn("Reading config", text)
+        self.assertIn("▹", text)  # pending step (tool not completed)
+        self.assertIn("config.toml", text)
+
+    def test_tool_call_completed_shows_diamond(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "Reading config"},
+            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "config.toml"}},
+        ]})
+        tree.on_tool_execution_start("c1", "read", {"path": "config.toml"})
+        tree.on_tool_execution_end("c1", False)
+        tree.on_turn_end()
+        text = tree.render(3)
+        self.assertIn("◆", text)  # completed tool
+        self.assertIn("▸", text)  # completed step
+        self.assertIn("loaded", text)
+
+    # -- fallback titles (no explicit text) -------------------------------
+
+    def test_fallback_title_read(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "config.toml"}},
+        ]})
         text = tree.render(1)
         self.assertIn("Reading", text)
         self.assertIn("config.toml", text)
 
-    def test_toolcall_edit_derives_editing_label(self):
-        """edit tool with path arg derives 'Editing <path>' label."""
-        tree = daemon.ThinkingTreeBuilder()
+    def test_fallback_title_edit(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "toolCall", "id": "c1", "name": "edit", "arguments": {"path": "config.toml"}},
-        ])
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "edit", "arguments": {"path": "daemon.py"}},
+        ]})
         text = tree.render(1)
-        self.assertIn("Editing", text)
-        self.assertIn("config.toml", text)
+        self.assertIn("Updating", text)
+        self.assertIn("daemon.py", text)
 
-    def test_toolcall_bash_long_command_truncates(self):
-        """bash tool with long command shows a summarized label."""
-        tree = daemon.ThinkingTreeBuilder()
+    def test_fallback_title_bash(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "find / -name '*.json' -type f 2>/dev/null | head -100"}},
-        ])
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo hello"}},
+        ]})
         text = tree.render(1)
-        # Should show a human-readable summary, not the raw command
-        self.assertIn("Finding files", text)
-        self.assertNotIn("find /", text)
+        self.assertIn("Running", text)
+        self.assertIn("command", text)
+        # Tool summary shows the command
+        self.assertIn("$ echo hello", text)
 
-    def test_toolcall_unknown_tool_uses_generic_label(self):
-        """Unknown tool name gets a 'Calling <name>' label."""
-        tree = daemon.ThinkingTreeBuilder()
+    def test_fallback_title_checks(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "toolCall", "id": "c1", "name": "custom_tool", "arguments": {}},
-        ])
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "npm test"}},
+        ]})
         text = tree.render(1)
-        self.assertIn("Calling custom_tool", text)
+        self.assertIn("Running checks", text)
 
-    def test_text_block_overrides_toolcall_label(self):
-        """When a text block arrives, it replaces the tool-call-derived label."""
-        tree = daemon.ThinkingTreeBuilder()
+    # -- thinking ---------------------------------------------------------
+
+    def test_thinking_draft_shown(self):
+        """Thinking with no tool calls shows a thinking draft."""
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
-        tree.on_message_update([
+        tree.on_message_start({"role": "assistant"})
+        tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
+                                 "delta": "I need to check the config"})
+        text = tree.render(1)
+        self.assertIn("Thinking", text)
+        self.assertIn("▹", text)
+        self.assertIn("•", text)  # thinking bullet
+        self.assertIn("check the config", text)
+
+    def test_thinking_with_tools_shows_bullets(self):
+        """Thinking + tool calls: title from text, thinking shown as bullets."""
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "Analyzing the request"},
+            {"type": "thinking", "thinking": "Need to check the config"},
+            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "config.toml"}},
+        ]})
+        text = tree.render(1)
+        self.assertIn("Analyzing the request", text)
+        self.assertIn("•", text)  # thinking bullet
+        self.assertIn("Need to check the config", text)
+        self.assertIn("◇", text)  # pending tool
+
+    def test_thinking_no_text_shows_thinking_title(self):
+        """Thinking + tools but no text: title defaults to 'Thinking'."""
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "thinking", "thinking": "Deep thought about the problem"},
+            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "x.py"}},
+        ]})
+        text = tree.render(1)
+        self.assertIn("Thinking", text)
+        self.assertIn("•", text)
+
+    # -- tree structure ---------------------------------------------------
+
+    def test_multiple_steps_tree_connectors(self):
+        """Multiple steps show tree connectors (├─/└─/│)."""
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "Step 1"},
             {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
-        ])
-        tree.on_message_update([
-            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
-            {"type": "text", "text": "Real goal label"},
-        ])
-        text = tree.render(3)
-        self.assertIn("Real goal label", text)
-        self.assertNotIn("Running ls", text.split("\n")[1])
-
-    def test_text_deltas_accumulate_into_label(self):
-        tree = daemon.ThinkingTreeBuilder()
+        ]})
+        tree.on_tool_execution_end("c1", False)
+        tree.on_turn_end()
         tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "Step 2"},
+            {"type": "toolCall", "id": "c2", "name": "bash", "arguments": {"command": "pwd"}},
+        ]})
+        text = tree.render(5)
+        self.assertIn("Step 1", text)
+        self.assertIn("Step 2", text)
+        self.assertIn("├─", text)  # non-last step
+        self.assertIn("└─", text)  # last step
+        self.assertIn("│  ", text)  # rail for non-last step
+        self.assertIn("steps", text)  # activity header
+
+    def test_activity_header_shows_counts(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "Step 1"},
+            {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "a.py"}},
+            {"type": "toolCall", "id": "c2", "name": "read", "arguments": {"path": "b.py"}},
+        ]})
+        text = tree.render(1)
+        self.assertIn("1 step", text)
+        self.assertIn("2 calls", text)
+        self.assertIn("0/1 complete", text)
+
+    def test_activity_header_all_passed(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo ok"}},
+        ]})
+        tree.on_tool_execution_end("c1", False)
+        tree.on_turn_end()
+        text = tree.render(1)
+        self.assertIn("all passed", text)
+
+    def test_activity_header_failed(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "false"}},
+        ]})
+        tree.on_tool_execution_end("c1", True)
+        tree.on_turn_end()
+        text = tree.render(1)
+        self.assertIn("failed", text)
+        self.assertIn("×", text)
+
+    # -- tool summary format ----------------------------------------------
+
+    def test_edit_summary_shows_edit_count(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "edit", "arguments": {
+                "path": "daemon.py", "edits": [{"oldText": "a", "newText": "b"}]}},
+        ]})
+        tree.on_tool_execution_end("c1", False)
+        tree.on_turn_end()
+        text = tree.render(1)
+        self.assertIn("1 edit", text)
+        self.assertIn("updated", text)
+
+    def test_bash_summary_shows_command(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "git status"}},
+        ]})
+        text = tree.render(1)
+        self.assertIn("$ git status", text)
+        self.assertIn("running", text)
+
+    def test_multiple_bash_shows_per_call_lines(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo a"}},
+            {"type": "toolCall", "id": "c2", "name": "bash", "arguments": {"command": "echo b"}},
+        ]})
+        text = tree.render(1)
+        self.assertIn("$ echo a", text)
+        self.assertIn("$ echo b", text)
+
+    # -- elapsed timers ---------------------------------------------------
+
+    def test_running_tool_shows_elapsed(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "sleep 10"}},
+        ]})
+        tree.on_tool_execution_start("c1", "bash", {"command": "sleep 10"})
+        # Override timestamps for deterministic testing (on_tool_execution_start
+        # uses real time.monotonic, which doesn't match start_time=0.0)
+        tree.current_step.started_at = 0.0
+        tree.current_step.tool_calls[0].started_at = 0.0
+        # Simulate 2.5 seconds elapsed
+        text = tree.render(2.5)
+        self.assertIn("2.", text)  # 2.Xs
+        self.assertIn("s", text)
+
+    # -- HTML escaping ----------------------------------------------------
+
+    def test_html_escaping_in_title(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "<script>alert(1)</script>"},
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
+        ]})
+        text = tree.render(1)
+        # sanitizeTitle strips HTML tags, leaving just the text content
+        self.assertIn("alert(1)", text)
+        self.assertNotIn("<script>", text)
+
+    def test_html_escaping_in_thinking(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_start({"role": "assistant"})
+        tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
+                                 "delta": "Use <b> & <i> tags"})
+        text = tree.render(1)
+        # sanitizeTitle strips HTML tags from thinking content; & is HTML-escaped
+        self.assertIn("&amp;", text)
+        # The thinking bullet line should not contain raw HTML tags from content
+        bullet_lines = [l for l in text.split("\n") if "•" in l]
+        self.assertTrue(any("Use" in l for l in bullet_lines))
+        self.assertTrue(all("<i>" not in l for l in bullet_lines))
+
+    def test_html_escaping_in_command(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "echo '<x>'"}},
+        ]})
+        text = tree.render(1)
+        self.assertIn("&lt;x&gt;", text)
+
+    # -- title truncation -------------------------------------------------
+
+    def test_long_title_truncated(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        long_title = "x" * 100
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": long_title},
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
+        ]})
+        text = tree.render(1)
+        self.assertIn("…", text)
+        self.assertLess(text.count("x"), 100)
+
+    # -- delta assembly ---------------------------------------------------
+
+    def test_text_deltas_accumulate(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_start({"role": "assistant"})
         tree.on_assistant_event({"type": "text_start", "contentIndex": 0})
         tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "Editing "})
         tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "daemon"})
-        self.assertIn("Editing daemon", tree.render(1))
-        tree.on_assistant_event({"type": "text_end", "contentIndex": 0, "content": "Editing daemon"})
-        self.assertIn("◇ <b>Editing daemon</b>", tree.render(1))
-
-    def test_thinking_deltas_derive_label_and_marker(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
-                                 "delta": "I need to check the systemd unit"})
+        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 1, "toolCall": {
+            "id": "t1", "name": "edit", "arguments": {"path": "d.py"},
+        }})
         text = tree.render(1)
-        self.assertIn("Check the systemd", text)
-        self.assertIn("▹", text)  # thinking marker, not the tool marker
+        self.assertIn("Editing daemon", text)
 
-    def test_toolcall_end_derives_label_from_tool_call(self):
-        tree = daemon.ThinkingTreeBuilder()
+    def test_toolcall_end_from_delta(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
+        tree.on_message_start({"role": "assistant"})
         tree.on_assistant_event({"type": "toolcall_start", "contentIndex": 0})
         tree.on_assistant_event({"type": "toolcall_delta", "contentIndex": 0, "delta": ""})
         tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 0, "toolCall": {
             "type": "toolCall", "id": "t1", "name": "read", "arguments": {"path": "/etc/hosts"},
         }})
-        self.assertIn("Reading etc/hosts", tree.render(1))
+        text = tree.render(1)
+        self.assertIn("Reading", text)
+        self.assertIn("hosts", text)
 
     def test_toolcall_arguments_as_json_string(self):
-        tree = daemon.ThinkingTreeBuilder()
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
+        tree.on_message_start({"role": "assistant"})
         tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 0, "toolCall": {
             "name": "bash", "arguments": '{"command": "git status"}',
         }})
-        self.assertIn("status", tree.render(1).lower())
+        text = tree.render(1)
+        self.assertIn("git status", text)
 
     def test_message_end_applies_authoritative_content(self):
         """Non-streaming providers only emit message_start/message_end."""
-        tree = daemon.ThinkingTreeBuilder()
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
         tree.on_message_end({"role": "assistant", "content": [
             {"type": "text", "text": "Final label"},
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
         ]})
-        self.assertIn("Final label", tree.render(1))
+        text = tree.render(1)
+        self.assertIn("Final label", text)
 
     def test_non_assistant_messages_do_not_reset_blocks(self):
-        tree = daemon.ThinkingTreeBuilder()
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
-        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "Kept label"})
+        tree.on_message_start({"role": "assistant"})
+        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "My title"})
+        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 1, "toolCall": {
+            "id": "c1", "name": "bash", "arguments": {"command": "ls"},
+        }})
         tree.on_message_start({"role": "toolResult"})
         tree.on_message_end({"role": "toolResult", "content": [{"type": "toolResult", "output": "x"}]})
-        self.assertIn("Kept label", tree.render(1))
+        text = tree.render(1)
+        self.assertIn("My title", text)
 
     def test_assistant_message_start_resets_blocks(self):
-        tree = daemon.ThinkingTreeBuilder()
+        """Each assistant message gets its own step; old steps persist in the tree."""
+        tree = self._new_tree()
+        tree.on_agent_start()
         tree.on_turn_start()
-        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "Old label"})
         tree.on_message_start({"role": "assistant"})
-        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "New label"})
+        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "Old"})
+        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 1, "toolCall": {
+            "id": "c1", "name": "bash", "arguments": {"command": "ls"},
+        }})
+        tree.on_message_start({"role": "assistant"})
+        tree.on_assistant_event({"type": "text_delta", "contentIndex": 0, "delta": "New"})
+        tree.on_assistant_event({"type": "toolcall_end", "contentIndex": 1, "toolCall": {
+            "id": "c2", "name": "bash", "arguments": {"command": "ls"},
+        }})
         text = tree.render(1)
-        self.assertIn("New label", text)
-        self.assertNotIn("Old label", text)
+        self.assertIn("New", text)
+        # Both steps visible in the tree (matching TUI trace)
+        self.assertIn("Old", text)
+        self.assertIn("2 steps", text)
+
+    # -- agent_end fails pending ------------------------------------------
+
+    def test_agent_end_fails_pending_steps(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
+        ]})
+        # Don't complete the tool — agent_end should mark it failed
+        tree.on_agent_end()
+        text = tree.render(1)
+        self.assertIn("failed", text)
+        self.assertIn("×", text)
+
+    # -- markdown stripping in titles -------------------------------------
+
+    def test_markdown_stripped_from_title(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "**Bold** goal with `code`"},
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "ls"}},
+        ]})
+        text = tree.render(1)
+        self.assertIn("Bold goal with code", text)
+        self.assertNotIn("**", text)
+
+    # -- total truncation -------------------------------------------------
 
     def test_total_message_truncation(self):
         """When total exceeds MAX_REPLY_CHARS, it's truncated with ellipsis."""
-        tree = daemon.ThinkingTreeBuilder()
-        # Completed goals collapse (no traces), so we need many goals with
-        # long labels to exceed the limit. Use 300 goals with 200-char labels.
+        tree = self._new_tree()
+        tree.on_agent_start()
         for i in range(300):
             tree.on_turn_start()
-            tree.on_message_update([
+            tree.on_message_end({"role": "assistant", "content": [
                 {"type": "text", "text": f"Goal {i}: " + "y" * 200},
-            ])
+                {"type": "toolCall", "id": f"c{i}", "name": "bash", "arguments": {"command": "ls"}},
+            ]})
+            tree.on_tool_execution_end(f"c{i}", False)
             tree.on_turn_end()
         text = tree.render(99)
         self.assertLessEqual(len(text), daemon.MAX_REPLY_CHARS)
         self.assertTrue(text.endswith("…"))
-
-    def test_turn_end_marks_goal_done(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([{"type": "text", "text": "Done goal"}])
-        tree.on_turn_end()
-        text = tree.render(5)
-        self.assertIn("◆ <b>Done goal</b>", text)
-        self.assertNotIn("◇ <b>Done goal</b>", text)
-
-    def test_completed_goals_show_only_labels(self):
-        """All goals (done or live) show only their label — no traces rendered."""
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "old trace that should be hidden"},
-            {"type": "text", "text": "Completed goal"},
-        ])
-        tree.on_turn_end()
-        tree.on_turn_start()
-        tree.on_message_update([{"type": "thinking", "thinking": "a live thought about the server"}])
-        text = tree.render(5)
-        self.assertIn("▸ <b>Completed goal</b>", text)
-        self.assertNotIn("old trace that should be hidden", text)
-        self.assertNotIn("┊", text)
-        # Thinking-derived label is capitalized
-        self.assertIn("A live thought", text)
-
-    def test_goal_label_derived_from_first_thinking(self):
-        """When no text block, goal label comes from the first thinking trace."""
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "I need to check the server cache first"},
-        ])
-        text = tree.render(3)
-        # Filler stripped, capitalized
-        self.assertIn("Check the server", text)
-        self.assertNotIn("I need to", text)
-        self.assertNotIn("working…", text)
-
-    def test_text_block_overrides_derived_label(self):
-        """When a text block arrives, it replaces the derived label."""
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "provisional thought"},
-        ])
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "provisional thought"},
-            {"type": "text", "text": "Real goal label"},
-        ])
-        text = tree.render(3)
-        self.assertIn("Real goal label", text)
-        self.assertNotIn("provisional thought", text.split("\n")[1])
-
-    def test_markdown_stripped_from_goal_label(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([{"type": "text", "text": "**Bold** goal with `code`"}])
-        text = tree.render(1)
-        self.assertIn("Bold goal with code", text)
-        self.assertNotIn("**", text)
-        self.assertNotIn("`", text)
-
-    def test_markdown_stripped_from_derived_label(self):
-        tree = daemon.ThinkingTreeBuilder()
-        tree.on_turn_start()
-        tree.on_message_update([
-            {"type": "thinking", "thinking": "Use **bold** and `code` in thinking"},
-        ])
-        text = tree.render(1)
-        self.assertNotIn("**", text)
-        self.assertNotIn("`code`", text)
-        self.assertIn("bold", text)
-        self.assertIn("code", text)
-
-
 class TestStatusMessenger(unittest.TestCase):
     """Unit tests for StatusMessenger — mocks telegram_api."""
 
@@ -522,11 +625,13 @@ class TestStatusMessenger(unittest.TestCase):
             sm.on_event({"type": "message_update", "assistantMessageEvent": {"type": "text_delta"}})
             sm.finalize()  # should not crash
 
-    def test_streaming_deltas_replace_placeholder_label(self):
+    def test_streaming_deltas_show_text_title(self):
         """Regression: labels stayed "working…" when deltas were ignored."""
         with patch.object(daemon, "telegram_api") as mock_api:
             mock_api.return_value = {"message_id": 1}
             sm = daemon.StatusMessenger("123")
+            sm.tree.start_time = 0.0
+            sm.on_event({"type": "agent_start"})
             sm.on_event({"type": "turn_start"})
             sm.on_event({"type": "message_start", "message": {"role": "assistant"}})
             sm.on_event({"type": "message_update", "assistantMessageEvent": {
@@ -534,7 +639,6 @@ class TestStatusMessenger(unittest.TestCase):
             }})
             text = sm.tree.render(3)
             self.assertIn("Reading config", text)
-            self.assertNotIn("working…", text)
 
 
 class TestAskIntegration(unittest.TestCase):

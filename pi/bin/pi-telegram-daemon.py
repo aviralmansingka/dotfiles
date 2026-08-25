@@ -116,274 +116,299 @@ class IncomingMessage:
     reply_to_sender_is_bot: bool = False
 
 
-def _strip_markdown(text: str) -> str:
-    """Remove common markdown emphasis so it doesn't show as literal ** or `.
+# ---------------------------------------------------------------------------
+# Thinking-trace rendering — mirrors the TUI tool-call-renderer extension.
+#
+# The TUI (pi/.pi/agent/extensions/tool-call-renderer.ts) renders a tree:
+#
+#   │  2 steps · 3 calls · 1/2 complete
+#   ├─ ▸ Reading config
+#   │  └─ ◆ settings.json · 1 read · loaded
+#   ├─ ▹ Editing daemon
+#   │  └─ ◇ daemon.py · 3 edits · running 1.2s
+#   └─ ▹ Running tests
+#      └─ ◇ $ npm test · running 0.5s
+#
+# Step titles use triangle glyphs (▸ done, ▹ running, × failed).
+# Tool summaries use diamond glyphs (◆ done, ◇ running, × failed).
+# Thinking bullets use • with tree connectors (├─/└─/│).
+# Telegram HTML only supports <b>, <code>, <i> — no colors — so the
+# glyph shapes carry the status meaning instead of TUI colors.
+# ---------------------------------------------------------------------------
 
-    Telegram HTML mode doesn't parse markdown, so raw **bold** or `code`
-    in thinking text renders as literal asterisks/backticks.
-    """
-    text = re.sub(r"^\s{0,3}```+[^\n]*$", "", text, flags=re.MULTILINE)
-    text = re.sub(r"^\s{0,3}#{1,6}\s+", "", text, flags=re.MULTILINE)
-    text = re.sub(r"\*{1,3}([^*\n]+)\*{1,3}", r"\1", text)
-    text = re.sub(r"`([^`\n]+)`", r"\1", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
-
-
-# Filler patterns that make thinking-derived labels read poorly.
-# Stripped from the beginning of a thinking snippet before truncation.
-# Only clearly-filler phrases are included; ambiguous words like "first",
-# "now", "so" require a trailing comma to be stripped.
-_THINKING_FILLER_RE = re.compile(
-    r"^(?:let me|i need to|i should|i'll|i will|i want to|i'd like to|let's|we need to|we should|first,\s*|now,\s*|so,\s*|ok,\s*|okay,\s*|alright,\s*|well,\s*|hmm,\s*|the user|the owner)\s+",
-    re.IGNORECASE,
-)
-
-# Map tool names to human-readable verb phrases for derived labels.
-# When a turn has tool calls but no text block, we synthesize a label
-# from the tool name and its primary argument.
-_TOOL_LABEL_TEMPLATES: dict[str, str] = {
-    "read": "Reading {path}",
-    "bash": "Running command",  # overridden by _summarize_command in _derive_tool_label
-    "edit": "Editing {path}",
-    "write": "Writing {path}",
-    "nvim_open": "Opening editor",
-    "plaid_transactions": "Fetching transactions",
-    "plaid_status": "Checking Plaid status",
-    "mcp": "Calling MCP tool",
-    "mcpScript": "Running MCP script",
-}
+TITLE_MAX = 40
 
 
-def _short_path(path: str) -> str:
-    """Shorten a file path for display in a goal label."""
-    # Keep last two segments if path is long.
-    parts = path.strip().strip("'").strip('"').split("/")
-    if len(parts) <= 2:
-        return path.strip().strip("'").strip('"')
-    return "/".join(parts[-2:])
+def _first_non_empty_line(value: str) -> Optional[str]:
+    for line in value.split("\n"):
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return None
 
 
-def _summarize_command(command: str) -> str:
-    """Generate a human-readable summary of a bash command.
-
-    Instead of showing the raw command, describe the intent.
-    """
-    cmd = command.strip().split("\n")[0].strip()
-    if not cmd:
-        return "Running command"
-    parts = cmd.split()
-    # Strip env var assignments and common prefixes.
-    while parts and ("=" in parts[0] or parts[0] in ("sudo", "env", "time", "nohup", "exec", "bash", "sh", "source")):
-        parts = parts[1:]
-    if not parts:
-        return "Running command"
-    base = parts[0]
-    # Strip path prefix (e.g. /usr/bin/git → git).
-    base = base.rsplit("/", 1)[-1]
-    args = parts[1:]
-    # Filter out flags for the summary subject.
-    positional = [a for a in args if not a.startswith("-")]
-    _COMMAND_SUMMARIES: dict[str, str] = {
-        "ls": "Listing files",
-        "cat": "Reading file",
-        "head": "Reading file head",
-        "tail": "Reading file tail",
-        "less": "Viewing file",
-        "more": "Viewing file",
-        "find": "Finding files",
-        "locate": "Finding files",
-        "grep": "Searching text",
-        "rg": "Searching text",
-        "ag": "Searching text",
-        "sed": "Transforming text",
-        "awk": "Processing text",
-        "sort": "Sorting",
-        "uniq": "Deduplicating",
-        "wc": "Counting",
-        "diff": "Comparing files",
-        "mkdir": "Creating directory",
-        "rmdir": "Removing directory",
-        "rm": "Removing files",
-        "cp": "Copying files",
-        "mv": "Moving files",
-        "ln": "Linking files",
-        "chmod": "Changing permissions",
-        "chown": "Changing ownership",
-        "touch": "Creating file",
-        "tar": "Archiving",
-        "zip": "Compressing",
-        "unzip": "Extracting",
-        "gzip": "Compressing",
-        "gunzip": "Decompressing",
-        "echo": "Printing",
-        "printf": "Printing",
-        "test": "Testing condition",
-        "true": "No-op",
-        "false": "No-op",
-        "which": "Finding command",
-        "whereis": "Finding command",
-        "whoami": "Checking user",
-        "hostname": "Checking hostname",
-        "uname": "Checking system",
-        "date": "Checking date",
-        "uptime": "Checking uptime",
-        "df": "Checking disk",
-        "du": "Checking disk usage",
-        "free": "Checking memory",
-        "top": "Checking processes",
-        "ps": "Listing processes",
-        "kill": "Killing process",
-        "killall": "Killing processes",
-        "pkill": "Killing process",
-        "curl": "Fetching URL",
-        "wget": "Downloading",
-        "ssh": "Connecting via SSH",
-        "scp": "Copying via SSH",
-        "rsync": "Syncing files",
-        "ping": "Pinging host",
-        "nc": "Checking connection",
-        "docker": "Running Docker",
-        "kubectl": "Running kubectl",
-        "helm": "Running Helm",
-        "terraform": "Running Terraform",
-        "ansible": "Running Ansible",
-        "vagrant": "Running Vagrant",
-        "virsh": "Managing VMs",
-        "systemctl": "Managing service",
-        "service": "Managing service",
-        "journalctl": "Reading logs",
-        "dmesg": "Reading kernel logs",
-        "log": "Reading logs",
-        "git": "Git operation",
-        "gh": "GitHub operation",
-        "npm": "Running npm",
-        "npx": "Running npx",
-        "yarn": "Running yarn",
-        "pnpm": "Running pnpm",
-        "bun": "Running bun",
-        "node": "Running Node",
-        "deno": "Running Deno",
-        "python": "Running Python",
-        "python3": "Running Python",
-        "pip": "Running pip",
-        "pip3": "Running pip",
-        "uv": "Running uv",
-        "poetry": "Running Poetry",
-        "pytest": "Running tests",
-        "jest": "Running tests",
-        "vitest": "Running tests",
-        "mocha": "Running tests",
-        "cargo": "Running Cargo",
-        "go": "Running Go",
-        "rustc": "Compiling Rust",
-        "gcc": "Compiling",
-        "make": "Building",
-        "cmake": "Building",
-        "javac": "Compiling Java",
-        "java": "Running Java",
-        "gradle": "Running Gradle",
-        "mvn": "Running Maven",
-        "ruby": "Running Ruby",
-        "bundle": "Running Bundler",
-        "gem": "Running gem",
-        "rails": "Running Rails",
-        "rake": "Running Rake",
-        "stow": "Running stow",
-        "home-manager": "Running Home Manager",
-        "nix": "Running Nix",
-        "nixos-rebuild": "Rebuilding NixOS",
-        "apt": "Managing packages",
-        "apt-get": "Managing packages",
-        "dpkg": "Managing packages",
-        "dnf": "Managing packages",
-        "yum": "Managing packages",
-        "pacman": "Managing packages",
-        "brew": "Running Homebrew",
-        "mas": "Managing Mac apps",
-        "launchctl": "Managing service",
-        "defaults": "Reading config",
-        "plutil": "Editing plist",
-        "xcodebuild": "Building Xcode",
-        "xcrun": "Running Xcode tool",
-        "simctl": "Managing simulator",
-        "xctest": "Running tests",
-        "swift": "Running Swift",
-        "swiftc": "Compiling Swift",
-        "ffmpeg": "Processing media",
-        "convert": "Converting image",
-        "magick": "Processing image",
-        "notify-send": "Sending notification",
-        "crontab": "Editing cron",
-        "at": "Scheduling task",
-        "watch": "Watching",
-        "timeout": "Running with timeout",
-        "xargs": "Batch processing",
-        "parallel": "Parallel processing",
-        "seq": "Generating sequence",
-        "yes": "Generating input",
-        "env": "Checking environment",
-        "export": "Setting variable",
-        "set": "Setting shell",
-        "unset": "Unsetting variable",
-        "source": "Sourcing script",
-        "cd": "Changing directory",
-        "pwd": "Checking directory",
-        "pushd": "Changing directory",
-        "popd": "Changing directory",
-        "dirs": "Checking directory stack",
-    }
-    summary = _COMMAND_SUMMARIES.get(base)
-    if summary:
-        # Try to add context from first positional arg.
-        if positional:
-            subject = positional[0].rsplit("/", 1)[-1]
-            if len(summary) + 1 + len(subject) <= GOAL_LABEL_CHARS:
-                return f"{summary} {subject}"
-        return summary
-    # Subcommand detection (git status, npm install, systemctl restart, etc.)
-    if base in ("git", "npm", "npx", "yarn", "pnpm", "docker", "kubectl", "systemctl", "service", "apt", "apt-get", "brew", "cargo", "go", "uv", "pip", "pip3") and positional:
-        sub = positional[0]
-        if len(sub) <= GOAL_LABEL_CHARS:
-            return f"{base} {sub}"
-    # Fallback: use the base command name.
-    return base[:GOAL_LABEL_CHARS] if base else "Running command"
+def _sanitize_title(value: Optional[str]) -> Optional[str]:
+    """Strip ANSI, markdown, HTML, and collapse whitespace — port of TUI sanitizeTitle."""
+    line = _first_non_empty_line(value or "")
+    if not line:
+        return None
+    title = line
+    title = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", title)  # ANSI escapes
+    title = re.sub(r"!\[([^\]]*)\]\([^)]*\)", r"\1", title)  # image alt
+    title = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", title)  # link text
+    title = re.sub(r"</?[^>]+>", " ", title)  # HTML tags
+    title = re.sub(r"^\s*(?:#{1,6}\s+|>\s*|(?:[-+*]|\d+[.)])\s+)", "", title)  # md prefix
+    title = re.sub(r"[*_~`]", "", title)  # emphasis markers
+    title = re.sub(r"\s+", " ", title).strip()
+    return title or None
 
 
-def _derive_tool_label(tool_calls: list[dict[str, Any]]) -> str:
-    """Build a human-readable label from the tool calls in a turn.
+def _truncate_title(title: str) -> str:
+    if len(title) <= TITLE_MAX:
+        return title
+    return title[:TITLE_MAX].rstrip() + "…"
 
-    Falls back gracefully when tool arguments are incomplete (during streaming).
-    Uses _summarize_command for bash tool calls to show intent, not raw command.
-    """
-    if not tool_calls:
-        return ""
-    first = tool_calls[0]
-    name = first.get("name", "") or first.get("toolName", "") or ""
-    args = first.get("arguments", {}) or first.get("args", {}) or first.get("input", {}) or {}
-    template = _TOOL_LABEL_TEMPLATES.get(name)
-    if template:
-        try:
-            if name == "bash":
-                cmd = str(args.get("command", ""))[:120].strip()
-                cmd = cmd.split("\n")[0].strip()
-                return _summarize_command(cmd) if cmd else "Running command"
-            if "{path}" in template:
-                path = _short_path(str(args.get("path", args.get("file", ""))))
-                return template.format(path=path) if path else template.replace(" {path}", "")
-            if "{command}" in template:
-                cmd = str(args.get("command", ""))[:60].strip()
-                cmd = cmd.split("\n")[0].strip()
-                return template.format(command=cmd) if cmd else "Running command"
-            return template
-        except Exception:
-            return template
-    # Unknown tool: use a generic label with the tool name.
-    if name:
-        return f"Calling {name}"
-    if len(tool_calls) > 1:
-        return f"Running {len(tool_calls)} tools"
-    return "working…"
+
+def _plural(count: int, singular: str) -> str:
+    return f"{count} {singular}{'' if count == 1 else 's'}"
+
+
+def _as_str(value: Any) -> Optional[str]:
+    return value if isinstance(value, str) else None
+
+
+def _as_record(value: Any) -> dict[str, Any]:
+    if value is not None and isinstance(value, dict):
+        return value
+    return {}
+
+
+def _basename(path: str) -> str:
+    return path.strip().strip("'").strip('"').rsplit("/", 1)[-1]
+
+
+# ---------------------------------------------------------------------------
+# Data model — ported from tool-call-renderer.ts WorkStep / ToolCall.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ToolCall:
+    id: str
+    name: str
+    arguments: dict[str, Any] = field(default_factory=dict)
+    started_at: Optional[float] = None
+    completed_at: Optional[float] = None
+
+
+@dataclass
+class WorkStep:
+    title: str
+    title_locked: bool
+    thinking: list[str] = field(default_factory=list)
+    tool_calls: list[ToolCall] = field(default_factory=list)
+    tool_call_ids: set[str] = field(default_factory=set)
+    completed_tool_call_ids: set[str] = field(default_factory=set)
+    failed: bool = False
+    started_at: Optional[float] = None
+    completed_at: Optional[float] = None
+
+
+# ---------------------------------------------------------------------------
+# Title derivation — ported from fallbackTitle / displayToolName / etc.
+# ---------------------------------------------------------------------------
+
+
+def _display_tool_name(tool_call: ToolCall) -> str:
+    if tool_call.name != "mcp":
+        return tool_call.name
+    server = (
+        _as_str(tool_call.arguments.get("server")) or _as_str(tool_call.arguments.get("connect")) or "gateway"
+    )
+    label = (server or "").strip()
+    return f"mcp({label or 'gateway'})"
+
+
+def _group_tools(tool_calls: list[ToolCall]) -> list[str]:
+    counts: dict[str, int] = {}
+    for tc in tool_calls:
+        name = _display_tool_name(tc)
+        counts[name] = counts.get(name, 0) + 1
+    return [f"{name}{' ×' + str(c) if c > 1 else ''}" for name, c in counts.items()]
+
+
+def _tool_target(tool_call: ToolCall) -> Optional[str]:
+    path = _as_str(tool_call.arguments.get("path"))
+    if path:
+        return _basename(path)
+    file = _as_str(tool_call.arguments.get("file"))
+    if file:
+        return _basename(file)
+    return None
+
+
+def _unique_targets(tool_calls: list[ToolCall]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for tc in tool_calls:
+        t = _tool_target(tc)
+        if t and t not in seen:
+            seen.add(t)
+            result.append(t)
+    return result
+
+
+def _format_targets(targets: list[str]) -> Optional[str]:
+    if not targets:
+        return None
+    if len(targets) <= 2:
+        return ", ".join(targets)
+    return _plural(len(targets), "file")
+
+
+def _is_check_command(tool_call: ToolCall) -> bool:
+    if tool_call.name != "bash":
+        return False
+    command = _as_str(tool_call.arguments.get("command")) or ""
+    return bool(re.search(r"(?:^|[\s/.-])(?:test|tests|verify|check|lint|typecheck|tsc)(?:[\s/.-]|$)", command, re.IGNORECASE))
+
+
+def _fallback_title(tool_calls: list[ToolCall]) -> str:
+    targets = _unique_targets(tool_calls)
+    target = _format_targets(targets)
+    names = [tc.name for tc in tool_calls]
+    if all(n in ("edit", "write") for n in names):
+        return f"Updating {target or _plural(len(tool_calls), 'file')}"
+    if all(n == "read" for n in names):
+        return f"Reading {target or _plural(len(tool_calls), 'file')}"
+    if all(_is_check_command(tc) for tc in tool_calls):
+        return "Running checks"
+    if all(n == "bash" for n in names):
+        return f"Running {_plural(len(tool_calls), 'command')}"
+    if target:
+        return f"Working with {target}"
+    return f"Using {', '.join(_group_tools(tool_calls))}"
+
+
+def _title_from_text(content: list[dict[str, Any]]) -> Optional[str]:
+    for item in content:
+        if item.get("type") != "text":
+            continue
+        title = _sanitize_title(_as_str(item.get("text")))
+        if title:
+            return title
+    return None
+
+
+def _thinking_from_content(content: list[dict[str, Any]]) -> list[str]:
+    result: list[str] = []
+    for item in content:
+        if item.get("type") != "thinking":
+            continue
+        sanitized = _sanitize_title(_as_str(item.get("thinking")))
+        if sanitized:
+            result.append(sanitized)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Tool summary — ported from summaryParts / bashCallSummary / renderParts.
+# Telegram HTML can't do colors, so we use <b> for emphasis and plain text.
+# ---------------------------------------------------------------------------
+
+
+def _format_elapsed(ms: float) -> str:
+    if ms < 1000:
+        return f"{int(ms)}ms"
+    if ms < 60000:
+        return f"{ms / 1000:.1f}s"
+    minutes = int(ms // 60000)
+    seconds = int((ms % 60000) // 1000)
+    return f"{minutes}m{seconds}s"
+
+
+def _step_status(step: WorkStep) -> str:
+    """pending | success | failure — ported from TUI status()."""
+    if step.failed:
+        return "failure"
+    if not step.tool_call_ids or len(step.completed_tool_call_ids) == len(step.tool_call_ids):
+        return "success"
+    return "pending"
+
+
+def _step_outcome(step: WorkStep, now: float, success_text: str) -> str:
+    current = _step_status(step)
+    if current == "pending":
+        if step.started_at is not None:
+            return f"running {_format_elapsed(max(0, now - step.started_at) * 1000)}"
+        return "running"
+    if current == "failure":
+        return "failed"
+    return success_text
+
+
+def _call_outcome(call: ToolCall, step: WorkStep, now: float) -> str:
+    if step.failed and call.id not in step.completed_tool_call_ids:
+        return "failed"
+    if call.id in step.completed_tool_call_ids:
+        return "completed"
+    if call.started_at is not None:
+        return f"running {_format_elapsed(max(0, now - call.started_at) * 1000)}"
+    return "running"
+
+
+def _summary_text(step: WorkStep, now: float) -> str:
+    """Render the tool summary for a step — ported from TUI summaryParts."""
+    calls = step.tool_calls
+    targets = _format_targets(_unique_targets(calls))
+    names = [tc.name for tc in calls]
+    parts: list[str] = []
+
+    def add(text: str) -> None:
+        parts.append(text)
+
+    if targets:
+        add(targets)
+
+    if all(n == "edit" for n in names):
+        edits = sum(
+            len(tc.arguments.get("edits")) if isinstance(tc.arguments.get("edits"), list) else 1
+            for tc in calls
+        )
+        add(_plural(edits, "edit"))
+        add(_step_outcome(step, now, "updated"))
+    elif all(n == "write" for n in names):
+        add(_plural(len(calls), "write"))
+        add(_step_outcome(step, now, "written"))
+    elif all(n == "read" for n in names):
+        add(_plural(len(calls), "read"))
+        add(_step_outcome(step, now, "loaded"))
+    elif len(calls) == 1 and calls[0].name == "bash":
+        command = (_as_str(calls[0].arguments.get("command")) or "").split("\n")[0].strip()
+        if command:
+            add(f"$ {command}")
+        else:
+            add("1 command")
+        add(_step_outcome(step, now, "completed"))
+    elif all(_is_check_command(tc) for tc in calls):
+        add(_plural(len(calls), "check"))
+        add(_step_outcome(step, now, "passed"))
+    elif all(n == "bash" for n in names):
+        add(_plural(len(calls), "command"))
+        add(_step_outcome(step, now, "completed"))
+    else:
+        add(_plural(len(calls), "call"))
+        add(" · ".join(_group_tools(calls)))
+        add(_step_outcome(step, now, "completed"))
+
+    return " · ".join(parts)
+
+
+def _bash_call_text(call: ToolCall, step: WorkStep, now: float) -> str:
+    """Render a single bash call — ported from bashCallSummary."""
+    command = (_as_str(call.arguments.get("command")) or "").split("\n")[0].strip()
+    text = f"$ {command}" if command else "1 command"
+    return f"{text} · {_call_outcome(call, step, now)}"
 
 
 def _try_json_object(raw: str) -> Optional[dict[str, Any]]:
@@ -395,86 +420,72 @@ def _try_json_object(raw: str) -> Optional[dict[str, Any]]:
     return parsed if isinstance(parsed, dict) else None
 
 
-def _clean_thinking_label(raw: str) -> str:
-    """Extract a clean, short label from a thinking block.
-
-    Takes the first sentence, strips filler words, and truncates.
-    """
-    text = raw.strip()
-    # Take first sentence or first line, whichever is shorter.
-    for sep in (". ", ".\n", "\n", "; "):
-        idx = text.find(sep)
-        if 0 < idx < GOAL_LABEL_CHARS:
-            text = text[:idx]
-            break
-    text = _strip_markdown(text)
-    # Strip leading filler words.
-    for _ in range(3):
-        new = _THINKING_FILLER_RE.sub("", text, count=1)
-        if new == text:
-            break
-        text = new
-    # Capitalize first letter.
-    if text:
-        text = text[0].upper() + text[1:]
-    if len(text) > GOAL_LABEL_CHARS:
-        text = text[:GOAL_LABEL_CHARS].rstrip() + "…"
-    return text or "working…"
+# ---------------------------------------------------------------------------
+# TraceBuilder — accumulates the work-step tree from RPC streaming events.
+# Replaces ThinkingTreeBuilder; mirrors the TUI's updateAssistant / WorkStepRow.
+# ---------------------------------------------------------------------------
 
 
-class ThinkingTreeBuilder:
-    """Accumulate a goal→traces tree from RPC streaming events.
-
-    Each turn (work step) produces one goal node. The label is derived via
-    a fallback chain that works across models with different output patterns:
-
-    1. Text block content (explicit title from the model) — preferred.
-    2. Tool-call summary (e.g. "Reading settings.json") — when the model
-       emits tool calls without a text title.
-    3. Cleaned first thinking sentence — when only thinking blocks are present.
-    4. "working…" — last resort.
-
-    The RPC stream sends deltas without a cumulative snapshot, so this class
-    reassembles the in-flight assistant message from `contentIndex`-keyed
-    blocks (see docs/rpc.md "message_update (Streaming)") and re-derives the
-    label on every delta.
-    """
+class TraceBuilder:
+    """Reassemble the live assistant message from RPC deltas and track
+    work-step lifecycle, then render a tree matching the TUI trace."""
 
     def __init__(self) -> None:
-        self.goals: list[dict[str, Any]] = []
+        self.steps: list[WorkStep] = []
         self.blocks: dict[int, dict[str, Any]] = {}
+        self.current_step: Optional[WorkStep] = None
+        self.thinking_draft_title: Optional[str] = None
+        self.thinking_draft_thinking: list[str] = []
+        self.start_time: float = time.monotonic()
+
+    # -- lifecycle --------------------------------------------------------
+
+    def on_agent_start(self) -> None:
+        self.steps = []
+        self.current_step = None
+        self.thinking_draft_title = None
+        self.thinking_draft_thinking = []
 
     def on_turn_start(self) -> None:
         self.blocks = {}
-        self.goals.append({"label": "working…", "traces": [], "tool_calls": [], "done": False})
+        self.current_step = None
+        self.thinking_draft_title = None
+        self.thinking_draft_thinking = []
+
+    def on_turn_end(self) -> None:
+        self.current_step = None
+        self.thinking_draft_title = None
+        self.thinking_draft_thinking = []
+
+    def on_agent_end(self) -> None:
+        for step in self.steps:
+            if _step_status(step) == "pending":
+                step.failed = True
+
+    # -- delta assembly (from message_update) -----------------------------
 
     def on_message_start(self, message: dict[str, Any]) -> None:
-        """Reset the block buffer when a new assistant message begins.
-
-        Ignores user/toolResult messages, which also emit message_start.
-        """
         if (message.get("role") or "assistant") == "assistant":
             self.blocks = {}
+            # Each assistant message gets its own step — mirrors the TUI
+            # where each AssistantMessageComponent creates a new WorkStep.
+            self.current_step = None
+            self.thinking_draft_title = None
+            self.thinking_draft_thinking = []
 
     def on_message_end(self, message: dict[str, Any]) -> None:
-        """Apply the authoritative final content of an assistant message.
-
-        Providers that do not stream deltas only produce message_start /
-        message_end, so this is the fallback that keeps labels correct.
-        """
         if (message.get("role") or "assistant") != "assistant":
             return
         content = message.get("content") or []
         if not content:
             return
         self.blocks = {i: dict(block) for i, block in enumerate(content) if isinstance(block, dict)}
-        self.on_message_update(self._content())
+        self._update_step()
 
     def _content(self) -> list[dict[str, Any]]:
         return [self.blocks[i] for i in sorted(self.blocks)]
 
     def on_assistant_event(self, ame: dict[str, Any]) -> None:
-        """Fold one streaming delta into the in-flight message, then relabel."""
         et = ame.get("type") or ""
         idx = ame.get("contentIndex")
         if not isinstance(idx, int):
@@ -492,7 +503,7 @@ class ThinkingTreeBuilder:
             elif et == "thinking_end":
                 block["thinking"] = ame.get("content") or block.get("thinking") or ""
         elif et.startswith("toolcall_"):
-            block = self.blocks.setdefault(idx, {"type": "toolCall", "name": "", "arguments": {}, "raw_args": ""})
+            block = self.blocks.setdefault(idx, {"type": "toolCall", "id": "", "name": "", "arguments": {}, "raw_args": ""})
             if et == "toolcall_delta":
                 block["raw_args"] = (block.get("raw_args") or "") + (ame.get("delta") or "")
                 parsed = _try_json_object(block["raw_args"])
@@ -500,6 +511,7 @@ class ThinkingTreeBuilder:
                     block["arguments"] = parsed
             elif et == "toolcall_end":
                 call = ame.get("toolCall") or {}
+                block["id"] = call.get("id") or block.get("id") or ""
                 block["name"] = call.get("name") or block.get("name") or ""
                 args = call.get("arguments")
                 if isinstance(args, str):
@@ -508,62 +520,166 @@ class ThinkingTreeBuilder:
                     block["arguments"] = args
         else:
             return
-        self.on_message_update(self._content())
+        self._update_step()
 
-    def on_message_update(self, content: list[dict[str, Any]]) -> None:
-        if not self.goals:
-            self.on_turn_start()
-        goal = self.goals[-1]
-        label = ""
-        traces: list[str] = []
-        tool_calls: list[dict[str, Any]] = []
-        for block in content:
-            bt = block.get("type")
-            if bt == "text" and (block.get("text") or "").strip():
-                label = block["text"].strip()
-            elif bt == "thinking" and (block.get("thinking") or "").strip():
-                traces.append(block["thinking"].strip())
-            elif bt in ("toolCall", "tool_call") and block.get("name"):
-                tool_calls.append(block)
-        # Fallback chain: text → tool-call summary → cleaned thinking → working…
-        if label:
-            goal["label"] = label
-            goal["label_derived"] = False
-        elif tool_calls:
-            derived = _derive_tool_label(tool_calls)
-            if derived and derived != "working…":
-                goal["label"] = derived
-                goal["label_derived"] = True
-            elif traces:
-                goal["label"] = _clean_thinking_label(traces[0])
-                goal["label_derived"] = True
-            else:
-                goal["label"] = "working…"
-                goal["label_derived"] = False
-        elif traces:
-            goal["label"] = _clean_thinking_label(traces[0])
-            goal["label_derived"] = True
-        goal["traces"] = traces
-        goal["tool_calls"] = tool_calls
+    # -- step creation/update (mirrors TUI updateAssistant) ---------------
 
-    def on_turn_end(self) -> None:
-        if self.goals:
-            self.goals[-1]["done"] = True
+    def _tool_calls_from_content(self) -> list[ToolCall]:
+        result: list[ToolCall] = []
+        for block in self._content():
+            if block.get("type") in ("toolCall", "tool_call"):
+                call_id = _as_str(block.get("id")) or ""
+                name = (_as_str(block.get("name")) or "").strip() or "tool"
+                args = block.get("arguments")
+                if isinstance(args, str):
+                    args = _try_json_object(args)
+                if not isinstance(args, dict):
+                    args = {}
+                result.append(ToolCall(id=call_id, name=name, arguments=args))
+        return result
 
-    def render(self, elapsed: int) -> str:
+    def _update_step(self) -> None:
+        content = self._content()
+        tool_calls = self._tool_calls_from_content()
+        explicit_title = _title_from_text(content)
+        thinking = _thinking_from_content(content)
+        has_thinking = any(b.get("type") == "thinking" and (b.get("thinking") or "").strip() for b in content)
+
+        if not tool_calls:
+            # Draft phase — no tools yet.  Show a live indicator so the
+            # Telegram status isn't blank while the agent streams text or
+            # thinking.  This mirrors the TUI's thinking-draft display but
+            # also covers text-only responses (the TUI shows those as native
+            # message content; Telegram has no such inline view).
+            self.thinking_draft_title = explicit_title if (has_thinking or explicit_title) else None
+            self.thinking_draft_thinking = thinking if has_thinking else []
+            return
+
+        # Have tool calls — create or update the step.
+        self.thinking_draft_title = None
+        self.thinking_draft_thinking = []
+
+        step_thinking = thinking if thinking else self.thinking_draft_thinking
+        step_explicit_title = explicit_title or self.thinking_draft_title
+        # Title derivation mirrors TUI updateAssistant:
+        #   thinking present  → explicit title or "Thinking"
+        #   no thinking       → explicit title or fallback from tool calls
+        if step_thinking:
+            title = step_explicit_title or "Thinking"
+        else:
+            title = step_explicit_title or _fallback_title(tool_calls)
+
+        step = self.current_step
+        if step is None:
+            step = WorkStep(
+                title=title,
+                title_locked=bool(step_explicit_title),
+                thinking=step_thinking,
+            )
+            self.steps.append(step)
+            self.current_step = step
+        else:
+            if not step.title_locked and step_explicit_title:
+                step.title = title
+                step.title_locked = True
+            elif not step.title_locked:
+                step.title = title
+
+        step.tool_calls = tool_calls
+        step.tool_call_ids = {tc.id for tc in tool_calls}
+        step.thinking = step_thinking
+
+    # -- tool execution lifecycle ----------------------------------------
+
+    def on_tool_execution_start(self, tool_call_id: str, tool_name: str, args: dict[str, Any]) -> None:
+        step = self.current_step
+        if not step:
+            return
+        tc = next((c for c in step.tool_calls if c.id == tool_call_id), None)
+        if not tc:
+            return
+        now = time.monotonic()
+        if tc.started_at is None:
+            tc.started_at = now
+        if step.started_at is None or now < step.started_at:
+            step.started_at = now
+
+    def on_tool_execution_end(self, tool_call_id: str, is_error: bool) -> None:
+        step = self.current_step
+        if not step:
+            return
+        tc = next((c for c in step.tool_calls if c.id == tool_call_id), None)
+        if tc and tc.completed_at is None:
+            tc.completed_at = time.monotonic()
+        step.completed_tool_call_ids.add(tool_call_id)
+        if is_error:
+            step.failed = True
+        if _step_status(step) != "pending" and step.completed_at is None and tc:
+            step.completed_at = tc.completed_at
+
+    # -- rendering (mirrors TUI WorkStepRow.render) ----------------------
+
+    def render(self, now: float) -> str:
+        elapsed = int(now - self.start_time)
         minutes, seconds = divmod(elapsed, 60)
         header = f"thinking · {minutes}:{seconds:02d}"
+
+        # If we have a thinking draft (no tools yet), show it standalone.
+        if not self.steps and (self.thinking_draft_thinking or self.thinking_draft_title):
+            return self._render_thinking_draft(header, now)
+
+        if not self.steps:
+            return header
+
         lines: list[str] = [header]
-        for goal in self.goals:
-            has_thinking = bool(goal.get("traces"))
-            if has_thinking:
-                marker = "▸" if goal["done"] else "▹"
-            else:
-                marker = "◆" if goal["done"] else "◇"
-            label = _strip_markdown(goal["label"])
-            if len(label) > GOAL_LABEL_CHARS:
-                label = label[:GOAL_LABEL_CHARS].rstrip() + "…"
-            lines.append(f"{marker} <b>{html.escape(label)}</b>")
+
+        # Activity header
+        all_steps = self.steps
+        total_calls = sum(len(s.tool_calls) for s in all_steps)
+        completed = sum(1 for s in all_steps if _step_status(s) == "success")
+        failed = any(_step_status(s) == "failure" for s in all_steps)
+        settled = completed == len(all_steps)
+        if failed:
+            state = "failed"
+        elif settled:
+            state = "all passed"
+        else:
+            state = f"{completed}/{len(all_steps)} complete"
+        lines.append(f" {_plural(len(all_steps), 'step')} · {_plural(total_calls, 'call')} · {state}")
+
+        # Steps (all in one group — RPC stream is sequential)
+        for step_idx, step in enumerate(all_steps):
+            final_step = step_idx == len(all_steps) - 1
+            outer = "└─" if final_step else "├─"
+            rail = "   " if final_step else "│  "
+            current_status = _step_status(step)
+
+            step_glyph = "▹" if current_status == "pending" else ("×" if current_status == "failure" else "▸")
+            title = _truncate_title(step.title)
+            lines.append(f" {outer} {step_glyph} <b>{html.escape(title)}</b>")
+
+            # Thinking bullets
+            if step.thinking:
+                for thought_idx, thought in enumerate(step.thinking):
+                    final_thought = thought_idx == len(step.thinking) - 1
+                    connector = "└─" if (not step.tool_calls and final_thought) else "├─"
+                    lines.append(f" {rail}{connector} • {html.escape(thought)}")
+
+            # Tool summary
+            if step.tool_calls:
+                tool_glyph = "◇" if current_status == "pending" else ("×" if current_status == "failure" else "◆")
+                all_bash = all(tc.name == "bash" for tc in step.tool_calls)
+                if all_bash and len(step.tool_calls) > 1:
+                    for call_idx, call in enumerate(step.tool_calls):
+                        final_call = call_idx == len(step.tool_calls) - 1
+                        call_status = _step_status(step)
+                        call_glyph = "◇" if call_status == "pending" else ("×" if call_status == "failure" else "◆")
+                        call_inner = "└─" if final_call else "├─"
+                        lines.append(f" {rail}{call_inner} {call_glyph} {html.escape(_bash_call_text(call, step, now))}")
+                else:
+                    inner = "└─"
+                    lines.append(f" {rail}{inner} {tool_glyph} {html.escape(_summary_text(step, now))}")
+
         text = "\n".join(lines)
         if len(text) > MAX_REPLY_CHARS:
             cut = text[:MAX_REPLY_CHARS]
@@ -574,7 +690,18 @@ class ThinkingTreeBuilder:
                 text = cut[:-1] + "…"
         return text
 
+    def _render_thinking_draft(self, header: str, now: float) -> str:
+        title = _truncate_title(self.thinking_draft_title or "Thinking")
+        lines = [header, "", f" ▹ <b>{html.escape(title)}</b>"]
+        for thought_idx, thought in enumerate(self.thinking_draft_thinking):
+            final_thought = thought_idx == len(self.thinking_draft_thinking) - 1
+            connector = "└─" if final_thought else "├─"
+            lines.append(f"   {connector} • {html.escape(thought)}")
+        return "\n".join(lines)
 
+
+# Kept for backward compatibility with tests and external callers.
+ThinkingTreeBuilder = TraceBuilder
 class StatusMessenger:
     """Manage one live Telegram status message that shows the thinking tree.
 
@@ -594,7 +721,10 @@ class StatusMessenger:
 
     def on_event(self, ev: dict[str, Any]) -> None:
         et = ev.get("type")
-        if et == "turn_start":
+        if et == "agent_start":
+            self.tree.on_agent_start()
+            self.dirty = True
+        elif et == "turn_start":
             self.tree.on_turn_start()
             self.dirty = True
         elif et == "message_start":
@@ -607,8 +737,24 @@ class StatusMessenger:
         elif et == "message_end":
             self.tree.on_message_end(ev.get("message") or {})
             self.dirty = True
+        elif et == "tool_execution_start":
+            self.tree.on_tool_execution_start(
+                ev.get("toolCallId") or "",
+                ev.get("toolName") or "",
+                ev.get("args") or {},
+            )
+            self.dirty = True
+        elif et == "tool_execution_end":
+            self.tree.on_tool_execution_end(
+                ev.get("toolCallId") or "",
+                bool(ev.get("isError")),
+            )
+            self.dirty = True
         elif et == "turn_end":
             self.tree.on_turn_end()
+            self.dirty = True
+        elif et == "agent_end":
+            self.tree.on_agent_end()
             self.dirty = True
         self._maybe_flush()
 
@@ -631,7 +777,7 @@ class StatusMessenger:
         self.last_edit = now
 
     def _create(self) -> None:
-        text = self.tree.render(self._elapsed())
+        text = self.tree.render(time.monotonic())
         payload: dict[str, Any] = {"chat_id": self.chat_id, "text": text, "parse_mode": "HTML"}
         if self.reply_to is not None:
             payload["reply_parameters"] = {"message_id": self.reply_to, "allow_sending_without_reply": True}
@@ -644,7 +790,7 @@ class StatusMessenger:
     def _edit(self) -> None:
         if self.message_id is None:
             return
-        text = self.tree.render(self._elapsed())
+        text = self.tree.render(time.monotonic())
         try:
             telegram_api(
                 "editMessageText",
