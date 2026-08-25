@@ -8,12 +8,11 @@
     "git/github.com/amosblomqvist/pi-config/extensions/youtube-search/index.ts"
   ],
   "extensions": [
-    "-extensions/transcript-scroll.ts",
-    "+extensions/rounded-bar-footer.ts"
+    "+extensions/pi-handoff.ts"
   ],
   "lastChangelogVersion": "0.84.2",
   "defaultProvider": "fireworks",
-  "defaultModel": "firerouter",
+  "defaultModel": "kimi-fast-latest",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-material",
   "transport": "websocket-cached",
