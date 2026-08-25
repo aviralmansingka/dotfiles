@@ -370,8 +370,70 @@ function status(step: WorkStep): "pending" | "success" | "failure" {
 
 type SummaryPart = {
   text: string;
-  role: "detail" | "strong" | "success" | "warning" | "error" | "prompt" | "plain";
+  role:
+    | "detail"
+    | "strong"
+    | "success"
+    | "warning"
+    | "error"
+    | "prompt"
+    | "plain"
+    | "command"
+    | "option"
+    | "quote"
+    | "operator"
+    | "path"
+    | "arg";
 };
+
+const OPERATOR_RE = /^(?:\|\||&&|\||>>|>|<<|<|;|&|\d*>&\d*|\d*>|\d*<)$/u;
+
+function commandParts(command: string): SummaryPart[] {
+  const parts: SummaryPart[] = [];
+  const tokens: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | undefined;
+  for (let index = 0; index < command.length; index++) {
+    const char = command[index];
+    if (quote) {
+      current += char;
+      if (char === quote) quote = undefined;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (/\s/u.test(char)) {
+      if (current.length > 0) {
+        tokens.push(current);
+        current = "";
+      }
+      continue;
+    }
+    current += char;
+  }
+  if (current.length > 0) tokens.push(current);
+
+  for (const [index, token] of tokens.entries()) {
+    if (index > 0) parts.push({ text: " ", role: "plain" });
+    if (token.startsWith("'") || token.startsWith('"')) {
+      parts.push({ text: token, role: "quote" });
+    } else if (OPERATOR_RE.test(token)) {
+      parts.push({ text: token, role: "operator" });
+    } else if (token.startsWith("-")) {
+      parts.push({ text: token, role: "option" });
+    } else if (token.includes("/")) {
+      parts.push({ text: token, role: "path" });
+    } else if (index === 0) {
+      parts.push({ text: token, role: "command" });
+    } else {
+      parts.push({ text: token, role: "arg" });
+    }
+  }
+  return parts;
+}
 
 function outcomePart(step: WorkStep, successText: string, now: number): SummaryPart {
   const currentStatus = status(step);
@@ -423,11 +485,13 @@ function summaryParts(step: WorkStep, now: number): SummaryPart[] {
     const command =
       asString(calls[0].arguments.command)?.split("\n")[0].trim() ?? "";
     if (command.length > 0) {
-      const [head, ...rest] = command.split(/\s+/);
       parts.push({ text: "$ ", role: "prompt" });
-      parts.push({ text: head, role: "strong" });
-      if (rest.length > 0)
-        parts.push({ text: ` ${rest.join(" ")}`, role: "plain" });
+      const cmdParts = commandParts(command);
+      if (cmdParts.length > 0) {
+        parts.push(...cmdParts);
+      } else {
+        add({ text: "1 command", role: "strong" });
+      }
     } else {
       add({ text: "1 command", role: "strong" });
     }
@@ -458,8 +522,14 @@ function renderSummary(theme: Theme, step: WorkStep): string {
   return summaryParts(step, now)
     .map((part) => {
       if (part.role === "detail") return theme.fg("muted", part.text);
-      if (part.role === "prompt") return theme.fg("success", theme.bold(part.text));
-      if (part.role === "plain") return theme.fg("text", part.text);
+      if (part.role === "plain" || part.role === "arg")
+        return theme.fg("text", part.text);
+      if (part.role === "prompt" || part.role === "command")
+        return theme.fg("success", theme.bold(part.text));
+      if (part.role === "option") return theme.fg("warning", part.text);
+      if (part.role === "quote") return theme.fg("accent", part.text);
+      if (part.role === "operator" || part.role === "path")
+        return theme.fg("mdLink", part.text);
       const color = part.role === "strong" ? "text" : part.role;
       return theme.fg(color, theme.bold(part.text));
     })
