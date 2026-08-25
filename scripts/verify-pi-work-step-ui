@@ -365,6 +365,7 @@ const titleActiveGlyph = "▹";
 const titleDoneGlyph = "▸";
 const toolActiveGlyph = "◇";
 const toolDoneGlyph = "◆";
+const truncateTitle = (title) => (title.length <= 20 ? title : title.slice(0, 20).trimEnd() + "…");
 const accentForeground = "rgb:242,133,52";
 const textForeground = "rgb:235,219,178";
 const mutedForeground = "rgb:146,131,116";
@@ -673,7 +674,7 @@ const resumedPrompt = resumed.plain.lastIndexOf("resumed activity");
 const resumedMarker = resumed.plain.indexOf("│  ", resumedPrompt);
 if (resumedPrompt < 0 || resumedMarker < 0)
 	fail("A resumed session did not render the activity rail for its new agent turn");
-const draftMarker = main.plain.indexOf("▹ Run grouped verification");
+const draftMarker = main.plain.indexOf(`▹ ${truncateTitle("Run grouped verification")}`);
 const settledHeader = main.plain.indexOf("│  1 step · 2 calls", draftMarker);
 if (draftMarker < 0 || settledHeader < 0)
 	fail("Thinking step did not transition from the standalone orange dot to the tool-owned timeline");
@@ -709,29 +710,29 @@ const restoreFailureSummary = "1 call · noisy_verify_tool · failed";
 const noTitleSummary = "1 call · noisy_verify_tool · completed";
 const pendingSummary = "2 calls · noisy_verify_tool ×2 · running";
 
-const pending = requireThinkingRow(main, pendingSummary, toolActiveGlyph, "Run grouped verification", "└─");
-const same = requireThinkingRow(main, sameSummary, toolDoneGlyph, "Run grouped verification", "├─");
+const pending = requireThinkingRow(main, pendingSummary, toolActiveGlyph, truncateTitle("Run grouped verification"), "└─");
+const same = requireThinkingRow(main, sameSummary, toolDoneGlyph, truncateTitle("Run grouped verification"), "├─");
 const sameFollowup = requireThinkingRow(
 	main,
 	sameFollowupSummary,
 	toolDoneGlyph,
-	"Continue grouped verification",
+	truncateTitle("Continue grouped verification"),
 	"├─",
 );
-const mixed = requireTerminalRow(main, mixedSummary, "×", "Working with settings.json", "└─", "└─");
+const mixed = requireTerminalRow(main, mixedSummary, "×", truncateTitle("Working with settings.json"), "└─", "└─");
 const noTitle = requireThinkingRow(main, noTitleSummary, toolDoneGlyph, "Thinking", "└─");
 const restoredSource = requireThinkingRow(
 	main,
 	restoreSuccessSummary,
 	toolDoneGlyph,
-	"Reconcile persisted tool result",
+	truncateTitle("Reconcile persisted tool result"),
 	"└─",
 );
 const afterReload = requireThinkingRow(
 	main,
 	restoreSuccessSummary,
 	toolDoneGlyph,
-	"Run post-reload verification",
+	truncateTitle("Run post-reload verification"),
 	"└─",
 );
 
@@ -740,7 +741,7 @@ for (const row of [pending, same, sameFollowup, noTitle, restoredSource, afterRe
 	assertThinkingForeground(main, row);
 assertHeaderRail(main);
 const nestedSteps = new RegExp(
-	`${escapeRegExp(sameSummary)}\r*\n ├─ ▸ Continue grouped verification`,
+	`${escapeRegExp(sameSummary)}\r*\n ├─ ▸ ${escapeRegExp(truncateTitle("Continue grouped verification"))}`,
 	"u",
 );
 if (!nestedSteps.test(main.plain)) fail("Continuous steps do not form a compact inner timeline");
@@ -762,15 +763,15 @@ for (const header of [
 ])
 	if (!missing.plain.includes(header)) fail(`Restored prompt-scoped timeline header is incorrect: ${header}`);
 const sameHeader = missing.plain.indexOf("│  3 steps · 6 calls · all passed");
-const sameFirst = missing.plain.indexOf("├─ ▸ Run grouped verification", sameHeader);
-const sameSecond = missing.plain.indexOf("├─ ▸ Continue grouped verification", sameFirst);
-const sameResponse = missing.plain.indexOf("└─ ▸ Preparing response", sameSecond);
+const sameFirst = missing.plain.indexOf(`├─ ▸ ${truncateTitle("Run grouped verification")}`, sameHeader);
+const sameSecond = missing.plain.indexOf(`├─ ▸ ${truncateTitle("Continue grouped verification")}`, sameFirst);
+const sameResponse = missing.plain.indexOf(`└─ ▸ Preparing response`, sameSecond);
 const mixedHeader = missing.plain.indexOf("│  1 step · 2 calls · failed", sameResponse);
-const mixedStep = missing.plain.indexOf("└─ × Working with settings.json", mixedHeader);
+const mixedStep = missing.plain.indexOf(`└─ × ${truncateTitle("Working with settings.json")}`, mixedHeader);
 const noTitleHeader = missing.plain.indexOf("│  1 step · 1 call · all passed", mixedStep);
 const noTitleStep = missing.plain.indexOf("└─ ▸ Thinking", noTitleHeader);
 const restoreHeader = missing.plain.indexOf("│  1 step · 1 call · failed", noTitleStep);
-const restoreStep = missing.plain.indexOf("└─ × Reconcile persisted tool result", restoreHeader);
+const restoreStep = missing.plain.indexOf(`└─ × ${truncateTitle("Reconcile persisted tool result")}`, restoreHeader);
 const restoredOrder = [
 	sameHeader,
 	sameFirst,
@@ -788,7 +789,7 @@ if (restoredOrder.some((index) => index < 0) || restoredOrder.some((index, posit
 
 
 const missingRows = thinkingRowsFor(missing, restoreFailureSummary).filter(
-	(row) => row.title === "Reconcile persisted tool result",
+	(row) => row.title === truncateTitle("Reconcile persisted tool result"),
 );
 if (missingRows.length === 0) fail("Missing restored work step was not rendered");
 if (missingRows.some((row) => row.glyph === toolDoneGlyph))
@@ -867,6 +868,8 @@ const draft = fs.readFileSync(process.argv[3], "utf8");
 const pending = fs.readFileSync(process.argv[4], "utf8");
 const narrow = fs.readFileSync(process.argv[5], "utf8");
 
+const truncateTitle = (title) => (title.length <= 20 ? title : title.slice(0, 20).trimEnd() + "…");
+
 function fail(message) {
 	console.error(message);
 	process.exit(1);
@@ -878,8 +881,8 @@ function indexOfRow(title) {
 }
 
 for (const [prompt, title] of [
-	["same-name success", "Run grouped verification"],
-	["mixed-name failure", "Working with settings.json"],
+	["same-name success", truncateTitle("Run grouped verification")],
+	["mixed-name failure", truncateTitle("Working with settings.json")],
 ]) {
 	const promptIndex = terminal.indexOf(prompt);
 	const rowIndex = indexOfRow(title);
@@ -898,10 +901,10 @@ if (draft.includes("⋯"))
 
 const promotedTitleLines = terminal
 	.split("\n")
-	.filter((line) => line.includes("▸ Run grouped verification"));
+	.filter((line) => line.includes(`▸ ${truncateTitle("Run grouped verification")}`));
 if (promotedTitleLines.length !== 1)
 	fail(`Promoted title rendered ${promotedTitleLines.length} times in the settled terminal`);
-if (!pending.includes("▹ Run grouped verification"))
+if (!pending.includes(`▹ ${truncateTitle("Run grouped verification")}`))
 	fail("Live activity did not promote thinking into a running agent step");
 if (!pending.includes("◇ 2 calls · noisy_verify_tool ×2 · running"))
 	fail("Tool calls were not visible while they were running");
