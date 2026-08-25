@@ -20,7 +20,7 @@ new_cwd = "follow"
 [keys]
 prefix = "ctrl+a"
 help = "prefix+space"
-workspace_picker = "prefix+o"
+workspace_picker = "prefix+s"
 open_notification_target = ""
 previous_tab = "prefix+p"
 next_tab = "prefix+n"
