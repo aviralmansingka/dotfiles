@@ -32,14 +32,18 @@ consistent trace regardless of which model is running.
 - `Searching refs`
 - `Restarting svc`
 
-**Bad titles** (vague, meta, or outcome-claiming):
+**Bad titles** (vague, meta, outcome-claiming, or prose):
 - `Let me look at this`
 - `Working on it`
 - `I will check the file`
 - `Done reading the config` (claims outcome before tools finish)
 - `Running read tool on /path/to/file` (mentions tool name)
+- `The user is still seeing truncated titles even after raising TITLE_MAX` (a sentence, not a label — 65 chars)
+- `Now let me refactor these three functions` (preamble/prose, not a label)
 
 Rules:
+- The title is a **label**, not a sentence. No preamble ("Let me…", "Now…", "I'll…"), no trailing prose, no restating the user's request.
+- **Hard cap: 40 characters.** Anything longer is truncated in the trace. Count the characters before emitting.
 - Summarize the purpose of the turn in 2–5 words, under 40 characters.
 - Use present-progressive wording: "Inspecting…", "Editing…", "Running…".
 - For parallel tool calls, summarize their common goal, not their count.
