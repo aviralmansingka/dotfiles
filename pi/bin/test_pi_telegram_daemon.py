@@ -151,6 +151,70 @@ class TestTraceBuilder(unittest.TestCase):
         # Compact render: no tool summary line
         self.assertNotIn("$ echo hello", text)
 
+    def test_fallback_title_uses_substantive_command_after_separator(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
+                "command": "date; ls -t /tmp/builds | head -1",
+            }},
+        ]})
+        text = tree.render(1)
+        self.assertIn("Listing files builds", text)
+        self.assertNotIn("date;", text)
+
+    def test_fallback_title_finds_loop_body_command(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
+                "command": "for f in *.log; do grep -q error \"$f\"; done",
+            }},
+        ]})
+        text = tree.render(1)
+        self.assertIn("Searching text error", text)
+        self.assertNotIn(" for", text)
+
+    def test_fallback_title_condenses_long_quoted_search_pattern(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
+                "command": "rg -n '123456789012345678901234|another-pattern' sessions",
+            }},
+        ]})
+        text = tree.render(1)
+        self.assertIn("Searching text 123456789012345678901234", text)
+        self.assertNotIn("|</b>", text)
+
+    def test_fallback_title_skips_multiline_assignment(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
+                "command": "ROOT=/tmp/builds\nls -t \"$ROOT\" | head -1",
+            }},
+        ]})
+        text = tree.render(1)
+        self.assertIn("Listing files $ROOT", text)
+        self.assertNotIn("Running command", text)
+
+    def test_fallback_title_keeps_trailing_slash_search_subject(self):
+        tree = self._new_tree()
+        tree.on_agent_start()
+        tree.on_turn_start()
+        tree.on_message_end({"role": "assistant", "content": [
+            {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {
+                "command": "grep -R /tmp/builds/ output.log",
+            }},
+        ]})
+        text = tree.render(1)
+        self.assertIn("Searching text builds", text)
+
     def test_fallback_title_checks(self):
         tree = self._new_tree()
         tree.on_agent_start()

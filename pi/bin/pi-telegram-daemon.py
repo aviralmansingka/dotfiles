@@ -18,6 +18,7 @@ import mimetypes
 import os
 import queue
 import re
+import shlex
 import signal
 import subprocess
 import tempfile
@@ -307,42 +308,66 @@ _SUBCOMMAND_TOOLS = {"git", "npm", "npx", "yarn", "pnpm", "docker", "kubectl", "
 
 def _summarize_command(command: str) -> str:
     """Describe a bash command's intent for use as a step title."""
-    cmd = command.strip().split("\n")[0].strip()
-    if not cmd:
+    lines = command.strip().splitlines()
+    if not lines:
         return "Running command"
-    # Strip leading "cd <dir> && " or "cd <dir>; " — the real command follows.
-    cmd = re.sub(r"^cd\s+\S+\s*(?:&&|;|\|\|)\s*", "", cmd, flags=re.IGNORECASE)
-    if not cmd:
-        return "Changing directory"
-    parts = cmd.split()
-    # Strip env var assignments and common prefixes.
-    while parts and ("=" in parts[0] or parts[0] in ("sudo", "env", "time", "nohup", "exec", "bash", "sh", "source")):
-        parts = parts[1:]
-    if not parts:
-        return "Running command"
-    base = parts[0].rsplit("/", 1)[-1]
-    positional = [a for a in parts[1:] if not a.startswith("-")]
-    summary = _COMMAND_SUMMARIES.get(base)
-    # Subcommand tools (git, npm, etc.) read better as "git status" than
-    # "Git operation status" — prefer the subcommand form when available.
-    if base in _SUBCOMMAND_TOOLS and positional:
-        sub = positional[0]
-        if len(sub) <= TITLE_MAX:
-            return f"{base} {sub}"
-    if summary:
-        if positional:
-            subject = positional[0].rsplit("/", 1)[-1].strip("'\"")
-            # Skip noise subjects like ., ., *, —, — that add no information.
-            if subject not in (".", ".", "*", "—", "—", ""):
-                combined = f"{summary} {subject}".strip()
-                if 1 < len(combined) <= TITLE_MAX:
-                    return combined
-        return summary
-    if base in _SUBCOMMAND_TOOLS and positional:
-        sub = positional[0]
-        if len(sub) <= TITLE_MAX:
-            return f"{base} {sub}"
-    return base[:TITLE_MAX] if base else "Running command"
+    # Keep heredoc bodies out of the shell heuristic; otherwise newlines are
+    # command boundaries and let us skip setup-only assignment lines.
+    cmd = lines[0].strip() if "<<" in lines[0] else ";".join(lines)
+    try:
+        lexer = shlex.shlex(cmd, posix=True, punctuation_chars=";&|")
+        lexer.whitespace_split = True
+        lexer.commenters = ""
+        tokens = list(lexer)
+    except ValueError:
+        tokens = cmd.split()
+
+    commands: list[list[str]] = []
+    current: list[str] = []
+    for token in tokens:
+        if token and not token.strip(";&|"):
+            if current:
+                commands.append(current)
+                current = []
+        else:
+            current.append(token)
+    if current:
+        commands.append(current)
+
+    best = (0, "Running command")
+    control_starts = {"case", "for", "if", "select", "until", "while"}
+    control_words = {"do", "elif", "else", "then", "!", "(", "{"}
+    control_ends = {"done", "esac", "fi", ")", "}"}
+    prefixes = {"sudo", "env", "time", "nohup", "exec", "bash", "sh", "source"}
+    for parts in commands:
+        if parts[0] in control_starts or parts[0] in control_ends:
+            continue
+        while parts and parts[0] in control_words:
+            parts = parts[1:]
+        while parts and ("=" in parts[0] or parts[0] in prefixes):
+            parts = parts[1:]
+        if not parts:
+            continue
+        base = parts[0].rsplit("/", 1)[-1].strip("(){}")
+        positional = [a for a in parts[1:] if not a.startswith("-")]
+        summary = _COMMAND_SUMMARIES.get(base)
+        if base in _SUBCOMMAND_TOOLS and positional:
+            title = f"{base} {positional[0]}"[:TITLE_MAX]
+            score = 4
+        elif summary:
+            subject = positional[0].rstrip("/").rsplit("/", 1)[-1] if positional else ""
+            if subject in (".", "*", "—", ""):
+                subject = ""
+            available = TITLE_MAX - len(summary) - 1
+            concise_subject = subject[:available].rstrip(";&|")
+            title = f"{summary} {concise_subject}" if concise_subject and available > 0 else summary
+            score = 3 if concise_subject else 2
+        else:
+            title = base[:TITLE_MAX] or "Running command"
+            score = 1
+        if score > best[0]:
+            best = (score, title)
+    return best[1]
 
 
 def _fallback_title(tool_calls: list[ToolCall]) -> str:
