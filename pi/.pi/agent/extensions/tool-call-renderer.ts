@@ -1,5 +1,6 @@
 import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 import { realpathSync } from "node:fs";
+import { hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
@@ -17,8 +18,10 @@ const ASSISTANT_INVALIDATING = Symbol.for(
   "aviral.pi.work-step-renderer.assistant-invalidating",
 );
 const CLOCK_SOURCE = Symbol.for("aviral.pi.work-step-renderer.clock-source");
+const PLAIN_BRIDGE = Symbol.for("aviral.pi.work-step-renderer.plain-bridge");
 const DEFAULT_CLOCK = () => Date.now();
 const TITLE_MAX = 20;
+const HOST_TAG = `⟠ ${hostname()}`;
 
 function truncateTitle(title: string): string {
   if (title.length <= TITLE_MAX) return title;
@@ -142,7 +145,7 @@ function resolveConnectedClock(): () => number {
   }
 }
 
-function bridgeNow(bridge?: ConnectedRenderBridge): number {
+function bridgeNow(bridge?: TimerBridge): number {
   try {
     const supplied = bridge?.clock?.();
     return finiteNumber(supplied) ? supplied : DEFAULT_CLOCK();
@@ -157,12 +160,17 @@ function formatElapsed(milliseconds: number): string {
   return `${Math.floor(milliseconds / 60000)}m${Math.floor((milliseconds % 60000) / 1000)}s`;
 }
 
+type TimerBridge = {
+  lifecycle: { status: string; startedAt?: number };
+  clock?: () => number;
+};
+
 class ClockInvalidationScheduler {
-  private readonly live = new Map<any, ConnectedRenderBridge>();
+  private readonly live = new Map<any, TimerBridge>();
   private timer?: ReturnType<typeof setTimeout>;
   private notifying = false;
 
-  arm(component: any, bridge: ConnectedRenderBridge): void {
+  arm(component: any, bridge: TimerBridge): void {
     if (bridge.lifecycle.status !== "running") {
       this.remove(component);
       return;
@@ -179,7 +187,7 @@ class ClockInvalidationScheduler {
   transfer(
     previous: any,
     replacement: any,
-    bridge: ConnectedRenderBridge,
+    bridge: TimerBridge,
   ): void {
     if (this.live.get(previous) !== bridge) return;
     this.live.delete(previous);
@@ -362,17 +370,23 @@ function status(step: WorkStep): "pending" | "success" | "failure" {
 
 type SummaryPart = {
   text: string;
-  role: "detail" | "strong" | "success" | "warning" | "error";
+  role: "detail" | "strong" | "success" | "warning" | "error" | "prompt" | "plain";
 };
 
-function outcomePart(step: WorkStep, successText: string): SummaryPart {
+function outcomePart(step: WorkStep, successText: string, now: number): SummaryPart {
   const currentStatus = status(step);
-  if (currentStatus === "pending") return { text: "running", role: "warning" };
+  if (currentStatus === "pending") {
+    if (finiteNumber(step.startedAt)) {
+      const elapsed = Math.max(0, now - step.startedAt);
+      return { text: `running ${formatElapsed(elapsed)}`, role: "warning" };
+    }
+    return { text: "running", role: "warning" };
+  }
   if (currentStatus === "failure") return { text: "failed", role: "error" };
   return { text: successText, role: "success" };
 }
 
-function summaryParts(step: WorkStep): SummaryPart[] {
+function summaryParts(step: WorkStep, now: number): SummaryPart[] {
   const calls = step.toolCalls;
   const targets = formatTargets(uniqueTargets(calls));
   const parts: SummaryPart[] = [];
@@ -389,44 +403,61 @@ function summaryParts(step: WorkStep): SummaryPart[] {
       return count + (Array.isArray(value) ? value.length : 1);
     }, 0);
     add({ text: plural(edits, "edit"), role: "strong" });
-    add(outcomePart(step, "updated"));
+    add(outcomePart(step, "updated", now));
     return parts;
   }
 
   if (calls.every((call) => call.name === "write")) {
     add({ text: plural(calls.length, "write"), role: "strong" });
-    add(outcomePart(step, "written"));
+    add(outcomePart(step, "written", now));
     return parts;
   }
 
   if (calls.every((call) => call.name === "read")) {
     add({ text: plural(calls.length, "read"), role: "strong" });
-    add(outcomePart(step, "loaded"));
+    add(outcomePart(step, "loaded", now));
     return parts;
   }
 
   if (calls.every(isCheckCommand)) {
     add({ text: plural(calls.length, "check"), role: "strong" });
-    add(outcomePart(step, "passed"));
+    add(outcomePart(step, "passed", now));
     return parts;
   }
 
   if (calls.every((call) => call.name === "bash")) {
-    add({ text: plural(calls.length, "command"), role: "strong" });
-    add(outcomePart(step, "completed"));
+    if (calls.length === 1) {
+      const command =
+        asString(calls[0].arguments.command)?.split("\n")[0].trim() ?? "";
+      if (command.length > 0) {
+        const [head, ...rest] = command.split(/\s+/);
+        parts.push({ text: "$ ", role: "prompt" });
+        parts.push({ text: head, role: "strong" });
+        if (rest.length > 0)
+          parts.push({ text: ` ${rest.join(" ")}`, role: "plain" });
+      } else {
+        add({ text: "1 command", role: "strong" });
+      }
+    } else {
+      add({ text: plural(calls.length, "command"), role: "strong" });
+    }
+    add(outcomePart(step, "completed", now));
     return parts;
   }
 
   add({ text: plural(calls.length, "call"), role: "strong" });
   add({ text: groupTools(calls).join(" · "), role: "strong" });
-  add(outcomePart(step, "completed"));
+  add(outcomePart(step, "completed", now));
   return parts;
 }
 
 function renderSummary(theme: Theme, step: WorkStep): string {
-  return summaryParts(step)
+  const now = resolveConnectedClock()();
+  return summaryParts(step, now)
     .map((part) => {
       if (part.role === "detail") return theme.fg("muted", part.text);
+      if (part.role === "prompt") return theme.fg("success", theme.bold(part.text));
+      if (part.role === "plain") return theme.fg("text", part.text);
       const color = part.role === "strong" ? "text" : part.role;
       return theme.fg(color, theme.bold(part.text));
     })
@@ -675,6 +706,45 @@ class WorkStepRow {
     const groups = renderedGroups(this.step.run);
     for (const [groupIndex, steps] of groups.entries()) {
       lines.push(renderActivityHeader(this.theme, steps));
+      const mergeableBashSingles =
+        steps.length > 1 &&
+        steps.every(
+          (item) =>
+            !item.titleLocked &&
+            item.thinking.length === 0 &&
+            item.toolCalls.length === 1 &&
+            item.toolCalls[0].name === "bash",
+        );
+      if (mergeableBashSingles) {
+        const anyPending = steps.some((item) => status(item) === "pending");
+        const anyFailed = steps.some((item) => status(item) === "failure");
+        const mergedGlyph = anyPending
+          ? this.theme.fg("accent", "▹")
+          : anyFailed
+            ? this.theme.fg("error", "×")
+            : this.theme.fg("muted", "▸");
+        const mergedTitle = `${plural(steps.length, "command")} · ${HOST_TAG}`;
+        lines.push(
+          ` ├─ ${mergedGlyph} ${this.theme.fg("text", this.theme.bold(mergedTitle))}`,
+        );
+        for (const [stepIndex, step] of steps.entries()) {
+          const currentStatus = status(step);
+          const toolGlyph =
+            currentStatus === "pending"
+              ? this.theme.fg("accent", "◇")
+              : currentStatus === "failure"
+                ? this.theme.fg("error", "×")
+                : this.theme.fg("success", "◆");
+          const finalStep = stepIndex === steps.length - 1;
+          const rail = this.theme.fg("borderMuted", finalStep ? "   " : "│  ");
+          const inner = this.theme.fg("borderMuted", finalStep ? "└─" : "├─");
+          lines.push(
+            ` ${rail}${inner} ${toolGlyph} ${renderSummary(this.theme, step)}`,
+          );
+        }
+        if (groupIndex < groups.length - 1) lines.push("");
+        continue;
+      }
       for (const [stepIndex, step] of steps.entries()) {
         const currentStatus = status(step);
         const hasTools = step.toolCalls.length > 0;
@@ -1170,6 +1240,50 @@ function synchronizeConnectedObservation(
   }
 }
 
+type PlainRenderBridge = {
+  layout: "plain";
+  lifecycle: {
+    readonly status: "pending" | "running" | "completed" | "failed";
+    readonly startedAt?: number;
+    thinking: string[];
+  };
+  clock?: () => number;
+  invalidate?: () => void;
+};
+
+function ensurePlainBridge(
+  component: any,
+  state: RendererState,
+): PlainRenderBridge {
+  let bridge = component[PLAIN_BRIDGE] as PlainRenderBridge | undefined;
+  if (bridge) return bridge;
+  const lifecycle = {
+    thinking: [] as string[],
+    get status(): "running" | "completed" | "failed" {
+      const step = component[WORK_STEP] as WorkStep | undefined;
+      if (!step) return "completed";
+      const current = status(step);
+      return current === "pending"
+        ? "running"
+        : current === "failure"
+          ? "failed"
+          : "completed";
+    },
+    get startedAt(): number | undefined {
+      const step = component[WORK_STEP] as WorkStep | undefined;
+      return step?.startedAt;
+    },
+  };
+  const created: PlainRenderBridge = {
+    layout: "plain",
+    lifecycle,
+    clock: resolveConnectedClock(),
+  };
+  component[PLAIN_BRIDGE] = created;
+  created.invalidate = () => state.scheduler.arm(component, created);
+  return created;
+}
+
 function ensureConnectedBridge(
   component: any,
   step: WorkStep,
@@ -1623,6 +1737,13 @@ export default async function (pi: ExtensionAPI) {
     toolUpdated(component) {
       const step = bindToolComponent(component, state);
       if (step) ensureConnectedBridge(component, step, state);
+      if (step && component.toolName !== "subagent") {
+        if (status(step) === "pending" && finiteNumber(step.startedAt)) {
+          state.scheduler.arm(component, ensurePlainBridge(component, state));
+        } else {
+          state.scheduler.remove(component);
+        }
+      }
     },
     toolExpanded(component) {
       toggleConnectedOutput(component, state);
@@ -1683,6 +1804,21 @@ export default async function (pi: ExtensionAPI) {
     ensureConnectedBridge(component, step, state);
     component.invalidate?.();
     component.ui?.requestRender?.();
+  });
+
+  pi.on("tool_execution_start", (event) => {
+    const step = state.pending.get(event.toolCallId);
+    const toolCall = step?.toolCalls.find((call) => call.id === event.toolCallId);
+    if (!step || !toolCall) return;
+    if (state.restoredToolCallIds.has(toolCall.id)) return;
+    const now = resolveConnectedClock()();
+    toolCall.startedAt ??= now;
+    const current = step.startedAt;
+    if (!finiteNumber(current) || now < current) step.startedAt = now;
+    const component = state.toolComponents.get(toolCall.id);
+    if (component && component.toolName !== "subagent") {
+      state.scheduler.arm(component, ensurePlainBridge(component, state));
+    }
   });
 
   pi.on("tool_execution_end", (event) => {

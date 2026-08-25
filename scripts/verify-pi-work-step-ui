@@ -135,7 +135,7 @@ if LC_ALL=C grep -q $'\033' "$append_system" || grep -Eiq 'ANSI|U\+001B|escape b
 	echo "Semantic prompt safety failure: ANSI-generation guidance remains in APPEND_SYSTEM.md" >&2
 	exit 1
 fi
-for heading in '# Response shape' '# Tool-call activity titles'; do
+for heading in '# Response shape' '# Turn titles'; do
 	if ! grep -Fqx "$heading" "$append_system"; then
 		echo "Semantic prompt safety failure: required section missing: $heading" >&2
 		exit 1
