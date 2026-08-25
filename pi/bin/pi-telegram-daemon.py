@@ -310,6 +310,10 @@ def _summarize_command(command: str) -> str:
     cmd = command.strip().split("\n")[0].strip()
     if not cmd:
         return "Running command"
+    # Strip leading "cd <dir> && " or "cd <dir>; " — the real command follows.
+    cmd = re.sub(r"^cd\s+\S+\s*(?:&&|;|\|\|)\s*", "", cmd, flags=re.IGNORECASE)
+    if not cmd:
+        return "Changing directory"
     parts = cmd.split()
     # Strip env var assignments and common prefixes.
     while parts and ("=" in parts[0] or parts[0] in ("sudo", "env", "time", "nohup", "exec", "bash", "sh", "source")):
@@ -327,10 +331,12 @@ def _summarize_command(command: str) -> str:
             return f"{base} {sub}"
     if summary:
         if positional:
-            subject = positional[0].rsplit("/", 1)[-1]
-            combined = f"{summary} {subject}".strip()
-            if len(combined) <= TITLE_MAX:
-                return combined
+            subject = positional[0].rsplit("/", 1)[-1].strip("'\"")
+            # Skip noise subjects like ., ., *, —, — that add no information.
+            if subject not in (".", ".", "*", "—", "—", ""):
+                combined = f"{summary} {subject}".strip()
+                if 1 < len(combined) <= TITLE_MAX:
+                    return combined
         return summary
     if base in _SUBCOMMAND_TOOLS and positional:
         sub = positional[0]
@@ -343,6 +349,7 @@ def _fallback_title(tool_calls: list[ToolCall]) -> str:
     targets = _unique_targets(tool_calls)
     target = _format_targets(targets)
     names = [tc.name for tc in tool_calls]
+    bash_calls = [tc for tc in tool_calls if tc.name == "bash"]
     if all(n in ("edit", "write") for n in names):
         return f"Updating {target or _plural(len(tool_calls), 'file')}"
     if all(n == "read" for n in names):
@@ -351,6 +358,11 @@ def _fallback_title(tool_calls: list[ToolCall]) -> str:
         return "Running checks"
     if all(n == "bash" for n in names):
         first_cmd = _as_str(tool_calls[0].arguments.get("command")) or ""
+        return _summarize_command(first_cmd)
+    # Mixed tools: prefer the bash command's intent if present (it's usually
+    # the primary action), falling back to a target-based label.
+    if bash_calls:
+        first_cmd = _as_str(bash_calls[0].arguments.get("command")) or ""
         return _summarize_command(first_cmd)
     if target:
         return f"Working with {target}"
