@@ -153,7 +153,8 @@ return {
     -- overridden in plugins/herdr-agent.lua. <leader>at sends to the agent pane
     -- in the same Herdr tab, falling back to sidekick's "Send This" stack
     -- (require("sidekick.cli").send({ msg = "{this}" })) when no agent pane
-    -- shares the tab. <leader>tt sends to the terminal pane in the same tab.
+    -- shares the tab. <leader>tt pastes the selection into the floating Snacks
+    -- terminal (the singleton toggled by <leader>ft), creating it if needed.
     {
       "<leader>av",
       function()

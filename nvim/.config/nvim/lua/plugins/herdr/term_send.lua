@@ -1,71 +1,26 @@
--- Send the current buffer (or visual selection) to the non-agent terminal pane
--- that shares a Herdr tab with this Neovim pane. Mirrors ./agent_send.lua but
--- targets a bare terminal instead of an agent pane and sends raw text (no
--- "From neovim buffer" header) so the content is usable as shell input.
+-- Send the current buffer (or visual selection) to the floating Snacks terminal
+-- (the same singleton float toggled by `<leader>ft`). If the terminal has not
+-- been opened yet this session, create it, then paste the raw text into it.
 --
--- Pane discovery contract (herdr 0.8.0):
---   * current pane: `$HERDR_PANE_ID`, falling back to `herdr pane current`
---   * candidates:   `herdr pane list` -> result.panes, filtered to the same tab_id
---   * delivery:     `herdr pane send-text <pane_id> <text>` + `herdr pane send-keys <pane_id> Enter`
-local herdr = require("plugins.sidekick.herdr")
+-- Delivery uses the terminal buffer's pty job id (`terminal_job_id`) via
+-- `vim.api.nvim_chan_send`, which is equivalent to physically pasting the bytes
+-- into the terminal — no "From neovim buffer" header, no agent formatting. A
+-- trailing newline is added so a single-line selection runs immediately; a
+-- multi-line selection runs line by line, just like a real paste.
 local agent_send = require("plugins.herdr.agent_send")
 
 local M = {}
 
--- Reuse the agent_send max_bytes guard so a giant buffer never gets pasted.
+-- Guard against pasting a giant buffer into a terminal prompt.
 M.max_bytes = agent_send.max_bytes
 
-local function notify(message, level)
-  vim.notify(message, level or vim.log.levels.WARN)
-end
-
--- A terminal pane is any pane the agent_send module does NOT consider an agent
--- pane (agent_status "unknown" or absent). Excludes the current pane.
----@param pane table
----@return boolean
-function M.is_term_pane(pane)
-  return type(pane) == "table" and not agent_send.is_agent_pane(pane)
-end
-
----Pick the terminal pane that shares a tab with `current_pane_id`.
----@param panes table[]
----@param current_pane_id string
----@return table|nil pane
-function M.find_term_pane(panes, current_pane_id)
-  local tab_id
-  for _, pane in ipairs(panes or {}) do
-    if pane.pane_id == current_pane_id then
-      tab_id = pane.tab_id
-      break
-    end
+-- Resolve the project root the same way LazyVim's `<leader>ft` does so this
+-- targets the very same terminal the user would toggle with that key.
+local function term_cwd()
+  if LazyVim and LazyVim.root then
+    return LazyVim.root()
   end
-  if not tab_id then
-    return nil
-  end
-  for _, pane in ipairs(panes) do
-    if pane.pane_id ~= current_pane_id and pane.tab_id == tab_id and M.is_term_pane(pane) then
-      return pane
-    end
-  end
-  return nil
-end
-
----@return table|nil pane
----@return string|nil error
-function M.resolve_target()
-  local current = agent_send.current_pane_id()
-  if not current then
-    return nil, "Not running inside a Herdr pane"
-  end
-  local panes = herdr.list_panes()
-  if not panes or #panes == 0 then
-    return nil, "No terminal pane found in this tab"
-  end
-  local pane = M.find_term_pane(panes, current)
-  if not pane then
-    return nil, "No terminal pane found in this tab"
-  end
-  return pane, nil
+  return vim.fn.getcwd()
 end
 
 ---@param bufnr integer
@@ -89,27 +44,56 @@ function M.build_payload(bufnr, visual)
   return body, label
 end
 
+---Get-or-create the floating Snacks terminal and return its pty job id.
+---@return number|nil job_id
+---@return string|nil error
+function M.resolve_target()
+  local Snacks = package.loaded["snacks"] and require("snacks") or _G.Snacks
+  if not Snacks or not Snacks.terminal then
+    return nil, "Snacks terminal not available"
+  end
+  -- `get` creates the terminal if it does not yet exist and returns it plus a
+  -- `created` flag. `show` ensures the float is visible whether or not it was
+  -- just created (it may already exist but be hidden).
+  local terminal, created = Snacks.terminal.get(nil, { cwd = term_cwd() })
+  if not terminal or not terminal.buf or not vim.api.nvim_buf_is_valid(terminal.buf) then
+    return nil, "Could not open floating terminal"
+  end
+  if not created then
+    pcall(function()
+      terminal:show()
+    end)
+  end
+  if terminal.focus then
+    pcall(function()
+      terminal:focus()
+    end)
+  end
+  local job = vim.b[terminal.buf].terminal_job_id
+  if not job then
+    return nil, "Floating terminal has no pty job"
+  end
+  return job, nil
+end
+
 ---@param opts? { visual?: boolean, bufnr?: integer }
 ---@return boolean sent
 function M.send(opts)
   opts = opts or {}
   local bufnr = opts.bufnr or vim.api.nvim_get_current_buf()
-  local pane, err = M.resolve_target()
-  if not pane then
-    notify(err or "No terminal pane found in this tab")
+  local job, err = M.resolve_target()
+  if not job then
+    vim.notify(err or "Could not open floating terminal", vim.log.levels.WARN)
     return false
   end
   local text, label = M.build_payload(bufnr, opts.visual == true)
-  if herdr.call({ "pane", "send-text", pane.pane_id, text }) == nil then
-    return false
+  -- Paste the raw bytes into the pty. A trailing newline submits a single-line
+  -- selection so it runs immediately, mirroring `<leader>at` pressing Enter.
+  if not text:find("\n$", 1, true) then
+    text = text .. "\n"
   end
-  if not herdr.send_key(pane.pane_id, "Enter") then
-    return false
-  end
-  notify(
-    string.format("Sent %s to terminal %s", label, pane.pane_id),
-    vim.log.levels.INFO
-  )
+  vim.api.nvim_chan_send(job, text)
+  vim.notify(string.format("Sent %s to floating terminal", label), vim.log.levels.INFO)
   return true
 end
 

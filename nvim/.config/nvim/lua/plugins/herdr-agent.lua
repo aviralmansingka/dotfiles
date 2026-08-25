@@ -3,8 +3,10 @@
 -- When no agent pane shares the tab, fall back to sidekick's original "Send
 -- This" stack so the selection still reaches the active session sidekick CLI.
 --
--- `<leader>tt`: send the buffer (or visual selection) to the non-agent terminal
--- pane that shares this Herdr tab. Logic lives in ./herdr/term_send.lua.
+-- `<leader>tt`: paste the buffer (or visual selection) into the floating
+-- Snacks terminal (the same singleton float toggled by `<leader>ft`), creating
+-- it if it has not been opened yet this session. Logic lives in
+-- ./herdr/term_send.lua.
 --
 -- Both override sidekick.nvim bindings (see plugins/sidekick.lua).
 local function send_to_agent(visual)
@@ -40,7 +42,7 @@ return {
       function()
         require("plugins.herdr.term_send").send({ visual = false })
       end,
-      desc = "Send buffer to Herdr terminal pane",
+      desc = "Send buffer to floating terminal",
     },
     {
       "<leader>tt",
@@ -48,7 +50,7 @@ return {
         require("plugins.herdr.term_send").send({ visual = true })
       end,
       mode = "x",
-      desc = "Send selection to Herdr terminal pane",
+      desc = "Send selection to floating terminal",
     },
   },
 }
