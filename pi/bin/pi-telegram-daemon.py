@@ -712,19 +712,11 @@ class TraceBuilder:
     # Mobile-first: one line per step, title plus elapsed. Tool summaries and
     # thinking bullets stay in the model but are not rendered here.
 
-    def _step_elapsed(self, step: WorkStep, now: float) -> Optional[float]:
-        if step.started_at is None:
-            return None
-        end = step.completed_at if step.completed_at is not None else now
-        return max(0.0, end - step.started_at)
-
     def _step_line(self, step: WorkStep, now: float) -> str:
         status = _step_status(step)
         glyph = "▹" if status == "pending" else ("×" if status == "failure" else "▸")
         title = html.escape(_truncate_title(step.title))
-        elapsed = self._step_elapsed(step, now)
-        timer = f" · {_format_elapsed(elapsed * 1000)}" if elapsed is not None else ""
-        return f"{glyph} <b>{title}</b>{timer}"
+        return f"{glyph} <b>{title}</b>"
 
     def render(self, now: float) -> str:
         elapsed = int(now - self.start_time)

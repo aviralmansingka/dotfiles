@@ -341,22 +341,24 @@ class TestTraceBuilder(unittest.TestCase):
 
     # -- elapsed timers ---------------------------------------------------
 
-    def test_running_tool_shows_elapsed(self):
+    def test_no_per_step_timer_in_render(self):
+        """Timers were removed — step lines carry glyph + title only."""
         tree = self._new_tree()
         tree.on_agent_start()
         tree.on_turn_start()
         tree.on_message_end({"role": "assistant", "content": [
+            {"type": "text", "text": "Running tests"},
             {"type": "toolCall", "id": "c1", "name": "bash", "arguments": {"command": "sleep 10"}},
         ]})
         tree.on_tool_execution_start("c1", "bash", {"command": "sleep 10"})
-        # Override timestamps for deterministic testing (on_tool_execution_start
-        # uses real time.monotonic, which doesn't match start_time=0.0)
         tree.current_step.started_at = 0.0
         tree.current_step.tool_calls[0].started_at = 0.0
-        # Simulate 2.5 seconds elapsed
         text = tree.render(2.5)
-        self.assertIn("2.", text)  # 2.Xs
-        self.assertIn("s", text)
+        self.assertIn("Running tests", text)
+        # No elapsed suffix on the step line
+        step_line = [l for l in text.split("\n") if "Running tests" in l][0]
+        self.assertNotIn("s", step_line.split("</b>")[-1])
+        self.assertTrue(step_line.endswith("</b>"))
 
     # -- HTML escaping ----------------------------------------------------
 
