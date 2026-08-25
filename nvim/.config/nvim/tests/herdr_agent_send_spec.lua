@@ -61,4 +61,70 @@ local truncated = agent_send.build_payload(bufnr, false)
 assert_eq(truncated:find("[truncated", 1, true) ~= nil, true, "large payloads are truncated with a note")
 agent_send.max_bytes = saved_max
 
+assert_eq(
+  agent_send.format_prompt("Explain these lines", "if value == { answer = 42 } then\n  return value\nend"),
+  "Explain these lines\n\n> if value == { answer = 42 } then\n>   return value\n> end",
+  "visual prompts put the instruction first and quote every selected line"
+)
+
+local herdr = require("plugins.sidekick.herdr")
+local saved_resolve_target = agent_send.resolve_target
+local saved_call = herdr.call
+local saved_send_key = herdr.send_key
+local delivered = {}
+agent_send.resolve_target = function()
+  return { pane_id = "w37:p3", agent = "pi" }
+end
+herdr.call = function(args)
+  delivered[#delivered + 1] = args
+  return {}
+end
+herdr.send_key = function(pane_id, key)
+  delivered[#delivered + 1] = { pane_id, key }
+  return true
+end
+local literal_payload = "Explain this\n\n> if value == { answer = 42 } then"
+assert_eq(
+  agent_send.send({ payload = literal_payload, label = "selection" }),
+  true,
+  "prebuilt visual prompt is delivered"
+)
+assert_eq(delivered[1][4], literal_payload, "prebuilt payload is delivered literally")
+assert_eq(delivered[2][2], "Enter", "delivery submits only after sending the payload")
+
+local saved_input = vim.ui.input
+local saved_exit_visual_mode = agent_send.exit_visual_mode
+local input_callback
+local exited_visual = 0
+vim.ui.input = function(_, callback)
+  input_callback = callback
+end
+agent_send.exit_visual_mode = function()
+  exited_visual = exited_visual + 1
+end
+
+delivered = {}
+agent_send.prompt_selection({ bufnr = bufnr })
+assert_eq(#delivered, 0, "opening the instruction input does not send or submit")
+input_callback(nil)
+assert_eq(#delivered, 0, "cancelling the instruction input sends nothing")
+assert_eq(exited_visual, 0, "cancelling keeps the visual selection")
+
+agent_send.prompt_selection({ bufnr = bufnr })
+assert_eq(#delivered, 0, "a second instruction input still waits for submission")
+input_callback("Explain these lines")
+assert_eq(exited_visual, 1, "submitting exits visual mode")
+assert_eq(
+  delivered[1][4],
+  "Explain these lines\n\n> line two\n> line three",
+  "input submission sends the instruction and quoted selection"
+)
+assert_eq(delivered[2][2], "Enter", "input submission triggers agent completion")
+
+vim.ui.input = saved_input
+agent_send.exit_visual_mode = saved_exit_visual_mode
+agent_send.resolve_target = saved_resolve_target
+herdr.call = saved_call
+herdr.send_key = saved_send_key
+
 print("herdr_agent_send_spec: ok")
