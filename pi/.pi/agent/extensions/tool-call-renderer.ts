@@ -20,13 +20,7 @@ const ASSISTANT_INVALIDATING = Symbol.for(
 const CLOCK_SOURCE = Symbol.for("aviral.pi.work-step-renderer.clock-source");
 const PLAIN_BRIDGE = Symbol.for("aviral.pi.work-step-renderer.plain-bridge");
 const DEFAULT_CLOCK = () => Date.now();
-const TITLE_MAX = 40;
 const HOST_TAG = `⟠ ${hostname()}`;
-
-function truncateTitle(title: string): string {
-  if (title.length <= TITLE_MAX) return title;
-  return title.slice(0, TITLE_MAX).trimEnd() + "…";
-}
 const BACKGROUND_UPDATE_EVENT = "subagent:background-update";
 
 type ToolCall = {
@@ -744,7 +738,7 @@ function renderConnectedParent(
           : connectedColor("success", "◆");
     const title = connectedColor(
       current === "failed" ? "error" : "text",
-      truncateTitle(item.title),
+      item.title,
       true,
     );
     const elapsed =
@@ -772,7 +766,7 @@ function renderThinkingDraft(
 ): string[] {
   const lines = [
     "",
-    ` ${theme.fg("accent", "▹")} ${theme.fg("text", theme.bold(truncateTitle(draft.title ?? "Thinking")))}`,
+    ` ${theme.fg("accent", "▹")} ${theme.fg("text", theme.bold(draft.title ?? "Thinking"))}`,
   ];
   for (const [index, thought] of draft.thinking.entries()) {
     const connector = index === draft.thinking.length - 1 ? "└─" : "├─";
@@ -780,11 +774,9 @@ function renderThinkingDraft(
       `   ${theme.fg("borderMuted", connector)} ${theme.fg("muted", "•")} ${theme.fg("muted", thought)}`,
     );
   }
-  // Title line (index 1) is truncated only by truncateTitle (title length),
-  // not by the line-width pass, so a <=40-char title always shows in full.
-  return lines.map((line, index) =>
-    index === 1 ? line : truncateToWidth(line, width),
-  );
+  // Every line — title included — is clipped to the viewport width, so the
+  // trace stays one line across external display, laptop, and mobile terms.
+  return lines.map((line) => truncateToWidth(line, width));
 }
 
 function renderThinkingStep(
@@ -798,7 +790,7 @@ function renderThinkingStep(
       : theme.fg("muted", "▸");
   const lines = [
     "",
-    ` ${glyph} ${theme.fg("text", theme.bold(truncateTitle(step.title)))}`,
+    ` ${glyph} ${theme.fg("text", theme.bold(step.title))}`,
   ];
   for (const [index, thought] of step.thinking.entries()) {
     const connector = index === step.thinking.length - 1 ? "└─" : "├─";
@@ -806,11 +798,9 @@ function renderThinkingStep(
       `   ${theme.fg("borderMuted", connector)} ${theme.fg("muted", "•")} ${theme.fg("muted", thought)}`,
     );
   }
-  // Title line (index 1) is truncated only by truncateTitle (title length),
-  // not by the line-width pass, so a <=40-char title always shows in full.
-  return lines.map((line, index) =>
-    index === 1 ? line : truncateToWidth(line, width),
-  );
+  // Every line — title included — is clipped to the viewport width, so the
+  // trace stays one line across external display, laptop, and mobile terms.
+  return lines.map((line) => truncateToWidth(line, width));
 }
 
 class WorkStepRow {
@@ -821,7 +811,6 @@ class WorkStepRow {
 
   render(width: number): string[] {
     const lines: string[] = [];
-    const titleLines = new Set<number>();
     const groups = renderedGroups(this.step.run);
     for (const [groupIndex, steps] of groups.entries()) {
       lines.push(renderActivityHeader(this.theme, steps));
@@ -846,7 +835,6 @@ class WorkStepRow {
         lines.push(
           ` ├─ ${mergedGlyph} ${this.theme.fg("text", this.theme.bold(mergedTitle))}`,
         );
-        titleLines.add(lines.length - 1);
         for (const [stepIndex, step] of steps.entries()) {
           const currentStatus = status(step);
           const toolGlyph =
@@ -887,9 +875,8 @@ class WorkStepRow {
         const rail = this.theme.fg("borderMuted", finalStep ? "   " : "│  ");
         const inner = this.theme.fg("borderMuted", "└─");
         lines.push(
-          ` ${outer} ${stepGlyph} ${this.theme.fg("text", this.theme.bold(truncateTitle(step.title)))}`,
+          ` ${outer} ${stepGlyph} ${this.theme.fg("text", this.theme.bold(step.title))}`,
         );
-        titleLines.add(lines.length - 1);
         if (step.thinking.length > 0) {
           for (const [thoughtIndex, thought] of step.thinking.entries()) {
             const finalThought = thoughtIndex === step.thinking.length - 1;
@@ -935,12 +922,9 @@ class WorkStepRow {
       }
       if (groupIndex < groups.length - 1) lines.push("");
     }
-    // Title lines are truncated only by truncateTitle (title length, 40),
-    // not by the line-width pass, so a <=40-char title always shows in full
-    // even when the pane is narrow.
-    return lines.map((line, index) =>
-      titleLines.has(index) ? line : truncateToWidth(line, width),
-    );
+    // Every line — title included — is clipped to the viewport width, so the
+    // trace stays one line across external display, laptop, and mobile.
+    return lines.map((line) => truncateToWidth(line, width));
   }
 }
 
