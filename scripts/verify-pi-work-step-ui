@@ -642,7 +642,7 @@ function assertNoLaterActiveState(terminal, summary, terminalGlyph) {
 	const rows = rowsFor(terminal, summary);
 	const terminalIndex = rows.findIndex((row) => row.glyph === terminalGlyph);
 	if (terminalIndex < 0) fail(`Missing terminal ${terminalGlyph} row for ${summary}`);
-	const laterActive = rows.slice(terminalIndex + 1).find((row) => row.glyph === activeGlyph);
+	const laterActive = rows.slice(terminalIndex + 1).find((row) => row.glyph === titleActiveGlyph);
 	if (laterActive) fail(`Completed work step returned to active state: ${summary}`);
 }
 
