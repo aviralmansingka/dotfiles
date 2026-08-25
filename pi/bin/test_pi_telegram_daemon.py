@@ -191,7 +191,7 @@ class TestTraceBuilder(unittest.TestCase):
     # -- thinking ---------------------------------------------------------
 
     def test_thinking_draft_shown(self):
-        """Thinking with no tool calls shows a thinking draft."""
+        """Thinking with no tool calls shows the first thinking line as title."""
         tree = self._new_tree()
         tree.on_agent_start()
         tree.on_turn_start()
@@ -199,11 +199,11 @@ class TestTraceBuilder(unittest.TestCase):
         tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
                                  "delta": "I need to check the config"})
         text = tree.render(1)
-        # Compact render: thinking draft shows title only, no bullets
-        self.assertIn("Thinking", text)
+        # No tools, no text title → first thinking line is the title
+        self.assertIn("check the config", text)
         self.assertIn("▹", text)
         self.assertNotIn("•", text)
-        self.assertNotIn("check the config", text)
+        self.assertNotIn("Thinking", text)
 
     def test_thinking_with_tools_shows_bullets(self):
         """Thinking + tool calls: title from text, thinking shown as bullets."""
@@ -222,8 +222,8 @@ class TestTraceBuilder(unittest.TestCase):
         self.assertNotIn("Need to check the config", text)
         self.assertNotIn("◇", text)
 
-    def test_thinking_no_text_shows_thinking_title(self):
-        """Thinking + tools but no text: title defaults to 'Thinking'."""
+    def test_thinking_no_text_prefers_tool_title(self):
+        """Thinking + tools but no text: tool-derived title preferred over 'Thinking'."""
         tree = self._new_tree()
         tree.on_agent_start()
         tree.on_turn_start()
@@ -232,8 +232,10 @@ class TestTraceBuilder(unittest.TestCase):
             {"type": "toolCall", "id": "c1", "name": "read", "arguments": {"path": "x.py"}},
         ]})
         text = tree.render(1)
-        self.assertIn("Thinking", text)
-        # No thinking bullets in compact render
+        # Tool fallback wins over "Thinking" when tools are present
+        self.assertIn("Reading", text)
+        self.assertIn("x.py", text)
+        self.assertNotIn("Thinking", text)
         self.assertNotIn("•", text)
 
     # -- tree structure ---------------------------------------------------
@@ -383,9 +385,11 @@ class TestTraceBuilder(unittest.TestCase):
         tree.on_assistant_event({"type": "thinking_delta", "contentIndex": 0,
                                  "delta": "Use <b> & <i> tags"})
         text = tree.render(1)
-        # Compact render: thinking draft title only, no bullet lines
+        # Thinking line used as title; sanitizeTitle strips HTML tags,
+        # & is HTML-escaped in output
         self.assertNotIn("•", text)
-        self.assertNotIn("&amp;", text)
+        self.assertIn("&amp;", text)
+        self.assertNotIn("<i>", text)
 
     def test_html_escaping_in_command(self):
         tree = self._new_tree()

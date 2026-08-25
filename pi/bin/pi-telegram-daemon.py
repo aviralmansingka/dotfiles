@@ -649,13 +649,22 @@ class TraceBuilder:
 
         step_thinking = thinking if thinking else self.thinking_draft_thinking
         step_explicit_title = explicit_title or self.thinking_draft_title
-        # Title derivation mirrors TUI updateAssistant:
-        #   thinking present  → explicit title or "Thinking"
-        #   no thinking       → explicit title or fallback from tool calls
-        if step_thinking:
-            title = step_explicit_title or "Thinking"
+        # Title derivation — adapted for compact mobile render:
+        #   1. explicit text title from model
+        #   2. tool-derived fallback (if tools present)
+        #   3. first sanitized thinking line (if thinking present)
+        #   4. "Thinking" — last resort
+        # The TUI uses "Thinking" as a category label with bullets below;
+        # Telegram shows no bullets, so we surface the thinking content or
+        # tool intent as the title instead.
+        if step_explicit_title:
+            title = step_explicit_title
+        elif tool_calls:
+            title = _fallback_title(tool_calls)
+        elif step_thinking:
+            title = _truncate_title(step_thinking[0])
         else:
-            title = step_explicit_title or _fallback_title(tool_calls)
+            title = "Thinking"
 
         step = self.current_step
         if step is None:
@@ -729,7 +738,10 @@ class TraceBuilder:
 
         # No step yet (streaming text or thinking before the first tool call).
         if not self.steps and (self.thinking_draft_title or self.thinking_draft_thinking):
-            title = html.escape(_truncate_title(self.thinking_draft_title or "Thinking"))
+            draft_title = self.thinking_draft_title
+            if not draft_title and self.thinking_draft_thinking:
+                draft_title = _truncate_title(self.thinking_draft_thinking[0])
+            title = html.escape(draft_title or "Thinking")
             lines.append(f"▹ <b>{title}</b>")
 
         text = "\n".join(lines)
