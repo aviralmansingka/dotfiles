@@ -365,7 +365,7 @@ const titleActiveGlyph = "▹";
 const titleDoneGlyph = "▸";
 const toolActiveGlyph = "◇";
 const toolDoneGlyph = "◆";
-const truncateTitle = (title) => (title.length <= 20 ? title : title.slice(0, 20).trimEnd() + "…");
+const truncateTitle = (title) => (title.length <= 40 ? title : title.slice(0, 40).trimEnd() + "…");
 const accentForeground = "rgb:242,133,52";
 const textForeground = "rgb:235,219,178";
 const mutedForeground = "rgb:146,131,116";
@@ -868,7 +868,7 @@ const draft = fs.readFileSync(process.argv[3], "utf8");
 const pending = fs.readFileSync(process.argv[4], "utf8");
 const narrow = fs.readFileSync(process.argv[5], "utf8");
 
-const truncateTitle = (title) => (title.length <= 20 ? title : title.slice(0, 20).trimEnd() + "…");
+const truncateTitle = (title) => (title.length <= 40 ? title : title.slice(0, 40).trimEnd() + "…");
 
 function fail(message) {
 	console.error(message);

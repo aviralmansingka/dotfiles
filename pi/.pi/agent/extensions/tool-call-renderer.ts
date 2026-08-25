@@ -20,7 +20,7 @@ const ASSISTANT_INVALIDATING = Symbol.for(
 const CLOCK_SOURCE = Symbol.for("aviral.pi.work-step-renderer.clock-source");
 const PLAIN_BRIDGE = Symbol.for("aviral.pi.work-step-renderer.plain-bridge");
 const DEFAULT_CLOCK = () => Date.now();
-const TITLE_MAX = 20;
+const TITLE_MAX = 40;
 const HOST_TAG = `⟠ ${hostname()}`;
 
 function truncateTitle(title: string): string {
