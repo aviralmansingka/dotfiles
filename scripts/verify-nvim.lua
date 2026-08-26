@@ -4825,6 +4825,46 @@ local function validate_workspace_session()
   vim.cmd("silent! %bwipeout!")
 end
 
+local function validate_cuda_lsp()
+  -- Smoke for the clangd CUDA graceful-failure detection in
+  -- helpers/cuda_lsp.lua. Asserts the host-capability booleans are sane for
+  -- the current host and that notify_if_unsupported is safe on a fake cuda
+  -- buffer. End-to-end clangd-attaches-and-returns-symbols is validated
+  -- manually on the real lesson file (see docs/neovim-cuda-lsp.md).
+  -- Prepend the worktree config so the helper resolves before it is stowed
+  -- into the live ~/.config/nvim; harmless once stowed (rtp dedup).
+  vim.opt.rtp:prepend(vim.fn.fnamemodify("nvim/.config/nvim", ":p"))
+  local ok, cuda_lsp = pcall(require, "helpers.cuda_lsp")
+  if not ok then
+    fail("helpers.cuda_lsp not found: " .. tostring(cuda_lsp))
+  end
+  local uname = vim.uv.os_uname()
+
+  if type(cuda_lsp.host_supports_full_cuda()) ~= "boolean" then
+    fail("host_supports_full_cuda must return a boolean")
+  end
+  if type(cuda_lsp.toolkit_present()) ~= "boolean" then
+    fail("toolkit_present must return a boolean")
+  end
+
+  -- macOS Apple Silicon has no NVIDIA CUDA Toolkit, so full CUDA LSP must
+  -- report unsupported there. Linux host support depends on the toolkit.
+  if uname.sysname == "Darwin" and uname.machine == "arm64" then
+    if cuda_lsp.host_supports_full_cuda() then
+      fail("macOS arm64 must not report full CUDA LSP support")
+    end
+  end
+
+  -- notify_if_unsupported must not error on a fake cuda buffer and must be
+  -- idempotent (once-per-session guard).
+  cuda_lsp._reset_notify_guard()
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].filetype = "cuda"
+  cuda_lsp.notify_if_unsupported(buf)
+  cuda_lsp.notify_if_unsupported(buf)
+  vim.api.nvim_buf_delete(buf, { force = true })
+end
+
 local cases = {
   ["agent-keymaps"] = validate_agent_keymaps,
   ["workspace-session"] = validate_workspace_session,
@@ -4840,6 +4880,7 @@ local cases = {
   ["sidekick-herdr-live"] = validate_sidekick_herdr_live,
   ["vault-features"] = validate_vault_features,
   ["vault-work-items"] = validate_vault_work_items,
+  ["cuda-lsp"] = validate_cuda_lsp,
 }
 
 local fn = cases[case]
@@ -4847,7 +4888,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items"
+      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items, cuda-lsp"
   )
 end
 
