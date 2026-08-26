@@ -1,4 +1,10 @@
 import { copyToClipboard, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { execFile } from "node:child_process";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
+import { promisify } from "node:util";
+import { buildNvimTerminalScript, extractMarkedOutput, NVIM_RUN_TIMEOUT_MS } from "./run-command/nvim-terminal";
 import {
 	Editor,
 	type EditorTheme,
@@ -15,20 +21,24 @@ import { Type } from "typebox";
 // run-command — a hands-on sibling of quiz.
 //
 // Where quiz verifies the HEAD (concepts, terminology), run-command verifies
-// the HANDS: the agent presents ONE command with a grounded prediction, the
-// user runs it in their own terminal, and pastes the output back. The agent
-// never executes the command — the user types everything, which is the point.
-//
-// UI: a floating panel above the prompt shows the command (and optional
-// context/prediction). Pressing `y` yanks the command to the system clipboard
-// as-is. The user runs it elsewhere, returns, types/pastes the output into the
-// response field (Tab to focus), and submits. On submit, the command and the
-// user's pasted output travel together so the agent grades output vs.
-// prediction without ever having seen the terminal.
+// the HANDS: the agent presents ONE command with a grounded prediction and the
+// user runs it. Two capture paths share the panel:
+//   - Manual: `y` yanks the command to the clipboard; the user runs it in their
+//     own terminal, returns, types/pastes output into the response field (Tab
+//     to focus), and submits. The agent never executes the command — the user
+//     types everything, which is the point.
+//   - Auto: `r` opens a Neovim `:term dm` pane, runs the command there, and
+//     captures output + exit status back into the grading flow (see
+//     runViaNvimTerminal and ./run-command/nvim-terminal.ts); the user need not
+//     paste by hand. Esc cancels; a hard timeout bounds long-running commands.
+// On submit, the command and observed output travel together so the agent
+// grades output vs. prediction without having seen the terminal.
 // ────────────────────────────────────────────────────────────────────────────
 
 interface RunCommandResponse {
 	output: string;
+	exitCode?: number;
+	autoRun?: boolean;
 }
 
 type RunCommandStatus = "answered" | "cancelled" | "unavailable";
@@ -39,8 +49,170 @@ interface RunCommandDetails {
 	prediction?: string;
 	context?: string;
 	output?: string;
+	exitCode?: number;
+	autoRun?: boolean;
 	copied?: boolean; // user pressed `y` — the command was yanked at least once
 	message?: string;
+}
+
+const execFileAsync = promisify(execFile);
+const HERDR_TIMEOUT_MS = 5000;
+const NVIM_START_TIMEOUT_MS = 10_000;
+const POLL_MS = 250;
+
+interface NvimRunResult {
+	output: string;
+	exitCode: number;
+	paneId: string;
+}
+
+function abortError(signal: AbortSignal): Error {
+	return signal.reason instanceof Error ? signal.reason : new Error("Neovim run cancelled");
+}
+
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+	if (signal.aborted) return Promise.reject(abortError(signal));
+	let onAbort: (() => void) | undefined;
+	return new Promise<void>((resolve, reject) => {
+		const timer = setTimeout(resolve, ms);
+		onAbort = () => {
+			clearTimeout(timer);
+			reject(abortError(signal));
+		};
+		signal.addEventListener("abort", onAbort, { once: true });
+	}).finally(() => {
+		if (onAbort) signal.removeEventListener("abort", onAbort);
+	});
+}
+
+function withTimeout(signal: AbortSignal | undefined, timeoutMs: number): { signal: AbortSignal; cleanup: () => void } {
+	const controller = new AbortController();
+	const onAbort = () => controller.abort(signal?.reason ?? new Error("Neovim run cancelled"));
+	if (signal?.aborted) onAbort();
+	signal?.addEventListener("abort", onAbort, { once: true });
+	const timer = setTimeout(() => controller.abort(new Error(`Neovim terminal run timed out after ${timeoutMs / 1000}s`)), timeoutMs);
+	return {
+		signal: controller.signal,
+		cleanup: () => {
+			clearTimeout(timer);
+			signal?.removeEventListener("abort", onAbort);
+		},
+	};
+}
+
+async function execText(command: string, args: string[], signal: AbortSignal, timeout = HERDR_TIMEOUT_MS): Promise<string> {
+	const { stdout } = await execFileAsync(command, args, {
+		encoding: "utf8",
+		maxBuffer: 1024 * 1024,
+		signal,
+		timeout,
+	});
+	return String(stdout);
+}
+
+async function herdrJson(args: string[], signal: AbortSignal): Promise<any | null> {
+	try {
+		return JSON.parse(await execText("herdr", args, signal));
+	} catch {
+		return null;
+	}
+}
+
+async function herdrOk(args: string[], signal: AbortSignal): Promise<boolean> {
+	try {
+		await execText("herdr", args, signal);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+async function nvimExpr(socket: string, expr: string, signal: AbortSignal): Promise<string> {
+	return execText("nvim", ["--server", socket, "--remote-expr", expr], signal);
+}
+
+function luaEval(lua: string, arg?: string): string {
+	return arg === undefined ? `luaeval(${JSON.stringify(lua)})` : `luaeval(${JSON.stringify(lua)}, ${JSON.stringify(arg)})`;
+}
+
+async function waitForSocket(socket: string, signal: AbortSignal): Promise<void> {
+	const deadline = Date.now() + NVIM_START_TIMEOUT_MS;
+	while (!existsSync(socket)) {
+		if (Date.now() > deadline) throw new Error("Timed out waiting for Neovim RPC socket");
+		await sleep(POLL_MS, signal);
+	}
+}
+
+async function waitForTerminalJob(socket: string, signal: AbortSignal): Promise<void> {
+	const deadline = Date.now() + NVIM_START_TIMEOUT_MS;
+	while (Date.now() <= deadline) {
+		const job = await nvimExpr(socket, "exists('b:terminal_job_id') ? b:terminal_job_id : 0", signal).catch(() => "0");
+		if (Number.parseInt(job.trim(), 10) > 0) return;
+		await sleep(POLL_MS, signal);
+	}
+	throw new Error("Timed out waiting for `:term dm` terminal job");
+}
+
+async function readNvimBuffer(socket: string, signal: AbortSignal): Promise<string> {
+	return nvimExpr(socket, luaEval('table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\\n")'), signal);
+}
+
+async function runViaNvimTerminal(
+	cwd: string,
+	command: string,
+	signal: AbortSignal | undefined,
+	onProgress: (message: string) => void,
+): Promise<NvimRunResult> {
+	const timeout = withTimeout(signal, NVIM_RUN_TIMEOUT_MS);
+	const runSignal = timeout.signal;
+	let paneId: string | undefined;
+	// Keep the RPC socket path short: UNIX domain sockets cap at ~103 bytes
+	// (sun_path[104] minus NUL), and macOS' /var/folders/.../T tmpdir is already
+	// ~48 bytes, so a `pi-run-command-<uuid>.sock` name blows the limit and
+	// `nvim --listen` silently fails to create the socket. Use a short prefix
+	// and a hyphen-less hex token so the full path stays well under the cap.
+	const socket = `${tmpdir()}/pi-rc-${randomUUID().replace(/-/g, "")}.sock`;
+	const token = randomUUID().replace(/-/g, "");
+	// Capture command stdout+stderr to a temp file and read it back via fs once
+	// the END marker fires. We do not scrape the echoed terminal buffer for
+	// output: the terminal driver echoes the bulk-pasted wrapper before the
+	// shell runs it, so buffer scraping corrupts the captured text.
+	const outputFile = `${tmpdir()}/pi-rc-out-${token}.txt`;
+	try {
+		onProgress("Opening Neovim terminal pane…");
+		const split = await herdrJson(["pane", "split", "--current", "--direction", "right", "--cwd", cwd, "--focus"], runSignal);
+		paneId = split?.result?.pane?.pane_id;
+		if (!paneId) throw new Error("Could not open a Herdr pane for Neovim");
+		const launched = await herdrOk(["pane", "run", paneId, "nvim", "--listen", socket, "-n", "+term dm", "+startinsert"], runSignal);
+		if (!launched) throw new Error("Could not launch Neovim in the new pane");
+
+		onProgress("Starting `:term dm`…");
+		await waitForSocket(socket, runSignal);
+		await waitForTerminalJob(socket, runSignal);
+
+		onProgress("Running command in the Neovim terminal…");
+		const script = buildNvimTerminalScript(command, token, outputFile);
+		await nvimExpr(socket, luaEval("vim.api.nvim_chan_send(vim.b.terminal_job_id, _A)", script), runSignal);
+
+		onProgress(`Waiting for output (timeout ${NVIM_RUN_TIMEOUT_MS / 1000}s)…`);
+		while (true) {
+			const parsed = extractMarkedOutput(await readNvimBuffer(socket, runSignal), token);
+			if (parsed.complete) {
+				let output = "";
+				try {
+					output = readFileSync(outputFile, "utf8");
+				} catch {
+					output = "";
+				}
+				return { output: output.trim(), exitCode: parsed.exitCode ?? -1, paneId };
+			}
+			await sleep(POLL_MS, runSignal);
+		}
+	} finally {
+		timeout.cleanup();
+		if (paneId) await herdrOk(["pane", "close", paneId], new AbortController().signal).catch(() => false);
+		rmSync(outputFile, { force: true });
+	}
 }
 
 const RunCommandParams = Type.Object({
@@ -154,16 +326,60 @@ interface AskResult {
 	copied: boolean;
 }
 
+type AutoRunState =
+	| { status: "idle" }
+	| { status: "running"; message: string }
+	| { status: "error"; message: string };
+
 async function askRunCommand(
 	ctx: any,
 	command: string,
 	prediction: string,
 	context: string | undefined,
+	signal: AbortSignal | undefined,
 ): Promise<AskResult> {
 	let copied = false;
 
 	const result = await ctx.ui.custom<RunCommandResponse | null>(
 		(tui: any, theme: any, _kb: any, done: (result: RunCommandResponse | null) => void) => {
+			let finished = false;
+			let autoRun: AutoRunState = { status: "idle" };
+			let autoController: AbortController | undefined;
+			const finish = (value: RunCommandResponse | null) => {
+				if (finished) return;
+				finished = true;
+				autoController?.abort(new Error("run-command panel closed"));
+				done(value);
+			};
+
+			function refresh() {
+				tui.requestRender();
+			}
+
+			function startAutoRun() {
+				if (autoRun.status === "running" || finished) return;
+				autoController = new AbortController();
+				const onAbort = () => autoController?.abort(signal?.reason ?? new Error("run-command cancelled"));
+				if (signal?.aborted) onAbort();
+				signal?.addEventListener("abort", onAbort, { once: true });
+				autoRun = { status: "running", message: "Opening Neovim terminal pane…" };
+				refresh();
+				runViaNvimTerminal(ctx.cwd ?? process.cwd(), command, autoController.signal, (message) => {
+					autoRun = { status: "running", message };
+					refresh();
+				})
+					.then((result) => {
+						signal?.removeEventListener("abort", onAbort);
+						finish({ output: result.output, exitCode: result.exitCode, autoRun: true });
+					})
+					.catch((error) => {
+						signal?.removeEventListener("abort", onAbort);
+						if (finished) return;
+						autoRun = { status: "error", message: error instanceof Error ? error.message : String(error) };
+						refresh();
+					});
+			}
+
 			// The response field. Enter must NOT submit inside the editor (its submit
 			// path clears the buffer), so disableSubmit and let the host own Enter.
 			// Ctrl+J still inserts a newline (pi convention) for multi-line output.
@@ -200,10 +416,16 @@ async function askRunCommand(
 					top.push("");
 					addWrapped(
 						top,
-						theme.fg("dim", "y — copy command · run it in your own terminal · paste the output below"),
+						theme.fg("dim", "y — copy · r — run in Neovim :term dm and auto-capture · paste output below"),
 						tw,
 						" ",
 					);
+					if (autoRun.status === "running") {
+						addWrapped(top, theme.fg("warning", `${autoRun.message} Esc cancels; hard timeout ${NVIM_RUN_TIMEOUT_MS / 1000}s.`), tw, " ");
+					}
+					if (autoRun.status === "error") {
+						addWrapped(top, theme.fg("warning", `Neovim run failed: ${autoRun.message}. Manual copy/paste still works.`), tw, " ");
+					}
 					if (copied) {
 						addT(theme.fg("success", " ✓ copied to clipboard"));
 					}
@@ -233,7 +455,7 @@ async function askRunCommand(
 				handleInput(data: string) {
 					if (focus === "editor") {
 						if (matchesKey(data, Key.enter)) {
-							done({ output: outputText() ?? "" });
+							finish({ output: outputText() ?? "" });
 							return;
 						}
 						if (matchesKey(data, Key.tab)) {
@@ -242,14 +464,14 @@ async function askRunCommand(
 							return;
 						}
 						if (matchesKey(data, Key.escape)) {
-							done(null);
+							finish(null);
 							return;
 						}
 						editor.handleInput(data);
 						return;
 					}
 
-					// Unfocused: y yanks the command as-is, Tab focuses the field.
+					// Unfocused: y yanks the command as-is, r runs it via Neovim, Tab focuses the field.
 					if (data === "y") {
 						copyToClipboard(command)
 							.then(() => {
@@ -257,6 +479,10 @@ async function askRunCommand(
 								tui.requestRender();
 							})
 							.catch(() => {});
+						return;
+					}
+					if (data === "r") {
+						startAutoRun();
 						return;
 					}
 					if (matchesKey(data, Key.tab)) {
@@ -272,11 +498,11 @@ async function askRunCommand(
 							editor.focused = true;
 							return;
 						}
-						done({ output: outputText()! });
+						finish({ output: outputText()! });
 						return;
 					}
 					if (matchesKey(data, Key.escape)) {
-						done(null);
+						finish(null);
 						return;
 					}
 				},
@@ -295,8 +521,10 @@ function buildDetails(
 	output?: string,
 	copied?: boolean,
 	message?: string,
+	exitCode?: number,
+	autoRun?: boolean,
 ): RunCommandDetails {
-	return { status, command, prediction, context, output, copied, message };
+	return { status, command, prediction, context, output, copied, message, exitCode, autoRun };
 }
 
 function cancelledResult(command: string, prediction: string | undefined, context?: string) {
@@ -319,11 +547,12 @@ export default function runCommand(pi: ExtensionAPI) {
 		name: "run-command",
 		label: "run-command",
 		description:
-			"Have the user run ONE command hands-on and report what they saw. A floating panel shows the command; the user presses y to copy it as-is, runs it in their own terminal, pastes the output into the response field, and submits. You receive the command and the pasted output together — grade the output against your prediction. You NEVER execute the command yourself: the user typing and running everything is the point. Use it for teaching labs and any hands-on verification where the user must do the doing.",
+			"Have the user run ONE command hands-on and report what they saw. A floating panel shows the command; y copies it for the manual terminal workflow, and r opens a Neovim terminal pane with `:term dm`, runs the command there, and captures output automatically. You receive the command and observed output together — grade output vs. prediction.",
 		promptSnippet:
-			"Use run-command to have the user execute one command hands-on (with a grounded prediction) and paste back the output. You never run it yourself.",
+			"Use run-command to have the user execute one command hands-on (with a grounded prediction); they can paste output manually or press r for Neovim-terminal auto-capture.",
 		promptGuidelines: [
 			"ONE command per call — never a batch. The panel shows exactly what you pass in `command`, verbatim.",
+			"The user may press r to run the displayed command through a Neovim `:term dm` pane; output and exit status are captured automatically when available.",
 			"prediction is REQUIRED and must be grounded: run the idempotent/read-only equivalent yourself first and predict the actual observed output; for state-modifying commands, run the read-side (current ruleset/sysctl value) and predict a concrete diff. When no safe read exists, say the prediction is inferred from docs.",
 			"Grade the returned output against your prediction. A mismatch is diagnostic: either host state drifted or your model was wrong — determine which before moving on.",
 			"The user may submit partial or empty output if something went wrong on their side — treat that as data, not as disobedience.",
@@ -347,13 +576,17 @@ export default function runCommand(pi: ExtensionAPI) {
 			}
 
 			return withUILock(async () => {
-				const { response, copied } = await askRunCommand(ctx, command, prediction, context);
+				const { response, copied } = await askRunCommand(ctx, command, prediction, context, signal);
 				if (!response) {
 					return cancelledResult(command, prediction, context);
 				}
 				const output = response.output.trim();
 				let text: string;
-				if (output) {
+				if (response.autoRun) {
+					text = output
+						? `User pressed r; Pi ran the command in a Neovim \`:term dm\` pane and captured output.\nCommand: ${command}\nExit status: ${response.exitCode ?? "unknown"}\nOutput:\n${output}`
+						: `User pressed r; Pi ran the command in a Neovim \`:term dm\` pane and captured no output.\nCommand: ${command}\nExit status: ${response.exitCode ?? "unknown"}`;
+				} else if (output) {
 					text = `User ran the command and pasted output.\nCommand: ${command}\nOutput:\n${output}`;
 				} else {
 					text = `User submitted WITHOUT output — the command produced nothing they could paste, or something went wrong on their side.\nCommand: ${command}`;
@@ -362,7 +595,7 @@ export default function runCommand(pi: ExtensionAPI) {
 				text += `\nYour prediction was: ${prediction}`;
 				return {
 					content: [{ type: "text" as const, text }],
-					details: buildDetails("answered", command, prediction, context, output || undefined, copied),
+					details: buildDetails("answered", command, prediction, context, output || undefined, copied, undefined, response.exitCode, response.autoRun),
 				};
 			});
 		},
@@ -386,6 +619,9 @@ export default function runCommand(pi: ExtensionAPI) {
 			}
 			const lines: string[] = [];
 			lines.push(theme.fg("toolTitle", theme.bold("run-command ")) + theme.fg("text", details.command));
+			if (details.autoRun) {
+				lines.push(theme.fg("muted", `via Neovim :term dm${details.exitCode === undefined ? "" : ` · exit ${details.exitCode}`}`));
+			}
 			if (details.output) {
 				lines.push(theme.fg("muted", `─ output (${details.output.split("\n").length} lines) ─`));
 				for (const line of details.output.split("\n").slice(0, 20)) {
@@ -393,6 +629,8 @@ export default function runCommand(pi: ExtensionAPI) {
 				}
 				const extra = details.output.split("\n").length - 20;
 				if (extra > 0) lines.push(theme.fg("dim", ` … ${extra} more lines`));
+			} else if (details.autoRun) {
+				lines.push(theme.fg("muted", "─ captured no output ─"));
 			} else {
 				lines.push(theme.fg("warning", " (no output submitted)"));
 			}
