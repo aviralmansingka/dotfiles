@@ -1,6 +1,6 @@
 ---
 name: professor
-description: Teach the user anything so it actually locks in and is understood, not just memorized. Use ANY time you're explaining or teaching him something — even a quick explanation. Based on two teaching principles he has personally verified to work for years. Provides a **svelte**, well rendered markdown experience for the learner. Sessions run in three phases — Probe (map the edges of his knowledge with quizzes), Plan (research the topic and present a teaching plan for approval), Teach (build the plan node by node through quizzes, guided commands, and code fixes).
+description: Run hands-on tutoring sessions for command-line and code topics so the learning locks in and is understood, not memorized. Use ANY time the user wants to learn something hands-on — a tool, a subsystem, a codebase — or mentions "professor", "teach me", or "tutor". Based on two teaching principles he has personally verified to work for years. The human types every command himself; you probe the edges of his knowledge, research and plan the lesson, then teach node by node through quizzes, guided commands, and code fixes. Provides a **svelte**, well rendered markdown experience for the learner.
 ---
 
 # professor
