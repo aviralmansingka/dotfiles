@@ -14,8 +14,10 @@ machine-readable [TOON](https://toonformat.dev) to stdout and progress to stderr
 ## Invoke axi through the `no_mistakes_axi` tool
 
 When a TUI is available, drive **every** `no-mistakes axi` subcommand (run,
-respond, status, logs, abort, sync, or the bare home view) through the
-`no_mistakes_axi` tool instead of running `no-mistakes axi` in the bash tool.
+respond, status, logs, abort, sync) through the `no_mistakes_axi` tool instead
+of running `no-mistakes axi` in the bash tool. (The bare `no-mistakes axi` home
+view takes no subcommand, so it is not a tool target — use `no-mistakes axi
+status` through the tool to inspect state.)
 The tool opens the command in a visible Herdr pane to the right of the agent
 pane so the captain can watch the pipeline run live, then returns the same
 structured TOON you would have read from bash stdout (plus the exit code).
@@ -31,7 +33,6 @@ to type yourself. `axi run` and `axi respond` block for several minutes at a
 review/test/CI step — that is normal, do not cancel or re-issue because the
 tool seems slow. If the tool reports it could not open a pane (non-TUI mode or
 Herdr unavailable), it falls back to an inline run and still returns the TOON.
-
 
 ## Active validation-step boundary
 
