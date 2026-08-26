@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
 	Editor,
 	type EditorTheme,
@@ -6,9 +6,10 @@ import {
 	Text,
 	matchesKey,
 	truncateToWidth,
+	visibleWidth,
 	wrapTextWithAnsi,
-} from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+} from "@earendil-works/pi-tui";
+import { Type } from "typebox";
 
 interface AskOption {
 	label: string;
@@ -281,14 +282,14 @@ async function askSingleChoice(
 			// crashes the process.
 			if (cachedLines && cachedWidth === width) return cachedLines;
 
+			const cw = Math.max(8, width - 6);
 			const lines: string[] = [];
-			const add = (text: string) => lines.push(truncateToWidth(text, width));
+			const add = (text: string) => lines.push(truncateToWidth(text, cw));
 
-			add(theme.fg("accent", "─".repeat(width)));
-			addWrapped(lines, theme.fg("text", ` ${question}`), width);
+			addWrapped(lines, theme.fg("text", ` ${question}`), cw);
 			if (context) {
 				lines.push("");
-				addWrapped(lines, theme.fg("muted", ` ${context}`), width);
+				addWrapped(lines, theme.fg("muted", ` ${context}`), cw);
 			}
 			lines.push("");
 
@@ -300,14 +301,14 @@ async function askSingleChoice(
 				const styled = selected ? theme.fg("accent", label) : theme.fg("text", label);
 				add(`${prefix}${styled}`);
 				if (option.description) {
-					addWrapped(lines, theme.fg("muted", option.description), width, "     ");
+					addWrapped(lines, theme.fg("muted", option.description), cw, "     ");
 				}
 			}
 
 			if (editMode) {
 				lines.push("");
 				add(theme.fg("muted", " Write your custom answer:"));
-				for (const line of editor.render(Math.max(1, width - 2))) {
+				for (const line of editor.render(Math.max(1, cw - 2))) {
 					add(` ${line}`);
 				}
 				lines.push("");
@@ -317,10 +318,10 @@ async function askSingleChoice(
 				add(theme.fg("dim", " ↑↓ navigate • Enter select • Esc cancel"));
 			}
 
-			add(theme.fg("accent", "─".repeat(width)));
-			cachedLines = lines;
+			const framed = frame(lines, width, theme);
+			cachedLines = framed;
 			cachedWidth = width;
-			return lines;
+			return framed;
 		}
 
 		return {
@@ -458,14 +459,14 @@ async function askMultiChoice(
 			// crashes the process.
 			if (cachedLines && cachedWidth === width) return cachedLines;
 
+			const cw = Math.max(8, width - 6);
 			const lines: string[] = [];
-			const add = (text: string) => lines.push(truncateToWidth(text, width));
+			const add = (text: string) => lines.push(truncateToWidth(text, cw));
 
-			add(theme.fg("accent", "─".repeat(width)));
-			addWrapped(lines, theme.fg("text", ` ${question}`), width);
+			addWrapped(lines, theme.fg("text", ` ${question}`), cw);
 			if (context) {
 				lines.push("");
-				addWrapped(lines, theme.fg("muted", ` ${context}`), width);
+				addWrapped(lines, theme.fg("muted", ` ${context}`), cw);
 			}
 			lines.push("");
 
@@ -502,14 +503,14 @@ async function askMultiChoice(
 					: theme.fg(checked ? "success" : "text", label);
 				add(`${prefix}${styled}`);
 				if (item.description) {
-					addWrapped(lines, theme.fg("muted", item.description), width, "     ");
+					addWrapped(lines, theme.fg("muted", item.description), cw, "     ");
 				}
 			}
 
 			if (editMode) {
 				lines.push("");
 				add(theme.fg("muted", " Write your custom answer:"));
-				for (const line of editor.render(Math.max(1, width - 2))) {
+				for (const line of editor.render(Math.max(1, cw - 2))) {
 					add(` ${line}`);
 				}
 				lines.push("");
@@ -522,10 +523,10 @@ async function askMultiChoice(
 				add(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter edit/submit • Esc cancel"));
 			}
 
-			add(theme.fg("accent", "─".repeat(width)));
-			cachedLines = lines;
+			const framed = frame(lines, width, theme);
+			cachedLines = framed;
 			cachedWidth = width;
-			return lines;
+			return framed;
 		}
 
 		return {
@@ -536,6 +537,22 @@ async function askMultiChoice(
 			handleInput,
 		};
 	});
+}
+
+// Frame a rendered panel in a rounded window, inset 2 columns from the left
+// edge. Content must already be laid out at (width - 6) visible columns.
+function frame(lines: string[], width: number, theme: any): string[] {
+	if (width < 12) return lines;
+	const contentW = width - 6;
+	const bar = "─".repeat(contentW + 2);
+	const wall = theme.fg("accent", "│");
+	const out = [`  ${theme.fg("accent", `╭${bar}╮`)}`];
+	for (const line of lines) {
+		const pad = Math.max(0, contentW - visibleWidth(line));
+		out.push(`  ${wall} ${line}${" ".repeat(pad)} ${wall}`);
+	}
+	out.push(`  ${theme.fg("accent", `╰${bar}╯`)}`);
+	return out;
 }
 
 // Shared UI mutex. ctx.ui.custom()/editor can only handle one active call at

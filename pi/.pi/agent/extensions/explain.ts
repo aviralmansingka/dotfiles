@@ -7,6 +7,7 @@ import {
 	Text,
 	matchesKey,
 	truncateToWidth,
+	visibleWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -127,6 +128,22 @@ function addWrapped(lines: string[], text: string, width: number, indent = ""): 
 	for (const line of wrapTextWithAnsi(text, contentWidth)) {
 		lines.push(truncateToWidth(`${indent}${line}`, width));
 	}
+}
+
+// Frame a rendered panel in a rounded window, inset 2 columns from the left
+// edge. Content must already be laid out at (width - 6) visible columns.
+function frame(lines: string[], width: number, theme: any): string[] {
+	if (width < 12) return lines;
+	const contentW = width - 6;
+	const bar = "─".repeat(contentW + 2);
+	const wall = theme.fg("accent", "│");
+	const out = [`  ${theme.fg("accent", `╭${bar}╮`)}`];
+	for (const line of lines) {
+		const pad = Math.max(0, contentW - visibleWidth(line));
+		out.push(`  ${wall} ${line}${" ".repeat(pad)} ${wall}`);
+	}
+	out.push(`  ${theme.fg("accent", `╰${bar}╯`)}`);
+	return out;
 }
 
 // Shared UI mutex. ctx.ui.custom()/editor can only handle one active call at
@@ -357,52 +374,52 @@ export default function explain(pi: ExtensionAPI) {
 
 						return {
 							render(width: number): string[] {
+								const cw = Math.max(8, width - 6);
 								const lines: string[] = [];
-								const add = (s: string) => lines.push(truncateToWidth(s, width));
+								const add = (s: string) => lines.push(truncateToWidth(s, cw));
 
-								add(theme.fg("accent", "─".repeat(width)));
 								add(theme.fg("toolTitle", theme.bold(" explain in your own words")));
 								lines.push("");
-								addWrapped(lines, theme.fg("text", question), width, " ");
+								addWrapped(lines, theme.fg("text", question), cw, " ");
 								if (context) {
 									lines.push("");
-									addWrapped(lines, theme.fg("muted", context), width, " ");
+									addWrapped(lines, theme.fg("muted", context), cw, " ");
 								}
 								lines.push("");
 
 								if (phase === "answering") {
-									for (const line of editor.render(width)) lines.push(line);
+									for (const line of editor.render(cw)) lines.push(line);
 									lines.push("");
 									add(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Esc — cancel"));
 								} else if (phase === "grading") {
-									addWrapped(lines, theme.fg("dim", editor.getText().trim()), width, " ");
+									addWrapped(lines, theme.fg("dim", editor.getText().trim()), cw, " ");
 									lines.push("");
-									for (const line of loader.render(width)) lines.push(line);
+									for (const line of loader.render(cw)) lines.push(line);
 									lines.push("");
 									add(theme.fg("dim", " Esc — abort grading"));
 								} else {
-									addWrapped(lines, theme.fg("dim", editor.getText().trim()), width, " ");
+									addWrapped(lines, theme.fg("dim", editor.getText().trim()), cw, " ");
 									lines.push("");
 									if (grading) {
 										add(` ${verdictIcon(grading)}`);
 										if (grading.summary) {
 											lines.push("");
-											addWrapped(lines, theme.fg("text", grading.summary), width, " ");
+											addWrapped(lines, theme.fg("text", grading.summary), cw, " ");
 										}
 										if (grading.verdict !== "correct" && grading.correctAnswer) {
 											lines.push("");
 											add(theme.fg("muted", " correct answer:"));
-											addWrapped(lines, theme.fg("success", grading.correctAnswer), width, "  ");
+											addWrapped(lines, theme.fg("success", grading.correctAnswer), cw, "  ");
 										}
 										if (grading.refinements.length > 0) {
 											lines.push("");
 											add(theme.fg("muted", " terminology:"));
 											for (const r of grading.refinements) {
-												addWrapped(lines, theme.fg("warning", `“${r.quote}”`), width, "  ");
+												addWrapped(lines, theme.fg("warning", `“${r.quote}”`), cw, "  ");
 												const note = [r.issue, r.correction && `→ ${r.correction}`]
 													.filter(Boolean)
 													.join(" — ");
-												if (note) addWrapped(lines, theme.fg("dim", note), width, "    ");
+												if (note) addWrapped(lines, theme.fg("dim", note), cw, "    ");
 											}
 										}
 									} else {
@@ -412,7 +429,7 @@ export default function explain(pi: ExtensionAPI) {
 									lines.push("");
 									add(theme.fg("dim", " Enter — continue"));
 								}
-								return lines;
+								return frame(lines, width, theme);
 							},
 
 							invalidate: () => {

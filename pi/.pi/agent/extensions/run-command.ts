@@ -6,6 +6,7 @@ import {
 	Text,
 	matchesKey,
 	truncateToWidth,
+	visibleWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -76,6 +77,22 @@ function addWrapped(lines: string[], text: string, width: number, indent = ""): 
 	}
 }
 
+// Frame a rendered panel in a rounded window, inset 2 columns from the left
+// edge. Content must already be laid out at (width - 6) visible columns.
+function frame(lines: string[], width: number, theme: any): string[] {
+	if (width < 12) return lines;
+	const contentW = width - 6;
+	const bar = "─".repeat(contentW + 2);
+	const wall = theme.fg("accent", "│");
+	const out = [`  ${theme.fg("accent", `╭${bar}╮`)}`];
+	for (const line of lines) {
+		const pad = Math.max(0, contentW - visibleWidth(line));
+		out.push(`  ${wall} ${line}${" ".repeat(pad)} ${wall}`);
+	}
+	out.push(`  ${theme.fg("accent", `╰${bar}╯`)}`);
+	return out;
+}
+
 // Shared UI mutex. ctx.ui.custom()/editor can only handle one active call at
 // a time, so ALL pop-up-style tools (quiz, ask_user_question, run-command, ...)
 // must serialize against each other, not just against themselves. We stash one
@@ -136,14 +153,14 @@ async function askRunCommand(
 
 			return {
 				render(width: number): string[] {
+					const cw = Math.max(8, width - 6);
 					const lines: string[] = [];
-					const add = (s: string) => lines.push(truncateToWidth(s, width));
+					const add = (s: string) => lines.push(truncateToWidth(s, cw));
 
-					add(theme.fg("accent", "─".repeat(width)));
 					add(theme.fg("toolTitle", theme.bold(" run this command")));
 					if (context) {
 						lines.push("");
-						addWrapped(lines, theme.fg("muted", context), width, " ");
+						addWrapped(lines, theme.fg("muted", context), cw, " ");
 					}
 					lines.push("");
 					// The command, verbatim, in a visually distinct block.
@@ -154,7 +171,7 @@ async function askRunCommand(
 					addWrapped(
 						lines,
 						theme.fg("dim", "y — copy command · run it in your own terminal · paste the output below"),
-						width,
+						cw,
 						" ",
 					);
 					if (copied) {
@@ -165,8 +182,8 @@ async function askRunCommand(
 						focus === "editor"
 							? theme.fg("accent", "Output (paste what you saw):")
 							: theme.fg("muted", "Output (paste what you saw) — Tab to focus:");
-					addWrapped(lines, label, width, " ");
-					for (const line of editor.render(width)) lines.push(line);
+					addWrapped(lines, label, cw, " ");
+					for (const line of editor.render(cw)) lines.push(line);
 					lines.push("");
 					add(
 						theme.fg(
@@ -174,7 +191,7 @@ async function askRunCommand(
 							focus === "editor" ? " Enter — submit · Tab — unfocus · Esc — cancel" : " Tab — focus output · Esc — cancel",
 						),
 					);
-					return lines;
+					return frame(lines, width, theme);
 				},
 
 				invalidate: () => {
