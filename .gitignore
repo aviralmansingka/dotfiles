@@ -2,6 +2,8 @@
 .envrc
 .todos/
 .lavish/*
+.tmp/
+nvim/.config/github-copilot/
 __pycache__/
 pi/.pi/agent/extensions/tool-call-renderer-thinking-prototype.html
 

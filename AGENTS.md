@@ -50,6 +50,16 @@ captain approval).
   kill, and focus actions must continue to target the exact underlying Herdr agent identity.
 - Preserve exact cwd behavior for non-Git directories instead of inventing repository identity.
 
+## CUDA LSP host invariant
+
+NVIDIA ships no CUDA Toolkit for macOS Apple Silicon. `.cu` files get
+local-symbol LSP only on the Mac (document symbols, local go-to-def/hover
+work; CUDA-API symbols like `cudaMalloc`/`__nv_bfloat16` do not). Full
+CUDA LSP needs the homelab/Linux CUDA Toolkit + a compile database.
+`helpers/cuda_lsp.lua` detects this and notifies once per session; do not
+try to stub CUDA headers or silence the clangd CUDA diagnostics. Authoritative
+setup + homelab command: `docs/neovim-cuda-lsp.md`.
+
 ## Maintaining this file
 
 Keep this file for knowledge useful to almost every future agent session in this project.
