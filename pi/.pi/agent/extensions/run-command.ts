@@ -177,6 +177,10 @@ async function askRunCommand(
 					return lines;
 				},
 
+				invalidate: () => {
+					editor.invalidate();
+				},
+
 				handleInput(data: string) {
 					if (focus === "editor") {
 						if (matchesKey(data, Key.enter)) {

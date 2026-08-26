@@ -158,7 +158,9 @@ narrate.
 You cannot teach into his zone of proximal development without knowing where its
 edges are. Locate the **edge** of his understanding — the frontier where
 reliable knowledge turns into guesswork — along every strand the lesson will
-depend on. Use quizzes, one at a time, each adapted to the last answer.
+depend on. Mostly quiz — options let you map the edge cheaply — with some
+explain once a strand starts feeling familiar, one question at a time, each
+adapted to the last answer.
 
 - **The edge is only located when it's bracketed.** Per strand you need both a
   floor (something he gets right) and a ceiling (something he gets wrong). One
@@ -238,8 +240,16 @@ that's the whole point.
 
 ## Interaction types
 
-Three instruments. Pick per node; prefer the terminal as grader wherever
-possible.
+Four instruments, in a deliberate hierarchy of confidence. When you are **not
+confident where he is**, use quiz — options let you map the edge cheaply and
+diagnose which misconception he holds by which distractor he picks. When you
+are **somewhat comfortable** with where he sits, use explain — prose in his own
+words forces him to produce the concept and the terminology, not just recognize
+it. Reserve run-command and fix-code for the **Teach loop proper**, where the
+hands-on work lives. Most of Probe is quiz, with some explain; Teach mixes all
+four per node.
+
+### quiz
 
 ### quiz
 
@@ -249,6 +259,19 @@ extension tool** (`pi/.pi/agent/extensions/quiz.ts`), a graded sibling of
 keyed by option value, with shuffling and an "I don't know" escape handled by
 the tool. The Quiz protocol below covers the parts the tool can't do: composing
 the question and evaluating the answer.
+
+### explain
+
+Prose retrieval — delivered through the **`explain` extension tool**
+(`pi/.pi/agent/extensions/explain.ts`). A floating panel above the prompt shows
+the question; the response field is focused immediately (nothing to navigate),
+and submit sends the question and his answer back **together** as a pair. The
+tool does not grade: you evaluate the prose yourself against bounded
+terminology — right-but-loose language gets sharpened, a revealed misconception
+gets named and re-asked. An empty submission is an honest "I don't know" —
+teach into it, don't punish it. Phrase questions to force mechanism and exact
+terms ("name the kernel construct this touches and why"), never open-ended
+musing — grill him on precision.
 
 ### run-command
 
@@ -274,10 +297,11 @@ The teacher only sees the check output, so grading is objective. Works for
 command topics too: "make `nft list ruleset` show X."
 
 **Command-based verifies are not self-sufficient.** run-command and fix-code
-prove the hands, not the head. Follow them with quiz questions as needed to
-cement the concept: the ruleset loads, but can he say which netfilter hook it
-attached to and why that hook? Kernel-level understanding lives in that
-follow-up.
+prove the hands, not the head. Follow them with quiz or explain as needed to
+cement the concept — explain is the stronger follow-up here, since it forces
+him to name the construct in his own words: the ruleset loads, but can he say
+which netfilter hook it attached to and why that hook? Kernel-level
+understanding lives in that follow-up.
 
 ## Core principles
 
@@ -403,8 +427,8 @@ terminology. Don't offer to wrap up early.
 
 ### Instrument routing
 
-- **quiz** and **run-command** are extension tools — always invoke them as
-  tools, never simulate them in chat.
+- **quiz**, **explain**, and **run-command** are extension tools — always
+  invoke them as tools, never simulate them in chat.
 - **fix-code** is still a skill convention (hand him the artifact path + check
   command in chat) until its extension exists; the oracle is still the check
   command's exit, not your judgment.
