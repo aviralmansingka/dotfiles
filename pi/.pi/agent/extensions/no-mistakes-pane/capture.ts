@@ -83,5 +83,5 @@ export function extractMarkedOutput(buffer: string, token: string): MarkedOutput
 		}
 		out.push(line);
 	}
-	return { complete: false };
+	return { complete: false, output: out.join("\n").trim() };
 }

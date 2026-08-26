@@ -121,6 +121,7 @@ const { buildPaneScript, extractMarkedOutput } = jiti("./no-mistakes-pane/captur
 	// Partial / still-running: no END marker yet.
 	assert.deepEqual(extractMarkedOutput("__NM_START_abc123__\nrunning…", token), {
 		complete: false,
+		output: "running…",
 	});
 
 	// No START marker at all (e.g. empty file before the command prints).
