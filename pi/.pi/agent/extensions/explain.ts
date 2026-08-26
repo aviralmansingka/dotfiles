@@ -3,6 +3,7 @@ import {
 	Editor,
 	type EditorTheme,
 	Key,
+	Loader,
 	Text,
 	matchesKey,
 	truncateToWidth,
@@ -11,29 +12,50 @@ import {
 import { Type } from "typebox";
 
 // ────────────────────────────────────────────────────────────────────────────
-// explain — a PROSE sibling of quiz.
+// explain — a PROSE sibling of quiz, with a grader fork.
 //
 // Where quiz grades a selection against known options, explain asks for an
 // answer in the user's OWN WORDS. That is a more demanding retrieval act: no
 // options to recognize, no shape to pattern-match — the user must produce the
-// concept and the terminology themselves. The tool deliberately does NOT
-// grade: evaluating the prose (precision of terms, hidden misconceptions) is
-// the agent's job, and it happens after submit.
+// concept and the terminology themselves.
+//
+// Grading: the caller supplies `expected` — the claims a correct answer must
+// contain. On submit, the tool makes ONE quick model call (a "grader fork":
+// ctx.modelRegistry.complete with the session's active model, no session, no
+// tools) that grades the answer against those claims and returns a verdict
+// plus per-quote terminology refinements. A spinner is shown while grading.
+// The verdict travels back with the question/answer pair; the calling agent
+// still owns the pedagogical response (re-asking, naming misconceptions).
 //
 // UI: a floating panel above the prompt shows the question (and optional
 // context). The response field is focused immediately — there is nothing to
 // navigate. Enter submits, Ctrl+J inserts a newline (pi convention), Esc
-// cancels. On submit, the question and the user's answer travel together as a
-// question/answer pair for the agent to evaluate.
+// cancels. During grading a spinner replaces the editor; Esc aborts the
+// grade. After grading, the verdict and refinements are shown in the panel;
+// Enter or Esc dismisses.
 // ────────────────────────────────────────────────────────────────────────────
 
 type ExplainStatus = "answered" | "cancelled" | "unavailable";
+type Verdict = "correct" | "partially_correct" | "incorrect";
+
+interface Refinement {
+	quote: string;
+	issue: string;
+	correction: string;
+}
+
+interface Grading {
+	verdict: Verdict;
+	summary: string;
+	refinements: Refinement[];
+}
 
 interface ExplainDetails {
 	status: ExplainStatus;
 	question: string;
 	context?: string;
 	answer?: string;
+	grading?: Grading;
 	message?: string;
 }
 
@@ -42,10 +64,37 @@ const ExplainParams = Type.Object({
 		description:
 			"The single question the user must answer in their own words. Ask exactly one question per tool call. Phrase it to force precise terminology — 'name the kernel construct and explain why', not 'what do you think about X'.",
 	}),
+	expected: Type.String({
+		description:
+			"The claims a correct answer must contain, in your own words — the grader fork grades the user's prose against this. Include the exact terminology you expect and any misconceptions to watch for. Not shown to the user.",
+	}),
 	details: Type.Optional(
 		Type.String({ description: "Optional extra context or instructions shown under the question." }),
 	),
 });
+
+const GRADER_SYSTEM_PROMPT = `You are grading a learner's free-text answer to a technical question. The teacher supplies the claims a correct answer must contain ("expected"). Grade the learner's answer against those claims, not against your own general knowledge.
+
+Output ONLY a JSON object — no markdown fences, no prose before or after — with exactly these keys:
+
+{
+  "verdict": "correct" | "partially_correct" | "incorrect",
+  "summary": "1-2 sentences: why this verdict",
+  "refinements": [
+    {
+      "quote": "an exact substring copied from the learner's answer",
+      "issue": "what is wrong or loose about it",
+      "correction": "the precise terminology or claim that should replace it"
+    }
+  ]
+}
+
+Grading rules:
+- "correct" means every required claim is present and accurately stated, with acceptable terminology. Minor phrasing differences are fine.
+- "partially_correct" means the core idea is right but a required claim is missing, or terminology is loose enough to matter.
+- "incorrect" means a required claim is wrong or the core mechanism is misunderstood.
+- refinements must quote the learner's own words verbatim — never invent quotes. Include every spot where terminology is wrong, loose, or a claim is factually off. An empty array means nothing needs refinement.
+- Do not penalize the learner for omitting things the expected claims do not require.`;
 
 function createEditorTheme(theme: any): EditorTheme {
 	return {
@@ -101,24 +150,54 @@ function buildDetails(
 	question: string,
 	context: string | undefined,
 	answer?: string,
+	grading?: Grading,
 	message?: string,
 ): ExplainDetails {
-	return { status, question, context, answer, message };
+	return { status, question, context, answer, grading, message };
 }
 
 function cancelledResult(question: string, context?: string) {
 	const message = "User cancelled explain";
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildDetails("cancelled", question, context, undefined, message),
+		details: buildDetails("cancelled", question, context, undefined, undefined, message),
 	};
 }
 
 function unavailableResult(question: string, message: string, context?: string) {
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildDetails("unavailable", question, context, undefined, message),
+		details: buildDetails("unavailable", question, context, undefined, undefined, message),
 	};
+}
+
+function extractGrading(raw: string): Grading | undefined {
+	const start = raw.indexOf("{");
+	const end = raw.lastIndexOf("}");
+	if (start === -1 || end <= start) return undefined;
+	try {
+		const parsed = JSON.parse(raw.slice(start, end + 1));
+		const verdict: Verdict =
+			parsed.verdict === "correct" || parsed.verdict === "incorrect" ? parsed.verdict : "partially_correct";
+		const refinements: Refinement[] = Array.isArray(parsed.refinements)
+			? parsed.refinements
+					.filter((r: any) => r && typeof r.quote === "string" && r.quote.length > 0)
+					.map((r: any) => ({
+						quote: String(r.quote),
+						issue: String(r.issue ?? ""),
+						correction: String(r.correction ?? ""),
+					}))
+			: [];
+		return { verdict, summary: String(parsed.summary ?? ""), refinements };
+	} catch {
+		return undefined;
+	}
+}
+
+interface PanelResult {
+	answer: string;
+	grading?: Grading;
+	gradeError?: string;
 }
 
 export default function explain(pi: ExtensionAPI) {
@@ -126,19 +205,21 @@ export default function explain(pi: ExtensionAPI) {
 		name: "explain",
 		label: "explain",
 		description:
-			"Ask the user to answer ONE question in their own words — a prose retrieval check, more demanding than quiz's multiple choice because there are no options to recognize. Use it to ground terminology ('name the kernel construct this touches and why') and to surface misconceptions that multiple choice can't reach. The tool does not grade: you receive the question and the user's prose answer together and evaluate precision yourself. For gradable questions with a known correct option set, use quiz; for preferences with no right answer, use ask_user_question.",
+			"Ask the user to answer ONE question in their own words — a prose retrieval check, more demanding than quiz's multiple choice because there are no options to recognize. Use it to ground terminology ('name the kernel construct this touches and why') and to surface misconceptions that multiple choice can't reach. You MUST supply `expected`: the claims a correct answer must contain. On submit, a quick grader model call grades the answer against those claims and returns a verdict (correct / partially_correct / incorrect) plus per-quote terminology refinements — you still own the pedagogical follow-up. For gradable questions with a known correct option set, use quiz; for preferences with no right answer, use ask_user_question.",
 		promptSnippet:
-			"Use explain to make the user answer one question in their own words (terminology grounding, mechanism explanations). You grade the prose yourself after submit.",
+			"Use explain to make the user answer one question in their own words; a grader fork scores it against your `expected` claims and returns a verdict plus terminology refinements.",
 		promptGuidelines: [
 			"ONE question per call. Phrase it to force precise terminology and mechanism, not vibes — 'why does X need Y' or 'name the construct and what it does', never 'what are your thoughts on X'.",
+			"Always supply `expected`: the claims a correct answer must contain, including the exact terms you want and the misconceptions to watch for. The grader grades against this, not general knowledge.",
 			"Prefer explain over quiz when you are somewhat confident where the user's understanding sits and want to verify precision of language; prefer quiz when you are still mapping the edge.",
-			"Evaluate the returned answer against bounded terminology: right-but-loose language gets corrected ('right idea, the exact term is X because Y'); a revealed misconception gets named and re-asked in a different form.",
-			"An empty or near-empty submission is an honest 'I don't know' — treat it as a genuine gap to teach into, not a failure.",
+			"Act on the verdict: correct-but-loose refinements get named and sharpened in your reply; partially_correct or incorrect means stop, diagnose, and re-ask in a different form before moving on.",
+			"An empty or near-empty submission is an honest 'I don't know' — treat it as a genuine gap to teach into, not a failure. Empty answers skip grading.",
 		],
 		parameters: ExplainParams,
 
 		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
 			const question = params.question.trim();
+			const expected = params.expected.trim();
 			const context = params.details?.trim() || undefined;
 
 			if (signal?.aborted) {
@@ -147,21 +228,84 @@ export default function explain(pi: ExtensionAPI) {
 			if (!question) {
 				return unavailableResult(question, "explain requires a non-empty question", context);
 			}
+			if (!expected) {
+				return unavailableResult(question, "explain requires `expected` (the claims a correct answer must contain)", context);
+			}
 			if (!ctx.hasUI) {
 				return unavailableResult(question, "explain requires interactive mode UI", context);
 			}
+			if (!ctx.model) {
+				return unavailableResult(question, "explain requires an active model for the grader fork", context);
+			}
+
+			const grade = async (answer: string): Promise<{ grading?: Grading; gradeError?: string }> => {
+				const graderPrompt =
+					`Question asked of the learner:\n${question}\n\n` +
+					`Expected — the claims a correct answer must contain:\n${expected}\n\n` +
+					`Learner's answer (their own words):\n${answer}`;
+				try {
+					const response = await ctx.modelRegistry.complete(ctx.model!, {
+						systemPrompt: GRADER_SYSTEM_PROMPT,
+						messages: [{ role: "user", content: graderPrompt, timestamp: Date.now() } as any],
+					});
+					const raw = response.content
+						.filter((c: any) => c.type === "text")
+						.map((c: any) => c.text)
+						.join("\n");
+					const grading = extractGrading(raw);
+					if (!grading) return { gradeError: `grader returned unparseable output: ${raw.slice(0, 200)}` };
+					return { grading };
+				} catch (err: any) {
+					if (signal?.aborted) return { gradeError: "aborted" };
+					return { gradeError: `grader call failed: ${err?.message ?? String(err)}` };
+				}
+			};
 
 			return withUILock(async () => {
-				const answer = await ctx.ui.custom<string | null>(
-					(tui: any, theme: any, _kb: any, done: (result: string | null) => void) => {
-						// The response field owns the whole interaction — there is nothing
-						// else to navigate, so it is focused immediately. Enter must NOT
-						// submit inside the editor (its submit path clears the buffer), so
+				const result = await ctx.ui.custom<PanelResult | null>(
+					(tui: any, theme: any, _kb: any, done: (result: PanelResult | null) => void) => {
+						// The response field owns the first phase — there is nothing else
+						// to navigate, so it is focused immediately. Enter must NOT submit
+						// inside the editor (its submit path clears the buffer), so
 						// disableSubmit and let the host own Enter. Ctrl+J still inserts a
 						// newline (pi convention) for multi-line prose.
 						const editor = new Editor(tui, createEditorTheme(theme));
 						editor.focused = true;
 						editor.disableSubmit = true;
+
+						const loader = new Loader(
+							tui,
+							(s: string) => theme.fg("accent", s),
+							(s: string) => theme.fg("muted", s),
+							" grading…",
+						);
+
+						let phase: "answering" | "grading" | "verdict" = "answering";
+						let grading: Grading | undefined;
+						let gradeError: string | undefined;
+
+						const verdictIcon = (v: Verdict): string => {
+							if (v === "correct") return theme.fg("success", "✓ correct");
+							if (v === "incorrect") return theme.fg("error", "✗ incorrect");
+							return theme.fg("warning", "◐ partially correct");
+						};
+
+						const startGrading = (answer: string) => {
+							phase = "grading";
+							loader.start();
+							tui.requestRender();
+							void grade(answer).then((res) => {
+								loader.stop();
+								if (res.gradeError === "aborted") {
+									done(null);
+									return;
+								}
+								grading = res.grading;
+								gradeError = res.gradeError;
+								phase = "verdict";
+								tui.requestRender();
+							});
+						};
 
 						return {
 							render(width: number): string[] {
@@ -177,9 +321,44 @@ export default function explain(pi: ExtensionAPI) {
 									addWrapped(lines, theme.fg("muted", context), width, " ");
 								}
 								lines.push("");
-								for (const line of editor.render(width)) lines.push(line);
-								lines.push("");
-								add(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Esc — cancel"));
+
+								if (phase === "answering") {
+									for (const line of editor.render(width)) lines.push(line);
+									lines.push("");
+									add(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Esc — cancel"));
+								} else if (phase === "grading") {
+									addWrapped(lines, theme.fg("dim", editor.getText().trim()), width, " ");
+									lines.push("");
+									for (const line of loader.render(width)) lines.push(line);
+									lines.push("");
+									add(theme.fg("dim", " Esc — abort grading"));
+								} else {
+									addWrapped(lines, theme.fg("dim", editor.getText().trim()), width, " ");
+									lines.push("");
+									if (grading) {
+										add(` ${verdictIcon(grading.verdict)}`);
+										if (grading.summary) {
+											lines.push("");
+											addWrapped(lines, theme.fg("text", grading.summary), width, " ");
+										}
+										if (grading.refinements.length > 0) {
+											lines.push("");
+											add(theme.fg("muted", " terminology:"));
+											for (const r of grading.refinements) {
+												addWrapped(lines, theme.fg("warning", `“${r.quote}”`), width, "  ");
+												const note = [r.issue, r.correction && `→ ${r.correction}`]
+													.filter(Boolean)
+													.join(" — ");
+												if (note) addWrapped(lines, theme.fg("dim", note), width, "    ");
+											}
+										}
+									} else {
+										add(theme.fg("warning", ` grading unavailable — ${gradeError ?? "unknown error"}`));
+										add(theme.fg("dim", " (returned ungraded; the agent will evaluate your answer itself)"));
+									}
+									lines.push("");
+									add(theme.fg("dim", " Enter — continue"));
+								}
 								return lines;
 							},
 
@@ -188,32 +367,70 @@ export default function explain(pi: ExtensionAPI) {
 							},
 
 							handleInput(data: string) {
-								if (matchesKey(data, Key.enter)) {
-									done(editor.getText().trim());
+								if (phase === "answering") {
+									if (matchesKey(data, Key.enter)) {
+										const answer = editor.getText().trim();
+										if (!answer) {
+											// Empty answer = honest "I don't know"; skip grading.
+											done({ answer: "" });
+											return;
+										}
+										startGrading(answer);
+										return;
+									}
+									if (matchesKey(data, Key.escape)) {
+										done(null);
+										return;
+									}
+									editor.handleInput(data);
 									return;
 								}
-								if (matchesKey(data, Key.escape)) {
-									done(null);
+								if (phase === "grading") {
+									if (matchesKey(data, Key.escape)) {
+										loader.stop();
+										done(null);
+									}
 									return;
 								}
-								editor.handleInput(data);
+								// verdict
+								if (matchesKey(data, Key.enter) || matchesKey(data, Key.escape)) {
+									done({ answer: editor.getText().trim(), grading, gradeError });
+								}
 							},
 						};
 					},
 				);
 
-				if (answer === null) {
+				if (result === null) {
 					return cancelledResult(question, context);
 				}
 				let text: string;
-				if (answer) {
-					text = `Question: ${question}\nUser's answer (their own words):\n${answer}`;
+				if (result.answer) {
+					text = `Question: ${question}\nUser's answer (their own words):\n${result.answer}`;
+					if (result.grading) {
+						const g = result.grading;
+						text += `\n\nGrader verdict: ${g.verdict.toUpperCase()}\n${g.summary}`;
+						if (g.refinements.length > 0) {
+							text += `\nTerminology refinements:`;
+							for (const r of g.refinements) {
+								text += `\n- "${r.quote}" — ${r.issue}${r.correction ? ` → ${r.correction}` : ""}`;
+							}
+						}
+						text +=
+							`\n\nAct on the verdict: correct = affirm and extend; partially_correct = name what was ` +
+							`missing or loose and sharpen it; incorrect = stop, diagnose the misconception, and re-ask ` +
+							`in a different form before moving on. The verdict is advisory — you own the final call.`;
+					} else {
+						text +=
+							`\n\n(Grader fork unavailable: ${result.gradeError ?? "unknown error"}. Evaluate the prose ` +
+							`yourself against your expected claims.)`;
+					}
 				} else {
 					text = `Question: ${question}\nUser submitted an EMPTY answer — treat this as an honest "I don't know": a genuine gap to teach into, not a failure.`;
 				}
 				return {
 					content: [{ type: "text" as const, text }],
-					details: buildDetails("answered", question, context, answer || undefined),
+					details: buildDetails("answered", question, context, result.answer || undefined, result.grading),
 				};
 			});
 		},
@@ -243,6 +460,23 @@ export default function explain(pi: ExtensionAPI) {
 				}
 			} else {
 				lines.push(theme.fg("warning", " (empty answer — treated as “I don't know”)"));
+			}
+			if (details.grading) {
+				const g = details.grading;
+				const icon =
+					g.verdict === "correct"
+						? theme.fg("success", "✓ correct")
+						: g.verdict === "incorrect"
+							? theme.fg("error", "✗ incorrect")
+							: theme.fg("warning", "◐ partially correct");
+				lines.push(theme.fg("muted", "─ grader ─"));
+				lines.push(` ${icon}`);
+				if (g.summary) lines.push(theme.fg("dim", ` ${g.summary}`));
+				for (const r of g.refinements) {
+					lines.push(theme.fg("warning", `  “${r.quote}”`));
+					const note = [r.issue, r.correction && `→ ${r.correction}`].filter(Boolean).join(" — ");
+					if (note) lines.push(theme.fg("dim", `    ${note}`));
+				}
 			}
 			return new Text(lines.join("\n"), 0, 0);
 		},

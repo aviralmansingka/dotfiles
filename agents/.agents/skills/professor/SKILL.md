@@ -242,8 +242,8 @@ that's the whole point.
 
 Four instruments, in a deliberate hierarchy of confidence. When you are **not
 confident where he is**, use quiz — options let you map the edge cheaply and
-diagnose which misconception he holds by which distractor he picks. When you
-are **somewhat comfortable** with where he sits, use explain — prose in his own
+diagnose which misconception he holds by which distractor he picks. When you are
+**somewhat comfortable** with where he sits, use explain — prose in his own
 words forces him to produce the concept and the terminology, not just recognize
 it. Reserve run-command and fix-code for the **Teach loop proper**, where the
 hands-on work lives. Most of Probe is quiz, with some explain; Teach mixes all
@@ -264,30 +264,35 @@ the question and evaluating the answer.
 
 Prose retrieval — delivered through the **`explain` extension tool**
 (`pi/.pi/agent/extensions/explain.ts`). A floating panel above the prompt shows
-the question; the response field is focused immediately (nothing to navigate),
-and submit sends the question and his answer back **together** as a pair. The
-tool does not grade: you evaluate the prose yourself against bounded
-terminology — right-but-loose language gets sharpened, a revealed misconception
-gets named and re-asked. An empty submission is an honest "I don't know" —
-teach into it, don't punish it. Phrase questions to force mechanism and exact
-terms ("name the kernel construct this touches and why"), never open-ended
-musing — grill him on precision.
+the question; the response field is focused immediately (nothing to navigate).
+You must supply **`expected`**: the claims a correct answer must contain,
+including the exact terminology you want and the misconceptions to watch for. On
+submit, a quick **grader fork** (one model call, no session, spinner shown in
+the panel) grades the answer against those claims and returns a verdict —
+correct, partially_correct, or incorrect — plus **per-quote terminology
+refinements** (his own words quoted verbatim, what's loose, and the precise term
+that should replace it). The verdict is advisory: you own the pedagogical
+response — right-but-loose language gets sharpened, a revealed misconception
+gets named and re-asked in a different form. An empty submission is an honest "I
+don't know" — it skips grading; teach into it, don't punish it. Phrase questions
+to force mechanism and exact terms ("name the kernel construct this touches and
+why"), never open-ended musing — grill him on precision.
 
 ### run-command
 
 Hands-on verification — delivered through the **`run-command` extension tool**
 (`pi/.pi/agent/extensions/run-command.ts`). A floating panel above the prompt
-shows the command; he presses `y` to copy it as-is, runs it in his own
-terminal, pastes the output into the response field, and submits. You receive
-the command and his pasted output **together** — grading = output vs. your
-grounded prediction (see Grounding predictions). You never execute the command
-yourself; him typing and running everything is the point.
+shows the command; he presses `y` to copy it as-is, runs it in his own terminal,
+pastes the output into the response field, and submits. You receive the command
+and his pasted output **together** — grading = output vs. your grounded
+prediction (see Grounding predictions). You never execute the command yourself;
+him typing and running everything is the point.
 
 If his output differs from the prediction, that mismatch is diagnostic gold:
-either host state drifted or your model was wrong — find out which. A
-submission without output is data too (nothing to paste, or something went
-wrong on his side), not disobedience. Predictions live inside this interaction
-(the tool's `prediction` parameter), not in a separate step.
+either host state drifted or your model was wrong — find out which. A submission
+without output is data too (nothing to paste, or something went wrong on his
+side), not disobedience. Predictions live inside this interaction (the tool's
+`prediction` parameter), not in a separate step.
 
 ### fix-code
 
@@ -298,10 +303,10 @@ command topics too: "make `nft list ruleset` show X."
 
 **Command-based verifies are not self-sufficient.** run-command and fix-code
 prove the hands, not the head. Follow them with quiz or explain as needed to
-cement the concept — explain is the stronger follow-up here, since it forces
-him to name the construct in his own words: the ruleset loads, but can he say
-which netfilter hook it attached to and why that hook? Kernel-level
-understanding lives in that follow-up.
+cement the concept — explain is the stronger follow-up here, since it forces him
+to name the construct in his own words: the ruleset loads, but can he say which
+netfilter hook it attached to and why that hook? Kernel-level understanding
+lives in that follow-up.
 
 ## Core principles
 
@@ -427,8 +432,8 @@ terminology. Don't offer to wrap up early.
 
 ### Instrument routing
 
-- **quiz**, **explain**, and **run-command** are extension tools — always
-  invoke them as tools, never simulate them in chat.
+- **quiz**, **explain**, and **run-command** are extension tools — always invoke
+  them as tools, never simulate them in chat.
 - **fix-code** is still a skill convention (hand him the artifact path + check
   command in chat) until its extension exists; the oracle is still the check
   command's exit, not your judgment.
