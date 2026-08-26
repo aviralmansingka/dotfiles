@@ -112,14 +112,17 @@ function cancelPane(paneId: string): void {
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
 	if (signal.aborted) return Promise.reject(abortError(signal));
+	let onAbort: (() => void) | undefined;
 	return new Promise<void>((resolve, reject) => {
 		const timer = setTimeout(resolve, ms);
-		const onAbort = () => {
+		onAbort = () => {
 			clearTimeout(timer);
 			reject(abortError(signal));
 		};
 		signal.addEventListener("abort", onAbort, { once: true });
-	}).finally(() => {});
+	}).finally(() => {
+		if (onAbort) signal.removeEventListener("abort", onAbort);
+	});
 }
 
 function abortError(signal: AbortSignal): Error {
@@ -194,6 +197,20 @@ async function runNmInline(args: string[], signal: AbortSignal, timeoutMs: numbe
 		}
 		const out = (e.stdout ?? "").toString().trim();
 		return { output: out, exitCode: typeof e.code === "number" ? e.code : -1, paneId: "", timedOut: false };
+	}
+}
+
+type InlineRun = { cancelled: true; error: Error } | { cancelled: false; result: PaneRunResult };
+
+async function runNmInlineSafe(
+	args: string[],
+	signal: AbortSignal,
+	timeoutMs: number,
+): Promise<InlineRun> {
+	try {
+		return { cancelled: false, result: await runNmInline(args, signal, timeoutMs) };
+	} catch (err) {
+		return { cancelled: true, error: err instanceof Error ? err : new Error(String(err)) };
 	}
 }
 
@@ -303,16 +320,14 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 
 			// No TUI / no Herdr — fall back to an inline run so gate-driving still works.
 			if (!current) {
-				const result = await runNmInline(args, sig, timeoutMs).catch((err) => {
-					return { output: "", exitCode: -1, paneId: "", timedOut: false, error: err };
-				});
-				if ((result as { error?: Error }).error) {
+				const ran = await runNmInlineSafe(args, sig, timeoutMs);
+				if (ran.cancelled) {
 					return textResult(
-						`no-mistakes axi ${subcommand} was cancelled or failed inline: ${(result as { error: Error }).error.message}`,
+						`no-mistakes axi ${subcommand} was cancelled or failed inline: ${ran.error.message}`,
 						{ status: "cancelled", subcommand, message: "inline run cancelled" },
 					);
 				}
-				const r = result as PaneRunResult;
+				const r = ran.result;
 				const text = formatOutput(r.output, r.exitCode, "inline");
 				return textResult(text, {
 					status: "inline",
@@ -333,7 +348,14 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				// Herdr was present but the split/launch failed — fall back to inline.
 				unlinkSafe(outFile);
 				unlinkSafe(scriptFile);
-				const r = await runNmInline(args, sig, timeoutMs);
+				const ran = await runNmInlineSafe(args, sig, timeoutMs);
+				if (ran.cancelled) {
+					return textResult(
+						`no-mistakes axi ${subcommand} was cancelled or failed inline: ${ran.error.message}`,
+						{ status: "cancelled", subcommand, message: "inline run cancelled" },
+					);
+				}
+				const r = ran.result;
 				const text = formatOutput(r.output, r.exitCode, "inline (pane launch failed)");
 				return textResult(text, {
 					status: "inline",
