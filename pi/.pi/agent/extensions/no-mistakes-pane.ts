@@ -147,29 +147,23 @@ async function pollNmPane(
 	timeoutMs: number,
 ): Promise<PaneRunResult> {
 	const deadline = Date.now() + timeoutMs;
-	try {
-		while (true) {
-			if (signal.aborted) throw abortError(signal);
-			if (existsSync(outFile)) {
-				const parsed = extractMarkedOutput(readFileSync(outFile, "utf-8"), token);
-				if (parsed.complete) {
-					return {
-						output: parsed.output ?? "",
-						exitCode: parsed.exitCode ?? -1,
-						paneId,
-						timedOut: false,
-					};
-				}
+	while (true) {
+		if (signal.aborted) throw abortError(signal);
+		if (existsSync(outFile)) {
+			const parsed = extractMarkedOutput(readFileSync(outFile, "utf-8"), token);
+			if (parsed.complete) {
+				return {
+					output: parsed.output ?? "",
+					exitCode: parsed.exitCode ?? -1,
+					paneId,
+					timedOut: false,
+				};
 			}
-			if (Date.now() >= deadline) {
-				return { output: partialOutput(outFile, token), exitCode: -1, paneId, timedOut: true };
-			}
-			await sleep(POLL_MS, signal);
 		}
-	} catch (err) {
-		// Abort during sleep — fall through to partial return.
-		if (!signal.aborted) throw err;
-		return { output: partialOutput(outFile, token), exitCode: -1, paneId, timedOut: false };
+		if (Date.now() >= deadline) {
+			return { output: partialOutput(outFile, token), exitCode: -1, paneId, timedOut: true };
+		}
+		await sleep(POLL_MS, signal);
 	}
 }
 
