@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
 	Editor,
 	type EditorTheme,
@@ -6,9 +6,10 @@ import {
 	Text,
 	matchesKey,
 	truncateToWidth,
+	visibleWidth,
 	wrapTextWithAnsi,
-} from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+} from "@earendil-works/pi-tui";
+import { Type } from "typebox";
 
 interface AskOption {
 	label: string;
@@ -281,16 +282,18 @@ async function askSingleChoice(
 			// crashes the process.
 			if (cachedLines && cachedWidth === width) return cachedLines;
 
-			const lines: string[] = [];
-			const add = (text: string) => lines.push(truncateToWidth(text, width));
+			const tw = Math.max(8, width - 8);
+			const bw = Math.max(8, width - 4);
+			const top: string[] = [];
+			const bottom: string[] = [];
+			const add = (text: string) => top.push(truncateToWidth(text, tw));
 
-			add(theme.fg("accent", "─".repeat(width)));
-			addWrapped(lines, theme.fg("text", ` ${question}`), width);
+			addWrapped(top, theme.fg("text", ` ${question}`), tw);
 			if (context) {
-				lines.push("");
-				addWrapped(lines, theme.fg("muted", ` ${context}`), width);
+				top.push("");
+				addWrapped(top, theme.fg("muted", ` ${context}`), tw);
 			}
-			lines.push("");
+			top.push("");
 
 			for (let i = 0; i < allOptions.length; i++) {
 				const option = allOptions[i];
@@ -300,27 +303,25 @@ async function askSingleChoice(
 				const styled = selected ? theme.fg("accent", label) : theme.fg("text", label);
 				add(`${prefix}${styled}`);
 				if (option.description) {
-					addWrapped(lines, theme.fg("muted", option.description), width, "     ");
+					addWrapped(top, theme.fg("muted", option.description), tw, "     ");
 				}
 			}
 
 			if (editMode) {
-				lines.push("");
-				add(theme.fg("muted", " Write your custom answer:"));
-				for (const line of editor.render(Math.max(1, width - 2))) {
-					add(` ${line}`);
+				top.push("");
+				add(theme.fg("muted", " Write your custom answer below • Enter to submit • Esc to go back"));
+				for (const line of editorInnerLines(editor, Math.max(1, bw - 2))) {
+					bottom.push(` ${line}`);
 				}
-				lines.push("");
-				add(theme.fg("dim", " Enter to submit • Esc to go back"));
 			} else {
-				lines.push("");
+				top.push("");
 				add(theme.fg("dim", " ↑↓ navigate • Enter select • Esc cancel"));
 			}
 
-			add(theme.fg("accent", "─".repeat(width)));
-			cachedLines = lines;
+			const framed = frameMerged(top, bottom, width, theme);
+			cachedLines = framed;
 			cachedWidth = width;
-			return lines;
+			return framed;
 		}
 
 		return {
@@ -458,16 +459,18 @@ async function askMultiChoice(
 			// crashes the process.
 			if (cachedLines && cachedWidth === width) return cachedLines;
 
-			const lines: string[] = [];
-			const add = (text: string) => lines.push(truncateToWidth(text, width));
+			const tw = Math.max(8, width - 8);
+			const bw = Math.max(8, width - 4);
+			const top: string[] = [];
+			const bottom: string[] = [];
+			const add = (text: string) => top.push(truncateToWidth(text, tw));
 
-			add(theme.fg("accent", "─".repeat(width)));
-			addWrapped(lines, theme.fg("text", ` ${question}`), width);
+			addWrapped(top, theme.fg("text", ` ${question}`), tw);
 			if (context) {
-				lines.push("");
-				addWrapped(lines, theme.fg("muted", ` ${context}`), width);
+				top.push("");
+				addWrapped(top, theme.fg("muted", ` ${context}`), tw);
 			}
-			lines.push("");
+			top.push("");
 
 			for (let i = 0; i < allItems.length; i++) {
 				const item = allItems[i];
@@ -502,30 +505,28 @@ async function askMultiChoice(
 					: theme.fg(checked ? "success" : "text", label);
 				add(`${prefix}${styled}`);
 				if (item.description) {
-					addWrapped(lines, theme.fg("muted", item.description), width, "     ");
+					addWrapped(top, theme.fg("muted", item.description), tw, "     ");
 				}
 			}
 
 			if (editMode) {
-				lines.push("");
-				add(theme.fg("muted", " Write your custom answer:"));
-				for (const line of editor.render(Math.max(1, width - 2))) {
-					add(` ${line}`);
+				top.push("");
+				add(theme.fg("muted", " Write your custom answer below • Enter to save • Esc to go back"));
+				for (const line of editorInnerLines(editor, Math.max(1, bw - 2))) {
+					bottom.push(` ${line}`);
 				}
-				lines.push("");
-				add(theme.fg("dim", " Enter to save • Esc to go back"));
 			} else {
-				lines.push("");
+				top.push("");
 				if (selected.size === 0) {
 					add(theme.fg("warning", " Select at least one answer before submitting."));
 				}
 				add(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter edit/submit • Esc cancel"));
 			}
 
-			add(theme.fg("accent", "─".repeat(width)));
-			cachedLines = lines;
+			const framed = frameMerged(top, bottom, width, theme);
+			cachedLines = framed;
 			cachedWidth = width;
-			return lines;
+			return framed;
 		}
 
 		return {
@@ -536,6 +537,49 @@ async function askMultiChoice(
 			handleInput,
 		};
 	});
+}
+
+// Render the panel as two merged rounded boxes over the prompt area: a narrow
+// content box (inset 2 columns each side) on top, its bottom corners becoming
+// tees in the top border of a full-width, prompt-styled input box below.
+// Top content must be laid out at (width - 8) columns, bottom at (width - 4).
+function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
+	if (width < 24) return [...top, ...bottom];
+	const tw = width - 8;
+	const bw = width - 4;
+	const accent = (s: string) => theme.fg("accent", s);
+	const out: string[] = [];
+	out.push(`  ${accent("╭")}${accent("─".repeat(tw + 2))}${accent("╮")}`);
+	for (const line of top) {
+		const pad = Math.max(0, tw - visibleWidth(line));
+		out.push(`  ${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
+	}
+	const rightTee = width - 3;
+	out.push(
+		accent("╭") +
+			accent("─") +
+			accent("┴") +
+			accent("─".repeat(rightTee - 3)) +
+			accent("┴") +
+			accent("─") +
+			accent("╮"),
+	);
+	for (const line of bottom) {
+		const pad = Math.max(0, bw - visibleWidth(line));
+		out.push(`${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
+	}
+	out.push(accent("╰") + accent("─".repeat(width - 2)) + accent("╯"));
+	return out;
+}
+
+// Strip the Editor's own flat ─ borders (and scroll-rule variants) so the
+// outer rounded box is the only frame — the bottom box then reads as a clean
+// prompt, exactly like the real one.
+function editorInnerLines(editor: any, width: number): string[] {
+	const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+	return editor
+		.render(width)
+		.filter((l: string) => !/^─+$/.test(stripAnsi(l)) && !/^─── [↑↓] \d+ more /.test(stripAnsi(l)));
 }
 
 // Shared UI mutex. ctx.ui.custom()/editor can only handle one active call at
@@ -563,6 +607,51 @@ const sharedUiLock = getSharedUiLock();
 
 function withUILock<T>(fn: () => Promise<T>): Promise<T> {
 	return sharedUiLock.withLock(fn);
+}
+
+// Free-text mode: same merged UI — question bubble on top, the answer typed in
+// the prompt-styled box below. Replaces pi's built-in ctx.ui.editor dialog so
+// every user-input surface shares one look.
+async function askFreeText(ctx: any, question: string, context: string | undefined): Promise<string | null> {
+	return ctx.ui.custom<string | null>(
+		(tui: any, theme: any, _kb: any, done: (result: string | null) => void) => {
+			const editor = new Editor(tui, createEditorTheme(theme));
+			editor.focused = true;
+			editor.disableSubmit = true;
+
+			return {
+				render(width: number): string[] {
+					const tw = Math.max(8, width - 8);
+					const bw = Math.max(8, width - 4);
+					const top: string[] = [];
+					const bottom: string[] = [];
+					addWrapped(top, theme.fg("text", ` ${question}`), tw);
+					if (context) {
+						top.push("");
+						addWrapped(top, theme.fg("muted", ` ${context}`), tw);
+					}
+					top.push("");
+					top.push(truncateToWidth(theme.fg("dim", " Enter submit • Ctrl+J newline • Esc cancel"), tw));
+					for (const line of editorInnerLines(editor, Math.max(1, bw - 2))) {
+						bottom.push(` ${line}`);
+					}
+					return frameMerged(top, bottom, width, theme);
+				},
+				invalidate: () => editor.invalidate(),
+				handleInput(data: string) {
+					if (matchesKey(data, Key.enter)) {
+						done(editor.getText().trim());
+						return;
+					}
+					if (matchesKey(data, Key.escape)) {
+						done(null);
+						return;
+					}
+					editor.handleInput(data);
+				},
+			};
+		},
+	);
 }
 
 export default function askUserQuestion(pi: ExtensionAPI) {
@@ -599,9 +688,8 @@ export default function askUserQuestion(pi: ExtensionAPI) {
 
 			return withUILock(async () => {
 				if (mode === "text") {
-					const editorTitle = context ? `${params.question}\n\n${context}` : params.question;
-					const answer = await ctx.ui.editor(editorTitle);
-					if (answer === undefined) {
+					const answer = await askFreeText(ctx, params.question, context);
+					if (answer === null) {
 						return cancelledResult(params.question, mode, context);
 					}
 					return buildResult(params.question, context, mode, [
