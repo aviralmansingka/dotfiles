@@ -119,7 +119,8 @@ Manages AWS infrastructure for the devbox:
 - IAM roles, security groups, DNS, GitHub OIDC integration
 
 ### CI/CD Workflows (`.github/workflows/`)
-- **Packer** (`packer.yml`) - Builds AMI on push to `main` (when `ops/packer/**` changes), validates via temporary EC2 instance
+- **CI** (`ci.yml`) - Fast, deterministic gate on every PR/push to `main`: shell/python/lua syntax checks, Pi extension unit tests (`*.test.mjs`), and `scripts/test-auto-git-sync.sh`. Covers the surfaces an agent touches without bootstrapping plugins or infra.
+- **Packer** (`packer.yml`) - Builds AMI on push to `main` (when `ops/packer/**` changes), validates via temporary EC2 instance. Self-gates via `detect-changes` on PRs.
 - **Terraform** (`terraform.yml`) - Plans on PR, applies on push to `main` (when `ops/terraform/**` changes)
 
 ## Dependency Management
