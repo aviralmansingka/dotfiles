@@ -182,6 +182,29 @@ function unavailableResult(question: string, message: string, context?: string) 
 	};
 }
 
+// The grader fork should be fast: prefer a small, cheap model over the
+// session's active model (which may be a slow reasoning model). Override with
+// PI_EXPLAIN_GRADER_MODEL="provider/model-id"; otherwise walk a preference
+// list of widely-available fast models, and finally fall back to ctx.model.
+function pickGraderModel(ctx: any): any {
+	const override = process.env.PI_EXPLAIN_GRADER_MODEL;
+	if (override) {
+		const slash = override.indexOf("/");
+		const m = slash > 0 ? ctx.modelRegistry.find(override.slice(0, slash), override.slice(slash + 1)) : undefined;
+		if (m) return m;
+	}
+	for (const [provider, id] of [
+		["anthropic", "claude-haiku-4-5"],
+		["openai", "gpt-4o-mini"],
+		["google", "gemini-2.5-flash"],
+		["fireworks", "deepseek-v4-flash-0731"],
+	] as const) {
+		const m = ctx.modelRegistry.find(provider, id);
+		if (m && (!ctx.modelRegistry.hasConfiguredAuth || ctx.modelRegistry.hasConfiguredAuth(m))) return m;
+	}
+	return ctx.model;
+}
+
 function extractGrading(raw: string): Grading | undefined {
 	const start = raw.indexOf("{");
 	const end = raw.lastIndexOf("}");
@@ -252,20 +275,22 @@ export default function explain(pi: ExtensionAPI) {
 			if (!ctx.hasUI) {
 				return unavailableResult(question, "explain requires interactive mode UI", context);
 			}
-			if (!ctx.model) {
-				return unavailableResult(question, "explain requires an active model for the grader fork", context);
-			}
-
 			const grade = async (answer: string): Promise<{ grading?: Grading; gradeError?: string }> => {
+				const model = pickGraderModel(ctx);
 				const graderPrompt =
 					`Question asked of the learner:\n${question}\n\n` +
 					`Expected — the claims a correct answer must contain:\n${expected}\n\n` +
 					`Learner's answer (their own words):\n${answer}`;
 				try {
-					const response = await ctx.modelRegistry.complete(ctx.model!, {
-						systemPrompt: GRADER_SYSTEM_PROMPT,
-						messages: [{ role: "user", content: graderPrompt, timestamp: Date.now() } as any],
-					});
+					const response = await ctx.modelRegistry.complete(
+						model,
+						{
+							systemPrompt: GRADER_SYSTEM_PROMPT,
+							messages: [{ role: "user", content: graderPrompt, timestamp: Date.now() } as any],
+						},
+						// Fast grading: small output budget, deterministic, thinking off.
+						{ signal, maxTokens: 800, temperature: 0, reasoning: "off" } as any,
+					);
 					const raw = response.content
 						.filter((c: any) => c.type === "text")
 						.map((c: any) => c.text)
@@ -278,6 +303,8 @@ export default function explain(pi: ExtensionAPI) {
 					return { gradeError: `grader call failed: ${err?.message ?? String(err)}` };
 				}
 			};
+
+			const graderModelId = pickGraderModel(ctx)?.id ?? "session model";
 
 			return withUILock(async () => {
 				const result = await ctx.ui.custom<PanelResult | null>(
@@ -295,7 +322,7 @@ export default function explain(pi: ExtensionAPI) {
 							tui,
 							(s: string) => theme.fg("accent", s),
 							(s: string) => theme.fg("muted", s),
-							" grading…",
+							 ` grading… (${graderModelId})`,
 						);
 
 						let phase: "answering" | "grading" | "verdict" = "answering";
