@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { createJiti } = require("/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs");
+const {
+	createJiti,
+} = require("/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs");
 const jiti = createJiti(import.meta.url);
 const { joinHints, numberShortcutHint, numberShortcutIndex } = jiti("./option-shortcuts.ts");
 
