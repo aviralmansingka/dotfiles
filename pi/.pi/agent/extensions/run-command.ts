@@ -397,7 +397,7 @@ async function askRunCommand(
 					top.push("");
 					addWrapped(
 						top,
-						theme.fg("dim", "y — copy · R — run in Neovim :term dm and auto-capture · paste output below"),
+						theme.fg("dim", "y — copy · r — run in Neovim :term dm and auto-capture · paste output below"),
 						tw,
 						" ",
 					);
@@ -452,7 +452,7 @@ async function askRunCommand(
 						return;
 					}
 
-					// Unfocused: y yanks the command as-is, R runs it via Neovim, Tab focuses the field.
+					// Unfocused: y yanks the command as-is, r runs it via Neovim, Tab focuses the field.
 					if (data === "y") {
 						copyToClipboard(command)
 							.then(() => {
@@ -462,7 +462,7 @@ async function askRunCommand(
 							.catch(() => {});
 						return;
 					}
-					if (data === "R") {
+					if (data === "r") {
 						startAutoRun();
 						return;
 					}
@@ -528,12 +528,12 @@ export default function runCommand(pi: ExtensionAPI) {
 		name: "run-command",
 		label: "run-command",
 		description:
-			"Have the user run ONE command hands-on and report what they saw. A floating panel shows the command; y copies it for the manual terminal workflow, and R opens a Neovim terminal pane with `:term dm`, runs the command there, and captures output automatically. You receive the command and observed output together — grade output vs. prediction.",
+			"Have the user run ONE command hands-on and report what they saw. A floating panel shows the command; y copies it for the manual terminal workflow, and r opens a Neovim terminal pane with `:term dm`, runs the command there, and captures output automatically. You receive the command and observed output together — grade output vs. prediction.",
 		promptSnippet:
-			"Use run-command to have the user execute one command hands-on (with a grounded prediction); they can paste output manually or press R for Neovim-terminal auto-capture.",
+			"Use run-command to have the user execute one command hands-on (with a grounded prediction); they can paste output manually or press r for Neovim-terminal auto-capture.",
 		promptGuidelines: [
 			"ONE command per call — never a batch. The panel shows exactly what you pass in `command`, verbatim.",
-			"The user may press R to run the displayed command through a Neovim `:term dm` pane; output and exit status are captured automatically when available.",
+			"The user may press r to run the displayed command through a Neovim `:term dm` pane; output and exit status are captured automatically when available.",
 			"prediction is REQUIRED and must be grounded: run the idempotent/read-only equivalent yourself first and predict the actual observed output; for state-modifying commands, run the read-side (current ruleset/sysctl value) and predict a concrete diff. When no safe read exists, say the prediction is inferred from docs.",
 			"Grade the returned output against your prediction. A mismatch is diagnostic: either host state drifted or your model was wrong — determine which before moving on.",
 			"The user may submit partial or empty output if something went wrong on their side — treat that as data, not as disobedience.",
@@ -565,8 +565,8 @@ export default function runCommand(pi: ExtensionAPI) {
 				let text: string;
 				if (response.autoRun) {
 					text = output
-						? `User pressed R; Pi ran the command in a Neovim \`:term dm\` pane and captured output.\nCommand: ${command}\nExit status: ${response.exitCode ?? "unknown"}\nOutput:\n${output}`
-						: `User pressed R; Pi ran the command in a Neovim \`:term dm\` pane and captured no output.\nCommand: ${command}\nExit status: ${response.exitCode ?? "unknown"}`;
+						? `User pressed r; Pi ran the command in a Neovim \`:term dm\` pane and captured output.\nCommand: ${command}\nExit status: ${response.exitCode ?? "unknown"}\nOutput:\n${output}`
+						: `User pressed r; Pi ran the command in a Neovim \`:term dm\` pane and captured no output.\nCommand: ${command}\nExit status: ${response.exitCode ?? "unknown"}`;
 				} else if (output) {
 					text = `User ran the command and pasted output.\nCommand: ${command}\nOutput:\n${output}`;
 				} else {
