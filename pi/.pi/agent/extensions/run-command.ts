@@ -1,6 +1,6 @@
 import { copyToClipboard, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
@@ -171,6 +171,11 @@ async function runViaNvimTerminal(
 	// and a hyphen-less hex token so the full path stays well under the cap.
 	const socket = `${tmpdir()}/pi-rc-${randomUUID().replace(/-/g, "")}.sock`;
 	const token = randomUUID().replace(/-/g, "");
+	// Capture command stdout+stderr to a temp file and read it back via fs once
+	// the END marker fires. We do not scrape the echoed terminal buffer for
+	// output: the terminal driver echoes the bulk-pasted wrapper before the
+	// shell runs it, so buffer scraping corrupts the captured text.
+	const outputFile = `${tmpdir()}/pi-rc-out-${token}.txt`;
 	try {
 		onProgress("Opening Neovim terminal pane…");
 		const split = await herdrJson(["pane", "split", "--current", "--direction", "right", "--cwd", cwd, "--focus"], runSignal);
@@ -184,20 +189,27 @@ async function runViaNvimTerminal(
 		await waitForTerminalJob(socket, runSignal);
 
 		onProgress("Running command in the Neovim terminal…");
-		const script = buildNvimTerminalScript(command, token);
+		const script = buildNvimTerminalScript(command, token, outputFile);
 		await nvimExpr(socket, luaEval("vim.api.nvim_chan_send(vim.b.terminal_job_id, _A)", script), runSignal);
 
 		onProgress(`Waiting for output (timeout ${NVIM_RUN_TIMEOUT_MS / 1000}s)…`);
 		while (true) {
 			const parsed = extractMarkedOutput(await readNvimBuffer(socket, runSignal), token);
 			if (parsed.complete) {
-				return { output: parsed.output ?? "", exitCode: parsed.exitCode ?? -1, paneId };
+				let output = "";
+				try {
+					output = readFileSync(outputFile, "utf8");
+				} catch {
+					output = "";
+				}
+				return { output: output.trim(), exitCode: parsed.exitCode ?? -1, paneId };
 			}
 			await sleep(POLL_MS, runSignal);
 		}
 	} finally {
 		timeout.cleanup();
 		if (paneId) await herdrOk(["pane", "close", paneId], new AbortController().signal).catch(() => false);
+		rmSync(outputFile, { force: true });
 	}
 }
 
