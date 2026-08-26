@@ -308,14 +308,14 @@ async function askSingleChoice(
 			}
 
 			if (editMode) {
-				bottom.push(theme.fg("muted", " Write your custom answer:"));
-				for (const line of editor.render(Math.max(1, bw - 2))) {
+				top.push("");
+				add(theme.fg("muted", " Write your custom answer below • Enter to submit • Esc to go back"));
+				for (const line of editorInnerLines(editor, Math.max(1, bw - 2))) {
 					bottom.push(` ${line}`);
 				}
-				bottom.push("");
-				bottom.push(theme.fg("dim", " Enter to submit • Esc to go back"));
 			} else {
-				bottom.push(theme.fg("dim", " ↑↓ navigate • Enter select • Esc cancel"));
+				top.push("");
+				add(theme.fg("dim", " ↑↓ navigate • Enter select • Esc cancel"));
 			}
 
 			const framed = frameMerged(top, bottom, width, theme);
@@ -510,17 +510,17 @@ async function askMultiChoice(
 			}
 
 			if (editMode) {
-				bottom.push(theme.fg("muted", " Write your custom answer:"));
-				for (const line of editor.render(Math.max(1, bw - 2))) {
+				top.push("");
+				add(theme.fg("muted", " Write your custom answer below • Enter to save • Esc to go back"));
+				for (const line of editorInnerLines(editor, Math.max(1, bw - 2))) {
 					bottom.push(` ${line}`);
 				}
-				bottom.push("");
-				bottom.push(theme.fg("dim", " Enter to save • Esc to go back"));
 			} else {
+				top.push("");
 				if (selected.size === 0) {
-					bottom.push(theme.fg("warning", " Select at least one answer before submitting."));
+					add(theme.fg("warning", " Select at least one answer before submitting."));
 				}
-				bottom.push(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter edit/submit • Esc cancel"));
+				add(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter edit/submit • Esc cancel"));
 			}
 
 			const framed = frameMerged(top, bottom, width, theme);
@@ -570,6 +570,16 @@ function frameMerged(top: string[], bottom: string[], width: number, theme: any)
 	}
 	out.push(accent("╰") + accent("─".repeat(width - 2)) + accent("╯"));
 	return out;
+}
+
+// Strip the Editor's own flat ─ borders (and scroll-rule variants) so the
+// outer rounded box is the only frame — the bottom box then reads as a clean
+// prompt, exactly like the real one.
+function editorInnerLines(editor: any, width: number): string[] {
+	const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+	return editor
+		.render(width)
+		.filter((l: string) => !/^─+$/.test(stripAnsi(l)) && !/^─── [↑↓] \d+ more /.test(stripAnsi(l)));
 }
 
 // Shared UI mutex. ctx.ui.custom()/editor can only handle one active call at

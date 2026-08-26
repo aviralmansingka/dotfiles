@@ -163,6 +163,16 @@ function frameMerged(top: string[], bottom: string[], width: number, theme: any)
 	return out;
 }
 
+// Strip the Editor's own flat ─ borders (and scroll-rule variants) so the
+// outer rounded box is the only frame — the bottom box then reads as a clean
+// prompt, exactly like the real one.
+function editorInnerLines(editor: Editor, width: number): string[] {
+	const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+	return editor
+		.render(width)
+		.filter((l) => !/^─+$/.test(stripAnsi(l)) && !/^─── [↑↓] \d+ more /.test(stripAnsi(l)));
+}
+
 // Shared UI mutex. ctx.ui.custom()/editor can only handle one active call at
 // a time, so ALL pop-up-style tools (quiz, ask_user_question, run-command,
 // explain, ...) must serialize against each other, not just against
@@ -407,15 +417,16 @@ export default function explain(pi: ExtensionAPI) {
 								}
 
 								if (phase === "answering") {
-									for (const line of editor.render(bw)) bottom.push(line);
-									bottom.push("");
-									addB(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Esc — cancel"));
+									top.push("");
+									addT(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Esc — cancel"));
+									for (const line of editorInnerLines(editor, bw)) bottom.push(line);
 								} else if (phase === "grading") {
 									top.push("");
 									addWrapped(top, theme.fg("dim", editor.getText().trim()), tw, " ");
 									top.push("");
 									for (const line of loader.render(tw)) top.push(line);
-									addB(theme.fg("dim", " Esc — abort grading"));
+									top.push("");
+									addT(theme.fg("dim", " Esc — abort grading"));
 								} else {
 									top.push("");
 									addWrapped(top, theme.fg("dim", editor.getText().trim()), tw, " ");
@@ -446,7 +457,8 @@ export default function explain(pi: ExtensionAPI) {
 										addT(theme.fg("warning", ` grading unavailable — ${gradeError ?? "unknown error"}`));
 										addT(theme.fg("dim", " (returned ungraded; the agent will evaluate your answer itself)"));
 									}
-									addB(theme.fg("dim", " Enter — continue"));
+									top.push("");
+									addT(theme.fg("dim", " Enter — continue"));
 								}
 								return frameMerged(top, bottom, width, theme);
 							},

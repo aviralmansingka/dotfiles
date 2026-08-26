@@ -430,14 +430,26 @@ function pushDontKnowRow(lines: string[], theme: any, width: number, focused: bo
 	lines.push(truncateToWidth(`${prefix}${styled}`, width));
 }
 
-// Persistent, always-present note field rendered under the options during the
-// select phase. Applies to ANY answer (including "I don't know") and is only
-// surfaced to the agent when non-empty.
+// Strip the Editor's own flat ─ borders (and scroll-rule variants) so the
+// outer rounded box is the only frame — the bottom box then reads as a clean
+// prompt, exactly like the real one.
+function editorInnerLines(editor: Editor, width: number): string[] {
+	const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+	return editor
+		.render(width)
+		.filter((l) => !/^─+$/.test(stripAnsi(l)) && !/^─── [↑↓] \d+ more /.test(stripAnsi(l)));
+}
+
+// Persistent, always-present note field in the prompt-styled bottom box.
+// Applies to ANY answer (including "I don't know") and is only surfaced to the
+// agent when non-empty. Empty + unfocused collapses to a dim placeholder so the
+// bottom box keeps the prompt silhouette.
 function pushNoteField(lines: string[], theme: any, width: number, editor: Editor, focused: boolean): void {
-	lines.push("");
-	const label = focused ? theme.fg("accent", "Note (optional):") : theme.fg("muted", "Note (optional):");
-	addWrapped(lines, label, width, " ");
-	for (const line of editor.render(width)) lines.push(line);
+	if (!focused && editor.getText().trim().length === 0) {
+		lines.push(theme.fg("dim", " note (optional) — Tab to write"));
+		return;
+	}
+	for (const line of editorInnerLines(editor, width)) lines.push(line);
 }
 
 // Build the note Editor. `disableSubmit` is set because Enter must NOT submit
@@ -606,13 +618,15 @@ async function askSingleChoice(
 
 				pushDontKnowRow(top, theme, tw, focus === "options" && optionIndex === dontKnowNav);
 
-				pushNoteField(bottom, theme, bw, editor, focus === "note");
-
 				if (focus === "note") {
-					bottom.push(theme.fg("dim", " Type note • Ctrl+J newline • Enter back to options • Tab options • Esc back"));
+					top.push("");
+					add(theme.fg("dim", " Type note below • Ctrl+J newline • Enter back to options • Esc cancel"));
 				} else {
-					bottom.push(theme.fg("dim", " ↑↓ navigate • Enter answer • Tab note • Esc cancel"));
+					top.push("");
+					add(theme.fg("dim", " ↑↓ navigate • Enter answer • Tab note • Esc cancel"));
 				}
+
+				pushNoteField(bottom, theme, bw, editor, focus === "note");
 				const framed = frameMerged(top, bottom, width, theme);
 				// Not cached when the note is focused: the editor renders a live cursor.
 				if (focus !== "note") {
@@ -849,15 +863,17 @@ async function askMultiChoice(
 					}
 				}
 
-				pushNoteField(bottom, theme, bw, editor, focus === "note");
-
-				if (selected.size === 0) {
-					bottom.push(theme.fg("warning", " Select at least one answer before submitting."));
-				}
 				if (focus === "note") {
-					bottom.push(theme.fg("dim", " Type note • Ctrl+J newline • Enter back to options • Tab options • Esc back"));
+					top.push("");
+					add(theme.fg("dim", " Type note below • Ctrl+J newline • Enter back to options • Esc cancel"));
 				} else {
-					bottom.push(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter submit • Tab note • Esc cancel"));
+					top.push("");
+					add(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter submit • Tab note • Esc cancel"));
+				}
+
+				pushNoteField(bottom, theme, bw, editor, focus === "note");
+				if (selected.size === 0 && focus !== "note") {
+					bottom.push(theme.fg("warning", " Select at least one answer before submitting."));
 				}
 				const framed = frameMerged(top, bottom, width, theme);
 				// Not cached when the note is focused: the editor renders a live cursor.

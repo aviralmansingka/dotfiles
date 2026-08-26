@@ -110,6 +110,16 @@ function frameMerged(top: string[], bottom: string[], width: number, theme: any)
 	return out;
 }
 
+// Strip the Editor's own flat ─ borders (and scroll-rule variants) so the
+// outer rounded box is the only frame — the bottom box then reads as a clean
+// prompt, exactly like the real one.
+function editorInnerLines(editor: Editor, width: number): string[] {
+	const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+	return editor
+		.render(width)
+		.filter((l) => !/^─+$/.test(stripAnsi(l)) && !/^─── [↑↓] \d+ more /.test(stripAnsi(l)));
+}
+
 // Shared UI mutex. ctx.ui.custom()/editor can only handle one active call at
 // a time, so ALL pop-up-style tools (quiz, ask_user_question, run-command, ...)
 // must serialize against each other, not just against themselves. We stash one
@@ -199,17 +209,20 @@ async function askRunCommand(
 					}
 					const label =
 						focus === "editor"
-							? theme.fg("accent", "Output (paste what you saw):")
-							: theme.fg("muted", "Output (paste what you saw) — Tab to focus:");
-					addWrapped(bottom, label, bw, " ");
-					for (const line of editor.render(bw)) bottom.push(line);
-					bottom.push("");
-					addB(
+							? theme.fg("accent", "Output (paste what you saw below):")
+							: theme.fg("muted", "Output (paste what you saw below) — Tab to focus:");
+					addWrapped(top, label, tw, " ");
+					addT(
 						theme.fg(
 							"dim",
 							focus === "editor" ? " Enter — submit · Tab — unfocus · Esc — cancel" : " Tab — focus output · Esc — cancel",
 						),
 					);
+					if (focus !== "editor" && editor.getText().trim().length === 0) {
+						bottom.push(theme.fg("dim", " output — Tab to paste"));
+					} else {
+						for (const line of editorInnerLines(editor, bw)) bottom.push(line);
+					}
 					return frameMerged(top, bottom, width, theme);
 				},
 
