@@ -492,10 +492,12 @@ function editorInnerLines(editor: Editor, width: number): string[] {
 		.filter((l) => !/^─+$/.test(stripAnsi(l)) && !/^─── [↑↓] \d+ more /.test(stripAnsi(l)));
 }
 
-// Persistent, always-present note field in the prompt-styled bottom box.
-// Applies to ANY answer (including "I don't know") and is only surfaced to the
-// agent when non-empty. Empty + unfocused collapses to a dim placeholder so the
-// bottom box keeps the prompt silhouette.
+// Render the bottom-box text editor for the note OR follow-up field. The note
+// is always-present (shown unfocused as a dim placeholder in steering mode),
+// attaches to ANY answer (including "I don't know"), and reaches the agent only
+// when non-empty; the follow-up editor is rendered only in follow-up mode.
+// Empty + unfocused collapses to a placeholder so the bottom box keeps the
+// prompt silhouette.
 function pushNoteField(lines: string[], theme: any, width: number, editor: Editor, focused: boolean): void {
 	if (!focused && editor.getText().trim().length === 0) {
 		lines.push(theme.fg("dim", " note (optional) — Tab to write"));
@@ -504,11 +506,12 @@ function pushNoteField(lines: string[], theme: any, width: number, editor: Edito
 	for (const line of editorInnerLines(editor, width)) lines.push(line);
 }
 
-// Build the note Editor. `disableSubmit` is set because Enter must NOT submit
-// here: the editor's submit path clears the buffer, which would wipe the note.
-// Instead the host intercepts Enter to return focus to the options while
-// keeping the text. Ctrl+J still inserts a newline (pi convention), so
-// multi-line notes work.
+// Build the text Editor shared by the note and follow-up fields. `disableSubmit`
+// is set because Enter must NOT submit here: the editor's submit path clears the
+// buffer, which would wipe the text. The host intercepts Enter with mode-specific
+// behavior: note mode returns to steering keeping the text; follow-up mode sends
+// the follow-up (ending the quiz) when non-empty, else returns to steering.
+// Ctrl+J still inserts a newline (pi convention), so multi-line text works.
 function makeNoteEditor(tui: any, theme: any): Editor {
 	const editor = new Editor(tui, createEditorTheme(theme));
 	editor.focused = false;
