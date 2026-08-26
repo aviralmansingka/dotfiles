@@ -378,19 +378,36 @@ function renderFeedback(
 	add(theme.fg("dim", " Enter/Esc to continue"));
 }
 
-// Frame a rendered panel in a rounded window, inset 2 columns from the left
-// edge. Content must already be laid out at (width - 6) visible columns.
-function frame(lines: string[], width: number, theme: any): string[] {
-	if (width < 12) return lines;
-	const contentW = width - 6;
-	const bar = "─".repeat(contentW + 2);
-	const wall = theme.fg("accent", "│");
-	const out = [`  ${theme.fg("accent", `╭${bar}╮`)}`];
-	for (const line of lines) {
-		const pad = Math.max(0, contentW - visibleWidth(line));
-		out.push(`  ${wall} ${line}${" ".repeat(pad)} ${wall}`);
+// Render the panel as two merged rounded boxes over the prompt area: a narrow
+// content box (inset 4 columns each side) on top, its bottom corners becoming
+// tees in the top border of a full-width, prompt-styled input box below.
+// Top content must be laid out at (width - 12) columns, bottom at (width - 4).
+function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
+	if (width < 24) return [...top, ...bottom];
+	const tw = width - 12;
+	const bw = width - 4;
+	const accent = (s: string) => theme.fg("accent", s);
+	const out: string[] = [];
+	out.push(`    ${accent("╭")}${accent("─".repeat(tw + 2))}${accent("╮")}`);
+	for (const line of top) {
+		const pad = Math.max(0, tw - visibleWidth(line));
+		out.push(`    ${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
 	}
-	out.push(`  ${theme.fg("accent", `╰${bar}╯`)}`);
+	const rightTee = width - 5;
+	out.push(
+		accent("╭") +
+			accent("─".repeat(3)) +
+			accent("┴") +
+			accent("─".repeat(rightTee - 5)) +
+			accent("┴") +
+			accent("─".repeat(width - rightTee - 2)) +
+			accent("╮"),
+	);
+	for (const line of bottom) {
+		const pad = Math.max(0, bw - visibleWidth(line));
+		out.push(`${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
+	}
+	out.push(accent("╰") + accent("─".repeat(width - 2)) + accent("╯"));
 	return out;
 }
 
@@ -549,16 +566,18 @@ async function askSingleChoice(
 				// crashes the process.
 				if (cachedLines && cachedWidth === width) return cachedLines;
 
-				const cw = Math.max(8, width - 6);
-				const lines: string[] = [];
-				const add = (text: string) => lines.push(truncateToWidth(text, cw));
-				pushHeader(lines, theme, cw, question, context);
+				const tw = Math.max(8, width - 12);
+				const bw = Math.max(8, width - 4);
+				const top: string[] = [];
+				const bottom: string[] = [];
+				const add = (text: string) => top.push(truncateToWidth(text, tw));
+				pushHeader(top, theme, tw, question, context);
 
 				if (phase === "feedback") {
 					renderFeedback(
-						lines,
+						top,
 						theme,
-						cw,
+						tw,
 						options,
 						chosen ? [chosen.index] : [],
 						correctIndices,
@@ -566,13 +585,13 @@ async function askSingleChoice(
 						dontKnow,
 						noteText(),
 					);
-					const framed = frame(lines, width, theme);
+					const framed = frameMerged(top, bottom, width, theme);
 					cachedLines = framed;
 					cachedWidth = width;
 					return framed;
 				}
 
-				lines.push("");
+				top.push("");
 				for (let i = 0; i < allOptions.length; i++) {
 					const option = allOptions[i];
 					const selected = focus === "options" && i === optionIndex;
@@ -581,21 +600,20 @@ async function askSingleChoice(
 					const styled = selected ? theme.fg("accent", label) : theme.fg("text", label);
 					add(`${prefix}${styled}`);
 					if (option.description) {
-						addWrapped(lines, theme.fg("muted", option.description), cw, "     ");
+						addWrapped(top, theme.fg("muted", option.description), tw, "     ");
 					}
 				}
 
-				pushDontKnowRow(lines, theme, cw, focus === "options" && optionIndex === dontKnowNav);
+				pushDontKnowRow(top, theme, tw, focus === "options" && optionIndex === dontKnowNav);
 
-				pushNoteField(lines, theme, cw, editor, focus === "note");
+				pushNoteField(bottom, theme, bw, editor, focus === "note");
 
-				lines.push("");
 				if (focus === "note") {
-					add(theme.fg("dim", " Type note • Ctrl+J newline • Enter back to options • Tab options • Esc back"));
+					bottom.push(theme.fg("dim", " Type note • Ctrl+J newline • Enter back to options • Tab options • Esc back"));
 				} else {
-					add(theme.fg("dim", " ↑↓ navigate • Enter answer • Tab note • Esc cancel"));
+					bottom.push(theme.fg("dim", " ↑↓ navigate • Enter answer • Tab note • Esc cancel"));
 				}
-				const framed = frame(lines, width, theme);
+				const framed = frameMerged(top, bottom, width, theme);
 				// Not cached when the note is focused: the editor renders a live cursor.
 				if (focus !== "note") {
 					cachedLines = framed;
@@ -772,16 +790,18 @@ async function askMultiChoice(
 				// crashes the process.
 				if (cachedLines && cachedWidth === width) return cachedLines;
 
-				const cw = Math.max(8, width - 6);
-				const lines: string[] = [];
-				const add = (text: string) => lines.push(truncateToWidth(text, cw));
-				pushHeader(lines, theme, cw, question, context);
+				const tw = Math.max(8, width - 12);
+				const bw = Math.max(8, width - 4);
+				const top: string[] = [];
+				const bottom: string[] = [];
+				const add = (text: string) => top.push(truncateToWidth(text, tw));
+				pushHeader(top, theme, tw, question, context);
 
 				if (phase === "feedback") {
 					renderFeedback(
-						lines,
+						top,
 						theme,
-						cw,
+						tw,
 						options,
 						realAnswers().map((a) => a.index),
 						correctIndices,
@@ -789,13 +809,13 @@ async function askMultiChoice(
 						choseDontKnow(),
 						noteText(),
 					);
-					const framed = frame(lines, width, theme);
+					const framed = frameMerged(top, bottom, width, theme);
 					cachedLines = framed;
 					cachedWidth = width;
 					return framed;
 				}
 
-				lines.push("");
+				top.push("");
 				for (let i = 0; i < allItems.length; i++) {
 					const item = allItems[i];
 					const isFocused = focus === "options" && i === optionIndex;
@@ -811,7 +831,7 @@ async function askMultiChoice(
 					}
 
 					if (item.id === DONT_KNOW_ID) {
-						lines.push(""); // visual separation from the real options
+						top.push(""); // visual separation from the real options
 						const checked = selected.has(item.id);
 						const label = `${checked ? "[x]" : "[ ]"} ${item.label}`;
 						const styled = isFocused ? theme.fg("accent", label) : theme.fg(checked ? "warning" : "dim", label);
@@ -825,22 +845,21 @@ async function askMultiChoice(
 					const styled = isFocused ? theme.fg("accent", label) : theme.fg(checked ? "success" : "text", label);
 					add(`${prefix}${styled}`);
 					if (item.description) {
-						addWrapped(lines, theme.fg("muted", item.description), cw, "     ");
+						addWrapped(top, theme.fg("muted", item.description), tw, "     ");
 					}
 				}
 
-				pushNoteField(lines, theme, cw, editor, focus === "note");
+				pushNoteField(bottom, theme, bw, editor, focus === "note");
 
-				lines.push("");
 				if (selected.size === 0) {
-					add(theme.fg("warning", " Select at least one answer before submitting."));
+					bottom.push(theme.fg("warning", " Select at least one answer before submitting."));
 				}
 				if (focus === "note") {
-					add(theme.fg("dim", " Type note • Ctrl+J newline • Enter back to options • Tab options • Esc back"));
+					bottom.push(theme.fg("dim", " Type note • Ctrl+J newline • Enter back to options • Tab options • Esc back"));
 				} else {
-					add(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter submit • Tab note • Esc cancel"));
+					bottom.push(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter submit • Tab note • Esc cancel"));
 				}
-				const framed = frame(lines, width, theme);
+				const framed = frameMerged(top, bottom, width, theme);
 				// Not cached when the note is focused: the editor renders a live cursor.
 				if (focus !== "note") {
 					cachedLines = framed;

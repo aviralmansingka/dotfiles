@@ -77,19 +77,36 @@ function addWrapped(lines: string[], text: string, width: number, indent = ""): 
 	}
 }
 
-// Frame a rendered panel in a rounded window, inset 2 columns from the left
-// edge. Content must already be laid out at (width - 6) visible columns.
-function frame(lines: string[], width: number, theme: any): string[] {
-	if (width < 12) return lines;
-	const contentW = width - 6;
-	const bar = "─".repeat(contentW + 2);
-	const wall = theme.fg("accent", "│");
-	const out = [`  ${theme.fg("accent", `╭${bar}╮`)}`];
-	for (const line of lines) {
-		const pad = Math.max(0, contentW - visibleWidth(line));
-		out.push(`  ${wall} ${line}${" ".repeat(pad)} ${wall}`);
+// Render the panel as two merged rounded boxes over the prompt area: a narrow
+// content box (inset 4 columns each side) on top, its bottom corners becoming
+// tees in the top border of a full-width, prompt-styled input box below.
+// Top content must be laid out at (width - 12) columns, bottom at (width - 4).
+function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
+	if (width < 24) return [...top, ...bottom];
+	const tw = width - 12;
+	const bw = width - 4;
+	const accent = (s: string) => theme.fg("accent", s);
+	const out: string[] = [];
+	out.push(`    ${accent("╭")}${accent("─".repeat(tw + 2))}${accent("╮")}`);
+	for (const line of top) {
+		const pad = Math.max(0, tw - visibleWidth(line));
+		out.push(`    ${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
 	}
-	out.push(`  ${theme.fg("accent", `╰${bar}╯`)}`);
+	const rightTee = width - 5;
+	out.push(
+		accent("╭") +
+			accent("─".repeat(3)) +
+			accent("┴") +
+			accent("─".repeat(rightTee - 5)) +
+			accent("┴") +
+			accent("─".repeat(width - rightTee - 2)) +
+			accent("╮"),
+	);
+	for (const line of bottom) {
+		const pad = Math.max(0, bw - visibleWidth(line));
+		out.push(`${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
+	}
+	out.push(accent("╰") + accent("─".repeat(width - 2)) + accent("╯"));
 	return out;
 }
 
@@ -153,45 +170,47 @@ async function askRunCommand(
 
 			return {
 				render(width: number): string[] {
-					const cw = Math.max(8, width - 6);
-					const lines: string[] = [];
-					const add = (s: string) => lines.push(truncateToWidth(s, cw));
+					const tw = Math.max(8, width - 12);
+					const bw = Math.max(8, width - 4);
+					const top: string[] = [];
+					const bottom: string[] = [];
+					const addT = (s: string) => top.push(truncateToWidth(s, tw));
+					const addB = (s: string) => bottom.push(truncateToWidth(s, bw));
 
-					add(theme.fg("toolTitle", theme.bold(" run this command")));
+					addT(theme.fg("toolTitle", theme.bold(" run this command")));
 					if (context) {
-						lines.push("");
-						addWrapped(lines, theme.fg("muted", context), cw, " ");
+						top.push("");
+						addWrapped(top, theme.fg("muted", context), tw, " ");
 					}
-					lines.push("");
+					top.push("");
 					// The command, verbatim, in a visually distinct block.
 					for (const line of command.split("\n")) {
-						add(` ${theme.fg("success", theme.bold(line))}`);
+						addT(` ${theme.fg("success", theme.bold(line))}`);
 					}
-					lines.push("");
+					top.push("");
 					addWrapped(
-						lines,
+						top,
 						theme.fg("dim", "y — copy command · run it in your own terminal · paste the output below"),
-						cw,
+						tw,
 						" ",
 					);
 					if (copied) {
-						add(theme.fg("success", " ✓ copied to clipboard"));
+						addT(theme.fg("success", " ✓ copied to clipboard"));
 					}
-					lines.push("");
 					const label =
 						focus === "editor"
 							? theme.fg("accent", "Output (paste what you saw):")
 							: theme.fg("muted", "Output (paste what you saw) — Tab to focus:");
-					addWrapped(lines, label, cw, " ");
-					for (const line of editor.render(cw)) lines.push(line);
-					lines.push("");
-					add(
+					addWrapped(bottom, label, bw, " ");
+					for (const line of editor.render(bw)) bottom.push(line);
+					bottom.push("");
+					addB(
 						theme.fg(
 							"dim",
 							focus === "editor" ? " Enter — submit · Tab — unfocus · Esc — cancel" : " Tab — focus output · Esc — cancel",
 						),
 					);
-					return frame(lines, width, theme);
+					return frameMerged(top, bottom, width, theme);
 				},
 
 				invalidate: () => {

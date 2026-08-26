@@ -282,16 +282,18 @@ async function askSingleChoice(
 			// crashes the process.
 			if (cachedLines && cachedWidth === width) return cachedLines;
 
-			const cw = Math.max(8, width - 6);
-			const lines: string[] = [];
-			const add = (text: string) => lines.push(truncateToWidth(text, cw));
+			const tw = Math.max(8, width - 12);
+			const bw = Math.max(8, width - 4);
+			const top: string[] = [];
+			const bottom: string[] = [];
+			const add = (text: string) => top.push(truncateToWidth(text, tw));
 
-			addWrapped(lines, theme.fg("text", ` ${question}`), cw);
+			addWrapped(top, theme.fg("text", ` ${question}`), tw);
 			if (context) {
-				lines.push("");
-				addWrapped(lines, theme.fg("muted", ` ${context}`), cw);
+				top.push("");
+				addWrapped(top, theme.fg("muted", ` ${context}`), tw);
 			}
-			lines.push("");
+			top.push("");
 
 			for (let i = 0; i < allOptions.length; i++) {
 				const option = allOptions[i];
@@ -301,24 +303,22 @@ async function askSingleChoice(
 				const styled = selected ? theme.fg("accent", label) : theme.fg("text", label);
 				add(`${prefix}${styled}`);
 				if (option.description) {
-					addWrapped(lines, theme.fg("muted", option.description), cw, "     ");
+					addWrapped(top, theme.fg("muted", option.description), tw, "     ");
 				}
 			}
 
 			if (editMode) {
-				lines.push("");
-				add(theme.fg("muted", " Write your custom answer:"));
-				for (const line of editor.render(Math.max(1, cw - 2))) {
-					add(` ${line}`);
+				bottom.push(theme.fg("muted", " Write your custom answer:"));
+				for (const line of editor.render(Math.max(1, bw - 2))) {
+					bottom.push(` ${line}`);
 				}
-				lines.push("");
-				add(theme.fg("dim", " Enter to submit • Esc to go back"));
+				bottom.push("");
+				bottom.push(theme.fg("dim", " Enter to submit • Esc to go back"));
 			} else {
-				lines.push("");
-				add(theme.fg("dim", " ↑↓ navigate • Enter select • Esc cancel"));
+				bottom.push(theme.fg("dim", " ↑↓ navigate • Enter select • Esc cancel"));
 			}
 
-			const framed = frame(lines, width, theme);
+			const framed = frameMerged(top, bottom, width, theme);
 			cachedLines = framed;
 			cachedWidth = width;
 			return framed;
@@ -459,16 +459,18 @@ async function askMultiChoice(
 			// crashes the process.
 			if (cachedLines && cachedWidth === width) return cachedLines;
 
-			const cw = Math.max(8, width - 6);
-			const lines: string[] = [];
-			const add = (text: string) => lines.push(truncateToWidth(text, cw));
+			const tw = Math.max(8, width - 12);
+			const bw = Math.max(8, width - 4);
+			const top: string[] = [];
+			const bottom: string[] = [];
+			const add = (text: string) => top.push(truncateToWidth(text, tw));
 
-			addWrapped(lines, theme.fg("text", ` ${question}`), cw);
+			addWrapped(top, theme.fg("text", ` ${question}`), tw);
 			if (context) {
-				lines.push("");
-				addWrapped(lines, theme.fg("muted", ` ${context}`), cw);
+				top.push("");
+				addWrapped(top, theme.fg("muted", ` ${context}`), tw);
 			}
-			lines.push("");
+			top.push("");
 
 			for (let i = 0; i < allItems.length; i++) {
 				const item = allItems[i];
@@ -503,27 +505,25 @@ async function askMultiChoice(
 					: theme.fg(checked ? "success" : "text", label);
 				add(`${prefix}${styled}`);
 				if (item.description) {
-					addWrapped(lines, theme.fg("muted", item.description), cw, "     ");
+					addWrapped(top, theme.fg("muted", item.description), tw, "     ");
 				}
 			}
 
 			if (editMode) {
-				lines.push("");
-				add(theme.fg("muted", " Write your custom answer:"));
-				for (const line of editor.render(Math.max(1, cw - 2))) {
-					add(` ${line}`);
+				bottom.push(theme.fg("muted", " Write your custom answer:"));
+				for (const line of editor.render(Math.max(1, bw - 2))) {
+					bottom.push(` ${line}`);
 				}
-				lines.push("");
-				add(theme.fg("dim", " Enter to save • Esc to go back"));
+				bottom.push("");
+				bottom.push(theme.fg("dim", " Enter to save • Esc to go back"));
 			} else {
-				lines.push("");
 				if (selected.size === 0) {
-					add(theme.fg("warning", " Select at least one answer before submitting."));
+					bottom.push(theme.fg("warning", " Select at least one answer before submitting."));
 				}
-				add(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter edit/submit • Esc cancel"));
+				bottom.push(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter edit/submit • Esc cancel"));
 			}
 
-			const framed = frame(lines, width, theme);
+			const framed = frameMerged(top, bottom, width, theme);
 			cachedLines = framed;
 			cachedWidth = width;
 			return framed;
@@ -539,19 +539,36 @@ async function askMultiChoice(
 	});
 }
 
-// Frame a rendered panel in a rounded window, inset 2 columns from the left
-// edge. Content must already be laid out at (width - 6) visible columns.
-function frame(lines: string[], width: number, theme: any): string[] {
-	if (width < 12) return lines;
-	const contentW = width - 6;
-	const bar = "─".repeat(contentW + 2);
-	const wall = theme.fg("accent", "│");
-	const out = [`  ${theme.fg("accent", `╭${bar}╮`)}`];
-	for (const line of lines) {
-		const pad = Math.max(0, contentW - visibleWidth(line));
-		out.push(`  ${wall} ${line}${" ".repeat(pad)} ${wall}`);
+// Render the panel as two merged rounded boxes over the prompt area: a narrow
+// content box (inset 4 columns each side) on top, its bottom corners becoming
+// tees in the top border of a full-width, prompt-styled input box below.
+// Top content must be laid out at (width - 12) columns, bottom at (width - 4).
+function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
+	if (width < 24) return [...top, ...bottom];
+	const tw = width - 12;
+	const bw = width - 4;
+	const accent = (s: string) => theme.fg("accent", s);
+	const out: string[] = [];
+	out.push(`    ${accent("╭")}${accent("─".repeat(tw + 2))}${accent("╮")}`);
+	for (const line of top) {
+		const pad = Math.max(0, tw - visibleWidth(line));
+		out.push(`    ${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
 	}
-	out.push(`  ${theme.fg("accent", `╰${bar}╯`)}`);
+	const rightTee = width - 5;
+	out.push(
+		accent("╭") +
+			accent("─".repeat(3)) +
+			accent("┴") +
+			accent("─".repeat(rightTee - 5)) +
+			accent("┴") +
+			accent("─".repeat(width - rightTee - 2)) +
+			accent("╮"),
+	);
+	for (const line of bottom) {
+		const pad = Math.max(0, bw - visibleWidth(line));
+		out.push(`${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
+	}
+	out.push(accent("╰") + accent("─".repeat(width - 2)) + accent("╯"));
 	return out;
 }
 

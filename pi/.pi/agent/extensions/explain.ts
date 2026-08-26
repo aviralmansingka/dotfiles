@@ -130,19 +130,36 @@ function addWrapped(lines: string[], text: string, width: number, indent = ""): 
 	}
 }
 
-// Frame a rendered panel in a rounded window, inset 2 columns from the left
-// edge. Content must already be laid out at (width - 6) visible columns.
-function frame(lines: string[], width: number, theme: any): string[] {
-	if (width < 12) return lines;
-	const contentW = width - 6;
-	const bar = "─".repeat(contentW + 2);
-	const wall = theme.fg("accent", "│");
-	const out = [`  ${theme.fg("accent", `╭${bar}╮`)}`];
-	for (const line of lines) {
-		const pad = Math.max(0, contentW - visibleWidth(line));
-		out.push(`  ${wall} ${line}${" ".repeat(pad)} ${wall}`);
+// Render the panel as two merged rounded boxes over the prompt area: a narrow
+// content box (inset 4 columns each side) on top, its bottom corners becoming
+// tees in the top border of a full-width, prompt-styled input box below.
+// Top content must be laid out at (width - 12) columns, bottom at (width - 4).
+function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
+	if (width < 24) return [...top, ...bottom];
+	const tw = width - 12;
+	const bw = width - 4;
+	const accent = (s: string) => theme.fg("accent", s);
+	const out: string[] = [];
+	out.push(`    ${accent("╭")}${accent("─".repeat(tw + 2))}${accent("╮")}`);
+	for (const line of top) {
+		const pad = Math.max(0, tw - visibleWidth(line));
+		out.push(`    ${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
 	}
-	out.push(`  ${theme.fg("accent", `╰${bar}╯`)}`);
+	const rightTee = width - 5;
+	out.push(
+		accent("╭") +
+			accent("─".repeat(3)) +
+			accent("┴") +
+			accent("─".repeat(rightTee - 5)) +
+			accent("┴") +
+			accent("─".repeat(width - rightTee - 2)) +
+			accent("╮"),
+	);
+	for (const line of bottom) {
+		const pad = Math.max(0, bw - visibleWidth(line));
+		out.push(`${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
+	}
+	out.push(accent("╰") + accent("─".repeat(width - 2)) + accent("╯"));
 	return out;
 }
 
@@ -374,62 +391,64 @@ export default function explain(pi: ExtensionAPI) {
 
 						return {
 							render(width: number): string[] {
-								const cw = Math.max(8, width - 6);
-								const lines: string[] = [];
-								const add = (s: string) => lines.push(truncateToWidth(s, cw));
+								const tw = Math.max(8, width - 12);
+								const bw = Math.max(8, width - 4);
+								const top: string[] = [];
+								const bottom: string[] = [];
+								const addT = (s: string) => top.push(truncateToWidth(s, tw));
+								const addB = (s: string) => bottom.push(truncateToWidth(s, bw));
 
-								add(theme.fg("toolTitle", theme.bold(" explain in your own words")));
-								lines.push("");
-								addWrapped(lines, theme.fg("text", question), cw, " ");
+								addT(theme.fg("toolTitle", theme.bold(" explain in your own words")));
+								top.push("");
+								addWrapped(top, theme.fg("text", question), tw, " ");
 								if (context) {
-									lines.push("");
-									addWrapped(lines, theme.fg("muted", context), cw, " ");
+									top.push("");
+									addWrapped(top, theme.fg("muted", context), tw, " ");
 								}
-								lines.push("");
 
 								if (phase === "answering") {
-									for (const line of editor.render(cw)) lines.push(line);
-									lines.push("");
-									add(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Esc — cancel"));
+									for (const line of editor.render(bw)) bottom.push(line);
+									bottom.push("");
+									addB(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Esc — cancel"));
 								} else if (phase === "grading") {
-									addWrapped(lines, theme.fg("dim", editor.getText().trim()), cw, " ");
-									lines.push("");
-									for (const line of loader.render(cw)) lines.push(line);
-									lines.push("");
-									add(theme.fg("dim", " Esc — abort grading"));
+									top.push("");
+									addWrapped(top, theme.fg("dim", editor.getText().trim()), tw, " ");
+									top.push("");
+									for (const line of loader.render(tw)) top.push(line);
+									addB(theme.fg("dim", " Esc — abort grading"));
 								} else {
-									addWrapped(lines, theme.fg("dim", editor.getText().trim()), cw, " ");
-									lines.push("");
+									top.push("");
+									addWrapped(top, theme.fg("dim", editor.getText().trim()), tw, " ");
+									top.push("");
 									if (grading) {
-										add(` ${verdictIcon(grading)}`);
+										addT(` ${verdictIcon(grading)}`);
 										if (grading.summary) {
-											lines.push("");
-											addWrapped(lines, theme.fg("text", grading.summary), cw, " ");
+											top.push("");
+											addWrapped(top, theme.fg("text", grading.summary), tw, " ");
 										}
 										if (grading.verdict !== "correct" && grading.correctAnswer) {
-											lines.push("");
-											add(theme.fg("muted", " correct answer:"));
-											addWrapped(lines, theme.fg("success", grading.correctAnswer), cw, "  ");
+											top.push("");
+											addT(theme.fg("muted", " correct answer:"));
+											addWrapped(top, theme.fg("success", grading.correctAnswer), tw, "  ");
 										}
 										if (grading.refinements.length > 0) {
-											lines.push("");
-											add(theme.fg("muted", " terminology:"));
+											top.push("");
+											addT(theme.fg("muted", " terminology:"));
 											for (const r of grading.refinements) {
-												addWrapped(lines, theme.fg("warning", `“${r.quote}”`), cw, "  ");
+												addWrapped(top, theme.fg("warning", `“${r.quote}”`), tw, "  ");
 												const note = [r.issue, r.correction && `→ ${r.correction}`]
 													.filter(Boolean)
 													.join(" — ");
-												if (note) addWrapped(lines, theme.fg("dim", note), cw, "    ");
+												if (note) addWrapped(top, theme.fg("dim", note), tw, "    ");
 											}
 										}
 									} else {
-										add(theme.fg("warning", ` grading unavailable — ${gradeError ?? "unknown error"}`));
-										add(theme.fg("dim", " (returned ungraded; the agent will evaluate your answer itself)"));
+										addT(theme.fg("warning", ` grading unavailable — ${gradeError ?? "unknown error"}`));
+										addT(theme.fg("dim", " (returned ungraded; the agent will evaluate your answer itself)"));
 									}
-									lines.push("");
-									add(theme.fg("dim", " Enter — continue"));
+									addB(theme.fg("dim", " Enter — continue"));
 								}
-								return frame(lines, width, theme);
+								return frameMerged(top, bottom, width, theme);
 							},
 
 							invalidate: () => {
