@@ -37,6 +37,7 @@ import { Type } from "typebox";
 
 type ExplainStatus = "answered" | "cancelled" | "unavailable";
 type Verdict = "correct" | "partially_correct" | "incorrect";
+type LetterGrade = "A" | "B" | "C" | "D" | "F";
 
 interface Refinement {
 	quote: string;
@@ -46,6 +47,7 @@ interface Refinement {
 
 interface Grading {
 	verdict: Verdict;
+	grade: LetterGrade;
 	summary: string;
 	refinements: Refinement[];
 }
@@ -79,6 +81,7 @@ Output ONLY a JSON object — no markdown fences, no prose before or after — w
 
 {
   "verdict": "correct" | "partially_correct" | "incorrect",
+  "grade": "A" | "B" | "C" | "D" | "F",
   "summary": "1-2 sentences: why this verdict",
   "refinements": [
     {
@@ -93,6 +96,14 @@ Grading rules:
 - "correct" means every required claim is present and accurately stated, with acceptable terminology. Minor phrasing differences are fine.
 - "partially_correct" means the core idea is right but a required claim is missing, or terminology is loose enough to matter.
 - "incorrect" means a required claim is wrong or the core mechanism is misunderstood.
+
+Letter grade rubric:
+- A: every required claim present, accurate, and stated with precise terminology.
+- B: all required claims present and right, but terminology is loose in places.
+- C: the core idea is right, but a required claim is missing or one claim is off.
+- D: mostly wrong, but shows a fragment of real understanding worth building on.
+- F: fundamentally wrong, a systematic misconception, or no engagement with the question.
+The verdict and grade must agree: correct = A or B; partially_correct = C; incorrect = D or F.
 - refinements must quote the learner's own words verbatim — never invent quotes. Include every spot where terminology is wrong, loose, or a claim is factually off. An empty array means nothing needs refinement.
 - Do not penalize the learner for omitting things the expected claims do not require.`;
 
@@ -179,6 +190,13 @@ function extractGrading(raw: string): Grading | undefined {
 		const parsed = JSON.parse(raw.slice(start, end + 1));
 		const verdict: Verdict =
 			parsed.verdict === "correct" || parsed.verdict === "incorrect" ? parsed.verdict : "partially_correct";
+		const grade: LetterGrade = ["A", "B", "C", "D", "F"].includes(parsed.grade)
+			? parsed.grade
+			: verdict === "correct"
+				? "B"
+				: verdict === "partially_correct"
+					? "C"
+					: "F";
 		const refinements: Refinement[] = Array.isArray(parsed.refinements)
 			? parsed.refinements
 					.filter((r: any) => r && typeof r.quote === "string" && r.quote.length > 0)
@@ -188,7 +206,7 @@ function extractGrading(raw: string): Grading | undefined {
 						correction: String(r.correction ?? ""),
 					}))
 			: [];
-		return { verdict, summary: String(parsed.summary ?? ""), refinements };
+		return { verdict, grade, summary: String(parsed.summary ?? ""), refinements };
 	} catch {
 		return undefined;
 	}
@@ -284,10 +302,10 @@ export default function explain(pi: ExtensionAPI) {
 						let grading: Grading | undefined;
 						let gradeError: string | undefined;
 
-						const verdictIcon = (v: Verdict): string => {
-							if (v === "correct") return theme.fg("success", "✓ correct");
-							if (v === "incorrect") return theme.fg("error", "✗ incorrect");
-							return theme.fg("warning", "◐ partially correct");
+						const verdictIcon = (g: Grading): string => {
+							if (g.verdict === "correct") return theme.fg("success", `✓ correct — grade ${g.grade}`);
+							if (g.verdict === "incorrect") return theme.fg("error", `✗ incorrect — grade ${g.grade}`);
+							return theme.fg("warning", `◐ partially correct — grade ${g.grade}`);
 						};
 
 						const startGrading = (answer: string) => {
@@ -336,7 +354,7 @@ export default function explain(pi: ExtensionAPI) {
 									addWrapped(lines, theme.fg("dim", editor.getText().trim()), width, " ");
 									lines.push("");
 									if (grading) {
-										add(` ${verdictIcon(grading.verdict)}`);
+										add(` ${verdictIcon(grading)}`);
 										if (grading.summary) {
 											lines.push("");
 											addWrapped(lines, theme.fg("text", grading.summary), width, " ");
@@ -409,7 +427,7 @@ export default function explain(pi: ExtensionAPI) {
 					text = `Question: ${question}\nUser's answer (their own words):\n${result.answer}`;
 					if (result.grading) {
 						const g = result.grading;
-						text += `\n\nGrader verdict: ${g.verdict.toUpperCase()}\n${g.summary}`;
+						text += `\n\nGrader verdict: ${g.verdict.toUpperCase()} (grade: ${g.grade})\n${g.summary}`;
 						if (g.refinements.length > 0) {
 							text += `\nTerminology refinements:`;
 							for (const r of g.refinements) {
@@ -465,10 +483,10 @@ export default function explain(pi: ExtensionAPI) {
 				const g = details.grading;
 				const icon =
 					g.verdict === "correct"
-						? theme.fg("success", "✓ correct")
+						? theme.fg("success", `✓ correct — grade ${g.grade}`)
 						: g.verdict === "incorrect"
-							? theme.fg("error", "✗ incorrect")
-							: theme.fg("warning", "◐ partially correct");
+							? theme.fg("error", `✗ incorrect — grade ${g.grade}`)
+							: theme.fg("warning", `◐ partially correct — grade ${g.grade}`);
 				lines.push(theme.fg("muted", "─ grader ─"));
 				lines.push(` ${icon}`);
 				if (g.summary) lines.push(theme.fg("dim", ` ${g.summary}`));

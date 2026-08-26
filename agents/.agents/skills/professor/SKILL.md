@@ -268,15 +268,16 @@ the question; the response field is focused immediately (nothing to navigate).
 You must supply **`expected`**: the claims a correct answer must contain,
 including the exact terminology you want and the misconceptions to watch for. On
 submit, a quick **grader fork** (one model call, no session, spinner shown in
-the panel) grades the answer against those claims and returns a verdict —
-correct, partially_correct, or incorrect — plus **per-quote terminology
-refinements** (his own words quoted verbatim, what's loose, and the precise term
-that should replace it). The verdict is advisory: you own the pedagogical
-response — right-but-loose language gets sharpened, a revealed misconception
-gets named and re-asked in a different form. An empty submission is an honest "I
-don't know" — it skips grading; teach into it, don't punish it. Phrase questions
-to force mechanism and exact terms ("name the kernel construct this touches and
-why"), never open-ended musing — grill him on precision.
+the panel) grades the answer against those claims and returns a letter grade
+(A–F) and a verdict — correct, partially_correct, or incorrect — plus
+**per-quote terminology refinements** (his own words quoted verbatim, what's
+loose, and the precise term that should replace it). The verdict is advisory:
+you own the pedagogical response — right-but-loose language gets sharpened, a
+revealed misconception gets named and re-asked in a different form. An empty
+submission is an honest "I don't know" — it skips grading; teach into it, don't
+punish it. Phrase questions to force mechanism and exact terms ("name the kernel
+construct this touches and why"), never open-ended musing — grill him on
+precision.
 
 ### run-command
 
