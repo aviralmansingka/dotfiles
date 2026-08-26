@@ -65,11 +65,13 @@ detected toolkit it is a no-op.
 - A compile database for the lesson tree, or clangd's Makefile fallback. The
   lesson ships a `Makefile` (`nvcc ... -gencode arch=compute_90a,code=sm_90a`);
   generate a compile database with:
+
   ```sh
   cd reference/fast.cu
   bear -- make matmul      # produces compile_commands.json
   # or: cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ... ; ln -s build/compile_commands.json .
   ```
+
 - Neovim with this dotfiles config (`XDG_CONFIG_HOME=dotfiles/nvim/.config`).
 
 ## Homelab validation command + success criteria
