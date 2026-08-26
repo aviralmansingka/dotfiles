@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
-import { buildNvimTerminalScript, extractMarkedOutput, NVIM_RUN_TIMEOUT_MS } from "./run-command-nvim-terminal";
+import { buildNvimTerminalScript, extractMarkedOutput, NVIM_RUN_TIMEOUT_MS } from "./run-command/nvim-terminal";
 import {
 	Editor,
 	type EditorTheme,
@@ -610,6 +610,8 @@ export default function runCommand(pi: ExtensionAPI) {
 				}
 				const extra = details.output.split("\n").length - 20;
 				if (extra > 0) lines.push(theme.fg("dim", ` … ${extra} more lines`));
+			} else if (details.autoRun) {
+				lines.push(theme.fg("muted", "─ captured no output ─"));
 			} else {
 				lines.push(theme.fg("warning", " (no output submitted)"));
 			}

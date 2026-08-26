@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -10,7 +11,7 @@ process.env.NODE_PATH = [
 require("node:module").Module._initPaths();
 const { createJiti } = require("/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs");
 const jiti = createJiti(import.meta.url);
-const { buildNvimTerminalScript, extractMarkedOutput } = jiti("./run-command-nvim-terminal.ts");
+const { buildNvimTerminalScript, extractMarkedOutput } = jiti("./run-command/nvim-terminal.ts");
 
 const token = "abc123";
 const command = "printf 'a b\\n'; printf \"err & stuff\\n\" >&2; false";
@@ -38,5 +39,29 @@ assert.deepEqual(extractMarkedOutput(captured, token), {
 });
 
 assert.deepEqual(extractMarkedOutput("only partial", token), { complete: false });
+
+function runWrapper(cmd, tok) {
+	const res = spawnSync("sh", ["-c", buildNvimTerminalScript(cmd, tok)], {
+		encoding: "utf8",
+		stdio: ["pipe", "pipe", "pipe"],
+	});
+	return { stdout: res.stdout ?? "", status: res.status };
+}
+
+const exited = runWrapper("exit 7", "ex");
+assert.deepEqual(extractMarkedOutput(exited.stdout, "ex"), {
+	complete: true,
+	output: "",
+	exitCode: 7,
+});
+assert.equal(exited.status, 7, "wrapper exits with the command's status");
+
+const ok = runWrapper("printf 'hi\\n'; true", "ok");
+assert.deepEqual(extractMarkedOutput(ok.stdout, "ok"), {
+	complete: true,
+	output: "hi",
+	exitCode: 0,
+});
+assert.equal(ok.status, 0);
 
 console.log("run-command helper tests passed");
