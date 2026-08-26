@@ -49,6 +49,7 @@ interface Grading {
 	verdict: Verdict;
 	grade: LetterGrade;
 	summary: string;
+	correctAnswer: string;
 	refinements: Refinement[];
 }
 
@@ -83,6 +84,7 @@ Output ONLY a JSON object — no markdown fences, no prose before or after — w
   "verdict": "correct" | "partially_correct" | "incorrect",
   "grade": "A" | "B" | "C" | "D" | "F",
   "summary": "one terse sentence, <=15 words: why this verdict",
+  "correctAnswer": "the correct answer, <=40 words, precise terminology — composed from the expected claims, not your outside knowledge",
   "refinements": [
     {
       "quote": "an exact substring copied from the learner's answer",
@@ -230,7 +232,7 @@ function extractGrading(raw: string): Grading | undefined {
 						correction: String(r.correction ?? ""),
 					}))
 			: [];
-		return { verdict, grade, summary: String(parsed.summary ?? ""), refinements };
+		return { verdict, grade, summary: String(parsed.summary ?? ""), correctAnswer: String(parsed.correctAnswer ?? ""), refinements };
 	} catch {
 		return undefined;
 	}
@@ -387,6 +389,11 @@ export default function explain(pi: ExtensionAPI) {
 											lines.push("");
 											addWrapped(lines, theme.fg("text", grading.summary), width, " ");
 										}
+										if (grading.verdict !== "correct" && grading.correctAnswer) {
+											lines.push("");
+											add(theme.fg("muted", " correct answer:"));
+											addWrapped(lines, theme.fg("success", grading.correctAnswer), width, "  ");
+										}
 										if (grading.refinements.length > 0) {
 											lines.push("");
 											add(theme.fg("muted", " terminology:"));
@@ -456,6 +463,7 @@ export default function explain(pi: ExtensionAPI) {
 					if (result.grading) {
 						const g = result.grading;
 						text += `\n\nGrader verdict: ${g.verdict.toUpperCase()} (grade: ${g.grade})\n${g.summary}`;
+						if (g.correctAnswer) text += `\nCorrect answer: ${g.correctAnswer}`;
 						if (g.refinements.length > 0) {
 							text += `\nTerminology refinements:`;
 							for (const r of g.refinements) {
@@ -515,6 +523,7 @@ export default function explain(pi: ExtensionAPI) {
 				lines.push(theme.fg("muted", "─ grader ─"));
 				lines.push(` ${icon}`);
 				if (g.summary) lines.push(theme.fg("dim", ` ${g.summary}`));
+				if (g.verdict !== "correct" && g.correctAnswer) lines.push(theme.fg("success", ` correct: ${g.correctAnswer}`));
 				for (const r of g.refinements) {
 					lines.push(theme.fg("warning", `  “${r.quote}”`));
 					const note = [r.issue, r.correction && `→ ${r.correction}`].filter(Boolean).join(" — ");
