@@ -120,7 +120,7 @@ Manages AWS infrastructure for the devbox:
 
 ### CI/CD Workflows (`.github/workflows/`)
 - **CI** (`ci.yml`) - Fast, deterministic gate on every PR/push to `main`: shell/python/lua syntax checks, Pi extension unit tests (`*.test.mjs`), and `scripts/test-auto-git-sync.sh`. Covers the surfaces an agent touches without bootstrapping plugins or infra.
-- **Packer** (`packer.yml`) - Builds AMI and validates via temporary EC2 instance on push/PR to `main` when `ops/packer/**` or `dependencies.json` changes (`workflow_dispatch` stays ungated). `detect-changes` distinguishes base vs devbox builds.
+- **Packer** (`packer.yml`) - Triggers on every PR/push to `main` so the "Packer Result" job always reports. Heavy AMI build/validate jobs are path-gated via the `detect-changes` job (`if: packer_changed == 'true'`, matching `ops/packer/**` and `dependencies.json`), so non-infra PRs only run two cheap jobs with no AWS work. `workflow_dispatch` stays ungated.
 - **Terraform** (`terraform.yml`) - Plans on PR, applies on push to `main` (when `ops/terraform/**` changes)
 
 ## Dependency Management
