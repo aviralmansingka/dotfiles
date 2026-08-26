@@ -194,6 +194,7 @@ function pickGraderModel(ctx: any): any {
 		if (m) return m;
 	}
 	for (const [provider, id] of [
+		["fireworks", "glm-fast-latest"],
 		["anthropic", "claude-haiku-4-5"],
 		["openai", "gpt-4o-mini"],
 		["google", "gemini-2.5-flash"],
@@ -288,8 +289,8 @@ export default function explain(pi: ExtensionAPI) {
 							systemPrompt: GRADER_SYSTEM_PROMPT,
 							messages: [{ role: "user", content: graderPrompt, timestamp: Date.now() } as any],
 						},
-						// Fast grading: small output budget, deterministic, thinking off.
-						{ signal, maxTokens: 800, temperature: 0, reasoning: "off" } as any,
+						// Fast grading: glm-fast-latest at medium reasoning, small output budget, deterministic.
+						{ signal, maxTokens: 800, temperature: 0, reasoning: "medium" } as any,
 					);
 					const raw = response.content
 						.filter((c: any) => c.type === "text")
