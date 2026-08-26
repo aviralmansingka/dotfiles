@@ -21,16 +21,18 @@ import { Type } from "typebox";
 // run-command — a hands-on sibling of quiz.
 //
 // Where quiz verifies the HEAD (concepts, terminology), run-command verifies
-// the HANDS: the agent presents ONE command with a grounded prediction, the
-// user runs it in their own terminal, and pastes the output back. The agent
-// never executes the command — the user types everything, which is the point.
-//
-// UI: a floating panel above the prompt shows the command (and optional
-// context/prediction). Pressing `y` yanks the command to the system clipboard
-// as-is. The user runs it elsewhere, returns, types/pastes the output into the
-// response field (Tab to focus), and submits. On submit, the command and the
-// user's pasted output travel together so the agent grades output vs.
-// prediction without ever having seen the terminal.
+// the HANDS: the agent presents ONE command with a grounded prediction and the
+// user runs it. Two capture paths share the panel:
+//   - Manual: `y` yanks the command to the clipboard; the user runs it in their
+//     own terminal, returns, types/pastes output into the response field (Tab
+//     to focus), and submits. The agent never executes the command — the user
+//     types everything, which is the point.
+//   - Auto: `r` opens a Neovim `:term dm` pane, runs the command there, and
+//     captures output + exit status back into the grading flow (see
+//     runViaNvimTerminal and ./run-command/nvim-terminal.ts); the user need not
+//     paste by hand. Esc cancels; a hard timeout bounds long-running commands.
+// On submit, the command and observed output travel together so the agent
+// grades output vs. prediction without having seen the terminal.
 // ────────────────────────────────────────────────────────────────────────────
 
 interface RunCommandResponse {
