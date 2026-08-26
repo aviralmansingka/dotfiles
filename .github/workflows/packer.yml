@@ -1,5 +1,13 @@
 name: Packer
 
+# Triggers on every PR/push so the "Packer Result" job always reports (it
+# exits 0 with "No packer changes detected" on non-infra PRs). The heavy AMI
+# build/validate jobs stay path-gated via the detect-changes job
+# (if: packer_changed == 'true'), so non-infra PRs only run two cheap jobs.
+# A trigger-level `paths` filter is intentionally NOT used: it would suppress
+# the workflow entirely on non-infra PRs and leave the required "Packer Result"
+# check never-reported, blocking merges.
+
 on:
   push:
     branches: [main]

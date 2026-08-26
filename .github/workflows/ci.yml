@@ -1,0 +1,100 @@
+name: CI
+
+# Fast, deterministic checks for the surfaces an agent actually touches:
+# shell/python scripts, neovim lua config, and Pi TS extensions.
+# Heavy infra checks (Packer AMI build, Terraform plan/apply) remain in their
+# own path-gated workflows; this workflow adds the missing lightweight gate.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Neovim
+        run: sudo apt-get update && sudo apt-get install -y neovim
+
+      - name: Shell syntax (bash/sh -n)
+        run: |
+          set +e
+          fail=0
+          # .sh files plus extensionless scripts under scripts/ with a bash/sh shebang.
+          while IFS= read -r f; do
+            sb=$(head -1 "$f")
+            case "$sb" in
+              '#!/bin/sh'|'#!/usr/bin/env sh') sh -n "$f" || { echo "FAIL $f"; fail=1; } ;;
+              *) bash -n "$f" || { echo "FAIL $f"; fail=1; } ;;
+            esac
+          done < <(git ls-files '*.sh')
+          while IFS= read -r f; do
+            sb=$(head -1 "$f" 2>/dev/null)
+            case "$sb" in
+              '#!/bin/bash'|'#!/usr/bin/env bash') bash -n "$f" || { echo "FAIL $f"; fail=1; } ;;
+              '#!/bin/sh'|'#!/usr/bin/env sh') sh -n "$f" || { echo "FAIL $f"; fail=1; } ;;
+            esac
+          done < <(git ls-files 'scripts/*')
+          exit $fail
+
+      - name: Python syntax (py_compile)
+        run: |
+          set +e
+          fail=0
+          while IFS= read -r f; do
+            python3 -m py_compile "$f" || { echo "FAIL $f"; fail=1; }
+          done < <(git ls-files '*.py')
+          exit $fail
+
+      - name: Lua syntax (nvim loadfile parse-only)
+        run: |
+          set +e
+          fail=0
+          # Parse-only via loadfile: catches syntax errors in neovim's lua
+          # dialect without bootstrapping plugins (deterministic, no network).
+          while IFS= read -r f; do
+            nvim --headless -u NONE -c "lua local fn,err=loadfile('$f'); if not fn then io.stderr:write(tostring(err)..'\n'); vim.cmd('cquit 1') else vim.cmd('qa') end" 2>&1 \
+              || { echo "FAIL $f"; fail=1; }
+          done < <(git ls-files '*.lua')
+          exit $fail
+
+  extensions:
+    name: Extension tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install jiti
+        run: npm install --prefix "$RUNNER_TEMP/jiti-root" jiti@2
+
+      - name: Run extension tests
+        env:
+          JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
+        run: |
+          node pi/.pi/agent/extensions/quiz-context-files.test.mjs
+          node pi/.pi/agent/extensions/user-input/option-shortcuts.test.mjs
+
+  scripts-tests:
+    name: Scripts tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: auto-git-sync tests
+        run: bash scripts/test-auto-git-sync.sh
