@@ -16,6 +16,7 @@ export function buildNvimTerminalScript(command: string, token: string): string 
 	return [
 		"stty -echo",
 		"PS1=",
+		"PS2=",
 		`printf '%s\\n' ${shellQuote(start)}`,
 		"(",
 		command,

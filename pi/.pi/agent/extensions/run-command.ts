@@ -164,7 +164,12 @@ async function runViaNvimTerminal(
 	const timeout = withTimeout(signal, NVIM_RUN_TIMEOUT_MS);
 	const runSignal = timeout.signal;
 	let paneId: string | undefined;
-	const socket = `${tmpdir()}/pi-run-command-${randomUUID()}.sock`;
+	// Keep the RPC socket path short: UNIX domain sockets cap at ~103 bytes
+	// (sun_path[104] minus NUL), and macOS' /var/folders/.../T tmpdir is already
+	// ~48 bytes, so a `pi-run-command-<uuid>.sock` name blows the limit and
+	// `nvim --listen` silently fails to create the socket. Use a short prefix
+	// and a hyphen-less hex token so the full path stays well under the cap.
+	const socket = `${tmpdir()}/pi-rc-${randomUUID().replace(/-/g, "")}.sock`;
 	const token = randomUUID().replace(/-/g, "");
 	try {
 		onProgress("Opening Neovim terminal pane…");
