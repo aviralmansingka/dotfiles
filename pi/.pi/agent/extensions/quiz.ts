@@ -12,6 +12,7 @@ import {
 import { Type } from "typebox";
 import { openEditor } from "./nvim-open";
 import { contextFileHint, normalizeContextFiles } from "./user-input/context-files";
+import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
 import { joinHints, numberShortcutHint, numberShortcutIndex } from "./user-input/option-shortcuts";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -60,9 +61,10 @@ interface QuizResponse {
 	dontKnow: boolean;
 	note?: string;
 	answers: OptionAnswer[];
+	followUp?: string; // set when the captain sends a follow-up instead of answering
 }
 
-type QuizStatus = "answered" | "cancelled" | "unavailable";
+type QuizStatus = "answered" | "cancelled" | "unavailable" | "follow-up";
 type QuizMode = "single-select" | "multi-select";
 
 interface DisplayedOption {
@@ -81,6 +83,7 @@ interface QuizResultDetails {
 	correct?: boolean;
 	dontKnow?: boolean; // user selected "I don't know" instead of guessing
 	note?: string; // optional free-text from the always-present note field (any answer)
+	followUp?: string; // set when the captain sent a follow-up instead of answering
 	explanation?: string;
 	message?: string;
 }
@@ -250,8 +253,9 @@ function buildStructuredResult(
 	options?: DisplayedOption[],
 	dontKnow?: boolean,
 	note?: string,
+	followUp?: string,
 ): QuizResultDetails {
-	return { status, question, context, mode, answers, correctIndices, options, correct, dontKnow, note, explanation, message };
+	return { status, question, context, mode, answers, correctIndices, options, correct, dontKnow, note, followUp, explanation, message };
 }
 
 function cancelledResult(question: string, mode: QuizMode, correctIndices: number[], context?: string) {
@@ -266,6 +270,39 @@ function unavailableResult(question: string, mode: QuizMode, message: string, co
 	return {
 		content: [{ type: "text" as const, text: message }],
 		details: buildStructuredResult("unavailable", question, mode, [], correctIndices, undefined, undefined, context, message),
+	};
+}
+
+// The captain typed a follow-up and submitted it (Follow-up mode, Enter). This
+// genuinely ends the quiz: the tool call returns with the follow-up text so the
+// agent can act on it. The outcome is visible — renderResult surfaces it as a
+// Follow-up line, never a silent close.
+function followUpResult(
+	question: string,
+	mode: QuizMode,
+	followUp: string,
+	note: string | undefined,
+	correctIndices: number[],
+	context?: string,
+) {
+	const message = `User sent a follow-up instead of answering: ${followUp}`;
+	return {
+		content: [{ type: "text" as const, text: message }],
+		details: buildStructuredResult(
+			"follow-up",
+			question,
+			mode,
+			[],
+			correctIndices,
+			undefined,
+			undefined,
+			context,
+			message,
+			undefined,
+			undefined,
+			note,
+			followUp,
+		),
 	};
 }
 
@@ -479,6 +516,13 @@ function makeNoteEditor(tui: any, theme: any): Editor {
 	return editor;
 }
 
+// Visible mode indicator line. Always rendered in the bottom hint row so the
+// captain knows which mode is active before typing. The active mode is
+// accent-colored; the rest stay dim.
+function modeIndicator(theme: any, mode: InputMode): string {
+	return theme.fg("accent", `Mode: ${inputModeLabel(mode)}`);
+}
+
 async function askSingleChoice(
 	ctx: any,
 	question: string,
@@ -499,10 +543,14 @@ async function askSingleChoice(
 		(tui: any, theme: any, _kb: any, done: (result: QuizResponse | null) => void) => {
 			let optionIndex = 0;
 			let phase: "select" | "feedback" = "select";
-			let focus: "options" | "note" = "options";
+			// Tab cycles the input mode: steering (options focused) -> note ->
+			// follow-up -> steering. "steering" replaces the old "options" focus
+			// and keeps the question visible; the quiz is never removed in it.
+			let mode: InputMode = "steering";
 			let chosen: OptionAnswer | null = null;
 			let dontKnow = false;
-			const editor = makeNoteEditor(tui, theme);
+			const noteEditor = makeNoteEditor(tui, theme);
+			const followUpEditor = makeNoteEditor(tui, theme);
 			let cachedLines: string[] | undefined;
 			let cachedWidth = -1;
 
@@ -512,13 +560,18 @@ async function askSingleChoice(
 			}
 
 			function noteText(): string | undefined {
-				const t = editor.getText().trim();
+				const t = noteEditor.getText().trim();
 				return t.length ? t : undefined;
 			}
 
-			function toOptions() {
-				focus = "options";
-				editor.focused = false;
+			function activeEditor(): Editor {
+				return mode === "note" ? noteEditor : followUpEditor;
+			}
+
+			function toSteering() {
+				mode = "steering";
+				noteEditor.focused = false;
+				followUpEditor.focused = false;
 				refresh();
 			}
 
@@ -537,28 +590,42 @@ async function askSingleChoice(
 					return;
 				}
 
-				// Tab toggles focus between the options list and the note field.
+				// Tab cycles the input mode: steering -> note -> follow-up -> steering.
 				if (matchesKey(data, Key.tab)) {
-					focus = focus === "options" ? "note" : "options";
-					editor.focused = focus === "note";
+					mode = nextInputMode(mode);
+					noteEditor.focused = mode === "note";
+					followUpEditor.focused = mode === "follow-up";
 					refresh();
 					return;
 				}
 
-				if (focus === "note") {
-					// Enter and Esc both return to the options and keep the note text.
+				if (mode !== "steering") {
+					// Enter and Esc both return to steering and keep the typed text.
+					// In follow-up mode, Enter with non-empty text ENDS the quiz and
+					// sends the follow-up (a visible outcome, never a silent close).
 					// (Enter must be intercepted here: the editor's own submit clears
 					// the buffer. Ctrl+J still reaches the editor as a newline.)
-					if (matchesKey(data, Key.enter) || matchesKey(data, Key.escape)) {
-						toOptions();
+					if (matchesKey(data, Key.enter)) {
+						if (mode === "follow-up") {
+							const text = followUpEditor.getText().trim();
+							if (text.length) {
+								done({ dontKnow: false, note: noteText(), answers: [], followUp: text });
+								return;
+							}
+						}
+						toSteering();
 						return;
 					}
-					editor.handleInput(data);
+					if (matchesKey(data, Key.escape)) {
+						toSteering();
+						return;
+					}
+					activeEditor().handleInput(data);
 					tui.requestRender();
 					return;
 				}
 
-				// focus === "options"
+				// mode === "steering"
 				if (data === "o" && contextFiles.length > 0) {
 					void openContextFiles(ctx, contextFiles).catch((error) =>
 						ctx?.ui?.notify?.(`Could not open context files: ${error}`, "warning"),
@@ -639,7 +706,7 @@ async function askSingleChoice(
 				top.push("");
 				for (let i = 0; i < allOptions.length; i++) {
 					const option = allOptions[i];
-					const selected = focus === "options" && i === optionIndex;
+					const selected = mode === "steering" && i === optionIndex;
 					const prefix = selected ? theme.fg("accent", "> ") : "  ";
 					const label = `${option.index}. ${option.label}`;
 					const styled = selected ? theme.fg("accent", label) : theme.fg("text", label);
@@ -649,20 +716,27 @@ async function askSingleChoice(
 					}
 				}
 
-				pushDontKnowRow(top, theme, tw, focus === "options" && optionIndex === dontKnowNav);
+				pushDontKnowRow(top, theme, tw, mode === "steering" && optionIndex === dontKnowNav);
 
-				if (focus === "note") {
-					top.push("");
-					add(theme.fg("dim", " Type note below • Ctrl+J newline • Enter back to options • Esc cancel"));
+				top.push("");
+				if (mode === "note") {
+					add(theme.fg("dim", ` ${modeIndicator(theme, mode)} • type your note (attaches to answer) • Ctrl+J newline • Enter back • Tab → follow-up • Esc back`));
+				} else if (mode === "follow-up") {
+					add(theme.fg("dim", ` ${modeIndicator(theme, mode)} • type a follow-up (Enter sends, ends quiz) • Ctrl+J newline • Tab → steering • Esc back`));
 				} else {
-					top.push("");
-					add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(allOptions.length, "answer"), "Enter answer", contextFileHint(contextFiles), "Tab note", "Esc cancel")}`));
+					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), "↑↓ navigate", numberShortcutHint(allOptions.length, "answer"), "Enter answer", contextFileHint(contextFiles), "Tab → note", "Esc cancel")}`));
 				}
 
-				pushNoteField(bottom, theme, bw, editor, focus === "note");
+				if (mode === "note") {
+					pushNoteField(bottom, theme, bw, noteEditor, true);
+				} else if (mode === "follow-up") {
+					pushNoteField(bottom, theme, bw, followUpEditor, true);
+				} else {
+					pushNoteField(bottom, theme, bw, noteEditor, false);
+				}
 				const framed = frameMerged(top, bottom, width, theme);
-				// Not cached when the note is focused: the editor renders a live cursor.
-				if (focus !== "note") {
+				// Not cached when a text editor is focused: it renders a live cursor.
+				if (mode === "steering") {
 					cachedLines = framed;
 					cachedWidth = width;
 				}
@@ -673,7 +747,8 @@ async function askSingleChoice(
 				render,
 				invalidate: () => {
 					cachedLines = undefined;
-					editor.invalidate();
+					noteEditor.invalidate();
+					followUpEditor.invalidate();
 				},
 				handleInput,
 			};
@@ -709,8 +784,11 @@ async function askMultiChoice(
 		(tui: any, theme: any, _kb: any, done: (result: QuizResponse | null) => void) => {
 			let optionIndex = 0;
 			let phase: "select" | "feedback" = "select";
-			let focus: "options" | "note" = "options";
-			const editor = makeNoteEditor(tui, theme);
+			// Tab cycles the input mode: steering (options focused) -> note ->
+			// follow-up -> steering. Mirrors askSingleChoice.
+			let mode: InputMode = "steering";
+			const noteEditor = makeNoteEditor(tui, theme);
+			const followUpEditor = makeNoteEditor(tui, theme);
 			let cachedLines: string[] | undefined;
 			let cachedWidth = -1;
 			const selected = new Map<string, OptionAnswer>();
@@ -721,13 +799,18 @@ async function askMultiChoice(
 			}
 
 			function noteText(): string | undefined {
-				const t = editor.getText().trim();
+				const t = noteEditor.getText().trim();
 				return t.length ? t : undefined;
 			}
 
-			function toOptions() {
-				focus = "options";
-				editor.focused = false;
+			function activeEditor(): Editor {
+				return mode === "note" ? noteEditor : followUpEditor;
+			}
+
+			function toSteering() {
+				mode = "steering";
+				noteEditor.focused = false;
+				followUpEditor.focused = false;
 				refresh();
 			}
 
@@ -777,28 +860,42 @@ async function askMultiChoice(
 					return;
 				}
 
-				// Tab toggles focus between the options list and the note field.
+				// Tab cycles the input mode: steering -> note -> follow-up -> steering.
 				if (matchesKey(data, Key.tab)) {
-					focus = focus === "options" ? "note" : "options";
-					editor.focused = focus === "note";
+					mode = nextInputMode(mode);
+					noteEditor.focused = mode === "note";
+					followUpEditor.focused = mode === "follow-up";
 					refresh();
 					return;
 				}
 
-				if (focus === "note") {
-					// Enter and Esc both return to the options and keep the note text.
+				if (mode !== "steering") {
+					// Enter and Esc both return to steering and keep the typed text.
+					// In follow-up mode, Enter with non-empty text ENDS the quiz and
+					// sends the follow-up (a visible outcome, never a silent close).
 					// (Enter must be intercepted here: the editor's own submit clears
 					// the buffer. Ctrl+J still reaches the editor as a newline.)
-					if (matchesKey(data, Key.enter) || matchesKey(data, Key.escape)) {
-						toOptions();
+					if (matchesKey(data, Key.enter)) {
+						if (mode === "follow-up") {
+							const text = followUpEditor.getText().trim();
+							if (text.length) {
+								done({ dontKnow: false, note: noteText(), answers: [], followUp: text });
+								return;
+							}
+						}
+						toSteering();
 						return;
 					}
-					editor.handleInput(data);
+					if (matchesKey(data, Key.escape)) {
+						toSteering();
+						return;
+					}
+					activeEditor().handleInput(data);
 					tui.requestRender();
 					return;
 				}
 
-				// focus === "options"
+				// mode === "steering"
 				if (data === "o" && contextFiles.length > 0) {
 					void openContextFiles(ctx, contextFiles).catch((error) =>
 						ctx?.ui?.notify?.(`Could not open context files: ${error}`, "warning"),
@@ -880,7 +977,7 @@ async function askMultiChoice(
 				top.push("");
 				for (let i = 0; i < allItems.length; i++) {
 					const item = allItems[i];
-					const isFocused = focus === "options" && i === optionIndex;
+					const isFocused = mode === "steering" && i === optionIndex;
 					const prefix = isFocused ? theme.fg("accent", "> ") : "  ";
 
 					if (item.isSubmit) {
@@ -911,21 +1008,28 @@ async function askMultiChoice(
 					}
 				}
 
-				if (focus === "note") {
-					top.push("");
-					add(theme.fg("dim", " Type note below • Ctrl+J newline • Enter back to options • Esc cancel"));
+				top.push("");
+				if (mode === "note") {
+					add(theme.fg("dim", ` ${modeIndicator(theme, mode)} • type your note (attaches to answer) • Ctrl+J newline • Enter back • Tab → follow-up • Esc back`));
+				} else if (mode === "follow-up") {
+					add(theme.fg("dim", ` ${modeIndicator(theme, mode)} • type a follow-up (Enter sends, ends quiz) • Ctrl+J newline • Tab → steering • Esc back`));
 				} else {
-					top.push("");
-					add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter submit", contextFileHint(contextFiles), "Tab note", "Esc cancel")}`));
+					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), "↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter submit", contextFileHint(contextFiles), "Tab → note", "Esc cancel")}`));
 				}
 
-				pushNoteField(bottom, theme, bw, editor, focus === "note");
-				if (selected.size === 0 && focus !== "note") {
+				if (mode === "note") {
+					pushNoteField(bottom, theme, bw, noteEditor, true);
+				} else if (mode === "follow-up") {
+					pushNoteField(bottom, theme, bw, followUpEditor, true);
+				} else {
+					pushNoteField(bottom, theme, bw, noteEditor, false);
+				}
+				if (selected.size === 0 && mode === "steering") {
 					bottom.push(theme.fg("warning", " Select at least one answer before submitting."));
 				}
 				const framed = frameMerged(top, bottom, width, theme);
-				// Not cached when the note is focused: the editor renders a live cursor.
-				if (focus !== "note") {
+				// Not cached when a text editor is focused: it renders a live cursor.
+				if (mode === "steering") {
 					cachedLines = framed;
 					cachedWidth = width;
 				}
@@ -936,7 +1040,8 @@ async function askMultiChoice(
 				render,
 				invalidate: () => {
 					cachedLines = undefined;
-					editor.invalidate();
+					noteEditor.invalidate();
+					followUpEditor.invalidate();
 				},
 				handleInput,
 			};
@@ -980,7 +1085,7 @@ export default function quiz(pi: ExtensionAPI) {
 		name: "quiz",
 		label: "quiz",
 		description:
-			"Ask the user a GRADED question with a known correct answer, then instantly grade and give feedback. Unlike ask_user_question (which collects preferences/decisions with no right answer), quiz always has a correct answer supplied by you, marks the user's selection right/wrong (✓/✗), reveals the correct answer, and can show an explanation. Use it to (1) assess what the learner already understands before teaching, and (2) run tight practice/retrieval loops after explaining, or probe understanding whenever you're unsure they've got it. Options-only: single-select or multi-select, plus an automatic 'I don't know' choice so the user can signal a genuine gap instead of guessing. An always-present optional note field (Tab to focus it) lets the user attach a free-text note to ANY answer; it reaches you only when non-empty. No free-text answers — for non-graded questions use ask_user_question instead.",
+			"Ask the user a GRADED question with a known correct answer, then instantly grade and give feedback. Unlike ask_user_question (which collects preferences/decisions with no right answer), quiz always has a correct answer supplied by you, marks the user's selection right/wrong (✓/✗), reveals the correct answer, and can show an explanation. Use it to (1) assess what the learner already understands before teaching, and (2) run tight practice/retrieval loops after explaining, or probe understanding whenever you're unsure they've got it. Options-only: single-select or multi-select, plus an automatic 'I don't know' choice so the user can signal a genuine gap instead of guessing. While a quiz is open, Tab cycles three input modes shown in a visible indicator: steering (options focused — navigate/answer/open context files, question stays visible), note (free-text that attaches to the answer, for 'I don't know' context), and follow-up (a message that ends the quiz and returns to you as `followUp`). The note reaches you only when non-empty. No free-text answers — for non-graded questions use ask_user_question instead.",
 		promptSnippet:
 			"Use the quiz tool to test the user with a graded multiple-choice or multi-select question (required correct answer + required explanation). For non-graded questions, use ask_user_question.",
 		promptGuidelines: [
@@ -991,7 +1096,8 @@ export default function quiz(pi: ExtensionAPI) {
 			"Multi-select is graded as an exact-set match: the user is correct only if they select every correct option and no incorrect ones.",
 			"There is no free-text mode. An 'I don't know' choice is ALWAYS added automatically — provide ONLY the real, gradable options (at least two). Never add your own uncertainty/opt-out option like 'I don't know', 'I'm not sure', or 'Not sure'; that is handled for you and a manual one would be redundant or gradable-as-wrong.",
 			"If a result comes back as dontKnow, the user honestly did not know and did NOT guess — treat it as a genuine knowledge gap to teach into, not as a wrong answer.",
-			"Any answer (right, wrong, or 'I don't know') may carry an optional free-text `note` the user typed in the always-present note field. When present it reflects what they were thinking or unsure about — read it and let it steer your follow-up. It is omitted entirely when empty.",
+			"Any answer (right, wrong, or 'I don't know') may carry an optional free-text `note` the user typed in note mode (Tab cycles steering → note → follow-up). When present it reflects what they were thinking or unsure about — read it and let it steer your follow-up. It is omitted entirely when empty.",
+			"If a result comes back with `followUp` set, the captain typed a follow-up in follow-up mode and submitted it (Enter) instead of answering — the quiz ended with that message. Read `followUp` and respond to it directly; do not grade it. This is a visible, deliberate end to the quiz, never a silent close.",
 			"Treat each wrong answer (distractor) as a diagnostic probe, not just filler: make it a specific, believable mistake the user might actually hold — a common misconception, or an adjacent/easily-confused concept — so that WHICH wrong answer they pick reveals WHICH nuance of their understanding is off. You learn far more from a targeted wrong choice than from a binary right/wrong, and the choice tells you exactly which gap to teach into next (and what the explanation should address).",
 			"Guardrail: every distractor must be unambiguously wrong on the intended reading — tempting, but a real error, not a defensible alternative. Don't drift into trick questions.",
 			"Anti-guessing hygiene: don't let the correct answer stand out by form (longest, most precise, most hedged, or the only one in the right format). Keep options similar in length, specificity, and phrasing so it can't be picked from shape alone.",
@@ -1068,6 +1174,9 @@ export default function quiz(pi: ExtensionAPI) {
 				if (!response) {
 					return cancelledResult(params.question, mode, correctIndices, context);
 				}
+				if (response.followUp) {
+					return followUpResult(params.question, mode, response.followUp, response.note, correctIndices, context);
+				}
 				return buildResult(params.question, context, mode, options, response, correctIndices, explanation);
 			});
 		},
@@ -1110,6 +1219,11 @@ export default function quiz(pi: ExtensionAPI) {
 			}
 			if (details.status === "unavailable") {
 				return new Text(theme.fg("warning", details.message || "quiz unavailable"), 0, 0);
+			}
+			if (details.status === "follow-up") {
+				// Visible outcome for Follow-up mode: never a silent close.
+				const body = details.followUp ? `Follow-up: ${details.followUp}` : (details.message || "Follow-up");
+				return new Text(theme.fg("accent", body), 0, 0);
 			}
 
 			const correctSet = new Set(details.correctIndices);
