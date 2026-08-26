@@ -10,7 +10,7 @@ import {
 	buildPaneScript,
 	extractMarkedOutput,
 	NM_PANE_TIMEOUT_MS,
-} from "./no-mistakes-pane-capture";
+} from "./no-mistakes-pane/capture";
 
 // ---------------------------------------------------------------------------
 // no-mistakes-pane — run `no-mistakes axi` in a visible Herdr pane beside the
@@ -18,7 +18,7 @@ import {
 // driving the gate.
 //
 // Mirrors nvim-open.ts (Herdr pane split + run + close) and reuses the marked
-// capture machinery from no-mistakes-pane-capture.ts (pattern borrowed from
+// capture machinery from no-mistakes-pane/capture.ts (pattern borrowed from
 // run-command-nvim-terminal.ts): stdout is teed to a temp file between
 // START/END markers while stderr streams live to the pane, so the captain
 // watches the run happen and the agent still gets a clean TOON to parse.

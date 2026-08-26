@@ -19,7 +19,7 @@ const jitiPath = process.env.JITI_PATH
 	: "/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs";
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
-const { buildPaneScript, extractMarkedOutput } = jiti("./no-mistakes-pane-capture.ts");
+const { buildPaneScript, extractMarkedOutput } = jiti("./no-mistakes-pane/capture.ts");
 
 // ---------------------------------------------------------------------------
 // buildPaneScript: run the generated script under bash with a stub
