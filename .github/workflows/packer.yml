@@ -3,8 +3,14 @@ name: Packer
 on:
   push:
     branches: [main]
+    paths:
+      - ops/packer/**
+      - dependencies.json
   pull_request:
     branches: [main]
+    paths:
+      - ops/packer/**
+      - dependencies.json
   workflow_dispatch:
     inputs:
       build_base:
