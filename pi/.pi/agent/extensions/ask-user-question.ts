@@ -10,6 +10,7 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { joinHints, numberShortcutHint, numberShortcutIndex } from "./user-input/option-shortcuts";
 
 interface AskOption {
 	label: string;
@@ -244,6 +245,18 @@ async function askSingleChoice(
 				return;
 			}
 
+			const shortcutIndex = numberShortcutIndex(data, options.length);
+			if (shortcutIndex !== undefined) {
+				const selected = allOptions[shortcutIndex];
+				done({
+					type: "option",
+					label: selected.label,
+					value: selected.value,
+					index: selected.index!,
+				});
+				return;
+			}
+
 			if (matchesKey(data, Key.up)) {
 				optionIndex = Math.max(0, optionIndex - 1);
 				refresh();
@@ -315,7 +328,7 @@ async function askSingleChoice(
 				}
 			} else {
 				top.push("");
-				add(theme.fg("dim", " ↑↓ navigate • Enter select • Esc cancel"));
+				add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(options.length, "select"), "Enter select", "Esc cancel")}`));
 			}
 
 			const framed = frameMerged(top, bottom, width, theme);
@@ -398,6 +411,13 @@ async function askMultiChoice(
 				}
 				editor.handleInput(data);
 				refresh();
+				return;
+			}
+
+			const shortcutIndex = numberShortcutIndex(data, choiceItems.length);
+			if (shortcutIndex !== undefined) {
+				optionIndex = shortcutIndex;
+				toggleOption(choiceItems[shortcutIndex]);
 				return;
 			}
 
@@ -520,7 +540,7 @@ async function askMultiChoice(
 				if (selected.size === 0) {
 					add(theme.fg("warning", " Select at least one answer before submitting."));
 				}
-				add(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter edit/submit • Esc cancel"));
+				add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter edit/submit", "Esc cancel")}`));
 			}
 
 			const framed = frameMerged(top, bottom, width, theme);

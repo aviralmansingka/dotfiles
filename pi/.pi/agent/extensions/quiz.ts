@@ -10,6 +10,7 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { joinHints, numberShortcutHint, numberShortcutIndex } from "./user-input/option-shortcuts";
 
 // ────────────────────────────────────────────────────────────────────────────
 // quiz — a GRADED sibling of ask_user_question.
@@ -543,6 +544,16 @@ async function askSingleChoice(
 				}
 
 				// focus === "options"
+				const shortcutIndex = numberShortcutIndex(data, allOptions.length);
+				if (shortcutIndex !== undefined) {
+					const selected = allOptions[shortcutIndex];
+					chosen = { label: selected.label, value: selected.value, index: selected.index };
+					dontKnow = false;
+					phase = "feedback";
+					refresh();
+					return;
+				}
+
 				if (matchesKey(data, Key.up)) {
 					optionIndex = Math.max(0, optionIndex - 1);
 					refresh();
@@ -623,7 +634,7 @@ async function askSingleChoice(
 					add(theme.fg("dim", " Type note below • Ctrl+J newline • Enter back to options • Esc cancel"));
 				} else {
 					top.push("");
-					add(theme.fg("dim", " ↑↓ navigate • Enter answer • Tab note • Esc cancel"));
+					add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(allOptions.length, "answer"), "Enter answer", "Tab note", "Esc cancel")}`));
 				}
 
 				pushNoteField(bottom, theme, bw, editor, focus === "note");
@@ -765,6 +776,13 @@ async function askMultiChoice(
 				}
 
 				// focus === "options"
+				const shortcutIndex = numberShortcutIndex(data, choiceItems.length);
+				if (shortcutIndex !== undefined) {
+					optionIndex = shortcutIndex;
+					toggleOption(choiceItems[shortcutIndex]);
+					return;
+				}
+
 				if (matchesKey(data, Key.up)) {
 					optionIndex = Math.max(0, optionIndex - 1);
 					refresh();
@@ -868,7 +886,7 @@ async function askMultiChoice(
 					add(theme.fg("dim", " Type note below • Ctrl+J newline • Enter back to options • Esc cancel"));
 				} else {
 					top.push("");
-					add(theme.fg("dim", " ↑↓ navigate • Space toggle • Enter submit • Tab note • Esc cancel"));
+					add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter submit", "Tab note", "Esc cancel")}`));
 				}
 
 				pushNoteField(bottom, theme, bw, editor, focus === "note");
