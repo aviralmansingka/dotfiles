@@ -288,7 +288,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		name: "no_mistakes_axi",
 		label: "no-mistakes (visible pane)",
 		description:
-			"Run a `no-mistakes axi` subcommand (run/respond/status/logs/abort/sync/home) in a visible Herdr pane beside the agent pane, live, and return the structured TOON result the agent drives the gate on. Use this INSTEAD of running `no-mistakes axi` in the bash tool so the captain can watch the pipeline run. The pane shows progress live; the agent receives the same TOON (findings, gate, outcome, branch_sync, help) it would have read from bash stdout, plus the exit code. Falls back to an inline run when no TUI/Herdr is available.",
+			"Run a `no-mistakes axi` subcommand (run/respond/status/logs/abort/sync) in a visible Herdr pane beside the agent pane, live, and return the structured TOON result the agent drives the gate on. Use this INSTEAD of running `no-mistakes axi` in the bash tool so the captain can watch the pipeline run. The pane shows progress live; the agent receives the same TOON (findings, gate, outcome, branch_sync, help) it would have read from bash stdout, plus the exit code. Falls back to an inline run when no TUI/Herdr is available.",
 		promptSnippet:
 			"Use no_mistakes_axi (not bash) to drive every no-mistakes axi call so the run is visible in a Herdr pane beside the agent.",
 		promptGuidelines: [
