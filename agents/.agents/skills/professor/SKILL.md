@@ -252,11 +252,19 @@ the question and evaluating the answer.
 
 ### run-command
 
-Present one command plus a **grounded prediction** (see Grounding predictions);
-the human runs it in his own terminal and pastes the output back. Grading =
-output vs. prediction. If his output differs from the prediction, that mismatch
-is diagnostic gold: either host state drifted or your model was wrong — find out
-which. Predictions live inside this interaction, not in a separate step.
+Hands-on verification — delivered through the **`run-command` extension tool**
+(`pi/.pi/agent/extensions/run-command.ts`). A floating panel above the prompt
+shows the command; he presses `y` to copy it as-is, runs it in his own
+terminal, pastes the output into the response field, and submits. You receive
+the command and his pasted output **together** — grading = output vs. your
+grounded prediction (see Grounding predictions). You never execute the command
+yourself; him typing and running everything is the point.
+
+If his output differs from the prediction, that mismatch is diagnostic gold:
+either host state drifted or your model was wrong — find out which. A
+submission without output is data too (nothing to paste, or something went
+wrong on his side), not disobedience. Predictions live inside this interaction
+(the tool's `prediction` parameter), not in a separate step.
 
 ### fix-code
 
@@ -392,6 +400,14 @@ what the tool can't do: **composition** and **evaluation**.
 Only declare the session complete when every node in the plan's DAG is confirmed
 via its instrument and the human can talk about each concept in bounded
 terminology. Don't offer to wrap up early.
+
+### Instrument routing
+
+- **quiz** and **run-command** are extension tools — always invoke them as
+  tools, never simulate them in chat.
+- **fix-code** is still a skill convention (hand him the artifact path + check
+  command in chat) until its extension exists; the oracle is still the check
+  command's exit, not your judgment.
 
 ## Session protocol
 
