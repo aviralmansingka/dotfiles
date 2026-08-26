@@ -282,7 +282,7 @@ async function askSingleChoice(
 			// crashes the process.
 			if (cachedLines && cachedWidth === width) return cachedLines;
 
-			const tw = Math.max(8, width - 12);
+			const tw = Math.max(8, width - 8);
 			const bw = Math.max(8, width - 4);
 			const top: string[] = [];
 			const bottom: string[] = [];
@@ -459,7 +459,7 @@ async function askMultiChoice(
 			// crashes the process.
 			if (cachedLines && cachedWidth === width) return cachedLines;
 
-			const tw = Math.max(8, width - 12);
+			const tw = Math.max(8, width - 8);
 			const bw = Math.max(8, width - 4);
 			const top: string[] = [];
 			const bottom: string[] = [];
@@ -540,28 +540,28 @@ async function askMultiChoice(
 }
 
 // Render the panel as two merged rounded boxes over the prompt area: a narrow
-// content box (inset 4 columns each side) on top, its bottom corners becoming
+// content box (inset 2 columns each side) on top, its bottom corners becoming
 // tees in the top border of a full-width, prompt-styled input box below.
-// Top content must be laid out at (width - 12) columns, bottom at (width - 4).
+// Top content must be laid out at (width - 8) columns, bottom at (width - 4).
 function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
 	if (width < 24) return [...top, ...bottom];
-	const tw = width - 12;
+	const tw = width - 8;
 	const bw = width - 4;
 	const accent = (s: string) => theme.fg("accent", s);
 	const out: string[] = [];
-	out.push(`    ${accent("╭")}${accent("─".repeat(tw + 2))}${accent("╮")}`);
+	out.push(`  ${accent("╭")}${accent("─".repeat(tw + 2))}${accent("╮")}`);
 	for (const line of top) {
 		const pad = Math.max(0, tw - visibleWidth(line));
-		out.push(`    ${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
+		out.push(`  ${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
 	}
-	const rightTee = width - 5;
+	const rightTee = width - 3;
 	out.push(
 		accent("╭") +
-			accent("─".repeat(3)) +
+			accent("─") +
 			accent("┴") +
-			accent("─".repeat(rightTee - 5)) +
+			accent("─".repeat(rightTee - 3)) +
 			accent("┴") +
-			accent("─".repeat(width - rightTee - 2)) +
+			accent("─") +
 			accent("╮"),
 	);
 	for (const line of bottom) {
