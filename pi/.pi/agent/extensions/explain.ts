@@ -82,12 +82,12 @@ Output ONLY a JSON object — no markdown fences, no prose before or after — w
 {
   "verdict": "correct" | "partially_correct" | "incorrect",
   "grade": "A" | "B" | "C" | "D" | "F",
-  "summary": "1-2 sentences: why this verdict",
+  "summary": "one terse sentence, <=15 words: why this verdict",
   "refinements": [
     {
       "quote": "an exact substring copied from the learner's answer",
-      "issue": "what is wrong or loose about it",
-      "correction": "the precise terminology or claim that should replace it"
+      "issue": "what is wrong or loose, <=10 words, no preamble",
+      "correction": "the precise term or claim only — no explanation, no sentence"
     }
   ]
 }
@@ -104,7 +104,7 @@ Letter grade rubric:
 - D: mostly wrong, but shows a fragment of real understanding worth building on.
 - F: fundamentally wrong, a systematic misconception, or no engagement with the question.
 The verdict and grade must agree: correct = A or B; partially_correct = C; incorrect = D or F.
-- refinements must quote the learner's own words verbatim — never invent quotes. Include every spot where terminology is wrong, loose, or a claim is factually off. An empty array means nothing needs refinement.
+- refinements must quote the learner's own words verbatim — never invent quotes. Include every spot where terminology is wrong, loose, or a claim is factually off. Keep issue and correction terse — labels, not prose. An empty array means nothing needs refinement.
 - Do not penalize the learner for omitting things the expected claims do not require.`;
 
 function createEditorTheme(theme: any): EditorTheme {
@@ -434,10 +434,7 @@ export default function explain(pi: ExtensionAPI) {
 								text += `\n- "${r.quote}" — ${r.issue}${r.correction ? ` → ${r.correction}` : ""}`;
 							}
 						}
-						text +=
-							`\n\nAct on the verdict: correct = affirm and extend; partially_correct = name what was ` +
-							`missing or loose and sharpen it; incorrect = stop, diagnose the misconception, and re-ask ` +
-							`in a different form before moving on. The verdict is advisory — you own the final call.`;
+						text += `\n\nVerdict is advisory — you own the final call and the follow-up.`;
 					} else {
 						text +=
 							`\n\n(Grader fork unavailable: ${result.gradeError ?? "unknown error"}. Evaluate the prose ` +
