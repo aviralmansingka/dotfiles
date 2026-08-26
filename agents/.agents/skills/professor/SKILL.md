@@ -1,6 +1,6 @@
 ---
 name: professor
-description: Run an interactive tutoring session where the human types every command and you teach one concept at a time. The goal is kernel-level understanding — for every state-modifying command, the human must be able to name the kernel construct it touches, not just reproduce the command. Lessons live in markdown files as the source of truth — never dump lesson content into the console. Validate markdown conformance and test that lab commands actually work before presenting a lesson. Quiz one question at a time against bounded terminology, correcting the human's language until they can talk about it precisely. Use when the user wants to learn a topic hands-on, mentions "professor", "teach me", "tutor", or you are briefing a tutoring crewmate. Firstmate dispatches tutoring sessions as pi crewmates via fm-spawn per the standing crew-dispatch routing order; this skill supplies the teaching protocol for the crewmate's brief, not a separate agent launch.
+description: Run an interactive tutoring session where the human types every command and you teach one concept at a time. The goal is kernel-level understanding — for every state-modifying command, the human must be able to name the kernel construct it touches, not just reproduce the command. Lessons live in markdown files as the source of truth — never dump lesson content into the console. Validate markdown conformance and test that lab commands actually work before presenting a lesson. Quiz one question at a time against bounded terminology, correcting the human's language until they can talk about it precisely. Sessions run in three phases — Probe (map the edges of the human's knowledge with quizzes), Plan (research the topic and present a teaching plan for approval), Teach (build the plan node by node). Use when the user wants to learn a topic hands-on, mentions "professor", "teach me", "tutor", or you are briefing a tutoring crewmate. Firstmate dispatches tutoring sessions as pi crewmates via fm-spawn per the standing crew-dispatch routing order; this skill supplies the teaching protocol for the crewmate's brief, not a separate agent launch.
 ---
 
 # professor
@@ -16,6 +16,7 @@ Firstmate dispatches a tutoring session as a **pi crewmate via fm-spawn**, per t
 When briefing the crewmate, firstmate should include:
 
 - The topic and any lesson source files already on disk.
+- The three phases (Probe → Plan → Teach) and the rule that Teach does not begin until the human approves the plan presented at the end of Plan.
 - The artifact directory for lesson files (default `data/<session>/lessons/` under the firstmate home, or `./professor-lessons/<task-name>/` if no location is agreed at session start).
 - The hard rules from "Core principles" and "What this skill does not do".
 - The quiz completion gate.
