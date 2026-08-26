@@ -609,6 +609,51 @@ function withUILock<T>(fn: () => Promise<T>): Promise<T> {
 	return sharedUiLock.withLock(fn);
 }
 
+// Free-text mode: same merged UI — question bubble on top, the answer typed in
+// the prompt-styled box below. Replaces pi's built-in ctx.ui.editor dialog so
+// every user-input surface shares one look.
+async function askFreeText(ctx: any, question: string, context: string | undefined): Promise<string | null> {
+	return ctx.ui.custom<string | null>(
+		(tui: any, theme: any, _kb: any, done: (result: string | null) => void) => {
+			const editor = new Editor(tui, createEditorTheme(theme));
+			editor.focused = true;
+			editor.disableSubmit = true;
+
+			return {
+				render(width: number): string[] {
+					const tw = Math.max(8, width - 8);
+					const bw = Math.max(8, width - 4);
+					const top: string[] = [];
+					const bottom: string[] = [];
+					addWrapped(top, theme.fg("text", ` ${question}`), tw);
+					if (context) {
+						top.push("");
+						addWrapped(top, theme.fg("muted", ` ${context}`), tw);
+					}
+					top.push("");
+					top.push(truncateToWidth(theme.fg("dim", " Enter submit • Ctrl+J newline • Esc cancel"), tw));
+					for (const line of editorInnerLines(editor, Math.max(1, bw - 2))) {
+						bottom.push(` ${line}`);
+					}
+					return frameMerged(top, bottom, width, theme);
+				},
+				invalidate: () => editor.invalidate(),
+				handleInput(data: string) {
+					if (matchesKey(data, Key.enter)) {
+						done(editor.getText().trim());
+						return;
+					}
+					if (matchesKey(data, Key.escape)) {
+						done(null);
+						return;
+					}
+					editor.handleInput(data);
+				},
+			};
+		},
+	);
+}
+
 export default function askUserQuestion(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "ask_user_question",
@@ -643,9 +688,8 @@ export default function askUserQuestion(pi: ExtensionAPI) {
 
 			return withUILock(async () => {
 				if (mode === "text") {
-					const editorTitle = context ? `${params.question}\n\n${context}` : params.question;
-					const answer = await ctx.ui.editor(editorTitle);
-					if (answer === undefined) {
+					const answer = await askFreeText(ctx, params.question, context);
+					if (answer === null) {
 						return cancelledResult(params.question, mode, context);
 					}
 					return buildResult(params.question, context, mode, [
