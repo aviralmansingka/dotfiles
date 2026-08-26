@@ -10,6 +10,8 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { openEditor } from "./nvim-open";
+import { contextFileHint, normalizeContextFiles } from "./user-input/context-files";
 import { joinHints, numberShortcutHint, numberShortcutIndex } from "./user-input/option-shortcuts";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -120,6 +122,12 @@ const QuizParams = Type.Object({
 				"Defaults to true: options are randomly reordered before display so the correct answer isn't always in the same position. Set to false only when option order is meaningful (e.g. ordered numeric values, or an 'All/None of the above' option that must stay last).",
 		}),
 	),
+	contextFiles: Type.Optional(
+		Type.Array(Type.String(), {
+			description:
+				"Optional file paths that provide context for this quiz question. When present, the quiz panel shows an `o` shortcut; pressing `o` opens these files in vim using the existing /nvim opener. Relative paths resolve from the session cwd.",
+		}),
+	),
 });
 
 function normalizeOptions(
@@ -138,6 +146,12 @@ function normalizeOptions(
 			seen.add(option.value);
 			return true;
 		});
+}
+
+async function openContextFiles(ctx: any, files: string[]): Promise<void> {
+	if (files.length === 0) return;
+	const result = await openEditor(ctx?.cwd ?? process.cwd(), files);
+	ctx?.ui?.notify?.(result.message, "info");
 }
 
 // Fisher-Yates shuffle over a copy. Safe to reorder for display because
@@ -469,6 +483,7 @@ async function askSingleChoice(
 	ctx: any,
 	question: string,
 	context: string | undefined,
+	contextFiles: string[],
 	options: QuizOption[],
 	correctIndices: number[],
 	explanation: string | undefined,
@@ -544,6 +559,13 @@ async function askSingleChoice(
 				}
 
 				// focus === "options"
+				if (data === "o" && contextFiles.length > 0) {
+					void openContextFiles(ctx, contextFiles).catch((error) =>
+						ctx?.ui?.notify?.(`Could not open context files: ${error}`, "warning"),
+					);
+					return;
+				}
+
 				const shortcutIndex = numberShortcutIndex(data, allOptions.length);
 				if (shortcutIndex !== undefined) {
 					const selected = allOptions[shortcutIndex];
@@ -634,7 +656,7 @@ async function askSingleChoice(
 					add(theme.fg("dim", " Type note below • Ctrl+J newline • Enter back to options • Esc cancel"));
 				} else {
 					top.push("");
-					add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(allOptions.length, "answer"), "Enter answer", "Tab note", "Esc cancel")}`));
+					add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(allOptions.length, "answer"), "Enter answer", contextFileHint(contextFiles), "Tab note", "Esc cancel")}`));
 				}
 
 				pushNoteField(bottom, theme, bw, editor, focus === "note");
@@ -663,6 +685,7 @@ async function askMultiChoice(
 	ctx: any,
 	question: string,
 	context: string | undefined,
+	contextFiles: string[],
 	options: QuizOption[],
 	correctIndices: number[],
 	explanation: string | undefined,
@@ -776,6 +799,13 @@ async function askMultiChoice(
 				}
 
 				// focus === "options"
+				if (data === "o" && contextFiles.length > 0) {
+					void openContextFiles(ctx, contextFiles).catch((error) =>
+						ctx?.ui?.notify?.(`Could not open context files: ${error}`, "warning"),
+					);
+					return;
+				}
+
 				const shortcutIndex = numberShortcutIndex(data, choiceItems.length);
 				if (shortcutIndex !== undefined) {
 					optionIndex = shortcutIndex;
@@ -886,7 +916,7 @@ async function askMultiChoice(
 					add(theme.fg("dim", " Type note below • Ctrl+J newline • Enter back to options • Esc cancel"));
 				} else {
 					top.push("");
-					add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter submit", "Tab note", "Esc cancel")}`));
+					add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter submit", contextFileHint(contextFiles), "Tab note", "Esc cancel")}`));
 				}
 
 				pushNoteField(bottom, theme, bw, editor, focus === "note");
@@ -967,6 +997,7 @@ export default function quiz(pi: ExtensionAPI) {
 			"Anti-guessing hygiene: don't let the correct answer stand out by form (longest, most precise, most hedged, or the only one in the right format). Keep options similar in length, specificity, and phrasing so it can't be picked from shape alone.",
 			"Set multiSelect: true only when more than one option is correct.",
 			"Options are shuffled before display by default, so don't worry about which position you list the correct answer in. Set shuffle: false only when option order is meaningful (ordered values, or an 'All/None of the above' option that must stay last).",
+			"When a quiz needs file context, pass `contextFiles: [\"path/to/file\"]`; the user can press `o` to open those files in vim while the quiz stays active.",
 			"To probe nuance, ask several quick quiz questions and adapt each one based on the previous answers, rather than writing one giant question.",
 			"Don't leak the answer through formatting: keep option phrasing/length even and don't hint which is correct.",
 		],
@@ -974,6 +1005,7 @@ export default function quiz(pi: ExtensionAPI) {
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const context = params.details?.trim() || undefined;
+			const contextFiles = normalizeContextFiles((params as any).contextFiles);
 			const explanation = params.explanation.trim();
 			const mode: QuizMode = params.multiSelect ? "multi-select" : "single-select";
 
@@ -1031,8 +1063,8 @@ export default function quiz(pi: ExtensionAPI) {
 			return withUILock(async () => {
 				const response =
 					mode === "single-select"
-						? await askSingleChoice(ctx, params.question, context, options, correctIndices, explanation)
-						: await askMultiChoice(ctx, params.question, context, options, correctIndices, explanation);
+						? await askSingleChoice(ctx, params.question, context, contextFiles, options, correctIndices, explanation)
+						: await askMultiChoice(ctx, params.question, context, contextFiles, options, correctIndices, explanation);
 				if (!response) {
 					return cancelledResult(params.question, mode, correctIndices, context);
 				}
@@ -1057,6 +1089,11 @@ export default function quiz(pi: ExtensionAPI) {
 			if (options.length > 0) {
 				const noun = options.length === 1 ? "option" : "options";
 				text += theme.fg("dim", ` (${options.length} ${noun})`);
+			}
+			const contextFiles = normalizeContextFiles((args as any).contextFiles);
+			if (contextFiles.length > 0) {
+				const noun = contextFiles.length === 1 ? "context file" : "context files";
+				text += theme.fg("dim", ` (${contextFiles.length} ${noun})`);
 			}
 			return new Text(text, 0, 0);
 		},

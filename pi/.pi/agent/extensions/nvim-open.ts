@@ -245,7 +245,7 @@ function parseArgs(input: string): string[] {
 function resolveFilePaths(cwd: string, files: string[]): string[] {
 	return files.map((f) => (isAbsolute(f) ? f : resolve(cwd, f)));
 }
-async function openEditor(
+export async function openEditor(
 	cwd: string,
 	rawArgs: string[],
 ): Promise<{ message: string; launched: boolean }> {
