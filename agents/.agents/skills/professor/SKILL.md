@@ -396,6 +396,14 @@ what the tool can't do: **composition** and **evaluation**.
 
 ### Composing questions
 
+- **Always pass `contextFiles`.** Every `quiz` call must include the
+  `contextFiles` array — the file(s) the question drills (the kernel, the
+  config, the lesson section, the command's source). This renders an `o`
+  shortcut in the panel so he can open the exact source while the quiz stays
+  active, grounding the question in the artifact instead of testing recall in a
+  vacuum. When uncertain whether a file is relevant, include it anyway: a false
+  positive (an irrelevant file surfaced) is cheaper than a false negative (no
+  context attached). Never omit it on the theory that he "should know it cold."
 - **One question per tool call.** Never multi-part; never a batch of questions
   in one message.
 - **Write the correct claim first, then mutate it into distractors** — state
