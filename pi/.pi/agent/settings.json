@@ -15,6 +15,5 @@
   "defaultModel": "accounts/fireworks/routers/glm-5p2-fast",
   "defaultThinkingLevel": "max",
   "theme": "gruvbox-material",
-  "transport": "websocket-cached",
-  "hideThinkingBlock": true
+  "transport": "websocket-cached"
 }
