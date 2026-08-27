@@ -1,14 +1,9 @@
 {
   "packages": [
-    "npm:pi-mcp-adapter",
-    {
-      "source": "https://github.com/amosblomqvist/pi-config",
-      "extensions": []
-    },
-    "git/github.com/amosblomqvist/pi-config/extensions/youtube-search/index.ts"
+    "npm:pi-mcp-adapter"
   ],
   "extensions": [
-    "+extensions/pi-handoff.ts"
+    "+extensions/rounded-bar-footer.ts"
   ],
   "lastChangelogVersion": "0.84.2",
   "defaultProvider": "fireworks",
