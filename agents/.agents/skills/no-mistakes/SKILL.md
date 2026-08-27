@@ -369,3 +369,37 @@ final state
 instead shows `outcome: <checks-passed|passed|failed|cancelled>` with no
 `findings` table. Field names and exact columns can vary by step and version,
 so read the actual `findings` header rather than assuming this layout.
+
+## PR description preferences
+
+After no-mistakes opens the PR and reports `checks-passed`, post-process the PR
+body before telling the user it is ready. no-mistakes generates the body from
+your `--intent` and pipeline results; edit it with `gh-axi pr edit` to match
+the captain's standing preferences:
+
+- Keep the intent section brief and human readable.
+- Bullet points should not exceed 7-10 words; use markdown formatting or nested
+  bullets for structure.
+- Expandable/collapsible sections (no-mistakes already emits some) are good;
+  keep them.
+- Add two quote-blocks at the top of the PR body, near the title, reporting
+  cost:
+  - **Pi-agent cost**: read the cumulative `usage.cost.total` from the last
+    assistant message in `$PI_SESSION_FILE` (the session file path Pi sets in
+    the environment). Format as `> **Pi-agent cost:** $X.XX`.
+  - **no-mistakes pipeline cost**: query the run's token usage from the local
+    state database and format it as a quote-block. The run id is in the
+    `checks-passed` output or `no-mistakes axi status`. Query:
+    `sqlite3 ~/.no-mistakes/state.sqlite "SELECT step_name, model, input_tokens, output_tokens, cache_read_tokens, reasoning_tokens, duration_ms FROM agent_invocations WHERE run_id='<run_id>'"`
+    Sum the tokens across steps and format as
+    `> **no-mistakes pipeline:** N input, M output, K cache-read, R reasoning tokens across S steps (model: <name>)`.
+    If the model's per-token pricing is known, also compute an estimated dollar
+    cost; otherwise report the token totals.
+- Apply the edit with `gh-axi pr edit <number> -R <repo> --body-file <file>`
+  using a temp file for the updated body.
+- Preserve every section no-mistakes already generated (Intent, Risk
+  Assessment, Pipeline, Testing, What Changed); only reformat for brevity and
+  prepend the cost quote-blocks.
+
+Do not remove factual content from the body; tighten prose and shorten bullets
+only.

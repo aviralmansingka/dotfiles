@@ -12,9 +12,9 @@
   ],
   "lastChangelogVersion": "0.84.2",
   "defaultProvider": "fireworks",
-  "defaultModel": "kimi-fast-latest",
-  "defaultThinkingLevel": "high",
+  "defaultModel": "accounts/fireworks/routers/glm-5p2-fast",
+  "defaultThinkingLevel": "max",
   "theme": "gruvbox-material",
   "transport": "websocket-cached",
-  "hideThinkingBlock": false
+  "hideThinkingBlock": true
 }
