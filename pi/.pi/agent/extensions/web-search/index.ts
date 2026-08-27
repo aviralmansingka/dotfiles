@@ -19,64 +19,91 @@ interface StructuredSearchArgs {
 }
 
 interface BuiltSearchQuery {
+	/** Human-readable composed query, used for TUI display. */
 	query: string;
 	baseQuery?: string;
 	exactPhrases: string[];
 	excludeTerms: string[];
+	/** excludeTerms that look like domains — sent as Tavily `exclude_domains`. */
+	excludeDomains: string[];
 	site?: string;
+	/** True when exactPhrases is non-empty; enables Tavily `exact_match`. */
+	exactMatch: boolean;
 }
 
-async function googleSearch(
-	query: string,
+async function tavilySearch(
+	built: BuiltSearchQuery,
 	count: number,
 	apiKey: string,
-	cseId: string,
 	signal?: AbortSignal,
 ): Promise<SearchResult[]> {
-	const num = Math.min(count, 10);
-	const url = new URL("https://www.googleapis.com/customsearch/v1");
-	url.searchParams.set("key", apiKey);
-	url.searchParams.set("cx", cseId);
-	url.searchParams.set("q", query);
-	url.searchParams.set("num", String(num));
+	const maxResults = Math.min(count, 10);
 
-	const resp = await fetch(url.toString(), { signal });
+	// Tavily takes a plain query plus dedicated include/exclude domain params,
+	// so the sent query omits the `site:` operator and domain-shaped excludes.
+	const queryParts: string[] = [];
+	if (built.baseQuery) queryParts.push(built.baseQuery);
+	for (const phrase of built.exactPhrases) {
+		queryParts.push(quoteForSearch(phrase));
+	}
+	for (const term of built.excludeTerms) {
+		if (built.excludeDomains.includes(term)) continue;
+		queryParts.push(`-${term.includes(" ") ? quoteForSearch(term) : term}`);
+	}
+	const tavilyQuery = queryParts.join(" ");
+
+	const body: Record<string, unknown> = {
+		query: tavilyQuery,
+		max_results: maxResults,
+		search_depth: "basic",
+	};
+	if (built.site) body.include_domains = [built.site];
+	if (built.excludeDomains.length > 0) body.exclude_domains = built.excludeDomains;
+	if (built.exactMatch) body.exact_match = true;
+
+	const resp = await fetch("https://api.tavily.com/search", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${apiKey}`,
+		},
+		body: JSON.stringify(body),
+		signal,
+	});
 	if (!resp.ok) {
-		const body = await resp.text();
-		throw new Error(`Google API ${resp.status}: ${body.slice(0, 200)}`);
+		const text = await resp.text();
+		throw new Error(`Tavily API ${resp.status}: ${text.slice(0, 200)}`);
 	}
 
 	const data = (await resp.json()) as {
-		items?: Array<{
+		results?: Array<{
 			title: string;
-			link: string;
-			snippet?: string;
+			url: string;
+			content?: string;
 		}>;
 	};
 
-	if (!data.items || data.items.length === 0) return [];
+	if (!data.results || data.results.length === 0) return [];
 
-	return data.items.map((item) => ({
+	return data.results.map((item) => ({
 		title: item.title,
-		url: item.link,
-		snippet: item.snippet?.replace(/\n/g, " ") ?? "",
+		url: item.url,
+		snippet: item.content?.replace(/\n/g, " ") ?? "",
 	}));
 }
 
 const EXT_DIR = path.dirname(new URL(import.meta.url).pathname);
 const AUTH_PATH = path.join(EXT_DIR, "auth.json");
 
-function loadCredentials(): { apiKey: string; cseId: string } | null {
-	const envApiKey = process.env.GOOGLE_SEARCH_API_KEY ?? process.env.GOOGLE_API_KEY;
-	const envCseId = process.env.GOOGLE_CSE_ID ?? process.env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID;
-	if (envApiKey && envCseId) return { apiKey: envApiKey, cseId: envCseId };
+function loadCredentials(): { apiKey: string } | null {
+	const envApiKey = process.env.TAVILY_API_KEY;
+	if (envApiKey) return { apiKey: envApiKey };
 
 	if (!fs.existsSync(AUTH_PATH)) return null;
 	try {
 		const config = JSON.parse(fs.readFileSync(AUTH_PATH, "utf-8"));
-		const apiKey = config.google_search_api_key as string;
-		const cseId = config.google_cse_id as string;
-		if (apiKey && cseId) return { apiKey, cseId };
+		const apiKey = config.tavily_api_key as string;
+		if (apiKey) return { apiKey };
 	} catch {}
 	return null;
 }
@@ -124,6 +151,11 @@ function normalizeSite(site?: string): string | undefined {
 	return value.replace(/\/+$/, "") || undefined;
 }
 
+function looksLikeDomain(term: string): boolean {
+	// No spaces, has a dot, and the trailing segment looks like a TLD.
+	return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(term) && !term.includes(" ");
+}
+
 function quoteForSearch(value: string): string {
 	return `"${value.replace(/"/g, '\\"')}"`;
 }
@@ -140,6 +172,10 @@ function buildSearchQuery(args: StructuredSearchArgs): BuiltSearchQuery {
 		);
 	}
 
+	const excludeDomains = excludeTerms.filter(looksLikeDomain);
+
+	// Composed display string — keeps the familiar `site:` / `-term` shape for
+	// the TUI even though the Tavily request splits these into dedicated params.
 	const parts: string[] = [];
 	if (baseQuery) parts.push(baseQuery);
 	for (const phrase of exactPhrases) {
@@ -157,7 +193,9 @@ function buildSearchQuery(args: StructuredSearchArgs): BuiltSearchQuery {
 		baseQuery,
 		exactPhrases,
 		excludeTerms,
+		excludeDomains,
 		site,
+		exactMatch: exactPhrases.length > 0,
 	};
 }
 
@@ -166,7 +204,7 @@ export default function (pi: ExtensionAPI) {
 		name: "web_search",
 		label: "Web Search",
 		description:
-			"Search the web via Google Custom Search API. Build one search per call from a base query string, exact phrases, exclusions, and an optional site. Returns title, URL, and snippet.",
+			"Search the web via the Tavily Search API. Build one search per call from a base query string, exact phrases, exclusions, and an optional site. Returns title, URL, and snippet.",
 		promptSnippet:
 			"Search the web via a query string plus optional exactPhrases, excludeTerms, and site. Use one tool call per search angle.",
 		promptGuidelines: [
@@ -184,19 +222,19 @@ export default function (pi: ExtensionAPI) {
 			exactPhrases: Type.Optional(
 				Type.Array(Type.String(), {
 					description:
-						"Exact phrases to match. Each item becomes a quoted phrase in the final Google query.",
+						"Exact phrases to match. Each item becomes a quoted phrase in the final Tavily query.",
 				}),
 			),
 			excludeTerms: Type.Optional(
 				Type.Array(Type.String(), {
 					description:
-						"Terms or phrases to exclude. Multi-word items are excluded as exact phrases.",
+						"Terms or phrases to exclude. Domain-shaped items (e.g. espn.com) are sent as Tavily exclude_domains; others are passed as minus-prefixed terms in the query.",
 				}),
 			),
 			site: Type.Optional(
 				Type.String({
 					description:
-						"Optional site/domain restriction, such as example.com or a full URL.",
+						"Optional site/domain restriction, such as example.com or a full URL. Mapped to Tavily include_domains.",
 				}),
 			),
 			count: Type.Optional(
@@ -212,19 +250,13 @@ export default function (pi: ExtensionAPI) {
 			const creds = loadCredentials();
 			if (!creds) {
 				throw new Error(
-					`Missing Google Custom Search credentials. Set GOOGLE_SEARCH_API_KEY and GOOGLE_CSE_ID, or create ${AUTH_PATH} from auth.example.json. Get credentials from https://developers.google.com/custom-search/v1/introduction`,
+					`Missing Tavily API key. Set TAVILY_API_KEY, or create ${AUTH_PATH} from auth.example.json. Get credentials from https://tavily.com`,
 				);
 			}
 
 			const count = params.count ?? 5;
 			const built = buildSearchQuery(params);
-			const results = await googleSearch(
-				built.query,
-				count,
-				creds.apiKey,
-				creds.cseId,
-				signal,
-			);
+			const results = await tavilySearch(built, count, creds.apiKey, signal);
 
 			return {
 				content: [
