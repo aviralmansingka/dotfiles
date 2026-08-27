@@ -1,4 +1,0 @@
-interface:
-  display_name: "Work on Vault Feature"
-  short_description: "Run a vault feature through Herdr to validation"
-  default_prompt: "Use $work-on-vault-feature to implement and validate the selected feature within its vault theme."
