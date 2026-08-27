@@ -1,0 +1,375 @@
+#!/usr/bin/env bash
+# nvimr — neovim remote control via RPC socket, Herdr-aware.
+#
+# Discovers nvim sessions (via herdr panes or socket glob) and runs lua
+# against a chosen session over its RPC socket.
+#
+# Usage:
+#   nvimr sessions            List nvim sessions found in herdr panes
+#   nvimr socket              Print the resolved socket path
+#   nvimr state               Current buf, cursor, mode, cwd, windows
+#   nvimr buffers             List listed, loaded buffers
+#   nvimr open <path> [line]  Open file in an editable window, goto line
+#   nvimr goto <line> [col]   Move cursor in current editable window
+#   nvimr read [buf] [n]      Print first n lines (default 50) of buf
+#   nvimr diag [buf]          Diagnostics for buffer (default: current)
+#   nvimr cmd <ex>            Run ex command in an editable window
+#   nvimr lua <file>          Run lua file, print return value
+#   nvimr keys <keys>         Send raw keystrokes (unreliable if terminal focus)
+#
+# Targeting:
+#   nvimr <command>                  Auto-resolve: focused pane's nvim, else
+#                                    newest live socket, else NVIM_LISTEN_ADDRESS.
+#   nvimr --pane <id> <command>      Target the nvim in a specific herdr pane.
+#   NVIM_LISTEN_ADDRESS=<path> nvimr ...   Force an explicit socket.
+set -euo pipefail
+
+# NOTE: nvim sets $NVIM to its socket path for its CHILDREN at runtime, but
+# does NOT export it in its own /proc/<pid>/environ. So we link a herdr pane's
+# nvim to its socket by: (a) reading --listen <path> from /proc/<pid>/cmdline,
+# else (b) nvim's default socket /run/user/<uid>/nvim.<pid>.0 (PID in name).
+NV="${NVIM_BIN:-$(command -v nvim)}"
+if [[ -z "$NV" ]]; then
+  echo "nvimr: nvim binary not found (set NVIM_BIN= or add to PATH)" >&2
+  exit 1
+fi
+UID_NUM="$(id -u)"
+USER_NAME="$(id -un)"
+RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$UID_NUM}"
+HERDR_TIMEOUT="${HERDR_TIMEOUT:-5}"
+
+# --- Herdr helpers ----------------------------------------------------------
+herdr_json() { timeout "$HERDR_TIMEOUT" herdr "$@" 2>/dev/null || true; }
+
+# Liveness-check a socket: returns 0 if nvim answers, 1 otherwise.
+socket_live() {
+  local sock="$1"
+  [[ -S "$sock" ]] || return 1
+  "$NV" --server "$sock" --remote-expr '1' >/dev/null 2>&1
+}
+
+# Given an nvim PID, resolve its RPC socket path. Empty string if not found.
+# 1. --listen <path> in /proc/<pid>/cmdline (nvim-open.sh uses this).
+# 2. nvim default socket: /run/user/<uid>/nvim.<pid>.0 (PID in filename).
+socket_for_pid() {
+  local pid="$1" sock cmdline
+  cmdline="$(tr '\0' '\n' < /proc/"$pid"/cmdline 2>/dev/null || true)"
+  if [[ "$cmdline" == *"--listen"* ]]; then
+    sock="$(printf '%s\n' "$cmdline" | awk '/^--listen$/{getline; print; exit}')"
+    [[ -z "$sock" ]] && sock="$(printf '%s\n' "$cmdline" | grep -oE '^--listen=.+' | head -1 | cut -d= -f2-)"
+    if [[ -n "$sock" && -S "$sock" ]]; then echo "$sock"; return 0; fi
+  fi
+  sock="$RUNTIME/nvim.$pid.0"
+  if [[ -S "$sock" ]]; then echo "$sock"; return 0; fi
+  return 0
+}
+
+# Emit '<pane_id>\t<shell_pid>\t<cwd>\t<title>' for every herdr pane (cached).
+PANE_ROWS_CACHE=""
+pane_shell_rows() {
+  [[ -n "$PANE_ROWS_CACHE" ]] && { printf '%s\n' "$PANE_ROWS_CACHE"; return 0; }
+  local list pane_id cwd title proc_json ss out=""
+  list="$(herdr_json pane list)"
+  [[ -z "$list" ]] && return 0
+  while IFS=$'\t' read -r pane_id cwd title; do
+    [[ -z "$pane_id" ]] && continue
+    proc_json="$(herdr_json pane process-info --pane "$pane_id")"
+    ss="$(printf '%s' "$proc_json" | jq -r '.result.process_info.shell_pid // ""' 2>/dev/null)"
+    out+="${pane_id}"$'\t'"${ss}"$'\t'"${cwd}"$'\t'"${title}"$'\n'
+  done < <(printf '%s' "$list" | jq -r '.result.panes[] | [.pane_id, .cwd, .terminal_title_stripped] | @tsv')
+  PANE_ROWS_CACHE="$out"
+  printf '%s\n' "$PANE_ROWS_CACHE"
+}
+
+# Walk a pid's parent chain (up to 15 hops). Echo the ancestor pid that matches
+# a pane shell_pid, else empty. Sets PANE_LINK_ID / PANE_LINK_CWD / PANE_LINK_TITLE.
+PANE_LINK_ID=""; PANE_LINK_CWD=""; PANE_LINK_TITLE=""
+pane_for_pid() {
+  local pid="$1" ppid i row sh
+  PANE_LINK_ID=""; PANE_LINK_CWD=""; PANE_LINK_TITLE=""
+  local rows; rows="$(pane_shell_rows)"
+  [[ -z "$rows" ]] && return 1
+  for i in $(seq 1 15); do
+    ppid="$(grep '^PPid:' /proc/"$pid"/status 2>/dev/null | awk '{print $2}')"
+    [[ -z "$ppid" || "$ppid" == "0" || "$ppid" == "1" ]] && return 1
+    while IFS=$'\t' read -r pane_id sp cwd title; do
+      if [[ "$sp" == "$ppid" && -n "$sp" ]]; then
+        PANE_LINK_ID="$pane_id"; PANE_LINK_CWD="$cwd"; PANE_LINK_TITLE="$title"
+        return 0
+      fi
+    done <<< "$rows"
+    pid="$ppid"
+  done
+  return 1
+}
+
+# All nvim pids on the system (comm == nvim).
+nvim_pids() { pgrep -x nvim 2>/dev/null || true; }
+
+# Enumerate drivable nvim sessions: for each nvim pid with a live socket, link
+# it to a herdr pane via the parent chain. Emits:
+#   <pane_id|->\t<pid>\t<cwd>\t<socket>\t<title|->
+list_sessions() {
+  local pid sock cwd title pane_id
+  for pid in $(nvim_pids); do
+    sock="$(socket_for_pid "$pid")"
+    [[ -n "$sock" && -S "$sock" ]] || continue
+    socket_live "$sock" || continue
+    cwd="$(readlink /proc/"$pid"/cwd 2>/dev/null || echo "-")"
+    if pane_for_pid "$pid"; then
+      pane_id="$PANE_LINK_ID"; title="$PANE_LINK_TITLE"
+    else
+      pane_id="-"; title="-"
+    fi
+    printf '%s\t%s\t%s\t%s\t%s\n' "$pane_id" "$pid" "$cwd" "$sock" "$title"
+  done
+}
+
+# Resolve a socket for a specific pane id: find an nvim pid whose parent
+# chain hits that pane's shell_pid.
+socket_for_pane() {
+  local target="$1" row pane_id sp pid sock
+  pane_shell_rows >/dev/null  # prime cache
+  while IFS=$'\t' read -r row; do
+    pane_id="$(printf '%s' "$row" | cut -f1)"
+    [[ "$pane_id" == "$target" ]] || continue
+    sp="$(printf '%s' "$row" | cut -f2)"
+    [[ -z "$sp" ]] && return 1
+    for pid in $(nvim_pids); do
+      if pane_for_pid "$pid" && [[ "$PANE_LINK_ID" == "$target" ]]; then
+        sock="$(socket_for_pid "$pid")"
+        if [[ -n "$sock" && -S "$sock" ]] && socket_live "$sock"; then
+          echo "$sock"; return 0
+        fi
+      fi
+    done
+    echo "nvimr: pane $target has no running nvim with a live RPC socket" >&2
+    return 1
+  done < <(pane_shell_rows)
+  echo "nvimr: pane $target not found" >&2
+  return 1
+}
+
+# Auto-resolve the socket: prefer the focused herdr pane's nvim, else the
+# newest live socket by glob, else NVIM_LISTEN_ADDRESS.
+find_socket() {
+  local pane_id sock user s
+  # 1. Explicit env override always wins.
+  if [[ -n "${NVIM_LISTEN_ADDRESS:-}" && -S "$NVIM_LISTEN_ADDRESS" ]] && socket_live "$NVIM_LISTEN_ADDRESS"; then
+    echo "$NVIM_LISTEN_ADDRESS"; return 0
+  fi
+  # 2. Focused pane's nvim (if herdr is available and focused pane runs nvim).
+  if pane_id="$(herdr_json pane current | jq -r '.result.pane.pane_id // empty' 2>/dev/null)" && [[ -n "$pane_id" ]]; then
+    sock="$(socket_for_pane "$pane_id" 2>/dev/null || true)"
+    if [[ -n "$sock" ]] && socket_live "$sock"; then echo "$sock"; return 0; fi
+  fi
+  # 3. Any herdr-pane-linked nvim session (first live; prefer linked over orphan).
+  sock="$(list_sessions | awk -F'\t' '$1!="-"{print $4; exit}')"
+  if [[ -n "$sock" ]] && socket_live "$sock"; then echo "$sock"; return 0; fi
+  # 4. Glob all nvim sockets, newest mtime first, first live one.
+  local sockets=() found
+  while IFS= read -r s; do sockets+=("$s"); done < <(
+    ls -t "${TMPDIR:-/tmp}"nvim."$USER_NAME"/*/nvim.*.0 "$RUNTIME"/nvim.*.0 2>/dev/null)
+  for s in "${sockets[@]:-}"; do
+    [[ -S "$s" ]] || continue
+    socket_live "$s" && { echo "$s"; return 0; }
+  done 2>/dev/null
+  return 0
+}
+
+# --- Argument parsing: optional --pane <id> -------------------------------
+TARGET_PANE=""
+if [[ "${1:-}" == "--pane" ]]; then
+  TARGET_PANE="${2:?nvimr --pane: pane id required}"
+  shift 2
+fi
+
+cmd="${1:-state}"; shift || true
+
+if [[ -n "$TARGET_PANE" ]]; then
+  SOCK="$(socket_for_pane "$TARGET_PANE")" || exit 1
+else
+  SOCK="$(find_socket)"
+fi
+if [[ -z "$SOCK" || ! -S "$SOCK" ]]; then
+  echo "nvimr: no nvim RPC socket found." >&2
+  echo "       Start nvim (it serves a default socket), or launch via the" >&2
+  echo "       nvim skill, or pass --pane <id>, or set NVIM_LISTEN_ADDRESS." >&2
+  exit 1
+fi
+if ! socket_live "$SOCK"; then
+  echo "nvimr: socket $SOCK is not live" >&2
+  exit 1
+fi
+
+# --- Lua runner -------------------------------------------------------------
+run_lua() {
+  local luafile="$1"
+  "$NV" --server "$SOCK" --remote-expr \
+    'luaeval("load(...)()", join(readfile("'"$luafile"'"), "\n"))' 2>&1
+}
+# Wrap user lua in a print-capturing harness so --remote-expr returns output.
+lua_cmd() {
+  local tmp; tmp="$(mktemp -t nvimr.XXXXXX.lua)"
+  {
+    printf 'local __out={}\n'
+    printf 'local __print=print\n'
+    printf 'print=function(...) __out[#__out+1]=table.concat({...},"\t") end\n'
+    printf '%s\n' "$1"
+    printf 'print=__print\n'
+    printf 'return table.concat(__out,"\\n")\n'
+  } > "$tmp"
+  run_lua "$tmp"
+  rm -f "$tmp"
+}
+
+# Prefer a non-terminal editable window for open/goto/cmd.
+WIN_PICK='
+local w = vim.api.nvim_get_current_win()
+local function bt(win)
+  local b = vim.api.nvim_win_get_buf(win)
+  return vim.bo[b].buftype
+end
+if bt(w) == "terminal" or bt(w) == "nofile" then
+  for _, ww in ipairs(vim.api.nvim_list_wins()) do
+    local t = bt(ww)
+    if t ~= "terminal" and t ~= "nofile" and t ~= "quickfix" then
+      w = ww; break
+    end
+  end
+end
+'
+
+# --- Subcommands ------------------------------------------------------------
+case "$cmd" in
+  sessions)
+    printf 'PANE\tPID\tCWD\tSOCKET\tTITLE\n'
+    list_sessions | while IFS=$'\t' read -r pane_id pid cwd sock title; do
+      printf '%s\t%s\t%s\t%s\t%s\n' "$pane_id" "$pid" "$cwd" "$sock" "$title"
+    done
+    ;;
+
+  socket)
+    echo "$SOCK"
+    ;;
+
+  state)
+    lua_cmd '
+local b = vim.api.nvim_get_current_buf()
+local w = vim.api.nvim_get_current_win()
+local c = vim.api.nvim_win_get_cursor(w)
+local mode = vim.api.nvim_get_mode().mode
+local wins = {}
+for _, ww in ipairs(vim.api.nvim_list_wins()) do
+  local bb = vim.api.nvim_win_get_buf(ww)
+  wins[#wins+1] = string.format("  win %d buf %d %s [%s]",
+    ww, bb, vim.api.nvim_buf_get_name(bb), vim.bo[bb].buftype)
+end
+print(string.format("buf: %s", vim.api.nvim_buf_get_name(b)))
+print(string.format("cursor: line %d col %d", c[1], c[2]+1))
+print(string.format("mode: %s", mode))
+print(string.format("cwd: %s", vim.fn.getcwd()))
+print(string.format("windows (%d):", #wins))
+print(table.concat(wins, "\n"))
+'
+    ;;
+
+  buffers)
+    lua_cmd '
+local out = {}
+for _, b in ipairs(vim.api.nvim_list_bufs()) do
+  if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buflisted then
+    local name = vim.api.nvim_buf_get_name(b)
+    if name ~= "" then
+      out[#out+1] = string.format("%3d  %s  %s", b,
+        vim.bo[b].modified and "+" or " ",
+        name)
+    end
+  end
+end
+print(table.concat(out, "\n"))
+'
+    ;;
+
+  open)
+    path="${1:?nvimr open: path required}"
+    line="${2:-}"
+    lua_cmd "$WIN_PICK
+vim.api.nvim_set_current_win(w)
+vim.cmd.edit('$path')
+if ${line:-0} > 0 then
+  vim.api.nvim_win_set_cursor(0, {tonumber('$line'), 0})
+  vim.cmd('normal! zz')
+end
+print(vim.api.nvim_buf_get_name(0) .. ':' .. vim.api.nvim_win_get_cursor(0)[1])
+"
+    ;;
+
+  goto)
+    line="${1:?nvimr goto: line required}"
+    col="${2:-0}"
+    lua_cmd "$WIN_PICK
+vim.api.nvim_set_current_win(w)
+vim.api.nvim_win_set_cursor(0, {tonumber('$line'), tonumber('$col')})
+vim.cmd('normal! zz')
+print('cursor: ' .. vim.api.nvim_win_get_cursor(0)[1])
+"
+    ;;
+
+  read)
+    buf="${1:-0}"
+    n="${2:-50}"
+    lua_cmd '
+local b = tonumber("'$buf'") or 0
+if b == 0 then b = vim.api.nvim_get_current_buf() end
+local n = tonumber("'$n'") or 50
+local total = vim.api.nvim_buf_line_count(b)
+local lines = vim.api.nvim_buf_get_lines(b, 0, math.min(n, total), false)
+print(string.format("[buf %d  %d/%d lines]", b, #lines, total))
+print(table.concat(lines, "\n"))
+'
+    ;;
+
+  diag)
+    buf="${1:-0}"
+    lua_cmd '
+local b = tonumber("'$buf'") or 0
+if b == 0 then b = vim.api.nvim_get_current_buf() end
+local diags = vim.diagnostic.get(b)
+if #diags == 0 then print("no diagnostics") return end
+local sev = {[1]="E",[2]="W",[3]="I",[4]="H"}
+local out = {}
+for _, d in ipairs(diags) do
+  out[#out+1] = string.format("%s L%d: %s", sev[d.severity] or "?", d.lnum+1, d.message)
+end
+print(table.concat(out, "\n"))
+'
+    ;;
+
+  cmd)
+    ex="${1:?nvimr cmd: ex command required}"
+    lua_cmd "$WIN_PICK
+vim.api.nvim_set_current_win(w)
+vim.cmd([[$ex]])
+print('ok')
+"
+    ;;
+
+  lua)
+    file="${1:?nvimr lua: file required}"
+    run_lua "$file"
+    ;;
+
+  keys)
+    keys="${1:?nvimr keys: key string required}"
+    "$NV" --server "$SOCK" --remote-send "$keys"
+    echo "sent (unreliable if terminal buffer has focus)"
+    ;;
+
+  *)
+    echo "nvimr: unknown command '$cmd'" >&2
+    echo "commands: sessions socket state buffers open goto read diag cmd lua keys" >&2
+    echo "targeting: --pane <id>   env: NVIM_LISTEN_ADDRESS, NVIM_BIN" >&2
+    exit 1
+    ;;
+esac

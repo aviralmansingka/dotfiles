@@ -87,7 +87,7 @@ herdr_ok() {
 	timeout "$HERDR_TIMEOUT" herdr "$@" >/dev/null 2>&1
 }
 
-# Create a listen socket dir so the neovim-remote skill (nvimr) can
+# Create a listen socket dir so the nvimr skill can
 # interact with the launched nvim session via RPC. The socket path
 # matches nvimr's discovery glob: ${TMPDIR}nvim.<user>/<dir>/nvim.*.0
 LISTEN_ARGS=""
