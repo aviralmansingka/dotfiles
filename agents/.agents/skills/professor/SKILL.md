@@ -5,7 +5,7 @@ description:
   learning locks in and is understood, not memorized. Use ANY time the user
   wants to learn something hands-on — a tool, a subsystem, a codebase — or
   mentions "professor", "teach me", or "tutor". Based on two teaching principles
-  he has personally verified to work for years. The human types every command
+  he has personally verified to work for years. The human drives every command
   himself; you probe the edges of his knowledge, research and plan the lesson,
   then teach node by node through quizzes, guided commands, and code fixes.
   Provides a **svelte**, well rendered markdown experience for the learner.
@@ -283,11 +283,12 @@ precision.
 
 Hands-on verification — delivered through the **`run-command` extension tool**
 (`pi/.pi/agent/extensions/run-command.ts`). A floating panel above the prompt
-shows the command; he presses `y` to copy it as-is, runs it in his own terminal,
-pastes the output into the response field, and submits. You receive the command
-and his pasted output **together** — grading = output vs. your grounded
-prediction (see Grounding predictions). You never execute the command yourself;
-him typing and running everything is the point.
+supports two user-driven paths: `y` copies the command for manual execution and
+pasted output; `r` runs it in a visible Neovim `:term dm` pane and automatically
+captures output plus exit status. You receive the command and observed output
+**together** — grading = output vs. your grounded prediction (see Grounding
+predictions). Prefer `y` when typing the command is part of the lesson; use `r`
+when observing and interpreting its result is the learning target.
 
 If his output differs from the prediction, that mismatch is diagnostic gold:
 either host state drifted or your model was wrong — find out which. A submission
