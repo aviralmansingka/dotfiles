@@ -123,6 +123,7 @@ return {
         enabled = true,
         window = {
           border = "rounded",
+          treesitter_highlighting = true,
         },
       },
     },

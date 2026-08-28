@@ -78,6 +78,12 @@ return {
       { "<C-b>", false, mode = { "n", "i", "s" } },
     },
     opts = function(_, opts)
+      -- Disable noice's signature help. blink.cmp provides the sole
+      -- signature-help popup (tree-sitter highlighted, active-parameter
+      -- highlight). Without this, both noice and blink.cmp auto-trigger
+      -- on LSP trigger characters and render stacked duplicate floats.
+      opts.lsp = opts.lsp or {}
+      opts.lsp.signature = vim.tbl_deep_extend("force", opts.lsp.signature or {}, { enabled = false })
       opts.routes = opts.routes or {}
       table.insert(opts.routes, {
         filter = {
