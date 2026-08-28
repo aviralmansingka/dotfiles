@@ -66,7 +66,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 
 ### Highlighting
 
-- Treesitter parsers are ensured for bash, JSON, Lua, Markdown, Markdown inline, Python, query, regex, TypeScript, TSX, Vim, YAML, and TOML.
+- Treesitter parsers are ensured for bash, JSON, Lua, Markdown, Markdown inline, Python, query, regex, TypeScript, TSX, Vim, YAML, TOML, C, and C++.
 - Treesitter context shows code context after buffer read.
 - Treesitter context is capped at 3 lines.
 - Treesitter helps detect debug expressions under the cursor.
@@ -85,13 +85,14 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 
 ### Formatting
 
-- Format-on-save is enabled for Markdown, Python, Java, Lua, and Go.
+- Format-on-save is enabled for Markdown, Python, Java, Lua, Go, C, and C++.
 - LSP formatting fallback is disabled.
 - Default formatting timeout is 2 seconds.
 - Markdown formatting uses Prettier while preserving prose wrapping, then a custom visual-width rewrapper.
 - Lua formatting uses Stylua.
 - Java formatting uses Google Java Format.
 - Go formatting uses goimports followed by gofumpt.
+- C and C++ formatting uses clang-format (Mason-installed), respecting a project `.clang-format` when present and falling back to LLVM style otherwise.
 - Bazel and Starlark formatting uses buildifier.
 - Python formatting uses Ruff fix and Ruff format.
 - Python formatting prefers project-local `.venv/bin/ruff` when available.
@@ -133,6 +134,12 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Clangd support includes IWYU header insertion.
 - Clangd support includes detailed completion.
 - Clangd support includes placeholders and LLVM fallback style.
+- C and C++ language config is consolidated in `lua/plugins/c.lua`, which owns the LazyVim `lang.clangd` extra (previously split across `clangd.lua` and the import in `lazy.lua`).
+- A standalone `.c` file analyzes cleanly with no `compile_commands.json`; clangd's built-in fallback resolves glibc headers on Linux.
+- Switch source/header is available on `<leader>ch` (LazyVim clangd extra).
+- clangd inlay hints and semantic tokens use LazyVim's native LSP support (the configured clangd_extensions build has no inlay-hints feature, so there is no double-hint conflict).
+- clangd extensions expose `:ClangdAST` and `:ClangdTypeHierarchy`, mapped to `<leader>Ca` and `<leader>Ct` on C buffers.
+- CUDA `.cu` buffers notify once per session when full CUDA LSP is unavailable on the host (macOS Apple Silicon without a toolkit) and route to the homelab; diagnostics are not silenced.
 - Go language support is enabled.
 - Go root detection prefers nearest `go.mod`, then `go.work`, then `.git`.
 - Go root detection avoids accidentally selecting a monorepo parent when a lower module exists.
@@ -189,6 +196,7 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Python buffers have a project-scoped test-run-all keymap.
 - Java tests use neotest-java.
 - Java Gradle path handling is patched around an upstream neotest-java path bug.
+- C and C++ testing is project-driven (`make test`, `ctest`); no neotest adapter is wired, by design.
 - JDTLS and LazyVim Java test keymaps are removed so neotest is the sole Java test path.
 - JDTLS buffers have neotest nearest/all keymaps.
 - `<leader>tg` runs nearest Java tests through neotest.
@@ -198,6 +206,9 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 
 - nvim-dap, DAP UI, Mason-managed DAP integration, and Python DAP integration are available.
 - DAP virtual text is declared but disabled.
+- C and C++ debugging uses codelldb (LazyVim clangd extra) with Launch-file and Attach-to-process configs.
+- A `C: Build & Launch current file` DAP config compiles the current file (`cc -g -O0`) and launches codelldb on it.
+- C buffers have one-key build, run, and build-and-debug under the free `<leader>C` namespace (`<leader>Cb`, `<leader>Cr`, `<leader>Cd`) and commands `:Cbuild`, `:Crun`, `:Cdebug`.
 - DAP UI has customized icons, does not auto-open on session start, and toggles with `<leader>dt`.
 - DAP keymaps support continue, step into, step over, step out, close, expression eval, logs, and stringified yank.
 - DAP breakpoint toggle and step-back currently share `<localleader>b`, so the effective direct keymap is ambiguous.
