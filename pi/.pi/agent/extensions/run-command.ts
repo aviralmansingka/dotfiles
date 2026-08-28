@@ -63,7 +63,9 @@ const POLL_MS = 250;
 interface NvimRunResult {
 	output: string;
 	exitCode: number;
-	paneId: string;
+	// Present only for a pane we own and must close (the split fallback); the
+	// float path leaves the existing nvim pane open so paneId is undefined.
+	paneId?: string;
 }
 
 function abortError(signal: AbortSignal): Error {
@@ -143,18 +145,174 @@ async function waitForSocket(socket: string, signal: AbortSignal): Promise<void>
 	}
 }
 
-async function waitForTerminalJob(socket: string, signal: AbortSignal): Promise<void> {
+// Run a multi-statement lua chunk on the remote nvim and return its result.
+// `nvim --remote-expr` only evaluates a single vim expression, so we use the
+// `load(...)()` trick: the chunk source is passed as the arg and compiled +
+// executed, and whatever the chunk `return`s comes back as the expr result.
+// `bufId`/`winId` are trusted integers we inline directly (no _A plumbing).
+async function nvimLua(socket: string, chunk: string, signal: AbortSignal): Promise<string> {
+	return nvimExpr(socket, `luaeval("load(...)()", ${JSON.stringify(chunk)})`, signal);
+}
+
+async function nvimLive(socket: string, signal: AbortSignal): Promise<boolean> {
+	try {
+		await execText("nvim", ["--server", socket, "--remote-expr", "1"], signal, HERDR_TIMEOUT_MS);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+// Pull the `--listen <path>` RPC socket out of an nvim process's argv, handling
+// both `--listen /path` (separate arg) and `--listen=/path` (joined arg).
+function listenSocketFromArgv(argv: string[]): string | undefined {
+	for (let i = 0; i < argv.length; i++) {
+		const a = argv[i];
+		if (a === "--listen") return argv[i + 1];
+		if (a.startsWith("--listen=")) return a.slice("--listen=".length);
+	}
+	return undefined;
+}
+
+// nvim's default RPC socket when no `--listen` is passed (Linux/has-XDG_RUNTIME
+// only). On macOS nvim does not auto-open a socket, so this is a best-effort
+// fallback — the nvim skill's launcher always passes `--listen` explicitly.
+function defaultNvimSocketForPid(pid: number | string | undefined): string | undefined {
+	if (pid === undefined || pid === null) return undefined;
+	const runtime = process.env.XDG_RUNTIME_DIR ?? (process.getuid ? `/run/user/${process.getuid()}` : undefined);
+	return runtime ? `${runtime}/nvim.${pid}.0` : undefined;
+}
+
+async function waitForTerminalJob(socket: string, bufId: number, signal: AbortSignal): Promise<void> {
 	const deadline = Date.now() + NVIM_START_TIMEOUT_MS;
 	while (Date.now() <= deadline) {
-		const job = await nvimExpr(socket, "exists('b:terminal_job_id') ? b:terminal_job_id : 0", signal).catch(() => "0");
+		const job = await nvimLua(
+			socket,
+			`local ok, j = pcall(vim.api.nvim_buf_get_var, ${bufId}, 'terminal_job_id'); return (ok and j) and j or 0`,
+			signal,
+		).catch(() => "0");
 		if (Number.parseInt(job.trim(), 10) > 0) return;
 		await sleep(POLL_MS, signal);
 	}
 	throw new Error("Timed out waiting for `:term dm` terminal job");
 }
 
-async function readNvimBuffer(socket: string, signal: AbortSignal): Promise<string> {
-	return nvimExpr(socket, luaEval('table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\\n")'), signal);
+async function readNvimBuffer(socket: string, bufId: number, signal: AbortSignal): Promise<string> {
+	return nvimLua(socket, `return table.concat(vim.api.nvim_buf_get_lines(${bufId}, 0, -1, false), "\n")`, signal);
+}
+
+// Find an already-open nvim the captain can see (e.g. a `/nvim` split in this
+// tab) and return its RPC socket. Preference order: the `NVIM_LISTEN_ADDRESS`
+// env override, then a Herdr pane whose foreground process is nvim — focused
+// pane first, then a pane in the agent's own tab, then any other. Returns null
+// when no drivable nvim is open, so the caller falls back to a fresh split.
+async function discoverExistingNvim(signal: AbortSignal): Promise<{ socket: string; paneId?: string } | null> {
+	const envSock = process.env.NVIM_LISTEN_ADDRESS;
+	if (envSock && existsSync(envSock) && (await nvimLive(envSock, signal))) return { socket: envSock };
+
+	const current = await herdrJson(["pane", "current"], signal);
+	const myTab = current?.result?.pane?.tab_id;
+	const list = await herdrJson(["pane", "list"], signal);
+	const panes: any[] = Array.isArray(list?.result?.panes) ? list.result.panes : [];
+	if (panes.length === 0) return null;
+	// focused first, then same-tab, then everything else.
+	const ranked = [...panes].sort((a, b) => {
+		const f = Number(b?.focused ? 1 : 0) - Number(a?.focused ? 1 : 0);
+		if (f !== 0) return f;
+		return Number(a?.tab_id === myTab ? 0 : 1) - Number(b?.tab_id === myTab ? 0 : 1);
+	});
+	for (const pane of ranked) {
+		const paneId: string | undefined = pane?.pane_id;
+		if (!paneId) continue;
+		const info = await herdrJson(["pane", "process-info", "--pane", paneId], signal);
+		const procs: any[] = Array.isArray(info?.result?.process_info?.foreground_processes) ? info.result.process_info.foreground_processes : [];
+		for (const proc of procs) {
+			if (String(proc?.name ?? "") !== "nvim") continue;
+			const argv: string[] = Array.isArray(proc?.argv) ? proc.argv.map(String) : [];
+			const sock = listenSocketFromArgv(argv) ?? defaultNvimSocketForPid(proc?.pid);
+			if (sock && existsSync(sock) && (await nvimLive(sock, signal))) return { socket: sock, paneId };
+		}
+	}
+	return null;
+}
+
+interface TerminalHandle {
+	socket: string;
+	bufId: number;
+	paneId?: string; // present only for a pane we own and must close (split fallback)
+	cleanup: () => Promise<void>;
+}
+
+// Fallback path (no existing nvim open): split a new Herdr pane to the right
+// and launch a fresh `nvim +term dm` in it, exactly as before. Output still
+// streams live via the shared `tee` wrapper.
+async function openSplitPaneTerminal(cwd: string, signal: AbortSignal): Promise<TerminalHandle> {
+	// Keep the RPC socket path short: UNIX domain sockets cap at ~103 bytes
+	// (sun_path[104] minus NUL), and macOS' /var/folders/.../T tmpdir is already
+	// ~48 bytes, so a `pi-run-command-<uuid>.sock` name blows the limit and
+	// `nvim --listen` silently fails to create the socket. Use a short prefix
+	// and a hyphen-less hex token so the full path stays well under the cap.
+	const socket = `${tmpdir()}/pi-rc-${randomUUID().replace(/-/g, "")}.sock`;
+	const split = await herdrJson(["pane", "split", "--current", "--direction", "right", "--cwd", cwd, "--focus"], signal);
+	const paneId = split?.result?.pane?.pane_id;
+	if (!paneId) throw new Error("Could not open a Herdr pane for Neovim");
+	const launched = await herdrOk(["pane", "run", paneId, "nvim", "--listen", socket, "-n", "+term dm", "+startinsert"], signal);
+	if (!launched) throw new Error("Could not launch Neovim in the new pane");
+	await waitForSocket(socket, signal);
+	const bufId = Number.parseInt((await nvimExpr(socket, "bufnr('%')", signal)).trim(), 10);
+	if (!Number.isFinite(bufId)) throw new Error("Could not resolve the Neovim terminal buffer");
+	return {
+		socket,
+		bufId,
+		paneId,
+		cleanup: async () => {
+			await herdrOk(["pane", "close", paneId], new AbortController().signal).catch(() => false);
+		},
+	};
+}
+
+// Preferred path: open a centered floating terminal inside an already-open
+// nvim (the captain's `/nvim` split) over its RPC socket. The float shows the
+// command output streaming live via `tee`; we close the float + wipe its
+// scratch buffer on completion. The existing nvim pane itself is never closed.
+async function openFloatTerminal(socket: string, _cwd: string, signal: AbortSignal): Promise<TerminalHandle> {
+	// Create a scratch buffer, open a centered float over it, and `termopen dm`
+	// in that buffer. `nvim_open_win(buf, true, …)` makes the float the current
+	// window so `termopen` (which always uses the current buffer) runs in buf.
+	// Return a `job|win|buf` string so the caller can target the exact terminal
+	// job/buffer regardless of where the captain later moves focus. (luaeval
+	// surfaces only the first return value of a chunk, so we join into one
+	// string rather than returning a multi-value/tuple.)
+	const chunk = [
+		"local cols = vim.o.columns",
+		"local lines = vim.o.lines",
+		"local width = math.floor(cols * 0.8)",
+		"local height = math.floor(lines * 0.6)",
+		"local row = math.floor((lines - height) / 2)",
+		"local col = math.floor((cols - width) / 2)",
+		"local buf = vim.api.nvim_create_buf(false, true)",
+		"vim.bo[buf].bufhidden = 'wipe'",
+		"local win = vim.api.nvim_open_win(buf, true, {relative='editor', width=width, height=height, row=row, col=col, border='rounded', title=' run-command ', title_pos='center', style='minimal'})",
+		"vim.fn.termopen({'dm'})",
+		"local ok, j = pcall(vim.api.nvim_buf_get_var, buf, 'terminal_job_id')",
+		"return tostring((ok and j) and j or 0) .. '|' .. tostring(win) .. '|' .. tostring(buf)",
+	].join("\n");
+	const out = await nvimLua(socket, chunk, signal);
+	const parts = out.trim().split("|");
+	const win = Number.parseInt(parts[1] ?? "", 10);
+	const buf = Number.parseInt(parts[2] ?? "", 10);
+	if (!Number.isFinite(buf)) throw new Error("Could not open a floating terminal in the existing Neovim");
+	return {
+		socket,
+		bufId: buf,
+		cleanup: async () => {
+			const lua = [
+				`if vim.api.nvim_win_is_valid(${win}) then vim.api.nvim_win_close(${win}, true) end`,
+				`if vim.api.nvim_buf_is_valid(${buf}) then vim.api.nvim_buf_delete(${buf}, {force=true, unload=true}) end`,
+			].join("\n");
+			await nvimLua(socket, lua, new AbortController().signal).catch(() => false);
+		},
+	};
 }
 
 async function runViaNvimTerminal(
@@ -165,38 +323,42 @@ async function runViaNvimTerminal(
 ): Promise<NvimRunResult> {
 	const timeout = withTimeout(signal, NVIM_RUN_TIMEOUT_MS);
 	const runSignal = timeout.signal;
-	let paneId: string | undefined;
-	// Keep the RPC socket path short: UNIX domain sockets cap at ~103 bytes
-	// (sun_path[104] minus NUL), and macOS' /var/folders/.../T tmpdir is already
-	// ~48 bytes, so a `pi-run-command-<uuid>.sock` name blows the limit and
-	// `nvim --listen` silently fails to create the socket. Use a short prefix
-	// and a hyphen-less hex token so the full path stays well under the cap.
-	const socket = `${tmpdir()}/pi-rc-${randomUUID().replace(/-/g, "")}.sock`;
 	const token = randomUUID().replace(/-/g, "");
-	// Capture command stdout+stderr to a temp file and read it back via fs once
-	// the END marker fires. We do not scrape the echoed terminal buffer for
-	// output: the terminal driver echoes the bulk-pasted wrapper before the
-	// shell runs it, so buffer scraping corrupts the captured text.
+	// Capture command stdout+stderr to a temp file (via `tee`, so output is also
+	// visible live in the terminal) and read it back via fs once the END marker
+	// fires. We do not scrape the echoed terminal buffer for output: the
+	// terminal driver echoes the bulk-pasted wrapper before the shell runs it,
+	// so buffer scraping corrupts the captured text. `statusFile` holds the
+	// command's real exit code (see buildNvimTerminalScript).
 	const outputFile = `${tmpdir()}/pi-rc-out-${token}.txt`;
+	const statusFile = `${tmpdir()}/pi-rc-st-${token}.txt`;
+	let handle: TerminalHandle | undefined;
 	try {
-		onProgress("Opening Neovim terminal pane…");
-		const split = await herdrJson(["pane", "split", "--current", "--direction", "right", "--cwd", cwd, "--focus"], runSignal);
-		paneId = split?.result?.pane?.pane_id;
-		if (!paneId) throw new Error("Could not open a Herdr pane for Neovim");
-		const launched = await herdrOk(["pane", "run", paneId, "nvim", "--listen", socket, "-n", "+term dm", "+startinsert"], runSignal);
-		if (!launched) throw new Error("Could not launch Neovim in the new pane");
+		onProgress("Finding a Neovim to run in…");
+		const existing = await discoverExistingNvim(runSignal);
+		if (existing) {
+			onProgress("Opening floating terminal in existing Neovim…");
+			handle = await openFloatTerminal(existing.socket, cwd, runSignal);
+		} else {
+			onProgress("Opening Neovim terminal pane…");
+			handle = await openSplitPaneTerminal(cwd, runSignal);
+		}
 
 		onProgress("Starting `:term dm`…");
-		await waitForSocket(socket, runSignal);
-		await waitForTerminalJob(socket, runSignal);
+		await waitForTerminalJob(handle.socket, handle.bufId, runSignal);
 
 		onProgress("Running command in the Neovim terminal…");
-		const script = buildNvimTerminalScript(command, token, outputFile);
-		await nvimExpr(socket, luaEval("vim.api.nvim_chan_send(vim.b.terminal_job_id, _A)", script), runSignal);
+		const script = buildNvimTerminalScript(command, token, outputFile, statusFile);
+		// Target the float/split's own terminal job by buffer so a focus change
+		// in the existing nvim can't misroute the pasted wrapper. luaeval's first
+		// arg must be a single expression (no statements/`local`), so resolve the
+		// job inline and pass the script text as `_A`.
+		const sendExpr = `vim.api.nvim_chan_send(vim.api.nvim_buf_get_var(${handle.bufId}, 'terminal_job_id'), _A)`;
+		await nvimExpr(handle.socket, luaEval(sendExpr, script), runSignal);
 
 		onProgress(`Waiting for output (timeout ${NVIM_RUN_TIMEOUT_MS / 1000}s)…`);
 		while (true) {
-			const parsed = extractMarkedOutput(await readNvimBuffer(socket, runSignal), token);
+			const parsed = extractMarkedOutput(await readNvimBuffer(handle.socket, handle.bufId, runSignal), token);
 			if (parsed.complete) {
 				let output = "";
 				try {
@@ -204,14 +366,15 @@ async function runViaNvimTerminal(
 				} catch {
 					output = "";
 				}
-				return { output: output.trim(), exitCode: parsed.exitCode ?? -1, paneId };
+				return { output: output.trim(), exitCode: parsed.exitCode ?? -1, paneId: handle.paneId };
 			}
 			await sleep(POLL_MS, runSignal);
 		}
 	} finally {
 		timeout.cleanup();
-		if (paneId) await herdrOk(["pane", "close", paneId], new AbortController().signal).catch(() => false);
+		if (handle) await handle.cleanup().catch(() => {});
 		rmSync(outputFile, { force: true });
+		rmSync(statusFile, { force: true });
 	}
 }
 
