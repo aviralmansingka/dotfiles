@@ -10,8 +10,11 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { openEditor } from "./nvim-open";
-import { contextFileHint, normalizeContextFiles } from "./user-input/context-files";
+import { contextFileHint, handoutHint, normalizeContextFiles } from "./user-input/context-files";
 import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
 import { joinHints, numberShortcutHint, numberShortcutIndex } from "./user-input/option-shortcuts";
 
@@ -155,6 +158,186 @@ async function openContextFiles(ctx: any, files: string[]): Promise<void> {
 	if (files.length === 0) return;
 	const result = await openEditor(ctx?.cwd ?? process.cwd(), files);
 	ctx?.ui?.notify?.(result.message, "info");
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// `h` handout — LLM-generated teaching handout for the active quiz.
+//
+// Pressing `h` mid-quiz (steering mode) generates a deeper explanation of
+// the quiz's core concepts via ctx.modelRegistry.complete (the same grader
+// fork pattern explain.ts uses), writes it to ~/.cache/pi/quiz-handout.md,
+// and opens that file in vim. The quiz itself stays active and ungraded —
+// this is the captain's explicit choice to read more, never an answer leak.
+// On model-unavailable or call failure we notify and keep the quiz running.
+// ────────────────────────────────────────────────────────────────────────
+
+const HANDOUT_SYSTEM_PROMPT = `You are a patient technical teacher. The user is taking a short multiple-choice quiz and has asked for a HANDOUT that explains the quiz's core concepts in more depth than the quiz's own one-line explanation.
+
+Write a teaching handout in clean Markdown. Cover:
+- The core concept(s) the question is testing, explained from first principles.
+- Why the correct answer is correct — name the precise mechanism or terminology.
+- For each distractor, why it is plausible-but-wrong: the specific misconception it trades on, and how it differs from the correct answer.
+- A short worked example or analogy if it clarifies the mechanism.
+- A one-line takeaway the reader should remember.
+
+Rules:
+- Be concrete and precise. Use the exact terminology the correct answer relies on.
+- Go deeper than the quiz's explanation field — that field is a one-liner; this is the handout.
+- Output ONLY Markdown. No preamble like "Here is the handout:". Start with a top-level # heading.
+- Do not reveal which option number was correct by position; refer to answers by their labels.`;
+
+// Prefer a fast, cheap model for handout generation (mirrors explain.ts's
+// pickGraderModel). Override with PI_QUIZ_HANDOUT_MODEL="provider/model-id".
+function pickHandoutModel(ctx: any): any {
+	const override = process.env.PI_QUIZ_HANDOUT_MODEL;
+	if (override) {
+		const slash = override.indexOf("/");
+		const m = slash > 0 ? ctx.modelRegistry.find(override.slice(0, slash), override.slice(slash + 1)) : undefined;
+		if (m) return m;
+	}
+	for (const [provider, id] of [
+		["fireworks", "glm-fast-latest"],
+		["anthropic", "claude-haiku-4-5"],
+		["openai", "gpt-4o-mini"],
+		["google", "gemini-2.5-flash"],
+		["fireworks", "deepseek-v4-flash-0731"],
+	] as const) {
+		const m = ctx.modelRegistry.find(provider, id);
+		if (m && (!ctx.modelRegistry.hasConfiguredAuth || ctx.modelRegistry.hasConfiguredAuth(m))) return m;
+	}
+	return ctx.model;
+}
+
+function handoutPath(): string {
+	const cache = process.env.PI_QUIZ_HANDOUT_PATH;
+	if (cache) return cache;
+	return resolve(homedir(), ".cache/pi/quiz-handout.md");
+}
+
+function buildHandoutPrompt(
+	question: string,
+	context: string | undefined,
+	options: QuizOption[],
+	correctIndices: number[],
+	explanation: string | undefined,
+	contextFileContents: Array<{ path: string; content: string }>,
+): string {
+	const lines: string[] = [];
+	lines.push(`Quiz question:`);
+	lines.push(question);
+	if (context) {
+		lines.push("");
+		lines.push(`Extra context shown to the learner:`);
+		lines.push(context);
+	}
+	lines.push("");
+	lines.push(`Answer options (label + description):`);
+	for (let i = 0; i < options.length; i++) {
+		const opt = options[i];
+		const desc = opt.description ? ` — ${opt.description}` : "";
+		lines.push(`- ${opt.label}${desc}`);
+	}
+	lines.push("");
+	const correctLabels = correctIndices.map((idx) => options[idx - 1]?.label ?? `(option ${idx})`);
+	lines.push(`Correct answer label(s): ${correctLabels.join(", ")}`);
+	if (explanation) {
+		lines.push("");
+		lines.push(`Quiz's own one-line explanation (go deeper than this in the handout):`);
+		lines.push(explanation);
+	}
+	if (contextFileContents.length > 0) {
+		lines.push("");
+		lines.push(`Reference material (from the quiz's context files) — use as grounding:`);
+		for (const ref of contextFileContents) {
+			lines.push("");
+			lines.push(`### ${ref.path}`);
+			lines.push(ref.content);
+		}
+	}
+	return lines.join("\n");
+}
+
+async function generateHandout(
+	ctx: any,
+	signal: AbortSignal | undefined,
+	question: string,
+	context: string | undefined,
+	options: QuizOption[],
+	correctIndices: number[],
+	explanation: string | undefined,
+	contextFiles: string[],
+): Promise<{ message: string }> {
+	if (!ctx?.modelRegistry?.complete) {
+		return { message: "handout unavailable: no model registry" };
+	}
+	const model = pickHandoutModel(ctx);
+	if (!model) {
+		return { message: "handout unavailable: no model" };
+	}
+
+	const cwd = ctx?.cwd ?? process.cwd();
+	const contextFileContents: Array<{ path: string; content: string }> = [];
+	for (const file of contextFiles) {
+		const abs = isAbsolute(file) ? file : resolve(cwd, file);
+		try {
+			const content = readFileSync(abs, "utf-8");
+			contextFileContents.push({ path: file, content });
+		} catch {
+			// best-effort: skip unreadable context files
+		}
+	}
+
+	const prompt = buildHandoutPrompt(question, context, options, correctIndices, explanation, contextFileContents);
+	let raw: string;
+	try {
+		const response = await ctx.modelRegistry.complete(
+			model,
+			{
+				systemPrompt: HANDOUT_SYSTEM_PROMPT,
+				messages: [{ role: "user", content: prompt, timestamp: Date.now() } as any],
+			},
+			{ signal, maxTokens: 2000, temperature: 0.2, reasoning: "medium" } as any,
+		);
+		raw = response.content
+			.filter((c: any) => c.type === "text")
+			.map((c: any) => c.text)
+			.join("\n");
+	} catch (err: any) {
+		if (signal?.aborted) return { message: "handout generation aborted" };
+		return { message: `handout generation failed: ${err?.message ?? String(err)}` };
+	}
+	if (!raw.trim()) {
+		return { message: "handout generation failed: model returned empty output" };
+	}
+
+	const path = handoutPath();
+	try {
+		mkdirSync(dirname(path), { recursive: true });
+		writeFileSync(path, raw, "utf-8");
+	} catch (err: any) {
+		return { message: `handout write failed: ${err?.message ?? String(err)}` };
+	}
+
+	const result = await openEditor(cwd, [path]);
+	return { message: `handout generated and opened in vim (${path}); ${result.message}` };
+}
+
+// Fire-and-forget wrapper used by the `h` keypress: shows a working notify,
+// runs the generation, and notifies the outcome. Never throws into the quiz.
+function requestHandout(
+	ctx: any,
+	signal: AbortSignal | undefined,
+	question: string,
+	context: string | undefined,
+	options: QuizOption[],
+	correctIndices: number[],
+	explanation: string | undefined,
+	contextFiles: string[],
+): void {
+	ctx?.ui?.notify?.("Generating handout…", "info");
+	void generateHandout(ctx, signal, question, context, options, correctIndices, explanation, contextFiles)
+		.then((res) => ctx?.ui?.notify?.(res.message, res.message.startsWith("handout generated") ? "info" : "warning"))
+		.catch((err) => ctx?.ui?.notify?.(`handout generation failed: ${err?.message ?? String(err)}`, "warning"));
 }
 
 // Fisher-Yates shuffle over a copy. Safe to reorder for display because
@@ -528,6 +711,7 @@ function modeIndicator(theme: any, mode: InputMode): string {
 
 async function askSingleChoice(
 	ctx: any,
+	signal: AbortSignal | undefined,
 	question: string,
 	context: string | undefined,
 	contextFiles: string[],
@@ -636,6 +820,11 @@ async function askSingleChoice(
 					return;
 				}
 
+				if (data === "h") {
+					requestHandout(ctx, signal, question, context, options, correctIndices, explanation, contextFiles);
+					return;
+				}
+
 				const shortcutIndex = numberShortcutIndex(data, allOptions.length);
 				if (shortcutIndex !== undefined) {
 					const selected = allOptions[shortcutIndex];
@@ -727,7 +916,7 @@ async function askSingleChoice(
 				} else if (mode === "follow-up") {
 					add(theme.fg("dim", ` ${modeIndicator(theme, mode)} • type a follow-up (Enter sends, ends quiz) • Ctrl+J newline • Tab → steering • Esc back`));
 				} else {
-					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), "↑↓ navigate", numberShortcutHint(allOptions.length, "answer"), "Enter answer", contextFileHint(contextFiles), "Tab → note", "Esc cancel")}`));
+					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), "↑↓ navigate", numberShortcutHint(allOptions.length, "answer"), "Enter answer", contextFileHint(contextFiles), handoutHint(), "Tab → note", "Esc cancel")}`));
 				}
 
 				if (mode === "note") {
@@ -761,6 +950,7 @@ async function askSingleChoice(
 
 async function askMultiChoice(
 	ctx: any,
+	signal: AbortSignal | undefined,
 	question: string,
 	context: string | undefined,
 	contextFiles: string[],
@@ -906,6 +1096,11 @@ async function askMultiChoice(
 					return;
 				}
 
+				if (data === "h") {
+					requestHandout(ctx, signal, question, context, options, correctIndices, explanation, contextFiles);
+					return;
+				}
+
 				const shortcutIndex = numberShortcutIndex(data, choiceItems.length);
 				if (shortcutIndex !== undefined) {
 					optionIndex = shortcutIndex;
@@ -1017,7 +1212,7 @@ async function askMultiChoice(
 				} else if (mode === "follow-up") {
 					add(theme.fg("dim", ` ${modeIndicator(theme, mode)} • type a follow-up (Enter sends, ends quiz) • Ctrl+J newline • Tab → steering • Esc back`));
 				} else {
-					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), "↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter submit", contextFileHint(contextFiles), "Tab → note", "Esc cancel")}`));
+					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), "↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter submit", contextFileHint(contextFiles), handoutHint(), "Tab → note", "Esc cancel")}`));
 				}
 
 				if (mode === "note") {
@@ -1088,7 +1283,7 @@ export default function quiz(pi: ExtensionAPI) {
 		name: "quiz",
 		label: "quiz",
 		description:
-			"Ask the user a GRADED question with a known correct answer, then instantly grade and give feedback. Unlike ask_user_question (which collects preferences/decisions with no right answer), quiz always has a correct answer supplied by you, marks the user's selection right/wrong (✓/✗), reveals the correct answer, and can show an explanation. Use it to (1) assess what the learner already understands before teaching, and (2) run tight practice/retrieval loops after explaining, or probe understanding whenever you're unsure they've got it. Options-only: single-select or multi-select, plus an automatic 'I don't know' choice so the user can signal a genuine gap instead of guessing. While a quiz is open, Tab cycles three input modes shown in a visible indicator: steering (options focused — navigate/answer/open context files, question stays visible), note (free-text that attaches to the answer, for 'I don't know' context), and follow-up (a message that ends the quiz and returns to you as `followUp`). The note reaches you only when non-empty. No free-text answers — for non-graded questions use ask_user_question instead.",
+			"Ask the user a GRADED question with a known correct answer, then instantly grade and give feedback. Unlike ask_user_question (which collects preferences/decisions with no right answer), quiz always has a correct answer supplied by you, marks the user's selection right/wrong (✓/✗), reveals the correct answer, and can show an explanation. Use it to (1) assess what the learner already understands before teaching, and (2) run tight practice/retrieval loops after explaining, or probe understanding whenever you're unsure they've got it. Options-only: single-select or multi-select, plus an automatic 'I don't know' choice so the user can signal a genuine gap instead of guessing. While a quiz is open, Tab cycles three input modes shown in a visible indicator: steering (options focused — navigate/answer/open context files, generate a handout, question stays visible), note (free-text that attaches to the answer, for 'I don't know' context), and follow-up (a message that ends the quiz and returns to you as `followUp`). The note reaches you only when non-empty. No free-text answers — for non-graded questions use ask_user_question instead.",
 		promptSnippet:
 			"Use the quiz tool to test the user with a graded multiple-choice or multi-select question (required correct answer + required explanation). For non-graded questions, use ask_user_question.",
 		promptGuidelines: [
@@ -1107,6 +1302,7 @@ export default function quiz(pi: ExtensionAPI) {
 			"Set multiSelect: true only when more than one option is correct.",
 			"Options are shuffled before display by default, so don't worry about which position you list the correct answer in. Set shuffle: false only when option order is meaningful (ordered values, or an 'All/None of the above' option that must stay last).",
 			"When a quiz needs file context, pass `contextFiles: [\"path/to/file\"]`; the user can press `o` to open those files in vim while the quiz stays active.",
+			"Mid-quiz, the user can press `h` to generate an LLM-written teaching handout that explains the quiz's core concepts in more depth than the `explanation` field, and open it in vim; the quiz stays active and ungraded. This is the user's choice and never leaks the answer before they answer.",
 			"To probe nuance, ask several quick quiz questions and adapt each one based on the previous answers, rather than writing one giant question.",
 			"Don't leak the answer through formatting: keep option phrasing/length even and don't hint which is correct.",
 		],
@@ -1172,8 +1368,8 @@ export default function quiz(pi: ExtensionAPI) {
 			return withUILock(async () => {
 				const response =
 					mode === "single-select"
-						? await askSingleChoice(ctx, params.question, context, contextFiles, options, correctIndices, explanation)
-						: await askMultiChoice(ctx, params.question, context, contextFiles, options, correctIndices, explanation);
+						? await askSingleChoice(ctx, signal, params.question, context, contextFiles, options, correctIndices, explanation)
+						: await askMultiChoice(ctx, signal, params.question, context, contextFiles, options, correctIndices, explanation);
 				if (!response) {
 					return cancelledResult(params.question, mode, correctIndices, context);
 				}
