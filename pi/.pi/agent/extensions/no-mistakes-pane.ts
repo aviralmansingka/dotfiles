@@ -1,15 +1,19 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { Text } from "@earendil-works/pi-tui";
-import { execFile, execFileSync } from "node:child_process";
+import { execFile, execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import {
+	buildAttachScript,
+	buildBackgroundScript,
 	buildPaneScript,
 	extractMarkedOutput,
+	hasStartMarker,
 	NM_PANE_TIMEOUT_MS,
+	wantsTuiPane,
 } from "./no-mistakes-pane/capture";
 
 // ---------------------------------------------------------------------------
@@ -108,6 +112,77 @@ function launchNmPane(cwd: string, scriptFile: string, label: string): string | 
 function cancelPane(paneId: string): void {
 	herdrOkSync(["pane", "send-text", paneId, "\x03"]);
 	herdrOkSync(["pane", "close", paneId]);
+}
+
+/** Cached result of `no-mistakes attach --help` — true when this no-mistakes
+ *  build has the `attach` subcommand at all. Help is a local cobra call that
+ *  does not touch the daemon run state, so checking it is daemon-safe. */
+let attachAvailableCache: boolean | undefined;
+function attachAvailable(): boolean {
+	if (attachAvailableCache !== undefined) return attachAvailableCache;
+	try {
+		execFileSync("no-mistakes", ["attach", "--help"], {
+			timeout: HERDR_TIMEOUT_MS,
+			stdio: ["pipe", "pipe", "pipe"],
+		});
+		attachAvailableCache = true;
+	} catch {
+		attachAvailableCache = false;
+	}
+	return attachAvailableCache;
+}
+
+/** Spawn a detached background bash script (the axi capture driver) that
+ *  survives this tool call. Returns its process-group pid for cleanup, or
+ *  null if the spawn failed. */
+function spawnBackground(scriptFile: string, cwd: string): number | null {
+	try {
+		const child = spawn("bash", [scriptFile], {
+			cwd,
+			detached: true,
+			stdio: "ignore",
+		});
+		child.unref();
+		return child.pid ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/** Send SIGINT to the background script's process group (mirrors the Ctrl-C
+ *  the text pane sends to an in-pane axi run), then best-effort kill the pid.
+ *  This disconnects the axi client; it never restarts the shared daemon. */
+function killBackground(pid: number): void {
+	try {
+		process.kill(-pid, "SIGINT");
+	} catch {
+		/* process group may already be gone */
+	}
+	try {
+		process.kill(pid, "SIGINT");
+	} catch {
+		/* pid may already be gone */
+	}
+}
+
+/** Poll the capture file for the START marker so we know the background axi
+ *  run actually began (and did not fail to spawn) before we attach a TUI to
+ *  it. Bounded by `timeoutMs` so a spawn failure falls back quickly. */
+async function waitForStart(
+	outFile: string,
+	token: string,
+	timeoutMs: number,
+	signal: AbortSignal,
+): Promise<boolean> {
+	const deadline = Date.now() + timeoutMs;
+	while (true) {
+		if (signal.aborted) return false;
+		if (existsSync(outFile) && hasStartMarker(readFileSync(outFile, "utf-8"), token)) {
+			return true;
+		}
+		if (Date.now() >= deadline) return false;
+		await sleep(POLL_MS, signal).catch(() => {});
+	}
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -214,6 +289,105 @@ async function runNmInlineSafe(
 	}
 }
 
+/** Attach-pane retry budget: 240 tries × 0.5s = up to 2min of startup-race
+ *  retries. Once `no-mistakes attach` attaches it blocks for the whole run
+ *  (up to NM_PANE_TIMEOUT_MS), so the loop count only advances on failed
+ *  attach attempts, not while the TUI is live. */
+const ATTACH_MAX_TRIES = 240;
+const ATTACH_INTERVAL_SEC = "0.5";
+/** How long to wait for the background axi run to print its START marker
+ *  before deciding the spawn failed and falling back to the text pane. */
+const START_WAIT_MS = 3000;
+
+type TuiPaneOutcome =
+	| { fallback: true }
+	| { result: PaneRunResult; cancelled?: boolean; message?: string };
+
+/**
+ * TUI-pane path (run/respond): run `no-mistakes axi <args>` detached in the
+ * background so it drives the daemon run and captures the TOON to a marked
+ * temp file, while `no-mistakes attach` runs in the visible Herdr pane so the
+ * captain watches the rich TUI of that same run. Returns the captured result
+ * (same shape as the text pane), or `{ fallback: true }` when the background
+ * run could not start or the pane could not be opened — in which case the
+ * caller falls back to the current text-pane behavior. Never restarts the
+ * shared daemon; on timeout/abort only the detached axi client is signaled.
+ */
+async function runTuiPane(
+	args: string[],
+	subcommand: string,
+	cwd: string,
+	signal: AbortSignal,
+	timeoutMs: number,
+): Promise<TuiPaneOutcome> {
+	const token = randomUUID().replace(/-/g, "");
+	const outFile = `${tmpdir()}/pi-nm-${token}.out`;
+	const errFile = `${tmpdir()}/pi-nm-${token}.err`;
+	const doneFile = `${tmpdir()}/pi-nm-${token}.done`;
+	const bgScript = `${tmpdir()}/pi-nm-${token}.bg.sh`;
+	const attachScript = `${tmpdir()}/pi-nm-${token}.attach.sh`;
+	writeFileSync(outFile, "");
+	writeFileSync(bgScript, buildBackgroundScript(args, token, outFile, errFile, doneFile));
+	writeFileSync(attachScript, buildAttachScript(doneFile, ATTACH_MAX_TRIES, ATTACH_INTERVAL_SEC));
+
+	const bgPid = spawnBackground(bgScript, cwd);
+	if (!bgPid) {
+		unlinkSafe(outFile);
+		unlinkSafe(bgScript);
+		unlinkSafe(attachScript);
+		return { fallback: true };
+	}
+
+	// Wait for the background axi run to begin before attaching the TUI, so
+	// `no-mistakes attach` finds an active run to attach to.
+	const started = await waitForStart(outFile, token, START_WAIT_MS, signal);
+	if (!started) {
+		killBackground(bgPid);
+		unlinkSafe(outFile);
+		unlinkSafe(errFile);
+		unlinkSafe(doneFile);
+		unlinkSafe(bgScript);
+		unlinkSafe(attachScript);
+		return { fallback: true };
+	}
+
+	const paneId = launchNmPane(cwd, attachScript, `attach ${subcommand}`);
+	if (!paneId) {
+		killBackground(bgPid);
+		unlinkSafe(outFile);
+		unlinkSafe(errFile);
+		unlinkSafe(doneFile);
+		unlinkSafe(bgScript);
+		unlinkSafe(attachScript);
+		return { fallback: true };
+	}
+
+	try {
+		const r = await pollNmPane(outFile, token, paneId, signal, timeoutMs);
+		if (r.timedOut) {
+			cancelPane(paneId);
+			killBackground(bgPid);
+		}
+		return { result: r };
+	} catch (err) {
+		cancelPane(paneId);
+		killBackground(bgPid);
+		const partial = partialOutput(outFile, token);
+		return {
+			result: { output: partial, exitCode: -1, paneId, timedOut: false },
+			cancelled: true,
+			message: err instanceof Error ? err.message : "cancelled",
+		};
+	} finally {
+		unlinkSafe(outFile);
+		unlinkSafe(errFile);
+		unlinkSafe(doneFile);
+		unlinkSafe(bgScript);
+		unlinkSafe(attachScript);
+		herdrOkSync(["pane", "close", paneId]);
+	}
+}
+
 // ---------------------------------------------------------------------------
 // quote-aware argument parsing (so the agent can pass --intent "long string")
 // ---------------------------------------------------------------------------
@@ -288,12 +462,12 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		name: "no_mistakes_axi",
 		label: "no-mistakes (visible pane)",
 		description:
-			"Run a `no-mistakes axi` subcommand (run/respond/status/logs/abort/sync) in a visible Herdr pane beside the agent pane, live, and return the structured TOON result the agent drives the gate on. Use this INSTEAD of running `no-mistakes axi` in the bash tool so the captain can watch the pipeline run. The pane shows progress live; the agent receives the same TOON (findings, gate, outcome, branch_sync, help) it would have read from bash stdout, plus the exit code. Falls back to an inline run when no TUI/Herdr is available.",
+			"Drive a `no-mistakes axi` subcommand (run/respond/status/logs/abort/sync) and return the structured TOON result the agent drives the gate on. Use this INSTEAD of running `no-mistakes axi` in the bash tool so the captain can watch the pipeline. For `run`/`respond`, the visible Herdr pane shows the rich `no-mistakes` TUI (`no-mistakes attach`) of the same daemon run the axi call is driving; for quick inspections (status/logs/sync/abort) the pane shows the raw axi text. In either case the agent receives the same structured TOON (findings, gate, outcome, branch_sync, help) plus the exit code, and drives the gate exactly as if it had read bash stdout. Falls back to the current text pane when `attach` is unavailable, and to an inline run when no TUI/Herdr is available.",
 		promptSnippet:
 			"Use no_mistakes_axi (not bash) to drive every no-mistakes axi call so the run is visible in a Herdr pane beside the agent.",
 		promptGuidelines: [
 			"Pass `args` = everything after `no-mistakes axi` (e.g. `run --intent \"...\"`, `respond --action fix --findings r1`, `status`). Quote multi-word values.",
-			"The command opens in a Herdr pane to the right of the agent and runs visibly; you still receive the structured TOON result to drive the gate (read every return; on a gate:, respond; loop until an outcome:).",
+			"The command opens in a Herdr pane to the right of the agent and runs visibly; for `run`/`respond` the pane shows the `no-mistakes` TUI (`no-mistakes attach`), and for other subcommands it shows the raw axi text. Either way you still receive the structured TOON result to drive the gate (read every return; on a gate:, respond; loop until an outcome:).",
 			"axi run and axi respond block for several minutes at review/test/CI steps — that is normal; do not cancel or re-issue because it seems slow. Allow a long timeout.",
 			"If a return has no parseable TOON (cancelled/timeout), the tool says so explicitly; use `no-mistakes axi status` via this same tool to inspect, or re-drive.",
 			"ask-user findings are never yours to resolve — escalate per the no-mistakes skill; this tool only changes the invocation surface, not gate authority.",
@@ -338,6 +512,45 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			}
 
 			// Visible-pane path.
+			//
+			// run/respond get the rich `no-mistakes attach` TUI in the visible pane
+			// while the axi capture runs detached in the background and the agent
+			// still reads the marked TOON to drive the gate. Falls back to the
+			// text-pane path below if `attach` is unavailable or the background run
+			// cannot start — the gate must never fail because the TUI could not be
+			// shown. status/logs/sync/abort keep the text pane (attaching a TUI to
+			// a status query does not make sense).
+			if (wantsTuiPane(args, subcommand) && attachAvailable()) {
+				const tui = await runTuiPane(args, subcommand, cwd, sig, timeoutMs);
+				if (!("fallback" in tui)) {
+					const r = tui.result;
+					if (tui.cancelled) {
+						const text = formatOutput(r.output, r.exitCode, "cancelled");
+						return textResult(
+							`no-mistakes axi ${subcommand} was cancelled; TUI pane closed.\n${text}`,
+							{ status: "cancelled", subcommand, paneId: r.paneId, output: r.output, message: tui.message },
+						);
+					}
+					if (r.timedOut) {
+						const text = formatOutput(r.output, r.exitCode, "timeout");
+						return textResult(
+							`no-mistakes axi ${subcommand} timed out after ${timeoutMs / 1000}s; TUI pane cancelled.\n${text}`,
+							{ status: "timeout", subcommand, exitCode: r.exitCode, paneId: r.paneId, output: r.output, message: "timed out" },
+						);
+					}
+					const text = formatOutput(r.output, r.exitCode, "visible (tui)");
+					return textResult(text, {
+						status: "visible",
+						subcommand,
+						exitCode: r.exitCode,
+						paneId: r.paneId,
+						output: r.output,
+						message: "TUI pane (no-mistakes attach)",
+					});
+				}
+				// fallback: continue to the text-pane path below.
+			}
+
 			const token = randomUUID().replace(/-/g, "");
 			const outFile = `${tmpdir()}/pi-nm-${token}.out`;
 			const scriptFile = `${tmpdir()}/pi-nm-${token}.sh`;
