@@ -18,6 +18,10 @@ return {
       "starpls",
       "buildifier",
 
+      -- C/C++ (LazyVim lang.clangd owns clangd + codelldb; clang-format is the
+      -- conform formatter for c/cpp — see lua/plugins/c.lua)
+      "clang-format",
+
       -- Go (LazyVim lang.go + none-ls / dap); keep explicit so installs don't depend on merge order
       "gopls",
       "goimports",

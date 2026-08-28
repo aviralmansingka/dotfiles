@@ -49,7 +49,7 @@ silenced"). So the correct host for full CUDA LSP is the homelab/Linux.
 
 ## Durable dotfiles behavior
 
-`nvim/.config/nvim/lua/plugins/clangd.lua` calls
+`nvim/.config/nvim/lua/plugins/c.lua` calls
 `require("helpers.cuda_lsp").notify_if_unsupported(bufnr)` on every clangd
 `cuda`-filetype `LspAttach`. On macOS Apple Silicon with no toolkit it emits one
 `WARN` notification per Neovim session explaining the above and routing to the
