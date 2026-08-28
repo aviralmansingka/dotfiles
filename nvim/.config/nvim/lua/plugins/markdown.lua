@@ -533,6 +533,16 @@ return {
         end,
         desc = "Find outgoing links from current note",
       },
+      -- <leader>mm = mermaid: render the ```mermaid fence under the cursor to
+      -- ASCII/Unicode via the `mmdflux` binary and pop it in a Snacks float.
+      -- See helpers/mermaid_render.lua and docs/neovim-mermaid-render.md.
+      {
+        "<leader>mm",
+        function()
+          require("helpers.mermaid_render").render_float()
+        end,
+        desc = "Render mermaid fence (mmdflux ASCII)",
+      },
     },
     ---@module 'render-markdown'
     ---@type render.md.UserConfig
