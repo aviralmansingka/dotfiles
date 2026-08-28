@@ -7,3 +7,7 @@
 -- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
+-- Declare each language's community-canonical indent explicitly instead of
+-- relying on LazyVim's implicit per-extra defaults. See lua/config/indent.lua.
+require("config.indent")
+
