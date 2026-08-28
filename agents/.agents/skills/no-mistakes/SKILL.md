@@ -18,12 +18,15 @@ respond, status, logs, abort, sync) through the `no_mistakes_axi` tool instead
 of running `no-mistakes axi` in the bash tool. (The bare `no-mistakes axi` home
 view takes no subcommand, so it is not a tool target — use `no-mistakes axi
 status` through the tool to inspect state.)
-The tool opens the command in a visible Herdr pane to the right of the agent
-pane so the captain can watch the pipeline run live, then returns the same
-structured TOON you would have read from bash stdout (plus the exit code).
-Everything below about reading gates, responding, escalating `ask-user`,
-syncing, and looping until an `outcome:` applies unchanged — only the
-invocation surface changes.
+For `run` and `respond`, the tool runs the axi call detached in the background
+and opens the rich `no-mistakes` TUI (`no-mistakes attach`) in a Herdr pane to
+the right of the agent pane so the captain can watch the pipeline run as an
+interactive UI — this is expected; you still receive the structured TOON the
+background axi call captured and drive the gate on it exactly as below. For
+quick inspections (status/logs/sync/abort) the pane shows the raw axi text.
+If the TUI cannot be shown (`attach` unavailable, no active run, or Herdr not
+present), the tool falls back to the raw axi text pane or an inline run and
+still returns the TOON — only the captain's view changes, never the gate.
 
 Pass `args` = everything after `no-mistakes axi` (e.g.
 `run --intent "ship the feature"`, `respond --action fix --findings r1`,
