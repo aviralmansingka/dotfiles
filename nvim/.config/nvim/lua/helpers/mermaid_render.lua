@@ -110,15 +110,16 @@ function M.render_float()
     return
   end
 
-  -- Cap the rendered grid at 80 columns: mmdflux has no documented --width
-  -- flag and auto-detects width (COLUMNS env / tty size, falling back to a
-  -- default when stdin is a pipe). Set COLUMNS=80 so the piped-stdin path
-  -- targets an 80-column grid; keep TERM so color/width queries resolve. If a
-  -- future mmdflux release adds an explicit --width/--columns/--term-width
-  -- flag, prefer that over the env var (see docs/neovim-mermaid-render.md).
+  -- mmdflux renders at the graph's natural width: it has no --width flag
+  -- (`mmdflux --help` confirms) and ignores both COLUMNS env and tty winsize
+  -- when stdin is a pipe. So we do NOT pass COLUMNS (it was a no-op); only
+  -- TERM is preserved so color queries resolve. The float is sized to fit the
+  -- output up to the editor width, and `wrap = false` lets the user scroll
+  -- left/right (zl/zh) for diagrams wider than the window instead of wrapping
+  -- (see docs/neovim-mermaid-render.md).
   local result = vim.system(
     { "mmdflux" },
-    { stdin = body, text = true, env = { COLUMNS = "80", TERM = vim.env.TERM or "xterm-256color" } }
+    { stdin = body, text = true, env = { TERM = vim.env.TERM or "xterm-256color" } }
   ):wait()
   if result.code ~= 0 then
     vim.notify("mmdflux failed (exit " .. result.code .. "): " .. (result.stderr or ""), vim.log.levels.ERROR)
@@ -138,14 +139,30 @@ function M.render_float()
   local tmp = vim.fn.tempname()
   vim.fn.writefile(vim.split(out, "\n", { plain = true }), tmp)
 
+  -- Size the float to the diagram's natural width (strip ANSI SGR to measure
+  -- visible columns), capped at the editor width minus border room. Narrow
+  -- graphs get a narrow float; wide ones fill the editor and scroll via
+  -- `wrap = false` rather than being clamped/wrapped at a fixed 80.
+  local visual = out:gsub("\x1b%[[0-9;]*m", "")
+  local max_w = 1
+  for line in visual:gmatch("[^\n]*") do
+    max_w = math.max(max_w, vim.fn.strdisplaywidth(line))
+  end
+  local width = math.min(math.max(1, vim.o.columns - 2), max_w)
+
   local win = Snacks.win({
     title = " mermaid render ",
-    -- Match the 80-column mmdflux grid (COLUMNS=80 above) so the terminal
-    -- float doesn't widen past the rendered art.
-    width = math.min(80, math.floor(vim.o.columns * 0.8)),
+    width = width,
     height = 0.8,
     bo = { bufhidden = "wipe" },
-    wo = { number = false, relativenumber = false, signcolumn = "no" },
+    wo = {
+      number = false,
+      relativenumber = false,
+      signcolumn = "no",
+      -- Show the full natural-width art; long lines scroll left/right
+      -- (zl/zh) instead of wrapping at the window edge.
+      wrap = false,
+    },
   })
 
   vim.fn.termopen({ "cat", tmp }, {

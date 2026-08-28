@@ -23,32 +23,40 @@ If `mmdflux` is not on `$PATH`, `<leader>mm` shows
 `mmdflux not installed — see docs/neovim-mermaid-render.md` instead of erroring.
 Nothing auto-installs.
 
-## 80-column width cap
+## Natural width + horizontal scroll (no width cap)
 
-The rendered ASCII/Unicode grid is capped at **80 columns**. mmdflux has no
-documented `--width`/`--columns`/`--term-width` flag; it auto-detects width
-(via `COLUMNS` env or tty size, falling back to a default when stdin is a
-pipe — which is our case). The helper enforces the cap by spawning mmdflux
-with `COLUMNS=80` (and `TERM` preserved) in the `vim.system` env:
+mmdflux renders at the **graph's natural width** — it has no
+`--width`/`--columns`/`--term-width` flag (`mmdflux --help` confirms) and
+**ignores both `COLUMNS` env and tty winsize** when stdin is a pipe (which is
+our case). Empirically, the 4 real vault fences render at 51–372 visible
+columns (`flowchart LR` layouts run widest); 3 of 4 exceed 80.
+
+Because there is no width flag, the helper does **not** pass `COLUMNS` (an
+earlier `COLUMNS=80` env was a no-op and has been removed); only `TERM` is
+preserved so color queries resolve:
 
 ```lua
 vim.system({ "mmdflux" }, {
   stdin = body,
-  env = { COLUMNS = "80", TERM = vim.env.TERM or "xterm-256color" },
+  env = { TERM = vim.env.TERM or "xterm-256color" },
 })
 ```
 
-The Snacks float width is also clamped to 80 columns so the terminal doesn't
-widen past the rendered art. The cap applies to the v1 on-demand float; any
-future v2 inline render must apply the same `COLUMNS=80` env when spawning
-mmdflux.
+The Snacks float is sized to the diagram's natural width (visible columns,
+ANSI SGR stripped), capped at the editor width so the float never overflows
+the screen. Narrow graphs get a narrow float; wide graphs fill the editor.
+The float window is opened with `wrap = false`, so a diagram wider than the
+window scrolls **left/right** (`zl`/`zh`, or the terminal's own scroll)
+instead of wrapping at the edge. No output is truncated.
 
-**Captain action after install:** run `mmdflux --help` and check for an
-explicit `--width`/`--columns`/`--term-width` flag. If one exists, prefer it
-over the `COLUMNS` env var and update `helpers/mermaid_render.lua` + this doc.
-If mmdflux ignores `COLUMNS` and queries the tty instead (stdin is a pipe, so
-it likely falls back to `COLUMNS` or a default), report that here and switch to
-the flag or a pty wrapper.
+Note: because the float is a `:terminal` buffer, the pty column count tracks
+the window width, so a diagram wider than the editor still wraps at the
+editor edge inside the terminal. That is the inherent limit of the `:terminal`
+path; for a true hard cap on ultra-wide `LR` layouts, the real fix is an
+upstream `--width` flag on `kevinswiber/mmdflux` — a feature request the
+captain can file if a hard cap is ever wanted. (A scratch-buffer path would
+preserve unlimited horizontal scroll but loses mmdflux's native ANSI color,
+which is the reason the v1 chose `:terminal`.)
 
 ## Install `mmdflux` (captain's step — not auto-installed by this config)
 
