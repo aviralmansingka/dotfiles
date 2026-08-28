@@ -197,8 +197,15 @@ async function waitForTerminalJob(socket: string, bufId: number, signal: AbortSi
 	throw new Error("Timed out waiting for `:term dm` terminal job");
 }
 
+// Read a buffer's lines back as one newline-joined string. The join separator
+// MUST be the Lua escape `\n` (written `\\n` in this template literal), NOT a
+// raw newline: the chunk travels JS template -> JSON.stringify (-> `\n`) ->
+// Vim double-quoted string in `--remote-expr`, and Vim unescapes `\n` back to a
+// raw newline. A raw newline inside a Lua short-string literal is a syntax
+// error, so `load(...)` returns nil and `load(...)()` throws "attempt to call a
+// nil value". See issue #184.
 async function readNvimBuffer(socket: string, bufId: number, signal: AbortSignal): Promise<string> {
-	return nvimLua(socket, `return table.concat(vim.api.nvim_buf_get_lines(${bufId}, 0, -1, false), "\n")`, signal);
+	return nvimLua(socket, `return table.concat(vim.api.nvim_buf_get_lines(${bufId}, 0, -1, false), "\\n")`, signal);
 }
 
 // Find an already-open nvim the captain can see (e.g. a `/nvim` split in this
