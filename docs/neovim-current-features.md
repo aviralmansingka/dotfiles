@@ -97,6 +97,18 @@ workflow area rather than plugin files, Lua modules, or implementation structure
 - Python formatting uses Ruff fix and Ruff format.
 - Python formatting prefers project-local `.venv/bin/ruff` when available.
 
+### Indent stance
+
+Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced from `autocmds.lua`) rather than inherited implicitly from LazyVim defaults, so the stance survives a LazyVim upgrade or a dropped `.clang-format`.
+
+- C, C++, Objective-C, Objective-C++: spaces, `shiftwidth=2`, `tabstop=2` — matches the LLVM/clang-format default and clangd `--fallback-style=llvm`, so the editor and clang-format-on-save agree at 2 spaces. No global `.clang-format` is shipped; each C project owns its own style.
+- Python: spaces, `shiftwidth=4`, `tabstop=4` — PEP 8.
+- Go: tabs, `shiftwidth=4`, `tabstop=4` — gofmt enforces tabs.
+- Rust: spaces, `shiftwidth=4`, `tabstop=4` — rustfmt default.
+- Lua: spaces, `shiftwidth=2`, `tabstop=2` — StyLua default; matches LazyVim.
+- `smartindent`, `autoindent`, and `shiftround` are left to LazyVim's global defaults and are not re-set.
+- Filetypes not listed keep LazyVim's default unchanged; no stance is imposed where none was named.
+
 ### Diagnostics
 
 - Trouble provides workspace diagnostics.
