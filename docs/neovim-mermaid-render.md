@@ -23,6 +23,33 @@ If `mmdflux` is not on `$PATH`, `<leader>mm` shows
 `mmdflux not installed — see docs/neovim-mermaid-render.md` instead of erroring.
 Nothing auto-installs.
 
+## 80-column width cap
+
+The rendered ASCII/Unicode grid is capped at **80 columns**. mmdflux has no
+documented `--width`/`--columns`/`--term-width` flag; it auto-detects width
+(via `COLUMNS` env or tty size, falling back to a default when stdin is a
+pipe — which is our case). The helper enforces the cap by spawning mmdflux
+with `COLUMNS=80` (and `TERM` preserved) in the `vim.system` env:
+
+```lua
+vim.system({ "mmdflux" }, {
+  stdin = body,
+  env = { COLUMNS = "80", TERM = vim.env.TERM or "xterm-256color" },
+})
+```
+
+The Snacks float width is also clamped to 80 columns so the terminal doesn't
+widen past the rendered art. The cap applies to the v1 on-demand float; any
+future v2 inline render must apply the same `COLUMNS=80` env when spawning
+mmdflux.
+
+**Captain action after install:** run `mmdflux --help` and check for an
+explicit `--width`/`--columns`/`--term-width` flag. If one exists, prefer it
+over the `COLUMNS` env var and update `helpers/mermaid_render.lua` + this doc.
+If mmdflux ignores `COLUMNS` and queries the tty instead (stdin is a pipe, so
+it likely falls back to `COLUMNS` or a default), report that here and switch to
+the flag or a pty wrapper.
+
 ## Install `mmdflux` (captain's step — not auto-installed by this config)
 
 `mmdflux` reads mermaid from stdin and writes ASCII/Unicode (ANSI-colored) to

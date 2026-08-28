@@ -110,7 +110,16 @@ function M.render_float()
     return
   end
 
-  local result = vim.system({ "mmdflux" }, { stdin = body, text = true }):wait()
+  -- Cap the rendered grid at 80 columns: mmdflux has no documented --width
+  -- flag and auto-detects width (COLUMNS env / tty size, falling back to a
+  -- default when stdin is a pipe). Set COLUMNS=80 so the piped-stdin path
+  -- targets an 80-column grid; keep TERM so color/width queries resolve. If a
+  -- future mmdflux release adds an explicit --width/--columns/--term-width
+  -- flag, prefer that over the env var (see docs/neovim-mermaid-render.md).
+  local result = vim.system(
+    { "mmdflux" },
+    { stdin = body, text = true, env = { COLUMNS = "80", TERM = vim.env.TERM or "xterm-256color" } }
+  ):wait()
   if result.code ~= 0 then
     vim.notify("mmdflux failed (exit " .. result.code .. "): " .. (result.stderr or ""), vim.log.levels.ERROR)
     return
@@ -131,7 +140,9 @@ function M.render_float()
 
   local win = Snacks.win({
     title = " mermaid render ",
-    width = 0.8,
+    -- Match the 80-column mmdflux grid (COLUMNS=80 above) so the terminal
+    -- float doesn't widen past the rendered art.
+    width = math.min(80, math.floor(vim.o.columns * 0.8)),
     height = 0.8,
     bo = { bufhidden = "wipe" },
     wo = { number = false, relativenumber = false, signcolumn = "no" },
