@@ -143,7 +143,8 @@ class UsageComponent implements Component {
     const cell = (lv: number) => RAMP[lv] + "█" + C.reset;
 
     const leftW = 4, cellW = 2;
-    const nWeeks = Math.max(6, Math.floor((W - 3 - leftW - 2) / cellW));
+    // Fill the full row content width (W-3): leftW + nWeeks*cellW - 1 (trimmed trailing space) = W-3.
+    const nWeeks = Math.max(1, Math.floor((W - 3 - leftW + 1) / cellW));
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const start = new Date(today); start.setDate(today.getDate() - today.getDay() - (nWeeks - 1) * 7);
     const grid: number[][] = Array.from({ length: 7 }, () => Array(nWeeks).fill(-1));
