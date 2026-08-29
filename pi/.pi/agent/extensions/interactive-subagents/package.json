@@ -1,0 +1,44 @@
+{
+  "name": "pi-interactive-subagents-herdr",
+  "version": "3.7.2-herdr.1",
+  "description": "Interactive subagents for pi - spawn, orchestrate, and manage sub-agent sessions in Herdr or tmux (dotfiles fork with a Herdr surface layer)",
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "author": "Amos Blomqvist",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amosblomqvist/pi-interactive-subagents"
+  },
+  "forkNotes": {
+    "upstream": "amosblomqvist/pi-interactive-subagents@main",
+    "changes": [
+      "Added pi-extension/subagents/herdr.ts — Herdr pane surface (herdr pane split/send-text/send-keys/read/close).",
+      "Added pi-extension/subagents/surface.ts — auto-detect dispatcher (Herdr via HERDR_ENV/HERDR_PANE_ID, else tmux via TMUX).",
+      "index.ts imports ./surface.ts instead of ./tmux.ts; tmux.ts kept intact as the fallback surface.",
+      "Remapped @mariozechner/* and @sinclair/typebox imports to @earendil-works/* (captain's pi publish names).",
+      "Known gap: Herdr has no select-layout even-horizontal equivalent, so pane rebalancing is a no-op on the Herdr surface."
+    ]
+  },
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/test.ts",
+    "test:integration": "node --test --test-concurrency=1 test/integration/*.test.ts"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@earendil-works/pi-ai": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./pi-extension/subagents/index.ts"
+    ]
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@earendil-works/pi-ai": "*"
+  }
+}
