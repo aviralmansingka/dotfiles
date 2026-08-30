@@ -280,8 +280,8 @@ Never treat "no CI checks reported" alone as green.
 Because that monitor stays live, a PR that falls behind the default branch or
 hits a merge conflict after checks pass - commonly because another PR merged
 first - needs **no command from you**: never hand-rebase. When the CI monitor
-sees an actual conflict it **rebases onto the base, resolves it, and re-pushes
-the branch itself**; a PR that is merely behind but still clean needs nothing
+sees an actual conflict it **rebases onto the base, resolves it, restarts
+validation at Review, and re-pushes the branch through Push**; a PR that is merely behind but still clean needs nothing
 either, since the platform merges it. The one exception is when that monitor is
 no longer running - the PR was closed, the run was aborted or superseded, it
 idle-timed-out, or its auto-fix attempts were exhausted - in which case recover
@@ -342,7 +342,8 @@ no-mistakes axi abort --run <id>   # cancel a specific run by id (works outside 
 ## Reading the output
 
 - Output is TOON: `key: value` pairs, `name[N]{cols}:` tables, and `help[N]:` hints.
-- A non-terminal run object may include `awaiting_agent: parked <duration>` immediately after `status`; that means the run is parked at a gate awaiting your `axi respond`.
+- `axi status` is scoped to your current branch when `--run` is omitted: with a known current branch, an implicitly resolved `run:` is this branch's. A run under `other_branch_run:` is one you named with `--run <id>` that belongs to another branch - never read its status or outcome as your own work. An explicit `--run <id>` rendered under `run:` while the current branch is unknown (detached `HEAD` or a branch-lookup failure) encodes no branch relationship. In a successful status response, no run object at all means this branch has no run yet, whatever the recent-runs table lists; an `error:` response proves nothing about run ownership, so act on the error instead of concluding the branch is idle.
+- A non-terminal run object may include `awaiting_agent: parked <duration>` immediately after `status`; that means the run is parked at a gate. Only an implicitly resolved current-branch gate offers `axi respond`; an explicit `--run <id>` status is inspection-only even when its branch matches, because the branch may have a newer active run. Follow the response's `help`.
 - A run object with a `running` or `fixing` step may include an `active_steps` table. Use it to see the active duration, latest activity, native agent PID, and current execution or fix round.
 - The `help` list at the bottom of most responses tells you the next commands to run.
 - Errors are printed as `error: ...` on stdout with a `help` list; act on the suggestion.
@@ -372,37 +373,3 @@ final state
 instead shows `outcome: <checks-passed|passed|failed|cancelled>` with no
 `findings` table. Field names and exact columns can vary by step and version,
 so read the actual `findings` header rather than assuming this layout.
-
-## PR description preferences
-
-After no-mistakes opens the PR and reports `checks-passed`, post-process the PR
-body before telling the user it is ready. no-mistakes generates the body from
-your `--intent` and pipeline results; edit it with `gh-axi pr edit` to match
-the captain's standing preferences:
-
-- Keep the intent section brief and human readable.
-- Bullet points should not exceed 7-10 words; use markdown formatting or nested
-  bullets for structure.
-- Expandable/collapsible sections (no-mistakes already emits some) are good;
-  keep them.
-- Add two quote-blocks at the top of the PR body, near the title, reporting
-  cost:
-  - **Pi-agent cost**: read the cumulative `usage.cost.total` from the last
-    assistant message in `$PI_SESSION_FILE` (the session file path Pi sets in
-    the environment). Format as `> **Pi-agent cost:** $X.XX`.
-  - **no-mistakes pipeline cost**: query the run's token usage from the local
-    state database and format it as a quote-block. The run id is in the
-    `checks-passed` output or `no-mistakes axi status`. Query:
-    `sqlite3 ~/.no-mistakes/state.sqlite "SELECT step_name, model, input_tokens, output_tokens, cache_read_tokens, reasoning_tokens, duration_ms FROM agent_invocations WHERE run_id='<run_id>'"`
-    Sum the tokens across steps and format as
-    `> **no-mistakes pipeline:** N input, M output, K cache-read, R reasoning tokens across S steps (model: <name>)`.
-    If the model's per-token pricing is known, also compute an estimated dollar
-    cost; otherwise report the token totals.
-- Apply the edit with `gh-axi pr edit <number> -R <repo> --body-file <file>`
-  using a temp file for the updated body.
-- Preserve every section no-mistakes already generated (Intent, Risk
-  Assessment, Pipeline, Testing, What Changed); only reformat for brevity and
-  prepend the cost quote-blocks.
-
-Do not remove factual content from the body; tighten prose and shorten bullets
-only.
