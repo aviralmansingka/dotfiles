@@ -100,9 +100,15 @@ stow -d "$DOTFILES_DIR" -t "$HOME" starship
 stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
 stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
 stow -d "$DOTFILES_DIR" -t "$HOME" karabiner
+stow -d "$DOTFILES_DIR" -t "$HOME" gh-dash
 stow -d "$DOTFILES_DIR" -t "$HOME" agents
 stow -d "$DOTFILES_DIR" -t "$HOME" pi
 stow -d "$DOTFILES_DIR" -t "$HOME" herdr
+
+echo "==> Installing gh-dash extension"
+if command -v gh >/dev/null 2>&1; then
+    gh extension install dlvhdr/gh-dash 2>/dev/null || true
+fi
 
 echo "==> Installing Herdr agent integrations"
 herdr integration install pi
