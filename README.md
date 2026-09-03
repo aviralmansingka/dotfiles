@@ -26,7 +26,7 @@ For manual installation:
 
 ```sh
 brew bundle
-stow nvim tmux zsh ghostty git starship agents pi herdr launchd
+stow nvim tmux zsh ghostty git starship agents pi herdr launchd gh-dash
 ```
 
 On Linux (systemd) systems, deploy the user services with:
