@@ -1,9 +1,9 @@
-import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
+import { keyHint, type ExtensionAPI, type Theme } from "@earendil-works/pi-coding-agent";
 import { realpathSync } from "node:fs";
 import { hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth } from "@earendil-works/pi-tui";
 
 const ASSISTANT_PATCHED = Symbol.for("aviral.pi.work-step-renderer.assistant");
 const TOOL_PATCHED = Symbol.for("aviral.pi.work-step-renderer.tool");
@@ -619,145 +619,172 @@ function renderCompactSummary(theme: Theme, run: ActivityRun, width: number): st
   return [truncateToWidth(` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", `${plural(total, "step")} · `)}${state}`, width)];
 }
 
-const CONNECTED_THINKING = "Thinking…";
-const CONNECTED_RGB = {
-  muted: "146;131;116",
-  dim: "102;92;84",
-  text: "235;219;178",
-  warning: "250;189;47",
-  success: "184;187;38",
-  error: "242;89;75",
-} as const;
-
-function connectedColor(
-  color: keyof typeof CONNECTED_RGB,
-  text: string,
-  bold = false,
-): string {
-  return `\x1b[${bold ? "1;" : ""}38;2;${CONNECTED_RGB[color]}m${text}\x1b[0m`;
+/**
+ * Format token-cost segments `↑in ↓out R… W… $cost` for a subagent stats
+ * object (mirrors the extension's `formatUsageSegments`).
+ */
+function formatStatsSegments(stats: any): string[] {
+  const segs: string[] = [];
+  const n = (v: unknown): number =>
+    typeof v === "number" && Number.isFinite(v) ? v : 0;
+  const fmt = (v: number): string =>
+    v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`;
+  if (n(stats.inputTokens)) segs.push(`↑${fmt(n(stats.inputTokens))}`);
+  if (n(stats.outputTokens)) segs.push(`↓${fmt(n(stats.outputTokens))}`);
+  if (n(stats.cacheReadTokens)) segs.push(`R${fmt(n(stats.cacheReadTokens))}`);
+  if (n(stats.cacheWriteTokens)) segs.push(`W${fmt(n(stats.cacheWriteTokens))}`);
+  if (typeof stats.cost === "number" && stats.cost)
+    segs.push(`$${stats.cost.toFixed(3)}`);
+  return segs;
 }
 
-function connectedParentStatus(
-  step: WorkStep,
-): "running" | "completed" | "failed" {
-  const current = status(step);
-  return current === "pending"
-    ? "running"
-    : current === "failure"
-      ? "failed"
-      : "completed";
-}
-
-function truncateConnectedLine(text: string, maxWidth: number): string {
-  if (text.includes("\n") || text.includes("\r"))
-    text = text.replace(/\r?\n/g, "↵ ");
-  if (visibleWidth(text) <= maxWidth) return text;
-
-  let result = "";
-  let width = 0;
-  for (let index = 0; index < text.length; index++) {
-    if (width >= maxWidth - 1) {
-      const truncated = `${result}…`;
-      return truncated.includes("\x1b[") ? `${truncated}\x1b[0m` : truncated;
-    }
-    if (text[index] === "\x1b") {
-      const ansi = text.slice(index).match(/^\x1b\[[0-9;]*m/);
-      if (ansi) {
-        result += ansi[0];
-        index += ansi[0].length - 1;
-        continue;
-      }
-    }
-    result += text[index];
-    width++;
-  }
-  return result;
-}
-
-function renderConnectedActivityHeader(steps: WorkStep[]): string {
-  const calls = steps.reduce((count, step) => count + step.toolCalls.length, 0);
-  const failed = steps.some((step) => status(step) === "failure");
-  const running = steps.some((step) => status(step) === "pending");
-  const state = failed
-    ? connectedColor("error", "failed", true)
-    : running
-      ? connectedColor("warning", "running")
-      : connectedColor("success", "all passed", true);
-  return (
-    connectedColor("muted", " │  ") +
-    connectedColor(
-      "muted",
-      `${plural(steps.length, "step")} · ${plural(calls, "call")} · `,
-    ) +
-    state
-  );
-}
-
-function connectedStepElapsed(
-  step: WorkStep,
-  bridge: ConnectedRenderBridge,
-): number | undefined {
-  if (!finiteNumber(step.startedAt)) return undefined;
-  const end = finiteNumber(step.completedAt)
-    ? step.completedAt
-    : connectedParentStatus(step) === "running"
-      ? bridgeNow(bridge)
-      : undefined;
-  return finiteNumber(end) ? Math.max(0, end - step.startedAt) : undefined;
-}
-
-function renderConnectedInitialThinking(
-  bridge: ConnectedRenderBridge,
-  nativeLines: string[],
-): string {
-  const connector = nativeLines.length > 0 ? "├─" : "└─";
-  return (
-    connectedColor("muted", ` ${bridge.parentRail}${connector} `) +
-    connectedColor("text", CONNECTED_THINKING)
-  );
-}
-
-function renderConnectedParent(
-  step: WorkStep,
-  bridge: ConnectedRenderBridge,
-  nativeSubtrees: string[][],
+/**
+ * Render `progress.recentTools` as a `◆ ◇ ├─ └─ │` nested tree under one chip.
+ * `rail` is the continuation rail inherited from the chip's connector
+ * (`│  ` when more chips follow, `   ` for the last chip).
+ */
+function renderRecentToolTree(
+  theme: Theme,
+  rail: string,
+  progress: Record<string, unknown> | undefined,
   width: number,
 ): string[] {
-  const steps = step.group.steps;
-  const lines = [
-    truncateConnectedLine(renderConnectedActivityHeader(steps), width),
-  ];
-  for (const [index, item] of steps.entries()) {
-    const current = connectedParentStatus(item);
-    const last = index === steps.length - 1;
+  const tools = Array.isArray(progress?.recentTools)
+    ? (progress!.recentTools as any[])
+    : [];
+  if (tools.length === 0) return [];
+  const lines: string[] = [];
+  for (const [i, tool] of tools.entries()) {
+    const lastTool = i === tools.length - 1;
+    const inner = lastTool ? "└─" : "├─";
+    const st = asString(tool.status);
     const glyph =
-      current === "running"
-        ? connectedColor("warning", "◇")
-        : current === "failed"
-          ? connectedColor("error", "×")
-          : connectedColor("success", "◆");
-    const title = connectedColor(
-      current === "failed" ? "error" : "text",
-      item.title,
-      true,
-    );
-    const elapsed =
-      item === step ? connectedStepElapsed(item, bridge) : undefined;
-    const timer = finiteNumber(elapsed)
-      ? connectedColor("dim", ` · ${formatElapsed(elapsed)}`)
+      st === "running"
+        ? theme.fg("accent", "◇")
+        : st === "failed"
+          ? theme.fg("error", "×")
+          : theme.fg("success", "◆");
+    const name = asString(tool.name) || "(tool)";
+    const preview = asString(tool.preview);
+    const previewSeg = preview
+      ? ` ${theme.fg("dim", "·")} ${theme.fg("dim", preview)}`
       : "";
     lines.push(
-      truncateConnectedLine(
-        `${connectedColor("muted", ` ${last ? "└─" : "├─"} `)}${glyph} ${title}${timer}`,
+      truncateToWidth(
+        ` ${theme.fg("borderMuted", rail)}${theme.fg("borderMuted", inner)} ${glyph} ${theme.fg("text", name)}${previewSeg}`,
         width,
       ),
     );
-    if (item === step) {
-      for (const nativeLines of nativeSubtrees) lines.push(...nativeLines);
+  }
+  return lines;
+}
+
+/**
+ * Prototype C inline chips: one `▹/▸/×` row per subagent, inline in the
+ * parent's tool-call trace. Colors route through `theme.fg(token, …)` so they
+ * follow theme switches (Gruvbox Material today: accent=#f28534 for `▹`,
+ * muted=#928374 for `▸`, error=#f2594b for `×`, success=#b8bb26 for `◆`,
+ * warning=#fabd2f for stalled labels, borderMuted=#504945 for connectors).
+ * No background boxes, no raw-ANSI blue. ctrl+o unfolds `progress.recentTools`
+ * as a `◆ ◇ ├─ └─ │` nested tree for a finished subagent; the success header
+ * also shows `↑in ↓out R… W… $cost` (dim) from `result.stats`.
+ */
+function renderConnectedChips(
+  theme: Theme,
+  step: WorkStep,
+  connectedComponents: Array<{ component: any; bridge: ConnectedRenderBridge }>,
+  width: number,
+): string[] {
+  const lines: string[] = [];
+  for (const [index, { component, bridge }] of connectedComponents.entries()) {
+    const last = index === connectedComponents.length - 1;
+    const connector = last ? "└─" : "├─";
+    const rail = last ? "   " : "│  ";
+    const progress = rootProgress(component);
+    const result = component.result?.details?.results?.[0];
+    const stats =
+      result && typeof result === "object" ? (result as any).stats : undefined;
+    const call = step.toolCalls.find(
+      (c) => c.id === asString(component.toolCallId),
+    );
+    const name = asString((call?.arguments as any)?.name) || "(subagent)";
+    const lifecycle = bridge.lifecycle;
+    const elapsedMs = finiteNumber(lifecycle.startedAt)
+      ? (finiteNumber(lifecycle.completedAt)
+          ? lifecycle.completedAt!
+          : bridgeNow(bridge)) - lifecycle.startedAt!
+      : undefined;
+    const elapsedText = finiteNumber(elapsedMs)
+      ? ` ${formatElapsed(Math.max(0, elapsedMs))}`
+      : "";
+
+    if (lifecycle.status === "running") {
+      // LIVE chip: ▹ name elapsed · status  (stalled → warning-yellow label)
+      const statusLine =
+        typeof progress?.output === "string" && progress.output
+          ? progress.output
+          : "running";
+      const stalled = statusLine.toLowerCase().startsWith("stalled");
+      const statusSeg = stalled
+        ? theme.fg("warning", statusLine)
+        : theme.fg("muted", statusLine);
+      lines.push(
+        truncateToWidth(
+          ` ${theme.fg("borderMuted", connector)} ${theme.fg("accent", "▹")} ${theme.fg("text", theme.bold(name))}${theme.fg("dim", elapsedText)} ${theme.fg("dim", "·")} ${statusSeg}`,
+          width,
+        ),
+      );
+      continue;
+    }
+
+    const failed = lifecycle.status === "failed";
+    const expanded = bridge.outputMode === "expanded";
+
+    if (failed) {
+      const reason = asString(progress?.error) || "failed";
+      const head = ` ${theme.fg("borderMuted", connector)} ${theme.fg("error", "×")} ${theme.fg("text", theme.bold(name))} ${theme.fg("dim", "·")} ${theme.fg("error", reason)}${theme.fg("dim", elapsedText)}`;
+      if (expanded) {
+        lines.push(truncateToWidth(head, width));
+        lines.push(...renderRecentToolTree(theme, rail, progress, width));
+      } else {
+        lines.push(
+          truncateToWidth(
+            `${head}  ${theme.fg("muted", keyHint("app.tools.expand", "to expand"))}`,
+            width,
+          ),
+        );
+      }
+      continue;
+    }
+
+    // success
+    const toolCount = finiteNumber(stats?.toolCount)
+      ? stats.toolCount
+      : Array.isArray(progress?.recentTools)
+        ? progress.recentTools.length
+        : 0;
+    const summary = `${toolCount} ${toolCount === 1 ? "tool" : "tools"}${elapsedText}`;
+    let head = ` ${theme.fg("borderMuted", connector)} ${theme.fg("muted", "▸")} ${theme.fg("text", theme.bold(name))} ${theme.fg("success", "◆")} ${theme.fg("dim", summary)}`;
+    if (expanded) {
+      if (stats) {
+        const segs = formatStatsSegments(stats);
+        if (segs.length > 0)
+          head += ` ${theme.fg("dim", "·")} ${segs.map((s) => theme.fg("dim", s)).join(theme.fg("dim", " "))}`;
+      }
+      lines.push(truncateToWidth(head, width));
+      lines.push(...renderRecentToolTree(theme, rail, progress, width));
+    } else {
+      lines.push(
+        truncateToWidth(
+          `${head}  ${theme.fg("muted", keyHint("app.tools.expand", "to expand"))}`,
+          width,
+        ),
+      );
     }
   }
   return lines;
 }
+
 
 function renderThinkingDraft(
   theme: Theme,
@@ -1578,39 +1605,11 @@ function renderToolComponent(
 
   if (connectedComponents.length > 0) {
     if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
-    const nativeSubtrees = connectedComponents.map(
-      ({ component: candidate, bridge: candidateBridge }, index) => {
-        candidateBridge.parentConnector =
-          index === connectedComponents.length - 1 ? "└─" : "├─";
-        const renderer = candidate.resultRendererComponent;
-        const native =
-          typeof renderer?.render === "function" ? renderer.render(width) : [];
-        const progress = rootProgress(candidate);
-        const hasChildProgress =
-          Array.isArray(progress?.recentTools) &&
-          progress.recentTools.length > 0;
-        const needsInitialThinking =
-          candidateBridge.thinkingVisible &&
-          candidateBridge.lifecycle.status === "running" &&
-          !hasChildProgress &&
-          !native.some((line: string) => line.includes(CONNECTED_THINKING));
-        return needsInitialThinking
-          ? [
-              truncateConnectedLine(
-                renderConnectedInitialThinking(candidateBridge, native),
-                width,
-              ),
-              ...native,
-            ]
-          : native;
-      },
-    );
-    return renderConnectedParent(
-      step,
-      connectedComponents[0].bridge,
-      nativeSubtrees,
-      width,
-    );
+    // Prototype C: one `▹/▸/×` chip row per subagent, inline in the parent's
+    // tool-call trace. The per-step `◇◆×` list (`renderConnectedParent`) is
+    // retired in favor of these per-subagent lifecycle chips; ctrl+o unfolds
+    // `progress.recentTools` as a `◆ ◇ ├─ └─ │` nested tree.
+    return renderConnectedChips(theme, step, connectedComponents, width);
   }
 
   if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
