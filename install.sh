@@ -99,7 +99,6 @@ stow -d "$DOTFILES_DIR" -t "$HOME" nvim
 stow -d "$DOTFILES_DIR" -t "$HOME" starship
 stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
 stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
-stow -d "$DOTFILES_DIR" -t "$HOME" karabiner
 stow -d "$DOTFILES_DIR" -t "$HOME" gh-dash
 stow -d "$DOTFILES_DIR" -t "$HOME" agents
 stow -d "$DOTFILES_DIR" -t "$HOME" pi
