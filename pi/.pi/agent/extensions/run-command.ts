@@ -717,10 +717,11 @@ export default function runCommand(pi: ExtensionAPI) {
 		name: "run-command",
 		label: "run-command",
 		description:
-			"Have the user run ONE command hands-on and report what they saw. A floating panel shows the command; y copies it for the manual terminal workflow, and r opens a Neovim terminal pane with `:term dm`, runs the command there, and captures output automatically. You receive the command and observed output together — grade output vs. prediction.",
+			"Use ONLY when the user has explicitly asked to learn about the commands being run — e.g., a /professor tutoring session, hands-on learning, or a 'teach me' request. In every other case, run commands directly via bash without asking the user; do NOT use this tool. When the user IS learning: have them run ONE command hands-on and report what they saw. A floating panel shows the command; y copies it for the manual terminal workflow, and r opens a Neovim terminal pane with `:term dm`, runs the command there, and captures output automatically. You receive the command and observed output together — grade output vs. prediction.",
 		promptSnippet:
-			"Use run-command to have the user execute one command hands-on (with a grounded prediction); they can paste output manually or press r for Neovim-terminal auto-capture.",
+			"Use run-command ONLY when the user has asked to learn the commands (tutoring/hands-on learning); otherwise run commands via bash directly. When learning, have the user execute one command hands-on (with a grounded prediction); they can paste output manually or press r for Neovim-terminal auto-capture.",
 		promptGuidelines: [
+			"Use ONLY in learning contexts — when the user has explicitly asked to learn about the commands being run (e.g., /professor, 'teach me', hands-on practice). In all other cases, run commands directly via bash; never use this tool for ordinary work.",
 			"ONE command per call — never a batch. The panel shows exactly what you pass in `command`, verbatim.",
 			"The user may press r to run the displayed command through a Neovim `:term dm` pane; output and exit status are captured automatically when available.",
 			"prediction is REQUIRED and must be grounded: run the idempotent/read-only equivalent yourself first and predict the actual observed output; for state-modifying commands, run the read-side (current ruleset/sysctl value) and predict a concrete diff. When no safe read exists, say the prediction is inferred from docs.",
