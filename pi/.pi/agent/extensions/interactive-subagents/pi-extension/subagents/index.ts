@@ -469,6 +469,149 @@ function formatUsageSegments(stats: SessionStats): string[] {
   return segs;
 }
 
+/** Event channel the tree renderer (`tool-call-renderer.ts`) subscribes to for
+ * connected-mode subagent chips. Payload shape (the renderer's data contract):
+ *   { toolCallId, result:{ progress:{ status, startedAt?, completedAt?,
+ *   recentTools?, error? }, output, exitCode?, stats? }, done } */
+const SUBAGENT_BACKGROUND_UPDATE_EVENT = "subagent:background-update";
+
+/** A single subagent tool call, for the expanded `◆ ◇` nested tree. */
+interface SubagentRecentTool {
+  name: string;
+  status: "running" | "completed" | "failed";
+  preview?: string;
+}
+
+/** One-line argument preview for common tools, for the expanded tool tree. */
+function toolCallPreview(name: string, args: unknown): string | undefined {
+  if (!args || typeof args !== "object") return undefined;
+  const a = args as Record<string, unknown>;
+  try {
+    if (name === "bash" || name === "shell") {
+      const c = typeof a.command === "string" ? a.command : undefined;
+      if (c) return c.split("\n")[0].slice(0, 80);
+    } else if (name === "read" || name === "read_file") {
+      const p = typeof a.path === "string" ? a.path : undefined;
+      if (p) return p;
+    } else if (name === "edit" || name === "write") {
+      const p = typeof a.path === "string" ? a.path : undefined;
+      if (p) return p;
+    } else if (name === "web_search" || name === "web_fetch") {
+      const q =
+        typeof a.query === "string" ? a.query :
+        typeof a.url === "string" ? a.url : undefined;
+      if (q) return q.slice(0, 80);
+    }
+  } catch {}
+  return undefined;
+}
+
+/** Live `recentTools` from the activity recorder: only the current tool is
+ * tracked there, so this yields a single-item list (or empty). */
+function buildLiveRecentTools(running: RunningSubagent): SubagentRecentTool[] {
+  const act = running.activity;
+  if (!act || !act.toolName) return [];
+  const status: SubagentRecentTool["status"] = act.toolActive ? "running" : "completed";
+  return [{ name: act.toolName, status }];
+}
+
+/** Full `recentTools` list parsed from the completed subagent session file, for
+ * the expanded `◆ ◇` tree on a finished subagent. */
+function buildFinalRecentTools(sessionFile: string): SubagentRecentTool[] {
+  let entries: ReturnType<typeof getNewEntries>;
+  try {
+    entries = getNewEntries(sessionFile, 0);
+  } catch {
+    return [];
+  }
+  const failedIds = new Set<string>();
+  for (const entry of entries) {
+    if (entry?.type !== "message") continue;
+    const msg = (entry as { message?: any }).message;
+    if (!msg || msg.role !== "toolResult" || !msg.isError) continue;
+    const id = typeof msg.toolCallId === "string" ? msg.toolCallId : null;
+    if (id) failedIds.add(id);
+  }
+  const tools: SubagentRecentTool[] = [];
+  for (const entry of entries) {
+    if (entry?.type !== "message") continue;
+    const msg = (entry as { message?: any }).message;
+    if (!msg || msg.role !== "assistant") continue;
+    const content = Array.isArray(msg.content) ? msg.content : [];
+    for (const block of content) {
+      if (block?.type !== "toolCall") continue;
+      const id = typeof block.id === "string" ? block.id : undefined;
+      const name = typeof block.name === "string" ? block.name : "(tool)";
+      const status: SubagentRecentTool["status"] =
+        id && failedIds.has(id) ? "failed" : "completed";
+      const preview = toolCallPreview(name, block.arguments);
+      tools.push({ name, status, ...(preview ? { preview } : {}) });
+    }
+  }
+  return tools;
+}
+
+/** Build the LIVE chip `output` status line from a StatusSnapshot. */
+function liveStatusLine(snapshot: StatusSnapshot): string {
+  switch (snapshot.kind) {
+    case "active": {
+      const label = snapshot.activityLabel ?? snapshot.activeScope ?? "active";
+      const dur = snapshot.activeDurationText ? ` ${snapshot.activeDurationText}` : "";
+      return `active · ${label}${dur}`;
+    }
+    case "waiting": {
+      const dur = snapshot.waitingDurationText ? ` ${snapshot.waitingDurationText}` : "";
+      return `waiting${dur}`;
+    }
+    case "stalled": {
+      const label = snapshot.snapshotProblemText ?? snapshot.snapshotState ?? "stalled";
+      return `stalled · ${label}`;
+    }
+    case "starting":
+      return "starting";
+    case "running":
+      return `running ${snapshot.elapsedText}`.trim();
+    default:
+      return snapshot.kind;
+  }
+}
+
+/** Emit a `subagent:background-update` event for one running subagent. No-op
+ * when the spawn captured no parent `toolCallId` (the renderer would have no
+ * component to target). */
+function emitSubagentBackgroundUpdate(
+  pi: ExtensionAPI,
+  running: RunningSubagent,
+  opts: {
+    done: boolean;
+    status: "running" | "completed" | "failed";
+    completedAt?: number;
+    error?: string;
+    output: string;
+    stats?: SessionStats | null;
+    recentTools: SubagentRecentTool[];
+    exitCode?: number;
+  },
+): void {
+  if (!running.toolCallId) return;
+  pi.events.emit(SUBAGENT_BACKGROUND_UPDATE_EVENT, {
+    toolCallId: running.toolCallId,
+    result: {
+      progress: {
+        status: opts.status,
+        startedAt: running.startTime,
+        ...(opts.completedAt != null ? { completedAt: opts.completedAt } : {}),
+        recentTools: opts.recentTools,
+        ...(opts.error ? { error: opts.error } : {}),
+      },
+      output: opts.output,
+      ...(opts.exitCode != null ? { exitCode: opts.exitCode } : {}),
+      ...(opts.stats ? { stats: opts.stats } : {}),
+    },
+    done: opts.done,
+  });
+}
+
 /** ANSI colors for widget status icons (raw, since the widget bypasses theme). */
 const ICON_GREEN = "\x1b[38;2;126;186;103m";
 const ICON_YELLOW = "\x1b[38;2;214;181;94m";
@@ -601,6 +744,10 @@ interface SubagentResult {
  */
 interface RunningSubagent {
   id: string;
+  /** Parent's toolCallId for this spawn — used to target `subagent:background-update`
+   * events so the tree renderer seeds/updates the inline chip for this subagent.
+   * Empty for spawns where the parent did not supply a toolCallId. */
+  toolCallId: string;
   name: string;
   task: string;
   agent?: string;
@@ -1082,6 +1229,17 @@ function startStatusRefresh(pi: ExtensionAPI) {
         shouldRefreshWidget = true;
       }
       running.statusState = nextState;
+
+      // Stream the live chip update on every 1s tick so the tree chip's
+      // elapsed timer ticks and `active`/`waiting`/`stalled` labels track the
+      // StatusSnapshot. Stalled stays `running` (no dedicated glyph) and
+      // carries its label in `output`/`progress`.
+      emitSubagentBackgroundUpdate(pi, running, {
+        done: false,
+        status: "running",
+        output: liveStatusLine(snapshot),
+        recentTools: buildLiveRecentTools(running),
+      });
 
       // Interactive subagents (long-running, user-driven) intentionally don't
       // wake the parent session on stalled/recovered transitions — the user is
@@ -1700,7 +1858,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         "After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
       parameters: SubagentParams,
 
-      async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      async execute(toolCallId, params, _signal, _onUpdate, ctx) {
         // Prevent self-spawning (e.g. planner spawning another planner)
         const currentAgent = process.env.PI_SUBAGENT_AGENT;
         if (params.agent && currentAgent && params.agent === currentAgent) {
@@ -1818,6 +1976,9 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         // (the tool's signal completes when we return)
         const watcherAbort = new AbortController();
         running.abortController = watcherAbort;
+        // Capture the parent's toolCallId so background-update events target
+        // the right tree-renderer chip. Empty string when the harness omits it.
+        running.toolCallId = typeof toolCallId === "string" ? toolCallId : "";
 
         // Start widget refresh and status supervision when the first agent launches
         startWidgetRefresh();
@@ -1853,6 +2014,15 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           })
           .catch((err) => {
             updateWidget();
+            emitSubagentBackgroundUpdate(pi, running, {
+              done: true,
+              status: "failed",
+              completedAt: Date.now(),
+              output: `Sub-agent "${running.name}" error: ${err?.message ?? String(err)}`,
+              exitCode: 1,
+              recentTools: [],
+              error: err?.message ?? String(err),
+            });
             pi.sendMessage(
               {
                 customType: "subagent_result",
@@ -1863,6 +2033,16 @@ export default function subagentsExtension(pi: ExtensionAPI) {
               { triggerTurn: true, deliverAs: "steer" },
             );
           });
+
+        // Seed the tree-renderer chip BEFORE the ack returns so the
+        // `tool_execution_end` running-guard (progress.status="running") holds
+        // and the chip renders `▹ running` instead of flashing `◆` done.
+        emitSubagentBackgroundUpdate(pi, running, {
+          done: false,
+          status: "running",
+          output: "running",
+          recentTools: [],
+        });
 
         // Return immediately
         return {
@@ -2350,114 +2530,15 @@ export default function subagentsExtension(pi: ExtensionAPI) {
   });
 
   // ── subagent_result message renderer ──
-  pi.registerMessageRenderer("subagent_result", (message, options, theme) => {
-    const details = message.details as any;
-    if (!details) return undefined;
-
-    return {
-      render(width: number): string[] {
-        const name = details.name ?? "subagent";
-        const exitCode = details.exitCode ?? 0;
-        const errorMessage = typeof details.errorMessage === "string" ? details.errorMessage : "";
-        const failed = exitCode !== 0 || !!errorMessage;
-        const elapsed = details.elapsed != null ? formatElapsed(details.elapsed) : "?";
-        const bgFn = failed
-          ? (text: string) => theme.bg("toolErrorBg", text)
-          : (text: string) => theme.bg("toolSuccessBg", text);
-        const stats = (details.stats ?? null) as SessionStats | null;
-        const icon = failed
-          ? theme.fg("error", "✗")
-          : theme.fg("success", "✓");
-        const agentTag = details.agent ? theme.fg("dim", ` (${details.agent})`) : "";
-        const modelTag = stats?.model ? theme.fg("dim", ` (${stats.model})`) : "";
-        const titleSegment = `${icon} ${theme.fg("toolTitle", theme.bold(name))}${agentTag}${modelTag} ${theme.fg("dim", "—")} `;
-
-        // Success: icon already conveys "completed", so show "N tools · duration"
-        // like the in-process extension. Failure: surface the failure reason.
-        let header: string;
-        if (failed) {
-          const reason = errorMessage ? "failed (provider/agent error)" : `failed (exit ${exitCode})`;
-          header = `${titleSegment}${theme.fg("error", reason)} ${theme.fg("dim", `· ${elapsed}`)}`;
-        } else {
-          const toolPart = stats ? `${stats.toolCount} tools · ${elapsed}` : elapsed;
-          header = `${titleSegment}${theme.fg("dim", toolPart)}`;
-        }
-
-        // Usage line: ↑in ↓out R… W… $cost · context-gauge (color-coded by %).
-        let usageLine: string | null = null;
-        if (stats) {
-          const segs = formatUsageSegments(stats).map((s) => theme.fg("dim", s));
-          if (stats.contextTokens > 0) {
-            const window = contextWindowFor(stats.model);
-            const ctxStr = formatContextUsage(stats.contextTokens, window);
-            const pct = window ? (stats.contextTokens / window) * 100 : 0;
-            const coloredCtx =
-              pct > 90 ? theme.fg("error", ctxStr) : pct > 70 ? theme.fg("warning", ctxStr) : theme.fg("dim", ctxStr);
-            segs.push(coloredCtx);
-          }
-          if (segs.length > 0) usageLine = segs.join(theme.fg("dim", " "));
-        }
-
-        const rawContent = typeof message.content === "string" ? message.content : "";
-
-        // Clean summary (remove follow-up ref and leading label for display)
-        const summary = rawContent
-          .replace(/\n\nFollow up with subagent_message[\s\S]+$/, "")
-          .replace(`Sub-agent "${name}" completed (${elapsed}).\n\n`, "")
-          .replace(`Sub-agent "${name}" failed (exit code ${exitCode}).\n\n`, "")
-          .replace(
-            new RegExp(
-              `^Sub-agent "${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}" failed after ${elapsed} \\(provider/agent error — auto-retry exhausted\\)\\.\\n\\n`,
-            ),
-            "",
-          );
-
-        // Build content for the box
-        const contentLines = [header];
-        if (usageLine) contentLines.push(usageLine);
-
-        if (options.expanded) {
-          // Full view: complete summary + session info
-          if (summary) {
-            for (const line of summary.split("\n")) {
-              contentLines.push(line.slice(0, width - 6));
-            }
-          }
-          if (details.name || details.sessionFile) {
-            contentLines.push("");
-            if (details.name) {
-              contentLines.push(
-                theme.fg(
-                  "dim",
-                  `Follow up:  subagent_message({ name: "${details.name}", message: "…" })`,
-                ),
-              );
-            }
-            if (details.sessionFile) {
-              contentLines.push(theme.fg("muted", `Session file: ${details.sessionFile}`));
-            }
-          }
-        } else {
-          // Collapsed: preview + expand hint
-          if (summary) {
-            const previewLines = summary.split("\n").slice(0, 5);
-            for (const line of previewLines) {
-              contentLines.push(theme.fg("dim", line.slice(0, width - 6)));
-            }
-            const totalLines = summary.split("\n").length;
-            if (totalLines > 5) {
-              contentLines.push(theme.fg("muted", `… ${totalLines - 5} more lines`));
-            }
-          }
-          contentLines.push(theme.fg("muted", keyHint("app.tools.expand", "to expand")));
-        }
-
-        // Render via Box for background + padding, with blank line above for separation
-        const box = new Box(1, 1, bgFn);
-        box.addChild(new Text(contentLines.join("\n"), 0, 0));
-        return ["", ...box.render(width)];
-      },
-    };
+  // `subagent_result` visible renderer is retired: the tree chip's
+  // FINAL/EXPANDED state owns the permanent record. The customType is still
+  // registered (returning undefined) so the steer's `customType` is recognized
+  // by the harness and not surfaced as an unknown-renderer warning, while the
+  // `triggerTurn: true` steer still wakes the parent — the functional invariant
+  // the tool description promises. (See `subagent:background-update` emits for
+  // the chip data path.)
+  pi.registerMessageRenderer("subagent_result", (_message, _options, _theme) => {
+    return undefined;
   });
 
   // ── subagent_status message renderer ──
