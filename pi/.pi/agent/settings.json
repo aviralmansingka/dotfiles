@@ -6,9 +6,9 @@
     "+extensions/rounded-bar-footer.ts"
   ],
   "lastChangelogVersion": "0.84.2",
-  "defaultProvider": "fireworks",
-  "defaultModel": "accounts/fireworks/routers/glm-5p2-fast",
-  "defaultThinkingLevel": "max",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultThinkingLevel": "high",
   "theme": "gruvbox-material",
   "transport": "websocket-cached"
 }
