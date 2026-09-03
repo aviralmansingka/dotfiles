@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
@@ -120,4 +120,114 @@ for (const shell of ["sh", "bash", "zsh", "dash"]) {
 // No END marker yet → not complete.
 assert.deepEqual(extractMarkedOutput("only partial", token), { complete: false });
 
-console.log("run-command helper tests passed");
+// Exercise the registered tool through its public execute/UI boundary. The
+// lightweight dependency stub keeps this deterministic and prevents an
+// automated test from changing the machine clipboard; the extension's real
+// panel event handler and renderer still process every key below.
+const stubDir = mkdtempSync(join(tmpdir(), "run-command-ui-test-"));
+const stubPath = join(stubDir, "deps.cjs");
+writeFileSync(
+	stubPath,
+	String.raw`
+class Editor {
+  constructor() { this.focused = false; this.disableSubmit = false; this.text = ""; }
+  getText() { return this.text; }
+  handleInput(data) { if (this.focused) this.text += data; }
+  invalidate() {}
+  render() { return [this.focused ? this.text + "▌" : this.text]; }
+}
+class Text { constructor(text) { this.text = text; } }
+const Key = { enter: "\r", tab: "\t", escape: "\x1b" };
+const Type = { Object: x => x, String: x => x, Optional: x => x };
+function wrapTextWithAnsi(text, width) {
+  const lines = [];
+  for (let rest = text; rest.length > width; rest = rest.slice(width)) lines.push(rest.slice(0, width));
+  lines.push(text.slice(lines.length * width));
+  return lines;
+}
+module.exports = {
+  Editor, Text, Key, Type,
+  copyToClipboard: async text => { globalThis.__runCommandClipboardCalls.push(text); },
+  matchesKey: (data, key) => data === key,
+  truncateToWidth: (text, width) => text.slice(0, width),
+  visibleWidth: text => text.length,
+  wrapTextWithAnsi,
+};
+`,
+);
+
+try {
+	globalThis.__runCommandClipboardCalls = [];
+	const uiJiti = createJiti(import.meta.url, {
+		alias: {
+			"@earendil-works/pi-coding-agent": stubPath,
+			"@earendil-works/pi-tui": stubPath,
+			typebox: stubPath,
+		},
+		moduleCache: false,
+	});
+	const runCommandExtension = uiJiti("./run-command.ts").default;
+	let tool;
+	runCommandExtension({ registerTool(value) { tool = value; } });
+	assert.ok(tool, "extension must register run-command");
+
+	async function drive(keys) {
+		let panel;
+		const renders = [];
+		const theme = { fg: (_color, text) => text, bold: text => text };
+		const tui = { requestRender: () => renders.push(panel.render(80).join("\n")) };
+		const ctx = {
+			hasUI: true,
+			cwd: process.cwd(),
+			ui: {
+				custom(factory) {
+					return new Promise(resolve => {
+						panel = factory(tui, theme, {}, resolve);
+						renders.push(panel.render(80).join("\n"));
+						for (const key of keys) {
+							panel.handleInput(key);
+							renders.push(panel.render(80).join("\n"));
+						}
+					});
+			},
+		},
+		};
+		const result = await tool.execute(
+			"test-call",
+			{ command: "printf ready", prediction: "ready" },
+			undefined,
+			undefined,
+			ctx,
+		);
+		return { result, renders };
+	}
+
+	const yanked = await drive(["y", "received through leader-at", "\r"]);
+	assert.deepEqual(globalThis.__runCommandClipboardCalls, ["printf ready"]);
+	assert.equal(yanked.result.details.output, "received through leader-at");
+	assert.equal(yanked.result.details.copied, true);
+	assert.match(yanked.renders[1], /Output \(paste what you saw below\):/);
+	assert.match(yanked.renders[1], /Enter — submit · Tab — unfocus/);
+	assert.doesNotMatch(yanked.renders[1], /Tab to focus/);
+	if (process.env.RUN_COMMAND_SHOW_PANEL === "1") {
+		console.log([
+			"INITIAL PANEL",
+			yanked.renders[0],
+			"",
+			"AFTER PRESSING Y (NO TAB)",
+			yanked.renders[1],
+			"",
+			"OUTPUT RECEIVED DIRECTLY",
+			yanked.renders[2],
+		].join("\n"));
+	}
+
+	const tabbed = await drive(["\t", "manual paste", "\r"]);
+	assert.equal(tabbed.result.details.output, "manual paste");
+	assert.equal(tabbed.result.details.copied, false);
+} finally {
+	delete globalThis.__runCommandClipboardCalls;
+	rmSync(stubDir, { recursive: true, force: true });
+}
+
+console.log("run-command helper and UI workflow tests passed");
