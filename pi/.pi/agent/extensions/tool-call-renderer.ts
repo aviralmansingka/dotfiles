@@ -1,5 +1,5 @@
 import { keyHint, type ExtensionAPI, type Theme } from "@earendil-works/pi-coding-agent";
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -1721,7 +1721,19 @@ async function loadPiInternals(): Promise<{
   theme: Theme;
 }> {
   const cliPath = realpathSync(process.argv[1] ?? "");
-  const interactivePath = join(dirname(cliPath), "modes/interactive");
+  const cliDir = dirname(cliPath);
+  const interactivePath = [
+    join(cliDir, "modes/interactive"),
+    join(dirname(cliDir), "modes/interactive"),
+  ].find((candidate) =>
+    existsSync(join(candidate, "components/assistant-message.js")),
+  );
+  if (!interactivePath) {
+    throw new Error(
+      "tool-call-renderer: could not locate pi interactive components relative to " +
+        cliPath,
+    );
+  }
   const [assistantModule, toolModule, themeModule] = await Promise.all([
     import(
       pathToFileURL(join(interactivePath, "components/assistant-message.js"))
