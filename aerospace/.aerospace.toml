@@ -96,23 +96,16 @@ alt-slash = 'layout tiles horizontal vertical'
 alt-comma = 'layout accordion horizontal vertical'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#focus
-# NOTE: alt-k (focus up) rebound to alt-up — 'k' is now a home-row option mod
-# (Miryoku dual-function via karabiner), so alt-k can no longer be triggered.
-# alt-h (left), alt-j (down), alt-l (right) still work: hold option on 'd' or 'k'
-# (opposite hand) and tap h/j/l.
 alt-h = 'focus left'
 alt-j = 'focus down'
-alt-up = 'focus up'
+alt-k = 'focus up'
 alt-l = 'focus right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move
-# NOTE: alt-shift-k (move up) and alt-shift-l (move right) rebound to arrow keys
-# — 'k' is now option and 'l' is now shift (home-row mods), so those chords can
-# no longer be triggered. alt-shift-h (left) and alt-shift-j (down) still work.
 alt-shift-h = 'move left'
 alt-shift-j = 'move down'
-alt-shift-up = 'move up'
-alt-shift-right = 'move right'
+alt-shift-k = 'move up'
+alt-shift-l = 'move right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#resize
 alt-minus = 'resize smart -50'
@@ -131,8 +124,7 @@ alt-9 = 'workspace 9'
 alt-a = 'workspace A' # In your config, you can drop workspace bindings that you don't need
 alt-b = 'workspace B'
 alt-c = 'workspace C'
-# NOTE: alt-d (workspace D) rebound to alt-0 — 'd' is now a home-row option mod.
-alt-0 = 'workspace D'
+alt-d = 'workspace D'
 alt-e = 'workspace E'
 alt-f = 'workspace F'
 alt-g = 'workspace G'
@@ -165,11 +157,7 @@ alt-shift-9 = 'move-node-to-workspace 9'
 alt-shift-a = 'move-node-to-workspace A'
 alt-shift-b = 'move-node-to-workspace B'
 alt-shift-c = 'move-node-to-workspace C'
-# NOTE: alt-shift-d (move-node-to-workspace D) rebound to alt-shift-0 and
-# alt-shift-s (move-node-to-workspace S) rebound to alt-shift-minus — 'd' is now
-# option and 's' is now shift (home-row mods), so those chords can no longer be
-# triggered. alt-s (workspace S) still works (hold option on d/k, tap s).
-alt-shift-0 = 'move-node-to-workspace D'
+alt-shift-d = 'move-node-to-workspace D'
 alt-shift-e = 'move-node-to-workspace E'
 alt-shift-f = 'move-node-to-workspace F'
 alt-shift-g = 'move-node-to-workspace G'
@@ -180,7 +168,7 @@ alt-shift-o = 'move-node-to-workspace O'
 alt-shift-p = 'move-node-to-workspace P'
 alt-shift-q = 'move-node-to-workspace Q'
 alt-shift-r = 'move-node-to-workspace R'
-alt-shift-minus = 'move-node-to-workspace S'
+alt-shift-s = 'move-node-to-workspace S'
 alt-shift-t = 'move-node-to-workspace T'
 alt-shift-u = 'move-node-to-workspace U'
 alt-shift-v = 'move-node-to-workspace V'
@@ -211,13 +199,10 @@ backspace = ['close-all-windows-but-current', 'mode main']
 # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
 #s = ['layout sticky tiling', 'mode main']
 
-# NOTE: alt-shift-k (join up) and alt-shift-l (join right) rebound to arrow keys
-# — 'k' is now option and 'l' is now shift (home-row mods). alt-shift-h (left)
-# and alt-shift-j (down) still work.
 alt-shift-h = ['join-with left', 'mode main']
 alt-shift-j = ['join-with down', 'mode main']
-alt-shift-up = ['join-with up', 'mode main']
-alt-shift-right = ['join-with right', 'mode main']
+alt-shift-k = ['join-with up', 'mode main']
+alt-shift-l = ['join-with right', 'mode main']
 
 down = 'volume down'
 up = 'volume up'
