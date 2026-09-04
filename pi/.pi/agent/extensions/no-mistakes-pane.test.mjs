@@ -20,7 +20,7 @@ const jitiPath = process.env.JITI_PATH
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 const { buildPaneScript, extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
-const { parseDurationMs, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
+const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
 const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
 // ---------------------------------------------------------------------------
@@ -132,6 +132,8 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	}]);
 	assert.equal(phaseProgress(escapedFinding)[0].preview, "❌ 1");
 
+	assert.equal(parseNoMistakesRunId(output), "00000000000000000000000000");
+	assert.equal(parseNoMistakesRunId("run:\n  id: invalid"), undefined);
 	assert.equal(parseNoMistakesStatus("current_branch: main\nruns_on_current_branch: 0"), undefined);
 	assert.equal(parseNoMistakesStatus([
 		"run:",
@@ -197,10 +199,19 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		"    review,completed,0,2000",
 		"    test,failed,0,1000",
 	].join("\n");
+	const staleStatus = [
+		"run:",
+		'  id: "00000000000000000000000005"',
+		"  status: running",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,running,0,1000",
+	].join("\n");
 	const noRunStatus = { code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" };
 	const statusResults = [
 		{ code: 0, stdout: activeStatus },
 		{ code: 0, stdout: terminalStatus },
+		{ code: 0, stdout: staleStatus },
+		{ code: 1, stdout: "temporary failure" },
 		{ code: 1, stdout: "temporary failure" },
 		noRunStatus,
 	];
@@ -218,7 +229,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 			return { unref() {} };
 		};
 		globalThis.clearInterval = () => {};
-		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nsleep 0.05\nprintf 'outcome: test-failed\\n'\nexit 1\n");
+		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nsleep 0.05\nprintf 'run:\\n  id: \"00000000000000000000000003\"\\n  status: failed\\n  outcome: test-failed\\n'\nexit 1\n");
 		chmodSync(join(stubDir, "no-mistakes"), 0o755);
 		process.env.PATH = `${stubDir}:${savedPath}`;
 
@@ -252,8 +263,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		assert.equal(events[0].payload.snapshot, undefined);
 		assert.equal(events[1].payload.snapshot.currentPhase, "review");
 		assert.equal(events[2].payload.snapshot, undefined);
-		assert.equal(updates.length, 2);
-		assert.equal(updates[1].details.snapshot.status, "failed");
+		assert.equal(updates.length, 0);
 		assert.equal(pipelineResult.details.snapshot.status, "failed");
 		assert.equal(pipelineResult.details.progress.recentTools.length, 2);
 		assert.equal(pipelineResult.details.progress.recentTools[1].status, "failed");
@@ -297,15 +307,30 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 			{ cwd: "/repo/a", hasUI: false },
 		);
 		assert.equal(invalidResult.details.progress, undefined);
-		assert.equal(statusResults.length, 2);
+		assert.equal(statusResults.length, 4);
 
 		poll();
 		await new Promise(setImmediate);
-		assert.equal(events.length, 3);
+		assert.equal(events.length, 4);
+		assert.equal(events[3].payload.snapshot.id, "00000000000000000000000005");
+
+		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nprintf 'outcome: test-failed\\n'\nexit 1\n");
+		const staleResult = await tool.execute(
+			"stale",
+			{ args: "run", timeoutMs: 1 },
+			undefined,
+			undefined,
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		assert.match(staleResult.content[0].text, /outcome: test-failed/);
+		assert.equal(staleResult.details.progress, undefined);
+		assert.equal(staleResult.details.snapshot, undefined);
+		assert.equal(events.length, 4);
+
 		poll();
 		await new Promise(setImmediate);
-		assert.equal(events.length, 4);
-		assert.equal(events[3].payload.snapshot, undefined);
+		assert.equal(events.length, 5);
+		assert.equal(events[4].payload.snapshot, undefined);
 		handlers.get("session_shutdown")();
 	} finally {
 		globalThis.setInterval = savedSetInterval;

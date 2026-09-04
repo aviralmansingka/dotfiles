@@ -148,8 +148,13 @@ export function parseDurationMs(value: string | undefined): number | undefined {
 	return matched ? total : undefined;
 }
 
-export function parseNoMistakesStatus(output: string, observedAt = Date.now()): NoMistakesSnapshot | undefined {
+export function parseNoMistakesRunId(output: string): string | undefined {
 	const id = scalar(output, "id");
+	return runStartedAt(id) == null ? undefined : id;
+}
+
+export function parseNoMistakesStatus(output: string, observedAt = Date.now()): NoMistakesSnapshot | undefined {
+	const id = parseNoMistakesRunId(output);
 	const pipelineStartedAt = runStartedAt(id);
 	const phaseRows = table(output, "steps");
 	if (!id || pipelineStartedAt == null || phaseRows.length === 0) return undefined;
