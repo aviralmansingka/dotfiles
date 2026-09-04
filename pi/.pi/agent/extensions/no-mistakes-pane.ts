@@ -457,7 +457,7 @@ const STATUS_POLL_MS = 1000;
 const STATUS_TIMEOUT_MS = 5000;
 
 function pipelineProgress(
-	snapshot: NoMistakesSnapshot | undefined,
+	snapshot: NoMistakesSnapshot,
 	status: NmPipelineProgress["status"],
 	startedAt: number,
 ): NmPipelineProgress {
@@ -466,8 +466,8 @@ function pipelineProgress(
 		status,
 		startedAt,
 		...(status === "running" ? {} : { completedAt: Date.now() }),
-		output: snapshot ? summarizeNoMistakesSnapshot(snapshot) : status,
-		recentTools: snapshot ? phaseProgress(snapshot) : [],
+		output: summarizeNoMistakesSnapshot(snapshot),
+		recentTools: phaseProgress(snapshot),
 	};
 }
 
@@ -503,7 +503,12 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 	let latestSnapshot: NoMistakesSnapshot | undefined;
 	const toolObservers = new Map<
 		string,
-		{ startedAt: number; subcommand: string; onUpdate: (result: ReturnType<typeof textResult>) => void }
+		{
+			startedAt: number;
+			subcommand: string;
+			snapshot?: NoMistakesSnapshot;
+			onUpdate: (result: ReturnType<typeof textResult>) => void;
+		}
 	>();
 
 	const publishSnapshot = (snapshot: NoMistakesSnapshot | undefined) => {
@@ -516,6 +521,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		});
 		if (!latestSnapshot) return;
 		for (const observer of toolObservers.values()) {
+			observer.snapshot = latestSnapshot;
 			observer.onUpdate(
 				textResult(summarizeNoMistakesSnapshot(latestSnapshot), {
 					status: "visible",
@@ -586,16 +592,25 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			const startedAt = Date.now();
 			const observerId = typeof toolCallId === "string" ? toolCallId : randomUUID();
-			let fallbackSnapshot = latestSnapshot;
+			let pipelineCall = false;
+			let observesSession = false;
 			const finishText = (text: string, details: NmAxiDetails) => {
+				const observedSnapshot = toolObservers.get(observerId)?.snapshot;
 				toolObservers.delete(observerId);
-				const parsed = (details.output ? parseNoMistakesStatus(details.output) : undefined) ?? fallbackSnapshot;
+				const parsed = pipelineCall
+					? (details.output ? parseNoMistakesStatus(details.output) : undefined) ??
+						(observesSession ? observedSnapshot ?? latestSnapshot : undefined)
+					: undefined;
 				const failed = details.status === "cancelled" || details.status === "timeout" || details.status === "error" ||
 					(details.exitCode != null && details.exitCode !== 0);
 				return textResult(text, {
 					...details,
-					progress: pipelineProgress(parsed, failed ? "failed" : "completed", startedAt),
-					...(parsed ? { snapshot: parsed } : {}),
+					...(parsed
+						? {
+							progress: pipelineProgress(parsed, failed ? "failed" : "completed", startedAt),
+							snapshot: parsed,
+						}
+						: {}),
 				});
 			};
 
@@ -609,14 +624,14 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			}
 			const args = parseArgs(rawArgs);
 			const subcommand = subcommandOf(args);
+			pipelineCall = wantsTuiPane(args, subcommand);
 			const sessionCwd = ctx?.cwd ?? process.cwd();
 			const cwd = params.cwd ?? sessionCwd;
-			const observesSession = resolve(cwd) === resolve(sessionCwd);
-			if (!observesSession) fallbackSnapshot = undefined;
+			observesSession = resolve(cwd) === resolve(sessionCwd);
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;
 			const sig = signal ?? new AbortController().signal;
-			if (observesSession && onUpdate && wantsTuiPane(args, subcommand)) {
-				toolObservers.set(observerId, { startedAt, subcommand, onUpdate });
+			if (observesSession && onUpdate && pipelineCall) {
+				toolObservers.set(observerId, { startedAt, subcommand, snapshot: latestSnapshot, onUpdate });
 				void refreshStatus({ cwd });
 			}
 

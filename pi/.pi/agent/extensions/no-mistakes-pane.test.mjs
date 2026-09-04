@@ -104,17 +104,16 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 {
 	const handlers = new Map();
 	const events = [];
+	const activeStatus = [
+		"run:",
+		"  status: running",
+		"  gate: review",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,awaiting,0,1000",
+	].join("\n");
 	const statusResults = [
-		{
-			code: 0,
-			stdout: [
-				"run:",
-				"  status: running",
-				"  gate: review",
-				"  steps[1]{step,status,findings,duration_ms}:",
-				"    review,awaiting,0,1000",
-			].join("\n"),
-		},
+		{ code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" },
+		{ code: 0, stdout: activeStatus },
 		{ code: 1, stdout: "temporary failure" },
 		{ code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" },
 	];
@@ -130,7 +129,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 			return { unref() {} };
 		};
 		globalThis.clearInterval = () => {};
-		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nprintf 'outcome: passed\\n'\n");
+		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nsleep 0.05\nprintf 'outcome: passed\\n'\n");
 		chmodSync(join(stubDir, "no-mistakes"), 0o755);
 		process.env.PATH = `${stubDir}:${savedPath}`;
 
@@ -143,27 +142,58 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		handlers.get("session_start")({}, { mode: "tui", cwd: "/repo/a" });
 		await new Promise(setImmediate);
 		assert.equal(events.length, 1);
-		assert.equal(events[0].payload.snapshot.currentPhase, "review");
+		assert.equal(events[0].payload.snapshot, undefined);
 
 		const updates = [];
-		const foreignResult = await tool.execute(
-			"foreign",
-			{ args: "run", cwd: stubDir, timeoutMs: 1 },
+		const pipelineResult = await tool.execute(
+			"pipeline",
+			{ args: "run", timeoutMs: 1 },
 			undefined,
 			(update) => updates.push(update),
 			{ cwd: "/repo/a", hasUI: false },
 		);
-		assert.equal(updates.length, 0);
+		assert.equal(updates.length, 1);
+		assert.equal(pipelineResult.details.snapshot.currentPhase, "review");
+		assert.equal(pipelineResult.details.progress.recentTools.length, 1);
+		assert.equal(pipelineResult.details.progress.status, "completed");
+
+		const foreignUpdates = [];
+		const foreignResult = await tool.execute(
+			"foreign",
+			{ args: "run", cwd: stubDir, timeoutMs: 1 },
+			undefined,
+			(update) => foreignUpdates.push(update),
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		assert.equal(foreignUpdates.length, 0);
+		assert.equal(foreignResult.details.progress, undefined);
 		assert.equal(foreignResult.details.snapshot, undefined);
+
+		const logsResult = await tool.execute(
+			"logs",
+			{ args: "logs", timeoutMs: 1 },
+			undefined,
+			undefined,
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		assert.equal(logsResult.details.progress, undefined);
+		const invalidResult = await tool.execute(
+			"invalid",
+			{ args: "" },
+			undefined,
+			undefined,
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		assert.equal(invalidResult.details.progress, undefined);
 		assert.equal(statusResults.length, 2);
 
 		poll();
 		await new Promise(setImmediate);
-		assert.equal(events.length, 1);
+		assert.equal(events.length, 2);
 		poll();
 		await new Promise(setImmediate);
-		assert.equal(events.length, 2);
-		assert.equal(events[1].payload.snapshot, undefined);
+		assert.equal(events.length, 3);
+		assert.equal(events[2].payload.snapshot, undefined);
 		handlers.get("session_shutdown")();
 	} finally {
 		globalThis.setInterval = savedSetInterval;

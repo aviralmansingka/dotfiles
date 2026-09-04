@@ -1366,6 +1366,18 @@ function rootFailed(component: any, progress: Record<string, unknown>): boolean 
   );
 }
 
+function supportsConnectedRendering(component: any): boolean {
+  if (component.toolName === "subagent") return true;
+  if (component.toolName !== "no_mistakes_axi") return false;
+  const progress = rootProgress(component);
+  return (
+    progress?.kind === "pipeline" &&
+    Array.isArray(progress.recentTools) &&
+    progress.recentTools.length > 0 &&
+    !rootFailed(component, progress)
+  );
+}
+
 function synchronizeConnectedObservation(
   component: any,
   step: WorkStep,
@@ -1477,7 +1489,7 @@ function ensureConnectedBridge(
   step: WorkStep,
   state: RendererState,
 ): ConnectedRenderBridge | undefined {
-  if (!CONNECTED_TOOL_NAMES.has(component.toolName)) return undefined;
+  if (!supportsConnectedRendering(component)) return undefined;
   const rendererState = (component.rendererState ??= {}) as Record<PropertyKey, unknown>;
   let connected = state.connected.get(component);
   if (!connected) {
@@ -1912,7 +1924,7 @@ function patchComponents(
       const activity = toolProto[CONTROLLER]?.renderTool(this, width) ?? [];
       if (!CONNECTED_TOOL_NAMES.has(this.toolName)) return activity;
       const connected = this.rendererState?.[SUBAGENT_BRIDGE];
-      return connected?.layout === "connected"
+      return connected?.layout === "connected" && supportsConnectedRendering(this)
         ? activity
         : [...activity, ...render.call(this, width)];
     };
