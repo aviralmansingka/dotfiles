@@ -39,6 +39,7 @@
         "fd",
         "ripgrep",
         "fzf",
+        "gh",
         "tree",
         "yq",
         "eza",
