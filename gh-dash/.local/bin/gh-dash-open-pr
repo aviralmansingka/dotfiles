@@ -1,0 +1,62 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 3 ]; then
+  printf 'Usage: gh-dash-open-pr REPO_PATH REPO_NAME PR_NUMBER\n' >&2
+  exit 2
+fi
+
+repo=$1
+repo_name=$2
+pr=$3
+case "$pr" in
+  ''|*[!0-9]*)
+    printf 'Invalid pull request number: %s\n' "$pr" >&2
+    exit 2
+    ;;
+esac
+
+branch="pr/$pr"
+branch_ref="refs/heads/$branch"
+pr_ref="refs/remotes/gh-dash/pull/$pr"
+owner_key="branch.$branch.ghDashPr"
+owner="$repo_name#$pr"
+branch_oid=$(git -C "$repo" rev-parse --verify "$branch_ref" 2>/dev/null || true)
+old_pr_oid=$(git -C "$repo" rev-parse --verify "$pr_ref" 2>/dev/null || true)
+configured_owner=$(git -C "$repo" config --local --get "$owner_key" 2>/dev/null || true)
+owned=false
+if [ "$configured_owner" = "$owner" ] ||
+   { [ -n "$branch_oid" ] && [ "$branch_oid" = "$old_pr_oid" ]; }; then
+  owned=true
+fi
+
+if git -C "$repo" worktree list --porcelain | grep -Fqx "branch $branch_ref"; then
+  if [ "$owned" != true ]; then
+    printf 'Branch %s is checked out but is not owned by gh-dash\n' "$branch" >&2
+    exit 1
+  fi
+  git -C "$repo" config --local "$owner_key" "$owner"
+  exec herdr worktree open --cwd "$repo" --branch "$branch" --focus
+fi
+
+if [ -n "$branch_oid" ] && [ "$owned" != true ]; then
+  printf 'Branch %s already exists outside a worktree\n' "$branch" >&2
+  exit 1
+fi
+
+remote=$(gh repo view "$repo_name" --json sshUrl --jq .sshUrl)
+git -C "$repo" fetch "$remote" "+pull/$pr/head:$pr_ref"
+new_pr_oid=$(git -C "$repo" rev-parse --verify "$pr_ref")
+
+if [ -n "$branch_oid" ]; then
+  if [ "$branch_oid" != "$old_pr_oid" ]; then
+    printf 'Branch %s has local commits; refusing to update it\n' "$branch" >&2
+    exit 1
+  fi
+  git -C "$repo" update-ref "$branch_ref" "$new_pr_oid" "$branch_oid"
+  git -C "$repo" config --local "$owner_key" "$owner"
+  exec herdr worktree create --cwd "$repo" --branch "$branch" --focus
+fi
+
+herdr worktree create --cwd "$repo" --branch "$branch" --base "$pr_ref" --focus
+git -C "$repo" config --local "$owner_key" "$owner"
