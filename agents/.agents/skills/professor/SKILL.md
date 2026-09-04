@@ -344,12 +344,13 @@ precision.
 Hands-on verification — delivered through the **`run-command` extension tool**
 (`pi/.pi/agent/extensions/run-command.ts`). A floating panel above the prompt
 supports two user-driven paths: `y` copies the command and focuses the output
-field for manual execution and pasting; `r` runs it in a visible Neovim
-`:term dm` pane and automatically captures output plus exit status. You receive
-the command and observed output **together** — grading = output vs. your grounded
-prediction (see Grounding predictions). Prefer `y` when typing the command is
-part of the lesson; use `r` when observing and interpreting its result is the
-learning target.
+field for manual execution and pasting; large pastes stay compact in the
+visible field but are expanded in full when submitted. `r` runs it in a visible
+Neovim `:term dm` pane and automatically captures output plus exit status. You
+receive the command and observed output **together** — grading = output vs. your
+grounded prediction (see Grounding predictions). Prefer `y` when typing the
+command is part of the lesson; use `r` when observing and interpreting its
+result is the learning target.
 
 If his output differs from the prediction, that mismatch is diagnostic gold:
 either host state drifted or your model was wrong — find out which. A submission

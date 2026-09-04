@@ -239,6 +239,11 @@ try {
 	assert.equal(tabbed.result.details.output, "manual paste");
 	assert.equal(tabbed.result.details.copied, false);
 
+	const smallOutput = "small line 1\nsmall line 2";
+	const smallPaste = await drive(["\t", `\x1b[200~${smallOutput}\x1b[201~`, "\r"]);
+	assert.equal(smallPaste.result.details.output, smallOutput);
+	assert.doesNotMatch(smallPaste.renders[2], /\[paste #/);
+
 	const largeOutput = Array.from({ length: 18 }, (_, i) => `output line ${i + 1}`).join("\n");
 	const largePaste = await drive(["\t", `\x1b[200~${largeOutput}\x1b[201~`, "\r"]);
 	assert.match(largePaste.renders[2], /\[paste #1 \+18 lines\]/);
