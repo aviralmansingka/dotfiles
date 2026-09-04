@@ -9,6 +9,7 @@ Development environment configuration for macOS and AWS devbox (Ubuntu), managed
 - **aerospace** - Tiling window manager for macOS
 - **starship** - Cross-shell prompt
 - **herdr** - Agent-aware terminal multiplexer used by Neovim Sidekick
+- **gh-dash** - GitHub dashboard with Herdr pull-request worktree integration
 - **omarchy** - User theme overrides for Omarchy/Hyprland
 
 ## Setup
@@ -27,6 +28,7 @@ For manual installation:
 
 ```sh
 brew bundle
+gh extension install dlvhdr/gh-dash
 stow nvim tmux zsh ghostty git starship gh-dash tuicr agents pi herdr launchd
 ```
 
@@ -84,7 +86,7 @@ terraform -chdir=ops/devbox destroy \
 | `claude`     | Claude AI context files                                                     |
 | `code`       | Code snippets (Golang, Lua)                                                 |
 | `ghostty`    | Ghostty terminal emulator                                                   |
-| `gh-dash`    | GitHub dashboard configuration                                              |
+| `gh-dash`    | GitHub dashboard config and PR worktree launcher                            |
 | `herdr`      | Agent workspaces, notifications, and sound configuration                    |
 | `git`        | Git configuration                                                           |
 | `kube`       | Kubernetes configuration                                                    |
@@ -100,6 +102,12 @@ terraform -chdir=ops/devbox destroy \
 | `tmuxinator` | Tmuxinator session templates                                                |
 | `tuicr`      | Terminal pull-request review configuration                                  |
 | `zsh`        | Zsh shell configuration                                                     |
+
+## gh-dash PR worktrees
+
+The stowed gh-dash config resolves `owner/repo` to `/Users/aviral/:repo`. In the pull-request view, press `O` to
+check out the selected PR as `pr/<number>` in a Herdr worktree, focus it, and start tuicr in the new worktree.
+Pressing `O` again focuses the existing workflow-owned worktree; a conflicting local branch is left untouched.
 
 ## Herdr server handoff
 
