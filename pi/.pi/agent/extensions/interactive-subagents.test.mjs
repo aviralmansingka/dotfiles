@@ -109,4 +109,41 @@ assert.match(
 	"killed panes should prompt the orchestrator to ask the user",
 );
 
+// --- Bundled professor is an interactive, skill-backed teaching agent ---
+const professorProfile = readFileSync(
+	new URL("./interactive-subagents/agents/professor.md", import.meta.url),
+	"utf8",
+);
+assert.match(professorProfile, /^name: professor$/m);
+assert.match(professorProfile, /^skills: professor$/m);
+assert.match(professorProfile, /^subagent_agents: researcher$/m);
+assert.match(professorProfile, /^auto-exit: false$/m);
+for (const tool of [
+	"ask_user_question",
+	"quiz",
+	"explain",
+	"run-command",
+]) {
+	assert.match(
+		professorProfile,
+		new RegExp(`^tools:.*\\b${tool}\\b`, "m"),
+		`professor profile should allow ${tool}`,
+	);
+}
+
+const professorSkill = readFileSync(
+	new URL(
+		"../../../../agents/.agents/skills/professor/SKILL.md",
+		import.meta.url,
+	),
+	"utf8",
+);
+assert.match(professorSkill, /agent: "professor"/);
+assert.match(professorSkill, /Phase 0 — Goal grill \(never skip\)/);
+assert.match(
+	professorSkill,
+	/Use `ask_user_question` for every grilling turn/,
+);
+assert.match(professorSkill, /Do not enter Probe until approval is explicit/);
+
 console.log("interactive-subagents surface smoke passed");

@@ -79,8 +79,9 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | **scout** | `openai-codex/gpt-5.6-luna` | `read`, `grep`, `find`, `ls` | Fast read-only codebase recon |
 | **researcher** | `openai-codex/gpt-5.6-luna` | `web_search`, `web_fetch`, `safe_bash` | Web research, synthesized into a sourced brief |
 | **worker** | `openai-codex/gpt-5.6-luna` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch` + spawning | General implementer; may spawn `scout` and `researcher` |
+| **professor** | `openai-codex/gpt-5.6-luna` | lesson authoring, learner interaction tools + `researcher` spawning | Interactive teacher; grills the learner to approve one observable goal before teaching |
 
-All three are autonomous (`auto-exit: true`) and carry their identity in the system prompt (`system-prompt: append`).
+`scout`, `researcher`, and `worker` are autonomous (`auto-exit: true`). `professor` is a long-lived, user-driven pane (`auto-exit: false`) that auto-loads the `professor` skill and remains open until the learner exits it. All four carry their identity in the system prompt (`system-prompt: append`).
 
 ## Custom agents
 
