@@ -27,7 +27,7 @@ For manual installation:
 
 ```sh
 brew bundle
-stow nvim tmux zsh ghostty git starship agents pi herdr launchd
+stow nvim tmux zsh ghostty git starship gh-dash tuicr agents pi herdr launchd
 ```
 
 On Linux (systemd) systems, deploy the user services with:
@@ -84,6 +84,7 @@ terraform -chdir=ops/devbox destroy \
 | `claude`     | Claude AI context files                                                     |
 | `code`       | Code snippets (Golang, Lua)                                                 |
 | `ghostty`    | Ghostty terminal emulator                                                   |
+| `gh-dash`    | GitHub dashboard configuration                                              |
 | `herdr`      | Agent workspaces, notifications, and sound configuration                    |
 | `git`        | Git configuration                                                           |
 | `kube`       | Kubernetes configuration                                                    |
@@ -91,13 +92,13 @@ terraform -chdir=ops/devbox destroy \
 | `neovide`    | Neovide (Neovim GUI) config                                                 |
 | `nvim`       | Neovim with LazyVim                                                         |
 | `omarchy`    | User Omarchy theme overrides                                                |
-| `ssh`        | SSH configuration                                                           |
 | `starship`   | Starship prompt                                                             |
 | `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges, flight check-in reminders) |
 | `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
 | `terminfo`   | Custom terminfo entries                                                     |
 | `tmux`       | Tmux configuration                                                          |
 | `tmuxinator` | Tmuxinator session templates                                                |
+| `tuicr`      | Terminal pull-request review configuration                                  |
 | `zsh`        | Zsh shell configuration                                                     |
 
 ## Herdr server handoff

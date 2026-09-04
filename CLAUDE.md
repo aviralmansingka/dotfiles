@@ -59,25 +59,8 @@ Each tool has its own directory containing dotfiles in their target path structu
 - `ghostty/.config/ghostty/` → `~/.config/ghostty/`
 
 ### Stow Packages
-- **aerospace** - AeroSpace tiling window manager
-- **agents** - Shared agent skills
-- **blinksh** - Blink Shell (iOS terminal) configuration
-- **claude** - Claude AI context files
-- **code** - Code snippets (Golang, Lua)
-- **ghostty** - Ghostty terminal emulator
-- **git** - Git configuration
-- **kube** - Kubernetes configuration
-- **launchd** - macOS user LaunchAgents
-- **neovide** - Neovide (Neovim GUI) configuration
-- **nvim** - Neovim with LazyVim distribution
-- **pi** - Pi agent config, packages, themes, and messaging daemons
-- **ssh** - SSH configuration
-- **starship** - Starship prompt
-- **terminfo** - Custom terminfo entries (xterm-ghostty)
-- **tmux** - Tmux configuration
-- **tmuxinator** - Tmuxinator session templates
-- **systemd** - User systemd units (Linux)
-- **zsh** - Zsh shell configuration
+
+See the authoritative package inventory in [README.md](README.md#stow-packages).
 
 ### Key Configuration Patterns
 
