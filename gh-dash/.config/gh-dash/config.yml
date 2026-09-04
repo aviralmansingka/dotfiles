@@ -86,7 +86,11 @@ keybindings:
     - key: C
       name: tuicr review
       command: tuicr pr "{{.RepoName}}#{{.PrNumber}}" --no-update-check
-repoPaths: {}
+    - key: O
+      name: review PR in Herdr worktree
+      command: gh-dash-open-pr "{{.RepoPath}}" "{{.RepoName}}" "{{.PrNumber}}"
+repoPaths:
+  ":owner/:repo": /Users/aviral/:repo
 theme:
     ui:
         sectionsShowCount: true
