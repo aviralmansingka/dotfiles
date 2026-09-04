@@ -28,6 +28,7 @@
         "python3-pip",
         "nodejs",
         "npm",
+        "bun",
         "rust",
         "luarocks"
       ]
@@ -38,6 +39,7 @@
         "fd",
         "ripgrep",
         "fzf",
+        "gh",
         "tree",
         "yq",
         "eza",
@@ -74,6 +76,7 @@
       "python3-pip": "python3-pip",
       "golang": "golang-go",
       "awscli": "awscli",
+      "bun": null,
       "rust": "cargo"
     },
     "alpine": {
@@ -81,14 +84,16 @@
       "build-essential": null,
       "python3-pip": "py3-pip",
       "golang": "go",
-      "awscli": "aws-cli"
+      "awscli": "aws-cli",
+      "bun": null
     },
     "macos": {
       "fd": "fd",
       "build-essential": null,
       "python3-pip": null,
       "golang": "go",
-      "awscli": "awscli"
+      "awscli": "awscli",
+      "bun": "bun"
     }
   },
   "os_specific": {

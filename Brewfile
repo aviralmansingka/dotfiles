@@ -1,4 +1,5 @@
 brew "awscli"
+brew "bun"
 brew "curl"
 brew "direnv"
 brew "eza"
@@ -55,3 +56,4 @@ cask "obsidian"
 cask "google-chrome"
 cask "whatsapp"
 cask "messenger"
+
