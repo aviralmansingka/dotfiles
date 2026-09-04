@@ -39,6 +39,9 @@ export interface NoMistakesSnapshot {
 	currentPhase?: string;
 	phaseElapsedMs?: number;
 	totalDurationMs: number;
+	observedAt?: number;
+	phaseStartedAt?: number;
+	pipelineStartedAt?: number;
 	reviewFindings: NoMistakesFinding[];
 }
 
@@ -112,7 +115,7 @@ export function parseDurationMs(value: string | undefined): number | undefined {
 	return matched ? total : undefined;
 }
 
-export function parseNoMistakesStatus(output: string): NoMistakesSnapshot | undefined {
+export function parseNoMistakesStatus(output: string, observedAt = Date.now()): NoMistakesSnapshot | undefined {
 	const phaseRows = table(output, "steps");
 	if (phaseRows.length === 0) return undefined;
 	const gate = scalar(output, "gate");
@@ -134,7 +137,7 @@ export function parseNoMistakesStatus(output: string): NoMistakesSnapshot | unde
 	const status = scalar(output, "outcome") ?? scalar(output, "status") ?? "running";
 	const current = phases.find((phase) => ["running", "fixing", "awaiting"].includes(phase.status)) ??
 		(gate ? phases.find((phase) => phase.name === gate) : undefined);
-	const phaseElapsedMs = parseDurationMs(current?.activeFor) ?? current?.durationMs;
+	const phaseElapsedMs = parseDurationMs(current?.activeFor) ?? current?.durationMs ?? 0;
 	const totalDurationMs = phases.reduce((total, phase) => {
 		const elapsed = phase === current
 			? Math.max(phase.durationMs ?? 0, phaseElapsedMs ?? 0)
@@ -160,7 +163,35 @@ export function parseNoMistakesStatus(output: string): NoMistakesSnapshot | unde
 		currentPhase: current?.name ?? (status === "checks-passed" ? "merge" : "starting"),
 		phaseElapsedMs,
 		totalDurationMs,
+		observedAt,
+		phaseStartedAt: observedAt - phaseElapsedMs,
+		pipelineStartedAt: observedAt - totalDurationMs,
 		reviewFindings,
+	};
+}
+
+export function observeNoMistakesTiming(
+	snapshot: NoMistakesSnapshot,
+	previous: NoMistakesSnapshot | undefined,
+): NoMistakesSnapshot {
+	const observedAt = snapshot.observedAt ?? Date.now();
+	const sameRun = !!previous && (snapshot.id
+		? snapshot.id === previous.id
+		: !previous.id && snapshot.branch === previous.branch && snapshot.head === previous.head);
+	const pipelineStartedAt = sameRun
+		? previous.pipelineStartedAt ?? (previous.observedAt ?? observedAt) - previous.totalDurationMs
+		: snapshot.pipelineStartedAt ?? observedAt - snapshot.totalDurationMs;
+	const samePhase = sameRun && snapshot.currentPhase === previous.currentPhase;
+	const phaseStartedAt = samePhase
+		? previous.phaseStartedAt ?? (previous.observedAt ?? observedAt) - (previous.phaseElapsedMs ?? 0)
+		: snapshot.phaseStartedAt ?? observedAt - (snapshot.phaseElapsedMs ?? 0);
+	return {
+		...snapshot,
+		observedAt,
+		phaseStartedAt,
+		pipelineStartedAt,
+		phaseElapsedMs: Math.max(snapshot.phaseElapsedMs ?? 0, observedAt - phaseStartedAt),
+		totalDurationMs: Math.max(snapshot.totalDurationMs, observedAt - pipelineStartedAt),
 	};
 }
 

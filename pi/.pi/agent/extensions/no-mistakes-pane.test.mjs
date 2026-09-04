@@ -20,7 +20,7 @@ const jitiPath = process.env.JITI_PATH
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 const { buildPaneScript, extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
-const { parseDurationMs, parseNoMistakesStatus, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
+const { parseDurationMs, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
 const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
 // ---------------------------------------------------------------------------
@@ -73,15 +73,27 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	assert.equal(phaseProgress(snapshot)[1].preview, "12s · round 1 · ❌ 1 · ⚠️ 1 · 2s ago: gate");
 	assert.equal(parseDurationMs("1h 2m 3.5s"), 3723500);
 
-	const checksPassed = parseNoMistakesStatus([
+	const checksPassedOutput = [
 		"run:",
+		'  id: "01MERGE"',
 		"  status: checks-passed",
 		"  steps[1]{step,status,findings,duration_ms}:",
 		"    test,completed,0,17000",
-	].join("\n"));
+	].join("\n");
+	const checksPassed = parseNoMistakesStatus(checksPassedOutput, 100_000);
 	assert.ok(checksPassed);
 	assert.equal(checksPassed.currentPhase, "merge");
-	assert.equal(summarizeNoMistakesSnapshot(checksPassed), "merge · — · 17s total");
+	assert.equal(summarizeNoMistakesSnapshot(checksPassed), "merge · 0ms · 17s total");
+	const mergeLater = observeNoMistakesTiming(
+		parseNoMistakesStatus(checksPassedOutput, 105_000),
+		checksPassed,
+	);
+	assert.equal(summarizeNoMistakesSnapshot(mergeLater), "merge · 5s · 22s total");
+	const reviewLater = observeNoMistakesTiming(
+		parseNoMistakesStatus(output, 105_000),
+		parseNoMistakesStatus(output, 100_000),
+	);
+	assert.equal(summarizeNoMistakesSnapshot(reviewLater), "review · 17s · 19s total");
 	assert.equal(
 		summarizeNoMistakesSnapshot({ ...snapshot, currentPhase: undefined, phaseElapsedMs: undefined }),
 		"starting · — · 14s total",
@@ -129,12 +141,15 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		"  steps[1]{step,status,findings,duration_ms}:",
 		"    review,awaiting,0,1000",
 	].join("\n");
+	const noRunStatus = { code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" };
 	const statusResults = [
-		{ code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" },
+		noRunStatus,
 		{ code: 0, stdout: activeStatus },
 		{ code: 1, stdout: "temporary failure" },
-		{ code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" },
+		noRunStatus,
 	];
+	let releaseInitialStatus;
+	let statusCalls = 0;
 	let tool;
 	let poll;
 	const savedSetInterval = globalThis.setInterval;
@@ -155,21 +170,32 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 			on(name, handler) { handlers.set(name, handler); },
 			registerTool(value) { tool = value; },
 			events: { emit(name, payload) { events.push({ name, payload }); } },
-			async exec() { return statusResults.shift(); },
+			exec() {
+				if (statusCalls++ > 0) return Promise.resolve(statusResults.shift());
+				return new Promise((resolve) => {
+					releaseInitialStatus = () => resolve(noRunStatus);
+				});
+			},
 		});
 		handlers.get("session_start")({}, { mode: "tui", cwd: "/repo/a" });
 		await new Promise(setImmediate);
-		assert.equal(events.length, 1);
-		assert.equal(events[0].payload.snapshot, undefined);
+		assert.equal(events.length, 0);
 
 		const updates = [];
-		const pipelineResult = await tool.execute(
+		const pipelinePromise = tool.execute(
 			"pipeline",
 			{ args: "run", timeoutMs: 1 },
 			undefined,
 			(update) => updates.push(update),
 			{ cwd: "/repo/a", hasUI: false },
 		);
+		await new Promise(setImmediate);
+		releaseInitialStatus();
+		const pipelineResult = await pipelinePromise;
+		assert.equal(events.length, 3);
+		assert.equal(events[0].payload.snapshot, undefined);
+		assert.equal(events[1].payload.snapshot, undefined);
+		assert.equal(events[2].payload.snapshot.currentPhase, "review");
 		assert.equal(updates.length, 1);
 		assert.equal(pipelineResult.details.snapshot.currentPhase, "review");
 		assert.equal(pipelineResult.details.progress.recentTools.length, 1);
@@ -207,11 +233,11 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
 		poll();
 		await new Promise(setImmediate);
-		assert.equal(events.length, 2);
+		assert.equal(events.length, 3);
 		poll();
 		await new Promise(setImmediate);
-		assert.equal(events.length, 3);
-		assert.equal(events[2].payload.snapshot, undefined);
+		assert.equal(events.length, 4);
+		assert.equal(events[3].payload.snapshot, undefined);
 		handlers.get("session_shutdown")();
 	} finally {
 		globalThis.setInterval = savedSetInterval;
