@@ -22,8 +22,7 @@ cd ${HOME}/dotfiles/
 ./install.sh
 ```
 
-The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, and
-installs Neovim via `bob`.
+The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, and installs Neovim via `bob`.
 
 For manual installation:
 
@@ -49,8 +48,7 @@ For a minimal setup without agent tooling, omit `agents` and `pi`.
 
 ### Option B: AWS Devbox
 
-A fully provisioned Ubuntu 24.04 EC2 instance with all tools pre-installed. AMIs are built with Packer and the
-instance is managed with Terraform.
+A fully provisioned Ubuntu 24.04 EC2 instance with all tools pre-installed. AMIs are built with Packer and the instance is managed with Terraform.
 
 **Prerequisites:** AWS credentials configured, Terraform installed, an SSH key pair.
 
@@ -68,8 +66,7 @@ Then SSH in:
 ssh aviralmansingka@$(terraform -chdir=ops/devbox output -raw devbox_public_ip)
 ```
 
-The devbox comes with: zsh + Oh My Zsh, tmux + TPM, Neovim via bob, Rust toolchain, Go, Node.js, Python, kubectl,
-k9s, lazygit, Claude Code, and all dotfiles stowed.
+The devbox comes with: zsh + Oh My Zsh, tmux + TPM, Neovim via bob, Rust toolchain, Go, Node.js, Python, kubectl, k9s, lazygit, Claude Code, and all dotfiles stowed.
 
 To tear down:
 
@@ -98,7 +95,7 @@ terraform -chdir=ops/devbox destroy \
 | `nvim`       | Neovim with LazyVim                                                         |
 | `omarchy`    | User Omarchy theme overrides                                                |
 | `starship`   | Starship prompt                                                             |
-| `systemd`    | User units for auto-sync, Pi chat bridges, and reminders                    |
+| `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges, flight check-in reminders) |
 | `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
 | `terminfo`   | Custom terminfo entries                                                     |
 | `tmux`       | Tmux configuration                                                          |
@@ -126,8 +123,7 @@ subprocesses keep their existing environment.
 
 ## Git auto-sync services
 
-The shared implementation is `scripts/auto-git-sync`. It fetches and merges the remote branch before committing
-local edits, then asks Pi to resolve Git conflict files if a merge or stash apply leaves conflicts.
+The shared implementation is `scripts/auto-git-sync`. It fetches and merges the remote branch before committing local edits, then asks Pi to resolve Git conflict files if a merge or stash apply leaves conflicts.
 
 Manage Linux user services:
 
@@ -159,8 +155,7 @@ The shared `vault` skill supports explicit project and knowledge-base lookup, no
 Wayfinder overviews. It preserves the vault's Project → Theme → Feature → Task ontology without installing an
 execution workflow. Neovim's `<leader>vf` picker remains a read-only navigation surface for active vault work.
 
-The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials
-should be provided out of band.
+The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
 Install/update Pi packages and the local web-fetch dependencies:
 
@@ -169,42 +164,28 @@ cd ~/.pi/agent/npm && npm install
 cd ~/.pi/agent/extensions/web-fetch && npm ci --ignore-scripts
 ```
 
-Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor
-when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`;
-the widget stays hidden when no run exists.
+Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`; the widget stays hidden when no run exists.
 
-For Pi over WhatsApp, copy `~/.config/pi-whatsapp.env.example` to `~/.config/pi-whatsapp.env`, fill in the allowed
-chat IDs, then enable the user services:
+For Pi over WhatsApp, copy `~/.config/pi-whatsapp.env.example` to `~/.config/pi-whatsapp.env`, fill in the allowed chat IDs, then enable the user services:
 
 ```sh
 systemctl --user daemon-reload
 systemctl --user enable --now whatsapp-bridge.service pi-whatsapp.service
 ```
 
-For Pi over Telegram, create a bot with `@BotFather`, copy `~/.config/pi-telegram.env.example` to
-`~/.config/pi-telegram.env`, fill in the bot token and allowed chat IDs, and set `PI_TELEGRAM_PREFIX=` if you want
-normal prefixless chat. Telegram replies default to `openai-codex/gpt-5.6-luna:high` via `PI_TELEGRAM_MODEL`, with
-`PI_FAST_MODE=1` selecting the priority service tier; `PI_TELEGRAM_TYPING_INTERVAL_SECONDS` controls the typing
-indicator refresh while Pi is generating. Photos/screenshots and image documents are downloaded and passed to Pi as
-image attachments; captions follow the existing prefix rules, while bare images are accepted.
-`PI_TELEGRAM_MAX_IMAGE_BYTES` (default 10 MiB) caps the accepted size. Then enable the user service:
+For Pi over Telegram, create a bot with `@BotFather`, copy `~/.config/pi-telegram.env.example` to `~/.config/pi-telegram.env`, fill in the bot token and allowed chat IDs, and set `PI_TELEGRAM_PREFIX=` if you want normal prefixless chat. Telegram replies default to `openai-codex/gpt-5.6-luna:high` via `PI_TELEGRAM_MODEL`, with `PI_FAST_MODE=1` selecting the priority service tier; `PI_TELEGRAM_TYPING_INTERVAL_SECONDS` controls the typing indicator refresh while Pi is generating. Photos/screenshots and image documents are downloaded and passed to Pi as image attachments; captions follow the existing prefix rules, while bare images are accepted. `PI_TELEGRAM_MAX_IMAGE_BYTES` (default 10 MiB) caps the accepted size. Then enable the user service:
 
 ```sh
 systemctl --user daemon-reload
 systemctl --user enable --now pi-telegram.service
 ```
 
-The `flight-checkin-reminders.timer` user unit (every 12h) scans Gmail for upcoming flight check-in windows via Pi
-and sends Telegram reminders. It runs `%h/vault/scripts/flight-checkin-reminders.py` through an explicit
-`/usr/bin/python3` because the vault checkout does not guarantee the executable bit; direct execution fails with
-`status=203/EXEC`. Enable it with `systemctl --user enable --now flight-checkin-reminders.timer`.
+The `flight-checkin-reminders.timer` user unit (every 12h) scans Gmail for upcoming flight check-in windows via Pi and sends Telegram reminders. It runs `%h/vault/scripts/flight-checkin-reminders.py` through an explicit `/usr/bin/python3` because the vault checkout does not guarantee the executable bit; direct execution fails with `status=203/EXEC`. Enable it with `systemctl --user enable --now flight-checkin-reminders.timer`.
 
 Retired reminder timers, kept out of the tracked units on purpose:
 
-- `honeymoon-message-drafts.timer` — built for the July 2026 honeymoon message plan; the trip is over, so the live
-  unit was retired (see the disable/remove commands in the PR that tracked these notes).
-- `aug18-trip-flight-reminder.timer` — its script self-disables after its 2026-08-18 cutoff; remove the live unit after
-  that date.
+- `honeymoon-message-drafts.timer` — built for the July 2026 honeymoon message plan; the trip is over, so the live unit was retired (see the disable/remove commands in the PR that tracked these notes).
+- `aug18-trip-flight-reminder.timer` — its script self-disables after its 2026-08-18 cutoff; remove the live unit after that date.
 
 ## Infrastructure
 
