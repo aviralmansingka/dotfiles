@@ -86,7 +86,13 @@ keybindings:
     - key: C
       name: tuicr review
       command: tuicr pr "{{.RepoName}}#{{.PrNumber}}" --no-update-check
-repoPaths: {}
+    - key: O
+      name: open PR in Herdr worktree
+      command: >
+        git -C "{{.RepoPath}}" fetch "$(gh repo view "{{.RepoName}}" --json sshUrl --jq .sshUrl)" "+pull/{{.PrNumber}}/head:refs/heads/pr/{{.PrNumber}}" &&
+        herdr worktree create --cwd "{{.RepoPath}}" --branch "pr/{{.PrNumber}}" --focus
+repoPaths:
+  ":owner/:repo": /Users/aviral/:repo
 theme:
     ui:
         sectionsShowCount: true
