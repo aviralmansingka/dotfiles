@@ -655,7 +655,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				const observer = toolObservers.get(observerId);
 				const failed = details.status === "cancelled" || details.status === "timeout" || details.status === "error" ||
 					(details.exitCode != null && details.exitCode !== 0);
-				const outputSnapshot = pipelineCall && details.output
+				const outputSnapshot = pipelineCall && observesSession && details.output
 					? parseNoMistakesStatus(details.output)
 					: undefined;
 				if (pipelineCall && observesSession && observer && !outputSnapshot) {
@@ -664,8 +664,8 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				}
 				const observedSnapshot = observer?.snapshot;
 				toolObservers.delete(observerId);
-				const parsed = pipelineCall
-					? outputSnapshot ?? (observesSession ? observedSnapshot ?? latestSnapshot : undefined)
+				const parsed = pipelineCall && observesSession
+					? outputSnapshot ?? observedSnapshot ?? latestSnapshot
 					: undefined;
 				return textResult(text, {
 					...details,

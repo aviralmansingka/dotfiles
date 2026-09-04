@@ -31,13 +31,11 @@ function findingEmoji(severity: string): string | undefined {
   return undefined;
 }
 
-export function noMistakesFindingLines(activity: NoMistakesActivity, limit = 3): string[] {
-  const findings = activity.reviewFindings.flatMap((finding) => {
+export function noMistakesFindingLines(activity: NoMistakesActivity): string[] {
+  return activity.reviewFindings.flatMap((finding) => {
     const emoji = findingEmoji(finding.severity);
     if (!emoji) return [];
     const location = finding.file ? `${finding.file}: ` : "";
     return `${emoji} ${location}${finding.description}`;
   });
-  if (findings.length <= limit) return findings;
-  return [...findings.slice(0, limit), `… +${findings.length - limit} more`];
 }

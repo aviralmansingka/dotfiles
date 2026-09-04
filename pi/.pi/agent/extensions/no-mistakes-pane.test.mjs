@@ -259,6 +259,12 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		assert.equal(pipelineResult.details.progress.recentTools[1].status, "failed");
 		assert.equal(pipelineResult.details.progress.status, "failed");
 
+		writeFileSync(join(stubDir, "no-mistakes"), [
+			"#!/bin/sh",
+			"printf '%s\\n' 'run:' '  id: \"00000000000000000000000004\"' '  status: failed' '  outcome: test-failed' '  steps[1]{step,status,findings,duration_ms}:' '    test,failed,0,1000'",
+			"exit 1",
+			"",
+		].join("\n"));
 		const foreignUpdates = [];
 		const statusCallsBeforeForeign = statusCalls;
 		const foreignResult = await tool.execute(
