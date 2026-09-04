@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join, resolve } from "node:path";
 
 const require = createRequire(import.meta.url);
 // Allow CI to supply its own jiti via JITI_PATH; fall back to the host pi install.
@@ -60,21 +58,38 @@ const oldEnv = {
 };
 
 try {
-	const piRoot = resolve(dirname(_jitiCjs), "../../..");
-	const stubAgent = join(tempRoot, "pi-coding-agent.mjs");
-	const quizBundle = join(tempRoot, "quiz.mjs");
-	writeFileSync(stubAgent, "export const defineTool = value => value;\n");
-	execFileSync(join(piRoot, "node_modules/.bin/esbuild"), [
-		resolve("pi/.pi/agent/extensions/quiz.ts"),
-		"--bundle",
-		"--platform=node",
-		"--format=esm",
-		`--alias:@earendil-works/pi-coding-agent=${stubAgent}`,
-		`--outfile=${quizBundle}`,
-	], { env: { ...process.env, NODE_PATH: join(piRoot, "node_modules") }, stdio: "pipe" });
+	const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
+	const stubTypes = join(tempRoot, "types.cjs");
+	const stubTui = join(tempRoot, "pi-tui.cjs");
+	writeFileSync(stubAgent, "exports.defineTool = value => value;\n");
+	writeFileSync(stubTypes, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
+	writeFileSync(stubTui, `
+class Editor {
+	constructor() { this.text = ""; }
+	getText() { return this.text; }
+	handleInput(data) { this.text += data; }
+	render() { return [this.text]; }
+	invalidate() {}
+}
+exports.Editor = Editor;
+exports.Key = { enter: "\\r", escape: "\\x1b", tab: "\\t", up: "up", down: "down", space: " " };
+exports.Text = class Text { constructor(text) { this.text = text; } };
+exports.matchesKey = (data, key) => data === key;
+exports.truncateToWidth = (text, width) => text.slice(0, width);
+exports.visibleWidth = text => text.length;
+exports.wrapTextWithAnsi = text => [text];
+`);
+	const quizJiti = createJiti(import.meta.url, {
+		alias: {
+			"@earendil-works/pi-ai": stubTypes,
+			"@earendil-works/pi-coding-agent": stubAgent,
+			"@earendil-works/pi-tui": stubTui,
+			typebox: stubTypes,
+		},
+	});
 
 	const fakeBin = join(tempRoot, "bin");
-	execFileSync("mkdir", ["-p", fakeBin]);
+	mkdirSync(fakeBin);
 	const fakeHerdr = join(fakeBin, "herdr");
 	writeFileSync(fakeHerdr, `#!/bin/sh
 if [ "$1 $2" = "pane current" ]; then
@@ -97,7 +112,7 @@ fi
 	process.env.PI_QUIZ_HANDOUT_PATH = handoutPath;
 	process.env.HANDOUT_OPEN_LOG = openLogPath;
 
-	const { default: registerQuiz } = await import(`${pathToFileURL(quizBundle).href}?${Date.now()}`);
+	const { default: registerQuiz } = quizJiti("./quiz.ts");
 	let quizTool;
 	registerQuiz({ registerTool(tool) { quizTool = tool; } });
 	assert.equal(quizTool?.name, "quiz");
