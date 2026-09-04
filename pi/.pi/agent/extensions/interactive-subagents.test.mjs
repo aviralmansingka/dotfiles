@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+	agentIsolationArgs,
+	loadAgentDefaultsFromPaths,
+} from "./interactive-subagents/pi-extension/subagents/agent-definitions.mjs";
+import { runHunkReview } from "./interactive-subagents/pi-extension/subagents/tools/hunk-review-core.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -167,26 +180,41 @@ assert.deepEqual(herdr.__pollForExitTest__.paneKilledResult(), {
 	exitCode: 130,
 });
 
-// --- Subagent launch sandbox keeps extension discovery enabled ---
-const subagentSource = readFileSync(
-	new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url),
-	"utf8",
+// --- Runtime profile resolution pins and isolates the read-only reviewer ---
+assert.deepEqual(agentIsolationArgs("researcher"), []);
+assert.deepEqual(agentIsolationArgs("hunk-review"), ["--no-extensions"]);
+const profileRoot = mkdtempSync(join(tmpdir(), "subagent-profile-test-"));
+const profileAgentDir = join(profileRoot, ".pi", "agents");
+mkdirSync(profileAgentDir, { recursive: true });
+writeFileSync(
+	join(profileAgentDir, "hunk-review.md"),
+	"---\nname: hunk-review\ntools: read, write, edit, bash\n---\nOverride\n",
 );
-assert.equal(
-	subagentSource.includes('parts.push("--no-extensions")'),
-	false,
-	"subagent launches should inherit normal extension discovery",
+const bundledAgentsDir = fileURLToPath(
+	new URL("./interactive-subagents/agents", import.meta.url),
 );
-assert.match(
-	subagentSource,
-	/parts\.push\("--tools", shellEscape\(loadout\.toolAllowlist\)\)/,
-	"tool restrictions should still be applied with --tools",
-);
-assert.match(
-	subagentSource,
-	/Ask the user what to do next: resume it with subagent_message/,
-	"killed panes should prompt the orchestrator to ask the user",
-);
+try {
+	const reviewer = loadAgentDefaultsFromPaths("hunk-review", {
+		cwd: profileRoot,
+		configDir: join(profileRoot, "global-agent-config"),
+		bundledDir: bundledAgentsDir,
+	});
+	assert.equal(reviewer.tools, "read, grep, find, ls, hunk_review");
+	assert.equal(reviewer.skills, "hunk-review");
+	assert.equal(reviewer.autoExit, true);
+
+	const professor = loadAgentDefaultsFromPaths("professor", {
+		cwd: profileRoot,
+		configDir: join(profileRoot, "global-agent-config"),
+		bundledDir: bundledAgentsDir,
+	});
+	assert.ok(professor.tools.split(", ").includes("hunk_open"));
+	assert.deepEqual(professor.subagentAgents, ["researcher", "hunk-review"]);
+	assert.equal(professor.skills, "professor");
+	assert.equal(professor.autoExit, false);
+} finally {
+	rmSync(profileRoot, { recursive: true, force: true });
+}
 
 // --- No Mistakes compact status follows the shared activity-widget contract ---
 const { noMistakesFindingLines, noMistakesIsWaiting, noMistakesWidgetStatus } = jiti(
@@ -217,26 +245,50 @@ assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
 	"❌ src/c.ts: Fourth explicit finding",
 ]);
 
-// --- Bundled professor is an interactive, skill-backed teaching agent ---
-const professorProfile = readFileSync(
-	new URL("./interactive-subagents/agents/professor.md", import.meta.url),
-	"utf8",
+// --- The reviewer tool exposes only Hunk inspection and comment application ---
+const hunkToolRoot = mkdtempSync(join(tmpdir(), "hunk-review-tool-test-"));
+const hunkArgsFile = join(hunkToolRoot, "args");
+const hunkInputFile = join(hunkToolRoot, "input");
+writeFileSync(
+	join(hunkToolRoot, "hunk"),
+	`#!/bin/sh
+printf '%s\\n' "$@" > "$HUNK_TEST_ARGS"
+cat > "$HUNK_TEST_INPUT"
+printf '%s\\n' '{"ok":true}'
+`,
+	{ mode: 0o755 },
 );
-assert.match(professorProfile, /^name: professor$/m);
-assert.match(professorProfile, /^skills: professor$/m);
-assert.match(professorProfile, /^subagent_agents: researcher, hunk-review$/m);
-assert.match(professorProfile, /^auto-exit: false$/m);
-for (const tool of [
-	"ask_user_question",
-	"quiz",
-	"explain",
-	"run-command",
-]) {
-	assert.match(
-		professorProfile,
-		new RegExp(`^tools:.*\\b${tool}\\b`, "m"),
-		`professor profile should allow ${tool}`,
-	);
+const savedToolPath = process.env.PATH;
+process.env.PATH = `${hunkToolRoot}:${savedToolPath}`;
+process.env.HUNK_TEST_ARGS = hunkArgsFile;
+process.env.HUNK_TEST_INPUT = hunkInputFile;
+try {
+	runHunkReview(hunkToolRoot, { operation: "review", includePatch: true });
+	assert.deepEqual(readFileSync(hunkArgsFile, "utf8").trim().split("\n"), [
+		"session", "review", "--repo", ".", "--include-patch", "--json",
+	]);
+
+	runHunkReview(hunkToolRoot, {
+		operation: "comment_apply",
+		comments: [{ filePath: "src/app.ts", newLine: 9, summary: "Handle failure" }],
+	});
+	assert.deepEqual(readFileSync(hunkArgsFile, "utf8").trim().split("\n"), [
+		"session", "comment", "apply", "--repo", ".", "--stdin", "--json",
+	]);
+	assert.deepEqual(JSON.parse(readFileSync(hunkInputFile, "utf8")), {
+		comments: [{
+			filePath: "src/app.ts",
+			newLine: 9,
+			summary: "Handle failure",
+			author: "Hunk reviewer",
+		}],
+	});
+} finally {
+	if (savedToolPath === undefined) delete process.env.PATH;
+	else process.env.PATH = savedToolPath;
+	delete process.env.HUNK_TEST_ARGS;
+	delete process.env.HUNK_TEST_INPUT;
+	rmSync(hunkToolRoot, { recursive: true, force: true });
 }
 
 const professorSkill = readFileSync(

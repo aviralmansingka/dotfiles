@@ -1,58 +1,41 @@
-export function parseHunkArgs(input) {
-	const args = [];
-	let current = "";
-	let quote = null;
-	let escaped = false;
+const WATCHED_DIFF_ARGS = ["diff", "--watch"];
 
-	for (const character of input) {
-		if (escaped) {
-			current += character;
-			escaped = false;
-		} else if (character === "\\" && quote !== "'") {
-			escaped = true;
-		} else if (quote) {
-			if (character === quote) quote = null;
-			else current += character;
-		} else if (character === "'" || character === '"') {
-			quote = character;
-		} else if (/\s/.test(character)) {
-			if (current) {
-				args.push(current);
-				current = "";
-			}
-		} else {
-			current += character;
-		}
-	}
-	if (escaped) current += "\\";
-	if (current) args.push(current);
-	return args;
+export function isWatchedHunkProcess(process) {
+	const argv = process.argv ?? [];
+	const executable = argv[0]?.split(/[\\/]/).at(-1);
+	return (
+		(process.name === "hunk" || executable === "hunk") &&
+		argv[1] === "diff" &&
+		argv.slice(2).includes("--watch")
+	);
 }
 
-export async function openHunkWithHost(cwd, requestedArgs, host) {
-	const args = requestedArgs.length > 0 ? requestedArgs : ["diff", "--watch"];
+export async function openHunkWithHost(cwd, host) {
 	const pane = host.currentPane();
 	if (pane) {
 		const existing = host.findHunkPane(pane.tab_id, cwd);
-		if (existing.status === "found") {
-			const focused = host.focusPane(existing.paneId, pane.pane_id);
+		if (
+			existing.status === "found" &&
+			host.focusPane(existing.paneId, pane.pane_id)
+		) {
 			return {
-				message: focused
-					? `Focused existing Hunk pane (${existing.paneId}).`
-					: `Could not focus existing Hunk pane (${existing.paneId}) automatically.`,
+				message: `Focused existing Hunk pane (${existing.paneId}).`,
 				launched: false,
 			};
 		}
-		if (existing.status === "absent") {
-			const paneId = host.launchPane(cwd, args);
+		if (existing.status !== "error") {
+			const paneId = host.launchPane(cwd, WATCHED_DIFF_ARGS);
 			if (paneId) {
 				return { message: `Opened Hunk in pane ${paneId}.`, launched: true };
 			}
 		}
 	}
 
-	if (host.tmuxOpen(cwd, args)) {
+	if (host.tmuxOpen(cwd, WATCHED_DIFF_ARGS)) {
 		return { message: "Opened Hunk in a tmux split.", launched: true };
 	}
-	return { message: host.manualCommand(cwd, args), launched: false };
+	return {
+		message: host.manualCommand(cwd, WATCHED_DIFF_ARGS),
+		launched: false,
+	};
 }

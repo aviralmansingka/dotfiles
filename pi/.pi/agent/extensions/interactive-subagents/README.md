@@ -83,7 +83,7 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | **researcher** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | `web_search`, `web_fetch`, `safe_bash` | Web research, synthesized into a sourced brief |
 | **worker** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch` + spawning | General implementer; may spawn `scout` and `researcher` |
 | **professor** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | lesson tools, Hunk canvas + restricted spawning | Interactive teacher; may start Hunk review only on the learner's explicit request |
-| **hunk-review** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | read-only repository tools, safe shell, Hunk review skill | Autonomous reviewer; anchors detailed findings in the active Hunk session |
+| **hunk-review** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | read-only repository tools, dedicated Hunk review tool | Autonomous reviewer; anchors detailed findings in the active Hunk session |
 
 `scout`, `researcher`, `worker`, and `hunk-review` are autonomous
 (`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane

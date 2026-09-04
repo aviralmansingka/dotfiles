@@ -83,14 +83,6 @@ check_repo() {
   return 1
 }
 
-check_tuicr_running() {
-  # Zellij has no panes-list CLI like tmux. Fall back to a process check.
-  if pgrep -x tuicr &> /dev/null; then
-    return 0
-  fi
-  return 1
-}
-
 launch_tuicr_pane() {
   local target_dir="$1"
   shift
@@ -192,13 +184,6 @@ main() {
     echo ""
     echo "3. Then run /tuicr again."
     exit 1
-  fi
-
-  # Check if tuicr is already running
-  if check_tuicr_running; then
-    log_warn "tuicr is already running"
-    log_info "Switch to its pane with Alt-arrow keys (default zellij binding)"
-    exit 0
   fi
 
   # Launch tuicr in a split pane

@@ -1,22 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import {
+	isWatchedHunkProcess,
 	openHunkWithHost,
-	parseHunkArgs,
 } from "./hunk-open-core.mjs";
 import { registerHunkReviewCommand } from "./interactive-subagents/pi-extension/subagents/hunk-review-command.mjs";
-
-function frontmatter(path) {
-	const text = readFileSync(new URL(path, import.meta.url), "utf8");
-	const block = text.match(/^---\n([\s\S]*?)\n---/)?.[1];
-	assert.ok(block, `${path} must have frontmatter`);
-	return Object.fromEntries(
-		block.split("\n").map((line) => {
-			const separator = line.indexOf(":");
-			return [line.slice(0, separator), line.slice(separator + 1).trim()];
-		}),
-	);
-}
 
 function fakeHost(overrides = {}) {
 	const calls = [];
@@ -41,15 +28,21 @@ function fakeHost(overrides = {}) {
 	};
 }
 
-assert.deepEqual(parseHunkArgs('show "HEAD~2" -- docs/my\\ file.md'), [
-	"show",
-	"HEAD~2",
-	"--",
-	"docs/my file.md",
-]);
+assert.equal(
+	isWatchedHunkProcess({ name: "hunk", argv: ["hunk", "diff", "--watch"] }),
+	true,
+);
+assert.equal(
+	isWatchedHunkProcess({ name: "hunk", argv: ["hunk", "show", "HEAD"] }),
+	false,
+);
+assert.equal(
+	isWatchedHunkProcess({ name: "hunk", argv: ["hunk", "diff"] }),
+	false,
+);
 
 const launchHost = fakeHost();
-assert.deepEqual(await openHunkWithHost("/repo", [], launchHost), {
+assert.deepEqual(await openHunkWithHost("/repo", launchHost), {
 	message: "Opened Hunk in pane hunk-pane.",
 	launched: true,
 });
@@ -58,17 +51,33 @@ assert.deepEqual(launchHost.calls, [["launch", "/repo", ["diff", "--watch"]]]);
 const focusHost = fakeHost({
 	findHunkPane: () => ({ status: "found", paneId: "existing" }),
 });
-assert.deepEqual(await openHunkWithHost("/repo", ["show", "HEAD"], focusHost), {
+assert.deepEqual(await openHunkWithHost("/repo", focusHost), {
 	message: "Focused existing Hunk pane (existing).",
 	launched: false,
 });
 assert.deepEqual(focusHost.calls, [["focus", "existing", "parent"]]);
 
+const blockedFocusHost = fakeHost({
+	findHunkPane: () => ({ status: "found", paneId: "existing" }),
+	focusPane: (...args) => {
+		blockedFocusHost.calls.push(["focus", ...args]);
+		return false;
+	},
+});
+assert.deepEqual(await openHunkWithHost("/repo", blockedFocusHost), {
+	message: "Opened Hunk in pane hunk-pane.",
+	launched: true,
+});
+assert.deepEqual(blockedFocusHost.calls, [
+	["focus", "existing", "parent"],
+	["launch", "/repo", ["diff", "--watch"]],
+]);
+
 const fallbackHost = fakeHost({
 	currentPane: () => null,
 	tmuxOpen: (_cwd, args) => args[0] === "diff",
 });
-assert.deepEqual(await openHunkWithHost("/repo", [], fallbackHost), {
+assert.deepEqual(await openHunkWithHost("/repo", fallbackHost), {
 	message: "Opened Hunk in a tmux split.",
 	launched: true,
 });
@@ -101,18 +110,5 @@ assert.equal(reviewParams.agent, "hunk-review");
 assert.equal(reviewParams.cwd, "/repo");
 assert.match(reviewParams.task, /Review focus: correctness and regressions/);
 assert.deepEqual(notifications, [["Hunk reviewer \"hunk-review\" launched.", "info"]]);
-
-const reviewer = frontmatter("./interactive-subagents/agents/hunk-review.md");
-assert.equal(reviewer.name, "hunk-review");
-assert.equal(reviewer.skills, "hunk-review");
-assert.equal(reviewer["auto-exit"], "true");
-assert.equal(reviewer.tools, "read, grep, find, ls, safe_bash");
-
-const professor = frontmatter("./interactive-subagents/agents/professor.md");
-assert.ok(professor.tools.split(", ").includes("hunk_open"));
-assert.deepEqual(professor.subagent_agents.split(", "), [
-	"researcher",
-	"hunk-review",
-]);
 
 console.log("Hunk open and review behavior passed");

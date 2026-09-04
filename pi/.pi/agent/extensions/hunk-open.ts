@@ -1,8 +1,11 @@
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFileSync } from "node:child_process";
-import { basename, resolve } from "node:path";
-import { openHunkWithHost, parseHunkArgs } from "./hunk-open-core.mjs";
+import { resolve } from "node:path";
+import {
+	isWatchedHunkProcess,
+	openHunkWithHost,
+} from "./hunk-open-core.mjs";
 
 const COMMAND_TIMEOUT_MS = 5000;
 
@@ -93,7 +96,7 @@ function findHunkPane(tabId: string, cwd: string): DetectionResult {
 			hadError = true;
 			continue;
 		}
-		if (processes.some((process) => process.name === "hunk" || basename(process.argv?.[0] ?? "") === "hunk")) {
+		if (processes.some(isWatchedHunkProcess)) {
 			return { status: "found", paneId: pane.pane_id };
 		}
 	}
@@ -148,9 +151,8 @@ function launchPane(cwd: string, args: string[]): string | null {
 
 export async function openHunk(
 	cwd: string,
-	requestedArgs: string[] = [],
 ): Promise<{ message: string; launched: boolean }> {
-	return openHunkWithHost(cwd, requestedArgs, {
+	return openHunkWithHost(cwd, {
 		currentPane,
 		findHunkPane,
 		focusPane,
@@ -173,14 +175,9 @@ const hunkOpenTool = defineTool({
 	],
 	parameters: Type.Object({
 		cwd: Type.Optional(Type.String({ description: "Repository directory. Defaults to the current working directory." })),
-		args: Type.Optional(
-			Type.Array(Type.String(), {
-				description: 'Arguments after `hunk`; defaults to ["diff", "--watch"].',
-			}),
-		),
 	}),
 	async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-		const result = await openHunk(params.cwd ?? ctx.cwd, params.args ?? []);
+		const result = await openHunk(params.cwd ?? ctx.cwd);
 		return { content: [{ type: "text" as const, text: result.message }], details: result };
 	},
 });
@@ -188,9 +185,9 @@ const hunkOpenTool = defineTool({
 export default function hunkOpen(pi: ExtensionAPI) {
 	pi.registerTool(hunkOpenTool);
 	pi.registerCommand("hunk", {
-		description: "Open or focus Hunk; defaults to a watched working-tree diff",
-		handler: async (args, ctx) => {
-			const result = await openHunk(ctx.cwd, parseHunkArgs(typeof args === "string" ? args : ""));
+		description: "Open or focus a watched Hunk working-tree diff",
+		handler: async (_args, ctx) => {
+			const result = await openHunk(ctx.cwd);
 			ctx.ui.notify(result.message, result.message.startsWith("Could not") ? "warning" : "info");
 		},
 	});

@@ -34,7 +34,7 @@ For manual package and configuration deployment (excluding installer-managed int
 brew bundle
 gh extension install dlvhdr/gh-dash
 stow nvim tmux zsh ghostty git starship gh-dash tuicr agents pi herdr launchd
-stow --no-folding --ignore='state\.json' hunk
+stow --no-folding hunk
 ```
 
 On Linux (systemd) systems, deploy the user services with:

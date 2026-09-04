@@ -75,14 +75,6 @@ check_repo() {
   return 1
 }
 
-check_tuicr_running() {
-  # Check if tuicr is already running in any tmux pane
-  if tmux list-panes -a -F '#{pane_current_command}' 2>/dev/null | grep -q '^tuicr$'; then
-    return 0  # tuicr is running
-  fi
-  return 1
-}
-
 launch_tuicr_pane() {
   local target_dir="$1"
   shift
@@ -132,7 +124,7 @@ launch_tuicr_pane() {
   # Use -d to not switch, -P to print pane info so we can capture the ID
   local new_pane_id
   new_pane_id=$(tmux split-window -d -P -F '#{pane_id}' "${split_args[@]}" \
-    "cd '$target_dir' && $tuicr_cmd; tmux wait-for -S '$wait_channel'")
+    "$tuicr_cmd; tmux wait-for -S '$wait_channel'")
 
   # Switch focus to the new tuicr pane
   tmux select-pane -t "$new_pane_id"
@@ -182,13 +174,6 @@ main() {
     echo ""
     echo "3. Then run /tuicr again."
     exit 1
-  fi
-
-  # Check if tuicr is already running
-  if check_tuicr_running; then
-    log_warn "tuicr is already running in another pane"
-    log_info "Switch to it with Ctrl-b + arrow keys"
-    exit 0
   fi
 
   # Launch tuicr in a split pane
