@@ -103,6 +103,9 @@ stow -d "$DOTFILES_DIR" -t "$HOME" gh-dash
 stow -d "$DOTFILES_DIR" -t "$HOME" agents
 stow -d "$DOTFILES_DIR" -t "$HOME" pi
 stow -d "$DOTFILES_DIR" -t "$HOME" herdr
+if command -v omarchy >/dev/null 2>&1; then
+    stow -d "$DOTFILES_DIR" -t "$HOME" omarchy
+fi
 
 echo "==> Installing gh-dash extension"
 if command -v gh >/dev/null 2>&1; then

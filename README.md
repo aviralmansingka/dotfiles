@@ -9,6 +9,7 @@ Development environment configuration for macOS and AWS devbox (Ubuntu), managed
 - **aerospace** - Tiling window manager for macOS
 - **starship** - Cross-shell prompt
 - **herdr** - Agent-aware terminal multiplexer used by Neovim Sidekick
+- **omarchy** - User theme overrides for Omarchy/Hyprland
 
 ## Setup
 
@@ -33,6 +34,12 @@ On Linux (systemd) systems, deploy the user services with:
 
 ```sh
 stow systemd
+```
+
+On Omarchy systems, deploy the user Omarchy theme overrides with:
+
+```sh
+stow omarchy
 ```
 
 For a minimal setup without agent tooling, omit `agents` and `pi`.
@@ -83,6 +90,7 @@ terraform -chdir=ops/devbox destroy \
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
 | `neovide`    | Neovide (Neovim GUI) config                                                 |
 | `nvim`       | Neovim with LazyVim                                                         |
+| `omarchy`    | User Omarchy theme overrides                                                |
 | `ssh`        | SSH configuration                                                           |
 | `starship`   | Starship prompt                                                             |
 | `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges, flight check-in reminders) |
