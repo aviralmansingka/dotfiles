@@ -255,25 +255,17 @@ export function summarizeNoMistakesSnapshot(snapshot: NoMistakesSnapshot): strin
 }
 
 function findingSummary(snapshot: NoMistakesSnapshot, phase: NoMistakesPhase): string | undefined {
-	if (!phase.findings) return undefined;
-	if (phase.name !== "review" || snapshot.reviewFindings.length === 0) {
-		return `🔎 ${phase.findings} finding${phase.findings === 1 ? "" : "s"}`;
-	}
+	if (phase.name !== "review") return undefined;
 	const errors = snapshot.reviewFindings.filter((finding) => finding.severity === "error").length;
 	const warnings = snapshot.reviewFindings.filter((finding) => finding.severity === "warning").length;
 	const info = snapshot.reviewFindings.filter((finding) => finding.severity === "info").length;
-	const unknown = Math.max(
-		snapshot.reviewFindings.length - errors - warnings - info,
-		phase.findings - errors - warnings - info,
-	);
 	return [
 		errors ? `❌ ${errors}` : undefined,
 		warnings ? `⚠️ ${warnings}` : undefined,
 		info ? `ℹ️ ${info}` : undefined,
-		unknown ? `🔎 ${unknown}` : undefined,
 	]
 		.filter(Boolean)
-		.join(" · ");
+		.join(" · ") || undefined;
 }
 
 export function phaseProgress(snapshot: NoMistakesSnapshot) {

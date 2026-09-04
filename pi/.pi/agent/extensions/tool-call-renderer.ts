@@ -665,7 +665,7 @@ function renderRecentToolTree(
     const inner = lastTool ? "└─" : "├─";
     const st = asString(tool.status);
     const glyph =
-      ["running", "fixing", "awaiting"].includes(st ?? "")
+      ["running", "fixing", "awaiting_approval", "fix_review"].includes(st ?? "")
         ? theme.fg("accent", "◇")
         : ["failed", "cancelled"].includes(st ?? "")
           ? theme.fg("error", "×")

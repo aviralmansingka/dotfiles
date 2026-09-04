@@ -530,24 +530,25 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 	const toolObservers = new Map<string, NmToolObserver>();
 
 	const publishSnapshot = (snapshot: NoMistakesSnapshot | undefined) => {
-		latestSnapshot = isObservableNoMistakesRun(snapshot)
+		const observedSnapshot = snapshot
 			? observeNoMistakesTiming(snapshot, latestSnapshot)
 			: undefined;
+		latestSnapshot = isObservableNoMistakesRun(observedSnapshot) ? observedSnapshot : undefined;
 		pi.events.emit(NM_ACTIVITY_UPDATE_EVENT, {
 			snapshot: latestSnapshot
 				? { ...latestSnapshot, summary: summarizeNoMistakesSnapshot(latestSnapshot) }
 				: undefined,
 			observedAt: Date.now(),
 		});
-		if (!latestSnapshot) return;
+		if (!observedSnapshot) return;
 		for (const observer of toolObservers.values()) {
-			observer.snapshot = latestSnapshot;
+			observer.snapshot = observedSnapshot;
 			observer.onUpdate(
-				textResult(summarizeNoMistakesSnapshot(latestSnapshot), {
+				textResult(summarizeNoMistakesSnapshot(observedSnapshot), {
 					status: "visible",
 					subcommand: observer.subcommand,
-					progress: pipelineProgress(latestSnapshot, "running", observer.startedAt),
-					snapshot: latestSnapshot,
+					progress: pipelineProgress(observedSnapshot, "running", observer.startedAt),
+					snapshot: observedSnapshot,
 				}),
 			);
 		}
@@ -657,9 +658,9 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				const outputSnapshot = pipelineCall && details.output
 					? parseNoMistakesStatus(details.output)
 					: undefined;
-				if (!failed && pipelineCall && observesSession && observer && !outputSnapshot && !observer.snapshot) {
+				if (!failed && pipelineCall && observesSession && observer && !outputSnapshot) {
 					await observer.refresh;
-					if (!observer.snapshot) await refreshStatus({ cwd: observer.cwd }, monitorGeneration, true);
+					await refreshStatus({ cwd: observer.cwd }, monitorGeneration, true);
 				}
 				const observedSnapshot = observer?.snapshot;
 				toolObservers.delete(observerId);

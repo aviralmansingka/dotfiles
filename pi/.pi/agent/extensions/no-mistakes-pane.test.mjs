@@ -104,14 +104,13 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	);
 	assert.equal(phaseProgress({
 		...snapshot,
-		phases: [{ name: "review", status: "awaiting_approval", findings: 5 }],
+		phases: [{ name: "review", status: "awaiting_approval", findings: 3 }],
 		reviewFindings: [
 			{ severity: "error", description: "error" },
 			{ severity: "warning", description: "warning" },
 			{ severity: "info", description: "info" },
-			{ severity: "critical", description: "unknown" },
 		],
-	})[0].preview, "❌ 1 · ⚠️ 1 · ℹ️ 1 · 🔎 2");
+	})[0].preview, "❌ 1 · ⚠️ 1 · ℹ️ 1");
 
 	const escapedFinding = parseNoMistakesStatus([
 		"run:",
@@ -189,10 +188,18 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		"  gate:",
 		"    step: review",
 	].join("\n");
+	const terminalStatus = [
+		"run:",
+		'  id: "00000000000000000000000003"',
+		"  status: completed",
+		"  outcome: passed",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,completed,0,2000",
+	].join("\n");
 	const noRunStatus = { code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" };
 	const statusResults = [
-		noRunStatus,
 		{ code: 0, stdout: activeStatus },
+		{ code: 0, stdout: terminalStatus },
 		{ code: 1, stdout: "temporary failure" },
 		noRunStatus,
 	];
@@ -242,11 +249,13 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		const pipelineResult = await pipelinePromise;
 		assert.equal(events.length, 3);
 		assert.equal(events[0].payload.snapshot, undefined);
-		assert.equal(events[1].payload.snapshot, undefined);
-		assert.equal(events[2].payload.snapshot.currentPhase, "review");
-		assert.equal(updates.length, 1);
-		assert.equal(pipelineResult.details.snapshot.currentPhase, "review");
+		assert.equal(events[1].payload.snapshot.currentPhase, "review");
+		assert.equal(events[2].payload.snapshot, undefined);
+		assert.equal(updates.length, 2);
+		assert.equal(updates[1].details.snapshot.status, "completed");
+		assert.equal(pipelineResult.details.snapshot.status, "completed");
 		assert.equal(pipelineResult.details.progress.recentTools.length, 1);
+		assert.equal(pipelineResult.details.progress.recentTools[0].status, "completed");
 		assert.equal(pipelineResult.details.progress.status, "completed");
 
 		const foreignUpdates = [];

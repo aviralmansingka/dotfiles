@@ -19,22 +19,20 @@ export function noMistakesWidgetStatus(activity: NoMistakesActivity): string {
   return ` ${activity.summary} `;
 }
 
-function findingEmoji(severity: string): string {
+function findingEmoji(severity: string): string | undefined {
   if (severity === "error") return "❌";
   if (severity === "warning") return "⚠️";
   if (severity === "info") return "ℹ️";
-  return "🔎";
+  return undefined;
 }
 
 export function noMistakesFindingLines(activity: NoMistakesActivity, limit = 3): string[] {
-  const findings = activity.reviewFindings.map((finding) => {
+  const findings = activity.reviewFindings.flatMap((finding) => {
+    const emoji = findingEmoji(finding.severity);
+    if (!emoji) return [];
     const location = finding.file ? `${finding.file}: ` : "";
-    return `${findingEmoji(finding.severity)} ${location}${finding.description}`;
+    return `${emoji} ${location}${finding.description}`;
   });
-  if (findings.length === 0 && activity.gate === "review") {
-    const count = activity.phases.find((phase) => phase.name === "review")?.findings ?? 0;
-    if (count > 0) findings.push(`🔎 ${count} review finding${count === 1 ? "" : "s"}`);
-  }
   if (findings.length <= limit) return findings;
   return [...findings.slice(0, limit), `… +${findings.length - limit} more`];
 }

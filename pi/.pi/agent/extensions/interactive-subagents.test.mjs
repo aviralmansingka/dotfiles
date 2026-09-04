@@ -197,30 +197,18 @@ const pipelineActivity = {
 	status: "running",
 	gate: "review",
 	summary: "review · 12s · 17s total",
-	phases: [{ name: "review", status: "awaiting", findings: 2 }],
+	phases: [{ name: "review", status: "awaiting_approval", findings: 3 }],
 	reviewFindings: [
 		{ severity: "error", file: "src/a.ts", description: "Null value reaches renderer" },
 		{ severity: "warning", file: "src/b.ts", description: "Missing cleanup" },
+		{ severity: "info", description: "Context only" },
 	],
 };
 assert.equal(noMistakesWidgetStatus(pipelineActivity), " review · 12s · 17s total ");
 assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
 	"❌ src/a.ts: Null value reaches renderer",
 	"⚠️ src/b.ts: Missing cleanup",
-]);
-assert.deepEqual(noMistakesFindingLines({
-	...pipelineActivity,
-	reviewFindings: [],
-}), ["🔎 2 review findings"]);
-assert.deepEqual(noMistakesFindingLines({
-	...pipelineActivity,
-	reviewFindings: [
-		{ severity: "info", description: "Context only" },
-		{ severity: "critical", description: "Unrecognized severity" },
-	],
-}), [
 	"ℹ️ Context only",
-	"🔎 Unrecognized severity",
 ]);
 
 // --- Bundled professor is an interactive, skill-backed teaching agent ---
