@@ -92,6 +92,10 @@ keybindings:
         branch="pr/{{.PrNumber}}"; ref="refs/remotes/gh-dash/pull/{{.PrNumber}}";
         if git -C "{{.RepoPath}}" worktree list --porcelain | grep -Fqx "branch refs/heads/$branch"; then
           herdr worktree open --cwd "{{.RepoPath}}" --branch "$branch" --focus;
+        elif branch_oid=$(git -C "{{.RepoPath}}" rev-parse --verify "refs/heads/$branch" 2>/dev/null) &&
+             ref_oid=$(git -C "{{.RepoPath}}" rev-parse --verify "$ref" 2>/dev/null) &&
+             test "$branch_oid" = "$ref_oid"; then
+          herdr worktree create --cwd "{{.RepoPath}}" --branch "$branch" --focus;
         elif git -C "{{.RepoPath}}" show-ref --verify --quiet "refs/heads/$branch"; then
           printf 'Branch %s already exists outside a worktree\n' "$branch" >&2; exit 1;
         else
