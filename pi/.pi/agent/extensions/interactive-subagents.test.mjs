@@ -51,50 +51,47 @@ assert.equal(surface.shellEscape("it's"), "'it'\\''s'");
 // muxSetupHint never throws and returns a non-empty string regardless of surface.
 assert.ok(typeof surface.muxSetupHint() === "string" && surface.muxSetupHint().length > 0);
 
-// --- Herdr surface detection (gated on the captain's live Herdr env) ---
-const herdr = jiti("./interactive-subagents/pi-extension/subagents/herdr.ts");
-
-// Simulate running under Herdr (the captain's primary surface).
-const savedHerdrEnv = process.env.HERDR_ENV;
-const savedHerdrPane = process.env.HERDR_PANE_ID;
-process.env.HERDR_ENV = "1";
-process.env.HERDR_PANE_ID = "w44:p2";
-try {
-	assert.equal(herdr.isHerdrAvailable(), true, "isHerdrAvailable under HERDR_ENV=1 + HERDR_PANE_ID + herdr on PATH");
-	assert.equal(herdr.isMuxAvailable(), true, "herdr.isMuxAvailable mirrors isHerdrAvailable");
-} finally {
-	process.env.HERDR_ENV = savedHerdrEnv;
-	process.env.HERDR_PANE_ID = savedHerdrPane;
-}
-
-// Without Herdr env, isHerdrAvailable is false (no false positives).
-process.env.HERDR_ENV = "";
-process.env.HERDR_PANE_ID = "";
-assert.equal(herdr.isHerdrAvailable(), false, "isHerdrAvailable false when Herdr env absent");
-
-// Herdr launches each subagent in an unfocused tab and returns its root pane id.
+// --- Herdr surface detection and tab creation ---
 const fakeBin = mkdtempSync(join(tmpdir(), "subagent-herdr-test-"));
 const captureFile = join(fakeBin, "args");
 writeFileSync(
 	join(fakeBin, "herdr"),
 	`#!/bin/sh
-printf '%s\\n' "$@" > "$HERDR_TEST_CAPTURE"
-printf '%s\\n' '{"result":{"root_pane":{"pane_id":"w44:p9"}}}'
+printf '%s\\n' "$@" >> "$HERDR_TEST_CAPTURE"
+printf '%s\\n' '--call--' >> "$HERDR_TEST_CAPTURE"
+if [ "$1" = pane ] && [ "$2" = get ]; then
+	printf '%s\\n' '{"result":{"pane":{"pane_id":"w44:p2","workspace_id":"w44"}}}'
+else
+	printf '%s\\n' '{"result":{"root_pane":{"pane_id":"w44:p9"}}}'
+fi
 `,
 	{ mode: 0o755 },
 );
-const savedPath = process.env.PATH;
+const savedHerdrEnv = process.env.HERDR_ENV;
+const savedHerdrPane = process.env.HERDR_PANE_ID;
 const savedWorkspace = process.env.HERDR_WORKSPACE_ID;
+const savedPath = process.env.PATH;
+process.env.PATH = `${fakeBin}:${savedPath}`;
+process.env.HERDR_TEST_CAPTURE = captureFile;
+const herdr = jiti("./interactive-subagents/pi-extension/subagents/herdr.ts");
 try {
 	process.env.HERDR_ENV = "1";
 	process.env.HERDR_PANE_ID = "w44:p2";
-	process.env.HERDR_WORKSPACE_ID = "w44";
-	process.env.HERDR_TEST_CAPTURE = captureFile;
-	process.env.PATH = `${fakeBin}:${savedPath}`;
+	assert.equal(herdr.isHerdrAvailable(), true, "isHerdrAvailable under HERDR_ENV=1 + HERDR_PANE_ID + herdr on PATH");
+	assert.equal(herdr.isMuxAvailable(), true, "herdr.isMuxAvailable mirrors isHerdrAvailable");
+
+	process.env.HERDR_ENV = "";
+	process.env.HERDR_PANE_ID = "";
+	assert.equal(herdr.isHerdrAvailable(), false, "isHerdrAvailable false when Herdr env absent");
+
+	process.env.HERDR_ENV = "1";
+	process.env.HERDR_PANE_ID = "w44:p2";
+	process.env.HERDR_WORKSPACE_ID = "stale-workspace";
 	assert.equal(herdr.createSurface("scout tab"), "w44:p9");
 	assert.deepEqual(readFileSync(captureFile, "utf8").trim().split("\n"), [
+		"pane", "get", "w44:p2", "--call--",
 		"tab", "create", "--workspace", "w44", "--cwd", process.cwd(),
-		"--label", "scout tab", "--no-focus",
+		"--label", "scout tab", "--no-focus", "--call--",
 	]);
 } finally {
 	process.env.HERDR_ENV = savedHerdrEnv;

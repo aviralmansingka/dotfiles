@@ -78,6 +78,15 @@ function parsePaneId(stdout: string): string {
   return paneId;
 }
 
+function workspaceForPane(paneId: string): string {
+  const stdout = execFileSync("herdr", ["pane", "get", paneId], { encoding: "utf8" });
+  const workspaceId = JSON.parse(stdout)?.result?.pane?.workspace_id;
+  if (typeof workspaceId !== "string" || workspaceId.length === 0) {
+    throw new Error(`Unexpected Herdr pane output: ${stdout}`);
+  }
+  return workspaceId;
+}
+
 // ── Pane layout ──
 
 /**
@@ -96,8 +105,7 @@ function rebalanceSurfaces(_hintPane?: string): void {
  */
 export function createSurface(name: string): string {
   requireHerdr();
-  const workspaceId = process.env.HERDR_WORKSPACE_ID;
-  if (!workspaceId) throw new Error("HERDR_WORKSPACE_ID is required to create a subagent tab");
+  const workspaceId = workspaceForPane(process.env.HERDR_PANE_ID!);
 
   const stdout = execFileSync(
     "herdr",
