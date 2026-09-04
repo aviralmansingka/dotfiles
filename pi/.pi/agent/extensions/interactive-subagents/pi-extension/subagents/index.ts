@@ -1125,8 +1125,8 @@ function observeRunningSubagent(running: RunningSubagent, observedAt = Date.now(
  * `runningSubagents`. Parallel `subagent` tool calls run their synchronous
  * prefix (name defaulting) before any of them finishes `launchSubagent` and
  * registers, so without this they'd all see an empty map and pick the same
- * name. Reserved synchronously when a default name is chosen and released once
- * the subagent registers (or its launch fails).
+ * name. Reserved synchronously for every spawn and released once the subagent
+ * registers (or its launch fails).
  */
 const reservedNames = new Set<string>();
 
@@ -1986,18 +1986,13 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           ctx.sessionManager.getSessionId(),
         );
 
-        // Default the cosmetic pane label to the agent name when omitted,
-        // disambiguating against running subagents, in-flight reservations, and
-        // every name already in the registry — so names stay unique across the
-        // whole session, running or finished. Reserve the chosen name
-        // synchronously (before any await) so parallel spawns don't collide.
-        let reservedName: string | null = null;
-        if (!params.name?.trim()) {
-          const registryNames = new Set(Object.keys(readNameRegistry(parentArtifactDir)));
-          params.name = uniqueRunningName(params.agent, registryNames);
-          reservedName = params.name;
-          reservedNames.add(reservedName);
-        }
+        // Default the cosmetic label to the agent name, then disambiguate both
+        // default and explicit names against running, in-flight, and registered
+        // subagents. Reserve synchronously so parallel spawns cannot collide.
+        const registryNames = new Set(Object.keys(readNameRegistry(parentArtifactDir)));
+        params.name = uniqueRunningName(params.name?.trim() || params.agent, registryNames);
+        const reservedName = params.name;
+        reservedNames.add(reservedName);
 
         // Launch the subagent (creates pane, sends command). Release the name
         // reservation once it registers in runningSubagents (or launch fails) —
@@ -2006,7 +2001,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         try {
           running = await launchSubagent(params, ctx);
         } finally {
-          if (reservedName) reservedNames.delete(reservedName);
+          reservedNames.delete(reservedName);
         }
 
         // Persist name → session so subagent_message({ name }) can resume this
