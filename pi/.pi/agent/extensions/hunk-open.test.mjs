@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+	hunkPaneCommand,
 	isWatchedHunkProcess,
 	openHunkWithHost,
 } from "./hunk-open-core.mjs";
@@ -40,6 +41,14 @@ assert.equal(
 	isWatchedHunkProcess({ name: "hunk", argv: ["hunk", "diff"] }),
 	false,
 );
+assert.deepEqual(hunkPaneCommand("pane-1", ["diff", "--watch"]), [
+	"sh",
+	"-c",
+	'hunk "$@"; herdr pane close "$0"',
+	"pane-1",
+	"diff",
+	"--watch",
+]);
 
 const launchHost = fakeHost();
 assert.deepEqual(await openHunkWithHost("/repo", launchHost), {

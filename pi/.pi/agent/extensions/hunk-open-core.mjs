@@ -1,5 +1,9 @@
 const WATCHED_DIFF_ARGS = ["diff", "--watch"];
 
+export function hunkPaneCommand(paneId, args) {
+	return ["sh", "-c", 'hunk "$@"; herdr pane close "$0"', paneId, ...args];
+}
+
 export function isWatchedHunkProcess(process) {
 	const argv = process.argv ?? [];
 	const executable = argv[0]?.split(/[\\/]/).at(-1);

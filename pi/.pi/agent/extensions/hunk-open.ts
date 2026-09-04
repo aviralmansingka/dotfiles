@@ -3,6 +3,7 @@ import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import {
+	hunkPaneCommand,
 	isWatchedHunkProcess,
 	openHunkWithHost,
 } from "./hunk-open-core.mjs";
@@ -141,7 +142,7 @@ function launchPane(cwd: string, args: string[]): string | null {
 		"--focus",
 	]) as { result?: { pane?: { pane_id?: string } } } | null;
 	const paneId = split?.result?.pane?.pane_id;
-	if (paneId && commandOk("herdr", ["pane", "run", paneId, "hunk", ...args])) {
+	if (paneId && commandOk("herdr", ["pane", "run", paneId, ...hunkPaneCommand(paneId, args)])) {
 		commandOk("herdr", ["pane", "rename", paneId, "hunk"]);
 		return paneId;
 	}
