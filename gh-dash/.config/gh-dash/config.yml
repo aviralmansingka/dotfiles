@@ -93,6 +93,21 @@ theme:
         table:
             showSeparator: true
             compact: false
+    colors:
+        text:
+            primary: "#ebdbb2"
+            secondary: "#80aa9e"
+            inverted: "#282828"
+            faint: "#928374"
+            warning: "#fabd2f"
+            success: "#b8bb26"
+            error: "#f2594b"
+        background:
+            selected: "#45403d"
+        border:
+            primary: "#504945"
+            secondary: "#80aa9e"
+            faint: "#3c3836"
 pager:
     diff: ""
 confirmQuit: false
