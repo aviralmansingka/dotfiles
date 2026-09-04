@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 
@@ -10,6 +10,7 @@ const jitiCandidates = [
 	process.env.JITI_PATH,
 	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
 	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
+	"/home/avirus/.local/share/mise/installs/npm-earendil-works-pi-coding-agent/latest/node_modules/.mise/jiti@2.7.0/node_modules/jiti/lib/jiti.cjs",
 ].filter(Boolean);
 const jitiPath = jitiCandidates.find((p) => p && existsSync(p));
 if (!jitiPath) {
@@ -82,5 +83,67 @@ assert.deepEqual(interpretExitSidecar({ type: "error" }), {
 	errorMessage: "Subagent exited with stopReason=error (no errorMessage in sidecar).",
 });
 assert.deepEqual(interpretExitSidecar({}), { reason: "done", exitCode: 0 });
+assert.deepEqual(herdr.__pollForExitTest__.paneKilledResult(), {
+	reason: "killed",
+	exitCode: 130,
+});
+
+// --- Subagent launch sandbox keeps extension discovery enabled ---
+const subagentSource = readFileSync(
+	new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url),
+	"utf8",
+);
+assert.equal(
+	subagentSource.includes('parts.push("--no-extensions")'),
+	false,
+	"subagent launches should inherit normal extension discovery",
+);
+assert.match(
+	subagentSource,
+	/parts\.push\("--tools", shellEscape\(loadout\.toolAllowlist\)\)/,
+	"tool restrictions should still be applied with --tools",
+);
+assert.match(
+	subagentSource,
+	/Ask the user what to do next: resume it with subagent_message/,
+	"killed panes should prompt the orchestrator to ask the user",
+);
+
+// --- Bundled professor is an interactive, skill-backed teaching agent ---
+const professorProfile = readFileSync(
+	new URL("./interactive-subagents/agents/professor.md", import.meta.url),
+	"utf8",
+);
+assert.match(professorProfile, /^name: professor$/m);
+assert.match(professorProfile, /^skills: professor$/m);
+assert.match(professorProfile, /^subagent_agents: researcher$/m);
+assert.match(professorProfile, /^auto-exit: false$/m);
+for (const tool of [
+	"ask_user_question",
+	"quiz",
+	"explain",
+	"run-command",
+]) {
+	assert.match(
+		professorProfile,
+		new RegExp(`^tools:.*\\b${tool}\\b`, "m"),
+		`professor profile should allow ${tool}`,
+	);
+}
+
+const professorSkill = readFileSync(
+	new URL(
+		"../../../../agents/.agents/skills/professor/SKILL.md",
+		import.meta.url,
+	),
+	"utf8",
+);
+assert.match(professorSkill, /agent: "professor"/);
+assert.match(professorSkill, /Phase 0 — Goal grill \(never skip\)/);
+assert.match(
+	professorSkill,
+	/Use `ask_user_question` for every grilling turn/,
+);
+assert.match(professorSkill, /Do not enter Probe until approval is explicit/);
 
 console.log("interactive-subagents surface smoke passed");

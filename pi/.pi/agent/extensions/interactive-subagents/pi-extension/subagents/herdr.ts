@@ -227,8 +227,8 @@ export function closeSurface(surface: string): void {
 
 export interface PollResult {
   /** How the subagent exited */
-  reason: "done" | "sentinel" | "error";
-  /** Shell exit code (from sentinel). 0 for file-based exits. */
+  reason: "done" | "sentinel" | "error" | "killed";
+  /** Shell exit code. 0 for file-based exits; 130 when the pane was killed. */
   exitCode: number;
   /** Error message if reason is "error" (auto-retry exhausted, provider overload, etc.) */
   errorMessage?: string;
@@ -254,7 +254,24 @@ function interpretExitSidecar(data: any): PollResult {
   return { reason: "done", exitCode: 0 };
 }
 
-export const __pollForExitTest__ = { interpretExitSidecar };
+function readExitSidecar(sessionFile?: string): PollResult | null {
+  if (!sessionFile) return null;
+  try {
+    const exitFile = `${sessionFile}.exit`;
+    if (!existsSync(exitFile)) return null;
+    const data = JSON.parse(readFileSync(exitFile, "utf-8"));
+    rmSync(exitFile, { force: true });
+    return interpretExitSidecar(data);
+  } catch {
+    return null;
+  }
+}
+
+function paneKilledResult(): PollResult {
+  return { reason: "killed", exitCode: 130 };
+}
+
+export const __pollForExitTest__ = { interpretExitSidecar, paneKilledResult };
 
 /**
  * Poll until the subagent exits. Checks for a `.exit` sidecar file first
@@ -280,16 +297,8 @@ export async function pollForExit(
     }
 
     // Fast path: check for .exit sidecar file (written by the error path)
-    if (options.sessionFile) {
-      try {
-        const exitFile = `${options.sessionFile}.exit`;
-        if (existsSync(exitFile)) {
-          const data = JSON.parse(readFileSync(exitFile, "utf-8"));
-          rmSync(exitFile, { force: true });
-          return interpretExitSidecar(data);
-        }
-      } catch {}
-    }
+    const sidecar = readExitSidecar(options.sessionFile);
+    if (sidecar) return sidecar;
 
     // Check Claude sentinel file (written by plugin Stop hook)
     if (options.sentinelFile) {
@@ -308,17 +317,8 @@ export async function pollForExit(
         return { reason: "sentinel", exitCode: parseInt(match[1], 10) };
       }
     } catch {
-      // Surface may have been destroyed — check if .exit file appeared in the meantime
-      if (options.sessionFile) {
-        try {
-          const exitFile = `${options.sessionFile}.exit`;
-          if (existsSync(exitFile)) {
-            const data = JSON.parse(readFileSync(exitFile, "utf-8"));
-            rmSync(exitFile, { force: true });
-            return interpretExitSidecar(data);
-          }
-        } catch {}
-      }
+      // Surface was destroyed (manual pane close/kill) unless a late .exit file explains it.
+      return readExitSidecar(options.sessionFile) ?? paneKilledResult();
     }
 
     const elapsed = Math.floor((Date.now() - start) / 1000);

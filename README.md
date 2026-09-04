@@ -9,6 +9,7 @@ Development environment configuration for macOS and AWS devbox (Ubuntu), managed
 - **aerospace** - Tiling window manager for macOS
 - **starship** - Cross-shell prompt
 - **herdr** - Agent-aware terminal multiplexer used by Neovim Sidekick
+- **omarchy** - User theme overrides for Omarchy/Hyprland
 
 ## Setup
 
@@ -26,13 +27,19 @@ For manual installation:
 
 ```sh
 brew bundle
-stow nvim tmux zsh ghostty git starship agents pi herdr launchd
+stow nvim tmux zsh ghostty git starship gh-dash tuicr agents pi herdr launchd
 ```
 
 On Linux (systemd) systems, deploy the user services with:
 
 ```sh
 stow systemd
+```
+
+On Omarchy systems, deploy the user Omarchy theme overrides with:
+
+```sh
+stow omarchy
 ```
 
 For a minimal setup without agent tooling, omit `agents` and `pi`.
@@ -77,19 +84,21 @@ terraform -chdir=ops/devbox destroy \
 | `claude`     | Claude AI context files                                                     |
 | `code`       | Code snippets (Golang, Lua)                                                 |
 | `ghostty`    | Ghostty terminal emulator                                                   |
+| `gh-dash`    | GitHub dashboard configuration                                              |
 | `herdr`      | Agent workspaces, notifications, and sound configuration                    |
 | `git`        | Git configuration                                                           |
 | `kube`       | Kubernetes configuration                                                    |
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
 | `neovide`    | Neovide (Neovim GUI) config                                                 |
 | `nvim`       | Neovim with LazyVim                                                         |
-| `ssh`        | SSH configuration                                                           |
+| `omarchy`    | User Omarchy theme overrides                                                |
 | `starship`   | Starship prompt                                                             |
 | `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges, flight check-in reminders) |
 | `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
 | `terminfo`   | Custom terminfo entries                                                     |
 | `tmux`       | Tmux configuration                                                          |
 | `tmuxinator` | Tmuxinator session templates                                                |
+| `tuicr`      | Terminal pull-request review configuration                                  |
 | `zsh`        | Zsh shell configuration                                                     |
 
 ## Herdr server handoff
@@ -140,11 +149,11 @@ execution workflow. Neovim's `<leader>vf` picker remains a read-only navigation 
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
-Install/update Pi packages from the checked-in manifest:
+Install/update Pi packages and the local web-fetch dependencies:
 
 ```sh
-cd ~/.pi/agent/npm
-npm install
+cd ~/.pi/agent/npm && npm install
+cd ~/.pi/agent/extensions/web-fetch && npm ci --ignore-scripts
 ```
 
 Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`; the widget stays hidden when no run exists.

@@ -1,5 +1,10 @@
 import { keyHint, type ExtensionAPI, type Theme } from "@earendil-works/pi-coding-agent";
-import { existsSync, realpathSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+} from "node:fs";
 import { hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -1719,35 +1724,107 @@ async function loadPiInternals(): Promise<{
   AssistantMessageComponent: any;
   ToolExecutionComponent: any;
   theme: Theme;
+  source: string;
 }> {
   const cliPath = realpathSync(process.argv[1] ?? "");
   const cliDir = dirname(cliPath);
+
+  // `dist/modes/interactive/...` is kept as the theme-singleton source and as
+  // a fallback for non-bundled dev runs.
   const interactivePath = [
     join(cliDir, "modes/interactive"),
     join(dirname(cliDir), "modes/interactive"),
   ].find((candidate) =>
     existsSync(join(candidate, "components/assistant-message.js")),
   );
-  if (!interactivePath) {
+
+  // Published pi ships a BUNDLED CLI: `dist/bundle/cli.js` imports everything
+  // from `dist/bundle/chunks/*.js` (hashed names). Those chunks inline their
+  // OWN copies of AssistantMessageComponent / ToolExecutionComponent and do NOT
+  // import from `dist/modes/interactive/...` — that tree is a separate,
+  // dead-at-runtime build output. Patching the classes imported from
+  // `modes/interactive` therefore patches prototypes the runtime never
+  // instantiates: a silent no-op (the bug this fixes). Instead, import the
+  // components from the bundled chunk the runtime actually uses. ESM caches
+  // modules by URL, so importing the chunk's file URL returns the SAME class
+  // instances the runtime renders with — prototype patching then takes effect.
+  const chunksDir = join(cliDir, "chunks");
+  let AssistantMessageComponent: any;
+  let ToolExecutionComponent: any;
+  let source: string | undefined;
+  if (existsSync(chunksDir)) {
+    const chunkFiles = readdirSync(chunksDir).filter((file) =>
+      file.endsWith(".js"),
+    );
+    for (const file of chunkFiles) {
+      // Cheap pre-filter so we only dynamic-import chunks that can match.
+      // NB: name this local `chunkSource`, not `source` — the outer `let source`
+      // records the resolved origin for the diagnostic, and reusing the name
+      // here would shadow it and make the `source = ` assignment below a
+      // runtime `Assignment to constant variable` TypeError under jiti, which
+      // silently disables the renderer.
+      const chunkSource = readFileSync(join(chunksDir, file), "utf8");
+      if (
+        !chunkSource.includes("AssistantMessageComponent") &&
+        !chunkSource.includes("ToolExecutionComponent")
+      )
+        continue;
+      const module = await import(
+        pathToFileURL(join(chunksDir, file)).href
+      ).catch(() => undefined);
+      if (!AssistantMessageComponent && module?.AssistantMessageComponent) {
+        AssistantMessageComponent = module.AssistantMessageComponent;
+        source = `bundled chunk ${file}`;
+      }
+      if (!ToolExecutionComponent && module?.ToolExecutionComponent)
+        ToolExecutionComponent = module.ToolExecutionComponent;
+      if (AssistantMessageComponent && ToolExecutionComponent) break;
+    }
+  }
+
+  // Fallback for non-bundled layouts: import the classes from modes/interactive.
+  if (
+    (!AssistantMessageComponent || !ToolExecutionComponent) &&
+    interactivePath
+  ) {
+    const [assistantModule, toolModule] = await Promise.all([
+      import(
+        pathToFileURL(join(interactivePath, "components/assistant-message.js"))
+          .href
+      ),
+      import(
+        pathToFileURL(join(interactivePath, "components/tool-execution.js"))
+          .href
+      ),
+    ]);
+    AssistantMessageComponent ??= assistantModule.AssistantMessageComponent;
+    ToolExecutionComponent ??= toolModule.ToolExecutionComponent;
+    if (!source) source = "modes/interactive (fallback)";
+  }
+
+  // The lowercase `theme` singleton is not exported from the chunk; pull it from
+  // the modes/interactive theme module. Any valid Theme instance colors
+  // correctly, so the source need not match the runtime's.
+  let theme: Theme | undefined;
+  if (interactivePath) {
+    const themeModule = await import(
+      pathToFileURL(join(interactivePath, "theme/theme.js")).href
+    );
+    theme = themeModule.theme as Theme | undefined;
+  }
+
+  if (!AssistantMessageComponent || !ToolExecutionComponent || !theme) {
     throw new Error(
-      "tool-call-renderer: could not locate pi interactive components relative to " +
-        cliPath,
+      "tool-call-renderer: could not locate pi interactive components (bundled chunks or modes/interactive) relative to " +
+        cliPath +
+        (source ? ` (last tried ${source})` : ""),
     );
   }
-  const [assistantModule, toolModule, themeModule] = await Promise.all([
-    import(
-      pathToFileURL(join(interactivePath, "components/assistant-message.js"))
-        .href
-    ),
-    import(
-      pathToFileURL(join(interactivePath, "components/tool-execution.js")).href
-    ),
-    import(pathToFileURL(join(interactivePath, "theme/theme.js")).href),
-  ]);
   return {
-    AssistantMessageComponent: assistantModule.AssistantMessageComponent,
-    ToolExecutionComponent: toolModule.ToolExecutionComponent,
-    theme: themeModule.theme as Theme,
+    AssistantMessageComponent,
+    ToolExecutionComponent,
+    theme,
+    source: source ?? "unknown",
   };
 }
 
@@ -1824,9 +1901,67 @@ function patchComponents(
   }
 }
 
+// Fail-soft wrapper around loadPiInternals + patchComponents. A future pi update
+// that moves the internal component modules would make discovery throw; this
+// catches that, logs once to stderr, and leaves pi's built-in renderer in place
+// instead of failing the whole extension load. Idempotent: `patchApplied` plus
+// the prototype guard symbols make repeated calls (e.g. on session_start) a
+// no-op once patching has succeeded, so re-discovery only runs when the initial
+// load-time attempt failed.
+let patchApplied = false;
+let patchAnnounced = false;
+
+function isBunVirtualPath(path: string | undefined): boolean {
+  return Boolean(
+    path &&
+      (path.startsWith("/$bunfs/") ||
+        path.startsWith("/~BUN/") ||
+        path.includes("%7EBUN")),
+  );
+}
+
+async function applyRendererPatch(
+  state: RendererState,
+  controller: RendererController,
+  onTheme: (theme: Theme) => void,
+): Promise<boolean> {
+  if (patchApplied) return true;
+  if (isBunVirtualPath(process.argv[1])) return false;
+  try {
+    const {
+      AssistantMessageComponent,
+      ToolExecutionComponent,
+      theme,
+      source,
+    } = await loadPiInternals();
+    patchComponents(
+      AssistantMessageComponent,
+      ToolExecutionComponent,
+      controller,
+    );
+    onTheme(theme);
+    patchApplied = true;
+    if (!patchAnnounced) {
+      patchAnnounced = true;
+      console.error(
+        `tool-call-renderer: custom rendering active (patched ${source}).`,
+      );
+    }
+    return true;
+  } catch (error) {
+    if (!patchAnnounced) {
+      patchAnnounced = true;
+      console.error(
+        "tool-call-renderer: custom rendering disabled — could not patch pi interactive components; falling back to built-in rendering. " +
+          (error instanceof Error ? error.message : String(error)),
+      );
+    }
+    return false;
+  }
+}
+
 export default async function (pi: ExtensionAPI) {
-  const { AssistantMessageComponent, ToolExecutionComponent, theme } =
-    await loadPiInternals();
+  let theme: Theme;
   const state: RendererState = {
     pending: new Map(),
     persisted: new WeakMap(),
@@ -1918,17 +2053,20 @@ export default async function (pi: ExtensionAPI) {
       return renderToolComponent(component, width, state, theme);
     },
   };
-  patchComponents(
-    AssistantMessageComponent,
-    ToolExecutionComponent,
-    controller,
-  );
+  await applyRendererPatch(state, controller, (resolved) => {
+    theme = resolved;
+  });
 
-  pi.on("session_start", (_event, ctx) => {
+  pi.on("session_start", async (_event, ctx) => {
     const sessionId = ctx.sessionManager.getSessionId();
     if (state.sessionId && state.sessionId !== sessionId) disposeState(state);
     state.sessionId = sessionId;
     scanPersistedSession(state, ctx.sessionManager.getEntries());
+    // Re-attempt patching if the load-time attempt failed (e.g. pi internals
+    // were not resolvable when the extension first loaded). No-op once applied.
+    await applyRendererPatch(state, controller, (resolved) => {
+      theme = resolved;
+    });
   });
 
   pi.on("agent_start", () => {

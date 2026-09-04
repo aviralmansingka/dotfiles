@@ -99,9 +99,23 @@ stow -d "$DOTFILES_DIR" -t "$HOME" nvim
 stow -d "$DOTFILES_DIR" -t "$HOME" starship
 stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
 stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
+stow -d "$DOTFILES_DIR" -t "$HOME" gh-dash
+stow -d "$DOTFILES_DIR" -t "$HOME" tuicr
 stow -d "$DOTFILES_DIR" -t "$HOME" agents
 stow -d "$DOTFILES_DIR" -t "$HOME" pi
 stow -d "$DOTFILES_DIR" -t "$HOME" herdr
+if command -v omarchy >/dev/null 2>&1; then
+    stow -d "$DOTFILES_DIR" -t "$HOME" omarchy
+fi
+
+echo "==> Installing Pi extension dependencies"
+npm ci --ignore-scripts --no-fund --no-audit \
+    --prefix "$DOTFILES_DIR/pi/.pi/agent/extensions/web-fetch"
+
+echo "==> Installing gh-dash extension"
+if command -v gh >/dev/null 2>&1; then
+    gh extension install dlvhdr/gh-dash 2>/dev/null || true
+fi
 
 echo "==> Installing Herdr agent integrations"
 herdr integration install pi

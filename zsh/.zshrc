@@ -161,3 +161,4 @@ export NVM_DIR="$HOME/.nvm"
 # Added by Windsurf
 export PATH="/Users/aviral/.codeium/windsurf/bin:$PATH"
 
+export PATH="$HOME/.local/bin:$PATH"

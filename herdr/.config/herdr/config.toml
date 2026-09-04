@@ -41,6 +41,7 @@ split_horizontal = "prefix+minus"
 
 [ui]
 pane_scrollbars = false
+host_cursor = "drawn"
 
 mouse_capture = true
 pane_borders = true

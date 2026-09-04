@@ -64,7 +64,7 @@ subagent_message({ name: "scout", message: "Also check the auth middleware" });
 
 Every spawn records name → session file in `artifacts/<sessionId>/subagent-registry.json`, so names stay addressable across pi restarts. A nested sub-agent that spawns children gets its own registry keyed by its own session id. Resume is refused with a clear error (listing known names) if the name isn't registered, the session file is gone, or the session predates sandboxed resume.
 
-**Resume replays the original sandbox.** At spawn time the fully-resolved loadout — tool allowlist, backing extensions, model, thinking level, system prompt, spawn whitelist, cwd — is snapshotted to `<session>.loadout.json`. Resume rebuilds the exact same restricted process from that snapshot rather than relaunching unrestricted.
+**Resume replays the original sandbox.** At spawn time the fully-resolved loadout — tool allowlist, model, thinking level, system prompt, spawn whitelist, cwd — is snapshotted to `<session>.loadout.json`. Resume rebuilds the same tool-restricted process from that snapshot while keeping normal extension discovery enabled.
 
 ### ask_question
 
@@ -76,11 +76,12 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 
 | Agent | Model | Tools | Role |
 | ----- | ----- | ----- | ---- |
-| **scout** | `openrouter/z-ai/glm-5.3` | `read`, `grep`, `find`, `ls` | Fast read-only codebase recon |
-| **researcher** | `openrouter/z-ai/glm-5.3` | `web_search`, `web_fetch`, `safe_bash` | Web research, synthesized into a sourced brief |
-| **worker** | `openrouter/z-ai/glm-5.3` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch` + spawning | General implementer; may spawn `scout` and `researcher` |
+| **scout** | `openai-codex/gpt-5.6-luna` | `read`, `grep`, `find`, `ls` | Fast read-only codebase recon |
+| **researcher** | `openai-codex/gpt-5.6-luna` | `web_search`, `web_fetch`, `safe_bash` | Web research, synthesized into a sourced brief |
+| **worker** | `openai-codex/gpt-5.6-luna` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch` + spawning | General implementer; may spawn `scout` and `researcher` |
+| **professor** | `openai-codex/gpt-5.6-luna` | lesson authoring, learner interaction tools + `researcher` spawning | Interactive teacher; grills the learner to approve one observable goal before teaching |
 
-All three are autonomous (`auto-exit: true`) and carry their identity in the system prompt (`system-prompt: append`).
+`scout`, `researcher`, and `worker` are autonomous (`auto-exit: true`). `professor` is a long-lived, user-driven pane (`auto-exit: false`) that auto-loads the `professor` skill and remains open until the learner exits it. All four carry their identity in the system prompt (`system-prompt: append`).
 
 ## Custom agents
 
@@ -90,7 +91,7 @@ Place a `.md` file in `.pi/agents/` (project) or `~/.pi/agent/agents/` (global).
 ---
 name: my-agent
 description: Does something specific
-model: openrouter/z-ai/glm-5.3
+model: openai-codex/gpt-5.6-luna
 thinking: medium
 tools: read, edit, write, safe_bash, web_search
 session-mode: lineage-only
@@ -108,7 +109,7 @@ You are a specialized agent that does X...
 | `description` | string | Shown in `subagents_list` |
 | `model` | string | Default model |
 | `thinking` | string | `minimal`, `low`, `medium`, or `high` |
-| `tools` | string | Strict tool allowlist. Built-ins: `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`. Extension-backed: `web_search`, `web_fetch`, `safe_bash`, `video_extract`, `youtube_search`, `google_image_search`. Only the extensions backing the listed tools are loaded into the child |
+| `tools` | string | Strict callable-tool allowlist. Built-ins: `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`. Extension-backed examples: `web_search`, `web_fetch`, `safe_bash`, `video_extract`, `youtube_search`, `google_image_search`. Normal extension discovery stays enabled, but only listed tools are callable |
 | `subagent_agents` | string | Comma-separated agent names this agent may spawn. **Presence of this field grants the spawning toolset** (`subagent`, `subagent_message`, `subagents_list`) and restricts spawn targets to the list. Omit it and the agent cannot spawn at all |
 | `skills` | string | Comma-separated skill names to auto-load |
 | `session-mode` | string | `standalone` (default), `lineage-only`, or `fork` — see below |
@@ -140,7 +141,7 @@ Controls whether `stalled`/`recovered` status transitions send a steer message t
 
 ## Tool access control
 
-Access is **whitelist-only**. Every sub-agent process is launched with `--no-extensions` (extension discovery disabled) and `--tools <allowlist>`; only the extensions backing the listed tools are loaded back in explicitly. There is no default toolset and no deny-list — an agent gets exactly what its frontmatter lists. The restriction survives resume via the loadout snapshot.
+Tool access is **whitelist-only**. Sub-agent processes keep normal extension discovery enabled, so they load the same configured global/project/package extensions as their cwd. Callable tools are still restricted with `--tools <allowlist>` plus explicit helper extensions for tools outside normal discovery. There is no deny-list — an agent can call exactly what its frontmatter lists. The restriction survives resume via the loadout snapshot.
 
 Spawns must name a known agent at **every** depth. A top-level session may spawn anything discoverable; a sub-agent may only spawn the agents in its `subagent_agents` list (enforced via `PI_SUBAGENT_ALLOWED`). There is no agentless spawn route, so a child can never escalate to a full-toolset profile by omitting its agent.
 
@@ -166,6 +167,8 @@ Set a per-agent default with `cwd:` in frontmatter.
 ## Status widget & configuration
 
 The widget tracks each sub-agent from a runtime activity snapshot written by the child: `starting`, `active` (turn/provider/tool work), `waiting` (open for input or another stage), `stalled` (no valid snapshot for too long), or `running` (fallback). Sub-agent sessions also show their own tools widget — toggle it with `Ctrl+Alt+O`. Completion messages expand with `Ctrl+O`.
+
+If a Herdr/tmux sub-agent pane is closed before its completion sentinel appears, the run is marked failed instead of stalling forever. The parent receives a steer prompt asking whether to resume the saved session, launch a fresh sub-agent, or ignore it.
 
 Status display is configured via `config.json` in the extension directory (copy `config.json.example`; it's gitignored):
 
