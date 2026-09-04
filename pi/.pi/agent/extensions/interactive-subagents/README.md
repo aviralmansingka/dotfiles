@@ -76,10 +76,10 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 
 | Agent | Model | Tools | Role |
 | ----- | ----- | ----- | ---- |
-| **scout** | `openai-codex/gpt-5.6-luna` | `read`, `grep`, `find`, `ls` | Fast read-only codebase recon |
-| **researcher** | `openai-codex/gpt-5.6-luna` | `web_search`, `web_fetch`, `safe_bash` | Web research, synthesized into a sourced brief |
-| **worker** | `openai-codex/gpt-5.6-luna` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch` + spawning | General implementer; may spawn `scout` and `researcher` |
-| **professor** | `openai-codex/gpt-5.6-luna` | lesson authoring, learner interaction tools + `researcher` spawning | Interactive teacher; grills the learner to approve one observable goal before teaching |
+| **scout** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | `read`, `grep`, `find`, `ls` | Fast read-only codebase recon |
+| **researcher** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | `web_search`, `web_fetch`, `safe_bash` | Web research, synthesized into a sourced brief |
+| **worker** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch` + spawning | General implementer; may spawn `scout` and `researcher` |
+| **professor** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | lesson authoring, learner interaction tools + `researcher` spawning | Interactive teacher; grills the learner to approve one observable goal before teaching |
 
 `scout`, `researcher`, and `worker` are autonomous (`auto-exit: true`). `professor` is a long-lived, user-driven pane (`auto-exit: false`) that auto-loads the `professor` skill and remains open until the learner exits it. All four carry their identity in the system prompt (`system-prompt: append`).
 
@@ -91,7 +91,7 @@ Place a `.md` file in `.pi/agents/` (project) or `~/.pi/agent/agents/` (global).
 ---
 name: my-agent
 description: Does something specific
-model: openai-codex/gpt-5.6-luna
+model: fireworks/accounts/fireworks/routers/glm-5p2-fast
 thinking: medium
 tools: read, edit, write, safe_bash, web_search
 session-mode: lineage-only
