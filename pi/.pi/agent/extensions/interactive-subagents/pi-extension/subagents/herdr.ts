@@ -1,15 +1,10 @@
 /**
- * Herdr surface layer — pane control via the `herdr` CLI socket API.
+ * Herdr surface layer — tab and pane control via the `herdr` CLI socket API.
  *
  * Mirrors the export contract of ./tmux.ts so index.ts can target either
- * multiplexer through ./surface.ts. Panes are identified by Herdr pane ids
- * (e.g. `w44:p2`). Splits always target the parent pi's pane
- * (`HERDR_PANE_ID`) so they follow the agent rather than the user's focus.
- *
- * Herdr has no `select-layout even-horizontal` equivalent, so pane rebalancing
- * is a no-op here (panes stay at the split ratio given at creation time). This
- * is the one functional gap vs the tmux surface; it is cosmetic and never
- * blocks spawning or watching.
+ * multiplexer through ./surface.ts. Each launched subagent gets a labeled,
+ * unfocused Herdr tab; the rest of the extension addresses that tab through
+ * its root pane id (e.g. `w44:p2`).
  */
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
@@ -73,17 +68,23 @@ export function shellEscape(s: string): string {
 
 // ── Herdr CLI helpers ──
 
-/**
- * Parse the new pane id out of `herdr pane split` JSON stdout, e.g.
- * `{"id":"cli:pane:split","result":{"pane":{"pane_id":"w44:p3",...}}}}`.
- */
+/** Parse the root pane id returned by tab creation or pane splitting. */
 function parsePaneId(stdout: string): string {
   const data = JSON.parse(stdout);
-  const paneId = data?.result?.pane?.pane_id;
+  const paneId = data?.result?.root_pane?.pane_id ?? data?.result?.pane?.pane_id;
   if (typeof paneId !== "string" || paneId.length === 0) {
-    throw new Error(`Unexpected herdr pane split output: ${stdout}`);
+    throw new Error(`Unexpected Herdr surface creation output: ${stdout}`);
   }
   return paneId;
+}
+
+function workspaceForPane(paneId: string): string {
+  const stdout = execFileSync("herdr", ["pane", "get", paneId], { encoding: "utf8" });
+  const workspaceId = JSON.parse(stdout)?.result?.pane?.workspace_id;
+  if (typeof workspaceId !== "string" || workspaceId.length === 0) {
+    throw new Error(`Unexpected Herdr pane output: ${stdout}`);
+  }
+  return workspaceId;
 }
 
 // ── Pane layout ──
@@ -99,14 +100,22 @@ function rebalanceSurfaces(_hintPane?: string): void {
 
 // ── Surface primitives ──
 
-/**
- * Create a new pane for a subagent: a right split off the parent pi's pane,
- * so new panes follow the agent rather than the user's focus.
- * Returns the new pane id (e.g. `w44:p3`).
- */
+/** Create a labeled, unfocused tab and return its root pane id. */
 export function createSurface(name: string): string {
-  void name; // Herdr panes are not named; the pi process inside shows its own title.
-  return createSurfaceSplit(name, "right", process.env.HERDR_PANE_ID);
+  requireHerdr();
+  const workspaceId = workspaceForPane(process.env.HERDR_PANE_ID!);
+  const stdout = execFileSync(
+    "herdr",
+    [
+      "tab", "create",
+      "--workspace", workspaceId,
+      "--cwd", process.cwd(),
+      "--label", `subagent: ${name}`,
+      "--no-focus",
+    ],
+    { encoding: "utf8" },
+  );
+  return parsePaneId(stdout);
 }
 
 /**

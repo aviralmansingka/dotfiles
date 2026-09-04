@@ -168,14 +168,15 @@ export function nameRegistryPath(artifactDir: string): string {
 
 /** Read a spawner session's name registry, or {} if absent/corrupt. */
 export function readNameRegistry(artifactDir: string): NameRegistry {
+  const registry = Object.create(null) as NameRegistry;
   try {
     const p = nameRegistryPath(artifactDir);
-    if (!existsSync(p)) return {};
+    if (!existsSync(p)) return registry;
     const parsed = JSON.parse(readFileSync(p, "utf8"));
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-    return parsed as NameRegistry;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return registry;
+    return Object.assign(registry, parsed);
   } catch {
-    return {};
+    return registry;
   }
 }
 
@@ -210,6 +211,13 @@ export function resolveNameInRegistry(
 ): NameRegistryEntry | null {
   const entry = readNameRegistry(artifactDir)[name];
   return entry && typeof entry.sessionFile === "string" ? entry : null;
+}
+
+export function uniqueSubagentName(base: string, taken: ReadonlySet<string>): string {
+  if (!taken.has(base)) return base;
+  let n = 2;
+  while (taken.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
 }
 
 function readEntries(sessionFile: string): SessionEntry[] {

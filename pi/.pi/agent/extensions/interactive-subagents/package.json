@@ -14,11 +14,11 @@
   "forkNotes": {
     "upstream": "amosblomqvist/pi-interactive-subagents@main",
     "changes": [
-      "Added pi-extension/subagents/herdr.ts — Herdr pane surface (herdr pane split/send-text/send-keys/read/close).",
+      "Added pi-extension/subagents/herdr.ts — Herdr tab surface (herdr tab create plus root-pane send/read/close).",
       "Added pi-extension/subagents/surface.ts — auto-detect dispatcher (Herdr via HERDR_ENV/HERDR_PANE_ID, else tmux via TMUX).",
       "index.ts imports ./surface.ts instead of ./tmux.ts; tmux.ts kept intact as the fallback surface.",
       "Remapped @mariozechner/* and @sinclair/typebox imports to @earendil-works/* (captain's pi publish names).",
-      "Known gap: Herdr has no select-layout even-horizontal equivalent, so pane rebalancing is a no-op on the Herdr surface."
+      "Herdr subagents launch as labeled tabs; tmux subagents remain split panes."
     ]
   },
   "type": "module",

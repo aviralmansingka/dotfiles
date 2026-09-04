@@ -17,7 +17,7 @@ import { homedir } from "node:os";
 import {
   isMuxAvailable,
   muxSetupHint,
-  createSurface,
+  withNewSurface,
   sendCommand,
   sendLongCommand,
   pollForExit,
@@ -37,6 +37,7 @@ import {
   resolveNameInRegistry,
   seedSubagentSessionFile,
   summarizeSessionStats,
+  uniqueSubagentName,
   writeSubagentLoadout,
   type SessionStats,
   type SubagentLoadout,
@@ -101,7 +102,7 @@ const SubagentParams = Type.Object({
   name: Type.Optional(
     Type.String({
       description:
-        "Optional cosmetic label for the subagent's pane and widget row. Defaults to the agent name. " +
+        "Optional cosmetic label for the subagent's Herdr tab or tmux pane and widget row. Defaults to the agent name. " +
         "Has no effect on which agent runs — use `agent` for that.",
     }),
   ),
@@ -393,7 +394,7 @@ function resolveLaunchBehavior(
  *   2. Default: the inverse of `auto-exit`. Agents that auto-exit are
  *      autonomous (scout, researcher) and the parent session should be
  *      woken on stall/recovery transitions. Agents that don't auto-exit are
- *      driven by the user in their own pane (worker) and stall pings are noise.
+ *      driven by the user in their own session (worker) and stall pings are noise.
  */
 function resolveEffectiveInteractive(
   _params: Static<typeof SubagentParams>,
@@ -636,7 +637,7 @@ function widgetIcon(kind: StatusSnapshot["kind"]): string {
 }
 
 /**
- * Wait long enough for a freshly created pane to finish shell startup.
+ * Wait long enough for a freshly created surface to finish shell startup.
  *
  * Some environments do extra shell-init work before the prompt is ready
  * (for example direnv/devenv), so the delay is configurable for users who hit
@@ -1125,8 +1126,8 @@ function observeRunningSubagent(running: RunningSubagent, observedAt = Date.now(
  * `runningSubagents`. Parallel `subagent` tool calls run their synchronous
  * prefix (name defaulting) before any of them finishes `launchSubagent` and
  * registers, so without this they'd all see an empty map and pick the same
- * name. Reserved synchronously when a default name is chosen and released once
- * the subagent registers (or its launch fails).
+ * name. Reserved synchronously for every spawn and released once the subagent
+ * registers (or its launch fails).
  */
 const reservedNames = new Set<string>();
 
@@ -1145,10 +1146,7 @@ function uniqueRunningName(base: string, registryNames?: Set<string>): string {
   const taken = new Set(Array.from(runningSubagents.values()).map((r) => r.name));
   for (const reserved of reservedNames) taken.add(reserved);
   if (registryNames) for (const n of registryNames) taken.add(n);
-  if (!taken.has(base)) return base;
-  let n = 2;
-  while (taken.has(`${base}-${n}`)) n++;
-  return `${base}-${n}`;
+  return uniqueSubagentName(base, taken);
 }
 
 function resolveRunningByName(name: string):
@@ -1174,7 +1172,7 @@ function resolveRunningByName(name: string):
 }
 
 /**
- * Type a follow-up message into a running subagent's live pane. Newlines are
+ * Type a follow-up message into a running subagent's live surface. Newlines are
  * collapsed to spaces because each newline submits a turn in the child's TUI
  * editor; a multi-line message would otherwise fire as several partial turns.
  */
@@ -1278,7 +1276,7 @@ function startStatusRefresh(pi: ExtensionAPI) {
 
       // Interactive subagents (long-running, user-driven) intentionally don't
       // wake the parent session on stalled/recovered transitions — the user is
-      // working in the subagent's pane, and a steer message here would burn an
+      // working in the subagent's session, and a steer message here would burn an
       // orchestrator turn on a no-op "still waiting" ping. Widget still updates.
       if (transition && !running.interactive) {
         transitionLines.push(formatTransitionLine(running.name, snapshot, transition));
@@ -1306,7 +1304,7 @@ function startStatusRefresh(pi: ExtensionAPI) {
 
 // Resuming a finished session is always autonomous: the relaunched agent runs
 // its follow-up task to completion and the harness delivers the result as a
-// steer message (fire-and-forget). An interactive resume would park the pane
+// steer message (fire-and-forget). An interactive resume would park the session
 // waiting for the user, contradicting that result-delivery model.
 function resolveResumeLaunchBehavior(): { autoExit: boolean; interactive: boolean } {
   return { autoExit: true, interactive: false };
@@ -1353,7 +1351,7 @@ function startWidgetRefresh() {
 }
 
 /**
- * Launch a subagent: creates the multiplexer pane, builds the command, and
+ * Launch a subagent: creates the multiplexer surface, builds the command, and
  * sends it. Returns a RunningSubagent — does NOT poll.
  *
  * Call watchSubagent() on the returned object to observe completion.
@@ -1361,7 +1359,14 @@ function startWidgetRefresh() {
 async function launchSubagent(
   params: typeof SubagentParams.static,
   ctx: { sessionManager: { getSessionFile(): string | null; getSessionId(): string; getSessionDir(): string }; cwd: string },
-  options?: { surface?: string },
+): Promise<RunningSubagent> {
+  return withNewSurface(params.name, (surface) => launchSubagentOnSurface(params, ctx, surface));
+}
+
+async function launchSubagentOnSurface(
+  params: typeof SubagentParams.static,
+  ctx: { sessionManager: { getSessionFile(): string | null; getSessionId(): string; getSessionDir(): string }; cwd: string },
+  surface: string,
 ): Promise<RunningSubagent> {
   const startTime = Date.now();
   const id = Math.random().toString(16).slice(2, 10);
@@ -1394,13 +1399,7 @@ async function launchSubagent(
   ].join("-");
   const subagentSessionFile = join(sessionDir, `${timestamp}_${uuid}.jsonl`);
 
-  // Use pre-created surface (parallel mode) or create a new one.
-  // For new surfaces, pause briefly so the shell is ready before sending the command.
-  const surfacePreCreated = !!options?.surface;
-  const surface = options?.surface ?? createSurface(params.name);
-  if (!surfacePreCreated) {
-    await new Promise<void>((resolve) => setTimeout(resolve, getShellReadyDelayMs()));
-  }
+  await new Promise<void>((resolve) => setTimeout(resolve, getShellReadyDelayMs()));
 
   const launchBehavior = resolveLaunchBehavior(params, agentDefs);
 
@@ -1422,7 +1421,7 @@ async function launchSubagent(
   // Blank-session modes need the wrapper instructions and artifact-backed handoff.
   const modeHint = agentDefs?.autoExit
     ? "Complete your task autonomously. When you are finished, simply stop — your session ends automatically."
-    : "Complete your task. The user can interact with you at any time, and the session ends when the user exits the pane.";
+    : "Complete your task. The user can interact with you at any time, and the session ends when the user exits the tab or pane.";
   const summaryInstruction = agentDefs?.autoExit
     ? "Your FINAL assistant message should summarize what you accomplished."
     : "Your FINAL assistant message (before the user exits) should summarize what you accomplished.";
@@ -1888,14 +1887,14 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       name: "subagent",
       label: "Subagent",
       description:
-        "Spawn a sub-agent in a dedicated terminal multiplexer pane. " +
+        "Spawn a sub-agent in a dedicated Herdr tab or tmux pane. " +
         "This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
         "DO NOT fabricate, assume, or summarize results after calling this tool. " +
         "After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
       promptSnippet:
-        "Spawn a sub-agent in a dedicated terminal multiplexer pane. " +
+        "Spawn a sub-agent in a dedicated Herdr tab or tmux pane. " +
         "This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
@@ -1986,27 +1985,22 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           ctx.sessionManager.getSessionId(),
         );
 
-        // Default the cosmetic pane label to the agent name when omitted,
-        // disambiguating against running subagents, in-flight reservations, and
-        // every name already in the registry — so names stay unique across the
-        // whole session, running or finished. Reserve the chosen name
-        // synchronously (before any await) so parallel spawns don't collide.
-        let reservedName: string | null = null;
-        if (!params.name?.trim()) {
-          const registryNames = new Set(Object.keys(readNameRegistry(parentArtifactDir)));
-          params.name = uniqueRunningName(params.agent, registryNames);
-          reservedName = params.name;
-          reservedNames.add(reservedName);
-        }
+        // Default the cosmetic label to the agent name, then disambiguate both
+        // default and explicit names against running, in-flight, and registered
+        // subagents. Reserve synchronously so parallel spawns cannot collide.
+        const registryNames = new Set(Object.keys(readNameRegistry(parentArtifactDir)));
+        params.name = uniqueRunningName(params.name?.trim() || params.agent, registryNames);
+        const reservedName = params.name;
+        reservedNames.add(reservedName);
 
-        // Launch the subagent (creates pane, sends command). Release the name
+        // Launch the subagent (creates its surface, then sends the command). Release the name
         // reservation once it registers in runningSubagents (or launch fails) —
         // from then on uniqueRunningName tracks it via the running map.
         let running;
         try {
           running = await launchSubagent(params, ctx);
         } finally {
-          if (reservedName) reservedNames.delete(reservedName);
+          reservedNames.delete(reservedName);
         }
 
         // Persist name → session so subagent_message({ name }) can resume this
@@ -2377,7 +2371,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         // transcript doesn't block the UI.
         const entryCountBefore = countSessionEntryLines(sessionPath);
 
-        const surface = createSurface(name);
+        return withNewSurface(name, async (surface) => {
         await new Promise<void>((resolve) => setTimeout(resolve, getShellReadyDelayMs()));
 
         // Build pi resume command
@@ -2550,6 +2544,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             status: "started",
           },
         };
+        });
       },
     });
 
