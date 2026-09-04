@@ -11,31 +11,6 @@ user-invocable: true
 the configured push target. You drive it through the `no-mistakes axi` command family, which prints
 machine-readable [TOON](https://toonformat.dev) to stdout and progress to stderr.
 
-## Invoke axi through the `no_mistakes_axi` tool
-
-When a TUI is available, drive **every** `no-mistakes axi` subcommand (run,
-respond, status, logs, abort, sync) through the `no_mistakes_axi` tool instead
-of running `no-mistakes axi` in the bash tool. (The bare `no-mistakes axi` home
-view takes no subcommand, so it is not a tool target — use `no-mistakes axi
-status` through the tool to inspect state.)
-For `run` and `respond`, the tool runs the axi call detached in the background
-and opens the rich `no-mistakes` TUI (`no-mistakes attach`) in a Herdr pane to
-the right of the agent pane so the captain can watch the pipeline run as an
-interactive UI — this is expected; you still receive the structured TOON the
-background axi call captured and drive the gate on it exactly as below. For
-quick inspections (status/logs/sync/abort) the pane shows the raw axi text.
-If the TUI cannot be shown (`attach` unavailable, no active run, or Herdr not
-present), the tool falls back to the raw axi text pane or an inline run and
-still returns the TOON — only the captain's view changes, never the gate.
-
-Pass `args` = everything after `no-mistakes axi` (e.g.
-`run --intent "ship the feature"`, `respond --action fix --findings r1`,
-`status`). The fenced `no-mistakes axi ...` examples throughout this skill
-show exactly what to put in `args`; read them as the tool's input, not as bash
-to type yourself. `axi run` and `axi respond` block for several minutes at a
-review/test/CI step — that is normal, do not cancel or re-issue because the
-tool seems slow. If the tool reports it could not open a pane (non-TUI mode or
-Herdr unavailable), it falls back to an inline run and still returns the TOON.
 
 ## Active validation-step boundary
 
