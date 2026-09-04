@@ -89,8 +89,15 @@ keybindings:
     - key: O
       name: open PR in Herdr worktree
       command: >
-        git -C "{{.RepoPath}}" fetch "$(gh repo view "{{.RepoName}}" --json sshUrl --jq .sshUrl)" "+pull/{{.PrNumber}}/head:refs/heads/pr/{{.PrNumber}}" &&
-        herdr worktree create --cwd "{{.RepoPath}}" --branch "pr/{{.PrNumber}}" --focus
+        branch="pr/{{.PrNumber}}"; ref="refs/remotes/gh-dash/pull/{{.PrNumber}}";
+        if git -C "{{.RepoPath}}" worktree list --porcelain | grep -Fqx "branch refs/heads/$branch"; then
+          herdr worktree open --cwd "{{.RepoPath}}" --branch "$branch" --focus;
+        elif git -C "{{.RepoPath}}" show-ref --verify --quiet "refs/heads/$branch"; then
+          printf 'Branch %s already exists outside a worktree\n' "$branch" >&2; exit 1;
+        else
+          git -C "{{.RepoPath}}" fetch "$(gh repo view "{{.RepoName}}" --json sshUrl --jq .sshUrl)" "+pull/{{.PrNumber}}/head:$ref" &&
+          herdr worktree create --cwd "{{.RepoPath}}" --branch "$branch" --base "$ref" --focus;
+        fi
 repoPaths:
   ":owner/:repo": /Users/aviral/:repo
 theme:
