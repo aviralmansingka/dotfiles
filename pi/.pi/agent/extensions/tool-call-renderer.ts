@@ -1911,12 +1911,22 @@ function patchComponents(
 let patchApplied = false;
 let patchAnnounced = false;
 
+function isBunVirtualPath(path: string | undefined): boolean {
+  return Boolean(
+    path &&
+      (path.startsWith("/$bunfs/") ||
+        path.startsWith("/~BUN/") ||
+        path.includes("%7EBUN")),
+  );
+}
+
 async function applyRendererPatch(
   state: RendererState,
   controller: RendererController,
   onTheme: (theme: Theme) => void,
 ): Promise<boolean> {
   if (patchApplied) return true;
+  if (isBunVirtualPath(process.argv[1])) return false;
   try {
     const {
       AssistantMessageComponent,
