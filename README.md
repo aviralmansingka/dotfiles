@@ -10,6 +10,8 @@ Development environment configuration for macOS and AWS devbox (Ubuntu), managed
 - **starship** - Cross-shell prompt
 - **herdr** - Agent-aware terminal multiplexer used by Neovim Sidekick
 - **gh-dash** - GitHub dashboard with Herdr pull-request worktree integration
+- **tuicr** - Vim-first terminal code review with agent-aware sessions
+- **hunk** - Review-first diff viewer with live agent annotations
 - **omarchy** - User theme overrides for Omarchy/Hyprland
 
 ## Setup
@@ -32,6 +34,7 @@ For manual package and configuration deployment (excluding installer-managed int
 brew bundle
 gh extension install dlvhdr/gh-dash
 stow nvim tmux zsh ghostty git starship gh-dash tuicr agents pi herdr launchd
+stow --no-folding hunk
 ```
 
 On Linux (systemd) systems, deploy the user services with:
@@ -90,6 +93,7 @@ terraform -chdir=ops/devbox destroy \
 | `ghostty`    | Ghostty terminal emulator                                                   |
 | `gh-dash`    | GitHub dashboard config and PR worktree launcher                            |
 | `herdr`      | Agent workspaces, notifications, and sound configuration                    |
+| `hunk`       | Review-first terminal diff configuration                                    |
 | `git`        | Git configuration                                                           |
 | `kube`       | Kubernetes configuration                                                    |
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
@@ -168,6 +172,11 @@ stow pi agents
 The shared `vault` skill supports explicit project and knowledge-base lookup, note summaries, project overviews, and
 Wayfinder overviews. It preserves the vault's Project → Theme → Feature → Task ontology without installing an
 execution workflow. Neovim's `<leader>vf` picker remains a read-only navigation surface for active vault work.
+
+Use `/hunk` to open or focus a watched Hunk diff in a sibling pane. It never
+starts a review. When you want an isolated asynchronous review, run
+`/hunk-review [focus]`; detailed findings are anchored in Hunk and only a terse
+completion summary returns to the parent session.
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
