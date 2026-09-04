@@ -9,29 +9,29 @@ trap cleanup EXIT
 mkdir -p "$verify_dir/bin" "$verify_dir/agent"
 cat > "$verify_dir/bin/no-mistakes" <<'FAKE'
 #!/bin/sh
-cat <<'TOON'
+run_id="$(node -e 'const a="0123456789ABCDEFGHJKMNPQRSTVWXYZ"; let n=Date.now()-17000,s=""; for(let i=0;i<10;i++){s=a[n%32]+s;n=Math.floor(n/32)} process.stdout.write(s+"0".repeat(16))')"
+cat <<TOON
 run:
-  id: "01TESTACTIVITY"
+  id: "$run_id"
   branch: feature/no-mistakes-activity
   status: running
   head: abc12345
-  gate: review
   awaiting_agent: parked 12s
   steps[9]{step,status,findings,duration_ms}:
     intent,completed,0,2000
     rebase,completed,0,3000
-    review,awaiting,2,12000
+    review,awaiting_approval,2,0
     test,pending,0,0
     document,pending,0,0
     lint,pending,0,0
     push,pending,0,0
     pr,pending,0,0
     ci,pending,0,0
-  active_steps[1]{step,status,active_for,last_activity,agent_pid,round}:
-    review,awaiting,12s,"2s ago: gate",4242,"round 1"
-  findings[2]{id,severity,file,action,description}:
-    r1,error,src/a.ts,ask-user,Null reaches renderer
-    r2,warning,src/b.ts,auto-fix,Missing cleanup
+  gate:
+    step: review
+    findings[2]{id,severity,file,action,description}:
+      r1,error,src/a.ts,ask-user,Null reaches renderer
+      r2,warning,src/b.ts,auto-fix,Missing cleanup
 TOON
 FAKE
 chmod +x "$verify_dir/bin/no-mistakes"

@@ -30,36 +30,35 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 {
 	const output = [
 		"run:",
-		'  id: "01TEST"',
+		'  id: "00000000000000000000000000"',
 		"  branch: feat/nm-ui",
 		"  status: running",
-		"  gate: review",
 		"  awaiting_agent: parked 12s",
 		"  steps[3]{step,status,findings,duration_ms}:",
 		"    intent,completed,0,2010",
-		"    review,awaiting,2,12000",
+		"    review,awaiting_approval,2,0",
 		"    test,pending,0,0",
-		"  active_steps[1]{step,status,active_for,last_activity,agent_pid,round}:",
-		'    review,awaiting,12s,"2s ago: gate",4242,"round 1"',
-		"  findings[2]{id,severity,file,action,description}:",
-		"    r1,error,src/a.ts,ask-user,Null value reaches renderer",
-		"    r2,warning,src/b.ts,auto-fix,Missing cleanup",
+		"  gate:",
+		"    step: review",
+		"    findings[2]{id,severity,file,action,description}:",
+		"      r1,error,src/a.ts,ask-user,Null value reaches renderer",
+		"      r2,warning,src/b.ts,auto-fix,Missing cleanup",
 	].join("\n");
-	const snapshot = parseNoMistakesStatus(output);
+	const snapshot = parseNoMistakesStatus(output, 14_010);
 	assert.ok(snapshot, "current-branch AXI status parses into an observation snapshot");
-	assert.equal(snapshot.id, "01TEST");
+	assert.equal(snapshot.id, "00000000000000000000000000");
 	assert.equal(snapshot.branch, "feat/nm-ui");
 	assert.equal(snapshot.gate, "review");
 	assert.equal(snapshot.awaitingAgent, "parked 12s");
 	assert.equal(snapshot.phases.length, 3);
 	assert.deepEqual(snapshot.phases[1], {
 		name: "review",
-		status: "awaiting",
+		status: "awaiting_approval",
 		findings: 2,
-		durationMs: 12000,
-		activeFor: "12s",
-		lastActivity: "2s ago: gate",
-		round: "round 1",
+		durationMs: 0,
+		activeFor: undefined,
+		lastActivity: undefined,
+		round: undefined,
 	});
 	assert.equal(snapshot.currentPhase, "review");
 	assert.equal(snapshot.phaseElapsedMs, 12000);
@@ -70,28 +69,33 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	]);
 	assert.equal(summarizeNoMistakesSnapshot(snapshot), "review · 12s · 14s total");
 	assert.equal(isObservableNoMistakesRun(snapshot), true);
-	assert.equal(phaseProgress(snapshot)[1].preview, "12s · round 1 · ❌ 1 · ⚠️ 1 · 2s ago: gate");
-	assert.equal(parseDurationMs("1h 2m 3.5s"), 3723500);
+	assert.equal(phaseProgress(snapshot)[1].preview, "❌ 1 · ⚠️ 1");
+	assert.equal(parseDurationMs("12m34s"), 754000);
+	assert.equal(parseDurationMs("1h2m"), 3720000);
+	assert.equal(parseDurationMs("1d2h"), 93600000);
+	assert.equal(parseDurationMs("1h2m3.5s"), 3723500);
 
 	const checksPassedOutput = [
 		"run:",
-		'  id: "01MERGE"',
-		"  status: checks-passed",
+		'  id: "00000000000000000000000001"',
+		"  status: running",
+		"  outcome: checks-passed",
 		"  steps[1]{step,status,findings,duration_ms}:",
 		"    test,completed,0,17000",
 	].join("\n");
-	const checksPassed = parseNoMistakesStatus(checksPassedOutput, 100_000);
-	assert.ok(checksPassed);
+	const checksPassedSnapshot = parseNoMistakesStatus(checksPassedOutput, 17_000);
+	assert.ok(checksPassedSnapshot);
+	const checksPassed = observeNoMistakesTiming(checksPassedSnapshot, snapshot);
 	assert.equal(checksPassed.currentPhase, "merge");
 	assert.equal(summarizeNoMistakesSnapshot(checksPassed), "merge · 0ms · 17s total");
 	const mergeLater = observeNoMistakesTiming(
-		parseNoMistakesStatus(checksPassedOutput, 105_000),
+		parseNoMistakesStatus(checksPassedOutput, 22_000),
 		checksPassed,
 	);
 	assert.equal(summarizeNoMistakesSnapshot(mergeLater), "merge · 5s · 22s total");
 	const reviewLater = observeNoMistakesTiming(
-		parseNoMistakesStatus(output, 105_000),
-		parseNoMistakesStatus(output, 100_000),
+		parseNoMistakesStatus(output, 19_010),
+		snapshot,
 	);
 	assert.equal(summarizeNoMistakesSnapshot(reviewLater), "review · 17s · 19s total");
 	assert.equal(
@@ -100,7 +104,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	);
 	assert.equal(phaseProgress({
 		...snapshot,
-		phases: [{ name: "review", status: "awaiting", findings: 5 }],
+		phases: [{ name: "review", status: "awaiting_approval", findings: 5 }],
 		reviewFindings: [
 			{ severity: "error", description: "error" },
 			{ severity: "warning", description: "warning" },
@@ -111,13 +115,15 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
 	const escapedFinding = parseNoMistakesStatus([
 		"run:",
+		'  id: "00000000000000000000000002"',
 		"  status: running",
-		"  gate: review",
 		"  steps[1]{step,status,findings,duration_ms}:",
-		"    review,awaiting,1,1000",
-		"  findings[1]{id,severity,file,action,description}:",
-		'    r1,error,src/a.ts,auto-fix,"The \\"run,respond\\" aliases bypass checks"',
-	].join("\n"));
+		"    review,fix_review,1,1000",
+		"  gate:",
+		"    step: review",
+		"    findings[1]{id,severity,file,action,description}:",
+		'      r1,error,src/a.ts,auto-fix,"The \\"run,respond\\" aliases bypass checks"',
+	].join("\n"), 1000);
 	assert.ok(escapedFinding);
 	assert.deepEqual(escapedFinding.reviewFindings, [{
 		id: "r1",
@@ -128,7 +134,46 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	assert.equal(phaseProgress(escapedFinding)[0].preview, "❌ 1");
 
 	assert.equal(parseNoMistakesStatus("current_branch: main\nruns_on_current_branch: 0"), undefined);
-	assert.equal(isObservableNoMistakesRun({ ...snapshot, status: "passed" }), false);
+	assert.equal(parseNoMistakesStatus([
+		"run:",
+		"  id: invalid",
+		"  status: running",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,running,0,0",
+	].join("\n")), undefined);
+	assert.equal(isObservableNoMistakesRun({
+		...snapshot,
+		status: "completed",
+		outcome: "passed-with-override",
+	}), false);
+	assert.equal(isObservableNoMistakesRun({
+		...snapshot,
+		status: "completed",
+		outcome: "ci-monitor-interrupted",
+	}), false);
+}
+
+{
+	const intervalKey = Symbol.for("pi-no-mistakes/status-interval");
+	const abortKey = Symbol.for("pi-no-mistakes/status-abort-controller");
+	const staleInterval = {};
+	let clearedInterval;
+	let aborted = false;
+	const savedClearInterval = globalThis.clearInterval;
+	try {
+		globalThis[intervalKey] = staleInterval;
+		globalThis[abortKey] = { abort() { aborted = true; } };
+		globalThis.clearInterval = (interval) => { clearedInterval = interval; };
+		createJiti(import.meta.url, { moduleCache: false })("./no-mistakes-pane.ts");
+		assert.equal(clearedInterval, staleInterval);
+		assert.equal(aborted, true);
+		assert.equal(globalThis[intervalKey], undefined);
+		assert.equal(globalThis[abortKey], undefined);
+	} finally {
+		globalThis.clearInterval = savedClearInterval;
+		globalThis[intervalKey] = undefined;
+		globalThis[abortKey] = undefined;
+	}
 }
 
 {
@@ -136,10 +181,13 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	const events = [];
 	const activeStatus = [
 		"run:",
+		'  id: "00000000000000000000000003"',
 		"  status: running",
-		"  gate: review",
+		"  awaiting_agent: parked 1s",
 		"  steps[1]{step,status,findings,duration_ms}:",
-		"    review,awaiting,0,1000",
+		"    review,awaiting_approval,0,0",
+		"  gate:",
+		"    step: review",
 	].join("\n");
 	const noRunStatus = { code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" };
 	const statusResults = [

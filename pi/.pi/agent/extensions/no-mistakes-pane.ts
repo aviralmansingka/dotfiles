@@ -456,6 +456,17 @@ interface NmAxiDetails {
 const NM_ACTIVITY_UPDATE_EVENT = "no-mistakes:activity-update";
 const STATUS_POLL_MS = 1000;
 const STATUS_TIMEOUT_MS = 5000;
+const STATUS_INTERVAL_KEY = Symbol.for("pi-no-mistakes/status-interval");
+const STATUS_ABORT_KEY = Symbol.for("pi-no-mistakes/status-abort-controller");
+
+{
+	const previousInterval = (globalThis as any)[STATUS_INTERVAL_KEY];
+	if (previousInterval) clearInterval(previousInterval);
+	const previousAbort = (globalThis as any)[STATUS_ABORT_KEY] as AbortController | undefined;
+	previousAbort?.abort();
+	(globalThis as any)[STATUS_INTERVAL_KEY] = undefined;
+	(globalThis as any)[STATUS_ABORT_KEY] = undefined;
+}
 
 function pipelineProgress(
 	snapshot: NoMistakesSnapshot,
@@ -562,6 +573,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		pollingStatus = true;
 		const controller = new AbortController();
 		monitorController = controller;
+		(globalThis as any)[STATUS_ABORT_KEY] = controller;
 		try {
 			const result = await pi.exec("no-mistakes", ["axi", "status"], {
 				cwd: ctx.cwd,
@@ -574,10 +586,13 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		} catch {
 		} finally {
 			if (monitorController === controller) monitorController = undefined;
+			if ((globalThis as any)[STATUS_ABORT_KEY] === controller) {
+				(globalThis as any)[STATUS_ABORT_KEY] = undefined;
+			}
 			pollingStatus = false;
 			const queued = queuedRefresh;
 			queuedRefresh = undefined;
-			if (queued?.generation === monitorGeneration) {
+			if (!controller.signal.aborted && queued?.generation === monitorGeneration) {
 				void refreshStatus({ cwd: queued.cwd }, queued.generation)
 					.finally(() => queued.resolve.forEach((done) => done()));
 			} else {
@@ -591,17 +606,24 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		const generation = ++monitorGeneration;
 		void refreshStatus(ctx, generation);
 		monitorTimer = setInterval(() => void refreshStatus(ctx, generation), STATUS_POLL_MS);
+		(globalThis as any)[STATUS_INTERVAL_KEY] = monitorTimer;
 		monitorTimer.unref?.();
 	});
 
 	pi.on("session_shutdown", () => {
 		monitorGeneration++;
 		monitorController?.abort();
+		if ((globalThis as any)[STATUS_ABORT_KEY] === monitorController) {
+			(globalThis as any)[STATUS_ABORT_KEY] = undefined;
+		}
 		monitorController = undefined;
 		pollingStatus = false;
 		queuedRefresh?.resolve.forEach((done) => done());
 		queuedRefresh = undefined;
 		if (monitorTimer) clearInterval(monitorTimer);
+		if ((globalThis as any)[STATUS_INTERVAL_KEY] === monitorTimer) {
+			(globalThis as any)[STATUS_INTERVAL_KEY] = undefined;
+		}
 		monitorTimer = undefined;
 		toolObservers.clear();
 		publishSnapshot(undefined);

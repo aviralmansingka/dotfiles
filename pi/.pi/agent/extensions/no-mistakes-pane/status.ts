@@ -2,7 +2,8 @@ export type NoMistakesPhaseStatus =
 	| "pending"
 	| "running"
 	| "fixing"
-	| "awaiting"
+	| "awaiting_approval"
+	| "fix_review"
 	| "completed"
 	| "passed"
 	| "checks-passed"
@@ -29,10 +30,11 @@ export interface NoMistakesFinding {
 }
 
 export interface NoMistakesSnapshot {
-	id?: string;
+	id: string;
 	branch?: string;
 	head?: string;
 	status: string;
+	outcome?: string;
 	gate?: string;
 	awaitingAgent?: string;
 	phases: NoMistakesPhase[];
@@ -82,6 +84,31 @@ function scalar(output: string, key: string): string | undefined {
 	return match ? unquote(match[1]!) : undefined;
 }
 
+function objectScalar(output: string, object: string, key: string): string | undefined {
+	const lines = output.split("\n");
+	const objectIndex = lines.findIndex((line) => new RegExp(`^\\s*${object}:\\s*$`).test(line));
+	if (objectIndex < 0) return undefined;
+	const indentation = lines[objectIndex]!.match(/^\s*/)?.[0].length ?? 0;
+	for (const line of lines.slice(objectIndex + 1)) {
+		if (!line.trim()) continue;
+		const rowIndentation = line.match(/^\s*/)?.[0].length ?? 0;
+		if (rowIndentation <= indentation) break;
+		const match = line.match(new RegExp(`^\\s*${key}:\\s*(.+)$`));
+		if (match) return unquote(match[1]!);
+	}
+	return undefined;
+}
+
+function runStartedAt(id: string | undefined): number | undefined {
+	if (!id || !/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i.test(id)) return undefined;
+	const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+	let timestamp = 0;
+	for (const character of id.slice(0, 10).toUpperCase()) {
+		timestamp = timestamp * 32 + alphabet.indexOf(character);
+	}
+	return timestamp;
+}
+
 function table(output: string, name: string): Array<Record<string, string>> {
 	const lines = output.split("\n");
 	const headerIndex = lines.findIndex((line) =>
@@ -106,19 +133,27 @@ export function parseDurationMs(value: string | undefined): number | undefined {
 	if (!value) return undefined;
 	let total = 0;
 	let matched = false;
-	for (const match of value.matchAll(/(\d+(?:\.\d+)?)\s*(ms|h|m|s)\b/g)) {
+	for (const match of value.matchAll(/(\d+(?:\.\d+)?)(ms|d|h|m|s)/g)) {
 		matched = true;
 		const amount = Number(match[1]);
 		const unit = match[2];
-		total += amount * (unit === "h" ? 3_600_000 : unit === "m" ? 60_000 : unit === "s" ? 1000 : 1);
+		total += amount * (
+			unit === "d" ? 86_400_000
+				: unit === "h" ? 3_600_000
+					: unit === "m" ? 60_000
+						: unit === "s" ? 1000
+							: 1
+		);
 	}
 	return matched ? total : undefined;
 }
 
 export function parseNoMistakesStatus(output: string, observedAt = Date.now()): NoMistakesSnapshot | undefined {
+	const id = scalar(output, "id");
+	const pipelineStartedAt = runStartedAt(id);
 	const phaseRows = table(output, "steps");
-	if (phaseRows.length === 0) return undefined;
-	const gate = scalar(output, "gate");
+	if (!id || pipelineStartedAt == null || phaseRows.length === 0) return undefined;
+	const gate = objectScalar(output, "gate", "step");
 	const active = new Map(table(output, "active_steps").map((row) => [row.step, row]));
 	const phases = phaseRows.map((row): NoMistakesPhase => {
 		const live = active.get(row.step);
@@ -134,16 +169,18 @@ export function parseNoMistakesStatus(output: string, observedAt = Date.now()): 
 			round: live?.round || undefined,
 		};
 	});
-	const status = scalar(output, "outcome") ?? scalar(output, "status") ?? "running";
-	const current = phases.find((phase) => ["running", "fixing", "awaiting"].includes(phase.status)) ??
-		(gate ? phases.find((phase) => phase.name === gate) : undefined);
-	const phaseElapsedMs = parseDurationMs(current?.activeFor) ?? current?.durationMs ?? 0;
-	const totalDurationMs = phases.reduce((total, phase) => {
-		const elapsed = phase === current
-			? Math.max(phase.durationMs ?? 0, phaseElapsedMs ?? 0)
-			: phase.durationMs ?? 0;
-		return total + elapsed;
-	}, 0);
+	const status = scalar(output, "status") ?? "running";
+	const outcome = scalar(output, "outcome");
+	const awaitingAgent = scalar(output, "awaiting_agent");
+	const current = phases.find((phase) => [
+		"running",
+		"fixing",
+		"awaiting_approval",
+		"fix_review",
+	].includes(phase.status)) ?? (gate ? phases.find((phase) => phase.name === gate) : undefined);
+	const parkedMs = parseDurationMs(awaitingAgent?.match(/^parked\s+(.+)$/)?.[1]);
+	const phaseElapsedMs = parseDurationMs(current?.activeFor) ?? (current?.durationMs ?? 0) + (parkedMs ?? 0);
+	const totalDurationMs = Math.max(0, observedAt - pipelineStartedAt);
 	const reviewFindings = gate === "review"
 		? table(output, "findings").map((row): NoMistakesFinding => ({
 			id: row.id || undefined,
@@ -153,19 +190,20 @@ export function parseNoMistakesStatus(output: string, observedAt = Date.now()): 
 		}))
 		: [];
 	return {
-		id: scalar(output, "id"),
+		id,
 		branch: scalar(output, "branch"),
 		head: scalar(output, "head"),
 		status,
+		outcome,
 		gate,
-		awaitingAgent: scalar(output, "awaiting_agent"),
+		awaitingAgent,
 		phases,
-		currentPhase: current?.name ?? (status === "checks-passed" ? "merge" : "starting"),
+		currentPhase: current?.name ?? (outcome === "checks-passed" ? "merge" : "starting"),
 		phaseElapsedMs,
 		totalDurationMs,
 		observedAt,
 		phaseStartedAt: observedAt - phaseElapsedMs,
-		pipelineStartedAt: observedAt - totalDurationMs,
+		pipelineStartedAt,
 		reviewFindings,
 	};
 }
@@ -175,9 +213,7 @@ export function observeNoMistakesTiming(
 	previous: NoMistakesSnapshot | undefined,
 ): NoMistakesSnapshot {
 	const observedAt = snapshot.observedAt ?? Date.now();
-	const sameRun = !!previous && (snapshot.id
-		? snapshot.id === previous.id
-		: !previous.id && snapshot.branch === previous.branch && snapshot.head === previous.head);
+	const sameRun = snapshot.id === previous?.id;
 	const pipelineStartedAt = sameRun
 		? previous.pipelineStartedAt ?? (previous.observedAt ?? observedAt) - previous.totalDurationMs
 		: snapshot.pipelineStartedAt ?? observedAt - snapshot.totalDurationMs;
@@ -195,7 +231,7 @@ export function observeNoMistakesTiming(
 	};
 }
 
-const TERMINAL_STATUSES = new Set(["passed", "failed", "cancelled", "completed"]);
+const TERMINAL_STATUSES = new Set(["failed", "cancelled", "completed"]);
 
 export function isObservableNoMistakesRun(snapshot: NoMistakesSnapshot | undefined): snapshot is NoMistakesSnapshot {
 	return !!snapshot && !TERMINAL_STATUSES.has(snapshot.status);
@@ -214,7 +250,7 @@ function duration(milliseconds: number | undefined): string {
 }
 
 export function summarizeNoMistakesSnapshot(snapshot: NoMistakesSnapshot): string {
-	const phase = snapshot.currentPhase ?? (snapshot.status === "checks-passed" ? "merge" : "starting");
+	const phase = snapshot.currentPhase ?? (snapshot.outcome === "checks-passed" ? "merge" : "starting");
 	return `${phase} · ${duration(snapshot.phaseElapsedMs)} · ${duration(snapshot.totalDurationMs)} total`;
 }
 
