@@ -108,7 +108,8 @@ launch_tuicr_pane() {
 
   # Check if --stdout is supported and set up output capture
   local output_file=""
-  local tuicr_cmd="tuicr$(tuicr_quote_args "${tuicr_args[@]+"${tuicr_args[@]}"}")"
+  local tuicr_cmd
+  tuicr_cmd="tuicr$(tuicr_quote_args "${tuicr_args[@]+"${tuicr_args[@]}"}")"
   local use_stdout=false
 
   if tuicr_stdout_supported; then

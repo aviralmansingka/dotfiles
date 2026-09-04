@@ -101,7 +101,11 @@ because Hunk was opened.
 
 ## Custom agents
 
-Place a `.md` file in `.pi/agents/` (project) or `~/.pi/agent/agents/` (global). Discovery priority: **project > global > package-bundled** — a project-local file overrides a bundled agent with the same name.
+Place a `.md` file in `.pi/agents/` (project) or
+`~/.pi/agent/agents/` (global). Discovery priority is **project > global >
+package-bundled**. The bundled `hunk-review` profile is the sole exception: it
+is always selected and launched without other extensions so a repository cannot
+widen the reviewer's read-only tool boundary.
 
 ```markdown
 ---
