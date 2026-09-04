@@ -63,6 +63,7 @@ import {
 } from "./activity.ts";
 import {
   noMistakesFindingLines,
+  noMistakesIsWaiting,
   noMistakesWidgetStatus,
   type NoMistakesActivity,
 } from "./no-mistakes.ts";
@@ -938,7 +939,7 @@ function renderSubagentWidgetLines(
   }
 
   if (pipeline) {
-    const waiting = Boolean(pipeline.gate || pipeline.status === "checks-passed");
+    const waiting = noMistakesIsWaiting(pipeline);
     const icon = waiting ? `${ICON_DIM}○${RST}` : `${ICON_YELLOW}⟳${RST}`;
     lines.push(borderLine(` ${icon} no-mistakes `, noMistakesWidgetStatus(pipeline), width));
     for (const finding of noMistakesFindingLines(pipeline)) {

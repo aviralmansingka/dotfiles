@@ -189,7 +189,7 @@ assert.match(
 );
 
 // --- No Mistakes compact status follows the shared activity-widget contract ---
-const { noMistakesFindingLines, noMistakesWidgetStatus } = jiti(
+const { noMistakesFindingLines, noMistakesIsWaiting, noMistakesWidgetStatus } = jiti(
 	"./interactive-subagents/pi-extension/subagents/no-mistakes.ts",
 );
 const pipelineActivity = {
@@ -205,6 +205,9 @@ const pipelineActivity = {
 	],
 };
 assert.equal(noMistakesWidgetStatus(pipelineActivity), " review · 12s · 17s total ");
+assert.equal(noMistakesIsWaiting(pipelineActivity), true);
+assert.equal(noMistakesIsWaiting({ ...pipelineActivity, gate: undefined, outcome: "checks-passed" }), true);
+assert.equal(noMistakesIsWaiting({ ...pipelineActivity, gate: undefined, outcome: undefined }), false);
 assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
 	"❌ src/a.ts: Null value reaches renderer",
 	"⚠️ src/b.ts: Missing cleanup",

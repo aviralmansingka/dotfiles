@@ -1,6 +1,7 @@
 export interface NoMistakesActivity {
   id?: string;
   status: string;
+  outcome?: string;
   gate?: string;
   summary: string;
   phases: Array<{
@@ -17,6 +18,10 @@ export interface NoMistakesActivity {
 
 export function noMistakesWidgetStatus(activity: NoMistakesActivity): string {
   return ` ${activity.summary} `;
+}
+
+export function noMistakesIsWaiting(activity: NoMistakesActivity): boolean {
+  return Boolean(activity.gate || activity.outcome === "checks-passed");
 }
 
 function findingEmoji(severity: string): string | undefined {
