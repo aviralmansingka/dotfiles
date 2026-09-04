@@ -164,7 +164,7 @@ cd ~/.pi/agent/npm && npm install
 cd ~/.pi/agent/extensions/web-fetch && npm ci --ignore-scripts
 ```
 
-Pi's No Mistakes integration keeps the rich `no-mistakes attach` TUI in a right-hand Herdr pane while `run` or `respond` is active. A read-only `no-mistakes axi status` observer also adds the current pipeline to the interactive-subagents activity widget and the expandable tool trace; it stays hidden when the current branch has no active run.
+Pi's No Mistakes integration keeps the rich `no-mistakes attach` TUI in a right-hand Herdr pane while `run` or `respond` is active. A read-only `no-mistakes axi status` observer adds a compact current-phase/phase-time/total-time row plus severity-marked review findings to the interactive-subagents activity widget; `Ctrl+O` expands the tool trace to all phases. It stays hidden when the current branch has no active run.
 
 In Herdr-backed TUI sessions, an active Pi UI prompt reports the agent as blocked until the prompt closes, so
 Sidekick shows that Pi is waiting for user input.

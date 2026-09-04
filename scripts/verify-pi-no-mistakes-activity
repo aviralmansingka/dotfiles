@@ -15,11 +15,12 @@ run:
   branch: feature/no-mistakes-activity
   status: running
   head: abc12345
-  findings: none
+  gate: review
+  awaiting_agent: parked 12s
   steps[9]{step,status,findings,duration_ms}:
-    intent,completed,0,0
-    rebase,completed,0,210
-    review,running,0,12000
+    intent,completed,0,2000
+    rebase,completed,0,3000
+    review,awaiting,2,12000
     test,pending,0,0
     document,pending,0,0
     lint,pending,0,0
@@ -27,7 +28,10 @@ run:
     pr,pending,0,0
     ci,pending,0,0
   active_steps[1]{step,status,active_for,last_activity,agent_pid,round}:
-    review,running,12s,"2s ago: log",4242,"round 1"
+    review,awaiting,12s,"2s ago: gate",4242,"round 1"
+  findings[2]{id,severity,file,action,description}:
+    r1,error,src/a.ts,ask-user,Null reaches renderer
+    r2,warning,src/b.ts,auto-fix,Missing cleanup
 TOON
 FAKE
 chmod +x "$verify_dir/bin/no-mistakes"
@@ -50,8 +54,9 @@ log_user 0
 log_file -a -noappend $env(PI_NM_RAW)
 spawn env PATH=$env(PI_NM_PATH) PI_CODING_AGENT_DIR=$env(PI_NM_AGENT_DIR) pi --no-extensions --no-skills --no-context-files --offline --approve --theme $env(PI_NM_THEME) --session $env(PI_NM_SESSION) -e $env(PI_NM_SUBAGENTS) -e $env(PI_NM_PANE)
 expect "Activities"
-expect "no-mistakes (feature/no-m"
-expect "active · review · round 1 · 12s · 2s ago: log"
+expect "no-mistakes"
+expect "review · 12s · 17s total"
+expect "❌ src/a.ts: Null reaches renderer"
 send -- "/quit\r"
 expect eof
 EXPECT
@@ -60,14 +65,20 @@ perl -pe 's/\e\][^\a]*(?:\a|\e\\)//g; s/\e\[[0-?]*[ -\/]*[@-~]//g; s/\r//g' \
   "$raw" > "$plain"
 for expected in \
   'Activities' \
-  'no-mistakes (feature/no-m' \
-  'active · review · round 1 · 12s · 2s ago: log'; do
+  'no-mistakes' \
+  'review · 12s · 17s total' \
+  '❌ src/a.ts: Null reaches renderer' \
+  '⚠️ src/b.ts: Missing cleanup'; do
   grep -F "$expected" "$plain" >/dev/null || {
     printf 'missing activity text: %s\n' "$expected" >&2
     tail -120 "$plain" >&2
     exit 1
   }
 done
+if grep -F 'feature/no-mistakes-activity' "$plain" >/dev/null; then
+  printf 'activity widget leaked the current branch name\n' >&2
+  exit 1
+fi
 
 printf 'ok: No Mistakes status shares the interactive-subagents activity widget\n'
-printf 'ok: active phase, round, duration, and latest activity render live\n'
+printf 'ok: the widget shows only current phase time, total time, and severity-marked review findings\n'

@@ -20,7 +20,7 @@ const jitiPath = process.env.JITI_PATH
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 const { buildPaneScript, extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
-const { parseNoMistakesStatus, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
+const { parseDurationMs, parseNoMistakesStatus, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
 
 // ---------------------------------------------------------------------------
 // AXI status observation: parse the daemon-owned run without changing it and
@@ -35,11 +35,14 @@ const { parseNoMistakesStatus, isObservableNoMistakesRun, summarizeNoMistakesSna
 		"  gate: review",
 		"  awaiting_agent: parked 12s",
 		"  steps[3]{step,status,findings,duration_ms}:",
-		"    intent,completed,0,10",
+		"    intent,completed,0,2010",
 		"    review,awaiting,2,12000",
 		"    test,pending,0,0",
 		"  active_steps[1]{step,status,active_for,last_activity,agent_pid,round}:",
 		'    review,awaiting,12s,"2s ago: gate",4242,"round 1"',
+		"  findings[2]{id,severity,file,action,description}:",
+		"    r1,error,src/a.ts,ask-user,Null value reaches renderer",
+		"    r2,warning,src/b.ts,auto-fix,Missing cleanup",
 	].join("\n");
 	const snapshot = parseNoMistakesStatus(output);
 	assert.ok(snapshot, "current-branch AXI status parses into an observation snapshot");
@@ -57,9 +60,17 @@ const { parseNoMistakesStatus, isObservableNoMistakesRun, summarizeNoMistakesSna
 		lastActivity: "2s ago: gate",
 		round: "round 1",
 	});
-	assert.equal(summarizeNoMistakesSnapshot(snapshot), "waiting · review gate");
+	assert.equal(snapshot.currentPhase, "review");
+	assert.equal(snapshot.phaseElapsedMs, 12000);
+	assert.equal(snapshot.totalDurationMs, 14010);
+	assert.deepEqual(snapshot.reviewFindings, [
+		{ id: "r1", severity: "error", file: "src/a.ts", description: "Null value reaches renderer" },
+		{ id: "r2", severity: "warning", file: "src/b.ts", description: "Missing cleanup" },
+	]);
+	assert.equal(summarizeNoMistakesSnapshot(snapshot), "review · 12s · 14s total");
 	assert.equal(isObservableNoMistakesRun(snapshot), true);
-	assert.equal(phaseProgress(snapshot)[1].preview, "12s · round 1 · 2 findings · 2s ago: gate");
+	assert.equal(phaseProgress(snapshot)[1].preview, "12s · round 1 · ❌ 1 · ⚠️ 1 · 2s ago: gate");
+	assert.equal(parseDurationMs("1h 2m 3.5s"), 3723500);
 
 	assert.equal(parseNoMistakesStatus("current_branch: main\nruns_on_current_branch: 0"), undefined);
 	assert.equal(isObservableNoMistakesRun({ ...snapshot, status: "passed" }), false);

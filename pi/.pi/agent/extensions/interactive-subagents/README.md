@@ -170,7 +170,7 @@ The widget tracks each sub-agent from a runtime activity snapshot written by the
 
 If a Herdr tab or tmux pane is closed before its completion sentinel appears, the run is marked failed instead of stalling forever. The parent receives a steer prompt asking whether to resume the saved session, launch a fresh sub-agent, or ignore it.
 
-The same widget also shows an active No Mistakes pipeline when the sibling `no-mistakes-pane.ts` extension is loaded. That observer only polls `no-mistakes axi status`: no-mistakes continues to own execution, gates, and its attached Herdr TUI. Expand the `no_mistakes_axi` tool row with `Ctrl+O` to see all pipeline phases in the parent trace.
+The same widget also shows an active No Mistakes pipeline when the sibling `no-mistakes-pane.ts` extension is loaded. Its compact row shows only the current phase, phase elapsed time, and total elapsed time; review findings appear below it as `❌` errors, `⚠️` warnings, or `ℹ️` notes. The current branch is omitted because the pipeline belongs to this session. The observer only polls `no-mistakes axi status`: no-mistakes continues to own execution, gates, and its attached Herdr TUI. Expand the `no_mistakes_axi` tool row with `Ctrl+O` to see all pipeline phases in the parent trace.
 
 Status display is configured via `config.json` in the extension directory (copy `config.json.example`; it's gitignored):
 

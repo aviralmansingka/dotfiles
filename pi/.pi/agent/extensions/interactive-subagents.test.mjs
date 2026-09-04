@@ -189,26 +189,29 @@ assert.match(
 );
 
 // --- No Mistakes compact status follows the shared activity-widget contract ---
-const { noMistakesWidgetStatus } = jiti(
+const { noMistakesFindingLines, noMistakesWidgetStatus } = jiti(
 	"./interactive-subagents/pi-extension/subagents/no-mistakes.ts",
 );
-assert.equal(noMistakesWidgetStatus({
+const pipelineActivity = {
 	id: "01TEST",
-	branch: "feat/nm-ui",
-	status: "running",
-	phases: [{
-		name: "review",
-		status: "running",
-		activeFor: "12s",
-		round: "round 1",
-		lastActivity: "2s ago: log",
-	}],
-}), " active · review · round 1 · 12s · 2s ago: log ");
-assert.equal(noMistakesWidgetStatus({
 	status: "running",
 	gate: "review",
-	phases: [],
-}), " waiting · review gate ");
+	summary: "review · 12s · 17s total",
+	phases: [{ name: "review", status: "awaiting", findings: 2 }],
+	reviewFindings: [
+		{ severity: "error", file: "src/a.ts", description: "Null value reaches renderer" },
+		{ severity: "warning", file: "src/b.ts", description: "Missing cleanup" },
+	],
+};
+assert.equal(noMistakesWidgetStatus(pipelineActivity), " review · 12s · 17s total ");
+assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
+	"❌ src/a.ts: Null value reaches renderer",
+	"⚠️ src/b.ts: Missing cleanup",
+]);
+assert.deepEqual(noMistakesFindingLines({
+	...pipelineActivity,
+	reviewFindings: [],
+}), ["⚠️ 2 review findings"]);
 
 // --- Bundled professor is an interactive, skill-backed teaching agent ---
 const professorProfile = readFileSync(

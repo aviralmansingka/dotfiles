@@ -62,6 +62,7 @@ import {
   type SubagentActivityState,
 } from "./activity.ts";
 import {
+  noMistakesFindingLines,
   noMistakesWidgetStatus,
   type NoMistakesActivity,
 } from "./no-mistakes.ts";
@@ -939,8 +940,10 @@ function renderSubagentWidgetLines(
   if (pipeline) {
     const waiting = Boolean(pipeline.gate || pipeline.status === "checks-passed");
     const icon = waiting ? `${ICON_DIM}○${RST}` : `${ICON_YELLOW}⟳${RST}`;
-    const branch = pipeline.branch ? ` (${pipeline.branch})` : "";
-    lines.push(borderLine(` ${icon} no-mistakes${branch} `, noMistakesWidgetStatus(pipeline), width));
+    lines.push(borderLine(` ${icon} no-mistakes `, noMistakesWidgetStatus(pipeline), width));
+    for (const finding of noMistakesFindingLines(pipeline)) {
+      lines.push(borderLine(`   ${finding} `, "", width));
+    }
   }
 
   lines.push(borderBottom(width));
@@ -1356,6 +1359,7 @@ export const __test__ = {
   resolveResumeLaunchBehavior,
   runningSubagents,
   noMistakesWidgetStatus,
+  noMistakesFindingLines,
   formatElapsed,
   formatTokens,
   formatContextUsage,

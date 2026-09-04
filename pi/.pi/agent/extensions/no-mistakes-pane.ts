@@ -507,7 +507,12 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 
 	const publishSnapshot = (snapshot: NoMistakesSnapshot | undefined) => {
 		latestSnapshot = isObservableNoMistakesRun(snapshot) ? snapshot : undefined;
-		pi.events.emit(NM_ACTIVITY_UPDATE_EVENT, { snapshot: latestSnapshot, observedAt: Date.now() });
+		pi.events.emit(NM_ACTIVITY_UPDATE_EVENT, {
+			snapshot: latestSnapshot
+				? { ...latestSnapshot, summary: summarizeNoMistakesSnapshot(latestSnapshot) }
+				: undefined,
+			observedAt: Date.now(),
+		});
 		if (!latestSnapshot) return;
 		for (const observer of toolObservers.values()) {
 			observer.onUpdate(

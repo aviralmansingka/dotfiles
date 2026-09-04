@@ -21,6 +21,13 @@ export interface NoMistakesPhase {
 	round?: string;
 }
 
+export interface NoMistakesFinding {
+	id?: string;
+	severity: string;
+	file?: string;
+	description: string;
+}
+
 export interface NoMistakesSnapshot {
 	id?: string;
 	branch?: string;
@@ -29,6 +36,10 @@ export interface NoMistakesSnapshot {
 	gate?: string;
 	awaitingAgent?: string;
 	phases: NoMistakesPhase[];
+	currentPhase?: string;
+	phaseElapsedMs?: number;
+	totalDurationMs: number;
+	reviewFindings: NoMistakesFinding[];
 }
 
 function unquote(value: string): string {
@@ -90,31 +101,67 @@ function table(output: string, name: string): Array<Record<string, string>> {
 	return rows;
 }
 
+export function parseDurationMs(value: string | undefined): number | undefined {
+	if (!value) return undefined;
+	let total = 0;
+	let matched = false;
+	for (const match of value.matchAll(/(\d+(?:\.\d+)?)\s*(ms|h|m|s)\b/g)) {
+		matched = true;
+		const amount = Number(match[1]);
+		const unit = match[2];
+		total += amount * (unit === "h" ? 3_600_000 : unit === "m" ? 60_000 : unit === "s" ? 1000 : 1);
+	}
+	return matched ? total : undefined;
+}
+
 export function parseNoMistakesStatus(output: string): NoMistakesSnapshot | undefined {
-	const phases = table(output, "steps");
-	if (phases.length === 0) return undefined;
+	const phaseRows = table(output, "steps");
+	if (phaseRows.length === 0) return undefined;
+	const gate = scalar(output, "gate");
 	const active = new Map(table(output, "active_steps").map((row) => [row.step, row]));
+	const phases = phaseRows.map((row): NoMistakesPhase => {
+		const live = active.get(row.step);
+		const findings = Number(row.findings);
+		const durationMs = Number(row.duration_ms);
+		return {
+			name: row.step || "step",
+			status: row.status || "pending",
+			findings: Number.isFinite(findings) ? findings : undefined,
+			durationMs: Number.isFinite(durationMs) ? durationMs : undefined,
+			activeFor: live?.active_for || undefined,
+			lastActivity: live?.last_activity || undefined,
+			round: live?.round || undefined,
+		};
+	});
+	const current = phases.find((phase) => ["running", "fixing", "awaiting"].includes(phase.status)) ??
+		(gate ? phases.find((phase) => phase.name === gate) : undefined);
+	const phaseElapsedMs = parseDurationMs(current?.activeFor) ?? current?.durationMs;
+	const totalDurationMs = phases.reduce((total, phase) => {
+		const elapsed = phase === current
+			? Math.max(phase.durationMs ?? 0, phaseElapsedMs ?? 0)
+			: phase.durationMs ?? 0;
+		return total + elapsed;
+	}, 0);
+	const reviewFindings = gate === "review"
+		? table(output, "findings").map((row): NoMistakesFinding => ({
+			id: row.id || undefined,
+			severity: row.severity || "warning",
+			file: row.file || undefined,
+			description: row.description || "Review finding",
+		}))
+		: [];
 	return {
 		id: scalar(output, "id"),
 		branch: scalar(output, "branch"),
 		head: scalar(output, "head"),
 		status: scalar(output, "outcome") ?? scalar(output, "status") ?? "running",
-		gate: scalar(output, "gate"),
+		gate,
 		awaitingAgent: scalar(output, "awaiting_agent"),
-		phases: phases.map((row) => {
-			const live = active.get(row.step);
-			const findings = Number(row.findings);
-			const durationMs = Number(row.duration_ms);
-			return {
-				name: row.step || "step",
-				status: row.status || "pending",
-				findings: Number.isFinite(findings) ? findings : undefined,
-				durationMs: Number.isFinite(durationMs) ? durationMs : undefined,
-				activeFor: live?.active_for || undefined,
-				lastActivity: live?.last_activity || undefined,
-				round: live?.round || undefined,
-			};
-		}),
+		phases,
+		currentPhase: current?.name,
+		phaseElapsedMs,
+		totalDurationMs,
+		reviewFindings,
 	};
 }
 
@@ -124,14 +171,45 @@ export function isObservableNoMistakesRun(snapshot: NoMistakesSnapshot | undefin
 	return !!snapshot && !TERMINAL_STATUSES.has(snapshot.status);
 }
 
+function duration(milliseconds: number | undefined): string {
+	if (milliseconds == null) return "—";
+	if (milliseconds < 1000) return `${Math.round(milliseconds)}ms`;
+	const seconds = Math.floor(milliseconds / 1000);
+	if (seconds < 60) return `${seconds}s`;
+	const minutes = Math.floor(seconds / 60);
+	const remainder = seconds % 60;
+	if (minutes < 60) return remainder ? `${minutes}m ${remainder}s` : `${minutes}m`;
+	const hours = Math.floor(minutes / 60);
+	return `${hours}h ${minutes % 60}m`;
+}
+
 export function summarizeNoMistakesSnapshot(snapshot: NoMistakesSnapshot): string {
-	if (snapshot.gate) return `waiting · ${snapshot.gate} gate`;
-	const active = snapshot.phases.find((phase) => ["running", "fixing", "awaiting"].includes(phase.status));
-	if (active) {
-		return ["active", active.name, active.round, active.lastActivity].filter(Boolean).join(" · ");
+	if (snapshot.currentPhase) {
+		return `${snapshot.currentPhase} · ${duration(snapshot.phaseElapsedMs)} · ${duration(snapshot.totalDurationMs)} total`;
 	}
-	if (snapshot.status === "checks-passed") return "waiting · merge";
-	return snapshot.status;
+	if (snapshot.status === "checks-passed") return `${duration(snapshot.totalDurationMs)} total · waiting for merge`;
+	return `${snapshot.status} · ${duration(snapshot.totalDurationMs)} total`;
+}
+
+function findingSummary(snapshot: NoMistakesSnapshot, phase: NoMistakesPhase): string | undefined {
+	if (!phase.findings) return undefined;
+	if (phase.name !== "review" || snapshot.reviewFindings.length === 0) {
+		return `⚠️ ${phase.findings} finding${phase.findings === 1 ? "" : "s"}`;
+	}
+	const errors = snapshot.reviewFindings.filter((finding) =>
+		["error", "critical", "blocking"].includes(finding.severity.toLowerCase()),
+	).length;
+	const info = snapshot.reviewFindings.filter((finding) =>
+		["info", "note"].includes(finding.severity.toLowerCase()),
+	).length;
+	const warnings = snapshot.reviewFindings.length - errors - info;
+	return [
+		errors ? `❌ ${errors}` : undefined,
+		warnings ? `⚠️ ${warnings}` : undefined,
+		info ? `ℹ️ ${info}` : undefined,
+	]
+		.filter(Boolean)
+		.join(" · ");
 }
 
 export function phaseProgress(snapshot: NoMistakesSnapshot) {
@@ -141,7 +219,7 @@ export function phaseProgress(snapshot: NoMistakesSnapshot) {
 		preview: [
 			phase.activeFor,
 			phase.round,
-			phase.findings ? `${phase.findings} finding${phase.findings === 1 ? "" : "s"}` : undefined,
+			findingSummary(snapshot, phase),
 			phase.lastActivity,
 		].filter(Boolean).join(" · ") || undefined,
 	}));
