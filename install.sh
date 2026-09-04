@@ -123,6 +123,10 @@ if command -v codex >/dev/null 2>&1; then
     herdr integration install codex
 fi
 
+echo "==> Installing pinned Herdr Annotate pilot"
+herdr plugin install plannotator/herdr-annotate \
+    --ref bccf884b874f5f39ccbef1bb6ac67625c5fb5d54 --yes
+
 if [[ "$(uname -s)" == "Darwin" ]]; then
     stow -d "$DOTFILES_DIR" -t "$HOME" launchd
     echo "==> Installing pinned No Mistakes and reconciling its LaunchAgent"

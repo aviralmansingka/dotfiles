@@ -1,4 +1,5 @@
 brew "awscli"
+brew "bun"
 brew "curl"
 brew "direnv"
 brew "eza"
