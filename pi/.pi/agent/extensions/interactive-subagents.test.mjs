@@ -10,6 +10,7 @@ const jitiCandidates = [
 	process.env.JITI_PATH,
 	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
 	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
+	"/home/avirus/.local/share/mise/installs/npm-earendil-works-pi-coding-agent/latest/node_modules/.mise/jiti@2.7.0/node_modules/jiti/lib/jiti.cjs",
 ].filter(Boolean);
 const jitiPath = jitiCandidates.find((p) => p && existsSync(p));
 if (!jitiPath) {
