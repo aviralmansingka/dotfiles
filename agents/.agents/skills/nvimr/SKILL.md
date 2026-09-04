@@ -22,6 +22,7 @@ directory. nvim serves a default RPC socket at
 `nvim` skill's launcher also opens a socket for nvimr to find.
 
 Override knobs (env):
+
 - `NVIM_BIN=` — nvim binary path if `nvim` is not on `PATH`.
 - `NVIM_LISTEN_ADDRESS=` — force a specific socket path (wins over all auto-discovery).
 - `HERDR_TIMEOUT=` — seconds for herdr CLI calls (default 5).
@@ -29,6 +30,7 @@ Override knobs (env):
 ## Discovery and targeting
 
 `nvimr` resolves a socket in this order:
+
 1. `NVIM_LISTEN_ADDRESS` (explicit env).
 2. The **focused Herdr pane's** nvim, if that pane is running nvim.
 3. Any Herdr pane running nvim (first live).
@@ -57,12 +59,14 @@ A pane→socket link is made by reading the nvim process's `--listen <path>` fro
 All commands run as `./nvimr <command> [args]` from this skill directory.
 
 ### Sessions and targeting
+
 ```bash
 ./nvimr sessions            # List nvim sessions in herdr panes
 ./nvimr --pane <id> <cmd>   # Run <cmd> against a specific pane's nvim
 ```
 
 ### Inspect editor state
+
 ```bash
 ./nvimr socket              # Print the resolved socket path
 ./nvimr state               # Current buf, cursor, mode, cwd, window list
@@ -72,6 +76,7 @@ All commands run as `./nvimr <command> [args]` from this skill directory.
 ```
 
 ### Take actions
+
 ```bash
 ./nvimr open <path> [line]  # Open file in an editable window, goto line
 ./nvimr goto <line> [col]   # Move cursor in current editable window
