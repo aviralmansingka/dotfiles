@@ -260,6 +260,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		assert.equal(pipelineResult.details.progress.status, "failed");
 
 		const foreignUpdates = [];
+		const statusCallsBeforeForeign = statusCalls;
 		const foreignResult = await tool.execute(
 			"foreign",
 			{ args: "run", cwd: stubDir, timeoutMs: 1 },
@@ -268,6 +269,9 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 			{ cwd: "/repo/a", hasUI: false },
 		);
 		assert.equal(foreignUpdates.length, 0);
+		assert.equal(statusCalls, statusCallsBeforeForeign);
+		assert.equal(events.length, 3);
+		assert.match(foreignResult.content[0].text, /outcome: test-failed/);
 		assert.equal(foreignResult.details.progress, undefined);
 		assert.equal(foreignResult.details.snapshot, undefined);
 
