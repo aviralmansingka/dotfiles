@@ -195,4 +195,45 @@ assert.ok(
 	`renderer diagnostic must name the bundled chunk source; got: ${diagnostic}`,
 );
 
-console.log("tool-call-renderer.test.mjs: PASS — runtime bundled-chunk classes patched, dead modes/interactive copy not patched");
+const controller = ChunkTool.prototype[Symbol.for("aviral.pi.work-step-renderer.controller")];
+const bridgeKey = Symbol.for("aviral.pi.work-step-renderer.subagent-bridge");
+const toolCallId = "failed-no-mistakes";
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "toolCall", id: toolCallId, name: "no_mistakes_axi", arguments: { args: "respond" } }],
+		stopReason: "toolUse",
+	},
+);
+const failedComponent = {
+	toolName: "no_mistakes_axi",
+	toolCallId,
+	rendererState: {},
+	executionStarted: true,
+	isPartial: false,
+	result: {
+		isError: true,
+		content: [{ type: "text", text: "RAW FAILURE OUTPUT" }],
+		details: {
+			exitCode: 1,
+			progress: {
+				kind: "pipeline",
+				status: "failed",
+				error: "test failed",
+				recentTools: [
+					{ name: "review", status: "completed" },
+					{ name: "test", status: "failed" },
+				],
+			},
+		},
+	},
+	resultRendererComponent: { render: () => ["RAW FAILURE OUTPUT"] },
+};
+controller.toolUpdated(failedComponent);
+assert.ok(failedComponent.rendererState[bridgeKey], "failed pipeline phase data enables connected rendering");
+failedComponent.rendererState[bridgeKey].outputMode = "expanded";
+const failedLines = controller.renderTool(failedComponent, 120).join("\n");
+assert.ok(failedLines.includes("review"), "expanded failed pipeline renders phase rows");
+assert.ok(failedLines.includes("RAW FAILURE OUTPUT"), "expanded failed pipeline retains raw output");
+
+console.log("tool-call-renderer.test.mjs: PASS — runtime patches and failed pipeline rendering work");

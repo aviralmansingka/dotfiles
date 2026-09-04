@@ -658,7 +658,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				const outputSnapshot = pipelineCall && details.output
 					? parseNoMistakesStatus(details.output)
 					: undefined;
-				if (!failed && pipelineCall && observesSession && observer && !outputSnapshot) {
+				if (pipelineCall && observesSession && observer && !outputSnapshot) {
 					await observer.refresh;
 					await refreshStatus({ cwd: observer.cwd }, monitorGeneration, true);
 				}
@@ -694,8 +694,14 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			observesSession = resolve(cwd) === resolve(sessionCwd);
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;
 			const sig = signal ?? new AbortController().signal;
-			if (observesSession && onUpdate && pipelineCall) {
-				const observer: NmToolObserver = { startedAt, subcommand, cwd, snapshot: latestSnapshot, onUpdate };
+			if (observesSession && pipelineCall) {
+				const observer: NmToolObserver = {
+					startedAt,
+					subcommand,
+					cwd,
+					snapshot: latestSnapshot,
+					onUpdate: onUpdate ?? (() => {}),
+				};
 				toolObservers.set(observerId, observer);
 				observer.refresh = refreshStatus({ cwd }, monitorGeneration, true);
 			}

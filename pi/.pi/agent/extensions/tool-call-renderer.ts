@@ -760,6 +760,10 @@ function renderConnectedChips(
       if (expanded) {
         lines.push(truncateToWidth(head, width));
         lines.push(...renderRecentToolTree(theme, rail, progress, width));
+        if (component.toolName === "no_mistakes_axi") {
+          const rawLines = component.resultRendererComponent?.render?.(width);
+          if (Array.isArray(rawLines)) lines.push(...rawLines);
+        }
       } else {
         lines.push(
           truncateToWidth(
@@ -1373,8 +1377,7 @@ function supportsConnectedRendering(component: any): boolean {
   return (
     progress?.kind === "pipeline" &&
     Array.isArray(progress.recentTools) &&
-    progress.recentTools.length > 0 &&
-    !rootFailed(component, progress)
+    progress.recentTools.length > 0
   );
 }
 

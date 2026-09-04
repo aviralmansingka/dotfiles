@@ -191,10 +191,11 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	const terminalStatus = [
 		"run:",
 		'  id: "00000000000000000000000003"',
-		"  status: completed",
-		"  outcome: passed",
-		"  steps[1]{step,status,findings,duration_ms}:",
+		"  status: failed",
+		"  outcome: test-failed",
+		"  steps[2]{step,status,findings,duration_ms}:",
 		"    review,completed,0,2000",
+		"    test,failed,0,1000",
 	].join("\n");
 	const noRunStatus = { code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" };
 	const statusResults = [
@@ -217,7 +218,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 			return { unref() {} };
 		};
 		globalThis.clearInterval = () => {};
-		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nsleep 0.05\nprintf 'outcome: passed\\n'\n");
+		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nsleep 0.05\nprintf 'outcome: test-failed\\n'\nexit 1\n");
 		chmodSync(join(stubDir, "no-mistakes"), 0o755);
 		process.env.PATH = `${stubDir}:${savedPath}`;
 
@@ -252,11 +253,11 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		assert.equal(events[1].payload.snapshot.currentPhase, "review");
 		assert.equal(events[2].payload.snapshot, undefined);
 		assert.equal(updates.length, 2);
-		assert.equal(updates[1].details.snapshot.status, "completed");
-		assert.equal(pipelineResult.details.snapshot.status, "completed");
-		assert.equal(pipelineResult.details.progress.recentTools.length, 1);
-		assert.equal(pipelineResult.details.progress.recentTools[0].status, "completed");
-		assert.equal(pipelineResult.details.progress.status, "completed");
+		assert.equal(updates[1].details.snapshot.status, "failed");
+		assert.equal(pipelineResult.details.snapshot.status, "failed");
+		assert.equal(pipelineResult.details.progress.recentTools.length, 2);
+		assert.equal(pipelineResult.details.progress.recentTools[1].status, "failed");
+		assert.equal(pipelineResult.details.progress.status, "failed");
 
 		const foreignUpdates = [];
 		const foreignResult = await tool.execute(
