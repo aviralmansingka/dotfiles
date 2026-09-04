@@ -15,6 +15,13 @@ import {
 	NM_PANE_TIMEOUT_MS,
 	wantsTuiPane,
 } from "./no-mistakes-pane/capture";
+import {
+	isObservableNoMistakesRun,
+	parseNoMistakesStatus,
+	phaseProgress,
+	summarizeNoMistakesSnapshot,
+	type NoMistakesSnapshot,
+} from "./no-mistakes-pane/status";
 
 // ---------------------------------------------------------------------------
 // no-mistakes-pane — run `no-mistakes axi` in a visible Herdr pane beside the
@@ -424,6 +431,15 @@ function parseArgs(input: string): string[] {
 	return args;
 }
 
+interface NmPipelineProgress {
+	kind: "pipeline";
+	status: "running" | "completed" | "failed";
+	startedAt: number;
+	completedAt?: number;
+	output: string;
+	recentTools: ReturnType<typeof phaseProgress>;
+}
+
 interface NmAxiDetails {
 	status: "visible" | "inline" | "cancelled" | "timeout" | "error";
 	subcommand: string;
@@ -431,6 +447,27 @@ interface NmAxiDetails {
 	paneId?: string;
 	output?: string;
 	message?: string;
+	progress?: NmPipelineProgress;
+	snapshot?: NoMistakesSnapshot;
+}
+
+const NM_ACTIVITY_UPDATE_EVENT = "no-mistakes:activity-update";
+const STATUS_POLL_MS = 1000;
+const STATUS_TIMEOUT_MS = 5000;
+
+function pipelineProgress(
+	snapshot: NoMistakesSnapshot | undefined,
+	status: NmPipelineProgress["status"],
+	startedAt: number,
+): NmPipelineProgress {
+	return {
+		kind: "pipeline",
+		status,
+		startedAt,
+		...(status === "running" ? {} : { completedAt: Date.now() }),
+		output: snapshot ? summarizeNoMistakesSnapshot(snapshot) : status,
+		recentTools: snapshot ? phaseProgress(snapshot) : [],
+	};
 }
 
 function textResult(text: string, details: NmAxiDetails) {
@@ -458,6 +495,73 @@ const NoMistakesAxiParams = Type.Object({
 });
 
 export default function noMistakesPane(pi: ExtensionAPI) {
+	let monitorTimer: ReturnType<typeof setInterval> | undefined;
+	let monitorController: AbortController | undefined;
+	let monitorGeneration = 0;
+	let pollingStatus = false;
+	let latestSnapshot: NoMistakesSnapshot | undefined;
+	const toolObservers = new Map<
+		string,
+		{ startedAt: number; subcommand: string; onUpdate: (result: ReturnType<typeof textResult>) => void }
+	>();
+
+	const publishSnapshot = (snapshot: NoMistakesSnapshot | undefined) => {
+		latestSnapshot = isObservableNoMistakesRun(snapshot) ? snapshot : undefined;
+		pi.events.emit(NM_ACTIVITY_UPDATE_EVENT, { snapshot: latestSnapshot, observedAt: Date.now() });
+		if (!latestSnapshot) return;
+		for (const observer of toolObservers.values()) {
+			observer.onUpdate(
+				textResult(summarizeNoMistakesSnapshot(latestSnapshot), {
+					status: "visible",
+					subcommand: observer.subcommand,
+					progress: pipelineProgress(latestSnapshot, "running", observer.startedAt),
+					snapshot: latestSnapshot,
+				}),
+			);
+		}
+	};
+
+	const refreshStatus = async (ctx: { cwd: string }, expectedGeneration = monitorGeneration) => {
+		if (pollingStatus || expectedGeneration !== monitorGeneration) return;
+		pollingStatus = true;
+		const controller = new AbortController();
+		monitorController = controller;
+		try {
+			const result = await pi.exec("no-mistakes", ["axi", "status"], {
+				cwd: ctx.cwd,
+				signal: controller.signal,
+				timeout: STATUS_TIMEOUT_MS,
+			});
+			if (!controller.signal.aborted && expectedGeneration === monitorGeneration) {
+				publishSnapshot(result.code === 0 ? parseNoMistakesStatus(result.stdout) : undefined);
+			}
+		} catch {
+			if (!controller.signal.aborted && expectedGeneration === monitorGeneration) publishSnapshot(undefined);
+		} finally {
+			if (monitorController === controller) monitorController = undefined;
+			pollingStatus = false;
+		}
+	};
+
+	pi.on("session_start", (_event, ctx) => {
+		if (ctx.mode !== "tui") return;
+		const generation = ++monitorGeneration;
+		void refreshStatus(ctx, generation);
+		monitorTimer = setInterval(() => void refreshStatus(ctx, generation), STATUS_POLL_MS);
+		monitorTimer.unref?.();
+	});
+
+	pi.on("session_shutdown", () => {
+		monitorGeneration++;
+		monitorController?.abort();
+		monitorController = undefined;
+		pollingStatus = false;
+		if (monitorTimer) clearInterval(monitorTimer);
+		monitorTimer = undefined;
+		toolObservers.clear();
+		publishSnapshot(undefined);
+	});
+
 	pi.registerTool({
 		name: "no_mistakes_axi",
 		label: "no-mistakes (visible pane)",
@@ -474,10 +578,24 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		],
 		parameters: NoMistakesAxiParams,
 
-		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		async execute(toolCallId, params, signal, onUpdate, ctx) {
+			const startedAt = Date.now();
+			const observerId = typeof toolCallId === "string" ? toolCallId : randomUUID();
+			const finishText = (text: string, details: NmAxiDetails) => {
+				toolObservers.delete(observerId);
+				const parsed = (details.output ? parseNoMistakesStatus(details.output) : undefined) ?? latestSnapshot;
+				const failed = details.status === "cancelled" || details.status === "timeout" || details.status === "error" ||
+					(details.exitCode != null && details.exitCode !== 0);
+				return textResult(text, {
+					...details,
+					progress: pipelineProgress(parsed, failed ? "failed" : "completed", startedAt),
+					...(parsed ? { snapshot: parsed } : {}),
+				});
+			};
+
 			const rawArgs = (params.args ?? "").trim();
 			if (!rawArgs) {
-				return textResult("no_mistakes_axi requires non-empty `args` (e.g. `status`).", {
+				return finishText("no_mistakes_axi requires non-empty `args` (e.g. `status`).", {
 					status: "error",
 					subcommand: "",
 					message: "empty args",
@@ -488,6 +606,10 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			const cwd = params.cwd ?? ctx?.cwd ?? process.cwd();
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;
 			const sig = signal ?? new AbortController().signal;
+			if (onUpdate && wantsTuiPane(args, subcommand)) {
+				toolObservers.set(observerId, { startedAt, subcommand, onUpdate });
+				void refreshStatus({ cwd });
+			}
 
 			const hasUI = (ctx as { hasUI?: boolean })?.hasUI ?? false;
 			const current = hasUI ? getCurrentPane() : null;
@@ -496,14 +618,14 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			if (!current) {
 				const ran = await runNmInlineSafe(args, sig, timeoutMs);
 				if (ran.cancelled) {
-					return textResult(
+					return finishText(
 						`no-mistakes axi ${subcommand} was cancelled or failed inline: ${ran.error.message}`,
 						{ status: "cancelled", subcommand, message: "inline run cancelled" },
 					);
 				}
 				const r = ran.result;
 				const text = formatOutput(r.output, r.exitCode, "inline");
-				return textResult(text, {
+				return finishText(text, {
 					status: "inline",
 					subcommand,
 					exitCode: r.exitCode,
@@ -526,20 +648,20 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 					const r = tui.result;
 					if (tui.cancelled) {
 						const text = formatOutput(r.output, r.exitCode, "cancelled");
-						return textResult(
+						return finishText(
 							`no-mistakes axi ${subcommand} was cancelled; TUI pane closed.\n${text}`,
 							{ status: "cancelled", subcommand, paneId: r.paneId, output: r.output, message: tui.message },
 						);
 					}
 					if (r.timedOut) {
 						const text = formatOutput(r.output, r.exitCode, "timeout");
-						return textResult(
+						return finishText(
 							`no-mistakes axi ${subcommand} timed out after ${timeoutMs / 1000}s; TUI pane cancelled.\n${text}`,
 							{ status: "timeout", subcommand, exitCode: r.exitCode, paneId: r.paneId, output: r.output, message: "timed out" },
 						);
 					}
 					const text = formatOutput(r.output, r.exitCode, "visible (tui)");
-					return textResult(text, {
+					return finishText(text, {
 						status: "visible",
 						subcommand,
 						exitCode: r.exitCode,
@@ -563,14 +685,14 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				unlinkSafe(scriptFile);
 				const ran = await runNmInlineSafe(args, sig, timeoutMs);
 				if (ran.cancelled) {
-					return textResult(
+					return finishText(
 						`no-mistakes axi ${subcommand} was cancelled or failed inline: ${ran.error.message}`,
 						{ status: "cancelled", subcommand, message: "inline run cancelled" },
 					);
 				}
 				const r = ran.result;
 				const text = formatOutput(r.output, r.exitCode, "inline (pane launch failed)");
-				return textResult(text, {
+				return finishText(text, {
 					status: "inline",
 					subcommand,
 					exitCode: r.exitCode,
@@ -584,13 +706,13 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				if (r.timedOut) {
 					cancelPane(paneId);
 					const text = formatOutput(r.output, r.exitCode, "timeout");
-					return textResult(
+					return finishText(
 						`no-mistakes axi ${subcommand} timed out after ${timeoutMs / 1000}s; pane cancelled.\n${text}`,
 						{ status: "timeout", subcommand, exitCode: r.exitCode, paneId, output: r.output, message: "timed out" },
 					);
 				}
 				const text = formatOutput(r.output, r.exitCode, "visible");
-				return textResult(text, {
+				return finishText(text, {
 					status: "visible",
 					subcommand,
 					exitCode: r.exitCode,
@@ -601,7 +723,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				cancelPane(paneId);
 				const partial = partialOutput(outFile, token);
 				const text = formatOutput(partial, -1, "cancelled");
-				return textResult(
+				return finishText(
 					`no-mistakes axi ${subcommand} was cancelled; pane closed.\n${text}`,
 					{
 						status: "cancelled",

@@ -164,7 +164,7 @@ cd ~/.pi/agent/npm && npm install
 cd ~/.pi/agent/extensions/web-fetch && npm ci --ignore-scripts
 ```
 
-Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`; the widget stays hidden when no run exists.
+Pi's No Mistakes integration keeps the rich `no-mistakes attach` TUI in a right-hand Herdr pane while `run` or `respond` is active. A read-only `no-mistakes axi status` observer also adds the current pipeline to the interactive-subagents activity widget and the expandable tool trace; it stays hidden when the current branch has no active run.
 
 In Herdr-backed TUI sessions, an active Pi UI prompt reports the agent as blocked until the prompt closes, so
 Sidekick shows that Pi is waiting for user input.

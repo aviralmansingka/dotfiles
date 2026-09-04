@@ -61,6 +61,10 @@ import {
   type ActivityReadResult,
   type SubagentActivityState,
 } from "./activity.ts";
+import {
+  noMistakesWidgetStatus,
+  type NoMistakesActivity,
+} from "./no-mistakes.ts";
 
 /** Absolute path to `pi-extension/subagents`. https://github.com/nodejs/node/issues/37845 */
 const SUBAGENTS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -477,6 +481,7 @@ function formatUsageSegments(stats: SessionStats): string[] {
  *   { toolCallId, result:{ progress:{ status, startedAt?, completedAt?,
  *   recentTools?, error? }, output, exitCode?, stats? }, done } */
 const SUBAGENT_BACKGROUND_UPDATE_EVENT = "subagent:background-update";
+const NO_MISTAKES_ACTIVITY_UPDATE_EVENT = "no-mistakes:activity-update";
 
 /** A single subagent tool call, for the expanded `◆ ◇` nested tree. */
 interface SubagentRecentTool {
@@ -829,6 +834,8 @@ const RUNNING_CHILDREN_COUNT_KEY = Symbol.for("pi-subagents/running-children-cou
 let latestCtx: ExtensionContext | null = null;
 /** Latest ExtensionAPI, used to deliver ask_question notifications from the watcher. */
 let latestPi: ExtensionAPI | null = null;
+/** Read-only pipeline activity published by no-mistakes-pane.ts. */
+let noMistakesActivity: NoMistakesActivity | null = null;
 
 /** Interval timer for widget re-renders. */
 let widgetInterval: ReturnType<typeof setInterval> | null = null;
@@ -903,10 +910,14 @@ function borderBottom(width: number): string {
   return `${ACCENT}╰${"─".repeat(inner)}╯${RST}`;
 }
 
-function renderSubagentWidgetLines(agents: RunningSubagent[], width: number): string[] {
-  const count = agents.length;
-  const title = "Subagents";
-  const info = `${count} running`;
+function renderSubagentWidgetLines(
+  agents: RunningSubagent[],
+  width: number,
+  pipeline: NoMistakesActivity | null = null,
+): string[] {
+  const count = agents.length + (pipeline ? 1 : 0);
+  const title = pipeline ? "Activities" : "Subagents";
+  const info = `${count} ${pipeline ? "active" : "running"}`;
 
   const lines: string[] = [borderTop(title, info, width)];
 
@@ -925,6 +936,13 @@ function renderSubagentWidgetLines(agents: RunningSubagent[], width: number): st
     lines.push(borderLine(left, right, width));
   }
 
+  if (pipeline) {
+    const waiting = Boolean(pipeline.gate || pipeline.status === "checks-passed");
+    const icon = waiting ? `${ICON_DIM}○${RST}` : `${ICON_YELLOW}⟳${RST}`;
+    const branch = pipeline.branch ? ` (${pipeline.branch})` : "";
+    lines.push(borderLine(` ${icon} no-mistakes${branch} `, noMistakesWidgetStatus(pipeline), width));
+  }
+
   lines.push(borderBottom(width));
   return lines;
 }
@@ -932,7 +950,7 @@ function renderSubagentWidgetLines(agents: RunningSubagent[], width: number): st
 function updateWidget() {
   if (!latestCtx?.hasUI) return;
 
-  if (runningSubagents.size === 0) {
+  if (runningSubagents.size === 0 && !noMistakesActivity) {
     latestCtx.ui.setWidget("subagent-status", undefined);
     if (widgetInterval) {
       clearInterval(widgetInterval);
@@ -948,7 +966,11 @@ function updateWidget() {
       return {
         invalidate() {},
         render(width: number) {
-          return renderSubagentWidgetLines(Array.from(runningSubagents.values()), width);
+          return renderSubagentWidgetLines(
+            Array.from(runningSubagents.values()),
+            width,
+            noMistakesActivity,
+          );
         },
       };
     },
@@ -1333,6 +1355,7 @@ export const __test__ = {
   resolveResultPresentation,
   resolveResumeLaunchBehavior,
   runningSubagents,
+  noMistakesWidgetStatus,
   formatElapsed,
   formatTokens,
   formatContextUsage,
@@ -1844,6 +1867,14 @@ async function watchSubagent(
 
 export default function subagentsExtension(pi: ExtensionAPI) {
   latestPi = pi;
+  pi.events.on(NO_MISTAKES_ACTIVITY_UPDATE_EVENT, (data: unknown) => {
+    const payload = data && typeof data === "object" ? data as { snapshot?: unknown } : {};
+    const snapshot = payload.snapshot;
+    noMistakesActivity = snapshot && typeof snapshot === "object"
+      ? snapshot as NoMistakesActivity
+      : null;
+    updateWidget();
+  });
   // Capture the UI context for widget updates
   pi.on("session_start", (_event, ctx) => {
     latestCtx = ctx;
@@ -1875,6 +1906,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       agent.abortController?.abort();
     }
     runningSubagents.clear();
+    noMistakesActivity = null;
   });
 
   // The spawning tools are always registered here. Whether a child process can

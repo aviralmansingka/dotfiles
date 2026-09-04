@@ -20,6 +20,50 @@ const jitiPath = process.env.JITI_PATH
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 const { buildPaneScript, extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
+const { parseNoMistakesStatus, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
+
+// ---------------------------------------------------------------------------
+// AXI status observation: parse the daemon-owned run without changing it and
+// expose the compact status + nine phase rows used by the shared activity UI.
+// ---------------------------------------------------------------------------
+{
+	const output = [
+		"run:",
+		'  id: "01TEST"',
+		"  branch: feat/nm-ui",
+		"  status: running",
+		"  gate: review",
+		"  awaiting_agent: parked 12s",
+		"  steps[3]{step,status,findings,duration_ms}:",
+		"    intent,completed,0,10",
+		"    review,awaiting,2,12000",
+		"    test,pending,0,0",
+		"  active_steps[1]{step,status,active_for,last_activity,agent_pid,round}:",
+		'    review,awaiting,12s,"2s ago: gate",4242,"round 1"',
+	].join("\n");
+	const snapshot = parseNoMistakesStatus(output);
+	assert.ok(snapshot, "current-branch AXI status parses into an observation snapshot");
+	assert.equal(snapshot.id, "01TEST");
+	assert.equal(snapshot.branch, "feat/nm-ui");
+	assert.equal(snapshot.gate, "review");
+	assert.equal(snapshot.awaitingAgent, "parked 12s");
+	assert.equal(snapshot.phases.length, 3);
+	assert.deepEqual(snapshot.phases[1], {
+		name: "review",
+		status: "awaiting",
+		findings: 2,
+		durationMs: 12000,
+		activeFor: "12s",
+		lastActivity: "2s ago: gate",
+		round: "round 1",
+	});
+	assert.equal(summarizeNoMistakesSnapshot(snapshot), "waiting · review gate");
+	assert.equal(isObservableNoMistakesRun(snapshot), true);
+	assert.equal(phaseProgress(snapshot)[1].preview, "12s · round 1 · 2 findings · 2s ago: gate");
+
+	assert.equal(parseNoMistakesStatus("current_branch: main\nruns_on_current_branch: 0"), undefined);
+	assert.equal(isObservableNoMistakesRun({ ...snapshot, status: "passed" }), false);
+}
 
 // ---------------------------------------------------------------------------
 // buildPaneScript: run the generated script under bash with a stub

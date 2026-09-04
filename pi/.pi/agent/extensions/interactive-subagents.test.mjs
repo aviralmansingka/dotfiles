@@ -188,6 +188,28 @@ assert.match(
 	"killed panes should prompt the orchestrator to ask the user",
 );
 
+// --- No Mistakes compact status follows the shared activity-widget contract ---
+const { noMistakesWidgetStatus } = jiti(
+	"./interactive-subagents/pi-extension/subagents/no-mistakes.ts",
+);
+assert.equal(noMistakesWidgetStatus({
+	id: "01TEST",
+	branch: "feat/nm-ui",
+	status: "running",
+	phases: [{
+		name: "review",
+		status: "running",
+		activeFor: "12s",
+		round: "round 1",
+		lastActivity: "2s ago: log",
+	}],
+}), " active · review · round 1 · 12s · 2s ago: log ");
+assert.equal(noMistakesWidgetStatus({
+	status: "running",
+	gate: "review",
+	phases: [],
+}), " waiting · review gate ");
+
 // --- Bundled professor is an interactive, skill-backed teaching agent ---
 const professorProfile = readFileSync(
 	new URL("./interactive-subagents/agents/professor.md", import.meta.url),
