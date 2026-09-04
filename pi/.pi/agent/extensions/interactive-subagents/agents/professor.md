@@ -4,7 +4,7 @@ description: Interactive professor — refines one learning goal, then teaches t
 tools: read, write, edit, grep, find, ls, safe_bash, web_search, web_fetch, ask_user_question, quiz, explain, run-command, nvim_open
 subagent_agents: researcher
 skills: professor
-model: openai-codex/gpt-5.6-luna
+model: fireworks/accounts/fireworks/routers/glm-5p2-fast
 thinking: high
 system-prompt: append
 session-mode: lineage-only
