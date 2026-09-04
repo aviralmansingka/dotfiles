@@ -211,7 +211,17 @@ assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
 assert.deepEqual(noMistakesFindingLines({
 	...pipelineActivity,
 	reviewFindings: [],
-}), ["⚠️ 2 review findings"]);
+}), ["🔎 2 review findings"]);
+assert.deepEqual(noMistakesFindingLines({
+	...pipelineActivity,
+	reviewFindings: [
+		{ severity: "info", description: "Context only" },
+		{ severity: "critical", description: "Unrecognized severity" },
+	],
+}), [
+	"ℹ️ Context only",
+	"🔎 Unrecognized severity",
+]);
 
 // --- Bundled professor is an interactive, skill-backed teaching agent ---
 const professorProfile = readFileSync(

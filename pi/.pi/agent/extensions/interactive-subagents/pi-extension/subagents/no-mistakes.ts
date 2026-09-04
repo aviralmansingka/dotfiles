@@ -20,10 +20,10 @@ export function noMistakesWidgetStatus(activity: NoMistakesActivity): string {
 }
 
 function findingEmoji(severity: string): string {
-  const normalized = severity.toLowerCase();
-  if (["error", "critical", "blocking"].includes(normalized)) return "❌";
-  if (["info", "note"].includes(normalized)) return "ℹ️";
-  return "⚠️";
+  if (severity === "error") return "❌";
+  if (severity === "warning") return "⚠️";
+  if (severity === "info") return "ℹ️";
+  return "🔎";
 }
 
 export function noMistakesFindingLines(activity: NoMistakesActivity, limit = 3): string[] {
@@ -33,7 +33,7 @@ export function noMistakesFindingLines(activity: NoMistakesActivity, limit = 3):
   });
   if (findings.length === 0 && activity.gate === "review") {
     const count = activity.phases.find((phase) => phase.name === "review")?.findings ?? 0;
-    if (count > 0) findings.push(`⚠️ ${count} review finding${count === 1 ? "" : "s"}`);
+    if (count > 0) findings.push(`🔎 ${count} review finding${count === 1 ? "" : "s"}`);
   }
   if (findings.length <= limit) return findings;
   return [...findings.slice(0, limit), `… +${findings.length - limit} more`];

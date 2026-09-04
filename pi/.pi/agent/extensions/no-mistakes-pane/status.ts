@@ -133,6 +133,7 @@ export function parseNoMistakesStatus(output: string): NoMistakesSnapshot | unde
 			round: live?.round || undefined,
 		};
 	});
+	const status = scalar(output, "outcome") ?? scalar(output, "status") ?? "running";
 	const current = phases.find((phase) => ["running", "fixing", "awaiting"].includes(phase.status)) ??
 		(gate ? phases.find((phase) => phase.name === gate) : undefined);
 	const phaseElapsedMs = parseDurationMs(current?.activeFor) ?? current?.durationMs;
@@ -145,7 +146,7 @@ export function parseNoMistakesStatus(output: string): NoMistakesSnapshot | unde
 	const reviewFindings = gate === "review"
 		? table(output, "findings").map((row): NoMistakesFinding => ({
 			id: row.id || undefined,
-			severity: row.severity || "warning",
+			severity: row.severity,
 			file: row.file || undefined,
 			description: row.description || "Review finding",
 		}))
@@ -154,11 +155,11 @@ export function parseNoMistakesStatus(output: string): NoMistakesSnapshot | unde
 		id: scalar(output, "id"),
 		branch: scalar(output, "branch"),
 		head: scalar(output, "head"),
-		status: scalar(output, "outcome") ?? scalar(output, "status") ?? "running",
+		status,
 		gate,
 		awaitingAgent: scalar(output, "awaiting_agent"),
 		phases,
-		currentPhase: current?.name,
+		currentPhase: current?.name ?? (status === "checks-passed" ? "merge" : "starting"),
 		phaseElapsedMs,
 		totalDurationMs,
 		reviewFindings,
@@ -184,29 +185,27 @@ function duration(milliseconds: number | undefined): string {
 }
 
 export function summarizeNoMistakesSnapshot(snapshot: NoMistakesSnapshot): string {
-	if (snapshot.currentPhase) {
-		return `${snapshot.currentPhase} · ${duration(snapshot.phaseElapsedMs)} · ${duration(snapshot.totalDurationMs)} total`;
-	}
-	if (snapshot.status === "checks-passed") return `${duration(snapshot.totalDurationMs)} total · waiting for merge`;
-	return `${snapshot.status} · ${duration(snapshot.totalDurationMs)} total`;
+	const phase = snapshot.currentPhase ?? (snapshot.status === "checks-passed" ? "merge" : "starting");
+	return `${phase} · ${duration(snapshot.phaseElapsedMs)} · ${duration(snapshot.totalDurationMs)} total`;
 }
 
 function findingSummary(snapshot: NoMistakesSnapshot, phase: NoMistakesPhase): string | undefined {
 	if (!phase.findings) return undefined;
 	if (phase.name !== "review" || snapshot.reviewFindings.length === 0) {
-		return `⚠️ ${phase.findings} finding${phase.findings === 1 ? "" : "s"}`;
+		return `🔎 ${phase.findings} finding${phase.findings === 1 ? "" : "s"}`;
 	}
-	const errors = snapshot.reviewFindings.filter((finding) =>
-		["error", "critical", "blocking"].includes(finding.severity.toLowerCase()),
-	).length;
-	const info = snapshot.reviewFindings.filter((finding) =>
-		["info", "note"].includes(finding.severity.toLowerCase()),
-	).length;
-	const warnings = snapshot.reviewFindings.length - errors - info;
+	const errors = snapshot.reviewFindings.filter((finding) => finding.severity === "error").length;
+	const warnings = snapshot.reviewFindings.filter((finding) => finding.severity === "warning").length;
+	const info = snapshot.reviewFindings.filter((finding) => finding.severity === "info").length;
+	const unknown = Math.max(
+		snapshot.reviewFindings.length - errors - warnings - info,
+		phase.findings - errors - warnings - info,
+	);
 	return [
 		errors ? `❌ ${errors}` : undefined,
 		warnings ? `⚠️ ${warnings}` : undefined,
 		info ? `ℹ️ ${info}` : undefined,
+		unknown ? `🔎 ${unknown}` : undefined,
 	]
 		.filter(Boolean)
 		.join(" · ");

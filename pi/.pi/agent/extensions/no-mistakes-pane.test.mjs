@@ -21,6 +21,7 @@ const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 const { buildPaneScript, extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
 const { parseDurationMs, parseNoMistakesStatus, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
+const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
 // ---------------------------------------------------------------------------
 // AXI status observation: parse the daemon-owned run without changing it and
@@ -72,8 +73,104 @@ const { parseDurationMs, parseNoMistakesStatus, isObservableNoMistakesRun, summa
 	assert.equal(phaseProgress(snapshot)[1].preview, "12s · round 1 · ❌ 1 · ⚠️ 1 · 2s ago: gate");
 	assert.equal(parseDurationMs("1h 2m 3.5s"), 3723500);
 
+	const checksPassed = parseNoMistakesStatus([
+		"run:",
+		"  status: checks-passed",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    test,completed,0,17000",
+	].join("\n"));
+	assert.ok(checksPassed);
+	assert.equal(checksPassed.currentPhase, "merge");
+	assert.equal(summarizeNoMistakesSnapshot(checksPassed), "merge · — · 17s total");
+	assert.equal(
+		summarizeNoMistakesSnapshot({ ...snapshot, currentPhase: undefined, phaseElapsedMs: undefined }),
+		"starting · — · 14s total",
+	);
+	assert.equal(phaseProgress({
+		...snapshot,
+		phases: [{ name: "review", status: "awaiting", findings: 5 }],
+		reviewFindings: [
+			{ severity: "error", description: "error" },
+			{ severity: "warning", description: "warning" },
+			{ severity: "info", description: "info" },
+			{ severity: "critical", description: "unknown" },
+		],
+	})[0].preview, "❌ 1 · ⚠️ 1 · ℹ️ 1 · 🔎 2");
+
 	assert.equal(parseNoMistakesStatus("current_branch: main\nruns_on_current_branch: 0"), undefined);
 	assert.equal(isObservableNoMistakesRun({ ...snapshot, status: "passed" }), false);
+}
+
+{
+	const handlers = new Map();
+	const events = [];
+	const statusResults = [
+		{
+			code: 0,
+			stdout: [
+				"run:",
+				"  status: running",
+				"  gate: review",
+				"  steps[1]{step,status,findings,duration_ms}:",
+				"    review,awaiting,0,1000",
+			].join("\n"),
+		},
+		{ code: 1, stdout: "temporary failure" },
+		{ code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" },
+	];
+	let tool;
+	let poll;
+	const savedSetInterval = globalThis.setInterval;
+	const savedClearInterval = globalThis.clearInterval;
+	const savedPath = process.env.PATH;
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-observer-"));
+	try {
+		globalThis.setInterval = (callback) => {
+			poll = callback;
+			return { unref() {} };
+		};
+		globalThis.clearInterval = () => {};
+		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nprintf 'outcome: passed\\n'\n");
+		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+		process.env.PATH = `${stubDir}:${savedPath}`;
+
+		noMistakesPane({
+			on(name, handler) { handlers.set(name, handler); },
+			registerTool(value) { tool = value; },
+			events: { emit(name, payload) { events.push({ name, payload }); } },
+			async exec() { return statusResults.shift(); },
+		});
+		handlers.get("session_start")({}, { mode: "tui", cwd: "/repo/a" });
+		await new Promise(setImmediate);
+		assert.equal(events.length, 1);
+		assert.equal(events[0].payload.snapshot.currentPhase, "review");
+
+		const updates = [];
+		const foreignResult = await tool.execute(
+			"foreign",
+			{ args: "run", cwd: stubDir, timeoutMs: 1 },
+			undefined,
+			(update) => updates.push(update),
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		assert.equal(updates.length, 0);
+		assert.equal(foreignResult.details.snapshot, undefined);
+		assert.equal(statusResults.length, 2);
+
+		poll();
+		await new Promise(setImmediate);
+		assert.equal(events.length, 1);
+		poll();
+		await new Promise(setImmediate);
+		assert.equal(events.length, 2);
+		assert.equal(events[1].payload.snapshot, undefined);
+		handlers.get("session_shutdown")();
+	} finally {
+		globalThis.setInterval = savedSetInterval;
+		globalThis.clearInterval = savedClearInterval;
+		process.env.PATH = savedPath;
+		rmSync(stubDir, { recursive: true, force: true });
+	}
 }
 
 // ---------------------------------------------------------------------------

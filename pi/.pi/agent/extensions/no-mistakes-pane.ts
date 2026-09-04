@@ -5,6 +5,7 @@ import { execFile, execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 import { promisify } from "node:util";
 import {
 	buildAttachScript,
@@ -537,11 +538,10 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				signal: controller.signal,
 				timeout: STATUS_TIMEOUT_MS,
 			});
-			if (!controller.signal.aborted && expectedGeneration === monitorGeneration) {
-				publishSnapshot(result.code === 0 ? parseNoMistakesStatus(result.stdout) : undefined);
+			if (!controller.signal.aborted && expectedGeneration === monitorGeneration && result.code === 0) {
+				publishSnapshot(parseNoMistakesStatus(result.stdout));
 			}
 		} catch {
-			if (!controller.signal.aborted && expectedGeneration === monitorGeneration) publishSnapshot(undefined);
 		} finally {
 			if (monitorController === controller) monitorController = undefined;
 			pollingStatus = false;
@@ -586,9 +586,10 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			const startedAt = Date.now();
 			const observerId = typeof toolCallId === "string" ? toolCallId : randomUUID();
+			let fallbackSnapshot = latestSnapshot;
 			const finishText = (text: string, details: NmAxiDetails) => {
 				toolObservers.delete(observerId);
-				const parsed = (details.output ? parseNoMistakesStatus(details.output) : undefined) ?? latestSnapshot;
+				const parsed = (details.output ? parseNoMistakesStatus(details.output) : undefined) ?? fallbackSnapshot;
 				const failed = details.status === "cancelled" || details.status === "timeout" || details.status === "error" ||
 					(details.exitCode != null && details.exitCode !== 0);
 				return textResult(text, {
@@ -608,10 +609,13 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			}
 			const args = parseArgs(rawArgs);
 			const subcommand = subcommandOf(args);
-			const cwd = params.cwd ?? ctx?.cwd ?? process.cwd();
+			const sessionCwd = ctx?.cwd ?? process.cwd();
+			const cwd = params.cwd ?? sessionCwd;
+			const observesSession = resolve(cwd) === resolve(sessionCwd);
+			if (!observesSession) fallbackSnapshot = undefined;
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;
 			const sig = signal ?? new AbortController().signal;
-			if (onUpdate && wantsTuiPane(args, subcommand)) {
+			if (observesSession && onUpdate && wantsTuiPane(args, subcommand)) {
 				toolObservers.set(observerId, { startedAt, subcommand, onUpdate });
 				void refreshStatus({ cwd });
 			}
