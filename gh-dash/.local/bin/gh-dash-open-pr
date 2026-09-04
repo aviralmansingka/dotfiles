@@ -22,6 +22,14 @@ repo_id=$(printf '%s' "$repo_name" | git -C "$repo" hash-object --stdin)
 pr_ref="refs/remotes/gh-dash/$repo_id/pull/$pr"
 owner_key="branch.$branch.ghDashPr"
 owner="$repo_name#$pr"
+
+create_and_review() {
+  result=$(herdr worktree create "$@")
+  git -C "$repo" config --local "$owner_key" "$owner"
+  pane=$(printf '%s\n' "$result" | jq -er '.result.root_pane.pane_id')
+  herdr pane run "$pane" "tuicr pr '$owner' --no-update-check"
+}
+
 branch_oid=$(git -C "$repo" rev-parse --verify "$branch_ref" 2>/dev/null || true)
 old_pr_oid=$(git -C "$repo" rev-parse --verify "$pr_ref" 2>/dev/null || true)
 configured_owner=$(git -C "$repo" config --local --get "$owner_key" 2>/dev/null || true)
@@ -59,9 +67,8 @@ if [ -n "$branch_oid" ]; then
     exit 1
   fi
   git -C "$repo" update-ref "$branch_ref" "$new_pr_oid" "$branch_oid"
-  git -C "$repo" config --local "$owner_key" "$owner"
-  exec herdr worktree create --cwd "$repo" --branch "$branch" --focus
+  create_and_review --cwd "$repo" --branch "$branch" --focus
+  exit
 fi
 
-herdr worktree create --cwd "$repo" --branch "$branch" --base "$pr_ref" --focus
-git -C "$repo" config --local "$owner_key" "$owner"
+create_and_review --cwd "$repo" --branch "$branch" --base "$pr_ref" --focus

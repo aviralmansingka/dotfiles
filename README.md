@@ -106,8 +106,8 @@ terraform -chdir=ops/devbox destroy \
 ## gh-dash PR worktrees
 
 The stowed gh-dash config resolves `owner/repo` to `/Users/aviral/:repo`. In the pull-request view, press `O` to
-check out the selected PR as `pr/<number>` in a Herdr worktree and focus it. Pressing `O` again focuses the existing
-workflow-owned worktree; a conflicting local branch is left untouched.
+check out the selected PR as `pr/<number>` in a Herdr worktree, focus it, and start tuicr in the new worktree.
+Pressing `O` again focuses the existing workflow-owned worktree; a conflicting local branch is left untouched.
 
 ## Herdr server handoff
 
