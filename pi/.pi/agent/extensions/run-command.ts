@@ -560,7 +560,7 @@ async function askRunCommand(
 			let focus: "editor" | "none" = "none";
 
 			function outputText(): string | undefined {
-				const t = editor.getText().trim();
+				const t = editor.getExpandedText().trim();
 				return t.length ? t : undefined;
 			}
 

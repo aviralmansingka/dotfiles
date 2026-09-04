@@ -130,9 +130,22 @@ writeFileSync(
 	stubPath,
 	String.raw`
 class Editor {
-  constructor() { this.focused = false; this.disableSubmit = false; this.text = ""; }
+  constructor() { this.focused = false; this.disableSubmit = false; this.text = ""; this.expandedText = null; }
   getText() { return this.text; }
-  handleInput(data) { if (this.focused) this.text += data; }
+  getExpandedText() { return this.expandedText ?? this.text; }
+  handleInput(data) {
+    if (!this.focused) return;
+    const paste = data.match(/^\x1b\[200~([\s\S]*)\x1b\[201~$/);
+    if (!paste) { this.text += data; return; }
+    const content = paste[1];
+    const lines = content.split("\n");
+    if (lines.length > 10 || content.length > 1000) {
+      this.text = "[paste #1 +" + lines.length + " lines]";
+      this.expandedText = content;
+    } else {
+      this.text += content;
+    }
+  }
   invalidate() {}
   render() { return [this.focused ? this.text + "▌" : this.text]; }
 }
@@ -225,6 +238,13 @@ try {
 	const tabbed = await drive(["\t", "manual paste", "\r"]);
 	assert.equal(tabbed.result.details.output, "manual paste");
 	assert.equal(tabbed.result.details.copied, false);
+
+	const largeOutput = Array.from({ length: 18 }, (_, i) => `output line ${i + 1}`).join("\n");
+	const largePaste = await drive(["\t", `\x1b[200~${largeOutput}\x1b[201~`, "\r"]);
+	assert.match(largePaste.renders[2], /\[paste #1 \+18 lines\]/);
+	assert.equal(largePaste.result.details.output, largeOutput);
+	assert.match(largePaste.result.content[0].text, /output line 9/);
+	assert.doesNotMatch(largePaste.result.content[0].text, /\[paste #1/);
 } finally {
 	delete globalThis.__runCommandClipboardCalls;
 	rmSync(stubDir, { recursive: true, force: true });
