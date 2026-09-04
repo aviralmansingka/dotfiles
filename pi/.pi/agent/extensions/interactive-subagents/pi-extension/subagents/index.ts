@@ -17,7 +17,7 @@ import { homedir } from "node:os";
 import {
   isMuxAvailable,
   muxSetupHint,
-  createSurface,
+  withNewSurface,
   sendCommand,
   sendLongCommand,
   pollForExit,
@@ -37,6 +37,7 @@ import {
   resolveNameInRegistry,
   seedSubagentSessionFile,
   summarizeSessionStats,
+  uniqueSubagentName,
   writeSubagentLoadout,
   type SessionStats,
   type SubagentLoadout,
@@ -1145,10 +1146,7 @@ function uniqueRunningName(base: string, registryNames?: Set<string>): string {
   const taken = new Set(Array.from(runningSubagents.values()).map((r) => r.name));
   for (const reserved of reservedNames) taken.add(reserved);
   if (registryNames) for (const n of registryNames) taken.add(n);
-  if (!taken.has(base)) return base;
-  let n = 2;
-  while (taken.has(`${base}-${n}`)) n++;
-  return `${base}-${n}`;
+  return uniqueSubagentName(base, taken);
 }
 
 function resolveRunningByName(name: string):
@@ -1361,7 +1359,14 @@ function startWidgetRefresh() {
 async function launchSubagent(
   params: typeof SubagentParams.static,
   ctx: { sessionManager: { getSessionFile(): string | null; getSessionId(): string; getSessionDir(): string }; cwd: string },
-  options?: { surface?: string },
+): Promise<RunningSubagent> {
+  return withNewSurface(params.name, (surface) => launchSubagentOnSurface(params, ctx, surface));
+}
+
+async function launchSubagentOnSurface(
+  params: typeof SubagentParams.static,
+  ctx: { sessionManager: { getSessionFile(): string | null; getSessionId(): string; getSessionDir(): string }; cwd: string },
+  surface: string,
 ): Promise<RunningSubagent> {
   const startTime = Date.now();
   const id = Math.random().toString(16).slice(2, 10);
@@ -1394,13 +1399,7 @@ async function launchSubagent(
   ].join("-");
   const subagentSessionFile = join(sessionDir, `${timestamp}_${uuid}.jsonl`);
 
-  // Use pre-created surface (parallel mode) or create a new one.
-  // For new surfaces, pause briefly so the shell is ready before sending the command.
-  const surfacePreCreated = !!options?.surface;
-  const surface = options?.surface ?? createSurface(params.name);
-  if (!surfacePreCreated) {
-    await new Promise<void>((resolve) => setTimeout(resolve, getShellReadyDelayMs()));
-  }
+  await new Promise<void>((resolve) => setTimeout(resolve, getShellReadyDelayMs()));
 
   const launchBehavior = resolveLaunchBehavior(params, agentDefs);
 
@@ -2372,7 +2371,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         // transcript doesn't block the UI.
         const entryCountBefore = countSessionEntryLines(sessionPath);
 
-        const surface = createSurface(name);
+        return withNewSurface(name, async (surface) => {
         await new Promise<void>((resolve) => setTimeout(resolve, getShellReadyDelayMs()));
 
         // Build pi resume command
@@ -2545,6 +2544,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             status: "started",
           },
         };
+        });
       },
     });
 

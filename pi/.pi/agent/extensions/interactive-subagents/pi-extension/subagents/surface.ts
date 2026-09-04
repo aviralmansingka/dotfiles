@@ -40,6 +40,20 @@ export const sendLongCommand = surface.sendLongCommand;
 export const readScreen = surface.readScreen;
 export const readScreenAsync = surface.readScreenAsync;
 export const closeSurface = surface.closeSurface;
+
+export async function withNewSurface<T>(
+  name: string,
+  use: (surface: string) => Promise<T>,
+): Promise<T> {
+  const created = createSurface(name);
+  try {
+    return await use(created);
+  } catch (error) {
+    try { closeSurface(created); } catch {}
+    throw error;
+  }
+}
+
 export const shellEscape = surface.shellEscape;
 export const pollForExit = surface.pollForExit;
 export const __pollForExitTest__ = surface.__pollForExitTest__;

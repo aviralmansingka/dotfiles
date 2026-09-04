@@ -32,6 +32,7 @@ for (const name of [
 	"isMuxAvailable",
 	"muxSetupHint",
 	"createSurface",
+	"withNewSurface",
 	"sendCommand",
 	"sendLongCommand",
 	"pollForExit",
@@ -62,6 +63,7 @@ printf '%s\\n' --call-- >> "$HERDR_TEST_CAPTURE"
 case "$1:$2" in
 	pane:get) printf '%s\\n' '{"result":{"pane":{"pane_id":"w44:p2","workspace_id":"w44"}}}' ;;
 	tab:create) printf '%s\\n' '{"result":{"root_pane":{"pane_id":"w44:p9"}}}' ;;
+	pane:send-text) [ "$HERDR_TEST_FAIL_SEND" = 1 ] && exit 1; printf '%s\\n' '{"result":{}}' ;;
 	*) printf '%s\\n' '{"result":{}}' ;;
 esac
 `,
@@ -98,6 +100,28 @@ try {
 		["pane", "close", "w44:p9"],
 	]);
 
+	process.env.HERDR_TEST_FAIL_SEND = "1";
+	await assert.rejects(
+		surface.withNewSurface("broken-launch", async (pane) => {
+			surface.sendCommand(pane, "false");
+		}),
+	);
+	delete process.env.HERDR_TEST_FAIL_SEND;
+	const failedLaunchCalls = readFileSync(captureFile, "utf8")
+		.split("--call--\n")
+		.filter(Boolean)
+		.map((call) => call.trim().split("\n"))
+		.slice(calls.length);
+	assert.deepEqual(failedLaunchCalls, [
+		["pane", "get", "w44:p2"],
+		[
+			"tab", "create", "--workspace", "w44", "--cwd", process.cwd(),
+			"--label", "subagent: broken-launch", "--no-focus",
+		],
+		["pane", "send-text", "w44:p9", "false"],
+		["pane", "close", "w44:p9"],
+	]);
+
 	process.env.HERDR_ENV = "";
 	process.env.HERDR_PANE_ID = "";
 	assert.equal(herdr.isHerdrAvailable(), false);
@@ -107,7 +131,22 @@ try {
 	if (savedWorkspace === undefined) delete process.env.HERDR_WORKSPACE_ID; else process.env.HERDR_WORKSPACE_ID = savedWorkspace;
 	if (savedPath === undefined) delete process.env.PATH; else process.env.PATH = savedPath;
 	delete process.env.HERDR_TEST_CAPTURE;
+	delete process.env.HERDR_TEST_FAIL_SEND;
 	rmSync(fakeBin, { recursive: true, force: true });
+}
+
+// --- Arbitrary explicit names remain registered and deduplicate ---
+const session = jiti("./interactive-subagents/pi-extension/subagents/session.ts");
+const registryDir = mkdtempSync(join(tmpdir(), "subagent-name-registry-test-"));
+try {
+	const entry = { sessionFile: "/tmp/proto-session.jsonl", sessionId: "proto-session" };
+	session.registerName(registryDir, "__proto__", entry);
+	assert.deepEqual(session.resolveNameInRegistry(registryDir, "__proto__"), entry);
+	const registryNames = new Set(Object.keys(session.readNameRegistry(registryDir)));
+	assert.deepEqual([...registryNames], ["__proto__"]);
+	assert.equal(session.uniqueSubagentName("__proto__", registryNames), "__proto__-2");
+} finally {
+	rmSync(registryDir, { recursive: true, force: true });
 }
 
 // --- pollForExit sidecar decoding (surface-agnostic logic) ---
