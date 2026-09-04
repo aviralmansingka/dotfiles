@@ -126,6 +126,11 @@ fi
 echo "==> Installing pinned Herdr Annotate pilot"
 herdr plugin install plannotator/herdr-annotate \
     --ref bccf884b874f5f39ccbef1bb6ac67625c5fb5d54 --yes
+annotate_root="$(herdr plugin list --plugin annotate --json | jq -er '.result.plugins[0].plugin_root')"
+[[ -x "$annotate_root/bin/plannotator-tui.exe" ]] || {
+    echo "Herdr Annotate Full TUI installation failed" >&2
+    exit 1
+}
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
     stow -d "$DOTFILES_DIR" -t "$HOME" launchd
