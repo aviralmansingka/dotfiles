@@ -14,6 +14,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { openEditor } from "./nvim-open";
+import { handoutModelOptions } from "./quiz-handout";
 import { contextFileHint, handoutHint, normalizeContextFiles } from "./user-input/context-files";
 import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
 import { joinHints, numberShortcutHint, numberShortcutIndex } from "./user-input/option-shortcuts";
@@ -196,6 +197,8 @@ function pickHandoutModel(ctx: any): any {
 		if (m) return m;
 	}
 	for (const [provider, id] of [
+		["fireworks", "accounts/fireworks/routers/glm-5p2-fast"],
+		["fireworks", "accounts/fireworks/models/glm-5p3-flash"],
 		["fireworks", "glm-fast-latest"],
 		["anthropic", "claude-haiku-4-5"],
 		["openai", "gpt-4o-mini"],
@@ -296,7 +299,7 @@ async function generateHandout(
 				systemPrompt: HANDOUT_SYSTEM_PROMPT,
 				messages: [{ role: "user", content: prompt, timestamp: Date.now() } as any],
 			},
-			{ signal, maxTokens: 2000, temperature: 0.2, reasoning: "medium" } as any,
+			handoutModelOptions(signal),
 		);
 		raw = response.content
 			.filter((c: any) => c.type === "text")
