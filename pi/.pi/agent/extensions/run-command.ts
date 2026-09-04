@@ -560,7 +560,9 @@ async function askRunCommand(
 			let focus: "editor" | "none" = "none";
 
 			function outputText(): string | undefined {
-				const t = editor.getText().trim();
+				// Keep the Editor's compact large-paste marker visual-only; submit
+				// the expanded clipboard content as the observed command output.
+				const t = editor.getExpandedText().trim();
 				return t.length ? t : undefined;
 			}
 

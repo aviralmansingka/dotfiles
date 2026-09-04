@@ -89,6 +89,7 @@ jobs:
           node pi/.pi/agent/extensions/herdr-prompt-state.test.mjs
           node pi/.pi/agent/extensions/quiz-context-files.test.mjs
           node pi/.pi/agent/extensions/quiz-handout.test.mjs
+          node pi/.pi/agent/extensions/run-command.test.mjs
           node pi/.pi/agent/extensions/user-input/option-shortcuts.test.mjs
 
   scripts-tests:
