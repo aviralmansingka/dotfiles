@@ -83,6 +83,10 @@ assert.deepEqual(interpretExitSidecar({ type: "error" }), {
 	errorMessage: "Subagent exited with stopReason=error (no errorMessage in sidecar).",
 });
 assert.deepEqual(interpretExitSidecar({}), { reason: "done", exitCode: 0 });
+assert.deepEqual(herdr.__pollForExitTest__.paneKilledResult(), {
+	reason: "killed",
+	exitCode: 130,
+});
 
 // --- Subagent launch sandbox keeps extension discovery enabled ---
 const subagentSource = readFileSync(
@@ -98,6 +102,11 @@ assert.match(
 	subagentSource,
 	/parts\.push\("--tools", shellEscape\(loadout\.toolAllowlist\)\)/,
 	"tool restrictions should still be applied with --tools",
+);
+assert.match(
+	subagentSource,
+	/Ask the user what to do next: resume it with subagent_message/,
+	"killed panes should prompt the orchestrator to ask the user",
 );
 
 console.log("interactive-subagents surface smoke passed");

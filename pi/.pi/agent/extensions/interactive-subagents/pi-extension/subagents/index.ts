@@ -694,13 +694,22 @@ function formatWidgetRightLabel(snapshot: StatusSnapshot): string {
 function resolveResultPresentation(
   result: Pick<
     SubagentResult,
-    "exitCode" | "elapsed" | "summary" | "sessionFile" | "sessionId" | "errorMessage"
+    "exitCode" | "elapsed" | "summary" | "sessionFile" | "sessionId" | "errorMessage" | "killed"
   >,
   name: string,
 ): string {
   // Name is the persistent handle: the same name steers a running subagent or
   // resumes a finished one, so follow-ups always reference it.
   const sessionRef = `\n\nFollow up with subagent_message({ name: "${name}", message: "…" })`;
+
+  if (result.killed) {
+    return (
+      `Sub-agent "${name}" pane was closed/killed after ${formatElapsed(result.elapsed)} ` +
+      `before it reported completion.\n\n${result.summary}\n\n` +
+      `Ask the user what to do next: resume it with subagent_message, launch a ` +
+      `fresh subagent, or ignore it. Do not infer the missing result.${sessionRef}`
+    );
+  }
 
   if (result.errorMessage) {
     // Auto-retry exhausted or other agent-loop error. The subagent did not
@@ -735,6 +744,8 @@ interface SubagentResult {
   exitCode: number;
   elapsed: number;
   error?: string;
+  /** True when the multiplexer pane disappeared before the completion sentinel. */
+  killed?: boolean;
   /** Provider/agent error message when auto-retry exhausted (overload, rate limit, etc.). */
   errorMessage?: string;
   /** Aggregate usage/model/tool stats parsed from the completed session file. */
@@ -779,6 +790,28 @@ interface RunningSubagent {
 
 /** All currently running subagents, keyed by id. */
 const runningSubagents = new Map<string, RunningSubagent>();
+
+function emitFinishedSubagentBackgroundUpdate(
+  pi: ExtensionAPI,
+  running: RunningSubagent,
+  result: SubagentResult,
+): void {
+  const failed = result.killed || result.exitCode !== 0 || !!result.errorMessage || !!result.error;
+  const sessionFile = result.sessionFile ?? running.sessionFile;
+  const error = result.killed
+    ? "pane killed"
+    : result.errorMessage ?? result.error ?? (result.exitCode !== 0 ? `exit code ${result.exitCode}` : undefined);
+  emitSubagentBackgroundUpdate(pi, running, {
+    done: true,
+    status: failed ? "failed" : "completed",
+    completedAt: Date.now(),
+    output: result.summary,
+    exitCode: result.exitCode,
+    ...(error ? { error } : {}),
+    ...(result.stats ? { stats: result.stats } : {}),
+    recentTools: sessionFile && existsSync(sessionFile) ? buildFinalRecentTools(sessionFile) : [],
+  });
+}
 
 // When this extension is loaded inside a subagent that itself spawns children
 // (e.g. a worker delegating to scout/researcher), `subagent-done.ts` runs in the
@@ -1452,6 +1485,7 @@ async function launchSubagent(
 
     const running: RunningSubagent = {
       id,
+      toolCallId: "",
       name: params.name,
       task: params.task,
       agent: params.agent,
@@ -1594,6 +1628,7 @@ async function launchSubagent(
 
   const running: RunningSubagent = {
     id,
+    toolCallId: "",
     name: params.name,
     task: params.task,
     agent: params.agent,
@@ -1699,18 +1734,19 @@ async function watchSubagent(
     });
 
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const killed = result.reason === "killed";
 
     if (running.cli === "claude") {
       // Claude Code result extraction
-      let summary = "";
+      let summary = killed ? "Pane was closed before Claude Code reported completion." : "";
 
-      if (running.sentinelFile) {
+      if (!killed && running.sentinelFile) {
         try {
           summary = readFileSync(running.sentinelFile, "utf-8").trim();
         } catch {}
       }
 
-      if (!summary) {
+      if (!killed && !summary) {
         summary = readScreen(surface, 200)
           .replace(/__SUBAGENT_DONE_\d+__/, "")
           .trimEnd();
@@ -1730,35 +1766,41 @@ async function watchSubagent(
         try { unlinkSync(running.sentinelFile + ".transcript"); } catch {}
       }
 
-      closeSurface(surface);
+      try { closeSurface(surface); } catch {}
       runningSubagents.delete(running.id);
 
-      return { name, task, summary, exitCode: result.exitCode, elapsed, ...(sessionId ? { claudeSessionId: sessionId } : {}) };
+      return { name, task, summary, exitCode: result.exitCode, elapsed, ...(killed ? { killed: true, error: "pane killed" } : {}), ...(sessionId ? { claudeSessionId: sessionId } : {}) };
     }
 
     // Pi subagent result extraction
     let summary: string;
     if (existsSync(sessionFile)) {
       const allEntries = getNewEntries(sessionFile, 0);
-      summary =
-        findLastAssistantMessage(allEntries) ??
-        (result.errorMessage
+      const lastAssistant = findLastAssistantMessage(allEntries);
+      summary = killed
+        ? lastAssistant
+          ? `Pane was closed before the subagent reported completion. Last saved assistant message:\n\n${lastAssistant}`
+          : "Pane was closed before the subagent reported completion. No assistant result was saved."
+        : lastAssistant ??
+          (result.errorMessage
+            ? `Subagent error: ${result.errorMessage}`
+            : result.exitCode !== 0
+              ? `Sub-agent exited with code ${result.exitCode}`
+              : "Sub-agent exited without output");
+    } else {
+      summary = killed
+        ? "Pane was closed before the subagent reported completion. No session file was saved."
+        : result.errorMessage
           ? `Subagent error: ${result.errorMessage}`
           : result.exitCode !== 0
             ? `Sub-agent exited with code ${result.exitCode}`
-            : "Sub-agent exited without output");
-    } else {
-      summary = result.errorMessage
-        ? `Subagent error: ${result.errorMessage}`
-        : result.exitCode !== 0
-          ? `Sub-agent exited with code ${result.exitCode}`
-          : "Sub-agent exited without output";
+            : "Sub-agent exited without output";
     }
 
     const stats = existsSync(sessionFile) ? summarizeSessionStats(sessionFile) : null;
     const subagentSessionId = existsSync(sessionFile) ? getSessionId(sessionFile) : null;
 
-    closeSurface(surface);
+    try { closeSurface(surface); } catch {}
     runningSubagents.delete(running.id);
 
     return {
@@ -1769,6 +1811,7 @@ async function watchSubagent(
       ...(subagentSessionId ? { sessionId: subagentSessionId } : {}),
       exitCode: result.exitCode,
       elapsed,
+      ...(killed ? { killed: true, error: "pane killed" } : {}),
       ...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
       ...(stats ? { stats } : {}),
     };
@@ -1990,6 +2033,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         watchSubagent(running, watcherAbort.signal)
           .then((result) => {
             updateWidget(); // reflect removal from Map immediately
+            emitFinishedSubagentBackgroundUpdate(pi, running, result);
 
             const presentation = resolveResultPresentation(result, running.name);
 
@@ -2007,6 +2051,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
                   sessionFile: result.sessionFile,
                   ...(result.sessionId ? { sessionId: result.sessionId } : {}),
                   ...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
+                  ...(result.killed ? { killed: true } : {}),
                   ...(result.claudeSessionId ? { claudeSessionId: result.claudeSessionId } : {}),
                   ...(result.stats ? { stats: result.stats } : {}),
                 },
@@ -2253,7 +2298,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         return new Text(theme.fg("dim", text), 0, 0);
       },
 
-      async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      async execute(toolCallId, params, _signal, _onUpdate, ctx) {
         const requestedName = params.name?.trim();
         if (!requestedName) {
           const err = "Provide the subagent's `name` to steer (if running) or resume (if finished).";
@@ -2420,6 +2465,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         // Register as a running subagent for widget tracking
         const running: RunningSubagent = {
           id,
+          toolCallId: typeof toolCallId === "string" ? toolCallId : "",
           name,
           task: message,
           surface,
@@ -2446,16 +2492,20 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             updateWidget();
 
             const allEntries = getNewEntries(sessionPath, entryCountBefore);
-            const summary = findLastAssistantMessage(allEntries) ??
-              (result.errorMessage
-                ? `Subagent error: ${result.errorMessage}`
-                : result.exitCode !== 0
-                  ? `Resumed session exited with code ${result.exitCode}`
-                  : "Resumed session exited without new output");
-            const presentation = resolveResultPresentation(
-              { ...result, summary, sessionFile: sessionPath, sessionId: resumedSessionId },
-              name,
-            );
+            const lastAssistant = findLastAssistantMessage(allEntries);
+            const summary = result.killed
+              ? lastAssistant
+                ? `Pane was closed before the resumed subagent reported completion. Last saved assistant message:\n\n${lastAssistant}`
+                : "Pane was closed before the resumed subagent reported completion. No new assistant result was saved."
+              : lastAssistant ??
+                (result.errorMessage
+                  ? `Subagent error: ${result.errorMessage}`
+                  : result.exitCode !== 0
+                    ? `Resumed session exited with code ${result.exitCode}`
+                    : "Resumed session exited without new output");
+            const displayedResult = { ...result, summary, sessionFile: sessionPath, sessionId: resumedSessionId };
+            emitFinishedSubagentBackgroundUpdate(pi, running, displayedResult);
+            const presentation = resolveResultPresentation(displayedResult, name);
 
             pi.sendMessage(
               {
@@ -2470,6 +2520,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
                   sessionFile: sessionPath,
                   sessionId: resumedSessionId,
                   ...(result.errorMessage ? { errorMessage: result.errorMessage } : {}),
+                  ...(result.killed ? { killed: true } : {}),
                 },
               },
               { triggerTurn: true, deliverAs: "steer" },
