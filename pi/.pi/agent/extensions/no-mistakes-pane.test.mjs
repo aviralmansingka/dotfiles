@@ -23,6 +23,17 @@ const { buildPaneScript, extractMarkedOutput, buildBackgroundScript, buildAttach
 const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
 const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
+function runIdAt(timestamp, suffix = "0".repeat(16)) {
+	const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+	let value = timestamp;
+	let prefix = "";
+	for (let index = 0; index < 10; index++) {
+		prefix = alphabet[value % 32] + prefix;
+		value = Math.floor(value / 32);
+	}
+	return prefix + suffix;
+}
+
 // ---------------------------------------------------------------------------
 // AXI status observation: parse the daemon-owned run without changing it and
 // expose the compact status + nine phase rows used by the shared activity UI.
@@ -180,9 +191,11 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 {
 	const handlers = new Map();
 	const events = [];
+	const activeRunId = runIdAt(Date.now() + 1000, "3".repeat(16));
+	const staleRunId = runIdAt(Date.now() - 60_000, "5".repeat(16));
 	const activeStatus = [
 		"run:",
-		'  id: "00000000000000000000000003"',
+		`  id: "${activeRunId}"`,
 		"  status: running",
 		"  awaiting_agent: parked 1s",
 		"  steps[1]{step,status,findings,duration_ms}:",
@@ -192,7 +205,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	].join("\n");
 	const terminalStatus = [
 		"run:",
-		'  id: "00000000000000000000000003"',
+		`  id: "${activeRunId}"`,
 		"  status: failed",
 		"  outcome: test-failed",
 		"  steps[2]{step,status,findings,duration_ms}:",
@@ -201,7 +214,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 	].join("\n");
 	const staleStatus = [
 		"run:",
-		'  id: "00000000000000000000000005"',
+		`  id: "${staleRunId}"`,
 		"  status: running",
 		"  steps[1]{step,status,findings,duration_ms}:",
 		"    review,running,0,1000",
@@ -211,7 +224,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		{ code: 0, stdout: activeStatus },
 		{ code: 0, stdout: terminalStatus },
 		{ code: 0, stdout: staleStatus },
-		{ code: 1, stdout: "temporary failure" },
+		{ code: 0, stdout: staleStatus },
 		{ code: 1, stdout: "temporary failure" },
 		noRunStatus,
 	];
@@ -229,7 +242,7 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 			return { unref() {} };
 		};
 		globalThis.clearInterval = () => {};
-		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nsleep 0.05\nprintf 'run:\\n  id: \"00000000000000000000000003\"\\n  status: failed\\n  outcome: test-failed\\n'\nexit 1\n");
+		writeFileSync(join(stubDir, "no-mistakes"), `#!/bin/sh\nsleep 0.05\nprintf 'run:\\n  id: "${activeRunId}"\\n  status: failed\\n  outcome: test-failed\\n'\nexit 1\n`);
 		chmodSync(join(stubDir, "no-mistakes"), 0o755);
 		process.env.PATH = `${stubDir}:${savedPath}`;
 
@@ -263,7 +276,9 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		assert.equal(events[0].payload.snapshot, undefined);
 		assert.equal(events[1].payload.snapshot.currentPhase, "review");
 		assert.equal(events[2].payload.snapshot, undefined);
-		assert.equal(updates.length, 0);
+		assert.equal(updates.length, 2);
+		assert.equal(updates[0].details.snapshot.id, activeRunId);
+		assert.equal(updates[1].details.snapshot.id, activeRunId);
 		assert.equal(pipelineResult.details.snapshot.status, "failed");
 		assert.equal(pipelineResult.details.progress.recentTools.length, 2);
 		assert.equal(pipelineResult.details.progress.recentTools[1].status, "failed");
@@ -312,25 +327,28 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		poll();
 		await new Promise(setImmediate);
 		assert.equal(events.length, 4);
-		assert.equal(events[3].payload.snapshot.id, "00000000000000000000000005");
+		assert.equal(events[3].payload.snapshot.id, staleRunId);
 
 		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nprintf 'outcome: test-failed\\n'\nexit 1\n");
+		const staleUpdates = [];
 		const staleResult = await tool.execute(
 			"stale",
 			{ args: "run", timeoutMs: 1 },
 			undefined,
-			undefined,
+			(update) => staleUpdates.push(update),
 			{ cwd: "/repo/a", hasUI: false },
 		);
 		assert.match(staleResult.content[0].text, /outcome: test-failed/);
 		assert.equal(staleResult.details.progress, undefined);
 		assert.equal(staleResult.details.snapshot, undefined);
-		assert.equal(events.length, 4);
+		assert.equal(staleUpdates.length, 0);
+		assert.equal(events.length, 5);
+		assert.equal(events[4].payload.snapshot.id, staleRunId);
 
 		poll();
 		await new Promise(setImmediate);
-		assert.equal(events.length, 5);
-		assert.equal(events[4].payload.snapshot, undefined);
+		assert.equal(events.length, 6);
+		assert.equal(events[5].payload.snapshot, undefined);
 		handlers.get("session_shutdown")();
 	} finally {
 		globalThis.setInterval = savedSetInterval;

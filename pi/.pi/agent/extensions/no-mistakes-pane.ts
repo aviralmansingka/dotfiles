@@ -492,9 +492,29 @@ function textResult(text: string, details: NmAxiDetails) {
 }
 
 interface NmToolObserver {
+	startedAt: number;
+	subcommand: string;
 	cwd: string;
+	baselineRunId?: string;
+	runId?: string;
 	snapshot?: NoMistakesSnapshot;
 	refresh?: Promise<void>;
+	onUpdate: (result: ReturnType<typeof textResult>) => void;
+}
+
+function observesInvocation(observer: NmToolObserver, snapshot: NoMistakesSnapshot): boolean {
+	if (observer.runId) return observer.runId === snapshot.id;
+	if (observer.subcommand === "respond") {
+		observer.runId = snapshot.id;
+		return true;
+	}
+	if (snapshot.id === observer.baselineRunId) return false;
+	if (observer.baselineRunId == null && (snapshot.pipelineStartedAt ?? 0) < observer.startedAt) {
+		observer.baselineRunId = snapshot.id;
+		return false;
+	}
+	observer.runId = snapshot.id;
+	return true;
 }
 
 const NoMistakesAxiParams = Type.Object({
@@ -540,7 +560,16 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		});
 		if (!observedSnapshot) return;
 		for (const observer of toolObservers.values()) {
+			if (!observesInvocation(observer, observedSnapshot)) continue;
 			observer.snapshot = observedSnapshot;
+			observer.onUpdate(
+				textResult(summarizeNoMistakesSnapshot(observedSnapshot), {
+					status: "visible",
+					subcommand: observer.subcommand,
+					progress: pipelineProgress(observedSnapshot, "running", observer.startedAt),
+					snapshot: observedSnapshot,
+				}),
+			);
 		}
 	};
 
@@ -636,7 +665,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		],
 		parameters: NoMistakesAxiParams,
 
-		async execute(toolCallId, params, signal, _onUpdate, ctx) {
+		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			const startedAt = Date.now();
 			const observerId = typeof toolCallId === "string" ? toolCallId : randomUUID();
 			let pipelineCall = false;
@@ -690,7 +719,13 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;
 			const sig = signal ?? new AbortController().signal;
 			if (observesSession && pipelineCall) {
-				const observer: NmToolObserver = { cwd };
+				const observer: NmToolObserver = {
+					startedAt,
+					subcommand,
+					cwd,
+					baselineRunId: latestSnapshot?.id,
+					onUpdate: onUpdate ?? (() => {}),
+				};
 				toolObservers.set(observerId, observer);
 				observer.refresh = refreshStatus({ cwd }, monitorGeneration, true);
 			}
