@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const require = createRequire(import.meta.url);
 
@@ -69,6 +71,39 @@ try {
 process.env.HERDR_ENV = "";
 process.env.HERDR_PANE_ID = "";
 assert.equal(herdr.isHerdrAvailable(), false, "isHerdrAvailable false when Herdr env absent");
+
+// Herdr launches each subagent in an unfocused tab and returns its root pane id.
+const fakeBin = mkdtempSync(join(tmpdir(), "subagent-herdr-test-"));
+const captureFile = join(fakeBin, "args");
+writeFileSync(
+	join(fakeBin, "herdr"),
+	`#!/bin/sh
+printf '%s\\n' "$@" > "$HERDR_TEST_CAPTURE"
+printf '%s\\n' '{"result":{"root_pane":{"pane_id":"w44:p9"}}}'
+`,
+	{ mode: 0o755 },
+);
+const savedPath = process.env.PATH;
+const savedWorkspace = process.env.HERDR_WORKSPACE_ID;
+try {
+	process.env.HERDR_ENV = "1";
+	process.env.HERDR_PANE_ID = "w44:p2";
+	process.env.HERDR_WORKSPACE_ID = "w44";
+	process.env.HERDR_TEST_CAPTURE = captureFile;
+	process.env.PATH = `${fakeBin}:${savedPath}`;
+	assert.equal(herdr.createSurface("scout tab"), "w44:p9");
+	assert.deepEqual(readFileSync(captureFile, "utf8").trim().split("\n"), [
+		"tab", "create", "--workspace", "w44", "--cwd", process.cwd(),
+		"--label", "scout tab", "--no-focus",
+	]);
+} finally {
+	process.env.HERDR_ENV = savedHerdrEnv;
+	process.env.HERDR_PANE_ID = savedHerdrPane;
+	process.env.HERDR_WORKSPACE_ID = savedWorkspace;
+	process.env.PATH = savedPath;
+	delete process.env.HERDR_TEST_CAPTURE;
+	rmSync(fakeBin, { recursive: true, force: true });
+}
 
 // --- pollForExit sidecar decoding (surface-agnostic logic) ---
 const { interpretExitSidecar } = herdr.__pollForExitTest__;
