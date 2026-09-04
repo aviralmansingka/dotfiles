@@ -59,7 +59,7 @@ subagent({ agent: "worker", name: "dark-mode", task: "Implement the dark mode to
 subagent_message({ name: "scout", message: "Also check the auth middleware" });
 ```
 
-- **Running** — the message is typed into the live pane (newlines flattened) and picked up at the next turn boundary. The call returns immediately; the eventual completion still arrives as a steer message.
+- **Running** — the message is typed into the live tab or pane (newlines flattened) and picked up at the next turn boundary. The call returns immediately; the eventual completion still arrives as a steer message.
 - **Finished** — the session is resumed with the message as the follow-up task, like a fresh spawn: fire-and-forget, always autonomous, result steered back later. The resumed run reclaims its original name.
 
 Every spawn records name → session file in `artifacts/<sessionId>/subagent-registry.json`, so names stay addressable across pi restarts. A nested sub-agent that spawns children gets its own registry keyed by its own session id. Resume is refused with a clear error (listing known names) if the name isn't registered, the session file is gone, or the session predates sandboxed resume.
@@ -70,7 +70,7 @@ Every spawn records name → session file in `artifacts/<sessionId>/subagent-reg
 
 A sub-agent can ask its orchestrator a single freeform question when requirements are ambiguous or a decision materially affects the work. The session **stays open** (parked as `waiting`) instead of exiting; the parent is notified with the sub-agent's name, replies via `subagent_message({ name, message })`, and the reply arrives as the sub-agent's next turn. Parallel questions are supported — each waiting sub-agent has its own name.
 
-If the reply arrives while the sub-agent is still mid-turn, it is absorbed into the current turn — either way the question is marked answered and the session exits normally when the work is done. If the parent never replies, the pane stays open until a human closes it. Only available inside sub-agent sessions.
+If the reply arrives while the sub-agent is still mid-turn, it is absorbed into the current turn — either way the question is marked answered and the session exits normally when the work is done. If the parent never replies, the tab or pane stays open until a human closes it. Only available inside sub-agent sessions.
 
 ## Bundled agents
 
@@ -81,7 +81,7 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | **worker** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch` + spawning | General implementer; may spawn `scout` and `researcher` |
 | **professor** | `fireworks/accounts/fireworks/routers/glm-5p2-fast` | lesson authoring, learner interaction tools + `researcher` spawning | Interactive teacher; grills the learner to approve one observable goal before teaching |
 
-`scout`, `researcher`, and `worker` are autonomous (`auto-exit: true`). `professor` is a long-lived, user-driven pane (`auto-exit: false`) that auto-loads the `professor` skill and remains open until the learner exits it. All four carry their identity in the system prompt (`system-prompt: append`).
+`scout`, `researcher`, and `worker` are autonomous (`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane (`auto-exit: false`) that auto-loads the `professor` skill and remains open until the learner exits it. All four carry their identity in the system prompt (`system-prompt: append`).
 
 ## Custom agents
 
@@ -132,12 +132,12 @@ With `auto-exit: true`, the session shuts down when the agent's turn ends — th
 
 Notes:
 
-- **Manual input does not strand an auto-exit sub-agent.** If a human types into the pane, the session still closes once that turn completes normally — only an escape/abort leaves it open.
+- **Manual input does not strand an auto-exit sub-agent.** If a human types into the tab or pane, the session still closes once that turn completes normally — only an escape/abort leaves it open.
 - **Auto-exit is suppressed while work is in flight:** the session parks as `waiting` instead of exiting when an `ask_question` is still unanswered, or when the agent's own child sub-agents are still running (a worker can stop after dispatching children and stays open until the last result returns).
 
 ### interactive
 
-Controls whether `stalled`/`recovered` status transitions send a steer message to the parent session. Defaults to the inverse of `auto-exit`: autonomous agents get stall pings; user-driven agents stay quiet (the user is already working in that pane — the widget still updates). Set explicitly to override.
+Controls whether `stalled`/`recovered` status transitions send a steer message to the parent session. Defaults to the inverse of `auto-exit`: autonomous agents get stall pings; user-driven agents stay quiet (the user is already working in that tab or pane — the widget still updates). Set explicitly to override.
 
 ## Tool access control
 
@@ -168,7 +168,7 @@ Set a per-agent default with `cwd:` in frontmatter.
 
 The widget tracks each sub-agent from a runtime activity snapshot written by the child: `starting`, `active` (turn/provider/tool work), `waiting` (open for input or another stage), `stalled` (no valid snapshot for too long), or `running` (fallback). Sub-agent sessions also show their own tools widget — toggle it with `Ctrl+Alt+O`. Completion messages expand with `Ctrl+O`.
 
-If a Herdr/tmux sub-agent pane is closed before its completion sentinel appears, the run is marked failed instead of stalling forever. The parent receives a steer prompt asking whether to resume the saved session, launch a fresh sub-agent, or ignore it.
+If a Herdr tab or tmux pane is closed before its completion sentinel appears, the run is marked failed instead of stalling forever. The parent receives a steer prompt asking whether to resume the saved session, launch a fresh sub-agent, or ignore it.
 
 Status display is configured via `config.json` in the extension directory (copy `config.json.example`; it's gitignored):
 
@@ -181,7 +181,9 @@ Status display is configured via `config.json` in the extension directory (copy 
 ## Requirements
 
 - [pi](https://github.com/badlogic/pi-mono)
-- [tmux](https://github.com/tmux/tmux)
+- A session running inside Herdr or [tmux](https://github.com/tmux/tmux)
+
+For the tmux fallback:
 
 ```bash
 tmux new -A -s pi 'pi'

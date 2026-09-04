@@ -394,7 +394,7 @@ function resolveLaunchBehavior(
  *   2. Default: the inverse of `auto-exit`. Agents that auto-exit are
  *      autonomous (scout, researcher) and the parent session should be
  *      woken on stall/recovery transitions. Agents that don't auto-exit are
- *      driven by the user in their own pane (worker) and stall pings are noise.
+ *      driven by the user in their own session (worker) and stall pings are noise.
  */
 function resolveEffectiveInteractive(
   _params: Static<typeof SubagentParams>,
@@ -637,7 +637,7 @@ function widgetIcon(kind: StatusSnapshot["kind"]): string {
 }
 
 /**
- * Wait long enough for a freshly created pane to finish shell startup.
+ * Wait long enough for a freshly created surface to finish shell startup.
  *
  * Some environments do extra shell-init work before the prompt is ready
  * (for example direnv/devenv), so the delay is configurable for users who hit
@@ -1172,7 +1172,7 @@ function resolveRunningByName(name: string):
 }
 
 /**
- * Type a follow-up message into a running subagent's live pane. Newlines are
+ * Type a follow-up message into a running subagent's live surface. Newlines are
  * collapsed to spaces because each newline submits a turn in the child's TUI
  * editor; a multi-line message would otherwise fire as several partial turns.
  */
@@ -1276,7 +1276,7 @@ function startStatusRefresh(pi: ExtensionAPI) {
 
       // Interactive subagents (long-running, user-driven) intentionally don't
       // wake the parent session on stalled/recovered transitions — the user is
-      // working in the subagent's pane, and a steer message here would burn an
+      // working in the subagent's session, and a steer message here would burn an
       // orchestrator turn on a no-op "still waiting" ping. Widget still updates.
       if (transition && !running.interactive) {
         transitionLines.push(formatTransitionLine(running.name, snapshot, transition));
@@ -1304,7 +1304,7 @@ function startStatusRefresh(pi: ExtensionAPI) {
 
 // Resuming a finished session is always autonomous: the relaunched agent runs
 // its follow-up task to completion and the harness delivers the result as a
-// steer message (fire-and-forget). An interactive resume would park the pane
+// steer message (fire-and-forget). An interactive resume would park the session
 // waiting for the user, contradicting that result-delivery model.
 function resolveResumeLaunchBehavior(): { autoExit: boolean; interactive: boolean } {
   return { autoExit: true, interactive: false };
@@ -1351,7 +1351,7 @@ function startWidgetRefresh() {
 }
 
 /**
- * Launch a subagent: creates the multiplexer pane, builds the command, and
+ * Launch a subagent: creates the multiplexer surface, builds the command, and
  * sends it. Returns a RunningSubagent — does NOT poll.
  *
  * Call watchSubagent() on the returned object to observe completion.
@@ -1993,7 +1993,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         const reservedName = params.name;
         reservedNames.add(reservedName);
 
-        // Launch the subagent (creates pane, sends command). Release the name
+        // Launch the subagent (creates its surface, then sends the command). Release the name
         // reservation once it registers in runningSubagents (or launch fails) —
         // from then on uniqueRunningName tracks it via the running map.
         let running;
