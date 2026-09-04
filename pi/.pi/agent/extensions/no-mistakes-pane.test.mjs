@@ -20,6 +20,343 @@ const jitiPath = process.env.JITI_PATH
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 const { buildPaneScript, extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
+const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
+const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
+
+function runIdAt(timestamp, suffix = "0".repeat(16)) {
+	const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+	let value = timestamp;
+	let prefix = "";
+	for (let index = 0; index < 10; index++) {
+		prefix = alphabet[value % 32] + prefix;
+		value = Math.floor(value / 32);
+	}
+	return prefix + suffix;
+}
+
+// ---------------------------------------------------------------------------
+// AXI status observation: parse the daemon-owned run without changing it and
+// expose the compact status + nine phase rows used by the shared activity UI.
+// ---------------------------------------------------------------------------
+{
+	const output = [
+		"run:",
+		'  id: "00000000000000000000000000"',
+		"  branch: feat/nm-ui",
+		"  status: running",
+		"  awaiting_agent: parked 12s",
+		"  steps[3]{step,status,findings,duration_ms}:",
+		"    intent,completed,0,2010",
+		"    review,awaiting_approval,2,0",
+		"    test,pending,0,0",
+		"  gate:",
+		"    step: review",
+		"    findings[2]{id,severity,file,action,description}:",
+		"      r1,error,src/a.ts,ask-user,Null value reaches renderer",
+		"      r2,warning,src/b.ts,auto-fix,Missing cleanup",
+	].join("\n");
+	const snapshot = parseNoMistakesStatus(output, 14_010);
+	assert.ok(snapshot, "current-branch AXI status parses into an observation snapshot");
+	assert.equal(snapshot.id, "00000000000000000000000000");
+	assert.equal(snapshot.branch, "feat/nm-ui");
+	assert.equal(snapshot.gate, "review");
+	assert.equal(snapshot.awaitingAgent, "parked 12s");
+	assert.equal(snapshot.phases.length, 3);
+	assert.deepEqual(snapshot.phases[1], {
+		name: "review",
+		status: "awaiting_approval",
+		findings: 2,
+		durationMs: 0,
+		activeFor: undefined,
+		lastActivity: undefined,
+		round: undefined,
+	});
+	assert.equal(snapshot.currentPhase, "review");
+	assert.equal(snapshot.phaseElapsedMs, 12000);
+	assert.equal(snapshot.totalDurationMs, 14010);
+	assert.deepEqual(snapshot.reviewFindings, [
+		{ id: "r1", severity: "error", file: "src/a.ts", description: "Null value reaches renderer" },
+		{ id: "r2", severity: "warning", file: "src/b.ts", description: "Missing cleanup" },
+	]);
+	assert.equal(summarizeNoMistakesSnapshot(snapshot), "review · 12s · 14s total");
+	assert.equal(isObservableNoMistakesRun(snapshot), true);
+	assert.equal(phaseProgress(snapshot)[1].preview, "❌ 1 · ⚠️ 1");
+	assert.equal(parseDurationMs("12m34s"), 754000);
+	assert.equal(parseDurationMs("1h2m"), 3720000);
+	assert.equal(parseDurationMs("1d2h"), 93600000);
+	assert.equal(parseDurationMs("1h2m3.5s"), 3723500);
+
+	const checksPassedOutput = [
+		"run:",
+		'  id: "00000000000000000000000001"',
+		"  status: running",
+		"  outcome: checks-passed",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    test,completed,0,17000",
+	].join("\n");
+	const checksPassedSnapshot = parseNoMistakesStatus(checksPassedOutput, 17_000);
+	assert.ok(checksPassedSnapshot);
+	const checksPassed = observeNoMistakesTiming(checksPassedSnapshot, snapshot);
+	assert.equal(checksPassed.currentPhase, "merge");
+	assert.equal(summarizeNoMistakesSnapshot(checksPassed), "merge · 0ms · 17s total");
+	const mergeLater = observeNoMistakesTiming(
+		parseNoMistakesStatus(checksPassedOutput, 22_000),
+		checksPassed,
+	);
+	assert.equal(summarizeNoMistakesSnapshot(mergeLater), "merge · 5s · 22s total");
+	const reviewLater = observeNoMistakesTiming(
+		parseNoMistakesStatus(output, 19_010),
+		snapshot,
+	);
+	assert.equal(summarizeNoMistakesSnapshot(reviewLater), "review · 17s · 19s total");
+	assert.equal(
+		summarizeNoMistakesSnapshot({ ...snapshot, currentPhase: undefined, phaseElapsedMs: undefined }),
+		"starting · — · 14s total",
+	);
+	assert.equal(phaseProgress({
+		...snapshot,
+		phases: [{ name: "review", status: "awaiting_approval", findings: 3 }],
+		reviewFindings: [
+			{ severity: "error", description: "error" },
+			{ severity: "warning", description: "warning" },
+			{ severity: "info", description: "info" },
+		],
+	})[0].preview, "❌ 1 · ⚠️ 1 · ℹ️ 1");
+
+	const escapedFinding = parseNoMistakesStatus([
+		"run:",
+		'  id: "00000000000000000000000002"',
+		"  status: running",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,fix_review,1,1000",
+		"  gate:",
+		"    step: review",
+		"    findings[1]{id,severity,file,action,description}:",
+		'      r1,error,src/a.ts,auto-fix,"The \\"run,respond\\" aliases bypass checks"',
+	].join("\n"), 1000);
+	assert.ok(escapedFinding);
+	assert.deepEqual(escapedFinding.reviewFindings, [{
+		id: "r1",
+		severity: "error",
+		file: "src/a.ts",
+		description: 'The "run,respond" aliases bypass checks',
+	}]);
+	assert.equal(phaseProgress(escapedFinding)[0].preview, "❌ 1");
+
+	assert.equal(parseNoMistakesRunId(output), "00000000000000000000000000");
+	assert.equal(parseNoMistakesRunId("run:\n  id: invalid"), undefined);
+	assert.equal(parseNoMistakesStatus("current_branch: main\nruns_on_current_branch: 0"), undefined);
+	assert.equal(parseNoMistakesStatus([
+		"run:",
+		"  id: invalid",
+		"  status: running",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,running,0,0",
+	].join("\n")), undefined);
+	assert.equal(isObservableNoMistakesRun({
+		...snapshot,
+		status: "completed",
+		outcome: "passed-with-override",
+	}), false);
+	assert.equal(isObservableNoMistakesRun({
+		...snapshot,
+		status: "completed",
+		outcome: "ci-monitor-interrupted",
+	}), false);
+}
+
+{
+	const intervalKey = Symbol.for("pi-no-mistakes/status-interval");
+	const abortKey = Symbol.for("pi-no-mistakes/status-abort-controller");
+	const staleInterval = {};
+	let clearedInterval;
+	let aborted = false;
+	const savedClearInterval = globalThis.clearInterval;
+	try {
+		globalThis[intervalKey] = staleInterval;
+		globalThis[abortKey] = { abort() { aborted = true; } };
+		globalThis.clearInterval = (interval) => { clearedInterval = interval; };
+		createJiti(import.meta.url, { moduleCache: false })("./no-mistakes-pane.ts");
+		assert.equal(clearedInterval, staleInterval);
+		assert.equal(aborted, true);
+		assert.equal(globalThis[intervalKey], undefined);
+		assert.equal(globalThis[abortKey], undefined);
+	} finally {
+		globalThis.clearInterval = savedClearInterval;
+		globalThis[intervalKey] = undefined;
+		globalThis[abortKey] = undefined;
+	}
+}
+
+{
+	const handlers = new Map();
+	const events = [];
+	const activeRunId = runIdAt(Date.now() + 1000, "3".repeat(16));
+	const staleRunId = runIdAt(Date.now() - 60_000, "5".repeat(16));
+	const activeStatus = [
+		"run:",
+		`  id: "${activeRunId}"`,
+		"  status: running",
+		"  awaiting_agent: parked 1s",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,awaiting_approval,0,0",
+		"  gate:",
+		"    step: review",
+	].join("\n");
+	const terminalStatus = [
+		"run:",
+		`  id: "${activeRunId}"`,
+		"  status: failed",
+		"  outcome: test-failed",
+		"  steps[2]{step,status,findings,duration_ms}:",
+		"    review,completed,0,2000",
+		"    test,failed,0,1000",
+	].join("\n");
+	const staleStatus = [
+		"run:",
+		`  id: "${staleRunId}"`,
+		"  status: running",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,running,0,1000",
+	].join("\n");
+	const noRunStatus = { code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" };
+	const statusResults = [
+		{ code: 0, stdout: activeStatus },
+		{ code: 0, stdout: terminalStatus },
+		{ code: 0, stdout: staleStatus },
+		{ code: 0, stdout: staleStatus },
+		{ code: 1, stdout: "temporary failure" },
+		noRunStatus,
+	];
+	let releaseInitialStatus;
+	let statusCalls = 0;
+	let tool;
+	let poll;
+	const savedSetInterval = globalThis.setInterval;
+	const savedClearInterval = globalThis.clearInterval;
+	const savedPath = process.env.PATH;
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-observer-"));
+	try {
+		globalThis.setInterval = (callback) => {
+			poll = callback;
+			return { unref() {} };
+		};
+		globalThis.clearInterval = () => {};
+		writeFileSync(join(stubDir, "no-mistakes"), `#!/bin/sh\nsleep 0.05\nprintf 'run:\\n  id: "${activeRunId}"\\n  status: failed\\n  outcome: test-failed\\n'\nexit 1\n`);
+		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+		process.env.PATH = `${stubDir}:${savedPath}`;
+
+		noMistakesPane({
+			on(name, handler) { handlers.set(name, handler); },
+			registerTool(value) { tool = value; },
+			events: { emit(name, payload) { events.push({ name, payload }); } },
+			exec() {
+				if (statusCalls++ > 0) return Promise.resolve(statusResults.shift());
+				return new Promise((resolve) => {
+					releaseInitialStatus = () => resolve(noRunStatus);
+				});
+			},
+		});
+		handlers.get("session_start")({}, { mode: "tui", cwd: "/repo/a" });
+		await new Promise(setImmediate);
+		assert.equal(events.length, 0);
+
+		const updates = [];
+		const pipelinePromise = tool.execute(
+			"pipeline",
+			{ args: "run", timeoutMs: 1 },
+			undefined,
+			(update) => updates.push(update),
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		await new Promise(setImmediate);
+		releaseInitialStatus();
+		const pipelineResult = await pipelinePromise;
+		assert.equal(events.length, 3);
+		assert.equal(events[0].payload.snapshot, undefined);
+		assert.equal(events[1].payload.snapshot.currentPhase, "review");
+		assert.equal(events[2].payload.snapshot, undefined);
+		assert.equal(updates.length, 2);
+		assert.equal(updates[0].details.snapshot.id, activeRunId);
+		assert.equal(updates[1].details.snapshot.id, activeRunId);
+		assert.equal(pipelineResult.details.snapshot.status, "failed");
+		assert.equal(pipelineResult.details.progress.recentTools.length, 2);
+		assert.equal(pipelineResult.details.progress.recentTools[1].status, "failed");
+		assert.equal(pipelineResult.details.progress.status, "failed");
+
+		writeFileSync(join(stubDir, "no-mistakes"), [
+			"#!/bin/sh",
+			"printf '%s\\n' 'run:' '  id: \"00000000000000000000000004\"' '  status: failed' '  outcome: test-failed' '  steps[1]{step,status,findings,duration_ms}:' '    test,failed,0,1000'",
+			"exit 1",
+			"",
+		].join("\n"));
+		const foreignUpdates = [];
+		const statusCallsBeforeForeign = statusCalls;
+		const foreignResult = await tool.execute(
+			"foreign",
+			{ args: "run", cwd: stubDir, timeoutMs: 1 },
+			undefined,
+			(update) => foreignUpdates.push(update),
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		assert.equal(foreignUpdates.length, 0);
+		assert.equal(statusCalls, statusCallsBeforeForeign);
+		assert.equal(events.length, 3);
+		assert.match(foreignResult.content[0].text, /outcome: test-failed/);
+		assert.equal(foreignResult.details.progress, undefined);
+		assert.equal(foreignResult.details.snapshot, undefined);
+
+		const logsResult = await tool.execute(
+			"logs",
+			{ args: "logs", timeoutMs: 1 },
+			undefined,
+			undefined,
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		assert.equal(logsResult.details.progress, undefined);
+		const invalidResult = await tool.execute(
+			"invalid",
+			{ args: "" },
+			undefined,
+			undefined,
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		assert.equal(invalidResult.details.progress, undefined);
+		assert.equal(statusResults.length, 4);
+
+		poll();
+		await new Promise(setImmediate);
+		assert.equal(events.length, 4);
+		assert.equal(events[3].payload.snapshot.id, staleRunId);
+
+		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nprintf 'outcome: test-failed\\n'\nexit 1\n");
+		const staleUpdates = [];
+		const staleResult = await tool.execute(
+			"stale",
+			{ args: "run", timeoutMs: 1 },
+			undefined,
+			(update) => staleUpdates.push(update),
+			{ cwd: "/repo/a", hasUI: false },
+		);
+		assert.match(staleResult.content[0].text, /outcome: test-failed/);
+		assert.equal(staleResult.details.progress, undefined);
+		assert.equal(staleResult.details.snapshot, undefined);
+		assert.equal(staleUpdates.length, 0);
+		assert.equal(events.length, 5);
+		assert.equal(events[4].payload.snapshot.id, staleRunId);
+
+		poll();
+		await new Promise(setImmediate);
+		assert.equal(events.length, 6);
+		assert.equal(events[5].payload.snapshot, undefined);
+		handlers.get("session_shutdown")();
+	} finally {
+		globalThis.setInterval = savedSetInterval;
+		globalThis.clearInterval = savedClearInterval;
+		process.env.PATH = savedPath;
+		rmSync(stubDir, { recursive: true, force: true });
+	}
+}
 
 // ---------------------------------------------------------------------------
 // buildPaneScript: run the generated script under bash with a stub

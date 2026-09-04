@@ -27,6 +27,7 @@ const PLAIN_BRIDGE = Symbol.for("aviral.pi.work-step-renderer.plain-bridge");
 const DEFAULT_CLOCK = () => Date.now();
 const HOST_TAG = `⟠ ${hostname()}`;
 const BACKGROUND_UPDATE_EVENT = "subagent:background-update";
+const CONNECTED_TOOL_NAMES = new Set(["subagent", "no_mistakes_axi"]);
 
 type ToolCall = {
   id: string;
@@ -664,11 +665,15 @@ function renderRecentToolTree(
     const inner = lastTool ? "└─" : "├─";
     const st = asString(tool.status);
     const glyph =
-      st === "running"
+      ["running", "fixing", "awaiting_approval", "fix_review"].includes(st ?? "")
         ? theme.fg("accent", "◇")
-        : st === "failed"
+        : ["failed", "cancelled"].includes(st ?? "")
           ? theme.fg("error", "×")
-          : theme.fg("success", "◆");
+          : st === "skipped"
+            ? theme.fg("dim", "–")
+            : st === "pending"
+              ? theme.fg("dim", "○")
+              : theme.fg("success", "◆");
     const name = asString(tool.name) || "(tool)";
     const preview = asString(tool.preview);
     const previewSeg = preview
@@ -706,13 +711,14 @@ function renderConnectedChips(
     const connector = last ? "└─" : "├─";
     const rail = last ? "   " : "│  ";
     const progress = rootProgress(component);
-    const result = component.result?.details?.results?.[0];
-    const stats =
-      result && typeof result === "object" ? (result as any).stats : undefined;
+    const result = rootResult(component);
+    const stats = result?.stats;
     const call = step.toolCalls.find(
       (c) => c.id === asString(component.toolCallId),
     );
-    const name = asString((call?.arguments as any)?.name) || "(subagent)";
+    const name = call?.name === "no_mistakes_axi"
+      ? "no-mistakes"
+      : asString((call?.arguments as any)?.name) || "(subagent)";
     const lifecycle = bridge.lifecycle;
     const elapsedMs = finiteNumber(lifecycle.startedAt)
       ? (finiteNumber(lifecycle.completedAt)
@@ -739,6 +745,9 @@ function renderConnectedChips(
           width,
         ),
       );
+      if (bridge.outputMode === "expanded") {
+        lines.push(...renderRecentToolTree(theme, rail, progress, width));
+      }
       continue;
     }
 
@@ -751,6 +760,10 @@ function renderConnectedChips(
       if (expanded) {
         lines.push(truncateToWidth(head, width));
         lines.push(...renderRecentToolTree(theme, rail, progress, width));
+        if (component.toolName === "no_mistakes_axi") {
+          const rawLines = component.resultRendererComponent?.render?.(width);
+          if (Array.isArray(rawLines)) lines.push(...rawLines);
+        }
       } else {
         lines.push(
           truncateToWidth(
@@ -768,7 +781,8 @@ function renderConnectedChips(
       : Array.isArray(progress?.recentTools)
         ? progress.recentTools.length
         : 0;
-    const summary = `${toolCount} ${toolCount === 1 ? "tool" : "tools"}${elapsedText}`;
+    const unit = progress?.kind === "pipeline" ? "phase" : "tool";
+    const summary = `${toolCount} ${toolCount === 1 ? unit : `${unit}s`}${elapsedText}`;
     let head = ` ${theme.fg("borderMuted", connector)} ${theme.fg("muted", "▸")} ${theme.fg("text", theme.bold(name))} ${theme.fg("success", "◆")} ${theme.fg("dim", summary)}`;
     if (expanded) {
       if (stats) {
@@ -1268,8 +1282,9 @@ function transferToolComponentOwnership(
 
   const connected = state.connected.get(previous);
   if (
-    previous.toolName !== "subagent" ||
-    component.toolName !== "subagent" ||
+    !CONNECTED_TOOL_NAMES.has(previous.toolName) ||
+    !CONNECTED_TOOL_NAMES.has(component.toolName) ||
+    previous.toolName !== component.toolName ||
     !connected
   )
     return false;
@@ -1333,20 +1348,36 @@ function bindToolComponent(
   return step;
 }
 
+function rootResult(component: any): Record<string, any> | undefined {
+  const nested = component.result?.details?.results?.[0];
+  if (nested && typeof nested === "object") return nested as Record<string, any>;
+  const direct = component.result?.details;
+  return direct && typeof direct === "object" ? direct as Record<string, any> : undefined;
+}
+
 function rootProgress(component: any): Record<string, unknown> | undefined {
-  const result = component.result?.details?.results?.[0];
-  return result && typeof result === "object"
-    ? asRecord((result as Record<string, unknown>).progress)
-    : undefined;
+  const result = rootResult(component);
+  return result ? asRecord(result.progress) : undefined;
 }
 
 function rootFailed(component: any, progress: Record<string, unknown>): boolean {
-  const result = component.result?.details?.results?.[0];
+  const result = rootResult(component);
   return (
     component.result?.isError === true ||
     progress.status === "failed" ||
     (finiteNumber(result?.exitCode) && result.exitCode !== 0) ||
     Boolean(progress.error)
+  );
+}
+
+function supportsConnectedRendering(component: any): boolean {
+  if (component.toolName === "subagent") return true;
+  if (component.toolName !== "no_mistakes_axi") return false;
+  const progress = rootProgress(component);
+  return (
+    progress?.kind === "pipeline" &&
+    Array.isArray(progress.recentTools) &&
+    progress.recentTools.length > 0
   );
 }
 
@@ -1461,7 +1492,7 @@ function ensureConnectedBridge(
   step: WorkStep,
   state: RendererState,
 ): ConnectedRenderBridge | undefined {
-  if (component.toolName !== "subagent") return undefined;
+  if (!supportsConnectedRendering(component)) return undefined;
   const rendererState = (component.rendererState ??= {}) as Record<PropertyKey, unknown>;
   let connected = state.connected.get(component);
   if (!connected) {
@@ -1551,10 +1582,12 @@ function toggleConnectedOutput(component: any, state: RendererState): void {
     bridge.lifecycle.status === "pending" ||
     bridge.lifecycle.status === "running"
   ) {
-    if (bridge.outputMode === "hidden") {
+    if (component.toolName === "no_mistakes_axi") {
+      bridge.outputMode = bridge.outputMode === "expanded" ? "auto" : "expanded";
+    } else if (bridge.outputMode === "hidden") {
       bridge.outputMode = connected.collapsedSource;
     } else {
-      connected.collapsedSource = bridge.outputMode;
+      connected.collapsedSource = bridge.outputMode === "expanded" ? "auto" : bridge.outputMode;
       bridge.outputMode = "hidden";
     }
     return;
@@ -1592,7 +1625,7 @@ function renderToolComponent(
   }> = [];
   for (const call of step.toolCalls) {
     const candidate = state.toolComponents.get(call.id);
-    if (candidate?.toolName !== "subagent" || candidate[WORK_STEP] !== step)
+    if (!CONNECTED_TOOL_NAMES.has(candidate?.toolName) || candidate[WORK_STEP] !== step)
       continue;
     const candidateBridge = ensureConnectedBridge(candidate, step, state);
     if (candidateBridge) {
@@ -1892,9 +1925,9 @@ function patchComponents(
     const render = toolProto.render;
     toolProto.render = function (width: number) {
       const activity = toolProto[CONTROLLER]?.renderTool(this, width) ?? [];
-      if (this.toolName !== "subagent") return activity;
+      if (!CONNECTED_TOOL_NAMES.has(this.toolName)) return activity;
       const connected = this.rendererState?.[SUBAGENT_BRIDGE];
-      return connected?.layout === "connected"
+      return connected?.layout === "connected" && supportsConnectedRendering(this)
         ? activity
         : [...activity, ...render.call(this, width)];
     };

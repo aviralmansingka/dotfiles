@@ -188,6 +188,35 @@ assert.match(
 	"killed panes should prompt the orchestrator to ask the user",
 );
 
+// --- No Mistakes compact status follows the shared activity-widget contract ---
+const { noMistakesFindingLines, noMistakesIsWaiting, noMistakesWidgetStatus } = jiti(
+	"./interactive-subagents/pi-extension/subagents/no-mistakes.ts",
+);
+const pipelineActivity = {
+	id: "01TEST",
+	status: "running",
+	gate: "review",
+	summary: "review · 12s · 17s total",
+	phases: [{ name: "review", status: "awaiting_approval", findings: 3 }],
+	reviewFindings: [
+		{ severity: "error", file: "src/a.ts", description: "Null value reaches renderer" },
+		{ severity: "warning", file: "src/b.ts", description: "Missing cleanup" },
+		{ severity: "info", description: "Context only" },
+		{ severity: "error", file: "src/c.ts", description: "Fourth explicit finding" },
+		{ severity: "unknown", description: "Count-only finding" },
+	],
+};
+assert.equal(noMistakesWidgetStatus(pipelineActivity), " review · 12s · 17s total ");
+assert.equal(noMistakesIsWaiting(pipelineActivity), true);
+assert.equal(noMistakesIsWaiting({ ...pipelineActivity, gate: undefined, outcome: "checks-passed" }), true);
+assert.equal(noMistakesIsWaiting({ ...pipelineActivity, gate: undefined, outcome: undefined }), false);
+assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
+	"❌ src/a.ts: Null value reaches renderer",
+	"⚠️ src/b.ts: Missing cleanup",
+	"ℹ️ Context only",
+	"❌ src/c.ts: Fourth explicit finding",
+]);
+
 // --- Bundled professor is an interactive, skill-backed teaching agent ---
 const professorProfile = readFileSync(
 	new URL("./interactive-subagents/agents/professor.md", import.meta.url),
