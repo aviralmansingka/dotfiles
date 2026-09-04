@@ -6,6 +6,11 @@ import { join } from "node:path";
 
 const require = createRequire(import.meta.url);
 
+function restoreEnv(name, value) {
+	if (value === undefined) delete process.env[name];
+	else process.env[name] = value;
+}
+
 // Allow CI / other hosts to supply jiti via JITI_PATH; otherwise fall back to
 // the captain's macOS homebrew pi install AND the Linux nvm homelab install.
 const jitiCandidates = [
@@ -59,17 +64,38 @@ writeFileSync(
 	`#!/bin/sh
 printf '%s\\n' "$@" >> "$HERDR_TEST_CAPTURE"
 printf '%s\\n' '--call--' >> "$HERDR_TEST_CAPTURE"
-if [ "$1" = pane ] && [ "$2" = get ]; then
-	printf '%s\\n' '{"result":{"pane":{"pane_id":"w44:p2","workspace_id":"w44"}}}'
-else
-	printf '%s\\n' '{"result":{"root_pane":{"pane_id":"w44:p9"}}}'
-fi
+case "$1:$2" in
+	pane:get)
+		printf '%s\\n' '{"result":{"pane":{"pane_id":"w44:p2","workspace_id":"w44"}}}'
+		;;
+	tab:create)
+		printf '%s\\n' '{"result":{"root_pane":{"pane_id":"w44:p9"}}}'
+		;;
+	pane:read)
+		printf '%s\\n' '__SUBAGENT_DONE_0__'
+		;;
+	*)
+		printf '%s\\n' '{"result":{}}'
+		;;
+esac
+`,
+	{ mode: 0o755 },
+);
+const tmuxCaptureFile = join(fakeBin, "tmux-args");
+writeFileSync(
+	join(fakeBin, "tmux"),
+	`#!/bin/sh
+printf '%s\\n' "$@" >> "$TMUX_TEST_CAPTURE"
+printf '%s\\n' '--call--' >> "$TMUX_TEST_CAPTURE"
+printf '%s\\n' '%9'
 `,
 	{ mode: 0o755 },
 );
 const savedHerdrEnv = process.env.HERDR_ENV;
 const savedHerdrPane = process.env.HERDR_PANE_ID;
 const savedWorkspace = process.env.HERDR_WORKSPACE_ID;
+const savedTmux = process.env.TMUX;
+const savedTmuxPane = process.env.TMUX_PANE;
 const savedPath = process.env.PATH;
 process.env.PATH = `${fakeBin}:${savedPath}`;
 process.env.HERDR_TEST_CAPTURE = captureFile;
@@ -87,18 +113,60 @@ try {
 	process.env.HERDR_ENV = "1";
 	process.env.HERDR_PANE_ID = "w44:p2";
 	process.env.HERDR_WORKSPACE_ID = "stale-workspace";
-	assert.equal(herdr.createSurface("scout tab"), "w44:p9");
+	const rootPane = herdr.createSurface("scout tab");
+	assert.equal(rootPane, "w44:p9");
+
+	herdr.sendCommand(rootPane, "printf ready");
+	const messageScript = join(fakeBin, "message.sh");
+	assert.equal(
+		herdr.sendLongCommand(rootPane, "printf message", { scriptPath: messageScript }),
+		messageScript,
+	);
+	assert.equal(readFileSync(messageScript, "utf8"), "#!/bin/bash\nprintf message\n");
+	assert.equal(herdr.readScreen(rootPane, 3), "__SUBAGENT_DONE_0__\n");
+	assert.deepEqual(
+		await herdr.pollForExit(rootPane, new AbortController().signal, { interval: 1 }),
+		{ reason: "sentinel", exitCode: 0 },
+	);
+	herdr.closeSurface(rootPane);
+
 	assert.deepEqual(readFileSync(captureFile, "utf8").trim().split("\n"), [
 		"pane", "get", "w44:p2", "--call--",
 		"tab", "create", "--workspace", "w44", "--cwd", process.cwd(),
 		"--label", "scout tab", "--no-focus", "--call--",
+		"pane", "send-text", "w44:p9", "printf ready", "--call--",
+		"pane", "send-keys", "w44:p9", "Enter", "--call--",
+		"pane", "send-text", "w44:p9", `bash '${messageScript}'`, "--call--",
+		"pane", "send-keys", "w44:p9", "Enter", "--call--",
+		"pane", "read", "w44:p9", "--source", "recent", "--lines", "3", "--format", "text", "--call--",
+		"pane", "read", "w44:p9", "--source", "recent", "--lines", "5", "--format", "text", "--call--",
+		"pane", "close", "w44:p9", "--call--",
+	]);
+
+	// Herdr absent + tmux present still dispatches to the unchanged pane fallback.
+	process.env.HERDR_ENV = "";
+	process.env.HERDR_PANE_ID = "";
+	process.env.TMUX = "fake-server";
+	process.env.TMUX_PANE = "%2";
+	process.env.TMUX_TEST_CAPTURE = tmuxCaptureFile;
+	const uncachedJiti = createJiti(import.meta.url, { moduleCache: false });
+	const tmuxSurface = uncachedJiti("./interactive-subagents/pi-extension/subagents/surface.ts");
+	assert.equal(tmuxSurface.activeSurface, "tmux");
+	assert.equal(tmuxSurface.createSurface("worker"), "%9");
+	await new Promise((resolve) => setTimeout(resolve, 150));
+	assert.deepEqual(readFileSync(tmuxCaptureFile, "utf8").trim().split("\n"), [
+		"split-window", "-d", "-h", "-t", "%2", "-P", "-F", "#{pane_id}", "--call--",
+		"select-layout", "-t", "%2", "even-horizontal", "--call--",
 	]);
 } finally {
-	process.env.HERDR_ENV = savedHerdrEnv;
-	process.env.HERDR_PANE_ID = savedHerdrPane;
-	process.env.HERDR_WORKSPACE_ID = savedWorkspace;
-	process.env.PATH = savedPath;
+	restoreEnv("HERDR_ENV", savedHerdrEnv);
+	restoreEnv("HERDR_PANE_ID", savedHerdrPane);
+	restoreEnv("HERDR_WORKSPACE_ID", savedWorkspace);
+	restoreEnv("TMUX", savedTmux);
+	restoreEnv("TMUX_PANE", savedTmuxPane);
+	restoreEnv("PATH", savedPath);
 	delete process.env.HERDR_TEST_CAPTURE;
+	delete process.env.TMUX_TEST_CAPTURE;
 	rmSync(fakeBin, { recursive: true, force: true });
 }
 

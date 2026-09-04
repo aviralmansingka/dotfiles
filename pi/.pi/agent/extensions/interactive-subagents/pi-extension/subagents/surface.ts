@@ -1,5 +1,5 @@
 /**
- * Surface dispatcher — selects between the tmux and Herdr pane surfaces at
+ * Surface dispatcher — selects between the tmux pane and Herdr tab surfaces at
  * module load time, so the rest of the extension (index.ts) stays
  * multiplexer-agnostic and talks to a single surface contract.
  *

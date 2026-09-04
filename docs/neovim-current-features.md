@@ -420,9 +420,9 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 
 - The `pi-interactive-subagents` extension is vendored at `pi/.pi/agent/extensions/interactive-subagents/` and loads via the existing `~/.pi/agent/extensions` symlink; it is a dotfiles fork of `amosblomqvist/pi-interactive-subagents`.
 - It adds the `subagent`, `subagent_message`, `subagents_list`, and sub-agent-only `ask_question` tools to pi, plus the bundled `scout`, `researcher`, and `worker` agents (`agents/*.md`).
-- The upstream extension spawns sub-agents in tmux panes. This fork adds a **Herdr surface layer** (`pi-extension/subagents/herdr.ts`) that launches each subagent in a new unfocused tab in the parent workspace, then drives the tab's root pane through the `herdr` CLI; a dispatcher (`surface.ts`) auto-selects Herdr when `HERDR_ENV=1` + `HERDR_PANE_ID` are set and falls back to tmux when `TMUX` is set.
+- Surface behavior and setup are documented in [the extension README](../pi/.pi/agent/extensions/interactive-subagents/README.md).
 - On the captain's host pi runs under Herdr, so the active surface is Herdr; tmux remains available as the fallback for pi sessions started inside `tmux new -A -s pi 'pi'`.
-- Extension deps are pi-runtime peer packages (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`, `@earendil-works/pi-ai`); no global npm installs and no runtime npm install is needed. `interactive-subagents.test.mjs` smoke-loads the surface dispatcher and Herdr detection.
+- Extension deps are pi-runtime peer packages (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`, `@earendil-works/pi-ai`); no global npm installs and no runtime npm install is needed.
 
 ## Notetaking features
 

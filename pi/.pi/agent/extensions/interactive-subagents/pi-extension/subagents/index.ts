@@ -393,7 +393,7 @@ function resolveLaunchBehavior(
  *   2. Default: the inverse of `auto-exit`. Agents that auto-exit are
  *      autonomous (scout, researcher) and the parent session should be
  *      woken on stall/recovery transitions. Agents that don't auto-exit are
- *      driven by the user in their own pane (worker) and stall pings are noise.
+ *      driven by the user in their own tab or pane (worker), so stall pings are noise.
  */
 function resolveEffectiveInteractive(
   _params: Static<typeof SubagentParams>,
@@ -636,7 +636,7 @@ function widgetIcon(kind: StatusSnapshot["kind"]): string {
 }
 
 /**
- * Wait long enough for a freshly created pane to finish shell startup.
+ * Wait long enough for a freshly created subagent surface to finish shell startup.
  *
  * Some environments do extra shell-init work before the prompt is ready
  * (for example direnv/devenv), so the delay is configurable for users who hit
@@ -744,7 +744,7 @@ interface SubagentResult {
   exitCode: number;
   elapsed: number;
   error?: string;
-  /** True when the multiplexer pane disappeared before the completion sentinel. */
+  /** True when the multiplexer surface disappeared before the completion sentinel. */
   killed?: boolean;
   /** Provider/agent error message when auto-retry exhausted (overload, rate limit, etc.). */
   errorMessage?: string;
@@ -783,7 +783,7 @@ interface RunningSubagent {
    * When true, status transitions (stalled/recovered) do not wake the parent
    * session via a steer message. The widget still updates locally. Used for
    * long-running agents where the user drives the conversation in the
-   * subagent's pane (e.g. planner).
+   * subagent's tab or pane (e.g. planner).
    */
   interactive: boolean;
 }
@@ -1174,7 +1174,7 @@ function resolveRunningByName(name: string):
 }
 
 /**
- * Type a follow-up message into a running subagent's live pane. Newlines are
+ * Type a follow-up message into a running subagent's terminal. Newlines are
  * collapsed to spaces because each newline submits a turn in the child's TUI
  * editor; a multi-line message would otherwise fire as several partial turns.
  */
@@ -1353,7 +1353,7 @@ function startWidgetRefresh() {
 }
 
 /**
- * Launch a subagent: creates the multiplexer pane, builds the command, and
+ * Launch a subagent: creates the multiplexer surface, builds the command, and
  * sends it. Returns a RunningSubagent — does NOT poll.
  *
  * Call watchSubagent() on the returned object to observe completion.
