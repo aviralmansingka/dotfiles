@@ -23,9 +23,9 @@ import { Type } from "typebox";
 // Where quiz verifies the HEAD (concepts, terminology), run-command verifies
 // the HANDS: the agent presents ONE command with a grounded prediction and the
 // user runs it. Two capture paths share the panel:
-//   - Manual: `y` yanks the command to the clipboard; the user runs it in their
-//     own terminal, returns, types/pastes output into the response field (Tab
-//     to focus), and submits. The agent never executes the command — the user
+//   - Manual: `y` yanks the command to the clipboard and focuses the response
+//     field; the user runs it in their own terminal, returns, types/pastes
+//     output, and submits. The agent never executes the command — the user
 //     types everything, which is the point.
 //   - Auto: `r` opens a Neovim `:term dm` pane, runs the command there, and
 //     captures output + exit status back into the grading flow (see
@@ -586,7 +586,7 @@ async function askRunCommand(
 					top.push("");
 					addWrapped(
 						top,
-						theme.fg("dim", "y — copy · r — run in Neovim :term dm and auto-capture · paste output below"),
+						theme.fg("dim", "y — copy and focus output · r — run in Neovim :term dm and auto-capture"),
 						tw,
 						" ",
 					);
@@ -641,8 +641,10 @@ async function askRunCommand(
 						return;
 					}
 
-					// Unfocused: y yanks the command as-is, r runs it via Neovim, Tab focuses the field.
+					// Unfocused: y yanks and focuses output, r runs via Neovim, Tab only focuses.
 					if (data === "y") {
+						focus = "editor";
+						editor.focused = true;
 						copyToClipboard(command)
 							.then(() => {
 								copied = true;
