@@ -173,9 +173,10 @@ function getAgentConfigDir(): string {
 // `getToolExtensionPath` otherwise only knows a closed set of tool names. Other
 // pi extensions that bundle a tool for subagents (e.g. a project-local
 // extension exposing a bespoke tool) register its name → extension-file path
-// here at load/session_start time so a child process can be launched with
-// `--no-extensions` + an explicit `-e <path>` for it. Mirrors the legacy
-// `subagents` extension's `registerToolExtension` hook.
+// here at load/session_start time so a child process can explicitly `-e <path>`
+// for tools that are not already discoverable by the child's normal extension
+// loading. Mirrors the legacy `subagents` extension's `registerToolExtension`
+// hook.
 const EXTRA_TOOL_EXTENSIONS = new Map<string, string>();
 
 /** Register (or re-register) a custom tool's backing extension file. */
@@ -205,8 +206,9 @@ export function registerToolExtension(name: string, extensionPath: string): void
 
 /**
  * Map a custom (non-built-in) tool name to the pi-extension file that
- * registers it. Used to build the child's `--extension` whitelist after
- * `--no-extensions` disables global discovery. Returns undefined for built-in
+ * registers it. The child now keeps normal extension discovery enabled, but
+ * explicit `-e` entries are still needed for helper tools outside discovered
+ * extension locations (for example safe_bash). Returns undefined for built-in
  * tools and for unknown names (which simply won't be granted).
  */
 function getToolExtensionPath(tool: string): string | undefined {
@@ -970,8 +972,9 @@ function buildSubagentToolAllowlist(
 
 /**
  * Apply a loadout snapshot's sandbox to a pi command's `parts` array: model,
- * identity (system prompt), and the default-deny tool/extension restriction
- * (`--no-extensions` + `--tools` + one `-e` per tool-backing extension).
+ * identity (system prompt), and the tool allowlist (`--tools` plus one explicit
+ * `-e` per non-discovered helper extension). Normal extension discovery stays
+ * enabled so subagents inherit the user's configured extensions.
  *
  * This is the single source of truth for reconstructing a subagent's sandbox,
  * used both by the initial `launchSubagent` and by the `subagent_message`
@@ -1004,11 +1007,10 @@ function applySandboxToParts(
     parts.push(flag, shellEscape(spPath));
   }
 
-  // Default-deny: disable global extension discovery and re-enable only the
-  // extensions backing the whitelisted tools. A null allowlist means the spawn
-  // was intentionally unrestricted (e.g. a fork clone) and is replayed as-is.
+  // Keep global/project/package extension discovery enabled; --tools only
+  // limits what the model may call. A null allowlist means the spawn was
+  // intentionally unrestricted (e.g. a fork clone) and is replayed as-is.
   if (loadout.toolAllowlist) {
-    parts.push("--no-extensions");
     parts.push("--tools", shellEscape(loadout.toolAllowlist));
 
     const extPaths = new Set<string>();
@@ -1487,15 +1489,15 @@ async function launchSubagent(
       ? localAgentDir
       : process.env.PI_CODING_AGENT_DIR ?? null;
 
-  // Default-deny model: when an agent restricts its tools (or is granted the
-  // spawning toolset), we disable global extension discovery and re-enable only
-  // the extensions backing the whitelisted tools. Bare/fork spawns with no tool
-  // restriction keep their full default toolset and all global extensions.
+  // When an agent restricts its tools (or is granted the spawning toolset), we
+  // still let pi load the user's configured extensions. --tools limits callable
+  // tools; explicit -e entries cover helper tools outside normal discovery.
+  // Bare/fork spawns with no tool restriction keep their full default toolset.
   const toolAllowlist = buildSubagentToolAllowlist(effectiveTools, { grantSpawning });
 
   // Snapshot the fully-resolved sandbox beside the session file so a later
-  // `subagent_message({ name })` resume can replay the exact same
-  // restriction instead of relaunching pi with all global extensions + tools.
+  // `subagent_message({ name })` resume can replay the exact same model,
+  // identity, cwd, spawn allowlist, and callable-tool restriction.
   const loadout: SubagentLoadout = {
     agent: params.agent ?? null,
     toolAllowlist,
@@ -1510,8 +1512,8 @@ async function launchSubagent(
   };
   writeSubagentLoadout(subagentSessionFile, loadout);
 
-  // Apply model, identity, and the default-deny tool/extension restriction via
-  // the shared helper (same code path resume uses — they can't drift).
+  // Apply model, identity, and the tool allowlist via the shared helper (same
+  // code path resume uses — they can't drift).
   applySandboxToParts(parts, loadout, { artifactDir, name: params.name });
 
   // Build env prefix: subagent identity + config dir propagation + spawn allowlist
@@ -1835,8 +1837,8 @@ export default function subagentsExtension(pi: ExtensionAPI) {
 
   // The spawning tools are always registered here. Whether a child process can
   // actually see/use them is governed by the parent's `--tools` allowlist and
-  // by which extensions are loaded into the child (default-deny --no-extensions
-  // + explicit -e). See launchSubagent().
+  // the child's inherited extension discovery plus explicit helper `-e` entries.
+  // See launchSubagent().
 
   // ── subagent tool ──
   pi.registerTool({
@@ -2310,14 +2312,15 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         }
 
         // Reconstruct the sandbox from the snapshot written at spawn time.
-        // Without it we cannot safely resume: relaunching bare would load every
-        // global extension + the full toolset. Refuse rather than escalate.
+        // Without it we cannot safely resume: relaunching bare would keep normal
+        // extension discovery but lose the model, spawn allowlist, and callable
+        // tool restriction. Refuse rather than escalate.
         const loadout = readSubagentLoadout(sessionPath);
         if (!loadout) {
           const err =
             `Cannot safely resume "${requestedName}": no sandbox snapshot found for this session ` +
             `(it predates sandboxed resume, or its .loadout.json sidecar was removed). ` +
-            `Resuming would relaunch with all global extensions and the full toolset, so this is refused. ` +
+            `Resuming would relaunch without the original tool/model restrictions, so this is refused. ` +
             `Re-run the task as a fresh subagent instead.`;
           return { content: [{ type: "text" as const, text: err }], details: { error: err } };
         }
@@ -2344,7 +2347,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         const activityFile = getSubagentActivityFile(artifactDir, id);
         mkdirSync(dirname(activityFile), { recursive: true });
 
-        // Replay the model, identity, and default-deny tool/extension sandbox.
+        // Replay the model, identity, and tool allowlist sandbox.
         applySandboxToParts(parts, loadout, { artifactDir, name });
 
         let resumeMsgFile: string | undefined;

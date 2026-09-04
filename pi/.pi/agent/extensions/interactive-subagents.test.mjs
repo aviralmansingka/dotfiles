@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 
@@ -83,5 +83,21 @@ assert.deepEqual(interpretExitSidecar({ type: "error" }), {
 	errorMessage: "Subagent exited with stopReason=error (no errorMessage in sidecar).",
 });
 assert.deepEqual(interpretExitSidecar({}), { reason: "done", exitCode: 0 });
+
+// --- Subagent launch sandbox keeps extension discovery enabled ---
+const subagentSource = readFileSync(
+	new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url),
+	"utf8",
+);
+assert.equal(
+	subagentSource.includes('parts.push("--no-extensions")'),
+	false,
+	"subagent launches should inherit normal extension discovery",
+);
+assert.match(
+	subagentSource,
+	/parts\.push\("--tools", shellEscape\(loadout\.toolAllowlist\)\)/,
+	"tool restrictions should still be applied with --tools",
+);
 
 console.log("interactive-subagents surface smoke passed");
