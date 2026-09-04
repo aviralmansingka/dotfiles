@@ -8,6 +8,7 @@ __pycache__/
 pi/.pi/agent/extensions/tool-call-renderer-thinking-prototype.html
 
 git/.config/lazygit/state.yml
+hunk/.config/hunk/state.json
 
 aws/.aws/cli
 aws/.aws/credentials

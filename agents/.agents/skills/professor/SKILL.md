@@ -7,7 +7,7 @@ description:
   or codebase — or mentions "professor", "teach me", or "tutor". The professor
   first holds a short, adaptive conversation to turn the rough request into one
   concrete, observable learning goal, then probes, plans, and teaches toward it
-  through quizzes, guided commands, explanations, and code fixes.
+  through quizzes, guided commands, explanations, and visual code review.
 ---
 
 # professor
@@ -281,7 +281,7 @@ step toward the goal), run:
 3. **Connect.** Make the dependency edge explicit — show exactly how this new
    node hangs off the ones already in place, so it's understood, not memorized.
 4. **Verify.** Confirm the node actually landed with one of the three
-   interaction types below — `quiz`, run-command, or fix-code — picked per node.
+   interaction types below — `quiz`, `explain`, or `run-command` — picked per node.
    This applies to foundations just as much as derived steps. An unconfirmed
    unconditional truth is exactly as dangerous as an unconfirmed derived fact:
    if he misses it, that node isn't solid, so stop and fix it before building
@@ -300,16 +300,15 @@ that's the whole point.
 
 ## Interaction types
 
-Four instruments, in a deliberate hierarchy of confidence. When you are **not
-confident where he is**, use quiz — options let you map the edge cheaply and
-diagnose which misconception he holds by which distractor he picks. When you are
-**somewhat comfortable** with where he sits, use explain — prose in his own
-words forces him to produce the concept and the terminology, not just recognize
-it. Reserve run-command and fix-code for the **Teach loop proper**, where the
-hands-on work lives. Most of Probe is quiz, with some explain; Teach mixes all
-four per node.
-
-### quiz
+Three assessment instruments and one visual review canvas serve different jobs.
+When you are **not confident where he is**, use quiz — options let you map the
+edge cheaply and diagnose which misconception he holds by which distractor he
+picks. When you are **somewhat comfortable** with where he sits, use explain —
+prose in his own words forces him to produce the concept and the terminology,
+not just recognize it. Reserve run-command for the **Teach loop proper**, where
+the hands-on work lives. Use Hunk when inspecting the learner's actual code
+changes makes the concept concrete. Most of Probe is quiz, with some explain;
+Teach mixes the assessment instruments per node and opens Hunk when useful.
 
 ### quiz
 
@@ -358,19 +357,28 @@ without output is data too (nothing to paste, or something went wrong on his
 side), not disobedience. Predictions live inside this interaction (the tool's
 `prediction` parameter), not in a separate step.
 
-### fix-code
-
-Hand the human a broken artifact — a code file, a ruleset, a config, a command
-sequence — plus a check command. Success = the check passes (Rustlings-style).
-The teacher only sees the check output, so grading is objective. Works for
-command topics too: "make `nft list ruleset` show X."
-
-**Command-based verifies are not self-sufficient.** run-command and fix-code
-prove the hands, not the head. Follow them with quiz or explain as needed to
-cement the concept — explain is the stronger follow-up here, since it forces him
-to name the construct in his own words: the ruleset loads, but can he say which
+**Command-based verifies are not self-sufficient.** run-command proves the
+hands, not the head. Follow it with quiz or explain as needed to cement the
+concept — explain is the stronger follow-up here, since it forces him to name
+the construct in his own words: the ruleset loads, but can he say which
 netfilter hook it attached to and why that hook? Kernel-level understanding
 lives in that follow-up.
+
+### Hunk
+
+Visual change inspection — delivered through the **`hunk_open` extension
+tool** (`pi/.pi/agent/extensions/hunk-open.ts`). It opens or focuses Hunk in a
+sibling pane and defaults to a watched working-tree diff. Use it when the
+learner should inspect the exact code they wrote, connect a diagnosis to a
+changed line, or discuss review feedback in context.
+
+Hunk is a canvas, not an assessment result: seeing a diff does not prove that a
+concept landed. Ask the learner to explain the relevant change, then use `quiz`
+or `explain` to verify understanding. The learner remains the author; never edit
+or apply code for them through Hunk.
+
+Opening Hunk never starts a reviewer. Do not launch `hunk-review` during normal
+lesson flow; review is a separate workflow that the learner triggers explicitly.
 
 ## Core principles
 
@@ -506,11 +514,10 @@ terminology. Don't offer to wrap up early.
 
 ### Instrument routing
 
-- **quiz**, **explain**, and **run-command** are extension tools — always invoke
-  them as tools, never simulate them in chat.
-- **fix-code** is still a skill convention (hand him the artifact path + check
-  command in chat) until its extension exists; the oracle is still the check
-  command's exit, not your judgment.
+- **quiz**, **explain**, **run-command**, and **hunk_open** are tools. Always
+  invoke them as tools; never simulate them in chat.
+- `hunk_open` only opens or focuses the review canvas. It never launches a
+  reviewer or applies changes.
 
 ## Session protocol
 
@@ -535,8 +542,6 @@ sessions:
 
 - **Failed run-command** — retry the command, or drop to quiz to diagnose the
   misconception first.
-- **fix-code follow-up style** — quiz debugging reasoning ("why did that fix
-  work?") vs. prediction ("what will the check output now?").
 
 ## What this skill does not do
 

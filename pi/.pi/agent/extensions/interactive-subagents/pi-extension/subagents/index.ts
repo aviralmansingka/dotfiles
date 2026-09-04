@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { keyHint } from "@earendil-works/pi-coding-agent";
+import { defineTool, keyHint } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "@earendil-works/pi-ai";
 import { Box, Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { dirname, join, resolve } from "node:path";
@@ -67,6 +67,7 @@ import {
   noMistakesWidgetStatus,
   type NoMistakesActivity,
 } from "./no-mistakes.ts";
+import { registerHunkReviewCommand } from "./hunk-review-command.mjs";
 
 /** Absolute path to `pi-extension/subagents`. https://github.com/nodejs/node/issues/37845 */
 const SUBAGENTS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -1920,7 +1921,9 @@ export default function subagentsExtension(pi: ExtensionAPI) {
   // See launchSubagent().
 
   // ── subagent tool ──
-  pi.registerTool({
+  // Keep the definition callable so explicit slash commands can launch through
+  // the exact same validation, registry, watcher, and completion-steer path.
+  const subagentTool = defineTool({
       name: "subagent",
       label: "Subagent",
       description:
@@ -2206,6 +2209,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         return new Text(theme.fg("dim", text), 0, 0);
       },
     });
+  pi.registerTool(subagentTool);
 
   // ── subagents_list tool ──
   pi.registerTool({
@@ -2584,6 +2588,12 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         });
       },
     });
+
+  // Launch directly through the same tool implementation so this command does
+  // not depend on another model turn choosing to call the subagent tool.
+  registerHunkReviewCommand(pi, (params, ctx) =>
+    subagentTool.execute("", params, undefined, undefined, ctx),
+  );
 
   // /subagent command — spawn a subagent by name
   pi.registerCommand("subagent", {

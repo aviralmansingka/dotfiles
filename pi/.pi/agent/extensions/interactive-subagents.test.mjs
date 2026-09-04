@@ -224,7 +224,7 @@ const professorProfile = readFileSync(
 );
 assert.match(professorProfile, /^name: professor$/m);
 assert.match(professorProfile, /^skills: professor$/m);
-assert.match(professorProfile, /^subagent_agents: researcher$/m);
+assert.match(professorProfile, /^subagent_agents: researcher, hunk-review$/m);
 assert.match(professorProfile, /^auto-exit: false$/m);
 for (const tool of [
 	"ask_user_question",
