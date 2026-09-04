@@ -148,11 +148,11 @@ execution workflow. Neovim's `<leader>vf` picker remains a read-only navigation 
 
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
-Install/update Pi packages from the checked-in manifest:
+Install/update Pi packages and the local web-fetch dependencies:
 
 ```sh
-cd ~/.pi/agent/npm
-npm install
+cd ~/.pi/agent/npm && npm install
+cd ~/.pi/agent/extensions/web-fetch && npm ci --ignore-scripts
 ```
 
 Pi's read-only No Mistakes timeline polls `no-mistakes axi status` and displays the nine AXI phases below the editor when the current repository has a run. Use `/no-mistakes-timeline` to toggle it, or pass `on`, `off`, or `refresh`; the widget stays hidden when no run exists.

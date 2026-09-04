@@ -107,6 +107,10 @@ if command -v omarchy >/dev/null 2>&1; then
     stow -d "$DOTFILES_DIR" -t "$HOME" omarchy
 fi
 
+echo "==> Installing Pi extension dependencies"
+npm ci --ignore-scripts --no-fund --no-audit \
+    --prefix "$DOTFILES_DIR/pi/.pi/agent/extensions/web-fetch"
+
 echo "==> Installing gh-dash extension"
 if command -v gh >/dev/null 2>&1; then
     gh extension install dlvhdr/gh-dash 2>/dev/null || true
