@@ -97,6 +97,24 @@ const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 		],
 	})[0].preview, "❌ 1 · ⚠️ 1 · ℹ️ 1 · 🔎 2");
 
+	const escapedFinding = parseNoMistakesStatus([
+		"run:",
+		"  status: running",
+		"  gate: review",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,awaiting,1,1000",
+		"  findings[1]{id,severity,file,action,description}:",
+		'    r1,error,src/a.ts,auto-fix,"The \\"run,respond\\" aliases bypass checks"',
+	].join("\n"));
+	assert.ok(escapedFinding);
+	assert.deepEqual(escapedFinding.reviewFindings, [{
+		id: "r1",
+		severity: "error",
+		file: "src/a.ts",
+		description: 'The "run,respond" aliases bypass checks',
+	}]);
+	assert.equal(phaseProgress(escapedFinding)[0].preview, "❌ 1");
+
 	assert.equal(parseNoMistakesStatus("current_branch: main\nruns_on_current_branch: 0"), undefined);
 	assert.equal(isObservableNoMistakesRun({ ...snapshot, status: "passed" }), false);
 }

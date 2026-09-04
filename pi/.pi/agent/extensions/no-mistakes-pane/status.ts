@@ -58,13 +58,11 @@ function splitRow(row: string): string[] {
 	let quoted = false;
 	for (let index = 0; index < row.length; index++) {
 		const character = row[index]!;
-		if (character === '"') {
-			if (quoted && row[index + 1] === '"') {
-				value += '"';
-				index++;
-			} else {
-				quoted = !quoted;
-			}
+		if (quoted && character === "\\" && index + 1 < row.length) {
+			value += character + row[++index]!;
+		} else if (character === '"') {
+			quoted = !quoted;
+			value += character;
 		} else if (character === "," && !quoted) {
 			values.push(value.trim());
 			value = "";
