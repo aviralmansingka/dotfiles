@@ -22,9 +22,11 @@ cd ${HOME}/dotfiles/
 ./install.sh
 ```
 
-The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, and installs Neovim via `bob`.
+The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, installs
+Neovim via `bob`, and installs the pinned Full Herdr Annotate plugin. It stops if the plugin's TUI executable is
+unavailable.
 
-For manual installation:
+For manual package and configuration deployment (excluding installer-managed integrations and plugins):
 
 ```sh
 brew bundle
@@ -44,7 +46,7 @@ On Omarchy systems, deploy the user Omarchy theme overrides with:
 stow omarchy
 ```
 
-For a minimal setup without agent tooling, omit `agents` and `pi`.
+For a minimal stow deployment without agent configuration, omit `agents` and `pi`.
 
 ### Option B: AWS Devbox
 
@@ -108,6 +110,18 @@ terraform -chdir=ops/devbox destroy \
 The stowed gh-dash config resolves `owner/repo` to `/Users/aviral/:repo`. In the pull-request view, press `O` to
 check out the selected PR as `pr/<number>` in a Herdr worktree, focus it, and start tuicr in the new worktree.
 Pressing `O` again focuses the existing workflow-owned worktree; a conflicting local branch is left untouched.
+
+## Herdr Annotate pilot
+
+The stowed Herdr configuration provides the Full Annotate workflows installed by `./install.sh`:
+
+| Key              | Action                                |
+| ---------------- | ------------------------------------- |
+| `prefix+a`       | Annotate terminal text                |
+| `prefix+Shift+a` | Copy annotations as agent context     |
+| `prefix+m`       | Manage annotations                    |
+| `prefix+o`       | Review Markdown in the current folder |
+| `prefix+Shift+o` | Review the last agent reply           |
 
 ## Herdr server handoff
 
