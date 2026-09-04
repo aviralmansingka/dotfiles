@@ -18,15 +18,20 @@ esac
 
 branch="pr/$pr"
 branch_ref="refs/heads/$branch"
-pr_ref="refs/remotes/gh-dash/pull/$pr"
+repo_id=$(printf '%s' "$repo_name" | git -C "$repo" hash-object --stdin)
+pr_ref="refs/remotes/gh-dash/$repo_id/pull/$pr"
 owner_key="branch.$branch.ghDashPr"
 owner="$repo_name#$pr"
 branch_oid=$(git -C "$repo" rev-parse --verify "$branch_ref" 2>/dev/null || true)
 old_pr_oid=$(git -C "$repo" rev-parse --verify "$pr_ref" 2>/dev/null || true)
 configured_owner=$(git -C "$repo" config --local --get "$owner_key" 2>/dev/null || true)
+if [ -n "$configured_owner" ] && [ "$configured_owner" != "$owner" ]; then
+  printf 'Branch %s belongs to %s, not %s\n' "$branch" "$configured_owner" "$owner" >&2
+  exit 1
+fi
 owned=false
 if [ "$configured_owner" = "$owner" ] ||
-   { [ -n "$branch_oid" ] && [ "$branch_oid" = "$old_pr_oid" ]; }; then
+   { [ -z "$configured_owner" ] && [ -n "$branch_oid" ] && [ "$branch_oid" = "$old_pr_oid" ]; }; then
   owned=true
 fi
 
