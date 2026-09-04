@@ -86,9 +86,9 @@ const { createJiti } = require(jitiPath);
 const piTuiEntry = require.resolve("@earendil-works/pi-tui", { paths: [piPackageDir] });
 const jiti = createJiti(import.meta.url, {
 	alias: {
-		"@earendil-works/pi-coding-agent": join(piPackageDir, "dist", "index.js"),
+		"@earendil-works/pi-coding-agent": join(interactiveDir, "components", "keybinding-hints.js"),
 		"@earendil-works/pi-tui": piTuiEntry,
-		"@mariozechner/pi-coding-agent": join(piPackageDir, "dist", "index.js"),
+		"@mariozechner/pi-coding-agent": join(interactiveDir, "components", "keybinding-hints.js"),
 		"@mariozechner/pi-tui": piTuiEntry,
 	},
 });
@@ -232,6 +232,10 @@ const failedComponent = {
 controller.toolUpdated(failedComponent);
 assert.ok(failedComponent.rendererState[bridgeKey], "failed pipeline phase data enables connected rendering");
 failedComponent.rendererState[bridgeKey].outputMode = "expanded";
+globalThis[Symbol.for("@earendil-works/pi-coding-agent:theme")] = {
+	fg: (_role, text) => text,
+	bold: (text) => text,
+};
 const failedLines = controller.renderTool(failedComponent, 120).join("\n");
 assert.ok(failedLines.includes("review"), "expanded failed pipeline renders phase rows");
 assert.ok(failedLines.includes("RAW FAILURE OUTPUT"), "expanded failed pipeline retains raw output");

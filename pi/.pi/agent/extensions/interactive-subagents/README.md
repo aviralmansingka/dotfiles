@@ -170,7 +170,18 @@ The widget tracks each sub-agent from a runtime activity snapshot written by the
 
 If a Herdr tab or tmux pane is closed before its completion sentinel appears, the run is marked failed instead of stalling forever. The parent receives a steer prompt asking whether to resume the saved session, launch a fresh sub-agent, or ignore it.
 
-The same widget also shows an active No Mistakes pipeline when the sibling `no-mistakes-pane.ts` extension is loaded. Its compact row shows only the current phase, phase wall-clock elapsed time, and total wall-clock elapsed time; review findings appear below it as `❌` errors, `⚠️` warnings, or `ℹ️` notes. The current branch is omitted because the pipeline belongs to this session. For a `no_mistakes_axi` call whose cwd matches the Pi session cwd, the observer only polls `no-mistakes axi status`: no-mistakes continues to own execution, gates, and its attached Herdr TUI. Expand that tool row with `Ctrl+O` to see all pipeline phases in the parent trace. Calls with an explicit foreign cwd retain native output and do not trigger status polling or activity publication.
+The same widget shows an active No Mistakes pipeline when the sibling `no-mistakes-pane.ts` extension is
+loaded. Its compact row omits the branch and shows the current (or synthetic `starting`/`merge`) phase,
+phase wall-clock time, and total wall-clock time. Below it, every explicit `error`, `warning`, or `info`
+review finding appears with `❌`, `⚠️`, or `ℹ️`; unknown severities and count-only findings are omitted.
+The widget is hidden when status reports no run or a terminal run.
+
+For `no_mistakes_axi run` and `respond` calls whose cwd matches the Pi session cwd, a read-only observer
+polls `no-mistakes axi status`; No Mistakes still owns execution and gates, with `no-mistakes attach` in
+the adjacent Herdr pane and the existing pane/inline fallbacks. A valid AXI run ID matching the invocation
+is required before phase progress is attached. With matched phase data, `Ctrl+O` expands all phases; failed
+calls also retain their raw error output. Without matched phase data, or for calls targeting another cwd,
+the native tool output remains and that call does not trigger status polling or activity publication.
 
 Status display is configured via `config.json` in the extension directory (copy `config.json.example`; it's gitignored):
 
