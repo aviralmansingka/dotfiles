@@ -1,6 +1,10 @@
 ---
 name: nvimr
-description: Drive a running neovim session over its RPC socket — list nvim sessions in Herdr panes, open files, jump to lines, read buffers, get diagnostics, run ex commands. Use when the user asks to do something in their editor, open/navigate files, check diagnostics, or says "in my editor" / "in neovim". Herdr-aware: discovers nvim by pane and lets you target a specific pane.
+description: >-
+  Drive a running Neovim session over its RPC socket: list sessions in Herdr
+  panes, open files, jump to lines, read buffers, get diagnostics, and run Ex
+  commands. Use when the user asks to inspect or control an existing editor,
+  check editor diagnostics, or says "in my editor" or "in Neovim".
 ---
 
 # nvimr — neovim remote control
