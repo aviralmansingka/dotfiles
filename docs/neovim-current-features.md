@@ -419,8 +419,9 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 ### Interactive subagents (pi extension)
 
 - The `pi-interactive-subagents` extension is vendored at `pi/.pi/agent/extensions/interactive-subagents/` and loads via the existing `~/.pi/agent/extensions` symlink; it is a dotfiles fork of `amosblomqvist/pi-interactive-subagents`.
-- It adds the `subagent`, `subagent_message`, `subagents_list`, and sub-agent-only `ask_question` tools to pi, plus the bundled `scout`, `researcher`, and `worker` agents (`agents/*.md`).
-- This fork supports Herdr and tmux; see the [extension README](../pi/.pi/agent/extensions/interactive-subagents/README.md#how-it-works) for launch, naming, and fallback behavior.
+- It provides asynchronous subagent orchestration, bundled agent profiles, and the explicit `/hunk-review` workflow; see
+  the [extension README](../pi/.pi/agent/extensions/interactive-subagents/README.md#how-it-works) for the authoritative
+  tool, agent, launch, naming, and fallback behavior.
 - On the captain's host pi runs under Herdr; tmux remains available as a fallback.
 - Extension deps are pi-runtime peer packages (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`, `@earendil-works/pi-ai`); no global npm installs and no runtime npm install is needed. `interactive-subagents.test.mjs` smoke-loads the surface dispatcher and Herdr detection.
 
