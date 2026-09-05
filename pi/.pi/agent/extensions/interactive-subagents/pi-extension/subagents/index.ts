@@ -17,9 +17,12 @@ import { homedir } from "node:os";
 import {
   isMuxAvailable,
   muxSetupHint,
+  activeSurface,
   withNewSurface,
   sendCommand,
   sendLongCommand,
+  waitForAgentReady,
+  sendAgentPrompt,
   pollForExit,
   closeSurface,
   shellEscape,
@@ -1430,9 +1433,10 @@ async function launchSubagentOnSurface(
       cmdParts.push("--append-system-prompt", shellEscape(sp));
     }
 
-    // Always pass the task as the prompt — even for resumed sessions,
-    // the caller's task is the follow-up instruction.
-    cmdParts.push(shellEscape(params.task));
+    // Herdr launches the CLI first and submits the task only after native agent
+    // detection reports an interactive prompt. Tmux retains its positional prompt.
+    const promptAfterStartup = activeSurface === "herdr";
+    if (!promptAfterStartup) cmdParts.push(shellEscape(params.task));
 
     const cdPrefix = effectiveCwd ? `cd ${shellEscape(effectiveCwd)} && ` : "";
     const command = `${cdPrefix}${cmdParts.join(" ")}; echo '__SUBAGENT_DONE_'$?'__'`;
@@ -1453,6 +1457,10 @@ async function launchSubagentOnSurface(
         `# Surface: ${surface}`,
       ].join("\n"),
     });
+    if (promptAfterStartup) {
+      await waitForAgentReady(surface);
+      sendAgentPrompt(surface, params.task);
+    }
 
     const running: RunningSubagent = {
       id,
@@ -1566,12 +1574,14 @@ async function launchSubagentOnSurface(
     taskArg = `@${artifactPath}`;
   }
 
-  for (const promptArg of buildPiPromptArgs({
+  const promptArgs = buildPiPromptArgs({
     effectiveSkills,
     taskDelivery: launchBehavior.taskDelivery,
     taskArg,
-  })) {
-    parts.push(shellEscape(promptArg));
+  });
+  const promptAfterStartup = activeSurface === "herdr";
+  if (!promptAfterStartup) {
+    for (const promptArg of promptArgs) parts.push(shellEscape(promptArg));
   }
 
   // Resolve cwd — param overrides agent default, supports absolute and relative paths.
@@ -1596,6 +1606,12 @@ async function launchSubagentOnSurface(
       `# Surface: ${surface}`,
     ].join("\n"),
   });
+  if (promptAfterStartup) {
+    await waitForAgentReady(surface);
+    for (const promptArg of promptArgs) {
+      if (promptArg) sendAgentPrompt(surface, promptArg);
+    }
+  }
 
   const running: RunningSubagent = {
     id,
@@ -1871,14 +1887,14 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       label: "Subagent",
       description:
         "Spawn a sub-agent in a dedicated Herdr tab or tmux pane. " +
-        "This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
+        "This is a fire-and-forget async tool: the call returns after the child is ready and its task is submitted, with only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
         "DO NOT fabricate, assume, or summarize results after calling this tool. " +
         "After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
       promptSnippet:
         "Spawn a sub-agent in a dedicated Herdr tab or tmux pane. " +
-        "This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
+        "This is a fire-and-forget async tool: the call returns after the child is ready and its task is submitted, with only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
         "DO NOT fabricate, assume, or summarize results after calling this tool. " +
@@ -2219,12 +2235,12 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         "if it has finished, your message resumes that session and continues it. " +
         "`name` and `message` are both required. " +
         "Steering a running subagent returns immediately with a local acknowledgement and does NOT, by itself, emit a new result. " +
-        "Resuming is a fire-and-forget async call: when the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up. " +
+        "Resuming waits for the child to become ready and submit the follow-up, then returns; when the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up. " +
         "DO NOT poll, sleep, tail logs, or read session files to detect completion — the harness handles delivery. " +
         "DO NOT fabricate or assume results. After calling, either end your turn or work on other independent tasks.",
       promptSnippet:
         "Message a subagent by name: steers it if running, resumes it if finished (same name either way). " +
-        "`name` and `message` are required. Steering returns immediately; resuming delivers its result later as a steer message. " +
+        "`name` and `message` are required. Steering returns immediately; resuming returns after startup and delivers its result later as a steer message. " +
         "Do not poll or fabricate results.",
       parameters: Type.Object({
         name: Type.String({
@@ -2388,7 +2404,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           );
           mkdirSync(dirname(resumeMsgFile), { recursive: true });
           writeFileSync(resumeMsgFile, message, "utf8");
-          parts.push(shellEscape(`@${resumeMsgFile}`));
+          if (activeSurface !== "herdr") parts.push(shellEscape(`@${resumeMsgFile}`));
         }
 
         // Build env prefix — replay the snapshot's config dir + spawn whitelist
@@ -2439,6 +2455,10 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             ...(resumeMsgFile ? [`# Resume message file: ${resumeMsgFile}`] : []),
           ].join("\n"),
         });
+        if (activeSurface === "herdr") {
+          await waitForAgentReady(surface);
+          if (resumeMsgFile) sendAgentPrompt(surface, `@${resumeMsgFile}`);
+        }
 
         // Register as a running subagent for widget tracking
         const running: RunningSubagent = {

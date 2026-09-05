@@ -149,14 +149,51 @@ export function createSurfaceSplit(
 }
 
 /**
- * Send a command string to a pane and execute it.
- * `herdr pane send-text` sends literal text (the tmux `send-keys -l` analogue),
- * then `herdr pane send-keys Enter` submits it.
+ * Send a command string to a pane and execute it atomically.
+ * `pane run` honors live bracketed-paste mode and submits text plus Enter.
  */
 export function sendCommand(surface: string, command: string): void {
   requireHerdr();
-  execFileSync("herdr", ["pane", "send-text", surface, command], { encoding: "utf8" });
-  execFileSync("herdr", ["pane", "send-keys", surface, "Enter"], { encoding: "utf8" });
+  execFileSync("herdr", ["pane", "run", surface, command], { encoding: "utf8" });
+}
+
+/** Wait until Herdr sees the launched agent at its interactive prompt. */
+export async function waitForAgentReady(surface: string, timeoutMs = 30_000): Promise<void> {
+  requireHerdr();
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    try {
+      const { stdout } = await execFileAsync("herdr", ["agent", "get", surface], {
+        encoding: "utf8",
+      });
+      const status = JSON.parse(stdout)?.result?.agent?.agent_status;
+      if (status === "idle" || status === "done") return;
+      if (status === "blocked") {
+        throw new Error(`Subagent in ${surface} was blocked during startup`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("blocked during startup")) throw error;
+    }
+
+    const screen = await readScreenAsync(surface, 5);
+    const exited = screen.match(/__SUBAGENT_DONE_(\d+)__/);
+    if (exited) {
+      throw new Error(
+        `Subagent in ${surface} exited with code ${exited[1]} before becoming ready`,
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  throw new Error(`Timed out waiting for subagent in ${surface} to become ready`);
+}
+
+/** Submit a prompt only after waitForAgentReady has observed interactive readiness. */
+export function sendAgentPrompt(surface: string, prompt: string): void {
+  requireHerdr();
+  execFileSync("herdr", ["agent", "prompt", surface, prompt], { encoding: "utf8" });
 }
 
 /**

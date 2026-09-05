@@ -48,6 +48,8 @@ for (const name of [
 	"withNewSurface",
 	"sendCommand",
 	"sendLongCommand",
+	"waitForAgentReady",
+	"sendAgentPrompt",
 	"pollForExit",
 	"closeSurface",
 	"shellEscape",
@@ -68,6 +70,7 @@ assert.ok(typeof surface.muxSetupHint() === "string" && surface.muxSetupHint().l
 // --- Herdr surface detection and labeled tab creation ---
 const fakeBin = mkdtempSync(join(tmpdir(), "subagent-herdr-tab-test-"));
 const captureFile = join(fakeBin, "calls");
+const readinessFile = join(fakeBin, "agent-get-count");
 writeFileSync(
 	join(fakeBin, "herdr"),
 	`#!/bin/sh
@@ -76,7 +79,19 @@ printf '%s\\n' --call-- >> "$HERDR_TEST_CAPTURE"
 case "$1:$2" in
 	pane:get) printf '%s\\n' '{"result":{"pane":{"pane_id":"w44:p2","workspace_id":"w44"}}}' ;;
 	tab:create) printf '%s\\n' '{"result":{"root_pane":{"pane_id":"w44:p9"}}}' ;;
-	pane:send-text) [ "$HERDR_TEST_FAIL_SEND" = 1 ] && exit 1; printf '%s\\n' '{"result":{}}' ;;
+	pane:run) [ "$HERDR_TEST_FAIL_SEND" = 1 ] && exit 1; printf '%s\\n' '{"result":{}}' ;;
+	agent:get)
+		count=0
+		[ -f "$HERDR_TEST_READINESS" ] && count=$(cat "$HERDR_TEST_READINESS")
+		count=$((count + 1))
+		printf '%s' "$count" > "$HERDR_TEST_READINESS"
+		if [ "$count" = 1 ]; then
+			printf '%s\\n' '{"result":{"agent":{"agent_status":"unknown"}}}'
+		else
+			printf '%s\\n' '{"result":{"agent":{"agent_status":"idle"}}}'
+		fi
+		;;
+	agent:prompt) printf '%s\\n' '{"result":{}}' ;;
 	*) printf '%s\\n' '{"result":{}}' ;;
 esac
 `,
@@ -90,6 +105,7 @@ process.env.HERDR_ENV = "1";
 process.env.HERDR_PANE_ID = "w44:p2";
 process.env.HERDR_WORKSPACE_ID = "stale-workspace";
 process.env.HERDR_TEST_CAPTURE = captureFile;
+process.env.HERDR_TEST_READINESS = readinessFile;
 process.env.PATH = `${fakeBin}:${savedPath}`;
 const herdr = createJiti(import.meta.url, { moduleCache: false })(
 	"./interactive-subagents/pi-extension/subagents/herdr.ts",
@@ -98,6 +114,9 @@ try {
 	assert.equal(herdr.isHerdrAvailable(), true);
 	const rootPane = herdr.createSurface("auth-review");
 	assert.equal(rootPane, "w44:p9");
+	herdr.sendCommand(rootPane, "pi --session child.jsonl");
+	await herdr.waitForAgentReady(rootPane);
+	herdr.sendAgentPrompt(rootPane, "Implement the fix");
 	herdr.closeSurface(rootPane);
 
 	const calls = readFileSync(captureFile, "utf8")
@@ -110,6 +129,11 @@ try {
 			"tab", "create", "--workspace", "w44", "--cwd", process.cwd(),
 			"--label", "subagent: auth-review", "--no-focus",
 		],
+		["pane", "run", "w44:p9", "pi --session child.jsonl"],
+		["agent", "get", "w44:p9"],
+		["pane", "read", "w44:p9", "--source", "recent", "--lines", "5", "--format", "text"],
+		["agent", "get", "w44:p9"],
+		["agent", "prompt", "w44:p9", "Implement the fix"],
 		["pane", "close", "w44:p9"],
 	]);
 
@@ -131,7 +155,7 @@ try {
 			"tab", "create", "--workspace", "w44", "--cwd", process.cwd(),
 			"--label", "subagent: broken-launch", "--no-focus",
 		],
-		["pane", "send-text", "w44:p9", "false"],
+		["pane", "run", "w44:p9", "false"],
 		["pane", "close", "w44:p9"],
 	]);
 
@@ -144,6 +168,7 @@ try {
 	if (savedWorkspace === undefined) delete process.env.HERDR_WORKSPACE_ID; else process.env.HERDR_WORKSPACE_ID = savedWorkspace;
 	if (savedPath === undefined) delete process.env.PATH; else process.env.PATH = savedPath;
 	delete process.env.HERDR_TEST_CAPTURE;
+	delete process.env.HERDR_TEST_READINESS;
 	delete process.env.HERDR_TEST_FAIL_SEND;
 	rmSync(fakeBin, { recursive: true, force: true });
 }

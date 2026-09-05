@@ -6,7 +6,7 @@ Async subagents for [pi](https://github.com/badlogic/pi-mono), running in dedica
 
 ## How it works
 
-`subagent()` returns immediately. In Herdr, the sub-agent runs in a new unfocused tab in the parent's workspace, labeled `subagent: <name>`; under tmux it runs in a right split off the parent pi pane. A live widget above the input tracks every running sub-agent, and when one finishes, its result is steered into the main session as a notification that triggers a new turn.
+`subagent()` returns after launch. In Herdr, the extension opens a new unfocused tab in the parent's workspace, starts the agent, waits for Herdr to report its interactive prompt ready, and only then submits the task. The tab is labeled `subagent: <name>`. Under tmux, the sub-agent runs in a right split off the parent pi pane. A live widget above the input tracks every running sub-agent, and when one finishes, its result is steered into the main session as a notification that triggers a new turn.
 
 ```
 ╭─ Subagents ──────────────────────────── 2 running ─╮
@@ -63,7 +63,7 @@ subagent_message({ name: "scout", message: "Also check the auth middleware" });
 ```
 
 - **Running** — the message is typed into the live tab or pane (newlines flattened) and picked up at the next turn boundary. The call returns immediately; the eventual completion still arrives as a steer message.
-- **Finished** — the session is resumed with the message as the follow-up task, like a fresh spawn: fire-and-forget, always autonomous, result steered back later. The resumed run reclaims its original name.
+- **Finished** — the session is resumed with the message as the follow-up task, like a fresh spawn: startup is readiness-gated, execution is fire-and-forget and always autonomous, and the result is steered back later. The resumed run reclaims its original name.
 
 Every spawn records name → session file in `artifacts/<sessionId>/subagent-registry.json`, so names stay addressable across pi restarts. A nested sub-agent that spawns children gets its own registry keyed by its own session id. Resume is refused with a clear error (listing known names) if the name isn't registered, the session file is gone, or the session predates sandboxed resume.
 

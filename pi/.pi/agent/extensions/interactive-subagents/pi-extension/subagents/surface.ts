@@ -41,6 +41,16 @@ export const readScreen = surface.readScreen;
 export const readScreenAsync = surface.readScreenAsync;
 export const closeSurface = surface.closeSurface;
 
+/** Herdr can wait for native agent readiness; tmux keeps its existing launch path. */
+export async function waitForAgentReady(surfaceId: string): Promise<void> {
+  if (useHerdr) await herdr.waitForAgentReady(surfaceId);
+}
+
+export function sendAgentPrompt(surfaceId: string, prompt: string): void {
+  if (useHerdr) herdr.sendAgentPrompt(surfaceId, prompt);
+  else tmux.sendCommand(surfaceId, prompt);
+}
+
 export async function withNewSurface<T>(
   name: string,
   use: (surface: string) => Promise<T>,
