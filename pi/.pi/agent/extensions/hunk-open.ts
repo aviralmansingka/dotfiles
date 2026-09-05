@@ -6,6 +6,7 @@ import {
 	hunkPaneCommand,
 	isWatchedHunkProcess,
 	openHunkWithHost,
+	shellQuote,
 } from "./hunk-open-core.mjs";
 
 const COMMAND_TIMEOUT_MS = 5000;
@@ -119,10 +120,6 @@ function focusPane(targetPaneId: string, currentPaneId: string): boolean {
 		}
 	}
 	return false;
-}
-
-function shellQuote(value: string): string {
-	return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function tmuxOpen(cwd: string, args: string[]): boolean {
