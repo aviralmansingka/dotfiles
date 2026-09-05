@@ -168,7 +168,7 @@ export async function waitForAgentReady(surface: string, timeoutMs = 30_000): Pr
         encoding: "utf8",
       });
       const status = JSON.parse(stdout)?.result?.agent?.agent_status;
-      if (status === "idle" || status === "done") return;
+      if (status === "idle") return;
       if (status === "blocked") {
         throw new Error(`Subagent in ${surface} was blocked during startup`);
       }
