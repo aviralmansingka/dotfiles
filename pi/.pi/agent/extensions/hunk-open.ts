@@ -3,8 +3,10 @@ import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import {
+	hunkPaneCommand,
 	isWatchedHunkProcess,
 	openHunkWithHost,
+	shellQuote,
 } from "./hunk-open-core.mjs";
 
 const COMMAND_TIMEOUT_MS = 5000;
@@ -120,10 +122,6 @@ function focusPane(targetPaneId: string, currentPaneId: string): boolean {
 	return false;
 }
 
-function shellQuote(value: string): string {
-	return `'${value.replaceAll("'", "'\\''")}'`;
-}
-
 function tmuxOpen(cwd: string, args: string[]): boolean {
 	const command = ["hunk", ...args].map(shellQuote).join(" ");
 	return commandOk("tmux", ["split-window", "-h", "-c", cwd, command]);
@@ -141,7 +139,7 @@ function launchPane(cwd: string, args: string[]): string | null {
 		"--focus",
 	]) as { result?: { pane?: { pane_id?: string } } } | null;
 	const paneId = split?.result?.pane?.pane_id;
-	if (paneId && commandOk("herdr", ["pane", "run", paneId, "hunk", ...args])) {
+	if (paneId && commandOk("herdr", ["pane", "run", paneId, hunkPaneCommand(paneId, args)])) {
 		commandOk("herdr", ["pane", "rename", paneId, "hunk"]);
 		return paneId;
 	}

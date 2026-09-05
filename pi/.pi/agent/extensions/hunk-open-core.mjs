@@ -1,5 +1,13 @@
 const WATCHED_DIFF_ARGS = ["diff", "--watch"];
 
+export function shellQuote(value) {
+	return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+export function hunkPaneCommand(paneId, args) {
+	return `${["hunk", ...args].map(shellQuote).join(" ")}; herdr pane close ${shellQuote(paneId)}`;
+}
+
 export function isWatchedHunkProcess(process) {
 	const argv = process.argv ?? [];
 	const executable = argv[0]?.split(/[\\/]/).at(-1);
