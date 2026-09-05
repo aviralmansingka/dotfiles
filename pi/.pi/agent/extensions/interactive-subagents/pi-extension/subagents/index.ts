@@ -1574,12 +1574,12 @@ async function launchSubagentOnSurface(
     taskArg = `@${artifactPath}`;
   }
 
+  const promptAfterStartup = activeSurface === "herdr";
   const promptArgs = buildPiPromptArgs({
     effectiveSkills,
-    taskDelivery: launchBehavior.taskDelivery,
-    taskArg,
+    taskDelivery: promptAfterStartup ? "direct" : launchBehavior.taskDelivery,
+    taskArg: promptAfterStartup ? fullTask : taskArg,
   });
-  const promptAfterStartup = activeSurface === "herdr";
   if (!promptAfterStartup) {
     for (const promptArg of promptArgs) parts.push(shellEscape(promptArg));
   }
@@ -2457,7 +2457,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         });
         if (activeSurface === "herdr") {
           await waitForAgentReady(surface);
-          if (resumeMsgFile) sendAgentPrompt(surface, `@${resumeMsgFile}`);
+          if (message) sendAgentPrompt(surface, message);
         }
 
         // Register as a running subagent for widget tracking
