@@ -142,7 +142,7 @@ function launchPane(cwd: string, args: string[]): string | null {
 		"--focus",
 	]) as { result?: { pane?: { pane_id?: string } } } | null;
 	const paneId = split?.result?.pane?.pane_id;
-	if (paneId && commandOk("herdr", ["pane", "run", paneId, ...hunkPaneCommand(paneId, args)])) {
+	if (paneId && commandOk("herdr", ["pane", "run", paneId, hunkPaneCommand(paneId, args)])) {
 		commandOk("herdr", ["pane", "rename", paneId, "hunk"]);
 		return paneId;
 	}
