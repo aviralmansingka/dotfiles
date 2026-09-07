@@ -12,11 +12,12 @@
  * (auto-exit is suppressed for that turn via `awaitingAnswer`), and the parent
  * replies with subagent_message — which lands as the subagent's next turn.
  */
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { stripFrontmatter, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Box, Text } from "@earendil-works/pi-tui";
 import { Type } from "@earendil-works/pi-ai";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createSubagentActivityRecorder } from "./activity.ts";
+import { buildSubagentInitialPrompt } from "./initial-prompt.ts";
 
 export function shouldMarkUserTookOver(agentStarted: boolean): boolean {
   return agentStarted;
@@ -318,6 +319,22 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("session_shutdown", (event) => {
     recorder.sessionShutdown((event as any).reason);
+  });
+
+  pi.registerCommand("interactive-subagent-start", {
+    handler: (args, ctx) => {
+      try {
+        const prompt = buildSubagentInitialPrompt(
+          args,
+          ctx.getSystemPromptOptions().skills ?? [],
+          (skill) => stripFrontmatter(readFileSync(skill.filePath, "utf8")).trim(),
+        );
+        pi.sendUserMessage(prompt);
+      } catch (error) {
+        ctx.shutdown();
+        throw error;
+      }
+    },
   });
 
   // Toggle expand/collapse with Ctrl+Alt+O
