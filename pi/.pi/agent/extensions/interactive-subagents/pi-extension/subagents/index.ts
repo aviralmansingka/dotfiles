@@ -1887,14 +1887,14 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       label: "Subagent",
       description:
         "Spawn a sub-agent in a dedicated Herdr tab or tmux pane. " +
-        "This is a fire-and-forget async tool: the call returns after the child is ready and its task is submitted, with only an acknowledgement. " +
+        "This is a fire-and-forget async tool: Herdr returns after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
         "DO NOT fabricate, assume, or summarize results after calling this tool. " +
         "After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
       promptSnippet:
         "Spawn a sub-agent in a dedicated Herdr tab or tmux pane. " +
-        "This is a fire-and-forget async tool: the call returns after the child is ready and its task is submitted, with only an acknowledgement. " +
+        "This is a fire-and-forget async tool: Herdr returns after the child is ready and its task is submitted; tmux returns after dispatch. The result is only an acknowledgement. " +
         "When the sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
         "DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT call subagents_list or any other tool to 'check' status. All of that is wasted work — the harness handles delivery for you. " +
         "DO NOT fabricate, assume, or summarize results after calling this tool. " +
@@ -2235,12 +2235,12 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         "if it has finished, your message resumes that session and continues it. " +
         "`name` and `message` are both required. " +
         "Steering a running subagent returns immediately with a local acknowledgement and does NOT, by itself, emit a new result. " +
-        "Resuming waits for the child to become ready and submit the follow-up, then returns; when the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up. " +
+        "On Herdr, resuming waits for the child to become ready and submit the follow-up; on tmux, it returns after dispatch. When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up. " +
         "DO NOT poll, sleep, tail logs, or read session files to detect completion — the harness handles delivery. " +
         "DO NOT fabricate or assume results. After calling, either end your turn or work on other independent tasks.",
       promptSnippet:
         "Message a subagent by name: steers it if running, resumes it if finished (same name either way). " +
-        "`name` and `message` are required. Steering returns immediately; resuming returns after startup and delivers its result later as a steer message. " +
+        "`name` and `message` are required. Steering returns immediately; Herdr resumes after readiness, while tmux resumes after dispatch. The result arrives later as a steer message. " +
         "Do not poll or fabricate results.",
       parameters: Type.Object({
         name: Type.String({
