@@ -8,6 +8,7 @@
  */
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
+import { setTimeout as sleep } from "node:timers/promises";
 import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -158,14 +159,20 @@ export function sendCommand(surface: string, command: string): void {
 }
 
 /** Wait until Herdr sees the launched agent at its interactive prompt. */
-export async function waitForAgentReady(surface: string, timeoutMs = 30_000): Promise<void> {
+export async function waitForAgentReady(
+  surface: string,
+  signal?: AbortSignal,
+  timeoutMs = 30_000,
+): Promise<void> {
   requireHerdr();
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
+    signal?.throwIfAborted();
     try {
       const { stdout } = await execFileAsync("herdr", ["agent", "get", surface], {
         encoding: "utf8",
+        signal,
       });
       const status = JSON.parse(stdout)?.result?.agent?.agent_status;
       if (status === "idle") return;
@@ -173,10 +180,11 @@ export async function waitForAgentReady(surface: string, timeoutMs = 30_000): Pr
         throw new Error(`Subagent in ${surface} was blocked during startup`);
       }
     } catch (error) {
+      signal?.throwIfAborted();
       if (error instanceof Error && error.message.includes("blocked during startup")) throw error;
     }
 
-    const screen = await readScreenAsync(surface, 5);
+    const screen = await readScreenAsync(surface, 5, signal);
     const exited = screen.match(/__SUBAGENT_DONE_(\d+)__/);
     if (exited) {
       throw new Error(
@@ -184,7 +192,7 @@ export async function waitForAgentReady(surface: string, timeoutMs = 30_000): Pr
       );
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await sleep(100, undefined, { signal });
   }
 
   throw new Error(`Timed out waiting for subagent in ${surface} to become ready`);
@@ -250,12 +258,16 @@ export function readScreen(surface: string, lines = 50): string {
 /**
  * Read the screen contents of a pane (async).
  */
-export async function readScreenAsync(surface: string, lines = 50): Promise<string> {
+export async function readScreenAsync(
+  surface: string,
+  lines = 50,
+  signal?: AbortSignal,
+): Promise<string> {
   requireHerdr();
   const { stdout } = await execFileAsync(
     "herdr",
     ["pane", "read", surface, "--source", "recent", "--lines", String(Math.max(1, lines)), "--format", "text"],
-    { encoding: "utf8" },
+    { encoding: "utf8", signal },
   );
   return stdout;
 }

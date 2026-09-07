@@ -114,6 +114,11 @@ function getModuleAbortSignal(): AbortSignal {
   return ((globalThis as any)[POLL_ABORT_KEY] as AbortController).signal;
 }
 
+function withModuleAbort(signal?: AbortSignal): AbortSignal {
+  const moduleSignal = getModuleAbortSignal();
+  return signal ? AbortSignal.any([signal, moduleSignal]) : moduleSignal;
+}
+
 const SubagentParams = Type.Object({
   agent: Type.String({
     description:
@@ -1381,14 +1386,16 @@ function startWidgetRefresh() {
 async function launchSubagent(
   params: typeof SubagentParams.static,
   ctx: { sessionManager: { getSessionFile(): string | null; getSessionId(): string; getSessionDir(): string }; cwd: string },
+  signal: AbortSignal,
 ): Promise<RunningSubagent> {
-  return withNewSurface(params.name, (surface) => launchSubagentOnSurface(params, ctx, surface));
+  return withNewSurface(params.name, (surface) => launchSubagentOnSurface(params, ctx, surface, signal));
 }
 
 async function launchSubagentOnSurface(
   params: typeof SubagentParams.static,
   ctx: { sessionManager: { getSessionFile(): string | null; getSessionId(): string; getSessionDir(): string }; cwd: string },
   surface: string,
+  signal: AbortSignal,
 ): Promise<RunningSubagent> {
   const startTime = Date.now();
   const id = Math.random().toString(16).slice(2, 10);
@@ -1496,6 +1503,7 @@ async function launchSubagentOnSurface(
       .replace(/^-|-$/g, "") || "subagent"}-${id}.sh`;
     const launchScriptFile = join(artifactDir, "subagent-scripts", launchScriptName);
 
+    if (promptAfterStartup) signal.throwIfAborted();
     sendLongCommand(surface, command, {
       scriptPath: launchScriptFile,
       scriptPreamble: [
@@ -1505,7 +1513,8 @@ async function launchSubagentOnSurface(
       ].join("\n"),
     });
     if (promptAfterStartup) {
-      await waitForAgentReady(surface);
+      await waitForAgentReady(surface, signal);
+      signal.throwIfAborted();
       sendAgentPrompt(surface, params.task);
     }
 
@@ -1652,6 +1661,7 @@ async function launchSubagentOnSurface(
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "") || "subagent"}-${id}.sh`;
   const launchScriptFile = join(artifactDir, "subagent-scripts", launchScriptName);
+  if (promptAfterStartup) signal.throwIfAborted();
   sendLongCommand(surface, command, {
     scriptPath: launchScriptFile,
     scriptPreamble: [
@@ -1662,7 +1672,8 @@ async function launchSubagentOnSurface(
     ].join("\n"),
   });
   if (readyPrompt) {
-    await waitForAgentReady(surface);
+    await waitForAgentReady(surface, signal);
+    signal.throwIfAborted();
     sendAgentPrompt(surface, readyPrompt);
   }
 
@@ -1954,7 +1965,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         "After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
       parameters: SubagentParams,
 
-      async execute(toolCallId, params, _signal, _onUpdate, ctx) {
+      async execute(toolCallId, params, signal, _onUpdate, ctx) {
         // Prevent self-spawning (e.g. planner spawning another planner)
         const currentAgent = process.env.PI_SUBAGENT_AGENT;
         if (params.agent && currentAgent && params.agent === currentAgent) {
@@ -2050,7 +2061,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         // from then on uniqueRunningName tracks it via the running map.
         let running;
         try {
-          running = await launchSubagent(params, ctx);
+          running = await launchSubagent(params, ctx, withModuleAbort(signal));
         } finally {
           reservedNames.delete(reservedName);
         }
@@ -2345,7 +2356,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         return new Text(theme.fg("dim", text), 0, 0);
       },
 
-      async execute(toolCallId, params, _signal, _onUpdate, ctx) {
+      async execute(toolCallId, params, signal, _onUpdate, ctx) {
         const requestedName = params.name?.trim();
         if (!requestedName) {
           const err = "Provide the subagent's `name` to steer (if running) or resume (if finished).";
@@ -2423,6 +2434,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         // Count lines cheaply (no per-line JSON.parse) so resuming a large
         // transcript doesn't block the UI.
         const entryCountBefore = countSessionEntryLines(sessionPath);
+        const launchSignal = withModuleAbort(signal);
 
         return withNewSurface(name, async (surface) => {
         await new Promise<void>((resolve) => setTimeout(resolve, getShellReadyDelayMs()));
@@ -2498,6 +2510,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             .replace(/-+/g, "-")
             .replace(/^-|-$/g, "") || "resume"}-resume-${Date.now()}.sh`,
         );
+        if (activeSurface === "herdr") launchSignal.throwIfAborted();
         sendLongCommand(surface, command, {
           scriptPath: launchScriptFile,
           scriptPreamble: [
@@ -2509,7 +2522,8 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           ].join("\n"),
         });
         if (activeSurface === "herdr") {
-          await waitForAgentReady(surface);
+          await waitForAgentReady(surface, launchSignal);
+          launchSignal.throwIfAborted();
           if (message) sendAgentPrompt(surface, message);
         }
 

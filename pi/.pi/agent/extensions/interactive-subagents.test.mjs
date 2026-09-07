@@ -197,6 +197,28 @@ try {
 		["pane", "close", "w44:p9"],
 	]);
 
+	const cancelledLaunchOffset = calls.length + failedLaunchCalls.length + startupFailureCalls.length;
+	process.env.HERDR_TEST_STATUS = "unknown";
+	const launchAbort = new AbortController();
+	await assert.rejects(
+		herdrSurface.withNewSurface("cancelled-startup", async (pane) => {
+			herdrSurface.sendCommand(pane, "pi --session cancelled.jsonl");
+			setTimeout(() => launchAbort.abort(), 20);
+			await herdrSurface.waitForAgentReady(pane, launchAbort.signal);
+			launchAbort.signal.throwIfAborted();
+			herdrSurface.sendAgentPrompt(pane, "This must not be delivered");
+		}),
+		/abort/i,
+	);
+	delete process.env.HERDR_TEST_STATUS;
+	const cancelledLaunchCalls = readFileSync(captureFile, "utf8")
+		.split("--call--\n")
+		.filter(Boolean)
+		.map((call) => call.trim().split("\n"))
+		.slice(cancelledLaunchOffset);
+	assert.equal(cancelledLaunchCalls.some((call) => call[0] === "agent" && call[1] === "prompt"), false);
+	assert.deepEqual(cancelledLaunchCalls.at(-1), ["pane", "close", "w44:p9"]);
+
 	process.env.HERDR_ENV = "";
 	process.env.HERDR_PANE_ID = "";
 	assert.equal(herdr.isHerdrAvailable(), false);
