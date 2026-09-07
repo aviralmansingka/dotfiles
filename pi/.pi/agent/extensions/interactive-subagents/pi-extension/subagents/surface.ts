@@ -1,7 +1,6 @@
 /**
- * Surface dispatcher — selects between the tmux and Herdr pane surfaces at
- * module load time, so the rest of the extension (index.ts) stays
- * multiplexer-agnostic and talks to a single surface contract.
+ * Surface dispatcher — selects shared tmux/Herdr pane operations at module
+ * load time and exposes Herdr-only helpers for readiness-gated launches.
  *
  * Selection order:
  *   1. Herdr  — when `HERDR_ENV=1`, `HERDR_PANE_ID` is set, and `herdr` is on PATH.
@@ -9,8 +8,8 @@
  *   3. neither — `isMuxAvailable()` returns false and `muxSetupHint()` tells
  *                the caller how to start a supported multiplexer.
  *
- * index.ts imports this module instead of ./tmux.ts directly. Every symbol
- * re-exported here matches the ./tmux.ts export contract one-for-one.
+ * index.ts imports this module instead of ./tmux.ts directly. Shared surface
+ * symbols match ./tmux.ts; readiness and prompt submission are Herdr-only.
  */
 import * as tmux from "./tmux.ts";
 import * as herdr from "./herdr.ts";
@@ -40,6 +39,9 @@ export const sendLongCommand = surface.sendLongCommand;
 export const readScreen = surface.readScreen;
 export const readScreenAsync = surface.readScreenAsync;
 export const closeSurface = surface.closeSurface;
+
+export const waitForAgentReady = herdr.waitForAgentReady;
+export const sendAgentPrompt = herdr.sendAgentPrompt;
 
 export async function withNewSurface<T>(
   name: string,
