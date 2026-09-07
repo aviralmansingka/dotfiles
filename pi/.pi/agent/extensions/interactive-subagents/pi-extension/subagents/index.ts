@@ -1,5 +1,12 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { defineTool, keyHint } from "@earendil-works/pi-coding-agent";
+import {
+  DefaultPackageManager,
+  SettingsManager,
+  defineTool,
+  keyHint,
+  loadSkills,
+  stripFrontmatter,
+} from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "@earendil-works/pi-ai";
 import { Box, Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { dirname, join, resolve } from "node:path";
@@ -1051,6 +1058,45 @@ function buildPiPromptArgs(params: {
   ];
 }
 
+async function buildPiReadyPrompt(params: {
+  effectiveSkills?: string;
+  task: string;
+  cwd: string;
+  agentDir: string;
+}): Promise<string> {
+  const skillNames = (params.effectiveSkills ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (skillNames.length === 0) return params.task;
+
+  const settingsManager = SettingsManager.create(params.cwd, params.agentDir, {
+    projectTrusted: true,
+  });
+  const packageManager = new DefaultPackageManager({
+    cwd: params.cwd,
+    agentDir: params.agentDir,
+    settingsManager,
+  });
+  const resources = await packageManager.resolve(async () => "skip");
+  const { skills } = loadSkills({
+    cwd: params.cwd,
+    agentDir: params.agentDir,
+    skillPaths: resources.skills.filter((resource) => resource.enabled).map((resource) => resource.path),
+    includeDefaults: false,
+  });
+
+  return [
+    ...skillNames.map((name) => {
+      const skill = skills.find((candidate) => candidate.name === name);
+      if (!skill) throw new Error(`Subagent skill not found: ${name}`);
+      const body = stripFrontmatter(readFileSync(skill.filePath, "utf8")).trim();
+      return `<skill name="${skill.name}" location="${skill.filePath}">\nReferences are relative to ${skill.baseDir}.\n\n${body}\n</skill>`;
+    }),
+    params.task,
+  ].join("\n\n");
+}
+
 function activityLabel(activity: SubagentActivityState): string | undefined {
   if (activity.phase !== "active") return undefined;
   if (activity.activeScope === "tool") return activity.toolName ?? "tool";
@@ -1295,6 +1341,7 @@ export const __test__ = {
   buildSubagentToolAllowlist,
   applySandboxToParts,
   buildPiPromptArgs,
+  buildPiReadyPrompt,
   formatWidgetRightLabel,
   observeRunningSubagent,
   getToolExtensionPath,
@@ -1577,9 +1624,17 @@ async function launchSubagentOnSurface(
   const promptAfterStartup = activeSurface === "herdr";
   const promptArgs = buildPiPromptArgs({
     effectiveSkills,
-    taskDelivery: promptAfterStartup ? "direct" : launchBehavior.taskDelivery,
-    taskArg: promptAfterStartup ? fullTask : taskArg,
+    taskDelivery: launchBehavior.taskDelivery,
+    taskArg,
   });
+  const readyPrompt = promptAfterStartup
+    ? await buildPiReadyPrompt({
+        effectiveSkills,
+        task: fullTask,
+        cwd: targetCwdForSession,
+        agentDir: effectiveAgentDir,
+      })
+    : null;
   if (!promptAfterStartup) {
     for (const promptArg of promptArgs) parts.push(shellEscape(promptArg));
   }
@@ -1606,11 +1661,9 @@ async function launchSubagentOnSurface(
       `# Surface: ${surface}`,
     ].join("\n"),
   });
-  if (promptAfterStartup) {
+  if (readyPrompt) {
     await waitForAgentReady(surface);
-    for (const promptArg of promptArgs) {
-      if (promptArg) sendAgentPrompt(surface, promptArg);
-    }
+    sendAgentPrompt(surface, readyPrompt);
   }
 
   const running: RunningSubagent = {
