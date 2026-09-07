@@ -1,12 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import {
-  DefaultPackageManager,
-  SettingsManager,
-  defineTool,
-  keyHint,
-  loadSkills,
-  stripFrontmatter,
-} from "@earendil-works/pi-coding-agent";
+import { defineTool, keyHint } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "@earendil-works/pi-ai";
 import { Box, Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { dirname, join, resolve } from "node:path";
@@ -21,6 +14,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { homedir } from "node:os";
+import { setTimeout as sleep } from "node:timers/promises";
 import {
   isMuxAvailable,
   muxSetupHint,
@@ -83,6 +77,7 @@ import {
   parseAgentDefinition,
 } from "./agent-definitions.mjs";
 import { registerHunkReviewCommand } from "./hunk-review-command.mjs";
+import { encodeSubagentInitialPrompt } from "./initial-prompt.ts";
 
 /** Absolute path to `pi-extension/subagents`. https://github.com/nodejs/node/issues/37845 */
 const SUBAGENTS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -1063,43 +1058,17 @@ function buildPiPromptArgs(params: {
   ];
 }
 
-async function buildPiReadyPrompt(params: {
+function buildPiReadyPrompt(params: {
   effectiveSkills?: string;
   task: string;
-  cwd: string;
-  agentDir: string;
-}): Promise<string> {
-  const skillNames = (params.effectiveSkills ?? "")
+}): string {
+  const skills = (params.effectiveSkills ?? "")
     .split(",")
     .map((name) => name.trim())
     .filter(Boolean);
-  if (skillNames.length === 0) return params.task;
+  if (skills.length === 0) return params.task;
 
-  const settingsManager = SettingsManager.create(params.cwd, params.agentDir, {
-    projectTrusted: true,
-  });
-  const packageManager = new DefaultPackageManager({
-    cwd: params.cwd,
-    agentDir: params.agentDir,
-    settingsManager,
-  });
-  const resources = await packageManager.resolve(async () => "skip");
-  const { skills } = loadSkills({
-    cwd: params.cwd,
-    agentDir: params.agentDir,
-    skillPaths: resources.skills.filter((resource) => resource.enabled).map((resource) => resource.path),
-    includeDefaults: false,
-  });
-
-  return [
-    ...skillNames.map((name) => {
-      const skill = skills.find((candidate) => candidate.name === name);
-      if (!skill) throw new Error(`Subagent skill not found: ${name}`);
-      const body = stripFrontmatter(readFileSync(skill.filePath, "utf8")).trim();
-      return `<skill name="${skill.name}" location="${skill.filePath}">\nReferences are relative to ${skill.baseDir}.\n\n${body}\n</skill>`;
-    }),
-    params.task,
-  ].join("\n\n");
+  return `/interactive-subagent-start ${encodeSubagentInitialPrompt({ skills, task: params.task })}`;
 }
 
 function activityLabel(activity: SubagentActivityState): string | undefined {
@@ -1428,7 +1397,11 @@ async function launchSubagentOnSurface(
   ].join("-");
   const subagentSessionFile = join(sessionDir, `${timestamp}_${uuid}.jsonl`);
 
-  await new Promise<void>((resolve) => setTimeout(resolve, getShellReadyDelayMs()));
+  await sleep(
+    getShellReadyDelayMs(),
+    undefined,
+    activeSurface === "herdr" ? { signal } : undefined,
+  );
 
   const launchBehavior = resolveLaunchBehavior(params, agentDefs);
 
@@ -1637,12 +1610,7 @@ async function launchSubagentOnSurface(
     taskArg,
   });
   const readyPrompt = promptAfterStartup
-    ? await buildPiReadyPrompt({
-        effectiveSkills,
-        task: fullTask,
-        cwd: targetCwdForSession,
-        agentDir: effectiveAgentDir,
-      })
+    ? buildPiReadyPrompt({ effectiveSkills, task: fullTask })
     : null;
   if (!promptAfterStartup) {
     for (const promptArg of promptArgs) parts.push(shellEscape(promptArg));
@@ -2437,7 +2405,11 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         const launchSignal = withModuleAbort(signal);
 
         return withNewSurface(name, async (surface) => {
-        await new Promise<void>((resolve) => setTimeout(resolve, getShellReadyDelayMs()));
+        await sleep(
+          getShellReadyDelayMs(),
+          undefined,
+          activeSurface === "herdr" ? { signal: launchSignal } : undefined,
+        );
 
         // Build pi resume command
         const parts = ["pi", "--session", shellEscape(sessionPath)];

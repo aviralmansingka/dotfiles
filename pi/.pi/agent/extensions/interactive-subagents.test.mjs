@@ -235,6 +235,31 @@ try {
 	rmSync(fakeBin, { recursive: true, force: true });
 }
 
+const initialPrompt = jiti("./interactive-subagents/pi-extension/subagents/initial-prompt.ts");
+const encodedInitialPrompt = initialPrompt.encodeSubagentInitialPrompt({
+	skills: ["professor", "hunk-review"],
+	task: "Explain the launch race.",
+});
+assert.equal(
+	initialPrompt.buildSubagentInitialPrompt(
+		encodedInitialPrompt,
+		[
+			{ name: "professor", filePath: "/trusted/professor/SKILL.md", baseDir: "/trusted/professor" },
+			{ name: "hunk-review", filePath: "/extension/hunk-review/SKILL.md", baseDir: "/extension/hunk-review" },
+		],
+		(skill) => `Resolved instructions for ${skill.name}.`,
+	),
+	'<skill name="professor" location="/trusted/professor/SKILL.md">\n' +
+		'References are relative to /trusted/professor.\n\nResolved instructions for professor.\n</skill>\n\n' +
+		'<skill name="hunk-review" location="/extension/hunk-review/SKILL.md">\n' +
+		'References are relative to /extension/hunk-review.\n\nResolved instructions for hunk-review.\n</skill>\n\n' +
+		"Explain the launch race.",
+);
+assert.throws(
+	() => initialPrompt.buildSubagentInitialPrompt(encodedInitialPrompt, [], () => ""),
+	/Subagent skill not found: professor/,
+);
+
 // --- Arbitrary explicit names remain registered and deduplicate ---
 const session = jiti("./interactive-subagents/pi-extension/subagents/session.ts");
 const registryDir = mkdtempSync(join(tmpdir(), "subagent-name-registry-test-"));
