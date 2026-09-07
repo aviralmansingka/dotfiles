@@ -173,8 +173,9 @@ The shared `vault` skill supports explicit project and knowledge-base lookup, no
 Wayfinder overviews. It preserves the vault's Project → Theme → Feature → Task ontology without installing an
 execution workflow. Neovim's `<leader>vf` picker remains a read-only navigation surface for active vault work.
 
-Use `/hunk` to open or focus a watched Hunk diff in a sibling pane. It never
-starts a review. When you want an isolated asynchronous review, run
+Use `/hunk` to open or focus a watched Hunk diff in a sibling pane. In Herdr,
+the sibling pane closes automatically when Hunk exits. Opening Hunk never starts
+a review. When you want an isolated asynchronous review, run
 `/hunk-review [focus]`; detailed findings are anchored in Hunk and only a terse
 completion summary returns to the parent session.
 

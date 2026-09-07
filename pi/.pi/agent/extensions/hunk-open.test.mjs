@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
+	hunkPaneCommand,
 	isWatchedHunkProcess,
 	openHunkWithHost,
 } from "./hunk-open-core.mjs";
@@ -39,6 +41,28 @@ assert.equal(
 assert.equal(
 	isWatchedHunkProcess({ name: "hunk", argv: ["hunk", "diff"] }),
 	false,
+);
+const paneCommand = hunkPaneCommand("pane '$(printf injected)'", [
+	"diff",
+	"--watch",
+	"argument with spaces",
+	"$(printf injected)",
+	"semi;colon",
+]);
+const commandResult = spawnSync(
+	"sh",
+	[
+		"-c",
+		`hunk() { printf 'hunk'; printf '\\n%s' "$@"; }
+herdr() { printf '\\nherdr'; printf '\\n%s' "$@"; }
+${paneCommand}`,
+	],
+	{ encoding: "utf8" },
+);
+assert.equal(commandResult.status, 0, commandResult.stderr);
+assert.equal(
+	commandResult.stdout,
+	"hunk\ndiff\n--watch\nargument with spaces\n$(printf injected)\nsemi;colon\nherdr\npane\nclose\npane '$(printf injected)'",
 );
 
 const launchHost = fakeHost();
