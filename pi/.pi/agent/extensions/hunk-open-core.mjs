@@ -5,6 +5,8 @@ export function shellQuote(value) {
 }
 
 export function hunkPaneCommand(paneId, args) {
+	// Herdr runs one shell command in the new pane, so quote each value to preserve
+	// Hunk's argv, then close that exact pane after Hunk exits.
 	return `${["hunk", ...args].map(shellQuote).join(" ")}; herdr pane close ${shellQuote(paneId)}`;
 }
 
