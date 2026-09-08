@@ -16,8 +16,9 @@ interactively, or send feedback from the page.
 
 For prototypes of developer tools, agents, terminal workflows, or command-driven systems, start with a CLI/TUI visual
 language rendered inside the HTML artifact: monospace type, terminal density, keyboard-first affordances, and native
-status or ANSI styling. Use a conventional web-app layout only when the subject itself is a web interface or the user
-asks for one.
+status or ANSI styling. Before writing one of these artifacts, read `THEME.md` in this skill's directory and use
+Aviral's Gruvbox Material profile by default. Use a conventional web-app layout only when the subject itself is a web
+interface or the user asks for one.
 
 Use the local `npx -y lavish-axi` command only for read-only helpers such as `playbook` and `design`. Use the homelab
 wrapper for both plain artifacts and opt-in review sessions.
@@ -40,8 +41,8 @@ Use lavish-axi when the user asks for a visual artifact, HTML explainer, interac
    a Markdown file, give the HTML the same filename stem.
 2. Run `~/dotfiles/scripts/lavish-homelab render <html-file> --source-markdown <markdown-file>` to sync it, create an
    isolated clone of the current pushed branch on the homelab, overlay local Git-visible files, launch its persistent
-   `Artifact-` Herdr workspace, and point the stable alias at the rendered artifact with its chat drawer. Share the
-   returned `alias_url`. Stop here by default.
+   `Artifact-` tab in the source repository's existing Herdr workspace, and point the stable alias at the rendered
+   artifact with its chat drawer. Share the returned `alias_url`. Stop here by default.
 3. Only for an explicitly requested collaborative review, run
    `~/dotfiles/scripts/lavish-homelab review <html-file> --source-markdown <markdown-file>` to point the alias at the
    Lavish Editor session, then run `~/dotfiles/scripts/lavish-homelab poll <html-file>` for annotations, queued
@@ -54,8 +55,11 @@ Use lavish-axi when the user asks for a visual artifact, HTML explainer, interac
 
 ## Homelab hosting
 
-- The homelab owns the artifact worktree, persistent Herdr chat agent, optional Lavish session state, and Tailscale Serve
-  endpoint. Client devices generate locally and sync Git-visible files through the wrapper.
+- The homelab owns the artifact worktree, persistent Herdr chat agent tab, optional Lavish session state, and Tailscale
+  Serve endpoint. The tab lives in the source repository's existing workspace; artifact rendering must not create a
+  separate Herdr workspace. That repository workspace must already be open on the homelab; if it is absent or cannot be
+  uniquely identified (independent clones of the same remote), report the blocker instead of creating an artifact
+  workspace or reusing an unrelated one. Client devices generate locally and sync Git-visible files through the wrapper.
 - Never configure Tailscale Serve on the client or fall back to a device URL without explicit user approval. If the
   homelab is unavailable, report that blocker and keep the artifact local until it returns.
 - Share the stable port-443 `alias_url`. In default `render` mode it serves a minimal shell with the unchanged artifact in
@@ -72,6 +76,8 @@ Use lavish-axi when the user asks for a visual artifact, HTML explainer, interac
   information density, ANSI/status semantics, and the subject's terminal theme instead of translating it into a web
   dashboard.
 - Use visual structure such as sections, cards, tables, diagrams, annotated snippets, and side-by-side comparisons instead of long prose
+- For terminal-native and developer-tool artifacts, read and apply `THEME.md` from this skill's directory; do not
+  improvise a different dark theme
 - Choose typography, spacing, color, and layout deliberately so the artifact has a clear point of view
 - Prevent horizontal overflow at every nesting level: nested grid/flex children also need minmax(0, 1fr) tracks and min-width: 0, especially when badges, labels, or status text use wide pixel or monospace fonts; wrap, truncate, or contain long unbreakable text deliberately
 - When the artifact would describe existing or current UI or state, show it instead: capture screenshots of the real pages (run the app read-only if needed) and embed them, rather than explaining the current look in prose; reserve prose for what cannot be shown such as rationale, trade-offs, and open questions
@@ -94,8 +100,8 @@ For flows, architecture, state, or sequence diagrams, do not hand-build boxes-an
 ## Commands & rules
 
 - Run `~/dotfiles/scripts/lavish-homelab render <html-file> --source-markdown <markdown-file>` by default. It returns a
-  stable `alias_url` backed by a homelab worktree and persistent `Artifact-` Herdr agent. Do not embed another chat UI in
-  the artifact HTML; the gateway supplies it consistently.
+  stable `alias_url` backed by a homelab worktree and persistent `Artifact-` Herdr agent tab in the source repository's
+  workspace. Do not embed another chat UI in the artifact HTML; the gateway supplies it consistently.
 - Run `~/dotfiles/scripts/lavish-homelab review <html-file> --source-markdown <markdown-file>` only when the user
   explicitly asks for the editor or annotation workflow. `open` remains a backward-compatible synonym for `review`
 - Unless the user specifies another location, create HTML artifacts in the current working directory under `.lavish/`
@@ -107,5 +113,5 @@ For flows, architecture, state, or sequence diagrams, do not hand-build boxes-an
 - Do not run `lavish-axi share` or publish to another host unless the user explicitly asks for external publishing; the default and canonical review host is the homelab
 - Do not run `lavish-axi stop` from a client; the persistent homelab service is shared by every review session
 - Run `npx -y lavish-axi playbook <playbook_id>` for focused artifact guidance. One artifact often combines several playbooks (for example a plan that includes a comparison and a diagram), so MUST open each matching playbook before writing HTML.
-- Lavish does not auto-inject any design system - artifacts stay portable so they render identically when opened directly without lavish-axi running. Before writing any HTML, decide the design direction in this strict priority order, and only move to the next step when the current one truly yields nothing: (1) if the user asked for a specific look or named design system, use that; (2) otherwise you must first inspect the project the artifact is about - the subject or product whose content or UI it represents, which may differ from your current working directory - and match that project's design system: Tailwind or theme config, shared CSS variables or design tokens, component library, brand assets, or existing styled pages. If the artifact previews, proposes, or mocks a specific app's UI, render it in that app's own design system so it faithfully shows the product, even when you are running in a different repo; (3) only when both steps come up empty, use the Lavish-recommended Tailwind CSS browser runtime v4 + DaisyUI v5, available via CDN - run `npx -y lavish-axi design` for a content-to-playbook router, a copy-pasteable CDN snippet, a Mermaid CDN snippet/init for diagrams, and the DaisyUI component reference, and prefer the Tailwind/DaisyUI CDN snippet over hand-writing styles unless explicitly instructed otherwise by the user. When you deliver the artifact, state which of the three design sources you used and why.
+- Lavish does not auto-inject any design system - artifacts stay portable so they render identically when opened directly without lavish-axi running. Before writing any HTML, decide the design direction in this strict priority order, and only move to the next step when the current one truly yields nothing: (1) if the user asked for a specific look or named design system, use that; (2) otherwise you must first inspect the project the artifact is about - the subject or product whose content or UI it represents, which may differ from your current working directory - and match that project's design system: Tailwind or theme config, shared CSS variables or design tokens, component library, brand assets, or existing styled pages. If the artifact previews, proposes, or mocks a specific app's UI, render it in that app's own design system so it faithfully shows the product, even when you are running in a different repo; (3) for developer tooling, terminal workflows, and technical planning without a product-specific design, read `THEME.md` from this skill's directory and use Aviral's terminal-native Gruvbox profile; (4) only when the earlier steps do not apply, use the Lavish-recommended Tailwind CSS browser runtime v4 + DaisyUI v5, available via CDN - run `npx -y lavish-axi design` for a content-to-playbook router, a copy-pasteable CDN snippet, a Mermaid CDN snippet/init for diagrams, and the DaisyUI component reference, and prefer the Tailwind/DaisyUI CDN snippet over hand-writing styles unless explicitly instructed otherwise by the user. When you deliver the artifact, state which design source you used and why.
 - Use lavish-axi when the user asks for a visual artifact, HTML explainer, interactive prototype, review surface, product or technical plan, comparison, report, or browser-based feedback loop

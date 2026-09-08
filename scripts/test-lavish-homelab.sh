@@ -78,7 +78,7 @@ with tempfile.TemporaryDirectory() as temporary:
         def fake_agent(context, command, question=None):
             calls.append((context, command, question))
             if command == "history":
-                return {"messages": [], "agent_status": "idle", "workspace": "Artifact-demo"}
+                return {"messages": [], "agent_status": "idle", "workspace": "Repository"}
             if command == "check":
                 return {
                     "artifact_changed_since_launch": False,
@@ -86,7 +86,7 @@ with tempfile.TemporaryDirectory() as temporary:
                     "artifact_removed_lines": 0,
                     "branch": "main",
                     "baseline_commit": "a" * 40,
-                    "workspace": "Artifact-demo",
+                    "workspace": "Repository",
                     "git_status": [],
                 }
             return {
@@ -105,6 +105,7 @@ with tempfile.TemporaryDirectory() as temporary:
         shell = response.read()
         assert response.status == 200
         assert b"Ask about this" in shell and b"Check changes" in shell
+        assert b"tab in the source Herdr workspace" in shell
         assert b'aria-hidden="true" inert' in shell
         assert b"drawer.inert = !open" in shell
         assert b"join(String.fromCharCode(10))" in shell
@@ -141,7 +142,7 @@ with tempfile.TemporaryDirectory() as temporary:
         connection.request("GET", "/demo/__artifact/api/history")
         response = connection.getresponse()
         assert response.status == 200
-        assert json.loads(response.read())["workspace"] == "Artifact-demo"
+        assert json.loads(response.read())["workspace"] == "Repository"
 
         body = json.dumps({"message": "What is this?"}).encode()
         connection.request(

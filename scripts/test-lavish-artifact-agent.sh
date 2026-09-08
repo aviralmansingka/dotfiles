@@ -28,15 +28,31 @@ cat > "$fake_herdr" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 case "$1 $2" in
-  "workspace create")
-    printf '{"result":{"workspace":{"workspace_id":"wA"},"root_pane":{"pane_id":"wA:p1","tab_id":"wA:t1","terminal_id":"term_A"}}}\n'
+  "workspace list")
+    if [[ -n "${FAKE_PORT_REPO_CHECKOUT:-}" ]]; then
+      printf '{"result":{"workspaces":[{"workspace_id":"wRepo","label":"Port repository","number":1,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-port"}}]}}\n' "$FAKE_PORT_REPO_CHECKOUT"
+    elif [[ -n "${FAKE_OTHER_REPO_CHECKOUT:-}" ]]; then
+      printf '{"result":{"workspaces":[{"workspace_id":"wRepo","label":"Repository","number":1,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-a"}},{"workspace_id":"wOther","label":"Other clone","number":2,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-b"}}]}}\n' "$FAKE_REPO_CHECKOUT" "$FAKE_OTHER_REPO_CHECKOUT"
+    else
+      printf '{"result":{"workspaces":[{"workspace_id":"wRepo","label":"Repository","number":1,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-a"}}]}}\n' "$FAKE_REPO_CHECKOUT"
+    fi
     ;;
   "workspace close")
     printf '{"result":{"closed":true}}\n'
     ;;
+  "tab close")
+    printf '%s\n' "$*" >> "$FAKE_CLOSE_LOG"
+    printf '{"result":{"closed":true}}\n'
+    ;;
+  "tab create")
+    printf '%s\n' "$*" >> "$FAKE_CREATE_LOG"
+    printf '{"result":{"tab":{"tab_id":"wRepo:tArtifact","workspace_id":"wRepo"},"root_pane":{"pane_id":"wRepo:pArtifact","tab_id":"wRepo:tArtifact","terminal_id":"term_A"}}}\n'
+    ;;
   "agent start")
     rm -f "$FAKE_STATE_DIR/first-prompt" "$FAKE_STATE_DIR/ready"
-    printf '{"result":{"agent":{"name":"%s","workspace_id":"wA","pane_id":"wA:p1","tab_id":"wA:t1","terminal_id":"term_A"}}}\n' "$3"
+    agent_tab_id=',"tab_id":"wRepo:tArtifact"'
+    if [[ -n "${FAKE_OMIT_TAB_ID:-}" ]]; then agent_tab_id=; fi
+    printf '{"result":{"agent":{"name":"%s","workspace_id":"wRepo","pane_id":"wRepo:pArtifact"%s,"terminal_id":"term_A"}}}\n' "$3" "$agent_tab_id"
     ;;
   "agent get")
     if [[ -f "$FAKE_STATE_DIR/ready" ]]; then
@@ -44,7 +60,9 @@ case "$1 $2" in
     else
       session=
     fi
-    printf '{"result":{"agent":{"name":"artifact-06ff9a2d0ea93ec9","workspace_id":"wA","pane_id":"wA:p1","tab_id":"wA:t1","terminal_id":"term_A","foreground_cwd":"%s","interactive_ready":true,"agent_status":"idle"%s}}}\n' "$FAKE_WORKTREE" "$session"
+    agent_tab_id=',"tab_id":"wRepo:tArtifact"'
+    if [[ -n "${FAKE_OMIT_TAB_ID:-}" ]]; then agent_tab_id=; fi
+    printf '{"result":{"agent":{"name":"artifact-06ff9a2d0ea93ec9","workspace_id":"wRepo","pane_id":"wRepo:pArtifact"%s,"terminal_id":"term_A","foreground_cwd":"%s","interactive_ready":true,"agent_status":"idle"%s}}}\n' "$agent_tab_id" "$FAKE_WORKTREE" "$session"
     ;;
   "agent prompt")
     if [[ "$4" == Initialize* ]]; then
@@ -80,6 +98,9 @@ agent_env=(
   LAVISH_HERDR_BIN="$fake_herdr"
   FAKE_STATE_DIR="$runtime/fake"
   FAKE_TERMINAL="$runtime/fake/terminal.txt"
+  FAKE_REPO_CHECKOUT="$seed"
+  FAKE_CLOSE_LOG="$runtime/fake/closed.log"
+  FAKE_CREATE_LOG="$runtime/fake/created.log"
 )
 
 env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
@@ -120,6 +141,7 @@ env "${agent_env[@]}" FAKE_WORKTREE="$worktree" \
   "$repo_dir/scripts/lavish-artifact-agent" history --context "$context" > "$test_dir/history.json"
 env "${agent_env[@]}" FAKE_WORKTREE="$worktree" \
   "$repo_dir/scripts/lavish-artifact-agent" retire --context "$context" > "$test_dir/retire.json"
+grep -Fx 'tab close wRepo:tArtifact' "$runtime/fake/closed.log" >/dev/null
 
 context_b=artifact-1111111111111111
 context_c=artifact-2222222222222222
@@ -131,6 +153,66 @@ env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
 pid_c=$!
 wait "$pid_b"
 wait "$pid_c"
+
+other_seed="$test_dir/other-seed"
+git clone -q "$origin" "$other_seed"
+ambiguous_context=artifact-8888888888888888
+env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
+  --context "$ambiguous_context" --slug ambiguous --repo-url "$origin" --branch main \
+  > "$test_dir/prepare-ambiguous.json"
+ambiguous_incoming="$runtime/artifacts/_contexts/$ambiguous_context/incoming"
+rsync -a --exclude .git/ "$seed/" "$ambiguous_incoming/"
+if env "${agent_env[@]}" FAKE_OTHER_REPO_CHECKOUT="$other_seed" \
+  "$repo_dir/scripts/lavish-artifact-agent" activate \
+  --context "$ambiguous_context" --artifact-relative artifact.html \
+  > "$test_dir/activate-ambiguous.json"; then
+  echo "same-origin repositories were silently disambiguated" >&2
+  exit 1
+fi
+[[ $(wc -l < "$runtime/fake/created.log") -eq 1 ]]
+
+port_context=artifact-9999999999999999
+env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
+  --context "$port_context" --slug port-collision --repo-url "$origin" --branch main \
+  > "$test_dir/prepare-port.json"
+port_incoming="$runtime/artifacts/_contexts/$port_context/incoming"
+rsync -a --exclude .git/ "$seed/" "$port_incoming/"
+git -C "$other_seed" remote set-url origin ssh://git@example.com:2200/org/repo.git
+uv run python - "$runtime/state.json" "$port_context" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+state = json.loads(path.read_text())
+state[sys.argv[2]]["repo_url"] = "ssh://git@example.com:2222/org/repo.git"
+path.write_text(json.dumps(state))
+PY
+if env "${agent_env[@]}" FAKE_PORT_REPO_CHECKOUT="$other_seed" \
+  "$repo_dir/scripts/lavish-artifact-agent" activate \
+  --context "$port_context" --artifact-relative artifact.html \
+  > "$test_dir/activate-port.json"; then
+  echo "different SSH ports shared a repository identity" >&2
+  exit 1
+fi
+[[ $(wc -l < "$runtime/fake/created.log") -eq 1 ]]
+
+no_tab_context=artifact-1212121212121212
+env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
+  --context "$no_tab_context" --slug no-tab-id --repo-url "$origin" --branch main \
+  > "$test_dir/prepare-no-tab.json"
+no_tab_incoming="$runtime/artifacts/_contexts/$no_tab_context/incoming"
+rsync -a --exclude .git/ "$seed/" "$no_tab_incoming/"
+env "${agent_env[@]}" FAKE_OMIT_TAB_ID=1 \
+  FAKE_WORKTREE="$runtime/artifacts/_contexts/$no_tab_context/worktree" \
+  "$repo_dir/scripts/lavish-artifact-agent" activate \
+  --context "$no_tab_context" --artifact-relative artifact.html \
+  > "$test_dir/activate-no-tab.json"
+env "${agent_env[@]}" \
+  FAKE_WORKTREE="$runtime/artifacts/_contexts/$no_tab_context/worktree" \
+  "$repo_dir/scripts/lavish-artifact-agent" retire --context "$no_tab_context" \
+  > "$test_dir/retire-no-tab.json"
+[[ $(grep -c 'tab close wRepo:tArtifact' "$runtime/fake/closed.log") -eq 2 ]]
 
 uv run python - "$test_dir" "$context" "$before" "$after" \
   "$repo_dir/scripts/lavish-artifact-agent" "$runtime/state.json" <<'PY'
@@ -154,9 +236,13 @@ state_path = Path(sys.argv[6])
 state = json.loads(state_path.read_text())
 
 assert prepare["context_id"] == context
-assert activate["workspace_label"] == "Artifact-sample-artifact"
-assert activate["workspace_id"] == "wA"
-assert activate["pane_id"] == "wA:p1"
+assert activate["workspace_label"] == "Repository"
+assert activate["workspace_id"] == "wRepo"
+assert activate["tab_label"] == "Artifact-sample-artifact"
+assert activate["tab_id"] == "wRepo:tArtifact"
+assert activate["pane_id"] == "wRepo:pArtifact"
+no_tab = json.loads((root / "activate-no-tab.json").read_text())
+assert no_tab["tab_id"] == "wRepo:tArtifact"
 assert clean["artifact_changed_since_launch"] is False
 assert changed["artifact_changed_since_launch"] is True
 assert changed["artifact_added_lines"] == 2
@@ -165,10 +251,21 @@ assert before == ""
 assert after == " M artifact.html"
 assert "Original artifact" in chat["answer"]
 assert [message["role"] for message in history["messages"]] == ["user", "assistant"]
-assert history["workspace"] == "Artifact-sample-artifact"
+assert history["workspace"] == "Repository"
 assert retire == {"context_id": context, "retired": True}
 assert not (state_path.parent / "artifacts/_contexts" / context).exists()
-assert set(state) == {"artifact-1111111111111111", "artifact-2222222222222222"}
+assert set(state) == {
+    "artifact-1111111111111111",
+    "artifact-2222222222222222",
+    "artifact-8888888888888888",
+    "artifact-9999999999999999",
+}
+ambiguous = json.loads((root / "activate-ambiguous.json").read_text())
+assert "Multiple Herdr repositories match" in ambiguous["error"]
+assert state["artifact-8888888888888888"]["phase"] == "prepared"
+port = json.loads((root / "activate-port.json").read_text())
+assert "No Herdr workspace" in port["error"]
+assert state["artifact-9999999999999999"]["phase"] == "prepared"
 
 path_worktree = root / "path-worktree"
 path_worktree.mkdir()
@@ -184,6 +281,67 @@ except module["ArtifactAgentError"] as error:
 else:
     raise AssertionError("out-of-worktree symlink was accepted")
 
+assert module["normalize_repo_url"]("git@github.com:Owner/Repo.git") == \
+    module["normalize_repo_url"]("https://github.com/Owner/Repo")
+assert module["normalize_repo_url"]("git@example.com:org/repo.git") == \
+    module["normalize_repo_url"]("ssh://git@example.com:22/org/repo")
+assert module["normalize_repo_url"]("https://example.com:443/org/repo.git") == \
+    module["normalize_repo_url"]("https://example.com/org/repo")
+assert module["normalize_repo_url"]("ssh://git@example.com:2222/org/repo.git") != \
+    module["normalize_repo_url"]("ssh://git@example.com:2200/org/repo.git")
+assert module["normalize_repo_url"]("ssh://git@example.com:22x/org/repo.git") != \
+    module["normalize_repo_url"]("https://example.com/org/repo")
+workspace_globals = module["workspace_for_repository"].__globals__
+workspace_globals["herdr_json"] = lambda args, **kwargs: {"workspaces": [
+    {
+        "workspace_id": "linked",
+        "number": 1,
+        "worktree": {
+            "checkout_path": "/repos/linked",
+            "is_linked_worktree": True,
+            "repo_key": "repo-one",
+        },
+    },
+    {
+        "workspace_id": "primary",
+        "number": 2,
+        "worktree": {
+            "checkout_path": "/repos/primary",
+            "is_linked_worktree": False,
+            "repo_key": "repo-one",
+        },
+    },
+]}
+workspace_globals["run"] = lambda args, **kwargs: type(
+    "Result", (), {"stdout": "https://github.com/Owner/Repo.git\n"}
+)()
+assert module["workspace_for_repository"]("git@github.com:Owner/Repo.git")["workspace_id"] == "primary"
+workspace_globals["herdr_json"] = lambda args, **kwargs: {"workspaces": []}
+try:
+    module["workspace_for_repository"]("git@github.com:Owner/Repo.git")
+except module["ArtifactAgentError"] as error:
+    assert "No Herdr workspace" in str(error)
+else:
+    raise AssertionError("missing source workspace was accepted")
+workspace_globals["herdr_json"] = lambda args, **kwargs: {"workspaces": [
+    {
+        "workspace_id": "wMalformed",
+        "worktree": {
+            "checkout_path": "/repos/malformed",
+            "repo_key": "repo-malformed",
+        },
+    },
+]}
+workspace_globals["run"] = lambda args, **kwargs: type(
+    "Result", (), {"stdout": "ssh://git@example.com:22x/org/repo.git\n"}
+)()
+try:
+    module["workspace_for_repository"]("https://example.com/org/repo")
+except module["ArtifactAgentError"] as error:
+    assert "No Herdr workspace" in str(error)
+else:
+    raise AssertionError("malformed remote port matched a source workspace")
+
 agent_globals = module["start_agent"].__globals__
 agent_globals["STATE_FILE"] = state_path
 agent_globals["CONTEXT_ROOT"] = state_path.parent / "artifacts/_contexts"
@@ -192,18 +350,42 @@ initializing_record = {
     "context_id": initializing_context,
     "slug": "initializing",
     "phase": "prepared",
+    "repo_url": "git@github.com:example/repository.git",
     "worktree": str(root / "initializing-worktree"),
     "replies": str(root / "initializing-replies"),
 }
 state[initializing_context] = initializing_record
 agent_globals["save_state"](state)
 close_calls = []
+agent_globals["workspace_for_repository"] = lambda repo_url: {
+    "workspace_id": "workspace-source",
+    "label": "Source",
+}
+def fail_tab_create(args, **kwargs):
+    if args[:2] == ["tab", "create"]:
+        raise module["ArtifactAgentError"]("tab creation failed")
+    close_calls.append(args)
+    return {}
+agent_globals["herdr_json"] = fail_tab_create
+try:
+    module["start_agent"](initializing_record, state)
+except module["ArtifactAgentError"]:
+    pass
+else:
+    raise AssertionError("tab creation failure was swallowed")
+assert initializing_record["phase"] == "prepared"
+assert "workspace_id" not in initializing_record
+assert close_calls == []
+
 def fail_after_create(args, **kwargs):
-    if args[:2] == ["workspace", "create"]:
-        return {"workspace": {"workspace_id": "workspace-created"}, "root_pane": {"pane_id": "pane-created"}}
+    if args[:2] == ["tab", "create"]:
+        return {
+            "tab": {"tab_id": "tab-created"},
+            "root_pane": {"pane_id": "pane-created"},
+        }
     if args[:2] == ["agent", "start"]:
         raise module["ArtifactAgentError"]("initialization failed")
-    if args[:2] == ["workspace", "close"]:
+    if args[:2] == ["tab", "close"]:
         close_calls.append(args)
         raise module["ArtifactAgentError"]("close failed")
     raise AssertionError(args)
@@ -216,8 +398,19 @@ else:
     raise AssertionError("initialization failure was swallowed")
 saved_initializing = json.loads(state_path.read_text())[initializing_context]
 assert saved_initializing["phase"] == "retiring"
-assert saved_initializing["workspace_id"] == "workspace-created"
-assert close_calls == [["workspace", "close", "workspace-created"]]
+assert saved_initializing["workspace_id"] == "workspace-source"
+assert saved_initializing["tab_id"] == "tab-created"
+assert close_calls == [["tab", "close", "tab-created"]]
+malformed_tab = {
+    "session_container": "tab",
+    "workspace_id": "workspace-source",
+}
+try:
+    module["close_started_session"](malformed_tab)
+except module["ArtifactAgentError"] as error:
+    assert "refusing to close" in str(error)
+else:
+    raise AssertionError("malformed artifact tab could close its source workspace")
 state.pop(initializing_context)
 agent_globals["save_state"](state)
 
