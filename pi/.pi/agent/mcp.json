@@ -20,13 +20,6 @@
         "-y",
         "granola-mcp-plus"
       ]
-    },
-    "browserbase": {
-      "command": "bash",
-      "args": [
-        "-lc",
-        "source \"$HOME/.config/pi-browserbase.env\" && exec npx -y @browserbasehq/mcp --browserbaseApiKey \"$BROWSERBASE_API_KEY\" --browserbaseProjectId \"$BROWSERBASE_PROJECT_ID\""
-      ]
     }
   }
 }
