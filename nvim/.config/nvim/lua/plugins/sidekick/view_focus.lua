@@ -68,10 +68,10 @@ function M.resume()
         if ok then
           if view.focus then
             term:focus()
-            if view.normal_mode then
-              term.normal_mode = true
-              vim.cmd.stopinsert()
-            end
+          end
+          term.normal_mode = view.normal_mode
+          if view.focus and view.normal_mode then
+            vim.cmd.stopinsert()
           end
         else
           vim.notify("Sidekick: could not restore Herdr view: " .. tostring(term), vim.log.levels.WARN)

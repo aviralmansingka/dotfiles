@@ -120,7 +120,8 @@ Pressing `O` again focuses the existing workflow-owned worktree; a conflicting l
 Sidekick releases its local writable Herdr attachment on Neovim `FocusLost` and reattaches the same running
 agent on `FocusGained`. Herdr can then size the agent for its own pane, including its sidebar and splits;
 returning to Neovim sizes it for the Sidekick window. Hidden Sidekick windows also release their attachments.
-Views in other Neovim tabs reopen when you return to those tabs. No durable agent is stopped or restarted.
+Views in other Neovim tabs reopen when you return while the tab still exists. A tab whose Sidekick view was its
+only window closes during handoff and is not restored. No durable agent is stopped or restarted.
 
 If your terminal does not forward focus events, run `:SidekickRelease` before switching to Herdr, then use
 `<C-.>` or the session picker to reopen the view in Neovim. Manual release cancels automatic reopening.
