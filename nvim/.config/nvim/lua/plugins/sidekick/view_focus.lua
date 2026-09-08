@@ -13,6 +13,65 @@ local function is_herdr(term)
   return term.parent and term.parent.backend == "herdr"
 end
 
+local function current_view(parent)
+  for _, term in pairs(terminals()) do
+    if term.parent == parent and not term.closed then
+      return term
+    end
+  end
+end
+
+local function patch_terminal_sends()
+  local Terminal = require("sidekick.cli.terminal")
+  if Terminal._dotfiles_view_focus_send then
+    return
+  end
+  Terminal._dotfiles_view_focus_send = Terminal.send
+  Terminal._dotfiles_view_focus_on_ready = Terminal.on_ready
+
+  function Terminal:send(input)
+    if self.closed and is_herdr(self) then
+      local Session = require("sidekick.cli.session")
+      if Session._attached[self.id] == self then
+        Session.detach(self)
+      end
+      local term = current_view(self.parent)
+      if term then
+        term:send(input)
+      elseif pending[self.parent.id] then
+        table.insert(pending[self.parent.id].send_queue, input)
+      end
+      return
+    end
+    return Terminal._dotfiles_view_focus_send(self, input)
+  end
+
+  function Terminal:on_ready()
+    if not is_herdr(self) then
+      return Terminal._dotfiles_view_focus_on_ready(self)
+    end
+    self.timer:start(0, 100, function()
+      local next = self.send_queue[1]
+      if next and not self._dotfiles_view_focus_sending then
+        self._dotfiles_view_focus_sending = true
+        next = next:gsub("\r\n", "\n")
+        vim.schedule(function()
+          if self:is_running() then
+            vim.api.nvim_buf_call(self.buf, function()
+              vim.api.nvim_put(vim.split(next, "\n", { plain = true }), "c", false, true)
+            end)
+            table.remove(self.send_queue, 1)
+            if self:is_focused() then
+              vim.cmd.startinsert()
+            end
+          end
+          self._dotfiles_view_focus_sending = false
+        end)
+      end
+    end)
+  end
+end
+
 function M.configure(term)
   if restoring and term.parent == restoring.parent then
     term.opts = vim.deepcopy(restoring.opts)
@@ -55,26 +114,33 @@ function M.resume()
     if not vim.api.nvim_tabpage_is_valid(view.tab) then
       pending[id] = nil
     elseif view.tab == vim.api.nvim_get_current_tabpage() then
-      pending[id] = nil
       local attached = false
       for _, term in pairs(terminals()) do
         attached = attached or (is_herdr(term) and term.parent.id == id)
       end
-      -- Do not resurrect exited agents or duplicate an explicitly reopened view.
-      if not attached and view.parent:is_running() then
-        restoring = view
-        local ok, term = pcall(require("sidekick.cli.session").attach, view.parent)
-        restoring = nil
-        if ok then
-          if view.focus then
-            term:focus()
+      if attached then
+        pending[id] = nil
+      else
+        local running = view.parent:is_running()
+        if running == false then
+          pending[id] = nil
+        elseif running then
+          restoring = view
+          local ok, term = pcall(require("sidekick.cli.session").attach, view.parent)
+          restoring = nil
+          if ok and term and term:is_running() then
+            pending[id] = nil
+            if view.focus then
+              term:focus()
+            end
+            term.normal_mode = view.normal_mode
+            if view.focus and view.normal_mode then
+              vim.cmd.stopinsert()
+            end
+          else
+            local err = ok and "attachment did not start" or term
+            vim.notify("Sidekick: could not restore Herdr view: " .. tostring(err), vim.log.levels.WARN)
           end
-          term.normal_mode = view.normal_mode
-          if view.focus and view.normal_mode then
-            vim.cmd.stopinsert()
-          end
-        else
-          vim.notify("Sidekick: could not restore Herdr view: " .. tostring(term), vim.log.levels.WARN)
         end
       end
     end
@@ -82,6 +148,7 @@ function M.resume()
 end
 
 function M.setup()
+  patch_terminal_sends()
   local group = vim.api.nvim_create_augroup("plugins.sidekick.view_focus", { clear = true })
   vim.api.nvim_create_autocmd("FocusLost", {
     group = group,
