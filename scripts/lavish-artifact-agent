@@ -284,8 +284,12 @@ def normalize_repo_url(value: str) -> str:
         default_port = {"git": 9418, "http": 80, "https": 443, "ssh": 22}.get(
             parsed.scheme.lower()
         )
-        if parsed.port is not None and parsed.port != default_port:
-            host = f"{host}:{parsed.port}"
+        try:
+            port = parsed.port
+        except ValueError:
+            return value.removesuffix(".git")
+        if port is not None and port != default_port:
+            host = f"{host}:{port}"
         return f"{host}/{parsed.path.removesuffix('.git').strip('/')}"
     try:
         return str(Path(value).expanduser().resolve())
@@ -502,7 +506,7 @@ def start_agent_unchecked(
         "workspace_label": workspace_label,
         "workspace_id": workspace_id,
         "tab_label": tab_label,
-        "tab_id": str(agent.get("tab_id", "")),
+        "tab_id": tab_id,
         "pane_id": pane_id,
         "terminal_id": str(agent.get("terminal_id", "")),
         "agent_name": agent_name,

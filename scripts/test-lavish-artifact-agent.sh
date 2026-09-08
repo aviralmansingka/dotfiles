@@ -50,7 +50,9 @@ case "$1 $2" in
     ;;
   "agent start")
     rm -f "$FAKE_STATE_DIR/first-prompt" "$FAKE_STATE_DIR/ready"
-    printf '{"result":{"agent":{"name":"%s","workspace_id":"wRepo","pane_id":"wRepo:pArtifact","tab_id":"wRepo:tArtifact","terminal_id":"term_A"}}}\n' "$3"
+    agent_tab_id=',"tab_id":"wRepo:tArtifact"'
+    if [[ -n "${FAKE_OMIT_TAB_ID:-}" ]]; then agent_tab_id=; fi
+    printf '{"result":{"agent":{"name":"%s","workspace_id":"wRepo","pane_id":"wRepo:pArtifact"%s,"terminal_id":"term_A"}}}\n' "$3" "$agent_tab_id"
     ;;
   "agent get")
     if [[ -f "$FAKE_STATE_DIR/ready" ]]; then
@@ -58,7 +60,9 @@ case "$1 $2" in
     else
       session=
     fi
-    printf '{"result":{"agent":{"name":"artifact-06ff9a2d0ea93ec9","workspace_id":"wRepo","pane_id":"wRepo:pArtifact","tab_id":"wRepo:tArtifact","terminal_id":"term_A","foreground_cwd":"%s","interactive_ready":true,"agent_status":"idle"%s}}}\n' "$FAKE_WORKTREE" "$session"
+    agent_tab_id=',"tab_id":"wRepo:tArtifact"'
+    if [[ -n "${FAKE_OMIT_TAB_ID:-}" ]]; then agent_tab_id=; fi
+    printf '{"result":{"agent":{"name":"artifact-06ff9a2d0ea93ec9","workspace_id":"wRepo","pane_id":"wRepo:pArtifact"%s,"terminal_id":"term_A","foreground_cwd":"%s","interactive_ready":true,"agent_status":"idle"%s}}}\n' "$agent_tab_id" "$FAKE_WORKTREE" "$session"
     ;;
   "agent prompt")
     if [[ "$4" == Initialize* ]]; then
@@ -193,6 +197,23 @@ if env "${agent_env[@]}" FAKE_PORT_REPO_CHECKOUT="$other_seed" \
 fi
 [[ $(wc -l < "$runtime/fake/created.log") -eq 1 ]]
 
+no_tab_context=artifact-1212121212121212
+env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
+  --context "$no_tab_context" --slug no-tab-id --repo-url "$origin" --branch main \
+  > "$test_dir/prepare-no-tab.json"
+no_tab_incoming="$runtime/artifacts/_contexts/$no_tab_context/incoming"
+rsync -a --exclude .git/ "$seed/" "$no_tab_incoming/"
+env "${agent_env[@]}" FAKE_OMIT_TAB_ID=1 \
+  FAKE_WORKTREE="$runtime/artifacts/_contexts/$no_tab_context/worktree" \
+  "$repo_dir/scripts/lavish-artifact-agent" activate \
+  --context "$no_tab_context" --artifact-relative artifact.html \
+  > "$test_dir/activate-no-tab.json"
+env "${agent_env[@]}" \
+  FAKE_WORKTREE="$runtime/artifacts/_contexts/$no_tab_context/worktree" \
+  "$repo_dir/scripts/lavish-artifact-agent" retire --context "$no_tab_context" \
+  > "$test_dir/retire-no-tab.json"
+[[ $(grep -c 'tab close wRepo:tArtifact' "$runtime/fake/closed.log") -eq 2 ]]
+
 uv run python - "$test_dir" "$context" "$before" "$after" \
   "$repo_dir/scripts/lavish-artifact-agent" "$runtime/state.json" <<'PY'
 import json
@@ -220,6 +241,8 @@ assert activate["workspace_id"] == "wRepo"
 assert activate["tab_label"] == "Artifact-sample-artifact"
 assert activate["tab_id"] == "wRepo:tArtifact"
 assert activate["pane_id"] == "wRepo:pArtifact"
+no_tab = json.loads((root / "activate-no-tab.json").read_text())
+assert no_tab["tab_id"] == "wRepo:tArtifact"
 assert clean["artifact_changed_since_launch"] is False
 assert changed["artifact_changed_since_launch"] is True
 assert changed["artifact_added_lines"] == 2
@@ -266,6 +289,8 @@ assert module["normalize_repo_url"]("https://example.com:443/org/repo.git") == \
     module["normalize_repo_url"]("https://example.com/org/repo")
 assert module["normalize_repo_url"]("ssh://git@example.com:2222/org/repo.git") != \
     module["normalize_repo_url"]("ssh://git@example.com:2200/org/repo.git")
+assert module["normalize_repo_url"]("ssh://git@example.com:22x/org/repo.git") != \
+    module["normalize_repo_url"]("https://example.com/org/repo")
 workspace_globals = module["workspace_for_repository"].__globals__
 workspace_globals["herdr_json"] = lambda args, **kwargs: {"workspaces": [
     {
@@ -298,6 +323,24 @@ except module["ArtifactAgentError"] as error:
     assert "No Herdr workspace" in str(error)
 else:
     raise AssertionError("missing source workspace was accepted")
+workspace_globals["herdr_json"] = lambda args, **kwargs: {"workspaces": [
+    {
+        "workspace_id": "wMalformed",
+        "worktree": {
+            "checkout_path": "/repos/malformed",
+            "repo_key": "repo-malformed",
+        },
+    },
+]}
+workspace_globals["run"] = lambda args, **kwargs: type(
+    "Result", (), {"stdout": "ssh://git@example.com:22x/org/repo.git\n"}
+)()
+try:
+    module["workspace_for_repository"]("https://example.com/org/repo")
+except module["ArtifactAgentError"] as error:
+    assert "No Herdr workspace" in str(error)
+else:
+    raise AssertionError("malformed remote port matched a source workspace")
 
 agent_globals = module["start_agent"].__globals__
 agent_globals["STATE_FILE"] = state_path
