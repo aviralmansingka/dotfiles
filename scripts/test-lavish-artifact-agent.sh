@@ -29,7 +29,11 @@ cat > "$fake_herdr" <<'SH'
 set -euo pipefail
 case "$1 $2" in
   "workspace list")
-    printf '{"result":{"workspaces":[{"workspace_id":"wRepo","label":"Repository","number":1,"worktree":{"checkout_path":"%s","is_linked_worktree":false}}]}}\n' "$FAKE_REPO_CHECKOUT"
+    if [[ -n "${FAKE_OTHER_REPO_CHECKOUT:-}" ]]; then
+      printf '{"result":{"workspaces":[{"workspace_id":"wRepo","label":"Repository","number":1,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-a"}},{"workspace_id":"wOther","label":"Other clone","number":2,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-b"}}]}}\n' "$FAKE_REPO_CHECKOUT" "$FAKE_OTHER_REPO_CHECKOUT"
+    else
+      printf '{"result":{"workspaces":[{"workspace_id":"wRepo","label":"Repository","number":1,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-a"}}]}}\n' "$FAKE_REPO_CHECKOUT"
+    fi
     ;;
   "workspace close")
     printf '{"result":{"closed":true}}\n'
@@ -39,6 +43,7 @@ case "$1 $2" in
     printf '{"result":{"closed":true}}\n'
     ;;
   "tab create")
+    printf '%s\n' "$*" >> "$FAKE_CREATE_LOG"
     printf '{"result":{"tab":{"tab_id":"wRepo:tArtifact","workspace_id":"wRepo"},"root_pane":{"pane_id":"wRepo:pArtifact","tab_id":"wRepo:tArtifact","terminal_id":"term_A"}}}\n'
     ;;
   "agent start")
@@ -89,6 +94,7 @@ agent_env=(
   FAKE_TERMINAL="$runtime/fake/terminal.txt"
   FAKE_REPO_CHECKOUT="$seed"
   FAKE_CLOSE_LOG="$runtime/fake/closed.log"
+  FAKE_CREATE_LOG="$runtime/fake/created.log"
 )
 
 env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
@@ -142,6 +148,23 @@ pid_c=$!
 wait "$pid_b"
 wait "$pid_c"
 
+other_seed="$test_dir/other-seed"
+git clone -q "$origin" "$other_seed"
+ambiguous_context=artifact-8888888888888888
+env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
+  --context "$ambiguous_context" --slug ambiguous --repo-url "$origin" --branch main \
+  > "$test_dir/prepare-ambiguous.json"
+ambiguous_incoming="$runtime/artifacts/_contexts/$ambiguous_context/incoming"
+rsync -a --exclude .git/ "$seed/" "$ambiguous_incoming/"
+if env "${agent_env[@]}" FAKE_OTHER_REPO_CHECKOUT="$other_seed" \
+  "$repo_dir/scripts/lavish-artifact-agent" activate \
+  --context "$ambiguous_context" --artifact-relative artifact.html \
+  > "$test_dir/activate-ambiguous.json"; then
+  echo "same-origin repositories were silently disambiguated" >&2
+  exit 1
+fi
+[[ $(wc -l < "$runtime/fake/created.log") -eq 1 ]]
+
 uv run python - "$test_dir" "$context" "$before" "$after" \
   "$repo_dir/scripts/lavish-artifact-agent" "$runtime/state.json" <<'PY'
 import json
@@ -180,7 +203,14 @@ assert [message["role"] for message in history["messages"]] == ["user", "assista
 assert history["workspace"] == "Repository"
 assert retire == {"context_id": context, "retired": True}
 assert not (state_path.parent / "artifacts/_contexts" / context).exists()
-assert set(state) == {"artifact-1111111111111111", "artifact-2222222222222222"}
+assert set(state) == {
+    "artifact-1111111111111111",
+    "artifact-2222222222222222",
+    "artifact-8888888888888888",
+}
+ambiguous = json.loads((root / "activate-ambiguous.json").read_text())
+assert "Multiple Herdr repositories match" in ambiguous["error"]
+assert state["artifact-8888888888888888"]["phase"] == "prepared"
 
 path_worktree = root / "path-worktree"
 path_worktree.mkdir()
@@ -203,12 +233,20 @@ workspace_globals["herdr_json"] = lambda args, **kwargs: {"workspaces": [
     {
         "workspace_id": "linked",
         "number": 1,
-        "worktree": {"checkout_path": "/repos/linked", "is_linked_worktree": True},
+        "worktree": {
+            "checkout_path": "/repos/linked",
+            "is_linked_worktree": True,
+            "repo_key": "repo-one",
+        },
     },
     {
         "workspace_id": "primary",
         "number": 2,
-        "worktree": {"checkout_path": "/repos/primary", "is_linked_worktree": False},
+        "worktree": {
+            "checkout_path": "/repos/primary",
+            "is_linked_worktree": False,
+            "repo_key": "repo-one",
+        },
     },
 ]}
 workspace_globals["run"] = lambda args, **kwargs: type(

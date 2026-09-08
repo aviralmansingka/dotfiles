@@ -33,14 +33,14 @@ Inline these variables so the standalone artifact remains portable:
   --border: #504945;
   --ghost: #665c54;
   --muted: #928374;
-  --fg0: #fbf1c7;
-  --fg1: #ebdbb2;
+  --fg0: #e2cca9;
+  --fg1: #e2cca9;
   --orange: #f28534;
   --yellow: #e9b143;
   --yellow-bright: #fabd2f;
   --green: #b0b846;
   --green-bright: #b8bb26;
-  --aqua: #89b482;
+  --aqua: #8bba7f;
   --blue: #80aa9e;
   --purple: #d3869b;
   --red: #f2594b;
