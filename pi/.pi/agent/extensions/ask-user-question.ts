@@ -10,7 +10,12 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { joinHints, numberShortcutHint, numberShortcutIndex } from "./user-input/option-shortcuts";
+import {
+	joinHints,
+	NAVIGATION_HINT,
+	numberShortcutHint,
+	numberShortcutIndex,
+} from "./user-input/option-shortcuts";
 
 interface AskOption {
 	label: string;
@@ -257,12 +262,12 @@ async function askSingleChoice(
 				return;
 			}
 
-			if (matchesKey(data, Key.up)) {
+			if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
 				optionIndex = Math.max(0, optionIndex - 1);
 				refresh();
 				return;
 			}
-			if (matchesKey(data, Key.down)) {
+			if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
 				optionIndex = Math.min(allOptions.length - 1, optionIndex + 1);
 				refresh();
 				return;
@@ -328,7 +333,7 @@ async function askSingleChoice(
 				}
 			} else {
 				top.push("");
-				add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(options.length, "select"), "Enter select", "Esc cancel")}`));
+				add(theme.fg("dim", ` ${joinHints(NAVIGATION_HINT, numberShortcutHint(options.length, "select"), "Enter select", "Esc cancel")}`));
 			}
 
 			const framed = frameMerged(top, bottom, width, theme);
@@ -421,12 +426,12 @@ async function askMultiChoice(
 				return;
 			}
 
-			if (matchesKey(data, Key.up)) {
+			if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
 				optionIndex = Math.max(0, optionIndex - 1);
 				refresh();
 				return;
 			}
-			if (matchesKey(data, Key.down)) {
+			if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
 				optionIndex = Math.min(allItems.length - 1, optionIndex + 1);
 				refresh();
 				return;
@@ -540,7 +545,7 @@ async function askMultiChoice(
 				if (selected.size === 0) {
 					add(theme.fg("warning", " Select at least one answer before submitting."));
 				}
-				add(theme.fg("dim", ` ${joinHints("↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter edit/submit", "Esc cancel")}`));
+				add(theme.fg("dim", ` ${joinHints(NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter edit/submit", "Esc cancel")}`));
 			}
 
 			const framed = frameMerged(top, bottom, width, theme);

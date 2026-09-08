@@ -19,6 +19,7 @@ import uuid
 from contextlib import contextmanager
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
+from urllib.parse import urlparse
 
 
 ARTIFACT_ROOT = Path(
@@ -269,14 +270,100 @@ def sync_snapshot(incoming: Path, worktree: Path) -> None:
     )
 
 
-def reset_started_workspace(
+def normalize_repo_url(value: str) -> str:
+    value = value.strip().rstrip("/")
+    scp = re.fullmatch(r"(?:[^@/]+@)?([^:/]+):(.+)", value)
+    if scp and "://" not in value:
+        host, path = scp.groups()
+        return f"{host.lower()}/{path.removesuffix('.git').strip('/')}"
+    parsed = urlparse(value)
+    if parsed.scheme and parsed.hostname:
+        host = parsed.hostname.lower()
+        if ":" in host:
+            host = f"[{host}]"
+        default_port = {"git": 9418, "http": 80, "https": 443, "ssh": 22}.get(
+            parsed.scheme.lower()
+        )
+        try:
+            port = parsed.port
+        except ValueError:
+            return value.removesuffix(".git")
+        if port is not None and port != default_port:
+            host = f"{host}:{port}"
+        return f"{host}/{parsed.path.removesuffix('.git').strip('/')}"
+    try:
+        return str(Path(value).expanduser().resolve())
+    except OSError:
+        return value.removesuffix(".git")
+
+
+def workspace_for_repository(repo_url: str) -> dict[str, object]:
+    wanted = normalize_repo_url(repo_url)
+    payload = herdr_json(["workspace", "list"])
+    matches: list[dict[str, object]] = []
+    for workspace in payload.get("workspaces", []):
+        if not isinstance(workspace, dict):
+            continue
+        worktree = workspace.get("worktree")
+        checkout = str(worktree.get("checkout_path", "")) if isinstance(worktree, dict) else ""
+        if not checkout:
+            continue
+        try:
+            origin = run(["git", "-C", checkout, "remote", "get-url", "origin"]).stdout.strip()
+        except ArtifactAgentError:
+            continue
+        if normalize_repo_url(origin) == wanted:
+            matches.append(workspace)
+    if not matches:
+        raise ArtifactAgentError(
+            "No Herdr workspace is open for the artifact's source repository"
+        )
+    groups: dict[str, list[dict[str, object]]] = {}
+    for workspace in matches:
+        worktree = workspace.get("worktree")
+        repo_key = str(worktree.get("repo_key", "")).strip() if isinstance(worktree, dict) else ""
+        if repo_key:
+            groups.setdefault(repo_key, []).append(workspace)
+    if len(groups) > 1:
+        raise ArtifactAgentError(
+            "Multiple Herdr repositories match the artifact's source repository URL"
+        )
+    if groups:
+        matches = next(iter(groups.values()))
+    elif len(matches) > 1:
+        raise ArtifactAgentError(
+            "Multiple Herdr workspaces match without a repository identity"
+        )
+    matches.sort(
+        key=lambda workspace: (
+            bool((workspace.get("worktree") or {}).get("is_linked_worktree")),
+            int(workspace.get("number", 0)),
+        )
+    )
+    return matches[0]
+
+
+def close_started_session(record: dict[str, object]) -> None:
+    if record.get("session_container") == "tab":
+        tab_id = str(record.get("tab_id", ""))
+        if not tab_id:
+            raise ArtifactAgentError("Artifact tab identity is missing; refusing to close its source workspace")
+        herdr_json(["tab", "close", tab_id])
+        return
+    workspace_id = str(record.get("workspace_id", ""))
+    if workspace_id:
+        # Backward compatibility for contexts created before artifact chats moved
+        # into tabs: those records own the whole Artifact-* workspace.
+        herdr_json(["workspace", "close", workspace_id])
+
+
+def reset_started_session(
     record: dict[str, object], state: dict[str, dict[str, object]]
 ) -> None:
-    workspace_id = str(record.get("workspace_id", ""))
-    if not workspace_id:
+    if not record.get("workspace_id"):
         return
     try:
-        herdr_json(["workspace", "close", workspace_id])
+        close_started_session(record)
     except (ArtifactAgentError, subprocess.TimeoutExpired):
         record["phase"] = "retiring"
         record["retirement_requested_at"] = now()
@@ -286,11 +373,13 @@ def reset_started_workspace(
     for key in (
         "workspace_label",
         "workspace_id",
+        "tab_label",
         "tab_id",
         "pane_id",
         "terminal_id",
         "agent_name",
         "agent_session",
+        "session_container",
     ):
         record.pop(key, None)
     save_state(state)
@@ -302,7 +391,7 @@ def start_agent(
     try:
         return start_agent_unchecked(record, state)
     except Exception:
-        reset_started_workspace(record, state)
+        reset_started_session(record, state)
         raise
 
 
@@ -313,38 +402,48 @@ def start_agent_unchecked(
     replies = Path(str(record["replies"]))
     context_id = str(record["context_id"])
     slug = str(record["slug"])
-    label = f"Artifact-{slug}"[:80]
-    workspace = herdr_json(
+    tab_label = f"Artifact-{slug}"[:80]
+    workspace_data = workspace_for_repository(str(record["repo_url"]))
+    workspace_id = str(workspace_data.get("workspace_id", ""))
+    workspace_label = str(workspace_data.get("label", ""))
+    if not workspace_id:
+        raise ArtifactAgentError("Herdr returned an incomplete source workspace identity")
+    created = herdr_json(
         [
-            "workspace",
+            "tab",
             "create",
+            "--workspace",
+            workspace_id,
             "--cwd",
             str(worktree),
             "--label",
-            label,
+            tab_label,
             "--env",
             f"ARTIFACT_CONTEXT_ID={context_id}",
             "--no-focus",
         ]
     )
-    workspace_data = workspace.get("workspace")
-    pane_data = workspace.get("root_pane")
-    workspace_id = str(workspace_data.get("workspace_id", "")) if isinstance(workspace_data, dict) else ""
-    if not workspace_id:
-        raise ArtifactAgentError("Herdr did not return the created workspace identity")
+    tab_data = created.get("tab")
+    pane_data = created.get("root_pane")
+    tab_id = str(tab_data.get("tab_id", "")) if isinstance(tab_data, dict) else ""
+    if not tab_id:
+        raise ArtifactAgentError("Herdr did not return the created artifact tab identity")
     record.update(
         {
             "phase": "initializing",
-            "workspace_label": label,
+            "session_container": "tab",
+            "workspace_label": workspace_label,
             "workspace_id": workspace_id,
+            "tab_label": tab_label,
+            "tab_id": tab_id,
         }
     )
     save_state(state)
     if not isinstance(pane_data, dict):
-        raise ArtifactAgentError("Herdr did not return the created workspace root pane")
+        raise ArtifactAgentError("Herdr did not return the created artifact tab's root pane")
     pane_id = str(pane_data.get("pane_id", ""))
     if not pane_id:
-        raise ArtifactAgentError("Herdr returned incomplete workspace identity")
+        raise ArtifactAgentError("Herdr returned incomplete artifact tab identity")
 
     agent_name = f"artifact-{hashlib.sha256(context_id.encode()).hexdigest()[:16]}"
     start_args = [
@@ -404,9 +503,10 @@ def start_agent_unchecked(
     else:
         raise ArtifactAgentError("Herdr started Codex but did not register its persistent session")
     return {
-        "workspace_label": label,
+        "workspace_label": workspace_label,
         "workspace_id": workspace_id,
-        "tab_id": str(agent.get("tab_id", "")),
+        "tab_label": tab_label,
+        "tab_id": tab_id,
         "pane_id": pane_id,
         "terminal_id": str(agent.get("terminal_id", "")),
         "agent_name": agent_name,
@@ -450,7 +550,7 @@ def command_activate(args: argparse.Namespace) -> dict[str, object]:
             atomic_json(context_dir(args.context) / "chat.json", {"messages": []})
         except Exception:
             if record.get("phase") in {"initializing", "active"}:
-                reset_started_workspace(record, state)
+                reset_started_session(record, state)
             raise
         return {
             "context_id": args.context,
@@ -852,7 +952,7 @@ def retire_context_locked(context_id: str) -> dict[str, object]:
             save_state(state)
 
     if phase != "retired":
-        herdr_json(["workspace", "close", workspace_id])
+        close_started_session(record)
         with state_transaction() as state:
             record = state_record(state, context_id)
             record["phase"] = "retired"

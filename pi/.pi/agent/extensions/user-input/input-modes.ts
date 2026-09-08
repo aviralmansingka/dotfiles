@@ -2,7 +2,7 @@
 // prompt is open. Extracted as a pure module so the cycling order is unit
 // testable without spinning up the TUI.
 //
-// - steering: the options list is focused (arrows navigate, number keys +
+// - steering: the options list is focused (arrows or j/k navigate, number keys +
 //   Enter answer, `o` opens context files). The quiz question stays visible
 //   and the quiz is never removed in this mode.
 // - note: the always-present note editor is focused (the "I don't know" /
