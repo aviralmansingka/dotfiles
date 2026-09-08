@@ -103,6 +103,7 @@ function M.toggle()
   -- when both happened in the same tick.
   local buf = vim.api.nvim_win_get_buf(win)
   local new_win = vim.api.nvim_open_win(buf, true, new_cfg)
+  term.win = new_win
   vim.w[new_win].sidekick_session_id = sid
   if new_cfg.vertical then
     vim.wo[new_win].winfixheight = true

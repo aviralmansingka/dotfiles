@@ -110,7 +110,14 @@ function M:attach()
 end
 
 function M:is_running()
-  return self.herdr_agent_name ~= nil and Herdr.get_agent(self.herdr_agent_name) ~= nil
+  if not self.herdr_agent_name then
+    return false
+  end
+  local agent, err = Herdr.get_agent(self.herdr_agent_name)
+  if err then
+    return nil, err
+  end
+  return agent ~= nil
 end
 
 function M:send(text)

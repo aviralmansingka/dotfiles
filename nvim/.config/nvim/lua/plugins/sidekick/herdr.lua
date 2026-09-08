@@ -141,9 +141,16 @@ end
 
 ---@param target string
 ---@return table|nil
+---@return string|nil error
 function M.get_agent(target)
-  local result = M.call({ "agent", "get", target }, true)
-  return result and result.agent or nil
+  local result, err = M.call({ "agent", "get", target }, true)
+  if err then
+    local ok, decoded = pcall(vim.json.decode, err)
+    if ok and type(decoded.error) == "table" and decoded.error.code == "agent_not_found" then
+      return nil
+    end
+  end
+  return result and result.agent or nil, err
 end
 
 ---@param tool string
