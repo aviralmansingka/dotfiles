@@ -28,8 +28,8 @@ import {
 // quiz — a GRADED sibling of ask_user_question.
 //
 // Where ask_user_question collects a preference/decision with no notion of
-// right or wrong, `quiz` poses a question that HAS a correct answer, grades the
-// user's selection instantly, and shows tight feedback (✓/✗ + the correct
+// right or wrong, `quiz` poses a question that HAS a correct answer, grades
+// submitted selections instantly, and shows tight feedback (✓/✗ + the correct
 // answer + an optional explanation) to both the user and the agent.
 //
 // It is intentionally options-only: single-select or multi-select. There is no
@@ -64,8 +64,8 @@ const DONT_KNOW_LABEL = "I don't know";
 const DONT_KNOW_INDEX = 0; // real options are 1-based; submit uses -1
 
 // Unified response from either ask* component. answers holds the real
-// selections (empty when dontKnow); note is the optional free-text the user
-// typed in the always-present note field (kept only when non-empty).
+// selections (empty when no answer was submitted); note is the optional
+// free-text from the always-present note field (kept only when non-empty).
 interface QuizResponse {
 	dontKnow: boolean;
 	tooHard?: boolean; // Ctrl+P: pass so the agent teaches and retries at a simpler level
@@ -1332,7 +1332,7 @@ export default function quiz(pi: ExtensionAPI) {
 		name: "quiz",
 		label: "quiz",
 		description:
-			"Ask the user a GRADED question with a known correct answer, then instantly grade and give feedback. Unlike ask_user_question (which collects preferences/decisions with no right answer), quiz always has a correct answer supplied by you, marks the user's selection right/wrong (✓/✗), reveals the correct answer, and can show an explanation. Use it to (1) assess what the learner already understands before teaching, and (2) run tight practice/retrieval loops after explaining, or probe understanding whenever you're unsure they've got it. Options-only: single-select or multi-select, plus an automatic 'I don't know' choice so the user can signal a genuine gap instead of guessing. Ctrl+P passes a question as too hard so you can simplify the prerequisite and retry. While a quiz is open, Tab cycles three input modes shown in a visible indicator: steering (options focused — navigate/answer/open context files, generate a handout, question stays visible), note (free-text that attaches to the answer, for 'I don't know' context), and follow-up (a message that ends the quiz and returns to you as `followUp`). The note reaches you only when non-empty. No free-text answers — for non-graded questions use ask_user_question instead.",
+			"Ask the user a GRADED question with a known correct answer, then grade submitted answers and give feedback. Unlike ask_user_question (which collects preferences/decisions with no right answer), quiz requires a correct answer from you and marks submitted selections right/wrong (✓/✗), reveals the correct answer, and can show an explanation. Use it to (1) assess what the learner already understands before teaching, and (2) run tight practice/retrieval loops after explaining, or probe understanding whenever you're unsure they've got it. Options-only: single-select or multi-select, plus an automatic 'I don't know' choice so the user can signal a genuine gap instead of guessing. Ctrl+P passes a question as too hard without grading or revealing its answer so you can simplify the prerequisite and retry. While a quiz is open, Tab cycles three input modes shown in a visible indicator: steering (options focused — navigate/answer/open context files, generate a handout, question stays visible), note (free-text that attaches to the answer, for 'I don't know' context), and follow-up (a message that ends the quiz and returns to you as `followUp`). The note reaches you only when non-empty. No free-text answers — for non-graded questions use ask_user_question instead.",
 		promptSnippet:
 			"Use the quiz tool to test the user with a graded multiple-choice or multi-select question (required correct answer + required explanation). For non-graded questions, use ask_user_question.",
 		promptGuidelines: [
