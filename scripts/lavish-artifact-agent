@@ -278,7 +278,15 @@ def normalize_repo_url(value: str) -> str:
         return f"{host.lower()}/{path.removesuffix('.git').strip('/')}"
     parsed = urlparse(value)
     if parsed.scheme and parsed.hostname:
-        return f"{parsed.hostname.lower()}/{parsed.path.removesuffix('.git').strip('/')}"
+        host = parsed.hostname.lower()
+        if ":" in host:
+            host = f"[{host}]"
+        default_port = {"git": 9418, "http": 80, "https": 443, "ssh": 22}.get(
+            parsed.scheme.lower()
+        )
+        if parsed.port is not None and parsed.port != default_port:
+            host = f"{host}:{parsed.port}"
+        return f"{host}/{parsed.path.removesuffix('.git').strip('/')}"
     try:
         return str(Path(value).expanduser().resolve())
     except OSError:

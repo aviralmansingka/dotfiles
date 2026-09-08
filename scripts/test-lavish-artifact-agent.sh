@@ -29,7 +29,9 @@ cat > "$fake_herdr" <<'SH'
 set -euo pipefail
 case "$1 $2" in
   "workspace list")
-    if [[ -n "${FAKE_OTHER_REPO_CHECKOUT:-}" ]]; then
+    if [[ -n "${FAKE_PORT_REPO_CHECKOUT:-}" ]]; then
+      printf '{"result":{"workspaces":[{"workspace_id":"wRepo","label":"Port repository","number":1,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-port"}}]}}\n' "$FAKE_PORT_REPO_CHECKOUT"
+    elif [[ -n "${FAKE_OTHER_REPO_CHECKOUT:-}" ]]; then
       printf '{"result":{"workspaces":[{"workspace_id":"wRepo","label":"Repository","number":1,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-a"}},{"workspace_id":"wOther","label":"Other clone","number":2,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-b"}}]}}\n' "$FAKE_REPO_CHECKOUT" "$FAKE_OTHER_REPO_CHECKOUT"
     else
       printf '{"result":{"workspaces":[{"workspace_id":"wRepo","label":"Repository","number":1,"worktree":{"checkout_path":"%s","is_linked_worktree":false,"repo_key":"repo-a"}}]}}\n' "$FAKE_REPO_CHECKOUT"
@@ -165,6 +167,32 @@ if env "${agent_env[@]}" FAKE_OTHER_REPO_CHECKOUT="$other_seed" \
 fi
 [[ $(wc -l < "$runtime/fake/created.log") -eq 1 ]]
 
+port_context=artifact-9999999999999999
+env "${agent_env[@]}" "$repo_dir/scripts/lavish-artifact-agent" prepare \
+  --context "$port_context" --slug port-collision --repo-url "$origin" --branch main \
+  > "$test_dir/prepare-port.json"
+port_incoming="$runtime/artifacts/_contexts/$port_context/incoming"
+rsync -a --exclude .git/ "$seed/" "$port_incoming/"
+git -C "$other_seed" remote set-url origin ssh://git@example.com:2200/org/repo.git
+uv run python - "$runtime/state.json" "$port_context" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+state = json.loads(path.read_text())
+state[sys.argv[2]]["repo_url"] = "ssh://git@example.com:2222/org/repo.git"
+path.write_text(json.dumps(state))
+PY
+if env "${agent_env[@]}" FAKE_PORT_REPO_CHECKOUT="$other_seed" \
+  "$repo_dir/scripts/lavish-artifact-agent" activate \
+  --context "$port_context" --artifact-relative artifact.html \
+  > "$test_dir/activate-port.json"; then
+  echo "different SSH ports shared a repository identity" >&2
+  exit 1
+fi
+[[ $(wc -l < "$runtime/fake/created.log") -eq 1 ]]
+
 uv run python - "$test_dir" "$context" "$before" "$after" \
   "$repo_dir/scripts/lavish-artifact-agent" "$runtime/state.json" <<'PY'
 import json
@@ -207,10 +235,14 @@ assert set(state) == {
     "artifact-1111111111111111",
     "artifact-2222222222222222",
     "artifact-8888888888888888",
+    "artifact-9999999999999999",
 }
 ambiguous = json.loads((root / "activate-ambiguous.json").read_text())
 assert "Multiple Herdr repositories match" in ambiguous["error"]
 assert state["artifact-8888888888888888"]["phase"] == "prepared"
+port = json.loads((root / "activate-port.json").read_text())
+assert "No Herdr workspace" in port["error"]
+assert state["artifact-9999999999999999"]["phase"] == "prepared"
 
 path_worktree = root / "path-worktree"
 path_worktree.mkdir()
@@ -228,6 +260,12 @@ else:
 
 assert module["normalize_repo_url"]("git@github.com:Owner/Repo.git") == \
     module["normalize_repo_url"]("https://github.com/Owner/Repo")
+assert module["normalize_repo_url"]("git@example.com:org/repo.git") == \
+    module["normalize_repo_url"]("ssh://git@example.com:22/org/repo")
+assert module["normalize_repo_url"]("https://example.com:443/org/repo.git") == \
+    module["normalize_repo_url"]("https://example.com/org/repo")
+assert module["normalize_repo_url"]("ssh://git@example.com:2222/org/repo.git") != \
+    module["normalize_repo_url"]("ssh://git@example.com:2200/org/repo.git")
 workspace_globals = module["workspace_for_repository"].__globals__
 workspace_globals["herdr_json"] = lambda args, **kwargs: {"workspaces": [
     {
