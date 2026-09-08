@@ -1,3 +1,4 @@
+export const NAVIGATION_HINT = "↑↓/jk navigate";
 export const NUMBER_SHORTCUT_LIMIT = 9;
 
 export function numberShortcutIndex(data: string, optionCount: number): number | undefined {
