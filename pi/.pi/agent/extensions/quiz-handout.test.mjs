@@ -72,7 +72,7 @@ class Editor {
 	invalidate() {}
 }
 exports.Editor = Editor;
-exports.Key = { enter: "\\r", escape: "\\x1b", tab: "\\t", up: "up", down: "down", space: " " };
+exports.Key = { enter: "\\r", escape: "\\x1b", tab: "\\t", up: "up", down: "down", space: " ", ctrl: key => "ctrl+" + key };
 exports.Text = class Text { constructor(text) { this.text = text; } };
 exports.matchesKey = (data, key) => data === key;
 exports.truncateToWidth = (text, width) => text.slice(0, width);
@@ -186,6 +186,33 @@ Equal members make equal sets.`;
 	assert.equal(notifications[0].message, "Generating handout…");
 	assert.match(notifications.at(-1).message, /^handout generated and opened in vim/);
 	assert.equal(result.details.status, "cancelled", "the quiz should remain active and ungraded after h");
+
+	for (const multiSelect of [false, true]) {
+		let passPanel = "";
+		ctx.ui.custom = (factory) =>
+			new Promise((done) => {
+				const theme = { fg: (_color, text) => text, bold: (text) => text };
+				component = factory({ requestRender() {} }, theme, {}, done);
+				passPanel = component.render(100).join("\n");
+				component.handleInput("ctrl+p");
+			});
+		const passResult = await quizTool.execute(`too-hard-${multiSelect}`, {
+			question: "When are two sets equal?",
+			options: [
+				{ label: "Same members", value: "members" },
+				{ label: "Same insertion order", value: "order" },
+			],
+			multiSelect,
+			correctAnswer: "members",
+			explanation: "Set equality compares membership.",
+			shuffle: false,
+		}, signal, undefined, ctx);
+		assert.match(passPanel, /Ctrl\+P too hard/);
+		assert.equal(passResult.details.status, "too-hard");
+		assert.equal(passResult.details.tooHard, true);
+		assert.deepEqual(passResult.details.answers, []);
+		assert.match(passResult.content[0].text, /Explain the prerequisite more simply, then ask an easier quiz question/);
+	}
 } finally {
 	process.env.PATH = oldEnv.PATH;
 	if (oldEnv.PI_QUIZ_HANDOUT_MODEL === undefined) delete process.env.PI_QUIZ_HANDOUT_MODEL;

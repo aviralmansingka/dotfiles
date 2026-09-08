@@ -17,7 +17,12 @@ import { openEditor } from "./nvim-open";
 import { handoutModelOptions } from "./quiz-handout";
 import { contextFileHint, handoutHint, normalizeContextFiles } from "./user-input/context-files";
 import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
-import { joinHints, numberShortcutHint, numberShortcutIndex } from "./user-input/option-shortcuts";
+import {
+	joinHints,
+	NAVIGATION_HINT,
+	numberShortcutHint,
+	numberShortcutIndex,
+} from "./user-input/option-shortcuts";
 
 // ────────────────────────────────────────────────────────────────────────────
 // quiz — a GRADED sibling of ask_user_question.
@@ -63,12 +68,13 @@ const DONT_KNOW_INDEX = 0; // real options are 1-based; submit uses -1
 // typed in the always-present note field (kept only when non-empty).
 interface QuizResponse {
 	dontKnow: boolean;
+	tooHard?: boolean; // Ctrl+P: pass so the agent teaches and retries at a simpler level
 	note?: string;
 	answers: OptionAnswer[];
 	followUp?: string; // set when the captain sends a follow-up instead of answering
 }
 
-type QuizStatus = "answered" | "cancelled" | "unavailable" | "follow-up";
+type QuizStatus = "answered" | "cancelled" | "unavailable" | "follow-up" | "too-hard";
 type QuizMode = "single-select" | "multi-select";
 
 interface DisplayedOption {
@@ -86,6 +92,7 @@ interface QuizResultDetails {
 	options?: DisplayedOption[]; // full option list in display order, for the transcript
 	correct?: boolean;
 	dontKnow?: boolean; // user selected "I don't know" instead of guessing
+	tooHard?: boolean; // user passed because the question needs simplifying
 	note?: string; // optional free-text from the always-present note field (any answer)
 	followUp?: string; // set when the captain sent a follow-up instead of answering
 	explanation?: string;
@@ -440,8 +447,9 @@ function buildStructuredResult(
 	dontKnow?: boolean,
 	note?: string,
 	followUp?: string,
+	tooHard?: boolean,
 ): QuizResultDetails {
-	return { status, question, context, mode, answers, correctIndices, options, correct, dontKnow, note, followUp, explanation, message };
+	return { status, question, context, mode, answers, correctIndices, options, correct, dontKnow, tooHard, note, followUp, explanation, message };
 }
 
 function cancelledResult(question: string, mode: QuizMode, correctIndices: number[], context?: string) {
@@ -456,6 +464,38 @@ function unavailableResult(question: string, mode: QuizMode, message: string, co
 	return {
 		content: [{ type: "text" as const, text: message }],
 		details: buildStructuredResult("unavailable", question, mode, [], correctIndices, undefined, undefined, context, message),
+	};
+}
+
+// Ctrl+P ends the quiz without grading or revealing the answer, and tells the
+// agent to teach the prerequisite before retrying at a simpler level.
+function tooHardResult(
+	question: string,
+	mode: QuizMode,
+	note: string | undefined,
+	correctIndices: number[],
+	context?: string,
+) {
+	const message =
+		"User passed with Ctrl+P because the question was too hard. Explain the prerequisite more simply, then ask an easier quiz question. Do not grade this as wrong or reveal the original answer.";
+	return {
+		content: [{ type: "text" as const, text: note ? `${message}\nUser's note: ${note}` : message }],
+		details: buildStructuredResult(
+			"too-hard",
+			question,
+			mode,
+			[],
+			correctIndices,
+			undefined,
+			undefined,
+			context,
+			message,
+			undefined,
+			undefined,
+			note,
+			undefined,
+			true,
+		),
 	};
 }
 
@@ -780,6 +820,11 @@ async function askSingleChoice(
 					return;
 				}
 
+				if (matchesKey(data, Key.ctrl("p"))) {
+					done({ dontKnow: false, tooHard: true, note: noteText(), answers: [] });
+					return;
+				}
+
 				// Tab cycles the input mode: steering -> note -> follow-up -> steering.
 				if (matchesKey(data, Key.tab)) {
 					mode = nextInputMode(mode);
@@ -838,12 +883,12 @@ async function askSingleChoice(
 					return;
 				}
 
-				if (matchesKey(data, Key.up)) {
+				if (matchesKey(data, Key.up) || data === "k") {
 					optionIndex = Math.max(0, optionIndex - 1);
 					refresh();
 					return;
 				}
-				if (matchesKey(data, Key.down)) {
+				if (matchesKey(data, Key.down) || data === "j") {
 					optionIndex = Math.min(dontKnowNav, optionIndex + 1);
 					refresh();
 					return;
@@ -919,7 +964,7 @@ async function askSingleChoice(
 				} else if (mode === "follow-up") {
 					add(theme.fg("dim", ` ${modeIndicator(theme, mode)} • type a follow-up (Enter sends, ends quiz) • Ctrl+J newline • Tab → steering • Esc back`));
 				} else {
-					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), "↑↓ navigate", numberShortcutHint(allOptions.length, "answer"), "Enter answer", contextFileHint(contextFiles), handoutHint(), "Tab → note", "Esc cancel")}`));
+					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), NAVIGATION_HINT, "Ctrl+P too hard", numberShortcutHint(allOptions.length, "answer"), "Enter answer", contextFileHint(contextFiles), handoutHint(), "Tab → note", "Esc cancel")}`));
 				}
 
 				if (mode === "note") {
@@ -1056,6 +1101,11 @@ async function askMultiChoice(
 					return;
 				}
 
+				if (matchesKey(data, Key.ctrl("p"))) {
+					done({ dontKnow: false, tooHard: true, note: noteText(), answers: [] });
+					return;
+				}
+
 				// Tab cycles the input mode: steering -> note -> follow-up -> steering.
 				if (matchesKey(data, Key.tab)) {
 					mode = nextInputMode(mode);
@@ -1111,12 +1161,12 @@ async function askMultiChoice(
 					return;
 				}
 
-				if (matchesKey(data, Key.up)) {
+				if (matchesKey(data, Key.up) || data === "k") {
 					optionIndex = Math.max(0, optionIndex - 1);
 					refresh();
 					return;
 				}
-				if (matchesKey(data, Key.down)) {
+				if (matchesKey(data, Key.down) || data === "j") {
 					optionIndex = Math.min(allItems.length - 1, optionIndex + 1);
 					refresh();
 					return;
@@ -1215,7 +1265,7 @@ async function askMultiChoice(
 				} else if (mode === "follow-up") {
 					add(theme.fg("dim", ` ${modeIndicator(theme, mode)} • type a follow-up (Enter sends, ends quiz) • Ctrl+J newline • Tab → steering • Esc back`));
 				} else {
-					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), "↑↓ navigate", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter submit", contextFileHint(contextFiles), handoutHint(), "Tab → note", "Esc cancel")}`));
+					add(theme.fg("dim", ` ${joinHints(modeIndicator(theme, mode), NAVIGATION_HINT, "Ctrl+P too hard", numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter submit", contextFileHint(contextFiles), handoutHint(), "Tab → note", "Esc cancel")}`));
 				}
 
 				if (mode === "note") {
@@ -1286,7 +1336,7 @@ export default function quiz(pi: ExtensionAPI) {
 		name: "quiz",
 		label: "quiz",
 		description:
-			"Ask the user a GRADED question with a known correct answer, then instantly grade and give feedback. Unlike ask_user_question (which collects preferences/decisions with no right answer), quiz always has a correct answer supplied by you, marks the user's selection right/wrong (✓/✗), reveals the correct answer, and can show an explanation. Use it to (1) assess what the learner already understands before teaching, and (2) run tight practice/retrieval loops after explaining, or probe understanding whenever you're unsure they've got it. Options-only: single-select or multi-select, plus an automatic 'I don't know' choice so the user can signal a genuine gap instead of guessing. While a quiz is open, Tab cycles three input modes shown in a visible indicator: steering (options focused — navigate/answer/open context files, generate a handout, question stays visible), note (free-text that attaches to the answer, for 'I don't know' context), and follow-up (a message that ends the quiz and returns to you as `followUp`). The note reaches you only when non-empty. No free-text answers — for non-graded questions use ask_user_question instead.",
+			"Ask the user a GRADED question with a known correct answer, then instantly grade and give feedback. Unlike ask_user_question (which collects preferences/decisions with no right answer), quiz always has a correct answer supplied by you, marks the user's selection right/wrong (✓/✗), reveals the correct answer, and can show an explanation. Use it to (1) assess what the learner already understands before teaching, and (2) run tight practice/retrieval loops after explaining, or probe understanding whenever you're unsure they've got it. Options-only: single-select or multi-select, plus an automatic 'I don't know' choice so the user can signal a genuine gap instead of guessing. Ctrl+P passes a question as too hard so you can simplify the prerequisite and retry. While a quiz is open, Tab cycles three input modes shown in a visible indicator: steering (options focused — navigate/answer/open context files, generate a handout, question stays visible), note (free-text that attaches to the answer, for 'I don't know' context), and follow-up (a message that ends the quiz and returns to you as `followUp`). The note reaches you only when non-empty. No free-text answers — for non-graded questions use ask_user_question instead.",
 		promptSnippet:
 			"Use the quiz tool to test the user with a graded multiple-choice or multi-select question (required correct answer + required explanation). For non-graded questions, use ask_user_question.",
 		promptGuidelines: [
@@ -1297,6 +1347,7 @@ export default function quiz(pi: ExtensionAPI) {
 			"Multi-select is graded as an exact-set match: the user is correct only if they select every correct option and no incorrect ones.",
 			"There is no free-text mode. An 'I don't know' choice is ALWAYS added automatically — provide ONLY the real, gradable options (at least two). Never add your own uncertainty/opt-out option like 'I don't know', 'I'm not sure', or 'Not sure'; that is handled for you and a manual one would be redundant or gradable-as-wrong.",
 			"If a result comes back as dontKnow, the user honestly did not know and did NOT guess — treat it as a genuine knowledge gap to teach into, not as a wrong answer.",
+			"If a quiz result comes back with status `too-hard`, the user pressed Ctrl+P because the question exceeded their current level. Do not grade it or reveal the original answer. Explain the prerequisite more simply, then ask an easier quiz question.",
 			"Any answer (right, wrong, or 'I don't know') may carry an optional free-text `note` the user typed in note mode (Tab cycles steering → note → follow-up). When present it reflects what they were thinking or unsure about — read it and let it steer your follow-up. It is omitted entirely when empty.",
 			"If a result comes back with `followUp` set, the captain typed a follow-up in follow-up mode and submitted it (Enter) instead of answering — the quiz ended with that message. Read `followUp` and respond to it directly; do not grade it. This is a visible, deliberate end to the quiz, never a silent close.",
 			"Treat each wrong answer (distractor) as a diagnostic probe, not just filler: make it a specific, believable mistake the user might actually hold — a common misconception, or an adjacent/easily-confused concept — so that WHICH wrong answer they pick reveals WHICH nuance of their understanding is off. You learn far more from a targeted wrong choice than from a binary right/wrong, and the choice tells you exactly which gap to teach into next (and what the explanation should address).",
@@ -1379,6 +1430,9 @@ export default function quiz(pi: ExtensionAPI) {
 				if (response.followUp) {
 					return followUpResult(params.question, mode, response.followUp, response.note, correctIndices, context);
 				}
+				if (response.tooHard) {
+					return tooHardResult(params.question, mode, response.note, correctIndices, context);
+				}
 				return buildResult(params.question, context, mode, options, response, correctIndices, explanation);
 			});
 		},
@@ -1426,6 +1480,9 @@ export default function quiz(pi: ExtensionAPI) {
 				// Visible outcome for Follow-up mode: never a silent close.
 				const body = details.followUp ? `Follow-up: ${details.followUp}` : (details.message || "Follow-up");
 				return new Text(theme.fg("accent", body), 0, 0);
+			}
+			if (details.status === "too-hard") {
+				return new Text(theme.fg("warning", "Passed — question was too hard; simplifying next"), 0, 0);
 			}
 
 			const correctSet = new Set(details.correctIndices);
