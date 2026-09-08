@@ -21,20 +21,31 @@ local function current_view(parent)
   end
 end
 
+local function close_local(term)
+  if type(term) ~= "table" then
+    return
+  end
+  if not term.closed then
+    term:close()
+  end
+  local Session = require("sidekick.cli.session")
+  if Session._attached[term.id] == term then
+    Session.detach(term)
+  end
+end
+
 local function patch_terminal_sends()
   local Terminal = require("sidekick.cli.terminal")
   if Terminal._dotfiles_view_focus_send then
     return
   end
   Terminal._dotfiles_view_focus_send = Terminal.send
+  Terminal._dotfiles_view_focus_submit = Terminal.submit
   Terminal._dotfiles_view_focus_on_ready = Terminal.on_ready
 
   function Terminal:send(input)
     if self.closed and is_herdr(self) then
-      local Session = require("sidekick.cli.session")
-      if Session._attached[self.id] == self then
-        Session.detach(self)
-      end
+      close_local(self)
       local term = current_view(self.parent)
       if term then
         term:send(input)
@@ -46,10 +57,22 @@ local function patch_terminal_sends()
     return Terminal._dotfiles_view_focus_send(self, input)
   end
 
+  function Terminal:submit()
+    if self.closed and is_herdr(self) then
+      return self:send("\r")
+    end
+    return Terminal._dotfiles_view_focus_submit(self)
+  end
+
   function Terminal:on_ready()
     if not is_herdr(self) then
       return Terminal._dotfiles_view_focus_on_ready(self)
     end
+    local restore = self._dotfiles_view_focus_restore
+    if restore and pending[self.parent.id] == restore then
+      pending[self.parent.id] = nil
+    end
+    self._dotfiles_view_focus_restore = nil
     self.timer:start(0, 100, function()
       local next = self.send_queue[1]
       if next and not self._dotfiles_view_focus_sending then
@@ -114,12 +137,20 @@ function M.resume()
     if not vim.api.nvim_tabpage_is_valid(view.tab) then
       pending[id] = nil
     elseif view.tab == vim.api.nvim_get_current_tabpage() then
-      local attached = false
+      local attached
       for _, term in pairs(terminals()) do
-        attached = attached or (is_herdr(term) and term.parent.id == id)
+        if is_herdr(term) and term.parent.id == id then
+          if term:is_running() then
+            attached = term
+          else
+            close_local(term)
+          end
+        end
       end
       if attached then
-        pending[id] = nil
+        if not attached._dotfiles_view_focus_restore then
+          pending[id] = nil
+        end
       else
         local running = view.parent:is_running()
         if running == false then
@@ -129,7 +160,19 @@ function M.resume()
           local ok, term = pcall(require("sidekick.cli.session").attach, view.parent)
           restoring = nil
           if ok and term and term:is_running() then
-            pending[id] = nil
+            term._dotfiles_view_focus_restore = view
+            vim.api.nvim_create_autocmd("TermClose", {
+              group = term.group,
+              buffer = term.buf,
+              once = true,
+              callback = function()
+                vim.schedule(function()
+                  if term._dotfiles_view_focus_restore and not term:is_running() then
+                    close_local(term)
+                  end
+                end)
+              end,
+            })
             if view.focus then
               term:focus()
             end
@@ -138,6 +181,7 @@ function M.resume()
               vim.cmd.stopinsert()
             end
           else
+            close_local(term)
             local err = ok and "attachment did not start" or term
             vim.notify("Sidekick: could not restore Herdr view: " .. tostring(err), vim.log.levels.WARN)
           end

@@ -1,5 +1,5 @@
 -- Run: nvim --headless -u NONE -l scripts/test-sidekick-view-focus.lua
--- Real Sidekick terminal lifecycle, local cat clients; no production Herdr calls.
+-- Real Sidekick terminal lifecycle, local fixture clients; no production Herdr calls.
 vim.opt.rtp:prepend(vim.fn.stdpath("data") .. "/lazy/sidekick.nvim")
 vim.opt.rtp:prepend(vim.fn.getcwd() .. "/nvim/.config/nvim")
 package.path = vim.fn.getcwd() .. "/nvim/.config/nvim/lua/?.lua;" .. package.path
@@ -10,19 +10,39 @@ local Session = require("sidekick.cli.session")
 local Terminal = require("sidekick.cli.terminal")
 local Cli = require("sidekick.cli")
 local Focus = require("plugins.sidekick.view_focus")
+local Herdr = require("plugins.sidekick.herdr")
 Config.cli.watch = false
 Config.cli.win.layout = "float"
 Config.cli.win.float = { width = 0.8, height = 0.8 }
 Config.cli.win.keys = {}
 Config.cli.win.config = Focus.configure
 Config.cli.tools.focus_test = { cmd = { "cat" }, native_scroll = true }
+Config.cli.tools.submit_test = {
+  cmd = { "sh", "-c", [[IFS= read -r line; printf 'SUBMITTED\n']] },
+  native_scroll = true,
+}
+local herdr_call = Herdr.call
+Herdr.call = function()
+  return nil, [[{"error":{"code":"agent_not_found","message":"agent target missing not found"}}]]
+end
+local missing, missing_err = Herdr.get_agent("missing")
+assert(not missing and not missing_err, "recognized missing agents must be confirmed absent")
+Herdr.call = function()
+  return nil, "transport failed"
+end
+local unknown, unknown_err = Herdr.get_agent("unknown")
+assert(not unknown and unknown_err == "transport failed", "transport failures must remain indeterminate")
+Herdr.call = herdr_call
 Session.register("terminal", Terminal)
 Session.register("herdr", {
   attach = function(self)
     if self.attach_error then
       error("temporary attach failure")
     end
-    return { cmd = { "cat" } }
+    if self.quick_fail then
+      return { cmd = { "sh", "-c", "sleep 0.05; exit 1" } }
+    end
+    return { cmd = self.tool.cmd }
   end,
   start = function()
     error("must never restart a durable agent")
@@ -43,10 +63,10 @@ local function drain()
     return false
   end)
 end
-local function parent(id)
+local function parent(id, tool)
   return Session.new({
     id = id,
-    tool = require("sidekick.cli.tool").get("focus_test"),
+    tool = require("sidekick.cli.tool").get(tool or "focus_test"),
     cwd = vim.fn.getcwd() .. "/" .. id,
     backend = "herdr",
     started = true,
@@ -69,13 +89,14 @@ local function view(p)
   end
 end
 local function wait_for(term, text)
+  local output = ""
   assert(vim.wait(1000, function()
     if not term:buf_valid() then
       return false
     end
-    local output = table.concat(vim.api.nvim_buf_get_lines(term.buf, 0, -1, false), "\n")
+    output = table.concat(vim.api.nvim_buf_get_lines(term.buf, 0, -1, false), "\n")
     return output:find(text, 1, true) ~= nil
-  end, 10), "terminal did not receive " .. text)
+  end, 10), "terminal did not receive " .. text .. ": " .. vim.inspect(output))
 end
 local p = parent("one")
 local term = open(p)
@@ -163,6 +184,19 @@ event("FocusLost")
 event("FocusGained")
 assert(not view(p), "hidden views must stay hidden")
 
+local submit_parent = parent("submit", "submit_test")
+local submit_term = open(submit_parent)
+Cli.send({ msg = "must submit", submit = true, filter = { session = submit_term.id }, focus = false })
+event("FocusLost")
+drain()
+event("FocusGained")
+submit_term = assert(view(submit_parent), "submitted prompt must restore its view")
+submit_term:on_ready()
+wait_for(submit_term, "SUBMITTED")
+submit_term:hide()
+drain()
+assert(not view(submit_parent), "submitted prompt test must release its client")
+
 term = open(p)
 event("FocusLost")
 vim.cmd.SidekickRelease()
@@ -196,6 +230,16 @@ assert(not view(p), "failed attachment must retain the pending view")
 p.attach_error = false
 event("FocusGained")
 assert(view(p), "pending view must retry after transient failures")
+term = assert(view(p))
+event("FocusLost")
+p.quick_fail = true
+event("FocusGained")
+assert(vim.wait(1000, function()
+  return not view(p)
+end, 10), "quick-failing attachment must be discarded")
+p.quick_fail = false
+event("FocusGained")
+assert(view(p), "quick-failing attachment must retain retry state")
 term = assert(view(p))
 event("FocusLost")
 local reopened = open(p)
