@@ -430,7 +430,7 @@ def artifact_shell(slug: str) -> bytes:
 <button class="ask" id="ask" type="button" aria-expanded="false" aria-controls="drawer">✦ Ask about this</button>
 <aside class="drawer" id="drawer" aria-label="Artifact conversation" aria-hidden="true" inert>
   <div class="grip" id="grip" role="separator" aria-orientation="vertical" aria-label="Resize chat" title="Drag to resize"></div>
-  <header class="head"><div><strong>Ask this artifact</strong><span>Answers come from its Artifact Herdr workspace</span></div><button class="icon" id="close" type="button" aria-label="Close chat">×</button></header>
+  <header class="head"><div><strong>Ask this artifact</strong><span>Answers come from its tab in the source Herdr workspace</span></div><button class="icon" id="close" type="button" aria-label="Close chat">×</button></header>
   <main class="messages" id="messages"><p class="empty">Ask about a term, number, decision, or anything currently on screen.</p></main>
   <section>
     <pre class="delta" id="delta" hidden></pre>
