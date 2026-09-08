@@ -115,6 +115,22 @@ The stowed gh-dash config resolves `owner/repo` to `/Users/aviral/:repo`. In the
 check out the selected PR as `pr/<number>` in a Herdr worktree, focus it, and start tuicr in the new worktree.
 Pressing `O` again focuses the existing workflow-owned worktree; a conflicting local branch is left untouched.
 
+## Sidekick / Herdr view sizing
+
+Sidekick releases its local writable Herdr attachment on Neovim `FocusLost` and reattaches the same running
+agent on `FocusGained`. Herdr can then size the agent for its own pane, including its sidebar and splits;
+returning to Neovim sizes it for the Sidekick window. Hidden Sidekick windows also release their attachments.
+Views in other Neovim tabs reopen when you return to those tabs. No durable agent is stopped or restarted.
+
+If your terminal does not forward focus events, run `:SidekickRelease` before switching to Herdr, then use
+`<C-.>` or the session picker to reopen the view in Neovim. Manual release cancels automatic reopening.
+Handoff recreates the local terminal buffer, so local scrollback/selection is not retained; the server-owned
+agent and its conversation remain running. This is a direct-client detach/reattach workaround, not the planned
+Herdr attachment-lease controller. Float size remains unchanged at 80%; the active surface owns the actual grid.
+
+Regression check (installed Sidekick required; no live Herdr calls):
+`nvim --headless -u NONE -l scripts/test-sidekick-view-focus.lua`.
+
 ## Herdr Annotate pilot
 
 The stowed Herdr configuration provides the Full Annotate workflows installed by `./install.sh`:

@@ -10,6 +10,7 @@ return {
     cli = {
       win = {
         config = function(terminal)
+          require("plugins.sidekick.view_focus").configure(terminal)
           require("plugins.sidekick.branding").apply(terminal)
         end,
         layout = "float",
@@ -35,6 +36,7 @@ return {
   config = function(_, opts)
     require("plugins.sidekick.herdr_backend").apply()
     require("sidekick").setup(opts)
+    require("plugins.sidekick.view_focus").setup()
     local config = require("sidekick.config")
     for tool in pairs(config.cli.tools) do
       if not internal.tool_commands[tool] then
