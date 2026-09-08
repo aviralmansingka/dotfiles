@@ -25,7 +25,7 @@
       "command": "bash",
       "args": [
         "-lc",
-        "source \"$HOME/.config/pi-browserbase.env\" && exec npx -y mcp-remote \"https://mcp.browserbase.com/mcp?browserbaseApiKey=${BROWSERBASE_API_KEY}\""
+        "source \"$HOME/.config/pi-browserbase.env\" && exec npx -y @browserbasehq/mcp --browserbaseApiKey \"$BROWSERBASE_API_KEY\" --browserbaseProjectId \"$BROWSERBASE_PROJECT_ID\""
       ]
     }
   }
