@@ -57,9 +57,9 @@ Use lavish-axi when the user asks for a visual artifact, HTML explainer, interac
 
 - The homelab owns the artifact worktree, persistent Herdr chat agent tab, optional Lavish session state, and Tailscale
   Serve endpoint. The tab lives in the source repository's existing workspace; artifact rendering must not create a
-  separate Herdr workspace. That repository workspace must already be open on the homelab; if it is absent, report the
-  blocker instead of creating an artifact workspace. Client devices generate locally and sync Git-visible files through
-  the wrapper.
+  separate Herdr workspace. That repository workspace must already be open on the homelab; if it is absent or cannot be
+  uniquely identified (independent clones of the same remote), report the blocker instead of creating an artifact
+  workspace or reusing an unrelated one. Client devices generate locally and sync Git-visible files through the wrapper.
 - Never configure Tailscale Serve on the client or fall back to a device URL without explicit user approval. If the
   homelab is unavailable, report that blocker and keep the artifact local until it returns.
 - Share the stable port-443 `alias_url`. In default `render` mode it serves a minimal shell with the unchanged artifact in
