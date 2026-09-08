@@ -92,7 +92,6 @@ interface QuizResultDetails {
 	options?: DisplayedOption[]; // full option list in display order, for the transcript
 	correct?: boolean;
 	dontKnow?: boolean; // user selected "I don't know" instead of guessing
-	tooHard?: boolean; // user passed because the question needs simplifying
 	note?: string; // optional free-text from the always-present note field (any answer)
 	followUp?: string; // set when the captain sent a follow-up instead of answering
 	explanation?: string;
@@ -447,9 +446,8 @@ function buildStructuredResult(
 	dontKnow?: boolean,
 	note?: string,
 	followUp?: string,
-	tooHard?: boolean,
 ): QuizResultDetails {
-	return { status, question, context, mode, answers, correctIndices, options, correct, dontKnow, tooHard, note, followUp, explanation, message };
+	return { status, question, context, mode, answers, correctIndices, options, correct, dontKnow, note, followUp, explanation, message };
 }
 
 function cancelledResult(question: string, mode: QuizMode, correctIndices: number[], context?: string) {
@@ -493,8 +491,6 @@ function tooHardResult(
 			undefined,
 			undefined,
 			note,
-			undefined,
-			true,
 		),
 	};
 }
@@ -883,12 +879,12 @@ async function askSingleChoice(
 					return;
 				}
 
-				if (matchesKey(data, Key.up) || data === "k") {
+				if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
 					optionIndex = Math.max(0, optionIndex - 1);
 					refresh();
 					return;
 				}
-				if (matchesKey(data, Key.down) || data === "j") {
+				if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
 					optionIndex = Math.min(dontKnowNav, optionIndex + 1);
 					refresh();
 					return;
@@ -1161,12 +1157,12 @@ async function askMultiChoice(
 					return;
 				}
 
-				if (matchesKey(data, Key.up) || data === "k") {
+				if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
 					optionIndex = Math.max(0, optionIndex - 1);
 					refresh();
 					return;
 				}
-				if (matchesKey(data, Key.down) || data === "j") {
+				if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
 					optionIndex = Math.min(allItems.length - 1, optionIndex + 1);
 					refresh();
 					return;

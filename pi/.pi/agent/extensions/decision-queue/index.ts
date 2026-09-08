@@ -91,8 +91,8 @@ class DecisionQueueView {
 	}
 
 	handleInput(data: string): void {
-		if (matchesKey(data, Key.up) || data === "k") this.move(-1);
-		else if (matchesKey(data, Key.down) || data === "j") this.move(1);
+		if (matchesKey(data, Key.up) || matchesKey(data, "k")) this.move(-1);
+		else if (matchesKey(data, Key.down) || matchesKey(data, "j")) this.move(1);
 		else if (matchesKey(data, Key.escape) || data === "q") return this.onDone(null);
 		else if (matchesKey(data, Key.enter)) {
 			return this.onDone(this.items[this.selected] ?? null);

@@ -74,7 +74,7 @@ class Editor {
 exports.Editor = Editor;
 exports.Key = { enter: "\\r", escape: "\\x1b", tab: "\\t", up: "up", down: "down", space: " ", ctrl: key => "ctrl+" + key };
 exports.Text = class Text { constructor(text) { this.text = text; } };
-exports.matchesKey = (data, key) => data === key;
+exports.matchesKey = (data, key) => data === key || ({ "\\u001b[106u": "j", "\\u001b[107u": "k" })[data] === key;
 exports.truncateToWidth = (text, width) => text.slice(0, width);
 exports.visibleWidth = text => text.length;
 exports.wrapTextWithAnsi = text => [text];
@@ -209,7 +209,6 @@ Equal members make equal sets.`;
 		}, signal, undefined, ctx);
 		assert.match(passPanel, /Ctrl\+P too hard/);
 		assert.equal(passResult.details.status, "too-hard");
-		assert.equal(passResult.details.tooHard, true);
 		assert.deepEqual(passResult.details.answers, []);
 		assert.match(passResult.content[0].text, /Explain the prerequisite more simply, then ask an easier quiz question/);
 	}

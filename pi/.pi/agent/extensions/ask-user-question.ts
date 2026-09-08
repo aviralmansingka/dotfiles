@@ -262,12 +262,12 @@ async function askSingleChoice(
 				return;
 			}
 
-			if (matchesKey(data, Key.up) || data === "k") {
+			if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
 				optionIndex = Math.max(0, optionIndex - 1);
 				refresh();
 				return;
 			}
-			if (matchesKey(data, Key.down) || data === "j") {
+			if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
 				optionIndex = Math.min(allOptions.length - 1, optionIndex + 1);
 				refresh();
 				return;
@@ -426,12 +426,12 @@ async function askMultiChoice(
 				return;
 			}
 
-			if (matchesKey(data, Key.up) || data === "k") {
+			if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
 				optionIndex = Math.max(0, optionIndex - 1);
 				refresh();
 				return;
 			}
-			if (matchesKey(data, Key.down) || data === "j") {
+			if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
 				optionIndex = Math.min(allItems.length - 1, optionIndex + 1);
 				refresh();
 				return;
