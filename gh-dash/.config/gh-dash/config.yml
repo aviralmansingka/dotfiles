@@ -86,6 +86,9 @@ keybindings:
     - key: C
       name: tuicr review
       command: tuicr pr "{{.RepoName}}#{{.PrNumber}}" --no-update-check
+    - key: H
+      name: hunk review
+      command: gh pr diff --repo "{{.RepoName}}" "{{.PrNumber}}" | hunk patch -
     - key: O
       name: review PR in Herdr worktree
       command: gh-dash-open-pr "{{.RepoPath}}" "{{.RepoName}}" "{{.PrNumber}}"
