@@ -9,16 +9,25 @@ trap 'rm -rf "$test_dir"' EXIT
 
 ruby -ryaml -e '
   config = YAML.safe_load(File.read(ARGV.fetch(0)))
-  binding = config.fetch("keybindings").fetch("prs").find { |item| item["key"] == "O" }
+  bindings = config.fetch("keybindings").fetch("prs").to_h { |item| [item.fetch("key"), item] }
   expected = {
-    "key" => "O",
-    "name" => "review PR in Herdr worktree",
-    "command" => "gh-dash-open-pr \"{{.RepoPath}}\" \"{{.RepoName}}\" \"{{.PrNumber}}\""
+    "H" => {
+      "key" => "H",
+      "name" => "hunk review",
+      "command" => "gh pr diff --repo \"{{.RepoName}}\" \"{{.PrNumber}}\" | hunk patch -"
+    },
+    "O" => {
+      "key" => "O",
+      "name" => "review PR in Herdr worktree",
+      "command" => "gh-dash-open-pr \"{{.RepoPath}}\" \"{{.RepoName}}\" \"{{.PrNumber}}\""
+    }
   }
-  abort "unexpected O binding: #{binding.inspect}" unless binding == expected
+  expected.each do |key, binding|
+    abort "unexpected #{key} binding: #{bindings[key].inspect}" unless bindings[key] == binding
+  end
   mapping = config.fetch("repoPaths").fetch(":owner/:repo")
   abort "unexpected repository mapping: #{mapping.inspect}" unless mapping == "/Users/aviral/:repo"
-  puts "CONFIG: O => #{binding.fetch("command")}; :owner/:repo => #{mapping}"
+  puts "CONFIG: H => #{bindings.fetch("H").fetch("command")}; O => #{bindings.fetch("O").fetch("command")}; :owner/:repo => #{mapping}"
 ' "$config"
 
 bin="$test_dir/bin"
