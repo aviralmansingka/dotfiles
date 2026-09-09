@@ -1,0 +1,36 @@
+id = "annotate-review"
+name = "Annotate Review (local)"
+version = "0.7.0-local.1"
+min_herdr_version = "0.9.0"
+description = "Dotfiles-managed reviewer with syntax highlighting and mouse-hover code yank."
+platforms = ["macos", "linux"]
+
+[[panes]]
+id = "doc"
+title = "Annotate Review"
+placement = "overlay"
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/plannotator-tui\" herdr pane"]
+
+[[actions]]
+id = "open"
+title = "Annotate: review documents (local)"
+contexts = ["workspace", "pane"]
+command = ["./plannotator-tui", "herdr", "open"]
+
+[[actions]]
+id = "last"
+title = "Annotate: review agent reply (local)"
+contexts = ["pane"]
+command = ["./plannotator-tui", "herdr", "last"]
+
+[[actions]]
+id = "open-link"
+title = "Annotate this file (local)"
+contexts = ["pane"]
+command = ["./plannotator-tui", "herdr", "open"]
+
+[[link_handlers]]
+id = "markdown-file"
+title = "Annotate this file (local)"
+pattern = "^file://.*\\.(md|markdown|mdx)$"
+action = "open-link"
