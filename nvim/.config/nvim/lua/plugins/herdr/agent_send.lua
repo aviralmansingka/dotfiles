@@ -14,6 +14,8 @@ local M = {}
 
 -- `herdr pane report-agent` states that mean "an agent owns this pane".
 -- "unknown" (bare shell / firstmate primary before it reports) is excluded.
+-- "blocked" is included: a blocked agent (e.g. Pi waiting on its own UI prompt)
+-- still owns its pane, so it stays a valid same-tab send target.
 M.agent_statuses = {
   working = true,
   busy = true,
