@@ -20,6 +20,7 @@ M.agent_statuses = {
   idle = true,
   done = true,
   waiting = true,
+  blocked = true,
 }
 
 -- Guard against pasting a giant buffer into an agent prompt.

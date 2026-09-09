@@ -1,4 +1,7 @@
 local config_root = vim.fn.getcwd()
+-- Prepend the worktree config so Neovim's rtp Lua loader prefers this
+-- checkout over the stowed ~/.config/nvim copy when run from a worktree.
+vim.opt.runtimepath:prepend(config_root)
 package.path = config_root .. "/lua/?.lua;" .. config_root .. "/lua/?/init.lua;" .. package.path
 
 local agent_send = require("plugins.herdr.agent_send")
@@ -17,6 +20,14 @@ local panes = {
 }
 
 assert_eq(agent_send.find_agent_pane(panes, "w37:p2").pane_id, "w37:p3", "picks the agent pane in the same tab")
+assert_eq(
+  agent_send.find_agent_pane({
+    { pane_id = "a", tab_id = "t", agent_status = "unknown" },
+    { pane_id = "b", tab_id = "t", agent_status = "blocked", agent = "pi" },
+  }, "a").pane_id,
+  "b",
+  "a blocked Pi pane in the same tab is a valid send target"
+)
 assert_eq(agent_send.find_agent_pane(panes, "w20:p1"), nil, "never targets a pane in another tab")
 assert_eq(agent_send.find_agent_pane(panes, "w99:p9"), nil, "unknown current pane resolves to no target")
 assert_eq(
