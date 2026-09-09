@@ -387,7 +387,9 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 - `<C-;>` opens the local session picker.
 - `<C-r>` renames the selected session in the picker.
 - `<C-x>` confirms before closing the selected agent from the local session picker.
-- `<leader>at` sends the current context/object through Sidekick's native `{this}` placeholder.
+- `<leader>at` sends the current buffer/selection directly to the agent pane sharing the Herdr tab (a blocked agent
+  still owns its pane and is a valid target); when no agent pane shares the tab it falls back to Sidekick's native
+  `{this}` placeholder.
 - `<leader>ap` opens prompt selection.
 - Sidekick supports sending context, prompting, toggling float/split, opening local sessions, and creating named sessions.
 - Sidekick keymaps include ask/edit/apply/reject/yank, context/prompt sending, the local picker, and named-session creation.
