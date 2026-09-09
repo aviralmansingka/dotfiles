@@ -25,8 +25,8 @@ cd ${HOME}/dotfiles/
 ```
 
 The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, installs
-Neovim via `bob`, and installs the pinned Full Herdr Annotate plugin. It stops if the plugin's TUI executable is
-unavailable.
+Neovim via `bob`, and installs Annotate Lite plus a pinned, patched local reviewer. A failed reviewer build stops
+the installation.
 
 For manual package and configuration deployment (excluding installer-managed integrations and plugins):
 
@@ -134,7 +134,10 @@ Regression check (installed Sidekick required; no live Herdr calls):
 
 ## Herdr Annotate pilot
 
-The stowed Herdr configuration provides the Full Annotate workflows installed by `./install.sh`:
+`./install.sh` installs upstream Annotate Lite for terminal comments and a separate local `annotate-review`
+plugin for Markdown/reply reviews. The local reviewer adds syntax highlighting and mouse-hover `y` to copy a
+whole code block; upstream plugin updates cannot replace it. Rebuild with `./scripts/install-herdr-annotate`.
+See [the installation and update runbook](ops/herdr-annotate-review/README.md).
 
 | Key              | Action                                |
 | ---------------- | ------------------------------------- |
