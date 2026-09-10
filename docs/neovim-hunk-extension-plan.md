@@ -28,19 +28,17 @@ untouched until a separately approved cutover.
 - Stock Hunk owns the ReviewStore, reconciliation, drafts, thread rendering,
   navigation, terminal lifecycle, and broker registration.
 
-The source-only proof currently accepts a snapshot JSON file; this is not the
-live bridge. It requires API 25 and `diff --vcs`, verified on upstream source
-`0a2d52f`. Installed Hunk 0.21.1 (API 16) lacks that CLI option and is not supported.
+The source-only proof is not the live bridge. Its README owns the
+[requirements, compatibility, invocation, and snapshot contract](../hunk/.config/hunk/extensions/nvim-review/README.md).
 
 The custom VCS adapter is selected explicitly; it must not take over ordinary
-Git reviews. `load()` captures one immutable source snapshot, builds context-only
-patches, closes `readFileSource` over the same text, and supplies `sourceCacheKey`.
-No disk fallback, fake added-line diffs, or second authoritative note collection.
+Git reviews. No disk fallback, fake added-line diffs, or second authoritative
+note collection.
 
 ## Small upstream prerequisite—not an extension-only promise
 
-The checked public extension API is version 25. Its event review controls expose
-reload, not snapshots or note creation. Command snapshots already exist.
+The checked public extension API's event review controls expose reload, not
+snapshots or note creation. Command snapshots already exist.
 
 Propose one small upstream change:
 
