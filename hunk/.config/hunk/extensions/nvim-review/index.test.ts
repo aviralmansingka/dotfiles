@@ -80,12 +80,12 @@ async function selectSnapshot(handler: ExtensionCliCommandHandler, cwd: string, 
 }
 
 /** Load the working-tree operation registered by the extension. */
-async function loadReview(adapter: ExtensionVcsAdapter, cwd: string) {
+async function loadReview(adapter: ExtensionVcsAdapter, cwd: string, staged = true) {
   const operation = adapter.operations?.["working-tree-diff"];
   if (!operation) throw new Error("Expected a working-tree operation.");
   const input = {
     kind: "vcs",
-    staged: false,
+    staged,
     options: {},
   } satisfies ExtensionVcsDiffInput;
   return operation.load(input, { cwd, signal: new AbortController().signal });
@@ -109,8 +109,9 @@ describe("nvim-review extension", () => {
     expect(adapter.detect("/worktree")).toBeNull();
     expect(selected.result).toEqual({
       kind: "delegate",
-      argv: ["diff", "--vcs", "nvim-review"],
+      argv: ["diff", "--staged", "--vcs", "nvim-review"],
     });
+    await expect(loadReview(adapter, "/worktree", false)).rejects.toThrow("--staged");
     expect({ stdinReads: selected.stdinReads, stdoutWrites: selected.stdoutWrites }).toEqual({
       stdinReads: 0,
       stdoutWrites: 0,
@@ -196,7 +197,15 @@ describe("nvim-review extension", () => {
         })),
       }),
     ).toThrow(String(MAX_TOTAL_SOURCE_BYTES));
-    for (const path of ["../escape.ts", "/absolute.ts", "C:\\absolute.ts", "bad\npath.ts"]) {
+    for (const path of [
+      "../escape.ts",
+      "/absolute.ts",
+      "C:\\absolute.ts",
+      "bad\npath.ts",
+      "bad\u0080path.ts",
+      "bad\u009bpath.ts",
+      "bad\u009fpath.ts",
+    ]) {
       expect(() => parseSnapshotValue({ files: [{ path, text: "x" }] })).toThrow("relative");
     }
     expect(() =>

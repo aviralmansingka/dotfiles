@@ -47,7 +47,7 @@ function exactRecord(value: unknown, keys: readonly string[]) {
 function hasControlCharacter(value: string) {
   for (let index = 0; index < value.length; index += 1) {
     const code = value.charCodeAt(index);
-    if (code <= 0x1f || code === 0x7f) return true;
+    if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
   }
   return false;
 }
@@ -226,7 +226,7 @@ const runNvimReview: ExtensionCliCommandHandler = (args, context) => {
     throw userError("Usage: hunk nvim-review <snapshot.json>");
   }
   snapshotPath = resolve(context.cwd, args[0]);
-  return { kind: "delegate", argv: ["diff", "--vcs", "nvim-review"] };
+  return { kind: "delegate", argv: ["diff", "--staged", "--vcs", "nvim-review"] };
 };
 
 /** Register the source-only proof command and explicitly selected VCS adapter. */
@@ -245,7 +245,12 @@ export default function nvimReviewExtension(hunk: HunkExtensionAPI) {
     detect: () => null,
     operations: {
       "working-tree-diff": {
-        load: (_input, context) => loadReview(context.cwd, context.signal),
+        load: (input, context) => {
+          if (!input.staged) {
+            throw userError("Neovim snapshot reviews require --staged read-only mode.");
+          }
+          return loadReview(context.cwd, context.signal);
+        },
       },
     },
   } satisfies ExtensionVcsAdapter);

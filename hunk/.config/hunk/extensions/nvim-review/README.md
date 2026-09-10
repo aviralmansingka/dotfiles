@@ -26,11 +26,13 @@ The snapshot is source-only JSON:
 ```
 
 The command captures the snapshot path and delegates once to stock
-`diff --vcs nvim-review`. The adapter reads one immutable version per load,
-returns full-context patches containing no additions or deletions, and serves
-both sides from the same captured text. It never reads or writes the buffer
-paths. Press Hunk's normal reload key after atomically replacing the snapshot
-file.
+`diff --staged --vcs nvim-review`. Here `--staged` selects Hunk's read-only
+workspace boundary; this adapter still reads only the snapshot and never reads
+Git's index. The adapter rejects unstaged loads, reads one immutable version per
+load, returns full-context patches containing no additions or deletions, and
+serves both sides from the same captured text. It never reads or writes the
+buffer paths. Press Hunk's normal reload key after atomically replacing the
+snapshot file.
 
 Limits are 4 MiB for the snapshot JSON and aggregate source, 1,000,000 UTF-8
 bytes per buffer, 100,000 logical lines total, 512 files, and 4,096 UTF-8 bytes
