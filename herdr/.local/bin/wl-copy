@@ -1,0 +1,4 @@
+#!/bin/sh
+# Headless wl-copy adapter: send stdin to the clipboard of the attached terminal.
+payload=$(base64 | tr -d '\n') || exit
+printf '\033]52;c;%s\007' "$payload"
