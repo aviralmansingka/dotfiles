@@ -124,6 +124,7 @@ describe("nvim-review extension", () => {
     const files = [
       { path: "src/crlf.ts", text: "first\r\nsecond\r\n" },
       { path: "empty.txt", text: "" },
+      { path: "src/emoji-😀.ts", text: "valid surrogate pair\n" },
       { path: 'src/space "quoted".ts', text: "no final newline" },
     ];
     writeFileSync(snapshotPath, JSON.stringify({ files }));
@@ -205,6 +206,8 @@ describe("nvim-review extension", () => {
       "bad\u0080path.ts",
       "bad\u009bpath.ts",
       "bad\u009fpath.ts",
+      "bad\ud800path.ts",
+      "bad\udc00path.ts",
     ]) {
       expect(() => parseSnapshotValue({ files: [{ path, text: "x" }] })).toThrow("relative");
     }

@@ -58,6 +58,7 @@ function safeRelativePath(input: string) {
   const normalized = posix.normalize(portable);
   if (
     input.length === 0 ||
+    !input.isWellFormed() ||
     Buffer.byteLength(input) > MAX_PATH_BYTES ||
     hasControlCharacter(input) ||
     isAbsolute(input) ||
