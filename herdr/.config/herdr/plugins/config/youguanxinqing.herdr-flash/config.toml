@@ -1,0 +1,6 @@
+[colors]
+unmatched = { fg = "#928374" }
+match = { fg = "#282828", bg = "#d8a657", bold = true }
+label = { fg = "#282828", bg = "#d3869b", bold = true }
+selection = { bg = "#504945" }
+cursor = { fg = "#282828", bg = "#ebdbb2", bold = true }

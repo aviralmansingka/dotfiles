@@ -76,6 +76,12 @@ type = "plugin_action"
 command = "annotate-review.last"
 description = "review the agent's last reply"
 
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "youguanxinqing.herdr-flash.flash"
+description = "search, select, and yank pane text"
+
 [ui]
 pane_scrollbars = false
 host_cursor = "drawn"

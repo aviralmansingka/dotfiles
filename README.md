@@ -145,7 +145,7 @@ See [the installation and update runbook](ops/herdr-annotate-review/README.md).
 | `prefix+a`       | Annotate terminal text                |
 | `prefix+Shift+a` | Copy annotations as agent context     |
 | `prefix+m`       | Manage annotations                    |
-| `prefix+o`       | Review Markdown in the current folder |
+| `prefix+o`       | Review Markdown changed from local `main` |
 | `prefix+Shift+o` | Review the last agent reply           |
 
 ## Herdr server handoff

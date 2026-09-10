@@ -200,8 +200,9 @@ For `no_mistakes_axi run` and `respond` calls whose cwd matches the Pi session c
 polls `no-mistakes axi status`; No Mistakes still owns execution and gates, with `no-mistakes attach` in
 the adjacent Herdr pane and the existing pane/inline fallbacks. A valid AXI run ID matching the invocation
 is required before phase progress is attached. With matched phase data, `Ctrl+O` expands all phases; failed
-calls also retain their raw error output. Without matched phase data, or for calls targeting another cwd,
-the native tool output remains and that call does not trigger status polling or activity publication.
+calls also retain their raw error output. Runs owned by another Pi session are ignored even when the shared
+daemon reports them as active. Without matched phase data, or for calls targeting another cwd, the native
+tool output remains and that call does not trigger status polling or activity publication.
 
 Status display is configured via `config.json` in the extension directory (copy `config.json.example`; it's gitignored):
 

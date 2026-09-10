@@ -216,17 +216,14 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		"run:",
 		`  id: "${staleRunId}"`,
 		"  status: running",
+		"  outcome: test-failed",
 		"  steps[1]{step,status,findings,duration_ms}:",
 		"    review,running,0,1000",
 	].join("\n");
-	const noRunStatus = { code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" };
 	const statusResults = [
-		{ code: 0, stdout: activeStatus },
 		{ code: 0, stdout: terminalStatus },
 		{ code: 0, stdout: staleStatus },
 		{ code: 0, stdout: staleStatus },
-		{ code: 1, stdout: "temporary failure" },
-		noRunStatus,
 	];
 	let releaseInitialStatus;
 	let statusCalls = 0;
@@ -253,7 +250,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			exec() {
 				if (statusCalls++ > 0) return Promise.resolve(statusResults.shift());
 				return new Promise((resolve) => {
-					releaseInitialStatus = () => resolve(noRunStatus);
+					releaseInitialStatus = () => resolve({ code: 0, stdout: activeStatus });
 				});
 			},
 		});
@@ -272,10 +269,9 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		await new Promise(setImmediate);
 		releaseInitialStatus();
 		const pipelineResult = await pipelinePromise;
-		assert.equal(events.length, 3);
-		assert.equal(events[0].payload.snapshot, undefined);
-		assert.equal(events[1].payload.snapshot.currentPhase, "review");
-		assert.equal(events[2].payload.snapshot, undefined);
+		assert.equal(events.length, 2);
+		assert.equal(events[0].payload.snapshot.currentPhase, "review");
+		assert.equal(events[1].payload.snapshot, undefined);
 		assert.equal(updates.length, 2);
 		assert.equal(updates[0].details.snapshot.id, activeRunId);
 		assert.equal(updates[1].details.snapshot.id, activeRunId);
@@ -301,7 +297,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		);
 		assert.equal(foreignUpdates.length, 0);
 		assert.equal(statusCalls, statusCallsBeforeForeign);
-		assert.equal(events.length, 3);
+		assert.equal(events.length, 2);
 		assert.match(foreignResult.content[0].text, /outcome: test-failed/);
 		assert.equal(foreignResult.details.progress, undefined);
 		assert.equal(foreignResult.details.snapshot, undefined);
@@ -322,14 +318,18 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			{ cwd: "/repo/a", hasUI: false },
 		);
 		assert.equal(invalidResult.details.progress, undefined);
-		assert.equal(statusResults.length, 4);
+		assert.equal(statusResults.length, 2);
 
+		const statusCallsBeforeIdlePoll = statusCalls;
 		poll();
 		await new Promise(setImmediate);
-		assert.equal(events.length, 4);
-		assert.equal(events[3].payload.snapshot.id, staleRunId);
+		assert.equal(statusCalls, statusCallsBeforeIdlePoll);
+		assert.equal(events.length, 2);
 
-		writeFileSync(join(stubDir, "no-mistakes"), "#!/bin/sh\nprintf 'outcome: test-failed\\n'\nexit 1\n");
+		writeFileSync(
+			join(stubDir, "no-mistakes"),
+			`#!/bin/sh\ncat <<'EOF'\n${staleStatus}\nEOF\nexit 1\n`,
+		);
 		const staleUpdates = [];
 		const staleResult = await tool.execute(
 			"stale",
@@ -342,13 +342,12 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.equal(staleResult.details.progress, undefined);
 		assert.equal(staleResult.details.snapshot, undefined);
 		assert.equal(staleUpdates.length, 0);
-		assert.equal(events.length, 5);
-		assert.equal(events[4].payload.snapshot.id, staleRunId);
+		assert.equal(events.length, 2);
+		assert.equal(statusResults.length, 1);
 
 		poll();
 		await new Promise(setImmediate);
-		assert.equal(events.length, 6);
-		assert.equal(events[5].payload.snapshot, undefined);
+		assert.equal(events.length, 2);
 		handlers.get("session_shutdown")();
 	} finally {
 		globalThis.setInterval = savedSetInterval;

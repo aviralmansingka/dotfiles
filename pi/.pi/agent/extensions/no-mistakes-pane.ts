@@ -545,6 +545,8 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		resolve: Array<() => void>;
 	} | undefined;
 	let latestSnapshot: NoMistakesSnapshot | undefined;
+	let trackedRunId: string | undefined;
+	let publishedRunId: string | undefined;
 	const toolObservers = new Map<string, NmToolObserver>();
 
 	const publishSnapshot = (snapshot: NoMistakesSnapshot | undefined) => {
@@ -552,24 +554,38 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			? observeNoMistakesTiming(snapshot, latestSnapshot)
 			: undefined;
 		latestSnapshot = isObservableNoMistakesRun(observedSnapshot) ? observedSnapshot : undefined;
-		pi.events.emit(NM_ACTIVITY_UPDATE_EVENT, {
-			snapshot: latestSnapshot
-				? { ...latestSnapshot, summary: summarizeNoMistakesSnapshot(latestSnapshot) }
-				: undefined,
-			observedAt: Date.now(),
-		});
-		if (!observedSnapshot) return;
-		for (const observer of toolObservers.values()) {
-			if (!observesInvocation(observer, observedSnapshot)) continue;
-			observer.snapshot = observedSnapshot;
-			observer.onUpdate(
-				textResult(summarizeNoMistakesSnapshot(observedSnapshot), {
-					status: "visible",
-					subcommand: observer.subcommand,
-					progress: pipelineProgress(observedSnapshot, "running", observer.startedAt),
-					snapshot: observedSnapshot,
-				}),
-			);
+		if (observedSnapshot) {
+			for (const observer of toolObservers.values()) {
+				if (!observesInvocation(observer, observedSnapshot)) continue;
+				trackedRunId = observedSnapshot.id;
+				observer.snapshot = observedSnapshot;
+				observer.onUpdate(
+					textResult(summarizeNoMistakesSnapshot(observedSnapshot), {
+						status: "visible",
+						subcommand: observer.subcommand,
+						progress: pipelineProgress(observedSnapshot, "running", observer.startedAt),
+						snapshot: observedSnapshot,
+					}),
+				);
+			}
+		}
+
+		const visibleSnapshot = observedSnapshot?.id === trackedRunId &&
+			isObservableNoMistakesRun(observedSnapshot)
+			? observedSnapshot
+			: undefined;
+		if (visibleSnapshot || publishedRunId) {
+			pi.events.emit(NM_ACTIVITY_UPDATE_EVENT, {
+				snapshot: visibleSnapshot
+					? { ...visibleSnapshot, summary: summarizeNoMistakesSnapshot(visibleSnapshot) }
+					: undefined,
+				observedAt: Date.now(),
+			});
+		}
+		publishedRunId = visibleSnapshot?.id;
+		if (observedSnapshot?.id === trackedRunId && !visibleSnapshot) trackedRunId = undefined;
+		if (trackedRunId && toolObservers.size === 0 && observedSnapshot?.id !== trackedRunId) {
+			trackedRunId = undefined;
 		}
 	};
 
@@ -624,8 +640,9 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 	pi.on("session_start", (_event, ctx) => {
 		if (ctx.mode !== "tui") return;
 		const generation = ++monitorGeneration;
-		void refreshStatus(ctx, generation);
-		monitorTimer = setInterval(() => void refreshStatus(ctx, generation), STATUS_POLL_MS);
+		monitorTimer = setInterval(() => {
+			if (trackedRunId || toolObservers.size > 0) void refreshStatus(ctx, generation);
+		}, STATUS_POLL_MS);
 		(globalThis as any)[STATUS_INTERVAL_KEY] = monitorTimer;
 		monitorTimer.unref?.();
 	});
@@ -646,6 +663,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		}
 		monitorTimer = undefined;
 		toolObservers.clear();
+		trackedRunId = undefined;
 		publishSnapshot(undefined);
 	});
 
@@ -684,13 +702,12 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 					await observer.refresh;
 					await refreshStatus({ cwd: observer.cwd }, monitorGeneration, true);
 				}
+				if (pipelineCall && observesSession && outputSnapshot) publishSnapshot(outputSnapshot);
 				const observedSnapshot = outputRunId && observer?.snapshot?.id === outputRunId
 					? observer.snapshot
 					: undefined;
 				toolObservers.delete(observerId);
-				const parsed = pipelineCall && observesSession
-					? outputSnapshot ?? observedSnapshot
-					: undefined;
+				const parsed = pipelineCall && observesSession ? observedSnapshot : undefined;
 				return textResult(text, {
 					...details,
 					...(parsed
