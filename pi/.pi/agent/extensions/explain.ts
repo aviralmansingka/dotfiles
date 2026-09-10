@@ -135,7 +135,8 @@ function addWrapped(lines: string[], text: string, width: number, indent = ""): 
 // tees in the top border of a full-width, prompt-styled input box below.
 // Top content must be laid out at (width - 8) columns, bottom at (width - 4).
 function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
-	if (width < 24) return [...top, ...bottom];
+	const promptLines = bottom.length > 0 ? bottom : [""];
+	if (width < 24) return [...top, ...promptLines.map((line) => truncateToWidth(` ${line}`, width))];
 	const tw = width - 8;
 	const bw = width - 4;
 	const accent = (s: string) => theme.fg("accent", s);
@@ -155,7 +156,7 @@ function frameMerged(top: string[], bottom: string[], width: number, theme: any)
 			accent("─") +
 			accent("╮"),
 	);
-	for (const line of bottom) {
+	for (const line of promptLines) {
 		const pad = Math.max(0, bw - visibleWidth(line));
 		out.push(`${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
 	}
