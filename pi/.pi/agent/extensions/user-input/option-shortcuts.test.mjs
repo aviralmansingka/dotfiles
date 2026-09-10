@@ -19,6 +19,9 @@ assert.equal(NAVIGATION_HINT, "↑↓/jk navigate");
 
 assert.equal(numberShortcutIndex("1", 3), 0);
 assert.equal(numberShortcutIndex("3", 3), 2);
+assert.equal(numberShortcutIndex("\u001b[50u", 3), 1); // Kitty keyboard protocol: 2
+assert.equal(numberShortcutIndex("\u001b[50;1u", 3), 1);
+assert.equal(numberShortcutIndex("\u001b[50;2u", 3), undefined); // Shift+2 is not answer 2
 assert.equal(numberShortcutIndex("9", 12), 8);
 assert.equal(numberShortcutIndex("0", 12), undefined);
 assert.equal(numberShortcutIndex("a", 12), undefined);

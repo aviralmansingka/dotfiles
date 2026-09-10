@@ -12,7 +12,7 @@ const { createJiti } = require(_jitiCjs);
 const jiti = createJiti(import.meta.url);
 const { contextFileHint, handoutHint, normalizeContextFiles } = jiti("./user-input/context-files.ts");
 const { handoutModelOptions } = jiti("./quiz-handout.ts");
-// `joinHints` is how the steering hint row assembles the per-shortcut hints;
+// `joinHints` is how the answer hint row assembles the per-shortcut hints;
 // importing it lets us assert the `h` hint actually lands in the rendered row.
 const { joinHints } = jiti("./user-input/option-shortcuts.ts");
 
@@ -23,15 +23,15 @@ assert.equal(handoutHint(), "h handout");
 // Calling it twice yields the same stable string (no hidden state).
 assert.equal(handoutHint(), handoutHint());
 
-// It composes into the steering hint row the way the `o` context-file hint
+// It composes into the answer hint row the way the `o` context-file hint
 // does — present whether or not contextFiles are supplied.
-const rowWithoutContext = joinHints("Mode: steering", "↑↓ navigate", "Enter answer", contextFileHint([]), handoutHint(), "Tab → note", "Esc cancel");
-assert.ok(rowWithoutContext.includes("h handout"), `steering hint should include h handout even without contextFiles: ${rowWithoutContext}`);
+const rowWithoutContext = joinHints("Mode: Answer", "↑↓/jk navigate", "Enter feedback", contextFileHint([]), handoutHint(), "Tab steering", "Esc cancel");
+assert.ok(rowWithoutContext.includes("h handout"), `answer hint should include h handout even without contextFiles: ${rowWithoutContext}`);
 assert.ok(!rowWithoutContext.includes("o open"), `steering hint should NOT show the o hint when contextFiles are empty: ${rowWithoutContext}`);
 
-const rowWithContext = joinHints("Mode: steering", "↑↓ navigate", "Enter answer", contextFileHint(["bench_core.py"]), handoutHint(), "Tab → note", "Esc cancel");
-assert.ok(rowWithContext.includes("o open context file"), `steering hint should still show the o hint when contextFiles are present: ${rowWithContext}`);
-assert.ok(rowWithContext.includes("h handout"), `steering hint should show BOTH o and h hints when contextFiles are present: ${rowWithContext}`);
+const rowWithContext = joinHints("Mode: Answer", "↑↓/jk navigate", "Enter feedback", contextFileHint(["bench_core.py"]), handoutHint(), "Tab steering", "Esc cancel");
+assert.ok(rowWithContext.includes("o open context file"), `answer hint should still show the o hint when contextFiles are present: ${rowWithContext}`);
+assert.ok(rowWithContext.includes("h handout"), `answer hint should show BOTH o and h hints when contextFiles are present: ${rowWithContext}`);
 
 // Re-assert the existing context-file contract is unchanged by the new helper.
 assert.equal(contextFileHint([]), undefined);
@@ -77,7 +77,7 @@ exports.Text = class Text { constructor(text) { this.text = text; } };
 exports.matchesKey = (data, key) => data === key || ({ "\\u001b[106u": "j", "\\u001b[107u": "k" })[data] === key;
 exports.truncateToWidth = (text, width) => text.slice(0, width);
 exports.visibleWidth = text => text.length;
-exports.wrapTextWithAnsi = text => [text];
+exports.wrapTextWithAnsi = (text, width) => Array.from({ length: Math.max(1, Math.ceil(text.length / width)) }, (_, i) => text.slice(i * width, (i + 1) * width));
 `);
 	const quizJiti = createJiti(import.meta.url, {
 		alias: {
@@ -207,7 +207,7 @@ Equal members make equal sets.`;
 			explanation: "Set equality compares membership.",
 			shuffle: false,
 		}, signal, undefined, ctx);
-		assert.match(passPanel, /Ctrl\+P too hard/);
+		assert.match(passPanel, /Ctrl\+P pause/);
 		assert.equal(passResult.details.status, "too-hard");
 		assert.deepEqual(passResult.details.answers, []);
 		assert.match(passResult.content[0].text, /Explain the prerequisite more simply, then ask an easier quiz question/);

@@ -25,10 +25,10 @@ class Editor {
 		if (data === "enter" && !this.disableSubmit && this.onSubmit) this.onSubmit(this.text);
 		else this.text += data;
 	}
-	render() { return [this.text]; }
+	render() { return [this.text || (this.focused ? "█" : "")]; }
 	invalidate() {}
 }
-const kitty = { "\\u001b[106u": "j", "\\u001b[107u": "k" };
+const kitty = { "\\u001b[50u": "2", "\\u001b[106u": "j", "\\u001b[107u": "k" };
 exports.Editor = Editor;
 exports.Key = { enter: "enter", escape: "escape", tab: "tab", up: "up", down: "down", space: " ", ctrl: key => "ctrl+" + key };
 exports.Text = class Text { constructor(text) { this.text = text; } };
@@ -66,9 +66,12 @@ exports.wrapTextWithAnsi = text => [text];
 				custom(factory) {
 					return new Promise((done) => {
 						const component = factory({ requestRender() {} }, theme, {}, done);
+						component.focused = true;
 						for (const step of steps) {
 							component.handleInput(step.data);
-							if (step.selected) assert.match(component.render(100).join("\n"), step.selected);
+							const rendered = component.render(100).join("\n");
+							if (step.selected) assert.match(rendered, step.selected);
+							if (step.notSelected) assert.doesNotMatch(rendered, step.notSelected);
 						}
 					});
 				},
@@ -78,7 +81,7 @@ exports.wrapTextWithAnsi = text => [text];
 	}
 
 	const askSingle = await execute(tools.ask_user_question, { question: "Pick one", options }, [
-		{ data: "\u001b[106u", selected: /> 2\. Beta/ },
+		{ data: "\u001b[106u", selected: /> 2\. Beta[\s\S]*\n│ › answer/ },
 		{ data: "\u001b[107u", selected: /> 1\. Alpha/ },
 		{ data: "j", selected: /> 2\. Beta/ },
 		{ data: "enter" },
@@ -99,7 +102,7 @@ exports.wrapTextWithAnsi = text => [text];
 	const other = await execute(tools.ask_user_question, { question: "Custom", options }, [
 		{ data: "j" },
 		{ data: "j" },
-		{ data: "enter" },
+		{ data: "enter", selected: /Other[\s\S]*\n│ › █/ },
 		{ data: "j" },
 		{ data: "k" },
 		{ data: "enter" },
@@ -116,33 +119,57 @@ exports.wrapTextWithAnsi = text => [text];
 	const quizSingle = await execute(tools.quiz, quizParams, [
 		{ data: "\u001b[106u", selected: /> 2\. Beta/ },
 		{ data: "\u001b[107u", selected: /> 1\. Alpha/ },
-		{ data: "\u001b[106u", selected: /> 2\. Beta/ },
-		{ data: "enter" },
+		{ data: "\u001b[50u", selected: /> ● 2\. Beta[\s\S]*\n│ › answer/ },
+		{ data: "enter", selected: /\n│ › feedback/ },
 		{ data: "enter" },
 	]);
 	assert.equal(quizSingle.details.answers[0].value, "beta");
+
+	const movedAfterNumber = await execute(tools.quiz, quizParams, [
+		{ data: "2", selected: /● 2\. Beta/ },
+		{ data: "k", selected: /> 1\. Alpha/, notSelected: /● 2\. Beta/ },
+		{ data: "enter" },
+		{ data: "enter" },
+	]);
+	assert.equal(movedAfterNumber.details.answers[0].value, "alpha");
 
 	const quizMulti = await execute(tools.quiz, { ...quizParams, multiSelect: true }, [
 		{ data: "\u001b[106u", selected: /> \[ \] 2\. Beta/ },
 		{ data: "\u001b[107u", selected: /> \[ \] 1\. Alpha/ },
 		{ data: " " },
-		{ data: "\u001b[106u" },
-		{ data: "\u001b[106u" },
-		{ data: "\u001b[106u", selected: /> ✓ Submit/ },
-		{ data: "enter" },
+		{ data: "enter", selected: /\n│ › feedback/ },
 		{ data: "enter" },
 	]);
 	assert.deepEqual(quizMulti.details.answers.map((answer) => answer.value), ["alpha"]);
 
-	const quizNote = await execute(tools.quiz, quizParams, [
-		{ data: "tab" },
+	const quizOther = await execute(tools.quiz, quizParams, [
+		{ data: "k", selected: /2\. Beta[\s\S]*Other[\s\S]*Mode: Answer[\s\S]*› answer/ },
 		{ data: "j" },
-		{ data: "k" },
-		{ data: "enter" },
-		{ data: "enter" },
+		{ data: "j" },
+		{ data: "enter", selected: /You chose Other \(I don't know\)[\s\S]*\n│ › feedback/ },
 		{ data: "enter" },
 	]);
-	assert.equal(quizNote.details.note, "jk");
+	assert.equal(quizOther.details.dontKnow, true);
+
+	const quizMultiOther = await execute(tools.quiz, { ...quizParams, multiSelect: true }, [
+		{ data: "j" },
+		{ data: "j", selected: /> \[ \] Other[\s\S]*Mode: Answer/ },
+		{ data: "enter", selected: /You chose Other \(I don't know\)[\s\S]*\n│ › feedback/ },
+		{ data: "enter" },
+	]);
+	assert.equal(quizMultiOther.details.dontKnow, true);
+
+	const quizSteer = await execute(tools.quiz, quizParams, [
+		{ data: "tab", selected: /Mode: Steering[\s\S]*\n│ › █/ },
+		{ data: "p" },
+		{ data: "a" },
+		{ data: "u" },
+		{ data: "s" },
+		{ data: "e" },
+		{ data: "enter" },
+	]);
+	assert.equal(quizSteer.details.status, "follow-up");
+	assert.equal(quizSteer.details.followUp, "pause");
 } finally {
 	rmSync(tempRoot, { recursive: true, force: true });
 }
