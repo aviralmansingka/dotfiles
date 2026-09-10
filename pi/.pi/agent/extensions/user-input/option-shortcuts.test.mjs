@@ -21,7 +21,15 @@ assert.equal(numberShortcutIndex("1", 3), 0);
 assert.equal(numberShortcutIndex("3", 3), 2);
 assert.equal(numberShortcutIndex("\u001b[50u", 3), 1); // Kitty keyboard protocol: 2
 assert.equal(numberShortcutIndex("\u001b[50;1u", 3), 1);
+assert.equal(numberShortcutIndex("\u001b[50;65u", 3), 1);
+assert.equal(numberShortcutIndex("\u001b[50;129u", 3), 1);
+assert.equal(numberShortcutIndex("\u001b[50;193u", 3), 1);
+assert.equal(numberShortcutIndex("\u001b[57401u", 3), 1);
+assert.equal(numberShortcutIndex("\u001b[57401;129u", 3), 1);
 assert.equal(numberShortcutIndex("\u001b[50;2u", 3), undefined); // Shift+2 is not answer 2
+assert.equal(numberShortcutIndex("\u001b[50;66u", 3), undefined);
+assert.equal(numberShortcutIndex("\u001b[50;67u", 3), undefined);
+assert.equal(numberShortcutIndex("\u001b[50;69u", 3), undefined);
 assert.equal(numberShortcutIndex("9", 12), 8);
 assert.equal(numberShortcutIndex("0", 12), undefined);
 assert.equal(numberShortcutIndex("a", 12), undefined);

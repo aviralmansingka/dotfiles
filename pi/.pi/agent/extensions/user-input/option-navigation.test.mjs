@@ -31,6 +31,7 @@ class Editor {
 const kitty = { "\\u001b[50u": "2", "\\u001b[106u": "j", "\\u001b[107u": "k" };
 exports.Editor = Editor;
 exports.Key = { enter: "enter", escape: "escape", tab: "tab", up: "up", down: "down", space: " ", ctrl: key => "ctrl+" + key };
+exports.Loader = class Loader { start() {} stop() {} render() { return ["grading"]; } };
 exports.Text = class Text { constructor(text) { this.text = text; } };
 exports.matchesKey = (data, key) => data === key || kitty[data] === key;
 exports.truncateToWidth = (text, width) => text.slice(0, width);
@@ -49,6 +50,7 @@ exports.wrapTextWithAnsi = text => [text];
 	const tools = {};
 	const registry = { registerTool(tool) { tools[tool.name] = tool; } };
 	jiti("../ask-user-question.ts").default(registry);
+	jiti("../explain.ts").default(registry);
 	jiti("../quiz.ts").default(registry);
 
 	const theme = { fg: (_color, text) => text, bold: (text) => text };
@@ -62,6 +64,11 @@ exports.wrapTextWithAnsi = text => [text];
 		const ctx = {
 			cwd: process.cwd(),
 			hasUI: true,
+			model: {},
+			modelRegistry: {
+				find() {},
+				complete() { return new Promise(() => {}); },
+			},
 			ui: {
 				custom(factory) {
 					return new Promise((done) => {
@@ -69,9 +76,14 @@ exports.wrapTextWithAnsi = text => [text];
 						component.focused = true;
 						for (const step of steps) {
 							component.handleInput(step.data);
-							const rendered = component.render(100).join("\n");
+							const lines = component.render(step.width ?? 100);
+							const rendered = lines.join("\n");
 							if (step.selected) assert.match(rendered, step.selected);
 							if (step.notSelected) assert.doesNotMatch(rendered, step.notSelected);
+							if (step.promptRow) {
+								if ((step.width ?? 100) < 24) assert.equal(lines.at(-1), " ");
+								else assert.match(lines.at(-2), /^│ /);
+							}
 						}
 					});
 				},
@@ -109,6 +121,14 @@ exports.wrapTextWithAnsi = text => [text];
 	]);
 	assert.equal(other.details.answers[0].value, "jk");
 
+	const explained = await execute(tools.explain, { question: "Why?", expected: "Because." }, [
+		{ data: "x" },
+		{ data: "enter", promptRow: true },
+		{ data: "ignored", width: 20, promptRow: true },
+		{ data: "escape" },
+	]);
+	assert.equal(explained.details.status, "cancelled");
+
 	const quizParams = {
 		question: "Pick beta",
 		options,
@@ -119,7 +139,7 @@ exports.wrapTextWithAnsi = text => [text];
 	const quizSingle = await execute(tools.quiz, quizParams, [
 		{ data: "\u001b[106u", selected: /> 2\. Beta/ },
 		{ data: "\u001b[107u", selected: /> 1\. Alpha/ },
-		{ data: "\u001b[50u", selected: /> ● 2\. Beta[\s\S]*\n│ › answer/ },
+		{ data: "\u001b[57401;129u", selected: /> ● 2\. Beta[\s\S]*\n│ › answer/ },
 		{ data: "enter", selected: /\n│ › feedback/ },
 		{ data: "enter" },
 	]);

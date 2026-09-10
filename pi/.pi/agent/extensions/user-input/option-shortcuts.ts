@@ -4,9 +4,15 @@ export const NUMBER_SHORTCUT_LIMIT = NUMBER_KEYS.length;
 
 export function numberShortcutIndex(data: string, optionCount: number): number | undefined {
 	const encoded = data.match(/^\x1b\[(\d+)(?::\d*)?(?::\d+)?(?:;(\d+))?(?::\d+)?u$/);
-	const codePoint = Number(encoded?.[1]);
-	const modifier = Number(encoded?.[2] ?? 1);
-	const key = modifier === 1 && codePoint >= 49 && codePoint <= 57 ? String.fromCodePoint(codePoint) : data;
+	let key = data;
+	if (encoded) {
+		const modifier = Number(encoded[2] ?? 1) - 1;
+		if ((modifier & ~(64 | 128)) !== 0) return undefined;
+		const codePoint = Number(encoded[1]);
+		const normalizedCodePoint = codePoint >= 57400 && codePoint <= 57408 ? codePoint - 57351 : codePoint;
+		if (normalizedCodePoint < 49 || normalizedCodePoint > 57) return undefined;
+		key = String.fromCodePoint(normalizedCodePoint);
+	}
 	const index = NUMBER_KEYS.indexOf(key as (typeof NUMBER_KEYS)[number]);
 	return index >= 0 && index < optionCount ? index : undefined;
 }
