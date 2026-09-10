@@ -61,9 +61,9 @@ const DONT_KNOW_INDEX = 0; // real options are 1-based
 
 interface QuizResponse {
 	dontKnow: boolean;
-	tooHard?: boolean; // Ctrl+P: pass so the agent teaches and retries at a simpler level
+	tooHard?: boolean; // Ctrl+P: pause so the agent teaches and retries at a simpler level
 	answers: OptionAnswer[];
-	followUp?: string; // set when the captain sends a follow-up instead of answering
+	followUp?: string; // set when the captain submits Steering guidance instead of answering
 }
 
 type QuizStatus = "answered" | "cancelled" | "unavailable" | "follow-up" | "too-hard";
@@ -83,7 +83,7 @@ interface QuizResultDetails {
 	correctIndices: number[];
 	options?: DisplayedOption[]; // full option list in display order, for the transcript
 	correct?: boolean;
-	dontKnow?: boolean; // user selected "I don't know" instead of guessing
+	dontKnow?: boolean; // user selected the ungraded Other option instead of guessing
 	note?: string; // retained when rendering results from older sessions
 	followUp?: string; // set when the captain sent a follow-up instead of answering
 	explanation?: string;
@@ -162,7 +162,7 @@ async function openContextFiles(ctx: any, files: string[]): Promise<void> {
 // ────────────────────────────────────────────────────────────────────────
 // `h` handout — LLM-generated teaching handout for the active quiz.
 //
-// Pressing `h` mid-quiz (steering mode) generates a deeper explanation of
+// Pressing `h` mid-quiz in Answer mode generates a deeper explanation of
 // the quiz's core concepts via ctx.modelRegistry.complete (the same grader
 // fork pattern explain.ts uses), writes it to ~/.cache/pi/quiz-handout.md,
 // and opens that file in vim. The quiz itself stays active and ungraded —
