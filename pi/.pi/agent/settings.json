@@ -10,5 +10,6 @@
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-material",
+  "tuiMode": "fullscreen",
   "transport": "websocket-cached"
 }

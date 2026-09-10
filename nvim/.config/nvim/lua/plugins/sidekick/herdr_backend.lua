@@ -45,8 +45,8 @@ function M.mark_seen(buf)
 end
 
 function M:init()
-  -- Keep native PTY scrollback during the P0 rollback. Pi's custom transcript
-  -- scroller is disabled; moving history ownership to Sidekick remains P1.
+  -- Herdr forwards mouse input, so agent TUIs such as Pi fullscreen own scrolling
+  -- instead of Sidekick replacing the live terminal with a snapshot buffer.
   self.tool.native_scroll = true
   self.herdr_agent_name = self.herdr_agent_name or Herdr.agent_name(self.tool.name, self.cwd)
   self.mux_session = self.herdr_agent_name
