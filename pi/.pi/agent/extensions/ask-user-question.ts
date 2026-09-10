@@ -222,6 +222,7 @@ async function askSingleChoice(
 	return ctx.ui.custom<AskAnswer | null>((tui: any, theme: any, _kb: any, done: (result: AskAnswer | null) => void) => {
 		let optionIndex = 0;
 		let editMode = false;
+		let panelFocused = false;
 		let cachedLines: string[] | undefined;
 		let cachedWidth = -1;
 		const editor = new Editor(tui, createEditorTheme(theme));
@@ -241,6 +242,7 @@ async function askSingleChoice(
 			if (editMode) {
 				if (matchesKey(data, Key.escape)) {
 					editMode = false;
+					editor.focused = false;
 					editor.setText("");
 					refresh();
 					return;
@@ -276,6 +278,7 @@ async function askSingleChoice(
 				const selected = allOptions[optionIndex];
 				if (selected.isOther) {
 					editMode = true;
+					editor.focused = panelFocused;
 					editor.setText("");
 					refresh();
 					return;
@@ -328,12 +331,13 @@ async function askSingleChoice(
 			if (editMode) {
 				top.push("");
 				add(theme.fg("muted", " Write your custom answer below • Enter to submit • Esc to go back"));
-				for (const line of editorInnerLines(editor, Math.max(1, bw - 2))) {
-					bottom.push(` ${line}`);
+				for (const [index, line] of editorInnerLines(editor, Math.max(1, bw - 2)).entries()) {
+					bottom.push(`${index === 0 ? "› " : "  "}${line}`);
 				}
 			} else {
 				top.push("");
 				add(theme.fg("dim", ` ${joinHints(NAVIGATION_HINT, numberShortcutHint(options.length, "select"), "Enter select", "Esc cancel")}`));
+				bottom.push(theme.fg("accent", "› answer"));
 			}
 
 			const framed = frameMerged(top, bottom, width, theme);
@@ -343,9 +347,15 @@ async function askSingleChoice(
 		}
 
 		return {
+			get focused() { return panelFocused; },
+			set focused(value: boolean) {
+				panelFocused = value;
+				editor.focused = value && editMode;
+			},
 			render,
 			invalidate: () => {
 				cachedLines = undefined;
+				editor.invalidate();
 			},
 			handleInput,
 		};
@@ -374,6 +384,7 @@ async function askMultiChoice(
 	return ctx.ui.custom<AskAnswer[] | null>((tui: any, theme: any, _kb: any, done: (result: AskAnswer[] | null) => void) => {
 		let optionIndex = 0;
 		let editMode = false;
+		let panelFocused = false;
 		let cachedLines: string[] | undefined;
 		let cachedWidth = -1;
 		const selected = new Map<string, AskAnswer>();
@@ -384,6 +395,7 @@ async function askMultiChoice(
 			if (!trimmed) return;
 			selected.set("other", { type: "other", label: trimmed, value: trimmed });
 			editMode = false;
+			editor.focused = false;
 			refresh();
 		};
 
@@ -410,6 +422,7 @@ async function askMultiChoice(
 			if (editMode) {
 				if (matchesKey(data, Key.escape)) {
 					editMode = false;
+					editor.focused = false;
 					editor.setText(selected.get("other")?.label || "");
 					refresh();
 					return;
@@ -446,6 +459,7 @@ async function askMultiChoice(
 						refresh();
 					} else {
 						editMode = true;
+						editor.focused = panelFocused;
 						editor.setText("");
 						refresh();
 					}
@@ -464,6 +478,7 @@ async function askMultiChoice(
 				}
 				if (current.isOther) {
 					editMode = true;
+					editor.focused = panelFocused;
 					editor.setText(selected.get("other")?.label || "");
 					refresh();
 					return;
@@ -537,8 +552,8 @@ async function askMultiChoice(
 			if (editMode) {
 				top.push("");
 				add(theme.fg("muted", " Write your custom answer below • Enter to save • Esc to go back"));
-				for (const line of editorInnerLines(editor, Math.max(1, bw - 2))) {
-					bottom.push(` ${line}`);
+				for (const [index, line] of editorInnerLines(editor, Math.max(1, bw - 2)).entries()) {
+					bottom.push(`${index === 0 ? "› " : "  "}${line}`);
 				}
 			} else {
 				top.push("");
@@ -546,6 +561,7 @@ async function askMultiChoice(
 					add(theme.fg("warning", " Select at least one answer before submitting."));
 				}
 				add(theme.fg("dim", ` ${joinHints(NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter edit/submit", "Esc cancel")}`));
+				bottom.push(theme.fg("accent", "› answer"));
 			}
 
 			const framed = frameMerged(top, bottom, width, theme);
@@ -555,9 +571,15 @@ async function askMultiChoice(
 		}
 
 		return {
+			get focused() { return panelFocused; },
+			set focused(value: boolean) {
+				panelFocused = value;
+				editor.focused = value && editMode;
+			},
 			render,
 			invalidate: () => {
 				cachedLines = undefined;
+				editor.invalidate();
 			},
 			handleInput,
 		};
@@ -569,7 +591,8 @@ async function askMultiChoice(
 // tees in the top border of a full-width, prompt-styled input box below.
 // Top content must be laid out at (width - 8) columns, bottom at (width - 4).
 function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
-	if (width < 24) return [...top, ...bottom];
+	const promptLines = bottom.length > 0 ? bottom : [""];
+	if (width < 24) return [...top, ...promptLines.map((line) => truncateToWidth(` ${line}`, width))];
 	const tw = width - 8;
 	const bw = width - 4;
 	const accent = (s: string) => theme.fg("accent", s);
@@ -589,7 +612,8 @@ function frameMerged(top: string[], bottom: string[], width: number, theme: any)
 			accent("─") +
 			accent("╮"),
 	);
-	for (const line of bottom) {
+	// Every prompt gets a content row and one column of left padding.
+	for (const line of promptLines) {
 		const pad = Math.max(0, bw - visibleWidth(line));
 		out.push(`${accent("│")} ${line}${" ".repeat(pad)} ${accent("│")}`);
 	}
@@ -645,6 +669,8 @@ async function askFreeText(ctx: any, question: string, context: string | undefin
 			editor.disableSubmit = true;
 
 			return {
+				get focused() { return editor.focused; },
+				set focused(value: boolean) { editor.focused = value; },
 				render(width: number): string[] {
 					const tw = Math.max(8, width - 8);
 					const bw = Math.max(8, width - 4);
@@ -657,8 +683,8 @@ async function askFreeText(ctx: any, question: string, context: string | undefin
 					}
 					top.push("");
 					top.push(truncateToWidth(theme.fg("dim", " Enter submit • Ctrl+J newline • Esc cancel"), tw));
-					for (const line of editorInnerLines(editor, Math.max(1, bw - 2))) {
-						bottom.push(` ${line}`);
+					for (const [index, line] of editorInnerLines(editor, Math.max(1, bw - 2)).entries()) {
+						bottom.push(`${index === 0 ? "› " : "  "}${line}`);
 					}
 					return frameMerged(top, bottom, width, theme);
 				},

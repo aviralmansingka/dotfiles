@@ -316,10 +316,9 @@ when useful.
 
 Concept checks, terminology, "why" questions — delivered through the **`quiz`
 extension tool** (`pi/.pi/agent/extensions/quiz.ts`), a graded sibling of
-`ask_user_question`: options-only, instantly graded against a correct answer
-keyed by option value, with shuffling and an "I don't know" escape handled by
-the tool. The Quiz protocol below covers the parts the tool can't do: composing
-the question and evaluating the answer.
+`ask_user_question`. The extension's tool description owns its interaction and
+grading mechanics. The Quiz protocol below covers the parts the tool can't do:
+composing the question and evaluating the answer.
 
 ### explain
 
@@ -472,9 +471,9 @@ After writing or re-rendering an artifact file, **validate it**:
 ## Quiz protocol
 
 Quizzing runs through the **`quiz` extension tool**, not ad-hoc chat questions.
-The extension owns the mechanics — options-only questions, instant grading,
-shuffle, "I don't know", post-answer explanation — so this protocol covers only
-what the tool can't do: **composition** and **evaluation**.
+The extension's tool description owns the interaction and grading mechanics, so
+this protocol covers only what the tool can't do: **composition** and
+**evaluation**.
 
 ### Composing questions
 
@@ -505,7 +504,8 @@ what the tool can't do: **composition** and **evaluation**.
   teach him the exact terms.
 - **Correct assumptions explicitly.** A wrong answer reveals a misconception —
   name it, explain why it's wrong, and re-ask in a different form before moving
-  on. Treat "I don't know" as an honest signal to teach, not a failure.
+  on. Treat an ungraded Other (`dontKnow`) result as an honest signal to teach,
+  not a failure.
 - **Drill into why, not just what.** Follow a correct answer with a "why"
   question before confirming mastery. "Why does the interface need to be
   admin-up before it can report carrier?" not just "What flag does ip link set?"

@@ -39,7 +39,13 @@ last_pane = "prefix+."
 split_vertical = "prefix+|"
 split_horizontal = "prefix+minus"
 
-# Herdr Annotate pilot: terminal comments, Markdown review, and agent-reply review.
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "youguanxinqing.herdr-flash.flash"
+description = "flash: search visible text, select, and yank"
+
+# Upstream terminal annotations + protected local document/reply reviewer.
 [[keys.command]]
 key = "prefix+a"
 type = "plugin_action"
@@ -61,13 +67,13 @@ description = "manage annotations"
 [[keys.command]]
 key = "prefix+o"
 type = "plugin_action"
-command = "annotate.open"
+command = "annotate-review.open"
 description = "review documents in this folder"
 
 [[keys.command]]
 key = "prefix+shift+o"
 type = "plugin_action"
-command = "annotate.last"
+command = "annotate-review.last"
 description = "review the agent's last reply"
 
 [ui]

@@ -25,8 +25,8 @@ cd ${HOME}/dotfiles/
 ```
 
 The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, installs
-Neovim via `bob`, and installs the pinned Full Herdr Annotate plugin. It stops if the plugin's TUI executable is
-unavailable.
+Neovim via `bob`, and installs Annotate Lite plus a pinned, patched local reviewer. A failed reviewer build stops
+the installation.
 
 For manual package and configuration deployment (excluding installer-managed integrations and plugins):
 
@@ -111,9 +111,10 @@ terraform -chdir=ops/devbox destroy \
 
 ## gh-dash PR worktrees
 
-The stowed gh-dash config resolves `owner/repo` to `/Users/aviral/:repo`. In the pull-request view, press `O` to
-check out the selected PR as `pr/<number>` in a Herdr worktree, focus it, and start tuicr in the new worktree.
-Pressing `O` again focuses the existing workflow-owned worktree; a conflicting local branch is left untouched.
+Run `ghd` to open gh-dash. In the pull-request view, press `H` to review the selected PR's diff in Hunk; quitting
+Hunk returns to gh-dash. The stowed config resolves `owner/repo` to `/Users/aviral/:repo`. Press `O` to check out
+the selected PR as `pr/<number>` in a Herdr worktree, focus it, and start tuicr in the new worktree. Pressing `O`
+again focuses the existing workflow-owned worktree; a conflicting local branch is left untouched.
 
 ## Sidekick / Herdr view sizing
 
@@ -134,7 +135,10 @@ Regression check (installed Sidekick required; no live Herdr calls):
 
 ## Herdr Annotate pilot
 
-The stowed Herdr configuration provides the Full Annotate workflows installed by `./install.sh`:
+`./install.sh` installs upstream Annotate Lite for terminal comments and a separate local `annotate-review`
+plugin for Markdown/reply reviews. The local reviewer adds syntax highlighting and mouse-hover `y` to copy a
+whole code block; upstream plugin updates cannot replace it. Rebuild with `./scripts/install-herdr-annotate`.
+See [the installation and update runbook](ops/herdr-annotate-review/README.md).
 
 | Key              | Action                                |
 | ---------------- | ------------------------------------- |

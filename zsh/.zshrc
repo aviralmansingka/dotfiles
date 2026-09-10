@@ -92,6 +92,7 @@ alias dvim='$HOME/tools/neovim/scripts/run-built-nvim.sh'
 alias rg='rg --hidden'
 alias ls='eza --icons -l'
 alias inv='uv run inv'
+alias ghd='gh dash'
 
 # Copy text/URLs into OSC52 clipboard (works in terminals that allow it)
 osc52-copy() {

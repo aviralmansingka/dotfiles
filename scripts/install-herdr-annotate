@@ -1,0 +1,55 @@
+#!/bin/bash
+# Build the protected reviewer; upstream Annotate owns only terminal annotations.
+set -euo pipefail
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+recipe="$repo/ops/herdr-annotate-review"
+revision="$(<"$recipe/upstream-ref")"
+root="${XDG_DATA_HOME:-$HOME/.local/share}/herdr/annotate-review"
+
+[[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid reviewer source revision' >&2; exit 1; }
+for tool in git cargo herdr shasum; do
+    command -v "$tool" >/dev/null || { echo "Required command not found: $tool" >&2; exit 1; }
+done
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
+echo "==> Building customized reviewer at $revision"
+git init -q "$work/source"
+git -C "$work/source" remote add origin https://github.com/plannotator/plannotator-tui.git
+git -C "$work/source" fetch -q --depth 1 origin "$revision"
+git -C "$work/source" checkout -q --detach FETCH_HEAD
+[[ "$(git -C "$work/source" rev-parse HEAD)" == "$revision" ]]
+git -C "$work/source" apply --check "$recipe/customizations.patch"
+git -C "$work/source" apply "$recipe/customizations.patch"
+(
+    cd "$work/source"
+    cargo fmt --all -- --check
+    cargo test --locked --workspace
+    cargo clippy --locked --workspace --all-targets -- -D warnings
+    cargo build --locked --release --package plannotator-tui --target-dir "$work/target"
+)
+binary="$work/target/release/plannotator-tui"
+"$binary" --version
+
+# Build/tests finish before touching the active reviewer. Rename avoids overwriting
+# executable bytes used by an already-open pane. Keep the last build for rollback.
+mkdir -p "$root"
+if [[ -f "$root/plannotator-tui" ]]; then
+    cp -p "$root/plannotator-tui" "$root/plannotator-tui.previous"
+fi
+install -m 755 "$binary" "$root/plannotator-tui.new"
+mv -f "$root/plannotator-tui.new" "$root/plannotator-tui"
+install -m 644 "$recipe/herdr-plugin.toml" "$root/herdr-plugin.toml"
+{
+    printf 'upstream_revision=%s\n' "$revision"
+    printf 'patch_sha256=%s\n' "$(shasum -a 256 "$recipe/customizations.patch" | awk '{print $1}')"
+    printf 'binary_sha256=%s\n' "$(shasum -a 256 "$root/plannotator-tui" | awk '{print $1}')"
+} > "$root/build-receipt.txt"
+herdr plugin link "$root"
+
+# Same annotate id and state as Full, but no competing document link handler.
+herdr plugin install plannotator/herdr-annotate/lite \
+    --ref bccf884b874f5f39ccbef1bb6ac67625c5fb5d54 --yes
+printf '\nProtected reviewer: %s\n' "$root"
+printf 'Review shortcuts must use annotate-review.open and annotate-review.last.\n'
