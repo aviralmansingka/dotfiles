@@ -1,6 +1,9 @@
 theme = "gruvbox-material"
 
 # Match Neovim's gruvbox-material settings: dark, medium background, mix foreground.
+# Keep temporary in-app view changes from replacing this stowed theme on quit.
+prompt_save_view_preferences = false
+
 [themes.gruvbox-material]
 base = "gruvbox-dark-medium"
 label = "Gruvbox Material"
