@@ -274,45 +274,53 @@ assert.ok(
 	!quizSurplus.some((line) => line.includes("Restarting Socratic quiz")),
 	"the first line (the row title) is not duplicated",
 );
-const stepTextComponent = {
-	lastMessage: {
-		content: [
-			{
-				type: "text",
-				text: "Restarting Socratic quiz\n\n### Question 1A — CP identity\n\nWhy must the VM retain a stable identity?",
-			},
-			{ type: "toolCall", id: "tc-3", name: "bash", arguments: { command: "true" } },
-		],
-	},
-};
-const stepTextLines = controller.renderStepText(stepTextComponent, 120).join("\n");
-assert.ok(
-	stepTextLines.includes("Question 1A"),
-	"controller.renderStepText surfaces swallowed assistant text",
-);
-assert.deepEqual(
-	controller.renderStepText(
-		{ lastMessage: { content: [{ type: "text", text: "short note" }] } },
-		120,
-	),
-	[],
-	"title-only text renders nothing extra (previous behavior preserved)",
-);
-const narrowStepTextLines = controller.renderStepText(
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
 	{
-		lastMessage: {
-			content: [
-				{
-					type: "text",
-					text: ["title", ...Array.from({ length: 13 }, (_, index) => `long surplus line ${index}`)].join("\n"),
-				},
-			],
-		},
+		content: [{ type: "text", text: "Previous response complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
 	},
-	10,
 );
+const orderedMessage = {
+	content: [
+		{
+			type: "text",
+			text: [
+				"Restarting Socratic quiz",
+				"",
+				"### Question 1A — CP identity",
+				...Array.from({ length: 11 }, (_, index) => `long surplus line ${index}`),
+			].join("\n"),
+		},
+		{ type: "toolCall", id: "tc-3", name: "bash", arguments: { command: "true" } },
+	],
+};
+const orderedAssistant = { hideThinkingBlock: false };
+controller.assistantUpdated(orderedAssistant, orderedMessage);
+assert.deepEqual(
+	ChunkAssistant.prototype.render.call(orderedAssistant, 120),
+	[],
+	"the assistant component defers tool-call text to the owning tool row",
+);
+const orderedTool = {
+	toolName: "bash",
+	toolCallId: "tc-3",
+	rendererState: {},
+	executionStarted: true,
+	invalidate: () => {},
+	ui: { requestRender: () => {} },
+};
+controller.toolUpdated(orderedTool);
+const orderedLines = controller.renderTool(orderedTool, 120);
+const orderedText = orderedLines.join("\n");
 assert.ok(
-	narrowStepTextLines.every((line) => visibleWidth(line) <= 10),
+	orderedText.indexOf("Restarting Socratic quiz") < orderedText.indexOf("Question 1A"),
+	"surplus text follows its title in the owning tool row",
+);
+const narrowOrderedLines = controller.renderTool(orderedTool, 10);
+assert.ok(
+	narrowOrderedLines.every((line) => visibleWidth(line) <= 10),
 	"surplus content and overflow marker are clipped after indentation",
 );
 
@@ -341,6 +349,31 @@ assert.equal(
 	plainToolComponent[plainBridgeKey]?.outputMode,
 	"hidden",
 	"collapsing restores the summary-only row",
+);
+const clickablePlainTool = Object.assign(Object.create(ChunkTool.prototype), {
+	toolName: "bash",
+	toolCallId: "tc-click",
+	result: { content: [{ type: "text", text: "clickable output" }], isError: false },
+	updateDisplay() {},
+	invalidate() {},
+	ui: { requestRender() {} },
+});
+const leftClick = { type: "click", button: "left", x: 0, y: 0, width: 80, height: 1 };
+assert.deepEqual(
+	clickablePlainTool.handleMouse(leftClick),
+	{ handled: true },
+	"a plain tool row handles a left click",
+);
+assert.equal(
+	clickablePlainTool[plainBridgeKey]?.outputMode,
+	"expanded",
+	"a row click expands plain tool output",
+);
+clickablePlainTool.handleMouse(leftClick);
+assert.equal(
+	clickablePlainTool[plainBridgeKey]?.outputMode,
+	"hidden",
+	"a second row click collapses plain tool output",
 );
 
 // 3. A finished assistant message with empty text and hidden thinking used

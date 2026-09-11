@@ -86,6 +86,7 @@ type WorkStep = {
   title: string;
   titleLocked: boolean;
   thinking: string[];
+  surplusText: string[];
   // Raw (unsanitized) thinking text, kept so a hidden-thinking session that
   // ends with an empty response can still show the model's answer instead of
   // rendering nothing at all.
@@ -129,7 +130,6 @@ type RendererController = {
   assistantThinkingChanged(component: any, hidden: boolean): void;
   assistantHasStep(component: any): boolean;
   renderAssistant(component: any, lines: string[], width: number): string[];
-  renderStepText(component: any, width: number): string[];
   toolUpdated(component: any): void;
   toolExpanded(component: any, expanded: boolean): void;
   renderTool(component: any, width: number): string[];
@@ -662,8 +662,15 @@ function renderCompactSummary(theme: Theme, run: ActivityRun, width: number): st
     : settled
       ? theme.fg("success", theme.bold("all passed"))
       : theme.fg("warning", theme.bold(`${completed}/${total} complete`));
-
-  return [truncateToWidth(` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", `${plural(total, "step")} · `)}${state}`, width)];
+  const lines = [
+    truncateToWidth(
+      ` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", `${plural(total, "step")} · `)}${state}`,
+      width,
+    ),
+  ];
+  for (const step of allSteps)
+    lines.push(...renderStepSurplusText(theme, step, width));
+  return lines;
 }
 
 /**
@@ -842,6 +849,11 @@ function renderConnectedChips(
       );
     }
   }
+  lines.splice(
+    Math.min(1, lines.length),
+    0,
+    ...renderStepSurplusText(theme, step, width),
+  );
   return lines;
 }
 
@@ -894,12 +906,12 @@ function renderThinkingStep(
 // text alongside its tool calls renders nothing natively (the tool row owns
 // the turn), and only its first line survived as the row title. Render the
 // surplus so requested content stays readable in the transcript.
-export function renderStepSurplusText(
+function renderStepSurplusText(
   theme: Theme,
-  component: any,
+  step: WorkStep,
   width: number,
 ): string[] {
-  const surplus = stepSurplusText(component.lastMessage);
+  const surplus = step.surplusText ?? [];
   if (surplus.length === 0) return [];
   const lines: string[] = [];
   for (const line of surplus.slice(0, STEP_TEXT_LINE_CAP)) {
@@ -1022,6 +1034,7 @@ class WorkStepRow {
         lines.push(
           ` ${outer} ${stepGlyph} ${this.theme.fg("text", this.theme.bold(step.title))}`,
         );
+        lines.push(...renderStepSurplusText(this.theme, step, width));
         if (step.thinking.length > 0) {
           for (const [thoughtIndex, thought] of step.thinking.entries()) {
             const finalThought = thoughtIndex === step.thinking.length - 1;
@@ -1143,6 +1156,7 @@ function updateAssistant(
   const explicitTitle = titleFromTextContent(content);
   const thinking = thinkingFromContent(content);
   const rawThinking = rawThinkingFromContent(content);
+  const surplusText = stepSurplusText(message);
   const hasThinking = content.some((item) => item?.type === "thinking");
 
   if (toolCalls.length === 0) {
@@ -1173,6 +1187,7 @@ function updateAssistant(
           title: "Preparing response",
           titleLocked: true,
           thinking: stepThinking,
+          surplusText: [],
           thinkingVisible: !component.hideThinkingBlock,
           toolCalls: [],
           toolCallIds: new Set<string>(),
@@ -1225,6 +1240,7 @@ function updateAssistant(
       title,
       titleLocked: Boolean(stepExplicitTitle),
       thinking: stepThinking,
+      surplusText,
       thinkingVisible: !component.hideThinkingBlock,
       toolCalls: [],
       toolCallIds: new Set<string>(),
@@ -1258,6 +1274,7 @@ function updateAssistant(
     step.titleLocked = Boolean(stepExplicitTitle);
   }
   step.thinking = stepThinking;
+  step.surplusText = surplusText;
   step.thinkingRaw = rawThinking;
   step.thinkingVisible = !component.hideThinkingBlock;
   if (message.stopReason === "error" || message.stopReason === "aborted")
@@ -2025,11 +2042,7 @@ function patchComponents(
     const render = assistantProto.render;
     assistantProto.render = function (width: number) {
       const controller = assistantProto[CONTROLLER];
-      if (controller?.assistantHasStep(this)) {
-        // The tool row owns this turn's activity; the assistant text itself
-        // used to vanish entirely. Render the surplus beyond the row title.
-        return controller.renderStepText(this, width);
-      }
+      if (controller?.assistantHasStep(this)) return [];
       const lines = render.call(this, width);
       return (
         controller?.renderAssistant(this, lines, width) ?? lines
@@ -2050,6 +2063,20 @@ function patchComponents(
     toolProto.setExpanded = function (expanded: boolean) {
       toolProto[CONTROLLER]?.toolExpanded(this, expanded);
       return setExpanded.call(this, expanded);
+    };
+    const handleMouse = toolProto.handleMouse;
+    toolProto.handleMouse = function (event: any) {
+      if (
+        !CONNECTED_TOOL_NAMES.has(this.toolName) &&
+        this.result &&
+        event?.type === "click" &&
+        event.button === "left"
+      ) {
+        const bridge = this[PLAIN_BRIDGE] as PlainRenderBridge | undefined;
+        this.setExpanded(bridge?.outputMode !== "expanded");
+        return { handled: true };
+      }
+      return handleMouse?.call(this, event);
     };
     const render = toolProto.render;
     toolProto.render = function (width: number) {
@@ -2234,9 +2261,6 @@ export default async function (pi: ExtensionAPI) {
     },
     renderTool(component, width) {
       return renderToolComponent(component, width, state, theme);
-    },
-    renderStepText(component, width) {
-      return renderStepSurplusText(theme, component, width);
     },
   };
   await applyRendererPatch(state, controller, (resolved) => {
