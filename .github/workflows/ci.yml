@@ -86,6 +86,7 @@ jobs:
         env:
           JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
         run: |
+          node pi/.pi/agent/extensions/explain.test.mjs
           node pi/.pi/agent/extensions/herdr-prompt-state.test.mjs
           node pi/.pi/agent/extensions/hunk-open.test.mjs
           node pi/.pi/agent/extensions/quiz-context-files.test.mjs
