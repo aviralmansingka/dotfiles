@@ -73,6 +73,18 @@ function safeRelativePath(input: string) {
   return normalized;
 }
 
+function hasUnsafeSourceControl(value: string) {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    const allowedWhitespace =
+      code === 0x09 || code === 0x0a || (code === 0x0d && value.charCodeAt(index + 1) === 0x0a);
+    if ((code <= 0x1f && !allowedWhitespace) || (code >= 0x7f && code <= 0x9f)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Count represented source lines without allocating one string per line. */
 function logicalLineCount(text: string) {
   let lines = 0;
@@ -106,6 +118,12 @@ export function parseSnapshotValue(value: unknown): NvimReviewSnapshot {
       throw userError(`The snapshot contains duplicate path ${JSON.stringify(path)}.`);
     seen.add(path);
 
+    if (!file.text.isWellFormed()) {
+      throw userError(`Buffer ${JSON.stringify(path)} must contain well-formed Unicode.`);
+    }
+    if (hasUnsafeSourceControl(file.text)) {
+      throw userError(`Buffer ${JSON.stringify(path)} contains an unsupported terminal control.`);
+    }
     const bytes = Buffer.byteLength(file.text);
     if (bytes > MAX_SOURCE_BYTES) {
       throw userError(`Buffer ${JSON.stringify(path)} exceeds ${MAX_SOURCE_BYTES} UTF-8 bytes.`);

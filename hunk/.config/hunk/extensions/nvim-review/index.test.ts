@@ -124,7 +124,7 @@ describe("nvim-review extension", () => {
     const files = [
       { path: "src/crlf.ts", text: "first\r\nsecond\r\n" },
       { path: "empty.txt", text: "" },
-      { path: "src/emoji-😀.ts", text: "valid surrogate pair\n" },
+      { path: "src/emoji-😀.ts", text: "valid 😀 pair\tkept\n" },
       { path: 'src/space "quoted".ts', text: "no final newline" },
     ];
     writeFileSync(snapshotPath, JSON.stringify({ files }));
@@ -219,6 +219,45 @@ describe("nvim-review extension", () => {
         ],
       }),
     ).toThrow("duplicate");
+  });
+
+  test("rejects unsafe source controls and malformed Unicode", async () => {
+    const rejected = [
+      { text: "nul\0byte", error: "terminal control" },
+      { text: "lone\rcarriage return", error: "terminal control" },
+      { text: "before\u001bPline one\nline two\u001b\\after", error: "terminal control" },
+      { text: "before\u001b]title\u0007after", error: "terminal control" },
+      { text: "delete\u007fcontrol", error: "terminal control" },
+      { text: "before\u0090line one\nline two\u009cafter", error: "terminal control" },
+      { text: "before\u009dtitle\u009cafter", error: "terminal control" },
+      { text: "lone high \ud800 surrogate", error: "well-formed Unicode" },
+      { text: "lone low \udc00 surrogate", error: "well-formed Unicode" },
+    ];
+    for (const { text, error } of rejected) {
+      expect(() => parseSnapshotValue({ files: [{ path: "source.ts", text }] })).toThrow(error);
+    }
+
+    const cwd = temporaryDirectory();
+    const path = join(cwd, "snapshot.json");
+    for (const { text, error } of rejected) {
+      writeFileSync(path, JSON.stringify({ files: [{ path: "source.ts", text }] }));
+      await expect(loadSnapshotFile(path)).rejects.toThrow(error);
+    }
+  });
+
+  test("preserves supported source text through parser and loader", async () => {
+    const text = "const emoji = '😀';\t// tab\r\nnext line\nno final newline";
+    const parsed = parseSnapshotValue({ files: [{ path: "source.ts", text }] });
+    expect(parsed.files[0]?.text).toBe(text);
+
+    const cwd = temporaryDirectory();
+    const path = join(cwd, "snapshot.json");
+    writeFileSync(
+      path,
+      JSON.stringify({ files: [{ path: "source.ts", text }, { path: "empty", text: "" }] }),
+    );
+    const loaded = await loadSnapshotFile(path);
+    expect(loaded.files.map((file) => file.text)).toEqual([text, ""]);
   });
 
   test("declares one dependency-free API-25 folder entry", () => {
