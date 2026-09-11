@@ -240,4 +240,125 @@ const failedLines = controller.renderTool(failedComponent, 120).join("\n");
 assert.ok(failedLines.includes("review"), "expanded failed pipeline renders phase rows");
 assert.ok(failedLines.includes("RAW FAILURE OUTPUT"), "expanded failed pipeline retains raw output");
 
-console.log("tool-call-renderer.test.mjs: PASS — runtime patches and failed pipeline rendering work");
+// --- Regression: the "missing conversation" bug (three swallowing paths) ---
+//
+// 1. Assistant text emitted alongside tool calls was reduced to the step row
+//    title (first line) and the rest vanished from the transcript.
+const rendererModule = jiti("./tool-call-renderer.ts");
+const { stepSurplusText } = rendererModule;
+assert.deepEqual(
+	stepSurplusText({
+		content: [
+			{ type: "text", text: "Displaying the padded bank map" },
+			{ type: "toolCall", id: "tc-1", name: "bash", arguments: { command: "true" } },
+		],
+	}),
+	[],
+	"single-line text equals its row title; no surplus",
+);
+const quizSurplus = stepSurplusText({
+	content: [
+		{
+			type: "text",
+			text: "Restarting Socratic quiz\n\n### Question 1A — CP identity\n\nWhy must the VM retain a stable Tailscale identity?",
+		},
+		{ type: "toolCall", id: "tc-2", name: "bash", arguments: { command: "true" } },
+	],
+});
+assert.ok(
+	quizSurplus.join("\n").includes("Question 1A"),
+	"multi-line text alongside a tool call keeps its surplus lines",
+);
+assert.ok(
+	!quizSurplus.some((line) => line.includes("Restarting Socratic quiz")),
+	"the first line (the row title) is not duplicated",
+);
+const stepTextComponent = {
+	lastMessage: {
+		content: [
+			{
+				type: "text",
+				text: "Restarting Socratic quiz\n\n### Question 1A — CP identity\n\nWhy must the VM retain a stable identity?",
+			},
+			{ type: "toolCall", id: "tc-3", name: "bash", arguments: { command: "true" } },
+		],
+	},
+};
+const stepTextLines = controller.renderStepText(stepTextComponent, 120).join("\n");
+assert.ok(
+	stepTextLines.includes("Question 1A"),
+	"controller.renderStepText surfaces swallowed assistant text",
+);
+assert.deepEqual(
+	controller.renderStepText(
+		{ lastMessage: { content: [{ type: "text", text: "short note" }] } },
+		120,
+	),
+	[],
+	"title-only text renders nothing extra (previous behavior preserved)",
+);
+
+// 2. Plain tool output was unviewable: rows collapsed to a one-line summary
+//    with no expand path. setExpanded(true) must now open the native output.
+const plainToolComponent = {
+	toolName: "bash",
+	toolCallId: "tc-4",
+	invalidate: () => {},
+	ui: { requestRender: () => {} },
+};
+const plainBridgeKey = Symbol.for("aviral.pi.work-step-renderer.plain-bridge");
+assert.equal(
+	plainToolComponent[plainBridgeKey],
+	undefined,
+	"plain bridge is created lazily",
+);
+controller.toolExpanded(plainToolComponent, true);
+assert.equal(
+	plainToolComponent[plainBridgeKey]?.outputMode,
+	"expanded",
+	"ctrl+o / click expands plain tool output",
+);
+controller.toolExpanded(plainToolComponent, false);
+assert.equal(
+	plainToolComponent[plainBridgeKey]?.outputMode,
+	"hidden",
+	"collapsing restores the summary-only row",
+);
+
+// 3. A finished assistant message with empty text and hidden thinking used
+//    to render nothing at all (the answer had leaked into the thinking block).
+const fallbackComponent = { hideThinkingBlock: true };
+controller.assistantUpdated(fallbackComponent, {
+	content: [
+		{
+			type: "thinking",
+			thinking: "The user wants a session summary.\n\n## Session summary\n1. Fixed the widget.\n2. Added the SSH check.",
+		},
+	],
+	stopReason: "stop",
+	usage: { totalTokens: 120 },
+});
+const fallbackLines = controller.renderAssistant(fallbackComponent, [], 120).join("\n");
+assert.ok(
+	fallbackLines.includes("Session summary"),
+	"empty response with hidden thinking falls back to raw thinking",
+);
+assert.ok(
+	fallbackLines.includes("no response text"),
+	"the fallback is labeled so the captain knows it came from thinking",
+);
+const visibleTextComponent = { hideThinkingBlock: false };
+controller.assistantUpdated(visibleTextComponent, {
+	content: [
+		{ type: "text", text: "Here is the answer." },
+	],
+	stopReason: "stop",
+	usage: { totalTokens: 120 },
+});
+assert.equal(
+	controller.renderAssistant(visibleTextComponent, ["Here is the answer."], 120).join("\n"),
+	"Here is the answer.",
+	"normal responses are untouched by the fallback",
+);
+
+console.log("tool-call-renderer.test.mjs: PASS — runtime patches, failed pipeline rendering, and missing-conversation recovery work");
