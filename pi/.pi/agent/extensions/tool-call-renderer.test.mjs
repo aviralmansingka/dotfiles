@@ -84,6 +84,7 @@ const { createJiti } = require(jitiPath);
 // resolve the same way they do when pi loads the extension (the package
 // `exports` map has no `require` condition, so plain CJS resolution fails).
 const piTuiEntry = require.resolve("@earendil-works/pi-tui", { paths: [piPackageDir] });
+const { Text, visibleWidth } = require(piTuiEntry);
 const jiti = createJiti(import.meta.url, {
 	alias: {
 		"@earendil-works/pi-coding-agent": join(interactiveDir, "components", "keybinding-hints.js"),
@@ -151,8 +152,14 @@ assert.equal(typeof activate, "function", "renderer must export an activate func
 const stderrLines = [];
 const savedError = console.error;
 console.error = (...args) => stderrLines.push(args.join(" "));
+const piHandlers = new Map();
 try {
-	const stubPi = { on() {}, events: { on() {} } };
+	const stubPi = {
+		on(name, handler) {
+			piHandlers.set(name, handler);
+		},
+		events: { on() {} },
+	};
 	await activate(stubPi);
 } finally {
 	console.error = savedError;
@@ -234,10 +241,294 @@ assert.ok(failedComponent.rendererState[bridgeKey], "failed pipeline phase data 
 failedComponent.rendererState[bridgeKey].outputMode = "expanded";
 globalThis[Symbol.for("@earendil-works/pi-coding-agent:theme")] = {
 	fg: (_role, text) => text,
+	bg: (_role, text) => text,
 	bold: (text) => text,
+	italic: (text) => text,
 };
 const failedLines = controller.renderTool(failedComponent, 120).join("\n");
 assert.ok(failedLines.includes("review"), "expanded failed pipeline renders phase rows");
 assert.ok(failedLines.includes("RAW FAILURE OUTPUT"), "expanded failed pipeline retains raw output");
 
-console.log("tool-call-renderer.test.mjs: PASS — runtime patches and failed pipeline rendering work");
+// --- Regression: the "missing conversation" bug (three swallowing paths) ---
+//
+// 1. Assistant text emitted alongside tool calls was reduced to the step row
+//    title (first line) and the rest vanished from the transcript.
+const rendererModule = jiti("./tool-call-renderer.ts");
+const { stepSurplusText } = rendererModule;
+assert.deepEqual(
+	stepSurplusText({
+		content: [
+			{ type: "text", text: "Displaying the padded bank map" },
+			{ type: "toolCall", id: "tc-1", name: "bash", arguments: { command: "true" } },
+		],
+	}),
+	[],
+	"single-line text equals its row title; no surplus",
+);
+const quizSurplus = stepSurplusText({
+	content: [
+		{
+			type: "text",
+			text: "Restarting Socratic quiz\n\n### Question 1A — CP identity\n\nWhy must the VM retain a stable Tailscale identity?",
+		},
+		{ type: "toolCall", id: "tc-2", name: "bash", arguments: { command: "true" } },
+	],
+});
+assert.ok(
+	quizSurplus.join("\n").includes("Question 1A"),
+	"multi-line text alongside a tool call keeps its surplus lines",
+);
+assert.ok(
+	!quizSurplus.some((line) => line.includes("Restarting Socratic quiz")),
+	"the first line (the row title) is not duplicated",
+);
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "text", text: "Previous response complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
+	},
+);
+const orderedMessage = {
+	content: [
+		{
+			type: "text",
+			text: [
+				"Restarting Socratic quiz",
+				"",
+				"### Question 1A — CP identity",
+				...Array.from({ length: 11 }, (_, index) => `long surplus line ${index}`),
+			].join("\n"),
+		},
+		{ type: "toolCall", id: "tc-3", name: "bash", arguments: { command: "true" } },
+	],
+};
+const orderedAssistant = { hideThinkingBlock: false };
+controller.assistantUpdated(orderedAssistant, orderedMessage);
+assert.deepEqual(
+	ChunkAssistant.prototype.render.call(orderedAssistant, 120),
+	[],
+	"the assistant component defers tool-call text to the owning tool row",
+);
+const orderedTool = {
+	toolName: "bash",
+	toolCallId: "tc-3",
+	rendererState: {},
+	executionStarted: true,
+	invalidate: () => {},
+	ui: { requestRender: () => {} },
+};
+controller.toolUpdated(orderedTool);
+const orderedLines = controller.renderTool(orderedTool, 120);
+const orderedText = orderedLines.join("\n");
+assert.ok(
+	orderedText.indexOf("Restarting Socratic quiz") < orderedText.indexOf("Question 1A"),
+	"surplus text follows its title in the owning tool row",
+);
+const narrowOrderedLines = controller.renderTool(orderedTool, 10);
+assert.ok(
+	narrowOrderedLines.every((line) => visibleWidth(line) <= 10),
+	"surplus content and overflow marker are clipped after indentation",
+);
+
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "text", text: "Previous run complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
+	},
+);
+const connectedOwnerAssistant = { hideThinkingBlock: false };
+controller.assistantUpdated(connectedOwnerAssistant, {
+	content: [
+		{ type: "text", text: "Launching connected work\nfirst connected surplus" },
+		{ type: "toolCall", id: "tc-connected", name: "subagent", arguments: { name: "worker" } },
+	],
+	stopReason: "toolUse",
+});
+const connectedOwnerTool = {
+	toolName: "subagent",
+	toolCallId: "tc-connected",
+	rendererState: {},
+	executionStarted: true,
+};
+controller.toolUpdated(connectedOwnerTool);
+controller.assistantUpdated({ hideThinkingBlock: false }, {
+	content: [
+		{ type: "text", text: "Showing later output\nlater step surplus" },
+		{ type: "toolCall", id: "tc-later", name: "bash", arguments: { command: "true" } },
+	],
+	stopReason: "toolUse",
+});
+controller.toolUpdated({
+	toolName: "bash",
+	toolCallId: "tc-later",
+	rendererState: {},
+	executionStarted: true,
+});
+const connectedRunText = controller.renderTool(connectedOwnerTool, 120).join("\n");
+assert.ok(
+	connectedRunText.indexOf("Launching connected work") <
+		connectedRunText.indexOf("first connected surplus"),
+	"a connected owner renders its surplus under its title",
+);
+assert.ok(
+	connectedRunText.indexOf("Showing later output") <
+		connectedRunText.indexOf("later step surplus"),
+	"a connected owner renders later run surplus under the later step title",
+);
+
+// 2. Plain tool output was unviewable: rows collapsed to a one-line summary
+//    with no expand path. setExpanded(true) must now open the native output.
+const plainToolComponent = {
+	toolName: "bash",
+	toolCallId: "tc-4",
+	invalidate: () => {},
+	ui: { requestRender: () => {} },
+};
+const plainBridgeKey = Symbol.for("aviral.pi.work-step-renderer.plain-bridge");
+assert.equal(
+	plainToolComponent[plainBridgeKey],
+	undefined,
+	"plain bridge is created lazily",
+);
+controller.toolExpanded(plainToolComponent, true);
+assert.equal(
+	plainToolComponent[plainBridgeKey]?.outputMode,
+	"expanded",
+	"ctrl+o expands plain tool output",
+);
+controller.toolExpanded(plainToolComponent, false);
+assert.equal(
+	plainToolComponent[plainBridgeKey]?.outputMode,
+	"hidden",
+	"collapsing restores the summary-only row",
+);
+
+// Exercise the public component methods that pi itself invokes, rather than
+// only the controller seam above. This proves setExpanded(true) composes the
+// work-step row with the native tool result renderer in the live TUI class.
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "text", text: "Previous plain tool complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
+	},
+);
+const nativeToolCallId = "tc-native-plain";
+const nativeMessage = {
+	content: [
+		{ type: "text", text: "Displaying requested output\nThe tool result can be expanded below." },
+		{ type: "toolCall", id: nativeToolCallId, name: "evidence_plain", arguments: {} },
+	],
+	stopReason: "toolUse",
+};
+const nativeAssistant = new ChunkAssistant(nativeMessage, false);
+assert.deepEqual(
+	nativeAssistant.render(120),
+	[],
+	"the live assistant component delegates a tool-call turn to its tool row",
+);
+const nativePlainTool = new ChunkTool(
+	"evidence_plain",
+	nativeToolCallId,
+	{},
+	{},
+	{
+		name: "evidence_plain",
+		renderCall: () => new Text("evidence_plain", 0, 0),
+		renderResult: () => new Text("REQUESTED TOOL OUTPUT", 0, 0),
+	},
+	{ requestRender() {} },
+	process.cwd(),
+);
+nativePlainTool.markExecutionStarted();
+nativePlainTool.setArgsComplete();
+nativePlainTool.updateResult(
+	{ content: [{ type: "text", text: "REQUESTED TOOL OUTPUT" }], details: {} },
+	false,
+);
+assert.equal(
+	typeof piHandlers.get("tool_execution_end"),
+	"function",
+	"activation registers the tool completion lifecycle handler",
+);
+piHandlers.get("tool_execution_end")({ toolCallId: nativeToolCallId });
+const nativeCollapsed = nativePlainTool.render(120).join("\n");
+assert.ok(
+	nativeCollapsed.includes("The tool result can be expanded below."),
+	"the live tool row displays assistant surplus text",
+);
+assert.ok(
+	!nativeCollapsed.includes("REQUESTED TOOL OUTPUT"),
+	"the live plain tool starts collapsed",
+);
+nativePlainTool.setExpanded(true);
+const nativeExpanded = nativePlainTool.render(120).join("\n");
+assert.ok(
+	nativeExpanded.includes("REQUESTED TOOL OUTPUT"),
+	"the live plain tool displays native result output after expansion",
+);
+nativePlainTool.setExpanded(false);
+assert.ok(
+	!nativePlainTool.render(120).join("\n").includes("REQUESTED TOOL OUTPUT"),
+	"the live plain tool hides native result output after collapse",
+);
+
+// 3. A finished assistant message with empty text and hidden thinking used
+//    to render nothing at all (the answer had leaked into the thinking block).
+const fallbackComponent = { hideThinkingBlock: true };
+controller.assistantUpdated(fallbackComponent, {
+	content: [
+		{
+			type: "thinking",
+			thinking: "The user wants a session summary.\n\n## Session summary\n1. Fixed the widget.\n2. Added the SSH check.",
+		},
+	],
+	stopReason: "stop",
+	usage: { totalTokens: 120 },
+});
+const fallbackLines = controller.renderAssistant(fallbackComponent, [], 120).join("\n");
+assert.ok(
+	fallbackLines.includes("Session summary"),
+	"empty response with hidden thinking falls back to raw thinking",
+);
+const nativeFallback = new ChunkAssistant(
+	{
+		content: [
+			{
+				type: "thinking",
+				thinking: "The user wants a session summary.\n\n## Session summary\n1. Fixed the widget.\n2. Added the SSH check.",
+			},
+		],
+		stopReason: "stop",
+		usage: { totalTokens: 120 },
+	},
+	true,
+).render(120).join("\n");
+assert.ok(
+	nativeFallback.includes("Session summary"),
+	"the live assistant component renders hidden thinking when response text is empty",
+);
+assert.ok(
+	fallbackLines.includes("no response text"),
+	"the fallback is labeled so the captain knows it came from thinking",
+);
+const visibleTextComponent = { hideThinkingBlock: false };
+controller.assistantUpdated(visibleTextComponent, {
+	content: [
+		{ type: "text", text: "Here is the answer." },
+	],
+	stopReason: "stop",
+	usage: { totalTokens: 120 },
+});
+assert.equal(
+	controller.renderAssistant(visibleTextComponent, ["Here is the answer."], 120).join("\n"),
+	"Here is the answer.",
+	"normal responses are untouched by the fallback",
+);
+
+console.log("tool-call-renderer.test.mjs: PASS — runtime patches, failed pipeline rendering, and missing-conversation recovery work");

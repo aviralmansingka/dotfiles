@@ -28,6 +28,12 @@ const DEFAULT_CLOCK = () => Date.now();
 const HOST_TAG = `⟠ ${hostname()}`;
 const BACKGROUND_UPDATE_EVENT = "subagent:background-update";
 const CONNECTED_TOOL_NAMES = new Set(["subagent", "no_mistakes_axi"]);
+// Assistant text emitted alongside tool calls survives only as the step row
+// title (its first non-empty line). Everything after that line used to be
+// swallowed entirely — the "missing conversation" bug. These caps keep the
+// recovered surplus text readable without flooding the trace.
+const STEP_TEXT_LINE_CAP = 12;
+const THINKING_FALLBACK_LINE_CAP = 30;
 
 type ToolCall = {
   id: string;
@@ -80,6 +86,11 @@ type WorkStep = {
   title: string;
   titleLocked: boolean;
   thinking: string[];
+  surplusText: string[];
+  // Raw (unsanitized) thinking text, kept so a hidden-thinking session that
+  // ends with an empty response can still show the model's answer instead of
+  // rendering nothing at all.
+  thinkingRaw?: string[];
   thinkingVisible: boolean;
   toolCalls: ToolCall[];
   toolCallIds: Set<string>;
@@ -120,7 +131,7 @@ type RendererController = {
   assistantHasStep(component: any): boolean;
   renderAssistant(component: any, lines: string[], width: number): string[];
   toolUpdated(component: any): void;
-  toolExpanded(component: any): void;
+  toolExpanded(component: any, expanded: boolean): void;
   renderTool(component: any, width: number): string[];
 };
 
@@ -356,6 +367,36 @@ function thinkingFromContent(content: any[]): string[] {
     .filter((item) => item?.type === "thinking")
     .map((item) => sanitizeTitle(asString(item.thinking)))
     .filter((item): item is string => Boolean(item));
+}
+
+function rawThinkingFromContent(content: any[]): string[] {
+  return content
+    .filter((item) => item?.type === "thinking")
+    .map((item) => asString(item.thinking))
+    .filter((item): item is string => Boolean(item));
+}
+
+// Assistant text emitted in the same message as a tool call is reduced to the
+// step row title (its first non-empty line). This returns everything AFTER
+// that line — the content that previously disappeared from the transcript.
+export function stepSurplusText(message: any): string[] {
+  const content = Array.isArray(message?.content) ? message.content : [];
+  const texts = content
+    .filter((item: any) => item?.type === "text")
+    .map((item: any) => asString(item.text))
+    .filter((text): text is string => Boolean(text && text.trim()));
+  if (texts.length === 0) return [];
+  const rawLines = texts.join("\n").split("\n");
+  let firstNonEmpty = 0;
+  while (
+    firstNonEmpty < rawLines.length &&
+    !rawLines[firstNonEmpty]?.trim()
+  ) {
+    firstNonEmpty++;
+  }
+  const surplus = rawLines.slice(firstNonEmpty + 1);
+  while (surplus.length > 0 && !surplus.at(-1)?.trim()) surplus.pop();
+  return surplus;
 }
 
 function status(step: WorkStep): "pending" | "success" | "failure" {
@@ -621,8 +662,14 @@ function renderCompactSummary(theme: Theme, run: ActivityRun, width: number): st
     : settled
       ? theme.fg("success", theme.bold("all passed"))
       : theme.fg("warning", theme.bold(`${completed}/${total} complete`));
-
-  return [truncateToWidth(` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", `${plural(total, "step")} · `)}${state}`, width)];
+  const lines = [
+    truncateToWidth(
+      ` ${theme.fg("borderMuted", "│")}  ${theme.fg("muted", `${plural(total, "step")} · `)}${state}`,
+      width,
+    ),
+  ];
+  lines.push(...renderRunSurplusText(theme, run, width));
+  return lines;
 }
 
 /**
@@ -849,6 +896,89 @@ function renderThinkingStep(
   return lines.map((line) => truncateToWidth(line, width));
 }
 
+// Fix for the "missing conversation" bug: an assistant message that carries
+// text alongside its tool calls renders nothing natively (the tool row owns
+// the turn), and only its first line survived as the row title. Render the
+// surplus so requested content stays readable in the transcript.
+function renderStepSurplusText(
+  theme: Theme,
+  step: WorkStep,
+  width: number,
+): string[] {
+  const surplus = step.surplusText ?? [];
+  if (surplus.length === 0) return [];
+  const lines: string[] = [];
+  for (const line of surplus.slice(0, STEP_TEXT_LINE_CAP)) {
+    lines.push(
+      `   ${theme.fg("muted", truncateToWidth(line, Math.max(width - 3, 20)))}`,
+    );
+  }
+  if (surplus.length > STEP_TEXT_LINE_CAP) {
+    lines.push(
+      `   ${theme.fg("dim", `… +${surplus.length - STEP_TEXT_LINE_CAP} more lines`)}`,
+    );
+  }
+  return lines.map((line) => truncateToWidth(line, width));
+}
+
+function renderRunSurplusText(
+  theme: Theme,
+  run: ActivityRun,
+  width: number,
+): string[] {
+  const lines: string[] = [];
+  for (const step of run.steps) {
+    const surplus = renderStepSurplusText(theme, step, width);
+    if (surplus.length === 0) continue;
+    const glyph = status(step) === "pending"
+      ? theme.fg("accent", "▹")
+      : status(step) === "failure"
+        ? theme.fg("error", "×")
+        : theme.fg("muted", "▸");
+    lines.push(
+      truncateToWidth(
+        ` ${glyph} ${theme.fg("text", theme.bold(step.title))}`,
+        width,
+      ),
+      ...surplus,
+    );
+  }
+  return lines;
+}
+
+// Fallback for sessions with hidden thinking: when a finished assistant
+// message has no response text at all (some models leak the whole answer into
+// the thinking block), show the raw thinking instead of rendering nothing.
+export function renderThinkingFallback(
+  theme: Theme,
+  step: WorkStep,
+  width: number,
+): string[] {
+  const raw = (step.thinkingRaw ?? [])
+    .flatMap((text) => text.split("\n"))
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (raw.length === 0) return [];
+  const lines = [
+    "",
+    ` ${theme.fg("muted", "▸")} ${theme.fg("text", theme.bold(step.title))} ${theme.fg(
+      "dim",
+      "(no response text — showing thinking)",
+    )}`,
+  ];
+  for (const line of raw.slice(0, THINKING_FALLBACK_LINE_CAP)) {
+    lines.push(
+      `   ${theme.fg("muted", truncateToWidth(line, Math.max(width - 3, 20)))}`,
+    );
+  }
+  if (raw.length > THINKING_FALLBACK_LINE_CAP) {
+    lines.push(
+      `   ${theme.fg("dim", `… +${raw.length - THINKING_FALLBACK_LINE_CAP} more lines`)}`,
+    );
+  }
+  return lines.map((line) => truncateToWidth(line, width));
+}
+
 class WorkStepRow {
   constructor(
     private readonly theme: Theme,
@@ -923,6 +1053,7 @@ class WorkStepRow {
         lines.push(
           ` ${outer} ${stepGlyph} ${this.theme.fg("text", this.theme.bold(step.title))}`,
         );
+        lines.push(...renderStepSurplusText(this.theme, step, width));
         if (step.thinking.length > 0) {
           for (const [thoughtIndex, thought] of step.thinking.entries()) {
             const finalThought = thoughtIndex === step.thinking.length - 1;
@@ -1043,6 +1174,8 @@ function updateAssistant(
   const toolCalls = toolCallsFrom(content);
   const explicitTitle = titleFromTextContent(content);
   const thinking = thinkingFromContent(content);
+  const rawThinking = rawThinkingFromContent(content);
+  const surplusText = stepSurplusText(message);
   const hasThinking = content.some((item) => item?.type === "thinking");
 
   if (toolCalls.length === 0) {
@@ -1073,6 +1206,7 @@ function updateAssistant(
           title: "Preparing response",
           titleLocked: true,
           thinking: stepThinking,
+          surplusText: [],
           thinkingVisible: !component.hideThinkingBlock,
           toolCalls: [],
           toolCallIds: new Set<string>(),
@@ -1091,6 +1225,7 @@ function updateAssistant(
         group.steps.push(step);
       }
       step.thinking = stepThinking;
+      step.thinkingRaw = rawThinking;
       step.thinkingVisible = !component.hideThinkingBlock;
       component[WORK_STEP] = step;
     }
@@ -1124,6 +1259,7 @@ function updateAssistant(
       title,
       titleLocked: Boolean(stepExplicitTitle),
       thinking: stepThinking,
+      surplusText,
       thinkingVisible: !component.hideThinkingBlock,
       toolCalls: [],
       toolCallIds: new Set<string>(),
@@ -1157,6 +1293,8 @@ function updateAssistant(
     step.titleLocked = Boolean(stepExplicitTitle);
   }
   step.thinking = stepThinking;
+  step.surplusText = surplusText;
+  step.thinkingRaw = rawThinking;
   step.thinkingVisible = !component.hideThinkingBlock;
   if (message.stopReason === "error" || message.stopReason === "aborted")
     step.failed = true;
@@ -1443,8 +1581,11 @@ function synchronizeConnectedObservation(
   }
 }
 
+type PlainOutputMode = "hidden" | "expanded";
+
 type PlainRenderBridge = {
   layout: "plain";
+  outputMode: PlainOutputMode;
   lifecycle: {
     readonly status: "pending" | "running" | "completed" | "failed";
     readonly startedAt?: number;
@@ -1479,12 +1620,30 @@ function ensurePlainBridge(
   };
   const created: PlainRenderBridge = {
     layout: "plain",
+    outputMode: "hidden",
     lifecycle,
     clock: resolveConnectedClock(),
   };
   component[PLAIN_BRIDGE] = created;
   created.invalidate = () => state.scheduler.arm(component, created);
   return created;
+}
+
+// Plain (non-connected) tool components map pi's expand boolean directly onto
+// the bridge output mode: false → summary row only, true → summary row plus
+// the native output render. The global ctrl+o toggle calls setExpanded on every
+// tool component and routes through here.
+function applyPlainOutputMode(
+  component: any,
+  expanded: boolean,
+  state: RendererState,
+): void {
+  const bridge = ensurePlainBridge(component, state);
+  const next: PlainOutputMode = expanded ? "expanded" : "hidden";
+  if (bridge.outputMode === next) return;
+  bridge.outputMode = next;
+  component.invalidate?.();
+  component.ui?.requestRender?.();
 }
 
 function ensureConnectedBridge(
@@ -1647,7 +1806,10 @@ function renderToolComponent(
     // tool-call trace. The per-step `◇◆×` list (`renderConnectedParent`) is
     // retired in favor of these per-subagent lifecycle chips; ctrl+o unfolds
     // `progress.recentTools` as a `◆ ◇ ├─ └─ │` nested tree.
-    return renderConnectedChips(theme, step, connectedComponents, width);
+    return [
+      ...renderRunSurplusText(theme, step.run, width),
+      ...renderConnectedChips(theme, step, connectedComponents, width),
+    ];
   }
 
   if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
@@ -1900,10 +2062,11 @@ function patchComponents(
     };
     const render = assistantProto.render;
     assistantProto.render = function (width: number) {
-      if (assistantProto[CONTROLLER]?.assistantHasStep(this)) return [];
+      const controller = assistantProto[CONTROLLER];
+      if (controller?.assistantHasStep(this)) return [];
       const lines = render.call(this, width);
       return (
-        assistantProto[CONTROLLER]?.renderAssistant(this, lines, width) ?? lines
+        controller?.renderAssistant(this, lines, width) ?? lines
       );
     };
   }
@@ -1919,13 +2082,21 @@ function patchComponents(
     };
     const setExpanded = toolProto.setExpanded;
     toolProto.setExpanded = function (expanded: boolean) {
-      toolProto[CONTROLLER]?.toolExpanded(this);
+      toolProto[CONTROLLER]?.toolExpanded(this, expanded);
       return setExpanded.call(this, expanded);
     };
     const render = toolProto.render;
     toolProto.render = function (width: number) {
-      const activity = toolProto[CONTROLLER]?.renderTool(this, width) ?? [];
-      if (!CONNECTED_TOOL_NAMES.has(this.toolName)) return activity;
+      const controller = toolProto[CONTROLLER];
+      const activity = controller?.renderTool(this, width) ?? [];
+      if (!CONNECTED_TOOL_NAMES.has(this.toolName)) {
+        // Plain tool rows collapse to a one-line summary; ctrl+o now expands
+        // them to the native output render instead of hiding the result forever.
+        const bridge = this[PLAIN_BRIDGE] as PlainRenderBridge | undefined;
+        return bridge?.outputMode === "expanded"
+          ? [...activity, ...render.call(this, width)]
+          : activity;
+      }
       const connected = this.rendererState?.[SUBAGENT_BRIDGE];
       return connected?.layout === "connected" && supportsConnectedRendering(this)
         ? activity
@@ -2041,10 +2212,18 @@ export default async function (pi: ExtensionAPI) {
           const activity = renderThinkingStep(theme, step, width);
           return lines.length > 0 ? [...activity, "", ...lines] : activity;
         }
+        // Hidden thinking + empty text used to render nothing at all; fall
+        // back to the raw thinking so the answer is not lost.
+        if (lines.length === 0 && (step.thinkingRaw ?? []).length > 0)
+          return renderThinkingFallback(theme, step, width);
         return lines;
       }
 
-      if (component.hideThinkingBlock) return lines;
+      if (component.hideThinkingBlock) {
+        if (lines.length === 0 && (step.thinkingRaw ?? []).length > 0)
+          return renderThinkingFallback(theme, step, width);
+        return lines;
+      }
       let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
       if (!row) {
         row = new WorkStepRow(theme, step);
@@ -2079,8 +2258,12 @@ export default async function (pi: ExtensionAPI) {
         }
       }
     },
-    toolExpanded(component) {
-      toggleConnectedOutput(component, state);
+    toolExpanded(component, expanded) {
+      if (CONNECTED_TOOL_NAMES.has(component.toolName)) {
+        toggleConnectedOutput(component, state);
+        return;
+      }
+      applyPlainOutputMode(component, expanded, state);
     },
     renderTool(component, width) {
       return renderToolComponent(component, width, state, theme);
