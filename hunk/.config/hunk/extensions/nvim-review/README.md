@@ -36,8 +36,9 @@ snapshot file.
 
 Limits are 4 MiB for the snapshot JSON and aggregate source, 1,000,000 UTF-8
 bytes per buffer, 100,000 logical lines total, 512 files, and 4,096 UTF-8 bytes
-per relative path. Absolute paths, traversal, controls, normalized duplicates,
-non-files, invalid UTF-8, and unknown JSON fields are rejected.
+per relative path. The snapshot must be a regular file containing valid UTF-8.
+Buffer paths must be relative, well-formed Unicode without control characters,
+and unique after normalization. Unknown JSON fields are rejected.
 
 Run the dependency-free checks with
 `bun test ./hunk/.config/hunk/extensions/nvim-review/index.test.ts` from the
