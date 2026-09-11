@@ -15,9 +15,10 @@ import { openEditor } from "./nvim-open";
 // session transcript or the LLM context of the running chat.
 //
 // The fork is grounded: it receives the question plus a bounded digest of the
-// recent session (user/assistant prose only, tool calls omitted), so side
-// questions can reference the work in progress. Works mid-stream too —
-// commands dispatch immediately, so asking a btw never steers the agent.
+// session (user/assistant prose only, tool calls omitted, budgeted to carry
+// most of the conversation), so side questions can reference parts of the
+// chat in progress. Works mid-stream too — commands dispatch immediately, so
+// asking a btw never steers the agent.
 //
 // Answers are appended to a log file (~/.cache/pi/btw.md) so they remain
 // retrievable after the panel closes; `v` reopens that log in vim.
@@ -34,12 +35,20 @@ Answer rules:
 - Maximum ~120 words unless the question genuinely demands more.
 - Plain markdown, no code fences unless code IS the answer.`;
 
-// Char budget for the session digest sent to the fork. Generous enough to
-// carry the working conversation, small enough to stay cheap.
-const DIGEST_MAX_CHARS = 12_000;
+// Char budget for the session digest sent to the fork. Large enough that
+// most of the working conversation rides along, so /btw questions can
+// reference parts of the chat beyond the most recent exchanges. Each btw
+// question pays these tokens once (in the fork only — never the session).
+// Tune with PI_BTW_DIGEST_CHARS.
+const DIGEST_MAX_CHARS = 40_000;
 // Per-message clip: individual walls of text (pasted logs, long replies)
 // must not crowd out the rest of the digest.
 const DIGEST_MESSAGE_MAX_CHARS = 2_000;
+
+export function digestBudget(): number {
+	const raw = Number.parseInt(process.env.PI_BTW_DIGEST_CHARS ?? "", 10);
+	return Number.isFinite(raw) && raw > 0 ? raw : DIGEST_MAX_CHARS;
+}
 
 function messageText(message: any): string {
 	const content = message?.content;
@@ -222,7 +231,7 @@ export default function btw(pi: ExtensionAPI) {
 			}
 
 			const entries = ctx.sessionManager?.buildContextEntries?.() ?? [];
-			const digest = buildContextDigest(entries);
+			const digest = buildContextDigest(entries, digestBudget());
 			const controller = new AbortController();
 			const state: BtwState = { phase: "thinking" };
 			const logFile = logPath();

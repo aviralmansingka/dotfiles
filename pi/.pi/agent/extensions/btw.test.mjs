@@ -45,7 +45,7 @@ const jiti = createJiti(import.meta.url, {
 	},
 });
 
-const { default: registerBtw, ANSWER_SYSTEM_PROMPT, buildContextDigest, buildQuestionPrompt } = jiti("./btw.ts");
+const { default: registerBtw, ANSWER_SYSTEM_PROMPT, buildContextDigest, buildQuestionPrompt, digestBudget } = jiti("./btw.ts");
 
 // ─── buildContextDigest ─────────────────────────────────────────────────────
 
@@ -83,6 +83,17 @@ assert.ok(!clipped.includes("END"), "oversized message must be clipped");
 assert.equal(buildQuestionPrompt("Q?", ""), "Q?");
 assert.ok(buildQuestionPrompt("Q?", "digest").includes("Q?"));
 assert.ok(buildQuestionPrompt("Q?", "digest").includes("digest"));
+
+// digestBudget: default is the large conversation-carrying budget; the env
+// override accepts positive integers only.
+assert.equal(digestBudget(), 40_000);
+process.env.PI_BTW_DIGEST_CHARS = "1500";
+assert.equal(digestBudget(), 1500);
+process.env.PI_BTW_DIGEST_CHARS = "not-a-number";
+assert.equal(digestBudget(), 40_000);
+process.env.PI_BTW_DIGEST_CHARS = "-5";
+assert.equal(digestBudget(), 40_000);
+delete process.env.PI_BTW_DIGEST_CHARS;
 
 // ─── command flow ────────────────────────────────────────────────────────────
 
