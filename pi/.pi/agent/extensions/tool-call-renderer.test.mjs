@@ -324,6 +324,54 @@ assert.ok(
 	"surplus content and overflow marker are clipped after indentation",
 );
 
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "text", text: "Previous run complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
+	},
+);
+const connectedOwnerAssistant = { hideThinkingBlock: false };
+controller.assistantUpdated(connectedOwnerAssistant, {
+	content: [
+		{ type: "text", text: "Launching connected work\nfirst connected surplus" },
+		{ type: "toolCall", id: "tc-connected", name: "subagent", arguments: { name: "worker" } },
+	],
+	stopReason: "toolUse",
+});
+const connectedOwnerTool = {
+	toolName: "subagent",
+	toolCallId: "tc-connected",
+	rendererState: {},
+	executionStarted: true,
+};
+controller.toolUpdated(connectedOwnerTool);
+controller.assistantUpdated({ hideThinkingBlock: false }, {
+	content: [
+		{ type: "text", text: "Showing later output\nlater step surplus" },
+		{ type: "toolCall", id: "tc-later", name: "bash", arguments: { command: "true" } },
+	],
+	stopReason: "toolUse",
+});
+controller.toolUpdated({
+	toolName: "bash",
+	toolCallId: "tc-later",
+	rendererState: {},
+	executionStarted: true,
+});
+const connectedRunText = controller.renderTool(connectedOwnerTool, 120).join("\n");
+assert.ok(
+	connectedRunText.indexOf("Launching connected work") <
+		connectedRunText.indexOf("first connected surplus"),
+	"a connected owner renders its surplus under its title",
+);
+assert.ok(
+	connectedRunText.indexOf("Showing later output") <
+		connectedRunText.indexOf("later step surplus"),
+	"a connected owner renders later run surplus under the later step title",
+);
+
 // 2. Plain tool output was unviewable: rows collapsed to a one-line summary
 //    with no expand path. setExpanded(true) must now open the native output.
 const plainToolComponent = {
@@ -342,7 +390,7 @@ controller.toolExpanded(plainToolComponent, true);
 assert.equal(
 	plainToolComponent[plainBridgeKey]?.outputMode,
 	"expanded",
-	"ctrl+o / click expands plain tool output",
+	"ctrl+o expands plain tool output",
 );
 controller.toolExpanded(plainToolComponent, false);
 assert.equal(
@@ -350,32 +398,6 @@ assert.equal(
 	"hidden",
 	"collapsing restores the summary-only row",
 );
-const clickablePlainTool = Object.assign(Object.create(ChunkTool.prototype), {
-	toolName: "bash",
-	toolCallId: "tc-click",
-	result: { content: [{ type: "text", text: "clickable output" }], isError: false },
-	updateDisplay() {},
-	invalidate() {},
-	ui: { requestRender() {} },
-});
-const leftClick = { type: "click", button: "left", x: 0, y: 0, width: 80, height: 1 };
-assert.deepEqual(
-	clickablePlainTool.handleMouse(leftClick),
-	{ handled: true },
-	"a plain tool row handles a left click",
-);
-assert.equal(
-	clickablePlainTool[plainBridgeKey]?.outputMode,
-	"expanded",
-	"a row click expands plain tool output",
-);
-clickablePlainTool.handleMouse(leftClick);
-assert.equal(
-	clickablePlainTool[plainBridgeKey]?.outputMode,
-	"hidden",
-	"a second row click collapses plain tool output",
-);
-
 // 3. A finished assistant message with empty text and hidden thinking used
 //    to render nothing at all (the answer had leaked into the thinking block).
 const fallbackComponent = { hideThinkingBlock: true };

@@ -668,8 +668,7 @@ function renderCompactSummary(theme: Theme, run: ActivityRun, width: number): st
       width,
     ),
   ];
-  for (const step of allSteps)
-    lines.push(...renderStepSurplusText(theme, step, width));
+  lines.push(...renderRunSurplusText(theme, run, width));
   return lines;
 }
 
@@ -849,11 +848,6 @@ function renderConnectedChips(
       );
     }
   }
-  lines.splice(
-    Math.min(1, lines.length),
-    0,
-    ...renderStepSurplusText(theme, step, width),
-  );
   return lines;
 }
 
@@ -925,6 +919,31 @@ function renderStepSurplusText(
     );
   }
   return lines.map((line) => truncateToWidth(line, width));
+}
+
+function renderRunSurplusText(
+  theme: Theme,
+  run: ActivityRun,
+  width: number,
+): string[] {
+  const lines: string[] = [];
+  for (const step of run.steps) {
+    const surplus = renderStepSurplusText(theme, step, width);
+    if (surplus.length === 0) continue;
+    const glyph = status(step) === "pending"
+      ? theme.fg("accent", "▹")
+      : status(step) === "failure"
+        ? theme.fg("error", "×")
+        : theme.fg("muted", "▸");
+    lines.push(
+      truncateToWidth(
+        ` ${glyph} ${theme.fg("text", theme.bold(step.title))}`,
+        width,
+      ),
+      ...surplus,
+    );
+  }
+  return lines;
 }
 
 // Fallback for sessions with hidden thinking: when a finished assistant
@@ -1612,9 +1631,8 @@ function ensurePlainBridge(
 
 // Plain (non-connected) tool components map pi's expand boolean directly onto
 // the bridge output mode: false → summary row only, true → summary row plus
-// the native output render. Both the global ctrl+o toggle (which calls
-// setExpanded on every tool component) and per-row clicks (setExpanded on the
-// clicked component) route through here.
+// the native output render. The global ctrl+o toggle calls setExpanded on every
+// tool component and routes through here.
 function applyPlainOutputMode(
   component: any,
   expanded: boolean,
@@ -1788,7 +1806,10 @@ function renderToolComponent(
     // tool-call trace. The per-step `◇◆×` list (`renderConnectedParent`) is
     // retired in favor of these per-subagent lifecycle chips; ctrl+o unfolds
     // `progress.recentTools` as a `◆ ◇ ├─ └─ │` nested tree.
-    return renderConnectedChips(theme, step, connectedComponents, width);
+    return [
+      ...renderRunSurplusText(theme, step.run, width),
+      ...renderConnectedChips(theme, step, connectedComponents, width),
+    ];
   }
 
   if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
@@ -2064,28 +2085,13 @@ function patchComponents(
       toolProto[CONTROLLER]?.toolExpanded(this, expanded);
       return setExpanded.call(this, expanded);
     };
-    const handleMouse = toolProto.handleMouse;
-    toolProto.handleMouse = function (event: any) {
-      if (
-        !CONNECTED_TOOL_NAMES.has(this.toolName) &&
-        this.result &&
-        event?.type === "click" &&
-        event.button === "left"
-      ) {
-        const bridge = this[PLAIN_BRIDGE] as PlainRenderBridge | undefined;
-        this.setExpanded(bridge?.outputMode !== "expanded");
-        return { handled: true };
-      }
-      return handleMouse?.call(this, event);
-    };
     const render = toolProto.render;
     toolProto.render = function (width: number) {
       const controller = toolProto[CONTROLLER];
       const activity = controller?.renderTool(this, width) ?? [];
       if (!CONNECTED_TOOL_NAMES.has(this.toolName)) {
-        // Plain tool rows collapse to a one-line summary; ctrl+o (or click)
-        // now expands them to the native output render instead of hiding the
-        // result forever.
+        // Plain tool rows collapse to a one-line summary; ctrl+o now expands
+        // them to the native output render instead of hiding the result forever.
         const bridge = this[PLAIN_BRIDGE] as PlainRenderBridge | undefined;
         return bridge?.outputMode === "expanded"
           ? [...activity, ...render.call(this, width)]
