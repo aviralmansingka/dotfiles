@@ -84,7 +84,7 @@ const { createJiti } = require(jitiPath);
 // resolve the same way they do when pi loads the extension (the package
 // `exports` map has no `require` condition, so plain CJS resolution fails).
 const piTuiEntry = require.resolve("@earendil-works/pi-tui", { paths: [piPackageDir] });
-const { visibleWidth } = require(piTuiEntry);
+const { Text, visibleWidth } = require(piTuiEntry);
 const jiti = createJiti(import.meta.url, {
 	alias: {
 		"@earendil-works/pi-coding-agent": join(interactiveDir, "components", "keybinding-hints.js"),
@@ -152,8 +152,14 @@ assert.equal(typeof activate, "function", "renderer must export an activate func
 const stderrLines = [];
 const savedError = console.error;
 console.error = (...args) => stderrLines.push(args.join(" "));
+const piHandlers = new Map();
 try {
-	const stubPi = { on() {}, events: { on() {} } };
+	const stubPi = {
+		on(name, handler) {
+			piHandlers.set(name, handler);
+		},
+		events: { on() {} },
+	};
 	await activate(stubPi);
 } finally {
 	console.error = savedError;
@@ -235,7 +241,9 @@ assert.ok(failedComponent.rendererState[bridgeKey], "failed pipeline phase data 
 failedComponent.rendererState[bridgeKey].outputMode = "expanded";
 globalThis[Symbol.for("@earendil-works/pi-coding-agent:theme")] = {
 	fg: (_role, text) => text,
+	bg: (_role, text) => text,
 	bold: (text) => text,
+	italic: (text) => text,
 };
 const failedLines = controller.renderTool(failedComponent, 120).join("\n");
 assert.ok(failedLines.includes("review"), "expanded failed pipeline renders phase rows");
@@ -398,6 +406,78 @@ assert.equal(
 	"hidden",
 	"collapsing restores the summary-only row",
 );
+
+// Exercise the public component methods that pi itself invokes, rather than
+// only the controller seam above. This proves setExpanded(true) composes the
+// work-step row with the native tool result renderer in the live TUI class.
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "text", text: "Previous plain tool complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
+	},
+);
+const nativeToolCallId = "tc-native-plain";
+const nativeMessage = {
+	content: [
+		{ type: "text", text: "Displaying requested output\nThe tool result can be expanded below." },
+		{ type: "toolCall", id: nativeToolCallId, name: "evidence_plain", arguments: {} },
+	],
+	stopReason: "toolUse",
+};
+const nativeAssistant = new ChunkAssistant(nativeMessage, false);
+assert.deepEqual(
+	nativeAssistant.render(120),
+	[],
+	"the live assistant component delegates a tool-call turn to its tool row",
+);
+const nativePlainTool = new ChunkTool(
+	"evidence_plain",
+	nativeToolCallId,
+	{},
+	{},
+	{
+		name: "evidence_plain",
+		renderCall: () => new Text("evidence_plain", 0, 0),
+		renderResult: () => new Text("REQUESTED TOOL OUTPUT", 0, 0),
+	},
+	{ requestRender() {} },
+	process.cwd(),
+);
+nativePlainTool.markExecutionStarted();
+nativePlainTool.setArgsComplete();
+nativePlainTool.updateResult(
+	{ content: [{ type: "text", text: "REQUESTED TOOL OUTPUT" }], details: {} },
+	false,
+);
+assert.equal(
+	typeof piHandlers.get("tool_execution_end"),
+	"function",
+	"activation registers the tool completion lifecycle handler",
+);
+piHandlers.get("tool_execution_end")({ toolCallId: nativeToolCallId });
+const nativeCollapsed = nativePlainTool.render(120).join("\n");
+assert.ok(
+	nativeCollapsed.includes("The tool result can be expanded below."),
+	"the live tool row displays assistant surplus text",
+);
+assert.ok(
+	!nativeCollapsed.includes("REQUESTED TOOL OUTPUT"),
+	"the live plain tool starts collapsed",
+);
+nativePlainTool.setExpanded(true);
+const nativeExpanded = nativePlainTool.render(120).join("\n");
+assert.ok(
+	nativeExpanded.includes("REQUESTED TOOL OUTPUT"),
+	"the live plain tool displays native result output after expansion",
+);
+nativePlainTool.setExpanded(false);
+assert.ok(
+	!nativePlainTool.render(120).join("\n").includes("REQUESTED TOOL OUTPUT"),
+	"the live plain tool hides native result output after collapse",
+);
+
 // 3. A finished assistant message with empty text and hidden thinking used
 //    to render nothing at all (the answer had leaked into the thinking block).
 const fallbackComponent = { hideThinkingBlock: true };
@@ -415,6 +495,23 @@ const fallbackLines = controller.renderAssistant(fallbackComponent, [], 120).joi
 assert.ok(
 	fallbackLines.includes("Session summary"),
 	"empty response with hidden thinking falls back to raw thinking",
+);
+const nativeFallback = new ChunkAssistant(
+	{
+		content: [
+			{
+				type: "thinking",
+				thinking: "The user wants a session summary.\n\n## Session summary\n1. Fixed the widget.\n2. Added the SSH check.",
+			},
+		],
+		stopReason: "stop",
+		usage: { totalTokens: 120 },
+	},
+	true,
+).render(120).join("\n");
+assert.ok(
+	nativeFallback.includes("Session summary"),
+	"the live assistant component renders hidden thinking when response text is empty",
 );
 assert.ok(
 	fallbackLines.includes("no response text"),
