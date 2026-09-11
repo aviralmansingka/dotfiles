@@ -84,6 +84,7 @@ const { createJiti } = require(jitiPath);
 // resolve the same way they do when pi loads the extension (the package
 // `exports` map has no `require` condition, so plain CJS resolution fails).
 const piTuiEntry = require.resolve("@earendil-works/pi-tui", { paths: [piPackageDir] });
+const { visibleWidth } = require(piTuiEntry);
 const jiti = createJiti(import.meta.url, {
 	alias: {
 		"@earendil-works/pi-coding-agent": join(interactiveDir, "components", "keybinding-hints.js"),
@@ -296,6 +297,23 @@ assert.deepEqual(
 	),
 	[],
 	"title-only text renders nothing extra (previous behavior preserved)",
+);
+const narrowStepTextLines = controller.renderStepText(
+	{
+		lastMessage: {
+			content: [
+				{
+					type: "text",
+					text: ["title", ...Array.from({ length: 13 }, (_, index) => `long surplus line ${index}`)].join("\n"),
+				},
+			],
+		},
+	},
+	10,
+);
+assert.ok(
+	narrowStepTextLines.every((line) => visibleWidth(line) <= 10),
+	"surplus content and overflow marker are clipped after indentation",
 );
 
 // 2. Plain tool output was unviewable: rows collapsed to a one-line summary

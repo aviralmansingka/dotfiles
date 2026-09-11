@@ -912,7 +912,7 @@ export function renderStepSurplusText(
       `   ${theme.fg("dim", `… +${surplus.length - STEP_TEXT_LINE_CAP} more lines`)}`,
     );
   }
-  return lines;
+  return lines.map((line) => truncateToWidth(line, width));
 }
 
 // Fallback for sessions with hidden thinking: when a finished assistant
