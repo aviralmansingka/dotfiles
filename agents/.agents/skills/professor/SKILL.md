@@ -180,7 +180,7 @@ Choose per topic and per his apparent energy:
 When unsure, lean Socratic for things he can clearly reason about; otherwise
 narrate.
 
-### Learner context — read the btw log first
+### Learner context — the btw log
 
 Before Phase 0, read the learner's **btw log** — `~/.cache/pi/btw.md` (honoring
 `PI_BTW_LOG_PATH` if set). Every `btw` side question the learner asked mid-work
@@ -189,13 +189,22 @@ were curious about, none of which ever entered a chat session. Read the most
 recent entries first; the file grows monotonically and old entries age out of
 relevance.
 
-Use it three ways:
+**Keep reading it mid-session — it is the cheapest map of known vs. unknown.**
+Every entry marks something the learner didn't know at ask time, and `/btw`
+works mid-lesson, so questions asked during this very session land there too.
+Re-read the tail at each phase transition, and whenever the learner stalls or
+misses — a fresh btw question is often the live edge showing itself.
 
 - **Seed the goal grill.** Recurring topics and repeated follow-ups point at
   what the learner actually wants to be able to do — propose goals there first.
-- **Aim Probe.** A question already asked marks territory they've touched:
-  probe around it, not through it. The answer they received sets a floor for
-  what they've _seen_, not what they've _retained_ — verify, don't assume.
+- **Align the edge in Probe.** A question already asked brackets territory:
+  verify retention of the answer they received (seen ≠ retained), then push
+  difficulty past it rather than probing back through it.
+- **Build nodes from questions in Plan.** Each btw question the goal contract
+  touches is a ready-made DAG node — it names something the learner wanted to
+  understand. Prefer these over invented nodes and draw their edges
+  explicitly; a cluster of related questions usually marks one missing
+  connecting concept worth making a node of its own.
 - **Ground examples.** Their own questions are the strongest concrete
   material: build examples, quiz scenarios, and `expected` claims on topics
   they personally asked about.
@@ -244,9 +253,10 @@ node, and exercise must earn its place by serving that contract.
 After the goal contract is approved, locate the learner's zone of proximal
 development. Find the **edge** of their understanding — the frontier where
 reliable knowledge turns into guesswork — along every strand the lesson will
-depend on. Mostly quiz — options let you map the edge cheaply — with some
-explain once a strand starts feeling familiar, one question at a time, each
-adapted to the last answer.
+depend on. Cross-reference each strand against the btw log (see Learner
+context): its questions bracket territory already touched. Mostly quiz —
+options let you map the edge cheaply — with some explain once a strand starts
+feeling familiar, one question at a time, each adapted to the last answer.
 
 - **The edge is only located when it's bracketed.** Per strand you need both a
   floor (something he gets right) and a ceiling (something he gets wrong). One
@@ -267,6 +277,10 @@ adapted to the last answer.
   concepts, real first principles, standard framings, and common gotchas needed
   for that outcome. Research happens before authoring, not mid-lesson; unrelated
   material stays out even when interesting.
+- **Mine the btw log for nodes** (see Learner context): questions the learner
+  already asked that touch the goal are ready-made DAG nodes — prefer them over
+  invented ones, and connect each to what it builds on. A cluster of related
+  questions usually marks one missing connecting concept: make that a node.
 - Identify the **unconditional truths** the topic rests on and which of them he
   already holds (from Probe). Build from there — not below it, not above it.
 - Design the **motivated discovery path** from those truths to his goal: why
