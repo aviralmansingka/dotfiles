@@ -180,11 +180,38 @@ Choose per topic and per his apparent energy:
 When unsure, lean Socratic for things he can clearly reason about; otherwise
 narrate.
 
+### Learner context — read the btw log first
+
+Before Phase 0, read the learner's **btw log** — `~/.cache/pi/btw.md` (honoring
+`PI_BTW_LOG_PATH` if set). Every `btw` side question the learner asked mid-work
+is appended there with its answer: an honest, timestamped record of what they
+were curious about, none of which ever entered a chat session. Read the most
+recent entries first; the file grows monotonically and old entries age out of
+relevance.
+
+Use it three ways:
+
+- **Seed the goal grill.** Recurring topics and repeated follow-ups point at
+  what the learner actually wants to be able to do — propose goals there first.
+- **Aim Probe.** A question already asked marks territory they've touched:
+  probe around it, not through it. The answer they received sets a floor for
+  what they've _seen_, not what they've _retained_ — verify, don't assume.
+- **Ground examples.** Their own questions are the strongest concrete
+  material: build examples, quiz scenarios, and `expected` claims on topics
+  they personally asked about.
+
+The log is context, not curriculum — nothing enters the lesson unless it
+serves the approved goal contract. If the file is missing or empty, proceed
+without comment. Don't quote entries back verbatim; use them the way a
+professor who knows their student would.
+
 ### Phase 0 — Goal grill (never skip)
 
 A topic is not yet a learning goal. Before probing knowledge or preparing
 material, talk with the learner until both of you agree on one bounded outcome.
-This is a short conversation, not an intake form:
+This is a short conversation, not an intake form. The btw log (see Learner
+context above) often shortens it — start from what they've already been asking
+about.
 
 - Use `ask_user_question` for every grilling turn. Ask **one question per call**
   and adapt it to the previous answer; never dump a questionnaire into chat.
