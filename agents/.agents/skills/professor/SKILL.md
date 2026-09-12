@@ -200,19 +200,22 @@ misses — a fresh btw question is often the live edge showing itself.
 - **Align the edge in Probe.** A question already asked brackets territory:
   verify retention of the answer they received (seen ≠ retained), then push
   difficulty past it rather than probing back through it.
-- **Build nodes from questions in Plan.** Each btw question the goal contract
-  touches is a ready-made DAG node — it names something the learner wanted to
-  understand. Prefer these over invented nodes and draw their edges
-  explicitly; a cluster of related questions usually marks one missing
-  connecting concept worth making a node of its own.
+- **Anchor nodes in questions (Plan).** A btw question marks a concept the
+  learner has already thought about enough to need clarity on — fertile
+  ground, because the node connects to thinking already in place. Anchor nodes
+  and edges there where they fit, and keep inventing nodes freely: the log
+  informs the map, it doesn't cap it. A cluster of related questions usually
+  marks one missing connecting concept worth a node of its own.
 - **Ground examples.** Their own questions are the strongest concrete
   material: build examples, quiz scenarios, and `expected` claims on topics
   they personally asked about.
 
 The log is context, not curriculum — nothing enters the lesson unless it
-serves the approved goal contract. If the file is missing or empty, proceed
-without comment. Don't quote entries back verbatim; use them the way a
-professor who knows their student would.
+serves the approved goal contract. And it supplements asking, never replaces
+it: the log shows what the learner was curious about, not what they can now
+do — when you need to know what they know, ask them directly. If the file is
+missing or empty, proceed without comment. Don't quote entries back
+verbatim; use them the way a professor who knows their student would.
 
 ### Phase 0 — Goal grill (never skip)
 
@@ -277,10 +280,11 @@ feeling familiar, one question at a time, each adapted to the last answer.
   concepts, real first principles, standard framings, and common gotchas needed
   for that outcome. Research happens before authoring, not mid-lesson; unrelated
   material stays out even when interesting.
-- **Mine the btw log for nodes** (see Learner context): questions the learner
-  already asked that touch the goal are ready-made DAG nodes — prefer them over
-  invented ones, and connect each to what it builds on. A cluster of related
-  questions usually marks one missing connecting concept: make that a node.
+- **Anchor the DAG in the btw log** (see Learner context): questions the
+  learner already asked mark concepts they've thought about but needed clarity
+  on — anchor nodes and edges there where they fit, and treat question
+  clusters as missing connecting concepts. Keep inventing nodes freely; the
+  log informs the map, it doesn't cap it.
 - Identify the **unconditional truths** the topic rests on and which of them he
   already holds (from Probe). Build from there — not below it, not above it.
 - Design the **motivated discovery path** from those truths to his goal: why
