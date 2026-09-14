@@ -4559,7 +4559,10 @@ local function validate_herdr_scrollback()
   local session = { source = "herdr:pi", kind = "path", value = "/sessions/conversation-a.jsonl" }
   local calls = 0
   vim.env.HERDR_ENV, vim.env.HERDR_ACTIVE_PANE_ID, vim.env.XDG_DATA_HOME = "1", "source-pane", temporary
-  local function capture(argv, opts)
+  local function capture(argv, opts, on_exit)
+    if argv[1] ~= "herdr" then
+      return system(argv, opts, on_exit)
+    end
     calls = calls + 1
     assert(argv[4] == vim.env.HERDR_ACTIVE_PANE_ID, "capture must target source, not editor/focused pane")
     assert(opts.text, "capture should normalize CRLF")
@@ -4629,7 +4632,10 @@ local function validate_herdr_scrollback()
     local before = calls
     assert(not scrollback.render(buf) and calls == before, "never capture an implicit focused pane")
     vim.env.HERDR_ACTIVE_PANE_ID = "source-pane"
-    vim.system = function()
+    vim.system = function(argv, opts, on_exit)
+      if argv[1] ~= "herdr" then
+        return system(argv, opts, on_exit)
+      end
       return {
         wait = function()
           return { code = 1, stderr = "pane gone" }
@@ -4646,9 +4652,9 @@ local function validate_herdr_scrollback()
     assert(not scrollback.render(buf), "missing conversation identity must not fall back to pane identity")
     session = identity
     assert(not pcall(scrollback.path, {}))
-    vim.system = function(argv, opts)
-      local response = capture(argv, opts)
-      if argv[3] == "read" then
+    vim.system = function(argv, opts, on_exit)
+      local response = capture(argv, opts, on_exit)
+      if argv[1] == "herdr" and argv[3] == "read" then
         session = { source = identity.source, kind = identity.kind, value = "switched-mid-capture" }
       end
       return response
