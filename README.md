@@ -25,8 +25,12 @@ cd ${HOME}/dotfiles/
 ```
 
 The script installs dependencies via Homebrew, deploys configurations with `stow`, sets up shell plugins, installs
-Neovim via `bob`, and installs Annotate Lite plus a pinned, patched local reviewer. A failed reviewer build stops
-the installation.
+Neovim via `bob`, and installs pinned Herdr Flash, Annotate Lite, and a pinned, patched local reviewer.
+A failed reviewer build or missing Flash executable stops the installation.
+
+`Ctrl+a f` opens Herdr Flash: search visible pane text, jump by label, select with `v`/`V` and Vim motions,
+then yank with `y`. This supplements built-in copy mode (`Ctrl+a [` or `Ctrl+a i`); it does not provide
+Neovim text objects or full-scrollback search.
 
 For manual package and configuration deployment (excluding installer-managed integrations and plugins):
 
@@ -132,6 +136,31 @@ Herdr attachment-lease controller. Float size remains unchanged at 80%; the acti
 
 Regression check (installed Sidekick required; no live Herdr calls):
 `nvim --headless -u NONE -l scripts/test-sidekick-view-focus.lua`.
+
+## Herdr scrollback in Neovim
+
+`Ctrl+a e` opens the focused pane's scrollback through `$EDITOR` (currently `bob run stable`; that
+version must be installed). `helpers/herdr_scrollback.lua` recognizes Herdr's temporary files and
+re-captures the original pane via `HERDR_ACTIVE_PANE_ID` using ANSI, unwrapped output.
+
+Tree-shaped rows are grouped into `ansi` fences; prompts and output remain ordinary text outside
+them. The capture is stored in `~/.local/share/herdr/captures/conversation-<hash>.md` (respecting
+`XDG_DATA_HOME`). The hash uses Herdr's reported conversation identity, not the pane, timestamp,
+or worktree: each capture updates the same file for that conversation. Missing or changing
+conversation identity aborts the capture rather than mixing unrelated sessions.
+
+Neovim decodes ANSI to highlights so hidden bytes do not break wrapping or contaminate yanks.
+`:write` serializes tree colors back into the Markdown file; reopening a saved capture works
+without a running Herdr session. Files are private (0600), written atomically, and survive `:q`.
+Saving stale edits refuses to overwrite a newer capture unless explicitly forced with `:write!`.
+A fresh capture replaces the previous snapshot, including manual edits; save annotations separately.
+
+Soft wrapping follows each window's width. Terminal padding is removed, but indentation and hard
+line breaks remain. This is a terminal snapshot, not a reconstructed transcript: it cannot undo
+application-inserted line breaks or recover discarded history. Only capture buffers get wrapping
+overrides and disabled diagnostics/modelines. Failed reads leave the previous capture intact.
+
+Checks: `scripts/verify-nvim herdr-scrollback` and `scripts/verify-nvim markdown-ansi`.
 
 ## Herdr Annotate pilot
 

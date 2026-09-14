@@ -4531,10 +4531,189 @@ local function validate_markdown_formatting()
   vim.api.nvim_buf_delete(buf, { force = true })
 end
 
+local function validate_herdr_scrollback()
+  local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
+  package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
+  package.loaded["helpers.markdown_ansi"] = dofile(config_lua .. "/helpers/markdown_ansi.lua")
+  local ansi = require("helpers.markdown_ansi")
+  local scrollback = dofile(config_lua .. "/helpers/herdr_scrollback.lua")
+  local esc = "\27"
+  local source = esc .. "[31mPrompt\r\n  ├─ ◆ colored tree ````   \r\n" .. esc .. "[0mOutput\r\n"
+  local document = scrollback.document(source)
+  local plain = { "Prompt", "", "`````ansi", "  ├─ ◆ colored tree ````", "`````", "", "Output" }
+  assert_sequence(ansi.decode(document), plain, "only tree gets a collision-safe ANSI fence")
+  assert(document[1] == "Prompt" and document[#document] == "Output", "prose must have no ANSI")
+  assert(document[4]:find(esc, 1, true), "color carried from preceding prose must survive in the tree")
+  assert_sequence(
+    scrollback.document("```text\n├─ already fenced\n```\nprose"),
+    { "```text", "├─ already fenced", "```", "prose" },
+    "existing code fences are not nested"
+  )
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_win_set_buf(0, buf)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "original plain snapshot" })
+  local system, notify = vim.system, vim.notify
+  local env, pane, data_home = vim.env.HERDR_ENV, vim.env.HERDR_ACTIVE_PANE_ID, vim.env.XDG_DATA_HOME
+  local temporary = vim.fn.tempname()
+  local session = { source = "herdr:pi", kind = "path", value = "/sessions/conversation-a.jsonl" }
+  local calls = 0
+  vim.env.HERDR_ENV, vim.env.HERDR_ACTIVE_PANE_ID, vim.env.XDG_DATA_HOME = "1", "source-pane", temporary
+  local function capture(argv, opts)
+    calls = calls + 1
+    assert(argv[4] == vim.env.HERDR_ACTIVE_PANE_ID, "capture must target source, not editor/focused pane")
+    assert(opts.text, "capture should normalize CRLF")
+    local output
+    if argv[3] == "get" then
+      output = vim.json.encode({ result = { pane = { agent_session = session } } })
+    else
+      assert_sequence(
+        argv,
+        {
+          "herdr",
+          "pane",
+          "read",
+          vim.env.HERDR_ACTIVE_PANE_ID,
+          "--source",
+          "recent-unwrapped",
+          "--lines",
+          "2147483647",
+          "--format",
+          "ansi",
+        },
+        "source capture"
+      )
+      output = source
+    end
+    return {
+      wait = function()
+        return { code = 0, stdout = output }
+      end,
+    }
+  end
+  vim.system = capture
+  local ok, err = pcall(function()
+    scrollback.setup()
+    assert(scrollback.render(buf))
+    local path = vim.api.nvim_buf_get_name(buf)
+    assert(path == scrollback.path(session) and path:match("%.md$"))
+    assert(vim.bo[buf].filetype == "markdown" and vim.bo[buf].buftype == "acwrite" and not vim.bo[buf].modified)
+    assert(not vim.bo[buf].modeline and not vim.bo[buf].swapfile)
+    assert(vim.wo.wrap and vim.wo.linebreak and vim.wo.breakindent)
+    assert(not vim.b[buf].snacks_indent and vim.b[buf].autoformat == false)
+    assert_sequence(vim.api.nvim_buf_get_lines(buf, 0, -1, false), plain, "clean editable Markdown")
+    assert_sequence(vim.fn.readfile(path), document, "ANSI Markdown on disk")
+    assert(vim.uv.fs_stat(path).mode % 512 == 384, "captures must be private (0600)")
+    local marks = vim.api.nvim_buf_get_extmarks(
+      buf,
+      vim.api.nvim_create_namespace("HerdrScrollbackAnsi"),
+      0,
+      -1,
+      { details = true }
+    )
+    assert(#marks == 1 and marks[1][2] == 3 and marks[1][3] == 0 and marks[1][4].end_col == #plain[4])
+    vim.api.nvim_win_set_cursor(0, { 4, 0 })
+    vim.cmd("normal! yy")
+    assert(vim.fn.getreg('"') == plain[4] .. "\n", "yanks must not contain hidden ANSI bytes")
+    assert(not vim.diagnostic.is_enabled({ bufnr = buf }))
+
+    -- Same conversation, even in a different pane, updates the same file.
+    vim.env.HERDR_ACTIVE_PANE_ID = "moved-source-pane"
+    source = source .. "Second output\n"
+    assert(scrollback.render(buf) and vim.api.nvim_buf_get_name(buf) == path)
+    assert(#vim.fn.glob(scrollback.directory() .. "/*.md", false, true) == 1)
+    assert(vim.fn.readfile(path)[#vim.fn.readfile(path)] == "Second output")
+    local current = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local saved = vim.fn.readfile(path)
+    vim.env.HERDR_ACTIVE_PANE_ID = nil
+    local before = calls
+    assert(not scrollback.render(buf) and calls == before, "never capture an implicit focused pane")
+    vim.env.HERDR_ACTIVE_PANE_ID = "source-pane"
+    vim.system = function()
+      return {
+        wait = function()
+          return { code = 1, stderr = "pane gone" }
+        end,
+      }
+    end
+    vim.notify = function() end
+    assert(not scrollback.render(buf))
+    assert_sequence(vim.api.nvim_buf_get_lines(buf, 0, -1, false), current, "failed capture preserves buffer")
+    assert_sequence(vim.fn.readfile(path), saved, "failed capture preserves file")
+    vim.system = capture
+    local identity = session
+    session = nil
+    assert(not scrollback.render(buf), "missing conversation identity must not fall back to pane identity")
+    session = identity
+    assert(not pcall(scrollback.path, {}))
+    vim.system = function(argv, opts)
+      local response = capture(argv, opts)
+      if argv[3] == "read" then
+        session = { source = identity.source, kind = identity.kind, value = "switched-mid-capture" }
+      end
+      return response
+    end
+    assert(not scrollback.render(buf), "conversation switches must not mix captures")
+    assert_sequence(vim.fn.readfile(path), saved, "identity race must preserve previous capture")
+    session, vim.system = identity, capture
+    vim.bo[buf].modeline = true
+    vim.api.nvim_exec_autocmds("BufReadPre", { pattern = "/tmp/herdr-scrollback-test.txt" })
+    assert(not vim.bo[buf].modeline)
+
+    -- Edits and :write preserve ANSI, including marks stretched across new lines.
+    vim.api.nvim_buf_set_text(buf, 3, #"  ├─ ◆ ", 3, #"  ├─ ◆ ", { "edited", "continuation " })
+    vim.cmd("write")
+    local written = vim.fn.readfile(path)
+    assert(table.concat(written, "\n"):find(esc, 1, true), ":write must retain tree ANSI")
+    assert_sequence(ansi.decode(written), vim.api.nvim_buf_get_lines(buf, 0, -1, false), "write round trip")
+    assert(not vim.bo[buf].modified)
+    local rename = vim.uv.fs_rename
+    vim.uv.fs_rename = function()
+      return nil, "simulated rename failure"
+    end
+    local write_ok = pcall(scrollback.save, buf, path)
+    vim.uv.fs_rename = rename
+    assert(not write_ok)
+    assert_sequence(vim.fn.readfile(path), written, "failed atomic write must preserve capture")
+    vim.fn.writefile({ "newer capture from another editor" }, path)
+    vim.api.nvim_buf_set_lines(buf, -1, -1, false, { "unsaved edit" })
+    assert(
+      not pcall(scrollback.save, buf, path) and vim.bo[buf].modified,
+      "stale edits must not silently overwrite newer capture"
+    )
+    vim.fn.writefile(written, path)
+    vim.api.nvim_buf_delete(buf, { force = true })
+    vim.env.HERDR_ENV, vim.env.HERDR_ACTIVE_PANE_ID = nil, nil
+    vim.cmd("edit " .. vim.fn.fnameescape(path))
+    buf = vim.api.nvim_get_current_buf()
+    assert_sequence(vim.api.nvim_buf_get_lines(buf, 0, -1, false), ansi.decode(written), "reopen without Herdr")
+    assert(vim.b[buf].herdr_scrollback and not vim.bo[buf].modeline)
+
+    -- Wrapping follows actual window width, for prose and decoded tree text.
+    vim.api.nvim_buf_set_lines(buf, -1, -1, false, { string.rep("visible word ", 30) })
+    local row = vim.api.nvim_buf_line_count(buf) - 1
+    local wide = vim.api.nvim_win_text_height(0, { start_row = row, end_row = row }).all
+    vim.cmd("vsplit")
+    vim.api.nvim_win_set_width(0, 24)
+    assert(vim.api.nvim_win_text_height(0, { start_row = row, end_row = row }).all > wide)
+    vim.cmd("close")
+    assert(scrollback.path({ source = session.source, kind = session.kind, value = "another-conversation" }) ~= path)
+  end)
+  vim.system, vim.notify = system, notify
+  vim.env.HERDR_ENV, vim.env.HERDR_ACTIVE_PANE_ID, vim.env.XDG_DATA_HOME = env, pane, data_home
+  if vim.api.nvim_buf_is_valid(buf) then
+    vim.api.nvim_buf_delete(buf, { force = true })
+  end
+  vim.fn.delete(temporary, "rf")
+  if not ok then
+    error(err)
+  end
+end
+
 local function validate_markdown_ansi()
   local config_lua = vim.fn.getcwd() .. "/nvim/.config/nvim/lua"
   package.path = config_lua .. "/?.lua;" .. config_lua .. "/?/init.lua;" .. package.path
-  package.loaded["helpers.markdown_ansi"] = nil
+  package.loaded["helpers.markdown_ansi"] = dofile(config_lua .. "/helpers/markdown_ansi.lua")
 
   local ansi = require("helpers.markdown_ansi")
   ansi.setup()
@@ -4639,6 +4818,25 @@ local function validate_markdown_ansi()
     return item.attrs.fg == 0xff0000 and item.attrs.bg == 0x00005f
   end) then
     fail("indexed 256-color foreground and background should render")
+  end
+
+  local decoded, spans = ansi.decode({
+    esc .. "[31m界 " .. esc .. "[1mred" .. esc .. "[0m plain",
+    esc .. "[38;2;1;2;3mcarry", "across" .. esc .. "[0m done",
+  })
+  assert_sequence(decoded, { "界 red plain", "carry", "across done" }, "decoded SGR")
+  assert(spans[1].start_col == 0 and spans[1].opts.end_col == #"界 ")
+  assert(spans[2].start_col == #"界 " and spans[2].opts.end_col == #"界 red")
+  assert(spans[4].start_row == 2 and spans[4].start_col == 0 and spans[4].opts.end_col == #"across")
+  local carried = vim.api.nvim_get_hl(0, { name = spans[4].opts.hl_group, link = false })
+  assert(carried.fg == 0x010203, "decoded colors carry across lines")
+  local roundtrip, restored = ansi.decode(ansi.encode(decoded, spans))
+  assert_sequence(roundtrip, decoded, "ANSI serialization preserves text")
+  assert(#restored == #spans)
+  for i, mark in ipairs(restored) do
+    assert(mark.start_row == spans[i].start_row and mark.start_col == spans[i].start_col)
+    assert(mark.opts.end_col == spans[i].opts.end_col and mark.opts.hl_group == spans[i].opts.hl_group,
+      "ANSI serialization preserves styles and byte columns")
   end
 
   local unsupported = lines[5]:find(esc .. "[2m", 1, true) - 1
@@ -4871,6 +5069,7 @@ local cases = {
   ["weekly-backlog"] = validate_weekly_backlog,
   ["markdown-formatting"] = validate_markdown_formatting,
   ["markdown-ansi"] = validate_markdown_ansi,
+  ["herdr-scrollback"] = validate_herdr_scrollback,
   ["inline-ask-edit"] = validate_inline_ask_edit,
   ["sidekick-pi"] = validate_sidekick_pi,
   ["sidekick-herdr"] = validate_sidekick_herdr,
@@ -4888,7 +5087,7 @@ if not fn then
   fail(
     "unknown VERIFY_NVIM_CASE "
       .. vim.inspect(case)
-      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items, cuda-lsp"
+      .. "; expected one of: agent-keymaps, workspace-session, weekly-backlog, markdown-formatting, markdown-ansi, herdr-scrollback, inline-ask-edit, sidekick-pi, sidekick-herdr, sidekick-picker-actions, herdr-workspaces, sidekick-herdr-live, vault-features, vault-work-items, cuda-lsp"
   )
 end
 

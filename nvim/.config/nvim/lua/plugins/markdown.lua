@@ -94,6 +94,9 @@ return {
     opts = {
       linters = {
         ["markdownlint-cli2"] = {
+          condition = function()
+            return not vim.b.herdr_scrollback
+          end,
           args = { "--config", vim.fn.expand("~/.markdownlint-cli2.yaml"), "-" },
         },
       },
@@ -135,6 +138,7 @@ return {
     ft = { "markdown", "octo" },
     init = function()
       require("helpers.markdown_ansi").setup()
+      require("helpers.herdr_scrollback").setup()
     end,
     keys = {
       {

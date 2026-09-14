@@ -281,6 +281,92 @@ function M.parse(ctx)
   return marks
 end
 
+-- Editable terminal snapshots need real text columns: concealed SGR bytes still
+-- influence Neovim's soft-wrap layout. Reuse the parser, but remove those bytes
+-- and translate its highlights onto the plain text instead.
+function M.decode(lines)
+  local plain, highlights, state = {}, {}, {}
+  for row, line in ipairs(lines) do
+    local marks, chunks = {}, {}
+    parse_line(marks, row - 1, line, 0, #line, state)
+    local cursor, removed = 0, 0
+    for _, mark in ipairs(marks) do
+      if mark.opts.conceal == "" then
+        chunks[#chunks + 1] = line:sub(cursor + 1, mark.start_col)
+        cursor = mark.opts.end_col
+        removed = removed + mark.opts.end_col - mark.start_col
+      else
+        mark.start_col = mark.start_col - removed
+        mark.opts.end_col = mark.opts.end_col - removed
+        highlights[#highlights + 1] = mark
+      end
+    end
+    chunks[#chunks + 1] = line:sub(cursor + 1)
+    plain[row] = table.concat(chunks)
+  end
+  return plain, highlights
+end
+
+-- Serialize decoded highlight spans back to portable SGR for Markdown captures.
+function M.encode(lines, marks)
+  local rows = {}
+  for _, mark in ipairs(marks) do
+    local state = definitions[mark.opts.hl_group]
+    if state then
+      local codes = { "0" }
+      for _, style in ipairs({
+        { "bold", 1 },
+        { "italic", 3 },
+        { "underline", 4 },
+        { "reverse", 7 },
+        { "strikethrough", 9 },
+      }) do
+        if state[style[1]] then
+          codes[#codes + 1] = tostring(style[2])
+        end
+      end
+      for _, channel in ipairs({ { "fg", 38 }, { "bg", 48 } }) do
+        local value = state[channel[1]]
+        if value then
+          codes[#codes + 1] = tostring(channel[2])
+          if value.index then
+            codes[#codes + 1] = "5;" .. value.index
+          else
+            local r, g, b = value.gui:match("#(%x%x)(%x%x)(%x%x)")
+            codes[#codes + 1] = ("2;%d;%d;%d"):format(tonumber(r, 16), tonumber(g, 16), tonumber(b, 16))
+          end
+        end
+      end
+      local last_row = mark.opts.end_row or mark.start_row
+      for row = mark.start_row, math.min(last_row, #lines - 1) do
+        local line = lines[row + 1]
+        local first = row == mark.start_row and mark.start_col or 0
+        local last = row == last_row and mark.opts.end_col or #line
+        first, last = math.min(first, #line), math.min(last, #line)
+        if first < last then
+          rows[row + 1] = rows[row + 1] or {}
+          table.insert(rows[row + 1], { first, last, "\27[" .. table.concat(codes, ";") .. "m" })
+        end
+      end
+    end
+  end
+  local encoded = {}
+  for row, line in ipairs(lines) do
+    local spans, chunks, cursor = rows[row] or {}, {}, 0
+    table.sort(spans, function(a, b)
+      return a[1] < b[1]
+    end)
+    for _, span in ipairs(spans) do
+      chunks[#chunks + 1] = line:sub(cursor + 1, span[1])
+      chunks[#chunks + 1] = span[3] .. line:sub(span[1] + 1, span[2]) .. "\27[0m"
+      cursor = span[2]
+    end
+    chunks[#chunks + 1] = line:sub(cursor + 1)
+    encoded[row] = table.concat(chunks)
+  end
+  return encoded
+end
+
 function M.setup()
   vim.api.nvim_create_autocmd("ColorScheme", {
     group = vim.api.nvim_create_augroup("RenderMarkdownAnsiColors", { clear = true }),

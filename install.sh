@@ -124,6 +124,15 @@ if command -v codex >/dev/null 2>&1; then
     herdr integration install codex
 fi
 
+echo "==> Installing pinned Herdr Flash"
+herdr plugin install youguanxinqing/herdr-flash \
+    --ref f18645409965ebd5617dac9153925b826272e3e5 --yes
+flash_root="$(herdr plugin list --plugin youguanxinqing.herdr-flash --json | jq -er '.result.plugins[0].plugin_root')"
+[[ -x "$flash_root/bin/herdr-flash" ]] || {
+    echo "Herdr Flash installation failed" >&2
+    exit 1
+}
+
 echo "==> Installing Herdr Annotate and the protected custom reviewer"
 "$DOTFILES_DIR/scripts/install-herdr-annotate"
 
