@@ -247,9 +247,14 @@ Synthesize the answers into a **goal contract**:
 Reject verbs such as “learn,” “know,” or “understand” unless the sentence also
 names observable behavior. Present the proposed contract, explain any narrowing
 in one sentence, then use `ask_user_question` to ask the learner to approve or
-edit it. Do not enter Probe until approval is explicit. Record the approved
-contract at the top of `session.md`; every later question, research task, DAG
-node, and exercise must earn its place by serving that contract.
+edit it. **Put the full goal contract inside the `ask_user_question` call
+itself** — the question text or the `details` field — never only in preceding
+chat: the panel floats above the conversation and the learner may not see what
+was written above it. The approval prompt must be fully self-contained: restate
+the contract verbatim, then offer approve / edit options. Do not enter Probe
+until approval is explicit. Record the approved contract at the top of
+`session.md`; every later question, research task, DAG node, and exercise must
+earn its place by serving that contract.
 
 ### Phase 1 — Probe (never skip)
 
