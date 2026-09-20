@@ -164,17 +164,15 @@ Checks: `scripts/verify-nvim herdr-scrollback` and `scripts/verify-nvim markdown
 
 ## Herdr Annotate pilot
 
-`./install.sh` installs upstream Annotate Lite for terminal comments and a separate local `annotate-review`
-plugin for Markdown/reply reviews. The local reviewer adds syntax highlighting and mouse-hover `y` to copy a
-whole code block; upstream plugin updates cannot replace it. Rebuild with `./scripts/install-herdr-annotate`.
-See [the installation and update runbook](ops/herdr-annotate-review/README.md).
+`./install.sh` installs upstream Annotate Lite: terminal comments plus the built-in Markdown/reply
+reviewer (`plannotator-tui`), fetched by the plugin's own build step.
 
 | Key              | Action                                |
 | ---------------- | ------------------------------------- |
 | `prefix+a`       | Annotate terminal text                |
 | `prefix+Shift+a` | Copy annotations as agent context     |
 | `prefix+m`       | Manage annotations                    |
-| `prefix+o`       | Review Markdown changed from local `main` |
+| `prefix+o`       | Review Markdown in the current folder |
 | `prefix+Shift+o` | Review the last agent reply           |
 
 ## Herdr server handoff
