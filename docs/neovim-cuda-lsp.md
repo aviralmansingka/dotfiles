@@ -114,3 +114,38 @@ graceful-failure signal, not a regression.
 - clangd 21.1.8 (Mason) / Apple clangd 17.0.0 (CommandLineTools)
 - nvcc: not installed; no CUDA Toolkit under /usr/local, /opt/homebrew,
   /Library/Developer, $HOME/.local, $HOME/.cache
+
+## Homelab working setup (2026-09-18, CUDA 13.1)
+
+Validated end-to-end on the homelab against the fast.cu reference tree
+(`professor-lessons/h100-matmul-modal/reference/fast.cu`): all 26 .cu/.cuh
+files open with **zero clang errors** and working docSymbols/hover.
+
+What the validation actually required (differs from the bear recipe above):
+
+- `compiledb` does not recognize nvcc; `bear` is not installed. The working
+  database is hand-written (see `_clangd_regenerate.py` in the reference
+  tree): one entry per file, driver `clang++`, flags
+  `-x cuda -std=c++17 --cuda-path=/usr/local/cuda --cuda-gpu-arch=sm_90a
+  -ferror-limit=0 -I /usr/local/cuda/include/cccl`.
+- **CUDA 13 split CCCL out of --cuda-path**: `<cuda/barrier>`,
+  `<cuda/atomic>` etc. live under `/usr/local/cuda/include/cccl/cuda/...`.
+  nvcc adds that directory itself; clangd does not. Without
+  `-I /usr/local/cuda/include/cccl`, every `cuda::` use errors.
+- The .cuh kernels have no includes of their own and depend on matmul.cu's
+  `typedef __nv_bfloat16 bf16` and `CEIL_DIV` macro: a shim header
+  (`_clangd_preamble.h`) is force-included per header entry so headers
+  parse standalone. clangd's header→source command inference does not fire
+  reliably in fresh sessions; explicit per-header entries do.
+- `-ferror-limit=0` is required: clang's device pass emits ~20 bogus
+  libstdc++ errors before the default limit aborts the parse, which kills
+  hover/goto-def for the rest of the file.
+- Remaining false positives (PTX asm `%` escapes, `__shared__` dynamic init
+  guarded by `#pragma nv_diag_suppress`, `extern __shared__ + __align__`,
+  device-pass stdlib operator lookups) are suppressed by diagnostic code in
+  a project-scoped `.clangd` in the reference tree — real diagnostics in
+  user code outside that tree are unaffected.
+- **clangd gotcha**: `.clangd` `If.PathMatch` is a full-path match —
+  patterns need `.*` on both ends (`.*sum\.cu.*`, not `.*sum\.cu`).
+- clangd 21.1.8 (Mason) does not know `sm_103a`; the gb300/nvfp4 entries
+  parse with `sm_100a` for analysis only (build still uses nvcc sm_103a).
