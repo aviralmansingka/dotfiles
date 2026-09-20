@@ -3,7 +3,7 @@ name: worker
 description: General-purpose worker — reads, writes, and edits code
 tools: read, write, edit, bash, web_search, web_fetch
 subagent_agents: scout, researcher
-model: fireworks/accounts/fireworks/routers/glm-5p2-fast
+model: openai-codex/gpt-6-astra
 thinking: high
 system-prompt: append
 auto-exit: true

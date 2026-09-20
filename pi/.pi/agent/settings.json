@@ -6,8 +6,8 @@
     "+extensions/rounded-bar-footer.ts"
   ],
   "lastChangelogVersion": "0.85.1",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol",
+  "defaultProvider": "fireworks",
+  "defaultModel": "accounts/fireworks/routers/glm-5p3-fast",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-material",
   "tuiMode": "fullscreen",

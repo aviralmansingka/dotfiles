@@ -2,7 +2,7 @@
 name: researcher
 description: Web researcher — searches the web and synthesizes findings
 tools: web_search, web_fetch, safe_bash
-model: fireworks/accounts/fireworks/routers/glm-5p2-fast
+model: openai-codex/gpt-6-astra
 thinking: medium
 system-prompt: append
 auto-exit: true

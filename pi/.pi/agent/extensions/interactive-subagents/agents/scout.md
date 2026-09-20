@@ -2,7 +2,7 @@
 name: scout
 description: Fast codebase recon — explores files, finds patterns, maps architecture
 tools: read, grep, find, ls
-model: fireworks/accounts/fireworks/routers/glm-5p2-fast
+model: openai-codex/gpt-6-astra
 thinking: low
 system-prompt: append
 auto-exit: true

@@ -1,7 +1,7 @@
 ---
 name: hunk-review
 description: Review the active Hunk session asynchronously and leave findings as anchored Hunk comments
-model: fireworks/accounts/fireworks/routers/glm-5p2-fast
+model: openai-codex/gpt-6-astra
 thinking: high
 tools: read, grep, find, ls, hunk_review
 skills: hunk-review
