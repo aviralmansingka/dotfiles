@@ -5,7 +5,7 @@
   "extensions": [
     "+extensions/rounded-bar-footer.ts"
   ],
-  "lastChangelogVersion": "0.85.1",
+  "lastChangelogVersion": "0.87.1",
   "defaultProvider": "fireworks",
   "defaultModel": "accounts/fireworks/routers/glm-5p3-fast",
   "defaultThinkingLevel": "high",
