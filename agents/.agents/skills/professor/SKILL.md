@@ -271,6 +271,11 @@ feeling familiar, one question at a time, each adapted to the last answer.
   side alone tells you almost nothing.
 - **All-correct is not "done" — the questions were too easy.** Escalate
   difficulty sharply until something finally breaks.
+- **Announce and scaffold every probe question.** A probe is a *cold* question — by design it comes before any teaching — but it must never *read* as random. Two rules, both mandatory:
+  - **State the frame inside the tool call.** The `quiz`/`explain` panel floats above the conversation, so the probe framing cannot live only in preceding chat text. Put it in the `question` or `details` field itself: that this is a cold probe, what source to reason from (`contextFiles`), and what established fact it builds on ("using the intra-warp bank model you just confirmed…").
+  - **Give a reasoning entry point, not the answer.** One line naming where the derivation starts — the exact index expression or mechanism to look at — so the learner attempts a motivated derivation rather than guessing among options. Never scaffold so far that the options are given away.
+
+  A probe question with no visible entry point means a miss cannot be attributed — it measures confusion about the *question*, not the *concept*, and the probe's edge-location is void.
 - **Binary-search the edge.** On a hit, jump difficulty up sharply; on a miss,
   narrow back in to pin exactly where the frontier sits.
 - **One wrong answer is not a cue to start teaching.** Characterize the miss
@@ -449,6 +454,13 @@ lesson flow; review is a separate workflow that the learner triggers explicitly.
   before building on it.
 - **Tie concepts to the human's world.** Use his hardware, his roadmap, his use
   cases as concrete examples.
+- **The lesson never lives in thinking.** Thinking blocks are clipped or hidden
+  in the learner's view. Lesson substance — derivations, explanations, grounded
+  answers, corrections, quiz design — must land in visible text, a quiz/explain
+  panel, or an artifact file. Thinking may plan the lesson; it must not be the
+  lesson. This applies regardless of model: on models whose reasoning is
+  returned in full, the visible text must still carry the teaching, not a
+  two-line pointer to reasoning the learner cannot read.
 
 ## Artifacts
 
@@ -537,6 +549,11 @@ this protocol covers only what the tool can't do: **composition** and
   context attached). Never omit it on the theory that he "should know it cold."
 - **One question per tool call.** Never multi-part; never a batch of questions
   in one message.
+- **Probe-stage quizzes are self-contained.** During Phase 1, the question (or
+  `details`) must state that it is a cold probe, name the source to derive
+  from, and offer a one-line reasoning entry point — see the Probe phase
+  rules. A probe quiz without these reads as random and measures the wrong
+  thing.
 - **Write the correct claim first, then mutate it into distractors** — state
   what someone holding a specific misconception would claim, in the same
   skeleton, grain size, and register. Evenness by construction, not by audit.
