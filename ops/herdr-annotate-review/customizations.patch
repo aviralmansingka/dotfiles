@@ -1,0 +1,816 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index c8e329c..ed8f656 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -2,6 +2,12 @@
+ # It is not intended for manual editing.
+ version = 4
+ 
++[[package]]
++name = "adler2"
++version = "2.0.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
++
+ [[package]]
+ name = "ahash"
+ version = "0.8.12"
+@@ -31,6 +37,19 @@ version = "0.2.21"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
+ 
++[[package]]
++name = "ansi-to-tui"
++version = "8.0.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e42366bb9d958f042bf58f0a85e1b2d091997c1257ca49bddd7e4827aadc65fd"
++dependencies = [
++ "nom 8.0.0",
++ "ratatui-core",
++ "simdutf8",
++ "smallvec",
++ "thiserror 2.0.20",
++]
++
+ [[package]]
+ name = "anyhow"
+ version = "1.0.104"
+@@ -67,6 +86,21 @@ version = "0.22.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+ 
++[[package]]
++name = "base64"
++version = "0.23.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
++
++[[package]]
++name = "bincode"
++version = "1.3.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
++dependencies = [
++ "serde",
++]
++
+ [[package]]
+ name = "bit-set"
+ version = "0.5.3"
+@@ -245,6 +279,15 @@ dependencies = [
+  "libc",
+ ]
+ 
++[[package]]
++name = "crc32fast"
++version = "1.5.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "8498c871161e1742aaa9d52551b2d6ebdd4c3d45a3be423e3728f33b955be550"
++dependencies = [
++ "cfg-if",
++]
++
+ [[package]]
+ name = "critical-section"
+ version = "1.2.0"
+@@ -519,6 +562,17 @@ version = "0.4.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
+ 
++[[package]]
++name = "flate2"
++version = "1.1.10"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb"
++dependencies = [
++ "crc32fast",
++ "miniz_oxide",
++ "zlib-rs",
++]
++
+ [[package]]
+ name = "fluent-uri"
+ version = "0.4.1"
+@@ -884,6 +938,12 @@ dependencies = [
+  "bitflags 2.13.1",
+ ]
+ 
++[[package]]
++name = "linked-hash-map"
++version = "0.5.6"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
++
+ [[package]]
+ name = "linux-raw-sys"
+ version = "0.12.1"
+@@ -963,6 +1023,16 @@ version = "0.2.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
+ 
++[[package]]
++name = "miniz_oxide"
++version = "0.9.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b63fbc4a50860e98e7b2aa7804ded1db5cbc3aff9193adaff57a6931bf7c4b4c"
++dependencies = [
++ "adler2",
++ "simd-adler32",
++]
++
+ [[package]]
+ name = "mio"
+ version = "1.2.2"
+@@ -998,6 +1068,15 @@ dependencies = [
+  "minimal-lexical",
+ ]
+ 
++[[package]]
++name = "nom"
++version = "8.0.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "df9761775871bdef83bee530e60050f7e54b1105350d6884eb0fb4f46c2f9405"
++dependencies = [
++ "memchr",
++]
++
+ [[package]]
+ name = "num"
+ version = "0.4.3"
+@@ -1108,6 +1187,28 @@ version = "1.21.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+ 
++[[package]]
++name = "onig"
++version = "6.5.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0cc3cbf698f9438986c11a880c90a6d04b9de27575afd28bbf45b154b6c709e2"
++dependencies = [
++ "bitflags 2.13.1",
++ "libc",
++ "once_cell",
++ "onig_sys",
++]
++
++[[package]]
++name = "onig_sys"
++version = "69.9.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1e68317604e77e53b85896388e1a803c1d21b74c899ec9e5e1112db90735edd7"
++dependencies = [
++ "cc",
++ "pkg-config",
++]
++
+ [[package]]
+ name = "ordered-float"
+ version = "4.6.0"
+@@ -1329,6 +1430,19 @@ dependencies = [
+  "sha2 0.11.0",
+ ]
+ 
++[[package]]
++name = "plist"
++version = "1.10.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "2896bade328c13f7042a297ea5ac5b0951f6cf989dea5f32c2fd98da398195cb"
++dependencies = [
++ "base64 0.23.1",
++ "indexmap",
++ "quick-xml",
++ "serde",
++ "time",
++]
++
+ [[package]]
+ name = "portable-atomic"
+ version = "1.15.0"
+@@ -1388,6 +1502,15 @@ version = "0.11.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae"
+ 
++[[package]]
++name = "quick-xml"
++version = "0.42.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "41b1177fdf999d2321d3fb46ff47159d9c1fb9ad66a4879f8c50a0b504615e9b"
++dependencies = [
++ "memchr",
++]
++
+ [[package]]
+ name = "quote"
+ version = "1.0.47"
+@@ -1683,6 +1806,15 @@ version = "1.0.23"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
+ 
++[[package]]
++name = "same-file"
++version = "1.0.6"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
++dependencies = [
++ "winapi-util",
++]
++
+ [[package]]
+ name = "scopeguard"
+ version = "1.2.0"
+@@ -1817,6 +1949,18 @@ dependencies = [
+  "libc",
+ ]
+ 
++[[package]]
++name = "simd-adler32"
++version = "0.3.10"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea"
++
++[[package]]
++name = "simdutf8"
++version = "0.1.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
++
+ [[package]]
+ name = "similar"
+ version = "3.2.0"
+@@ -1910,6 +2054,27 @@ dependencies = [
+  "unicode-ident",
+ ]
+ 
++[[package]]
++name = "syntect"
++version = "5.3.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "656b45c05d95a5704399aeef6bd0ddec7b2b3531b7c9e900abbf7c4d2190c925"
++dependencies = [
++ "bincode",
++ "flate2",
++ "fnv",
++ "once_cell",
++ "onig",
++ "plist",
++ "regex-syntax",
++ "serde",
++ "serde_derive",
++ "serde_json",
++ "thiserror 2.0.20",
++ "walkdir",
++ "yaml-rust",
++]
++
+ [[package]]
+ name = "termina"
+ version = "0.3.3"
+@@ -1930,7 +2095,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "d4ea810f0692f9f51b382fff5893887bb4580f5fa246fde546e0b13e7fcee662"
+ dependencies = [
+  "fnv",
+- "nom",
++ "nom 7.1.3",
+  "phf",
+  "phf_codegen",
+ ]
+@@ -1951,7 +2116,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "4676b37242ccbd1aabf56edb093a4827dc49086c0ffd764a5705899e0f35f8f7"
+ dependencies = [
+  "anyhow",
+- "base64",
++ "base64 0.22.1",
+  "bitflags 2.13.1",
+  "fancy-regex 0.11.0",
+  "filedescriptor",
+@@ -2146,11 +2311,13 @@ version = "0.3.9"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "a0c95afc7b66008823dea2614a800d944e18990690db47517efc66cd01ff9cee"
+ dependencies = [
++ "ansi-to-tui",
+  "itertools 0.15.0",
+  "pretty_assertions",
+  "pulldown-cmark",
+  "ratatui-core",
+  "rstest",
++ "syntect",
+  "tracing",
+ ]
+ 
+@@ -2262,6 +2429,16 @@ dependencies = [
+  "utf8parse",
+ ]
+ 
++[[package]]
++name = "walkdir"
++version = "2.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b"
++dependencies = [
++ "same-file",
++ "winapi-util",
++]
++
+ [[package]]
+ name = "wasi"
+ version = "0.11.1+wasi-snapshot-preview1"
+@@ -2410,6 +2587,15 @@ version = "0.4.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
+ 
++[[package]]
++name = "winapi-util"
++version = "0.1.11"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
++dependencies = [
++ "windows-sys",
++]
++
+ [[package]]
+ name = "winapi-x86_64-pc-windows-gnu"
+ version = "0.4.0"
+@@ -2446,6 +2632,15 @@ version = "0.57.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
+ 
++[[package]]
++name = "yaml-rust"
++version = "0.4.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
++dependencies = [
++ "linked-hash-map",
++]
++
+ [[package]]
+ name = "yansi"
+ version = "1.0.1"
+@@ -2472,6 +2667,12 @@ dependencies = [
+  "syn 2.0.119",
+ ]
+ 
++[[package]]
++name = "zlib-rs"
++version = "0.6.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "34b31d188d9d685a4f9c7b46d6e36631b07058d2cfe190267adce54dc230bf12"
++
+ [[package]]
+ name = "zmij"
+ version = "1.0.23"
+diff --git a/README.md b/README.md
+index 639af16..d43ba03 100644
+--- a/README.md
++++ b/README.md
+@@ -53,6 +53,13 @@ Drag with the mouse (or `v` and move) to select, then `a` 👍 · `c` 💬 · `d
+ feedback to the clipboard as numbered annotations (`# Annotations on plan.md`, `## Annotation 1
+ (line 12)`, …). Every annotation is saved as JSON the moment you make it; `q` closes.
+ 
++Fenced code blocks with a recognized language (for example, `rust`, `python`, or `sh`)
++use syntax highlighting in a warm dark palette. Unknown or unlabeled languages stay plain.
++
++Hover the mouse over a code block and press `y` to copy its entire code body, including
++lines outside the viewport, without the Markdown fences or language label. No click or
++selection is needed; `y` remains ordinary text while writing a comment.
++
+ Copies go to the clipboard as OSC 52, which is the terminal you are looking at, so on Herdr 0.9.0
+ they reach your own machine even when the app runs on a remote server; Herdr Annotate's global
+ `copy-context` and `copy-archive` actions do not, because they run outside a pane.
+diff --git a/crates/plannotator-tui/Cargo.toml b/crates/plannotator-tui/Cargo.toml
+index 85cb8f4..9fd48fb 100644
+--- a/crates/plannotator-tui/Cargo.toml
++++ b/crates/plannotator-tui/Cargo.toml
+@@ -25,8 +25,9 @@ unicode-width.workspace = true
+ time = { version = "0.3", features = ["formatting", "parsing"] }
+ pulldown-cmark = { version = "0.13.4", default-features = false }
+ ratatui = "0.30"
+-# highlight-code pulls syntect + a C oniguruma build; plain code blocks keep the build pure Rust.
+-tui-markdown = { version = "0.3.9", default-features = false }
++# Built-in syntax highlighting uses syntect/oniguruma and needs a C compiler.
++# Unknown or unlabeled code fences retain the plain-code fallback.
++tui-markdown = { version = "0.3.9", default-features = false, features = ["highlight-code"] }
+ 
+ [dev-dependencies]
+ rusqlite = { version = "0.31.0", features = ["bundled"] }
+diff --git a/crates/plannotator-tui/README.md b/crates/plannotator-tui/README.md
+index 384bbf2..2fe1ec3 100644
+--- a/crates/plannotator-tui/README.md
++++ b/crates/plannotator-tui/README.md
+@@ -13,6 +13,7 @@ cargo build --release
+ | Where | Keys |
+ |---|---|
+ | anywhere | `Tab` cycle focus (tree · document · rail) · `E` send feedback (clipboard) · `t` show/hide tree · `r` reload · `q` quit |
++| code block | hover with the mouse and press `y` to copy the whole code body, without Markdown fences |
+ | document | drag with the mouse, or `v` then `hjkl` / `w` `b` / `0` `$` to select; `Enter` confirms · `j`/`k` or click selects a block · `c` comments on the block · `x` clears the block's annotations |
+ | selection toolbar | `a` 👍 looks good · `c` 💬 comment (opens a box at the selection) · `d` ✗ delete · `Esc` clears |
+ | rail | `j`/`k` move · `e` / `Enter` edit body · `x` remove · click a bubble to focus it |
+diff --git a/crates/plannotator-tui/src/app/draw.rs b/crates/plannotator-tui/src/app/draw.rs
+index a56778c..d3ea952 100644
+--- a/crates/plannotator-tui/src/app/draw.rs
++++ b/crates/plannotator-tui/src/app/draw.rs
+@@ -413,6 +413,7 @@ impl App {
+             parts.push("rail hidden: widen to ≥80 cols".into());
+         }
+         let help = match self.focus {
++            _ if self.hovered_code().is_some() => "y copy code block · q quit ",
+             _ if self.pending.is_some() => "a looks good · c comment · d delete · esc clear ",
+             Focus::Tree => "j/k · enter open · E send · t hide · q quit ",
+             Focus::Rail => "j/k · e edit · x remove · tab · q quit ",
+diff --git a/crates/plannotator-tui/src/app/input.rs b/crates/plannotator-tui/src/app/input.rs
+index 869b228..9bae503 100644
+--- a/crates/plannotator-tui/src/app/input.rs
++++ b/crates/plannotator-tui/src/app/input.rs
+@@ -15,6 +15,11 @@ use crate::delivery::Delivery as _;
+ 
+ impl App {
+     pub(crate) fn handle_event(&mut self, event: &Event) -> Result<()> {
++        match event {
++            Event::Mouse(mouse) => self.pointer = Some((mouse.column, mouse.row)),
++            Event::FocusLost | Event::Resize(_, _) => self.pointer = None,
++            _ => {}
++        }
+         match event {
+             Event::Key(key) if key.kind != KeyEventKind::Release => match &self.mode {
+                 Mode::Browse => self.browse_key(*key),
+@@ -47,6 +52,10 @@ impl App {
+     fn browse_key(&mut self, key: KeyEvent) -> Result<()> {
+         // Global keys first.
+         match (key.code, key.modifiers) {
++            (KeyCode::Char('y'), KeyModifiers::NONE) => {
++                self.yank_hovered_code();
++                return Ok(());
++            }
+             (KeyCode::Char('q'), _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                 self.request_quit();
+                 return Ok(());
+diff --git a/crates/plannotator-tui/src/app/mod.rs b/crates/plannotator-tui/src/app/mod.rs
+index c1c6925..0162f28 100644
+--- a/crates/plannotator-tui/src/app/mod.rs
++++ b/crates/plannotator-tui/src/app/mod.rs
+@@ -16,6 +16,7 @@ mod selection;
+ mod send;
+ #[cfg(test)]
+ mod tests;
++mod yank;
+ 
+ use std::collections::HashMap;
+ use std::ops::Range;
+@@ -180,6 +181,8 @@ pub(crate) struct App {
+     /// The last primary-button press, for double-click detection.
+     last_click: Option<(std::time::Instant, u16, u16)>,
+     geometry: Geometry,
++    /// Last reported pointer position; resolve against current layout when y is pressed.
++    pointer: Option<(u16, u16)>,
+     status: Option<String>,
+     frame_ms: f64,
+     frame_max_ms: f64,
+@@ -244,6 +247,7 @@ impl App {
+             shift_enter: false,
+             last_click: None,
+             geometry: Geometry::default(),
++            pointer: None,
+             status: None,
+             frame_ms: 0.0,
+             frame_max_ms: 0.0,
+diff --git a/crates/plannotator-tui/src/app/yank.rs b/crates/plannotator-tui/src/app/yank.rs
+new file mode 100644
+index 0000000..0fb4aa2
+--- /dev/null
++++ b/crates/plannotator-tui/src/app/yank.rs
+@@ -0,0 +1,156 @@
++//! Copy a code block under the mouse without moving the keyboard selection.
++
++use ratatui::layout::Position;
++
++use super::{App, Mode};
++use crate::delivery::{Clipboard, Delivery as _};
++use crate::doc::BlockKind;
++
++impl App {
++    pub(super) fn hovered_code(&self) -> Option<&str> {
++        if self.mode != Mode::Browse {
++            return None;
++        }
++        let (column, row) = self.pointer?;
++        let position = Position::new(column, row);
++        let doc = self.geometry.doc;
++        if !doc.contains(position)
++            || self.geometry.toolbar.as_ref().is_some_and(|(rect, _)| rect.contains(position))
++        {
++            return None;
++        }
++        let doc_row = self.scroll + usize::from(row - doc.y);
++        let block_index = self.open.layout.block_at_row(doc_row)?;
++        let block = self.open.doc.blocks.get(block_index)?;
++        // A top-level code block includes blank rows; nested code uses mapped source cells.
++        self.open
++            .doc
++            .code_blocks
++            .iter()
++            .find(|code| {
++                if block.kind == BlockKind::CodeBlock {
++                    code.range.contains(&block.range.start)
++                } else {
++                    self.open.layout.row(doc_row).is_some_and(|row| {
++                        row.cells.iter().flatten().any(|offset| code.range.contains(offset))
++                    })
++                }
++            })
++            .map(|code| code.text.as_str())
++    }
++
++    pub(super) fn yank_hovered_code(&mut self) {
++        let Some(text) = self.hovered_code() else { return };
++        if !self.clipboard {
++            return;
++        }
++        self.status = Some(match Clipboard.deliver(text) {
++            Ok(()) => "code block copied".into(),
++            Err(error) => format!("could not copy code block: {error}"),
++        });
++    }
++}
++
++#[cfg(test)]
++#[allow(clippy::expect_used, reason = "tests assert by panicking")]
++mod tests {
++    use super::*;
++    use crate::delivery::Discard;
++    use plannotator_tui_schema::{DocumentSource, Provenance};
++    use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
++    use ratatui::layout::Rect;
++
++    fn app() -> App {
++        let source = DocumentSource::new(
++            "intro\n\n```rust\nlet café = 1;\n\n    next();\n```\n\n    indented();\n\n> ```sh\n> echo nested\n> ```\n".into(),
++            "test.md",
++            true,
++            Provenance::Stdin,
++        );
++        let mut app = App::open(source, 8, Box::new(Discard)).expect("open");
++        app.geometry.doc = Rect::new(10, 2, 8, 30);
++        app
++    }
++
++    fn hover_row(app: &mut App, row: usize) {
++        app.handle_event(&Event::Mouse(MouseEvent {
++            kind: MouseEventKind::Moved,
++            column: app.geometry.doc.x + 1,
++            row: app.geometry.doc.y + (row - app.scroll) as u16,
++            modifiers: KeyModifiers::NONE,
++        }))
++        .expect("hover");
++    }
++
++    #[test]
++    fn hover_copies_complete_code_not_clipped_text_or_fences() {
++        let mut app = app();
++        let row = app.open.layout.blocks.get(1).expect("code").first_row;
++        hover_row(&mut app, row);
++        assert_eq!(app.hovered_code(), Some("let café = 1;\n\n    next();\n"));
++        assert_eq!(app.selected, 0, "hover does not change keyboard selection");
++        hover_row(&mut app, row + 1);
++        assert_eq!(app.hovered_code(), Some("let café = 1;\n\n    next();\n"));
++    }
++
++    #[test]
++    fn indented_and_nested_code_use_parsed_bodies() {
++        let mut app = app();
++        for (index, expected) in [(2, "indented();\n"), (3, "echo nested\n")] {
++            let row = app.open.layout.blocks.get(index).expect("code").first_row;
++            hover_row(&mut app, row);
++            assert_eq!(app.hovered_code(), Some(expected));
++        }
++    }
++
++    #[test]
++    fn non_code_gaps_chrome_and_stale_geometry_do_not_yank() {
++        let mut app = app();
++        assert_eq!(app.hovered_code(), None);
++        hover_row(&mut app, 0);
++        assert_eq!(app.hovered_code(), None);
++        hover_row(&mut app, 1);
++        assert_eq!(app.hovered_code(), None, "gap");
++        let row = app.open.layout.blocks.get(1).expect("code").first_row;
++        hover_row(&mut app, row);
++        app.geometry.toolbar = Some((Rect::new(10, row as u16 + 2, 8, 1), [0..1, 1..2, 2..3]));
++        assert_eq!(app.hovered_code(), None, "toolbar overlays code");
++        app.geometry.toolbar = None;
++        app.pointer = Some((9, row as u16 + 2));
++        assert_eq!(app.hovered_code(), None, "gutter");
++        hover_row(&mut app, row);
++        app.handle_event(&Event::Resize(80, 24)).expect("resize");
++        assert_eq!(app.hovered_code(), None);
++        hover_row(&mut app, row);
++        app.handle_event(&Event::FocusLost).expect("focus lost");
++        assert_eq!(app.hovered_code(), None);
++    }
++
++    #[test]
++    fn hover_resolves_current_scroll_without_stale_block_identity() {
++        let mut app = app();
++        hover_row(&mut app, 0);
++        assert_eq!(app.hovered_code(), None);
++        app.scroll = app.open.layout.blocks.get(1).expect("code").first_row;
++        assert_eq!(app.hovered_code(), Some("let café = 1;\n\n    next();\n"));
++        app.scroll = app.open.layout.total_rows;
++        assert_eq!(app.hovered_code(), None, "below the document, no clamping");
++    }
++
++    #[test]
++    fn yank_does_not_annotate_or_write_clipboard_in_headless_mode() {
++        let mut app = app();
++        let row = app.open.layout.blocks.get(1).expect("code").first_row;
++        hover_row(&mut app, row);
++        let y = Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE));
++        app.handle_event(&y).expect("yank");
++        assert!(app.status.is_none(), "no false copy-success status");
++        assert!(app.pending.is_none());
++        assert!(app.selection.is_none());
++        assert_eq!(app.open.store.len(), 0);
++        app.mode = Mode::Compose;
++        app.handle_event(&y).expect("type y");
++        assert_eq!(app.compose.value(), "y");
++        assert_eq!(app.hovered_code(), None);
++    }
++}
+diff --git a/crates/plannotator-tui/src/doc.rs b/crates/plannotator-tui/src/doc.rs
+index 2d631cc..dd7df64 100644
+--- a/crates/plannotator-tui/src/doc.rs
++++ b/crates/plannotator-tui/src/doc.rs
+@@ -7,7 +7,7 @@
+ 
+ use std::ops::Range;
+ 
+-use pulldown_cmark::{Event, Options, Parser, Tag};
++use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+ 
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ pub(crate) enum BlockKind {
+@@ -41,6 +41,14 @@ pub(crate) struct Block {
+ pub(crate) struct Document {
+     pub(crate) source: String,
+     pub(crate) blocks: Vec<Block>,
++    /// Parsed code bodies, including nested blocks; excludes fences and language labels.
++    pub(crate) code_blocks: Vec<CodeBlock>,
++}
++
++#[derive(Debug)]
++pub(crate) struct CodeBlock {
++    pub(crate) range: Range<usize>,
++    pub(crate) text: String,
+ }
+ 
+ /// The option set `tui-markdown` enables, so block boundaries agree with its renderer.
+@@ -60,8 +68,9 @@ fn parse_options() -> Options {
+ 
+ impl Document {
+     pub(crate) fn parse(source: String) -> Self {
+-        let blocks = split_blocks(&source);
+-        Self { source, blocks }
++        let mut code_blocks = Vec::new();
++        let blocks = split_blocks(&source, &mut code_blocks);
++        Self { source, blocks, code_blocks }
+     }
+ 
+     /// Source text of block `index`. Empty for an out-of-range index.
+@@ -90,12 +99,30 @@ fn kind_of(tag: &Tag<'_>) -> BlockKind {
+ }
+ 
+ /// Walk the event stream and cut the source at depth-zero block boundaries.
+-fn split_blocks(source: &str) -> Vec<Block> {
++fn split_blocks(source: &str, code_blocks: &mut Vec<CodeBlock>) -> Vec<Block> {
+     let mut blocks = Vec::new();
+     let mut depth = 0usize;
+     let mut open: Option<(usize, BlockKind)> = None;
++    let mut code: Option<CodeBlock> = None;
+ 
+     for (event, range) in Parser::new_ext(source, parse_options()).into_offset_iter() {
++        match &event {
++            Event::Start(Tag::CodeBlock(_)) => {
++                code = Some(CodeBlock { range: range.clone(), text: String::new() });
++            }
++            Event::Text(text) => {
++                if let Some(code) = &mut code {
++                    code.text.push_str(text);
++                }
++            }
++            Event::End(TagEnd::CodeBlock) => {
++                if let Some(mut code) = code.take() {
++                    code.range.end = range.end;
++                    code_blocks.push(code);
++                }
++            }
++            _ => {}
++        }
+         match event {
+             Event::Start(tag) => {
+                 if depth == 0 {
+@@ -153,6 +180,15 @@ mod tests {
+         assert_eq!(doc.block_text(3), "```rs\nfn x() {}\n```");
+     }
+ 
++    #[test]
++    fn code_bodies_preserve_whitespace_without_fences_or_container_markup() {
++        let doc = Document::parse(
++            "~~~unknown\n  café\n\n~~~\n\n```\n```\n\n- item\n\n  ```sh\n  echo hi\n  ```\n".into(),
++        );
++        let bodies: Vec<_> = doc.code_blocks.iter().map(|code| code.text.as_str()).collect();
++        assert_eq!(bodies, ["  café\n\n", "", "echo hi\n"]);
++    }
++
+     #[test]
+     fn front_matter_is_dropped_and_nested_lists_stay_one_block() {
+         let doc = Document::parse("---\ntitle: X\n---\n\n- a\n  - nested\n- b\n".to_owned());
+diff --git a/crates/plannotator-tui/src/layout.rs b/crates/plannotator-tui/src/layout.rs
+index 0251e27..0fdfce1 100644
+--- a/crates/plannotator-tui/src/layout.rs
++++ b/crates/plannotator-tui/src/layout.rs
+@@ -8,7 +8,7 @@ use std::ops::Range;
+ 
+ use ratatui::style::{Color, Modifier, Style};
+ use ratatui::text::{Line, Text};
+-use tui_markdown::{Options, StyleSheet};
++use tui_markdown::{BuiltinCodeTheme, Options, StyleSheet};
+ 
+ use crate::doc::{BlockKind, Document};
+ use crate::srcmap::{LineOffsets, align};
+@@ -66,7 +66,10 @@ pub(crate) struct DocLayout {
+ 
+ fn render_block(doc: &Document, index: usize) -> (Text<'static>, Vec<LineOffsets>) {
+     let source = doc.block_text(index);
+-    let text = own(tui_markdown::from_str_with_options(source, &Options::new(Styles)));
++    // Gruvbox isn't bundled with tui-markdown; Base16MochaDark is the closest warm-dark
++    // builtin. Unrecognized or language-less fences skip the theme and use `StyleSheet::code`.
++    let options = Options::new(Styles).code_theme(BuiltinCodeTheme::Base16MochaDark);
++    let text = own(tui_markdown::from_str_with_options(source, &options));
+     let plain: Vec<String> = text.lines.iter().map(ToString::to_string).collect();
+     let base = doc.blocks.get(index).map_or(0, |b| b.range.start);
+     let offsets = align(&plain, source, base);
+@@ -180,6 +183,65 @@ impl DocLayout {
+ #[allow(clippy::expect_used, reason = "tests assert by panicking")]
+ mod tests {
+     use super::*;
++    use crate::doc::BlockKind;
++
++    fn code_block_text(layout: &DocLayout) -> &Text<'static> {
++        layout.blocks.iter().find(|b| b.kind == BlockKind::CodeBlock).map(|b| &b.text).expect("a code block")
++    }
++
++    #[test]
++    fn known_language_code_block_gets_syntax_colors() {
++        let doc = Document::parse("```rust\nfn main() {}\n```\n".to_owned());
++        let layout = DocLayout::build(&doc, 80);
++        let text = code_block_text(&layout);
++        // A recognized language drives syntect token colors (Color::Rgb from the theme),
++        // distinct from the house `Styles::code` fallback of LightYellow.
++        let colored: Vec<_> = text
++            .lines
++            .iter()
++            .flat_map(|l| &l.spans)
++            .filter(|s| matches!(s.style.fg, Some(Color::Rgb(_, _, _))))
++            .collect();
++        assert!(!colored.is_empty(), "rust block was not highlighted");
++        let fn_span = text
++            .lines
++            .iter()
++            .flat_map(|l| &l.spans)
++            .find(|s| s.content == "fn")
++            .expect("`fn` is its own highlighted span");
++        assert!(matches!(fn_span.style.fg, Some(Color::Rgb(_, _, _))));
++        assert_ne!(fn_span.style.fg, Some(Color::LightYellow));
++    }
++
++    #[test]
++    fn unrecognized_and_unlabeled_code_falls_back_to_house_style() {
++        let doc =
++            Document::parse("```no-such-lang\nfn main() {}\n```\n\n```\nfn bare() {}\n```\n".to_owned());
++        let layout = DocLayout::build(&doc, 80);
++        for block in &layout.blocks {
++            if block.kind != BlockKind::CodeBlock {
++                continue;
++            }
++            let colored: Vec<_> = block
++                .text
++                .lines
++                .iter()
++                .flat_map(|l| &l.spans)
++                .filter(|s| matches!(s.style.fg, Some(Color::Rgb(_, _, _))))
++                .collect();
++            assert!(colored.is_empty(), "fallback block was highlighted: {colored:?}");
++        }
++    }
++
++    #[test]
++    fn highlighted_code_block_preserves_source_mapping() {
++        let doc = Document::parse("Intro.\n\n```rust\nfn main() {}\n```\n".to_owned());
++        let layout = DocLayout::build(&doc, 80);
++        let body_start = doc.source.find("fn main").expect("body present");
++        let body_range = body_start..body_start + "fn main() {}".len();
++        // Highlighting must not break the rendered-text → source-byte map used by yank/select.
++        assert_eq!(layout.rendered_in_range(&doc.source, &body_range), "fn main() {}");
++    }
+ 
+     #[test]
+     fn rendered_text_strips_markup_and_joins_blocks_without_separator() {

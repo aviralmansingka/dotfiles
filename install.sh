@@ -133,9 +133,8 @@ flash_root="$(herdr plugin list --plugin youguanxinqing.herdr-flash --json | jq 
     exit 1
 }
 
-echo "==> Installing pinned Herdr Annotate Lite"
-herdr plugin install plannotator/herdr-annotate/lite \
-    --ref bccf884b874f5f39ccbef1bb6ac67625c5fb5d54 --yes
+echo "==> Installing Herdr Annotate and the protected custom reviewer"
+"$DOTFILES_DIR/scripts/install-herdr-annotate"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
     stow -d "$DOTFILES_DIR" -t "$HOME" launchd
