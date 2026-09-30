@@ -36,7 +36,7 @@ const jiti = createJiti(import.meta.url, {
 	},
 });
 
-const { OutputBuffer, TaskManager, TaskManagerError, formatUptime, stripAnsi } = jiti("./background-tasks/tasks.ts");
+const { MAX_LINE_LENGTH, OutputBuffer, TaskManager, TaskManagerError, formatUptime, stripAnsi } = jiti("./background-tasks/tasks.ts");
 
 // ─── OutputBuffer ────────────────────────────────────────────────────────────
 
@@ -79,13 +79,37 @@ const { OutputBuffer, TaskManager, TaskManagerError, formatUptime, stripAnsi } =
 	buf.push("first\nno newline yet");
 	const partial = buf.since(1);
 	assert.deepEqual(partial.lines, []);
-	assert.deepEqual(partial.partialLine, { lineNumber: 2, text: "no newline yet" });
+	assert.deepEqual(partial.partialLines, [{ lineNumber: 2, text: "no newline yet", source: "stdout" }]);
 	assert.equal(partial.toLine, 1, "partial output does not advance the incremental cursor");
 	buf.push(" done\n");
 	const complete = buf.since(partial.toLine);
 	assert.deepEqual(complete.lines, ["no newline yet done"]);
-	assert.equal(complete.partialLine, null);
+	assert.deepEqual(complete.partialLines, []);
 	assert.equal(complete.toLine, 2);
+}
+
+{
+	const buf = new OutputBuffer(10);
+	buf.push(`${"x".repeat(MAX_LINE_LENGTH * 5)}Continue? `);
+	const partial = buf.since(0);
+	assert.equal(partial.toLine, 0);
+	assert.equal(partial.partialLines[0].text.length, MAX_LINE_LENGTH);
+	assert.ok(partial.partialLines[0].text.endsWith("Continue? "));
+	buf.push("yes\n");
+	const complete = buf.since(partial.toLine);
+	assert.equal(complete.toLine, 1);
+	assert.ok(complete.lines[0].endsWith("Continue? yes"));
+}
+
+{
+	const buf = new OutputBuffer(10);
+	buf.push("Continue? ", "stdout");
+	buf.push("warning\n", "stderr");
+	const snapshot = buf.since(0);
+	assert.deepEqual(snapshot.lines, ["warning"]);
+	assert.deepEqual(snapshot.partialLines, [{ lineNumber: 2, text: "Continue? ", source: "stdout" }]);
+	buf.push("yes\n", "stdout");
+	assert.deepEqual(buf.since(snapshot.toLine).lines, ["Continue? yes"]);
 }
 
 {
@@ -123,12 +147,12 @@ const manager = new TaskManager({ shell: "/bin/sh" });
 {
 	const task = manager.start({ command: "printf 'Continue? '; read x; echo got:$x" });
 	await waitFor(
-		() => manager.read(task.id).partialLine?.text === "Continue? ",
+		() => manager.read(task.id).partialLines[0]?.text === "Continue? ",
 		"waiting prompt was not exposed",
 	);
 	const prompt = manager.read(task.id, { sinceLine: 0 });
 	assert.equal(prompt.toLine, 0);
-	assert.deepEqual(prompt.partialLine, { lineNumber: 1, text: "Continue? " });
+	assert.deepEqual(prompt.partialLines, [{ lineNumber: 1, text: "Continue? ", source: "stdout" }]);
 	await manager.send(task.id, "steer-me");
 	await manager.wait(task.id, 5000);
 	const result = manager.read(task.id, { sinceLine: prompt.toLine });
@@ -179,6 +203,30 @@ const manager = new TaskManager({ shell: "/bin/sh" });
 	const second = m.start({ command: "sleep 30" });
 	assert.equal(second.state, "running", "exited history does not consume the running-task limit");
 	m.kill(second.id, "SIGKILL");
+}
+
+{
+	const m = new TaskManager({ shell: "/bin/sh" });
+	const task = m.start({ command: "sleep 30" });
+	assert.throws(() => m.kill(task.id, "NOT_A_SIGNAL"), /unsupported signal/);
+	assert.equal(m.get(task.id).suppressExitNotify, false);
+	m.kill(task.id, "SIGKILL");
+}
+
+{
+	const m = new TaskManager({ shell: "/bin/sh" });
+	const task = m.start({ command: "sleep 30 >/dev/null 2>&1 & echo $!" });
+	await m.wait(task.id, 5000);
+	const descendantPid = Number(m.read(task.id).lines[0]);
+	assert.ok(descendantPid > 0);
+	await waitFor(() => {
+		try {
+			process.kill(descendantPid, 0);
+			return false;
+		} catch (error) {
+			return error.code === "ESRCH";
+		}
+	}, "detached descendant survived its shell");
 }
 
 {
@@ -274,5 +322,45 @@ assert.match(out(started), /Started task t\d+ "stuck"/);
 	assert.match(notes[1], /already exited/, "sending to an exited task notifies, not throws");
 	await registered.commands[0].handler("t999", commandCtx);
 	assert.match(notes[2], /No such task/);
+
+{
+	const realSetTimeout = globalThis.setTimeout;
+	const realClearTimeout = globalThis.clearTimeout;
+	const timers = [];
+	globalThis.setTimeout = (callback, delay, ...args) => {
+		if (delay !== 400) return realSetTimeout(callback, delay, ...args);
+		const timer = { active: true, run: () => callback(...args) };
+		timers.push(timer);
+		return timer;
+	};
+	globalThis.clearTimeout = (timer) => {
+		if (timers.includes(timer)) timer.active = false;
+		else realClearTimeout(timer);
+	};
+	try {
+		const isolated = { tools: [], sent: [], handlers: {} };
+		register({
+			registerTool: (registeredTool) => isolated.tools.push(registeredTool),
+			registerCommand: () => {},
+			registerMessageRenderer: () => {},
+			sendMessage: (message) => isolated.sent.push(message),
+			on: (event, handler) => {
+				isolated.handlers[event] = handler;
+			},
+		});
+		const isolatedRun = (params) => isolated.tools[0].execute("call-2", params, undefined, undefined, ctx);
+		const task = await isolatedRun({ action: "start", command: "exit 0" });
+		await waitFor(async () => {
+			const listed = await isolatedRun({ action: "list" });
+			return listed.details.tasks.find((item) => item.id === task.details.task.id)?.state === "exited";
+		}, "isolated task did not exit");
+		await isolated.handlers.session_shutdown();
+		for (const timer of timers) if (timer.active) timer.run();
+		assert.equal(isolated.sent.length, 0, "shutdown cancels pending exit notifications");
+	} finally {
+		globalThis.setTimeout = realSetTimeout;
+		globalThis.clearTimeout = realClearTimeout;
+	}
+}
 
 rmSync(tempRoot, { recursive: true, force: true });

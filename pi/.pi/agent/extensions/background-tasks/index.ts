@@ -40,7 +40,7 @@ const MAX_WAIT_MS = 120_000;
 interface BgDetails {
 	action: string;
 	task?: TaskSummary;
-	snapshot?: { fromLine: number; toLine: number; partialLine: number | null; truncated: boolean };
+	snapshot?: { fromLine: number; toLine: number; partialLines: number[]; truncated: boolean };
 	tasks?: TaskSummary[];
 	error?: string;
 }
@@ -114,15 +114,20 @@ function describeState(task: TaskSummary): string {
 
 export default function backgroundTasksExtension(pi: ExtensionAPI) {
 	let ui: ExtensionContext["ui"] | undefined;
+	let disposed = false;
+	const exitTimers = new Set<ReturnType<typeof setTimeout>>();
 
 	const manager = new TaskManager({
 		onExit: (task) => {
+			if (disposed) return;
 			// Debounce so a read/wait tool result racing the exit event can claim
 			// the report (exitReported) instead of waking the agent twice.
-			setTimeout(() => {
-				if (task.exitReported || task.suppressExitNotify) return;
+			const timer = setTimeout(() => {
+				exitTimers.delete(timer);
+				if (disposed || task.exitReported || task.suppressExitNotify) return;
 				wakeOnExit(task);
 			}, 400);
+			exitTimers.add(timer);
 		},
 	});
 
@@ -148,11 +153,16 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 	}
 
 	pi.on("session_start", async (_event, ctx) => {
+		disposed = false;
 		ui = ctx.ui;
 	});
 
 	pi.on("session_shutdown", async () => {
+		disposed = true;
+		for (const timer of exitTimers) clearTimeout(timer);
+		exitTimers.clear();
 		manager.killAll();
+		ui = undefined;
 	});
 
 	type ExitDetails = { taskId: string; exitCode: number | null; exitSignal: string | null };
@@ -214,9 +224,9 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 						const numbered = result.lines
 							.map((line, i) => `${String(result.fromLine + i).padStart(5)} | ${line}`)
 							.join("\n");
-						const partial = result.partialLine
-							? `${String(result.partialLine.lineNumber).padStart(5)} | ${result.partialLine.text} [partial]`
-							: "";
+						const partial = result.partialLines
+							.map((line) => `${String(line.lineNumber).padStart(5)} | ${line.text} [${line.source} partial]`)
+							.join("\n");
 						const output = [numbered, partial].filter(Boolean).join("\n");
 						const header = `task ${result.task.id} "${result.task.name}" (${result.task.command}) — ${describeState(result.task)}` +
 							(result.truncated
@@ -235,7 +245,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 								snapshot: {
 									fromLine: result.fromLine,
 									toLine: result.toLine,
-									partialLine: result.partialLine?.lineNumber ?? null,
+									partialLines: result.partialLines.map((line) => line.lineNumber),
 									truncated: result.truncated,
 								},
 							} as BgDetails,
@@ -260,7 +270,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 					}
 					case "kill": {
 						if (!params.taskId) throw new TaskManagerError("taskId is required for kill");
-						const sig = (params.signal ?? "SIGTERM") as NodeJS.Signals;
+						const sig = params.signal ?? "SIGTERM";
 						const task = manager.kill(params.taskId, sig);
 						if (task.state === "exited") markReported(task.id);
 						return textResult(
@@ -334,7 +344,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 						const snapshot = manager.read(t.id, { tail: 3 });
 						const tail = [
 							...snapshot.lines,
-							...(snapshot.partialLine ? [`${snapshot.partialLine.text} [partial]`] : []),
+							...snapshot.partialLines.map((line) => `${line.text} [${line.source} partial]`),
 						].map((line) => `    ${line}`).join("\n");
 						return `  ${t.id} "${t.name}" — ${describeState(t)}\n    ${t.command}${tail ? `\n${tail}` : ""}`;
 					})
@@ -352,7 +362,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 				const snapshot = manager.read(id, { tail: 20 });
 				const body = [
 					...snapshot.lines,
-					...(snapshot.partialLine ? [`${snapshot.partialLine.text} [partial]`] : []),
+					...snapshot.partialLines.map((line) => `${line.text} [${line.source} partial]`),
 				].join("\n") || "(no output)";
 				ctx.ui.notify(
 					`task ${task.id} "${task.name}" — ${describeState(summarize(task))}\n${body}`,

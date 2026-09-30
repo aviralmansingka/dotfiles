@@ -4,6 +4,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
+import { constants as osConstants } from "node:os";
 
 export const DEFAULT_BUFFER_LINES = 500;
 export const MAX_LINE_LENGTH = 2000;
@@ -16,22 +17,37 @@ export function stripAnsi(text: string): string {
 	return text.replace(ANSI_RE, "");
 }
 
+export type OutputSource = "stdout" | "stderr";
+
+export interface PartialOutputLine {
+	lineNumber: number;
+	text: string;
+	source: OutputSource;
+}
+
 export interface OutputSnapshot {
 	/** 1-based number of the first returned complete line (0 when empty). */
 	fromLine: number;
 	/** Completed-line cursor to pass to the next incremental read. */
 	toLine: number;
 	lines: string[];
-	/** Current unterminated line, exposed without advancing the completed-line cursor. */
-	partialLine: { lineNumber: number; text: string } | null;
+	/** Current unterminated lines, exposed without advancing the completed-line cursor. */
+	partialLines: PartialOutputLine[];
 	/** Lines dropped from the buffer below the returned window. */
 	truncated: boolean;
+}
+
+interface PendingOutput {
+	text: string;
+	truncated: boolean;
+	order: number;
 }
 
 /** Line-oriented ring buffer with absolute line numbering. */
 export class OutputBuffer {
 	private lines: string[] = [];
-	private pending = "";
+	private pending = new Map<OutputSource, PendingOutput>();
+	private nextPendingOrder = 0;
 	totalLines = 0;
 
 	get bufferedCount(): number {
@@ -40,30 +56,38 @@ export class OutputBuffer {
 
 	constructor(private readonly maxLines = DEFAULT_BUFFER_LINES) {}
 
-	push(chunk: string): void {
-		this.pending += chunk;
-		let idx = this.pending.indexOf("\n");
-		while (idx !== -1) {
-			this.addLine(this.pending.slice(0, idx));
-			this.pending = this.pending.slice(idx + 1);
-			idx = this.pending.indexOf("\n");
+	push(chunk: string, source: OutputSource = "stdout"): void {
+		const current = this.pending.get(source) ?? {
+			text: "",
+			truncated: false,
+			order: this.nextPendingOrder++,
+		};
+		const parts = `${current.text}${chunk}`.split("\n");
+		for (let i = 0; i < parts.length - 1; i++) {
+			this.addLine(parts[i], i === 0 && current.truncated);
 		}
-		if (this.pending.length > MAX_LINE_LENGTH * 4) {
-			// Pathological stream with no newlines: flush the partial line.
-			this.addLine(this.pending);
-			this.pending = "";
+		const remainder = parts.at(-1) ?? "";
+		if (!remainder) {
+			this.pending.delete(source);
+			return;
 		}
+		const limit = MAX_LINE_LENGTH * 4;
+		this.pending.set(source, {
+			text: remainder.slice(-limit),
+			truncated: (parts.length === 1 && current.truncated) || remainder.length > limit,
+			order: parts.length > 1 ? this.nextPendingOrder++ : current.order,
+		});
 	}
 
-	/** Flush any partial trailing line (call when the stream ends). */
+	/** Flush any partial trailing lines (call when the streams end). */
 	close(): void {
-		if (this.pending) {
-			this.addLine(this.pending);
-			this.pending = "";
+		for (const pending of [...this.pending.values()].sort((a, b) => a.order - b.order)) {
+			this.addLine(pending.text, pending.truncated);
 		}
+		this.pending.clear();
 	}
 
-	/** Last `count` complete lines plus any current partial line. */
+	/** Last `count` complete lines plus any current partial lines. */
 	tail(count: number): OutputSnapshot {
 		const lines = this.lines.slice(-count);
 		return this.snapshot(lines);
@@ -71,7 +95,7 @@ export class OutputBuffer {
 
 	/**
 	 * Incremental read: all buffered complete lines numbered above `sinceLine`
-	 * plus the current partial line without advancing the cursor.
+	 * plus current partial lines without advancing the cursor.
 	 */
 	since(sinceLine: number): OutputSnapshot {
 		const have = this.lines.length;
@@ -84,11 +108,17 @@ export class OutputBuffer {
 	}
 
 	private snapshot(lines: string[], includePartial = true, cursorLine = 0): OutputSnapshot {
-		const partialLine = includePartial && this.pending
-			? { lineNumber: this.totalLines + 1, text: stripAnsi(this.pending).slice(0, MAX_LINE_LENGTH) }
-			: null;
+		const partialLines = includePartial
+			? [...this.pending.entries()]
+				.sort(([, a], [, b]) => a.order - b.order)
+				.map(([source, pending], index) => ({
+					lineNumber: this.totalLines + index + 1,
+					text: this.formatLine(pending.text, pending.truncated),
+					source,
+				}))
+			: [];
 		if (lines.length === 0) {
-			return { fromLine: 0, toLine: cursorLine, lines: [], partialLine, truncated: false };
+			return { fromLine: 0, toLine: cursorLine, lines: [], partialLines, truncated: false };
 		}
 		const firstIndex = this.lines.length - lines.length;
 		const fromLine = this.totalLines - this.lines.length + 1 + firstIndex;
@@ -96,16 +126,21 @@ export class OutputBuffer {
 			fromLine,
 			toLine: fromLine + lines.length - 1,
 			lines,
-			partialLine,
+			partialLines,
 			truncated: this.totalLines > this.lines.length,
 		};
 	}
 
-	private addLine(raw: string): void {
-		const line = stripAnsi(raw).slice(0, MAX_LINE_LENGTH);
+	private addLine(raw: string, truncated = false): void {
 		this.totalLines++;
-		this.lines.push(line);
+		this.lines.push(this.formatLine(raw, truncated));
 		if (this.lines.length > this.maxLines) this.lines.shift();
+	}
+
+	private formatLine(raw: string, truncated: boolean): string {
+		const clean = stripAnsi(raw);
+		if (!truncated && clean.length <= MAX_LINE_LENGTH) return clean;
+		return `…${clean.slice(-(MAX_LINE_LENGTH - 1))}`;
 	}
 }
 
@@ -248,8 +283,8 @@ export class TaskManager {
 
 		child.stdout?.setEncoding("utf8");
 		child.stderr?.setEncoding("utf8");
-		child.stdout?.on("data", (chunk: string) => task.buffer.push(chunk));
-		child.stderr?.on("data", (chunk: string) => task.buffer.push(chunk));
+		child.stdout?.on("data", (chunk: string) => task.buffer.push(chunk, "stdout"));
+		child.stderr?.on("data", (chunk: string) => task.buffer.push(chunk, "stderr"));
 		child.stdin?.on("error", () => {});
 		child.on("error", (err) => {
 			task.buffer.push(`[spawn error] ${err.message}\n`);
@@ -299,37 +334,52 @@ export class TaskManager {
 		return summarize(task);
 	}
 
-	kill(id: string, signal: NodeJS.Signals = "SIGTERM"): TaskSummary {
+	kill(id: string, signal: string = "SIGTERM"): TaskSummary {
 		const task = this.require(id);
+		const validSignal = this.validateSignal(signal);
 		if (task.state === "running") {
+			this.signal(task, validSignal);
 			task.suppressExitNotify = true;
-			this.signal(task, signal);
-			if (signal === "SIGKILL") this.finish(task, null, "SIGKILL");
+			if (validSignal === "SIGKILL") this.finish(task, null, "SIGKILL");
 		}
 		return summarize(task);
 	}
 
-	killAll(signal: NodeJS.Signals = "SIGTERM"): void {
+	killAll(signal: string = "SIGTERM"): void {
+		const validSignal = this.validateSignal(signal);
 		for (const task of this.tasks.values()) {
 			if (task.state === "running") {
+				this.signal(task, validSignal, true);
 				task.suppressExitNotify = true;
-				this.signal(task, signal);
 			}
 		}
 	}
 
-	private signal(task: Task, signal: NodeJS.Signals): void {
-		const pid = task.child.pid;
-		try {
-			// negative pid = the task's whole process group
-			if (pid) process.kill(-pid, signal);
-		} catch {
-			try {
-				task.child.kill(signal);
-			} catch {
-				// already gone
-			}
+	private validateSignal(signal: string): NodeJS.Signals {
+		if (!Object.hasOwn(osConstants.signals, signal)) {
+			throw new TaskManagerError(`unsupported signal ${signal}`);
 		}
+		return signal as NodeJS.Signals;
+	}
+
+	private signal(task: Task, signal: NodeJS.Signals, allowMissing = false): void {
+		let cause: unknown;
+		try {
+			if (task.pid) {
+				process.kill(-task.pid, signal);
+				return;
+			}
+		} catch (error) {
+			cause = error;
+		}
+		try {
+			if (task.child.kill(signal)) return;
+		} catch (error) {
+			cause = error;
+		}
+		if (allowMissing && (cause as NodeJS.ErrnoException | undefined)?.code === "ESRCH") return;
+		const detail = cause instanceof Error ? `: ${cause.message}` : "";
+		throw new TaskManagerError(`failed to send ${signal} to task ${task.id}${detail}`);
 	}
 
 	private require(id: string): Task {
@@ -340,6 +390,11 @@ export class TaskManager {
 
 	private finish(task: Task, code: number | null, signal: string | null): void {
 		if (task.state === "exited") return;
+		if (!task.suppressExitNotify && task.pid) {
+			try {
+				process.kill(-task.pid, "SIGKILL");
+			} catch {}
+		}
 		task.state = "exited";
 		task.exitCode = code;
 		task.exitSignal = signal;
