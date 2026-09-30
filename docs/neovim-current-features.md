@@ -411,7 +411,8 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 
 - Sidekick inline ask workflow can ask about the current line or selection.
 - Sidekick inline edit workflow can request a unified diff edit for the current line or selection.
-- Sidekick inline ask/edit uses Codex Spark in read-only/no-approval exec mode.
+- Sidekick inline ask/edit uses the pi harness with Fireworks' GLM-5.3-fast router in ephemeral print mode, with tools
+  and session persistence disabled.
 - Sidekick ask/edit context includes Tree-sitter scope detection.
 - Sidekick ask/edit context includes LSP-hover symbol enrichment.
 - Sidekick signs and extmarks show pending and completed ask/edit state.

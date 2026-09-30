@@ -84,7 +84,7 @@ return {
         require("plugins.sidekick.ask").ask()
       end,
       mode = { "n", "x" },
-      desc = "Ask Codex Spark about this code",
+      desc = "Ask pi (GLM-5.3-fast) about this code",
     },
     {
       "<leader>ae",
@@ -92,7 +92,7 @@ return {
         require("plugins.sidekick.ask").edit()
       end,
       mode = { "n", "x" },
-      desc = "Edit: ask Codex Spark for a diff (hover to preview)",
+      desc = "Edit: ask pi (GLM-5.3-fast) for a diff (hover to preview)",
     },
     {
       "<leader>aA",
