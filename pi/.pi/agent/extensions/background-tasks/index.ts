@@ -40,7 +40,7 @@ const MAX_WAIT_MS = 120_000;
 interface BgDetails {
 	action: string;
 	task?: TaskSummary;
-	snapshot?: { fromLine: number; toLine: number; truncated: boolean };
+	snapshot?: { fromLine: number; toLine: number; partialLine: number | null; truncated: boolean };
 	tasks?: TaskSummary[];
 	error?: string;
 }
@@ -93,9 +93,9 @@ The task starts without blocking the turn, its output is captured, and you can c
 Actions:
 - start: spawn command in the background, returns the task id immediately
 - read: get output — pass tail for the last N lines, or sinceLine (a line number from a previous read) for only new lines
-- send: write input (e.g. answer a y/n prompt, REPL input, Ctrl-C as \\x03) to a running task's stdin
+- send: write input (e.g. answer a y/n prompt or provide REPL input) to a running task's stdin
 - wait: block until the task exits or timeoutMs (max ${MAX_WAIT_MS / 1000}s) elapses
-- kill: stop a task (SIGTERM by default)
+- kill: interrupt or stop a task (SIGTERM by default)
 - list: all tasks with state
 
 When a task exits on its own, a message with its exit status and output tail is delivered to you automatically — no polling needed.`;
@@ -143,7 +143,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 				display: true,
 				details: { taskId: task.id, exitCode: task.exitCode, exitSignal: task.exitSignal },
 			},
-			{ triggerTurn: true, deliverAs: "nextTurn" },
+			{ triggerTurn: true },
 		);
 	}
 
@@ -198,7 +198,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 						if (!params.taskId || params.input === undefined) {
 							throw new TaskManagerError("taskId and input are required for send");
 						}
-						const task = manager.send(params.taskId, params.input, params.newline ?? true);
+						const task = await manager.send(params.taskId, params.input, params.newline ?? true);
 						return textResult(`Sent input to task ${task.id} (${task.command}).`, {
 							action: "send",
 							task,
@@ -214,6 +214,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 						const numbered = result.lines
 							.map((line, i) => `${String(result.fromLine + i).padStart(5)} | ${line}`)
 							.join("\n");
+						const partial = result.partialLine
+							? `${String(result.partialLine.lineNumber).padStart(5)} | ${result.partialLine.text} [partial]`
+							: "";
+						const output = [numbered, partial].filter(Boolean).join("\n");
 						const header = `task ${result.task.id} "${result.task.name}" (${result.task.command}) — ${describeState(result.task)}` +
 							(result.truncated
 								? ` (older lines dropped; ${result.task.totalLines - result.task.bufferedLines} not buffered)`
@@ -222,9 +226,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 							content: [
 								{
 									type: "text",
-									text: result.lines.length
-										? `${header}\nlines ${result.fromLine}-${result.toLine}:\n${numbered}`
-										: `${header}\n(no new output)`,
+									text: output ? `${header}\noutput:\n${output}` : `${header}\n(no new output)`,
 								},
 							],
 							details: {
@@ -233,6 +235,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 								snapshot: {
 									fromLine: result.fromLine,
 									toLine: result.toLine,
+									partialLine: result.partialLine?.lineNumber ?? null,
 									truncated: result.truncated,
 								},
 							} as BgDetails,
@@ -328,7 +331,11 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 				}
 				const body = tasks
 					.map((t) => {
-						const tail = manager.read(t.id, { tail: 3 }).lines.map((l) => `    ${l}`).join("\n");
+						const snapshot = manager.read(t.id, { tail: 3 });
+						const tail = [
+							...snapshot.lines,
+							...(snapshot.partialLine ? [`${snapshot.partialLine.text} [partial]`] : []),
+						].map((line) => `    ${line}`).join("\n");
 						return `  ${t.id} "${t.name}" — ${describeState(t)}\n    ${t.command}${tail ? `\n${tail}` : ""}`;
 					})
 					.join("\n");
@@ -343,7 +350,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 			}
 			if (parts.length === 1) {
 				const snapshot = manager.read(id, { tail: 20 });
-				const body = snapshot.lines.length ? snapshot.lines.join("\n") : "(no output)";
+				const body = [
+					...snapshot.lines,
+					...(snapshot.partialLine ? [`${snapshot.partialLine.text} [partial]`] : []),
+				].join("\n") || "(no output)";
 				ctx.ui.notify(
 					`task ${task.id} "${task.name}" — ${describeState(summarize(task))}\n${body}`,
 					"info",
@@ -352,7 +362,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI) {
 			}
 			const input = args.trim().slice(id.length).trim();
 			try {
-				manager.send(id, input, true);
+				await manager.send(id, input, true);
 				ctx.ui.notify(`Sent to ${id}: ${input}`, "info");
 			} catch (err) {
 				ctx.ui.notify(err instanceof Error ? err.message : String(err), "error");

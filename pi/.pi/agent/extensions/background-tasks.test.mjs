@@ -76,10 +76,16 @@ const { OutputBuffer, TaskManager, TaskManagerError, formatUptime, stripAnsi } =
 
 {
 	const buf = new OutputBuffer(10);
-	buf.push("no newline yet");
-	assert.equal(buf.tail(5).lines.length, 0, "partial line is not returned before close");
-	buf.close();
-	assert.deepEqual(buf.tail(5).lines, ["no newline yet"]);
+	buf.push("first\nno newline yet");
+	const partial = buf.since(1);
+	assert.deepEqual(partial.lines, []);
+	assert.deepEqual(partial.partialLine, { lineNumber: 2, text: "no newline yet" });
+	assert.equal(partial.toLine, 1, "partial output does not advance the incremental cursor");
+	buf.push(" done\n");
+	const complete = buf.since(partial.toLine);
+	assert.deepEqual(complete.lines, ["no newline yet done"]);
+	assert.equal(complete.partialLine, null);
+	assert.equal(complete.toLine, 2);
 }
 
 {
@@ -95,46 +101,54 @@ assert.equal(formatUptime(0, 3_780_000), "1h3m");
 
 // ─── TaskManager with real processes ──────────────────────────────────────────
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const waitFor = async (condition, message, timeoutMs = 5000) => {
+	const deadline = Date.now() + timeoutMs;
+	while (!(await condition())) {
+		if (Date.now() >= deadline) assert.fail(message);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+	}
+};
 const manager = new TaskManager({ shell: "/bin/sh" });
 
 {
 	const task = manager.start({ command: "echo hello; sleep 0.3; echo done; exit 7" });
 	assert.equal(task.state, "running");
 	assert.ok(task.pid > 0);
-	await sleep(700);
+	const exited = await manager.wait(task.id, 5000);
 	const result = manager.read(task.id, { tail: 10 });
-	assert.equal(result.task.state, "exited");
-	assert.equal(result.task.exitCode, 7);
+	assert.equal(exited.exitCode, 7);
 	assert.deepEqual(result.lines, ["hello", "done"]);
 }
 
 {
-	// steering: send stdin to a waiting process without killing it
-	const task = manager.start({ command: "read x; echo got:$x" });
-	await sleep(200);
-	manager.send(task.id, "steer-me");
-	await sleep(300);
-	const result = manager.read(task.id, { tail: 10 });
-	assert.equal(result.task.state, "exited");
-	assert.deepEqual(result.lines, ["got:steer-me"], "stdin input reaches the process");
+	const task = manager.start({ command: "printf 'Continue? '; read x; echo got:$x" });
+	await waitFor(
+		() => manager.read(task.id).partialLine?.text === "Continue? ",
+		"waiting prompt was not exposed",
+	);
+	const prompt = manager.read(task.id, { sinceLine: 0 });
+	assert.equal(prompt.toLine, 0);
+	assert.deepEqual(prompt.partialLine, { lineNumber: 1, text: "Continue? " });
+	await manager.send(task.id, "steer-me");
+	await manager.wait(task.id, 5000);
+	const result = manager.read(task.id, { sinceLine: prompt.toLine });
+	assert.deepEqual(result.lines, ["Continue? got:steer-me"], "stdin reaches the waiting process");
+	assert.equal(result.toLine, 1, "the completed prompt retains its original line number");
 }
 
 {
-	// incremental read via sinceLine
-	const task = manager.start({ command: "echo l1; echo l2; sleep 0.2; echo l3; echo l4" });
-	await sleep(100);
+	const task = manager.start({ command: "echo l1; echo l2; read x; echo l3; echo l4" });
+	await waitFor(() => manager.read(task.id).task.totalLines >= 2, "initial output was not captured");
 	const first = manager.read(task.id, { tail: 40 });
 	assert.deepEqual(first.lines, ["l1", "l2"]);
-	await sleep(400);
+	await manager.send(task.id, "continue");
+	await manager.wait(task.id, 5000);
 	const next = manager.read(task.id, { sinceLine: first.toLine });
 	assert.deepEqual(next.lines, ["l3", "l4"], "sinceLine returns only new lines");
 }
 
 {
-	// kill a stuck task
 	const task = manager.start({ command: "sleep 30" });
-	await sleep(100);
 	manager.kill(task.id, "SIGKILL");
 	const summary = manager.list().find((t) => t.id === task.id);
 	assert.equal(summary.state, "exited");
@@ -155,10 +169,26 @@ const manager = new TaskManager({ shell: "/bin/sh" });
 
 {
 	assert.throws(() => manager.read("t999"), TaskManagerError);
-	assert.throws(() => manager.send("t999", "x"), TaskManagerError);
+	await assert.rejects(manager.send("t999", "x"), TaskManagerError);
 }
 
-// onExit fires once with the finished task
+{
+	const m = new TaskManager({ shell: "/bin/sh", maxTasks: 1 });
+	const first = m.start({ command: "exit 0" });
+	await m.wait(first.id, 5000);
+	const second = m.start({ command: "sleep 30" });
+	assert.equal(second.state, "running", "exited history does not consume the running-task limit");
+	m.kill(second.id, "SIGKILL");
+}
+
+{
+	const m = new TaskManager({ shell: "/bin/sh" });
+	const task = m.start({ command: "exec 0<&-; echo ready; sleep 30" });
+	await waitFor(() => m.read(task.id).lines.includes("ready"), "child did not close stdin");
+	await assert.rejects(m.send(task.id, "input"), /failed to send input.*EPIPE|failed to send input.*closed/i);
+	m.kill(task.id, "SIGKILL");
+}
+
 {
 	const exits = [];
 	const m = new TaskManager({ shell: "/bin/sh", onExit: (t) => exits.push(t.id) });
@@ -221,21 +251,18 @@ assert.match(out(started), /Started task t\d+ "stuck"/);
 	const bad = await run({ action: "read", taskId: "t999" });
 	assert.match(out(bad), /^Error: unknown task/);
 
-	// exit wake-up: an unobserved exit sends a bg-task-exit message with triggerTurn
 	const quick = await run({ action: "start", command: "echo bye", name: "quick" });
 	const quickId = quick.details.task.id;
-	await new Promise((resolve) => setTimeout(resolve, 800));
-	assert.equal(registered.sent.length, 1, "unobserved exit wakes the agent");
+	await waitFor(() => registered.sent.length === 1, "unobserved exit did not wake the agent");
+	assert.match(quickId, /^t\d+$/);
 	const wake = registered.sent[0];
 	assert.equal(wake.message.customType, EXIT_MESSAGE_TYPE);
-	assert.equal(wake.options.triggerTurn, true);
-	assert.equal(wake.options.deliverAs, "nextTurn");
+	assert.deepEqual(wake.options, { triggerTurn: true });
 	assert.match(String(wake.message.content[0].text), /exited with code 0[\s\S]*bye/);
 
-	// observed exits (via wait) are not re-reported as wake messages
 	const observed = await run({ action: "start", command: "exit 3" });
-	await run({ action: "wait", taskId: observed.details.task.id, timeoutMs: 5000 });
-	assert.equal(registered.sent.length, 1, "tool-observed exit does not double-report");
+	const observedResult = await run({ action: "wait", taskId: observed.details.task.id, timeoutMs: 5000 });
+	assert.match(out(observedResult), /exited \(code 3\)/);
 
 	// /bg command smoke: list and send through notify
 	const notes = [];

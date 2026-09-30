@@ -17,11 +17,13 @@ export function stripAnsi(text: string): string {
 }
 
 export interface OutputSnapshot {
-	/** 1-based number of the first returned line (0 when empty). */
+	/** 1-based number of the first returned complete line (0 when empty). */
 	fromLine: number;
-	/** 1-based number of the last returned line (0 when empty). */
+	/** Completed-line cursor to pass to the next incremental read. */
 	toLine: number;
 	lines: string[];
+	/** Current unterminated line, exposed without advancing the completed-line cursor. */
+	partialLine: { lineNumber: number; text: string } | null;
 	/** Lines dropped from the buffer below the returned window. */
 	truncated: boolean;
 }
@@ -61,34 +63,40 @@ export class OutputBuffer {
 		}
 	}
 
-	/** Last `count` lines with absolute numbering. */
+	/** Last `count` complete lines plus any current partial line. */
 	tail(count: number): OutputSnapshot {
 		const lines = this.lines.slice(-count);
 		return this.snapshot(lines);
 	}
 
 	/**
-	 * Incremental read: all buffered lines numbered above `sinceLine`
-	 * (a 1-based line number previously observed by the caller).
+	 * Incremental read: all buffered complete lines numbered above `sinceLine`
+	 * plus the current partial line without advancing the cursor.
 	 */
 	since(sinceLine: number): OutputSnapshot {
 		const have = this.lines.length;
 		const total = this.totalLines;
-		if (have === 0) return { fromLine: 0, toLine: 0, lines: [], truncated: false };
+		if (have === 0) return this.snapshot([], sinceLine <= total, sinceLine);
 		const oldest = total - have + 1;
 		const from = Math.max(sinceLine + 1, oldest);
-		if (from > total) return { fromLine: 0, toLine: 0, lines: [], truncated: false };
+		if (from > total) return this.snapshot([], sinceLine <= total, sinceLine);
 		return this.snapshot(this.lines.slice(from - oldest));
 	}
 
-	private snapshot(lines: string[]): OutputSnapshot {
-		if (lines.length === 0) return { fromLine: 0, toLine: 0, lines: [], truncated: false };
+	private snapshot(lines: string[], includePartial = true, cursorLine = 0): OutputSnapshot {
+		const partialLine = includePartial && this.pending
+			? { lineNumber: this.totalLines + 1, text: stripAnsi(this.pending).slice(0, MAX_LINE_LENGTH) }
+			: null;
+		if (lines.length === 0) {
+			return { fromLine: 0, toLine: cursorLine, lines: [], partialLine, truncated: false };
+		}
 		const firstIndex = this.lines.length - lines.length;
 		const fromLine = this.totalLines - this.lines.length + 1 + firstIndex;
 		return {
 			fromLine,
 			toLine: fromLine + lines.length - 1,
 			lines,
+			partialLine,
 			truncated: this.totalLines > this.lines.length,
 		};
 	}
@@ -196,10 +204,10 @@ export class TaskManager {
 	}
 
 	start(opts: StartOptions): TaskSummary {
-		if (this.tasks.size >= (this.options.maxTasks ?? MAX_TASKS)) {
-			throw new TaskManagerError(
-				`too many background tasks (max ${this.options.maxTasks ?? MAX_TASKS}); kill one first`,
-			);
+		const maxTasks = this.options.maxTasks ?? MAX_TASKS;
+		const runningTasks = [...this.tasks.values()].filter((task) => task.state === "running").length;
+		if (runningTasks >= maxTasks) {
+			throw new TaskManagerError(`too many running background tasks (max ${maxTasks}); stop one first`);
 		}
 		const command = opts.command.trim();
 		if (!command) throw new TaskManagerError("command must not be empty");
@@ -242,6 +250,7 @@ export class TaskManager {
 		child.stderr?.setEncoding("utf8");
 		child.stdout?.on("data", (chunk: string) => task.buffer.push(chunk));
 		child.stderr?.on("data", (chunk: string) => task.buffer.push(chunk));
+		child.stdin?.on("error", () => {});
 		child.on("error", (err) => {
 			task.buffer.push(`[spawn error] ${err.message}\n`);
 			this.finish(task, null, null);
@@ -253,14 +262,24 @@ export class TaskManager {
 		return summarize(task);
 	}
 
-	send(id: string, input: string, newline = true): TaskSummary {
+	async send(id: string, input: string, newline = true): Promise<TaskSummary> {
 		const task = this.require(id);
-		if (task.state !== "running") throw new TaskManagerError(`task ${id} has already exited`);
-		if (!task.child.stdin || task.child.stdin.destroyed) {
-			throw new TaskManagerError(`task ${id} has no writable stdin`);
+		if (task.state !== "running") {
+			return Promise.reject(new TaskManagerError(`task ${id} has already exited`));
 		}
-		task.child.stdin.write(newline ? `${input}\n` : input);
-		return summarize(task);
+		if (!task.child.stdin || task.child.stdin.destroyed) {
+			return Promise.reject(new TaskManagerError(`task ${id} has no writable stdin`));
+		}
+		return new Promise((resolve, reject) => {
+			try {
+				task.child.stdin!.write(newline ? `${input}\n` : input, (error) => {
+					if (error) reject(new TaskManagerError(`failed to send input to task ${id}: ${error.message}`));
+					else resolve(summarize(task));
+				});
+			} catch (error) {
+				reject(new TaskManagerError(`failed to send input to task ${id}: ${(error as Error).message}`));
+			}
+		});
 	}
 
 	read(id: string, opts: ReadOptions = {}): ReadResult {
