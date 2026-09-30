@@ -4,6 +4,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
+import { QUESTION_PANEL_OVERLAY } from "./question-overlay";
 import { buildNvimTerminalScript, extractMarkedOutput, NVIM_RUN_TIMEOUT_MS } from "./run-command/nvim-terminal";
 import {
 	Editor,
@@ -681,7 +682,7 @@ async function askRunCommand(
 					}
 				},
 			};
-		},
+		}, QUESTION_PANEL_OVERLAY
 	);
 
 	return { response: result, copied };
