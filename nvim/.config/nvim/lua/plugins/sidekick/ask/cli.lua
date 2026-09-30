@@ -1,15 +1,12 @@
 -- nvim/.config/nvim/lua/plugins/sidekick/ask/cli.lua
--- Spawn Codex for inline ask/edit prompts and read its final answer.
+-- Spawn the pi agent for inline ask/edit prompts and read its final answer.
 local M = {}
 
-local CODEX_MODEL = "gpt-5.3-codex-spark"
+local PI_PROVIDER = "fireworks"
+local PI_MODEL = "accounts/fireworks/routers/glm-5p3-fast"
 
-local function read_output(path)
-  local ok, lines = pcall(vim.fn.readfile, path)
-  if not ok or type(lines) ~= "table" then
-    return ""
-  end
-  return table.concat(lines, "\n"):gsub("%s+$", "")
+local function read_output(obj)
+  return (obj.stdout or ""):gsub("%s+$", "")
 end
 
 ---@param prompt string
@@ -17,39 +14,36 @@ end
 ---@param _opts { mode: string? }?  Retained for call-site compatibility.
 ---@return vim.SystemObj
 function M.spawn(prompt, on_done, _opts)
-  local output_path = vim.fn.tempname()
   local start = vim.uv.hrtime()
   local cmd = {
-    "codex",
+    "pi",
+    "--provider",
+    PI_PROVIDER,
     "--model",
-    CODEX_MODEL,
-    "--sandbox",
-    "read-only",
-    "-a",
-    "never",
-    "exec",
-    "--output-last-message",
-    output_path,
+    PI_MODEL,
+    "--no-tools",
+    "--no-session",
+    "--print",
+    "--",
+    prompt,
   }
-  cmd[#cmd + 1] = prompt
   return vim.system(cmd, {
     cwd = vim.fn.getcwd(),
     text = true,
   }, function(obj)
     vim.schedule(function()
-      local result = read_output(output_path)
-      pcall(vim.fn.delete, output_path)
+      local result = read_output(obj)
 
       if obj.code ~= 0 and result == "" then
         local err = (obj.stderr or ""):gsub("%s+$", "")
         if err == "" then
-          err = "codex exited with code " .. tostring(obj.code)
+          err = "pi exited with code " .. tostring(obj.code)
         end
         on_done({ ok = false, err = err })
         return
       end
       if result == "" then
-        on_done({ ok = false, err = "codex: empty result" })
+        on_done({ ok = false, err = "pi: empty result" })
         return
       end
       on_done({
