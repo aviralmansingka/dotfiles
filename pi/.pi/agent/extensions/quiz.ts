@@ -14,6 +14,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { openEditor } from "./nvim-open";
+import { QUESTION_PANEL_OVERLAY } from "./question-overlay";
 import { handoutModelOptions } from "./quiz-handout";
 import { contextFileHint, handoutHint, normalizeContextFiles } from "./user-input/context-files";
 import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
@@ -926,7 +927,7 @@ async function askSingleChoice(
 				},
 				handleInput,
 			};
-		},
+		}, QUESTION_PANEL_OVERLAY
 	);
 }
 
@@ -1180,7 +1181,7 @@ async function askMultiChoice(
 				},
 				handleInput,
 			};
-		},
+		}, QUESTION_PANEL_OVERLAY
 	);
 }
 

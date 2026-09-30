@@ -10,6 +10,7 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { QUESTION_PANEL_OVERLAY } from "./question-overlay";
 import {
 	joinHints,
 	NAVIGATION_HINT,
@@ -359,7 +360,7 @@ async function askSingleChoice(
 			},
 			handleInput,
 		};
-	});
+	}, QUESTION_PANEL_OVERLAY);
 }
 
 async function askMultiChoice(
@@ -583,7 +584,7 @@ async function askMultiChoice(
 			},
 			handleInput,
 		};
-	});
+	}, QUESTION_PANEL_OVERLAY);
 }
 
 // Render the panel as two merged rounded boxes over the prompt area: a narrow
@@ -701,7 +702,7 @@ async function askFreeText(ctx: any, question: string, context: string | undefin
 					editor.handleInput(data);
 				},
 			};
-		},
+		}, QUESTION_PANEL_OVERLAY
 	);
 }
 
