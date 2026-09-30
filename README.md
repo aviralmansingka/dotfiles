@@ -219,6 +219,14 @@ Pi config and shared skills are deployed with:
 stow pi agents
 ```
 
+Pi routes shell commands expected to run longer than a few seconds through `background_task`; quick commands such as
+`ls`, `rg`, and `git status` continue to use the regular shell tool. Background tasks use piped standard I/O rather
+than a terminal, so TUI applications are unsupported. When an unobserved task exits on its own, Pi resumes
+with its status and output tail.
+
+Use `/bg` to list tasks and recent output, `/bg <task-id>` to show a longer tail, or
+`/bg <task-id> <text>` to send a line to a waiting process.
+
 The shared `vault` skill supports explicit project and knowledge-base lookup, note summaries, project overviews, and
 Wayfinder overviews. It preserves the vault's Project → Theme → Feature → Task ontology without installing an
 execution workflow. Neovim's `<leader>vf` picker remains a read-only navigation surface for active vault work.

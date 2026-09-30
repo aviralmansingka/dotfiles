@@ -215,6 +215,18 @@ const manager = new TaskManager({ shell: "/bin/sh" });
 
 {
 	const m = new TaskManager({ shell: "/bin/sh" });
+	const marker = join(tempRoot, "descendant-survived");
+	const task = m.start({
+		command: `sh -c '(sleep 0.5; echo survived > "$1") & echo ready; wait' sh ${JSON.stringify(marker)}`,
+	});
+	await waitFor(() => m.read(task.id).lines.includes("ready"), "descendant did not start");
+	m.kill(task.id, "SIGKILL");
+	await new Promise((resolve) => setTimeout(resolve, 800));
+	assert.equal(existsSync(marker), false, "kill must terminate descendants in the detached process group");
+}
+
+{
+	const m = new TaskManager({ shell: "/bin/sh" });
 	const task = m.start({ command: "sleep 30 >/dev/null 2>&1 & echo $!" });
 	await m.wait(task.id, 5000);
 	const descendantPid = Number(m.read(task.id).lines[0]);
