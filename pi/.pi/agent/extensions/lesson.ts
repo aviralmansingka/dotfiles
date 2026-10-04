@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
 import {
+	Container,
 	Key,
 	Markdown,
 	matchesKey,
@@ -9,6 +10,8 @@ import {
 	visibleWidth,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { basename, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { resolveJournalPath } from "./md-log";
 
@@ -48,6 +51,7 @@ type LessonStatus = "read" | "cancelled";
 interface LessonResultDetails {
 	status: LessonStatus;
 	title: string;
+	journalPath?: string;
 }
 
 // Shared UI mutex — same globalThis key as quiz/ask_user_question/explain, so
@@ -105,16 +109,17 @@ export default function lesson(pi: ExtensionAPI) {
 		parameters: LessonParams,
 
 		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+			const journalPath = resolveJournalPath(ctx);
 			if (signal?.aborted) {
 				return {
 					content: [{ type: "text" as const, text: `Lesson "${params.title}" aborted before display.` }],
-					details: { status: "cancelled", title: params.title } satisfies LessonResultDetails,
+					details: { status: "cancelled", title: params.title, journalPath } satisfies LessonResultDetails,
 				};
 			}
 			if (!ctx.hasUI) {
 				return {
 					content: [{ type: "text" as const, text: "lesson requires interactive mode UI" }],
-					details: { status: "cancelled", title: params.title } satisfies LessonResultDetails,
+					details: { status: "cancelled", title: params.title, journalPath } satisfies LessonResultDetails,
 				};
 			}
 
@@ -175,11 +180,10 @@ export default function lesson(pi: ExtensionAPI) {
 				// time the user dismisses the panel the lesson is already in the file.
 				// Surface the path so the agent can link it (Ctrl-click opens the
 				// herdr-annotate reviewer via the markdown-file link handler).
-				const journal = resolveJournalPath(ctx);
-				const textWithJournal = journal ? `${text}\nJournal: ${journal}` : text;
+				const textWithJournal = journalPath ? `${text}\nJournal: ${journalPath}` : text;
 				return {
 					content: [{ type: "text" as const, text: textWithJournal }],
-					details: { status, title: params.title } satisfies LessonResultDetails,
+					details: { status, title: params.title, journalPath } satisfies LessonResultDetails,
 				};
 			});
 		},
@@ -202,7 +206,13 @@ export default function lesson(pi: ExtensionAPI) {
 				details.status === "read"
 					? theme.fg("success", `Read — ${details.title}`)
 					: theme.fg("warning", `Skipped — ${details.title}`);
-			return new Text(text, 0, 0);
+			if (!details.journalPath) return new Text(text, 0, 0);
+			const label = basename(details.journalPath).replace(/[\\[\]`*_]/g, "\\$&");
+			const url = pathToFileURL(resolve(details.journalPath)).href;
+			const rendered = new Container();
+			rendered.addChild(new Text(text, 0, 0));
+			rendered.addChild(new Markdown(`[${label}](${url})`, 0, 0, getMarkdownTheme()));
+			return rendered;
 		},
 	});
 }

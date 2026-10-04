@@ -23,20 +23,30 @@ export function reviewerPaneCommand(paneId, binaryPath, journalPath, deliverToPa
 	return `${parts.join(" ")}; herdr pane close ${shellQuote(paneId)}`;
 }
 
-export function isReviewerProcess(process) {
+export function manualReviewerCommand(binaryPath, journalPath, deliverToPaneId) {
+	const parts = [binaryPath, "herdr", "open", journalPath];
+	if (deliverToPaneId) parts.push("--deliver-to", deliverToPaneId);
+	return parts.map(shellQuote).join(" ");
+}
+
+export function isReviewerProcess(process, journalPath, deliverToPaneId) {
 	const argv = process.argv ?? [];
 	const executable = argv[0]?.split(/[\\/]/).at(-1);
+	const deliverToIndex = argv.indexOf("--deliver-to");
 	return (
 		(process.name === "plannotator-tui" || executable === "plannotator-tui") &&
 		argv[1] === "herdr" &&
-		argv[2] === "open"
+		argv[2] === "open" &&
+		argv[3] === journalPath &&
+		deliverToIndex >= 0 &&
+		argv[deliverToIndex + 1] === deliverToPaneId
 	);
 }
 
 export async function openReviewerWithHost(host, binaryPath, journalPath, deliverToPaneId) {
 	const pane = host.currentPane();
 	if (pane) {
-		const existing = host.findReviewerPane(pane.tab_id);
+		const existing = host.findReviewerPane(pane.tab_id, journalPath, deliverToPaneId);
 		if (
 			existing.status === "found" &&
 			host.focusPane(existing.paneId, pane.pane_id)

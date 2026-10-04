@@ -26,7 +26,13 @@ const jiti = createJiti(import.meta.url, {
 });
 
 const core = jiti("./journal-review-core.mjs");
-const { shellQuote, reviewerPaneCommand, isReviewerProcess, openReviewerWithHost } = core;
+const {
+	shellQuote,
+	reviewerPaneCommand,
+	manualReviewerCommand,
+	isReviewerProcess,
+	openReviewerWithHost,
+} = core;
 
 // ── core helpers ─────────────────────────────────────────────────────────────
 
@@ -40,20 +46,41 @@ assert.ok(cmd.startsWith("'/bin/reviewer' 'herdr' 'open' '/tmp/my journal.md'"))
 assert.ok(cmd.includes("'--deliver-to' 'agent pane'"));
 assert.ok(cmd.endsWith("herdr pane close 'pane id'"), cmd);
 assert.ok(!cmd.includes("$(printf"), "no injection through unquoted interpolation");
-
 assert.equal(
-	isReviewerProcess({
-		name: "plannotator-tui",
-		argv: ["/x/plannotator-tui", "herdr", "open", "j.md"],
-	}),
-	true,
+	manualReviewerCommand("/path with/reviewer", "/tmp/my journal.md"),
+	"'/path with/reviewer' 'herdr' 'open' '/tmp/my journal.md'",
 );
 assert.equal(
-	isReviewerProcess({ name: "plannotator-tui", argv: ["plannotator-tui", "herdr", "last"] }),
+	manualReviewerCommand("/path with/reviewer", "/tmp/my journal.md", "agent pane"),
+	"'/path with/reviewer' 'herdr' 'open' '/tmp/my journal.md' '--deliver-to' 'agent pane'",
+);
+
+const reviewerProcess = {
+	name: "plannotator-tui",
+	argv: [
+		"/x/plannotator-tui",
+		"herdr",
+		"open",
+		"/tmp/j.md",
+		"--placement",
+		"split",
+		"--deliver-to",
+		"agent",
+	],
+};
+assert.equal(isReviewerProcess(reviewerProcess, "/tmp/j.md", "agent"), true);
+assert.equal(isReviewerProcess(reviewerProcess, "/tmp/other.md", "agent"), false);
+assert.equal(isReviewerProcess(reviewerProcess, "/tmp/j.md", "other-agent"), false);
+assert.equal(
+	isReviewerProcess(
+		{ name: "plannotator-tui", argv: ["plannotator-tui", "herdr", "last"] },
+		"/tmp/j.md",
+		"agent",
+	),
 	false,
 );
 assert.equal(
-	isReviewerProcess({ name: "hunk", argv: ["hunk", "diff", "--watch"] }),
+	isReviewerProcess({ name: "hunk", argv: ["hunk", "diff", "--watch"] }, "/tmp/j.md", "agent"),
 	false,
 );
 
@@ -80,12 +107,18 @@ function fakeHost(overrides = {}) {
 
 // Existing reviewer pane is focused, not duplicated.
 const focusHost = fakeHost({
-	findReviewerPane: () => ({ status: "found", paneId: "existing" }),
+	findReviewerPane: (...args) => {
+		focusHost.calls.push(["find", ...args]);
+		return { status: "found", paneId: "existing" };
+	},
 });
 let focused = await openReviewerWithHost(focusHost, "/bin/reviewer", "j.md", "agent");
 assert.equal(focused.launched, false);
 assert.ok(focused.message.includes("Focused existing"));
-assert.deepEqual(focusHost.calls, [["focus", "existing", "agent"]]);
+assert.deepEqual(focusHost.calls, [
+	["find", "tab", "j.md", "agent"],
+	["focus", "existing", "agent"],
+]);
 
 // No existing pane → launch with deliver-to.
 const launchHost = fakeHost();

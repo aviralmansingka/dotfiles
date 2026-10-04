@@ -138,7 +138,7 @@ export function formatExplainEntry(details: ExplainDetails): string {
 	lines.push("");
 	if (details.answer?.trim()) {
 		lines.push(`> ${details.answer.trim().replace(/\n/g, "\n> ")}`);
-	} else {
+	} else if (details.status === "answered") {
 		lines.push("> _(no answer — honest \"I don't know\")_");
 	}
 	if (g) {

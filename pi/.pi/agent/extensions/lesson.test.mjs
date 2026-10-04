@@ -32,9 +32,20 @@ class Markdown {
 	render(width) { return this.text.split("\\n"); }
 	invalidate() {}
 }
-class Text { constructor(text) { this.text = text; } }
+class Text {
+	constructor(text) { this.text = text; }
+	render() { return this.text.split("\\n"); }
+	invalidate() {}
+}
+class Container {
+	constructor() { this.children = []; }
+	addChild(child) { this.children.push(child); }
+	render(width) { return this.children.flatMap((child) => child.render(width)); }
+	invalidate() { for (const child of this.children) child.invalidate(); }
+}
 exports.Markdown = Markdown;
 exports.Text = Text;
+exports.Container = Container;
 exports.Key = { enter: "\\r", escape: "\\x1b" };
 exports.matchesKey = (data, key) => data === key;
 exports.truncateToWidth = (text, width) => String(text).slice(0, width);
@@ -140,12 +151,20 @@ const read = await tool.execute(
 );
 assert.equal(read.details.status, "read");
 assert.equal(read.details.title, "Herdr states");
+assert.equal(read.details.journalPath, "/tmp/s/session-abc.md");
 assert.ok(read.content[0].text.includes("acknowledged"));
-// The result surfaces the journal path so the agent can link it for
-// herdr-annotate's markdown-file link handler.
 assert.ok(
 	read.content[0].text.includes("Journal: /tmp/s/session-abc.md"),
 	`result should mention the journal path: ${read.content[0].text}`,
+);
+const renderedResult = tool.renderResult(read, {}, {
+	fg: (_token, text) => text,
+});
+assert.ok(
+	renderedResult.render(120).some((line) =>
+		line.includes("[session-abc.md](file:///tmp/s/session-abc.md)"),
+	),
+	"visible result should contain a clickable journal link",
 );
 // The panel must mount as an overlay, not replace the transcript.
 assert.deepEqual(sawOverlayOptions, {

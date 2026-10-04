@@ -83,6 +83,18 @@ assert.ok(explainEntry.includes("> over the socket to herdr"));
 assert.ok(explainEntry.includes("pane.report_agent over the Unix socket"));
 assert.ok(explainEntry.includes("“over the socket”"));
 
+const emptyExplainEntry = formatExplainEntry({
+	status: "answered",
+	question: "What happens next?",
+});
+assert.ok(emptyExplainEntry.includes("honest \"I don't know\""));
+
+for (const status of ["cancelled", "unavailable"]) {
+	const incompleteEntry = formatExplainEntry({ status, question: "What happens next?" });
+	assert.ok(incompleteEntry.includes(`— ${status}`));
+	assert.ok(!incompleteEntry.includes("I don't know"));
+}
+
 // ── extension wiring ─────────────────────────────────────────────────────────
 
 const dir = mkdtempSync(join(tmpdir(), "md-log-"));

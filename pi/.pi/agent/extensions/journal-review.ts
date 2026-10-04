@@ -7,9 +7,9 @@ import { join } from "node:path";
 
 import {
 	isReviewerProcess,
+	manualReviewerCommand,
 	openReviewerWithHost,
 	reviewerPaneCommand,
-	shellQuote,
 } from "./journal-review-core.mjs";
 import { resolveJournalPath } from "./md-log";
 
@@ -85,7 +85,11 @@ function currentPane(): PaneInfo | null {
 	return response?.result?.pane ?? null;
 }
 
-function findReviewerPane(tabId: string): DetectionResult {
+function findReviewerPane(
+	tabId: string,
+	journalPath: string,
+	deliverToPaneId: string,
+): DetectionResult {
 	const response = commandJson("herdr", ["pane", "list"]) as
 		| { result?: { panes?: PaneInfo[] } }
 		| null;
@@ -105,7 +109,7 @@ function findReviewerPane(tabId: string): DetectionResult {
 			hadError = true;
 			continue;
 		}
-		if (processes.some(isReviewerProcess)) {
+		if (processes.some((process) => isReviewerProcess(process, journalPath, deliverToPaneId))) {
 			return { status: "found", paneId: pane.pane_id };
 		}
 	}
@@ -193,7 +197,7 @@ export async function openJournalReviewer(
 	const pane = currentPane();
 	if (!pane) {
 		return {
-			message: `Not inside Herdr. Run: ${binary} herdr open ${shellQuote(journal)}`,
+			message: `Not inside Herdr. Run: ${manualReviewerCommand(binary, journal)}`,
 			launched: false,
 		};
 	}
@@ -205,7 +209,7 @@ export async function openJournalReviewer(
 			focusPane,
 			launchPane,
 			manualCommand: (bin: string, jp: string, deliverTo: string) =>
-				`Could not open the reviewer automatically. Run: ${bin} herdr open ${shellQuote(jp)} --deliver-to ${shellQuote(deliverTo)}`,
+				`Could not open the reviewer automatically. Run: ${manualReviewerCommand(bin, jp, deliverTo)}`,
 		},
 		binary,
 		journal,
