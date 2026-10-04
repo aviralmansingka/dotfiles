@@ -110,6 +110,46 @@ const abortedResult = await tool.execute(
 );
 assert.equal(abortedResult.details.status, "cancelled");
 
+let releaseBlockingLesson;
+const blockingLesson = tool.execute(
+	"blocking",
+	{ title: "Blocking", body: "B" },
+	undefined,
+	undefined,
+	{
+		mode: "tui",
+		ui: {
+			custom: () => new Promise((resolve) => {
+				releaseBlockingLesson = resolve;
+			}),
+		},
+	},
+);
+await Promise.resolve();
+let queuedPanelMounted = false;
+const queuedAbort = new AbortController();
+const queuedLesson = tool.execute(
+	"queued",
+	{ title: "Queued", body: "B" },
+	queuedAbort.signal,
+	undefined,
+	{
+		mode: "tui",
+		ui: {
+			custom: () => {
+				queuedPanelMounted = true;
+				return Promise.resolve(true);
+			},
+		},
+	},
+);
+queuedAbort.abort();
+releaseBlockingLesson(true);
+await blockingLesson;
+const queuedResult = await queuedLesson;
+assert.equal(queuedResult.details.status, "cancelled");
+assert.equal(queuedPanelMounted, false, "an aborted queued lesson must not mount its panel");
+
 // Happy path: ui.custom resolves true → "read".
 let sawOverlayOptions = null;
 const ackCtx = {

@@ -527,6 +527,45 @@ assert.ok(
 	"expanding a lesson still renders its native result",
 );
 
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "text", text: "Previous lesson complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
+	},
+);
+const hiddenLessonToolCallId = "tc-hidden-lesson-link";
+controller.assistantUpdated(
+	{ hideThinkingBlock: true },
+	{
+		content: [
+			{ type: "text", text: "Presenting hidden-thinking lesson" },
+			{ type: "toolCall", id: hiddenLessonToolCallId, name: "lesson", arguments: { title: "States" } },
+		],
+		stopReason: "toolUse",
+	},
+);
+const hiddenLessonTool = {
+	toolName: "lesson",
+	toolCallId: hiddenLessonToolCallId,
+	rendererState: {},
+	executionStarted: true,
+	isPartial: false,
+	result: {
+		content: [{ type: "text", text: "Journal: /tmp/session-abc.md" }],
+		details: { status: "read", title: "States", journalPath: "/tmp/session-abc.md" },
+	},
+	resultRendererComponent: { render: () => ["Read — States", lessonLink] },
+};
+controller.toolUpdated(hiddenLessonTool);
+piHandlers.get("tool_execution_end")({ toolCallId: hiddenLessonToolCallId });
+const hiddenLessonOutput = controller.renderTool(hiddenLessonTool, 120).join("\n");
+assert.ok(
+	hiddenLessonOutput.includes("file:///tmp/session-abc.md"),
+	`hidden-thinking lesson results keep the journal hyperlink visible: ${JSON.stringify(hiddenLessonOutput)}`,
+);
+
 // 3. A finished assistant message with empty text and hidden thinking used
 //    to render nothing at all (the answer had leaked into the thinking block).
 const fallbackComponent = { hideThinkingBlock: true };

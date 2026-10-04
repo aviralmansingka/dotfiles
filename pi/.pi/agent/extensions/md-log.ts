@@ -153,22 +153,18 @@ export function formatExplainEntry(details: ExplainDetails): string {
 	return lines.join("\n");
 }
 
-interface JournalState {
-	path: string | undefined;
-}
-
-function appendEntry(state: JournalState, entry: string): void {
-	if (!state.path) return;
+function appendEntry(path: string | undefined, entry: string): void {
+	if (!path) return;
 	try {
-		if (!existsSync(state.path)) {
-			mkdirSync(dirname(state.path), { recursive: true });
+		if (!existsSync(path)) {
+			mkdirSync(dirname(path), { recursive: true });
 			writeFileSync(
-				state.path,
+				path,
 				`# Lesson journal\n\n_Created ${new Date().toISOString()}_\n\n`,
 				"utf-8",
 			);
 		}
-		appendFileSync(state.path, entry, "utf-8");
+		appendFileSync(path, entry, "utf-8");
 	} catch {
 		// The journal is an at-most-once convenience: never let a logging
 		// failure break the conversation.
@@ -176,34 +172,21 @@ function appendEntry(state: JournalState, entry: string): void {
 }
 
 export default function mdLog(pi: ExtensionAPI) {
-	const state: JournalState = { path: process.env.PI_LESSON_JOURNAL || undefined };
-
-	function refreshSessionPath(ctx: any): void {
-		if (state.path) return; // explicit override wins
-		state.path = resolveJournalPath(ctx);
-	}
-
-	pi.on("session_start", (_event, ctx) => {
-		refreshSessionPath(ctx);
-	});
-
 	pi.on("tool_execution_start", (event, ctx) => {
 		if (event.toolName !== "lesson") return;
-		refreshSessionPath(ctx);
 		const args = event.args as { title?: string; body?: string } | undefined;
 		if (!args?.title || !args.body) return;
-		appendEntry(state, formatLessonEntry(args.title, args.body));
+		appendEntry(resolveJournalPath(ctx), formatLessonEntry(args.title, args.body));
 	});
 
 	pi.on("tool_execution_end", (event, ctx) => {
 		if (!JOURNAL_TOOLS.has(event.toolName)) return;
-		refreshSessionPath(ctx);
 		const details = event.result?.details;
 		if (!details?.question) return;
 		const entry =
 			event.toolName === "quiz"
 				? formatQuizEntry(details as QuizDetails)
 				: formatExplainEntry(details as ExplainDetails);
-		appendEntry(state, entry);
+		appendEntry(resolveJournalPath(ctx), entry);
 	});
 }

@@ -110,12 +110,11 @@ export default function lesson(pi: ExtensionAPI) {
 
 		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
 			const journalPath = resolveJournalPath(ctx);
-			if (signal?.aborted) {
-				return {
-					content: [{ type: "text" as const, text: `Lesson "${params.title}" aborted before display.` }],
-					details: { status: "cancelled", title: params.title, journalPath } satisfies LessonResultDetails,
-				};
-			}
+			const cancelledResult = () => ({
+				content: [{ type: "text" as const, text: `Lesson "${params.title}" aborted before display.` }],
+				details: { status: "cancelled" as const, title: params.title, journalPath } satisfies LessonResultDetails,
+			});
+			if (signal?.aborted) return cancelledResult();
 			if (ctx.mode !== "tui") {
 				return {
 					content: [{ type: "text" as const, text: "lesson requires interactive TUI mode" }],
@@ -124,6 +123,7 @@ export default function lesson(pi: ExtensionAPI) {
 			}
 
 			return sharedUiLock.withLock(async () => {
+				if (signal?.aborted) return cancelledResult();
 				const acknowledged = await ctx.ui.custom<boolean | null>(
 					(tui: any, theme: any, _kb: any, done: (result: boolean | null) => void) => {
 						const markdown = new Markdown(params.body, 0, 0, getMarkdownTheme(), {

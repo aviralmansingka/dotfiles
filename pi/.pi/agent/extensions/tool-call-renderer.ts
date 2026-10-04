@@ -1770,6 +1770,21 @@ function renderPlainToolSupplement(component: any, width: number): string[] {
   return Array.isArray(lines) && lines.length > 1 ? [lines.at(-1)] : [];
 }
 
+function renderStepPlainToolSupplements(
+  step: WorkStep,
+  component: any,
+  state: RendererState,
+  width: number,
+): string[] {
+  return step.toolCalls.flatMap((call) =>
+    renderPlainToolSupplement(
+      state.toolComponents.get(call.id) ??
+        (call.id === component.toolCallId ? component : undefined),
+      width,
+    ),
+  );
+}
+
 function renderToolComponent(
   component: any,
   width: number,
@@ -1811,7 +1826,11 @@ function renderToolComponent(
   }
 
   if (connectedComponents.length > 0) {
-    if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
+    if (!step.thinkingVisible)
+      return [
+        ...renderCompactSummary(theme, step.run, width),
+        ...renderStepPlainToolSupplements(step, component, state, width),
+      ];
     // Prototype C: one `▹/▸/×` chip row per subagent, inline in the parent's
     // tool-call trace. The per-step `◇◆×` list (`renderConnectedParent`) is
     // retired in favor of these per-subagent lifecycle chips; ctrl+o unfolds
@@ -1822,7 +1841,11 @@ function renderToolComponent(
     ];
   }
 
-  if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
+  if (!step.thinkingVisible)
+    return [
+      ...renderCompactSummary(theme, step.run, width),
+      ...renderStepPlainToolSupplements(step, component, state, width),
+    ];
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
   if (!row) {
     row = new WorkStepRow(theme, step);
@@ -1831,13 +1854,7 @@ function renderToolComponent(
   }
   return [
     ...row.render(width),
-    ...step.toolCalls.flatMap((call) =>
-      renderPlainToolSupplement(
-        state.toolComponents.get(call.id) ??
-          (call.id === component.toolCallId ? component : undefined),
-        width,
-      ),
-    ),
+    ...renderStepPlainToolSupplements(step, component, state, width),
   ];
 }
 

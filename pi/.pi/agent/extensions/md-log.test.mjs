@@ -98,7 +98,7 @@ for (const status of ["cancelled", "unavailable"]) {
 // ── extension wiring ─────────────────────────────────────────────────────────
 
 const dir = mkdtempSync(join(tmpdir(), "md-log-"));
-const sessionFile = join(dir, "sub", "session-abc.jsonl");
+let sessionFile = join(dir, "sub", "session-abc.jsonl");
 
 const handlers = new Map();
 const pi = {
@@ -112,8 +112,9 @@ const ctx = {
 	sessionManager: { getSessionFile: () => sessionFile },
 };
 
+assert.equal(handlers.has("session_start"), false, "journal logging is event-only");
+
 // A lesson fires before its quiz — journal order must match conversation order.
-handlers.get("session_start")({}, ctx);
 handlers.get("tool_execution_start")(
 	{ toolName: "lesson", args: { title: "Priority ladder", body: "blocked > working > idle" } },
 	ctx,
@@ -181,6 +182,19 @@ assert.ok(
 	"entries must be appended in conversation order",
 );
 assert.ok(!contents.includes("bash"), "non-journal tools must not be logged");
+
+sessionFile = join(dir, "sub", "session-def.jsonl");
+handlers.get("tool_execution_start")(
+	{ toolName: "lesson", args: { title: "New session", body: "fresh journal" } },
+	ctx,
+);
+const nextJournal = journalPathFor(sessionFile);
+assert.ok(existsSync(nextJournal), "a changed session gets its own journal");
+assert.ok(readFileSync(nextJournal, "utf-8").includes("Lesson: New session"));
+assert.ok(
+	!readFileSync(journal, "utf-8").includes("Lesson: New session"),
+	"a changed session must not append to the previous journal",
+);
 
 // Without a session file and without PI_LESSON_JOURNAL, appends are no-ops.
 const noSessionHandlers = new Map();
