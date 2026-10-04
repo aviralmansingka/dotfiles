@@ -225,14 +225,6 @@ Pi config and shared skills are deployed with:
 stow pi agents
 ```
 
-Pi routes shell commands expected to run longer than a few seconds through `background_task`; quick commands such as
-`ls`, `rg`, and `git status` continue to use the regular shell tool. Background tasks use piped standard I/O rather
-than a terminal, so TUI applications are unsupported. When an unobserved task exits on its own, Pi resumes
-with its status and output tail.
-
-Use `/bg` to list tasks and recent output, `/bg <task-id>` to show a longer tail, or
-`/bg <task-id> <text>` to send a line to a waiting process.
-
 The shared `vault` skill supports explicit project and knowledge-base lookup, note summaries, project overviews, and
 Wayfinder overviews. It preserves the vault's Project → Theme → Feature → Task ontology without installing an
 execution workflow. Neovim's `<leader>vf` picker remains a read-only navigation surface for active vault work.
@@ -266,7 +258,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now whatsapp-bridge.service pi-whatsapp.service
 ```
 
-For Pi over Telegram, create a bot with `@BotFather`, copy `~/.config/pi-telegram.env.example` to `~/.config/pi-telegram.env`, fill in the bot token and allowed chat IDs, and set `PI_TELEGRAM_PREFIX=` if you want normal prefixless chat. Telegram replies default to `openai-codex/gpt-5.6-luna:high` via `PI_TELEGRAM_MODEL`, with `PI_FAST_MODE=1` selecting the priority service tier; `PI_TELEGRAM_TYPING_INTERVAL_SECONDS` controls the typing indicator refresh while Pi is generating. Photos/screenshots and image documents are downloaded and passed to Pi as image attachments; captions follow the existing prefix rules, while bare images are accepted. `PI_TELEGRAM_MAX_IMAGE_BYTES` (default 10 MiB) caps the accepted size. Then enable the user service:
+For Pi over Telegram, create a bot with `@BotFather`, copy `~/.config/pi-telegram.env.example` to `~/.config/pi-telegram.env`, fill in the bot token and allowed chat IDs, and set `PI_TELEGRAM_PREFIX=` if you want normal prefixless chat. Telegram replies default to `openai-codex/gpt-5.6-luna:high` via `PI_TELEGRAM_MODEL`; `PI_TELEGRAM_TYPING_INTERVAL_SECONDS` controls the typing indicator refresh while Pi is generating. Photos/screenshots and image documents are downloaded and passed to Pi as image attachments; captions follow the existing prefix rules, while bare images are accepted. `PI_TELEGRAM_MAX_IMAGE_BYTES` (default 10 MiB) caps the accepted size. Then enable the user service:
 
 ```sh
 systemctl --user daemon-reload

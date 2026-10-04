@@ -118,7 +118,6 @@ interface TokenSpeed {
 }
 
 const tokenSpeed: TokenSpeed = { startedAt: 0, exact: false };
-let fastModeEnabled = false;
 let requestPromptRender: (() => void) | undefined;
 
 function outputTokenEstimate(message: any): { tokens: number; exact: boolean } {
@@ -143,9 +142,8 @@ function updateTokenSpeed(message: any): void {
 }
 
 function tokenSpeedLabel(): string {
-	const bolt = fastModeEnabled ? "⚡ " : "";
-	if (tokenSpeed.rate == null) return `${bolt}-- tok/s`;
-	return `${bolt}${tokenSpeed.exact ? "" : "~"}${Math.max(1, Math.round(tokenSpeed.rate))} tok/s`;
+	if (tokenSpeed.rate == null) return "-- tok/s";
+	return `${tokenSpeed.exact ? "" : "~"}${Math.max(1, Math.round(tokenSpeed.rate))} tok/s`;
 }
 
 function computeUsage(entries: Iterable<{ type: string; message?: any; usage?: any }>): UsageTotals {
@@ -178,10 +176,6 @@ function computeUsage(entries: Iterable<{ type: string; message?: any; usage?: a
 }
 
 export default function (pi: ExtensionAPI) {
-	pi.events.on("fast-mode:changed", (data: unknown) => {
-		fastModeEnabled = !!(data as { enabled?: boolean } | undefined)?.enabled;
-		requestPromptRender?.();
-	});
 
 	pi.on("message_start", (event) => {
 		if (event.message.role !== "assistant") return;
