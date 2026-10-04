@@ -10,13 +10,9 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, isAbsolute, resolve } from "node:path";
 import { openEditor } from "./nvim-open";
-import { QUESTION_PANEL_OVERLAY } from "./question-overlay";
-import { handoutModelOptions } from "./quiz-handout";
-import { contextFileHint, handoutHint, normalizeContextFiles } from "./user-input/context-files";
+import { openJournalInEditor } from "./md-log";
+import { contextFileHint, lessonFileHint, normalizeContextFiles } from "./user-input/context-files";
 import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
 import {
 	joinHints,
@@ -161,185 +157,18 @@ async function openContextFiles(ctx: any, files: string[]): Promise<void> {
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// `h` handout — LLM-generated teaching handout for the active quiz.
+// `h` lesson file — opens the session's lesson journal in the editor.
 //
-// Pressing `h` mid-quiz in Answer mode generates a deeper explanation of
-// the quiz's core concepts via ctx.modelRegistry.complete (the same grader
-// fork pattern explain.ts uses), writes it to ~/.cache/pi/quiz-handout.md,
-// and opens that file in vim. The quiz itself stays active and ungraded —
-// this is the captain's explicit choice to read more, never an answer leak.
-// On model-unavailable or call failure we notify and keep the quiz running.
+// Pressing `h` mid-quiz in Answer mode opens the per-session lesson journal
+// (<session>.md, maintained by md-log) in the user's editor pane. The quiz
+// itself stays active and ungraded. Fire-and-forget: never throws into the
+// quiz, no LLM call, no waiting.
 // ────────────────────────────────────────────────────────────────────────
-
-const HANDOUT_SYSTEM_PROMPT = `You are a patient technical teacher. The user is taking a short multiple-choice quiz and has asked for a HANDOUT that explains the quiz's core concepts in more depth than the quiz's own one-line explanation.
-
-Write a teaching handout in clean Markdown. Cover:
-- The core concept(s) the question is testing, explained from first principles.
-- Why the correct answer is correct — name the precise mechanism or terminology.
-- For each distractor, why it is plausible-but-wrong: the specific misconception it trades on, and how it differs from the correct answer.
-- A short worked example or analogy if it clarifies the mechanism.
-- A one-line takeaway the reader should remember.
-
-Rules:
-- Be concrete and precise. Use the exact terminology the correct answer relies on.
-- Go deeper than the quiz's explanation field — that field is a one-liner; this is the handout.
-- Output ONLY Markdown. No preamble like "Here is the handout:". Start with a top-level # heading.
-- Do not reveal which option number was correct by position; refer to answers by their labels.`;
-
-// Prefer a fast, cheap model for handout generation (mirrors explain.ts's
-// pickGraderModel). Override with PI_QUIZ_HANDOUT_MODEL="provider/model-id".
-function pickHandoutModel(ctx: any): any {
-	const override = process.env.PI_QUIZ_HANDOUT_MODEL;
-	if (override) {
-		const slash = override.indexOf("/");
-		const m = slash > 0 ? ctx.modelRegistry.find(override.slice(0, slash), override.slice(slash + 1)) : undefined;
-		if (m) return m;
-	}
-	for (const [provider, id] of [
-		["fireworks", "accounts/fireworks/routers/glm-5p2-fast"],
-		["fireworks", "accounts/fireworks/models/glm-5p3-flash"],
-		["fireworks", "glm-fast-latest"],
-		["anthropic", "claude-haiku-4-5"],
-		["openai", "gpt-4o-mini"],
-		["google", "gemini-2.5-flash"],
-		["fireworks", "deepseek-v4-flash-0731"],
-	] as const) {
-		const m = ctx.modelRegistry.find(provider, id);
-		if (m && (!ctx.modelRegistry.hasConfiguredAuth || ctx.modelRegistry.hasConfiguredAuth(m))) return m;
-	}
-	return ctx.model;
-}
-
-function handoutPath(): string {
-	const cache = process.env.PI_QUIZ_HANDOUT_PATH;
-	if (cache) return cache;
-	return resolve(homedir(), ".cache/pi/quiz-handout.md");
-}
-
-function buildHandoutPrompt(
-	question: string,
-	context: string | undefined,
-	options: QuizOption[],
-	correctIndices: number[],
-	explanation: string | undefined,
-	contextFileContents: Array<{ path: string; content: string }>,
-): string {
-	const lines: string[] = [];
-	lines.push(`Quiz question:`);
-	lines.push(question);
-	if (context) {
-		lines.push("");
-		lines.push(`Extra context shown to the learner:`);
-		lines.push(context);
-	}
-	lines.push("");
-	lines.push(`Answer options (label + description):`);
-	for (let i = 0; i < options.length; i++) {
-		const opt = options[i];
-		const desc = opt.description ? ` — ${opt.description}` : "";
-		lines.push(`- ${opt.label}${desc}`);
-	}
-	lines.push("");
-	const correctLabels = correctIndices.map((idx) => options[idx - 1]?.label ?? `(option ${idx})`);
-	lines.push(`Correct answer label(s): ${correctLabels.join(", ")}`);
-	if (explanation) {
-		lines.push("");
-		lines.push(`Quiz's own one-line explanation (go deeper than this in the handout):`);
-		lines.push(explanation);
-	}
-	if (contextFileContents.length > 0) {
-		lines.push("");
-		lines.push(`Reference material (from the quiz's context files) — use as grounding:`);
-		for (const ref of contextFileContents) {
-			lines.push("");
-			lines.push(`### ${ref.path}`);
-			lines.push(ref.content);
-		}
-	}
-	return lines.join("\n");
-}
-
-async function generateHandout(
-	ctx: any,
-	signal: AbortSignal | undefined,
-	question: string,
-	context: string | undefined,
-	options: QuizOption[],
-	correctIndices: number[],
-	explanation: string | undefined,
-	contextFiles: string[],
-): Promise<{ message: string }> {
-	if (!ctx?.modelRegistry?.complete) {
-		return { message: "handout unavailable: no model registry" };
-	}
-	const model = pickHandoutModel(ctx);
-	if (!model) {
-		return { message: "handout unavailable: no model" };
-	}
-
-	const cwd = ctx?.cwd ?? process.cwd();
-	const contextFileContents: Array<{ path: string; content: string }> = [];
-	for (const file of contextFiles) {
-		const abs = isAbsolute(file) ? file : resolve(cwd, file);
-		try {
-			const content = readFileSync(abs, "utf-8");
-			contextFileContents.push({ path: file, content });
-		} catch {
-			// best-effort: skip unreadable context files
-		}
-	}
-
-	const prompt = buildHandoutPrompt(question, context, options, correctIndices, explanation, contextFileContents);
-	let raw: string;
-	try {
-		const response = await ctx.modelRegistry.complete(
-			model,
-			{
-				systemPrompt: HANDOUT_SYSTEM_PROMPT,
-				messages: [{ role: "user", content: prompt, timestamp: Date.now() } as any],
-			},
-			handoutModelOptions(signal),
-		);
-		raw = response.content
-			.filter((c: any) => c.type === "text")
-			.map((c: any) => c.text)
-			.join("\n");
-	} catch (err: any) {
-		if (signal?.aborted) return { message: "handout generation aborted" };
-		return { message: `handout generation failed: ${err?.message ?? String(err)}` };
-	}
-	if (!raw.trim()) {
-		return { message: "handout generation failed: model returned empty output" };
-	}
-
-	const path = handoutPath();
-	try {
-		mkdirSync(dirname(path), { recursive: true });
-		writeFileSync(path, raw, "utf-8");
-	} catch (err: any) {
-		return { message: `handout write failed: ${err?.message ?? String(err)}` };
-	}
-
-	const result = await openEditor(cwd, [path]);
-	return { message: `handout generated and opened in vim (${path}); ${result.message}` };
-}
-
-// Fire-and-forget wrapper used by the `h` keypress: shows a working notify,
-// runs the generation, and notifies the outcome. Never throws into the quiz.
-function requestHandout(
-	ctx: any,
-	signal: AbortSignal | undefined,
-	question: string,
-	context: string | undefined,
-	options: QuizOption[],
-	correctIndices: number[],
-	explanation: string | undefined,
-	contextFiles: string[],
-): void {
-	ctx?.ui?.notify?.("Generating handout…", "info");
-	void generateHandout(ctx, signal, question, context, options, correctIndices, explanation, contextFiles)
-		.then((res) => ctx?.ui?.notify?.(res.message, res.message.startsWith("handout generated") ? "info" : "warning"))
-		.catch((err) => ctx?.ui?.notify?.(`handout generation failed: ${err?.message ?? String(err)}`, "warning"));
+function openLessonFileShortcut(ctx: any): void {
+	ctx?.ui?.notify?.("Opening lesson file…", "info");
+	void openJournalInEditor(ctx)
+		.then((res) => ctx?.ui?.notify?.(res.message, "info"))
+		.catch((err) => ctx?.ui?.notify?.(`lesson file open failed: ${err?.message ?? String(err)}`, "warning"));
 }
 
 // Fisher-Yates shuffle over a copy. Safe to reorder for display because
@@ -802,7 +631,7 @@ async function askSingleChoice(
 				}
 
 				if (matchesKey(data, "h")) {
-					requestHandout(ctx, signal, question, context, options, correctIndices, explanation, contextFiles);
+					openLessonFileShortcut(ctx);
 					return;
 				}
 
@@ -899,7 +728,7 @@ async function askSingleChoice(
 				addWrapped(
 					top,
 					theme.fg("dim", mode === "answer"
-						? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(allOptions.length, "select"), "Enter feedback", "Tab steering", contextFileHint(contextFiles), handoutHint(), "Esc cancel")
+						? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(allOptions.length, "select"), "Enter feedback", "Tab steering", contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
 						: joinHints(modeIndicator(theme, mode), "type guidance", "Enter send", "Tab answer", "Esc answer")),
 					tw,
 					" ",
@@ -927,7 +756,7 @@ async function askSingleChoice(
 				},
 				handleInput,
 			};
-		}, QUESTION_PANEL_OVERLAY
+		}
 	);
 }
 
@@ -1053,7 +882,7 @@ async function askMultiChoice(
 				}
 
 				if (matchesKey(data, "h")) {
-					requestHandout(ctx, signal, question, context, options, correctIndices, explanation, contextFiles);
+					openLessonFileShortcut(ctx);
 					return;
 				}
 
@@ -1153,7 +982,7 @@ async function askMultiChoice(
 				addWrapped(
 					top,
 					theme.fg("dim", mode === "answer"
-						? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter feedback", "Tab steering", contextFileHint(contextFiles), handoutHint(), "Esc cancel")
+						? joinHints(modeIndicator(theme, mode), "Ctrl+P pause", NAVIGATION_HINT, numberShortcutHint(choiceItems.length, "toggle"), "Space toggle", "Enter feedback", "Tab steering", contextFileHint(contextFiles), lessonFileHint(), "Esc cancel")
 						: joinHints(modeIndicator(theme, mode), "type guidance", "Enter send", "Tab answer", "Esc answer")),
 					tw,
 					" ",
@@ -1181,7 +1010,7 @@ async function askMultiChoice(
 				},
 				handleInput,
 			};
-		}, QUESTION_PANEL_OVERLAY
+		}
 	);
 }
 
@@ -1239,7 +1068,7 @@ export default function quiz(pi: ExtensionAPI) {
 			"Set multiSelect: true only when more than one option is correct.",
 			"Options are shuffled before display by default, so don't worry about which position you list the correct answer in. Set shuffle: false only when option order is meaningful (ordered values, or an 'All/None of the above' option that must stay last).",
 			"When a quiz needs file context, pass `contextFiles: [\"path/to/file\"]`; the user can press `o` to open those files in vim while the quiz stays active.",
-			"Mid-quiz, the user can press `h` to generate an LLM-written teaching handout that explains the quiz's core concepts in more depth than the `explanation` field, and open it in vim; the quiz stays active and ungraded. This is the user's choice and never leaks the answer before they answer.",
+			"Mid-quiz, the user can press `h` to open the session's lesson journal (<session>.md, where every lesson and quiz verdict is recorded by md-log) in their editor pane; the quiz stays active and ungraded.",
 			"To probe nuance, ask several quick quiz questions and adapt each one based on the previous answers, rather than writing one giant question.",
 			"Don't leak the answer through formatting: keep option phrasing/length even and don't hint which is correct.",
 		],

@@ -8,7 +8,12 @@ const {
 	createJiti,
 } = require(_jitiCjs);
 const jiti = createJiti(import.meta.url);
-const { contextFileHint, normalizeContextFiles } = jiti("./user-input/context-files.ts");
+const { contextFileHint, lessonFileHint, normalizeContextFiles } = jiti("./user-input/context-files.ts");
+
+// The `h` shortcut now opens the session lesson journal — always available,
+// unconditional hint, stable string.
+assert.equal(lessonFileHint(), "h lesson file");
+assert.equal(lessonFileHint(), lessonFileHint());
 
 const h100SmokeFiles = [
 	"/Users/aviral/.treehouse/vault-278260/2/vault/professor-lessons/h100-matmul-modal/bench_core.py",

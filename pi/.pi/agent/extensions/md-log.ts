@@ -2,6 +2,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 
+import { openEditor } from "./nvim-open";
+
 // ────────────────────────────────────────────────────────────────────────────
 // md-log — a per-session markdown journal of lessons and graded questions.
 //
@@ -169,6 +171,32 @@ function appendEntry(path: string | undefined, entry: string): void {
 		// The journal is an at-most-once convenience: never let a logging
 		// failure break the conversation.
 	}
+}
+
+/**
+ * Open the session's lesson journal in the user's editor pane (existing pane
+ * if one is open, else a split). Non-blocking: resolves as soon as the file
+ * is sent, never waits for the user to finish reading. Shared by the lesson
+ * tool and the quiz `h` shortcut.
+ */
+export async function openJournalInEditor(
+	ctx: any,
+): Promise<{ message: string; launched: boolean }> {
+	const journalPath = resolveJournalPath(ctx);
+	if (!journalPath) {
+		return { message: "No lesson journal for this session", launched: false };
+	}
+	if (!existsSync(journalPath)) {
+		return {
+			message: `Lesson journal not written yet (${journalPath})`,
+			launched: false,
+		};
+	}
+	const result = await openEditor(ctx?.cwd ?? process.cwd(), [journalPath]);
+	return {
+		message: `${result.message} — lesson journal ${journalPath}`,
+		launched: result.launched,
+	};
 }
 
 export default function mdLog(pi: ExtensionAPI) {

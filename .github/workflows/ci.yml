@@ -95,7 +95,6 @@ jobs:
           node pi/.pi/agent/extensions/lesson.test.mjs
           node pi/.pi/agent/extensions/md-log.test.mjs
           node pi/.pi/agent/extensions/quiz-context-files.test.mjs
-          node pi/.pi/agent/extensions/quiz-handout.test.mjs
           node pi/.pi/agent/extensions/run-command.test.mjs
           node pi/.pi/agent/extensions/user-input/input-modes.test.mjs
           node pi/.pi/agent/extensions/user-input/option-navigation.test.mjs
