@@ -20,3 +20,8 @@ export const QUESTION_PANEL_OVERLAY = {
 		width: "100%",
 	} satisfies OverlayOptions,
 } as const;
+
+// This module lives in ~/.pi/agent/extensions/, where pi auto-loads every
+// file as an extension. It is a shared constant, not an extension, so
+// export a no-op factory to satisfy the extension loader.
+export default function () {}

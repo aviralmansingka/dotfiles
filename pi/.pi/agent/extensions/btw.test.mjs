@@ -10,7 +10,7 @@ const jitiPath = [
 	process.env.JITI_PATH,
 	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
 	"/home/avirus/.pi/agent/npm/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.local/share/mise/installs/npm-earendil-works-pi-coding-agent/0.85.0/node_modules/.mise/jiti@2.7.0/node_modules/jiti/lib/jiti.cjs",
+	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
 ].find((path) => path && existsSync(path));
 if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
 

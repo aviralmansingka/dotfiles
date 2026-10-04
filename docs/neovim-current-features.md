@@ -426,7 +426,10 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
   the [extension README](../pi/.pi/agent/extensions/interactive-subagents/README.md#how-it-works) for the authoritative
   tool, agent, launch, naming, and fallback behavior.
 - On the captain's host pi runs under Herdr; tmux remains available as a fallback.
-- Extension deps are pi-runtime peer packages (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`, `@earendil-works/pi-ai`); no global npm installs and no runtime npm install is needed. `interactive-subagents.test.mjs` smoke-loads the surface dispatcher and Herdr detection.
+- Extension deps are pi-runtime peer packages (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`,
+  `@earendil-works/pi-ai`); they need no separate installation beyond the Pi CLI setup in the
+  [README](../README.md#pi-agent). `interactive-subagents.test.mjs` smoke-loads the surface dispatcher and Herdr
+  detection.
 
 ## Notetaking features
 

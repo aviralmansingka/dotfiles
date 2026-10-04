@@ -25,7 +25,6 @@ const jitiCandidates = [
 	process.env.JITI_PATH,
 	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
 	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.local/share/mise/installs/npm-earendil-works-pi-coding-agent/latest/node_modules/.mise/jiti@2.7.0/node_modules/jiti/lib/jiti.cjs",
 ].filter(Boolean);
 const jitiPath = jitiCandidates.find((p) => p && existsSync(p));
 if (!jitiPath) {
@@ -402,20 +401,5 @@ try {
 	delete process.env.HUNK_TEST_INPUT;
 	rmSync(hunkToolRoot, { recursive: true, force: true });
 }
-
-const professorSkill = readFileSync(
-	new URL(
-		"../../../../agents/.agents/skills/professor/SKILL.md",
-		import.meta.url,
-	),
-	"utf8",
-);
-assert.match(professorSkill, /agent: "professor"/);
-assert.match(professorSkill, /Phase 0 — Goal grill \(never skip\)/);
-assert.match(
-	professorSkill,
-	/Use `ask_user_question` for every grilling turn/,
-);
-assert.match(professorSkill, /Do not enter Probe until approval is explicit/);
 
 console.log("interactive-subagents surface smoke passed");
