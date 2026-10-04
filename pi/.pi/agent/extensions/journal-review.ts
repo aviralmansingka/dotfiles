@@ -6,10 +6,11 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
-	isReviewerProcess,
+	isReviewerPane,
 	manualReviewerCommand,
 	openReviewerWithHost,
-	reviewerPaneCommand,
+	reviewerPaneTitle,
+	reviewerPluginPaneArgs,
 } from "./journal-review-core.mjs";
 import { resolveJournalPath } from "./md-log";
 
@@ -36,6 +37,9 @@ interface PaneInfo {
 	tab_id: string;
 	cwd: string;
 	foreground_cwd?: string;
+	label?: string;
+	title?: string;
+	terminal_title_stripped?: string;
 }
 
 interface ProcessEntry {
@@ -109,34 +113,15 @@ function findReviewerPane(
 			hadError = true;
 			continue;
 		}
-		if (processes.some((process) => isReviewerProcess(process, journalPath, deliverToPaneId))) {
+		if (isReviewerPane(pane, processes, journalPath, deliverToPaneId)) {
 			return { status: "found", paneId: pane.pane_id };
 		}
 	}
 	return hadError ? { status: "error" } : { status: "absent" };
 }
 
-function focusPane(targetPaneId: string, currentPaneId: string): boolean {
-	for (const direction of ["right", "down", "left", "up"] as const) {
-		const response = commandJson("herdr", [
-			"pane",
-			"neighbor",
-			"--pane",
-			currentPaneId,
-			"--direction",
-			direction,
-		]) as { result?: { neighbor?: { pane_id?: string } } } | null;
-		if (response?.result?.neighbor?.pane_id === targetPaneId) {
-			return commandOk("herdr", [
-				"pane",
-				"focus",
-				"--current",
-				"--direction",
-				direction,
-			]);
-		}
-	}
-	return false;
+function focusPane(targetPaneId: string, _currentPaneId: string): boolean {
+	return commandOk("herdr", ["plugin", "pane", "focus", targetPaneId]);
 }
 
 function reviewerBinary(): string {
@@ -145,33 +130,31 @@ function reviewerBinary(): string {
 }
 
 function launchPane(
-	binaryPath: string,
+	_binaryPath: string,
 	journalPath: string,
 	deliverToPaneId: string,
 ): string | null {
-	const split = commandJson("herdr", [
+	const response = commandJson(
+		"herdr",
+		reviewerPluginPaneArgs(journalPath, deliverToPaneId),
+	) as {
+		result?: {
+			pane?: { pane_id?: string };
+			plugin_pane?: { pane_id?: string };
+			pane_id?: string;
+		};
+	} | null;
+	const paneId = response?.result?.pane?.pane_id
+		?? response?.result?.plugin_pane?.pane_id
+		?? response?.result?.pane_id;
+	if (!paneId) return null;
+	commandOk("herdr", [
 		"pane",
-		"split",
-		"--current",
-		"--direction",
-		"right",
-		"--focus",
-	]) as { result?: { pane?: { pane_id?: string } } } | null;
-	const paneId = split?.result?.pane?.pane_id;
-	if (
-		paneId &&
-		commandOk("herdr", [
-			"pane",
-			"run",
-			paneId,
-			reviewerPaneCommand(paneId, binaryPath, journalPath, deliverToPaneId),
-		])
-	) {
-		commandOk("herdr", ["pane", "rename", paneId, "annotate"]);
-		return paneId;
-	}
-	if (paneId) commandOk("herdr", ["pane", "close", paneId]);
-	return null;
+		"rename",
+		paneId,
+		reviewerPaneTitle(journalPath, deliverToPaneId),
+	]);
+	return paneId;
 }
 
 export async function openJournalReviewer(

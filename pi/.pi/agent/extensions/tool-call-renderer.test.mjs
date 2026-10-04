@@ -478,6 +478,55 @@ assert.ok(
 	"the live plain tool hides native result output after collapse",
 );
 
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "text", text: "Previous output complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
+	},
+);
+const lessonToolCallId = "tc-lesson-link";
+const lessonAssistant = new ChunkAssistant({
+	content: [
+		{ type: "text", text: "Presenting lesson" },
+		{ type: "toolCall", id: lessonToolCallId, name: "lesson", arguments: { title: "States" } },
+	],
+	stopReason: "toolUse",
+}, false);
+assert.deepEqual(lessonAssistant.render(120), []);
+const lessonLink = "\x1b]8;;file:///tmp/session-abc.md\x07session-abc.md\x1b]8;;\x07";
+const nativeLessonTool = new ChunkTool(
+	"lesson",
+	lessonToolCallId,
+	{ title: "States" },
+	{},
+	{
+		name: "lesson",
+		renderCall: () => new Text("lesson States", 0, 0),
+		renderResult: () => new Text(`Read — States\n${lessonLink}`, 0, 0),
+	},
+	{ requestRender() {} },
+	process.cwd(),
+);
+nativeLessonTool.markExecutionStarted();
+nativeLessonTool.setArgsComplete();
+nativeLessonTool.updateResult({
+	content: [{ type: "text", text: "Journal: /tmp/session-abc.md" }],
+	details: { status: "read", title: "States", journalPath: "/tmp/session-abc.md" },
+}, false);
+piHandlers.get("tool_execution_end")({ toolCallId: lessonToolCallId });
+const collapsedLessonOutput = nativeLessonTool.render(120).join("\n");
+assert.ok(
+	collapsedLessonOutput.includes("file:///tmp/session-abc.md"),
+	`collapsed lesson results keep the journal hyperlink visible: ${JSON.stringify(collapsedLessonOutput)}`,
+);
+nativeLessonTool.setExpanded(true);
+assert.ok(
+	nativeLessonTool.render(120).join("\n").includes("Read — States"),
+	"expanding a lesson still renders its native result",
+);
+
 // 3. A finished assistant message with empty text and hidden thinking used
 //    to render nothing at all (the answer had leaked into the thinking block).
 const fallbackComponent = { hideThinkingBlock: true };

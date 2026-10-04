@@ -3,24 +3,44 @@
 // to the requesting agent pane (--deliver-to). Mirrors hunk-open-core.mjs so
 // both share the focus-or-launch pane pattern.
 
+import { createHash } from "node:crypto";
+import { dirname } from "node:path";
+
 export function shellQuote(value) {
 	return `'${String(value).replaceAll("'", "'\\''")}'`;
 }
 
-export function reviewerPaneCommand(paneId, binaryPath, journalPath, deliverToPaneId) {
-	// Herdr runs one shell command in the new pane; quote each value, and
-	// close that exact pane when the reviewer exits.
-	const parts = [
-		binaryPath,
-		"herdr",
+export function reviewerPaneTitle(journalPath, deliverToPaneId) {
+	const identity = createHash("sha256")
+		.update(`${journalPath}\0${deliverToPaneId}`)
+		.digest("hex")
+		.slice(0, 12);
+	return `annotate:${identity}`;
+}
+
+export function reviewerPluginPaneArgs(journalPath, deliverToPaneId) {
+	return [
+		"plugin",
+		"pane",
 		"open",
-		journalPath,
+		"--plugin",
+		"annotate-review",
+		"--entrypoint",
+		"doc",
 		"--placement",
 		"split",
-		"--deliver-to",
+		"--target-pane",
 		deliverToPaneId,
-	].map(shellQuote);
-	return `${parts.join(" ")}; herdr pane close ${shellQuote(paneId)}`;
+		"--direction",
+		"right",
+		"--cwd",
+		dirname(journalPath),
+		"--env",
+		`PLANNOTATOR_TUI_FILE=${journalPath}`,
+		"--env",
+		`PLANNOTATOR_TUI_DELIVER_TO=${deliverToPaneId}`,
+		"--focus",
+	];
 }
 
 export function manualReviewerCommand(binaryPath, journalPath, deliverToPaneId) {
@@ -29,17 +49,21 @@ export function manualReviewerCommand(binaryPath, journalPath, deliverToPaneId) 
 	return parts.map(shellQuote).join(" ");
 }
 
-export function isReviewerProcess(process, journalPath, deliverToPaneId) {
+export function isReviewerProcess(process) {
 	const argv = process.argv ?? [];
 	const executable = argv[0]?.split(/[\\/]/).at(-1);
-	const deliverToIndex = argv.indexOf("--deliver-to");
 	return (
 		(process.name === "plannotator-tui" || executable === "plannotator-tui") &&
 		argv[1] === "herdr" &&
-		argv[2] === "open" &&
-		argv[3] === journalPath &&
-		deliverToIndex >= 0 &&
-		argv[deliverToIndex + 1] === deliverToPaneId
+		argv[2] === "pane"
+	);
+}
+
+export function isReviewerPane(pane, processes, journalPath, deliverToPaneId) {
+	const expectedTitle = reviewerPaneTitle(journalPath, deliverToPaneId);
+	return (
+		[pane.label, pane.title, pane.terminal_title_stripped].includes(expectedTitle) &&
+		processes.some(isReviewerProcess)
 	);
 }
 

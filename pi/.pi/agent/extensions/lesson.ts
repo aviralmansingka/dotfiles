@@ -46,7 +46,7 @@ const LessonParams = Type.Object({
 	}),
 });
 
-type LessonStatus = "read" | "cancelled";
+type LessonStatus = "read" | "cancelled" | "unavailable";
 
 interface LessonResultDetails {
 	status: LessonStatus;
@@ -116,59 +116,85 @@ export default function lesson(pi: ExtensionAPI) {
 					details: { status: "cancelled", title: params.title, journalPath } satisfies LessonResultDetails,
 				};
 			}
-			if (!ctx.hasUI) {
+			if (ctx.mode !== "tui") {
 				return {
-					content: [{ type: "text" as const, text: "lesson requires interactive mode UI" }],
-					details: { status: "cancelled", title: params.title, journalPath } satisfies LessonResultDetails,
+					content: [{ type: "text" as const, text: "lesson requires interactive TUI mode" }],
+					details: { status: "unavailable", title: params.title, journalPath } satisfies LessonResultDetails,
 				};
 			}
 
 			return sharedUiLock.withLock(async () => {
 				const acknowledged = await ctx.ui.custom<boolean | null>(
 					(tui: any, theme: any, _kb: any, done: (result: boolean | null) => void) => {
-						// Rendered once; Markdown caches by width, and the text
-						// never changes during the interaction.
 						const markdown = new Markdown(params.body, 0, 0, getMarkdownTheme(), {
 							color: (text: string) => theme.fg("text", text),
 						});
+						let scrollTop = 0;
+						let pageSize = 1;
+						let bodyLineCount = 0;
+
+						const scrollBy = (delta: number) => {
+							const next = Math.max(0, Math.min(scrollTop + delta, Math.max(0, bodyLineCount - pageSize)));
+							if (next === scrollTop) return;
+							scrollTop = next;
+							tui.requestRender();
+						};
 
 						return {
 							render(width: number): string[] {
 								const cw = Math.max(8, width - 6);
-								const top: string[] = [];
-								top.push(
+								const bodyLines = markdown.render(cw);
+								bodyLineCount = bodyLines.length;
+								pageSize = Math.max(1, Math.floor(tui.terminal.rows * 0.9) - 6);
+								scrollTop = Math.min(scrollTop, Math.max(0, bodyLineCount - pageSize));
+								const visibleBody = bodyLines.slice(scrollTop, scrollTop + pageSize);
+								const position = bodyLineCount > pageSize
+									? ` · ${scrollTop + 1}-${scrollTop + visibleBody.length}/${bodyLineCount}`
+									: "";
+								const top = [
 									truncateToWidth(
 										theme.fg("toolTitle", theme.bold(` lesson · ${params.title}`)),
 										cw,
 									),
-								);
-								top.push("");
-								for (const line of markdown.render(cw)) top.push(line);
-								top.push("");
-								top.push(
+									"",
+									...visibleBody,
+									"",
 									truncateToWidth(
-										theme.fg("dim", " Enter — continue · Esc — cancel"),
+										theme.fg("dim", ` ↑↓/j/k · PgUp/PgDn${position} · Enter — continue · Esc — cancel`),
 										cw,
 									),
-								);
+								];
 								return frameBox(top, width, theme);
 							},
-							invalidate: () => {
-								markdown.invalidate();
-							},
+							invalidate: () => markdown.invalidate(),
 							handleInput(data: string) {
 								if (matchesKey(data, Key.enter)) {
 									done(true);
-									return;
-								}
-								if (matchesKey(data, Key.escape)) {
+								} else if (matchesKey(data, Key.escape)) {
 									done(null);
-									return;
+								} else if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
+									scrollBy(-1);
+								} else if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
+									scrollBy(1);
+								} else if (matchesKey(data, Key.pageUp)) {
+									scrollBy(-pageSize);
+								} else if (matchesKey(data, Key.pageDown)) {
+									scrollBy(pageSize);
+								} else if (matchesKey(data, Key.home)) {
+									scrollBy(-bodyLineCount);
+								} else if (matchesKey(data, Key.end)) {
+									scrollBy(bodyLineCount);
 								}
 							},
 						};
 					},
-					QUESTION_PANEL_OVERLAY,
+					{
+						...QUESTION_PANEL_OVERLAY,
+						overlayOptions: {
+							...QUESTION_PANEL_OVERLAY.overlayOptions,
+							maxHeight: "90%",
+						},
+					},
 				);
 
 				const status: LessonStatus = acknowledged === true ? "read" : "cancelled";
@@ -202,9 +228,10 @@ export default function lesson(pi: ExtensionAPI) {
 				const first = result.content[0];
 				return new Text(first?.type === "text" ? first.text : "", 0, 0);
 			}
-			const text =
-				details.status === "read"
-					? theme.fg("success", `Read — ${details.title}`)
+			const text = details.status === "read"
+				? theme.fg("success", `Read — ${details.title}`)
+				: details.status === "unavailable"
+					? theme.fg("warning", `Unavailable — ${details.title}`)
 					: theme.fg("warning", `Skipped — ${details.title}`);
 			if (!details.journalPath) return new Text(text, 0, 0);
 			const label = basename(details.journalPath).replace(/[\\[\]`*_]/g, "\\$&");

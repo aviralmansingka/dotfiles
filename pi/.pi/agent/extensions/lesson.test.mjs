@@ -46,7 +46,7 @@ class Container {
 exports.Markdown = Markdown;
 exports.Text = Text;
 exports.Container = Container;
-exports.Key = { enter: "\\r", escape: "\\x1b" };
+exports.Key = { enter: "\\r", escape: "\\x1b", up: "up", down: "down", pageUp: "pageUp", pageDown: "pageDown", home: "home", end: "end" };
 exports.matchesKey = (data, key) => data === key;
 exports.truncateToWidth = (text, width) => String(text).slice(0, width);
 exports.visibleWidth = (text) => String(text).length;
@@ -87,15 +87,15 @@ assert.ok(
 	"lesson must install the shared __piSharedUiLock mutex",
 );
 
-// No UI → cancelled, not a crash.
+// RPC advertises UI but cannot mount terminal custom components.
 const noUi = await tool.execute(
 	"id",
 	{ title: "T", body: "B" },
 	undefined,
 	undefined,
-	{ hasUI: false },
+	{ mode: "rpc", hasUI: true },
 );
-assert.equal(noUi.details.status, "cancelled");
+assert.equal(noUi.details.status, "unavailable");
 assert.equal(noUi.details.title, "T");
 
 // Aborted before display → cancelled.
@@ -106,28 +106,24 @@ const abortedResult = await tool.execute(
 	{ title: "T", body: "B" },
 	aborted.signal,
 	undefined,
-	{ hasUI: true },
+	{ mode: "tui", hasUI: true },
 );
 assert.equal(abortedResult.details.status, "cancelled");
 
 // Happy path: ui.custom resolves true → "read".
 let sawOverlayOptions = null;
 const ackCtx = {
+	mode: "tui",
 	hasUI: true,
 	ui: {
 		custom(factory, options) {
 			sawOverlayOptions = options;
-			// Drive the component factory once so render/handleInput are exercised.
+			const tui = { terminal: { rows: 12 }, requestRender() {} };
 			const theme = {
 				fg: (_token, text) => text,
 				bold: (t) => t,
 			};
-			const component = factory(
-				{ requestRender() {} },
-				theme,
-				{},
-				() => {},
-			);
+			const component = factory(tui, theme, {}, () => {});
 			const lines = component.render(80);
 			assert.ok(lines.length > 3, "panel should render more than a frame");
 			assert.ok(
@@ -169,11 +165,41 @@ assert.ok(
 // The panel must mount as an overlay, not replace the transcript.
 assert.deepEqual(sawOverlayOptions, {
 	overlay: true,
-	overlayOptions: { anchor: "top-center", width: "100%" },
+	overlayOptions: { anchor: "top-center", width: "100%", maxHeight: "90%" },
 });
+
+let longLessonComponent;
+const longBody = Array.from({ length: 20 }, (_, index) => `lesson line ${index + 1}`).join("\n");
+await tool.execute(
+	"id",
+	{ title: "Long lesson", body: longBody },
+	undefined,
+	undefined,
+	{
+		mode: "tui",
+		ui: {
+			custom(factory) {
+				longLessonComponent = factory(
+					{ terminal: { rows: 12 }, requestRender() {} },
+					{ fg: (_token, text) => text, bold: (text) => text },
+					{},
+					() => {},
+				);
+				return Promise.resolve(true);
+			},
+		},
+	},
+);
+assert.ok(!longLessonComponent.render(80).some((line) => line.includes("lesson line 20")));
+longLessonComponent.handleInput("end");
+assert.ok(
+	longLessonComponent.render(80).some((line) => line.includes("lesson line 20")),
+	"long lessons must expose their final line through viewport navigation",
+);
 
 // Esc path: ui.custom resolves null → "cancelled".
 const escCtx = {
+	mode: "tui",
 	hasUI: true,
 	ui: { custom: () => Promise.resolve(null) },
 };

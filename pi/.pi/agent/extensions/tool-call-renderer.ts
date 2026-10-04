@@ -1760,6 +1760,16 @@ function toggleConnectedOutput(component: any, state: RendererState): void {
   }
 }
 
+function renderPlainToolSupplement(component: any, width: number): string[] {
+  if (
+    component?.toolName !== "lesson" ||
+    typeof component.result?.details?.journalPath !== "string"
+  )
+    return [];
+  const lines = component.resultRendererComponent?.render?.(width);
+  return Array.isArray(lines) && lines.length > 1 ? [lines.at(-1)] : [];
+}
+
 function renderToolComponent(
   component: any,
   width: number,
@@ -1819,7 +1829,16 @@ function renderToolComponent(
     component[WORK_STEP_ROW] = row;
     step.row = row;
   }
-  return row.render(width);
+  return [
+    ...row.render(width),
+    ...step.toolCalls.flatMap((call) =>
+      renderPlainToolSupplement(
+        state.toolComponents.get(call.id) ??
+          (call.id === component.toolCallId ? component : undefined),
+        width,
+      ),
+    ),
+  ];
 }
 
 function disposeState(state: RendererState): void {

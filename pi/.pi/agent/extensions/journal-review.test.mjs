@@ -28,9 +28,11 @@ const jiti = createJiti(import.meta.url, {
 const core = jiti("./journal-review-core.mjs");
 const {
 	shellQuote,
-	reviewerPaneCommand,
+	reviewerPaneTitle,
+	reviewerPluginPaneArgs,
 	manualReviewerCommand,
 	isReviewerProcess,
+	isReviewerPane,
 	openReviewerWithHost,
 } = core;
 
@@ -39,13 +41,13 @@ const {
 assert.equal(shellQuote("plain"), "'plain'");
 assert.equal(shellQuote("it's"), "'it'\\''s'");
 
-// The pane command must shell-quote every value (journal paths and pane ids
-// can contain spaces/quotes) and close the pane when the reviewer exits.
-const cmd = reviewerPaneCommand("pane id", "/bin/reviewer", "/tmp/my journal.md", "agent pane");
-assert.ok(cmd.startsWith("'/bin/reviewer' 'herdr' 'open' '/tmp/my journal.md'"));
-assert.ok(cmd.includes("'--deliver-to' 'agent pane'"));
-assert.ok(cmd.endsWith("herdr pane close 'pane id'"), cmd);
-assert.ok(!cmd.includes("$(printf"), "no injection through unquoted interpolation");
+const pluginArgs = reviewerPluginPaneArgs("/tmp/my journal.md", "agent pane");
+assert.deepEqual(pluginArgs.slice(0, 7), [
+	"plugin", "pane", "open", "--plugin", "annotate-review", "--entrypoint", "doc",
+]);
+assert.ok(pluginArgs.includes("PLANNOTATOR_TUI_FILE=/tmp/my journal.md"));
+assert.ok(pluginArgs.includes("PLANNOTATOR_TUI_DELIVER_TO=agent pane"));
+assert.ok(pluginArgs.includes("--target-pane"));
 assert.equal(
 	manualReviewerCommand("/path with/reviewer", "/tmp/my journal.md"),
 	"'/path with/reviewer' 'herdr' 'open' '/tmp/my journal.md'",
@@ -57,32 +59,21 @@ assert.equal(
 
 const reviewerProcess = {
 	name: "plannotator-tui",
-	argv: [
-		"/x/plannotator-tui",
-		"herdr",
-		"open",
-		"/tmp/j.md",
-		"--placement",
-		"split",
-		"--deliver-to",
-		"agent",
-	],
+	argv: ["/x/plannotator-tui", "herdr", "pane"],
 };
-assert.equal(isReviewerProcess(reviewerProcess, "/tmp/j.md", "agent"), true);
-assert.equal(isReviewerProcess(reviewerProcess, "/tmp/other.md", "agent"), false);
-assert.equal(isReviewerProcess(reviewerProcess, "/tmp/j.md", "other-agent"), false);
+assert.equal(isReviewerProcess(reviewerProcess), true);
 assert.equal(
-	isReviewerProcess(
-		{ name: "plannotator-tui", argv: ["plannotator-tui", "herdr", "last"] },
-		"/tmp/j.md",
-		"agent",
-	),
+	isReviewerProcess({ name: "plannotator-tui", argv: ["plannotator-tui", "herdr", "open"] }),
 	false,
 );
-assert.equal(
-	isReviewerProcess({ name: "hunk", argv: ["hunk", "diff", "--watch"] }, "/tmp/j.md", "agent"),
-	false,
-);
+assert.equal(isReviewerProcess({ name: "hunk", argv: ["hunk", "diff", "--watch"] }), false);
+const matchingPane = {
+	terminal_title_stripped: reviewerPaneTitle("/tmp/j.md", "agent"),
+};
+assert.equal(isReviewerPane(matchingPane, [reviewerProcess], "/tmp/j.md", "agent"), true);
+assert.equal(isReviewerPane(matchingPane, [reviewerProcess], "/tmp/other.md", "agent"), false);
+assert.equal(isReviewerPane(matchingPane, [reviewerProcess], "/tmp/j.md", "other-agent"), false);
+assert.equal(isReviewerPane(matchingPane, [{ name: "shell", argv: ["fish"] }], "/tmp/j.md", "agent"), false);
 
 // ── focus-or-launch host flow ────────────────────────────────────────────────
 
