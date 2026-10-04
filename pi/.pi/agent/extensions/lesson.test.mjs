@@ -1,0 +1,165 @@
+import assert from "node:assert/strict";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const require = createRequire(import.meta.url);
+const jitiPath = [
+	process.env.JITI_PATH,
+	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
+	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
+].find((path) => path && existsSync(path));
+
+if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
+
+const { createJiti } = require(jitiPath);
+
+// Peer packages are stubbed the same way explain.test.mjs stubs them: the
+// lesson tool's logic is what's under test, not pi-tui rendering.
+const tempRoot = mkdtempSync(join(tmpdir(), "lesson-test-"));
+const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
+const stubTypes = join(tempRoot, "types.cjs");
+const stubTui = join(tempRoot, "pi-tui.cjs");
+writeFileSync(
+	stubAgent,
+	"exports.getMarkdownTheme = () => ({ heading: (t) => t, link: (t) => t, linkUrl: (t) => t, code: (t) => t, codeBlock: (t) => t, codeBlockBorder: (t) => t, quote: (t) => t, quoteBorder: (t) => t, listMarker: (t) => t, hr: (t) => t, tableBorder: (t) => t });\n",
+);
+writeFileSync(stubTypes, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
+writeFileSync(stubTui, `
+class Markdown {
+	constructor(text) { this.text = text; }
+	render(width) { return this.text.split("\\n"); }
+	invalidate() {}
+}
+class Text { constructor(text) { this.text = text; } }
+exports.Markdown = Markdown;
+exports.Text = Text;
+exports.Key = { enter: "\\r", escape: "\\x1b" };
+exports.matchesKey = (data, key) => data === key;
+exports.truncateToWidth = (text, width) => String(text).slice(0, width);
+exports.visibleWidth = (text) => String(text).length;
+`);
+
+const jiti = createJiti(import.meta.url, {
+	alias: {
+		"@earendil-works/pi-coding-agent": stubAgent,
+		"@earendil-works/pi-tui": stubTui,
+		typebox: stubTypes,
+	},
+});
+
+const extension = jiti("./lesson.ts").default;
+
+// Register the tool against a fake pi and capture the registration.
+const registered = [];
+const pi = {
+	registerTool(def) {
+		registered.push(def);
+	},
+};
+extension(pi);
+
+assert.equal(registered.length, 1, "lesson should register exactly one tool");
+const tool = registered[0];
+assert.equal(tool.name, "lesson");
+assert.equal(typeof tool.execute, "function");
+assert.equal(typeof tool.renderCall, "function");
+assert.equal(typeof tool.renderResult, "function");
+assert.ok(tool.description.length > 40, "description should be substantive");
+assert.ok(tool.promptGuidelines.length >= 3, "should carry usage guidelines");
+
+// The shared UI lock must use the SAME globalThis key as quiz/explain, so
+// the lesson panel serializes against every other pop-up tool.
+assert.ok(
+	"__piSharedUiLock" in globalThis,
+	"lesson must install the shared __piSharedUiLock mutex",
+);
+
+// No UI → cancelled, not a crash.
+const noUi = await tool.execute(
+	"id",
+	{ title: "T", body: "B" },
+	undefined,
+	undefined,
+	{ hasUI: false },
+);
+assert.equal(noUi.details.status, "cancelled");
+assert.equal(noUi.details.title, "T");
+
+// Aborted before display → cancelled.
+const aborted = new AbortController();
+aborted.abort();
+const abortedResult = await tool.execute(
+	"id",
+	{ title: "T", body: "B" },
+	aborted.signal,
+	undefined,
+	{ hasUI: true },
+);
+assert.equal(abortedResult.details.status, "cancelled");
+
+// Happy path: ui.custom resolves true → "read".
+let sawOverlayOptions = null;
+const ackCtx = {
+	hasUI: true,
+	ui: {
+		custom(factory, options) {
+			sawOverlayOptions = options;
+			// Drive the component factory once so render/handleInput are exercised.
+			const theme = {
+				fg: (_token, text) => text,
+				bold: (t) => t,
+			};
+			const component = factory(
+				{ requestRender() {} },
+				theme,
+				{},
+				() => {},
+			);
+			const lines = component.render(80);
+			assert.ok(lines.length > 3, "panel should render more than a frame");
+			assert.ok(
+				lines.some((l) => l.includes("Enter")),
+				"panel should show the continue hint",
+			);
+			assert.ok(
+				lines.some((l) => l.includes("blocked beats working")),
+				"panel should render the markdown body",
+			);
+			return Promise.resolve(true);
+		},
+	},
+};
+const read = await tool.execute(
+	"id",
+	{ title: "Herdr states", body: "blocked beats working" },
+	undefined,
+	undefined,
+	{ ...ackCtx, sessionManager: { getSessionFile: () => "/tmp/s/session-abc.jsonl" } },
+);
+assert.equal(read.details.status, "read");
+assert.equal(read.details.title, "Herdr states");
+assert.ok(read.content[0].text.includes("acknowledged"));
+// The result surfaces the journal path so the agent can link it for
+// herdr-annotate's markdown-file link handler.
+assert.ok(
+	read.content[0].text.includes("Journal: /tmp/s/session-abc.md"),
+	`result should mention the journal path: ${read.content[0].text}`,
+);
+// The panel must mount as an overlay, not replace the transcript.
+assert.deepEqual(sawOverlayOptions, {
+	overlay: true,
+	overlayOptions: { anchor: "top-center", width: "100%" },
+});
+
+// Esc path: ui.custom resolves null → "cancelled".
+const escCtx = {
+	hasUI: true,
+	ui: { custom: () => Promise.resolve(null) },
+};
+const skipped = await tool.execute("id", { title: "T2", body: "B" }, undefined, undefined, escCtx);
+assert.equal(skipped.details.status, "cancelled");
+
+rmSync(tempRoot, { recursive: true, force: true });
+console.log("lesson tests passed");
