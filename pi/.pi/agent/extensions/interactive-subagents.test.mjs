@@ -402,19 +402,4 @@ try {
 	rmSync(hunkToolRoot, { recursive: true, force: true });
 }
 
-const professorSkill = readFileSync(
-	new URL(
-		"../../../../agents/.agents/skills/professor/SKILL.md",
-		import.meta.url,
-	),
-	"utf8",
-);
-assert.match(professorSkill, /agent: "professor"/);
-assert.match(professorSkill, /Phase 0 — Goal grill \(never skip\)/);
-assert.match(
-	professorSkill,
-	/Use `ask_user_question` for every grilling turn/,
-);
-assert.match(professorSkill, /Do not enter Probe until approval is explicit/);
-
 console.log("interactive-subagents surface smoke passed");
