@@ -83,10 +83,13 @@ function commandOk(command: string, args: string[]): boolean {
 }
 
 function currentPane(): PaneInfo | null {
+	const paneId = process.env.HERDR_PANE_ID;
+	if (process.env.HERDR_ENV !== "1" || !paneId) return null;
 	const response = commandJson("herdr", ["pane", "current"]) as
 		| { result?: { pane?: PaneInfo } }
 		| null;
-	return response?.result?.pane ?? null;
+	const pane = response?.result?.pane;
+	return pane?.pane_id === paneId ? pane : null;
 }
 
 function findReviewerPane(

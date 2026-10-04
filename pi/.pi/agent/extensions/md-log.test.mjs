@@ -18,6 +18,7 @@ const jiti = createJiti(import.meta.url);
 const mdLog = jiti("./md-log.ts");
 const {
 	journalPathFor,
+	resolveJournalPath,
 	formatLessonEntry,
 	formatQuizEntry,
 	formatExplainEntry,
@@ -29,6 +30,16 @@ const extension = mdLog.default;
 assert.equal(journalPathFor("/a/b/xyz.jsonl"), "/a/b/xyz.md");
 assert.equal(journalPathFor("/a/b/session"), "/a/b/session.md");
 assert.equal(journalPathFor("/a/b.v2/xyz.jsonl"), "/a/b.v2/xyz.md");
+
+const savedJournalOverride = process.env.PI_LESSON_JOURNAL;
+process.env.PI_LESSON_JOURNAL = "notes/course.md";
+assert.equal(
+	resolveJournalPath({ cwd: "/workspace/project" }),
+	"/workspace/project/notes/course.md",
+	"relative overrides resolve against the agent cwd",
+);
+if (savedJournalOverride === undefined) delete process.env.PI_LESSON_JOURNAL;
+else process.env.PI_LESSON_JOURNAL = savedJournalOverride;
 
 const lesson = formatLessonEntry("Priority ladder", "blocked > working > idle");
 assert.ok(lesson.includes("## "), lesson);

@@ -37,7 +37,7 @@ export function journalPathFor(sessionFile: string): string {
  */
 export function resolveJournalPath(ctx: any): string | undefined {
 	const override = process.env.PI_LESSON_JOURNAL;
-	if (override) return override;
+	if (override) return resolve(ctx?.cwd ?? process.cwd(), override);
 	try {
 		const file = ctx?.sessionManager?.getSessionFile?.();
 		return typeof file === "string" && file.startsWith("/")

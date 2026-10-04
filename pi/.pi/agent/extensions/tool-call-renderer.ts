@@ -120,6 +120,7 @@ type RendererState = {
   sessionId?: string;
   restoredToolCallIds: Set<string>;
   toolComponents: Map<string, any>;
+  plainSupplements: Map<string, any>;
   connected: WeakMap<object, ConnectedComponentState>;
   scheduler: ClockInvalidationScheduler;
 };
@@ -1778,7 +1779,8 @@ function renderStepPlainToolSupplements(
 ): string[] {
   return step.toolCalls.flatMap((call) =>
     renderPlainToolSupplement(
-      state.toolComponents.get(call.id) ??
+      state.plainSupplements.get(call.id) ??
+        state.toolComponents.get(call.id) ??
         (call.id === component.toolCallId ? component : undefined),
       width,
     ),
@@ -1838,6 +1840,7 @@ function renderToolComponent(
     return [
       ...renderRunSurplusText(theme, step.run, width),
       ...renderConnectedChips(theme, step, connectedComponents, width),
+      ...renderStepPlainToolSupplements(step, component, state, width),
     ];
   }
 
@@ -1871,6 +1874,7 @@ function disposeState(state: RendererState): void {
   state.sessionId = undefined;
   state.restoredToolCallIds.clear();
   state.toolComponents.clear();
+  state.plainSupplements.clear();
   state.connected = new WeakMap();
 }
 
@@ -2207,6 +2211,7 @@ export default async function (pi: ExtensionAPI) {
     persisted: new WeakMap(),
     restoredToolCallIds: new Set(),
     toolComponents: new Map(),
+    plainSupplements: new Map(),
     connected: new WeakMap(),
     scheduler: new ClockInvalidationScheduler(),
   };
@@ -2270,6 +2275,8 @@ export default async function (pi: ExtensionAPI) {
     },
     toolUpdated(component) {
       const step = bindToolComponent(component, state);
+      if (step && component.toolName === "lesson")
+        state.plainSupplements.set(component.toolCallId, component);
       if (step) ensureConnectedBridge(component, step, state);
       if (step && component.toolName !== "subagent") {
         if (component.executionStarted) {

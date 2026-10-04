@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -128,7 +128,7 @@ assert.equal(manual.message, "manual fallback");
 
 // ── extension registration ───────────────────────────────────────────────────
 
-const { default: register } = jiti("./journal-review.ts");
+const { default: register, openJournalReviewer } = jiti("./journal-review.ts");
 const tools = [];
 const commands = new Map();
 register({
@@ -146,6 +146,54 @@ const noJournal = await tools[0].execute("id", {}, undefined, undefined, {
 	sessionManager: { getSessionFile: () => undefined },
 });
 assert.ok(noJournal.content[0].text.includes("No lesson journal"));
+
+// A globally focused Herdr pane must not be mistaken for this process's pane.
+const fakeBin = join(tempRoot, "bin");
+const fakeHerdr = join(fakeBin, "herdr");
+const dataHome = join(tempRoot, "data");
+const reviewer = join(dataHome, "herdr", "annotate-review", "plannotator-tui");
+const journal = join(tempRoot, "session.md");
+mkdirSync(fakeBin, { recursive: true });
+mkdirSync(join(dataHome, "herdr", "annotate-review"), { recursive: true });
+writeFileSync(journal, "# Lesson journal\n");
+writeFileSync(reviewer, "");
+writeFileSync(fakeHerdr, `#!/bin/sh
+case "$1 $2" in
+  "pane current") printf '%s\\n' '{"result":{"pane":{"pane_id":"unrelated","tab_id":"tab","cwd":"/tmp"}}}' ;;
+  "pane list") printf '%s\\n' '{"result":{"panes":[]}}' ;;
+  "plugin pane") printf '%s\\n' '{"result":{"pane_id":"wrong-reviewer"}}' ;;
+  *) printf '%s\\n' '{}' ;;
+esac
+`);
+chmodSync(fakeHerdr, 0o755);
+const savedEnv = {
+	HERDR_ENV: process.env.HERDR_ENV,
+	HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+	PI_LESSON_JOURNAL: process.env.PI_LESSON_JOURNAL,
+	XDG_DATA_HOME: process.env.XDG_DATA_HOME,
+	PATH: process.env.PATH,
+};
+try {
+	delete process.env.HERDR_ENV;
+	delete process.env.HERDR_PANE_ID;
+	process.env.PI_LESSON_JOURNAL = journal;
+	process.env.XDG_DATA_HOME = dataHome;
+	process.env.PATH = `${fakeBin}:${savedEnv.PATH ?? ""}`;
+	const outsideHerdr = await openJournalReviewer({ cwd: tempRoot });
+	assert.equal(outsideHerdr.launched, false);
+	assert.ok(outsideHerdr.message.startsWith("Not inside Herdr."));
+
+	process.env.HERDR_ENV = "1";
+	process.env.HERDR_PANE_ID = "agent";
+	const mismatchedPane = await openJournalReviewer({ cwd: tempRoot });
+	assert.equal(mismatchedPane.launched, false);
+	assert.ok(mismatchedPane.message.startsWith("Not inside Herdr."));
+} finally {
+	for (const [key, value] of Object.entries(savedEnv)) {
+		if (value === undefined) delete process.env[key];
+		else process.env[key] = value;
+	}
+}
 
 rmSync(tempRoot, { recursive: true, force: true });
 console.log("journal-review tests passed");
