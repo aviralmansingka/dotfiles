@@ -12,7 +12,6 @@ import {
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
-import { QUESTION_PANEL_OVERLAY } from "./question-overlay";
 
 // ────────────────────────────────────────────────────────────────────────────
 // explain — a PROSE sibling of quiz, with a grader fork.
@@ -504,7 +503,7 @@ export default function explain(pi: ExtensionAPI) {
 								}
 							},
 						};
-					}, QUESTION_PANEL_OVERLAY
+					}
 				);
 
 				if (result === null) {

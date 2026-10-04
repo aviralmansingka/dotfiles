@@ -15,14 +15,22 @@ if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
 
 const { createJiti } = require(jitiPath);
 
-// journal-review.ts imports typebox and md-log (which only type-imports its
-// peers), so only typebox needs a stub.
+// journal-review.ts imports typebox and md-log; md-log imports nvim-open
+// (value imports from the peers), so stub the peers too.
 const tempRoot = mkdtempSync(join(tmpdir(), "journal-review-test-"));
 const stubTypes = join(tempRoot, "types.cjs");
+const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
+const stubAi = join(tempRoot, "pi-ai.cjs");
 writeFileSync(stubTypes, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
+writeFileSync(stubAgent, "exports.defineTool = (t) => t;\n");
+writeFileSync(stubAi, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
 
 const jiti = createJiti(import.meta.url, {
-	alias: { typebox: stubTypes },
+	alias: {
+		typebox: stubTypes,
+		"@earendil-works/pi-coding-agent": stubAgent,
+		"@earendil-works/pi-ai": stubAi,
+	},
 });
 
 const core = jiti("./journal-review-core.mjs");

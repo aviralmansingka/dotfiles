@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,7 +14,19 @@ const jitiPath = [
 if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
 
 const { createJiti } = require(jitiPath);
-const jiti = createJiti(import.meta.url);
+
+// md-log imports nvim-open (value imports from the peers), so stub them.
+const tempRoot = mkdtempSync(join(tmpdir(), "md-log-test-"));
+const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
+const stubAi = join(tempRoot, "pi-ai.cjs");
+writeFileSync(stubAgent, "exports.defineTool = (t) => t;\n");
+writeFileSync(stubAi, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
+const jiti = createJiti(import.meta.url, {
+	alias: {
+		"@earendil-works/pi-coding-agent": stubAgent,
+		"@earendil-works/pi-ai": stubAi,
+	},
+});
 const mdLog = jiti("./md-log.ts");
 const {
 	journalPathFor,
@@ -218,5 +230,6 @@ noSessionHandlers.get("tool_execution_start")(
 ); // must not throw
 
 rmSync(dir, { recursive: true, force: true });
+rmSync(tempRoot, { recursive: true, force: true });
 
 console.log("md-log tests passed");
