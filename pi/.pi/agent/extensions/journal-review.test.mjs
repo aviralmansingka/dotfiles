@@ -159,9 +159,14 @@ writeFileSync(journal, "# Lesson journal\n");
 writeFileSync(reviewer, "");
 writeFileSync(fakeHerdr, `#!/bin/sh
 case "$1 $2" in
-  "pane current") printf '%s\\n' '{"result":{"pane":{"pane_id":"unrelated","tab_id":"tab","cwd":"/tmp"}}}' ;;
+  "pane current")
+    if [ "$3" = "--pane" ] && [ "$4" = "agent" ]; then
+      printf '%s\\n' '{"result":{"pane":{"pane_id":"agent","tab_id":"tab","cwd":"/tmp"}}}'
+    else
+      printf '%s\\n' '{"result":{"pane":{"pane_id":"unrelated","tab_id":"tab","cwd":"/tmp"}}}'
+    fi ;;
   "pane list") printf '%s\\n' '{"result":{"panes":[]}}' ;;
-  "plugin pane") printf '%s\\n' '{"result":{"pane_id":"wrong-reviewer"}}' ;;
+  "plugin pane") printf '%s\\n' '{"result":{"pane_id":"reviewer"}}' ;;
   *) printf '%s\\n' '{}' ;;
 esac
 `);
@@ -185,6 +190,11 @@ try {
 
 	process.env.HERDR_ENV = "1";
 	process.env.HERDR_PANE_ID = "agent";
+	const targetedPane = await openJournalReviewer({ cwd: tempRoot });
+	assert.equal(targetedPane.launched, true);
+	assert.ok(targetedPane.message.includes("pane reviewer"));
+
+	process.env.HERDR_PANE_ID = "different-agent";
 	const mismatchedPane = await openJournalReviewer({ cwd: tempRoot });
 	assert.equal(mismatchedPane.launched, false);
 	assert.ok(mismatchedPane.message.startsWith("Not inside Herdr."));

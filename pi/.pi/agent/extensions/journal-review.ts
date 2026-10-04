@@ -85,7 +85,7 @@ function commandOk(command: string, args: string[]): boolean {
 function currentPane(): PaneInfo | null {
 	const paneId = process.env.HERDR_PANE_ID;
 	if (process.env.HERDR_ENV !== "1" || !paneId) return null;
-	const response = commandJson("herdr", ["pane", "current"]) as
+	const response = commandJson("herdr", ["pane", "current", "--pane", paneId]) as
 		| { result?: { pane?: PaneInfo } }
 		| null;
 	const pane = response?.result?.pane;

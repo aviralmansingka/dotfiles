@@ -345,7 +345,6 @@ controller.assistantUpdated(connectedOwnerAssistant, {
 	content: [
 		{ type: "text", text: "Launching connected work\nfirst connected surplus" },
 		{ type: "toolCall", id: "tc-connected", name: "subagent", arguments: { name: "worker" } },
-		{ type: "toolCall", id: "tc-connected-lesson", name: "lesson", arguments: { title: "Connected states" } },
 	],
 	stopReason: "toolUse",
 });
@@ -356,6 +355,13 @@ const connectedOwnerTool = {
 	executionStarted: true,
 };
 controller.toolUpdated(connectedOwnerTool);
+controller.assistantUpdated({ hideThinkingBlock: false }, {
+	content: [
+		{ type: "text", text: "Showing later lesson\nlater step surplus" },
+		{ type: "toolCall", id: "tc-connected-lesson", name: "lesson", arguments: { title: "Connected states" } },
+	],
+	stopReason: "toolUse",
+});
 const connectedLessonLink = "\x1b]8;;file:///tmp/connected-session.md\x07connected-session.md\x1b]8;;\x07";
 controller.toolUpdated({
 	toolName: "lesson",
@@ -369,19 +375,6 @@ controller.toolUpdated({
 	},
 	resultRendererComponent: { render: () => ["Read — Connected states", connectedLessonLink] },
 });
-controller.assistantUpdated({ hideThinkingBlock: false }, {
-	content: [
-		{ type: "text", text: "Showing later output\nlater step surplus" },
-		{ type: "toolCall", id: "tc-later", name: "bash", arguments: { command: "true" } },
-	],
-	stopReason: "toolUse",
-});
-controller.toolUpdated({
-	toolName: "bash",
-	toolCallId: "tc-later",
-	rendererState: {},
-	executionStarted: true,
-});
 const connectedRunText = controller.renderTool(connectedOwnerTool, 120).join("\n");
 assert.ok(
 	connectedRunText.indexOf("Launching connected work") <
@@ -389,13 +382,13 @@ assert.ok(
 	"a connected owner renders its surplus under its title",
 );
 assert.ok(
-	connectedRunText.indexOf("Showing later output") <
+	connectedRunText.indexOf("Showing later lesson") <
 		connectedRunText.indexOf("later step surplus"),
 	"a connected owner renders later run surplus under the later step title",
 );
 assert.ok(
 	connectedRunText.includes("file:///tmp/connected-session.md"),
-	"a visible-thinking connected step keeps its lesson journal hyperlink",
+	"the owner row keeps a later step's lesson journal hyperlink",
 );
 
 // 2. Plain tool output was unviewable: rows collapsed to a one-line summary

@@ -1777,12 +1777,14 @@ function renderStepPlainToolSupplements(
   state: RendererState,
   width: number,
 ): string[] {
-  return step.toolCalls.flatMap((call) =>
-    renderPlainToolSupplement(
-      state.plainSupplements.get(call.id) ??
-        state.toolComponents.get(call.id) ??
-        (call.id === component.toolCallId ? component : undefined),
-      width,
+  return step.run.steps.flatMap((runStep) =>
+    runStep.toolCalls.flatMap((call) =>
+      renderPlainToolSupplement(
+        state.plainSupplements.get(call.id) ??
+          state.toolComponents.get(call.id) ??
+          (call.id === component.toolCallId ? component : undefined),
+        width,
+      ),
     ),
   );
 }
