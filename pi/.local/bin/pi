@@ -1,3 +1,0 @@
-#!/bin/bash
-export MISE_MINIMUM_RELEASE_AGE=0
-exec mise x -q 'npm:@earendil-works/pi-coding-agent' -- pi "$@"

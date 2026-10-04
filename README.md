@@ -213,6 +213,12 @@ launchctl print "gui/$UID/com.aviral.dotfiles-auto-sync"
 
 ## Pi agent
 
+Install or upgrade the Pi CLI with npm (the global npm bin directory must be on `PATH`):
+
+```sh
+npm install -g @earendil-works/pi-coding-agent@latest
+```
+
 Pi config and shared skills are deployed with:
 
 ```sh
