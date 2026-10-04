@@ -124,12 +124,21 @@ const dir = mkdtempSync(join(tmpdir(), "md-log-"));
 let sessionFile = join(dir, "sub", "session-abc.jsonl");
 
 const handlers = new Map();
+const commands = new Map();
 const pi = {
 	on(event, handler) {
 		handlers.set(event, handler);
 	},
+	registerCommand(name, def) {
+		commands.set(name, def);
+	},
 };
 extension(pi);
+
+// The any-time shortcut: /lessons opens the journal in the editor pane.
+assert.equal(commands.size, 1);
+assert.ok(commands.has("lessons"), "/lessons command should be registered");
+assert.equal(typeof commands.get("lessons").handler, "function");
 
 const ctx = {
 	sessionManager: { getSessionFile: () => sessionFile },
@@ -221,7 +230,10 @@ assert.ok(
 
 // Without a session file and without PI_LESSON_JOURNAL, appends are no-ops.
 const noSessionHandlers = new Map();
-const pi2 = { on: (e, h) => noSessionHandlers.set(e, h) };
+const pi2 = {
+	on: (e, h) => noSessionHandlers.set(e, h),
+	registerCommand: () => {},
+};
 extension(pi2);
 const noCtx = { sessionManager: { getSessionFile: () => undefined } };
 noSessionHandlers.get("tool_execution_start")(

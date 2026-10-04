@@ -200,6 +200,16 @@ export async function openJournalInEditor(
 }
 
 export default function mdLog(pi: ExtensionAPI) {
+	// Any-time shortcut to open the session's lesson journal in the user's
+	// editor pane. The quiz `h` key and the lesson tool hit the same helper.
+	pi.registerCommand("lessons", {
+		description: "Open this session's lesson journal in the editor pane",
+		handler: async (_args: string, ctx: any) => {
+			const result = await openJournalInEditor(ctx);
+			ctx?.ui?.notify?.(result.message, result.launched ? "info" : "warning");
+		},
+	});
+
 	pi.on("tool_execution_start", (event, ctx) => {
 		if (event.toolName !== "lesson") return;
 		const args = event.args as { title?: string; body?: string } | undefined;
