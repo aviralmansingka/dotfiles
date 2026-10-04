@@ -120,6 +120,7 @@ type RendererState = {
   sessionId?: string;
   restoredToolCallIds: Set<string>;
   toolComponents: Map<string, any>;
+  plainSupplements: Map<string, any>;
   connected: WeakMap<object, ConnectedComponentState>;
   scheduler: ClockInvalidationScheduler;
 };
@@ -1760,6 +1761,34 @@ function toggleConnectedOutput(component: any, state: RendererState): void {
   }
 }
 
+function renderPlainToolSupplement(component: any, width: number): string[] {
+  if (
+    component?.toolName !== "lesson" ||
+    typeof component.result?.details?.journalPath !== "string"
+  )
+    return [];
+  const lines = component.resultRendererComponent?.render?.(width);
+  return Array.isArray(lines) && lines.length > 1 ? [lines.at(-1)] : [];
+}
+
+function renderStepPlainToolSupplements(
+  step: WorkStep,
+  component: any,
+  state: RendererState,
+  width: number,
+): string[] {
+  return step.run.steps.flatMap((runStep) =>
+    runStep.toolCalls.flatMap((call) =>
+      renderPlainToolSupplement(
+        state.plainSupplements.get(call.id) ??
+          state.toolComponents.get(call.id) ??
+          (call.id === component.toolCallId ? component : undefined),
+        width,
+      ),
+    ),
+  );
+}
+
 function renderToolComponent(
   component: any,
   width: number,
@@ -1801,7 +1830,11 @@ function renderToolComponent(
   }
 
   if (connectedComponents.length > 0) {
-    if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
+    if (!step.thinkingVisible)
+      return [
+        ...renderCompactSummary(theme, step.run, width),
+        ...renderStepPlainToolSupplements(step, component, state, width),
+      ];
     // Prototype C: one `▹/▸/×` chip row per subagent, inline in the parent's
     // tool-call trace. The per-step `◇◆×` list (`renderConnectedParent`) is
     // retired in favor of these per-subagent lifecycle chips; ctrl+o unfolds
@@ -1809,17 +1842,25 @@ function renderToolComponent(
     return [
       ...renderRunSurplusText(theme, step.run, width),
       ...renderConnectedChips(theme, step, connectedComponents, width),
+      ...renderStepPlainToolSupplements(step, component, state, width),
     ];
   }
 
-  if (!step.thinkingVisible) return renderCompactSummary(theme, step.run, width);
+  if (!step.thinkingVisible)
+    return [
+      ...renderCompactSummary(theme, step.run, width),
+      ...renderStepPlainToolSupplements(step, component, state, width),
+    ];
   let row = component[WORK_STEP_ROW] as WorkStepRow | undefined;
   if (!row) {
     row = new WorkStepRow(theme, step);
     component[WORK_STEP_ROW] = row;
     step.row = row;
   }
-  return row.render(width);
+  return [
+    ...row.render(width),
+    ...renderStepPlainToolSupplements(step, component, state, width),
+  ];
 }
 
 function disposeState(state: RendererState): void {
@@ -1835,6 +1876,7 @@ function disposeState(state: RendererState): void {
   state.sessionId = undefined;
   state.restoredToolCallIds.clear();
   state.toolComponents.clear();
+  state.plainSupplements.clear();
   state.connected = new WeakMap();
 }
 
@@ -2171,6 +2213,7 @@ export default async function (pi: ExtensionAPI) {
     persisted: new WeakMap(),
     restoredToolCallIds: new Set(),
     toolComponents: new Map(),
+    plainSupplements: new Map(),
     connected: new WeakMap(),
     scheduler: new ClockInvalidationScheduler(),
   };
@@ -2234,6 +2277,8 @@ export default async function (pi: ExtensionAPI) {
     },
     toolUpdated(component) {
       const step = bindToolComponent(component, state);
+      if (step && component.toolName === "lesson")
+        state.plainSupplements.set(component.toolCallId, component);
       if (step) ensureConnectedBridge(component, step, state);
       if (step && component.toolName !== "subagent") {
         if (component.executionStarted) {

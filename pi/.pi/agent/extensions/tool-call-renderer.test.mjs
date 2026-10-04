@@ -357,16 +357,23 @@ const connectedOwnerTool = {
 controller.toolUpdated(connectedOwnerTool);
 controller.assistantUpdated({ hideThinkingBlock: false }, {
 	content: [
-		{ type: "text", text: "Showing later output\nlater step surplus" },
-		{ type: "toolCall", id: "tc-later", name: "bash", arguments: { command: "true" } },
+		{ type: "text", text: "Showing later lesson\nlater step surplus" },
+		{ type: "toolCall", id: "tc-connected-lesson", name: "lesson", arguments: { title: "Connected states" } },
 	],
 	stopReason: "toolUse",
 });
+const connectedLessonLink = "\x1b]8;;file:///tmp/connected-session.md\x07connected-session.md\x1b]8;;\x07";
 controller.toolUpdated({
-	toolName: "bash",
-	toolCallId: "tc-later",
+	toolName: "lesson",
+	toolCallId: "tc-connected-lesson",
 	rendererState: {},
 	executionStarted: true,
+	isPartial: false,
+	result: {
+		content: [{ type: "text", text: "Journal: /tmp/connected-session.md" }],
+		details: { status: "read", title: "Connected states", journalPath: "/tmp/connected-session.md" },
+	},
+	resultRendererComponent: { render: () => ["Read — Connected states", connectedLessonLink] },
 });
 const connectedRunText = controller.renderTool(connectedOwnerTool, 120).join("\n");
 assert.ok(
@@ -375,9 +382,13 @@ assert.ok(
 	"a connected owner renders its surplus under its title",
 );
 assert.ok(
-	connectedRunText.indexOf("Showing later output") <
+	connectedRunText.indexOf("Showing later lesson") <
 		connectedRunText.indexOf("later step surplus"),
 	"a connected owner renders later run surplus under the later step title",
+);
+assert.ok(
+	connectedRunText.includes("file:///tmp/connected-session.md"),
+	"the owner row keeps a later step's lesson journal hyperlink",
 );
 
 // 2. Plain tool output was unviewable: rows collapsed to a one-line summary
@@ -476,6 +487,94 @@ nativePlainTool.setExpanded(false);
 assert.ok(
 	!nativePlainTool.render(120).join("\n").includes("REQUESTED TOOL OUTPUT"),
 	"the live plain tool hides native result output after collapse",
+);
+
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "text", text: "Previous output complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
+	},
+);
+const lessonToolCallId = "tc-lesson-link";
+const lessonAssistant = new ChunkAssistant({
+	content: [
+		{ type: "text", text: "Presenting lesson" },
+		{ type: "toolCall", id: lessonToolCallId, name: "lesson", arguments: { title: "States" } },
+	],
+	stopReason: "toolUse",
+}, false);
+assert.deepEqual(lessonAssistant.render(120), []);
+const lessonLink = "\x1b]8;;file:///tmp/session-abc.md\x07session-abc.md\x1b]8;;\x07";
+const nativeLessonTool = new ChunkTool(
+	"lesson",
+	lessonToolCallId,
+	{ title: "States" },
+	{},
+	{
+		name: "lesson",
+		renderCall: () => new Text("lesson States", 0, 0),
+		renderResult: () => new Text(`Read — States\n${lessonLink}`, 0, 0),
+	},
+	{ requestRender() {} },
+	process.cwd(),
+);
+nativeLessonTool.markExecutionStarted();
+nativeLessonTool.setArgsComplete();
+nativeLessonTool.updateResult({
+	content: [{ type: "text", text: "Journal: /tmp/session-abc.md" }],
+	details: { status: "read", title: "States", journalPath: "/tmp/session-abc.md" },
+}, false);
+piHandlers.get("tool_execution_end")({ toolCallId: lessonToolCallId });
+const collapsedLessonOutput = nativeLessonTool.render(120).join("\n");
+assert.ok(
+	collapsedLessonOutput.includes("file:///tmp/session-abc.md"),
+	`collapsed lesson results keep the journal hyperlink visible: ${JSON.stringify(collapsedLessonOutput)}`,
+);
+nativeLessonTool.setExpanded(true);
+assert.ok(
+	nativeLessonTool.render(120).join("\n").includes("Read — States"),
+	"expanding a lesson still renders its native result",
+);
+
+controller.assistantUpdated(
+	{ hideThinkingBlock: false },
+	{
+		content: [{ type: "text", text: "Previous lesson complete." }],
+		stopReason: "stop",
+		usage: { totalTokens: 1 },
+	},
+);
+const hiddenLessonToolCallId = "tc-hidden-lesson-link";
+controller.assistantUpdated(
+	{ hideThinkingBlock: true },
+	{
+		content: [
+			{ type: "text", text: "Presenting hidden-thinking lesson" },
+			{ type: "toolCall", id: hiddenLessonToolCallId, name: "lesson", arguments: { title: "States" } },
+		],
+		stopReason: "toolUse",
+	},
+);
+const hiddenLessonTool = {
+	toolName: "lesson",
+	toolCallId: hiddenLessonToolCallId,
+	rendererState: {},
+	executionStarted: true,
+	isPartial: false,
+	result: {
+		content: [{ type: "text", text: "Journal: /tmp/session-abc.md" }],
+		details: { status: "read", title: "States", journalPath: "/tmp/session-abc.md" },
+	},
+	resultRendererComponent: { render: () => ["Read — States", lessonLink] },
+};
+controller.toolUpdated(hiddenLessonTool);
+piHandlers.get("tool_execution_end")({ toolCallId: hiddenLessonToolCallId });
+const hiddenLessonOutput = controller.renderTool(hiddenLessonTool, 120).join("\n");
+assert.ok(
+	hiddenLessonOutput.includes("file:///tmp/session-abc.md"),
+	`hidden-thinking lesson results keep the journal hyperlink visible: ${JSON.stringify(hiddenLessonOutput)}`,
 );
 
 // 3. A finished assistant message with empty text and hidden thinking used
