@@ -70,6 +70,13 @@ so do not require a multiplexer just to connect to an existing active session.
 
 When the user needs an interactive tuicr pane and no active session exists:
 
+**If the `tuicr_background` tool is available, use it instead of a wrapper
+script.** It launches (or attaches to) the same pane but returns immediately,
+and new user comments are steered back into your session automatically as
+they land — no polling and no blocking. The wrapper table below is the
+fallback for environments without that extension, and the tmux/Zellij/Herdr
+wrappers block until the TUI exits, so only run them when you cannot avoid it.
+
 | Environment | Action |
 |-------------|--------|
 | `$CMUX_WORKSPACE_ID` is set | Run `tuicr-wrapper-cmux.sh /path/to/repo -- <scope>` |
@@ -123,9 +130,11 @@ read the comments after the user exits tuicr.
 
 This is the main review loop for user-led review.
 
-There is no push stream from tuicr to the agent. Read comments by running the
-CLI on demand. After the user says comments are ready, or after the TUI exits,
-run:
+There is no push stream from tuicr to the agent — except when the session was
+started through the `tuicr_background` tool, which steers each new comment
+batch into the session automatically; in that flow, do not poll at all, just
+act on the steered batches. Otherwise, read comments by running the CLI on
+demand. After the user says comments are ready, or after the TUI exits, run:
 
 ```bash
 tuicr review comments --repo /path/to/repo --session <slug>
