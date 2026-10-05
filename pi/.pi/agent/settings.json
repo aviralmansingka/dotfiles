@@ -5,11 +5,12 @@
   "extensions": [
     "+extensions/rounded-bar-footer.ts"
   ],
-  "lastChangelogVersion": "0.87.1",
+  "lastChangelogVersion": "0.99.1",
   "defaultProvider": "fireworks",
   "defaultModel": "accounts/fireworks/routers/glm-5p3-fast",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-material",
   "tuiMode": "fullscreen",
-  "transport": "websocket-cached"
+  "transport": "websocket-cached",
+  "hideThinkingBlock": false
 }
