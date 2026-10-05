@@ -3,7 +3,8 @@
     "npm:pi-mcp-adapter"
   ],
   "extensions": [
-    "+extensions/rounded-bar-footer.ts"
+    "+extensions/rounded-bar-footer.ts",
+    "-extensions/tool-call-renderer.ts"
   ],
   "lastChangelogVersion": "0.99.1",
   "defaultProvider": "fireworks",
