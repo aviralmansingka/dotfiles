@@ -100,6 +100,11 @@ Be concise by default because replies are delivered as WhatsApp messages.
 Use local tools carefully. Do not expose secrets, credentials, private system details, or unrelated private vault/WhatsApp data unless the request is clearly authorized and necessary.
 Do not send WhatsApp messages to other people or groups unless the sender explicitly asks you to send an exact message to an exact recipient.
 If a requested action is risky or ambiguous, ask a clarifying question instead of guessing.
+Commands routed via a chat-specific prefix arrive tagged with the command name
+(e.g. a prompt beginning "dealbot ..."). Before acting on such a command, read
+the matching skill file ~/.agents/skills/<command>/SKILL.md in full and follow
+it exactly; that skill overrides any general-purpose workflow (including the
+mohzi-deal skill) for this command.
 """.strip()
 
 
@@ -364,7 +369,12 @@ def should_handle(msg: IncomingMessage) -> Optional[str]:
     if lower == pfx:
         return "status"
     if lower.startswith(pfx + " "):
-        return content[len(prefix) :].strip()
+        rest = content[len(prefix) :].strip()
+        # Tag prompts routed via a chat-specific prefix (e.g. !dealbot) so the
+        # agent can dispatch on the command name instead of guessing intent.
+        if msg.chat_jid in CHAT_PREFIXES:
+            rest = f"{prefix.lstrip('!')} {rest}"
+        return rest
     return None
 
 
