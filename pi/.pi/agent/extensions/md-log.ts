@@ -50,16 +50,36 @@ export function resolveJournalPath(ctx: any): string | undefined {
 	}
 }
 
-function timestamp(): string {
-	return new Date().toISOString().slice(11, 19); // HH:MM:SS, UTC
+// Entry stamp with a date — arcs can span days, and a time-only stamp
+// makes next-day entries read as if they came first.
+function entryStamp(): string {
+	const iso = new Date().toISOString();
+	return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
+}
+
+/** Escape emphasis/inline-code metacharacters in short user-facing labels
+ *  (option labels are full of `*` for multiplication, which must not
+ *  render as italics). Questions and lesson bodies stay verbatim — their
+ *  markdown (code spans, bold) is authored deliberately. */
+function escapeLabel(label: string): string {
+	return label.replace(/([*_`])/g, "\\$1");
+}
+
+/** Demote a lesson body's headings one level so its sections nest under
+ *  the entry heading instead of colliding with it. */
+function demoteHeadings(body: string): string {
+	return body
+		.split("\n")
+		.map((line) => (line.match(/^#{1,5} /) ? `#${line}` : line))
+		.join("\n");
 }
 
 /** Markdown for one lesson, as it is shown to the user. */
 export function formatLessonEntry(title: string, body: string): string {
 	return [
-		`## ${timestamp()} — Lesson: ${title.trim()}`,
+		`## ${entryStamp()} · Lesson · ${title.trim()}`,
 		"",
-		body.trim(),
+		demoteHeadings(body.trim()),
 		"",
 	].join("\n");
 }
@@ -79,18 +99,23 @@ interface QuizDetails {
 	message?: string;
 }
 
+function quizVerdict(details: QuizDetails): string {
+	if (details.dontKnow) return "◐ Other — I don't know";
+	if (details.status === "answered") return details.correct ? "✓ Correct" : "✗ Incorrect";
+	return details.status;
+}
+
 /** Markdown for one quiz result, in the order the user actually saw. */
 export function formatQuizEntry(details: QuizDetails): string {
 	const lines: string[] = [];
-	const verdict = details.dontKnow
-		? "Other — I don't know"
-		: details.status === "answered"
-			? details.correct
-				? "✓ Correct"
-				: "✗ Incorrect"
-			: details.status;
-	lines.push(`### ${timestamp()} — Quiz: ${details.question.trim()} — ${verdict}`);
-	if (details.mode === "multi-select") lines.push("_multi-select_");
+	const mode = details.mode === "multi-select" ? " (multi-select)" : "";
+	lines.push(`## ${entryStamp()} · Quiz${mode} · ${quizVerdict(details)}`);
+	lines.push("");
+	lines.push(`**Question:** ${details.question.trim()}`);
+	if (details.context?.trim()) {
+		lines.push("");
+		lines.push(`**Context:** ${details.context.trim()}`);
+	}
 	lines.push("");
 	const displayed = details.options?.length
 		? details.options
@@ -98,17 +123,25 @@ export function formatQuizEntry(details: QuizDetails): string {
 	const selected = new Set((details.answers ?? []).map((a) => a.index));
 	const correct = new Set(details.correctIndices ?? []);
 	for (const opt of displayed) {
-		const mark = correct.has(opt.index) ? "✓" : selected.has(opt.index) ? "✗" : " ";
-		const picked = selected.has(opt.index) ? "**" : "";
-		lines.push(`${mark} ${picked}${opt.index}. ${opt.label}${picked}`);
+		const label = escapeLabel(opt.label);
+		const num = `**${opt.index}.**`;
+		if (correct.has(opt.index) && selected.has(opt.index)) {
+			lines.push(`- ✓ ${num} ${label}`);
+		} else if (correct.has(opt.index)) {
+			lines.push(`- ✓ ${opt.index}. ${label}`);
+		} else if (selected.has(opt.index)) {
+			lines.push(`- ✗ ${num} ${label}`);
+		} else {
+			lines.push(`- ${opt.index}. ${label}`);
+		}
 	}
 	if (details.explanation) {
 		lines.push("");
-		lines.push(`> ${details.explanation.trim()}`);
+		lines.push(`**Why:** ${details.explanation.trim()}`);
 	}
 	if (details.followUp) {
 		lines.push("");
-		lines.push(`Steering: ${details.followUp}`);
+		lines.push(`**Steering:** ${details.followUp}`);
 	}
 	lines.push("");
 	return lines.join("\n");
@@ -129,26 +162,35 @@ interface ExplainDetails {
 	message?: string;
 }
 
+function explainVerdict(details: ExplainDetails): string {
+	const g = details.grading;
+	if (!g) return details.status;
+	const glyph =
+		g.verdict === "correct" ? "✓" : g.verdict === "incorrect" ? "✗" : "◐";
+	return `${glyph} ${g.verdict.replace(/_/g, " ")} — grade ${g.grade}`;
+}
+
 /** Markdown for one explain result: the prose answer plus its grading. */
 export function formatExplainEntry(details: ExplainDetails): string {
 	const lines: string[] = [];
-	const g = details.grading;
-	const verdict = g
-		? `${g.verdict} — grade ${g.grade}`
-		: details.status;
-	lines.push(`### ${timestamp()} — Explain: ${details.question.trim()} — ${verdict}`);
+	lines.push(`## ${entryStamp()} · Explain · ${explainVerdict(details)}`);
+	lines.push("");
+	lines.push(`**Question:** ${details.question.trim()}`);
 	lines.push("");
 	if (details.answer?.trim()) {
+		lines.push("**Your answer:**");
+		lines.push("");
 		lines.push(`> ${details.answer.trim().replace(/\n/g, "\n> ")}`);
 	} else if (details.status === "answered") {
-		lines.push("> _(no answer — honest \"I don't know\")_");
+		lines.push(`**Your answer:** _(no answer — honest \"I don't know\")_`);
 	}
+	const g = details.grading;
 	if (g) {
 		lines.push("");
 		lines.push(`**Correct answer:** ${g.correctAnswer}`);
 		if (g.summary) lines.push(`**Why:** ${g.summary}`);
 		for (const r of g.refinements ?? []) {
-			lines.push(`- “${r.quote}” — ${r.issue} → ${r.correction}`);
+			lines.push(`  - “${r.quote}” — ${r.issue} → ${r.correction}`);
 		}
 	}
 	lines.push("");
@@ -166,7 +208,10 @@ function appendEntry(path: string | undefined, entry: string): void {
 				"utf-8",
 			);
 		}
-		appendFileSync(path, entry, "utf-8");
+		// Horizontal rules between entries keep the transcript scannable;
+		// the leading blank line keeps `---` from turning the last text line
+		// into a setext heading.
+		appendFileSync(path, `\n---\n\n${entry}`, "utf-8");
 	} catch {
 		// The journal is an at-most-once convenience: never let a logging
 		// failure break the conversation.

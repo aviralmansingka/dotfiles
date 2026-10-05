@@ -54,9 +54,16 @@ if (savedJournalOverride === undefined) delete process.env.PI_LESSON_JOURNAL;
 else process.env.PI_LESSON_JOURNAL = savedJournalOverride;
 
 const lesson = formatLessonEntry("Priority ladder", "blocked > working > idle");
-assert.ok(lesson.includes("## "), lesson);
-assert.ok(lesson.includes("Lesson: Priority ladder"));
+// Short heading: stamp + type + title — the question/body lives below it.
+assert.ok(lesson.startsWith("## "), lesson);
+assert.ok(lesson.includes("· Lesson · Priority ladder"));
 assert.ok(lesson.includes("blocked > working > idle"));
+// Heading stamps carry the date, not just the time (arcs span days).
+assert.match(lesson, /^## \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC · Lesson · Priority ladder$/m);
+
+// A lesson body's own headings are demoted one level under the entry heading.
+const nestedLesson = formatLessonEntry("T", "## Section\nbody");
+assert.ok(nestedLesson.includes("\n### Section\n"), nestedLesson);
 
 const quizEntry = formatQuizEntry({
 	status: "answered",
@@ -71,11 +78,27 @@ const quizEntry = formatQuizEntry({
 	correct: true,
 	explanation: "blockedCount > 0 takes priority.",
 });
-assert.ok(quizEntry.includes("Quiz: What state does desiredState() report?"));
-assert.ok(quizEntry.includes("✓ Correct"));
-assert.ok(quizEntry.includes("✓ **2. blocked**"), "correct option is marked and bolded");
-assert.ok(quizEntry.includes("1. working"));
-assert.ok(quizEntry.includes("blockedCount > 0 takes priority."));
+assert.ok(quizEntry.includes("Quiz · ✓ Correct"));
+assert.ok(quizEntry.includes("**Question:** What state does desiredState() report?"));
+assert.ok(quizEntry.includes("- ✓ **2.** blocked"), "selected-and-correct option is marked and bolded");
+assert.ok(quizEntry.includes("\n- 1. working"), "unselected incorrect option stays plain, no mark");
+assert.ok(quizEntry.includes("**Why:** blockedCount > 0 takes priority."));
+// Emphasis metacharacters in option labels are escaped (M*K is multiplication).
+const starredQuiz = formatQuizEntry({
+	status: "answered",
+	question: "Q?",
+	options: [{ index: 1, label: "M*K + K*N" }],
+	answers: [{ index: 1, label: "M*K + K*N" }],
+	correctIndices: [1],
+	correct: true,
+});
+assert.ok(starredQuiz.includes("M\\*K"), starredQuiz);
+assert.ok(!starredQuiz.includes("M*K +"), "unescaped * would render as emphasis");
+// The quiz context/details field is journaled too.
+assert.ok(
+	formatQuizEntry({ status: "answered", question: "Q?", context: "use the ladder" })
+		.includes("**Context:** use the ladder"),
+);
 
 const dontKnowEntry = formatQuizEntry({
 	status: "answered",
@@ -84,7 +107,7 @@ const dontKnowEntry = formatQuizEntry({
 	correctIndices: [1],
 	dontKnow: true,
 });
-assert.ok(dontKnowEntry.includes("Other — I don't know"));
+assert.ok(dontKnowEntry.includes("Quiz · ◐ Other — I don't know"));
 
 const explainEntry = formatExplainEntry({
 	status: "answered",
@@ -100,10 +123,11 @@ const explainEntry = formatExplainEntry({
 		],
 	},
 });
-assert.ok(explainEntry.includes("Explain: Where does the chosen state go next?"));
-assert.ok(explainEntry.includes("partially_correct — grade C"));
+assert.ok(explainEntry.includes("Explain · ◐ partially correct — grade C"));
+assert.ok(explainEntry.includes("**Question:** Where does the chosen state go next?"));
+assert.ok(explainEntry.includes("**Your answer:**"));
 assert.ok(explainEntry.includes("> over the socket to herdr"));
-assert.ok(explainEntry.includes("pane.report_agent over the Unix socket"));
+assert.ok(explainEntry.includes("**Correct answer:** pane.report_agent over the Unix socket"));
 assert.ok(explainEntry.includes("“over the socket”"));
 
 const emptyExplainEntry = formatExplainEntry({
@@ -114,7 +138,7 @@ assert.ok(emptyExplainEntry.includes("honest \"I don't know\""));
 
 for (const status of ["cancelled", "unavailable"]) {
 	const incompleteEntry = formatExplainEntry({ status, question: "What happens next?" });
-	assert.ok(incompleteEntry.includes(`— ${status}`));
+	assert.ok(incompleteEntry.includes(`Explain · ${status}`));
 	assert.ok(!incompleteEntry.includes("I don't know"));
 }
 
@@ -199,18 +223,19 @@ assert.ok(existsSync(journal), "journal should be created beside the session fil
 const contents = readFileSync(journal, "utf-8");
 
 assert.ok(contents.startsWith("# Lesson journal"), "journal gets a header on first write");
-assert.ok(contents.includes("Lesson: Priority ladder"));
+assert.ok(contents.includes("· Lesson · Priority ladder"));
 assert.ok(contents.includes("blocked > working > idle"));
-assert.ok(contents.includes("Quiz: What state wins?"));
-assert.ok(contents.includes("✓ Correct"));
-assert.ok(contents.includes("Explain: Where does the state go?"));
-assert.ok(contents.includes("incorrect — grade D"));
+assert.ok(contents.includes("Quiz · ✓ Correct"));
+assert.ok(contents.includes("**Question:** What state wins?"));
+assert.ok(contents.includes("Explain · ✗ incorrect — grade D"));
+// Entries are separated by horizontal rules.
+assert.ok(contents.includes("\n---\n\n## "), "entries are rule-separated");
 // Conversation order preserved: lesson before quiz before explain.
 assert.ok(
-	contents.indexOf("Lesson: Priority ladder") <
-		contents.indexOf("Quiz: What state wins?") &&
-		contents.indexOf("Quiz: What state wins?") <
-		contents.indexOf("Explain: Where does the state go?"),
+	contents.indexOf("· Lesson · Priority ladder") <
+		contents.indexOf("Quiz ·") &&
+		contents.indexOf("Quiz ·") <
+		contents.indexOf("Explain ·"),
 	"entries must be appended in conversation order",
 );
 assert.ok(!contents.includes("bash"), "non-journal tools must not be logged");
@@ -222,9 +247,9 @@ handlers.get("tool_execution_start")(
 );
 const nextJournal = journalPathFor(sessionFile);
 assert.ok(existsSync(nextJournal), "a changed session gets its own journal");
-assert.ok(readFileSync(nextJournal, "utf-8").includes("Lesson: New session"));
+assert.ok(readFileSync(nextJournal, "utf-8").includes("· Lesson · New session"));
 assert.ok(
-	!readFileSync(journal, "utf-8").includes("Lesson: New session"),
+	!readFileSync(journal, "utf-8").includes("· Lesson · New session"),
 	"a changed session must not append to the previous journal",
 );
 
