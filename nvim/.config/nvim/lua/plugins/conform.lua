@@ -6,7 +6,35 @@ return {
       -- Normalize Markdown structure, then let markdownlint apply its
       -- conceal-aware visual-width rule.
       prettier = {
-        prepend_args = { "--prose-wrap", "never" },
+        -- Let a project's own prettier config drive prose wrapping
+        -- (e.g. mohzi-deal wraps at 80); unwrap only when there is none.
+        prepend_args = function(_, ctx)
+          local names = {
+            ".prettierrc",
+            ".prettierrc.json",
+            ".prettierrc.yaml",
+            ".prettierrc.yml",
+            ".prettierrc.toml",
+            ".prettierrc.js",
+            ".prettierrc.cjs",
+            ".prettierrc.mjs",
+            "prettier.config.js",
+            "prettier.config.mjs",
+            "prettier.config.cjs",
+          }
+          local found = vim.fs.find(names, { upward = true, path = ctx.dirname })
+          if #found > 0 then
+            return {}
+          end
+          local pkg = vim.fs.find({ "package.json" }, { upward = true, path = ctx.dirname })
+          if #pkg > 0 then
+            local ok, decoded = pcall(vim.json.decode, table.concat(vim.fn.readfile(pkg[1]), "\n"))
+            if ok and decoded and decoded.prettier ~= nil then
+              return {}
+            end
+          end
+          return { "--prose-wrap", "never" }
+        end,
       },
       ["markdownlint-cli2"] = {
         prepend_args = { "--config", vim.fn.expand("~/.markdownlint-cli2.yaml") },
