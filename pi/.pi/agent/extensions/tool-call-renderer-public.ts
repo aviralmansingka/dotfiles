@@ -365,9 +365,10 @@ function commandRows(command: string): CommandRow[] {
 /**
  * Bash/powershell call rows render each command line separately: real
  * commands behind a `$` prefix with bash-grammar highlighting, quoted
- * continuations as dim `│` rows (highlighting prose as bash would be a
- * lie). Cached per toolCallId and theme: renders fire every frame, and only
- * a changed command (streaming args) or theme switch recomputes.
+ * continuations as dim unmarked rows aligned under the commands
+ * (highlighting prose as bash would be a lie). Cached per toolCallId and
+ * theme: renders fire every frame, and only a changed command (streaming
+ * args) or theme switch recomputes.
  */
 const highlightedCommands = new Map<string, { source: string; theme: string; rows: { body: string; command: boolean }[] }>();
 function commandBodies(theme: Theme, toolCallId: string, tool: string, command: string): { body: string; command: boolean }[] {
@@ -583,7 +584,7 @@ export default function (pi: ExtensionAPI) {
               return [
                 ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
                 ...commands.map((row, index) =>
-                  ` ${index === commands.length - 1 ? tail : rail} ${row.command ? theme.fg("dim", "$") : theme.fg("borderMuted", "│")} ${row.body}`),
+                  ` ${index === commands.length - 1 ? tail : rail} ${row.command ? theme.fg("dim", "$") : " "} ${row.body}`),
               ];
             }
           }
