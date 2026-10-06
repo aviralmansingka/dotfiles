@@ -310,29 +310,87 @@ function highlightMarkdown(theme: Theme, text: string): string[] {
   return out;
 }
 
+type CommandRow = { text: string; command: boolean };
+
 /**
- * Bash/powershell call rows render each command line separately behind a
- * `$` prefix with bash-grammar highlighting. Cached per toolCallId: renders
- * fire every frame, and only a changed command (streaming args) recomputes.
+ * Split a bash command into lines, tracking quote, heredoc, and backslash
+ * state so quoted multi-line strings (commit messages, heredoc bodies) are
+ * classified as continuations rather than commands. Only lines that start
+ * outside any continuation state get the `$` command treatment; `$(...)`
+ * and backtick spans are not tracked (they rarely split these tool calls).
  */
-const highlightedCommands = new Map<string, { source: string; lines: string[] }>();
-function highlightCommand(theme: Theme, toolCallId: string, tool: string, command: string): string[] {
-  const cached = highlightedCommands.get(toolCallId);
-  if (cached && cached.source === command) return cached.lines;
-  ensureHighlightTheme(theme);
-  const lang = tool === "powershell" ? "powershell" : "bash";
-  const lines: string[] = [];
-  for (const line of command.split("\n")) {
-    const text = safeLine(line);
-    if (!text.trim()) continue;
-    try {
-      lines.push(...highlightCode(text, lang));
-    } catch {
-      lines.push(text);
+function commandRows(command: string): CommandRow[] {
+  const rows: CommandRow[] = [];
+  let inSingle = false;
+  let inDouble = false;
+  let heredoc: string | undefined;
+  let continued = false;
+  for (const raw of command.split("\n")) {
+    const line = safeLine(raw);
+    const isContinuation = inSingle || inDouble || Boolean(heredoc) || continued;
+    if (!isContinuation && !line.trim()) continue;
+    if (heredoc) {
+      rows.push({ text: line, command: false });
+      if (line.trim() === heredoc) heredoc = undefined;
+      continue;
+    }
+    rows.push({ text: line, command: !isContinuation });
+    continued = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inSingle) {
+        if (ch === "'") inSingle = false;
+      } else if (inDouble) {
+        if (ch === "\\") i++;
+        else if (ch === '"') inDouble = false;
+      } else if (ch === "\\") {
+        if (i === line.length - 1) continued = true;
+        else i++;
+      } else if (ch === "'") {
+        inSingle = true;
+      } else if (ch === '"') {
+        inDouble = true;
+      } else if (ch === "<" && line[i + 1] === "<") {
+        const tag = /^<<-?\s*("?)([A-Za-z_][A-Za-z0-9_-]*)\1/.exec(line.slice(i));
+        if (tag) {
+          heredoc = tag[2];
+          i += tag[0].length - 1;
+        }
+      }
     }
   }
-  highlightedCommands.set(toolCallId, { source: command, lines });
-  return lines;
+  return rows;
+}
+
+/**
+ * Bash/powershell call rows render each command line separately: real
+ * commands behind a `$` prefix with bash-grammar highlighting, quoted
+ * continuations as dim `│` rows (highlighting prose as bash would be a
+ * lie). Cached per toolCallId and theme: renders fire every frame, and only
+ * a changed command (streaming args) or theme switch recomputes.
+ */
+const highlightedCommands = new Map<string, { source: string; theme: string; rows: { body: string; command: boolean }[] }>();
+function commandBodies(theme: Theme, toolCallId: string, tool: string, command: string): { body: string; command: boolean }[] {
+  const themeName = theme.name ?? "";
+  const cached = highlightedCommands.get(toolCallId);
+  if (cached && cached.source === command && cached.theme === themeName) return cached.rows;
+  ensureHighlightTheme(theme);
+  const lang = tool === "powershell" ? "powershell" : "bash";
+  const rows = commandRows(command).map((part) => {
+    let body = part.text;
+    if (part.command) {
+      try {
+        body = highlightCode(part.text, lang)[0] ?? part.text;
+      } catch {
+        // Highlighting needs pi's theme runtime; the plain line still renders.
+      }
+    } else {
+      body = theme.fg("dim", part.text);
+    }
+    return { body, command: part.command };
+  });
+  highlightedCommands.set(toolCallId, { source: command, theme: themeName, rows });
+  return rows;
 }
 
 function wrapLine(line: string, avail: number): { chunks: string[]; skipped: number } {
@@ -515,16 +573,17 @@ export default function (pi: ExtensionAPI) {
           const elapsed = elapsedValue ? ` · ${elapsedValue}` : "";
           const name = theme.fg("text", theme.bold(clean(toolName)));
           if (toolName === "bash" || toolName === "powershell") {
-            const commands = highlightCommand(theme, context.toolCallId, toolName, asString(asRecord(args).command));
-            if (commands.length === 1) {
-              return [` ${glyph} ${name} ${theme.fg("dim", "$")} ${commands[0]}${theme.fg("dim", elapsed)}`];
+            const commands = commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
+            if (commands.length === 1 && commands[0].command) {
+              return [` ${glyph} ${name} ${theme.fg("dim", "$")} ${commands[0].body}${theme.fg("dim", elapsed)}`];
             }
-            if (commands.length > 1) {
+            if (commands.length > 0) {
               const rail = theme.fg("borderMuted", "├─");
               const tail = theme.fg("borderMuted", "└─");
               return [
                 ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
-                ...commands.map((line, index) => ` ${index === commands.length - 1 ? tail : rail} ${theme.fg("dim", "$")} ${line}`),
+                ...commands.map((row, index) =>
+                  ` ${index === commands.length - 1 ? tail : rail} ${row.command ? theme.fg("dim", "$") : theme.fg("borderMuted", "│")} ${row.body}`),
               ];
             }
           }
