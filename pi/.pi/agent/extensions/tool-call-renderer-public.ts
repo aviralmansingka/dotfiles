@@ -364,11 +364,12 @@ function commandRows(command: string): CommandRow[] {
 
 /**
  * Bash/powershell call rows render each command line separately: real
- * commands behind a `$`-prefixed leaf with bash-grammar highlighting,
- * quoted continuations as dim unmarked lines indented under the command
- * (no leaf per line; highlighting prose as bash would be a lie). Cached per
- * toolCallId and theme: renders fire every frame, and only a changed
- * command (streaming args) or theme switch recomputes.
+ * commands behind a `$`-prefixed leaf with bash-grammar highlighting;
+ * continuation lines between command leaves carry the connecting `│` rail
+ * (bare indent after the last command) with dim, unhighlighted text —
+ * highlighting prose as bash would be a lie. Cached per toolCallId and
+ * theme: renders fire every frame, and only a changed command (streaming
+ * args) or theme switch recomputes.
  */
 const highlightedCommands = new Map<string, { source: string; theme: string; rows: { body: string; command: boolean }[] }>();
 function commandBodies(theme: Theme, toolCallId: string, tool: string, command: string): { body: string; command: boolean }[] {
@@ -585,9 +586,14 @@ export default function (pi: ExtensionAPI) {
               return [
                 ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
                 ...commands.map((row, index) => {
-                  // Leaves only where a command begins; continuations are
-                  // bare indented lines, aligned under the command text.
-                  if (!row.command) return `      ${row.body}`;
+                  // Leaves only where a command begins. Continuations carry
+                  // the connecting rail while later commands follow, so the
+                  // leaves read as one tree; after the last command they
+                  // indent bare, aligned under the command text.
+                  if (!row.command) {
+                    const connectsCommands = commands.slice(index + 1).some((later) => later.command);
+                    return `${connectsCommands ? ` ${theme.fg("borderMuted", "│")}` : "  "}    ${row.body}`;
+                  }
                   const isLastCommand = !commands.slice(index + 1).some((later) => later.command);
                   return ` ${isLastCommand ? tail : rail} ${dollar} ${row.body}`;
                 }),
