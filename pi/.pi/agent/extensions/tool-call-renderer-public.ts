@@ -310,14 +310,18 @@ function highlightMarkdown(theme: Theme, text: string): string[] {
   return out;
 }
 
-type CommandRow = { text: string; command: boolean };
+type CommandRow = { text: string; command: boolean; op: string };
 
 /**
- * Split a bash command into lines, tracking quote, heredoc, and backslash
- * state so quoted multi-line strings (commit messages, heredoc bodies) are
- * classified as continuations rather than commands. Only lines that start
- * outside any continuation state get the `$` command treatment; `$(...)`
- * and backtick spans are not tracked (they rarely split these tool calls).
+ * Split a bash command into rows, tracking quote, heredoc, backslash, and
+ * paren (subshell/$(…)) state across lines. Command lines are further split
+ * into executable segments at top-level `&&`, `||`, and `|`: each segment
+ * after the first starts with the operator that joins it to the previous
+ * step, so every leaf reads as an executable line. Quoted multi-line
+ * strings and heredoc bodies are continuations, not commands. `;` is not
+ * split mid-line (it would break for/if headers) but a leading `;` is
+ * stripped as the joining operator; an operator ending a line carries to
+ * the next command line.
  */
 function commandRows(command: string): CommandRow[] {
   const rows: CommandRow[] = [];
@@ -325,18 +329,36 @@ function commandRows(command: string): CommandRow[] {
   let inDouble = false;
   let heredoc: string | undefined;
   let continued = false;
+  let carriedOp: string | undefined;
   for (const raw of command.split("\n")) {
     const line = safeLine(raw);
-    const isContinuation = inSingle || inDouble || Boolean(heredoc) || continued;
+    // A line that merely completes a backslash-continued segment after an
+    // operator (a line ending in `&& \` whose next line holds the operand)
+    // is executable: it takes the carried operator instead of rendering as
+    // a dim continuation.
+    const completesCarried = continued && Boolean(carriedOp) && !inSingle && !inDouble && !heredoc;
+    const isContinuation = (inSingle || inDouble || Boolean(heredoc) || continued) && !completesCarried;
     if (!isContinuation && !line.trim()) continue;
     if (heredoc) {
-      rows.push({ text: line, command: false });
+      rows.push({ text: line, command: false, op: "" });
       if (line.trim() === heredoc) heredoc = undefined;
       continue;
     }
-    rows.push({ text: line, command: !isContinuation });
+    let parenDepth = 0;
+    let start = 0;
+    let pendingOp: string | undefined;
+    if (!isContinuation) {
+      const lead = /^(&&|\|\||\||;)\s*/.exec(line);
+      if (lead) {
+        pendingOp = lead[1];
+        start = lead[0].length;
+      } else if (carriedOp) {
+        pendingOp = carriedOp;
+      }
+    }
+    carriedOp = undefined;
     continued = false;
-    for (let i = 0; i < line.length; i++) {
+    for (let i = start; i < line.length; i++) {
       const ch = line[i];
       if (inSingle) {
         if (ch === "'") inSingle = false;
@@ -350,6 +372,18 @@ function commandRows(command: string): CommandRow[] {
         inSingle = true;
       } else if (ch === '"') {
         inDouble = true;
+      } else if (parenDepth > 0) {
+        if (ch === ")") parenDepth--;
+        else if (ch === "(") parenDepth++;
+      } else if (ch === "(") {
+        parenDepth++;
+      } else if (!isContinuation && (ch === "|" || (ch === "&" && line[i + 1] === "&"))) {
+        const op = ch === "|" ? (line[i + 1] === "|" ? "||" : "|") : "&&";
+        const text = line.slice(start, i).trim();
+        if (text) rows.push({ text, command: true, op: pendingOp ?? "$" });
+        pendingOp = op;
+        i += op.length - 1;
+        start = i + 1;
       } else if (ch === "<" && line[i + 1] === "<") {
         const tag = /^<<-?\s*("?)([A-Za-z_][A-Za-z0-9_-]*)\1/.exec(line.slice(i));
         if (tag) {
@@ -358,21 +392,29 @@ function commandRows(command: string): CommandRow[] {
         }
       }
     }
+    if (isContinuation) {
+      rows.push({ text: line, command: false, op: "" });
+      continue;
+    }
+    const tailText = line.slice(start).trim();
+    if (tailText && tailText !== "\\") rows.push({ text: tailText, command: true, op: pendingOp ?? "$" });
+    else if (pendingOp) carriedOp = pendingOp;
   }
   return rows;
 }
 
 /**
- * Bash/powershell call rows render each command line separately: real
- * commands behind a `$`-prefixed leaf with bash-grammar highlighting;
+ * Bash/powershell call rows render each executable segment separately:
+ * commands behind a dim operator marker (`$` for the first, then the
+ * `&&`/`||`/`|` that joins them) with bash-grammar highlighting;
  * continuation lines between command leaves carry the connecting `│` rail
  * (bare indent after the last command) with dim, unhighlighted text —
  * highlighting prose as bash would be a lie. Cached per toolCallId and
  * theme: renders fire every frame, and only a changed command (streaming
  * args) or theme switch recomputes.
  */
-const highlightedCommands = new Map<string, { source: string; theme: string; rows: { body: string; command: boolean }[] }>();
-function commandBodies(theme: Theme, toolCallId: string, tool: string, command: string): { body: string; command: boolean }[] {
+const highlightedCommands = new Map<string, { source: string; theme: string; rows: { body: string; command: boolean; op: string }[] }>();
+function commandBodies(theme: Theme, toolCallId: string, tool: string, command: string): { body: string; command: boolean; op: string }[] {
   const themeName = theme.name ?? "";
   const cached = highlightedCommands.get(toolCallId);
   if (cached && cached.source === command && cached.theme === themeName) return cached.rows;
@@ -389,7 +431,7 @@ function commandBodies(theme: Theme, toolCallId: string, tool: string, command: 
     } else {
       body = theme.fg("dim", part.text);
     }
-    return { body, command: part.command };
+    return { body, command: part.command, op: part.op };
   });
   highlightedCommands.set(toolCallId, { source: command, theme: themeName, rows });
   return rows;
@@ -582,20 +624,20 @@ export default function (pi: ExtensionAPI) {
             if (commands.length > 0) {
               const rail = theme.fg("borderMuted", "├─");
               const tail = theme.fg("borderMuted", "└─");
-              const dollar = theme.fg("dim", "$");
               return [
                 ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
                 ...commands.map((row, index) => {
-                  // Leaves only where a command begins. Continuations carry
-                  // the connecting rail while later commands follow, so the
-                  // leaves read as one tree; after the last command they
-                  // indent bare, aligned under the command text.
+                  // Leaves only where an executable segment begins; the dim
+                  // marker is `$` for the first segment and the joining
+                  // operator for the rest. Continuations carry the
+                  // connecting rail while later commands follow; after the
+                  // last command they indent bare, aligned under the text.
                   if (!row.command) {
                     const connectsCommands = commands.slice(index + 1).some((later) => later.command);
-                    return `${connectsCommands ? ` ${theme.fg("borderMuted", "│")}` : "  "}    ${row.body}`;
+                    return `${connectsCommands ? ` ${theme.fg("borderMuted", "│")}` : "  "}     ${row.body}`;
                   }
                   const isLastCommand = !commands.slice(index + 1).some((later) => later.command);
-                  return ` ${isLastCommand ? tail : rail} ${dollar} ${row.body}`;
+                  return ` ${isLastCommand ? tail : rail} ${theme.fg("dim", row.op.padEnd(2))} ${row.body}`;
                 }),
               ];
             }
