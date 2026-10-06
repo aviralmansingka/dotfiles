@@ -122,7 +122,12 @@ try {
   const bashCtx = context("timed", { command: "printf hi\nexit 0" });
   handlers.get("tool_execution_start")({ toolCallId: "timed" });
   const call = bash.renderCall(bashCtx.args, theme, bashCtx);
-  assert.match(render(call), /◇ bash \$ printf hi/);
+  const callOut = render(call);
+  assert.match(callOut, /◇ bash/, "multi-line commands render a bare header row");
+  assert.ok(!callOut.includes("◇ bash $"), "multi-line commands drop the inline $ form");
+  assert.match(callOut, /├─ \$ <hl:bash>printf hi/, "each command line gets its own railed $ row, highlighted");
+  assert.match(callOut, /└─ \$ <hl:bash>exit 0/);
+  assert.match(render(bash.renderCall({ command: "printf hi" }, theme, context("single", {}, { executionStarted: false }))), /◇ bash \$ <hl:bash>printf hi/, "single-line commands stay inline");
   const beforeTick = invalidations;
   await new Promise((resolve) => setTimeout(resolve, 1100));
   assert.ok(invalidations > beforeTick, "clock invalidates the public row context");

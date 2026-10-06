@@ -310,6 +310,31 @@ function highlightMarkdown(theme: Theme, text: string): string[] {
   return out;
 }
 
+/**
+ * Bash/powershell call rows render each command line separately behind a
+ * `$` prefix with bash-grammar highlighting. Cached per toolCallId: renders
+ * fire every frame, and only a changed command (streaming args) recomputes.
+ */
+const highlightedCommands = new Map<string, { source: string; lines: string[] }>();
+function highlightCommand(theme: Theme, toolCallId: string, tool: string, command: string): string[] {
+  const cached = highlightedCommands.get(toolCallId);
+  if (cached && cached.source === command) return cached.lines;
+  ensureHighlightTheme(theme);
+  const lang = tool === "powershell" ? "powershell" : "bash";
+  const lines: string[] = [];
+  for (const line of command.split("\n")) {
+    const text = safeLine(line);
+    if (!text.trim()) continue;
+    try {
+      lines.push(...highlightCode(text, lang));
+    } catch {
+      lines.push(text);
+    }
+  }
+  highlightedCommands.set(toolCallId, { source: command, lines });
+  return lines;
+}
+
 function wrapLine(line: string, avail: number): { chunks: string[]; skipped: number } {
   try {
     const { visualLines, skippedCount } = truncateToVisualLines(line, OUTPUT_WRAP_LINES, Math.max(8, avail));
@@ -401,6 +426,7 @@ function disposeState(): void {
   for (const row of rows.values()) stop(row);
   rows.clear();
   background.clear();
+  highlightedCommands.clear();
 }
 
 function component(draw: (width?: number) => string[]): Component {
@@ -487,8 +513,23 @@ export default function (pi: ExtensionAPI) {
           const elapsedValue = !row.restored && finiteNumber(row.startedAt)
             ? formatElapsed(Math.max(0, (row.completedAt ?? Date.now()) - row.startedAt)) : "";
           const elapsed = elapsedValue ? ` · ${elapsedValue}` : "";
+          const name = theme.fg("text", theme.bold(clean(toolName)));
+          if (toolName === "bash" || toolName === "powershell") {
+            const commands = highlightCommand(theme, context.toolCallId, toolName, asString(asRecord(args).command));
+            if (commands.length === 1) {
+              return [` ${glyph} ${name} ${theme.fg("dim", "$")} ${commands[0]}${theme.fg("dim", elapsed)}`];
+            }
+            if (commands.length > 1) {
+              const rail = theme.fg("borderMuted", "├─");
+              const tail = theme.fg("borderMuted", "└─");
+              return [
+                ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
+                ...commands.map((line, index) => ` ${index === commands.length - 1 ? tail : rail} ${theme.fg("dim", "$")} ${line}`),
+              ];
+            }
+          }
           const arg = preview(toolName, asRecord(args));
-          return [` ${glyph} ${theme.fg("text", theme.bold(clean(toolName)))}${theme.fg("dim", `${arg ? ` ${arg}` : ""}${elapsed}`)}`];
+          return [` ${glyph} ${name}${theme.fg("dim", `${arg ? ` ${arg}` : ""}${elapsed}`)}`];
         });
       },
       renderResult(result, { expanded, isPartial }, theme, context) {
