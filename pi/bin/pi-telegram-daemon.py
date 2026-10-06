@@ -118,9 +118,11 @@ class IncomingMessage:
 
 
 # ---------------------------------------------------------------------------
-# Thinking-trace rendering — mirrors the TUI tool-call-renderer extension.
+# Thinking-trace rendering — mirrors the TUI work-step tree. The internals-
+# based renderer it was ported from (tool-call-renderer.ts) is removed; the
+# current TUI renderer is the public-API tool-call-renderer-public.ts.
 #
-# The TUI (pi/.pi/agent/extensions/tool-call-renderer.ts) renders a tree:
+# The ported tree renders:
 #
 #   │  2 steps · 3 calls · 1/2 complete
 #   ├─ ▸ Reading config
@@ -189,7 +191,7 @@ def _basename(path: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Data model — ported from tool-call-renderer.ts WorkStep / ToolCall.
+# Data model — ported from the removed tool-call-renderer.ts WorkStep / ToolCall.
 # ---------------------------------------------------------------------------
 
 
@@ -535,10 +537,10 @@ class TraceBuilder:
     lifecycle, and render a compact one-line-per-step trace.
 
     Telegram is a mobile-first surface, so the render is deliberately flatter
-    than the TUI tree: only step titles and per-step elapsed time. The TUI
-    (pi/.pi/agent/extensions/tool-call-renderer.ts) keeps the full tree with
-    tool summaries and thinking bullets; the model here stays faithful to it so
-    a richer render can be restored without rework.
+    than the TUI tree: only step titles and per-step elapsed time. The model
+    stays faithful to the removed tool-call-renderer.ts tree (kept in the TUI
+    by tool-call-renderer-public.ts in flatter form) so a richer render can be
+    restored without rework.
     """
 
     def __init__(self, clock: Optional[Any] = None) -> None:
