@@ -627,17 +627,18 @@ export default function (pi: ExtensionAPI) {
               return [
                 ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
                 ...commands.map((row, index) => {
-                  // Leaves only where an executable segment begins; the dim
-                  // marker is `$` for the first segment and the joining
-                  // operator for the rest. Continuations carry the
-                  // connecting rail while later commands follow; after the
-                  // last command they indent bare, aligned under the text.
+                  // A leaf (├─/└─) only where a `$` command starts; every
+                  // other row — operator-joined segments and quoted/heredoc
+                  // continuations — rides a bare `│` spine with no
+                  // horizontal arm, all text aligned in one column.
+                  const followed = index < commands.length - 1;
                   if (!row.command) {
-                    const connectsCommands = commands.slice(index + 1).some((later) => later.command);
-                    return `${connectsCommands ? ` ${theme.fg("borderMuted", "│")}` : "  "}     ${row.body}`;
+                    return ` ${theme.fg("borderMuted", "│")}     ${row.body}`;
                   }
-                  const isLastCommand = !commands.slice(index + 1).some((later) => later.command);
-                  return ` ${isLastCommand ? tail : rail} ${theme.fg("dim", row.op.padEnd(2))} ${row.body}`;
+                  if (row.op === "$") {
+                    return ` ${followed ? rail : tail} ${theme.fg("dim", "$ ")} ${row.body}`;
+                  }
+                  return ` ${theme.fg("borderMuted", "│")}  ${theme.fg("dim", row.op.padEnd(2))} ${row.body}`;
                 }),
               ];
             }
