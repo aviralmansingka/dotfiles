@@ -2,10 +2,11 @@
  * Public-API work-step renderer experiment. Load with pi -ne -e <this file>.
  * Owns the call row and collapsed summary for every tool (built-ins ship
  * their own renderers in pi 1.0.4, so `next() ?? mine` would never apply).
- * Expanded bodies: output-style tools (bash etc.) delegate to downstream
- * renderResult when present; connected tools and file-shaped tools (read,
- * write) keep OUR expansion — numbered, theme-synced syntax-highlighted
- * content, +/− diffs, soft-wrapped rails.
+ * Expanded bodies: connected tools, file-shaped tools (read, write), and
+ * bash/powershell keep OUR expansion — chips and recentTools trees,
+ * numbered syntax-highlighted content, and status-framed command output
+ * (✓/✗ exit banner + railed head-and-tail fold). Other tools delegate to
+ * downstream renderResult when present.
  * No assistant-message grouping or native expanded output: each tool owns its
  * row, and expansion is bounded text/details (images are described, not drawn).
  */
@@ -38,6 +39,9 @@ const rows = new Map<string, Row>();
 const background = new Map<string, Background>();
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 const FILE_TOOLS = new Set(["read", "write"]);
+const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
+const OUTPUT_HEAD = 30;
+const OUTPUT_TAIL = 30;
 const RUNNING = new Set(["pending", "running", "fixing", "awaiting_approval", "fix_review"]);
 const OUTPUT_LINE_CAP = 200;
 const OUTPUT_WRAP_LINES = 8;
@@ -506,9 +510,50 @@ function wrapLine(line: string, avail: number): { chunks: string[]; skipped: num
  * instead of hard-truncating; one pathological line folds after
  * OUTPUT_WRAP_LINES visual lines.
  */
+/**
+ * Status banner replacing the collapsed summary when a bash/powershell row
+ * is expanded: bold ✓/✗ exit mark in success/error color, dim line count
+ * and elapsed. Collapsed rows keep the plain `exit N · M lines` summary.
+ */
+function statusBanner(theme: Theme, result: Result, row: Row): string {
+  const code = exitCode(result);
+  const text = textContent(result);
+  const count = text ? text.replace(/\n$/, "").split("\n").length : 0;
+  const elapsedValue = !row.restored && finiteNumber(row.startedAt) && finiteNumber(row.completedAt)
+    ? formatElapsed(Math.max(0, row.completedAt - row.startedAt)) : "";
+  const elapsed = elapsedValue ? ` · ${elapsedValue}` : "";
+  const mark = row.failed
+    ? theme.fg("error", theme.bold(`✗ exit ${code ?? "?"}`))
+    : theme.fg("success", theme.bold(`✓ exit ${code ?? 0}`));
+  return ` ${theme.fg("borderMuted", "└─")} ${mark}${theme.fg("dim", ` · ${plural(count, "line")}${elapsed}`)}`;
+}
+
 function expandedOutput(tool: string, result: Result, theme: Theme, context: RenderContext, width = 200): string[] {
   const details = asRecord(result.details);
   const text = textContent(result);
+  if (OUTPUT_TOOLS.has(tool)) {
+    // Command output behind a bare rail, head-and-tail folded so both the
+    // opening context and the trailing errors stay visible.
+    if (!text) return [];
+    const rail = theme.fg("borderMuted", "│");
+    const prefix = ` ${rail}  `;
+    const out: string[] = [];
+    const emit = (line: string): void => {
+      const body = theme.fg("toolOutput", safeLine(line));
+      for (const chunk of wrapLine(body, Math.max(8, width - 4)).chunks) out.push(prefix + chunk);
+    };
+    const all = text.replace(/\n$/, "").split("\n");
+    if (all.length <= OUTPUT_HEAD + OUTPUT_TAIL + 2) {
+      for (const line of all) emit(line);
+    } else {
+      for (const line of all.slice(0, OUTPUT_HEAD)) emit(line);
+      out.push(`${prefix}${theme.fg("dim", `… ${all.length - OUTPUT_HEAD - OUTPUT_TAIL} lines hidden …`)}`);
+      for (const line of all.slice(-OUTPUT_TAIL)) emit(line);
+    }
+    if (asRecord(details.truncation).truncated) out.push(`${prefix}${theme.fg("dim", "Output was truncated by the tool.")}`);
+    if (details.fullOutputPath) out.push(`${prefix}${theme.fg("dim", `Full output: ${clean(details.fullOutputPath)}`)}`);
+    return out;
+  }
   let lines: string[] = text ? text.split("\n") : [];
   let color: ((line: string) => string) | undefined;
   if (tool === "edit" && details.diff) {
@@ -717,7 +762,9 @@ export default function (pi: ExtensionAPI) {
           }
           const lines = CONNECTED.has(toolName)
             ? renderConnectedChips(toolName, asRecord(context.args), effective, expanded, partial, row, theme, context.isError || asRecord(effective).isError === true)
-            : [` ${theme.fg("borderMuted", "└─")} ${theme.fg(row.failed ? "error" : running ? "muted" : "success", running ? "running" : summary(toolName, effective, Boolean(row.failed)))}`];
+            : [expanded && row.settled && OUTPUT_TOOLS.has(toolName)
+              ? statusBanner(theme, effective, row)
+              : ` ${theme.fg("borderMuted", "└─")} ${theme.fg(row.failed ? "error" : running ? "muted" : "success", running ? "running" : summary(toolName, effective, Boolean(row.failed)))}`];
           if (expanded) lines.push(...expandedOutput(toolName, effective, theme, context, width));
           return lines;
         };
@@ -729,10 +776,10 @@ export default function (pi: ExtensionAPI) {
     // Connected tools never delegate: our chips and recentTools tree are
     // richer than the subagent extension's own result render, which would
     // otherwise show a stale "⟳ name — started" line on expand. File tools
-    // keep their expansion ours too: the native render proved near-uncolored
-    // in practice, while our theme-synced highlightCode carries full syntax
-    // colors plus line numbers.
-    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) ? undefined : next();
+    // and bash/powershell keep their expansion ours too: the native file
+    // render proved near-uncolored, and the native bash output view has no
+    // framing — ours adds the exit banner plus the railed head-and-tail fold.
+    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) ? undefined : next();
     if (!other?.renderResult) return mine;
     return {
       renderShell: "self",

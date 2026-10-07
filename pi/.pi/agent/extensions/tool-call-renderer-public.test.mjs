@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell"]);
   for (const name of ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "no_mistakes_axi", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -159,6 +159,20 @@ try {
   assert.match(midclose, /^ │\s*$/m);
   assert.match(midclose, /Demonstrates row shapes\."/, "the quoted message renders dim to its close");
   assert.match(midclose, / │  && <hl:bash>git log --oneline -1/, "a command following a mid-line quote close gets its own executable row");
+  const bashOut = render(bash.renderResult(result("line one\nline two\nline three", { exitCode: 0 }), { ...options, expanded: true }, theme, context("bout", {}, quiet)));
+  assert.match(bashOut, /└─ ✓ exit 0 · 3 lines/, "the status banner replaces the collapsed summary when expanded");
+  assert.match(bashOut, / │  line two/, "output lines ride a bare rail");
+  const many = Array.from({ length: 100 }, (_, i) => `out ${i}`).join("\n");
+  const folded = render(bash.renderResult(result(many, { exitCode: 0 }), { ...options, expanded: true }, theme, context("fold", {}, quiet)));
+  assert.match(folded, / │  out 0\n/);
+  assert.match(folded, / │  out 29\n/);
+  assert.ok(!folded.includes("out 30"), "middle lines fold away");
+  assert.match(folded, /… 40 lines hidden …/);
+  assert.match(folded, / │  out 99/);
+  const errTheme = { ...theme, fg: (c, t) => (c === "error" ? `<e>${t}</e>` : t) };
+  const failedBanner = render(bash.renderResult(result("boom", { exitCode: 2 }), { ...options, expanded: true }, errTheme, context("fb", {}, quiet)));
+  assert.match(failedBanner, /└─ <e>✗ exit 2<\/e> · 1 line/, "failed runs get a red ✗ banner");
+  assert.match(failedBanner, / │  boom/);
   const beforeTick = invalidations;
   await new Promise((resolve) => setTimeout(resolve, 1100));
   assert.ok(invalidations > beforeTick, "clock invalidates the public row context");
