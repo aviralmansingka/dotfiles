@@ -535,8 +535,9 @@ function expandedOutput(tool: string, result: Result, theme: Theme, context: Ren
     // Command output behind a bare rail, head-and-tail folded so both the
     // opening context and the trailing errors stay visible.
     if (!text) return [];
-    const rail = theme.fg("borderMuted", "│");
-    const prefix = ` ${rail}  `;
+    // Plain indentation, no rail glyph: rail characters pollute terminal
+    // selections and make the output hard to copy out.
+    const prefix = "    ";
     const out: string[] = [];
     const emit = (line: string): void => {
       const body = theme.fg("toolOutput", safeLine(line));
