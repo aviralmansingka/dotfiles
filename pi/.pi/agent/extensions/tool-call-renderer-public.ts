@@ -314,14 +314,16 @@ type CommandRow = { text: string; command: boolean; op: string };
 
 /**
  * Split a bash command into rows, tracking quote, heredoc, backslash, and
- * paren (subshell/$(…)) state across lines. Command lines are further split
- * into executable segments at top-level `&&`, `||`, and `|`: each segment
+ * paren (subshell/$(…)) state across lines. Each line is scanned in two
+ * phases: a continuation prefix (quoted string, heredoc body, backslash
+ * wrap) renders dim, and a construct that CLOSES mid-line hands the rest of
+ * the line to command context — so `…message." && git log` yields a dim
+ * message row plus an executable `&& git log` row. Command context splits
+ * into executable segments at top-level `&&`, `||`, and `|`; each segment
  * after the first starts with the operator that joins it to the previous
- * step, so every leaf reads as an executable line. Quoted multi-line
- * strings and heredoc bodies are continuations, not commands. `;` is not
- * split mid-line (it would break for/if headers) but a leading `;` is
- * stripped as the joining operator; an operator ending a line carries to
- * the next command line.
+ * step. `;` is not split mid-line (it would break for/if headers) but a
+ * leading `;` is stripped as the joining operator; an operator ending a
+ * line carries to the next command line.
  */
 function commandRows(command: string): CommandRow[] {
   const rows: CommandRow[] = [];
@@ -332,42 +334,93 @@ function commandRows(command: string): CommandRow[] {
   let carriedOp: string | undefined;
   for (const raw of command.split("\n")) {
     const line = safeLine(raw);
-    // A line that merely completes a backslash-continued segment after an
-    // operator (a line ending in `&& \` whose next line holds the operand)
-    // is executable: it takes the carried operator instead of rendering as
-    // a dim continuation.
-    const completesCarried = continued && Boolean(carriedOp) && !inSingle && !inDouble && !heredoc;
-    const isContinuation = (inSingle || inDouble || Boolean(heredoc) || continued) && !completesCarried;
-    if (!isContinuation && !line.trim()) continue;
     if (heredoc) {
       rows.push({ text: line, command: false, op: "" });
       if (line.trim() === heredoc) heredoc = undefined;
       continue;
     }
-    let parenDepth = 0;
+    // A line that merely completes a backslash-continued segment after an
+    // operator (a line ending in `&& \` whose next line holds the operand)
+    // is executable: it takes the carried operator instead of rendering as
+    // a dim continuation.
+    const completesCarried = continued && Boolean(carriedOp) && !inSingle && !inDouble;
+    const startsContinued = (inSingle || inDouble || continued) && !completesCarried;
+    if (!startsContinued && !completesCarried && !line.trim()) continue;
+
+    // Phase 1 — continuation prefix: everything up to where the continued
+    // construct closes renders dim.
+    let i = 0;
+    if (startsContinued) {
+      if (inSingle || inDouble) {
+        while (i < line.length) {
+          const ch = line[i];
+          if (inSingle) {
+            if (ch === "'") {
+              inSingle = false;
+              i++;
+              break;
+            }
+            i++;
+          } else if (ch === "\\") {
+            i += 2;
+          } else if (ch === '"') {
+            inDouble = false;
+            i++;
+            break;
+          } else {
+            i++;
+          }
+        }
+      } else {
+        // Backslash wrap: the whole line continues its segment. Re-scan it
+        // for constructs that outlive it (opened quotes, another wrap).
+        i = line.length;
+        continued = false;
+        for (let j = 0; j < line.length; j++) {
+          const ch = line[j];
+          if (inSingle) {
+            if (ch === "'") inSingle = false;
+          } else if (inDouble) {
+            if (ch === "\\") j++;
+            else if (ch === '"') inDouble = false;
+          } else if (ch === "\\") {
+            if (j === line.length - 1) continued = true;
+            else j++;
+          } else if (ch === "'") {
+            inSingle = true;
+          } else if (ch === '"') {
+            inDouble = true;
+          }
+        }
+      }
+      rows.push({ text: line.slice(0, i), command: false, op: "" });
+    }
+
+    // Phase 2 — command context for the remainder: split into executable
+    // segments at top-level operators; state persists across lines.
+    const rest = startsContinued ? line.slice(i) : line;
+    let pendingOp: string | undefined = carriedOp;
+    carriedOp = undefined;
     let start = 0;
-    let pendingOp: string | undefined;
-    if (!isContinuation) {
-      const lead = /^(&&|\|\||\||;)\s*/.exec(line);
+    if (rest.trim() && !pendingOp) {
+      const lead = /^(&&|\|\||\||;)\s*/.exec(rest);
       if (lead) {
         pendingOp = lead[1];
         start = lead[0].length;
-      } else if (carriedOp) {
-        pendingOp = carriedOp;
       }
     }
-    carriedOp = undefined;
-    continued = false;
-    for (let i = start; i < line.length; i++) {
-      const ch = line[i];
+    if (rest.length) continued = false;
+    let parenDepth = 0;
+    for (let j = start; j < rest.length; j++) {
+      const ch = rest[j];
       if (inSingle) {
         if (ch === "'") inSingle = false;
       } else if (inDouble) {
-        if (ch === "\\") i++;
+        if (ch === "\\") j++;
         else if (ch === '"') inDouble = false;
       } else if (ch === "\\") {
-        if (i === line.length - 1) continued = true;
-        else i++;
+        if (j === rest.length - 1) continued = true;
+        else j++;
       } else if (ch === "'") {
         inSingle = true;
       } else if (ch === '"') {
@@ -377,26 +430,22 @@ function commandRows(command: string): CommandRow[] {
         else if (ch === "(") parenDepth++;
       } else if (ch === "(") {
         parenDepth++;
-      } else if (!isContinuation && (ch === "|" || (ch === "&" && line[i + 1] === "&"))) {
-        const op = ch === "|" ? (line[i + 1] === "|" ? "||" : "|") : "&&";
-        const text = line.slice(start, i).trim();
+      } else if (ch === "|" || (ch === "&" && rest[j + 1] === "&")) {
+        const op = ch === "|" ? (rest[j + 1] === "|" ? "||" : "|") : "&&";
+        const text = rest.slice(start, j).trim();
         if (text) rows.push({ text, command: true, op: pendingOp ?? "$" });
         pendingOp = op;
-        i += op.length - 1;
-        start = i + 1;
-      } else if (ch === "<" && line[i + 1] === "<") {
-        const tag = /^<<-?\s*("?)([A-Za-z_][A-Za-z0-9_-]*)\1/.exec(line.slice(i));
+        j += op.length - 1;
+        start = j + 1;
+      } else if (ch === "<" && rest[j + 1] === "<") {
+        const tag = /^<<-?\s*("?)([A-Za-z_][A-Za-z0-9_-]*)\1/.exec(rest.slice(j));
         if (tag) {
           heredoc = tag[2];
-          i += tag[0].length - 1;
+          j += tag[0].length - 1;
         }
       }
     }
-    if (isContinuation) {
-      rows.push({ text: line, command: false, op: "" });
-      continue;
-    }
-    const tailText = line.slice(start).trim();
+    const tailText = rest.slice(start).trim();
     if (tailText && tailText !== "\\") rows.push({ text: tailText, command: true, op: pendingOp ?? "$" });
     else if (pendingOp) carriedOp = pendingOp;
   }

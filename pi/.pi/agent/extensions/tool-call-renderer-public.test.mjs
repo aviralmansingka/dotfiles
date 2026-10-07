@@ -154,6 +154,11 @@ try {
   const subshell = render(bash.renderCall({ command: "F=$(ls -t x | head -1) && echo $F" }, theme, context("sub", {}, quiet)));
   assert.match(subshell, /├─ \$ {2}<hl:bash>F=\$\(ls -t x \| head -1\)/, "operators inside $(…) do not split");
   assert.match(subshell, / │  && <hl:bash>echo \$F/);
+  const midclose = render(bash.renderCall({ command: 'git commit -q -m "Add sample\n\nDemonstrates row shapes." && git log --oneline -1' }, theme, context("midclose", {}, quiet)));
+  assert.match(midclose, /├─ \$ {2}<hl:bash>git commit -q -m "Add sample/);
+  assert.match(midclose, /^ │\s*$/m);
+  assert.match(midclose, /Demonstrates row shapes\."/, "the quoted message renders dim to its close");
+  assert.match(midclose, / │  && <hl:bash>git log --oneline -1/, "a command following a mid-line quote close gets its own executable row");
   const beforeTick = invalidations;
   await new Promise((resolve) => setTimeout(resolve, 1100));
   assert.ok(invalidations > beforeTick, "clock invalidates the public row context");
