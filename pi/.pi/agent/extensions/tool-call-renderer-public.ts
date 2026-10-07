@@ -2,10 +2,11 @@
  * Public-API work-step renderer experiment. Load with pi -ne -e <this file>.
  * Owns the call row and collapsed summary for every tool (built-ins ship
  * their own renderers in pi 1.0.4, so `next() ?? mine` would never apply).
- * Expanded bodies: output-style tools (bash etc.) delegate to downstream
- * renderResult when present; connected tools and file-shaped tools (read,
- * write) keep OUR expansion — numbered, theme-synced syntax-highlighted
- * content, +/− diffs, soft-wrapped rails.
+ * Expanded bodies: connected tools, file-shaped tools (read, write), and
+ * bash/powershell keep OUR expansion — chips and recentTools trees,
+ * numbered syntax-highlighted content, and status-framed command output
+ * (✓/✗ exit banner + railed head-and-tail fold). Other tools delegate to
+ * downstream renderResult when present.
  * No assistant-message grouping or native expanded output: each tool owns its
  * row, and expansion is bounded text/details (images are described, not drawn).
  */
@@ -38,6 +39,9 @@ const rows = new Map<string, Row>();
 const background = new Map<string, Background>();
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 const FILE_TOOLS = new Set(["read", "write"]);
+const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
+const OUTPUT_HEAD = 30;
+const OUTPUT_TAIL = 30;
 const RUNNING = new Set(["pending", "running", "fixing", "awaiting_approval", "fix_review"]);
 const OUTPUT_LINE_CAP = 200;
 const OUTPUT_WRAP_LINES = 8;
@@ -310,6 +314,182 @@ function highlightMarkdown(theme: Theme, text: string): string[] {
   return out;
 }
 
+type CommandRow = { text: string; command: boolean; op: string };
+
+/**
+ * Split a bash command into rows, tracking quote, heredoc, backslash, and
+ * paren (subshell/$(…)) state across lines. Each line is scanned in two
+ * phases: a continuation prefix (quoted string, heredoc body, backslash
+ * wrap) renders dim, and a construct that CLOSES mid-line hands the rest of
+ * the line to command context — so `…message." && git log` yields a dim
+ * message row plus an executable `&& git log` row. Command context splits
+ * into executable segments at top-level `&&`, `||`, and `|`; each segment
+ * after the first starts with the operator that joins it to the previous
+ * step. `;` is not split mid-line (it would break for/if headers) but a
+ * leading `;` is stripped as the joining operator; an operator ending a
+ * line carries to the next command line.
+ */
+function commandRows(command: string): CommandRow[] {
+  const rows: CommandRow[] = [];
+  let inSingle = false;
+  let inDouble = false;
+  let heredoc: string | undefined;
+  let continued = false;
+  let carriedOp: string | undefined;
+  for (const raw of command.split("\n")) {
+    const line = safeLine(raw);
+    if (heredoc) {
+      rows.push({ text: line, command: false, op: "" });
+      if (line.trim() === heredoc) heredoc = undefined;
+      continue;
+    }
+    // A line that merely completes a backslash-continued segment after an
+    // operator (a line ending in `&& \` whose next line holds the operand)
+    // is executable: it takes the carried operator instead of rendering as
+    // a dim continuation.
+    const completesCarried = continued && Boolean(carriedOp) && !inSingle && !inDouble;
+    const startsContinued = (inSingle || inDouble || continued) && !completesCarried;
+    if (!startsContinued && !completesCarried && !line.trim()) continue;
+
+    // Phase 1 — continuation prefix: everything up to where the continued
+    // construct closes renders dim.
+    let i = 0;
+    if (startsContinued) {
+      if (inSingle || inDouble) {
+        while (i < line.length) {
+          const ch = line[i];
+          if (inSingle) {
+            if (ch === "'") {
+              inSingle = false;
+              i++;
+              break;
+            }
+            i++;
+          } else if (ch === "\\") {
+            i += 2;
+          } else if (ch === '"') {
+            inDouble = false;
+            i++;
+            break;
+          } else {
+            i++;
+          }
+        }
+      } else {
+        // Backslash wrap: the whole line continues its segment. Re-scan it
+        // for constructs that outlive it (opened quotes, another wrap).
+        i = line.length;
+        continued = false;
+        for (let j = 0; j < line.length; j++) {
+          const ch = line[j];
+          if (inSingle) {
+            if (ch === "'") inSingle = false;
+          } else if (inDouble) {
+            if (ch === "\\") j++;
+            else if (ch === '"') inDouble = false;
+          } else if (ch === "\\") {
+            if (j === line.length - 1) continued = true;
+            else j++;
+          } else if (ch === "'") {
+            inSingle = true;
+          } else if (ch === '"') {
+            inDouble = true;
+          }
+        }
+      }
+      rows.push({ text: line.slice(0, i), command: false, op: "" });
+    }
+
+    // Phase 2 — command context for the remainder: split into executable
+    // segments at top-level operators; state persists across lines.
+    const rest = startsContinued ? line.slice(i) : line;
+    let pendingOp: string | undefined = carriedOp;
+    carriedOp = undefined;
+    let start = 0;
+    if (rest.trim() && !pendingOp) {
+      const lead = /^(&&|\|\||\||;)\s*/.exec(rest);
+      if (lead) {
+        pendingOp = lead[1];
+        start = lead[0].length;
+      }
+    }
+    if (rest.length) continued = false;
+    let parenDepth = 0;
+    for (let j = start; j < rest.length; j++) {
+      const ch = rest[j];
+      if (inSingle) {
+        if (ch === "'") inSingle = false;
+      } else if (inDouble) {
+        if (ch === "\\") j++;
+        else if (ch === '"') inDouble = false;
+      } else if (ch === "\\") {
+        if (j === rest.length - 1) continued = true;
+        else j++;
+      } else if (ch === "'") {
+        inSingle = true;
+      } else if (ch === '"') {
+        inDouble = true;
+      } else if (parenDepth > 0) {
+        if (ch === ")") parenDepth--;
+        else if (ch === "(") parenDepth++;
+      } else if (ch === "(") {
+        parenDepth++;
+      } else if (ch === "|" || (ch === "&" && rest[j + 1] === "&")) {
+        const op = ch === "|" ? (rest[j + 1] === "|" ? "||" : "|") : "&&";
+        const text = rest.slice(start, j).trim();
+        if (text) rows.push({ text, command: true, op: pendingOp ?? "$" });
+        pendingOp = op;
+        j += op.length - 1;
+        start = j + 1;
+      } else if (ch === "<" && rest[j + 1] === "<") {
+        const tag = /^<<-?\s*("?)([A-Za-z_][A-Za-z0-9_-]*)\1/.exec(rest.slice(j));
+        if (tag) {
+          heredoc = tag[2];
+          j += tag[0].length - 1;
+        }
+      }
+    }
+    const tailText = rest.slice(start).trim();
+    if (tailText && tailText !== "\\") rows.push({ text: tailText, command: true, op: pendingOp ?? "$" });
+    else if (pendingOp) carriedOp = pendingOp;
+  }
+  return rows;
+}
+
+/**
+ * Bash/powershell call rows render each executable segment separately:
+ * commands behind a dim operator marker (`$` for the first, then the
+ * `&&`/`||`/`|` that joins them) with bash-grammar highlighting;
+ * continuation lines between command leaves carry the connecting `│` rail
+ * (bare indent after the last command) with dim, unhighlighted text —
+ * highlighting prose as bash would be a lie. Cached per toolCallId and
+ * theme: renders fire every frame, and only a changed command (streaming
+ * args) or theme switch recomputes.
+ */
+const highlightedCommands = new Map<string, { source: string; theme: string; rows: { body: string; command: boolean; op: string }[] }>();
+function commandBodies(theme: Theme, toolCallId: string, tool: string, command: string): { body: string; command: boolean; op: string }[] {
+  const themeName = theme.name ?? "";
+  const cached = highlightedCommands.get(toolCallId);
+  if (cached && cached.source === command && cached.theme === themeName) return cached.rows;
+  ensureHighlightTheme(theme);
+  const lang = tool === "powershell" ? "powershell" : "bash";
+  const rows = commandRows(command).map((part) => {
+    let body = part.text;
+    if (part.command) {
+      try {
+        body = highlightCode(part.text, lang)[0] ?? part.text;
+      } catch {
+        // Highlighting needs pi's theme runtime; the plain line still renders.
+      }
+    } else {
+      body = theme.fg("dim", part.text);
+    }
+    return { body, command: part.command, op: part.op };
+  });
+  highlightedCommands.set(toolCallId, { source: command, theme: themeName, rows });
+  return rows;
+}
+
 function wrapLine(line: string, avail: number): { chunks: string[]; skipped: number } {
   try {
     const { visualLines, skippedCount } = truncateToVisualLines(line, OUTPUT_WRAP_LINES, Math.max(8, avail));
@@ -330,9 +510,51 @@ function wrapLine(line: string, avail: number): { chunks: string[]; skipped: num
  * instead of hard-truncating; one pathological line folds after
  * OUTPUT_WRAP_LINES visual lines.
  */
+/**
+ * Status banner replacing the collapsed summary when a bash/powershell row
+ * is expanded: bold ✓/✗ exit mark in success/error color, dim line count
+ * and elapsed. Collapsed rows keep the plain `exit N · M lines` summary.
+ */
+function statusBanner(theme: Theme, result: Result, row: Row): string {
+  const code = exitCode(result);
+  const text = textContent(result);
+  const count = text ? text.replace(/\n$/, "").split("\n").length : 0;
+  const elapsedValue = !row.restored && finiteNumber(row.startedAt) && finiteNumber(row.completedAt)
+    ? formatElapsed(Math.max(0, row.completedAt - row.startedAt)) : "";
+  const elapsed = elapsedValue ? ` · ${elapsedValue}` : "";
+  const mark = row.failed
+    ? theme.fg("error", theme.bold(`✗ exit ${code ?? "?"}`))
+    : theme.fg("success", theme.bold(`✓ exit ${code ?? 0}`));
+  return ` ${theme.fg("borderMuted", "└─")} ${mark}${theme.fg("dim", ` · ${plural(count, "line")}${elapsed}`)}`;
+}
+
 function expandedOutput(tool: string, result: Result, theme: Theme, context: RenderContext, width = 200): string[] {
   const details = asRecord(result.details);
   const text = textContent(result);
+  if (OUTPUT_TOOLS.has(tool)) {
+    // Command output behind a bare rail, head-and-tail folded so both the
+    // opening context and the trailing errors stay visible.
+    if (!text) return [];
+    // Plain indentation, no rail glyph: rail characters pollute terminal
+    // selections and make the output hard to copy out.
+    const prefix = "    ";
+    const out: string[] = [];
+    const emit = (line: string): void => {
+      const body = theme.fg("toolOutput", safeLine(line));
+      for (const chunk of wrapLine(body, Math.max(8, width - 4)).chunks) out.push(prefix + chunk);
+    };
+    const all = text.replace(/\n$/, "").split("\n");
+    if (all.length <= OUTPUT_HEAD + OUTPUT_TAIL + 2) {
+      for (const line of all) emit(line);
+    } else {
+      for (const line of all.slice(0, OUTPUT_HEAD)) emit(line);
+      out.push(`${prefix}${theme.fg("dim", `… ${all.length - OUTPUT_HEAD - OUTPUT_TAIL} lines hidden …`)}`);
+      for (const line of all.slice(-OUTPUT_TAIL)) emit(line);
+    }
+    if (asRecord(details.truncation).truncated) out.push(`${prefix}${theme.fg("dim", "Output was truncated by the tool.")}`);
+    if (details.fullOutputPath) out.push(`${prefix}${theme.fg("dim", `Full output: ${clean(details.fullOutputPath)}`)}`);
+    return out;
+  }
   let lines: string[] = text ? text.split("\n") : [];
   let color: ((line: string) => string) | undefined;
   if (tool === "edit" && details.diff) {
@@ -401,6 +623,7 @@ function disposeState(): void {
   for (const row of rows.values()) stop(row);
   rows.clear();
   background.clear();
+  highlightedCommands.clear();
 }
 
 function component(draw: (width?: number) => string[]): Component {
@@ -487,8 +710,36 @@ export default function (pi: ExtensionAPI) {
           const elapsedValue = !row.restored && finiteNumber(row.startedAt)
             ? formatElapsed(Math.max(0, (row.completedAt ?? Date.now()) - row.startedAt)) : "";
           const elapsed = elapsedValue ? ` · ${elapsedValue}` : "";
+          const name = theme.fg("text", theme.bold(clean(toolName)));
+          if (toolName === "bash" || toolName === "powershell") {
+            const commands = commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
+            if (commands.length === 1 && commands[0].command) {
+              return [` ${glyph} ${name} ${theme.fg("dim", "$")} ${commands[0].body}${theme.fg("dim", elapsed)}`];
+            }
+            if (commands.length > 0) {
+              const rail = theme.fg("borderMuted", "├─");
+              const tail = theme.fg("borderMuted", "└─");
+              return [
+                ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
+                ...commands.map((row, index) => {
+                  // A leaf (├─/└─) only where a `$` command starts; every
+                  // other row — operator-joined segments and quoted/heredoc
+                  // continuations — rides a bare `│` spine with no
+                  // horizontal arm, all text aligned in one column.
+                  const followed = index < commands.length - 1;
+                  if (!row.command) {
+                    return ` ${theme.fg("borderMuted", "│")}     ${row.body}`;
+                  }
+                  if (row.op === "$") {
+                    return ` ${followed ? rail : tail} ${theme.fg("dim", "$ ")} ${row.body}`;
+                  }
+                  return ` ${theme.fg("borderMuted", "│")}  ${theme.fg("dim", row.op.padEnd(2))} ${row.body}`;
+                }),
+              ];
+            }
+          }
           const arg = preview(toolName, asRecord(args));
-          return [` ${glyph} ${theme.fg("text", theme.bold(clean(toolName)))}${theme.fg("dim", `${arg ? ` ${arg}` : ""}${elapsed}`)}`];
+          return [` ${glyph} ${name}${theme.fg("dim", `${arg ? ` ${arg}` : ""}${elapsed}`)}`];
         });
       },
       renderResult(result, { expanded, isPartial }, theme, context) {
@@ -512,7 +763,9 @@ export default function (pi: ExtensionAPI) {
           }
           const lines = CONNECTED.has(toolName)
             ? renderConnectedChips(toolName, asRecord(context.args), effective, expanded, partial, row, theme, context.isError || asRecord(effective).isError === true)
-            : [` ${theme.fg("borderMuted", "└─")} ${theme.fg(row.failed ? "error" : running ? "muted" : "success", running ? "running" : summary(toolName, effective, Boolean(row.failed)))}`];
+            : [expanded && row.settled && OUTPUT_TOOLS.has(toolName)
+              ? statusBanner(theme, effective, row)
+              : ` ${theme.fg("borderMuted", "└─")} ${theme.fg(row.failed ? "error" : running ? "muted" : "success", running ? "running" : summary(toolName, effective, Boolean(row.failed)))}`];
           if (expanded) lines.push(...expandedOutput(toolName, effective, theme, context, width));
           return lines;
         };
@@ -524,10 +777,10 @@ export default function (pi: ExtensionAPI) {
     // Connected tools never delegate: our chips and recentTools tree are
     // richer than the subagent extension's own result render, which would
     // otherwise show a stale "⟳ name — started" line on expand. File tools
-    // keep their expansion ours too: the native render proved near-uncolored
-    // in practice, while our theme-synced highlightCode carries full syntax
-    // colors plus line numbers.
-    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) ? undefined : next();
+    // and bash/powershell keep their expansion ours too: the native file
+    // render proved near-uncolored, and the native bash output view has no
+    // framing — ours adds the exit banner plus the railed head-and-tail fold.
+    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) ? undefined : next();
     if (!other?.renderResult) return mine;
     return {
       renderShell: "self",
