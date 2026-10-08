@@ -20,7 +20,7 @@ Simplify the prose only.
 
 Apply these rules to every sentence you write:
 
-1. **Keep sentences short.** One topic per sentence. Do not go over 20
+1. **Keep sentences short.** One topic per sentence. Use fewer than 20
    words.
 2. **Use the active voice.** Name the actor. Write "the kernel loads the
    module", not "the module is loaded by the kernel".

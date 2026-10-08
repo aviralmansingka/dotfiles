@@ -17,8 +17,9 @@ prose at FULL compliance: short sentences, active voice, approved verbs, one
 term per concept. No relaxations apply to these panels — the learner reads
 them as the lesson itself.
 
-Stay at 80%, not 100% for ordinary prose: do not let the rules break natural
-flow or make text stiff. These relaxations apply:
+Stay at 80%, not 100% for ordinary prose unless an active skill requires full
+compliance. When the `simple` skill is active, use 100% compliance for the
+session and do not use these relaxations. Otherwise, these relaxations apply:
 
 - Technical nouns, identifiers, and code stay as-is. Do not simplify names
   of files, APIs, tools, or errors.
