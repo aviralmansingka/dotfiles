@@ -725,9 +725,125 @@ try {
   assert.match(mixedOutput, /└─ × bad · broken/);
   const axi = resolver("no_mistakes_axi", () => undefined);
   const pipeline = result("failed", { progress: { kind: "pipeline", status: "failed", error: "tests failed", recentTools: [{ name: "tests", status: "failed" }] } });
-  const pipelineOutput = render(axi.renderResult(pipeline, { ...options, expanded: true }, theme, context("axi")));
+  const pipelineOutput = render(axi.renderResult(pipeline, options, theme, context("axi")));
   assert.match(pipelineOutput, /× no-mistakes · tests failed/);
-  assert.match(pipelineOutput, /└─ × tests/);
+  const pipelineFallback = render(axi.renderResult(pipeline, { ...options, expanded: true }, theme, context("axi")));
+  assert.ok(pipelineFallback.includes("└─ ✗ tests failed") && pipelineFallback.includes("    failed"));
+  assert.ok(!pipelineFallback.includes("│"), "unstructured pipeline output uses plain indentation");
+  const cleanToon = `run:
+  id: "01MEXAMPLE"
+  branch: fix/topic
+  status: running
+  head: abcdef12
+  pr: "https://github.com/owner/repo/pull/185"
+  findings: none
+  steps[9]{step,status,findings,duration_ms}:
+    intent,completed,0,1
+    rebase,completed,0,1419
+    review,completed,0,12
+    test,completed,0,5
+    document,completed,0,0
+    lint,completed,0,0
+    push,completed,0,0
+    pr,completed,0,0
+    ci,running,0,0
+branch_sync:
+  state: pipeline_owned
+  note: Pipeline owns this branch.
+  next_action:
+    command: no-mistakes axi status`;
+  const gateToon = `run:
+  branch: fix/topic
+  status: running
+  findings: 1 awaiting
+  steps[3]{step,status,findings,duration_ms}:
+    intent,completed,0,1
+    rebase,awaiting_approval,1,1419
+    ci,pending,0,0
+gate:
+  step: rebase
+  status: awaiting_approval
+  summary: branch bundles 3 unpushed main commit
+  findings[1]{id,severity,file,action,description}:
+    R1,error,src/view.ts,ask-user,"Rendered lines exceed the viewport, including the overflow marker."
+branch_sync:
+  state: pipeline_owned
+  next_action:
+    command: no-mistakes axi status`;
+  const toonResult = (output, extra = {}) => result("[no-mistakes axi — visible (tui), exit 0]\n" + output, {
+    output, subcommand: "run", progress: { kind: "pipeline", status: "completed" }, ...extra,
+  });
+  const toonCtx = context("toon", {}, quiet);
+  const showToon = (output, t = theme, extra = {}) => render(axi.renderResult(toonResult(output, extra), { ...options, expanded: true }, t, toonCtx), 1000);
+  const cleanFrame = showToon(cleanToon, styT);
+  assert.ok(cleanFrame.includes("<borderMuted>├─</borderMuted> <dim>▣ </dim> <text>fix/topic</text><dim> · pr #185</dim>"));
+  assert.ok(cleanFrame.includes("<mdLink>● gate running · 0 findings</mdLink>"));
+  assert.ok(cleanFrame.includes("<dim>intent </dim><success>✓</success>"));
+  assert.ok(cleanFrame.includes("<dim>rebase </dim><success>✓</success><dim> 1.4s</dim>"));
+  assert.ok(cleanFrame.includes("<dim>ci </dim><mdLink>●</mdLink>"));
+  assert.ok(cleanFrame.includes("<dim>branch_sync: pipeline_owned · Pipeline owns this branch.</dim>"));
+  assert.ok(cleanFrame.includes("<dim>next: no-mistakes axi status</dim>"));
+  assert.ok(!cleanFrame.includes("run:") && !cleanFrame.includes("01MEXAMPLE"));
+  const gateFrame = showToon(gateToon, styT);
+  assert.ok(gateFrame.includes("<mdLink>● gate awaiting approval · 1 finding</mdLink><dim> · rebase</dim>"));
+  assert.ok(gateFrame.includes("<dim>✎ </dim> <dim>r1 · rebase — Rendered lines exceed the viewport, including the overflow marker.</dim>"));
+  assert.ok(gateFrame.includes("<borderMuted>│</borderMuted>  <dim>branch bundles 3 unpushed main commit</dim>"));
+  const gatePlain = showToon(gateToon);
+  assert.ok(gatePlain.includes("intent ✓ · rebase ● 1.4s · ci pending"));
+  assert.ok(!gatePlain.includes("outcome") && !gatePlain.includes("pr #"));
+  for (const outcome of ["passed", "merged"]) {
+    const passed = showToon(cleanToon.replace("status: running", "status: completed") + `\noutcome: ${outcome}`, styT);
+    assert.ok(passed.includes(`<success>✓ gate passed · 0 findings · outcome ${outcome}</success>`));
+  }
+  for (const output of [
+    cleanToon.replace("status: running", "status: failed") + "\noutcome: failed",
+    gateToon.replaceAll("awaiting_approval", "blocked"),
+  ]) assert.ok(showToon(output, styT).includes("<error>✗ gate blocked ·"));
+  assert.ok(showToon(cleanToon, styT, { exitCode: 1 }).includes("<error>✗ gate blocked"), "a nonzero exit blocks even without isError");
+  const minimalToon = showToon("run:\n  status: completed");
+  assert.ok(minimalToon.includes("✓ gate passed") && !minimalToon.includes("findings") && !minimalToon.includes("▣"));
+  const unknownToon = showToon("run:\n  branch: topic\n  status: futuristic\nunknown:\n  command: do not render");
+  assert.ok(unknownToon.includes("▣  topic") && !unknownToon.includes("gate passed") && !unknownToon.includes("do not render"));
+  for (const subcommand of ["run", "respond", "status", "sync"]) {
+    const chip = render(axi.renderResult(toonResult(gateToon, { subcommand }), options, styT, toonCtx), 1000);
+    assert.ok(chip.includes(`<text><b>no-mistakes</b></text><dim> · ${subcommand}</dim><mdLink> · findings 1</mdLink>`));
+    assert.ok(!chip.includes("1.4s") && !chip.includes("✎"));
+  }
+  const compoundToon = gateToon.replace("findings: 1 awaiting", 'findings: "1 awaiting, 1 auto-fix"');
+  const compoundFrame = showToon(compoundToon);
+  assert.ok(compoundFrame.includes("findings: 1 awaiting, 1 auto-fix") && !compoundFrame.includes(" · 1 finding"));
+  const compoundChip = render(axi.renderResult(toonResult(compoundToon), options, theme, toonCtx));
+  assert.ok(!compoundChip.includes("findings 1") && !compoundChip.includes("findings 2"), "compound categories do not imply a run-wide total");
+  const cleanChip = render(axi.renderResult(toonResult(cleanToon), options, styT, toonCtx));
+  assert.ok(!cleanChip.includes("findings 0"), "zero findings do not add a badge");
+  const bareChip = render(axi.renderResult(result("ok"), options, theme, context("bare-axi", {}, quiet)));
+  assert.ok(bareChip.includes("▸ no-mistakes ◆ 0 tools"), "absent details keep the old chip");
+  const invalidTable = showToon(gateToon.replace('R1,error,src/view.ts,ask-user,"Rendered lines exceed the viewport, including the overflow marker."', 'R1,error,unclosed,"quote'));
+  assert.ok(!invalidTable.includes("✎"), "incomplete CSV rows are omitted");
+  const malformedCell = showToon(gateToon.replace('"Rendered lines exceed the viewport, including the overflow marker."', '"bad"junk'));
+  assert.ok(!malformedCell.includes("✎"), "invalid quoted scalars reject the entire finding row");
+  for (const header of ["unknown-section:", "help[6]:"]) {
+    const isolated = showToon(`run:\n  status: running\n  ${header}\n    status: completed`);
+    assert.ok(isolated.includes("● gate running") && !isolated.includes("✓ gate passed"), "unsupported subtrees cannot overwrite parent fields");
+  }
+  const escapedFinding = showToon(gateToon.replace("Rendered lines exceed the viewport, including the overflow marker.", 'A \\"quoted\\" label, and `code`.'));
+  assert.ok(escapedFinding.includes('r1 · rebase — A "quoted" label, and `code`.'));
+  const narrowGate = render(axi.renderResult(toonResult(gateToon), { ...options, expanded: true }, theme, toonCtx), 45);
+  assert.ok(narrowGate.includes("│     "), "finding continuations use a bare spine");
+  assert.ok(narrowGate.split("\n").every((line) => [...line].length <= 45));
+  for (const count of [60, 62, 63, 100]) {
+    const raw = Array.from({ length: count }, (_, i) => `raw-line-${i + 1}`).join("\n");
+    const fallback = showToon(raw);
+    assert.ok(!fallback.includes("│") && fallback.includes("    raw-line-1\n") && fallback.includes(`    raw-line-${count}`));
+    if (count <= 62) assert.ok(!fallback.includes("lines hidden"));
+    else {
+      assert.ok(fallback.includes(`… ${count - 60} lines hidden …`));
+      assert.ok(fallback.includes("    raw-line-30\n") && !fallback.includes("    raw-line-31\n"));
+      assert.ok(fallback.includes(`    raw-line-${count - 29}\n`));
+    }
+  }
+  const safeToon = showToon(cleanToon.replace("fix/topic", "fix/\u001b[31mtopic\u001b[0m"));
+  assert.ok(safeToon.includes("fix/topic") && !safeToon.includes("\u001b"));
   session("first");
   assert.match(render(chip), /▸ scout/, "same session preserves live final state");
   session("second", [{ message: { role: "assistant", content: [{ type: "toolCall", id: "restored" }] } }]);
