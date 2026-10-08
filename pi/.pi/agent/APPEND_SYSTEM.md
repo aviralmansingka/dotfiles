@@ -181,3 +181,14 @@ Rules:
 - A `#` comment after the first code line stays a normal comment, not a
   title.
 - `powershell` calls take no title comment.
+
+## Python tool preference
+
+Run Python code with the `python` tool. Do not wrap Python in a `bash`
+command.
+
+- Do not use `python3 - <<` heredocs. Do not use `python3 -c` strings.
+- Send the code as the `code` parameter. Send one snippet per call.
+- A blocked `bash` call means: send the same code with the `python` tool.
+- Run an existing script file (`python3 script.py`) in `bash` only when the
+  script is the deliverable. Do not use it for inline data work.
