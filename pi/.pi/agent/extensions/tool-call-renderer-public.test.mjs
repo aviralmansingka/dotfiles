@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review"]);
   for (const name of [...NEVER_DELEGATE, "edit", "ask_question", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -239,6 +239,122 @@ try {
   assert.ok(styled.includes("<muted>> </muted>quoted"), "quote markers muted");
   assert.ok(styled.includes("<dim>```ts</dim>"), "fence lines dim");
   assert.ok(styled.includes("<hl:ts>const a = 1;"), "inner code still engine-highlighted");
+
+  const message = resolver("subagent_message", () => undefined);
+  const messageArgs = { name: "scout", message: "Inspect the renderer.\nThen report back." };
+  const messageCtx = context("message", messageArgs, quiet);
+  const messageCall = message.renderCall(messageArgs, styT, messageCtx);
+  const letter = render(messageCall);
+  assert.ok(letter.includes("<text><b>subagent_message</b></text>"));
+  assert.ok(letter.includes("<dim>» </dim> <text>scout</text><dim> — Inspect the renderer.…</dim>"));
+  assert.ok(!letter.includes("Then report back"));
+  const steerResult = result('Message delivered to running subagent "scout".', { id: "abc", name: "scout", status: "steered" });
+  assert.ok(render(message.renderResult(steerResult, options, styT, messageCtx)).includes("<success>✓ steered · delivered live</success>"));
+  assert.ok(!render(messageCall).includes("»"), "receipt owns the leaf once a result arrives");
+  const messageShown = render(message.renderResult(steerResult, { ...options, expanded: true }, styT, messageCtx));
+  assert.ok(messageShown.includes("<dim>» </dim> <text>scout</text>"));
+  assert.ok(messageShown.includes("<borderMuted>│</borderMuted>  <dim>Then report back.</dim>"));
+  assert.ok(messageShown.includes("<dim>the child keeps running; its result arrives as a steer message</dim>"));
+  const resumedMessage = render(message.renderResult(result("", { name: "scout", status: "started" }), { ...options, expanded: true }, styT, messageCtx));
+  assert.ok(resumedMessage.includes("<accent>⟳ resumed · follow-up dispatched</accent>"));
+  assert.ok(resumedMessage.includes("<dim>waits for readiness on Herdr, dispatch on tmux</dim>"));
+  for (const [text, banner] of [['Message delivered to running subagent "worker".', "✓ steered"], ['Session "worker" resumed.', "⟳ resumed"]]) {
+    const sparse = render(message.renderResult(result(text), options, theme, context(`sparse-${banner}`, {}, quiet)));
+    assert.ok(sparse.includes("├─ »  worker") && sparse.includes(banner));
+  }
+  const longMessage = "abcdefghij".repeat(30) + "END";
+  const narrowMessage = render(message.renderResult(steerResult, { ...options, expanded: true }, theme, context("message-wrap", { name: "scout", message: longMessage }, quiet)), 24);
+  assert.equal(narrowMessage.split("\n").filter((line) => line.startsWith(" │  ")).map((line) => line.slice(4)).join(""), longMessage, "full message wraps on the bare spine without folding");
+  assert.ok(render(message.renderResult(steerResult, { ...options, isPartial: true }, theme, context("message-partial", messageArgs, quiet))).includes("└─ running"));
+  assert.ok(render(message.renderResult(result("missing", { error: "missing" }), options, styT, messageCtx)).includes("<error>✗ missing</error>"));
+  assert.ok(render(message.renderResult(result("", { status: "cancelled" }), options, styT, messageCtx)).includes("<dim>✗ cancelled</dim>"));
+  assert.ok(render(message.renderResult(result(""), options, theme, context("message-empty", {}, quiet))).includes("✗ unavailable"));
+  assert.ok(!render(message.renderResult(steerResult, options, theme, messageCtx)).includes("<success>"), "theme change invalidates receipt cache");
+  const streamingMessage = { name: "worker", message: "fir" };
+  const streamingLetter = message.renderCall(streamingMessage, theme, context("message-stream", streamingMessage, quiet));
+  assert.ok(render(streamingLetter).includes("worker — fir"));
+  streamingMessage.message = "first line";
+  assert.ok(render(streamingLetter).includes("worker — first line"));
+
+  const hunk = resolver("hunk_review", () => undefined);
+  const commentArgs = { operation: "comment_apply", comments: [
+    { filePath: "src/a.ts", newLine: 12, summary: "Guard the input.\nMore context", rationale: "Missing values can reach this path." },
+    { filePath: "src/b.ts", oldLine: 8, summary: "Keep the check." },
+  ] };
+  const commentCtx = context("hunk-comments", commentArgs, quiet);
+  const commentCall = hunk.renderCall(commentArgs, styT, commentCtx);
+  const commentCallText = render(commentCall);
+  assert.ok(commentCallText.includes("<text><b>hunk_review</b></text><dim> · comment_apply</dim>"));
+  assert.ok(commentCallText.includes("<dim>✎ </dim> <dim>src/a.ts:12 — </dim><text>Guard the input.…</text>"));
+  assert.ok(commentCallText.includes("<dim>✎ </dim> <dim>src/b.ts:8 — </dim><text>Keep the check.</text>"));
+  assert.ok(!commentCallText.includes("Missing values"));
+  // Actual CLI shape: no details and no session id in comment_apply output.
+  const appliedComments = { result: { applied: [
+    { commentId: "c1", fileId: "f1", filePath: "src/a.ts", hunkIndex: 0, side: "new", line: 12 },
+    { commentId: "c2", fileId: "f2", filePath: "src/b.ts", hunkIndex: 1, side: "old", line: 8 },
+  ] } };
+  const appliedResult = result(JSON.stringify(appliedComments));
+  delete appliedResult.details;
+  const commentMin = render(hunk.renderResult(appliedResult, options, styT, commentCtx));
+  assert.ok(commentMin.includes("<success>✓ applied · 2 comments</success>"));
+  assert.ok(!commentMin.includes("session") && !commentMin.includes("Missing values"));
+  assert.ok(!render(commentCall).includes("✎"), "comment result owns the leaves");
+  const commentShown = render(hunk.renderResult(appliedResult, { ...options, expanded: true }, styT, commentCtx));
+  assert.ok(commentShown.includes("<borderMuted>│</borderMuted>  <dim>Missing values can reach this path.</dim>"));
+  const identifiedApply = render(hunk.renderResult(result(JSON.stringify(appliedComments), { sessionId: "review-7" }), options, theme, commentCtx));
+  assert.ok(identifiedApply.includes("✓ applied · 2 comments · session review-7"));
+  const returnedRationale = render(hunk.renderResult(result("", { applied: [{ filePath: "src/b.ts", rationale: "Returned rationale." }] }), { ...options, expanded: true }, styT, context("hunk-rationale", { operation: "comment_apply", comments: [commentArgs.comments[1]] }, quiet)));
+  assert.ok(returnedRationale.includes("<dim>Returned rationale.</dim>"));
+  assert.ok(returnedRationale.includes("✓ applied · 1 comment"));
+  const streamingComments = { operation: "comment_apply", comments: [{ filePath: "src/a.ts" }] };
+  const streamingHunk = hunk.renderCall(streamingComments, theme, context("hunk-stream", streamingComments, quiet));
+  assert.ok(render(streamingHunk).includes("├─ ✎  src/a.ts"));
+  streamingComments.comments[0].newLine = 3;
+  streamingComments.comments[0].summary = "First";
+  streamingComments.comments.push({ filePath: "src/b.ts", hunkNumber: 2, summary: "Second" });
+  const streamed = render(streamingHunk);
+  assert.ok(streamed.includes("├─ ✎  src/a.ts:3 — First") && streamed.includes("├─ ✎  src/b.ts · hunk 2 — Second"));
+  const longRationale = "abcdefghij".repeat(30) + "END";
+  const rationaleWrapped = render(hunk.renderResult(appliedResult, { ...options, expanded: true }, theme, context("hunk-wrap", { operation: "comment_apply", comments: [{ filePath: "a", rationale: longRationale }] }, quiet)), 24);
+  assert.equal(rationaleWrapped.split("\n").filter((line) => line.startsWith(" │  ")).map((line) => line.slice(4)).join(""), longRationale);
+  const reviewArgs = { operation: "review", includePatch: true, includeNotes: true };
+  const reviewCtx = context("hunk-review", reviewArgs, quiet);
+  const reviewData = { review: { sessionId: "session-1", repoRoot: "/repo", title: "repo diff", showAgentNotes: true, liveCommentCount: 1,
+    files: [{ path: "src/a.ts", additions: 1, deletions: 1, hunkCount: 1, patch: "@@ -1 +1 @@\n-old\n+new", hunks: [] }],
+    reviewNotes: [{ noteId: "n1", filePath: "src/a.ts", body: "Keep this note." }],
+  } };
+  const reviewResult = result(JSON.stringify(reviewData));
+  const reviewMin = render(hunk.renderResult(reviewResult, options, styT, reviewCtx));
+  assert.ok(reviewMin.includes("<dim>▣ </dim> <text>hunk</text><dim> · /repo</dim>"));
+  assert.ok(reviewMin.includes("<success>✓ session session-1</success>"));
+  assert.ok(!reviewMin.includes("Keep this note"));
+  const reviewShown = render(hunk.renderResult(reviewResult, { ...options, expanded: true }, styT, reviewCtx));
+  assert.ok(reviewShown.includes('    <toolOutput>  "showAgentNotes": true,</toolOutput>'));
+  assert.ok(reviewShown.includes('"body": "Keep this note."'));
+  assert.ok(reviewShown.includes("    <dim>@@ -1 +1 @@</dim>\n    <dim>-old</dim>\n    <dim>+new</dim>"));
+  assert.ok(!reviewShown.includes("│"), "session state uses copyable plain indentation, not rails");
+  for (const count of [60, 61, 100]) {
+    const output = Array.from({ length: count }, (_, i) => `state ${i}`).join("\n");
+    const foldedState = render(hunk.renderResult(result(output), { ...options, expanded: true }, theme, context(`hunk-fold-${count}`, reviewArgs, quiet)));
+    assert.ok(foldedState.includes("    state 0\n") && foldedState.includes(`    state ${count - 1}`));
+    assert.equal(foldedState.includes("lines hidden"), count > 60);
+    if (count > 60) {
+      assert.ok(foldedState.includes(`… ${count - 60} lines hidden …`));
+      assert.ok(!foldedState.includes("    state 30\n"));
+    }
+  }
+  const truncatedReview = '{"review":{"sessionId":"cut-1","repoRoot":"/repo","files":[{"patch":"incomplete';
+  const truncatedHunk = render(hunk.renderResult(result(truncatedReview), { ...options, expanded: true }, theme, context("hunk-cut", reviewArgs, quiet)));
+  assert.ok(truncatedHunk.includes("hunk · /repo") && truncatedHunk.includes("✓ session cut-1") && truncatedHunk.includes("incomplete"));
+  const unknownApply = render(hunk.renderResult(result('{"result":{"applied":['), options, theme, commentCtx));
+  assert.ok(unknownApply.includes("✓ completed") && !unknownApply.includes("✓ applied"), "never substitute requested count for an unknown applied count");
+  const unknownReview = render(hunk.renderResult(result("Hunk command completed."), { ...options, expanded: true }, theme, context("hunk-unknown", reviewArgs, quiet)));
+  assert.ok(unknownReview.includes("├─ ▣  hunk") && unknownReview.includes("✓ completed") && !unknownReview.includes("✓ session"));
+  assert.ok(render(hunk.renderResult(reviewResult, { ...options, isPartial: true }, theme, context("hunk-partial", reviewArgs, quiet))).includes("└─ running"));
+  const failedReview = render(hunk.renderResult(result("No active Hunk sessions"), options, styT, context("hunk-error", reviewArgs, { ...quiet, isError: true })));
+  assert.ok(failedReview.includes("<error>✗ No active Hunk sessions</error>") && !failedReview.includes("✓"));
+  assert.ok(render(hunk.renderResult(result("", { status: "cancelled" }), options, styT, reviewCtx)).includes("<dim>✗ cancelled</dim>"));
+  assert.ok(!render(hunk.renderResult(reviewResult, { ...options, expanded: true }, theme, reviewCtx)).includes("<dim>"), "review cache follows theme changes");
 
   const ask = resolver("ask_user_question", () => undefined);
   const askArgs = { question: "Which approach?", details: "Choose for clarity.", options: [{ label: "First" }, { label: "Second" }, { label: "Third" }] };
