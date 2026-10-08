@@ -1011,6 +1011,12 @@ branch_sync:
   ));
   assert.match(hiddenPy, /^ ◇ python — parse the session log for nested bash calls$/m, "hidden mode covers python titles");
   assert.ok(!hiddenPy.includes("import json"), "hidden mode: python code never renders");
+  const colorTheme = { ...theme, fg: (color, text) => `<${color}>${text}</${color}>` };
+  const sumCtx = context("hidden-sum", {});
+  const sumRow = bash.renderResult(result("a\nb", { exitCode: 0 }), options, colorTheme, sumCtx);
+  const sumOut = render(sumRow);
+  assert.match(sumOut, /<success>exit 0<\/success><dim> · 2 lines<\/dim>/, "minimized summary: exit status keeps its color, the line count dims");
+  assert.ok(!sumOut.includes("<success>exit 0 · 2 lines</success>"), "the count never rides the status color");
   shutdown();
   assert.equal(bus.size, 0, "shutdown releases bus subscription");
   console.log("tool-call-renderer-public tests passed");
