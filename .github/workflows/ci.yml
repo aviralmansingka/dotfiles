@@ -2,8 +2,8 @@ name: CI
 
 # Fast, deterministic checks for the surfaces an agent actually touches:
 # shell/python scripts, neovim lua config, and Pi TS extensions.
-# Heavy infra checks (Packer AMI build, Terraform plan/apply) remain in their
-# own path-gated workflows; this workflow adds the missing lightweight gate.
+# The Packer AMI pipeline was removed; Terraform plan/apply stays path-gated
+# in its own workflow. This workflow runs every offline repo test.
 
 on:
   push:
@@ -79,28 +79,34 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install jiti
-        run: npm install --prefix "$RUNNER_TEMP/jiti-root" jiti@2
+      - name: Install jiti and typebox
+        run: npm install --prefix "$RUNNER_TEMP/jiti-root" jiti@2 typebox@1.3.27
 
       - name: Run extension tests
         env:
           JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
+          NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
         run: |
           node pi/.pi/agent/extensions/explain.test.mjs
           node pi/.pi/agent/extensions/focus-buffer.test.mjs
           node pi/.pi/agent/extensions/herdr-prompt-state.test.mjs
           node pi/.pi/agent/extensions/hunk-open.test.mjs
+          node pi/.pi/agent/extensions/interactive-subagents.test.mjs
           node pi/.pi/agent/extensions/lesson.test.mjs
           node pi/.pi/agent/extensions/md-log.test.mjs
+          node pi/.pi/agent/extensions/no-mistakes-pane.test.mjs
           node pi/.pi/agent/extensions/nvim-open.test.mjs
           node pi/.pi/agent/extensions/quiz-context-files.test.mjs
           node pi/.pi/agent/extensions/quiz-result.test.mjs
           node pi/.pi/agent/extensions/run-command.test.mjs
           node pi/.pi/agent/extensions/tool-call-renderer-public.test.mjs
           node pi/.pi/agent/extensions/tuicr-background.test.mjs
+          node pi/.pi/agent/extensions/usage.test.mjs
           node pi/.pi/agent/extensions/user-input/input-modes.test.mjs
           node pi/.pi/agent/extensions/user-input/option-navigation.test.mjs
           node pi/.pi/agent/extensions/user-input/option-shortcuts.test.mjs
+          node pi/.pi/agent/extensions/web-fetch/web-fetch.test.mjs
+          node pi/.pi/agent/extensions/web-search/web-search.test.mjs
 
   scripts-tests:
     name: Scripts tests
@@ -112,6 +118,26 @@ jobs:
       - name: auto-git-sync tests
         run: bash scripts/test-auto-git-sync.sh
 
+      - name: gh-dash-open-pr tests (ruby is preinstalled on ubuntu runners)
+        run: bash scripts/test-gh-dash-open-pr.sh
+
+      - name: herdr-clean-handoff tests
+        run: bash scripts/test-herdr-clean-handoff.sh
+
+      - name: herdr-flash-copy tests
+        run: bash scripts/test-herdr-flash-copy.sh
+
+      - name: herdr-annotate-install tests
+        run: python3 scripts/test-herdr-annotate-install.py
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: lavish tests
+        run: |
+          bash scripts/test-lavish-artifact-agent.sh
+          bash scripts/test-lavish-homelab.sh
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -121,3 +147,6 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y stow
           node scripts/test-pi-live-config.mjs
+
+      - name: Pi telegram daemon tests
+        run: python3 -m unittest discover -s pi/bin -p 'test_pi_telegram_daemon.py'
