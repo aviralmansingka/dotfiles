@@ -83,12 +83,14 @@ assert.equal(
 // openJournalInEditor refuses cleanly without a journal or before first write.
 const noJournal = await openJournalInEditor({ sessionManager: { getSessionFile: () => undefined } });
 assert.ok(noJournal.message.includes("No lesson journal"));
+assert.equal(noJournal.ok, false);
 assert.equal(noJournal.launched, false);
 
 const notYetWritten = await openJournalInEditor({
 	sessionManager: { getSessionFile: () => "/tmp/s/session-abc.jsonl" },
 });
 assert.ok(notYetWritten.message.includes("not written yet"));
+assert.equal(notYetWritten.ok, false);
 
 // ── execute paths ────────────────────────────────────────────────────────────
 
@@ -103,17 +105,31 @@ const unavailable = await tool.execute(
 assert.equal(unavailable.details.status, "unavailable");
 assert.ok(unavailable.content[0].text.includes("Restate"));
 
-// Journal exists → opened. The editor call is stubbed via PI_LESSON_JOURNAL
-// pointing at a real temp file plus a session ctx; openJournalInEditor would
-// open herdr IO, so instead assert the guard that precedes it: a journal
-// that EXISTS passes the existence check and would proceed to openEditor.
-// (Executing the real openEditor here would send keystrokes to a live pane —
-// deliberately out of scope, mirroring hunk-open.test.mjs.)
-assert.ok(
-	(await openJournalInEditor({
-		sessionManager: { getSessionFile: () => "/tmp/s/session-abc.jsonl" },
-	})) instanceof Object,
-);
+// A written journal with no available editor surface stays unavailable.
+// Clear PATH so the executable boundary cannot reach herdr, tmux, or nvim.
+const savedPath = process.env.PATH;
+const savedJournal = process.env.PI_LESSON_JOURNAL;
+const strandedJournal = join(tempRoot, "stranded.md");
+writeFileSync(strandedJournal, "# Lesson journal\n");
+process.env.PATH = "";
+process.env.PI_LESSON_JOURNAL = strandedJournal;
+try {
+	const stranded = await tool.execute(
+		"id",
+		{ title: "Stranded", body: "Read this." },
+		undefined,
+		undefined,
+		{ cwd: tempRoot, sessionManager: { getSessionFile: () => "/tmp/s/session-abc.jsonl" } },
+	);
+	assert.equal(stranded.details.status, "unavailable");
+	assert.ok(stranded.content[0].text.includes("was not shown"));
+	assert.ok(stranded.content[0].text.includes("Restate"));
+} finally {
+	if (savedPath === undefined) delete process.env.PATH;
+	else process.env.PATH = savedPath;
+	if (savedJournal === undefined) delete process.env.PI_LESSON_JOURNAL;
+	else process.env.PI_LESSON_JOURNAL = savedJournal;
+}
 
 rmSync(tempRoot, { recursive: true, force: true });
 console.log("lesson tests passed");

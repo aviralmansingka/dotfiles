@@ -259,9 +259,7 @@ export async function presentLesson(
 		};
 	}
 	const journal = await openJournalInEditor(ctx);
-	if (!journal.launched && journal.message.startsWith("No lesson journal")) {
-		return { mode: "none", message: journal.message };
-	}
+	if (!journal.ok) return { mode: "none", message: `${buffer.message}; ${journal.message}` };
 	return {
 		mode: "journal",
 		message: `${buffer.message}; opened the journal instead — ${journal.message}`,
@@ -277,20 +275,22 @@ export async function presentLesson(
  */
 export async function openJournalInEditor(
 	ctx: any,
-): Promise<{ message: string; launched: boolean }> {
+): Promise<{ message: string; ok: boolean; launched: boolean }> {
 	const journalPath = resolveJournalPath(ctx);
 	if (!journalPath) {
-		return { message: "No lesson journal for this session", launched: false };
+		return { message: "No lesson journal for this session", ok: false, launched: false };
 	}
 	if (!existsSync(journalPath)) {
 		return {
 			message: `Lesson journal not written yet (${journalPath})`,
+			ok: false,
 			launched: false,
 		};
 	}
 	const result = await openEditor(ctx?.cwd ?? process.cwd(), [journalPath]);
 	return {
 		message: `${result.message} — lesson journal ${journalPath}`,
+		ok: result.ok,
 		launched: result.launched,
 	};
 }
@@ -302,7 +302,7 @@ export default function mdLog(pi: ExtensionAPI) {
 		description: "Open this session's lesson journal in the editor pane",
 		handler: async (_args: string, ctx: any) => {
 			const result = await openJournalInEditor(ctx);
-			ctx?.ui?.notify?.(result.message, result.launched ? "info" : "warning");
+			ctx?.ui?.notify?.(result.message, result.ok ? "info" : "warning");
 		},
 	});
 

@@ -28,8 +28,8 @@ import { presentLesson, resolveJournalPath } from "./md-log";
 // node the active quiz/explain is about. When no nvim RPC editor is
 // available, the tool falls back to opening the journal file. The journal
 // remains the durable course transcript (every quiz/explain verdict lands
-// there too, append-only). The user can reopen it any time: mid-quiz `h`
-// (focus buffer when a lesson is active), /lessons, or /journal.
+// there too, append-only). The quiz `h` and explain Alt+H shortcuts open the
+// journal directly. The user can also reopen it with /lessons or /journal.
 // ────────────────────────────────────────────────────────────────────────────
 
 const LessonParams = Type.Object({
@@ -64,8 +64,8 @@ export default function lesson(pi: ExtensionAPI) {
 			"One node per lesson call. The focus buffer replaces its whole content on every call, so a lesson that bundles several nodes shows none of them well. Name the node in `title` — it becomes the buffer heading and the journal entry heading.",
 			"Write lesson prose in Simplified Technical English at full compliance: short sentences, active voice, approved verbs, one term per concept. The general 80% relaxation does not apply to teaching prose.",
 			"Keep the pre-question assistant text to a single connective line and put the actual teaching markdown in `body`.",
-			"The tool returns as soon as the journal is open — give the user a beat to read it before firing the dependent question, but do not wait for acknowledgement.",
-			"If the result is `unavailable` (no session journal), restate the essential idea in the conversation instead.",
+			"The tool returns when the focus buffer opens. If that fails, it returns when the journal opens. Give the user time to read before you ask the question.",
+			"If the result is `unavailable`, neither editor surface opened. Restate the essential idea in the conversation.",
 		],
 		parameters: LessonParams,
 
@@ -86,6 +86,15 @@ export default function lesson(pi: ExtensionAPI) {
 			}
 
 			const result = await presentLesson(ctx, params.title, params.body);
+			if (result.mode === "none") {
+				return {
+					content: [{
+						type: "text" as const,
+						text: `The lesson "${params.title}" was not shown (${result.message}). Restate the essential content in the conversation.`,
+					}],
+					details: { status: "unavailable", title: params.title } satisfies LessonResultDetails,
+				};
+			}
 			const text =
 				`Lesson "${params.title}" appended to the journal and shown to the user ` +
 				`(${result.message}). Continue — the user reads at their own pace.`;
