@@ -1563,8 +1563,12 @@ export default function (pi: ExtensionAPI) {
               const room = width - clean(toolName).length - 12;
               return [` ${glyph} ${name} ${theme.fg("dim", `$ ${shortPedagogy(source, room)}`)}${theme.fg("dim", elapsed)}`];
             }
-            if (commands.length === 1 && commands[0].command) {
-              return [` ${glyph} ${name}${label} ${theme.fg("dim", "$")} ${commands[0].body}${theme.fg("dim", elapsed)}`];
+            if (commands.length === 1 && commands[0].command && !title) {
+              // Inline `$ command` stays for title-less calls only: a lifted
+              // title never shares its row with the command, so a titled
+              // single command rides the same bare-header + railed-leaf
+              // layout as multi-command calls.
+              return [` ${glyph} ${name} ${theme.fg("dim", "$")} ${commands[0].body}${theme.fg("dim", elapsed)}`];
             }
             if (commands.length > 0) {
               const rail = theme.fg("borderMuted", "├─");
