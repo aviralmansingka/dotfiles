@@ -235,10 +235,6 @@ function appendEntry(path: string | undefined, entry: string): void {
 	}
 }
 
-// The most recent lesson taught in this process: the "current node" the
-// learner's side buffer shows. Set on every lesson tool_execution_start.
-let currentLesson: { title: string; body: string } | undefined;
-
 /** Buffer-name key for this session's focus buffer (journal path stem). */
 function focusKey(ctx: any): string {
 	const journal = resolveJournalPath(ctx);
@@ -272,26 +268,12 @@ export async function presentLesson(
 		};
 }
 
-/** Re-show the current node (mid-quiz `h`): focus buffer when a lesson is
- *  active, else the full journal. */
-export async function showLessonView(
-	ctx: any,
-): Promise<{ mode: "buffer" | "journal"; message: string }> {
-	if (currentLesson) {
-		const buffer = showNodeBuffer(focusKey(ctx), currentLesson.title, currentLesson.body);
-		if (buffer.ok) {
-			return { mode: "buffer", message: buffer.message };
-		}
-	}
-	const journal = await openJournalInEditor(ctx);
-	return { mode: "journal", message: journal.message };
-}
-
 /**
  * Open the session's lesson journal in the user's editor pane (existing pane
  * if one is open, else a split). Non-blocking: resolves as soon as the file
- * is sent, never waits for the user to finish reading. Shared by the lesson
- * tool and the quiz `h` shortcut.
+ * is sent, never waits for the user to finish reading. Used by the quiz and
+ * explain `h`/`alt+h` shortcuts; the lesson tool presents through the focus
+ * buffer instead (see presentLesson) with this as its fallback.
  */
 export async function openJournalInEditor(
 	ctx: any,
@@ -328,7 +310,6 @@ export default function mdLog(pi: ExtensionAPI) {
 		if (event.toolName !== "lesson") return;
 		const args = event.args as { title?: string; body?: string } | undefined;
 		if (!args?.title || !args.body) return;
-		currentLesson = { title: args.title, body: args.body };
 		appendEntry(resolveJournalPath(ctx), formatLessonEntry(args.title, args.body));
 	});
 

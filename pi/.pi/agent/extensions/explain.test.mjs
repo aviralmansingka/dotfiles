@@ -11,9 +11,13 @@ const jitiPath =
 const { createJiti } = require(jitiPath);
 const tempRoot = mkdtempSync(join(tmpdir(), "explain-grader-test-"));
 const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
+const stubAi = join(tempRoot, "pi-ai.cjs");
 const stubTypes = join(tempRoot, "types.cjs");
 const stubTui = join(tempRoot, "pi-tui.cjs");
-writeFileSync(stubAgent, "");
+// explain now imports md-log (journal shortcut), which imports nvim-open —
+// stub its peer deps too (house pattern from md-log.test.mjs).
+writeFileSync(stubAgent, "exports.defineTool = (t) => t;\n");
+writeFileSync(stubAi, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
 writeFileSync(stubTypes, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
 writeFileSync(stubTui, `
 class Editor {
@@ -35,6 +39,7 @@ exports.wrapTextWithAnsi = text => [text];
 const jiti = createJiti(import.meta.url, {
 	alias: {
 		"@earendil-works/pi-coding-agent": stubAgent,
+		"@earendil-works/pi-ai": stubAi,
 		"@earendil-works/pi-tui": stubTui,
 		typebox: stubTypes,
 	},
