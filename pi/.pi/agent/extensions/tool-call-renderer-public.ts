@@ -8,6 +8,7 @@
  * (✓/✗ exit banner + railed head-and-tail fold). Inspection tools own
  * their query/results too; pedagogy tools own question leaves and verdicts.
  * Message, review, and tuicr receipts own leaves, never agent chips.
+ * MCP tools own neutral server badges and read/send/default result bodies.
  * No-mistakes expands its chip into TOON pipeline framing.
  * Other tools delegate to
  * downstream renderResult when present.
@@ -1274,6 +1275,52 @@ function renderReview(result: Result, expanded: boolean, row: Row, theme: Theme,
   return lines;
 }
 
+function mcpIdentity(tool: string) {
+  const parts = tool.split("__");
+  const name = parts[parts.length - 1];
+  const kind = /^(?:list_|get_|search_|fetch_|read_|query_|whoami|download_)/.test(name) ? "read"
+    : /^(?:send_|post_|create_|modify_|update_|add_|draft_|append_|move_|rename_|invite_|join_|manage_)/.test(name) ? "send" : "default";
+  return { server: clean(parts[1]), name: clean(name), kind };
+}
+
+function mcpArg(args: RecordValue, keys = ["query", "message", "text", "path", "channel", "file", "url", "name"]): string {
+  for (const key of keys) if (firstLine(args[key])) return asString(args[key]);
+  return asString(Object.values(args).find((value) => firstLine(value)));
+}
+
+function renderMcp(tool: string, result: Result, expanded: boolean, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
+  const { kind } = mcpIdentity(tool);
+  const text = textContent(result);
+  const details = asRecord(result.details);
+  const source = JSON.stringify([tool, context.args, details, text, expanded, row.settled, row.failed, width]);
+  const cached = receiptRows.get(context.toolCallId);
+  if (cached?.source === source && cached.theme === theme) return cached.rows;
+  const output = text.trim() ? text.replace(/\n$/, "").split("\n").map(safeLine) : [];
+  const count = output.filter((line) => line.trim()).length;
+  const truncated = details.truncation === true || asRecord(details.truncation).truncated === true
+    || asRecord(details.outputGuard).truncated === true || /\btruncated\b/i.test(text);
+  const label = row.failed ? `✗ ${firstLine(text) || firstLine(details.error) || "failed"}` : !row.settled ? "● running"
+    : kind === "read" ? count ? `✓ ${plural(count, "item")}` : "✓ no results"
+    : kind === "send" ? "✓ sent" : "✓ done";
+  const color = row.failed ? "error" : !row.settled || (kind === "read" && !count) ? "dim" : "success";
+  const lines: string[] = [];
+  if (kind === "send") {
+    const payload = mcpArg(asRecord(context.args), ["message", "text", "body", "content", "comment_content", "media_path", "summary", "title", "name", "path", "file", "url"]);
+    if (expanded) {
+      lines.push(...pedagogyText(theme, payload, "»", width, "text"));
+      lines[0] = lines[0].replace(` ${theme.fg("borderMuted", "│")}  `, ` ${theme.fg("borderMuted", "├─")} `);
+    } else lines.push(` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "» ")} ${theme.fg("text", shortPedagogy(payload, width - 7))}`);
+  }
+  lines.push(` ${theme.fg("borderMuted", "└─")} ${theme.fg(color, label)}${kind === "read" && truncated ? theme.fg("dim", " · truncated") : ""}`);
+  if (expanded && kind !== "send") {
+    for (const line of foldInspection(output.map((line) => theme.fg("toolOutput", line)), theme, " lines")) {
+      lines.push(...wrapLine(line, width - 4).chunks.map((chunk) => `    ${chunk}`));
+    }
+  }
+  receiptRows.set(context.toolCallId, { source, theme, rows: lines });
+  return lines;
+}
+
 function stop(row: Row): void {
   if (row.timer) clearInterval(row.timer);
   row.timer = undefined;
@@ -1395,6 +1442,13 @@ export default function (pi: ExtensionAPI) {
             ? formatElapsed(Math.max(0, (row.completedAt ?? Date.now()) - row.startedAt)) : "";
           const elapsed = elapsedValue ? ` · ${elapsedValue}` : "";
           const name = theme.fg("text", theme.bold(clean(toolName)));
+          if (toolName.startsWith("mcp__")) {
+            const mcp = mcpIdentity(toolName);
+            const badge = `mcp · ${mcp.server} — `;
+            const argWidth = width - 4 - badge.length - mcp.name.length - elapsed.length;
+            const arg = argWidth > 0 ? shortPedagogy(mcpArg(asRecord(args)), argWidth) : "";
+            return [` ${glyph} ${theme.fg("dim", badge)}${theme.fg("text", theme.bold(mcp.name))}${theme.fg("dim", `${arg ? ` ${arg}` : ""}${elapsed}`)}`];
+          }
           if (PEDAGOGY_TOOLS.has(toolName)) return [
             ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
             ...(!row.leafResult ? questionLeaf(theme, asRecord(args).question, false, width) : []),
@@ -1461,10 +1515,10 @@ export default function (pi: ExtensionAPI) {
           const partial = live ? !live.done : isPartial;
           const running = partial || (CONNECTED.has(toolName) && !live?.done
             && roots(effective).some((root) => RUNNING.has(asString(asRecord(root.progress).status))));
-          row.failed = INSPECT_TOOLS.has(toolName)
+          row.failed = INSPECT_TOOLS.has(toolName) || toolName.startsWith("mcp__")
             ? context.isError || asRecord(effective).isError === true
             : failed(effective, context);
-          if (RECEIPT_TOOLS.has(toolName)) row.failed ||= Boolean(asRecord(effective.details).error) || asRecord(effective.details).status === "failed";
+          if (RECEIPT_TOOLS.has(toolName) || toolName.startsWith("mcp__")) row.failed ||= Boolean(asRecord(effective.details).error) || asRecord(effective.details).status === "failed";
           row.settled = !running || row.failed;
           if (row.settled) {
             if (!row.restored) row.completedAt ??= Date.now();
@@ -1489,6 +1543,7 @@ export default function (pi: ExtensionAPI) {
             row.leafResult = true;
             return renderReview(effective, expanded, row, theme, context, width);
           }
+          if (toolName.startsWith("mcp__")) return renderMcp(toolName, effective, expanded, row, theme, context, width);
           if (toolName === "grep") return renderGrep(effective, expanded, row, theme, context, width);
           if ((toolName === "find" || toolName === "ls") && expanded) return [
             inspectionBanner(toolName, effective, row, theme),
@@ -1515,8 +1570,8 @@ export default function (pi: ExtensionAPI) {
     // and bash/powershell keep their expansion ours too: the native file
     // render proved near-uncolored, and the native bash output view has no
     // framing — ours adds the exit banner plus the railed head-and-tail fold.
-    // Inspection, pedagogy, and receipt tools keep their own leaves too.
-    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) || PEDAGOGY_TOOLS.has(toolName) || RECEIPT_TOOLS.has(toolName) ? undefined : next();
+    // Inspection, pedagogy, receipt, and MCP tools keep their own bodies too.
+    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) || PEDAGOGY_TOOLS.has(toolName) || RECEIPT_TOOLS.has(toolName) || toolName.startsWith("mcp__") ? undefined : next();
     if (!other?.renderResult) return mine;
     // Reply receipts own both rows: their leading line and tuicr target are
     // more useful than the generic tool summary, even while collapsed.
