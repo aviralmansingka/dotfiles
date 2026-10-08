@@ -1,6 +1,6 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { Text } from "@mariozechner/pi-tui";
+import { Text, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -113,6 +113,14 @@ function formatResults(results: SearchResult[]): string {
 	return results
 		.map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}\n   ${r.snippet}`)
 		.join("\n\n");
+}
+
+// Older session results only stored formatResults() text, not the result array.
+function parseResults(content: string): SearchResult[] {
+	return content.split(/\n\n(?=\d+\. )/).flatMap((block) => {
+		const match = /^\d+\. (.+)\n[ \t]+(\S+)(?:\n([\s\S]*))?$/.exec(block.trimEnd());
+		return match ? [{ title: match[1], url: match[2], snippet: (match[3] ?? "").trim() }] : [];
+	});
 }
 
 function stripWrappingQuotes(value: string): string {
@@ -272,6 +280,7 @@ export default function (pi: ExtensionAPI) {
 					excludeTerms: built.excludeTerms,
 					site: built.site,
 					resultCount: results.length,
+					results,
 				},
 			};
 		},
@@ -307,49 +316,39 @@ export default function (pi: ExtensionAPI) {
 		},
 
 		renderResult(result, { expanded, isPartial }, theme, context) {
-			const text =
-				(context.lastComponent as Text | undefined) ??
-				new Text("", 0, 0);
+			if (isPartial) return new Text(theme.fg("dim", " └─ Searching…"), 0, 0);
 
-			if (isPartial) {
-				text.setText(theme.fg("warning", "Searching…"));
-				return text;
-			}
+			const content = result.content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
+			const details = result.details as { results?: SearchResult[] } | undefined;
+			const results = details?.results ?? parseResults(content);
+			const clean = (value: string) => value.replace(/\s+/g, " ").trim();
+			const banner = theme.fg("borderMuted", " └─ ") + (context.isError
+				? theme.fg("error", `✗ ${content.split("\n")[0] || "Error"}`)
+				: results.length === 0
+					? theme.fg("error", "✗ no results")
+					: theme.fg("success", "✓") + theme.fg("dim", ` ${results.length} results · top: ${clean(results[0].title)}`));
 
-			if (context.isError) {
-				const msg =
-					result.content.find((c) => c.type === "text")?.text ||
-					"Error";
-				text.setText(theme.fg("error", msg));
-				return text;
-			}
-
-			const details = result.details as {
-				composedQuery?: string;
-				resultCount?: number;
+			return {
+				invalidate() {},
+				render(width: number) {
+					const lines = [truncateToWidth(banner, width)];
+					if (!expanded || context.isError) return lines;
+					const bodyWidth = Math.max(1, width - 5);
+					for (const [i, item] of results.slice(0, 8).entries()) {
+						lines.push(truncateToWidth(`  ${i + 1}  ` + theme.fg("text", theme.bold(clean(item.title))), width));
+						lines.push(truncateToWidth("     " + theme.fg("dim", clean(item.url)), width));
+						const snippet = wrapTextWithAnsi(clean(item.snippet), bodyWidth);
+						for (const [j, line] of snippet.slice(0, 2).entries()) {
+							const preview = j === 1 && snippet.length > 2
+								? truncateToWidth(line, Math.max(0, bodyWidth - 1), "") + "…"
+								: line;
+							lines.push(truncateToWidth("     " + theme.fg("dim", preview), width));
+						}
+					}
+					if (results.length > 8) lines.push(truncateToWidth(theme.fg("dim", `     … ${results.length - 8} more results …`), width));
+					return lines;
+				},
 			};
-			const status = theme.fg(
-				"success",
-				`${details?.resultCount ?? 0} results`,
-			);
-			if (!expanded) {
-				text.setText(status);
-				return text;
-			}
-
-			const content =
-				result.content.find((c) => c.type === "text")?.text || "";
-			const preview =
-				content.length > 500 ? content.slice(0, 500) + "..." : content;
-			const queryLine = details?.composedQuery
-				? theme.fg("dim", `query: ${details.composedQuery}`)
-				: "";
-			text.setText(
-				[status, queryLine, theme.fg("dim", preview)]
-					.filter(Boolean)
-					.join("\n"),
-			);
-			return text;
 		},
 	});
 }
