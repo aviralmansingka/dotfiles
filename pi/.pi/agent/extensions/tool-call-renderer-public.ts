@@ -45,7 +45,7 @@ const rows = new Map<string, Row>();
 const background = new Map<string, Background>();
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 // Launch/message/review receipts are not agent runs: never route them through chips.
-const RECEIPT_TOOLS = new Set(["subagent_message", "hunk_review", "tuicr_background"]);
+const RECEIPT_TOOLS = new Set(["subagent_message", "hunk_review", "tuicr"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell", "python"]);
 const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
@@ -1491,7 +1491,7 @@ export default function (pi: ExtensionAPI) {
             ` ${glyph} ${name}${theme.fg("dim", `${asRecord(args).operation ? ` · ${clean(asRecord(args).operation)}` : ""}${elapsed}`)}`,
             ...(!row.leafResult ? commentLeaves(theme, asRecord(args).comments, false, width) : []),
           ];
-          if (toolName === "tuicr_background") return [
+          if (toolName === "tuicr") return [
             ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
             ...(!row.leafResult ? tuicrLeaf(theme, tuicrData(asRecord(args), context.cwd)) : []),
           ];
@@ -1571,7 +1571,7 @@ export default function (pi: ExtensionAPI) {
             row.leafResult = true;
             return renderMessage(effective, expanded, row, theme, context, width);
           }
-          if (toolName === "tuicr_background") {
+          if (toolName === "tuicr") {
             row.leafResult = true;
             return renderTuicr(effective, expanded, row, theme, context, width);
           }

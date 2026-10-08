@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "python", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review", "tuicr_background", "mcp__not_connected__search"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "python", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review", "tuicr", "mcp__not_connected__search"]);
   for (const name of [...NEVER_DELEGATE, "mcp__whatsapp__list_messages", "edit", "ask_question", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name) || name.startsWith("mcp__");
     let calls = 0;
@@ -742,12 +742,12 @@ try {
     assert.ok(narrow.render(16).every((line) => [...line].length <= 16));
   }
 
-  const tuicr = resolver("tuicr_background", () => { throw new Error("tuicr must not delegate"); });
+  const tuicr = resolver("tuicr", () => { throw new Error("tuicr must not delegate"); });
   const tuicrArgs = { repo: "/work/my-repo/" };
-  const tuicrCtx = context("tuicr", tuicrArgs, quiet);
+  const tuicrCtx = context("tuicr-launch", tuicrArgs, quiet);
   const tuicrCall = tuicr.renderCall(tuicrArgs, styT, tuicrCtx);
   const tuicrCallText = render(tuicrCall);
-  assert.ok(tuicrCallText.includes("◇") && tuicrCallText.includes("tuicr_background"));
+  assert.ok(tuicrCallText.includes("◇") && tuicrCallText.includes("tuicr"));
   assert.ok(tuicrCallText.includes("<borderMuted>├─</borderMuted> <dim>▣ </dim> <text>my-repo</text><dim> · working-tree</dim>"));
   const tuicrResult = result("launched", { slug: "calm-fox", attached: false, paneId: 42 });
   const watching = render(tuicr.renderResult(tuicrResult, options, styT, tuicrCtx));

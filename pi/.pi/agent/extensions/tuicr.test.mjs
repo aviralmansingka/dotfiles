@@ -19,7 +19,7 @@ import {
 	selectWrapper,
 	shouldDeliverBatch,
 	truncateLines,
-} from "./tuicr-background-core.mjs";
+} from "./tuicr-core.mjs";
 
 // ── selectWrapper / resolveSkillDir ──
 
@@ -239,4 +239,4 @@ assert.equal(formatReplyCall({}, theme),
 	"<toolTitle>◇ tuicr_reply</toolTitle>\n └─ <toolTitle>✎</toolTitle> <dim>re: review comments — </dim><toolTitle></toolTitle>");
 assert.equal(formatReplyResult({ content: [], details: {} }, theme), "<dim> └─ posting reply…</dim>");
 
-console.log("tuicr-background.test.mjs: all assertions passed");
+console.log("tuicr.test.mjs: all assertions passed");

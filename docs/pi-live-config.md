@@ -12,7 +12,9 @@ Pi **1.1.0 has no user-local settings overlay**. Its installed `docs/settings.md
 *project*, and `PI_CODING_AGENT_DIR` relocates the whole agent directory, not an
 overlay. A project override would not apply to every invocation.
 
-- `pi/.pi/agent/settings.json`: versioned shared packages and extensions only.
+- `pi/.pi/agent/settings.json`: versioned shared packages, extensions, and skill
+  exclusions only (`!skills/tuicr` keeps the shared tuicr skill hidden in Pi —
+  the `tuicr` extension owns that surface — while other backends keep the skill).
 - `~/.pi/agent/settings.local.json`: un-stowed host preferences/overrides.
 - `~/.pi/agent/settings.json`: materialized, real runtime file; Pi may update it.
 
