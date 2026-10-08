@@ -154,3 +154,30 @@ reads like a plan unfolding:
 Triangles (▸/▹) mark thinking turns; diamonds (◆/◇) mark tool-call turns. Filled
 glyphs (▸/◆) mean complete; hollow glyphs (▹/◇) mean in progress. Aim for this
 kind of structured, nested trace rather than a single long turn.
+
+## Shell and python call titles
+
+Open every `bash` command and every `python` script with one comment line
+that states the intent of the call. The row header shows it as the call
+title, next to the tool name.
+
+```text
+bash example:
+# list files changed on this branch against main
+git diff --name-only main...HEAD
+
+python example:
+# parse the session log for nested bash calls
+rows = [json.loads(line) for line in open(path)]
+```
+
+Rules:
+
+- The comment is the first line, before any code.
+- Start the comment with a verb. Use 10 to 15 words. State the intent, not
+  the syntax.
+- Do not end the comment with a period.
+- Use one comment line. Do not write a comment block.
+- A `#` comment after the first code line stays a normal comment, not a
+  title.
+- `powershell` calls take no title comment.

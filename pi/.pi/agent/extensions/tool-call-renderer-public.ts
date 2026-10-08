@@ -786,14 +786,44 @@ function commandRows(command: string): CommandRow[] {
  * theme: renders fire every frame, and only a changed command (streaming
  * args) or theme switch recomputes.
  */
-const highlightedCommands = new Map<string, { source: string; theme: string; rows: { body: string; command: boolean; op: string }[] }>();
-function commandBodies(theme: Theme, toolCallId: string, tool: string, command: string): { body: string; command: boolean; op: string }[] {
+const TITLE_CAP = 60;
+type CommandBody = { body: string; command: boolean; op: string };
+type CommandRender = { rows: CommandBody[]; title?: string };
+const highlightedCommands = new Map<string, { source: string; theme: string; rows: CommandBody[]; title?: string }>();
+
+function capTitle(title: string): string {
+  const chars = [...title];
+  return chars.length <= TITLE_CAP ? title : `${chars.slice(0, TITLE_CAP - 1).join("")}…`;
+}
+
+/**
+ * Intent-title lift for bash and python rows: the model opens each call
+ * with one `# <intent>` comment line (the APPEND_SYSTEM.md rule) and the
+ * row header carries it as `— <title>` beside the tool name. Only a
+ * comment block that starts the source lifts — a `#` after any code stays
+ * body text, and a heredoc body cannot start a script, so no heredoc scan
+ * is needed. The title is the first comment line's text; the body starts
+ * at the first line that is neither comment nor blank.
+ */
+function liftLeadingComment(source: string): { title: string; rest: string } | undefined {
+  const lines = source.split("\n");
+  let index = 0;
+  while (index < lines.length && !lines[index].trim()) index++;
+  if (index === lines.length || !lines[index].trimStart().startsWith("#")) return undefined;
+  const title = clean(lines[index].trimStart().replace(/^#+\s*/, ""));
+  if (!title) return undefined;
+  while (index < lines.length && (!lines[index].trim() || lines[index].trimStart().startsWith("#"))) index++;
+  return { title, rest: lines.slice(index).join("\n") };
+}
+
+function commandBodies(theme: Theme, toolCallId: string, tool: string, command: string): CommandRender {
   const themeName = theme.name ?? "";
   const cached = highlightedCommands.get(toolCallId);
-  if (cached && cached.source === command && cached.theme === themeName) return cached.rows;
+  if (cached && cached.source === command && cached.theme === themeName) return { rows: cached.rows, title: cached.title };
   ensureHighlightTheme(theme);
+  const lift = tool === "bash" ? liftLeadingComment(command) : undefined;
   const lang = tool === "powershell" ? "powershell" : "bash";
-  const rows = commandRows(command).map((part) => {
+  const rows = commandRows(lift ? lift.rest : command).map((part) => {
     let body = part.text;
     if (part.command) {
       try {
@@ -806,8 +836,8 @@ function commandBodies(theme: Theme, toolCallId: string, tool: string, command: 
     }
     return { body, command: part.command, op: part.op };
   });
-  highlightedCommands.set(toolCallId, { source: command, theme: themeName, rows });
-  return rows;
+  highlightedCommands.set(toolCallId, { source: command, theme: themeName, rows, title: lift?.title });
+  return { rows, title: lift?.title };
 }
 
 /**
@@ -816,17 +846,22 @@ function commandBodies(theme: Theme, toolCallId: string, tool: string, command: 
  * way quoted/heredoc continuations do. The whole script highlights through
  * the python grammar in ONE call, so multi-line strings and blocks keep
  * their context line to line — the structured `code` arg is what makes this
- * deterministic where bash heredoc bodies cannot be. Cached beside the bash
+ * deterministic where bash heredoc bodies cannot be. A leading `#` comment
+ * block lifts into the row title exactly like bash. Cached beside the bash
  * rows: same per-frame render pressure, same changed-source-or-theme rule.
  */
-function pythonBodies(theme: Theme, toolCallId: string, code: string): { body: string; command: boolean; op: string }[] {
+function pythonBodies(theme: Theme, toolCallId: string, code: string): CommandRender {
   const themeName = theme.name ?? "";
   const cached = highlightedCommands.get(toolCallId);
-  if (cached && cached.source === code && cached.theme === themeName) return cached.rows;
+  if (cached && cached.source === code && cached.theme === themeName) return { rows: cached.rows, title: cached.title };
   ensureHighlightTheme(theme);
-  const lines = code.replace(/\n+$/, "").split("\n");
+  const lift = liftLeadingComment(code);
+  const lines = (lift ? lift.rest : code).replace(/\n+$/, "").split("\n");
   const leaf = lines.findIndex((line) => line.trim());
-  if (leaf === -1) return [];
+  if (leaf === -1) {
+    highlightedCommands.set(toolCallId, { source: code, theme: themeName, rows: [], title: lift?.title });
+    return { rows: [], title: lift?.title };
+  }
   let highlighted = lines;
   try {
     const styled = highlightCode(lines.join("\n"), "python");
@@ -839,8 +874,8 @@ function pythonBodies(theme: Theme, toolCallId: string, code: string): { body: s
     command: index === leaf,
     op: index === leaf ? "$" : "",
   }));
-  highlightedCommands.set(toolCallId, { source: code, theme: themeName, rows });
-  return rows;
+  highlightedCommands.set(toolCallId, { source: code, theme: themeName, rows, title: lift?.title });
+  return { rows, title: lift?.title };
 }
 
 function wrapLine(line: string, avail: number, keep: "start" | "end" = "end", maxLines = OUTPUT_WRAP_LINES): { chunks: string[]; skipped: number } {
@@ -1500,17 +1535,18 @@ export default function (pi: ExtensionAPI) {
             ...(!row.leafResult ? messageLeaf(theme, asRecord(args), false, width) : []),
           ];
           if (toolName === "bash" || toolName === "powershell" || toolName === "python") {
-            const commands = toolName === "python"
+            const { rows: commands, title } = toolName === "python"
               ? pythonBodies(theme, context.toolCallId, asString(asRecord(args).code))
               : commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
+            const label = title ? ` ${theme.fg("dim", `— ${capTitle(title)}`)}` : "";
             if (commands.length === 1 && commands[0].command) {
-              return [` ${glyph} ${name} ${theme.fg("dim", "$")} ${commands[0].body}${theme.fg("dim", elapsed)}`];
+              return [` ${glyph} ${name}${label} ${theme.fg("dim", "$")} ${commands[0].body}${theme.fg("dim", elapsed)}`];
             }
             if (commands.length > 0) {
               const rail = theme.fg("borderMuted", "├─");
               const tail = theme.fg("borderMuted", "└─");
               return [
-                ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
+                ` ${glyph} ${name}${label}${theme.fg("dim", elapsed)}`,
                 ...commands.map((row, index) => {
                   // A leaf (├─/└─) only where a `$` command starts; every
                   // other row — operator-joined segments and quoted/heredoc
@@ -1526,6 +1562,11 @@ export default function (pi: ExtensionAPI) {
                   return ` ${theme.fg("borderMuted", "│")}  ${theme.fg("dim", row.op.padEnd(2))} ${row.body}`;
                 }),
               ];
+            }
+            if (title) {
+              // Comment-only call: no executable row survives the lift, so
+              // the title is the whole row.
+              return [` ${glyph} ${name}${label}${theme.fg("dim", elapsed)}`];
             }
           }
           if (toolName === "grep") {
