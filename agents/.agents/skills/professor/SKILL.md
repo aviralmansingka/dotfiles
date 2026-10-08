@@ -538,8 +538,9 @@ this protocol covers only what the tool can't do: **composition** and
 - **Deliver the node's lesson first.** Before quizzing a node, teach it with
   one `lesson` call scoped to that node only — the learner's side buffer then
   shows exactly the node the question is about. Mid-question the learner can
-  open the full transcript instead: `h` in a quiz panel, Alt+H in an explain
-  panel, both opening the session journal.
+  open the full transcript instead. In a quiz panel, use `h`. In an explain
+  panel, use `h` before composing or at the verdict. Use Alt+H at any time.
+  Each shortcut opens the session journal.
 - **Always pass `contextFiles`.** Every `quiz` call must include the
   `contextFiles` array — the file(s) the question drills (the kernel, the
   config, the lesson section, the command's source). This renders an `o`
