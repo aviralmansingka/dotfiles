@@ -18,6 +18,7 @@
  * No assistant-message grouping or native expanded output: each tool owns its
  * row, and expansion is bounded text/details (images are described, not drawn).
  */
+import { execSync } from "node:child_process";
 import {
   getLanguageFromPath,
   highlightCode,
@@ -100,14 +101,37 @@ function formatElapsed(milliseconds: number): string {
   return `${Math.floor(milliseconds / 60000)}m${Math.floor((milliseconds % 60000) / 1000)}s`;
 }
 
-function preview(tool: string, args: RecordValue): string {
+// Repository roots for path display, cached per session cwd. An absolute
+// path under the repo root renders relative to that root, so edit rows stay
+// short and stable no matter which worktree the session runs in.
+const repoRoots = new Map<string, string | null>();
+function repoRoot(cwd: string): string | undefined {
+  if (!repoRoots.has(cwd)) {
+    try {
+      repoRoots.set(cwd, execSync("git rev-parse --show-toplevel", {
+        cwd, encoding: "utf8", timeout: 2000, stdio: ["ignore", "pipe", "ignore"],
+      }).trim() || null);
+    } catch {
+      repoRoots.set(cwd, null);
+    }
+  }
+  return repoRoots.get(cwd) ?? undefined;
+}
+
+function displayPath(path: string, cwd: string): string {
+  const root = repoRoot(cwd);
+  if (!root || !path.startsWith(`${root}/`)) return path;
+  return path.slice(root.length + 1) || ".";
+}
+
+function preview(tool: string, args: RecordValue, cwd = ""): string {
   const path = clean(args.path || args.file);
   switch (tool) {
+    case "edit": return `${displayPath(path, cwd)} · ${plural(Array.isArray(args.edits) ? args.edits.length : 1, "edit")}`;
     case "bash": case "powershell": return `$ ${firstLine(args.command)}`;
     case "python": return `$ ${firstLine(args.code)}`;
     case "read": return [path, ...["offset", "limit"].flatMap((key) =>
       finiteNumber(args[key]) ? [`${key}=${args[key]}`] : [])].join(" · ");
-    case "edit": return `${path} · ${plural(Array.isArray(args.edits) ? args.edits.length : 1, "edit")}`;
     case "write": return `${path} · ${plural(asString(args.content).split("\n").length, "line")}`;
     case "grep": case "find": return `${JSON.stringify(clean(args.pattern))} in ${path || "."}${args.glob ? ` · ${clean(args.glob)}` : ""}`;
     case "ls": return path || ".";
@@ -1422,6 +1446,7 @@ function disposeState(): void {
   for (const row of rows.values()) stop(row);
   rows.clear();
   background.clear();
+  repoRoots.clear();
   highlightedCommands.clear();
   highlightedGrep.clear();
   inspectionTrees.clear();
@@ -1609,7 +1634,7 @@ export default function (pi: ExtensionAPI) {
               ` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "$ ")} ${theme.fg("text", theme.bold(JSON.stringify(clean(query.pattern))))}${theme.fg("dim", scope + flags)}`,
             ];
           }
-          const arg = preview(toolName, asRecord(args));
+          const arg = preview(toolName, asRecord(args), context.cwd);
           return [` ${glyph} ${name}${theme.fg("dim", `${arg ? ` ${arg}` : ""}${elapsed}`)}`];
         });
       },

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -1017,6 +1018,30 @@ branch_sync:
   const sumOut = render(sumRow);
   assert.match(sumOut, /<success>exit 0<\/success><dim> · 2 lines<\/dim>/, "minimized summary: exit status keeps its color, the line count dims");
   assert.ok(!sumOut.includes("<success>exit 0 · 2 lines</success>"), "the count never rides the status color");
+  // Edit rows render repo-relative paths: an absolute path under the
+  // session cwd's git root strips to that root; other paths stay as-is.
+  const gitRoot = mkdtempSync(join(tempRoot, "git-"));
+  execSync("git init --quiet", { cwd: gitRoot });
+  const editRow = resolver("edit", () => undefined);
+  const inRepo = render(editRow.renderCall(
+    { path: `${gitRoot}/src/main.rs`, edits: [{ oldText: "a", newText: "b" }] },
+    theme,
+    context("edit-in-repo", {}, { cwd: gitRoot }),
+  ));
+  assert.match(inRepo, /◇ edit src\/main\.rs · 1 edit/, "an absolute path under the repo root renders relative to it");
+  assert.ok(!inRepo.includes(gitRoot), "the repo root never appears in the row");
+  const outside = render(editRow.renderCall(
+    { path: "/etc/hosts", edits: [{ oldText: "a", newText: "b" }] },
+    theme,
+    context("edit-outside", {}, { cwd: "/tmp" }),
+  ));
+  assert.match(outside, /◇ edit \/etc\/hosts · 1 edit/, "a path outside the repo stays absolute");
+  const relative = render(editRow.renderCall(
+    { path: "src/main.rs", edits: [{ oldText: "a", newText: "b" }] },
+    theme,
+    context("edit-relative", {}, { cwd: gitRoot }),
+  ));
+  assert.match(relative, /◇ edit src\/main\.rs · 1 edit/, "an already-relative path stays unchanged");
   shutdown();
   assert.equal(bus.size, 0, "shutdown releases bus subscription");
   console.log("tool-call-renderer-public tests passed");
