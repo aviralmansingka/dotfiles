@@ -41,7 +41,7 @@ const background = new Map<string, Background>();
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
-const INSPECT_TOOLS = new Set(["grep", "find"]);
+const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
 const OUTPUT_HEAD = 30;
 const OUTPUT_TAIL = 30;
 const RUNNING = new Set(["pending", "running", "fixing", "awaiting_approval", "fix_review"]);
@@ -153,7 +153,14 @@ function summary(tool: string, result: Result, isError: boolean): string {
       return `${matchCount(hits.length)} · ${plural(new Set(hits.map((hit) => hit.path)).size, "file")}${notice}`;
     }
     case "find": return `${plural(inspectionPaths(result, "No files found matching pattern").length, "path")}${truncated || (details.resultLimitReached ? " · truncated" : "")}`;
-    case "ls": return `${plural(count, "result")}${truncated}`;
+    case "ls": {
+      const paths = inspectionPaths(result, "(empty directory)");
+      const dirs = paths.filter((path) => path.endsWith("/")).length;
+      const counts = dirs || !paths.length
+        ? `${plural(dirs, "dir")} · ${plural(paths.length - dirs, "file")}`
+        : plural(paths.length, "result");
+      return counts + (truncated || (details.entryLimitReached ? " · truncated" : ""));
+    }
     default: return firstLine(text) || "completed";
   }
 }
@@ -282,6 +289,20 @@ function findTree(theme: Theme, id: string, paths: string[]): string[] {
   };
   // Fold the complete result subtree once, keeping hidden line counts exact.
   const rendered = foldInspection(drawTree(root, ""), theme).map((line) => `    ${line}`);
+  inspectionTrees.set(id, { source, theme, rows: rendered });
+  return rendered;
+}
+
+function lsListing(theme: Theme, id: string, paths: string[]): string[] {
+  const source = JSON.stringify(paths);
+  const cached = inspectionTrees.get(id);
+  if (cached && cached.source === source && cached.theme === theme) return cached.rows;
+  // Native ls exposes only names and trailing /, not lstat metadata. Do not
+  // invent sizes, symlink targets, or directory child counts from those names.
+  const rendered = paths.map((path, index) => {
+    const label = path.endsWith("/") ? theme.fg("accent", theme.bold(path)) : theme.fg("toolOutput", path);
+    return `    ${theme.fg("borderMuted", index === paths.length - 1 ? "└── " : "├── ")}${label}`;
+  });
   inspectionTrees.set(id, { source, theme, rows: rendered });
   return rendered;
 }
@@ -919,9 +940,10 @@ export default function (pi: ExtensionAPI) {
             arm(row);
           }
           if (toolName === "grep") return renderGrep(effective, expanded, row, theme, context, width);
-          if (toolName === "find" && expanded) return [
+          if ((toolName === "find" || toolName === "ls") && expanded) return [
             inspectionBanner(toolName, effective, row, theme),
-            ...(!row.failed ? findTree(theme, context.toolCallId, inspectionPaths(effective, "No files found matching pattern")) : []),
+            ...(!row.failed ? (toolName === "find" ? findTree : lsListing)(theme, context.toolCallId,
+              inspectionPaths(effective, toolName === "find" ? "No files found matching pattern" : "(empty directory)")) : []),
           ];
           const lines = CONNECTED.has(toolName)
             ? renderConnectedChips(toolName, asRecord(context.args), effective, expanded, partial, row, theme, context.isError || asRecord(effective).isError === true)
@@ -942,6 +964,7 @@ export default function (pi: ExtensionAPI) {
     // and bash/powershell keep their expansion ours too: the native file
     // render proved near-uncolored, and the native bash output view has no
     // framing — ours adds the exit banner plus the railed head-and-tail fold.
+    // Inspection tools keep their query spines and colored file trees too.
     const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) ? undefined : next();
     if (!other?.renderResult) return mine;
     return {

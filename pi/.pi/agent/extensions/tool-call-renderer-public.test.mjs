@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls"]);
   for (const name of ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "no_mistakes_axi", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -300,6 +300,45 @@ try {
   assert.ok(!treePartial.includes("✓") && treePartial.includes("nested/"));
   const treeError = render(find.renderResult(result("path not found"), { ...options, expanded: true }, styT, context("find-error", {}, { ...quiet, isError: true })));
   assert.ok(treeError.includes("<error><b>✗ path not found</b></error>") && !treeError.includes("└──"));
+
+  const ls = resolver("ls", () => undefined);
+  const lsCtx = context("ls-list", { path: "." }, quiet);
+  // Real session results omit details normally; limited results only carry
+  // entryLimitReached (and optionally truncation), never an entries array.
+  const listing = result(".git/\nREADME.md\nsrc/\ntest.mjs");
+  delete listing.details;
+  assert.match(render(ls.renderResult(listing, options, styT, lsCtx)), /2 dirs · 2 files/);
+  const lsOut = render(ls.renderResult(listing, { ...options, expanded: true }, styT, lsCtx));
+  assert.ok(lsOut.includes("<success><b>✓ 2 dirs</b></success><dim> · 2 files</dim>"));
+  assert.ok(lsOut.includes("<borderMuted>├── </borderMuted><accent><b>.git/</b></accent>"));
+  assert.ok(lsOut.includes("<borderMuted>├── </borderMuted><toolOutput>README.md</toolOutput>"));
+  assert.ok(lsOut.includes("<borderMuted>└── </borderMuted><toolOutput>test.mjs</toolOutput>"));
+  assert.ok(!lsOut.includes(" → "), "native stat follows links; never invent link metadata");
+  const lsLimited = render(ls.renderResult(result("one/\ntwo.txt\n\n[2 entries limit reached. Use limit=4 for more]", { entryLimitReached: 2 }), { ...options, expanded: true }, styT, context("ls-limit", {}, quiet)));
+  assert.ok(lsLimited.includes("✓ 1 dir") && lsLimited.includes(" · 1 file · truncated"));
+  assert.ok(!lsLimited.includes("entries limit"), "tool notices are not listing entries");
+  const lsBytes = render(ls.renderResult(result("one/\ntwo.txt\n\n[50.0KB limit reached]", { truncation: { truncated: true, content: "one/\ntwo.txt", lastLinePartial: false, totalLines: 3, totalBytes: 60000, outputLines: 2, outputBytes: 12, maxBytes: 51200 } }), { ...options, expanded: true }, styT, context("ls-bytes", {}, quiet)));
+  assert.ok(lsBytes.includes(" · 1 file · truncated"));
+  assert.ok(!lsBytes.includes("50.0KB") && !lsBytes.includes("60000"), "output byte counts are not file sizes");
+  const lsPlain = render(ls.renderResult(result("one.txt\ntwo.txt"), { ...options, expanded: true }, styT, context("ls-plain", {}, quiet)));
+  assert.ok(lsPlain.includes("✓ 2 results") && lsPlain.includes("<toolOutput>one.txt</toolOutput>"));
+  assert.ok(!lsPlain.includes("dirs") && !lsPlain.includes("<accent>"));
+  const lsEmpty = render(ls.renderResult(result("(empty directory)"), { ...options, expanded: true }, styT, context("ls-empty", {}, quiet)));
+  assert.ok(lsEmpty.includes("✓ 0 dirs") && lsEmpty.includes(" · 0 files") && !lsEmpty.includes("└──"));
+  const lsError = render(ls.renderResult(result("Path not found: /missing", {}), { ...options, expanded: true }, styT, context("ls-error", {}, { ...quiet, isError: true })));
+  assert.ok(lsError.includes("<error><b>✗ Path not found: /missing</b></error>") && !lsError.includes("└──"));
+  const lsPartial = render(ls.renderResult(listing, { expanded: true, isPartial: true }, styT, context("ls-partial", {}, quiet)));
+  assert.match(lsPartial, /running/);
+  assert.ok(!lsPartial.includes("✓") && lsPartial.includes("src/"));
+  const lsEscapes = render(ls.renderResult(result("\u001b[31msrc/\u001b[0m\nfile\tname"), { ...options, expanded: true }, styT, context("ls-safe", {}, quiet)));
+  assert.ok(!lsEscapes.includes("\u001b") && lsEscapes.includes("file  name") && lsEscapes.includes("✓ 1 dir"));
+  const lsUpdated = render(ls.renderResult(result("new/"), { ...options, expanded: true }, theme, lsCtx));
+  assert.match(lsUpdated, /✓ 1 dir · 0 files/);
+  assert.ok(!lsUpdated.includes("README.md") && !lsUpdated.includes("<accent>"));
+  for (const [tool, output, args] of [[grep, hits, grepArgs], [find, paths, {}], [ls, listing, {}]]) {
+    const narrow = tool.renderResult(output, { ...options, expanded: true }, theme, context(`narrow-${JSON.stringify(args)}-${output.content[0].text}`, args, quiet));
+    assert.ok(narrow.render(16).every((line) => [...line].length <= 16));
+  }
 
   const subagent = resolver("subagent", () => undefined);
   const ctx = context("child", { name: "scout" });
