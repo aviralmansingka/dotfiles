@@ -78,7 +78,7 @@ type DetectionResult =
  * vim/nvim. Returns "error" if any herdr call fails, so the caller does NOT
  * launch a duplicate on a transient failure.
  */
-function findEditorPane(currentTabId: string): DetectionResult {
+export function findEditorPane(currentTabId: string): DetectionResult {
 	const panes = listPanes();
 	if (panes === null) return { status: "error" };
 	const tabPanes = panes.filter((p) => p.tab_id === currentTabId);
@@ -100,6 +100,26 @@ function findEditorPane(currentTabId: string): DetectionResult {
 		}
 	}
 	return hadError ? { status: "error" } : { status: "absent" };
+}
+/** Detect the editor (vim/nvim) process in the current Herdr tab, with its
+ *  pane id and process name. Exported for focus-buffer's nvim RPC path. */
+export function detectEditorProcess():
+	| { paneId: string; pid: number; name: string }
+	| null {
+	const current = getCurrentPane();
+	if (!current) return null;
+	const detection = findEditorPane(current.tab_id);
+	if (detection.status !== "found") return null;
+	const proc = getProcessInfo(detection.editor.paneId)?.foreground_processes ?? [];
+	const match = proc.find(
+		(p) => p.name === "nvim" || p.argv?.[0] === "nvim" || p.name === "vim" || p.argv?.[0] === "vim",
+	);
+	if (!match) return null;
+	return {
+		paneId: detection.editor.paneId,
+		pid: detection.editor.pid,
+		name: match.name === "vim" || match.argv?.[0] === "vim" ? "vim" : "nvim",
+	};
 }
 // ---------------------------------------------------------------------------
 // editor communication

@@ -5,7 +5,7 @@ import { Type } from "typebox";
 import { basename, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { openJournalInEditor, resolveJournalPath } from "./md-log";
+import { presentLesson, resolveJournalPath } from "./md-log";
 
 // ────────────────────────────────────────────────────────────────────────────
 // lesson — teaching content lives in the session's markdown journal, not in
@@ -21,18 +21,21 @@ import { openJournalInEditor, resolveJournalPath } from "./md-log";
 //
 // Now: the agent calls `lesson` with the teaching markdown; md-log appends
 // it to the per-session journal (<session>.md, beside the session file) on
-// tool_execution_start; the tool opens that journal in the user's editor
-// pane and returns IMMEDIATELY — the user reads at their own pace while the
-// conversation continues. The journal is also where every quiz/explain
-// verdict lands, so it reads as the course transcript. The user can reopen
-// it any time: mid-quiz `h`, /journal (herdr-annotate reviewer), or
-// Ctrl-click the file:// link in the result row.
+// tool_execution_start; the tool then shows the lesson in the learner's
+// FOCUS BUFFER — an in-memory scratch buffer in the running nvim pane that
+// holds ONLY the current node — and returns IMMEDIATELY. Each lesson call
+// replaces the buffer's whole content, so the side pane always shows the
+// node the active quiz/explain is about. When no nvim RPC editor is
+// available, the tool falls back to opening the journal file. The journal
+// remains the durable course transcript (every quiz/explain verdict lands
+// there too, append-only). The user can reopen it any time: mid-quiz `h`
+// (focus buffer when a lesson is active), /lessons, or /journal.
 // ────────────────────────────────────────────────────────────────────────────
 
 const LessonParams = Type.Object({
 	title: Type.String({
 		description:
-			"Short lesson title (a few words, used as the journal heading).",
+			"Short lesson title (a few words). Name the teaching node this lesson covers — it becomes the focus-buffer heading and the journal entry heading.",
 	}),
 	body: Type.String({
 		description:
@@ -53,11 +56,13 @@ export default function lesson(pi: ExtensionAPI) {
 		name: "lesson",
 		label: "lesson",
 		description:
-			"Write teaching content (a lesson) into the session's markdown journal and open that journal in the user's editor pane. Returns immediately — the user reads at their own pace while you continue. Use this BEFORE quiz or explain whenever the question depends on content the user must read — do not emit that content as ordinary assistant text alongside the tool call, because it collapses in the trace. The journal is shared with every quiz/explain verdict, and the user can reopen it mid-quiz with `h` or via /journal.",
+			"Write teaching content (a lesson) into the session's markdown journal and show it in the learner's editor as the CURRENT NODE: an in-memory scratch buffer holding only this lesson's content. Returns immediately — the user reads at their own pace while you continue. Use this BEFORE quiz or explain whenever the question depends on content the user must read — do not emit that content as ordinary assistant text alongside the tool call, because it collapses in the trace. One node per call: each lesson replaces the buffer's whole content, so batching multiple nodes hides the current one. The journal stays the durable append-only transcript (shared with every quiz/explain verdict); the buffer is the ephemeral node view, re-shown by the quiz `h` shortcut.",
 		promptSnippet:
 			"Use the lesson tool to append teaching content to the session journal and open it in the user's editor before asking a dependent quiz/explain question.",
 		promptGuidelines: [
 			"When a quiz or explain question depends on content the user must read, deliver that content with the lesson tool first — not as assistant text in the same turn as the question tool, which the trace collapses.",
+			"One node per lesson call. The focus buffer replaces its whole content on every call, so a lesson that bundles several nodes shows none of them well. Name the node in `title` — it becomes the buffer heading and the journal entry heading.",
+			"Write lesson prose in Simplified Technical English at full compliance: short sentences, active voice, approved verbs, one term per concept. The general 80% relaxation does not apply to teaching prose.",
 			"Keep the pre-question assistant text to a single connective line and put the actual teaching markdown in `body`.",
 			"The tool returns as soon as the journal is open — give the user a beat to read it before firing the dependent question, but do not wait for acknowledgement.",
 			"If the result is `unavailable` (no session journal), restate the essential idea in the conversation instead.",
@@ -80,8 +85,10 @@ export default function lesson(pi: ExtensionAPI) {
 				};
 			}
 
-			const result = await openJournalInEditor(ctx);
-			const text = `Lesson "${params.title}" appended to the journal and opened in the user's editor (${result.message}). Continue — the user reads at their own pace.`;
+			const result = await presentLesson(ctx, params.title, params.body);
+			const text =
+				`Lesson "${params.title}" appended to the journal and shown to the user ` +
+				`(${result.message}). Continue — the user reads at their own pace.`;
 			return {
 				content: [{ type: "text" as const, text }],
 				details: { status: "opened", title: params.title, journalPath } satisfies LessonResultDetails,

@@ -3,6 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 
 import { openEditor } from "./nvim-open";
+import { showNodeBuffer } from "./focus-buffer";
 
 // ────────────────────────────────────────────────────────────────────────────
 // md-log — a per-session markdown journal of lessons and graded questions.
@@ -74,10 +75,14 @@ function demoteHeadings(body: string): string {
 		.join("\n");
 }
 
-/** Markdown for one lesson, as it is shown to the user. */
+/** Markdown for one lesson, as it is shown to the user. The heading is the
+ *  lesson's own short title; the stamp rides a metadata line under it so the
+ *  heading stays content-focused and scannable. */
 export function formatLessonEntry(title: string, body: string): string {
 	return [
-		`## ${entryStamp()} · Lesson · ${title.trim()}`,
+		`## ${title.trim()}`,
+		"",
+		`_Lesson · ${entryStamp()}_`,
 		"",
 		demoteHeadings(body.trim()),
 		"",
@@ -86,6 +91,7 @@ export function formatLessonEntry(title: string, body: string): string {
 
 interface QuizDetails {
 	status: string;
+	title?: string;
 	question: string;
 	context?: string;
 	mode?: string;
@@ -105,11 +111,16 @@ function quizVerdict(details: QuizDetails): string {
 	return details.status;
 }
 
-/** Markdown for one quiz result, in the order the user actually saw. */
+/** Markdown for one quiz result, in the order the user actually saw. The
+ *  heading is the quiz's own short title (node + teaching goal) when the
+ *  tool call supplied one; the verdict and stamp ride a metadata line under
+ *  it. No timestamp in the heading. */
 export function formatQuizEntry(details: QuizDetails): string {
 	const lines: string[] = [];
-	const mode = details.mode === "multi-select" ? " (multi-select)" : "";
-	lines.push(`## ${entryStamp()} · Quiz${mode} · ${quizVerdict(details)}`);
+	const mode = details.mode === "multi-select" ? "multi-select" : "Quiz";
+	lines.push(`## ${details.title?.trim() || mode}`);
+	lines.push("");
+	lines.push(`_${mode} · ${quizVerdict(details)} · ${entryStamp()}_`);
 	lines.push("");
 	lines.push(`**Question:** ${details.question.trim()}`);
 	if (details.context?.trim()) {
@@ -149,6 +160,7 @@ export function formatQuizEntry(details: QuizDetails): string {
 
 interface ExplainDetails {
 	status: string;
+	title?: string;
 	question: string;
 	context?: string;
 	answer?: string;
@@ -170,10 +182,15 @@ function explainVerdict(details: ExplainDetails): string {
 	return `${glyph} ${g.verdict.replace(/_/g, " ")} — grade ${g.grade}`;
 }
 
-/** Markdown for one explain result: the prose answer plus its grading. */
+/** Markdown for one explain result: the prose answer plus its grading. The
+ *  heading is the question's own short title (node + teaching goal) when the
+ *  tool call supplied one; the verdict and stamp ride a metadata line under
+ *  it. No timestamp in the heading. */
 export function formatExplainEntry(details: ExplainDetails): string {
 	const lines: string[] = [];
-	lines.push(`## ${entryStamp()} · Explain · ${explainVerdict(details)}`);
+	lines.push(`## ${details.title?.trim() || "Explain"}`);
+	lines.push("");
+	lines.push(`_Explain · ${explainVerdict(details)} · ${entryStamp()}_`);
 	lines.push("");
 	lines.push(`**Question:** ${details.question.trim()}`);
 	lines.push("");
@@ -218,6 +235,58 @@ function appendEntry(path: string | undefined, entry: string): void {
 	}
 }
 
+// The most recent lesson taught in this process: the "current node" the
+// learner's side buffer shows. Set on every lesson tool_execution_start.
+let currentLesson: { title: string; body: string } | undefined;
+
+/** Buffer-name key for this session's focus buffer (journal path stem). */
+function focusKey(ctx: any): string {
+	const journal = resolveJournalPath(ctx);
+	if (!journal) return "session";
+	const base = journal.split("/").pop() ?? "session";
+	return base.replace(/\.md$/, "");
+}
+
+/** Present a lesson as the current node: focus buffer first (an in-memory
+ *  scratch buffer holding only this node), the journal file as fallback.
+ *  Used by the lesson tool. */
+export async function presentLesson(
+	ctx: any,
+	title: string,
+	body: string,
+): Promise<{ mode: "buffer" | "journal" | "none"; message: string }> {
+	const buffer = showNodeBuffer(focusKey(ctx), title, body);
+	if (buffer.ok) {
+		return {
+			mode: "buffer",
+			message: `${buffer.message} — the learner's side buffer shows only this node`,
+		};
+	}
+	const journal = await openJournalInEditor(ctx);
+	if (!journal.launched && journal.message.startsWith("No lesson journal")) {
+		return { mode: "none", message: journal.message };
+	}
+	return {
+		mode: "journal",
+		message: `${buffer.message}; opened the journal instead — ${journal.message}`,
+		};
+}
+
+/** Re-show the current node (mid-quiz `h`): focus buffer when a lesson is
+ *  active, else the full journal. */
+export async function showLessonView(
+	ctx: any,
+): Promise<{ mode: "buffer" | "journal"; message: string }> {
+	if (currentLesson) {
+		const buffer = showNodeBuffer(focusKey(ctx), currentLesson.title, currentLesson.body);
+		if (buffer.ok) {
+			return { mode: "buffer", message: buffer.message };
+		}
+	}
+	const journal = await openJournalInEditor(ctx);
+	return { mode: "journal", message: journal.message };
+}
+
 /**
  * Open the session's lesson journal in the user's editor pane (existing pane
  * if one is open, else a split). Non-blocking: resolves as soon as the file
@@ -259,6 +328,7 @@ export default function mdLog(pi: ExtensionAPI) {
 		if (event.toolName !== "lesson") return;
 		const args = event.args as { title?: string; body?: string } | undefined;
 		if (!args?.title || !args.body) return;
+		currentLesson = { title: args.title, body: args.body };
 		appendEntry(resolveJournalPath(ctx), formatLessonEntry(args.title, args.body));
 	});
 

@@ -54,12 +54,16 @@ if (savedJournalOverride === undefined) delete process.env.PI_LESSON_JOURNAL;
 else process.env.PI_LESSON_JOURNAL = savedJournalOverride;
 
 const lesson = formatLessonEntry("Priority ladder", "blocked > working > idle");
-// Short heading: stamp + type + title — the question/body lives below it.
-assert.ok(lesson.startsWith("## "), lesson);
-assert.ok(lesson.includes("· Lesson · Priority ladder"));
+// The heading is the lesson's own title — no timestamp in headings. The
+// stamp and entry type ride a metadata line under the heading.
+assert.ok(lesson.startsWith("## Priority ladder\n"), lesson);
+assert.ok(lesson.includes("_Lesson · "), lesson);
+assert.ok(lesson.includes(" UTC_"), lesson);
 assert.ok(lesson.includes("blocked > working > idle"));
-// Heading stamps carry the date, not just the time (arcs span days).
-assert.match(lesson, /^## \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC · Lesson · Priority ladder$/m);
+// The stamp still carries the date, not just the time (arcs span days).
+assert.match(lesson, /_Lesson · \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC_/m);
+// No timestamp in the heading itself.
+assert.doesNotMatch(lesson, /^## \d{4}/m);
 
 // A lesson body's own headings are demoted one level under the entry heading.
 const nestedLesson = formatLessonEntry("T", "## Section\nbody");
@@ -67,6 +71,7 @@ assert.ok(nestedLesson.includes("\n### Section\n"), nestedLesson);
 
 const quizEntry = formatQuizEntry({
 	status: "answered",
+	title: "Node A — state priority",
 	question: "What state does desiredState() report?",
 	mode: "single-select",
 	options: [
@@ -78,7 +83,10 @@ const quizEntry = formatQuizEntry({
 	correct: true,
 	explanation: "blockedCount > 0 takes priority.",
 });
-assert.ok(quizEntry.includes("Quiz · ✓ Correct"));
+// The heading is the quiz's own short title (node + teaching goal).
+assert.ok(quizEntry.startsWith("## Node A — state priority\n"), quizEntry);
+assert.ok(quizEntry.includes("_Quiz · ✓ Correct · "), quizEntry);
+assert.ok(!/^## \d{4}/m.test(quizEntry), "no timestamp in the heading");
 assert.ok(quizEntry.includes("**Question:** What state does desiredState() report?"));
 assert.ok(quizEntry.includes("- ✓ **2.** blocked"), "selected-and-correct option is marked and bolded");
 assert.ok(quizEntry.includes("\n- 1. working"), "unselected incorrect option stays plain, no mark");
@@ -108,6 +116,7 @@ const dontKnowEntry = formatQuizEntry({
 	dontKnow: true,
 });
 assert.ok(dontKnowEntry.includes("Quiz · ◐ Other — I don't know"));
+assert.ok(dontKnowEntry.startsWith("## Quiz\n"), "untitled quiz falls back to a plain heading");
 
 const explainEntry = formatExplainEntry({
 	status: "answered",
@@ -124,6 +133,13 @@ const explainEntry = formatExplainEntry({
 	},
 });
 assert.ok(explainEntry.includes("Explain · ◐ partially correct — grade C"));
+assert.ok(!/^## \d{4}/m.test(explainEntry), "no timestamp in the heading");
+const titledExplain = formatExplainEntry({
+	status: "answered",
+	title: "Node F — control vs data plane",
+	question: "Where does the chosen state go next?",
+});
+assert.ok(titledExplain.startsWith("## Node F — control vs data plane\n"), titledExplain);
 assert.ok(explainEntry.includes("**Question:** Where does the chosen state go next?"));
 assert.ok(explainEntry.includes("**Your answer:**"));
 assert.ok(explainEntry.includes("> over the socket to herdr"));
@@ -223,7 +239,8 @@ assert.ok(existsSync(journal), "journal should be created beside the session fil
 const contents = readFileSync(journal, "utf-8");
 
 assert.ok(contents.startsWith("# Lesson journal"), "journal gets a header on first write");
-assert.ok(contents.includes("· Lesson · Priority ladder"));
+assert.ok(contents.includes("## Priority ladder"));
+assert.ok(contents.includes("_Lesson · "));
 assert.ok(contents.includes("blocked > working > idle"));
 assert.ok(contents.includes("Quiz · ✓ Correct"));
 assert.ok(contents.includes("**Question:** What state wins?"));
@@ -247,9 +264,9 @@ handlers.get("tool_execution_start")(
 );
 const nextJournal = journalPathFor(sessionFile);
 assert.ok(existsSync(nextJournal), "a changed session gets its own journal");
-assert.ok(readFileSync(nextJournal, "utf-8").includes("· Lesson · New session"));
+assert.ok(readFileSync(nextJournal, "utf-8").includes("## New session"));
 assert.ok(
-	!readFileSync(journal, "utf-8").includes("· Lesson · New session"),
+	!readFileSync(journal, "utf-8").includes("## New session"),
 	"a changed session must not append to the previous journal",
 );
 

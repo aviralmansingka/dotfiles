@@ -11,7 +11,7 @@ import {
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { openEditor } from "./nvim-open";
-import { openJournalInEditor } from "./md-log";
+import { showLessonView } from "./md-log";
 import { contextFileHint, lessonFileHint, normalizeContextFiles } from "./user-input/context-files";
 import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
 import {
@@ -73,6 +73,7 @@ interface DisplayedOption {
 
 interface QuizResultDetails {
 	status: QuizStatus;
+	title?: string; // short node/goal title from the tool call; journal heading
 	question: string;
 	context?: string;
 	mode: QuizMode;
@@ -96,6 +97,12 @@ const OptionSchema = Type.Object({
 });
 
 const QuizParams = Type.Object({
+	title: Type.Optional(
+		Type.String({
+			description:
+				"Short title for this quiz (aim for under 40 characters). Name the node or concept under test and the teaching goal — e.g. 'Node E — ROV drop scope'. Shown as the panel heading and recorded as the journal entry heading; no timestamp is put in headings.",
+		}),
+	),
 	question: Type.String({
 		description: "The single quiz question to ask. Ask exactly one question per tool call.",
 	}),
@@ -157,18 +164,20 @@ async function openContextFiles(ctx: any, files: string[]): Promise<void> {
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// `h` lesson file — opens the session's lesson journal in the editor.
+// `h` lesson view — re-shows the current node in the learner's editor.
 //
-// Pressing `h` mid-quiz in Answer mode opens the per-session lesson journal
-// (<session>.md, maintained by md-log) in the user's editor pane. The quiz
-// itself stays active and ungraded. Fire-and-forget: never throws into the
-// quiz, no LLM call, no waiting.
+// Pressing `h` mid-quiz in Answer mode re-shows the CURRENT NODE: the focus
+// buffer (an in-memory scratch buffer holding only the most recent lesson)
+// when a lesson is active, else the per-session lesson journal
+// (<session>.md, maintained by md-log). The quiz itself stays active and
+// ungraded. Fire-and-forget: never throws into the quiz, no LLM call, no
+// waiting.
 // ────────────────────────────────────────────────────────────────────────
 function openLessonFileShortcut(ctx: any): void {
-	ctx?.ui?.notify?.("Opening lesson file…", "info");
-	void openJournalInEditor(ctx)
+	ctx?.ui?.notify?.("Opening lesson view…", "info");
+	void showLessonView(ctx)
 		.then((res) => ctx?.ui?.notify?.(res.message, "info"))
-		.catch((err) => ctx?.ui?.notify?.(`lesson file open failed: ${err?.message ?? String(err)}`, "warning"));
+		.catch((err) => ctx?.ui?.notify?.(`lesson view open failed: ${err?.message ?? String(err)}`, "warning"));
 }
 
 // Fisher-Yates shuffle over a copy. Safe to reorder for display because
@@ -268,22 +277,36 @@ function buildStructuredResult(
 	dontKnow?: boolean,
 	note?: string,
 	followUp?: string,
+	title?: string,
 ): QuizResultDetails {
-	return { status, question, context, mode, answers, correctIndices, options, correct, dontKnow, note, followUp, explanation, message };
+	return { status, title, question, context, mode, answers, correctIndices, options, correct, dontKnow, note, followUp, explanation, message };
 }
 
-function cancelledResult(question: string, mode: QuizMode, correctIndices: number[], context?: string) {
+function cancelledResult(
+	question: string,
+	mode: QuizMode,
+	correctIndices: number[],
+	context?: string,
+	title?: string,
+) {
 	const message = "User cancelled the quiz";
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult("cancelled", question, mode, [], correctIndices, undefined, undefined, context, message),
+		details: buildStructuredResult("cancelled", question, mode, [], correctIndices, undefined, undefined, context, message, undefined, undefined, undefined, undefined, title),
 	};
 }
 
-function unavailableResult(question: string, mode: QuizMode, message: string, correctIndices: number[], context?: string) {
+function unavailableResult(
+	question: string,
+	mode: QuizMode,
+	message: string,
+	correctIndices: number[],
+	context?: string,
+	title?: string,
+) {
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult("unavailable", question, mode, [], correctIndices, undefined, undefined, context, message),
+		details: buildStructuredResult("unavailable", question, mode, [], correctIndices, undefined, undefined, context, message, undefined, undefined, undefined, undefined, title),
 	};
 }
 
@@ -294,6 +317,7 @@ function tooHardResult(
 	mode: QuizMode,
 	correctIndices: number[],
 	context?: string,
+	title?: string,
 ) {
 	const message =
 		"User passed with Ctrl+P because the question was too hard. Explain the prerequisite more simply, then ask an easier quiz question. Do not grade this as wrong or reveal the original answer.";
@@ -309,6 +333,8 @@ function tooHardResult(
 			undefined,
 			context,
 			message,
+			undefined,
+			title,
 		),
 	};
 }
@@ -321,6 +347,7 @@ function followUpResult(
 	followUp: string,
 	correctIndices: number[],
 	context?: string,
+	title?: string,
 ) {
 	const message = `User steered instead of answering: ${followUp}`;
 	return {
@@ -339,6 +366,7 @@ function followUpResult(
 			undefined,
 			undefined,
 			followUp,
+			title,
 		),
 	};
 }
@@ -356,6 +384,7 @@ function buildResult(
 	response: QuizResponse,
 	correctIndices: number[],
 	explanation: string | undefined,
+	title?: string,
 ) {
 	const { dontKnow, answers } = response;
 	const selectedIndices = answers.map((a) => a.index);
@@ -391,6 +420,8 @@ function buildResult(
 			undefined,
 			displayedOptions,
 			dontKnow,
+			undefined,
+			title,
 		),
 	};
 }
@@ -495,9 +526,21 @@ function frameMerged(top: string[], bottom: string[], width: number, theme: any)
 	return out;
 }
 
-// Question + optional context. Shared by both components. (The frame provides
-// the border now; no flat top bar.)
-function pushHeader(lines: string[], theme: any, width: number, question: string, context: string | undefined): void {
+// Title + question + optional context. Shared by both components. (The frame
+// provides the border now; no flat top bar.) The title names the node under
+// test so the learner knows which lesson the question belongs to.
+function pushHeader(
+	lines: string[],
+	theme: any,
+	width: number,
+	title: string | undefined,
+	question: string,
+	context: string | undefined,
+): void {
+	if (title) {
+		addWrapped(lines, theme.fg("toolTitle", theme.bold(title)), width, " ");
+		lines.push("");
+	}
 	addWrapped(lines, theme.fg("text", question), width, " ");
 	if (context) {
 		lines.push("");
@@ -555,6 +598,7 @@ async function askSingleChoice(
 	options: QuizOption[],
 	correctIndices: number[],
 	explanation: string | undefined,
+	title?: string,
 ): Promise<QuizResponse | null> {
 	const allOptions: DisplayOption[] = options.map((option, index) => ({
 		...option,
@@ -689,7 +733,7 @@ async function askSingleChoice(
 				const top: string[] = [];
 				const bottom: string[] = [];
 				const add = (text: string) => top.push(truncateToWidth(text, tw));
-				pushHeader(top, theme, tw, question, context);
+				pushHeader(top, theme, tw, title, question, context);
 
 				if (phase === "feedback") {
 					renderFeedback(
@@ -769,6 +813,7 @@ async function askMultiChoice(
 	options: QuizOption[],
 	correctIndices: number[],
 	explanation: string | undefined,
+	title?: string,
 ): Promise<QuizResponse | null> {
 	const DONT_KNOW_ID = "dont-know";
 	const choiceItems: DisplayOption[] = options.map((option, index) => ({
@@ -933,7 +978,7 @@ async function askMultiChoice(
 				const top: string[] = [];
 				const bottom: string[] = [];
 				const add = (text: string) => top.push(truncateToWidth(text, tw));
-				pushHeader(top, theme, tw, question, context);
+				pushHeader(top, theme, tw, title, question, context);
 
 				if (phase === "feedback") {
 					renderFeedback(
@@ -1055,6 +1100,8 @@ export default function quiz(pi: ExtensionAPI) {
 			"Use the quiz tool to test the user with a graded multiple-choice or multi-select question (required correct answer + required explanation). For non-graded questions, use ask_user_question.",
 		promptGuidelines: [
 			"quiz is GRADED; ask_user_question is not. If the question has a correct answer, use quiz. If you just need a preference, decision, or open-ended input, use ask_user_question.",
+			"Always pass `title`: a short label (under 40 characters) naming the node or concept under test and the teaching goal — 'Node E — ROV drop scope', never 'Question 3'. It heads the panel and the journal entry.",
+			"Write the question, options, and explanation in Simplified Technical English at full compliance — short sentences, active voice, approved verbs, one term per concept. The general 80% relaxation does not apply to quiz prose.",
 			'correctAnswer is REQUIRED and is the option value, not a position number. Single-select: one string (e.g. "mercury"). Multi-select: an array of strings (e.g. ["belize", "niue"]).',
 			"Always pass the option's `value` string as correctAnswer — it is self-checking and prevents miscounting positions. A value that matches no option is a hard error.",
 			"explanation is REQUIRED — always say why the correct answer is correct.",
@@ -1068,7 +1115,7 @@ export default function quiz(pi: ExtensionAPI) {
 			"Set multiSelect: true only when more than one option is correct.",
 			"Options are shuffled before display by default, so don't worry about which position you list the correct answer in. Set shuffle: false only when option order is meaningful (ordered values, or an 'All/None of the above' option that must stay last).",
 			"When a quiz needs file context, pass `contextFiles: [\"path/to/file\"]`; the user can press `o` to open those files in vim while the quiz stays active.",
-			"Mid-quiz, the user can press `h` to open the session's lesson journal (<session>.md, where every lesson and quiz verdict is recorded by md-log) in their editor pane; the quiz stays active and ungraded.",
+			"Mid-quiz, the user can press `h` to re-open the current node's lesson in their editor pane (an in-memory focus buffer when a lesson is active, else the session journal); the quiz stays active and ungraded.",
 			"To probe nuance, ask several quick quiz questions and adapt each one based on the previous answers, rather than writing one giant question.",
 			"Don't leak the answer through formatting: keep option phrasing/length even and don't hint which is correct.",
 		],
@@ -1078,13 +1125,14 @@ export default function quiz(pi: ExtensionAPI) {
 			const context = params.details?.trim() || undefined;
 			const contextFiles = normalizeContextFiles((params as any).contextFiles);
 			const explanation = params.explanation.trim();
+			const title = (params as any).title?.trim() || undefined;
 			const mode: QuizMode = params.multiSelect ? "multi-select" : "single-select";
 
 			let options: QuizOption[];
 			try {
 				options = normalizeOptions(params.options);
 			} catch (e) {
-				return unavailableResult(params.question, mode, `quiz ${(e as Error).message}`, [], context);
+				return unavailableResult(params.question, mode, `quiz ${(e as Error).message}`, [], context, title);
 			}
 
 			// Shuffle for display (default on) BEFORE resolving correct indices, so
@@ -1101,7 +1149,7 @@ export default function quiz(pi: ExtensionAPI) {
 			// user has answered and must not leak the answer.
 			onUpdate?.({
 				content: [{ type: "text", text: "Awaiting user response..." }],
-				details: { options: options.map((o, i) => ({ index: i + 1, label: o.label })) },
+				details: { title, options: options.map((o, i) => ({ index: i + 1, label: o.label })) },
 			});
 
 			const { indices: correctIndices, error: correctError } = resolveCorrect(
@@ -1110,7 +1158,7 @@ export default function quiz(pi: ExtensionAPI) {
 			);
 
 			if (signal?.aborted) {
-				return cancelledResult(params.question, mode, correctIndices, context);
+				return cancelledResult(params.question, mode, correctIndices, context, title);
 			}
 
 			if (options.length < 2) {
@@ -1120,32 +1168,33 @@ export default function quiz(pi: ExtensionAPI) {
 					"quiz requires at least two options",
 					correctIndices,
 					context,
+					title,
 				);
 			}
 
 			if (correctError) {
-				return unavailableResult(params.question, mode, `quiz ${correctError}`, correctIndices, context);
+				return unavailableResult(params.question, mode, `quiz ${correctError}`, correctIndices, context, title);
 			}
 
 			if (!ctx.hasUI) {
-				return unavailableResult(params.question, mode, "quiz requires interactive mode UI", correctIndices, context);
+				return unavailableResult(params.question, mode, "quiz requires interactive mode UI", correctIndices, context, title);
 			}
 
 			return withUILock(async () => {
 				const response =
 					mode === "single-select"
-						? await askSingleChoice(ctx, signal, params.question, context, contextFiles, options, correctIndices, explanation)
-						: await askMultiChoice(ctx, signal, params.question, context, contextFiles, options, correctIndices, explanation);
+						? await askSingleChoice(ctx, signal, params.question, context, contextFiles, options, correctIndices, explanation, title)
+						: await askMultiChoice(ctx, signal, params.question, context, contextFiles, options, correctIndices, explanation, title);
 				if (!response) {
-					return cancelledResult(params.question, mode, correctIndices, context);
+					return cancelledResult(params.question, mode, correctIndices, context, title);
 				}
 				if (response.followUp) {
-					return followUpResult(params.question, mode, response.followUp, correctIndices, context);
+					return followUpResult(params.question, mode, response.followUp, correctIndices, context, title);
 				}
 				if (response.tooHard) {
-					return tooHardResult(params.question, mode, correctIndices, context);
+					return tooHardResult(params.question, mode, correctIndices, context, title);
 				}
-				return buildResult(params.question, context, mode, options, response, correctIndices, explanation);
+				return buildResult(params.question, context, mode, options, response, correctIndices, explanation, title);
 			});
 		},
 
@@ -1159,7 +1208,9 @@ export default function quiz(pi: ExtensionAPI) {
 			const options = normalizeOptions(
 				args.options as Array<{ label: string; value?: string; description?: string }> | undefined,
 			);
-			let text = theme.fg("toolTitle", theme.bold("quiz ")) + theme.fg("muted", args.question);
+			let text = theme.fg("toolTitle", theme.bold("quiz "));
+			if (args.title) text += theme.fg("accent", String(args.title)) + " ";
+			text += theme.fg("muted", args.question);
 			if (args.multiSelect) {
 				text += theme.fg("dim", " [multi-select]");
 			}

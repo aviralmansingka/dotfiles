@@ -715,6 +715,7 @@ export default function askUserQuestion(pi: ExtensionAPI) {
 			"Use this tool to ask exactly one clarifying question, missing-requirement question, preference question, or decision question before continuing.",
 		promptGuidelines: [
 			"Ask exactly one question per tool call.",
+			"Write the question, options, and descriptions in Simplified Technical English at full compliance — short sentences, active voice, approved verbs, one term per concept. The general 80% relaxation does not apply to this panel's prose.",
 			"If you need answers to multiple questions, make multiple separate ask_user_question tool calls instead of combining them into one prompt.",
 			'Users will always be able to select "Other" to provide custom text input when options are provided.',
 			"Use multiSelect: true only when you need multiple answers to the same question.",

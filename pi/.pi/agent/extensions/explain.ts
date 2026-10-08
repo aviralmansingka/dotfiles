@@ -57,6 +57,7 @@ interface Grading {
 
 interface ExplainDetails {
 	status: ExplainStatus;
+	title?: string; // short node/goal title from the tool call; journal heading
 	question: string;
 	context?: string;
 	answer?: string;
@@ -65,6 +66,12 @@ interface ExplainDetails {
 }
 
 const ExplainParams = Type.Object({
+	title: Type.Optional(
+		Type.String({
+			description:
+				"Short title for this question (aim for under 40 characters). Name the node or concept under test and the teaching goal — e.g. 'Node E — ROV drop scope'. Shown as the panel heading and recorded as the journal entry heading; no timestamp is put in headings.",
+		}),
+	),
 	question: Type.String({
 		description:
 			"The single question the user must answer in their own words. Ask exactly one question per tool call. Phrase it to force precise terminology — 'name the kernel construct and explain why', not 'what do you think about X'.",
@@ -211,22 +218,23 @@ function buildDetails(
 	answer?: string,
 	grading?: Grading,
 	message?: string,
+	title?: string,
 ): ExplainDetails {
-	return { status, question, context, answer, grading, message };
+	return { status, title, question, context, answer, grading, message };
 }
 
-function cancelledResult(question: string, context?: string) {
+function cancelledResult(question: string, context?: string, title?: string) {
 	const message = "User cancelled explain";
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildDetails("cancelled", question, context, undefined, undefined, message),
+		details: buildDetails("cancelled", question, context, undefined, undefined, message, title),
 	};
 }
 
-function unavailableResult(question: string, message: string, context?: string) {
+function unavailableResult(question: string, message: string, context?: string, title?: string) {
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildDetails("unavailable", question, context, undefined, undefined, message),
+		details: buildDetails("unavailable", question, context, undefined, undefined, message, title),
 	};
 }
 
@@ -302,6 +310,8 @@ export default function explain(pi: ExtensionAPI) {
 			"Use explain to make the user answer one question in their own words; a grader fork scores it against your `expected` claims and returns a verdict plus terminology refinements.",
 		promptGuidelines: [
 			"ONE question per call. Phrase it to force precise terminology and mechanism, not vibes — 'why does X need Y' or 'name the construct and what it does', never 'what are your thoughts on X'.",
+			"Always pass `title`: a short label (under 40 characters) naming the node or concept under test and the teaching goal — 'Node E — ROV drop scope', never 'Question 3'. It heads the panel and the journal entry.",
+			"Write the question and `expected` claims in Simplified Technical English at full compliance — short sentences, active voice, approved verbs, one term per concept. The general 80% relaxation does not apply to teaching prose.",
 			"Always supply `expected`: the claims a correct answer must contain, including the exact terms you want and the misconceptions to watch for. The grader grades against this, not general knowledge.",
 			"Prefer explain over quiz when you are somewhat confident where the user's understanding sits and want to verify precision of language; prefer quiz when you are still mapping the edge.",
 			"Act on the verdict: correct-but-loose refinements get named and sharpened in your reply; partially_correct or incorrect means stop, diagnose, and re-ask in a different form before moving on.",
@@ -313,18 +323,19 @@ export default function explain(pi: ExtensionAPI) {
 			const question = params.question.trim();
 			const expected = params.expected.trim();
 			const context = params.details?.trim() || undefined;
+			const title = (params as any).title?.trim() || undefined;
 
 			if (signal?.aborted) {
-				return cancelledResult(question, context);
+				return cancelledResult(question, context, title);
 			}
 			if (!question) {
-				return unavailableResult(question, "explain requires a non-empty question", context);
+				return unavailableResult(question, "explain requires a non-empty question", context, title);
 			}
 			if (!expected) {
-				return unavailableResult(question, "explain requires `expected` (the claims a correct answer must contain)", context);
+				return unavailableResult(question, "explain requires `expected` (the claims a correct answer must contain)", context, title);
 			}
 			if (!ctx.hasUI) {
-				return unavailableResult(question, "explain requires interactive mode UI", context);
+				return unavailableResult(question, "explain requires interactive mode UI", context, title);
 			}
 			const grade = async (answer: string): Promise<{ grading?: Grading; gradeError?: string }> => {
 				const model = pickGraderModel(ctx);
@@ -412,8 +423,12 @@ export default function explain(pi: ExtensionAPI) {
 								const addT = (s: string) => top.push(truncateToWidth(s, tw));
 								const addB = (s: string) => bottom.push(truncateToWidth(s, bw));
 
-								addT(theme.fg("toolTitle", theme.bold(" explain in your own words")));
+								addT(theme.fg("toolTitle", theme.bold(title || " explain in your own words")));
 								top.push("");
+								if (title) {
+									addT(theme.fg("dim", " explain in your own words"));
+									top.push("");
+								}
 								addWrapped(top, theme.fg("text", question), tw, " ");
 								if (context) {
 									top.push("");
@@ -507,7 +522,7 @@ export default function explain(pi: ExtensionAPI) {
 				);
 
 				if (result === null) {
-					return cancelledResult(question, context);
+					return cancelledResult(question, context, title);
 				}
 				let text: string;
 				if (result.answer) {
@@ -533,13 +548,16 @@ export default function explain(pi: ExtensionAPI) {
 				}
 				return {
 					content: [{ type: "text" as const, text }],
-					details: buildDetails("answered", question, context, result.answer || undefined, result.grading),
+					details: buildDetails("answered", question, context, result.answer || undefined, result.grading, undefined, title),
 				};
 			});
 		},
 
 		renderCall(args, theme) {
-			return new Text(theme.fg("toolTitle", theme.bold("explain ")) + theme.fg("muted", String(args.question ?? "")), 0, 0);
+			let text = theme.fg("toolTitle", theme.bold("explain "));
+			if (args.title) text += theme.fg("accent", String(args.title)) + " ";
+			text += theme.fg("muted", String(args.question ?? ""));
+			return new Text(text, 0, 0);
 		},
 
 		renderResult(result, _options, theme) {
@@ -555,7 +573,9 @@ export default function explain(pi: ExtensionAPI) {
 				return new Text(theme.fg("warning", details.message || "Unavailable"), 0, 0);
 			}
 			const lines: string[] = [];
-			lines.push(theme.fg("toolTitle", theme.bold("explain ")) + theme.fg("text", details.question));
+			let heading = theme.fg("toolTitle", theme.bold("explain "));
+			if (details.title) heading += theme.fg("accent", details.title) + " ";
+			lines.push(heading + theme.fg("text", details.question));
 			if (details.answer) {
 				lines.push(theme.fg("muted", "─ answer ─"));
 				for (const line of details.answer.split("\n")) {
