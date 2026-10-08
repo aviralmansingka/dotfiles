@@ -12,7 +12,7 @@
  * No-mistakes expands its chip into TOON pipeline framing.
  * Other tools delegate to
  * downstream renderResult when present.
- * Ctrl+E toggles command visibility for bash/powershell/python: hidden
+ * Ctrl+Q toggles command visibility for bash/powershell/python: hidden
  * (the launch default), the intent title is the row; visible, the numbered
  * body returns.
  * No assistant-message grouping or native expanded output: each tool owns its
@@ -46,7 +46,7 @@ type Row = {
 type Background = { result: Result; done: boolean };
 const rows = new Map<string, Row>();
 const background = new Map<string, Background>();
-// Ctrl+E state: every pi launch starts with command bodies minimized. The
+// Ctrl+Q state: every pi launch starts with command bodies minimized. The
 // toggle is process state, not row state, so session switches keep it.
 let commandsHidden = true;
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
@@ -1505,7 +1505,7 @@ export default function (pi: ExtensionAPI) {
     unsubscribe();
   });
 
-  pi.registerShortcut("ctrl+e", {
+  pi.registerShortcut("ctrl+q", { // frees ctrl+e for move-to-line-end
     description: "Toggle bash/powershell/python command visibility",
     handler(ctx) {
       commandsHidden = !commandsHidden;
@@ -1558,7 +1558,7 @@ export default function (pi: ExtensionAPI) {
             // below the main text fg.
             const label = title ? ` ${theme.fg("muted", `— ${capTitle(title)}`)}` : "";
             if (commandsHidden) {
-              // Ctrl+E hide, orthogonal to Ctrl+O: the intent title is the
+              // Ctrl+Q hide, orthogonal to Ctrl+O: the intent title is the
               // row in collapsed AND expanded views; a title-less call keeps
               // a dim one-line preview so the row stays identifiable.
               if (title) return [` ${glyph} ${name}${label}${theme.fg("dim", elapsed)}`];
