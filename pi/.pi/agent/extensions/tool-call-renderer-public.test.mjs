@@ -174,6 +174,28 @@ try {
   const pyBlank = render(python.renderCall({ code: "\n\nimport os\n" }, theme, context("py-blank", {}, quiet)));
   assert.match(pyBlank, /└─ \$ {2}<hl:python>import os/, "leading and trailing blank lines do not steal the leaf");
   assert.ok(!render(python.renderCall({ code: "   " }, theme, context("py-empty", {}, quiet))).includes("├─"), "blank-only code renders no leaves");
+  // Intent-title lift: the leading `#` comment becomes the row title; the
+  // next non-comment line takes the $ leaf. Bash and python only.
+  const bashTitle = render(bash.renderCall({ command: "# list files changed on this branch against main\ngit diff --name-only main...HEAD" }, theme, context("bash-title", {}, quiet)));
+  assert.match(bashTitle, /◇ bash — list files changed on this branch against main \$ <hl:bash>git diff/, "a lifted bash title rides the inline row before the $");
+  const bashTitleMulti = render(bash.renderCall({ command: "# verify worktree state before the rebase\ngit status --short\ngit log --oneline -1" }, theme, context("bash-title-multi", {}, quiet)));
+  assert.match(bashTitleMulti, /^ ◇ bash — verify worktree state before the rebase$/m, "a lifted title rides the bare header row");
+  assert.match(bashTitleMulti, /├─ \$ {2}<hl:bash>git status --short/, "the first line after the comment becomes the $");
+  assert.ok(!bashTitleMulti.includes("# verify"), "the lifted comment never renders as a body row");
+  const commentOnly = render(bash.renderCall({ command: "# check whether the daemon reloaded after the config change" }, theme, context("bash-comment-only", {}, quiet)));
+  assert.match(commentOnly, /^ ◇ bash — check whether the daemon reloaded after the config change$/m, "a comment-only call renders the title as the whole row");
+  assert.ok(!commentOnly.includes("$"), "no $ leaf renders without executable text");
+  const heredocComment = render(bash.renderCall({ command: "cat <<EOF\n# not a title\nEOF\necho done" }, theme, context("heredoc-comment", {}, quiet)));
+  assert.ok(!heredocComment.includes("— "), "a # inside a heredoc body never lifts");
+  assert.match(heredocComment, /│ {5}# not a title/, "heredoc # lines stay body rows");
+  const pyTitle = render(python.renderCall({ code: "# parse the session log for nested bash calls\nimport json\nrows = [json.loads(line) for line in open(path)]" }, theme, context("py-title", {}, quiet)));
+  assert.match(pyTitle, /^ ◇ python — parse the session log for nested bash calls$/m, "a lifted python title rides the header row");
+  assert.match(pyTitle, /├─ \$ {2}<hl:python>import json/, "the first code line after the comment becomes the $");
+  assert.match(pyTitle, /│ {5}<hl:python>rows = /, "remaining code lines ride the spine");
+  const longTitle = `# ${"word ".repeat(30).trim()}`;
+  const capped = render(bash.renderCall({ command: `${longTitle}\necho hi` }, theme, context("bash-cap", {}, quiet)));
+  assert.ok(capped.includes("…"), "overlong titles truncate with an ellipsis");
+  assert.ok(!capped.includes(longTitle.slice(2)), "the untruncated title never renders");
   const bsCommand = "printf 'a' \\\\ && \\" + "\n  echo b";
   const backslash = render(bash.renderCall({ command: bsCommand }, theme, context("bs", {}, quiet)));
   assert.match(backslash, /├─ \$ {2}.*printf/, "the wrapped command keeps its leaf");
