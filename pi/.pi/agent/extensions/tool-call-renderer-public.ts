@@ -43,7 +43,7 @@ const rows = new Map<string, Row>();
 const background = new Map<string, Background>();
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 // Receipts are not live background agents: never route them through chips.
-const RECEIPT_TOOLS = new Set(["subagent_message", "hunk_review"]);
+const RECEIPT_TOOLS = new Set(["subagent_message", "hunk_review", "tuicr_background"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
 const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
@@ -1004,6 +1004,44 @@ function renderMessage(result: Result, expanded: boolean, row: Row, theme: Theme
   return lines;
 }
 
+function tuicrData(args: RecordValue, cwd: string, result?: Result) {
+  const details = asRecord(result?.details);
+  const text = asString(details.message) || (result ? textContent(result) : "");
+  const attached = /^Attached to active tuicr review session (\S+) \((.*?)\)\./.exec(text);
+  const launched = /^tuicr launched in a background pane for (.*?) —/.exec(text);
+  const repo = clean(details.repo || attached?.[2] || launched?.[1] || args.repo || cwd);
+  const slug = clean(details.slug || attached?.[1] || /Session (\S+) is active in the new pane\./.exec(text)?.[1]);
+  const pane = finiteNumber(details.paneId) ? String(details.paneId)
+    : clean(details.paneId) || /\bpane (?:id[: ]+)([\w.:%-]+)/i.exec(text)?.[1] || "";
+  const scope = args.sessionSlug || details.attached === true || attached
+    ? `attached${clean(args.sessionSlug) || slug ? ` · session ${clean(args.sessionSlug) || slug}` : ""}`
+    : args.scope === "revset" ? `revset${clean(args.revset) ? ` ${clean(args.revset)}` : ""}` : "working-tree";
+  return { repo: repo.replace(/\/+$/, "").split("/").pop() || repo, scope, slug, pane };
+}
+
+function tuicrLeaf(theme: Theme, data: ReturnType<typeof tuicrData>): string[] {
+  return [` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "▣ ")} ${theme.fg("text", data.repo)}${theme.fg("dim", ` · ${data.scope}`)}`];
+}
+
+function renderTuicr(result: Result, expanded: boolean, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
+  const source = JSON.stringify([context.args, context.cwd, result.details, textContent(result), expanded, row.settled, row.failed, width]);
+  const cached = receiptRows.get(context.toolCallId);
+  if (cached?.source === source && cached.theme === theme) return cached.rows;
+  const data = tuicrData(asRecord(context.args), context.cwd, result);
+  const lines = tuicrLeaf(theme, data);
+  const label = row.failed ? `✗ ${firstLine(asRecord(result.details).error || textContent(result)) || "failed"}`
+    : !row.settled ? "running" : `✓ watching${data.slug ? ` · session ${data.slug}` : ""}${data.pane ? ` · pane ${data.pane}` : ""}`;
+  lines.push(` ${theme.fg("borderMuted", "└─")} ${theme.fg(row.failed ? "error" : row.settled ? "success" : "dim", label)}`);
+  if (expanded) {
+    for (const detail of [`scope: ${data.scope}`, ...(data.slug ? [`slug: ${data.slug}`] : []),
+      ...(!row.failed && row.settled ? ["comments arrive as steer messages; the final batch lands when the TUI exits"] : [])]) {
+      lines.push(...wrapLine(theme.fg("dim", detail), width - 4, "start", Number.MAX_SAFE_INTEGER).chunks.map((chunk) => `    ${chunk}`));
+    }
+  }
+  receiptRows.set(context.toolCallId, { source, theme, rows: lines });
+  return lines;
+}
+
 function commentLeaves(theme: Theme, comments: unknown, expanded: boolean, width: number): string[] {
   if (!Array.isArray(comments)) return [];
   return comments.map(asRecord).flatMap((comment) => {
@@ -1217,6 +1255,10 @@ export default function (pi: ExtensionAPI) {
             ` ${glyph} ${name}${theme.fg("dim", `${asRecord(args).operation ? ` · ${clean(asRecord(args).operation)}` : ""}${elapsed}`)}`,
             ...(!row.leafResult ? commentLeaves(theme, asRecord(args).comments, false, width) : []),
           ];
+          if (toolName === "tuicr_background") return [
+            ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
+            ...(!row.leafResult ? tuicrLeaf(theme, tuicrData(asRecord(args), context.cwd)) : []),
+          ];
           if (toolName === "subagent_message") return [
             ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
             ...(!row.leafResult ? messageLeaf(theme, asRecord(args), false, width) : []),
@@ -1290,6 +1332,10 @@ export default function (pi: ExtensionAPI) {
           if (toolName === "subagent_message") {
             row.leafResult = true;
             return renderMessage(effective, expanded, row, theme, context, width);
+          }
+          if (toolName === "tuicr_background") {
+            row.leafResult = true;
+            return renderTuicr(effective, expanded, row, theme, context, width);
           }
           if (toolName === "hunk_review") {
             row.leafResult = true;

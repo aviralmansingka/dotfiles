@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review", "tuicr_background"]);
   for (const name of [...NEVER_DELEGATE, "edit", "ask_question", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -648,6 +648,44 @@ try {
     const narrow = tool.renderResult(output, { ...options, expanded: true }, theme, context(`narrow-${JSON.stringify(args)}-${output.content[0].text}`, args, quiet));
     assert.ok(narrow.render(16).every((line) => [...line].length <= 16));
   }
+
+  const tuicr = resolver("tuicr_background", () => { throw new Error("tuicr must not delegate"); });
+  const tuicrArgs = { repo: "/work/my-repo/" };
+  const tuicrCtx = context("tuicr", tuicrArgs, quiet);
+  const tuicrCall = tuicr.renderCall(tuicrArgs, styT, tuicrCtx);
+  const tuicrCallText = render(tuicrCall);
+  assert.ok(tuicrCallText.includes("◇") && tuicrCallText.includes("tuicr_background"));
+  assert.ok(tuicrCallText.includes("<borderMuted>├─</borderMuted> <dim>▣ </dim> <text>my-repo</text><dim> · working-tree</dim>"));
+  const tuicrResult = result("launched", { slug: "calm-fox", attached: false, paneId: 42 });
+  const watching = render(tuicr.renderResult(tuicrResult, options, styT, tuicrCtx));
+  assert.ok(watching.includes("<success>✓ watching · session calm-fox · pane 42</success>"));
+  assert.ok(!render(tuicrCall).includes("▣"), "the result takes ownership of the session leaf");
+  const tuicrShown = render(tuicr.renderResult(tuicrResult, { ...options, expanded: true }, styT, tuicrCtx), 500);
+  assert.ok(tuicrShown.includes("<dim>scope: working-tree</dim>"));
+  assert.ok(tuicrShown.includes("<dim>slug: calm-fox</dim>"));
+  assert.ok(tuicrShown.includes("<dim>comments arrive as steer messages; the final batch lands when the TUI exits</dim>"));
+  for (const [args, expected] of [
+    [{ scope: "revset", revset: "main..HEAD" }, "tmp · revset main..HEAD"],
+    [{ sessionSlug: "existing" }, "tmp · attached · session existing"],
+    [{}, "tmp · working-tree"],
+  ]) {
+    const call = render(tuicr.renderCall(args, theme, context(`tuicr-${expected}`, args, quiet)));
+    assert.ok(call.includes(`├─ ▣  ${expected}`));
+  }
+  for (const [text, expected] of [
+    ["Attached to active tuicr review session vivid-bird (/work/project). New comments will be steered", "project · attached · session vivid-bird"],
+    ["tuicr launched in a background pane for /work/project — this call did not block. Session vivid-bird is active in the new pane.", "project · working-tree"],
+  ]) {
+    const out = render(tuicr.renderResult(result(text), options, theme, context(`tuicr-${text}`, {}, quiet)));
+    assert.ok(out.includes(`▣  ${expected}`) && out.includes("✓ watching · session vivid-bird"));
+    assert.ok(!out.includes(" · pane "), "a new pane is not a pane ID");
+  }
+  const pendingTuicr = render(tuicr.renderResult(result("The session slug is still being resolved", { slug: null, attached: false }), options, theme, context("tuicr-pending", {}, quiet)));
+  assert.ok(pendingTuicr.includes("✓ watching") && !pendingTuicr.includes(" · session"));
+  const tuicrError = render(tuicr.renderResult(result("missing session\nmore detail", { error: "missing session\nmore detail" }), options, styT, context("tuicr-error", {}, quiet)));
+  assert.ok(tuicrError.includes("<error>✗ missing session</error>") && !tuicrError.includes("watching"));
+  const tuicrPartial = render(tuicr.renderResult(result(""), { ...options, isPartial: true }, theme, context("tuicr-stream", {}, quiet)));
+  assert.ok(tuicrPartial.includes("running") && !tuicrPartial.includes("watching"));
 
   const subagent = resolver("subagent", () => undefined);
   const ctx = context("child", { name: "scout" });
