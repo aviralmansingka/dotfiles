@@ -14,8 +14,10 @@ displaces the raw command leaf.
 
 ```text
 today     ◇ bash $ grep -rn "renderCall" dist/core/tools | head -5
-proposed  ◇ bash — find renderCall hooks in core tool sources · $ grep -rn "renderCall" dist/core/tools | head -5
-proposed  ◇ python — parse session log for nested bash calls · $ rows = [json.loads(l) for l in open(...)]
+proposed  ◇ bash — find renderCall hooks in core tool sources
+          └─ $ grep -rn "renderCall" dist/core/tools | head -5
+proposed  ◇ python — parse session log for nested bash calls
+          └─ $ rows = [json.loads(l) for l in open(...)]
 ```
 
 ## Scope: bash and python
@@ -54,7 +56,10 @@ reload.
   same way; first code line stays the leaf.
 - Both caches carry the lifted title beside the existing rows.
 - Row header: ` ${glyph} ${name} ${dim —} ${dim title}` in the
-  `bash/powershell/python` branch, before the inline `$ leaf` and `elapsed`.
+  `bash/powershell/python` branch. A titled call never inlines the
+  command into the title row: single and multi commands alike render a
+  bare header, then railed `$` leaf rows. The inline `name $ command` form
+  survives only for title-less single commands.
   Title truncates to remaining width; the full comment still shows in the
   expanded spine.
 - Multi-command rows: the title rides the name line; leaf/spine rows are

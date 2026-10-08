@@ -208,7 +208,9 @@ try {
   // Intent-title lift: the leading `#` comment becomes the row title; the
   // next non-comment line takes the $ leaf. Bash and python only.
   const bashTitle = render(bash.renderCall({ command: "# list files changed on this branch against main\ngit diff --name-only main...HEAD" }, theme, context("bash-title", {}, quiet)));
-  assert.match(bashTitle, /◇ bash — list files changed on this branch against main \$ <hl:bash>git diff/, "a lifted bash title rides the inline row before the $");
+  assert.match(bashTitle, /^ ◇ bash — list files changed on this branch against main$/m, "a lifted bash title renders a bare header row, even for a single command");
+  assert.match(bashTitle, /└─ \$ {2}<hl:bash>git diff --name-only main\.\.\.HEAD/, "a titled single command rides its own railed $ leaf");
+  assert.ok(!bashTitle.includes("◇ bash — list files changed on this branch against main $"), "the command never shares the title row");
   const bashTitleMulti = render(bash.renderCall({ command: "# verify worktree state before the rebase\ngit status --short\ngit log --oneline -1" }, theme, context("bash-title-multi", {}, quiet)));
   assert.match(bashTitleMulti, /^ ◇ bash — verify worktree state before the rebase$/m, "a lifted title rides the bare header row");
   assert.match(bashTitleMulti, /├─ \$ {2}<hl:bash>git status --short/, "the first line after the comment becomes the $");
