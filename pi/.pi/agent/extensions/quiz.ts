@@ -100,41 +100,41 @@ const QuizParams = Type.Object({
 	title: Type.Optional(
 		Type.String({
 			description:
-				"Short title for this quiz (aim for under 40 characters). Name the node or concept under test and the teaching goal — e.g. 'Node E — ROV drop scope'. Shown as the panel heading and recorded as the journal entry heading; no timestamp is put in headings.",
+				"Short title for this quiz. Keep it under 40 characters. Name the node under test and the teaching goal. Example: 'Node E — ROV drop scope'. The panel shows it as the heading. The journal records it as the entry heading. Headings carry no timestamp.",
 		}),
 	),
 	question: Type.String({
-		description: "The single quiz question to ask. Ask exactly one question per tool call.",
+		description: "The single quiz question. Ask exactly one question per tool call.",
 	}),
 	details: Type.Optional(
-		Type.String({ description: "Optional extra context or instructions shown under the question." }),
+		Type.String({ description: "Optional extra context or instructions. The panel shows it under the question." }),
 	),
 	options: Type.Array(OptionSchema, {
 		description:
-			"The answer options (2 or more). Options only — there is no free-text mode. Give each option a stable `value`; you reference the correct one by that value in correctAnswer.",
+			"The answer options. Supply 2 or more. There is no free-text mode. Give each option a stable `value`. You reference the correct option by that value in correctAnswer.",
 		minItems: 2,
 	}),
 	multiSelect: Type.Optional(
-		Type.Boolean({ description: "Set to true when more than one option is correct and the user must select all of them." }),
+		Type.Boolean({ description: "Set to true when more than one option is correct. The user must then select all correct options." }),
 	),
 	correctAnswer: Type.Union([Type.String(), Type.Array(Type.String())], {
 		description:
-			'REQUIRED. The correct answer as the option value(s) — the `value` field of the option you intend. Single-select: a single string (e.g. "mercury"). Multi-select: an array of strings (e.g. ["belize", "niue"]); the user is only correct if their selection matches this set exactly. Always pass the value, not a position number — this is self-checking and prevents miscounting.',
+			'REQUIRED. The correct answer as the option value or values. Pass the `value` field of the intended option. Single-select: one string, for example "mercury". Multi-select: an array of strings, for example ["belize", "niue"]. The user is correct only when the selection matches this set exactly. Always pass the value, not a position number. The check is automatic and prevents miscounting.',
 	}),
 	explanation: Type.String({
 		description:
-			"REQUIRED. Explanation revealed AFTER the user answers (shown whether they got it right or wrong). Use it to reinforce why the correct answer is correct.",
+			"REQUIRED. The tool shows it after the user answers. It shows for a correct and for an incorrect answer. Use it to say why the correct answer is correct.",
 	}),
 	shuffle: Type.Optional(
 		Type.Boolean({
 			description:
-				"Defaults to true: options are randomly reordered before display so the correct answer isn't always in the same position. Set to false only when option order is meaningful (e.g. ordered numeric values, or an 'All/None of the above' option that must stay last).",
+				"Defaults to true. The tool reorders the options at random before display, so the correct answer does not stay in one position. Set to false only when the order carries meaning. Examples: ordered numeric values, or 'All/None of the above' as the last option.",
 		}),
 	),
 	contextFiles: Type.Optional(
 		Type.Array(Type.String(), {
 			description:
-				"Optional file paths that provide context for this quiz question. When present, the quiz panel shows an `o` shortcut; pressing `o` opens these files in vim using the existing /nvim opener. Relative paths resolve from the session cwd.",
+				"Optional file paths that give context for this question. When present, the panel shows an `o` shortcut. Pressing `o` opens these files in vim. Relative paths resolve from the session cwd.",
 		}),
 	),
 });
@@ -1088,29 +1088,29 @@ export default function quiz(pi: ExtensionAPI) {
 		name: "quiz",
 		label: "quiz",
 		description:
-			"Ask the user a GRADED question with a known correct answer, then grade submitted answers and give feedback. Answer mode supports number shortcuts plus j/k navigation; Enter opens feedback. Other is always added last and reports an honest knowledge gap. Tab switches to steering mode, where the user can type guidance that ends this quiz and returns as `followUp`. Ctrl+P pauses a quiz as too hard without revealing the answer. No free-text answers — for non-graded questions use ask_user_question instead.",
+			"Ask the user a graded question. The question must have a known correct answer. The tool grades the answer and shows feedback. Answer mode: number shortcuts and j/k navigation. Enter shows feedback. Other is always the last choice. It reports an honest knowledge gap, not a guess. Tab opens steering mode. There the user types guidance. It ends the quiz and returns as `followUp`. Ctrl+P marks the quiz as too hard. It does not show the answer. There is no free-text answer mode. For a question without a correct answer, use ask_user_question.",
 		promptSnippet:
-			"Use the quiz tool to test the user with a graded multiple-choice or multi-select question (required correct answer + required explanation). For non-graded questions, use ask_user_question.",
+			"Use quiz to test the user with a graded multiple-choice or multi-select question. Supply the correct answer and an explanation. For a question without a correct answer, use ask_user_question.",
 		promptGuidelines: [
-			"quiz is GRADED; ask_user_question is not. If the question has a correct answer, use quiz. If you just need a preference, decision, or open-ended input, use ask_user_question.",
-			"Always pass `title`: a short label (under 40 characters) naming the node or concept under test and the teaching goal — 'Node E — ROV drop scope', never 'Question 3'. It heads the panel and the journal entry.",
-			"Write the question, options, and explanation in Simplified Technical English at full compliance — short sentences, active voice, approved verbs, one term per concept. The general 80% relaxation does not apply to quiz prose.",
-			'correctAnswer is REQUIRED and is the option value, not a position number. Single-select: one string (e.g. "mercury"). Multi-select: an array of strings (e.g. ["belize", "niue"]).',
-			"Always pass the option's `value` string as correctAnswer — it is self-checking and prevents miscounting positions. A value that matches no option is a hard error.",
-			"explanation is REQUIRED — always say why the correct answer is correct.",
-			"Multi-select is graded as an exact-set match: the user is correct only if they select every correct option and no incorrect ones.",
-			"An ungraded Other choice is ALWAYS added at the bottom — provide ONLY the real, gradable options. A dontKnow result means the user did not guess; treat it as a genuine knowledge gap.",
-			"If a quiz result comes back with status `too-hard`, the user pressed Ctrl+P because the question exceeded their current level. Do not grade it or reveal the original answer. Explain the prerequisite more simply, then ask an easier quiz question.",
-			"If a result comes back with `followUp` set, the captain used steering mode to change or pause the questioning. Respond to that guidance directly; do not grade it.",
-			"Treat each wrong answer (distractor) as a diagnostic probe, not just filler: make it a specific, believable mistake the user might actually hold — a common misconception, or an adjacent/easily-confused concept — so that WHICH wrong answer they pick reveals WHICH nuance of their understanding is off. You learn far more from a targeted wrong choice than from a binary right/wrong, and the choice tells you exactly which gap to teach into next (and what the explanation should address).",
-			"Guardrail: every distractor must be unambiguously wrong on the intended reading — tempting, but a real error, not a defensible alternative. Don't drift into trick questions.",
-			"Anti-guessing hygiene: don't let the correct answer stand out by form (longest, most precise, most hedged, or the only one in the right format). Keep options similar in length, specificity, and phrasing so it can't be picked from shape alone.",
+			"quiz is graded; ask_user_question is not. Use quiz when the question has a correct answer. Use ask_user_question for a preference, a decision, or open input.",
+			"Always pass `title`. Keep it under 40 characters. Name the node under test and the teaching goal. Example: 'Node E — ROV drop scope'. Never use 'Question 3'. The panel and the journal entry carry this title.",
+			"Write the question, the options, and the explanation in Simplified Technical English at full compliance. Use short sentences, the active voice, approved verbs, and one term per concept. The general 80% relaxation does not apply to quiz prose.",
+			'correctAnswer is required. Pass the option `value`, not a position number. Single-select: one string, for example "mercury". Multi-select: an array of strings, for example ["belize", "niue"].',
+			"The tool checks the value against the options. A value that matches no option is a hard error. This prevents miscounting.",
+			"explanation is required. Say why the correct answer is correct.",
+			"Multi-select grading is an exact-set match. The user is correct only when they select every correct option and no incorrect one.",
+			"The tool adds an ungraded Other choice at the bottom. Supply only the real, gradable options. A dontKnow result means the user did not guess. Treat it as a genuine knowledge gap.",
+			"A `too-hard` status means the user pressed Ctrl+P. The question was above their level. Do not grade it. Do not reveal the original answer. Teach the prerequisite in simpler words, then ask an easier question.",
+			"A result with `followUp` set means the captain steered the quiz. Answer that guidance directly. Do not grade it.",
+			"Treat each distractor as a diagnostic probe, not filler. Make it a specific mistake the user might hold: a common misconception, or an easily confused concept. The distractor the user picks tells you which gap to teach next. It also tells you what the explanation must address.",
+			"Guardrail: each distractor must be clearly wrong on the intended reading. Make it tempting, but a real error. Do not write a defensible alternative. Do not write a trick question.",
+			"Do not let the correct answer stand out by form. Keep the options similar in length, detail, and phrasing. The user must not pick the answer from shape alone.",
 			"Set multiSelect: true only when more than one option is correct.",
-			"Options are shuffled before display by default, so don't worry about which position you list the correct answer in. Set shuffle: false only when option order is meaningful (ordered values, or an 'All/None of the above' option that must stay last).",
-			"When a quiz needs file context, pass `contextFiles: [\"path/to/file\"]`; the user can press `o` to open those files in vim while the quiz stays active.",
-			"Mid-quiz, the user can press `h` to open the session's lesson journal (<session>.md, the append-only transcript md-log maintains) in their editor pane; the quiz stays active and ungraded.",
-			"To probe nuance, ask several quick quiz questions and adapt each one based on the previous answers, rather than writing one giant question.",
-			"Don't leak the answer through formatting: keep option phrasing/length even and don't hint which is correct.",
+			"The tool shuffles the options by default. Do not worry about the list position of the correct answer. Set shuffle: false only when the order carries meaning. Examples: ordered values, or 'All/None of the above' as the last option.",
+			'When the question needs file context, pass `contextFiles: ["path/to/file"]`. The user presses `o` to open those files in vim. The quiz stays active.',
+			"The user can press `h` mid-quiz. It opens the session journal (<session>.md) in the editor pane. md-log maintains this journal. The quiz stays active and ungraded.",
+			"To probe nuance, ask several short questions. Adapt each one to the previous answer. Do not write one large question.",
+			"Do not leak the answer through formatting. Keep the option phrasing and length even. Do not hint at the correct option.",
 		],
 		parameters: QuizParams,
 

@@ -88,19 +88,19 @@ const ExplainParams = Type.Object({
 	title: Type.Optional(
 		Type.String({
 			description:
-				"Short title for this question (aim for under 40 characters). Name the node or concept under test and the teaching goal — e.g. 'Node E — ROV drop scope'. Shown as the panel heading and recorded as the journal entry heading; no timestamp is put in headings.",
+				"Short title for this question. Keep it under 40 characters. Name the node under test and the teaching goal. Example: 'Node E — ROV drop scope'. The panel shows it as the heading. The journal records it as the entry heading. Headings carry no timestamp.",
 		}),
 	),
 	question: Type.String({
 		description:
-			"The single question the user must answer in their own words. Ask exactly one question per tool call. Phrase it to force precise terminology — 'name the kernel construct and explain why', not 'what do you think about X'.",
+			"The single question. The user must answer it in their own words. Ask exactly one question per tool call. Force precise terminology. Ask 'name the kernel construct and explain why'. Do not ask 'what do you think about X'.",
 	}),
 	expected: Type.String({
 		description:
-			"The claims a correct answer must contain, in your own words — the grader fork grades the user's prose against this. Include the exact terminology you expect and any misconceptions to watch for. Not shown to the user.",
+			"The claims a correct answer must contain. Write them in your own words. The grader fork grades the user's prose against this list. Include the exact terminology you expect and the misconceptions to watch for. The panel does not show it.",
 	}),
 	details: Type.Optional(
-		Type.String({ description: "Optional extra context or instructions shown under the question." }),
+		Type.String({ description: "Optional extra context or instructions. The panel shows it under the question." }),
 	),
 });
 
@@ -324,18 +324,18 @@ export default function explain(pi: ExtensionAPI) {
 		name: "explain",
 		label: "explain",
 		description:
-			"Ask the user to answer ONE question in their own words — a prose retrieval check, more demanding than quiz's multiple choice because there are no options to recognize. Use it to ground terminology ('name the kernel construct this touches and why') and to surface misconceptions that multiple choice can't reach. You MUST supply `expected`: the claims a correct answer must contain. On submit, a quick grader model call grades the answer against those claims and returns a verdict (correct / partially_correct / incorrect) plus per-quote terminology refinements — you still own the pedagogical follow-up. For gradable questions with a known correct option set, use quiz; for preferences with no right answer, use ask_user_question.",
+			"Ask the user to answer one question in their own words. This is a prose check. It is harder than quiz because there are no options to recognize. Use it to test terminology, for example 'name the kernel construct this touches and why'. Use it also to find misconceptions that multiple choice cannot reach. You MUST supply `expected`: the claims a correct answer must contain. On submit, a grader model call grades the answer against those claims. It returns a verdict (correct, partially_correct, or incorrect) and per-quote terminology refinements. You keep control of the teaching that follows. For a question with a known set of correct options, use quiz. For a question with no right answer, use ask_user_question.",
 		promptSnippet:
-			"Use explain to make the user answer one question in their own words; a grader fork scores it against your `expected` claims and returns a verdict plus terminology refinements.",
+			"Use explain to make the user answer one question in their own words. A grader fork scores the answer against your `expected` claims. It returns a verdict and terminology refinements.",
 		promptGuidelines: [
-			"ONE question per call. Phrase it to force precise terminology and mechanism, not vibes — 'why does X need Y' or 'name the construct and what it does', never 'what are your thoughts on X'.",
-			"Always pass `title`: a short label (under 40 characters) naming the node or concept under test and the teaching goal — 'Node E — ROV drop scope', never 'Question 3'. It heads the panel and the journal entry.",
-			"Write the question and `expected` claims in Simplified Technical English at full compliance — short sentences, active voice, approved verbs, one term per concept. The general 80% relaxation does not apply to teaching prose.",
-			"Always supply `expected`: the claims a correct answer must contain, including the exact terms you want and the misconceptions to watch for. The grader grades against this, not general knowledge.",
-			"Prefer explain over quiz when you are somewhat confident where the user's understanding sits and want to verify precision of language; prefer quiz when you are still mapping the edge.",
-			"Act on the verdict: correct-but-loose refinements get named and sharpened in your reply; partially_correct or incorrect means stop, diagnose, and re-ask in a different form before moving on.",
-			"An empty or near-empty submission is an honest 'I don't know' — treat it as a genuine gap to teach into, not a failure. Empty answers skip grading.",
-			"While answering or reading the verdict, the user can press Alt+H to open the session's lesson journal (<session>.md, the append-only transcript md-log maintains) in their editor pane; the panel stays active.",
+			"Ask one question per call. Force precise terminology and mechanism. Ask 'why does X need Y' or 'name the construct and what it does'. Do not ask 'what do you think about X'.",
+			"Always pass `title`. Keep it under 40 characters. Name the node under test and the teaching goal. Example: 'Node E — ROV drop scope'. Never use 'Question 3'. The panel and the journal entry carry this title.",
+			"Write the question and the `expected` claims in Simplified Technical English at full compliance. Use short sentences, the active voice, approved verbs, and one term per concept. The general 80% relaxation does not apply to teaching prose.",
+			"Always supply `expected`. List the claims a correct answer must contain. Include the exact terms you want and the misconceptions to watch for. The grader grades against this list, not against general knowledge.",
+			"Prefer explain when you know roughly where the user stands and want to test the precision of their language. Prefer quiz when you are still finding the edge.",
+			"Act on the verdict. When the answer is correct but loose, name the loose terms and sharpen them. When it is partially correct or incorrect, stop. Diagnose the gap, then re-ask in a different form.",
+			"An empty or near-empty answer is an honest 'I don't know'. Treat it as a real gap to teach into, not a failure. Empty answers skip grading.",
+			"The user can press Alt+H while answering or reading the verdict. It opens the session journal (<session>.md) in the editor pane. md-log maintains this journal. The panel stays active.",
 		],
 		parameters: ExplainParams,
 

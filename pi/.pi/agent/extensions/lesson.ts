@@ -35,11 +35,11 @@ import { presentLesson, resolveJournalPath } from "./md-log";
 const LessonParams = Type.Object({
 	title: Type.String({
 		description:
-			"Short lesson title (a few words). Name the teaching node this lesson covers — it becomes the focus-buffer heading and the journal entry heading.",
+			"Short lesson title, a few words. Name the teaching node that this lesson covers. It becomes the focus-buffer heading and the journal entry heading.",
 	}),
 	body: Type.String({
 		description:
-			"The lesson itself, in Markdown. It lands verbatim in the session journal, which the user reads in their editor — complete and self-contained.",
+			"The lesson itself, in Markdown. It lands verbatim in the session journal. The user reads it in their editor. Make it complete and self-contained.",
 	}),
 });
 
@@ -56,16 +56,16 @@ export default function lesson(pi: ExtensionAPI) {
 		name: "lesson",
 		label: "lesson",
 		description:
-			"Write teaching content (a lesson) into the session's markdown journal and show it in the learner's editor as the CURRENT NODE: an in-memory scratch buffer holding only this lesson's content. Returns immediately — the user reads at their own pace while you continue. Use this BEFORE quiz or explain whenever the question depends on content the user must read — do not emit that content as ordinary assistant text alongside the tool call, because it collapses in the trace. One node per call: each lesson replaces the buffer's whole content, so batching multiple nodes hides the current one. The journal stays the durable append-only transcript (shared with every quiz/explain verdict); the buffer is the ephemeral node view; the quiz `h` and explain Alt+H shortcuts open the journal instead.",
+			"Write teaching content into the session's markdown journal. Then show it in the learner's editor as the current node: an in-memory scratch buffer that holds only this lesson. The tool returns immediately. The user reads at their own pace while you continue. Call this before quiz or explain when the question depends on content the user must read. Do not emit that content as ordinary assistant text next to the tool call. The trace collapses such text. Send one node per call. Each lesson replaces the whole buffer content, so a batch of nodes hides the current one. The journal stays the durable append-only transcript. It records every quiz and explain verdict too. The quiz `h` and explain Alt+H shortcuts open the journal, not the buffer.",
 		promptSnippet:
-			"Use the lesson tool to append teaching content to the session journal and open it in the user's editor before asking a dependent quiz/explain question.",
+			"Use the lesson tool to write teaching content into the session journal and show it in the user's editor. Do this before a quiz or explain question that depends on it.",
 		promptGuidelines: [
-			"When a quiz or explain question depends on content the user must read, deliver that content with the lesson tool first — not as assistant text in the same turn as the question tool, which the trace collapses.",
-			"One node per lesson call. The focus buffer replaces its whole content on every call, so a lesson that bundles several nodes shows none of them well. Name the node in `title` — it becomes the buffer heading and the journal entry heading.",
-			"Write lesson prose in Simplified Technical English at full compliance: short sentences, active voice, approved verbs, one term per concept. The general 80% relaxation does not apply to teaching prose.",
-			"Keep the pre-question assistant text to a single connective line and put the actual teaching markdown in `body`.",
-			"The tool returns when the focus buffer opens. If that fails, it returns when the journal opens. Give the user time to read before you ask the question.",
-			"If the result is `unavailable`, neither editor surface opened. Restate the essential idea in the conversation.",
+			"When a quiz or explain question depends on content the user must read, deliver that content with the lesson tool first. Do not put it in assistant text in the same turn as the question tool. The trace collapses that text.",
+			"Send one node per lesson call. The focus buffer replaces its whole content on every call. A lesson that bundles several nodes shows none of them well. Name the node in `title`. It becomes the buffer heading and the journal entry heading.",
+			"Write lesson prose in Simplified Technical English at full compliance. Use short sentences, the active voice, approved verbs, and one term per concept. The general 80% relaxation does not apply to teaching prose.",
+			"Keep the assistant text before the question to one connective line. Put the teaching markdown in `body`.",
+			"The tool returns when the focus buffer opens. When that fails, it opens the journal instead. Give the user time to read before you ask the question.",
+			"When the result is `unavailable`, no editor surface opened. Restate the essential idea in the conversation.",
 		],
 		parameters: LessonParams,
 
