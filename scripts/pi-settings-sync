@@ -1,0 +1,84 @@
+#!/usr/bin/env node
+// Pi has no user-local overlay: materialize the shared base plus local preferences.
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const { parseArgs, isDeepStrictEqual } = require('node:util');
+
+try {
+  const { values } = parseArgs({ options: {
+    repo: { type: 'string', default: path.resolve(__dirname, '..') },
+    'agent-dir': { type: 'string', default: process.env.PI_CODING_AGENT_DIR || path.join(os.homedir(), '.pi/agent') },
+    capture: { type: 'boolean' }, help: { type: 'boolean', short: 'h' },
+  } });
+  if (values.help) {
+    console.log(`Usage: pi-settings-sync [--repo PATH] [--agent-dir PATH] [--capture]
+Merge repo pi/.pi/agent/settings.json with agent-dir/settings.local.json.
+First run captures existing live preferences automatically. --capture refreshes
+local preferences from live settings after /settings or pi install changes.
+Resource arrays are additive (base first, local last); other keys replace the
+base at the top level. Edit the base to remove shared resources. Existing files
+are backed up before replacement. Stop Pi before syncing; reload/restart after.
+Defaults: repo containing this script; PI_CODING_AGENT_DIR or ~/.pi/agent.`);
+    process.exit(0);
+  }
+  const agent = path.resolve(values['agent-dir']);
+  const baseFile = path.resolve(values.repo, 'pi/.pi/agent/settings.json');
+  const liveFile = path.join(agent, 'settings.json');
+  const localFile = path.join(agent, 'settings.local.json');
+  const resources = new Set(['extensions', 'packages', 'skills', 'prompts', 'themes']);
+  function read(file) {
+    const value = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${file}: expected a JSON object`);
+    for (const key of resources) {
+      if (key in value && !Array.isArray(value[key])) throw new Error(`${file}: ${key} must be an array`);
+    }
+    return value;
+  }
+  const base = read(baseFile);
+  // Never follow a folded agent directory and accidentally write into dotfiles.
+  fs.mkdirSync(agent, { recursive: true });
+  if (fs.realpathSync(agent) !== agent) throw new Error(`${agent}: symlinked parent/directory; unfold it before syncing`);
+  const live = fs.existsSync(liveFile) ? read(liveFile) : {};
+  let local = fs.existsSync(localFile) ? read(localFile) : {};
+  const capture = values.capture || !fs.existsSync(localFile);
+  if (capture) {
+    local = Object.fromEntries(Object.entries(live).flatMap(([key, value]) => {
+      if (resources.has(key)) {
+        const extra = value.filter(item => !(base[key] || []).some(shared => isDeepStrictEqual(shared, item)));
+        return extra.length ? [[key, extra]] : [];
+      }
+      return isDeepStrictEqual(value, base[key]) ? [] : [[key, value]];
+    }));
+  }
+  const merged = { ...base, ...local };
+  for (const key of resources) {
+    if (!(key in base) && !(key in local)) continue;
+    merged[key] = [...(base[key] || []), ...(local[key] || [])].filter((item, index, list) =>
+      list.findIndex(other => isDeepStrictEqual(item, other)) === index);
+  }
+  function replace(file, value) {
+    const text = JSON.stringify(value, null, 2) + '\n';
+    const stat = fs.lstatSync(file, { throwIfNoEntry: false });
+    if (stat && !stat.isSymbolicLink() && fs.readFileSync(file, 'utf8') === text) return;
+    if (stat) {
+      // Copy contents, not the symlink. Atomic rename below never writes its target.
+      const backup = `${file}.backup-${Date.now()}-${process.pid}`;
+      fs.writeFileSync(backup, fs.readFileSync(file), { mode: 0o600, flag: 'wx' });
+      console.log(`Backup: ${backup}`);
+    }
+    const temp = `${file}.tmp-${process.pid}`;
+    try {
+      fs.writeFileSync(temp, text, { mode: 0o600, flag: 'wx' });
+      fs.renameSync(temp, file);
+    } finally {
+      if (fs.existsSync(temp)) fs.unlinkSync(temp);
+    }
+  }
+  if (capture) replace(localFile, local);
+  replace(liveFile, merged);
+  console.log(`Synced ${liveFile} (local preferences: ${localFile})`);
+} catch (error) {
+  console.error(`pi-settings-sync: ${error.message}`);
+  process.exitCode = 1;
+}

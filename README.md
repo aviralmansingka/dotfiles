@@ -37,6 +37,7 @@ For manual package and configuration deployment (excluding installer-managed int
 ```sh
 brew bundle
 gh extension install dlvhdr/gh-dash
+./scripts/pi-settings-sync
 stow nvim tmux zsh ghostty git starship gh-dash tuicr agents pi herdr launchd
 stow --no-folding hunk
 ```
@@ -222,8 +223,16 @@ npm install -g @earendil-works/pi-coding-agent@latest
 Pi config and shared skills are deployed with:
 
 ```sh
+./scripts/pi-settings-sync
 stow pi agents
+./scripts/pi-extensions-drift-check
 ```
+
+Pi 1.1.0 has no user-local settings overlay. The checked-in settings are a shared
+base; the sync script preserves host preferences in un-stowed
+`~/.pi/agent/settings.local.json` and generates the live `settings.json`.
+See [Pi live-config ownership and migration](docs/pi-live-config.md) before
+updating an older deployment (especially its MCP/npm symlinks).
 
 The shared `vault` skill supports explicit project and knowledge-base lookup, note summaries, project overviews, and
 Wayfinder overviews. It preserves the vault's Project → Theme → Feature → Task ontology without installing an
@@ -240,8 +249,10 @@ The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, a
 Install/update Pi packages and the local web-fetch dependencies:
 
 ```sh
-cd ~/.pi/agent/npm && npm install
-cd ~/.pi/agent/extensions/web-fetch && npm ci --ignore-scripts
+mkdir -p ~/.pi/agent/npm
+[ -e ~/.pi/agent/npm/package.json ] || cp pi/.pi/agent/npm/package.json.example ~/.pi/agent/npm/package.json
+(cd ~/.pi/agent/npm && npm install)
+(cd ~/.pi/agent/extensions/web-fetch && npm ci --ignore-scripts)
 ```
 
 Pi surfaces No Mistakes runs in the shared activity widget without replacing the attached TUI. See the

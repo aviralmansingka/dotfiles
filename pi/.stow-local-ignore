@@ -1,0 +1,23 @@
+# Retain Stow's VCS/editor exclusions when overriding its default list.
+RCS
+.+,v
+CVS
+\.\#.+
+\.cvsignore
+\.svn
+_darcs
+\.hg
+\.git
+\.gitignore
+.+~
+\#.*\#
+^/README.*
+^/LICENSE.*
+^/COPYING
+
+# Shared settings are an input to pi-settings-sync, never a live symlink.
+# npm metadata and MCP configuration belong to the host; templates stay here.
+^/\.pi/agent/(settings[^/]*|mcp[^/]*\.json(?:\.example)?|npm)(/|$)
+# Do not deploy ignored runtime data accidentally created in this checkout.
+^/\.pi/agent/(auth\.json|models[^/]*\.json|trust\.json|sessions|install|git|logs|bin|scheduled-whatsapp)(/|$)
+^/\.pi/agent/(pi-crash\.log|pi-(whatsapp|telegram)-state\.json|tirupati-.*-watch\.json)$

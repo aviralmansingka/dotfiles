@@ -1,0 +1,90 @@
+#!/usr/bin/env node
+// Read-only: a copied extension directory can silently hide new repository files.
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const { execFileSync } = require('node:child_process');
+const { parseArgs } = require('node:util');
+
+try {
+  const { values } = parseArgs({ options: {
+    repo: { type: 'string', default: path.join(os.homedir(), 'dotfiles') },
+    'agent-dir': { type: 'string', default: process.env.PI_CODING_AGENT_DIR || path.join(os.homedir(), '.pi/agent') },
+    'allow-local': { type: 'string', multiple: true, default: [] },
+    help: { type: 'boolean', short: 'h' },
+  } });
+  if (values.help) {
+    console.log(`Usage: pi-extensions-drift-check [--repo PATH] [--agent-dir PATH]
+                                 [--allow-local EXTENSION_NAME ...]
+Check tracked extension paths against their deployed Stow targets. Report real
+files/directories, missing paths, wrong/broken links, and unknown local entries.
+Quiet success; exit 1 for drift/errors. Read-only: never repairs live files.
+--repo is the DEPLOYED checkout (default ~/dotfiles), not a review worktree.
+--allow-local explicitly permits a top-level local-only extension, never a
+repo-owned path or a broken link. No local-only extensions allowed by default.
+Agent dir defaults to PI_CODING_AGENT_DIR or ~/.pi/agent.
+See docs/pi-live-config.md for the root runtime allowlist and repair procedure.`);
+    process.exit(0);
+  }
+  const repo = fs.realpathSync(values.repo);
+  const agent = path.resolve(values['agent-dir']);
+  const prefix = 'pi/.pi/agent/';
+  const tracked = execFileSync('git', ['-C', repo, 'ls-files', '-z', '--', prefix], { encoding: 'utf8' })
+    .split('\0').filter(Boolean).map(file => file.slice(prefix.length));
+  const files = tracked.filter(file => file.startsWith('extensions/') && path.basename(file) !== '.gitignore');
+  if (!files.length) throw new Error(`${repo}: no tracked Pi extensions`);
+  const owned = new Set(files.flatMap(file => {
+    const parts = file.split('/');
+    return parts.map((_, index) => parts.slice(0, index + 1).join('/')).slice(1);
+  }));
+  const localExtensions = new Set(values['allow-local']);
+  for (const name of localExtensions) {
+    if (!name || name === '.' || name === '..' || name.includes('/') || name.includes('\\')) {
+      throw new Error(`--allow-local requires an extension basename: ${name}`);
+    }
+  }
+  const problems = [];
+  const folded = [];
+  const report = (kind, name, detail = '') => problems.push(`${kind}: ${name}${detail ? ` (${detail})` : ''}`);
+  function check(name) {
+    const live = path.join(agent, name);
+    const expected = path.join(repo, prefix, name);
+    const stat = fs.lstatSync(live, { throwIfNoEntry: false });
+    if (!stat) return report('MISSING', name);
+    if (!stat.isSymbolicLink()) return report(stat.isDirectory() ? 'REAL directory' : 'REAL file', name);
+    if (!fs.existsSync(live)) return report('BROKEN symlink', name, fs.readlinkSync(live));
+    if (!fs.existsSync(expected) || fs.realpathSync(live) !== fs.realpathSync(expected)) {
+      return report('WRONG target', name, `${fs.readlinkSync(live)}; expected ${expected}`);
+    }
+    if (fs.statSync(live).isDirectory()) folded.push(name);
+  }
+  // Stow may fold the entire extensions directory. Its children then inherit
+  // the correct target; demanding an additional link per child would be wrong.
+  const root = fs.lstatSync(path.join(agent, 'extensions'), { throwIfNoEntry: false });
+  if (root?.isSymbolicLink()) check('extensions');
+  for (const name of [...owned].sort()) {
+    if (!folded.some(parent => name.startsWith(`${parent}/`))) check(name);
+  }
+  const repoRootEntries = new Set(tracked.map(file => file.split('/')[0]));
+  // Explicit host/runtime ownership. Keep reasons in docs/pi-live-config.md.
+  const localRoot = /^(?:auth\.json|models(?:-store)?\.json|trust\.json|node_modules|themes|sessions|install|scheduled-whatsapp|npm|bin|git|logs|skills|\.gitignore|mcp(?:-.*)?\.json|settings.*|pi-crash\.log|pi-(?:whatsapp|telegram)-state\.json|tirupati-.*-watch\.json)$/;
+  function extras(directory, allowed) {
+    if (!fs.existsSync(directory)) return;
+    for (const name of fs.readdirSync(directory)) {
+      const entry = path.join(directory, name);
+      const relative = path.relative(agent, entry);
+      if (fs.lstatSync(entry).isSymbolicLink() && !fs.existsSync(entry)) {
+        if (!owned.has(relative)) report('BROKEN symlink', relative, fs.readlinkSync(entry));
+      } else if (!allowed(name)) report('UNEXPECTED local entry', relative);
+    }
+  }
+  extras(agent, name => repoRootEntries.has(name) || name === 'extensions' || localRoot.test(name));
+  extras(path.join(agent, 'extensions'), name => owned.has(`extensions/${name}`) || localExtensions.has(name));
+  if (problems.length) {
+    console.error(`Pi extension/config drift (${repo} -> ${agent}):\n${problems.map(line => `  ${line}`).join('\n')}`);
+    process.exitCode = 1;
+  }
+} catch (error) {
+  console.error(`pi-extensions-drift-check: ${error.message}`);
+  process.exitCode = 1;
+}

@@ -1,0 +1,140 @@
+#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+
+const checkout = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'pi-live-config-')));
+const repo = path.join(tmp, 'repo');
+const home = path.join(tmp, 'home');
+const agent = path.join(home, '.pi/agent');
+const base = path.join(repo, 'pi/.pi/agent');
+const json = (file, data) => {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
+};
+const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
+const run = (command, args, status = 0) => {
+  const result = spawnSync(command, args, { cwd: repo, encoding: 'utf8', env: { ...process.env, HOME: home } });
+  assert.equal(result.status, status, `${command} ${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
+  return result.stdout + result.stderr;
+};
+const sync = (...args) => run(process.execPath, [path.join(checkout, 'scripts/pi-settings-sync'), '--repo', repo, '--agent-dir', agent, ...args]);
+const drift = (status = 0, ...args) => run(process.execPath, [path.join(checkout, 'scripts/pi-extensions-drift-check'), '--repo', repo, '--agent-dir', agent, ...args], status);
+
+try {
+  const shared = { packages: ['npm:shared'], extensions: ['+extensions/a.ts'] };
+  json(path.join(base, 'settings.json'), shared);
+  json(path.join(agent, 'settings.json'), { ...shared, extensions: [...shared.extensions, '-builtin:mcp'], defaultModel: 'local', hideThinkingBlock: true });
+  sync('--help');
+  drift(0, '--help');
+  sync();
+  assert.deepEqual(read(path.join(agent, 'settings.local.json')), { extensions: ['-builtin:mcp'], defaultModel: 'local', hideThinkingBlock: true });
+  assert.equal(read(path.join(agent, 'settings.json')).hideThinkingBlock, true);
+  assert.deepEqual(read(path.join(base, 'settings.json')), shared);
+  assert.equal(fs.statSync(path.join(agent, 'settings.local.json')).mode & 0o777, 0o600);
+  const names = fs.readdirSync(agent);
+  sync();
+  assert.deepEqual(fs.readdirSync(agent), names, 'idempotent sync creates no backups');
+  json(path.join(base, 'settings.json'), { ...shared, extensions: [...shared.extensions, '+extensions/b.ts'] });
+  sync();
+  assert.deepEqual(read(path.join(agent, 'settings.json')).extensions, ['+extensions/a.ts', '+extensions/b.ts', '-builtin:mcp']);
+  json(path.join(agent, 'settings.json'), { ...read(path.join(agent, 'settings.json')), defaultModel: 'changed' });
+  sync('--capture');
+  assert.equal(read(path.join(agent, 'settings.local.json')).defaultModel, 'changed');
+  assert.deepEqual(read(path.join(agent, 'settings.local.json')).extensions, ['-builtin:mcp']);
+  assert(fs.readdirSync(agent).some(name => name.startsWith('settings.local.json.backup-')));
+
+  fs.unlinkSync(path.join(agent, 'settings.json'));
+  fs.symlinkSync(path.join(base, 'settings.json'), path.join(agent, 'settings.json'));
+  const before = fs.readFileSync(path.join(base, 'settings.json'), 'utf8');
+  sync();
+  assert(!fs.lstatSync(path.join(agent, 'settings.json')).isSymbolicLink());
+  assert.equal(fs.readFileSync(path.join(base, 'settings.json'), 'utf8'), before, 'never write through a live symlink');
+  fs.writeFileSync(path.join(agent, 'settings.local.json'), '{ broken');
+  const liveBefore = fs.readFileSync(path.join(agent, 'settings.json'), 'utf8');
+  run(process.execPath, [path.join(checkout, 'scripts/pi-settings-sync'), '--repo', repo, '--agent-dir', agent], 1);
+  assert.equal(fs.readFileSync(path.join(agent, 'settings.json'), 'utf8'), liveBefore);
+  json(path.join(agent, 'settings.local.json'), {});
+  const foldedAgent = path.join(tmp, 'folded-agent');
+  fs.symlinkSync(base, foldedAgent);
+  assert.match(run(process.execPath, [path.join(checkout, 'scripts/pi-settings-sync'), '--repo', repo, '--agent-dir', foldedAgent], 1), /symlinked parent/);
+
+  json(path.join(base, 'extensions/a.ts'), {});
+  json(path.join(base, 'extensions/run-command/render.ts'), {});
+  fs.mkdirSync(path.join(agent, 'extensions'));
+  run('git', ['init', '-q', repo]);
+  run('git', ['add', 'pi']);
+  const extensions = path.join(agent, 'extensions');
+  const source = path.join(base, 'extensions');
+  fs.symlinkSync(path.relative(extensions, path.join(source, 'a.ts')), path.join(extensions, 'a.ts'));
+  fs.symlinkSync(path.join(source, 'run-command'), path.join(extensions, 'run-command'));
+  assert.equal(drift(), '', 'clean drift check is quiet');
+  fs.unlinkSync(path.join(extensions, 'a.ts'));
+  assert.match(drift(1), /MISSING: extensions\/a.ts/);
+  fs.symlinkSync('/not/a/real/path', path.join(extensions, 'a.ts'));
+  assert.match(drift(1), /BROKEN symlink: extensions\/a.ts/);
+  fs.unlinkSync(path.join(extensions, 'a.ts'));
+  fs.symlinkSync(path.join(source, 'run-command/render.ts'), path.join(extensions, 'a.ts'));
+  assert.match(drift(1), /WRONG target: extensions\/a.ts/);
+  fs.unlinkSync(path.join(extensions, 'a.ts'));
+  json(path.join(extensions, 'a.ts'), {});
+  assert.match(drift(1), /REAL file: extensions\/a.ts/);
+  assert.match(drift(1, '--allow-local', 'a.ts'), /REAL file: extensions\/a.ts/);
+  fs.unlinkSync(path.join(extensions, 'a.ts'));
+  fs.symlinkSync(path.join(source, 'a.ts'), path.join(extensions, 'a.ts'));
+  fs.unlinkSync(path.join(extensions, 'run-command'));
+  fs.mkdirSync(path.join(extensions, 'run-command'));
+  const shadowed = drift(1);
+  assert.match(shadowed, /REAL directory: extensions\/run-command/);
+  assert.match(shadowed, /MISSING: extensions\/run-command\/render.ts/);
+  fs.rmdirSync(path.join(extensions, 'run-command'));
+  fs.symlinkSync(path.join(source, 'run-command'), path.join(extensions, 'run-command'));
+  json(path.join(extensions, 'personal.ts'), {});
+  assert.match(drift(1), /UNEXPECTED local entry: extensions\/personal.ts/);
+  assert.equal(drift(0, '--allow-local', 'personal.ts'), '');
+  fs.unlinkSync(path.join(extensions, 'personal.ts'));
+  fs.symlinkSync('/not/a/real/path', path.join(extensions, 'personal.ts'));
+  assert.match(drift(1, '--allow-local', 'personal.ts'), /BROKEN symlink/);
+  fs.unlinkSync(path.join(extensions, 'personal.ts'));
+  json(path.join(agent, 'surprise.json'), {});
+  assert.match(drift(1), /UNEXPECTED local entry: surprise.json/);
+  fs.unlinkSync(path.join(agent, 'surprise.json'));
+  json(path.join(agent, 'models.json'), {});
+  json(path.join(agent, 'mcp-adapter.json'), {});
+  assert.equal(drift(), '');
+  fs.rmSync(extensions, { recursive: true });
+  fs.symlinkSync(source, extensions);
+  assert.equal(drift(), '', 'folded extension root covers descendants');
+  fs.unlinkSync(extensions);
+
+  // Stow must leave settings and runtime metadata real, including on a fresh home.
+  fs.copyFileSync(path.join(checkout, 'pi/.stow-local-ignore'), path.join(repo, 'pi/.stow-local-ignore'));
+  json(path.join(base, 'mcp.json'), { old: true });
+  json(path.join(base, 'npm/package.json'), { old: true });
+  json(path.join(base, 'npm/package.json.example'), { example: true });
+  json(path.join(agent, 'npm/package.json'), { local: true });
+  const stow = spawnSync('stow', ['--version'], { encoding: 'utf8' });
+  assert.equal(stow.status, 0, 'Install GNU Stow to run the deployment fixtures');
+  run('stow', ['--dir', repo, '--target', home, 'pi']);
+  assert.equal(fs.readFileSync(path.join(agent, 'settings.json'), 'utf8'), liveBefore);
+  assert.deepEqual(read(path.join(agent, 'npm/package.json')), { local: true });
+  assert(!fs.existsSync(path.join(agent, 'mcp.json')));
+  assert(!fs.existsSync(path.join(agent, 'npm/package.json.example')));
+  assert(!fs.lstatSync(agent).isSymbolicLink());
+  assert.equal(drift(), '');
+  run('stow', ['--restow', '--dir', repo, '--target', home, 'pi']);
+  assert.deepEqual(read(path.join(agent, 'npm/package.json')), { local: true });
+
+  const fresh = path.join(tmp, 'fresh');
+  run(process.execPath, [path.join(checkout, 'scripts/pi-settings-sync'), '--repo', repo, '--agent-dir', path.join(fresh, '.pi/agent')]);
+  run('stow', ['--dir', repo, '--target', fresh, 'pi']);
+  assert(!fs.lstatSync(path.join(fresh, '.pi/agent/settings.json')).isSymbolicLink());
+  assert(!fs.existsSync(path.join(fresh, '.pi/agent/npm')));
+  console.log('pi live-config: settings, drift and Stow checks passed');
+} finally {
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
