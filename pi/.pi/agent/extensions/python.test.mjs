@@ -22,7 +22,11 @@ try {
 	writeFileSync(agent, "exports.copyToClipboard = () => {};\n");
 	const jiti = createJiti(import.meta.url, { alias: { typebox, "@earendil-works/pi-coding-agent": agent } });
 	let tool;
-	jiti("./python.ts").default({ registerTool(value) { tool = value; } });
+	const handlers = new Map();
+	jiti("./python.ts").default({
+		registerTool(value) { tool = value; },
+		on(event, handler) { handlers.set(event, handler); return () => handlers.delete(event); },
+	});
 	assert.equal(tool.name, "python");
 	assert.equal(tool.label, "python");
 	assert.ok(tool.parameters, "the tool declares a parameter schema");
@@ -85,6 +89,40 @@ try {
 		assert.equal(isError, true);
 		assert.match(text, /non-empty/);
 	}
+
+	// tool_call guard: bash-wrapped inline Python is blocked with a
+	// corrective reason; everything else passes untouched.
+	const guard = handlers.get("tool_call");
+	assert.ok(guard, "the extension registers a tool_call handler");
+	const blocked = (command) => guard({ toolName: "bash", input: { command } });
+	const mustBlock = [
+		["heredoc", "python3 - <<'EOF'\nimport os\nprint(os.getcwd())\nEOF"],
+		["unquoted heredoc", "python3 - <<EOF\nprint(1)\nEOF"],
+		["heredoc without the dash", "python <<EOF\nprint(1)\nEOF"],
+		["one-liner", "python3 -c 'import json; print(json.dumps({}))'"],
+		["uv run heredoc", "uv run python - <<EOF\nprint(1)\nEOF"],
+		["env-prefixed heredoc", "PYTHONWARNINGS=ignore python3 - <<EOF\nprint(1)\nEOF"],
+		["titled heredoc", "# parse the session log for nested bash calls\npython3 - <<EOF\nprint(1)\nEOF"],
+		["versioned interpreter", "python3.11 - <<EOF\nprint(1)\nEOF"],
+		["flagged stdin", "python3 -B -u - <<EOF\nprint(1)\nEOF"],
+	];
+	for (const [label, command] of mustBlock) {
+		const outcome = blocked(command);
+		assert.equal(outcome?.block, true, `${label}: blocked`);
+		assert.match(outcome?.reason ?? "", /python tool/, `${label}: the reason names the python tool`);
+	}
+	const mustPass = [
+		["script file", "python3 scripts/analyze.py --flag"],
+		["module run", "python3 -m http.server"],
+		["chained after cd", "cd /tmp && python3 - <<EOF\nprint(1)\nEOF"],
+		["piped stdin", "echo '{\"a\":1}' | python3 -c 'import json,sys; print(json.load(sys.stdin))'"],
+		["plain shell", "grep -rn renderCall dist/core | head -5"],
+		["install command", "pip install requests"],
+	];
+	for (const [label, command] of mustPass) {
+		assert.equal(blocked(command), undefined, `${label}: not blocked`);
+	}
+	assert.equal(guard({ toolName: "read", input: { path: "x" } }), undefined, "non-bash calls pass untouched");
 } finally {
 	rmSync(root, { recursive: true, force: true });
 }

@@ -52,7 +52,56 @@ export type PythonDetails = {
 
 type Child = ReturnType<typeof spawn>;
 
+// ────────────────────────────────────────────────────────────────────────────
+// tool_call guard — bash-wrapped inline Python is a python-tool call in
+// disguise. The tool's own prompt guidance steers most calls, but session
+// history still shows ~240 `python3 - <<` / `python -c` bash calls per 1,100
+// bash calls, which render dim and unhighlighted. The guard blocks the
+// clear-cut cases — an invocation line that is only `python[3] [-] <<HEREDOC`
+// or `python[3] -c …` (env assignments and `uv run` allowed) — and returns a
+// corrective reason so the model re-issues the same code through the python
+// tool. Chained or piped invocation lines stay allowed: anything that does
+// more than run inline Python is not ours to block, and running an existing
+// script file (`python3 script.py`) keeps working in bash.
+// ────────────────────────────────────────────────────────────────────────
+const PYTHON_INVOCATION =
+	/^(?:[A-Za-z_]\w*=(?:"[^"\n]*"|'[^'\n]*'|[^\s]+)\s+)*(?:uv\s+run\s+)?python3?(?:\.\d+)?(?=\s|$)/;
+
+function chainsShellCommands(text: string): boolean {
+	// Quote-aware: a `;` inside the quoted Python code of `-c '…;…'` is
+	// Python syntax, not a shell chain.
+	let quote = "";
+	for (const char of text) {
+		if (quote) {
+			if (char === quote) quote = "";
+		} else if (char === "'" || char === '"') quote = char;
+		else if (char === ";" || char === "|" || char === "&") return true;
+	}
+	return false;
+}
+
+function wrapsInlinePython(command: string): boolean {
+	// Drop the leading intent-title comment, then judge the invocation line.
+	const source = command.replace(/^(?:\s*#[^\n]*\n)+/, "");
+	const invocation = (source.split("\n", 1)[0] ?? "").trim();
+	const beforeHeredoc = invocation.split("<<", 1)[0];
+	if (chainsShellCommands(beforeHeredoc)) return false;
+	const invocationMatch = PYTHON_INVOCATION.exec(invocation);
+	if (!invocationMatch) return false;
+	const args = beforeHeredoc.slice(invocationMatch[0].length).trim().split(/\s+/).filter(Boolean);
+	return args.includes("-") || args.includes("-c") || invocation.includes("<<");
+}
+
 export default function pythonTool(pi: ExtensionAPI) {
+	pi.on("tool_call", (event) => {
+		if (event.toolName !== "bash") return;
+		if (!wrapsInlinePython(event.input.command)) return;
+		return {
+			block: true,
+			reason:
+				"This bash call only runs inline Python. Use the python tool instead: send the same code as its code parameter. Running an existing script file in bash stays fine.",
+		};
+	});
 	pi.registerTool({
 		name: "python",
 		label: "python",
