@@ -4,6 +4,12 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
+import { stripVTControlCharacters } from "node:util";
+
+// Optional real Pi helpers exercise ANSI/Unicode wrapping locally; CI's small
+// dependency stub below still checks the renderer's wrapping contract.
+const tuiUtils = process.env.PI_TUI_UTILS ? await import(process.env.PI_TUI_UTILS) : undefined;
+globalThis.__runCommandTuiUtils = tuiUtils;
 
 const require = createRequire(import.meta.url);
 process.env.NODE_PATH = [
@@ -152,18 +158,30 @@ class Editor {
 class Text { constructor(text) { this.text = text; } }
 const Key = { enter: "\r", tab: "\t", escape: "\x1b" };
 const Type = { Object: x => x, String: x => x, Optional: x => x };
+const stripAnsi = require("node:util").stripVTControlCharacters;
 function wrapTextWithAnsi(text, width) {
-  const lines = [];
-  for (let rest = text; rest.length > width; rest = rest.slice(width)) lines.push(rest.slice(0, width));
-  lines.push(text.slice(lines.length * width));
+  if (globalThis.__runCommandTuiUtils) return globalThis.__runCommandTuiUtils.wrapTextWithAnsi(text, width);
+  const lines = [""];
+  let columns = 0;
+  for (const token of text.match(/\x1b\[[0-9;]*m|[^]/gu) ?? []) {
+    if (token === "\n") { lines.push(""); columns = 0; continue; }
+    const size = stripAnsi(token).length;
+    if (size && columns + size > width) { lines.push(""); columns = 0; }
+    lines[lines.length - 1] += token;
+    columns += size;
+  }
   return lines;
 }
 module.exports = {
   Editor, Text, Key, Type,
   copyToClipboard: async text => { globalThis.__runCommandClipboardCalls.push(text); },
   matchesKey: (data, key) => data === key,
-  truncateToWidth: (text, width) => text.slice(0, width),
-  visibleWidth: text => text.length,
+  truncateToWidth: (text, width, ellipsis = "…") => {
+    if (globalThis.__runCommandTuiUtils) return globalThis.__runCommandTuiUtils.truncateToWidth(text, width, ellipsis);
+    if (stripAnsi(text).length <= width) return text;
+    return wrapTextWithAnsi(text, Math.max(1, width - ellipsis.length))[0] + ellipsis;
+  },
+  visibleWidth: text => globalThis.__runCommandTuiUtils?.visibleWidth(text) ?? stripAnsi(text).length,
   wrapTextWithAnsi,
 };
 `,
@@ -183,6 +201,141 @@ try {
 	let tool;
 	runCommandExtension({ registerTool(value) { tool = value; } });
 	assert.ok(tool, "extension must register run-command");
+
+	const theme = { fg: (_color, text) => text, bold: text => text };
+	const { splitCommand, outputLines } = uiJiti("./run-command/render.ts");
+	const call = (args, width = 100, colors = theme) => tool.renderCall(args, colors).render(width);
+	const result = (details, width = 100, colors = theme, expanded = false) => tool.renderResult({
+		content: [], details: { status: "answered", command: "printf ready", context: "why", prediction: "ready", ...details },
+	}, { expanded, isPartial: false }, colors).render(width);
+	assert.deepEqual(call({ details: "why", prediction: "ready", command: "printf ready && echo done || false | cat" }), [
+		"├─ §  why", "├─ ¶  ready", "├─ $  printf ready", "│  && echo done", "│  || false", "│  |  cat",
+	]);
+	assert.deepEqual(call({}), []);
+	assert.deepEqual(call({ prediction: "par" }), ["├─ ¶  par"]);
+	assert.deepEqual(call({ details: "first\nsecond", prediction: "x".repeat(120) }).map(stripVTControlCharacters), [
+		"├─ §  first…", `├─ ¶  ${"x".repeat(93)}…`,
+	]);
+	assert.deepEqual(call({ command: "echo x &&" }), ["├─ $  echo x", "│  && "]);
+	assert.deepEqual(splitCommand(`echo 'a && b' "c || d" | cat`), [
+		{ text: `echo 'a && b' "c || d"`, op: "$" }, { text: "cat", op: "|" },
+	]);
+	assert.deepEqual(splitCommand(String.raw`echo a\|b \&\& "c\"||d" && done`), [
+		{ text: String.raw`echo a\|b \&\& "c\"||d"`, op: "$" }, { text: "done", op: "&&" },
+	]);
+	assert.deepEqual(splitCommand("(a && (b || c)) | echo $(x | y) && z"), [
+		{ text: "(a && (b || c))", op: "$" }, { text: "echo $(x | y)", op: "|" }, { text: "z", op: "&&" },
+	]);
+	assert.deepEqual(splitCommand("(a\n| b) || c"), [
+		{ text: "(a", op: "$" }, { text: "| b)", op: "" }, { text: "c", op: "||" },
+	]);
+	assert.deepEqual(call({ command: "echo one \\\ntwo" }), ["├─ $  echo one \\" , "│     two"]);
+	assert.deepEqual(call({ command: "echo 'one\ntwo | three' && done" }), [
+		"├─ $  echo 'one", "│     two | three'", "│  && done",
+	]);
+	assert.deepEqual(call({ command: "cat <<'EOF' | wc\na && b\nEOF\necho done" }), [
+		"├─ $  cat <<'EOF'", "│  |  wc", "│     a && b", "│     EOF", "│     echo done",
+	]);
+	assert.deepEqual(splitCommand("echo x &&\necho y"), [
+		{ text: "echo x", op: "$" }, { text: "echo y", op: "&&" },
+	]);
+	assert.deepEqual(splitCommand("echo x && \\\necho y"), [
+		{ text: "echo x", op: "$" }, { text: "echo y", op: "&&" },
+	]);
+	assert.deepEqual(call({ command: "echo x \\\n  --flag" }), ["├─ $  echo x \\", "│       --flag"]);
+	assert.deepEqual(splitCommand("cat <<-EOF <<'END'\n\ta | b\n\tEOF\nc && d\nEND"), [
+		{ text: "cat <<-EOF <<'END'", op: "$" }, { text: "\ta | b", op: "" },
+		{ text: "\tEOF", op: "" }, { text: "c && d", op: "" }, { text: "END", op: "" },
+	]);
+	assert.deepEqual(splitCommand("printf 'a  \n\nb'"), [
+		{ text: "printf 'a  ", op: "$" }, { text: "", op: "" }, { text: "b'", op: "" },
+	]);
+	assert.deepEqual(splitCommand(`echo "unfinished ||`), [{ text: `echo "unfinished ||`, op: "$" }]);
+	assert.deepEqual(splitCommand("cat <<< word | wc"), [
+		{ text: "cat <<< word", op: "$" }, { text: "wc", op: "|" },
+	]);
+
+	assert.deepEqual(outputLines("> printf ready\r\n❯ ready\r\n>   indented\r\nplain\r\n", "printf ready"), ["ready", "  indented", "plain"]);
+	assert.deepEqual(outputLines("$ printf ready\nprintf ready\nready\nprintf ready", "printf ready"), ["ready", "printf ready"]);
+	assert.deepEqual(outputLines("\x1b[32m❯ printf ready\x1b[0m\nready", "printf ready"), ["ready"]);
+	assert.deepEqual(outputLines("\x1b[32m> ready\x1b[0m", "printf ready"), ["\x1b[32mready\x1b[0m"]);
+	assert.deepEqual(outputLines("\x1b[32m❯\x1b[0m printf ready\nready", "printf ready"), ["ready"]);
+	assert.deepEqual(outputLines("> echo one \\\n> two\nresult", "echo one \\\ntwo"), ["result"]);
+	assert.deepEqual(outputLines("echo one\nactual output", "echo one\necho two"), ["echo one", "actual output"]);
+	assert.deepEqual(outputLines("x > y\n❯not-a-gutter\n>actual", "cmd"), ["x > y", "❯not-a-gutter", ">actual"]);
+
+	assert.deepEqual(result({ output: "> printf ready\n❯ ready", copied: true }), [
+		"├─ §  why", "├─ ¶  ready", "├─ $  printf ready", "└─ ✓ output pasted · 1 lines · y-copied", "  ready",
+	]);
+	assert.equal(result({ output: "ready" })[3], "└─ ✓ output pasted · 1 lines");
+	assert.equal(result({})[3], "└─ ● no output submitted");
+	assert.equal(result({ output: "printf ready" })[3], "└─ ● no output submitted");
+	assert.equal(result({ autoRun: true, exitCode: 0 })[3], "└─ ✓ via :term dm · exit 0 · 0 lines");
+	assert.equal(result({ autoRun: true, exitCode: 7, output: "err" })[3], "└─ ✗ via :term dm · exit 7 · 1 lines");
+	assert.equal(result({ autoRun: true })[3], "└─ ✓ via :term dm · exit unknown · 0 lines");
+	const styled = [];
+	const recordingTheme = { ...theme, fg: (color, text) => { styled.push([color, text]); return text; } };
+	result({ autoRun: true, exitCode: 2 }, 100, recordingTheme);
+	assert.ok(styled.some(([color, text]) => color === "error" && text === "✗"));
+	for (const status of ["cancelled", "unavailable"]) {
+		styled.length = 0;
+		assert.deepEqual(result({ status, message: "reason", output: "stale" }, 100, recordingTheme).slice(3), [`└─ ● ${status} · reason`]);
+		assert.ok(styled.some(([color, text]) => color === "dim" && text === `└─ ● ${status} · reason`));
+		assert.equal(result({ status })[3], `└─ ● ${status}`);
+	}
+	styled.length = 0;
+	call({ details: "why", prediction: "what", command: "a && b\nc" }, 100, recordingTheme);
+	for (const text of ["├─ §  ", "├─ ¶  ", "├─ $  ", "│  && ", "c"]) {
+		assert.ok(styled.some(([color, value]) => color === "dim" && value === text), `${text}: dim marker/continuation`);
+	}
+
+	for (const count of [0, 1, 59, 60, 61, 62, 100]) {
+		const output = Array.from({ length: count }, (_, i) => `line ${i + 1}`).join("\n");
+		const rendered = result({ output });
+		const body = rendered.slice(4);
+		if (count <= 60) assert.deepEqual(body, output ? output.split("\n").map(line => `  ${line}`) : []);
+		else {
+			assert.equal(body.length, 61);
+			assert.equal(body[29], "  line 30");
+			assert.equal(body[30], `  … ${count - 60} lines hidden …`);
+			assert.equal(body[31], `  line ${count - 29}`);
+			assert.equal(body[60], `  line ${count}`);
+			assert.match(rendered[3], new RegExp(` · ${count} lines$`));
+		}
+		assert.ok(body.every(line => !line.includes("│")), "output has no copy-hostile rails");
+		assert.deepEqual(result({ output }, 100, theme, true), rendered, "result renders full content regardless of expanded flag");
+	}
+	const longBody = "\x1b[31m" + "word ".repeat(30) + "\x1b[0m\nlast line";
+	const wrapped = result({ context: longBody, prediction: longBody }, 40);
+	assert.ok(wrapped.every(line => (tuiUtils?.visibleWidth(line) ?? stripVTControlCharacters(line).length) <= 40));
+	assert.ok(wrapped.some(line => line.includes("\x1b[31m")), "ANSI styling survives wrapping");
+	assert.ok(wrapped.every(line => !stripVTControlCharacters(line).includes("\x1b")), "no broken ANSI sequences");
+	const paragraph = wrapped.slice(0, wrapped.findIndex(line => line.startsWith("├─ ¶")));
+	assert.equal(paragraph.map(line => stripVTControlCharacters(line).slice(6)).join("").replace(/\s/g, ""), stripVTControlCharacters(longBody).replace(/\s/g, ""), "full body retained");
+	assert.ok(result({ context: "x".repeat(220) }).filter(line => line.includes("x")).length >= 3, "default wrap is around 100 columns");
+	assert.equal(tool.renderResult({ content: [{ type: "text", text: "legacy" }] }, {}, theme).text, "legacy");
+
+	// The chat resolver shadows renderCall and delegates only expanded results.
+	// Exercise that boundary without changing or stubbing the renderer itself.
+	let resolveRenderer;
+	uiJiti("./tool-call-renderer-public.ts").default({
+		on() {}, events: { on: () => () => {} },
+		registerToolRenderer(resolver) { resolveRenderer = resolver; },
+	});
+	const chatRenderer = resolveRenderer("run-command", () => tool);
+	const chatContext = { toolCallId: "render-check", args: {}, executionStarted: false, isError: false };
+	const chatResult = { content: [{ type: "text", text: "User ran the command and pasted output." }], details: {
+		status: "answered", context: "Check the working tree", prediction: "A clean checkout",
+		command: "git status --short && git branch --show-current", copied: true, output: "❯ feat/example",
+	} };
+	const expandedRows = chatRenderer.renderResult(chatResult, { expanded: true, isPartial: false }, theme, chatContext).render(100);
+	assert.deepEqual(expandedRows, [
+		"├─ §  Check the working tree", "├─ ¶  A clean checkout", "├─ $  git status --short",
+		"│  && git branch --show-current", "└─ ✓ output pasted · 1 lines · y-copied", "  feat/example",
+	]);
+	assert.notEqual(chatRenderer.renderCall, tool.renderCall, "chat still owns collapsed calls");
+	assert.equal(chatRenderer.renderResult(chatResult, { expanded: false, isPartial: false }, theme, chatContext).render(100).length, 1);
+	if (process.env.RUN_COMMAND_SHOW_RENDERERS === "1") console.log("EXPANDED CHAT RESULT\n" + expandedRows.join("\n"));
 
 	async function drive(keys) {
 		let panel;
@@ -252,7 +405,8 @@ try {
 	assert.doesNotMatch(largePaste.result.content[0].text, /\[paste #1/);
 } finally {
 	delete globalThis.__runCommandClipboardCalls;
+	delete globalThis.__runCommandTuiUtils;
 	rmSync(stubDir, { recursive: true, force: true });
 }
 
-console.log("run-command helper and UI workflow tests passed");
+console.log("run-command helper, renderer, and UI workflow tests passed");

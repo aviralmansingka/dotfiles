@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { buildNvimTerminalScript, extractMarkedOutput, NVIM_RUN_TIMEOUT_MS } from "./run-command/nvim-terminal";
+import { renderCommandCall, renderCommandResult, type RunCommandDetails } from "./run-command/render";
 import {
 	Editor,
 	type EditorTheme,
@@ -42,18 +43,6 @@ interface RunCommandResponse {
 }
 
 type RunCommandStatus = "answered" | "cancelled" | "unavailable";
-
-interface RunCommandDetails {
-	status: RunCommandStatus;
-	command: string;
-	prediction?: string;
-	context?: string;
-	output?: string;
-	exitCode?: number;
-	autoRun?: boolean;
-	copied?: boolean; // user pressed `y` — the command was yanked at least once
-	message?: string;
-}
 
 const execFileAsync = promisify(execFile);
 const HERDR_TIMEOUT_MS = 5000;
@@ -775,10 +764,7 @@ export default function runCommand(pi: ExtensionAPI) {
 			});
 		},
 
-		renderCall(args, theme) {
-			let text = theme.fg("toolTitle", theme.bold("run-command ")) + theme.fg("muted", String(args.command ?? ""));
-			return new Text(text, 0, 0);
-		},
+		renderCall: renderCommandCall,
 
 		renderResult(result, _options, theme) {
 			const details = result.details as RunCommandDetails | undefined;
@@ -786,30 +772,7 @@ export default function runCommand(pi: ExtensionAPI) {
 				const first = result.content[0];
 				return new Text(first?.type === "text" ? first.text : "", 0, 0);
 			}
-			if (details.status === "cancelled") {
-				return new Text(theme.fg("warning", details.message || "Cancelled"), 0, 0);
-			}
-			if (details.status === "unavailable") {
-				return new Text(theme.fg("warning", details.message || "Unavailable"), 0, 0);
-			}
-			const lines: string[] = [];
-			lines.push(theme.fg("toolTitle", theme.bold("run-command ")) + theme.fg("text", details.command));
-			if (details.autoRun) {
-				lines.push(theme.fg("muted", `via Neovim :term dm${details.exitCode === undefined ? "" : ` · exit ${details.exitCode}`}`));
-			}
-			if (details.output) {
-				lines.push(theme.fg("muted", `─ output (${details.output.split("\n").length} lines) ─`));
-				for (const line of details.output.split("\n").slice(0, 20)) {
-					lines.push(theme.fg("dim", ` ${line}`));
-				}
-				const extra = details.output.split("\n").length - 20;
-				if (extra > 0) lines.push(theme.fg("dim", ` … ${extra} more lines`));
-			} else if (details.autoRun) {
-				lines.push(theme.fg("muted", "─ captured no output ─"));
-			} else {
-				lines.push(theme.fg("warning", " (no output submitted)"));
-			}
-			return new Text(lines.join("\n"), 0, 0);
+			return renderCommandResult(details, theme);
 		},
 	});
 }
