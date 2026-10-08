@@ -96,6 +96,7 @@ jobs:
           node pi/.pi/agent/extensions/quiz-result.test.mjs
           node pi/.pi/agent/extensions/run-command.test.mjs
           node pi/.pi/agent/extensions/tool-call-renderer-public.test.mjs
+          node pi/.pi/agent/extensions/tuicr-background.test.mjs
           node pi/.pi/agent/extensions/user-input/input-modes.test.mjs
           node pi/.pi/agent/extensions/user-input/option-navigation.test.mjs
           node pi/.pi/agent/extensions/user-input/option-shortcuts.test.mjs

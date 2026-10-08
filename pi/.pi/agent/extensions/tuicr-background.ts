@@ -21,7 +21,7 @@
  */
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Box, Text } from "@earendil-works/pi-tui";
+import { Box, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { execFile as execFileCb, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -31,11 +31,14 @@ import {
 	collectSeenKeys,
 	commentKey,
 	formatLaunchResult,
+	formatReplyCall,
+	formatReplyResult,
 	formatSteerContent,
 	newComments,
 	parseCommentPayload,
 	parseSessionList,
 	pickSession,
+	postTuicrReply,
 	resolveSkillDir,
 	scopeToTuicrArgs,
 	selectWrapper,
@@ -70,6 +73,8 @@ interface WatchState {
 
 /** One watcher per session (v1): a new launch replaces the previous one. */
 let watch: WatchState | null = null;
+const replyIds = new Set<string>();
+let repliesInFlight = 0;
 
 // The tool's execute closure needs the ExtensionAPI; captured at factory time.
 let piRef: ExtensionAPI | null = null;
@@ -113,8 +118,9 @@ function stopWatch(reason: string) {
 }
 
 function deliver(pi: ExtensionAPI, state: WatchState, final: boolean) {
-	const batch = state.pending;
+	const batch = newComments(new Set(), state.pending, replyIds);
 	state.pending = [];
+	if (!final && batch.length === 0) return;
 	// Final with an empty batch still steers so the agent learns the review
 	// ended and can wrap up.
 	state.lastDeliveredAt = Date.now();
@@ -140,7 +146,7 @@ function deliver(pi: ExtensionAPI, state: WatchState, final: boolean) {
 }
 
 async function tick(pi: ExtensionAPI, state: WatchState) {
-	if (state.ticking) return;
+	if (state.ticking || repliesInFlight > 0) return;
 	state.ticking = true;
 	try {
 		if (!state.slug) {
@@ -172,7 +178,7 @@ async function tick(pi: ExtensionAPI, state: WatchState) {
 		}
 
 		const comments = await fetchComments(state.repo, state.slug);
-		const fresh = newComments(state.seen, comments);
+		const fresh = newComments(state.seen, comments, replyIds);
 		for (const comment of fresh) state.seen.add(commentKey(comment));
 		state.pending.push(...fresh);
 
@@ -186,6 +192,9 @@ async function tick(pi: ExtensionAPI, state: WatchState) {
 		// least once, so a slow launch is not mistaken for an exit.
 		const final = state.everActive && !active;
 
+		// An add can persist before its CLI process returns the id. Wait until
+		// replies are tracked before flushing any concurrently fetched batch.
+		if (repliesInFlight > 0) return;
 		if (final) {
 			deliver(pi, state, true);
 			stopWatch(`review session ${state.slug} ended`);
@@ -367,10 +376,51 @@ const tuicrBackgroundTool = defineTool({
 	},
 });
 
+const tuicrReplyTool = defineTool({
+	name: "tuicr_reply",
+	label: "Reply in tuicr",
+	description: "Reply to user review comments inside tuicr as pi-agent. Posts the full response with a visible Re: reference; the chat shows only its leading line. Never use for preemptive self-review comments.",
+	promptSnippet: "Answer user review comments in tuicr",
+	promptGuidelines: [
+		"Use tuicr_reply to answer user review comments so responses appear in tuicr; never post preemptive self-review comments.",
+		"Put the full response text in message. The chat row shows the leading line only.",
+		"Supply replyTo from tuicr review comments when known, and file/line for a human-visible anchor. Replies use a Re: prefix because tuicr has no threading flag.",
+	],
+	parameters: Type.Object({
+		message: Type.String({ minLength: 1, description: "Full response text to post in tuicr." }),
+		file: Type.Optional(Type.String({ minLength: 1, description: "File to anchor the reply to." })),
+		line: Type.Optional(Type.Integer({ minimum: 1, description: "Line anchor; requires file." })),
+		replyTo: Type.Optional(Type.String({ minLength: 1, description: "User comment id being answered." })),
+		sessionSlug: Type.Optional(Type.String({ minLength: 1, description: "Defaults to the watcher's session, or the only active session under cwd." })),
+	}),
+	async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		repliesInFlight += 1;
+		try {
+			return await postTuicrReply(params, { cwd: ctx.cwd, watch, execFile, signal, replyIds });
+		} finally {
+			repliesInFlight -= 1;
+		}
+	},
+	renderShell: "self",
+	renderCall(args, theme) {
+		return {
+			render: (width: number) => formatReplyCall(args, theme).split("\n").map((line: string) => truncateToWidth(line, width)),
+			invalidate() {},
+		};
+	},
+	renderResult(result, _options, theme, context) {
+		return {
+			render: (width: number) => formatReplyResult({ ...result, isError: context?.isError }, theme).split("\n").map((line: string) => truncateToWidth(line, width)),
+			invalidate() {},
+		};
+	},
+});
+
 export default function tuicrBackground(pi: ExtensionAPI) {
 	piRef = pi;
 
 	pi.registerTool(tuicrBackgroundTool);
+	pi.registerTool(tuicrReplyTool);
 
 	pi.registerCommand("tuicr-bg", {
 		description:

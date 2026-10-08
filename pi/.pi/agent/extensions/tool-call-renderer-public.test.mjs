@@ -118,6 +118,12 @@ try {
       "downstream without renderResult: we render everything",
     );
   }
+  const replyRenderer = {
+    renderShell: "self",
+    renderCall: () => ({ render: () => ["◇ tuicr_reply"], invalidate() {} }),
+    renderResult: () => ({ render: () => ["✎ re: src/main.rs:42", "└─ ✓ posted to session s · visible in tuicr"], invalidate() {} }),
+  };
+  assert.equal(resolver("tuicr_reply", () => replyRenderer), replyRenderer, "tuicr replies own call and result rows even when collapsed");
   const bash = resolver("bash", () => undefined);
   const bashCtx = context("timed", { command: "printf hi\nexit 0" });
   handlers.get("tool_execution_start")({ toolCallId: "timed" });

@@ -102,9 +102,12 @@ export function collectSeenKeys(comments) {
 	return new Set(comments.map(commentKey));
 }
 
-/** Comments not yet seen; the caller folds their keys into the seen set. */
-export function newComments(seenKeys, comments) {
-	return comments.filter((comment) => !seenKeys.has(commentKey(comment)));
+export const AGENT_USERNAME = "pi-agent";
+
+/** Comments not yet seen; never steer our replies back as user feedback. */
+export function newComments(seenKeys, comments, replyIds = new Set()) {
+	return comments.filter((comment) => comment?.author !== AGENT_USERNAME &&
+		!replyIds.has(commentKey(comment)) && !seenKeys.has(commentKey(comment)));
 }
 
 /**
@@ -180,6 +183,91 @@ export function formatSteerContent({ repo, slug, comments, final }) {
 		`Full JSON: tuicr review comments --repo ${repo} --session ${slug}`,
 	);
 	return lines.join("\n");
+}
+
+/** The transcript shows only the leading response line, never the full body. */
+export function firstNonEmptyLine(message) {
+	return String(message ?? "").split(/\r?\n/).find((line) => line.trim())?.trim() ?? "";
+}
+
+function replyAnchor({ file, line, replyTo } = {}) {
+	return file ? `${file}${line !== undefined ? `:${line}` : ""}`
+		: replyTo ? `comment ${replyTo}` : "review comments";
+}
+
+/** tuicr has no thread/reply flag; a visible reference precedes the full body. */
+export function buildReplyArgs({ repo, slug, message, file, line, replyTo }) {
+	return [
+		"review", "add", "--session", slug,
+		...(slug.startsWith("gh:") ? [] : ["--repo", repo]),
+		"--username", AGENT_USERNAME,
+		...(file ? ["--target-file", file] : []),
+		...(line !== undefined ? ["--line", String(line)] : []),
+		"--", `Re: ${replyAnchor({ file, line, replyTo })}\n\n${message}`,
+	];
+}
+
+/** Inject execFile so the actual CLI flow is testable without a live review. */
+export async function postTuicrReply(params, { cwd, watch, execFile, signal, replyIds = new Set() }) {
+	try {
+		if (!firstNonEmptyLine(params.message)) throw new Error("Reply message must not be empty.");
+		if (params.line !== undefined && (!params.file || !Number.isInteger(params.line) || params.line < 1)) {
+			throw new Error("line must be a positive integer and requires file.");
+		}
+		const repo = watch?.slug && (!params.sessionSlug || params.sessionSlug === watch.slug) ? watch.repo : cwd;
+		let slug = params.sessionSlug ?? watch?.slug;
+		const run = async (args) => execFile("tuicr", args, { timeout: 15_000, signal });
+		if (!slug) {
+			const picked = pickSession(parseSessionList((await run(["review", "list", "--repo", repo])).stdout));
+			if (picked.status === "ambiguous") {
+				throw new Error(`Multiple active tuicr sessions under ${repo}; pass sessionSlug to choose one.`);
+			}
+			if (picked.status !== "ok") throw new Error(`No active tuicr session under ${repo}. Start tuicr or pass sessionSlug.`);
+			slug = picked.session.slug;
+		}
+		const comments = parseCommentPayload((await run([
+			"review", "comments", "--session", slug, ...(slug.startsWith("gh:") ? [] : ["--repo", repo]),
+		])).stdout);
+		const userComments = newComments(new Set(), comments, replyIds);
+		const targets = userComments.filter((comment) => params.replyTo
+			? commentKey(comment) === params.replyTo
+			: (!params.file || comment.path === params.file) && (params.line === undefined ||
+				(comment.start_line <= params.line && params.line <= (comment.end_line ?? comment.start_line))));
+		if (!targets.length) {
+			throw new Error("No matching user review comment to reply to. Read tuicr review comments and supply its replyTo id; never post preemptive self-review comments.");
+		}
+		const { stdout } = await run(buildReplyArgs({ ...params, repo, slug }));
+		// v0.24 omits authors from `review comments`; track the returned id so
+		// our replies cannot trigger another user-feedback steer.
+		const added = JSON.parse(stdout);
+		if (added.id) replyIds.add(String(added.id));
+		return {
+			content: [{ type: "text", text: `Posted reply to session ${slug}; visible in tuicr.` }],
+			details: { slug, file: params.file, line: params.line, replyTo: params.replyTo, posted: true,
+				firstLine: firstNonEmptyLine(params.message) },
+		};
+	} catch (error) {
+		const message = String(error?.stderr || error?.message || error).trim();
+		return { content: [{ type: "text", text: message }], details: { error: message }, isError: true };
+	}
+}
+
+export function formatReplyCall(args, theme) {
+	return `${theme.fg("toolTitle", "◇ tuicr_reply")}\n` +
+		` └─ ${theme.fg("toolTitle", "✎")} ${theme.fg("dim", `re: ${replyAnchor(args)} — `)}` +
+		theme.fg("toolTitle", firstNonEmptyLine(args?.message));
+}
+
+export function formatReplyResult(result, theme) {
+	const details = result.details ?? {};
+	if (result.isError || details.error) {
+		const message = details.error ?? result.content?.find((part) => part.type === "text")?.text;
+		return ` └─ ${theme.fg("error", `✗ ${firstNonEmptyLine(message)}`)}`;
+	}
+	if (!details.posted) return theme.fg("dim", " └─ posting reply…");
+	return ` ├─ ${theme.fg("toolTitle", "✎")} ${theme.fg("dim", `re: ${replyAnchor(details)} — `)}` +
+		theme.fg("toolTitle", details.firstLine ?? "") + "\n" +
+		` └─ ${theme.fg("success", "✓")} ${theme.fg("dim", `posted to session ${details.slug} · visible in tuicr`)}`;
 }
 
 /** Structured, model-facing summary returned by the tool itself. */
