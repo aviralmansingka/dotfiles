@@ -43,7 +43,7 @@ const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
 const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
-const PEDAGOGY_TOOLS = new Set(["ask_user_question"]);
+const PEDAGOGY_TOOLS = new Set(["ask_user_question", "quiz"]);
 const OUTPUT_HEAD = 30;
 const OUTPUT_TAIL = 30;
 const RUNNING = new Set(["pending", "running", "fixing", "awaiting_approval", "fix_review"]);
@@ -788,7 +788,7 @@ function questionLeaf(theme: Theme, question: unknown, expanded: boolean, width:
   return lines;
 }
 
-type PedagogyVerdict = { label: string; color: "success" | "error" | "accent" | "dim"; body: string[] };
+type PedagogyVerdict = { label: string; color: "success" | "error" | "mdLink" | "dim"; body: string[] };
 
 // Option indices in both interactive tools are one-based display positions.
 function optionRefs(text: string): RecordValue[] {
@@ -825,11 +825,55 @@ function askVerdict(args: RecordValue, details: RecordValue, text: string, expan
   return { label, color: label.startsWith("✓") ? "success" : "dim", body };
 }
 
+// Quiz shuffles before its partial update. Retain that displayed order for
+// Ctrl+P/cancel results, whose final details omit options. Never mistake input
+// positions for shuffled indices when restoring older text-only transcripts.
+const quizDisplayOptions = new Map<string, RecordValue[]>();
+function quizVerdict(args: RecordValue, details: RecordValue, text: string, expanded: boolean, theme: Theme, width: number, id: string): PedagogyVerdict {
+  const selectedRefs = optionRefs(/^Selected:\s*(.*)$/m.exec(text)?.[1] ?? "");
+  const correctRefs = optionRefs(/^Correct:\s*(.*)$/m.exec(text)?.[1] ?? "");
+  const answers = Array.isArray(details.answers) ? details.answers.map(asRecord) : selectedRefs;
+  const picked = answers.map((answer) => answer.index).filter(finiteNumber).filter((index) => index > 0);
+  const correct = Array.isArray(details.correctIndices) ? details.correctIndices.filter(finiteNumber) : correctRefs.map((ref) => ref.index as number);
+  const dontKnow = details.dontKnow === true || details.status === "too-hard" || /genuine knowledge gap|passed with Ctrl\+P/i.test(text);
+  const isCorrect = typeof details.correct === "boolean" ? details.correct : /User answered correctly\./.test(text);
+  const graded = dontKnow || typeof details.correct === "boolean" || /User answered (?:in)?correctly\./.test(text);
+  let choices = quizDisplayOptions.get(id);
+  if (!choices) {
+    if (args.shuffle === false) choices = pedagogyOptions(args.options);
+    else {
+      const refs = [...answers, ...correctRefs];
+      const known = new Map(refs.filter((ref) => finiteNumber(ref.index) && ref.index > 0).map((ref) => [ref.index as number, ref]));
+      const count = Math.max(Array.isArray(args.options) ? args.options.length : 0, ...picked, ...correct);
+      choices = Array.from({ length: count }, (_, index) => known.get(index + 1) ?? { index: index + 1, label: "(label unavailable)" });
+    }
+  }
+  const body = expanded ? choices.flatMap((option) => {
+    const index = option.index as number;
+    const selected = !dontKnow && picked.includes(index);
+    const right = correct.includes(index);
+    const mark = selected ? (isCorrect || right ? "✓ " : "✗ ") : right && graded ? "✓ " : "";
+    const color = selected ? (isCorrect ? "text" : right ? "success" : "error") : right && graded ? "success" : "dim";
+    return pedagogyText(theme, `${mark}${safeLine(option.label)}`, String(index), width, color);
+  }) : [];
+  if (expanded) {
+    const explanation = details.explanation ?? /^Explanation:\s*([\s\S]*)$/m.exec(text)?.[1] ?? args.explanation;
+    if (explanation) body.push(...pedagogyText(theme, explanation, "✎", width, "text", true));
+    if (Array.isArray(args.contextFiles) && args.contextFiles.length) body.push(...pedagogyText(theme, `context: ${args.contextFiles.map(safeLine).join(", ")}`, "", width));
+  }
+  const label = dontKnow ? "● don't know — a genuine gap"
+    : !graded ? "✗ unavailable"
+    : isCorrect ? `✓ correct${picked.length ? ` · option${picked.length === 1 ? "" : "s"} ${picked.join(" + ")}` : ""}`
+    : `✗ incorrect · picked ${picked.join(" + ") || "?"} · correct ${correct.join(" + ") || "?"}`;
+  return { label, color: dontKnow ? "mdLink" : !graded ? "dim" : isCorrect ? "success" : "error", body };
+}
+
 const pedagogyRows = new Map<string, { source: string; theme: Theme; rows: string[] }>();
 function renderPedagogy(tool: string, result: Result, expanded: boolean, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
   const args = asRecord(context.args);
   const details = asRecord(result.details);
   const text = textContent(result);
+  if (tool === "quiz" && Array.isArray(details.options)) quizDisplayOptions.set(context.toolCallId, pedagogyOptions(details.options));
   const source = JSON.stringify([tool, args, details, text, expanded, row.settled, row.failed, width]);
   const cached = pedagogyRows.get(context.toolCallId);
   if (cached?.source === source && cached.theme === theme) return cached.rows;
@@ -841,7 +885,9 @@ function renderPedagogy(tool: string, result: Result, expanded: boolean, row: Ro
   if (!row.settled) verdict = { label: "running", color: "dim", body: [] };
   else if (["cancelled", "unavailable", "follow-up"].includes(status) || /User cancelled/i.test(text) || row.failed) {
     verdict = { label: `✗ ${status || (/User cancelled/i.test(text) ? "cancelled" : "unavailable")}`, color: "dim", body: [] };
-  } else verdict = askVerdict(args, details, text, expanded, theme, width);
+  } else verdict = tool === "quiz"
+    ? quizVerdict(args, details, text, expanded, theme, width, context.toolCallId)
+    : askVerdict(args, details, text, expanded, theme, width);
   lines.push(...verdict.body, ` ${theme.fg("borderMuted", "└─")} ${theme.fg(verdict.color, verdict.label)}`);
   pedagogyRows.set(context.toolCallId, { source, theme, rows: lines });
   return lines;
@@ -877,6 +923,7 @@ function disposeState(): void {
   highlightedGrep.clear();
   inspectionTrees.clear();
   pedagogyRows.clear();
+  quizDisplayOptions.clear();
 }
 
 function component(draw: (width?: number) => string[]): Component {

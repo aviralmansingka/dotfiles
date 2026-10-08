@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz"]);
   for (const name of [...NEVER_DELEGATE, "edit", "ask_question", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -288,6 +288,61 @@ try {
   assert.ok(longOptionOut.includes("LABEL_END") && longOptionOut.includes("└─ ✓ option 1"));
   const changedAsk = render(ask.renderResult(result("", askDetails), { ...options, expanded: true }, theme, askCtx));
   assert.ok(changedAsk.includes("✓ Second") && !changedAsk.includes("<dim>"), "theme changes invalidate pedagogy cache");
+
+  const quiz = resolver("quiz", () => undefined);
+  const quizArgs = { ...askArgs, shuffle: false, correctAnswer: "second", explanation: "Use `second` with **care**.", contextFiles: ["src/quiz.ts"] };
+  const quizCtx = context("quiz-choice", quizArgs, quiet);
+  assert.ok(render(quiz.renderCall(quizArgs, styT, quizCtx)).includes("<dim>? </dim> <text>Which approach?</text>"));
+  const quizDetails = { status: "answered", question: quizArgs.question, mode: "single-select", answers: [{ index: 2, label: "Second", value: "second" }], correctIndices: [2], options: quizArgs.options.map((option, i) => ({ index: i + 1, label: option.label })), correct: true, dontKnow: false, explanation: quizArgs.explanation };
+  const quizRight = render(quiz.renderResult(result("", quizDetails), { ...options, expanded: true }, styT, quizCtx));
+  assert.ok(quizRight.includes("<success>✓ correct · option 2</success>"));
+  assert.ok(quizRight.includes("<dim>2 </dim> <text>✓ Second</text>"));
+  assert.ok(quizRight.includes("<dim>✎ </dim> Use <success>`second`</success> with <b>**care**</b>."));
+  assert.ok(quizRight.includes("<dim>context: src/quiz.ts</dim>"));
+  assert.ok(quizRight.includes("<dim>Choose for clarity.</dim>"));
+  const quizWrongDetails = { ...quizDetails, correct: false, answers: [{ index: 3, label: "Third", value: "third" }] };
+  const quizWrong = render(quiz.renderResult(result("", quizWrongDetails), { ...options, expanded: true }, styT, quizCtx));
+  assert.ok(quizWrong.includes("<error>✗ incorrect · picked 3 · correct 2</error>"));
+  assert.ok(quizWrong.includes("<dim>3 </dim> <error>✗ Third</error>"));
+  assert.ok(quizWrong.includes("<dim>2 </dim> <success>✓ Second</success>"));
+  for (const details of [{ ...quizDetails, correct: false, dontKnow: true, answers: [] }, { status: "too-hard", correctIndices: [2], answers: [] }]) {
+    const out = render(quiz.renderResult(result("", details), { ...options, expanded: true }, styT, quizCtx));
+    assert.ok(out.includes("<mdLink>● don't know — a genuine gap</mdLink>"));
+    assert.ok(out.includes("<dim>1 </dim> <dim>First</dim>"));
+    assert.ok(out.includes("<dim>2 </dim> <success>✓ Second</success>"));
+    assert.ok(!out.includes("✗"));
+  }
+  const shuffledCtx = context("quiz-shuffle", { ...quizArgs, shuffle: true }, quiet);
+  const shuffled = { ...quizDetails, options: [{ index: 1, label: "Third" }, { index: 2, label: "First" }, { index: 3, label: "Second" }], correctIndices: [3], answers: [{ index: 3, label: "Second" }] };
+  const shuffledOut = render(quiz.renderResult(result("", shuffled), { ...options, expanded: true }, theme, shuffledCtx));
+  assert.ok(shuffledOut.includes("1  Third") && shuffledOut.includes("3  ✓ Second"), "use displayed order, never input order");
+  const partialQuizCtx = context("quiz-partial-shuffle", { ...quizArgs, shuffle: true }, quiet);
+  const partialQuiz = render(quiz.renderResult(result("Awaiting user response...", { options: shuffled.options }), { expanded: true, isPartial: true }, theme, partialQuizCtx));
+  assert.ok(partialQuiz.includes("running") && !partialQuiz.includes("✓") && !partialQuiz.includes("Use `second`"));
+  const pausedQuiz = render(quiz.renderResult(result("", { status: "too-hard", correctIndices: [3], answers: [] }), { ...options, expanded: true }, theme, partialQuizCtx));
+  assert.ok(pausedQuiz.includes("3  ✓ Second"), "Ctrl+P retains the partial update's shuffled display order");
+  for (const [text, banner] of [
+    ["User answered correctly.\nSelected: 2. Second\nCorrect: 2. Second\nExplanation: Use `second`.", "✓ correct · option 2"],
+    ["User answered incorrectly.\nSelected: 3. Third\nCorrect: 2. Second", "✗ incorrect · picked 3 · correct 2"],
+    ["User selected Other (I don't know) — a genuine knowledge gap, not a wrong guess.\nCorrect: 2. Second", "● don't know — a genuine gap"],
+    ["User passed with Ctrl+P because the question was too hard.", "● don't know — a genuine gap"],
+    ["User cancelled the quiz", "✗ cancelled"],
+  ]) {
+    assert.ok(render(quiz.renderResult(result(text), options, theme, context(`quiz-fallback-${banner}`, quizArgs, quiet))).includes(banner), text);
+  }
+  for (const status of ["cancelled", "unavailable", "follow-up"]) {
+    assert.ok(render(quiz.renderResult(result("", { status }), options, styT, quizCtx)).includes(`<dim>✗ ${status}</dim>`));
+  }
+  const quizMin = render(quiz.renderResult(result("", quizDetails), options, styT, quizCtx));
+  assert.ok(!quizMin.includes("Choose for clarity") && !quizMin.includes("✎") && !quizMin.includes("context:"));
+  const longQuizCtx = context("quiz-long-question", { ...quizArgs, question: longQuestion }, quiet);
+  const longQuizResult = result("User answered correctly.\nSelected: 2. Second\nCorrect: 2. Second");
+  const quizMinLong = render(quiz.renderResult(longQuizResult, options, theme, longQuizCtx), 40);
+  assert.equal(quizMinLong.split("\n").length, 2);
+  assert.ok(quizMinLong.split("\n")[0].endsWith("…"));
+  const quizLong = render(quiz.renderResult(longQuizResult, { ...options, expanded: true }, theme, longQuizCtx), 40);
+  assert.ok(quizLong.includes("QUESTION_END") && quizLong.includes(" │     question"));
+  assert.equal(quizLong.split("\n").filter((line) => line.includes("? ")).length, 1);
 
   const grep = resolver("grep", () => undefined);
   const grepArgs = { pattern: "needle", path: "src", glob: "*.ts", ignoreCase: true, literal: true, context: 2 };
