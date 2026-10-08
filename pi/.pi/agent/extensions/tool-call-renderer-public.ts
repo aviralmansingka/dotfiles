@@ -6,7 +6,8 @@
  * bash/powershell keep OUR expansion — chips and recentTools trees,
  * numbered syntax-highlighted content, and status-framed command output
  * (✓/✗ exit banner + railed head-and-tail fold). Inspection tools own
- * their query/results too. Other tools delegate to
+ * their query/results too; pedagogy tools own question leaves and verdicts.
+ * Other tools delegate to
  * downstream renderResult when present.
  * No assistant-message grouping or native expanded output: each tool owns its
  * row, and expansion is bounded text/details (images are described, not drawn).
@@ -43,7 +44,7 @@ const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
 const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
-const PEDAGOGY_TOOLS = new Set(["ask_user_question", "quiz"]);
+const PEDAGOGY_TOOLS = new Set(["ask_user_question", "quiz", "explain"]);
 const OUTPUT_HEAD = 30;
 const OUTPUT_TAIL = 30;
 const RUNNING = new Set(["pending", "running", "fixing", "awaiting_approval", "fix_review"]);
@@ -797,13 +798,17 @@ function optionRefs(text: string): RecordValue[] {
 }
 
 function pedagogyOptions(value: unknown): RecordValue[] {
-  return Array.isArray(value) ? value.map((option, index) => ({ index: index + 1, ...asRecord(option) })) : [];
+  return Array.isArray(value) ? value.map(asRecord).filter((option) => clean(option.label))
+    .map((option, index) => ({ index: index + 1, ...option })) : [];
 }
 
 function askVerdict(args: RecordValue, details: RecordValue, text: string, expanded: boolean, theme: Theme, width: number): PedagogyVerdict {
   const choices = pedagogyOptions(args.options);
   const selected = /^User selected:\s*([\s\S]*)/.exec(text)?.[1] ?? "";
   const answers = Array.isArray(details.answers) ? details.answers.map(asRecord) : optionRefs(selected);
+  if (!Array.isArray(details.answers)) {
+    for (const match of selected.matchAll(/(?:^|\n)(?:-\s*)?Other:\s*(.*)/g)) answers.push({ label: match[1] });
+  }
   // Older transcripts can contain labels without numbered references.
   if (!Array.isArray(details.answers) && !answers.length && selected) {
     const choice = choices.find((option) => clean(option.label) === clean(selected));
@@ -818,7 +823,7 @@ function askVerdict(args: RecordValue, details: RecordValue, text: string, expan
   let label = "✗ unavailable";
   if (answers.length) {
     const pointers = indices.length > 1 ? `options ${indices.join(" + ")}` : indices.length ? `option ${indices[0]}` : "";
-    const other = answers.filter((answer) => !finiteNumber(answer.index)).map((answer) => clean(answer.label || answer.value)).join(" + ");
+    const other = answers.filter((answer) => !finiteNumber(answer.index)).map((answer) => asString(answer.label || answer.value)).join(" + ");
     const answer = shortPedagogy(other || answers[0].label || answers[0].value, 40) || "(empty answer)";
     label = `✓ ${pointers}${pointers && (indices.length === 1 || other) ? " — " : ""}${indices.length > 1 && !other ? "" : answer}`;
   } else if (text === "User submitted an empty response") label = "✓ (empty answer)";
@@ -868,6 +873,65 @@ function quizVerdict(args: RecordValue, details: RecordValue, text: string, expa
   return { label, color: dontKnow ? "mdLink" : !graded ? "dim" : isCorrect ? "success" : "error", body };
 }
 
+function expectedClaims(value: unknown): string[] {
+  return asString(value).split(/\n|;\s*/).map((claim) => clean(claim).replace(/^(?:[-*•]|\d+[.)])\s+/, "")).filter(Boolean);
+}
+
+function claimKey(value: unknown): string {
+  return clean(value).toLowerCase().replace(/[.!?]+$/, "");
+}
+
+function explainVerdict(args: RecordValue, details: RecordValue, text: string, expanded: boolean, theme: Theme, width: number): PedagogyVerdict {
+  const parsed = /Grader verdict: (CORRECT|PARTIALLY_CORRECT|INCORRECT) \(grade: ([ABCDF])\)(?:\n([^\n]*))?/.exec(text);
+  const grading = asRecord(details.grading);
+  const verdict = asString(grading.verdict) || parsed?.[1].toLowerCase() || "";
+  const grade = clean(grading.grade) || parsed?.[2] || "";
+  const summary = grading.summary ?? parsed?.[3];
+  const answer = asString(details.answer ?? /User's answer \(their own words\):\n([\s\S]*?)(?=\n\n(?:Grader verdict:|\(Grader fork unavailable:)|$)/.exec(text)?.[1]);
+  const dontKnow = details.dontKnow === true || /User submitted an EMPTY answer/i.test(text)
+    || (details.status === "answered" && !answer.trim() && !verdict);
+  const refinements = Array.isArray(grading.refinements) ? grading.refinements.map(asRecord)
+    : [...text.matchAll(/^- "(.*)" — (.*?)(?: → (.*))?$/gm)].map((match) => ({ quote: match[1], issue: match[2], correction: match[3] }));
+  const body: string[] = [];
+  if (expanded) {
+    const claims = expectedClaims(args.expected);
+    const keys = claims.map(claimKey);
+    const answerClaims = expectedClaims(answer).map(claimKey);
+    // Refinements have no claim IDs or per-claim verdicts. Only exact,
+    // unique clause matches with a real answer quote justify a mapping;
+    // do not turn lexical similarity (or a global grade) into claim scores.
+    const mapped = refinements.map((refinement) => {
+      const correction = claimKey(refinement.correction);
+      const quote = claimKey(refinement.quote);
+      if (!asString(refinement.quote) || !answer.includes(asString(refinement.quote))) return [];
+      return keys.flatMap((key, index) => key === correction || key === quote ? [index] : []);
+    });
+    claims.forEach((claim, index) => {
+      const hits = mapped.flatMap((indices, refinement) => indices.length === 1 && indices[0] === index ? [refinement] : []);
+      const ambiguous = mapped.some((indices) => indices.length > 1 && indices.includes(index)) || keys.indexOf(keys[index]) !== keys.lastIndexOf(keys[index]);
+      let mark = "";
+      if (!ambiguous && hits.length === 1 && verdict) mark = verdict === "incorrect" ? theme.fg("error", "✗ ") : theme.fg("mdLink", "● ");
+      else if (!ambiguous && !hits.length && verdict && answerClaims.includes(keys[index])
+        && !refinements.some((refinement) => claimKey(refinement.quote) === keys[index])) mark = theme.fg("success", "✓ ");
+      const styled = theme.fg("dim", "expected: ") + mark + theme.fg("dim", claim);
+      body.push(...wrapLine(styled, width - 7, "start", Number.MAX_SAFE_INTEGER).chunks.map((chunk) => ` ${theme.fg("borderMuted", "│")}     ${chunk}`));
+    });
+    if (answer) body.push(...pedagogyText(theme, answer, "A", width, "text"));
+    if (summary) body.push(...pedagogyText(theme, summary, "✎", width));
+    for (const refinement of refinements) {
+      const quote = safeLine(refinement.quote);
+      const issue = safeLine(refinement.issue);
+      const correction = safeLine(refinement.correction);
+      body.push(...pedagogyText(theme, `“${quote}”${issue ? ` — ${issue}` : ""}${correction ? ` → ${correction}` : ""}`, "·", width));
+    }
+  }
+  const label = dontKnow ? "● don't know — a genuine gap"
+    : verdict === "correct" ? `✓ correct${grade ? ` · grade ${grade}` : ""}`
+    : verdict === "partially_correct" ? `● partially correct${grade ? ` · grade ${grade}` : ""}`
+    : verdict === "incorrect" ? `✗ incorrect${grade ? ` · grade ${grade}` : ""}` : "✗ unavailable";
+  return { label, color: dontKnow || verdict === "partially_correct" ? "mdLink" : verdict === "correct" ? "success" : verdict === "incorrect" ? "error" : "dim", body };
+}
+
 const pedagogyRows = new Map<string, { source: string; theme: Theme; rows: string[] }>();
 function renderPedagogy(tool: string, result: Result, expanded: boolean, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
   const args = asRecord(context.args);
@@ -884,9 +948,11 @@ function renderPedagogy(tool: string, result: Result, expanded: boolean, row: Ro
   let verdict: PedagogyVerdict;
   if (!row.settled) verdict = { label: "running", color: "dim", body: [] };
   else if (["cancelled", "unavailable", "follow-up"].includes(status) || /User cancelled/i.test(text) || row.failed) {
-    verdict = { label: `✗ ${status || (/User cancelled/i.test(text) ? "cancelled" : "unavailable")}`, color: "dim", body: [] };
+    const ghost = ["cancelled", "unavailable", "follow-up"].includes(status) ? status : /User cancelled/i.test(text) ? "cancelled" : "unavailable";
+    verdict = { label: `✗ ${ghost}`, color: "dim", body: [] };
   } else verdict = tool === "quiz"
     ? quizVerdict(args, details, text, expanded, theme, width, context.toolCallId)
+    : tool === "explain" ? explainVerdict(args, details, text, expanded, theme, width)
     : askVerdict(args, details, text, expanded, theme, width);
   lines.push(...verdict.body, ` ${theme.fg("borderMuted", "└─")} ${theme.fg(verdict.color, verdict.label)}`);
   pedagogyRows.set(context.toolCallId, { source, theme, rows: lines });

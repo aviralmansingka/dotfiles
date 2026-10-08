@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain"]);
   for (const name of [...NEVER_DELEGATE, "edit", "ask_question", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -281,6 +281,10 @@ try {
   for (const [text, banner] of [["User selected: 2. Second", "✓ option 2 — Second"], ["User selected:\n- 1. First\n- 3. Third", "✓ options 1 + 3"], ["User selected: Second", "✓ option 2 — Second"], ["User answered: typed answer", "✓ typed answer"], ["User selected: Other: custom", "✓ custom"], ["User cancelled the question", "✗ cancelled"]]) {
     assert.ok(render(ask.renderResult(result(text), options, theme, askCtx)).includes(banner), text);
   }
+  const mixedOther = render(ask.renderResult(result("User selected:\n- 1. First\n- Other: custom"), options, theme, askCtx));
+  assert.ok(mixedOther.includes("✓ option 1 — custom"));
+  const multilineTyped = render(ask.renderResult(result("", { ...askDetails, mode: "text", answers: [{ type: "text", label: "first\nsecond" }] }), options, theme, askCtx));
+  assert.ok(multilineTyped.includes("✓ first…") && !multilineTyped.includes("second"));
   const askPartial = render(ask.renderResult(result("", askDetails), { expanded: true, isPartial: true }, theme, askCtx));
   assert.ok(askPartial.includes("running") && !askPartial.includes("✓"));
   const longOptionCtx = context("ask-long-option", { question: "Pick?", options: [{ label: "label ".repeat(30) + "LABEL_END" }] }, quiet);
@@ -343,6 +347,70 @@ try {
   const quizLong = render(quiz.renderResult(longQuizResult, { ...options, expanded: true }, theme, longQuizCtx), 40);
   assert.ok(quizLong.includes("QUESTION_END") && quizLong.includes(" │     question"));
   assert.equal(quizLong.split("\n").filter((line) => line.includes("? ")).length, 1);
+
+  const explain = resolver("explain", () => undefined);
+  const explainArgs = { question: "Explain the mechanism?", expected: "A descriptor names a file.\n- A table owns descriptors.", details: "Name the kernel construct." };
+  const explainCtx = context("explain-grade", explainArgs, quiet);
+  assert.ok(render(explain.renderCall(explainArgs, styT, explainCtx)).includes("<dim>? </dim> <text>Explain the mechanism?</text>"));
+  const explainDetails = { status: "answered", question: explainArgs.question, answer: "A descriptor names a file.\nA process owns everything.", grading: { verdict: "partially_correct", grade: "C", summary: "Identify the owning table.", correctAnswer: "A table owns descriptors.", refinements: [{ quote: "A process owns everything.", issue: "Loose ownership", correction: "A table owns descriptors." }] } };
+  const explainShown = render(explain.renderResult(result("", explainDetails), { ...options, expanded: true }, styT, explainCtx));
+  assert.ok(explainShown.includes("<mdLink>● partially correct · grade C</mdLink>"));
+  assert.ok(explainShown.includes("<dim>expected: </dim><success>✓ </success><dim>A descriptor names a file.</dim>"));
+  assert.ok(explainShown.includes("<dim>expected: </dim><mdLink>● </mdLink><dim>A table owns descriptors.</dim>"));
+  assert.ok(explainShown.includes("<dim>A </dim> <text>A descriptor names a file.</text>"));
+  assert.ok(explainShown.includes("<dim>✎ </dim> <dim>Identify the owning table.</dim>"));
+  assert.ok(explainShown.includes("<dim>· </dim> <dim>“A process owns everything.” — Loose ownership → A table owns descriptors.</dim>"));
+  assert.ok(explainShown.includes("<dim>Name the kernel construct.</dim>"));
+  for (const [verdict, grade, color, banner] of [["correct", "A", "success", "✓ correct"], ["partially_correct", "C", "mdLink", "● partially correct"], ["incorrect", "D", "error", "✗ incorrect"]]) {
+    const details = { ...explainDetails, grading: { ...explainDetails.grading, verdict, grade } };
+    const minimized = render(explain.renderResult(result("", details), options, styT, explainCtx));
+    assert.ok(minimized.includes(`<${color}>${banner} · grade ${grade}</${color}>`));
+    assert.ok(!minimized.includes("expected:") && !minimized.includes("Name the kernel construct") && !minimized.includes("✎"));
+    if (verdict === "incorrect") {
+      const expanded = render(explain.renderResult(result("", details), { ...options, expanded: true }, styT, explainCtx));
+      assert.ok(expanded.includes("<error>✗ </error><dim>A table owns descriptors.</dim>"));
+    }
+    const fallback = `Question: Explain the mechanism?\nUser's answer (their own words):\nA descriptor names a file.\nA process owns everything.\n\nGrader verdict: ${verdict.toUpperCase()} (grade: ${grade})\nIdentify the owning table.\nCorrect answer: A table owns descriptors.\nTerminology refinements:\n- "A process owns everything." — Loose ownership → A table owns descriptors.\n\nVerdict is advisory — you own the final call and the follow-up.`;
+    const parsed = render(explain.renderResult(result(fallback), { ...options, expanded: true }, styT, explainCtx));
+    assert.ok(parsed.includes(`<${color}>${banner} · grade ${grade}</${color}>`));
+    assert.ok(parsed.includes("<dim>A </dim> <text>A descriptor names a file.</text>"));
+    assert.ok(parsed.includes("<dim>✎ </dim> <dim>Identify the owning table.</dim>"));
+    assert.ok(parsed.includes("<dim>· </dim> <dim>“A process owns everything.” — Loose ownership → A table owns descriptors.</dim>"));
+    assert.ok(!parsed.includes("Verdict is advisory"));
+  }
+  for (const output of [result("", { status: "answered" }), result('Question: Q?\nUser submitted an EMPTY answer — treat this as an honest "I don\'t know": a genuine gap to teach into, not a failure.')]) {
+    assert.ok(render(explain.renderResult(output, options, styT, explainCtx)).includes("<mdLink>● don't know — a genuine gap</mdLink>"));
+  }
+  for (const status of ["cancelled", "unavailable"]) {
+    assert.ok(render(explain.renderResult(result("", { status }), options, styT, explainCtx)).includes(`<dim>✗ ${status}</dim>`));
+  }
+  const bareVerdict = render(explain.renderResult(result("Grader verdict: CORRECT (grade: A)"), options, theme, explainCtx));
+  assert.ok(bareVerdict.includes("✓ correct · grade A"));
+  const failedExplain = render(explain.renderResult(result("", explainDetails), options, styT, context("failed-explain", explainArgs, { ...quiet, isError: true })));
+  assert.ok(failedExplain.includes("<dim>✗ unavailable</dim>") && !failedExplain.includes("✗ answered"));
+  const ungraded = render(explain.renderResult(result("", { status: "answered", answer: "My ungraded answer." }), { ...options, expanded: true }, styT, explainCtx));
+  assert.ok(ungraded.includes("<dim>✗ unavailable</dim>") && ungraded.includes("<text>My ungraded answer.</text>"));
+  const ambiguousCtx = context("explain-ambiguous", { question: "Q?", expected: "A table owns descriptors.\nA table owns descriptors.\nSome other claim." }, quiet);
+  const ambiguous = render(explain.renderResult(result("", explainDetails), { ...options, expanded: true }, styT, ambiguousCtx));
+  assert.ok(ambiguous.includes("<dim>expected: </dim><dim>A table owns descriptors.</dim>"));
+  assert.ok(!ambiguous.includes("<mdLink>● </mdLink>") && !ambiguous.includes("<success>✓ </success>"), "ambiguous or unrelated claims stay unmarked");
+  const inventedQuote = { ...explainDetails, grading: { ...explainDetails.grading, refinements: [{ quote: "Not in the answer", issue: "Wrong", correction: "A table owns descriptors." }] } };
+  const invented = render(explain.renderResult(result("", inventedQuote), { ...options, expanded: true }, styT, explainCtx));
+  assert.ok(invented.includes("<dim>expected: </dim><dim>A table owns descriptors.</dim>"), "never map invented grader quotes");
+  const longExplainCtx = context("explain-long", { question: longQuestion, expected: "" }, quiet);
+  const longExplainDetails = { status: "answered", answer: "answer ".repeat(30) + "ANSWER_END", grading: { verdict: "incorrect", grade: "F", summary: "summary ".repeat(25) + "SUMMARY_END", refinements: [{ quote: "quote ".repeat(30) + "QUOTE_END", issue: "wrong", correction: "correct" }] } };
+  const explainMinLong = render(explain.renderResult(result("", longExplainDetails), options, theme, longExplainCtx), 40);
+  assert.equal(explainMinLong.split("\n").length, 2);
+  assert.ok(explainMinLong.split("\n")[0].endsWith("…"));
+  const explainLong = render(explain.renderResult(result("", longExplainDetails), { ...options, expanded: true }, theme, longExplainCtx), 40);
+  assert.ok(explainLong.includes("QUESTION_END") && explainLong.includes("ANSWER_END") && explainLong.includes("SUMMARY_END") && explainLong.includes("QUOTE_END"));
+  for (const marker of ["? ", " A ", " ✎ ", " · "]) assert.equal(explainLong.split("\n").filter((line) => line.includes(marker)).length, marker === " · " ? 2 : 1);
+  const explainPartial = render(explain.renderResult(result("", explainDetails), { expanded: true, isPartial: true }, theme, explainCtx));
+  assert.ok(explainPartial.includes("running") && !explainPartial.includes("grade C"));
+  for (const tool of [ask, quiz, explain]) {
+    const narrow = tool.renderResult(result(""), { ...options, expanded: true }, theme, context(`pedagogy-narrow-${tool === ask ? "ask" : tool === quiz ? "quiz" : "explain"}`, { question: longQuestion }, quiet));
+    assert.ok(narrow.render(16).every((line) => [...line].length <= 16));
+  }
 
   const grep = resolver("grep", () => undefined);
   const grepArgs = { pattern: "needle", path: "src", glob: "*.ts", ignoreCase: true, literal: true, context: 2 };
