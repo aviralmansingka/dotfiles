@@ -1795,10 +1795,11 @@ async function watchSubagent(
     if (existsSync(sessionFile)) {
       const allEntries = getNewEntries(sessionFile, 0);
       const lastAssistant = findLastAssistantMessage(allEntries);
+      // Killed panes never print the completion sentinel, so the session file
+      // only holds a partial mid-turn message. Do not surface that raw
+      // partial text to the orchestrator — report the kill, not the wreckage.
       summary = killed
-        ? lastAssistant
-          ? `Pane was closed before the subagent reported completion. Last saved assistant message:\n\n${lastAssistant}`
-          : "Pane was closed before the subagent reported completion. No assistant result was saved."
+        ? "Pane was closed before the subagent reported completion. No result was saved."
         : lastAssistant ??
           (result.errorMessage
             ? `Subagent error: ${result.errorMessage}`
@@ -2534,9 +2535,7 @@ export default function subagentsExtension(pi: ExtensionAPI) {
             const allEntries = getNewEntries(sessionPath, entryCountBefore);
             const lastAssistant = findLastAssistantMessage(allEntries);
             const summary = result.killed
-              ? lastAssistant
-                ? `Pane was closed before the resumed subagent reported completion. Last saved assistant message:\n\n${lastAssistant}`
-                : "Pane was closed before the resumed subagent reported completion. No new assistant result was saved."
+              ? "Pane was closed before the resumed subagent reported completion. No result was saved."
               : lastAssistant ??
                 (result.errorMessage
                   ? `Subagent error: ${result.errorMessage}`
