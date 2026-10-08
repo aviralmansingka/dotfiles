@@ -64,7 +64,7 @@ try {
     sessionManager: { getSessionId: () => id, getEntries: () => entries },
   });
   session("first");
-  const theme = { fg: (_color, text) => text, bold: (text) => text };
+  const theme = { fg: (_color, text) => text, bold: (text) => text, italic: (text) => text };
   let invalidations = 0;
   const context = (toolCallId, args = {}, extra = {}) => ({
     args, toolCallId, invalidate: () => invalidations++, state: {}, lastComponent: undefined,
@@ -81,8 +81,8 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls"]);
-  for (const name of ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "no_mistakes_axi", "mcp__not_connected__search", "unknown"]) {
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question"]);
+  for (const name of [...NEVER_DELEGATE, "edit", "ask_question", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
     const renderer = resolver(name, () => { calls++; });
@@ -239,6 +239,55 @@ try {
   assert.ok(styled.includes("<muted>> </muted>quoted"), "quote markers muted");
   assert.ok(styled.includes("<dim>```ts</dim>"), "fence lines dim");
   assert.ok(styled.includes("<hl:ts>const a = 1;"), "inner code still engine-highlighted");
+
+  const ask = resolver("ask_user_question", () => undefined);
+  const askArgs = { question: "Which approach?", details: "Choose for clarity.", options: [{ label: "First" }, { label: "Second" }, { label: "Third" }] };
+  const askCtx = context("ask-choice", askArgs, quiet);
+  const askCall = ask.renderCall(askArgs, styT, askCtx);
+  const askCallText = render(askCall);
+  assert.ok(askCallText.includes("<text><b>ask_user_question</b></text>"));
+  assert.ok(askCallText.includes("<borderMuted>├─</borderMuted> <dim>? </dim> <text>Which approach?</text>"));
+  assert.ok(!askCallText.includes("Choose for clarity"));
+  const askDetails = { status: "answered", question: askArgs.question, context: askArgs.details, mode: "single-select", answers: [{ type: "option", index: 2, label: "Second", value: "second" }] };
+  const askCollapsed = render(ask.renderResult(result("ignored", askDetails), options, styT, askCtx));
+  assert.ok(askCollapsed.includes("<success>✓ option 2 — Second</success>"));
+  assert.ok(askCollapsed.includes("<dim>? </dim>") && !askCollapsed.includes("Choose for clarity"));
+  assert.ok(!render(askCall).includes("?"), "the result owns the question after first result, avoiding duplicate leaves");
+  const askShown = render(ask.renderResult(result("ignored", askDetails), { ...options, expanded: true }, styT, askCtx));
+  assert.ok(askShown.includes("<dim>Choose for clarity.</dim>"));
+  assert.ok(askShown.includes("<dim>1 </dim> <dim>First</dim>"));
+  assert.ok(askShown.includes("<dim>2 </dim> <text>✓ Second</text>"));
+  const longQuestion = "question ".repeat(35) + "QUESTION_END";
+  const longAskCtx = context("ask-long", { ...askArgs, question: longQuestion }, quiet);
+  const longAsk = result("User selected: 1. First");
+  const askNarrow = render(ask.renderResult(longAsk, options, theme, longAskCtx), 40);
+  assert.equal(askNarrow.split("\n").length, 2, "minimized question never wraps");
+  assert.ok(askNarrow.split("\n")[0].endsWith("…"));
+  const askWrapped = render(ask.renderResult(longAsk, { ...options, expanded: true }, theme, longAskCtx), 40);
+  assert.equal(askWrapped.split("\n").filter((line) => line.includes("? ")).length, 1);
+  assert.ok(askWrapped.includes(" │     question") && askWrapped.includes("QUESTION_END"), "question wraps fully on a bare spine");
+  const multilineCall = render(ask.renderCall({ question: "first\nsecond" }, theme, context("ask-stream", {}, quiet)));
+  assert.ok(multilineCall.includes("├─ ?  first…") && !multilineCall.includes("second"));
+  for (const question of ["W", "Wh", "Which?"]) {
+    assert.ok(render(ask.renderCall({ question }, theme, context("ask-stream", {}, quiet))).includes(`?  ${question}`));
+  }
+  const multiAsk = render(ask.renderResult(result("", { ...askDetails, mode: "multi-select", answers: [{ index: 1, label: "First" }, { index: 3, label: "Third" }] }), options, styT, askCtx));
+  assert.ok(multiAsk.includes("<success>✓ options 1 + 3</success>"));
+  const typedAsk = render(ask.renderResult(result("", { ...askDetails, mode: "text", answers: [{ type: "text", label: "x".repeat(60), value: "typed" }] }), options, theme, askCtx));
+  assert.ok(typedAsk.includes(`✓ ${"x".repeat(39)}…`));
+  for (const status of ["cancelled", "unavailable"]) {
+    assert.ok(render(ask.renderResult(result("", { status }), options, styT, askCtx)).includes(`<dim>✗ ${status}</dim>`));
+  }
+  for (const [text, banner] of [["User selected: 2. Second", "✓ option 2 — Second"], ["User selected:\n- 1. First\n- 3. Third", "✓ options 1 + 3"], ["User selected: Second", "✓ option 2 — Second"], ["User answered: typed answer", "✓ typed answer"], ["User selected: Other: custom", "✓ custom"], ["User cancelled the question", "✗ cancelled"]]) {
+    assert.ok(render(ask.renderResult(result(text), options, theme, askCtx)).includes(banner), text);
+  }
+  const askPartial = render(ask.renderResult(result("", askDetails), { expanded: true, isPartial: true }, theme, askCtx));
+  assert.ok(askPartial.includes("running") && !askPartial.includes("✓"));
+  const longOptionCtx = context("ask-long-option", { question: "Pick?", options: [{ label: "label ".repeat(30) + "LABEL_END" }] }, quiet);
+  const longOptionOut = render(ask.renderResult(result("User selected: 1. label"), { ...options, expanded: true }, theme, longOptionCtx), 40);
+  assert.ok(longOptionOut.includes("LABEL_END") && longOptionOut.includes("└─ ✓ option 1"));
+  const changedAsk = render(ask.renderResult(result("", askDetails), { ...options, expanded: true }, theme, askCtx));
+  assert.ok(changedAsk.includes("✓ Second") && !changedAsk.includes("<dim>"), "theme changes invalidate pedagogy cache");
 
   const grep = resolver("grep", () => undefined);
   const grepArgs = { pattern: "needle", path: "src", glob: "*.ts", ignoreCase: true, literal: true, context: 2 };

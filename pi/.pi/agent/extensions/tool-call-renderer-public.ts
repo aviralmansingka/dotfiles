@@ -32,6 +32,7 @@ type Row = {
   settled?: boolean;
   failed?: boolean;
   restored?: boolean;
+  pedagogyResult?: boolean;
   invalidate?: () => void;
   timer?: ReturnType<typeof setInterval>;
 };
@@ -42,6 +43,7 @@ const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
 const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
+const PEDAGOGY_TOOLS = new Set(["ask_user_question"]);
 const OUTPUT_HEAD = 30;
 const OUTPUT_TAIL = 30;
 const RUNNING = new Set(["pending", "running", "fixing", "awaiting_approval", "fix_review"]);
@@ -655,9 +657,9 @@ function commandBodies(theme: Theme, toolCallId: string, tool: string, command: 
   return rows;
 }
 
-function wrapLine(line: string, avail: number, keep: "start" | "end" = "end"): { chunks: string[]; skipped: number } {
+function wrapLine(line: string, avail: number, keep: "start" | "end" = "end", maxLines = OUTPUT_WRAP_LINES): { chunks: string[]; skipped: number } {
   try {
-    const { visualLines, skippedCount } = truncateToVisualLines(line, OUTPUT_WRAP_LINES, Math.max(8, avail), 0, keep);
+    const { visualLines, skippedCount } = truncateToVisualLines(line, maxLines, Math.max(8, avail), 0, keep);
     // The real truncateToVisualLines returns [] for blank lines; keep the
     // row so its number prefix renders and numbering stays file-aligned.
     return { chunks: visualLines.length ? visualLines : [""], skipped: skippedCount };
@@ -762,6 +764,89 @@ function expandedOutput(tool: string, result: Result, theme: Theme, context: Ren
   return shown;
 }
 
+// Pedagogy leaves share the command gutter: a two-column marker, then text.
+function shortPedagogy(value: unknown, width: number): string {
+  const text = firstLine(value);
+  const more = asString(value).trim().split("\n").length > 1;
+  const clipped = truncateToWidth(text, Math.max(0, width), "");
+  return clipped !== text || more ? truncateToWidth(text, Math.max(0, width - 1), "") + "…" : text;
+}
+
+function pedagogyText(theme: Theme, value: unknown, marker: string, width: number, color: "dim" | "text" | "success" | "error" = "dim", markdown = false): string[] {
+  const rail = ` ${theme.fg("borderMuted", "│")}  `;
+  const lines = asString(value).split("\n").flatMap((line) => {
+    const body = safeLine(line);
+    return wrapLine(markdown ? styleMarkdownInline(theme, body) : theme.fg(color, body), width - 7, "start", Number.MAX_SAFE_INTEGER).chunks;
+  });
+  return lines.map((line, index) => rail + (index === 0 ? theme.fg("dim", marker.padEnd(2)) : "  ") + " " + line);
+}
+
+function questionLeaf(theme: Theme, question: unknown, expanded: boolean, width: number): string[] {
+  if (!expanded) return [` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "? ")} ${theme.fg("text", shortPedagogy(question, width - 7))}`];
+  const lines = pedagogyText(theme, question, "?", width, "text");
+  lines[0] = lines[0].replace(` ${theme.fg("borderMuted", "│")}  `, ` ${theme.fg("borderMuted", "├─")} `);
+  return lines;
+}
+
+type PedagogyVerdict = { label: string; color: "success" | "error" | "accent" | "dim"; body: string[] };
+
+// Option indices in both interactive tools are one-based display positions.
+function optionRefs(text: string): RecordValue[] {
+  return [...text.matchAll(/(?:^|\n|,\s*)(?:-\s*)?(\d+)\.\s*([^\n]*?)(?=,\s*\d+\.\s|\n|$)/g)]
+    .map((match) => ({ index: Number(match[1]), label: match[2] }));
+}
+
+function pedagogyOptions(value: unknown): RecordValue[] {
+  return Array.isArray(value) ? value.map((option, index) => ({ index: index + 1, ...asRecord(option) })) : [];
+}
+
+function askVerdict(args: RecordValue, details: RecordValue, text: string, expanded: boolean, theme: Theme, width: number): PedagogyVerdict {
+  const choices = pedagogyOptions(args.options);
+  const selected = /^User selected:\s*([\s\S]*)/.exec(text)?.[1] ?? "";
+  const answers = Array.isArray(details.answers) ? details.answers.map(asRecord) : optionRefs(selected);
+  // Older transcripts can contain labels without numbered references.
+  if (!Array.isArray(details.answers) && !answers.length && selected) {
+    const choice = choices.find((option) => clean(option.label) === clean(selected));
+    answers.push(choice ?? { label: selected.replace(/^Other:\s*/, "") });
+  }
+  if (!Array.isArray(details.answers) && !answers.length && text.startsWith("User answered: ")) answers.push({ label: text.slice(15) });
+  const indices = answers.map((answer) => answer.index).filter(finiteNumber);
+  const body = expanded ? choices.flatMap((option) => {
+    const picked = indices.includes(option.index as number);
+    return pedagogyText(theme, `${picked ? "✓ " : ""}${safeLine(option.label)}`, String(option.index), width, picked ? "text" : "dim");
+  }) : [];
+  let label = "✗ unavailable";
+  if (answers.length) {
+    const pointers = indices.length > 1 ? `options ${indices.join(" + ")}` : indices.length ? `option ${indices[0]}` : "";
+    const other = answers.filter((answer) => !finiteNumber(answer.index)).map((answer) => clean(answer.label || answer.value)).join(" + ");
+    const answer = shortPedagogy(other || answers[0].label || answers[0].value, 40) || "(empty answer)";
+    label = `✓ ${pointers}${pointers && (indices.length === 1 || other) ? " — " : ""}${indices.length > 1 && !other ? "" : answer}`;
+  } else if (text === "User submitted an empty response") label = "✓ (empty answer)";
+  return { label, color: label.startsWith("✓") ? "success" : "dim", body };
+}
+
+const pedagogyRows = new Map<string, { source: string; theme: Theme; rows: string[] }>();
+function renderPedagogy(tool: string, result: Result, expanded: boolean, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
+  const args = asRecord(context.args);
+  const details = asRecord(result.details);
+  const text = textContent(result);
+  const source = JSON.stringify([tool, args, details, text, expanded, row.settled, row.failed, width]);
+  const cached = pedagogyRows.get(context.toolCallId);
+  if (cached?.source === source && cached.theme === theme) return cached.rows;
+  const lines = questionLeaf(theme, details.question ?? args.question, expanded, width);
+  const justification = details.context ?? args.details;
+  if (expanded && justification) lines.push(...pedagogyText(theme, justification, "", width));
+  const status = asString(details.status);
+  let verdict: PedagogyVerdict;
+  if (!row.settled) verdict = { label: "running", color: "dim", body: [] };
+  else if (["cancelled", "unavailable", "follow-up"].includes(status) || /User cancelled/i.test(text) || row.failed) {
+    verdict = { label: `✗ ${status || (/User cancelled/i.test(text) ? "cancelled" : "unavailable")}`, color: "dim", body: [] };
+  } else verdict = askVerdict(args, details, text, expanded, theme, width);
+  lines.push(...verdict.body, ` ${theme.fg("borderMuted", "└─")} ${theme.fg(verdict.color, verdict.label)}`);
+  pedagogyRows.set(context.toolCallId, { source, theme, rows: lines });
+  return lines;
+}
+
 function stop(row: Row): void {
   if (row.timer) clearInterval(row.timer);
   row.timer = undefined;
@@ -791,6 +876,7 @@ function disposeState(): void {
   highlightedCommands.clear();
   highlightedGrep.clear();
   inspectionTrees.clear();
+  pedagogyRows.clear();
 }
 
 function component(draw: (width?: number) => string[]): Component {
@@ -824,6 +910,7 @@ export default function (pi: ExtensionAPI) {
     const row = rows.get(event.toolCallId) ?? {};
     row.startedAt ??= Date.now();
     row.settled = false;
+    row.pedagogyResult = false;
     rows.set(event.toolCallId, row);
     arm(row);
   });
@@ -872,12 +959,16 @@ export default function (pi: ExtensionAPI) {
       renderCall(args, theme, context) {
         const row = capture(context);
         if (!row.settled && context.executionStarted) arm(row);
-        return component(() => {
+        return component((width = 200) => {
           const glyph = row.failed ? theme.fg("error", "×") : row.settled ? theme.fg("success", "◆") : theme.fg("accent", "◇");
           const elapsedValue = !row.restored && finiteNumber(row.startedAt)
             ? formatElapsed(Math.max(0, (row.completedAt ?? Date.now()) - row.startedAt)) : "";
           const elapsed = elapsedValue ? ` · ${elapsedValue}` : "";
           const name = theme.fg("text", theme.bold(clean(toolName)));
+          if (PEDAGOGY_TOOLS.has(toolName)) return [
+            ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
+            ...(!row.pedagogyResult ? questionLeaf(theme, asRecord(args).question, false, width) : []),
+          ];
           if (toolName === "bash" || toolName === "powershell") {
             const commands = commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
             if (commands.length === 1 && commands[0].command) {
@@ -939,6 +1030,10 @@ export default function (pi: ExtensionAPI) {
             row.completedAt = undefined;
             arm(row);
           }
+          if (PEDAGOGY_TOOLS.has(toolName)) {
+            row.pedagogyResult = true;
+            return renderPedagogy(toolName, effective, expanded, row, theme, context, width);
+          }
           if (toolName === "grep") return renderGrep(effective, expanded, row, theme, context, width);
           if ((toolName === "find" || toolName === "ls") && expanded) return [
             inspectionBanner(toolName, effective, row, theme),
@@ -964,8 +1059,8 @@ export default function (pi: ExtensionAPI) {
     // and bash/powershell keep their expansion ours too: the native file
     // render proved near-uncolored, and the native bash output view has no
     // framing — ours adds the exit banner plus the railed head-and-tail fold.
-    // Inspection tools keep their query spines and colored file trees too.
-    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) ? undefined : next();
+    // Inspection and pedagogy tools keep their question/query spines too.
+    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) || PEDAGOGY_TOOLS.has(toolName) ? undefined : next();
     if (!other?.renderResult) return mine;
     // Reply receipts own both rows: their leading line and tuicr target are
     // more useful than the generic tool summary, even while collapsed.
