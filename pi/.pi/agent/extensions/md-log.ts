@@ -16,12 +16,12 @@ import { showNodeBuffer } from "./focus-buffer";
 //
 // Override the location with PI_LESSON_JOURNAL=/path/to/file.md.
 //
-// This is a pure listener: quiz/explain/lesson need no changes and no
-// imports from here. It consumes tool_execution_start (lesson content) and
-// tool_execution_end (quiz/explain results) events. quiz deliberately
+// Journal writes stay event-driven: tool_execution_start records lesson
+// content, and tool_execution_end records quiz/explain results. The lesson,
+// quiz, and explain tools import only the presentation helpers below. Quiz
 // publishes its options in tool_execution_update in display order BEFORE
 // blocking; the end result's details already carry the same display order,
-// so we only listen to the end event.
+// so this extension writes only from the end event.
 // ────────────────────────────────────────────────────────────────────────────
 
 const JOURNAL_TOOLS = new Set(["quiz", "explain"]);
@@ -269,9 +269,9 @@ export async function presentLesson(
 /**
  * Open the session's lesson journal in the user's editor pane (existing pane
  * if one is open, else a split). Non-blocking: resolves as soon as the file
- * is sent, never waits for the user to finish reading. Used by the quiz and
- * explain `h`/`alt+h` shortcuts; the lesson tool presents through the focus
- * buffer instead (see presentLesson) with this as its fallback.
+ * is sent, never waits for the user to finish reading. Used by quiz `h` and
+ * explain Alt+H; the lesson tool presents through the focus buffer instead
+ * (see presentLesson) with this as its fallback.
  */
 export async function openJournalInEditor(
 	ctx: any,
@@ -297,7 +297,8 @@ export async function openJournalInEditor(
 
 export default function mdLog(pi: ExtensionAPI) {
 	// Any-time shortcut to open the session's lesson journal in the user's
-	// editor pane. The quiz `h` key and the lesson tool hit the same helper.
+	// editor pane. Quiz `h` and explain Alt+H use the same helper. The lesson
+	// tool uses it only when the focus buffer is unavailable.
 	pi.registerCommand("lessons", {
 		description: "Open this session's lesson journal in the editor pane",
 		handler: async (_args: string, ctx: any) => {

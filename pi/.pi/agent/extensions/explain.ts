@@ -21,8 +21,8 @@ import { openJournalInEditor } from "./md-log";
 // journal opener (ESC-prefixed h in legacy terminals, CSI-u under the kitty
 // protocol — matchesKey handles both). Opens the per-session lesson journal
 // (<session>.md, the live file md-log appends to as the session runs) so the
-// learner can read the whole running transcript while composing an answer.
-// Fire-and-forget: never throws into the panel, no LLM call, no waiting.
+// learner can read the whole transcript while answering or reading the
+// verdict. Fire-and-forget: never throws into the panel, no LLM call, no wait.
 // ────────────────────────────────────────────────────────────────────────
 function openJournalShortcut(ctx: any): void {
 	ctx?.ui?.notify?.("Opening lesson journal…", "info");
