@@ -1,6 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { Text } from "@earendil-works/pi-tui";
 import { execFile, execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -877,30 +876,6 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			}
 		},
 
-		renderCall(args, theme) {
-			return new Text(
-				theme.fg("toolTitle", theme.bold("no-mistakes ")) +
-					theme.fg("muted", `axi ${String(args.args ?? "")}`),
-				0,
-				0,
-			);
-		},
-
-		renderResult(result, _options, theme) {
-			const details = result.details as NmAxiDetails | undefined;
-			const first = result.content[0];
-			const text = first?.type === "text" ? first.text : "";
-			if (!details) {
-				return new Text(text, 0, 0);
-			}
-			const head = theme.fg("toolTitle", theme.bold(`no-mistakes axi ${details.subcommand}`));
-			const tag = details.status === "visible"
-				? theme.fg("success", " (visible pane)")
-				: details.status === "inline"
-					? theme.fg("muted", " (inline)")
-					: theme.fg("warning", ` (${details.status})`);
-			return new Text(`${head}${tag}\n${text}`, 0, 0);
-		},
 	});
 }
 

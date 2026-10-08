@@ -259,6 +259,8 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.equal(events.length, 0);
 
 		const updates = [];
+		assert.equal(tool.renderCall, undefined, "call rows belong to the public tool renderer");
+		assert.equal(tool.renderResult, undefined, "result rows belong to the public tool renderer");
 		const pipelinePromise = tool.execute(
 			"pipeline",
 			{ args: "run", timeoutMs: 1 },
