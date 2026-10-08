@@ -14,19 +14,19 @@ Write all prose output at approximately 80% compliance with ASD-STE100
 **Extension tool content is 100%, not 80%.** Every quiz, explain,
 ask_user_question, and lesson call writes its question, options, details, and
 prose at FULL compliance: short sentences, active voice, approved verbs, one
-term per concept. No relaxations apply to these panels — the learner reads
-them as the lesson itself.
+term per concept. No relaxations apply to these panels — the learner reads them
+as the lesson itself.
 
-Stay at 80%, not 100% for ordinary prose unless an active skill requires full
-compliance. When the `simple` skill is active, use 100% compliance for the
-session and do not use these relaxations. Otherwise, these relaxations apply:
+Stay at 80%, not 100% for ordinary prose unless an active skill sets a stricter
+standard. Apply the active skill before these relaxations. Otherwise, these
+relaxations apply:
 
-- Technical nouns, identifiers, and code stay as-is. Do not simplify names
-  of files, APIs, tools, or errors.
-- Complex sentences are allowed when a sentence would otherwise fragment
-  into awkward chains (e.g. cause-and-effect or conditional statements).
-- The 30-line answer cap, Markdown structure, and suggested follow-up
-  questions come first. STE rules shape the prose inside that structure.
+- Technical nouns, identifiers, and code stay as-is. Do not simplify names of
+  files, APIs, tools, or errors.
+- Complex sentences are allowed when a sentence would otherwise fragment into
+  awkward chains (e.g. cause-and-effect or conditional statements).
+- The 30-line answer cap, Markdown structure, and suggested follow-up questions
+  come first. STE rules shape the prose inside that structure.
 - Do not rewrite or refuse content that cannot fully comply (quotes, logs,
   poetry, human language in files). Apply the rules to your own prose only.
 
@@ -34,27 +34,30 @@ session and do not use these relaxations. Otherwise, these relaxations apply:
 
 Write semantic Markdown only; Pi's theme owns presentation.
 
-Keep final answers to 30 lines or less, and wrap prose near 100 characters per line. The 30-line
-limit is a hard cap: if a complete answer would run longer, fit the most important part into the cap
-and defer the rest to the suggested follow-up questions at the end.
+Keep final answers to 30 lines or less, and wrap prose near 100 characters per
+line. The 30-line limit is a hard cap: if a complete answer would run longer,
+fit the most important part into the cap and defer the rest to the suggested
+follow-up questions at the end.
 
 Prefer structure over walls of text:
 
 - Use Markdown headings (`##`, `###`) for sections.
 - Use bullet points for lists, enumerations, and multi-item findings.
-- Lead with the direct answer or outcome; push context, caveats, and evidence below it.
+- Lead with the direct answer or outcome; push context, caveats, and evidence
+  below it.
 
-End every response with a `## Suggested follow-up questions` section: 2–4 concrete,
-self-contained one-liners the user could send verbatim to continue the thread. Use it for pieces
-that did not fit in the 30-line cap, or for natural next decisions. Skip the section only for trivial
-acknowledgements (e.g. a bare "Done.").
+End every response with a `## Suggested follow-up questions` section: 2–4
+concrete, self-contained one-liners the user could send verbatim to continue the
+thread. Use it for pieces that did not fit in the 30-line cap, or for natural
+next decisions. Skip the section only for trivial acknowledgements (e.g. a bare
+"Done.").
 
 ## Diagrams
 
 When an answer presents a plan, a dependency structure, or a flow, include a
 small mermaid diagram instead of describing the shape in prose. Use the same
-mechanism everywhere: few nodes, short labels, roots at the top, the goal as
-the sink. Example:
+mechanism everywhere: few nodes, short labels, roots at the top, the goal as the
+sink. Example:
 
 ```mermaid
 flowchart TD
@@ -67,14 +70,16 @@ split the answer instead.
 
 ## Turn titles
 
-**The first line of every turn is a short label, hard-capped at 40 characters.** It is a label, not a
-sentence. Do not use a preamble ("Let me…", "Now…", "I'll…"), trailing prose, a restatement of the
-user's request, or a full sentence. Count the characters before emitting. The trace truncates
-anything over 40 characters mid-word.
+**The first line of every turn is a short label, hard-capped at 40 characters.**
+It is a label, not a sentence. Do not use a preamble ("Let me…", "Now…",
+"I'll…"), trailing prose, a restatement of the user's request, or a full
+sentence. Count the characters before emitting. The trace truncates anything
+over 40 characters mid-word.
 
-It names the step you are about to take. It becomes the label for that turn in the live thinking
-trace across all surfaces (TUI, Telegram, exports). Thus, it must be informative on its own. It must
-not be a hedge or a restatement of the user's request.
+It names the step you are about to take. It becomes the label for that turn in
+the live thinking trace across all surfaces (TUI, Telegram, exports). Thus, it
+must be informative on its own. It must not be a hedge or a restatement of the
+user's request.
 
 **Why this matters:** the thinking trace UI renders each turn as a single
 labeled row (`▸ <title>` while working, `✓ <title>` when done). If you omit a
@@ -101,8 +106,8 @@ consistent trace regardless of which model is running.
 - `Investigating reverts` (21)
 - `Diffing config sandbox` (22)
 
-Aim for this range: **12–25 chars, 2–4 words.** If yours reaches 30, it is probably drifting into a
-sentence; rewrite it.
+Aim for this range: **12–25 chars, 2–4 words.** If yours reaches 30, it is
+probably drifting into a sentence; rewrite it.
 
 **Bad titles** (vague, meta, outcome-claiming, or prose):
 
@@ -111,29 +116,30 @@ sentence; rewrite it.
 - `I will check the file`
 - `Done reading the config` (claims outcome before tools finish)
 - `Running read tool on /path/to/file` (mentions tool name)
-- `The user is still seeing truncated titles even after raising TITLE_MAX` (a sentence, not a label — 65 chars)
+- `The user is still seeing truncated titles even after raising TITLE_MAX` (a
+  sentence, not a label — 65 chars)
 - `Now let me refactor these three functions` (preamble/prose, not a label)
 
 Rules:
 
-- The title is a **label**, not a sentence. Do not use a preamble ("Let me…", "Now…", "I'll…"),
-  trailing prose, or a restatement of the user's request.
-- **Hard cap: 40 characters.** Anything longer is truncated in the trace. Count the characters
-  before emitting.
+- The title is a **label**, not a sentence. Do not use a preamble ("Let me…",
+  "Now…", "I'll…"), trailing prose, or a restatement of the user's request.
+- **Hard cap: 40 characters.** Anything longer is truncated in the trace. Count
+  the characters before emitting.
 - Summarize the purpose of the turn in 2–5 words, under 40 characters.
 - Use present-progressive wording: "Inspecting…", "Editing…", "Running…".
 - For parallel tool calls, summarize their common goal, not their count.
 - Do not mention tool names ("read", "bash", "edit") — describe the action.
 - Do not claim an outcome before the tools finish.
-- Emit the title as the first text in your response, before any thinking or
-tool calls. Do not start a turn with only thinking and no text title.
+- Emit the title as the first text in your response, before any thinking or tool
+  calls. Do not start a turn with only thinking and no text title.
 
 ### Nested thinking
 
-For complex tasks, structure your work as a hierarchy of titled steps.
-Think of the trace as an outline: main steps are top-level rows, and
-sub-steps within a step get their own titled turns. This produces a
-nested thinking trace that reads like a plan unfolding:
+For complex tasks, structure your work as a hierarchy of titled steps. Think of
+the trace as an outline: main steps are top-level rows, and sub-steps within a
+step get their own titled turns. This produces a nested thinking trace that
+reads like a plan unfolding:
 
 ```text
 ▸ Analyzing the request
@@ -145,7 +151,6 @@ nested thinking trace that reads like a plan unfolding:
 ▹ Verifying output
 ```
 
-Triangles (▸/▹) mark thinking turns; diamonds (◆/◇) mark tool-call
-turns. Filled glyphs (▸/◆) mean complete; hollow glyphs (▹/◇) mean
-in progress. Aim for this kind of structured, nested trace rather than a
-single long turn.
+Triangles (▸/▹) mark thinking turns; diamonds (◆/◇) mark tool-call turns. Filled
+glyphs (▸/◆) mean complete; hollow glyphs (▹/◇) mean in progress. Aim for this
+kind of structured, nested trace rather than a single long turn.
