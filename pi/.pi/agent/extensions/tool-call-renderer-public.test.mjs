@@ -141,6 +141,21 @@ try {
   assert.match(heredoc, /│ {5}body line/, "heredoc bodies are continuations");
   assert.match(heredoc, /│ {5}EOF/, "the closing tag is a continuation too");
   assert.match(heredoc, /└─ \$ {2}<hl:bash>echo done/);
+  const heredocTheme = { ...theme, fg: (color, text) => color === "dim" ? `<dim>${text}</dim>` : text };
+  for (const [opener, tag] of [["<<'PY'", "PY"], ['<<"EOF"', "EOF"], ["<< EOF", "EOF"]]) {
+    const command = `python3 - ${opener}\nimport os\nprint(os.getcwd())\n${tag}\necho done`;
+    const out = render(bash.renderCall({ command }, heredocTheme, context(`heredoc-${opener}`, {}, quiet)));
+    assert.match(out, /├─.*\$.*<hl:bash>python3 -/, "the invocation is an executable leaf");
+    assert.equal(out.split("\n").filter((line) => /├─.*\$/.test(line)).length, 1, "only the invocation gets an intermediate executable leaf");
+    assert.equal(out.split("\n").filter((line) => line.includes("$")).length, 2, "only python3 and echo get $ markers");
+    for (const body of ["import os", "print(os.getcwd())", tag]) {
+      const row = out.split("\n").find((line) => line.includes(`<dim>${body}</dim>`));
+      assert.ok(row, `${opener}: body and terminator rows render dim`);
+      assert.match(row, /│/, "continuations keep the connecting spine");
+      assert.ok(!row.includes("$") && !row.includes("<hl:bash>"), "continuations are not executable rows");
+    }
+    assert.match(out, /└─.*\$.*<hl:bash>echo done/, "the terminator restores command context");
+  }
   const bsCommand = "printf 'a' \\\\ && \\" + "\n  echo b";
   const backslash = render(bash.renderCall({ command: bsCommand }, theme, context("bs", {}, quiet)));
   assert.match(backslash, /├─ \$ {2}.*printf/, "the wrapped command keeps its leaf");
