@@ -3,7 +3,7 @@
  * Owns the call row and collapsed summary for every tool (built-ins ship
  * their own renderers in pi 1.0.4, so `next() ?? mine` would never apply).
  * Expanded bodies: connected tools, file-shaped tools (read, write), and
- * bash/powershell keep OUR expansion — chips and recentTools trees,
+ * bash/powershell/python keep OUR expansion — chips and recentTools trees,
  * numbered syntax-highlighted content, and status-framed command output
  * (✓/✗ exit banner + railed head-and-tail fold). Inspection tools own
  * their query/results too; pedagogy tools own question leaves and verdicts.
@@ -47,7 +47,7 @@ const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 // Launch/message/review receipts are not agent runs: never route them through chips.
 const RECEIPT_TOOLS = new Set(["subagent_message", "hunk_review", "tuicr_background"]);
 const FILE_TOOLS = new Set(["read", "write"]);
-const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
+const OUTPUT_TOOLS = new Set(["bash", "powershell", "python"]);
 const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
 const PEDAGOGY_TOOLS = new Set(["ask_user_question", "quiz", "explain"]);
 const OUTPUT_HEAD = 30;
@@ -98,6 +98,7 @@ function preview(tool: string, args: RecordValue): string {
   const path = clean(args.path || args.file);
   switch (tool) {
     case "bash": case "powershell": return `$ ${firstLine(args.command)}`;
+    case "python": return `$ ${firstLine(args.code)}`;
     case "read": return [path, ...["offset", "limit"].flatMap((key) =>
       finiteNumber(args[key]) ? [`${key}=${args[key]}`] : [])].join(" · ");
     case "edit": return `${path} · ${plural(Array.isArray(args.edits) ? args.edits.length : 1, "edit")}`;
@@ -146,7 +147,7 @@ function summary(tool: string, result: Result, isError: boolean): string {
   if (isError) return firstLine(text) || "failed";
   const truncated = asRecord(details.truncation).truncated ? " · truncated" : "";
   switch (tool) {
-    case "bash": case "powershell": return `${exitCode(result) === undefined ? "done" : `exit ${exitCode(result)}`} · ${plural(count, "line")}${truncated}`;
+    case "bash": case "powershell": case "python": return `${exitCode(result) === undefined ? "done" : `exit ${exitCode(result)}`} · ${plural(count, "line")}${truncated}`;
     case "read": return result.content?.some((item) => item.type === "image") ? "image loaded" : `${plural(count, "line")} loaded${truncated}`;
     case "edit": {
       const diff = asString(details.diff).split("\n");
@@ -809,6 +810,39 @@ function commandBodies(theme: Theme, toolCallId: string, tool: string, command: 
   return rows;
 }
 
+/**
+ * Python call rows borrow the bash leaf semantics: the first non-blank code
+ * line is the executable `$` leaf, every other line rides the `│` spine the
+ * way quoted/heredoc continuations do. The whole script highlights through
+ * the python grammar in ONE call, so multi-line strings and blocks keep
+ * their context line to line — the structured `code` arg is what makes this
+ * deterministic where bash heredoc bodies cannot be. Cached beside the bash
+ * rows: same per-frame render pressure, same changed-source-or-theme rule.
+ */
+function pythonBodies(theme: Theme, toolCallId: string, code: string): { body: string; command: boolean; op: string }[] {
+  const themeName = theme.name ?? "";
+  const cached = highlightedCommands.get(toolCallId);
+  if (cached && cached.source === code && cached.theme === themeName) return cached.rows;
+  ensureHighlightTheme(theme);
+  const lines = code.replace(/\n+$/, "").split("\n");
+  const leaf = lines.findIndex((line) => line.trim());
+  if (leaf === -1) return [];
+  let highlighted = lines;
+  try {
+    const styled = highlightCode(lines.join("\n"), "python");
+    if (styled.length === lines.length) highlighted = styled;
+  } catch {
+    // Highlighting needs pi's theme runtime; plain lines still render.
+  }
+  const rows = lines.map((line, index) => ({
+    body: highlighted[index] ?? line,
+    command: index === leaf,
+    op: index === leaf ? "$" : "",
+  }));
+  highlightedCommands.set(toolCallId, { source: code, theme: themeName, rows });
+  return rows;
+}
+
 function wrapLine(line: string, avail: number, keep: "start" | "end" = "end", maxLines = OUTPUT_WRAP_LINES): { chunks: string[]; skipped: number } {
   try {
     const { visualLines, skippedCount } = truncateToVisualLines(line, maxLines, Math.max(8, avail), 0, keep);
@@ -1465,8 +1499,10 @@ export default function (pi: ExtensionAPI) {
             ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
             ...(!row.leafResult ? messageLeaf(theme, asRecord(args), false, width) : []),
           ];
-          if (toolName === "bash" || toolName === "powershell") {
-            const commands = commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
+          if (toolName === "bash" || toolName === "powershell" || toolName === "python") {
+            const commands = toolName === "python"
+              ? pythonBodies(theme, context.toolCallId, asString(asRecord(args).code))
+              : commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
             if (commands.length === 1 && commands[0].command) {
               return [` ${glyph} ${name} ${theme.fg("dim", "$")} ${commands[0].body}${theme.fg("dim", elapsed)}`];
             }
@@ -1567,7 +1603,7 @@ export default function (pi: ExtensionAPI) {
     // Connected tools never delegate: our chips and recentTools tree are
     // richer than the subagent extension's own result render, which would
     // otherwise show a stale "⟳ name — started" line on expand. File tools
-    // and bash/powershell keep their expansion ours too: the native file
+    // and bash/powershell/python keep their expansion ours too: the native file
     // render proved near-uncolored, and the native bash output view has no
     // framing — ours adds the exit banner plus the railed head-and-tail fold.
     // Inspection, pedagogy, receipt, and MCP tools keep their own bodies too.

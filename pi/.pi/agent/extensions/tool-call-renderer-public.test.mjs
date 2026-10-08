@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review", "tuicr_background", "mcp__not_connected__search"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "python", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review", "tuicr_background", "mcp__not_connected__search"]);
   for (const name of [...NEVER_DELEGATE, "mcp__whatsapp__list_messages", "edit", "ask_question", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name) || name.startsWith("mcp__");
     let calls = 0;
@@ -162,6 +162,18 @@ try {
     }
     assert.match(out, /└─.*\$.*<hl:bash>echo done/, "the terminator restores command context");
   }
+  const python = resolver("python", () => undefined);
+  const pyCode = { code: "import os\nprint(os.getcwd())" };
+  const pyCall = render(python.renderCall(pyCode, theme, context("py-call", pyCode, quiet)));
+  assert.match(pyCall, /◇ python/, "multi-line python renders a bare header row");
+  assert.match(pyCall, /├─ \$ {2}<hl:python>import os/, "the first code line is the executable $ leaf, python-highlighted");
+  assert.match(pyCall, /│ {5}<hl:python>print\(os\.getcwd\(\)\)/, "remaining code lines ride the spine, still python-highlighted");
+  assert.ok(!pyCall.includes("<hl:bash>"), "python rows never use the bash grammar");
+  assert.equal(pyCall.split("\n").filter((line) => line.includes("$")).length, 1, "only the first code line gets a $ marker");
+  assert.match(render(python.renderCall({ code: "print(1)" }, theme, context("py-one", {}, quiet))), /◇ python \$ <hl:python>print\(1\)/, "single-line snippets stay inline");
+  const pyBlank = render(python.renderCall({ code: "\n\nimport os\n" }, theme, context("py-blank", {}, quiet)));
+  assert.match(pyBlank, /└─ \$ {2}<hl:python>import os/, "leading and trailing blank lines do not steal the leaf");
+  assert.ok(!render(python.renderCall({ code: "   " }, theme, context("py-empty", {}, quiet))).includes("├─"), "blank-only code renders no leaves");
   const bsCommand = "printf 'a' \\\\ && \\" + "\n  echo b";
   const backslash = render(bash.renderCall({ command: bsCommand }, theme, context("bs", {}, quiet)));
   assert.match(backslash, /├─ \$ {2}.*printf/, "the wrapped command keeps its leaf");
@@ -194,6 +206,12 @@ try {
   const failedBanner = render(bash.renderResult(result("boom", { exitCode: 2 }), { ...options, expanded: true }, errTheme, context("fb", {}, quiet)));
   assert.match(failedBanner, /└─ <e>✗ exit 2<\/e> · 1 line/, "failed runs get a red ✗ banner");
   assert.match(failedBanner, /^ {4}boom$/m);
+  assert.match(render(python.renderResult(result("hi\n", { exitCode: 0, stdout: "hi\n", stderr: "" }), options, theme, context("py-res", pyCode))), /exit 0 · 1 line/, "collapsed python rows use the bash exit/line summary");
+  const pyBanner = render(python.renderResult(result("hi\n", { exitCode: 0 }), { ...options, expanded: true }, theme, context("py-ban", pyCode)));
+  assert.match(pyBanner, /└─ ✓ exit 0 · 1 line/, "expanded python rows get the status banner");
+  assert.match(pyBanner, /^ {4}hi$/m, "stdout renders behind the plain indent");
+  const pyFail = render(python.renderResult(result("stderr:\nTraceback", { exitCode: 1 }), { ...options, expanded: true }, errTheme, context("py-fail", pyCode)));
+  assert.match(pyFail, /└─ <e>✗ exit 1<\/e> · 2 lines/, "failed python runs get the red ✗ banner");
   const beforeTick = invalidations;
   await new Promise((resolve) => setTimeout(resolve, 1100));
   assert.ok(invalidations > beforeTick, "clock invalidates the public row context");
