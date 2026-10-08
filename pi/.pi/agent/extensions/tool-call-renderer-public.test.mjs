@@ -54,8 +54,10 @@ try {
   const handlers = new Map();
   const bus = new Map();
   let resolver;
+  let shortcut;
   extension({
     registerToolRenderer(value) { resolver = value; },
+    registerShortcut(key, options) { shortcut = { key, ...options }; },
     on(event, handler) { handlers.set(event, handler); return () => handlers.delete(event); },
     events: { on(event, handler) { bus.set(event, handler); return () => bus.delete(event); } },
   });
@@ -125,6 +127,35 @@ try {
   };
   assert.equal(resolver("tuicr_reply", () => replyRenderer), replyRenderer, "tuicr replies own call and result rows even when collapsed");
   const bash = resolver("bash", () => undefined);
+  // Ctrl+E command-visibility toggle: every launch starts hidden.
+  assert.ok(shortcut, "ctrl+e shortcut is registered");
+  assert.equal(shortcut.key, "ctrl+e");
+  assert.equal(typeof shortcut.handler, "function");
+  assert.ok(shortcut.description, "the shortcut carries a /hotkeys description");
+  const notifications = [];
+  const shortcutCtx = { ui: { notify: (message, type) => notifications.push([message, type]) } };
+  const quietStart = { executionStarted: false };
+  const hiddenBash = render(bash.renderCall(
+    { command: "# list files changed on this branch against main\ngit diff --name-only main...HEAD" },
+    theme,
+    context("hidden-title", {}, quietStart),
+  ));
+  assert.match(hiddenBash, /^ ◇ bash — list files changed on this branch against main$/m, "hidden mode: the intent title is the row");
+  assert.ok(!hiddenBash.includes("$"), "hidden mode: no command body renders");
+  const hiddenPlain = render(bash.renderCall({ command: "git status --short" }, theme, context("hidden-plain", {}, quietStart)));
+  assert.match(hiddenPlain, /◇ bash \$ git status --short/, "hidden mode: a title-less call keeps a one-line preview");
+  assert.equal(hiddenPlain.split("\n").length, 1, "hidden mode: no railed body rows");
+  const hiddenExpanded = render(bash.renderCall(
+    { command: "# list files changed on this branch against main\ngit diff --name-only main...HEAD" },
+    theme,
+    context("hidden-expanded", {}, { executionStarted: false, expanded: true }),
+  ));
+  assert.match(hiddenExpanded, /^ ◇ bash — list files changed on this branch against main$/m, "expanded rows keep the hidden title-only form");
+  assert.ok(!hiddenExpanded.includes("git diff"), "Ctrl+E stays orthogonal to Ctrl+O: expansion never reveals the command body");
+  const beforeToggle = invalidations;
+  shortcut.handler(shortcutCtx);
+  assert.ok(invalidations > beforeToggle, "the toggle invalidates mounted rows");
+  assert.deepEqual(notifications.at(-1), ["Commands shown", "info"]);
   const bashCtx = context("timed", { command: "printf hi\nexit 0" });
   handlers.get("tool_execution_start")({ toolCallId: "timed" });
   const call = bash.renderCall(bashCtx.args, theme, bashCtx);
@@ -969,6 +1000,15 @@ branch_sync:
   const restoredCall = read.renderCall(restoredCtx.args, theme, restoredCtx);
   render(read.renderResult(result("a\nb"), options, theme, restoredCtx));
   assert.doesNotMatch(render(restoredCall), /\d+(?:ms|s)/, "restored calls have no invented elapsed time");
+  shortcut.handler(shortcutCtx);
+  assert.deepEqual(notifications.at(-1), ["Commands hidden", "info"], "the toggle flips back to hidden");
+  const hiddenPy = render(python.renderCall(
+    { code: "# parse the session log for nested bash calls\nimport json" },
+    theme,
+    context("hidden-py", {}, { executionStarted: false }),
+  ));
+  assert.match(hiddenPy, /^ ◇ python — parse the session log for nested bash calls$/m, "hidden mode covers python titles");
+  assert.ok(!hiddenPy.includes("import json"), "hidden mode: python code never renders");
   shutdown();
   assert.equal(bus.size, 0, "shutdown releases bus subscription");
   console.log("tool-call-renderer-public tests passed");

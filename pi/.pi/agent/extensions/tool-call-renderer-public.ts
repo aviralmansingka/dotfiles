@@ -12,6 +12,9 @@
  * No-mistakes expands its chip into TOON pipeline framing.
  * Other tools delegate to
  * downstream renderResult when present.
+ * Ctrl+E toggles command visibility for bash/powershell/python: hidden
+ * (the launch default), the intent title is the row; visible, the numbered
+ * body returns.
  * No assistant-message grouping or native expanded output: each tool owns its
  * row, and expansion is bounded text/details (images are described, not drawn).
  */
@@ -43,6 +46,9 @@ type Row = {
 type Background = { result: Result; done: boolean };
 const rows = new Map<string, Row>();
 const background = new Map<string, Background>();
+// Ctrl+E state: every pi launch starts with command bodies minimized. The
+// toggle is process state, not row state, so session switches keep it.
+let commandsHidden = true;
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 // Launch/message/review receipts are not agent runs: never route them through chips.
 const RECEIPT_TOOLS = new Set(["subagent_message", "hunk_review", "tuicr"]);
@@ -1499,6 +1505,15 @@ export default function (pi: ExtensionAPI) {
     unsubscribe();
   });
 
+  pi.registerShortcut("ctrl+e", {
+    description: "Toggle bash/powershell/python command visibility",
+    handler(ctx) {
+      commandsHidden = !commandsHidden;
+      // Redraw every mounted call row so the transcript flips in place.
+      for (const row of rows.values()) row.invalidate?.();
+      ctx.ui?.notify(commandsHidden ? "Commands hidden" : "Commands shown", "info");
+    },
+  });
   pi.registerToolRenderer((toolName, next) => {
     const mine: ToolRenderers = {
       renderShell: "self",
@@ -1539,6 +1554,15 @@ export default function (pi: ExtensionAPI) {
               ? pythonBodies(theme, context.toolCallId, asString(asRecord(args).code))
               : commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
             const label = title ? ` ${theme.fg("dim", `— ${capTitle(title)}`)}` : "";
+            if (commandsHidden) {
+              // Ctrl+E hide, orthogonal to Ctrl+O: the intent title is the
+              // row in collapsed AND expanded views; a title-less call keeps
+              // a dim one-line preview so the row stays identifiable.
+              if (title) return [` ${glyph} ${name}${label}${theme.fg("dim", elapsed)}`];
+              const source = toolName === "python" ? asString(asRecord(args).code) : asString(asRecord(args).command);
+              const room = width - clean(toolName).length - 12;
+              return [` ${glyph} ${name} ${theme.fg("dim", `$ ${shortPedagogy(source, room)}`)}${theme.fg("dim", elapsed)}`];
+            }
             if (commands.length === 1 && commands[0].command) {
               return [` ${glyph} ${name}${label} ${theme.fg("dim", "$")} ${commands[0].body}${theme.fg("dim", elapsed)}`];
             }
