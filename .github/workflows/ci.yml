@@ -122,7 +122,9 @@ jobs:
         run: bash scripts/test-gh-dash-open-pr.sh
 
       - name: herdr-clean-handoff tests
-        run: bash scripts/test-herdr-clean-handoff.sh
+        run: |
+          sudo apt-get update && sudo apt-get install -y zsh
+          bash scripts/test-herdr-clean-handoff.sh
 
       - name: herdr-flash-copy tests
         run: bash scripts/test-herdr-flash-copy.sh
