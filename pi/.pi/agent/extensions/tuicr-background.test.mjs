@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import {
+	buildReplyArgs,
 	buildWrapperArgs,
 	collectSeenKeys,
 	commentKey,
 	formatCommentLine,
 	formatLaunchResult,
+	formatReplyCall,
+	formatReplyResult,
 	formatSteerContent,
 	newComments,
 	parseCommentPayload,
 	parseSessionList,
 	pickSession,
+	postTuicrReply,
 	resolveSkillDir,
 	scopeToTuicrArgs,
 	selectWrapper,
@@ -130,5 +134,109 @@ assert.match(launchAttached, /Attached to active tuicr review session s/);
 const launchNew = formatLaunchResult({ repo: "/r", slug: null, attached: false, pending: true });
 assert.match(launchNew, /did not block/);
 assert.match(launchNew, /still being resolved/);
+
+// ── reply CLI flow: no subprocess or live review required ──
+
+const reply = { message: "\nFixed the empty case.\n\nFull explanation here.", file: "src/main.rs", line: 42, replyTo: "user-1" };
+const userComment = { id: "user-1", author: "user", path: "src/main.rs", start_line: 42, content: "Handle empty input" };
+function fakeCli({ sessions = [{ slug: "active", active: true }], comments = [userComment], error } = {}) {
+	const calls = [];
+	return {
+		calls,
+		execFile: async (command, args, options) => {
+			calls.push({ command, args, options });
+			assert.equal(command, "tuicr");
+			if (args[1] === "list") return { stdout: JSON.stringify(sessions) };
+			if (args[1] === "comments") return { stdout: JSON.stringify(comments) };
+			assert.equal(args[1], "add");
+			if (error) throw error;
+			return { stdout: JSON.stringify({ id: "agent-1" }) };
+		},
+	};
+}
+const watchedCli = fakeCli();
+const replyIds = new Set();
+const signal = new AbortController().signal;
+const posted = await postTuicrReply(reply, {
+	cwd: "/cwd", watch: { repo: "/watched", slug: "watched" }, execFile: watchedCli.execFile, signal, replyIds,
+});
+assert.deepEqual(posted.details, {
+	slug: "watched", file: "src/main.rs", line: 42, replyTo: "user-1", posted: true, firstLine: "Fixed the empty case.",
+});
+assert.match(posted.content[0].text, /visible in tuicr/);
+assert.deepEqual(watchedCli.calls.map((call) => call.args), [
+	["review", "comments", "--session", "watched", "--repo", "/watched"],
+	["review", "add", "--session", "watched", "--repo", "/watched", "--username", "pi-agent",
+		"--target-file", "src/main.rs", "--line", "42", "--", `Re: src/main.rs:42\n\n${reply.message}`],
+]);
+assert.equal(watchedCli.calls[1].options.signal, signal);
+assert.equal(watchedCli.calls[1].options.timeout, 15_000);
+assert.ok(replyIds.has("agent-1"));
+assert.deepEqual(newComments(new Set(), [{ id: "agent-1", content: "Answer" }], replyIds), []);
+const echoCli = fakeCli({ comments: [{ id: "agent-1", content: "Answer" }] });
+assert.equal((await postTuicrReply({ message: "Answer", replyTo: "agent-1" }, {
+	cwd: "/cwd", execFile: echoCli.execFile, replyIds,
+})).isError, true);
+
+const fallbackCli = fakeCli();
+assert.equal((await postTuicrReply(reply, { cwd: "/cwd", execFile: fallbackCli.execFile })).details.slug, "active");
+assert.deepEqual(fallbackCli.calls[0].args, ["review", "list", "--repo", "/cwd"]);
+const explicitCli = fakeCli();
+assert.equal((await postTuicrReply({ ...reply, sessionSlug: "explicit" }, {
+	cwd: "/cwd", watch: { repo: "/watched", slug: "watched" }, execFile: explicitCli.execFile,
+})).details.slug, "explicit");
+assert.deepEqual(explicitCli.calls[0].args, ["review", "comments", "--session", "explicit", "--repo", "/cwd"]);
+assert.deepEqual(buildReplyArgs({ repo: "/r", slug: "gh:owner/repo/pr/1", message: "--not-a-flag", replyTo: "user-1" }), [
+	"review", "add", "--session", "gh:owner/repo/pr/1", "--username", "pi-agent", "--", "Re: comment user-1\n\n--not-a-flag",
+]);
+assert.deepEqual(buildReplyArgs({ repo: "/r", slug: "s", file: "src/main.rs", message: "Answer" }).slice(-4), [
+	"--target-file", "src/main.rs", "--", "Re: src/main.rs\n\nAnswer",
+]);
+
+for (const [sessions, expected] of [
+	[[], /No active tuicr session/],
+	[[{ slug: "stale", active: false }], /No active tuicr session/],
+	[[{ slug: "a", active: true }, { slug: "b", active: true }], /Multiple active tuicr sessions/],
+]) {
+	const cli = fakeCli({ sessions });
+	const result = await postTuicrReply(reply, { cwd: "/cwd", execFile: cli.execFile });
+	assert.equal(result.isError, true);
+	assert.match(result.content[0].text, expected);
+	assert.equal(cli.calls.length, 1);
+}
+for (const params of [{ message: "  " }, { message: "Answer", line: 3 }, { ...reply, line: 1.5 }]) {
+	const cli = fakeCli();
+	assert.equal((await postTuicrReply(params, { cwd: "/cwd", execFile: cli.execFile })).isError, true);
+	assert.equal(cli.calls.length, 0);
+}
+for (const comments of [[], [{ ...userComment, author: "pi-agent" }], [{ ...userComment, id: "wrong" }]]) {
+	const cli = fakeCli({ comments });
+	const result = await postTuicrReply(reply, { cwd: "/cwd", execFile: cli.execFile });
+	assert.equal(result.isError, true);
+	assert.match(result.content[0].text, /No matching user review comment/);
+	assert.ok(!cli.calls.some((call) => call.args[1] === "add"));
+}
+const anchorCli = fakeCli();
+assert.equal((await postTuicrReply({ message: "Answer", file: "src/main.rs", line: 42 }, { cwd: "/cwd", execFile: anchorCli.execFile })).details.posted, true);
+const reviewCli = fakeCli();
+assert.equal((await postTuicrReply({ message: "Answer" }, { cwd: "/cwd", execFile: reviewCli.execFile })).details.posted, true);
+assert.equal(reviewCli.calls.at(-1).args.at(-1), "Re: review comments\n\nAnswer");
+assert.deepEqual(newComments(new Set(), [userComment, { id: "agent-1", author: "pi-agent", content: "Answer" }]), [userComment]);
+
+const errorCli = fakeCli({ error: Object.assign(new Error("Command failed: tuicr review add ..."), { stderr: "error: session is read-only\nMore details\n" }) });
+const failed = await postTuicrReply(reply, { cwd: "/cwd", execFile: errorCli.execFile });
+assert.equal(failed.isError, true);
+assert.equal(failed.content[0].text, "error: session is read-only\nMore details");
+
+// ── compact renderCall/renderResult snapshots, including theme tokens ──
+const theme = { fg: (color, text) => `<${color}>${text}</${color}>` };
+assert.equal(formatReplyCall(reply, theme),
+	"<toolTitle>◇ tuicr_reply</toolTitle>\n └─ <toolTitle>✎</toolTitle> <dim>re: src/main.rs:42 — </dim><toolTitle>Fixed the empty case.</toolTitle>");
+assert.equal(formatReplyResult(posted, theme),
+	" ├─ <toolTitle>✎</toolTitle> <dim>re: src/main.rs:42 — </dim><toolTitle>Fixed the empty case.</toolTitle>\n └─ <success>✓</success> <dim>posted to session watched · visible in tuicr</dim>");
+assert.equal(formatReplyResult(failed, theme), " └─ <error>✗ error: session is read-only</error>");
+assert.equal(formatReplyCall({}, theme),
+	"<toolTitle>◇ tuicr_reply</toolTitle>\n └─ <toolTitle>✎</toolTitle> <dim>re: review comments — </dim><toolTitle></toolTitle>");
+assert.equal(formatReplyResult({ content: [], details: {} }, theme), "<dim> └─ posting reply…</dim>");
 
 console.log("tuicr-background.test.mjs: all assertions passed");

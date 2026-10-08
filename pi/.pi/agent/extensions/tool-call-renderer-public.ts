@@ -967,6 +967,9 @@ export default function (pi: ExtensionAPI) {
     // Inspection tools keep their query spines and colored file trees too.
     const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) ? undefined : next();
     if (!other?.renderResult) return mine;
+    // Reply receipts own both rows: their leading line and tuicr target are
+    // more useful than the generic tool summary, even while collapsed.
+    if (toolName === "tuicr_reply" && other.renderCall) return other;
     return {
       renderShell: "self",
       renderCall: mine.renderCall,
