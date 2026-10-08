@@ -1,5 +1,6 @@
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { execFileSync } from "node:child_process";
 import { resolve, isAbsolute } from "node:path";
 
@@ -352,6 +353,26 @@ const nvimOpenTool = defineTool({
 		const files = params.files ?? [];
 		const result = await openEditor(cwd, files);
 		return { content: [{ type: "text", text: result.message }] };
+	},
+	renderResult(result, _options, theme, context) {
+		const files = context.args?.files ?? [];
+		const target = files.length ? `${files.length} ${files.length === 1 ? "file" : "files"}` : context.args?.cwd || context.cwd;
+		const first = result.content.find((part) => part.type === "text")?.text.split("\n", 1)[0].trim() ?? "";
+		// Older results have no details or error flag, even when opening failed.
+		const failed = context.isError || first.startsWith("Could not");
+		return {
+			render(width) {
+				const leaf = theme.fg("dim", " ├─ ⌨  nvim · ") + theme.fg("text", theme.bold(target));
+				const banner = theme.fg("dim", " └─ ") + theme.fg(failed ? "error" : "success", failed ? `✗ ${first || "Could not open editor"}` : "✓ opened in editor pane");
+				return [
+					truncateToWidth(leaf, width),
+					...files.flatMap((file) => wrapTextWithAnsi(file, Math.max(1, width - 4))
+						.map((line) => truncateToWidth(theme.fg("dim", ` │  ${line}`), width))),
+					truncateToWidth(banner, width),
+				];
+			},
+			invalidate() {},
+		};
 	},
 });
 export default function (pi: ExtensionAPI) {

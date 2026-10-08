@@ -92,6 +92,7 @@ jobs:
           node pi/.pi/agent/extensions/hunk-open.test.mjs
           node pi/.pi/agent/extensions/lesson.test.mjs
           node pi/.pi/agent/extensions/md-log.test.mjs
+          node pi/.pi/agent/extensions/nvim-open.test.mjs
           node pi/.pi/agent/extensions/quiz-context-files.test.mjs
           node pi/.pi/agent/extensions/quiz-result.test.mjs
           node pi/.pi/agent/extensions/run-command.test.mjs

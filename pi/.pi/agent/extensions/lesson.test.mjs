@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 const require = createRequire(import.meta.url);
+const installRoot = join(homedir(), ".pi/agent/install");
+const versionFile = join(installRoot, "current-version");
 const jitiPath = [
 	process.env.JITI_PATH,
+	existsSync(versionFile) && join(installRoot, "releases", readFileSync(versionFile, "utf8").trim(), "node_modules/jiti/lib/jiti.cjs"),
 	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
 	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
 ].find((path) => path && existsSync(path));
@@ -42,6 +45,12 @@ class Container { addChild() {} }
 exports.Markdown = Markdown;
 exports.Text = Text;
 exports.Container = Container;
+exports.truncateToWidth = (text, width) => text.length <= width ? text : text.slice(0, Math.max(0, width - 1)) + "…";
+exports.wrapTextWithAnsi = (text, width) => {
+	const lines = [];
+	for (let start = 0; start < text.length; start += width) lines.push(text.slice(start, start + width));
+	return lines.length ? lines : [""];
+};
 `,
 );
 writeFileSync(stubTypes, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
@@ -129,6 +138,47 @@ try {
 	else process.env.PATH = savedPath;
 	if (savedJournal === undefined) delete process.env.PI_LESSON_JOURNAL;
 	else process.env.PI_LESSON_JOURNAL = savedJournal;
+}
+
+// Expanded results own their entire body; renderCall is not involved.
+const theme = { fg: (_token, text) => text, bold: (text) => text };
+const tagged = { fg: (token, text) => `<${token}>${text}</${token}>`, bold: (text) => `<b>${text}</b>` };
+const options = { expanded: true, isPartial: false };
+const args = { title: "Memory layout", body: "First line\nSecond line\nThird line\nFourth line must stay hidden" };
+const opened = {
+	content: [{ type: "text", text: 'Lesson "Memory layout" appended to the journal and shown to the user.' }],
+	details: { status: "opened", title: args.title, journalPath: "/tmp/session.md" },
+};
+const context = { args, cwd: "/repo", isError: false };
+const rendered = tool.renderResult(opened, options, theme, context).render(100).join("\n");
+assert.match(rendered, /^ ├─ ✎ {2}lesson · Memory layout/);
+assert.match(rendered, /body landed in the session journal/);
+assert.match(rendered, / │  First line\n │  Second line\n │  Third line\n │  …/);
+assert.ok(!rendered.includes("Fourth line"));
+assert.match(rendered, / └─ ✓ journaled$/);
+const styled = tool.renderResult(opened, options, tagged, context).render(500).join("\n");
+assert.ok(styled.includes("<dim> ├─ ✎  lesson · "));
+assert.ok(styled.includes("<text><b>Memory layout</b></text>"));
+assert.ok(styled.includes("<dim> │  First line</dim>"));
+assert.ok(styled.includes("<success>✓ journaled</success>"));
+
+const longTitle = "A long teaching title ".repeat(20);
+const narrow = tool.renderResult({ ...opened, details: { ...opened.details, title: longTitle } }, options, theme, context).render(30);
+assert.match(narrow[0], /^ ├─ ✎ {2}lesson · .*…$/);
+assert.ok(narrow.every((line) => line.length <= 30));
+const wrapped = tool.renderResult(opened, options, theme, { ...context, args: { ...args, body: "abcdefghij".repeat(20) } }).render(24);
+assert.deepEqual(wrapped.slice(-5, -1), [" │  abcdefghijabcdefghij", " │  abcdefghijabcdefghij", " │  abcdefghijabcdefghij", " │  …"]);
+
+const unavailableView = tool.renderResult(unavailable, options, theme, context).render(300).join("\n");
+assert.match(unavailableView, / └─ ✗ No session journal available/);
+assert.ok(!unavailableView.includes("body landed"));
+assert.ok(!unavailableView.includes("✓ journaled"));
+const thrown = { content: [{ type: "text", text: "Journal write failed\nDo not show this second line" }] };
+const errorView = tool.renderResult(thrown, options, tagged, { ...context, isError: true }).render(500).join("\n");
+assert.ok(errorView.includes("<error>✗ Journal write failed</error>"));
+assert.ok(!errorView.includes("second line"));
+for (const width of [1, 4, 12]) {
+	assert.ok(tool.renderResult(opened, options, theme, context).render(width).every((line) => line.length <= width));
 }
 
 rmSync(tempRoot, { recursive: true, force: true });
