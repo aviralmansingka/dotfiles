@@ -33,7 +33,7 @@ type Row = {
   settled?: boolean;
   failed?: boolean;
   restored?: boolean;
-  pedagogyResult?: boolean;
+  leafResult?: boolean;
   invalidate?: () => void;
   timer?: ReturnType<typeof setInterval>;
 };
@@ -41,6 +41,8 @@ type Background = { result: Result; done: boolean };
 const rows = new Map<string, Row>();
 const background = new Map<string, Background>();
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
+// Receipts are not live background agents: never route them through chips.
+const RECEIPT_TOOLS = new Set(["subagent_message"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
 const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
@@ -959,6 +961,48 @@ function renderPedagogy(tool: string, result: Result, expanded: boolean, row: Ro
   return lines;
 }
 
+function spineText(theme: Theme, text: unknown, width: number): string[] {
+  return asString(text).split("\n").flatMap((line) =>
+    wrapLine(theme.fg("dim", safeLine(line)), width - 4, "start", Number.MAX_SAFE_INTEGER).chunks
+      .map((chunk) => ` ${theme.fg("borderMuted", "│")}  ${chunk}`));
+}
+
+function messageLeaf(theme: Theme, args: RecordValue, expanded: boolean, width: number): string[] {
+  const name = clean(args.name) || "(unknown)";
+  const preview = !expanded && args.message ? ` — ${shortPedagogy(args.message, width - 10 - [...name].length)}` : "";
+  return [` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "» ")} ${theme.fg("text", name)}${theme.fg("dim", preview)}`];
+}
+
+const receiptRows = new Map<string, { source: string; theme: Theme; rows: string[] }>();
+function renderMessage(result: Result, expanded: boolean, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
+  const args = asRecord(context.args);
+  const details = asRecord(result.details);
+  const text = textContent(result);
+  const source = JSON.stringify([args, details, text, expanded, row.settled, row.failed, width]);
+  const cached = receiptRows.get(context.toolCallId);
+  if (cached?.source === source && cached.theme === theme) return cached.rows;
+  const steered = /^Message delivered to running subagent "([^"]+)"\./.exec(text);
+  const resumed = /^Session "([^"]+)" resumed\./.exec(text);
+  const status = asString(details.status) || (steered ? "steered" : resumed ? "started" : "");
+  const lines = messageLeaf(theme, { ...args, name: details.name || args.name || steered?.[1] || resumed?.[1] }, expanded, width);
+  if (expanded && args.message) lines.push(...spineText(theme, args.message, width));
+  const cancelled = status === "cancelled" || /^cancelled\b/i.test(text);
+  const error = row.failed || Boolean(details.error) || status === "failed";
+  const label = cancelled ? "✗ cancelled" : error ? `✗ ${firstLine(details.error || text) || "failed"}`
+    : !row.settled ? "running" : status === "steered" ? "✓ steered · delivered live"
+    : status === "started" ? "⟳ resumed · follow-up dispatched" : firstLine(text) || "✗ unavailable";
+  const color = cancelled ? "dim" : error ? "error" : !row.settled ? "dim"
+    : status === "steered" ? "success" : status === "started" ? "accent" : "dim";
+  lines.push(` ${theme.fg("borderMuted", "└─")} ${theme.fg(color, label)}`);
+  if (expanded && row.settled && !error && !cancelled) {
+    const semantics = status === "steered" ? "the child keeps running; its result arrives as a steer message"
+      : status === "started" ? "waits for readiness on Herdr, dispatch on tmux" : "";
+    if (semantics) lines.push(...wrapLine(theme.fg("dim", semantics), width - 4, "start", Number.MAX_SAFE_INTEGER).chunks.map((chunk) => `    ${chunk}`));
+  }
+  receiptRows.set(context.toolCallId, { source, theme, rows: lines });
+  return lines;
+}
+
 function stop(row: Row): void {
   if (row.timer) clearInterval(row.timer);
   row.timer = undefined;
@@ -989,6 +1033,7 @@ function disposeState(): void {
   highlightedGrep.clear();
   inspectionTrees.clear();
   pedagogyRows.clear();
+  receiptRows.clear();
   quizDisplayOptions.clear();
 }
 
@@ -1023,7 +1068,7 @@ export default function (pi: ExtensionAPI) {
     const row = rows.get(event.toolCallId) ?? {};
     row.startedAt ??= Date.now();
     row.settled = false;
-    row.pedagogyResult = false;
+    row.leafResult = false;
     rows.set(event.toolCallId, row);
     arm(row);
   });
@@ -1080,7 +1125,11 @@ export default function (pi: ExtensionAPI) {
           const name = theme.fg("text", theme.bold(clean(toolName)));
           if (PEDAGOGY_TOOLS.has(toolName)) return [
             ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
-            ...(!row.pedagogyResult ? questionLeaf(theme, asRecord(args).question, false, width) : []),
+            ...(!row.leafResult ? questionLeaf(theme, asRecord(args).question, false, width) : []),
+          ];
+          if (toolName === "subagent_message") return [
+            ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
+            ...(!row.leafResult ? messageLeaf(theme, asRecord(args), false, width) : []),
           ];
           if (toolName === "bash" || toolName === "powershell") {
             const commands = commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
@@ -1135,6 +1184,7 @@ export default function (pi: ExtensionAPI) {
           row.failed = INSPECT_TOOLS.has(toolName)
             ? context.isError || asRecord(effective).isError === true
             : failed(effective, context);
+          if (RECEIPT_TOOLS.has(toolName)) row.failed ||= Boolean(asRecord(effective.details).error) || asRecord(effective.details).status === "failed";
           row.settled = !running || row.failed;
           if (row.settled) {
             if (!row.restored) row.completedAt ??= Date.now();
@@ -1144,8 +1194,12 @@ export default function (pi: ExtensionAPI) {
             arm(row);
           }
           if (PEDAGOGY_TOOLS.has(toolName)) {
-            row.pedagogyResult = true;
+            row.leafResult = true;
             return renderPedagogy(toolName, effective, expanded, row, theme, context, width);
+          }
+          if (toolName === "subagent_message") {
+            row.leafResult = true;
+            return renderMessage(effective, expanded, row, theme, context, width);
           }
           if (toolName === "grep") return renderGrep(effective, expanded, row, theme, context, width);
           if ((toolName === "find" || toolName === "ls") && expanded) return [
@@ -1173,7 +1227,7 @@ export default function (pi: ExtensionAPI) {
     // render proved near-uncolored, and the native bash output view has no
     // framing — ours adds the exit banner plus the railed head-and-tail fold.
     // Inspection and pedagogy tools keep their question/query spines too.
-    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) || PEDAGOGY_TOOLS.has(toolName) ? undefined : next();
+    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) || PEDAGOGY_TOOLS.has(toolName) || RECEIPT_TOOLS.has(toolName) ? undefined : next();
     if (!other?.renderResult) return mine;
     // Reply receipts own both rows: their leading line and tuicr target are
     // more useful than the generic tool summary, even while collapsed.

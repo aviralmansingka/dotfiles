@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message"]);
   for (const name of [...NEVER_DELEGATE, "edit", "ask_question", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -239,6 +239,42 @@ try {
   assert.ok(styled.includes("<muted>> </muted>quoted"), "quote markers muted");
   assert.ok(styled.includes("<dim>```ts</dim>"), "fence lines dim");
   assert.ok(styled.includes("<hl:ts>const a = 1;"), "inner code still engine-highlighted");
+
+  const message = resolver("subagent_message", () => undefined);
+  const messageArgs = { name: "scout", message: "Inspect the renderer.\nThen report back." };
+  const messageCtx = context("message", messageArgs, quiet);
+  const messageCall = message.renderCall(messageArgs, styT, messageCtx);
+  const letter = render(messageCall);
+  assert.ok(letter.includes("<text><b>subagent_message</b></text>"));
+  assert.ok(letter.includes("<dim>» </dim> <text>scout</text><dim> — Inspect the renderer.…</dim>"));
+  assert.ok(!letter.includes("Then report back"));
+  const steerResult = result('Message delivered to running subagent "scout".', { id: "abc", name: "scout", status: "steered" });
+  assert.ok(render(message.renderResult(steerResult, options, styT, messageCtx)).includes("<success>✓ steered · delivered live</success>"));
+  assert.ok(!render(messageCall).includes("»"), "receipt owns the leaf once a result arrives");
+  const messageShown = render(message.renderResult(steerResult, { ...options, expanded: true }, styT, messageCtx));
+  assert.ok(messageShown.includes("<dim>» </dim> <text>scout</text>"));
+  assert.ok(messageShown.includes("<borderMuted>│</borderMuted>  <dim>Then report back.</dim>"));
+  assert.ok(messageShown.includes("<dim>the child keeps running; its result arrives as a steer message</dim>"));
+  const resumedMessage = render(message.renderResult(result("", { name: "scout", status: "started" }), { ...options, expanded: true }, styT, messageCtx));
+  assert.ok(resumedMessage.includes("<accent>⟳ resumed · follow-up dispatched</accent>"));
+  assert.ok(resumedMessage.includes("<dim>waits for readiness on Herdr, dispatch on tmux</dim>"));
+  for (const [text, banner] of [['Message delivered to running subagent "worker".', "✓ steered"], ['Session "worker" resumed.', "⟳ resumed"]]) {
+    const sparse = render(message.renderResult(result(text), options, theme, context(`sparse-${banner}`, {}, quiet)));
+    assert.ok(sparse.includes("├─ »  worker") && sparse.includes(banner));
+  }
+  const longMessage = "abcdefghij".repeat(30) + "END";
+  const narrowMessage = render(message.renderResult(steerResult, { ...options, expanded: true }, theme, context("message-wrap", { name: "scout", message: longMessage }, quiet)), 24);
+  assert.equal(narrowMessage.split("\n").filter((line) => line.startsWith(" │  ")).map((line) => line.slice(4)).join(""), longMessage, "full message wraps on the bare spine without folding");
+  assert.ok(render(message.renderResult(steerResult, { ...options, isPartial: true }, theme, context("message-partial", messageArgs, quiet))).includes("└─ running"));
+  assert.ok(render(message.renderResult(result("missing", { error: "missing" }), options, styT, messageCtx)).includes("<error>✗ missing</error>"));
+  assert.ok(render(message.renderResult(result("", { status: "cancelled" }), options, styT, messageCtx)).includes("<dim>✗ cancelled</dim>"));
+  assert.ok(render(message.renderResult(result(""), options, theme, context("message-empty", {}, quiet))).includes("✗ unavailable"));
+  assert.ok(!render(message.renderResult(steerResult, options, theme, messageCtx)).includes("<success>"), "theme change invalidates receipt cache");
+  const streamingMessage = { name: "worker", message: "fir" };
+  const streamingLetter = message.renderCall(streamingMessage, theme, context("message-stream", streamingMessage, quiet));
+  assert.ok(render(streamingLetter).includes("worker — fir"));
+  streamingMessage.message = "first line";
+  assert.ok(render(streamingLetter).includes("worker — first line"));
 
   const ask = resolver("ask_user_question", () => undefined);
   const askArgs = { question: "Which approach?", details: "Choose for clarity.", options: [{ label: "First" }, { label: "Second" }, { label: "Third" }] };
