@@ -51,6 +51,7 @@ registerExplain({ registerTool(tool) { explainTool = tool; } });
 assert.equal(explainTool?.name, "explain");
 
 const calls = [];
+const notifications = [];
 let component;
 let renderRequests = 0;
 const gradingJson = JSON.stringify({
@@ -78,18 +79,31 @@ const ctx = {
 		},
 	},
 	ui: {
+		notify(message, level) {
+			notifications.push({ message, level });
+		},
 		custom(factory) {
 			return new Promise((done) => {
 				const tui = {
 					requestRender() {
 						renderRequests++;
-						if (renderRequests === 2) queueMicrotask(() => component.handleInput("\r"));
+						if (renderRequests === 2) {
+							queueMicrotask(() => {
+								component.handleInput("h");
+								component.handleInput("\r");
+							});
+						}
 					},
 				};
 				const theme = { fg: (_color, text) => text, bold: (text) => text };
 				component = factory(tui, theme, {}, done);
+				component.handleInput("alt+h");
+				component.handleInput("h");
+				component.handleInput(" ");
+				component.handleInput("h");
 				component.handleInput("Occupancy counts resident warps.");
 				component.handleInput("\r");
+				component.handleInput("alt+h");
 			});
 		},
 	},
@@ -116,6 +130,8 @@ assert.equal(calls[0].options.signal, signal);
 assert.equal(calls[0].options.maxTokens, 800);
 assert.equal(calls[0].options.reasoningEffort, "low");
 assert.ok(!Object.hasOwn(calls[0].options, "reasoning"));
+assert.match(calls[0].prompt.messages[0].content, /Learner's answer \(their own words\):\nhOccupancy/);
+assert.equal(notifications.filter(({ message }) => message === "Opening lesson journal…").length, 4);
 assert.equal(result.details.grading.verdict, "correct");
 assert.match(result.content[0].text, /Grader verdict: CORRECT/);
 

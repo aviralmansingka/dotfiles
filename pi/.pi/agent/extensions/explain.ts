@@ -411,6 +411,7 @@ export default function explain(pi: ExtensionAPI) {
 						);
 
 						let phase: "answering" | "grading" | "verdict" = "answering";
+						let hasComposed = false;
 						let grading: Grading | undefined;
 						let gradeError: string | undefined;
 
@@ -460,7 +461,7 @@ export default function explain(pi: ExtensionAPI) {
 
 								if (phase === "answering") {
 									top.push("");
-									addT(theme.fg("dim", " Enter — submit · Ctrl+J — new line · h / Alt+H — journal · Esc — cancel"));
+									addT(theme.fg("dim", " Enter — submit · Ctrl+J — new line · h (empty) / Alt+H (anytime) — journal · Esc — cancel"));
 									for (const line of editorInnerLines(editor, bw)) bottom.push(line);
 								} else if (phase === "grading") {
 									top.push("");
@@ -468,7 +469,7 @@ export default function explain(pi: ExtensionAPI) {
 									top.push("");
 									for (const line of loader.render(tw)) top.push(line);
 									top.push("");
-									addT(theme.fg("dim", " Esc — abort grading"));
+									addT(theme.fg("dim", " Alt+H — journal · Esc — abort grading"));
 								} else {
 									top.push("");
 									addWrapped(top, theme.fg("dim", editor.getText().trim()), tw, " ");
@@ -500,7 +501,7 @@ export default function explain(pi: ExtensionAPI) {
 										addT(theme.fg("dim", " (returned ungraded; the agent will evaluate your answer itself)"));
 									}
 									top.push("");
-									addT(theme.fg("dim", " Enter — continue"));
+									addT(theme.fg("dim", " Enter — continue · h / Alt+H — journal"));
 								}
 								return frameMerged(top, bottom, width, theme);
 							},
@@ -510,15 +511,15 @@ export default function explain(pi: ExtensionAPI) {
 							},
 
 							handleInput(data: string) {
+								if (matchesKey(data, "alt+h")) {
+									openJournalShortcut(ctx);
+									return;
+								}
 								if (phase === "answering") {
-									if (matchesKey(data, "alt+h")) {
-										openJournalShortcut(ctx);
-										return;
-									}
 									// Bare h matches the quiz shortcut, but only before any
 									// typing: the Editor must keep every printable key once the
 									// learner is composing an answer.
-									if (matchesKey(data, "h") && editor.getText().trim() === "") {
+									if (matchesKey(data, "h") && !hasComposed) {
 										openJournalShortcut(ctx);
 										return;
 									}
@@ -537,6 +538,7 @@ export default function explain(pi: ExtensionAPI) {
 										return;
 									}
 									editor.handleInput(data);
+									hasComposed ||= editor.getText() !== "";
 									return;
 								}
 								if (phase === "grading") {
@@ -547,7 +549,7 @@ export default function explain(pi: ExtensionAPI) {
 									return;
 								}
 								// verdict — nothing is typed here, so bare h is safe too
-								if (matchesKey(data, "alt+h") || matchesKey(data, "h")) {
+								if (matchesKey(data, "h")) {
 									openJournalShortcut(ctx);
 									return;
 								}
