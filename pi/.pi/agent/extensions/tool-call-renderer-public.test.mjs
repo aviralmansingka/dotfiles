@@ -33,14 +33,14 @@ try {
     // mirrors the real dual-instance trap: uninitiated highlightCode silently
     // returns plain lines even for valid languages
     'exports.highlightCode = (code, lang) => (hlInited && lang) ? String(code).split("\\n").map((l) => l ? `<hl:${lang}>${l}` : l) : String(code).split("\\n");',
-    'exports.truncateToVisualLines = (text, maxLines, width) => {',
+    'exports.truncateToVisualLines = (text, maxLines, width, _padding, keep = "end") => {',
     '  const out = [];',
     '  for (const line of String(text).split("\\n")) {',
     '    const chars = [...line];',
     '    for (let i = 0; i < chars.length; i += Math.max(1, width)) out.push(chars.slice(i, i + Math.max(1, width)).join(""));',
     '  }',
     '  const skipped = Math.max(0, out.length - maxLines);',
-    '  return { visualLines: skipped ? out.slice(out.length - maxLines) : out, skippedCount: skipped };',
+    '  return { visualLines: skipped ? (keep === "start" ? out.slice(0, maxLines) : out.slice(out.length - maxLines)) : out, skippedCount: skipped };',
     '};',
   ].join("\n") + "\n");
   writeFileSync(stubTui, 'exports.truncateToWidth = (text, width) => [...text].slice(0, width).join("");\n');
@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep"]);
   for (const name of ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "no_mistakes_axi", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -218,6 +218,61 @@ try {
   assert.ok(styled.includes("<muted>> </muted>quoted"), "quote markers muted");
   assert.ok(styled.includes("<dim>```ts</dim>"), "fence lines dim");
   assert.ok(styled.includes("<hl:ts>const a = 1;"), "inner code still engine-highlighted");
+
+  const grep = resolver("grep", () => undefined);
+  const grepArgs = { pattern: "needle", path: "src", glob: "*.ts", ignoreCase: true, literal: true, context: 2 };
+  const grepCtx = context("grep-hits", grepArgs, quiet);
+  const grepCall = render(grep.renderCall(grepArgs, styT, grepCtx));
+  assert.ok(grepCall.includes('<text><b>"needle"</b></text>'));
+  assert.ok(grepCall.includes("<dim> in src · *.ts · -i · -F · ctx 2</dim>"));
+  assert.ok(grepCall.includes("<borderMuted>├─</borderMuted> <dim>$ </dim>"));
+  const hits = result("src/a.ts:2:needle one\nsrc/a.ts:9:two NEEDLEs\nsrc/with:colon.ts:3:needle three");
+  const grepCollapsed = render(grep.renderResult(hits, options, styT, grepCtx));
+  assert.match(grepCollapsed, /3 matches · 2 files/);
+  assert.ok(grepCollapsed.includes("<borderMuted>│</borderMuted>  <dim>src/a.ts:2:</dim><toolOutput><b>needle</b> one"));
+  assert.ok(!grepCollapsed.includes("two NEEDLEs"));
+  const grepExpanded = render(grep.renderResult(hits, { ...options, expanded: true }, styT, grepCtx));
+  assert.ok(grepExpanded.includes("<success><b>✓ 3 matches</b></success><dim> · 2 files</dim>"));
+  assert.ok(grepExpanded.includes("two <b>NEEDLE</b>s"));
+  assert.ok(grepExpanded.includes("<dim>src/with:colon.ts:3:</dim>"));
+  const grepZero = render(grep.renderResult(result("No matches found"), { ...options, expanded: true }, styT, context("grep-zero", grepArgs, quiet)));
+  assert.ok(grepZero.includes("<error><b>✗ 0 matches</b></error>"));
+  assert.ok(!grepZero.includes("No matches found"));
+  const grepMany = result(Array.from({ length: 100 }, (_, i) => `file.ts:${i + 1}:needle ${i}`).join("\n"));
+  const grepFold = render(grep.renderResult(grepMany, { ...options, expanded: true }, styT, context("grep-fold", grepArgs, quiet)));
+  assert.match(grepFold, /100 matches/);
+  assert.ok(grepFold.includes("<dim>… 40 lines hidden …</dim>"));
+  assert.ok(grepFold.includes("file.ts:30:") && grepFold.includes("file.ts:71:") && grepFold.includes("file.ts:100:"));
+  assert.ok(!grepFold.includes("file.ts:31:"));
+  const grepPartial = render(grep.renderResult(hits, { expanded: true, isPartial: true }, styT, context("grep-partial", grepArgs, quiet)));
+  assert.match(grepPartial, /running/);
+  assert.ok(!grepPartial.includes("✓") && grepPartial.includes("<b>needle</b>"));
+  const grepError = render(grep.renderResult(result("bad pattern"), { ...options, expanded: true }, styT, context("grep-error", grepArgs, { ...quiet, isError: true })));
+  assert.ok(grepError.includes("<error><b>✗ bad pattern</b></error>"));
+  const grepNative = result("src/a.ts-9- before:123: context\nsrc/a.ts:10: value:123: needle\nsrc/a.ts-11- after\nsrc/a.ts:12: needle\nsrc/with:colon.ts:3: needle");
+  const grepNativeCtx = context("grep-native", grepArgs, quiet);
+  const grepNativeOut = render(grep.renderResult(grepNative, { ...options, expanded: true }, styT, grepNativeCtx));
+  assert.match(grepNativeOut, /3 matches/);
+  assert.ok(grepNativeOut.includes(" · 2 files"));
+  assert.ok(grepNativeOut.includes("<dim>src/a.ts:10:</dim><toolOutput> value:123: <b>needle</b>"));
+  assert.ok(grepNativeOut.includes("<dim>src/a.ts-9- before:123: context</dim>"));
+  assert.ok(grepNativeOut.includes("<dim>src/a.ts-11- after</dim>"));
+  const grepNativeCollapsed = render(grep.renderResult(grepNative, options, styT, grepNativeCtx));
+  assert.ok(grepNativeCollapsed.includes("src/a.ts:10:") && !grepNativeCollapsed.includes("src/a.ts-9-"));
+  for (const details of [{ matchLimitReached: 1 }, { linesTruncated: true }]) {
+    const grepLimit = render(grep.renderResult(result("a.ts:1: needle\n\n[tool truncation notice]", details), { ...options, expanded: true }, styT, context(`grep-${JSON.stringify(details)}`, grepArgs, quiet)));
+    assert.ok(grepLimit.includes("✓ 1 match") && grepLimit.includes(" · 1 file · truncated"));
+  }
+  const grepLong = render(grep.renderResult(result(`a.ts:42: needle ${"x".repeat(500)}`), { ...options, expanded: true }, theme, context("grep-long", grepArgs, quiet)), 40);
+  assert.match(grepLong, /a\.ts:42: needle/);
+  assert.match(grepLong, /… \d+ wrapped lines hidden/);
+  const grepLiteralArgs = { pattern: "a.b", literal: true };
+  const grepLiteral = render(grep.renderResult(result("f:1:a.b axb a.b"), { ...options, expanded: true }, styT, context("grep-literal", grepLiteralArgs, quiet)));
+  assert.ok(grepLiteral.includes("<b>a.b</b> axb <b>a.b</b>"));
+  // A new partial source or theme must invalidate the per-call row cache.
+  const grepChanged = render(grep.renderResult(result("new:4:new needle"), { ...options, expanded: true }, theme, grepCtx));
+  assert.match(grepChanged, /new:4:new needle/);
+  assert.ok(!grepChanged.includes("<b>"));
 
   const subagent = resolver("subagent", () => undefined);
   const ctx = context("child", { name: "scout" });
