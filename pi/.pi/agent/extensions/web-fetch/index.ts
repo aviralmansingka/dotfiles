@@ -1,6 +1,6 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { highlightCode, initTheme, type ExtensionAPI, type Theme } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { Text } from "@mariozechner/pi-tui";
+import { Text, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import TurndownService from "turndown";
@@ -25,6 +25,7 @@ interface FetchResult {
 	url: string;
 	title: string;
 	content: string;
+	contentType?: string;
 	error: string | null;
 }
 
@@ -105,7 +106,7 @@ async function extractPDF(
 		);
 	}
 
-	return { url, title, content: lines.join("\n"), error: null };
+	return { url, title, content: lines.join("\n"), contentType: "application/pdf", error: null };
 }
 
 // ── RSC Content Extraction (Next.js) ─────────────────────────────────
@@ -365,7 +366,7 @@ async function extractWithJinaReader(
 			extractHeadingTitle(markdownPart) ??
 			new URL(url).pathname.split("/").pop() ??
 			url;
-		return { url, title, content: markdownPart, error: null };
+		return { url, title, content: markdownPart, contentType: "text/markdown", error: null };
 	} catch {
 		return null;
 	}
@@ -448,7 +449,7 @@ async function extractViaHttp(
 				extractHeadingTitle(text) ??
 				new URL(url).pathname.split("/").pop() ??
 				url;
-			return { url, title, content: text, error: null };
+			return { url, title, content: text, contentType: contentType.split(";")[0] || "text/plain", error: null };
 		}
 
 		const { document } = parseHTML(text);
@@ -462,6 +463,7 @@ async function extractViaHttp(
 					url,
 					title: rscResult.title,
 					content: rscResult.content,
+					contentType: contentType.split(";")[0],
 					error: null,
 				};
 			}
@@ -492,6 +494,7 @@ async function extractViaHttp(
 			url,
 			title: article.title || "",
 			content: markdown,
+			contentType: contentType.split(";")[0],
 			error: null,
 		};
 	} catch (err) {
@@ -542,6 +545,56 @@ async function fetchAndExtract(
 	};
 }
 
+// highlightCode's public module can be a different instance from the running
+// app. Its theme singleton must be initialized or highlighting is plain text.
+let syncedThemeName: string | undefined;
+function syncHighlightTheme(theme: Theme): void {
+	const name = theme.name ?? "";
+	if (syncedThemeName === name) return;
+	initTheme(theme.name);
+	syncedThemeName = name;
+}
+
+function markdownLines(content: string, theme: Theme): string[] {
+	const lines: string[] = [];
+	let fence = "";
+	let language = "";
+	let code: string[] = [];
+	const flushCode = () => {
+		syncHighlightTheme(theme);
+		lines.push(...highlightCode(code.join("\n"), language || undefined));
+		code = [];
+	};
+	const inline = (text: string) => text.replace(/(`[^`]+`)|(\*\*[^*]+\*\*)/g,
+		(match, code) => code ? theme.fg("success", match) : theme.bold(match));
+	for (const line of content.split("\n")) {
+		if (fence) {
+			const close = /^\s*(`{3,}|~{3,})\s*$/.exec(line);
+			if (close && close[1][0] === fence[0] && close[1].length >= fence.length) {
+				flushCode();
+				lines.push(theme.fg("dim", close[1]));
+				fence = "";
+			} else code.push(line);
+			continue;
+		}
+		const open = /^\s*(`{3,}|~{3,})\s*([^\s`]*)/.exec(line);
+		if (open) {
+			fence = open[1];
+			language = open[2].toLowerCase();
+			lines.push(theme.fg("dim", `${fence}${language}`));
+		} else if (/^#{1,6}\s/.test(line)) {
+			if (lines.length && lines.at(-1) !== "") lines.push("");
+			lines.push(theme.fg("accent", theme.bold(line)), "");
+		} else {
+			const list = /^(\s*(?:[-*+]|\d+[.)])\s+)(.*)$/.exec(line);
+			const styled = list ? theme.fg("dim", list[1]) + inline(list[2]) : inline(line);
+			if (line !== "" || lines.at(-1) !== "") lines.push(styled);
+		}
+	}
+	if (fence) flushCode();
+	return lines;
+}
+
 // ── Extension Registration ───────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
@@ -578,6 +631,7 @@ export default function (pi: ExtensionAPI) {
 					url: result.url,
 					title: result.title,
 					chars: result.content.length,
+					contentType: result.contentType,
 				},
 			};
 		},
@@ -604,47 +658,37 @@ export default function (pi: ExtensionAPI) {
 		},
 
 		renderResult(result, { expanded, isPartial }, theme, context) {
-			const text =
-				(context.lastComponent as Text | undefined) ??
-				new Text("", 0, 0);
+			if (isPartial) return new Text(theme.fg("dim", " └─ Fetching…"), 0, 0);
 
-			if (isPartial) {
-				text.setText(theme.fg("warning", "Fetching…"));
-				return text;
-			}
-
-			if (context.isError) {
-				const msg =
-					result.content.find((c) => c.type === "text")?.text ||
-					"Error";
-				text.setText(theme.fg("error", msg));
-				return text;
-			}
-
-			const details = result.details as {
-				title?: string;
-				chars?: number;
+			const content = result.content.filter((c) => c.type === "text").map((c) => c.text).join("\n");
+			const details = result.details as { url?: string; title?: string; chars?: number; contentType?: string } | undefined;
+			// execute() prefixes a synthetic title/source header. The leaf already
+			// carries that metadata; leave the actual document headings in the body.
+			const header = /^# ([^\n]+)\n\nSource: (\S+)\n\n---\n\n/.exec(content);
+			const body = header ? content.slice(header[0].length) : content;
+			const url = details?.url || header?.[2] || (context.args?.url as string) || "";
+			let domain = url || "unknown source";
+			try { domain = new URL(url).hostname; } catch {}
+			const title = (details?.title || header?.[1] || domain).replace(/\s+/g, " ");
+			// Historical records have no MIME field; their content is extracted Markdown.
+			const contentType = details?.contentType || "text/markdown";
+			const size = `${(details?.chars ?? body.length).toLocaleString("en-US")} chars`;
+			const leaf = theme.fg("borderMuted", " ├─ ") + theme.fg("dim", "⇠ ") + " "
+				+ theme.fg("text", theme.bold(title)) + theme.fg("dim", ` · ${contentType} · ${size}`);
+			const banner = theme.fg("borderMuted", " └─ ") + (context.isError
+				? theme.fg("error", `✗ ${content.split("\n")[0] || "Error"}`)
+				: theme.fg("success", "✓") + theme.fg("dim", ` fetched · ${domain}`));
+			const styled = expanded && !context.isError ? markdownLines(body, theme) : [];
+			return {
+				invalidate() {},
+				render(width: number) {
+					const lines = styled.flatMap((line) => wrapTextWithAnsi(line, Math.max(1, width - 4)));
+					const visible = lines.length > 60
+						? [...lines.slice(0, 30), theme.fg("dim", `… ${lines.length - 60} lines hidden …`), ...lines.slice(-30)]
+						: lines;
+					return [leaf, banner, ...visible.map((line) => "    " + line)].map((line) => truncateToWidth(line, width));
+				},
 			};
-
-			const title = details?.title || "Untitled";
-			const chars = details?.chars ?? 0;
-			const status =
-				theme.fg("success", title) +
-				theme.fg("muted", ` (${chars} chars)`);
-
-			if (!expanded) {
-				text.setText(status);
-				return text;
-			}
-
-			const content =
-				result.content.find((c) => c.type === "text")?.text || "";
-			const preview =
-				content.length > 500
-					? content.slice(0, 500) + "..."
-					: content;
-			text.setText(status + "\n" + theme.fg("dim", preview));
-			return text;
 		},
 	});
 }
