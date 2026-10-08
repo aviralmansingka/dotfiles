@@ -1,12 +1,12 @@
 # Language standard: near-ASD-STE100
 
 Write all prose output at approximately 80% compliance with ASD-STE100
-(Simplified Technical English). Apply these rules by default:
+(Simplified Technical English). Apply these rules to all prose you write:
 
 - Keep sentences short: one topic per sentence, target 15 words or fewer.
 - Use the approved-verb principle: prefer simple, common verbs (make, show,
   start, use, check) over complex synonyms (utilize, facilitate, implement).
-- Use the active voice for procedure and instruction text.
+- Use the active voice.
 - Prefer the present tense. Use the imperative form for instructions.
 - Use one word or phrase per concept. Do not use synonyms for the same thing.
 - Keep paragraphs to 6 sentences or fewer.
