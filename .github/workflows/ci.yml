@@ -111,3 +111,13 @@ jobs:
 
       - name: auto-git-sync tests
         run: bash scripts/test-auto-git-sync.sh
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Pi live-config tests
+        run: |
+          sudo apt-get update && sudo apt-get install -y stow
+          node scripts/test-pi-live-config.mjs
