@@ -270,8 +270,9 @@ export async function presentLesson(
  * Open the session's lesson journal in the user's editor pane (existing pane
  * if one is open, else a split). Non-blocking: resolves as soon as the file
  * is sent, never waits for the user to finish reading. Used by quiz `h` and
- * explain Alt+H; the lesson tool presents through the focus buffer instead
- * (see presentLesson) with this as its fallback.
+ * explain shortcuts (`h` before composing or at the verdict, and Alt+H at
+ * any time); the lesson tool presents through the focus buffer instead (see
+ * presentLesson) with this as its fallback.
  */
 export async function openJournalInEditor(
 	ctx: any,
@@ -297,8 +298,8 @@ export async function openJournalInEditor(
 
 export default function mdLog(pi: ExtensionAPI) {
 	// Any-time shortcut to open the session's lesson journal in the user's
-	// editor pane. Quiz `h` and explain Alt+H use the same helper. The lesson
-	// tool uses it only when the focus buffer is unavailable.
+	// editor pane. Quiz `h` and explain `h`/Alt+H use the same helper. The
+	// lesson tool uses it only when the focus buffer is unavailable.
 	pi.registerCommand("lessons", {
 		description: "Open this session's lesson journal in the editor pane",
 		handler: async (_args: string, ctx: any) => {

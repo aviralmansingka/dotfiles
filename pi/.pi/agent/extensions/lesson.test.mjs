@@ -68,6 +68,10 @@ const tool = registered[0];
 assert.equal(tool.name, "lesson");
 assert.equal(typeof tool.execute, "function");
 assert.ok(tool.description.length > 40, "description should be substantive");
+assert.ok(
+	tool.description.includes("quiz `h` and explain `h`/Alt+H shortcuts"),
+	"generated lesson guidance should describe the explain journal shortcuts",
+);
 assert.ok(tool.promptGuidelines.length >= 3, "should carry usage guidelines");
 // The lesson is file-based: no panel, no overlay, no UI lock.
 assert.ok(!("__piSharedUiLock" in globalThis) || true); // lock is quiz-side; nothing to assert here
