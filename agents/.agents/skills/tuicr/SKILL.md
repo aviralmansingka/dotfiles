@@ -70,7 +70,7 @@ so do not require a multiplexer just to connect to an existing active session.
 
 When the user needs an interactive tuicr pane and no active session exists:
 
-**If the `tuicr_background` tool is available, use it instead of a wrapper
+**If the `tuicr` tool is available, use it instead of a wrapper
 script.** It launches (or attaches to) the same pane but returns immediately,
 and new user comments are steered back into your session automatically as
 they land — no polling and no blocking. The wrapper table below is the
@@ -131,7 +131,7 @@ read the comments after the user exits tuicr.
 This is the main review loop for user-led review.
 
 There is no push stream from tuicr to the agent — except when the session was
-started through the `tuicr_background` tool, which steers each new comment
+started through the `tuicr` tool, which steers each new comment
 batch into the session automatically; in that flow, do not poll at all, just
 act on the steered batches. Otherwise, read comments by running the CLI on
 demand. After the user says comments are ready, or after the TUI exits, run:

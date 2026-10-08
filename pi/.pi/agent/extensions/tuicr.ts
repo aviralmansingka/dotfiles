@@ -1,12 +1,12 @@
 /**
- * tuicr-background: launch tuicr detached, steer review comments back.
+ * tuicr: launch tuicr detached, steer review comments back.
  *
  * Problem this replaces: asking an agent to open tuicr via the skill's
  * wrapper scripts blocks the agent (`herdr pane wait-output`, tmux/Zellij
  * equivalents) until the human closes the TUI.
  *
  * Instead:
- *   - `tuicr_background` / `/tuicr-bg` spawn the same wrapper detached
+ *   - `tuicr` / `/tuicr` spawn the same wrapper detached
  *     (the pane still opens; the wrapper still closes it on exit) and
  *     return immediately. An existing active session is attached instead.
  *   - A single watcher polls `tuicr review comments` and steers each new
@@ -44,7 +44,7 @@ import {
 	selectWrapper,
 	shouldDeliverBatch,
 	truncateLines,
-} from "./tuicr-background-core.mjs";
+} from "./tuicr-core.mjs";
 
 const execFile = promisify(execFileCb);
 
@@ -155,7 +155,7 @@ async function tick(pi: ExtensionAPI, state: WatchState) {
 				pi.sendMessage(
 					{
 						customType: "tuicr_review_comments",
-						content: `tuicr background watcher gave up: no review session became active for ${state.repo}. The pane may have failed to launch — check it, or ask the user to start tuicr manually and re-run tuicr_background.`,
+						content: `tuicr background watcher gave up: no review session became active for ${state.repo}. The pane may have failed to launch — check it, or ask the user to start tuicr manually and re-run tuicr.`,
 						display: true,
 						details: { repo: state.repo, slug: null, final: true, count: 0, gaveUp: true },
 					},
@@ -220,7 +220,7 @@ async function tick(pi: ExtensionAPI, state: WatchState) {
 }
 
 function startWatch(pi: ExtensionAPI, repo: string, slug: string | null, seen: Set<string>) {
-	if (watch) stopWatch("replaced by a new tuicr_background launch");
+	if (watch) stopWatch("replaced by a new tuicr launch");
 	const state: WatchState = {
 		repo,
 		slug,
@@ -326,14 +326,14 @@ async function startTuicrBackground(
 
 // eslint-disable-next-line @typescript-eslint/no-use-before-define -- execute runs only after the factory sets piRef
 const tuicrBackgroundTool = defineTool({
-	name: "tuicr_background",
+	name: "tuicr",
 	label: "Launch tuicr in background",
 	description:
 		"Launch tuicr (interactive TUI code review) in a background pane without blocking, or attach to the active tuicr review session. New user review comments are polled and steered back into this session automatically as each batch lands, so work can continue while the user reviews; a final steer arrives when the TUI exits. Use this INSTEAD of running a tuicr wrapper script through bash — those wrappers block until the TUI is closed.",
 	promptSnippet: "Open tuicr detached and receive review comments as steer messages",
 	promptGuidelines: [
-		"Use tuicr_background instead of running tuicr wrapper scripts via bash; the wrappers block the agent until the TUI exits.",
-		"tuicr_background returns immediately; user review comments arrive later as tuicr_review_comments steer messages.",
+		"Use tuicr instead of running tuicr wrapper scripts via bash; the wrappers block the agent until the TUI exits.",
+		"tuicr returns immediately; user review comments arrive later as tuicr_review_comments steer messages.",
 		"Only one watcher runs per session — a second launch replaces the first.",
 	],
 	parameters: Type.Object({
@@ -422,9 +422,9 @@ export default function tuicrBackground(pi: ExtensionAPI) {
 	pi.registerTool(tuicrBackgroundTool);
 	pi.registerTool(tuicrReplyTool);
 
-	pi.registerCommand("tuicr-bg", {
+	pi.registerCommand("tuicr", {
 		description:
-			"Launch tuicr detached (or attach to the active session) and steer new review comments back. '/tuicr-bg stop' stops the watcher.",
+			"Launch tuicr detached (or attach to the active session) and steer new review comments back. '/tuicr stop' stops the watcher.",
 		handler: async (args, ctx) => {
 			latestUi = ctx.ui;
 			const tokens = (args ?? "").trim().split(/\s+/).filter(Boolean);
@@ -433,7 +433,7 @@ export default function tuicrBackground(pi: ExtensionAPI) {
 					ctx.ui.notify("No tuicr background watcher is running.", "info");
 					return;
 				}
-				stopWatch("stopped by /tuicr-bg stop");
+				stopWatch("stopped by /tuicr stop");
 				return;
 			}
 			let repo: string | undefined;

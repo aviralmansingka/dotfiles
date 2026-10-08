@@ -1,5 +1,5 @@
 /**
- * Pure logic for the tuicr-background extension.
+ * Pure logic for the tuicr extension.
  *
  * The extension solves two problems with asking an agent to open tuicr:
  *   1. The multiplexer wrapper scripts (tmux/Zellij/Herdr) block until the

@@ -100,7 +100,7 @@ jobs:
           node pi/.pi/agent/extensions/quiz-result.test.mjs
           node pi/.pi/agent/extensions/run-command.test.mjs
           node pi/.pi/agent/extensions/tool-call-renderer-public.test.mjs
-          node pi/.pi/agent/extensions/tuicr-background.test.mjs
+          node pi/.pi/agent/extensions/tuicr.test.mjs
           node pi/.pi/agent/extensions/usage.test.mjs
           node pi/.pi/agent/extensions/user-input/input-modes.test.mjs
           node pi/.pi/agent/extensions/user-input/option-navigation.test.mjs

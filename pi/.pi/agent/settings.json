@@ -6,5 +6,8 @@
     "+extensions/python.ts",
     "+extensions/rounded-bar-footer.ts",
     "+extensions/tool-call-renderer-public.ts"
+  ],
+  "skills": [
+    "!skills/tuicr"
   ]
 }
