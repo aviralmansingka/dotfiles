@@ -2244,11 +2244,15 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         if (agents.length === 0) {
           return new Text(theme.fg("dim", "No subagent definitions found."), 0, 0);
         }
-        const lines = agents.map((a: any) => {
-          const badge = a.source === "project" ? theme.fg("accent", " (project)") : "";
-          const desc = a.description ? theme.fg("dim", ` — ${a.description}`) : "";
-          const model = a.model ? theme.fg("dim", ` [${a.model}]`) : "";
-          return `  ${theme.fg("toolTitle", theme.bold(a.name))}${badge}${model}${desc}`;
+        const lines = ["project", "global", "package"].flatMap((source) => {
+          const group = agents.filter((a: any) => a.source === source);
+          if (group.length === 0) return [];
+          return [theme.fg("dim", source), ...group.map((a: any) => {
+            const badge = a.source === "project" ? theme.fg("accent", " (project)") : "";
+            const desc = a.description ? theme.fg("dim", ` — ${a.description}`) : "";
+            const model = a.model ? theme.fg("dim", ` [${a.model}]`) : "";
+            return ` • ${theme.fg("toolTitle", theme.bold(a.name))}${badge}${model}${desc}`;
+          })];
         });
         return new Text(lines.join("\n"), 0, 0);
       },

@@ -410,4 +410,42 @@ try {
 	rmSync(hunkToolRoot, { recursive: true, force: true });
 }
 
+// --- List rendering groups definitions by override precedence without losing defaults ---
+// Isolate the registration so this check needs only jiti, not the installed Pi UI.
+const indexSource = readFileSync(new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url), "utf8");
+const listRegistration = indexSource.split("// ── subagents_list tool ──")[1].split("// ── subagent_message tool ──")[0];
+const listTool = jiti.evalModule(`
+	const pi = { registerTool: (tool) => { module.exports = tool; } };
+	const Type = { Object: (value) => value };
+	class Text { constructor(text) { this.text = text; } render() { return this.text.split("\\n"); } }
+	${listRegistration}
+`, { filename: join(tmpdir(), "subagents-list-render-test.ts") });
+const theme = {
+	fg: (token, text) => `<${token}>${text}</${token}>`,
+	bold: (text) => `<bold>${text}</bold>`,
+};
+const renderList = (agents) => listTool.renderResult({ details: { agents } }, {}, theme).render(1000).join("\n").trimEnd();
+const definitions = [
+	{ name: "bundled", source: "package" },
+	{ name: "shared", source: "global", model: "test-model" },
+	{ name: "local", source: "project", model: "local-model", description: "Local helper" },
+	{ name: "plain", source: "global", description: "Shared helper" },
+];
+assert.equal(renderList(definitions), [
+	"<dim>project</dim>",
+	" • <toolTitle><bold>local</bold></toolTitle><accent> (project)</accent><dim> [local-model]</dim><dim> — Local helper</dim>",
+	"<dim>global</dim>",
+	" • <toolTitle><bold>shared</bold></toolTitle><dim> [test-model]</dim>",
+	" • <toolTitle><bold>plain</bold></toolTitle><dim> — Shared helper</dim>",
+	"<dim>package</dim>",
+	" • <toolTitle><bold>bundled</bold></toolTitle>",
+].join("\n"));
+for (const source of ["project", "global", "package"]) {
+	const rendered = renderList(definitions.filter((agent) => agent.source === source));
+	assert.equal(rendered.split("\n")[0], `<dim>${source}</dim>`);
+	assert.equal((rendered.match(/^<dim>/gm) ?? []).length, 1, "omit empty groups");
+}
+assert.equal(renderList([]), "<dim>No subagent definitions found.</dim>");
+assert.equal(renderList(undefined), "<dim>No subagent definitions found.</dim>");
+
 console.log("interactive-subagents surface smoke passed");
