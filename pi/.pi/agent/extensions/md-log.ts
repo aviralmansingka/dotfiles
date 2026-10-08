@@ -16,12 +16,12 @@ import { showNodeBuffer } from "./focus-buffer";
 //
 // Override the location with PI_LESSON_JOURNAL=/path/to/file.md.
 //
-// This is a pure listener: quiz/explain/lesson need no changes and no
-// imports from here. It consumes tool_execution_start (lesson content) and
-// tool_execution_end (quiz/explain results) events. quiz deliberately
+// Journal writes stay event-driven: tool_execution_start records lesson
+// content, and tool_execution_end records quiz/explain results. The lesson,
+// quiz, and explain tools import only the presentation helpers below. Quiz
 // publishes its options in tool_execution_update in display order BEFORE
 // blocking; the end result's details already carry the same display order,
-// so we only listen to the end event.
+// so this extension writes only from the end event.
 // ────────────────────────────────────────────────────────────────────────────
 
 const JOURNAL_TOOLS = new Set(["quiz", "explain"]);
@@ -235,10 +235,6 @@ function appendEntry(path: string | undefined, entry: string): void {
 	}
 }
 
-// The most recent lesson taught in this process: the "current node" the
-// learner's side buffer shows. Set on every lesson tool_execution_start.
-let currentLesson: { title: string; body: string } | undefined;
-
 /** Buffer-name key for this session's focus buffer (journal path stem). */
 function focusKey(ctx: any): string {
 	const journal = resolveJournalPath(ctx);
@@ -263,64 +259,51 @@ export async function presentLesson(
 		};
 	}
 	const journal = await openJournalInEditor(ctx);
-	if (!journal.launched && journal.message.startsWith("No lesson journal")) {
-		return { mode: "none", message: journal.message };
-	}
+	if (!journal.ok) return { mode: "none", message: `${buffer.message}; ${journal.message}` };
 	return {
 		mode: "journal",
 		message: `${buffer.message}; opened the journal instead — ${journal.message}`,
 		};
 }
 
-/** Re-show the current node (mid-quiz `h`): focus buffer when a lesson is
- *  active, else the full journal. */
-export async function showLessonView(
-	ctx: any,
-): Promise<{ mode: "buffer" | "journal"; message: string }> {
-	if (currentLesson) {
-		const buffer = showNodeBuffer(focusKey(ctx), currentLesson.title, currentLesson.body);
-		if (buffer.ok) {
-			return { mode: "buffer", message: buffer.message };
-		}
-	}
-	const journal = await openJournalInEditor(ctx);
-	return { mode: "journal", message: journal.message };
-}
-
 /**
  * Open the session's lesson journal in the user's editor pane (existing pane
  * if one is open, else a split). Non-blocking: resolves as soon as the file
- * is sent, never waits for the user to finish reading. Shared by the lesson
- * tool and the quiz `h` shortcut.
+ * is sent, never waits for the user to finish reading. Used by quiz `h` and
+ * explain Alt+H; the lesson tool presents through the focus buffer instead
+ * (see presentLesson) with this as its fallback.
  */
 export async function openJournalInEditor(
 	ctx: any,
-): Promise<{ message: string; launched: boolean }> {
+): Promise<{ message: string; ok: boolean; launched: boolean }> {
 	const journalPath = resolveJournalPath(ctx);
 	if (!journalPath) {
-		return { message: "No lesson journal for this session", launched: false };
+		return { message: "No lesson journal for this session", ok: false, launched: false };
 	}
 	if (!existsSync(journalPath)) {
 		return {
 			message: `Lesson journal not written yet (${journalPath})`,
+			ok: false,
 			launched: false,
 		};
 	}
 	const result = await openEditor(ctx?.cwd ?? process.cwd(), [journalPath]);
 	return {
 		message: `${result.message} — lesson journal ${journalPath}`,
+		ok: result.ok,
 		launched: result.launched,
 	};
 }
 
 export default function mdLog(pi: ExtensionAPI) {
 	// Any-time shortcut to open the session's lesson journal in the user's
-	// editor pane. The quiz `h` key and the lesson tool hit the same helper.
+	// editor pane. Quiz `h` and explain Alt+H use the same helper. The lesson
+	// tool uses it only when the focus buffer is unavailable.
 	pi.registerCommand("lessons", {
 		description: "Open this session's lesson journal in the editor pane",
 		handler: async (_args: string, ctx: any) => {
 			const result = await openJournalInEditor(ctx);
-			ctx?.ui?.notify?.(result.message, result.launched ? "info" : "warning");
+			ctx?.ui?.notify?.(result.message, result.ok ? "info" : "warning");
 		},
 	});
 
@@ -328,7 +311,6 @@ export default function mdLog(pi: ExtensionAPI) {
 		if (event.toolName !== "lesson") return;
 		const args = event.args as { title?: string; body?: string } | undefined;
 		if (!args?.title || !args.body) return;
-		currentLesson = { title: args.title, body: args.body };
 		appendEntry(resolveJournalPath(ctx), formatLessonEntry(args.title, args.body));
 	});
 

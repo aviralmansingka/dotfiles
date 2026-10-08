@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -30,8 +30,7 @@ export interface FocusBufferResult {
 	message: string;
 }
 
-/** Resolve the nvim RPC socket for a pane pid: --listen arg, else the
- *  default /run/user/<uid>/nvim.<pid>.0 path. Returns null if unknown. */
+/** Resolve the live nvim RPC socket for a pane pid. */
 export function editorSocketPath(pid: number): string | undefined {
 	try {
 		const cmdline = readFileSync(`/proc/${pid}/cmdline`);
@@ -40,7 +39,18 @@ export function editorSocketPath(pid: number): string | undefined {
 			if (args[i] === "--listen") return args[i + 1];
 		}
 	} catch {
-		// Not Linux or process gone — fall through to the default path.
+		// Not Linux or process gone — fall through to platform defaults.
+	}
+	if (process.platform === "darwin" && process.env.USER) {
+		const root = join(tmpdir(), `nvim.${process.env.USER}`);
+		try {
+			for (const entry of readdirSync(root)) {
+				const socket = join(root, entry, `nvim.${pid}.0`);
+				if (existsSync(socket) && nvimAlive(socket)) return socket;
+			}
+		} catch {
+			// No Neovim socket directory — fall through to other defaults.
+		}
 	}
 	const uid = process.getuid?.();
 	if (uid === undefined) return undefined;

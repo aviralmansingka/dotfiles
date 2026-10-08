@@ -11,6 +11,25 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { openJournalInEditor } from "./md-log";
+
+// ────────────────────────────────────────────────────────────────────────
+// `alt+h` lesson journal — the explain panel's journal shortcut.
+//
+// The answering phase is a free-text Editor that consumes every printable
+// key, so the plain `h` shortcut quiz uses cannot work here: alt+h is the
+// journal opener (ESC-prefixed h in legacy terminals, CSI-u under the kitty
+// protocol — matchesKey handles both). Opens the per-session lesson journal
+// (<session>.md, the live file md-log appends to as the session runs) so the
+// learner can read the whole transcript while answering or reading the
+// verdict. Fire-and-forget: never throws into the panel, no LLM call, no wait.
+// ────────────────────────────────────────────────────────────────────────
+function openJournalShortcut(ctx: any): void {
+	ctx?.ui?.notify?.("Opening lesson journal…", "info");
+	void openJournalInEditor(ctx)
+		.then((res) => ctx?.ui?.notify?.(res.message, "info"))
+		.catch((err) => ctx?.ui?.notify?.(`lesson journal open failed: ${err?.message ?? String(err)}`, "warning"));
+}
 
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -316,6 +335,7 @@ export default function explain(pi: ExtensionAPI) {
 			"Prefer explain over quiz when you are somewhat confident where the user's understanding sits and want to verify precision of language; prefer quiz when you are still mapping the edge.",
 			"Act on the verdict: correct-but-loose refinements get named and sharpened in your reply; partially_correct or incorrect means stop, diagnose, and re-ask in a different form before moving on.",
 			"An empty or near-empty submission is an honest 'I don't know' — treat it as a genuine gap to teach into, not a failure. Empty answers skip grading.",
+			"While answering or reading the verdict, the user can press Alt+H to open the session's lesson journal (<session>.md, the append-only transcript md-log maintains) in their editor pane; the panel stays active.",
 		],
 		parameters: ExplainParams,
 
@@ -437,7 +457,7 @@ export default function explain(pi: ExtensionAPI) {
 
 								if (phase === "answering") {
 									top.push("");
-									addT(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Esc — cancel"));
+									addT(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Alt+H — journal · Esc — cancel"));
 									for (const line of editorInnerLines(editor, bw)) bottom.push(line);
 								} else if (phase === "grading") {
 									top.push("");
@@ -488,6 +508,10 @@ export default function explain(pi: ExtensionAPI) {
 
 							handleInput(data: string) {
 								if (phase === "answering") {
+									if (matchesKey(data, "alt+h")) {
+										openJournalShortcut(ctx);
+										return;
+									}
 									if (matchesKey(data, Key.enter)) {
 										const answer = editor.getText().trim();
 										if (!answer) {
@@ -513,6 +537,10 @@ export default function explain(pi: ExtensionAPI) {
 									return;
 								}
 								// verdict
+								if (matchesKey(data, "alt+h")) {
+									openJournalShortcut(ctx);
+									return;
+								}
 								if (matchesKey(data, Key.enter) || matchesKey(data, Key.escape)) {
 									done({ answer: editor.getText().trim(), grading, gradeError });
 								}

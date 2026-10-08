@@ -248,11 +248,14 @@ assert.ok(contents.includes("Explain · ✗ incorrect — grade D"));
 // Entries are separated by horizontal rules.
 assert.ok(contents.includes("\n---\n\n## "), "entries are rule-separated");
 // Conversation order preserved: lesson before quiz before explain.
+const lessonIndex = contents.indexOf("## Priority ladder");
+const quizIndex = contents.indexOf("**Question:** What state wins?");
+const explainIndex = contents.indexOf("**Question:** Where does the state go?");
+assert.notEqual(lessonIndex, -1, "lesson entry marker must exist");
+assert.notEqual(quizIndex, -1, "quiz entry marker must exist");
+assert.notEqual(explainIndex, -1, "explain entry marker must exist");
 assert.ok(
-	contents.indexOf("· Lesson · Priority ladder") <
-		contents.indexOf("Quiz ·") &&
-		contents.indexOf("Quiz ·") <
-		contents.indexOf("Explain ·"),
+	lessonIndex < quizIndex && quizIndex < explainIndex,
 	"entries must be appended in conversation order",
 );
 assert.ok(!contents.includes("bash"), "non-journal tools must not be logged");

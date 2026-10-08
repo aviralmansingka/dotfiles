@@ -133,7 +133,8 @@ function fnameEscape(path: string): string {
 	return path.replace(/[\\ |%"'#\t\n\r]/g, "\\$&");
 }
 /** Send `:e <file>` keystrokes to the editor pane via herdr send-text. */
-function sendFilesViaText(paneId: string, files: string[]): void {
+function sendFilesViaText(paneId: string, files: string[]): boolean {
+	let sent = true;
 	for (const file of files) {
 		const escaped = fnameEscape(file);
 		const text = `\x1b:e ${escaped}\r`;
@@ -142,9 +143,10 @@ function sendFilesViaText(paneId: string, files: string[]): void {
 				timeout: HERDR_TIMEOUT_MS, stdio: "ignore",
 			});
 		} catch {
-			// best-effort
+			sent = false;
 		}
 	}
+	return sent;
 }
 // ---------------------------------------------------------------------------
 // launch & focus
@@ -268,7 +270,7 @@ function resolveFilePaths(cwd: string, files: string[]): string[] {
 export async function openEditor(
 	cwd: string,
 	rawArgs: string[],
-): Promise<{ message: string; launched: boolean }> {
+): Promise<{ message: string; ok: boolean; launched: boolean }> {
 	const finalFiles = resolveFilePaths(cwd, rawArgs);
 	// Try Herdr — getCurrentPane returns null if herdr is unavailable
 	const current = getCurrentPane();
@@ -277,16 +279,22 @@ export async function openEditor(
 		if (detection.status === "found") {
 			const editor = detection.editor;
 			if (finalFiles.length > 0) {
-				sendFilesViaText(editor.paneId, finalFiles);
-				focusEditorPane(editor.paneId, current.pane_id);
+				const ok = sendFilesViaText(editor.paneId, finalFiles);
+				if (ok) focusEditorPane(editor.paneId, current.pane_id);
 				return {
-					message: `Sent ${finalFiles.length} file(s) to existing editor (pane ${editor.paneId}).`,
+					message: ok
+						? `Sent ${finalFiles.length} file(s) to existing editor (pane ${editor.paneId}).`
+						: `Could not send files to existing editor (pane ${editor.paneId}).`,
+					ok,
 					launched: false,
 				};
 			}
-			focusEditorPane(editor.paneId, current.pane_id);
+			const ok = focusEditorPane(editor.paneId, current.pane_id);
 			return {
-				message: `Focused existing editor pane (${editor.paneId}).`,
+				message: ok
+					? `Focused existing editor pane (${editor.paneId}).`
+					: `Could not focus existing editor pane (${editor.paneId}).`,
+				ok,
 				launched: false,
 			};
 		}
@@ -298,6 +306,7 @@ export async function openEditor(
 				const fileNote = finalFiles.length > 0 ? ` with ${finalFiles.length} file(s)` : "";
 				return {
 					message: `Launched vim in a vertical split (pane ${newPane}) at ${cwd}${fileNote}.`,
+					ok: true,
 					launched: true,
 				};
 			}
@@ -305,10 +314,11 @@ export async function openEditor(
 	}
 	// Herdr unavailable or failed — try tmux.
 	if (tmuxFallback(cwd, finalFiles)) {
-		return { message: `Launched vim in a tmux split at ${cwd}.`, launched: true };
+		return { message: `Launched vim in a tmux split at ${cwd}.`, ok: true, launched: true };
 	}
 	return {
 		message: `Could not launch vim automatically. Run manually: cd ${cwd} && vim ${finalFiles.join(" ")}`,
+		ok: false,
 		launched: false,
 	};
 }

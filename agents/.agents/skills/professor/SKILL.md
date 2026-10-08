@@ -460,11 +460,6 @@ session journal maintained by md-log:
   the journal, not here.
 - **`handout.md` (static, global)** — authored once during Plan from the
   researcher pass: the full command reference and background for the whole arc.
-- **Session journal (`<session>.md`, beside the session file)** — the durable
-  transcript, maintained by md-log: every lesson and every quiz/explain
-  verdict, each entry headed by its own short title. **Append-only at the
-  bottom**: entries land in the order they happen and are never reordered,
-  rewritten, or re-rendered. Never edit this file by hand.
   For every command: its purpose, the flags used, and the kernel construct it
   touches (e.g. `ip link set eno1 up` writes the netdev's `IFF_UP` flag via
   netlink; `modprobe -r igc` unloads the module, calling the driver's `.remove`
@@ -472,6 +467,11 @@ session journal maintained by md-log:
   what he doesn't precisely understand — this reference is what lets him type
   with intent. `session.md` links into it; he falls back to it when he wants the
   full picture.
+- **Session journal (`<session>.md`, beside the session file)** — the durable
+  transcript, maintained by md-log: every lesson and every quiz/explain
+  verdict, each entry headed by its own short title. **Append-only at the
+  bottom**: entries land in the order they happen and are never reordered,
+  rewritten, or re-rendered. Never edit this file by hand.
 
 **Never dump lesson content into the console.** The console is for:
 
@@ -537,8 +537,9 @@ this protocol covers only what the tool can't do: **composition** and
   records it as the entry heading, and no timestamp goes in any heading.
 - **Deliver the node's lesson first.** Before quizzing a node, teach it with
   one `lesson` call scoped to that node only — the learner's side buffer then
-  shows exactly the node the question is about. The mid-quiz `h` shortcut
-  re-opens that same node view.
+  shows exactly the node the question is about. Mid-question the learner can
+  open the full transcript instead: `h` in a quiz panel, Alt+H in an explain
+  panel, both opening the session journal.
 - **Always pass `contextFiles`.** Every `quiz` call must include the
   `contextFiles` array — the file(s) the question drills (the kernel, the
   config, the lesson section, the command's source). This renders an `o`

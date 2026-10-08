@@ -11,7 +11,7 @@ import {
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { openEditor } from "./nvim-open";
-import { showLessonView } from "./md-log";
+import { openJournalInEditor } from "./md-log";
 import { contextFileHint, lessonFileHint, normalizeContextFiles } from "./user-input/context-files";
 import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
 import {
@@ -164,20 +164,20 @@ async function openContextFiles(ctx: any, files: string[]): Promise<void> {
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// `h` lesson view — re-shows the current node in the learner's editor.
+// `h` lesson view — opens the session's lesson journal in the learner's editor.
 //
-// Pressing `h` mid-quiz in Answer mode re-shows the CURRENT NODE: the focus
-// buffer (an in-memory scratch buffer holding only the most recent lesson)
-// when a lesson is active, else the per-session lesson journal
-// (<session>.md, maintained by md-log). The quiz itself stays active and
-// ungraded. Fire-and-forget: never throws into the quiz, no LLM call, no
-// waiting.
+// Pressing `h` mid-quiz in Answer mode opens the per-session LESSON JOURNAL
+// (<session>.md, the live file md-log appends to as the session runs) so
+// the learner can read the whole running transcript while answering — the
+// journal first, not the focus-buffer node view. The quiz itself stays
+// active and ungraded. Fire-and-forget: never throws into the quiz, no LLM
+// call, no waiting.
 // ────────────────────────────────────────────────────────────────────────
 function openLessonFileShortcut(ctx: any): void {
-	ctx?.ui?.notify?.("Opening lesson view…", "info");
-	void showLessonView(ctx)
+	ctx?.ui?.notify?.("Opening lesson journal…", "info");
+	void openJournalInEditor(ctx)
 		.then((res) => ctx?.ui?.notify?.(res.message, "info"))
-		.catch((err) => ctx?.ui?.notify?.(`lesson view open failed: ${err?.message ?? String(err)}`, "warning"));
+		.catch((err) => ctx?.ui?.notify?.(`lesson journal open failed: ${err?.message ?? String(err)}`, "warning"));
 }
 
 // Fisher-Yates shuffle over a copy. Safe to reorder for display because
@@ -263,23 +263,8 @@ function isCorrect(selectedIndices: number[], correctIndices: number[]): boolean
 	return a.every((v, i) => v === b[i]);
 }
 
-function buildStructuredResult(
-	status: QuizStatus,
-	question: string,
-	mode: QuizMode,
-	answers: OptionAnswer[],
-	correctIndices: number[],
-	correct: boolean | undefined,
-	explanation: string | undefined,
-	context?: string,
-	message?: string,
-	options?: DisplayedOption[],
-	dontKnow?: boolean,
-	note?: string,
-	followUp?: string,
-	title?: string,
-): QuizResultDetails {
-	return { status, title, question, context, mode, answers, correctIndices, options, correct, dontKnow, note, followUp, explanation, message };
+function buildStructuredResult(details: QuizResultDetails): QuizResultDetails {
+	return details;
 }
 
 function cancelledResult(
@@ -292,7 +277,16 @@ function cancelledResult(
 	const message = "User cancelled the quiz";
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult("cancelled", question, mode, [], correctIndices, undefined, undefined, context, message, undefined, undefined, undefined, undefined, title),
+		details: buildStructuredResult({
+			status: "cancelled",
+			title,
+			question,
+			context,
+			mode,
+			answers: [],
+			correctIndices,
+			message,
+		}),
 	};
 }
 
@@ -306,7 +300,16 @@ function unavailableResult(
 ) {
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult("unavailable", question, mode, [], correctIndices, undefined, undefined, context, message, undefined, undefined, undefined, undefined, title),
+		details: buildStructuredResult({
+			status: "unavailable",
+			title,
+			question,
+			context,
+			mode,
+			answers: [],
+			correctIndices,
+			message,
+		}),
 	};
 }
 
@@ -323,19 +326,16 @@ function tooHardResult(
 		"User passed with Ctrl+P because the question was too hard. Explain the prerequisite more simply, then ask an easier quiz question. Do not grade this as wrong or reveal the original answer.";
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult(
-			"too-hard",
-			question,
-			mode,
-			[],
-			correctIndices,
-			undefined,
-			undefined,
-			context,
-			message,
-			undefined,
+		details: buildStructuredResult({
+			status: "too-hard",
 			title,
-		),
+			question,
+			context,
+			mode,
+			answers: [],
+			correctIndices,
+			message,
+		}),
 	};
 }
 
@@ -352,22 +352,17 @@ function followUpResult(
 	const message = `User steered instead of answering: ${followUp}`;
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult(
-			"follow-up",
-			question,
-			mode,
-			[],
-			correctIndices,
-			undefined,
-			undefined,
-			context,
-			message,
-			undefined,
-			undefined,
-			undefined,
-			followUp,
+		details: buildStructuredResult({
+			status: "follow-up",
 			title,
-		),
+			question,
+			context,
+			mode,
+			answers: [],
+			correctIndices,
+			followUp,
+			message,
+		}),
 	};
 }
 
@@ -408,21 +403,19 @@ function buildResult(
 
 	return {
 		content: [{ type: "text" as const, text }],
-		details: buildStructuredResult(
-			"answered",
+		details: buildStructuredResult({
+			status: "answered",
+			title,
 			question,
+			context,
 			mode,
 			answers,
 			correctIndices,
+			options: displayedOptions,
 			correct,
-			explanation,
-			context,
-			undefined,
-			displayedOptions,
 			dontKnow,
-			undefined,
-			title,
-		),
+			explanation,
+		}),
 	};
 }
 
@@ -1115,7 +1108,7 @@ export default function quiz(pi: ExtensionAPI) {
 			"Set multiSelect: true only when more than one option is correct.",
 			"Options are shuffled before display by default, so don't worry about which position you list the correct answer in. Set shuffle: false only when option order is meaningful (ordered values, or an 'All/None of the above' option that must stay last).",
 			"When a quiz needs file context, pass `contextFiles: [\"path/to/file\"]`; the user can press `o` to open those files in vim while the quiz stays active.",
-			"Mid-quiz, the user can press `h` to re-open the current node's lesson in their editor pane (an in-memory focus buffer when a lesson is active, else the session journal); the quiz stays active and ungraded.",
+			"Mid-quiz, the user can press `h` to open the session's lesson journal (<session>.md, the append-only transcript md-log maintains) in their editor pane; the quiz stays active and ungraded.",
 			"To probe nuance, ask several quick quiz questions and adapt each one based on the previous answers, rather than writing one giant question.",
 			"Don't leak the answer through formatting: keep option phrasing/length even and don't hint which is correct.",
 		],
