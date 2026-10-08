@@ -119,7 +119,7 @@ const QuizParams = Type.Object({
 	),
 	correctAnswer: Type.Union([Type.String(), Type.Array(Type.String())], {
 		description:
-			'ReQUIRED. The correct answer as the option value or values. Pass the `value` field of the intended option. Single-select: one string, for example "mercury". Multi-select: an array of strings, for example ["belize", "niue"]. The user is correct only when the selection matches this set exactly. Always pass the value, not a position number. The check is automatic and prevents miscounting.',
+			'REQUIRED. The correct answer as the option value or values. Pass the `value` field of the intended option. Single-select: one string, for example "mercury". Multi-select: an array of strings, for example ["belize", "niue"]. The user is correct only when the selection matches this set exactly. Always pass the value, not a position number. The check is automatic and prevents miscounting.',
 	}),
 	explanation: Type.String({
 		description:
