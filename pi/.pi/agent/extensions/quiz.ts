@@ -263,23 +263,8 @@ function isCorrect(selectedIndices: number[], correctIndices: number[]): boolean
 	return a.every((v, i) => v === b[i]);
 }
 
-function buildStructuredResult(
-	status: QuizStatus,
-	question: string,
-	mode: QuizMode,
-	answers: OptionAnswer[],
-	correctIndices: number[],
-	correct: boolean | undefined,
-	explanation: string | undefined,
-	context?: string,
-	message?: string,
-	options?: DisplayedOption[],
-	dontKnow?: boolean,
-	note?: string,
-	followUp?: string,
-	title?: string,
-): QuizResultDetails {
-	return { status, title, question, context, mode, answers, correctIndices, options, correct, dontKnow, note, followUp, explanation, message };
+function buildStructuredResult(details: QuizResultDetails): QuizResultDetails {
+	return details;
 }
 
 function cancelledResult(
@@ -292,7 +277,16 @@ function cancelledResult(
 	const message = "User cancelled the quiz";
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult("cancelled", question, mode, [], correctIndices, undefined, undefined, context, message, undefined, undefined, undefined, undefined, title),
+		details: buildStructuredResult({
+			status: "cancelled",
+			title,
+			question,
+			context,
+			mode,
+			answers: [],
+			correctIndices,
+			message,
+		}),
 	};
 }
 
@@ -306,7 +300,16 @@ function unavailableResult(
 ) {
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult("unavailable", question, mode, [], correctIndices, undefined, undefined, context, message, undefined, undefined, undefined, undefined, title),
+		details: buildStructuredResult({
+			status: "unavailable",
+			title,
+			question,
+			context,
+			mode,
+			answers: [],
+			correctIndices,
+			message,
+		}),
 	};
 }
 
@@ -323,19 +326,16 @@ function tooHardResult(
 		"User passed with Ctrl+P because the question was too hard. Explain the prerequisite more simply, then ask an easier quiz question. Do not grade this as wrong or reveal the original answer.";
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult(
-			"too-hard",
-			question,
-			mode,
-			[],
-			correctIndices,
-			undefined,
-			undefined,
-			context,
-			message,
-			undefined,
+		details: buildStructuredResult({
+			status: "too-hard",
 			title,
-		),
+			question,
+			context,
+			mode,
+			answers: [],
+			correctIndices,
+			message,
+		}),
 	};
 }
 
@@ -352,22 +352,17 @@ function followUpResult(
 	const message = `User steered instead of answering: ${followUp}`;
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: buildStructuredResult(
-			"follow-up",
-			question,
-			mode,
-			[],
-			correctIndices,
-			undefined,
-			undefined,
-			context,
-			message,
-			undefined,
-			undefined,
-			undefined,
-			followUp,
+		details: buildStructuredResult({
+			status: "follow-up",
 			title,
-		),
+			question,
+			context,
+			mode,
+			answers: [],
+			correctIndices,
+			followUp,
+			message,
+		}),
 	};
 }
 
@@ -408,21 +403,19 @@ function buildResult(
 
 	return {
 		content: [{ type: "text" as const, text }],
-		details: buildStructuredResult(
-			"answered",
+		details: buildStructuredResult({
+			status: "answered",
+			title,
 			question,
+			context,
 			mode,
 			answers,
 			correctIndices,
+			options: displayedOptions,
 			correct,
-			explanation,
-			context,
-			undefined,
-			displayedOptions,
 			dontKnow,
-			undefined,
-			title,
-		),
+			explanation,
+		}),
 	};
 }
 
