@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find"]);
   for (const name of ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "no_mistakes_axi", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -273,6 +273,33 @@ try {
   const grepChanged = render(grep.renderResult(result("new:4:new needle"), { ...options, expanded: true }, theme, grepCtx));
   assert.match(grepChanged, /new:4:new needle/);
   assert.ok(!grepChanged.includes("<b>"));
+
+  const find = resolver("find", () => undefined);
+  const findCtx = context("find-tree", { pattern: "*.ts", path: "src" }, quiet);
+  assert.match(render(find.renderCall(findCtx.args, theme, findCtx)), /"\*\.ts" in src/);
+  const paths = result("src/a.ts\nsrc/nested/b.ts\nREADME.md\n");
+  assert.match(render(find.renderResult(paths, options, styT, findCtx)), /3 paths/);
+  const tree = render(find.renderResult(paths, { ...options, expanded: true }, styT, findCtx));
+  assert.ok(tree.includes("<success><b>✓ 3 paths</b></success>"));
+  assert.ok(tree.includes("<borderMuted>├── </borderMuted><accent><b>src/</b></accent>"));
+  assert.ok(tree.includes("<borderMuted>│   ├── </borderMuted><toolOutput>a.ts</toolOutput>"));
+  assert.ok(tree.includes("<borderMuted>│   └── </borderMuted><accent><b>nested/</b></accent>"));
+  assert.ok(tree.includes("<borderMuted>│       └── </borderMuted><toolOutput>b.ts</toolOutput>"));
+  assert.ok(tree.includes("<borderMuted>└── </borderMuted><toolOutput>README.md</toolOutput>"));
+  const treeFold = render(find.renderResult(result(Array.from({ length: 100 }, (_, i) => `src/file-${i}.ts`).join("\n")), { ...options, expanded: true }, styT, context("find-fold", {}, quiet)));
+  assert.ok(treeFold.includes("<dim>… 41 hidden …</dim>"));
+  assert.ok(treeFold.includes("file-0.ts") && treeFold.includes("file-99.ts"));
+  assert.ok(!treeFold.includes("file-30.ts"));
+  const treeTruncated = render(find.renderResult(result("a.ts\nb.ts\n\n[2 results limit reached. Use limit=4 for more]", { resultLimitReached: 2, truncation: { truncated: true } }), { ...options, expanded: true }, styT, context("find-limit", {}, quiet)));
+  assert.ok(treeTruncated.includes("<success><b>✓ 2 paths</b></success><dim> · truncated</dim>"));
+  assert.ok(!treeTruncated.includes("limit reached"));
+  const treeEmpty = render(find.renderResult(result("No files found matching pattern"), { ...options, expanded: true }, styT, context("find-empty", {}, quiet)));
+  assert.ok(treeEmpty.includes("✓ 0 paths") && !treeEmpty.includes("└──"));
+  const treePartial = render(find.renderResult(paths, { expanded: true, isPartial: true }, styT, context("find-partial", {}, quiet)));
+  assert.match(treePartial, /running/);
+  assert.ok(!treePartial.includes("✓") && treePartial.includes("nested/"));
+  const treeError = render(find.renderResult(result("path not found"), { ...options, expanded: true }, styT, context("find-error", {}, { ...quiet, isError: true })));
+  assert.ok(treeError.includes("<error><b>✗ path not found</b></error>") && !treeError.includes("└──"));
 
   const subagent = resolver("subagent", () => undefined);
   const ctx = context("child", { name: "scout" });

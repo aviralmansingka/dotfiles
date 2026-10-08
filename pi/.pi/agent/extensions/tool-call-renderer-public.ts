@@ -41,7 +41,7 @@ const background = new Map<string, Background>();
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
-const INSPECT_TOOLS = new Set(["grep"]);
+const INSPECT_TOOLS = new Set(["grep", "find"]);
 const OUTPUT_HEAD = 30;
 const OUTPUT_TAIL = 30;
 const RUNNING = new Set(["pending", "running", "fixing", "awaiting_approval", "fix_review"]);
@@ -152,7 +152,8 @@ function summary(tool: string, result: Result, isError: boolean): string {
       const notice = truncated || (details.matchLimitReached || details.linesTruncated ? " · truncated" : "");
       return `${matchCount(hits.length)} · ${plural(new Set(hits.map((hit) => hit.path)).size, "file")}${notice}`;
     }
-    case "find": case "ls": return `${plural(count, "result")}${truncated}`;
+    case "find": return `${plural(inspectionPaths(result, "No files found matching pattern").length, "path")}${truncated || (details.resultLimitReached ? " · truncated" : "")}`;
+    case "ls": return `${plural(count, "result")}${truncated}`;
     default: return firstLine(text) || "completed";
   }
 }
@@ -230,6 +231,67 @@ function renderGrep(result: Result, expanded: boolean, row: Row, theme: Theme, c
   }
   lines.push(` ${theme.fg("borderMuted", "└─")} ${status}`);
   return lines;
+}
+
+function inspectionPaths(result: Result, empty: string): string[] {
+  const details = asRecord(result.details);
+  const truncation = asRecord(details.truncation);
+  let text = textContent(result);
+  if (truncation.truncated && typeof truncation.content === "string") text = truncation.content;
+  else if (details.resultLimitReached || details.entryLimitReached || truncation.truncated) {
+    // Native tools append a notice after a blank line; it is not a path.
+    text = text.replace(/\n\n\[[^\n]*\]$/, "");
+  }
+  if (text === empty) return [];
+  const paths = text.replace(/\n$/, "").split("\n");
+  if (truncation.lastLinePartial) paths.pop();
+  return paths.filter(Boolean).map(safeLine);
+}
+
+type PathTree = Map<string, { directory: boolean; children: PathTree }>;
+const inspectionTrees = new Map<string, { source: string; theme: Theme; rows: string[] }>();
+function findTree(theme: Theme, id: string, paths: string[]): string[] {
+  const source = JSON.stringify(paths);
+  const cached = inspectionTrees.get(id);
+  if (cached && cached.source === source && cached.theme === theme) return cached.rows;
+  const root: PathTree = new Map();
+  for (const path of paths) {
+    const parts = path.split("/").filter(Boolean);
+    if (path.startsWith("/")) parts.unshift("/");
+    let tree = root;
+    parts.forEach((part, index) => {
+      let node = tree.get(part);
+      if (!node) {
+        node = { directory: false, children: new Map() };
+        tree.set(part, node);
+      }
+      node.directory ||= index < parts.length - 1 || path.endsWith("/");
+      tree = node.children;
+    });
+  }
+  const drawTree = (tree: PathTree, indent: string): string[] => {
+    const lines = [...tree].flatMap(([name, node], index) => {
+      const last = index === tree.size - 1;
+      const label = node.directory ? theme.fg("accent", theme.bold(name.endsWith("/") ? name : `${name}/`)) : theme.fg("toolOutput", name);
+      return [
+        theme.fg("borderMuted", indent + (last ? "└── " : "├── ")) + label,
+        ...drawTree(node.children, indent + (last ? "    " : "│   ")),
+      ];
+    });
+    return lines;
+  };
+  // Fold the complete result subtree once, keeping hidden line counts exact.
+  const rendered = foldInspection(drawTree(root, ""), theme).map((line) => `    ${line}`);
+  inspectionTrees.set(id, { source, theme, rows: rendered });
+  return rendered;
+}
+
+function inspectionBanner(tool: string, result: Result, row: Row, theme: Theme): string {
+  const label = row.settled ? summary(tool, result, Boolean(row.failed)) : "running";
+  const [count, ...detail] = label.split(" · ");
+  const color = row.failed ? "error" : row.settled ? "success" : "muted";
+  const mark = row.settled ? theme.bold(`${row.failed ? "✗" : "✓"} ${count}`) : count;
+  return ` ${theme.fg("borderMuted", "└─")} ${theme.fg(color, mark)}${detail.length ? theme.fg("dim", ` · ${detail.join(" · ")}`) : ""}`;
 }
 
 function formatStatsSegments(stats: RecordValue): string[] {
@@ -707,6 +769,7 @@ function disposeState(): void {
   background.clear();
   highlightedCommands.clear();
   highlightedGrep.clear();
+  inspectionTrees.clear();
 }
 
 function component(draw: (width?: number) => string[]): Component {
@@ -856,6 +919,10 @@ export default function (pi: ExtensionAPI) {
             arm(row);
           }
           if (toolName === "grep") return renderGrep(effective, expanded, row, theme, context, width);
+          if (toolName === "find" && expanded) return [
+            inspectionBanner(toolName, effective, row, theme),
+            ...(!row.failed ? findTree(theme, context.toolCallId, inspectionPaths(effective, "No files found matching pattern")) : []),
+          ];
           const lines = CONNECTED.has(toolName)
             ? renderConnectedChips(toolName, asRecord(context.args), effective, expanded, partial, row, theme, context.isError || asRecord(effective).isError === true)
             : [expanded && row.settled && OUTPUT_TOOLS.has(toolName)
