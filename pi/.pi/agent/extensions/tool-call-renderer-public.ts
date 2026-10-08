@@ -1553,7 +1553,10 @@ export default function (pi: ExtensionAPI) {
             const { rows: commands, title } = toolName === "python"
               ? pythonBodies(theme, context.toolCallId, asString(asRecord(args).code))
               : commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
-            const label = title ? ` ${theme.fg("dim", `— ${capTitle(title)}`)}` : "";
+            // The intent title is the row's primary content (Ctrl+E hides
+            // the body), so it renders muted — stronger than dim, a step
+            // below the main text fg.
+            const label = title ? ` ${theme.fg("muted", `— ${capTitle(title)}`)}` : "";
             if (commandsHidden) {
               // Ctrl+E hide, orthogonal to Ctrl+O: the intent title is the
               // row in collapsed AND expanded views; a title-less call keeps
@@ -1656,11 +1659,22 @@ export default function (pi: ExtensionAPI) {
               inspectionPaths(effective, toolName === "find" ? "No files found matching pattern" : "(empty directory)")) : []),
           ];
           if (toolName === "no_mistakes_axi" && expanded) return renderPipeline(effective, row, theme, context, width);
+          // Minimized rows keep the exit status in its status color but dim
+          // the line-count tail, so the muted intent title stays the row's
+          // focus instead of competing with a full-brightness summary.
+          const collapsedSummary = ():
+            string => {
+            if (!commandsHidden || row.failed || running || !OUTPUT_TOOLS.has(toolName)) {
+              return theme.fg(row.failed ? "error" : running ? "muted" : "success", running ? "running" : summary(toolName, effective, Boolean(row.failed)));
+            }
+            const [status, ...rest] = summary(toolName, effective, false).split(" · ");
+            return theme.fg("success", status) + (rest.length ? theme.fg("dim", ` · ${rest.join(" · ")}`) : "");
+          };
           const lines = CONNECTED.has(toolName)
             ? renderConnectedChips(toolName, asRecord(context.args), effective, expanded, partial, row, theme, context.isError || asRecord(effective).isError === true, context.toolCallId)
             : [expanded && row.settled && OUTPUT_TOOLS.has(toolName)
               ? statusBanner(theme, effective, row)
-              : ` ${theme.fg("borderMuted", "└─")} ${theme.fg(row.failed ? "error" : running ? "muted" : "success", running ? "running" : summary(toolName, effective, Boolean(row.failed)))}`];
+              : ` ${theme.fg("borderMuted", "└─")} ${collapsedSummary()}`];
           if (expanded) lines.push(...expandedOutput(toolName, effective, theme, context, width));
           return lines;
         };
