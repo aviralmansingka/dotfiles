@@ -64,7 +64,7 @@ try {
     sessionManager: { getSessionId: () => id, getEntries: () => entries },
   });
   session("first");
-  const theme = { fg: (_color, text) => text, bold: (text) => text };
+  const theme = { fg: (_color, text) => text, bold: (text) => text, italic: (text) => text };
   let invalidations = 0;
   const context = (toolCallId, args = {}, extra = {}) => ({
     args, toolCallId, invalidate: () => invalidations++, state: {}, lastComponent: undefined,
@@ -81,8 +81,8 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls"]);
-  for (const name of ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "no_mistakes_axi", "mcp__not_connected__search", "unknown"]) {
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain"]);
+  for (const name of [...NEVER_DELEGATE, "edit", "ask_question", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
     const renderer = resolver(name, () => { calls++; });
@@ -239,6 +239,178 @@ try {
   assert.ok(styled.includes("<muted>> </muted>quoted"), "quote markers muted");
   assert.ok(styled.includes("<dim>```ts</dim>"), "fence lines dim");
   assert.ok(styled.includes("<hl:ts>const a = 1;"), "inner code still engine-highlighted");
+
+  const ask = resolver("ask_user_question", () => undefined);
+  const askArgs = { question: "Which approach?", details: "Choose for clarity.", options: [{ label: "First" }, { label: "Second" }, { label: "Third" }] };
+  const askCtx = context("ask-choice", askArgs, quiet);
+  const askCall = ask.renderCall(askArgs, styT, askCtx);
+  const askCallText = render(askCall);
+  assert.ok(askCallText.includes("<text><b>ask_user_question</b></text>"));
+  assert.ok(askCallText.includes("<borderMuted>├─</borderMuted> <dim>? </dim> <text>Which approach?</text>"));
+  assert.ok(!askCallText.includes("Choose for clarity"));
+  const askDetails = { status: "answered", question: askArgs.question, context: askArgs.details, mode: "single-select", answers: [{ type: "option", index: 2, label: "Second", value: "second" }] };
+  const askCollapsed = render(ask.renderResult(result("ignored", askDetails), options, styT, askCtx));
+  assert.ok(askCollapsed.includes("<success>✓ option 2 — Second</success>"));
+  assert.ok(askCollapsed.includes("<dim>? </dim>") && !askCollapsed.includes("Choose for clarity"));
+  assert.ok(!render(askCall).includes("?"), "the result owns the question after first result, avoiding duplicate leaves");
+  const askShown = render(ask.renderResult(result("ignored", askDetails), { ...options, expanded: true }, styT, askCtx));
+  assert.ok(askShown.includes("<dim>Choose for clarity.</dim>"));
+  assert.ok(askShown.includes("<dim>1 </dim> <dim>First</dim>"));
+  assert.ok(askShown.includes("<dim>2 </dim> <text>✓ Second</text>"));
+  const longQuestion = "question ".repeat(35) + "QUESTION_END";
+  const longAskCtx = context("ask-long", { ...askArgs, question: longQuestion }, quiet);
+  const longAsk = result("User selected: 1. First");
+  const askNarrow = render(ask.renderResult(longAsk, options, theme, longAskCtx), 40);
+  assert.equal(askNarrow.split("\n").length, 2, "minimized question never wraps");
+  assert.ok(askNarrow.split("\n")[0].endsWith("…"));
+  const askWrapped = render(ask.renderResult(longAsk, { ...options, expanded: true }, theme, longAskCtx), 40);
+  assert.equal(askWrapped.split("\n").filter((line) => line.includes("? ")).length, 1);
+  assert.ok(askWrapped.includes(" │     question") && askWrapped.includes("QUESTION_END"), "question wraps fully on a bare spine");
+  const multilineCall = render(ask.renderCall({ question: "first\nsecond" }, theme, context("ask-stream", {}, quiet)));
+  assert.ok(multilineCall.includes("├─ ?  first…") && !multilineCall.includes("second"));
+  for (const question of ["W", "Wh", "Which?"]) {
+    assert.ok(render(ask.renderCall({ question }, theme, context("ask-stream", {}, quiet))).includes(`?  ${question}`));
+  }
+  const multiAsk = render(ask.renderResult(result("", { ...askDetails, mode: "multi-select", answers: [{ index: 1, label: "First" }, { index: 3, label: "Third" }] }), options, styT, askCtx));
+  assert.ok(multiAsk.includes("<success>✓ options 1 + 3</success>"));
+  const typedAsk = render(ask.renderResult(result("", { ...askDetails, mode: "text", answers: [{ type: "text", label: "x".repeat(60), value: "typed" }] }), options, theme, askCtx));
+  assert.ok(typedAsk.includes(`✓ ${"x".repeat(39)}…`));
+  for (const status of ["cancelled", "unavailable"]) {
+    assert.ok(render(ask.renderResult(result("", { status }), options, styT, askCtx)).includes(`<dim>✗ ${status}</dim>`));
+  }
+  for (const [text, banner] of [["User selected: 2. Second", "✓ option 2 — Second"], ["User selected:\n- 1. First\n- 3. Third", "✓ options 1 + 3"], ["User selected: Second", "✓ option 2 — Second"], ["User answered: typed answer", "✓ typed answer"], ["User selected: Other: custom", "✓ custom"], ["User cancelled the question", "✗ cancelled"]]) {
+    assert.ok(render(ask.renderResult(result(text), options, theme, askCtx)).includes(banner), text);
+  }
+  const mixedOther = render(ask.renderResult(result("User selected:\n- 1. First\n- Other: custom"), options, theme, askCtx));
+  assert.ok(mixedOther.includes("✓ option 1 — custom"));
+  const multilineTyped = render(ask.renderResult(result("", { ...askDetails, mode: "text", answers: [{ type: "text", label: "first\nsecond" }] }), options, theme, askCtx));
+  assert.ok(multilineTyped.includes("✓ first…") && !multilineTyped.includes("second"));
+  const askPartial = render(ask.renderResult(result("", askDetails), { expanded: true, isPartial: true }, theme, askCtx));
+  assert.ok(askPartial.includes("running") && !askPartial.includes("✓"));
+  const longOptionCtx = context("ask-long-option", { question: "Pick?", options: [{ label: "label ".repeat(30) + "LABEL_END" }] }, quiet);
+  const longOptionOut = render(ask.renderResult(result("User selected: 1. label"), { ...options, expanded: true }, theme, longOptionCtx), 40);
+  assert.ok(longOptionOut.includes("LABEL_END") && longOptionOut.includes("└─ ✓ option 1"));
+  const changedAsk = render(ask.renderResult(result("", askDetails), { ...options, expanded: true }, theme, askCtx));
+  assert.ok(changedAsk.includes("✓ Second") && !changedAsk.includes("<dim>"), "theme changes invalidate pedagogy cache");
+
+  const quiz = resolver("quiz", () => undefined);
+  const quizArgs = { ...askArgs, shuffle: false, correctAnswer: "second", explanation: "Use `second` with **care**.", contextFiles: ["src/quiz.ts"] };
+  const quizCtx = context("quiz-choice", quizArgs, quiet);
+  assert.ok(render(quiz.renderCall(quizArgs, styT, quizCtx)).includes("<dim>? </dim> <text>Which approach?</text>"));
+  const quizDetails = { status: "answered", question: quizArgs.question, mode: "single-select", answers: [{ index: 2, label: "Second", value: "second" }], correctIndices: [2], options: quizArgs.options.map((option, i) => ({ index: i + 1, label: option.label })), correct: true, dontKnow: false, explanation: quizArgs.explanation };
+  const quizRight = render(quiz.renderResult(result("", quizDetails), { ...options, expanded: true }, styT, quizCtx));
+  assert.ok(quizRight.includes("<success>✓ correct · option 2</success>"));
+  assert.ok(quizRight.includes("<dim>2 </dim> <text>✓ Second</text>"));
+  assert.ok(quizRight.includes("<dim>✎ </dim> Use <success>`second`</success> with <b>**care**</b>."));
+  assert.ok(quizRight.includes("<dim>context: src/quiz.ts</dim>"));
+  assert.ok(quizRight.includes("<dim>Choose for clarity.</dim>"));
+  const quizWrongDetails = { ...quizDetails, correct: false, answers: [{ index: 3, label: "Third", value: "third" }] };
+  const quizWrong = render(quiz.renderResult(result("", quizWrongDetails), { ...options, expanded: true }, styT, quizCtx));
+  assert.ok(quizWrong.includes("<error>✗ incorrect · picked 3 · correct 2</error>"));
+  assert.ok(quizWrong.includes("<dim>3 </dim> <error>✗ Third</error>"));
+  assert.ok(quizWrong.includes("<dim>2 </dim> <success>✓ Second</success>"));
+  for (const details of [{ ...quizDetails, correct: false, dontKnow: true, answers: [] }, { status: "too-hard", correctIndices: [2], answers: [] }]) {
+    const out = render(quiz.renderResult(result("", details), { ...options, expanded: true }, styT, quizCtx));
+    assert.ok(out.includes("<mdLink>● don't know — a genuine gap</mdLink>"));
+    assert.ok(out.includes("<dim>1 </dim> <dim>First</dim>"));
+    assert.ok(out.includes("<dim>2 </dim> <success>✓ Second</success>"));
+    assert.ok(!out.includes("✗"));
+  }
+  const shuffledCtx = context("quiz-shuffle", { ...quizArgs, shuffle: true }, quiet);
+  const shuffled = { ...quizDetails, options: [{ index: 1, label: "Third" }, { index: 2, label: "First" }, { index: 3, label: "Second" }], correctIndices: [3], answers: [{ index: 3, label: "Second" }] };
+  const shuffledOut = render(quiz.renderResult(result("", shuffled), { ...options, expanded: true }, theme, shuffledCtx));
+  assert.ok(shuffledOut.includes("1  Third") && shuffledOut.includes("3  ✓ Second"), "use displayed order, never input order");
+  const partialQuizCtx = context("quiz-partial-shuffle", { ...quizArgs, shuffle: true }, quiet);
+  const partialQuiz = render(quiz.renderResult(result("Awaiting user response...", { options: shuffled.options }), { expanded: true, isPartial: true }, theme, partialQuizCtx));
+  assert.ok(partialQuiz.includes("running") && !partialQuiz.includes("✓") && !partialQuiz.includes("Use `second`"));
+  const pausedQuiz = render(quiz.renderResult(result("", { status: "too-hard", correctIndices: [3], answers: [] }), { ...options, expanded: true }, theme, partialQuizCtx));
+  assert.ok(pausedQuiz.includes("3  ✓ Second"), "Ctrl+P retains the partial update's shuffled display order");
+  for (const [text, banner] of [
+    ["User answered correctly.\nSelected: 2. Second\nCorrect: 2. Second\nExplanation: Use `second`.", "✓ correct · option 2"],
+    ["User answered incorrectly.\nSelected: 3. Third\nCorrect: 2. Second", "✗ incorrect · picked 3 · correct 2"],
+    ["User selected Other (I don't know) — a genuine knowledge gap, not a wrong guess.\nCorrect: 2. Second", "● don't know — a genuine gap"],
+    ["User passed with Ctrl+P because the question was too hard.", "● don't know — a genuine gap"],
+    ["User cancelled the quiz", "✗ cancelled"],
+  ]) {
+    assert.ok(render(quiz.renderResult(result(text), options, theme, context(`quiz-fallback-${banner}`, quizArgs, quiet))).includes(banner), text);
+  }
+  for (const status of ["cancelled", "unavailable", "follow-up"]) {
+    assert.ok(render(quiz.renderResult(result("", { status }), options, styT, quizCtx)).includes(`<dim>✗ ${status}</dim>`));
+  }
+  const quizMin = render(quiz.renderResult(result("", quizDetails), options, styT, quizCtx));
+  assert.ok(!quizMin.includes("Choose for clarity") && !quizMin.includes("✎") && !quizMin.includes("context:"));
+  const longQuizCtx = context("quiz-long-question", { ...quizArgs, question: longQuestion }, quiet);
+  const longQuizResult = result("User answered correctly.\nSelected: 2. Second\nCorrect: 2. Second");
+  const quizMinLong = render(quiz.renderResult(longQuizResult, options, theme, longQuizCtx), 40);
+  assert.equal(quizMinLong.split("\n").length, 2);
+  assert.ok(quizMinLong.split("\n")[0].endsWith("…"));
+  const quizLong = render(quiz.renderResult(longQuizResult, { ...options, expanded: true }, theme, longQuizCtx), 40);
+  assert.ok(quizLong.includes("QUESTION_END") && quizLong.includes(" │     question"));
+  assert.equal(quizLong.split("\n").filter((line) => line.includes("? ")).length, 1);
+
+  const explain = resolver("explain", () => undefined);
+  const explainArgs = { question: "Explain the mechanism?", expected: "A descriptor names a file.\n- A table owns descriptors.", details: "Name the kernel construct." };
+  const explainCtx = context("explain-grade", explainArgs, quiet);
+  assert.ok(render(explain.renderCall(explainArgs, styT, explainCtx)).includes("<dim>? </dim> <text>Explain the mechanism?</text>"));
+  const explainDetails = { status: "answered", question: explainArgs.question, answer: "A descriptor names a file.\nA process owns everything.", grading: { verdict: "partially_correct", grade: "C", summary: "Identify the owning table.", correctAnswer: "A table owns descriptors.", refinements: [{ quote: "A process owns everything.", issue: "Loose ownership", correction: "A table owns descriptors." }] } };
+  const explainShown = render(explain.renderResult(result("", explainDetails), { ...options, expanded: true }, styT, explainCtx));
+  assert.ok(explainShown.includes("<mdLink>● partially correct · grade C</mdLink>"));
+  assert.ok(explainShown.includes("<dim>expected: </dim><success>✓ </success><dim>A descriptor names a file.</dim>"));
+  assert.ok(explainShown.includes("<dim>expected: </dim><mdLink>● </mdLink><dim>A table owns descriptors.</dim>"));
+  assert.ok(explainShown.includes("<dim>A </dim> <text>A descriptor names a file.</text>"));
+  assert.ok(explainShown.includes("<dim>✎ </dim> <dim>Identify the owning table.</dim>"));
+  assert.ok(explainShown.includes("<dim>· </dim> <dim>“A process owns everything.” — Loose ownership → A table owns descriptors.</dim>"));
+  assert.ok(explainShown.includes("<dim>Name the kernel construct.</dim>"));
+  for (const [verdict, grade, color, banner] of [["correct", "A", "success", "✓ correct"], ["partially_correct", "C", "mdLink", "● partially correct"], ["incorrect", "D", "error", "✗ incorrect"]]) {
+    const details = { ...explainDetails, grading: { ...explainDetails.grading, verdict, grade } };
+    const minimized = render(explain.renderResult(result("", details), options, styT, explainCtx));
+    assert.ok(minimized.includes(`<${color}>${banner} · grade ${grade}</${color}>`));
+    assert.ok(!minimized.includes("expected:") && !minimized.includes("Name the kernel construct") && !minimized.includes("✎"));
+    if (verdict === "incorrect") {
+      const expanded = render(explain.renderResult(result("", details), { ...options, expanded: true }, styT, explainCtx));
+      assert.ok(expanded.includes("<error>✗ </error><dim>A table owns descriptors.</dim>"));
+    }
+    const fallback = `Question: Explain the mechanism?\nUser's answer (their own words):\nA descriptor names a file.\nA process owns everything.\n\nGrader verdict: ${verdict.toUpperCase()} (grade: ${grade})\nIdentify the owning table.\nCorrect answer: A table owns descriptors.\nTerminology refinements:\n- "A process owns everything." — Loose ownership → A table owns descriptors.\n\nVerdict is advisory — you own the final call and the follow-up.`;
+    const parsed = render(explain.renderResult(result(fallback), { ...options, expanded: true }, styT, explainCtx));
+    assert.ok(parsed.includes(`<${color}>${banner} · grade ${grade}</${color}>`));
+    assert.ok(parsed.includes("<dim>A </dim> <text>A descriptor names a file.</text>"));
+    assert.ok(parsed.includes("<dim>✎ </dim> <dim>Identify the owning table.</dim>"));
+    assert.ok(parsed.includes("<dim>· </dim> <dim>“A process owns everything.” — Loose ownership → A table owns descriptors.</dim>"));
+    assert.ok(!parsed.includes("Verdict is advisory"));
+  }
+  for (const output of [result("", { status: "answered" }), result('Question: Q?\nUser submitted an EMPTY answer — treat this as an honest "I don\'t know": a genuine gap to teach into, not a failure.')]) {
+    assert.ok(render(explain.renderResult(output, options, styT, explainCtx)).includes("<mdLink>● don't know — a genuine gap</mdLink>"));
+  }
+  for (const status of ["cancelled", "unavailable"]) {
+    assert.ok(render(explain.renderResult(result("", { status }), options, styT, explainCtx)).includes(`<dim>✗ ${status}</dim>`));
+  }
+  const bareVerdict = render(explain.renderResult(result("Grader verdict: CORRECT (grade: A)"), options, theme, explainCtx));
+  assert.ok(bareVerdict.includes("✓ correct · grade A"));
+  const failedExplain = render(explain.renderResult(result("", explainDetails), options, styT, context("failed-explain", explainArgs, { ...quiet, isError: true })));
+  assert.ok(failedExplain.includes("<dim>✗ unavailable</dim>") && !failedExplain.includes("✗ answered"));
+  const ungraded = render(explain.renderResult(result("", { status: "answered", answer: "My ungraded answer." }), { ...options, expanded: true }, styT, explainCtx));
+  assert.ok(ungraded.includes("<dim>✗ unavailable</dim>") && ungraded.includes("<text>My ungraded answer.</text>"));
+  const ambiguousCtx = context("explain-ambiguous", { question: "Q?", expected: "A table owns descriptors.\nA table owns descriptors.\nSome other claim." }, quiet);
+  const ambiguous = render(explain.renderResult(result("", explainDetails), { ...options, expanded: true }, styT, ambiguousCtx));
+  assert.ok(ambiguous.includes("<dim>expected: </dim><dim>A table owns descriptors.</dim>"));
+  assert.ok(!ambiguous.includes("<mdLink>● </mdLink>") && !ambiguous.includes("<success>✓ </success>"), "ambiguous or unrelated claims stay unmarked");
+  const inventedQuote = { ...explainDetails, grading: { ...explainDetails.grading, refinements: [{ quote: "Not in the answer", issue: "Wrong", correction: "A table owns descriptors." }] } };
+  const invented = render(explain.renderResult(result("", inventedQuote), { ...options, expanded: true }, styT, explainCtx));
+  assert.ok(invented.includes("<dim>expected: </dim><dim>A table owns descriptors.</dim>"), "never map invented grader quotes");
+  const longExplainCtx = context("explain-long", { question: longQuestion, expected: "" }, quiet);
+  const longExplainDetails = { status: "answered", answer: "answer ".repeat(30) + "ANSWER_END", grading: { verdict: "incorrect", grade: "F", summary: "summary ".repeat(25) + "SUMMARY_END", refinements: [{ quote: "quote ".repeat(30) + "QUOTE_END", issue: "wrong", correction: "correct" }] } };
+  const explainMinLong = render(explain.renderResult(result("", longExplainDetails), options, theme, longExplainCtx), 40);
+  assert.equal(explainMinLong.split("\n").length, 2);
+  assert.ok(explainMinLong.split("\n")[0].endsWith("…"));
+  const explainLong = render(explain.renderResult(result("", longExplainDetails), { ...options, expanded: true }, theme, longExplainCtx), 40);
+  assert.ok(explainLong.includes("QUESTION_END") && explainLong.includes("ANSWER_END") && explainLong.includes("SUMMARY_END") && explainLong.includes("QUOTE_END"));
+  for (const marker of ["? ", " A ", " ✎ ", " · "]) assert.equal(explainLong.split("\n").filter((line) => line.includes(marker)).length, marker === " · " ? 2 : 1);
+  const explainPartial = render(explain.renderResult(result("", explainDetails), { expanded: true, isPartial: true }, theme, explainCtx));
+  assert.ok(explainPartial.includes("running") && !explainPartial.includes("grade C"));
+  for (const tool of [ask, quiz, explain]) {
+    const narrow = tool.renderResult(result(""), { ...options, expanded: true }, theme, context(`pedagogy-narrow-${tool === ask ? "ask" : tool === quiz ? "quiz" : "explain"}`, { question: longQuestion }, quiet));
+    assert.ok(narrow.render(16).every((line) => [...line].length <= 16));
+  }
 
   const grep = resolver("grep", () => undefined);
   const grepArgs = { pattern: "needle", path: "src", glob: "*.ts", ignoreCase: true, literal: true, context: 2 };

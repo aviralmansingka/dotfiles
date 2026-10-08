@@ -6,7 +6,8 @@
  * bash/powershell keep OUR expansion — chips and recentTools trees,
  * numbered syntax-highlighted content, and status-framed command output
  * (✓/✗ exit banner + railed head-and-tail fold). Inspection tools own
- * their query/results too. Other tools delegate to
+ * their query/results too; pedagogy tools own question leaves and verdicts.
+ * Other tools delegate to
  * downstream renderResult when present.
  * No assistant-message grouping or native expanded output: each tool owns its
  * row, and expansion is bounded text/details (images are described, not drawn).
@@ -32,6 +33,7 @@ type Row = {
   settled?: boolean;
   failed?: boolean;
   restored?: boolean;
+  pedagogyResult?: boolean;
   invalidate?: () => void;
   timer?: ReturnType<typeof setInterval>;
 };
@@ -42,6 +44,7 @@ const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
 const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
+const PEDAGOGY_TOOLS = new Set(["ask_user_question", "quiz", "explain"]);
 const OUTPUT_HEAD = 30;
 const OUTPUT_TAIL = 30;
 const RUNNING = new Set(["pending", "running", "fixing", "awaiting_approval", "fix_review"]);
@@ -655,9 +658,9 @@ function commandBodies(theme: Theme, toolCallId: string, tool: string, command: 
   return rows;
 }
 
-function wrapLine(line: string, avail: number, keep: "start" | "end" = "end"): { chunks: string[]; skipped: number } {
+function wrapLine(line: string, avail: number, keep: "start" | "end" = "end", maxLines = OUTPUT_WRAP_LINES): { chunks: string[]; skipped: number } {
   try {
-    const { visualLines, skippedCount } = truncateToVisualLines(line, OUTPUT_WRAP_LINES, Math.max(8, avail), 0, keep);
+    const { visualLines, skippedCount } = truncateToVisualLines(line, maxLines, Math.max(8, avail), 0, keep);
     // The real truncateToVisualLines returns [] for blank lines; keep the
     // row so its number prefix renders and numbering stays file-aligned.
     return { chunks: visualLines.length ? visualLines : [""], skipped: skippedCount };
@@ -762,6 +765,200 @@ function expandedOutput(tool: string, result: Result, theme: Theme, context: Ren
   return shown;
 }
 
+// Pedagogy leaves share the command gutter: a two-column marker, then text.
+function shortPedagogy(value: unknown, width: number): string {
+  const text = firstLine(value);
+  const more = asString(value).trim().split("\n").length > 1;
+  const clipped = truncateToWidth(text, Math.max(0, width), "");
+  return clipped !== text || more ? truncateToWidth(text, Math.max(0, width - 1), "") + "…" : text;
+}
+
+function pedagogyText(theme: Theme, value: unknown, marker: string, width: number, color: "dim" | "text" | "success" | "error" = "dim", markdown = false): string[] {
+  const rail = ` ${theme.fg("borderMuted", "│")}  `;
+  const lines = asString(value).split("\n").flatMap((line) => {
+    const body = safeLine(line);
+    return wrapLine(markdown ? styleMarkdownInline(theme, body) : theme.fg(color, body), width - 7, "start", Number.MAX_SAFE_INTEGER).chunks;
+  });
+  return lines.map((line, index) => rail + (index === 0 ? theme.fg("dim", marker.padEnd(2)) : "  ") + " " + line);
+}
+
+function questionLeaf(theme: Theme, question: unknown, expanded: boolean, width: number): string[] {
+  if (!expanded) return [` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "? ")} ${theme.fg("text", shortPedagogy(question, width - 7))}`];
+  const lines = pedagogyText(theme, question, "?", width, "text");
+  lines[0] = lines[0].replace(` ${theme.fg("borderMuted", "│")}  `, ` ${theme.fg("borderMuted", "├─")} `);
+  return lines;
+}
+
+type PedagogyVerdict = { label: string; color: "success" | "error" | "mdLink" | "dim"; body: string[] };
+
+// Option indices in both interactive tools are one-based display positions.
+function optionRefs(text: string): RecordValue[] {
+  return [...text.matchAll(/(?:^|\n|,\s*)(?:-\s*)?(\d+)\.\s*([^\n]*?)(?=,\s*\d+\.\s|\n|$)/g)]
+    .map((match) => ({ index: Number(match[1]), label: match[2] }));
+}
+
+function pedagogyOptions(value: unknown): RecordValue[] {
+  return Array.isArray(value) ? value.map(asRecord).filter((option) => clean(option.label))
+    .map((option, index) => ({ index: index + 1, ...option })) : [];
+}
+
+function askVerdict(args: RecordValue, details: RecordValue, text: string, expanded: boolean, theme: Theme, width: number): PedagogyVerdict {
+  const choices = pedagogyOptions(args.options);
+  const selected = /^User selected:\s*([\s\S]*)/.exec(text)?.[1] ?? "";
+  const answers = Array.isArray(details.answers) ? details.answers.map(asRecord) : optionRefs(selected);
+  if (!Array.isArray(details.answers)) {
+    for (const match of selected.matchAll(/(?:^|\n)(?:-\s*)?Other:\s*(.*)/g)) answers.push({ label: match[1] });
+  }
+  // Older transcripts can contain labels without numbered references.
+  if (!Array.isArray(details.answers) && !answers.length && selected) {
+    const choice = choices.find((option) => clean(option.label) === clean(selected));
+    answers.push(choice ?? { label: selected.replace(/^Other:\s*/, "") });
+  }
+  if (!Array.isArray(details.answers) && !answers.length && text.startsWith("User answered: ")) answers.push({ label: text.slice(15) });
+  const indices = answers.map((answer) => answer.index).filter(finiteNumber);
+  const body = expanded ? choices.flatMap((option) => {
+    const picked = indices.includes(option.index as number);
+    return pedagogyText(theme, `${picked ? "✓ " : ""}${safeLine(option.label)}`, String(option.index), width, picked ? "text" : "dim");
+  }) : [];
+  let label = "✗ unavailable";
+  if (answers.length) {
+    const pointers = indices.length > 1 ? `options ${indices.join(" + ")}` : indices.length ? `option ${indices[0]}` : "";
+    const other = answers.filter((answer) => !finiteNumber(answer.index)).map((answer) => asString(answer.label || answer.value)).join(" + ");
+    const answer = shortPedagogy(other || answers[0].label || answers[0].value, 40) || "(empty answer)";
+    label = `✓ ${pointers}${pointers && (indices.length === 1 || other) ? " — " : ""}${indices.length > 1 && !other ? "" : answer}`;
+  } else if (text === "User submitted an empty response") label = "✓ (empty answer)";
+  return { label, color: label.startsWith("✓") ? "success" : "dim", body };
+}
+
+// Quiz shuffles before its partial update. Retain that displayed order for
+// Ctrl+P/cancel results, whose final details omit options. Never mistake input
+// positions for shuffled indices when restoring older text-only transcripts.
+const quizDisplayOptions = new Map<string, RecordValue[]>();
+function quizVerdict(args: RecordValue, details: RecordValue, text: string, expanded: boolean, theme: Theme, width: number, id: string): PedagogyVerdict {
+  const selectedRefs = optionRefs(/^Selected:\s*(.*)$/m.exec(text)?.[1] ?? "");
+  const correctRefs = optionRefs(/^Correct:\s*(.*)$/m.exec(text)?.[1] ?? "");
+  const answers = Array.isArray(details.answers) ? details.answers.map(asRecord) : selectedRefs;
+  const picked = answers.map((answer) => answer.index).filter(finiteNumber).filter((index) => index > 0);
+  const correct = Array.isArray(details.correctIndices) ? details.correctIndices.filter(finiteNumber) : correctRefs.map((ref) => ref.index as number);
+  const dontKnow = details.dontKnow === true || details.status === "too-hard" || /genuine knowledge gap|passed with Ctrl\+P/i.test(text);
+  const isCorrect = typeof details.correct === "boolean" ? details.correct : /User answered correctly\./.test(text);
+  const graded = dontKnow || typeof details.correct === "boolean" || /User answered (?:in)?correctly\./.test(text);
+  let choices = quizDisplayOptions.get(id);
+  if (!choices) {
+    if (args.shuffle === false) choices = pedagogyOptions(args.options);
+    else {
+      const refs = [...answers, ...correctRefs];
+      const known = new Map(refs.filter((ref) => finiteNumber(ref.index) && ref.index > 0).map((ref) => [ref.index as number, ref]));
+      const count = Math.max(Array.isArray(args.options) ? args.options.length : 0, ...picked, ...correct);
+      choices = Array.from({ length: count }, (_, index) => known.get(index + 1) ?? { index: index + 1, label: "(label unavailable)" });
+    }
+  }
+  const body = expanded ? choices.flatMap((option) => {
+    const index = option.index as number;
+    const selected = !dontKnow && picked.includes(index);
+    const right = correct.includes(index);
+    const mark = selected ? (isCorrect || right ? "✓ " : "✗ ") : right && graded ? "✓ " : "";
+    const color = selected ? (isCorrect ? "text" : right ? "success" : "error") : right && graded ? "success" : "dim";
+    return pedagogyText(theme, `${mark}${safeLine(option.label)}`, String(index), width, color);
+  }) : [];
+  if (expanded) {
+    const explanation = details.explanation ?? /^Explanation:\s*([\s\S]*)$/m.exec(text)?.[1] ?? args.explanation;
+    if (explanation) body.push(...pedagogyText(theme, explanation, "✎", width, "text", true));
+    if (Array.isArray(args.contextFiles) && args.contextFiles.length) body.push(...pedagogyText(theme, `context: ${args.contextFiles.map(safeLine).join(", ")}`, "", width));
+  }
+  const label = dontKnow ? "● don't know — a genuine gap"
+    : !graded ? "✗ unavailable"
+    : isCorrect ? `✓ correct${picked.length ? ` · option${picked.length === 1 ? "" : "s"} ${picked.join(" + ")}` : ""}`
+    : `✗ incorrect · picked ${picked.join(" + ") || "?"} · correct ${correct.join(" + ") || "?"}`;
+  return { label, color: dontKnow ? "mdLink" : !graded ? "dim" : isCorrect ? "success" : "error", body };
+}
+
+function expectedClaims(value: unknown): string[] {
+  return asString(value).split(/\n|;\s*/).map((claim) => clean(claim).replace(/^(?:[-*•]|\d+[.)])\s+/, "")).filter(Boolean);
+}
+
+function claimKey(value: unknown): string {
+  return clean(value).toLowerCase().replace(/[.!?]+$/, "");
+}
+
+function explainVerdict(args: RecordValue, details: RecordValue, text: string, expanded: boolean, theme: Theme, width: number): PedagogyVerdict {
+  const parsed = /Grader verdict: (CORRECT|PARTIALLY_CORRECT|INCORRECT) \(grade: ([ABCDF])\)(?:\n([^\n]*))?/.exec(text);
+  const grading = asRecord(details.grading);
+  const verdict = asString(grading.verdict) || parsed?.[1].toLowerCase() || "";
+  const grade = clean(grading.grade) || parsed?.[2] || "";
+  const summary = grading.summary ?? parsed?.[3];
+  const answer = asString(details.answer ?? /User's answer \(their own words\):\n([\s\S]*?)(?=\n\n(?:Grader verdict:|\(Grader fork unavailable:)|$)/.exec(text)?.[1]);
+  const dontKnow = details.dontKnow === true || /User submitted an EMPTY answer/i.test(text)
+    || (details.status === "answered" && !answer.trim() && !verdict);
+  const refinements = Array.isArray(grading.refinements) ? grading.refinements.map(asRecord)
+    : [...text.matchAll(/^- "(.*)" — (.*?)(?: → (.*))?$/gm)].map((match) => ({ quote: match[1], issue: match[2], correction: match[3] }));
+  const body: string[] = [];
+  if (expanded) {
+    const claims = expectedClaims(args.expected);
+    const keys = claims.map(claimKey);
+    const answerClaims = expectedClaims(answer).map(claimKey);
+    // Refinements have no claim IDs or per-claim verdicts. Only exact,
+    // unique clause matches with a real answer quote justify a mapping;
+    // do not turn lexical similarity (or a global grade) into claim scores.
+    const mapped = refinements.map((refinement) => {
+      const correction = claimKey(refinement.correction);
+      const quote = claimKey(refinement.quote);
+      if (!asString(refinement.quote) || !answer.includes(asString(refinement.quote))) return [];
+      return keys.flatMap((key, index) => key === correction || key === quote ? [index] : []);
+    });
+    claims.forEach((claim, index) => {
+      const hits = mapped.flatMap((indices, refinement) => indices.length === 1 && indices[0] === index ? [refinement] : []);
+      const ambiguous = mapped.some((indices) => indices.length > 1 && indices.includes(index)) || keys.indexOf(keys[index]) !== keys.lastIndexOf(keys[index]);
+      let mark = "";
+      if (!ambiguous && hits.length === 1 && verdict) mark = verdict === "incorrect" ? theme.fg("error", "✗ ") : theme.fg("mdLink", "● ");
+      else if (!ambiguous && !hits.length && verdict && answerClaims.includes(keys[index])
+        && !refinements.some((refinement) => claimKey(refinement.quote) === keys[index])) mark = theme.fg("success", "✓ ");
+      const styled = theme.fg("dim", "expected: ") + mark + theme.fg("dim", claim);
+      body.push(...wrapLine(styled, width - 7, "start", Number.MAX_SAFE_INTEGER).chunks.map((chunk) => ` ${theme.fg("borderMuted", "│")}     ${chunk}`));
+    });
+    if (answer) body.push(...pedagogyText(theme, answer, "A", width, "text"));
+    if (summary) body.push(...pedagogyText(theme, summary, "✎", width));
+    for (const refinement of refinements) {
+      const quote = safeLine(refinement.quote);
+      const issue = safeLine(refinement.issue);
+      const correction = safeLine(refinement.correction);
+      body.push(...pedagogyText(theme, `“${quote}”${issue ? ` — ${issue}` : ""}${correction ? ` → ${correction}` : ""}`, "·", width));
+    }
+  }
+  const label = dontKnow ? "● don't know — a genuine gap"
+    : verdict === "correct" ? `✓ correct${grade ? ` · grade ${grade}` : ""}`
+    : verdict === "partially_correct" ? `● partially correct${grade ? ` · grade ${grade}` : ""}`
+    : verdict === "incorrect" ? `✗ incorrect${grade ? ` · grade ${grade}` : ""}` : "✗ unavailable";
+  return { label, color: dontKnow || verdict === "partially_correct" ? "mdLink" : verdict === "correct" ? "success" : verdict === "incorrect" ? "error" : "dim", body };
+}
+
+const pedagogyRows = new Map<string, { source: string; theme: Theme; rows: string[] }>();
+function renderPedagogy(tool: string, result: Result, expanded: boolean, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
+  const args = asRecord(context.args);
+  const details = asRecord(result.details);
+  const text = textContent(result);
+  if (tool === "quiz" && Array.isArray(details.options)) quizDisplayOptions.set(context.toolCallId, pedagogyOptions(details.options));
+  const source = JSON.stringify([tool, args, details, text, expanded, row.settled, row.failed, width]);
+  const cached = pedagogyRows.get(context.toolCallId);
+  if (cached?.source === source && cached.theme === theme) return cached.rows;
+  const lines = questionLeaf(theme, details.question ?? args.question, expanded, width);
+  const justification = details.context ?? args.details;
+  if (expanded && justification) lines.push(...pedagogyText(theme, justification, "", width));
+  const status = asString(details.status);
+  let verdict: PedagogyVerdict;
+  if (!row.settled) verdict = { label: "running", color: "dim", body: [] };
+  else if (["cancelled", "unavailable", "follow-up"].includes(status) || /User cancelled/i.test(text) || row.failed) {
+    const ghost = ["cancelled", "unavailable", "follow-up"].includes(status) ? status : /User cancelled/i.test(text) ? "cancelled" : "unavailable";
+    verdict = { label: `✗ ${ghost}`, color: "dim", body: [] };
+  } else verdict = tool === "quiz"
+    ? quizVerdict(args, details, text, expanded, theme, width, context.toolCallId)
+    : tool === "explain" ? explainVerdict(args, details, text, expanded, theme, width)
+    : askVerdict(args, details, text, expanded, theme, width);
+  lines.push(...verdict.body, ` ${theme.fg("borderMuted", "└─")} ${theme.fg(verdict.color, verdict.label)}`);
+  pedagogyRows.set(context.toolCallId, { source, theme, rows: lines });
+  return lines;
+}
+
 function stop(row: Row): void {
   if (row.timer) clearInterval(row.timer);
   row.timer = undefined;
@@ -791,6 +988,8 @@ function disposeState(): void {
   highlightedCommands.clear();
   highlightedGrep.clear();
   inspectionTrees.clear();
+  pedagogyRows.clear();
+  quizDisplayOptions.clear();
 }
 
 function component(draw: (width?: number) => string[]): Component {
@@ -824,6 +1023,7 @@ export default function (pi: ExtensionAPI) {
     const row = rows.get(event.toolCallId) ?? {};
     row.startedAt ??= Date.now();
     row.settled = false;
+    row.pedagogyResult = false;
     rows.set(event.toolCallId, row);
     arm(row);
   });
@@ -872,12 +1072,16 @@ export default function (pi: ExtensionAPI) {
       renderCall(args, theme, context) {
         const row = capture(context);
         if (!row.settled && context.executionStarted) arm(row);
-        return component(() => {
+        return component((width = 200) => {
           const glyph = row.failed ? theme.fg("error", "×") : row.settled ? theme.fg("success", "◆") : theme.fg("accent", "◇");
           const elapsedValue = !row.restored && finiteNumber(row.startedAt)
             ? formatElapsed(Math.max(0, (row.completedAt ?? Date.now()) - row.startedAt)) : "";
           const elapsed = elapsedValue ? ` · ${elapsedValue}` : "";
           const name = theme.fg("text", theme.bold(clean(toolName)));
+          if (PEDAGOGY_TOOLS.has(toolName)) return [
+            ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
+            ...(!row.pedagogyResult ? questionLeaf(theme, asRecord(args).question, false, width) : []),
+          ];
           if (toolName === "bash" || toolName === "powershell") {
             const commands = commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
             if (commands.length === 1 && commands[0].command) {
@@ -939,6 +1143,10 @@ export default function (pi: ExtensionAPI) {
             row.completedAt = undefined;
             arm(row);
           }
+          if (PEDAGOGY_TOOLS.has(toolName)) {
+            row.pedagogyResult = true;
+            return renderPedagogy(toolName, effective, expanded, row, theme, context, width);
+          }
           if (toolName === "grep") return renderGrep(effective, expanded, row, theme, context, width);
           if ((toolName === "find" || toolName === "ls") && expanded) return [
             inspectionBanner(toolName, effective, row, theme),
@@ -964,8 +1172,8 @@ export default function (pi: ExtensionAPI) {
     // and bash/powershell keep their expansion ours too: the native file
     // render proved near-uncolored, and the native bash output view has no
     // framing — ours adds the exit banner plus the railed head-and-tail fold.
-    // Inspection tools keep their query spines and colored file trees too.
-    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) ? undefined : next();
+    // Inspection and pedagogy tools keep their question/query spines too.
+    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) || PEDAGOGY_TOOLS.has(toolName) ? undefined : next();
     if (!other?.renderResult) return mine;
     // Reply receipts own both rows: their leading line and tuicr target are
     // more useful than the generic tool summary, even while collapsed.
