@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -36,6 +36,38 @@ const { editorSocketPath, showNodeBuffer } = jiti("./focus-buffer.ts");
 // A pid with no /proc entry and no default socket resolves to undefined.
 assert.equal(editorSocketPath(999_999_999), undefined);
 
+const originalPlatform = process.platform;
+const originalPath = process.env.PATH;
+const originalTmpdir = process.env.TMPDIR;
+const originalUser = process.env.USER;
+const macPid = 999_999_998;
+const macUser = "focus-test";
+const socketDir = join(tempRoot, `nvim.${macUser}`, "session");
+const macSocket = join(socketDir, `nvim.${macPid}.0`);
+const binDir = join(tempRoot, "bin");
+mkdirSync(socketDir, { recursive: true });
+mkdirSync(binDir);
+writeFileSync(macSocket, "");
+writeFileSync(
+	join(binDir, "nvim"),
+	`#!/bin/sh\n[ "$2" = "${macSocket}" ] && exit 0\nexit 1\n`,
+);
+chmodSync(join(binDir, "nvim"), 0o755);
+try {
+	Object.defineProperty(process, "platform", { value: "darwin" });
+	process.env.TMPDIR = `${tempRoot}/`;
+	process.env.USER = macUser;
+	process.env.PATH = binDir;
+	assert.equal(editorSocketPath(macPid), macSocket);
+} finally {
+	Object.defineProperty(process, "platform", { value: originalPlatform });
+	if (originalTmpdir === undefined) delete process.env.TMPDIR;
+	else process.env.TMPDIR = originalTmpdir;
+	if (originalUser === undefined) delete process.env.USER;
+	else process.env.USER = originalUser;
+	process.env.PATH = originalPath;
+}
+
 // ── hard off-switch ──────────────────────────────────────────────────────────
 
 // PI_DISABLE_FOCUS_BUFFER=1 must never touch a live editor pane: it returns
@@ -50,12 +82,11 @@ delete process.env.PI_DISABLE_FOCUS_BUFFER;
 // unavailable on PATH this fails cleanly rather than throwing. (On a machine
 // WITH herdr the call is safe: it only lists panes and would proceed to the
 // buffer update — which is the production behavior under test elsewhere.)
-const realPath = process.env.PATH;
 process.env.PATH = "/nonexistent";
 const noEditor = showNodeBuffer("session-abc", "Node A", "body");
 assert.equal(noEditor.ok, false);
 assert.ok(noEditor.message.length > 0);
-process.env.PATH = realPath;
+process.env.PATH = originalPath;
 
 rmSync(tempRoot, { recursive: true, force: true });
 console.log("focus-buffer tests passed");
