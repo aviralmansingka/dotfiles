@@ -321,6 +321,7 @@ try {
 	uiJiti("./tool-call-renderer-public.ts").default({
 		on() {}, events: { on: () => () => {} },
 		registerToolRenderer(resolver) { resolveRenderer = resolver; },
+		registerShortcut() {},
 	});
 	const chatRenderer = resolveRenderer("run-command", () => tool);
 	const chatContext = { toolCallId: "render-check", args: {}, executionStarted: false, isError: false };
