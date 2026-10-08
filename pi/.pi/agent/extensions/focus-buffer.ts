@@ -1,3 +1,4 @@
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -152,4 +153,11 @@ export function showNodeBuffer(
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
+}
+
+// pi's extension loader scans every .ts file in this directory and requires
+// a default factory. This module is a library consumed by md-log and lesson;
+// register nothing, but keep a valid factory so the file loads cleanly.
+export default function focusBuffer(_pi: ExtensionAPI) {
+	// no commands, no tools, no listeners — see showNodeBuffer above
 }
