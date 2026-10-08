@@ -1,5 +1,6 @@
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import {
@@ -177,6 +178,25 @@ const hunkOpenTool = defineTool({
 	async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 		const result = await openHunk(params.cwd ?? ctx.cwd);
 		return { content: [{ type: "text" as const, text: result.message }], details: result };
+	},
+	renderResult(result, _options, theme, context) {
+		const target = context.args?.cwd || context.cwd;
+		const first = result.content.find((part) => part.type === "text")?.text.split("\n", 1)[0].trim() ?? "";
+		// launched=false also means a successful focus; use the outcome instead.
+		const failed = context.isError || first.startsWith("Could not");
+		return {
+			render(width) {
+				const leaf = theme.fg("dim", " ├─ ▣  hunk · ") + theme.fg("text", theme.bold(target));
+				const banner = theme.fg("dim", " └─ ") + theme.fg(failed ? "error" : "success", failed ? `✗ ${first || "Could not open canvas"}` : "✓ canvas open");
+				return [
+					truncateToWidth(leaf, width),
+					...wrapTextWithAnsi("review canvas only — no reviewer launched", Math.max(1, width - 4))
+						.map((line) => truncateToWidth(theme.fg("dim", ` │  ${line}`), width)),
+					truncateToWidth(banner, width),
+				];
+			},
+			invalidate() {},
+		};
 	},
 });
 

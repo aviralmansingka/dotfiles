@@ -21,12 +21,15 @@ const { createJiti } = require(jitiPath);
 const tempRoot = mkdtempSync(join(tmpdir(), "focus-buffer-test-"));
 const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
 const stubAi = join(tempRoot, "pi-ai.cjs");
+const stubTui = join(tempRoot, "pi-tui.cjs");
+writeFileSync(stubTui, "module.exports = {};\n"); // nvim-open rendering is not exercised here.
 writeFileSync(stubAgent, "exports.defineTool = (t) => t;\n");
 writeFileSync(stubAi, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
 const jiti = createJiti(import.meta.url, {
 	alias: {
 		"@earendil-works/pi-coding-agent": stubAgent,
 		"@earendil-works/pi-ai": stubAi,
+		"@earendil-works/pi-tui": stubTui,
 	},
 });
 const { editorSocketPath, showNodeBuffer } = jiti("./focus-buffer.ts");

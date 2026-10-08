@@ -1,9 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
-import { Container, Markdown, Text } from "@earendil-works/pi-tui";
+import { Text, truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { basename, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 
 import { presentLesson, resolveJournalPath } from "./md-log";
 
@@ -112,22 +109,31 @@ export default function lesson(pi: ExtensionAPI) {
 			);
 		},
 
-		renderResult(result, _options, theme) {
+		renderResult(result, _options, theme, context) {
 			const details = result.details as LessonResultDetails | undefined;
-			if (!details) {
-				const first = result.content[0];
-				return new Text(first?.type === "text" ? first.text : "", 0, 0);
-			}
-			const text = details.status === "opened"
-				? theme.fg("success", `Opened in editor — ${details.title}`)
-				: theme.fg("warning", `Unavailable — ${details.title}`);
-			if (!details.journalPath) return new Text(text, 0, 0);
-			const label = basename(details.journalPath).replace(/[\\[\]`*_]/g, "\\$&");
-			const url = pathToFileURL(resolve(details.journalPath)).href;
-			const rendered = new Container();
-			rendered.addChild(new Text(text, 0, 0));
-			rendered.addChild(new Markdown(`[${label}](${url})`, 0, 0, getMarkdownTheme()));
-			return rendered;
+			const title = details?.title ?? context.args?.title ?? "lesson";
+			const first = result.content.find((part) => part.type === "text")?.text.split("\n", 1)[0].trim() ?? "";
+			const failed = context.isError || details?.status !== "opened";
+			// Bound the preview before layout; never scan the full lesson on redraw.
+			const preview = (context.args?.body ?? "").slice(0, 2000).split("\n", 3);
+			return {
+				render(width) {
+					const leaf = theme.fg("dim", " ├─ ✎  lesson · ") + theme.fg("text", theme.bold(title));
+					const banner = theme.fg("dim", " └─ ") + theme.fg(failed ? "error" : "success", failed ? `✗ ${first || "Lesson unavailable"}` : "✓ journaled");
+					const bodyWidth = Math.max(1, width - 4);
+					const shown = failed ? [] : [
+						...wrapTextWithAnsi("body landed in the session journal", bodyWidth),
+						...preview.flatMap((line) => wrapTextWithAnsi(line, bodyWidth)).slice(0, 3),
+						"…",
+					];
+					return [
+						truncateToWidth(leaf, width),
+						...shown.map((line) => truncateToWidth(theme.fg("dim", ` │  ${line}`), width)),
+						truncateToWidth(banner, width),
+					];
+				},
+				invalidate() {},
+			};
 		},
 	});
 }
