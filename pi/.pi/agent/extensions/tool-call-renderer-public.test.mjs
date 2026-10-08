@@ -81,9 +81,9 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review", "tuicr_background"]);
-  for (const name of [...NEVER_DELEGATE, "edit", "ask_question", "mcp__not_connected__search", "unknown"]) {
-    const ours = NEVER_DELEGATE.has(name);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review", "tuicr_background", "mcp__not_connected__search"]);
+  for (const name of [...NEVER_DELEGATE, "mcp__whatsapp__list_messages", "edit", "ask_question", "unknown"]) {
+    const ours = NEVER_DELEGATE.has(name) || name.startsWith("mcp__");
     let calls = 0;
     const renderer = resolver(name, () => { calls++; });
     assert.equal(calls, ours ? 0 : 1);
@@ -239,6 +239,81 @@ try {
   assert.ok(styled.includes("<muted>> </muted>quoted"), "quote markers muted");
   assert.ok(styled.includes("<dim>```ts</dim>"), "fence lines dim");
   assert.ok(styled.includes("<hl:ts>const a = 1;"), "inner code still engine-highlighted");
+
+  const mcpRead = resolver("mcp__whatsapp__list_messages", () => { throw new Error("MCP must not delegate"); });
+  const mcpCtx = context("mcp-read", { query: "first\nsecond", message: "ignored" }, quiet);
+  const mcpHeader = render(mcpRead.renderCall(mcpCtx.args, styT, mcpCtx));
+  assert.ok(mcpHeader.includes("<dim>mcp · whatsapp — </dim><text><b>list_messages</b></text><dim> first…</dim>"));
+  const previewKeys = ["query", "message", "text", "path", "channel", "file", "url", "name"];
+  for (let i = 0; i < previewKeys.length; i++) {
+    const args = { fallback: "fallback", ...Object.fromEntries(previewKeys.map((key, j) => [key, j < i ? " \n" : key])) };
+    assert.ok(render(mcpRead.renderCall(args, theme, mcpCtx)).endsWith(` ${previewKeys[i]}`));
+  }
+  for (const args of [{ count: 5, empty: "\n ", custom: "fallback" }, { query: {}, custom: "fallback" }]) {
+    assert.ok(render(mcpRead.renderCall(args, theme, mcpCtx)).endsWith(" fallback"));
+  }
+  const streamingMcpArgs = { query: "fir" };
+  const streamingMcp = mcpRead.renderCall(streamingMcpArgs, theme, context("mcp-stream", streamingMcpArgs, quiet));
+  assert.ok(render(streamingMcp).endsWith(" fir"));
+  streamingMcpArgs.query = "first line";
+  assert.ok(render(streamingMcp).endsWith(" first line"));
+  assert.ok(render(mcpRead.renderCall({ query: "x".repeat(100) }, theme, mcpCtx), 50).endsWith("…"));
+  const mcpText = result("one\n\n \ntwo\n");
+  delete mcpText.details;
+  assert.equal(render(mcpRead.renderResult(mcpText, options, theme, mcpCtx)), " └─ ✓ 2 items");
+  const mcpShown = render(mcpRead.renderResult(mcpText, { ...options, expanded: true }, styT, mcpCtx));
+  assert.ok(mcpShown.includes("<success>✓ 2 items</success>") && mcpShown.includes("    <toolOutput>two</toolOutput>"));
+  assert.ok(!mcpShown.includes("│"));
+  for (const count of [60, 61, 62, 100]) {
+    const out = render(mcpRead.renderResult(result(Array.from({ length: count }, (_, i) => `item-${i}`).join("\n")), { ...options, expanded: true }, theme, context(`mcp-fold-${count}`, {}, quiet)));
+    assert.ok(out.includes(`✓ ${count} items`) && out.includes("    item-0\n") && out.endsWith(`    item-${count - 1}`));
+    assert.equal(out.includes("lines hidden"), count > 60);
+    if (count > 60) assert.ok(out.includes(`… ${count - 60} lines hidden …`) && !out.includes("    item-30\n"));
+  }
+  for (const truncated of [result("one", { truncation: { truncated: true } }), result("one", { truncation: true }), result("one", { outputGuard: { truncated: true } }), result("one\n…200 chars truncated…")]) {
+    assert.ok(render(mcpRead.renderResult(truncated, options, theme, mcpCtx)).includes(" · truncated"));
+  }
+  for (const empty of [result(""), result("\n \n"), { content: [] }]) {
+    assert.ok(render(mcpRead.renderResult(empty, { ...options, expanded: true }, styT, mcpCtx)).includes("<dim>✓ no results</dim>"));
+  }
+  const safeMcp = render(mcpRead.renderResult(result("\u001b[31mone\u001b[0m\ntwo\tthree"), { ...options, expanded: true }, theme, mcpCtx));
+  assert.ok(!safeMcp.includes("\u001b") && safeMcp.includes("    two  three"));
+  const wrappingMcp = render(mcpRead.renderResult(result("abcdefghij".repeat(5)), { ...options, expanded: true }, theme, mcpCtx), 24);
+  assert.equal(wrappingMcp.split("\n").slice(1).map((line) => line.slice(4)).join(""), "abcdefghij".repeat(5));
+  const mcpSend = resolver("mcp__google_workspace__send_gmail_message", () => undefined);
+  const sendCtx = context("mcp-send", { user_google_email: "sender", to: "recipient", body: "Hello\nGoodbye" }, quiet);
+  const mcpSent = render(mcpSend.renderResult(result("receipt"), options, styT, sendCtx));
+  assert.ok(mcpSent.includes("<borderMuted>├─</borderMuted> <dim>» </dim> <text>Hello…</text>"));
+  assert.ok(mcpSent.includes("<success>✓ sent</success>") && !mcpSent.includes("receipt"));
+  const mcpSendShown = render(mcpSend.renderResult(result("receipt"), { ...options, expanded: true }, styT, sendCtx));
+  assert.ok(mcpSendShown.includes("<dim>» </dim> <text>Hello</text>") && mcpSendShown.includes("<borderMuted>│</borderMuted>     <text>Goodbye</text>"));
+  const mcpFile = render(mcpSend.renderResult(result("receipt"), options, theme, context("mcp-file", { recipient: "recipient", media_path: "/tmp/photo.png" }, quiet)));
+  assert.ok(mcpFile.includes("├─ »  /tmp/photo.png") && !mcpFile.includes("recipient"));
+  const payload = "abcdefghij".repeat(30) + "END";
+  const fullSend = render(mcpSend.renderResult(result(""), { ...options, expanded: true }, theme, context("mcp-send-wrap", { message: payload }, quiet)), 24);
+  assert.equal(fullSend.split("\n").slice(0, -1).map((line) => line.slice(7)).join(""), payload, "shown payload wraps fully on the spine");
+  for (const prefix of ["list_", "get_", "search_", "fetch_", "read_", "query_", "whoami", "download_", "send_", "post_", "create_", "modify_", "update_", "add_", "draft_", "append_", "move_", "rename_", "invite_", "join_", "manage_"]) {
+    const tool = resolver(`mcp__server__${prefix}example`, () => undefined);
+    const out = render(tool.renderResult(result("one"), options, theme, context(`mcp-class-${prefix}`, { text: "payload" }, quiet)));
+    assert.ok(out.includes(["list_", "get_", "search_", "fetch_", "read_", "query_", "whoami", "download_"].includes(prefix) ? "✓ 1 item" : "✓ sent"), prefix);
+  }
+  for (const name of ["mcp__browserbase__act", "mcp__browserbase__observe", "mcp__list_server__batch_get", "mcp__server__list", "mcp__unknown"]) {
+    const tool = resolver(name, () => undefined);
+    const out = render(tool.renderResult(result('{"steps":["done"]}'), { ...options, expanded: true }, theme, context(name, {}, quiet)));
+    assert.ok(out.includes("└─ ✓ done\n    {\"steps\":[\"done\"]}") && !out.includes("│"), name);
+  }
+  for (const tool of [mcpRead, mcpSend, resolver("mcp__browserbase__act", () => undefined)]) {
+    for (const [value, extra] of [[result("bad request\nmore detail"), { isError: true }], [{ ...result("bad request\nmore detail"), isError: true }, {}]]) {
+      const out = render(tool.renderResult(value, options, styT, context("mcp-error", { text: "payload" }, { ...quiet, ...extra })));
+      assert.ok(out.includes("<error>✗ bad request</error>") && !out.includes("more detail"));
+    }
+    const partial = render(tool.renderResult(result("one"), { ...options, isPartial: true }, theme, context("mcp-partial", {}, quiet)));
+    assert.ok(partial.includes("● running") && !partial.includes("✓"));
+  }
+  assert.ok(render(mcpRead.renderResult(result("an example exited with code 2"), options, theme, mcpCtx)).includes("✓ 1 item"), "MCP text is not a shell exit status");
+  assert.ok(render(mcpRead.renderResult(result("", { error: "unavailable" }), options, styT, mcpCtx)).includes("<error>✗ unavailable</error>"));
+  const adapterResult = result("message 1\nmessage 2", { mode: "call", server: "google_workspace", tool: "search_gmail_messages", mcpResult: { structuredContent: { result: "message 1\nmessage 2" } } });
+  assert.equal(render(mcpRead.renderResult(adapterResult, options, theme, mcpCtx)), " └─ ✓ 2 items", "adapter metadata is not an invented item list");
 
   const message = resolver("subagent_message", () => undefined);
   const messageArgs = { name: "scout", message: "Inspect the renderer.\nThen report back." };
