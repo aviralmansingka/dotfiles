@@ -5,7 +5,8 @@
  * Expanded bodies: connected tools, file-shaped tools (read, write), and
  * bash/powershell keep OUR expansion — chips and recentTools trees,
  * numbered syntax-highlighted content, and status-framed command output
- * (✓/✗ exit banner + railed head-and-tail fold). Other tools delegate to
+ * (✓/✗ exit banner + railed head-and-tail fold). Inspection tools own
+ * their query/results too. Other tools delegate to
  * downstream renderResult when present.
  * No assistant-message grouping or native expanded output: each tool owns its
  * row, and expansion is bounded text/details (images are described, not drawn).
@@ -40,6 +41,7 @@ const background = new Map<string, Background>();
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell"]);
+const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
 const OUTPUT_HEAD = 30;
 const OUTPUT_TAIL = 30;
 const RUNNING = new Set(["pending", "running", "fixing", "awaiting_approval", "fix_review"]);
@@ -92,7 +94,7 @@ function preview(tool: string, args: RecordValue): string {
       finiteNumber(args[key]) ? [`${key}=${args[key]}`] : [])].join(" · ");
     case "edit": return `${path} · ${plural(Array.isArray(args.edits) ? args.edits.length : 1, "edit")}`;
     case "write": return `${path} · ${plural(asString(args.content).split("\n").length, "line")}`;
-    case "grep": case "find": return [clean(args.pattern), path || ".", clean(args.glob)].filter(Boolean).join(" · ");
+    case "grep": case "find": return `${JSON.stringify(clean(args.pattern))} in ${path || "."}${args.glob ? ` · ${clean(args.glob)}` : ""}`;
     case "ls": return path || ".";
     case "subagent": return clean(args.name || args.agent);
     case "no_mistakes_axi": return clean(args.phase || args.task);
@@ -145,9 +147,172 @@ function summary(tool: string, result: Result, isError: boolean): string {
       return details.diff ? `+${additions} −${removals} · updated` : "updated";
     }
     case "write": return firstLine(text) || "written";
-    case "grep": case "find": case "ls": return `${plural(count, "result")}${truncated}`;
+    case "grep": {
+      const hits = grepLines(text).filter((hit) => hit.match);
+      const notice = truncated || (details.matchLimitReached || details.linesTruncated ? " · truncated" : "");
+      return `${matchCount(hits.length)} · ${plural(new Set(hits.map((hit) => hit.path)).size, "file")}${notice}`;
+    }
+    case "find": return `${plural(inspectionPaths(result, "No files found matching pattern").length, "path")}${truncated || (details.resultLimitReached ? " · truncated" : "")}`;
+    case "ls": {
+      const paths = inspectionPaths(result, "(empty directory)");
+      const dirs = paths.filter((path) => path.endsWith("/")).length;
+      const counts = dirs || !paths.length
+        ? `${plural(dirs, "dir")} · ${plural(paths.length - dirs, "file")}`
+        : plural(paths.length, "result");
+      return counts + (truncated || (details.entryLimitReached ? " · truncated" : ""));
+    }
     default: return firstLine(text) || "completed";
   }
+}
+
+type GrepLine = { path: string; line: string; content: string; match: boolean };
+
+function grepLines(text: string): GrepLine[] {
+  return text.split("\n").flatMap((raw) => {
+    const line = safeLine(raw);
+    // Prefer pi's native separator (it adds a space before content), so
+    // numeric colon groups in content do not become part of the filename.
+    // The raw-rg fallback is greedy to tolerate colons in paths.
+    const native = /^(.*?)(:|-)(\d+)\2( .*)$/.exec(line);
+    if (native) return [{ path: native[1], line: native[3], content: native[4], match: native[2] === ":" }];
+    const hit = /^(.*):(\d+):(.*)$/.exec(line);
+    return hit ? [{ path: hit[1], line: hit[2], content: hit[3], match: true }] : [];
+  });
+}
+
+function matchCount(count: number): string {
+  return count === 1 ? "1 match" : `${count} matches`;
+}
+
+type GrepBody = { body: string; match: boolean };
+const highlightedGrep = new Map<string, { source: string; pattern: string; ignoreCase: boolean; theme: Theme; rows: GrepBody[] }>();
+function grepBodies(theme: Theme, id: string, args: RecordValue, text: string): GrepBody[] {
+  const pattern = safeLine(args.pattern);
+  const ignoreCase = args.ignoreCase === true;
+  const cached = highlightedGrep.get(id);
+  if (cached && cached.source === text && cached.pattern === pattern && cached.ignoreCase === ignoreCase && cached.theme === theme) return cached.rows;
+  // Highlight literal occurrences, not a JS reinterpretation of ripgrep's regex dialect.
+  const needle = ignoreCase ? pattern.toLowerCase() : pattern;
+  const bodies = grepLines(text).map((hit) => {
+    if (!hit.match) return { body: theme.fg("dim", `${hit.path}-${hit.line}-${hit.content}`), match: false };
+    let body = "";
+    let start = 0;
+    const haystack = ignoreCase ? hit.content.toLowerCase() : hit.content;
+    let index: number;
+    while (needle && (index = haystack.indexOf(needle, start)) !== -1) {
+      body += hit.content.slice(start, index) + theme.bold(hit.content.slice(index, index + pattern.length));
+      start = index + pattern.length;
+    }
+    body += hit.content.slice(start);
+    return { body: theme.fg("dim", `${hit.path}:${hit.line}:`) + theme.fg("toolOutput", body), match: true };
+  });
+  highlightedGrep.set(id, { source: text, pattern, ignoreCase, theme, rows: bodies });
+  return bodies;
+}
+
+function foldInspection(lines: string[], theme: Theme, unit = ""): string[] {
+  return lines.length <= OUTPUT_HEAD + OUTPUT_TAIL ? lines : [
+    ...lines.slice(0, OUTPUT_HEAD),
+    theme.fg("dim", `… ${lines.length - OUTPUT_HEAD - OUTPUT_TAIL}${unit} hidden …`),
+    ...lines.slice(-OUTPUT_TAIL),
+  ];
+}
+
+function renderGrep(result: Result, expanded: boolean, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
+  const bodies = grepBodies(theme, context.toolCallId, asRecord(context.args), textContent(result));
+  const rail = ` ${theme.fg("borderMuted", "│")}  `;
+  const hits = bodies.filter((body) => body.match);
+  const shown = expanded ? foldInspection(bodies.map((body) => body.body), theme, " lines") : hits.slice(0, 1).map((hit) => hit.body);
+  const lines = shown.flatMap((body) => {
+    const { chunks, skipped } = wrapLine(body, width - 4, "start");
+    return [...chunks.map((chunk) => rail + chunk), ...(skipped ? [rail + theme.fg("dim", `… ${skipped} wrapped lines hidden`)] : [])];
+  });
+  const label = row.settled ? summary("grep", result, Boolean(row.failed)) : "running";
+  let status = theme.fg(row.failed ? "error" : row.settled ? "success" : "muted", label);
+  if (expanded && row.settled) {
+    if (row.failed || !hits.length) status = theme.fg("error", theme.bold(`✗ ${row.failed ? label : "0 matches"}`));
+    else {
+      const [count, ...detail] = label.split(" · ");
+      status = theme.fg("success", theme.bold(`✓ ${count}`)) + theme.fg("dim", ` · ${detail.join(" · ")}`);
+    }
+  }
+  lines.push(` ${theme.fg("borderMuted", "└─")} ${status}`);
+  return lines;
+}
+
+function inspectionPaths(result: Result, empty: string): string[] {
+  const details = asRecord(result.details);
+  const truncation = asRecord(details.truncation);
+  let text = textContent(result);
+  if (truncation.truncated && typeof truncation.content === "string") text = truncation.content;
+  else if (details.resultLimitReached || details.entryLimitReached || truncation.truncated) {
+    // Native tools append a notice after a blank line; it is not a path.
+    text = text.replace(/\n\n\[[^\n]*\]$/, "");
+  }
+  if (text === empty) return [];
+  const paths = text.replace(/\n$/, "").split("\n");
+  if (truncation.lastLinePartial) paths.pop();
+  return paths.filter(Boolean).map(safeLine);
+}
+
+type PathTree = Map<string, { directory: boolean; children: PathTree }>;
+const inspectionTrees = new Map<string, { source: string; theme: Theme; rows: string[] }>();
+function findTree(theme: Theme, id: string, paths: string[]): string[] {
+  const source = JSON.stringify(paths);
+  const cached = inspectionTrees.get(id);
+  if (cached && cached.source === source && cached.theme === theme) return cached.rows;
+  const root: PathTree = new Map();
+  for (const path of paths) {
+    const parts = path.split("/").filter(Boolean);
+    if (path.startsWith("/")) parts.unshift("/");
+    let tree = root;
+    parts.forEach((part, index) => {
+      let node = tree.get(part);
+      if (!node) {
+        node = { directory: false, children: new Map() };
+        tree.set(part, node);
+      }
+      node.directory ||= index < parts.length - 1 || path.endsWith("/");
+      tree = node.children;
+    });
+  }
+  const drawTree = (tree: PathTree, indent: string): string[] => {
+    const lines = [...tree].flatMap(([name, node], index) => {
+      const last = index === tree.size - 1;
+      const label = node.directory ? theme.fg("accent", theme.bold(name.endsWith("/") ? name : `${name}/`)) : theme.fg("toolOutput", name);
+      return [
+        theme.fg("borderMuted", indent + (last ? "└── " : "├── ")) + label,
+        ...drawTree(node.children, indent + (last ? "    " : "│   ")),
+      ];
+    });
+    return lines;
+  };
+  // Fold the complete result subtree once, keeping hidden line counts exact.
+  const rendered = foldInspection(drawTree(root, ""), theme).map((line) => `    ${line}`);
+  inspectionTrees.set(id, { source, theme, rows: rendered });
+  return rendered;
+}
+
+function lsListing(theme: Theme, id: string, paths: string[]): string[] {
+  const source = JSON.stringify(paths);
+  const cached = inspectionTrees.get(id);
+  if (cached && cached.source === source && cached.theme === theme) return cached.rows;
+  // Native ls exposes only names and trailing /, not lstat metadata. Do not
+  // invent sizes, symlink targets, or directory child counts from those names.
+  const rendered = paths.map((path, index) => {
+    const label = path.endsWith("/") ? theme.fg("accent", theme.bold(path)) : theme.fg("toolOutput", path);
+    return `    ${theme.fg("borderMuted", index === paths.length - 1 ? "└── " : "├── ")}${label}`;
+  });
+  inspectionTrees.set(id, { source, theme, rows: rendered });
+  return rendered;
+}
+
+function inspectionBanner(tool: string, result: Result, row: Row, theme: Theme): string {
+  const label = row.settled ? summary(tool, result, Boolean(row.failed)) : "running";
+  const [count, ...detail] = label.split(" · ");
+  const color = row.failed ? "error" : row.settled ? "success" : "muted";
+  const mark = row.settled ? theme.bold(`${row.failed ? "✗" : "✓"} ${count}`) : count;
+  return ` ${theme.fg("borderMuted", "└─")} ${theme.fg(color, mark)}${detail.length ? theme.fg("dim", ` · ${detail.join(" · ")}`) : ""}`;
 }
 
 function formatStatsSegments(stats: RecordValue): string[] {
@@ -490,9 +655,9 @@ function commandBodies(theme: Theme, toolCallId: string, tool: string, command: 
   return rows;
 }
 
-function wrapLine(line: string, avail: number): { chunks: string[]; skipped: number } {
+function wrapLine(line: string, avail: number, keep: "start" | "end" = "end"): { chunks: string[]; skipped: number } {
   try {
-    const { visualLines, skippedCount } = truncateToVisualLines(line, OUTPUT_WRAP_LINES, Math.max(8, avail));
+    const { visualLines, skippedCount } = truncateToVisualLines(line, OUTPUT_WRAP_LINES, Math.max(8, avail), 0, keep);
     // The real truncateToVisualLines returns [] for blank lines; keep the
     // row so its number prefix renders and numbering stays file-aligned.
     return { chunks: visualLines.length ? visualLines : [""], skipped: skippedCount };
@@ -624,6 +789,8 @@ function disposeState(): void {
   rows.clear();
   background.clear();
   highlightedCommands.clear();
+  highlightedGrep.clear();
+  inspectionTrees.clear();
 }
 
 function component(draw: (width?: number) => string[]): Component {
@@ -738,6 +905,15 @@ export default function (pi: ExtensionAPI) {
               ];
             }
           }
+          if (toolName === "grep") {
+            const query = asRecord(args);
+            const scope = ` in ${clean(query.path) || "."}${query.glob ? ` · ${clean(query.glob)}` : ""}`;
+            const flags = `${query.ignoreCase ? " · -i" : ""}${query.literal ? " · -F" : ""}${finiteNumber(query.context) ? ` · ctx ${query.context}` : ""}`;
+            return [
+              ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
+              ` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "$ ")} ${theme.fg("text", theme.bold(JSON.stringify(clean(query.pattern))))}${theme.fg("dim", scope + flags)}`,
+            ];
+          }
           const arg = preview(toolName, asRecord(args));
           return [` ${glyph} ${name}${theme.fg("dim", `${arg ? ` ${arg}` : ""}${elapsed}`)}`];
         });
@@ -752,7 +928,9 @@ export default function (pi: ExtensionAPI) {
           const partial = live ? !live.done : isPartial;
           const running = partial || (CONNECTED.has(toolName) && !live?.done
             && roots(effective).some((root) => RUNNING.has(asString(asRecord(root.progress).status))));
-          row.failed = failed(effective, context);
+          row.failed = INSPECT_TOOLS.has(toolName)
+            ? context.isError || asRecord(effective).isError === true
+            : failed(effective, context);
           row.settled = !running || row.failed;
           if (row.settled) {
             if (!row.restored) row.completedAt ??= Date.now();
@@ -761,6 +939,12 @@ export default function (pi: ExtensionAPI) {
             row.completedAt = undefined;
             arm(row);
           }
+          if (toolName === "grep") return renderGrep(effective, expanded, row, theme, context, width);
+          if ((toolName === "find" || toolName === "ls") && expanded) return [
+            inspectionBanner(toolName, effective, row, theme),
+            ...(!row.failed ? (toolName === "find" ? findTree : lsListing)(theme, context.toolCallId,
+              inspectionPaths(effective, toolName === "find" ? "No files found matching pattern" : "(empty directory)")) : []),
+          ];
           const lines = CONNECTED.has(toolName)
             ? renderConnectedChips(toolName, asRecord(context.args), effective, expanded, partial, row, theme, context.isError || asRecord(effective).isError === true)
             : [expanded && row.settled && OUTPUT_TOOLS.has(toolName)
@@ -780,7 +964,8 @@ export default function (pi: ExtensionAPI) {
     // and bash/powershell keep their expansion ours too: the native file
     // render proved near-uncolored, and the native bash output view has no
     // framing — ours adds the exit banner plus the railed head-and-tail fold.
-    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) ? undefined : next();
+    // Inspection tools keep their query spines and colored file trees too.
+    const other = CONNECTED.has(toolName) || FILE_TOOLS.has(toolName) || OUTPUT_TOOLS.has(toolName) || INSPECT_TOOLS.has(toolName) ? undefined : next();
     if (!other?.renderResult) return mine;
     return {
       renderShell: "self",

@@ -33,14 +33,14 @@ try {
     // mirrors the real dual-instance trap: uninitiated highlightCode silently
     // returns plain lines even for valid languages
     'exports.highlightCode = (code, lang) => (hlInited && lang) ? String(code).split("\\n").map((l) => l ? `<hl:${lang}>${l}` : l) : String(code).split("\\n");',
-    'exports.truncateToVisualLines = (text, maxLines, width) => {',
+    'exports.truncateToVisualLines = (text, maxLines, width, _padding, keep = "end") => {',
     '  const out = [];',
     '  for (const line of String(text).split("\\n")) {',
     '    const chars = [...line];',
     '    for (let i = 0; i < chars.length; i += Math.max(1, width)) out.push(chars.slice(i, i + Math.max(1, width)).join(""));',
     '  }',
     '  const skipped = Math.max(0, out.length - maxLines);',
-    '  return { visualLines: skipped ? out.slice(out.length - maxLines) : out, skippedCount: skipped };',
+    '  return { visualLines: skipped ? (keep === "start" ? out.slice(0, maxLines) : out.slice(out.length - maxLines)) : out, skippedCount: skipped };',
     '};',
   ].join("\n") + "\n");
   writeFileSync(stubTui, 'exports.truncateToWidth = (text, width) => [...text].slice(0, width).join("");\n');
@@ -81,7 +81,7 @@ try {
   };
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
-  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell"]);
+  const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "grep", "find", "ls"]);
   for (const name of ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "no_mistakes_axi", "mcp__not_connected__search", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name);
     let calls = 0;
@@ -218,6 +218,127 @@ try {
   assert.ok(styled.includes("<muted>> </muted>quoted"), "quote markers muted");
   assert.ok(styled.includes("<dim>```ts</dim>"), "fence lines dim");
   assert.ok(styled.includes("<hl:ts>const a = 1;"), "inner code still engine-highlighted");
+
+  const grep = resolver("grep", () => undefined);
+  const grepArgs = { pattern: "needle", path: "src", glob: "*.ts", ignoreCase: true, literal: true, context: 2 };
+  const grepCtx = context("grep-hits", grepArgs, quiet);
+  const grepCall = render(grep.renderCall(grepArgs, styT, grepCtx));
+  assert.ok(grepCall.includes('<text><b>"needle"</b></text>'));
+  assert.ok(grepCall.includes("<dim> in src · *.ts · -i · -F · ctx 2</dim>"));
+  assert.ok(grepCall.includes("<borderMuted>├─</borderMuted> <dim>$ </dim>"));
+  const hits = result("src/a.ts:2:needle one\nsrc/a.ts:9:two NEEDLEs\nsrc/with:colon.ts:3:needle three");
+  const grepCollapsed = render(grep.renderResult(hits, options, styT, grepCtx));
+  assert.match(grepCollapsed, /3 matches · 2 files/);
+  assert.ok(grepCollapsed.includes("<borderMuted>│</borderMuted>  <dim>src/a.ts:2:</dim><toolOutput><b>needle</b> one"));
+  assert.ok(!grepCollapsed.includes("two NEEDLEs"));
+  const grepExpanded = render(grep.renderResult(hits, { ...options, expanded: true }, styT, grepCtx));
+  assert.ok(grepExpanded.includes("<success><b>✓ 3 matches</b></success><dim> · 2 files</dim>"));
+  assert.ok(grepExpanded.includes("two <b>NEEDLE</b>s"));
+  assert.ok(grepExpanded.includes("<dim>src/with:colon.ts:3:</dim>"));
+  const grepZero = render(grep.renderResult(result("No matches found"), { ...options, expanded: true }, styT, context("grep-zero", grepArgs, quiet)));
+  assert.ok(grepZero.includes("<error><b>✗ 0 matches</b></error>"));
+  assert.ok(!grepZero.includes("No matches found"));
+  const grepMany = result(Array.from({ length: 100 }, (_, i) => `file.ts:${i + 1}:needle ${i}`).join("\n"));
+  const grepFold = render(grep.renderResult(grepMany, { ...options, expanded: true }, styT, context("grep-fold", grepArgs, quiet)));
+  assert.match(grepFold, /100 matches/);
+  assert.ok(grepFold.includes("<dim>… 40 lines hidden …</dim>"));
+  assert.ok(grepFold.includes("file.ts:30:") && grepFold.includes("file.ts:71:") && grepFold.includes("file.ts:100:"));
+  assert.ok(!grepFold.includes("file.ts:31:"));
+  const grepPartial = render(grep.renderResult(hits, { expanded: true, isPartial: true }, styT, context("grep-partial", grepArgs, quiet)));
+  assert.match(grepPartial, /running/);
+  assert.ok(!grepPartial.includes("✓") && grepPartial.includes("<b>needle</b>"));
+  const grepError = render(grep.renderResult(result("bad pattern"), { ...options, expanded: true }, styT, context("grep-error", grepArgs, { ...quiet, isError: true })));
+  assert.ok(grepError.includes("<error><b>✗ bad pattern</b></error>"));
+  const grepNative = result("src/a.ts-9- before:123: context\nsrc/a.ts:10: value:123: needle\nsrc/a.ts-11- after\nsrc/a.ts:12: needle\nsrc/with:colon.ts:3: needle");
+  const grepNativeCtx = context("grep-native", grepArgs, quiet);
+  const grepNativeOut = render(grep.renderResult(grepNative, { ...options, expanded: true }, styT, grepNativeCtx));
+  assert.match(grepNativeOut, /3 matches/);
+  assert.ok(grepNativeOut.includes(" · 2 files"));
+  assert.ok(grepNativeOut.includes("<dim>src/a.ts:10:</dim><toolOutput> value:123: <b>needle</b>"));
+  assert.ok(grepNativeOut.includes("<dim>src/a.ts-9- before:123: context</dim>"));
+  assert.ok(grepNativeOut.includes("<dim>src/a.ts-11- after</dim>"));
+  const grepNativeCollapsed = render(grep.renderResult(grepNative, options, styT, grepNativeCtx));
+  assert.ok(grepNativeCollapsed.includes("src/a.ts:10:") && !grepNativeCollapsed.includes("src/a.ts-9-"));
+  for (const details of [{ matchLimitReached: 1 }, { linesTruncated: true }]) {
+    const grepLimit = render(grep.renderResult(result("a.ts:1: needle\n\n[tool truncation notice]", details), { ...options, expanded: true }, styT, context(`grep-${JSON.stringify(details)}`, grepArgs, quiet)));
+    assert.ok(grepLimit.includes("✓ 1 match") && grepLimit.includes(" · 1 file · truncated"));
+  }
+  const grepLong = render(grep.renderResult(result(`a.ts:42: needle ${"x".repeat(500)}`), { ...options, expanded: true }, theme, context("grep-long", grepArgs, quiet)), 40);
+  assert.match(grepLong, /a\.ts:42: needle/);
+  assert.match(grepLong, /… \d+ wrapped lines hidden/);
+  const grepLiteralArgs = { pattern: "a.b", literal: true };
+  const grepLiteral = render(grep.renderResult(result("f:1:a.b axb a.b"), { ...options, expanded: true }, styT, context("grep-literal", grepLiteralArgs, quiet)));
+  assert.ok(grepLiteral.includes("<b>a.b</b> axb <b>a.b</b>"));
+  // A new partial source or theme must invalidate the per-call row cache.
+  const grepChanged = render(grep.renderResult(result("new:4:new needle"), { ...options, expanded: true }, theme, grepCtx));
+  assert.match(grepChanged, /new:4:new needle/);
+  assert.ok(!grepChanged.includes("<b>"));
+
+  const find = resolver("find", () => undefined);
+  const findCtx = context("find-tree", { pattern: "*.ts", path: "src" }, quiet);
+  assert.match(render(find.renderCall(findCtx.args, theme, findCtx)), /"\*\.ts" in src/);
+  const paths = result("src/a.ts\nsrc/nested/b.ts\nREADME.md\n");
+  assert.match(render(find.renderResult(paths, options, styT, findCtx)), /3 paths/);
+  const tree = render(find.renderResult(paths, { ...options, expanded: true }, styT, findCtx));
+  assert.ok(tree.includes("<success><b>✓ 3 paths</b></success>"));
+  assert.ok(tree.includes("<borderMuted>├── </borderMuted><accent><b>src/</b></accent>"));
+  assert.ok(tree.includes("<borderMuted>│   ├── </borderMuted><toolOutput>a.ts</toolOutput>"));
+  assert.ok(tree.includes("<borderMuted>│   └── </borderMuted><accent><b>nested/</b></accent>"));
+  assert.ok(tree.includes("<borderMuted>│       └── </borderMuted><toolOutput>b.ts</toolOutput>"));
+  assert.ok(tree.includes("<borderMuted>└── </borderMuted><toolOutput>README.md</toolOutput>"));
+  const treeFold = render(find.renderResult(result(Array.from({ length: 100 }, (_, i) => `src/file-${i}.ts`).join("\n")), { ...options, expanded: true }, styT, context("find-fold", {}, quiet)));
+  assert.ok(treeFold.includes("<dim>… 41 hidden …</dim>"));
+  assert.ok(treeFold.includes("file-0.ts") && treeFold.includes("file-99.ts"));
+  assert.ok(!treeFold.includes("file-30.ts"));
+  const treeTruncated = render(find.renderResult(result("a.ts\nb.ts\n\n[2 results limit reached. Use limit=4 for more]", { resultLimitReached: 2, truncation: { truncated: true } }), { ...options, expanded: true }, styT, context("find-limit", {}, quiet)));
+  assert.ok(treeTruncated.includes("<success><b>✓ 2 paths</b></success><dim> · truncated</dim>"));
+  assert.ok(!treeTruncated.includes("limit reached"));
+  const treeEmpty = render(find.renderResult(result("No files found matching pattern"), { ...options, expanded: true }, styT, context("find-empty", {}, quiet)));
+  assert.ok(treeEmpty.includes("✓ 0 paths") && !treeEmpty.includes("└──"));
+  const treePartial = render(find.renderResult(paths, { expanded: true, isPartial: true }, styT, context("find-partial", {}, quiet)));
+  assert.match(treePartial, /running/);
+  assert.ok(!treePartial.includes("✓") && treePartial.includes("nested/"));
+  const treeError = render(find.renderResult(result("path not found"), { ...options, expanded: true }, styT, context("find-error", {}, { ...quiet, isError: true })));
+  assert.ok(treeError.includes("<error><b>✗ path not found</b></error>") && !treeError.includes("└──"));
+
+  const ls = resolver("ls", () => undefined);
+  const lsCtx = context("ls-list", { path: "." }, quiet);
+  // Real session results omit details normally; limited results only carry
+  // entryLimitReached (and optionally truncation), never an entries array.
+  const listing = result(".git/\nREADME.md\nsrc/\ntest.mjs");
+  delete listing.details;
+  assert.match(render(ls.renderResult(listing, options, styT, lsCtx)), /2 dirs · 2 files/);
+  const lsOut = render(ls.renderResult(listing, { ...options, expanded: true }, styT, lsCtx));
+  assert.ok(lsOut.includes("<success><b>✓ 2 dirs</b></success><dim> · 2 files</dim>"));
+  assert.ok(lsOut.includes("<borderMuted>├── </borderMuted><accent><b>.git/</b></accent>"));
+  assert.ok(lsOut.includes("<borderMuted>├── </borderMuted><toolOutput>README.md</toolOutput>"));
+  assert.ok(lsOut.includes("<borderMuted>└── </borderMuted><toolOutput>test.mjs</toolOutput>"));
+  assert.ok(!lsOut.includes(" → "), "native stat follows links; never invent link metadata");
+  const lsLimited = render(ls.renderResult(result("one/\ntwo.txt\n\n[2 entries limit reached. Use limit=4 for more]", { entryLimitReached: 2 }), { ...options, expanded: true }, styT, context("ls-limit", {}, quiet)));
+  assert.ok(lsLimited.includes("✓ 1 dir") && lsLimited.includes(" · 1 file · truncated"));
+  assert.ok(!lsLimited.includes("entries limit"), "tool notices are not listing entries");
+  const lsBytes = render(ls.renderResult(result("one/\ntwo.txt\n\n[50.0KB limit reached]", { truncation: { truncated: true, content: "one/\ntwo.txt", lastLinePartial: false, totalLines: 3, totalBytes: 60000, outputLines: 2, outputBytes: 12, maxBytes: 51200 } }), { ...options, expanded: true }, styT, context("ls-bytes", {}, quiet)));
+  assert.ok(lsBytes.includes(" · 1 file · truncated"));
+  assert.ok(!lsBytes.includes("50.0KB") && !lsBytes.includes("60000"), "output byte counts are not file sizes");
+  const lsPlain = render(ls.renderResult(result("one.txt\ntwo.txt"), { ...options, expanded: true }, styT, context("ls-plain", {}, quiet)));
+  assert.ok(lsPlain.includes("✓ 2 results") && lsPlain.includes("<toolOutput>one.txt</toolOutput>"));
+  assert.ok(!lsPlain.includes("dirs") && !lsPlain.includes("<accent>"));
+  const lsEmpty = render(ls.renderResult(result("(empty directory)"), { ...options, expanded: true }, styT, context("ls-empty", {}, quiet)));
+  assert.ok(lsEmpty.includes("✓ 0 dirs") && lsEmpty.includes(" · 0 files") && !lsEmpty.includes("└──"));
+  const lsError = render(ls.renderResult(result("Path not found: /missing", {}), { ...options, expanded: true }, styT, context("ls-error", {}, { ...quiet, isError: true })));
+  assert.ok(lsError.includes("<error><b>✗ Path not found: /missing</b></error>") && !lsError.includes("└──"));
+  const lsPartial = render(ls.renderResult(listing, { expanded: true, isPartial: true }, styT, context("ls-partial", {}, quiet)));
+  assert.match(lsPartial, /running/);
+  assert.ok(!lsPartial.includes("✓") && lsPartial.includes("src/"));
+  const lsEscapes = render(ls.renderResult(result("\u001b[31msrc/\u001b[0m\nfile\tname"), { ...options, expanded: true }, styT, context("ls-safe", {}, quiet)));
+  assert.ok(!lsEscapes.includes("\u001b") && lsEscapes.includes("file  name") && lsEscapes.includes("✓ 1 dir"));
+  const lsUpdated = render(ls.renderResult(result("new/"), { ...options, expanded: true }, theme, lsCtx));
+  assert.match(lsUpdated, /✓ 1 dir · 0 files/);
+  assert.ok(!lsUpdated.includes("README.md") && !lsUpdated.includes("<accent>"));
+  for (const [tool, output, args] of [[grep, hits, grepArgs], [find, paths, {}], [ls, listing, {}]]) {
+    const narrow = tool.renderResult(output, { ...options, expanded: true }, theme, context(`narrow-${JSON.stringify(args)}-${output.content[0].text}`, args, quiet));
+    assert.ok(narrow.render(16).every((line) => [...line].length <= 16));
+  }
 
   const subagent = resolver("subagent", () => undefined);
   const ctx = context("child", { name: "scout" });
