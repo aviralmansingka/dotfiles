@@ -14,15 +14,18 @@ import { Type } from "typebox";
 import { openJournalInEditor } from "./md-log";
 
 // ────────────────────────────────────────────────────────────────────────
-// `alt+h` lesson journal — the explain panel's journal shortcut.
+// `h` / `alt+h` lesson journal — the explain panel's journal shortcuts.
 //
 // The answering phase is a free-text Editor that consumes every printable
-// key, so the plain `h` shortcut quiz uses cannot work here: alt+h is the
-// journal opener (ESC-prefixed h in legacy terminals, CSI-u under the kitty
-// protocol — matchesKey handles both). Opens the per-session lesson journal
-// (<session>.md, the live file md-log appends to as the session runs) so the
-// learner can read the whole transcript while answering or reading the
-// verdict. Fire-and-forget: never throws into the panel, no LLM call, no wait.
+// key, so bare `h` cannot simply be claimed: it would make the letter h
+// untypable. Match quiz muscle memory where it is safe instead: bare `h`
+// opens the journal while the answer field is still EMPTY (the moment the
+// panel appears, before composing) and in the verdict phase (nothing is
+// typed there). Alt+h opens the journal at all times (ESC-prefixed h in
+// legacy terminals, CSI-u under the kitty protocol — matchesKey handles
+// both). Both open the per-session lesson journal (<session>.md, the live
+// file md-log appends to as the session runs) so the learner can read the
+// whole transcript. Fire-and-forget: never throws, no LLM call, no wait.
 // ────────────────────────────────────────────────────────────────────────
 function openJournalShortcut(ctx: any): void {
 	ctx?.ui?.notify?.("Opening lesson journal…", "info");
@@ -335,7 +338,7 @@ export default function explain(pi: ExtensionAPI) {
 			"Prefer explain when you know roughly where the user stands and want to test the precision of their language. Prefer quiz when you are still finding the edge.",
 			"Act on the verdict. When the answer is correct but loose, name the loose terms and sharpen them. When it is partially correct or incorrect, stop. Diagnose the gap, then re-ask in a different form.",
 			"An empty or near-empty answer is an honest 'I don't know'. Treat it as a real gap to teach into, not a failure. Empty answers skip grading.",
-			"The user can press Alt+H while answering or reading the verdict. It opens the session journal (<session>.md) in the editor pane. md-log maintains this journal. The panel stays active.",
+			"The user can press `h` while the answer field is empty, in the verdict phase, or Alt+H at any time. It opens the session journal (<session>.md) in the editor pane. md-log maintains this journal. The panel stays active.",
 		],
 		parameters: ExplainParams,
 
@@ -457,7 +460,7 @@ export default function explain(pi: ExtensionAPI) {
 
 								if (phase === "answering") {
 									top.push("");
-									addT(theme.fg("dim", " Enter — submit · Ctrl+J — new line · Alt+H — journal · Esc — cancel"));
+									addT(theme.fg("dim", " Enter — submit · Ctrl+J — new line · h / Alt+H — journal · Esc — cancel"));
 									for (const line of editorInnerLines(editor, bw)) bottom.push(line);
 								} else if (phase === "grading") {
 									top.push("");
@@ -512,6 +515,13 @@ export default function explain(pi: ExtensionAPI) {
 										openJournalShortcut(ctx);
 										return;
 									}
+									// Bare h matches the quiz shortcut, but only before any
+									// typing: the Editor must keep every printable key once the
+									// learner is composing an answer.
+									if (matchesKey(data, "h") && editor.getText().trim() === "") {
+										openJournalShortcut(ctx);
+										return;
+									}
 									if (matchesKey(data, Key.enter)) {
 										const answer = editor.getText().trim();
 										if (!answer) {
@@ -536,8 +546,8 @@ export default function explain(pi: ExtensionAPI) {
 									}
 									return;
 								}
-								// verdict
-								if (matchesKey(data, "alt+h")) {
+								// verdict — nothing is typed here, so bare h is safe too
+								if (matchesKey(data, "alt+h") || matchesKey(data, "h")) {
 									openJournalShortcut(ctx);
 									return;
 								}
