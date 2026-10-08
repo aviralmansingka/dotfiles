@@ -231,7 +231,7 @@ export function registerToolExtension(name: string, extensionPath: string): void
  * Map a custom (non-built-in) tool name to the pi-extension file that
  * registers it. The child now keeps normal extension discovery enabled, but
  * explicit `-e` entries are still needed for helper tools outside discovered
- * extension locations (for example safe_bash). Returns undefined for built-in
+ * extension locations (for example hunk_review). Returns undefined for built-in
  * tools and for unknown names (which simply won't be granted).
  */
 function getToolExtensionPath(tool: string): string | undefined {
@@ -248,7 +248,6 @@ function getToolExtensionPath(tool: string): string | undefined {
     youtube_search: join(extBase, "youtube-search", "index.ts"),
     google_image_search: join(extBase, "google-image-search", "index.ts"),
     hunk_review: join(SUBAGENTS_DIR, "tools", "hunk-review.ts"),
-    safe_bash: join(SUBAGENTS_DIR, "tools", "safe-bash.ts"),
   };
   // Prefer the built-in path, but fall back to a runtime-registered extension
   // when that path no longer exists on disk (e.g. a built-in tool extension
@@ -2467,8 +2466,8 @@ export default function subagentsExtension(pi: ExtensionAPI) {
         }
         const resumeEnvPrefix = resumeEnvParts.join(" ") + " ";
 
-        // Resume in the subagent's original cwd so its tools (safe_bash, edits)
-        // operate where they did before.
+        // Resume in the subagent's original cwd so its tools operate where
+        // they did before.
         const resumeCdPrefix = loadout.cwd ? `cd ${shellEscape(loadout.cwd)} && ` : "";
 
         const command = `${resumeCdPrefix}${resumeEnvPrefix}${parts.join(" ")}; echo '__SUBAGENT_DONE_'$?'__'`;

@@ -80,7 +80,7 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | Agent | Model | Tools | Role |
 | ----- | ----- | ----- | ---- |
 | **scout** | `openai-codex/gpt-6-astra` | `read`, `grep`, `find`, `ls` | Fast read-only codebase recon |
-| **researcher** | `openai-codex/gpt-6-astra` | `web_search`, `web_fetch`, `safe_bash` | Web research, synthesized into a sourced brief |
+| **researcher** | `openai-codex/gpt-6-astra` | `web_search`, `web_fetch`, `bash` | Web research, synthesized into a sourced brief |
 | **worker** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch` + spawning | General implementer; may spawn `scout` and `researcher` |
 | **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, Hunk canvas + restricted spawning | Interactive teacher; may start Hunk review only on the learner's explicit request |
 | **hunk-review** | `openai-codex/gpt-6-astra` | read-only repository tools, dedicated Hunk review tool | Autonomous reviewer; anchors detailed findings in the active Hunk session |
@@ -113,7 +113,7 @@ name: my-agent
 description: Does something specific
 model: fireworks/accounts/fireworks/routers/glm-5p2-fast
 thinking: medium
-tools: read, edit, write, safe_bash, web_search
+tools: read, edit, write, bash, web_search
 session-mode: lineage-only
 auto-exit: true
 ---
@@ -129,7 +129,7 @@ You are a specialized agent that does X...
 | `description` | string | Shown in `subagents_list` |
 | `model` | string | Default model |
 | `thinking` | string | `minimal`, `low`, `medium`, or `high` |
-| `tools` | string | Strict callable-tool allowlist. Built-ins: `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`. Extension-backed examples: `web_search`, `web_fetch`, `safe_bash`, `video_extract`, `youtube_search`, `google_image_search`. Normal extension discovery stays enabled, but only listed tools are callable |
+| `tools` | string | Strict callable-tool allowlist. Built-ins: `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`. Extension-backed examples: `web_search`, `web_fetch`, `video_extract`, `youtube_search`, `google_image_search`. Normal extension discovery stays enabled, but only listed tools are callable |
 | `subagent_agents` | string | Comma-separated agent names this agent may spawn. **Presence of this field grants the spawning toolset** (`subagent`, `subagent_message`, `subagents_list`) and restricts spawn targets to the list. Omit it and the agent cannot spawn at all |
 | `skills` | string | Comma-separated skill names to auto-load |
 | `session-mode` | string | `standalone` (default), `lineage-only`, or `fork` — see below |

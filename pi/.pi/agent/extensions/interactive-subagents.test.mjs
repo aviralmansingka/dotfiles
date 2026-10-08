@@ -314,12 +314,20 @@ try {
 	assert.equal(reviewer.skills, "hunk-review");
 	assert.equal(reviewer.autoExit, true);
 
+	const researcher = loadAgentDefaultsFromPaths("researcher", {
+		cwd: profileRoot,
+		configDir: join(profileRoot, "global-agent-config"),
+		bundledDir: bundledAgentsDir,
+	});
+	assert.equal(researcher.tools, "web_search, web_fetch, bash");
+
 	const professor = loadAgentDefaultsFromPaths("professor", {
 		cwd: profileRoot,
 		configDir: join(profileRoot, "global-agent-config"),
 		bundledDir: bundledAgentsDir,
 	});
 	assert.ok(professor.tools.split(", ").includes("hunk_open"));
+	assert.ok(professor.tools.split(", ").includes("bash"));
 	assert.deepEqual(professor.subagentAgents, ["researcher", "hunk-review"]);
 	assert.equal(professor.skills, "professor");
 	assert.equal(professor.autoExit, false);
