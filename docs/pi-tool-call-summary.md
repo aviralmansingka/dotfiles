@@ -66,18 +66,19 @@ reload.
   unchanged.
 - `statusBanner`, `expandedOutput`, and the exit summary are untouched.
 
-## Ctrl+E command-visibility toggle
+## Ctrl+Q command-visibility toggle
 
-`registerShortcut("ctrl+e")` in the same extension toggles
+`registerShortcut("ctrl+q")` in the same extension toggles
 `commandsHidden` (process state, starts `true` every launch). Hidden rows
 keep the `— title` header; a title-less call keeps a dim one-line `$ `
 preview so the row stays identifiable. The toggles are orthogonal:
 `Ctrl+O` expands output only and never reveals a hidden command body;
-`Ctrl+E` hides the command body in collapsed and expanded views alike.
+`Ctrl+Q` hides the command body in collapsed and expanded views alike.
 The handler invalidates every mounted row, so the transcript flips in
 place, and `ctx.ui.notify()` confirms the state.
-Extension shortcuts outrank the editor's default
-`ctrl+e` (line-end) in the main editor; `end` still moves to line end.
+No editor clash: `ctrl+e` keeps move-to-line-end. The user runs
+AeroSpace, so alt-based shortcuts are out, and ctrl+q is the one
+unbound ctrl letter.
 
 ## Prompt rule (`APPEND_SYSTEM.md`)
 

@@ -127,9 +127,9 @@ try {
   };
   assert.equal(resolver("tuicr_reply", () => replyRenderer), replyRenderer, "tuicr replies own call and result rows even when collapsed");
   const bash = resolver("bash", () => undefined);
-  // Ctrl+E command-visibility toggle: every launch starts hidden.
-  assert.ok(shortcut, "ctrl+e shortcut is registered");
-  assert.equal(shortcut.key, "ctrl+e");
+  // Ctrl+Q command-visibility toggle: every launch starts hidden.
+  assert.ok(shortcut, "ctrl+q shortcut is registered");
+  assert.equal(shortcut.key, "ctrl+q");
   assert.equal(typeof shortcut.handler, "function");
   assert.ok(shortcut.description, "the shortcut carries a /hotkeys description");
   const notifications = [];
@@ -151,7 +151,7 @@ try {
     context("hidden-expanded", {}, { executionStarted: false, expanded: true }),
   ));
   assert.match(hiddenExpanded, /^ ◇ bash — list files changed on this branch against main$/m, "expanded rows keep the hidden title-only form");
-  assert.ok(!hiddenExpanded.includes("git diff"), "Ctrl+E stays orthogonal to Ctrl+O: expansion never reveals the command body");
+  assert.ok(!hiddenExpanded.includes("git diff"), "Ctrl+Q stays orthogonal to Ctrl+O: expansion never reveals the command body");
   const beforeToggle = invalidations;
   shortcut.handler(shortcutCtx);
   assert.ok(invalidations > beforeToggle, "the toggle invalidates mounted rows");
