@@ -607,7 +607,7 @@ function commandRows(command: string): CommandRow[] {
         j += op.length - 1;
         start = j + 1;
       } else if (ch === "<" && rest[j + 1] === "<") {
-        const tag = /^<<-?\s*("?)([A-Za-z_][A-Za-z0-9_-]*)\1/.exec(rest.slice(j));
+        const tag = /^<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_-]*)\1/.exec(rest.slice(j));
         if (tag) {
           heredoc = tag[2];
           j += tag[0].length - 1;
