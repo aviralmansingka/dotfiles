@@ -711,15 +711,16 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		const scriptFile = join(stubDir, "attach.sh");
 		const logFile = join(stubDir, "attach.log");
 		const stubPath = join(stubDir, "no-mistakes");
-		// Stub `no-mistakes attach`: log the attempt, then touch the done file on
-		// the first call so the wrapper stops retrying after one iteration.
+		// Stub `no-mistakes`: `axi status` reports a branch-scoped run id;
+		// `attach` logs its arguments, then touches the done file on the first
+		// call so the wrapper stops retrying after one iteration.
 		writeFileSync(
 			stubPath,
 			[
 				"#!/bin/sh",
-				'echo "attach-call" >> "$ATTACH_LOG"',
-				'if [ ! -f "$DONE" ]; then touch "$DONE"; fi',
-				"exit 0",
+				'if [ "$1" = "axi" ]; then printf \u0027  id: "RUN123"\\n\u0027; exit 0; fi',
+				'if [ "$1" = "attach" ]; then echo "$*" >> "$ATTACH_LOG"; if [ ! -f "$DONE" ]; then touch "$DONE"; fi; exit 0; fi',
+				"exit 1",
 				"",
 			].join("\n"),
 		);
@@ -742,6 +743,8 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		// The wrapper calls attach once; the done file appears, so it stops without
 		// spinning through all 240 retries.
 		assert.equal(calls.length, 1, `attach is retried only until done appears (got ${calls.length} calls)`);
+		// attach is branch-scoped: it always receives the resolved run id.
+		assert.equal(calls[0], "attach --run RUN123", `attach receives the branch-scoped run id (got: ${calls[0]})`);
 	} finally {
 		rmSync(stubDir, { recursive: true, force: true });
 	}
@@ -763,8 +766,9 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			stubPath,
 			[
 				"#!/bin/sh",
-				'echo "attach-call" >> "$ATTACH_LOG"',
-				"exit 0",
+				'if [ "$1" = "axi" ]; then printf \u0027  id: "RUN123"\\n\u0027; exit 0; fi',
+				'if [ "$1" = "attach" ]; then echo "$*" >> "$ATTACH_LOG"; exit 0; fi',
+				"exit 1",
 				"",
 			].join("\n"),
 		);
@@ -781,6 +785,53 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		});
 		assert.equal(ran.status, 0, `attach wrapper should exit 0 when done already exists; stderr: ${ran.stderr}`);
 		assert.ok(!existsSync(logFile) || readFileSync(logFile, "utf-8").trim() === "", "attach is not called when done already exists");
+	} finally {
+		rmSync(stubDir, { recursive: true, force: true });
+	}
+}
+
+// ---------------------------------------------------------------------------
+// buildAttachScript: while axi status resolves no run id (the background run
+// has not registered with the daemon yet), attach is NEVER invoked — and
+// in particular never without an explicit --run id, which would latch onto
+// any active run in the shared repo mirror.
+// ---------------------------------------------------------------------------
+{
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-attach-noid-"));
+	try {
+		const doneFile = join(stubDir, "capture.done");
+		const scriptFile = join(stubDir, "attach.sh");
+		const logFile = join(stubDir, "attach.log");
+		const statusCalls = join(stubDir, "status.calls");
+		const stubPath = join(stubDir, "no-mistakes");
+		writeFileSync(
+			stubPath,
+			[
+				"#!/bin/sh",
+				'if [ "$1" = "axi" ]; then echo "status" >> "' + statusCalls + '"; printf "no run\\n"; exit 1; fi',
+				'if [ "$1" = "attach" ]; then echo "$*" >> "$ATTACH_LOG"; exit 0; fi',
+				"exit 1",
+				"",
+			].join("\n"),
+		);
+		chmodSync(stubPath, 0o755);
+		writeFileSync(join(stubDir, "sleep"), ["#!/bin/sh", "exit 0", ""].join("\n"));
+		chmodSync(join(stubDir, "sleep"), 0o755);
+
+		// Small retry budget: resolution never succeeds, so the wrapper exhausts
+		// it and exits without a single attach call.
+		writeFileSync(scriptFile, buildAttachScript(doneFile, 3, "0.001"));
+		const ran = spawnSync("bash", [scriptFile], {
+			encoding: "utf-8",
+			env: { ...process.env, PATH: `${stubDir}:${process.env.PATH}`, DONE: doneFile, ATTACH_LOG: logFile },
+		});
+		assert.equal(ran.status, 0, `attach wrapper should exit 0; stderr: ${ran.stderr}`);
+		assert.ok(!existsSync(logFile), "attach is never called when no run id resolves");
+		assert.equal(
+			readFileSync(statusCalls, "utf-8").trim().split("\n").length,
+			3,
+			"run-id resolution is retried for every attempt",
+		);
 	} finally {
 		rmSync(stubDir, { recursive: true, force: true });
 	}

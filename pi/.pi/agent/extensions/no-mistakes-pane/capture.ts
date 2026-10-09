@@ -71,13 +71,22 @@ export function buildBackgroundScript(
 
 /**
  * Build the bash script that runs `no-mistakes attach` in the visible Herdr
- * pane. attach renders the interactive TUI of the active
- * daemon run — the same run the background `axi <args>` is driving.
+ * pane. attach renders the interactive TUI of the daemon run — the same run
+ * the background `axi <args>` is driving.
+ *
+ * Run selection: a bare `no-mistakes attach` picks "the active run for the
+ * current repo", and one repo mirror is shared by every worktree of that
+ * repo — with several worktrees running pipelines at once, the pane latches
+ * onto whichever run the daemon considers most active, not this branch's.
+ * Each attempt therefore resolves the branch-scoped run id first via
+ * `no-mistakes axi status` (branch-scoped from this pane's cwd) and attaches
+ * with `--run <id>`; attach is never invoked without an explicit id. When no
+ * run is registered yet, resolution yields nothing and the loop retries.
  *
  * attach needs an active run to attach to, and there is a startup race: the
  * background axi run may not have registered with the daemon yet when attach
  * first runs. attach is read-only w.r.t. the daemon, so this wrapper simply
- * retries it until either it attaches (then it blocks for the whole run and
+ * retries until either it attaches (then it blocks for the whole run and
  * exits when the run ends) or the background run completes (sentinel
  * `doneFile` appears, meaning the run — successful or failed — is over and
  * there is nothing left to watch). Bounded by `maxTries` × `intervalSec` so a
@@ -89,7 +98,13 @@ export function buildAttachScript(doneFile: string, maxTries: number, intervalSe
 		`i=0`,
 		`while [ "$i" -lt ${maxTries} ]; do`,
 		`  [ -f "$DONE" ] && break`,
-		`  no-mistakes attach 2>/dev/null`,
+		`  # Branch-scoped run id: the first "id: …" line of axi status output.`,
+		`  # (axi status resolves by branch from this pane's cwd; bare attach is`,
+		`  # repo-scoped and can latch onto a different worktree's run.)`,
+		`  RID=$(no-mistakes axi status 2>/dev/null | grep -m1 '^  id: "' | cut -d'"' -f2)`,
+		`  if [ -n "$RID" ]; then`,
+		`    no-mistakes attach --run "$RID" 2>/dev/null`,
+		`  fi`,
 		`  [ -f "$DONE" ] && break`,
 		`  i=$((i+1))`,
 		`  sleep ${intervalSec}`,
