@@ -136,7 +136,7 @@ function preview(tool: string, args: RecordValue, cwd = ""): string {
     case "grep": case "find": return `${JSON.stringify(clean(args.pattern))} in ${path || "."}${args.glob ? ` · ${clean(args.glob)}` : ""}`;
     case "ls": return path || ".";
     case "subagent": return clean(args.name || args.agent);
-    case "no_mistakes_axi": return clean(args.phase || args.task);
+    case "no_mistakes_axi": return clean(args.args) || clean(args.phase) || clean(args.task);
     case "mcp": return clean(args.server || args.connect || args.tool);
     default: return firstLine(args.query || args.url || args.path || args.name || args.command || args.task);
   }

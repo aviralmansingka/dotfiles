@@ -1,7 +1,8 @@
 ---
 name: no-mistakes
-description: Validate your code changes through the no-mistakes pipeline - automated code review, tests, lint, docs, push, PR, and CI - before they reach the configured push target. Use when the user asks to run no-mistakes, gate or ship or validate their changes, push safely, asks you to do a task and then validate it, or invokes /no-mistakes.
+description: Validate your code changes through the no-mistakes pipeline - automated code review, tests, lint, docs, push, PR, and CI - before they reach the configured push target. Use when the user asks to run no-mistakes, gate or ship or validate their changes, push safely, asks you to do a task and then validate it, or invokes /skill:no-mistakes.
 user-invocable: true
+disable-model-invocation: true
 ---
 
 # no-mistakes
@@ -30,21 +31,29 @@ return control to the outer executor. Safe inspection remains available through
 `no-mistakes doctor`.
 
 
-When the user invokes `/no-mistakes`, report the outcome at the end. If the user
+`/no-mistakes` (registered by the no-mistakes-pane pi extension) focuses the
+visible pane of the active run, or re-opens it when it was closed; it never
+starts a pipeline. Drive every pipeline through the extension's
+`no_mistakes_axi` tool instead of the bash tool: each call runs detached in
+the background and returns immediately, and the structured TOON result
+(gate, outcome, findings, or error) arrives as a `no_mistakes_axi_result`
+message that triggers a new turn - the pipeline interfaces with you only
+through those messages. When the user asks for validation, report the
+outcome at the end. If the user
 asks for something specific, translate that request into the matching `axi run`
 flags yourself - for example, "skip the lint step" becomes `--skip=lint`. Run
 `no-mistakes axi run --help` to see the available flags.
 
 ## Two ways to invoke
 
-`/no-mistakes` works in two modes, depending on whether the user hands you a
-task along with the command:
+A validation request works in two modes, depending on whether the user hands
+you a task along with it:
 
-- **Validate-only** - bare `/no-mistakes` (optionally with flag-style requests
-  like "skip the lint step"). The user's code changes are already committed;
-  validate them and report the outcome.
-- **Task-first** - `/no-mistakes <task>`, e.g.
-  `/no-mistakes add a --json flag to the status command`. First carry out the
+- **Validate-only** - the user asks to validate, gate, or ship (optionally
+  with flag-style requests like "skip the lint step"). The user's code changes
+  are already committed; validate them and report the outcome.
+- **Task-first** - the user asks for a task and validation, e.g.
+  "add a --json flag to the status command, then gate it". First carry out the
   task yourself, then validate the result through the pipeline:
   1. **Check scope.** Inspect `git status` before you change or commit anything.
      Preserve unrelated pre-existing uncommitted changes, and when you commit,
@@ -140,19 +149,22 @@ that a reviewer reading only the diff would not know.
 
 Run the pipeline and decide on its findings as they come up:
 
-1. Start the run. It blocks until the first decision point or the end:
-   ```sh
-   no-mistakes axi run --intent "<what the user set out to accomplish>"
+1. Start the run through the `no_mistakes_axi` tool (never bash):
+   ```text
+   no_mistakes_axi args: run --intent "<what the user set out to accomplish>"
    ```
-   `axi run` and every `axi respond` block synchronously - the review, test,
-   and CI steps can each take **several minutes**, so a single call may not
-   return for a while. That is normal; allow a long timeout and do not cancel
-   or re-issue the command because it seems slow. To check progress without
-   disturbing the run, use `no-mistakes axi status` from a separate call.
-   A long-running call is working, not stalled - background it if your harness
-   needs to, but the run **never advances past a gate on its own**. Read every
-   return; on a `gate:`, respond; loop until an `outcome:`. Never idle-wait
-   for the run to move forward by itself.
+   Every `no_mistakes_axi` call - `run`, `respond`, `status`, `logs`, `sync`,
+   `abort` alike - submits its axi command detached in the background and
+   returns immediately; your session never blocks. The result later arrives
+   as a `no_mistakes_axi_result` message that triggers a new turn. The review,
+   test, and CI steps can each take **several minutes**, so a result may be
+   slow to arrive. That is normal; do not cancel or re-issue the call because
+   it seems slow. To check progress without disturbing the run, submit
+   `no_mistakes_axi args: status` any time - its result arrives the same way.
+   A long-running call is working, not stalled, but the run **never advances
+   past a gate on its own**. Read every result message; on a `gate:`, respond;
+   loop until an `outcome:`. Never idle-wait for the run to move forward by
+   itself.
    When that status output includes `awaiting_agent: parked <duration>` under the run,
    the run is parked at an approval or fix-review gate and waiting for you to
    send `axi respond`. The field is observability only: it does not change
