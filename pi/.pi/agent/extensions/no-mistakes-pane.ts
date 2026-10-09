@@ -35,7 +35,9 @@ import {
 //     END marker lands, its structured TOON result (findings, gate, outcome,
 //     branch_sync, help) is delivered as a `no_mistakes_axi_result` steer
 //     message that triggers a new turn — the pipeline talks to the agent only
-//     through messages.
+//     through messages. When a result parks the run at a gate and the
+//     no-mistakes-gate extension is loaded, the gate panel surfaces the
+//     findings to the user first and the steer carries their decision.
 //   - For `run`/`respond`, a visible Herdr pane beside the agent runs
 //     `no-mistakes attach` (the rich TUI of the same daemon run). The pane
 //     stays open while the run is parked at a gate and closes when the run
@@ -60,6 +62,40 @@ const execFileAsync = promisify(execFile);
 
 const NM_ACTIVITY_UPDATE_EVENT = "no-mistakes:activity-update";
 const NM_RESULT_MESSAGE = "no_mistakes_axi_result";
+
+// ---------------------------------------------------------------------------
+// Gate panel bridge — the no-mistakes-gate extension registers a decision
+// panel API on globalThis under the Symbol.for key below. It is optional:
+// without it (or without a TUI) every gate result steers immediately and the
+// agent relays findings as text, exactly as before. Structurally identical
+// to the api type exported by no-mistakes-gate.ts; duplicated here so the
+// two extensions stay decoupled.
+// ---------------------------------------------------------------------------
+const GATE_API_KEY = Symbol.for("pi-no-mistakes/gate-api");
+
+type NmGateDecision =
+	| { type: "approve" }
+	| { type: "fix"; findings: string[]; instructions?: string }
+	| { type: "skip" }
+	| { type: "yolo" };
+
+interface NmGateApi {
+	handleGate(payload: {
+		output: string;
+		cwd: string;
+		subcommand: string;
+		branch?: string;
+		runId?: string;
+	}): Promise<NmGateDecision | null>;
+	yoloActive(runId: string | undefined): boolean;
+	setYolo(cwd: string, on: boolean): Promise<{ on: boolean; activeRun: boolean }>;
+	runObserved(cwd: string, runId?: string): Promise<string | undefined>;
+	runFinished(cwd: string, runId?: string): Promise<void>;
+}
+
+function gateApi(): NmGateApi | undefined {
+	return (globalThis as any)[GATE_API_KEY] as NmGateApi | undefined;
+}
 
 /** Attach-pane retry budget: 240 tries × 0.5s = up to 2min of startup-race
  *  retries. Once `no-mistakes attach` attaches it blocks for the whole run,
@@ -439,6 +475,8 @@ function finishCall(
 	call: InFlightCall,
 	r: { output: string; exitCode: number; timedOut: boolean },
 ): void {
+	const runId = state.observers.get(call.key)?.runId ??
+		(call.observesSession ? state.trackedRunId : undefined);
 	state.calls.delete(call.key);
 	state.observers.delete(call.key);
 	for (const file of [call.outFile, call.errFile, call.doneFile, call.bgScript]) unlinkSafe(file);
@@ -452,7 +490,49 @@ function finishCall(
 		if (snapshot) publishSnapshot(state, snapshot);
 		else void refreshStatus(state, { cwd: call.cwd }, true);
 	}
-	steerResult(state, call, r, parkedAtGate, paneClosed);
+	const outcome = /^outcome:\s*(\S+)/m.exec(r.output)?.[1];
+	if (outcome || call.subcommand === "abort") void gateApi()?.runFinished(call.cwd, runId);
+	if (parkedAtGate) {
+		// The gate panel owns this result until the user decides; the steer
+		// (TOON + decision) lands when the panel resolves. Detached so the
+		// watcher keeps serving other calls and status polling meanwhile.
+		void driveParkedGate(state, call, r, paneClosed, runId);
+		return;
+	}
+	steerResult(state, call, r, parkedAtGate, paneClosed, undefined, false);
+}
+
+/** Parked at a gate: surface the findings through the no-mistakes gate
+ *  panel (when that extension is loaded and yolo standing consent has not
+ *  taken over), then steer the result with the user's decision attached.
+ *  Without a panel the result steers immediately, as before. */
+async function driveParkedGate(
+	state: WatchState,
+	call: InFlightCall,
+	r: { output: string; exitCode: number; timedOut: boolean },
+	paneClosed: boolean,
+	runId: string | undefined,
+): Promise<void> {
+	const api = gateApi();
+	let decision: NmGateDecision | undefined;
+	let yoloStanding = false;
+	if (api) {
+		const observedRunId = await api.runObserved(call.cwd, runId);
+		if (api.yoloActive(observedRunId)) {
+			yoloStanding = true;
+		} else {
+			decision = (await api
+				.handleGate({
+					output: r.output,
+					cwd: call.cwd,
+					subcommand: call.subcommand,
+					branch: state.latestSnapshot?.branch,
+					runId: observedRunId,
+				})
+				.catch(() => null)) ?? undefined;
+		}
+	}
+	steerResult(state, call, r, true, paneClosed, decision, yoloStanding);
 }
 
 function steerResult(
@@ -461,12 +541,23 @@ function steerResult(
 	r: { output: string; exitCode: number; timedOut: boolean },
 	parkedAtGate: boolean,
 	paneClosed: boolean,
+	decision: NmGateDecision | undefined = undefined,
+	yoloStanding = false,
 ): void {
-	const header = r.timedOut
+	const baseHeader = r.timedOut
 		? `no-mistakes axi ${call.subcommand} timed out after ${Math.round(call.timeoutMs / 1000)}s and the background axi client was disconnected (the daemon run keeps its state). Partial output follows — inspect with no_mistakes_axi \`status\` before re-driving.`
 		: `no-mistakes axi ${call.subcommand} finished (exit ${r.exitCode}).`;
-	const guidance = call.pipeline || call.subcommand === "abort" ? resultGuidance(r) : "";
-	const content = [header, r.output, guidance].filter(Boolean).join("\n");
+	const decisionNote = r.timedOut
+		? ""
+		: decision
+			? " — the user decided at the gate panel"
+			: yoloStanding
+				? " — yolo standing consent is active for this run"
+				: "";
+	const guidance = call.pipeline || call.subcommand === "abort" ? resultGuidance(r, decision, yoloStanding) : "";
+	const content = [baseHeader + decisionNote, r.output, gateDecisionBlock(decision, yoloStanding), guidance]
+		.filter(Boolean)
+		.join("\n");
 	state.pi.sendMessage(
 		{
 			customType: NM_RESULT_MESSAGE,
@@ -480,6 +571,8 @@ function steerResult(
 				cwd: call.cwd,
 				gate: parkedAtGate,
 				outcome: /^outcome:\s*(\S+)/m.exec(r.output)?.[1],
+				gateDecision: decision,
+				yolo: yoloStanding || decision?.type === "yolo" || undefined,
 				paneClosed,
 			},
 		},
@@ -487,9 +580,44 @@ function steerResult(
 	);
 }
 
-function resultGuidance(r: { output: string; timedOut: boolean }): string {
+function doubleQuoteArg(value: string): string {
+	return `"${value.replace(/(["\\])/g, "\\$1")}"`;
+}
+
+/** The decision block appended to a steered gate result. It names the exact
+ *  respond call so the agent executes the user's decision verbatim. */
+function gateDecisionBlock(decision: NmGateDecision | undefined, yoloStanding: boolean): string {
+	if (yoloStanding) {
+		return "YOLO ACTIVE: standing consent covers this run. Submit no_mistakes_axi `respond --yes` at this gate and at every later gate of this run; do not ask the user and do not relay its findings as questions.";
+	}
+	if (!decision) return "";
+	switch (decision.type) {
+		case "approve":
+			return "GATE DECISION (user): approve — accept this step as-is.\nSubmit through no_mistakes_axi: `respond --action approve`";
+		case "fix": {
+			const ids = decision.findings.join(",");
+			const instructions = decision.instructions
+				? ` --instructions ${doubleQuoteArg(decision.instructions)}`
+				: "";
+			return `GATE DECISION (user): fix findings ${ids}.\nSubmit through no_mistakes_axi: \`respond --action fix --findings ${ids}${instructions}\``;
+		}
+		case "skip":
+			return "GATE DECISION (user): skip this step.\nSubmit through no_mistakes_axi: `respond --action skip`";
+		case "yolo":
+			return "GATE DECISION (user): yolo — standing consent for the rest of this run.\nSubmit through no_mistakes_axi: `respond --yes` at this gate and at every later gate of this run. Drive the run unattended: do not ask the user at gates and do not relay its findings as questions.";
+	}
+}
+
+function resultGuidance(
+	r: { output: string; timedOut: boolean },
+	decision: NmGateDecision | undefined,
+	yoloStanding: boolean,
+): string {
 	if (r.timedOut) return "";
 	if (/^gate:/m.test(r.output)) {
+		if (decision || yoloStanding) {
+			return "The gate decision above is the user's instruction — execute it exactly through no_mistakes_axi, then keep reading results and driving gates the same way until an `outcome:` result arrives.";
+		}
 		return "The run is parked at this gate. Read the findings table, decide, and submit the next call through no_mistakes_axi: `respond --action approve|fix|skip` with `--findings <ids>` and `--instructions` as needed. Findings marked ask-user belong to the user — relay them verbatim and wait for their decision. Never edit the code yourself while the run is active; the pipeline owns findings and fixes.";
 	}
 	const outcome = /^outcome:\s*(\S+)/m.exec(r.output)?.[1];
@@ -769,17 +897,18 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		name: "no_mistakes_axi",
 		label: "no-mistakes (background)",
 		description:
-			"Submit a `no-mistakes axi` subcommand (run/respond/status/logs/abort/sync) to run detached in the background and return immediately — the session stays free and never blocks on a review/test/CI step. Use this INSTEAD of running `no-mistakes axi` in the bash tool. The structured TOON result (findings, gate, outcome, branch_sync, help) arrives later as a `no_mistakes_axi_result` steer message that triggers a new turn: read every one, and on a `gate:` decide and submit the next call (`respond --action ...`) until an `outcome:` arrives. For `run`/`respond` a visible Herdr pane beside the agent shows the rich `no-mistakes` TUI of the same daemon run; it stays open while the run is parked at a gate, and `/no-mistakes` focuses or re-opens it.",
+			"Submit a `no-mistakes axi` subcommand (run/respond/status/logs/abort/sync) to run detached in the background and return immediately — the session stays free and never blocks on a review/test/CI step. Use this INSTEAD of running `no-mistakes axi` in the bash tool. The structured TOON result (findings, gate, outcome, branch_sync, help) arrives later as a `no_mistakes_axi_result` steer message that triggers a new turn: read every one. Gate results carry the user's decision from the no-mistakes gate panel (or yolo standing consent) — submit the `respond` call it names until an `outcome:` arrives; without a decision, relay ask-user findings verbatim and wait. For `run`/`respond` a visible Herdr pane beside the agent shows the rich `no-mistakes` TUI of the same daemon run; it stays open while the run is parked at a gate, and `/no-mistakes` focuses or re-opens it.",
 		promptSnippet:
 			"Use no_mistakes_axi (not bash) to drive every no-mistakes axi call; it runs in the background and results arrive as steer messages.",
 		promptGuidelines: [
 			"Pass `args` = everything after `no-mistakes axi` (e.g. `run --intent \"...\"`, `respond --action fix --findings r1`, `status`). Quote multi-word values.",
 			"Every call returns immediately with an ack — never wait, poll, or re-issue while a call is in flight. The result arrives as a `no_mistakes_axi_result` steer message; read every one.",
-			"On a `gate:` result, read the findings and submit the next call: `respond --action approve|fix|skip` with `--findings <ids>` and `--instructions` as needed. Loop until an `outcome:` result arrives.",
+			"On a `gate:` result, read the attached GATE DECISION (the user decided in the gate panel) and submit the exact `respond` call it names. When a gate result carries no decision (no panel was available), relay ask-user findings verbatim and wait for the user. Loop until an `outcome:` result arrives.",
+			"When a result says yolo standing consent is active (or the user chose yolo), submit `respond --yes` at this and every later gate of that run without asking.",
 			"`--intent` is required on `run`: pass what the user set out to accomplish, in their terms — goal, decisions, constraints — not a diff summary.",
 			"run/respond can take several minutes at a step — that is normal. Check progress any time with `no_mistakes_axi status`; never cancel or re-issue because it seems slow.",
 			"While a run is active, never fix findings by editing code yourself — the pipeline owns findings and fixes; use `respond --action fix`.",
-			"Findings marked ask-user are never yours to resolve: relay them verbatim to the user and wait for their decision before responding.",
+			"Findings marked ask-user are never yours to resolve: the gate panel already surfaced them in TUI sessions — execute its decision; otherwise relay them verbatim to the user and wait.",
 		],
 		parameters: NoMistakesAxiParams,
 
@@ -822,6 +951,9 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 					);
 				}
 				const r = ran.result;
+				if (/^outcome:\s*\S+/m.test(r.output) || subcommand === "abort") {
+					await gateApi()?.runFinished(cwd);
+				}
 				return textResult(formatOutput(r.output, r.exitCode, "inline (background spawn failed)"), {
 					status: "inline",
 					subcommand,
@@ -913,12 +1045,34 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 
 	pi.registerCommand("no-mistakes", {
 		description:
-			"Focus the visible no-mistakes pane for the active run, or re-open it (attached to the active daemon run) when it was closed.",
+			"Focus the visible no-mistakes pane for the active run, re-open it when it was closed, or enable or disable yolo standing consent (`/no-mistakes yolo` / `yolo off`).",
 		handler: async (args, ctx) => {
 			const state = ensureWatchState(pi);
-			if ((args ?? "").trim() === "stop") {
+			const arg = (args ?? "").trim();
+			if (arg === "stop") {
 				ctx.ui.notify(
 					"/no-mistakes stop is not available — use the no_mistakes_axi tool with `abort` to cancel the run itself.",
+					"info",
+				);
+				return;
+			}
+			if (arg === "yolo" || arg === "yolo off") {
+				const api = gateApi();
+				if (!api) {
+					ctx.ui.notify(
+						"/no-mistakes yolo needs the no-mistakes-gate extension, which is not loaded.",
+						"warning",
+					);
+					return;
+				}
+				const on = arg !== "yolo off";
+				const result = await api.setYolo(ctx.cwd, on);
+				ctx.ui.notify(
+					on
+						? result.activeRun
+							? "Yolo enabled for the active run in this worktree — later gates are driven with --yes, without panels."
+							: "Yolo armed for the next run in this worktree — its gates will be driven with --yes, without panels."
+						: "Yolo disabled — gates surface the decision panel again.",
 					"info",
 				);
 				return;
@@ -980,16 +1134,35 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 	// the functional part, this only renders in the transcript.
 	pi.registerMessageRenderer(NM_RESULT_MESSAGE, (message, options, theme) => {
 		const details = message.details as
-			| { subcommand?: string; exitCode?: number; timedOut?: boolean; gate?: boolean; outcome?: string }
+			| {
+				subcommand?: string;
+				exitCode?: number;
+				timedOut?: boolean;
+				gate?: boolean;
+				outcome?: string;
+				gateDecision?: { type: string; findings?: string[] };
+				yolo?: boolean;
+			}
 			| undefined;
 		if (!details) return undefined;
-		const state = details.timedOut
-			? "timed out"
-			: details.gate
-				? "gate"
-				: details.outcome
-					? `outcome: ${details.outcome}`
-					: `exit ${details.exitCode ?? -1}`;
+		let state: string;
+		if (details.timedOut) {
+			state = "timed out";
+		} else if (details.gate) {
+			const decision = details.gateDecision;
+			const label = decision
+				? decision.type === "fix" && decision.findings
+					? `fix ${decision.findings.join(",")}`
+					: decision.type
+				: details.yolo
+					? "yolo · standing"
+					: "awaiting decision";
+			state = `gate · ${label}`;
+		} else if (details.outcome) {
+			state = `outcome: ${details.outcome}`;
+		} else {
+			state = `exit ${details.exitCode ?? -1}`;
+		}
 		const header = `${theme.fg("accent", "◆")} ${theme.fg("toolTitle", theme.bold(`no-mistakes · ${details.subcommand ?? "axi"}`))} ${theme.fg("dim", state)}`;
 		const body = String(message.content ?? "").split("\n");
 		const lines = ["", header, ...(options.expanded ? body : body.slice(0, 6).map((line) => theme.fg("dim", line)))];

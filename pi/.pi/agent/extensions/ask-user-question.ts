@@ -111,7 +111,7 @@ function getOtherLabel(options: AskOption[]): string {
 	return options.some((option) => option.label.toLowerCase() === "other") ? "Other (custom)" : "Other";
 }
 
-function createEditorTheme(theme: any): EditorTheme {
+export function createEditorTheme(theme: any): EditorTheme {
 	return {
 		borderColor: (s) => theme.fg("accent", s),
 		selectList: {
@@ -124,7 +124,7 @@ function createEditorTheme(theme: any): EditorTheme {
 	};
 }
 
-function addWrapped(lines: string[], text: string, width: number, indent = ""): void {
+export function addWrapped(lines: string[], text: string, width: number, indent = ""): void {
 	const contentWidth = Math.max(1, width - indent.length);
 	for (const line of wrapTextWithAnsi(text, contentWidth)) {
 		lines.push(truncateToWidth(`${indent}${line}`, width));
@@ -590,7 +590,7 @@ async function askMultiChoice(
 // content box (inset 2 columns each side) on top, its bottom corners becoming
 // tees in the top border of a full-width, prompt-styled input box below.
 // Top content must be laid out at (width - 8) columns, bottom at (width - 4).
-function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
+export function frameMerged(top: string[], bottom: string[], width: number, theme: any): string[] {
 	const promptLines = bottom.length > 0 ? bottom : [""];
 	if (width < 24) return [...top, ...promptLines.map((line) => truncateToWidth(` ${line}`, width))];
 	const tw = width - 8;
@@ -624,7 +624,7 @@ function frameMerged(top: string[], bottom: string[], width: number, theme: any)
 // Strip the Editor's own flat ─ borders (and scroll-rule variants) so the
 // outer rounded box is the only frame — the bottom box then reads as a clean
 // prompt, exactly like the real one.
-function editorInnerLines(editor: any, width: number): string[] {
+export function editorInnerLines(editor: any, width: number): string[] {
 	const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 	return editor
 		.render(width)

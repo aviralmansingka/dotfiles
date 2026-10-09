@@ -148,6 +148,47 @@ export function parseDurationMs(value: string | undefined): number | undefined {
 	return matched ? total : undefined;
 }
 
+export interface NoMistakesGateFinding {
+	id: string;
+	severity: string;
+	file?: string;
+	line?: string;
+	/** Pipeline classification: `auto-fix`, `no-op`, `ask-user`, or an
+	 *  unknown/absent value (rendered as-is; treated as actionable). */
+	action: string;
+	description: string;
+}
+
+export interface NoMistakesGate {
+	step: string;
+	note?: string;
+	findings: NoMistakesGateFinding[];
+}
+
+/** Parse a parked-gate result (the top-level `gate:` block a run/respond
+ *  call returns): the gated step, its optional `note:`, and the findings
+ *  table with every column the pipeline emitted. Findings-table columns can
+ *  vary by step and version, so columns are read from the actual header and
+ *  missing values fall back to safe defaults. */
+export function parseNoMistakesGate(output: string): NoMistakesGate | undefined {
+	const step = /^gate:\s*(\S+)/m.exec(output)?.[1];
+	if (!step) return undefined;
+	const rows = table(output, "findings");
+	const findings = rows.map((row, index): NoMistakesGateFinding => ({
+		id: row.id || `f${index + 1}`,
+		severity: row.severity || "info",
+		file: row.file || undefined,
+		line: row.line || undefined,
+		action: row.action || "",
+		description: row.description || "(no description)",
+	}));
+	return {
+		step,
+		note: scalar(output, "note") ?? objectScalar(output, "gate", "note"),
+		findings,
+	};
+}
+
 export function parseNoMistakesRunId(output: string): string | undefined {
 	const id = scalar(output, "id");
 	return runStartedAt(id) == null ? undefined : id;
