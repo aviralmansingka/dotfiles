@@ -6,13 +6,55 @@
 // them out of hidden runs so a hidden message renders zero lines and
 // successive tool calls keep a single line gap.
 // Re-run this after every `pi update`: a new release drops the patch.
+// Exports { patches } for scripts/test-pi-hidden-thinking.mjs.
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { execFileSync } = require('node:child_process');
 const { parseArgs } = require('node:util');
 
-try {
+// The hidden-run row plus the trailing spacer, guarded as one block.
+const runInner =
+  'this.contentContainer.addChild(new MouseRegion(thinkingComponent,event=>' +
+  '{if(!(event.type!=="click"||event.button!=="left"))' +
+  'return this.thinkingVisibilityOverrides.set(runIndex,!hidden),' +
+  'this.lastMessage&&this.updateContent(this.lastMessage),{handled:!0}})),' +
+  'hasVisibleContentAfter&&this.contentContainer.addChild(new Spacer(1))';
+
+// The leading message spacer: thinking only counts when it will render —
+// visible by default, a non-blank label, or a Ctrl+T override in play.
+const leadSome =
+  'message.content.some(c=>c.type==="text"&&c.text.trim()' +
+  '||c.type==="thinking"&&c.thinking.trim()';
+
+const patches = [
+  {
+    name: 'hidden-run row and trailing spacer',
+    original: ';' + runInner,
+    patched: ';if(!(hidden&&!this.hiddenThinkingLabel.trim())){' + runInner + '}',
+  },
+  {
+    name: 'leading message spacer',
+    original: leadSome + ')&&this.contentContainer.addChild(new Spacer(1))',
+    patched: leadSome +
+      '&&(this.hiddenThinkingLabel.trim()||!this.hideThinkingBlock' +
+      '||this.thinkingVisibilityOverrides.size>0))' +
+      '&&this.contentContainer.addChild(new Spacer(1))',
+  },
+];
+
+function findTarget(chunksDir) {
+  for (const name of fs.readdirSync(chunksDir).filter((n) => n.endsWith('.js'))) {
+    const file = path.join(chunksDir, name);
+    const src = fs.readFileSync(file, 'utf8');
+    const states = patches.map((patch) =>
+      src.includes(patch.patched) ? 'patched' : src.includes(patch.original) ? 'original' : 'absent');
+    if (states.some((state) => state !== 'absent')) return { file, states };
+  }
+  return null;
+}
+
+function main() {
   const { values } = parseArgs({ options: {
     'agent-dir': { type: 'string', default: process.env.PI_CODING_AGENT_DIR || path.join(os.homedir(), '.pi/agent') },
     restore: { type: 'boolean' },
@@ -31,94 +73,64 @@ try {
     'node_modules/@earendil-works/pi-coding-agent/dist/bundle/chunks'
   );
 
-  // The hidden-run row plus the trailing spacer, guarded as one block.
-  const runInner =
-    'this.contentContainer.addChild(new MouseRegion(thinkingComponent,event=>' +
-    '{if(!(event.type!=="click"||event.button!=="left"))' +
-    'return this.thinkingVisibilityOverrides.set(runIndex,!hidden),' +
-    'this.lastMessage&&this.updateContent(this.lastMessage),{handled:!0}})),' +
-    'hasVisibleContentAfter&&this.contentContainer.addChild(new Spacer(1))';
-
-  // The leading message spacer: thinking only counts when it will render —
-  // visible by default, a non-blank label, or a Ctrl+T override in play.
-  const leadSome =
-    'message.content.some(c=>c.type==="text"&&c.text.trim()' +
-    '||c.type==="thinking"&&c.thinking.trim()';
-
-  const patches = [
-    {
-      name: 'hidden-run row and trailing spacer',
-      original: ';' + runInner,
-      patched: ';if(!(hidden&&!this.hiddenThinkingLabel.trim())){' + runInner + '}',
-    },
-    {
-      name: 'leading message spacer',
-      original: leadSome + ')&&this.contentContainer.addChild(new Spacer(1))',
-      patched: leadSome +
-        '&&(this.hiddenThinkingLabel.trim()||!this.hideThinkingBlock' +
-        '||this.thinkingVisibilityOverrides.size>0))' +
-        '&&this.contentContainer.addChild(new Spacer(1))',
-    },
-  ];
-
-  const chunks = fs.readdirSync(chunksDir).filter((name) => name.endsWith('.js'));
-  let target = null;
-  let states = null;
-  for (const name of chunks) {
-    const src = fs.readFileSync(path.join(chunksDir, name), 'utf8');
-    const next = patches.map((patch) =>
-      src.includes(patch.patched) ? 'patched' : src.includes(patch.original) ? 'original' : 'absent');
-    if (next.some((state) => state !== 'absent')) { target = path.join(chunksDir, name); states = next; break; }
-  }
-
+  const target = findTarget(chunksDir);
   if (!target) {
     console.error(`pi ${version}: patch anchors not found. The bundle changed; review and update this script.`);
     process.exit(1);
   }
+  const { file, states } = target;
   if (states.includes('absent')) {
     console.error(`pi ${version}: anchor "${patches[states.indexOf('absent')].name}" missing. The bundle changed; review and update this script.`);
     process.exit(1);
   }
 
-  const backup = target + '.unpatched';
+  const backup = file + '.unpatched';
   if (values.restore) {
     if (!fs.existsSync(backup)) {
       console.log(states.every((state) => state === 'patched') ? 'nothing to restore' : 'not patched');
       process.exit(0);
     }
-    fs.copyFileSync(backup, target);
+    fs.copyFileSync(backup, file);
     fs.rmSync(backup);
-    console.log('restored', path.basename(target));
+    console.log('restored', path.basename(file));
     process.exit(0);
   }
 
   const pending = patches.filter((_, index) => states[index] === 'original');
   if (pending.length === 0) {
-    console.log(`pi ${version}: already patched (${path.basename(target)})`);
+    console.log(`pi ${version}: already patched (${path.basename(file)})`);
     process.exit(0);
   }
 
-  if (!fs.existsSync(backup)) fs.copyFileSync(target, backup);
-  let src = fs.readFileSync(target, 'utf8');
+  let src = fs.readFileSync(file, 'utf8');
   for (const patch of pending) {
     if (src.split(patch.original).length > 2) {
       console.error(`pi ${version}: anchor "${patch.name}" is not unique; refusing to patch.`);
       process.exit(1);
     }
-    src = src.replace(patch.original, patch.patched);
   }
-  fs.writeFileSync(target, src, { mode: 0o644 });
+  if (!fs.existsSync(backup)) fs.copyFileSync(file, backup);
+  for (const patch of pending) src = src.replace(patch.original, patch.patched);
+  fs.writeFileSync(file, src, { mode: 0o644 });
 
   // Syntax gate: a bad splice must never ship to the running TUI.
   const check = path.join(os.tmpdir(), 'pi-patch-check-' + Date.now() + '.mjs');
-  fs.copyFileSync(target, check);
+  fs.copyFileSync(file, check);
   try {
     execFileSync(process.execPath, ['--check', check], { stdio: 'pipe' });
   } finally {
     fs.rmSync(check, { force: true });
   }
-  console.log(`pi ${version}: patched ${path.basename(target)} — ${pending.map((patch) => patch.name).join('; ')} (backup: ${path.basename(backup)})`);
-} catch (error) {
-  console.error(String(error.message || error));
-  process.exit(1);
+  console.log(`pi ${version}: patched ${path.basename(file)} — ${pending.map((patch) => patch.name).join('; ')} (backup: ${path.basename(backup)})`);
+}
+
+module.exports = { patches };
+
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    console.error(String(error.message || error));
+    process.exit(1);
+  }
 }
