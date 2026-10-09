@@ -403,7 +403,12 @@ async function paneRunWithGateApi(fakeApi, roundTrip = false) {
 			registerTool(value) { tool = value; },
 			registerCommand() {},
 			registerMessageRenderer() {},
-			events: { emit() {} },
+			events: {
+				emit() {},
+				// no-mistakes-pane subscribes to NM_TOGGLE_EVENT (Ctrl+Q toggle
+				// from tool-call-renderer-public); the fake just accepts it.
+				on() { return () => {}; },
+			},
 			exec() {
 				return Promise.resolve({
 					code: 0,
