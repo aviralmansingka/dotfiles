@@ -555,6 +555,13 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			fg: (_name, text) => text,
 			bold: (text) => text,
 		};
+		const initiallyHidden = renderer.value(
+			{ content: messages[1].message.content, details: messages[1].message.details },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(initiallyHidden.join("\n"), /▹ no-mistakes · respond/);
+		toggleRows(false);
 		const rendered = renderer.value(
 			{ content: messages[1].message.content, details: messages[1].message.details },
 			{ expanded: false },
@@ -563,6 +570,12 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		const lines = rendered.render(200);
 		assert.match(lines.join("\n"), /no-mistakes · respond/);
 		assert.match(lines.join("\n"), /outcome: checks-passed/);
+		const outcomeExpanded = renderer.value(
+			{ content: messages[1].message.content, details: messages[1].message.details },
+			{ expanded: true },
+			theme,
+		).render(200);
+		assert.ok(!outcomeExpanded.some((line) => line.includes("finished (exit")), "an outcome never renders raw steer prose");
 		// A gate result renders chips and the expand hint, never raw TOON or
 		// the agent-facing guidance prose.
 		const gateBody = [
@@ -601,26 +614,55 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.match(gateExpanded.join("\n"), /└ help:/);
 		assert.match(gateExpanded.join("\n"), /respond --action approve/);
 		assert.match(gateExpanded.join("\n"), /Ctrl\+Q hide all nm rows/);
-		// Unparsed output falls back to the raw body, truncated when collapsed.
-		const longBody = ["gate: review", ...Array.from({ length: 10 }, (_, i) => `finding ${i}`)].join("\n");
+		const bareGateExpanded = renderer.value(
+			{ content: "gate: review\nThe run is parked at this gate.", details: gateDetails },
+			{ expanded: true },
+			theme,
+		).render(200);
+		assert.ok(!bareGateExpanded.some((line) => line.includes("parked at this gate")), "a gate without findings never renders guidance prose");
+		const wrappedBody = [
+			"gate: review",
+			"findings[1]{id,severity,file,action,description}:",
+			"  r1,error,src/component-name.ts,ask-user,Every word in this long finding description remains visible after wrapping",
+			"help[1]:",
+			"  Run the next command with every required argument after reviewing all findings",
+			"run:",
+			'  id: "00000000000000000000000000"',
+			"  status: running",
+			"  steps[2]{step,status,findings,duration_ms}:",
+			"    review-phase-name,completed,1,1000",
+			"    verification-phase-name,running,0,2000",
+		].join("\n");
+		const wrappedLines = renderer.value(
+			{ content: wrappedBody, details: gateDetails },
+			{ expanded: true },
+			theme,
+		).render(32);
+		assert.ok(wrappedLines.every((line) => [...line].length <= 32), "expanded report lines fit the viewport");
+		for (const text of [
+			"component-name.ts", "Every", "word", "finding", "description", "remains", "visible", "wrapping",
+			"review-phase-name", "verification-phase-name", "required", "argument", "reviewing", "findings",
+		]) {
+			assert.match(wrappedLines.join("\n"), new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+		}
+		const longBody = Array.from({ length: 10 }, (_, i) => `daemon log ${i}`).join("\n");
 		const longRendered = renderer.value(
-			{ content: longBody, details: { subcommand: "run", gate: true } },
+			{ content: longBody, details: { subcommand: "status", exitCode: 0 } },
 			{ expanded: false },
 			theme,
 		);
 		const longLines = longRendered.render(200);
-		assert.match(longLines.join("\n"), /no-mistakes · run/);
-		assert.ok(!longLines.some((line) => line.includes("finding 9")), "the collapsed row truncates the body");
+		assert.match(longLines.join("\n"), /daemon log 0/);
+		assert.ok(!longLines.some((line) => line.includes("daemon log 9")), "the collapsed raw fallback limits the body");
 		assert.match(longLines.join("\n"), /Ctrl\+O full report/);
 		const expandedLines = renderer.value(
-			{ content: longBody, details: { subcommand: "run", gate: true } },
+			{ content: longBody, details: { subcommand: "status", exitCode: 0 } },
 			{ expanded: true },
 			theme,
-		).render(200);
-		assert.ok(expandedLines.some((line) => line.includes("finding 9")), "the expanded row shows the full body");
-		// Ctrl+Q hides every row as one ghost line; toggling again restores.
+		).render(20);
+		assert.ok(expandedLines.some((line) => line.includes("daemon log 9")), "the expanded raw fallback shows the full body");
 		assert.equal(typeof toggleRows, "function", "the renderer subscribes to the ctrl+q toggle event");
-		toggleRows();
+		toggleRows(true);
 		const hiddenLines = renderer.value(
 			{ content: gateBody, details: gateDetails },
 			{ expanded: false },
@@ -628,7 +670,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		).render(200);
 		assert.match(hiddenLines.join("\n"), /▹ no-mistakes · run — gate: review · 2 findings/);
 		assert.equal(hiddenLines.filter((line) => line.trim()).length, 1, "the hidden row is a single ghost line");
-		toggleRows();
+		toggleRows(false);
 		const restoredLines = renderer.value(
 			{ content: gateBody, details: gateDetails },
 			{ expanded: false },

@@ -137,6 +137,8 @@ try {
   assert.equal(typeof shortcut.handler, "function");
   assert.ok(shortcut.description, "the shortcut carries a /hotkeys description");
   const notifications = [];
+  let togglePayload;
+  bus.set("no-mistakes:toggle-rows", (payload) => { togglePayload = payload; });
   const shortcutCtx = { ui: { notify: (message, type) => notifications.push([message, type]) } };
   const quietStart = { executionStarted: false };
   const hiddenBash = render(bash.renderCall(
@@ -159,6 +161,7 @@ try {
   const beforeToggle = invalidations;
   shortcut.handler(shortcutCtx);
   assert.ok(invalidations > beforeToggle, "the toggle invalidates mounted rows");
+  assert.equal(togglePayload, false, "the shared event publishes the shown state");
   assert.deepEqual(notifications.at(-1), ["Commands and no-mistakes rows shown", "info"]);
   const bashCtx = context("timed", { command: "printf hi\nexit 0" });
   handlers.get("tool_execution_start")({ toolCallId: "timed" });
@@ -1048,6 +1051,8 @@ branch_sync:
   render(read.renderResult(result("a\nb"), options, theme, restoredCtx));
   assert.doesNotMatch(render(restoredCall), /\d+(?:ms|s)/, "restored calls have no invented elapsed time");
   shortcut.handler(shortcutCtx);
+  assert.equal(togglePayload, true, "the shared event publishes the hidden state");
+  bus.delete("no-mistakes:toggle-rows");
   assert.deepEqual(notifications.at(-1), ["Commands and no-mistakes rows hidden", "info"], "the toggle flips back to hidden");
   const hiddenPy = render(python.renderCall(
     { code: "# parse the session log for nested bash calls\nimport json" },
