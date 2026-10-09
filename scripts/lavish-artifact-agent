@@ -47,6 +47,59 @@ class ArtifactAgentError(RuntimeError):
     pass
 
 
+CODEX_CONFIG = Path(
+    os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))
+) / "config.toml"
+
+
+def _codex_trust_header(worktree: Path) -> str:
+    return f'[projects."{worktree}"]'
+
+
+def trust_codex_worktree(worktree: Path) -> None:
+    """Codex shows a folder-trust dialog for unknown project roots, which
+    blocks the pane agent during startup (herdr reports agent_not_ready).
+    Register the ephemeral artifact worktree as trusted before codex starts."""
+    header = _codex_trust_header(worktree)
+    try:
+        text = CODEX_CONFIG.read_text() if CODEX_CONFIG.exists() else ""
+    except OSError:
+        return
+    if header in text:
+        return
+    try:
+        CODEX_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+        with open(CODEX_CONFIG, "a", encoding="utf-8") as config:
+            if text and not text.endswith("\n"):
+                config.write("\n")
+            config.write(f'{header}\ntrust_level = "trusted"\n')
+    except OSError:
+        pass
+
+
+def untrust_codex_worktree(worktree: Path) -> None:
+    """Remove the trust entry trust_codex_worktree added, so ephemeral
+    worktrees do not accumulate in the codex project list."""
+    header = _codex_trust_header(worktree)
+    try:
+        text = CODEX_CONFIG.read_text() if CODEX_CONFIG.exists() else ""
+    except OSError:
+        return
+    if header not in text:
+        return
+    pattern = re.compile(
+        re.escape(header) + r"\ntrust_level = \"trusted\"\n?"
+    )
+    try:
+        temporary = CODEX_CONFIG.with_name(
+            f".{CODEX_CONFIG.name}.{os.getpid()}.tmp"
+        )
+        temporary.write_text(pattern.sub("", text), encoding="utf-8")
+        os.replace(temporary, CODEX_CONFIG)
+    except OSError:
+        pass
+
+
 def now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
@@ -445,6 +498,7 @@ def start_agent_unchecked(
     if not pane_id:
         raise ArtifactAgentError("Herdr returned incomplete artifact tab identity")
 
+    trust_codex_worktree(worktree)
     agent_name = f"artifact-{hashlib.sha256(context_id.encode()).hexdigest()[:16]}"
     start_args = [
         "agent",
@@ -918,6 +972,7 @@ def command_reflow_history(args: argparse.Namespace) -> dict[str, object]:
 
 def remove_context_files(context_id: str) -> None:
     root = context_dir(context_id)
+    untrust_codex_worktree(root / "worktree")
     try:
         shutil.rmtree(root)
     except FileNotFoundError:
