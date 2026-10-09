@@ -27,8 +27,8 @@ const jiti = createJiti(import.meta.url, {
 
 const { default: registerMarker, HIDDEN_THINKING_GLYPH } = jiti("./thinking-marker.ts");
 
-// The glyph must be one visible character with no padding — dim italic styling
-// comes from the theme's thinkingText color, not from the label string.
+// The glyph must be one visible character with no padding. Pi's renderer adds
+// the thinkingText color and italic style; neither belongs in the label string.
 assert.equal(HIDDEN_THINKING_GLYPH, "…");
 assert.equal([...HIDDEN_THINKING_GLYPH].length, 1);
 
