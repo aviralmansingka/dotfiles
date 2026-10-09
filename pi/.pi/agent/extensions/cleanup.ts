@@ -8,9 +8,9 @@
  * then closes the pi session gracefully via `ctx.shutdown()`.
  *
  * Refuses to run on the main checkout, on `main`/`master`, or outside a listed
- * linked worktree. A confirm dialog lists the exact targets plus dirty-file and
- * upstream-ahead warnings. Any failed git step aborts the remaining steps and
- * keeps the session open.
+ * linked worktree or a sub-agent session. A confirm dialog lists the exact
+ * targets plus local-file and upstream-ahead warnings. Any failed git step
+ * aborts the remaining steps and keeps the session open.
  */
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
@@ -76,7 +76,7 @@ export interface CleanupFacts {
 	remote: string | null;
 	/** Branch name on the upstream remote, or null when no upstream exists. */
 	remoteBranch: string | null;
-	/** Uncommitted file count in the worktree. */
+	/** Local file count reported by Git, including ignored files. */
 	dirtyCount: number;
 	/** Commits on HEAD not on the upstream, or null without an upstream. */
 	aheadCount: number | null;
