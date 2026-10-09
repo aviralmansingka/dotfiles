@@ -8,8 +8,9 @@ export function contextFileHint(files: string[]): string | undefined {
 	return `o open ${files.length === 1 ? "context file" : "context files"}`;
 }
 
-// The `h` lesson-file shortcut always works (it opens the session journal,
-// not something derived from contextFiles), so this hint is unconditional.
+// The `h` / `H` lesson shortcuts always work (the node view falls back to
+// the session journal, not something derived from contextFiles), so this
+// hint is unconditional.
 export function lessonFileHint(): string {
-	return "h lesson file";
+	return "h node · H journal";
 }

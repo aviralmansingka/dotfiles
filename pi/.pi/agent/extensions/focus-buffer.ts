@@ -165,6 +165,71 @@ export function showNodeBuffer(
 	}
 }
 
+/**
+ * Focus the session's existing node buffer WITHOUT rewriting its content.
+ * The buffer holds whatever the most recent `lesson` call showed. If a
+ * window already displays it, the cursor just returns to the top; otherwise
+ * it opens in a right-hand split. Returns ok:false when no buffer exists
+ * yet for this session (no lesson has been presented) — the caller then
+ * falls back to the journal file.
+ */
+export function focusNodeBuffer(key: string): FocusBufferResult {
+	if (process.env.PI_DISABLE_FOCUS_BUFFER === "1") {
+		return { ok: false, message: "focus buffer disabled (PI_DISABLE_FOCUS_BUFFER=1)" };
+	}
+	const editor = detectEditorProcess();
+	if (!editor) return { ok: false, message: "no editor pane found" };
+	if (editor.name !== "nvim") {
+		return { ok: false, message: "editor pane is not nvim (no RPC socket)" };
+	}
+	const socket = editorSocketPath(editor.pid);
+	if (!socket || !nvimAlive(socket)) {
+		return { ok: false, message: "no live nvim RPC socket for the editor pane" };
+	}
+
+	const dir = mkdtempSync(join(tmpdir(), "pi-focus-"));
+	const luaPath = join(dir, "node.lua");
+	try {
+		writeFileSync(
+			luaPath,
+			[
+				`local name = "pi-focus://${safeKey(key)}"`,
+				"local buf",
+				"for _, b in ipairs(vim.api.nvim_list_bufs()) do",
+				"  if vim.api.nvim_buf_get_name(b) == name then buf = b break end",
+				"end",
+				"if not buf then return \"missing\" end",
+				"local win",
+				"for _, w in ipairs(vim.api.nvim_list_wins()) do",
+				"  if vim.api.nvim_win_get_buf(w) == buf then win = w break end",
+				"end",
+				"if not win then",
+				'  vim.cmd("rightbelow vertical split")',
+				"  win = vim.api.nvim_get_current_win()",
+				"  vim.api.nvim_win_set_buf(win, buf)",
+				"end",
+				"vim.api.nvim_win_set_cursor(win, { 1, 0 })",
+				'return "ok"',
+			].join("\n"),
+			"utf-8",
+		);
+		const expr = `luaeval("load(...)()", join(readfile(${JSON.stringify(luaPath)}), "\\n"))`;
+		const out = execFileSync("nvim", ["--server", socket, "--remote-expr", expr], {
+			timeout: RPC_TIMEOUT_MS,
+			stdio: ["pipe", "pipe", "ignore"],
+		});
+		const result = out.toString("utf-8").trim();
+		if (result === "ok") {
+			return { ok: true, message: `node buffer "${safeKey(key)}" focused` };
+		}
+		return { ok: false, message: `no node buffer yet for this session (lesson not presented)` };
+	} catch (err: any) {
+		return { ok: false, message: `node buffer focus failed: ${err?.message ?? String(err)}` };
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
 // pi's extension loader scans every .ts file in this directory and requires
 // a default factory. This module is a library consumed by md-log and lesson;
 // register nothing, but keep a valid factory so the file loads cleanly.
