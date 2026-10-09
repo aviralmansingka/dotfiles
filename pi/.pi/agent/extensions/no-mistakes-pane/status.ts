@@ -347,7 +347,7 @@ export interface NoMistakesResultFinding {
 export interface NoMistakesResultReport {
 	gate?: string;
 	outcome?: string;
-	error?: boolean;
+	error?: string;
 	findings: NoMistakesResultFinding[];
 	help: string[];
 	run?: NoMistakesSnapshot;
@@ -376,7 +376,8 @@ export function parseNoMistakesResult(
 ): NoMistakesResultReport {
 	const gate = /^gate:\s*(\S+)/m.exec(output)?.[1];
 	const outcome = /^outcome:\s*(\S+)/m.exec(output)?.[1];
-	const error = /^error:/m.test(output);
+	const errorMatch = /^error:\s*(.+)$/m.exec(output);
+	const error = errorMatch ? unquote(errorMatch[1]!) : undefined;
 	const findings = table(output, "findings")
 		.map((row): NoMistakesResultFinding => ({
 			id: row.id || undefined,

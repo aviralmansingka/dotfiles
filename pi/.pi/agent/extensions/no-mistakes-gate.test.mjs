@@ -258,7 +258,12 @@ const clearApi = () => {
 	assert.match(flat, /no-op/, "the no-op classification is surfaced");
 	assert.match(flat, /src\/a\.go:42/, "file and line are surfaced");
 	assert.match(flat, /New --force flag bypasses the confirm prompt/, "descriptions are relayed verbatim");
-	assert.match(flat, /y yolo this run/, "the yolo shortcut is advertised");
+	assert.match(flat, /y +yolo this run/, "the yolo shortcut is advertised");
+	assert.match(flat, /1\. Approve — accept this step as-is and continue/, "the decide options are visible and numbered");
+	assert.match(flat, /2\. Fix — select findings for the pipeline to fix/, "the fix option is visible");
+	assert.match(flat, /3\. Skip — skip this step/, "the skip option is visible");
+	assert.match(flat, /keys +↑↓\/jk +move/, "the legend labels the navigation keys");
+	assert.match(flat, /1-3 +select option/, "the legend advertises number selection");
 	clearApi();
 }
 
@@ -551,7 +556,10 @@ async function paneRunWithGateApi(fakeApi, roundTrip = false) {
 		registerTool() {},
 		registerCommand(_name, value) { command = value; },
 		registerMessageRenderer() {},
-		events: { emit() {}, on() { return () => {}; } },
+		events: {
+			emit() {},
+			on() { return () => {}; },
+		},
 		exec() { return Promise.resolve({ code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" }); },
 		sendMessage() {},
 	});

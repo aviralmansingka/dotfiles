@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { execFile, execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
@@ -67,9 +68,10 @@ const NM_RESULT_MESSAGE = "no_mistakes_axi_result";
 const NM_TOGGLE_EVENT = "no-mistakes:toggle-rows";
 
 /** Ctrl+Q visibility class for the result rows: hidden rows render as one
- *  ghost line. Flipped by the ctrl+q shortcut in tool-call-renderer-public
- *  through NM_TOGGLE_EVENT; the rows re-render cache-free. */
-let nmRowsHidden = false;
+ *  ghost line. The ctrl+q shortcut in tool-call-renderer-public sends the
+ *  absolute hidden state through NM_TOGGLE_EVENT, so this stays in sync with
+ *  its commandsHidden; the rows re-render cache-free. */
+let nmRowsHidden = true;
 
 // ---------------------------------------------------------------------------
 // Gate panel bridge — the no-mistakes-gate extension registers a decision
@@ -1143,15 +1145,18 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 	// or the agent-facing guidance prose. The steer content stays unchanged;
 	// only the human-facing rendering differs.
 	//
-	//   collapsed: one header line + phase strip + finding chips
+	//   collapsed: one compressed line — state, severity/ask-user counts,
+	//             inline error note, and the Ctrl+O hint
 	//   Ctrl+O (options.expanded, driven by CustomMessageComponent): the
-	//             framed findings/steps/help report
+	//             framed error/findings/steps/help report with wrapped rows;
+	//             unparsed output falls back to the raw body
 	//   Ctrl+Q  (shortcut registered by tool-call-renderer-public): emits
-	//             NM_TOGGLE_EVENT; the handler flips nmRowsHidden and the
-	//             shortcut's notify-triggered render pass re-renders these
-	//             cache-free rows as a one-line ghost row.
-	pi.events.on(NM_TOGGLE_EVENT, () => {
-		nmRowsHidden = !nmRowsHidden;
+	//             NM_TOGGLE_EVENT with the absolute hidden state; the handler
+	//             assigns nmRowsHidden and the shortcut's notify-triggered
+	//             render pass re-renders these cache-free rows as a one-line
+	//             ghost row.
+	pi.events.on(NM_TOGGLE_EVENT, (hidden: unknown) => {
+		if (typeof hidden === "boolean") nmRowsHidden = hidden;
 	});
 	pi.registerMessageRenderer(NM_RESULT_MESSAGE, (message, options, theme) => {
 		const details = message.details as
@@ -1168,32 +1173,31 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		const content = String(message.content ?? "");
 		const report = parseNoMistakesResult(content);
 		const subcommand = details?.subcommand ?? "axi";
-		let state: string;
-		if (details?.timedOut) {
-			state = "timed out";
-		} else if (report.gate) {
-			// #269 gate-decision labels ride along when the steer carries them;
-			// a bare gate keeps the plain step name so the row stays compact.
-			const decision = details?.gateDecision;
-			const label = decision
-				? decision.type === "fix" && decision.findings
-					? `fix ${decision.findings.join(",")}`
-					: decision.type
-				: details?.yolo
-					? "yolo · standing"
-					: undefined;
-			state = label ? `gate: ${report.gate} · ${label}` : `gate: ${report.gate}`;
-		} else if (report.outcome) {
-			state = `outcome: ${report.outcome}`;
-		} else if (report.error) {
-			state = "error";
-		} else if (details?.outcome) {
-			state = `outcome: ${details.outcome}`;
-		} else if (details?.gate) {
-			state = "gate";
-		} else {
-			state = `exit ${details?.exitCode ?? -1}`;
-		}
+		const gate = report.gate ?? report.run?.gate;
+		const outcome = report.outcome ?? report.run?.outcome;
+		const decision = details?.gateDecision;
+		const decisionLabel = decision
+			? decision.type === "fix" && decision.findings
+				? `fix ${decision.findings.join(",")}`
+				: decision.type
+			: details?.yolo
+				? "yolo · standing"
+				: undefined;
+		const state = details?.timedOut
+			? "timed out"
+			: details?.gate && decisionLabel
+				? `gate · ${decisionLabel}`
+				: gate
+					? `gate: ${gate}`
+					: outcome
+						? `outcome: ${outcome}`
+						: report.error
+							? "error"
+							: details?.gate
+								? "gate · awaiting decision"
+								: details?.outcome
+									? `outcome: ${details.outcome}`
+									: `exit ${details?.exitCode ?? -1}`;
 		return {
 			render(width: number): string[] {
 				return renderNmResultRow(theme, { subcommand, state, report, content, expanded: options.expanded, width });
@@ -1270,23 +1274,46 @@ function phaseStrip(theme: NmRowTheme, report: NoMistakesResultReport): string |
 		.join(theme.fg("dim", " · "));
 }
 
-function findingChip(theme: NmRowTheme, finding: { id?: string; severity: string; file?: string; action?: string; description: string }): string {
-	const { mark, color } = severityMark(finding.severity);
-	const id = finding.id ? `${finding.id} ` : "";
-	const bits = [finding.severity, finding.action, finding.file].filter(Boolean).join(" · ");
-	const description = finding.description ? theme.fg("text", finding.description) : "";
-	return theme.fg(color, `${mark} ${id}`) + theme.fg("dim", bits ? `${bits} — ` : "") + description;
+/** Compact severity/action counts for the one-line collapsed row:
+ *  `!1 ▲2 ·1 ?1` — errors, warnings, info, ask-user. */
+function findingCounts(
+	theme: NmRowTheme,
+	findings: Array<{ severity: string; action?: string }>,
+): string | undefined {
+	if (!findings.length) return undefined;
+	const errors = findings.filter((finding) => severityMark(finding.severity).mark === "!").length;
+	const warnings = findings.filter((finding) => severityMark(finding.severity).mark === "▲").length;
+	const infos = findings.length - errors - warnings;
+	const askUser = findings.filter((finding) => finding.action === "ask-user").length;
+	const bits: string[] = [];
+	if (errors) bits.push(theme.fg("error", `!${errors}`));
+	if (warnings) bits.push(theme.fg("warning", `▲${warnings}`));
+	if (infos) bits.push(theme.fg("muted", `·${infos}`));
+	if (askUser) bits.push(theme.fg("customMessageLabel", `?${askUser}`));
+	return bits.join(" ") || undefined;
 }
 
-function findingRow(theme: NmRowTheme, finding: { id?: string; severity: string; file?: string; action?: string; description: string }): string[] {
+function wrapRow(prefix: string, body: string, width: number): string[] {
+	return wrapTextWithAnsi(body, Math.max(1, width - visibleWidth(prefix)))
+		.map((line) => `${prefix}${line}`);
+}
+
+function findingRow(
+	theme: NmRowTheme,
+	finding: { id?: string; severity: string; file?: string; action?: string; description: string },
+	width: number,
+): string[] {
 	const { color } = severityMark(finding.severity);
 	const id = (finding.id ?? "  ").padEnd(2);
 	const severity = finding.severity.padEnd(7);
 	const action = (finding.action ?? "").padEnd(9);
 	const actionColor = finding.action === "ask-user" ? "customMessageLabel" : "muted";
-	const head = `   ${theme.fg("borderMuted", "│")} ${theme.fg("warning", id)} ${theme.fg(color, severity)} ${theme.fg(actionColor, action)} ${theme.fg("mdLink", finding.file ?? "")}`;
-	const lines = [head];
-	if (finding.description) lines.push(`   ${theme.fg("borderMuted", "│")}     ${theme.fg("text", finding.description)}`);
+	const prefix = `   ${theme.fg("borderMuted", "│")} `;
+	const head = `${theme.fg("warning", id)} ${theme.fg(color, severity)} ${theme.fg(actionColor, action)} ${theme.fg("mdLink", finding.file ?? "")}`;
+	const lines = wrapRow(prefix, head, width);
+	if (finding.description) {
+		lines.push(...wrapRow(`${prefix}    `, theme.fg("text", finding.description), width));
+	}
 	return lines;
 }
 
@@ -1303,49 +1330,64 @@ function renderNmResultRow(
 ): string[] {
 	const { subcommand, state, report, content, expanded, width } = args;
 	const title = theme.fg("toolTitle", theme.bold(`no-mistakes · ${subcommand}`));
-	const findingsSuffix = report.findings.length ? ` · ${report.findings.length} finding${report.findings.length > 1 ? "s" : ""}` : "";
+	const counts = findingCounts(theme, report.findings);
+	const countsSuffix = counts ? theme.fg("dim", " · ") + counts : "";
 
 	// Ctrl+Q hidden class: one ghost line, nothing else.
 	if (nmRowsHidden) {
-		return ["", ` ${theme.fg("muted", `▹ no-mistakes · ${subcommand} — ${state}${findingsSuffix}`)}`]
+		return ["", ` ${theme.fg("muted", `▹ no-mistakes · ${subcommand} — ${state}`)}${theme.fg("muted", counts ? ` · ${counts}` : "")}`]
 			.map((line) => truncateAnsi(line, width));
 	}
 
-	const header = ` ${theme.fg("accent", "◆")} ${title}${theme.fg("dim", `  ${state}${findingsSuffix}`)}`;
-	const structured = Boolean(report.findings.length || report.help.length || report.run);
+	const header = ` ${theme.fg("accent", "◆")} ${title}${theme.fg("dim", `  ${state}`)}${countsSuffix}`;
+	const structured = Boolean(
+		report.gate || report.outcome || report.error || report.findings.length || report.help.length || report.run,
+	);
 
-	if (!expanded) {
-		const lines = ["", header];
-		const strip = phaseStrip(theme, report);
-		if (strip) lines.push(`   ${strip}`);
-		for (const finding of report.findings.slice(0, 3)) lines.push(`   ${findingChip(theme, finding)}`);
-		if (report.findings.length > 3) {
-			lines.push(`   ${theme.fg("muted", `+${report.findings.length - 3} more`)}`);
-		}
-		lines.push(`   ${theme.fg("muted", "Ctrl+O full report")}`);
+	if (!structured) {
+		const raw = content.split("\n");
+		const shown = expanded ? raw : raw.slice(0, 6);
+		const lines = [
+			"",
+			header,
+			...shown.flatMap((line) => wrapTextWithAnsi(theme.fg("dim", line), Math.max(1, width))),
+		];
+		if (!expanded) lines.push(`   ${theme.fg("muted", "Ctrl+O full report")}`);
+		else lines.push(` ${theme.fg("muted", "Ctrl+O collapse · Ctrl+Q hide all nm rows")}`);
 		return lines.map((line) => truncateAnsi(line, width));
 	}
 
-	// Expanded: the framed report, or the raw output when nothing parsed.
-	if (!structured) {
-		const body = content.split("\n").map((line) => theme.fg("dim", line));
-		return ["", header, ...body, ` ${theme.fg("muted", "Ctrl+O collapse · Ctrl+Q hide all nm rows")}`]
-			.map((line) => truncateAnsi(line, width));
+	if (!expanded) {
+		// Compressed: everything on one line — state, severity/ask-user
+		// counts, and the expand hint. Details live behind Ctrl+O, except an
+		// error message, which stays visible on the line.
+		const errorNote = report.error
+			? theme.fg("error", ` — ${report.error}`)
+			: "";
+		const line = `${header}${errorNote}  ${theme.fg("muted", "Ctrl+O")}`;
+		return ["", truncateAnsi(line, width)];
 	}
+
 	const lines = ["", header];
+	if (report.error) {
+		lines.push(`   ${theme.fg("borderMuted", "┌ error ────")}`);
+		lines.push(...wrapRow(`   ${theme.fg("borderMuted", "│")} `, theme.fg("error", report.error), width));
+	}
 	if (report.findings.length) {
-		lines.push(`   ${theme.fg("borderMuted", "┌ findings ─")}`);
-		for (const finding of report.findings) lines.push(...findingRow(theme, finding));
+		lines.push(`   ${theme.fg("borderMuted", report.error ? "├ findings ─" : "┌ findings ─")}`);
+		for (const finding of report.findings) lines.push(...findingRow(theme, finding, width));
 	}
 	const strip = phaseStrip(theme, report);
 	if (strip) {
-		lines.push(`   ${theme.fg("borderMuted", report.findings.length ? "├ steps ───" : "┌ steps ───")}`);
-		lines.push(`   ${theme.fg("borderMuted", "│")} ${strip}`);
+		lines.push(`   ${theme.fg("borderMuted", report.error || report.findings.length ? "├ steps ───" : "┌ steps ───")}`);
+		lines.push(...wrapRow(`   ${theme.fg("borderMuted", "│")} `, strip, width));
 	}
 	if (report.help.length) {
 		lines.push(`   ${theme.fg("borderMuted", "└ help:")}`);
-		for (const hint of report.help) lines.push(`   ${theme.fg("borderMuted", "  ")}${theme.fg("dim", hint)}`);
-	} else if (report.findings.length || strip) {
+		for (const hint of report.help) {
+			lines.push(...wrapRow(`   ${theme.fg("borderMuted", "  ")}`, theme.fg("dim", hint), width));
+		}
+	} else if (report.error || report.findings.length || strip) {
 		lines.push(`   ${theme.fg("borderMuted", "└")}`);
 	}
 	lines.push(`   ${theme.fg("muted", "Ctrl+O collapse · Ctrl+Q hide all nm rows")}`);

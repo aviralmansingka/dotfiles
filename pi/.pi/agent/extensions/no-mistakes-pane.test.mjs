@@ -22,7 +22,37 @@ const jitiPath = [
 ].find((path) => path && existsSync(path));
 if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
 const { createJiti } = require(jitiPath);
-const jiti = createJiti(import.meta.url);
+// CI installs only jiti and typebox, so @earendil-works/pi-tui (used by the
+// pane's wrapping) must be stubbed through a jiti alias like the sibling
+// extension tests do, never resolved from a machine-local install.
+const stubRoot = mkdtempSync(join(tmpdir(), "nm-pane-test-"));
+const stubTui = join(stubRoot, "pi-tui.cjs");
+const NL = String.fromCharCode(10);
+writeFileSync(stubTui, [
+	"const NL = String.fromCharCode(10);",
+	"exports.visibleWidth = (text) => [...String(text)].length;",
+	"exports.wrapTextWithAnsi = (text, width) => {",
+	"	const maxWidth = Math.max(1, width);",
+	"	const out = [];",
+	"	for (const paragraph of String(text).split(NL)) {",
+	"		let line = \"\";",
+	"		for (let word of paragraph.split(\" \")) {",
+	"			while (word.length > maxWidth) {",
+	"				if (line) { out.push(line); line = \"\"; }",
+	"				out.push(word.slice(0, maxWidth));",
+	"				word = word.slice(maxWidth);",
+	"			}",
+	"			if (line === \"\") line = word;",
+	"			else if ((line + \" \" + word).length <= maxWidth) line += \" \" + word;",
+	"			else { out.push(line); line = word; }",
+	"		}",
+	"		out.push(line);",
+	"	}",
+	"	return out;",
+	"};",
+].join(NL) + NL);
+const tuiAlias = { "@earendil-works/pi-tui": stubTui };
+const jiti = createJiti(import.meta.url, { alias: tuiAlias });
 const { extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
 const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
 const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
@@ -197,7 +227,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			publishedRunId: "00000000000000000000000001",
 		};
 		globalThis.clearInterval = (interval) => { clearedInterval = interval; };
-		createJiti(import.meta.url, { moduleCache: false })("./no-mistakes-pane.ts");
+		createJiti(import.meta.url, { moduleCache: false, alias: tuiAlias })("./no-mistakes-pane.ts");
 		assert.equal(clearedInterval, staleInterval, "the previous watch timer is cleared");
 		assert.equal(aborted, true, "the previous status controller is aborted");
 		assert.equal(globalThis[intervalKey], undefined);
@@ -312,9 +342,13 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.equal(message.customType, "no_mistakes_axi_result");
 		assert.equal(options.triggerTurn, true, "the result triggers a new agent turn");
 		assert.equal(options.deliverAs, "steer");
-		assert.match(message.content, /no-mistakes axi run finished \(exit 0\)/);
-		assert.match(message.content, /gate: review/);
-		assert.match(message.content, /parked at this gate/);
+		const baselineSteerContent = [
+			"no-mistakes axi run finished (exit 0).",
+			gateOutput,
+			"The run is parked at this gate. Read the findings table, decide, and submit the next call through no_mistakes_axi: `respond --action approve|fix|skip` with `--findings <ids>` and `--instructions` as needed. Findings marked ask-user belong to the user — relay them verbatim and wait for their decision. Never edit the code yourself while the run is active; the pipeline owns findings and fixes.",
+		].join("\n");
+		assert.equal(message.content, baselineSteerContent,
+			"the extension tool preserves every byte of the baseline gate steer contract");
 		assert.equal(message.details.subcommand, "run");
 		assert.equal(message.details.gate, true);
 		assert.equal(message.details.paneClosed, false);
@@ -555,6 +589,13 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			fg: (_name, text) => text,
 			bold: (text) => text,
 		};
+		const initiallyHidden = renderer.value(
+			{ content: messages[1].message.content, details: messages[1].message.details },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(initiallyHidden.join("\n"), /▹ no-mistakes · respond/);
+		toggleRows(false);
 		const rendered = renderer.value(
 			{ content: messages[1].message.content, details: messages[1].message.details },
 			{ expanded: false },
@@ -563,6 +604,12 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		const lines = rendered.render(200);
 		assert.match(lines.join("\n"), /no-mistakes · respond/);
 		assert.match(lines.join("\n"), /outcome: checks-passed/);
+		const outcomeExpanded = renderer.value(
+			{ content: messages[1].message.content, details: messages[1].message.details },
+			{ expanded: true },
+			theme,
+		).render(200);
+		assert.ok(!outcomeExpanded.some((line) => line.includes("finished (exit")), "an outcome never renders raw steer prose");
 		// A gate result renders chips and the expand hint, never raw TOON or
 		// the agent-facing guidance prose.
 		const gateBody = [
@@ -582,12 +629,12 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			theme,
 		).render(200);
 		assert.match(gateLines.join("\n"), /no-mistakes · run/);
-		assert.match(gateLines.join("\n"), /gate: review · 2 findings/);
-		assert.match(gateLines.join("\n"), /r1 error · ask-user · pi\/no-mistakes-pane\.ts — Null value reaches renderer/);
-		assert.match(gateLines.join("\n"), /r2 warning · auto-fix · pi\/status\.ts — Missing cleanup/);
+		assert.match(gateLines.join("\n"), /gate: review · !1 ▲1 \?1/);
+		assert.equal(gateLines.filter((line) => line.trim()).length, 1, "the collapsed row is a single line");
 		assert.ok(!gateLines.some((line) => line.includes("findings[2]{")), "no raw TOON schema renders");
 		assert.ok(!gateLines.some((line) => line.includes("parked at this gate")), "agent guidance prose never renders");
-		assert.match(gateLines.join("\n"), /Ctrl\+O full report/);
+		assert.ok(!gateLines.some((line) => line.includes("Null value reaches")), "finding details stay behind Ctrl+O");
+		assert.match(gateLines.join("\n"), /Ctrl\+O/);
 		// Expanded: the framed report with finding rows, severity, and help.
 		const gateExpanded = renderer.value(
 			{ content: gateBody, details: gateDetails },
@@ -601,40 +648,113 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.match(gateExpanded.join("\n"), /└ help:/);
 		assert.match(gateExpanded.join("\n"), /respond --action approve/);
 		assert.match(gateExpanded.join("\n"), /Ctrl\+Q hide all nm rows/);
-		// Unparsed output falls back to the raw body, truncated when collapsed.
-		const longBody = ["gate: review", ...Array.from({ length: 10 }, (_, i) => `finding ${i}`)].join("\n");
+		const bareGateExpanded = renderer.value(
+			{ content: "gate: review\nThe run is parked at this gate.", details: gateDetails },
+			{ expanded: true },
+			theme,
+		).render(200);
+		assert.ok(!bareGateExpanded.some((line) => line.includes("parked at this gate")), "a gate without findings never renders guidance prose");
+		const nestedGateBody = [
+			"run:",
+			'  id: "00000000000000000000000000"',
+			"  status: running",
+			"  steps[1]{step,status,findings,duration_ms}:",
+			"    review,awaiting_approval,0,0",
+			"  gate:",
+			"    step: review",
+		].join("\n");
+		const nestedGateLines = renderer.value(
+			{ content: nestedGateBody, details: { subcommand: "status", exitCode: 0 } },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(nestedGateLines.join("\n"), /gate: review/);
+		const nestedOutcomeBody = [
+			"run:",
+			'  id: "00000000000000000000000000"',
+			"  status: completed",
+			"  outcome: checks-passed",
+			"  steps[1]{step,status,findings,duration_ms}:",
+			"    test,completed,0,1000",
+		].join("\n");
+		const nestedOutcomeLines = renderer.value(
+			{ content: nestedOutcomeBody, details: { subcommand: "status", exitCode: 0 } },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(nestedOutcomeLines.join("\n"), /outcome: checks-passed/);
+		const errorBody = 'error: "daemon unavailable after connection timeout"\nTell the agent to retry the call.';
+		const errorLines = renderer.value(
+			{ content: errorBody, details: { subcommand: "status", exitCode: 1 } },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(errorLines.join("\n"), /daemon unavailable after connection timeout/);
+		const errorExpanded = renderer.value(
+			{ content: errorBody, details: { subcommand: "status", exitCode: 1 } },
+			{ expanded: true },
+			theme,
+		).render(32);
+		assert.match(errorExpanded.join("\n"), /┌ error/);
+		assert.match(errorExpanded.join("\n"), /connection timeout/);
+		assert.ok(!errorExpanded.some((line) => line.includes("retry the call")), "an error never renders agent guidance");
+		const wrappedBody = [
+			"gate: review",
+			"findings[1]{id,severity,file,action,description}:",
+			"  r1,error,src/component-name.ts,ask-user,Every word in this long finding description remains visible after wrapping",
+			"help[1]:",
+			"  Run the next command with every required argument after reviewing all findings",
+			"run:",
+			'  id: "00000000000000000000000000"',
+			"  status: running",
+			"  steps[2]{step,status,findings,duration_ms}:",
+			"    review-phase-name,completed,1,1000",
+			"    verification-phase-name,running,0,2000",
+		].join("\n");
+		const wrappedLines = renderer.value(
+			{ content: wrappedBody, details: gateDetails },
+			{ expanded: true },
+			theme,
+		).render(32);
+		assert.ok(wrappedLines.every((line) => [...line].length <= 32), "expanded report lines fit the viewport");
+		for (const text of [
+			"component-name.ts", "Every", "word", "finding", "description", "remains", "visible", "wrapping",
+			"review-phase-name", "verification-phase-name", "required", "argument", "reviewing", "findings",
+		]) {
+			assert.match(wrappedLines.join("\n"), new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+		}
+		const longBody = Array.from({ length: 10 }, (_, i) => `daemon log ${i}`).join("\n");
 		const longRendered = renderer.value(
-			{ content: longBody, details: { subcommand: "run", gate: true } },
+			{ content: longBody, details: { subcommand: "status", exitCode: 0 } },
 			{ expanded: false },
 			theme,
 		);
 		const longLines = longRendered.render(200);
-		assert.match(longLines.join("\n"), /no-mistakes · run/);
-		assert.ok(!longLines.some((line) => line.includes("finding 9")), "the collapsed row truncates the body");
+		assert.match(longLines.join("\n"), /daemon log 0/);
+		assert.ok(!longLines.some((line) => line.includes("daemon log 9")), "the collapsed raw fallback limits the body");
 		assert.match(longLines.join("\n"), /Ctrl\+O full report/);
 		const expandedLines = renderer.value(
-			{ content: longBody, details: { subcommand: "run", gate: true } },
+			{ content: longBody, details: { subcommand: "status", exitCode: 0 } },
 			{ expanded: true },
 			theme,
-		).render(200);
-		assert.ok(expandedLines.some((line) => line.includes("finding 9")), "the expanded row shows the full body");
-		// Ctrl+Q hides every row as one ghost line; toggling again restores.
+		).render(20);
+		assert.ok(expandedLines.some((line) => line.includes("daemon log 9")), "the expanded raw fallback shows the full body");
 		assert.equal(typeof toggleRows, "function", "the renderer subscribes to the ctrl+q toggle event");
-		toggleRows();
+		toggleRows(true);
 		const hiddenLines = renderer.value(
 			{ content: gateBody, details: gateDetails },
 			{ expanded: false },
 			theme,
 		).render(200);
-		assert.match(hiddenLines.join("\n"), /▹ no-mistakes · run — gate: review · 2 findings/);
+		assert.match(hiddenLines.join("\n"), /▹ no-mistakes · run — gate: review · !1 ▲1 \?1/);
 		assert.equal(hiddenLines.filter((line) => line.trim()).length, 1, "the hidden row is a single ghost line");
-		toggleRows();
+		toggleRows(false);
 		const restoredLines = renderer.value(
 			{ content: gateBody, details: gateDetails },
 			{ expanded: false },
 			theme,
 		).render(200);
-		assert.match(restoredLines.join("\n"), /Ctrl\+O full report/, "toggling back restores the row");
+		assert.match(restoredLines.join("\n"), /Ctrl\+O/, "toggling back restores the row");
 
 		handlers.get("session_shutdown")();
 	} finally {
