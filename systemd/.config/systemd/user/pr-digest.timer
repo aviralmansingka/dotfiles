@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily 9AM timer for the merged-PR Telegram digest
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+AccuracySec=1m
+Persistent=true
+Unit=pr-digest.service
+
+[Install]
+WantedBy=timers.target

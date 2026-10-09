@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily merged-PR digest across owned GitHub repos, sent via Telegram
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/bin:%h/.nvm/versions/node/v22.22.3/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-%h/.config/pi-telegram.env
+ExecStart=%h/dotfiles/scripts/pr-digest.py
