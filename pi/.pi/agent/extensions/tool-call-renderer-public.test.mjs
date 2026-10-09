@@ -60,7 +60,10 @@ try {
     registerToolRenderer(value) { resolver = value; },
     registerShortcut(key, options) { shortcut = { key, ...options }; },
     on(event, handler) { handlers.set(event, handler); return () => handlers.delete(event); },
-    events: { on(event, handler) { bus.set(event, handler); return () => bus.delete(event); } },
+    events: {
+      on(event, handler) { bus.set(event, handler); return () => bus.delete(event); },
+      emit(event, payload) { bus.get(event)?.(payload); },
+    },
   });
   shutdown = handlers.get("session_shutdown");
   const session = (id, entries = []) => handlers.get("session_start")({}, {
@@ -156,7 +159,7 @@ try {
   const beforeToggle = invalidations;
   shortcut.handler(shortcutCtx);
   assert.ok(invalidations > beforeToggle, "the toggle invalidates mounted rows");
-  assert.deepEqual(notifications.at(-1), ["Commands shown", "info"]);
+  assert.deepEqual(notifications.at(-1), ["Commands and no-mistakes rows shown", "info"]);
   const bashCtx = context("timed", { command: "printf hi\nexit 0" });
   handlers.get("tool_execution_start")({ toolCallId: "timed" });
   const call = bash.renderCall(bashCtx.args, theme, bashCtx);
@@ -1045,7 +1048,7 @@ branch_sync:
   render(read.renderResult(result("a\nb"), options, theme, restoredCtx));
   assert.doesNotMatch(render(restoredCall), /\d+(?:ms|s)/, "restored calls have no invented elapsed time");
   shortcut.handler(shortcutCtx);
-  assert.deepEqual(notifications.at(-1), ["Commands hidden", "info"], "the toggle flips back to hidden");
+  assert.deepEqual(notifications.at(-1), ["Commands and no-mistakes rows hidden", "info"], "the toggle flips back to hidden");
   const hiddenPy = render(python.renderCall(
     { code: "# parse the session log for nested bash calls\nimport json" },
     theme,

@@ -270,7 +270,10 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			registerTool(value) { tool = value; },
 			registerCommand() {},
 			registerMessageRenderer() {},
-			events: { emit(name, payload) { events.push({ name, payload }); } },
+			events: {
+				emit(name, payload) { events.push({ name, payload }); },
+				on() { return () => {}; },
+			},
 			exec() { return Promise.resolve({ code: 0, stdout: statusStdout }); },
 			sendMessage(message, options) { messages.push({ message, options }); },
 		});
@@ -397,6 +400,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 	let tool;
 	let command;
 	let renderer;
+	let toggleRows;
 	let tick;
 	let statusStdout = activeStatus;
 	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-pane-"));
@@ -453,7 +457,13 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			registerTool(value) { tool = value; },
 			registerCommand(name, value) { command = value; },
 			registerMessageRenderer(type, value) { renderer = { type, value }; },
-			events: { emit() {} },
+			events: {
+				emit() {},
+				on(name, handler) {
+					if (name === "no-mistakes:toggle-rows") toggleRows = handler;
+					return () => {};
+				},
+			},
 			exec() { return Promise.resolve({ code: 0, stdout: statusStdout }); },
 			sendMessage(message, options) { messages.push({ message, options }); },
 		});
@@ -538,7 +548,8 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.ok(notifies.some((n) => /No active no-mistakes run/.test(n.m)));
 		assert.ok(!herdrLog.slice(logBeforeNoRun).some((line) => line.startsWith("pane split")), "no pane is opened without an active run");
 
-		// 8. The result message renderer produces a compact transcript row.
+		// 8. The result message renderer produces a structured transcript row:
+		//    a summary header, finding chips, and no raw TOON schema lines.
 		assert.equal(renderer.type, "no_mistakes_axi_result");
 		const theme = {
 			fg: (_name, text) => text,
@@ -552,7 +563,45 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		const lines = rendered.render(200);
 		assert.match(lines.join("\n"), /no-mistakes · respond/);
 		assert.match(lines.join("\n"), /outcome: checks-passed/);
-		// A long result is truncated with an expand hint; expanding shows it all.
+		// A gate result renders chips and the expand hint, never raw TOON or
+		// the agent-facing guidance prose.
+		const gateBody = [
+			"no-mistakes axi run finished (exit 0).",
+			"gate: review",
+			"findings[2]{id,severity,file,action,description}:",
+			"  r1,error,pi/no-mistakes-pane.ts,ask-user,Null value reaches renderer",
+			"  r2,warning,pi/status.ts,auto-fix,Missing cleanup",
+			"help[1]:",
+			"  Run `no-mistakes axi respond --action approve` to accept this step and continue",
+			"The run is parked at this gate. Read the findings table, decide, and submit the next call.",
+		].join("\n");
+		const gateDetails = { subcommand: "run", gate: true };
+		const gateLines = renderer.value(
+			{ content: gateBody, details: gateDetails },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(gateLines.join("\n"), /no-mistakes · run/);
+		assert.match(gateLines.join("\n"), /gate: review · 2 findings/);
+		assert.match(gateLines.join("\n"), /r1 error · ask-user · pi\/no-mistakes-pane\.ts — Null value reaches renderer/);
+		assert.match(gateLines.join("\n"), /r2 warning · auto-fix · pi\/status\.ts — Missing cleanup/);
+		assert.ok(!gateLines.some((line) => line.includes("findings[2]{")), "no raw TOON schema renders");
+		assert.ok(!gateLines.some((line) => line.includes("parked at this gate")), "agent guidance prose never renders");
+		assert.match(gateLines.join("\n"), /Ctrl\+O full report/);
+		// Expanded: the framed report with finding rows, severity, and help.
+		const gateExpanded = renderer.value(
+			{ content: gateBody, details: gateDetails },
+			{ expanded: true },
+			theme,
+		).render(200);
+		assert.match(gateExpanded.join("\n"), /┌ findings/);
+		assert.match(gateExpanded.join("\n"), /r1 +error +ask-user +pi\/no-mistakes-pane\.ts/);
+		assert.match(gateExpanded.join("\n"), /Null value reaches renderer/);
+		assert.match(gateExpanded.join("\n"), /Missing cleanup/);
+		assert.match(gateExpanded.join("\n"), /└ help:/);
+		assert.match(gateExpanded.join("\n"), /respond --action approve/);
+		assert.match(gateExpanded.join("\n"), /Ctrl\+Q hide all nm rows/);
+		// Unparsed output falls back to the raw body, truncated when collapsed.
 		const longBody = ["gate: review", ...Array.from({ length: 10 }, (_, i) => `finding ${i}`)].join("\n");
 		const longRendered = renderer.value(
 			{ content: longBody, details: { subcommand: "run", gate: true } },
@@ -560,15 +609,32 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			theme,
 		);
 		const longLines = longRendered.render(200);
-		assert.match(longLines.join("\n"), /no-mistakes · run gate/);
+		assert.match(longLines.join("\n"), /no-mistakes · run/);
 		assert.ok(!longLines.some((line) => line.includes("finding 9")), "the collapsed row truncates the body");
-		assert.match(longLines.join("\n"), /Ctrl\+O to expand/);
+		assert.match(longLines.join("\n"), /Ctrl\+O full report/);
 		const expandedLines = renderer.value(
 			{ content: longBody, details: { subcommand: "run", gate: true } },
 			{ expanded: true },
 			theme,
 		).render(200);
 		assert.ok(expandedLines.some((line) => line.includes("finding 9")), "the expanded row shows the full body");
+		// Ctrl+Q hides every row as one ghost line; toggling again restores.
+		assert.equal(typeof toggleRows, "function", "the renderer subscribes to the ctrl+q toggle event");
+		toggleRows();
+		const hiddenLines = renderer.value(
+			{ content: gateBody, details: gateDetails },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(hiddenLines.join("\n"), /▹ no-mistakes · run — gate: review · 2 findings/);
+		assert.equal(hiddenLines.filter((line) => line.trim()).length, 1, "the hidden row is a single ghost line");
+		toggleRows();
+		const restoredLines = renderer.value(
+			{ content: gateBody, details: gateDetails },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(restoredLines.join("\n"), /Ctrl\+O full report/, "toggling back restores the row");
 
 		handlers.get("session_shutdown")();
 	} finally {

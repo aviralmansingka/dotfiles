@@ -17,8 +17,10 @@ import {
 import {
 	isObservableNoMistakesRun,
 	observeNoMistakesTiming,
+	parseNoMistakesResult,
 	parseNoMistakesStatus,
 	summarizeNoMistakesSnapshot,
+	type NoMistakesResultReport,
 	type NoMistakesSnapshot,
 } from "./no-mistakes-pane/status";
 
@@ -62,6 +64,12 @@ const execFileAsync = promisify(execFile);
 
 const NM_ACTIVITY_UPDATE_EVENT = "no-mistakes:activity-update";
 const NM_RESULT_MESSAGE = "no_mistakes_axi_result";
+const NM_TOGGLE_EVENT = "no-mistakes:toggle-rows";
+
+/** Ctrl+Q visibility class for the result rows: hidden rows render as one
+ *  ghost line. Flipped by the ctrl+q shortcut in tool-call-renderer-public
+ *  through NM_TOGGLE_EVENT; the rows re-render cache-free. */
+let nmRowsHidden = false;
 
 // ---------------------------------------------------------------------------
 // Gate panel bridge — the no-mistakes-gate extension registers a decision
@@ -1130,8 +1138,21 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		},
 	});
 
-	// Compact visible record of each delivered result; the steer itself is
-	// the functional part, this only renders in the transcript.
+	// Structured transcript row for each delivered result (prototype A): the
+	// row renders a summary built from the TOON — never the raw TOON schema
+	// or the agent-facing guidance prose. The steer content stays unchanged;
+	// only the human-facing rendering differs.
+	//
+	//   collapsed: one header line + phase strip + finding chips
+	//   Ctrl+O (options.expanded, driven by CustomMessageComponent): the
+	//             framed findings/steps/help report
+	//   Ctrl+Q  (shortcut registered by tool-call-renderer-public): emits
+	//             NM_TOGGLE_EVENT; the handler flips nmRowsHidden and the
+	//             shortcut's notify-triggered render pass re-renders these
+	//             cache-free rows as a one-line ghost row.
+	pi.events.on(NM_TOGGLE_EVENT, () => {
+		nmRowsHidden = !nmRowsHidden;
+	});
 	pi.registerMessageRenderer(NM_RESULT_MESSAGE, (message, options, theme) => {
 		const details = message.details as
 			| {
@@ -1144,32 +1165,38 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				yolo?: boolean;
 			}
 			| undefined;
-		if (!details) return undefined;
+		const content = String(message.content ?? "");
+		const report = parseNoMistakesResult(content);
+		const subcommand = details?.subcommand ?? "axi";
 		let state: string;
-		if (details.timedOut) {
+		if (details?.timedOut) {
 			state = "timed out";
-		} else if (details.gate) {
-			const decision = details.gateDecision;
+		} else if (report.gate) {
+			// #269 gate-decision labels ride along when the steer carries them;
+			// a bare gate keeps the plain step name so the row stays compact.
+			const decision = details?.gateDecision;
 			const label = decision
 				? decision.type === "fix" && decision.findings
 					? `fix ${decision.findings.join(",")}`
 					: decision.type
-				: details.yolo
+				: details?.yolo
 					? "yolo · standing"
-					: "awaiting decision";
-			state = `gate · ${label}`;
-		} else if (details.outcome) {
+					: undefined;
+			state = label ? `gate: ${report.gate} · ${label}` : `gate: ${report.gate}`;
+		} else if (report.outcome) {
+			state = `outcome: ${report.outcome}`;
+		} else if (report.error) {
+			state = "error";
+		} else if (details?.outcome) {
 			state = `outcome: ${details.outcome}`;
+		} else if (details?.gate) {
+			state = "gate";
 		} else {
-			state = `exit ${details.exitCode ?? -1}`;
+			state = `exit ${details?.exitCode ?? -1}`;
 		}
-		const header = `${theme.fg("accent", "◆")} ${theme.fg("toolTitle", theme.bold(`no-mistakes · ${details.subcommand ?? "axi"}`))} ${theme.fg("dim", state)}`;
-		const body = String(message.content ?? "").split("\n");
-		const lines = ["", header, ...(options.expanded ? body : body.slice(0, 6).map((line) => theme.fg("dim", line)))];
-		if (!options.expanded && body.length > 6) lines.push(theme.fg("muted", "Ctrl+O to expand"));
 		return {
 			render(width: number): string[] {
-				return lines.map((line) => truncateAnsi(line, width));
+				return renderNmResultRow(theme, { subcommand, state, report, content, expanded: options.expanded, width });
 			},
 		};
 	});
@@ -1197,6 +1224,132 @@ function truncateAnsi(line: string, width: number): string {
 		index++;
 	}
 	return line;
+}
+
+// ---------------------------------------------------------------------------
+// Structured result-row rendering (prototype A). All state is read inside
+// render() with no caching, so a Ctrl+Q visibility flip shows on the next
+// render pass without per-row invalidation.
+// ---------------------------------------------------------------------------
+
+interface NmRowTheme {
+	fg(name: string, text: string): string;
+	bold(text: string): string;
+}
+
+function severityMark(severity: string): { mark: string; color: string } {
+	const normalized = severity.toLowerCase();
+	if (normalized.includes("err") || normalized === "fatal") return { mark: "!", color: "error" };
+	if (normalized.includes("warn")) return { mark: "▲", color: "warning" };
+	return { mark: "·", color: "muted" };
+}
+
+function phaseMark(status: string): { mark: string; color: string } {
+	if (["completed", "passed", "checks-passed", "skipped"].includes(status)) return { mark: "✓", color: "success" };
+	if (["awaiting_approval", "fix_review"].includes(status)) return { mark: "◆", color: "warning" };
+	if (["running", "fixing"].includes(status)) return { mark: "◇", color: "accent" };
+	if (status === "failed" || status === "cancelled") return { mark: "×", color: "error" };
+	return { mark: "⋯", color: "muted" };
+}
+
+function formatMs(ms: number | undefined): string {
+	if (ms == null || !Number.isFinite(ms)) return "";
+	if (ms < 1000) return `${Math.round(ms)}ms`;
+	return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function phaseStrip(theme: NmRowTheme, report: NoMistakesResultReport): string | undefined {
+	const phases = report.run?.phases ?? [];
+	if (!phases.length) return undefined;
+	return phases
+		.map((phase) => {
+			const { mark, color } = phaseMark(phase.status);
+			const duration = formatMs(phase.durationMs);
+			return theme.fg("dim", `${theme.fg(color, `${mark} ${phase.name}`)}${duration ? ` ${duration}` : ""}`);
+		})
+		.join(theme.fg("dim", " · "));
+}
+
+function findingChip(theme: NmRowTheme, finding: { id?: string; severity: string; file?: string; action?: string; description: string }): string {
+	const { mark, color } = severityMark(finding.severity);
+	const id = finding.id ? `${finding.id} ` : "";
+	const bits = [finding.severity, finding.action, finding.file].filter(Boolean).join(" · ");
+	const description = finding.description ? theme.fg("text", finding.description) : "";
+	return theme.fg(color, `${mark} ${id}`) + theme.fg("dim", bits ? `${bits} — ` : "") + description;
+}
+
+function findingRow(theme: NmRowTheme, finding: { id?: string; severity: string; file?: string; action?: string; description: string }): string[] {
+	const { color } = severityMark(finding.severity);
+	const id = (finding.id ?? "  ").padEnd(2);
+	const severity = finding.severity.padEnd(7);
+	const action = (finding.action ?? "").padEnd(9);
+	const actionColor = finding.action === "ask-user" ? "customMessageLabel" : "muted";
+	const head = `   ${theme.fg("borderMuted", "│")} ${theme.fg("warning", id)} ${theme.fg(color, severity)} ${theme.fg(actionColor, action)} ${theme.fg("mdLink", finding.file ?? "")}`;
+	const lines = [head];
+	if (finding.description) lines.push(`   ${theme.fg("borderMuted", "│")}     ${theme.fg("text", finding.description)}`);
+	return lines;
+}
+
+function renderNmResultRow(
+	theme: NmRowTheme,
+	args: {
+		subcommand: string;
+		state: string;
+		report: NoMistakesResultReport;
+		content: string;
+		expanded: boolean;
+		width: number;
+	},
+): string[] {
+	const { subcommand, state, report, content, expanded, width } = args;
+	const title = theme.fg("toolTitle", theme.bold(`no-mistakes · ${subcommand}`));
+	const findingsSuffix = report.findings.length ? ` · ${report.findings.length} finding${report.findings.length > 1 ? "s" : ""}` : "";
+
+	// Ctrl+Q hidden class: one ghost line, nothing else.
+	if (nmRowsHidden) {
+		return ["", ` ${theme.fg("muted", `▹ no-mistakes · ${subcommand} — ${state}${findingsSuffix}`)}`]
+			.map((line) => truncateAnsi(line, width));
+	}
+
+	const header = ` ${theme.fg("accent", "◆")} ${title}${theme.fg("dim", `  ${state}${findingsSuffix}`)}`;
+	const structured = Boolean(report.findings.length || report.help.length || report.run);
+
+	if (!expanded) {
+		const lines = ["", header];
+		const strip = phaseStrip(theme, report);
+		if (strip) lines.push(`   ${strip}`);
+		for (const finding of report.findings.slice(0, 3)) lines.push(`   ${findingChip(theme, finding)}`);
+		if (report.findings.length > 3) {
+			lines.push(`   ${theme.fg("muted", `+${report.findings.length - 3} more`)}`);
+		}
+		lines.push(`   ${theme.fg("muted", "Ctrl+O full report")}`);
+		return lines.map((line) => truncateAnsi(line, width));
+	}
+
+	// Expanded: the framed report, or the raw output when nothing parsed.
+	if (!structured) {
+		const body = content.split("\n").map((line) => theme.fg("dim", line));
+		return ["", header, ...body, ` ${theme.fg("muted", "Ctrl+O collapse · Ctrl+Q hide all nm rows")}`]
+			.map((line) => truncateAnsi(line, width));
+	}
+	const lines = ["", header];
+	if (report.findings.length) {
+		lines.push(`   ${theme.fg("borderMuted", "┌ findings ─")}`);
+		for (const finding of report.findings) lines.push(...findingRow(theme, finding));
+	}
+	const strip = phaseStrip(theme, report);
+	if (strip) {
+		lines.push(`   ${theme.fg("borderMuted", report.findings.length ? "├ steps ───" : "┌ steps ───")}`);
+		lines.push(`   ${theme.fg("borderMuted", "│")} ${strip}`);
+	}
+	if (report.help.length) {
+		lines.push(`   ${theme.fg("borderMuted", "└ help:")}`);
+		for (const hint of report.help) lines.push(`   ${theme.fg("borderMuted", "  ")}${theme.fg("dim", hint)}`);
+	} else if (report.findings.length || strip) {
+		lines.push(`   ${theme.fg("borderMuted", "└")}`);
+	}
+	lines.push(`   ${theme.fg("muted", "Ctrl+O collapse · Ctrl+Q hide all nm rows")}`);
+	return lines.map((line) => truncateAnsi(line, width));
 }
 
 function formatOutput(output: string, exitCode: number, mode: string): string {

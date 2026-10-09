@@ -1666,12 +1666,18 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerShortcut("ctrl+q", { // frees ctrl+e for move-to-line-end
-    description: "Toggle bash/powershell/python command visibility",
+    description: "Toggle command and no-mistakes row visibility",
     handler(ctx) {
       commandsHidden = !commandsHidden;
       // Redraw every mounted call row so the transcript flips in place.
       for (const row of rows.values()) row.invalidate?.();
-      ctx.ui?.notify(commandsHidden ? "Commands hidden" : "Commands shown", "info");
+      // The no-mistakes result rows flip their own visibility class; their
+      // cache-free render refreshes on this notify's render pass.
+      pi.events.emit("no-mistakes:toggle-rows");
+      ctx.ui?.notify(
+        commandsHidden ? "Commands and no-mistakes rows hidden" : "Commands and no-mistakes rows shown",
+        "info",
+      );
     },
   });
   pi.registerToolRenderer((toolName, next) => {

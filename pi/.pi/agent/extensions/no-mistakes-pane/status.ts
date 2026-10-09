@@ -326,3 +326,67 @@ export function phaseProgress(snapshot: NoMistakesSnapshot) {
 		].filter(Boolean).join(" · ") || undefined,
 	}));
 }
+
+// ---------------------------------------------------------------------------
+// Result TOON — parse the raw output carried by a no_mistakes_axi_result
+// steer message (gate, outcome, error, findings table, help lines, and the
+// optional run: block) into the structured report the transcript row renders.
+// The extension wraps that output with a header line and agent-facing
+// guidance prose; the parsers below only match TOON shapes, so the prose is
+// ignored naturally.
+// ---------------------------------------------------------------------------
+
+export interface NoMistakesResultFinding {
+	id?: string;
+	severity: string;
+	file?: string;
+	action?: string;
+	description: string;
+}
+
+export interface NoMistakesResultReport {
+	gate?: string;
+	outcome?: string;
+	error?: boolean;
+	findings: NoMistakesResultFinding[];
+	help: string[];
+	run?: NoMistakesSnapshot;
+}
+
+function blockLines(output: string, name: string): string[] {
+	const lines = output.split("\n");
+	const headerIndex = lines.findIndex((line) =>
+		new RegExp(`^\\s*${name}\\[\\d+\\]:$`).test(line),
+	);
+	if (headerIndex < 0) return [];
+	const indentation = lines[headerIndex]!.match(/^\s*/)?.[0].length ?? 0;
+	const collected: string[] = [];
+	for (const line of lines.slice(headerIndex + 1)) {
+		if (!line.trim()) break;
+		const rowIndentation = line.match(/^\s*/)?.[0].length ?? 0;
+		if (rowIndentation <= indentation) break;
+		collected.push(line.trim());
+	}
+	return collected;
+}
+
+export function parseNoMistakesResult(
+	output: string,
+	observedAt = Date.now(),
+): NoMistakesResultReport {
+	const gate = /^gate:\s*(\S+)/m.exec(output)?.[1];
+	const outcome = /^outcome:\s*(\S+)/m.exec(output)?.[1];
+	const error = /^error:/m.test(output);
+	const findings = table(output, "findings")
+		.map((row): NoMistakesResultFinding => ({
+			id: row.id || undefined,
+			severity: row.severity || "info",
+			file: row.file || undefined,
+			action: row.action || undefined,
+			description: row.description || "",
+		}))
+		.filter((finding) => finding.id || finding.file || finding.description);
+	const help = blockLines(output, "help");
+	const run = parseNoMistakesStatus(output, observedAt);
+	return { gate, outcome, error, findings, help, run };
+}
