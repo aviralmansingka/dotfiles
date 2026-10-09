@@ -1,12 +1,52 @@
-# Neovim Mermaid rendering (mmdflux ASCII path)
+# Neovim Mermaid rendering (ASCII path)
 
-Mermaid ```` ```mermaid ```` fences render to **ASCII/Unicode art** inside Neovim
-via the [`mmdflux`](https://github.com/kevinswiber/mmdflux) binary — a single
-static Rust binary, **no Node, no headless Chromium, no ImageMagick**. This is
-the v1 surface; the inline-image upgrade is deferred (see
-[Deferred image upgrade](#deferred-image-upgrade) below).
+Mermaid ```` ```mermaid ```` fences render as **ASCII/Unicode art** inside
+Neovim — no headless Chromium, no ImageMagick. Two surfaces:
 
-## Surface
+1. **Inline auto-render** (default): every fence in a markdown buffer renders
+   automatically as Unicode box-drawing art in virtual lines below the fence,
+   via the [`grok-mermaid`](https://www.npmjs.com/package/grok-mermaid) npm
+   package — the same engine the pi agent TUI uses. The engine returns spans
+   tagged with semantic classes (`border`/`text`/`edge`/`edgeLabel`/`title`),
+   which map to `MermaidAscii*` highlight groups (gruvbox hexes matching the
+   Ghostty palette: gray frames, aqua edges, fg labels, yellow edge labels;
+   see `CLS_HL`/`CLS_FG` in the helper). Re-applied on `ColorScheme`.
+2. **On-demand float** (`<leader>mm`): runs [`mmdflux`](https://github.com/kevinswiber/mmdflux)
+   on the fence under the cursor and pops its ANSI-colored output in a Snacks
+   terminal float. Use this when you want mmdflux's color (`classDef`/`linkStyle`)
+   or its layout.
+
+The inline-image (snacks.image + mmdc → PNG) path was prototyped and
+**rejected** by the captain (render looked bad even after scale/size tuning);
+see [Image path: tried and rejected](#image-path-tried-and-rejected) below.
+
+## Inline auto-render (grok-mermaid)
+
+- Helper: `nvim/.config/nvim/lua/helpers/mermaid_render.lua` (`setup_inline`,
+  `render_buf`). Enabled from `plugins/markdown.lua` (render-markdown.nvim
+  `init`) next to `helpers.markdown_ansi`.
+- Fences are found with the same treesitter walk as the float path; each
+  fence body is hashed (`sha256`) and the rendered art cached, so edits only
+  re-render the changed fence. Renders run through `vim.system` → `node`,
+  async, max one render in flight per fence.
+- **Source hidden, revealed on cursor:** each fence is one `foldmethod=expr`
+  fold (fence lines included) shown as a single dim `▸ mermaid source (N
+  lines) — cursor here to edit` line. The art anchors to the line **above**
+  the fence — virt_lines on a folded line do not render (verified with
+  `nvim_win_text_height`), so anchoring outside the fold keeps the art
+  visible while closed. `CursorMoved`/`CursorMovedI` open the fold while the
+  cursor is inside the fence and close it when the cursor leaves. Buffer-local
+  ranges live in `vim.b.mermaid_fences`; TS node end ranges are half-open
+  (`end_col == 0` ⇒ `end_row` one past the last fence line) and are pulled
+  back before folding.
+- Engine resolution: `npm root -g` first, then pi's bundled copy
+  (`~/.pi/agent/install/releases/*/node_modules/grok-mermaid`). Install with
+  `npm install -g grok-mermaid`.
+- snacks.image's mermaid PNG pipeline is disabled by the query shadow
+  `nvim/.config/nvim/queries/markdown/images.scm` (a non-`extends` copy of
+  snacks' query with the `mermaid` pattern removed; `math` is kept).
+
+## On-demand float (mmdflux)
 
 - **`<leader>mm`** (defined in `nvim/.config/nvim/lua/plugins/markdown.lua`,
   render-markdown.nvim `keys` table): with the cursor inside (or on) a
@@ -94,29 +134,27 @@ and press `<leader>mm`. The float should show the rendered graph with ANSI
 color. The `lesson.md` fence (10-node DAG, `<br/>` multi-line labels,
 branching/joining edges) is the strongest shape test.
 
-## Deferred image upgrade (later, out of scope for v1)
+## Image path: tried and rejected
 
-A higher-fidelity inline-image path exists and is the intended eventual upgrade,
-**gated on Herdr's `kitty_graphics` flag graduating from experimental**. It is
-deliberately NOT shipped here. When the flag graduates, the upgrade is:
+The deferred upgrade below was prototyped on `feat-nvim-mermaid` (snacks.image
+inline render: `mmdc` + puppeteer `--no-sandbox` for Ubuntu 24.04 AppMag → PNG
+via kitty graphics). The captain rejected it: the render looked bad even after
+raising the mmdc scale to 4x and capping the inline size. The pivot to the
+inline ASCII path replaced it. If the image path is ever retried:
 
-1. **Herdr config:** `[experimental] kitty_graphics = true` in
-   `~/.config/herdr/config.toml`, then `herdr server reload-config` (or restart).
-   Today this flag is "experimental and disabled by default … enable it only
-   when testing terminal image behavior" (`herdr.dev/docs/configuration`).
-2. **Homelab deps:** `npm install -g @mermaid-js/mermaid-cli` (Node already
-   present) + ImageMagick. `mmdc` emits SVG; ImageMagick converts SVG→PNG for
-   the kitty graphics protocol.
-3. **nvim:** enable the Snacks `image` module in the existing Snacks lazy spec
-   — an `opts` change only (Snacks is already on disk as a dependency for the
-   pickers). Snacks Image has a built-in `convert.mermaid` handler that renders
-   ```` ```mermaid ```` fences inline via `mmdc`→SVG→ImageMagick→PNG, overlaid
-   with a kitty-graphics `U+10EEEE` Unicode placeholder. Covers **all** diagram
-   types (flowchart, sequence, state, ER, gantt, …) pixel-perfect.
-4. **Validate:** `:checkhealth snacks` → `ghostty ✓`, `mmdc ✓`, `magick ✓`,
-   kitty graphics ✓. Ripcord for pivoting back to the ASCII path: escapes never
-   reach Ghostty with the flag on and all deps green; degraded modes
-   (stale-on-reattach, slow cold start) are livable, not pivot triggers.
+1. `npm install -g @mermaid-js/mermaid-cli` + ImageMagick; on Ubuntu 24.04
+   mmdc needs a puppeteer config with `--no-sandbox` (AppArmor blocks
+   Chromium's user-namespace sandbox).
+2. Enable the Snacks `image` module `doc` opts (Snacks is already installed
+   for the pickers).
+3. Remove the `mermaid`-pattern shadow from
+   `nvim/.config/nvim/queries/markdown/images.scm` so snacks' own query is
+   used again.
 
-This ASCII path remains the fallback for copy-pasteable text art and for any
+Known stains from the rejected prototype that may still be on the host:
+`@mermaid-js/mermaid-cli` is installed globally under nvm (removable with
+`npm rm -g @mermaid-js/mermaid-cli`), and `~/.cache/nvim/snacks/image` holds
+PNGs from it.
+
+This ASCII path remains the surface for copy-pasteable text art and for any
 environment where the image path is unavailable.

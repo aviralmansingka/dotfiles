@@ -138,6 +138,7 @@ return {
     ft = { "markdown", "octo" },
     init = function()
       require("helpers.markdown_ansi").setup()
+      require("helpers.mermaid_render").setup_inline()
       require("helpers.herdr_scrollback").setup()
     end,
     keys = {
