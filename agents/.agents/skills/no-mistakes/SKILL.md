@@ -33,11 +33,13 @@ return control to the outer executor. Safe inspection remains available through
 
 `/no-mistakes` (registered by the no-mistakes-pane pi extension) focuses the
 visible pane of the active run, or re-opens it when it was closed; it never
-starts a pipeline. `/no-mistakes yolo` toggles standing consent for the
-current worktree's run (`--yes` at every gate, no decision panels);
-`/no-mistakes yolo off` disables it again. Drive every pipeline through the extension's
-`no_mistakes_axi` tool instead of the bash tool: each call runs detached in
-the background and returns immediately, and the structured TOON result
+starts a pipeline. `/no-mistakes yolo` enables standing consent for the active
+run in the current worktree, or arms it for the next run when none is active.
+The consent sends `--yes` at every gate and suppresses decision panels. A
+terminal outcome or a different run retires consent for the active run.
+`/no-mistakes yolo off` disables it. Drive every pipeline through the
+extension's `no_mistakes_axi` tool instead of the bash tool. Each call runs
+detached in the background and returns immediately. The structured TOON result
 (gate, outcome, findings, or error) arrives as a `no_mistakes_axi_result`
 message that triggers a new turn - the pipeline interfaces with you only
 through those messages. When the user asks for validation, report the
@@ -189,18 +191,20 @@ Run the pipeline and decide on its findings as they come up:
      touches product behavior. This is a call only the user can make - see
      [Escalate `ask-user` findings](#escalate-ask-user-findings) below.
 
-   In an interactive TUI session the no-mistakes-gate extension surfaces the
-gate for you: a decision panel opens when the result parks the run,
-highlights each finding by severity and action, and the user's decision
-(approve, fix with selected findings and optional guidance, skip, or yolo)
-arrives attached to the result message as a `GATE DECISION (user)` block that
-names the exact `respond` call. Execute that decision verbatim - do not
-re-decide it, do not edit files yourself, and do not relay findings the panel
-already showed. A gate result with no decision block means no panel was
-available (headless/mobile): decide `auto-fix` and `no-op` findings on your
-own judgment and escalate `ask-user` ones as below.
-When a result says yolo standing consent is active, submit `respond --yes` at
-this and every later gate of that run without asking.
+   In an interactive TUI session, the no-mistakes-gate extension surfaces the
+   gate for you. A decision panel opens when the result parks the run. It
+   highlights each finding by severity and action. The user can approve, skip,
+   or select findings to fix with optional guidance. The user can also press
+   `y` to enable yolo consent. The result message includes the decision in a
+   `GATE DECISION (user)` block. This
+   block names the exact `respond` call. Execute that decision verbatim. Do not
+   re-decide it, edit files yourself, or relay findings that the panel showed.
+   A gate result with no decision block means the panel was unavailable or
+   failed. This fallback includes headless and RPC sessions, and a missing gate
+   extension. Decide `auto-fix` and `no-op` findings on your own judgment. Then
+   escalate `ask-user` findings as described below. When a result says yolo
+   standing consent is active, submit `respond --yes` at this and every later
+   gate of that run without asking.
 
    **Review auto-fix is disabled by default** (`auto_fix.review: 0`; a repo
    or global `auto_fix.review > 0` override re-enables it), so blocking and

@@ -1045,14 +1045,14 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 
 	pi.registerCommand("no-mistakes", {
 		description:
-			"Focus the visible no-mistakes pane for the active run, re-open it when it was closed, or toggle yolo standing consent (`/no-mistakes yolo` / `yolo off`).",
+			"Focus the visible no-mistakes pane for the active run, re-open it when it was closed, or enable or disable yolo standing consent (`/no-mistakes yolo` / `yolo off`).",
 		handler: async (args, ctx) => {
 			const state = ensureWatchState(pi);
 			const arg = (args ?? "").trim();
 			if (arg === "stop") {
 				ctx.ui.notify(
 					"/no-mistakes stop is not available — use the no_mistakes_axi tool with `abort` to cancel the run itself.",
-				"info",
+					"info",
 				);
 				return;
 			}
@@ -1064,7 +1064,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 						"warning",
 					);
 					return;
-			}
+				}
 				const on = arg !== "yolo off";
 				const result = await api.setYolo(ctx.cwd, on);
 				ctx.ui.notify(

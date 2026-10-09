@@ -37,7 +37,8 @@ import {
 //     falls back to steering the raw result for text relay.
 //   - yolo state: the `y` shortcut inside the panel grants standing consent
 //     for the rest of the run (`respond --yes` at every gate, no more
-//     panels); `/no-mistakes yolo` toggles it too. Consent is bound to one
+//     panels); `/no-mistakes yolo` enables it and `yolo off` disables it.
+//     Consent is bound to one
 //     run: a terminal outcome or a fresh `axi run` retires it, and a consent
 //     set while no run is active stays pending for the next run.
 //
@@ -71,7 +72,7 @@ export interface NoMistakesGateApi {
 	}): Promise<NoMistakesGateDecision | null>;
 	/** Standing --yes consent currently covers this exact run. */
 	yoloActive(runId: string | undefined): boolean;
-	/** Toggle standing consent. Resolves whether an active run is bound now
+	/** Set standing consent. Resolves whether an active run is bound now
 	 *  (false = the consent stays pending for the next run). */
 	setYolo(cwd: string, on: boolean): Promise<{ on: boolean; activeRun: boolean }>;
 	/** Bind pending consent to an observed run, or retire another run's consent. */
