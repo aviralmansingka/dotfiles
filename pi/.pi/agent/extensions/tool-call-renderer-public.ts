@@ -416,6 +416,14 @@ function toonCells(line: string): string[] | undefined {
 }
 
 const pipelineData = new Map<string, { source: string; data?: RecordValue }>();
+
+// Live no-mistakes review state from the pane extension's activity events:
+// the tracked run plus the finding ids still unresolved at its review gate.
+// A finding a later fix round resolved no longer appears in the current
+// gate listing; chips of that same run drop it so resolved findings do not
+// linger in the transcript. Findings without an id cannot be tracked and
+// always render; chips of other runs are history and render unfiltered.
+const noMistakesLive: { runId?: string; unresolved?: Set<string> } = {};
 function parsePipeline(id: string, source: string): RecordValue | undefined {
   const cached = pipelineData.get(id);
   if (cached?.source === source) return cached.data;
@@ -468,6 +476,31 @@ function pipelineFindingCount(data: RecordValue | undefined): number | undefined
   return finiteNumber(total) ? total : undefined;
 }
 
+/** Live unresolved-finding ids for the run this parsed pipeline belongs to,
+ *  when the pane extension is tracking that run. Undefined means no live
+ *  state applies and history renders unfiltered. */
+function liveUnresolvedFor(data: RecordValue | undefined): Set<string> | undefined {
+  const runId = clean(asRecord(data?.run).id);
+  return runId && noMistakesLive.runId === runId ? noMistakesLive.unresolved : undefined;
+}
+
+/** Count findings still unresolved at the live review gate: rows without an
+ *  id cannot be tracked and always count; rows whose id the current gate no
+ *  longer lists were resolved by a fix round and do not count. */
+function countLiveFindings(data: RecordValue | undefined, unresolved: Set<string>): number | undefined {
+  const rows = [
+    ...(Array.isArray(asRecord(data?.gate).findings) ? asRecord(data?.gate).findings : []),
+    ...(Array.isArray(asRecord(data).findings) ? asRecord(data).findings : []),
+  ].map(asRecord);
+  if (rows.length === 0) return pipelineFindingCount(data);
+  let visible = 0;
+  for (const row of rows) {
+    const id = clean(row.id);
+    if (!id || unresolved.has(id)) visible++;
+  }
+  return visible;
+}
+
 function renderPipeline(result: Result, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
   const details = asRecord(result.details);
   const output = asString(details.output) || textContent(result);
@@ -491,13 +524,26 @@ function renderPipeline(result: Result, row: Row, theme: Theme, context: RenderC
   const blocked = row.failed || statuses.some((status) => ["failed", "blocked", "cancelled"].includes(status));
   const awaiting = statuses.includes("awaiting_approval") || steps.some((step) => step.status === "awaiting_approval");
   const passed = statuses.some((status) => ["passed", "merged", "completed"].includes(status));
-  const count = pipelineFindingCount(data);
+  const findings: RecordValue[] = [...(Array.isArray(gate.findings) ? gate.findings.map((item) => ({ ...asRecord(item), step: asRecord(item).step || gate.step })) : []),
+    ...(Array.isArray(data.findings) ? data.findings.map(asRecord) : [])];
+  // Live resolution state: when this chip belongs to the run the pane
+  // extension tracks, drop findings the current review gate no longer
+  // lists — a fix round resolved them and they must not linger here.
+  const unresolved = liveUnresolvedFor(data);
+  let resolvedHidden = 0;
+  const visibleFindings = unresolved
+    ? findings.filter((finding) => {
+      const id = clean(finding.id);
+      if (!id || unresolved.has(id)) return true;
+      resolvedHidden++;
+      return false;
+    })
+    : findings;
+  const count = unresolved ? visibleFindings.length : pipelineFindingCount(data);
   const label = blocked ? "✗ gate blocked" : awaiting ? "● gate awaiting approval" : passed ? "✓ gate passed"
     : run.status === "running" ? "● gate running" : "";
   if (label) lines.push(` ${theme.fg("borderMuted", "└─")} ${theme.fg(blocked ? "error" : awaiting || !passed ? "mdLink" : "success", label + (count === undefined ? "" : ` · ${plural(count, "finding")}`) + (passed && !blocked && !awaiting && outcome ? ` · outcome ${outcome}` : ""))}${awaiting && gate.step ? theme.fg("dim", ` · ${clean(gate.step)}`) : ""}`);
-  const findings: RecordValue[] = [...(Array.isArray(gate.findings) ? gate.findings.map((item) => ({ ...asRecord(item), step: asRecord(item).step || gate.step })) : []),
-    ...(Array.isArray(data.findings) ? data.findings.map(asRecord) : [])];
-  for (const finding of findings) {
+  for (const finding of visibleFindings) {
     const id = clean(finding.id).replace(/^R(\d+)$/, "r$1");
     const identity = [id, clean(finding.step)].filter(Boolean).join(" · ");
     const summary = clean(finding.summary || finding.description);
@@ -508,6 +554,7 @@ function renderPipeline(result: Result, row: Row, theme: Theme, context: RenderC
       ? ` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "✎ ")} ${chunk}`
       : ` ${theme.fg("borderMuted", "│")}     ${chunk}`));
   }
+  if (resolvedHidden > 0) lines.push(...spineText(theme, `${plural(resolvedHidden, "resolved finding")} hidden`, width));
   if (count === undefined && clean(run.findings)) lines.push(...spineText(theme, `findings: ${clean(run.findings)}`, width));
   if (gate.summary) lines.push(...spineText(theme, gate.summary, width));
   const stepLine = steps.filter((step) => clean(step.step) && clean(step.status)).map((step) => {
@@ -542,7 +589,8 @@ function renderConnectedChips(tool: string, args: RecordValue, result: Result, e
     const elapsed = elapsedValue ? ` ${elapsedValue}` : "";
     const head = ` ${theme.fg("borderMuted", last ? "└─" : "├─")} `;
     const pipeline = tool === "no_mistakes_axi" ? parsePipeline(id, asString(root.output)) : undefined;
-    const findings = pipelineFindingCount(pipeline);
+    const chipUnresolved = pipeline ? liveUnresolvedFor(pipeline) : undefined;
+    const findings = chipUnresolved ? countLiveFindings(pipeline, chipUnresolved) : pipelineFindingCount(pipeline);
     const subcommand = tool === "no_mistakes_axi" && ["run", "respond", "status", "sync"].includes(asString(root.subcommand)) ? clean(root.subcommand) : "";
     const label = theme.fg("text", theme.bold(name)) + (subcommand ? theme.fg("dim", ` · ${subcommand}`) : "")
       + (findings !== undefined && findings > 0 ? theme.fg("mdLink", ` · findings ${findings}`) : "");
@@ -1464,6 +1512,8 @@ function disposeState(): void {
   receiptRows.clear();
   pipelineData.clear();
   quizDisplayOptions.clear();
+  noMistakesLive.runId = undefined;
+  noMistakesLive.unresolved = undefined;
 }
 
 function component(draw: (width?: number) => string[]): Component {
@@ -1587,9 +1637,32 @@ export default function (pi: ExtensionAPI) {
     }
     row.invalidate?.();
   });
+  const unsubscribeNoMistakes = pi.events.on("no-mistakes:activity-update", (payload: unknown) => {
+    const snapshot = asRecord(asRecord(payload).snapshot);
+    const runId = clean(snapshot.id);
+    // A missing run id means the run ended or none is tracked: keep the last
+    // known resolution state so completed runs still render filtered.
+    if (!runId) return;
+    if (noMistakesLive.runId !== runId) {
+      noMistakesLive.runId = runId;
+      noMistakesLive.unresolved = undefined;
+    }
+    const reviewFindings = snapshot.reviewFindings;
+    if (Array.isArray(reviewFindings)) {
+      const ids = new Set<string>();
+      for (const item of reviewFindings) {
+        const id = clean(asRecord(item).id);
+        if (id) ids.add(id);
+      }
+      noMistakesLive.unresolved = ids;
+    }
+    // Redraw mounted rows so resolution applies to already-rendered chips.
+    for (const row of rows.values()) row.invalidate?.();
+  });
   pi.on("session_shutdown", () => {
     disposeState();
     unsubscribe();
+    unsubscribeNoMistakes();
   });
 
   pi.registerShortcut("ctrl+q", { // frees ctrl+e for move-to-line-end

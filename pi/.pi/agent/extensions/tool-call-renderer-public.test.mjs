@@ -993,6 +993,47 @@ branch_sync:
   }
   const safeToon = showToon(cleanToon.replace("fix/topic", "fix/\u001b[31mtopic\u001b[0m"));
   assert.ok(safeToon.includes("fix/topic") && !safeToon.includes("\u001b"));
+  // Live no-mistakes resolution: activity updates carry the current review
+  // gate's unresolved finding ids. Findings a later fix round resolved drop
+  // from chips of the same run; other runs' chips stay unfiltered history.
+  const liveToon = `run:
+  id: "01M4LIVERUN0000000000000"
+  branch: fix/live
+  status: running
+  findings: 2 auto-fix
+  steps[3]{step,status,findings,duration_ms}:
+    intent,completed,0,1
+    review,awaiting_approval,2,1419
+    ci,pending,0,0
+gate:
+  step: review
+  status: awaiting_approval
+  findings[2]{id,severity,file,action,description}:
+    keep-me,error,src/a.ts,auto-fix,"Still open at the gate."
+    fixed-me,error,src/b.ts,auto-fix,"Resolved by a later fix round."
+branch_sync:
+  state: pipeline_owned`;
+  const liveCtx = context("live-axi", {}, quiet);
+  const liveShow = () => render(axi.renderResult(toonResult(liveToon), { ...options, expanded: true }, theme, liveCtx), 1000);
+  const liveChip = () => render(axi.renderResult(toonResult(liveToon), options, theme, liveCtx));
+  const beforeLive = liveShow();
+  assert.ok(beforeLive.includes("keep-me") && beforeLive.includes("fixed-me"), "before tracking, all findings render");
+  const nmUpdate = bus.get("no-mistakes:activity-update");
+  assert.ok(typeof nmUpdate === "function", "the renderer subscribes to no-mistakes activity updates");
+  nmUpdate({ snapshot: { id: "01M4LIVERUN0000000000000", gate: "review", reviewFindings: [{ id: "keep-me", severity: "error" }] } });
+  const afterLive = liveShow();
+  assert.ok(afterLive.includes("keep-me"), "unresolved findings stay visible");
+  assert.ok(!afterLive.includes("fixed-me"), "resolved findings drop from the chip");
+  assert.ok(afterLive.includes("1 resolved finding hidden"), "the hidden count is disclosed");
+  const afterChip = liveChip();
+  assert.ok(afterChip.includes("findings 1") && !afterChip.includes("findings 2"), "the badge counts only visible findings");
+  nmUpdate({ snapshot: { id: "01M4OTHERRUN00000000000", gate: "review", reviewFindings: [] } });
+  const otherRun = liveShow();
+  assert.ok(otherRun.includes("fixed-me"), "chips of other runs render unfiltered");
+  nmUpdate({ snapshot: { id: "01M4LIVERUN0000000000000", gate: "review", reviewFindings: [{ id: "keep-me", severity: "error" }] } });
+  nmUpdate({ snapshot: undefined });
+  const endedRun = liveShow();
+  assert.ok(!endedRun.includes("fixed-me"), "the last known resolution state survives the run ending");
   session("first");
   assert.match(render(chip), /▸ scout/, "same session preserves live final state");
   session("second", [{ message: { role: "assistant", content: [{ type: "toolCall", id: "restored" }] } }]);
