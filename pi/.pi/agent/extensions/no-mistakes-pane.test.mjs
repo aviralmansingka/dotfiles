@@ -312,9 +312,13 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.equal(message.customType, "no_mistakes_axi_result");
 		assert.equal(options.triggerTurn, true, "the result triggers a new agent turn");
 		assert.equal(options.deliverAs, "steer");
-		assert.match(message.content, /no-mistakes axi run finished \(exit 0\)/);
-		assert.match(message.content, /gate: review/);
-		assert.match(message.content, /parked at this gate/);
+		const baselineSteerContent = [
+			"no-mistakes axi run finished (exit 0).",
+			gateOutput,
+			"The run is parked at this gate. Read the findings table, decide, and submit the next call through no_mistakes_axi: `respond --action approve|fix|skip` with `--findings <ids>` and `--instructions` as needed. Findings marked ask-user belong to the user — relay them verbatim and wait for their decision. Never edit the code yourself while the run is active; the pipeline owns findings and fixes.",
+		].join("\n");
+		assert.equal(message.content, baselineSteerContent,
+			"the extension tool preserves every byte of the baseline gate steer contract");
 		assert.equal(message.details.subcommand, "run");
 		assert.equal(message.details.gate, true);
 		assert.equal(message.details.paneClosed, false);
