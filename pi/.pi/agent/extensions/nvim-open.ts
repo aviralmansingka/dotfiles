@@ -2,7 +2,8 @@ import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { execFileSync } from "node:child_process";
-import { resolve, isAbsolute } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve, isAbsolute } from "node:path";
 
 const HERDR_TIMEOUT_MS = 5000;
 
@@ -162,7 +163,11 @@ function launchEditor(cwd: string, files: string[]): string | null {
 	]) as { result?: { pane?: { pane_id?: string } } } | null;
 	const newPaneId = splitRes?.result?.pane?.pane_id;
 	if (!newPaneId) return null;
-	const cmd = files.length > 0 ? ["vim", ...files] : ["vim"];
+	// Launch nvim with an explicit RPC socket so focus-buffer (and nvimr)
+	// can drive this pane: the pi-focus:// node buffers live in THIS
+	// instance. Without --listen the pane is a dead end for buffer updates.
+	const socketPath = join(tmpdir(), `pi-nvim-${newPaneId}.sock`);
+	const cmd = ["nvim", "--listen", socketPath, ...files];
 	if (!herdrOk(["pane", "run", newPaneId, ...cmd])) {
 		return null;
 	}
@@ -197,12 +202,16 @@ function focusEditorPane(editorPaneId: string, currentPaneId: string): boolean {
 // ---------------------------------------------------------------------------
 function tmuxFallback(cwd: string, files: string[]): boolean {
 	try {
+		// Same contract as the herdr launcher: nvim with an RPC socket, so
+		// focus-buffer can drive this pane too.
+		const socketPath = join(tmpdir(), `pi-nvim-${process.pid}-${Date.now()}.sock`);
+		const socketArg = `--listen ${socketPath}`;
 		let shellCmd: string;
 		if (files.length > 0) {
 			const quotedFiles = files.map((f) => `'${f.replace(/'/g, "'\\''")}'`);
-			shellCmd = `vim ${quotedFiles.join(" ")}`;
+			shellCmd = `nvim ${socketArg} ${quotedFiles.join(" ")}`;
 		} else {
-			shellCmd = "vim";
+			shellCmd = `nvim ${socketArg}`;
 		}
 		execFileSync("tmux", ["split-window", "-h", "-c", cwd, shellCmd], {
 			timeout: HERDR_TIMEOUT_MS, stdio: "ignore",

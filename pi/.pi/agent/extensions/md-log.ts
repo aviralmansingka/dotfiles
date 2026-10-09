@@ -3,7 +3,13 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { dirname, extname, resolve } from "node:path";
 
 import { openEditor } from "./nvim-open";
-import { focusNodeBuffer, showNodeBuffer, showOverviewBuffer } from "./focus-buffer";
+import {
+	ensureEditorReady,
+	focusNodeBuffer,
+	isEditorMissing,
+	showNodeBuffer,
+	showOverviewBuffer,
+} from "./focus-buffer";
 
 // ────────────────────────────────────────────────────────────────────────────
 // md-log — the durable teaching record plus the scoped learner views.
@@ -340,9 +346,44 @@ export function buildOverview(journal: string | undefined): string {
 }
 
 /**
+ * Extract one lesson entry's body from the journal (the entry headed
+ * `## <node>`, up to the next rule). Used to REBUILD a node buffer after the
+ * editor pane was missing at lesson time or was restarted since.
+ */
+function lessonBodyFromJournal(journal: string | undefined, node: string): string | undefined {
+	if (!journal || !existsSync(journal)) return undefined;
+	const text = readFileSync(journal, "utf-8");
+	const start = text.indexOf(`\n## ${node}\n`);
+	if (start === -1) return undefined;
+	const end = text.indexOf("\n---\n", start);
+	return text.slice(start + 1, end === -1 ? undefined : end).trim();
+}
+
+/**
+ * The LAST lesson's node title in the journal — the durable fallback for
+ * the current node when no in-memory state exists (fresh process, resume).
+ */
+export function lastLessonFromJournal(journal: string | undefined): string | undefined {
+	if (!journal || !existsSync(journal)) return undefined;
+	let lastHeading: string | undefined;
+	let lastLesson: string | undefined;
+	for (const line of readFileSync(journal, "utf-8").split("\n")) {
+		const heading = line.match(/^## (.+)$/);
+		if (heading) {
+			lastHeading = heading[1].trim();
+			continue;
+		}
+		if (/^_Lesson \u00b7 /.test(line) && lastHeading) lastLesson = lastHeading;
+	}
+	return lastLesson;
+}
+
+/**
  * Present a lesson as its own node buffer: creates or updates
  * `pi-focus://<key>/<node-slug>` and focuses it. Earlier node buffers
- * persist for nvim-side cycling. Headless fallback: the journal file.
+ * persist for nvim-side cycling. When no editor pane exists yet, LAUNCH one
+ * (nvim with an RPC socket) and retry — the journal file is a fallback only
+ * for headless runs with no editor surface at all.
  * Used by the lesson tool.
  */
 export async function presentLesson(
@@ -351,7 +392,15 @@ export async function presentLesson(
 	body: string,
 ): Promise<{ mode: "buffer" | "journal" | "none"; message: string }> {
 	const key = focusKey(ctx);
-	const buffer = showNodeBuffer(key, title, title, body);
+	let buffer = showNodeBuffer(key, title, title, body);
+	if (!buffer.ok && isEditorMissing(buffer.message)) {
+		// No editor pane yet: launch one, wait for nvim to bind its RPC
+		// socket, then retry — the node buffer must exist, not the journal.
+		const launched = await openEditor(ctx?.cwd ?? process.cwd(), []);
+		if (launched.ok && (await ensureEditorReady())) {
+			buffer = showNodeBuffer(key, title, title, body);
+		}
+	}
 	if (buffer.ok) {
 		return {
 			mode: "buffer",
@@ -368,33 +417,53 @@ export async function presentLesson(
 
 /**
  * Open the learner's CURRENT view: the current node's buffer when a lesson
- * has been shown, else the overview buffer rebuilt from the journal. The
- * whole journal file is NOT a fallback here — it opens only via H or
- * /lessons. The journal fallback below fires only when no editor surface
- * exists at all (headless runs). Used by quiz `h`, explain `h`, and the
- * global ctrl+h shortcut.
+ * has been shown — REBUILT from the journal if the buffer is gone (editor
+ * launched late, nvim restarted) — else the overview buffer. When no editor
+ * pane exists at all, launch one and retry. The whole journal file is NOT a
+ * fallback here — it opens only via H or /lessons, or headless runs.
+ * Used by quiz `h`, explain `h`, and the global ctrl+h shortcut.
  */
 export async function openNodeView(
 	ctx: any,
 ): Promise<{ mode: "node" | "overview" | "journal" | "none"; message: string }> {
 	const journal = resolveJournalPath(ctx);
 	const key = focusKey(ctx);
-	const node = journal ? currentNode.get(journal) : undefined;
-	if (node) {
-		const buffer = focusNodeBuffer(key, node);
-		if (buffer.ok) return { mode: "node", message: buffer.message };
-		// Buffer gone (nvim restarted): fall through to the overview, which
-		// rebuilds the position from the journal.
+	const node =
+		(journal ? currentNode.get(journal) : undefined) ?? lastLessonFromJournal(journal);
+
+	const attempt = (): { mode: "node" | "overview" | "none"; message: string } => {
+		if (node) {
+			const buffer = focusNodeBuffer(key, node);
+			if (buffer.ok) return { mode: "node", message: buffer.message };
+			// Buffer gone: rebuild it from the journal's lesson entry.
+			const body = lessonBodyFromJournal(journal, node);
+			if (body) {
+				const rebuilt = showNodeBuffer(key, node, node, body);
+				if (rebuilt.ok) {
+					return { mode: "node", message: `${rebuilt.message} (rebuilt from the journal)` };
+				}
+			}
+		}
+		const title = `${key} — lesson arc overview`;
+		const overview = showOverviewBuffer(key, title, buildOverview(journal));
+		if (overview.ok) {
+			return { mode: "overview", message: `${overview.message} — nodes, verdicts, current position` };
+		}
+		return { mode: "none", message: overview.message };
+	};
+
+	let view = attempt();
+	if (view.mode === "none" && isEditorMissing(view.message)) {
+		// No editor pane at all: launch one, wait for the RPC socket, retry.
+		const launched = await openEditor(ctx?.cwd ?? process.cwd(), []);
+		if (launched.ok && (await ensureEditorReady())) view = attempt();
 	}
-	const title = `${key} — lesson arc overview`;
-	const overview = showOverviewBuffer(key, title, buildOverview(journal));
-	if (overview.ok) {
-		return { mode: "overview", message: `${overview.message} — nodes, verdicts, current position` };
-	}
+	if (view.mode !== "none") return view;
+
 	// Headless / no editor: last resort, the journal file.
 	const file = await openJournalInEditor(ctx);
-	if (!file.ok) return { mode: "none", message: `${overview.message}; ${file.message}` };
-	return { mode: "journal", message: `${overview.message}; opened the journal — ${file.message}` };
+	if (!file.ok) return { mode: "none", message: `${view.message}; ${file.message}` };
+	return { mode: "journal", message: `${view.message}; opened the journal — ${file.message}` };
 }
 
 /**

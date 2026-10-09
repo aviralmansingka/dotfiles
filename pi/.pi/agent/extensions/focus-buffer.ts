@@ -141,6 +141,30 @@ function resolveEditor(): EditorTarget | { error: string } {
 	return { socket };
 }
 
+/** True when a focus-buffer failure means NO usable editor pane yet. */
+export function isEditorMissing(message: string): boolean {
+	return (
+		message.includes("no editor pane found") ||
+		message.includes("editor pane is not nvim") ||
+		message.includes("no live nvim RPC socket") ||
+		message.includes("focus buffer disabled")
+	);
+}
+
+/**
+ * Poll for a usable editor pane until `timeoutMs` passes — the caller
+ * launches one (openEditor) first, then waits for nvim to boot and bind
+ * its RPC socket. True when an editor is ready within the budget.
+ */
+export async function ensureEditorReady(timeoutMs = 4000): Promise<boolean> {
+	const deadline = Date.now() + timeoutMs;
+	for (;;) {
+		if (!("error" in resolveEditor())) return true;
+		if (Date.now() >= deadline) return false;
+		await new Promise((sleep) => setTimeout(sleep, 250));
+	}
+}
+
 /** Run one lua file in the live nvim; returns its remote-expr result. */
 function runLua(socket: string, lua: string[]): string {
 	const dir = mkdtempSync(join(tmpdir(), "pi-focus-"));
