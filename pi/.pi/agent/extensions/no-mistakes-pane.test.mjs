@@ -9,14 +9,18 @@ const require = createRequire(import.meta.url);
 process.env.NODE_PATH = [
 	"/opt/homebrew/lib/node_modules",
 	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules",
+	"/home/avirus/.pi/agent/install/releases/1.1.0/node_modules",
 	process.env.NODE_PATH || "",
 ].filter(Boolean).join(":");
 require("node:module").Module._initPaths();
 
-// Resolve jiti the same way CI (JITI_PATH) and the local Mac install do.
-const jitiPath = process.env.JITI_PATH
-	? process.env.JITI_PATH
-	: "/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs";
+// Resolve jiti the same way CI (JITI_PATH) and the local installs do.
+const jitiPath = [
+	process.env.JITI_PATH,
+	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
+	"/home/avirus/.pi/agent/install/releases/1.1.0/node_modules/jiti/lib/jiti.cjs",
+].find((path) => path && existsSync(path));
+if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 const { extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");

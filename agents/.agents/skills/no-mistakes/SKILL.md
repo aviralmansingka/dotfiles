@@ -33,7 +33,9 @@ return control to the outer executor. Safe inspection remains available through
 
 `/no-mistakes` (registered by the no-mistakes-pane pi extension) focuses the
 visible pane of the active run, or re-opens it when it was closed; it never
-starts a pipeline. Drive every pipeline through the extension's
+starts a pipeline. `/no-mistakes yolo` toggles standing consent for the
+current worktree's run (`--yes` at every gate, no decision panels);
+`/no-mistakes yolo off` disables it again. Drive every pipeline through the extension's
 `no_mistakes_axi` tool instead of the bash tool: each call runs detached in
 the background and returns immediately, and the structured TOON result
 (gate, outcome, findings, or error) arrives as a `no_mistakes_axi_result`
@@ -187,6 +189,19 @@ Run the pipeline and decide on its findings as they come up:
      touches product behavior. This is a call only the user can make - see
      [Escalate `ask-user` findings](#escalate-ask-user-findings) below.
 
+   In an interactive TUI session the no-mistakes-gate extension surfaces the
+gate for you: a decision panel opens when the result parks the run,
+highlights each finding by severity and action, and the user's decision
+(approve, fix with selected findings and optional guidance, skip, or yolo)
+arrives attached to the result message as a `GATE DECISION (user)` block that
+names the exact `respond` call. Execute that decision verbatim - do not
+re-decide it, do not edit files yourself, and do not relay findings the panel
+already showed. A gate result with no decision block means no panel was
+available (headless/mobile) or the user dismissed it: decide `auto-fix` and
+`no-op` findings on your own judgment and escalate `ask-user` ones as below.
+When a result says yolo standing consent is active, submit `respond --yes` at
+this and every later gate of that run without asking.
+
    **Review auto-fix is disabled by default** (`auto_fix.review: 0`; a repo
    or global `auto_fix.review > 0` override re-enables it), so blocking and
    ask-user review findings park for your decision rather than being silently
@@ -292,8 +307,10 @@ own judgment: respond with `--action fix` or `--action approve` as
 appropriate. But a finding marked
 `ask-user` is a decision that belongs to the user, not you - the pipeline
 flagged it because it challenges their deliberate intent or changes product
-behavior. Do not approve, fix, or skip it on your own. Instead, stop and bring
-it to the user before you respond:
+behavior. Do not approve, fix, or skip it on your own. In a TUI session the
+gate panel already brought the gate to the user and returned their decision
+with the result - just execute it. The manual flow below applies when no
+panel opened. Stop and bring the finding to the user before you respond:
 
 - Relay each `ask-user` finding to them as the pipeline wrote it - its
   `id`, `file`, and full `description` verbatim. Do not paraphrase,
