@@ -3,6 +3,7 @@
     "npm:pi-mcp-adapter"
   ],
   "extensions": [
+    "+extensions/cleanup.ts",
     "+extensions/python.ts",
     "+extensions/rounded-bar-footer.ts",
     "+extensions/thinking-marker.ts",

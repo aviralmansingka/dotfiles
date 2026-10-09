@@ -768,7 +768,7 @@ function emitFinishedSubagentBackgroundUpdate(
     exitCode: result.exitCode,
     ...(error ? { error } : {}),
     ...(result.stats ? { stats: result.stats } : {}),
-    recentTools: sessionFile && existsSync(sessionFile) ? buildFinalRecentTools(sessionFile) : [],
+    recentTools: !result.killed && sessionFile && existsSync(sessionFile) ? buildFinalRecentTools(sessionFile) : [],
   });
 }
 
@@ -1792,31 +1792,27 @@ async function watchSubagent(
 
     // Pi subagent result extraction
     let summary: string;
-    if (existsSync(sessionFile)) {
+    if (killed) {
+      summary = "Pane was closed before the subagent reported completion. No result was saved.";
+    } else if (existsSync(sessionFile)) {
       const allEntries = getNewEntries(sessionFile, 0);
       const lastAssistant = findLastAssistantMessage(allEntries);
-      summary = killed
-        ? lastAssistant
-          ? `Pane was closed before the subagent reported completion. Last saved assistant message:\n\n${lastAssistant}`
-          : "Pane was closed before the subagent reported completion. No assistant result was saved."
-        : lastAssistant ??
-          (result.errorMessage
-            ? `Subagent error: ${result.errorMessage}`
-            : result.exitCode !== 0
-              ? `Sub-agent exited with code ${result.exitCode}`
-              : "Sub-agent exited without output");
-    } else {
-      summary = killed
-        ? "Pane was closed before the subagent reported completion. No session file was saved."
-        : result.errorMessage
+      summary = lastAssistant ??
+        (result.errorMessage
           ? `Subagent error: ${result.errorMessage}`
           : result.exitCode !== 0
             ? `Sub-agent exited with code ${result.exitCode}`
-            : "Sub-agent exited without output";
+            : "Sub-agent exited without output");
+    } else {
+      summary = result.errorMessage
+        ? `Subagent error: ${result.errorMessage}`
+        : result.exitCode !== 0
+          ? `Sub-agent exited with code ${result.exitCode}`
+          : "Sub-agent exited without output";
     }
 
-    const stats = existsSync(sessionFile) ? summarizeSessionStats(sessionFile) : null;
-    const subagentSessionId = existsSync(sessionFile) ? getSessionId(sessionFile) : null;
+    const stats = !killed && existsSync(sessionFile) ? summarizeSessionStats(sessionFile) : null;
+    const subagentSessionId = !killed && existsSync(sessionFile) ? getSessionId(sessionFile) : null;
 
     try { closeSurface(surface); } catch {}
     runningSubagents.delete(running.id);
@@ -2531,18 +2527,19 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           .then((result) => {
             updateWidget();
 
-            const allEntries = getNewEntries(sessionPath, entryCountBefore);
-            const lastAssistant = findLastAssistantMessage(allEntries);
-            const summary = result.killed
-              ? lastAssistant
-                ? `Pane was closed before the resumed subagent reported completion. Last saved assistant message:\n\n${lastAssistant}`
-                : "Pane was closed before the resumed subagent reported completion. No new assistant result was saved."
-              : lastAssistant ??
+            let summary: string;
+            if (result.killed) {
+              summary = "Pane was closed before the resumed subagent reported completion. No result was saved.";
+            } else {
+              const allEntries = getNewEntries(sessionPath, entryCountBefore);
+              const lastAssistant = findLastAssistantMessage(allEntries);
+              summary = lastAssistant ??
                 (result.errorMessage
                   ? `Subagent error: ${result.errorMessage}`
                   : result.exitCode !== 0
                     ? `Resumed session exited with code ${result.exitCode}`
                     : "Resumed session exited without new output");
+            }
             const displayedResult = { ...result, summary, sessionFile: sessionPath, sessionId: resumedSessionId };
             emitFinishedSubagentBackgroundUpdate(pi, running, displayedResult);
             const presentation = resolveResultPresentation(displayedResult, name);
