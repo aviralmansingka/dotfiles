@@ -26,6 +26,7 @@ import {
   keyHint,
   truncateToVisualLines,
   type ExtensionAPI,
+  type ExtensionContext,
   type Theme,
   type ToolRenderers,
 } from "@earendil-works/pi-coding-agent";
@@ -47,6 +48,12 @@ type Row = {
 type Background = { result: Result; done: boolean };
 const rows = new Map<string, Row>();
 const background = new Map<string, Background>();
+// Intent titles the harness requested from the session model for title-less
+// output-tool calls, keyed by toolCallId. tool_result persists them into the
+// stored details as intentTitle, so reloaded sessions restore them without
+// another request.
+const generatedTitles = new Map<string, string>();
+const pendingTitles = new Set<string>();
 // Ctrl+Q state: every pi launch starts with command bodies minimized. The
 // toggle is process state, not row state, so session switches keep it.
 let commandsHidden = true;
@@ -1443,10 +1450,13 @@ function capture(context: RenderContext): Row {
 }
 
 function disposeState(): void {
+  extensionCtx = undefined;
   for (const row of rows.values()) stop(row);
   rows.clear();
   background.clear();
   repoRoots.clear();
+  generatedTitles.clear();
+  pendingTitles.clear();
   highlightedCommands.clear();
   highlightedGrep.clear();
   inspectionTrees.clear();
@@ -1465,12 +1475,59 @@ function component(draw: (width?: number) => string[]): Component {
   };
 }
 
+// The live ExtensionContext, refreshed on every session_start; the render
+// path needs it to backfill titles but renders carry only a RenderContext.
+let extensionCtx: ExtensionContext | undefined;
+
+// Backfill: ask the session model for a one-line intent title only when a
+// LIVE row renders without one — the comment title from the original tool
+// message always wins, restored rows keep their dim preview, and streaming
+// rows wait for argsComplete. Fire-and-forget: the row keeps its dim preview
+// until the answer lands, then invalidates and redraws titled.
+function requestTitle(toolCallId: string, tool: string, source: string): void {
+  if (!source.trim() || generatedTitles.has(toolCallId) || pendingTitles.has(toolCallId)) return;
+  const ctx = extensionCtx;
+  if (!ctx?.model) return;
+  pendingTitles.add(toolCallId);
+  const clipped = source.length > 4000 ? `${source.slice(0, 4000)}\n…` : source;
+  void (async () => {
+    try {
+      const model = ctx.model;
+      const response = await ctx.modelRegistry.complete(
+        model,
+        {
+          systemPrompt:
+            "You write one-line intent titles for developer tool calls. Reply with ONLY the title: verb-first, 10-15 words, states the intent of the call, no trailing period, no quotes, no backticks, no markup.",
+          messages: [{ role: "user" as const, content: [{ type: "text" as const, text: `${tool} call:\n${clipped}` }], timestamp: Date.now() }],
+        },
+        { signal: ctx.signal },
+      );
+      const title = clean(asRecord(response).content instanceof Array
+        ? (asRecord(response).content as RecordValue[]).filter((block) => asString(asRecord(block).type) === "text")
+          .map((block) => asString(asRecord(block).text)).join(" ")
+        : "").replace(/^["'`]+|["'`]+$/g, "");
+      if (title) {
+        generatedTitles.set(toolCallId, capTitle(title));
+        rows.get(toolCallId)?.invalidate?.();
+      }
+    } catch {
+      // No title beats a broken render; the dim preview row stays.
+    } finally {
+      pendingTitles.delete(toolCallId);
+    }
+  })();
+}
+
 export default function (pi: ExtensionAPI) {
   let sessionId: string | undefined;
   pi.on("session_start", (_event, ctx) => {
     const nextId = ctx.sessionManager.getSessionId();
-    if (sessionId === nextId) return;
+    if (sessionId === nextId) {
+      extensionCtx = ctx;
+      return;
+    }
     disposeState();
+    extensionCtx = ctx;
     sessionId = nextId;
     // Stored calls do not own clocks. Their stored results still flow through
     // the same renderer; no transcript reconstruction or component lookup.
@@ -1482,6 +1539,11 @@ export default function (pi: ExtensionAPI) {
         if (block.type === "toolCall" && typeof block.id === "string") rows.set(block.id, { restored: true });
       }
     }
+  });
+  pi.on("tool_result", (event) => {
+    const title = generatedTitles.get(event.toolCallId);
+    if (!title || asString(asRecord(event.details).intentTitle)) return;
+    return { details: { ...asRecord(event.details), intentTitle: title } };
   });
   pi.on("tool_execution_start", (event) => {
     const row = rows.get(event.toolCallId) ?? {};
@@ -1575,9 +1637,15 @@ export default function (pi: ExtensionAPI) {
             ...(!row.leafResult ? messageLeaf(theme, asRecord(args), false, width) : []),
           ];
           if (toolName === "bash" || toolName === "powershell" || toolName === "python") {
-            const { rows: commands, title } = toolName === "python"
+            const { rows: commands, title: lifted } = toolName === "python"
               ? pythonBodies(theme, context.toolCallId, asString(asRecord(args).code))
               : commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
+            // A missing comment title falls back to the harness-requested one.
+            const title = lifted ?? generatedTitles.get(context.toolCallId);
+            if (!title && context.argsComplete !== false && !row.restored) {
+              requestTitle(context.toolCallId, toolName, toolName === "python"
+                ? asString(asRecord(args).code) : asString(asRecord(args).command));
+            }
             // The intent title is the row's primary content (Ctrl+E hides
             // the body), so it renders muted — stronger than dim, a step
             // below the main text fg.
@@ -1640,6 +1708,13 @@ export default function (pi: ExtensionAPI) {
       },
       renderResult(result, { expanded, isPartial }, theme, context) {
         const row = capture(context);
+        // Reloaded sessions restore harness-requested titles from the stored
+        // result details; seed the map before drawing so this very draw sees it.
+        const storedTitle = asString(asRecord(asRecord(result).details).intentTitle);
+        if (storedTitle && !generatedTitles.has(context.toolCallId)) {
+          generatedTitles.set(context.toolCallId, storedTitle);
+          rows.get(context.toolCallId)?.invalidate?.();
+        }
         const draw = (width = 200) => {
           const live = background.get(context.toolCallId);
           // Retain the last done update too: the parent's stored return value

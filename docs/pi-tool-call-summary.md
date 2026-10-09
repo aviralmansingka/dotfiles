@@ -40,11 +40,19 @@ Why it wins:
 - Best intent quality: the session model knows *why* it runs the command,
   which no post-hoc summarizer can recover from the string alone.
 
-Fallback: comment-less calls render exactly as today (no title). If model
-compliance proves poor, revisit a cheap `ctx.modelRegistry.streamSimple()`
-summarizer on the `tool_call` event — rejected for now because it needs
-async state keyed by toolCallId, races fast commands, and re-summarizes on
-reload.
+Fallback (implemented): the comment title from the original tool message
+stays primary; the harness backfills only when a LIVE row renders without
+one. The render path (argsComplete, not restored) fires exactly one
+`ctx.modelRegistry.complete()` request at the session model — system prompt
+demands ONLY a verb-first 10–15 word title — deduped per toolCallId with a
+pending set. The answer lands in `generatedTitles`, invalidates the row,
+and the redraw shows `— <title>`. `tool_result` persists it into the stored
+details as `intentTitle`, and `renderResult` seeds the map from stored
+details, so reloaded sessions restore titles with no new requests; rows
+that predate the feature keep their dim one-line preview. The old
+objections are answered: async state is a plain map, racing a fast command
+only means the title lands after the result, and reload re-summarizes
+never.
 
 ## Rendering changes (`tool-call-renderer-public.ts`)
 
