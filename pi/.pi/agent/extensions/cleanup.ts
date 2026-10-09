@@ -190,7 +190,7 @@ export function collectCleanupFacts(
 
 	let status: string;
 	try {
-		status = runGit(worktreePath, ["status", "--porcelain"]);
+		status = runGit(worktreePath, ["status", "--porcelain", "--ignored"]);
 	} catch {
 		return { ok: false, reason: "Could not read worktree status; refusing to clean up." };
 	}
@@ -293,6 +293,11 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("cleanup", {
 		description: "Delete this worktree, its local and remote branch, then close the session",
 		handler: async (_args, ctx) => {
+			if (process.env.PI_SUBAGENT_SESSION !== undefined) {
+				ctx.ui.notify("Cleanup is only available in the durable parent session.", "error");
+				return;
+			}
+
 			const result = collectCleanupFacts(ctx.cwd);
 			if (!result.ok) {
 				ctx.ui.notify(result.reason, "error");

@@ -27,6 +27,34 @@ const jiti = createJiti(import.meta.url, {
 try {
 	const ext = jiti("./cleanup.ts");
 
+	{
+		const commands = new Map();
+		ext.default({ registerCommand: (name, command) => commands.set(name, command) });
+		const cleanup = commands.get("cleanup");
+		const notifications = [];
+		let confirmed = false;
+		const previousSession = process.env.PI_SUBAGENT_SESSION;
+		process.env.PI_SUBAGENT_SESSION = "/tmp/subagent.jsonl";
+		try {
+			await cleanup.handler("", {
+				cwd: process.cwd(),
+				ui: {
+					notify: (message, level) => notifications.push([message, level]),
+					confirm: async () => {
+						confirmed = true;
+						return true;
+					},
+				},
+				shutdown: () => assert.fail("subagent cleanup must not shut down"),
+			});
+		} finally {
+			if (previousSession === undefined) delete process.env.PI_SUBAGENT_SESSION;
+			else process.env.PI_SUBAGENT_SESSION = previousSession;
+		}
+		assert.equal(confirmed, false);
+		assert.deepEqual(notifications, [["Cleanup is only available in the durable parent session.", "error"]]);
+	}
+
 	// --- parseWorktreeList ----------------------------------------------------
 
 	{
@@ -165,6 +193,7 @@ try {
 			run(repo, ["config", "user.email", "test@test"]);
 			run(repo, ["config", "user.name", "test"]);
 			writeFileSync(join(repo, "f.txt"), "x");
+			writeFileSync(join(repo, ".gitignore"), ".env\n");
 			run(repo, ["add", "."]);
 			run(repo, ["commit", "-q", "-m", "init"]);
 
@@ -242,11 +271,12 @@ try {
 			assert.match(mixedRemoteResult.reason, /points to this repository/);
 			run(wt, ["config", "--unset-all", "remote.team/origin.pushurl"]);
 
-			// Dirty state counts.
+			// Dirty state counts tracked and ignored data.
 			writeFileSync(join(wt, "f.txt"), "changed");
+			writeFileSync(join(wt, ".env"), "secret");
 			const dirtyResult = ext.collectCleanupFacts(wt);
 			assert.equal(dirtyResult.ok, true);
-			assert.equal(dirtyResult.facts.dirtyCount, 1);
+			assert.equal(dirtyResult.facts.dirtyCount, 2);
 
 		} finally {
 			rmSync(repo, { recursive: true, force: true });
