@@ -53,10 +53,8 @@ return {
       sources = {
         default = { "lsp", "path", "snippets", "buffer", "emoji", "obsidian", "obsidian_new", "obsidian_tags" },
         providers = {
-          git = {
-            name = "git",
-            module = "blink.cmp.sources.git",
-          },
+          -- NOTE: no "git" provider — `blink.cmp.sources.git` does not exist as a
+          -- module in blink.cmp and made :checkhealth blink.cmp fail.
           emoji = {
             name = "Emoji",
             module = "blink-emoji",

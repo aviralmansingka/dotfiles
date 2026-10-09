@@ -1,4 +1,17 @@
 vim.opt.termguicolors = true
+
+-- Put Mason's bin dir on PATH at startup. Mason itself is lazy-loaded
+-- (cmd/BufReadPre), so its own PATH prepend only happens once a file opens;
+-- before that, :checkhealth (nvim-treesitter, lazyvim) cannot find tools like
+-- tree-sitter/clang-format that Mason has installed.
+vim.env.PATH = vim.fn.stdpath("data") .. "/mason/bin:" .. vim.env.PATH
+
+-- Disable legacy provider plugins that nothing in this config uses.
+-- Keeps :checkhealth vim.provider clean (node / perl / python3 / ruby).
+vim.g.loaded_node_provider = 0
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_ruby_provider = 0
 vim.opt.number = true
 vim.opt.signcolumn = "yes:1"
 vim.opt.numberwidth = 3
