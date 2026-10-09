@@ -68,8 +68,9 @@ const NM_RESULT_MESSAGE = "no_mistakes_axi_result";
 const NM_TOGGLE_EVENT = "no-mistakes:toggle-rows";
 
 /** Ctrl+Q visibility class for the result rows: hidden rows render as one
- *  ghost line. Flipped by the ctrl+q shortcut in tool-call-renderer-public
- *  through NM_TOGGLE_EVENT; the rows re-render cache-free. */
+ *  ghost line. The ctrl+q shortcut in tool-call-renderer-public sends the
+ *  absolute hidden state through NM_TOGGLE_EVENT, so this stays in sync with
+ *  its commandsHidden; the rows re-render cache-free. */
 let nmRowsHidden = true;
 
 // ---------------------------------------------------------------------------
@@ -1144,13 +1145,16 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 	// or the agent-facing guidance prose. The steer content stays unchanged;
 	// only the human-facing rendering differs.
 	//
-	//   collapsed: one header line + phase strip + finding chips
+	//   collapsed: one compressed line — state, severity/ask-user counts,
+	//             inline error note, and the Ctrl+O hint
 	//   Ctrl+O (options.expanded, driven by CustomMessageComponent): the
-	//             framed findings/steps/help report
+	//             framed error/findings/steps/help report with wrapped rows;
+	//             unparsed output falls back to the raw body
 	//   Ctrl+Q  (shortcut registered by tool-call-renderer-public): emits
-	//             NM_TOGGLE_EVENT; the handler flips nmRowsHidden and the
-	//             shortcut's notify-triggered render pass re-renders these
-	//             cache-free rows as a one-line ghost row.
+	//             NM_TOGGLE_EVENT with the absolute hidden state; the handler
+	//             assigns nmRowsHidden and the shortcut's notify-triggered
+	//             render pass re-renders these cache-free rows as a one-line
+	//             ghost row.
 	pi.events.on(NM_TOGGLE_EVENT, (hidden: unknown) => {
 		if (typeof hidden === "boolean") nmRowsHidden = hidden;
 	});
