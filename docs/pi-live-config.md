@@ -55,6 +55,16 @@ spacer rows out of hidden runs. After every `pi update`, re-run that script —
 a new release directory drops the patch. It refuses to run when the bundle
 anchor changed, so a failed run means the script needs review, not a retry.
 
+Two tests guard the contract. `scripts/test-pi-hidden-thinking.mjs` (CI)
+drives the patch script against fixture bundles and checks live deployment
+state read-only. `scripts/test-pi-hidden-thinking-render.py` (local, no
+model call) renders a fixture session with thinking between two bash calls
+in a real TUI and asserts exactly one blank line between the tool rows:
+
+```sh
+uv run --with pyte scripts/test-pi-hidden-thinking-render.py
+```
+
 Resource arrays (`extensions`, `packages`, `skills`, `prompts`, `themes`) combine
 base first, local last, with duplicate values removed. Capture stores only local
 resource additions, not a frozen copy of the shared list. Use Pi's `-path`

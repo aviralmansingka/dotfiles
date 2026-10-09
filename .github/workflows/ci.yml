@@ -152,6 +152,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y stow
           node scripts/test-pi-live-config.mjs
+          node scripts/test-pi-hidden-thinking.mjs
 
       - name: Pi telegram daemon tests
         run: python3 -m unittest discover -s pi/bin -p 'test_pi_telegram_daemon.py'
