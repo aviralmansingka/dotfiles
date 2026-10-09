@@ -1671,8 +1671,9 @@ export default function (pi: ExtensionAPI) {
       commandsHidden = !commandsHidden;
       // Redraw every mounted call row so the transcript flips in place.
       for (const row of rows.values()) row.invalidate?.();
-      // The no-mistakes result rows flip their own visibility class; their
-      // cache-free render refreshes on this notify's render pass.
+      // The no-mistakes result rows set their visibility class from the
+      // absolute state this event carries; their cache-free render refreshes
+      // on this notify's render pass.
       pi.events.emit("no-mistakes:toggle-rows", commandsHidden);
       ctx.ui?.notify(
         commandsHidden ? "Commands and no-mistakes rows hidden" : "Commands and no-mistakes rows shown",
