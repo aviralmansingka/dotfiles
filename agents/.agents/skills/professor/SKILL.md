@@ -542,10 +542,11 @@ this protocol covers only what the tool can't do: **composition** and
   records it as the entry heading, and no timestamp goes in any heading.
 - **Deliver the node's lesson first.** Before quizzing a node, teach it with
   one `lesson` call scoped to that node only — the learner's side buffer then
-  shows exactly the node the question is about. Mid-question the learner can
-  open the full transcript instead. In a quiz panel, use `h`. In an explain
-  panel, use `h` before composing or at the verdict. Use Alt+H at any time.
-  Each shortcut opens the session journal.
+  shows exactly the node the question is about. Mid-question, `h` refocuses
+  that same node buffer. In a quiz panel, use `h`. In an explain panel, use
+  `h` before composing or at the verdict. `H` (Shift+H) opens the full
+  transcript instead, at any time. Alt is not used — the window manager owns
+  the Option key. Ctrl+H focuses the node buffer from anywhere in pi.
 - **Always pass `contextFiles`.** Every `quiz` call must include the
   `contextFiles` array — the file(s) the question drills (the kernel, the
   config, the lesson section, the command's source). This renders an `o`

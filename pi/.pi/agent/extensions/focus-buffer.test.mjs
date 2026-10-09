@@ -32,7 +32,7 @@ const jiti = createJiti(import.meta.url, {
 		"@earendil-works/pi-tui": stubTui,
 	},
 });
-const { editorSocketPath, showNodeBuffer } = jiti("./focus-buffer.ts");
+const { editorSocketPath, focusNodeBuffer, showNodeBuffer } = jiti("./focus-buffer.ts");
 
 // ── socket resolution (pure) ─────────────────────────────────────────────────
 
@@ -79,6 +79,9 @@ process.env.PI_DISABLE_FOCUS_BUFFER = "1";
 const disabled = showNodeBuffer("session-abc", "Node A", "body");
 assert.equal(disabled.ok, false);
 assert.ok(disabled.message.includes("disabled"));
+const disabledFocus = focusNodeBuffer("session-abc");
+assert.equal(disabledFocus.ok, false);
+assert.ok(disabledFocus.message.includes("disabled"));
 delete process.env.PI_DISABLE_FOCUS_BUFFER;
 
 // Without the guard, the very first step is editor detection; with herdr
@@ -89,6 +92,9 @@ process.env.PATH = "/nonexistent";
 const noEditor = showNodeBuffer("session-abc", "Node A", "body");
 assert.equal(noEditor.ok, false);
 assert.ok(noEditor.message.length > 0);
+const noEditorFocus = focusNodeBuffer("session-abc");
+assert.equal(noEditorFocus.ok, false);
+assert.ok(noEditorFocus.message.length > 0);
 process.env.PATH = originalPath;
 
 rmSync(tempRoot, { recursive: true, force: true });

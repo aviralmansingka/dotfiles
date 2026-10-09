@@ -11,7 +11,7 @@ import {
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { openEditor } from "./nvim-open";
-import { openJournalInEditor } from "./md-log";
+import { openJournalInEditor, openNodeView } from "./md-log";
 import { contextFileHint, lessonFileHint, normalizeContextFiles } from "./user-input/context-files";
 import { type InputMode, inputModeLabel, nextInputMode } from "./user-input/input-modes";
 import {
@@ -164,16 +164,25 @@ async function openContextFiles(ctx: any, files: string[]): Promise<void> {
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// `h` lesson view — opens the session's lesson journal in the learner's editor.
+// `h` node view / `H` journal — the quiz panel's lesson shortcuts.
 //
-// Pressing `h` mid-quiz in Answer mode opens the per-session LESSON JOURNAL
-// (<session>.md, the live file md-log appends to as the session runs) so
-// the learner can read the whole running transcript while answering — the
-// journal first, not the focus-buffer node view. The quiz itself stays
-// active and ungraded. Fire-and-forget: never throws into the quiz, no LLM
-// call, no waiting.
+// Pressing `h` mid-quiz in Answer mode focuses the CURRENT NODE: the
+// in-memory focus buffer holding only the node the last `lesson` call
+// showed — not the whole journal. When no node buffer exists yet (no
+// lesson presented), it falls back to the journal file. Pressing `H`
+// (Shift+H) opens the full LESSON JOURNAL (<session>.md) directly. Alt is
+// not usable — the learner's window manager owns the Option key. The quiz
+// itself stays active and ungraded. Fire-and-forget: never throws into the
+// quiz, no LLM call, no waiting.
 // ────────────────────────────────────────────────────────────────────────
-function openLessonFileShortcut(ctx: any): void {
+function openNodeViewShortcut(ctx: any): void {
+	ctx?.ui?.notify?.("Opening current node…", "info");
+	void openNodeView(ctx)
+		.then((res) => ctx?.ui?.notify?.(res.message, res.mode === "none" ? "warning" : "info"))
+		.catch((err) => ctx?.ui?.notify?.(`node view open failed: ${err?.message ?? String(err)}`, "warning"));
+}
+
+function openJournalShortcut(ctx: any): void {
 	ctx?.ui?.notify?.("Opening lesson journal…", "info");
 	void openJournalInEditor(ctx)
 		.then((res) => ctx?.ui?.notify?.(res.message, "info"))
@@ -668,7 +677,11 @@ async function askSingleChoice(
 				}
 
 				if (matchesKey(data, "h")) {
-					openLessonFileShortcut(ctx);
+					openNodeViewShortcut(ctx);
+					return;
+				}
+				if (matchesKey(data, "shift+h")) {
+					openJournalShortcut(ctx);
 					return;
 				}
 
@@ -920,7 +933,11 @@ async function askMultiChoice(
 				}
 
 				if (matchesKey(data, "h")) {
-					openLessonFileShortcut(ctx);
+					openNodeViewShortcut(ctx);
+					return;
+				}
+				if (matchesKey(data, "shift+h")) {
+					openJournalShortcut(ctx);
 					return;
 				}
 
@@ -1108,7 +1125,7 @@ export default function quiz(pi: ExtensionAPI) {
 			"Set multiSelect: true only when more than one option is correct.",
 			"The tool shuffles the options by default. Do not worry about the list position of the correct answer. Set shuffle: false only when the order carries meaning. Examples: ordered values, or 'All/None of the above' as the last option.",
 			'When the question needs file context, pass `contextFiles: ["path/to/file"]`. The user presses `o` to open those files in vim. The quiz stays active.',
-			"The user can press `h` mid-quiz. It opens the session journal (<session>.md) in the editor pane. md-log maintains this journal. The quiz stays active and ungraded.",
+			"The user can press `h` mid-quiz. It focuses the current lesson node in the editor pane: an in-memory buffer holding only the node the last lesson call showed. It falls back to the session journal when no lesson was shown yet. `H` (Shift+H) opens the full journal (<session>.md). The quiz stays active and ungraded.",
 			"To probe nuance, ask several short questions. Adapt each one to the previous answer. Do not write one large question.",
 			"Do not leak the answer through formatting. Keep the option phrasing and length even. Do not hint at the correct option.",
 		],

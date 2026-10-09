@@ -10,9 +10,9 @@ const {
 const jiti = createJiti(import.meta.url);
 const { contextFileHint, lessonFileHint, normalizeContextFiles } = jiti("./user-input/context-files.ts");
 
-// The `h` shortcut now opens the session lesson journal — always available,
-// unconditional hint, stable string.
-assert.equal(lessonFileHint(), "h lesson file");
+// The `h` shortcut focuses the current node; `H` opens the session lesson
+// journal — always available, unconditional hint, stable string.
+assert.equal(lessonFileHint(), "h node · H journal");
 assert.equal(lessonFileHint(), lessonFileHint());
 
 const h100SmokeFiles = [

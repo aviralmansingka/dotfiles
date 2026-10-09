@@ -168,6 +168,7 @@ let sessionFile = join(dir, "sub", "session-abc.jsonl");
 
 const handlers = new Map();
 const commands = new Map();
+const shortcuts = new Map();
 const pi = {
 	on(event, handler) {
 		handlers.set(event, handler);
@@ -175,13 +176,21 @@ const pi = {
 	registerCommand(name, def) {
 		commands.set(name, def);
 	},
+	registerShortcut(key, def) {
+		shortcuts.set(key, def);
+	},
 };
 extension(pi);
 
-// The any-time shortcut: /lessons opens the journal in the editor pane.
+// The any-time command: /lessons opens the journal in the editor pane.
 assert.equal(commands.size, 1);
 assert.ok(commands.has("lessons"), "/lessons command should be registered");
 assert.equal(typeof commands.get("lessons").handler, "function");
+
+// The global shortcut: ctrl+h focuses the node buffer (journal fallback).
+assert.equal(shortcuts.size, 1);
+assert.ok(shortcuts.has("ctrl+h"), "ctrl+h global shortcut should be registered");
+assert.equal(typeof shortcuts.get("ctrl+h").handler, "function");
 
 const ctx = {
 	sessionManager: { getSessionFile: () => sessionFile },
@@ -281,6 +290,7 @@ const noSessionHandlers = new Map();
 const pi2 = {
 	on: (e, h) => noSessionHandlers.set(e, h),
 	registerCommand: () => {},
+	registerShortcut: () => {},
 };
 extension(pi2);
 const noCtx = { sessionManager: { getSessionFile: () => undefined } };

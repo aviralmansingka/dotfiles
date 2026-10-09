@@ -3,7 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 
 import { openEditor } from "./nvim-open";
-import { showNodeBuffer } from "./focus-buffer";
+import { focusNodeBuffer, showNodeBuffer } from "./focus-buffer";
 
 // ────────────────────────────────────────────────────────────────────────────
 // md-log — a per-session markdown journal of lessons and graded questions.
@@ -267,12 +267,33 @@ export async function presentLesson(
 }
 
 /**
+ * Open the session's CURRENT NODE in the learner's editor: focus the
+ * existing in-memory node buffer (the one the last `lesson` call filled)
+ * without rewriting it, and fall back to the journal file when no node
+ * buffer exists yet or no nvim RPC editor is available. Non-blocking.
+ * Used by quiz `h`, explain `h`, and the global ctrl+h shortcut.
+ */
+export async function openNodeView(
+	ctx: any,
+): Promise<{ mode: "buffer" | "journal" | "none"; message: string }> {
+	const buffer = focusNodeBuffer(focusKey(ctx));
+	if (buffer.ok) return { mode: "buffer", message: buffer.message };
+	const journal = await openJournalInEditor(ctx);
+	if (!journal.ok) {
+		return { mode: "none", message: `${buffer.message}; ${journal.message}` };
+	}
+	return {
+		mode: "journal",
+		message: `${buffer.message}; opened the journal instead — ${journal.message}`,
+	};
+}
+
+/**
  * Open the session's lesson journal in the user's editor pane (existing pane
  * if one is open, else a split). Non-blocking: resolves as soon as the file
- * is sent, never waits for the user to finish reading. Used by quiz `h` and
- * explain shortcuts (`h` before composing or at the verdict, and Alt+H at
- * any time); the lesson tool presents through the focus buffer instead (see
- * presentLesson) with this as its fallback.
+ * is sent, never waits for the user to finish reading. Used by the Shift+H
+ * panel shortcut and the /lessons command; node-view surfaces (panel `h`,
+ * global ctrl+h) use it only as their fallback (see openNodeView).
  */
 export async function openJournalInEditor(
 	ctx: any,
@@ -297,14 +318,28 @@ export async function openJournalInEditor(
 }
 
 export default function mdLog(pi: ExtensionAPI) {
-	// Any-time shortcut to open the session's lesson journal in the user's
-	// editor pane. Quiz `h` and explain `h`/Alt+H use the same helper. The
-	// lesson tool uses it only when the focus buffer is unavailable.
+	// Any-time command to open the session's lesson journal in the user's
+	// editor pane. The Shift+H panel shortcut and this command share the
+	// helper. The lesson tool uses it only when the focus buffer is unavailable.
 	pi.registerCommand("lessons", {
 		description: "Open this session's lesson journal in the editor pane",
 		handler: async (_args: string, ctx: any) => {
 			const result = await openJournalInEditor(ctx);
 			ctx?.ui?.notify?.(result.message, result.ok ? "info" : "warning");
+		},
+	});
+
+	// Global shortcut: from anywhere in pi, focus the session's current node
+	// buffer (the last lesson shown). Alt is not an option — the learner's
+	// window manager owns the Option key — and Shift+H already serves the
+	// journal on the quiz/explain panels. Kitty-protocol terminals deliver
+	// ctrl+h distinctly from backspace; in legacy terminals the byte is
+	// ambiguous (0x08) and pi keeps it as backspace there.
+	pi.registerShortcut("ctrl+h", {
+		description: "Open the current lesson node buffer (journal fallback)",
+		handler: async (ctx: any) => {
+			const result = await openNodeView(ctx);
+			ctx?.ui?.notify?.(result.message, result.mode === "none" ? "warning" : "info");
 		},
 	});
 

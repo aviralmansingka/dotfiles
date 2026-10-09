@@ -78,8 +78,8 @@ assert.equal(tool.name, "lesson");
 assert.equal(typeof tool.execute, "function");
 assert.ok(tool.description.length > 40, "description should be substantive");
 assert.ok(
-	tool.description.includes("quiz `h` and explain `h`/Alt+H shortcuts"),
-	"generated lesson guidance should describe the explain journal shortcuts",
+	tool.description.includes("quiz and explain `h` shortcuts focus this buffer"),
+	"generated lesson guidance should describe the node-buffer shortcuts",
 );
 assert.ok(tool.promptGuidelines.length >= 3, "should carry usage guidelines");
 // The lesson is file-based: no panel, no overlay, no UI lock.

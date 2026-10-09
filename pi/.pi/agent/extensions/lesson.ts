@@ -25,10 +25,12 @@ import { presentLesson, resolveJournalPath } from "./md-log";
 // node the active quiz/explain is about. When no nvim RPC editor is
 // available, the tool falls back to opening the journal file. The journal
 // remains the durable course transcript (every quiz/explain verdict lands
-// there too, append-only). The quiz `h` and explain `h`/Alt+H shortcuts
-// open the journal directly. In explain, bare `h` works before composing and
-// at the verdict; Alt+H works at any time. The user can also reopen the
-// journal with /lessons or /journal.
+// there too, append-only). The quiz and explain `h` shortcuts FOCUS the same
+// buffer (the node the last lesson showed); `H` (Shift+H) opens the journal
+// directly, as does the /lessons command. In explain, bare `h` works before
+// composing and at the verdict; `H` works at any time, including during
+// grading. Alt is not used — the learner's window manager owns the Option
+// key. A global ctrl+h shortcut focuses the buffer from anywhere in pi.
 // ────────────────────────────────────────────────────────────────────────────
 
 const LessonParams = Type.Object({
@@ -55,7 +57,7 @@ export default function lesson(pi: ExtensionAPI) {
 		name: "lesson",
 		label: "lesson",
 		description:
-			"Write teaching content into the session's markdown journal. Then show it in the learner's editor as the current node: an in-memory scratch buffer that holds only this lesson. The tool returns immediately. The user reads at their own pace while you continue. Call this before quiz or explain when the question depends on content the user must read. Do not emit that content as ordinary assistant text next to the tool call. The trace collapses such text. Send one node per call. Each lesson replaces the whole buffer content, so a batch of nodes hides the current one. The journal stays the durable append-only transcript. It records every quiz and explain verdict too. The quiz `h` and explain `h`/Alt+H shortcuts open the journal, not the buffer. In explain, bare `h` works before composing and at the verdict. Alt+H works at any time.",
+			"Write teaching content into the session's markdown journal. Then show it in the learner's editor as the current node: an in-memory scratch buffer that holds only this lesson. The tool returns immediately. The user reads at their own pace while you continue. Call this before quiz or explain when the question depends on content the user must read. Do not emit that content as ordinary assistant text next to the tool call. The trace collapses such text. Send one node per call. Each lesson replaces the whole buffer content, so a batch of nodes hides the current one. The journal stays the durable append-only transcript. It records every quiz and explain verdict too. The quiz and explain `h` shortcuts focus this buffer, not the journal. `H` (Shift+H) opens the journal. In explain, bare `h` works before composing and at the verdict. `H` works at any time.",
 		promptSnippet:
 			"Use the lesson tool to write teaching content into the session journal and show it in the user's editor. Do this before a quiz or explain question that depends on it.",
 		promptGuidelines: [

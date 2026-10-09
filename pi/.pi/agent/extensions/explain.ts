@@ -11,22 +11,30 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { openJournalInEditor } from "./md-log";
+import { openJournalInEditor, openNodeView } from "./md-log";
 
 // ────────────────────────────────────────────────────────────────────────
-// `h` / `alt+h` lesson journal — the explain panel's journal shortcuts.
+// `h` node view / `H` journal — the explain panel's lesson shortcuts.
 //
 // The answering phase is a free-text Editor that consumes every printable
 // key, so bare `h` cannot simply be claimed: it would make the letter h
 // untypable. Match quiz muscle memory where it is safe instead: bare `h`
-// opens the journal while the answer field is still EMPTY (the moment the
-// panel appears, before composing) and in the verdict phase (nothing is
-// typed there). Alt+h opens the journal at all times (ESC-prefixed h in
-// legacy terminals, CSI-u under the kitty protocol — matchesKey handles
-// both). Both open the per-session lesson journal (<session>.md, the live
-// file md-log appends to as the session runs) so the learner can read the
-// whole transcript. Fire-and-forget: never throws, no LLM call, no wait.
+// focuses the CURRENT NODE (the in-memory buffer holding the node the last
+// lesson call showed, journal fallback when none exists yet) while the
+// answer field is still EMPTY (the moment the panel appears, before
+// composing) and in the verdict phase (nothing is typed there). `H`
+// (Shift+H) opens the per-session lesson journal (<session>.md) at all
+// times, including during grading — Alt is NOT an option: the learner's
+// window manager owns the Option key. Fire-and-forget: never throws, no
+// LLM call, no wait.
 // ────────────────────────────────────────────────────────────────────────
+function openNodeViewShortcut(ctx: any): void {
+	ctx?.ui?.notify?.("Opening current node…", "info");
+	void openNodeView(ctx)
+		.then((res) => ctx?.ui?.notify?.(res.message, res.mode === "none" ? "warning" : "info"))
+		.catch((err) => ctx?.ui?.notify?.(`node view open failed: ${err?.message ?? String(err)}`, "warning"));
+}
+
 function openJournalShortcut(ctx: any): void {
 	ctx?.ui?.notify?.("Opening lesson journal…", "info");
 	void openJournalInEditor(ctx)
@@ -338,7 +346,7 @@ export default function explain(pi: ExtensionAPI) {
 			"Prefer explain when you know roughly where the user stands and want to test the precision of their language. Prefer quiz when you are still finding the edge.",
 			"Act on the verdict. When the answer is correct but loose, name the loose terms and sharpen them. When it is partially correct or incorrect, stop. Diagnose the gap, then re-ask in a different form.",
 			"An empty or near-empty answer is an honest 'I don't know'. Treat it as a real gap to teach into, not a failure. Empty answers skip grading.",
-			"The user can press `h` while the answer field is empty, in the verdict phase, or Alt+H at any time. It opens the session journal (<session>.md) in the editor pane. md-log maintains this journal. The panel stays active.",
+			"The user can press `h` while the answer field is empty or in the verdict phase. It focuses the current lesson node in the editor pane: an in-memory buffer holding only the node the last lesson call showed. It falls back to the session journal when no lesson was shown yet. `H` (Shift+H) opens the full journal (<session>.md) at any time. The panel stays active.",
 		],
 		parameters: ExplainParams,
 
@@ -461,7 +469,7 @@ export default function explain(pi: ExtensionAPI) {
 
 								if (phase === "answering") {
 									top.push("");
-									addT(theme.fg("dim", " Enter — submit · Ctrl+J — new line · h (empty) / Alt+H (anytime) — journal · Esc — cancel"));
+									addT(theme.fg("dim", " Enter — submit · Ctrl+J — new line · h (empty) — node · H — journal · Esc — cancel"));
 									for (const line of editorInnerLines(editor, bw)) bottom.push(line);
 								} else if (phase === "grading") {
 									top.push("");
@@ -469,7 +477,7 @@ export default function explain(pi: ExtensionAPI) {
 									top.push("");
 									for (const line of loader.render(tw)) top.push(line);
 									top.push("");
-									addT(theme.fg("dim", " Alt+H — journal · Esc — abort grading"));
+									addT(theme.fg("dim", " H — journal · Esc — abort grading"));
 								} else {
 									top.push("");
 									addWrapped(top, theme.fg("dim", editor.getText().trim()), tw, " ");
@@ -501,7 +509,7 @@ export default function explain(pi: ExtensionAPI) {
 										addT(theme.fg("dim", " (returned ungraded; the agent will evaluate your answer itself)"));
 									}
 									top.push("");
-									addT(theme.fg("dim", " Enter — continue · h / Alt+H — journal"));
+									addT(theme.fg("dim", " Enter — continue · h — node · H — journal"));
 								}
 								return frameMerged(top, bottom, width, theme);
 							},
@@ -511,7 +519,9 @@ export default function explain(pi: ExtensionAPI) {
 							},
 
 							handleInput(data: string) {
-								if (matchesKey(data, "alt+h")) {
+								// Shift+H works at all times (also during grading); Alt is not
+								// an option — the learner's window manager owns the Option key.
+								if (matchesKey(data, "shift+h")) {
 									openJournalShortcut(ctx);
 									return;
 								}
@@ -520,7 +530,7 @@ export default function explain(pi: ExtensionAPI) {
 									// typing: the Editor must keep every printable key once the
 									// learner is composing an answer.
 									if (matchesKey(data, "h") && !hasComposed) {
-										openJournalShortcut(ctx);
+										openNodeViewShortcut(ctx);
 										return;
 									}
 									if (matchesKey(data, Key.enter)) {
@@ -550,7 +560,7 @@ export default function explain(pi: ExtensionAPI) {
 								}
 								// verdict — nothing is typed here, so bare h is safe too
 								if (matchesKey(data, "h")) {
-									openJournalShortcut(ctx);
+									openNodeViewShortcut(ctx);
 									return;
 								}
 								if (matchesKey(data, Key.enter) || matchesKey(data, Key.escape)) {

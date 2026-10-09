@@ -57,9 +57,10 @@ registerExplain({ registerTool(tool) { explainTool = tool; } });
 assert.equal(explainTool?.name, "explain");
 assert.ok(
 	explainTool.promptGuidelines.some((guideline) =>
-		guideline.includes("press `h` while the answer field is empty") && guideline.includes("Alt+H at any time")
+		guideline.includes("press `h` while the answer field is empty or in the verdict phase") &&
+		guideline.includes("`H` (Shift+H) opens the full journal")
 	),
-	"generated explain guidance should describe both journal shortcuts",
+	"generated explain guidance should describe both lesson shortcuts",
 );
 
 const calls = [];
@@ -113,14 +114,14 @@ const ctx = {
 				const theme = { fg: (_color, text) => text, bold: (text) => text };
 				component = factory(tui, theme, {}, done);
 				rendered.empty = component.render(120).join("\n");
-				component.handleInput("alt+h");
+				component.handleInput("shift+h");
 				component.handleInput("h");
 				component.handleInput(" ");
 				component.handleInput("h");
 				component.handleInput("Occupancy counts resident warps.");
 				rendered.composing = component.render(120).join("\n");
 				component.handleInput("\r");
-				component.handleInput("alt+h");
+				component.handleInput("shift+h");
 			});
 		},
 	},
@@ -148,27 +149,28 @@ assert.equal(calls[0].options.maxTokens, 800);
 assert.equal(calls[0].options.reasoningEffort, "low");
 assert.ok(!Object.hasOwn(calls[0].options, "reasoning"));
 assert.match(calls[0].prompt.messages[0].content, /Learner's answer \(their own words\):\nhOccupancy/);
-assert.equal(notifications.filter(({ message }) => message === "Opening lesson journal…").length, 4);
-assert.match(rendered.empty, /h \(empty\) \/ Alt\+H \(anytime\) — journal/);
+assert.equal(notifications.filter(({ message }) => message === "Opening lesson journal…").length, 2);
+assert.equal(notifications.filter(({ message }) => message === "Opening current node…").length, 2);
+assert.match(rendered.empty, /h \(empty\) — node · H — journal/);
 assert.match(rendered.composing, /hOccupancy counts resident warps\./);
-assert.match(rendered.grading, /Alt\+H — journal · Esc — abort grading/);
-assert.match(rendered.verdict, /Enter — continue · h \/ Alt\+H — journal/);
+assert.match(rendered.grading, /H — journal · Esc — abort grading/);
+assert.match(rendered.verdict, /Enter — continue · h — node · H — journal/);
 assert.equal(result.details.grading.verdict, "correct");
 assert.match(result.content[0].text, /Grader verdict: CORRECT/);
 
 rmSync(tempRoot, { recursive: true, force: true });
 if (process.env.EXPLAIN_TEST_EVIDENCE === "1") {
 	console.log([
-		"EMPTY ANSWER — bare h and Alt+H opened the journal without changing the answer:",
+		"EMPTY ANSWER — bare h opened the node view, Shift+H the journal, without changing the answer:",
 		rendered.empty,
 		"",
 		"COMPOSING — printable h stayed in the answer:",
 		rendered.composing,
 		"",
-		"GRADING — Alt+H remained available:",
+		"GRADING — Shift+H remained available:",
 		rendered.grading,
 		"",
-		"VERDICT — bare h and Alt+H opened the journal:",
+		"VERDICT — bare h opened the node view:",
 		rendered.verdict,
 	].join("\n"));
 }
