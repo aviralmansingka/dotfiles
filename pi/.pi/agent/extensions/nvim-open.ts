@@ -166,7 +166,10 @@ function launchEditor(cwd: string, files: string[]): string | null {
 	// Launch nvim with an explicit RPC socket so focus-buffer (and nvimr)
 	// can drive this pane: the pi-focus:// node buffers live in THIS
 	// instance. Without --listen the pane is a dead end for buffer updates.
-	const socketPath = join(tmpdir(), `pi-nvim-${newPaneId}.sock`);
+	// Pane IDs contain colons ("w57:p2X") and nvim parses colon-bearing
+	// --listen values as host:service addresses — sanitize to a plain path.
+	const safePaneId = newPaneId.replace(/[^A-Za-z0-9._-]/g, "-");
+	const socketPath = join(tmpdir(), `pi-nvim-${safePaneId}.sock`);
 	const cmd = ["nvim", "--listen", socketPath, ...files];
 	if (!herdrOk(["pane", "run", newPaneId, ...cmd])) {
 		return null;
