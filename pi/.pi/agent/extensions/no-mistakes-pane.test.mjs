@@ -620,6 +620,50 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			theme,
 		).render(200);
 		assert.ok(!bareGateExpanded.some((line) => line.includes("parked at this gate")), "a gate without findings never renders guidance prose");
+		const nestedGateBody = [
+			"run:",
+			'  id: "00000000000000000000000000"',
+			"  status: running",
+			"  steps[1]{step,status,findings,duration_ms}:",
+			"    review,awaiting_approval,0,0",
+			"  gate:",
+			"    step: review",
+		].join("\n");
+		const nestedGateLines = renderer.value(
+			{ content: nestedGateBody, details: { subcommand: "status", exitCode: 0 } },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(nestedGateLines.join("\n"), /gate: review/);
+		const nestedOutcomeBody = [
+			"run:",
+			'  id: "00000000000000000000000000"',
+			"  status: completed",
+			"  outcome: checks-passed",
+			"  steps[1]{step,status,findings,duration_ms}:",
+			"    test,completed,0,1000",
+		].join("\n");
+		const nestedOutcomeLines = renderer.value(
+			{ content: nestedOutcomeBody, details: { subcommand: "status", exitCode: 0 } },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(nestedOutcomeLines.join("\n"), /outcome: checks-passed/);
+		const errorBody = 'error: "daemon unavailable after connection timeout"\nTell the agent to retry the call.';
+		const errorLines = renderer.value(
+			{ content: errorBody, details: { subcommand: "status", exitCode: 1 } },
+			{ expanded: false },
+			theme,
+		).render(200);
+		assert.match(errorLines.join("\n"), /daemon unavailable after connection timeout/);
+		const errorExpanded = renderer.value(
+			{ content: errorBody, details: { subcommand: "status", exitCode: 1 } },
+			{ expanded: true },
+			theme,
+		).render(32);
+		assert.match(errorExpanded.join("\n"), /┌ error/);
+		assert.match(errorExpanded.join("\n"), /connection timeout/);
+		assert.ok(!errorExpanded.some((line) => line.includes("retry the call")), "an error never renders agent guidance");
 		const wrappedBody = [
 			"gate: review",
 			"findings[1]{id,severity,file,action,description}:",
