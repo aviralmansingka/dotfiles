@@ -1,17 +1,15 @@
-// Pure helpers for running a `no-mistakes axi` command and capturing its
-// structured TOON stdout back to the agent, with two pane modes:
+// Pure helpers for running a `no-mistakes axi` command detached in the
+// background and capturing its structured TOON stdout, plus the visible
+// `no-mistakes attach` wrapper for the watch pane:
 //
-//  - TEXT pane (status/logs/sync/abort, and fallback): `buildPaneScript` runs
-//    `no-mistakes axi <args>` IN the visible Herdr pane. stdout (the TOON) is
-//    teed to a temp file between START/END markers while stderr (progress)
-//    streams live to the terminal. The captain watches the raw axi text.
+//  - `buildBackgroundScript` runs `no-mistakes axi <args>` DETACHED,
+//    capturing the TOON to a marked temp file between START/END markers
+//    (stderr → a separate log file). The extension's watcher polls that file
+//    and steers the finished result back into the agent session.
 //
-//  - TUI pane (run/respond): `buildBackgroundScript` runs `no-mistakes axi
-//    <args>` detached in the BACKGROUND, capturing the TOON to the same marked
-//    temp file (stderr → a separate log file). `buildAttachScript` runs
-//    `no-mistakes attach` in the visible pane, retrying until the background
-//    run is active, so the captain watches the rich no-mistakes TUI of that
-//    same daemon run. The agent still reads the marked TOON to drive the gate.
+//  - `buildAttachScript` runs `no-mistakes attach` in the visible Herdr pane,
+//    retrying until the background run is active, so the captain watches the
+//    rich no-mistakes TUI of that same daemon run.
 //
 // `no-mistakes axi run` and `no-mistakes attach` are two views of one daemon
 // run: axi drives it (and streams TOON), attach renders its interactive TUI.
@@ -36,47 +34,15 @@ function shellQuote(value: string): string {
 }
 
 /**
- * Build the bash script that runs `no-mistakes axi <args>` IN a Herdr pane
- * (text-pane mode).
- *
- * stdout (the START/END markers plus the command's TOON stdout) is piped
- * through `tee` so the captain sees it live AND a clean copy lands in
- * `outFile`. stderr (progress) flows straight to the terminal via fd 3, so it
- * is visible live but stays out of the captured file — keeping the TOON the
- * agent parses free of interleaved progress noise.
- *
- * The END marker carries the command's exit status so the caller can detect
- * completion by polling `outFile` without racing the process exit.
- */
-export function buildPaneScript(args: string[], token: string, outFile: string): string {
-	const start = `__NM_START_${token}__`;
-	const end = `__NM_END_${token}__`;
-	const cmd = ["no-mistakes", "axi", ...args].map(shellQuote).join(" ");
-	return [
-		`OUT=${shellQuote(outFile)}`,
-		`TOKEN=${shellQuote(token)}`,
-		`{`,
-		`  {`,
-		`    printf '%s\\n' ${shellQuote(start)}`,
-		`    ${cmd}`,
-		`    __nm_status=$?`,
-		`    printf '%s:%s\\n' ${shellQuote(end)} "$__nm_status"`,
-		`  } 2>&3 | tee "$OUT"`,
-		`} 3>&1`,
-		"",
-	].join("\n");
-}
-
-/**
  * Build the bash script that runs `no-mistakes axi <args>` DETACHED in the
- * background (TUI-pane mode). stdout (START/END markers + TOON) is teed to
+ * background. stdout (START/END markers + TOON) is teed to
  * `outFile`; stderr (progress) is redirected to `errFile` (there is no
  * visible terminal for it here — the visible pane shows `no-mistakes attach`
  * instead). After the command exits and the END marker lands, a `doneFile`
  * sentinel is touched so the attach wrapper knows it can stop retrying.
  *
  * The caller spawns this with `detached: true` and `stdio: 'ignore'`, then
- * polls `outFile` for the END marker exactly as in text-pane mode.
+ * polls `outFile` for the END marker and steers the result back.
  */
 export function buildBackgroundScript(
 	args: string[],
@@ -105,7 +71,7 @@ export function buildBackgroundScript(
 
 /**
  * Build the bash script that runs `no-mistakes attach` in the visible Herdr
- * pane (TUI-pane mode). attach renders the interactive TUI of the active
+ * pane. attach renders the interactive TUI of the active
  * daemon run — the same run the background `axi <args>` is driving.
  *
  * attach needs an active run to attach to, and there is a startup race: the
@@ -178,15 +144,15 @@ export function extractMarkedOutput(buffer: string, token: string): MarkedOutput
 /**
  * axi subcommands that drive a long pipeline run the captain wants to watch
  * in the rich `no-mistakes attach` TUI. Quick inspections (status/logs/sync/
- * abort) keep the text-pane behavior — attaching a TUI to a status query does
- * not make sense.
+ * abort) run headless — attaching a TUI to a status query does not make
+ * sense — and their result still steers back like every other call.
  */
 export const TUI_SUBCOMMANDS = new Set(["run", "respond"]);
 
 /**
- * Should this `axi <args>` call get the TUI pane (run/respond, unless the user
- * is just asking for `--help`)? `--help`/`-h` are quick introspections that
- * never start a pipeline run, so they stay on the text-pane path.
+ * Should this `axi <args>` call get the watch pane (run/respond, unless the
+ * user is just asking for `--help`)? `--help`/`-h` are quick introspections
+ * that never start a pipeline run, so they run headless too.
  */
 export function wantsTuiPane(args: string[], subcommand: string): boolean {
 	if (!TUI_SUBCOMMANDS.has(subcommand)) return false;

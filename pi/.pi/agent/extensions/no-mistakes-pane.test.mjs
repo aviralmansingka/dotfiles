@@ -19,7 +19,7 @@ const jitiPath = process.env.JITI_PATH
 	: "/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs";
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
-const { buildPaneScript, extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
+const { extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
 const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
 const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
@@ -166,33 +166,213 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 }
 
 {
+	// Reload teardown: a previous watch state (registered on globalThis by the
+	// pre-reload module) is torn down — its timer is cleared, its status
+	// controller aborted, and one cleared activity event is published for the
+	// shared widget — and the legacy pre-async status keys are cleared too.
 	const intervalKey = Symbol.for("pi-no-mistakes/status-interval");
 	const abortKey = Symbol.for("pi-no-mistakes/status-abort-controller");
+	const watchKey = Symbol.for("pi-no-mistakes/watch-state");
 	const staleInterval = {};
 	let clearedInterval;
 	let aborted = false;
+	const emitted = [];
 	const savedClearInterval = globalThis.clearInterval;
 	try {
 		globalThis[intervalKey] = staleInterval;
 		globalThis[abortKey] = { abort() { aborted = true; } };
+		globalThis[watchKey] = {
+			pi: { events: { emit(name, payload) { emitted.push({ name, payload }); } } },
+			timer: staleInterval,
+			statusController: { abort() { aborted = true; } },
+			pollingStatus: false,
+			queuedRefresh: undefined,
+			calls: new Map(),
+			observers: new Map(),
+			trackedRunId: undefined,
+			publishedRunId: "00000000000000000000000001",
+		};
 		globalThis.clearInterval = (interval) => { clearedInterval = interval; };
 		createJiti(import.meta.url, { moduleCache: false })("./no-mistakes-pane.ts");
-		assert.equal(clearedInterval, staleInterval);
-		assert.equal(aborted, true);
+		assert.equal(clearedInterval, staleInterval, "the previous watch timer is cleared");
+		assert.equal(aborted, true, "the previous status controller is aborted");
 		assert.equal(globalThis[intervalKey], undefined);
 		assert.equal(globalThis[abortKey], undefined);
+		assert.equal(globalThis[watchKey], undefined, "the stale watch state slot is cleared");
+		assert.equal(emitted.length, 1, "teardown publishes one cleared activity event");
+		assert.equal(emitted[0].name, "no-mistakes:activity-update");
+		assert.equal(emitted[0].payload.snapshot, undefined);
 	} finally {
 		globalThis.clearInterval = savedClearInterval;
 		globalThis[intervalKey] = undefined;
 		globalThis[abortKey] = undefined;
+		globalThis[watchKey] = undefined;
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Async submission: every axi call returns immediately with an ack, runs its
+// capture script detached in the background, and the watcher later steers the
+// captured TOON back as a no_mistakes_axi_result message that triggers a turn.
+// ---------------------------------------------------------------------------
 {
+	const activeRunId = runIdAt(Date.now() + 1000, "3".repeat(16));
+	const gateStatus = [
+		"run:",
+		`  id: "${activeRunId}"`,
+		"  status: running",
+		"  awaiting_agent: parked 1s",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    review,awaiting_approval,0,0",
+		"  gate:",
+		"    step: review",
+	].join("\n");
+	const gateOutput = [
+		"gate: review",
+		"findings[1]{id,severity,file,action,description}:",
+		"  r1,warning,foo.ts,auto-fix,Error from os.Remove is ignored",
+		"help[1]:",
+		"  Run `no-mistakes axi respond --action approve` to accept this step and continue",
+	].join("\n");
+	const outcomeOutput = "outcome: checks-passed";
+
 	const handlers = new Map();
 	const events = [];
-	const activeRunId = runIdAt(Date.now() + 1000, "3".repeat(16));
-	const staleRunId = runIdAt(Date.now() - 60_000, "5".repeat(16));
+	const messages = [];
+	let tool;
+	let tick;
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-async-"));
+	const savedSetInterval = globalThis.setInterval;
+	const savedClearInterval = globalThis.clearInterval;
+	const savedPath = process.env.PATH;
+	const sleepReal = (ms) => new Promise((done) => setTimeout(done, ms));
+	const writeStub = (body) => {
+		writeFileSync(join(stubDir, "no-mistakes"), ["#!/bin/sh", ...body, ""].join("\n"));
+		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+	};
+	try {
+		globalThis.setInterval = (callback) => {
+			tick = callback;
+			return { unref() {} };
+		};
+		globalThis.clearInterval = () => {};
+		// Background axi stub: short delay, then a gate TOON on stdout.
+		writeStub(["sleep 0.1", `printf '%s\\n' '${gateOutput.replace(/'/g, `'\\''`)}'`]);
+		process.env.PATH = `${stubDir}:${savedPath}`;
+
+		let statusStdout = gateStatus;
+		noMistakesPane({
+			on(name, handler) { handlers.set(name, handler); },
+			registerTool(value) { tool = value; },
+			registerCommand() {},
+			registerMessageRenderer() {},
+			events: { emit(name, payload) { events.push({ name, payload }); } },
+			exec() { return Promise.resolve({ code: 0, stdout: statusStdout }); },
+			sendMessage(message, options) { messages.push({ message, options }); },
+		});
+
+		// 1. The call returns immediately with a "started" ack — never the TOON.
+		const startedAt = Date.now();
+		const ack = await tool.execute(
+			"run-1",
+			{ args: 'run --intent "ship the async feature"', timeoutMs: 60 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: false },
+		);
+		assert.ok(Date.now() - startedAt < 500, "the tool call returns immediately");
+		assert.equal(ack.details.status, "started");
+		assert.equal(ack.details.subcommand, "run");
+		assert.equal(ack.details.pipeline, true);
+		assert.match(ack.content[0].text, /running in the background/);
+		assert.match(ack.content[0].text, /no_mistakes_axi_result/);
+
+		// 2. While the call is in flight, the status monitor feeds the shared
+		//    activity UI exactly as before (read-only axi status polling).
+		await tick();
+		await new Promise(setImmediate);
+		await sleepReal(50);
+		assert.ok(events.some((e) => e.payload.snapshot && e.payload.snapshot.id === activeRunId),
+			"the widget receives live snapshots while the call is in flight");
+
+		// 3. Once the background capture completes, the watcher steers the TOON
+		//    back as a result message that triggers a new turn.
+		assert.equal(messages.length, 0, "no result before the background run completes");
+		await sleepReal(400);
+		await tick();
+		assert.equal(messages.length, 1, "the completed run steers exactly one result");
+		const { message, options } = messages[0];
+		assert.equal(message.customType, "no_mistakes_axi_result");
+		assert.equal(options.triggerTurn, true, "the result triggers a new agent turn");
+		assert.equal(options.deliverAs, "steer");
+		assert.match(message.content, /no-mistakes axi run finished \(exit 0\)/);
+		assert.match(message.content, /gate: review/);
+		assert.match(message.content, /parked at this gate/);
+		assert.equal(message.details.subcommand, "run");
+		assert.equal(message.details.gate, true);
+		assert.equal(message.details.paneClosed, false);
+		assert.equal(message.details.exitCode, 0);
+
+		// 4. A settled watcher tick is a no-op — no duplicate steers.
+		await tick();
+		assert.equal(messages.length, 1);
+
+		// 5. A quick non-pipeline call (status) is also async and steers its
+		//    result without gate guidance.
+		writeStub(["sleep 0.05", "printf '%s\\n' 'current_branch: feat/x'", "exit 0"]);
+		const statusAck = await tool.execute(
+			"status-1",
+			{ args: "status", timeoutMs: 30 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: false },
+		);
+		assert.equal(statusAck.details.status, "started");
+		assert.equal(statusAck.details.pipeline, false);
+		await sleepReal(300);
+		await tick();
+		assert.equal(messages.length, 2);
+		assert.equal(messages[1].message.details.subcommand, "status");
+		assert.equal(messages[1].message.details.pipeline, false);
+		assert.doesNotMatch(messages[1].message.content, /parked at this gate/);
+
+		// 6. Timeout: a stuck background client is disconnected and the timeout
+		//    is steered, never silently dropped.
+		writeStub(["sleep 5", "exit 0"]);
+		const stuckAck = await tool.execute(
+			"stuck-1",
+			{ args: "run", timeoutMs: 0.2 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: false },
+		);
+		assert.equal(stuckAck.details.status, "started");
+		await sleepReal(400);
+		await tick();
+		assert.equal(messages.length, 3);
+		assert.equal(messages[2].message.details.timedOut, true);
+		assert.match(messages[2].message.content, /timed out after 0s/);
+		assert.match(messages[2].message.content, /inspect with no_mistakes_axi `status`/);
+
+		handlers.get("session_shutdown")();
+		assert.equal(messages.length, 3, "shutdown stops the watcher without stray steers");
+	} finally {
+		globalThis.setInterval = savedSetInterval;
+		globalThis.clearInterval = savedClearInterval;
+		process.env.PATH = savedPath;
+		rmSync(stubDir, { recursive: true, force: true });
+		globalThis[Symbol.for("pi-no-mistakes/watch-state")] = undefined;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Watch pane + /no-mistakes: run/respond open the attach TUI pane beside the
+// agent, the pane survives a gate and closes on a terminal outcome, and the
+// /no-mistakes command focuses the live pane or re-opens one for the active
+// daemon run (or reports that no run is active).
+// ---------------------------------------------------------------------------
+{
+	const activeRunId = runIdAt(Date.now() + 1000, "7".repeat(16));
 	const activeStatus = [
 		"run:",
 		`  id: "${activeRunId}"`,
@@ -203,226 +383,196 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		"  gate:",
 		"    step: review",
 	].join("\n");
-	const terminalStatus = [
-		"run:",
-		`  id: "${activeRunId}"`,
-		"  status: failed",
-		"  outcome: test-failed",
-		"  steps[2]{step,status,findings,duration_ms}:",
-		"    review,completed,0,2000",
-		"    test,failed,0,1000",
-	].join("\n");
-	const staleStatus = [
-		"run:",
-		`  id: "${staleRunId}"`,
-		"  status: running",
-		"  outcome: test-failed",
-		"  steps[1]{step,status,findings,duration_ms}:",
-		"    review,running,0,1000",
-	].join("\n");
-	const statusResults = [
-		{ code: 0, stdout: terminalStatus },
-		{ code: 0, stdout: staleStatus },
-		{ code: 0, stdout: staleStatus },
-	];
-	let releaseInitialStatus;
-	let statusCalls = 0;
+	const gateOutput = "gate: review";
+	const outcomeOutput = "outcome: checks-passed";
+
+	const handlers = new Map();
+	const messages = [];
+	const notifies = [];
+	const herdrLog = [];
 	let tool;
-	let poll;
+	let command;
+	let renderer;
+	let tick;
+	let statusStdout = activeStatus;
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-pane-"));
 	const savedSetInterval = globalThis.setInterval;
 	const savedClearInterval = globalThis.clearInterval;
 	const savedPath = process.env.PATH;
-	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-observer-"));
+	const sleepReal = (ms) => new Promise((done) => setTimeout(done, ms));
+	const writeNmStub = (body) => {
+		writeFileSync(join(stubDir, "no-mistakes"), ["#!/bin/sh", ...body, ""].join("\n"));
+		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+	};
+	const herdrLogPath = join(stubDir, "herdr-calls.log");
+	const syncHerdrLog = () => {
+		herdrLog.length = 0;
+		if (existsSync(herdrLogPath)) herdrLog.push(...readFileSync(herdrLogPath, "utf-8").split("\n").filter(Boolean));
+	};
 	try {
 		globalThis.setInterval = (callback) => {
-			poll = callback;
+			tick = callback;
 			return { unref() {} };
 		};
 		globalThis.clearInterval = () => {};
-		writeFileSync(join(stubDir, "no-mistakes"), `#!/bin/sh\nsleep 0.05\nprintf 'run:\\n  id: "${activeRunId}"\\n  status: failed\\n  outcome: test-failed\\n'\nexit 1\n`);
-		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+
+		// Herdr stub: logs every call, answers the JSON endpoints the
+		// extension uses, and makes the watch pane the right-hand neighbor of
+		// the agent pane so the focus-by-neighbor path is exercised.
+		writeFileSync(join(stubDir, "herdr"), [
+			"#!/bin/sh",
+			`echo "$*" >> ${JSON.stringify(herdrLogPath)}`,
+			'case "$1 $2" in',
+			'  "pane current") echo \'{"result":{"pane":{"pane_id":"agent:p1","tab_id":"tab:t1"}}}\';;',
+			'  "pane split") echo \'{"result":{"pane":{"pane_id":"nm:p2","tab_id":"tab:t1"}}}\';;',
+			'  "pane neighbor")',
+			'    if [ "$4" = "right" ]; then echo \'{"result":{"neighbor":{"pane_id":"nm:p2"}}}\';',
+			'    else echo \'{"result":{"neighbor":{"pane_id":"other:p9"}}}\'; fi;;',
+			`  "pane get") if [ -f ${JSON.stringify(join(stubDir, "pane-gone"))} ]; then exit 1; fi; echo '{"result":{"pane":{}}}';;`,
+			"esac",
+			"exit 0",
+			"",
+		].join("\n"));
+		chmodSync(join(stubDir, "herdr"), 0o755);
+		// no-mistakes stub: attach --help succeeds (attach is available), and
+		// the axi subcommands print the TOON the phase under test needs.
+		writeNmStub([
+			'if [ "$1" = "attach" ]; then exit 0; fi',
+			"sleep 0.05",
+			`printf '%s\\n' '${gateOutput}'`,
+			"exit 0",
+		]);
 		process.env.PATH = `${stubDir}:${savedPath}`;
 
 		noMistakesPane({
 			on(name, handler) { handlers.set(name, handler); },
 			registerTool(value) { tool = value; },
-			events: { emit(name, payload) { events.push({ name, payload }); } },
-			exec() {
-				if (statusCalls++ > 0) return Promise.resolve(statusResults.shift());
-				return new Promise((resolve) => {
-					releaseInitialStatus = () => resolve({ code: 0, stdout: activeStatus });
-				});
-			},
+			registerCommand(name, value) { command = value; },
+			registerMessageRenderer(type, value) { renderer = { type, value }; },
+			events: { emit() {} },
+			exec() { return Promise.resolve({ code: 0, stdout: statusStdout }); },
+			sendMessage(message, options) { messages.push({ message, options }); },
 		});
-		handlers.get("session_start")({}, { mode: "tui", cwd: "/repo/a" });
-		await new Promise(setImmediate);
-		assert.equal(events.length, 0);
 
-		const updates = [];
-		assert.equal(tool.renderCall, undefined, "call rows belong to the public tool renderer");
-		assert.equal(tool.renderResult, undefined, "result rows belong to the public tool renderer");
-		const pipelinePromise = tool.execute(
-			"pipeline",
-			{ args: "run", timeoutMs: 1 },
+		// 1. run opens the attach pane beside the agent pane.
+		const ack = await tool.execute(
+			"run-1",
+			{ args: "run --intent \"ship it\"", timeoutMs: 60 },
 			undefined,
-			(update) => updates.push(update),
-			{ cwd: "/repo/a", hasUI: false },
+			undefined,
+			{ cwd: stubDir, hasUI: true },
 		);
-		await new Promise(setImmediate);
-		releaseInitialStatus();
-		const pipelineResult = await pipelinePromise;
-		assert.equal(events.length, 2);
-		assert.equal(events[0].payload.snapshot.currentPhase, "review");
-		assert.equal(events[1].payload.snapshot, undefined);
-		assert.equal(updates.length, 2);
-		assert.equal(updates[0].details.snapshot.id, activeRunId);
-		assert.equal(updates[1].details.snapshot.id, activeRunId);
-		assert.equal(pipelineResult.details.snapshot.status, "failed");
-		assert.equal(pipelineResult.details.progress.recentTools.length, 2);
-		assert.equal(pipelineResult.details.progress.recentTools[1].status, "failed");
-		assert.equal(pipelineResult.details.progress.status, "failed");
+		assert.equal(ack.details.status, "started");
+		assert.equal(ack.details.paneId, "nm:p2");
+		assert.match(ack.content[0].text, /pane nm:p2/);
+		await sleepReal(300);
+		await tick();
+		syncHerdrLog();
 
-		writeFileSync(join(stubDir, "no-mistakes"), [
-			"#!/bin/sh",
-			"printf '%s\\n' 'run:' '  id: \"00000000000000000000000004\"' '  status: failed' '  outcome: test-failed' '  steps[1]{step,status,findings,duration_ms}:' '    test,failed,0,1000'",
-			"exit 1",
-			"",
-		].join("\n"));
-		const foreignUpdates = [];
-		const statusCallsBeforeForeign = statusCalls;
-		const foreignResult = await tool.execute(
-			"foreign",
-			{ args: "run", cwd: stubDir, timeoutMs: 1 },
-			undefined,
-			(update) => foreignUpdates.push(update),
-			{ cwd: "/repo/a", hasUI: false },
-		);
-		assert.equal(foreignUpdates.length, 0);
-		assert.equal(statusCalls, statusCallsBeforeForeign);
-		assert.equal(events.length, 2);
-		assert.match(foreignResult.content[0].text, /outcome: test-failed/);
-		assert.equal(foreignResult.details.progress, undefined);
-		assert.equal(foreignResult.details.snapshot, undefined);
+		// 2. The gate result keeps the pane open for the captain to watch.
+		assert.equal(messages.length, 1);
+		assert.equal(messages[0].message.details.gate, true);
+		assert.equal(messages[0].message.details.paneClosed, false);
+		assert.ok(!herdrLog.includes("pane close nm:p2"), "the pane stays open at a gate");
 
-		const logsResult = await tool.execute(
-			"logs",
-			{ args: "logs", timeoutMs: 1 },
-			undefined,
-			undefined,
-			{ cwd: "/repo/a", hasUI: false },
-		);
-		assert.equal(logsResult.details.progress, undefined);
-		const invalidResult = await tool.execute(
-			"invalid",
-			{ args: "" },
-			undefined,
-			undefined,
-			{ cwd: "/repo/a", hasUI: false },
-		);
-		assert.equal(invalidResult.details.progress, undefined);
-		assert.equal(statusResults.length, 2);
+		// 3. /no-mistakes focuses the live pane across the right-hand split.
+		await command.handler("", { cwd: stubDir, ui: { notify: (m, l) => notifies.push({ m, l }) } });
+		syncHerdrLog();
+		assert.ok(herdrLog.includes("pane focus --pane agent:p1 --direction right"),
+			"focus targets the watch pane as the agent pane's right neighbor");
+		assert.ok(notifies.some((n) => /Focused the no-mistakes pane/.test(n.m)));
 
-		const statusCallsBeforeIdlePoll = statusCalls;
-		poll();
-		await new Promise(setImmediate);
-		assert.equal(statusCalls, statusCallsBeforeIdlePoll);
-		assert.equal(events.length, 2);
-
-		writeFileSync(
-			join(stubDir, "no-mistakes"),
-			`#!/bin/sh\ncat <<'EOF'\n${staleStatus}\nEOF\nexit 1\n`,
-		);
-		const staleUpdates = [];
-		const staleResult = await tool.execute(
-			"stale",
-			{ args: "run", timeoutMs: 1 },
+		// 4. respond reuses the same pane (no second split).
+		writeNmStub([
+			'if [ "$1" = "attach" ]; then exit 0; fi',
+			"sleep 0.05",
+			`printf '%s\\n' '${outcomeOutput}'`,
+			"exit 0",
+		]);
+		const respondAck = await tool.execute(
+			"respond-1",
+			{ args: "respond --action approve", timeoutMs: 60 },
 			undefined,
-			(update) => staleUpdates.push(update),
-			{ cwd: "/repo/a", hasUI: false },
+			undefined,
+			{ cwd: stubDir, hasUI: true },
 		);
-		assert.match(staleResult.content[0].text, /outcome: test-failed/);
-		assert.equal(staleResult.details.progress, undefined);
-		assert.equal(staleResult.details.snapshot, undefined);
-		assert.equal(staleUpdates.length, 0);
-		assert.equal(events.length, 2);
-		assert.equal(statusResults.length, 1);
+		assert.equal(respondAck.details.paneId, "nm:p2");
+		syncHerdrLog();
+		assert.equal(herdrLog.filter((line) => line === "pane split --current --direction right --cwd " + stubDir + " --no-focus").length, 1,
+			"the existing pane is reused, not split again");
+		await sleepReal(300);
+		await tick();
+		syncHerdrLog();
 
-		poll();
-		await new Promise(setImmediate);
-		assert.equal(events.length, 2);
+		// 5. The terminal outcome closes the pane.
+		assert.equal(messages.length, 2);
+		assert.equal(messages[0].message.details.gate, true);
+		assert.match(messages[1].message.content, /outcome: checks-passed/);
+		assert.equal(messages[1].message.details.outcome, "checks-passed");
+		assert.equal(messages[1].message.details.paneClosed, true);
+		assert.ok(herdrLog.includes("pane close nm:p2"), "the pane closes on a terminal outcome");
+
+		// 6. /no-mistakes with the pane closed but the run still active re-opens
+		//    a pane attached to the daemon's active run.
+		notifies.length = 0;
+		await command.handler("", { cwd: stubDir, ui: { notify: (m, l) => notifies.push({ m, l }) } });
+		assert.ok(notifies.some((n) => new RegExp(`Re-opened the no-mistakes TUI for run ${activeRunId}`).test(n.m)),
+			"the command re-opens a pane for the active run");
+		syncHerdrLog();
+		assert.ok(herdrLog.filter((line) => line === "pane rename nm:p2 no-mistakes: attach re-open").length === 1,
+			"the re-opened pane is labeled");
+
+		// 7. /no-mistakes with the pane gone and no active run reports instead
+		//    of opening a pane.
+		writeFileSync(join(stubDir, "pane-gone"), "");
+		statusStdout = "current_branch: main\nruns_on_current_branch: 0";
+		notifies.length = 0;
+		syncHerdrLog();
+		const logBeforeNoRun = herdrLog.length;
+		await command.handler("", { cwd: stubDir, ui: { notify: (m, l) => notifies.push({ m, l }) } });
+		syncHerdrLog();
+		assert.ok(notifies.some((n) => /No active no-mistakes run/.test(n.m)));
+		assert.ok(!herdrLog.slice(logBeforeNoRun).some((line) => line.startsWith("pane split")), "no pane is opened without an active run");
+
+		// 8. The result message renderer produces a compact transcript row.
+		assert.equal(renderer.type, "no_mistakes_axi_result");
+		const theme = {
+			fg: (_name, text) => text,
+			bold: (text) => text,
+		};
+		const rendered = renderer.value(
+			{ content: messages[1].message.content, details: messages[1].message.details },
+			{ expanded: false },
+			theme,
+		);
+		const lines = rendered.render(200);
+		assert.match(lines.join("\n"), /no-mistakes · respond/);
+		assert.match(lines.join("\n"), /outcome: checks-passed/);
+		// A long result is truncated with an expand hint; expanding shows it all.
+		const longBody = ["gate: review", ...Array.from({ length: 10 }, (_, i) => `finding ${i}`)].join("\n");
+		const longRendered = renderer.value(
+			{ content: longBody, details: { subcommand: "run", gate: true } },
+			{ expanded: false },
+			theme,
+		);
+		const longLines = longRendered.render(200);
+		assert.match(longLines.join("\n"), /no-mistakes · run gate/);
+		assert.ok(!longLines.some((line) => line.includes("finding 9")), "the collapsed row truncates the body");
+		assert.match(longLines.join("\n"), /Ctrl\+O to expand/);
+		const expandedLines = renderer.value(
+			{ content: longBody, details: { subcommand: "run", gate: true } },
+			{ expanded: true },
+			theme,
+		).render(200);
+		assert.ok(expandedLines.some((line) => line.includes("finding 9")), "the expanded row shows the full body");
+
 		handlers.get("session_shutdown")();
 	} finally {
 		globalThis.setInterval = savedSetInterval;
 		globalThis.clearInterval = savedClearInterval;
 		process.env.PATH = savedPath;
 		rmSync(stubDir, { recursive: true, force: true });
-	}
-}
-
-// ---------------------------------------------------------------------------
-// buildPaneScript: run the generated script under bash with a stub
-// no-mistakes on PATH and assert the observable capture behavior — stdout
-// lands in the capture file, stderr is excluded from the file but streams
-// live to the terminal, the exit code rides the END marker, and every arg
-// round-trips verbatim (including a multi-word --intent value).
-// ---------------------------------------------------------------------------
-{
-	const token = `behav${process.pid}`;
-	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-stub-"));
-	try {
-		const outFile = join(stubDir, "capture.out");
-		const scriptFile = join(stubDir, "run.sh");
-		const stubPath = join(stubDir, "no-mistakes");
-		const exitCode = 42;
-		writeFileSync(
-			stubPath,
-			[
-				"#!/bin/sh",
-				'printf "arg=%s\\n" "$@"', // round-trip every arg to stdout
-				'printf "STDERR_NOISE\\n" 1>&2', // stderr — must stream live, never reach the file
-				'printf "STDOUT_LINE\\n"', // stdout — must land in the file
-				`exit ${exitCode}`,
-				"",
-			].join("\n"),
-		);
-		chmodSync(stubPath, 0o755);
-
-		const args = ["run", "--intent", "ship the no-mistakes visible pane feature"];
-		writeFileSync(scriptFile, buildPaneScript(args, token, outFile));
-
-		const ran = spawnSync("bash", [scriptFile], {
-			encoding: "utf-8",
-			env: { ...process.env, PATH: `${stubDir}:${process.env.PATH}` },
-		});
-		assert.equal(
-			ran.status,
-			0,
-			`bash should exit 0 (the exit code rides the END marker, not the script); stderr: ${ran.stderr}`,
-		);
-		assert.ok(existsSync(outFile), "capture file was created by tee");
-
-		const fileContents = readFileSync(outFile, "utf-8");
-		const parsed = extractMarkedOutput(fileContents, token);
-
-		assert.equal(parsed.complete, true, "END marker landed in the capture file");
-		assert.equal(parsed.exitCode, exitCode, "exit code rides the END marker");
-		assert.ok(parsed.output, "captured stdout is non-empty");
-
-		// stdout lands in the file; args round-trip verbatim as separate argv entries.
-		assert.match(parsed.output, /arg=axi/, "subcommand arg round-trips");
-		assert.match(parsed.output, /arg=run/, "positional arg round-trips");
-		assert.match(parsed.output, /arg=--intent/, "flag round-trips");
-		assert.ok(
-			parsed.output.includes("arg=ship the no-mistakes visible pane feature"),
-			"multi-word --intent value survives as a single argv entry",
-		);
-		assert.match(parsed.output, /STDOUT_LINE/, "command stdout is captured");
-
-		// stderr is excluded from the capture file but streamed live to the terminal.
-		assert.doesNotMatch(fileContents, /STDERR_NOISE/, "stderr never reaches the capture file");
-		assert.match(ran.stdout, /STDERR_NOISE/, "stderr streams live to the terminal via fd 3");
-	} finally {
-		rmSync(stubDir, { recursive: true, force: true });
+		globalThis[Symbol.for("pi-no-mistakes/watch-state")] = undefined;
 	}
 }
 
@@ -467,8 +617,8 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 }
 
 // ---------------------------------------------------------------------------
-// wantsTuiPane: only run/respond (and not their --help) get the TUI pane;
-// status/logs/sync/abort keep the text pane.
+// wantsTuiPane: only run/respond (and not their --help) get the watch pane;
+// status/logs/sync/abort run headless.
 // ---------------------------------------------------------------------------
 {
 	assert.equal(wantsTuiPane(["run", "--intent", "ship it"], "run"), true, "run gets the TUI pane");
@@ -476,12 +626,12 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 	assert.equal(wantsTuiPane(["run", "--yes"], "run"), true, "run --yes still gets the TUI pane");
 
 	// --help / -h are quick introspections that never start a pipeline run.
-	assert.equal(wantsTuiPane(["run", "--help"], "run"), false, "run --help stays on the text pane");
-	assert.equal(wantsTuiPane(["respond", "-h"], "respond"), false, "respond -h stays on the text pane");
+	assert.equal(wantsTuiPane(["run", "--help"], "run"), false, "run --help runs headless");
+	assert.equal(wantsTuiPane(["respond", "-h"], "respond"), false, "respond -h runs headless");
 
 	// Quick inspections never get the TUI pane.
 	for (const sub of ["status", "logs", "sync", "abort", "axi"]) {
-		assert.equal(wantsTuiPane([sub], sub), false, `${sub} stays on the text pane`);
+		assert.equal(wantsTuiPane([sub], sub), false, `${sub} runs headless`);
 	}
 
 	// The TUI set is exactly run + respond.
