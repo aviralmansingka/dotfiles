@@ -1,7 +1,6 @@
 .git
 .envrc
 .todos/
-.lavish/*
 .tmp/
 nvim/.config/github-copilot/
 __pycache__/

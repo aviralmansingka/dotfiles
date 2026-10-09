@@ -166,7 +166,7 @@ The live verifier reports `working` then `idle` for its disposable pane, confirm
 ### Task 5: Completion audit
 
 **Files:**
-- Inspect every file above and the source Lavish artifact at `/Users/aviral/vault/.lavish/neovim-herdr-backend-comparison.html`.
+- Inspect every file above.
 
 **Interfaces:**
 - Produces: fresh evidence for every acceptance-gate behavior.
@@ -193,6 +193,6 @@ Run: `herdr status && herdr integration status && herdr agent list && herdr work
 
 Expected: compatible running server, Pi and Codex installed, no disposable verifier agents left, and project workspaces represented in Herdr.
 
-- [ ] **Step 4: Audit the Lavish acceptance gate item by item**
+- [ ] **Step 4: Audit the acceptance gate item by item**
 
 Confirm start, hide/reattach command construction, context send transport, preview scrollback, close, semantic state transition, and sound delivery each have direct evidence rather than inference.

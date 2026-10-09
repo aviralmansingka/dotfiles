@@ -135,14 +135,6 @@ jobs:
       - name: herdr-annotate-install tests
         run: python3 scripts/test-herdr-annotate-install.py
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: lavish tests
-        run: |
-          bash scripts/test-lavish-artifact-agent.sh
-          bash scripts/test-lavish-homelab.sh
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
