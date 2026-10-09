@@ -2,15 +2,15 @@
  * `/cleanup` — tear down this worktree's session after its work ships.
  *
  * Deletes, in order:
- *   1. the remote branch (`git push <remote> --delete <branch>`)
- *   2. the Git worktree at the session cwd
+ *   1. the configured upstream branch, when one exists
+ *   2. the current linked Git worktree
  *   3. the local branch (`git branch -D`, run from the main checkout)
  * then closes the pi session gracefully via `ctx.shutdown()`.
  *
- * Refuses to run on the main checkout, on `main`/`master`, or when the cwd is
- * not a linked worktree root. A confirm dialog lists the exact targets plus
- * dirty-file and unpushed-commit warnings; any failed git step aborts the
- * remaining steps before shutdown so nothing is half-deleted.
+ * Refuses to run on the main checkout, on `main`/`master`, or outside a listed
+ * linked worktree. A confirm dialog lists the exact targets plus dirty-file and
+ * upstream-ahead warnings. Any failed git step aborts the remaining steps and
+ * keeps the session open.
  */
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";

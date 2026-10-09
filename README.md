@@ -244,6 +244,13 @@ a review. When you want an isolated asynchronous review, run
 `/hunk-review [focus]`; detailed findings are anchored in Hunk and only a terse
 completion summary returns to the parent session.
 
+Use `/cleanup` from a linked worktree after its work ships. The command confirms
+its worktree, local branch, and configured upstream branch, when one exists. It
+warns about dirty files and commits absent from upstream. It then deletes those
+targets and closes Pi. It refuses the main checkout, detached HEAD, and protected
+local or upstream branches. A failed deletion stops the remaining steps and keeps
+Pi open.
+
 The checked-in Pi config intentionally excludes `auth.json`, sessions, caches, and runtime state. MCP credentials should be provided out of band.
 
 Install/update Pi packages and the local web-fetch dependencies:

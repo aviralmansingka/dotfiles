@@ -31,9 +31,7 @@ On first run, sync captures live settings that differ from the base. This keeps
 `lastChangelogVersion`, provider/model/thinking defaults, `enabledModels`,
 `defaultTools`, theme, TUI, transport, and `hideThinkingBlock` local. On this host,
 `-builtin:mcp` also stays local: it disables Pi's built-in MCP in favor of the
-installed adapter. The base retains main's explicitly enabled extensions
-(`python.ts`, `rounded-bar-footer.ts`, `thinking-marker.ts`,
-`tool-call-renderer-public.ts`).
+installed adapter. The base retains all explicitly enabled shared extensions.
 
 Later runs use the saved local file. Edit it directly, then sync. After changing
 settings inside Pi or running `pi install/remove/config`, **capture before the
