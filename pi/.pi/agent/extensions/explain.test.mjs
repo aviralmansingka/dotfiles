@@ -20,8 +20,11 @@ const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
 const stubAi = join(tempRoot, "pi-ai.cjs");
 const stubTypes = join(tempRoot, "types.cjs");
 const stubTui = join(tempRoot, "pi-tui.cjs");
-// explain now imports md-log (journal shortcut), which imports nvim-open —
-// stub its peer deps too (house pattern from md-log.test.mjs).
+// explain now imports md-log (journal shortcut), which imports nvim-open and
+// focus-buffer — stub its peer deps too (house pattern from md-log.test.mjs).
+// The h-shortcut path calls the focus buffers; hard-off so a machine WITH a
+// live herdr/nvim (the homelab) can never receive test writes.
+process.env.PI_DISABLE_FOCUS_BUFFER = "1";
 writeFileSync(stubAgent, "exports.defineTool = (t) => t;\n");
 writeFileSync(stubAi, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
 writeFileSync(stubTypes, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");

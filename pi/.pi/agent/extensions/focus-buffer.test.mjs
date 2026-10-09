@@ -32,7 +32,25 @@ const jiti = createJiti(import.meta.url, {
 		"@earendil-works/pi-tui": stubTui,
 	},
 });
-const { editorSocketPath, focusNodeBuffer, showNodeBuffer } = jiti("./focus-buffer.ts");
+const {
+	editorSocketPath,
+	focusNodeBuffer,
+	nodeBufferName,
+	nodeSlug,
+	overviewBufferName,
+	showNodeBuffer,
+} = jiti("./focus-buffer.ts");
+
+// ── buffer naming (pure) ─────────────────────────────────────────────
+
+// One stable buffer per node: the slug collapses separators and case, so
+// the same node always lands in the same buffer.
+assert.equal(nodeSlug("Node E — ROV drop scope"), "node-e-rov-drop-scope");
+assert.equal(nodeSlug("Node E — ROV drop  scope!"), "node-e-rov-drop-scope");
+assert.equal(nodeSlug("  "), "node");
+assert.equal(nodeBufferName("session-abc", "Node E — ROV drop scope"), "pi-focus://session-abc/node-e-rov-drop-scope");
+assert.equal(overviewBufferName("session-abc"), "pi-focus://session-abc/overview");
+assert.equal(nodeBufferName("a b", "x"), nodeBufferName("a-b", "x"), "session keys sanitize to the same buffer family");
 
 // ── socket resolution (pure) ─────────────────────────────────────────────────
 
@@ -76,10 +94,10 @@ try {
 // PI_DISABLE_FOCUS_BUFFER=1 must never touch a live editor pane: it returns
 // before any herdr/nvim call. This is what keeps tests and headless runs safe.
 process.env.PI_DISABLE_FOCUS_BUFFER = "1";
-const disabled = showNodeBuffer("session-abc", "Node A", "body");
+const disabled = showNodeBuffer("session-abc", "Node A", "Node A", "body");
 assert.equal(disabled.ok, false);
 assert.ok(disabled.message.includes("disabled"));
-const disabledFocus = focusNodeBuffer("session-abc");
+const disabledFocus = focusNodeBuffer("session-abc", "Node A");
 assert.equal(disabledFocus.ok, false);
 assert.ok(disabledFocus.message.includes("disabled"));
 delete process.env.PI_DISABLE_FOCUS_BUFFER;
@@ -89,10 +107,10 @@ delete process.env.PI_DISABLE_FOCUS_BUFFER;
 // WITH herdr the call is safe: it only lists panes and would proceed to the
 // buffer update — which is the production behavior under test elsewhere.)
 process.env.PATH = "/nonexistent";
-const noEditor = showNodeBuffer("session-abc", "Node A", "body");
+const noEditor = showNodeBuffer("session-abc", "Node A", "Node A", "body");
 assert.equal(noEditor.ok, false);
 assert.ok(noEditor.message.length > 0);
-const noEditorFocus = focusNodeBuffer("session-abc");
+const noEditorFocus = focusNodeBuffer("session-abc", "Node A");
 assert.equal(noEditorFocus.ok, false);
 assert.ok(noEditorFocus.message.length > 0);
 process.env.PATH = originalPath;

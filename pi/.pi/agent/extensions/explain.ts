@@ -113,6 +113,12 @@ const ExplainParams = Type.Object({
 	details: Type.Optional(
 		Type.String({ description: "Optional extra context or instructions. The panel shows it under the question." }),
 	),
+	stage: Type.Optional(
+		Type.Union([Type.Literal("probe"), Type.Literal("teach")], {
+			description:
+				"Set to 'probe' for a cold Phase-1 probe. Probe entries land in the separate probe log (<session>-probes.md), never in the teaching journal. Omit or use 'teach' for a teaching check. The default is 'teach'.",
+		}),
+	),
 });
 
 const GRADER_SYSTEM_PROMPT = `You are grading a learner's free-text answer to a technical question. The teacher supplies the claims a correct answer must contain ("expected"). Grade the learner's answer against those claims, not against your own general knowledge.
@@ -346,7 +352,7 @@ export default function explain(pi: ExtensionAPI) {
 			"Prefer explain when you know roughly where the user stands and want to test the precision of their language. Prefer quiz when you are still finding the edge.",
 			"Act on the verdict. When the answer is correct but loose, name the loose terms and sharpen them. When it is partially correct or incorrect, stop. Diagnose the gap, then re-ask in a different form.",
 			"An empty or near-empty answer is an honest 'I don't know'. Treat it as a real gap to teach into, not a failure. Empty answers skip grading.",
-			"The user can press `h` while the answer field is empty or in the verdict phase. It focuses the current lesson node in the editor pane: an in-memory buffer holding only the node the last lesson call showed. It falls back to the session journal when no lesson was shown yet. `H` (Shift+H) opens the full journal (<session>.md) at any time. The panel stays active.",
+			"The user can press `h` while the answer field is empty or in the verdict phase. It focuses the current lesson node in the editor pane: an in-memory buffer holding only the node the last lesson call showed. Before the first lesson, it shows the overview buffer instead — nodes, verdicts, current position. `H` (Shift+H) opens the full journal (<session>.md) at any time. The panel stays active.",
 		],
 		parameters: ExplainParams,
 

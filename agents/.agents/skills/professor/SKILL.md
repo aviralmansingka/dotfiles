@@ -473,10 +473,21 @@ session journal maintained by md-log:
   with intent. `session.md` links into it; he falls back to it when he wants the
   full picture.
 - **Session journal (`<session>.md`, beside the session file)** — the durable
-  transcript, maintained by md-log: every lesson and every quiz/explain
-  verdict, each entry headed by its own short title. **Append-only at the
-  bottom**: entries land in the order they happen and are never reordered,
+  teaching transcript, maintained by md-log: every lesson and every teaching
+  quiz/explain verdict, each entry headed by its own short title. **Append-only
+  at the bottom**: entries land in the order they happen and are never reordered,
   rewritten, or re-rendered. Never edit this file by hand.
+- **Probe log (`<session>-probes.md`, beside the session file)** — the separate
+  durable record of every Phase-1 cold probe. Pass `stage: "probe"` on every
+  probe `quiz`/`explain` call; md-log routes those verdicts here, never into
+  the journal. `/probes` opens it. Never edit this file by hand.
+- **Learner-side buffers (in-memory, per node)** — every `lesson` call gets
+  its own buffer (`pi-focus://<session>/<node>`); earlier nodes persist so
+  the learner can cycle them in nvim (`:bnext`/`:bprev`). `h` and `ctrl+h`
+  focus the current node's buffer; before the first lesson they show the
+  **overview buffer** — nodes taught, per-node verdicts, current position,
+  rebuilt from the journal so a resumed or refreshed session still makes
+  sense. The whole journal file opens only via `H` or `/lessons`.
 
 **Never dump lesson content into the console.** The console is for:
 
@@ -541,12 +552,17 @@ this protocol covers only what the tool can't do: **composition** and
   ROV drop scope`, never `Question 3`. The panel heads with it, the journal
   records it as the entry heading, and no timestamp goes in any heading.
 - **Deliver the node's lesson first.** Before quizzing a node, teach it with
-  one `lesson` call scoped to that node only — the learner's side buffer then
-  shows exactly the node the question is about. Mid-question, `h` refocuses
-  that same node buffer. In a quiz panel, use `h`. In an explain panel, use
-  `h` before composing or at the verdict. `H` (Shift+H) opens the full
-  transcript instead, at any time. Alt is not used — the window manager owns
-  the Option key. Ctrl+H focuses the node buffer from anywhere in pi.
+  one `lesson` call scoped to that node only — that node's buffer then holds
+  exactly what the question is about, and earlier nodes stay open for nvim-side
+  cycling. Mid-question, `h` refocuses the current node buffer (the overview
+  before the first lesson). In a quiz panel, use `h`. In an explain panel, use
+  `h` before composing or at the verdict. `H` (Shift+H) opens the full journal
+  at any time. Alt is not used — the window manager owns the Option key.
+  Ctrl+H focuses the current view from anywhere in pi.
+- **Tag every Phase-1 probe with `stage: "probe"`.** Cold probes land in the
+  probe log, not the journal. Teaching checks omit `stage` (or pass
+  `"teach"`) and land in the journal. A mistagged probe pollutes the teaching
+  transcript; a mistagged teaching check hides a verdict from the arc.
 - **Always pass `contextFiles`.** Every `quiz` call must include the
   `contextFiles` array — the file(s) the question drills (the kernel, the
   config, the lesson section, the command's source). This renders an `o`
@@ -624,7 +640,9 @@ monitoring treats the wait as deliberate, not a wedge.
 ### Resumption
 
 If resuming after a context reset, read any handoff notes plus `session.md`
-(including its `[x]` progress marks) and `handout.md` before continuing. Don't
+(including its `[x]` progress marks) and `handout.md` before continuing. The
+journal, probe log, and overview buffer rebuild the same position from
+md-log's durable records — `h` shows the learner where the arc stands. Don't
 re-teach what's already landed.
 
 ## Judgment calls

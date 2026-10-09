@@ -33,16 +33,19 @@ const jiti = createJiti(import.meta.url, {
 const mdLog = jiti("./md-log.ts");
 const {
 	journalPathFor,
+	probesPathFor,
 	resolveJournalPath,
 	formatLessonEntry,
 	formatQuizEntry,
 	formatExplainEntry,
+	buildOverview,
 } = mdLog;
 const extension = mdLog.default;
 
 // ── pure helpers ─────────────────────────────────────────────────────────────
 
 assert.equal(journalPathFor("/a/b/xyz.jsonl"), "/a/b/xyz.md");
+assert.equal(probesPathFor("/a/b/xyz.md"), "/a/b/xyz-probes.md");
 assert.equal(journalPathFor("/a/b/session"), "/a/b/session.md");
 assert.equal(journalPathFor("/a/b.v2/xyz.jsonl"), "/a/b.v2/xyz.md");
 
@@ -182,12 +185,15 @@ const pi = {
 };
 extension(pi);
 
-// The any-time command: /lessons opens the journal in the editor pane.
-assert.equal(commands.size, 1);
+// The any-time commands: /lessons opens the journal, /probes the probe log.
+assert.equal(commands.size, 2);
 assert.ok(commands.has("lessons"), "/lessons command should be registered");
 assert.equal(typeof commands.get("lessons").handler, "function");
+assert.ok(commands.has("probes"), "/probes command should be registered");
+assert.equal(typeof commands.get("probes").handler, "function");
 
-// The global shortcut: ctrl+h focuses the node buffer (journal fallback).
+// The global shortcut: ctrl+h focuses the current view (node buffer, else
+// overview) — never the whole journal file.
 assert.equal(shortcuts.size, 1);
 assert.ok(shortcuts.has("ctrl+h"), "ctrl+h global shortcut should be registered");
 assert.equal(typeof shortcuts.get("ctrl+h").handler, "function");
@@ -271,6 +277,85 @@ assert.ok(
 	"entries must be appended in conversation order",
 );
 assert.ok(!contents.includes("bash"), "non-journal tools must not be logged");
+
+// Probe-stage checks land in the probe log, never the journal.
+const journalBeforeProbe = readFileSync(journal, "utf-8");
+handlers.get("tool_execution_start")(
+	{ toolCallId: "probe-1", toolName: "quiz", args: { stage: "probe" } },
+	ctx,
+);
+handlers.get("tool_execution_end")(
+	{
+		toolCallId: "probe-1",
+		toolName: "quiz",
+		result: {
+			details: {
+				status: "answered",
+				title: "Probe — window model",
+				question: "What does the window limit?",
+				options: [{ index: 1, label: "bytes in flight" }, { index: 2, label: "packet rate" }],
+				answers: [{ index: 1, label: "bytes in flight" }],
+				correctIndices: [1],
+				correct: false,
+				explanation: "It limits unacknowledged bytes.",
+			},
+		},
+	},
+	ctx,
+);
+const probes = probesPathFor(journal);
+assert.equal(probes, join(dir, "sub", "session-abc-probes.md"), "probe log sits beside the journal");
+assert.ok(existsSync(probes), "probe log should be created");
+const probeContents = readFileSync(probes, "utf-8");
+assert.ok(probeContents.startsWith("# Probe log"), "probe log gets its own header");
+assert.ok(probeContents.includes("## Probe — window model"));
+assert.ok(probeContents.includes("Quiz · ✗ Incorrect"));
+assert.equal(
+	readFileSync(journal, "utf-8"),
+	journalBeforeProbe,
+	"a probe must not append to the teaching journal",
+);
+
+// A quiz whose start event was never seen defaults to the journal.
+handlers.get("tool_execution_end")(
+	{
+		toolCallId: "unseen-1",
+		toolName: "quiz",
+		result: {
+			details: {
+				status: "answered",
+				title: "Missed start",
+				question: "Defaults where?",
+				options: [{ index: 1, label: "journal" }],
+				answers: [{ index: 1, label: "journal" }],
+				correctIndices: [1],
+				correct: true,
+				explanation: "Stage unknown means teaching.",
+			},
+		},
+	},
+	ctx,
+);
+assert.ok(
+	readFileSync(journal, "utf-8").includes("## Missed start"),
+	"an untagged end event defaults to the journal",
+);
+assert.ok(
+	!readFileSync(probes, "utf-8").includes("## Missed start"),
+	"the untagged entry must not reach the probe log",
+);
+
+// The overview rebuilds the arc from the journal: current position and
+// per-node verdicts — the resumable view h/ctrl+h show before a live node.
+const overview = buildOverview(journal);
+assert.ok(overview.includes("Current position: Priority ladder"), "overview names the current node");
+assert.ok(overview.includes("- Priority ladder ✓✗"), "overview carries per-node verdict marks");
+assert.ok(overview.includes("session-abc-probes.md"), "overview points at the probe log");
+const emptyOverview = buildOverview(join(dir, "nope.md"));
+assert.ok(
+	emptyOverview.includes("No lesson history yet"),
+	"an absent journal yields the pre-lesson overview",
+);
 
 sessionFile = join(dir, "sub", "session-def.jsonl");
 handlers.get("tool_execution_start")(

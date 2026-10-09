@@ -137,6 +137,12 @@ const QuizParams = Type.Object({
 				"Optional file paths that give context for this question. When present, the panel shows an `o` shortcut. Pressing `o` opens these files in vim. Relative paths resolve from the session cwd.",
 		}),
 	),
+	stage: Type.Optional(
+		Type.Union([Type.Literal("probe"), Type.Literal("teach")], {
+			description:
+				"Set to 'probe' for a cold Phase-1 probe. Probe entries land in the separate probe log (<session>-probes.md), never in the teaching journal. Omit or use 'teach' for a teaching check. The default is 'teach'.",
+		}),
+	),
 });
 
 function normalizeOptions(
@@ -1125,7 +1131,7 @@ export default function quiz(pi: ExtensionAPI) {
 			"Set multiSelect: true only when more than one option is correct.",
 			"The tool shuffles the options by default. Do not worry about the list position of the correct answer. Set shuffle: false only when the order carries meaning. Examples: ordered values, or 'All/None of the above' as the last option.",
 			'When the question needs file context, pass `contextFiles: ["path/to/file"]`. The user presses `o` to open those files in vim. The quiz stays active.',
-			"The user can press `h` mid-quiz. It focuses the current lesson node in the editor pane: an in-memory buffer holding only the node the last lesson call showed. It falls back to the session journal when no lesson was shown yet. `H` (Shift+H) opens the full journal (<session>.md). The quiz stays active and ungraded.",
+			"The user can press `h` mid-quiz. It focuses the current lesson node in the editor pane: an in-memory buffer holding only the node the last lesson call showed. Before the first lesson, it shows the overview buffer instead — nodes, verdicts, current position. `H` (Shift+H) opens the full journal (<session>.md). The quiz stays active and ungraded.",
 			"To probe nuance, ask several short questions. Adapt each one to the previous answer. Do not write one large question.",
 			"Do not leak the answer through formatting. Keep the option phrasing and length even. Do not hint at the correct option.",
 		],

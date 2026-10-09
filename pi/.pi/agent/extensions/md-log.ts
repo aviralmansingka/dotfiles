@@ -1,36 +1,53 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 
 import { openEditor } from "./nvim-open";
-import { focusNodeBuffer, showNodeBuffer } from "./focus-buffer";
+import { focusNodeBuffer, showNodeBuffer, showOverviewBuffer } from "./focus-buffer";
 
 // ────────────────────────────────────────────────────────────────────────────
-// md-log — a per-session markdown journal of lessons and graded questions.
+// md-log — the durable teaching record plus the scoped learner views.
 //
-// The journal file lives NEXT TO the session file (same directory, .md
-// extension instead of the session's), so every conversation that teaches
-// gets its own course transcript: each lesson appears when it is shown, and
-// each quiz/explain result (question, the user's answer, the verdict, the
-// correct answer) is appended beneath it as the conversation continues.
+// Durable files, both beside the session file:
+//   <session>.md         — the journal: every lesson and every TEACHING
+//                          quiz/explain verdict, append-only, in order.
+//   <session>-probes.md  — the probe log: every quiz/explain called with
+//                          stage:"probe" (the Phase-1 cold probes). Probes
+//                          never mix into the journal.
 //
-// Override the location with PI_LESSON_JOURNAL=/path/to/file.md.
+// In-memory views (focus-buffer), rebuilt from the journal so a refreshed or
+// resumed session still makes sense:
+//   pi-focus://<key>/<node-slug>  — one buffer per teaching node; h/ctrl+h
+//                                   focus the CURRENT one; earlier ones stay
+//                                   available for nvim-side cycling.
+//   pi-focus://<key>/overview     — the arc at a glance: nodes taught, per-
+//                                   node verdicts, current position. This is
+//                                   what h/ctrl+h show BEFORE the first
+//                                   lesson exists. The whole journal file is
+//                                   never the fallback view; it opens only
+//                                   via H / /lessons, and only headless runs
+//                                   fall back to it.
+//
+// Override the journal location with PI_LESSON_JOURNAL=/path/to/file.md.
 //
 // Journal writes stay event-driven: tool_execution_start records lesson
-// content, and tool_execution_end records quiz/explain results. The lesson,
-// quiz, and explain tools import only the presentation helpers below. Quiz
-// publishes its options in tool_execution_update in display order BEFORE
-// blocking; the end result's details already carry the same display order,
-// so this extension writes only from the end event.
+// content (and the current node), and tool_execution_end records quiz/explain
+// results — routed to the journal or the probes file by the call's stage.
 // ────────────────────────────────────────────────────────────────────────────
 
 const JOURNAL_TOOLS = new Set(["quiz", "explain"]);
+const PROBE_STAGE = "probe";
 
 /** Session file `/a/b/xyz.jsonl` → journal `/a/b/xyz.md`. */
 export function journalPathFor(sessionFile: string): string {
 	const ext = extname(sessionFile);
 	const stem = sessionFile.slice(0, sessionFile.length - ext.length);
 	return `${stem || sessionFile}.md`;
+}
+
+/** Journal `/a/b/xyz.md` → probe log `/a/b/xyz-probes.md`. */
+export function probesPathFor(journal: string): string {
+	return journal.replace(/\.md$/, "-probes.md");
 }
 
 /**
@@ -76,8 +93,8 @@ function demoteHeadings(body: string): string {
 }
 
 /** Markdown for one lesson, as it is shown to the user. The heading is the
- *  lesson's own short title; the stamp rides a metadata line under it so the
- *  heading stays content-focused and scannable. */
+ *  lesson's own short title; the stamp rides a metadata line under it so
+ *  the heading stays content-focused and scannable. */
 export function formatLessonEntry(title: string, body: string): string {
 	return [
 		`## ${title.trim()}`,
@@ -152,7 +169,7 @@ export function formatQuizEntry(details: QuizDetails): string {
 	}
 	if (details.followUp) {
 		lines.push("");
-		lines.push(`**Steering:** ${details.followUp}`);
+		lines.push(`**Steering:** ${details.followUp.trim()}`);
 	}
 	lines.push("");
 	return lines.join("\n");
@@ -199,7 +216,7 @@ export function formatExplainEntry(details: ExplainDetails): string {
 		lines.push("");
 		lines.push(`> ${details.answer.trim().replace(/\n/g, "\n> ")}`);
 	} else if (details.status === "answered") {
-		lines.push(`**Your answer:** _(no answer — honest \"I don't know\")_`);
+		lines.push("**Your answer:** _(no answer — honest \"I don't know\")_");
 	}
 	const g = details.grading;
 	if (g) {
@@ -214,16 +231,12 @@ export function formatExplainEntry(details: ExplainDetails): string {
 	return lines.join("\n");
 }
 
-function appendEntry(path: string | undefined, entry: string): void {
+function appendEntry(path: string | undefined, entry: string, header: string): void {
 	if (!path) return;
 	try {
 		if (!existsSync(path)) {
 			mkdirSync(dirname(path), { recursive: true });
-			writeFileSync(
-				path,
-				`# Lesson journal\n\n_Created ${new Date().toISOString()}_\n\n`,
-				"utf-8",
-			);
+			writeFileSync(path, `# ${header}\n\n_Created ${new Date().toISOString()}_\n\n`, "utf-8");
 		}
 		// Horizontal rules between entries keep the transcript scannable;
 		// the leading blank line keeps `---` from turning the last text line
@@ -235,7 +248,17 @@ function appendEntry(path: string | undefined, entry: string): void {
 	}
 }
 
-/** Buffer-name key for this session's focus buffer (journal path stem). */
+// ── per-session view state ───────────────────────────────────────────────────
+// Keyed by journal path so concurrent sessions never share state. The
+// current node is the title of the most recent lesson; a quiz verdict
+// attaches to the node taught just before it (the skill teaches a node,
+// then quizzes it). Lost on restart — the overview rebuilds it from the
+// durable journal instead.
+
+const currentNode = new Map<string, string>();
+const probeCalls = new Map<string, boolean>();
+
+/** Buffer-name key for this session's focus buffers (journal path stem). */
 function focusKey(ctx: any): string {
 	const journal = resolveJournalPath(ctx);
 	if (!journal) return "session";
@@ -243,19 +266,96 @@ function focusKey(ctx: any): string {
 	return base.replace(/\.md$/, "");
 }
 
-/** Present a lesson as the current node: focus buffer first (an in-memory
- *  scratch buffer holding only this node), the journal file as fallback.
- *  Used by the lesson tool. */
+interface OverviewNode {
+	title: string;
+	verdicts: string[];
+}
+
+/**
+ * Rebuild the arc overview from the durable journal: nodes taught in order,
+ * each node's verdicts (from the teaching quizzes/explains that followed
+ * its lesson), and the current position. Parsing — not in-memory state — is
+ * the source of truth, so a refreshed or resumed session still makes sense.
+ */
+export function buildOverview(journal: string | undefined): string {
+	const probesNote = journal
+		? `Probes live in ${probesPathFor(journal).split("/").pop()}. `
+		: "";
+	if (!journal || !existsSync(journal)) {
+		return [
+			"No lesson history yet — the probe phase has not produced teaching nodes.",
+			"",
+			`${probesNote}The journal is created with the first lesson.`,
+		].join("\n");
+	}
+
+	const ordered: OverviewNode[] = [];
+	let lastHeading: string | undefined;
+	let lastLessonNode: string | undefined;
+	for (const line of readFileSync(journal, "utf-8").split("\n")) {
+		const heading = line.match(/^## (.+)$/);
+		if (heading) {
+			lastHeading = heading[1].trim();
+			continue;
+		}
+		// Lesson metadata carries no verdict glyph — it opens a node.
+		if (/^_Lesson · /.test(line)) {
+			if (!lastHeading) continue;
+			lastLessonNode = lastHeading;
+			ordered.push({ title: lastHeading, verdicts: [] });
+			continue;
+		}
+		// Quiz/explain metadata opens with a verdict glyph.
+		const m = line.match(/^_(?:Quiz|multi-select|Explain) · (✓|✗|◐)/);
+		if (!m) continue;
+		// A teaching check attaches to the node it follows — normally the
+		// lesson of the same node, occasionally a later confirm.
+		const owner = lastLessonNode
+			? ordered.find((n) => n.title === lastLessonNode)
+			: undefined;
+		if (owner) owner.verdicts.push(m[1]);
+	}
+
+	if (ordered.length === 0) {
+		return [
+			"No lesson history yet — the probe phase has not produced teaching nodes.",
+			"",
+			`${probesNote}The journal is created with the first lesson.`,
+		].join("\n");
+	}
+
+	const lines: string[] = [];
+	lines.push(`Current position: ${ordered[ordered.length - 1].title}`);
+	lines.push("");
+	lines.push("Node progress:");
+	for (const node of ordered) {
+		const marks = node.verdicts.length > 0 ? node.verdicts.join("") : "—";
+		lines.push(`- ${node.title} ${marks}`);
+	}
+	lines.push("");
+	lines.push(
+		`${probesNote}The full transcript stays in the journal; earlier node buffers remain open in nvim for cycling.`,
+	);
+	return lines.join("\n");
+}
+
+/**
+ * Present a lesson as its own node buffer: creates or updates
+ * `pi-focus://<key>/<node-slug>` and focuses it. Earlier node buffers
+ * persist for nvim-side cycling. Headless fallback: the journal file.
+ * Used by the lesson tool.
+ */
 export async function presentLesson(
 	ctx: any,
 	title: string,
 	body: string,
 ): Promise<{ mode: "buffer" | "journal" | "none"; message: string }> {
-	const buffer = showNodeBuffer(focusKey(ctx), title, body);
+	const key = focusKey(ctx);
+	const buffer = showNodeBuffer(key, title, title, body);
 	if (buffer.ok) {
 		return {
 			mode: "buffer",
-			message: `${buffer.message} — the learner's side buffer shows only this node`,
+			message: `${buffer.message} — the learner's side buffer holds only this node`,
 		};
 	}
 	const journal = await openJournalInEditor(ctx);
@@ -263,37 +363,45 @@ export async function presentLesson(
 	return {
 		mode: "journal",
 		message: `${buffer.message}; opened the journal instead — ${journal.message}`,
-		};
+	};
 }
 
 /**
- * Open the session's CURRENT NODE in the learner's editor: focus the
- * existing in-memory node buffer (the one the last `lesson` call filled)
- * without rewriting it, and fall back to the journal file when no node
- * buffer exists yet or no nvim RPC editor is available. Non-blocking.
- * Used by quiz `h`, explain `h`, and the global ctrl+h shortcut.
+ * Open the learner's CURRENT view: the current node's buffer when a lesson
+ * has been shown, else the overview buffer rebuilt from the journal. The
+ * whole journal file is NOT a fallback here — it opens only via H or
+ * /lessons. The journal fallback below fires only when no editor surface
+ * exists at all (headless runs). Used by quiz `h`, explain `h`, and the
+ * global ctrl+h shortcut.
  */
 export async function openNodeView(
 	ctx: any,
-): Promise<{ mode: "buffer" | "journal" | "none"; message: string }> {
-	const buffer = focusNodeBuffer(focusKey(ctx));
-	if (buffer.ok) return { mode: "buffer", message: buffer.message };
-	const journal = await openJournalInEditor(ctx);
-	if (!journal.ok) {
-		return { mode: "none", message: `${buffer.message}; ${journal.message}` };
+): Promise<{ mode: "node" | "overview" | "journal" | "none"; message: string }> {
+	const journal = resolveJournalPath(ctx);
+	const key = focusKey(ctx);
+	const node = journal ? currentNode.get(journal) : undefined;
+	if (node) {
+		const buffer = focusNodeBuffer(key, node);
+		if (buffer.ok) return { mode: "node", message: buffer.message };
+		// Buffer gone (nvim restarted): fall through to the overview, which
+		// rebuilds the position from the journal.
 	}
-	return {
-		mode: "journal",
-		message: `${buffer.message}; opened the journal instead — ${journal.message}`,
-	};
+	const title = `${key} — lesson arc overview`;
+	const overview = showOverviewBuffer(key, title, buildOverview(journal));
+	if (overview.ok) {
+		return { mode: "overview", message: `${overview.message} — nodes, verdicts, current position` };
+	}
+	// Headless / no editor: last resort, the journal file.
+	const file = await openJournalInEditor(ctx);
+	if (!file.ok) return { mode: "none", message: `${overview.message}; ${file.message}` };
+	return { mode: "journal", message: `${overview.message}; opened the journal — ${file.message}` };
 }
 
 /**
  * Open the session's lesson journal in the user's editor pane (existing pane
  * if one is open, else a split). Non-blocking: resolves as soon as the file
  * is sent, never waits for the user to finish reading. Used by the Shift+H
- * panel shortcut and the /lessons command; node-view surfaces (panel `h`,
- * global ctrl+h) use it only as their fallback (see openNodeView).
+ * panel shortcut and the /lessons command.
  */
 export async function openJournalInEditor(
 	ctx: any,
@@ -317,10 +425,35 @@ export async function openJournalInEditor(
 	};
 }
 
+/**
+ * Open the session's probe log in the user's editor pane. Used by the
+ * /probes command.
+ */
+export async function openProbesInEditor(
+	ctx: any,
+): Promise<{ message: string; ok: boolean; launched: boolean }> {
+	const journalPath = resolveJournalPath(ctx);
+	if (!journalPath) {
+		return { message: "No probe log for this session", ok: false, launched: false };
+	}
+	const probesPath = probesPathFor(journalPath);
+	if (!existsSync(probesPath)) {
+		return {
+			message: `Probe log not written yet (${probesPath})`,
+			ok: false,
+			launched: false,
+		};
+	}
+	const result = await openEditor(ctx?.cwd ?? process.cwd(), [probesPath]);
+	return {
+		message: `${result.message} — probe log ${probesPath}`,
+		ok: result.ok,
+		launched: result.launched,
+	};
+}
+
 export default function mdLog(pi: ExtensionAPI) {
-	// Any-time command to open the session's lesson journal in the user's
-	// editor pane. The Shift+H panel shortcut and this command share the
-	// helper. The lesson tool uses it only when the focus buffer is unavailable.
+	// /lessons opens the full journal; /probes opens the probe log.
 	pi.registerCommand("lessons", {
 		description: "Open this session's lesson journal in the editor pane",
 		handler: async (_args: string, ctx: any) => {
@@ -328,15 +461,23 @@ export default function mdLog(pi: ExtensionAPI) {
 			ctx?.ui?.notify?.(result.message, result.ok ? "info" : "warning");
 		},
 	});
+	pi.registerCommand("probes", {
+		description: "Open this session's probe log in the editor pane",
+		handler: async (_args: string, ctx: any) => {
+			const result = await openProbesInEditor(ctx);
+			ctx?.ui?.notify?.(result.message, result.ok ? "info" : "warning");
+		},
+	});
 
-	// Global shortcut: from anywhere in pi, focus the session's current node
-	// buffer (the last lesson shown). Alt is not an option — the learner's
-	// window manager owns the Option key — and Shift+H already serves the
-	// journal on the quiz/explain panels. Kitty-protocol terminals deliver
-	// ctrl+h distinctly from backspace; in legacy terminals the byte is
-	// ambiguous (0x08) and pi keeps it as backspace there.
+	// Global shortcut: from anywhere in pi, focus the learner's current view —
+	// the current node buffer, or the overview before the first lesson. Alt
+	// is not an option — the learner's window manager owns the Option key —
+	// and Shift+H already serves the journal on the quiz/explain panels.
+	// Kitty-protocol terminals deliver ctrl+h distinctly from backspace; in
+	// legacy terminals the byte is ambiguous (0x08) and pi keeps it as
+	// backspace there.
 	pi.registerShortcut("ctrl+h", {
-		description: "Open the current lesson node buffer (journal fallback)",
+		description: "Open the current node buffer (overview before the first lesson)",
 		handler: async (ctx: any) => {
 			const result = await openNodeView(ctx);
 			ctx?.ui?.notify?.(result.message, result.mode === "none" ? "warning" : "info");
@@ -344,10 +485,20 @@ export default function mdLog(pi: ExtensionAPI) {
 	});
 
 	pi.on("tool_execution_start", (event, ctx) => {
-		if (event.toolName !== "lesson") return;
-		const args = event.args as { title?: string; body?: string } | undefined;
-		if (!args?.title || !args.body) return;
-		appendEntry(resolveJournalPath(ctx), formatLessonEntry(args.title, args.body));
+		if (event.toolName === "lesson") {
+			const args = event.args as { title?: string; body?: string } | undefined;
+			if (!args?.title || !args.body) return;
+			const journal = resolveJournalPath(ctx);
+			appendEntry(journal, formatLessonEntry(args.title, args.body), "Lesson journal");
+			if (journal) currentNode.set(journal, args.title);
+			return;
+		}
+		if (JOURNAL_TOOLS.has(event.toolName)) {
+			// Route the eventual verdict by the call's stage: probe entries
+			// land in the probe log, teaching entries in the journal.
+			const args = event.args as { stage?: string } | undefined;
+			probeCalls.set(event.toolCallId, args?.stage === PROBE_STAGE);
+		}
 	});
 
 	pi.on("tool_execution_end", (event, ctx) => {
@@ -358,6 +509,13 @@ export default function mdLog(pi: ExtensionAPI) {
 			event.toolName === "quiz"
 				? formatQuizEntry(details as QuizDetails)
 				: formatExplainEntry(details as ExplainDetails);
-		appendEntry(resolveJournalPath(ctx), entry);
+		const journal = resolveJournalPath(ctx);
+		const isProbe = probeCalls.get(event.toolCallId) ?? false;
+		probeCalls.delete(event.toolCallId);
+		appendEntry(
+			isProbe ? (journal ? probesPathFor(journal) : undefined) : journal,
+			entry,
+			isProbe ? "Probe log" : "Lesson journal",
+		);
 	});
 }

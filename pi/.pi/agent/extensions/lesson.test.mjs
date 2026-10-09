@@ -78,7 +78,7 @@ assert.equal(tool.name, "lesson");
 assert.equal(typeof tool.execute, "function");
 assert.ok(tool.description.length > 40, "description should be substantive");
 assert.ok(
-	tool.description.includes("quiz and explain `h` shortcuts focus this buffer"),
+	tool.description.includes("quiz and explain `h` shortcuts focus the current node buffer"),
 	"generated lesson guidance should describe the node-buffer shortcuts",
 );
 assert.ok(tool.promptGuidelines.length >= 3, "should carry usage guidelines");
