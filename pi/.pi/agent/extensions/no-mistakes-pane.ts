@@ -77,8 +77,7 @@ type NmGateDecision =
 	| { type: "approve" }
 	| { type: "fix"; findings: string[]; instructions?: string }
 	| { type: "skip" }
-	| { type: "yolo" }
-	| { type: "dismissed" };
+	| { type: "yolo" };
 
 interface NmGateApi {
 	handleGate(payload: {
@@ -88,10 +87,10 @@ interface NmGateApi {
 		branch?: string;
 		runId?: string;
 	}): Promise<NmGateDecision | null>;
-	yoloActive(cwd: string): boolean;
+	yoloActive(runId: string | undefined): boolean;
 	setYolo(cwd: string, on: boolean): Promise<{ on: boolean; activeRun: boolean }>;
-	runStarted(cwd: string): void;
-	runFinished(cwd: string): void;
+	runObserved(cwd: string, runId?: string): Promise<string | undefined>;
+	runFinished(cwd: string, runId?: string): Promise<void>;
 }
 
 function gateApi(): NmGateApi | undefined {
@@ -476,6 +475,8 @@ function finishCall(
 	call: InFlightCall,
 	r: { output: string; exitCode: number; timedOut: boolean },
 ): void {
+	const runId = state.observers.get(call.key)?.runId ??
+		(call.observesSession ? state.trackedRunId : undefined);
 	state.calls.delete(call.key);
 	state.observers.delete(call.key);
 	for (const file of [call.outFile, call.errFile, call.doneFile, call.bgScript]) unlinkSafe(file);
@@ -490,12 +491,12 @@ function finishCall(
 		else void refreshStatus(state, { cwd: call.cwd }, true);
 	}
 	const outcome = /^outcome:\s*(\S+)/m.exec(r.output)?.[1];
-	if (outcome || call.subcommand === "abort") gateApi()?.runFinished(call.cwd);
+	if (outcome || call.subcommand === "abort") void gateApi()?.runFinished(call.cwd, runId);
 	if (parkedAtGate) {
 		// The gate panel owns this result until the user decides; the steer
 		// (TOON + decision) lands when the panel resolves. Detached so the
 		// watcher keeps serving other calls and status polling meanwhile.
-		void driveParkedGate(state, call, r, paneClosed);
+		void driveParkedGate(state, call, r, paneClosed, runId);
 		return;
 	}
 	steerResult(state, call, r, parkedAtGate, paneClosed, undefined, false);
@@ -510,12 +511,14 @@ async function driveParkedGate(
 	call: InFlightCall,
 	r: { output: string; exitCode: number; timedOut: boolean },
 	paneClosed: boolean,
+	runId: string | undefined,
 ): Promise<void> {
 	const api = gateApi();
 	let decision: NmGateDecision | undefined;
 	let yoloStanding = false;
 	if (api) {
-		if (api.yoloActive(call.cwd)) {
+		const observedRunId = await api.runObserved(call.cwd, runId);
+		if (api.yoloActive(observedRunId)) {
 			yoloStanding = true;
 		} else {
 			decision = (await api
@@ -524,7 +527,7 @@ async function driveParkedGate(
 					cwd: call.cwd,
 					subcommand: call.subcommand,
 					branch: state.latestSnapshot?.branch,
-					runId: state.trackedRunId,
+					runId: observedRunId,
 				})
 				.catch(() => null)) ?? undefined;
 		}
@@ -547,9 +550,7 @@ function steerResult(
 	const decisionNote = r.timedOut
 		? ""
 		: decision
-			? decision.type === "dismissed"
-				? " — the user dismissed the gate panel"
-				: " — the user decided at the gate panel"
+			? " — the user decided at the gate panel"
 			: yoloStanding
 				? " — yolo standing consent is active for this run"
 				: "";
@@ -579,6 +580,10 @@ function steerResult(
 	);
 }
 
+function doubleQuoteArg(value: string): string {
+	return `"${value.replace(/(["\\])/g, "\\$1")}"`;
+}
+
 /** The decision block appended to a steered gate result. It names the exact
  *  respond call so the agent executes the user's decision verbatim. */
 function gateDecisionBlock(decision: NmGateDecision | undefined, yoloStanding: boolean): string {
@@ -592,7 +597,7 @@ function gateDecisionBlock(decision: NmGateDecision | undefined, yoloStanding: b
 		case "fix": {
 			const ids = decision.findings.join(",");
 			const instructions = decision.instructions
-				? ` --instructions "${decision.instructions.replace(/"/g, '\\"')}"`
+				? ` --instructions ${doubleQuoteArg(decision.instructions)}`
 				: "";
 			return `GATE DECISION (user): fix findings ${ids}.\nSubmit through no_mistakes_axi: \`respond --action fix --findings ${ids}${instructions}\``;
 		}
@@ -600,8 +605,6 @@ function gateDecisionBlock(decision: NmGateDecision | undefined, yoloStanding: b
 			return "GATE DECISION (user): skip this step.\nSubmit through no_mistakes_axi: `respond --action skip`";
 		case "yolo":
 			return "GATE DECISION (user): yolo — standing consent for the rest of this run.\nSubmit through no_mistakes_axi: `respond --yes` at this gate and at every later gate of this run. Drive the run unattended: do not ask the user at gates and do not relay its findings as questions.";
-		case "dismissed":
-			return "GATE DECISION (user): dismissed the gate panel without deciding.\nLeave the run parked at this gate and stand by. Do not respond, abort, rerun, or edit files. The user can decide in the no-mistakes TUI pane (/no-mistakes) or tell you directly; relay ask-user findings verbatim if asked.";
 	}
 }
 
@@ -924,9 +927,6 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			const sessionCwd = ctx?.cwd ?? process.cwd();
 			const cwd = params.cwd ?? sessionCwd;
 			const observesSession = resolve(cwd) === resolve(sessionCwd);
-			// A fresh run retires any yolo consent earned by the previous run
-			// (idle-armed consent binds to this run instead).
-			if (pipeline && subcommand === "run") gateApi()?.runStarted(cwd);
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;
 			const sig = signal ?? new AbortController().signal;
 			const state = ensureWatchState(pi);
@@ -951,6 +951,9 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 					);
 				}
 				const r = ran.result;
+				if (/^outcome:\s*\S+/m.test(r.output) || subcommand === "abort") {
+					await gateApi()?.runFinished(cwd);
+				}
 				return textResult(formatOutput(r.output, r.exitCode, "inline (background spawn failed)"), {
 					status: "inline",
 					subcommand,
@@ -1053,7 +1056,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 				);
 				return;
 			}
-			if (arg === "yolo" || arg === "yolo on" || arg === "yolo off") {
+			if (arg === "yolo" || arg === "yolo off") {
 				const api = gateApi();
 				if (!api) {
 					ctx.ui.notify(

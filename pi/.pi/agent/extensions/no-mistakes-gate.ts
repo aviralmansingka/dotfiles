@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { resolve } from "node:path";
 import { Editor, Key, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
 import {
 	joinHints,
@@ -32,8 +33,8 @@ import {
 //   - handleGate(): open the gate panel (findings highlighted by severity and
 //     pipeline action classification) and resolve with the user's decision:
 //     approve, fix (+ selected finding ids, + optional fix guidance), skip,
-//     yolo, or dismissed (Esc). Returns null when no panel can open (no TUI)
-//     so the pane falls back to steering the raw result for text relay.
+//     or yolo. Returns null when no panel can open (no TUI), so the pane
+//     falls back to steering the raw result for text relay.
 //   - yolo state: the `y` shortcut inside the panel grants standing consent
 //     for the rest of the run (`respond --yes` at every gate, no more
 //     panels); `/no-mistakes yolo` toggles it too. Consent is bound to one
@@ -56,12 +57,11 @@ export type NoMistakesGateDecision =
 	| { type: "approve" }
 	| { type: "fix"; findings: string[]; instructions?: string }
 	| { type: "skip" }
-	| { type: "yolo" }
-	| { type: "dismissed" };
+	| { type: "yolo" };
 
 export interface NoMistakesGateApi {
 	/** Open the gate panel for a parked-gate result and resolve with the
-	 *  user's decision, "dismissed", or null when no panel can open. */
+	 *  user's decision, or null when no panel can open. */
 	handleGate(payload: {
 		output: string;
 		cwd: string;
@@ -69,16 +69,15 @@ export interface NoMistakesGateApi {
 		branch?: string;
 		runId?: string;
 	}): Promise<NoMistakesGateDecision | null>;
-	/** Standing --yes consent currently covers the run in this worktree. */
-	yoloActive(cwd: string): boolean;
+	/** Standing --yes consent currently covers this exact run. */
+	yoloActive(runId: string | undefined): boolean;
 	/** Toggle standing consent. Resolves whether an active run is bound now
 	 *  (false = the consent stays pending for the next run). */
 	setYolo(cwd: string, on: boolean): Promise<{ on: boolean; activeRun: boolean }>;
-	/** A fresh `axi run` started: retire consent earned by the previous
-	 *  run, keep consent that was set while idle (pending). */
-	runStarted(cwd: string): void;
+	/** Bind pending consent to an observed run, or retire another run's consent. */
+	runObserved(cwd: string, runId?: string): Promise<string | undefined>;
 	/** The run in this worktree reached a terminal state: consent expires. */
-	runFinished(cwd: string): void;
+	runFinished(cwd: string, runId?: string): Promise<void>;
 }
 
 export const GATE_API_KEY = Symbol.for("pi-no-mistakes/gate-api");
@@ -89,7 +88,7 @@ interface GateState {
 	/** Stashed ExtensionContext (from session_start/turn_start) — the only
 	 *  place a watcher-side panel can get a `ctx.ui` from. */
 	ctx: { hasUI: boolean; mode: string; ui: any } | undefined;
-	yolo: Map<string, { pending: boolean }>;
+	yolo: Map<string, { runId?: string }>;
 }
 
 {
@@ -316,9 +315,6 @@ function askGateDecision(
 						chooseOption(decideOptions[optionIndex]);
 						return;
 					}
-					if (matchesKey(data, Key.escape)) {
-						done({ type: "dismissed" });
-					}
 					return;
 				}
 
@@ -438,7 +434,7 @@ function askGateDecision(
 							phase === "decide" ? "select" : "toggle",
 						),
 						...(phase === "decide"
-							? ["Enter select", "y yolo this run", "Esc dismiss"]
+							? ["Enter select", "y yolo this run"]
 							: ["Space toggle", "Enter toggle/submit", "y yolo this run", "Esc back"]),
 					);
 					add(theme.fg("dim", ` ${hints}`));
@@ -471,15 +467,29 @@ function askGateDecision(
 // ---------------------------------------------------------------------------
 // Extension factory + gate API
 // ---------------------------------------------------------------------------
-async function resolveActiveRun(state: GateState, cwd: string): Promise<boolean> {
+async function worktreeKey(state: GateState, cwd: string): Promise<string> {
+	try {
+		const result = await state.pi.exec("git", ["rev-parse", "--show-toplevel"], {
+			cwd,
+			timeout: 5000,
+		});
+		const root = result.code === 0 ? result.stdout.trim() : "";
+		if (root) return resolve(root);
+	} catch {
+	}
+	return resolve(cwd);
+}
+
+async function resolveActiveRun(state: GateState, cwd: string): Promise<string | undefined> {
 	try {
 		const result = await state.pi.exec("no-mistakes", ["axi", "status"], {
 			cwd,
 			timeout: 5000,
 		});
-		return isObservableNoMistakesRun(parseNoMistakesStatus(result.stdout));
+		const snapshot = parseNoMistakesStatus(result.stdout);
+		return isObservableNoMistakesRun(snapshot) ? snapshot.id : undefined;
 	} catch {
-		return false;
+		return undefined;
 	}
 }
 
@@ -508,8 +518,9 @@ export default function noMistakesGate(pi: ExtensionAPI) {
 					}),
 				);
 				if (decision?.type === "yolo") {
-					// The y shortcut grants standing consent for this run.
-					state.yolo.set(payload.cwd, { pending: false });
+					const key = await worktreeKey(state, payload.cwd);
+					const runId = payload.runId ?? await resolveActiveRun(state, payload.cwd);
+					state.yolo.set(key, { runId });
 				}
 				return decision;
 			} catch {
@@ -519,31 +530,37 @@ export default function noMistakesGate(pi: ExtensionAPI) {
 			}
 		},
 
-		yoloActive(cwd) {
-			return state.yolo.has(cwd);
+		yoloActive(runId) {
+			if (!runId) return false;
+			return Array.from(state.yolo.values()).some((consent) => consent.runId === runId);
 		},
 
 		async setYolo(cwd, on) {
+			const key = await worktreeKey(state, cwd);
 			if (!on) {
-				state.yolo.delete(cwd);
+				state.yolo.delete(key);
 				return { on: false, activeRun: false };
 			}
-			const activeRun = await resolveActiveRun(state, cwd);
-			state.yolo.set(cwd, { pending: !activeRun });
-			return { on: true, activeRun };
+			const runId = await resolveActiveRun(state, cwd);
+			state.yolo.set(key, { runId });
+			return { on: true, activeRun: Boolean(runId) };
 		},
 
-		runStarted(cwd) {
-			const consent = state.yolo.get(cwd);
-			if (!consent) return;
-			// Consent earned inside the previous run dies with it; consent
-			// set while idle was meant for this run and binds to it now.
-			if (consent.pending) consent.pending = false;
-			else state.yolo.delete(cwd);
+		async runObserved(cwd, runId) {
+			const observedRunId = runId ?? await resolveActiveRun(state, cwd);
+			if (!observedRunId) return undefined;
+			const key = await worktreeKey(state, cwd);
+			const consent = state.yolo.get(key);
+			if (!consent) return observedRunId;
+			if (!consent.runId) consent.runId = observedRunId;
+			else if (consent.runId !== observedRunId) state.yolo.delete(key);
+			return observedRunId;
 		},
 
-		runFinished(cwd) {
-			state.yolo.delete(cwd);
+		async runFinished(cwd, runId) {
+			const key = await worktreeKey(state, cwd);
+			const consent = state.yolo.get(key);
+			if (consent && (!runId || consent.runId === runId)) state.yolo.delete(key);
 		},
 	};
 	(globalThis as any)[GATE_API_KEY] = api;

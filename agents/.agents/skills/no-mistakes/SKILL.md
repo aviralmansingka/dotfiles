@@ -197,8 +197,8 @@ arrives attached to the result message as a `GATE DECISION (user)` block that
 names the exact `respond` call. Execute that decision verbatim - do not
 re-decide it, do not edit files yourself, and do not relay findings the panel
 already showed. A gate result with no decision block means no panel was
-available (headless/mobile) or the user dismissed it: decide `auto-fix` and
-`no-op` findings on your own judgment and escalate `ask-user` ones as below.
+available (headless/mobile): decide `auto-fix` and `no-op` findings on your
+own judgment and escalate `ask-user` ones as below.
 When a result says yolo standing consent is active, submit `respond --yes` at
 this and every later gate of that run without asking.
 

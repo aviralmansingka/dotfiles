@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -114,7 +114,12 @@ function registerGateExtension(options = {}) {
 	let api;
 	const pi = {
 		on(name, handler) { handlers.set(name, handler); },
-		exec() { return Promise.resolve(options.execResult ?? { code: 0, stdout: "" }); },
+		exec(command) {
+			if (command === "git") {
+				return Promise.resolve({ code: 0, stdout: options.worktreeRoot ?? "/repo" });
+			}
+			return Promise.resolve(options.execResult ?? { code: 0, stdout: "" });
+		},
 	};
 	noMistakesGate(pi);
 	api = globalThis[GATE_API_KEY];
@@ -168,25 +173,22 @@ const clearApi = () => {
 	clearApi();
 }
 
-// Yolo shortcut grants standing consent for the run.
+// Yolo shortcut grants standing consent for the exact run.
 {
 	const { api } = registerGateExtension({ panelInputs: ["y"] });
 	assert.deepEqual(
-		await api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" }),
+		await api.handleGate({
+			output: GATE_OUTPUT,
+			cwd: "/repo/subdir",
+			subcommand: "run",
+			runId: "00000000000000000000000001",
+		}),
 		{ type: "yolo" },
 	);
-	assert.equal(api.yoloActive("/repo"), true, "pressing y arms standing consent");
-	assert.equal(api.yoloActive("/other"), false, "consent is scoped to the worktree");
-	clearApi();
-}
-
-// Esc dismisses without a decision.
-{
-	const { api } = registerGateExtension({ panelInputs: ["\x1b"] });
-	assert.deepEqual(
-		await api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" }),
-		{ type: "dismissed" },
-	);
+	assert.equal(api.yoloActive("00000000000000000000000001"), true,
+		"pressing y arms consent for the current run");
+	assert.equal(api.yoloActive("00000000000000000000000002"), false,
+		"another run cannot consume consent");
 	clearApi();
 }
 
@@ -308,12 +310,14 @@ const clearApi = () => {
 // Yolo consent lifecycle
 // ---------------------------------------------------------------------------
 {
+	const firstRun = "00000000000000000000000001";
+	const secondRun = "00000000000000000000000002";
 	const idleStatus = { code: 0, stdout: "current_branch: feat/x" };
 	const activeStatus = {
 		code: 0,
 		stdout: [
 			"run:",
-			'  id: "00000000000000000000000000"',
+			`  id: "${firstRun}"`,
 			"  branch: feat/x",
 			"  status: running",
 			"  steps[2]{step,status,findings,duration_ms}:",
@@ -322,29 +326,32 @@ const clearApi = () => {
 		].join("\n"),
 	};
 
-	// Armed while idle → binds to the next run → retires on the run after it.
-	// The options getter keeps pi.exec reading the current stub status.
 	let execResult = idleStatus;
-	const { api } = registerGateExtension({ get execResult() { return execResult; } });
-	assert.deepEqual(await api.setYolo("/repo", true), { on: true, activeRun: false });
-	assert.equal(api.yoloActive("/repo"), true);
-	api.runStarted("/repo");
-	assert.equal(api.yoloActive("/repo"), true, "idle-armed consent binds to the next run");
-	api.runFinished("/repo");
-	assert.equal(api.yoloActive("/repo"), false, "a terminal outcome retires consent");
+	const { api } = registerGateExtension({
+		get execResult() { return execResult; },
+		worktreeRoot: "/repo",
+	});
+	assert.deepEqual(await api.setYolo("/repo/subdir", true), { on: true, activeRun: false });
+	assert.equal(api.yoloActive(firstRun), false, "idle consent is not valid before a run binds it");
+	await api.runObserved("/repo/", firstRun);
+	assert.equal(api.yoloActive(firstRun), true, "idle consent binds across worktree path spellings");
+	await api.runObserved("/repo/subdir", firstRun);
+	assert.equal(api.yoloActive(firstRun), true, "reattaching the same run keeps its consent");
+	await api.runFinished("/repo/subdir", secondRun);
+	assert.equal(api.yoloActive(firstRun), true, "another run cannot retire this run's consent");
+	await api.runFinished("/repo/", firstRun);
+	assert.equal(api.yoloActive(firstRun), false, "the matching terminal outcome retires consent");
 
-	// Earned during a run → a fresh run does not inherit it.
 	execResult = activeStatus;
-	assert.deepEqual(await api.setYolo("/repo", true), { on: true, activeRun: true });
-	assert.equal(api.yoloActive("/repo"), true);
-	api.runStarted("/repo");
-	assert.equal(api.yoloActive("/repo"), false, "consent earned in one run never leaks into the next");
+	assert.deepEqual(await api.setYolo("/repo/subdir", true), { on: true, activeRun: true });
+	assert.equal(api.yoloActive(firstRun), true);
+	await api.runObserved("/repo/", secondRun);
+	assert.equal(api.yoloActive(firstRun), false, "a different run never inherits consent");
+	assert.equal(api.yoloActive(secondRun), false, "the new run requires fresh consent");
 
-	// Explicit off.
-	execResult = activeStatus;
-	await api.setYolo("/repo", true);
-	assert.deepEqual(await api.setYolo("/repo", false), { on: false, activeRun: false });
-	assert.equal(api.yoloActive("/repo"), false);
+	await api.setYolo("/repo/subdir", true);
+	assert.deepEqual(await api.setYolo("/repo/", false), { on: false, activeRun: false });
+	assert.equal(api.yoloActive(firstRun), false, "off uses canonical worktree identity");
 	clearApi();
 }
 
@@ -353,8 +360,22 @@ const clearApi = () => {
 // ---------------------------------------------------------------------------
 const GATE_API = Symbol.for("pi-no-mistakes/gate-api");
 
-async function paneRunWithGateApi(fakeApi) {
+function runIdAt(timestamp, suffix = "0".repeat(16)) {
+	const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+	let value = timestamp;
+	let prefix = "";
+	for (let index = 0; index < 10; index++) {
+		prefix = alphabet[value % 32] + prefix;
+		value = Math.floor(value / 32);
+	}
+	return prefix + suffix;
+}
+
+const PANE_RUN_ID = runIdAt(Date.now() + 1000, "1".repeat(16));
+
+async function paneRunWithGateApi(fakeApi, roundTrip = false) {
 	const messages = [];
+	let capturedArgs;
 	let tick;
 	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-gate-"));
 	const savedSetInterval = globalThis.setInterval;
@@ -362,6 +383,7 @@ async function paneRunWithGateApi(fakeApi) {
 	const savedPath = process.env.PATH;
 	const sleepReal = (ms) => new Promise((done) => setTimeout(done, ms));
 	const gateOutput = GATE_OUTPUT.replace(/'/g, `'\\''`);
+	globalThis[Symbol.for("pi-no-mistakes/watch-state")] = undefined;
 	writeFileSync(
 		join(stubDir, "no-mistakes"),
 		["#!/bin/sh", "sleep 0.1", `printf '%s\\n' '${gateOutput}'`, ""].join("\n"),
@@ -382,7 +404,18 @@ async function paneRunWithGateApi(fakeApi) {
 			registerCommand() {},
 			registerMessageRenderer() {},
 			events: { emit() {} },
-			exec() { return Promise.resolve({ code: 0, stdout: "current_branch: feat/x" }); },
+			exec() {
+				return Promise.resolve({
+					code: 0,
+					stdout: [
+						"run:",
+						`  id: "${PANE_RUN_ID}"`,
+						"  status: running",
+						"  steps[1]{step,status,findings,duration_ms}:",
+						"    review,awaiting_approval,1,0",
+					].join("\n"),
+				});
+			},
 			sendMessage(message, options) { messages.push({ message, options }); },
 		});
 		const ack = await tool.execute(
@@ -396,48 +429,81 @@ async function paneRunWithGateApi(fakeApi) {
 		await sleepReal(400);
 		await tick();
 		await new Promise(setImmediate);
-		return messages;
+		if (roundTrip) {
+			const exactCall = /Submit through no_mistakes_axi: `([^`]+)`/.exec(messages[0].message.content)?.[1];
+			assert.ok(exactCall, "the gate result includes an executable respond call");
+			const argsLog = join(stubDir, "args.log");
+			writeFileSync(
+				join(stubDir, "no-mistakes"),
+				["#!/bin/sh", `printf '%s\\n' "$@" > ${JSON.stringify(argsLog)}`, "printf '%s\\n' 'outcome: checks-passed'", ""].join("\n"),
+			);
+			const respondAck = await tool.execute(
+				"gate-respond-1",
+				{ args: exactCall, timeoutMs: 60 },
+				undefined,
+				undefined,
+				{ cwd: stubDir, hasUI: false },
+			);
+			assert.equal(respondAck.details.status, "started");
+			await sleepReal(400);
+			await tick();
+			capturedArgs = readFileSync(argsLog, "utf-8").trimEnd().split("\n");
+		}
+		return { messages, capturedArgs };
 	} finally {
 		globalThis.setInterval = savedSetInterval;
 		globalThis.clearInterval = savedClearInterval;
 		process.env.PATH = savedPath;
 		globalThis[GATE_API] = undefined;
+		globalThis[Symbol.for("pi-no-mistakes/watch-state")] = undefined;
 		rmSync(stubDir, { recursive: true, force: true });
 	}
 }
 
-// A decided gate: one steer carrying the TOON plus the exact respond call.
+// A decided gate: one steer carrying an exact respond call whose guidance
+// round-trips through the executable tool interface.
 {
-	const messages = await paneRunWithGateApi({
-		handleGate: async () => ({ type: "fix", findings: ["r1", "r2"], instructions: "keep the prompt" }),
+	const guidance = 'check C:\\tmp, say "go", then leave \\';
+	const { messages, capturedArgs } = await paneRunWithGateApi({
+		handleGate: async () => ({ type: "fix", findings: ["r1", "r2"], instructions: guidance }),
 		yoloActive: () => false,
 		setYolo: async () => ({ on: false, activeRun: false }),
-		runStarted() {},
-		runFinished() {},
-	});
-	assert.equal(messages.length, 1, "the parked gate steers exactly once, after the decision");
+		runObserved: async (_cwd, runId) => runId,
+		runFinished: async () => {},
+	}, true);
+	assert.equal(messages.filter(({ message }) => message.details.gate).length, 1,
+		"the parked gate steers exactly once, after the decision");
 	const { message, options } = messages[0];
 	assert.equal(message.customType, "no_mistakes_axi_result");
 	assert.equal(options.triggerTurn, true);
 	assert.match(message.content, /the user decided at the gate panel/);
 	assert.match(message.content, /GATE DECISION \(user\): fix findings r1,r2/);
-	assert.match(message.content, /respond --action fix --findings r1,r2 --instructions "keep the prompt"/);
+	assert.deepEqual(capturedArgs, [
+		"axi",
+		"respond",
+		"--action",
+		"fix",
+		"--findings",
+		"r1,r2",
+		"--instructions",
+		guidance,
+	], "the emitted respond call preserves quotes and backslashes");
 	assert.equal(message.details.gate, true);
 	assert.deepEqual(message.details.gateDecision, {
 		type: "fix",
 		findings: ["r1", "r2"],
-		instructions: "keep the prompt",
+		instructions: guidance,
 	});
 }
 
 // Standing consent: no panel, the steer instructs --yes directly.
 {
-	const messages = await paneRunWithGateApi({
+	const { messages } = await paneRunWithGateApi({
 		handleGate: async () => { throw new Error("must not open a panel under yolo"); },
 		yoloActive: () => true,
 		setYolo: async () => ({ on: true, activeRun: true }),
-		runStarted() {},
-		runFinished() {},
+		runObserved: async (_cwd, runId) => runId,
+		runFinished: async () => {},
 	});
 	assert.equal(messages.length, 1);
 	const { message } = messages[0];
@@ -450,13 +516,49 @@ async function paneRunWithGateApi(fakeApi) {
 // No gate extension loaded: the result steers immediately with the plain
 // relay guidance, exactly as before.
 {
-	const messages = await paneRunWithGateApi(undefined);
+	const { messages } = await paneRunWithGateApi(undefined);
 	assert.equal(messages.length, 1);
 	const { message } = messages[0];
 	assert.match(message.content, /parked at this gate/);
 	assert.match(message.content, /relay them verbatim/);
 	assert.equal(message.details.gateDecision, undefined);
 	assert.equal(message.details.yolo, undefined);
+}
+
+// The command accepts only the documented yolo and yolo off forms.
+{
+	let command;
+	const toggles = [];
+	const notifications = [];
+	globalThis[Symbol.for("pi-no-mistakes/watch-state")] = undefined;
+	globalThis[GATE_API] = {
+		handleGate: async () => null,
+		yoloActive: () => false,
+		setYolo: async (_cwd, on) => {
+			toggles.push(on);
+			return { on, activeRun: false };
+		},
+		runObserved: async () => {},
+		runFinished: async () => {},
+	};
+	noMistakesPane({
+		on() {},
+		registerTool() {},
+		registerCommand(_name, value) { command = value; },
+		registerMessageRenderer() {},
+		events: { emit() {} },
+		exec() { return Promise.resolve({ code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" }); },
+		sendMessage() {},
+	});
+	const ctx = { cwd: "/repo", ui: { notify(message) { notifications.push(message); } } };
+	await command.handler("yolo on", ctx);
+	assert.deepEqual(toggles, [], "the unsupported yolo on alias does not toggle consent");
+	assert.match(notifications.at(-1), /No active no-mistakes run/);
+	await command.handler("yolo", ctx);
+	await command.handler("yolo off", ctx);
+	assert.deepEqual(toggles, [true, false], "the documented command forms toggle consent");
+	globalThis[GATE_API] = undefined;
+	globalThis[Symbol.for("pi-no-mistakes/watch-state")] = undefined;
 }
 
 rmSync(tempRoot, { recursive: true, force: true });
