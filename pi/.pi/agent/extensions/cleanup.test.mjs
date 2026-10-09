@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -59,15 +59,15 @@ try {
 			worktreePath: "/wt/fix-x",
 			mainPath: "/repo",
 			branch: "fix-x",
-			upstream: "origin/fix-x",
-			remote: "origin",
+			remote: "team/origin",
+			remoteBranch: "release",
 			dirtyCount: 3,
 			aheadCount: 2,
 		});
 		assert.match(message, /Worktree:  \/wt\/fix-x/);
-		assert.match(message, /local \+ origin\/fix-x/);
+		assert.match(message, /Remote:    team\/origin branch release/);
 		assert.match(message, /3 uncommitted file/);
-		assert.match(message, /2 commit\(s\) not on origin\/fix-x/);
+		assert.match(message, /2 commit\(s\) not on team\/origin\/release/);
 		assert.match(message, /session closes/);
 	}
 
@@ -76,8 +76,8 @@ try {
 			worktreePath: "/wt/fix-x",
 			mainPath: "/repo",
 			branch: "fix-x",
-			upstream: null,
 			remote: null,
+			remoteBranch: null,
 			dirtyCount: 0,
 			aheadCount: null,
 		});
@@ -94,8 +94,8 @@ try {
 				worktreePath: "/wt/fix-x",
 				mainPath: "/repo",
 				branch: "fix-x",
-				upstream: "origin/fix-x",
-				remote: "origin",
+				remote: "team/origin",
+				remoteBranch: "release",
 				dirtyCount: 0,
 				aheadCount: 0,
 			},
@@ -103,7 +103,7 @@ try {
 		);
 		assert.deepEqual(
 			calls.map(([, cmd]) => cmd),
-			["push origin --delete fix-x", "worktree remove /wt/fix-x", "branch -D fix-x"],
+			["push team/origin --delete release", "worktree remove /wt/fix-x", "branch -D fix-x"],
 		);
 		assert.deepEqual(report, { remoteDeleted: true, worktreeRemoved: true, localBranchDeleted: true });
 	}
@@ -116,8 +116,8 @@ try {
 				worktreePath: "/wt/fix-x",
 				mainPath: "/repo",
 				branch: "fix-x",
-				upstream: null,
 				remote: null,
+				remoteBranch: null,
 				dirtyCount: 2,
 				aheadCount: null,
 			},
@@ -138,8 +138,8 @@ try {
 					worktreePath: "/wt/fix-x",
 					mainPath: "/repo",
 					branch: "fix-x",
-					upstream: "origin/fix-x",
-					remote: "origin",
+					remote: "team/origin",
+					remoteBranch: "release",
 					dirtyCount: 0,
 					aheadCount: 0,
 				},
@@ -171,18 +171,54 @@ try {
 			const wt = join(repo, "wt");
 			run(repo, ["worktree", "add", "-q", "-b", "feature-x", wt]);
 
-			// Main checkout refuses.
+			// Main checkout and its subdirectories refuse.
 			const mainResult = ext.collectCleanupFacts(repo);
 			assert.equal(mainResult.ok, false);
 			assert.match(mainResult.reason, /main checkout/);
+			const mainSubdir = join(repo, "main-subdir");
+			mkdirSync(mainSubdir);
+			const mainSubdirResult = ext.collectCleanupFacts(mainSubdir);
+			assert.equal(mainSubdirResult.ok, false);
+			assert.match(mainSubdirResult.reason, /main checkout/);
 
-			// Worktree facts: branch, no upstream, clean.
-			const wtResult = ext.collectCleanupFacts(wt);
+			// Worktree facts use the listed root, even from a subdirectory.
+			const wtSubdir = join(wt, "subdir");
+			mkdirSync(wtSubdir);
+			const wtResult = ext.collectCleanupFacts(wtSubdir);
 			assert.equal(wtResult.ok, true);
+			assert.equal(wtResult.facts.worktreePath, realpathSync(wt));
 			assert.equal(wtResult.facts.branch, "feature-x");
-			assert.equal(wtResult.facts.mainPath, require("node:fs").realpathSync(repo));
-			assert.equal(wtResult.facts.upstream, null);
+			assert.equal(wtResult.facts.mainPath, realpathSync(repo));
+			assert.equal(wtResult.facts.remote, null);
+			assert.equal(wtResult.facts.remoteBranch, null);
 			assert.equal(wtResult.facts.dirtyCount, 0);
+
+			// Every safety lookup fails closed.
+			for (const failedCommand of ["for-each-ref", "status"]) {
+				const failedResult = ext.collectCleanupFacts(wt, (cwd, args) => {
+					if (args[0] === failedCommand) throw new Error("lookup failed");
+					return run(cwd, args);
+				});
+				assert.equal(failedResult.ok, false);
+			}
+
+			// A remote name can contain slashes, and its branch can differ locally.
+			const remoteRepo = join(tempRoot, "remote.git");
+			mkdirSync(remoteRepo);
+			run(remoteRepo, ["init", "-q", "--bare"]);
+			run(repo, ["remote", "add", "team/origin", remoteRepo]);
+			run(wt, ["push", "-q", "-u", "team/origin", "HEAD:release"]);
+			const upstreamResult = ext.collectCleanupFacts(wt);
+			assert.equal(upstreamResult.ok, true);
+			assert.equal(upstreamResult.facts.remote, "team/origin");
+			assert.equal(upstreamResult.facts.remoteBranch, "release");
+			assert.equal(upstreamResult.facts.aheadCount, 0);
+
+			const revListFailure = ext.collectCleanupFacts(wt, (cwd, args) => {
+				if (args[0] === "rev-list") throw new Error("lookup failed");
+				return run(cwd, args);
+			});
+			assert.equal(revListFailure.ok, false);
 
 			// Dirty state counts.
 			writeFileSync(join(wt, "f.txt"), "changed");

@@ -30,14 +30,6 @@ function git(cwd: string, args: string[]): string {
 	}).trim();
 }
 
-function tryGit(cwd: string, args: string[]): string | null {
-	try {
-		return git(cwd, args);
-	} catch {
-		return null;
-	}
-}
-
 export interface WorktreeEntry {
 	path: string;
 	branch?: string;
@@ -72,10 +64,10 @@ export interface CleanupFacts {
 	worktreePath: string;
 	mainPath: string;
 	branch: string;
-	/** Tracking ref like "origin/fix-x", or null when the branch was never pushed. */
-	upstream: string | null;
-	/** Remote name parsed from `upstream`, or null. */
+	/** Configured upstream remote, or null when no upstream exists. */
 	remote: string | null;
+	/** Branch name on the upstream remote, or null when no upstream exists. */
+	remoteBranch: string | null;
 	/** Uncommitted file count in the worktree. */
 	dirtyCount: number;
 	/** Commits on HEAD not on the upstream, or null without an upstream. */
@@ -86,29 +78,55 @@ export type CleanupFactsResult =
 	| { ok: true; facts: CleanupFacts }
 	| { ok: false; reason: string };
 
-export function collectCleanupFacts(cwd: string): CleanupFactsResult {
-	const worktreePath = realpathSync(cwd);
-
+export function collectCleanupFacts(
+	cwd: string,
+	runGit: (cwd: string, args: string[]) => string = git,
+): CleanupFactsResult {
+	let worktreePath: string;
 	let porcelain: string;
 	try {
-		porcelain = git(cwd, ["worktree", "list", "--porcelain"]);
+		worktreePath = realpathSync(runGit(cwd, ["rev-parse", "--show-toplevel"]));
+		porcelain = runGit(worktreePath, ["worktree", "list", "--porcelain"]);
 	} catch {
-		return { ok: false, reason: "Not inside a Git repository." };
+		return { ok: false, reason: "Not inside a valid Git worktree." };
 	}
 
 	const entries = parseWorktreeList(porcelain);
-	const mainEntry = entries.find((entry) => !entry.bare);
-	if (!mainEntry) {
+	const currentEntry = entries.find((entry) => {
+		try {
+			return realpathSync(entry.path) === worktreePath;
+		} catch {
+			return false;
+		}
+	});
+	if (!currentEntry) {
+		return { ok: false, reason: "The current directory is not a listed Git worktree." };
+	}
+
+	const mainEntry = entries[0];
+	if (!mainEntry || mainEntry.bare) {
 		return { ok: false, reason: "No main checkout found for this repository." };
 	}
-	if (realpathSync(mainEntry.path) === worktreePath) {
+
+	let mainPath: string;
+	try {
+		mainPath = realpathSync(mainEntry.path);
+	} catch {
+		return { ok: false, reason: "The main checkout path is not available." };
+	}
+	if (mainPath === worktreePath) {
 		return {
 			ok: false,
 			reason: "This is the main checkout, not a worktree. Nothing to clean up.",
 		};
 	}
 
-	const branch = tryGit(cwd, ["branch", "--show-current"]);
+	let branch: string;
+	try {
+		branch = runGit(worktreePath, ["branch", "--show-current"]);
+	} catch {
+		return { ok: false, reason: "Could not read the current branch; refusing to clean up." };
+	}
 	if (!branch) {
 		return { ok: false, reason: "Detached HEAD or empty branch name; refusing to clean up." };
 	}
@@ -116,23 +134,56 @@ export function collectCleanupFacts(cwd: string): CleanupFactsResult {
 		return { ok: false, reason: `Refusing to delete protected branch "${branch}".` };
 	}
 
-	const upstream = tryGit(cwd, ["rev-parse", "--abbrev-ref", "@{u}"]);
-	const remote = upstream ? upstream.split("/")[0] || null : null;
+	let upstreamRaw: string;
+	try {
+		upstreamRaw = runGit(worktreePath, [
+			"for-each-ref",
+			"--format=%(upstream)%00%(upstream:remotename)%00%(upstream:remoteref)",
+			`refs/heads/${branch}`,
+		]);
+	} catch {
+		return { ok: false, reason: "Could not read the upstream branch; refusing to clean up." };
+	}
+	const [upstreamRef = "", remoteValue = "", remoteRef = "", ...extra] = upstreamRaw.split("\0");
+	if (extra.length > 0 || (!upstreamRef && (remoteValue || remoteRef))) {
+		return { ok: false, reason: "The upstream branch data is invalid; refusing to clean up." };
+	}
+	if (upstreamRef && (!remoteValue || !remoteRef.startsWith("refs/heads/"))) {
+		return { ok: false, reason: "The upstream branch data is invalid; refusing to clean up." };
+	}
+	const remote = upstreamRef ? remoteValue : null;
+	const remoteBranch = upstreamRef ? remoteRef.slice("refs/heads/".length) : null;
 
-	const status = tryGit(cwd, ["status", "--porcelain"]) ?? "";
+	let status: string;
+	try {
+		status = runGit(worktreePath, ["status", "--porcelain"]);
+	} catch {
+		return { ok: false, reason: "Could not read worktree status; refusing to clean up." };
+	}
 	const dirtyCount = status.split("\n").filter((line) => line.trim() !== "").length;
 
-	const aheadRaw = upstream ? tryGit(cwd, ["rev-list", "--count", `${upstream}..HEAD`]) : null;
-	const aheadCount = aheadRaw !== null && /^\d+$/.test(aheadRaw) ? Number(aheadRaw) : null;
+	let aheadCount: number | null = null;
+	if (upstreamRef) {
+		let aheadRaw: string;
+		try {
+			aheadRaw = runGit(worktreePath, ["rev-list", "--count", `${upstreamRef}..HEAD`]);
+		} catch {
+			return { ok: false, reason: "Could not compare the upstream branch; refusing to clean up." };
+		}
+		if (!/^\d+$/.test(aheadRaw)) {
+			return { ok: false, reason: "The upstream comparison is invalid; refusing to clean up." };
+		}
+		aheadCount = Number(aheadRaw);
+	}
 
 	return {
 		ok: true,
 		facts: {
 			worktreePath,
-			mainPath: realpathSync(mainEntry.path),
+			mainPath,
 			branch,
-			upstream,
 			remote,
+			remoteBranch,
 			dirtyCount,
 			aheadCount,
 		},
@@ -144,14 +195,16 @@ export function collectCleanupFacts(cwd: string): CleanupFactsResult {
 export function buildConfirmMessage(facts: CleanupFacts): string {
 	const lines = [
 		`Worktree:  ${facts.worktreePath}`,
-		`Branch:    ${facts.branch}` +
-			(facts.upstream ? ` (local + ${facts.upstream})` : " (local only, never pushed)"),
+		`Branch:    ${facts.branch}`,
+		facts.remote && facts.remoteBranch
+			? `Remote:    ${facts.remote} branch ${facts.remoteBranch}`
+			: "Remote:    none (local only, never pushed)",
 	];
 	if (facts.dirtyCount > 0) {
 		lines.push(`Warning:   ${facts.dirtyCount} uncommitted file(s) — discarded with the worktree.`);
 	}
 	if (facts.aheadCount !== null && facts.aheadCount > 0) {
-		lines.push(`Warning:   ${facts.aheadCount} commit(s) not on ${facts.upstream} — the remote branch is still deleted.`);
+		lines.push(`Warning:   ${facts.aheadCount} commit(s) not on ${facts.remote}/${facts.remoteBranch} — the remote branch is still deleted.`);
 	}
 	lines.push("", "The pi session closes after cleanup.");
 	return lines.join("\n");
@@ -177,8 +230,8 @@ export function executeCleanup(
 	};
 
 	// 1. Remote branch — from the still-existing worktree.
-	if (facts.upstream && facts.remote) {
-		run(facts.worktreePath, ["push", facts.remote, "--delete", facts.branch]);
+	if (facts.remote && facts.remoteBranch) {
+		run(facts.worktreePath, ["push", facts.remote, "--delete", facts.remoteBranch]);
 		report.remoteDeleted = true;
 	}
 
