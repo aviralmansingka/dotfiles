@@ -48,6 +48,13 @@ An already folded `.pi` or `agent` directory is rejected: first preserve its
 contents in a real directory instead of writing through it. Backups are local;
 remove old ones yourself after checking them.
 
+Hidden thinking renders nothing through two pieces that must both deploy:
+`extensions/thinking-blank.ts` sets the hidden-thinking label to an empty
+string, and `scripts/pi-patch-hidden-thinking` guards the bundle's structural
+spacer rows out of hidden runs. After every `pi update`, re-run that script —
+a new release directory drops the patch. It refuses to run when the bundle
+anchor changed, so a failed run means the script needs review, not a retry.
+
 Resource arrays (`extensions`, `packages`, `skills`, `prompts`, `themes`) combine
 base first, local last, with duplicate values removed. Capture stores only local
 resource additions, not a frozen copy of the shared list. Use Pi's `-path`
