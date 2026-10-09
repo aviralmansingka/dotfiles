@@ -1,6 +1,14 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, extname, resolve } from "node:path";
+import {
+	appendFileSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
+import { dirname, extname, join, resolve } from "node:path";
 
 import { openEditor } from "./nvim-open";
 import {
@@ -284,6 +292,9 @@ interface OverviewNode {
  * the source of truth, so a refreshed or resumed session still makes sense.
  */
 export function buildOverview(journal: string | undefined): string {
+	// A fresh session's journal has no lessons yet — fall back to the most
+	// recent lesson-bearing journal in the same directory so the arc shows.
+	journal = arcJournal(journal);
 	const probesNote = journal
 		? `Probes live in ${probesPathFor(journal).split("/").pop()}. `
 		: "";
@@ -359,6 +370,42 @@ function lessonBodyFromJournal(journal: string | undefined, node: string): strin
 	return text.slice(start + 1, end === -1 ? undefined : end).trim();
 }
 
+/** True when the file is a journal that carries at least one lesson. */
+function journalHasLessons(path: string): boolean {
+	try {
+		if (!existsSync(path)) return false;
+		return /^_Lesson \u00b7 /m.test(readFileSync(path, "utf-8"));
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * The journal that carries the ARC: this session's journal when it already
+ * has lessons, else the most recent lesson-bearing journal in the SAME
+ * session directory. Professor subagent sessions of one repo share that
+ * directory, so a restarted or resumed session still sees the arc — the
+ * overview, the current node, and node-buffer rebuilds all read from here.
+ * Probe logs are never candidates; non-teaching sessions have no lessons and
+ * are excluded by the same test.
+ */
+function arcJournal(journal: string | undefined): string | undefined {
+	if (!journal) return undefined;
+	if (journalHasLessons(journal)) return journal;
+	try {
+		const dir = dirname(journal);
+		const candidates = readdirSync(dir)
+			.filter((f) => f.endsWith(".md") && !f.endsWith("-probes.md"))
+			.map((f) => join(dir, f))
+			.filter((f) => f !== journal && journalHasLessons(f));
+		if (candidates.length === 0) return journal;
+		candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+		return candidates[0];
+	} catch {
+		return journal;
+	}
+}
+
 /**
  * The LAST lesson's node title in the journal — the durable fallback for
  * the current node when no in-memory state exists (fresh process, resume).
@@ -428,15 +475,16 @@ export async function openNodeView(
 ): Promise<{ mode: "node" | "overview" | "journal" | "none"; message: string }> {
 	const journal = resolveJournalPath(ctx);
 	const key = focusKey(ctx);
+	const arc = arcJournal(journal);
 	const node =
-		(journal ? currentNode.get(journal) : undefined) ?? lastLessonFromJournal(journal);
+		(journal ? currentNode.get(journal) : undefined) ?? lastLessonFromJournal(arc);
 
 	const attempt = (): { mode: "node" | "overview" | "none"; message: string } => {
 		if (node) {
 			const buffer = focusNodeBuffer(key, node);
 			if (buffer.ok) return { mode: "node", message: buffer.message };
-			// Buffer gone: rebuild it from the journal's lesson entry.
-			const body = lessonBodyFromJournal(journal, node);
+			// Buffer gone: rebuild it from the arc journal's lesson entry.
+			const body = lessonBodyFromJournal(arc, node);
 			if (body) {
 				const rebuilt = showNodeBuffer(key, node, node, body);
 				if (rebuilt.ok) {
@@ -445,7 +493,7 @@ export async function openNodeView(
 			}
 		}
 		const title = `${key} — lesson arc overview`;
-		const overview = showOverviewBuffer(key, title, buildOverview(journal));
+		const overview = showOverviewBuffer(key, title, buildOverview(arc));
 		if (overview.ok) {
 			return { mode: "overview", message: `${overview.message} — nodes, verdicts, current position` };
 		}

@@ -645,6 +645,13 @@ journal, probe log, and overview buffer rebuild the same position from
 md-log's durable records — `h` shows the learner where the arc stands. Don't
 re-teach what's already landed.
 
+**Re-present the active node on resume.** The previous session's node buffers
+died with its editor pane. Before you quiz or verify any node after a
+resume, deliver that node's content again with one `lesson` call (from the
+handout or the prior journal entry) — the node buffer must exist for the
+question that follows. Verification of a node the learner cannot see is a
+test of memory, not understanding.
+
 ## Judgment calls
 
 Left to the teacher's discretion in-session, pending refinement from real

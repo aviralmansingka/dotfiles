@@ -384,6 +384,35 @@ noSessionHandlers.get("tool_execution_start")(
 	noCtx,
 ); // must not throw
 
+// ── cross-session continuity ───────────────────────────────────────
+// A fresh session's journal has no lessons; the overview must fall back to
+// the most recent lesson-bearing journal in the same session directory, so
+// a restarted or resumed professor still sees the arc.
+const emptyJournal = journalPathFor(join(dir, "sub", "session-fresh.jsonl"));
+writeFileSync(emptyJournal, "# Lesson journal\n\n");
+const resumedOverview = buildOverview(emptyJournal);
+// session-def.md is the most recently written lesson-bearing journal in
+// the directory at this point, so the arc position is its last lesson.
+assert.ok(
+	resumedOverview.includes("Current position: New session"),
+	"a fresh session's overview falls back to the arc journal",
+);
+assert.ok(
+	resumedOverview.includes("Node progress:"),
+	"the fallback overview carries the arc's node list",
+);
+// The fallback prefers the NEWEST lesson-bearing journal in the directory.
+const newerArc = journalPathFor(join(dir, "sub", "session-newer.jsonl"));
+writeFileSync(
+	newerArc,
+	"# Lesson journal\n\n---\n\n## Later arc node\n\n_Lesson · 2026-10-09 12:00 UTC_\n\nbody\n",
+);
+const newestOverview = buildOverview(emptyJournal);
+assert.ok(
+	newestOverview.includes("Current position: Later arc node"),
+	"continuity prefers the most recent lesson-bearing journal",
+);
+
 rmSync(dir, { recursive: true, force: true });
 rmSync(tempRoot, { recursive: true, force: true });
 
