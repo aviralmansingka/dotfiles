@@ -14,6 +14,8 @@
  */
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const GIT_TIMEOUT_MS = 30_000;
@@ -28,6 +30,12 @@ function git(cwd: string, args: string[]): string {
 		timeout: GIT_TIMEOUT_MS,
 		stdio: ["pipe", "pipe", "pipe"],
 	}).trim();
+}
+
+function localRemotePath(cwd: string, url: string): string | null {
+	if (url.startsWith("file://")) return fileURLToPath(url);
+	if (/^[^/]+:/.test(url)) return null;
+	return resolve(cwd, url);
 }
 
 export interface WorktreeEntry {
@@ -153,6 +161,32 @@ export function collectCleanupFacts(
 	}
 	const remote = upstreamRef ? remoteValue : null;
 	const remoteBranch = upstreamRef ? remoteRef.slice("refs/heads/".length) : null;
+	if (remoteBranch && PROTECTED_BRANCHES.has(remoteBranch)) {
+		return { ok: false, reason: `Refusing to delete protected remote branch "${remoteBranch}".` };
+	}
+	if (remote) {
+		try {
+			const remoteUrls = runGit(worktreePath, ["remote", "get-url", "--push", "--all", remote])
+				.split("\n")
+				.filter(Boolean);
+			if (remoteUrls.length === 0) throw new Error("missing push URL");
+			const localCommonDir = realpathSync(
+				runGit(worktreePath, ["rev-parse", "--path-format=absolute", "--git-common-dir"]),
+			);
+			for (const remoteUrl of remoteUrls) {
+				const remotePath = localRemotePath(worktreePath, remoteUrl);
+				if (!remotePath) continue;
+				const remoteCommonDir = realpathSync(
+					runGit(remotePath, ["rev-parse", "--path-format=absolute", "--git-common-dir"]),
+				);
+				if (localCommonDir === remoteCommonDir) {
+					return { ok: false, reason: "The upstream remote points to this repository; refusing to clean up." };
+				}
+			}
+		} catch {
+			return { ok: false, reason: "Could not validate the upstream remote; refusing to clean up." };
+		}
+	}
 
 	let status: string;
 	try {

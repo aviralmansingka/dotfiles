@@ -207,6 +207,7 @@ try {
 			mkdirSync(remoteRepo);
 			run(remoteRepo, ["init", "-q", "--bare"]);
 			run(repo, ["remote", "add", "team/origin", remoteRepo]);
+			run(repo, ["push", "-q", "team/origin", "main:main"]);
 			run(wt, ["push", "-q", "-u", "team/origin", "HEAD:release"]);
 			const upstreamResult = ext.collectCleanupFacts(wt);
 			assert.equal(upstreamResult.ok, true);
@@ -219,6 +220,27 @@ try {
 				return run(cwd, args);
 			});
 			assert.equal(revListFailure.ok, false);
+
+			run(wt, ["branch", "--set-upstream-to", "team/origin/main", "feature-x"]);
+			const protectedRemoteResult = ext.collectCleanupFacts(wt);
+			assert.equal(protectedRemoteResult.ok, false);
+			assert.match(protectedRemoteResult.reason, /protected remote branch/);
+
+			run(repo, ["remote", "add", "self", "."]);
+			run(repo, ["update-ref", "refs/remotes/self/safe", "HEAD"]);
+			run(wt, ["config", "branch.feature-x.remote", "self"]);
+			run(wt, ["config", "branch.feature-x.merge", "refs/heads/safe"]);
+			const localRemoteResult = ext.collectCleanupFacts(wt);
+			assert.equal(localRemoteResult.ok, false);
+			assert.match(localRemoteResult.reason, /points to this repository/);
+
+			run(wt, ["branch", "--set-upstream-to", "team/origin/release", "feature-x"]);
+			run(wt, ["config", "--add", "remote.team/origin.pushurl", remoteRepo]);
+			run(wt, ["config", "--add", "remote.team/origin.pushurl", "."]);
+			const mixedRemoteResult = ext.collectCleanupFacts(wt);
+			assert.equal(mixedRemoteResult.ok, false);
+			assert.match(mixedRemoteResult.reason, /points to this repository/);
+			run(wt, ["config", "--unset-all", "remote.team/origin.pushurl"]);
 
 			// Dirty state counts.
 			writeFileSync(join(wt, "f.txt"), "changed");
