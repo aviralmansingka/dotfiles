@@ -1042,6 +1042,54 @@ branch_sync:
     context("edit-relative", {}, { cwd: gitRoot }),
   ));
   assert.match(relative, /◇ edit src\/main\.rs · 1 edit/, "an already-relative path stays unchanged");
+
+  // Harness-requested titles: the comment title from the original tool
+  // message stays primary; a live title-less row backfills exactly one
+  // model request at render time, and tool_result persists the answer
+  // into the stored details as intentTitle.
+  const titleRequests = [];
+  const sessionWith = (id, entries = [], extra = {}) => handlers.get("session_start")({}, {
+    sessionManager: { getSessionId: () => id, getEntries: () => entries },
+    ...extra,
+  });
+  const resultHandler = handlers.get("tool_result");
+  assert.ok(resultHandler, "the extension registers a tool_result handler");
+  sessionWith("model-session", [], {
+    model: { id: "stub-model" }, signal: undefined,
+    modelRegistry: { complete: async (model, request) => {
+      titleRequests.push({ model: model.id, text: request.messages[0].content[0].text });
+      return { content: [{ type: "text", text: "  count files by type across the tree  " }] };
+    } },
+  });
+  const genCtx = context("gen-1", { command: "find . -type f | sed 's/.*\.//' | sort | uniq -c" }, { executionStarted: false });
+  render(bash.renderCall(genCtx.args, theme, genCtx));
+  assert.equal(titleRequests.length, 1, "a live title-less row backfills exactly one title request");
+  assert.match(titleRequests[0].text, /find \. -type f/, "the request carries the command source");
+  await new Promise((resolve) => setImmediate(resolve));
+  const genRow = render(bash.renderCall(genCtx.args, theme, genCtx));
+  assert.match(genRow, /^ ◇ bash — count files by type across the tree$/m, "the requested title renders as the row title");
+  render(bash.renderCall(genCtx.args, theme, genCtx));
+  assert.equal(titleRequests.length, 1, "re-renders never re-request");
+  const genCommentCtx = context("gen-comment", { command: "# list files changed on this branch against main\ngit diff --name-only main...HEAD" }, { executionStarted: false });
+  render(bash.renderCall(genCommentCtx.args, theme, genCommentCtx));
+  assert.equal(titleRequests.length, 1, "a call with its own comment title never requests");
+  const streamingCtx = context("gen-stream", { command: "du -sh ." }, { executionStarted: false, argsComplete: false });
+  render(bash.renderCall(streamingCtx.args, theme, streamingCtx));
+  assert.equal(titleRequests.length, 1, "a row whose args are still streaming waits");
+  const injected = resultHandler({ toolName: "bash", toolCallId: "gen-1", details: { exitCode: 0 } });
+  assert.deepEqual(injected, { details: { exitCode: 0, intentTitle: "count files by type across the tree" } }, "tool_result persists the requested title into details");
+  assert.equal(resultHandler({ toolName: "bash", toolCallId: "other", details: {} }), undefined, "calls without a requested title inject nothing");
+  sessionWith("restored-session", [{ message: { role: "assistant", content: [{ type: "toolCall", id: "gen-old" }] } }]);
+  const oldCtx = context("gen-old", { command: "wc -l *.md" }, { executionStarted: false });
+  render(bash.renderCall(oldCtx.args, theme, oldCtx));
+  assert.equal(titleRequests.length, 1, "restored rows keep their dim preview and never backfill");
+  assert.match(render(bash.renderCall(oldCtx.args, theme, oldCtx)), /\$ wc -l \*\.md/, "the restored title-less row keeps its one-line preview");
+  const genRestoredCtx = context("gen-restored", {});
+  render(bash.renderCall({ command: "du -sh ." }, theme, genRestoredCtx));
+  render(bash.renderResult(result("42M .", { exitCode: 0, intentTitle: "measure the working tree size" }), options, theme, genRestoredCtx));
+  const restoredRow = render(bash.renderCall({ command: "du -sh ." }, theme, genRestoredCtx));
+  assert.match(restoredRow, /— measure the working tree size/, "a stored intentTitle restores the title on reload without a request");
+  assert.equal(titleRequests.length, 1, "restoring never fires a new request");
   shutdown();
   assert.equal(bus.size, 0, "shutdown releases bus subscription");
   console.log("tool-call-renderer-public tests passed");
