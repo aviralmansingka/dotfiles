@@ -15,7 +15,7 @@ const jitiPath = [
 if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
 
 const { createJiti } = require(jitiPath);
-const tempRoot = mkdtempSync(join(tmpdir(), "thinking-marker-test-"));
+const tempRoot = mkdtempSync(join(tmpdir(), "thinking-blank-test-"));
 const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
 writeFileSync(stubAgent, "exports.defineTool = (tool) => tool;\n");
 
@@ -25,12 +25,12 @@ const jiti = createJiti(import.meta.url, {
 	},
 });
 
-const { default: registerMarker, HIDDEN_THINKING_GLYPH } = jiti("./thinking-marker.ts");
+const { default: registerBlank, HIDDEN_THINKING_LABEL } = jiti("./thinking-blank.ts");
 
-// The glyph must be one visible character with no padding. Pi's renderer adds
-// the thinkingText color and italic style; neither belongs in the label string.
-assert.equal(HIDDEN_THINKING_GLYPH, "…");
-assert.equal([...HIDDEN_THINKING_GLYPH].length, 1);
+// The label must be the empty string exactly: an empty string survives the
+// `label ?? default` reset inside setHiddenThinkingLabel, so the hidden row
+// renders no text at all. Null or undefined would fall back to "Thinking...".
+assert.equal(HIDDEN_THINKING_LABEL, "");
 
 const handlers = {};
 const ui = {
@@ -39,7 +39,7 @@ const ui = {
 	},
 	label: undefined,
 };
-registerMarker({
+registerBlank({
 	on(event, handler) {
 		handlers[event] = handler;
 	},
@@ -52,7 +52,7 @@ assert.equal(typeof handlers.session_start, "function");
 // The headless runner stubs setHiddenThinkingLabel as a no-op, so calling
 // unconditionally is safe in every mode.
 handlers.session_start({ type: "session_start", reason: "startup" }, { ui });
-assert.equal(ui.label, HIDDEN_THINKING_GLYPH);
+assert.equal(ui.label, "");
 
 rmSync(tempRoot, { recursive: true, force: true });
-console.log("thinking-marker tests passed");
+console.log("thinking-blank tests passed");

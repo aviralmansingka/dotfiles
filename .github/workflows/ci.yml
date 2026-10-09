@@ -101,7 +101,7 @@ jobs:
           node pi/.pi/agent/extensions/quiz-context-files.test.mjs
           node pi/.pi/agent/extensions/quiz-result.test.mjs
           node pi/.pi/agent/extensions/run-command.test.mjs
-          node pi/.pi/agent/extensions/thinking-marker.test.mjs
+          node pi/.pi/agent/extensions/thinking-blank.test.mjs
           node pi/.pi/agent/extensions/tool-call-renderer-public.test.mjs
           node pi/.pi/agent/extensions/tuicr.test.mjs
           node pi/.pi/agent/extensions/usage.test.mjs

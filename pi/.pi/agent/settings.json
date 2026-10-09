@@ -6,7 +6,7 @@
     "+extensions/cleanup.ts",
     "+extensions/python.ts",
     "+extensions/rounded-bar-footer.ts",
-    "+extensions/thinking-marker.ts",
+    "+extensions/thinking-blank.ts",
     "+extensions/tool-call-renderer-public.ts"
   ],
   "skills": [
