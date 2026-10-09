@@ -551,7 +551,7 @@ async function paneRunWithGateApi(fakeApi, roundTrip = false) {
 		registerTool() {},
 		registerCommand(_name, value) { command = value; },
 		registerMessageRenderer() {},
-		events: { emit() {} },
+		events: { emit() {}, on() { return () => {}; } },
 		exec() { return Promise.resolve({ code: 0, stdout: "current_branch: main\nruns_on_current_branch: 0" }); },
 		sendMessage() {},
 	});
