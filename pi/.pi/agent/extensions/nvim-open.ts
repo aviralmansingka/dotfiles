@@ -170,8 +170,15 @@ function launchEditor(cwd: string, files: string[]): string | null {
 	// --listen values as host:service addresses — sanitize to a plain path.
 	const safePaneId = newPaneId.replace(/[^A-Za-z0-9._-]/g, "-");
 	const socketPath = join(tmpdir(), `pi-nvim-${safePaneId}.sock`);
-	const cmd = ["nvim", "--listen", socketPath, ...files];
-	if (!herdrOk(["pane", "run", newPaneId, ...cmd])) {
+	// The pane dies with nvim (tuicr behavior): when nvim exits, the pane's
+	// shell closes the pane itself — no dead prompt left behind. `herdr pane
+	// run` injects the string into the pane's interactive shell (zsh/fish
+	// safe: bash -c with a single single-quoted argument, quotes escaped).
+	const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
+	const nvimLine = ["nvim", "--listen", socketPath, ...files.map(quote)].join(" ");
+	const inner = `${nvimLine}; herdr pane close ${newPaneId}`;
+	const paneCommand = `bash -c '${inner.replace(/'/g, "'\\''")}'`;
+	if (!herdrOk(["pane", "run", newPaneId, paneCommand])) {
 		return null;
 	}
 	return newPaneId;
