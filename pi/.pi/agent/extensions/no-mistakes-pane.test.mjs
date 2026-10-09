@@ -599,12 +599,12 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			theme,
 		).render(200);
 		assert.match(gateLines.join("\n"), /no-mistakes · run/);
-		assert.match(gateLines.join("\n"), /gate: review · 2 findings/);
-		assert.match(gateLines.join("\n"), /r1 error · ask-user · pi\/no-mistakes-pane\.ts — Null value reaches renderer/);
-		assert.match(gateLines.join("\n"), /r2 warning · auto-fix · pi\/status\.ts — Missing cleanup/);
+		assert.match(gateLines.join("\n"), /gate: review · !1 ▲1 \?1/);
+		assert.equal(gateLines.filter((line) => line.trim()).length, 1, "the collapsed row is a single line");
 		assert.ok(!gateLines.some((line) => line.includes("findings[2]{")), "no raw TOON schema renders");
 		assert.ok(!gateLines.some((line) => line.includes("parked at this gate")), "agent guidance prose never renders");
-		assert.match(gateLines.join("\n"), /Ctrl\+O full report/);
+		assert.ok(!gateLines.some((line) => line.includes("Null value reaches")), "finding details stay behind Ctrl+O");
+		assert.match(gateLines.join("\n"), /Ctrl\+O/);
 		// Expanded: the framed report with finding rows, severity, and help.
 		const gateExpanded = renderer.value(
 			{ content: gateBody, details: gateDetails },
@@ -716,7 +716,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			{ expanded: false },
 			theme,
 		).render(200);
-		assert.match(hiddenLines.join("\n"), /▹ no-mistakes · run — gate: review · 2 findings/);
+		assert.match(hiddenLines.join("\n"), /▹ no-mistakes · run — gate: review · !1 ▲1 \?1/);
 		assert.equal(hiddenLines.filter((line) => line.trim()).length, 1, "the hidden row is a single ghost line");
 		toggleRows(false);
 		const restoredLines = renderer.value(
@@ -724,7 +724,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			{ expanded: false },
 			theme,
 		).render(200);
-		assert.match(restoredLines.join("\n"), /Ctrl\+O full report/, "toggling back restores the row");
+		assert.match(restoredLines.join("\n"), /Ctrl\+O/, "toggling back restores the row");
 
 		handlers.get("session_shutdown")();
 	} finally {
