@@ -1,12 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { resolve } from "node:path";
 import { Editor, Key, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
-import {
-	joinHints,
-	NAVIGATION_HINT,
-	numberShortcutHint,
-	numberShortcutIndex,
-} from "./user-input/option-shortcuts";
+import { NUMBER_SHORTCUT_LIMIT, numberShortcutIndex } from "./user-input/option-shortcuts";
 import {
 	addWrapped,
 	createEditorTheme,
@@ -387,6 +382,21 @@ function askGateDecision(
 				}
 				top.push("");
 
+				// The decide phase must show what it can select: the options
+				// themselves, numbered and focusable, above the findings.
+				if (phase === "decide") {
+					for (const [index, option] of decideOptions.entries()) {
+						const focused = index === optionIndex;
+						const marker = focused ? theme.fg("accent", "> ") : "  ";
+						const num = theme.fg("dim", `${index + 1}.`);
+						const label = focused
+							? theme.fg("text", OPTION_LABEL[option])
+							: theme.fg("muted", OPTION_LABEL[option]);
+						add(`${marker}${num} ${label}`);
+					}
+					top.push("");
+				}
+
 				const showCheckboxes = phase === "select" || phase === "instructions";
 				for (const [index, row] of rows.entries()) {
 					if (row.kind === "submit") {
@@ -419,7 +429,7 @@ function askGateDecision(
 
 				if (phase === "instructions") {
 					top.push("");
-					add(theme.fg("muted", " Optional guidance for the fix round — Enter submits (empty = none)"));
+					add(theme.fg("muted", " Optional fix guidance — Enter submits · Esc back · empty = none"));
 					for (const [index, line] of editorInnerLines(editor, Math.max(1, bw - 2)).entries()) {
 						bottom.push(`${index === 0 ? "› " : "  "}${line}`);
 					}
@@ -427,18 +437,37 @@ function askGateDecision(
 					top.push("");
 					if (phase === "select" && selected.size === 0) {
 						add(theme.fg("warning", " Select at least one finding before submitting."));
+						top.push("");
 					}
-					const hints = joinHints(
-						NAVIGATION_HINT,
-						numberShortcutHint(
-							phase === "decide" ? decideOptions.length : actionable.length,
-							phase === "decide" ? "select" : "toggle",
-						),
-						...(phase === "decide"
-							? ["Enter select", "y yolo this run"]
-							: ["Space toggle", "Enter toggle/submit", "y yolo this run", "Esc back"]),
+					// Shortcut legend: every key the panel accepts, labeled and
+					// aligned, so the decision surface is always discoverable.
+					const last = Math.min(
+						phase === "decide" ? decideOptions.length : actionable.length,
+						NUMBER_SHORTCUT_LIMIT,
 					);
-					add(theme.fg("dim", ` ${hints}`));
+					const pairs: Array<[string, string]> = [["↑↓/jk", "move"]];
+					if (last > 0) {
+						pairs.push([
+							last === 1 ? "1" : `1-${last}`,
+							phase === "decide" ? "select option" : "toggle finding",
+						]);
+					}
+					if (phase === "decide") {
+						pairs.push(["Enter", "select option"], ["y", "yolo this run"]);
+					} else {
+						pairs.push(
+							["Space", "toggle finding"],
+							["Enter", "toggle · submit"],
+							["Esc", "back"],
+							["y", "yolo this run"],
+						);
+					}
+					for (let i = 0; i < pairs.length; i += 2) {
+						const cells = pairs.slice(i, i + 2).map(([key, action]) =>
+							`${theme.fg("accent", key.padEnd(7))}${theme.fg("dim", action)}`);
+						const prefix = i === 0 ? ` ${theme.fg("muted", "keys")}  ` : " ".repeat(7);
+						add(`${prefix}${cells.join("   ")}`);
+					}
 					bottom.push(theme.fg("accent", "› gate decision"));
 				}
 
