@@ -22,7 +22,37 @@ const jitiPath = [
 ].find((path) => path && existsSync(path));
 if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
 const { createJiti } = require(jitiPath);
-const jiti = createJiti(import.meta.url);
+// CI installs only jiti and typebox, so @earendil-works/pi-tui (used by the
+// pane's wrapping) must be stubbed through a jiti alias like the sibling
+// extension tests do, never resolved from a machine-local install.
+const stubRoot = mkdtempSync(join(tmpdir(), "nm-pane-test-"));
+const stubTui = join(stubRoot, "pi-tui.cjs");
+const NL = String.fromCharCode(10);
+writeFileSync(stubTui, [
+	"const NL = String.fromCharCode(10);",
+	"exports.visibleWidth = (text) => [...String(text)].length;",
+	"exports.wrapTextWithAnsi = (text, width) => {",
+	"	const maxWidth = Math.max(1, width);",
+	"	const out = [];",
+	"	for (const paragraph of String(text).split(NL)) {",
+	"		let line = \"\";",
+	"		for (let word of paragraph.split(\" \")) {",
+	"			while (word.length > maxWidth) {",
+	"				if (line) { out.push(line); line = \"\"; }",
+	"				out.push(word.slice(0, maxWidth));",
+	"				word = word.slice(maxWidth);",
+	"			}",
+	"			if (line === \"\") line = word;",
+	"			else if ((line + \" \" + word).length <= maxWidth) line += \" \" + word;",
+	"			else { out.push(line); line = word; }",
+	"		}",
+	"		out.push(line);",
+	"	}",
+	"	return out;",
+	"};",
+].join(NL) + NL);
+const tuiAlias = { "@earendil-works/pi-tui": stubTui };
+const jiti = createJiti(import.meta.url, { alias: tuiAlias });
 const { extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
 const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
 const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
@@ -197,7 +227,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			publishedRunId: "00000000000000000000000001",
 		};
 		globalThis.clearInterval = (interval) => { clearedInterval = interval; };
-		createJiti(import.meta.url, { moduleCache: false })("./no-mistakes-pane.ts");
+		createJiti(import.meta.url, { moduleCache: false, alias: tuiAlias })("./no-mistakes-pane.ts");
 		assert.equal(clearedInterval, staleInterval, "the previous watch timer is cleared");
 		assert.equal(aborted, true, "the previous status controller is aborted");
 		assert.equal(globalThis[intervalKey], undefined);
