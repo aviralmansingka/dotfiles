@@ -1,9 +1,11 @@
--- Mermaid → ASCII/Unicode rendering via the `mmdflux` binary.
+-- Mermaid → ASCII/Unicode rendering: the `mmdflux` binary (float) and the
+-- `grok-mermaid` engine (inline auto-render).
 --
 -- Reuses the treesitter fenced-code-block walk from helpers/markdown_ansi.lua
 -- (content_node / language / visit pattern) but matches `mermaid` fences and
--- pipes the fence body to `mmdflux` (reads mermaid from stdin). The v1 surface
--- is an on-demand Snacks float bound to `<leader>mm` (see plugins/markdown.lua).
+-- pipes the fence body to `mmdflux` (reads mermaid from stdin). Surfaces: the
+-- on-demand Snacks float bound to `<leader>mm` (see plugins/markdown.lua) and
+-- the inline auto-render below.
 --
 -- Why a `:terminal` float instead of parsing ANSI into nvim highlights:
 -- mmdflux emits ANSI color for `classDef`/`linkStyle` (SGR, 256-color, possibly
@@ -12,9 +14,8 @@
 -- would mean coupling to its mark-generation shape for a one-off float. The
 -- terminal is the cleaner, higher-fidelity choice for the float surface.
 --
--- The deferred image upgrade (Herdr `kitty_graphics=true` + Snacks Image +
--- mmdc + ImageMagick) is documented in docs/neovim-mermaid-render.md and is
--- out of scope here.
+-- The image path (Snacks Image + mmdc + ImageMagick) was prototyped and
+-- rejected; see docs/neovim-mermaid-render.md.
 
 local M = {}
 
@@ -117,10 +118,9 @@ function M.render_float()
   -- output up to the editor width, and `wrap = false` lets the user scroll
   -- left/right (zl/zh) for diagrams wider than the window instead of wrapping
   -- (see docs/neovim-mermaid-render.md).
-  local result = vim.system(
-    { "mmdflux" },
-    { stdin = body, text = true, env = { TERM = vim.env.TERM or "xterm-256color" } }
-  ):wait()
+  local result = vim
+    .system({ "mmdflux" }, { stdin = body, text = true, env = { TERM = vim.env.TERM or "xterm-256color" } })
+    :wait()
   if result.code ~= 0 then
     vim.notify("mmdflux failed (exit " .. result.code .. "): " .. (result.stderr or ""), vim.log.levels.ERROR)
     return
@@ -210,11 +210,11 @@ local grok_dist
 -- Semantic class -> highlight group. Gruvbox hexes matching
 -- ghostty/.config/ghostty/config so the art matches the terminal palette.
 local CLS_HL = {
-  border = "MermaidAsciiBorder",     -- gray: box frames, dim like pi-agent
-  text = "MermaidAsciiText",         -- fg: node/participant labels
-  edge = "MermaidAsciiEdge",         -- aqua: connectors and arrowheads
+  border = "MermaidAsciiBorder", -- gray: box frames, dim like pi-agent
+  text = "MermaidAsciiText", -- fg: node/participant labels
+  edge = "MermaidAsciiEdge", -- aqua: connectors and arrowheads
   edgeLabel = "MermaidAsciiEdgeLabel", -- yellow: text sitting on an edge
-  title = "MermaidAsciiTitle",       -- pink: source-box headers
+  title = "MermaidAsciiTitle", -- pink: source-box headers
 }
 local CLS_FG = {
   border = "#7c6f64",

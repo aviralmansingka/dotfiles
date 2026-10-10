@@ -4,7 +4,7 @@ Mermaid ```` ```mermaid ```` fences render as **ASCII/Unicode art** inside
 Neovim — no headless Chromium, no ImageMagick. Two surfaces:
 
 1. **Inline auto-render** (default): every fence in a markdown buffer renders
-   automatically as Unicode box-drawing art in virtual lines below the fence,
+   automatically as Unicode box-drawing art in virtual lines above the fence,
    via the [`grok-mermaid`](https://www.npmjs.com/package/grok-mermaid) npm
    package — the same engine the pi agent TUI uses. The engine returns spans
    tagged with semantic classes (`border`/`text`/`edge`/`edgeLabel`/`title`),
@@ -32,7 +32,9 @@ see [Image path: tried and rejected](#image-path-tried-and-rejected) below.
 - **Source hidden, revealed on cursor:** each fence is one `foldmethod=expr`
   fold (fence lines included) shown as a single dim `▸ mermaid source (N
   lines) — cursor here to edit` line. The art anchors to the line **above**
-  the fence — virt_lines on a folded line do not render (verified with
+  the fence (below the fence when it starts the buffer or the line above sits
+  inside another fence's fold; inside the fence as a last resort) — virt_lines
+  on a folded line do not render (verified with
   `nvim_win_text_height`), so anchoring outside the fold keeps the art
   visible while closed. `CursorMoved`/`CursorMovedI` open the fold while the
   cursor is inside the fence and close it when the cursor leaves. Buffer-local
