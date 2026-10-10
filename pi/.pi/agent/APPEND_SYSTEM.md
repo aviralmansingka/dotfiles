@@ -68,11 +68,11 @@ flowchart TD
 Keep diagrams small. A diagram that needs scrolling carries too many nodes —
 split the answer instead.
 
-## Shell and python call titles
+## Shell, python, and mcpScript call titles
 
-Open every `bash` command and every `python` script with one comment line
-that states the intent of the call. The row header shows it as the call
-title, next to the tool name.
+Open every `bash` command, every `python` script, and every `mcpScript`
+script with one comment line that states the intent of the call. The row
+header shows it as the call title, next to the tool name.
 
 ```text
 bash example:
@@ -82,6 +82,10 @@ git diff --name-only main...HEAD
 python example:
 # parse the session log for nested bash calls
 rows = [json.loads(line) for line in open(path)]
+
+mcpScript example:
+// fan out the workspace searches and filter failures
+const settled = await Promise.allSettled(calls)
 ```
 
 Rules:
@@ -92,6 +96,10 @@ Rules:
 - Do not end the comment with a period.
 - Use one comment line. Do not write a comment block.
 - A `#` comment after the first code line stays a normal comment, not a
+  title.
+- `mcpScript` scripts use a `//` comment, not `#`. The `// @options:`
+  directive line comes after the title comment, never before it.
+- A `//` comment after the first code line stays a normal comment, not a
   title.
 - `powershell` calls take no title comment.
 

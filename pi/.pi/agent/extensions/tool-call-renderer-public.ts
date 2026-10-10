@@ -901,6 +901,73 @@ function liftLeadingComment(source: string): { title: string; rest: string } | u
   return { title, rest: lines.slice(index).join("\n") };
 }
 
+/**
+ * Intent-title lift for mcpScript rows: the model opens each script with
+ * one `// <intent>` comment line (the APPEND_SYSTEM.md rule) and the row
+ * header carries it as `— <title>` beside the tool name, mirroring the
+ * bash/python lift. A `// @options:` directive line is skipped, never
+ * lifted, so both the rule-following title-first order and the legacy
+ * @options-first order title correctly. The title is the first other `//`
+ * comment line before any code; the body starts at the first line that is
+ * neither comment nor blank.
+ */
+function liftLeadingJsComment(source: string): { title: string; rest: string } | undefined {
+  const lines = source.split("\n");
+  let index = 0;
+  let title = "";
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.trim()) {
+      index++;
+      continue;
+    }
+    if (!line.trimStart().startsWith("//")) break;
+    const text = clean(line.trimStart().replace(/^\/\/\s*/, ""));
+    if (text && !text.startsWith("@options") && !title) title = text;
+    index++;
+  }
+  if (!title) return undefined;
+  return { title, rest: lines.slice(index).join("\n") };
+}
+
+/**
+ * mcpScript call rows borrow the python leaf semantics: the first
+ * non-blank code line is the executable `$` leaf, every other line rides
+ * the `│` spine. The whole script highlights through the javascript
+ * grammar in ONE call (the same grammar pi's own codemode renderer uses),
+ * so template literals and blocks keep their context line to line. A
+ * leading `//` comment block lifts into the row title exactly like bash
+ * and python. Cached beside the bash and python rows: same per-frame
+ * render pressure, same changed-source-or-theme rule.
+ */
+function jsBodies(theme: Theme, toolCallId: string, code: string): CommandRender {
+  const themeName = theme.name ?? "";
+  const cached = highlightedCommands.get(toolCallId);
+  if (cached && cached.source === code && cached.theme === themeName) return { rows: cached.rows, title: cached.title };
+  ensureHighlightTheme(theme);
+  const lift = liftLeadingJsComment(code);
+  const lines = (lift ? lift.rest : code).replace(/\n+$/, "").split("\n");
+  const leaf = lines.findIndex((line) => line.trim());
+  if (leaf === -1) {
+    highlightedCommands.set(toolCallId, { source: code, theme: themeName, rows: [], title: lift?.title });
+    return { rows: [], title: lift?.title };
+  }
+  let highlighted = lines;
+  try {
+    const styled = highlightCode(lines.join("\n"), "javascript");
+    if (styled.length === lines.length) highlighted = styled;
+  } catch {
+    // Highlighting needs pi's theme runtime; plain lines still render.
+  }
+  const rows = lines.map((line, index) => ({
+    body: highlighted[index] ?? line,
+    command: index === leaf,
+    op: index === leaf ? "$" : "",
+  }));
+  highlightedCommands.set(toolCallId, { source: code, theme: themeName, rows, title: lift?.title });
+  return { rows, title: lift?.title };
+}
+
 function commandBodies(theme: Theme, toolCallId: string, tool: string, command: string): CommandRender {
   const themeName = theme.name ?? "";
   const cached = highlightedCommands.get(toolCallId);
@@ -1716,15 +1783,18 @@ export default function (pi: ExtensionAPI) {
             ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
             ...(!row.leafResult ? messageLeaf(theme, asRecord(args), false, width) : []),
           ];
-          if (toolName === "bash" || toolName === "powershell" || toolName === "python") {
+          if (OUTPUT_TOOLS.has(toolName) || toolName === "mcpScript") {
+            const source = toolName === "python" || toolName === "mcpScript"
+              ? asString(asRecord(args).code) : asString(asRecord(args).command);
             const { rows: commands, title: lifted } = toolName === "python"
-              ? pythonBodies(theme, context.toolCallId, asString(asRecord(args).code))
-              : commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
+              ? pythonBodies(theme, context.toolCallId, source)
+              : toolName === "mcpScript"
+                ? jsBodies(theme, context.toolCallId, source)
+                : commandBodies(theme, context.toolCallId, toolName, source);
             // A missing comment title falls back to the harness-requested one.
             const title = lifted ?? generatedTitles.get(context.toolCallId);
             if (!title && context.argsComplete !== false && !row.restored) {
-              requestTitle(context.toolCallId, toolName, toolName === "python"
-                ? asString(asRecord(args).code) : asString(asRecord(args).command));
+              requestTitle(context.toolCallId, toolName, source);
             }
             // The intent title is the row's primary content (Ctrl+E hides
             // the body), so it renders muted — stronger than dim, a step
@@ -1735,7 +1805,6 @@ export default function (pi: ExtensionAPI) {
               // row in collapsed AND expanded views; a title-less call keeps
               // a dim one-line preview so the row stays identifiable.
               if (title) return [` ${glyph} ${name}${label}${theme.fg("dim", elapsed)}`];
-              const source = toolName === "python" ? asString(asRecord(args).code) : asString(asRecord(args).command);
               const room = width - clean(toolName).length - 12;
               return [` ${glyph} ${name} ${theme.fg("dim", `$ ${shortPedagogy(source, room)}`)}${theme.fg("dim", elapsed)}`];
             }

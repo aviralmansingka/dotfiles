@@ -1,6 +1,7 @@
-# Pi tool-call summary titles (bash + python)
+# Pi tool-call summary titles (bash + python + mcpScript)
 
-Status: implemented for bash and python. Branch `feat/bash-summary`,
+Status: implemented for bash, python, and mcpScript. Branch `feat/bash-summary`
+(mcpScript lift: `feat-mcpscript-rendering`),
 rebased on `main` `1846f04`. Rendering lives in
 `pi/.pi/agent/extensions/tool-call-renderer-public.ts`; the prompt rule
 lives in `pi/.pi/agent/APPEND_SYSTEM.md`. Powershell is out of scope:
@@ -18,13 +19,17 @@ proposed  ◇ bash — find renderCall hooks in core tool sources
           └─ $ grep -rn "renderCall" dist/core/tools | head -5
 proposed  ◇ python — parse session log for nested bash calls
           └─ $ rows = [json.loads(l) for l in open(...)]
+proposed  ◇ mcpScript — fan out workspace searches and filter failures
+          └─ $ const settled = await Promise.allSettled(calls)
 ```
 
-## Scope: bash and python
+## Scope: bash, python, and mcpScript
 
 Powershell stays out: session history shows zero powershell calls across
 all sessions (32 distinct tools used, ~29,900 bash calls), and
-`commandBodies` gates the lift on `tool === "bash"`.
+`commandBodies` gates the lift on `tool === "bash"`. mcpScript joins via
+`jsBodies`: its `code` arg is JavaScript source, so the same comment-lift
+model applies with `//` instead of `#`.
 
 ## Title source — decision
 
@@ -42,7 +47,9 @@ Why it wins:
 
 Fallback (implemented): the comment title from the original tool message
 stays primary; the harness backfills only when a LIVE row renders without
-one. The render path (argsComplete, not restored) fires exactly one
+one — for bash, python, and mcpScript rows alike (`requestTitle` is
+tool-agnostic; the mcpScript branch just passes `args.code`). The render
+path (argsComplete, not restored) fires exactly one
 `ctx.modelRegistry.complete()` request at the session model — system prompt
 demands ONLY a verb-first 10–15 word title — deduped per toolCallId with a
 pending set. The answer lands in `generatedTitles`, invalidates the row,
@@ -62,6 +69,12 @@ never.
   title. First non-comment line becomes the `$` leaf, as today.
 - `pythonBodies(theme, toolCallId, code)`: lift leading `#` comment lines the
   same way; first code line stays the leaf.
+- `jsBodies(theme, toolCallId, code)`: mcpScript mirror of `pythonBodies` —
+  `liftLeadingJsComment` lifts the first `//` comment before any code and
+  skips `// @options:` directive lines (both title-first and
+  @options-first orders work); first code line is the `$` leaf, the rest
+  ride the `│` spine, highlighted with the `javascript` grammar (the same
+  grammar pi's codemode renderer uses).
 - Both caches carry the lifted title beside the existing rows.
 - Row header: ` ${glyph} ${name} ${dim —} ${dim title}` in the
   `bash/powershell/python` branch. A titled call never inlines the
@@ -90,24 +103,29 @@ unbound ctrl letter.
 
 ## Prompt rule (`APPEND_SYSTEM.md`)
 
-One new section, Simplified Technical English at the panel's 100% standard:
+One section, Simplified Technical English at the panel's 100% standard:
 format spec (`# verb-first intent, 10–15 words, first line, before code`),
-scope (bash and python only), and the no-trailing-period rule. It sits
-after the turn-title rules so one mental model covers both.
+scope (bash, python, and mcpScript; `//` for mcpScript with `@options`
+after the title), and the no-trailing-period rule. It sits after the
+turn-title rules so one mental model covers both.
 
 ## Tests
 
-- `tool-call-renderer-public.test.mjs`: title lift for bash and python; leaf
-  skips the comment; heredoc `#` stays body; comment-only call renders the
-  title as the whole row; overlong titles truncate with `…`; comment-less
-  fallback renders today's row. All green.
+- `tool-call-renderer-public.test.mjs`: title lift for bash, python, and
+  mcpScript (`//` lift, `@options` skip in both orders, late `//` stays
+  body, comment-only script renders the title as the whole row); leaf
+  skips the comment; heredoc `#` stays body; overlong titles truncate with
+  `…`; comment-less fallback renders today's row. All green.
+- mcpScript keeps downstream delegation for expanded result bodies: only
+  the call row is ours.
 - `python.test.mjs` unchanged and green: tool behavior is untouched.
 
 ## Out of scope
 
 - Powershell title parity (`commandBodies` lifts for bash only).
 - Titles on non-output tools (read, edit, write).
-- The summarizer-model fallback.
+- mcpScript result-body framing: the collapsed summary and expanded body
+  stay generic; only the call row and its title changed.
 
 ## Risks
 
