@@ -1,4 +1,7 @@
 {
+  "defaultProvider": "fireworks",
+  "defaultModel": "accounts/fireworks/routers/glm-5p3-fast",
+  "defaultThinkingLevel": "max",
   "packages": [
     "npm:pi-mcp-adapter"
   ],
