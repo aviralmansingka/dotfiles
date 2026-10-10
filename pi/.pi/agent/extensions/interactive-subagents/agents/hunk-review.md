@@ -3,7 +3,7 @@ name: hunk-review
 description: Review the active Hunk session asynchronously and leave findings as anchored Hunk comments
 model: openai-codex/gpt-6-astra
 thinking: high
-tools: read, grep, find, ls, hunk_review
+tools: read, grep, find, ls, hunk_review, tuicr, tuicr_reply
 skills: hunk-review
 session-mode: lineage-only
 system-prompt: append

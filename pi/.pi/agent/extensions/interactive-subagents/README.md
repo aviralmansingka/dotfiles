@@ -79,11 +79,11 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 
 | Agent | Model | Tools | Role |
 | ----- | ----- | ----- | ---- |
-| **scout** | `openai-codex/gpt-6-astra` | `read`, `grep`, `find`, `ls` | Fast read-only codebase recon |
-| **researcher** | `openai-codex/gpt-6-astra` | `web_search`, `web_fetch`, `bash` | Web research, synthesized into a sourced brief |
-| **worker** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch` + spawning | General implementer; may spawn `scout` and `researcher` |
-| **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, Hunk canvas + restricted spawning | Interactive teacher; may start Hunk review only on the learner's explicit request |
-| **hunk-review** | `openai-codex/gpt-6-astra` | read-only repository tools, dedicated Hunk review tool | Autonomous reviewer; anchors detailed findings in the active Hunk session |
+| **scout** | `openai-codex/gpt-6-astra` | `read`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Fast read-only codebase recon |
+| **researcher** | `openai-codex/gpt-6-astra` | `web_search`, `web_fetch`, `bash`, `tuicr`, `tuicr_reply` | Web research, synthesized into a sourced brief |
+| **worker** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
+| **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, Hunk canvas, tuicr + restricted spawning | Interactive teacher; may start Hunk review only on the learner's explicit request |
+| **hunk-review** | `openai-codex/gpt-6-astra` | read-only repository tools, dedicated Hunk review tool, `tuicr`, `tuicr_reply` | Autonomous reviewer; anchors detailed findings in the active Hunk session |
 
 `scout`, `researcher`, `worker`, and `hunk-review` are autonomous
 (`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane
