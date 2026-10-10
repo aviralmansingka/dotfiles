@@ -1,7 +1,7 @@
 # Pi tool-call summary titles (bash + python + mcpScript)
 
 Status: implemented for bash, python, and mcpScript. Branch `feat/bash-summary`
-(mcpScript lift: `feat-mcpscript-rendering`),
+(mcpScript lift: `feat/mcpscript-rendering`),
 rebased on `main` `1846f04`. Rendering lives in
 `pi/.pi/agent/extensions/tool-call-renderer-public.ts`; the prompt rule
 lives in `pi/.pi/agent/APPEND_SYSTEM.md`. Powershell is out of scope:
