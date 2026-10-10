@@ -276,13 +276,28 @@ local function mermaid_fences(buf)
 end
 
 local function place_inline(buf, node, cached)
-  local start_row, _, end_row = node:range()
+  local start_row, _, end_row, end_col = node:range()
+  if end_col == 0 and end_row > start_row then
+    end_row = end_row - 1
+  end
   -- anchor outside the fence fold: virt_lines on a folded line are hidden,
   -- so the art anchors to the line ABOVE the fence (below it when the fence
-  -- starts the buffer; inside as a last resort)
+  -- starts the buffer or the line above sits inside another fence's fold;
+  -- inside as a last resort)
   local anchor = start_row
-  if start_row > 0 then
-    anchor = start_row - 1
+  local above = start_row - 1
+  local above_folded = false
+  local fences = vim.b[buf].mermaid_fences
+  if start_row > 0 and fences then
+    for _, f in ipairs(fences) do
+      if above >= f[1] and above <= f[2] then
+        above_folded = true
+        break
+      end
+    end
+  end
+  if start_row > 0 and not above_folded then
+    anchor = above
   elseif end_row + 1 < vim.api.nvim_buf_line_count(buf) then
     anchor = end_row + 1
   end
@@ -310,18 +325,22 @@ local function update_folds(buf)
   if not fences then
     return
   end
-  local row = vim.api.nvim_win_get_cursor(0)[1] - 1
-  for _, f in ipairs(fences) do
-    local start_l, end_l = f[1] + 1, f[2] + 1
-    local inside = row >= f[1] and row <= f[2]
-    if inside then
-      if vim.fn.foldclosed(start_l) ~= -1 then
-        vim.cmd(start_l .. "foldopen")
-      end
-    elseif vim.fn.foldclosed(start_l) == -1 and vim.fn.foldlevel(start_l) > 0 then
-      -- foldlevel guards against closing an unrelated fold that merely
-      -- contains this line
-      vim.cmd(start_l .. "," .. end_l .. "foldclose")
+  for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+    local row = vim.api.nvim_win_get_cursor(win)[1] - 1
+    for _, f in ipairs(fences) do
+      local start_l, end_l = f[1] + 1, f[2] + 1
+      local inside = row >= f[1] and row <= f[2]
+      vim.api.nvim_win_call(win, function()
+        if inside then
+          if vim.fn.foldclosed(start_l) ~= -1 then
+            vim.cmd(start_l .. "foldopen")
+          end
+        elseif vim.fn.foldclosed(start_l) == -1 and vim.fn.foldlevel(start_l) > 0 then
+          -- foldlevel guards against closing an unrelated fold that merely
+          -- contains this line
+          vim.cmd(start_l .. "," .. end_l .. "foldclose")
+        end
+      end)
     end
   end
 end
@@ -347,6 +366,45 @@ function M.foldtext()
   return { { ("  ▸ mermaid source (%d lines) — cursor here to edit"):format(n), "Comment" } }
 end
 
+local FOLD_EXPR = "v:lua.require('helpers.mermaid_render').foldexpr()"
+local FOLD_TEXT = "v:lua.require('helpers.mermaid_render').foldtext()"
+
+---Take over a window's fold options for mermaid fence folding, saving the
+---prior values once so they can be restored when the fences go away.
+local function apply_fold_opts(win)
+  local wo = vim.wo[win]
+  -- Save the pre-mermaid values once per window. Never save when the window
+  -- already runs our foldexpr: nvim remembers window options per displayed
+  -- buffer, so on re-entry it can hand our own values back as "prior" ones.
+  if not vim.w[win].mermaid_fold_saved and wo.foldexpr ~= FOLD_EXPR then
+    vim.w[win].mermaid_fold_saved = {
+      foldmethod = wo.foldmethod,
+      foldexpr = wo.foldexpr,
+      foldtext = wo.foldtext,
+      foldenable = wo.foldenable,
+    }
+  end
+  wo.foldmethod = "expr"
+  wo.foldexpr = FOLD_EXPR
+  wo.foldtext = FOLD_TEXT
+  wo.foldenable = true
+end
+
+---Return a window's fold options to the values saved by apply_fold_opts.
+--Only windows still running our foldexpr are restored, so user-made changes
+--survive; the saved values stay (sticky) for later re-entry.
+local function restore_fold_opts(win)
+  local saved = vim.w[win].mermaid_fold_saved
+  if not saved or vim.wo[win].foldexpr ~= FOLD_EXPR then
+    return
+  end
+  local wo = vim.wo[win]
+  wo.foldmethod = saved.foldmethod
+  wo.foldexpr = saved.foldexpr
+  wo.foldtext = saved.foldtext
+  wo.foldenable = saved.foldenable
+end
+
 local function render_buf(buf)
   if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].buftype ~= "" then
     return
@@ -367,11 +425,11 @@ local function render_buf(buf)
   end
   vim.b[buf].mermaid_fences = ranges
   for _, win in ipairs(vim.fn.win_findbuf(buf)) do
-    local wo = vim.wo[win]
-    wo.foldmethod = "expr"
-    wo.foldexpr = "v:lua.require('helpers.mermaid_render').foldexpr()"
-    wo.foldtext = "v:lua.require('helpers.mermaid_render').foldtext()"
-    wo.foldenable = true
+    if #ranges > 0 then
+      apply_fold_opts(win)
+    else
+      restore_fold_opts(win)
+    end
   end
   update_folds(buf)
 
@@ -440,6 +498,14 @@ function M.setup_inline()
     pattern = { "*.md", "*.markdown" },
     callback = function(ev)
       update_folds(ev.buf)
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    group = group,
+    callback = function()
+      if not (vim.b.mermaid_fences and #vim.b.mermaid_fences > 0) then
+        restore_fold_opts(0)
+      end
     end,
   })
 end
