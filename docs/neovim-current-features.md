@@ -470,6 +470,14 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 - Rendered Markdown customizes link and wiki-link icons.
 - Rendered Markdown includes custom web, Discord, GitHub, GitLab, Google, Neovim, Reddit, StackOverflow, Wikipedia, and YouTube link icons.
 - Rendered Markdown customizes quote rendering.
+- Mermaid fences auto-render as inline Unicode ASCII art via grok-mermaid, shown as virtual lines anchored beside the fence.
+- Mermaid ASCII art maps semantic classes to `MermaidAscii*` highlight groups in Gruvbox hexes matching the Ghostty palette.
+- Mermaid source fences fold to one dim line; the fold opens on cursor entry and closes on cursor leave.
+- `<leader>mm` opens an on-demand mmdflux float for the mermaid fence under the cursor.
+- snacks.image mermaid PNG rendering is disabled by a treesitter query shadow; math image rendering is kept.
+
+The mermaid entries above were added after the 2026-07-03 audit by the
+feat/nvim-mermaid change; `docs/neovim-mermaid-render.md` owns the full details.
 
 ### Obsidian and vault
 
