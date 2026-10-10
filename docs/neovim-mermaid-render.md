@@ -51,7 +51,7 @@ see [Image path: tried and rejected](#image-path-tried-and-rejected) below.
 - **`<leader>mm`** (defined in `nvim/.config/nvim/lua/plugins/markdown.lua`,
   render-markdown.nvim `keys` table): with the cursor inside (or on) a
   ```` ```mermaid ```` fence, runs `mmdflux` on that fence's body and pops the
-  ASCII/Unicode output in a **Snacks terminal float** titled `mermaid render`.
+  ASCII/Unicode output in a **borderless Snacks terminal float**.
   The float is a `:terminal` buffer so the terminal driver renders mmdflux's
   ANSI color (from `classDef`/`linkStyle`) natively. Close with `q` or `<esc>`.
 - Helper: `nvim/.config/nvim/lua/helpers/mermaid_render.lua`. It reuses the

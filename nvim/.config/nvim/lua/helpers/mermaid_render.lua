@@ -150,8 +150,9 @@ function M.render_float()
   end
   local width = math.min(math.max(1, vim.o.columns - 2), max_w)
 
+  -- No border: a borderless Snacks float shows no title (Snacks clears
+  -- title/footer when border is falsy), so none is passed.
   local win = Snacks.win({
-    title = " mermaid render ",
     width = width,
     height = 0.8,
     bo = { bufhidden = "wipe" },
