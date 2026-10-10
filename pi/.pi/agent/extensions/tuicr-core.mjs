@@ -34,7 +34,7 @@ export function resolveSkillDir(env = process.env) {
 }
 
 /** Translate the tool's scope enum into tuicr passthrough args. */
-export function scopeToTuicrArgs(scope, revset) {
+export function scopeToTuicrArgs(scope, revset, prNumber) {
 	if (scope === "working-tree") return ["-w"];
 	if (scope === "revset") {
 		const trimmed = typeof revset === "string" ? revset.trim() : "";
@@ -43,7 +43,65 @@ export function scopeToTuicrArgs(scope, revset) {
 		}
 		return ["-r", trimmed];
 	}
+	if (scope === "pr") {
+		const n = Number(prNumber);
+		if (!Number.isInteger(n) || n < 1) {
+			throw new Error("pr is required and must be a positive integer when scope is 'pr'");
+		}
+		return ["pr", String(n)];
+	}
 	throw new Error(`Unknown scope: ${scope}`);
+}
+
+/**
+ * Parse `/tuicr` command text.
+ *
+ * Grammar:
+ *   /tuicr [open] [pr <N> | -r <revset> | -w] [repo-directory]   → subagent review flow (default)
+ *   /tuicr watch [pr <N> | -r <revset> | -w] [repo-directory]     → internal chat-watcher mode
+ *   /tuicr stop                                                  → stop the watcher
+ *
+ * `open` is the default action and may be omitted (`/tuicr pr 272`).
+ */
+export function parseTuicrCommandArgs(raw) {
+	const tokens = String(raw ?? "").trim().split(/\s+/).filter(Boolean);
+	if (tokens.length === 0) return { action: "open", scope: "working-tree" };
+	if (tokens[0] === "stop") return { action: "stop" };
+
+	const parsed = { action: "open", scope: "working-tree", revset: undefined, pr: undefined, repo: undefined };
+	const rest = [...tokens];
+	if (rest[0] === "open" || rest[0] === "watch") parsed.action = rest.shift();
+
+	while (rest.length > 0) {
+		const token = rest.shift();
+		if (token === "pr") {
+			const value = Number(rest.shift());
+			if (!Number.isInteger(value) || value < 1) {
+				throw new Error(`Usage: /tuicr ${parsed.action} pr <number> — expected a positive PR number`);
+			}
+			parsed.scope = "pr";
+			parsed.pr = value;
+		} else if (token === "-r" || token === "--revset") {
+			const value = rest.shift();
+			if (!value || value.startsWith("-")) {
+				throw new Error(`Usage: /tuicr ${parsed.action} -r <revset>`);
+			}
+			parsed.scope = "revset";
+			parsed.revset = value;
+		} else if (token === "-w") {
+			parsed.scope = "working-tree";
+		} else if (!token.startsWith("-") && parsed.repo === undefined) {
+			parsed.repo = token;
+		} else {
+			throw new Error(`Unknown /tuicr argument: ${token}`);
+		}
+	}
+	// Omit unset keys so deepStrictEqual comparisons stay shape-stable.
+	const result = { action: parsed.action, scope: parsed.scope };
+	if (parsed.revset !== undefined) result.revset = parsed.revset;
+	if (parsed.pr !== undefined) result.pr = parsed.pr;
+	if (parsed.repo !== undefined) result.repo = parsed.repo;
+	return result;
 }
 
 /**
@@ -268,6 +326,34 @@ export function formatReplyResult(result, theme) {
 	return ` ├─ ${theme.fg("toolTitle", "✎")} ${theme.fg("dim", `re: ${replyAnchor(details)} — `)}` +
 		theme.fg("toolTitle", details.firstLine ?? "") + "\n" +
 		` └─ ${theme.fg("success", "✓")} ${theme.fg("dim", `posted to session ${details.slug} · visible in tuicr`)}`;
+}
+
+/** Task prompt for the tuicr-review subagent spawned by `tuicr_review`. */
+export function buildReviewSubagentTask({ repo, slug, scope, revset, pr }) {
+	const target =
+		scope === "pr" ? `PR ${pr}` : scope === "revset" ? `commit range ${revset}` : "the working tree";
+	const lines = [
+		`Answer the user's tuicr review comments for ${target} in ${repo}.`,
+		slug
+			? `First attach this session's comment watcher with the tuicr tool: repo ${repo}, sessionSlug "${slug}", attachOnly true.`
+			: `First attach this session's comment watcher with the tuicr tool: repo ${repo}, attachOnly true. No session may be active yet — retry for up to a minute before giving up. Never launch a new pane; the parent already opened one.`,
+		"User comments arrive as tuicr_review_comments steer messages.",
+		"Answer every user comment with tuicr_reply so it shows inside the TUI. Apply fixes for actionable comments and say what you changed.",
+		"When the final steer says the review session ended, write a terse summary of every comment, your answer, the fixes applied, and the files touched. Remind the orchestrator to ask the user whether to merge or review later. Then stop.",
+	];
+	return lines.join(" ");
+}
+
+/** Structured, model-facing summary returned by `tuicr_review` after spawn. */
+export function formatReviewLaunchResult({ repo, slug, attached, subagent }) {
+	const opener = attached
+		? `Attached to the active tuicr review session ${slug} (${repo}).`
+		: `tuicr opened in a background pane for ${repo}${slug ? ` — session ${slug} is active` : " — the session slug is still resolving"}.`;
+	return (
+		opener +
+		` The "${subagent}" subagent now watches that session: it answers your comments inside the TUI and applies fixes.` +
+		" When you close the TUI, its summary returns here and the user will be asked whether to merge or review later."
+	);
 }
 
 /** Structured, model-facing summary returned by the tool itself. */

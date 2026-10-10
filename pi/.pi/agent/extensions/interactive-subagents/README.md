@@ -35,9 +35,12 @@ export PI_SUBAGENT_SHELL_READY_DELAY_MS=2500   # default: 500
 | `ask_question` | *(sub-agent sessions only)* Ask the orchestrator a question and wait for the reply |
 
 There is also a `/subagent <agent> <task>` command for spawning through the
-normal model tool-call path. `/hunk-review [focus]` bypasses that extra model
-turn and directly starts the bundled `hunk-review` agent asynchronously; it
-does not open Hunk.
+normal model tool-call path. Sibling extensions can spawn a named agent
+without a model turn through the shared process global:
+`__pi_interactive_subagents.executeSubagent({ agent, name, task, cwd }, ctx)` —
+the same validation, registry, watcher, and completion-steer path as the tool.
+The tuicr extension's `tuicr_review` uses this to start the bundled
+`tuicr-review` agent.
 
 ### Spawning
 
@@ -82,30 +85,26 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | **scout** | `openai-codex/gpt-6-astra` | `read`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Fast read-only codebase recon |
 | **researcher** | `openai-codex/gpt-6-astra` | `web_search`, `web_fetch`, `bash`, `tuicr`, `tuicr_reply` | Web research, synthesized into a sourced brief |
 | **worker** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
-| **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, Hunk canvas, tuicr + restricted spawning | Interactive teacher; may start Hunk review only on the learner's explicit request |
-| **hunk-review** | `openai-codex/gpt-6-astra` | read-only repository tools, dedicated Hunk review tool, `tuicr`, `tuicr_reply` | Autonomous reviewer; anchors detailed findings in the active Hunk session |
+| **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, Hunk canvas, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
+| **tuicr-review** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
 
-`scout`, `researcher`, `worker`, and `hunk-review` are autonomous
+`scout`, `researcher`, `worker`, and `tuicr-review` are autonomous
 (`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane
 (`auto-exit: false`) that auto-loads the `professor` skill and remains open
 until the learner exits it. All five carry their identity in the system prompt
 (`system-prompt: append`).
 
-Hunk pane ownership is deliberately separate from review. `/hunk` and
-`hunk_open` only open or focus the visual diff canvas. Start review explicitly
-with `/hunk-review [focus]` or `/subagent hunk-review <task>` after Hunk is open.
-The reviewer cannot edit files or apply code; its detailed findings stay in Hunk
-and only a terse completion count returns to the parent. Professor can honor an
-explicit learner request to start this workflow, but never starts it merely
-because Hunk was opened.
+The `tuicr-review` agent is started by the tuicr extension's `tuicr_review`
+tool / `/tuicr` command (see
+[README-tuicr.md](../README-tuicr.md)); it parks in `waiting` between comment
+batches — auto-exit is suppressed while its comment watcher is active — and
+closes itself after the TUI exits and its summary is delivered.
 
 ## Custom agents
 
 Place a `.md` file in `.pi/agents/` (project) or
 `~/.pi/agent/agents/` (global). Discovery priority is **project > global >
-package-bundled**. The bundled `hunk-review` profile is the sole exception: it
-is always selected and launched without other extensions so a repository cannot
-widen the reviewer's read-only tool boundary.
+package-bundled**, with no per-profile exceptions.
 
 ```markdown
 ---

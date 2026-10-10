@@ -76,7 +76,6 @@ import {
   loadAgentDefaultsFromPaths,
   parseAgentDefinition,
 } from "./agent-definitions.mjs";
-import { registerHunkReviewCommand } from "./hunk-review-command.mjs";
 import { encodeSubagentInitialPrompt } from "./initial-prompt.ts";
 
 /** Absolute path to `pi-extension/subagents`. https://github.com/nodejs/node/issues/37845 */
@@ -247,7 +246,6 @@ function getToolExtensionPath(tool: string): string | undefined {
     video_extract: join(extBase, "video-extract", "index.ts"),
     youtube_search: join(extBase, "youtube-search", "index.ts"),
     google_image_search: join(extBase, "google-image-search", "index.ts"),
-    hunk_review: join(SUBAGENTS_DIR, "tools", "hunk-review.ts"),
   };
   // Prefer the built-in path, but fall back to a runtime-registered extension
   // when that path no longer exists on disk (e.g. a built-in tool extension
@@ -256,6 +254,10 @@ function getToolExtensionPath(tool: string): string | undefined {
   if (builtin && existsSync(builtin)) return builtin;
   return EXTRA_TOOL_EXTENSIONS.get(tool);
 }
+
+// Nothing else needs an explicit entry: tools registered by extensions in
+// normal discovery locations (e.g. the tuicr extension's `tuicr`,
+// `tuicr_reply`, `tuicr_review`) load in the child without an `-e` override.
 
 /**
  * When this process was spawned as a restricted subagent, the parent pins the
@@ -2591,11 +2593,14 @@ export default function subagentsExtension(pi: ExtensionAPI) {
       },
     });
 
-  // Launch directly through the same tool implementation so this command does
-  // not depend on another model turn choosing to call the subagent tool.
-  registerHunkReviewCommand(pi, (params, ctx) =>
-    subagentTool.execute("", params, undefined, undefined, ctx),
-  );
+  // Launch directly through the same tool implementation so sibling
+  // extensions can spawn a named subagent without a model turn choosing to
+  // call the subagent tool (e.g. tuicr's tuicr_review spawning tuicr-review).
+  const subagentsGlobal = (globalThis as any).__pi_interactive_subagents;
+  if (subagentsGlobal && typeof subagentsGlobal.executeSubagent !== "function") {
+    subagentsGlobal.executeSubagent = (params: any, ctx: any) =>
+      subagentTool.execute("", params, undefined, undefined, ctx);
+  }
 
   // /subagent command — spawn a subagent by name
   pi.registerCommand("subagent", {

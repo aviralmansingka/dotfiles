@@ -422,9 +422,11 @@ Per-filetype indent is declared explicitly in `lua/config/indent.lua` (sourced f
 ### Interactive subagents (pi extension)
 
 - The `pi-interactive-subagents` extension is vendored at `pi/.pi/agent/extensions/interactive-subagents/` and loads via the existing `~/.pi/agent/extensions` symlink; it is a dotfiles fork of `amosblomqvist/pi-interactive-subagents`.
-- It provides asynchronous subagent orchestration, bundled agent profiles, and the explicit `/hunk-review` workflow; see
+- It provides asynchronous subagent orchestration and bundled agent profiles; see
   the [extension README](../pi/.pi/agent/extensions/interactive-subagents/README.md#how-it-works) for the authoritative
-  tool, agent, launch, naming, and fallback behavior.
+  tool, agent, launch, naming, and fallback behavior. The `/tuicr` review flow
+  (tuicr pane + tuicr-review subagent) is documented in the
+  [tuicr extension README](../pi/.pi/agent/extensions/README-tuicr.md).
 - On the captain's host pi runs under Herdr; tmux remains available as a fallback.
 - Extension deps are pi-runtime peer packages (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`,
   `@earendil-works/pi-ai`); they need no separate installation beyond the Pi CLI setup in the
