@@ -9,8 +9,8 @@ session history shows zero powershell calls, so it keeps today's rows.
 
 ## Goal
 
-Every `bash` and `python` call row carries a 10–15 word intent title next to
-the tool name. The title is always visible, collapsed or expanded, and never
+Every `bash`, `python`, and `mcpScript` call row carries a 10–15 word
+intent title next to the tool name. The title is always visible, collapsed or expanded, and never
 displaces the raw command leaf.
 
 ```text
@@ -35,7 +35,8 @@ model applies with `//` instead of `#`.
 
 Chosen: **model-authored leading comment**. `APPEND_SYSTEM.md` gains a rule:
 every `bash` command and `python` script starts with one `# <intent>`
-comment line — verb-first, 10–15 words, no trailing period, before any code.
+comment line, and every `mcpScript` script with one `// <intent>` line —
+verb-first, 10–15 words, no trailing period, before any code.
 
 Why it wins:
 
