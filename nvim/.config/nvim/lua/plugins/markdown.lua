@@ -138,6 +138,7 @@ return {
     ft = { "markdown", "octo" },
     init = function()
       require("helpers.markdown_ansi").setup()
+      require("helpers.mermaid_render").setup_inline()
       require("helpers.herdr_scrollback").setup()
     end,
     keys = {
@@ -166,8 +167,13 @@ return {
                 if not in_habit_section and line:match("^%s*- %[ %]") then
                   local todo_text = line:match("^%s*- %[ %] (.+)")
                   if todo_text then
-                    local display =
-                      string.format("%s:%d [%s] %s", relative_to_vault(file), i, current_section or "General", todo_text)
+                    local display = string.format(
+                      "%s:%d [%s] %s",
+                      relative_to_vault(file),
+                      i,
+                      current_section or "General",
+                      todo_text
+                    )
                     table.insert(todos, {
                       text = display,
                       file = file,
