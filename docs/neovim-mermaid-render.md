@@ -43,8 +43,12 @@ see [Image path: tried and rejected](#image-path-tried-and-rejected) below.
   (`~/.pi/agent/install/releases/*/node_modules/grok-mermaid`). Install with
   `npm install -g grok-mermaid`.
 - snacks.image's mermaid PNG pipeline is disabled by the query shadow
-  `nvim/.config/nvim/queries/markdown/images.scm` (a non-`extends` copy of
-  snacks' query with the `mermaid` pattern removed; `math` is kept).
+  `nvim/.config/nvim/queries/markdown/images.scm` (snacks' query with the
+  `mermaid` pattern removed; `math` is kept). Because snacks' own
+  `images.scm` starts with `; extends` and would merge into a plain file
+  shadow, `helpers/mermaid_render.lua` registers the shadow as an explicit
+  treesitter query (`vim.treesitter.query.set`), which bypasses runtimepath
+  merging entirely.
 
 ## On-demand float (mmdflux)
 

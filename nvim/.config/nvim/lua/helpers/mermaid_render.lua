@@ -472,8 +472,29 @@ local function render_buf(buf)
   end
 end
 
+---Register `queries/markdown/images.scm` as an explicit treesitter query.
+---
+---File placement alone cannot disable snacks.image's mermaid pipeline: snacks
+---ships its own `queries/markdown/images.scm` with a leading `; extends`, so
+---nvim MERGES the plugin file into our non-`extends` shadow instead of
+---replacing it (the mermaid pattern survives and `math` matches twice).
+---`query.set` text with no `; extends`/modeline header bypasses runtimepath
+---merging entirely, so only the shadow (mermaid removed, math kept) is used.
+local function register_image_query_shadow()
+  -- treesitter query files live under `queries/` (plural) on the runtimepath
+  local path = vim.fn.stdpath("config") .. "/queries/markdown/images.scm"
+  local f = io.open(path, "r")
+  if not f then
+    return
+  end
+  local content = f:read("*a")
+  f:close()
+  vim.treesitter.query.set("markdown", "images", content)
+end
+
 ---Enable auto-render of all ```mermaid fences in markdown buffers.
 function M.setup_inline()
+  register_image_query_shadow()
   for cls, hl in pairs(CLS_HL) do
     vim.api.nvim_set_hl(0, hl, { fg = CLS_FG[cls], default = true })
   end
