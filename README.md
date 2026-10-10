@@ -240,9 +240,11 @@ execution workflow. Neovim's `<leader>vf` picker remains a read-only navigation 
 
 Use `/hunk` to open or focus a watched Hunk diff in a sibling pane. In Herdr,
 the sibling pane closes automatically when Hunk exits. Opening Hunk never starts
-a review. When you want an isolated asynchronous review, run
-`/hunk-review [focus]`; detailed findings are anchored in Hunk and only a terse
-completion summary returns to the parent session.
+a review. When you want an interactive review, run
+`/tuicr [open] [pr <N> | -r <revset> | -w] [repo]`; the tuicr-review subagent
+answers your comments inside the tuicr TUI, applies fixes, and returns a terse
+summary to the parent session, which then asks whether to merge or review
+later.
 
 Use `/cleanup` from a durable parent session in a linked worktree after its work
 ships. The command confirms its worktree, local branch, and configured upstream

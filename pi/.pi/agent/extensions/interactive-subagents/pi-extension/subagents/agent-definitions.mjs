@@ -60,8 +60,8 @@ export function parseAgentDefinition(content, fallbackName) {
 	};
 }
 
-export function agentIsolationArgs(agentName) {
-	return agentName === "hunk-review" ? ["--no-extensions"] : [];
+export function agentIsolationArgs(_agentName) {
+	return [];
 }
 
 export function loadAgentDefaultsFromPaths(
@@ -69,13 +69,11 @@ export function loadAgentDefaultsFromPaths(
 	{ cwd, configDir, bundledDir },
 ) {
 	const bundledPath = join(bundledDir, `${agentName}.md`);
-	const paths = agentName === "hunk-review"
-		? [bundledPath]
-		: [
-				join(cwd, ".pi", "agents", `${agentName}.md`),
-				join(configDir, "agents", `${agentName}.md`),
-				bundledPath,
-			];
+	const paths = [
+		join(cwd, ".pi", "agents", `${agentName}.md`),
+		join(configDir, "agents", `${agentName}.md`),
+		bundledPath,
+	];
 
 	for (const path of paths) {
 		if (!existsSync(path)) continue;

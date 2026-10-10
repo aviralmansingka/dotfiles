@@ -15,7 +15,6 @@ import {
 	agentIsolationArgs,
 	loadAgentDefaultsFromPaths,
 } from "./interactive-subagents/pi-extension/subagents/agent-definitions.mjs";
-import { runHunkReview } from "./interactive-subagents/pi-extension/subagents/tools/hunk-review-core.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -236,7 +235,7 @@ try {
 
 const initialPrompt = jiti("./interactive-subagents/pi-extension/subagents/initial-prompt.ts");
 const encodedInitialPrompt = initialPrompt.encodeSubagentInitialPrompt({
-	skills: ["professor", "hunk-review"],
+	skills: ["professor", "demo-skill"],
 	task: "Explain the launch race.",
 });
 assert.equal(
@@ -244,14 +243,14 @@ assert.equal(
 		encodedInitialPrompt,
 		[
 			{ name: "professor", filePath: "/trusted/professor/SKILL.md", baseDir: "/trusted/professor" },
-			{ name: "hunk-review", filePath: "/extension/hunk-review/SKILL.md", baseDir: "/extension/hunk-review" },
+			{ name: "demo-skill", filePath: "/extension/demo-skill/SKILL.md", baseDir: "/extension/demo-skill" },
 		],
 		(skill) => `Resolved instructions for ${skill.name}.`,
 	),
 	'<skill name="professor" location="/trusted/professor/SKILL.md">\n' +
 		'References are relative to /trusted/professor.\n\nResolved instructions for professor.\n</skill>\n\n' +
-		'<skill name="hunk-review" location="/extension/hunk-review/SKILL.md">\n' +
-		'References are relative to /extension/hunk-review.\n\nResolved instructions for hunk-review.\n</skill>\n\n' +
+		'<skill name="demo-skill" location="/extension/demo-skill/SKILL.md">\n' +
+		'References are relative to /extension/demo-skill.\n\nResolved instructions for demo-skill.\n</skill>\n\n' +
 		"Explain the launch race.",
 );
 assert.throws(
@@ -291,31 +290,39 @@ assert.deepEqual(herdr.__pollForExitTest__.paneKilledResult(), {
 	exitCode: 130,
 });
 
-// --- Runtime profile resolution pins and isolates the read-only reviewer ---
+// --- Runtime profile resolution: bundled defaults, then project overrides ---
 assert.deepEqual(agentIsolationArgs("researcher"), []);
-assert.deepEqual(agentIsolationArgs("hunk-review"), ["--no-extensions"]);
+assert.deepEqual(agentIsolationArgs("tuicr-review"), []);
 const profileRoot = mkdtempSync(join(tmpdir(), "subagent-profile-test-"));
 const profileAgentDir = join(profileRoot, ".pi", "agents");
 mkdirSync(profileAgentDir, { recursive: true });
-writeFileSync(
-	join(profileAgentDir, "hunk-review.md"),
-	"---\nname: hunk-review\ntools: read, write, edit, bash\n---\nOverride\n",
-);
 const bundledAgentsDir = fileURLToPath(
 	new URL("./interactive-subagents/agents", import.meta.url),
 );
 try {
-	const reviewer = loadAgentDefaultsFromPaths("hunk-review", {
+	const reviewer = loadAgentDefaultsFromPaths("tuicr-review", {
 		cwd: profileRoot,
 		configDir: join(profileRoot, "global-agent-config"),
 		bundledDir: bundledAgentsDir,
 	});
 	assert.equal(
 		reviewer.tools,
-		"read, grep, find, ls, hunk_review, tuicr, tuicr_reply",
+		"read, write, edit, bash, grep, find, ls, tuicr, tuicr_reply",
 	);
-	assert.equal(reviewer.skills, "hunk-review");
 	assert.equal(reviewer.autoExit, true);
+
+	// A project-local profile now overrides the bundled one (no special case).
+	writeFileSync(
+		join(profileAgentDir, "tuicr-review.md"),
+		"---\nname: tuicr-review\ntools: read\n---\nOverride\n",
+	);
+	const overridden = loadAgentDefaultsFromPaths("tuicr-review", {
+		cwd: profileRoot,
+		configDir: join(profileRoot, "global-agent-config"),
+		bundledDir: bundledAgentsDir,
+	});
+	assert.equal(overridden.tools, "read");
+	assert.equal(overridden.body, "Override");
 
 	const researcher = loadAgentDefaultsFromPaths("researcher", {
 		cwd: profileRoot,
@@ -335,7 +342,7 @@ try {
 	assert.ok(professor.tools.split(", ").includes("tuicr_reply"));
 	assert.ok(professor.tools.split(", ").includes("hunk_open"));
 	assert.ok(professor.tools.split(", ").includes("bash"));
-	assert.deepEqual(professor.subagentAgents, ["researcher", "hunk-review"]);
+	assert.deepEqual(professor.subagentAgents, ["researcher", "tuicr-review"]);
 	assert.equal(professor.skills, "professor");
 	assert.equal(professor.autoExit, false);
 } finally {
@@ -370,52 +377,6 @@ assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
 	"ℹ️ Context only",
 	"❌ src/c.ts: Fourth explicit finding",
 ]);
-
-// --- The reviewer tool exposes only Hunk inspection and comment application ---
-const hunkToolRoot = mkdtempSync(join(tmpdir(), "hunk-review-tool-test-"));
-const hunkArgsFile = join(hunkToolRoot, "args");
-const hunkInputFile = join(hunkToolRoot, "input");
-writeFileSync(
-	join(hunkToolRoot, "hunk"),
-	`#!/bin/sh
-printf '%s\\n' "$@" > "$HUNK_TEST_ARGS"
-cat > "$HUNK_TEST_INPUT"
-printf '%s\\n' '{"ok":true}'
-`,
-	{ mode: 0o755 },
-);
-const savedToolPath = process.env.PATH;
-process.env.PATH = `${hunkToolRoot}:${savedToolPath}`;
-process.env.HUNK_TEST_ARGS = hunkArgsFile;
-process.env.HUNK_TEST_INPUT = hunkInputFile;
-try {
-	runHunkReview(hunkToolRoot, { operation: "review", includePatch: true });
-	assert.deepEqual(readFileSync(hunkArgsFile, "utf8").trim().split("\n"), [
-		"session", "review", "--repo", ".", "--include-patch", "--json",
-	]);
-
-	runHunkReview(hunkToolRoot, {
-		operation: "comment_apply",
-		comments: [{ filePath: "src/app.ts", newLine: 9, summary: "Handle failure" }],
-	});
-	assert.deepEqual(readFileSync(hunkArgsFile, "utf8").trim().split("\n"), [
-		"session", "comment", "apply", "--repo", ".", "--stdin", "--json",
-	]);
-	assert.deepEqual(JSON.parse(readFileSync(hunkInputFile, "utf8")), {
-		comments: [{
-			filePath: "src/app.ts",
-			newLine: 9,
-			summary: "Handle failure",
-			author: "Hunk reviewer",
-		}],
-	});
-} finally {
-	if (savedToolPath === undefined) delete process.env.PATH;
-	else process.env.PATH = savedToolPath;
-	delete process.env.HUNK_TEST_ARGS;
-	delete process.env.HUNK_TEST_INPUT;
-	rmSync(hunkToolRoot, { recursive: true, force: true });
-}
 
 // --- List rendering groups definitions by override precedence without losing defaults ---
 // Isolate the registration so this check needs only jiti, not the installed Pi UI.
