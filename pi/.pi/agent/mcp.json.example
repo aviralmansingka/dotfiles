@@ -20,6 +20,10 @@
         "-y",
         "granola-mcp-plus"
       ]
+    },
+    "mcp": {
+      "url": "https://mcp.notion.com/mcp",
+      "description": "Notion (Mohzi workspace, aviral@mohzi.com): search and fetch pages, create/update pages and databases, comments, custom agents; OAuth token lives in local MCP auth state"
     }
   }
 }
