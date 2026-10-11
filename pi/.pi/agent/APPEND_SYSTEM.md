@@ -54,16 +54,13 @@ next decisions. Skip the section only for trivial acknowledgements (e.g. a bare
 
 ## Diagrams
 
-When an answer presents a plan, a dependency structure, or a flow, include a
-small mermaid diagram instead of describing the shape in prose. Use the same
-mechanism everywhere: few nodes, short labels, roots at the top, the goal as the
-sink. Example:
-
-```mermaid
-flowchart TD
-  A[Root concept] --> B[Derived step]
-  B --> Z[Goal]
-```
+When an answer presents a plan, a dependency structure, or a flow, call the
+`mermaid` tool instead of writing a mermaid fence inline. Put the full context
+in `spec`: diagram type, every node with its exact label, every edge with its
+direction, and the layout direction (TD or LR). The tool writes the diagram,
+validates it with a strict parser, retries with the parse error until it
+parses, and shows the rendered diagram in the transcript. Embed the returned
+fence in the reply verbatim. Do not edit it.
 
 Keep diagrams small. A diagram that needs scrolling carries too many nodes —
 split the answer instead.
