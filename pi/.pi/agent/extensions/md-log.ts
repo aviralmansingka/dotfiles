@@ -59,9 +59,14 @@ export function journalPathFor(sessionFile: string): string {
 	return `${stem || sessionFile}.md`;
 }
 
-/** Journal `/a/b/xyz.md` → probe log `/a/b/xyz-probes.md`. */
+/** Journal `/a/b/xyz.md` → probe log `/a/b/xyz-probes.md`. A journal
+ *  without the `.md` suffix (possible only through PI_LESSON_JOURNAL)
+ *  still gets a SEPARATE probe log — probes must never mix into the
+ *  journal file itself. */
 export function probesPathFor(journal: string): string {
-	return journal.replace(/\.md$/, "-probes.md");
+	return /\.md$/.test(journal)
+		? journal.replace(/\.md$/, "-probes.md")
+		: `${journal}-probes.md`;
 }
 
 /**
