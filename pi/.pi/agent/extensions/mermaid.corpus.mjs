@@ -31,8 +31,19 @@ const jitiPath = [
 	join(installRoot, "releases", release, "node_modules/jiti/lib/jiti.cjs"),
 ].find((p) => p && existsSync(p));
 if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
+// Usage check first so the harness never touches binaries for a bad
+// invocation; binary checks below skip cleanly (exit 2, message, no stack)
+// when the host lacks them.
+const [mode, corpusPath] = process.argv.slice(2);
+if (!mode || !corpusPath) {
+	console.error("usage: node mermaid.corpus.mjs <gates|e2e> <corpus.json>");
+	process.exit(2);
+}
 const grokReal = join(installRoot, "releases", release, "node_modules/grok-mermaid/dist/index.js");
-if (!existsSync(grokReal)) throw new Error(`real grok-mermaid not found at ${grokReal}`);
+if (!existsSync(grokReal)) {
+	console.error(`corpus: real grok-mermaid not found at ${grokReal}; this is a local, manual gate — run it on a host with the chat renderer installed`);
+	process.exit(2);
+}
 
 const { createJiti } = require(jitiPath);
 const tempRoot = mkdtempSync(join(tmpdir(), "mermaid-corpus-"));
@@ -62,11 +73,6 @@ mermaidModule.default({
 });
 const tool = registered[0];
 
-const [mode, corpusPath] = process.argv.slice(2);
-if (!mode || !corpusPath) {
-	console.error("usage: node mermaid.corpus.mjs <gates|e2e> <corpus.json>");
-	process.exit(2);
-}
 const corpus = JSON.parse(readFileSync(corpusPath, "utf8"));
 const pane = paneWidth();
 const haveMmdflux = existsSync(join(homedir(), ".local", "bin", "mmdflux")) || !!process.env.PI_MERMAID_MMDFLUX;
