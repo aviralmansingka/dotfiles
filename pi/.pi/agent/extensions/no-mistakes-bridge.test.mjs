@@ -518,6 +518,23 @@ await (async () => {
 	rmSync(root, { recursive: true, force: true });
 })();
 
+await (async () => {
+	const root = makeShimRoot("nm-shim-truncated-", "#!/bin/sh\nexit 0\n");
+	const server = await startFakeBridge(join(root, "herdr-bridge", TEST_RUN_ID, "sock"), (sock) => {
+		sock.end(JSON.stringify({ type: "events", lines: ['{"type":"session","id":"truncated"}'] }) + "\n");
+	});
+	try {
+		const { child, stderr } = runShim({ root });
+		child.stdin.end("truncated turn");
+		const result = await awaitExit(child, 15000);
+		assert.equal(result.code, 1);
+		assert.match(Buffer.concat(stderr).toString(), /delivery truncated before agent_settled/);
+	} finally {
+		server.close();
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
+
 // ---------------------------------------------------------------------------
 // The real bridge server (the exported module) hosting real shim connections.
 // Herdr and the tab's pi are stubbed at the process boundary with real pi's
@@ -655,6 +672,10 @@ if (command === "agent" && sub === "get") {
 	process.exit(0);
 }
 if (command === "agent" && sub === "prompt") {
+	if (process.env.HERDR_STUB_PROMPT_FAIL) {
+		process.stderr.write("stub prompt rejected\\n");
+		process.exit(1);
+	}
 	const pane = argv[2];
 	const prompt = argv[3];
 	const rec = readPane(pane);
@@ -889,6 +910,7 @@ await (async () => {
 })();
 
 for (const [knob, value] of [
+	["HERDR_STUB_PROMPT_FAIL", "1"],
 	["HERDR_STUB_BACKLOG", "1300"], // > 10 MiB: multiple capped reads after settle
 ]) {
 	const root = makeBridgeRoot("nm-bridge-delivery-");
@@ -902,11 +924,20 @@ for (const [knob, value] of [
 		const result = await awaitExit(child, 30000);
 		const err = Buffer.concat(stderr).toString();
 		const events = Buffer.concat(stdout).toString().trim().split("\n").filter(Boolean).map(JSON.parse);
-		assert.equal(result.code, 0, err);
-		assert.deepEqual(events.at(-1), { type: "agent_settled", aborted: false });
-		const indices = events.filter((event) => event.type === "message_end" && event.message.index !== undefined)
-			.map((event) => event.message.index);
-		assert.deepEqual(indices, Array.from({ length: Number(value) }, (_, i) => i), "all backlog records arrive in order");
+		if (knob === "HERDR_STUB_PROMPT_FAIL") {
+			assert.equal(result.code, 1, err);
+			assert.match(err, /bridge server:.*bridge:/);
+			assert.match(err, /stub prompt rejected/);
+			assert.ok(!events.some((event) => event.type === "agent_settled"));
+		} else {
+			assert.equal(result.code, 0, err);
+			assert.deepEqual(events.at(-1), { type: "agent_settled", aborted: false });
+			if (knob === "HERDR_STUB_BACKLOG") {
+				const indices = events.filter((event) => event.type === "message_end" && event.message.index !== undefined)
+					.map((event) => event.message.index);
+				assert.deepEqual(indices, Array.from({ length: Number(value) }, (_, i) => i), "all backlog records arrive in order");
+			}
+		}
 		assertCleanClose(root, readCalls(root).find((call) => call.op === "tab create").pane);
 	} finally {
 		teardownBridgeForRun(TEST_RUN_ID);

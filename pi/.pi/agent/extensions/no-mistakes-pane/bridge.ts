@@ -665,16 +665,17 @@ async function runInvocation(
 			["agent", "prompt", tab.paneId, hello.prompt, "--wait", "--timeout", String(TURN_SETTLE_TIMEOUT_MS)],
 			{ timeout: TURN_SETTLE_TIMEOUT_MS + 30_000, maxBuffer: 1024 * 1024 },
 		);
-		// A failure before the race below (discovery fatal, daemon cut)
-		// must not leave the in-flight prompt as an unhandled rejection.
-		submit.catch(() => {});
+		// Race discovery against rejection too: a failed prompt may never
+		// create a session file. All failures reach the same clean-close path.
+		const promptFailed = submit.then(() => new Promise<never>(() => {}));
+		promptFailed.catch(() => {});
 
 		if (!sessionId) {
 			// Cold step: the whole fresh session file is this one turn, so the
 			// stream starts at byte 0 and the head records (session header,
 			// system message, this turn's user record) flow through the
 			// translator in file order.
-			sessionFile = await discoverSessionFile(tab, hello, sessionId);
+			sessionFile = await Promise.race([discoverSessionFile(tab, hello, sessionId), promptFailed]);
 			fd = openSync(sessionFile, "r");
 		}
 
