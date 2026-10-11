@@ -37,7 +37,7 @@
 
 import { execFile, execFileSync } from "node:child_process";
 import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { createServer, type Server, type Socket } from "node:net";
+import { createConnection, createServer, type Server, type Socket } from "node:net";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -125,24 +125,6 @@ export function splitAgentArgv(argv: string[]): SplitAgentArgv {
 		interactive.push(arg);
 	}
 	return { interactive, sessionId, sessionless };
-}
-
-/** Coarse step name for tab labels from the daemon's phase prompt. The daemon
- *  does not name the step in argv; its prompts are phase-specific. Order
- *  matters: later prompts quote earlier vocabulary (the review prompt
- *  checks the run "intent", the fixer prompt mentions "review" findings), so
- *  the most specific discriminators come first and "intent" — which appears
- *  in nearly every phase's acceptance framing — comes last. */
-export function stepLabelFromPrompt(prompt: string, ordinal: number): string {
-	const head = prompt.slice(0, 4000);
-	if (/\bCI\b|continuous integration/i.test(head)) return "ci";
-	if (/rebase|conflict/i.test(head)) return "rebase";
-	if (/\blint\b/i.test(head)) return "lint";
-	if (/document|documentation/i.test(head)) return "document";
-	if (/scenarios|live validation|\bverdict\b/i.test(head)) return "test";
-	if (/review/i.test(head)) return "review";
-	if (/\bintent\b/i.test(head)) return "intent";
-	return `agent-${ordinal}`;
 }
 
 export function shellQuote(value: string): string {
@@ -396,25 +378,65 @@ function isHello(value: unknown): value is Hello {
 	return Array.isArray(v.argv) && typeof v.cwd === "string" && typeof v.prompt === "string";
 }
 
+/** True when a live server answers the socket at `sockPath`. */
+export function probeSocket(sockPath: string): Promise<boolean> {
+	return new Promise((done) => {
+		const probe = createConnection(sockPath);
+		const finish = (alive: boolean) => {
+			clearTimeout(timer);
+			probe.destroy();
+			done(alive);
+		};
+		const timer = setTimeout(() => finish(false), 500);
+		timer.unref?.();
+		probe.once("connect", () => finish(true));
+		probe.once("error", () => finish(false));
+	});
+}
+
 /** Ensure the bridge listener exists for a run (idempotent). No-op without
- *  Herdr — the shims passthrough headless and nothing changes. */
+ *  Herdr — the shims passthrough headless and nothing changes. A socket
+ *  another live host answers means that host owns the run's bridge: this
+ *  process never touches the dir. A socket nobody answers is a stale
+ *  leftover from a dead host: only that file is removed before claiming. */
 export function ensureBridgeServer(runId: string): void {
 	const state = bridgeState();
 	if (state.runs.has(runId)) return;
 	if (!herdrBridgeAvailable()) return;
 	const dir = bridgeRunDir(nmHomeDir(), runId);
-	mkdirSync(dir, { recursive: true });
 	const sockPath = join(dir, "sock");
+	if (existsSync(sockPath)) {
+		void probeSocket(sockPath).then((alive) => {
+			if (alive || state.runs.has(runId)) return;
+			try {
+				rmSync(sockPath, { force: true });
+			} catch {}
+			claimBridgeServer(state, runId, dir, sockPath);
+		});
+		return;
+	}
+	claimBridgeServer(state, runId, dir, sockPath);
+}
+
+function claimBridgeServer(state: BridgeState, runId: string, dir: string, sockPath: string): void {
+	mkdirSync(dir, { recursive: true });
 	const bridge: RunBridge = { runId, dir, server: undefined as any, tabs: new Map(), ordinal: 0 };
 	const server = createServer((socket) => void handleConnection(bridge, socket));
-	server.on("error", () => void teardownRun(bridge));
+	let listening = false;
+	server.on("listening", () => {
+		listening = true;
+	});
+	server.on("error", () => {
+		// An error before the first listen means another host claimed the run.
+		if (bridgeState().runs.get(runId) === bridge) state.runs.delete(runId);
+		if (listening) void teardownRun(bridge);
+	});
 	try {
 		server.listen(sockPath);
 		// The pane extension's own TUI keeps this process alive in production;
 		// unref keeps a headless host (tests, JSON mode) from draining never.
 		server.unref();
 	} catch {
-		void teardownRun(bridge);
 		return;
 	}
 	bridge.server = server;
@@ -470,7 +492,7 @@ async function runInvocation(
 		fatal("bridge: invocation cwd is not a run worktree");
 		return;
 	}
-	const step = stepLabelFromPrompt(hello.prompt, ++bridge.ordinal);
+	const step = `agent-${++bridge.ordinal}`;
 	const tabKey = sessionId ?? `cold-${bridge.ordinal}`;
 
 	let created: TabHandle | undefined;
@@ -487,7 +509,7 @@ async function runInvocation(
 		}
 		created = opened;
 		tab = opened;
-		if (sessionId) bridge.tabs.set(sessionId, tab);
+		bridge.tabs.set(tabKey, tab);
 	}
 
 	const cut = { flag: false };
@@ -504,7 +526,7 @@ async function runInvocation(
 				rmSync(handle.scriptPath, { force: true });
 			} catch {}
 		}
-		if (sessionId) bridge.tabs.delete(sessionId);
+		bridge.tabs.delete(tabKey);
 	};
 
 	try {
@@ -712,7 +734,7 @@ function streamNewRecords(fd: number, offset: number, onRecord: (record: unknown
 
 async function teardownRun(bridge: RunBridge): Promise<void> {
 	const state = bridgeState();
-	state.runs.delete(bridge.runId);
+	if (state.runs.get(bridge.runId) === bridge) state.runs.delete(bridge.runId);
 	for (const tab of bridge.tabs.values()) {
 		herdrOkSync(["pane", "close", tab.paneId]);
 		if (tab.scriptPath) {

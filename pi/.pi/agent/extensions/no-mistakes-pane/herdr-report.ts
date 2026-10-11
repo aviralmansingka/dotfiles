@@ -93,34 +93,43 @@ export function setCiBlocked(pi: ExtensionAPI, active: boolean): void {
 	pi.events.emit("herdr:blocked", { active, label: active ? CI_BLOCKED_LABEL : undefined });
 }
 
+/** A pane-state transition PaneReportState emits for one snapshot. */
+export interface PaneReportActions {
+	label?: string;
+	clearLabels?: boolean;
+	ciBlocked?: boolean;
+}
+
 /** Stateful gate so the wiring only emits label/blocked transitions on
  *  actual changes, never on every 1s status poll. */
 export class PaneReportState {
 	private label: string | undefined;
 	private ciBlocked = false;
 
-	/** Returns the actions to perform for this snapshot (already deduped). */
-	next(snapshot: NoMistakesSnapshot | undefined): {
-		label?: string;
-		clearLabels?: boolean;
-		ciBlocked?: boolean;
-	} {
+	/** Returns the actions to perform for this snapshot, deduped against the
+	 *  last actions recorded by confirm(). An action the caller never
+	 *  confirms re-emits on the next call, so a failed application is
+	 *  retried on the next poll instead of being swallowed. */
+	next(snapshot: NoMistakesSnapshot | undefined): PaneReportActions {
 		if (snapshot) {
 			const label = runPhaseLabel(snapshot);
 			const ci = isCiPhaseActive(snapshot);
-			const out: { label?: string; clearLabels?: boolean; ciBlocked?: boolean } = {};
+			const out: PaneReportActions = {};
 			if (label !== undefined && label !== this.label) out.label = label;
 			if (label === undefined && this.label !== undefined) out.clearLabels = true;
 			if (ci !== this.ciBlocked) out.ciBlocked = ci;
-			this.label = label;
-			this.ciBlocked = ci;
 			return out;
 		}
-		const out: { clearLabels?: boolean; ciBlocked?: boolean } = {};
+		const out: PaneReportActions = {};
 		if (this.label !== undefined) out.clearLabels = true;
 		if (this.ciBlocked) out.ciBlocked = false;
-		this.label = undefined;
-		this.ciBlocked = false;
 		return out;
+	}
+
+	/** Records that the given actions were applied successfully. */
+	confirm(actions: PaneReportActions): void {
+		if (actions.label !== undefined) this.label = actions.label;
+		if (actions.clearLabels) this.label = undefined;
+		if (actions.ciBlocked !== undefined) this.ciBlocked = actions.ciBlocked;
 	}
 }

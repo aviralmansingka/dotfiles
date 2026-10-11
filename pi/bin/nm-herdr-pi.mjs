@@ -9,9 +9,10 @@
 // Bridge mode (only when the parent session is alive and hosting):
 //   - The run id is the cwd basename (a ULID, same derivation as the
 //     no-mistakes-pane extension's bridge server).
-//   - `$NM_HOME/herdr-bridge/<run-id>` exists → wait briefly for its socket,
-//     connect, and hand the invocation over: the parent session opens a
-//     visible Herdr subagent tab that runs real pi interactively, and
+//   - The parent creates `$NM_HOME/herdr-bridge/<run-id>` only after it first
+//     observes the run, so the shim waits for that dir (bounded), then for
+//     its socket, connects, and hands the invocation over: the parent session
+//     opens a visible Herdr subagent tab that runs real pi interactively, and
 //     streams translated json-mode events back over the socket. This shim
 //     writes them to stdout.
 //   - A `fatal` message from the server (tab could not open or settle) exits
@@ -61,6 +62,25 @@ function pickEnv() {
 		if (ENV_PREFIXES.some((pattern) => pattern.test(key))) out[key] = value;
 	}
 	return out;
+}
+
+let pendingWrites = 0;
+let pendingExit = null;
+
+function writeDrained(stream, text) {
+	pendingWrites++;
+	stream.write(text, () => {
+		pendingWrites--;
+		exitIfDrained();
+	});
+}
+
+function exitIfDrained() {
+	if (pendingExit !== null && pendingWrites <= 0) {
+		const code = pendingExit;
+		pendingExit = null;
+		process.exit(code);
+	}
 }
 
 function passthrough(prompt) {
@@ -136,7 +156,11 @@ async function bridgeMode(sockPath, prompt) {
 	let buffer = "";
 	let finished = false;
 	const writeStdout = (text) => {
-		if (!process.stdout.write(text)) {
+		pendingWrites++;
+		if (!process.stdout.write(text, () => {
+			pendingWrites--;
+			exitIfDrained();
+		})) {
 			socket.pause();
 			process.stdout.once("drain", () => socket.resume());
 		}
@@ -144,11 +168,12 @@ async function bridgeMode(sockPath, prompt) {
 	const exitBridge = (code, error) => {
 		if (finished) return;
 		finished = true;
-		if (error) process.stderr.write(`nm-herdr-pi: ${error}\n`);
+		if (error) writeDrained(process.stderr, `nm-herdr-pi: ${error}\n`);
 		try {
 			socket.destroy();
 		} catch {}
-		process.exit(code);
+		pendingExit = code;
+		exitIfDrained();
 	};
 
 	process.on("SIGTERM", () => {
@@ -205,12 +230,19 @@ async function main() {
 	const prompt = await readStdinFully();
 	const runId = runIdOf(process.cwd());
 	const dir = runId ? join(nmHome(), "herdr-bridge", runId) : undefined;
-	if (!dir || !existsSync(dir)) {
+	if (!dir) {
+		passthrough(prompt);
+		return;
+	}
+	const deadline = Date.now() + BRIDGE_WAIT_MS;
+	while (!existsSync(dir) && Date.now() < deadline) {
+		await sleep(POLL_MS);
+	}
+	if (!existsSync(dir)) {
 		passthrough(prompt);
 		return;
 	}
 	const sockPath = join(dir, "sock");
-	const deadline = Date.now() + BRIDGE_WAIT_MS;
 	while (!isSocket(sockPath) && Date.now() < deadline) {
 		await sleep(POLL_MS);
 	}
@@ -222,6 +254,7 @@ async function main() {
 }
 
 main().catch((err) => {
-	process.stderr.write(`nm-herdr-pi: ${err?.stack ?? err}\n`);
-	process.exit(1);
+	writeDrained(process.stderr, `nm-herdr-pi: ${err?.stack ?? err}\n`);
+	pendingExit = 1;
+	exitIfDrained();
 });

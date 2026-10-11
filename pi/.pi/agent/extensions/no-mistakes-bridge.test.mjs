@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import { existsSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 process.env.NODE_PATH = [
@@ -25,8 +30,8 @@ const {
 	deriveRunId,
 	bridgeRunDir,
 	splitAgentArgv,
-	stepLabelFromPrompt,
 	buildTabLauncher,
+	probeSocket,
 	SessionEventTranslator,
 } = jiti("./no-mistakes-pane/bridge.ts");
 const {
@@ -93,20 +98,6 @@ const {
 	const split = splitAgentArgv(["--mode", "json", "--", "positional", "--no-session"]);
 	assert.deepEqual(split.interactive, ["--", "positional", "--no-session"]);
 	assert.equal(split.sessionless, false);
-}
-
-// ---------------------------------------------------------------------------
-// Step labels for tab names, derived from the daemon's phase prompt.
-// ---------------------------------------------------------------------------
-{
-	assert.equal(stepLabelFromPrompt("Review the changes against the intent...", 1), "review");
-	assert.equal(stepLabelFromPrompt("Drive live test scenarios...", 2), "test");
-	assert.equal(stepLabelFromPrompt("Fix the CI failure on...", 3), "ci");
-	assert.equal(stepLabelFromPrompt("Resolve the rebase conflict...", 4), "rebase");
-	assert.equal(stepLabelFromPrompt("Extract the intent...", 5), "intent");
-	assert.equal(stepLabelFromPrompt("Lint and fix...", 6), "lint");
-	assert.equal(stepLabelFromPrompt("Update documentation...", 7), "document");
-	assert.equal(stepLabelFromPrompt("Do something unclassifiable", 8), "agent-8");
 }
 
 // ---------------------------------------------------------------------------
@@ -277,8 +268,186 @@ function snapshot(currentPhase, phases) {
 
 	const report = new PaneReportState();
 	assert.deepEqual(report.next(snapshot("review")), { label: "nm: review" }, "no CI transition fires from the initial unblocked state");
-	assert.deepEqual(report.next(snapshot("review")), {}, "no transition fires twice");
+	assert.deepEqual(
+		report.next(snapshot("review")),
+		{ label: "nm: review" },
+		"an unconfirmed transition re-emits while Herdr never received it",
+	);
+	report.confirm({ label: "nm: review" });
+	assert.deepEqual(report.next(snapshot("review")), {}, "no confirmed transition fires twice");
 	assert.deepEqual(report.next(snapshot("ci")), { label: "nm: ci", ciBlocked: true });
+	report.confirm({ label: "nm: ci", ciBlocked: true });
 	assert.deepEqual(report.next(undefined), { clearLabels: true, ciBlocked: false });
+	report.confirm({ clearLabels: true, ciBlocked: false });
 	assert.deepEqual(report.next(undefined), {}, "release fires once");
+
+	// A transition whose herdr application failed is never confirmed, so the
+	// next poll must re-emit it instead of permanently swallowing it.
+	const failedApply = new PaneReportState();
+	assert.deepEqual(failedApply.next(snapshot("lint")), { label: "nm: lint" });
+	assert.deepEqual(
+		failedApply.next(snapshot("lint")),
+		{ label: "nm: lint" },
+		"the transition re-emits while its application keeps failing",
+	);
+	failedApply.confirm({ label: "nm: lint" });
+	assert.deepEqual(failedApply.next(snapshot("lint")), {});
+
+	// confirm is per-action: an applied CI transition must not advance a
+	// label transition that never applied.
+	const partial = new PaneReportState();
+	assert.deepEqual(partial.next(snapshot("ci")), { label: "nm: ci", ciBlocked: true });
+	partial.confirm({ ciBlocked: true });
+	assert.deepEqual(
+		partial.next(snapshot("ci")),
+		{ label: "nm: ci" },
+		"the unconfirmed label re-emits after a CI-only confirm",
+	);
 }
+
+// ---------------------------------------------------------------------------
+// Socket ownership probe: a live bridge server answers; a socket nobody
+// answers is stale, whatever kind of file it is.
+// ---------------------------------------------------------------------------
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+
+await (async () => {
+	const root = mkdtempSync(join(tmpdir(), "nm-probe-"));
+	const livePath = join(root, "live.sock");
+	const server = createServer((sock) => sock.destroy());
+	await new Promise((done) => server.listen(livePath, done));
+	assert.equal(await probeSocket(livePath), true, "a listening bridge server answers the probe");
+	server.close();
+	await new Promise((done) => server.close(done));
+	assert.equal(
+		await probeSocket(livePath),
+		false,
+		"a socket left behind by a closed server is stale",
+	);
+	const stalePath = join(root, "stale.sock");
+	writeFileSync(stalePath, "not a server");
+	assert.equal(await probeSocket(stalePath), false, "a socket file nobody answers is stale");
+	assert.equal(await probeSocket(join(root, "missing.sock")), false, "no socket file is stale");
+	rmSync(root, { recursive: true, force: true });
+})();
+
+// ---------------------------------------------------------------------------
+// The shim itself, exercised against a fake bridge server: a step launched
+// before the parent creates the bridge dir must still reach the bridge, and
+// the daemon must receive every event line through the final agent_settled
+// before the shim exits.
+// ---------------------------------------------------------------------------
+const shimPath = fileURLToPath(new URL("../../../bin/nm-herdr-pi.mjs", import.meta.url));
+const TEST_RUN_ID = "01M4KZ1QA7E1CSFXJM5B4W0240";
+
+function startFakeBridge(sockPath, onHello) {
+	mkdirSync(join(sockPath, ".."), { recursive: true });
+	const server = createServer((sock) => {
+		let buffer = "";
+		sock.on("data", (chunk) => {
+			buffer += chunk.toString("utf-8");
+			const index = buffer.indexOf("\n");
+			if (index < 0) return;
+			buffer = buffer.slice(index + 1);
+			sock.removeAllListeners("data");
+			onHello(sock);
+		});
+	});
+	return new Promise((done) => server.listen(sockPath, () => done(server)));
+}
+
+function runShim({ root, extraEnv = {} }) {
+	const child = spawn(process.execPath, [shimPath], {
+		cwd: join(root, TEST_RUN_ID),
+		env: {
+			...process.env,
+			NM_HOME: root,
+			NM_HERDR_REAL_PI: join(root, "stub-pi.sh"),
+			NM_HERDR_BRIDGE_WAIT_MS: "4000",
+			...extraEnv,
+		},
+		stdio: ["pipe", "pipe", "pipe"],
+	});
+	const stdout = [];
+	const stderr = [];
+	child.stdout.on("data", (chunk) => stdout.push(chunk));
+	child.stderr.on("data", (chunk) => stderr.push(chunk));
+	return { child, stdout, stderr };
+}
+
+function awaitExit(child, timeoutMs) {
+	return new Promise((done, fail) => {
+		const timer = setTimeout(() => {
+			child.kill("SIGKILL");
+			fail(new Error("shim did not exit in time"));
+		}, timeoutMs);
+		child.once("exit", (code, signal) => {
+			clearTimeout(timer);
+			done({ code, signal });
+		});
+	});
+}
+
+function makeShimRoot(prefix, stubBody) {
+	const root = mkdtempSync(join(tmpdir(), prefix));
+	writeFileSync(join(root, "stub-pi.sh"), stubBody);
+	chmodSync(join(root, "stub-pi.sh"), 0o755);
+	mkdirSync(join(root, TEST_RUN_ID));
+	return root;
+}
+
+await (async () => {
+	// The parent creates the bridge dir only after it first observes the run:
+	// it appears 500ms after the shim starts, and the shim must wait for it
+	// instead of falling back to headless pi.
+	const root = makeShimRoot("nm-shim-late-", "#!/bin/sh\necho PASSTHROUGH-MARKER\nexit 0\n");
+	const lines = [
+		'{"type":"session","id":"01late-dir-test-000000000000000"}',
+		'{"type":"agent_settled","aborted":false}',
+	];
+	const { child, stdout, stderr } = runShim({ root });
+	child.stdin.end("do the step");
+	const exited = awaitExit(child, 15000);
+	await sleep(500);
+	const server = await startFakeBridge(join(root, "herdr-bridge", TEST_RUN_ID, "sock"), (sock) => {
+		sock.write(JSON.stringify({ type: "events", lines }) + "\n");
+		sock.end();
+	});
+	const result = await exited;
+	const out = Buffer.concat(stdout).toString("utf-8");
+	const err = Buffer.concat(stderr).toString("utf-8");
+	assert.equal(result.code, 0, `shim stderr: ${err}`);
+	assert.ok(!out.includes("PASSTHROUGH-MARKER"), `the step must not run headless; stderr: ${err}`);
+	assert.equal(out, lines.map((line) => line + "\n").join(""), `shim stderr: ${err}`);
+	server.close();
+	rmSync(root, { recursive: true, force: true });
+})();
+
+await (async () => {
+	// A turn far larger than the stdout pipe buffer: every event line must
+	// land on stdout, through the final agent_settled, before the shim exits.
+	const root = makeShimRoot("nm-shim-drain-", "#!/bin/sh\nexit 0\n");
+	const settled = '{"type":"agent_settled","aborted":false}';
+	const payload = [];
+	const expected = [];
+	for (let i = 0; i < 1200; i++) {
+		const line = `{"type":"message_end","message":{"role":"assistant","content":[{"type":"text","text":"${"x".repeat(80)} chunk ${i}"}]}}`;
+		payload.push(JSON.stringify({ type: "events", lines: [line] }) + "\n");
+		expected.push(line + "\n");
+	}
+	payload.push(JSON.stringify({ type: "events", lines: [settled] }) + "\n");
+	expected.push(settled + "\n");
+	const server = await startFakeBridge(join(root, "herdr-bridge", TEST_RUN_ID, "sock"), (sock) => {
+		for (const message of payload) sock.write(message);
+		sock.end();
+	});
+	const { child, stdout, stderr } = runShim({ root });
+	child.stdin.end("big turn");
+	const result = await awaitExit(child, 30000);
+	const out = Buffer.concat(stdout).toString("utf-8");
+	const err = Buffer.concat(stderr).toString("utf-8");
+	assert.equal(result.code, 0, `shim stderr: ${err}`);
+	assert.equal(out, expected.join(""), `the daemon must receive the full stream; stderr: ${err}`);
+	server.close();
+	rmSync(root, { recursive: true, force: true });
+})();

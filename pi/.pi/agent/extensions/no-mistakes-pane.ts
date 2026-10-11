@@ -23,6 +23,7 @@ import {
 import {
 	applyRunPaneLabels,
 	clearRunPaneLabels,
+	PaneReportActions,
 	PaneReportState,
 	setCiBlocked,
 } from "./no-mistakes-pane/herdr-report";
@@ -400,11 +401,8 @@ function teardownWatch(state: WatchState): void {
 		state.bridgeRunId = undefined;
 	}
 	teardownBridgeServers();
-	const paneId = process.env.HERDR_PANE_ID;
-	if (paneId && state.paneReport) {
-		const actions = state.paneReport.next(undefined);
-		if (actions.clearLabels) clearRunPaneLabels(paneId);
-		if (actions.ciBlocked !== undefined) setCiBlocked(state.pi, actions.ciBlocked);
+	if (state.paneReport) {
+		applyPaneReportActions(state, state.paneReport.next(undefined));
 	}
 	publishSnapshot(state, undefined);
 	// Deliberately leave background axi clients and the attach pane alone:
@@ -729,6 +727,23 @@ function publishSnapshot(state: WatchState, snapshot: NoMistakesSnapshot | undef
 	}
 }
 
+/** Apply one pane-report transition set: each action is confirmed only
+ *  after it reached Herdr, so a failed herdr call leaves it unconfirmed and
+ *  the next poll re-emits it. */
+function applyPaneReportActions(state: WatchState, actions: PaneReportActions): void {
+	const paneId = process.env.HERDR_PANE_ID;
+	if (actions.label !== undefined && paneId && applyRunPaneLabels(paneId, actions.label)) {
+		state.paneReport.confirm({ label: actions.label });
+	}
+	if (actions.clearLabels && paneId && clearRunPaneLabels(paneId)) {
+		state.paneReport.confirm({ clearLabels: true });
+	}
+	if (actions.ciBlocked !== undefined) {
+		setCiBlocked(state.pi, actions.ciBlocked);
+		state.paneReport.confirm({ ciBlocked: actions.ciBlocked });
+	}
+}
+
 /** Drive the two Herdr visibility surfaces for the tracked run:
  *  the interactive bridge (daemon step agents hosted as visible subagent
  *  tabs) and the pane-state report (phase labels + the CI red state). Runs
@@ -740,19 +755,13 @@ function syncRunVisibility(state: WatchState, visible: NoMistakesSnapshot | unde
 	// Only a live interactive session drives Herdr surfaces; the flag is set
 	// by the default export on session_start (see above).
 	if (!interactiveTuiSession) return;
-	const paneId = process.env.HERDR_PANE_ID;
 	if (visible && visible.id === state.trackedRunId) {
 		if (state.bridgeRunId && state.bridgeRunId !== visible.id) {
 			teardownBridgeForRun(state.bridgeRunId);
 		}
 		state.bridgeRunId = visible.id;
 		ensureBridgeServer(visible.id);
-		if (paneId) {
-			const actions = state.paneReport.next(visible);
-			if (actions.label) applyRunPaneLabels(paneId, actions.label);
-			if (actions.clearLabels) clearRunPaneLabels(paneId);
-			if (actions.ciBlocked !== undefined) setCiBlocked(state.pi, actions.ciBlocked);
-		}
+		applyPaneReportActions(state, state.paneReport.next(visible));
 		return;
 	}
 	// No visible tracked run: release every surface (run terminal, aborted,
@@ -761,11 +770,7 @@ function syncRunVisibility(state: WatchState, visible: NoMistakesSnapshot | unde
 		teardownBridgeForRun(state.bridgeRunId);
 		state.bridgeRunId = undefined;
 	}
-	if (paneId) {
-		const actions = state.paneReport.next(undefined);
-		if (actions.clearLabels) clearRunPaneLabels(paneId);
-		if (actions.ciBlocked !== undefined) setCiBlocked(state.pi, actions.ciBlocked);
-	}
+	applyPaneReportActions(state, state.paneReport.next(undefined));
 }
 
 async function refreshStatus(

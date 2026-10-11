@@ -144,7 +144,8 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
 fi
 
 echo "==> Installing the no-mistakes Herdr bridge (visible step agents)"
-"$DOTFILES_DIR/scripts/install-nm-herdr-bridge"
+"$DOTFILES_DIR/scripts/install-nm-herdr-bridge" ||
+    echo "==> no-mistakes Herdr bridge not installed (its installer failed; continuing)"
 
 # Optional Linux-only systemd units
 if command -v systemctl >/dev/null 2>&1; then
