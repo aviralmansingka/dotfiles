@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { HOMEBREW_JITI, resolveJiti } from "../test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
-// Allow CI to supply its own jiti via JITI_PATH; fall back to the host pi install.
-const _jitiCjs = process.env.JITI_PATH || "/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs";
-const {
-	createJiti,
-} = require(_jitiCjs);
+const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI] });
+const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 const {
 	joinHints,

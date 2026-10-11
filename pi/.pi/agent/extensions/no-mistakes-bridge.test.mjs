@@ -6,26 +6,18 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
 // Drive the bridge's prompt-settle poll fast (default 250 ms); pure test
 // knob — the module reads it once at import, so set it BEFORE jiti loads.
 process.env.NM_BRIDGE_POLL_MS ??= "25";
-process.env.NODE_PATH = [
-	"/opt/homebrew/lib/node_modules",
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules",
-	"/home/avirus/.pi/agent/install/releases/1.1.0/node_modules",
-	process.env.NODE_PATH || "",
-].filter(Boolean).join(":");
+// Shared jiti resolution (test-lib): JITI_PATH/NODE_PATH or the pi-managed
+// install; NODE_PATH is re-derived from the resolved jiti root exactly the
+// way CI's prefix install provides it, so typebox resolves uniformly.
+const { jitiPath, nodePath } = resolveJiti();
+process.env.NODE_PATH = nodePath;
 require("node:module").Module._initPaths();
-
-// Resolve jiti the same way CI (JITI_PATH) and the local installs do.
-const jitiPath = [
-	process.env.JITI_PATH,
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.pi/agent/install/releases/1.1.0/node_modules/jiti/lib/jiti.cjs",
-].find((path) => path && existsSync(path));
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 

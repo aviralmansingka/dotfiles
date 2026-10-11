@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "typebox";
+import { wrapsInlinePython } from "./shell-classify.mjs";
 
 // ────────────────────────────────────────────────────────────────────────────
 // python — a codemode-style sibling of the bash tool.
@@ -63,35 +64,12 @@ type Child = ReturnType<typeof spawn>;
 // tool. Chained or piped invocation lines stay allowed: anything that does
 // more than run inline Python is not ours to block, and running an existing
 // script file (`python3 script.py`) keeps working in bash.
+//
+// The decision table (invocation pattern, quote-aware chain-char detection,
+// heredoc judgment) is delegated to shell-classify.mjs — the shared pure
+// classifier the tool-call renderer and run-command also use, so the three
+// parsers cannot drift apart again (#242, `786c2d3`).
 // ────────────────────────────────────────────────────────────────────────
-const PYTHON_INVOCATION =
-	/^(?:[A-Za-z_]\w*=(?:"[^"\n]*"|'[^'\n]*'|[^\s]+)\s+)*(?:uv\s+run\s+)?python3?(?:\.\d+)?(?=\s|$)/;
-
-function chainsShellCommands(text: string): boolean {
-	// Quote-aware: a `;` inside the quoted Python code of `-c '…;…'` is
-	// Python syntax, not a shell chain.
-	let quote = "";
-	for (const char of text) {
-		if (quote) {
-			if (char === quote) quote = "";
-		} else if (char === "'" || char === '"') quote = char;
-		else if (char === ";" || char === "|" || char === "&") return true;
-	}
-	return false;
-}
-
-function wrapsInlinePython(command: string): boolean {
-	// Drop the leading intent-title comment, then judge the invocation line.
-	const source = command.replace(/^(?:\s*#[^\n]*\n)+/, "");
-	const invocation = (source.split("\n", 1)[0] ?? "").trim();
-	const beforeHeredoc = invocation.split("<<", 1)[0];
-	if (chainsShellCommands(beforeHeredoc)) return false;
-	const invocationMatch = PYTHON_INVOCATION.exec(invocation);
-	if (!invocationMatch) return false;
-	const args = beforeHeredoc.slice(invocationMatch[0].length).trim().split(/\s+/).filter(Boolean);
-	return args.includes("-") || args.includes("-c") || invocation.includes("<<");
-}
-
 export default function pythonTool(pi: ExtensionAPI) {
 	pi.on("tool_call", (event) => {
 		if (event.toolName !== "bash") return;

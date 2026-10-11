@@ -1,16 +1,9 @@
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
+import { HOMEBREW_JITI, NVM_JITI, resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
-const jitiPath = [
-	process.env.JITI_PATH,
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-].find((path) => path && existsSync(path));
-
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
-
+const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI, NVM_JITI] });
 const { createJiti } = require(jitiPath);
 const extension = createJiti(import.meta.url)("./herdr-prompt-state.ts").default;
 const handlers = new Map();

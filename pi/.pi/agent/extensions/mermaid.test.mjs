@@ -5,19 +5,10 @@ import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
-const installRoot = join(homedir(), ".pi/agent/install");
-const versionFile = join(installRoot, "current-version");
-const jitiPath = [
-	process.env.JITI_PATH,
-	existsSync(versionFile) && join(installRoot, "releases", readFileSync(versionFile, "utf8").trim(), "node_modules/jiti/lib/jiti.cjs"),
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-].find((path) => path && existsSync(path));
-
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
-
+const { jitiPath } = resolveJiti();
 const { createJiti } = require(jitiPath);
 
 // Peer stubs (house pattern from lesson.test.mjs). mermaid.ts imports Type

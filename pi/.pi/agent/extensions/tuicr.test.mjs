@@ -10,8 +10,9 @@ import {
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { resolveJiti } from "./test-lib/jiti.mjs";
 import {
 	activeSlugs,
 	buildReplyArgs,
@@ -638,13 +639,7 @@ assert.equal(
 // the comment/session fixtures the fake CLI serves. No network, no panes.
 
 const require = createRequire(import.meta.url);
-const installRoot = join(homedir(), ".pi/agent/install");
-const versionFile = join(installRoot, "current-version");
-const jitiPath = [
-	process.env.JITI_PATH,
-	existsSync(versionFile) && join(installRoot, "releases", readFileSync(versionFile, "utf8").trim(), "node_modules/jiti/lib/jiti.cjs"),
-].find((path) => path && existsSync(path));
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
+const { jitiPath } = resolveJiti();
 const { createJiti } = require(jitiPath);
 
 const extRoot = mkdtempSync(join(tmpdir(), "tuicr-ext-test-"));

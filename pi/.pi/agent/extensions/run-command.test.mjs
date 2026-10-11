@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 import { stripVTControlCharacters } from "node:util";
+import { HOMEBREW_JITI, jitiEnv } from "./test-lib/jiti.mjs";
 
 // Optional real Pi helpers exercise ANSI/Unicode wrapping locally; CI's small
 // dependency stub below still checks the renderer's wrapping contract.
@@ -12,18 +13,13 @@ const tuiUtils = process.env.PI_TUI_UTILS ? await import(process.env.PI_TUI_UTIL
 globalThis.__runCommandTuiUtils = tuiUtils;
 
 const require = createRequire(import.meta.url);
-process.env.NODE_PATH = [
-	"/opt/homebrew/lib/node_modules",
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules",
-	process.env.NODE_PATH || "",
-].filter(Boolean).join(":");
+// Shared jiti resolution (test-lib): JITI_PATH/NODE_PATH or the pi-managed
+// install, plus this file's historical macOS homebrew fallback. NODE_PATH is
+// re-derived from the resolved jiti root exactly the way CI's prefix install
+// provides it, so typebox resolves uniformly across hosts.
+Object.assign(process.env, jitiEnv({ extraFallbacks: [HOMEBREW_JITI] }));
 require("node:module").Module._initPaths();
-// Allow CI / non-macOS hosts to supply jiti via JITI_PATH; fall back to the
-// captain's macOS homebrew pi install (matches quiz-context-files.test.mjs).
-const _jitiCjs =
-	process.env.JITI_PATH ||
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs";
-const { createJiti } = require(_jitiCjs);
+const { createJiti } = require(process.env.JITI_PATH);
 const jiti = createJiti(import.meta.url);
 const { buildNvimTerminalScript, extractMarkedOutput } = jiti("./run-command/nvim-terminal.ts");
 

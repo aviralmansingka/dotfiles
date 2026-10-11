@@ -4,16 +4,10 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { HOMEBREW_JITI, NVM_JITI, resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
-const jitiPath = [
-	process.env.JITI_PATH,
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-].find((path) => path && existsSync(path));
-
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
-
+const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI, NVM_JITI] });
 const { createJiti } = require(jitiPath);
 
 // Peer stubs (house pattern). focus-buffer imports nvim-open, which imports

@@ -1,21 +1,16 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { resolveJiti } from "./test-lib/jiti.mjs";
 
 // Exercises the REAL usage.ts: the extension factory, aggregate(), and the
 // UsageComponent the /usage command mounts. Stub-alias imports keep the run
 // offline and hermetic; the old version of this file re-implemented the
 // grid-width formula and kept passing while the implementation regressed.
 const require = createRequire(import.meta.url);
-const jitiPath = [
-  process.env.JITI_PATH,
-  "/tmp/ren-jiti/node_modules/jiti/lib/jiti.cjs",
-  "/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-  "/home/avirus/.pi/agent/install/releases/1.1.0/node_modules/jiti/lib/jiti.cjs",
-].find((path) => path && existsSync(path));
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
+const { jitiPath } = resolveJiti();
 const { createJiti } = require(jitiPath);
 
 const root = mkdtempSync(join(tmpdir(), "usage-test-"));

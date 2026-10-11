@@ -3,10 +3,10 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { HOMEBREW_JITI, resolveJiti } from "../test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
-const jitiPath =
-	process.env.JITI_PATH || "/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs";
+const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI] });
 const { createJiti } = require(jitiPath);
 const tempRoot = mkdtempSync(join(tmpdir(), "option-navigation-test-"));
 

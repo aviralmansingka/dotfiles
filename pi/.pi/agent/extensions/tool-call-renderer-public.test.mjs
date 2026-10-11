@@ -1,17 +1,15 @@
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { HOMEBREW_JITI, NVM_JITI, resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
-const jitiPath = [
-  process.env.JITI_PATH,
-  "/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-  "/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-].find((path) => path && existsSync(path));
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
+// Historical host fallbacks (macOS homebrew, homelab nvm) — this file's old
+// list had no pi-install entry, so pass them through extraFallbacks.
+const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI, NVM_JITI] });
 const { createJiti } = require(jitiPath);
 const source = readFileSync(new URL("./tool-call-renderer-public.ts", import.meta.url), "utf8");
 for (const marker of ["Symbol.for", "prototype", "rendererState", "dist/bundle", "updateResult", "hideThinkingBlock", "requestRender", "globalThis"]) {

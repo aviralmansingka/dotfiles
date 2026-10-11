@@ -17,23 +17,14 @@ import {
 	loadAgentDefaultsFromPaths,
 	parseAgentDefinition,
 } from "./interactive-subagents/pi-extension/subagents/agent-definitions.mjs";
+import { HOMEBREW_JITI, NVM_JITI, resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
 
-// Allow CI / other hosts to supply jiti via JITI_PATH; otherwise fall back to
-// the captain's macOS homebrew pi install AND the Linux nvm homelab install.
-const jitiCandidates = [
-	process.env.JITI_PATH,
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-].filter(Boolean);
-const jitiPath = jitiCandidates.find((p) => p && existsSync(p));
-if (!jitiPath) {
-	console.error(
-		"jiti not found. Set JITI_PATH to jiti.cjs for your pi install.",
-	);
-	process.exit(1);
-}
+// Shared jiti resolution (test-lib): JITI_PATH/NODE_PATH or the pi-managed
+// install; this file's historical macOS homebrew and homelab nvm installs
+// stay as caller fallbacks.
+const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI, NVM_JITI] });
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 
