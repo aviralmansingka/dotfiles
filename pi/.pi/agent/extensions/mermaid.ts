@@ -564,7 +564,7 @@ export default function (pi: ExtensionAPI) {
 				details: {
 					error,
 					ms: Date.now() - started,
-				paneWidth: pane,
+					paneWidth: pane,
 					path: freeformSource ? "freeform" : "structured",
 					...extra,
 				} satisfies MermaidDetails,
