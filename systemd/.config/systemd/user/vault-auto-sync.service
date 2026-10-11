@@ -10,7 +10,9 @@ Environment=REPO_DIR=%h/vault
 Environment=TARGET_BRANCH=main
 Environment=SYNC_INTERVAL_SECONDS=300
 Environment=STATE_DIR=%h/.local/state/auto-git-sync/vault
-ExecStart=%h/dotfiles/scripts/auto-git-sync --daemon
+# Explicit interpreter: avoids the 203/EXEC failure class when the exec bit
+# is absent on the host.
+ExecStart=/bin/bash %h/dotfiles/scripts/auto-git-sync --daemon
 Restart=always
 RestartSec=15
 StandardOutput=journal
