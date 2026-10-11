@@ -113,3 +113,12 @@ command.
 - A blocked `bash` call means: send the same code with the `python` tool.
 - Run an existing script file (`python3 script.py`) in `bash` only when the
   script is the deliverable. Do not use it for inline data work.
+
+## Edit tool paths
+
+Send the edit tool's `path` relative to the session cwd, the same way
+read calls do. Stored calls, result text, and downstream consumers then
+carry the short, worktree-stable form.
+
+- Send `path=src/main.rs`, not `path=/home/user/worktrees/fix-x/src/main.rs`.
+- Keep the absolute form only when the file lies outside the session cwd.
