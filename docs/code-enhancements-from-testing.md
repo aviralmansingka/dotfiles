@@ -105,8 +105,17 @@ Status legend:
     `PORTABILITY_GAPS` entries removed; C9/C14 selftests pin the
     recurrences (dom-config-lint).
 
-25. **no-mistakes binary drifted far past the repo pin** — [needs-decision]
-    The installed binary is v1.84.0 while `scripts/install-no-mistakes`
+25. **no-mistakes binary drifted far past the repo pin** — DONE by
+    rel-nm-pin. Mechanism: the setup wizard's self-managed symlink install
+    (the pinned installer never ran on this host) plus two explicit
+    `no-mistakes update` events (one agent-driven, 2026-10-08). Pin moved
+    to v1.84.0 with official checksums; a pin-drift tripwire now fails on
+    pin-vs-installed mismatch; axi argv verified unchanged via full help
+    diff (the earlier `--step` note overstated the delta — it was already
+    required in v1.41.2). OPERATIONAL: adopting the owned installer on
+    this host requires deleting the wizard symlink first, then running
+    `scripts/install-no-mistakes`.
+    ~~The installed binary is v1.84.0 while `scripts/install-no-mistakes`
     pins v1.41.2, and the axi CLI contract has drifted with it (e.g.
     `axi logs` now requires `--step`). Observed live: a launch from the
     captain's tab never registered a run (daemon log untouched for hours)
