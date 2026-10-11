@@ -195,8 +195,14 @@ Status legend:
 
 ## D. Test/process enhancements (not product code)
 
-35. **Quarantine mechanism for known-failing tests** — "fails on baseline"
-    was normalized across sessions and masked regressions. [ready-to-file]
+35. **Quarantine mechanism for known-failing tests** — CLOSED AS DORMANT.
+    "Fails on baseline" was normalized across sessions and masked
+    regressions; the triage rule ("fails on the pre-change baseline ⇒ not
+    your regression ⇒ quarantine, never ignore") is documented in
+    `docs/ci-tests/ci-meta.md`. The full tree is green — zero known-failing
+    tests exist to quarantine — so no mechanism ships. Revisit the moment a
+    red suite ever persists on main: a quarantine list file + runner skip
+    support is the designed shape.
 36. **Mermaid corpus as an institutionalized pre-merge local gate** — the v1
     lesson: unit tests pass while the architecture is wrong. [ready-to-file;
     corpus stays manual, skip paths hardened by dom-mermaid]
