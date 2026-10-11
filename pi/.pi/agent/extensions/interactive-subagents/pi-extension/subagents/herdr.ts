@@ -15,6 +15,14 @@ import { dirname, join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
+// Explicit stdio on every captured execFileSync below is load-bearing: with
+// the default (unspecified) stdio, Node passes the child's stderr through to
+// this process's terminal while also capturing it — the #291 splatter class
+// (a failing herdr call painted raw error lines over the agent's TUI).
+// stdio: ["pipe", "pipe", "pipe"] keeps the CLI's stderr fully captured
+// (real failures still surface through the thrown error) and off the
+// terminal. Best-effort close sites swallow the error as before.
+
 // ── Availability ──
 
 const commandAvailability = new Map<string, boolean>();
@@ -80,7 +88,10 @@ function parsePaneId(stdout: string): string {
 }
 
 function workspaceForPane(paneId: string): string {
-  const stdout = execFileSync("herdr", ["pane", "get", paneId], { encoding: "utf8" });
+  const stdout = execFileSync("herdr", ["pane", "get", paneId], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
   const workspaceId = JSON.parse(stdout)?.result?.pane?.workspace_id;
   if (typeof workspaceId !== "string" || workspaceId.length === 0) {
     throw new Error(`Unexpected Herdr pane output: ${stdout}`);
@@ -92,7 +103,10 @@ function workspaceForPane(paneId: string): string {
  *  Returns null when the pane cannot be resolved. */
 export function tabForPane(paneId: string): string | null {
   try {
-    const stdout = execFileSync("herdr", ["pane", "get", paneId], { encoding: "utf8" });
+    const stdout = execFileSync("herdr", ["pane", "get", paneId], {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     const tabId = JSON.parse(stdout)?.result?.pane?.tab_id;
     return typeof tabId === "string" && tabId.length > 0 ? tabId : null;
   } catch {
@@ -113,6 +127,20 @@ function rebalanceSurfaces(_hintPane?: string): void {
 
 // ── Surface primitives ──
 
+/** Best-effort tab id extraction from a `tab create` response that carried
+ *  no root pane id. Used only by createSurface's missing-pane-id recovery:
+ *  the response's own tab key is the only close target that exists. */
+function tabIdFromCreateOutput(stdout: string): string | undefined {
+  try {
+    const data = JSON.parse(stdout);
+    const tab = data?.result?.tab ?? data?.result;
+    const tabId = tab?.tab_id ?? tab?.id ?? data?.result?.tab_id;
+    return typeof tabId === "string" && tabId.length > 0 ? tabId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Create a labeled, unfocused tab and return its root pane id. */
 export function createSurface(name: string): string {
   requireHerdr();
@@ -126,9 +154,29 @@ export function createSurface(name: string): string {
       "--label", `subagent: ${name}`,
       "--no-focus",
     ],
-    { encoding: "utf8" },
+    { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
   );
-  return parsePaneId(stdout);
+  // C31: a `tab create` answer without a pane id leaves no close target for
+  // the caller (withNewSurface closes by pane id). Recover by closing the tab
+  // the response DOES name — best-effort, then surface the original parse
+  // failure — so a pane-less tab-create answer never leaks an empty tab.
+  try {
+    return parsePaneId(stdout);
+  } catch (error) {
+    const tabId = tabIdFromCreateOutput(stdout);
+    if (tabId) {
+      try {
+        execFileSync("herdr", ["tab", "close", tabId], {
+          encoding: "utf8",
+          stdio: ["pipe", "pipe", "pipe"],
+        });
+      } catch {
+        // Best-effort: the tab may already be gone. The parse error below
+        // still reports the malformed response.
+      }
+    }
+    throw error;
+  }
 }
 
 /**
@@ -155,7 +203,10 @@ export function createSurfaceSplit(
   }
   args.push("--direction", herdrDirection, "--ratio", "0.5", "--no-focus");
 
-  const stdout = execFileSync("herdr", args, { encoding: "utf8" });
+  const stdout = execFileSync("herdr", args, {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
   const pane = parsePaneId(stdout);
   rebalanceSurfaces(pane);
   return pane;
@@ -167,7 +218,10 @@ export function createSurfaceSplit(
  */
 export function sendCommand(surface: string, command: string): void {
   requireHerdr();
-  execFileSync("herdr", ["pane", "run", surface, command], { encoding: "utf8" });
+  execFileSync("herdr", ["pane", "run", surface, command], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 }
 
 /** Wait until Herdr sees the launched agent at its interactive prompt. */
@@ -213,7 +267,10 @@ export async function waitForAgentReady(
 /** Submit a prompt only after waitForAgentReady has observed interactive readiness. */
 export function sendAgentPrompt(surface: string, prompt: string): void {
   requireHerdr();
-  execFileSync("herdr", ["agent", "prompt", surface, prompt], { encoding: "utf8" });
+  execFileSync("herdr", ["agent", "prompt", surface, prompt], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 }
 
 /**
@@ -263,7 +320,7 @@ export function readScreen(surface: string, lines = 50): string {
   return execFileSync(
     "herdr",
     ["pane", "read", surface, "--source", "recent", "--lines", String(Math.max(1, lines)), "--format", "text"],
-    { encoding: "utf8" },
+    { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
   );
 }
 
@@ -289,7 +346,10 @@ export async function readScreenAsync(
  */
 export function closeSurface(surface: string): void {
   requireHerdr();
-  execFileSync("herdr", ["pane", "close", surface], { encoding: "utf8" });
+  execFileSync("herdr", ["pane", "close", surface], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
   rebalanceSurfaces();
 }
 
@@ -305,24 +365,79 @@ export function closeTabForPane(paneId: string): void {
   const tabId = tabForPane(paneId);
   if (tabId) {
     try {
-      execFileSync("herdr", ["tab", "close", tabId], { encoding: "utf8" });
+      execFileSync("herdr", ["tab", "close", tabId], {
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+      });
       return;
     } catch {}
   }
   try {
-    execFileSync("herdr", ["pane", "close", paneId], { encoding: "utf8" });
+    execFileSync("herdr", ["pane", "close", paneId], {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
   } catch {}
 }
 
 // ── Exit polling ──
 
+/** TESTABILITY knobs (the same pattern as bridge.ts's NM_BRIDGE_POLL_MS):
+ *  PI_SUBAGENT_POLL_MS (poll cadence), PI_SUBAGENT_MAX_WAIT_MS (hard
+ *  deadline), PI_SUBAGENT_STARTUP_GRACE_MS (no-sighting grace), and
+ *  PI_SUBAGENT_PROCINFO_FAIL_LIMIT (consecutive read failures before a
+ *  pane-existence probe) override a wait bound so tests run in milliseconds.
+ *  They change no default behavior. Identical contract in ./tmux.ts. */
+export const DEFAULT_SUBAGENT_POLL_MS = 1000;
+export const DEFAULT_SUBAGENT_MAX_WAIT_MS = 30 * 60_000;
+export const DEFAULT_SUBAGENT_STARTUP_GRACE_MS = 60_000;
+export const DEFAULT_SUBAGENT_PROCINFO_FAIL_LIMIT = 3;
+
+function envMs(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 export interface PollResult {
   /** How the subagent exited */
-  reason: "done" | "sentinel" | "error" | "killed" | "agent-gone";
-  /** Shell exit code. 0 for file-based exits; 130 when the pane was killed. */
-  exitCode: number;
+  reason:
+    | "done"
+    | "sentinel"
+    | "error"
+    | "killed"
+    | "agent-gone"
+    | "no-agent"
+    | "timeout";
+  /** Shell exit code. 0 for file-based exits; 130 when the pane was killed.
+   *  null for timeout/no-agent unless the deadline harvest reveals one. */
+  exitCode: number | null;
   /** Error message if reason is "error" (auto-retry exhausted, provider overload, etc.) */
   errorMessage?: string;
+}
+
+/** Resolved wait bounds shared by pollForExit and the index.ts watcher. */
+export interface SubagentPollBounds {
+  pollMs: number;
+  maxWaitMs: number;
+  startupGraceMs: number;
+  processInfoFailLimit: number;
+}
+
+export function getSubagentPollBounds(
+  overrides?: Partial<SubagentPollBounds>,
+): SubagentPollBounds {
+  return {
+    pollMs: overrides?.pollMs ?? envMs("PI_SUBAGENT_POLL_MS", DEFAULT_SUBAGENT_POLL_MS),
+    maxWaitMs:
+      overrides?.maxWaitMs ?? envMs("PI_SUBAGENT_MAX_WAIT_MS", DEFAULT_SUBAGENT_MAX_WAIT_MS),
+    startupGraceMs:
+      overrides?.startupGraceMs ??
+      envMs("PI_SUBAGENT_STARTUP_GRACE_MS", DEFAULT_SUBAGENT_STARTUP_GRACE_MS),
+    processInfoFailLimit:
+      overrides?.processInfoFailLimit ??
+      envMs("PI_SUBAGENT_PROCINFO_FAIL_LIMIT", DEFAULT_SUBAGENT_PROCINFO_FAIL_LIMIT),
+  };
 }
 
 /**
@@ -366,6 +481,31 @@ function paneKilledResult(): PollResult {
  *  never detected, but the pane's pi agent process is gone. */
 function agentGoneResult(): PollResult {
   return { reason: "agent-gone", exitCode: 0 };
+}
+
+/** Startup death: pi was never seen in the pane's foreground processes and
+ *  no sentinel/sidecar appeared within the startup grace window — the failed
+ *  delegation launch (bare shell) failure class. */
+function noAgentResult(): PollResult {
+  return { reason: "no-agent", exitCode: null };
+}
+
+/** Hard deadline expired while the subagent was still pending (the wedged
+ *  agent failure class). exitCode stays null unless the deadline harvest
+ *  (final sidecar/sentinel check) reveals one. */
+function timeoutResult(): PollResult {
+  return { reason: "timeout", exitCode: null };
+}
+
+/** Does the pane still exist? Probed after repeated process-info read
+ *  failures to tell a transient read problem from a destroyed pane. */
+async function paneExistsAsync(paneId: string, signal?: AbortSignal): Promise<boolean> {
+  try {
+    await execFileAsync("herdr", ["pane", "get", paneId], { encoding: "utf8", signal });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── Liveness fallback ──
@@ -421,32 +561,81 @@ export const __pollForExitTest__ = {
   interpretExitSidecar,
   paneKilledResult,
   agentGoneResult,
+  noAgentResult,
+  timeoutResult,
   updateAgentLiveness,
   isPiForegroundProcess,
 };
 
 /**
- * Poll until the subagent exits. Checks for a `.exit` sidecar file first
- * (written by the error path), falling back to the terminal sentinel for
- * clean-completion and crash detection. Identical logic to ./tmux.ts; only
- * the underlying readScreenAsync differs.
+ * Poll until the subagent exits — but never forever. Checks for a `.exit`
+ * sidecar file first (written by the error path), falling back to the
+ * terminal sentinel for clean-completion and crash detection, plus a
+ * liveness fallback and three hard bounds:
+ *
+ *   1. HARD DEADLINE (`maxWaitMs`, env PI_SUBAGENT_MAX_WAIT_MS, default
+ *      30 min): on expiry, one final harvest attempt (sidecar + sentinel)
+ *      and a `timeout` result. The wedged-agent failure class.
+ *   2. NO-SIGHTING GRACE (`startupGraceMs`, env
+ *      PI_SUBAGENT_STARTUP_GRACE_MS, default 60 s): pi was never seen in
+ *      the pane's foreground processes and no sentinel appeared → the
+ *      launch itself died → `no-agent`. The bare-shell failure class.
+ *   3. READ-FAILURE THRESHOLD (`processInfoFailLimit`, default 3): that
+ *      many consecutive process-info failures trigger a pane-existence
+ *      probe — gone → `killed`, alive → keep waiting (failures still
+ *      count toward the deadline).
+ *
+ * Identical logic to ./tmux.ts; only the underlying pane reads differ.
  */
 export async function pollForExit(
   surface: string,
   signal: AbortSignal,
   options: {
-    interval: number;
+    /** Poll cadence. Defaults to the PI_SUBAGENT_POLL_MS knob (1000 ms). */
+    interval?: number;
     sessionFile?: string;
     sentinelFile?: string;
     onTick?: (elapsed: number) => void;
+    maxWaitMs?: number;
+    startupGraceMs?: number;
+    processInfoFailLimit?: number;
   },
 ): Promise<PollResult> {
   const start = Date.now();
+  const bounds = getSubagentPollBounds({
+    pollMs: options.interval,
+    maxWaitMs: options.maxWaitMs,
+    startupGraceMs: options.startupGraceMs,
+    processInfoFailLimit: options.processInfoFailLimit,
+  });
+  const deadline = start + bounds.maxWaitMs;
   let seenAgentProcess = false;
+  let consecutiveReadFails = 0;
 
   for (;;) {
     if (signal.aborted) {
       throw new Error("Aborted while waiting for subagent to finish");
+    }
+
+    // Hard deadline: one final harvest attempt (a sidecar or a screen
+    // sentinel that landed at the wire still produces its real result;
+    // a dead pane reads as killed), then a timeout — never an infinite wait.
+    if (Date.now() >= deadline) {
+      const sidecar = readExitSidecar(options.sessionFile);
+      if (sidecar) return sidecar;
+      if (options.sentinelFile) {
+        try {
+          if (existsSync(options.sentinelFile)) return { reason: "sentinel", exitCode: 0 };
+        } catch {}
+      }
+      try {
+        const screen = await readScreenAsync(surface, 5);
+        const match = screen.match(/__SUBAGENT_DONE_(\d+)__/);
+        if (match) return { reason: "sentinel", exitCode: parseInt(match[1], 10) };
+      } catch {
+        return paneKilledResult();
+      }
+      return timeoutResult();
     }
 
     // Fast path: check for .exit sidecar file (written by the error path)
@@ -483,10 +672,32 @@ export async function pollForExit(
     // lost workers were recovered by hand this way; this makes it
     // automatic.
     const processes = await paneForegroundProcessesAsync(surface, signal);
-    const liveness = updateAgentLiveness(seenAgentProcess, processes);
-    seenAgentProcess = liveness.seenAgent;
-    if (liveness.agentGone) {
-      return agentGoneResult();
+    if (processes === null) {
+      // Read failure (transient server error, or a pane that no longer
+      // answers). After the threshold, probe pane existence: gone → the
+      // killed path; alive → keep waiting, the deadline still bounds it.
+      consecutiveReadFails++;
+      if (consecutiveReadFails >= bounds.processInfoFailLimit) {
+        if (!(await paneExistsAsync(surface, signal))) {
+          return readExitSidecar(options.sessionFile) ?? paneKilledResult();
+        }
+      }
+    } else {
+      consecutiveReadFails = 0;
+      const liveness = updateAgentLiveness(seenAgentProcess, processes);
+      seenAgentProcess = liveness.seenAgent;
+      if (liveness.agentGone) {
+        return agentGoneResult();
+      }
+      // No-sighting grace: a successful foreground read that never listed
+      // pi, with no sentinel and no sidecar, past the grace window means
+      // the launch itself died (bare shell). Bounded, never infinite.
+      if (
+        !seenAgentProcess &&
+        Date.now() - start >= bounds.startupGraceMs
+      ) {
+        return noAgentResult();
+      }
     }
 
     const elapsed = Math.floor((Date.now() - start) / 1000);
@@ -497,7 +708,7 @@ export async function pollForExit(
       const timer = setTimeout(() => {
         signal.removeEventListener("abort", onAbort);
         resolve();
-      }, options.interval);
+      }, bounds.pollMs);
       function onAbort() {
         clearTimeout(timer);
         reject(new Error("Aborted"));
