@@ -60,9 +60,10 @@ structured data: `type`, `direction`, `nodes` (id + label), `edges` (from,
 to, optional label), plus `groups` for zones. Labels are copied verbatim —
 never put double quotes in a label. The tool emits the source, validates it
 locally (strict parse, exact structure match against your params, pane fit
-on the chat's renderer), and returns in under a second. Embed the returned
-fence in the reply verbatim. Do not edit it. On `isError`, fix exactly what
-the error names and call once more.
+on the chat's renderer), and returns in under a second. The validated
+diagram is displayed to the user automatically as a transcript row; do not
+write the fence in your reply. On `isError`, fix exactly what the error
+names and call once more.
 
 Keep diagrams small: about 7 nodes or fewer, short labels, prefer TD. The
 pane is narrow; height is free. A diagram that needs scrolling carries too

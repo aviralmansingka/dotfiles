@@ -521,17 +521,36 @@ const MermaidParams = Type.Object({
 	freeform: Type.Optional(Type.String({ description: "Escape hatch: hand-written Mermaid source, validated by the same gates. Use only when the structured params cannot express the diagram." })),
 });
 
+/** The custom message type that displays a validated diagram as a transcript row. */
+export const MERMAID_DISPLAY_TYPE = "mermaid_diagram";
+
 export default function (pi: ExtensionAPI) {
+	// The diagram the user sees: a transcript row rendered from the persisted
+	// custom message, never locked inside the tool-result row. Registered at
+	// load so resumed sessions re-render their diagram rows too.
+	pi.registerMessageRenderer(MERMAID_DISPLAY_TYPE, (message, options, theme) => {
+		const details = message.details as MermaidDetails | undefined;
+		if (!details?.art) return undefined;
+		const header = theme.fg(
+			"muted",
+			`mermaid (validated: parse + structure + pane fit, ${details.ms} ms, ${details.width}/${details.paneWidth} cols)`,
+		);
+		const body = options.expanded
+			? `${details.art}\n\n${theme.fg("dim", "```mermaid\n" + (details.source ?? "") + "\n```")}`
+			: details.art;
+		return new Text(header + "\n" + body, 0, 0);
+	});
+
 	pi.registerTool({
 		name: "mermaid",
 		description:
-			"Generate a Mermaid diagram that is guaranteed to render in the chat. Pass nodes and edges as structured data; the tool emits canonical Mermaid syntax and enforces three local gates before returning: strict parse (mmdflux), exact structure match against your params, and pane fit with zero warnings on the chat's own renderer (grok-mermaid). Use this instead of writing mermaid fences inline. All checks are local: the call returns in under a second.",
+			"Generate a Mermaid diagram that is guaranteed to render in the chat. Pass nodes and edges as structured data; the tool emits canonical Mermaid syntax and enforces three local gates before returning: strict parse (mmdflux), exact structure match against your params, and pane fit with zero warnings on the chat's own renderer (grok-mermaid). The validated diagram is displayed to the user automatically as a transcript row — never write the fence in your reply. All checks are local: the call returns in under a second.",
 		promptGuidelines: [
 			"Call this tool instead of writing a mermaid fence inline.",
 			"Pass the diagram as data: type, direction, nodes, edges. Labels are copied verbatim; the tool never shortens them.",
 			"Keep diagrams small: about 7 nodes or fewer, short labels, prefer TD. The pane is narrow; height is free.",
 			"On isError, fix exactly what the error names and call once more. Cut nodes or edges rather than shorten labels.",
-			"The returned fence passed every gate; embed it in your reply verbatim. Do not edit it.",
+			"The tool displays the validated diagram in the transcript automatically; do not write the fence in your reply.",
 		],
 		parameters: MermaidParams,
 
@@ -622,12 +641,34 @@ export default function (pi: ExtensionAPI) {
 				if (signal?.aborted) return fail("mermaid tool: aborted.");
 				if (!gates.ok) return fail(`mermaid tool: ${gates.error.replace(/^WIDTH_OVERRUN:\d+/, "")}`, { problems: (gates as any).problems, source });
 				const ms = Date.now() - started;
+				// Display guarantee: a transcript row the user sees without expanding
+				// anything. Mid-turn sendMessage with triggerTurn:false is deferred by
+				// pi to a sanctioned boundary (turn_end), so it never lands between a
+				// tool call and its result. Best-effort: the fence stays in the result.
+				try {
+					pi.sendMessage(
+						{
+							customType: MERMAID_DISPLAY_TYPE,
+							content:
+								"mermaid: the validated diagram is displayed to the user as a transcript row in this turn. " +
+								"Do not write the fence in your reply. The source stays in the tool result for reference.",
+							display: true,
+							details: {
+								source, art: gates.art, width: gates.width, paneWidth: pane, ms,
+								path: freeformSource ? "freeform" : "structured",
+							} satisfies MermaidDetails,
+						},
+						{ triggerTurn: false },
+					);
+				} catch {
+					// Display is best-effort; the validated fence remains in the tool result.
+				}
 				return {
 					content: textContent(
 						`Mermaid diagram validated: strict parse, exact structure match, ${gates.width}/${pane} cols, zero renderer warnings (${ms} ms).` +
 						(reEmittedTD ? " Re-emitted as TD to fit the pane; the fence below is TD." : "") + "\n\n" +
 						"```mermaid\n" + source + "\n```\n\n" +
-						"Show this fence to the user in your reply, verbatim. Do not edit it.",
+						"The diagram is displayed to the user automatically as a transcript row. Do not write the fence in your reply.",
 					),
 					details: {
 						source, art: gates.art, width: gates.width, paneWidth: pane, ms,

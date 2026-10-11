@@ -72,20 +72,31 @@ const haveMmdflux = existsSync(join(homedir(), ".local", "bin", "mmdflux")) || !
 // ── registration ─────────────────────────────────────────────────────────────
 
 const registered = [];
-extension({ registerTool(def) { registered.push(def); } });
+const sentMessages = [];
+const messageRenderers = new Map();
+extension({
+	registerTool(def) { registered.push(def); },
+	sendMessage(message, options) { sentMessages.push({ message, options }); },
+	registerMessageRenderer(customType, renderer) { messageRenderers.set(customType, renderer); },
+});
 assert.equal(registered.length, 1, "mermaid should register exactly one tool");
 const tool = registered[0];
 assert.equal(tool.name, "mermaid");
 assert.equal(typeof tool.execute, "function");
 assert.ok(tool.description.length > 40, "description should be substantive");
 assert.ok(
-	tool.description.includes("Use this instead of writing mermaid fences inline"),
+	tool.description.includes("never write the fence in your reply"),
 	"description should say it replaces inline generation",
 );
 assert.ok(tool.description.includes("guaranteed to render"), "description should promise chat rendering");
 assert.ok(tool.promptGuidelines.length >= 3, "should carry usage guidelines");
 assert.equal(typeof tool.renderResult, "function", "should render its own result");
 assert.ok(tool.parameters, "should declare parameters");
+assert.ok(
+	tool.description.includes("displayed to the user automatically as a transcript row"),
+	"description should promise the automatic transcript row",
+);
+assert.ok(messageRenderers.has("mermaid_diagram"), "registers a transcript-row renderer for diagrams");
 
 // ── ids and labels ────────────────────────────────────────────────────────────
 
@@ -287,10 +298,17 @@ try {
 	});
 	assert.equal(ok.isError, undefined, `structured call should pass: ${JSON.stringify(ok).slice(0, 200)}`);
 	assert.ok(ok.content[0].text.includes("```mermaid\nflowchart TD"), "result returns the validated fence");
-	assert.ok(ok.content[0].text.includes("verbatim"), "result tells the model to echo verbatim");
+	assert.ok(ok.content[0].text.includes("Do not write the fence in your reply"), "result tells the model not to repeat the fence");
 	assert.equal(ok.details.width, 40);
 	assert.equal(ok.details.path, "structured");
 	assert.equal(typeof ok.details.ms, "number");
+	assert.equal(sentMessages.length, 1, "a successful diagram emits exactly one display message");
+	const sent = sentMessages[0];
+	assert.equal(sent.message.customType, "mermaid_diagram");
+	assert.equal(sent.message.display, true, "the display message is shown in the transcript");
+	assert.equal(sent.options.triggerTurn, false, "the display message must not trigger a turn");
+	assert.ok(sent.message.details.art.length > 0, "display message carries the rendered art");
+	assert.ok(sent.message.details.source.includes("flowchart TD"), "display message carries the source");
 
 	// width overrun on LR re-emits TD locally and passes
 	globalThis.__grokRender = (src) =>
@@ -303,6 +321,8 @@ try {
 	});
 	assert.equal(lrOk.isError, undefined, `LR overrun should recover via TD: ${JSON.stringify(lrOk).slice(0, 200)}`);
 	assert.ok(lrOk.content[0].text.includes("```mermaid\nflowchart TD"), "the TD variant is what ships");
+	assert.equal(sentMessages.length, 2, "the recovered diagram also emits its display message");
+	assert.ok(sentMessages[1].message.details.source.includes("flowchart TD"), "the displayed source is the TD variant");
 
 	// width overrun with no variant left reports both numbers
 	globalThis.__grokRender = () => ({ width: 500, warnings: [], plain: ["wide"] });
@@ -333,6 +353,7 @@ try {
 	});
 	assert.equal(crashed.isError, true);
 	assert.ok(crashed.details.error.includes("raw text"), `crash error names the raw-source fallback: ${crashed.details.error}`);
+	assert.equal(sentMessages.length, 2, "rejected diagrams emit no display message");
 } finally {
 	delete globalThis.__grokRender;
 	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
@@ -393,6 +414,23 @@ if (haveMmdflux && !process.env.PI_MERMAID_MMDFLUX) {
 } else {
 	console.log("mermaid.test.mjs: skipping real-mmdflux integration (binary not found)");
 }
+
+// ── message renderer (the transcript row the user sees) ───────────────────────
+
+const rowRenderer = messageRenderers.get("mermaid_diagram");
+const rowTheme = { fg: (_name, s) => s };
+const rowDetails = { art: "┌─────┐\n│ ART │", source: "flowchart TD\n  A --> B", width: 40, paneWidth: 100, ms: 5 };
+const collapsedRow = rowRenderer({ details: rowDetails }, { expanded: false, outputPad: 0 }, rowTheme);
+assert.ok(collapsedRow.text.includes("ART"), "the transcript row shows the art");
+assert.ok(collapsedRow.text.includes("validated"), "the transcript row header marks validation");
+assert.ok(!collapsedRow.text.includes("```mermaid"), "collapsed row hides the source fence");
+const expandedRow = rowRenderer({ details: rowDetails }, { expanded: true, outputPad: 0 }, rowTheme);
+assert.ok(expandedRow.text.includes("```mermaid"), "expanded row shows the source fence");
+assert.equal(
+	rowRenderer({ details: { error: "no art" } }, { expanded: false, outputPad: 0 }, rowTheme),
+	undefined,
+	"a message without art renders nothing",
+);
 
 // ── renderResult ──────────────────────────────────────────────────────────────
 

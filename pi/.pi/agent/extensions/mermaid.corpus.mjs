@@ -54,7 +54,12 @@ const jiti = createJiti(import.meta.url, {
 const mermaidModule = jiti("./mermaid.ts");
 const { runMmdflux, renderWithGrok, paneWidth } = mermaidModule;
 const registered = [];
-mermaidModule.default({ registerTool(def) { registered.push(def); } });
+const displayMessages = [];
+mermaidModule.default({
+	registerTool(def) { registered.push(def); },
+	sendMessage(message) { displayMessages.push(message); },
+	registerMessageRenderer() {},
+});
 const tool = registered[0];
 
 const [mode, corpusPath] = process.argv.slice(2);
@@ -128,6 +133,7 @@ if (mode === "e2e") {
 	}
 	const total = times.reduce((a, b) => a + b, 0);
 	console.log(`e2e mode: ${corpus.length} cases, ${corpus.length - failed} passed, ${failed} failed; total ${total} ms, mean ${(total / Math.max(1, times.length)).toFixed(0)} ms, max ${Math.max(...times, 0)} ms`);
+	console.log(`display rows emitted: ${displayMessages.length} (one custom-message transcript row per delivered diagram)`);
 	rmSync(tempRoot, { recursive: true, force: true });
 	process.exit(failed ? 1 : 0);
 }
