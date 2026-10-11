@@ -16,6 +16,17 @@ import {
 	wantsTuiPane,
 } from "./no-mistakes-pane/capture";
 import {
+	ensureBridgeServer,
+	teardownBridgeForRun,
+	teardownBridgeServers,
+} from "./no-mistakes-pane/bridge";
+import {
+	applyRunPaneLabels,
+	clearRunPaneLabels,
+	PaneReportState,
+	setCiBlocked,
+} from "./no-mistakes-pane/herdr-report";
+import {
 	isObservableNoMistakesRun,
 	observeNoMistakesTiming,
 	parseNoMistakesResult,
@@ -345,6 +356,10 @@ interface WatchState {
 	trackedRunId: string | undefined;
 	publishedRunId: string | undefined;
 	pane: NmPane | undefined;
+	/** Dedupe gate for pane labels / CI red state transitions. */
+	paneReport: PaneReportState;
+	/** Run id whose interactive bridge (step-agent tabs) is live. */
+	bridgeRunId: string | undefined;
 }
 
 const WATCH_STATE_KEY = Symbol.for("pi-no-mistakes/watch-state");
@@ -375,6 +390,22 @@ function teardownWatch(state: WatchState): void {
 	state.calls.clear();
 	state.observers.clear();
 	state.trackedRunId = undefined;
+	// Release the pane-state surfaces and close every step-agent tab. Unlike
+	// the attach pane (left alone on purpose), a live tab owns a pi session
+	// file: a later headless --session resume from the daemon must never meet
+	// a second writer, so tabs close here. The daemon run itself continues
+	// headless and a later observer re-creates the bridge for new steps.
+	if (state.bridgeRunId) {
+		teardownBridgeForRun(state.bridgeRunId);
+		state.bridgeRunId = undefined;
+	}
+	teardownBridgeServers();
+	const paneId = process.env.HERDR_PANE_ID;
+	if (paneId && state.paneReport) {
+		const actions = state.paneReport.next(undefined);
+		if (actions.clearLabels) clearRunPaneLabels(paneId);
+		if (actions.ciBlocked !== undefined) setCiBlocked(state.pi, actions.ciBlocked);
+	}
 	publishSnapshot(state, undefined);
 	// Deliberately leave background axi clients and the attach pane alone:
 	// the daemon run keeps its state and a human can keep watching it.
@@ -400,6 +431,8 @@ function ensureWatchState(pi: ExtensionAPI): WatchState {
 		trackedRunId: undefined,
 		publishedRunId: undefined,
 		pane: undefined,
+		paneReport: new PaneReportState(),
+		bridgeRunId: undefined,
 	};
 	(globalThis as any)[WATCH_STATE_KEY] = state;
 	return state;
@@ -688,10 +721,50 @@ function publishSnapshot(state: WatchState, snapshot: NoMistakesSnapshot | undef
 			observedAt: Date.now(),
 		});
 	}
+	syncRunVisibility(state, visibleSnapshot);
 	state.publishedRunId = visibleSnapshot?.id;
 	if (observedSnapshot?.id === state.trackedRunId && !visibleSnapshot) state.trackedRunId = undefined;
 	if (state.trackedRunId && state.observers.size === 0 && observedSnapshot?.id !== state.trackedRunId) {
 		state.trackedRunId = undefined;
+	}
+}
+
+/** Drive the two Herdr visibility surfaces for the tracked run:
+ *  the interactive bridge (daemon step agents hosted as visible subagent
+ *  tabs) and the pane-state report (phase labels + the CI red state). Runs
+ *  on every status poll but only acts on transitions — the bridge server is
+ *  idempotent per run id, and PaneReportState dedupes label/blocked changes.
+ *  Without Herdr both are no-ops and nothing changes for the run. */
+function syncRunVisibility(state: WatchState, visible: NoMistakesSnapshot | undefined): void {
+	if (process.env.HERDR_ENV !== "1" || !state.paneReport) return;
+	// Only a live interactive session drives Herdr surfaces; the flag is set
+	// by the default export on session_start (see above).
+	if (!interactiveTuiSession) return;
+	const paneId = process.env.HERDR_PANE_ID;
+	if (visible && visible.id === state.trackedRunId) {
+		if (state.bridgeRunId && state.bridgeRunId !== visible.id) {
+			teardownBridgeForRun(state.bridgeRunId);
+		}
+		state.bridgeRunId = visible.id;
+		ensureBridgeServer(visible.id);
+		if (paneId) {
+			const actions = state.paneReport.next(visible);
+			if (actions.label) applyRunPaneLabels(paneId, actions.label);
+			if (actions.clearLabels) clearRunPaneLabels(paneId);
+			if (actions.ciBlocked !== undefined) setCiBlocked(state.pi, actions.ciBlocked);
+		}
+		return;
+	}
+	// No visible tracked run: release every surface (run terminal, aborted,
+	// or superseded by a different run's snapshot).
+	if (state.bridgeRunId) {
+		teardownBridgeForRun(state.bridgeRunId);
+		state.bridgeRunId = undefined;
+	}
+	if (paneId) {
+		const actions = state.paneReport.next(undefined);
+		if (actions.clearLabels) clearRunPaneLabels(paneId);
+		if (actions.ciBlocked !== undefined) setCiBlocked(state.pi, actions.ciBlocked);
 	}
 }
 
@@ -902,7 +975,18 @@ const NoMistakesAxiParams = Type.Object({
 	),
 });
 
+// Herdr surface work (bridge server, pane labels, CI red state) belongs to
+// a real interactive TUI session — the same gate herdr-agent-state.ts uses.
+// Headless hosts (tests, JSON mode) never touch real Herdr state, even when
+// they inherit HERDR_* from a Herdr-hosted parent shell. Set by the default
+// export on session_start; reset naturally on module reload.
+let interactiveTuiSession = false;
+
 export default function noMistakesPane(pi: ExtensionAPI) {
+	pi.on("session_start", (_event, ctx) => {
+		if (ctx?.mode === "tui") interactiveTuiSession = true;
+	});
+
 	pi.registerTool({
 		name: "no_mistakes_axi",
 		label: "no-mistakes (background)",

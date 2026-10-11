@@ -48,6 +48,20 @@ asks for something specific, translate that request into the matching `axi run`
 flags yourself - for example, "skip the lint step" becomes `--skip=lint`. Run
 `no-mistakes axi run --help` to see the available flags.
 
+## Visible step agents (Herdr bridge)
+
+When a pipeline is started from a session running inside Herdr, the daemon's
+step agents (review, fixer, test, lint, document, CI repair) run as visible,
+interactive Herdr subagent tabs of that session instead of headless
+processes - installed by `scripts/install-nm-herdr-bridge` via the upstream
+`agent_path_override.pi` knob. A step agent inside such a tab holds the same
+boundary as a headless one: it works only its assigned phase in the run
+worktree, the daemon owns rounds, budgets, and the findings schema, and the
+human may watch or steer the tab but never drives the pipeline from it.
+Fixer sessions reuse one tab across fix rounds; cold review turns get a fresh
+tab per pass. When the triggering session dies, tabs close and later steps
+fall back to headless pi - so a step agent must never assume a tab exists.
+
 ## Two ways to invoke
 
 A validation request works in two modes, depending on whether the user hands
