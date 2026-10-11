@@ -4,7 +4,9 @@ local M = {}
 ---@return string
 local function one_line_preview(body)
   if not body or body == "" then return "" end
-  local first = body:match("[^\r\n]+") or body
+  -- C32b: a body of only newlines has no first line — preview empty,
+  -- never the raw body.
+  local first = body:match("[^\r\n]+") or ""
   if #first > 80 then first = first:sub(1, 77) .. "..." end
   return first
 end
