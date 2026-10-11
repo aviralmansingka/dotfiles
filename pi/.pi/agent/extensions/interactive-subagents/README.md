@@ -89,11 +89,12 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | **worker** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
 | **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, mermaid diagrams, Hunk canvas, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
 | **tuicr-review** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
+| **nm-orchestrator** | session default | `no_mistakes_axi`, `read` | no-mistakes run orchestrator; drives one pipeline run through its gates and returns the run summary |
 
-`scout`, `researcher`, `worker`, and `tuicr-review` are autonomous
-(`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane
+`scout`, `researcher`, `worker`, `tuicr-review`, and `nm-orchestrator` are
+autonomous (`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane
 (`auto-exit: false`) that auto-loads the `professor` skill and remains open
-until the learner exits it. All five carry their identity in the system prompt
+until the learner exits it. All six carry their identity in the system prompt
 (`system-prompt: append`).
 
 The `tuicr-review` agent is started by the tuicr extension's `tuicr_review`
@@ -101,6 +102,12 @@ tool / `/tuicr` command (see
 [README-tuicr.md](../README-tuicr.md)); it parks in `waiting` between comment
 batches — auto-exit is suppressed while its comment watcher is active — and
 closes itself after the TUI exits and its summary is delivered.
+
+The `nm-orchestrator` agent is started by the no-mistake-pane extension's
+`no_mistakes_axi` tool when a Herdr captain session submits `run`: it owns
+the attach pane, gate panels, and the step-agent bridge for that run, parks
+in `waiting` between axi results (auto-exit is suppressed while the run is
+active), and closes itself after the terminal outcome and its run summary.
 
 ## Custom agents
 

@@ -35,8 +35,11 @@
 //
 // Teardown rules: run terminal, session shutdown, and extension reload close
 // the tab panes (a later headless `--session` resume must never meet a live
-// tab writing the same session file). The bridge dir is removed so later
-// shims passthrough instantly instead of probing a dead socket.
+// tab writing the same session file). Every close is a clean exit — the
+// tab's pi is asked to quit (Ctrl+D, Ctrl+C fallback) before `pane close` —
+// so a terminated step agent never surfaces as an agent-killed notification
+// in the hosting session. The bridge dir is removed so later shims
+// passthrough instantly instead of probing a dead socket.
 
 import { execFile, execFileSync } from "node:child_process";
 import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -298,6 +301,68 @@ interface RunBridge {
 }
 
 const BRIDGE_KEY = Symbol.for("pi-no-mistakes/bridge-state");
+
+/** Total sync budget for one clean tab close (see closeTabPaneCleanly). */
+export const CLEAN_CLOSE_BUDGET_MS = 1400;
+const CLEAN_CLOSE_POLL_MS = 100;
+
+function sleepSync(ms: number): void {
+	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/** True when the pane's process is gone (pane closed, or foreground
+ *  process group empty after a clean exit). */
+export function paneProcessGone(paneId: string): boolean {
+	if (!paneAlive(paneId)) return true;
+	const info = herdrJsonSync(["pane", "process-info", "--pane", paneId]) as
+		| { result?: { process_info?: { foreground_processes?: unknown[] } } }
+		| null;
+	const processes = info?.result?.process_info?.foreground_processes;
+	return Array.isArray(processes) && processes.length === 0;
+}
+
+/** Close a step-agent tab without leaving an agent-killed state behind.
+ *
+ *  A bare `pane close` kills the tab's pi mid-flight, and Herdr raises an
+ *  "agent killed" notification for a terminated background agent — stray
+ *  noise in whichever session launched the run. Instead, ask pi to exit
+ *  itself: Ctrl+D exits an idle pi (the tab sits at its prompt between
+ *  rounds), and Ctrl+C first aborts a still-running turn so the following
+ *  Ctrl+D lands on an empty editor. The pane is then closed while the
+ *  toast delay window is still open, so neither a killed nor a finished
+ *  notification fires.
+ *
+ *  Synchronous and bounded on purpose: teardown runs from session_shutdown
+ *  and extension reload, which cannot await. Budget split: ~60% for the
+ *  first Ctrl+D, the rest for the Ctrl+C + Ctrl+D fallback; whatever
+ *  remains, the pane is closed regardless (the killed-notification path is
+ *  the last resort, not the default). Exported for tests, which pass a
+ *  small budget against the stub herdr. */
+export function closeTabPaneCleanly(paneId: string, budgetMs = CLEAN_CLOSE_BUDGET_MS): void {
+	if (paneProcessGone(paneId)) {
+		herdrOkSync(["pane", "close", paneId]);
+		return;
+	}
+	const firstBudget = Math.max(CLEAN_CLOSE_POLL_MS, Math.floor(budgetMs * 0.6));
+	herdrOkSync(["pane", "send-keys", paneId, "ctrl+d"]);
+	const deadline = Date.now() + firstBudget;
+	while (Date.now() < deadline) {
+		sleepSync(CLEAN_CLOSE_POLL_MS);
+		if (paneProcessGone(paneId)) break;
+	}
+	if (!paneProcessGone(paneId)) {
+		// A turn is still running (or the editor is not empty): abort it, then
+		// exit. pi's ctrl+c aborts the active turn / clears the editor.
+		herdrOkSync(["pane", "send-keys", paneId, "ctrl+c"]);
+		herdrOkSync(["pane", "send-keys", paneId, "ctrl+d"]);
+		const rest = Date.now() + Math.max(CLEAN_CLOSE_POLL_MS, budgetMs - firstBudget);
+		while (Date.now() < rest) {
+			sleepSync(CLEAN_CLOSE_POLL_MS);
+			if (paneProcessGone(paneId)) break;
+		}
+	}
+	herdrOkSync(["pane", "close", paneId]);
+}
 
 interface BridgeState {
 	runs: Map<string, RunBridge>;
@@ -568,7 +633,7 @@ async function runInvocation(
 		cut.flag = true;
 	});
 	const closeTab = (handle: TabHandle) => {
-		herdrOkSync(["pane", "close", handle.paneId]);
+		closeTabPaneCleanly(handle.paneId);
 		if (handle.scriptPath) {
 			try {
 				rmSync(handle.scriptPath, { force: true });
@@ -816,7 +881,7 @@ async function teardownRun(bridge: RunBridge): Promise<void> {
 	const state = bridgeState();
 	if (state.runs.get(bridge.runId) === bridge) state.runs.delete(bridge.runId);
 	for (const tab of bridge.tabs.values()) {
-		herdrOkSync(["pane", "close", tab.paneId]);
+		closeTabPaneCleanly(tab.paneId);
 		if (tab.scriptPath) {
 			try {
 				rmSync(tab.scriptPath, { force: true });

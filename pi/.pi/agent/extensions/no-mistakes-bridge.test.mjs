@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -33,6 +33,7 @@ const {
 	buildTabLauncher,
 	stepAgentExtensionPaths,
 	STEP_AGENT_EXTENSIONS,
+	closeTabPaneCleanly,
 	probeSocket,
 	SessionEventTranslator,
 	ensureBridgeServer,
@@ -593,6 +594,27 @@ if (command === "pane" && sub === "run") {
 	spawn("bash", [script], { stdio: "ignore", detached: true }).unref();
 	process.exit(0);
 }
+if (command === "pane" && sub === "send-keys") {
+	const pane = argv[2];
+	const keys = argv.slice(3).join(" ");
+	appendFileSync(join(stateDir, "keys.log"), JSON.stringify({ pane, keys }) + "\\n");
+	// A non-sticky pane models pi: ctrl+d on the idle prompt exits it. With
+	// HERDR_STUB_STICKY_PANE set, the pane ignores every key (a mid-turn pi
+	// that will not exit), forcing the fallback path.
+	if (!process.env.HERDR_STUB_STICKY_PANE && keys === "ctrl+d") {
+		const rec = readPane(pane);
+		if (rec) writeFileSync(paneFile(pane), JSON.stringify({ ...rec, exited: true }));
+	}
+	process.exit(0);
+}
+if (command === "pane" && sub === "process-info") {
+	const pane = argv[argv.indexOf("--pane") + 1];
+	const rec = readPane(pane);
+	if (!rec) process.exit(1);
+	const processes = rec.exited ? [] : [{ argv: ["pi"], pid: 4242 }];
+	emit({ process_info: { pane_id: pane, foreground_processes: processes } });
+	process.exit(0);
+}
 if (command === "pane" && sub === "close") {
 	const pane = argv[2];
 	rmSync(paneFile(pane), { force: true });
@@ -690,6 +712,89 @@ function readCalls(root) {
 	if (!existsSync(path)) return [];
 	return readFileSync(path, "utf-8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
+
+function readKeys(root) {
+	const path = join(root, "stub-state", "keys.log");
+	if (!existsSync(path)) return [];
+	return readFileSync(path, "utf-8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+}
+
+/** Create a live stub tab pane (no session, no turn) for direct pane ops. */
+function stubCreateTab(root, label) {
+	const out = execFileSync(
+		"herdr",
+		[
+			"tab", "create",
+			"--workspace", "ws-stub",
+			"--cwd", join(root, TEST_RUN_ID),
+			"--label", label,
+			"--no-focus",
+		],
+		{ encoding: "utf-8" },
+	);
+	return JSON.parse(out).result.root_pane.pane_id;
+}
+
+await (async () => {
+	// Clean tab close: the tab's pi is asked to exit (Ctrl+D on its idle
+	// prompt) BEFORE the pane closes, so a terminated step agent never
+	// surfaces as an agent-killed notification. A pane that will not exit
+	// falls back to Ctrl+C then Ctrl+D, and the pane close is the last
+	// resort — never the default.
+	const root = makeBridgeRoot("nm-bridge-clean-");
+	const restore = enterBridgeEnv(root);
+	try {
+		// Idle tab: one ctrl+d, then the pane close; no ctrl+c ever.
+		const idle = stubCreateTab(root, "clean-close-idle");
+		closeTabPaneCleanly(idle, 600);
+		const idleKeys = readKeys(root).filter((entry) => entry.pane === idle);
+		assert.deepEqual(
+			idleKeys.map((entry) => entry.keys),
+			["ctrl+d"],
+			"an idle tab exits on a single ctrl+d",
+		);
+		assert.ok(
+			readCalls(root).some((call) => call.op === "pane close" && call.pane === idle),
+			"the exited pane is closed",
+		);
+
+		// Sticky pane (a mid-turn pi that ignores keys): ctrl+d, then the
+		// ctrl+c + ctrl+d fallback, then the pane close regardless.
+		process.env.HERDR_STUB_STICKY_PANE = "1";
+		let sticky;
+		try {
+			sticky = stubCreateTab(root, "clean-close-sticky");
+			closeTabPaneCleanly(sticky, 320);
+		} finally {
+			delete process.env.HERDR_STUB_STICKY_PANE;
+		}
+		const stickyKeys = readKeys(root).filter((entry) => entry.pane === sticky);
+		assert.deepEqual(
+			stickyKeys.map((entry) => entry.keys),
+			["ctrl+d", "ctrl+c", "ctrl+d"],
+			"a pane that ignores ctrl+d gets the ctrl+c abort then a retry",
+		);
+		assert.ok(
+			readCalls(root).some((call) => call.op === "pane close" && call.pane === sticky),
+			"the sticky pane is still closed after the budget",
+		);
+
+		// Already-gone pane: no keys are sent; the close is a no-op formality.
+		const gone = stubCreateTab(root, "clean-close-gone");
+		execFileSync("herdr", ["pane", "close", gone]);
+		const keysBefore = readKeys(root).length;
+		closeTabPaneCleanly(gone, 600);
+		assert.equal(
+			readKeys(root).length,
+			keysBefore,
+			"no keys are sent to a pane whose process is already gone",
+		);
+	} finally {
+		teardownBridgeForRun(TEST_RUN_ID);
+		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
 
 await (async () => {
 	// A session-free (cold) step: the daemon launches the shim with

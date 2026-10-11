@@ -70,7 +70,7 @@ corrupts the next toggle. The user's own prefix+t is the only correct show path.
 
 The no-mistakes daemon's step agents run as visible Herdr subagent tabs when the triggering
 session is inside Herdr (`scripts/install-nm-herdr-bridge`, upstream `agent_path_override.pi`).
-Three rules are load-bearing:
+These rules are load-bearing:
 
 - A live tab owns its pi session file. Teardown (run terminal, session shutdown, extension
   reload) must close tab panes so a later headless `--session` resume never meets a second
@@ -85,6 +85,16 @@ Three rules are load-bearing:
   chrome. The parent's pipeline machinery (no-mistakes-gate, no-mistakes-pane,
   interactive-subagents, tuicr) and human-blocking tools never load inside a step agent -
   keep it that way when adding extensions.
+- A run started from a Herdr captain session is owned by the `nm-orchestrator` subagent tab
+  (tuicr-review architecture, `no-mistakes-pane/orchestrate.ts` + the bundled agent). It drives
+  axi run/respond and owns the attach pane, gate panels, pane labels, and the step-agent
+  bridge; the captain keeps read-only status/logs, abort as the escape hatch, and the
+  orchestrator's final summary steer. Delegation never nests (subagent sessions execute
+  directly) and falls back to direct driving without a TUI or spawn API - headless behavior
+  is unchanged.
+- Step-agent tab closes are clean exits: the tab's pi is asked to quit (Ctrl+D, Ctrl+C
+  fallback) before `pane close`, inside Herdr's toast delay. A terminated step agent must
+  never surface as an agent-killed notification in the hosting session.
 
 ## CUDA LSP host invariant
 
