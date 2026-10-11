@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import {
 	agentIsolationArgs,
 	loadAgentDefaultsFromPaths,
+	parseAgentDefinition,
 } from "./interactive-subagents/pi-extension/subagents/agent-definitions.mjs";
 
 const require = createRequire(import.meta.url);
@@ -329,6 +330,18 @@ try {
 	});
 	assert.equal(overridden.tools, "read");
 	assert.equal(overridden.body, "Override");
+
+	// agent-dir frontmatter: "parent" is the only supported policy value.
+	assert.equal(parseAgentDefinition("---\nname: x\nagent-dir: parent\n---\nBody").agentDir, "parent");
+	assert.equal(parseAgentDefinition("---\nname: x\n---\nBody").agentDir, undefined, "omission parses to undefined");
+	assert.equal(parseAgentDefinition("---\nname: x\nagent-dir: repo\n---\nBody").agentDir, undefined, "unsupported value parses to undefined");
+	const orchestrator = loadAgentDefaultsFromPaths("nm-orchestrator", {
+		cwd: profileRoot,
+		configDir: join(profileRoot, "global-agent-config"),
+		bundledDir: bundledAgentsDir,
+	});
+	assert.equal(orchestrator.agentDir, "parent");
+	assert.equal(orchestrator.tools, "no_mistakes_axi, read");
 
 	const researcher = loadAgentDefaultsFromPaths("researcher", {
 		cwd: profileRoot,

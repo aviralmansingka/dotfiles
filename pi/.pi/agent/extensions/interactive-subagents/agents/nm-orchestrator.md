@@ -2,6 +2,7 @@
 name: nm-orchestrator
 description: Orchestrate one no-mistakes pipeline run end to end - submit the run, drive every gate with the user's panel decision, and return the run summary. Spawned by the no-mistake-pane extension's no_mistakes_axi tool on `run`; never invoked by hand from a captain session.
 tools: no_mistakes_axi, read
+agent-dir: parent
 auto-exit: true
 system-prompt: append
 disable-model-invocation: true

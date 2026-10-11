@@ -141,6 +141,7 @@ You are a specialized agent that does X...
 | `subagent_agents` | string | Comma-separated agent names this agent may spawn. **Presence of this field grants the spawning toolset** (`subagent`, `subagent_message`, `subagents_list`) and restricts spawn targets to the list. Omit it and the agent cannot spawn at all |
 | `skills` | string | Comma-separated skill names to auto-load |
 | `session-mode` | string | `standalone` (default), `lineage-only`, or `fork` — see below |
+| `agent-dir` | string | `parent` keeps the captain's configured agent dir (global extensions, settings, themes) instead of redirecting to a target-repo `.pi/agent`; the target repo's project `.pi` settings still apply as project settings |
 | `system-prompt` | string | `append` or `replace`: pass the body as the child's `--append-system-prompt` / `--system-prompt`. Omit and the body is prepended to the task prompt instead |
 | `auto-exit` | boolean | Auto-shutdown when the agent finishes (see below) |
 | `interactive` | boolean | Whether stall/recovery transitions wake the parent (see below) |
@@ -191,6 +192,12 @@ subagent({ agent: "worker", cwd: "agents/sre", task: "Review the deployment pipe
 ```
 
 Set a per-agent default with `cwd:` in frontmatter.
+
+`agent-dir: parent` opts an agent out of that config redirect: the captain's
+configured agent dir (`PI_CODING_AGENT_DIR`, else `~/.pi/agent`) stays the
+child's agent dir — global extensions, settings, and themes keep loading —
+while the target repo's project `.pi` settings still apply as project
+settings.
 
 ## Status widget & configuration
 
