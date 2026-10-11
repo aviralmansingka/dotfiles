@@ -882,22 +882,39 @@ function capTitle(title: string): string {
 }
 
 /**
- * Intent-title lift for bash and python rows: the model opens each call
- * with one `# <intent>` comment line (the APPEND_SYSTEM.md rule) and the
- * row header carries it as `— <title>` beside the tool name. Only a
- * comment block that starts the source lifts — a `#` after any code stays
- * body text, and a heredoc body cannot start a script, so no heredoc scan
- * is needed. The title is the first comment line's text; the body starts
- * at the first line that is neither comment nor blank.
+ * Intent-title lift for bash, python, and mcpScript rows: the model opens
+ * each call with one leading comment line (the APPEND_SYSTEM.md rule — `#`
+ * for bash and python, `//` for mcpScript) and the row header carries it
+ * as `— <title>` beside the tool name. Only a comment block that starts
+ * the source lifts — a comment marker after any code stays body text, and
+ * a heredoc body cannot start a script, so no heredoc scan is needed. The
+ * `skip` predicate rules comment text out of title candidacy without
+ * stopping the block scan (mcpScript's `// @options:` directive line), so
+ * both the rule-following title-first order and the legacy @options-first
+ * order title correctly. The title is the first comment text `skip` keeps;
+ * the body starts at the first line that is neither comment nor blank.
  */
-function liftLeadingComment(source: string): { title: string; rest: string } | undefined {
+function liftLeadingComment(
+  source: string,
+  marker: string,
+  skip: (text: string) => boolean = () => false,
+): { title: string; rest: string } | undefined {
+  const strip = new RegExp(`^${marker}+\\s*`);
   const lines = source.split("\n");
   let index = 0;
-  while (index < lines.length && !lines[index].trim()) index++;
-  if (index === lines.length || !lines[index].trimStart().startsWith("#")) return undefined;
-  const title = clean(lines[index].trimStart().replace(/^#+\s*/, ""));
+  let title = "";
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.trim()) {
+      index++;
+      continue;
+    }
+    if (!line.trimStart().startsWith(marker)) break;
+    const text = clean(line.trimStart().replace(strip, ""));
+    if (text && !skip(text) && !title) title = text;
+    index++;
+  }
   if (!title) return undefined;
-  while (index < lines.length && (!lines[index].trim() || lines[index].trimStart().startsWith("#"))) index++;
   return { title, rest: lines.slice(index).join("\n") };
 }
 
@@ -906,7 +923,7 @@ function commandBodies(theme: Theme, toolCallId: string, tool: string, command: 
   const cached = highlightedCommands.get(toolCallId);
   if (cached && cached.source === command && cached.theme === themeName) return { rows: cached.rows, title: cached.title };
   ensureHighlightTheme(theme);
-  const lift = tool === "bash" ? liftLeadingComment(command) : undefined;
+  const lift = tool === "bash" ? liftLeadingComment(command, "#") : undefined;
   const lang = tool === "powershell" ? "powershell" : "bash";
   const rows = commandRows(lift ? lift.rest : command).map((part) => {
     let body = part.text;
@@ -926,21 +943,29 @@ function commandBodies(theme: Theme, toolCallId: string, tool: string, command: 
 }
 
 /**
- * Python call rows borrow the bash leaf semantics: the first non-blank code
- * line is the executable `$` leaf, every other line rides the `│` spine the
- * way quoted/heredoc continuations do. The whole script highlights through
- * the python grammar in ONE call, so multi-line strings and blocks keep
- * their context line to line — the structured `code` arg is what makes this
- * deterministic where bash heredoc bodies cannot be. A leading `#` comment
- * block lifts into the row title exactly like bash. Cached beside the bash
- * rows: same per-frame render pressure, same changed-source-or-theme rule.
+ * Python and mcpScript call rows borrow the bash leaf semantics: the first
+ * non-blank code line is the executable `$` leaf, every other line rides
+ * the `│` spine the way quoted/heredoc continuations do. The whole script
+ * highlights through the language grammar in ONE call, so multi-line
+ * strings and blocks keep their context line to line — the structured
+ * `code` arg is what makes this deterministic where bash heredoc bodies
+ * cannot be. A leading comment block (marker per language) lifts into the
+ * row title exactly like bash. Cached beside the bash rows: same per-frame
+ * render pressure, same changed-source-or-theme rule.
  */
-function pythonBodies(theme: Theme, toolCallId: string, code: string): CommandRender {
+function codeBodies(
+  theme: Theme,
+  toolCallId: string,
+  code: string,
+  lang: string,
+  marker: string,
+  skip: (text: string) => boolean = () => false,
+): CommandRender {
   const themeName = theme.name ?? "";
   const cached = highlightedCommands.get(toolCallId);
   if (cached && cached.source === code && cached.theme === themeName) return { rows: cached.rows, title: cached.title };
   ensureHighlightTheme(theme);
-  const lift = liftLeadingComment(code);
+  const lift = liftLeadingComment(code, marker, skip);
   const lines = (lift ? lift.rest : code).replace(/\n+$/, "").split("\n");
   const leaf = lines.findIndex((line) => line.trim());
   if (leaf === -1) {
@@ -949,7 +974,7 @@ function pythonBodies(theme: Theme, toolCallId: string, code: string): CommandRe
   }
   let highlighted = lines;
   try {
-    const styled = highlightCode(lines.join("\n"), "python");
+    const styled = highlightCode(lines.join("\n"), lang);
     if (styled.length === lines.length) highlighted = styled;
   } catch {
     // Highlighting needs pi's theme runtime; plain lines still render.
@@ -1716,15 +1741,18 @@ export default function (pi: ExtensionAPI) {
             ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
             ...(!row.leafResult ? messageLeaf(theme, asRecord(args), false, width) : []),
           ];
-          if (toolName === "bash" || toolName === "powershell" || toolName === "python") {
+          if (OUTPUT_TOOLS.has(toolName) || toolName === "mcpScript") {
+            const source = toolName === "python" || toolName === "mcpScript"
+              ? asString(asRecord(args).code) : asString(asRecord(args).command);
             const { rows: commands, title: lifted } = toolName === "python"
-              ? pythonBodies(theme, context.toolCallId, asString(asRecord(args).code))
-              : commandBodies(theme, context.toolCallId, toolName, asString(asRecord(args).command));
+              ? codeBodies(theme, context.toolCallId, source, "python", "#")
+              : toolName === "mcpScript"
+                ? codeBodies(theme, context.toolCallId, source, "javascript", "//", (text) => text.startsWith("@options"))
+                : commandBodies(theme, context.toolCallId, toolName, source);
             // A missing comment title falls back to the harness-requested one.
             const title = lifted ?? generatedTitles.get(context.toolCallId);
             if (!title && context.argsComplete !== false && !row.restored) {
-              requestTitle(context.toolCallId, toolName, toolName === "python"
-                ? asString(asRecord(args).code) : asString(asRecord(args).command));
+              requestTitle(context.toolCallId, toolName, source);
             }
             // The intent title is the row's primary content (Ctrl+E hides
             // the body), so it renders muted — stronger than dim, a step
@@ -1735,7 +1763,6 @@ export default function (pi: ExtensionAPI) {
               // row in collapsed AND expanded views; a title-less call keeps
               // a dim one-line preview so the row stays identifiable.
               if (title) return [` ${glyph} ${name}${label}${theme.fg("dim", elapsed)}`];
-              const source = toolName === "python" ? asString(asRecord(args).code) : asString(asRecord(args).command);
               const room = width - clean(toolName).length - 12;
               return [` ${glyph} ${name} ${theme.fg("dim", `$ ${shortPedagogy(source, room)}`)}${theme.fg("dim", elapsed)}`];
             }
