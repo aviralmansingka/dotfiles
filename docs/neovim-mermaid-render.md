@@ -104,20 +104,29 @@ captain can file if a hard cap is ever wanted. (A scratch-buffer path would
 preserve unlimited horizontal scroll but loses mmdflux's native ANSI color,
 which is the reason the v1 chose `:terminal`.)
 
-## Install `mmdflux` (captain's step — not auto-installed by this config)
+## Install `mmdflux` + `grok-mermaid` (provisioned by the installers)
 
 `mmdflux` reads mermaid from stdin and writes ASCII/Unicode (ANSI-colored) to
 stdout. Covers flowchart, class, sequence, state — all of the vault's current
-fences (4 flowcharts).
+fences (4 flowcharts). `grok-mermaid` (npm) is the inline-render engine
+([above](#inline-auto-render-grok-mermaid)).
 
-**macOS (Homebrew):**
-```sh
-brew tap kevinswiber/mmdflux
-brew install mmdflux
-```
+Both are provisioned by the dotfiles installers, pinned to a release:
 
-**Linux (homelab) / macOS without Homebrew — prebuilt static binary from GitHub
-releases** (covers `linux-x86_64` and `darwin-arm64`):
+- **macOS** — `install.sh` §2: mmdflux `v2.6.1` release binary →
+  `~/.local/bin` + `npm install -g grok-mermaid`.
+- **homelab image** — `ops/packer/scripts/install_cli_tools.sh` installs the
+  same pair; `ops/packer/scripts/validate_tools.sh` checks both.
+
+`~/.local/bin` is the first candidate path in pi's mermaid extension and
+`mermaid.corpus.mjs`, so the corpus pre-merge gate works unattended. The
+Homebrew tap path (`brew tap kevinswiber/mmdflux && brew install mmdflux`)
+now needs `brew trust kevinswiber/mmdflux` first — Homebrew refuses
+untrusted taps — which is why the installers use the release binary.
+Manual install on any other host:
+
+**Prebuilt static binary from GitHub releases** (covers `linux-x86_64`,
+`darwin-arm64`, `darwin-x86_64`):
 ```sh
 # Pick the matching tarball from https://github.com/kevinswiber/mmdflux/releases
 ver=v2.6.1          # latest as of writing; check the releases page

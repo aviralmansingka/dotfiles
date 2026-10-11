@@ -70,6 +70,9 @@ check_command uv
 check_command direnv
 check_command claude "claude-code"
 check_command opencode
+check_command mmdflux
+GROK_MERMAID_PATH="$(npm root -g 2>/dev/null || echo MISSING)/grok-mermaid"
+check_path "$GROK_MERMAID_PATH" "grok-mermaid (npm global)"
 
 echo ""
 echo "=== Neovim ==="

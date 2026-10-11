@@ -69,3 +69,22 @@ curl -fsSL https://claude.ai/install.sh | bash
 
 echo "==> Installing OpenCode"
 curl -fsSL https://opencode.ai/install | bash
+
+echo "==> Installing mmdflux (pinned release binary)"
+# Mermaid ASCII renderer for pi's mermaid-extension gates and nvim's
+# <leader>mm float. ~/.local/bin is the first candidate path in pi's
+# mermaid extension and mermaid.corpus.mjs, so the corpus pre-merge gate
+# works unattended. kevinswiber/mmdflux ships linux-x86_64 only.
+MMDFLUX_VERSION=v2.6.1
+if [ "$ARCH" = "amd64" ]; then
+  curl -fsSL -o /tmp/mmdflux.tar.gz "https://github.com/kevinswiber/mmdflux/releases/download/mmdflux-${MMDFLUX_VERSION}/mmdflux-${MMDFLUX_VERSION}-linux-x86_64.tar.gz"
+  tar xzf /tmp/mmdflux.tar.gz -C /tmp mmdflux
+  install -m 0755 /tmp/mmdflux "$HOME/.local/bin/mmdflux"
+  rm -f /tmp/mmdflux.tar.gz /tmp/mmdflux
+else
+  echo "    no mmdflux prebuilt for ${ARCH}; skipping"
+fi
+
+echo "==> Installing grok-mermaid (nvim inline mermaid engine)"
+# apt npm's global root (/usr/lib/node_modules) needs sudo to write.
+sudo npm install -g grok-mermaid

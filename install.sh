@@ -50,6 +50,34 @@ if ! command -v herdr >/dev/null 2>&1; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
+# Mermaid rendering tooling, mirroring ops/packer/scripts/install_cli_tools.sh:
+#   - mmdflux: pi mermaid-extension gates + nvim <leader>mm float. Pinned
+#     release binary (the Homebrew tap needs `brew trust` for untrusted taps,
+#     which breaks unattended installs). ~/.local/bin is the first candidate
+#     path in pi's mermaid extension and mermaid.corpus.mjs.
+#   - grok-mermaid: nvim inline mermaid render (npm root -g lookup).
+MMDFLUX_VERSION=v2.6.1
+if ! command -v mmdflux >/dev/null 2>&1; then
+    echo "==> Installing mmdflux ${MMDFLUX_VERSION} (pinned release binary)"
+    case "$(uname -m)" in
+        arm64) MMDFLUX_ASSET="darwin-arm64" ;;
+        x86_64) MMDFLUX_ASSET="darwin-x86_64" ;;
+        *) MMDFLUX_ASSET="" ;;
+    esac
+    if [[ -n "$MMDFLUX_ASSET" ]]; then
+        curl -fsSL -o /tmp/mmdflux.tar.gz "https://github.com/kevinswiber/mmdflux/releases/download/mmdflux-${MMDFLUX_VERSION}/mmdflux-${MMDFLUX_VERSION}-${MMDFLUX_ASSET}.tar.gz"
+        tar xzf /tmp/mmdflux.tar.gz -C /tmp mmdflux
+        mkdir -p "$HOME/.local/bin"
+        install -m 0755 /tmp/mmdflux "$HOME/.local/bin/mmdflux"
+        rm -f /tmp/mmdflux.tar.gz /tmp/mmdflux
+    else
+        echo "    no mmdflux prebuilt for $(uname -m); skipping"
+    fi
+fi
+
+echo "==> Installing grok-mermaid (nvim inline mermaid engine)"
+npm install -g grok-mermaid
+
 ####################
 #  3. Rust         #
 ####################
