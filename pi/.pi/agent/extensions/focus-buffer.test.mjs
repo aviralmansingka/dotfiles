@@ -1,18 +1,13 @@
 import assert from "node:assert/strict";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { HOMEBREW_JITI, NVM_JITI, resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
-const jitiPath = [
-	process.env.JITI_PATH,
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-].find((path) => path && existsSync(path));
-
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
-
+const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI, NVM_JITI] });
 const { createJiti } = require(jitiPath);
 
 // Peer stubs (house pattern). focus-buffer imports nvim-open, which imports
@@ -34,11 +29,14 @@ const jiti = createJiti(import.meta.url, {
 });
 const {
 	editorSocketPath,
+	ensureEditorReady,
 	focusNodeBuffer,
+	isEditorMissing,
 	nodeBufferName,
 	nodeSlug,
 	overviewBufferName,
 	showNodeBuffer,
+	showOverviewBuffer,
 } = jiti("./focus-buffer.ts");
 
 // ── buffer naming (pure) ─────────────────────────────────────────────
@@ -51,6 +49,19 @@ assert.equal(nodeSlug("  "), "node");
 assert.equal(nodeBufferName("session-abc", "Node E — ROV drop scope"), "pi-focus://session-abc/node-e-rov-drop-scope");
 assert.equal(overviewBufferName("session-abc"), "pi-focus://session-abc/overview");
 assert.equal(nodeBufferName("a b", "x"), nodeBufferName("a-b", "x"), "session keys sanitize to the same buffer family");
+// Slug edges: disallowed runs collapse to single dashes, edges trim, keys
+// and slugs cap at 64 chars, non-ASCII falls away, empty never yields "".
+assert.equal(nodeSlug("Node_A/B: C!"), "node_a-b-c");
+assert.equal(nodeSlug("--trim me--"), "trim-me");
+assert.equal(nodeSlug("x".repeat(80)), "x".repeat(64), "node slugs cap at 64 chars");
+assert.equal(nodeSlug("Ünïcode node"), "n-code-node", "non-ASCII collapses without killing the slug");
+assert.equal(nodeBufferName("a:b/c d", "x"), "pi-focus://a-b-c-d/x", "session keys sanitize separators");
+assert.equal(
+	nodeBufferName("k".repeat(80), "x").length,
+	"pi-focus://".length + 64 + "/x".length,
+	"session keys cap at 64 chars",
+);
+assert.equal(nodeBufferName("", "x"), "pi-focus://session/x", "an empty session key still names a family");
 
 // ── socket resolution (pure) ─────────────────────────────────────────────────
 
@@ -114,6 +125,180 @@ const noEditorFocus = focusNodeBuffer("session-abc", "Node A");
 assert.equal(noEditorFocus.ok, false);
 assert.ok(noEditorFocus.message.length > 0);
 process.env.PATH = originalPath;
+
+// ── editor-missing classification ──────────────────────────────────
+// Only the four no-editor classes count as "launch one": a missing node
+// buffer or a failed RPC must NOT trigger an editor launch.
+assert.equal(isEditorMissing("no editor pane found"), true);
+assert.equal(isEditorMissing("editor pane is not nvim (no RPC socket)"), true);
+assert.equal(isEditorMissing("no live nvim RPC socket for the editor pane"), true);
+assert.equal(isEditorMissing("focus buffer disabled (PI_DISABLE_FOCUS_BUFFER=1)"), true);
+assert.equal(isEditorMissing('no node "Node A" buffer yet'), false, "a missing buffer is not a missing editor");
+assert.equal(isEditorMissing('node "A" buffer update failed: boom'), false, "a failed update is not a missing editor");
+
+// ── readiness poll under the off-switch ─────────────────────────────
+// With the buffer disabled there is never a usable editor: the poll must
+// return false within its own budget, not hang or throw.
+const savedDisable = process.env.PI_DISABLE_FOCUS_BUFFER;
+try {
+	process.env.PI_DISABLE_FOCUS_BUFFER = "1";
+	const before = Date.now();
+	assert.equal(await ensureEditorReady(300), false);
+	assert.ok(Date.now() - before < 2000, "the readiness poll respects its timeout");
+} finally {
+	if (savedDisable === undefined) delete process.env.PI_DISABLE_FOCUS_BUFFER;
+	else process.env.PI_DISABLE_FOCUS_BUFFER = savedDisable;
+}
+
+// ── Linux runtime-dir socket fallback ───────────────────────────────────
+const uid = process.getuid?.();
+if (typeof uid === "number" && existsSync(`/run/user/${uid}`)) {
+	const fakePid = 987_654_321;
+	const fallbackSock = join(`/run/user/${uid}`, `nvim.${fakePid}.0`);
+	writeFileSync(fallbackSock, "");
+	try {
+		assert.equal(
+			editorSocketPath(fakePid),
+			fallbackSock,
+			"the runtime-dir socket is the Linux fallback",
+		);
+	} finally {
+		rmSync(fallbackSock, { force: true });
+	}
+} else {
+	console.log("skip /run/user socket fallback (no runtime dir)");
+}
+assert.equal(editorSocketPath(987_654_320), undefined, "no socket anywhere means no editor socket");
+
+// ── live fake editor: show/focus round trip ─────────────────────────
+// Fake herdr/nvim shell binaries on PATH (house pattern); a real spawned
+// listener carries --listen in /proc/<pid>/cmdline so editorSocketPath
+// resolves its socket exactly as in production. The fake nvim answers
+// "missing" for pure-focus lua and "ok" otherwise, and a state marker
+// makes it fail to cover RPC-failure handling.
+if (existsSync("/proc")) {
+	const binDir = join(tempRoot, "bin");
+	const stateDir = join(tempRoot, "state");
+	const runDir = join(tempRoot, "run");
+	const harnessTmp = join(tempRoot, "hr-tmp");
+	mkdirSync(stateDir, { recursive: true });
+	mkdirSync(binDir, { recursive: true });
+	mkdirSync(runDir, { recursive: true });
+	mkdirSync(harnessTmp, { recursive: true });
+	writeFileSync(join(binDir, "nvim"), [
+		"#!/usr/bin/env node",
+		"const fs = require('node:fs');",
+		"const args = process.argv.slice(2);",
+		"if (args[0] === '--listen') {",
+		"	// Listener mode: stay alive so /proc/<pid>/cmdline keeps --listen.",
+		"	setInterval(() => {}, 1 << 30);",
+		"} else {",
+		"	if (args[0] === '--server') {",
+		"		const i = args.indexOf('--remote-expr');",
+		"		if (i !== -1) {",
+		"			if (args[i + 1] === '1') process.exit(0);",
+		"			const state = process.env.FAKE_NVIM_STATE;",
+		"			if (state && fs.existsSync(state + '/nvim-fail')) process.exit(1);",
+		"			const m = args[i + 1].match(/readfile\\(\"([^\"]+)\"\\)/);",
+		"			let lua = '';",
+		"			try { lua = m ? fs.readFileSync(m[1], 'utf-8') : ''; } catch {}",
+		"			console.log(lua.indexOf('return \"missing\"') === -1 ? 'ok' : 'missing');",
+		"		}",
+		"	}",
+		"	process.exit(0);",
+		"}",
+	].join("\n"), "utf-8");
+	chmodSync(join(binDir, "nvim"), 0o755);
+	writeFileSync(join(binDir, "herdr"), [
+		"#!/usr/bin/env node",
+		"const fs = require('node:fs');",
+		"const path = require('node:path');",
+		"const state = process.env.FAKE_HERDR_STATE;",
+		"const args = process.argv.slice(2);",
+		"const cmd = args.join(' ');",
+		"const out = (o) => { console.log(JSON.stringify(o)); process.exit(0); };",
+		"if (cmd === 'pane current') {",
+		"	out({ result: { pane: { pane_id: 'w1:p1', tab_id: 't1', cwd: '/tmp' } } });",
+		"} else if (cmd.startsWith('pane list')) {",
+		"	out({ result: { panes: [",
+		"		{ pane_id: 'w1:p1', tab_id: 't1', cwd: '/tmp' },",
+		"		{ pane_id: 'w1:p2', tab_id: 't1', cwd: '/tmp' } ] } });",
+		"} else if (cmd.startsWith('pane process-info')) {",
+		"	const pane = args[args.indexOf('--pane') + 1];",
+		"	const pid = Number(fs.readFileSync(path.join(state, 'editor-pid'), 'utf-8').trim());",
+		"	if (pane === 'w1:p2') {",
+		"		out({ result: { process_info: { pane_id: pane, foreground_processes: [{ name: 'nvim', pid, argv: ['nvim'] }] } } });",
+		"	} else {",
+		"		out({ result: { process_info: { pane_id: pane, foreground_processes: [{ name: 'zsh', pid: 4242, argv: ['zsh'] }] } } });",
+		"	}",
+		"} else if (cmd.startsWith('pane neighbor')) {",
+		"	out({ result: { neighbor: { neighbor_pane_id: 'w1:p2' } } });",
+		"}",
+		"process.exit(0);",
+	].join("\n"), "utf-8");
+	chmodSync(join(binDir, "herdr"), 0o755);
+
+	const listener = spawn(join(binDir, "nvim"), ["--listen", join(stateDir, "listener.sock")], {
+		stdio: "ignore",
+	});
+	const waitForListen = (pid, budgetMs = 3000) => {
+		const deadline = Date.now() + budgetMs;
+		for (;;) {
+			try {
+				if (readFileSync(`/proc/${pid}/cmdline`, "utf-8").includes("--listen")) return true;
+			} catch {}
+			if (Date.now() >= deadline) return false;
+			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+		}
+	};
+	const savedHarnessTmpdir = process.env.TMPDIR;
+	const savedHarnessXdg = process.env.XDG_RUNTIME_DIR;
+	try {
+		process.env.PATH = `${binDir}:${originalPath}`;
+		process.env.TMPDIR = harnessTmp;
+		process.env.XDG_RUNTIME_DIR = runDir;
+		process.env.FAKE_HERDR_STATE = stateDir;
+		process.env.FAKE_NVIM_STATE = stateDir;
+		assert.ok(waitForListen(listener.pid), "the fake nvim listener must expose --listen");
+		writeFileSync(join(stateDir, "editor-pid"), String(listener.pid));
+
+		const shown = showNodeBuffer("session-abc", "Node A", "Node A", "body");
+		assert.equal(shown.ok, true, shown.message);
+		assert.ok(shown.message.includes('node "Node A" buffer "Node A" updated'), shown.message);
+
+		const overviewShown = showOverviewBuffer("session-abc", "Arc overview", "nodes and verdicts");
+		assert.equal(overviewShown.ok, true, overviewShown.message);
+		assert.ok(overviewShown.message.includes('overview buffer "Arc overview" updated'), overviewShown.message);
+
+		// Pure focus on a never-shown buffer reports it missing — the caller
+		// falls back to the overview, and an empty buffer is never created.
+		const missing = focusNodeBuffer("session-abc", "Node A");
+		assert.equal(missing.ok, false);
+		assert.ok(missing.message.includes('no node "Node A" buffer yet'), missing.message);
+
+		// An RPC failure (nvim exits nonzero) surfaces as a failed update,
+		// never as a throw into the conversation.
+		writeFileSync(join(stateDir, "nvim-fail"), "1");
+		const rpcFailed = showNodeBuffer("session-abc", "Node B", "Node B", "body");
+		assert.equal(rpcFailed.ok, false);
+		assert.ok(rpcFailed.message.includes("buffer update failed"), rpcFailed.message);
+		rmSync(join(stateDir, "nvim-fail"), { force: true });
+
+		// With a live editor pane the readiness poll succeeds at once.
+		assert.equal(await ensureEditorReady(1000), true);
+	} finally {
+		listener.kill();
+		process.env.PATH = originalPath;
+		if (savedHarnessTmpdir === undefined) delete process.env.TMPDIR;
+		else process.env.TMPDIR = savedHarnessTmpdir;
+		if (savedHarnessXdg === undefined) delete process.env.XDG_RUNTIME_DIR;
+		else process.env.XDG_RUNTIME_DIR = savedHarnessXdg;
+		delete process.env.FAKE_HERDR_STATE;
+		delete process.env.FAKE_NVIM_STATE;
+	}
+} else {
+	console.log("skip live fake-editor scenarios (no /proc)");
+}
 
 rmSync(tempRoot, { recursive: true, force: true });
 console.log("focus-buffer tests passed");
