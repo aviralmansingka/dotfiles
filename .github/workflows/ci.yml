@@ -285,6 +285,19 @@ jobs:
       - name: Install lua5.4
         run: sudo apt-get update && sudo apt-get install -y lua5.4
 
+      # The nvim suites (and nvim-open's .sh e2e scenarios in the pi
+      # job) are authored against modern nvim. apt on noble
+      # ships 0.9.5 (tree-sitter 0.20.8, parser ABI <= 14) — never use it
+      # for the nvim lane. Install the pinned official stable tarball.
+      - name: Install pinned Neovim (v0.12.6)
+        run: |
+          curl -sSL -o "$RUNNER_TEMP/nvim.tar.gz" \
+            https://github.com/neovim/neovim/releases/download/v0.12.6/nvim-linux-x86_64.tar.gz
+          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
+          sudo mv "$RUNNER_TEMP/nvim-linux-x86_64" /usr/local/nvim-v0.12.6
+          sudo ln -sf /usr/local/nvim-v0.12.6/bin/nvim /usr/local/bin/nvim
+          nvim --version | head -1
+
       - name: Extension loader smoke
         env:
           JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
@@ -330,8 +343,17 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Neovim
-        run: sudo apt-get update && sudo apt-get install -y neovim
+      # The nvim suites are authored against modern nvim. apt on noble
+      # ships 0.9.5 (tree-sitter 0.20.8, parser ABI <= 14) — never use it
+      # for the nvim lane. Install the pinned official stable tarball.
+      - name: Install pinned Neovim (v0.12.6)
+        run: |
+          curl -sSL -o "$RUNNER_TEMP/nvim.tar.gz" \
+            https://github.com/neovim/neovim/releases/download/v0.12.6/nvim-linux-x86_64.tar.gz
+          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
+          sudo mv "$RUNNER_TEMP/nvim-linux-x86_64" /usr/local/nvim-v0.12.6
+          sudo ln -sf /usr/local/nvim-v0.12.6/bin/nvim /usr/local/bin/nvim
+          nvim --version | head -1
 
       # dap_eval_spec:range_contains parses a go buffer with core
       # treesitter; the go parser is host-installed on the fleet but

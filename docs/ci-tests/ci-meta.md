@@ -65,15 +65,15 @@ node scripts/test-ci-self.mjs   # self-check
 
 ## Runtime and SLA
 
-Local timings, serial: `pi-tests` 30 s, `nvim-tests` 10 s,
-`scripts-tests` 6 s, `lint` 2 s, `ops` 0.1 s — 49 s total. GitHub runs
-jobs in parallel: expect 2-3 minutes end to end (target: 5 or less);
-each test has a timeout, so a hang turns red, not slow.
+Local timings, serial: `pi-tests` 30 s, `nvim-tests` 10 s, `scripts-tests`
+6 s, `lint` 2 s, `ops` 0.1 s — 49 s total. GitHub runs jobs in parallel:
+expect 2-3 minutes end to end (target: 5 or less); timeouts make hangs red.
 
 ## Known gaps
 
-- GitHub timing data is pending: every branch run failed at 0 s
-  (job-level env used the `runner` context; fixed and pinned).
+- apt neovim on noble is 0.9.5 (tree-sitter 0.20.8, parser ABI 14):
+  never use it for the nvim lane; the nvim and pi jobs install a
+  pinned official tarball (v0.12.6).
 - `nvim-tests` runs only the no-plugin specs (`verify-nvim` needs the
   full set); `mermaid.corpus.mjs` needs real binaries — both stay local.
 - Many agents share this worktree; tests go red mid-edit and green

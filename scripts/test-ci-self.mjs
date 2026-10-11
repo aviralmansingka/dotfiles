@@ -71,10 +71,12 @@ for (const needle of [
   // The gate consumes changed_all (the docs filter rewrites it into
   // `changed`); a missing capture silently selects no job at all.
   "mapfile -t changed_all < <(git diff",
-  // Provisioning contracts the discovered tests rely on.
+  // Provisioning contracts the discovered tests rely on. The nvim pin
+  // matters: apt on noble ships 0.9.5, which the suites do not support.
   "astral-sh/setup-uv",
   "lua5.4",
   "hashicorp/setup-terraform",
+  "v0.12.6/nvim-linux-x86_64.tar.gz",
 ]) {
   assert.ok(ci.includes(needle), `ci.yml must wire: ${needle}`);
 }
