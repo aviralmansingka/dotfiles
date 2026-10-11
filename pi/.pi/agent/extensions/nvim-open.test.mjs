@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,7 +37,8 @@ const jiti = createJiti(import.meta.url, { alias: {
 
 try {
 	let tool;
-	jiti("./nvim-open.ts").default({ registerTool: (definition) => { tool = definition; }, registerCommand() {} });
+	const nvimOpen = jiti("./nvim-open.ts");
+	nvimOpen.default({ registerTool: (definition) => { tool = definition; }, registerCommand() {} });
 	assert.equal(tool.name, "nvim_open");
 	const theme = { fg: (_token, text) => text, bold: (text) => text };
 	const tagged = { fg: (token, text) => `<${token}>${text}</${token}>`, bold: (text) => `<b>${text}</b>` };
@@ -66,10 +67,10 @@ try {
 	assert.deepEqual(wrapped.slice(1, -1), Array(3).fill(" │  abcdefghijabcdefghij"));
 	assert.ok(wrapped.every((line) => line.length <= 24));
 
-	for (const message of ["Sent 1 file(s) to existing editor (pane w20:p4A).", "Focused existing editor pane (w20:p4A).", "Launched vim in a tmux split at /repo."]) {
+	for (const message of ["Sent 1 file(s) to existing editor (pane w20:p4A).", "Focused existing editor pane (w20:p4A).", "Launched vim in a tmux split at /repo.", "Opened 2 file(s) in the herdr-nvim sidebar (tab w6V:t1).", "Focused the herdr-nvim sidebar (tab w6V:t1)."]) {
 		assert.match(tool.renderResult({ content: [{ type: "text", text: message }] }, options, theme, context).render(100).at(-1), /✓ opened in editor pane$/);
 	}
-	for (const [message, isError] of [["Could not focus existing editor pane (w20:p4A).", false], ["Editor unavailable", true]]) {
+	for (const [message, isError] of [["Could not focus existing editor pane (w20:p4A).", false], ["Could not open files in the herdr-nvim sidebar (tab w6V:t1).", false], ["Could not focus the herdr-nvim sidebar (tab w6V:t1).", false], ["Editor unavailable", true]]) {
 		const failed = { content: [{ type: "text", text: `${message}\nHidden second line` }] };
 		const errorView = tool.renderResult(failed, options, tagged, { ...context, isError }).render(500).join("\n");
 		assert.ok(errorView.includes(`<error>✗ ${message}</error>`));
@@ -79,6 +80,69 @@ try {
 	for (const width of [1, 4, 12]) {
 		assert.ok(tool.renderResult(result, options, theme, fileContext).render(width).every((line) => line.length <= width));
 	}
+
+	// ── herdr-nvim daemon socket resolution (pure) ─────────────────────
+	const runtimeDir = join(tempRoot, "xdg-run");
+	process.env.XDG_RUNTIME_DIR = runtimeDir;
+	assert.deepEqual(nvimOpen.sidebarSocketCandidates("w6V:t1"), [
+		join(runtimeDir, "herdr-nvim", "w6V_t1.sock"),
+		join(tmpdir(), "herdr-nvim", "w6V_t1.sock"),
+	]);
+	delete process.env.XDG_RUNTIME_DIR;
+	assert.deepEqual(nvimOpen.sidebarSocketCandidates("w26:t2"), [
+		join(tmpdir(), "herdr-nvim", "w26_t2.sock"),
+	]);
+	// No socket registered for this tab → null (registry dir may exist
+	// with other tabs' daemons; only the exact tab key matches).
+	assert.equal(nvimOpen.sidebarDaemonSocket("w99:t9"), null);
+
+	// ── sidebar-pane process matcher (pure) ─────────────────────────────
+	// Shapes recorded live from a visible herdr-nvim sidebar pane: the
+	// `herdr-nvim sidebar` launcher before it execs, and the exec'd
+	// `nvim --server <socket> --remote-ui` client — the steady state.
+	const daemonSocket = join(tmpdir(), "herdr-nvim", "w6V_t1.sock");
+	const remoteUi = {
+		name: "nvim", pid: 4242,
+		argv: ["/home/avirus/.local/share/bob/nightly/bin/nvim", "--server", daemonSocket, "--remote-ui"],
+	};
+	assert.equal(nvimOpen.isSidebarProcess(remoteUi, daemonSocket), true);
+	const launcher = {
+		name: "herdr-nvim", pid: 4243,
+		argv: ["/plugins/github/chmarax.herdr-nvim-x/bin/herdr-nvim", "sidebar"],
+	};
+	assert.equal(nvimOpen.isSidebarProcess(launcher, daemonSocket), true);
+	// name missing → fall back to argv[0], basename-matched.
+	assert.equal(
+		nvimOpen.isSidebarProcess({ name: "", pid: 4244, argv: ["/opt/bin/nvim", "--server", daemonSocket, "--remote-ui"] }, daemonSocket),
+		true,
+	);
+	// A plain editor nvim (no --remote-ui) is not the sidebar.
+	assert.equal(
+		nvimOpen.isSidebarProcess({ name: "nvim", pid: 7, argv: ["/usr/bin/nvim", "src/main.rs"] }, daemonSocket),
+		false,
+	);
+	// A remote-ui client on another tab's daemon socket is not this sidebar.
+	assert.equal(
+		nvimOpen.isSidebarProcess({ ...remoteUi, argv: ["/usr/bin/nvim", "--server", join(tmpdir(), "herdr-nvim", "w9_t9.sock"), "--remote-ui"] }, daemonSocket),
+		false,
+	);
+	// The headless daemon itself (--listen, no --server/--remote-ui) is not a pane process.
+	assert.equal(
+		nvimOpen.isSidebarProcess({ name: "nvim", pid: 8, argv: ["/usr/bin/nvim", "--headless", "--listen", daemonSocket] }, daemonSocket),
+		false,
+	);
+
+	// ── dotfiles worktree config detection (pure) ───────────────────
+	const dotfilesRoot = join(tempRoot, "dotfiles");
+	mkdirSync(join(dotfilesRoot, "nvim", ".config", "nvim"), { recursive: true });
+	writeFileSync(join(dotfilesRoot, "nvim", ".config", "nvim", "init.lua"), "");
+	assert.equal(
+		nvimOpen.dotfilesConfigHome(join(dotfilesRoot, "nvim", ".config", "nvim", "lua")),
+		join(dotfilesRoot, "nvim", ".config"),
+	);
+	const plainRoot = join(tempRoot, "plain");
+	mkdirSync(plainRoot);
+	assert.equal(nvimOpen.dotfilesConfigHome(plainRoot), null);
 } finally {
 	rmSync(tempRoot, { recursive: true, force: true });
 }

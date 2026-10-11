@@ -1,15 +1,16 @@
 ---
 name: nvim
-description: "Open a vim editor session in the folder the agent is working with. Launches vim as a vertical split in the current Herdr tab. If an editor is already running in that tab, sends files to the existing instance instead of launching a new one. When the cwd is inside a dotfiles checkout, uses the local nvim config instead of ~/.config/nvim. Use when the user wants to open an editor for the current workspace or specific files, says 'open in vim'/'nvim', 'edit', or types /nvim."
+description: "Open a vim editor session in the folder the agent is working with. Attaches to the tab's live herdr-nvim sidebar daemon when one is running, else sends files to an existing editor in that tab, else launches vim as a vertical split. When the cwd is inside a dotfiles checkout and a new editor is launched, uses the local nvim config instead of ~/.config/nvim; a live sidebar daemon always runs the global config. Use when the user wants to open an editor for the current workspace or specific files, says 'open in vim'/'nvim', 'edit', or types /nvim."
 ---
 
 # Open Editor
 
-Open a vim session for the current workspace or specific files. Vim
-launches as a **vertical split to the right of the agent pane** in the
-current Herdr tab. If an editor is already running in the current tab,
-files are sent to the existing instance — a second instance is never
-launched.
+Open a vim session for the current workspace or specific files. When
+the tab has a live herdr-nvim sidebar daemon, files open in it — no
+second instance is ever launched. Otherwise, if an editor is already
+running in the current tab, files are sent to the existing instance.
+Otherwise vim launches as a **vertical split to the right of the agent
+pane** in the current Herdr tab.
 
 ## Usage
 
@@ -26,6 +27,10 @@ Run the bundled shell script from this skill directory:
 The script handles:
 - **Detecting an existing editor** in the current Herdr tab via `herdr
   pane list` + `herdr pane process-info`, looking for `vim` or `nvim`.
+- **Attaching to a herdr-nvim sidebar daemon** for the current tab: when one
+  is live, files open in the sidebar's persistent nvim (its registry socket,
+  `<tab key>.sock` under `$XDG_RUNTIME_DIR/herdr-nvim` or the temp dir) and
+  no duplicate split is launched.
 - **Sending files to an existing editor** via `herdr pane send-text`
   with `:e <file>` ex commands (paths escaped with fnameescape
   semantics). The editor pane is focused using `herdr pane neighbor` +
@@ -52,6 +57,11 @@ When a dotfiles config is detected but an existing editor is already
 running in the tab, files are still sent to it, but a warning is printed
 noting that the existing editor may be using a different config. Close
 and relaunch `/nvim` to pick up the worktree config.
+
+When the tab has a live herdr-nvim sidebar daemon, files open in the
+daemon and it always runs the global nvim config. A note is printed
+when a worktree config was detected; relaunching `/nvim` does not
+change the daemon's config.
 
 If the user references a file by name rather than by path (e.g. "the
 readme"), resolve it yourself before calling the script — the script

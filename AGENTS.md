@@ -50,6 +50,22 @@ captain approval).
   kill, and focus actions must continue to target the exact underlying Herdr agent identity.
 - Preserve exact cwd behavior for non-Git directories instead of inventing repository identity.
 
+## herdr-nvim sidebar
+
+`prefix+t` toggles the per-tab persistent nvim sidebar; `prefix+o` opens its
+agent-touched file picker (ChmaraX/herdr-nvim — Herdr half machine-installed via
+`herdr plugin install`, nvim half at `nvim/.config/nvim/lua/plugins/herdr-nvim.lua`).
+A live sidebar daemon is the tab's editor: `nvim_open`/`/nvim` attach to it through
+its registry socket (`<tab key>.sock` — tab id with `:`→`_` — under
+`$XDG_RUNTIME_DIR/herdr-nvim`, else the temp dir) instead of launching a duplicate
+split, and focus-buffer drives lesson buffers through the same socket. When the
+sidebar pane is hidden, the agent only reports it (press prefix+t): a plugin
+action invoke resolves to the focused tab and can land in another workspace, and
+a raw `plugin pane open` bypasses the plugin's state/layout machinery and
+corrupts the next toggle. The user's own prefix+t is the only correct show path.
+`annotate-review.open` lost its chord to the picker; the reply reviewer keeps
+`prefix+shift+o`.
+
 ## no-mistakes Herdr bridge invariants
 
 The no-mistakes daemon's step agents run as visible Herdr subagent tabs when the triggering

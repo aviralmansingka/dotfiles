@@ -46,6 +46,9 @@ command = "youguanxinqing.herdr-flash.flash"
 description = "search, select, and yank pane text"
 
 # Upstream terminal annotations + protected local document/reply reviewer.
+# prefix+o moved from annotate-review.open to the herdr-nvim file picker
+# (the reply reviewer keeps prefix+shift+o); annotate-review.open is now
+# unbound — rebind it here if document review needs a key again.
 [[keys.command]]
 key = "prefix+a"
 type = "plugin_action"
@@ -65,16 +68,24 @@ command = "annotate.manage"
 description = "manage annotations"
 
 [[keys.command]]
-key = "prefix+o"
-type = "plugin_action"
-command = "annotate-review.open"
-description = "review documents in this folder"
-
-[[keys.command]]
 key = "prefix+shift+o"
 type = "plugin_action"
 command = "annotate-review.last"
 description = "review the agent's last reply"
+
+# herdr-nvim: persistent per-tab nvim sidebar (chmarax.herdr-nvim).
+# prefix+t keeps prefix+e free for herdr's edit_scrollback default.
+[[keys.command]]
+key = "prefix+t"
+type = "plugin_action"
+command = "chmarax.herdr-nvim.toggle"
+description = "nvim sidebar"
+
+[[keys.command]]
+key = "prefix+o"
+type = "plugin_action"
+command = "chmarax.herdr-nvim.pick-file"
+description = "open file from agent output"
 
 [ui]
 pane_scrollbars = false

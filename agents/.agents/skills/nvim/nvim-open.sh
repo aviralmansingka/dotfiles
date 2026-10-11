@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# nvim-open.sh — open vim in the current Herdr tab as a vertical split,
-# or send files to an existing editor instance.
+# nvim-open.sh — open vim in the current Herdr tab: attach to the tab's
+# live herdr-nvim sidebar daemon, send files to an existing editor
+# instance, or launch a vertical split.
 #
 # Usage:
 #   nvim-open.sh [cwd] [file1] [file2] ...
@@ -133,6 +134,88 @@ if [[ -z "$TAB_ID" || -z "$CURRENT_PANE_ID" ]]; then
 	exit 1
 fi
 
+# ── herdr-nvim sidebar daemon: attach instead of a duplicate split ──
+# ChmaraX/herdr-nvim keeps one headless nvim daemon per tab, registered
+# as <tab key>.sock (tab id with ':'→'_') under $XDG_RUNTIME_DIR/herdr-nvim,
+# else the temp dir. A live daemon means the sidebar owns this tab's
+# editing: open files in it and make sure the sidebar is shown.
+DAEMON_TAB_KEY="${TAB_ID//:/_}"
+DAEMON_SOCKET=""
+for _dir in "${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/herdr-nvim}" "${TMPDIR:-/tmp}/herdr-nvim"; do
+	if [[ -S "$_dir/$DAEMON_TAB_KEY.sock" ]]; then
+		DAEMON_SOCKET="$_dir/$DAEMON_TAB_KEY.sock"
+		break
+	fi
+done
+unset _dir
+if [[ -n "$DAEMON_SOCKET" && "$EDITOR_CMD" == "nvim" ]] && \
+	nvim --server "$DAEMON_SOCKET" --remote-expr 1 >/dev/null 2>&1; then
+	if [[ -n "$DOTFILES_XDG_CONFIG_HOME" ]]; then
+		echo "Note: the sidebar daemon runs the global nvim config, not the detected worktree config." >&2
+	fi
+	DAEMON_OK=true
+	for file in "${FILES[@]}"; do
+		# Resolve against CWD — the daemon's own cwd is unrelated.
+		if [[ "$file" != /* ]]; then
+			file="$CWD/$file"
+		fi
+		nvim --server "$DAEMON_SOCKET" --remote "$file" || DAEMON_OK=false
+	done
+	# Find the visible sidebar pane: the `herdr-nvim sidebar` launcher (brief
+	# on Unix before it execs, the parent on Windows) or the
+	# `nvim --server <socket> --remote-ui` client it execs into on Unix —
+	# the steady state, matched by this tab's own daemon socket.
+	TAB_PANES_LIST=$(herdr_json pane list | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+panes = [p['pane_id'] for p in data.get('result', {}).get('panes', []) if p.get('tab_id') == '$TAB_ID']
+print('\n'.join(panes))
+" 2>/dev/null || echo "")
+	SIDEBAR_VISIBLE=false
+	while IFS= read -r _pane; do
+		[[ -z "$_pane" ]] && continue
+		if herdr_json pane process-info --pane "$_pane" | python3 -c "
+import sys, json
+socket = sys.argv[1]
+data = json.load(sys.stdin)
+for p in data.get('result', {}).get('process_info', {}).get('foreground_processes', []):
+    argv = p.get('argv') or []
+    exe = (p.get('name', '') or (argv[0] if argv else '')).replace(chr(92), '/').rsplit('/', 1)[-1]
+    if exe in ('herdr-nvim', 'herdr-nvim.exe') and 'sidebar' in argv:
+        sys.exit(0)
+    server = ''
+    if '--server' in argv:
+        i = argv.index('--server')
+        if i + 1 < len(argv):
+            server = argv[i + 1]
+    if exe in ('nvim', 'nvim.exe') and '--remote-ui' in argv and server == socket:
+        sys.exit(0)
+sys.exit(1)
+" "$DAEMON_SOCKET" 2>/dev/null; then
+			SIDEBAR_VISIBLE=true
+			break
+		fi
+	done <<< "$TAB_PANES_LIST"
+	if [[ "$DAEMON_OK" != "true" ]]; then
+		echo "Could not open files in the herdr-nvim sidebar (tab $TAB_ID)." >&2
+		exit 1
+	fi
+	# Toggled-off sidebar: never show the pane from the agent side — an
+	# action invoke follows the focused tab (possibly another workspace)
+	# and a raw pane open bypasses the plugin's state machinery. The
+	# files are in the persistent daemon; prefix+t shows them.
+	VIEW_NOTE=""
+	if [[ "$SIDEBAR_VISIBLE" != "true" ]]; then
+		VIEW_NOTE=" — press prefix+t in that tab to view"
+	fi
+	if [[ ${#FILES[@]} -gt 0 ]]; then
+		echo "Opened ${#FILES[@]} file(s) in the herdr-nvim sidebar (tab $TAB_ID)$VIEW_NOTE."
+	else
+		echo "herdr-nvim sidebar (tab $TAB_ID) is this tab's editor$VIEW_NOTE."
+	fi
+	exit 0
+fi
+
 # Detect existing editor in the current tab
 EDITOR_PANE_ID=""
 EDITOR_FOUND=false
@@ -204,9 +287,9 @@ if [[ "$EDITOR_FOUND" == "true" ]]; then
 	fi
 	# Focus the editor pane — find direction via neighbor
 	for dir in right down left up; do
-		NEIGHBOR=$(herdr_json pane neighbor --pane "$CURRENT_PANE_ID" --direction "$dir" | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',{}).get('neighbor',{}).get('pane_id',''))" 2>/dev/null || echo "")
+		NEIGHBOR=$(herdr_json pane neighbor --pane "$CURRENT_PANE_ID" --direction "$dir" | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',{}).get('neighbor',{}).get('neighbor_pane_id',''))" 2>/dev/null || echo "")
 		if [[ "$NEIGHBOR" == "$EDITOR_PANE_ID" ]]; then
-			herdr_ok pane focus --current --direction "$dir"
+			herdr_ok pane focus --pane "$CURRENT_PANE_ID" --direction "$dir"
 			break
 		fi
 	done
