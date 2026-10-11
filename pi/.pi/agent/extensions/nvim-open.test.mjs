@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,8 +37,12 @@ const jiti = createJiti(import.meta.url, { alias: {
 
 try {
 	let tool;
+	const commands = {};
 	const nvimOpen = jiti("./nvim-open.ts");
-	nvimOpen.default({ registerTool: (definition) => { tool = definition; }, registerCommand() {} });
+	nvimOpen.default({
+		registerTool: (definition) => { tool = definition; },
+		registerCommand: (name, definition) => { commands[name] = definition; },
+	});
 	assert.equal(tool.name, "nvim_open");
 	const theme = { fg: (_token, text) => text, bold: (text) => text };
 	const tagged = { fg: (token, text) => `<${token}>${text}</${token}>`, bold: (text) => `<b>${text}</b>` };
@@ -143,6 +147,110 @@ try {
 	const plainRoot = join(tempRoot, "plain");
 	mkdirSync(plainRoot);
 	assert.equal(nvimOpen.dotfilesConfigHome(plainRoot), null);
+
+	// ── launch provenance log line (pure) ──────────────────────
+	assert.equal(
+		nvimOpen.launchLogPath({}),
+		join(homedir(), ".cache", "pi", "nvim-open-launches.log"),
+	);
+	assert.equal(nvimOpen.launchLogPath({ PI_NVIM_LAUNCH_LOG: "/tmp/x.log" }), "/tmp/x.log");
+	const event = {
+		route: "tool", cwd: "/repo/My Work", outcome: "split",
+		pane: "w5G:p2", socket: "/tmp/pi-nvim-w5G-p2.sock", files: 2,
+	};
+	const env = {
+		PI_SUBAGENT_SESSION: "/sessions/sub.jsonl",
+		PI_SUBAGENT_NAME: "recon",
+		HERDR_PANE_ID: "w73:pB",
+	};
+	const line = nvimOpen.buildLaunchLogLine(event, env);
+	// Required keys, in order; spaced values are single-quoted.
+	assert.match(line, /^ts=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z pid=\d+ route=tool /);
+	assert.match(line, / session=\/sessions\/sub\.jsonl subagent=recon callerPane=w73:pB /);
+	assert.match(line, / cwd='\/repo\/My Work' outcome=split pane=w5G:p2 socket=\/tmp\/pi-nvim-w5G-p2\.sock files=2$/);
+	// session resolution: subagent session wins, then the main session file, then "-".
+	assert.match(
+		nvimOpen.buildLaunchLogLine(event, { PI_SESSION_FILE: "/s/main.jsonl" }),
+		/ session=\/s\/main\.jsonl /,
+	);
+	assert.match(
+		nvimOpen.buildLaunchLogLine(event, { PI_SESSION_FILE: "/s/main.jsonl", PI_SUBAGENT_SESSION: "/s/sub.jsonl" }),
+		/ session=\/s\/sub\.jsonl /,
+	);
+	const bareLine = nvimOpen.buildLaunchLogLine(event, {});
+	assert.match(bareLine, / session=- subagent=- callerPane=- /);
+	// existing / sidebar outcomes carry no pane or socket keys.
+	for (const outcome of ["existing", "sidebar"]) {
+		const outcomeLine = nvimOpen.buildLaunchLogLine({ ...event, outcome });
+		assert.ok(!/(^| )(pane|socket)=/.test(outcomeLine), `${outcome} line must not carry pane/socket`);
+		assert.match(outcomeLine, new RegExp(` outcome=${outcome} files=2$`));
+	}
+	// failed keeps pane/socket with "-" defaults.
+	assert.match(
+		nvimOpen.buildLaunchLogLine({ route: "script", cwd: "/r", outcome: "failed", files: 0 }),
+		/ outcome=failed pane=- socket=- files=0$/,
+	);
+	// Quoting: embedded quotes are shell-escaped; "=" and empty force quoting.
+	assert.match(
+		nvimOpen.buildLaunchLogLine({ ...event, cwd: "/it's a=b" }, {}),
+		/ cwd='\/it'\\''s a=b' /,
+	);
+	assert.ok(nvimOpen.buildLaunchLogLine({ ...event, cwd: "" }, {}).includes("cwd='' "));
+
+	// ── route threading through openEditor (offline) ───────────
+	// A PATH holding only a no-op `tmux` makes openEditor deterministic:
+	// herdr is not found (pane detection is skipped) and the tmux fallback
+	// "succeeds" without touching any real multiplexer.
+	const offlineBin = join(tempRoot, "offline-bin");
+	mkdirSync(offlineBin);
+	const fakeTmux = join(offlineBin, "tmux");
+	writeFileSync(fakeTmux, "#!/bin/sh\nexit 0\n");
+	chmodSync(fakeTmux, 0o755);
+	const launchLog = join(tempRoot, "launches.log");
+	const savedPath = process.env.PATH;
+	const savedEnv = ["PI_NVIM_LAUNCH_LOG", "PI_SESSION_FILE", "PI_SUBAGENT_SESSION", "PI_SUBAGENT_NAME", "HERDR_PANE_ID"]
+		.map((key) => [key, process.env[key]]);
+	process.env.PATH = offlineBin;
+	process.env.PI_NVIM_LAUNCH_LOG = launchLog;
+	process.env.PI_SESSION_FILE = "/sessions/main.jsonl";
+	delete process.env.PI_SUBAGENT_SESSION;
+	delete process.env.PI_SUBAGENT_NAME;
+	process.env.HERDR_PANE_ID = "w73:pB";
+	const unwritableDir = join(tempRoot, "unwritable-dir");
+	mkdirSync(unwritableDir);
+	try {
+		const lastLine = () => readFileSync(launchLog, "utf-8").split("\n").filter(Boolean).at(-1);
+		// tool route: through the registered nvim_open tool execute.
+		const toolResult = await tool.execute("t1", { cwd: "/repo", files: ["a.ts", "b.ts"] });
+		assert.equal(toolResult.content[0].text, "Launched vim in a tmux split at /repo.");
+		assert.match(lastLine(), / route=tool /);
+		assert.match(lastLine(), / session=\/sessions\/main\.jsonl subagent=- callerPane=w73:pB /);
+		assert.match(lastLine(), / outcome=split pane=- socket=\S*pi-nvim-\d+-\d+\.sock files=2$/);
+		// command route: through the registered /nvim command handler.
+		let notified;
+		await commands.nvim.handler([], { cwd: "/repo", ui: { notify: (message) => { notified = message; } } });
+		assert.equal(notified, "Launched vim in a tmux split at /repo.");
+		assert.match(lastLine(), / route=command /);
+		// library route: an explicit route string lands in the line.
+		await nvimOpen.openEditor("/repo", [], "library:md-log");
+		assert.match(lastLine(), / route=library:md-log /);
+		// An unset route defaults to library:unknown.
+		await nvimOpen.openEditor("/repo", []);
+		assert.match(lastLine(), / route=library:unknown /);
+		// Failure tolerance: a log path that cannot be written (a directory)
+		// never fails or delays the launch — openEditor still succeeds.
+		process.env.PI_NVIM_LAUNCH_LOG = unwritableDir;
+		const tolerant = await nvimOpen.openEditor("/repo", ["x.ts"], "tool");
+		assert.equal(tolerant.ok, true);
+		assert.equal(tolerant.launched, true);
+		assert.equal(tolerant.message, "Launched vim in a tmux split at /repo.");
+	} finally {
+		process.env.PATH = savedPath;
+		for (const [key, value] of savedEnv) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+	}
 } finally {
 	rmSync(tempRoot, { recursive: true, force: true });
 }

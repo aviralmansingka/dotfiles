@@ -2,8 +2,8 @@ import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { appendFileSync, existsSync, mkdirSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join, dirname, resolve, isAbsolute } from "node:path";
 
 const HERDR_TIMEOUT_MS = 5000;
@@ -316,16 +316,25 @@ export function dotfilesConfigHome(cwd: string): string | null {
 	}
 	return null;
 }
+/** A herdr split attempt: what it established before succeeding or
+ *  failing. The pane id and --listen socket survive a failed `pane run`
+ *  and identify the orphan pane in the failure log line. */
+interface SplitAttempt {
+	ran: boolean;
+	paneId: string | null;
+	socket: string | null;
+}
 /**
  * Split the current pane to the right and launch vim in the new pane.
- * Returns the new pane ID, or null if the split or run failed.
+ * Returns the attempt: ran=true on success, or whatever the failed
+ * attempt managed to establish (nulls when the split itself failed).
  */
-function launchEditor(cwd: string, files: string[]): string | null {
+function launchEditor(cwd: string, files: string[]): SplitAttempt {
 	const splitRes = herdrJson([
 		"pane", "split", "--current", "--direction", "right", "--cwd", cwd, "--focus",
 	]) as { result?: { pane?: { pane_id?: string } } } | null;
 	const newPaneId = splitRes?.result?.pane?.pane_id;
-	if (!newPaneId) return null;
+	if (!newPaneId) return { ran: false, paneId: null, socket: null };
 	// Launch nvim with an explicit RPC socket so focus-buffer (and nvimr)
 	// can drive this pane: the pi-focus:// node buffers live in THIS
 	// instance. Without --listen the pane is a dead end for buffer updates.
@@ -346,9 +355,9 @@ function launchEditor(cwd: string, files: string[]): string | null {
 	const inner = `${nvimLine}; herdr pane close ${newPaneId}`;
 	const paneCommand = `bash -c '${inner.replace(/'/g, "'\\''")}'`;
 	if (!herdrOk(["pane", "run", newPaneId, paneCommand])) {
-		return null;
+		return { ran: false, paneId: newPaneId, socket: socketPath };
 	}
-	return newPaneId;
+	return { ran: true, paneId: newPaneId, socket: socketPath };
 }
 /**
  * Focus the editor pane by discovering the direction from the current pane
@@ -373,7 +382,7 @@ function focusEditorPane(editorPaneId: string, currentPaneId: string): boolean {
 // ---------------------------------------------------------------------------
 // tmux fallback
 // ---------------------------------------------------------------------------
-function tmuxFallback(cwd: string, files: string[]): boolean {
+function tmuxFallback(cwd: string, files: string[]): string | null {
 	try {
 		// Same contract as the herdr launcher: nvim with an RPC socket, so
 		// focus-buffer can drive this pane too.
@@ -386,9 +395,82 @@ function tmuxFallback(cwd: string, files: string[]): boolean {
 		execFileSync("tmux", ["split-window", "-h", "-c", cwd, shellCmd], {
 			timeout: HERDR_TIMEOUT_MS, stdio: "ignore",
 		});
-		return true;
+		return socketPath;
 	} catch {
-		return false;
+		return null;
+	}
+}
+// ---------------------------------------------------------------------------
+// launch provenance log
+// ---------------------------------------------------------------------------
+// Two nvim panes once appeared in a subagent tab running the wrong
+// worktree's config, and no pi session log held any trace of their
+// launchers. Every editor launch from every route now appends one
+// attributable line to a fixed log, so an orphan pane can always be
+// traced back — and a pane with NO line was launched outside pi (the
+// Herdr plugin layer). Logging is debug state: a write failure must
+// never fail or delay the launch it describes.
+
+/** Fixed provenance log for editor launches; PI_NVIM_LAUNCH_LOG overrides. */
+export function launchLogPath(
+	env: { [key: string]: string | undefined } = process.env,
+): string {
+	return env.PI_NVIM_LAUNCH_LOG ?? join(homedir(), ".cache", "pi", "nvim-open-launches.log");
+}
+
+/** One provenance event, as known at the launch decision point. */
+export interface LaunchLogEvent {
+	route: string;
+	cwd: string;
+	outcome: "split" | "existing" | "sidebar" | "failed";
+	/** New pane id / --listen socket — recorded for split and failed only. */
+	pane?: string;
+	socket?: string;
+	files: number;
+}
+
+/** Quote a value that would otherwise break key=value token scanning:
+ *  empty, or containing whitespace, quotes, backslash, or "=". */
+function quoteLogValue(value: string): string {
+	if (value === "" || /[\s'"\\=]/.test(value)) {
+		return `'${value.replace(/'/g, "'\\''")}'`;
+	}
+	return value;
+}
+
+/** Build one grep-friendly provenance line: space-separated key=value
+ *  pairs, values with spaces single-quoted (shell style). Pure, so it
+ *  is unit-tested directly, mirroring tuicr-core.mjs. */
+export function buildLaunchLogLine(
+	event: LaunchLogEvent,
+	env: { [key: string]: string | undefined } = process.env,
+): string {
+	const pairs: Array<[string, string]> = [
+		["ts", new Date().toISOString()],
+		["pid", String(process.pid)],
+		["route", event.route],
+		["session", env.PI_SUBAGENT_SESSION ?? env.PI_SESSION_FILE ?? "-"],
+		["subagent", env.PI_SUBAGENT_NAME ?? "-"],
+		["callerPane", env.HERDR_PANE_ID ?? "-"],
+		["cwd", event.cwd],
+		["outcome", event.outcome],
+	];
+	if (event.outcome === "split" || event.outcome === "failed") {
+		pairs.push(["pane", event.pane ?? "-"], ["socket", event.socket ?? "-"]);
+	}
+	pairs.push(["files", String(event.files)]);
+	return pairs.map(([key, value]) => `${key}=${quoteLogValue(value)}`).join(" ");
+}
+
+/** Record one launch at its decision point (the outcome is now known).
+ *  Best-effort: any failure is swallowed and never delays the launch. */
+function logLaunch(event: LaunchLogEvent): void {
+	try {
+		const path = launchLogPath();
+		mkdirSync(dirname(path), { recursive: true });
+		appendFileSync(path, `${buildLaunchLogLine(event)}\n`, { encoding: "utf-8" });
+	} catch {
+		// Swallowed by design.
 	}
 }
 // ---------------------------------------------------------------------------
@@ -450,21 +532,34 @@ function resolveFilePaths(cwd: string, files: string[]): string[] {
 export async function openEditor(
 	cwd: string,
 	rawArgs: string[],
+	route = "library:unknown",
 ): Promise<{ message: string; ok: boolean; launched: boolean }> {
 	const finalFiles = resolveFilePaths(cwd, rawArgs);
+	// Provenance: remembered from a partial herdr attempt so even the
+	// final failure line can name the pane it left behind.
+	let herdrAttempt: SplitAttempt | null = null;
 	// Try Herdr — getCurrentPane returns null if herdr is unavailable
 	const current = getCurrentPane();
 	if (current) {
 		// A live herdr-nvim sidebar daemon owns editing for this tab:
 		// attach to it instead of detecting or launching a split editor.
 		const daemon = liveSidebarDaemon(current);
-		if (daemon) return attachToSidebarDaemon(daemon, current, finalFiles);
+		if (daemon) {
+			const result = attachToSidebarDaemon(daemon, current, finalFiles);
+			logLaunch(result.ok
+				? { route, cwd, outcome: "sidebar", files: finalFiles.length }
+				: { route, cwd, outcome: "failed", pane: "-", socket: daemon.socket, files: finalFiles.length });
+			return result;
+		}
 		const detection = findEditorPane(current.tab_id);
 		if (detection.status === "found") {
 			const editor = detection.editor;
 			if (finalFiles.length > 0) {
 				const ok = sendFilesViaText(editor.paneId, finalFiles);
 				if (ok) focusEditorPane(editor.paneId, current.pane_id);
+				logLaunch(ok
+					? { route, cwd, outcome: "existing", files: finalFiles.length }
+					: { route, cwd, outcome: "failed", pane: editor.paneId, socket: "-", files: finalFiles.length });
 				return {
 					message: ok
 						? `Sent ${finalFiles.length} file(s) to existing editor (pane ${editor.paneId}).`
@@ -474,6 +569,9 @@ export async function openEditor(
 				};
 			}
 			const ok = focusEditorPane(editor.paneId, current.pane_id);
+			logLaunch(ok
+				? { route, cwd, outcome: "existing", files: 0 }
+				: { route, cwd, outcome: "failed", pane: editor.paneId, socket: "-", files: 0 });
 			return {
 				message: ok
 					? `Focused existing editor pane (${editor.paneId}).`
@@ -485,21 +583,35 @@ export async function openEditor(
 		// Only launch a new editor if we definitively confirmed no editor exists.
 		// On error, fall through to tmux fallback rather than risking a duplicate.
 		if (detection.status === "absent") {
-			const newPane = launchEditor(cwd, finalFiles);
-			if (newPane) {
+			const launch = launchEditor(cwd, finalFiles);
+			if (launch.ran) {
 				const fileNote = finalFiles.length > 0 ? ` with ${finalFiles.length} file(s)` : "";
+				logLaunch({
+					route, cwd, outcome: "split",
+					pane: launch.paneId ?? "-", socket: launch.socket ?? "-",
+					files: finalFiles.length,
+				});
 				return {
-					message: `Launched vim in a vertical split (pane ${newPane}) at ${cwd}${fileNote}.`,
+					message: `Launched vim in a vertical split (pane ${launch.paneId}) at ${cwd}${fileNote}.`,
 					ok: true,
 					launched: true,
 				};
 			}
+			if (launch.paneId) herdrAttempt = launch;
 		}
 	}
 	// Herdr unavailable or failed — try tmux.
-	if (tmuxFallback(cwd, finalFiles)) {
+	const tmuxSocket = tmuxFallback(cwd, finalFiles);
+	if (tmuxSocket !== null) {
+		logLaunch({ route, cwd, outcome: "split", pane: "-", socket: tmuxSocket, files: finalFiles.length });
 		return { message: `Launched vim in a tmux split at ${cwd}.`, ok: true, launched: true };
 	}
+	logLaunch({
+		route, cwd, outcome: "failed",
+		pane: herdrAttempt?.paneId ?? "-",
+		socket: herdrAttempt?.socket ?? "-",
+		files: finalFiles.length,
+	});
 	return {
 		message: `Could not launch vim automatically. Run manually: cd ${cwd} && vim ${finalFiles.join(" ")}`,
 		ok: false,
@@ -535,7 +647,7 @@ const nvimOpenTool = defineTool({
 	async execute(_toolCallId, params) {
 		const cwd = params.cwd ?? process.cwd();
 		const files = params.files ?? [];
-		const result = await openEditor(cwd, files);
+		const result = await openEditor(cwd, files, "tool");
 		return { content: [{ type: "text", text: result.message }] };
 	},
 	renderResult(result, _options, theme, context) {
@@ -570,7 +682,7 @@ export default function (pi: ExtensionAPI) {
 				if (typeof args === "string") return args.trim() ? parseArgs(args.trim()) : [];
 				return [];
 			})();
-			const result = await openEditor(cwd, fileList);
+			const result = await openEditor(cwd, fileList, "command");
 			ctx?.ui?.notify(result.message, "info");
 		},
 	});
