@@ -9,7 +9,6 @@ import {
 	isWatchedHunkProcess,
 	openHunkWithHost,
 } from "./hunk-open-core.mjs";
-import { registerHunkReviewCommand } from "./interactive-subagents/pi-extension/subagents/hunk-review-command.mjs";
 
 function fakeHost(overrides = {}) {
 	const calls = [];
@@ -110,35 +109,6 @@ assert.deepEqual(await openHunkWithHost("/repo", fallbackHost), {
 	launched: true,
 });
 
-let reviewCommand;
-let reviewParams;
-registerHunkReviewCommand(
-	{
-		registerCommand(name, definition) {
-			assert.equal(name, "hunk-review");
-			reviewCommand = definition;
-		},
-	},
-	async (params) => {
-		reviewParams = params;
-		return {
-			content: [{ type: "text", text: "started" }],
-			details: { status: "started", name: params.agent },
-		};
-	},
-);
-assert.ok(reviewCommand);
-const notifications = [];
-const commandContext = {
-	cwd: "/repo",
-	ui: { notify: (...args) => notifications.push(args) },
-};
-await reviewCommand.handler("correctness and regressions", commandContext);
-assert.equal(reviewParams.agent, "hunk-review");
-assert.equal(reviewParams.cwd, "/repo");
-assert.match(reviewParams.task, /Review focus: correctness and regressions/);
-assert.deepEqual(notifications, [["Hunk reviewer \"hunk-review\" launched.", "info"]]);
-
 // Render the registered tool with peer stubs; no live Herdr/editor IO.
 const require = createRequire(import.meta.url);
 const installRoot = join(homedir(), ".pi/agent/install");
@@ -207,4 +177,4 @@ try {
 } finally {
 	rmSync(tempRoot, { recursive: true, force: true });
 }
-console.log("Hunk open and review behavior passed");
+console.log("Hunk open behavior passed");
