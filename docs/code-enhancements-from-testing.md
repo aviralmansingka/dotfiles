@@ -123,12 +123,9 @@ Status legend:
     through `--tools` with no `-e`; fail fast at spawn (dom-subagents).
 31. **createSurface leaks a tab when `tab create` answers without a pane id**
     — no close target exists; decide recovery or document (dom-subagents).
-32. **Two pinned octo quirks** — `html_to_markdown` collapses decoded
-    `&lt;…&gt;`; `one_line_preview` returns raw body for newline-only bodies
-    (nvim-octo).
-33. **`dap_eval_hover` manual-focus branch is dead code with a latent
-    self-close bug** — would self-close instantly if ever wired to a keymap
-    (nvim-dap; spec pins the branch).
+32. ~~Two pinned octo quirks~~ — FIXED by rel-nvim-fixes (see A19).
+33. ~~`dap_eval_hover` manual-focus branch~~ — FIXED by rel-nvim-fixes
+    (deleted; see A20).
 34. **pollForExit liveness/timeout hardening** — [in progress, agent
     `subagent-liveness`]. #294 (now merged) fixed the seen-then-gone case,
     but two observed live failure classes remain: (1) pi that NEVER

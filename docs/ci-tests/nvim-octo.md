@@ -75,6 +75,7 @@ wrap with a flag on `octo.mappings`, and the suite pins the guard.
   commit. If upstream reformats the mutation, the suite still passes
   against the copy; it cannot see upstream drift. Re-extract the fixture
   when the lazy-lock pin moves.
-- Pinned quirks: `html_to_markdown` collapses a decoded `&lt;…&gt;` pair in
-  the final strip pass; `one_line_preview` returns the raw body when the
-  body holds only newlines.
+- Fixed and pinned (was a quirk): `html_to_markdown` now strips raw tags
+  before entity decoding, so decoded `&lt;…&gt;` pairs survive as literal
+  text; `one_line_preview` returns an empty string for newline-only
+  bodies.

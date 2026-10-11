@@ -70,11 +70,8 @@ spec. Every case stays deterministic: stubbed dap sessions, a synchronous
 - Real DAP sessions, delve plumbing, dap-ui live windows, the nvim-dap
   `config` body, and the 2 s idle timer all need a live debugger or a
   real event loop. Not tested. The spec clears the idle autocmds.
-- Latent defect, not fixed: the manual focus branch in `dap_eval_hover`
-  is dead code. Only the idle timer calls the function, always with
-  `auto`. If a keymap ever calls it, the focused preview float closes
-  at once: the preview close handler fires when the cursor leaves the
-  source buffer. The spec pins the branch logic with a plain float.
-  No code change was made.
+- The dead manual-focus branch in `dap_eval_hover` was deleted (commit
+  fe8f112 removed the only manual keymap on purpose). The spec pins that
+  no nvim-dap key binding mentions `hover`, so the branch stays deleted.
 - The register `+` prints a warning in the headless run: no clipboard
   provider exists there. The spec reads the unnamed register instead.
