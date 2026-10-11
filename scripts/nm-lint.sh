@@ -48,7 +48,34 @@ while IFS= read -r f; do
     '#!/bin/sh' | '#!/usr/bin/env sh')
       sh -n "$f" || { echo "FAIL $f"; fail=1; } ;;
   esac
-done < <(git ls-files 'scripts/*')
+done < <(git ls-files 'scripts/*' 'pi/bin/*')
+
+# ... plus extensionless node scripts (node --check) under scripts/ and pi/bin.
+echo "== extensionless node syntax (node --check)"
+if command -v node >/dev/null 2>&1; then
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    sb=$(head -n 1 "$f" 2>/dev/null)
+    case "$sb" in
+      '#!/usr/bin/env node' | '#!'*/node)
+        node --check "$f" || { echo "FAIL $f"; fail=1; } ;;
+    esac
+  done < <(git ls-files 'scripts/*' 'pi/bin/*' | grep -v '\.')
+else
+  echo "FAIL: node not found on PATH; node syntax checks cannot run" >&2
+  fail=1
+fi
+
+echo "== zsh syntax (zsh -n)"
+if command -v zsh >/dev/null 2>&1; then
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    zsh -n "$f" || { echo "FAIL $f"; fail=1; }
+  done < <(git ls-files 'zsh/*')
+else
+  echo "FAIL: zsh not found on PATH; zsh syntax checks cannot run" >&2
+  fail=1
+fi
 
 echo "== python syntax (py_compile)"
 if command -v python3 >/dev/null 2>&1; then

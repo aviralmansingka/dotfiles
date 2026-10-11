@@ -6,15 +6,21 @@
  * equivalents) until the human closes the TUI.
  *
  * Instead, two surfaces (see README-tuicr.md):
- *   - `tuicr_review` / `/tuicr` open a review: the same wrapper spawns
- *     detached (the pane still opens; the wrapper still closes it on exit),
- *     the call returns immediately, an existing active session is attached
- *     instead, and the `tuicr-review` subagent is spawned to answer the
- *     user's comments inside the TUI. The parent chat keeps no watcher for
- *     that repo while the subagent runs.
- *   - `tuicr` (internal; `/tuicr watch`) attaches this session's own
- *     watcher: it polls `tuicr review comments` and steers each new batch
- *     back with `deliverAs: "steer"` + `triggerTurn: true` — the same
+ *   - `tuicr_review` / `/tuicr` open a review: the requested target is
+ *     resolved — never silently attaching to an unrelated active session
+ *     — a duplicate reviewer for the same target is refused, and the
+ *     `tuicr-review` subagent is spawned. The parent opens NO pane: the
+ *     subagent launches it itself with the internal `tuicr` tool from
+ *     inside its own Herdr tab, so the wrapper inherits the subagent's
+ *     HERDR_PANE_ID and the split lands beside the agent. The subagent
+ *     answers the user's comments inside the TUI and its summary steers
+ *     back when the TUI closes. Different targets run concurrently, each
+ *     in its own tab with its own pane.
+ *   - `tuicr` (internal; `/tuicr watch`) launches the pane in this
+ *     session's own tab when no session matches the requested target, or
+ *     attaches to the matching active session, then polls
+ *     `tuicr review comments` and steers each new batch back with
+ *     `deliverAs: "steer"` + `triggerTurn: true` — the same
  *     delivery path interactive-subagents uses — coalescing bursts so a
  *     comment at a time does not spawn a steer per comment. When the TUI
  *     exits, the remaining batch and a final notice are steered once.
@@ -31,10 +37,13 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import {
+	activeSlugs,
 	buildReviewSubagentTask,
 	buildWrapperArgs,
+	classifyReviewRequest,
 	collectSeenKeys,
 	commentKey,
+	describeReviewTarget,
 	formatCommentLine,
 	formatLaunchResult,
 	formatReplyCall,
@@ -46,11 +55,14 @@ import {
 	parseSessionList,
 	parseTuicrCommandArgs,
 	postTuicrReply,
-	resolveTargetSession,
+	resolveLaunchedSession,
 	resolveSkillDir,
-	scopeToTuicrArgs,
+	resolveTargetSession,
+	reviewTargetKey,
+	reviewerSubagentName,
 	selectWrapper,
 	shouldDeliverBatch,
+	targetToScopeArgs,
 	truncateLines,
 } from "./tuicr-core.mjs";
 
@@ -65,10 +77,20 @@ const MAX_CONSECUTIVE_ERRORS = 20;
 /** User-facing error carrying a message the model can act on directly. */
 class TuicrBackgroundError extends Error {}
 
+/** A resolved review target (see resolveTargetSession in tuicr-core.mjs). */
+interface ReviewTarget {
+	type: "pr" | "revset" | "working-tree" | "slug";
+	pr?: number;
+	revset?: string;
+	slug?: string;
+}
+
 interface WatchState {
 	repo: string;
-	/** The request's explicit target, so late slug resolution never attaches to an unrelated active session. */
-	target: { sessionSlug?: string; scope?: string; pr?: number; revset?: string };
+	/** Requested target, threaded in so a launch resolves its own session. */
+	target: ReviewTarget | null;
+	/** Active slugs at launch time: sessions new since then are ours. */
+	baselineSlugs: string[];
 	slug: string | null;
 	seen: Set<string>;
 	pending: unknown[];
@@ -87,10 +109,12 @@ let watch: WatchState | null = null;
 const replyIds = new Set<string>();
 let repliesInFlight = 0;
 
-// One tuicr-review subagent per repo: a second watcher on the same session
-// would double-answer every comment batch. Liveness is queried from the
-// interactive-subagents registry, so a finished reviewer never blocks the
-// next review.
+// One tuicr-review subagent per review target (pr:<N> / rev:<revset> /
+// wt:<repo> / slug:<slug>): a second watcher on the same session would
+// double-answer every comment batch, while different targets run
+// concurrently, each in its own tab with its own pane. Liveness is queried
+// from the interactive-subagents registry, so a finished reviewer never
+// blocks the next review of the same target.
 const spawnedReviewers = new Map<string, string>();
 
 function reviewerRunning(name: string): boolean {
@@ -236,19 +260,31 @@ async function tick(pi: ExtensionAPI, state: WatchState) {
 				);
 				return;
 			}
-			const picked = resolveTargetSession(await listSessions(state.repo), state.target);
-			if (picked.status === "ok") {
-				state.slug = picked.session.slug;
+			// The requested target resolves ambiguity: a PR target matches its
+			// `/pr/<N>` session, and a launch attaches to the session that
+			// appeared after it — never to one that was already active.
+			const prTarget = state.target?.type === "pr" ? state.target.pr ?? null : null;
+			const resolved = resolveLaunchedSession({
+				sessions: await listSessions(state.repo),
+				baselineSlugs: state.baselineSlugs,
+				pr: prTarget,
+			});
+			if (resolved.status === "ok") {
+				state.slug = resolved.session.slug;
 				state.everActive = true;
 				// Baseline whatever the user already wrote before we attached.
 				state.seen = collectSeenKeys(await fetchComments(state.repo, state.slug));
 				notify(`tuicr background watcher attached to ${state.slug}`, "info");
-			} else if (picked.status === "ambiguous") {
+			} else if (resolved.status === "ambiguous") {
+				const slugs = resolved.sessions
+					.map((session) => `  ${(session as { slug?: string })?.slug}`)
+					.join("\n");
+				const which = state.target?.type === "pr" ? ` for PR ${state.target.pr}` : "";
 				stopWatchWithFinalSteer(
 					pi,
 					state,
 					"multiple active tuicr sessions; pass a session slug",
-					`tuicr background watcher stopped: several tuicr sessions are active under ${state.repo}, so it cannot tell which one to watch. Ask the user which session holds this review, then re-attach with the tuicr tool and that sessionSlug. If the user cannot say, summarize the review so far and stop.`,
+					`tuicr background watcher stopped: several possible tuicr sessions are active under ${state.repo}${which}, so it cannot tell which one to watch:\n${slugs}\nAsk the user which session holds this review, then re-attach with the tuicr tool and that sessionSlug. If the user cannot say, summarize the review so far and stop.`,
 				);
 				return;
 			}
@@ -313,12 +349,13 @@ function startWatch(
 	repo: string,
 	slug: string | null,
 	seen: Set<string>,
-	target: WatchState["target"] = {},
+	opts: { target?: ReviewTarget | null; baselineSlugs?: string[] } = {},
 ) {
 	if (watch) stopWatch("replaced by a new tuicr launch");
 	const state: WatchState = {
 		repo,
-		target,
+		target: opts.target ?? null,
+		baselineSlugs: opts.baselineSlugs ?? [],
 		slug,
 		seen,
 		pending: [],
@@ -347,6 +384,77 @@ async function resolveRepo(input: string | undefined, fallback: string): Promise
 	return stdout.trim() || candidate;
 }
 
+/** Current branch of the repo ("" when detached or git fails). */
+async function gitCurrentBranch(repo: string): Promise<string> {
+	const { stdout } = await execFile("git", ["-C", repo, "branch", "--show-current"], {
+		timeout: 5_000,
+	}).catch(() => ({ stdout: "" }));
+	return String(stdout).trim();
+}
+
+/** Open PRs whose head is the given branch ([] when gh fails). */
+async function ghOpenPrsForBranch(
+	repo: string,
+	branch: string,
+): Promise<{ number: number; title: string }[]> {
+	const { stdout } = await execFile(
+		"gh",
+		["pr", "list", "--head", branch, "--state", "open", "--json", "number,title"],
+		{ timeout: CLI_TIMEOUT_MS, cwd: repo },
+	).catch(() => ({ stdout: "[]" }));
+	try {
+		const parsed = JSON.parse(String(stdout));
+		if (!Array.isArray(parsed)) return [];
+		return parsed
+			.filter((entry) => Number.isInteger((entry as { number?: unknown })?.number))
+			.map((entry) => ({
+				number: Number((entry as { number: number }).number),
+				title: String((entry as { title?: string })?.title ?? ""),
+			}));
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Inputs for resolveTargetSession: the repo-scoped session list, plus the
+ * current branch and its open PRs when the call carries no target (the
+ * bare default resolves the worktree's open PR first). git/gh failures and
+ * a detached HEAD fall back to no open PRs → working-tree review.
+ */
+async function resolveTargetInputs(
+	params: { scope?: string; revset?: string; pr?: number; sessionSlug?: string },
+	repo: string,
+	sessions: unknown[],
+): Promise<{ repo: string; sessions: unknown[]; currentBranch?: string | null; openPrs?: unknown[] }> {
+	if (classifyReviewRequest(params) !== "default") return { repo, sessions };
+	const branch = await gitCurrentBranch(repo);
+	return {
+		repo,
+		sessions,
+		currentBranch: branch || null,
+		openPrs: branch ? await ghOpenPrsForBranch(repo, branch) : [],
+	};
+}
+
+/** Resolve the request target, mapping validation throws to tool errors. */
+async function resolveReviewDecision(
+	params: { repo?: string; scope?: string; revset?: string; pr?: number; sessionSlug?: string },
+	cwd: string,
+): Promise<{ repo: string; sessions: unknown[]; decision: ReturnType<typeof resolveTargetSession> }> {
+	const repo = await resolveRepo(params.repo, cwd);
+	const sessions = await listSessions(repo);
+	const inputs = await resolveTargetInputs(params, repo, sessions);
+	let decision;
+	try {
+		decision = resolveTargetSession(params, inputs);
+	} catch (error) {
+		throw new TuicrBackgroundError(error instanceof Error ? error.message : String(error));
+	}
+	if (decision.status === "error") throw new TuicrBackgroundError(decision.message);
+	return { repo, sessions, decision };
+}
+
 async function startTuicrBackground(
 	pi: ExtensionAPI,
 	params: {
@@ -361,57 +469,33 @@ async function startTuicrBackground(
 	opts: { watcher?: boolean } = {},
 ): Promise<{ message: string; slug: string | null; attached: boolean; repo: string }> {
 	const startWatcher = opts.watcher !== false;
-	const repo = await resolveRepo(params.repo, cwd);
-	// Validate the scope before session resolution so an invalid pr/revset
-	// fails fast instead of attaching to an unrelated active session.
-	let tuicrArgs: string[];
-	try {
-		tuicrArgs = scopeToTuicrArgs(params.scope ?? "working-tree", params.revset, params.pr);
-	} catch (error) {
-		throw new TuicrBackgroundError(error instanceof Error ? error.message : String(error));
-	}
-	const sessions = await listSessions(repo);
-	// The EXPLICIT target wins: a pr/revset request only ever attaches to a
-	// session naming that target — never to "the only active session" (#289).
-	const picked = resolveTargetSession(sessions, params);
+	// The requested target always wins — never "the only active session"
+	// (#289). Invalid scope/pr/revset fail fast as tool errors.
+	const { repo, sessions, decision } = await resolveReviewDecision(params, cwd);
+	const target = decision.target as ReviewTarget;
 
-	if (picked.status === "missing") {
-		if (picked.slug) {
-			throw new TuicrBackgroundError(
-				`No tuicr session named ${picked.slug} under ${repo}. Run \`tuicr review list --repo ${repo}\` for valid slugs.`,
-			);
-		}
-		const active = picked.sessions.map((session) => (session as { slug?: string }).slug).join("\n  ");
-		throw new TuicrBackgroundError(
-			`No active tuicr session for ${picked.target} under ${repo}, and an explicit target never attaches to another session:\n  ${active}\nPass sessionSlug for one of these, or close them and re-run to open ${picked.target}.`,
-		);
-	}
-	if (picked.status === "ambiguous") {
-		const slugs = picked.sessions.map((session) => (session as { slug: string }).slug).join("\n  ");
-		throw new TuicrBackgroundError(
-			`Multiple active tuicr sessions under ${repo}:\n  ${slugs}\nPass sessionSlug to choose one.`,
-		);
-	}
-
-	if (picked.status === "ok") {
-		const slug = picked.session.slug as string;
+	if (decision.status === "ok") {
+		const slug = decision.session.slug as string;
 		if (startWatcher) {
 			const seen = collectSeenKeys(await fetchComments(repo, slug));
-			startWatch(pi, repo, slug, seen, params);
+			startWatch(pi, repo, slug, seen, { target });
 		}
 		return { message: formatLaunchResult({ repo, slug, attached: true }), slug, attached: true, repo };
 	}
 
-	// attachOnly (used by the tuicr-review subagent): never open a pane from
-	// this session — the parent already owns the pane for this review.
+	// attachOnly (strict attach for debugging and resumed reviewers): never
+	// open a pane from this session — the tuicr-review subagent normally
+	// launches the pane in its own tab.
 	if (params.attachOnly) {
 		throw new TuicrBackgroundError(
-			`No active tuicr session under ${repo}. Retry shortly; do not launch one.`,
+			`No active tuicr session for ${describeReviewTarget(target)} under ${repo}. Retry shortly; do not launch one.`,
 		);
 	}
 
-	// No active session: launch the wrapper detached. The wrapper still owns
-	// pane creation, quoting, and pane cleanup on exit — we simply never wait.
+	// Launch: the wrapper spawns detached (it still owns pane creation,
+	// quoting, and pane cleanup on exit — we simply never wait) and splits
+	// the pane this process runs in, so a subagent caller gets the pane
+	// beside it, inside its own tab.
 	const script = selectWrapper();
 	if (!script) {
 		throw new TuicrBackgroundError(
@@ -424,7 +508,10 @@ async function startTuicrBackground(
 			`tuicr wrapper not found at ${wrapperPath}. Set TUICR_SKILL_DIR or install the tuicr skill.`,
 		);
 	}
-	const child = spawn(wrapperPath, buildWrapperArgs({ repo, tuicrArgs }), {
+	// Baseline the sessions active now: the watcher treats only sessions
+	// that appear after this point (or the target's own match) as ours.
+	const baselineSlugs = activeSlugs(sessions);
+	const child = spawn(wrapperPath, buildWrapperArgs({ repo, tuicrArgs: targetToScopeArgs(target) }), {
 		cwd: repo,
 		detached: true,
 		stdio: "ignore",
@@ -439,21 +526,26 @@ async function startTuicrBackground(
 	// the slug; the watcher resolves it later if we time out here. Poll before
 	// sleeping so an already-registered session needs no wait, and keep the
 	// sleep within the wait budget.
+	const prTarget = target.type === "pr" ? target.pr ?? null : null;
 	const deadline = Date.now() + LAUNCH_WAIT_MS;
 	let slug: string | null = null;
 	while (!slug) {
-		const retry = resolveTargetSession(await listSessions(repo), params);
+		const retry = resolveLaunchedSession({
+			sessions: await listSessions(repo),
+			baselineSlugs,
+			pr: prTarget,
+		});
 		if (retry.status === "ok") slug = retry.session.slug as string;
 		else if (retry.status === "ambiguous" || Date.now() > deadline) break;
 		else await new Promise((resolve) => setTimeout(resolve, Math.min(1_000, LAUNCH_WAIT_MS)));
 	}
 
 	// Start the watcher even when the slug has not resolved yet: it keeps
-	// resolving (via the explicit target) until its deadline, matching the
-	// result message's promise that the watcher will pick the session up.
+	// resolving (by target match or baseline diff) until its deadline,
+	// matching the result message's promise that the watcher picks it up.
 	if (startWatcher) {
 		const seen = slug ? collectSeenKeys(await fetchComments(repo, slug)) : new Set<string>();
-		startWatch(pi, repo, slug, seen, params);
+		startWatch(pi, repo, slug, seen, { target, baselineSlugs });
 	}
 	return {
 		message: formatLaunchResult({ repo, slug, attached: false, pending: startWatcher }),
@@ -465,43 +557,54 @@ async function startTuicrBackground(
 
 // ── Subagent review flow ──
 
-/** Spawn the tuicr-review subagent that owns answering comments in the TUI. */
+/**
+ * Spawn the tuicr-review subagent that owns the review. The parent opens no
+ * pane and starts no watcher: the subagent launches the pane itself (inside
+ * its own tab) with the internal tuicr tool — or attaches, when the target
+ * resolves to an already-active session — and answers the user's comments
+ * in the TUI until its final summary steers back.
+ */
 async function startTuicrReview(
 	pi: ExtensionAPI,
 	params: { repo?: string; scope?: string; revset?: string; pr?: number; sessionSlug?: string },
 	cwd: string,
 	ctx: { cwd: string; ui: unknown },
-): Promise<{ message: string; slug: string | null; attached: boolean; repo: string }> {
-	const spawn = (globalThis as any).__pi_interactive_subagents?.executeSubagent;
-	if (typeof spawn !== "function") {
+): Promise<{
+	message: string;
+	repo: string;
+	targetKey: string;
+	reviewer: string;
+	slug: string | null;
+}> {
+	const spawnFn = (globalThis as any).__pi_interactive_subagents?.executeSubagent;
+	if (typeof spawnFn !== "function") {
 		throw new TuicrBackgroundError(
 			"interactive-subagents is not loaded, so the tuicr-review subagent cannot spawn. Attach a watcher with the plain tuicr tool instead.",
 		);
 	}
-	const repo = await resolveRepo(params.repo, cwd);
-	const running = spawnedReviewers.get(repo);
+	const { repo, decision } = await resolveReviewDecision(params, cwd);
+	const target = decision.target as ReviewTarget;
+	const slug = decision.status === "ok" ? (decision.session.slug as string) : null;
+
+	// One reviewer per review TARGET: a second watcher on the same session
+	// would double-answer every comment batch, while a different target runs
+	// concurrently in its own tab with its own pane.
+	const key = reviewTargetKey(target, repo);
+	const running = spawnedReviewers.get(key);
 	if (running && reviewerRunning(running)) {
 		throw new TuicrBackgroundError(
-			`A tuicr-review subagent ("${running}") is already handling the review for ${repo}. ` +
+			`A tuicr-review subagent ("${running}") is already handling the review of ${describeReviewTarget(target)} in ${repo}. ` +
 				"If the TUI is still open, keep commenting there — it replies inside it. " +
-				"Otherwise wait for its summary, then re-run tuicr_review.",
+				"Otherwise wait for its summary, then re-run tuicr_review. " +
+				"A different target (another PR or commit range) can still be reviewed concurrently.",
 		);
 	}
-	// The subagent hosts the watcher for this session; a same-repo watcher in
-	// the parent chat would double-steer every comment batch.
-	const { slug, attached } = await startTuicrBackground(pi, params, cwd, {
-		watcher: false,
-	});
-	const task = buildReviewSubagentTask({
-		repo,
-		slug,
-		attached,
-		scope: params.scope ?? "working-tree",
-		revset: params.revset,
-		pr: params.pr,
-	});
+	const task = buildReviewSubagentTask({ repo, slug, target });
+	// A same-repo watcher in the parent chat would double-steer every comment
+	// batch; the subagent owns the TUI conversation while it runs.
 	if (watch && watch.repo === repo) stopWatch("replaced by a tuicr_review subagent");
-	const result = await spawn({ agent: "tuicr-review", name: "tuicr-review", task, cwd: repo }, ctx);
+	const requestedName = reviewerSubagentName(target, repo);
+	const result = await spawnFn({ agent: "tuicr-review", name: requestedName, task, cwd: repo }, ctx);
 	const text = (result?.content ?? [])
 		.filter((part: { type: string }) => part.type === "text")
 		.map((part: { text: string }) => part.text)
@@ -509,14 +612,19 @@ async function startTuicrReview(
 	if (result?.details?.error || result?.isError) {
 		throw new TuicrBackgroundError(text || result?.details?.error || "tuicr-review subagent failed to spawn.");
 	}
+	// Collisions (two live reviewers whose targets sanitize identically) are
+	// uniquified by interactive-subagents; track the ACTUAL name it reports.
 	const reviewerName =
-		typeof result?.details?.name === "string" && result.details.name ? result.details.name : "tuicr-review";
-	spawnedReviewers.set(repo, reviewerName);
+		typeof result?.details?.name === "string" && result.details.name ? result.details.name : requestedName;
+	spawnedReviewers.set(key, reviewerName);
 	return {
-		message: formatReviewLaunchResult({ repo, slug, attached, subagent: reviewerName }) + (text ? `\n${text}` : ""),
-		slug,
-		attached,
+		message:
+			formatReviewLaunchResult({ repo, target, slug, subagent: reviewerName }) +
+			(text ? `\n${text}` : ""),
 		repo,
+		targetKey: key,
+		reviewer: reviewerName,
+		slug,
 	};
 }
 

@@ -719,8 +719,9 @@ assert.ok(
 // House pattern: fake herdr/nvim shell binaries on PATH before the calls; a
 // real spawned listener process carries --listen in /proc/<pid>/cmdline so
 // editorSocketPath resolves its socket exactly as in production. The fake
-// herdr reports no editor pane until it has seen a `pane split`, so the
-// launch path is observable: exactly ONE split, then the buffer retry.
+// herdr models #294's nvim-open per pane: only panes whose `pane run`
+// command started nvim report an nvim foreground process, so the launch
+// path is observable in a fresh tab: exactly ONE split, then the retry.
 const hasProc = existsSync("/proc");
 if (hasProc) {
 	const binDir = join(tempRoot, "bin");
@@ -758,6 +759,13 @@ if (hasProc) {
 		"}",
 	].join("\n"), "utf-8");
 	chmodSync(join(binDir, "nvim"), 0o755);
+	// Fake herdr answering #294's nvim-open call shapes: pane current, pane
+	// list (including split-created panes, per tab), pane process-info (the
+	// registry liveness probe AND the editor scan), pane split, pane run (the
+	// pane command starts nvim, so the editor arrives in that pane), pane
+	// close, pane neighbor, pane focus, pane send-text. State files drive
+	// it: tab-id, nvim-panes.json, split-panes.json, split-count,
+	// send-text.log, editor-pid.
 	writeFileSync(join(binDir, "herdr"), [
 		"#!/usr/bin/env node",
 		"const fs = require('node:fs');",
@@ -767,30 +775,57 @@ if (hasProc) {
 		"const cmd = args.join(' ');",
 		"const out = (o) => { console.log(JSON.stringify(o)); process.exit(0); };",
 		"const read = (f, d) => { try { return fs.readFileSync(f, 'utf-8').trim(); } catch { return d; } };",
+		"const readJson = (f, d) => { try { const v = JSON.parse(read(f, 'null')); return v === null ? d : v; } catch { return d; } };",
+		"const tab = () => read(path.join(state, 'tab-id'), 't1');",
+		"const nvimPanes = () => readJson(path.join(state, 'nvim-panes.json'), []);",
 		"if (cmd === 'pane current') {",
-		"	out({ result: { pane: { pane_id: 'w1:p1', tab_id: 't1', cwd: '/tmp' } } });",
+		"	out({ result: { pane: { pane_id: 'w1:p1', tab_id: tab(), cwd: '/tmp' } } });",
 		"} else if (cmd.startsWith('pane list')) {",
-		"	out({ result: { panes: [",
-		"		{ pane_id: 'w1:p1', tab_id: 't1', cwd: '/tmp' },",
-		"		{ pane_id: 'w1:p2', tab_id: 't1', cwd: '/tmp' } ] } });",
+		"	const panes = [",
+		"		{ pane_id: 'w1:p1', tab_id: tab(), cwd: '/tmp' },",
+		"		{ pane_id: 'w1:p2', tab_id: tab(), cwd: '/tmp' },",
+		"	];",
+		"	for (const sp of readJson(path.join(state, 'split-panes.json'), [])) {",
+		"		panes.push({ pane_id: sp.pane_id, tab_id: sp.tab_id, cwd: '/tmp' });",
+		"	}",
+		"	out({ result: { panes } });",
 		"} else if (cmd.startsWith('pane process-info')) {",
 		"	const pane = args[args.indexOf('--pane') + 1];",
 		"	const pid = Number(read(path.join(state, 'editor-pid'), '0'));",
-		"	const live = fs.existsSync(path.join(state, 'editor-live'));",
-		"	if (live && pane === 'w1:p2' && pid) {",
+		"	if (nvimPanes().includes(pane) && pid) {",
 		"		out({ result: { process_info: { pane_id: pane, foreground_processes: [{ name: 'nvim', pid, argv: ['nvim'] }] } } });",
 		"	} else {",
 		"		out({ result: { process_info: { pane_id: pane, foreground_processes: [{ name: 'zsh', pid: 4242, argv: ['zsh'] }] } } });",
 		"	}",
 		"} else if (cmd.startsWith('pane split')) {",
+		"	const splits = readJson(path.join(state, 'split-panes.json'), []);",
+		"	const paneId = 'w1:p' + (9 + splits.length);",
+		"	splits.push({ pane_id: paneId, tab_id: tab() });",
+		"	fs.writeFileSync(path.join(state, 'split-panes.json'), JSON.stringify(splits));",
 		"	fs.writeFileSync(path.join(state, 'split-count'), String(Number(read(path.join(state, 'split-count'), '0')) + 1));",
-		"	fs.writeFileSync(path.join(state, 'editor-live'), '1');",
-		"	out({ result: { pane: { pane_id: 'w1:p9' } } });",
+		"	out({ result: { pane: { pane_id: paneId } } });",
+		"} else if (cmd.startsWith('pane run')) {",
+		"	// The pane command starts nvim with --listen: the editor arrives.",
+		"	if (args.slice(3).join(' ').includes('nvim')) {",
+		"		const nvim = nvimPanes();",
+		"		nvim.push(args[2]);",
+		"		fs.writeFileSync(path.join(state, 'nvim-panes.json'), JSON.stringify(nvim));",
+		"	}",
+		"	process.exit(0);",
 		"} else if (cmd.startsWith('pane send-text')) {",
 		"	fs.appendFileSync(path.join(state, 'send-text.log'), args.slice(2).join(' ') + '\\n');",
 		"	process.exit(0);",
 		"} else if (cmd.startsWith('pane neighbor')) {",
-		"	out({ result: { neighbor: { neighbor_pane_id: 'w1:p2' } } });",
+		"	const nvim = nvimPanes();",
+		"	if (nvim.length) out({ result: { neighbor: { neighbor_pane_id: nvim[0] } } });",
+		"	else process.exit(1);",
+		"} else if (cmd.startsWith('pane close')) {",
+		"	const pane = args[2];",
+		"	fs.writeFileSync(path.join(state, 'split-panes.json'),",
+		"		JSON.stringify(readJson(path.join(state, 'split-panes.json'), []).filter((s) => s.pane_id !== pane)));",
+		"	fs.writeFileSync(path.join(state, 'nvim-panes.json'),",
+		"		JSON.stringify(nvimPanes().filter((p) => p !== pane)));",
+		"	process.exit(0);",
 		"}",
 		"process.exit(0);",
 	].join("\n"), "utf-8");
@@ -812,15 +847,22 @@ if (hasProc) {
 	const savedPath = process.env.PATH;
 	const savedTmpdir = process.env.TMPDIR;
 	const savedXdg = process.env.XDG_RUNTIME_DIR;
+	const savedLaunchLog = process.env.PI_NVIM_LAUNCH_LOG;
 	try {
 		process.env.PATH = `${binDir}:${savedPath}`;
 		process.env.TMPDIR = harnessTmp;
 		process.env.XDG_RUNTIME_DIR = runDir;
 		process.env.FAKE_HERDR_STATE = stateDir;
 		process.env.FAKE_NVIM_STATE = stateDir;
+		// #294 provenance logging must never touch the real ~/.cache.
+		process.env.PI_NVIM_LAUNCH_LOG = join(stateDir, "launches.log");
 		assert.ok(waitForListen(listener.pid), "the fake nvim listener must expose --listen");
 		writeFileSync(join(stateDir, "editor-pid"), String(listener.pid));
-		writeFileSync(join(stateDir, "editor-live"), "1");
+		// Tab t1 already has an editor pane (w1:p2); the launch scenario
+		// below switches to a fresh tab t2 with no editor, so the per-tab
+		// editor registry starts clean there.
+		writeFileSync(join(stateDir, "tab-id"), "t1");
+		writeFileSync(join(stateDir, "nvim-panes.json"), JSON.stringify(["w1:p2"]));
 
 		const defCtx = {
 			cwd: tempRoot,
@@ -880,9 +922,12 @@ if (hasProc) {
 		assert.ok(overviewView.message.includes("current position"), overviewView.message);
 		rmSync(freshDir, { recursive: true, force: true });
 
-		// No editor pane yet: openEditor launches ONE split, the retry lands in
-		// the node buffer — never an unbounded series of editor splits.
-		rmSync(join(stateDir, "editor-live"), { force: true });
+		// No editor pane in a FRESH tab (t2): the registry-first lookup finds
+		// nothing, the scan says absent, openEditor splits ONCE and `pane run`
+		// brings nvim up in the new pane, and the retry lands in the node
+		// buffer — never an unbounded series of editor splits.
+		writeFileSync(join(stateDir, "tab-id"), "t2");
+		writeFileSync(join(stateDir, "nvim-panes.json"), "[]");
 		const launchDir = mkdtempSync(join(tmpdir(), "md-log-launch-"));
 		const launchedLesson = await presentLesson({
 			cwd: launchDir,
@@ -895,6 +940,14 @@ if (hasProc) {
 			"the editor launches with exactly one split",
 		);
 		rmSync(launchDir, { recursive: true, force: true });
+		// #294 provenance: every launch decision leaves an attributable line.
+		const launchLog = readState("launches.log", "");
+		assert.ok(launchLog.includes("outcome=existing"), launchLog);
+		assert.ok(launchLog.includes("outcome=split"), launchLog);
+		assert.ok(launchLog.includes("route="), launchLog);
+		// Back to tab t1 (its editor pane) for the command/shortcut scenarios.
+		writeFileSync(join(stateDir, "tab-id"), "t1");
+		writeFileSync(join(stateDir, "nvim-panes.json"), JSON.stringify(["w1:p2"]));
 
 		// The /lessons, /probes, and ctrl+h registrations drive the same paths.
 		const notes = [];
@@ -945,6 +998,8 @@ if (hasProc) {
 		else process.env.TMPDIR = savedTmpdir;
 		if (savedXdg === undefined) delete process.env.XDG_RUNTIME_DIR;
 		else process.env.XDG_RUNTIME_DIR = savedXdg;
+		if (savedLaunchLog === undefined) delete process.env.PI_NVIM_LAUNCH_LOG;
+		else process.env.PI_NVIM_LAUNCH_LOG = savedLaunchLog;
 		delete process.env.FAKE_HERDR_STATE;
 		delete process.env.FAKE_NVIM_STATE;
 	}

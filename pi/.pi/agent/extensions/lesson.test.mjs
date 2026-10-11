@@ -121,12 +121,15 @@ assert.ok(unavailable.content[0].text.includes("Restate"));
 
 // A written journal with no available editor surface stays unavailable.
 // Clear PATH so the executable boundary cannot reach herdr, tmux, or nvim.
+// #294's provenance logging is redirected so the run never touches ~/.cache.
 const savedPath = process.env.PATH;
 const savedJournal = process.env.PI_LESSON_JOURNAL;
+const savedLaunchLog = process.env.PI_NVIM_LAUNCH_LOG;
 const strandedJournal = join(tempRoot, "stranded.md");
 writeFileSync(strandedJournal, "# Lesson journal\n");
 process.env.PATH = "";
 process.env.PI_LESSON_JOURNAL = strandedJournal;
+process.env.PI_NVIM_LAUNCH_LOG = join(tempRoot, "launches.log");
 try {
 	const stranded = await tool.execute(
 		"id",
@@ -138,11 +141,19 @@ try {
 	assert.equal(stranded.details.status, "unavailable");
 	assert.ok(stranded.content[0].text.includes("was not shown"));
 	assert.ok(stranded.content[0].text.includes("Restate"));
+	// #294 provenance: even the failed launch leaves an attributable line
+	// — and it landed in the redirected log, never in ~/.cache.
+	assert.ok(
+		readFileSync(join(tempRoot, "launches.log"), "utf-8").includes("outcome=failed"),
+		"a failed editor launch still leaves a provenance line",
+	);
 } finally {
 	if (savedPath === undefined) delete process.env.PATH;
 	else process.env.PATH = savedPath;
 	if (savedJournal === undefined) delete process.env.PI_LESSON_JOURNAL;
 	else process.env.PI_LESSON_JOURNAL = savedJournal;
+	if (savedLaunchLog === undefined) delete process.env.PI_NVIM_LAUNCH_LOG;
+	else process.env.PI_NVIM_LAUNCH_LOG = savedLaunchLog;
 }
 
 // Expanded results own their entire body; renderCall is not involved.
