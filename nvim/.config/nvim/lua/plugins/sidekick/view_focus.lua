@@ -51,6 +51,10 @@ local function patch_terminal_sends()
         term:send(input)
       elseif pending[self.parent.id] then
         table.insert(pending[self.parent.id].send_queue, input)
+      else
+        -- No live view and no saved view: the input cannot reach the agent.
+        -- Report it; a silent drop would look like a delivered send.
+        vim.notify("Sidekick: Herdr view is closed; input not delivered", vim.log.levels.WARN)
       end
       return
     end
