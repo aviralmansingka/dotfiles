@@ -1,0 +1,21 @@
+# Tier 2 exclusions: live-env tests that CI discovery must NOT run.
+#
+# CI discovers tests with git ls-files globs (never a hand-written list of
+# runnable tests). Every discovered file runs UNLESS it is listed here.
+# Keep this table honest: scripts/test-ci-self.mjs fails when an entry does
+# not exist on disk or matches no discovery glob (deletion lockstep).
+#
+# One path per line, relative to the repository root. Comments on their
+# own lines (or after a `#`) are stripped before matching.
+
+# needs a live terminal emulator
+scripts/test-osc52.sh
+
+# needs a real PTY (pyte renders a live terminal)
+scripts/test-pi-hidden-thinking-render.py
+
+# needs a live tmux session with a sidekick picker
+scripts/test-sidekick-view-focus.lua
+
+# needs the sidekick.nvim plugin clone under ~/.local/share/nvim/lazy
+nvim/.config/nvim/tests/herdr_agent_mapping_spec.lua

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Paths: pi/bin/pi-stt* pi/.config/pi-stt-*.env.example
 """Small end-to-end check for the Pi STT worker and client."""
 
 from __future__ import annotations
