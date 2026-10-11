@@ -11,7 +11,7 @@
  *      `tuicr review comments` and steer new comments back into the session
  *      (`pi.sendMessage(..., { triggerTurn: true, deliverAs: "steer" })`).
  *
- * Review targets are honored exactly (see resolveReviewTarget): a request
+ * Review targets are honored exactly (see resolveTargetSession): a request
  * never silently attaches to an unrelated active session.
  *
  * Kept free of pi imports so it can be unit-tested with plain `node`.
@@ -138,6 +138,78 @@ export function activeSessions(sessions) {
 }
 
 /**
+ * Resolve a review request into an action, honoring the requested target —
+ * never silently attaching to an unrelated active session (#289:
+ * tuicr_review pr:287 attached to PR-288's session). Consolidated from the
+ * two #289 fixes: our explicit-target statuses plus main's decision matrix.
+ * Pure: the caller supplies the `tuicr review list` sessions and, for a bare
+ * call with no target, the current branch and its open PRs (git/gh results
+ * injected by the caller).
+ *
+ * Rules:
+ *   1. explicit sessionSlug → attach to exactly that session (missing →
+ *      error); a slug ending in `/pr/<N>` also keys the review by that PR.
+ *   2. explicit PR → attach only to an active session whose slug ends with
+ *      `/pr/<N>` (two matches → error); none matches → launch for that PR.
+ *   3. explicit revset → launch a new pane for the range.
+ *   4. explicit working tree → launch a new pane with -w, even while other
+ *      sessions are active.
+ *   5. no target → the current branch's open PRs: exactly one → that PR
+ *      (match-or-launch as above); none → working-tree launch; several →
+ *      error listing them, asking for `pr` explicitly.
+ *
+ * @returns one of
+ *   { status: "ok", session, target }   → attach to that session
+ *   { status: "launch", target }        → launch a new pane for the target
+ *   { status: "error", message }        → refuse, with an actionable message
+ * where target is { type: "pr", pr } | { type: "revset", revset } |
+ * { type: "working-tree" } | { type: "slug", slug }.
+ */
+export function resolveTargetSession(
+	params = {},
+	{ repo = "", sessions = [], currentBranch = null, openPrs = [] } = {},
+) {
+	const kind = classifyReviewRequest(params);
+	if (kind === "session") {
+		const slug = String(params.sessionSlug);
+		const picked = pickSession(sessions, slug);
+		if (picked.status === "missing") {
+			return {
+				status: "error",
+				message: `No tuicr session named ${slug} under ${repo}. Run \`tuicr review list --repo ${repo}\` for valid slugs.`,
+			};
+		}
+		const sessionSlug = picked.session.slug;
+		const pr = prSessionNumber(sessionSlug);
+		return {
+				status: "ok",
+				session: picked.session,
+				target: pr ? { type: "pr", pr } : { type: "slug", slug: sessionSlug },
+			};
+	}
+	if (kind === "pr") return prMatchOrLaunch(requirePrNumber(params.pr), repo, sessions);
+	if (kind === "revset") {
+		return { status: "launch", target: { type: "revset", revset: requireRevset(params.revset) } };
+	}
+	if (kind === "working-tree") {
+		return { status: "launch", target: { type: "working-tree" } };
+	}
+	// Bare call with no target: resolve the current worktree's open PR first.
+	const prs = Array.isArray(openPrs) ? openPrs : [];
+	if (prs.length === 1) return prMatchOrLaunch(requirePrNumber(prs[0]?.number), repo, sessions);
+	if (prs.length > 1) {
+		const listed = prs
+			.map((entry) => `  #${entry?.number} ${entry?.title ?? ""}`.trimEnd())
+			.join("\n");
+		return {
+			status: "error",
+			message: `Several open PRs for branch ${currentBranch ?? "(unknown)"} under ${repo}:\n${listed}\nPass pr explicitly to choose which one to review.`,
+		};
+	}
+	return { status: "launch", target: { type: "working-tree" } };
+}
+
+/**
  * Resolve which session to watch.
  * - explicit slug → that session, or `missing`
  * - exactly one active → it
@@ -200,84 +272,16 @@ function prMatchOrLaunch(pr, repo, sessions) {
 		(session) => prSessionNumber(session?.slug) === pr,
 	);
 	if (matching.length === 1) {
-		return { action: "attach", slug: matching[0].slug, target: { type: "pr", pr } };
+		return { status: "ok", session: matching[0], target: { type: "pr", pr } };
 	}
 	if (matching.length > 1) {
 		const listed = matching.map((session) => `  ${session?.slug}`).join("\n");
 		return {
-			action: "error",
+			status: "error",
 			message: `Multiple active tuicr sessions for PR ${pr} under ${repo}:\n${listed}\nPass sessionSlug to choose one.`,
 		};
 	}
-	return { action: "launch", target: { type: "pr", pr } };
-}
-
-/**
- * Resolve a review request into an action, honoring the requested target —
- * never silently attaching to an unrelated active session. Pure: the caller
- * supplies the `tuicr review list` sessions and, for a bare call with no
- * target, the current branch and its open PRs (git/gh results injected).
- *
- * Order:
- *   1. explicit sessionSlug → attach to exactly that session (missing →
- *      error); a slug ending in `/pr/<N>` also keys the review by that PR.
- *   2. explicit PR → attach only to an active session whose slug ends with
- *      `/pr/<N>`; none matches → launch a new pane for that PR.
- *   3. explicit revset → launch a new pane for the range.
- *   4. explicit working tree → launch a new pane with -w.
- *   5. no target → the current branch's open PRs: exactly one → that PR
- *      (match-or-launch as above); none → working-tree review; several →
- *      error listing them, asking for `pr` explicitly.
- *
- * @returns one of
- *   { action: "attach", slug: string, target }
- *   { action: "launch", target }
- *   { action: "error", message: string }
- * where target is { type: "pr", pr } | { type: "revset", revset } |
- * { type: "working-tree" } | { type: "slug", slug }.
- */
-export function resolveReviewTarget(
-	params,
-	{ repo, sessions = [], currentBranch = null, openPrs = [] } = {},
-) {
-	const kind = classifyReviewRequest(params);
-	if (kind === "session") {
-		const slug = String(params.sessionSlug);
-		const picked = pickSession(sessions, slug);
-		if (picked.status === "missing") {
-			return {
-				action: "error",
-				message: `No tuicr session named ${slug} under ${repo}. Run \`tuicr review list --repo ${repo}\` for valid slugs.`,
-			};
-		}
-		const sessionSlug = picked.session.slug;
-		const pr = prSessionNumber(sessionSlug);
-		return {
-			action: "attach",
-			slug: sessionSlug,
-			target: pr ? { type: "pr", pr } : { type: "slug", slug: sessionSlug },
-		};
-	}
-	if (kind === "pr") return prMatchOrLaunch(requirePrNumber(params.pr), repo, sessions);
-	if (kind === "revset") {
-		return { action: "launch", target: { type: "revset", revset: requireRevset(params.revset) } };
-	}
-	if (kind === "working-tree") {
-		return { action: "launch", target: { type: "working-tree" } };
-	}
-	// Bare call with no target: resolve the current worktree's open PR first.
-	const prs = Array.isArray(openPrs) ? openPrs : [];
-	if (prs.length === 1) return prMatchOrLaunch(requirePrNumber(prs[0]?.number), repo, sessions);
-	if (prs.length > 1) {
-		const listed = prs
-			.map((entry) => `  #${entry?.number} ${entry?.title ?? ""}`.trimEnd())
-			.join("\n");
-		return {
-			action: "error",
-			message: `Several open PRs for branch ${currentBranch ?? "(unknown)"} under ${repo}:\n${listed}\nPass pr explicitly to choose which one to review.`,
-		};
-	}
-	return { action: "launch", target: { type: "working-tree" } };
+	return { status: "launch", target: { type: "pr", pr } };
 }
 
 /**
