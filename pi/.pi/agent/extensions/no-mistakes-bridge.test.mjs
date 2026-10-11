@@ -6,23 +6,18 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
-process.env.NODE_PATH = [
-	"/opt/homebrew/lib/node_modules",
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules",
-	"/home/avirus/.pi/agent/install/releases/1.1.0/node_modules",
-	process.env.NODE_PATH || "",
-].filter(Boolean).join(":");
+// Drive the bridge's prompt-settle poll fast (default 250 ms); pure test
+// knob — the module reads it once at import, so set it BEFORE jiti loads.
+process.env.NM_BRIDGE_POLL_MS ??= "25";
+// Shared jiti resolution (test-lib): JITI_PATH/NODE_PATH or the pi-managed
+// install; NODE_PATH is re-derived from the resolved jiti root exactly the
+// way CI's prefix install provides it, so typebox resolves uniformly.
+const { jitiPath, nodePath } = resolveJiti();
+process.env.NODE_PATH = nodePath;
 require("node:module").Module._initPaths();
-
-// Resolve jiti the same way CI (JITI_PATH) and the local installs do.
-const jitiPath = [
-	process.env.JITI_PATH,
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.pi/agent/install/releases/1.1.0/node_modules/jiti/lib/jiti.cjs",
-].find((path) => path && existsSync(path));
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 
@@ -443,9 +438,9 @@ function startFakeBridge(sockPath, onHello) {
 	return new Promise((done) => server.listen(sockPath, () => done(server)));
 }
 
-function runShim({ root, extraEnv = {}, argv = [] }) {
+function runShim({ root, extraEnv = {}, argv = [], cwd }) {
 	const child = spawn(process.execPath, [shimPath, ...argv], {
-		cwd: join(root, TEST_RUN_ID),
+		cwd: cwd ?? join(root, TEST_RUN_ID),
 		env: {
 			...process.env,
 			NM_HOME: root,
@@ -495,7 +490,7 @@ await (async () => {
 	const { child, stdout, stderr } = runShim({ root });
 	child.stdin.end("do the step");
 	const exited = awaitExit(child, 15000);
-	await sleep(500);
+	await sleep(150);
 	const server = await startFakeBridge(join(root, "herdr-bridge", TEST_RUN_ID, "sock"), (sock) => {
 		sock.write(JSON.stringify({ type: "events", lines }) + "\n");
 		sock.end();
@@ -582,9 +577,9 @@ const STUB_ASSISTANT = {
 // Written with plain string concatenation only, so the surrounding template
 // literal stays interpolation-free.
 const HERDR_STUB = `
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { spawn } from "node:child_process";
-import { join } from "node:path";
+const { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } = require("node:fs");
+const { spawn } = require("node:child_process");
+const { join } = require("node:path");
 
 const stateDir = process.env.HERDR_STUB_STATE;
 const sessionsRoot = join(process.env.PI_CODING_AGENT_DIR, "sessions");
@@ -741,10 +736,10 @@ function makeBridgeRoot(prefix) {
 	// or node on PATH run this too)
 	writeFileSync(
 		join(stubDir, "herdr"),
-		"#!/bin/sh\nexec \"" + process.execPath + "\" \"" + join(stubDir, "herdr.mjs") + "\" \"$@\"\n",
+		"#!/bin/sh\nexec \"" + process.execPath + "\" \"" + join(stubDir, "herdr.cjs") + "\" \"$@\"\n",
 		{ mode: 0o755 },
 	);
-	writeFileSync(join(stubDir, "herdr.mjs"), HERDR_STUB.trimStart() + "\n");
+	writeFileSync(join(stubDir, "herdr.cjs"), HERDR_STUB.trimStart() + "\n");
 	// stub tab pi: the pane's interactive process; it idles and writes
 	// nothing (the stub herdr models pi's session-file timing instead)
 	writeFileSync(join(root, "stub-pi.sh"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
@@ -960,7 +955,7 @@ await (async () => {
 for (const [knob, value] of [
 	["HERDR_STUB_ABORTED", "1"],
 	["HERDR_STUB_PROMPT_FAIL", "1"],
-	["HERDR_STUB_BACKLOG", "1300"], // > 10 MiB: multiple capped reads after settle
+	["HERDR_STUB_BACKLOG", "520"], // > 4 MiB: a second capped read after settle
 ]) {
 	const root = makeBridgeRoot("nm-bridge-delivery-");
 	const restore = enterBridgeEnv(root);
@@ -1119,6 +1114,87 @@ await (async () => {
 	} finally {
 		teardownBridgeForRun(TEST_RUN_ID);
 		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
+
+// ---------------------------------------------------------------------------
+// Shim passthrough (#278): without a live bridge the shim execs real pi with
+// the same argv and stdin, and pi's exit code becomes the shim's. The cwd
+// basename decides immediately (not a run worktree), and a run worktree with
+// no bridge dir falls back after the bounded wait.
+// ---------------------------------------------------------------------------
+await (async () => {
+	const root = makeShimRoot(
+		"nm-shim-passthrough-",
+		"#!/bin/sh\nprintf 'PI-ARGV:%s\\n' \"$*\"\ncat\nexit 3\n",
+	);
+	const plainDir = mkdtempSync(join(tmpdir(), "nm-shim-plain-"));
+	try {
+		const argv = ["--mode", "json", "--no-session", "--extension", "/tmp/nm-output-abc.mjs"];
+		const { child, stdout, stderr } = runShim({ root, argv, cwd: plainDir });
+		child.stdin.end("prompt bytes");
+		const result = await awaitExit(child, 15000);
+		const out = Buffer.concat(stdout).toString("utf-8");
+		const err = Buffer.concat(stderr).toString("utf-8");
+		assert.equal(result.code, 3, "pi's exit code becomes the shim's exit code");
+		assert.equal(err, "", `shim stderr must stay clean: ${err}`);
+		assert.equal(
+			out,
+			"PI-ARGV:--mode json --no-session --extension /tmp/nm-output-abc.mjs\nprompt bytes",
+			"argv and stdin pass through to real pi byte-identical",
+		);
+	} finally {
+		rmSync(plainDir, { recursive: true, force: true });
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
+
+await (async () => {
+	// A run worktree with no bridge dir: the shim waits only the bounded
+	// budget, then falls back to headless pi (unchanged argv and exit code).
+	const root = makeShimRoot(
+		"nm-shim-late-fallback-",
+		"#!/bin/sh\nprintf 'PI-ARGV:%s\\n' \"$*\"\ncat\nexit 3\n",
+	);
+	try {
+		const startedAt = Date.now();
+		const { child, stdout, stderr } = runShim({
+			root,
+			argv: [],
+			extraEnv: { NM_HERDR_BRIDGE_WAIT_MS: "150" },
+		});
+		child.stdin.end("late");
+		const result = await awaitExit(child, 15000);
+		const out = Buffer.concat(stdout).toString("utf-8");
+		const err = Buffer.concat(stderr).toString("utf-8");
+		assert.equal(result.code, 3, `shim stderr: ${err}`);
+		assert.equal(out, "PI-ARGV:\nlate", "the fallback passthrough keeps argv and stdin");
+		assert.ok(Date.now() - startedAt < 5000, "the bounded wait never hangs the daemon step");
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
+
+await (async () => {
+	// SIGTERM forwarded: the daemon's kill reaches real pi, and pi's clean
+	// exit becomes the shim's — no stray signal death.
+	const root = makeShimRoot(
+		"nm-shim-sigterm-",
+		"#!/bin/sh\ntrap 'echo TERM-RECEIVED; exit 0' TERM\nwhile true; do sleep 0.1; done\n",
+	);
+	const plainDir = mkdtempSync(join(tmpdir(), "nm-shim-term-"));
+	try {
+		const { child, stdout, stderr } = runShim({ root, argv: [], cwd: plainDir });
+		child.stdin.end("killed turn");
+		for (let i = 0; i < 3; i++) await sleep(50); // let pi boot and trap
+		child.kill("SIGTERM");
+		const result = await awaitExit(child, 15000);
+		const out = Buffer.concat(stdout).toString("utf-8");
+		assert.equal(result.code, 0, `shim stderr: ${Buffer.concat(stderr).toString("utf-8")}`);
+		assert.match(out, /TERM-RECEIVED/, "the signal reaches real pi");
+	} finally {
+		rmSync(plainDir, { recursive: true, force: true });
 		rmSync(root, { recursive: true, force: true });
 	}
 })();
