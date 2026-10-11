@@ -713,7 +713,8 @@ esac
 	// The fail-fast scenario's shUtilBin deliberately stays editor-free.
 	let realNvim = "";
 	try {
-		realNvim = execFileSync("sh", ["-c", "command -v nvim"], { encoding: "utf8" }).trim();
+		// stdio: captured child — never inherit stderr (#291 class)
+		realNvim = execFileSync("sh", ["-c", "command -v nvim"], { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
 	} catch {
 		realNvim = "";
 	}
