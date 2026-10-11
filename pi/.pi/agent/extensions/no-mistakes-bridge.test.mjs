@@ -31,6 +31,8 @@ const {
 	bridgeRunDir,
 	splitAgentArgv,
 	buildTabLauncher,
+	stepAgentExtensionPaths,
+	STEP_AGENT_EXTENSIONS,
 	probeSocket,
 	SessionEventTranslator,
 	ensureBridgeServer,
@@ -130,6 +132,55 @@ const {
 		extraExtensions: [],
 	});
 	assert.ok(tricky.includes("export GIT_MSG='it'\\''s done'"));
+}
+
+// ---------------------------------------------------------------------------
+// Step-agent extension set: a closed, curated list resolved against the
+// agent dir — present entries load in order, missing ones are skipped, and
+// the parent's pipeline/teaching machinery never appears in it.
+// ---------------------------------------------------------------------------
+{
+	for (const name of STEP_AGENT_EXTENSIONS) {
+		assert.ok(
+			!/[/\\]/.test(name) || name.startsWith("builtin:"),
+			`set entries are plain names under extensions/ or builtin:<name>, not paths: ${name}`,
+		);
+	}
+	assert.ok(
+		!STEP_AGENT_EXTENSIONS.some((name) =>
+			/no-mistakes|interactive-subagents|tuicr|cleanup|ask-user|explain|quiz|lesson|focus-buffer|run-command|nvim-open|hunk-open|image-drop|mobile-mode|md-log|user-input/.test(name)),
+		"pipeline, review, and human-blocking extensions stay out of the step set",
+	);
+	assert.ok(
+		STEP_AGENT_EXTENSIONS.indexOf("herdr-agent-state.ts") === 0,
+		"the pane-state reporter loads first",
+	);
+
+	const root = mkdtempSync(join(tmpdir(), "nm-step-ext-"));
+	const extDir = join(root, "extensions");
+	mkdirSync(extDir);
+	writeFileSync(join(extDir, "herdr-agent-state.ts"), "");
+	writeFileSync(join(extDir, "python.ts"), "");
+	mkdirSync(join(extDir, "web-fetch"));
+	writeFileSync(join(extDir, "web-fetch", "index.ts"), "");
+	// A stray extension in the dir is never picked up: the set is closed,
+	// not discovery — that is what keeps the parent's machinery out.
+	writeFileSync(join(extDir, "stray-no-mistakes-gate.ts"), "");
+	assert.deepEqual(stepAgentExtensionPaths(root), [
+		join(extDir, "herdr-agent-state.ts"),
+		join(extDir, "python.ts"),
+		join(extDir, "web-fetch"),
+		"builtin:codemode",
+	], "present entries resolve in load order, missing ones are skipped, and builtin: entries pass through without files");
+
+	const bare = mkdtempSync(join(tmpdir(), "nm-step-ext-bare-"));
+	assert.deepEqual(
+		stepAgentExtensionPaths(bare),
+		["builtin:codemode"],
+		"an agent dir without the extensions yields only the builtin entries",
+	);
+	rmSync(root, { recursive: true, force: true });
+	rmSync(bare, { recursive: true, force: true });
 }
 
 // ---------------------------------------------------------------------------

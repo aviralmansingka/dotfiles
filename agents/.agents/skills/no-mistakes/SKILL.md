@@ -59,7 +59,11 @@ boundary as a headless one: it works only its assigned phase in the run
 worktree, the daemon owns rounds, budgets, and the findings schema, and the
 human may watch or steer the tab but never drives the pipeline from it.
 Fixer sessions reuse one tab across fix rounds; cold review turns get a fresh
-tab per pass. When the triggering session dies, tabs close and later steps
+tab per pass. Each tab runs pi with `--no-extensions` plus one curated explicit
+set (`STEP_AGENT_EXTENSIONS` in the bridge): the pane-state reporters, capability
+tools (python, web fetch, web search, mermaid), and tab chrome. The parent
+session's pipeline machinery and human-blocking panels never load inside a step
+tab. When the triggering session dies, tabs close and later steps
 fall back to headless pi - so a step agent must never assume a tab exists.
 While a run is active, the triggering session's own pane also shows the
 current pipeline phase as its state label (`nm: <phase>`), and the CI phase
