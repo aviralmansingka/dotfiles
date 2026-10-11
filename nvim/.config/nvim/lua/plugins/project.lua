@@ -3,8 +3,9 @@ return {
   config = function()
     require("project_nvim").setup({
       detection_methods = { "pattern" },
-      -- BUILD.bazel before .git: rules_go packages (e.g. modal/go/machine-manager) stay rooted
-      -- there instead of the monorepo git root when you :cd into the service directory.
+      -- No BUILD.bazel anchor (dropped in 11f7d93): rooting rules_go packages at the
+      -- sub-package level fought the monorepo git root that gopls/ripgrep work better
+      -- from, so detection stops at these roots only.
       patterns = { "init.lua", "build.gradle", ".git" },
       scope_chdir = "tab",
       silent_chdir = true,
