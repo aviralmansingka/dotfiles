@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -401,6 +401,28 @@ assert.ok(
 	resumedOverview.includes("Node progress:"),
 	"the fallback overview carries the arc's node list",
 );
+// Regression: journals written in quick succession can share an mtime (the
+// kernel records inode timestamps on a coarse tick grid, so a restarted
+// professor's second journal can land in the same tick as the first — this
+// exact tie flaked CI nondeterministically). The fallback must stay
+// deterministic on a tie: name order, never readdirSync hash order. The tie
+// is pinned one second into the past so a later writeFileSync (whose mtime
+// comes from the coarse clock) is always strictly newer.
+const tieDir = mkdtempSync(join(tmpdir(), "md-log-tie-"));
+const tieAbc = join(tieDir, "session-abc.md");
+const tieDef = join(tieDir, "session-def.md");
+const tieFresh = join(tieDir, "session-fresh.md");
+writeFileSync(tieAbc, "# Lesson journal\n\n---\n\n## Old arc node\n\n_Lesson · 2026-10-09 12:00 UTC_\n\nbody\n");
+writeFileSync(tieDef, "# Lesson journal\n\n---\n\n## New session\n\n_Lesson · 2026-10-09 12:00 UTC_\n\nbody\n");
+writeFileSync(tieFresh, "# Lesson journal\n\n");
+const tieTime = new Date(Math.floor(Date.now() / 1000) * 1000 - 1000);
+for (const tied of [tieAbc, tieDef, tieFresh]) utimesSync(tied, tieTime, tieTime);
+const tiedOverview = buildOverview(tieFresh);
+assert.ok(
+	tiedOverview.includes("Current position: New session"),
+	"an mtime tie falls back deterministically, never by readdir order",
+);
+rmSync(tieDir, { recursive: true, force: true });
 // The fallback prefers the NEWEST lesson-bearing journal in the directory.
 const newerArc = journalPathFor(join(dir, "sub", "session-newer.jsonl"));
 writeFileSync(
