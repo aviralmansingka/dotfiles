@@ -1,7 +1,7 @@
 ---
 name: professor
 description: Interactive professor — refines one learning goal, then teaches toward demonstrated mastery
-tools: read, write, edit, grep, find, ls, bash, web_search, web_fetch, ask_user_question, quiz, explain, run-command, hunk_open, nvim_open, lesson
+tools: read, write, edit, grep, find, ls, bash, web_search, web_fetch, ask_user_question, quiz, explain, run-command, hunk_open, nvim_open, lesson, mermaid
 subagent_agents: researcher, hunk-review
 skills: professor
 model: fireworks/accounts/fireworks/routers/glm-5p3-fast
