@@ -117,13 +117,21 @@ Status legend:
 33. **`dap_eval_hover` manual-focus branch is dead code with a latent
     self-close bug** — would self-close instantly if ever wired to a keymap
     (nvim-dap; spec pins the branch).
-34. **pollForExit has no pi-liveness check and no timeout** — the
-    stuck-in-waiting bug the captain reported: pi exits without a visible
-    sentinel (scrolled past the 5-line window, crash, or covered by a
-    full-screen app) and the watcher polls forever; identical logic in
-    tmux.ts. Fixed upstream by PR #294's liveness machine — merge it or port
-    `isPiForegroundProcess`/`updateAgentLiveness` here (this bug bit this
-    very session: eight subagent results were lost to it).
+34. **pollForExit liveness/timeout hardening** — [in progress, agent
+    `subagent-liveness`]. #294 (now merged) fixed the seen-then-gone case,
+    but two observed live failure classes remain: (1) pi that NEVER
+    appeared (silent spawn death — liveness requires a prior sighting, so
+    the watcher waits forever past the startup shell); (2) pi alive but
+    wedged (no sentinel, no deadline — pollForExit is an unbounded loop).
+    Spec being implemented: hard deadline (`PI_SUBAGENT_MAX_WAIT_MS`),
+    no-sighting grace (`PI_SUBAGENT_STARTUP_GRACE_MS`), read-failure
+    threshold with pane-existence probe, one shared death-completion helper
+    (harvest → notify → clean close), a module watchdog enforcing deadlines,
+    reason-carrying `subagent_result` steers, orchestrate.ts/no-mistakes
+    alignment, and a dedicated `subagent-liveness.test.mjs` suite. The
+    captain flags this as a deal breaker for autonomous work — both failure
+    classes were observed live this session (bare-zsh delegate panes; the
+    wedged step pi polling a deleted repo).
 
 35. **Stray nvim package-root files get stowed into `$HOME`** — [ready-to-file]
     `tool-call-rendering-prototypes.md` and markdownlint files sit at the

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
@@ -106,8 +106,12 @@ exit 0
 );
 const savedOpenPath = process.env.PATH;
 const savedXdgRuntime = process.env.XDG_RUNTIME_DIR;
+const savedLaunchLogEnv = process.env.PI_NVIM_LAUNCH_LOG;
 process.env.NVIM_TEST_CAPTURE = editorCapture;
 process.env.PATH = `${editorBin}:${savedOpenPath}`;
+// Every openEditor route now writes a provenance line; stage the log for the
+// whole file so no scenario ever touches the real ~/.cache/pi log.
+process.env.PI_NVIM_LAUNCH_LOG = join(tempRoot, "launches.log");
 const nvimTestEnvKeys = [
 	"NVIM_TEST_CAPTURE",
 	"NVIM_TEST_NO_CURRENT",
@@ -136,8 +140,14 @@ const jiti = createJiti(import.meta.url, { alias: {
 
 try {
 	let tool;
+	const commands = {};
+	let shutdownHandler;
 	const nvimOpen = jiti("./nvim-open.ts");
-	nvimOpen.default({ registerTool: (definition) => { tool = definition; }, registerCommand() {}, on: () => {} });
+	nvimOpen.default({
+		registerTool: (definition) => { tool = definition; },
+		registerCommand: (name, definition) => { commands[name] = definition; },
+		on: (name, handler) => { if (name === "session_shutdown") shutdownHandler = handler; },
+	});
 	assert.equal(tool.name, "nvim_open");
 	const theme = { fg: (_token, text) => text, bold: (text) => text };
 	const tagged = { fg: (token, text) => `<${token}>${text}</${token}>`, bold: (text) => `<b>${text}</b>` };
@@ -278,7 +288,22 @@ try {
 		{ pane_id: "w9:p1", tab_id: "w9:t9", cwd: "/other", workspace_id: "w9" },
 	];
 	const editorProc = [{ name: "nvim", pid: 9, argv: ["nvim", "src/main.rs"] }];
+	// #294 keeps a module-level editor registry keyed by tab, consulted before
+	// any scan. These scenarios share one fake tab, so each starts by firing the
+	// captured session_shutdown handler under a temporary subagent env: it
+	// closes only created:true panes (into the fake bin) and clears the map.
+	const resetEditorRegistry = () => {
+		const savedSession = process.env.PI_SUBAGENT_SESSION;
+		process.env.PI_SUBAGENT_SESSION = "/sessions/nvim-open-test-reset.jsonl";
+		try {
+			shutdownHandler?.();
+		} finally {
+			if (savedSession === undefined) delete process.env.PI_SUBAGENT_SESSION;
+			else process.env.PI_SUBAGENT_SESSION = savedSession;
+		}
+	};
 	const runOpenEditor = async (files) => {
+		resetEditorRegistry();
 		const before = readEditorCalls().length;
 		const result = await nvimOpen.openEditor(repoCwd, files);
 		return { result, calls: readEditorCalls().slice(before) };
@@ -498,6 +523,25 @@ try {
 		clearNvimTestEnv();
 	}
 
+	// Zero files + focusable neighbor → focus-only success, no :e send.
+	{
+		clearNvimTestEnv();
+		stageHerdr("g7", {
+			panes: [...basePanes, { pane_id: "w7:p2", tab_id: "w7:t1", cwd: "/repo", workspace_id: "w7" }],
+			procs: { "w7:p2": editorProc },
+			neighbors: { right: "w7:p2" },
+		});
+		const { result, calls } = await runOpenEditor([]);
+		assert.deepEqual(result, {
+			message: "Focused existing editor pane (w7:p2).",
+			ok: true,
+			launched: false,
+		});
+		assert.equal(calls.some((call) => call[1] === "send-text"), false, "no files means no :e send");
+		assert.deepEqual(calls.at(-1), ["pane", "focus", "--pane", "w7:p1", "--direction", "right"]);
+		clearNvimTestEnv();
+	}
+
 	// No files and no focusable neighbor → focus failure reports ok:false.
 	{
 		clearNvimTestEnv();
@@ -611,7 +655,7 @@ try {
 	mkdirSync(shUtilBin, { recursive: true });
 	mkdirSync(shHome, { recursive: true });
 	mkdirSync(shTmp, { recursive: true });
-	for (const utility of ["timeout", "dirname", "sed", "mktemp", "mkdir", "date", "id", "seq", "python3", "cat"]) {
+	for (const utility of ["timeout", "dirname", "sed", "mktemp", "mkdir", "date", "id", "seq", "sleep", "flock", "python3", "cat"]) {
 		const real = execFileSync("sh", ["-c", `command -v ${utility}`], { encoding: "utf8" }).trim();
 		assert.ok(real, `host provides ${utility} for the nvim-open.sh tests`);
 		symlinkSync(real, join(shUtilBin, utility));
@@ -629,10 +673,23 @@ if [ "$SH_HERDR_DOWN" = 1 ]; then
 fi
 case "$1:$2" in
 	workspace:list) printf '%s\\n' '{"result":{"workspaces":[]}}' ;;
-	pane:current) printf '%s\\n' '{"result":{"pane":{"pane_id":"w7:p1","tab_id":"w7:t1","cwd":"/repo","workspace_id":"w7"}}}' ;;
+	pane:current)
+		printf '{"result":{"pane":{"pane_id":"w7:p1","tab_id":"%s","cwd":"/repo","workspace_id":"w7"}}}\\n' "\${SH_TAB:-w7:t1}"
+		;;
 	pane:list)
 		[ "$SH_PANES_FAIL" = 1 ] && exit 1
-		cat "$SH_PANES_FILE"
+		lists=1
+		if [ -n "$SH_LIST_COUNT" ]; then
+			if [ -f "$SH_LIST_COUNT" ]; then
+				lists=$(( $(cat "$SH_LIST_COUNT") + 1 ))
+			fi
+			printf '%s' "$lists" > "$SH_LIST_COUNT"
+		fi
+		if [ -n "$SH_PANES_FILE2" ] && { [ "$lists" -ge 2 ] || { [ -n "$SH_SPLIT_FLAG" ] && [ -f "$SH_SPLIT_FLAG" ]; }; }; then
+			cat "$SH_PANES_FILE2"
+		else
+			cat "$SH_PANES_FILE"
+		fi
 		;;
 	pane:process-info)
 		if [ -f "$SH_PROCS_DIR/$4.json" ]; then
@@ -641,7 +698,9 @@ case "$1:$2" in
 			printf '{"result":{"process_info":{"pane_id":"%s","foreground_processes":[]}}}' "$4"
 		fi
 		;;
-	pane:split) printf '%s\\n' '{"result":{"pane":{"pane_id":"w7:p9"}}}' ;;
+	pane:split)
+		[ -n "$SH_SPLIT_FLAG" ] && : >> "$SH_SPLIT_FLAG"
+		printf '%s\\n' '{"result":{"pane":{"pane_id":"w7:p9"}}}' ;;
 	pane:neighbor)
 		if [ -f "$SH_NEIGHBORS_DIR/$6" ]; then
 			printf '{"result":{"neighbor":{"neighbor_pane_id":"%s"}}}' "$(cat "$SH_NEIGHBORS_DIR/$6")"
@@ -787,14 +846,132 @@ exit 0
 				error.status === 1 && /neither vim nor nvim is installed/.test(String(error.stderr)),
 		);
 	}
-} finally {
-	if (savedOpenPath === undefined) delete process.env.PATH;
-	else process.env.PATH = savedOpenPath;
-	if (savedXdgRuntime === undefined) delete process.env.XDG_RUNTIME_DIR;
-	else process.env.XDG_RUNTIME_DIR = savedXdgRuntime;
-	for (const key of nvimTestEnvKeys) delete process.env[key];
-	rmSync(tempRoot, { recursive: true, force: true });
-}
+
+	// ── nvim-open.sh per-tab flock lock + settle re-scan (#294) ──────────
+	// Settle re-check: the first scan sees no editor, but a concurrent
+	// launch's editor pane becomes visible on the second (post-settle) scan —
+	// the script routes to it and no duplicate split lands.
+	{
+		const settleStaging = shStage("s1", {
+			panes: [basePanes[0], basePanes[1]],
+			procs: { "w7:p9": editorProc },
+		});
+		const settlePanes2 = join(shRoot, "s1-panes2.json");
+		writeFileSync(settlePanes2, JSON.stringify({ result: { panes: [
+			basePanes[0],
+			{ pane_id: "w7:p9", tab_id: "w7:t1", cwd: "/repo", workspace_id: "w7" },
+			basePanes[1],
+		] } }));
+		const { stdout, calls } = runSh("s1-calls", [repoCwd, shFile], {
+			...settleStaging,
+			SH_PANES_FILE2: settlePanes2,
+			SH_LIST_COUNT: join(shRoot, "s1-count"),
+		});
+		assert.match(stdout, /Sent 1 file\(s\) to existing editor \(pane w7:p9\)\./);
+		assert.equal(
+			calls.some((call) => call[0] === "pane" && call[1] === "split"),
+			false,
+			"the settle re-scan prevented a duplicate split",
+		);
+		assert.equal(
+			calls.filter((call) => call[0] === "pane" && call[1] === "list").length,
+			2,
+			"the scan ran twice: initial scan + settle re-check",
+		);
+	}
+
+	// Real cross-process lock: two concurrent invocations in one tab. The
+	// winner splits (its landing flips the staged pane list); the loser waits
+	// on the per-tab flock, then its scan sees the winner's editor — exactly
+	// one split across both processes.
+	{
+		const lockStaging = shStage("s2", {
+			panes: [basePanes[0], basePanes[1]],
+			procs: { "w7:p9": editorProc },
+		});
+		const lockPanes2 = join(shRoot, "s2-panes2.json");
+		writeFileSync(lockPanes2, JSON.stringify({ result: { panes: [
+			basePanes[0],
+			{ pane_id: "w7:p9", tab_id: "w7:t1", cwd: "/repo", workspace_id: "w7" },
+			basePanes[1],
+		] } }));
+		const splitFlag = join(shRoot, "s2-split-flag");
+		const sharedCapture = join(shRoot, "s2-calls");
+		writeFileSync(sharedCapture, "");
+		const lockEnv = {
+			...lockStaging,
+			SH_PANES_FILE2: lockPanes2,
+			SH_SPLIT_FLAG: splitFlag,
+			SH_CAPTURE: sharedCapture,
+		};
+		const runShAsync = () => new Promise((resolve, reject) => {
+			const child = spawn(bashBin, [shScript, repoCwd, shFile], {
+				env: { PATH: shBin, HOME: shHome, TMPDIR: `${shTmp}/`, XDG_RUNTIME_DIR: "", ...lockEnv },
+			});
+			let stdout = "";
+			let stderr = "";
+			child.stdout.on("data", (chunk) => { stdout += chunk; });
+			child.stderr.on("data", (chunk) => { stderr += chunk; });
+			child.on("error", reject);
+			child.on("close", (code) => {
+				if (code === 0) resolve(stdout);
+				else reject(new Error(`script exited ${code}: ${stderr}`));
+			});
+		});
+		const [winnerOut, loserOut] = await Promise.all([runShAsync(), runShAsync()]);
+		const lockCalls = readFileSync(sharedCapture, "utf8")
+			.split("--call--\n")
+			.filter(Boolean)
+			.map((call) => call.trim().split("\n"));
+		assert.equal(
+			lockCalls.filter((call) => call[0] === "pane" && call[1] === "split").length,
+			1,
+			"exactly one split across both processes",
+		);
+		assert.match(
+			winnerOut + loserOut,
+			/Sent 1 file\(s\) to existing editor \(pane w7:p9\)\./,
+			"the loser routed to the winner's editor",
+		);
+	}
+
+	// Without flock on PATH the script still completes its full flow.
+	{
+		const noFlockBin = join(shRoot, "no-flock-bin");
+		mkdirSync(noFlockBin, { recursive: true });
+		for (const utility of ["timeout", "dirname", "sed", "mktemp", "mkdir", "date", "id", "seq", "sleep", "python3", "cat"]) {
+			symlinkSync(join(shUtilBin, utility), join(noFlockBin, utility));
+		}
+		symlinkSync(join(shBin, "herdr"), join(noFlockBin, "herdr"));
+		symlinkSync(join(shBin, "nvim"), join(noFlockBin, "nvim"));
+		symlinkSync(join(shBin, "tmux"), join(noFlockBin, "tmux"));
+		const { stdout } = runSh(
+			"s3-calls",
+			[repoCwd, shFile],
+			shStage("s3", { panes: [basePanes[0], basePanes[1]] }),
+			noFlockBin,
+		);
+		assert.ok(stdout.includes(`Launched nvim in a vertical split (pane w7:p9) at ${repoCwd} with 1 file(s).`));
+	}
+
+	// The lockfile is keyed per tab, with ':' sanitized out of the id.
+	{
+		const { stdout } = runSh("s4-calls", [repoCwd, shFile], {
+			...shStage("s4", { panes: [
+				{ pane_id: "w8:p1", tab_id: "w8:t8", cwd: "/repo", workspace_id: "w8" },
+				basePanes[1],
+			] }),
+			SH_TAB: "w8:t8",
+		});
+		assert.ok(stdout.includes(`Launched nvim in a vertical split (pane w7:p9) at ${repoCwd} with 1 file(s).`));
+		assert.equal(
+			existsSync("/tmp/pi-nvim-launch-w8_t8.lock"),
+			true,
+			"the lockfile name sanitizes ':' out of the tab id",
+		);
+		rmSync("/tmp/pi-nvim-launch-w8_t8.lock", { force: true });
+		rmSync("/tmp/pi-nvim-launch-w7_t1.lock", { force: true });
+	}
 
 	// ── launch provenance log line (pure) ──────────────────────
 	assert.equal(
@@ -1098,5 +1275,134 @@ exit 0
 			else process.env[key] = value;
 		}
 	}
+
+	// ── withTabLaunchLock mechanics (eval'd from source: the lock is module- ──
+	// internal, and every openEditor path through it is fully synchronous, so
+	// only a direct drive exercises cross-tab isolation and error release).
+	{
+		const nvimOpenSource = readFileSync(new URL("./nvim-open.ts", import.meta.url), "utf8");
+		const lockSource =
+			"const tabLaunchLocks = new Map" +
+			nvimOpenSource
+				.split("const tabLaunchLocks = new Map")[1]
+				.split("// ---------------------------------------------------------------------------\n// tmux fallback")[0];
+		const { withTabLaunchLock, tabLaunchLocks } = jiti.evalModule(
+			`
+			${lockSource}
+			module.exports = { withTabLaunchLock, tabLaunchLocks };
+		`,
+			{ filename: join(tmpdir(), "nvim-open-launch-lock-test.ts") },
+		);
+		const drain = () => new Promise((resolve) => setImmediate(resolve));
+		const order = [];
+
+		// Same tab: the second caller waits for the first's completion.
+		let releaseFirst;
+		const first = withTabLaunchLock("lock:t1", () =>
+			new Promise((resolve) => { order.push("first"); releaseFirst = resolve; }));
+		let releaseSecond;
+		const second = withTabLaunchLock("lock:t1", () =>
+			new Promise((resolve) => { order.push("second"); releaseSecond = resolve; }));
+		await drain();
+		assert.deepEqual(order, ["first"], "the lock serializes same-tab callers");
+		releaseFirst("one");
+		assert.equal(await first, "one");
+		await drain();
+		assert.deepEqual(order, ["first", "second"], "the queued caller runs after release");
+		releaseSecond("two");
+		assert.equal(await second, "two");
+		await drain();
+
+		// Different tabs: per-tab locks never block each other.
+		let releaseA;
+		let releaseB;
+		const crossA = withTabLaunchLock("lock:tA", () =>
+			new Promise((resolve) => { order.push("A"); releaseA = resolve; }));
+		const crossB = withTabLaunchLock("lock:tB", () =>
+			new Promise((resolve) => { order.push("B"); releaseB = resolve; }));
+		await drain();
+		assert.deepEqual(order.slice(-2).sort(), ["A", "B"], "per-tab locks never block each other");
+		releaseA("a");
+		releaseB("b");
+		assert.equal(await crossA, "a");
+		assert.equal(await crossB, "b");
+		await drain();
+
+		// A section that throws still releases the lock for the next caller.
+		await assert.rejects(
+			withTabLaunchLock("lock:tE", async () => { throw new Error("boom"); }),
+			/boom/,
+		);
+		await drain();
+		assert.equal(
+			await withTabLaunchLock("lock:tE", async () => "recovered"),
+			"recovered",
+			"an error path must not wedge the tab's lock",
+		);
+		await drain();
+		assert.equal(tabLaunchLocks.size, 0, "settled queues clean up their map entries");
+	}
+
+	// ── registry staleness: a dead pane deletes its entry, the scan runs, and ──
+	// an attached pane is reused with zero pane lists.
+	try {
+		let phase = "launch";
+		let lists = 0;
+		const staleCalls = [];
+		const staleImpl = (command, args) => {
+			staleCalls.push([command, ...args]);
+			if (command === "herdr" && args[0] === "pane" && args[1] === "current") {
+				return JSON.stringify({ result: { pane: {
+					pane_id: "wX:p1", tab_id: "wX:t1", workspace_id: "wX", cwd: "/repo",
+				} } });
+			}
+			if (command === "herdr" && args[0] === "pane" && args[1] === "list") {
+				lists += 1;
+				return JSON.stringify({ result: { panes: phase === "launch"
+					? [{ pane_id: "wX:p1", tab_id: "wX:t1" }]
+					: [{ pane_id: "wX:p1", tab_id: "wX:t1" }, { pane_id: "wX:p5", tab_id: "wX:t1" }] } });
+			}
+			if (command === "herdr" && args[0] === "pane" && args[1] === "process-info") {
+				const paneId = args[args.indexOf("--pane") + 1];
+				if (phase === "stale" && paneId === "wX:p2") throw new Error("pane gone");
+				return JSON.stringify({ result: { process_info: { pane_id: paneId, foreground_processes:
+					paneId === "wX:p5" ? [{ name: "nvim", pid: 50, argv: ["nvim"] }] : [{ name: "zsh", pid: 11, argv: ["zsh"] }] } } });
+			}
+			if (command === "herdr" && args[0] === "pane" && args[1] === "split") {
+				return JSON.stringify({ result: { pane: { pane_id: "wX:p2" } } });
+			}
+			return '{"result":{}}';
+		};
+		process.env.HERDR_PANE_ID = "wX:p1";
+		nvimOpen.__setExecSyncForTests(staleImpl);
+		const launched = await nvimOpen.openEditor("/repo", ["a.ts"], "tool");
+		assert.match(launched.message, /Launched vim in a vertical split \(pane wX:p2\)/);
+		const listsAfterLaunch = lists;
+		phase = "stale";
+		const rerouted = await nvimOpen.openEditor("/repo", ["b.ts"], "tool");
+		assert.match(rerouted.message, /Sent 1 file\(s\) to existing editor \(pane wX:p5\)/);
+		assert.ok(lists > listsAfterLaunch, "a stale registry entry is deleted and the scan runs");
+		const listsAfterScan = lists;
+		const reused = await nvimOpen.openEditor("/repo", ["c.ts"], "tool");
+		assert.match(reused.message, /Sent 1 file\(s\) to existing editor \(pane wX:p5\)/);
+		assert.equal(lists, listsAfterScan, "an attached pane is reused with zero pane lists");
+		assert.ok(
+			staleCalls.some((call) => call[0] === "herdr" && call[1] === "pane" && call[2] === "send-text" && call[3] === "wX:p5"),
+			"the files were routed to the newly found editor",
+		);
+	} finally {
+		nvimOpen.__setExecSyncForTests(null);
+	}
+} finally {
+	if (savedOpenPath === undefined) delete process.env.PATH;
+	else process.env.PATH = savedOpenPath;
+	if (savedXdgRuntime === undefined) delete process.env.XDG_RUNTIME_DIR;
+	else process.env.XDG_RUNTIME_DIR = savedXdgRuntime;
+	if (savedLaunchLogEnv === undefined) delete process.env.PI_NVIM_LAUNCH_LOG;
+	else process.env.PI_NVIM_LAUNCH_LOG = savedLaunchLogEnv;
+	for (const key of nvimTestEnvKeys) delete process.env[key];
+	rmSync(tempRoot, { recursive: true, force: true });
+	try { rmSync(shRoot, { recursive: true, force: true }); } catch {}
+}
 
 console.log("nvim-open tests passed");

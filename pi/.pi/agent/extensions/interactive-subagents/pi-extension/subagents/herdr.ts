@@ -316,13 +316,62 @@ export function closeTabForPane(paneId: string): void {
 
 // ── Exit polling ──
 
+/** TESTABILITY knobs (the same pattern as bridge.ts's NM_BRIDGE_POLL_MS):
+ *  PI_SUBAGENT_POLL_MS (poll cadence), PI_SUBAGENT_MAX_WAIT_MS (hard
+ *  deadline), PI_SUBAGENT_STARTUP_GRACE_MS (no-sighting grace), and
+ *  PI_SUBAGENT_PROCINFO_FAIL_LIMIT (consecutive read failures before a
+ *  pane-existence probe) override a wait bound so tests run in milliseconds.
+ *  They change no default behavior. Identical contract in ./tmux.ts. */
+export const DEFAULT_SUBAGENT_POLL_MS = 1000;
+export const DEFAULT_SUBAGENT_MAX_WAIT_MS = 30 * 60_000;
+export const DEFAULT_SUBAGENT_STARTUP_GRACE_MS = 60_000;
+export const DEFAULT_SUBAGENT_PROCINFO_FAIL_LIMIT = 3;
+
+function envMs(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 export interface PollResult {
   /** How the subagent exited */
-  reason: "done" | "sentinel" | "error" | "killed" | "agent-gone";
-  /** Shell exit code. 0 for file-based exits; 130 when the pane was killed. */
-  exitCode: number;
+  reason:
+    | "done"
+    | "sentinel"
+    | "error"
+    | "killed"
+    | "agent-gone"
+    | "no-agent"
+    | "timeout";
+  /** Shell exit code. 0 for file-based exits; 130 when the pane was killed.
+   *  null for timeout/no-agent unless the deadline harvest reveals one. */
+  exitCode: number | null;
   /** Error message if reason is "error" (auto-retry exhausted, provider overload, etc.) */
   errorMessage?: string;
+}
+
+/** Resolved wait bounds shared by pollForExit and the index.ts watcher. */
+export interface SubagentPollBounds {
+  pollMs: number;
+  maxWaitMs: number;
+  startupGraceMs: number;
+  processInfoFailLimit: number;
+}
+
+export function getSubagentPollBounds(
+  overrides?: Partial<SubagentPollBounds>,
+): SubagentPollBounds {
+  return {
+    pollMs: overrides?.pollMs ?? envMs("PI_SUBAGENT_POLL_MS", DEFAULT_SUBAGENT_POLL_MS),
+    maxWaitMs:
+      overrides?.maxWaitMs ?? envMs("PI_SUBAGENT_MAX_WAIT_MS", DEFAULT_SUBAGENT_MAX_WAIT_MS),
+    startupGraceMs:
+      overrides?.startupGraceMs ??
+      envMs("PI_SUBAGENT_STARTUP_GRACE_MS", DEFAULT_SUBAGENT_STARTUP_GRACE_MS),
+    processInfoFailLimit:
+      overrides?.processInfoFailLimit ??
+      envMs("PI_SUBAGENT_PROCINFO_FAIL_LIMIT", DEFAULT_SUBAGENT_PROCINFO_FAIL_LIMIT),
+  };
 }
 
 /**
@@ -366,6 +415,31 @@ function paneKilledResult(): PollResult {
  *  never detected, but the pane's pi agent process is gone. */
 function agentGoneResult(): PollResult {
   return { reason: "agent-gone", exitCode: 0 };
+}
+
+/** Startup death: pi was never seen in the pane's foreground processes and
+ *  no sentinel/sidecar appeared within the startup grace window — the failed
+ *  delegation launch (bare shell) failure class. */
+function noAgentResult(): PollResult {
+  return { reason: "no-agent", exitCode: null };
+}
+
+/** Hard deadline expired while the subagent was still pending (the wedged
+ *  agent failure class). exitCode stays null unless the deadline harvest
+ *  (final sidecar/sentinel check) reveals one. */
+function timeoutResult(): PollResult {
+  return { reason: "timeout", exitCode: null };
+}
+
+/** Does the pane still exist? Probed after repeated process-info read
+ *  failures to tell a transient read problem from a destroyed pane. */
+async function paneExistsAsync(paneId: string, signal?: AbortSignal): Promise<boolean> {
+  try {
+    await execFileAsync("herdr", ["pane", "get", paneId], { encoding: "utf8", signal });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // ── Liveness fallback ──
@@ -421,32 +495,81 @@ export const __pollForExitTest__ = {
   interpretExitSidecar,
   paneKilledResult,
   agentGoneResult,
+  noAgentResult,
+  timeoutResult,
   updateAgentLiveness,
   isPiForegroundProcess,
 };
 
 /**
- * Poll until the subagent exits. Checks for a `.exit` sidecar file first
- * (written by the error path), falling back to the terminal sentinel for
- * clean-completion and crash detection. Identical logic to ./tmux.ts; only
- * the underlying readScreenAsync differs.
+ * Poll until the subagent exits — but never forever. Checks for a `.exit`
+ * sidecar file first (written by the error path), falling back to the
+ * terminal sentinel for clean-completion and crash detection, plus a
+ * liveness fallback and three hard bounds:
+ *
+ *   1. HARD DEADLINE (`maxWaitMs`, env PI_SUBAGENT_MAX_WAIT_MS, default
+ *      30 min): on expiry, one final harvest attempt (sidecar + sentinel)
+ *      and a `timeout` result. The wedged-agent failure class.
+ *   2. NO-SIGHTING GRACE (`startupGraceMs`, env
+ *      PI_SUBAGENT_STARTUP_GRACE_MS, default 60 s): pi was never seen in
+ *      the pane's foreground processes and no sentinel appeared → the
+ *      launch itself died → `no-agent`. The bare-shell failure class.
+ *   3. READ-FAILURE THRESHOLD (`processInfoFailLimit`, default 3): that
+ *      many consecutive process-info failures trigger a pane-existence
+ *      probe — gone → `killed`, alive → keep waiting (failures still
+ *      count toward the deadline).
+ *
+ * Identical logic to ./tmux.ts; only the underlying pane reads differ.
  */
 export async function pollForExit(
   surface: string,
   signal: AbortSignal,
   options: {
-    interval: number;
+    /** Poll cadence. Defaults to the PI_SUBAGENT_POLL_MS knob (1000 ms). */
+    interval?: number;
     sessionFile?: string;
     sentinelFile?: string;
     onTick?: (elapsed: number) => void;
+    maxWaitMs?: number;
+    startupGraceMs?: number;
+    processInfoFailLimit?: number;
   },
 ): Promise<PollResult> {
   const start = Date.now();
+  const bounds = getSubagentPollBounds({
+    pollMs: options.interval,
+    maxWaitMs: options.maxWaitMs,
+    startupGraceMs: options.startupGraceMs,
+    processInfoFailLimit: options.processInfoFailLimit,
+  });
+  const deadline = start + bounds.maxWaitMs;
   let seenAgentProcess = false;
+  let consecutiveReadFails = 0;
 
   for (;;) {
     if (signal.aborted) {
       throw new Error("Aborted while waiting for subagent to finish");
+    }
+
+    // Hard deadline: one final harvest attempt (a sidecar or a screen
+    // sentinel that landed at the wire still produces its real result;
+    // a dead pane reads as killed), then a timeout — never an infinite wait.
+    if (Date.now() >= deadline) {
+      const sidecar = readExitSidecar(options.sessionFile);
+      if (sidecar) return sidecar;
+      if (options.sentinelFile) {
+        try {
+          if (existsSync(options.sentinelFile)) return { reason: "sentinel", exitCode: 0 };
+        } catch {}
+      }
+      try {
+        const screen = await readScreenAsync(surface, 5);
+        const match = screen.match(/__SUBAGENT_DONE_(\d+)__/);
+        if (match) return { reason: "sentinel", exitCode: parseInt(match[1], 10) };
+      } catch {
+        return paneKilledResult();
+      }
+      return timeoutResult();
     }
 
     // Fast path: check for .exit sidecar file (written by the error path)
@@ -483,10 +606,32 @@ export async function pollForExit(
     // lost workers were recovered by hand this way; this makes it
     // automatic.
     const processes = await paneForegroundProcessesAsync(surface, signal);
-    const liveness = updateAgentLiveness(seenAgentProcess, processes);
-    seenAgentProcess = liveness.seenAgent;
-    if (liveness.agentGone) {
-      return agentGoneResult();
+    if (processes === null) {
+      // Read failure (transient server error, or a pane that no longer
+      // answers). After the threshold, probe pane existence: gone → the
+      // killed path; alive → keep waiting, the deadline still bounds it.
+      consecutiveReadFails++;
+      if (consecutiveReadFails >= bounds.processInfoFailLimit) {
+        if (!(await paneExistsAsync(surface, signal))) {
+          return readExitSidecar(options.sessionFile) ?? paneKilledResult();
+        }
+      }
+    } else {
+      consecutiveReadFails = 0;
+      const liveness = updateAgentLiveness(seenAgentProcess, processes);
+      seenAgentProcess = liveness.seenAgent;
+      if (liveness.agentGone) {
+        return agentGoneResult();
+      }
+      // No-sighting grace: a successful foreground read that never listed
+      // pi, with no sentinel and no sidecar, past the grace window means
+      // the launch itself died (bare shell). Bounded, never infinite.
+      if (
+        !seenAgentProcess &&
+        Date.now() - start >= bounds.startupGraceMs
+      ) {
+        return noAgentResult();
+      }
     }
 
     const elapsed = Math.floor((Date.now() - start) / 1000);
@@ -497,7 +642,7 @@ export async function pollForExit(
       const timer = setTimeout(() => {
         signal.removeEventListener("abort", onAbort);
         resolve();
-      }, options.interval);
+      }, bounds.pollMs);
       function onAbort() {
         clearTimeout(timer);
         reject(new Error("Aborted"));

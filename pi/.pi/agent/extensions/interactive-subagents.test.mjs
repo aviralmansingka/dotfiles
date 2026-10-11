@@ -1517,4 +1517,286 @@ esac
 	}
 }
 
+// --- tmux closeTabForPane: list-panes → kill-window, with kill-pane fallback ---
+// The tmux twin of the herdr tab close: resolve the pane's window, kill the
+// window so sibling panes die with it, and fall back to killing just the pane.
+{
+	const tabCloseBin = mkdtempSync(join(tmpdir(), "subagent-tmux-tabclose-"));
+	const tabCloseCapture = join(tabCloseBin, "calls");
+	writeFileSync(
+		join(tabCloseBin, "tmux"),
+		`#!/bin/sh
+printf '%s\\n' "$@" >> "$TAB_CLOSE_CAPTURE"
+printf '%s\\n' --call-- >> "$TAB_CLOSE_CAPTURE"
+case "$1" in
+	list-panes)
+		if [ "$TAB_CLOSE_LIST_FAIL" = 1 ]; then
+			exit 1
+		elif [ "$TAB_CLOSE_EMPTY" = 1 ]; then
+			printf '%s\\n' ''
+		else
+			printf '%s\\n' '@3'
+		fi
+		;;
+esac
+exit 0
+`,
+		{ mode: 0o755 },
+	);
+	const savedTabClosePath = process.env.PATH;
+	process.env.TAB_CLOSE_CAPTURE = tabCloseCapture;
+	process.env.PATH = `${tabCloseBin}:${savedTabClosePath}`;
+	try {
+		const tmuxTabClose = createJiti(import.meta.url, { moduleCache: false })(
+			"./interactive-subagents/pi-extension/subagents/tmux.ts",
+		);
+		const readTabCloseCalls = () =>
+			readFileSync(tabCloseCapture, "utf8")
+				.split("--call--\n")
+				.filter(Boolean)
+				.map((call) => call.trim().split("\n"));
+		tmuxTabClose.closeTabForPane("%12");
+		assert.deepEqual(readTabCloseCalls(), [
+			["list-panes", "-t", "%12", "-F", "#{window_id}"],
+			["kill-window", "-t", "@3"],
+		]);
+		// A failed window lookup falls back to killing just the pane.
+		process.env.TAB_CLOSE_LIST_FAIL = "1";
+		tmuxTabClose.closeTabForPane("%12");
+		delete process.env.TAB_CLOSE_LIST_FAIL;
+		assert.deepEqual(readTabCloseCalls().at(-1), ["kill-pane", "-t", "%12"]);
+		// An empty window id also falls back to the pane kill.
+		process.env.TAB_CLOSE_EMPTY = "1";
+		tmuxTabClose.closeTabForPane("%12");
+		delete process.env.TAB_CLOSE_EMPTY;
+		assert.deepEqual(readTabCloseCalls().at(-1), ["kill-pane", "-t", "%12"]);
+	} finally {
+		process.env.PATH = savedTabClosePath;
+		delete process.env.TAB_CLOSE_CAPTURE;
+		delete process.env.TAB_CLOSE_LIST_FAIL;
+		delete process.env.TAB_CLOSE_EMPTY;
+		rmSync(tabCloseBin, { recursive: true, force: true });
+	}
+}
+
+// --- agent-gone → session harvest → subagent_result steer, end-to-end ---
+// The whole extension loads through the stub aliases (the pi package is
+// stubbed), the real `subagent` tool execute runs against a staged fake-herdr
+// bin, and the done-watcher's liveness fallback (DONE sentinel never on the
+// screen, the pane's pi process seen once then gone) drives the REAL harvest
+// and the REAL subagent_result steer message — the two lost-workers incident
+// path, recovered automatically.
+{
+	const e2eRoot = mkdtempSync(join(tmpdir(), "subagent-agent-gone-"));
+	const e2eBin = join(e2eRoot, "bin");
+	const e2eCapture = join(e2eRoot, "calls");
+	const e2eStageFile = join(e2eRoot, "proc-stage");
+	const e2eSessionDir = join(e2eRoot, "sessions");
+	const e2eConfigDir = join(e2eRoot, "agent-config");
+	mkdirSync(e2eBin, { recursive: true });
+	mkdirSync(e2eSessionDir, { recursive: true });
+	mkdirSync(e2eConfigDir, { recursive: true });
+	const parentSessionFile = join(e2eSessionDir, "parent.jsonl");
+	writeFileSync(
+		parentSessionFile,
+		JSON.stringify({ type: "session", version: 3, id: "parent-id", cwd: e2eRoot, timestamp: new Date().toISOString() }) + "\n",
+	);
+	writeFileSync(
+		join(e2eBin, "herdr"),
+		`#!/bin/sh
+printf '%s\\n' "$@" >> "$E2E_CAPTURE"
+printf '%s\\n' --call-- >> "$E2E_CAPTURE"
+case "$1:$2" in
+	pane:get) printf '%s\\n' '{"result":{"pane":{"pane_id":"wE:p1","tab_id":"wE:t1","workspace_id":"wE"}}}' ;;
+	tab:create) printf '%s\\n' '{"result":{"root_pane":{"pane_id":"wE:p2"}}}' ;;
+	pane:run) printf '%s\\n' '{"result":{}}' ;;
+	agent:get) printf '%s\\n' '{"result":{"agent":{"agent_status":"idle"}}}' ;;
+	agent:prompt) printf '%s\\n' '{"result":{}}' ;;
+	pane:read) printf '%s\\n' "$E2E_SCREEN" ;;
+	pane:process-info)
+		stage=0
+		[ -f "$E2E_PROC_STAGE" ] && stage=$(cat "$E2E_PROC_STAGE")
+		stage=$((stage + 1))
+		printf '%s' "$stage" > "$E2E_PROC_STAGE"
+		if [ "$stage" = "1" ]; then
+			printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"pi","pid":201,"argv":["pi"]}]}}}'
+		else
+			printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"zsh","pid":200,"argv":["zsh"]}]}}}'
+		fi
+		;;
+	*) printf '%s\\n' '{"result":{}}' ;;
+esac
+`,
+		{ mode: 0o755 },
+	);
+	const savedE2EEnv = {
+		PATH: process.env.PATH,
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		HERDR_WORKSPACE_ID: process.env.HERDR_WORKSPACE_ID,
+		TMUX: process.env.TMUX,
+		TMUX_PANE: process.env.TMUX_PANE,
+		PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
+		PI_SUBAGENT_AGENT: process.env.PI_SUBAGENT_AGENT,
+		PI_SUBAGENT_ALLOWED: process.env.PI_SUBAGENT_ALLOWED,
+	};
+	try {
+		process.env.PATH = `${e2eBin}:${savedE2EEnv.PATH}`;
+		process.env.HERDR_ENV = "1";
+		process.env.HERDR_PANE_ID = "wE:p1";
+		delete process.env.HERDR_WORKSPACE_ID;
+		delete process.env.TMUX;
+		delete process.env.TMUX_PANE;
+		process.env.PI_CODING_AGENT_DIR = e2eConfigDir;
+		delete process.env.PI_SUBAGENT_AGENT;
+		delete process.env.PI_SUBAGENT_ALLOWED;
+		process.env.E2E_CAPTURE = e2eCapture;
+		process.env.E2E_PROC_STAGE = e2eStageFile;
+
+		const sentMessages = [];
+		const registeredTools = new Map();
+		const handlers = {};
+		let steerResolve;
+		const steerDone = new Promise((resolve) => { steerResolve = resolve; });
+		const fakePi = {
+			registerTool: (tool) => registeredTools.set(tool.name, tool),
+			registerCommand() {},
+			registerMessageRenderer() {},
+			on: (name, handler) => { handlers[name] = handler; },
+			events: { on() {}, emit() {} },
+			getAllTools: () => [],
+			sendMessage: (message, opts) => {
+				sentMessages.push({ message, opts });
+				if (message.customType === "subagent_result") steerResolve();
+			},
+		};
+		const e2eIndex = createJiti(import.meta.url, {
+			moduleCache: false,
+			alias: {
+				"@earendil-works/pi-coding-agent": join(e2eRoot, "agent.cjs"),
+				"@earendil-works/pi-ai": join(e2eRoot, "ai.cjs"),
+				"@earendil-works/pi-tui": join(e2eRoot, "tui.cjs"),
+			},
+		});
+		// The stub files are recreated here so this instance owns them.
+		writeFileSync(
+			join(e2eRoot, "agent.cjs"),
+			"exports.defineTool = (tool) => tool;\nexports.keyHint = () => 'hint';\n",
+		);
+		writeFileSync(
+			join(e2eRoot, "ai.cjs"),
+			"exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n",
+		);
+		writeFileSync(
+			join(e2eRoot, "tui.cjs"),
+			[
+				"exports.Box = class Box { constructor(...a) { this.a = a; } };",
+				"exports.Text = class Text { constructor(text) { this.text = text; } render() { return String(this.text).split('\\n'); } };",
+				"exports.truncateToWidth = (text, width) => String(text).slice(0, Math.max(0, width));",
+				"exports.visibleWidth = (text) => String(text).length;",
+				"",
+			].join("\n"),
+		);
+		const e2eModule = e2eIndex(
+			new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url).href,
+		);
+		e2eModule.default(fakePi);
+		// session_start installs the module abort signal the watcher polls against.
+		handlers.session_start?.({}, {});
+		const subagentTool = registeredTools.get("subagent");
+		assert.ok(subagentTool, "the subagent tool is registered");
+
+		const ack = await subagentTool.execute(
+			"call-e2e",
+			{ agent: "worker", task: "Summarize the repo." },
+			new AbortController().signal,
+			undefined,
+			{
+				sessionManager: {
+					getSessionFile: () => parentSessionFile,
+					getSessionId: () => "parent-id",
+					getSessionDir: () => e2eSessionDir,
+				},
+				cwd: e2eRoot,
+			},
+		);
+		assert.match(ack.content[0].text, /worker/);
+
+		// The watcher polls at the source's 1 s interval. Its first tick sees
+		// the pane's pi process; fill the child session NOW so the harvest on
+		// the agent-gone tick reads a real transcript.
+		const e2eHooks = e2eModule.__test__;
+		const running = [...e2eHooks.runningSubagents.values()][0];
+		assert.ok(running, "the subagent is registered as running");
+		assert.equal(running.interactive, false, "worker is an auto-exit agent");
+		writeFileSync(
+			running.sessionFile,
+			[
+				JSON.stringify({ type: "session", version: 3, id: "child-id", cwd: e2eRoot, timestamp: new Date().toISOString() }),
+				JSON.stringify({ type: "message", id: "c1", message: { role: "user", content: [{ type: "text", text: "Summarize the repo." }] } }),
+				JSON.stringify({
+					type: "message",
+					id: "c2",
+					message: {
+						role: "assistant",
+						model: "test-model",
+						content: [{ type: "text", text: "All done: 3 files." }],
+						usage: { input: 5, output: 7, totalTokens: 12, cost: { total: 0.1 } },
+					},
+				}),
+			].join("\n") + "\n",
+		);
+
+		// The liveness fallback fires on the second tick → harvest → steer.
+		await Promise.race([
+			steerDone,
+			new Promise((_, reject) => {
+				const timer = setTimeout(
+					() => reject(new Error("subagent_result steer never arrived")),
+					5000,
+				);
+				timer.unref?.();
+			})
+		]);
+		const steer = sentMessages.find((entry) => entry.message.customType === "subagent_result");
+		assert.ok(steer, "the completion arrived as a subagent_result steer");
+		assert.equal(steer.opts.deliverAs, "steer");
+		assert.equal(steer.opts.triggerTurn, true);
+		assert.match(steer.message.content, /Sub-agent "worker" completed/);
+		assert.match(steer.message.content, /All done: 3 files\./, "the summary came from the session harvest, not the screen");
+		assert.equal(steer.message.details.name, "worker");
+		assert.equal(steer.message.details.exitCode, 0);
+		assert.equal(steer.message.details.sessionId, "child-id");
+		assert.ok(steer.message.details.stats, "the harvested stats ride along");
+		assert.equal(steer.message.details.stats.outputTokens, 7);
+
+		// Clean auto-exit → the whole tab closed, never just the root pane.
+		const e2eCalls = readFileSync(e2eCapture, "utf8")
+			.split("--call--\n")
+			.filter(Boolean)
+			.map((call) => call.trim().split("\n"));
+		assert.ok(
+			e2eCalls.some((call) => call[0] === "tab" && call[1] === "close" && call[2] === "wE:t1"),
+			"a clean auto-exit closes the whole tab",
+		);
+		assert.equal(
+			e2eCalls.some((call) => call[0] === "pane" && call[1] === "close" && call[2] === "wE:p2"),
+			false,
+			"the root-pane close is not used for a clean auto-exit",
+		);
+		assert.equal(e2eHooks.runningSubagents.size, 0, "the finished subagent is deregistered");
+
+		// Tear down the widget/status intervals so this process can exit.
+		handlers.session_shutdown?.({}, {});
+	} finally {
+		for (const [key, value] of Object.entries(savedE2EEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		delete process.env.E2E_CAPTURE;
+		delete process.env.E2E_PROC_STAGE;
+		rmSync(e2eRoot, { recursive: true, force: true });
+	}
+}
+
 console.log("interactive-subagents surface smoke passed");

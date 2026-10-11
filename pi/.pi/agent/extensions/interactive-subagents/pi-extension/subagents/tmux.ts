@@ -262,13 +262,62 @@ export function closeTabForPane(paneId: string): void {
 
 // ── Exit polling ──
 
+/** TESTABILITY knobs (the same pattern as bridge.ts's NM_BRIDGE_POLL_MS):
+ *  PI_SUBAGENT_POLL_MS (poll cadence), PI_SUBAGENT_MAX_WAIT_MS (hard
+ *  deadline), PI_SUBAGENT_STARTUP_GRACE_MS (no-sighting grace), and
+ *  PI_SUBAGENT_PROCINFO_FAIL_LIMIT (consecutive read failures before a
+ *  pane-existence probe) override a wait bound so tests run in milliseconds.
+ *  They change no default behavior. Identical contract in ./herdr.ts. */
+export const DEFAULT_SUBAGENT_POLL_MS = 1000;
+export const DEFAULT_SUBAGENT_MAX_WAIT_MS = 30 * 60_000;
+export const DEFAULT_SUBAGENT_STARTUP_GRACE_MS = 60_000;
+export const DEFAULT_SUBAGENT_PROCINFO_FAIL_LIMIT = 3;
+
+function envMs(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 export interface PollResult {
   /** How the subagent exited */
-  reason: "done" | "sentinel" | "error" | "killed";
-  /** Shell exit code. 0 for file-based exits; 130 when the pane was killed. */
-  exitCode: number;
+  reason:
+    | "done"
+    | "sentinel"
+    | "error"
+    | "killed"
+    | "agent-gone"
+    | "no-agent"
+    | "timeout";
+  /** Shell exit code. 0 for file-based exits; 130 when the pane was killed.
+   *  null for timeout/no-agent unless the deadline harvest reveals one. */
+  exitCode: number | null;
   /** Error message if reason is "error" (auto-retry exhausted, provider overload, etc.) */
   errorMessage?: string;
+}
+
+/** Resolved wait bounds shared by pollForExit and the index.ts watcher. */
+export interface SubagentPollBounds {
+  pollMs: number;
+  maxWaitMs: number;
+  startupGraceMs: number;
+  processInfoFailLimit: number;
+}
+
+export function getSubagentPollBounds(
+  overrides?: Partial<SubagentPollBounds>,
+): SubagentPollBounds {
+  return {
+    pollMs: overrides?.pollMs ?? envMs("PI_SUBAGENT_POLL_MS", DEFAULT_SUBAGENT_POLL_MS),
+    maxWaitMs:
+      overrides?.maxWaitMs ?? envMs("PI_SUBAGENT_MAX_WAIT_MS", DEFAULT_SUBAGENT_MAX_WAIT_MS),
+    startupGraceMs:
+      overrides?.startupGraceMs ??
+      envMs("PI_SUBAGENT_STARTUP_GRACE_MS", DEFAULT_SUBAGENT_STARTUP_GRACE_MS),
+    processInfoFailLimit:
+      overrides?.processInfoFailLimit ??
+      envMs("PI_SUBAGENT_PROCINFO_FAIL_LIMIT", DEFAULT_SUBAGENT_PROCINFO_FAIL_LIMIT),
+  };
 }
 
 /**
@@ -308,28 +357,206 @@ function paneKilledResult(): PollResult {
   return { reason: "killed", exitCode: 130 };
 }
 
-export const __pollForExitTest__ = { interpretExitSidecar, paneKilledResult };
+/** Clean completion reported by the liveness fallback: the sentinel was
+ *  never detected, but the pane's pi agent process is gone. */
+function agentGoneResult(): PollResult {
+  return { reason: "agent-gone", exitCode: 0 };
+}
+
+/** Startup death: pi was never seen in the pane's foreground processes and
+ *  no sentinel/sidecar appeared within the startup grace window — the failed
+ *  delegation launch (bare shell) failure class. */
+function noAgentResult(): PollResult {
+  return { reason: "no-agent", exitCode: null };
+}
+
+/** Hard deadline expired while the subagent was still pending (the wedged
+ *  agent failure class). exitCode stays null unless the deadline harvest
+ *  (final sidecar/sentinel check) reveals one. */
+function timeoutResult(): PollResult {
+  return { reason: "timeout", exitCode: null };
+}
+
+// ── Liveness fallback ──
+
+/** True when a foreground-process entry is the subagent pane's pi agent.
+ *  Same matcher as ./herdr.ts (name or argv[0] basename). */
+export function isPiForegroundProcess(proc: { name?: string; argv?: string[] }): boolean {
+  const argv0 = proc?.argv?.[0];
+  const base = typeof argv0 === "string" ? argv0.replace(/^.*[\/\\]/, "") : "";
+  return proc?.name === "pi" || base === "pi";
+}
+
+/** One liveness-fallback state step — identical semantics to ./herdr.ts:
+ *  `processes === null` (transient read failure) keeps the current state
+ *  and never reports gone; seeing the pi agent marks seenAgent; once seen,
+ *  its absence means the agent loop ended (agentGone). It never fires
+ *  before the agent was seen once, so a slow-starting pane cannot
+ *  false-positive. */
+export function updateAgentLiveness(
+  seenAgent: boolean,
+  processes: Array<{ name?: string; argv?: string[] }> | null,
+): { seenAgent: boolean; agentGone: boolean } {
+  if (processes === null) return { seenAgent, agentGone: false };
+  if (processes.some((proc) => isPiForegroundProcess(proc))) {
+    return { seenAgent: true, agentGone: false };
+  }
+  return { seenAgent, agentGone: seenAgent };
+}
+
+/** The pane's foreground process tree, or null when the read fails — the
+ *  tmux analogue of herdr's `pane process-info`. tmux exposes the pane's
+ *  shell pid (`display-message #{pane_pid}`); `ps` then enumerates the
+ *  pane's whole process tree (the shell, the launch script, the pi agent,
+ *  and any tool children it spawned — the pgid-member analogue of herdr's
+ *  foreground_processes, so a child listed alongside pi never counts as
+ *  gone). A missing pane also answers null here — the screen read in the
+ *  same poll tick is what turns that into the killed result. */
+async function paneForegroundProcessesAsync(
+  paneId: string,
+  signal?: AbortSignal,
+): Promise<Array<{ name?: string; argv?: string[] }> | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      "tmux",
+      ["display-message", "-p", "-t", paneId, "#{pane_pid}"],
+      { encoding: "utf8", signal },
+    );
+    const panePid = Number.parseInt(stdout.trim(), 10);
+    if (!Number.isFinite(panePid) || panePid <= 0) return null;
+    const { stdout: psOut } = await execFileAsync(
+      "ps",
+      ["-eo", "pid=,ppid=,args="],
+      { encoding: "utf8", signal },
+    );
+    interface PsProc {
+      pid: number;
+      ppid: number;
+      argv: string[];
+    }
+    const procs: PsProc[] = [];
+    for (const line of psOut.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const pid = Number.parseInt(trimmed, 10);
+      if (!Number.isFinite(pid)) continue;
+      const afterPid = trimmed.slice(String(pid).length).trimStart();
+      const ppid = Number.parseInt(afterPid, 10);
+      if (!Number.isFinite(ppid)) continue;
+      const args = afterPid.slice(String(ppid).length).trim();
+      if (!args) continue;
+      procs.push({ pid, ppid, argv: args.split(/\s+/) });
+    }
+    const byParent = new Map<number, PsProc[]>();
+    for (const proc of procs) {
+      const siblings = byParent.get(proc.ppid);
+      if (siblings) siblings.push(proc);
+      else byParent.set(proc.ppid, [proc]);
+    }
+    const foreground: Array<{ name?: string; argv?: string[] }> = [];
+    const queue: PsProc[] = procs.filter((proc) => proc.pid === panePid);
+    while (queue.length > 0) {
+      const proc = queue.shift()!;
+      foreground.push({ name: proc.argv[0]?.replace(/^.*[\/\\]/, ""), argv: proc.argv });
+      queue.push(...(byParent.get(proc.pid) ?? []));
+    }
+    return foreground.length > 0 ? foreground : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Does the pane still exist? Probed after repeated foreground read
+ *  failures to tell a transient read problem from a destroyed pane. */
+async function paneExistsAsync(paneId: string, signal?: AbortSignal): Promise<boolean> {
+  try {
+    await execFileAsync(
+      "tmux",
+      ["display-message", "-p", "-t", paneId, "#{pane_id}"],
+      { encoding: "utf8", signal },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const __pollForExitTest__ = {
+  interpretExitSidecar,
+  paneKilledResult,
+  agentGoneResult,
+  noAgentResult,
+  timeoutResult,
+  updateAgentLiveness,
+  isPiForegroundProcess,
+};
 
 /**
- * Poll until the subagent exits. Checks for a `.exit` sidecar file first
- * (written by the error path), falling back to the terminal sentinel for
- * clean-completion and crash detection.
+ * Poll until the subagent exits — but never forever. Identical logic to
+ * ./herdr.ts (sidecar → sentinel file → screen sentinel → liveness
+ * fallback) plus three hard bounds:
+ *
+ *   1. HARD DEADLINE (`maxWaitMs`, env PI_SUBAGENT_MAX_WAIT_MS, default
+ *      30 min): on expiry, one final harvest attempt (sidecar + sentinel)
+ *      and a `timeout` result. The wedged-agent failure class.
+ *   2. NO-SIGHTING GRACE (`startupGraceMs`, env
+ *      PI_SUBAGENT_STARTUP_GRACE_MS, default 60 s): pi was never seen in
+ *      the pane's foreground processes and no sentinel appeared → the
+ *      launch itself died → `no-agent`. The bare-shell failure class.
+ *   3. READ-FAILURE THRESHOLD (`processInfoFailLimit`, default 3): that
+ *      many consecutive foreground-read failures trigger a pane-existence
+ *      probe — gone → `killed`, alive → keep waiting (failures still
+ *      count toward the deadline).
  */
 export async function pollForExit(
   surface: string,
   signal: AbortSignal,
   options: {
-    interval: number;
+    /** Poll cadence. Defaults to the PI_SUBAGENT_POLL_MS knob (1000 ms). */
+    interval?: number;
     sessionFile?: string;
     sentinelFile?: string;
     onTick?: (elapsed: number) => void;
+    maxWaitMs?: number;
+    startupGraceMs?: number;
+    processInfoFailLimit?: number;
   },
 ): Promise<PollResult> {
   const start = Date.now();
+  const bounds = getSubagentPollBounds({
+    pollMs: options.interval,
+    maxWaitMs: options.maxWaitMs,
+    startupGraceMs: options.startupGraceMs,
+    processInfoFailLimit: options.processInfoFailLimit,
+  });
+  const deadline = start + bounds.maxWaitMs;
+  let seenAgentProcess = false;
+  let consecutiveReadFails = 0;
 
   for (;;) {
     if (signal.aborted) {
       throw new Error("Aborted while waiting for subagent to finish");
+    }
+
+    // Hard deadline: one final harvest attempt (a sidecar or a screen
+    // sentinel that landed at the wire still produces its real result;
+    // a dead pane reads as killed), then a timeout — never an infinite wait.
+    if (Date.now() >= deadline) {
+      const sidecar = readExitSidecar(options.sessionFile);
+      if (sidecar) return sidecar;
+      if (options.sentinelFile) {
+        try {
+          if (existsSync(options.sentinelFile)) return { reason: "sentinel", exitCode: 0 };
+        } catch {}
+      }
+      try {
+        const screen = await readScreenAsync(surface, 5);
+        const match = screen.match(/__SUBAGENT_DONE_(\d+)__/);
+        if (match) return { reason: "sentinel", exitCode: parseInt(match[1], 10) };
+      } catch {
+        return paneKilledResult();
+      }
+      return timeoutResult();
     }
 
     // Fast path: check for .exit sidecar file (written by the error path)
@@ -357,6 +584,36 @@ export async function pollForExit(
       return readExitSidecar(options.sessionFile) ?? paneKilledResult();
     }
 
+    // Liveness fallback — see ./herdr.ts for the full rationale.
+    const processes = await paneForegroundProcessesAsync(surface, signal);
+    if (processes === null) {
+      // Read failure (transient, or a pane that no longer answers). After
+      // the threshold, probe pane existence: gone → the killed path;
+      // alive → keep waiting, the deadline still bounds it.
+      consecutiveReadFails++;
+      if (consecutiveReadFails >= bounds.processInfoFailLimit) {
+        if (!(await paneExistsAsync(surface, signal))) {
+          return readExitSidecar(options.sessionFile) ?? paneKilledResult();
+        }
+      }
+    } else {
+      consecutiveReadFails = 0;
+      const liveness = updateAgentLiveness(seenAgentProcess, processes);
+      seenAgentProcess = liveness.seenAgent;
+      if (liveness.agentGone) {
+        return agentGoneResult();
+      }
+      // No-sighting grace: a successful foreground read that never listed
+      // pi, with no sentinel and no sidecar, past the grace window means
+      // the launch itself died (bare shell). Bounded, never infinite.
+      if (
+        !seenAgentProcess &&
+        Date.now() - start >= bounds.startupGraceMs
+      ) {
+        return noAgentResult();
+      }
+    }
+
     const elapsed = Math.floor((Date.now() - start) / 1000);
     options.onTick?.(elapsed);
 
@@ -365,7 +622,7 @@ export async function pollForExit(
       const timer = setTimeout(() => {
         signal.removeEventListener("abort", onAbort);
         resolve();
-      }, options.interval);
+      }, bounds.pollMs);
       function onAbort() {
         clearTimeout(timer);
         reject(new Error("Aborted"));

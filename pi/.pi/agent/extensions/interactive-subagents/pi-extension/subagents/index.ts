@@ -25,10 +25,13 @@ import {
   waitForAgentReady,
   sendAgentPrompt,
   pollForExit,
+  getSubagentPollBounds,
   closeSurface,
   closeTabForPane,
   shellEscape,
   readScreen,
+  type PollResult,
+  type SubagentPollBounds,
 } from "./surface.ts";
 
 import {
@@ -88,6 +91,7 @@ const SUBAGENTS_DIR = dirname(fileURLToPath(import.meta.url));
 const WIDGET_INTERVAL_KEY = Symbol.for("pi-subagents/widget-interval");
 const STATUS_INTERVAL_KEY = Symbol.for("pi-subagents/status-interval");
 const POLL_ABORT_KEY = Symbol.for("pi-subagents/poll-abort-controller");
+const WATCHDOG_INTERVAL_KEY = Symbol.for("pi-subagents/watchdog-interval");
 
 {
   const prevInterval = (globalThis as any)[WIDGET_INTERVAL_KEY];
@@ -99,6 +103,11 @@ const POLL_ABORT_KEY = Symbol.for("pi-subagents/poll-abort-controller");
   if (prevStatusInterval) {
     clearInterval(prevStatusInterval);
     (globalThis as any)[STATUS_INTERVAL_KEY] = null;
+  }
+  const prevWatchdogInterval = (globalThis as any)[WATCHDOG_INTERVAL_KEY];
+  if (prevWatchdogInterval) {
+    clearInterval(prevWatchdogInterval);
+    (globalThis as any)[WATCHDOG_INTERVAL_KEY] = null;
   }
   const prevAbort = (globalThis as any)[POLL_ABORT_KEY] as AbortController | undefined;
   if (prevAbort) prevAbort.abort();
@@ -677,13 +686,37 @@ function formatWidgetRightLabel(snapshot: StatusSnapshot): string {
 function resolveResultPresentation(
   result: Pick<
     SubagentResult,
-    "exitCode" | "elapsed" | "summary" | "sessionFile" | "sessionId" | "errorMessage" | "killed"
+    "exitCode" | "elapsed" | "summary" | "sessionFile" | "sessionId" | "errorMessage" | "killed" | "reason"
   >,
   name: string,
 ): string {
   // Name is the persistent handle: the same name steers a running subagent or
   // resumes a finished one, so follow-ups always reference it.
   const sessionRef = `\n\nFollow up with subagent_message({ name: "${name}", message: "…" })`;
+
+  if (result.reason === "timeout") {
+    // The wedged-agent failure class: the watcher gave up at its hard
+    // deadline and closed the pane. Harvest whatever the session file
+    // holds so the partial work is not lost.
+    return (
+      `Sub-agent "${name}" timed out after ${formatElapsed(result.elapsed)} and its pane was closed ` +
+      `at the PI_SUBAGENT_MAX_WAIT_MS deadline.` +
+      (result.summary && !result.summary.startsWith("Sub-agent timed out")
+        ? ` Partial results attached:\n\n${result.summary}`
+        : `\n\n${result.summary}`) +
+      `\n\nDo not wait further: resume the session with subagent_message (it replays\nwhat was already written) or spawn a fresh subagent.${sessionRef}`
+    );
+  }
+
+  if (result.reason === "no-agent") {
+    // The failed-launch failure class: pi never started in the pane.
+    return (
+      `Sub-agent "${name}" never started — no pi process appeared in its pane within ` +
+      `the PI_SUBAGENT_STARTUP_GRACE_MS window (the launch itself died; the pane held only a shell).` +
+      `\n\n${result.summary}` +
+      `\n\nNothing ran, so there is nothing to resume: spawn a fresh subagent instead.${sessionRef}`
+    );
+  }
 
   if (result.killed) {
     return (
@@ -720,6 +753,11 @@ interface SubagentResult {
   name: string;
   task: string;
   summary: string;
+  /** How the watcher observed the end: done/sentinel/error/killed/
+   *  agent-gone/no-agent/timeout (pollForExit's reason). Rides the
+   *  subagent_result steer as `details.status` so the captain sees WHY a
+   *  subagent died, not just that it did. */
+  reason?: string;
   sessionFile?: string;
   /** Canonical session header id, used for follow-ups via subagent_message. */
   sessionId?: string;
@@ -1726,8 +1764,16 @@ async function launchSubagentOnSurface(
  */
 export function shouldCloseSubagentTab(
   interactive: boolean,
-  result: { killed?: boolean; exitCode: number; errorMessage?: string },
+  result: { killed?: boolean; exitCode: number | null; errorMessage?: string; reason?: string },
 ): boolean {
+  // timeout/no-agent (non-interactive): the pane's pi is dead or wedged —
+  // nothing to inspect, and sibling panes (an orchestrator's attach pane)
+  // must not orphan the tab, so the whole tab closes even though the exit
+  // is not clean. Interactive subagents keep the root-pane close so the
+  // human can still inspect the pane.
+  if (!interactive && (result.reason === "timeout" || result.reason === "no-agent")) {
+    return true;
+  }
   return !interactive && !result.killed && result.exitCode === 0 && !result.errorMessage;
 }
 
@@ -1737,7 +1783,7 @@ export function shouldCloseSubagentTab(
  *  historical root-pane close. */
 function closeFinishedSubagentSurface(
   running: RunningSubagent,
-  result: { killed?: boolean; exitCode: number; errorMessage?: string },
+  result: { killed?: boolean; exitCode: number | null; errorMessage?: string; reason?: string },
 ): void {
   try {
     if (shouldCloseSubagentTab(running.interactive, result)) {
