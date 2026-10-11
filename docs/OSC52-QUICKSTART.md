@@ -135,10 +135,12 @@ infocmp -x xterm-ghostty | ssh remote-server "tic -x -"
 stow ghostty tmux nvim
 ```
 
-### 2. Deploy SSH Config (Optional)
-```bash
-stow ssh
-```
+### 2. SSH Config: Nothing to Deploy
+
+This repo ships no `ssh` stow package. The SSH configuration lives in the
+host-side `~/.ssh/config` and needs no OSC52 directives - the escape
+sequences pass through SSH transparently (see the SSH Configuration section
+of [OSC52.md](OSC52.md)).
 
 ### 3. Restart Applications
 - Restart Tmux: `tmux kill-server && tmux new-session`
