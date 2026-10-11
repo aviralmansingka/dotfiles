@@ -1,6 +1,10 @@
 frame = "buttonless"
 title-hidden = true
-neovim-bin = "/Users/aviral/.local/share/bob/nvim-bin/nvim"
+# neovim-bin is intentionally unset: neovide never expands ~ or $HOME in
+# config paths, so an absolute user path was the only literal form - and it
+# broke on any other username/host. Unset, neovide resolves `nvim` from
+# PATH; ~/.local/bin/nvim (a bob symlink, on PATH via .zshenv for every
+# zsh, including neovide's macOS login-shell launch wrapper) answers it.
 
 [font]
 size = 13
