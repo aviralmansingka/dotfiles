@@ -59,14 +59,22 @@ import {
 //     reaches a terminal outcome (or is aborted).
 //   - `/no-mistakes` focuses that pane, or re-opens it (attached to the
 //     active daemon run) when it was closed.
+//   - In a Herdr TUI session, the watcher also drives the two Herdr
+//     visibility surfaces for the tracked run: the interactive bridge that
+//     hosts daemon step agents as visible subagent tabs (bridge.ts) and the
+//     pane-state report — phase labels plus the CI red state (herdr-report.ts).
+//     Outside Herdr both are no-ops.
 //
 // The status monitor (1s `axi status` polling while a pipeline call is in
 // flight) is kept: it feeds the shared activity UI (NM_ACTIVITY_UPDATE_EVENT,
 // consumed by interactive-subagents) exactly as before.
 //
-// Session shutdown / extension reload tears down the watcher but leaves the
-// background axi clients and the attach pane alone — the daemon run keeps its
-// state, a human can keep watching, and a later session reattaches.
+// Session shutdown / extension reload tears down the watcher, closes every
+// step-agent tab, and releases the pane-state labels — a live tab owns its
+// pi session file, so a later headless `--session` resume must never meet a
+// second writer. The background axi clients and the attach pane are still
+// left alone — the daemon run keeps its state, a human can keep watching,
+// and a later session reattaches (headless for any remaining steps).
 // ---------------------------------------------------------------------------
 
 const HERDR_TIMEOUT_MS = 5000;

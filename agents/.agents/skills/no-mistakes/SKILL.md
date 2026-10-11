@@ -61,6 +61,9 @@ human may watch or steer the tab but never drives the pipeline from it.
 Fixer sessions reuse one tab across fix rounds; cold review turns get a fresh
 tab per pass. When the triggering session dies, tabs close and later steps
 fall back to headless pi - so a step agent must never assume a tab exists.
+While a run is active, the triggering session's own pane also shows the
+current pipeline phase as its state label (`nm: <phase>`), and the CI phase
+drives Herdr's red blocked state; both clear when the run ends.
 
 ## Two ways to invoke
 
