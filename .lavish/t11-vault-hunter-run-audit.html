@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>T11 Vault Hunter Run Audit</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg0: #1d2021;
+      --bg1: #282828;
+      --bg2: #32302f;
+      --bg3: #3c3836;
+      --border: #504945;
+      --ghost: #665c54;
+      --muted: #928374;
+      --fg0: #fbf1c7;
+      --fg1: #ebdbb2;
+      --orange: #f28534;
+      --yellow: #e9b143;
+      --green: #b8bb26;
+      --aqua: #80aa9e;
+      --purple: #d3869b;
+      --red: #f2594b;
+      --shadow: 0 28px 90px rgb(0 0 0 / 44%);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { background: var(--bg0); }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 10% 0%, rgb(128 170 158 / 10%), transparent 34rem),
+        radial-gradient(circle at 92% 8%, rgb(242 133 52 / 9%), transparent 32rem),
+        var(--bg0);
+      color: var(--fg1);
+      font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    code {
+      color: var(--aqua);
+      overflow-wrap: anywhere;
+    }
+
+    main {
+      width: min(1240px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 42px 0 96px;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1, h2, h3 {
+      color: var(--fg0);
+      line-height: 1.16;
+    }
+
+    h1 {
+      max-width: 1000px;
+      margin-bottom: 14px;
+      font-size: clamp(2.35rem, 6vw, 5rem);
+      letter-spacing: -.055em;
+    }
+
+    h2 {
+      margin-bottom: 7px;
+      font-size: clamp(1.45rem, 3vw, 2.15rem);
+      letter-spacing: -.03em;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
+    .eyebrow {
+      margin-bottom: 16px;
+      color: var(--orange);
+      font: 800 12px/1 ui-monospace, monospace;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .lede {
+      max-width: 850px;
+      margin-bottom: 0;
+      color: #c7bfa5;
+      font-size: 1.08rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 22px;
+    }
+
+    .chip, .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font: 700 11px/1.2 ui-monospace, monospace;
+      letter-spacing: .025em;
+    }
+
+    .chip { padding: 7px 10px; color: var(--muted); background: rgb(50 48 47 / 78%); }
+    .chip strong { color: var(--fg0); }
+    .status { padding: 5px 8px; white-space: nowrap; }
+    .status.good { border-color: rgb(184 187 38 / 35%); color: var(--green); background: rgb(53 61 37 / 72%); }
+    .status.warn { border-color: rgb(233 177 67 / 36%); color: var(--yellow); background: rgb(63 53 29 / 74%); }
+    .status.bad { border-color: rgb(242 89 75 / 38%); color: #ff7b6f; background: rgb(61 31 31 / 78%); }
+    .status.info { border-color: rgb(128 170 158 / 38%); color: var(--aqua); background: rgb(37 52 51 / 78%); }
+
+    section { min-width: 0; margin-top: 52px; }
+
+    .section-head {
+      display: flex;
+      min-width: 0;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+
+    .section-head > * { min-width: 0; }
+    .section-head p { max-width: 620px; margin-bottom: 0; color: var(--muted); text-align: right; }
+
+    .terminal {
+      overflow: hidden;
+      margin-top: 34px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: var(--bg1);
+      box-shadow: var(--shadow);
+    }
+
+    .term-bar {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--border);
+      background: #242424;
+      color: var(--muted);
+      font: 12px/1 ui-monospace, monospace;
+    }
+
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
+    .term-title { min-width: 0; margin-left: 5px; overflow: hidden; color: var(--fg1); text-overflow: ellipsis; white-space: nowrap; }
+    .term-path { min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .verdict {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: minmax(0, 1.35fr) minmax(250px, .65fr);
+      gap: 0;
+    }
+
+    .verdict-copy { min-width: 0; padding: clamp(24px, 5vw, 46px); }
+    .prompt { color: var(--green); font: 800 13px/1.4 ui-monospace, monospace; }
+    .prompt::before { content: "❯ "; color: var(--orange); }
+    .verdict-copy h2 { max-width: 760px; margin-top: 12px; font-size: clamp(1.55rem, 3.4vw, 2.65rem); }
+    .verdict-copy p { max-width: 720px; margin-bottom: 0; color: #c7bfa5; }
+
+    .score {
+      display: grid;
+      min-width: 0;
+      place-items: center;
+      padding: 28px;
+      border-left: 1px solid var(--border);
+      background: linear-gradient(145deg, rgb(242 133 52 / 8%), transparent), var(--bg2);
+      text-align: center;
+    }
+
+    .score strong { display: block; color: var(--yellow); font: 900 clamp(3rem, 8vw, 6rem)/.9 ui-monospace, monospace; letter-spacing: -.08em; }
+    .score span { display: block; margin-top: 12px; color: var(--muted); font: 700 11px/1.3 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+
+    .grid {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--bg2);
+    }
+
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-6 { grid-column: span 6; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+
+    .metric { position: relative; overflow: hidden; }
+    .metric::after {
+      position: absolute;
+      right: 12px;
+      bottom: -31px;
+      color: rgb(235 219 178 / 4%);
+      font: 900 92px/1 ui-monospace, monospace;
+      content: attr(data-glyph);
+    }
+    .metric strong { position: relative; z-index: 1; display: block; color: var(--fg0); font: 900 2rem/1 ui-monospace, monospace; }
+    .metric span { position: relative; z-index: 1; display: block; margin-top: 9px; color: var(--muted); font-size: .88rem; }
+
+    .timeline {
+      position: relative;
+      padding: 8px 0 0 34px;
+    }
+
+    .timeline::before {
+      position: absolute;
+      top: 18px;
+      bottom: 18px;
+      left: 10px;
+      width: 1px;
+      background: var(--border);
+      content: "";
+    }
+
+    .event {
+      position: relative;
+      min-width: 0;
+      margin: 0 0 14px;
+      padding: 16px 17px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg2);
+    }
+
+    .event::before {
+      position: absolute;
+      top: 19px;
+      left: -31px;
+      width: 11px;
+      height: 11px;
+      border: 3px solid var(--bg0);
+      border-radius: 50%;
+      background: var(--muted);
+      box-shadow: 0 0 0 1px var(--border);
+      content: "";
+    }
+
+    .event.ok::before { background: var(--green); }
+    .event.warn::before { background: var(--yellow); }
+    .event.fail::before { background: var(--red); }
+    .event.active::before { background: var(--aqua); box-shadow: 0 0 0 1px var(--aqua), 0 0 18px rgb(128 170 158 / 65%); }
+
+    .event-top {
+      display: flex;
+      min-width: 0;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .event time { color: var(--purple); font: 700 11px/1.4 ui-monospace, monospace; white-space: nowrap; }
+    .event h3 { margin-bottom: 4px; }
+    .event p { margin-bottom: 0; color: #c7bfa5; }
+    .nested { margin: 10px 0 0; padding-left: 19px; color: var(--muted); }
+    .nested li + li { margin-top: 4px; }
+    .nested li::marker { color: var(--aqua); }
+
+    .compare-card h3 { display: flex; align-items: center; gap: 8px; }
+    .compare-card ul { margin: 12px 0 0; padding-left: 20px; color: #c7bfa5; }
+    .compare-card li + li { margin-top: 8px; }
+    .compare-card.good-side { border-top: 3px solid var(--green); }
+    .compare-card.bad-side { border-top: 3px solid var(--red); }
+
+    .state-stack { display: grid; gap: 9px; }
+    .state-row {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: minmax(160px, .65fr) minmax(0, 1.35fr);
+      gap: 16px;
+      align-items: start;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .state-row:last-child { border-bottom: 0; }
+    .state-label { color: var(--muted); font: 700 12px/1.5 ui-monospace, monospace; }
+    .state-value { min-width: 0; color: var(--fg1); }
+
+    .flow {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--bg1);
+    }
+
+    .flow-item { position: relative; min-width: 0; padding: 17px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg2); }
+    .flow-item:not(:last-child)::after {
+      position: absolute;
+      top: 50%;
+      right: -21px;
+      color: var(--ghost);
+      font: 900 19px/1 ui-monospace, monospace;
+      content: "→";
+      transform: translateY(-50%);
+    }
+    .flow-item strong { display: block; color: var(--fg0); }
+    .flow-item p { margin: 6px 0 0; color: var(--muted); font-size: .9rem; }
+    .flow-item.broken { border-color: rgb(242 89 75 / 48%); background: linear-gradient(120deg, rgb(242 89 75 / 8%), transparent), var(--bg2); }
+
+    .table-wrap {
+      min-width: 0;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--bg1);
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { min-width: 0; padding: 13px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { color: var(--muted); background: #242424; font: 800 11px/1.3 ui-monospace, monospace; letter-spacing: .07em; text-transform: uppercase; }
+    td:first-child { color: var(--fg0); font-weight: 700; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: rgb(60 56 54 / 52%); }
+
+    details {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg1);
+    }
+    details + details { margin-top: 10px; }
+    summary { cursor: pointer; padding: 15px 17px; color: var(--fg0); font-weight: 750; }
+    details[open] summary { border-bottom: 1px solid var(--border); }
+    .details-body { padding: 16px 17px; color: #c7bfa5; }
+    .details-body p:last-child { margin-bottom: 0; }
+
+    .next-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: next;
+    }
+    .next-list li {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 12px;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--border);
+      counter-increment: next;
+    }
+    .next-list li:last-child { border-bottom: 0; }
+    .next-list li::before {
+      display: grid;
+      width: 29px;
+      height: 29px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--orange);
+      background: var(--bg1);
+      font: 800 12px/1 ui-monospace, monospace;
+      content: counter(next, decimal-leading-zero);
+    }
+    .next-list strong { color: var(--fg0); }
+    .next-list p { margin: 3px 0 0; color: var(--muted); }
+
+    footer { margin-top: 54px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font: 12px/1.6 ui-monospace, monospace; }
+
+    @media (max-width: 900px) {
+      .span-3, .span-4, .span-6, .span-8 { grid-column: span 12; }
+      .verdict { grid-template-columns: 1fr; }
+      .score { border-top: 1px solid var(--border); border-left: 0; }
+      .flow { grid-template-columns: 1fr; gap: 26px; }
+      .flow-item:not(:last-child)::after { top: auto; right: 50%; bottom: -23px; content: "↓"; transform: translateX(50%); }
+    }
+
+    @media (max-width: 640px) {
+      main { width: min(100% - 20px, 1240px); padding-top: 28px; }
+      .section-head { display: block; }
+      .section-head p { margin-top: 8px; text-align: left; }
+      .term-path { display: none; }
+      .state-row { grid-template-columns: 1fr; gap: 5px; }
+      .event-top { display: block; }
+      .event time { display: block; margin-top: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">Vault Hunter · Run audit · T11</div>
+      <h1>Strong output. Weak run-state integrity.</h1>
+      <p class="lede">
+        I classified all 30 Codex traces that reference T11, then checked the canonical Task and Feature,
+        the backlog checkpoint, the Vault Hunter Run Registry, live Herdr state, the feature worktree,
+        and PR&nbsp;#87. The implementation effort was substantial; the orchestration contract did not
+        remain trustworthy end to end.
+      </p>
+      <div class="chips">
+        <span class="chip"><strong>30</strong> matching traces</span>
+        <span class="chip"><strong>1</strong> primary Vault Hunter run</span>
+        <span class="chip"><strong>3</strong> invalid invisible subagents</span>
+        <span class="chip"><strong>3</strong> related issue runs</span>
+        <span class="chip"><strong>PR #87</strong> open · CI green · behind main</span>
+      </div>
+    </header>
+
+    <div class="terminal">
+      <div class="term-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">pi-agent — vault-hunter audit</span>
+        <span class="term-path">feature/pi-skills-tools · T11</span>
+      </div>
+      <div class="verdict">
+        <div class="verdict-copy">
+          <div class="prompt">evaluate --run t11 --last-vault-hunter-usage</div>
+          <h2>Mixed result — useful engineering, unhealthy lifecycle.</h2>
+          <p>
+            The run created a real Atlas binary, routed independent reviews, and wrote several durable
+            checkpoints. But it also drifted into invisible agents, overclaimed state, let the Registry,
+            backlog, and Task diverge, cleaned workers before the run was actually finished, and left the
+            live Atlas pane unable to stay connected.
+          </p>
+        </div>
+        <div class="score">
+          <div>
+            <strong>5/10</strong>
+            <span>Do not close this run yet</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section>
+      <div class="grid">
+        <div class="card metric span-3" data-glyph="✓">
+          <strong>8</strong>
+          <span>durable vault checkpoints identified on remote main</span>
+        </div>
+        <div class="card metric span-3" data-glyph="↯">
+          <strong>3</strong>
+          <span>authoritative state surfaces currently disagree</span>
+        </div>
+        <div class="card metric span-3" data-glyph="×">
+          <strong>6</strong>
+          <span>registered worker references now stale after cleanup</span>
+        </div>
+        <div class="card metric span-3" data-glyph="…">
+          <strong>1</strong>
+          <span>open PR, green checks, no auto-merge, behind main</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Timeline</div>
+          <h2>Where the run held—and where it broke</h2>
+        </div>
+        <p>The sequence matters: several mistakes were corrected locally, but the final state was never reconciled globally.</p>
+      </div>
+
+      <div class="timeline">
+        <article class="event warn">
+          <div class="event-top">
+            <div>
+              <h3>Spec and design precede Vault Hunter</h3>
+              <p>A separate <code>$grill-with-docs</code> session shaped T11. It belongs to the T11 history, but it was not part of the Vault Hunter run.</p>
+            </div>
+            <time>PRE-RUN</time>
+          </div>
+          <ul class="nested">
+            <li>Trace <code>019f9839-276a-7823-a647-ff0fcd464a65</code></li>
+            <li>Useful design context; no lifecycle guarantees yet</li>
+          </ul>
+        </article>
+
+        <article class="event ok">
+          <div class="event-top">
+            <div>
+              <h3>Invocation and checkpoint zero are clean</h3>
+              <p>The primary session invoked <code>$vault-hunter</code> from the Feature checklist and committed the start before substantive work.</p>
+            </div>
+            <time>08:54Z · START</time>
+          </div>
+          <ul class="nested">
+            <li>Primary trace <code>019f987b-9e28-7933-ba49-35ad875be043</code></li>
+            <li>Backlog entry created in <code>3_logs/2026-30/backlog.md</code></li>
+            <li>Vault commits <code>6a24d8e</code> and <code>ad8540f</code></li>
+          </ul>
+        </article>
+
+        <article class="event warn">
+          <div class="event-top">
+            <div>
+              <h3>The driver implements and tests directly</h3>
+              <p>Early V01–V10 work happened in the primary session. That matched the older skill shape, but conflicts with the later driver-only contract the user requested and the session reloaded.</p>
+            </div>
+            <time>EARLY EXECUTION</time>
+          </div>
+          <ul class="nested">
+            <li>Substantial implementation progress and multiple green verifier passes</li>
+            <li>High driver context load: 57 shell calls, 89 waits, 11 goals created</li>
+          </ul>
+        </article>
+
+        <article class="event fail">
+          <div class="event-top">
+            <div>
+              <h3>Three invisible built-in subagents are dispatched</h3>
+              <p>They inherited the primary pane and were not individually visible to Herdr. This violated the user’s visibility requirement.</p>
+            </div>
+            <time>11:54 · CORRECTED</time>
+          </div>
+          <ul class="nested">
+            <li>Implement: <code>019f9920-5776-…</code></li>
+            <li>Audit: <code>019f9920-6d9b-…</code></li>
+            <li>Test design: <code>019f9920-8625-…</code></li>
+            <li>All three were stopped before editing after the user called out the problem</li>
+          </ul>
+        </article>
+
+        <article class="event ok">
+          <div class="event-top">
+            <div>
+              <h3>Dispatch moves into named Herdr-visible Codex sessions</h3>
+              <p>Implementation, review, dispatch expertise, refactor, convergence, verification, and review-fix work became visible full sessions.</p>
+            </div>
+            <time>AFTER CORRECTION</time>
+          </div>
+          <ul class="nested">
+            <li>The first worker tab briefly used a blank root plus split; that too was corrected</li>
+            <li>Revised driver-only skill reloaded at 12:14</li>
+            <li>Independent review rejected real defects, which were routed back and fixed</li>
+          </ul>
+        </article>
+
+        <article class="event ok">
+          <div class="event-top">
+            <div>
+              <h3>Engineering output converges meaningfully</h3>
+              <p>The branch accumulated working layout, navigation, read-only behavior, lifecycle, participant state, Herdr events, Sidekick integration, and review-fix commits.</p>
+            </div>
+            <time>IMPLEMENTATION</time>
+          </div>
+          <ul class="nested">
+            <li>Review convergence continued through <code>0868c61</code>, <code>36a02c3</code>, <code>dc4705e</code>, and <code>6b29960</code></li>
+            <li>Related worker-lifecycle issue landed independently in PR&nbsp;#86</li>
+          </ul>
+        </article>
+
+        <article class="event fail">
+          <div class="event-top">
+            <div>
+              <h3>Registry, backlog, and canonical Task split apart</h3>
+              <p>The run’s authoritative surfaces no longer describe the same lifecycle. A concise handoff cannot repair this ambiguity by itself.</p>
+            </div>
+            <time>STATE SPLIT-BRAIN</time>
+          </div>
+          <ul class="nested">
+            <li>Registry: V11 active, V05 pending, later stages pending</li>
+            <li>Backlog: V11 and V05 done, Review Convergence active</li>
+            <li>Task decomposition: T13 in progress; T14 and T15 pending</li>
+          </ul>
+        </article>
+
+        <article class="event fail">
+          <div class="event-top">
+            <div>
+              <h3>Worker cleanup happens before run completion</h3>
+              <p>Six participant references became stale. The Atlas companion still depends on querying those Herdr panes, so the right split now exits after its reconnect window.</p>
+            </div>
+            <time>LIFECYCLE FAILURE</time>
+          </div>
+          <ul class="nested">
+            <li>Layout survives; functioning Atlas does not</li>
+            <li>Observed error: <code>failed to decode pane get error</code></li>
+            <li>Supported reconciliation found 6 stale, 0 live, 0 unexpected workers</li>
+          </ul>
+        </article>
+
+        <article class="event active">
+          <div class="event-top">
+            <div>
+              <h3>The design is now pivoting away from Herdr liveness</h3>
+              <p>The live T11 driver has been asked to redesign Atlas so sessions do not need to remain alive in Herdr. That is the right issue to solve next, but it means this usage is still active—not a completed success.</p>
+            </div>
+            <time>NOW · ACTIVE</time>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Comparison</div>
+          <h2>What worked vs. what undermined trust</h2>
+        </div>
+        <p>The failure is primarily orchestration integrity, not lack of effort or implementation volume.</p>
+      </div>
+      <div class="grid">
+        <article class="card compare-card good-side span-6">
+          <h3><span class="status good">PASSING</span> Strong parts of the usage</h3>
+          <ul>
+            <li>Started from a canonical Feature reference and wrote invocation state first.</li>
+            <li>Created one primary backlog entry with a useful nested execution timeline.</li>
+            <li>Produced real code and a long, inspectable commit trail.</li>
+            <li>Moved to visible Codex workers after correction and kept the main driver pane.</li>
+            <li>Used independent review; rejection findings were not ignored.</li>
+            <li>Wrote multiple evidence and task-decomposition checkpoints to remote vault main.</li>
+            <li>Kept unrelated dirty files out of the feature changes.</li>
+          </ul>
+        </article>
+        <article class="card compare-card bad-side span-6">
+          <h3><span class="status bad">FAILING</span> Contract and lifecycle defects</h3>
+          <ul>
+            <li>First dispatch used invisible built-in subagents.</li>
+            <li>The driver did substantive work before the stricter contract was reloaded.</li>
+            <li>Completion was overstated before independent review and live evidence agreed.</li>
+            <li>Explicit Run Registry transitions were not maintained.</li>
+            <li>Cleanup occurred while goals, PR landing, and final checkpointing remained open.</li>
+            <li>Atlas incorrectly treats live Herdr worker panes as durable run state.</li>
+            <li>No completed checkpoint two; PR #87 is still open and behind main.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">State model</div>
+          <h2>The critical defect is split-brain truth</h2>
+        </div>
+        <p>The same run is simultaneously “active,” “done,” and “pending,” depending on which canonical-looking surface is read.</p>
+      </div>
+      <div class="flow">
+        <div class="flow-item broken">
+          <strong>Run Registry</strong>
+          <p><span class="status bad">STALE</span> V11 active · V05 pending · revision 9 · last updated 12:39 EDT</p>
+        </div>
+        <div class="flow-item broken">
+          <strong>Backlog checkpoint</strong>
+          <p><span class="status warn">DRIFTED</span> V11 done · V05 done · Review Convergence active</p>
+        </div>
+        <div class="flow-item broken">
+          <strong>Canonical Task split</strong>
+          <p><span class="status info">CURRENT</span> T13 in progress · T14 pending · T15 pending</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Current snapshot</div>
+          <h2>What is true right now</h2>
+        </div>
+        <p>These are live-state findings, separate from what any earlier agent claimed.</p>
+      </div>
+      <div class="card">
+        <div class="state-stack">
+          <div class="state-row">
+            <div class="state-label">Primary driver</div>
+            <div class="state-value"><span class="status info">WORKING</span> <code>codex-pi-agent-pi-skills-and-tools-t11</code></div>
+          </div>
+          <div class="state-row">
+            <div class="state-label">Atlas companion</div>
+            <div class="state-value"><span class="status bad">DEAD</span> Right split exists, but the Atlas command exits after the 30-second Herdr reconnect window.</div>
+          </div>
+          <div class="state-row">
+            <div class="state-label">PR #87</div>
+            <div class="state-value"><span class="status warn">OPEN</span> Mergeable, CI green, behind main, no auto-merge request.</div>
+          </div>
+          <div class="state-row">
+            <div class="state-label">Feature branch</div>
+            <div class="state-value"><code>feature/pi-skills-tools</code> at <code>6b29960</code>; unrelated <code>CLAUDE.md</code> and <code>docs/agents/</code> changes remain preserved.</div>
+          </div>
+          <div class="state-row">
+            <div class="state-label">Vault remote main</div>
+            <div class="state-value"><span class="status good">HEALTHY</span> Local bare main and origin/main both point at <code>8d5197c</code>.</div>
+          </div>
+          <div class="state-row">
+            <div class="state-label">Vault worktree</div>
+            <div class="state-value"><span class="status bad">BROKEN</span> <code>/Users/aviral/vault/.git</code> points to missing worktree metadata. This blocks future checkpoint writes until repaired; the traces do not prove Vault Hunter caused it.</div>
+          </div>
+          <div class="state-row">
+            <div class="state-label">Marker convention</div>
+            <div class="state-value"><span class="status warn">STALE</span> Feature checklist still uses <code>[~]</code> although the latest skill contract uses <code>[-]</code> for in progress.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Contract scorecard</div>
+          <h2>Vault Hunter behavior, criterion by criterion</h2>
+        </div>
+        <p>The updated driver-only skill is the standard for the latter half of the run; earlier behavior is called out separately.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Criterion</th>
+              <th>Result</th>
+              <th>Evidence-based assessment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Invocation checkpoint</td>
+              <td><span class="status good">PASS</span></td>
+              <td>Minimal acknowledgement, backlog entry, and commit <code>6a24d8e</code> before substantive execution.</td>
+            </tr>
+            <tr>
+              <td>Sole vault writer</td>
+              <td><span class="status good">MOSTLY PASS</span></td>
+              <td>Primary driver authored the canonical checkpoints; issue runs created a parallel <code>2026-W30</code> backlog path, exposing convention drift.</td>
+            </tr>
+            <tr>
+              <td>Context-efficient driver</td>
+              <td><span class="status warn">MIXED</span></td>
+              <td>Failed early through direct implementation/testing; behavior improved after the driver-only skill reload.</td>
+            </tr>
+            <tr>
+              <td>Herdr-visible dispatch</td>
+              <td><span class="status warn">CORRECTED</span></td>
+              <td>Three invisible agents and one malformed tab first; named one-pane Codex sessions after user correction.</td>
+            </tr>
+            <tr>
+              <td>Independent verification</td>
+              <td><span class="status good">PASS</span></td>
+              <td>Reviewers found real critical and major issues; fixes and convergence were routed through separate sessions.</td>
+            </tr>
+            <tr>
+              <td>Explicit Registry transitions</td>
+              <td><span class="status bad">FAIL</span></td>
+              <td>Registry stopped at revision 9 with V11 active while backlog and Task moved on.</td>
+            </tr>
+            <tr>
+              <td>Evidence checkpoints</td>
+              <td><span class="status warn">PARTIAL</span></td>
+              <td>Several durable commits exist, but live picker evidence remains split into pending T14/T15 and checkpoint two is absent.</td>
+            </tr>
+            <tr>
+              <td>Status accuracy</td>
+              <td><span class="status bad">FAIL</span></td>
+              <td>“Converged” and “done” claims preceded later critical review findings and conflict with the canonical task split.</td>
+            </tr>
+            <tr>
+              <td>PR and landing</td>
+              <td><span class="status warn">INCOMPLETE</span></td>
+              <td>PR #87 is green and mergeable, but open, behind main, and not configured for auto-merge.</td>
+            </tr>
+            <tr>
+              <td>Worker cleanup / finish</td>
+              <td><span class="status bad">FAIL</span></td>
+              <td>Workers were closed before all goals, landing, final evidence, and Run finish were complete; Atlas then lost its data source.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Session inventory</div>
+          <h2>How the 30 matching traces were classified</h2>
+        </div>
+        <p>Not every T11 reference is a separate Vault Hunter usage. Several are descendants, handoffs, reviewers, or issue-specific runs.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Representative session(s)</th>
+              <th>Role in the audit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Pre-run design</td>
+              <td><code>019f9839-276a-7823-a647-ff0fcd464a65</code></td>
+              <td>Designed T11 under a different skill; context, not Vault Hunter execution.</td>
+            </tr>
+            <tr>
+              <td>Primary T11 run</td>
+              <td><code>019f987b-9e28-7933-ba49-35ad875be043</code></td>
+              <td>The last primary Vault Hunter invocation and resume; owns the main lifecycle.</td>
+            </tr>
+            <tr>
+              <td>Invalid invisible subagents</td>
+              <td><code>019f9920-5776-…</code> · <code>6d9b-…</code> · <code>8625-…</code></td>
+              <td>Implementation, audit, and test design; stopped before edits.</td>
+            </tr>
+            <tr>
+              <td>Visible implement/review</td>
+              <td><code>019f9922-e11b-…</code> · <code>019f9922-e0a0-…</code></td>
+              <td>Initial named full Codex implementation and independent review.</td>
+            </tr>
+            <tr>
+              <td>Dispatch expertise</td>
+              <td><code>019f9930-28d1-78c0-8ecf-efdba4875333</code></td>
+              <td>Herdr lifecycle diagnosis, reconciliation, and companion restart evidence.</td>
+            </tr>
+            <tr>
+              <td>Refactor / convergence</td>
+              <td><code>019f9a06-6055-…</code> · <code>019f9a0f-0355-…</code> · <code>019f9a16-7617-…</code> · <code>019f9a25-4671-…</code></td>
+              <td>Later implementation hardening, review, verification, and review-fix rounds.</td>
+            </tr>
+            <tr>
+              <td>Related issue runs</td>
+              <td><code>019f9959-9c52-7143-…</code> · <code>7593-…</code> · <code>9c68-…</code></td>
+              <td>Responsive layout, participant registration, and worker-tab lifecycle; separate explicit Vault Hunter invocations.</td>
+            </tr>
+            <tr>
+              <td>Remaining traces</td>
+              <td>Read-only handoffs, status audits, reviewers, release/PR sessions, and this audit</td>
+              <td>Corroborating descendants and observers; not additional primary invocations.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Recovery order</div>
+          <h2>What would make the usage healthy</h2>
+        </div>
+        <p>These steps restore one trustworthy lifecycle before any completion claim.</p>
+      </div>
+      <div class="card">
+        <ol class="next-list">
+          <li>
+            <div>
+              <strong>Finish the design pivot already underway.</strong>
+              <p>Make Atlas Run-Registry-first and treat Herdr as optional presentation/transport state, not durable worker truth.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>Repair the vault worktree metadata.</strong>
+              <p>The remote vault is healthy, but the canonical checkout cannot currently write checkpoint two safely.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>Reconcile Registry, backlog, Task, and Feature once.</strong>
+              <p>Resolve T11 vs. T13–T15 ownership, then update every surface from the same decision. Do not mark T11 complete yet.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>Bring PR #87 current with main and re-run final verification.</strong>
+              <p>Green checks on a behind branch are not landing evidence.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>Finish through the lifecycle command path.</strong>
+              <p>Complete goals, record final evidence, land, clean workers only then, mark the Run finished, and write checkpoint two.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Evidence notes</div>
+          <h2>Boundaries on the conclusion</h2>
+        </div>
+      </div>
+      <details>
+        <summary>Canonical vault evidence</summary>
+        <div class="details-body">
+          <p><code>1_projects/pi-agent/themes/pi-customization/features/pi-skills-tools/feature.md</code></p>
+          <p><code>1_projects/pi-agent/themes/pi-customization/features/pi-skills-tools/tasks/11-implement-vault-hunter-tui.md</code></p>
+          <p><code>3_logs/2026-30/backlog.md</code> plus related issue entries under <code>3_logs/2026-W30/backlog.md</code>.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Run and live-state evidence</summary>
+        <div class="details-body">
+          <p>Registry: <code>~/.local/state/vault-hunter/runs/6708659d90e6570fa4b58574abe02be7.json</code></p>
+          <p>Herdr workspace <code>w2R</code>, T11 tab <code>w2R:t8</code>, driver pane <code>w2R:pF</code>, companion pane <code>w2R:pW</code>.</p>
+          <p>Feature worktree head <code>6b29960</code>; PR #87 live state checked independently.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Attribution caution</summary>
+        <div class="details-body">
+          <p>The vault worktree’s Git metadata is currently missing, but the available session evidence does not establish who or what removed it. It is reported as an operational blocker, not blamed on Vault Hunter.</p>
+        </div>
+      </details>
+    </section>
+
+    <footer>
+      Audit rendered 2026-07-25 · Pi Agent Gruvbox Material palette · Read-only evaluation except for this report artifact.
+    </footer>
+  </main>
+</body>
+</html>

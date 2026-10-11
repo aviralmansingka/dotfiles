@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dotfiles codebase exploration</title>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        background: "#282828", primaryColor: "#3c3836", primaryTextColor: "#fbf1c7",
+        primaryBorderColor: "#f28534", lineColor: "#928374", secondaryColor: "#32302f",
+        tertiaryColor: "#45403d", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
+      },
+      flowchart: { curve: "basis", htmlLabels: true }
+    });
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#282828; --raised:#32302f; --message:#3c3836; --selected:#45403d;
+      --text:#ebdbb2; --bright:#fbf1c7; --accent:#f28534; --yellow:#e9b143;
+      --green:#b8bb26; --aqua:#80aa9e; --purple:#d3869b; --red:#f2594b;
+      --muted:#928374; --dim:#665c54; --border:#504945;
+    }
+    * { box-sizing:border-box; }
+    html { background:var(--bg); }
+    body { margin:0; color:var(--text); background:var(--bg); font:15px/1.55 Inter, ui-sans-serif, system-ui, sans-serif; }
+    main { width:min(1180px, calc(100% - 32px)); margin:0 auto; padding:44px 0 80px; }
+    h1,h2,h3 { color:var(--bright); line-height:1.15; margin:0; }
+    h1 { font-size:clamp(2.2rem, 6vw, 4.8rem); letter-spacing:-.055em; max-width:900px; }
+    h2 { font-size:1.55rem; letter-spacing:-.025em; }
+    h3 { font-size:1rem; }
+    p { margin:.65rem 0 0; }
+    code,.mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    code { color:var(--aqua); overflow-wrap:anywhere; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.18em; font:700 12px/1 ui-monospace,monospace; margin-bottom:18px; }
+    .lede { max-width:780px; color:var(--muted); font-size:1.08rem; margin-top:18px; }
+    .meta { display:flex; gap:10px; flex-wrap:wrap; margin-top:22px; }
+    .pill { border:1px solid var(--border); border-radius:999px; padding:6px 10px; color:var(--muted); background:var(--raised); font:12px/1.2 ui-monospace,monospace; }
+    .pill strong { color:var(--bright); }
+    section { margin-top:52px; min-width:0; }
+    .section-head { display:flex; justify-content:space-between; align-items:end; gap:20px; margin-bottom:16px; }
+    .section-head p { color:var(--muted); max-width:560px; text-align:right; }
+    .grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:14px; }
+    .card { min-width:0; border:1px solid var(--border); border-radius:14px; background:var(--raised); padding:18px; }
+    .card p { color:var(--muted); }
+    .span-4 { grid-column:span 4; } .span-6 { grid-column:span 6; } .span-8 { grid-column:span 8; } .span-12 { grid-column:span 12; }
+    .metric { font:700 2rem/1 ui-monospace,monospace; color:var(--yellow); margin-bottom:8px; }
+    .accent { color:var(--accent); } .green { color:var(--green); } .red { color:var(--red); } .aqua { color:var(--aqua); } .purple { color:var(--purple); }
+    .diagram { overflow:auto; padding:22px; }
+    .mermaid { min-width:760px; }
+    table { width:100%; border-collapse:collapse; table-layout:fixed; }
+    th,td { padding:13px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+    th { color:var(--yellow); font:700 12px/1.2 ui-monospace,monospace; text-transform:uppercase; letter-spacing:.08em; background:#2d2b2a; }
+    td:first-child { color:var(--bright); font-weight:700; }
+    tr:last-child td { border-bottom:0; }
+    .status { display:inline-flex; align-items:center; gap:6px; font:700 12px/1 ui-monospace,monospace; white-space:nowrap; }
+    .status::before { content:""; width:7px; height:7px; border-radius:99px; background:currentColor; }
+    .ok { color:var(--green); } .watch { color:var(--yellow); } .risk { color:var(--red); }
+    ol.flow { list-style:none; padding:0; margin:0; counter-reset:step; }
+    ol.flow li { position:relative; padding:0 0 22px 44px; min-width:0; }
+    ol.flow li:last-child { padding-bottom:0; }
+    ol.flow li::before { counter-increment:step; content:counter(step); position:absolute; left:0; top:0; width:26px; height:26px; display:grid; place-items:center; border-radius:50%; color:var(--bg); background:var(--accent); font:800 12px/1 ui-monospace,monospace; }
+    ol.flow li:not(:last-child)::after { content:""; position:absolute; left:12px; top:28px; bottom:2px; width:1px; background:var(--border); }
+    ol.flow p { margin:.25rem 0 0; }
+    ul.clean { list-style:none; padding:0; margin:0; }
+    ul.clean li { padding:10px 0; border-bottom:1px solid var(--border); }
+    ul.clean li:last-child { border-bottom:0; }
+    .path { color:var(--aqua); font:12px/1.4 ui-monospace,monospace; overflow-wrap:anywhere; }
+    .callout { border-left:3px solid var(--accent); background:linear-gradient(90deg,rgba(242,133,52,.09),transparent); }
+    .footer { color:var(--dim); font-size:12px; margin-top:48px; border-top:1px solid var(--border); padding-top:16px; }
+    @media (max-width:850px) {
+      main { width:min(100% - 22px,1180px); padding-top:28px; }
+      .span-4,.span-6,.span-8 { grid-column:span 12; }
+      .section-head { display:block; }
+      .section-head p { text-align:left; }
+      table { table-layout:auto; display:block; overflow-x:auto; }
+      th,td { min-width:150px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Repository field guide · 24 Jul 2026</div>
+    <h1>A personal platform, not just dotfiles.</h1>
+    <p class="lede">GNU Stow is the deployment primitive, but the repository’s center of gravity is a custom Neovim + Herdr + Pi agent workspace. Infrastructure, messaging daemons, and sync automation make the same environment portable across macOS and an AWS devbox.</p>
+    <div class="meta">
+      <span class="pill"><strong>306</strong> tracked files</span>
+      <span class="pill"><strong>main</strong> aligned with origin</span>
+      <span class="pill"><strong>9</strong> modified files</span>
+      <span class="pill"><strong>2</strong> focused checks passing</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-head"><h2>At a glance</h2><p>The repository has three real products: a workstation image, an editor/agent cockpit, and background personal automation.</p></div>
+    <div class="grid">
+      <article class="card span-4"><div class="metric">85</div><h3>Neovim files</h3><p>LazyVim plus language tooling, reviews, vault workflows, and a large Sidekick/Herdr integration.</p></article>
+      <article class="card span-4"><div class="metric">8k</div><h3>Pi lines</h3><p>Agent extensions, Gruvbox rendering, MCP configuration, speech-to-text, Telegram, and WhatsApp.</p></article>
+      <article class="card span-4"><div class="metric">30</div><h3>Ops files</h3><p>Packer creates layered Ubuntu AMIs; Terraform manages shared AWS resources and the optional EC2 devbox.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>System topology</h2><p>Solid arrows show runtime or deployment flow; dotted arrows show configuration feeding a subsystem.</p></div>
+    <div class="card diagram">
+      <pre class="mermaid">
+flowchart TD
+  D["dependencies.json"] -. generates .-> B["Brewfile / package commands"]
+  B --> I["install.sh · macOS"]
+  D -. feeds .-> P["Packer · Ubuntu AMIs"]
+  I --> S["GNU Stow packages"]
+  P --> S
+  S --> W["User workstation"]
+
+  W --> N["Neovim · LazyVim"]
+  N --> SK["Sidekick"]
+  SK --> H["Herdr workspaces + panes"]
+  H --> A["Pi / Codex agents"]
+  A --> M["MCP: Google · WhatsApp · Granola"]
+
+  W --> U["systemd / launchd"]
+  U --> G["Git auto-sync"]
+  U --> C["Telegram · WhatsApp · STT daemons"]
+
+  P --> AMI["Validated devbox AMI"]
+  AMI --> T["Terraform EC2 devbox"]
+
+  classDef core fill:#3c3836,stroke:#f28534,color:#fbf1c7;
+  classDef agent fill:#353d25,stroke:#b8bb26,color:#fbf1c7;
+  classDef infra fill:#32302f,stroke:#80aa9e,color:#fbf1c7;
+  class D,B,I,S,W core;
+  class N,SK,H,A,M agent;
+  class P,AMI,T,U,G,C infra;
+      </pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Subsystem map</h2><p>Read these in order to understand behavior without walking every Stow package.</p></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th style="width:17%">Area</th><th style="width:24%">Primary entry</th><th>Responsibility</th><th style="width:17%">Assessment</th></tr></thead>
+        <tbody>
+          <tr><td>Deployment</td><td><code>install.sh</code></td><td>Homebrew, external CLIs, Rust tools, Stow, shell plugins, terminfo, hooks.</td><td><span class="status watch">script-heavy</span></td></tr>
+          <tr><td>Dependencies</td><td><code>dependencies.json</code><br><code>scripts/install_deps.py</code></td><td>Single catalog mapped into Brewfile and Linux package/install commands.</td><td><span class="status ok">centralized</span></td></tr>
+          <tr><td>Neovim</td><td><code>nvim/.config/nvim/lua/config/lazy.lua</code></td><td>LazyVim composition; language, DAP, testing, GitHub review, Markdown, vault and agent UX.</td><td><span class="status watch">largest surface</span></td></tr>
+          <tr><td>Agent workspace</td><td><code>plugins/sidekick.lua</code><br><code>plugins/herdr/workspaces.lua</code></td><td>Binds Neovim tabs to Herdr workspaces and Sidekick sessions to Herdr agents.</td><td><span class="status ok">active core</span></td></tr>
+          <tr><td>Pi customization</td><td><code>pi/.pi/agent/extensions/</code></td><td>Work-step rendering, Herdr status, image drop, Wayfinder subagents, Codex fast mode.</td><td><span class="status watch">prototype APIs</span></td></tr>
+          <tr><td>Messaging + voice</td><td><code>pi/bin/</code></td><td>Telegram/WhatsApp bridges and remote speech-to-text client/worker.</td><td><span class="status ok">service-backed</span></td></tr>
+          <tr><td>Cloud</td><td><code>ops/packer/</code><br><code>ops/devbox/</code></td><td>Builds and validates Ubuntu AMIs, then launches the optional EC2 development box.</td><td><span class="status watch">AWS coupled</span></td></tr>
+          <tr><td>Sync automation</td><td><code>scripts/auto-git-sync</code></td><td>Fetches, stashes, merges, asks Pi to resolve conflicts, commits, and pushes on a timer.</td><td><span class="status risk">high agency</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>The most important runtime flow</h2><p>Herdr owns workspace/process state; Neovim is deliberately a view and controller, not the authority.</p></div>
+    <div class="grid">
+      <article class="card span-6">
+        <h3 class="accent">Workspace → agent</h3>
+        <ol class="flow" style="margin-top:18px">
+          <li><strong><code>&lt;leader&gt;fw</code> opens workspaces.</strong><p><code>plugins/herdr/workspaces.lua</code> snapshots authoritative Herdr workspaces and panes.</p></li>
+          <li><strong>A Neovim tab binds to one workspace ID.</strong><p>Tab-local ID, label, detached and warning state keep UI identity stable.</p></li>
+          <li><strong>Selection opens the scoped session picker.</strong><p><code>plugins/sidekick/cwd_picker.lua</code> groups agents, previews terminal output, and manages sessions.</p></li>
+          <li><strong>Sidekick attaches through a custom backend.</strong><p><code>herdr_backend.lua</code> registers a Sidekick session implementation that calls the Herdr CLI.</p></li>
+        </ol>
+      </article>
+      <article class="card span-6">
+        <h3 class="purple">Agent → rendered work</h3>
+        <ol class="flow" style="margin-top:18px">
+          <li><strong>Pi emits assistant and tool updates.</strong><p>The local extension discovers Pi’s internal TUI component classes.</p></li>
+          <li><strong>Prototype hooks assemble work steps.</strong><p>Thinking, title, calls, targets, completion and failure state are coalesced.</p></li>
+          <li><strong>A Gruvbox activity tree replaces raw calls.</strong><p>Rows preserve chronology and truncate to terminal width.</p></li>
+          <li><strong>Stable symbols make reload replacement possible.</strong><p>The prototype wrapper keeps original methods and swaps the live controller after <code>/reload</code>.</p></li>
+        </ol>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>What is changing right now</h2><p>The working tree is focused, but not clean. These edits look like one cohesive Pi/Sidekick UX iteration plus dependency cleanup.</p></div>
+    <div class="grid">
+      <article class="card span-4">
+        <h3 class="accent">Sidekick previews</h3>
+        <p>Initial previews now read only visible terminal content. Scrolling or <code>Ctrl-b/Ctrl-f</code> lazily expands to 120 lines, reducing picker cost.</p>
+        <p class="path">nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua</p>
+      </article>
+      <article class="card span-4">
+        <h3 class="accent">Pi work-step renderer</h3>
+        <p>Thinking is grouped into the activity tree, native duplicate output is suppressed, and stable-symbol prototype hooks survive extension reloads.</p>
+        <p class="path">pi/.pi/agent/extensions/tool-call-renderer.ts</p>
+      </article>
+      <article class="card span-4">
+        <h3 class="accent">Package cleanup</h3>
+        <p><code>@zackify/pi-wafer</code> and the Claude session-start Lavish hook are being removed; lockfile churn is the bulk of the diff.</p>
+        <p class="path">pi/.pi/agent/{settings.json,npm/package.json}</p>
+      </article>
+      <article class="card span-12 callout">
+        <h3 class="green">Focused verification passed</h3>
+        <p><code>./scripts/verify-pi-work-step-ui</code> passed offline rendering, reload, terminal-width, and live-model smoke checks. <code>./scripts/verify-nvim</code> passed the default agent-keymap suite.</p>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Sharp edges worth knowing</h2><p>These are observations, not requested fixes. They are the places most likely to surprise the next change.</p></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr><th style="width:18%">Severity</th><th style="width:26%">Evidence</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td><span class="status risk">security</span></td><td><code>ops/devbox/devbox.tf</code></td><td>SSH ingress is open to <code>0.0.0.0/0</code>. Convenient, but the key pair is the only network-access boundary.</td></tr>
+          <tr><td><span class="status watch">drift</span></td><td><code>README.md</code> vs <code>ops/packer/scripts/deploy_dotfiles.sh</code></td><td>The README describes a fully agent-enabled devbox, while Packer only stows zsh, tmux, nvim, starship, then git.</td></tr>
+          <tr><td><span class="status watch">coverage</span></td><td><code>.github/workflows/</code></td><td>CI validates Packer/Terraform. The substantial Neovim, Pi, daemon, and sync harnesses are local-only.</td></tr>
+          <tr><td><span class="status watch">coupling</span></td><td><code>systemd/.../pi-telegram.service</code></td><td>The service PATH pins a specific NVM Node version, so a Node upgrade can silently break daemon startup.</td></tr>
+          <tr><td><span class="status watch">upstream API</span></td><td><code>sidekick/herdr_backend.lua</code></td><td>The backend patches Sidekick validation because upstream hard-codes tmux/zellij. Plugin upgrades need focused regression checks.</td></tr>
+          <tr><td><span class="status watch">privilege</span></td><td><code>scripts/auto-git-sync</code></td><td>Unattended automation may let Pi edit conflicts, stage everything, commit, and push. Tests are good; blast radius remains intentionally broad.</td></tr>
+          <tr><td><span class="status watch">hygiene</span></td><td><code>.DS_Store</code>, duplicate picker import</td><td>A tracked macOS metadata file and duplicate <code>snacks_picker</code> import are small signs that config drift is accumulating.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Best reading order</h2><p>A shortest-path tour for the next coding task.</p></div>
+    <div class="grid">
+      <article class="card span-6"><h3>To understand deployment</h3><ul class="clean"><li><span class="path">README.md</span></li><li><span class="path">install.sh</span></li><li><span class="path">dependencies.json → scripts/install_deps.py</span></li><li><span class="path">ops/packer/{base,devbox}.pkr.hcl</span></li></ul></article>
+      <article class="card span-6"><h3>To understand the active product</h3><ul class="clean"><li><span class="path">CONTEXT.md</span></li><li><span class="path">nvim/.../plugins/herdr/workspaces.lua</span></li><li><span class="path">nvim/.../plugins/sidekick.lua</span></li><li><span class="path">nvim/.../plugins/sidekick/{herdr_backend,cwd_picker}.lua</span></li><li><span class="path">pi/.pi/agent/extensions/tool-call-renderer.ts</span></li></ul></article>
+      <article class="card span-6"><h3>To understand automation</h3><ul class="clean"><li><span class="path">scripts/auto-git-sync</span></li><li><span class="path">systemd/.config/systemd/user/</span></li><li><span class="path">launchd/Library/LaunchAgents/</span></li><li><span class="path">pi/bin/</span></li></ul></article>
+      <article class="card span-6"><h3>To verify a change</h3><ul class="clean"><li><span class="path">scripts/verify-nvim</span></li><li><span class="path">scripts/verify-pi-work-step-ui</span></li><li><span class="path">scripts/test-auto-git-sync.sh</span></li><li><span class="path">scripts/test-pi-stt.py</span></li></ul></article>
+    </div>
+  </section>
+
+  <p class="footer">Evidence gathered from tracked files, current Git status/diff, and focused verification. Design source: the repository’s own Gruvbox Material tokens from Pi and Neovim configuration.</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,477 @@
+<!doctype html>
+<!-- Three variants of a collapsed Atlas Goal, switchable via ?variant=, in a standalone throwaway prototype. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atlas · collapsed Goal by Vault Hunter crew</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #151514;
+      --panel: #1d1c1a;
+      --terminal: #282828;
+      --border: #45403d;
+      --cream: #fbf1c7;
+      --text: #ebdbb2;
+      --muted: #928374;
+      --orange: #f28534;
+      --yellow: #e9b143;
+      --green: #b8bb26;
+      --red: #f2594b;
+      --blue: #80aa9e;
+      --magenta: #d3869b;
+      --shadow: rgba(0, 0, 0, .42);
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 50% -20%, rgba(242,133,52,.12), transparent 42rem),
+        var(--page);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+    main {
+      width: min(100%, 1540px);
+      margin: 0 auto;
+      padding: 38px 28px 112px;
+    }
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+    .eyebrow {
+      color: var(--orange);
+      font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 920px;
+      margin: 8px 0 7px;
+      color: var(--cream);
+      font-size: clamp(25px, 4vw, 44px);
+      line-height: 1.05;
+      letter-spacing: -.035em;
+    }
+    .lede {
+      max-width: 880px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .contract {
+      display: grid;
+      gap: 6px;
+      justify-items: end;
+      color: var(--muted);
+      font: 12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .contract strong { color: var(--blue); font-weight: 600; }
+    .terminal-shell {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--terminal);
+      box-shadow: 0 22px 70px var(--shadow);
+    }
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      height: 38px;
+      padding: 0 13px;
+      border-bottom: 1px solid var(--border);
+      background: #232220;
+      color: var(--muted);
+      font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .dot.red { background: var(--red); }
+    .dot.yellow { background: var(--yellow); }
+    .dot.green { background: var(--green); }
+    .terminal-title {
+      min-width: 0;
+      margin-left: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .terminal-meta { margin-left: auto; white-space: nowrap; }
+    .terminal-viewport {
+      min-width: 0;
+      overflow-x: auto;
+      padding: 18px 20px 20px;
+    }
+    pre {
+      width: 120ch;
+      min-width: 120ch;
+      min-height: 32em;
+      margin: 0;
+      color: var(--text);
+      background: transparent;
+      white-space: pre;
+      tab-size: 2;
+      font-family: "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+      font-size: 13px;
+      font-variant-ligatures: none;
+      line-height: 1.24;
+      letter-spacing: 0;
+    }
+    .notes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .note {
+      min-width: 0;
+      padding: 14px 15px;
+      border: 1px solid #383532;
+      border-radius: 9px;
+      background: rgba(29,28,26,.76);
+    }
+    .note-label {
+      margin-bottom: 5px;
+      color: var(--yellow);
+      font: 700 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .note p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .prototype-switcher {
+      position: fixed;
+      z-index: 20;
+      left: 50%;
+      bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: min(calc(100vw - 28px), 570px);
+      padding: 7px;
+      transform: translateX(-50%);
+      border: 1px solid #5b544f;
+      border-radius: 999px;
+      background: rgba(29,28,26,.96);
+      box-shadow: 0 13px 45px rgba(0,0,0,.5);
+      backdrop-filter: blur(14px);
+    }
+    .prototype-switcher button {
+      border: 0;
+      border-radius: 999px;
+      color: var(--text);
+      background: transparent;
+      font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      cursor: pointer;
+    }
+    .arrow {
+      width: 35px;
+      height: 35px;
+      flex: 0 0 auto;
+      font-size: 17px !important;
+    }
+    .arrow:hover, .copy:hover { background: #45403d; }
+    .variant-name {
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+      color: var(--cream);
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .copy {
+      flex: 0 0 auto;
+      padding: 0 13px;
+      height: 35px;
+      color: var(--blue) !important;
+    }
+    .warning {
+      display: none;
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--red);
+      color: var(--red);
+      background: rgba(242,89,75,.08);
+      font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .warning.visible { display: block; }
+    @media (max-width: 800px) {
+      main { padding: 24px 14px 104px; }
+      header { grid-template-columns: 1fr; }
+      .contract { justify-items: start; }
+      .notes { grid-template-columns: 1fr; }
+      .terminal-viewport { padding: 14px; }
+      pre { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <div class="eyebrow">Throwaway Atlas presentation prototype</div>
+        <h1>Collapse one Goal around the crew handoffs</h1>
+        <p class="lede">Three structures for the same faithful Run data. Ownership is literal, final evidence stays distinct from baseline evidence, and old records are never forced into a modern persona.</p>
+      </div>
+      <div class="contract">
+        <span><strong>120×32</strong> fixed terminal contract</span>
+        <span><strong>38;2 RGB</strong> current Atlas palette</span>
+        <span><strong>read-only</strong> presentation projection</span>
+      </div>
+    </header>
+
+    <div id="warning" class="warning" role="alert"></div>
+
+    <section class="terminal-shell" aria-label="Atlas terminal prototype">
+      <div class="terminal-bar">
+        <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+        <span id="terminal-title" class="terminal-title"></span>
+        <span id="terminal-meta" class="terminal-meta">120 cols · 32 rows</span>
+      </div>
+      <div class="terminal-viewport">
+        <pre id="terminal" aria-live="polite"></pre>
+      </div>
+    </section>
+
+    <section class="notes" aria-label="Variant interpretation">
+      <article class="note">
+        <div class="note-label">Invariant</div>
+        <p>Task and Goal are the frame. The three crew personas are accountable handoffs inside that Goal, not replacement goals.</p>
+      </article>
+      <article class="note">
+        <div class="note-label">Compression</div>
+        <p>Matched start/finish records become one work episode. Failures, rejected evidence, candidate trees, and open blockers remain visible.</p>
+      </article>
+      <article class="note">
+        <div class="note-label">Boundary</div>
+        <p>Only explicit persona ownership is grouped. Historical records without it stay in Legacy / Unassigned.</p>
+      </article>
+    </section>
+  </main>
+
+  <nav class="prototype-switcher" aria-label="Prototype variants">
+    <button id="previous" class="arrow" type="button" aria-label="Previous variant">←</button>
+    <button id="variant-name" class="variant-name" type="button" aria-label="Current variant"></button>
+    <button id="next" class="arrow" type="button" aria-label="Next variant">→</button>
+    <button id="copy" class="copy" type="button">copy ANSI</button>
+  </nav>
+
+  <script>
+    const ESC = "\u001b[";
+    const rgb = {
+      cream: "251;241;199", text: "235;219;178", muted: "146;131;116",
+      orange: "242;133;52", yellow: "233;177;67", green: "184;187;38",
+      red: "242;89;75", blue: "128;170;158", magenta: "211;134;155"
+    };
+    const fg = (name, value) => `${ESC}38;2;${rgb[name]}m${value}${ESC}0m`;
+    const bold = (name, value) => `${ESC}1;38;2;${rgb[name]}m${value}${ESC}0m`;
+    const dim = value => fg("muted", value);
+    const line = "────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────";
+    const padFrame = lines => {
+      const copy = [...lines];
+      while (copy.length < 31) copy.push("");
+      copy.push(dim("g/G goals · j/k crew · v/V verifier · e/E evidence · enter detail · q quit · 120×32"));
+      return copy.slice(0, 32).join("\n");
+    };
+
+    const variants = {
+      A: {
+        name: "A — Crew stack",
+        rationale: "Goal-first; quiet ownership view",
+        ansi: padFrame([
+          `${bold("orange", "vault-hunter journal")}  ${fg("text", "T14 · Goal T14.G01")}                              ${dim("Run t14-rewrite · rev 12")}`,
+          `${fg("text", "Collapse faithful execution around explicit crew handoffs")}                    ${fg("yellow", "ACTIVE")}`,
+          dim(line),
+          "",
+          `${bold("cream", "PARENT")}                 ${fg("green", "● invoked")}`,
+          `${dim("  └─")} ${fg("text", "Task and Goal accepted")}`,
+          "",
+          `${bold("yellow", "VERIFIER BUILDER")} ${dim("≈")}     ${fg("green", "◆ handoff complete")}`,
+          `${dim("  └─")} ${fg("text", "V01–V02 baseline manifest")}`,
+          "",
+          `${bold("orange", "CONVERGENCE ENGINEER")} ${dim("≈")} ${fg("yellow", "● active")}`,
+          `${dim("  └─")} ${fg("text", "candidate 7fd31ac · V02 pending")}`,
+          "",
+          `${bold("magenta", "DELIVERY STEWARD")} ${dim("≈")}    ${dim("○ waiting")}`,
+          `${dim("  └─")} ${fg("text", "review and certification")}`,
+          "",
+          `${bold("blue", "PARENT CLOSURE")}         ${dim("○ waiting")}`,
+          `${dim("  └─")} ${fg("text", "evidence checkpoint and cleanup")}`,
+          "",
+          `${bold("muted", "UNASSIGNED")}  ${fg("yellow", "1 legacy record")}  ${dim("outside crew custody")}`,
+          "",
+          dim(line),
+          `${dim("◆ handoff · ● active or complete · ○ waiting · ≈ inferred role")}`
+        ])
+      },
+      B: {
+        name: "B — Handoff rail",
+        rationale: "Sequence-first; quiet custody view",
+        ansi: padFrame([
+          `${bold("orange", "vault-hunter journal")}  ${fg("text", "T14 · Goal T14.G01")}                              ${dim("Run t14-rewrite · rev 12")}`,
+          `${fg("text", "Collapse faithful execution around explicit crew handoffs")}                    ${fg("yellow", "ACTIVE")}`,
+          dim(line),
+          "",
+          `${bold("cream", "PARENT")}              ${bold("yellow", "VERIFIER")} ${dim("≈")}             ${bold("orange", "CONVERGENCE")} ${dim("≈")}            ${bold("magenta", "DELIVERY")} ${dim("≈")}            ${bold("blue", "PARENT")}`,
+          `${fg("green", "  ●")}────────────────────${fg("green", "◆")}────────────────────────${fg("yellow", "●")}──────────────────────────${dim("○")}────────────────────${dim("○")}`,
+          `${dim("invoked")}              ${fg("green", "handoff")}                 ${fg("yellow", "working")}                    ${dim("waiting")}               ${dim("closure")}`,
+          "",
+          `${bold("orange", "CREW DELIVERABLES")}`,
+          `${fg("green", "◆")} ${bold("yellow", "Verifier")}     ${fg("text", "V01–V02 baseline manifest")}      ${dim("commands · red evidence · 8d21…a74c")}`,
+          `${fg("yellow", "●")} ${bold("orange", "Convergence")}  ${fg("text", "candidate tree 7fd31ac")}          ${dim("implementation · V02 pending")}`,
+          `${dim("○")} ${bold("magenta", "Delivery")}     ${fg("text", "reviewed, certified commit")}       ${dim("review · full checks · PR/CI")}`,
+          `${dim("○")} ${bold("blue", "Parent")}       ${fg("text", "accepted evidence checkpoint")}      ${dim("canonical decision · cleanup")}`,
+          "",
+          `${bold("muted", "UNASSIGNED")}  ${fg("yellow", "1 legacy record")}  ${dim("outside crew custody")}`,
+          "",
+          dim(line),
+          `${dim("◆ handoff · ● active or complete · ○ waiting · ≈ inferred role")}`
+        ])
+      },
+      C: {
+        name: "C — Evidence ledger",
+        rationale: "Verifier-first; strongest closure test",
+        ansi: padFrame([
+          `${bold("orange", "vault-hunter journal")}  ${fg("text", "T14 Harden execution journal presentation")}                 ${dim("Run t14-rewrite · rev 12")}`,
+          `${bold("cream", "Goal T14.G01")} ${dim("· active · projection, not authority")}                         ${fg("yellow", "2 baseline · 0 certified")}`,
+          dim(line),
+          `${bold("cream", "VERIFIER")}                 ${bold("cream", "BASELINE")}                 ${bold("cream", "CANDIDATE")}                ${bold("cream", "FINAL CERTIFICATION")}`,
+          `${fg("blue", "V01 crew grouping")}        ${fg("green", "red · exit 1")}             ${fg("green", "green · exit 0")}            ${dim("not recorded")}`,
+          `${dim("  owner")} ${fg("yellow", "verifier-builder")}     ${dim("tree 612ce8a")}              ${dim("tree 7fd31ac")}              ${dim("owner delivery-steward")}`,
+          `${dim("  artifact")} ${fg("text", "26fa…91c0")}         ${dim("frozen")}                    ${fg("text", "a143…d920")}                 ${dim("—")}`,
+          "",
+          `${fg("blue", "V02 ANSI 120×32")}          ${fg("green", "red · exit 1")}             ${fg("yellow", "running")}                   ${dim("not recorded")}`,
+          `${dim("  owner")} ${fg("yellow", "verifier-builder")}     ${dim("tree 612ce8a")}              ${dim("tree 7fd31ac")}              ${dim("owner delivery-steward")}`,
+          `${dim("  artifact")} ${fg("text", "8d21…a74c")}         ${dim("frozen")}                    ${dim("pending")}                   ${dim("—")}`,
+          "",
+          `${fg("blue", "V03 legacy boundary")}      ${fg("green", "red · exit 1")}             ${dim("not attempted")}             ${dim("not recorded")}`,
+          `${dim("  owner")} ${fg("yellow", "verifier-builder")}     ${dim("tree 612ce8a")}              ${dim("owner convergence")}         ${dim("owner delivery-steward")}`,
+          `${dim("  assertion")} ${fg("text", "unknown role stays Legacy / Unassigned; no keyword mapping")}`,
+          "",
+          dim(line),
+          `${bold("orange", "CREW PROVENANCE")}`,
+          `${fg("green", "●")} ${bold("yellow", "verifier-builder")}      ${dim("3 verifier definitions · 3 baseline attempts · handoff complete")}`,
+          `${fg("yellow", "●")} ${bold("orange", "convergence-engineer")}   ${dim("3 work episodes · candidate 7fd31ac · V02 active")}`,
+          `${dim("○")} ${bold("magenta", "delivery-steward")}       ${dim("waiting · no final verifier decision recorded")}`,
+          `${dim("○")} ${bold("blue", "parent closure")}          ${dim("waiting · canonical evidence unchanged")}`,
+          "",
+          `${bold("muted", "LEGACY / UNASSIGNED")} ${fg("yellow", "1")} ${dim("· historical participant role implementer · retained outside crew totals")}`,
+          "",
+          `${bold("red", "CLOSURE TEST")} ${fg("yellow", "NOT READY")} ${dim("· V02 candidate and V01–V03 final certification remain open")}`,
+          `${dim("A green candidate is implementation evidence. Only the steward's frozen-tree decision is acceptance.")}`,
+          dim(line)
+        ])
+      }
+    };
+
+    function ansiToFragment(value) {
+      const fragment = document.createDocumentFragment();
+      const pattern = /\u001b\[([0-9;]*)m/g;
+      let index = 0;
+      let match;
+      let state = { color: "", background: "", weight: "", opacity: "" };
+      const append = text => {
+        if (!text) return;
+        const span = document.createElement("span");
+        span.textContent = text;
+        span.style.color = state.color;
+        span.style.backgroundColor = state.background;
+        span.style.fontWeight = state.weight;
+        span.style.opacity = state.opacity;
+        fragment.appendChild(span);
+      };
+      while ((match = pattern.exec(value))) {
+        append(value.slice(index, match.index));
+        const codes = (match[1] || "0").split(";").map(Number);
+        for (let i = 0; i < codes.length; i++) {
+          const code = codes[i];
+          if (code === 0) state = { color: "", background: "", weight: "", opacity: "" };
+          else if (code === 1) state.weight = "700";
+          else if (code === 2) state.opacity = ".68";
+          else if (code === 22) { state.weight = ""; state.opacity = ""; }
+          else if (code === 39) state.color = "";
+          else if (code === 49) state.background = "";
+          else if ((code === 38 || code === 48) && codes[i + 1] === 2) {
+            const color = `rgb(${codes[i + 2]}, ${codes[i + 3]}, ${codes[i + 4]})`;
+            if (code === 38) state.color = color; else state.background = color;
+            i += 4;
+          }
+        }
+        index = pattern.lastIndex;
+      }
+      append(value.slice(index));
+      return fragment;
+    }
+
+    function stripAnsi(value) {
+      return value.replace(/\u001b\[[0-9;]*m/g, "");
+    }
+
+    function validateFrame(value) {
+      const lines = stripAnsi(value).split("\n");
+      const tooWide = lines.map((line, i) => [i + 1, Array.from(line).length]).filter(([, width]) => width > 120);
+      const problems = [];
+      if (lines.length !== 32) problems.push(`${lines.length} rows, expected 32`);
+      if (tooWide.length) problems.push(`wide rows: ${tooWide.map(([row, width]) => `${row}=${width}`).join(", ")}`);
+      return problems;
+    }
+
+    const keys = Object.keys(variants);
+    const params = new URLSearchParams(location.search);
+    let current = keys.includes(params.get("variant")) ? params.get("variant") : "A";
+
+    function render() {
+      const variant = variants[current];
+      const terminal = document.getElementById("terminal");
+      terminal.replaceChildren(ansiToFragment(variant.ansi));
+      document.getElementById("terminal-title").textContent = `${variant.name} · ${variant.rationale}`;
+      document.getElementById("variant-name").textContent = variant.name;
+      const problems = validateFrame(variant.ansi);
+      const warning = document.getElementById("warning");
+      warning.textContent = problems.length ? `Frame contract failed: ${problems.join("; ")}` : "";
+      warning.classList.toggle("visible", problems.length > 0);
+      const url = new URL(location.href);
+      url.searchParams.set("variant", current);
+      history.replaceState({}, "", url);
+    }
+
+    function cycle(delta) {
+      const index = keys.indexOf(current);
+      current = keys[(index + delta + keys.length) % keys.length];
+      render();
+    }
+
+    document.getElementById("previous").addEventListener("click", () => cycle(-1));
+    document.getElementById("next").addEventListener("click", () => cycle(1));
+    document.getElementById("variant-name").addEventListener("click", () => cycle(1));
+    document.getElementById("copy").addEventListener("click", async event => {
+      await navigator.clipboard.writeText(variants[current].ansi);
+      const button = event.currentTarget;
+      const original = button.textContent;
+      button.textContent = "copied";
+      setTimeout(() => { button.textContent = original; }, 1100);
+    });
+    addEventListener("keydown", event => {
+      const target = event.target;
+      if (target.matches("input, textarea, [contenteditable]")) return;
+      if (event.key === "ArrowLeft") cycle(-1);
+      if (event.key === "ArrowRight") cycle(1);
+    });
+    render();
+  </script>
+</body>
+</html>

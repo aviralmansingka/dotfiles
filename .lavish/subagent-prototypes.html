@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Subagent rendering — 3 tree-renderer prototypes</title>
+<style>
+  :root{
+    --bg0:#282828; --bg1:#32302f; --bg2:#3c3836; --border:#504945;
+    --fg1:#ebdbb2; --muted:#928374; --ghost:#665c54;
+    --orange:#f28534; --green:#b8bb26; --red:#f2594b; --yellow:#fabd2f;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg0); color:var(--fg1);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-size:14px; line-height:1.6; padding:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:32px 24px 72px}
+  h1{font-size:21px; font-weight:700; margin:0 0 4px; color:var(--fg1)}
+  .lede{color:var(--muted); margin:0 0 26px; font-size:13px}
+  h2{font-size:15.5px; font-weight:700; color:var(--orange); margin:40px 0 8px;
+     border-bottom:1px solid var(--border); padding-bottom:6px}
+  h3{font-size:13px; color:var(--fg1); margin:18px 0 6px; font-weight:700}
+  .sub{color:var(--muted); font-size:12.5px; margin:0 0 10px}
+  .sub b{color:var(--fg1); font-weight:600}
+  .term{
+    background:var(--bg0); color:var(--fg1);
+    font-family:inherit; font-size:13px; line-height:1.6;
+    padding:14px 16px; border-radius:6px; white-space:pre; overflow-x:auto;
+    margin:0; border:1px solid var(--border);
+  }
+  .callout{background:var(--bg1); border:1px solid var(--border); border-radius:6px;
+           padding:12px 14px; margin:0 0 26px; font-size:12.5px; color:var(--muted)}
+  .callout b{color:var(--fg1)}
+  .legend{border-collapse:collapse; width:100%; font-size:12.5px; margin:8px 0 4px}
+  .legend td,.legend th{padding:5px 8px; text-align:left; border-bottom:1px solid var(--border)}
+  .legend th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em}
+  .legend td{color:var(--fg1)}
+  .swatch{display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-1px; margin-right:6px; border:1px solid rgba(255,255,255,.08)}
+  .cmp{border-collapse:collapse; width:100%; font-size:12.5px; margin:10px 0 4px}
+  .cmp td,.cmp th{padding:6px 9px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  .cmp th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em}
+  .cmp td{color:var(--fg1)}
+  .cmp .pa{color:var(--green)}
+  .cmp .pb{color:var(--orange)}
+  .cmp .pc{color:#7daea3}
+  code{color:var(--fg1); background:var(--bg2); padding:1px 5px; border-radius:3px; font-size:12.5px}
+  .tag{display:inline-block; padding:1px 7px; border-radius:9px; font-size:11px; font-weight:600; margin-left:6px}
+  .tag.live{background:#2a3a1a; color:var(--green)}
+  .tag.final{background:#3a2a1a; color:var(--orange)}
+  .tag.exp{background:#253033; color:#7daea3}
+  a{color:var(--orange)}
+  .foot{color:var(--muted); font-size:12px; margin-top:30px; border-top:1px solid var(--border); padding-top:14px}
+  .scene{background:var(--bg1); border:1px solid var(--border); border-radius:6px; padding:10px 14px; margin:0 0 14px; font-size:12.5px; color:var(--muted)}
+  .scene b{color:var(--fg1)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Subagent rendering — 3 tree-renderer prototypes</h1>
+<p class="lede">Three approaches for integrating <b style="color:var(--fg1)">pi-interactive-subagents</b> (vendored Herdr-surface fork) into the captain's tree renderer. Each re-expresses the subagent lifecycle in the tree's native <code>▸ ▹ ◆ ◇ × • ├─ └─ │</code> vocabulary and Gruvbox Material theme tokens — <b style="color:var(--fg1)">no background boxes, no raw-ANSI blue</b>.</p>
+
+<div class="callout"><b>The gap these close.</b> The live widget draws a <span style="color:#4da3ff">#4da3ff</span> blue rounded box; the completion box fills a <code>toolSuccessBg</code>/<code>toolErrorBg</code> background. The tree renderer uses <b>foreground glyphs + theme tokens only</b> — so every prototype below drops the boxes and the blue, and speaks only in the tree's language. <b>Stalled</b> is rendered as a working step (<span style="color:var(--orange)">▹</span>) with a <span style="color:var(--yellow)">warning</span>-yellow label, since the tree has no dedicated stalled glyph.</div>
+
+<h2>Shared glyph vocabulary <span style="color:var(--muted);font-weight:400;font-size:12px">— verified against tool-call-renderer.ts</span></h2>
+<table class="legend">
+  <tr><th>Glyph</th><th>Meaning</th><th>Token</th><th>Hex</th></tr>
+  <tr><td><span style="color:var(--orange)">▹</span></td><td>working step</td><td><code>accent</code></td><td><span class="swatch" style="background:#f28534"></span>#f28534</td></tr>
+  <tr><td><span style="color:var(--muted)">▸</span></td><td>done step</td><td><code>muted</code></td><td><span class="swatch" style="background:#928374"></span>#928374</td></tr>
+  <tr><td><span style="color:var(--red)">×</span></td><td>failed step</td><td><code>error</code></td><td><span class="swatch" style="background:#f2594b"></span>#f2594b</td></tr>
+  <tr><td><span style="color:var(--green)">◆</span></td><td>tool done</td><td><code>success</code></td><td><span class="swatch" style="background:#b8bb26"></span>#b8bb26</td></tr>
+  <tr><td><span style="color:var(--orange)">◇</span></td><td>tool pending</td><td><code>accent</code></td><td><span class="swatch" style="background:#f28534"></span>#f28534</td></tr>
+  <tr><td><span style="color:var(--muted)">•</span></td><td>thought bullet</td><td><code>muted</code></td><td><span class="swatch" style="background:#928374"></span>#928374</td></tr>
+  <tr><td><span style="color:var(--border)">├─ └─ │</span></td><td>connectors / rail</td><td><code>borderMuted</code></td><td><span class="swatch" style="background:#504945"></span>#504945</td></tr>
+</table>
+
+<div class="scene"><b>Canonical scenario (rendered identically by all three):</b> a parent pi thinks, then dispatches two subagents in parallel — <b>scout</b> (scout agent, <code>glm-5p3-flash</code>) and <b>researcher</b> (researcher agent, <code>glm-5p3-flash</code>). <b>scout</b> runs <code>read ×2</code> + <code>bash</code>, succeeds in 43s, 3 tools. <b>researcher</b> starts, waits 2m, stalls (wrong activity id), then fails (provider rate-limit) at 1m 12s. Each prototype shows a <b>LIVE</b> frame (mid-run) and a <b>FINAL</b> frame (both completed).</div>
+
+<!-- ============ PROTOTYPE A ============ -->
+<h2>Prototype A — Nested subtree</h2>
+<p class="sub"><b>Idea:</b> the subagent is a child branch of the parent trace; the subagent's own tool calls are deeper leaves on the <b>same</b> tree. Deepest integration — subagent work unfolds <i>inside</i> the parent trace, sharing its rails and indent.</p>
+
+<h3>LIVE <span class="tag live">mid-run</span></h3>
+<pre class="term"> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatching scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--muted)">00:23 · active</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read · README.md</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read · budget.py</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">└─</span> <span style="color:var(--orange)">◇</span> <span style="color:var(--fg1)">bash · 7m</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--muted)">00:45 · waiting 2m</span></pre>
+
+<h3>FINAL <span class="tag final">both completed</span></h3>
+<pre class="term"> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatched scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--green)">◆</span> <span style="color:var(--muted)">3 tools · 43s</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read · README.md</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read · budget.py</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">└─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">bash · ok</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--red)">×</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--red)">· failed (provider error) · 1m 12s</span>
+    <span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read ×1</span>
+    <span style="color:var(--border)">└─</span> <span style="color:var(--red)">×</span> <span style="color:var(--fg1)">bash · rate limit</span></pre>
+
+<p class="sub"><b>Stalled moment</b> (between waiting and failed) would render as <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--yellow)">01:12 · stalled · wrong activity id</span> — same working glyph, warning-yellow label.</p>
+
+<!-- ============ PROTOTYPE B ============ -->
+<h2>Prototype B — Subagent step block</h2>
+<p class="sub"><b>Idea:</b> a dedicated subagent step type — one <span style="color:var(--orange)">▹</span>/<span style="color:var(--muted)">▸</span>/<span style="color:var(--red)">×</span> row carries a rich inline summary (agent · model · status · tools · duration · tokens), with the subagent's tool calls as a contained mini-tree beneath. The completion box's content, re-expressed in tree vocabulary.</p>
+
+<h3>LIVE <span class="tag live">mid-run</span></h3>
+<pre class="term"> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatching scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--muted)">(scout · glm-5p3-flash) — active · bash 7m · 00:23</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read ×2 · loaded</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">└─</span> <span style="color:var(--orange)">◇</span> <span style="color:var(--fg1)">bash · running 7m</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--muted)">(researcher · glm-5p3-flash) — waiting 2m · 00:45</span></pre>
+
+<h3>FINAL <span class="tag final">both completed</span></h3>
+<pre class="term"> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatched scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--muted)">(scout · glm-5p3-flash) — 3 tools · 43s · ↑4.3k ↓717 $0.001</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read ×2 · loaded</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">└─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">bash · ok</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--red)">×</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--red)">(researcher · glm-5p3-flash) — failed (provider error) · 1m 12s</span> <span style="color:var(--muted)">· ↑8.1k ↓1.2k $0.004</span>
+    <span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read ×1</span>
+    <span style="color:var(--border)">└─</span> <span style="color:var(--red)">×</span> <span style="color:var(--fg1)">bash · rate limit</span></pre>
+
+<p class="sub"><b>Stalled moment:</b> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--muted)">(researcher · glm-5p3-flash) — </span><span style="color:var(--yellow)">stalled · wrong activity id</span><span style="color:var(--muted)"> · 01:12</span> — inline summary keeps the agent/model context visible even mid-stall.</p>
+
+<!-- ============ PROTOTYPE C ============ -->
+<h2>Prototype C — Inline chip + expandable trace</h2>
+<p class="sub"><b>Idea:</b> minimal footprint while live — one-line chips inline in the parent trace, <b>no nested tree while running</b>. On completion the chip becomes a collapsed <span style="color:var(--muted)">▸</span>/<span style="color:var(--red)">×</span> row that expands on <code>ctrl+o</code> to reveal the full subagent tool tree. Most space-efficient for parallel runs.</p>
+
+<h3>LIVE <span class="tag live">mid-run · compact chips</span></h3>
+<pre class="term"> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatching scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--muted)">00:23 · active</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--muted)">00:45 · </span><span style="color:var(--yellow)">waiting 2m</span></pre>
+
+<h3>FINAL <span class="tag final">collapsed · expand on demand</span></h3>
+<pre class="term"> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatched scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--green)">◆</span> <span style="color:var(--muted)">3 tools · 43s</span>  <span style="color:var(--muted)">ctrl+o to expand</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--red)">×</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--red)">· failed · 1m 12s</span>  <span style="color:var(--muted)">ctrl+o to expand</span></pre>
+
+<h3>EXPANDED <span class="tag exp">scout opened with ctrl+o</span></h3>
+<pre class="term"> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatched scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--green)">◆</span> <span style="color:var(--muted)">3 tools · 43s · ↑4.3k ↓717 $0.001</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read · README.md — Project description…</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read · budget.py — Core module…</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">└─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">bash · ok</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--red)">×</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--red)">· failed · 1m 12s</span>  <span style="color:var(--muted)">ctrl+o to expand</span></pre>
+
+<!-- ============ COMPARISON ============ -->
+<h2>Comparison</h2>
+<table class="cmp">
+  <tr><th></th><th><span class="pa">A · Nested subtree</span></th><th><span class="pb">B · Step block</span></th><th><span class="pc">C · Chip + expand</span></th></tr>
+  <tr><td><b>Live footprint</b></td><td>medium — shows subagent tools live</td><td>medium — rich inline summary</td><td><b>minimal</b> — one-line chips, no nested tree</td></tr>
+  <tr><td><b>Depth integration</b></td><td><b>deepest</b> — subagent tools are parent leaves</td><td>high — dedicated step, contained mini-tree</td><td>low live, high on expand</td></tr>
+  <tr><td><b>Token / cost visibility</b></td><td>on expand only</td><td><b>inline always</b></td><td>on expand only</td></tr>
+  <tr><td><b>Stalled state</b></td><td>working glyph + yellow label</td><td>working glyph + yellow label, context kept</td><td>chip + yellow label</td></tr>
+  <tr><td><b>Best for</b></td><td>watching subagent work unfold step-by-step</td><td>at-a-glance status + cost while it runs</td><td>many parallel subagents, compactness first</td></tr>
+  <tr><td><b>Tree-nativeness</b></td><td>full — reuses existing step/call nodes</td><td>full — new step subtype, same tokens</td><td>full — chips are working/done steps; expand reuses tree</td></tr>
+</table>
+
+<div class="foot"><b>What these are not.</b> These are rendering prototypes — visual proposals for how subagent lifecycle should look in the tree renderer. The actual <code>tool-call-renderer.ts</code> integration (wiring subagent state into the renderer's step/call model) is a separate ship task once the captain picks a direction. Reference for the current (pre-integration) rendering lives at <code>.lavish/subagent-rendering.html</code>.</div>
+
+</div>
+</body>
+</html>

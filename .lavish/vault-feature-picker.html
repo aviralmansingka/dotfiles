@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vault feature picker prototype</title>
+  <!-- PROTOTYPE: Three structural variants for the <leader>vf Snacks picker. -->
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg0: #1d2021;
+      --bg1: #282828;
+      --bg2: #32302f;
+      --bg3: #45403d;
+      --border: #504945;
+      --fg: #ebdbb2;
+      --muted: #928374;
+      --orange: #f28534;
+      --yellow: #e9b143;
+      --green: #a9b665;
+      --aqua: #80aa9e;
+      --blue: #7daea3;
+      --red: #ea6962;
+      --shadow: 0 24px 80px rgb(0 0 0 / 45%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 15% 10%, rgb(128 170 158 / 10%), transparent 34rem),
+        radial-gradient(circle at 90% 0%, rgb(242 133 52 / 8%), transparent 30rem),
+        var(--bg0);
+      color: var(--fg);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    button, input, textarea { font: inherit; }
+
+    .page {
+      width: min(1480px, 100%);
+      margin: 0 auto;
+      padding: 28px clamp(16px, 3vw, 48px) 130px;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--orange);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 940px;
+      margin: 0;
+      font: 700 clamp(28px, 4vw, 52px)/1.08 system-ui, sans-serif;
+      letter-spacing: -.04em;
+    }
+
+    .lede {
+      max-width: 850px;
+      margin: 14px 0 24px;
+      color: #c7bfa5;
+      font: 400 16px/1.55 system-ui, sans-serif;
+    }
+
+    kbd {
+      padding: 2px 7px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--bg2);
+      color: var(--yellow);
+      box-shadow: inset 0 -1px 0 rgb(0 0 0 / 35%);
+      font: 600 .88em/1.4 ui-monospace, monospace;
+    }
+
+    .facts {
+      display: flex;
+      min-width: 0;
+      margin: 0 0 20px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .fact {
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgb(40 40 40 / 72%);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .fact strong { color: var(--fg); }
+
+    .variant-intro {
+      display: flex;
+      min-width: 0;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 22px 0 12px;
+    }
+
+    .variant-intro > * { min-width: 0; }
+
+    .variant-intro h2 {
+      margin: 0 0 4px;
+      color: var(--fg);
+      font: 700 20px/1.25 system-ui, sans-serif;
+    }
+
+    .variant-intro p {
+      margin: 0;
+      color: var(--muted);
+      font: 400 13px/1.45 system-ui, sans-serif;
+    }
+
+    .tradeoff {
+      flex: 0 1 auto;
+      max-width: 520px;
+      padding: 8px 11px;
+      border-left: 2px solid var(--orange);
+      color: #c7bfa5;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .terminal {
+      min-width: 0;
+      height: min(680px, 69vh);
+      min-height: 520px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--bg1);
+      box-shadow: var(--shadow);
+    }
+
+    .nvim-bar {
+      display: flex;
+      min-width: 0;
+      height: 34px;
+      align-items: center;
+      gap: 14px;
+      padding: 0 12px;
+      border-bottom: 1px solid #3c3836;
+      background: #242424;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .nvim-bar span { min-width: 0; }
+    .nvim-bar .filename {
+      overflow: hidden;
+      color: var(--fg);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .nvim-bar .mode { color: var(--green); font-weight: 800; }
+    .nvim-bar .right { margin-left: auto; white-space: nowrap; }
+
+    .picker {
+      display: grid;
+      min-width: 0;
+      height: calc(100% - 34px);
+      padding: 10px;
+      gap: 10px;
+    }
+
+    .pane {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg1);
+    }
+
+    .pane-title {
+      display: flex;
+      min-width: 0;
+      height: 30px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      color: var(--orange);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .pane-title .count { margin-left: auto; color: var(--muted); }
+
+    .rows {
+      min-width: 0;
+      height: calc(100% - 30px);
+      overflow: auto;
+      padding: 3px 5px 7px;
+      scrollbar-color: var(--border) transparent;
+      scrollbar-width: thin;
+    }
+
+    .row {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      color: var(--fg);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .row.selected {
+      background: var(--bg3);
+      color: #fff7d6;
+      font-weight: 700;
+    }
+
+    .row .path {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .row .faded { color: var(--muted); }
+    .row .project { color: var(--blue); }
+    .row .theme { color: var(--yellow); }
+    .dot { flex: 0 0 auto; font-size: 11px; }
+    .dot.progress { color: var(--green); }
+    .dot.pending { color: var(--muted); }
+
+    .query {
+      display: flex;
+      min-width: 0;
+      height: 38px;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg1);
+      color: var(--aqua);
+      font-size: 12px;
+    }
+
+    .query .typed { color: var(--fg); }
+    .query .cursor {
+      width: 7px;
+      height: 16px;
+      background: var(--fg);
+      animation: blink 1.1s steps(1) infinite;
+    }
+    .query .keys { margin-left: auto; color: var(--muted); white-space: nowrap; }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .preview {
+      height: calc(100% - 30px);
+      overflow: auto;
+      padding: 18px 20px 28px;
+      color: #d5cdb5;
+      font-size: 12px;
+      line-height: 1.55;
+      scrollbar-color: var(--border) transparent;
+      scrollbar-width: thin;
+    }
+
+    .preview .line { display: block; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .preview .fm { color: var(--muted); }
+    .preview .key { color: var(--aqua); }
+    .preview .value { color: var(--green); }
+    .preview .h1 { margin: 15px 0 8px; color: var(--orange); font-weight: 800; }
+    .preview .h2 { margin: 13px 0 5px; color: var(--yellow); font-weight: 800; }
+    .preview .bullet { color: var(--blue); }
+    .preview .selected-line { margin: 0 -8px; padding: 0 8px; background: rgb(69 64 61 / 52%); }
+
+    /* A: the implemented compact flat list */
+    .variant-a .picker {
+      grid-template: minmax(0, 1fr) 38px / minmax(0, 1.18fr) minmax(0, .82fr);
+    }
+    .variant-a .list-pane { grid-area: 1 / 1; }
+    .variant-a .query { grid-area: 2 / 1; }
+    .variant-a .preview-pane { grid-area: 1 / 2 / 3; }
+
+    /* B: project rail + grouped feature browser */
+    .variant-b .picker {
+      grid-template: minmax(0, 1fr) 38px / minmax(135px, .36fr) minmax(0, .74fr) minmax(0, .9fr);
+    }
+    .variant-b .projects-pane { grid-area: 1 / 1; }
+    .variant-b .features-pane { grid-area: 1 / 2; }
+    .variant-b .preview-pane { grid-area: 1 / 3 / 3; }
+    .variant-b .query { grid-area: 2 / 1 / 3 / 3; }
+
+    .group-label {
+      padding: 10px 8px 4px;
+      color: var(--yellow);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .project-row {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      padding: 9px 8px;
+      border-radius: 4px;
+      color: var(--fg);
+      font-size: 12px;
+    }
+    .project-row.selected { background: var(--bg3); }
+    .project-row span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .project-row .count { color: var(--muted); }
+
+    /* C: hierarchy tree with tasks */
+    .variant-c .picker {
+      grid-template: minmax(0, 1fr) 38px / minmax(0, .96fr) minmax(0, 1.04fr);
+    }
+    .variant-c .tree-pane { grid-area: 1 / 1; }
+    .variant-c .query { grid-area: 2 / 1; }
+    .variant-c .preview-pane { grid-area: 1 / 2 / 3; }
+    .tree-row { gap: 6px; }
+    .tree-row.level-1 { padding-left: 20px; color: var(--yellow); }
+    .tree-row.level-2 { padding-left: 38px; }
+    .tree-row.level-3 { padding-left: 58px; color: #c7bfa5; }
+    .tree-row .branch { flex: 0 0 auto; color: var(--muted); }
+    .tree-row .task-state { color: var(--aqua); }
+
+    .choice-panel {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr);
+      gap: 18px;
+      margin-top: 22px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgb(40 40 40 / 72%);
+    }
+
+    .choice-panel > * { min-width: 0; }
+    .choice-panel h3 {
+      margin: 0 0 5px;
+      font: 700 17px/1.3 system-ui, sans-serif;
+    }
+    .choice-panel p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font: 400 13px/1.45 system-ui, sans-serif;
+    }
+
+    .choices {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .choice {
+      display: flex;
+      min-width: 0;
+      cursor: pointer;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg1);
+      color: #c7bfa5;
+      font: 600 12px/1.35 system-ui, sans-serif;
+    }
+    .choice:has(input:checked) {
+      border-color: var(--orange);
+      background: rgb(242 133 52 / 8%);
+      color: var(--fg);
+    }
+    .choice input { accent-color: var(--orange); }
+
+    textarea {
+      width: 100%;
+      min-height: 70px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      background: var(--bg0);
+      color: var(--fg);
+      padding: 10px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    textarea:focus { border-color: var(--aqua); }
+
+    .queue-row {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 10px;
+      margin-top: 9px;
+    }
+
+    .queue {
+      cursor: pointer;
+      border: 0;
+      border-radius: 7px;
+      background: var(--orange);
+      color: #1d2021;
+      padding: 9px 12px;
+      font-weight: 900;
+    }
+    .queue:hover { filter: brightness(1.08); }
+    .queue-status { color: var(--green); font-size: 11px; }
+
+    .switcher {
+      position: fixed;
+      z-index: 20;
+      left: 50%;
+      bottom: 22px;
+      display: grid;
+      min-width: 320px;
+      grid-template-columns: 42px minmax(0, 1fr) 42px;
+      align-items: center;
+      overflow: hidden;
+      transform: translateX(-50%);
+      border: 1px solid #665c54;
+      border-radius: 999px;
+      background: #121313;
+      box-shadow: 0 12px 44px rgb(0 0 0 / 55%);
+    }
+
+    .switcher button {
+      height: 42px;
+      cursor: pointer;
+      border: 0;
+      background: transparent;
+      color: var(--fg);
+      font-size: 18px;
+    }
+    .switcher button:hover { background: var(--bg3); }
+    .switch-label {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--fg);
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    [data-variant-panel][hidden] { display: none; }
+
+    @media (max-width: 900px) {
+      .terminal { height: 720px; }
+      .variant-a .picker,
+      .variant-c .picker {
+        grid-template: minmax(0, .85fr) 38px minmax(0, 1.15fr) / minmax(0, 1fr);
+      }
+      .variant-a .list-pane,
+      .variant-c .tree-pane { grid-area: 1 / 1; }
+      .variant-a .query,
+      .variant-c .query { grid-area: 2 / 1; }
+      .variant-a .preview-pane,
+      .variant-c .preview-pane { grid-area: 3 / 1; }
+
+      .variant-b .picker {
+        grid-template: minmax(0, .72fr) 38px minmax(0, 1.28fr) / minmax(120px, .38fr) minmax(0, .62fr);
+      }
+      .variant-b .projects-pane { grid-area: 1 / 1; }
+      .variant-b .features-pane { grid-area: 1 / 2; }
+      .variant-b .query { grid-area: 2 / 1 / 3 / 3; }
+      .variant-b .preview-pane { grid-area: 3 / 1 / 4 / 3; }
+      .choice-panel { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    @media (max-width: 620px) {
+      .page { padding-inline: 10px; }
+      .variant-intro { display: block; }
+      .tradeoff { margin-top: 10px; }
+      .terminal { min-height: 620px; }
+      .choices { grid-template-columns: minmax(0, 1fr); }
+      .switcher { min-width: min(320px, calc(100vw - 24px)); }
+      .query .keys { display: none; }
+      .variant-b .picker {
+        grid-template: 130px minmax(0, 1fr) 38px minmax(0, 1fr) / minmax(0, 1fr);
+      }
+      .variant-b .projects-pane { grid-area: 1 / 1; }
+      .variant-b .features-pane { grid-area: 2 / 1; }
+      .variant-b .query { grid-area: 3 / 1; }
+      .variant-b .preview-pane { grid-area: 4 / 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .query .cursor { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <p class="eyebrow">Throwaway UI prototype · real vault sample</p>
+    <h1>How should <kbd>&lt;leader&gt;vf</kbd> expose active features?</h1>
+    <p class="lede">
+      The data contract is fixed: scan <code>~/vault/1_projects</code>, exclude done and maintained features,
+      put in-progress work first, preview the source, and open on Enter. The decision here is information hierarchy.
+    </p>
+    <div class="facts" aria-label="Live vault facts">
+      <span class="fact"><strong>38</strong> active features</span>
+      <span class="fact"><strong>10</strong> in progress</span>
+      <span class="fact"><strong>28</strong> pending</span>
+      <span class="fact">Gruvbox Material + Snacks picker</span>
+    </div>
+
+    <section class="variant-a" data-variant-panel="A">
+      <div class="variant-intro">
+        <div>
+          <h2>A — Compact flat list</h2>
+          <p>The implementation now in dotfiles: fastest scanning, least machinery.</p>
+        </div>
+        <div class="tradeoff">Best for jumping to a known feature. Hierarchy is readable in each row, but not browsable.</div>
+      </div>
+      <div class="terminal">
+        <div class="nvim-bar">
+          <span class="mode">NORMAL</span>
+          <span class="filename">1_projects/neovim/…/vault-feature-picker/feature.md</span>
+          <span class="right">markdown · 57:1</span>
+        </div>
+        <div class="picker">
+          <section class="pane list-pane">
+            <div class="pane-title">Results <span class="count">38</span></div>
+            <div class="rows">
+              <div class="row selected"><span class="dot progress">●</span><span class="faded">in progress │</span><span class="path"><span class="project">Neovim</span> › <span class="theme">Agent Integration</span> › Inline Ask And Edit</span></div>
+              <div class="row"><span class="dot progress">●</span><span class="faded">in progress │</span><span class="path"><span class="project">Neovim</span> › <span class="theme">Editor Platform</span> › Headless Verification</span></div>
+              <div class="row"><span class="dot progress">●</span><span class="faded">in progress │</span><span class="path"><span class="project">Neovim</span> › <span class="theme">Notetaking Support</span> › Weekly Backlog Helpers</span></div>
+              <div class="row"><span class="dot progress">●</span><span class="faded">in progress │</span><span class="path"><span class="project">Pi Agent</span> › <span class="theme">Finance</span> › Plaid Transaction Retrieval</span></div>
+              <div class="row"><span class="dot progress">●</span><span class="faded">in progress │</span><span class="path"><span class="project">Pi Agent</span> › <span class="theme">Pi Customization</span> › Multi-User Pi Operation</span></div>
+              <div class="row"><span class="dot pending">○</span><span class="faded">pending&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; │</span><span class="path"><span class="project">Kernel Programming</span> › <span class="theme">Blackwell Kernels</span> › Comparative Matmul Sprint</span></div>
+              <div class="row"><span class="dot pending">○</span><span class="faded">pending&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; │</span><span class="path"><span class="project">Neovim</span> › <span class="theme">Code Editing</span> › Code Review Workflow</span></div>
+              <div class="row"><span class="dot pending">○</span><span class="faded">pending&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; │</span><span class="path"><span class="project">Neovim</span> › <span class="theme">Notetaking Support</span> › Vault Feature Picker</span></div>
+              <div class="row"><span class="dot pending">○</span><span class="faded">pending&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; │</span><span class="path"><span class="project">Pi Agent</span> › <span class="theme">Telegram Agent Workflows</span> › Telegram Capture</span></div>
+            </div>
+          </section>
+          <div class="query"><span>❯</span><span class="typed">vault</span><span class="cursor"></span><span class="keys">↵ open · esc close</span></div>
+          <section class="pane preview-pane">
+            <div class="pane-title">Preview: feature.md</div>
+            <div class="preview">
+              <span class="line fm">---</span>
+              <span class="line"><span class="key">id:</span> neovim-feature-vault-feature-picker</span>
+              <span class="line"><span class="key">status:</span> <span class="value">in-progress</span></span>
+              <span class="line fm">---</span>
+              <span class="line h1 selected-line"># Vault Feature Picker</span>
+              <span class="line h2">## Current Behavior</span>
+              <span class="line"><span class="bullet">-</span> &lt;leader&gt;vf opens active features from the canonical</span>
+              <span class="line">  ~/vault/1_projects hierarchy.</span>
+              <span class="line"><span class="bullet">-</span> Rows show status plus Project → Theme → Feature,</span>
+              <span class="line">  with in-progress before pending-work.</span>
+              <span class="line"><span class="bullet">-</span> Selecting a row previews and opens the feature.</span>
+              <span class="line h2">## Tasks</span>
+              <span class="line">- [~] T01 Build and verify the tree picker and handoff.</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="variant-b" data-variant-panel="B" hidden>
+      <div class="variant-intro">
+        <div>
+          <h2>B — Project rail + grouped features</h2>
+          <p>Browse by project first, then scan theme sections inside that project.</p>
+        </div>
+        <div class="tradeoff">Makes project boundaries obvious. Costs horizontal space and adds a navigation step.</div>
+      </div>
+      <div class="terminal">
+        <div class="nvim-bar">
+          <span class="mode">NORMAL</span>
+          <span class="filename">1_projects/neovim/README.md</span>
+          <span class="right">markdown · project browser</span>
+        </div>
+        <div class="picker">
+          <section class="pane projects-pane">
+            <div class="pane-title">Projects</div>
+            <div class="rows">
+              <div class="project-row"><span>Pi Agent</span><span class="count">11</span></div>
+              <div class="project-row selected"><span>Neovim</span><span class="count">25</span></div>
+              <div class="project-row"><span>Kernel Programming</span><span class="count">2</span></div>
+            </div>
+          </section>
+          <section class="pane features-pane">
+            <div class="pane-title">Neovim <span class="count">25 active</span></div>
+            <div class="rows">
+              <div class="group-label">Agent Integration · 2</div>
+              <div class="row"><span class="dot progress">●</span><span class="path">Inline Ask And Edit</span></div>
+              <div class="row"><span class="dot pending">○</span><span class="path">Agent Context Management</span></div>
+              <div class="group-label">Editor Platform · 8</div>
+              <div class="row"><span class="dot progress">●</span><span class="path">Headless Verification</span></div>
+              <div class="row"><span class="dot pending">○</span><span class="path">Clipboard</span></div>
+              <div class="row"><span class="dot pending">○</span><span class="path">Picker</span></div>
+              <div class="row"><span class="dot pending">○</span><span class="path">Project Root</span></div>
+              <div class="group-label">Notetaking Support · 10</div>
+              <div class="row selected"><span class="dot pending">○</span><span class="path">Vault Feature Picker</span></div>
+              <div class="row"><span class="dot progress">●</span><span class="path">Weekly Backlog Helpers</span></div>
+              <div class="row"><span class="dot pending">○</span><span class="path">Obsidian And Vault Navigation</span></div>
+            </div>
+          </section>
+          <div class="query"><span>❯</span><span class="typed"></span><span class="cursor"></span><span class="keys">tab projects · ↵ open</span></div>
+          <section class="pane preview-pane">
+            <div class="pane-title">Preview: feature.md</div>
+            <div class="preview">
+              <span class="line fm">---</span>
+              <span class="line"><span class="key">id:</span> neovim-feature-vault-feature-picker</span>
+              <span class="line"><span class="key">status:</span> <span class="value">in-progress</span></span>
+              <span class="line fm">---</span>
+              <span class="line h1 selected-line"># Vault Feature Picker</span>
+              <span class="line h2">## Purpose</span>
+              <span class="line">Surface unfinished vault features and tasks in Neovim</span>
+              <span class="line">through the same Project → Theme → Feature → Task</span>
+              <span class="line">hierarchy used on disk.</span>
+              <span class="line h2">## Current Behavior</span>
+              <span class="line"><span class="bullet">-</span> Flat active-feature list is implemented.</span>
+              <span class="line"><span class="bullet">-</span> Source preview and exact heading open are implemented.</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="variant-c" data-variant-panel="C" hidden>
+      <div class="variant-intro">
+        <div>
+          <h2>C — Full hierarchy tree</h2>
+          <p>The durable feature contract: visible parents and task rows, retained while filtering.</p>
+        </div>
+        <div class="tradeoff">Best context and future agent handoff. Highest implementation and interaction complexity.</div>
+      </div>
+      <div class="terminal">
+        <div class="nvim-bar">
+          <span class="mode">NORMAL</span>
+          <span class="filename">~/vault/1_projects</span>
+          <span class="right">feature tree · 38 active</span>
+        </div>
+        <div class="picker">
+          <section class="pane tree-pane">
+            <div class="pane-title">Active feature tree <span class="count">3 projects</span></div>
+            <div class="rows">
+              <div class="row tree-row"><span class="branch">▾</span><span class="project">Neovim</span></div>
+              <div class="row tree-row level-1"><span class="branch">▾</span><span>Notetaking Support</span></div>
+              <div class="row tree-row level-2 selected"><span class="dot pending">○</span><span class="path">Vault Feature Picker</span></div>
+              <div class="row tree-row level-3"><span class="branch">└─</span><span class="task-state">[~]</span><span class="path">T01 Build and verify the vault feature tree picker</span></div>
+              <div class="row tree-row level-2"><span class="dot progress">●</span><span class="path">Weekly Backlog Helpers</span></div>
+              <div class="row tree-row level-3"><span class="branch">├─</span><span class="task-state">[x]</span><span class="path">T01 Canonical weekly backlog paths</span></div>
+              <div class="row tree-row level-3"><span class="branch">└─</span><span class="task-state">[ ]</span><span class="path">T02 Verify date navigation edge cases</span></div>
+              <div class="row tree-row level-1"><span class="branch">▸</span><span>Editor Platform</span></div>
+              <div class="row tree-row level-1"><span class="branch">▸</span><span>Agent Integration</span></div>
+              <div class="row tree-row"><span class="branch">▸</span><span class="project">Pi Agent</span></div>
+              <div class="row tree-row"><span class="branch">▸</span><span class="project">Kernel Programming</span></div>
+            </div>
+          </section>
+          <div class="query"><span>❯</span><span class="typed">feature picker</span><span class="cursor"></span><span class="keys">↵ open · ^a agent</span></div>
+          <section class="pane preview-pane">
+            <div class="pane-title">Preview: feature.md</div>
+            <div class="preview">
+              <span class="line fm">---</span>
+              <span class="line"><span class="key">id:</span> neovim-feature-vault-feature-picker</span>
+              <span class="line"><span class="key">status:</span> <span class="value">in-progress</span></span>
+              <span class="line fm">---</span>
+              <span class="line h1 selected-line"># Vault Feature Picker</span>
+              <span class="line h2">## Goal</span>
+              <span class="line">&lt;leader&gt;vf opens a tree picker of non-done features,</span>
+              <span class="line">orders in-progress work first, keeps fuzzy input at the</span>
+              <span class="line">bottom, and lets &lt;C-a&gt; send the selected task to a</span>
+              <span class="line">project-scoped Herdr workspace and focused Pi session.</span>
+              <span class="line h2">## Validation</span>
+              <span class="line"><span class="bullet">-</span> Preserve parents during fuzzy filtering.</span>
+              <span class="line"><span class="bullet">-</span> Verify picker-local agent mapping.</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <form class="choice-panel" data-lavish-question="vault-feature-picker-variant" id="choice-form">
+      <div>
+        <h3>Choose the direction</h3>
+        <p>Selection stays local until you queue it. You can still annotate any exact row, pane, or tradeoff above.</p>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="variant" value="A" checked><span><strong>A</strong><br>Compact flat list</span></label>
+          <label class="choice"><input type="radio" name="variant" value="B"><span><strong>B</strong><br>Project rail</span></label>
+          <label class="choice"><input type="radio" name="variant" value="C"><span><strong>C</strong><br>Hierarchy tree</span></label>
+        </div>
+      </div>
+      <div>
+        <label for="notes"><h3>What should I steal or change?</h3></label>
+        <textarea id="notes" name="notes" placeholder="Example: A's density, but group rows under project headings…"></textarea>
+        <div class="queue-row">
+          <button class="queue" type="submit">Queue choice</button>
+          <span class="queue-status" id="queue-status" aria-live="polite"></span>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <nav class="switcher" aria-label="Prototype variants">
+    <button type="button" id="previous" aria-label="Previous variant">←</button>
+    <div class="switch-label" id="switch-label">A — Compact flat list</div>
+    <button type="button" id="next" aria-label="Next variant">→</button>
+  </nav>
+
+  <script>
+    const variants = [
+      { key: "A", name: "Compact flat list" },
+      { key: "B", name: "Project rail" },
+      { key: "C", name: "Hierarchy tree" },
+    ];
+
+    function currentIndex() {
+      const key = new URLSearchParams(location.search).get("variant") || "A";
+      const index = variants.findIndex((variant) => variant.key === key.toUpperCase());
+      return index < 0 ? 0 : index;
+    }
+
+    function showVariant(index) {
+      const variant = variants[(index + variants.length) % variants.length];
+      document.querySelectorAll("[data-variant-panel]").forEach((panel) => {
+        panel.hidden = panel.dataset.variantPanel !== variant.key;
+      });
+      document.getElementById("switch-label").textContent = `${variant.key} — ${variant.name}`;
+      const radio = document.querySelector(`input[name="variant"][value="${variant.key}"]`);
+      if (radio) radio.checked = true;
+      const url = new URL(location.href);
+      url.searchParams.set("variant", variant.key);
+      history.replaceState({}, "", url);
+    }
+
+    document.getElementById("previous").addEventListener("click", () => showVariant(currentIndex() - 1));
+    document.getElementById("next").addEventListener("click", () => showVariant(currentIndex() + 1));
+    document.querySelectorAll('input[name="variant"]').forEach((radio) => {
+      radio.addEventListener("change", () => showVariant(variants.findIndex((variant) => variant.key === radio.value)));
+    });
+
+    addEventListener("keydown", (event) => {
+      const target = event.target;
+      if (target.matches("input, textarea, [contenteditable]")) return;
+      if (event.key === "ArrowLeft") showVariant(currentIndex() - 1);
+      if (event.key === "ArrowRight") showVariant(currentIndex() + 1);
+    });
+
+    document.getElementById("choice-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      const choice = data.get("variant");
+      const notes = String(data.get("notes") || "").trim();
+      const chosen = variants.find((variant) => variant.key === choice);
+      const prompt = `Use variant ${chosen.key} — ${chosen.name} for <leader>vf.${notes ? ` Feedback: ${notes}` : ""}`;
+      if (window.lavish && window.lavish.queuePrompt) {
+        window.lavish.queuePrompt(prompt, {
+          tag: "ui-choice",
+          text: `Vault picker: ${chosen.key}`,
+          queueKey: "vault-feature-picker-variant",
+          element: event.currentTarget,
+          data: { question: "vault-feature-picker-variant", answer: chosen.key, notes },
+        });
+        document.getElementById("queue-status").textContent = `${chosen.key} queued — use “Send to Agent” when ready`;
+      } else {
+        document.getElementById("queue-status").textContent = `${chosen.key} selected (Lavish queue unavailable)`;
+      }
+    });
+
+    showVariant(currentIndex());
+  </script>
+</body>
+</html>

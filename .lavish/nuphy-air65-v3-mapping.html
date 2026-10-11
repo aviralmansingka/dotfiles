@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nuphy Air65 v3 — Mapping Plan (cross-keyboard)</title>
+<style>
+  :root{
+    --bg:#282828; --bg1:#3c3836; --bg2:#504944; --bg3:#665c54;
+    --fg:#ebdbb2; --fg-dim:#a89984; --gray:#928374;
+    --red:#fb4934; --green:#b8bb26; --yellow:#fabd2f; --blue:#83a598;
+    --purple:#d3869b; --aqua:#8ec07c; --orange:#fe8019;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:14px;line-height:1.5}
+  body{padding:28px clamp(16px,4vw,56px) 80px;max-width:1180px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px;color:var(--yellow);letter-spacing:.5px}
+  h2{font-size:16px;margin:34px 0 10px;color:var(--aqua);border-bottom:1px solid var(--bg2);padding-bottom:5px}
+  h3{font-size:14px;margin:22px 0 8px;color:var(--blue)}
+  p{margin:8px 0}
+  a{color:var(--blue);text-decoration:none}
+  .sub{color:var(--fg-dim);font-size:12px;margin-bottom:22px}
+  .tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:11px;background:var(--bg2);color:var(--fg);margin-right:4px}
+  .tag.red{background:var(--red);color:#1d1d1d}
+  .tag.y{background:var(--yellow);color:#1d1d1d}
+  .tag.p{background:var(--purple);color:#1d1d1d}
+  .tag.a{background:var(--aqua);color:#1d1d1d}
+  .tag.g{background:var(--green);color:#1d1d1d}
+  .tag.o{background:var(--orange);color:#1d1d1d}
+  .tag.dim{background:var(--bg3);color:var(--fg-dim)}
+  .callout{background:var(--bg1);border-left:3px solid var(--yellow);padding:12px 14px;border-radius:6px;margin:14px 0}
+  .callout.red{border-left-color:var(--red)}
+  .callout.green{border-left-color:var(--green)}
+  .callout.aqua{border-left-color:var(--aqua)}
+  .callout.blue{border-left-color:var(--blue)}
+  .callout b{color:var(--yellow)}
+  .callout.red b{color:var(--red)}
+  .callout.green b{color:var(--green)}
+  .callout.aqua b{color:var(--aqua)}
+  .grid{display:grid;gap:14px}
+  .two{grid-template-columns:1fr 1fr}
+  .three{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:860px){.two,.three{grid-template-columns:1fr}}
+  .card{background:var(--bg1);border:1px solid var(--bg2);border-radius:8px;padding:14px}
+  .card h3{margin-top:0}
+
+  /* keyboard */
+  .kb{background:var(--bg1);border:1px solid var(--bg2);border-radius:10px;padding:16px;margin:10px 0}
+  .kb-row{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));gap:5px;margin-bottom:5px}
+  .kb-row:last-child{margin-bottom:0}
+  .key{background:var(--bg2);border:1px solid #3a3531;border-bottom-width:3px;border-radius:5px;
+    min-height:38px;display:flex;align-items:center;justify-content:center;
+    font-size:11px;color:var(--fg);text-align:center;padding:2px;line-height:1.1;position:relative}
+  .key.mod{background:var(--bg3);color:var(--fg-dim)}
+  .key.shared{box-shadow:0 0 0 2px var(--green) inset;border-color:var(--green)}
+  .key.power{background:var(--red);color:#1d1d1d;font-weight:700;border-color:#c5362a}
+  .key.tab{box-shadow:0 0 0 2px var(--aqua) inset;border-color:var(--aqua);color:var(--aqua)}
+  .key.caps{background:var(--yellow);color:#1d1d1d;font-weight:700;border-color:#d4a017}
+  .key.fn{background:var(--purple);color:#1d1d1d;font-weight:700;border-color:#b06a85}
+  .key.fnmac{background:#665c54;color:var(--purple);border-color:#b06a85}
+  .key.arrow{background:var(--bg3);color:var(--fg-dim)}
+  .key .badge{position:absolute;top:-9px;right:-4px;font-size:8px;padding:1px 4px;border-radius:8px;background:var(--bg);color:var(--fg-dim);border:1px solid var(--bg2);white-space:nowrap}
+  .key .badge.g{color:var(--green);border-color:var(--green)}
+  .key .badge.o{color:var(--orange);border-color:var(--orange)}
+  .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--fg-dim);margin-top:12px}
+  .leg span{display:inline-flex;align-items:center;gap:5px}
+  .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+  th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--bg2);vertical-align:top}
+  th{color:var(--aqua);font-weight:600;background:var(--bg1)}
+  td code{color:var(--green);white-space:nowrap}
+  tr:hover td{background:rgba(251,73,52,.04)}
+
+  pre{background:#1d1d1d;border:1px solid var(--bg2);border-radius:6px;padding:11px 13px;overflow:auto;
+    font-size:11.5px;color:#d4c7a8;margin:8px 0}
+  pre .c{color:var(--gray)}
+  pre .k{color:var(--purple)}
+  code.inline{background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:12px;color:var(--green)}
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:4px 0}
+  ol{margin:8px 0;padding-left:20px}
+  .ok{color:var(--green)}
+  .no{color:var(--red)}
+  .warn{color:var(--orange)}
+  .small{font-size:11.5px;color:var(--fg-dim)}
+  .flow{display:flex;flex-direction:column;gap:0;align-items:stretch;margin:14px 0}
+  .flow .lyr{background:var(--bg1);border:1px solid var(--bg2);border-radius:8px;padding:10px 14px;text-align:center}
+  .flow .lyr b{color:var(--yellow)}
+  .flow .arr{text-align:center;color:var(--gray);font-size:18px;padding:3px 0}
+  .flow .lyr .pills{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  .pill{font-size:10.5px;padding:2px 8px;border-radius:12px;background:var(--bg2);color:var(--fg)}
+  .foot{margin-top:40px;color:var(--fg-dim);font-size:11px;border-top:1px solid var(--bg2);padding-top:12px}
+</style>
+</head>
+<body>
+
+<h1>Nuphy Air65 v3 — Mapping Plan</h1>
+<div class="sub">Crewmate analysis · cross-keyboard parity with the built-in Mac keyboard · shared core + Nuphy-only bonuses · for review before implementation</div>
+
+<div class="callout green">
+  <b>TL;DR.</b> One mapping scheme that works identically on <b>both</b> keyboards.
+  <b>Shared core (global, both keyboards):</b> CapsLock&nbsp;hold→<code>left_option</code> + tap→<code>esc</code> = <b>left aerospace</b> (pinky, same place on both);
+  <b>right&nbsp;Option</b> = <b>right aerospace</b> (same place on both); Tab&nbsp;hold→<b>Raycast</b>, tap→Tab.
+  <b>Nuphy-only bonuses (device-scoped, won't touch the Mac):</b> Fn&nbsp;hold→<code>right_option</code> (a 2nd right trigger, merged with the firmware Fn layer);
+  red power button→<b>Wispr Flow</b>. AeroSpace stays on <code>alt</code> → <b>all ~80 existing bindings reused unchanged</b>. Muscle memory transfers 1:1 except for the two Nuphy-only extras.
+</div>
+
+<h2>1 · Cross-keyboard parity (the new constraint)</h2>
+<p>You want the Nuphy mapping "not too different" from the built-in Mac keyboard. The trick: the two boards put <code>Fn</code> on <b>opposite sides</b>, and only the Nuphy has the red button. So we anchor on the keys that exist <b>in the same place on both</b>, and treat the rest as scoped extras.</p>
+
+<div class="grid three">
+  <div class="card">
+    <h3>Shared core — same place on both</h3>
+    <ul>
+      <li><span class="tag g">shared</span> <b>CapsLock</b> → left aerospace (pinky)</li>
+      <li><span class="tag g">shared</span> <b>right Option</b> → right aerospace</li>
+      <li><span class="tag g">shared</span> <b>Tab</b> hold → Raycast</li>
+    </ul>
+    <p class="small">Applied globally in Karabiner → identical behavior on the MacBook and the Nuphy.</p>
+  </div>
+  <div class="card">
+    <h3>Nuphy-only bonuses</h3>
+    <ul>
+      <li><span class="tag p">nuphy</span> <b>Fn</b> (bottom-right) → 2nd right aerospace trigger</li>
+      <li><span class="tag red">nuphy</span> <b>red button</b> → Wispr Flow</li>
+    </ul>
+    <p class="small">Scoped to the Nuphy via Karabiner <code>device_if</code> conditions — the Mac is never disturbed by these.</p>
+  </div>
+  <div class="card">
+    <h3>Mac-only gap to fill</h3>
+    <ul>
+      <li><span class="tag o">mac</span> <b>Wispr</b> has no red button → needs an equivalent combo</li>
+      <li><span class="tag dim">mac</span> Mac <b>fn/Globe</b> (bottom-left) stays as fn/Globe</li>
+    </ul>
+    <p class="small">Pick a Wispr combo that also works on the Nuphy (e.g. Globe+Tab or Cmd+Ctrl+Space). See §9.</p>
+  </div>
+</div>
+
+<h3>Bottom-row layout, side by side</h3>
+<div class="grid two">
+  <div class="kb" style="padding:12px">
+    <div class="small" style="color:var(--aqua);margin-bottom:8px"><b>MacBook built-in</b> — Fn is bottom-LEFT</div>
+    <div class="kb-row">
+      <div class="key fnmac" style="grid-column:span 3">fn / Globe<span class="badge">mac-only, stays</span></div>
+      <div class="key mod">⌃</div>
+      <div class="key mod">⌥</div>
+      <div class="key mod">⌘</div>
+      <div class="key mod" style="grid-column:span 8">Space</div>
+      <div class="key mod">⌘</div>
+      <div class="key mod">⌥</div>
+      <div class="key mod" style="grid-column:span 2">⌃</div>
+    </div>
+  </div>
+  <div class="kb" style="padding:12px">
+    <div class="small" style="color:var(--aqua);margin-bottom:8px"><b>Nuphy Air65 v3</b> — Fn is bottom-RIGHT</div>
+    <div class="kb-row">
+      <div class="key mod" style="grid-column:span 2">⌃</div>
+      <div class="key mod">⌘</div>
+      <div class="key mod">⌥</div>
+      <div class="key mod" style="grid-column:span 7">Space</div>
+      <div class="key mod">⌥</div>
+      <div class="key fn" style="grid-column:span 2">Fn<span class="badge">nuphy bonus</span></div>
+      <div class="key mod" style="grid-column:span 2">⌃</div>
+    </div>
+  </div>
+</div>
+<div class="callout blue">
+  <b>Why Fn can't be a shared trigger.</b> On the Mac, Fn lives bottom-left under your left pinky — pressing it for "right aerospace" would feel wrong, and remapping it kills Globe/fn (emoji picker, dictation, F-key emulation on compact Macs). On the Nuphy it's bottom-right, perfect for a right trigger.
+  So Fn-as-aerospace is a <b>Nuphy-only bonus</b>; the Mac keeps fn/Globe native, and <b>right Option</b> is the consistent right trigger on both.
+</div>
+
+<h2>2 · Current state (today)</h2>
+<div class="grid two">
+  <div class="card">
+    <h3>AeroSpace — <span class="tag a">on alt</span></h3>
+    <ul>
+      <li><code>alt-h/j/k/l</code> focus · <code>alt-shift-h/j/k/l</code> move</li>
+      <li><code>alt-1..9</code> + <code>alt-a..z</code> workspaces (~35)</li>
+      <li><code>alt-shift-1..z</code> move-node-to-workspace (~35)</li>
+      <li><code>alt-tab</code> back-and-forth · <code>alt-shift-tab</code> ws→monitor</li>
+      <li><code>alt-slash/comma</code> layout · <code>alt-minus/equal</code> resize</li>
+      <li><code>alt-shift-;</code> service mode</li>
+    </ul>
+    <p class="small">~80 bindings, all under <code>alt</code>. Single entry key: Option.</p>
+  </div>
+  <div class="card">
+    <h3>Apps &amp; tooling</h3>
+    <ul>
+      <li><b>Raycast</b> — installed, <span class="no">no global hotkey</span></li>
+      <li><b>Wispr Flow</b> — installed, unbound</li>
+      <li><b>Karabiner-Elements</b> — <span class="no">not installed</span></li>
+      <li><b>skhd / Hammerspoon</b> — not present</li>
+      <li>Nuphy firmware Fn layer — stock (F-keys, media via Fn+row)</li>
+    </ul>
+    <p class="small">Clean slate: nothing owns these keys yet, so the shared core can land globally with no conflict.</p>
+  </div>
+</div>
+
+<h2>3 · The hard constraint</h2>
+<div class="callout red">
+  AeroSpace binds only <code>cmd · alt · ctrl · shift</code> — <b>not <code>fn</code></b> (per the AeroSpace guide). The Nuphy Fn layer is firmware-side (the board turns <code>Fn+1</code> into <code>F1</code> before macOS sees it). So "share the fn key" is a <b>partition</b>: firmware keeps <code>Fn+number/arrow</code>; AeroSpace gets <code>Fn+letters</code> via Karabiner translating <code>Fn→right_option</code>. This bonus is Nuphy-only.
+</div>
+
+<h2>4 · Proposed architecture (data flow)</h2>
+<div class="flow">
+  <div class="lyr"><b>Nuphy firmware</b> + <b>Mac keyboard</b>
+    <div class="pills"><span class="pill">Nuphy Fn layer: Fn+1..0 → F1..F10 · Fn+arrows → media</span><span class="pill">Mac fn/Globe stays native</span></div>
+  </div>
+  <div class="arr">↓ keys reach macOS</div>
+  <div class="lyr"><b>Karabiner-Elements</b>
+    <div class="pills">
+      <span class="pill" style="background:#3a5a3a">GLOBAL: CapsLock hold→left_option · tap→esc</span>
+      <span class="pill" style="background:#3a5a3a">GLOBAL: Tab hold→Raycast · tap→Tab</span>
+      <span class="pill" style="background:#5a3a5a">NUPHY-ONLY: Fn hold→right_option</span>
+      <span class="pill" style="background:#5a2a2a">NUPHY-ONLY: red button→Wispr</span>
+    </div>
+    <div class="small" style="margin-top:6px">right Option needs no remap — it's already <code>alt</code> on both boards.</div>
+  </div>
+  <div class="arr">↓ translated modifier + keys</div>
+  <div class="lyr"><b>AeroSpace — all existing alt- bindings (unchanged, both keyboards)</b>
+    <div class="pills"><span class="pill" style="background:#504944">alt-hjkl focus</span><span class="pill" style="background:#504944">alt-shift-hjkl move</span><span class="pill" style="background:#504944">alt-1..z workspaces</span><span class="pill" style="background:#504944">alt-tab cycle</span></div>
+  </div>
+</div>
+
+<h2>5 · The Nuphy keyboard, annotated</h2>
+<div class="kb">
+  <div class="kb-row" style="grid-template-columns:repeat(15,minmax(0,1fr));margin-bottom:8px">
+    <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+    <div class="key power">POWER<span class="badge o">→ Wispr · nuphy-only</span></div>
+  </div>
+  <div class="kb-row">
+    <div class="key" style="grid-column:span 2">Esc</div>
+    <div class="key">1</div><div class="key">2</div><div class="key">3</div><div class="key">4</div><div class="key">5</div>
+    <div class="key">6</div><div class="key">7</div><div class="key">8</div><div class="key">9</div><div class="key">0</div>
+    <div class="key">-</div><div class="key">=</div><div class="key" style="grid-column:span 2">⌫</div>
+  </div>
+  <div class="kb-row">
+    <div class="key tab shared" style="grid-column:span 3">Tab<span class="badge g">hold → Raycast · shared</span></div>
+    <div class="key">Q</div><div class="key">W</div><div class="key">E</div><div class="key">R</div><div class="key">T</div>
+    <div class="key">Y</div><div class="key">U</div><div class="key">I</div><div class="key">O</div><div class="key">P</div>
+    <div class="key">[</div><div class="key">]</div><div class="key" style="grid-column:span 2">\</div>
+  </div>
+  <div class="kb-row">
+    <div class="key caps shared" style="grid-column:span 2">Caps<span class="badge g">L. aerospace · shared · tap=esc</span></div>
+    <div class="key">A</div><div class="key">S</div><div class="key">D</div><div class="key">F</div><div class="key">G</div>
+    <div class="key">H</div><div class="key">J</div><div class="key">K</div><div class="key">L</div>
+    <div class="key">;</div><div class="key">'</div><div class="key" style="grid-column:span 3">Enter</div>
+  </div>
+  <div class="kb-row">
+    <div class="key mod" style="grid-column:span 2">⇧</div>
+    <div class="key">Z</div><div class="key">X</div><div class="key">C</div><div class="key">V</div><div class="key">B</div>
+    <div class="key">N</div><div class="key">M</div><div class="key">,</div><div class="key">.</div><div class="key">/</div>
+    <div class="key mod" style="grid-column:span 2">⇧</div>
+    <div class="key arrow">↑</div>
+  </div>
+  <div class="kb-row">
+    <div class="key mod" style="grid-column:span 2">⌃</div>
+    <div class="key mod">⌘</div>
+    <div class="key mod">⌥</div>
+    <div class="key mod" style="grid-column:span 7">Space</div>
+    <div class="key mod shared">⌥<span class="badge g">R. aerospace · shared</span></div>
+    <div class="key fn">Fn<span class="badge o">R. aerospace · nuphy bonus</span></div>
+    <div class="key mod" style="grid-column:span 2">⌃</div>
+    <div class="key arrow">←</div><div class="key arrow">↓</div><div class="key arrow">→</div>
+  </div>
+  <div class="leg">
+    <span><i class="sw" style="background:var(--red)"></i>red button → Wispr (Nuphy-only)</span>
+    <span><i class="sw" style="background:var(--aqua);outline:2px solid var(--aqua)"></i>Tab hold → Raycast (shared)</span>
+    <span><i class="sw" style="background:var(--yellow)"></i>CapsLock = left aerospace (shared, pinky)</span>
+    <span><i class="sw" style="background:var(--purple)"></i>Fn = 2nd right aerospace (Nuphy-only)</span>
+    <span><i class="sw" style="background:var(--green);outline:2px solid var(--green)"></i>right Option = right aerospace (shared)</span>
+  </div>
+</div>
+<p class="small">Green outline = shared core (identical on the Mac). Orange = Nuphy-only bonus (scoped via <code>device_if</code>, never fires on the Mac).</p>
+
+<h2>6 · Sharing the Fn key — the partition</h2>
+<table>
+  <tr><th>Combo</th><th>Owner</th><th>Result</th><th>On Mac?</th></tr>
+  <tr><td><code>Fn + 1..0 / - / =</code></td><td><span class="tag p">firmware</span></td><td>F1..F12</td><td>n/a (Mac uses row directly)</td></tr>
+  <tr><td><code>Fn + arrows</code></td><td><span class="tag p">firmware</span></td><td>media / brightness / volume</td><td>Mac fn+arrows native</td></tr>
+  <tr><td><code>Fn + h / j / k / l</code></td><td><span class="tag g">aerospace</span></td><td>focus left/down/up/right</td><td><span class="no">Nuphy-only</span> (use right Opt on Mac)</td></tr>
+  <tr><td><code>Fn + letters &amp; rest</code></td><td><span class="tag g">aerospace</span></td><td>all alt-* bindings, right hand</td><td><span class="no">Nuphy-only</span></td></tr>
+</table>
+<div class="callout red">
+  <b>Verify before committing the Fn merge.</b> Open Karabiner <b>EventViewer</b>, press <code>Fn+1</code> on the Nuphy:
+  <ul style="margin:6px 0 0">
+    <li class="ok">just <code>F1</code>, no Fn flag → merge works; Fn+letter = alt+letter for AeroSpace.</li>
+    <li class="warn">Fn flag + <code>F1</code> → Karabiner turns it into <code>alt+F1</code>, breaking app F-keys. Drop the merge; right Option stays the right trigger.</li>
+    <li class="no">Fn sends nothing → enable "send Fn/Globe to OS" in Nuphy Console; if the board can't emit Fn, drop the merge.</li>
+  </ul>
+  <b>Either way the shared core (CapsLock + right Option + Tab) is unaffected</b> — the Fn merge is strictly additive.
+</div>
+
+<h2>7 · The mapping — Karabiner rules</h2>
+
+<h3>GLOBAL (both keyboards) — left aerospace: CapsLock, tap = Esc</h3>
+<pre>{
+  <span class="c">// applied to every keyboard — identical on Mac and Nuphy</span>
+  <span class="k">"from"</span>: { <span class="k">"key_code"</span>: <span class="k">"caps_lock"</span> },
+  <span class="k">"to"</span>:   [{ <span class="k">"key_code"</span>: <span class="k">"left_option"</span> }],
+  <span class="k">"to_if_alone"</span>: [{ <span class="k">"key_code"</span>: <span class="k">"escape"</span> }],
+  <span class="k">"type"</span>: <span class="k">"basic"</span>
+}</pre>
+
+<h3>GLOBAL (both keyboards) — Tab hold → Raycast, tap → Tab</h3>
+<pre>{
+  <span class="k">"from"</span>: { <span class="k">"key_code"</span>: <span class="k">"tab"</span> },
+  <span class="k">"to"</span>:   [{ <span class="k">"key_code"</span>: <span class="k">"tab"</span> }],
+  <span class="k">"to_if_held_down"</span>: [{ <span class="k">"shell_command"</span>: <span class="k">"open -a Raycast"</span> }],
+  <span class="k">"parameters"</span>: { <span class="k">"basic.to_if_held_down_threshold_milliseconds"</span>: <span class="k">200</span> },
+  <span class="k">"type"</span>: <span class="k">"basic"</span>
+}</pre>
+
+<h3>NUPHY-ONLY — Fn hold → right_option (2nd right aerospace trigger)</h3>
+<pre>{
+  <span class="c">// scoped to the Nuphy via device conditions — Mac fn/Globe is untouched</span>
+  <span class="c">// grab vendor_id / product_id from Karabiner → Devices tab</span>
+  <span class="k">"from"</span>: { <span class="k">"key_code"</span>: <span class="k">"fn"</span> },
+  <span class="k">"to"</span>:   [{ <span class="k">"key_code"</span>: <span class="k">"right_option"</span> }],
+  <span class="k">"conditions"</span>: [{
+    <span class="k">"type"</span>: <span class="k">"device_if"</span>,
+    <span class="k">"identifiers"</span>: [{ <span class="k">"vendor_id"</span>: <span class="k">9999</span>, <span class="k">"product_id"</span>: <span class="k">9999</span> }]
+  }],
+  <span class="k">"type"</span>: <span class="k">"basic"</span>
+} <span class="c">// only if the §6 EventViewer test passes; else omit and use right Option</span></pre>
+
+<h3>NUPHY-ONLY — red power button → Wispr Flow</h3>
+<pre>{
+  <span class="c">// VERIFY key_code in EventViewer first: f16 / f17 / f18 / media / power</span>
+  <span class="k">"from"</span>: { <span class="k">"key_code"</span>: <span class="k">"f18"</span> },
+  <span class="k">"to"</span>:   [{ <span class="k">"shell_command"</span>: <span class="k">"open -a 'Wispr Flow'"</span> }],
+  <span class="k">"conditions"</span>: [{
+    <span class="k">"type"</span>: <span class="k">"device_if"</span>,
+    <span class="k">"identifiers"</span>: [{ <span class="k">"vendor_id"</span>: <span class="k">9999</span>, <span class="k">"product_id"</span>: <span class="k">9999</span> }]
+  }],
+  <span class="k">"type"</span>: <span class="k">"basic"</span>
+} <span class="c">// if the button is a hardware radio switch (no event), it can't be mapped</span></pre>
+
+<h3>MAC-EQUIVALENT — Wispr launch (no red button on the Mac)</h3>
+<pre>{
+  <span class="c">// pick ONE combo that works on both keyboards; shown: Globe(fn)+Tab</span>
+  <span class="c">// alternative: cmd+ctrl+space, or right_cmd single-tap if you have a spare</span>
+  <span class="k">"from"</span>: { <span class="k">"key_code"</span>: <span class="k">"tab"</span>, <span class="k">"modifiers"</span>: { <span class="k">"mandatory"</span>: [<span class="k">"fn"</span>] } },
+  <span class="k">"to"</span>:   [{ <span class="k">"shell_command"</span>: <span class="k">"open -a 'Wispr Flow'"</span> }],
+  <span class="k">"type"</span>: <span class="k">"basic"</span>
+} <span class="c">// scope with device_unless (Nuphy) if you want the red button to be the only Nuphy trigger</span></pre>
+
+<h3>AeroSpace — unchanged</h3>
+<p class="small"><code>~/.aerospace.toml</code> stays as-is. Because CapsLock, right Option, and (on Nuphy) Fn all emit Option, every <code>alt-*</code> binding is reachable identically on both keyboards.</p>
+
+<h2>8 · Largest viable shared mapping — the answer</h2>
+<div class="callout green">
+  <b>Largest viable = one <code>alt</code> scheme, a 3-key shared core, 2 Nuphy bonuses, ~80 bindings reused.</b>
+  Shared core (CapsLock·right Option·Tab) is global → identical muscle memory on Mac + Nuphy.
+  Nuphy bonuses (Fn merge·red button) are device-scoped → they add capability without diverging the Mac.
+  Maximal consistency + maximal reuse + zero rewritten AeroSpace bindings. Anything larger would mean inventing bindings you didn't ask for or breaking parity.
+</div>
+
+<h2>9 · Install &amp; verify</h2>
+<ol>
+  <li><code class="inline">brew install --cask karabiner-elements</code> → grant Input Monitoring.</li>
+  <li>Open <b>Karabiner → Devices</b>, note the Nuphy <code>vendor_id</code>/<code>product_id</code> → fill the <code>conditions</code> placeholders in §7.</li>
+  <li><b>EventViewer</b>: press the <b>red power button</b> → note the <code>key_code</code> (f16/f17/f18/media/none).</li>
+  <li><b>EventViewer</b>: press <code>Fn+1</code> on the Nuphy → check for an <code>fn</code> flag (§6 merge test).</li>
+  <li>If Fn sends nothing: enable "send Fn/Globe to OS" in Nuphy Console; retest.</li>
+  <li>Drop the rules into <code>~/.config/karabiner/assets/complex_modifications/nuphy-aerospace.json</code>, enable in Karabiner → Complex Modifications.</li>
+  <li><code class="inline">aerospace reload-config</code> (no AeroSpace edits needed).</li>
+  <li>Confirm on <b>both</b> keyboards: CapsLock+h moves focus; right Option+h moves focus; Tab hold opens Raycast; tap Tab types Tab. On Nuphy only: Fn+h moves focus; red button opens Wispr.</li>
+</ol>
+
+<h2>10 · Open decisions</h2>
+<table>
+  <tr><th>Decision</th><th>Recommended</th><th>Alternative</th></tr>
+  <tr><td>Apply shared core globally?</td><td><span class="tag g">yes — both keyboards identical</span></td><td>Nuphy-only (device-scoped) — Mac stays stock</td></tr>
+  <tr><td>Aerospace modifier</td><td><span class="tag g">keep alt</span> (no rewrite)</td><td>switch to hyper (frees Option, rewrites ~80 bindings)</td></tr>
+  <tr><td>CapsLock tap</td><td><span class="tag g">tap = Esc</span></td><td>nothing · Caps Lock</td></tr>
+  <tr><td>Fn merge (Nuphy)</td><td><span class="tag g">merge if §6 test passes</span></td><td>skip; right Option is the right trigger</td></tr>
+  <tr><td>Wispr on Mac</td><td><span class="tag o">Globe(fn)+Tab</span></td><td>cmd+ctrl+space · spare right_cmd tap</td></tr>
+  <tr><td>Red button keycode</td><td><span class="tag o">verify in EventViewer</span></td><td>if no event → use the Mac-equivalent combo on Nuphy too</td></tr>
+  <tr><td>Tab hold threshold</td><td><span class="tag g">200ms</span></td><td>tune 150–300ms</td></tr>
+</table>
+
+<div class="foot">
+  Crewmate proposal v2 — cross-keyboard parity with the built-in Mac keyboard.
+  Shared core = global; Nuphy bonuses = device-scoped. Not yet written to disk.
+  Confirm the §6/§7 verify results and the §10 decisions, then I'll stage
+  <code>karabiner/karabiner.json</code> in the dotfiles and run it through no-mistakes.
+</div>
+
+</body>
+</html>

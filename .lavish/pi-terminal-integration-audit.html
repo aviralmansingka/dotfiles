@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Pi terminal integration audit</title>
+  <style>
+    :root {
+      --bg0: #171918;
+      --bg1: #1d2021;
+      --bg2: #282828;
+      --bg3: #32302f;
+      --bg4: #3c3836;
+      --border: #504945;
+      --ghost: #665c54;
+      --muted: #a89984;
+      --fg0: #fbf1c7;
+      --fg1: #ebdbb2;
+      --red: #ea6962;
+      --red-bg: #3d2424;
+      --green: #a9b665;
+      --green-bg: #293126;
+      --yellow: #d8a657;
+      --yellow-bg: #353025;
+      --blue: #7daea3;
+      --blue-bg: #253033;
+      --aqua: #89b482;
+      --purple: #d3869b;
+      --orange: #e78a4e;
+      --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --shadow: 0 30px 100px rgb(0 0 0 / 48%);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg0); scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      color: var(--fg1);
+      font-family: var(--sans);
+      background:
+        linear-gradient(rgb(235 219 178 / 2.2%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(235 219 178 / 1.6%) 1px, transparent 1px),
+        radial-gradient(circle at 12% 0%, rgb(231 138 78 / 13%), transparent 31rem),
+        radial-gradient(circle at 96% 7%, rgb(125 174 163 / 10%), transparent 28rem),
+        var(--bg0);
+      background-size: 24px 24px, 24px 24px, auto, auto, auto;
+    }
+
+    a { color: var(--blue); text-underline-offset: 3px; }
+    code, .mono { font-family: var(--mono); }
+    code {
+      overflow-wrap: anywhere;
+      color: var(--yellow);
+      font-size: .92em;
+    }
+    button { font: inherit; }
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 3px;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { text-wrap: balance; }
+
+    .page {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: rgb(29 32 33 / 97%);
+      box-shadow: var(--shadow);
+    }
+
+    .terminal-bar, .status-bar {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      background: var(--bg3);
+      color: var(--muted);
+      font: 11px/1.3 var(--mono);
+    }
+    .terminal-bar { border-bottom: 1px solid var(--border); }
+    .status-bar { border-top: 1px solid var(--border); }
+    .terminal-title { overflow: hidden; color: var(--fg1); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+    .lights { color: var(--red); letter-spacing: 4px; }
+    .lights span:nth-child(1) { color: var(--yellow); }
+    .lights span:nth-child(2) { color: var(--green); }
+
+    .command {
+      display: flex;
+      gap: 10px;
+      min-width: 0;
+      padding: 12px 16px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+      background: #242424;
+      font: 12px/1.3 var(--mono);
+    }
+    .prompt { flex: 0 0 auto; color: var(--green); font-weight: 800; }
+    .command-text { overflow: hidden; color: var(--fg0); text-overflow: ellipsis; white-space: nowrap; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 390px);
+      gap: 42px;
+      padding: 52px 46px 44px;
+      border-bottom: 1px solid var(--border);
+    }
+    .eyebrow {
+      margin-bottom: 13px;
+      color: var(--orange);
+      font: 800 11px/1.3 var(--mono);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 880px;
+      margin-bottom: 18px;
+      color: var(--fg0);
+      font-size: clamp(36px, 5.2vw, 70px);
+      letter-spacing: -.055em;
+      line-height: .96;
+    }
+    .lead {
+      max-width: 850px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(14px, 1.4vw, 17px);
+      line-height: 1.75;
+    }
+    .hero-meta { display: grid; align-content: start; gap: 10px; }
+    .meta-card {
+      padding: 14px 15px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--muted);
+      font: 11px/1.55 var(--mono);
+    }
+    .meta-card strong { display: block; margin-bottom: 5px; color: var(--fg0); font-size: 12px; }
+    .meta-card.critical { border-left: 3px solid var(--red); }
+    .meta-card.shared { border-left: 3px solid var(--yellow); }
+    .meta-card.clean { border-left: 3px solid var(--green); }
+    .meta-card.runtime { border-left: 3px solid var(--blue); }
+    .meta-card.active { border-left: 3px solid var(--green); background: var(--green-bg); }
+
+    .jumpbar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 18px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      scrollbar-width: thin;
+    }
+    .jumpbar a {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      background: var(--bg1);
+      color: var(--muted);
+      font: 10px/1 var(--mono);
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+    .jumpbar a:hover { border-color: var(--blue); color: var(--fg0); }
+
+    main { padding: 36px 34px 48px; }
+    section + section { margin-top: 48px; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 17px;
+    }
+    h2 {
+      margin-bottom: 5px;
+      color: var(--aqua);
+      font-size: clamp(21px, 2.3vw, 30px);
+      letter-spacing: -.035em;
+    }
+    .section-kicker { margin: 0; color: var(--muted); font: 11px/1.55 var(--mono); text-align: right; }
+
+    .risk-grid, .snapshot-grid, .roadmap-grid, .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .risk-card, .snapshot, .roadmap-card, .evidence-card {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .risk-card { position: relative; overflow: hidden; }
+    .risk-card::after {
+      position: absolute;
+      width: 110px;
+      height: 110px;
+      top: -62px;
+      right: -45px;
+      border-radius: 50%;
+      background: currentColor;
+      content: "";
+      opacity: .08;
+    }
+    .risk-card.p0 { color: var(--red); border-top: 3px solid var(--red); }
+    .risk-card.done { color: var(--green); border-top: 3px solid var(--green); }
+    .risk-card.p1 { color: var(--yellow); border-top: 3px solid var(--yellow); }
+    .risk-num { margin-bottom: 12px; font: 800 11px/1 var(--mono); letter-spacing: .08em; }
+    .risk-card h3 { margin-bottom: 8px; color: var(--fg0); font-size: 17px; }
+    .risk-card p, .roadmap-card p, .evidence-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.68; }
+
+    .snapshot { padding: 15px; }
+    .snapshot .label { margin-bottom: 9px; color: var(--muted); font: 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .09em; }
+    .snapshot .value { color: var(--fg0); font: 800 19px/1.2 var(--mono); }
+    .snapshot .detail { margin-top: 7px; color: var(--muted); font: 10px/1.45 var(--mono); }
+
+    .panel { min-width: 0; border: 1px solid var(--border); background: var(--bg2); }
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px 13px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--fg0);
+      font: 11px/1.3 var(--mono);
+    }
+    .panel-title span:last-child { color: var(--muted); text-align: right; }
+
+    .architecture { padding: 18px; overflow-x: auto; }
+    .architecture svg { display: block; width: 100%; min-width: 880px; height: auto; }
+    .arch-node rect { stroke-width: 1.2; }
+    .arch-node text { font-family: var(--mono); }
+    .arch-edge { fill: none; stroke: var(--ghost); stroke-width: 2; marker-end: url(#arrow); }
+    .arch-edge.bad { stroke: var(--red); stroke-dasharray: 6 5; }
+    .arch-edge.shared { stroke: var(--yellow); }
+    .arch-rail { fill: none; stroke: var(--ghost); stroke-width: 2; }
+    .arch-rail.bad { stroke: var(--red); stroke-dasharray: 6 5; }
+    .arch-boundary > rect { fill: #293126; fill-opacity: .26; stroke: var(--green); stroke-width: 1.2; stroke-dasharray: 6 5; }
+    .arch-boundary text { font-family: var(--mono); }
+    .arch-caption { fill: var(--muted); font: 11px var(--mono); }
+    .arch-legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 14px 18px 18px;
+      border-top: 1px solid var(--border);
+      background: var(--bg1);
+    }
+    .arch-legend-title {
+      grid-column: 1 / -1;
+      margin-bottom: 2px;
+      color: var(--fg0);
+      font: 800 10px/1.3 var(--mono);
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .arch-key {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      align-items: start;
+      gap: 8px;
+      min-width: 0;
+      color: var(--muted);
+      font: 10px/1.45 var(--mono);
+    }
+    .arch-key strong { display: block; color: var(--fg1); font-size: 10px; }
+    .arch-mark { display: block; width: 26px; height: 14px; margin-top: 2px; }
+    .arch-mark.neutral { border: 2px solid var(--blue); background: var(--blue-bg); }
+    .arch-mark.native { border: 2px solid var(--green); background: var(--green-bg); }
+    .arch-mark.risk { border: 2px solid var(--red); background: var(--red-bg); }
+    .arch-mark.shared { border: 2px solid var(--yellow); background: var(--yellow-bg); }
+    .arch-mark.flow { height: 8px; border-top: 2px solid var(--ghost); }
+    .arch-mark.private { height: 8px; border-top: 2px dashed var(--red); }
+    .arch-mark.handoff { height: 8px; border-top: 2px solid var(--yellow); }
+    .arch-mark.scope { border: 2px dashed var(--green); background: rgb(169 182 101 / 8%); }
+
+    .callout {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 14px;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    .callout + .callout { margin-top: 10px; }
+    .callout .mark { font: 900 15px/1 var(--mono); }
+    .callout strong { color: var(--fg0); }
+    .callout p { margin: 3px 0 0; color: var(--muted); }
+    .callout ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
+    .callout li + li { margin-top: 4px; }
+    .callout.bad { border-left: 3px solid var(--red); }
+    .callout.bad .mark { color: var(--red); }
+    .callout.warn { border-left: 3px solid var(--yellow); }
+    .callout.warn .mark { color: var(--yellow); }
+    .callout.good { border-left: 3px solid var(--green); }
+    .callout.good .mark { color: var(--green); }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); background: var(--bg2); }
+    table { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 11px; line-height: 1.55; }
+    th, td { padding: 12px 13px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--bg3);
+      color: var(--fg0);
+      font: 800 10px/1.3 var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: rgb(60 56 54 / 36%); }
+    td { color: var(--muted); }
+    td:first-child { color: var(--fg0); font-family: var(--mono); }
+    .surface-table td:nth-child(6) { color: var(--fg1); font-weight: 700; }
+    .decision { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font: 800 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+    .decision::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
+    .decision.keep { color: var(--green); }
+    .decision.refactor { color: var(--yellow); }
+    .decision.remove { color: var(--red); }
+    .decision.promote { color: var(--blue); }
+
+    .filters { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+    .filter {
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--muted);
+      cursor: pointer;
+      font: 10px/1 var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .filter:hover, .filter.active { border-color: var(--blue); color: var(--fg0); background: var(--blue-bg); }
+    .filter-status { align-self: center; margin-left: auto; color: var(--muted); font: 10px/1.3 var(--mono); }
+    tr[hidden] { display: none; }
+
+    .capability-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .capability-card {
+      min-width: 0;
+      padding: 17px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .capability-card .surface { margin-bottom: 9px; color: var(--blue); font: 800 10px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .capability-card h3 { margin-bottom: 8px; color: var(--fg0); font-size: 15px; }
+    .capability-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.62; }
+    .capability-card p + p { margin-top: 8px; }
+    .capability-card strong { color: var(--fg1); }
+
+    .research-note {
+      margin: 12px 0 0;
+      padding: 13px 15px;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      background: rgb(23 25 24 / 45%);
+      font: 10px/1.65 var(--mono);
+    }
+
+    .ownership {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .owner {
+      padding: 16px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .owner .host { margin-bottom: 8px; color: var(--blue); font: 800 11px/1.3 var(--mono); }
+    .owner strong { display: block; margin-bottom: 7px; color: var(--fg0); font-size: 14px; }
+    .owner p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+
+    .roadmap-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .roadmap-card { padding: 16px; }
+    .roadmap-card .phase { margin-bottom: 10px; color: var(--orange); font: 800 10px/1 var(--mono); letter-spacing: .08em; }
+    .roadmap-card h3 { margin-bottom: 10px; color: var(--fg0); font-size: 15px; }
+    .roadmap-card ol { margin: 0; padding-left: 18px; color: var(--muted); font-size: 11px; line-height: 1.65; }
+    .roadmap-card li + li { margin-top: 6px; }
+    .roadmap-card:first-child { border-top: 3px solid var(--red); }
+    .roadmap-card.active { border-top: 3px solid var(--green); }
+
+    .check-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; }
+    .check {
+      position: relative;
+      padding: 10px 12px 10px 34px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+    .check::before { position: absolute; left: 10px; top: 12px; color: var(--green); font: 800 12px/1 var(--mono); content: "□"; }
+
+    .evidence-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .evidence-card { padding: 15px; }
+    .evidence-card .state { margin-bottom: 9px; font: 800 10px/1 var(--mono); text-transform: uppercase; letter-spacing: .07em; }
+    .evidence-card.pass .state { color: var(--green); }
+    .evidence-card.blocked .state { color: var(--yellow); }
+    .evidence-card.live .state { color: var(--blue); }
+    .evidence-card.fail .state { color: var(--red); }
+    .evidence-card h3 { margin-bottom: 7px; color: var(--fg0); font-size: 13px; }
+
+    .fineprint { margin-top: 17px; color: var(--muted); font: 10px/1.65 var(--mono); }
+    .status-bar .ok { color: var(--green); }
+
+    @media (max-width: 1000px) {
+      body { padding: 0; }
+      .page { border-left: 0; border-right: 0; }
+      .hero { grid-template-columns: 1fr; padding: 38px 26px 32px; }
+      main { padding: 28px 18px 38px; }
+      .risk-grid, .snapshot-grid, .roadmap-grid, .evidence-grid, .arch-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ownership { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 650px) {
+      .terminal-bar, .status-bar { grid-template-columns: 1fr auto; }
+      .terminal-title { display: none; }
+      .hero { padding: 32px 20px 28px; }
+      .section-head { display: block; }
+      .section-kicker { margin-top: 8px; text-align: left; }
+      .risk-grid, .snapshot-grid, .roadmap-grid, .evidence-grid, .ownership, .check-grid, .capability-grid, .arch-legend { grid-template-columns: 1fr; }
+      .callout { grid-template-columns: 1fr; }
+    }
+    @media print {
+      :root {
+        --bg0: #fff; --bg1: #fff; --bg2: #fff; --bg3: #f1f1f1; --bg4: #e8e8e8;
+        --border: #bbb; --ghost: #777; --muted: #444; --fg0: #000; --fg1: #111;
+        --red-bg: #fff; --green-bg: #fff; --yellow-bg: #fff; --blue-bg: #fff;
+      }
+      body { padding: 0; background: #fff; color: #111; }
+      .page { width: 100%; border: 0; box-shadow: none; }
+      .jumpbar, .command, .terminal-bar, .status-bar, .filters { display: none; }
+      tr[hidden] { display: table-row; }
+      main { padding: 20px; }
+      section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="terminal-bar">
+        <div class="lights">● <span>●</span> <span>●</span></div>
+        <div class="terminal-title">pi-terminal-integration-audit — dotfiles</div>
+        <div>updated 2026-08-13</div>
+      </div>
+      <div class="command">
+        <span class="prompt">aviral@dotfiles %</span>
+        <span class="command-text">inspect --surface direct,herdr,sidekick,ssh,rpc --focus pi</span>
+      </div>
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Compatibility audit · P0 merged · Phase 1 launched</div>
+          <h1>One Pi.<br>Too many terminal owners.</h1>
+          <p class="lead">P0.1 and P0.2 are merged to <code>main</code>. Semantic Markdown is restored, the unsafe transcript renderer is excluded, and Attachment Leases Phase 1 is active in an isolated Herdr workspace. Runtime ownership behavior remains unchanged.</p>
+        </div>
+        <div class="hero-meta">
+          <div class="meta-card clean"><strong>P0.1 · implemented</strong>New Pi turns receive semantic Markdown guidance; the historical polluted transcript is preserved as evidence.</div>
+          <div class="meta-card clean"><strong>P0.2 · implemented · cleanup 2/2</strong><code>transcript-scroll.ts</code> is force-excluded; one pane reloaded and the other affected pane exited.</div>
+          <div class="meta-card clean"><strong>Delivery · merged</strong>PR #131 landed on <code>main</code> as <code>86a38aa</code>.</div>
+          <div class="meta-card active"><strong>Attachment Leases · Phase 1 active</strong>Workspace <code>w5W</code>; isolated branch <code>agent/herdr-attachment-leases-phase1</code>. <a href="https://homelab.tail1b3b66.ts.net/herdr-attachment-leases/">Open the detailed plan.</a></div>
+          <div class="meta-card critical"><strong>P0 · capability boundary</strong>Custom subagent tool allowlists are recorded but never enforced.</div>
+          <div class="meta-card shared"><strong>Shared · Codex</strong>Codex rendering is clean; Sidekick scroll and takeover choices still affect it.</div>
+          <div class="meta-card clean"><strong>Safe fallback</strong>Let Pi's Markdown/theme own color. Do not patch Codex rendering.</div>
+          <div class="meta-card runtime"><strong>Complete inventory</strong>12 TypeScript sources, 11 enabled by default, 1 inert HTML prototype, and 4 package/resource decisions.</div>
+        </div>
+      </div>
+      <nav class="jumpbar" aria-label="Report sections">
+        <a href="#verdict">Verdict</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#failures">Failures</a>
+        <a href="#surfaces">Surfaces</a>
+        <a href="#extensions">Extensions</a>
+        <a href="#prior-proofs">Prior proofs</a>
+        <a href="#shared">Shared gaps</a>
+        <a href="#rpc">RPC</a>
+        <a href="#target">Target</a>
+        <a href="#plan">Sequence</a>
+        <a href="#acceptance">Acceptance</a>
+        <a href="#evidence">Evidence</a>
+        <a href="#sources">Sources</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="verdict">
+        <div class="section-head">
+          <div><h2>Executive decision</h2><p class="mono">Correctness before ornament.</p></div>
+          <p class="section-kicker">P0 merged; the lease contract/verifier phase is now active.</p>
+        </div>
+        <div class="risk-grid">
+          <article class="risk-card done">
+            <div class="risk-num">P0 / 01 · DONE</div>
+            <h3>Semantic Markdown restored</h3>
+            <p>The ANSI-generation block is gone; response-shape and activity-title guidance remain. Pi's theme owns color.</p>
+          </article>
+          <article class="risk-card done">
+            <div class="risk-num">P0 / 02 · DONE</div>
+            <h3>Transcript scroll excluded</h3>
+            <p>Ambient loading is disabled, explicit fixtures retain the source, and both affected live surfaces are clear.</p>
+          </article>
+          <article class="risk-card p0">
+            <div class="risk-num">P0 / 03</div>
+            <h3>Enforce subagent capabilities</h3>
+            <p>Pass <code>--tools</code> and explicit extension profiles, or adapt the installed <code>pi-subagents</code> runtime.</p>
+          </article>
+        </div>
+
+        <div class="snapshot-grid" style="margin-top:12px">
+          <div class="snapshot"><div class="label">Mac runtime</div><div class="value">Pi 0.82.1</div><div class="detail">Herdr 0.8.0 · all local extensions symlinked</div></div>
+          <div class="snapshot"><div class="label">Homelab runtime</div><div class="value">Pi 0.83.0</div><div class="detail">Herdr 0.7.5 · Telegram + WhatsApp active</div></div>
+          <div class="snapshot"><div class="label">Homelab source</div><div class="value">1e75d8a</div><div class="detail">clean main · merged Herdr 0.8 compatibility PR #127</div></div>
+          <div class="snapshot"><div class="label">Mac source</div><div class="value">Dirty + diverged</div><div class="detail">live symlinks use the inspected working-tree versions</div></div>
+          <div class="snapshot"><div class="label">Mac extension profile</div><div class="value">11 / 12 enabled</div><div class="detail"><code>transcript-scroll.ts</code> is present but force-excluded</div></div>
+          <div class="snapshot"><div class="label">Homelab profile</div><div class="value">1 extension</div><div class="detail"><code>herdr-agent-state.ts</code> only · accidental/undocumented split</div></div>
+          <div class="snapshot"><div class="label">P0 delivery</div><div class="value">86a38aa</div><div class="detail">PR #131 merged to <code>main</code></div></div>
+          <div class="snapshot"><div class="label">Phase 1 workspace</div><div class="value">w5W · active</div><div class="detail"><code>codex-attachment-leases</code> · isolated contract/verifier worktree</div></div>
+        </div>
+        <p class="research-note">Audit snapshot captured during task <code>019fe6ba-a82e-7d72-8fa5-b97b0fd68733</code>; implementation status refreshed 2026-08-13. The Mac conclusions describe the live symlinked working tree—including modified <code>settings.json</code>, <code>herdr-agent-state.ts</code>, and <code>vault-hunter-crew.ts</code>—rather than only committed <code>main</code>.</p>
+      </section>
+
+      <section id="architecture">
+        <div class="section-head">
+          <div><h2>Where ownership collides</h2><p class="mono">Configured data and input flow after P0.1 + P0.2.</p></div>
+          <p class="section-kicker">Semantic presentation is restored; private renderer and shared host boundaries remain.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><span>Configured terminal stack · P0 updated</span><span>semantic content → render → PTY → host</span></div>
+          <div class="architecture">
+            <svg viewBox="0 0 1180 500" role="img" aria-labelledby="arch-title arch-desc">
+              <title id="arch-title">Configured Pi terminal integration after P0.1 and P0.2</title>
+              <desc id="arch-desc">Semantic messages branch inside Pi presentation: prose uses native Markdown and theme rendering, while tool events use the remaining private activity renderer. Both converge at the Pi TUI, then flow through Herdr, Sidekick, and Ghostty. Blue marks neutral boundaries, green native or intended ownership, red private-API risk, and yellow shared integration with unresolved ownership. Transcript-scroll mouse capture is disabled for normal startup, and both previously affected live surfaces are clear.</desc>
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/></marker>
+              </defs>
+
+              <path class="arch-rail" d="M230 135 H285"/>
+              <path class="arch-edge" d="M285 135 C310 135 315 105 350 105"/>
+              <path class="arch-edge bad" d="M285 135 C310 135 315 190 350 190"/>
+              <path class="arch-rail" d="M800 105 C850 105 855 135 885 135"/>
+              <path class="arch-rail bad" d="M800 190 C850 190 855 135 885 135"/>
+              <path class="arch-edge" d="M885 135 H925"/>
+              <path class="arch-edge shared" d="M1020 180 V315"/>
+              <path class="arch-edge shared" d="M925 365 H820"/>
+              <path class="arch-edge" d="M630 365 H525"/>
+              <path class="arch-edge" d="M335 365 H230"/>
+
+              <g class="arch-node" transform="translate(40 90)">
+                <rect width="190" height="90" rx="8" fill="#253033" stroke="#7daea3"/>
+                <text x="95" y="34" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Semantic message</text>
+                <text x="95" y="59" text-anchor="middle" fill="#a89984" font-size="11">Markdown · tools · links</text>
+              </g>
+
+              <g class="arch-boundary">
+                <rect x="325" y="25" width="500" height="220" rx="10"/>
+                <text x="345" y="52" fill="#a9b665" font-size="11" font-weight="700">PI PRESENTATION</text>
+              </g>
+              <g class="arch-node" transform="translate(350 70)">
+                <rect width="450" height="70" rx="8" fill="#293126" stroke="#a9b665"/>
+                <text x="225" y="29" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Native Markdown + Gruvbox theme</text>
+                <text x="225" y="51" text-anchor="middle" fill="#a9b665" font-size="11">assistant prose · headings · links</text>
+              </g>
+              <g class="arch-node" transform="translate(350 155)">
+                <rect width="450" height="70" rx="8" fill="#3d2424" stroke="#ea6962"/>
+                <text x="225" y="29" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Custom tool activity renderer</text>
+                <text x="225" y="51" text-anchor="middle" fill="#ea6962" font-size="11">tool activity · private Pi APIs remain</text>
+              </g>
+              <g class="arch-node" transform="translate(925 90)">
+                <rect width="190" height="90" rx="8" fill="#282828" stroke="#7daea3"/>
+                <text x="95" y="34" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Pi TUI / PTY</text>
+                <text x="95" y="59" text-anchor="middle" fill="#a89984" font-size="11">native render · mouse off</text>
+              </g>
+
+              <g class="arch-node" transform="translate(925 315)">
+                <rect width="190" height="100" rx="8" fill="#353025" stroke="#d8a657"/>
+                <text x="95" y="32" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Herdr attach</text>
+                <text x="95" y="57" text-anchor="middle" fill="#d8a657" font-size="11">mouse · 10 MB history</text>
+                <text x="95" y="78" text-anchor="middle" fill="#d8a657" font-size="11">persistent --takeover</text>
+              </g>
+              <g class="arch-node" transform="translate(630 315)">
+                <rect width="190" height="100" rx="8" fill="#353025" stroke="#d8a657"/>
+                <text x="95" y="32" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Sidekick / Neovim</text>
+                <text x="95" y="57" text-anchor="middle" fill="#d8a657" font-size="11">native_scroll = true</text>
+                <text x="95" y="78" text-anchor="middle" fill="#d8a657" font-size="11">snapshot copy disabled</text>
+              </g>
+              <g class="arch-node" transform="translate(335 315)">
+                <rect width="190" height="100" rx="8" fill="#282828" stroke="#7daea3"/>
+                <text x="95" y="32" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Ghostty / tmux</text>
+                <text x="95" y="57" text-anchor="middle" fill="#a89984" font-size="11">selection · OSC52</text>
+                <text x="95" y="78" text-anchor="middle" fill="#a89984" font-size="11">Shift-Enter / terminfo</text>
+              </g>
+              <g class="arch-node" transform="translate(40 315)">
+                <rect width="190" height="100" rx="8" fill="#293126" stroke="#a9b665"/>
+                <text x="95" y="32" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Human interaction</text>
+                <text x="95" y="57" text-anchor="middle" fill="#a9b665" font-size="11">scroll · select · copy</text>
+                <text x="95" y="78" text-anchor="middle" fill="#a9b665" font-size="11">paste · open · resume</text>
+              </g>
+
+              <text x="590" y="475" text-anchor="middle" class="arch-caption">Target: semantic core + exactly one surface owner for history, selection, clipboard, opener, and attachment lifecycle.</text>
+            </svg>
+          </div>
+          <div class="arch-legend" aria-label="Architecture diagram legend">
+            <div class="arch-legend-title">Legend · color encodes role; line style encodes relationship</div>
+            <div class="arch-key"><span class="arch-mark neutral" aria-hidden="true"></span><span><strong>Blue · neutral boundary</strong>Semantic payload, Pi runtime, or terminal transport.</span></div>
+            <div class="arch-key"><span class="arch-mark native" aria-hidden="true"></span><span><strong>Green · native / intended owner</strong>Pi-native presentation or the human-facing target.</span></div>
+            <div class="arch-key"><span class="arch-mark risk" aria-hidden="true"></span><span><strong>Red · private contract risk</strong>Custom rendering tied to private Pi APIs.</span></div>
+            <div class="arch-key"><span class="arch-mark shared" aria-hidden="true"></span><span><strong>Yellow · shared ownership</strong>Integration layer whose owner boundary remains open.</span></div>
+            <div class="arch-key"><span class="arch-mark flow" aria-hidden="true"></span><span><strong>Solid gray · ordinary flow</strong>Normal content, transport, or interaction direction.</span></div>
+            <div class="arch-key"><span class="arch-mark private" aria-hidden="true"></span><span><strong>Dashed red · risky branch</strong>Flow through the private custom-renderer path.</span></div>
+            <div class="arch-key"><span class="arch-mark handoff" aria-hidden="true"></span><span><strong>Solid yellow · shared handoff</strong>Transfer across Herdr or Sidekick ownership.</span></div>
+            <div class="arch-key"><span class="arch-mark scope" aria-hidden="true"></span><span><strong>Dashed green box · owner scope</strong>Components governed by Pi presentation.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="failures">
+        <div class="section-head">
+          <div><h2>Confirmed findings and remediation</h2><p class="mono">Historical evidence preserved; current state explicit.</p></div>
+        </div>
+        <div class="callout good"><div class="mark">✓</div><div><strong>P0.1 remediated a confirmed semantic-content defect.</strong><p>The historical Pi JSONL still proves the model authored visible <code>[38;2;…m</code> fragments. The current append prompt now contains semantic Markdown guidance only, so new direct, Sidekick, and unattended turns no longer receive instructions to manufacture escape bytes.</p></div></div>
+        <div class="callout good"><div class="mark">✓</div><div><strong>P0.2 quarantined the renderer that violated width and input contracts.</strong><p><code>~/.pi/agent/pi-crash.log</code> remains evidence of terminal width 6 versus rendered width 11. The source stays available to explicit fixtures, but normal startup resolves it disabled. One affected pane reloaded and cleared the old SGR mouse modes; the other affected Pi process and pane exited, ending its terminal modes.</p><ul><li>The rollback restores host mouse handling after reload.</li><li>Keyboard transcript scroll/copy is not implemented; that remains P1.</li><li>Sidekick's <code>native_scroll=true</code> policy remains unchanged.</li></ul></div></div>
+        <div class="callout bad"><div class="mark">03</div><div><strong>Read-only subagent tool lists are not enforced.</strong><p>The custom child launcher never emits <code>--tools</code>; children get ambient extensions, MCP, and mutation tools plus <code>--approve</code>.</p></div></div>
+        <div class="callout warn"><div class="mark">04</div><div><strong>Shared Sidekick choices already affect Codex.</strong><p><code>native_scroll=true</code>, persistent <code>--takeover</code>, global phased-paste state, and picker scrubbing sit below tool selection. Codex rendering itself looked healthy.</p></div></div>
+      </section>
+
+      <section id="surfaces">
+        <div class="section-head">
+          <div><h2>Surface matrix</h2><p class="mono">Same agent, materially different host contracts.</p></div>
+          <p class="section-kicker">The target is not identical mechanics; it is consistent outcomes.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="surface-table">
+            <thead><tr><th>Surface</th><th>Rendering</th><th>Scroll / history</th><th>Copy / paste</th><th>Session / lifecycle</th><th>Verdict</th></tr></thead>
+            <tbody>
+              <tr><td>Direct Pi / Ghostty</td><td>Semantic Markdown + Pi theme</td><td>Native PTY history; custom logical viewport disabled</td><td>Bracketed paste + whole-message copy; host mouse handling restored</td><td>Simple direct process</td><td>P0 safe; keyboard copy mode remains P1</td></tr>
+              <tr><td>Pi / Herdr UI</td><td>Same semantic Pi output</td><td>Custom Pi viewport off; Herdr retains history</td><td>Herdr copy mode; Pi no longer captures every mouse report</td><td>Reattach works</td><td>P0 safe; ownership E2E remains</td></tr>
+              <tr><td>Pi / Sidekick</td><td>Picker parsing stale</td><td>Stable snapshot scrollback disabled</td><td>Bracketed paste wrapped; no stable historical selection</td><td>Hidden takeover jobs can retain ownership</td><td>Refactor shared adapter</td></tr>
+              <tr><td>Codex / Sidekick</td><td>Clean in live check</td><td>Inherits global native-scroll policy</td><td>Inherits shared Neovim paste path</td><td>Inherits persistent takeover</td><td>Shared regression only</td></tr>
+              <tr><td>SSH / tmux</td><td>Truecolor foundation present</td><td>50k tmux history; custom Pi mouse capture off</td><td>OSC52 + tmux-yank present; reverse-SCP image path fragile</td><td>Environment-dependent</td><td>Needs real E2E</td></tr>
+              <tr><td>Telegram RPC</td><td>Transport prompt avoids raw ANSI</td><td>Not applicable</td><td>HTML text; no inbound images</td><td>Stops at agent_end; no abort; one synchronous session</td><td>Lifecycle refactor</td></tr>
+              <tr><td>WhatsApp RPC</td><td>Plain text</td><td>Not applicable</td><td>Text only</td><td>Same settle/abort/durability gaps; no switch/resume</td><td>Behind Telegram</td></tr>
+              <tr><td>JSON / print</td><td>Semantic Markdown guidance</td><td>Not applicable</td><td>Pipe/log output</td><td>Transcript renderer excluded</td><td>P0 safe; explicit profiles remain</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="extensions">
+        <div class="section-head">
+          <div><h2>Complete extension inventory</h2><p class="mono">Keep capability; remove accidental coupling.</p></div>
+          <p class="section-kicker">Every top-level runtime extension, adjacent prototype, configured resource, and installed candidate is represented.</p>
+        </div>
+        <div class="snapshot-grid" style="margin-bottom:12px">
+          <div class="snapshot"><div class="label">Enabled TypeScript</div><div class="value">11 / 12</div><div class="detail">one exact global force-exclude on the Mac</div></div>
+          <div class="snapshot"><div class="label">Adjacent prototype</div><div class="value">1 inert HTML</div><div class="detail">not loaded by Pi; relocate to make intent obvious</div></div>
+          <div class="snapshot"><div class="label">Package/resources</div><div class="value">4 decisions</div><div class="detail">3 configured entries + inactive installed <code>pi-subagents</code></div></div>
+        </div>
+        <div class="filters" role="group" aria-label="Filter extensions">
+          <button class="filter active" data-filter="all" type="button" aria-pressed="true">All</button>
+          <button class="filter" data-filter="keep" type="button" aria-pressed="false">Keep</button>
+          <button class="filter" data-filter="refactor" type="button" aria-pressed="false">Refactor</button>
+          <button class="filter" data-filter="remove" type="button" aria-pressed="false">Remove / disable</button>
+          <button class="filter" data-filter="promote" type="button" aria-pressed="false">Promote</button>
+          <span id="extension-count" class="filter-status" role="status" aria-live="polite">18 entries</span>
+        </div>
+        <div class="table-wrap">
+          <table id="extension-table">
+            <thead><tr><th>Extension / package</th><th>Decision</th><th>Evidence</th><th>Better shape</th></tr></thead>
+            <tbody>
+              <tr data-decision="remove"><td>atlas-evidence-rail-prototype.ts</td><td><span class="decision remove">Remove from auto-load</span></td><td>A named prototype globally registers UI in every Pi startup.</td><td>Move to <code>prototypes/</code>; explicit <code>-e</code> only.</td></tr>
+              <tr data-decision="keep"><td>codex-fast-mode.ts</td><td><span class="decision keep">Keep</span></td><td>Provider-request-only and transport-neutral.</td><td>Document provider scope; keep out of terminal logic.</td></tr>
+              <tr data-decision="keep"><td>herdr-agent-state.ts</td><td><span class="decision keep">Keep</span></td><td>Correct TUI + Herdr environment gating.</td><td>Use as the reference gating pattern.</td></tr>
+              <tr data-decision="refactor"><td>image-drop.ts</td><td><span class="decision refactor">Keep + refactor</span></td><td>Transform/resize works; raw slash buffering delays ordinary input and reverse-SCP guesses identity.</td><td>Separate ingestion adapter; explicit SSH config; feed RPC images.</td></tr>
+              <tr data-decision="refactor"><td>plaid.ts</td><td><span class="decision refactor">Keep + adapt</span></td><td>Tools are portable; status command assumes interactive notify.</td><td>Plain status outside TUI or intentional RPC UI.</td></tr>
+              <tr data-decision="refactor"><td>subagent.ts</td><td><span class="decision refactor">Replace urgently</span></td><td><code>AgentConfig.tools</code> is ignored; ambient tools/extensions + <code>--approve</code>; width from stdout.</td><td>Adapt pi-subagents; enforce tools/extensions; separate renderer.</td></tr>
+              <tr data-decision="remove"><td>tool-call-renderer-thinking-prototype.html</td><td><span class="decision remove">Relocate prototype</span></td><td>Inert today, but a design artifact lives beside globally discovered runtime extensions.</td><td>Move under <code>prototypes/</code>; keep runtime inventory unambiguous.</td></tr>
+              <tr data-decision="refactor"><td>tool-call-renderer.ts</td><td><span class="decision refactor">TUI-only refactor</span></td><td>Imports installation internals and patches private component prototypes before mode is known.</td><td>Delay until TUI session; public renderer seam + version test.</td></tr>
+              <tr data-decision="remove"><td>transcript-scroll.ts</td><td><span class="decision remove">Disabled 2026-08-13</span></td><td>Force-excluded from ambient startup; historical global mouse capture and width crash remain documented.</td><td>Keep explicit fixture coverage; redesign as transcript model + surface adapters + keyboard copy mode.</td></tr>
+              <tr data-decision="refactor"><td>vault-hunter-agents.ts</td><td><span class="decision refactor">Keep definitions</span></td><td>Personas are useful; their tool lists are currently decorative.</td><td>Feed into an enforcing subagent runtime.</td></tr>
+              <tr data-decision="keep"><td>vault-hunter-crew-child.ts</td><td><span class="decision keep">Keep</span></td><td>Useful lifecycle and telemetry.</td><td>Load only in crew-child profile; explicit headless behavior.</td></tr>
+              <tr data-decision="keep"><td>vault-hunter-crew.ts</td><td><span class="decision keep">Keep</span></td><td>Already gates on TUI and Herdr.</td><td>Exclude from generic and headless profiles.</td></tr>
+              <tr data-decision="refactor"><td>vault-hunter-run.ts</td><td><span class="decision refactor">Keep + adapt</span></td><td><code>ctx.hasUI</code> is also true in RPC, where current bridges cancel dialogs.</td><td>TUI gate or real remote approval capability.</td></tr>
+              <tr data-decision="refactor"><td>pi-mcp-adapter</td><td><span class="decision refactor">Keep + policy</span></td><td>Pre-authenticated tools work; interactive auth/elicitation has no remote path.</td><td>Explicit per-transport approval and auth policy.</td></tr>
+              <tr data-decision="keep"><td>youtube-search</td><td><span class="decision keep">Keep</span></td><td>Transport-neutral tool; explicit load succeeded under Pi 0.82.1.</td><td>No terminal changes needed.</td></tr>
+              <tr data-decision="keep"><td>amosblomqvist/pi-config</td><td><span class="decision keep">Keep resources</span></td><td>General extensions intentionally disabled with <code>extensions: []</code>.</td><td>Keep distinct from local production extensions.</td></tr>
+              <tr data-decision="promote"><td>pi-subagents@0.37.0</td><td><span class="decision promote">Promote</span></td><td>Installed but inactive; already supports explicit tool and extension visibility.</td><td>Compatibility-test, then replace custom orchestration core.</td></tr>
+              <tr data-decision="remove"><td>APPEND_SYSTEM raw ANSI</td><td><span class="decision remove">Removed 2026-08-13</span></td><td>Historical styling instructions produced demonstrably malformed semantic content.</td><td>Current prompt retains semantic response-shape and activity-title guidance only.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="research-note"><strong>Current settings:</strong> Fireworks/Kimi, high thinking, Gruvbox Material, and websocket-cached transport. Four MCP subprocesses are declared—Google Workspace via <code>uvx</code>, WhatsApp via <code>uv run</code>, and Granola/Browserbase via <code>npx</code>. Those tools are terminal-neutral but host-path, environment, authentication, and network dependent; standalone Codex does not inherit them.</p>
+      </section>
+
+      <section id="prior-proofs">
+        <div class="section-head">
+          <div><h2>Prior verified behavior carried forward</h2><p class="mono">Keep the capabilities; change the host coupling.</p></div>
+          <p class="section-kicker">These older proofs explain why the recommendation is refactor, not delete.</p>
+        </div>
+        <div class="capability-grid">
+          <article class="capability-card"><div class="surface">Image drop · verified</div><h3>Real Ghostty-over-SSH fragmentation was fixed</h3><p>A 100 ms debounce plus delayed-character verifier handled a real macOS screenshot path over SSH, producing one remote PNG attachment. Preserve transform/resize/transfer; move raw-path ingestion behind an explicit surface adapter.</p><p><strong>Historical runtime:</strong> local Pi 0.81.1, homelab Pi 0.80.3. Existing sessions required <code>/reload</code>.</p></article>
+          <article class="capability-card"><div class="surface">Work-step UI · verified</div><h3>The compact visual intent is proven</h3><p>Deterministic persisted sessions covered spinner/completion/failure state, grouped tool counts, thinking-title fallback, reload/restoration, custom-tool suppression, ANSI foreground checks, and optional live smoke.</p><p><strong>Upgrade risk:</strong> it monkey-patches private Pi components. Re-run a version-contract and narrow-width gate on 0.82.1 and 0.83.0.</p></article>
+        </div>
+      </section>
+
+      <section id="shared">
+        <div class="section-head">
+          <div><h2>Shared gaps and Codex blast radius</h2><p class="mono">Below Pi's process boundary.</p></div>
+          <p class="section-kicker">Fix these with shared terminal tests, not Pi screenshots alone.</p>
+        </div>
+        <div class="callout warn"><div class="mark">A</div><div><strong>Sidekick's snapshot scrollback is globally disabled.</strong><p><code>herdr_backend.lua</code> sets <code>native_scroll=true</code> for Pi and Codex. Enabling native PTY scrolling bypasses Sidekick's dump-backed, searchable, yankable history.</p></div></div>
+        <div class="callout warn"><div class="mark">B</div><div><strong>Hidden views can retain takeover ownership.</strong><p>Sidekick hides the window but keeps its terminal job. A hidden <code>herdr agent attach --takeover</code> can force the next outside client to take over again.</p></div></div>
+        <div class="callout warn"><div class="mark">C</div><div><strong>Paste state is global across terminal buffers.</strong><p>The phased bracketed-paste accumulator should be keyed by terminal channel so concurrent Sidekick sessions cannot interleave fragments.</p></div></div>
+        <div class="callout warn"><div class="mark">D</div><div><strong>Nested Shift-Enter can split into cancel plus Enter.</strong><p>Ghostty emits <code>ESC CR</code>; Herdr's lone-Escape timeout can flush the Escape before carriage return arrives. Test the complete Ghostty → Neovim → Herdr → Pi route, including Alt chords.</p></div></div>
+        <div class="callout warn"><div class="mark">E</div><div><strong>Global TERM masks native capabilities.</strong><p>Shell startup forces <code>TERM=xterm-256color</code> for every boundary. Ghostty/tmux already provide richer terminfo, RGB, OSC52, and extended-key support; compatibility overrides should live only where required.</p></div></div>
+        <div class="callout warn"><div class="mark">F</div><div><strong>The shared picker parser and activity scrubber are stale.</strong><p><code>cwd_picker.lua</code> looks for the old <code>MCP:</code> footer and context shape, missing <code>🔌 MCP:</code> and <code>7.7%/1.0M</code>. Its Working scrubber also strips useful Pi and Codex activity feedback.</p></div></div>
+        <div class="callout good"><div class="mark">✓</div><div><strong>Codex renderer fallback is simple: leave it alone.</strong><p>The Pi prompt and prototype patches are Pi-local. Current live Codex output was clean. Narrow shared scroll, paste, attachment, and picker changes instead.</p></div></div>
+      </section>
+
+      <section id="rpc">
+        <div class="section-head">
+          <div><h2>Outside-Neovim and RPC research</h2><p class="mono">Preserve the working transport features; replace the duplicated run loops.</p></div>
+          <p class="section-kicker">The desired abstraction is one lifecycle reducer with explicit per-surface capabilities.</p>
+        </div>
+        <div class="capability-grid">
+          <article class="capability-card"><div class="surface">Telegram · working</div><h3>A credible remote control surface</h3><p>Text/captions, allowlisting, mention gating, typing activity, voice/audio transcription, session listing/switching, concise transport prompting, and safe Markdown-like HTML rendering already work.</p></article>
+          <article class="capability-card"><div class="surface">Telegram · gaps</div><h3>Delivery is not yet durable</h3><p>It stops at <code>agent_end</code> instead of authoritative <code>agent_settled</code>, never sends RPC <code>abort</code> on timeout, shares one synchronous session across chats, and persists offsets before processing/delivery.</p><p>No steering, photo/image ingress, extension approval flow, or background-subagent completion delivery exists.</p></article>
+          <article class="capability-card"><div class="surface">WhatsApp · working</div><h3>A functional text bridge</h3><p>Allowlisted prefixed text, status/reset, and reply delivery through the local bridge are in place.</p></article>
+          <article class="capability-card"><div class="surface">WhatsApp · gaps</div><h3>Behind Telegram's feature floor</h3><p>It shares the settle/abort/session/dialog/acknowledgement problems and lacks real switch/resume, Markdown, media, typing/progress, and origin/message-ID deduplication. The queried <code>is_from_me</code> field is ignored.</p></article>
+          <article class="capability-card"><div class="surface">Print / unattended</div><h3>Semantic output restored; profile work remains</h3><p>Global <code>APPEND_SYSTEM.md</code> now requests semantic Markdown only, and transcript-scroll is excluded. Other TUI-only extensions still need explicit headless profiles and must not patch private renderer internals during startup.</p></article>
+          <article class="capability-card"><div class="surface">SSH / tmux</div><h3>Good foundations, missing E2E proof</h3><p>50k history, mouse, OSC52, RGB, extended keys, tmux-yank, and reverse-SCP image ingress exist. App mouse capture, dual <code>C-a</code>, guessed callback identity, stale pane environment, and forced TERM remain risks.</p></article>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <div class="panel-title"><span>Shared RPC reducer requirements</span><span>one run, one acknowledgement boundary</span></div>
+          <div class="check-grid" style="padding:8px 14px 14px">
+            <div class="check">Wait for authoritative <code>agent_settled</code>; <code>agent_end</code> can precede a retry.</div>
+            <div class="check">Send RPC <code>abort</code> on timeout and drain only that run's events.</div>
+            <div class="check">Resume a real session path/ID; <code>--name</code> only labels a new session.</div>
+            <div class="check">Isolate state per chat or explicitly declare a shared-session model.</div>
+            <div class="check">Acknowledge inbound offsets only after durable processing/delivery; use idempotency/outbox.</div>
+            <div class="check">Sanitize control bytes at the transport boundary.</div>
+            <div class="check">Model images, progress, steering, approvals, and background completion as capabilities.</div>
+            <div class="check">Never silently cancel an extension dialog without a transport-visible result.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="target">
+        <div class="section-head">
+          <div><h2>Target integration</h2><p class="mono">One semantic core, explicit surface adapters.</p></div>
+          <p class="section-kicker">Equivalent outcomes do not require identical host mechanics.</p>
+        </div>
+        <div class="ownership">
+          <article class="owner"><div class="host">DIRECT GHOSTTY</div><strong>Pi owns transcript</strong><p>Keyboard PageUp/PageDown, explicit copy mode, documented host-selection bypass, clean semantic copy.</p></article>
+          <article class="owner"><div class="host">HERDR UI</div><strong>Herdr owns history</strong><p>Pi receives mouse only at live bottom. Herdr copy mode and 10 MB history own historical interaction.</p></article>
+          <article class="owner"><div class="host">SIDEKICK / NVIM</div><strong>Neovim owns history</strong><p>Live PTY for input; on scroll, materialize <code>herdr agent read</code> into a normal searchable/yankable buffer.</p></article>
+          <article class="owner"><div class="host">RPC / PRINT</div><strong>Transport owns render</strong><p>No terminal ANSI or scroll behavior. Markdown/HTML/plain adapters sanitize, chunk, and deliver semantic content.</p></article>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <div class="panel-title"><span>Four boundaries</span><span>deep core, thin adapters</span></div>
+          <div class="check-grid" style="padding:8px 14px 14px">
+            <div class="check"><strong>Semantic core:</strong> messages, tools, links, images, approvals, sessions—no ANSI, mouse, clipboard, or <code>$NVIM</code>.</div>
+            <div class="check"><strong>Pi presentation:</strong> Markdown/theme and public-width-aware tool components, loaded only in TUI mode.</div>
+            <div class="check"><strong>Surface adapters:</strong> history, selection, clipboard, paste/file ingestion, opener, attachment lifecycle.</div>
+            <div class="check"><strong>Explicit profiles:</strong> terminal, Herdr child, Sidekick, headless RPC, unattended—no ambient discovery as policy.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="plan">
+        <div class="section-head">
+          <div><h2>Recommended sequence</h2><p class="mono">Smallest safe path to a coherent integration.</p></div>
+        </div>
+        <div class="roadmap-grid">
+          <article class="roadmap-card"><div class="phase">P0 · 01–02 LANDED</div><h3>Restore semantic safety</h3><ol><li>✓ Raw ANSI prompt removed.</li><li>✓ Transcript scroll force-excluded.</li><li>✓ 2 / 2 affected live surfaces cleared.</li><li>Open: enforce child tool visibility.</li></ol></article>
+          <article class="roadmap-card active"><div class="phase">P1 · LEASES · ACTIVE</div><h3>Freeze ownership contract</h3><ol><li>V0 vocabulary + boundary.</li><li>V1 executable transitions.</li><li>V2 capability-plan inspection.</li><li>V3 Pi/Codex scenarios.</li><li>No runtime behavior change.</li></ol></article>
+          <article class="roadmap-card"><div class="phase">P1 · HEADLESS</div><h3>Unify RPC lifecycle</h3><ol><li>Wait for <code>agent_settled</code>.</li><li>Abort on timeout.</li><li>Resume real session IDs.</li><li>Durable delivery + adapters.</li></ol></article>
+          <article class="roadmap-card"><div class="phase">P2 · GATE</div><h3>Prove both hosts</h3><ol><li>Mac Pi 0.82.1.</li><li>Homelab Pi 0.83.0.</li><li>Herdr 0.8 + 0.7.5.</li><li>Pin or declare two-version support.</li></ol></article>
+        </div>
+
+        <div class="panel" id="acceptance" style="margin-top:12px">
+          <div class="panel-title"><span>Acceptance matrix</span><span>run on every supported surface</span></div>
+          <div class="check-grid" style="padding:8px 14px 14px">
+            <div class="check">Render at widths 6, 20, 80 and after resize.</div>
+            <div class="check">Scroll while output streams; continue without surprise jump.</div>
+            <div class="check">Copy old transcript text with zero control/ANSI fragments.</div>
+            <div class="check">Paste single/multiline text while live and viewing history.</div>
+            <div class="check">Prove phased pastes in two terminal buffers cannot interleave.</div>
+            <div class="check">Route image/file input only on surfaces that declare support.</div>
+            <div class="check">Open/copy HTTP and file links with safe non-Neovim fallback.</div>
+            <div class="check">Provide keyboard transcript scroll/copy plus intentional host mouse selection.</div>
+            <div class="check">Crash/restart a TUI and prove SGR mouse reporting is reset.</div>
+            <div class="check">Hide/show/reattach without an orphan takeover client.</div>
+            <div class="check">Retry, timeout/abort, restart/resume, background RPC delivery.</div>
+            <div class="check">Acknowledge RPC input after durable delivery and deduplicate retries.</div>
+            <div class="check">Prove read-only children cannot see mutation tools.</div>
+          </div>
+        </div>
+        <p class="research-note">Run this matrix on direct Ghostty, Herdr UI, Sidekick/Neovim, SSH/tmux, Telegram RPC, WhatsApp RPC, and <code>--print</code>. Gate widths 6, 20, and 80 plus resize on Mac Pi 0.82.1 / Herdr 0.8 and homelab Pi 0.83.0 / Herdr 0.7.5; then pin one version or document the two-version contract.</p>
+      </section>
+
+      <section id="evidence">
+        <div class="section-head">
+          <div><h2>Evidence ledger</h2><p class="mono">Source, live state, and executable checks.</p></div>
+          <p class="section-kicker">A dirty-parent refusal is reported as blocked, never as a pass.</p>
+        </div>
+        <div class="evidence-grid">
+          <article class="evidence-card live"><div class="state">Live</div><h3>Mac Herdr</h3><p>Agent, pane, workspace, Pi, and Codex surfaces inspected. Codex output clean.</p></article>
+          <article class="evidence-card pass"><div class="state">P0.1 pass</div><h3>Semantic prompt</h3><p>No escape byte or ANSI-generation directive remains; response-shape and activity-title sections are retained.</p></article>
+          <article class="evidence-card pass"><div class="state">P0.2 pass</div><h3>Global exclusion</h3><p>Pi 0.82.1 resolves <code>transcript-scroll.ts</code> present but disabled; one affected pane reloaded cleanly and the other Pi process and pane exited.</p></article>
+          <article class="evidence-card fail"><div class="state">Historical</div><h3>Persisted ANSI defect</h3><p>Malformed SGR fragments remain in the old semantic Pi JSONL, before the terminal layer.</p></article>
+          <article class="evidence-card fail"><div class="state">Historical</div><h3>Width crash</h3><p><code>pi-crash.log</code>: terminal width 6, compacted changelog line width 11.</p></article>
+          <article class="evidence-card pass"><div class="state">Pass</div><h3>Transcript links V02</h3><p>Viewport, link action, cleanup, resize, and adapter fixtures passed.</p></article>
+          <article class="evidence-card blocked"><div class="state">Separate failure</div><h3>Transcript links V03</h3><p>Explicit loading reached real Pi; the fixture failed one stale model-footer assertion and two Neovim target-open assertions. Ambient exclusion checks still pass.</p></article>
+          <article class="evidence-card pass"><div class="state">Pass</div><h3>Image drop</h3><p>Offline verifier passed with Pi settings/trust lock access.</p></article>
+          <article class="evidence-card pass"><div class="state">Partial pass</div><h3>Transcript V01 behavior</h3><p>Behavior checks passed; the baseline-ancestry assertion failed on the diverged checkout.</p></article>
+          <article class="evidence-card blocked"><div class="state">Blocked</div><h3>Work-step golden</h3><p>Verifier correctly refused a dirty parent Git source. No product verdict claimed.</p></article>
+          <article class="evidence-card live"><div class="state">Live</div><h3>Homelab</h3><p>Clean main at PR #127; both messaging services active; Pi 0.83.0 / Herdr 0.7.5.</p></article>
+          <article class="evidence-card blocked"><div class="state">Unavailable</div><h3>Neovim RPC</h3><p>No discoverable listen socket. Static adapter + installed Sidekick + live Herdr evidence used.</p></article>
+          <article class="evidence-card live"><div class="state">Complete</div><h3>Extension inventory</h3><p>All 12 top-level TypeScript sources inspected; 11 now resolve enabled by default.</p></article>
+          <article class="evidence-card live"><div class="state">Active</div><h3>Attachment Leases Phase 1</h3><p>Herdr workspace <code>w5W</code> runs <code>codex-attachment-leases</code> on isolated branch <code>agent/herdr-attachment-leases-phase1</code> from merged baseline <code>86a38aa</code>.</p></article>
+        </div>
+        <p class="fineprint">Full source notes: <code>.lavish/pi-terminal-integration-audit.md</code>. The 2026-08-09 audit was read-only; P0.1 and P0.2 merged through PR #131. Attachment Leases Phase 1 changes only the contract and verifier until later phases explicitly migrate runtime ownership.</p>
+      </section>
+
+      <section id="sources">
+        <div class="section-head">
+          <div><h2>Source and research ledger</h2><p class="mono">Every material conclusion has a provenance and a limitation.</p></div>
+          <p class="section-kicker">Paths are from the audited Mac checkout and runtime.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Evidence</th><th>Location</th><th>What it supports</th><th>Status / limitation</th></tr></thead>
+            <tbody>
+              <tr><td>Semantic prompt rollback</td><td><code>pi/.pi/agent/APPEND_SYSTEM.md</code></td><td>Current prompt retains response shape and activity titles without ANSI generation.</td><td>Implemented 2026-08-13; historical JSONL evidence remains valid.</td></tr>
+              <tr><td>Persisted malformed response</td><td><code>~/.pi/agent/sessions/--Users-aviral-dotfiles--/2026-08-09T13-34-15-264Z_019fe6bb-30e0-7d5e-90e9-066a07ad4aa3.jsonl</code></td><td>Visible SGR fragments exist before terminal rendering.</td><td>Live persisted evidence; transcript content was inspected, not republished.</td></tr>
+              <tr><td>Narrow-width crash</td><td><code>~/.pi/agent/pi-crash.log:1</code></td><td>Terminal width 6, rendered line width 11.</td><td>Runtime-confirmed crash record.</td></tr>
+              <tr><td>Transcript ownership rollback</td><td><code>pi/.pi/agent/settings.json</code><br><code>pi/.pi/agent/extensions/transcript-scroll.ts:278-398,427-433</code></td><td>Exact force-exclude preserves the source while disabling its root render patch and global mouse capture.</td><td>Implemented 2026-08-13; explicit V02/V03 fixture loading remains available.</td></tr>
+              <tr><td>Subagent capability leak</td><td><code>pi/.pi/agent/extensions/subagent.ts:18-32,284-329</code></td><td><code>AgentConfig.tools</code> exists but child args never include <code>--tools</code>.</td><td>Source-confirmed; existing verifier does not assert isolation.</td></tr>
+              <tr><td>Private Pi renderer patch</td><td><code>pi/.pi/agent/extensions/tool-call-renderer.ts:1410-1567</code></td><td>Installed interactive internals are imported and prototypes patched before mode is known.</td><td>Source-confirmed; historical renderer proof was on Pi 0.81.1.</td></tr>
+              <tr><td>Sidekick Herdr adapter</td><td><code>nvim/.config/nvim/lua/plugins/sidekick/herdr_backend.lua:46-55,96-98</code></td><td><code>native_scroll=true</code> bypasses snapshots; attach always uses <code>--takeover</code>.</td><td>Source-confirmed; no live Neovim RPC socket was available.</td></tr>
+              <tr><td>Terminal paste state</td><td><code>nvim/.config/nvim/lua/config/options.lua:35-70</code></td><td>One phased-paste accumulator is shared across terminal channels.</td><td>Source-confirmed; concurrent-interleave behavior needs an executable test.</td></tr>
+              <tr><td>Stale picker parsing</td><td><code>nvim/.config/nvim/lua/plugins/sidekick/cwd_picker.lua:306+</code></td><td>Old MCP/context patterns and shared Working scrubber.</td><td>Source-confirmed; live UI not driven in this audit.</td></tr>
+              <tr><td>RPC lifecycle loops</td><td><code>pi/bin/pi-telegram-daemon.py:108-231</code><br><code>pi/bin/pi-whatsapp-daemon.py:74-195</code></td><td>Both bridges settle on <code>agent_end</code> and lack timeout abort.</td><td>Source-confirmed; live services were checked only on homelab.</td></tr>
+              <tr><td>Host capability layer</td><td><code>ghostty/.config/ghostty/config</code><br><code>tmux/.tmux.conf</code><br><code>zsh/.zshrc:108-111</code></td><td>Clipboard, history, OSC52, Shift-Enter, mouse, TERM, and key-routing foundations/conflicts.</td><td>Source-confirmed; full nested E2E matrix remains future acceptance work.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <div class="panel-title"><span>Recovered audit corpus</span><span>2026-08-09</span></div>
+          <div class="check-grid" style="padding:8px 14px 14px">
+            <div class="check"><strong>Root synthesis:</strong> <code>019fe6ba-a82e-7d72-8fa5-b97b0fd68733</code></div>
+            <div class="check"><strong>Extension inventory:</strong> <code>019fe6f0-66a1-7c91-aedf-0b4383bba6a1</code></div>
+            <div class="check"><strong>Terminal integration map:</strong> <code>019fe6f0-8284-77c1-9841-570f33444be9</code></div>
+            <div class="check"><strong>Outside-Neovim surfaces:</strong> <code>019fe6f0-99d0-7492-b316-6439b5e750c0</code></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="status-bar">
+      <div><span class="ok">● P0 merged · Attachment Leases Phase 1 active</span></div>
+      <div class="terminal-title">workspace w5W · contract/verifier only · no Codex renderer changes</div>
+      <div>updated 2026-08-13</div>
+    </footer>
+  </div>
+
+  <script>
+    const buttons = [...document.querySelectorAll('.filter')];
+    const rows = [...document.querySelectorAll('#extension-table tbody tr')];
+    const extensionCount = document.querySelector('#extension-count');
+    for (const button of buttons) {
+      button.setAttribute('aria-controls', 'extension-table');
+      button.addEventListener('click', () => {
+        const wanted = button.dataset.filter;
+        for (const item of buttons) {
+          const selected = item === button;
+          item.classList.toggle('active', selected);
+          item.setAttribute('aria-pressed', String(selected));
+        }
+        for (const row of rows) row.hidden = wanted !== 'all' && row.dataset.decision !== wanted;
+        const visible = rows.filter((row) => !row.hidden).length;
+        extensionCount.textContent = `${visible} ${visible === 1 ? 'entry' : 'entries'}`;
+      });
+    }
+    extensionCount.textContent = `${rows.length} entries`;
+  </script>
+</body>
+</html>

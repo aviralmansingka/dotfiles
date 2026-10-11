@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Herdr attachment leases</title>
+  <style>
+    :root {
+      --bg0: #171918;
+      --bg1: #1d2021;
+      --bg2: #282828;
+      --bg3: #32302f;
+      --bg4: #3c3836;
+      --border: #504945;
+      --ghost: #665c54;
+      --muted: #a89984;
+      --fg0: #fbf1c7;
+      --fg1: #ebdbb2;
+      --red: #ea6962;
+      --red-bg: #3d2424;
+      --green: #a9b665;
+      --green-bg: #293126;
+      --yellow: #d8a657;
+      --yellow-bg: #353025;
+      --blue: #7daea3;
+      --blue-bg: #253033;
+      --aqua: #89b482;
+      --purple: #d3869b;
+      --orange: #e78a4e;
+      --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --shadow: 0 30px 100px rgb(0 0 0 / 48%);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg0); scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      color: var(--fg1);
+      font-family: var(--sans);
+      background:
+        linear-gradient(rgb(235 219 178 / 2.2%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(235 219 178 / 1.6%) 1px, transparent 1px),
+        radial-gradient(circle at 10% 0%, rgb(231 138 78 / 13%), transparent 31rem),
+        radial-gradient(circle at 96% 8%, rgb(125 174 163 / 10%), transparent 28rem),
+        var(--bg0);
+      background-size: 24px 24px, 24px 24px, auto, auto, auto;
+    }
+
+    a { color: var(--blue); text-underline-offset: 3px; }
+    code, .mono { font-family: var(--mono); }
+    code { overflow-wrap: anywhere; color: var(--yellow); font-size: .92em; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { text-wrap: balance; }
+
+    .page {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: rgb(29 32 33 / 97%);
+      box-shadow: var(--shadow);
+    }
+
+    .terminal-bar, .status-bar {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      background: var(--bg3);
+      color: var(--muted);
+      font: 11px/1.3 var(--mono);
+    }
+    .terminal-bar { border-bottom: 1px solid var(--border); }
+    .status-bar { border-top: 1px solid var(--border); }
+    .terminal-title { overflow: hidden; color: var(--fg1); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+    .lights { color: var(--red); letter-spacing: 4px; }
+    .lights span:nth-child(1) { color: var(--yellow); }
+    .lights span:nth-child(2) { color: var(--green); }
+
+    .command {
+      display: flex;
+      gap: 10px;
+      min-width: 0;
+      padding: 12px 16px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+      background: #242424;
+      font: 12px/1.3 var(--mono);
+    }
+    .prompt { flex: 0 0 auto; color: var(--green); font-weight: 800; }
+    .command-text { overflow: hidden; color: var(--fg0); text-overflow: ellipsis; white-space: nowrap; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 410px);
+      gap: 42px;
+      padding: 52px 46px 44px;
+      border-bottom: 1px solid var(--border);
+    }
+    .eyebrow {
+      margin-bottom: 13px;
+      color: var(--orange);
+      font: 800 11px/1.3 var(--mono);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 900px;
+      margin-bottom: 18px;
+      color: var(--fg0);
+      font-size: clamp(38px, 5.4vw, 74px);
+      letter-spacing: -.055em;
+      line-height: .96;
+    }
+    .lead {
+      max-width: 860px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(14px, 1.4vw, 17px);
+      line-height: 1.75;
+    }
+    .hero-meta { display: grid; align-content: start; gap: 10px; }
+    .meta-card {
+      min-width: 0;
+      padding: 14px 15px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--muted);
+      font: 11px/1.55 var(--mono);
+    }
+    .meta-card strong { display: block; margin-bottom: 5px; color: var(--fg0); font-size: 12px; }
+    .meta-card.decision { border-left: 3px solid var(--green); }
+    .meta-card.session { border-left: 3px solid var(--blue); }
+    .meta-card.lease { border-left: 3px solid var(--yellow); }
+    .meta-card.scope { border-left: 3px solid var(--red); }
+    .meta-card.active { border-left: 3px solid var(--green); background: var(--green-bg); }
+
+    .jumpbar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 18px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      scrollbar-width: thin;
+    }
+    .jumpbar a {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      background: var(--bg1);
+      color: var(--muted);
+      font: 10px/1 var(--mono);
+      letter-spacing: .07em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .jumpbar a:hover { border-color: var(--blue); color: var(--fg0); }
+
+    main { padding: 36px 34px 48px; }
+    section + section { margin-top: 48px; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 17px;
+    }
+    h2 {
+      margin-bottom: 5px;
+      color: var(--aqua);
+      font-size: clamp(21px, 2.3vw, 30px);
+      letter-spacing: -.035em;
+    }
+    .section-kicker { margin: 0; color: var(--muted); font: 11px/1.55 var(--mono); text-align: right; }
+
+    .summary-grid, .term-grid, .scenario-grid, .roadmap-grid, .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .summary-card, .term-card, .scenario-card, .roadmap-card, .decision-card {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .summary-card.current { border-top: 3px solid var(--red); }
+    .summary-card.target { border-top: 3px solid var(--green); }
+    .summary-card.rule { border-top: 3px solid var(--yellow); }
+    .card-label { margin-bottom: 11px; color: var(--blue); font: 800 10px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .summary-card.current .card-label { color: var(--red); }
+    .summary-card.target .card-label { color: var(--green); }
+    .summary-card.rule .card-label { color: var(--yellow); }
+    .summary-card h3, .term-card h3, .scenario-card h3, .roadmap-card h3, .decision-card h3 { margin-bottom: 8px; color: var(--fg0); font-size: 15px; }
+    .summary-card p, .term-card p, .scenario-card p, .roadmap-card p, .decision-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
+
+    .panel { min-width: 0; border: 1px solid var(--border); background: var(--bg2); }
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 13px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+      color: var(--fg0);
+      font: 11px/1.3 var(--mono);
+    }
+    .panel-title span:last-child { color: var(--muted); text-align: right; }
+    .architecture, .lifecycle { padding: 18px; overflow-x: auto; }
+    .architecture svg, .lifecycle svg { display: block; width: 100%; min-width: 900px; height: auto; }
+    .arch-node rect, .life-node rect { stroke-width: 1.3; }
+    .arch-node text, .life-node text, .arch-scope text { font-family: var(--mono); }
+    .arch-edge, .life-edge { fill: none; stroke: var(--ghost); stroke-width: 2; marker-end: url(#arrow); }
+    .arch-edge.lease, .life-edge.lease { stroke: var(--yellow); }
+    .arch-edge.snapshot { stroke: var(--blue); stroke-dasharray: 6 5; }
+    .arch-edge.release, .life-edge.release { stroke: var(--green); stroke-dasharray: 6 5; }
+    .arch-edge.observe, .life-edge.failure { stroke: var(--red); stroke-dasharray: 3 5; }
+    .arch-scope > rect { fill: var(--yellow-bg); fill-opacity: .16; stroke: var(--yellow); stroke-width: 1.2; stroke-dasharray: 7 5; }
+    .arch-caption { fill: var(--muted); font: 11px var(--mono); }
+    .edge-label { fill: var(--muted); font: 10px var(--mono); text-anchor: middle; paint-order: stroke; stroke: var(--bg2); stroke-width: 5px; stroke-linejoin: round; }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 14px 18px 18px;
+      border-top: 1px solid var(--border);
+      background: var(--bg1);
+    }
+    .legend-title { grid-column: 1 / -1; margin-bottom: 2px; color: var(--fg0); font: 800 10px/1.3 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .key { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; min-width: 0; color: var(--muted); font: 10px/1.45 var(--mono); }
+    .key strong { display: block; color: var(--fg1); font-size: 10px; }
+    .swatch { display: block; width: 26px; height: 14px; margin-top: 2px; }
+    .swatch.session { border: 2px solid var(--blue); background: var(--blue-bg); }
+    .swatch.lease { border: 2px solid var(--yellow); background: var(--yellow-bg); }
+    .swatch.nvim { border: 2px solid var(--green); background: var(--green-bg); }
+    .swatch.observer { border: 2px dashed var(--red); background: var(--red-bg); }
+    .swatch.snapshot { height: 8px; border-top: 2px dashed var(--blue); }
+    .swatch.holder { height: 8px; border-top: 2px solid var(--yellow); }
+    .swatch.release { height: 8px; border-top: 2px dashed var(--green); }
+    .swatch.scope { border: 2px dashed var(--yellow); background: rgb(216 166 87 / 8%); }
+
+    .term-card { position: relative; padding-top: 42px; }
+    .term-card::before { position: absolute; top: 17px; left: 18px; color: var(--purple); font: 800 10px/1 var(--mono); content: attr(data-term); letter-spacing: .08em; text-transform: uppercase; }
+
+    .interface-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      border: 1px solid var(--border);
+      background: var(--border);
+    }
+    .interface-step { min-width: 0; padding: 17px; background: var(--bg2); }
+    .interface-step .verb { color: var(--green); font: 800 12px/1.2 var(--mono); }
+    .interface-step .result { margin-top: 7px; color: var(--yellow); font: 10px/1.5 var(--mono); }
+    .interface-step p { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); background: var(--bg2); }
+    table { width: 100%; min-width: 850px; border-collapse: collapse; font-size: 11px; line-height: 1.55; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: var(--bg3); color: var(--fg0); font: 800 10px/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    td { color: var(--muted); }
+    td:first-child { color: var(--fg0); font-family: var(--mono); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .owner { color: var(--green); font-weight: 700; }
+    .lease-owner { color: var(--yellow); font-weight: 700; }
+
+    .invariant-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border: 1px solid var(--border); background: var(--border); }
+    .invariant { position: relative; min-width: 0; padding: 15px 15px 15px 45px; background: var(--bg2); color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .invariant::before { position: absolute; top: 14px; left: 15px; color: var(--green); font: 800 12px/1 var(--mono); content: attr(data-n); }
+
+    .scenario-card { border-top: 3px solid var(--blue); }
+    .scenario-card:nth-child(2) { border-top-color: var(--yellow); }
+    .scenario-card:nth-child(3) { border-top-color: var(--red); }
+    .scenario-card:nth-child(4) { border-top-color: var(--purple); }
+    .scenario-card:nth-child(5) { border-top-color: var(--green); }
+    .scenario-card .outcome { display: block; margin-top: 10px; color: var(--fg1); font: 10px/1.5 var(--mono); }
+
+    .profile-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+    .profile-card { min-width: 0; border: 1px solid var(--border); background: var(--bg2); }
+    .profile-head { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--fg0); font: 800 11px/1.3 var(--mono); }
+    .profile-card.session .profile-head { border-top: 3px solid var(--blue); }
+    .profile-card.nvim .profile-head { border-top: 3px solid var(--green); }
+    .profile-card.terminal .profile-head { border-top: 3px solid var(--yellow); }
+    .profile-row { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 8px; padding: 9px 13px; border-bottom: 1px solid var(--border); font: 10px/1.45 var(--mono); }
+    .profile-row:last-child { border-bottom: 0; }
+    .profile-row span:first-child { color: var(--muted); }
+    .profile-row span:last-child { color: var(--fg1); overflow-wrap: anywhere; }
+
+    .roadmap-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .roadmap-card { position: relative; padding-top: 48px; }
+    .roadmap-card .phase { position: absolute; top: 17px; left: 18px; color: var(--yellow); font: 800 10px/1 var(--mono); letter-spacing: .08em; }
+    .roadmap-card ol { margin: 10px 0 0; padding-left: 17px; color: var(--muted); font-size: 10px; line-height: 1.6; }
+    .roadmap-card.recommended { border-top: 3px solid var(--green); }
+
+    .decision-card { border-left: 3px solid var(--yellow); }
+    .decision-card.resolved { border-left-color: var(--green); }
+    .decision-card.risk { border-left-color: var(--red); }
+    .decision-card .state { margin-bottom: 10px; color: var(--yellow); font: 800 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .decision-card.resolved .state { color: var(--green); }
+    .decision-card.risk .state { color: var(--red); }
+
+    .acceptance {
+      margin-top: 12px;
+      padding: 18px;
+      border: 1px solid var(--green);
+      background: var(--green-bg);
+      color: var(--fg0);
+      font: 800 clamp(14px, 1.8vw, 20px)/1.55 var(--mono);
+      text-align: center;
+    }
+    .note { margin-top: 14px; color: var(--muted); font: 10px/1.65 var(--mono); }
+    .status-bar .ok { color: var(--green); }
+
+    @media (max-width: 1050px) {
+      body { padding: 0; }
+      .page { border-left: 0; border-right: 0; }
+      .hero { grid-template-columns: 1fr; padding: 38px 26px 32px; }
+      main { padding: 28px 18px 38px; }
+      .summary-grid, .term-grid, .scenario-grid, .decision-grid, .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .roadmap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .profile-grid { grid-template-columns: 1fr 1fr; }
+      .profile-card.session { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 650px) {
+      .terminal-bar, .status-bar { grid-template-columns: 1fr auto; }
+      .terminal-title { display: none; }
+      .hero { padding: 32px 20px 28px; }
+      .section-head { display: block; }
+      .section-kicker { margin-top: 8px; text-align: left; }
+      .summary-grid, .term-grid, .scenario-grid, .roadmap-grid, .decision-grid, .legend, .profile-grid, .invariant-grid, .interface-strip { grid-template-columns: 1fr; }
+      .profile-card.session { grid-column: auto; }
+      .panel-title { display: block; }
+      .panel-title span { display: block; }
+      .panel-title span + span { margin-top: 4px; text-align: left; }
+    }
+
+    @media print {
+      :root {
+        --bg0: #fff; --bg1: #fff; --bg2: #fff; --bg3: #f1f1f1; --bg4: #e8e8e8;
+        --border: #bbb; --ghost: #777; --muted: #444; --fg0: #000; --fg1: #111;
+        --red-bg: #fff; --green-bg: #fff; --yellow-bg: #fff; --blue-bg: #fff;
+      }
+      body { padding: 0; background: #fff; color: #111; }
+      .page { width: 100%; border: 0; box-shadow: none; }
+      .jumpbar, .command, .terminal-bar, .status-bar { display: none; }
+      main { padding: 20px; }
+      section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="terminal-bar">
+        <div class="lights">● <span>●</span> <span>●</span></div>
+        <div class="terminal-title">herdr-attachment-leases — Phase 1 active</div>
+        <div>2026-08-13</div>
+      </div>
+      <div class="command">
+        <span class="prompt">aviral@dotfiles %</span>
+        <span class="command-text">design attachment-leases --phase 1 --workspace w5W --status active</span>
+      </div>
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Herdr × Sidekick · Phase 1 launch</div>
+          <h1>Launch once.<br>Open anywhere.</h1>
+          <p class="lead">Phase 1 is active: freeze the contract before changing behavior. One durable Agent Session, surface-native history and interaction, and exactly one live-input owner with safe observers.</p>
+        </div>
+        <div class="hero-meta">
+          <div class="meta-card decision"><strong>Decision direction</strong>Move takeover policy into a Herdr Attachment Lease module.</div>
+          <div class="meta-card session"><strong>Session invariant</strong>Switching between Neovim and terminal mode never restarts the agent.</div>
+          <div class="meta-card lease"><strong>Ownership invariant</strong>One live holder; zero or many read-only observers.</div>
+          <div class="meta-card active"><strong>Phase 1 · active</strong>Workspace <code>w5W</code> on isolated branch <code>agent/herdr-attachment-leases-phase1</code>. Contract and verifier only.</div>
+        </div>
+      </div>
+      <nav class="jumpbar" aria-label="Design sections">
+        <a href="#decision">Decision</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#language">Language</a>
+        <a href="#interface">Interface</a>
+        <a href="#ownership">Ownership</a>
+        <a href="#lifecycle">Lifecycle</a>
+        <a href="#scenarios">Scenarios</a>
+        <a href="#profiles">Profiles</a>
+        <a href="#plan">Plan</a>
+        <a href="#questions">Questions</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="decision">
+        <div class="section-head">
+          <div><h2>The decision</h2><p class="mono">Attachment is a negotiated capability, not an unconditional takeover.</p></div>
+          <p class="section-kicker">Outcome parity, surface-native mechanics.</p>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-card current">
+            <div class="card-label">Current seam</div>
+            <h3>Policy leaks into Sidekick</h3>
+            <p><code>native_scroll=true</code> disables dump-backed history, every attach uses <code>--takeover</code>, and hiding a view does not tell Herdr to release ownership.</p>
+          </article>
+          <article class="summary-card target">
+            <div class="card-label">Target seam</div>
+            <h3>Herdr arbitrates; adapters render</h3>
+            <p>Herdr resolves a Capability Plan, grants one live lease, exposes history, and recovers stale ownership. Neovim and terminal adapters own their native UX.</p>
+          </article>
+          <article class="summary-card rule">
+            <div class="card-label">Parity rule</div>
+            <h3>Same outcomes, not cloned UI</h3>
+            <p>Both surfaces can scroll, search, copy, open, paste, steer, and resume the same session. Neovim uses buffers and registers; terminal mode uses copy mode and OSC52.</p>
+          </article>
+        </div>
+        <div class="summary-grid" style="margin-top:12px">
+          <article class="summary-card target">
+            <div class="card-label">Live workspace</div>
+            <h3><code>w5W</code> · Attachment Leases · Phase 1</h3>
+            <p>Dedicated agent <code>codex-attachment-leases</code> is ready inside an isolated Herdr worktree.</p>
+          </article>
+          <article class="summary-card current">
+            <div class="card-label">Git isolation</div>
+            <h3><code>agent/herdr-attachment-leases-phase1</code></h3>
+            <p>Based on merged P0 baseline <code>86a38aa</code>. The existing dirty checkout remains outside this workspace.</p>
+          </article>
+          <article class="summary-card rule">
+            <div class="card-label">Phase guardrail</div>
+            <h3>Executable contract, no runtime switch</h3>
+            <p>Phase 1 may define vocabulary, profiles, transitions, inspect output, and failing acceptance cases—never change current Sidekick behavior.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <div class="section-head">
+          <div><h2>Ideal architecture</h2><p class="mono">The session is durable; surface ownership is leased.</p></div>
+          <p class="section-kicker">The yellow enclosure is the new deep Herdr module.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><span>Agent Session + Attachment Lease topology</span><span>one session · two adapters · one holder</span></div>
+          <div class="architecture">
+            <svg viewBox="0 0 1200 590" role="img" aria-labelledby="arch-title arch-desc">
+              <title id="arch-title">Proposed Herdr attachment lease architecture</title>
+              <desc id="arch-desc">A durable Herdr Agent Session contains canonical transcript history. A lease controller resolves capability plans and grants one live-input lease. Sidekick and terminal mode are separate surface attachments; either may hold the lease while the other observes. Release and expiry return ownership to Herdr.</desc>
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker>
+              </defs>
+
+              <g class="arch-scope">
+                <rect x="345" y="38" width="510" height="360" rx="12"/>
+                <text x="365" y="66" fill="#d8a657" font-size="11" font-weight="700">HERDR · SESSION + ATTACHMENT AUTHORITY</text>
+              </g>
+
+              <g class="arch-node" transform="translate(395 92)">
+                <rect width="410" height="94" rx="9" fill="#253033" stroke="#7daea3"/>
+                <text x="205" y="34" text-anchor="middle" fill="#fbf1c7" font-size="16" font-weight="700">Agent Session</text>
+                <text x="205" y="60" text-anchor="middle" fill="#7daea3" font-size="11">identity · process · PTY · conversation continuity</text>
+                <text x="205" y="78" text-anchor="middle" fill="#a89984" font-size="10">survives every surface transition</text>
+              </g>
+
+              <g class="arch-node" transform="translate(395 225)">
+                <rect width="195" height="118" rx="9" fill="#353025" stroke="#d8a657"/>
+                <text x="98" y="31" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Lease Controller</text>
+                <text x="98" y="56" text-anchor="middle" fill="#d8a657" font-size="10">one holder · heartbeat</text>
+                <text x="98" y="75" text-anchor="middle" fill="#d8a657" font-size="10">release · expiry · transfer</text>
+                <text x="98" y="94" text-anchor="middle" fill="#a89984" font-size="10">observer-safe by default</text>
+              </g>
+
+              <g class="arch-node" transform="translate(610 225)">
+                <rect width="195" height="118" rx="9" fill="#293126" stroke="#a9b665"/>
+                <text x="98" y="31" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">History Store</text>
+                <text x="98" y="56" text-anchor="middle" fill="#a9b665" font-size="10">canonical PTY transcript</text>
+                <text x="98" y="75" text-anchor="middle" fill="#a9b665" font-size="10">snapshot cursors · status</text>
+                <text x="98" y="94" text-anchor="middle" fill="#a89984" font-size="10">stored exactly once</text>
+              </g>
+
+              <g class="arch-node" transform="translate(35 190)">
+                <rect width="245" height="150" rx="9" fill="#293126" stroke="#a9b665"/>
+                <text x="123" y="34" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Sidekick / Neovim</text>
+                <text x="123" y="63" text-anchor="middle" fill="#a9b665" font-size="10">buffer history · search · yank</text>
+                <text x="123" y="84" text-anchor="middle" fill="#a9b665" font-size="10">vim.ui.open · paste · navigation</text>
+                <text x="123" y="105" text-anchor="middle" fill="#d8a657" font-size="10">lease while visible + focused</text>
+                <text x="123" y="126" text-anchor="middle" fill="#a89984" font-size="10">release on hide / close</text>
+              </g>
+
+              <g class="arch-node" transform="translate(920 190)">
+                <rect width="245" height="150" rx="9" fill="#353025" stroke="#d8a657"/>
+                <text x="123" y="34" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Herdr UI / Ghostty</text>
+                <text x="123" y="63" text-anchor="middle" fill="#d8a657" font-size="10">copy mode · scrollback · OSC52</text>
+                <text x="123" y="84" text-anchor="middle" fill="#d8a657" font-size="10">host opener · terminal paste</text>
+                <text x="123" y="105" text-anchor="middle" fill="#d8a657" font-size="10">lease while focused</text>
+                <text x="123" y="126" text-anchor="middle" fill="#a89984" font-size="10">release on detach</text>
+              </g>
+
+              <g class="arch-node" transform="translate(390 468)">
+                <rect width="420" height="82" rx="9" fill="#3d2424" stroke="#ea6962" stroke-dasharray="6 5"/>
+                <text x="210" y="31" text-anchor="middle" fill="#fbf1c7" font-size="14" font-weight="700">Observer attachment(s)</text>
+                <text x="210" y="57" text-anchor="middle" fill="#ea6962" font-size="10">snapshots + status · no live input · no mouse ownership</text>
+              </g>
+
+              <path class="arch-edge lease" d="M395 274 H280"/>
+              <path class="arch-edge lease" d="M805 274 H920"/>
+              <path class="arch-edge snapshot" d="M610 310 C500 405 345 410 215 340"/>
+              <path class="arch-edge snapshot" d="M805 310 C870 385 985 388 1040 340"/>
+              <path class="arch-edge release" d="M280 225 C320 170 350 160 395 160"/>
+              <path class="arch-edge release" d="M920 225 C880 170 850 160 805 160"/>
+              <path class="arch-edge observe" d="M600 398 V468"/>
+              <path class="arch-edge" d="M600 186 V225"/>
+
+              <text x="338" y="259" class="edge-label">grant / renew</text>
+              <text x="862" y="259" class="edge-label">grant / renew</text>
+              <text x="325" y="398" class="edge-label">snapshot</text>
+              <text x="875" y="398" class="edge-label">snapshot</text>
+              <text x="340" y="173" class="edge-label">release</text>
+              <text x="860" y="173" class="edge-label">release</text>
+              <text x="650" y="439" class="edge-label">observe</text>
+
+              <text x="600" y="578" text-anchor="middle" class="arch-caption">Herdr owns truth and arbitration. Each adapter owns the experience native to its surface.</text>
+            </svg>
+          </div>
+          <div class="legend" aria-label="Architecture diagram legend">
+            <div class="legend-title">Legend · node color is role; line style is relationship</div>
+            <div class="key"><span class="swatch session" aria-hidden="true"></span><span><strong>Blue · durable session</strong>Identity, process, PTY, and continuity.</span></div>
+            <div class="key"><span class="swatch lease" aria-hidden="true"></span><span><strong>Yellow · live ownership</strong>Lease controller or interactive terminal surface.</span></div>
+            <div class="key"><span class="swatch nvim" aria-hidden="true"></span><span><strong>Green · surface projection</strong>Native history or interaction adapter.</span></div>
+            <div class="key"><span class="swatch observer" aria-hidden="true"></span><span><strong>Red dashed · observer</strong>Visible and safe, but never mutating.</span></div>
+            <div class="key"><span class="swatch holder" aria-hidden="true"></span><span><strong>Solid yellow · lease</strong>Grant or heartbeat renewal.</span></div>
+            <div class="key"><span class="swatch snapshot" aria-hidden="true"></span><span><strong>Dashed blue · snapshot</strong>Read-only history flow.</span></div>
+            <div class="key"><span class="swatch release" aria-hidden="true"></span><span><strong>Dashed green · release</strong>Ownership returns to Herdr.</span></div>
+            <div class="key"><span class="swatch scope" aria-hidden="true"></span><span><strong>Dashed yellow box · seam</strong>The proposed deep Herdr module.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="language">
+        <div class="section-head">
+          <div><h2>Proposed language</h2><p class="mono">Precise names keep session truth separate from surface behavior.</p></div>
+          <p class="section-kicker">Discussion vocabulary; persist after approval.</p>
+        </div>
+        <div class="term-grid">
+          <article class="term-card" data-term="Agent Session"><h3>Durable process identity</h3><p>Herdr-managed process, PTY, transcript, and session reference. Never called a Neovim or terminal session.</p></article>
+          <article class="term-card" data-term="Surface Attachment"><h3>One view of a session</h3><p>A Sidekick or terminal client connected to an Agent Session with declared surface behavior.</p></article>
+          <article class="term-card" data-term="Attachment Lease"><h3>Time-bounded live grant</h3><p>Herdr's permission for one attachment to send input and own interactive mouse routing.</p></article>
+          <article class="term-card" data-term="Lease Holder"><h3>The one live owner</h3><p>The attachment currently allowed to mutate the TUI. There may also be no holder.</p></article>
+          <article class="term-card" data-term="Observer"><h3>Safe concurrent viewer</h3><p>An attachment that follows status and snapshots without input or mouse ownership.</p></article>
+          <article class="term-card" data-term="Capability Plan"><h3>Resolved owner map</h3><p>The inspectable result saying who owns history, selection, clipboard, opener, paste, input, and mouse.</p></article>
+        </div>
+      </section>
+
+      <section id="interface">
+        <div class="section-head">
+          <div><h2>Small external interface</h2><p class="mono">Three lifecycle operations; existing transcript reads stay intact.</p></div>
+          <p class="section-kicker">Illustrative names, not frozen commands.</p>
+        </div>
+        <div class="interface-strip">
+          <article class="interface-step"><div class="verb">launch(profile)</div><div class="result">→ Agent Session</div><p>Creates or resumes durable agent state with a stable session policy.</p></article>
+          <article class="interface-step"><div class="verb">open(session, surface)</div><div class="result">→ Attachment + Plan</div><p>Registers the surface and returns either the live lease or observer status.</p></article>
+          <article class="interface-step"><div class="verb">release(attachment)</div><div class="result">→ Released</div><p>Relinquishes ownership and unregisters the attachment on hide, close, or detach.</p></article>
+          <article class="interface-step"><div class="verb">agent read</div><div class="result">→ Snapshot</div><p>Remains the canonical history interface; no duplicate transcript protocol is required.</p></article>
+        </div>
+        <p class="note">Heartbeat renewal belongs inside the attachment implementation. Callers should not manually choreograph liveness timers.</p>
+      </section>
+
+      <section id="ownership">
+        <div class="section-head">
+          <div><h2>Capability ownership</h2><p class="mono">Authority is stable; presentation varies by surface.</p></div>
+          <p class="section-kicker">No capability has two active owners.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Capability</th><th>Canonical authority</th><th>Neovim attachment</th><th>Terminal attachment</th></tr></thead>
+            <tbody>
+              <tr><td>Session identity + lifecycle</td><td class="owner">Herdr Agent Session</td><td>Request / reopen</td><td>Request / reopen</td></tr>
+              <tr><td>Conversation + model state</td><td class="owner">Pi or Codex</td><td>Same live process</td><td>Same live process</td></tr>
+              <tr><td>Live rendering</td><td class="owner">Agent TUI</td><td>Display PTY</td><td>Display PTY</td></tr>
+              <tr><td>Transcript storage</td><td class="owner">Herdr</td><td>Read snapshots</td><td>Read native history</td></tr>
+              <tr><td>Historical view</td><td>Capability Plan</td><td class="owner">Sidekick buffer</td><td class="owner">Herdr copy mode</td></tr>
+              <tr><td>Search / selection / copy</td><td>Surface adapter</td><td class="owner">Neovim + registers</td><td class="owner">Herdr / Ghostty + OSC52</td></tr>
+              <tr><td>Live input</td><td class="lease-owner">Attachment Lease</td><td>Holder while visible + focused</td><td>Holder while focused</td></tr>
+              <tr><td>Mouse routing</td><td class="lease-owner">Lease + adapter</td><td>Neovim surface</td><td>Herdr surface</td></tr>
+              <tr><td>Link / file opener</td><td>Surface adapter</td><td class="owner">Neovim navigation</td><td class="owner">Host opener</td></tr>
+              <tr><td>Paste / file ingestion</td><td>Surface adapter</td><td class="owner">Neovim normalization</td><td class="owner">Terminal normalization</td></tr>
+              <tr><td>Seen / unseen state</td><td class="owner">Herdr agent state</td><td>Focus completed <code>done</code></td><td>Focus completed <code>done</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="lifecycle">
+        <div class="section-head">
+          <div><h2>Lease lifecycle</h2><p class="mono">Safe concurrency without stranded takeover.</p></div>
+          <p class="section-kicker">A healthy holder is never silently displaced.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><span>Attachment Lease state machine</span><span>open · renew · observe · release · expire</span></div>
+          <div class="lifecycle">
+            <svg viewBox="0 0 1200 390" role="img" aria-labelledby="life-title life-desc">
+              <title id="life-title">Attachment Lease state machine</title>
+              <desc id="life-desc">An available session grants a lease when a surface opens. Healthy holders renew. Hide, close, or detach release the lease. A missed heartbeat expires it. A second surface observes or explicitly requests transfer rather than silently taking over.</desc>
+              <defs><marker id="life-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+
+              <g class="life-node" transform="translate(60 130)"><rect width="200" height="95" rx="9" fill="#253033" stroke="#7daea3"/><text x="100" y="39" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">AVAILABLE</text><text x="100" y="65" text-anchor="middle" fill="#a89984" font-size="10">zero live owners</text></g>
+              <g class="life-node" transform="translate(380 130)"><rect width="200" height="95" rx="9" fill="#353025" stroke="#d8a657"/><text x="100" y="39" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">GRANTED</text><text x="100" y="65" text-anchor="middle" fill="#d8a657" font-size="10">one healthy holder</text></g>
+              <g class="life-node" transform="translate(700 48)"><rect width="200" height="95" rx="9" fill="#293126" stroke="#a9b665"/><text x="100" y="39" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">RELEASING</text><text x="100" y="65" text-anchor="middle" fill="#a9b665" font-size="10">hide · close · detach</text></g>
+              <g class="life-node" transform="translate(700 218)"><rect width="200" height="95" rx="9" fill="#3d2424" stroke="#ea6962"/><text x="100" y="39" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">EXPIRED</text><text x="100" y="65" text-anchor="middle" fill="#ea6962" font-size="10">crash · heartbeat lost</text></g>
+              <g class="life-node" transform="translate(980 130)"><rect width="170" height="95" rx="9" fill="#3d2424" stroke="#ea6962" stroke-dasharray="6 5"/><text x="85" y="39" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">OBSERVER</text><text x="85" y="65" text-anchor="middle" fill="#ea6962" font-size="10">read-only until transfer</text></g>
+
+              <path d="M260 178 H380" fill="none" stroke="#d8a657" stroke-width="2" marker-end="url(#life-arrow)"/>
+              <path d="M580 150 C630 112 650 95 700 95" fill="none" stroke="#a9b665" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#life-arrow)"/>
+              <path d="M700 95 C530 18 215 35 165 130" fill="none" stroke="#a9b665" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#life-arrow)"/>
+              <path d="M580 205 C630 242 650 265 700 265" fill="none" stroke="#ea6962" stroke-width="2" stroke-dasharray="3 5" marker-end="url(#life-arrow)"/>
+              <path d="M700 265 C520 370 220 328 165 225" fill="none" stroke="#ea6962" stroke-width="2" stroke-dasharray="3 5" marker-end="url(#life-arrow)"/>
+              <path d="M580 178 H980" fill="none" stroke="#ea6962" stroke-width="2" stroke-dasharray="3 5" marker-end="url(#life-arrow)"/>
+              <path d="M480 130 C420 65 540 30 540 130" fill="none" stroke="#d8a657" stroke-width="2" marker-end="url(#life-arrow)"/>
+
+              <text x="320" y="162" class="edge-label">open → grant</text>
+              <text x="645" y="105" class="edge-label">explicit release</text>
+              <text x="645" y="260" class="edge-label">timeout</text>
+              <text x="790" y="163" class="edge-label">second surface</text>
+              <text x="478" y="62" class="edge-label">heartbeat renews</text>
+              <text x="600" y="372" text-anchor="middle" class="arch-caption">Transfer is deliberate. Force is explicit or stale-holder-only. No implicit takeover.</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="invariant-grid" style="margin-top:12px">
+          <div class="invariant" data-n="01">At most one live-input holder; zero holders is valid.</div>
+          <div class="invariant" data-n="02">Any number of observers may read snapshots safely.</div>
+          <div class="invariant" data-n="03">A second surface never steals a healthy lease silently.</div>
+          <div class="invariant" data-n="04">Hide, close, detach, and explicit switch release immediately.</div>
+          <div class="invariant" data-n="05">Crash or liveness loss expires ownership after a bounded interval.</div>
+          <div class="invariant" data-n="06">Switching surfaces never changes Agent Session identity.</div>
+          <div class="invariant" data-n="07">History exists once in Herdr; surface buffers are projections.</div>
+          <div class="invariant" data-n="08">Every open returns an inspectable effective Capability Plan.</div>
+        </div>
+      </section>
+
+      <section id="scenarios">
+        <div class="section-head">
+          <div><h2>Scenario outcomes</h2><p class="mono">Concrete transitions the design must survive.</p></div>
+          <p class="section-kicker">Same agent; ownership moves, state does not.</p>
+        </div>
+        <div class="scenario-grid">
+          <article class="scenario-card"><div class="card-label">Launch in Neovim</div><h3>Sidekick gets the first lease</h3><p>The Workspace Tab chooses the session profile. Sidekick opens as <code>nvim</code>, receives the plan, displays live PTY output, and uses Herdr snapshots for history mode.</p><span class="outcome">OUTCOME · perfect Neovim-native history without a second session</span></article>
+          <article class="scenario-card"><div class="card-label">Continue in terminal</div><h3>Same session, new holder</h3><p>After Sidekick releases, Herdr terminal mode acquires the lease. Copy mode, OSC52, opener, and terminal paste own the surface experience.</p><span class="outcome">OUTCOME · no restart, no transcript fork</span></article>
+          <article class="scenario-card"><div class="card-label">Open both</div><h3>One holder, one observer</h3><p>The current holder stays interactive. The other surface follows status and snapshots and may request transfer.</p><span class="outcome">OUTCOME · concurrency without surprise takeover</span></article>
+          <article class="scenario-card"><div class="card-label">Neovim crashes</div><h3>Ownership self-heals</h3><p>The heartbeat stops; the bounded lease expires. Terminal mode can acquire while the agent process, conversation, and transcript survive.</p><span class="outcome">OUTCOME · recovery without manual pane surgery</span></article>
+          <article class="scenario-card"><div class="card-label">No surface open</div><h3>The agent still completes</h3><p>Zero holders is normal. Herdr retains output and marks completion; opening either surface later shows the same final transcript.</p><span class="outcome">OUTCOME · background work is independent of viewers</span></article>
+        </div>
+      </section>
+
+      <section id="profiles">
+        <div class="section-head">
+          <div><h2>Session-aware profile</h2><p class="mono">Session policy is stable; surface policy resolves on every open.</p></div>
+          <p class="section-kicker">Explicit request → named profile → documented default.</p>
+        </div>
+        <div class="profile-grid">
+          <article class="profile-card session">
+            <div class="profile-head">interactive · session policy</div>
+            <div class="profile-row"><span>history store</span><span>Herdr</span></div>
+            <div class="profile-row"><span>rendering</span><span>agent-native TUI</span></div>
+            <div class="profile-row"><span>lifetime</span><span>Herdr Workspace</span></div>
+            <div class="profile-row"><span>identity</span><span>stable across surfaces</span></div>
+          </article>
+          <article class="profile-card nvim">
+            <div class="profile-head">surface · nvim</div>
+            <div class="profile-row"><span>history view</span><span>Sidekick snapshot</span></div>
+            <div class="profile-row"><span>selection</span><span>Neovim</span></div>
+            <div class="profile-row"><span>clipboard</span><span>Neovim registers</span></div>
+            <div class="profile-row"><span>opener</span><span>Neovim navigation</span></div>
+            <div class="profile-row"><span>input</span><span>lease while visible + focused</span></div>
+            <div class="profile-row"><span>hide</span><span>release immediately</span></div>
+          </article>
+          <article class="profile-card terminal">
+            <div class="profile-head">surface · terminal</div>
+            <div class="profile-row"><span>history view</span><span>Herdr copy mode</span></div>
+            <div class="profile-row"><span>selection</span><span>Herdr / Ghostty</span></div>
+            <div class="profile-row"><span>clipboard</span><span>OSC52 / host</span></div>
+            <div class="profile-row"><span>opener</span><span>host terminal</span></div>
+            <div class="profile-row"><span>input</span><span>lease while focused</span></div>
+            <div class="profile-row"><span>detach</span><span>release immediately</span></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="plan">
+        <div class="section-head">
+          <div><h2>Delivery plan</h2><p class="mono">Contract first; enforcement before UX migration.</p></div>
+          <p class="section-kicker">No Sidekick switch until Herdr can enforce the rule.</p>
+        </div>
+        <div class="roadmap-grid">
+          <article class="roadmap-card recommended"><div class="phase">PHASE 01 · ACTIVE</div><h3>Contract + verifier</h3><p>Iterate from language to executable behavior before changing a live adapter.</p><ol><li>V0 · vocabulary + boundary</li><li>V1 · state transitions</li><li>V2 · capability plans</li><li>V3 · Pi/Codex scenarios</li></ol></article>
+          <article class="roadmap-card"><div class="phase">PHASE 02</div><h3>Herdr controller</h3><p>Add attachment registry, holder enforcement, liveness, expiry, release, observer mode, and transfer.</p><ol><li>Retain agent read</li><li>Compatibility mode</li><li>Stale recovery</li></ol></article>
+          <article class="roadmap-card"><div class="phase">PHASE 03</div><h3>Sidekick adapter</h3><p>Declare <code>nvim</code>, consume the plan, release on hide, and enable dump-backed history.</p><ol><li>No default takeover</li><li>Restart recovery</li><li>Normal history view</li></ol></article>
+          <article class="roadmap-card"><div class="phase">PHASE 04</div><h3>Terminal parity</h3><p>Declare <code>terminal</code> and prove copy mode, OSC52, opener, paste, mouse, and focus behavior.</p><ol><li>Same identity</li><li>Surface switching</li><li>Pi + Codex</li></ol></article>
+          <article class="roadmap-card"><div class="phase">PHASE 05</div><h3>Migration gate</h3><p>Test old clients, live transitions, simultaneous observers, crashes, resize, and background completion.</p><ol><li>Remove unconditional path</li><li>Document fallback</li><li>Land only after parity</li></ol></article>
+        </div>
+        <div class="acceptance">Launch once. Open anywhere. One live owner. Many safe observers. Same session and transcript on every surface. No hidden takeover survives its view.</div>
+      </section>
+
+      <section id="questions">
+        <div class="section-head">
+          <div><h2>Decisions and risks to discuss</h2><p class="mono">The proposal is concrete; these choices shape implementation.</p></div>
+          <p class="section-kicker">Exact timeout values should be tested, not guessed.</p>
+        </div>
+        <div class="decision-grid">
+          <article class="decision-card resolved"><div class="state">Recommended</div><h3>No implicit takeover</h3><p>A second surface observes by default. Transfer is deliberate; force requires explicit intent or a stale holder.</p></article>
+          <article class="decision-card resolved"><div class="state">Recommended</div><h3>Release on Sidekick hide</h3><p>Hidden UI should not retain live-input ownership. The Agent Session continues independently.</p></article>
+          <article class="decision-card"><div class="state">Discuss</div><h3>Transfer authority</h3><p>Can a healthy holder reject forever, or does explicit user force always win after confirmation?</p></article>
+          <article class="decision-card"><div class="state">Measure</div><h3>Lease timeout</h3><p>Choose heartbeat and expiry intervals from real Neovim stalls and Herdr behavior, not aesthetics.</p></article>
+          <article class="decision-card risk"><div class="state">Phase 2 dependency</div><h3>Owning Herdr source</h3><p>The installed 0.8 CLI exposes only attach plus <code>--takeover</code>. Lease semantics require work in the owning Herdr repository, but Phase 1 can freeze the contract now.</p></article>
+          <article class="decision-card risk"><div class="state">Verification risk</div><h3>History fidelity</h3><p>Real Pi and Codex sessions must prove resize, ANSI replay, links, copy-without-controls, and return-to-live behavior.</p></article>
+        </div>
+        <p class="note">Out of scope: rewriting Pi/Codex rendering, duplicating transcript storage in Neovim, building a semantic event protocol, or making Sidekick a session authority.</p>
+      </section>
+    </main>
+
+    <footer class="status-bar">
+      <div><span class="ok">● Phase 1 active · workspace w5W</span></div>
+      <div class="terminal-title">Herdr owns session truth · adapters own surface-native UX</div>
+      <div>runtime behavior: unchanged</div>
+    </footer>
+  </div>
+</body>
+</html>

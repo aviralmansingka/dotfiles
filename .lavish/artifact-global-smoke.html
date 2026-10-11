@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Notification Service — Staggered Release Strategy</title>
+  <style>
+    :root {
+      --bg0: #171918;
+      --bg1: #1d2021;
+      --bg2: #282828;
+      --bg3: #32302f;
+      --border: #504945;
+      --muted: #a89984;
+      --fg0: #fbf1c7;
+      --fg1: #ebdbb2;
+      --red: #ea6962;
+      --red-bg: #3d2424;
+      --green: #a9b665;
+      --green-bg: #293126;
+      --yellow: #d8a657;
+      --yellow-bg: #353025;
+      --blue: #7daea3;
+      --blue-bg: #253033;
+      --aqua: #89b482;
+      --orange: #e78a4e;
+      --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --shadow: 0 30px 100px rgb(0 0 0 / 48%);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg0); scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      color: var(--fg1);
+      font-family: var(--sans);
+      background:
+        linear-gradient(rgb(235 219 178 / 2.2%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(235 219 178 / 1.6%) 1px, transparent 1px),
+        radial-gradient(circle at 10% 0%, rgb(231 138 78 / 13%), transparent 31rem),
+        radial-gradient(circle at 96% 8%, rgb(125 174 163 / 10%), transparent 28rem),
+        var(--bg0);
+      background-size: 24px 24px, 24px 24px, auto, auto, auto;
+    }
+
+    a { color: var(--blue); text-underline-offset: 3px; }
+    a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { text-wrap: balance; }
+    .rs-mono { font-family: var(--mono); }
+
+    .rs-page {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: rgb(29 32 33 / 97%);
+      box-shadow: var(--shadow);
+    }
+    .rs-terminal,
+    .rs-status {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      background: var(--bg3);
+      color: var(--muted);
+      font: 11px/1.3 var(--mono);
+    }
+    .rs-terminal { border-bottom: 1px solid var(--border); }
+    .rs-status { border-top: 1px solid var(--border); }
+    .rs-terminal-title {
+      overflow: hidden;
+      color: var(--fg1);
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rs-lights { color: var(--red); letter-spacing: 4px; }
+    .rs-lights span:first-child { color: var(--yellow); }
+    .rs-lights span:last-child { color: var(--green); }
+    .rs-command {
+      display: flex;
+      gap: 10px;
+      min-width: 0;
+      padding: 12px 16px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+      background: #242424;
+      font: 12px/1.3 var(--mono);
+    }
+    .rs-prompt { flex: 0 0 auto; color: var(--green); font-weight: 800; }
+    .rs-command-text { overflow: hidden; color: var(--fg0); text-overflow: ellipsis; white-space: nowrap; }
+
+    .rs-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 390px);
+      gap: 42px;
+      padding: 52px 46px 44px;
+      border-bottom: 1px solid var(--border);
+    }
+    .rs-eyebrow {
+      margin-bottom: 13px;
+      color: var(--orange);
+      font: 800 11px/1.3 var(--mono);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 880px;
+      margin-bottom: 18px;
+      color: var(--fg0);
+      font-size: clamp(38px, 5.4vw, 72px);
+      letter-spacing: -.055em;
+      line-height: .96;
+    }
+    .rs-lead { max-width: 820px; margin: 0; color: var(--muted); font-size: clamp(14px, 1.4vw, 17px); line-height: 1.75; }
+    .rs-meta { display: grid; align-content: start; gap: 10px; }
+    .rs-meta-card { min-width: 0; padding: 14px 15px; border: 1px solid var(--border); background: var(--bg2); color: var(--muted); font: 11px/1.55 var(--mono); }
+    .rs-meta-card strong { display: block; margin-bottom: 5px; color: var(--fg0); font-size: 12px; }
+    .rs-meta-card.decision { border-left: 3px solid var(--green); }
+    .rs-meta-card.gate { border-left: 3px solid var(--yellow); }
+    .rs-meta-card.failure { border-left: 3px solid var(--red); }
+    .rs-meta-card.done { border-left: 3px solid var(--blue); }
+
+    .rs-jumpbar { display: flex; gap: 8px; padding: 12px 18px; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--bg2); scrollbar-width: thin; }
+    .rs-jumpbar a { flex: 0 0 auto; padding: 7px 10px; border: 1px solid var(--border); background: var(--bg1); color: var(--muted); font: 10px/1 var(--mono); letter-spacing: .07em; text-decoration: none; text-transform: uppercase; }
+    .rs-jumpbar a:hover { border-color: var(--blue); color: var(--fg0); }
+
+    main { padding: 36px 34px 48px; }
+    section + section { margin-top: 48px; }
+    .rs-section-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 17px; }
+    h2 { margin-bottom: 5px; color: var(--aqua); font-size: clamp(21px, 2.3vw, 30px); letter-spacing: -.035em; }
+    .rs-section-head p { margin-bottom: 0; color: var(--muted); font: 11px/1.55 var(--mono); }
+    .rs-section-kicker { text-align: right; }
+
+    .rs-comparison,
+    .rs-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .rs-card { min-width: 0; padding: 18px; border: 1px solid var(--border); background: var(--bg2); }
+    .rs-card h3 { margin-bottom: 8px; color: var(--fg0); font-size: 16px; }
+    .rs-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    .rs-card.rejected { border-top: 3px solid var(--red); }
+    .rs-card.selected { border-top: 3px solid var(--green); }
+    .rs-card.pause { border-left: 3px solid var(--red); }
+    .rs-card.rollback { border-left: 3px solid var(--yellow); }
+    .rs-label { margin-bottom: 11px; font: 800 10px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .rs-rejected-label { color: var(--red); }
+    .rs-selected-label { color: var(--green); }
+    .rs-rollback-label { color: var(--yellow); }
+    .rs-cost { display: inline-block; margin-top: 12px; color: var(--yellow); font: 700 10px/1.4 var(--mono); }
+
+    .rs-panel { min-width: 0; border: 1px solid var(--border); background: var(--bg2); }
+    .rs-panel-title { display: flex; justify-content: space-between; gap: 14px; padding: 10px 13px; border-bottom: 1px solid var(--border); background: var(--bg3); color: var(--fg0); font: 11px/1.3 var(--mono); }
+    .rs-panel-title span:last-child { color: var(--muted); text-align: right; }
+    .rs-diagram { padding: 18px; overflow-x: auto; }
+    .rs-diagram svg { display: block; width: 100%; min-width: 860px; height: auto; }
+    .rs-node text { font-family: var(--mono); }
+    .rs-edge { fill: none; stroke-width: 2.5; marker-end: url(#release-arrow); }
+    .rs-edge.advance { stroke: var(--green); }
+    .rs-edge.observe { stroke: var(--blue); stroke-dasharray: 7 5; }
+    .rs-edge.stop { stroke: var(--red); stroke-dasharray: 3 5; }
+    .rs-edge-label { fill: var(--muted); font: 10px var(--mono); text-anchor: middle; paint-order: stroke; stroke: var(--bg2); stroke-width: 5px; stroke-linejoin: round; }
+    .rs-caption { fill: var(--muted); font: 11px var(--mono); }
+
+    .rs-legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 14px 18px 18px; border-top: 1px solid var(--border); background: var(--bg1); }
+    .rs-legend-title { grid-column: 1 / -1; margin-bottom: 2px; color: var(--fg0); font: 800 10px/1.3 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .rs-key { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; min-width: 0; color: var(--muted); font: 10px/1.45 var(--mono); }
+    .rs-key strong { display: block; color: var(--fg1); font-size: 10px; }
+    .rs-swatch { display: block; width: 26px; height: 8px; margin-top: 3px; }
+    .rs-swatch.advance { border-top: 2px solid var(--green); }
+    .rs-swatch.observe { border-top: 2px dashed var(--blue); }
+    .rs-swatch.stop { border-top: 2px dotted var(--red); }
+
+    .rs-table-wrap { overflow-x: auto; border: 1px solid var(--border); background: var(--bg2); }
+    table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 11px; line-height: 1.55; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { background: var(--bg3); color: var(--fg0); font: 800 10px/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    td { color: var(--muted); }
+    td:first-child { color: var(--fg0); font-family: var(--mono); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .rs-status-hold { color: var(--yellow); font-weight: 700; }
+    .rs-status-complete { color: var(--green); font-weight: 700; }
+    .rs-acceptance { margin-top: 12px; padding: 20px; border: 1px solid var(--green); background: var(--green-bg); color: var(--fg0); font: 800 clamp(14px, 1.8vw, 20px)/1.55 var(--mono); text-align: center; }
+    .rs-ok { color: var(--green); }
+
+    @media (max-width: 1050px) {
+      body { padding: 0; }
+      .rs-page { border-left: 0; border-right: 0; }
+      .rs-hero { grid-template-columns: 1fr; padding: 38px 26px 32px; }
+      main { padding: 28px 18px 38px; }
+      .rs-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 650px) {
+      .rs-terminal, .rs-status { grid-template-columns: 1fr auto; }
+      .rs-terminal-title { display: none; }
+      .rs-hero { padding: 32px 20px 28px; }
+      .rs-section-head, .rs-panel-title { display: block; }
+      .rs-panel-title span { display: block; }
+      .rs-section-kicker, .rs-panel-title span + span { margin-top: 8px; text-align: left; }
+      .rs-comparison, .rs-rules, .rs-legend { grid-template-columns: 1fr; }
+    }
+    @media print {
+      :root { --bg0: #fff; --bg1: #fff; --bg2: #fff; --bg3: #f1f1f1; --border: #bbb; --muted: #444; --fg0: #000; --fg1: #111; --red-bg: #fff; --green-bg: #fff; --yellow-bg: #fff; --blue-bg: #fff; }
+      body { padding: 0; background: #fff; color: #111; }
+      .rs-page { width: 100%; border: 0; box-shadow: none; }
+      .rs-jumpbar, .rs-command, .rs-terminal, .rs-status { display: none; }
+      main { padding: 20px; }
+      section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="rs-page">
+    <header>
+      <div class="rs-terminal">
+        <div class="rs-lights">● <span>●</span> <span>●</span></div>
+        <div class="rs-terminal-title">notification-service — release strategy</div>
+        <div>decision: approved</div>
+      </div>
+      <div class="rs-command"><span class="rs-prompt">$</span><span class="rs-command-text">rollout notification-service --cohorts internal,10%,50%,100% --gate existing-thresholds</span></div>
+      <div class="rs-hero">
+        <div>
+          <div class="rs-eyebrow">Release decision · notification service</div>
+          <h1>Ship in stages. Advance only on health.</h1>
+          <p class="rs-lead">Use a staggered rollout to contain failures: internal users first, then 10%, 50%, and 100%. Each cohort earns promotion by keeping error rate and delivery latency within their existing thresholds for one full observation window.</p>
+        </div>
+        <div class="rs-meta">
+          <div class="rs-meta-card decision"><strong>Selected strategy</strong>Staggered rollout with four cohorts.</div>
+          <div class="rs-meta-card gate"><strong>Promotion gate</strong>Both health signals stay within existing thresholds for one observation window.</div>
+          <div class="rs-meta-card failure"><strong>Failure response</strong>Pause automatically, then roll back the active cohort before investigation.</div>
+          <div class="rs-meta-card done"><strong>Completion</strong>The 100% cohort remains healthy for a full window and the rollback switch is tested.</div>
+        </div>
+      </div>
+      <nav class="rs-jumpbar" aria-label="Page sections">
+        <a href="#choice">Choice</a><a href="#sequence">Sequence</a><a href="#gates">Gates</a><a href="#failure">Failure rule</a><a href="#done">Done</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="choice">
+        <div class="rs-section-head">
+          <div><h2>Why staggered wins</h2><p>The tradeoff is more rollout time for a smaller blast radius.</p></div>
+          <p class="rs-section-kicker">One defect should not reach everyone at once.</p>
+        </div>
+        <div class="rs-comparison">
+          <article class="rs-card rejected">
+            <div class="rs-label rs-rejected-label">Not selected · big bang</div>
+            <h3>Fastest completion, highest exposure</h3>
+            <p>There is no intermediate state, but a single defect affects the full audience before the team can contain it.</p>
+            <span class="rs-cost">RISK · EVERY USER SHARES THE FIRST FAILURE</span>
+          </article>
+          <article class="rs-card selected">
+            <div class="rs-label rs-selected-label">Selected · staggered</div>
+            <h3>Controlled exposure with observable gates</h3>
+            <p>Cohort tracking lengthens the rollout window, but every promotion is conditional and each failure stays bounded to the active cohort.</p>
+            <span class="rs-cost">COST · COHORT TRACKING + LONGER WINDOW</span>
+          </article>
+        </div>
+      </section>
+
+      <section id="sequence">
+        <div class="rs-section-head">
+          <div><h2>Promotion sequence</h2><p>Every arrow represents a passed observation window, not elapsed time alone.</p></div>
+          <p class="rs-section-kicker">Internal → 10% → 50% → 100%</p>
+        </div>
+        <div class="rs-panel">
+          <div class="rs-panel-title"><span>How does a cohort advance?</span><span>observe both health signals · promote or pause</span></div>
+          <div class="rs-diagram">
+            <svg viewBox="0 0 1080 430" role="img" aria-labelledby="release-flow-title release-flow-desc">
+              <title id="release-flow-title">Staggered notification-service rollout sequence</title>
+              <desc id="release-flow-desc">The service starts with internal users, then advances to ten percent, fifty percent, and one hundred percent after healthy observation windows. A regression in either monitored threshold pauses the rollout and returns the active cohort to its previous state.</desc>
+              <defs>
+                <marker id="release-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/>
+                </marker>
+              </defs>
+
+              <g class="rs-node" transform="translate(35 130)">
+                <rect width="205" height="112" rx="9" fill="#253033" stroke="#7daea3" stroke-width="1.4"/>
+                <text x="102" y="35" text-anchor="middle" fill="#fbf1c7" font-size="16" font-weight="700">Internal</text>
+                <text x="102" y="62" text-anchor="middle" fill="#7daea3" font-size="10">first exposure</text>
+                <text x="102" y="84" text-anchor="middle" fill="#a89984" font-size="10">observe one full window</text>
+              </g>
+              <g class="rs-node" transform="translate(300 130)">
+                <rect width="205" height="112" rx="9" fill="#293126" stroke="#a9b665" stroke-width="1.4"/>
+                <text x="102" y="35" text-anchor="middle" fill="#fbf1c7" font-size="16" font-weight="700">10%</text>
+                <text x="102" y="62" text-anchor="middle" fill="#a9b665" font-size="10">limited audience</text>
+                <text x="102" y="84" text-anchor="middle" fill="#a89984" font-size="10">observe one full window</text>
+              </g>
+              <g class="rs-node" transform="translate(565 130)">
+                <rect width="205" height="112" rx="9" fill="#293126" stroke="#a9b665" stroke-width="1.4"/>
+                <text x="102" y="35" text-anchor="middle" fill="#fbf1c7" font-size="16" font-weight="700">50%</text>
+                <text x="102" y="62" text-anchor="middle" fill="#a9b665" font-size="10">broad validation</text>
+                <text x="102" y="84" text-anchor="middle" fill="#a89984" font-size="10">observe one full window</text>
+              </g>
+              <g class="rs-node" transform="translate(830 130)">
+                <rect width="205" height="112" rx="9" fill="#293126" stroke="#a9b665" stroke-width="1.4"/>
+                <text x="102" y="35" text-anchor="middle" fill="#fbf1c7" font-size="16" font-weight="700">100%</text>
+                <text x="102" y="62" text-anchor="middle" fill="#a9b665" font-size="10">full release</text>
+                <text x="102" y="84" text-anchor="middle" fill="#a89984" font-size="10">prove one healthy window</text>
+              </g>
+
+              <path class="rs-edge advance" d="M240 186 H300"/>
+              <path class="rs-edge advance" d="M505 186 H565"/>
+              <path class="rs-edge advance" d="M770 186 H830"/>
+              <text class="rs-edge-label" x="270" y="170">pass</text>
+              <text class="rs-edge-label" x="535" y="170">pass</text>
+              <text class="rs-edge-label" x="800" y="170">pass</text>
+
+              <path class="rs-edge observe" d="M137 242 V300 H932 V242"/>
+              <text class="rs-edge-label" x="535" y="320">error rate + delivery latency remain within existing thresholds</text>
+
+              <g class="rs-node" transform="translate(402 350)">
+                <rect width="276" height="58" rx="9" fill="#3d2424" stroke="#ea6962" stroke-width="1.4" stroke-dasharray="6 5"/>
+                <text x="138" y="25" text-anchor="middle" fill="#fbf1c7" font-size="13" font-weight="700">Regression detected</text>
+                <text x="138" y="43" text-anchor="middle" fill="#ea6962" font-size="10">pause · roll back active cohort</text>
+              </g>
+              <path class="rs-edge stop" d="M800 300 V379 H678"/>
+              <text class="rs-edge-label" x="772" y="365">either signal fails</text>
+              <text x="540" y="32" text-anchor="middle" class="rs-caption">Promotion is earned independently at every cohort boundary.</text>
+            </svg>
+          </div>
+          <div class="rs-legend" role="group" aria-label="Rollout sequence legend">
+            <div class="rs-legend-title">Legend · line style states what happens next</div>
+            <div class="rs-key"><span class="rs-swatch advance" aria-hidden="true"></span><span><strong>Solid green · advance</strong>Both health signals pass for one window.</span></div>
+            <div class="rs-key"><span class="rs-swatch observe" aria-hidden="true"></span><span><strong>Dashed blue · observe</strong>Error rate and delivery latency are evaluated.</span></div>
+            <div class="rs-key"><span class="rs-swatch stop" aria-hidden="true"></span><span><strong>Dotted red · stop</strong>Either regression triggers pause and rollback.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="gates">
+        <div class="rs-section-head">
+          <div><h2>Release gates</h2><p>Every cohort uses the same two health checks and the same observation rule.</p></div>
+          <p class="rs-section-kicker">Threshold values remain the service’s existing thresholds.</p>
+        </div>
+        <div class="rs-table-wrap">
+          <table>
+            <thead>
+              <tr><th>Cohort</th><th>Exposure purpose</th><th>Promotion evidence</th><th>State after a pass</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Internal</td><td>Validate with the smallest controlled audience.</td><td>Error rate and delivery latency stay within threshold for one window.</td><td class="rs-status-hold">Advance to 10%</td></tr>
+              <tr><td>10%</td><td>Limit the blast radius while observing real traffic.</td><td>Error rate and delivery latency stay within threshold for one window.</td><td class="rs-status-hold">Advance to 50%</td></tr>
+              <tr><td>50%</td><td>Validate behavior across a broad audience.</td><td>Error rate and delivery latency stay within threshold for one window.</td><td class="rs-status-hold">Advance to 100%</td></tr>
+              <tr><td>100%</td><td>Complete the release under full traffic.</td><td>Both signals stay healthy for one full window; rollback switch is tested.</td><td class="rs-status-complete">Rollout complete</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="failure">
+        <div class="rs-section-head">
+          <div><h2>Failure rule</h2><p>The response order is fixed so investigation cannot prolong exposure.</p></div>
+          <p class="rs-section-kicker">Contain first; investigate second.</p>
+        </div>
+        <div class="rs-rules">
+          <article class="rs-card pause">
+            <div class="rs-label rs-rejected-label">01 · automatic action</div>
+            <h3>Pause on either regression</h3>
+            <p>A breach in error rate or delivery latency is sufficient. The rollout stops without waiting for both signals to fail.</p>
+          </article>
+          <article class="rs-card rollback">
+            <div class="rs-label rs-rollback-label">02 · containment action</div>
+            <h3>Roll back before investigation</h3>
+            <p>Return the active cohort to its prior state first. Root-cause analysis begins only after the current exposure has been contained.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="done">
+        <div class="rs-section-head">
+          <div><h2>Acceptance</h2><p>Full traffic alone is not completion.</p></div>
+          <p class="rs-section-kicker">Health proof + rollback proof</p>
+        </div>
+        <div class="rs-acceptance">Done means the 100% cohort stays healthy for one full observation window and the rollback switch has been tested.</div>
+      </section>
+    </main>
+
+    <footer class="rs-status">
+      <div><span class="rs-ok">● strategy ready</span></div>
+      <div class="rs-terminal-title">stagger exposure · gate on health · contain before investigating</div>
+      <div>mode: standalone</div>
+    </footer>
+  </div>
+</body>
+</html>
