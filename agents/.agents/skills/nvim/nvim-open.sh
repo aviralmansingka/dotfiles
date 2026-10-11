@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# nvim-open.sh — open vim in the current Herdr tab as a vertical split,
-# or send files to an existing editor instance.
+# nvim-open.sh — open vim in the current Herdr tab: attach to the tab's
+# live herdr-nvim sidebar daemon, send files to an existing editor
+# instance, or launch a vertical split.
 #
 # Usage:
 #   nvim-open.sh [cwd] [file1] [file2] ...

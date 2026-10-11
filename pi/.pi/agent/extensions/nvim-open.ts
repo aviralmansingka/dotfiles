@@ -514,12 +514,12 @@ const nvimOpenTool = defineTool({
 	label: "Open Editor",
 	description:
 		"Open vim in the current Herdr tab: attach to the tab's herdr-nvim sidebar daemon when one is live, else send files to an existing editor pane in the tab, else launch a vertical split. With no files, opens or focuses the editor at the agent's cwd.",
-	promptSnippet: "Open vim in the current Herdr tab as a vertical split",
+	promptSnippet: "Open vim in the current Herdr tab (sidebar daemon, existing editor, or vertical split)",
 	promptGuidelines: [
 		"Use nvim_open when the user wants to open an editor (vim) for editing, either at the current working directory or for specific files.",
 		"If an editor is already running in the current Herdr tab, this tool sends files to the existing instance rather than launching a duplicate.",
 		"When the tab has a live herdr-nvim sidebar daemon, the tool attaches to it: files open in the sidebar and no second editor is launched.",
-		"With no files provided, it opens vim at the agent's cwd. With file paths, it opens those specific files.",
+		"With no files provided, it opens or focuses the editor at the agent's cwd. With file paths, it opens those specific files.",
 		"The split is vertical (to the right of the agent pane) and focus moves to the editor pane so the captain can see it.",
 	],
 	parameters: Type.Object({
@@ -562,7 +562,7 @@ const nvimOpenTool = defineTool({
 export default function (pi: ExtensionAPI) {
 	pi.registerTool(nvimOpenTool);
 	pi.registerCommand("nvim", {
-		description: "Open vim in the current Herdr tab as a vertical split",
+		description: "Open vim in the current Herdr tab (sidebar daemon, existing editor, or vertical split)",
 		handler: async (args: unknown, ctx: { cwd?: string; ui: { notify: (msg: string, level: string) => void } }) => {
 			const cwd = ctx?.cwd ?? process.cwd();
 			const fileList: string[] = (() => {

@@ -1,15 +1,16 @@
 ---
 name: nvim
-description: "Open a vim editor session in the folder the agent is working with. Launches vim as a vertical split in the current Herdr tab. If an editor is already running in that tab, sends files to the existing instance instead of launching a new one. When the cwd is inside a dotfiles checkout, uses the local nvim config instead of ~/.config/nvim. Use when the user wants to open an editor for the current workspace or specific files, says 'open in vim'/'nvim', 'edit', or types /nvim."
+description: "Open a vim editor session in the folder the agent is working with. Attaches to the tab's live herdr-nvim sidebar daemon when one is running, else sends files to an existing editor in that tab, else launches vim as a vertical split. When the cwd is inside a dotfiles checkout and a new editor is launched, uses the local nvim config instead of ~/.config/nvim; a live sidebar daemon always runs the global config. Use when the user wants to open an editor for the current workspace or specific files, says 'open in vim'/'nvim', 'edit', or types /nvim."
 ---
 
 # Open Editor
 
-Open a vim session for the current workspace or specific files. Vim
-launches as a **vertical split to the right of the agent pane** in the
-current Herdr tab. If an editor is already running in the current tab,
-files are sent to the existing instance — a second instance is never
-launched.
+Open a vim session for the current workspace or specific files. When
+the tab has a live herdr-nvim sidebar daemon, files open in it — no
+second instance is ever launched. Otherwise, if an editor is already
+running in the current tab, files are sent to the existing instance.
+Otherwise vim launches as a **vertical split to the right of the agent
+pane** in the current Herdr tab.
 
 ## Usage
 
