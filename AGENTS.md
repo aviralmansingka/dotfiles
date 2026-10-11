@@ -70,7 +70,7 @@ corrupts the next toggle. The user's own prefix+t is the only correct show path.
 
 The no-mistakes daemon's step agents run as visible Herdr subagent tabs when the triggering
 session is inside Herdr (`scripts/install-nm-herdr-bridge`, upstream `agent_path_override.pi`).
-Two rules are load-bearing:
+Three rules are load-bearing:
 
 - A live tab owns its pi session file. Teardown (run terminal, session shutdown, extension
   reload) must close tab panes so a later headless `--session` resume never meets a second
@@ -79,6 +79,12 @@ Two rules are load-bearing:
   for display and the `herdr:blocked` event for the CI red state. Never report pane state
   from another source or impersonate a `herdr:` source - a second source cannot override the
   holder, and a seq-locked `herdr:` source mutes the managed reporter for the whole session.
+- Step-agent tabs run `pi --no-extensions` with one closed set loaded explicitly
+  (`STEP_AGENT_EXTENSIONS` in `pi/.pi/agent/extensions/no-mistakes-pane/bridge.ts`):
+  pane-state reporters, capability tools (python, web-fetch, web-search, mermaid), and tab
+  chrome. The parent's pipeline machinery (no-mistakes-gate, no-mistakes-pane,
+  interactive-subagents, tuicr) and human-blocking tools never load inside a step agent -
+  keep it that way when adding extensions.
 
 ## CUDA LSP host invariant
 

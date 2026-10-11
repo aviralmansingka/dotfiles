@@ -16,7 +16,10 @@
 //     interactively in a Herdr tab of the parent's workspace, cwd = the step
 //     worktree, with the daemon's argv translated for interactive use (drop
 //     `--mode json`; `--no-session` is dropped too so the turn is streamable
-//     — the daemon ignores session ids on cold turns). The daemon's prompt is
+//     — the daemon ignores session ids on cold turns). The tab runs
+//     `pi --no-extensions` plus the curated step-agent set
+//     (STEP_AGENT_EXTENSIONS: reporters, capability tools, tab chrome — never
+//     the parent's pipeline machinery). The daemon's prompt is
 //     submitted through `herdr agent prompt --wait`.
 //   - The tab's session file is tailed and translated into pi json-mode
 //     events (message_end / turn_end / agent_end, plus the synthesized
@@ -134,10 +137,10 @@ export function shellQuote(value: string): string {
 /** Launcher script for the tab: exports the daemon-provided environment
  *  subset (gate evidence + git non-interactive discipline + NM_* wiring) and
  *  execs real pi interactively with the translated argv. `--no-extensions`
- *  keeps the step agent deterministic (no global extension machinery); the
- *  daemon's strict `--extension <file>` output tool and the pane-state
- *  reporter are loaded explicitly, since explicit -e paths still work under
- *  --no-extensions. */
+ *  keeps the step agent deterministic (no discovered or settings-configured
+ *  extension machinery); the daemon's strict `--extension <file>` output tool
+ *  and the curated step-agent set (STEP_AGENT_EXTENSIONS) are loaded
+ *  explicitly, since explicit -e paths still work under --no-extensions. */
 export function buildTabLauncher(opts: {
 	realPi: string;
 	interactiveArgv: string[];
@@ -348,9 +351,54 @@ function realPiPath(): string {
 	return "pi";
 }
 
-function paneStateExtensionPath(): string | undefined {
-	const candidate = join(homedir(), ".pi", "agent", "extensions", "herdr-agent-state.ts");
-	return existsSync(candidate) ? candidate : undefined;
+/** The extension set every hosted step-agent tab loads, on top of the
+ *  daemon's own `--extension` argv. The launcher keeps `--no-extensions`, so
+ *  nothing here is discovery: each entry is an explicit `-e` path, in load
+ *  order — pane-state reporters first (a step tab reports its own state via
+ *  the sanctioned surfaces), then capability tools, then tab chrome for the
+ *  human watching the tab.
+ *
+ *  `builtin:codemode` is a pi built-in, not a file: `--no-extensions`
+ *  disables built-ins too, and `-e builtin:<name>` loads one explicitly, so
+ *  the resolver passes `builtin:` entries through untouched (they never
+ *  depend on the agent dir's contents).
+ *
+ *  Deliberately excluded, and it must stay that way:
+ *    - no-mistakes-gate / no-mistakes-pane — pipeline control belongs to the
+ *      parent session; a step agent must never drive the pipeline;
+ *    - interactive-subagents — steps stay single-minded, no nested tabs;
+ *    - tuicr — reviews belong to the parent session;
+ *    - ask-user-question, explain, quiz, lesson, focus-buffer, run-command —
+ *      they block on a human; steps are autonomous;
+ *    - cleanup — it deletes worktrees; it must never run in the run worktree;
+ *    - nvim-open, hunk-open — captain-side canvases, not step tools;
+ *    - image-drop, mobile-mode, md-log, user-input — not applicable here.
+ *  A file that is missing is skipped, so a leaner install degrades to a
+ *  leaner step agent instead of failing the launch. */
+export const STEP_AGENT_EXTENSIONS: readonly string[] = [
+	"herdr-agent-state.ts",
+	"herdr-prompt-state.ts",
+	"python.ts",
+	"web-fetch",
+	"web-search",
+	"mermaid.ts",
+	"builtin:codemode",
+	"usage.ts",
+	"rounded-bar-footer.ts",
+	"thinking-blank.ts",
+	"tool-call-renderer-public.ts",
+];
+
+/** Resolve the step-agent extension set against a pi agent dir, keeping
+ *  only entries that exist. The production caller passes the user's agent
+ *  dir — the dir the tab's pi resolves by default, because the daemon env
+ *  subset never carries PI_CODING_AGENT_DIR into the pane. */
+export function stepAgentExtensionPaths(agentDir: string): string[] {
+	return STEP_AGENT_EXTENSIONS.flatMap((name) => {
+		if (name.startsWith("builtin:")) return [name];
+		const candidate = join(agentDir, "extensions", name);
+		return existsSync(candidate) ? [candidate] : [];
+	});
 }
 
 function piSessionsDir(): string {
@@ -631,7 +679,7 @@ function openTab(
 	const paneId = created?.result?.root_pane?.pane_id ?? created?.result?.pane?.pane_id;
 	if (typeof paneId !== "string" || !paneId) return undefined;
 
-	const extraExtensions = paneStateExtensionPath() ? [paneStateExtensionPath()!] : [];
+	const extraExtensions = stepAgentExtensionPaths(join(homedir(), ".pi", "agent"));
 	const script = buildTabLauncher({
 		realPi: realPiPath(),
 		interactiveArgv: interactive,
