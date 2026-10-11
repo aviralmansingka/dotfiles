@@ -80,6 +80,10 @@ These rules are load-bearing:
   the durable session file in a fresh tab. Teardown (run terminal, session shutdown, extension
   reload) also closes panes so a later headless `--session` resume never meets a second writer;
   the shim then passthroughs to real pi with unchanged argv and stdin.
+- Auto-exit subagents that finish cleanly close their whole Herdr tab (interactive subagents
+  keep parking for the user), so an orphaned sibling pane can never hold the tab open after
+  its session is done; the nvim-open extension likewise closes editor panes it created when
+  a subagent session shuts down, while captain sessions leave editor panes open for the human.
 - Pane state surfaces are Herdr's sanctioned ones only: `pane report-metadata --state-label`
   for display and the `herdr:blocked` event for the CI red state. Never report pane state
   from another source or impersonate a `herdr:` source - a second source cannot override the

@@ -870,4 +870,16 @@ export default function (pi: ExtensionAPI) {
 			ctx?.ui?.notify(result.message, "info");
 		},
 	});
+	// Subagent sessions close the editor panes they created on shutdown:
+	// orphaned editor panes were keeping subagent tabs open forever after
+	// their pi exited. Captain sessions leave every pane open — a human may
+	// be editing in them; the tuicr extension keeps its human-facing panes
+	// open on session_shutdown by the same principle.
+	pi.on("session_shutdown", () => {
+		if (!process.env.PI_SUBAGENT_SESSION) return;
+		for (const entry of [...editorRegistry.values()]) {
+			if (entry.created) herdrOk(["pane", "close", entry.paneId]);
+		}
+		editorRegistry.clear();
+	});
 }

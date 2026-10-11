@@ -397,6 +397,53 @@ try {
 		// created was closed, so no live pane is attributed to this call.
 		assert.match(seamLines().at(-1), / outcome=existing files=1$/);
 
+		// ── shutdown close: subagent yes, captain no ──────────────
+		const shutdownHandlers = {};
+		nvimOpen.default({
+			registerTool: () => {},
+			registerCommand: () => {},
+			on: (name, handler) => { shutdownHandlers[name] = handler; },
+		});
+		assert.equal(typeof shutdownHandlers.session_shutdown, "function");
+		// Reset registry state from the earlier scenarios: fire the handler
+		// once under subagent env (scenario B's fake still injected, its
+		// assertions already done) so the scenario-A pane closes and the
+		// map clears — the shutdown scenarios then start from a clean slate.
+		process.env.PI_SUBAGENT_SESSION = "/sessions/sub.jsonl";
+		shutdownHandlers.session_shutdown();
+
+		// Subagent context: the pane this process created is closed.
+		const sub = makeFakeExec({
+			callerPane: "wS1:p1", tab: "wS1:t1", workspace: "wS1", newPane: "wS1:p2",
+			panes: () => [{ pane_id: "wS1:p1", tab_id: "wS1:t1" }, { pane_id: "wS1:p2", tab_id: "wS1:t1" }],
+			procs: () => [{ name: "zsh", pid: 11, argv: ["zsh"] }],
+		});
+		process.env.PI_SUBAGENT_SESSION = "/sessions/sub.jsonl";
+		process.env.PI_SUBAGENT_NAME = "worker";
+		process.env.HERDR_PANE_ID = "wS1:p1";
+		nvimOpen.__setExecSyncForTests(sub.impl);
+		const subLaunch = await nvimOpen.openEditor("/repo", ["a.ts"], "tool");
+		assert.equal(subLaunch.launched, true);
+		assert.equal(countCalls(sub.calls, "herdr", "pane", "close"), 0, "no close before shutdown");
+		shutdownHandlers.session_shutdown();
+		assert.ok(findCall(sub.calls, "herdr", "pane", "close", "wS1:p2"), "subagent shutdown must close the created pane");
+		assert.equal(countCalls(sub.calls, "herdr", "pane", "close"), 1);
+
+		// Captain context: the pane this process created stays open — a
+		// human may be editing in it.
+		const captain = makeFakeExec({
+			callerPane: "wC1:p1", tab: "wC1:t1", workspace: "wC1", newPane: "wC1:p2",
+			panes: () => [{ pane_id: "wC1:p1", tab_id: "wC1:t1" }, { pane_id: "wC1:p2", tab_id: "wC1:t1" }],
+			procs: () => [{ name: "zsh", pid: 11, argv: ["zsh"] }],
+		});
+		delete process.env.PI_SUBAGENT_SESSION;
+		delete process.env.PI_SUBAGENT_NAME;
+		process.env.HERDR_PANE_ID = "wC1:p1";
+		nvimOpen.__setExecSyncForTests(captain.impl);
+		const captainLaunch = await nvimOpen.openEditor("/repo", ["a.ts"], "tool");
+		assert.equal(captainLaunch.launched, true);
+		shutdownHandlers.session_shutdown();
+		assert.equal(countCalls(captain.calls, "herdr", "pane", "close"), 0, "captain shutdown must leave editor panes open");
 	} finally {
 		nvimOpen.__setExecSyncForTests(null);
 		for (const [key, value] of savedSeamEnv) {
