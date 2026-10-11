@@ -67,6 +67,10 @@ for (const needle of [
   "scripts/test-(nvim-.*|terraform.*)",
   // Path-header harvest: entries self-wire their trigger paths.
   "# Paths:",
+  "// Paths:",
+  // The gate consumes changed_all (the docs filter rewrites it into
+  // `changed`); a missing capture silently selects no job at all.
+  "mapfile -t changed_all < <(git diff",
   // Provisioning contracts the discovered tests rely on.
   "astral-sh/setup-uv",
   "lua5.4",
@@ -74,6 +78,19 @@ for (const needle of [
 ]) {
   assert.ok(ci.includes(needle), `ci.yml must wire: ${needle}`);
 }
+
+// 4b. GitHub schema guard: the runner context is not allowed in JOB-level
+// env (only step-level). Every pushed run on this branch failed at 0s with
+// "workflow file issue" until this was fixed; actionlint (X9) and this
+// assertion both pin it.
+assert.ok(
+  !/^ {4}env:\n {6}JITI_PATH: \$\{\{ runner\.temp/m.test(ci),
+  "JITI_PATH must not use ${{ runner.temp }} in job-level env (GitHub rejects the workflow)",
+);
+assert.ok(
+  /^ {8}env:\n {10}JITI_PATH: \$\{\{ runner\.temp/m.test(ci),
+  "the jiti env must stay on step-level env, where the runner context is allowed",
+);
 
 // 5. Path gating: every area job must be gated on the changes job outputs.
 for (const job of ["pi-tests", "nvim-tests", "scripts-tests", "ops-tests"]) {
@@ -118,7 +135,7 @@ const FIXED_GATES = {
   nvim: ["nvim/*", "scripts/test-nvim-*", ".github/workflows/ci.yml"],
   scripts: [
     "scripts/*", "install.sh", "Brewfile", ".stowrc", "dependencies.json",
-    "skills-lock.json", "systemd/*", "launchd/*", "gh-dash/*",
+    "systemd/*", "launchd/*", "gh-dash/*",
   ],
   ops: ["ops/*", ".github/workflows/ci.yml"],
 };
@@ -210,6 +227,8 @@ const synthetic = [
   { changed: ["pi/.pi/agent/settings.json"], expect: { pi: true, scripts: true } }, // repo-config + live-config declare pi/.pi/agent paths
   { changed: ["pi/bin/pi-stt-worker.py"], expect: { pi: true, scripts: true } }, // test-pi-stt declares pi/bin/pi-stt*
   { changed: ["pi/bin/notion-cli"], expect: { pi: true, scripts: true } }, // test-repo-parity declares pi/bin/notion-cli
+  { changed: ["pi/bin/pi-telegram-daemon.py"], expect: { pi: true, scripts: true } }, // test-child-stdio declares pi/bin/**
+  { changed: ["pi/.pi/agent/extensions/usage.ts"], expect: { pi: true, scripts: true } }, // child-stdio + live-config declare pi/.pi/agent/**
   { changed: ["starship/starship.toml"], expect: { scripts: true } }, // test-config-lint declares starship/**
   { changed: ["agents/.agents/skills/nvim/SKILL.md"], expect: { pi: true, scripts: true } }, // declared agents/.agents/skills/** beats the *.md strip
   { changed: ["nvim/.markdownlint-cli2.yaml"], expect: { nvim: true, scripts: true } }, // repo-config declares it; nvim/* fixed gate also hits

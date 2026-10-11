@@ -23,19 +23,46 @@
 // docs/ci-tests/ci-meta.md.
 
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
+import Module, { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const require = createRequire(import.meta.url);
+// Shared jiti/typebox resolution contract (pi/.pi/agent/extensions/
+// test-lib/jiti.mjs): explicit JITI_PATH first (validated loudly — a stale
+// value never falls through silently), then NODE_PATH entries, then pi's
+// managed install. When nothing resolves and no explicit JITI_PATH was
+// given, the smoke bootstraps jiti@2 + typebox@1.3.27 into a temp prefix
+// (the same recipe as scripts/nm-test.sh), so it never depends on the
+// caller's env (rel-classifier hit 11 `Cannot find module 'typebox'`
+// failures running the smoke without the env).
+import { resolveJiti } from "../pi/.pi/agent/extensions/test-lib/jiti.mjs";
 
-const jitiPath = process.env.JITI_PATH;
-assert.ok(
-  jitiPath && existsSync(jitiPath),
-  "JITI_PATH must point at jiti.cjs (npm install --prefix <dir> jiti@2 typebox@1.3.27; see docs/ci-tests/ci-meta.md)",
-);
+function resolveJitiWithBootstrap() {
+  if (process.env.JITI_PATH) return resolveJiti(); // explicit env: loud, no masking
+  try {
+    return resolveJiti();
+  } catch (error) {
+    const root = mkdtempSync(join(tmpdir(), "loader-smoke-jiti-"));
+    const installed = spawnSync("npm", ["install", "--prefix", root, "jiti@2", "typebox@1.3.27"], { encoding: "utf8" });
+    const jitiPath = join(root, "node_modules", "jiti", "lib", "jiti.cjs");
+    if (installed.status === 0 && existsSync(jitiPath)) {
+      return { jitiPath, nodePath: join(root, "node_modules") };
+    }
+    throw new Error(`jiti not found and the bootstrap failed: ${error?.message ?? error}`);
+  }
+}
+
+const require = createRequire(import.meta.url);
+const { jitiPath, nodePath } = resolveJitiWithBootstrap();
+// typebox sits next to jiti; make node's resolver see it even when the
+// caller exported no NODE_PATH.
+if (!(process.env.NODE_PATH || "").split(":").includes(nodePath)) {
+  process.env.NODE_PATH = `${nodePath}${process.env.NODE_PATH ? ":" + process.env.NODE_PATH : ""}`;
+  Module._initPaths();
+}
 const { createJiti } = require(jitiPath);
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));

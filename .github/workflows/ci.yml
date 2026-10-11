@@ -78,8 +78,7 @@ jobs:
             } >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Docs-only changes (*.md) never trigger the heavy suites.
-          mapfile -t changed < <(git diff --name-only "$merge_base" HEAD | grep -v '\.md$' || true)
+          mapfile -t changed_all < <(git diff --name-only "$merge_base" HEAD || true)
 
           # --- dynamic gates ---------------------------------------------
           # A scripts/test-* entry may declare its own trigger paths in a
@@ -92,10 +91,17 @@ jobs:
           # scripts/test-ci-self.mjs enforces this contract.
           tier2() { sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' scripts/ci-tier2-exclusions.txt; }
           is_tier2() { grep -xFq "$1" <(tier2); }
+          # shellcheck disable=SC2020,SC2053  # tr char-set and glob [[ == ]] are intentional
           harvest() { # emit one declared glob per line for the given entries
+            # Canonical header per file type: "# Paths:" for .sh/.py,
+            # "// Paths:" for .mjs (node rejects "#" comments). Any other
+            # form fails loudly in scripts/test-ci-self.mjs.
             local f line
             for f in "$@"; do
-              line="$(grep -m1 '^# Paths:' "$f" 2>/dev/null | sed 's/^# Paths://' || true)"
+              case "$f" in
+                *.mjs) line="$(grep -m1 '^// Paths:' "$f" 2>/dev/null | sed 's|^// Paths:||' || true)" ;;
+                *)     line="$(grep -m1 '^# Paths:' "$f" 2>/dev/null | sed 's/^# Paths://' || true)" ;;
+              esac
               if [ -n "$line" ]; then printf '%s\n' "$line" | tr ' ,' '\n\n' | grep -v '^$' || true; fi
             done
           }
@@ -114,7 +120,7 @@ jobs:
           pi_globs=('pi/*' 'agents/*' '.github/workflows/ci.yml')
           nvim_globs=('nvim/*' 'scripts/test-nvim-*' '.github/workflows/ci.yml')
           scripts_globs=('scripts/*' 'install.sh' 'Brewfile' '.stowrc'
-                         'dependencies.json' 'skills-lock.json'
+                         'dependencies.json'
                          'systemd/*' 'launchd/*' 'gh-dash/*')
           ops_globs=('ops/*' '.github/workflows/ci.yml')
           # declared_all holds every header-declared glob (fixed gates
@@ -131,6 +137,7 @@ jobs:
           # path that an entry declares beats the strip (that entry guards
           # the file, e.g. SKILL.md frontmatter, README stow tables).
           mapfile -t changed < <(
+            # shellcheck disable=SC2053  # glob [[ == ]] is intentional
             for f in "${changed_all[@]}"; do
               case "$f" in
                 *.md)
@@ -146,6 +153,7 @@ jobs:
           )
 
           # Bash pattern matching: * crosses / (git-pathspec semantics).
+          # shellcheck disable=SC2053  # glob [[ == ]] is intentional
           gate_hits() { # true when any changed file matches any glob
             local f g
             for f in "${changed[@]}"; do
@@ -256,9 +264,6 @@ jobs:
     if: needs.changes.outputs.pi == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
-      NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -281,9 +286,15 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y lua5.4
 
       - name: Extension loader smoke
+        env:
+          JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
+          NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
         run: node scripts/test-extension-loader.mjs
 
       - name: Extension and agents tests (glob-discovered)
+        env:
+          JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
+          NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
         run: |
           set +e
           fail=0
@@ -299,7 +310,7 @@ jobs:
             | grep '\.test\.mjs$' \
             | grep -vxFf <(tier2))
           [ "$fail" -eq 0 ] || exit 1
-          echo "discovered $(git ls-files 'pi/.pi/agent/extensions/**' 'agents/**' | grep '\.test\.mjs$' | grep -vxFf <(tier2) | wc -l) test files"
+          echo "discovered $(git ls-files 'pi/.pi/agent/extensions/**' 'agents/**' | grep '\.test\.mjs$' | grep -cvxFf <(tier2)) test files"
 
       - name: Pi bin python tests (glob-discovered)
         run: timeout 120 python3 -m unittest discover -s pi/bin -p 'test_*.py'
@@ -314,8 +325,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Install Neovim
         run: sudo apt-get update && sudo apt-get install -y neovim
+
+      # dap_eval_spec:range_contains parses a go buffer with core
+      # treesitter; the go parser is host-installed on the fleet but
+      # absent on fresh runners. Build the pinned grammar into the
+      # runner's site parser dir (default runtimepath picks it up).
+      - name: Provision treesitter go parser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/ts-go" tree-sitter-cli@0.27.1 tree-sitter-go@0.25.0
+          mkdir -p "$HOME/.local/share/nvim/site/parser"
+          (cd "$RUNNER_TEMP/ts-go/node_modules/tree-sitter-go" && \
+            npx --prefix "$RUNNER_TEMP/ts-go" tree-sitter build \
+              -o "$HOME/.local/share/nvim/site/parser/go.so")
 
       - name: Nvim suites (glob-discovered scripts/test-nvim-*.sh)
         run: |
@@ -331,7 +359,7 @@ jobs:
             fi
           done < <(git ls-files --cached --others --exclude-standard 'scripts/test-nvim-*.sh' | grep -vxFf <(tier2))
           [ "$fail" -eq 0 ] || exit 1
-          echo "discovered $(git ls-files --cached --others --exclude-standard 'scripts/test-nvim-*.sh' | grep -vxFf <(tier2) | wc -l) nvim suite scripts"
+          echo "discovered $(git ls-files --cached --others --exclude-standard 'scripts/test-nvim-*.sh' | grep -cvxFf <(tier2)) nvim suite scripts"
 
       - name: Nvim spec tests (glob-discovered)
         run: |
@@ -352,11 +380,15 @@ jobs:
               echo "FAIL $f"
               fail=1
             fi
+          # Top-level legacy specs only: tests/ci/*_spec.lua belong to
+          # scripts/test-nvim-headless.sh (shared harness contract) and
+          # must not run twice.
           done < <(git ls-files 'nvim/.config/nvim/tests/*' \
             | grep '_spec\.lua$' \
+            | grep -v '^nvim/.config/nvim/tests/ci/' \
             | grep -vxFf <(tier2))
           [ "$fail" -eq 0 ] || exit 1
-          echo "discovered $(git ls-files 'nvim/.config/nvim/tests/*' | grep '_spec\.lua$' | grep -vxFf <(tier2) | wc -l) spec files"
+          echo "discovered $(git ls-files 'nvim/.config/nvim/tests/*' | grep '_spec\.lua$' | grep -v '^nvim/.config/nvim/tests/ci/' | grep -cvxFf <(tier2)) spec files"
 
   scripts-tests:
     name: Scripts tests
@@ -364,9 +396,6 @@ jobs:
     if: needs.changes.outputs.scripts == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
-      NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -384,6 +413,9 @@ jobs:
 
       # ruby is preinstalled on ubuntu runners (test-gh-dash-open-pr.sh).
       - name: Scripts tests (glob-discovered, dispatch by suffix)
+        env:
+          JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
+          NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
         run: |
           set +e
           fail=0
@@ -404,7 +436,13 @@ jobs:
                 continue
                 ;;
             esac
-            if timeout 120 "${runner[@]}"; then
+            # Per-entry env: the nm-install suite is offline; STRICT=1
+            # only turns missing-tool skips into failures (dom-nm-install).
+            entry_env=()
+            case "$f" in
+              scripts/test-nm-install.sh) entry_env=(STRICT=1) ;;
+            esac
+            if timeout 120 env "${entry_env[@]}" "${runner[@]}"; then
               echo "ok   $f"
             else
               echo "FAIL $f"
@@ -412,7 +450,7 @@ jobs:
             fi
           done < <(routed)
           [ "$fail" -eq 0 ] || exit 1
-          echo "discovered $(routed | wc -l) test files"
+          echo "discovered $(routed | grep -c .) test files"
 
   ops-tests:
     name: Ops tests
