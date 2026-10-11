@@ -41,6 +41,7 @@ import {
 	orchestratorAckMessage,
 	orchestratorDelegationDecision,
 	orchestratorOwnedMessage,
+	orchestratorSpawnSucceeded,
 	orchestratorSurfaceMessage,
 	ORCHESTRATOR_AGENT,
 	ORCHESTRATOR_SPAWN_NAME,
@@ -1183,19 +1184,28 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 						{ agent: ORCHESTRATOR_AGENT, name: ORCHESTRATOR_SPAWN_NAME, task, cwd: resolvedCwd },
 						ctx,
 					);
-					const spawned = result?.details?.name ?? ORCHESTRATOR_SPAWN_NAME;
-					orchestratorRegistry().set(resolvedCwd, spawned);
-					return textResult(orchestratorAckMessage(spawned), {
-						status: "started",
-						subcommand,
-						pipeline,
-						message: `delegated to ${ORCHESTRATOR_AGENT} "${spawned}"`,
-					});
+					if (!orchestratorSpawnSucceeded(result)) {
+						// Spawn failure without a throw (mux unavailable, unknown or
+						// unallowlisted agent, no session file): executeSubagent
+						// resolves an error result. Fall through to direct driving —
+						// never ack "delegated" or register a phantom owner.
+						const reason = result?.details?.error ?? "spawn returned no session";
+						delegateNote = ` Orchestrator delegation failed (${reason}); driving the run directly here instead.`;
+					} else {
+						const spawned = result?.details?.name ?? ORCHESTRATOR_SPAWN_NAME;
+						orchestratorRegistry().set(resolvedCwd, spawned);
+						return textResult(orchestratorAckMessage(spawned), {
+							status: "started",
+							subcommand,
+							pipeline,
+							message: `delegated to ${ORCHESTRATOR_AGENT} "${spawned}"`,
+						});
+					}
 				} catch (err) {
 					// Spawn failure (missing agent definition, no tab): fall through
 					// to direct driving — the run must still start, but say so.
 					delegateNote = ` Orchestrator delegation failed (${err instanceof Error ? err.message : String(err)}); driving the run directly here instead.`;
-				}
+					}
 			}
 			const observesSession = resolve(cwd) === resolve(sessionCwd);
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;

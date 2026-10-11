@@ -56,6 +56,7 @@ const jiti = createJiti(import.meta.url, { alias: tuiAlias });
 const { extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
 const {
 	orchestratorDelegationDecision,
+	orchestratorSpawnSucceeded,
 	buildOrchestratorTask,
 	orchestratorAckMessage,
 	orchestratorOwnedMessage,
@@ -1103,6 +1104,36 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		true,
 		"ownership is per-cwd: another worktree's orchestrator does not block this run",
 	);
+}
+
+// ---------------------------------------------------------------------------
+// Spawn-result classification: executeSubagent returns error results WITHOUT
+// throwing (mux-unavailable, unknown/unallowlisted agent, no-session-file).
+// Those must count as delegation failure — never as a "delegated" ack with a
+// phantom registry owner.
+// ---------------------------------------------------------------------------
+{
+	assert.equal(
+		orchestratorSpawnSucceeded({ details: { name: "nm-orchestrator" } }),
+		true,
+		"a resolved result with a spawn name is a success",
+	);
+	assert.equal(
+		orchestratorSpawnSucceeded({ isError: true, details: { name: "nm-orchestrator" } }),
+		false,
+		"an isError result is a failure even when it carries a name",
+	);
+	assert.equal(
+		orchestratorSpawnSucceeded({ details: { error: "mux unavailable" } }),
+		false,
+		"a details.error result (mux-unavailable) is a failure",
+	);
+	assert.equal(
+		orchestratorSpawnSucceeded({ details: {} }),
+		false,
+		"a result without details.name is a failure",
+	);
+	assert.equal(orchestratorSpawnSucceeded(undefined), false, "no result at all is a failure");
 }
 
 // ---------------------------------------------------------------------------

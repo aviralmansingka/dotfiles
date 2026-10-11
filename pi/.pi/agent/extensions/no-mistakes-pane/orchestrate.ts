@@ -83,6 +83,18 @@ export function orchestratorDelegationDecision(input: {
 	return { delegate: true };
 }
 
+/** Did a RESOLVED executeSubagent result actually spawn the orchestrator?
+ *  executeSubagent returns error results WITHOUT throwing — mux-unavailable,
+ *  unknown/unallowlisted agent, no-session-file — and those results carry
+ *  `details.error` and no `details.name`. Pure: tests pin every failure
+ *  shape; anything else counts as a successful spawn. */
+export function orchestratorSpawnSucceeded(result: unknown): boolean {
+	const r = result as { isError?: boolean; details?: { error?: unknown; name?: unknown } } | undefined;
+	if (r?.isError) return false;
+	if (r?.details?.error) return false;
+	return Boolean(r?.details?.name);
+}
+
 /** Ack shown to the captain after a successful delegation. */
 export function orchestratorAckMessage(name: string): string {
 	return [
