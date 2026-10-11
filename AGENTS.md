@@ -58,7 +58,11 @@ agent-touched file picker (ChmaraX/herdr-nvim — Herdr half machine-installed v
 A live sidebar daemon is the tab's editor: `nvim_open`/`/nvim` attach to it through
 its registry socket (`<tab key>.sock` — tab id with `:`→`_` — under
 `$XDG_RUNTIME_DIR/herdr-nvim`, else the temp dir) instead of launching a duplicate
-split, and focus-buffer drives lesson buffers through the same socket.
+split, and focus-buffer drives lesson buffers through the same socket. When the
+sidebar pane is hidden, the agent only reports it (press prefix+t): a plugin
+action invoke resolves to the focused tab and can land in another workspace, and
+a raw `plugin pane open` bypasses the plugin's state/layout machinery and
+corrupts the next toggle. The user's own prefix+t is the only correct show path.
 `annotate-review.open` lost its chord to the picker; the reply reviewer keeps
 `prefix+shift+o`.
 

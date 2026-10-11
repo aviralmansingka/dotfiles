@@ -192,20 +192,22 @@ sys.exit(1)
 			break
 		fi
 	done <<< "$TAB_PANES_LIST"
-	# Toggled-off sidebar: run the plugin's own toggle action (the same one
-	# prefix+t runs) to show the daemon's buffers. It opens in the focused
-	# tab — the tab the user is looking at.
-	if [[ "$SIDEBAR_VISIBLE" != "true" ]]; then
-		herdr_ok plugin action invoke chmarax.herdr-nvim.toggle
-	fi
 	if [[ "$DAEMON_OK" != "true" ]]; then
 		echo "Could not open files in the herdr-nvim sidebar (tab $TAB_ID)." >&2
 		exit 1
 	fi
+	# Toggled-off sidebar: never show the pane from the agent side — an
+	# action invoke follows the focused tab (possibly another workspace)
+	# and a raw pane open bypasses the plugin's state machinery. The
+	# files are in the persistent daemon; prefix+t shows them.
+	VIEW_NOTE=""
+	if [[ "$SIDEBAR_VISIBLE" != "true" ]]; then
+		VIEW_NOTE=" — press prefix+t in that tab to view"
+	fi
 	if [[ ${#FILES[@]} -gt 0 ]]; then
-		echo "Opened ${#FILES[@]} file(s) in the herdr-nvim sidebar (tab $TAB_ID)."
+		echo "Opened ${#FILES[@]} file(s) in the herdr-nvim sidebar (tab $TAB_ID)$VIEW_NOTE."
 	else
-		echo "herdr-nvim sidebar (tab $TAB_ID) is this tab's editor."
+		echo "herdr-nvim sidebar (tab $TAB_ID) is this tab's editor$VIEW_NOTE."
 	fi
 	exit 0
 fi

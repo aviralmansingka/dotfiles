@@ -181,10 +181,13 @@ function openInDaemon(socket: string, files: string[]): boolean {
 }
 
 /** Attach to the tab's herdr-nvim sidebar: open the files in its daemon,
- *  then show the sidebar — focus it when visible, open it with the
- *  plugin's own toggle action (what `prefix+t` runs) when toggled off.
- *  The toggle applies to the focused tab, which is where the user is
- *  looking when they ask for files. */
+ *  then focus the sidebar pane when one is visible. When the sidebar is
+ *  toggled off, the files land in the persistent daemon and the message
+ *  says how to view them — the agent never shows the pane itself: a
+ *  plugin *action* invoke resolves to the focused tab (possibly another
+ *  workspace), and a raw `plugin pane open` bypasses the plugin's
+ *  state/layout machinery and corrupts the next `prefix+t`. The user's
+ *  own toggle is the only correct show path. */
 function attachToSidebarDaemon(
 	daemon: { socket: string; tabId: string },
 	current: PaneInfo,
@@ -194,18 +197,19 @@ function attachToSidebarDaemon(
 	const sidebarPane = findSidebarPane(daemon.tabId, daemon.socket);
 	if (sidebarPane) {
 		focusEditorPane(sidebarPane, current.pane_id);
-	} else {
-		herdrOk(["plugin", "action", "invoke", "chmarax.herdr-nvim.toggle"]);
 	}
 	const where = `herdr-nvim sidebar (tab ${daemon.tabId})`;
+	const viewNote = sidebarPane ? "" : " — press prefix+t in that tab to view";
 	if (!opened) {
 		return { message: `Could not open files in the ${where}.`, ok: false, launched: false };
 	}
 	if (files.length > 0) {
-		return { message: `Opened ${files.length} file(s) in the ${where}.`, ok: true, launched: false };
+		return { message: `Opened ${files.length} file(s) in the ${where}${viewNote}.`, ok: true, launched: false };
 	}
 	return {
-		message: `${sidebarPane ? "Focused" : "Opened"} the ${where}.`,
+		message: sidebarPane
+			? `Focused the ${where}.`
+			: `The ${where} is this tab's editor${viewNote}.`,
 		ok: true,
 		launched: false,
 	};
