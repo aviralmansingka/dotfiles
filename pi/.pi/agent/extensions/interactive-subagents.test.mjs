@@ -9,7 +9,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	agentIsolationArgs,
@@ -388,19 +388,9 @@ try {
 		assert.equal(defs.model, undefined, `${name} inherits the session model (no model pin)`);
 		assert.equal(defs.thinking, thinking, `${name} keeps its thinking level on the inherited model`);
 	}
-	// With no model pin, the sandbox helper must apply the agent's thinking
-	// level as a standalone --thinking flag on the inherited default model
-	// (index.ts cannot be jiti-loaded whole, so this pins the branch by source,
-	// mirroring the list-tool and baseline-renderer assertions).
-	const sandboxSource = readFileSync(
-		new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url),
-		"utf8",
-	);
-	assert.ok(
-		/else if \(loadout\.thinking\) {/.test(sandboxSource) &&
-			sandboxSource.includes('parts.push("--thinking", shellEscape(loadout.thinking))'),
-		"applySandboxToParts passes a standalone --thinking when no model is pinned",
-	);
+	// With no model pin, the standalone --thinking behavior is asserted for
+	// real in the applySandboxToParts behavior block below (eval'd from source
+	// with injected deps — index.ts cannot be jiti-loaded whole).
 }
 
 // --- No Mistakes compact status follows the shared activity-widget contract ---
@@ -534,15 +524,87 @@ try {
 		process.chdir(previousCwd);
 	}
 
-	// The baseline is pushed unconditionally, outside the toolAllowlist block.
-	const sandboxBody = indexSource.split("function applySandboxToParts(")[1].split("\nfunction ")[0];
-	assert.ok(
-		sandboxBody.indexOf("baselineSubagentExtensionArgs(getAgentConfigDir())") <
-			sandboxBody.indexOf("loadout.toolAllowlist"),
-		"applySandboxToParts pushes the baseline -e before any toolAllowlist logic",
-	);
 } finally {
 	rmSync(baselineRoot, { recursive: true, force: true });
+}
+
+// --- applySandboxToParts behavior: standalone --thinking on the inherited
+// model, and the baseline renderer's -e pair ordered BEFORE the granted
+// tool's -e pair. Eval'd from index.ts source with injected deps (like the
+// baseline renderer above) because index.ts cannot be jiti-loaded whole.
+{
+	const sandboxRoot = mkdtempSync(join(tmpdir(), "subagent-sandbox-test-"));
+	try {
+		// An agent dir WITH the public renderer, so the baseline -e pair is live.
+		const agentDir = join(sandboxRoot, "agent");
+		mkdirSync(join(agentDir, "extensions"), { recursive: true });
+		const baselineRendererPath = join(agentDir, "extensions", "tool-call-renderer-public.ts");
+		writeFileSync(baselineRendererPath, "export {};\n");
+		// One granted tool whose helper extension is a real temp .ts on disk.
+		const toolExtPath = join(sandboxRoot, "tools", "faketool.ts");
+		mkdirSync(join(sandboxRoot, "tools"), { recursive: true });
+		writeFileSync(toolExtPath, "export {};\n");
+		globalThis.__sandboxDeps = {
+			shellEscape: surface.shellEscape,
+			getAgentConfigDir: () => agentDir,
+			agentIsolationArgs: () => [],
+			getToolExtensionPath: (tool) => (tool === "faketool" ? toolExtPath : undefined),
+			join,
+			resolve,
+			dirname,
+			mkdirSync,
+			writeFileSync,
+			existsSync,
+		};
+		const sandboxBody = indexSource.split("function applySandboxToParts(")[1].split("\nfunction ")[0];
+		const { applySandboxToParts } = jiti.evalModule(
+			`
+			const { shellEscape, getAgentConfigDir, agentIsolationArgs, getToolExtensionPath, join, resolve, dirname, mkdirSync, writeFileSync, existsSync } = globalThis.__sandboxDeps;
+			${baselineSource}
+			function applySandboxToParts(${sandboxBody}
+			module.exports = { applySandboxToParts };
+		`,
+			{ filename: join(tmpdir(), "subagent-sandbox-behavior-test.ts") },
+		);
+		delete globalThis.__sandboxDeps;
+
+		// (a) No model pin: the agent's thinking level rides the inherited
+		// default model as a standalone --thinking pair — no --model flag.
+		const thinkingParts = [];
+		applySandboxToParts(
+			thinkingParts,
+			{ model: null, thinking: "high", toolAllowlist: null },
+			{ artifactDir: join(sandboxRoot, "artifacts"), name: "thinking-test" },
+		);
+		const thinkingIndex = thinkingParts.indexOf("--thinking");
+		assert.ok(thinkingIndex !== -1, "a pinned thinking level yields a standalone --thinking flag");
+		assert.deepEqual(
+			thinkingParts.slice(thinkingIndex, thinkingIndex + 2),
+			["--thinking", "'high'"],
+			"the --thinking pair carries the shell-escaped level",
+		);
+		assert.ok(!thinkingParts.includes("--model"), "no model pin means no --model flag");
+
+		// (b) The baseline renderer's -e pair is pushed BEFORE the granted
+		// tool's helper-extension -e pair, regardless of source layout.
+		const toolParts = [];
+		applySandboxToParts(
+			toolParts,
+			{ model: null, thinking: null, toolAllowlist: "faketool" },
+			{ artifactDir: join(sandboxRoot, "artifacts"), name: "tools-test" },
+		);
+		const baselineIndex = toolParts.indexOf(`'${baselineRendererPath}'`);
+		const grantedIndex = toolParts.indexOf(`'${toolExtPath}'`);
+		assert.ok(baselineIndex !== -1, "the baseline renderer's -e pair is present");
+		assert.ok(grantedIndex !== -1, "the granted tool's helper -e pair is present");
+		assert.ok(
+			baselineIndex < grantedIndex,
+			"the baseline renderer's -e pair precedes the granted tool's -e pair",
+		);
+		assert.ok(toolParts.includes("--tools"), "the allowlist is replayed as --tools");
+	} finally {
+		rmSync(sandboxRoot, { recursive: true, force: true });
+	}
 }
 
 console.log("interactive-subagents surface smoke passed");

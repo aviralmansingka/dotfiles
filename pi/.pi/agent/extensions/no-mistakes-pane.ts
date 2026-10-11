@@ -41,6 +41,7 @@ import {
 	orchestratorAckMessage,
 	orchestratorDelegationDecision,
 	orchestratorOwnedMessage,
+	orchestratorSpawnSucceeded,
 	orchestratorSurfaceMessage,
 	ORCHESTRATOR_AGENT,
 	ORCHESTRATOR_SPAWN_NAME,
@@ -398,8 +399,19 @@ interface WatchState {
 // exiting after its first turn, exactly like the tuicr-review agent's
 // watcher. The count drops synchronously when a terminal outcome steers,
 // so the orchestrator's summary turn is its last.
+//
+// COMPOSITION: this is a SHARED slot — tuicr.ts publishes its watcher's
+// count under the same well-known symbol, and the nm-orchestrator (spawned
+// with agent-dir: parent) loads both extensions in one session. A plain
+// assignment would be last-writer-wins by readdir load order, silently
+// disabling whichever extension loaded first. So capture the previous
+// owner's function (a non-function previous value counts as 0) and publish
+// a wrapper that ADDS it to ours — both sources must be able to keep the
+// session open. tuicr.ts composes symmetrically, so either load order sums
+// both counts.
 const KEEP_OPEN_COUNT_KEY = Symbol.for("pi-subagents/keep-open-count");
-(globalThis as any)[KEEP_OPEN_COUNT_KEY] = () => {
+const previousKeepOpenCount: unknown = (globalThis as any)[KEEP_OPEN_COUNT_KEY];
+const ownKeepOpenCount = (): number => {
 	const state = (globalThis as any)[WATCH_STATE_KEY] as WatchState | undefined;
 	if (!state) return 0;
 	if (state.trackedRunId) return 1;
@@ -407,6 +419,18 @@ const KEEP_OPEN_COUNT_KEY = Symbol.for("pi-subagents/keep-open-count");
 		if (call.pipeline) return 1;
 	}
 	return 0;
+};
+(globalThis as any)[KEEP_OPEN_COUNT_KEY] = (): number => {
+	let previous = 0;
+	if (typeof previousKeepOpenCount === "function") {
+		try {
+			const value = (previousKeepOpenCount as () => unknown)();
+			if (typeof value === "number" && value > 0) previous = value;
+		} catch {
+			// A broken previous owner must not mask this module's count.
+		}
+	}
+	return previous + ownKeepOpenCount();
 };
 
 function orchestratorSpawnApi(): OrchestratorSpawnApi | undefined {
@@ -1160,19 +1184,28 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 						{ agent: ORCHESTRATOR_AGENT, name: ORCHESTRATOR_SPAWN_NAME, task, cwd: resolvedCwd },
 						ctx,
 					);
-					const spawned = result?.details?.name ?? ORCHESTRATOR_SPAWN_NAME;
-					orchestratorRegistry().set(resolvedCwd, spawned);
-					return textResult(orchestratorAckMessage(spawned), {
-						status: "started",
-						subcommand,
-						pipeline,
-						message: `delegated to ${ORCHESTRATOR_AGENT} "${spawned}"`,
-					});
+					if (!orchestratorSpawnSucceeded(result)) {
+						// Spawn failure without a throw (mux unavailable, unknown or
+						// unallowlisted agent, no session file): executeSubagent
+						// resolves an error result. Fall through to direct driving —
+						// never ack "delegated" or register a phantom owner.
+						const reason = result?.details?.error ?? "spawn returned no session";
+						delegateNote = ` Orchestrator delegation failed (${reason}); driving the run directly here instead.`;
+					} else {
+						const spawned = result?.details?.name ?? ORCHESTRATOR_SPAWN_NAME;
+						orchestratorRegistry().set(resolvedCwd, spawned);
+						return textResult(orchestratorAckMessage(spawned), {
+							status: "started",
+							subcommand,
+							pipeline,
+							message: `delegated to ${ORCHESTRATOR_AGENT} "${spawned}"`,
+						});
+					}
 				} catch (err) {
 					// Spawn failure (missing agent definition, no tab): fall through
 					// to direct driving — the run must still start, but say so.
 					delegateNote = ` Orchestrator delegation failed (${err instanceof Error ? err.message : String(err)}); driving the run directly here instead.`;
-				}
+					}
 			}
 			const observesSession = resolve(cwd) === resolve(sessionCwd);
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;

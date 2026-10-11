@@ -56,6 +56,7 @@ const jiti = createJiti(import.meta.url, { alias: tuiAlias });
 const { extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
 const {
 	orchestratorDelegationDecision,
+	orchestratorSpawnSucceeded,
 	buildOrchestratorTask,
 	orchestratorAckMessage,
 	orchestratorOwnedMessage,
@@ -1106,6 +1107,36 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 }
 
 // ---------------------------------------------------------------------------
+// Spawn-result classification: executeSubagent returns error results WITHOUT
+// throwing (mux-unavailable, unknown/unallowlisted agent, no-session-file).
+// Those must count as delegation failure — never as a "delegated" ack with a
+// phantom registry owner.
+// ---------------------------------------------------------------------------
+{
+	assert.equal(
+		orchestratorSpawnSucceeded({ details: { name: "nm-orchestrator" } }),
+		true,
+		"a resolved result with a spawn name is a success",
+	);
+	assert.equal(
+		orchestratorSpawnSucceeded({ isError: true, details: { name: "nm-orchestrator" } }),
+		false,
+		"an isError result is a failure even when it carries a name",
+	);
+	assert.equal(
+		orchestratorSpawnSucceeded({ details: { error: "mux unavailable" } }),
+		false,
+		"a details.error result (mux-unavailable) is a failure",
+	);
+	assert.equal(
+		orchestratorSpawnSucceeded({ details: {} }),
+		false,
+		"a result without details.name is a failure",
+	);
+	assert.equal(orchestratorSpawnSucceeded(undefined), false, "no result at all is a failure");
+}
+
+// ---------------------------------------------------------------------------
 // Orchestrator task and messages: verbatim args carried, boundary rules
 // stated, and every user-facing text names the owner.
 // ---------------------------------------------------------------------------
@@ -1140,6 +1171,45 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		"the yolo pointer explains consent lives in the orchestrator session",
 	);
 	assert.equal(ORCHESTRATOR_AGENT, "nm-orchestrator");
+}
+
+// ---------------------------------------------------------------------------
+// Keep-open slot composition: the shared pi-subagents/keep-open-count slot
+// has multiple publishers (tuicr.ts owns it too, and the nm-orchestrator
+// loads both extensions in one session). The pane module must ADD to any
+// previous owner's count, never replace it — whichever extension loads
+// last, both sources must be able to keep the session open.
+// ---------------------------------------------------------------------------
+{
+	const KEY = Symbol.for("pi-subagents/keep-open-count");
+	const WATCH_STATE = Symbol.for("pi-no-mistakes/watch-state");
+	const savedSlot = globalThis[KEY];
+	const savedState = globalThis[WATCH_STATE];
+	try {
+		// A previous owner (e.g. tuicr's watcher) already holds the slot.
+		let fakeOwnerCount = 2;
+		globalThis[KEY] = () => fakeOwnerCount;
+		globalThis[WATCH_STATE] = undefined;
+		// Fresh import of the pane module (caching disabled so module scope
+		// re-runs): it must capture the previous owner and compose, not clobber.
+		const freshJiti = createJiti(import.meta.url, { alias: tuiAlias, moduleCache: false, fsCache: false });
+		freshJiti("./no-mistakes-pane.ts");
+
+		const slot = globalThis[KEY];
+		assert.equal(typeof slot, "function", "the pane module publishes the slot function");
+		assert.equal(slot(), 2, "the previous owner's count survives the pane module's load");
+
+		// Additive: when both sides report, the slot returns the sum.
+		globalThis[WATCH_STATE] = { trackedRunId: "01TEST", calls: new Map() };
+		assert.equal(slot(), 3, "the pane's own run-tracking count adds to the previous owner's count");
+
+		// The pane side alone still keeps the session open.
+		fakeOwnerCount = 0;
+		assert.equal(slot(), 1, "the pane's own count parks the session on its own");
+	} finally {
+		globalThis[KEY] = savedSlot;
+		globalThis[WATCH_STATE] = savedState;
+	}
 }
 
 console.log("no-mistakes-pane capture tests passed");
