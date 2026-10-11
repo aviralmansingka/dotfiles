@@ -68,6 +68,24 @@ flowchart TD
 Keep diagrams small. A diagram that needs scrolling carries too many nodes —
 split the answer instead.
 
+When one node branches into several parallel outcomes, draw a single
+shared arrow from the node to an invisible junction point, then split
+from the junction to each outcome — do not fan multiple arrows
+directly out of one node. Group the parallel outcomes in a subgraph
+when they belong together. Example:
+
+```mermaid
+flowchart LR
+  A[Source] --> J((" "))
+  subgraph outcomes[Outcomes]
+    J --> B[First parallel outcome]
+    J --> C[Second parallel outcome]
+  end
+```
+
+The junction node `J((" "))` renders as a small circle. Keep it
+unlabeled so it reads as a split point, not a step.
+
 ### PNG export rules
 
 When a mermaid diagram is exported as a PNG for a document, page, or message:
