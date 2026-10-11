@@ -68,6 +68,49 @@ flowchart TD
 Keep diagrams small. A diagram that needs scrolling carries too many nodes —
 split the answer instead.
 
+Use these named layout patterns (full catalog, sources, and renderer
+rules: consult the `mermaid` skill):
+
+- **junction** — one node splits into parallel outcomes: a single
+  shared arrow runs to an invisible junction `J((" "))`, then splits
+  to each outcome, with the outcomes grouped in a subgraph. Never fan
+  multiple arrows directly out of one node.
+- **serpentine** — a long ordered sequence reads as rows: first row
+  left-to-right, then down at the right edge, next row right-to-left
+  (one subgraph per row, `direction LR` then `direction RL`, last
+  node of a row linking to the first node of the next).
+- **wrap** — serpentine fallback: every row reads left-to-right; the
+  last node of each row links down to the first node of the next.
+- **zones** — subgraph boxes named by ownership or phase; arrows cross
+  the zone borders.
+
+Example (junction):
+
+```mermaid
+flowchart LR
+  A[Source] --> J((" "))
+  subgraph outcomes[Outcomes]
+    J --> B[First parallel outcome]
+    J --> C[Second parallel outcome]
+  end
+```
+
+### PNG export rules
+
+When a mermaid diagram is exported as a PNG for a document, page, or message:
+
+- Export with a transparent background. Never bake a background color into
+  the PNG.
+- Generate two ink variants: dark ink for light surfaces (Google Docs, PDFs,
+  GitHub), light ink for dark surfaces (Notion in dark mode). Pick the
+  variant per surface — a transparent PNG readable on one background is
+  invisible on the other.
+- Keep resolution at or above 250 DPI at the intended display size.
+- Manage the aspect ratio. Keep width to height between 1:2 and 3:1, and
+  prefer 16:9 to 3:2. Avoid skinny banners and tall towers. When a layout
+  comes out extreme, change the flow direction, wrap a long chain into
+  rows, or split the diagram.
+
 ## Shell, python, and mcpScript call titles
 
 Open every `bash` command, every `python` script, and every `mcpScript`
