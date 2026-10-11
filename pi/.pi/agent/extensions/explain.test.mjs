@@ -1,30 +1,27 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { resolveJiti } from "./test-lib/jiti.mjs";
 
 const require = createRequire(import.meta.url);
-const jitiPath = [
-	process.env.JITI_PATH,
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.pi/agent/install/releases/1.1.0/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.nvm/versions/node/v22.22.3/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-].find((path) => path && existsSync(path));
-
-if (!jitiPath) throw new Error("jiti not found; set JITI_PATH");
-
+const { jitiPath } = resolveJiti();
 const { createJiti } = require(jitiPath);
 const tempRoot = mkdtempSync(join(tmpdir(), "explain-grader-test-"));
 const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
 const stubAi = join(tempRoot, "pi-ai.cjs");
 const stubTypes = join(tempRoot, "types.cjs");
 const stubTui = join(tempRoot, "pi-tui.cjs");
-// explain now imports md-log (journal shortcut), which imports nvim-open and
-// focus-buffer — stub its peer deps too (house pattern from md-log.test.mjs).
-// The h-shortcut path calls the focus buffers; hard-off so a machine WITH a
-// live herdr/nvim (the homelab) can never receive test writes.
-process.env.PI_DISABLE_FOCUS_BUFFER = "1";
+// explain imports md-log (journal shortcut), which imports nvim-open and
+// focus-buffer. Stub md-log itself via the jiti alias so the h/H shortcut
+// path never reaches a real journal file, editor socket, or pane — the test
+// stays hermetic even on a machine with a live herdr/nvim (the homelab).
+const stubMdLog = join(tempRoot, "md-log.cjs");
+writeFileSync(stubMdLog, `
+exports.openNodeView = async () => ({ mode: "node", message: "node view" });
+exports.openJournalInEditor = async () => ({ mode: "journal", message: "journal" });
+`);
 writeFileSync(stubAgent, "exports.defineTool = (t) => t;\n");
 writeFileSync(stubAi, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
 writeFileSync(stubTypes, "exports.Type = new Proxy({}, { get: () => (...args) => ({ args }) });\n");
@@ -51,6 +48,7 @@ const jiti = createJiti(import.meta.url, {
 		"@earendil-works/pi-ai": stubAi,
 		"@earendil-works/pi-tui": stubTui,
 		typebox: stubTypes,
+		"./md-log": stubMdLog,
 	},
 });
 
