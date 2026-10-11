@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 // ponytail: check the report contract without a Markdown parser dependency
@@ -64,7 +64,7 @@ export function checkReport(text) {
   return { errors, lessons: lessons.length, nodes: nodes.length };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   if (process.argv.length !== 3) {
     console.error("Use: node check-report.mjs research.md");
     process.exitCode = 2;

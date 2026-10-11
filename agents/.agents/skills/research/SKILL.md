@@ -68,7 +68,7 @@ An edge means the next lesson uses the earlier lesson's result.
 Do not treat an assumption as an established foundation.
 
 Write the first map and node table in `research.md`.
-The table records each node's question, dependencies, child name, and state.
+The table records each node's question, dependencies, acceptance condition, child name, and state.
 Use these states: `planned`, `running`, `done`, and `gap`.
 The first map is provisional.
 If research finds a missing question, add a node and update the map.
