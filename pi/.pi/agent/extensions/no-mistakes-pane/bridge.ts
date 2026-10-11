@@ -253,7 +253,7 @@ export class SessionEventTranslator {
 						JSON.stringify({
 							type: "tool_execution_end",
 							toolName: OUTPUT_TOOL,
-							isError: false,
+							isError: msg.isError === true,
 							toolCallId: msg.toolCallId,
 							result: { terminate: true, details: { output } },
 						}),
@@ -277,7 +277,7 @@ export class SessionEventTranslator {
 			lines.push(JSON.stringify({ type: "turn_end", message: this.lastAssistant }));
 		}
 		lines.push(JSON.stringify({ type: "agent_end", messages }));
-		lines.push(JSON.stringify({ type: "agent_settled", aborted: false }));
+		lines.push(JSON.stringify({ type: "agent_settled", aborted: (this.lastAssistant as any)?.stopReason === "aborted" }));
 		return lines;
 	}
 }

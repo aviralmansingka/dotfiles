@@ -292,6 +292,22 @@ const {
 	assert.deepEqual(finished[1], { type: "agent_settled", aborted: false });
 }
 
+{
+	const translator = new SessionEventTranslator();
+	translator.feedRecord({ type: "message", message: {
+		role: "assistant", stopReason: "aborted",
+		content: [{ type: "toolCall", id: "error-tool", name: "no_mistakes_output" }],
+	} });
+	const events = translator.feedRecord({ type: "message", message: {
+		role: "toolResult", toolCallId: "error-tool", isError: true,
+		content: [{ type: "text", text: '{"findings":[]}' }],
+	} }).map(JSON.parse);
+	assert.equal(events.find((event) => event.type === "tool_execution_end").isError, true);
+	assert.deepEqual(JSON.parse(translator.finish().at(-1)), { type: "agent_settled", aborted: true });
+	translator.feedRecord({ type: "message", message: { role: "assistant", stopReason: "stop", content: [] } });
+	assert.equal(JSON.parse(translator.finish().at(-1)).aborted, false, "only the LAST assistant determines abort");
+}
+
 // ---------------------------------------------------------------------------
 // Pane report: label and CI transitions fire once per change, release on
 // run end, and the merge phase (checks already passed) is never CI-red.
@@ -693,10 +709,12 @@ if (command === "agent" && sub === "prompt") {
 		records.push({ type: "message", message: { role: "system", content: "", sections: {} } });
 	}
 	records.push({ type: "message", message: { role: "user", content: [{ type: "text", text: prompt }] } });
+	const assistant = ${JSON.stringify(STUB_ASSISTANT)};
+	if (process.env.HERDR_STUB_ABORTED) assistant.stopReason = "aborted";
 	for (let i = 0; i < Number(process.env.HERDR_STUB_BACKLOG ?? 0); i++) {
 		records.push({ type: "message", message: { role: "assistant", content: "x".repeat(8192), index: i } });
 	}
-	records.push({ type: "message", message: ${JSON.stringify(STUB_ASSISTANT)} });
+	records.push({ type: "message", message: assistant });
 	appendFileSync(file, records.map((record) => JSON.stringify(record) + "\\n").join(""));
 	log("agent prompt", pane);
 	process.exit(0);
@@ -910,6 +928,7 @@ await (async () => {
 })();
 
 for (const [knob, value] of [
+	["HERDR_STUB_ABORTED", "1"],
 	["HERDR_STUB_PROMPT_FAIL", "1"],
 	["HERDR_STUB_BACKLOG", "1300"], // > 10 MiB: multiple capped reads after settle
 ]) {
@@ -931,7 +950,7 @@ for (const [knob, value] of [
 			assert.ok(!events.some((event) => event.type === "agent_settled"));
 		} else {
 			assert.equal(result.code, 0, err);
-			assert.deepEqual(events.at(-1), { type: "agent_settled", aborted: false });
+			assert.deepEqual(events.at(-1), { type: "agent_settled", aborted: knob === "HERDR_STUB_ABORTED" });
 			if (knob === "HERDR_STUB_BACKLOG") {
 				const indices = events.filter((event) => event.type === "message_end" && event.message.index !== undefined)
 					.map((event) => event.message.index);
