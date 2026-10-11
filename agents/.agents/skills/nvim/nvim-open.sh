@@ -266,35 +266,53 @@ sys.exit(1)
 	exit 0
 fi
 
-# Detect existing editor in the current tab
-EDITOR_PANE_ID=""
-EDITOR_FOUND=false
-SCAN_ERROR=false
+# ── Per-tab launch lock ──────────────────────────────────────
+# Two invocations of this script in one tab (an agent tool call and a
+# skill call, or two racing callers) can both scan "no editor" and both
+# split — the provenance log recorded two splits 27 ms apart. Serialize
+# the detect→split section below on a per-tab lockfile. flock is
+# advisory and best-effort: when it is missing the script behaves as
+# before. The lock releases when fd 9 closes — every path below exits.
+LAUNCH_LOCK="/tmp/pi-nvim-launch-${TAB_ID//:/_}.lock"
+if command -v flock >/dev/null 2>&1; then
+	if exec 9>>"$LAUNCH_LOCK" 2>/dev/null; then
+		flock -w 15 9 || true
+	fi
+fi
 
-PANES_JSON=$(herdr_json pane list)
-if [[ -z "$PANES_JSON" ]]; then
-	SCAN_ERROR=true
-else
-	# Get panes in this tab
-	TAB_PANES=$(echo "$PANES_JSON" | python3 -c "
+# Detect existing editor in the current tab (sets EDITOR_PANE_ID,
+# EDITOR_FOUND, SCAN_ERROR). A function so the pre-split settle re-check
+# below can run the exact same scan.
+scan_tab_for_editor() {
+	EDITOR_PANE_ID=""
+	EDITOR_FOUND=false
+	SCAN_ERROR=false
+
+	local PANES_JSON TAB_PANES PROC_JSON IS_EDITOR pane_id
+	PANES_JSON=$(herdr_json pane list)
+	if [[ -z "$PANES_JSON" ]]; then
+		SCAN_ERROR=true
+	else
+		# Get panes in this tab
+		TAB_PANES=$(echo "$PANES_JSON" | python3 -c "
 import sys,json
 data=json.load(sys.stdin)
 panes=[p['pane_id'] for p in data.get('result',{}).get('panes',[]) if p.get('tab_id')=='$TAB_ID']
 print('\n'.join(panes))
 " 2>/dev/null || echo "")
 
-	if [[ -z "$TAB_PANES" ]]; then
-		SCAN_ERROR=true
-	else
-		while IFS= read -r pane_id; do
-			[[ -z "$pane_id" ]] && continue
-			PROC_JSON=$(herdr_json pane process-info --pane "$pane_id")
-			if [[ -z "$PROC_JSON" ]]; then
-				SCAN_ERROR=true
-				continue
-			fi
-			# Check if foreground process is vim or nvim
-			IS_EDITOR=$(echo "$PROC_JSON" | python3 -c "
+		if [[ -z "$TAB_PANES" ]]; then
+			SCAN_ERROR=true
+		else
+			while IFS= read -r pane_id; do
+				[[ -z "$pane_id" ]] && continue
+				PROC_JSON=$(herdr_json pane process-info --pane "$pane_id")
+				if [[ -z "$PROC_JSON" ]]; then
+					SCAN_ERROR=true
+					continue
+				fi
+				# Check if foreground process is vim or nvim
+				IS_EDITOR=$(echo "$PROC_JSON" | python3 -c "
 import sys,json
 data=json.load(sys.stdin)
 procs=data.get('result',{}).get('process_info',{}).get('foreground_processes',[])
@@ -306,26 +324,29 @@ for p in procs:
         break
 " 2>/dev/null || echo "")
 
-			if [[ "$IS_EDITOR" == "yes" ]]; then
-				EDITOR_PANE_ID="$pane_id"
-				EDITOR_FOUND=true
-				break
-			fi
-		done <<< "$TAB_PANES"
+				if [[ "$IS_EDITOR" == "yes" ]]; then
+					EDITOR_PANE_ID="$pane_id"
+					EDITOR_FOUND=true
+					break
+				fi
+			done <<< "$TAB_PANES"
+		fi
 	fi
-fi
+}
 
-# If editor exists, send files to it.
-# When a dotfiles config was detected, warn that the existing editor
-# may be running with a different config — the captain can close and
-# relaunch to pick up the worktree config.
-if [[ "$EDITOR_FOUND" == "true" ]]; then
+# Send files to / focus the existing editor pane (EDITOR_PANE_ID), then
+# exit. A function so the settle re-check reuses the exact same routing.
+use_existing_editor() {
+	# When a dotfiles config was detected, warn that the existing editor
+	# may be running with a different config — the captain can close and
+	# relaunch to pick up the worktree config.
 	if [[ -n "$DOTFILES_XDG_CONFIG_HOME" ]]; then
 		echo "Note: dotfiles config detected at $DOTFILES_XDG_CONFIG_HOME but" >&2
 		echo "      existing editor may be using a different config. Close and" >&2
 		echo "      relaunch /nvim to use the worktree config." >&2
 	fi
 	if [[ ${#FILES[@]} -gt 0 ]]; then
+		local escaped file
 		for file in "${FILES[@]}"; do
 			escaped=$(fnameescape "$file")
 			# Escape to exit insert mode, then :e with escaped path, then Enter
@@ -336,6 +357,7 @@ if [[ "$EDITOR_FOUND" == "true" ]]; then
 		echo "Editor already running (pane $EDITOR_PANE_ID)."
 	fi
 	# Focus the editor pane — find direction via neighbor
+	local dir NEIGHBOR
 	for dir in right down left up; do
 		NEIGHBOR=$(herdr_json pane neighbor --pane "$CURRENT_PANE_ID" --direction "$dir" | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',{}).get('neighbor',{}).get('neighbor_pane_id',''))" 2>/dev/null || echo "")
 		if [[ "$NEIGHBOR" == "$EDITOR_PANE_ID" ]]; then
@@ -345,6 +367,11 @@ if [[ "$EDITOR_FOUND" == "true" ]]; then
 	done
 	log_launch existing
 	exit 0
+}
+
+scan_tab_for_editor
+if [[ "$EDITOR_FOUND" == "true" ]]; then
+	use_existing_editor
 fi
 
 # On scan error, don't launch a duplicate — fall through to tmux
@@ -361,6 +388,18 @@ if [[ "$SCAN_ERROR" == "true" ]]; then
 		[[ -n "${_SOCKET_PATH:-}" ]] && echo "Listen socket: $_SOCKET_PATH"
 		log_launch split - "${_SOCKET_PATH:--}"
 		exit 0
+	fi
+fi
+
+# Settle re-check before splitting: a concurrent invocation may have
+# split moments ago and its nvim has not reached the pane's foreground
+# processes yet (the 27 ms incident shape). Wait briefly and re-scan
+# once — a late-appearing editor wins over a duplicate split.
+if [[ "$SCAN_ERROR" != "true" ]]; then
+	sleep 0.3
+	scan_tab_for_editor
+	if [[ "$EDITOR_FOUND" == "true" ]]; then
+		use_existing_editor
 	fi
 fi
 
