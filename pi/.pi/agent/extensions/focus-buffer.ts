@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { detectEditorProcess } from "./nvim-open";
+import { detectEditorProcess, liveSidebarDaemon, nvimServerAlive } from "./nvim-open";
 
 // ────────────────────────────────────────────────────────────────────────────
 // focus-buffer — the learner's scoped node views.
@@ -64,7 +64,7 @@ export function editorSocketPath(pid: number): string | undefined {
 		try {
 			for (const entry of readdirSync(root)) {
 				const socket = join(root, entry, `nvim.${pid}.0`);
-				if (existsSync(socket) && nvimAlive(socket)) return socket;
+				if (existsSync(socket) && nvimServerAlive(socket)) return socket;
 			}
 		} catch {
 			// No Neovim socket directory — fall through to other defaults.
@@ -74,19 +74,6 @@ export function editorSocketPath(pid: number): string | undefined {
 	if (uid === undefined) return undefined;
 	const fallback = `/run/user/${uid}/nvim.${pid}.0`;
 	return existsSync(fallback) ? fallback : undefined;
-}
-
-/** True when the socket answers a trivial remote-expr — i.e. a live nvim. */
-function nvimAlive(socket: string): boolean {
-	try {
-		execFileSync("nvim", ["--server", socket, "--remote-expr", "1"], {
-			timeout: RPC_TIMEOUT_MS,
-			stdio: ["pipe", "pipe", "ignore"],
-		});
-		return true;
-	} catch {
-		return false;
-	}
 }
 
 /** Sanitize a session key into a buffer-name-safe fragment. */
@@ -129,13 +116,18 @@ function resolveEditor(): EditorTarget | { error: string } {
 	if (process.env.PI_DISABLE_FOCUS_BUFFER === "1") {
 		return { error: "focus buffer disabled (PI_DISABLE_FOCUS_BUFFER=1)" };
 	}
+	// A live herdr-nvim sidebar daemon is this tab's editor — drive the
+	// pi-focus:// buffers through its socket so they land where the user
+	// is looking. Falls through to the pane editor when there is no daemon.
+	const daemon = liveSidebarDaemon();
+	if (daemon) return { socket: daemon.socket };
 	const editor = detectEditorProcess();
 	if (!editor) return { error: "no editor pane found" };
 	if (editor.name !== "nvim") {
 		return { error: "editor pane is not nvim (no RPC socket)" };
 	}
 	const socket = editorSocketPath(editor.pid);
-	if (!socket || !nvimAlive(socket)) {
+	if (!socket || !nvimServerAlive(socket)) {
 		return { error: "no live nvim RPC socket for the editor pane" };
 	}
 	return { socket };

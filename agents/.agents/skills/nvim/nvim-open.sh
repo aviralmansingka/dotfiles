@@ -133,6 +133,71 @@ if [[ -z "$TAB_ID" || -z "$CURRENT_PANE_ID" ]]; then
 	exit 1
 fi
 
+# ── herdr-nvim sidebar daemon: attach instead of a duplicate split ──
+# ChmaraX/herdr-nvim keeps one headless nvim daemon per tab, registered
+# as <tab key>.sock (tab id with ':'→'_') under $XDG_RUNTIME_DIR/herdr-nvim,
+# else the temp dir. A live daemon means the sidebar owns this tab's
+# editing: open files in it and make sure the sidebar is shown.
+DAEMON_TAB_KEY="${TAB_ID//:/_}"
+DAEMON_SOCKET=""
+for _dir in "${XDG_RUNTIME_DIR:+$XDG_RUNTIME_DIR/herdr-nvim}" "${TMPDIR:-/tmp}/herdr-nvim"; do
+	if [[ -S "$_dir/$DAEMON_TAB_KEY.sock" ]]; then
+		DAEMON_SOCKET="$_dir/$DAEMON_TAB_KEY.sock"
+		break
+	fi
+done
+unset _dir
+if [[ -n "$DAEMON_SOCKET" && "$EDITOR_CMD" == "nvim" ]] && \
+	nvim --server "$DAEMON_SOCKET" --remote-expr 1 >/dev/null 2>&1; then
+	DAEMON_OK=true
+	for file in "${FILES[@]}"; do
+		# Resolve against CWD — the daemon's own cwd is unrelated.
+		if [[ "$file" != /* ]]; then
+			file="$CWD/$file"
+		fi
+		nvim --server "$DAEMON_SOCKET" --remote "$file" || DAEMON_OK=false
+	done
+	# Find the visible sidebar pane (the one running `bin/herdr-nvim sidebar`).
+	TAB_PANES_LIST=$(herdr_json pane list | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+panes = [p['pane_id'] for p in data.get('result', {}).get('panes', []) if p.get('tab_id') == '$TAB_ID']
+print('\n'.join(panes))
+" 2>/dev/null || echo "")
+	SIDEBAR_VISIBLE=false
+	while IFS= read -r _pane; do
+		[[ -z "$_pane" ]] && continue
+		if herdr_json pane process-info --pane "$_pane" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for p in data.get('result', {}).get('process_info', {}).get('foreground_processes', []):
+    exe = p.get('name', '') or ((p.get('argv') or [''])[0])
+    if exe.endswith('herdr-nvim') and 'sidebar' in (p.get('argv') or []):
+        sys.exit(0)
+sys.exit(1)
+" 2>/dev/null; then
+			SIDEBAR_VISIBLE=true
+			break
+		fi
+	done <<< "$TAB_PANES_LIST"
+	# Toggled-off sidebar: run the plugin's own toggle action (the same one
+	# prefix+t runs) to show the daemon's buffers. It opens in the focused
+	# tab — the tab the user is looking at.
+	if [[ "$SIDEBAR_VISIBLE" != "true" ]]; then
+		herdr_ok plugin action invoke chmarax.herdr-nvim.toggle
+	fi
+	if [[ "$DAEMON_OK" != "true" ]]; then
+		echo "Could not open files in the herdr-nvim sidebar (tab $TAB_ID)." >&2
+		exit 1
+	fi
+	if [[ ${#FILES[@]} -gt 0 ]]; then
+		echo "Opened ${#FILES[@]} file(s) in the herdr-nvim sidebar (tab $TAB_ID)."
+	else
+		echo "herdr-nvim sidebar (tab $TAB_ID) is this tab's editor."
+	fi
+	exit 0
+fi
+
 # Detect existing editor in the current tab
 EDITOR_PANE_ID=""
 EDITOR_FOUND=false

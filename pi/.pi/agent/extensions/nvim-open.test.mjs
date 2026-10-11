@@ -37,7 +37,8 @@ const jiti = createJiti(import.meta.url, { alias: {
 
 try {
 	let tool;
-	jiti("./nvim-open.ts").default({ registerTool: (definition) => { tool = definition; }, registerCommand() {} });
+	const nvimOpen = jiti("./nvim-open.ts");
+	nvimOpen.default({ registerTool: (definition) => { tool = definition; }, registerCommand() {} });
 	assert.equal(tool.name, "nvim_open");
 	const theme = { fg: (_token, text) => text, bold: (text) => text };
 	const tagged = { fg: (token, text) => `<${token}>${text}</${token}>`, bold: (text) => `<b>${text}</b>` };
@@ -66,10 +67,10 @@ try {
 	assert.deepEqual(wrapped.slice(1, -1), Array(3).fill(" │  abcdefghijabcdefghij"));
 	assert.ok(wrapped.every((line) => line.length <= 24));
 
-	for (const message of ["Sent 1 file(s) to existing editor (pane w20:p4A).", "Focused existing editor pane (w20:p4A).", "Launched vim in a tmux split at /repo."]) {
+	for (const message of ["Sent 1 file(s) to existing editor (pane w20:p4A).", "Focused existing editor pane (w20:p4A).", "Launched vim in a tmux split at /repo.", "Opened 2 file(s) in the herdr-nvim sidebar (tab w6V:t1).", "Focused the herdr-nvim sidebar (tab w6V:t1)."]) {
 		assert.match(tool.renderResult({ content: [{ type: "text", text: message }] }, options, theme, context).render(100).at(-1), /✓ opened in editor pane$/);
 	}
-	for (const [message, isError] of [["Could not focus existing editor pane (w20:p4A).", false], ["Editor unavailable", true]]) {
+	for (const [message, isError] of [["Could not focus existing editor pane (w20:p4A).", false], ["Could not open files in the herdr-nvim sidebar (tab w6V:t1).", false], ["Editor unavailable", true]]) {
 		const failed = { content: [{ type: "text", text: `${message}\nHidden second line` }] };
 		const errorView = tool.renderResult(failed, options, tagged, { ...context, isError }).render(500).join("\n");
 		assert.ok(errorView.includes(`<error>✗ ${message}</error>`));
@@ -79,6 +80,21 @@ try {
 	for (const width of [1, 4, 12]) {
 		assert.ok(tool.renderResult(result, options, theme, fileContext).render(width).every((line) => line.length <= width));
 	}
+
+	// ── herdr-nvim daemon socket resolution (pure) ─────────────────────
+	const runtimeDir = join(tempRoot, "xdg-run");
+	process.env.XDG_RUNTIME_DIR = runtimeDir;
+	assert.deepEqual(nvimOpen.sidebarSocketCandidates("w6V:t1"), [
+		join(runtimeDir, "herdr-nvim", "w6V_t1.sock"),
+		join(tmpdir(), "herdr-nvim", "w6V_t1.sock"),
+	]);
+	delete process.env.XDG_RUNTIME_DIR;
+	assert.deepEqual(nvimOpen.sidebarSocketCandidates("w26:t2"), [
+		join(tmpdir(), "herdr-nvim", "w26_t2.sock"),
+	]);
+	// No socket registered for this tab → null (registry dir may exist
+	// with other tabs' daemons; only the exact tab key matches).
+	assert.equal(nvimOpen.sidebarDaemonSocket("w99:t9"), null);
 } finally {
 	rmSync(tempRoot, { recursive: true, force: true });
 }

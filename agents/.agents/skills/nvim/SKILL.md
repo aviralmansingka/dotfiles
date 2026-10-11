@@ -26,6 +26,10 @@ Run the bundled shell script from this skill directory:
 The script handles:
 - **Detecting an existing editor** in the current Herdr tab via `herdr
   pane list` + `herdr pane process-info`, looking for `vim` or `nvim`.
+- **Attaching to a herdr-nvim sidebar daemon** for the current tab: when one
+  is live, files open in the sidebar's persistent nvim (its registry socket,
+  `<tab key>.sock` under `$XDG_RUNTIME_DIR/herdr-nvim` or the temp dir) and
+  no duplicate split is launched.
 - **Sending files to an existing editor** via `herdr pane send-text`
   with `:e <file>` ex commands (paths escaped with fnameescape
   semantics). The editor pane is focused using `herdr pane neighbor` +

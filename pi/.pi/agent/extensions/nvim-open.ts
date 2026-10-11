@@ -2,6 +2,7 @@ import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, isAbsolute } from "node:path";
 
@@ -64,6 +65,135 @@ function getProcessInfo(paneId: string): ProcessInfo | null {
 		| { result?: { process_info?: ProcessInfo } } | null;
 	return res?.result?.process_info ?? null;
 }
+// ---------------------------------------------------------------------------
+// herdr-nvim sidebar daemon (ChmaraX/herdr-nvim)
+// ---------------------------------------------------------------------------
+// The plugin keeps one persistent headless nvim per Herdr tab. A daemon
+// registers itself as a listen socket in its runtime dir (plugin
+// src/daemon/registry.rs): <tab key>.sock, where the tab key is the tab id
+// with every ':' turned into '_'. When this tab has a live daemon, the
+// sidebar IS the tab's editor: open files in it instead of launching a
+// duplicate split.
+
+/** herdr-nvim tab key: the tab id with every ':' replaced by '_'. */
+function sidebarTabKey(tabId: string): string {
+	return tabId.replace(/:/g, "_");
+}
+
+/** Candidate daemon sockets for a tab, mirroring the plugin's registry
+ *  lookup order: $XDG_RUNTIME_DIR/herdr-nvim, then the platform temp dir. */
+export function sidebarSocketCandidates(tabId: string): string[] {
+	const name = `${sidebarTabKey(tabId)}.sock`;
+	const dirs: string[] = [];
+	if (process.env.XDG_RUNTIME_DIR) {
+		dirs.push(join(process.env.XDG_RUNTIME_DIR, "herdr-nvim"));
+	}
+	dirs.push(join(tmpdir(), "herdr-nvim"));
+	return [...new Set(dirs.map((dir) => join(dir, name)))];
+}
+
+/** The tab's registered daemon socket, or null when the plugin is absent
+ *  or the tab never started a daemon. The socket file can outlive a
+ *  crashed daemon — liveness-check with `nvimServerAlive` before use. */
+export function sidebarDaemonSocket(tabId: string): string | null {
+	for (const socket of sidebarSocketCandidates(tabId)) {
+		if (existsSync(socket)) return socket;
+	}
+	return null;
+}
+
+/** True when an nvim RPC server answers on `socket`. */
+export function nvimServerAlive(socket: string): boolean {
+	try {
+		execFileSync("nvim", ["--server", socket, "--remote-expr", "1"], {
+			timeout: HERDR_TIMEOUT_MS,
+			stdio: ["pipe", "pipe", "ignore"],
+		});
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/** Live herdr-nvim daemon for a tab — pass the current pane when the
+ *  caller already has it (openEditor), else it is looked up. */
+export function liveSidebarDaemon(
+	current?: PaneInfo,
+): { socket: string; tabId: string } | null {
+	const pane = current ?? getCurrentPane();
+	if (!pane) return null;
+	const socket = sidebarDaemonSocket(pane.tab_id);
+	if (!socket || !nvimServerAlive(socket)) return null;
+	return { socket, tabId: pane.tab_id };
+}
+
+/** Find the tab's visible sidebar pane — the pane running
+ *  `bin/herdr-nvim sidebar`, the remote-ui window onto the headless
+ *  daemon. Returns its pane id, or null when the sidebar is toggled off. */
+function findSidebarPane(currentTabId: string): string | null {
+	const panes = listPanes();
+	if (!panes) return null;
+	for (const pane of panes) {
+		if (pane.tab_id !== currentTabId) continue;
+		const procs = getProcessInfo(pane.pane_id)?.foreground_processes ?? [];
+		for (const proc of procs) {
+			const exe = proc.name || proc.argv?.[0] || "";
+			if (/herdr-nvim(\.exe)?$/.test(exe) && (proc.argv ?? []).includes("sidebar")) {
+				return pane.pane_id;
+			}
+		}
+	}
+	return null;
+}
+
+/** Open files in the daemon's nvim over its RPC socket (`--remote`, one
+ *  client per file — the same mechanism the plugin's own picker uses). */
+function openInDaemon(socket: string, files: string[]): boolean {
+	let ok = true;
+	for (const file of files) {
+		try {
+			execFileSync("nvim", ["--server", socket, "--remote", file], {
+				timeout: HERDR_TIMEOUT_MS,
+				stdio: ["pipe", "pipe", "ignore"],
+			});
+		} catch {
+			ok = false;
+		}
+	}
+	return ok;
+}
+
+/** Attach to the tab's herdr-nvim sidebar: open the files in its daemon,
+ *  then show the sidebar — focus it when visible, open it with the
+ *  plugin's own toggle action (what `prefix+t` runs) when toggled off.
+ *  The toggle applies to the focused tab, which is where the user is
+ *  looking when they ask for files. */
+function attachToSidebarDaemon(
+	daemon: { socket: string; tabId: string },
+	current: PaneInfo,
+	files: string[],
+): { message: string; ok: boolean; launched: boolean } {
+	const opened = files.length === 0 || openInDaemon(daemon.socket, files);
+	const sidebarPane = findSidebarPane(daemon.tabId);
+	if (sidebarPane) {
+		focusEditorPane(sidebarPane, current.pane_id);
+	} else {
+		herdrOk(["plugin", "action", "invoke", "chmarax.herdr-nvim.toggle"]);
+	}
+	const where = `herdr-nvim sidebar (tab ${daemon.tabId})`;
+	if (!opened) {
+		return { message: `Could not open files in the ${where}.`, ok: false, launched: false };
+	}
+	if (files.length > 0) {
+		return { message: `Opened ${files.length} file(s) in the ${where}.`, ok: true, launched: false };
+	}
+	return {
+		message: `${sidebarPane ? "Focused" : "Opened"} the ${where}.`,
+		ok: true,
+		launched: false,
+	};
+}
+
 // ---------------------------------------------------------------------------
 // editor detection (tri-state: found | absent | error)
 // ---------------------------------------------------------------------------
@@ -295,6 +425,10 @@ export async function openEditor(
 	// Try Herdr — getCurrentPane returns null if herdr is unavailable
 	const current = getCurrentPane();
 	if (current) {
+		// A live herdr-nvim sidebar daemon owns editing for this tab:
+		// attach to it instead of detecting or launching a split editor.
+		const daemon = liveSidebarDaemon(current);
+		if (daemon) return attachToSidebarDaemon(daemon, current, finalFiles);
 		const detection = findEditorPane(current.tab_id);
 		if (detection.status === "found") {
 			const editor = detection.editor;
@@ -349,11 +483,12 @@ const nvimOpenTool = defineTool({
 	name: "nvim_open",
 	label: "Open Editor",
 	description:
-		"Open vim as a vertical split in the current Herdr tab, or send files to an existing editor instance in the current tab. If an editor is already running in the current tab, files are sent to the existing instance instead of launching a new one. With no files, opens vim at the agent's cwd.",
+		"Open vim in the current Herdr tab: attach to the tab's herdr-nvim sidebar daemon when one is live, else send files to an existing editor pane in the tab, else launch a vertical split. With no files, opens or focuses the editor at the agent's cwd.",
 	promptSnippet: "Open vim in the current Herdr tab as a vertical split",
 	promptGuidelines: [
 		"Use nvim_open when the user wants to open an editor (vim) for editing, either at the current working directory or for specific files.",
 		"If an editor is already running in the current Herdr tab, this tool sends files to the existing instance rather than launching a duplicate.",
+		"When the tab has a live herdr-nvim sidebar daemon, the tool attaches to it: files open in the sidebar and no second editor is launched.",
 		"With no files provided, it opens vim at the agent's cwd. With file paths, it opens those specific files.",
 		"The split is vertical (to the right of the agent pane) and focus moves to the editor pane so the captain can see it.",
 	],
