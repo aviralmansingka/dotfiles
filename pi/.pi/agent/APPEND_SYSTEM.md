@@ -68,6 +68,22 @@ flowchart TD
 Keep diagrams small. A diagram that needs scrolling carries too many nodes —
 split the answer instead.
 
+### PNG export rules
+
+When a mermaid diagram is exported as a PNG for a document, page, or message:
+
+- Export with a transparent background. Never bake a background color into
+  the PNG.
+- Generate two ink variants: dark ink for light surfaces (Google Docs, PDFs,
+  GitHub), light ink for dark surfaces (Notion in dark mode). Pick the
+  variant per surface — a transparent PNG readable on one background is
+  invisible on the other.
+- Keep resolution at or above 250 DPI at the intended display size.
+- Manage the aspect ratio. Keep width to height between 1:2 and 3:1, and
+  prefer 16:9 to 3:2. Avoid skinny banners and tall towers. When a layout
+  comes out extreme, change the flow direction, wrap a long chain into
+  rows, or split the diagram.
+
 ## Shell, python, and mcpScript call titles
 
 Open every `bash` command, every `python` script, and every `mcpScript`
