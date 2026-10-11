@@ -11,7 +11,7 @@
  *      `tuicr review comments` and steer new comments back into the session
  *      (`pi.sendMessage(..., { triggerTurn: true, deliverAs: "steer" })`).
  *
- * Review targets are honored exactly (see resolveReviewTarget): a request
+ * Review targets are honored exactly (see resolveTargetSession): a request
  * never silently attaches to an unrelated active session.
  *
  * Kept free of pi imports so it can be unit-tested with plain `node`.

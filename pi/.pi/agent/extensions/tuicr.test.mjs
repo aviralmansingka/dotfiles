@@ -681,15 +681,43 @@ if (sub === "list") {
 `);
 chmodSync(join(binDir, "tuicr"), 0o755);
 
-// fake git: rev-parse --show-toplevel echoes the -C directory
+// fake git: rev-parse --show-toplevel echoes the -C directory;
+// branch --show-current serves the staged branch (empty = detached)
 writeFileSync(join(binDir, "git"), `#!/bin/sh
 root=""
+cmd=""
 while [ "$#" -gt 0 ]; do
-  if [ "$1" = "-C" ]; then root="$2"; shift 2; else shift; fi
+  case "$1" in
+    -C) root="$2"; shift 2 ;;
+    *) cmd="$cmd $1"; shift ;;
+  esac
 done
-echo "$root"
+case "$cmd" in
+  *" rev-parse --show-toplevel"*) echo "$root" ;;
+  *" branch --show-current"*)
+    if [ -f "$TUICR_FAKE_DIR/branch" ]; then cat "$TUICR_FAKE_DIR/branch"; else echo ""; fi
+    ;;
+  *) echo "$root" ;;
+esac
 `);
 chmodSync(join(binDir, "git"), 0o755);
+
+// fake gh: pr list serves the staged open-PR JSON, logs every call
+writeFileSync(join(binDir, "gh"), `#!/usr/bin/env node
+const fs = require("node:fs");
+const path = require("node:path");
+const dir = process.env.TUICR_FAKE_DIR;
+const args = process.argv.slice(2);
+fs.appendFileSync(path.join(dir, "gh-calls.log"), JSON.stringify(args) + "\\n");
+if (args[0] === "pr" && args[1] === "list") {
+	const file = path.join(dir, "open-prs.json");
+	process.stdout.write(fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "[]");
+} else {
+	process.stderr.write("fake gh: unsupported " + args.join(" ") + "\\n");
+	process.exit(1);
+}
+`);
+chmodSync(join(binDir, "gh"), 0o755);
 
 // fake wrapper script: logs its argv and marks the launch (never a real pane)
 writeFileSync(join(skillDir, "tuicr-wrapper-herdr.sh"), `#!/bin/sh
@@ -755,8 +783,8 @@ try {
 		return fn();
 	};
 
-	function stage({ listInitial = [], listAfter = listInitial, comments = [] } = {}) {
-		for (const name of ["calls.log", "wrapper.log", "launched", "last-add.json"]) {
+	function stage({ listInitial = [], listAfter = listInitial, comments = [], branch = "", openPrs = [] } = {}) {
+		for (const name of ["calls.log", "wrapper.log", "launched", "last-add.json", "gh-calls.log"]) {
 			try {
 				unlinkSync(join(stateDir, name));
 			} catch {}
@@ -764,7 +792,16 @@ try {
 		writeFileSync(join(stateDir, "list-initial.json"), JSON.stringify(listInitial));
 		writeFileSync(join(stateDir, "list-after.json"), JSON.stringify(listAfter));
 		writeFileSync(join(stateDir, "comments.json"), JSON.stringify(comments));
+		writeFileSync(join(stateDir, "branch"), branch);
+		writeFileSync(join(stateDir, "open-prs.json"), JSON.stringify(openPrs));
 	}
+	const ghCalls = () => {
+		try {
+			return readFileSync(join(stateDir, "gh-calls.log"), "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+		} catch {
+			return [];
+		}
+	};
 	const tuicrCalls = () => {
 		try {
 			return readFileSync(join(stateDir, "calls.log"), "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
@@ -813,7 +850,7 @@ try {
 		isSubagentRunning: () => isas.running,
 		executeSubagent: async (params) => {
 			isas.spawned.push(params);
-			return { content: [{ type: "text", text: "watching the review" }], details: { name: "tuicr-review" } };
+			return { content: [{ type: "text", text: "watching the review" }], details: { name: params.name } };
 		},
 	};
 
@@ -826,93 +863,149 @@ try {
 	assert.ok(tuicrTool && reviewTool && replyTool, "registers the three tuicr tools");
 	assert.ok(harness.commands.has("tuicr"), "registers the /tuicr command");
 
-	// ── T2: explicit target resolution through both tools (#289) ──
+	// ── T2 through tuicr_review: the subagent owns the pane (#289) ──
 
-	// pr:287 while PR-288's session is the active one → refusal, never attach
+	// THE INCIDENT: pr:287 while PR-288's session is the only active one →
+	// the parent opens NO pane and attaches to NOTHING; the reviewer subagent
+	// gets a launch task for PR 287 and opens the pane in its own tab.
 	stage({ listInitial: [s288] });
 	const wrongPr = await reviewTool.execute("t-wrong-pr", { repo: repoDir, scope: "pr", pr: 287 }, undefined, undefined, harness.ctx);
-	assert.equal(wrongPr.isError, true);
-	assert.match(wrongPr.content[0].text, /PR 287/);
-	assert.match(wrongPr.content[0].text, /pr\/288/);
-	assert.match(wrongPr.content[0].text, /never attaches to another session/);
-	assert.equal(isas.spawned.length, 0, "no reviewer spawns for a wrong-session request");
-	assert.deepEqual(wrapperCalls(), [], "no wrapper launches for a wrong-session request");
-	assert.equal(keepOpenCount(), 0);
-	const wrongWatch = await tuicrTool.execute("t-wrong-watch", { repo: repoDir, scope: "pr", pr: 287 }, undefined, undefined, harness.ctx);
-	assert.equal(wrongWatch.isError, true);
-	assert.match(wrongWatch.content[0].text, /PR 287/);
+	assert.equal(wrongPr.isError, undefined);
+	assert.deepEqual(wrapperCalls(), [], "the parent never launches a pane in the review flow");
+	assert.equal(isas.spawned.length, 1);
+	assert.equal(isas.spawned[0].name, "tuicr-review-pr-287");
+	assert.equal(isas.spawned[0].cwd, repoDir);
+	assert.match(isas.spawned[0].task, /PR 287 in /);
+	assert.match(isas.spawned[0].task, /Open the review FIRST with the tuicr tool/);
+	assert.match(isas.spawned[0].task, /YOUR OWN tab/);
+	assert.match(isas.spawned[0].task, /Do not pass attachOnly/);
+	assert.doesNotMatch(isas.spawned[0].task, /PR 288/);
+	assert.equal(wrongPr.details.targetKey, "pr:287");
+	assert.equal(wrongPr.details.reviewer, "tuicr-review-pr-287");
+	assert.equal(wrongPr.details.slug, null, "a launch task carries no session slug yet");
+	assert.match(wrongPr.content[0].text, /Spawned the "tuicr-review-pr-287" subagent for PR 287/);
+	assert.match(wrongPr.content[0].text, /opens the tuicr pane inside its own tab/);
+	assert.equal(keepOpenCount(), 0, "the review flow leaves the parent watcher-free");
 
 	// pr:287 with both PR sessions active → attaches to the RIGHT one
 	stage({ listInitial: [s287, s288] });
 	const rightPr = await reviewTool.execute("t-right-pr", { repo: repoDir, scope: "pr", pr: 287 }, undefined, undefined, harness.ctx);
 	assert.equal(rightPr.isError, undefined);
 	assert.equal(rightPr.details.slug, "gh:owner/repo/pr/287");
-	assert.equal(rightPr.details.attached, true);
-	assert.equal(isas.spawned.length, 1);
-	assert.equal(isas.spawned[0].agent, "tuicr-review");
-	assert.equal(isas.spawned[0].cwd, repoDir);
-	assert.match(isas.spawned[0].task, /active tuicr session gh:owner\/repo\/pr\/287/);
+	assert.equal(rightPr.details.targetKey, "pr:287");
+	assert.equal(isas.spawned.length, 2);
+	assert.equal(isas.spawned[1].name, "tuicr-review-pr-287");
+	assert.match(isas.spawned[1].task, /active tuicr session gh:owner\/repo\/pr\/287 \(PR 287\)/);
+	assert.match(isas.spawned[1].task, /sessionSlug "gh:owner\/repo\/pr\/287"/);
+	assert.match(isas.spawned[1].task, /attachOnly true/);
 	assert.deepEqual(wrapperCalls(), [], "attach never launches a wrapper");
 
-	// duplicate-reviewer refusal is per target repo, and liveness unblocks it
+	// duplicate-reviewer refusal is per TARGET; a different target runs concurrently
 	isas.running = true;
 	const duplicate = await reviewTool.execute("t-dup", { repo: repoDir, scope: "pr", pr: 287 }, undefined, undefined, harness.ctx);
 	assert.equal(duplicate.isError, true);
-	assert.match(duplicate.content[0].text, /already handling the review/);
-	assert.equal(isas.spawned.length, 1, "a duplicate reviewer never spawns");
+	assert.match(duplicate.content[0].text, /already handling the review of PR 287/);
+	assert.match(duplicate.content[0].text, /concurrently/);
+	assert.equal(isas.spawned.length, 2, "a duplicate reviewer never spawns");
+	const concurrent = await reviewTool.execute("t-concurrent", { repo: repoDir, scope: "pr", pr: 288 }, undefined, undefined, harness.ctx);
+	assert.equal(concurrent.isError, undefined, "a different target runs concurrently (#289)");
+	assert.equal(isas.spawned.length, 3);
+	assert.equal(isas.spawned[2].name, "tuicr-review-pr-288");
 	isas.running = false;
 	const resumed = await reviewTool.execute("t-resume", { repo: repoDir, scope: "pr", pr: 287 }, undefined, undefined, harness.ctx);
 	assert.equal(resumed.isError, undefined);
-	assert.equal(isas.spawned.length, 2, "a finished reviewer no longer blocks the next review");
+	assert.equal(isas.spawned.length, 4, "a finished reviewer no longer blocks the same target");
 
-	// revset targets: match by slug, refuse on a named-range miss
-	stage({ listInitial: [revsetSession] });
-	const revsetOk = await reviewTool.execute("t-revset", { repo: repoDir, scope: "revset", revset: "main..@" }, undefined, undefined, harness.ctx);
-	assert.equal(revsetOk.isError, undefined);
-	assert.equal(revsetOk.details.slug, "rev@x/commits/main..@");
-	const revsetMiss = await reviewTool.execute("t-revset-miss", { repo: repoDir, scope: "revset", revset: "other..range" }, undefined, undefined, harness.ctx);
-	assert.equal(revsetMiss.isError, true);
-	assert.match(revsetMiss.content[0].text, /commit range other\.\.range/);
+	// explicit revset always launches — even with an active session present
+	stage({ listInitial: [s288] });
+	const revsetLaunch = await reviewTool.execute("t-revset", { repo: repoDir, scope: "revset", revset: "main..@-" }, undefined, undefined, harness.ctx);
+	assert.equal(revsetLaunch.isError, undefined);
+	assert.equal(revsetLaunch.details.slug, null);
+	assert.equal(revsetLaunch.details.targetKey, "rev:main..@-");
+	assert.equal(isas.spawned[4].name, "tuicr-review-rev-main");
+	assert.match(isas.spawned[4].task, /commit range main\.\.@-/);
+	assert.deepEqual(wrapperCalls(), [], "the review flow leaves wrapper launches to the subagent");
 
 	// invalid scope fails fast — even with an active session to attach to
 	stage({ listInitial: [s288] });
 	const badScope = await reviewTool.execute("t-bad-scope", { repo: repoDir, scope: "pr" }, undefined, undefined, harness.ctx);
 	assert.equal(badScope.isError, true);
 	assert.match(badScope.content[0].text, /pr is required/);
-	assert.equal(isas.spawned.length, 3, "an invalid scope spawns no reviewer");
+	assert.equal(isas.spawned.length, 5, "an invalid scope spawns no reviewer");
 
-	// explicit sessionSlug outranks a disagreeing pr scope
-	const slugWins = await reviewTool.execute("t-slug-wins", { repo: repoDir, scope: "pr", pr: 287, sessionSlug: "gh:owner/repo/pr/288" }, undefined, undefined, harness.ctx);
-	assert.equal(slugWins.isError, undefined);
-	assert.equal(slugWins.details.slug, "gh:owner/repo/pr/288");
+	// an explicit missing slug errors, and an explicit slug attaches active-or-not
+	stage({ listInitial: [s288] });
+	const slugMissing = await reviewTool.execute("t-slug-missing", { repo: repoDir, sessionSlug: "zz" }, undefined, undefined, harness.ctx);
+	assert.equal(slugMissing.isError, true);
+	assert.match(slugMissing.content[0].text, /No tuicr session named zz/);
+	stage({ listInitial: [{ slug: "s1", active: false }] });
+	const slugAttach = await reviewTool.execute("t-slug-attach", { repo: repoDir, sessionSlug: "s1" }, undefined, undefined, harness.ctx);
+	assert.equal(slugAttach.isError, undefined);
+	assert.equal(slugAttach.details.slug, "s1");
+	assert.equal(slugAttach.details.targetKey, "slug:s1");
+	assert.equal(isas.spawned[5].name, "tuicr-review-slug-s1");
+	assert.match(isas.spawned[5].task, /sessionSlug "s1"/);
 
-	// ── T2: attachOnly contract and the launch flow ──
+	// bare call with several open PRs → error listing them, asking for pr
+	stage({ listInitial: [], branch: "fix/a", openPrs: [
+		{ number: 287, title: "chore: remove historical docs" },
+		{ number: 288, title: "fix(agents): /simple" },
+	] });
+	const severalPrs = await reviewTool.execute("t-several-prs", { repo: repoDir }, undefined, undefined, harness.ctx);
+	assert.equal(severalPrs.isError, true);
+	assert.match(severalPrs.content[0].text, /Several open PRs for branch fix\/a/);
+	assert.match(severalPrs.content[0].text, /#287 chore: remove historical docs/);
+	assert.match(severalPrs.content[0].text, /Pass pr explicitly/);
+	assert.deepEqual(ghCalls().at(-1), ["pr", "list", "--head", "fix/a", "--state", "open", "--json", "number,title"]);
 
-	// attachOnly never opens a pane; failure while nothing is active
-	stage({ listInitial: [] });
-	const attachFail = await tuicrTool.execute("t-attach-fail", { repo: repoDir, attachOnly: true }, undefined, undefined, harness.ctx);
+	// bare call with exactly one open PR matching an active session → attach
+	stage({ listInitial: [s288], branch: "fix/a", openPrs: [{ number: 288, title: "t" }] });
+	const defaultAttach = await reviewTool.execute("t-default-attach", { repo: repoDir }, undefined, undefined, harness.ctx);
+	assert.equal(defaultAttach.isError, undefined);
+	assert.equal(defaultAttach.details.slug, "gh:owner/repo/pr/288");
+	assert.equal(defaultAttach.details.targetKey, "pr:288");
+	assert.equal(isas.spawned.length, 7);
+	assert.equal(isas.spawned[6].name, "tuicr-review-pr-288");
+
+	// ── T2 through the plain tuicr tool: parent launches, resolves by target ──
+
+	// attachOnly never opens a pane; the refusal names the requested target
+	stage({ listInitial: [s288] });
+	const attachFail = await tuicrTool.execute("t-attach-fail", { repo: repoDir, attachOnly: true, scope: "pr", pr: 287 }, undefined, undefined, harness.ctx);
 	assert.equal(attachFail.isError, true);
+	assert.match(attachFail.content[0].text, /No active tuicr session for PR 287/);
 	assert.match(attachFail.content[0].text, /do not launch one/);
 	assert.deepEqual(wrapperCalls(), []);
 
-	// fresh pr review: wrapper spawns detached with the explicit scope, the
-	// session registers, the reviewer spawns against that exact target
-	stage({ listInitial: [], listAfter: [s287] });
-	const launched = await reviewTool.execute("t-launch", { repo: repoDir, scope: "pr", pr: 287 }, undefined, undefined, harness.ctx);
-	assert.equal(launched.isError, undefined);
-	assert.equal(launched.details.slug, "gh:owner/repo/pr/287");
-	assert.equal(launched.details.attached, false);
-	assert.deepEqual(wrapperCalls(), [`${repoDir} -- pr 287`], "wrapper receives the repo and the explicit scope");
-	assert.equal(isas.spawned.length, 5);
-	assert.match(isas.spawned[4].task, /PR 287/);
-	assert.match(isas.spawned[4].task, /sessionSlug "gh:owner\/repo\/pr\/287"/);
-	assert.equal(keepOpenCount(), 0, "the review flow leaves the parent watcher-free");
+	// pr:287 while PR-288 is active: the parent launches a pane for PR 287
+	// and the watcher resolves THAT session by slug suffix — never PR-288's
+	stage({ listInitial: [s288], listAfter: [s288, s287] });
+	const prLaunch = await tuicrTool.execute("t-pr-launch", { repo: repoDir, scope: "pr", pr: 287 }, undefined, undefined, harness.ctx);
+	assert.equal(prLaunch.isError, undefined);
+	assert.deepEqual(wrapperCalls(), [`${repoDir} -- pr 287`], "wrapper receives the repo and the explicit pr target");
+	assert.equal(prLaunch.details.slug, "gh:owner/repo/pr/287", "the PR target resolves its own session, not PR-288's");
+	assert.equal(keepOpenCount(), 1);
+	harness.commands.get("tuicr").handler("stop", harness.ctx);
+	assert.equal(keepOpenCount(), 0);
 
-	// the subagent-side attach: attachOnly resolves the pane the parent owns
+	// bare call with no open PR: a working-tree pane launches even while
+	// PR-288's session is active, and the watcher attaches to the session
+	// that APPEARED after the launch — never to the pre-active one
+	stage({ listInitial: [s288], listAfter: [s288, { slug: "wt-new", active: true }], branch: "main", openPrs: [] });
+	const wtLaunch = await tuicrTool.execute("t-wt-launch", { repo: repoDir }, undefined, undefined, harness.ctx);
+	assert.equal(wtLaunch.isError, undefined);
+	assert.deepEqual(wrapperCalls(), [`${repoDir} -- -w`], "the default with no open PR launches a working-tree pane");
+	assert.equal(wtLaunch.details.slug, "wt-new", "baseline diff owns the NEW session, not the pre-active one");
+	assert.equal(keepOpenCount(), 1);
+	harness.commands.get("tuicr").handler("stop", harness.ctx);
+	assert.equal(keepOpenCount(), 0);
+
+	// the subagent-side attach: attachOnly resolves the pane it owns
+	stage({ listInitial: [s287] });
 	const attachOk = await tuicrTool.execute("t-attach-ok", { repo: repoDir, attachOnly: true, sessionSlug: "gh:owner/repo/pr/287" }, undefined, undefined, harness.ctx);
 	assert.equal(attachOk.isError, undefined);
 	assert.equal(keepOpenCount(), 1, "the watcher holds one keep-open slot");
-	assert.deepEqual(wrapperCalls(), [`${repoDir} -- pr 287`], "attachOnly never adds a wrapper launch");
+	assert.deepEqual(wrapperCalls(), [], "attachOnly never adds a wrapper launch");
 	harness.commands.get("tuicr").handler("stop", harness.ctx);
 	assert.equal(keepOpenCount(), 0, "stopping the watcher releases the slot");
 	const noticesBefore = harness.notifications.length;
@@ -928,7 +1021,7 @@ try {
 	const thirdComment = { id: "u3", author: "user", path: "c.ts", comment_type: "note", content: "third comment" };
 	const watchedSession = { slug: "watched-s1", active: true };
 	stage({ listInitial: [watchedSession], listAfter: [watchedSession], comments: [baselineComment] });
-	const attach = await tuicrTool.execute("t-watch", { repo: repoDir }, undefined, undefined, harness.ctx);
+	const attach = await tuicrTool.execute("t-watch", { repo: repoDir, sessionSlug: "watched-s1" }, undefined, undefined, harness.ctx);
 	assert.equal(attach.isError, undefined);
 	assert.match(attach.content[0].text, /Attached to active tuicr review session watched-s1/);
 	assert.equal(keepOpenCount(), 1);
@@ -1005,7 +1098,7 @@ try {
 	assert.equal(amb.details.slug, null);
 	assert.match(amb.content[0].text, /watcher will pick it up/);
 	await until(
-		() => harness.sent.some((entry) => entry.message.customType === "tuicr_review_comments" && entry.message.details.final && /several tuicr sessions/.test(entry.message.content)),
+		() => harness.sent.some((entry) => entry.message.customType === "tuicr_review_comments" && entry.message.details.final && /several possible tuicr sessions/.test(entry.message.content)),
 		"ambiguity final steer",
 	);
 	assert.equal(keepOpenCount(), 0);
@@ -1024,7 +1117,7 @@ try {
 
 	// repeated tuicr CLI failures stop the watcher with exactly one final steer
 	stage({ listInitial: [watchedSession], listAfter: [watchedSession], comments: [baselineComment] });
-	const flakyAttach = await tuicrTool.execute("t-flaky", { repo: repoDir }, undefined, undefined, harness.ctx);
+	const flakyAttach = await tuicrTool.execute("t-flaky", { repo: repoDir, sessionSlug: "watched-s1" }, undefined, undefined, harness.ctx);
 	assert.equal(flakyAttach.isError, undefined);
 	for (const name of ["list-initial.json", "list-after.json", "comments.json"]) {
 		unlinkSync(join(stateDir, name));
@@ -1060,11 +1153,12 @@ try {
 	assert.match(noWrapper.content[0].text, /wrapper not found/);
 	process.env.TUICR_SKILL_DIR = savedSkillDir;
 
-	// /tuicr watch drives the internal chat-watcher path end to end
-	stage({ listInitial: [watchedSession], listAfter: [watchedSession], comments: [baselineComment] });
+	// /tuicr watch (bare) drives the internal chat-watcher path end to end:
+	// the branch's single open PR resolves to its matching active session
+	stage({ listInitial: [s287], branch: "fix/a", openPrs: [{ number: 287, title: "t" }], comments: [baselineComment] });
 	await harness.commands.get("tuicr").handler("watch", harness.ctx);
 	assert.equal(keepOpenCount(), 1, "/tuicr watch starts the internal watcher");
-	assert.match(harness.notifications.at(-1).message, /Attached to active tuicr review session watched-s1/);
+	assert.match(harness.notifications.at(-1).message, /Attached to active tuicr review session gh:owner\/repo\/pr\/287/);
 	harness.commands.get("tuicr").handler("stop", harness.ctx);
 	assert.equal(keepOpenCount(), 0);
 
@@ -1072,7 +1166,7 @@ try {
 	stage({ listInitial: [s287, s288] });
 	await harness.commands.get("tuicr").handler("open pr 287", harness.ctx);
 	assert.equal(keepOpenCount(), 0, "/tuicr open leaves the parent watcher-free");
-	assert.match(harness.notifications.at(-1).message, /gh:owner\/repo\/pr\/287/);
+	assert.match(harness.notifications.at(-1).message, /Spawned the "tuicr-review-pr-287" subagent for PR 287/);
 
 	// transcript renderer for comment batches renders without a real TUI
 	const batchRenderer = harness.renderers.get("tuicr_review_comments");
@@ -1099,7 +1193,7 @@ try {
 	modB.default(harnessB.pi);
 	const toolB = harnessB.tools.find((tool) => tool.name === "tuicr");
 	stage({ listInitial: [watchedSession], listAfter: [watchedSession], comments: [baselineComment] });
-	const attachB = await toolB.execute("k-attach", { repo: repoDir }, undefined, undefined, harnessB.ctx);
+	const attachB = await toolB.execute("k-attach", { repo: repoDir, sessionSlug: "watched-s1" }, undefined, undefined, harnessB.ctx);
 	assert.equal(attachB.isError, undefined);
 	assert.equal(composingCount(), 4, "a running watcher adds exactly one slot");
 	harnessB.commands.get("tuicr").handler("stop", harnessB.ctx);

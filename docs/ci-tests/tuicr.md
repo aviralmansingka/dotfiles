@@ -2,40 +2,44 @@
 
 ## Purpose
 
-This suite guards the tuicr extension: `tuicr.ts`, `tuicr-core.mjs`, and
-`tuicr.test.mjs` under `pi/.pi/agent/extensions/`. It opens tuicr reviews,
-steers user comments into the session, and posts agent replies in the TUI.
+This suite guards the tuicr extension files under `pi/.pi/agent/extensions/`.
+They open reviews, steer user comments into the session, and post replies.
 
 ## What the suite covers
 
-- Reply-loop prevention (#246). `newComments` removes comments that the
-  `pi-agent` author wrote, and replies tracked by id. The watcher never
-  steers its own reply back. `collectSeenKeys` keeps the old-comment
-  baseline. `firstNonEmptyLine` shows only the leading reply line.
+- Reply-loop prevention (#246). `newComments` removes comments by the
+  `pi-agent` author and replies tracked by id, so the watcher never steers
+  its own reply back. `collectSeenKeys` keeps the baseline;
+  `firstNonEmptyLine` shows only the leading reply line.
 - Command grammar. `parseTuicrCommandArgs` accepts `pr N`, `-r revset`,
-  `--revset`, `-w`, `watch`, and `stop` forms. Bad tokens and missing
-  values raise usage errors. `scopeToTuicrArgs` and `buildWrapperArgs`
-  map every scope into one wrapper argv.
-- Target resolution (#289). `resolveTargetSession` uses the explicit
+  `--revset`, `-w`, `watch`, and `stop`; a bare call carries no scope, so
+  the default rule applies, and bad tokens raise usage errors.
+- Target resolution (#289). `resolveTargetSession` honors the explicit
   target: a `pr 287` request never attaches to the session for PR 288.
-  The suite asserts refusal on a wrong session, attach on an exact
-  match, and duplicate-reviewer refusal per repo.
-- The subagent flow. `buildReviewSubagentTask` names the session, the
-  sweep of old comments, and the reply rule. The launch path spawns the
-  wrapper with the exact scope argv. `attachOnly` never opens a pane.
+  An explicit pr attaches on an exact match, else it launches for that
+  PR; an explicit working tree or revset always launches; an explicit
+  slug attaches active-or-not. A bare call resolves the current branch's
+  open PR: one → match-or-launch, none → working tree, several → an
+  error that asks for `pr`. Merge note: two fixes of this bug met in
+  the merge; the one API keeps our name and main's matrix.
+- Classification units. `classifyReviewRequest` maps every request form;
+  `prSessionNumber` reads the PR suffix with no prefix confusion;
+  `resolveLaunchedSession` resolves by PR suffix or baseline diff.
+- The subagent flow. The subagent owns the pane: a launch task opens the
+  pane in its own tab; an attach task passes `sessionSlug` plus
+  `attachOnly`; the parent opens no pane in the review flow. One reviewer
+  runs per target; different targets run concurrently.
 - The watcher loop. New comments steer in as `tuicr_review_comments` with
-  `triggerTurn`. The end of the review, CLI failure, ambiguity, and a
-  dead launch window each send one final steer and stop the watcher.
+  `triggerTurn`; review end, CLI failure, ambiguity, and a dead launch
+  window each send one final steer and stop the watcher.
 - Reply anchors. `postTuicrReply` accepts `file:line`, `replyTo`, and the
-  `Re: review comments` fallback. It refuses empty messages, bad line
-  anchors, and preemptive self-review comments.
+  `Re: review comments` fallback; it refuses empty messages and bad anchors.
 - Keep-open slot contract (#286). `tuicr.ts` publishes its open-session
   count under `Symbol.for("pi-subagents/keep-open-count")`. The slot is
   shared with `no-mistakes-pane.ts`, whose suite asserts its own side.
-  Each writer must capture the previous function and add its own count.
-  The suite asserts the add, the release, and the idempotence under
-  repeated factory calls. A broken or non-function previous owner
-  counts as zero.
+  Each writer captures the previous function and adds its own count. The
+  suite asserts the add, the release, and repeated-factory idempotence;
+  a broken previous owner counts as zero.
 
 ## How to run
 
@@ -46,18 +50,19 @@ export NODE_PATH=/tmp/tc-jiti/node_modules
 cd pi/.pi/agent/extensions && node tuicr.test.mjs
 ```
 
-The suite stays offline and deterministic. Fake `tuicr` and `git` binaries
-go on `PATH` before the import; a fake wrapper logs argv and opens no pane.
-It stages fixtures, restores env in `finally`, and sleeps at most 100 ms.
+The suite stays offline and deterministic. Fake `tuicr`, `git`, and `gh`
+binaries go on `PATH` before the import; a fake wrapper logs argv and
+opens no pane. The fakes serve the staged branch and open-PR list. Env
+restores in `finally`; no sleep exceeds 100 ms.
 
 ## Runtime and SLA
 
-The suite runs in about 1.7 s; the budget is 5 s. The watcher polls at 20 ms.
+The suite runs in about 1.9 s; the budget is 5 s. The watcher polls at 20 ms.
 
 ## Coverage result
 
-`c8` reports the suite against both files: statements 92.5 percent
-(baseline 88.3), branches 77.9 percent, functions 93.3 percent.
+`c8` reports (run from the repo root; the jiti line map is fuzzy):
+statements 94.8 percent (merge baseline 92.5), branches 79.5, functions 95.2.
 
 ```
 /tmp/tc-cov/node_modules/.bin/c8 --reporter=text \
@@ -66,15 +71,10 @@ The suite runs in about 1.7 s; the budget is 5 s. The watcher polls at 20 ms.
   node pi/.pi/agent/extensions/tuicr.test.mjs
 ```
 
-Run `c8` from the repo root; the jiti line map for `tuicr.ts` is fuzzy.
-
 ## Known gaps
 
-- The `renderCall` and `renderResult` wrappers in `tuicr.ts` stay thin
-  and untested. The pure formatters in `tuicr-core.mjs` carry the load.
-- The real wrapper scripts and real panes need live tmux or Herdr. They
-  stay in the manual tier.
-- Revset matching assumes a slug that ends in `/commits/<revset>`. A
-  different slug format reads as a miss, and the tool refuses the attach.
-- The poll loop uses real 20 ms timers. A timing race inside one poll
-  window stays outside the assertions.
+- The thin `renderCall`/`renderResult` wrappers in `tuicr.ts` stay untested;
+  the pure formatters in `tuicr-core.mjs` carry the load.
+- The real wrapper scripts and panes need live tmux or Herdr (manual tier).
+- A revset launch resolves its session by baseline diff, not slug text.
+- The poll loop uses real 20 ms timers; intra-window races stay unasserted.
