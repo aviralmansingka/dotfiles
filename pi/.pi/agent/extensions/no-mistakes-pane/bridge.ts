@@ -25,9 +25,9 @@
 //     events (message_end / turn_end / agent_end, plus the synthesized
 //     `no_mistakes_output` tool_execution_end for strict turns), streamed to
 //     the shim, which writes them to its stdout for the daemon's parser.
-//   - Fixer sessions (`--session <uuid>`) reuse ONE live tab across
-//     invocations, mirroring the daemon's durable fixer session. Cold
-//     (session-free) turns get a fresh tab that closes when the turn settles.
+//   - Every invocation owns a fresh tab and closes it after delivery. Fixer
+//     rounds (`--session <uuid>`) resume the durable session file in a fresh
+//     tab; no panes linger between rounds.
 //   - Fallback is the shim's job: no bridge dir/socket, connection refused,
 //     or fatal mid-turn → it runs (or fails like) real headless pi, so runs
 //     that outlive the parent session, daemon restarts, and non-Herdr
@@ -326,8 +326,8 @@ export function paneProcessGone(paneId: string): boolean {
  *  A bare `pane close` kills the tab's pi mid-flight, and Herdr raises an
  *  "agent killed" notification for a terminated background agent — stray
  *  noise in whichever session launched the run. Instead, ask pi to exit
- *  itself: Ctrl+D exits an idle pi (the tab sits at its prompt between
- *  rounds), and Ctrl+C first aborts a still-running turn so the following
+ *  itself: Ctrl+D exits an idle pi after this invocation (fixer rounds
+ *  resume the durable session in a fresh tab), and Ctrl+C first aborts a still-running turn so the following
  *  Ctrl+D lands on an empty editor. The pane is then closed while the
  *  toast delay window is still open, so neither a killed nor a finished
  *  notification fires.
@@ -599,31 +599,19 @@ async function runInvocation(
 		socket.end();
 	};
 
-	const { interactive, sessionId, sessionless } = splitAgentArgv(hello.argv);
+	const { interactive, sessionId } = splitAgentArgv(hello.argv);
 	const runId = deriveRunId(hello.cwd);
 	if (!runId) {
 		fatal("bridge: invocation cwd is not a run worktree");
 		return;
 	}
 	const step = `agent-${++bridge.ordinal}`;
-	const tabKey = sessionId ?? `cold-${bridge.ordinal}`;
-
-	let created: TabHandle | undefined;
-	let tab = sessionId ? bridge.tabs.get(sessionId) : undefined;
-	if (tab && !paneAlive(tab.paneId)) {
-		bridge.tabs.delete(sessionId!);
-		tab = undefined;
-	}
+	const tab = openTab(bridge, hello, interactive, step, step);
 	if (!tab) {
-		const opened = openTab(bridge, hello, interactive, step, tabKey);
-		if (!opened) {
-			fatal(`bridge: could not open a Herdr tab for step ${step}`);
-			return;
-		}
-		created = opened;
-		tab = opened;
-		bridge.tabs.set(tabKey, tab);
+		fatal(`bridge: could not open a Herdr tab for step ${step}`);
+		return;
 	}
+	bridge.tabs.set(step, tab);
 
 	const cut = { flag: false };
 	registerKiller(() => {
@@ -639,7 +627,7 @@ async function runInvocation(
 				rmSync(handle.scriptPath, { force: true });
 			} catch {}
 		}
-		bridge.tabs.delete(tabKey);
+		bridge.tabs.delete(step);
 	};
 
 	try {
@@ -713,9 +701,9 @@ async function runInvocation(
 		for (const line of translator.finish()) send({ type: "events", lines: [line] });
 		closeSync(fd!);
 		socket.end();
-		if (sessionless) closeTab(tab);
+		closeTab(tab);
 	} catch (err) {
-		if (created) closeTab(created);
+		closeTab(tab);
 		fatal(`bridge: ${err instanceof Error ? err.message : String(err)}`);
 	}
 }
@@ -744,23 +732,25 @@ function openTab(
 	const paneId = created?.result?.root_pane?.pane_id ?? created?.result?.pane?.pane_id;
 	if (typeof paneId !== "string" || !paneId) return undefined;
 
-	const extraExtensions = stepAgentExtensionPaths(join(homedir(), ".pi", "agent"));
-	const script = buildTabLauncher({
-		realPi: realPiPath(),
-		interactiveArgv: interactive,
-		env: hello.env ?? {},
-		extraExtensions,
-	});
 	const scriptPath = join(bridge.dir, `launch-${tabKey}.sh`);
-	writeFileSync(scriptPath, script, { mode: 0o755 });
-	if (!herdrOkSync(["pane", "run", paneId, "bash", scriptPath])) {
-		herdrOkSync(["pane", "close", paneId]);
+	try {
+		const extraExtensions = stepAgentExtensionPaths(join(homedir(), ".pi", "agent"));
+		const script = buildTabLauncher({
+			realPi: realPiPath(),
+			interactiveArgv: interactive,
+			env: hello.env ?? {},
+			extraExtensions,
+		});
+		writeFileSync(scriptPath, script, { mode: 0o755 });
+		if (!herdrOkSync(["pane", "run", paneId, "bash", scriptPath])) throw new Error("pane run failed");
+		return { paneId, scriptPath };
+	} catch {
+		closeTabPaneCleanly(paneId);
 		try {
 			rmSync(scriptPath, { force: true });
 		} catch {}
 		return undefined;
 	}
-	return { paneId, scriptPath };
 }
 
 async function waitTabReady(paneId: string): Promise<void> {

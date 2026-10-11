@@ -73,8 +73,9 @@ unchanged.
 A step agent tab holds the same boundary as a headless one: it works only its
 assigned phase in the run worktree, the daemon owns rounds, budgets, and the
 findings schema, and the human may watch or steer the tab but never drives the
-pipeline from it. Fixer sessions reuse one tab across fix rounds; cold review
-turns get a fresh tab per pass. Each tab runs pi with `--no-extensions` plus
+pipeline from it. Every invocation gets a fresh tab that closes cleanly after
+its round; fixer rounds resume the durable session file, never a lingering tab.
+Each tab runs pi with `--no-extensions` plus
 one curated explicit set (`STEP_AGENT_EXTENSIONS` in the bridge): the
 pane-state reporters, capability tools (python, web fetch, web search,
 mermaid, codemode), and tab chrome. The parent session's pipeline machinery

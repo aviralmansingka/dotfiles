@@ -883,7 +883,9 @@ await (async () => {
 	const restore = enterBridgeEnv(root);
 	try {
 		ensureBridgeServer(TEST_RUN_ID);
-		const prompt = "fixer round 2: apply the remedy";
+		const panes = [];
+		for (const round of [2, 3]) {
+		const prompt = `fixer round ${round}: apply the remedy`;
 		const { child, stdout, stderr } = runShim({
 			root,
 			argv: ["--mode", "json", "--session", fixerId],
@@ -911,18 +913,14 @@ await (async () => {
 		], `resumed round stream; shim stderr: ${err}`);
 		assert.ok(!out.includes("prior round"), "the prior conversation is never re-emitted");
 		const calls = readCalls(root);
-		const created = calls.find((call) => call.op === "tab create");
-		assert.ok(created, "a visible tab was created for the fixer round");
-		assert.ok(
-			!calls.some((call) => call.op === "pane close" && call.pane === created.pane),
-			"the fixer tab stays open across rounds",
-		);
-		teardownBridgeForRun(TEST_RUN_ID);
-		assert.ok(
-			readCalls(root).some((call) => call.op === "pane close" && call.pane === created.pane),
-			"teardown closes the live fixer tab",
-		);
-		assert.ok(!existsSync(join(root, "herdr-bridge", TEST_RUN_ID)), "teardown removed the bridge dir");
+		const created = calls.filter((call) => call.op === "tab create").at(-1);
+		assert.ok(created, "a visible tab was created for each fixer round");
+		panes.push(created.pane);
+		assert.ok(calls.some((call) => call.op === "pane close" && call.pane === created.pane), "each fixer tab closes after delivery");
+		assert.deepEqual(readKeys(root).filter((entry) => entry.pane === created.pane).map((entry) => entry.keys), ["ctrl+d"]);
+		if (round === 3) assert.ok(!out.includes("fixer round 2"), "second invocation never replays the first");
+		}
+		assert.equal(new Set(panes).size, 2, "each invocation owns a different pane");
 	} finally {
 		teardownBridgeForRun(TEST_RUN_ID);
 		restore();

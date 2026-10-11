@@ -72,9 +72,10 @@ The no-mistakes daemon's step agents run as visible Herdr subagent tabs when the
 session is inside Herdr (`scripts/install-nm-herdr-bridge`, upstream `agent_path_override.pi`).
 These rules are load-bearing:
 
-- A live tab owns its pi session file. Teardown (run terminal, session shutdown, extension
-  reload) must close tab panes so a later headless `--session` resume never meets a second
-  writer; the shim then passthroughs to real pi with unchanged argv and stdin.
+- Every step invocation owns a fresh tab and closes it after delivery; fixer rounds resume
+  the durable session file in a fresh tab. Teardown (run terminal, session shutdown, extension
+  reload) also closes panes so a later headless `--session` resume never meets a second writer;
+  the shim then passthroughs to real pi with unchanged argv and stdin.
 - Pane state surfaces are Herdr's sanctioned ones only: `pane report-metadata --state-label`
   for display and the `herdr:blocked` event for the CI red state. Never report pane state
   from another source or impersonate a `herdr:` source - a second source cannot override the
