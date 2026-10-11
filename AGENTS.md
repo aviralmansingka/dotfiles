@@ -101,6 +101,15 @@ These rules are load-bearing:
   its identity before `pane close`. A terminated step agent must never surface as an
   agent-killed notification in the hosting session.
 
+## no-mistakes gate test and lint runners
+
+The gate's Test and Lint steps run the pinned offline runners from `.no-mistakes.yaml`
+(`scripts/nm-test.sh`, `scripts/nm-lint.sh`) — the same offline suite as
+`.github/workflows/ci.yml`. Gate/step agents must never improvise tests that launch live
+sessions: no real pi sessions, no nvim, no tmux/multiplexer servers. The 2026-10-11
+professor-test incident (run 01M4NRT2XKCHANREB6YFBPX6Q9) improvised a live harness,
+timed out, and leaked nvim processes on the host.
+
 ## CUDA LSP host invariant
 
 NVIDIA ships no CUDA Toolkit for macOS Apple Silicon. `.cu` files get
