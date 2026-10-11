@@ -47,6 +47,7 @@ import {
 	ORCHESTRATOR_SPAWN_NAME,
 	type OrchestratorSpawnApi,
 } from "./no-mistakes-pane/orchestrate";
+import { publishKeepOpenCount } from "./keep-open-slot.mjs";
 
 // ---------------------------------------------------------------------------
 // no-mistakes-pane — run `no-mistakes axi` detached, beside the agent, and
@@ -402,15 +403,13 @@ interface WatchState {
 //
 // COMPOSITION: this is a SHARED slot — tuicr.ts publishes its watcher's
 // count under the same well-known symbol, and the nm-orchestrator (spawned
-// with agent-dir: parent) loads both extensions in one session. A plain
-// assignment would be last-writer-wins by readdir load order, silently
-// disabling whichever extension loaded first. So capture the previous
-// owner's function (a non-function previous value counts as 0) and publish
-// a wrapper that ADDS it to ours — both sources must be able to keep the
-// session open. tuicr.ts composes symmetrically, so either load order sums
-// both counts.
-const KEEP_OPEN_COUNT_KEY = Symbol.for("pi-subagents/keep-open-count");
-const previousKeepOpenCount: unknown = (globalThis as any)[KEEP_OPEN_COUNT_KEY];
+// with agent-dir: parent) loads both extensions in one session. Both sides
+// publish through the one shared module (keep-open-slot.mjs), which owns the
+// composition: keyed per-owner entries in a null-prototype holder on
+// globalThis, summed by one reader. That makes the composition symmetric and
+// idempotent BY CONSTRUCTION — either load order sums both counts, repeated
+// loads replace (never stack) their own entry, and a broken or foreign
+// previous owner reads as 0 instead of masking this module's count.
 const ownKeepOpenCount = (): number => {
 	const state = (globalThis as any)[WATCH_STATE_KEY] as WatchState | undefined;
 	if (!state) return 0;
@@ -420,18 +419,7 @@ const ownKeepOpenCount = (): number => {
 	}
 	return 0;
 };
-(globalThis as any)[KEEP_OPEN_COUNT_KEY] = (): number => {
-	let previous = 0;
-	if (typeof previousKeepOpenCount === "function") {
-		try {
-			const value = (previousKeepOpenCount as () => unknown)();
-			if (typeof value === "number" && value > 0) previous = value;
-		} catch {
-			// A broken previous owner must not mask this module's count.
-		}
-	}
-	return previous + ownKeepOpenCount();
-};
+publishKeepOpenCount("no-mistakes-pane", ownKeepOpenCount);
 
 function orchestratorSpawnApi(): OrchestratorSpawnApi | undefined {
 	const api = (globalThis as any).__pi_interactive_subagents as Partial<OrchestratorSpawnApi> | undefined;
@@ -1108,7 +1096,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		name: "no_mistakes_axi",
 		label: "no-mistakes (background)",
 		description:
-			"Submit a `no-mistakes axi` subcommand (run/respond/status/logs/abort/sync) to run detached in the background and return immediately — the session stays free and never blocks on a review/test/CI step. Use this INSTEAD of running `no-mistakes axi` in the bash tool. The structured TOON result (findings, gate, outcome, branch_sync, help) arrives later as a `no_mistakes_axi_result` steer message that triggers a new turn: read every one. Gate results carry the user's decision from the no-mistakes gate panel (or yolo standing consent) — submit the `respond` call it names until an `outcome:` arrives; without a decision, relay ask-user findings verbatim and wait. For `run`/`respond` a visible Herdr pane beside the agent shows the rich `no-mistakes` TUI of the same daemon run; it stays open while the run is parked at a gate, and `/no-mistakes` focuses or re-opens it. From a Herdr captain session, `run` is delegated to the nm-orchestrator subagent tab, which owns the attach pane, gate panels, and step-agent tabs and steers its final run summary back here — do not re-issue run or respond for a delegated run; steer that tab with subagent_message instead.",
+			"Submit a `no-mistakes axi` subcommand (run/respond/status/logs/answer/abort/sync) to run detached in the background and return immediately — the session stays free and never blocks on a review/test/CI step. Use this INSTEAD of running `no-mistakes axi` in the bash tool. The structured TOON result (findings, gate, outcome, branch_sync, help) arrives later as a `no_mistakes_axi_result` steer message that triggers a new turn: read every one. Gate results carry the user's decision from the no-mistakes gate panel (or yolo standing consent) — submit the `respond` call it names until an `outcome:` arrives; without a decision, relay ask-user findings verbatim and wait. For `run`/`respond` a visible Herdr pane beside the agent shows the rich `no-mistakes` TUI of the same daemon run; it stays open while the run is parked at a gate, and `/no-mistakes` focuses or re-opens it. From a Herdr captain session, `run` is delegated to the nm-orchestrator subagent tab, which owns the attach pane, gate panels, and step-agent tabs and steers its final run summary back here — do not re-issue run or respond for a delegated run; steer that tab with subagent_message instead.",
 		promptSnippet:
 			"Use no_mistakes_axi (not bash) to drive every no-mistakes axi call; it runs in the background and results arrive as steer messages.",
 		promptGuidelines: [
