@@ -204,7 +204,7 @@ const synthetic = [
   { changed: ["install.sh", "Brewfile"], entry: "scripts/test-install-smoke.sh", entryGlobs: ["install.sh", "Brewfile"], job: "scripts" },
   { changed: ["scripts/install-no-mistakes"], entry: "scripts/test-nm-install.sh", entryGlobs: ["scripts/install-no-mistakes"], job: "scripts" },
   { changed: ["claude/settings.json"], entry: "scripts/test-repo-parity.py", entryGlobs: ["claude/**"], job: "scripts" },
-  { changed: ["nvim/.config/nvim/init.lua"], expect: { nvim: true } },
+  { changed: ["nvim/.config/nvim/init.lua"], expect: { nvim: true, scripts: true } }, // install-smoke declares nvim/** (install.sh stows nvim)
   { changed: ["scripts/test-nvim-octo.sh"], expect: { nvim: true, scripts: true } }, // scripts/* fixed glob also hits; the scripts job just skips routed entries
   { changed: ["ops/terraform/main.tf"], expect: { ops: true } },
   { changed: ["pi/.pi/agent/settings.json"], expect: { pi: true, scripts: true } }, // repo-config + live-config declare pi/.pi/agent paths
