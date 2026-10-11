@@ -477,7 +477,7 @@ assert.deepEqual(
 	{ status: "ok", session: { slug: "s1", active: false }, target: { type: "slug", slug: "s1" } },
 );
 assert.deepEqual(
-	resolveTargetSession({ sessionSlug: "gh:o/r/pr/288" }, { repo, sessions: [s288] }),
+	resolveTargetSession({ sessionSlug: "gh:owner/repo/pr/288" }, { repo, sessions: [s288] }),
 	{ status: "ok", session: s288, target: { type: "pr", pr: 288 } },
 );
 assert.match(
