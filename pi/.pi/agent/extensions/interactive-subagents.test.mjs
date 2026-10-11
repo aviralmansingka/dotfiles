@@ -368,6 +368,41 @@ try {
 	rmSync(profileRoot, { recursive: true, force: true });
 }
 
+// --- Bundled agents inherit the session model; per-agent thinking stays ---
+{
+	const expectedThinking = {
+		scout: "low",
+		researcher: "medium",
+		worker: "high",
+		"tuicr-review": "high",
+		professor: "high",
+		"research-orchestrator": "high",
+		"nm-orchestrator": undefined,
+	};
+	for (const [name, thinking] of Object.entries(expectedThinking)) {
+		const defs = loadAgentDefaultsFromPaths(name, {
+			cwd: tmpdir(),
+			configDir: tmpdir(),
+			bundledDir: bundledAgentsDir,
+		});
+		assert.equal(defs.model, undefined, `${name} inherits the session model (no model pin)`);
+		assert.equal(defs.thinking, thinking, `${name} keeps its thinking level on the inherited model`);
+	}
+	// With no model pin, the sandbox helper must apply the agent's thinking
+	// level as a standalone --thinking flag on the inherited default model
+	// (index.ts cannot be jiti-loaded whole, so this pins the branch by source,
+	// mirroring the list-tool and baseline-renderer assertions).
+	const sandboxSource = readFileSync(
+		new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url),
+		"utf8",
+	);
+	assert.ok(
+		/else if \(loadout\.thinking\) {/.test(sandboxSource) &&
+			sandboxSource.includes('parts.push("--thinking", shellEscape(loadout.thinking))'),
+		"applySandboxToParts passes a standalone --thinking when no model is pinned",
+	);
+}
+
 // --- No Mistakes compact status follows the shared activity-widget contract ---
 const { noMistakesFindingLines, noMistakesIsWaiting, noMistakesWidgetStatus } = jiti(
 	"./interactive-subagents/pi-extension/subagents/no-mistakes.ts",

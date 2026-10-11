@@ -1043,6 +1043,11 @@ function applySandboxToParts(
   if (loadout.model) {
     const model = loadout.thinking ? `${loadout.model}:${loadout.thinking}` : loadout.model;
     parts.push("--model", shellEscape(model));
+  } else if (loadout.thinking) {
+    // No model pin — the bundled agents inherit the session model. Keep the
+    // agent's thinking level by applying it to the default model instead of
+    // silently dropping it (pi supports a standalone --thinking flag).
+    parts.push("--thinking", shellEscape(loadout.thinking));
   }
 
   if (loadout.identity) {

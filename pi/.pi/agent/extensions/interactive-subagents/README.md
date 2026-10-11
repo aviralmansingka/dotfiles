@@ -84,12 +84,17 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 
 | Agent | Model | Tools | Role |
 | ----- | ----- | ----- | ---- |
-| **scout** | `openai-codex/gpt-6-astra` | `read`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Fast read-only codebase recon |
-| **researcher** | `openai-codex/gpt-6-astra` | `web_search`, `web_fetch`, `bash`, `tuicr`, `tuicr_reply` | Web research, synthesized into a sourced brief |
-| **worker** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
-| **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, mermaid diagrams, Hunk canvas, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
-| **tuicr-review** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
+| **scout** | session default | `read`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Fast read-only codebase recon |
+| **researcher** | session default | `web_search`, `web_fetch`, `bash`, `tuicr`, `tuicr_reply` | Web research, synthesized into a sourced brief |
+| **worker** | session default | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
+| **professor** | session default | lesson tools, mermaid diagrams, Hunk canvas, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
+| **tuicr-review** | session default | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
 | **nm-orchestrator** | session default | `no_mistakes_axi`, `read` | no-mistakes run orchestrator; drives one pipeline run through its gates and returns the run summary |
+
+Bundled agents inherit the session model (no `model:` pin in their
+frontmatter); each agent's `thinking:` level still applies on top of the
+inherited model. Pin a model per spawn with the `model` parameter, or per
+custom agent with a `model:` frontmatter line.
 
 `scout`, `researcher`, `worker`, `tuicr-review`, and `nm-orchestrator` are
 autonomous (`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane
