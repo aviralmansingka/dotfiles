@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -681,8 +681,13 @@ if (command === "pane" && sub === "close") {
 if (command === "agent" && sub === "get") {
 	const pane = argv[2];
 	const rec = readPane(pane);
+	if (!rec) {
+		// Unknown pane: mirror the real CLI — agent_not_found JSON on stderr, exit 1.
+		process.stderr.write(JSON.stringify({ error: { code: "agent_not_found", message: "agent target " + pane + " not found" }, id: "cli:agent:get" }) + "\\n");
+		process.exit(1);
+	}
 	const agent = {};
-	if (!rec || !booted(pane)) {
+	if (!booted(pane)) {
 		agent.agent_status = "booting";
 	} else {
 		agent.agent_status = "idle";
@@ -1048,6 +1053,69 @@ await (async () => {
 		if (round === 3) assert.ok(!out.includes("fixer round 2"), "second invocation never replays the first");
 		}
 		assert.equal(new Set(panes).size, 2, "each invocation owns a different pane");
+	} finally {
+		teardownBridgeForRun(TEST_RUN_ID);
+		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
+
+// ---------------------------------------------------------------------------
+// Regression: a failed herdr readiness poll must never leak stderr onto a
+// terminal. The stub herdr answers `agent get` on an unknown pane exactly
+// like the real CLI (agent_not_found JSON on stderr, exit 1). A child
+// process runs the real herdrJsonSync against it: its stderr stream must
+// stay byte-clean (the bridge lives inside the nm-orchestrator's pi
+// process, so any pass-through lands raw on that pane's TUI). The control
+// arm — the same call with Node's DEFAULT stdio — proves the harness sees
+// the leak class this fix removed.
+// ---------------------------------------------------------------------------
+await (async () => {
+	const root = makeBridgeRoot("nm-stderr-leak-");
+	const restore = enterBridgeEnv(root);
+	try {
+		const bridgePath = fileURLToPath(new URL("./no-mistakes-pane/bridge.ts", import.meta.url));
+		const probeEnv = {
+			...process.env,
+			PATH: join(root, "stub-bin") + ":" + (process.env.PATH ?? ""),
+			JITI_PATH: jitiPath,
+		};
+		const probeChild = join(root, "probe-child.cjs");
+		writeFileSync(probeChild, [
+			"const { createRequire } = require('node:module');",
+			"const req = createRequire(__filename);",
+			"const { createJiti } = req(process.env.JITI_PATH);",
+			"const jiti = createJiti(__filename);",
+			`const { herdrJsonSync } = jiti(${JSON.stringify(bridgePath)});`,
+			"const out = herdrJsonSync(['agent', 'get', 'w1:p-nope']);",
+			"console.log('returned=' + out);",
+			"",
+		].join("\n"));
+		const probe = spawnSync(process.execPath, [probeChild], {
+			encoding: "utf-8",
+			env: probeEnv,
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		assert.equal(probe.status, 0, `probe child failed: ${probe.stderr}`);
+		assert.equal(probe.stdout.trim(), "returned=null", "a failed poll resolves to null, never a throw");
+		assert.equal(probe.stderr, "", "no stderr byte from a failed readiness poll reaches the terminal");
+
+		const controlChild = join(root, "control-child.cjs");
+		writeFileSync(controlChild, [
+			"const { execFileSync } = require('node:child_process');",
+			"try { execFileSync('herdr', ['agent', 'get', 'w1:p-nope'], { encoding: 'utf-8', timeout: 5000 }); } catch {}",
+			"",
+		].join("\n"));
+		const control = spawnSync(process.execPath, [controlChild], {
+			encoding: "utf-8",
+			env: probeEnv,
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		assert.equal(control.status, 0, `control child failed: ${control.stderr}`);
+		assert.ok(
+			control.stderr.includes("agent_not_found"),
+			"control: default-stdio execFileSync passes the poll stderr through — the leak this fix removes",
+		);
 	} finally {
 		teardownBridgeForRun(TEST_RUN_ID);
 		restore();
