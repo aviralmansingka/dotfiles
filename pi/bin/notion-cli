@@ -75,6 +75,8 @@ def call(method: str, path: str, payload: dict | None = None) -> dict:
         except json.JSONDecodeError:
             payload = {"raw": text}
         raise SystemExit(f"Notion API error {exc.code}: {json.dumps(payload)}")
+    except urllib.error.URLError as exc:
+        raise SystemExit(f"Notion network error: {exc.reason}")
 
 
 def collect(path: str, payload: dict | None = None) -> dict:
@@ -136,7 +138,13 @@ def main() -> None:
     elif args.cmd == "get-blocks":
         out = collect(f"/blocks/{nid(args.id)}/children?page_size=100")
     elif args.cmd == "query-db":
-        body = json.loads(args.body) if args.body else {}
+        if args.body:
+            try:
+                body = json.loads(args.body)
+            except json.JSONDecodeError as exc:
+                raise SystemExit(f"Invalid --body JSON: {exc}")
+        else:
+            body = {}
         out = collect(f"/databases/{nid(args.id)}/query", body)
     elif args.cmd == "create-page":
         page: dict = {

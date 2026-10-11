@@ -252,7 +252,7 @@ echo $TERM
 3. **Terminal support**: Ensure you're using Ghostty, Kitty, iTerm2, or another OSC52-capable terminal
 
 **Solution:**
-1. Re-run `stow ssh tmux ghostty nvim` to deploy updated configs
+1. Re-run `stow tmux ghostty nvim` to deploy updated configs (the SSH config is host-side; this repo ships no ssh stow package)
 2. Restart tmux: `tmux kill-server && tmux new-session`
 3. Test with direct OSC52 sequence
 
