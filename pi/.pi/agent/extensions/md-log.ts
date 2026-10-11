@@ -399,7 +399,19 @@ function arcJournal(journal: string | undefined): string | undefined {
 			.map((f) => join(dir, f))
 			.filter((f) => f !== journal && journalHasLessons(f));
 		if (candidates.length === 0) return journal;
-		candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+		// mtime can tie at the kernel's timestamp granularity when journals are
+		// written in quick succession (a restarted professor's second journal
+		// lands within the same clock tick as the first). V8's sort is stable, so
+		// a bare mtime comparator then preserves readdirSync order — ext4 hash
+		// order, arbitrary per directory — and the fallback can pick the WRONG
+		// journal (nondeterministically: this flaked CI). Break mtime ties by
+		// name, descending, so the choice is deterministic; pi session ids are
+		// time-ordered, so the name order also tracks session recency.
+		candidates.sort(
+			(a, b) =>
+				statSync(b).mtimeMs - statSync(a).mtimeMs ||
+				(a < b ? 1 : a > b ? -1 : 0),
+		);
 		return candidates[0];
 	} catch {
 		return journal;
