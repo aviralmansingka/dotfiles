@@ -32,12 +32,14 @@ const DEFAULT_REASONING_EFFORT = "max";
 const DEFAULT_MAX_ATTEMPTS = 4;
 const MMDFLUX_TIMEOUT_MS = 30_000;
 const OUTPUT_CAP = 512 * 1024;
+/** Diagram types the mmdflux validator accepts. */
+const SUPPORTED_DIAGRAM_TYPES = ["flowchart", "sequenceDiagram", "stateDiagram-v2", "classDiagram"] as const;
 
 export const MERMAID_BASE_PROMPT = [
 	"You write Mermaid diagrams.",
 	"Output exactly one ```mermaid fenced block and nothing else. No prose before or after.",
 	"Keep the diagram small: few nodes, short labels, roots at the top, the goal node as the sink.",
-	"Use plain node and edge syntax only. Do not use experimental or beta diagram types.",
+	`Use plain node and edge syntax only. Use one of these diagram types: ${SUPPORTED_DIAGRAM_TYPES.join(", ")}.`,
 	"The diagram must pass a strict Mermaid parser. When a parser error is given back, fix it and output the full corrected diagram.",
 	"Node budget: at most ~7 nodes. If the spec lists more, cut the nodes and labels that do not earn their place; keep the idea intact. A diagram of 4 nodes that each pull weight beats one of 12 that fight for space.",
 	"Truth: if an edge or label is uncertain, omit it rather than assert something false. Do not invent content. If the spec is thin, draw the smaller true diagram.",
@@ -103,8 +105,7 @@ export function parseCheckerVerdict(raw: string): { match: true } | { match: fal
 
 const MermaidParams = Type.Object({
 	spec: Type.String({
-		description:
-			"Detailed description of the diagram: diagram type (flowchart, sequenceDiagram, stateDiagram-v2, classDiagram, erDiagram, gantt, pie, mindmap), every node with its exact label, every edge with its direction and optional label, and layout direction (TD or LR).",
+		description: `Detailed description of the diagram: diagram type (${SUPPORTED_DIAGRAM_TYPES.join(", ")}), every node with its exact label, every edge with its direction and optional label, and layout direction (TD or LR).`,
 	}),
 });
 
@@ -143,7 +144,7 @@ export function buildAttemptPrompt(spec: string, previous?: { source: string; er
 		"- Output only one ```mermaid fenced block. No prose.",
 		"- Keep the diagram small: at most ~7 nodes, short labels.",
 		"- Roots at the top. The goal node is the sink.",
-		"- Use plain node and edge syntax only. No experimental or beta diagram types.",
+		`- Use plain node and edge syntax only. Use one of these diagram types: ${SUPPORTED_DIAGRAM_TYPES.join(", ")}.`,
 	];
 	if (previous) {
 		lines.push(
@@ -413,6 +414,10 @@ export default function (pi: ExtensionAPI) {
 				}
 				lastError = verdict.error;
 				if (verdict.kind === "environment") break;
+				if (verdict.kind === "parse" && /unknown diagram type/i.test(verdict.error)) {
+					lastError = `mmdflux does not support this diagram type. Supported types: ${SUPPORTED_DIAGRAM_TYPES.join(", ")}.`;
+					break;
+				}
 				previous = { source, error: verdict.error };
 			}
 

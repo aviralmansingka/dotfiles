@@ -340,6 +340,34 @@ try {
 	else process.env.PI_MERMAID_MMDFLUX = savedTuiFlux;
 }
 
+// A validator type rejection must end the run after one attempt, naming the supported types.
+const typeRejectBin = join(tempRoot, "typereject-mmdflux");
+writeFileSync(typeRejectBin, "#!/bin/sh\necho 'Error: Unknown diagram type' >&2\nexit 1\n");
+chmodSync(typeRejectBin, 0o755);
+const savedTypeFlux = process.env.PI_MERMAID_MMDFLUX;
+process.env.PI_MERMAID_MMDFLUX = typeRejectBin;
+try {
+	const typeCtx = fakeCtx(["```mermaid\nerDiagram\n  CUSTOMER ||--o{ ORDER : places\n```"]);
+	const typeFail = await tool.execute(
+		"id-10",
+		{ spec: "Type: erDiagram. Entities: CUSTOMER, ORDER. Relationship: CUSTOMER places ORDER." },
+		undefined,
+		() => {},
+		typeCtx,
+	);
+	assert.equal(typeFail.isError, true, "an unsupported diagram type should fail the tool");
+	assert.equal(typeCtx.callCount(), 1, "a type rejection must not consume further attempts");
+	assert.equal(typeFail.details.attempts, 1, "details report the single attempt that ran");
+	assert.ok(
+			typeFail.details.error.includes("Supported types: flowchart, sequenceDiagram, stateDiagram-v2, classDiagram"),
+			`error names the supported types: ${typeFail.details.error}`,
+	);
+	assert.ok(typeFail.details.source?.startsWith("erDiagram"), "details carry the rejected source");
+} finally {
+	if (savedTypeFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedTypeFlux;
+}
+
 // ── renderResult ─────────────────────────────────────────────────────────────
 
 const theme = { fg: (_name, s) => s };
