@@ -88,6 +88,7 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
         run: |
           node pi/.pi/agent/extensions/cleanup.test.mjs
+          node pi/.pi/agent/extensions/edit-relative-paths.test.mjs
           node pi/.pi/agent/extensions/explain.test.mjs
           node pi/.pi/agent/extensions/focus-buffer.test.mjs
           node pi/.pi/agent/extensions/herdr-prompt-state.test.mjs
