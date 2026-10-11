@@ -1,6 +1,7 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { stripVTControlCharacters } from "node:util";
+import { isHeredocTerminator, scanCommandContext } from "../shell-classify.mjs";
 
 export interface RunCommandDetails {
 	status: "answered" | "cancelled" | "unavailable";
@@ -16,51 +17,47 @@ export interface RunCommandDetails {
 
 type CommandRow = { text: string; op: string };
 
-// ponytail: a display splitter, not a shell parser. Track quotes, parentheses,
-// escapes and ordinary heredocs; leave other shell grammar verbatim.
+// ponytail: a display splitter, not a shell parser. The shell grammar
+// (quotes, escapes, parens, heredoc tags, operator positions) is delegated
+// to shell-classify.mjs — the shared pure classifier the tool-call renderer
+// and the python guard also use — so the parsers cannot drift apart again
+// (#242, `786c2d3`); this side owns only the display policy around the
+// reported split points.
 export function splitCommand(command: string): CommandRow[] {
 	const rows: CommandRow[] = [];
-	let quote = "", depth = 0, op = "$";
+	let op = "$";
 	const heredocs: string[] = [];
+	const state = { quote: "", parenDepth: 0 };
 	for (const line of command.split("\n")) {
 		if (heredocs.length) {
 			rows.push({ text: line, op: "" });
-			if (line.trim() === heredocs[0]) heredocs.shift();
+			if (isHeredocTerminator(heredocs[0], line)) heredocs.shift();
 			continue;
 		}
+		const scan = scanCommandContext(line, state);
+		state.quote = scan.quote;
+		state.parenDepth = scan.parenDepth;
 		let start = 0;
-		const emit = (end: number) => {
+		const emit = (end: number, openQuote: boolean) => {
 			const segment = line.slice(start, end);
-			const text = op ? (quote ? segment.trimStart() : segment.trim())
+			const text = op ? (openQuote ? segment.trimStart() : segment.trim())
 				: end < line.length ? segment.trimEnd() : segment;
 			if (text === "\\" && op && op !== "$") return; // carry the operator across a shell line wrap
-			if (text.trim() || quote || (!op && start === 0)) {
+			if (text.trim() || openQuote || (!op && start === 0)) {
 				rows.push({ text, op });
 				op = "";
 			}
 		};
-		for (let i = 0; i < line.length; i++) {
-			const ch = line[i];
-			if (ch === "\\" && quote !== "'") { i++; continue; }
-			if (quote) {
-				if (ch === quote) quote = "";
-				continue;
-			}
-			if (ch === "'" || ch === '"') { quote = ch; continue; }
-			if (ch === "(") { depth++; continue; }
-			if (ch === ")") { depth = Math.max(0, depth - 1); continue; }
-			if (ch === "<" && line[i - 1] !== "<") {
-				const tag = /^<<-?\s*(['"]?)([\w-]+)\1/.exec(line.slice(i));
-				if (tag) { heredocs.push(tag[2]); i += tag[0].length - 1; continue; }
-			}
-			if (depth === 0 && (ch === "|" || (ch === "&" && line[i + 1] === "&"))) {
-				emit(i);
-				op = line.slice(i, i + 2) === "||" || ch === "&" ? line.slice(i, i + 2) : "|";
-				i += op.length - 1;
-				start = i + 1;
+		for (const event of scan.events) {
+			if (event.type === "operator") {
+				emit(event.index, false); // operators only fire outside quotes
+				op = event.op;
+				start = event.index + event.op.length;
+			} else {
+				heredocs.push(event.tag);
 			}
 		}
-		emit(line.length);
+		emit(line.length, Boolean(scan.quote));
 	}
 	// Keep an operator visible while its next operand is still streaming.
 	if (op && op !== "$") rows.push({ text: "", op });
