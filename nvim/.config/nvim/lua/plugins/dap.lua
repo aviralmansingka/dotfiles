@@ -121,7 +121,7 @@ end
 local dap_yank_stringify
 
 -- Module-level state for eval/yank lifecycle. Tracks the persistent hover
--- float (auto/manual <localleader>g) and the last expression so
+-- float (idle auto-trigger only) and the last expression so
 -- <localleader>y can re-evaluate the stringified form.
 local _eval_state = {
   last_expr = nil,
@@ -155,30 +155,21 @@ end
 
 -- Render the eval result in a hover float at the cursor (rounded border,
 -- standard vim-hover dismissal — closes on any cursor move, insert-mode
--- entry, or buffer leave). Driven only by the auto-trigger now — manual
--- eval lives on <localleader>r (REPL split). Auto-trigger silently skips
--- re-eval if the cursor is still on the same expression.
-local function dap_eval_hover(opts)
-  opts = opts or {}
+-- entry, or buffer leave). Driven only by the idle auto-trigger: the
+-- manual-focus branch (source="manual") was dead code (fe8f112 dropped the
+-- <localleader>g keymap — gitsigns claimed it — and the idle timer, the
+-- only caller, always passes auto) with a latent self-close bug
+-- (focusing the lsp preview float fires its buffer-local CursorMoved
+-- close handler), so it is deleted. Manual eval lives on <localleader>r
+-- (REPL split). The trigger silently skips re-eval if the cursor is still
+-- on the same expression.
+local function dap_eval_hover()
   local ok_dap, dap = pcall(require, "dap")
   if not ok_dap then
     return
   end
   local session = dap.session()
   if not session or not session.stopped_thread_id then
-    if opts.source == "manual" then
-      vim.notify("DAP: no paused session", vim.log.levels.WARN)
-    end
-    return
-  end
-
-  if
-    opts.source == "manual"
-    and _eval_state.hover_win
-    and vim.api.nvim_win_is_valid(_eval_state.hover_win)
-    and vim.api.nvim_get_current_win() ~= _eval_state.hover_win
-  then
-    vim.api.nvim_set_current_win(_eval_state.hover_win)
     return
   end
 
@@ -192,8 +183,7 @@ local function dap_eval_hover(opts)
   end
 
   if
-    opts.source == "auto"
-    and expression == _eval_state.last_expr
+    expression == _eval_state.last_expr
     and _eval_state.hover_win
     and vim.api.nvim_win_is_valid(_eval_state.hover_win)
   then
@@ -360,7 +350,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "BufEnter", "InsertEnter", "WinEnte
         if not sess or not sess.stopped_thread_id then
           return
         end
-        dap_eval_hover({ source = "auto" })
+        dap_eval_hover()
       end)
     )
   end,

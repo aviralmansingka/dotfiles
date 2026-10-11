@@ -47,6 +47,11 @@ local function html_to_markdown(text)
     text = text:gsub("</" .. tag .. ">", "")
   end
 
+  -- Strip any remaining HTML tags BEFORE decoding entities (C32a): a
+  -- decoded &lt;…&gt; pair is literal text, not a tag, so a post-decode
+  -- <[^>]+> strip pass would eat it.
+  text = text:gsub("<[^>]+>", "")
+
   -- Decode common HTML entities
   local entities = {
     ["&amp;"] = "&",
@@ -60,9 +65,6 @@ local function html_to_markdown(text)
   for entity, char in pairs(entities) do
     text = text:gsub(entity, char)
   end
-
-  -- Strip any remaining HTML tags
-  text = text:gsub("<[^>]+>", "")
 
   return text
 end

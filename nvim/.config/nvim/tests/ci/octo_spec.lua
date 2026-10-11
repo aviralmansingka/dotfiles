@@ -453,10 +453,12 @@ H.run("octo_spec", function()
       "an entity-only body takes the no-'<' fast path unchanged")
     H.eq(h2m("<b>a</b> &amp; &quot; &#39; &nbsp;end"), "**a** & \" '  end",
       "common entities decode alongside tags")
-    -- Known quirk, pinned as-is (see docs/ci-tests/nvim-octo.md gaps): a
-    -- decoded &lt;…&gt; pair looks like a tag to the final <[^>]+> strip pass.
-    H.eq(h2m("<b>x</b> a &lt; b &gt; c"), "**x** a  c",
-      "decoded angle brackets collapse into the tag-stripping pass")
+    -- C32a fixed: the tag-stripping pass runs BEFORE entity decoding, so
+    -- a decoded &lt;…&gt; pair survives as literal text.
+    H.eq(h2m("<b>x</b> a &lt; b &gt; c"), "**x** a < b > c",
+      "decoded angle brackets survive the tag-stripping pass")
+    H.eq(h2m("<code>&lt;tag&gt;</code>"), "`<tag>`",
+      "a decoded angle pair inside a converted tag stays literal")
     H.eq(h2m("<div><span>keep</span></div>"), "keep", "container tags strip, content stays")
     H.eq(h2m("tail <unknown>tag</unknown>"), "tail tag", "unknown tags strip")
   end

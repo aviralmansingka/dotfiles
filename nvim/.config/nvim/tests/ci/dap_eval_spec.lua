@@ -145,6 +145,15 @@ case("dap_eval_spec:symbols", function()
   H.truthy(type(binding[2]) == "function", "the <localleader>r binding has a function handler")
   H.truthy(type(binding.desc) == "string" and binding.desc ~= "", "the <localleader>r binding carries a desc")
 
+  -- C33: the manual-focus hover branch is deleted — fe8f112 dropped the
+  -- <localleader>g keymap (gitsigns claimed it), and the idle timer is the
+  -- only caller, always auto. Structural pin: no nvim-dap key binding
+  -- mentions the hover, so the dead branch stays deleted/unwired.
+  for _, k in ipairs(dap_entry.keys or {}) do
+    H.truthy(not (k.desc or ""):lower():find("hover", 1, true),
+      "no nvim-dap key binding re-wires the eval hover (C33)")
+  end
+
   -- Pull the real locals out of the closure graph. H.upvalue errors
   -- ("not reachable") when a merge silently dropped one — the #27 guard.
   M.eval_repl = H.upvalue(binding[2], "dap_eval_repl_split")
@@ -417,28 +426,21 @@ case("dap_eval_spec:hover_lifecycle", function()
   local session = stub_dap(make_session("go"))
   local state = M._eval_state
 
-  -- Guard: no paused session. manual warns, auto is silent (never throws).
+  -- Guard: no paused session. The manual-focus branch is deleted (C33),
+  -- so hover is always silent without a paused session — never throws.
   session.stopped_thread_id = nil
-  local ok = pcall(M.hover, { source = "manual" })
-  H.truthy(ok, "manual hover never throws without a paused session")
-  ok = pcall(M.hover, { source = "auto" })
-  H.truthy(ok, "auto hover never throws without a paused session")
-  local warned = false
-  for _, c in ipairs(calls) do
-    if type(c.msg) == "string" and c.msg:find("DAP: no paused session", 1, true) then
-      warned = true
-    end
-  end
-  H.truthy(warned, "manual hover warns without a paused session")
+  local ok = pcall(M.hover)
+  H.truthy(ok, "hover never throws without a paused session")
+  H.eq(#calls, 0, "hover without a paused session is silent (no manual notify path)")
   H.eq(#session.requests, 0, "no paused session means no evaluate request")
 
-  -- Manual eval: request payload, float opened, state tracked, keymaps set.
+  -- Auto idle eval: request payload, float opened, state tracked, keymaps set.
   session.stopped_thread_id = 42
   local buf, win = go_window(SRC_LINES)
   vim.g.maplocalleader = ","
   vim.api.nvim_win_set_cursor(win, { 3, SRC_LINES[3]:find("Header", 1, true) - 1 })
-  M.hover({ source = "manual" })
-  H.eq(#session.requests, 1, "manual hover issues exactly one evaluate request")
+  M.hover()
+  H.eq(#session.requests, 1, "hover issues exactly one evaluate request")
   local req = session.requests[1]
   H.eq(req.command, "evaluate", "the request is an evaluate")
   H.eq(req.payload.expression, "w.Header()", "the request evaluates the cursor expression")
@@ -459,9 +461,12 @@ case("dap_eval_spec:hover_lifecycle", function()
   H.truthy(descs["DAP: Yank stringified value"], "the yank binding carries its desc")
   H.truthy(descs["DAP: Close eval hover"], "the float binds a close key (q/<Esc>)")
 
-  -- Re-eval suppression: same expression + live float = no second request.
-  M.hover({ source = "auto" })
+  -- Re-eval suppression: same expression + live float = no second request,
+  -- and the float never steals focus (the deleted manual branch was the
+  -- only focus-moving path, C33).
+  M.hover()
   H.eq(#session.requests, 1, "auto re-hover on the same expression is suppressed")
+  H.eq(vim.api.nvim_get_current_win(), win, "a live hover float never steals focus")
 
   -- The hover_buf guard (state steered directly — making the hover buffer
   -- current via the API would close the preview through its own
@@ -470,30 +475,14 @@ case("dap_eval_spec:hover_lifecycle", function()
   local hover_buf_saved, hover_win_saved = state.hover_buf, state.hover_win
   state.hover_win = nil
   state.hover_buf = buf
-  M.hover({ source = "auto" })
+  M.hover()
   H.eq(#session.requests, 1, "hovering while the hover buffer is current is a no-op")
   state.hover_buf, state.hover_win = hover_buf_saved, hover_win_saved
 
-  -- The manual-focus branch: a live hover_win + manual source focuses it
-  -- instead of evaluating again. State is steered directly, and the target
-  -- is a plain float (no lsp preview close-autocmds) so the branch logic is
-  -- what gets pinned — focusing the real preview float self-closes it via
-  -- the buffer-local CursorMoved close handler (known gap, see the doc).
-  local plain_buf = vim.api.nvim_create_buf(false, true)
-  local plain_win = vim.api.nvim_open_win(plain_buf, false, { relative = "editor", width = 20, height = 4, row = 0, col = 70 })
-  state.hover_buf, state.hover_win = nil, plain_win
-  M.hover({ source = "manual" })
-  H.eq(#session.requests, 1, "manual hover focuses the live hover window instead of re-evaluating")
-  H.eq(vim.api.nvim_get_current_win(), plain_win, "the manual branch moved focus to the hover window")
-  vim.api.nvim_set_current_win(win)
-  vim.api.nvim_win_close(plain_win, true)
-  vim.api.nvim_buf_delete(plain_buf, { force = true })
-
   -- New expression: the old float is gone (cursor moved), a fresh request
   -- and a fresh float appear.
-  state.hover_buf, state.hover_win = hover_buf_saved, hover_win_saved
   vim.api.nvim_win_set_cursor(win, { 3, SRC_LINES[3]:find("Set", 1, true) - 1 })
-  M.hover({ source = "auto" })
+  M.hover()
   H.eq(#session.requests, 2, "a different expression triggers a new evaluate")
   H.eq(session.requests[2].payload.expression, 'w.Header().Set("a", b)', "the new request carries the chain expression")
   H.eq(state.last_expr, 'w.Header().Set("a", b)', "last_expr advances to the new expression")
@@ -501,7 +490,7 @@ case("dap_eval_spec:hover_lifecycle", function()
   -- Adapter error path: the float surfaces the error, never throws.
   vim.api.nvim_win_set_cursor(win, { 4, SRC_LINES[4]:find("x", 1, true) - 1 })
   session.err = { message = "boom" }
-  M.hover({ source = "auto" })
+  M.hover()
   H.eq(#session.requests, 3, "the error path still issues the request")
   body = vim.api.nvim_buf_get_lines(state.hover_buf, 0, -1, false)
   H.eq(body[1], "Error: boom", "the float shows the adapter error message")

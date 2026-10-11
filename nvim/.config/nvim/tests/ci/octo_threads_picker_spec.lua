@@ -86,8 +86,11 @@ H.run("octo_threads_picker_spec", function()
   H.eq(#one_line_preview(string.rep("y", 200)), 80, "the preview never exceeds 80 chars")
   H.eq(one_line_preview("l1\r\nl2"), "l1", "CRLF bodies keep the first line")
   H.eq(one_line_preview("l1\nl2"), "l1", "LF bodies keep the first line")
-  H.eq(one_line_preview("\n\n"), "\n\n",
-    "a body of only newlines falls back to the raw body (documented quirk)")
+  -- C32b fixed: a body of only newlines has no first line — empty preview,
+  -- never the raw body.
+  H.eq(one_line_preview("\n\n"), "",
+    "a body of only newlines previews empty")
+  H.eq(one_line_preview("\r\n\r\n"), "", "CRLF-only bodies also preview empty")
 
   -- thread_line fallback chain
   H.eq(thread_line({ line = 5 }), 5, "line wins first")
