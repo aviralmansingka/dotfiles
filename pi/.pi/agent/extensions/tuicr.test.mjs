@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
 	buildReplyArgs,
+	buildReviewSubagentTask,
 	buildWrapperArgs,
 	collectSeenKeys,
 	commentKey,
@@ -8,10 +9,12 @@ import {
 	formatLaunchResult,
 	formatReplyCall,
 	formatReplyResult,
+	formatReviewLaunchResult,
 	formatSteerContent,
 	newComments,
 	parseCommentPayload,
 	parseSessionList,
+	parseTuicrCommandArgs,
 	pickSession,
 	postTuicrReply,
 	resolveSkillDir,
@@ -36,7 +39,102 @@ assert.equal(resolveSkillDir({ HOME: "/h" }), "/h/.agents/skills/tuicr");
 assert.deepEqual(scopeToTuicrArgs("working-tree"), ["-w"]);
 assert.deepEqual(scopeToTuicrArgs("revset", "main..@-"), ["-r", "main..@-"]);
 assert.throws(() => scopeToTuicrArgs("revset", "  "), /revset is required/);
+assert.deepEqual(scopeToTuicrArgs("pr", undefined, 272), ["pr", "272"]);
+assert.throws(() => scopeToTuicrArgs("pr"), /pr is required/);
+assert.throws(() => scopeToTuicrArgs("pr", undefined, 0), /pr is required/);
+assert.throws(() => scopeToTuicrArgs("pr", undefined, "abc"), /pr is required/);
 assert.throws(() => scopeToTuicrArgs("staged"), /Unknown scope/);
+assert.deepEqual(buildWrapperArgs({ repo: "/repo", tuicrArgs: ["pr", "272"] }), [
+	"/repo",
+	"--",
+	"pr",
+	"272",
+]);
+
+// ── /tuicr command grammar ──
+
+assert.deepEqual(parseTuicrCommandArgs(""), { action: "open", scope: "working-tree" });
+assert.deepEqual(parseTuicrCommandArgs("open"), { action: "open", scope: "working-tree" });
+assert.deepEqual(parseTuicrCommandArgs("open pr 272"), {
+	action: "open", scope: "pr", pr: 272,
+});
+assert.deepEqual(parseTuicrCommandArgs("pr 272"), {
+	action: "open", scope: "pr", pr: 272,
+});
+assert.deepEqual(parseTuicrCommandArgs("open -r main..@-"), {
+	action: "open", scope: "revset", revset: "main..@-",
+});
+assert.deepEqual(parseTuicrCommandArgs("watch"), {
+	action: "watch", scope: "working-tree",
+});
+assert.deepEqual(parseTuicrCommandArgs("watch -w /repo"), {
+	action: "watch", scope: "working-tree", repo: "/repo",
+});
+assert.deepEqual(parseTuicrCommandArgs("open -w /repo"), {
+	action: "open", scope: "working-tree", repo: "/repo",
+});
+assert.deepEqual(parseTuicrCommandArgs("stop"), { action: "stop" });
+assert.throws(() => parseTuicrCommandArgs("open pr"), /positive PR number/);
+assert.throws(() => parseTuicrCommandArgs("open pr abc"), /positive PR number/);
+assert.throws(() => parseTuicrCommandArgs("open -r"), /-r <revset>/);
+assert.throws(() => parseTuicrCommandArgs("open --bogus"), /Unknown \/tuicr argument/);
+
+// ── review subagent task and launch result ──
+
+const taskKnown = buildReviewSubagentTask({
+	repo: "/repo", slug: "s1", scope: "pr", revset: undefined, pr: 272,
+});
+assert.match(taskKnown, /PR 272/);
+assert.match(taskKnown, /sessionSlug "s1"/);
+assert.match(taskKnown, /attachOnly true/);
+assert.match(taskKnown, /tuicr_reply/);
+assert.match(taskKnown, /merge or review later/);
+const taskUnresolved = buildReviewSubagentTask({
+	repo: "/repo", slug: null, scope: "working-tree", revset: undefined, pr: undefined,
+});
+assert.match(taskUnresolved, /working tree/);
+assert.match(taskUnresolved, /Never launch a new pane/);
+assert.match(taskUnresolved, /retry for up to a minute/);
+
+// Scope args are validated on the attach path too — no pane launches, so
+// scopeToTuicrArgs never runs upstream of the task build.
+assert.throws(
+	() => buildReviewSubagentTask({ repo: "/repo", slug: "s1", scope: "pr", revset: undefined, pr: undefined }),
+	/pr is required/,
+);
+assert.throws(
+	() => buildReviewSubagentTask({ repo: "/repo", slug: "s1", scope: "revset", revset: undefined, pr: undefined }),
+	/revset is required/,
+);
+assert.throws(
+	() => buildReviewSubagentTask({ repo: "/repo", slug: "s1", scope: "staged", revset: undefined, pr: undefined }),
+	/Unknown scope/,
+);
+
+// Attaching names the session actually watched, not the requested scope.
+const taskAttached = buildReviewSubagentTask({
+	repo: "/repo", slug: "s1", attached: true, scope: "pr", revset: undefined, pr: 272,
+});
+assert.match(taskAttached, /active tuicr session s1/);
+assert.doesNotMatch(taskAttached, /PR 272/);
+assert.match(taskAttached, /sessionSlug "s1"/);
+
+// Pre-attach comments are swept, and any final steer ends the flow.
+assert.match(taskKnown, /existed before the watcher attached/);
+assert.match(taskKnown, /tuicr review comments --session <slug> --repo <repo>/);
+assert.match(taskKnown, /no pi-agent reply/);
+assert.match(taskKnown, /watcher stopped early/);
+
+const reviewLaunch = formatReviewLaunchResult({
+	repo: "/repo", slug: "s1", attached: false, subagent: "tuicr-review",
+});
+assert.match(reviewLaunch, /session s1 is active/);
+assert.match(reviewLaunch, /"tuicr-review" subagent now watches/);
+assert.match(reviewLaunch, /merge or review later/);
+const reviewAttach = formatReviewLaunchResult({
+	repo: "/repo", slug: "s1", attached: true, subagent: "tuicr-review",
+});
+assert.match(reviewAttach, /Attached to the active tuicr review session/);
 assert.deepEqual(buildWrapperArgs({ repo: "/repo", tuicrArgs: ["-w"] }), [
 	"/repo",
 	"--",

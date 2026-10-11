@@ -70,12 +70,15 @@ so do not require a multiplexer just to connect to an existing active session.
 
 When the user needs an interactive tuicr pane and no active session exists:
 
-**If the `tuicr` tool is available, use it instead of a wrapper
-script.** It launches (or attaches to) the same pane but returns immediately,
-and new user comments are steered back into your session automatically as
-they land — no polling and no blocking. The wrapper table below is the
-fallback for environments without that extension, and the tmux/Zellij/Herdr
-wrappers block until the TUI exits, so only run them when you cannot avoid it.
+**If the `tuicr_review` tool is available, use it instead of a wrapper
+script.** It opens (or attaches to) the same pane, returns immediately, and
+spawns the tuicr-review subagent that answers the user's comments inside the
+TUI — no polling and no blocking; the subagent's summary returns when the TUI
+exits. The plain `tuicr` tool is the internal comment watcher: it steers each
+comment batch into your own session instead (`/tuicr watch`). The wrapper
+table below is the fallback for environments without those extension tools,
+and the tmux/Zellij/Herdr wrappers block until the TUI exits, so only run
+them when you cannot avoid it.
 
 | Environment | Action |
 |-------------|--------|
@@ -130,11 +133,13 @@ read the comments after the user exits tuicr.
 
 This is the main review loop for user-led review.
 
-There is no push stream from tuicr to the agent — except when the session was
-started through the `tuicr` tool, which steers each new comment
-batch into the session automatically; in that flow, do not poll at all, just
-act on the steered batches. Otherwise, read comments by running the CLI on
-demand. After the user says comments are ready, or after the TUI exits, run:
+There is no push stream from tuicr to the agent — except when the session
+was started through the extension tools: `tuicr_review` steers each new
+comment batch into its tuicr-review subagent, and the calling session
+receives only the summary when the TUI exits; the plain `tuicr` watcher
+steers the batches into your own session. In those flows, do not poll at
+all, just act on the steered batches. Otherwise, read comments by running
+the CLI on demand. After the user says comments are ready, or after the TUI exits, run:
 
 ```bash
 tuicr review comments --repo /path/to/repo --session <slug>

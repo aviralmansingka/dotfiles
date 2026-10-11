@@ -1,7 +1,7 @@
 ---
 name: worker
 description: General-purpose worker — reads, writes, and edits code
-tools: read, write, edit, bash, web_search, web_fetch
+tools: read, write, edit, bash, web_search, web_fetch, tuicr, tuicr_reply
 subagent_agents: scout, researcher
 model: openai-codex/gpt-6-astra
 thinking: high
