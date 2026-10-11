@@ -118,6 +118,13 @@ sessions: no real pi sessions, no nvim, no tmux/multiplexer servers. The 2026-10
 professor-test incident (run 01M4NRT2XKCHANREB6YFBPX6Q9) improvised a live harness,
 timed out, and leaked nvim processes on the host.
 
+Both runners discover targets with `git ls-files` — every `scripts/test-*` entry and
+`pi/.pi/agent/extensions/**/*.test.mjs` joins automatically; never hand-list tests.
+Per-component coverage, runtime SLA, and the full rules live in `docs/ci-tests/README.md`;
+the no-mistakes runbook (commands, skip-vs-fail semantics, how to add coverage) is
+`docs/ci-tests/no-mistakes-ci.md`. A new suite is a `scripts/test-<name>.*` entry with a
+`# Paths:` header (`// Paths:` for .mjs) plus a `/simple` doc in `docs/ci-tests/`.
+
 ## CUDA LSP host invariant
 
 NVIDIA ships no CUDA Toolkit for macOS Apple Silicon. `.cu` files get

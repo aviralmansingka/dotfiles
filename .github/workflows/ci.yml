@@ -1,9 +1,32 @@
 name: CI
 
-# Fast, deterministic checks for the surfaces an agent actually touches:
-# shell/python scripts, neovim lua config, and Pi TS extensions.
-# The Packer AMI pipeline was removed; Terraform plan/apply stays path-gated
-# in its own workflow. This workflow runs every offline repo test.
+# Fast, deterministic, offline checks for the surfaces an agent actually
+# touches: Pi TS extensions, agents skills, neovim lua config, and
+# shell/python/node scripts.
+#
+# Structure (see docs/ci-tests/ci-meta.md):
+#   changes       - diffs against the merge base; area outputs gate jobs
+#   lint          - always runs; repo-wide syntax gates + CI self-check
+#   pi-tests      - gated on pi/** or agents/** changes
+#   nvim-tests    - gated on nvim/** changes
+#   scripts-tests - gated on scripts/** or root config changes
+#   ops-tests     - gated on ops/** changes (terraform offline tests)
+#   result        - ALWAYS reports (if: !cancelled()); make this the
+#                   required check, never the individual area jobs
+#
+# This workflow owns required checks, so its trigger has NO paths filter.
+# PR #175: a trigger-level paths filter stops a required check from
+# reporting on PRs that do not touch those paths, and blocks merges.
+# Area gating happens in the `changes` job instead. Docs-only changes
+# (*.md) never trigger the heavy suites.
+#
+# Test files are DISCOVERED by git ls-files globs, never hand-listed
+# (PRs #227, #257, #279: hand-written lists drift silently). Live-env
+# tests are excluded in scripts/ci-tier2-exclusions.txt; the exclusion
+# table is enforced by scripts/test-ci-self.mjs (deletion lockstep).
+#
+# The Packer AMI pipeline was removed; Terraform plan/apply stays
+# path-gated in its own workflow (terraform.yml owns no required check).
 
 on:
   push:
@@ -15,15 +38,154 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pi: ${{ steps.filter.outputs.pi }}
+      nvim: ${{ steps.filter.outputs.nvim }}
+      scripts: ${{ steps.filter.outputs.scripts }}
+      ops: ${{ steps.filter.outputs.ops }}
+    steps:
+      - name: Checkout (full history for merge-base)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gate areas from the diff and test path headers
+        id: filter
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            base="origin/$BASE_REF"
+          elif git cat-file -e "$EVENT_BEFORE" 2>/dev/null; then
+            base="$EVENT_BEFORE"
+          else
+            base=""
+          fi
+          merge_base="$(git merge-base "$base" HEAD 2>/dev/null || true)"
+          if [ -z "$merge_base" ]; then
+            # No usable base (first push, force push): run everything.
+            echo "no merge base found; running all suites"
+            {
+              echo "pi=true"
+              echo "nvim=true"
+              echo "scripts=true"
+              echo "ops=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mapfile -t changed_all < <(git diff --name-only "$merge_base" HEAD || true)
+
+          # --- dynamic gates ---------------------------------------------
+          # A scripts/test-* entry may declare its own trigger paths in a
+          # "# Paths: <globs>" header comment. Harvest every header and
+          # union its globs into the gate of the job that RUNS the entry:
+          #   scripts/test-nvim-*.sh   -> nvim-tests
+          #   scripts/test-terraform*  -> ops-tests
+          #   every other runnable entry -> scripts-tests
+          # New test entries then self-wire; nothing is hand-listed here.
+          # scripts/test-ci-self.mjs enforces this contract.
+          tier2() { sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' scripts/ci-tier2-exclusions.txt; }
+          is_tier2() { grep -xFq "$1" <(tier2); }
+          # shellcheck disable=SC2020,SC2053  # tr char-set and glob [[ == ]] are intentional
+          harvest() { # emit one declared glob per line for the given entries
+            # Canonical header per file type: "# Paths:" for .sh/.py,
+            # "// Paths:" for .mjs (node rejects "#" comments). Any other
+            # form fails loudly in scripts/test-ci-self.mjs.
+            local f line
+            for f in "$@"; do
+              case "$f" in
+                *.mjs) line="$(grep -m1 '^// Paths:' "$f" 2>/dev/null | sed 's|^// Paths:||' || true)" ;;
+                *)     line="$(grep -m1 '^# Paths:' "$f" 2>/dev/null | sed 's/^# Paths://' || true)" ;;
+              esac
+              if [ -n "$line" ]; then printf '%s\n' "$line" | tr ' ,' '\n\n' | grep -v '^$' || true; fi
+            done
+          }
+          mapfile -t entries < <(git ls-files --cached --others --exclude-standard 'scripts/test-*')
+          nvim_entries=() ; ops_entries=() ; scripts_entries=()
+          for f in "${entries[@]}"; do
+            is_tier2 "$f" && continue
+            case "$f" in
+              scripts/test-nvim-*.sh)  nvim_entries+=("$f") ;;
+              scripts/test-terraform*) ops_entries+=("$f") ;;
+              *)                       scripts_entries+=("$f") ;;
+            esac
+          done
+
+          # Fixed gates (kept in sync with scripts/test-ci-self.mjs).
+          pi_globs=('pi/*' 'agents/*' '.github/workflows/ci.yml')
+          nvim_globs=('nvim/*' 'scripts/test-nvim-*' '.github/workflows/ci.yml')
+          scripts_globs=('scripts/*' 'install.sh' 'Brewfile' '.stowrc'
+                         'dependencies.json'
+                         'systemd/*' 'launchd/*' 'gh-dash/*')
+          ops_globs=('ops/*' '.github/workflows/ci.yml')
+          # declared_all holds every header-declared glob (fixed gates
+          # excluded) — the docs-only rule below consults it.
+          declared_all=()
+          mapfile -t extra < <(harvest "${nvim_entries[@]}")
+          nvim_globs+=("${extra[@]}"); declared_all+=("${extra[@]}")
+          mapfile -t extra < <(harvest "${ops_entries[@]}")
+          ops_globs+=("${extra[@]}"); declared_all+=("${extra[@]}")
+          mapfile -t extra < <(harvest "${scripts_entries[@]}")
+          scripts_globs+=("${extra[@]}"); declared_all+=("${extra[@]}")
+
+          # Docs-only rule: an UNDECLARED *.md change triggers nothing. A
+          # path that an entry declares beats the strip (that entry guards
+          # the file, e.g. SKILL.md frontmatter, README stow tables).
+          mapfile -t changed < <(
+            # shellcheck disable=SC2053  # glob [[ == ]] is intentional
+            for f in "${changed_all[@]}"; do
+              case "$f" in
+                *.md)
+                  keep=0
+                  for g in "${declared_all[@]}"; do
+                    [[ "$f" == $g ]] && { keep=1; break; }
+                  done
+                  [ "$keep" -eq 1 ] && printf '%s\n' "$f" || true
+                  ;;
+                *) printf '%s\n' "$f" ;;
+              esac
+            done
+          )
+
+          # Bash pattern matching: * crosses / (git-pathspec semantics).
+          # shellcheck disable=SC2053  # glob [[ == ]] is intentional
+          gate_hits() { # true when any changed file matches any glob
+            local f g
+            for f in "${changed[@]}"; do
+              for g in "$@"; do
+                [[ "$f" == $g ]] && return 0
+              done
+            done
+            return 1
+          }
+          hit() { gate_hits "$@" && echo true || echo false; }
+          {
+            echo "pi=$(hit "${pi_globs[@]}")"
+            echo "nvim=$(hit "${nvim_globs[@]}")"
+            echo "scripts=$(hit "${scripts_globs[@]}")"
+            echo "ops=$(hit "${ops_globs[@]}")"
+          } >> "$GITHUB_OUTPUT"
+
   lint:
     name: Lint & syntax
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Neovim
-        run: sudo apt-get update && sudo apt-get install -y neovim
+      - name: Install Neovim and zsh
+        run: sudo apt-get update && sudo apt-get install -y neovim zsh
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Shell syntax (bash/sh -n)
         run: |
@@ -46,6 +208,15 @@ jobs:
           done < <(git ls-files 'scripts/*')
           exit $fail
 
+      - name: Zsh syntax (zsh -n)
+        run: |
+          set +e
+          fail=0
+          while IFS= read -r f; do
+            zsh -n "$f" || { echo "FAIL $f"; fail=1; }
+          done < <(git ls-files 'zsh/*')
+          exit $fail
+
       - name: Python syntax (py_compile)
         run: |
           set +e
@@ -53,6 +224,23 @@ jobs:
           while IFS= read -r f; do
             python3 -m py_compile "$f" || { echo "FAIL $f"; fail=1; }
           done < <(git ls-files '*.py')
+          exit $fail
+
+      - name: Extensionless script syntax (node --check / py_compile)
+        run: |
+          set +e
+          fail=0
+          # Extensionless scripts (e.g. scripts/pi-settings-sync,
+          # pi/bin/notion-cli) fall through the *.sh/*.py loops above.
+          while IFS= read -r f; do
+            sb=$(head -1 "$f" 2>/dev/null)
+            case "$sb" in
+              '#!/usr/bin/env node'|'#!/usr/bin/node'|'#!/bin/node')
+                node --check "$f" || { echo "FAIL $f"; fail=1; } ;;
+              '#!/usr/bin/env python3'|'#!/usr/bin/python3'|'#!/bin/python3')
+                python3 -m py_compile "$f" || { echo "FAIL $f"; fail=1; } ;;
+            esac
+          done < <(git ls-files 'scripts/*' 'pi/bin/*' | grep -v '\.')
           exit $fail
 
       - name: Lua syntax (nvim loadfile parse-only)
@@ -67,9 +255,15 @@ jobs:
           done < <(git ls-files '*.lua')
           exit $fail
 
-  extensions:
-    name: Extension tests
+      - name: CI self-check (workflow structure + exclusion table)
+        run: node scripts/test-ci-self.mjs
+
+  pi-tests:
+    name: Pi & agents tests
+    needs: changes
+    if: needs.changes.outputs.pi == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -82,70 +276,264 @@ jobs:
       - name: Install jiti and typebox
         run: npm install --prefix "$RUNNER_TEMP/jiti-root" jiti@2 typebox@1.3.27
 
-      - name: Run extension tests
+      # python.test.mjs spawns `uv run python -`.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      # run-command.test.mjs probes lua5.4 -> lua5.3 -> lua5.1 -> luajit
+      # -> lua and activates a real-Lua compile gate (loadfile) when found.
+      - name: Install lua5.4
+        run: sudo apt-get update && sudo apt-get install -y lua5.4
+
+      # The nvim suites (and nvim-open's .sh e2e scenarios in the pi
+      # job) are authored against modern nvim. apt on noble
+      # ships 0.9.5 (tree-sitter 0.20.8, parser ABI <= 14) — never use it
+      # for the nvim lane. Install the pinned official stable tarball.
+      - name: Install pinned Neovim (v0.12.6)
+        run: |
+          curl -sSL -o "$RUNNER_TEMP/nvim.tar.gz" \
+            https://github.com/neovim/neovim/releases/download/v0.12.6/nvim-linux-x86_64.tar.gz
+          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
+          sudo mv "$RUNNER_TEMP/nvim-linux-x86_64" /usr/local/nvim-v0.12.6
+          sudo ln -sf /usr/local/nvim-v0.12.6/bin/nvim /usr/local/bin/nvim
+          nvim --version | head -1
+
+      - name: Extension loader smoke
+        env:
+          JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
+          NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
+        run: node scripts/test-extension-loader.mjs
+
+      - name: Extension and agents tests (glob-discovered)
         env:
           JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
           NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
         run: |
-          node pi/.pi/agent/extensions/cleanup.test.mjs
-          node pi/.pi/agent/extensions/explain.test.mjs
-          node pi/.pi/agent/extensions/focus-buffer.test.mjs
-          node pi/.pi/agent/extensions/herdr-prompt-state.test.mjs
-          node pi/.pi/agent/extensions/interactive-subagents.test.mjs
-          node pi/.pi/agent/extensions/lesson.test.mjs
-          node pi/.pi/agent/extensions/md-log.test.mjs
-          node pi/.pi/agent/extensions/mermaid.test.mjs
-          node pi/.pi/agent/extensions/no-mistakes-gate.test.mjs
-          node pi/.pi/agent/extensions/no-mistakes-bridge.test.mjs
-          node pi/.pi/agent/extensions/no-mistakes-pane.test.mjs
-          node pi/.pi/agent/extensions/nvim-open.test.mjs
-          node pi/.pi/agent/extensions/quiz-context-files.test.mjs
-          node pi/.pi/agent/extensions/quiz-result.test.mjs
-          node pi/.pi/agent/extensions/run-command.test.mjs
-          node pi/.pi/agent/extensions/thinking-blank.test.mjs
-          node pi/.pi/agent/extensions/tool-call-renderer-public.test.mjs
-          node pi/.pi/agent/extensions/tuicr.test.mjs
-          node pi/.pi/agent/extensions/usage.test.mjs
-          node pi/.pi/agent/extensions/user-input/input-modes.test.mjs
-          node pi/.pi/agent/extensions/user-input/option-navigation.test.mjs
-          node pi/.pi/agent/extensions/user-input/option-shortcuts.test.mjs
-          node pi/.pi/agent/extensions/web-fetch/web-fetch.test.mjs
-          node pi/.pi/agent/extensions/web-search/web-search.test.mjs
+          set +e
+          fail=0
+          tier2() { sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' scripts/ci-tier2-exclusions.txt; }
+          while IFS= read -r f; do
+            if timeout 120 node "$f"; then
+              echo "ok   $f"
+            else
+              echo "FAIL $f"
+              fail=1
+            fi
+          done < <(git ls-files 'pi/.pi/agent/extensions/**' 'agents/**' \
+            | grep '\.test\.mjs$' \
+            | grep -vxFf <(tier2))
+          [ "$fail" -eq 0 ] || exit 1
+          echo "discovered $(git ls-files 'pi/.pi/agent/extensions/**' 'agents/**' | grep '\.test\.mjs$' | grep -cvxFf <(tier2)) test files"
 
-  scripts-tests:
-    name: Scripts tests
+      - name: Pi bin python tests (glob-discovered)
+        run: timeout 120 python3 -m unittest discover -s pi/bin -p 'test_*.py'
+
+  nvim-tests:
+    name: Nvim tests
+    needs: changes
+    if: needs.changes.outputs.nvim == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: auto-git-sync tests
-        run: bash scripts/test-auto-git-sync.sh
-
-      - name: gh-dash-open-pr tests (ruby is preinstalled on ubuntu runners)
-        run: bash scripts/test-gh-dash-open-pr.sh
-
-      - name: herdr-clean-handoff tests
-        run: |
-          sudo apt-get update && sudo apt-get install -y zsh
-          bash scripts/test-herdr-clean-handoff.sh
-
-      - name: herdr-flash-copy tests
-        run: bash scripts/test-herdr-flash-copy.sh
-
-      - name: herdr-annotate-install tests
-        run: python3 scripts/test-herdr-annotate-install.py
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Pi live-config tests
+      # The nvim suites are authored against modern nvim. apt on noble
+      # ships 0.9.5 (tree-sitter 0.20.8, parser ABI <= 14) — never use it
+      # for the nvim lane. Install the pinned official stable tarball.
+      - name: Install pinned Neovim (v0.12.6)
         run: |
-          sudo apt-get update && sudo apt-get install -y stow
-          node scripts/test-pi-live-config.mjs
-          node scripts/test-pi-hidden-thinking.mjs
+          curl -sSL -o "$RUNNER_TEMP/nvim.tar.gz" \
+            https://github.com/neovim/neovim/releases/download/v0.12.6/nvim-linux-x86_64.tar.gz
+          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
+          sudo mv "$RUNNER_TEMP/nvim-linux-x86_64" /usr/local/nvim-v0.12.6
+          sudo ln -sf /usr/local/nvim-v0.12.6/bin/nvim /usr/local/bin/nvim
+          nvim --version | head -1
 
-      - name: Pi telegram daemon tests
-        run: python3 -m unittest discover -s pi/bin -p 'test_pi_telegram_daemon.py'
+      # dap_eval_spec:range_contains parses a go buffer with core
+      # treesitter; the go parser is host-installed on the fleet but
+      # absent on fresh runners. Build the pinned grammar into the
+      # runner's site parser dir (default runtimepath picks it up).
+      - name: Provision treesitter go parser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/ts-go" tree-sitter-cli@0.27.1 tree-sitter-go@0.25.0
+          mkdir -p "$HOME/.local/share/nvim/site/parser"
+          (cd "$RUNNER_TEMP/ts-go/node_modules/tree-sitter-go" && \
+            npx --prefix "$RUNNER_TEMP/ts-go" tree-sitter build \
+              -o "$HOME/.local/share/nvim/site/parser/go.so")
+
+      - name: Nvim suites (glob-discovered scripts/test-nvim-*.sh)
+        run: |
+          set +e
+          fail=0
+          tier2() { sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' scripts/ci-tier2-exclusions.txt; }
+          while IFS= read -r f; do
+            if timeout 120 bash "$f"; then
+              echo "ok   $f"
+            else
+              echo "FAIL $f"
+              fail=1
+            fi
+          done < <(git ls-files --cached --others --exclude-standard 'scripts/test-nvim-*.sh' | grep -vxFf <(tier2))
+          [ "$fail" -eq 0 ] || exit 1
+          echo "discovered $(git ls-files --cached --others --exclude-standard 'scripts/test-nvim-*.sh' | grep -cvxFf <(tier2)) nvim suite scripts"
+
+      - name: Nvim spec tests (glob-discovered)
+        run: |
+          set +e
+          fail=0
+          tier2() { sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' scripts/ci-tier2-exclusions.txt; }
+          # Specs resolve config modules relative to the nvim config root,
+          # so run with cwd nvim/.config/nvim and NVIM_TEST_CONFIG_ROOT set
+          # (the shared harness contract of test-nvim-headless.sh). pcall +
+          # cquit converts a failed assertion into a non-zero exit (nvim
+          # alone exits 0).
+          config_root="$PWD/nvim/.config/nvim"
+          while IFS= read -r f; do
+            b="$(basename "$f")"
+            if (cd nvim/.config/nvim && NVIM_TEST_CONFIG_ROOT="$config_root" timeout 120 nvim --headless -u NONE -c "lua local ok,err = pcall(dofile, 'tests/$b'); if not ok then io.stderr:write(tostring(err)..'\n'); vim.cmd('cquit 1') else vim.cmd('qa') end") ; then
+              echo "ok   $f"
+            else
+              echo "FAIL $f"
+              fail=1
+            fi
+          # Top-level legacy specs only: tests/ci/*_spec.lua belong to
+          # scripts/test-nvim-headless.sh (shared harness contract) and
+          # must not run twice.
+          done < <(git ls-files 'nvim/.config/nvim/tests/*' \
+            | grep '_spec\.lua$' \
+            | grep -v '^nvim/.config/nvim/tests/ci/' \
+            | grep -vxFf <(tier2))
+          [ "$fail" -eq 0 ] || exit 1
+          echo "discovered $(git ls-files 'nvim/.config/nvim/tests/*' | grep '_spec\.lua$' | grep -v '^nvim/.config/nvim/tests/ci/' | grep -cvxFf <(tier2)) spec files"
+
+  scripts-tests:
+    name: Scripts tests
+    needs: changes
+    if: needs.changes.outputs.scripts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install stow and zsh
+        run: sudo apt-get update && sudo apt-get install -y stow zsh
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install jiti and typebox
+        run: npm install --prefix "$RUNNER_TEMP/jiti-root" jiti@2 typebox@1.3.27
+
+      # ruby is preinstalled on ubuntu runners (test-gh-dash-open-pr.sh).
+      - name: Scripts tests (glob-discovered, dispatch by suffix)
+        env:
+          JITI_PATH: ${{ runner.temp }}/jiti-root/node_modules/jiti/lib/jiti.cjs
+          NODE_PATH: ${{ runner.temp }}/jiti-root/node_modules
+        run: |
+          set +e
+          fail=0
+          tier2() { sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' scripts/ci-tier2-exclusions.txt; }
+          # scripts/test-nvim-*.sh is routed to the nvim job;
+          # scripts/test-terraform* is routed to the ops job.
+          routed() { git ls-files --cached --others --exclude-standard 'scripts/test-*' \
+            | grep -vxFf <(tier2) \
+            | grep -vxE 'scripts/test-(nvim-.*|terraform.*)'; }
+          while IFS= read -r f; do
+            case "$f" in
+              *.mjs) runner=(node "$f") ;;
+              *.sh)  runner=(bash "$f") ;;
+              *.py)  runner=(python3 "$f") ;;
+              *)
+                echo "FAIL $f (no runner for this suffix; add one or exclude it as Tier 2)"
+                fail=1
+                continue
+                ;;
+            esac
+            # Per-entry env: the nm-install suite is offline; STRICT=1
+            # only turns missing-tool skips into failures (dom-nm-install).
+            entry_env=()
+            case "$f" in
+              scripts/test-nm-install.sh) entry_env=(STRICT=1) ;;
+            esac
+            if timeout 120 env "${entry_env[@]}" "${runner[@]}"; then
+              echo "ok   $f"
+            else
+              echo "FAIL $f"
+              fail=1
+            fi
+          done < <(routed)
+          [ "$fail" -eq 0 ] || exit 1
+          echo "discovered $(routed | grep -c .) test files"
+
+  ops-tests:
+    name: Ops tests
+    needs: changes
+    if: needs.changes.outputs.ops == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Offline terraform checks (fmt/validate etc.) arrive as
+      # scripts/test-terraform.*; discovery tolerates their absence.
+      - name: Terraform offline tests (glob-discovered)
+        run: |
+          set +e
+          fail=0
+          found=0
+          while IFS= read -r f; do
+            found=1
+            case "$f" in
+              *.mjs) runner=(node "$f") ;;
+              *.sh)  runner=(bash "$f") ;;
+              *.py)  runner=(python3 "$f") ;;
+              *)
+                echo "FAIL $f (no runner for this suffix)"
+                fail=1
+                continue
+                ;;
+            esac
+            # STRICT=1: a missing tool fails in CI (locally it skips).
+            # The offline lane runs; terraform init stays opt-in (TF_VALIDATE).
+            if STRICT=1 timeout 300 "${runner[@]}"; then
+              echo "ok   $f"
+            else
+              echo "FAIL $f"
+              fail=1
+            fi
+          done < <(git ls-files --cached --others --exclude-standard 'scripts/test-terraform*')
+          if [ "$found" -eq 0 ]; then
+            echo "no scripts/test-terraform.* discovered yet; ops suite idle"
+          fi
+          exit $fail
+
+  result:
+    name: CI result
+    needs: [changes, lint, pi-tests, nvim-tests, scripts-tests, ops-tests]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Report aggregate result
+        run: |
+          echo "changes=${{ needs.changes.result }} lint=${{ needs.lint.result }} pi=${{ needs.pi-tests.result }} nvim=${{ needs.nvim-tests.result }} scripts=${{ needs.scripts-tests.result }} ops=${{ needs.ops-tests.result }}"
+          # Skipped area jobs are fine (path-gated); failure or cancellation
+          # of any dependency fails the aggregate required check.
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] \
+            || [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "one or more CI jobs failed or were cancelled"
+            exit 1
+          fi
