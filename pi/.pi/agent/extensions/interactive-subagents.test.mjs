@@ -9,11 +9,12 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	agentIsolationArgs,
 	loadAgentDefaultsFromPaths,
+	parseAgentDefinition,
 } from "./interactive-subagents/pi-extension/subagents/agent-definitions.mjs";
 
 const require = createRequire(import.meta.url);
@@ -330,6 +331,18 @@ try {
 	assert.equal(overridden.tools, "read");
 	assert.equal(overridden.body, "Override");
 
+	// agent-dir frontmatter: "parent" is the only supported policy value.
+	assert.equal(parseAgentDefinition("---\nname: x\nagent-dir: parent\n---\nBody").agentDir, "parent");
+	assert.equal(parseAgentDefinition("---\nname: x\n---\nBody").agentDir, undefined, "omission parses to undefined");
+	assert.equal(parseAgentDefinition("---\nname: x\nagent-dir: repo\n---\nBody").agentDir, undefined, "unsupported value parses to undefined");
+	const orchestrator = loadAgentDefaultsFromPaths("nm-orchestrator", {
+		cwd: profileRoot,
+		configDir: join(profileRoot, "global-agent-config"),
+		bundledDir: bundledAgentsDir,
+	});
+	assert.equal(orchestrator.agentDir, "parent");
+	assert.equal(orchestrator.tools, "no_mistakes_axi, read");
+
 	const researcher = loadAgentDefaultsFromPaths("researcher", {
 		cwd: profileRoot,
 		configDir: join(profileRoot, "global-agent-config"),
@@ -352,6 +365,31 @@ try {
 	assert.equal(professor.autoExit, false);
 } finally {
 	rmSync(profileRoot, { recursive: true, force: true });
+}
+
+// --- Bundled agents inherit the session model; per-agent thinking stays ---
+{
+	const expectedThinking = {
+		scout: "low",
+		researcher: "medium",
+		worker: "high",
+		"tuicr-review": "high",
+		professor: "high",
+		"research-orchestrator": "high",
+		"nm-orchestrator": undefined,
+	};
+	for (const [name, thinking] of Object.entries(expectedThinking)) {
+		const defs = loadAgentDefaultsFromPaths(name, {
+			cwd: tmpdir(),
+			configDir: tmpdir(),
+			bundledDir: bundledAgentsDir,
+		});
+		assert.equal(defs.model, undefined, `${name} inherits the session model (no model pin)`);
+		assert.equal(defs.thinking, thinking, `${name} keeps its thinking level on the inherited model`);
+	}
+	// With no model pin, the standalone --thinking behavior is asserted for
+	// real in the applySandboxToParts behavior block below (eval'd from source
+	// with injected deps — index.ts cannot be jiti-loaded whole).
 }
 
 // --- No Mistakes compact status follows the shared activity-widget contract ---
@@ -420,5 +458,302 @@ for (const source of ["project", "global", "package"]) {
 }
 assert.equal(renderList([]), "<dim>No subagent definitions found.</dim>");
 assert.equal(renderList(undefined), "<dim>No subagent definitions found.</dim>");
+
+// --- Baseline tool renderer for every spawned subagent ---
+// index.ts cannot be jiti-loaded whole (it imports the pi package), so the
+// helper is eval'd from source with the real surface's shellEscape injected.
+const baselineSource = indexSource
+	.split("// ── baseline subagent renderer ──")[1]
+	.split("/**\n * Apply a loadout snapshot's sandbox")[0];
+globalThis.__baselineDeps = { shellEscape: surface.shellEscape, resolve, existsSync };
+const baselineSubagentExtensionArgs = jiti.evalModule(
+	`
+	const { shellEscape, resolve, existsSync } = globalThis.__baselineDeps;
+	${baselineSource}
+	module.exports = baselineSubagentExtensionArgs;
+`,
+	{ filename: join(tmpdir(), "subagent-baseline-renderer-test.ts") },
+);
+delete globalThis.__baselineDeps;
+
+// Missing renderer → no baseline args.
+const baselineRoot = mkdtempSync(join(tmpdir(), "subagent-baseline-test-"));
+try {
+	const emptyDir = join(baselineRoot, "agent");
+	mkdirSync(emptyDir, { recursive: true });
+	assert.deepEqual(baselineSubagentExtensionArgs(emptyDir), []);
+
+	// Present renderer → exactly one shell-escaped -e pair.
+	const rendererDir = join(baselineRoot, "agent-with-renderer", "extensions");
+	mkdirSync(rendererDir, { recursive: true });
+	writeFileSync(join(rendererDir, "tool-call-renderer-public.ts"), "export {};\n");
+	assert.deepEqual(baselineSubagentExtensionArgs(join(baselineRoot, "agent-with-renderer")), [
+		"-e",
+		`'${join(rendererDir, "tool-call-renderer-public.ts")}'`,
+	]);
+
+	// A parent dir with spaces and an apostrophe is correctly quoted.
+	const weirdDir = join(baselineRoot, "par ent's dir", "agent", "extensions");
+	mkdirSync(weirdDir, { recursive: true });
+	writeFileSync(join(weirdDir, "tool-call-renderer-public.ts"), "export {};\n");
+	const [weirdFlag, weirdPath] = baselineSubagentExtensionArgs(join(baselineRoot, "par ent's dir", "agent"));
+	assert.equal(weirdFlag, "-e");
+	assert.equal(
+		weirdPath,
+		`'${join(weirdDir, "tool-call-renderer-public.ts").replace(/'/g, "'\\''")}'`,
+		"spaces stay quoted and the apostrophe is escaped shell-style",
+	);
+
+	// A relative agent dir resolves against the process cwd to an absolute path.
+	const relRoot = join(baselineRoot, "rel-cwd");
+	mkdirSync(join(relRoot, "agent", "extensions"), { recursive: true });
+	writeFileSync(join(relRoot, "agent", "extensions", "tool-call-renderer-public.ts"), "export {};\n");
+	const previousCwd = process.cwd();
+	process.chdir(relRoot);
+	try {
+		const [relFlag, relPath] = baselineSubagentExtensionArgs("agent");
+		assert.equal(relFlag, "-e");
+		assert.ok(relPath.startsWith("'"), "path is shell-quoted");
+		assert.ok(
+			!relPath.startsWith("'agent"),
+			"resolve() made the relative agent dir absolute before quoting",
+		);
+		assert.ok(relPath.includes("tool-call-renderer-public.ts'"));
+	} finally {
+		process.chdir(previousCwd);
+	}
+
+} finally {
+	rmSync(baselineRoot, { recursive: true, force: true });
+}
+
+// --- applySandboxToParts behavior: standalone --thinking on the inherited
+// model, and the baseline renderer's -e pair ordered BEFORE the granted
+// tool's -e pair. Eval'd from index.ts source with injected deps (like the
+// baseline renderer above) because index.ts cannot be jiti-loaded whole.
+{
+	const sandboxRoot = mkdtempSync(join(tmpdir(), "subagent-sandbox-test-"));
+	try {
+		// An agent dir WITH the public renderer, so the baseline -e pair is live.
+		const agentDir = join(sandboxRoot, "agent");
+		mkdirSync(join(agentDir, "extensions"), { recursive: true });
+		const baselineRendererPath = join(agentDir, "extensions", "tool-call-renderer-public.ts");
+		writeFileSync(baselineRendererPath, "export {};\n");
+		// One granted tool whose helper extension is a real temp .ts on disk.
+		const toolExtPath = join(sandboxRoot, "tools", "faketool.ts");
+		mkdirSync(join(sandboxRoot, "tools"), { recursive: true });
+		writeFileSync(toolExtPath, "export {};\n");
+		globalThis.__sandboxDeps = {
+			shellEscape: surface.shellEscape,
+			getAgentConfigDir: () => agentDir,
+			agentIsolationArgs: () => [],
+			getToolExtensionPath: (tool) => (tool === "faketool" ? toolExtPath : undefined),
+			join,
+			resolve,
+			dirname,
+			mkdirSync,
+			writeFileSync,
+			existsSync,
+		};
+		const sandboxBody = indexSource.split("function applySandboxToParts(")[1].split("\nfunction ")[0];
+		const { applySandboxToParts } = jiti.evalModule(
+			`
+			const { shellEscape, getAgentConfigDir, agentIsolationArgs, getToolExtensionPath, join, resolve, dirname, mkdirSync, writeFileSync, existsSync } = globalThis.__sandboxDeps;
+			${baselineSource}
+			function applySandboxToParts(${sandboxBody}
+			module.exports = { applySandboxToParts };
+		`,
+			{ filename: join(tmpdir(), "subagent-sandbox-behavior-test.ts") },
+		);
+		delete globalThis.__sandboxDeps;
+
+		// (a) No model pin: the agent's thinking level rides the inherited
+		// default model as a standalone --thinking pair — no --model flag.
+		const thinkingParts = [];
+		applySandboxToParts(
+			thinkingParts,
+			{ model: null, thinking: "high", toolAllowlist: null },
+			{ artifactDir: join(sandboxRoot, "artifacts"), name: "thinking-test" },
+		);
+		const thinkingIndex = thinkingParts.indexOf("--thinking");
+		assert.ok(thinkingIndex !== -1, "a pinned thinking level yields a standalone --thinking flag");
+		assert.deepEqual(
+			thinkingParts.slice(thinkingIndex, thinkingIndex + 2),
+			["--thinking", "'high'"],
+			"the --thinking pair carries the shell-escaped level",
+		);
+		assert.ok(!thinkingParts.includes("--model"), "no model pin means no --model flag");
+
+		// (b) The baseline renderer's -e pair is pushed BEFORE the granted
+		// tool's helper-extension -e pair, regardless of source layout.
+		const toolParts = [];
+		applySandboxToParts(
+			toolParts,
+			{ model: null, thinking: null, toolAllowlist: "faketool" },
+			{ artifactDir: join(sandboxRoot, "artifacts"), name: "tools-test" },
+		);
+		const baselineIndex = toolParts.indexOf(`'${baselineRendererPath}'`);
+		const grantedIndex = toolParts.indexOf(`'${toolExtPath}'`);
+		assert.ok(baselineIndex !== -1, "the baseline renderer's -e pair is present");
+		assert.ok(grantedIndex !== -1, "the granted tool's helper -e pair is present");
+		assert.ok(
+			baselineIndex < grantedIndex,
+			"the baseline renderer's -e pair precedes the granted tool's -e pair",
+		);
+		assert.ok(toolParts.includes("--tools"), "the allowlist is replayed as --tools");
+	} finally {
+		rmSync(sandboxRoot, { recursive: true, force: true });
+	}
+}
+
+// ── Subagent completion lifecycle: liveness fallback + auto-exit tab close ──
+// A dedicated fake-herdr bin (the established pattern) with pane:process-info
+// and tab:close cases drives the new completion-path behavior end-to-end: the
+// done-watcher's liveness fallback (sentinel missed, pi process gone) and the
+// auto-exit whole-tab close (orphaned sibling panes die with the subagent).
+{
+	const lifecycleBin = mkdtempSync(join(tmpdir(), "subagent-lifecycle-test-"));
+	const lifecycleCapture = join(lifecycleBin, "calls");
+	const lifecycleStageFile = join(lifecycleBin, "proc-stage");
+	writeFileSync(
+		join(lifecycleBin, "herdr"),
+		`#!/bin/sh
+printf '%s\\n' "$@" >> "$LIFECYCLE_CAPTURE"
+printf '%s\\n' --call-- >> "$LIFECYCLE_CAPTURE"
+case "$1:$2" in
+	pane:get)
+		printf '%s\\n' '{"result":{"pane":{"pane_id":"w44:p2","tab_id":"w44:t7","workspace_id":"w44"}}}'
+		;;
+	tab:close)
+		[ "$LIFECYCLE_FAIL_TAB_CLOSE" = "1" ] && exit 1
+		printf '%s\\n' '{"result":{}}'
+		;;
+	pane:close) printf '%s\\n' '{"result":{}}' ;;
+	pane:read) printf '%s\\n' "$LIFECYCLE_SCREEN" ;;
+	pane:process-info)
+		# Staged liveness: the first read shows the pi agent in the pane's
+		# foreground processes; every later read shows only the shell.
+		stage=0
+		[ -f "$LIFECYCLE_PROC_STAGE" ] && stage=$(cat "$LIFECYCLE_PROC_STAGE")
+		stage=$((stage + 1))
+		printf '%s' "$stage" > "$LIFECYCLE_PROC_STAGE"
+		if [ "$stage" = "1" ]; then
+			printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"bash","pid":100,"argv":["bash"]},{"name":"pi","pid":101,"argv":["pi"]}]}}}'
+		else
+			printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"zsh","pid":100,"argv":["zsh"]}]}}}'
+		fi
+		;;
+	*) printf '%s\\n' '{"result":{}}' ;;
+esac
+`,
+		{ mode: 0o755 },
+	);
+	const savedLifecycleEnv = {
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		PATH: process.env.PATH,
+	};
+	process.env.HERDR_ENV = "1";
+	process.env.HERDR_PANE_ID = "w44:p2";
+	process.env.PATH = `${lifecycleBin}:${savedLifecycleEnv.PATH}`;
+	process.env.LIFECYCLE_CAPTURE = lifecycleCapture;
+	process.env.LIFECYCLE_PROC_STAGE = lifecycleStageFile;
+	delete process.env.LIFECYCLE_SCREEN;
+	delete process.env.LIFECYCLE_FAIL_TAB_CLOSE;
+	const lifecycleCalls = () =>
+		readFileSync(lifecycleCapture, "utf8")
+			.split("--call--\n")
+			.filter(Boolean)
+			.map((call) => call.trim().split("\n"));
+	try {
+		const lifecycleHerdr = createJiti(import.meta.url, { moduleCache: false })(
+			"./interactive-subagents/pi-extension/subagents/herdr.ts",
+		);
+
+		// Pure decision logic: the liveness state machine.
+		const bashOnly = [{ name: "bash", pid: 1, argv: ["bash"] }];
+		const withPi = [{ name: "bash", pid: 1, argv: ["bash"] }, { name: "pi", pid: 2, argv: ["pi"] }];
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(false, bashOnly), {
+			seenAgent: false, agentGone: false,
+		}, "startup shell must never count as agent-gone");
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(false, withPi), {
+			seenAgent: true, agentGone: false,
+		});
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(true, bashOnly), {
+			seenAgent: true, agentGone: true,
+		}, "agent seen once, then gone → completed");
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(true, null), {
+			seenAgent: true, agentGone: false,
+		}, "transient process-info failure keeps polling");
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(false, null), {
+			seenAgent: false, agentGone: false,
+		});
+		assert.equal(lifecycleHerdr.isPiForegroundProcess({ name: "pi", argv: ["pi"] }), true);
+		assert.equal(lifecycleHerdr.isPiForegroundProcess({ name: "bash", argv: ["/usr/local/bin/pi"] }), true);
+		assert.equal(lifecycleHerdr.isPiForegroundProcess({ name: "nvim", argv: ["nvim"] }), false);
+		assert.equal(lifecycleHerdr.isPiForegroundProcess({ name: "bash", argv: ["bash"] }), false);
+
+		// pollForExit end-to-end: the DONE sentinel never appears on the
+		// screen, the pi agent was seen once, then it vanished — the watcher
+		// must report a clean completion instead of polling forever.
+		const lifecyclePoll = new AbortController();
+		const livenessResult = await lifecycleHerdr.pollForExit("w44:p9", lifecyclePoll.signal, {
+			interval: 20,
+		});
+		lifecyclePoll.abort();
+		assert.deepEqual(livenessResult, { reason: "agent-gone", exitCode: 0 });
+		const polled = lifecycleCalls();
+		assert.ok(polled.filter((call) => call[1] === "read").length >= 2, "screen sentinel was checked every tick");
+		assert.ok(
+			polled.filter((call) => call[1] === "process-info").length >= 2,
+			"foreground processes were checked every tick",
+		);
+		assert.equal(
+			polled.some((call) => call[1] === "close" || call[1] === "tab"),
+			false,
+			"pollForExit itself must not close anything",
+		);
+
+		// Auto-exit tab close decision (pure, eval'd from index.ts source —
+		// index.ts cannot be jiti-loaded whole): clean auto-exit closes the
+		// whole tab; interactive, killed, errored, or non-zero exit do not.
+		const { shouldCloseSubagentTab } = jiti.evalModule(
+			`
+			${indexSource.split("// ── auto-exit tab close decision ──")[1].split("// ── auto-exit tab close mechanics ──")[0]}
+			module.exports = { shouldCloseSubagentTab };
+		`,
+			{ filename: join(tmpdir(), "subagent-tab-close-decision-test.ts") },
+		);
+		assert.equal(shouldCloseSubagentTab(false, { exitCode: 0 }), true, "clean auto-exit → close the tab");
+		assert.equal(shouldCloseSubagentTab(true, { exitCode: 0 }), false, "interactive → park for the user");
+		assert.equal(shouldCloseSubagentTab(false, { exitCode: 1 }), false);
+		assert.equal(shouldCloseSubagentTab(false, { exitCode: 0, killed: true }), false);
+		assert.equal(shouldCloseSubagentTab(false, { exitCode: 0, errorMessage: "overload" }), false);
+
+		// closeTabForPane end-to-end: pane get → tab close, and the pane-close
+		// fallback when tab close fails.
+		lifecycleHerdr.closeTabForPane("w44:p9");
+		assert.deepEqual(lifecycleCalls().at(-2), ["pane", "get", "w44:p9"]);
+		assert.deepEqual(lifecycleCalls().at(-1), ["tab", "close", "w44:t7"]);
+		process.env.LIFECYCLE_FAIL_TAB_CLOSE = "1";
+		lifecycleHerdr.closeTabForPane("w44:p9");
+		delete process.env.LIFECYCLE_FAIL_TAB_CLOSE;
+		// The fake bin records a call even when it then exits 1, so the
+		// failed tab close is followed by the pane-close fallback.
+		assert.deepEqual(lifecycleCalls().at(-3), ["pane", "get", "w44:p9"]);
+		assert.deepEqual(lifecycleCalls().at(-2), ["tab", "close", "w44:t7"]);
+		assert.deepEqual(lifecycleCalls().at(-1), ["pane", "close", "w44:p9"], "failed tab close falls back to pane close");
+	} finally {
+		for (const [key, value] of Object.entries(savedLifecycleEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		delete process.env.LIFECYCLE_CAPTURE;
+		delete process.env.LIFECYCLE_PROC_STAGE;
+		delete process.env.LIFECYCLE_SCREEN;
+		delete process.env.LIFECYCLE_FAIL_TAB_CLOSE;
+		rmSync(lifecycleBin, { recursive: true, force: true });
+	}
+}
 
 console.log("interactive-subagents surface smoke passed");

@@ -36,9 +36,17 @@ export function runPhaseLabel(snapshot: NoMistakesSnapshot): string | undefined 
 
 /** True while the CI phase is the active phase (waiting on checks or
  *  repairing them). `merge` (checks-passed monitoring) is deliberately not
- *  CI: the checks already passed, so nothing needs attention. */
+ *  CI: the checks already passed, so nothing needs attention. The daemon's
+ *  post-checks-passed monitor keeps the `ci` step merely `running` until
+ *  the PR merges or closes, so an outcome of `checks-passed` with a
+ *  `running` ci step is that monitor — never red. An actively repairing ci
+ *  step (`fixing`, `awaiting_approval`, `fix_review`) stays red whatever
+ *  the outcome: it needs attention even after a prior pass. */
 export function isCiPhaseActive(snapshot: NoMistakesSnapshot): boolean {
-	if (snapshot.currentPhase === "ci") return true;
+	if (snapshot.currentPhase === "ci") {
+		const ciPhase = snapshot.phases.find((phase) => phase.name === "ci");
+		return !(snapshot.outcome === "checks-passed" && ciPhase?.status === "running");
+	}
 	return snapshot.phases.some(
 		(phase) =>
 			phase.name === "ci" &&

@@ -36,6 +36,17 @@ import {
 	type NoMistakesResultReport,
 	type NoMistakesSnapshot,
 } from "./no-mistakes-pane/status";
+import {
+	buildOrchestratorTask,
+	orchestratorAckMessage,
+	orchestratorDelegationDecision,
+	orchestratorOwnedMessage,
+	orchestratorSpawnSucceeded,
+	orchestratorSurfaceMessage,
+	ORCHESTRATOR_AGENT,
+	ORCHESTRATOR_SPAWN_NAME,
+	type OrchestratorSpawnApi,
+} from "./no-mistakes-pane/orchestrate";
 
 // ---------------------------------------------------------------------------
 // no-mistakes-pane — run `no-mistakes axi` detached, beside the agent, and
@@ -64,6 +75,16 @@ import {
 //     hosts daemon step agents as visible subagent tabs (bridge.ts) and the
 //     pane-state report — phase labels plus the CI red state (herdr-report.ts).
 //     Outside Herdr both are no-ops.
+//   - From a Herdr captain session, `run` is DELEGATED (orchestrate.ts): the
+//     tool spawns the bundled nm-orchestrator subagent tab, which drives the
+//     run and owns every surface above in its own session — the captain
+//     keeps read-only status/logs, abort as the escape hatch, and the
+//     orchestrator's final summary steer. While a pipeline call is in flight
+//     or a run is tracked, the module publishes the subagent keep-open count,
+//     so an auto-exit subagent hosting this extension (the orchestrator)
+//     parks between turns instead of exiting. Inside subagent sessions,
+//     without a TUI, or without interactive-subagents, calls execute
+//     directly, exactly as before.
 //
 // The status monitor (1s `axi status` polling while a pipeline call is in
 // flight) is kept: it feeds the shared activity UI (NM_ACTIVITY_UPDATE_EVENT,
@@ -371,6 +392,77 @@ interface WatchState {
 	bridgeRunId: string | undefined;
 }
 
+// While a pipeline call is in flight or a run is tracked in THIS session,
+// future turns are guaranteed (axi results steer in). subagent-done.ts reads
+// this count in its agent_end handler so an auto-exit subagent hosting this
+// extension — the nm-orchestrator agent — parks in "waiting" instead of
+// exiting after its first turn, exactly like the tuicr-review agent's
+// watcher. The count drops synchronously when a terminal outcome steers,
+// so the orchestrator's summary turn is its last.
+//
+// COMPOSITION: this is a SHARED slot — tuicr.ts publishes its watcher's
+// count under the same well-known symbol, and the nm-orchestrator (spawned
+// with agent-dir: parent) loads both extensions in one session. A plain
+// assignment would be last-writer-wins by readdir load order, silently
+// disabling whichever extension loaded first. So capture the previous
+// owner's function (a non-function previous value counts as 0) and publish
+// a wrapper that ADDS it to ours — both sources must be able to keep the
+// session open. tuicr.ts composes symmetrically, so either load order sums
+// both counts.
+const KEEP_OPEN_COUNT_KEY = Symbol.for("pi-subagents/keep-open-count");
+const previousKeepOpenCount: unknown = (globalThis as any)[KEEP_OPEN_COUNT_KEY];
+const ownKeepOpenCount = (): number => {
+	const state = (globalThis as any)[WATCH_STATE_KEY] as WatchState | undefined;
+	if (!state) return 0;
+	if (state.trackedRunId) return 1;
+	for (const call of state.calls.values()) {
+		if (call.pipeline) return 1;
+	}
+	return 0;
+};
+(globalThis as any)[KEEP_OPEN_COUNT_KEY] = (): number => {
+	let previous = 0;
+	if (typeof previousKeepOpenCount === "function") {
+		try {
+			const value = (previousKeepOpenCount as () => unknown)();
+			if (typeof value === "number" && value > 0) previous = value;
+		} catch {
+			// A broken previous owner must not mask this module's count.
+		}
+	}
+	return previous + ownKeepOpenCount();
+};
+
+function orchestratorSpawnApi(): OrchestratorSpawnApi | undefined {
+	const api = (globalThis as any).__pi_interactive_subagents as Partial<OrchestratorSpawnApi> | undefined;
+	if (typeof api?.executeSubagent === "function" && typeof api?.isSubagentRunning === "function") {
+		return api as OrchestratorSpawnApi;
+	}
+	return undefined;
+}
+
+/** Orchestrator delegation registry, resolved cwd → spawn name. Lives on its
+ *  own globalThis key (not the watch state) so an extension reload keeps it:
+ *  the spawned orchestrators outlive the reload, and a post-reload `run`
+ *  must still refuse to double-drive them. */
+const ORCHESTRATORS_KEY = Symbol.for("pi-no-mistakes/orchestrators");
+function orchestratorRegistry(): Map<string, string> {
+	let registry = (globalThis as any)[ORCHESTRATORS_KEY] as Map<string, string> | undefined;
+	if (!(registry instanceof Map)) {
+		registry = new Map();
+		(globalThis as any)[ORCHESTRATORS_KEY] = registry;
+	}
+	return registry;
+}
+
+/** The orchestrator currently owning the run for a resolved cwd, if any. */
+function orchestratorOwnerOf(cwd: string): string | undefined {
+	const api = orchestratorSpawnApi();
+	const owner = orchestratorRegistry().get(cwd);
+	if (owner && api?.isSubagentRunning(owner)) return owner;
+	return undefined;
+}
+
 const WATCH_STATE_KEY = Symbol.for("pi-no-mistakes/watch-state");
 const STATUS_INTERVAL_KEY = Symbol.for("pi-no-mistakes/status-interval");
 const STATUS_ABORT_KEY = Symbol.for("pi-no-mistakes/status-abort-controller");
@@ -540,7 +632,19 @@ function finishCall(
 		else void refreshStatus(state, { cwd: call.cwd }, true);
 	}
 	const outcome = /^outcome:\s*(\S+)/m.exec(r.output)?.[1];
-	if (outcome || call.subcommand === "abort") void gateApi()?.runFinished(call.cwd, runId);
+	if (outcome || call.subcommand === "abort") {
+		void gateApi()?.runFinished(call.cwd, runId);
+		// Terminal for driving purposes: release the tracked run in the same
+		// tick as the steer, so a hosting orchestrator subagent's keep-open
+		// count drops before its summary turn ends — its final message is its
+		// last (auto-exit), never a parked hang. The daemon's post-outcome
+		// monitoring (merge watch after checks-passed) continues without these
+		// surfaces, exactly as before.
+		if (state.trackedRunId) {
+			state.trackedRunId = undefined;
+			syncRunVisibility(state, undefined);
+		}
+	}
 	if (parkedAtGate) {
 		// The gate panel owns this result until the user decides; the steer
 		// (TOON + decision) lands when the panel resolves. Detached so the
@@ -1004,11 +1108,12 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		name: "no_mistakes_axi",
 		label: "no-mistakes (background)",
 		description:
-			"Submit a `no-mistakes axi` subcommand (run/respond/status/logs/abort/sync) to run detached in the background and return immediately — the session stays free and never blocks on a review/test/CI step. Use this INSTEAD of running `no-mistakes axi` in the bash tool. The structured TOON result (findings, gate, outcome, branch_sync, help) arrives later as a `no_mistakes_axi_result` steer message that triggers a new turn: read every one. Gate results carry the user's decision from the no-mistakes gate panel (or yolo standing consent) — submit the `respond` call it names until an `outcome:` arrives; without a decision, relay ask-user findings verbatim and wait. For `run`/`respond` a visible Herdr pane beside the agent shows the rich `no-mistakes` TUI of the same daemon run; it stays open while the run is parked at a gate, and `/no-mistakes` focuses or re-opens it.",
+			"Submit a `no-mistakes axi` subcommand (run/respond/status/logs/abort/sync) to run detached in the background and return immediately — the session stays free and never blocks on a review/test/CI step. Use this INSTEAD of running `no-mistakes axi` in the bash tool. The structured TOON result (findings, gate, outcome, branch_sync, help) arrives later as a `no_mistakes_axi_result` steer message that triggers a new turn: read every one. Gate results carry the user's decision from the no-mistakes gate panel (or yolo standing consent) — submit the `respond` call it names until an `outcome:` arrives; without a decision, relay ask-user findings verbatim and wait. For `run`/`respond` a visible Herdr pane beside the agent shows the rich `no-mistakes` TUI of the same daemon run; it stays open while the run is parked at a gate, and `/no-mistakes` focuses or re-opens it. From a Herdr captain session, `run` is delegated to the nm-orchestrator subagent tab, which owns the attach pane, gate panels, and step-agent tabs and steers its final run summary back here — do not re-issue run or respond for a delegated run; steer that tab with subagent_message instead.",
 		promptSnippet:
 			"Use no_mistakes_axi (not bash) to drive every no-mistakes axi call; it runs in the background and results arrive as steer messages.",
 		promptGuidelines: [
 			"Pass `args` = everything after `no-mistakes axi` (e.g. `run --intent \"...\"`, `respond --action fix --findings r1`, `status`). Quote multi-word values.",
+			"A `run` ack that names the nm-orchestrator subagent means the run is delegated: its tab owns the gates and findings. Do not re-issue run or respond for it; steer the orchestrator with subagent_message, keep inspecting through status/logs, and report its summary steer when it lands.",
 			"Every call returns immediately with an ack — never wait, poll, or re-issue while a call is in flight. The result arrives as a `no_mistakes_axi_result` steer message; read every one.",
 			"On a `gate:` result, read the attached GATE DECISION (the user decided in the gate panel) and submit the exact `respond` call it names. When a gate result carries no decision (no panel was available), relay ask-user findings verbatim and wait for the user. Loop until an `outcome:` result arrives.",
 			"When a result says yolo standing consent is active (or the user chose yolo), submit `respond --yes` at this and every later gate of that run without asking.",
@@ -1033,6 +1138,75 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 			const pipeline = wantsTuiPane(args, subcommand);
 			const sessionCwd = ctx?.cwd ?? process.cwd();
 			const cwd = params.cwd ?? sessionCwd;
+
+			// Orchestrator delegation (tuicr-review architecture): from a Herdr
+			// captain, `run` is handed to the nm-orchestrator subagent tab, which
+			// owns every no-mistakes surface for that run — attach pane, gate
+			// panels, step-agent bridge, pane labels — and steers its final
+			// summary back here. Falls back to direct execution in subagent
+			// sessions (that is how the orchestrator itself drives), without a
+			// TUI, without interactive-subagents, and on spawn failure, so
+			// headless hosts and non-Herdr contexts are unchanged.
+			const spawnApi = orchestratorSpawnApi();
+			const decision = orchestratorDelegationDecision({
+				subcommand,
+				helpOnly: args.some((a) => a === "--help" || a === "-h"),
+				insideSubagent: Boolean(process.env.PI_SUBAGENT_NAME),
+				hasSpawnApi: Boolean(spawnApi),
+				hasTui: interactiveTuiSession && Boolean((ctx as { hasUI?: boolean })?.hasUI),
+				cwd: resolve(cwd),
+				orchestrators: orchestratorRegistry(),
+				isRunning: (name) => spawnApi?.isSubagentRunning(name) ?? false,
+			});
+			if (decision.reason === "already-owned") {
+				return textResult(orchestratorOwnedMessage(decision.owner, subcommand), {
+					status: "error",
+					subcommand,
+					message: `run owned by ${ORCHESTRATOR_AGENT} "${decision.owner}"`,
+				});
+			}
+			if (subcommand === "respond") {
+				const owner = orchestratorOwnerOf(resolve(cwd));
+				if (owner) {
+					return textResult(orchestratorOwnedMessage(owner, subcommand), {
+						status: "error",
+						subcommand,
+						message: `run owned by ${ORCHESTRATOR_AGENT} "${owner}"`,
+					});
+				}
+			}
+			let delegateNote = "";
+			if (decision.delegate) {
+				const resolvedCwd = resolve(cwd);
+				const task = buildOrchestratorTask({ args: rawArgs, cwd: resolvedCwd });
+				try {
+					const result = await spawnApi!.executeSubagent(
+						{ agent: ORCHESTRATOR_AGENT, name: ORCHESTRATOR_SPAWN_NAME, task, cwd: resolvedCwd },
+						ctx,
+					);
+					if (!orchestratorSpawnSucceeded(result)) {
+						// Spawn failure without a throw (mux unavailable, unknown or
+						// unallowlisted agent, no session file): executeSubagent
+						// resolves an error result. Fall through to direct driving —
+						// never ack "delegated" or register a phantom owner.
+						const reason = result?.details?.error ?? "spawn returned no session";
+						delegateNote = ` Orchestrator delegation failed (${reason}); driving the run directly here instead.`;
+					} else {
+						const spawned = result?.details?.name ?? ORCHESTRATOR_SPAWN_NAME;
+						orchestratorRegistry().set(resolvedCwd, spawned);
+						return textResult(orchestratorAckMessage(spawned), {
+							status: "started",
+							subcommand,
+							pipeline,
+							message: `delegated to ${ORCHESTRATOR_AGENT} "${spawned}"`,
+						});
+					}
+				} catch (err) {
+					// Spawn failure (missing agent definition, no tab): fall through
+					// to direct driving — the run must still start, but say so.
+					delegateNote = ` Orchestrator delegation failed (${err instanceof Error ? err.message : String(err)}); driving the run directly here instead.`;
+					}
+			}
 			const observesSession = resolve(cwd) === resolve(sessionCwd);
 			const timeoutMs = (params.timeoutMs ?? NM_PANE_TIMEOUT_MS / 1000) * 1000;
 			const sig = signal ?? new AbortController().signal;
@@ -1137,7 +1311,7 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 
 			ensureWatchTimer(state);
 			return textResult(
-				`no-mistakes axi ${subcommand} is running in the background; this session stays free.${paneNote} The structured TOON result (gate, outcome, findings, or error) will arrive as a ${NM_RESULT_MESSAGE} steer message — read it when it lands, and do not re-issue this call while it is in flight.`,
+				`no-mistakes axi ${subcommand} is running in the background; this session stays free.${paneNote}${delegateNote} The structured TOON result (gate, outcome, findings, or error) will arrive as a ${NM_RESULT_MESSAGE} steer message — read it when it lands, and do not re-issue this call while it is in flight.`,
 				{
 					status: "started",
 					subcommand,
@@ -1156,6 +1330,18 @@ export default function noMistakesPane(pi: ExtensionAPI) {
 		handler: async (args, ctx) => {
 			const state = ensureWatchState(pi);
 			const arg = (args ?? "").trim();
+			// A run owned by the nm-orchestrator subagent keeps every surface in
+			// its tab: point the human there instead of opening a second attach
+			// pane here, or setting yolo consent this session's gates never read
+			// (the panel — and its consent — live in the orchestrator session).
+			const owner = orchestratorOwnerOf(resolve(ctx.cwd));
+			if (owner) {
+				ctx.ui.notify(
+					orchestratorSurfaceMessage(owner, arg === "yolo" || arg === "yolo off"),
+					"info",
+				);
+				return;
+			}
 			if (arg === "stop") {
 				ctx.ui.notify(
 					"/no-mistakes stop is not available — use the no_mistakes_axi tool with `abort` to cancel the run itself.",

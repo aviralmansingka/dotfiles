@@ -43,31 +43,51 @@ detached in the background and returns immediately. The structured TOON result
 (gate, outcome, findings, or error) arrives as a `no_mistakes_axi_result`
 message that triggers a new turn - the pipeline interfaces with you only
 through those messages. When the user asks for validation, report the
-outcome at the end. If the user
+outcome at the end. From a Herdr session, a `run` call is delegated to the
+`nm-orchestrator` subagent tab (see below): its ack names the orchestrator,
+the gates and findings live in its tab, and its final summary steers back to
+you - report that summary instead of driving the gates yourself. If the user
 asks for something specific, translate that request into the matching `axi run`
 flags yourself - for example, "skip the lint step" becomes `--skip=lint`. Run
 `no-mistakes axi run --help` to see the available flags.
 
 ## Visible step agents (Herdr bridge)
 
-When a pipeline is started from a session running inside Herdr, the daemon's
-step agents (review, fixer, test, lint, document, CI repair) run as visible,
-interactive Herdr subagent tabs of that session instead of headless
-processes - installed by `scripts/install-nm-herdr-bridge` via the upstream
-`agent_path_override.pi` knob. A step agent inside such a tab holds the same
-boundary as a headless one: it works only its assigned phase in the run
-worktree, the daemon owns rounds, budgets, and the findings schema, and the
-human may watch or steer the tab but never drives the pipeline from it.
-Fixer sessions reuse one tab across fix rounds; cold review turns get a fresh
-tab per pass. Each tab runs pi with `--no-extensions` plus one curated explicit
-set (`STEP_AGENT_EXTENSIONS` in the bridge): the pane-state reporters, capability
-tools (python, web fetch, web search, mermaid), and tab chrome. The parent
-session's pipeline machinery and human-blocking panels never load inside a step
-tab. When the triggering session dies, tabs close and later steps
-fall back to headless pi - so a step agent must never assume a tab exists.
-While a run is active, the triggering session's own pane also shows the
-current pipeline phase as its state label (`nm: <phase>`), and the CI phase
-drives Herdr's red blocked state; both clear when the run ends.
+When a pipeline is started from a session running inside Herdr, the
+`no_mistakes_axi` `run` call does not drive the run in the launching session.
+It delegates to the `nm-orchestrator` subagent tab (the tuicr-review
+architecture, installed by `scripts/install-nm-herdr-bridge`): that tab
+submits the run itself and owns every no-mistakes surface for it - the
+`no-mistakes attach` pane beside its own pane, the gate decision panels (the
+human decides there), the pane phase labels, and the interactive bridge that
+hosts the daemon's step agents (review, fixer, test, lint, document, CI
+repair) as visible subagent tabs of the orchestrator. The launching session
+keeps read-only `status`/`logs` calls, `abort` as the escape hatch, and the
+orchestrator's final run summary, which steers back as its subagent
+completion - report that summary to the user. Never re-issue `run` or
+`respond` for a delegated run; steer the orchestrator tab with
+`subagent_message` instead. Delegation falls back to direct driving (the old
+flow) without a TUI or without interactive-subagents, so headless hosts are
+unchanged.
+
+A step agent tab holds the same boundary as a headless one: it works only its
+assigned phase in the run worktree, the daemon owns rounds, budgets, and the
+findings schema, and the human may watch or steer the tab but never drives the
+pipeline from it. Every invocation gets a fresh tab that closes cleanly after
+its round; fixer rounds resume the durable session file, never a lingering tab.
+Each tab runs pi with `--no-extensions` plus
+one curated explicit set (`STEP_AGENT_EXTENSIONS` in the bridge): the
+pane-state reporters, capability tools (python, web fetch, web search,
+mermaid, codemode), and tab chrome. The parent session's pipeline machinery
+and human-blocking panels never load inside a step tab. Tab closes are clean
+exits - the tab's pi quits itself, then releases its agent identity before the
+pane closes - so terminated step
+agents never surface as agent-killed notifications. When the orchestrator
+session dies, its tabs close and later steps fall back to headless pi - so a
+step agent must never assume a tab exists. While a run is active, the
+orchestrator session's pane shows the current pipeline phase as its state
+label (`nm: <phase>`), and the CI phase drives Herdr's red blocked state; both
+clear when the run ends.
 
 ## Two ways to invoke
 

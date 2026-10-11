@@ -63,6 +63,10 @@ sidebar pane is hidden, the agent only reports it (press prefix+t): a plugin
 action invoke resolves to the focused tab and can land in another workspace, and
 a raw `plugin pane open` bypasses the plugin's state/layout machinery and
 corrupts the next toggle. The user's own prefix+t is the only correct show path.
+Every nvim editor launch (extension tool, `/nvim`, md-log/quiz library call, skill
+script) appends a provenance line to `~/.cache/pi/nvim-open-launches.log` — read it
+to attribute orphan editor panes; panes with no log line were launched outside pi
+(Herdr plugin layer).
 `annotate-review.open` lost its chord to the picker; the reply reviewer keeps
 `prefix+shift+o`.
 
@@ -70,11 +74,16 @@ corrupts the next toggle. The user's own prefix+t is the only correct show path.
 
 The no-mistakes daemon's step agents run as visible Herdr subagent tabs when the triggering
 session is inside Herdr (`scripts/install-nm-herdr-bridge`, upstream `agent_path_override.pi`).
-Three rules are load-bearing:
+These rules are load-bearing:
 
-- A live tab owns its pi session file. Teardown (run terminal, session shutdown, extension
-  reload) must close tab panes so a later headless `--session` resume never meets a second
-  writer; the shim then passthroughs to real pi with unchanged argv and stdin.
+- Every step invocation owns a fresh tab and closes it after delivery; fixer rounds resume
+  the durable session file in a fresh tab. Teardown (run terminal, session shutdown, extension
+  reload) also closes panes so a later headless `--session` resume never meets a second writer;
+  the shim then passthroughs to real pi with unchanged argv and stdin.
+- Auto-exit subagents that finish cleanly close their whole Herdr tab (interactive subagents
+  keep parking for the user), so an orphaned sibling pane can never hold the tab open after
+  its session is done; the nvim-open extension likewise closes editor panes it created when
+  a subagent session shuts down, while captain sessions leave editor panes open for the human.
 - Pane state surfaces are Herdr's sanctioned ones only: `pane report-metadata --state-label`
   for display and the `herdr:blocked` event for the CI red state. Never report pane state
   from another source or impersonate a `herdr:` source - a second source cannot override the
@@ -84,7 +93,30 @@ Three rules are load-bearing:
   pane-state reporters, capability tools (python, web-fetch, web-search, mermaid), and tab
   chrome. The parent's pipeline machinery (no-mistakes-gate, no-mistakes-pane,
   interactive-subagents, tuicr) and human-blocking tools never load inside a step agent -
-  keep it that way when adding extensions.
+  keep it that way when adding extensions. Every pi subagent spawned by interactive-subagents
+  gets the parent's tool-call renderer as a baseline explicit `-e` (deduped by pi; skipped when
+  absent) - the curated step-agent set above stays curated and unchanged.
+- A run started from a Herdr captain session is owned by the `nm-orchestrator` subagent tab
+  (tuicr-review architecture, `no-mistakes-pane/orchestrate.ts` + the bundled agent). It drives
+  axi run/respond and owns the attach pane, gate panels, pane labels, and the step-agent
+  bridge; the captain keeps read-only status/logs, abort as the escape hatch, and the
+  orchestrator's final summary steer. Delegation never nests (subagent sessions execute
+  directly) and falls back to direct driving without a TUI or spawn API - headless behavior
+  is unchanged. The bundled nm-orchestrator declares `agent-dir: parent`, keeping the
+  captain's configured agent dir instead of a repo-local `.pi/agent` redirect.
+- Step-agent tab closes are clean exits: the tab's pi is asked to quit (Ctrl+D, Ctrl+C
+  fallback); after confirmed exit, `pane release-agent --source herdr:pi --agent pi` clears
+  its identity before `pane close`. A terminated step agent must never surface as an
+  agent-killed notification in the hosting session.
+
+## no-mistakes gate test and lint runners
+
+The gate's Test and Lint steps run the pinned offline runners from `.no-mistakes.yaml`
+(`scripts/nm-test.sh`, `scripts/nm-lint.sh`) — the same offline suite as
+`.github/workflows/ci.yml`. Gate/step agents must never improvise tests that launch live
+sessions: no real pi sessions, no nvim, no tmux/multiplexer servers. The 2026-10-11
+professor-test incident (run 01M4NRT2XKCHANREB6YFBPX6Q9) improvised a live harness,
+timed out, and leaked nvim processes on the host.
 
 ## CUDA LSP host invariant
 

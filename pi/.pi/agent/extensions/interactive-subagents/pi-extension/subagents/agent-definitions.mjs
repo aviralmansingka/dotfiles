@@ -22,6 +22,10 @@ function parseSessionMode(value) {
 		: undefined;
 }
 
+function parseAgentDir(value) {
+	return value === "parent" ? "parent" : undefined;
+}
+
 export function parseAgentDefinition(content, fallbackName) {
 	const match = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!match) return null;
@@ -51,6 +55,7 @@ export function parseAgentDefinition(content, fallbackName) {
 		sessionMode: parseSessionMode(
 			getFrontmatterValue(frontmatter, "session-mode"),
 		),
+		agentDir: parseAgentDir(getFrontmatterValue(frontmatter, "agent-dir")),
 		cwd: getFrontmatterValue(frontmatter, "cwd"),
 		cli: getFrontmatterValue(frontmatter, "cli"),
 		body: body || undefined,

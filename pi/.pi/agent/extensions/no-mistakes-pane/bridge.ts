@@ -25,9 +25,9 @@
 //     events (message_end / turn_end / agent_end, plus the synthesized
 //     `no_mistakes_output` tool_execution_end for strict turns), streamed to
 //     the shim, which writes them to its stdout for the daemon's parser.
-//   - Fixer sessions (`--session <uuid>`) reuse ONE live tab across
-//     invocations, mirroring the daemon's durable fixer session. Cold
-//     (session-free) turns get a fresh tab that closes when the turn settles.
+//   - Every invocation owns a fresh tab and closes it after delivery. Fixer
+//     rounds (`--session <uuid>`) resume the durable session file in a fresh
+//     tab; no panes linger between rounds.
 //   - Fallback is the shim's job: no bridge dir/socket, connection refused,
 //     or fatal mid-turn → it runs (or fails like) real headless pi, so runs
 //     that outlive the parent session, daemon restarts, and non-Herdr
@@ -35,8 +35,12 @@
 //
 // Teardown rules: run terminal, session shutdown, and extension reload close
 // the tab panes (a later headless `--session` resume must never meet a live
-// tab writing the same session file). The bridge dir is removed so later
-// shims passthrough instantly instead of probing a dead socket.
+// tab writing the same session file). Every close is a clean exit — the
+// tab's pi is asked to quit (Ctrl+D, Ctrl+C fallback), then release-agent
+// clears its identity before `pane close` —
+// so a terminated step agent never surfaces as an agent-killed notification
+// in the hosting session. The bridge dir is removed so later shims
+// passthrough instantly instead of probing a dead socket.
 
 import { execFile, execFileSync } from "node:child_process";
 import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -249,7 +253,7 @@ export class SessionEventTranslator {
 						JSON.stringify({
 							type: "tool_execution_end",
 							toolName: OUTPUT_TOOL,
-							isError: false,
+							isError: msg.isError === true,
 							toolCallId: msg.toolCallId,
 							result: { terminate: true, details: { output } },
 						}),
@@ -273,7 +277,7 @@ export class SessionEventTranslator {
 			lines.push(JSON.stringify({ type: "turn_end", message: this.lastAssistant }));
 		}
 		lines.push(JSON.stringify({ type: "agent_end", messages }));
-		lines.push(JSON.stringify({ type: "agent_settled", aborted: false }));
+		lines.push(JSON.stringify({ type: "agent_settled", aborted: (this.lastAssistant as any)?.stopReason === "aborted" }));
 		return lines;
 	}
 }
@@ -299,16 +303,84 @@ interface RunBridge {
 
 const BRIDGE_KEY = Symbol.for("pi-no-mistakes/bridge-state");
 
+/** Total sync budget for one clean tab close (see closeTabPaneCleanly). */
+export const CLEAN_CLOSE_BUDGET_MS = 1400;
+const CLEAN_CLOSE_POLL_MS = 100;
+
+function sleepSync(ms: number): void {
+	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/** True when the pane's process is gone (pane closed, or foreground
+ *  process group empty after a clean exit). */
+export function paneProcessGone(paneId: string): boolean {
+	if (!paneAlive(paneId)) return true;
+	const info = herdrJsonSync(["pane", "process-info", "--pane", paneId]) as
+		| { result?: { process_info?: { foreground_processes?: unknown[] } } }
+		| null;
+	const processes = info?.result?.process_info?.foreground_processes;
+	return Array.isArray(processes) && processes.length === 0;
+}
+
+/** Close a step-agent tab without leaving an agent-killed state behind.
+ *
+ *  A bare `pane close` kills the tab's pi mid-flight, and Herdr raises an
+ *  "agent killed" notification for a terminated background agent — stray
+ *  noise in whichever session launched the run. Instead, ask pi to exit
+ *  itself: Ctrl+D exits an idle pi after this invocation; fixer rounds
+ *  resume the durable session in a fresh tab. Ctrl+C first aborts a running
+ *  turn so the following Ctrl+D lands on an empty editor. Once pi exits,
+ *  release-agent clears its name, state and resume command before pane
+ *  close, so the delayed toast's same-state check cannot notify.
+ *
+ *  Synchronous and bounded on purpose: teardown runs from session_shutdown
+ *  and extension reload, which cannot await. Budget split: ~60% for the
+ *  first Ctrl+D, the rest for the Ctrl+C + Ctrl+D fallback; whatever
+ *  remains, the pane is closed regardless (the killed-notification path is
+ *  the last resort, not the default). Exported for tests, which pass a
+ *  small budget against the stub herdr. */
+export function closeTabPaneCleanly(paneId: string, budgetMs = CLEAN_CLOSE_BUDGET_MS): void {
+	if (paneProcessGone(paneId)) {
+		herdrOkSync(["pane", "release-agent", paneId, "--source", "herdr:pi", "--agent", "pi"]);
+		herdrOkSync(["pane", "close", paneId]);
+		return;
+	}
+	const firstBudget = Math.max(CLEAN_CLOSE_POLL_MS, Math.floor(budgetMs * 0.6));
+	herdrOkSync(["pane", "send-keys", paneId, "ctrl+d"]);
+	const deadline = Date.now() + firstBudget;
+	while (Date.now() < deadline) {
+		sleepSync(CLEAN_CLOSE_POLL_MS);
+		if (paneProcessGone(paneId)) break;
+	}
+	if (!paneProcessGone(paneId)) {
+		// A turn is still running (or the editor is not empty): abort it, then
+		// exit. pi's ctrl+c aborts the active turn / clears the editor.
+		herdrOkSync(["pane", "send-keys", paneId, "ctrl+c"]);
+		herdrOkSync(["pane", "send-keys", paneId, "ctrl+d"]);
+		const rest = Date.now() + Math.max(CLEAN_CLOSE_POLL_MS, budgetMs - firstBudget);
+		while (Date.now() < rest) {
+			sleepSync(CLEAN_CLOSE_POLL_MS);
+			if (paneProcessGone(paneId)) break;
+		}
+	}
+	if (paneProcessGone(paneId)) {
+		herdrOkSync(["pane", "release-agent", paneId, "--source", "herdr:pi", "--agent", "pi"]);
+	}
+	herdrOkSync(["pane", "close", paneId]);
+}
+
 interface BridgeState {
 	runs: Map<string, RunBridge>;
+	generations: Map<string, number>;
 }
 
 function bridgeState(): BridgeState {
 	let state = (globalThis as any)[BRIDGE_KEY] as BridgeState | undefined;
 	if (!state) {
-		state = { runs: new Map() };
+		state = { runs: new Map(), generations: new Map() };
 		(globalThis as any)[BRIDGE_KEY] = state;
 	}
+	state.generations ??= new Map(); // extension reload can inherit older state
 	return state;
 }
 
@@ -322,9 +394,20 @@ export function herdrBridgeAvailable(): boolean {
 	}
 }
 
-function herdrJsonSync(args: string[]): any | null {
+/** Explicit stdio is load-bearing here: with the default (unspecified)
+ *  stdio, Node's execFileSync passes the child's stderr through to this
+ *  process's terminal while also capturing it (verified live). The bridge
+ *  runs inside the nm-orchestrator's pi process, so every readiness poll
+ *  of a booting or already-closed step tab printed its agent_not_found
+ *  JSON straight onto the orchestrator's TUI — raw error lines over the
+ *  input box. Explicit pipes keep the CLI's stderr fully captured and off
+ *  the terminal; real failures still surface through the null return and
+ *  the invocation error paths. Exported for the regression test. */
+export function herdrJsonSync(args: string[]): any | null {
 	try {
-		return JSON.parse(execFileSync("herdr", args, { encoding: "utf-8", timeout: 10_000 }));
+		return JSON.parse(
+			execFileSync("herdr", args, { encoding: "utf-8", timeout: 10_000, stdio: ["pipe", "pipe", "pipe"] }),
+		);
 	} catch {
 		return null;
 	}
@@ -453,9 +536,13 @@ export function ensureBridgeServer(runId: string): void {
 	if (!herdrBridgeAvailable()) return;
 	const dir = bridgeRunDir(nmHomeDir(), runId);
 	const sockPath = join(dir, "sock");
+	const generation = state.generations.get(runId) ?? 0;
+	state.generations.set(runId, generation);
 	if (existsSync(sockPath)) {
 		void probeSocket(sockPath).then((alive) => {
-			if (alive || state.runs.has(runId)) return;
+			if (alive || state.runs.has(runId) || state.generations.get(runId) !== generation) return;
+			// Known limitation: another host can claim between this stale probe
+			// and unlink; the cross-host stale-probe unlink race remains.
 			try {
 				rmSync(sockPath, { force: true });
 			} catch {}
@@ -534,31 +621,21 @@ async function runInvocation(
 		socket.end();
 	};
 
-	const { interactive, sessionId, sessionless } = splitAgentArgv(hello.argv);
+	const { interactive, sessionId } = splitAgentArgv(hello.argv);
 	const runId = deriveRunId(hello.cwd);
 	if (!runId) {
 		fatal("bridge: invocation cwd is not a run worktree");
 		return;
 	}
 	const step = `agent-${++bridge.ordinal}`;
-	const tabKey = sessionId ?? `cold-${bridge.ordinal}`;
-
-	let created: TabHandle | undefined;
-	let tab = sessionId ? bridge.tabs.get(sessionId) : undefined;
-	if (tab && !paneAlive(tab.paneId)) {
-		bridge.tabs.delete(sessionId!);
-		tab = undefined;
-	}
+	// Same-session invocations are unserialized: the daemon drives them
+	// sequentially. Durability belongs to the session file, not the tab.
+	const tab = openTab(bridge, hello, interactive, step, step);
 	if (!tab) {
-		const opened = openTab(bridge, hello, interactive, step, tabKey);
-		if (!opened) {
-			fatal(`bridge: could not open a Herdr tab for step ${step}`);
-			return;
-		}
-		created = opened;
-		tab = opened;
-		bridge.tabs.set(tabKey, tab);
+		fatal(`bridge: could not open a Herdr tab for step ${step}`);
+		return;
 	}
+	bridge.tabs.set(step, tab);
 
 	const cut = { flag: false };
 	registerKiller(() => {
@@ -568,21 +645,23 @@ async function runInvocation(
 		cut.flag = true;
 	});
 	const closeTab = (handle: TabHandle) => {
-		herdrOkSync(["pane", "close", handle.paneId]);
+		closeTabPaneCleanly(handle.paneId);
 		if (handle.scriptPath) {
 			try {
 				rmSync(handle.scriptPath, { force: true });
 			} catch {}
 		}
-		bridge.tabs.delete(tabKey);
+		bridge.tabs.delete(step);
 	};
 
+	let fd: number | undefined;
+	let promptError: Error | undefined;
+	const isCut = () => cut.flag || promptError !== undefined;
 	try {
-		await waitTabReady(tab.paneId);
+		await waitTabReady(tab.paneId, isCut);
 		const translator = new SessionEventTranslator(sessionId);
 
 		let sessionFile: string | undefined;
-		let fd: number | undefined;
 		let offset = 0;
 		if (sessionId) {
 			// Resumed fixer session: the durable session file already exists,
@@ -590,7 +669,7 @@ async function runInvocation(
 			// event line goes to the shim, like a headless pi startup) and
 			// stream only records appended after this point — the prior
 			// conversation is never re-emitted.
-			sessionFile = await discoverSessionFile(tab, hello, sessionId);
+			sessionFile = await discoverSessionFile(tab, hello, sessionId, isCut);
 			for (const line of applyPreface(translator, sessionFile, sessionId)) {
 				send({ type: "events", lines: [line] });
 			}
@@ -602,21 +681,21 @@ async function runInvocation(
 		// (verified live: an idle tab pi has an empty session dir), so the
 		// daemon's prompt must be in flight before discovery can ever succeed
 		// — for a cold step the opposite order always times out.
-		const submit = execFileAsync(
+		let settled = false;
+		void execFileAsync(
 			"herdr",
 			["agent", "prompt", tab.paneId, hello.prompt, "--wait", "--timeout", String(TURN_SETTLE_TIMEOUT_MS)],
 			{ timeout: TURN_SETTLE_TIMEOUT_MS + 30_000, maxBuffer: 1024 * 1024 },
-		);
-		// A failure before the race below (discovery fatal, daemon cut)
-		// must not leave the in-flight prompt as an unhandled rejection.
-		submit.catch(() => {});
+		).then(() => { settled = true; }, (err) => {
+			promptError = err instanceof Error ? err : new Error(String(err));
+		});
 
 		if (!sessionId) {
 			// Cold step: the whole fresh session file is this one turn, so the
 			// stream starts at byte 0 and the head records (session header,
 			// system message, this turn's user record) flow through the
 			// translator in file order.
-			sessionFile = await discoverSessionFile(tab, hello, sessionId);
+			sessionFile = await discoverSessionFile(tab, hello, sessionId, isCut);
 			fd = openSync(sessionFile, "r");
 		}
 
@@ -626,32 +705,35 @@ async function runInvocation(
 			});
 		};
 
-		let settled = false;
-		const polling = (async () => {
-			while (!cut.flag && !settled) {
-				await sleep(PROMPT_POLL_MS);
-				if (cut.flag) return false;
-				streamNew();
-			}
-			return false;
-		})();
-		settled = await Promise.race([submit.then(() => true), polling]);
-		if (cut.flag && !settled) {
+		while (!isCut() && !settled) {
+			await sleep(PROMPT_POLL_MS);
+			if (!isCut() && !settled) streamNew();
+		}
+		if (promptError) throw promptError;
+		if (cut.flag) {
 			// The daemon cut the invocation (timeout/cancel): kill the tab so a
 			// retry or later --session resume never meets a second writer.
 			closeTab(tab);
-			closeSync(fd!);
 			socket.end();
 			return;
 		}
-		streamNew();
+		// Drain the settled backlog, retaining the 4 MiB per-read cap. Bound
+		// work even if an unexpected writer keeps appending to the file.
+		for (let pass = 0; ; pass++) {
+			if (pass >= 1024) throw new Error("session backlog exceeded drain limit");
+			const previous = offset;
+			streamNew();
+			if (offset === previous) break;
+		}
 		for (const line of translator.finish()) send({ type: "events", lines: [line] });
-		closeSync(fd!);
 		socket.end();
-		if (sessionless) closeTab(tab);
+		closeTab(tab);
 	} catch (err) {
-		if (created) closeTab(created);
-		fatal(`bridge: ${err instanceof Error ? err.message : String(err)}`);
+		closeTab(tab);
+		const reason = promptError ?? err;
+		fatal(`bridge: ${reason instanceof Error ? reason.message : String(reason)}`);
+	} finally {
+		if (fd !== undefined) closeSync(fd);
 	}
 }
 
@@ -679,28 +761,31 @@ function openTab(
 	const paneId = created?.result?.root_pane?.pane_id ?? created?.result?.pane?.pane_id;
 	if (typeof paneId !== "string" || !paneId) return undefined;
 
-	const extraExtensions = stepAgentExtensionPaths(join(homedir(), ".pi", "agent"));
-	const script = buildTabLauncher({
-		realPi: realPiPath(),
-		interactiveArgv: interactive,
-		env: hello.env ?? {},
-		extraExtensions,
-	});
 	const scriptPath = join(bridge.dir, `launch-${tabKey}.sh`);
-	writeFileSync(scriptPath, script, { mode: 0o755 });
-	if (!herdrOkSync(["pane", "run", paneId, "bash", scriptPath])) {
-		herdrOkSync(["pane", "close", paneId]);
+	try {
+		const extraExtensions = stepAgentExtensionPaths(join(homedir(), ".pi", "agent"));
+		const script = buildTabLauncher({
+			realPi: realPiPath(),
+			interactiveArgv: interactive,
+			env: hello.env ?? {},
+			extraExtensions,
+		});
+		writeFileSync(scriptPath, script, { mode: 0o755 });
+		if (!herdrOkSync(["pane", "run", paneId, "bash", scriptPath])) throw new Error("pane run failed");
+		return { paneId, scriptPath };
+	} catch {
+		closeTabPaneCleanly(paneId);
 		try {
 			rmSync(scriptPath, { force: true });
 		} catch {}
 		return undefined;
 	}
-	return { paneId, scriptPath };
 }
 
-async function waitTabReady(paneId: string): Promise<void> {
+export async function waitTabReady(paneId: string, isCut = () => false): Promise<void> {
 	const deadline = Date.now() + TAB_READY_TIMEOUT_MS;
 	while (Date.now() < deadline) {
+		if (isCut()) throw new Error("invocation cut");
 		const info = herdrJsonSync(["agent", "get", paneId]);
 		const status = info?.result?.agent?.agent_status;
 		if (status === "idle" || status === "done") return;
@@ -712,14 +797,16 @@ async function waitTabReady(paneId: string): Promise<void> {
 	throw new Error("tab agent never became ready");
 }
 
-async function discoverSessionFile(tab: TabHandle, hello: Hello, sessionId?: string): Promise<string> {
+export async function discoverSessionFile(tab: TabHandle, hello: Hello, sessionId?: string, isCut = () => false): Promise<string> {
 	const deadline = Date.now() + SESSION_DISCOVER_TIMEOUT_MS;
 	while (Date.now() < deadline) {
+		if (isCut()) throw new Error("invocation cut");
 		const info = herdrJsonSync(["agent", "get", tab.paneId]);
 		const path = info?.result?.agent?.agent_session?.value;
 		if (typeof path === "string" && path && existsSync(path)) return path;
 		await sleep(PROMPT_POLL_MS);
 	}
+	if (isCut()) throw new Error("invocation cut");
 	// Fallback: resolve by session id under the mangled sessions dir.
 	if (sessionId) {
 		const dir = join(piSessionsDir(), mangledSessionDir(hello.cwd));
@@ -814,9 +901,10 @@ function streamNewRecords(fd: number, offset: number, onRecord: (record: unknown
 
 async function teardownRun(bridge: RunBridge): Promise<void> {
 	const state = bridgeState();
+	state.generations.set(bridge.runId, (state.generations.get(bridge.runId) ?? 0) + 1);
 	if (state.runs.get(bridge.runId) === bridge) state.runs.delete(bridge.runId);
 	for (const tab of bridge.tabs.values()) {
-		herdrOkSync(["pane", "close", tab.paneId]);
+		closeTabPaneCleanly(tab.paneId);
 		if (tab.scriptPath) {
 			try {
 				rmSync(tab.scriptPath, { force: true });
@@ -836,7 +924,9 @@ async function teardownRun(bridge: RunBridge): Promise<void> {
  *  bridge dirs (later shims then passthrough instantly). Called on run
  *  terminal, session shutdown, and extension reload. */
 export function teardownBridgeServers(): void {
-	for (const bridge of Array.from(bridgeState().runs.values())) {
+	const state = bridgeState();
+	for (const [runId, generation] of state.generations) state.generations.set(runId, generation + 1);
+	for (const bridge of Array.from(state.runs.values())) {
 		void teardownRun(bridge);
 	}
 }
@@ -846,4 +936,8 @@ export function teardownBridgeServers(): void {
 export function teardownBridgeForRun(runId: string): void {
 	const bridge = bridgeState().runs.get(runId);
 	if (bridge) void teardownRun(bridge);
+	else {
+		const state = bridgeState();
+		state.generations.set(runId, (state.generations.get(runId) ?? 0) + 1);
+	}
 }

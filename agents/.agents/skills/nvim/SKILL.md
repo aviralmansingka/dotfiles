@@ -66,3 +66,12 @@ change the daemon's config.
 If the user references a file by name rather than by path (e.g. "the
 readme"), resolve it yourself before calling the script — the script
 does not do natural-language resolution.
+
+## Launch provenance log
+
+The script appends one line to `~/.cache/pi/nvim-open-launches.log` for
+every launch it attempts (split, send-to-existing, sidebar attach, or
+failure), recording the timestamp, pid, session, caller pane, and
+outcome so an orphan editor pane can always be attributed. The log is
+debug state, safe to delete at any time. Set `PI_NVIM_LAUNCH_LOG` to
+override the path.

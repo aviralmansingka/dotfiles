@@ -42,7 +42,7 @@ the same validation, registry, watcher, and completion-steer path as the tool.
 The tuicr extension's `tuicr_review` uses this to start the bundled
 `tuicr-review` agent, and `__pi_interactive_subagents.isSubagentRunning(name)`
 reports whether such a spawn is still running (tuicr refuses a second reviewer
-for a repo whose review is already open).
+for the same review target — another PR or range still runs concurrently).
 
 ### Spawning
 
@@ -84,23 +84,37 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 
 | Agent | Model | Tools | Role |
 | ----- | ----- | ----- | ---- |
-| **scout** | `openai-codex/gpt-6-astra` | `read`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Fast read-only codebase recon |
-| **researcher** | `openai-codex/gpt-6-astra` | `web_search`, `web_fetch`, `bash`, `tuicr`, `tuicr_reply` | Web research, synthesized into a sourced brief |
-| **worker** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
-| **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, mermaid diagrams, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
-| **tuicr-review** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
+| **scout** | session default | `read`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Fast read-only codebase recon |
+| **researcher** | session default | `web_search`, `web_fetch`, `bash`, `tuicr`, `tuicr_reply` | Web research, synthesized into a sourced brief |
+| **worker** | session default | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
+| **professor** | session default | lesson tools, mermaid diagrams, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
+| **tuicr-review** | session default | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
+| **nm-orchestrator** | session default | `no_mistakes_axi`, `read` | no-mistakes run orchestrator; drives one pipeline run through its gates and returns the run summary |
 
-`scout`, `researcher`, `worker`, and `tuicr-review` are autonomous
-(`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane
+Bundled agents inherit the session model (no `model:` pin in their
+frontmatter); each agent's `thinking:` level still applies on top of the
+inherited model. Pin a model per spawn with the `model` parameter, or per
+custom agent with a `model:` frontmatter line.
+
+`scout`, `researcher`, `worker`, `tuicr-review`, and `nm-orchestrator` are
+autonomous (`auto-exit: true`). `professor` is a long-lived, user-driven tab or pane
 (`auto-exit: false`) that auto-loads the `professor` skill and remains open
-until the learner exits it. All five carry their identity in the system prompt
+until the learner exits it. All six carry their identity in the system prompt
 (`system-prompt: append`).
 
 The `tuicr-review` agent is started by the tuicr extension's `tuicr_review`
 tool / `/tuicr` command (see
-[README-tuicr.md](../README-tuicr.md)); it parks in `waiting` between comment
-batches — auto-exit is suppressed while its comment watcher is active — and
-closes itself after the TUI exits and its summary is delivered.
+[README-tuicr.md](../README-tuicr.md)); it opens the tuicr pane inside its own
+tab (the wrapper it spawns inherits its `HERDR_PANE_ID`), parks in `waiting`
+between comment batches — auto-exit is suppressed while its comment watcher
+is active — and closes itself after the TUI exits and its summary is
+delivered.
+
+The `nm-orchestrator` agent is started by the no-mistake-pane extension's
+`no_mistakes_axi` tool when a Herdr captain session submits `run`: it owns
+the attach pane, gate panels, and the step-agent bridge for that run, parks
+in `waiting` between axi results (auto-exit is suppressed while the run is
+active), and closes itself after the terminal outcome and its run summary.
 
 ## Custom agents
 
@@ -134,6 +148,7 @@ You are a specialized agent that does X...
 | `subagent_agents` | string | Comma-separated agent names this agent may spawn. **Presence of this field grants the spawning toolset** (`subagent`, `subagent_message`, `subagents_list`) and restricts spawn targets to the list. Omit it and the agent cannot spawn at all |
 | `skills` | string | Comma-separated skill names to auto-load |
 | `session-mode` | string | `standalone` (default), `lineage-only`, or `fork` — see below |
+| `agent-dir` | string | `parent` keeps the captain's configured agent dir (global extensions, settings, themes) instead of redirecting to a target-repo `.pi/agent`; the target repo's project `.pi` settings still apply as project settings |
 | `system-prompt` | string | `append` or `replace`: pass the body as the child's `--append-system-prompt` / `--system-prompt`. Omit and the body is prepended to the task prompt instead |
 | `auto-exit` | boolean | Auto-shutdown when the agent finishes (see below) |
 | `interactive` | boolean | Whether stall/recovery transitions wake the parent (see below) |
@@ -164,6 +179,8 @@ Controls whether `stalled`/`recovered` status transitions send a steer message t
 
 Tool access is **whitelist-only**. Sub-agent processes keep normal extension discovery enabled, so they load the same configured global/project/package extensions as their cwd. Callable tools are still restricted with `--tools <allowlist>` plus explicit helper extensions for tools outside normal discovery. There is no deny-list — an agent can call exactly what its frontmatter lists. The restriction survives resume via the loadout snapshot.
 
+Every spawned pi sub-agent also gets the parent's tool-call renderer as a baseline explicit `-e` (restored when a repo-local `.pi/agent` redirect would otherwise drop it; deduped by pi; skipped when absent).
+
 Spawns must name a known agent at **every** depth. A top-level session may spawn anything discoverable; a sub-agent may only spawn the agents in its `subagent_agents` list (enforced via `PI_SUBAGENT_ALLOWED`). There is no agentless spawn route, so a child can never escalate to a full-toolset profile by omitting its agent.
 
 Extensions can register additional tools for sub-agents at runtime via `registerToolExtension(name, path)` on the `__pi_interactive_subagents` process global.
@@ -184,6 +201,12 @@ subagent({ agent: "worker", cwd: "agents/sre", task: "Review the deployment pipe
 ```
 
 Set a per-agent default with `cwd:` in frontmatter.
+
+`agent-dir: parent` opts an agent out of that config redirect: the captain's
+configured agent dir (`PI_CODING_AGENT_DIR`, else `~/.pi/agent`) stays the
+child's agent dir — global extensions, settings, and themes keep loading —
+while the target repo's project `.pi` settings still apply as project
+settings.
 
 ## Status widget & configuration
 
