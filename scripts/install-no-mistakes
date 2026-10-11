@@ -4,11 +4,15 @@ set -eu
 # Owned, pinned installer for No Mistakes. A local NO_MISTAKES_ASSET can be
 # supplied for an offline install; otherwise only the pinned release URL is
 # fetched.
-VERSION=v1.41.2
-SOURCE_REVISION=867d64d9c2df89f3f204ad1f5528e5bf7b460caa
-CHECKSUMS_SHA256=e17cc7a246bc619f34d423848171e734c5fe033106562db8baeb20de2570a01b
-DARWIN_ARM64_SHA256=59c3963d925db27886dece99aef30e873b978cee1c297bac1f1632854271effe
-LINUX_AMD64_SHA256=a100c58bdfe7df9f598ecec32553d5fbd8eb0079912fc830f362011fd9dc8825
+# B25 pin bump v1.41.2 -> v1.84.0 (current stable 2026-09-26). Digests from the
+# official release asset checksums.txt (sha256 7bc01a59...); the tag commit is
+# 4822244e763fd4c3d7f48be6433f92df10bb5b33. Never run `no-mistakes update` to
+# move this pin: edit VERSION + digests here, then re-run this installer.
+VERSION=v1.84.0
+SOURCE_REVISION=4822244e763fd4c3d7f48be6433f92df10bb5b33
+CHECKSUMS_SHA256=7bc01a59657ec55174cf4105a2daf836f432ad7960ae9b6da86bb41ed19e896c
+DARWIN_ARM64_SHA256=2e5f838303ab727edccd1a60a4834068024606c68ae7d97fdc0fdeecd7bd4d90
+LINUX_AMD64_SHA256=b0fb8a9df412c5fa1fb92a3584ffa1d4d5b4d6e0d1738efa2f8b88320f8bf1c2
 RELEASE_BASE=https://github.com/kunchenguid/no-mistakes/releases/download/$VERSION
 
 fail() {
