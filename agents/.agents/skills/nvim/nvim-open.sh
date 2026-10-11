@@ -157,7 +157,10 @@ if [[ -n "$DAEMON_SOCKET" && "$EDITOR_CMD" == "nvim" ]] && \
 		fi
 		nvim --server "$DAEMON_SOCKET" --remote "$file" || DAEMON_OK=false
 	done
-	# Find the visible sidebar pane (the one running `bin/herdr-nvim sidebar`).
+	# Find the visible sidebar pane: the `herdr-nvim sidebar` launcher (brief
+	# on Unix before it execs, the parent on Windows) or the
+	# `nvim --server <socket> --remote-ui` client it execs into on Unix —
+	# the steady state, matched by this tab's own daemon socket.
 	TAB_PANES_LIST=$(herdr_json pane list | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
@@ -169,13 +172,22 @@ print('\n'.join(panes))
 		[[ -z "$_pane" ]] && continue
 		if herdr_json pane process-info --pane "$_pane" | python3 -c "
 import sys, json
+socket = sys.argv[1]
 data = json.load(sys.stdin)
 for p in data.get('result', {}).get('process_info', {}).get('foreground_processes', []):
-    exe = p.get('name', '') or ((p.get('argv') or [''])[0])
-    if exe.endswith('herdr-nvim') and 'sidebar' in (p.get('argv') or []):
+    argv = p.get('argv') or []
+    exe = (p.get('name', '') or (argv[0] if argv else '')).replace(chr(92), '/').rsplit('/', 1)[-1]
+    if exe in ('herdr-nvim', 'herdr-nvim.exe') and 'sidebar' in argv:
+        sys.exit(0)
+    server = ''
+    if '--server' in argv:
+        i = argv.index('--server')
+        if i + 1 < len(argv):
+            server = argv[i + 1]
+    if exe in ('nvim', 'nvim.exe') and '--remote-ui' in argv and server == socket:
         sys.exit(0)
 sys.exit(1)
-" 2>/dev/null; then
+" "$DAEMON_SOCKET" 2>/dev/null; then
 			SIDEBAR_VISIBLE=true
 			break
 		fi

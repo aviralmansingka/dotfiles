@@ -127,20 +127,37 @@ export function liveSidebarDaemon(
 	return { socket, tabId: pane.tab_id };
 }
 
-/** Find the tab's visible sidebar pane — the pane running
- *  `bin/herdr-nvim sidebar`, the remote-ui window onto the headless
- *  daemon. Returns its pane id, or null when the sidebar is toggled off. */
-function findSidebarPane(currentTabId: string): string | null {
+/** True when `proc` is a sidebar-pane foreground process. Two shapes:
+ *  the `herdr-nvim sidebar` launcher (brief on Unix before it execs, the
+ *  parent on Windows) and the `nvim --server <socket> --remote-ui` client
+ *  it execs into on Unix (daemon/mod.rs `attach_remote_ui`) — the steady
+ *  state. The client is matched by the tab's own daemon socket, which the
+ *  caller already holds. */
+export function isSidebarProcess(proc: ProcessEntry, daemonSocket: string): boolean {
+	const argv = proc.argv ?? [];
+	const exe = proc.name || argv[0] || "";
+	const base = exe.replace(/^.*[\\/]/, "");
+	if (/^herdr-nvim(\.exe)?$/.test(base) && argv.includes("sidebar")) return true;
+	const server = argv.indexOf("--server");
+	return (
+		(base === "nvim" || base === "nvim.exe") &&
+		argv.includes("--remote-ui") &&
+		server !== -1 &&
+		argv[server + 1] === daemonSocket
+	);
+}
+
+/** Find the tab's visible sidebar pane — the pane whose foreground
+ *  process is the remote-ui window onto the headless daemon. Returns
+ *  its pane id, or null when the sidebar is toggled off. */
+function findSidebarPane(currentTabId: string, daemonSocket: string): string | null {
 	const panes = listPanes();
 	if (!panes) return null;
 	for (const pane of panes) {
 		if (pane.tab_id !== currentTabId) continue;
 		const procs = getProcessInfo(pane.pane_id)?.foreground_processes ?? [];
-		for (const proc of procs) {
-			const exe = proc.name || proc.argv?.[0] || "";
-			if (/herdr-nvim(\.exe)?$/.test(exe) && (proc.argv ?? []).includes("sidebar")) {
-				return pane.pane_id;
-			}
+		if (procs.some((proc) => isSidebarProcess(proc, daemonSocket))) {
+			return pane.pane_id;
 		}
 	}
 	return null;
@@ -174,7 +191,7 @@ function attachToSidebarDaemon(
 	files: string[],
 ): { message: string; ok: boolean; launched: boolean } {
 	const opened = files.length === 0 || openInDaemon(daemon.socket, files);
-	const sidebarPane = findSidebarPane(daemon.tabId);
+	const sidebarPane = findSidebarPane(daemon.tabId, daemon.socket);
 	if (sidebarPane) {
 		focusEditorPane(sidebarPane, current.pane_id);
 	} else {
@@ -315,17 +332,20 @@ function launchEditor(cwd: string, files: string[]): string | null {
 }
 /**
  * Focus the editor pane by discovering the direction from the current pane
- * to the editor pane using `herdr pane neighbor`. `herdr pane focus` requires
- * --direction, so we cannot focus by pane ID alone.
+ * to the editor pane using `herdr pane neighbor` (the neighbor is reported
+ * as `neighbor_pane_id`; `pane_id` is the origin). `herdr pane focus`
+ * requires --direction, so focus relative to the current pane with --pane
+ * rather than --current, whose origin is the client's focused pane — often
+ * the sidebar itself when it is visible.
  */
 function focusEditorPane(editorPaneId: string, currentPaneId: string): boolean {
 	const directions = ["right", "down", "left", "up"] as const;
 	for (const dir of directions) {
 		const res = herdrJson(["pane", "neighbor", "--pane", currentPaneId, "--direction", dir]) as
-			| { result?: { neighbor?: { pane_id?: string } } } | null;
-		const neighborId = res?.result?.neighbor?.pane_id;
+			| { result?: { neighbor?: { neighbor_pane_id?: string } } } | null;
+		const neighborId = res?.result?.neighbor?.neighbor_pane_id;
 		if (neighborId === editorPaneId) {
-			return herdrOk(["pane", "focus", "--current", "--direction", dir]);
+			return herdrOk(["pane", "focus", "--pane", currentPaneId, "--direction", dir]);
 		}
 	}
 	// Fallback: try each direction directly

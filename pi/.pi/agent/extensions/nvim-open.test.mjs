@@ -95,6 +95,42 @@ try {
 	// No socket registered for this tab → null (registry dir may exist
 	// with other tabs' daemons; only the exact tab key matches).
 	assert.equal(nvimOpen.sidebarDaemonSocket("w99:t9"), null);
+
+	// ── sidebar-pane process matcher (pure) ─────────────────────────────
+	// Shapes recorded live from a visible herdr-nvim sidebar pane: the
+	// `herdr-nvim sidebar` launcher before it execs, and the exec'd
+	// `nvim --server <socket> --remote-ui` client — the steady state.
+	const daemonSocket = join(tmpdir(), "herdr-nvim", "w6V_t1.sock");
+	const remoteUi = {
+		name: "nvim", pid: 4242,
+		argv: ["/home/avirus/.local/share/bob/nightly/bin/nvim", "--server", daemonSocket, "--remote-ui"],
+	};
+	assert.equal(nvimOpen.isSidebarProcess(remoteUi, daemonSocket), true);
+	const launcher = {
+		name: "herdr-nvim", pid: 4243,
+		argv: ["/plugins/github/chmarax.herdr-nvim-x/bin/herdr-nvim", "sidebar"],
+	};
+	assert.equal(nvimOpen.isSidebarProcess(launcher, daemonSocket), true);
+	// name missing → fall back to argv[0], basename-matched.
+	assert.equal(
+		nvimOpen.isSidebarProcess({ name: "", pid: 4244, argv: ["/opt/bin/nvim", "--server", daemonSocket, "--remote-ui"] }, daemonSocket),
+		true,
+	);
+	// A plain editor nvim (no --remote-ui) is not the sidebar.
+	assert.equal(
+		nvimOpen.isSidebarProcess({ name: "nvim", pid: 7, argv: ["/usr/bin/nvim", "src/main.rs"] }, daemonSocket),
+		false,
+	);
+	// A remote-ui client on another tab's daemon socket is not this sidebar.
+	assert.equal(
+		nvimOpen.isSidebarProcess({ ...remoteUi, argv: ["/usr/bin/nvim", "--server", join(tmpdir(), "herdr-nvim", "w9_t9.sock"), "--remote-ui"] }, daemonSocket),
+		false,
+	);
+	// The headless daemon itself (--listen, no --server/--remote-ui) is not a pane process.
+	assert.equal(
+		nvimOpen.isSidebarProcess({ name: "nvim", pid: 8, argv: ["/usr/bin/nvim", "--headless", "--listen", daemonSocket] }, daemonSocket),
+		false,
+	);
 } finally {
 	rmSync(tempRoot, { recursive: true, force: true });
 }
