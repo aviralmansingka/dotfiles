@@ -421,15 +421,17 @@ lesson flow; review is a separate workflow that the learner triggers explicitly.
   before you deliver new content; after a second miss, stop re-asking, teach
   the corrected model with the `lesson` tool, then verify once. The session
   must add knowledge faster than it adds questions.
-- **Always use the `simple` skill for learner-facing prose.** Before you
-  write any lesson, quiz, explain prompt, or artifact, read
-  `~/.agents/skills/simple/SKILL.md` and apply it. All learner-facing prose —
-  lesson bodies, quiz questions, options, and explanations, explain prompts
-  and details, panel text, artifact files (`session.md` and `handout.md`),
-  teaching chat — follows ASD-STE100 at full compliance with no relaxations:
-  short sentences, active voice, approved verbs, one term per concept. The
-  system prompt's 80% relaxation does not apply to teaching surfaces. This
-  holds for every session; the learner does not need to type `/simple`.
+- **Always use the `/simple` skill for lessons and handouts.** This rule
+  is explicit: lesson bodies and handouts are written under `/simple`, every
+  time. Before you write a lesson body, the handout, or any other
+  learner-facing prose, read `~/.agents/skills/simple/SKILL.md` and apply
+  its rules. This covers lesson bodies, `handout.md`, quiz questions,
+  options, and explanations, explain prompts and details, panel text,
+  `session.md`, and teaching chat. All of it follows ASD-STE100 at full
+  compliance with no relaxations: short sentences, active voice, approved
+  verbs, one term per concept. The system prompt's 80% relaxation does not
+  apply to teaching surfaces. This holds for every session; the learner
+  does not need to type `/simple`.
 - **One concept at a time.** Park after each interaction and wait for his paste.
 - **Motivate every node, including foundations.** Unmotivated, unconfirmed facts
   don't lock in — that's the whole point.
@@ -463,7 +465,7 @@ session journal maintained by md-log:
   no per-lesson recap/commands/quiz boilerplate. Anything historical goes in
   the journal, not here.
 - **`handout.md` (static, global)** — authored once during Plan from the
-  researcher pass, under the `simple` skill's rules: the full command
+  researcher pass, under the `/simple` skill's rules: the full command
   reference and background for the whole arc.
   For every command: its purpose, the flags used, and the kernel construct it
   touches (e.g. `ip link set eno1 up` writes the netdev's `IFF_UP` flag via
