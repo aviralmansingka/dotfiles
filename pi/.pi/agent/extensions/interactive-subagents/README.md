@@ -172,6 +172,8 @@ Controls whether `stalled`/`recovered` status transitions send a steer message t
 
 Tool access is **whitelist-only**. Sub-agent processes keep normal extension discovery enabled, so they load the same configured global/project/package extensions as their cwd. Callable tools are still restricted with `--tools <allowlist>` plus explicit helper extensions for tools outside normal discovery. There is no deny-list — an agent can call exactly what its frontmatter lists. The restriction survives resume via the loadout snapshot.
 
+Every spawned pi sub-agent also gets the parent's tool-call renderer as a baseline explicit `-e` (restored when a repo-local `.pi/agent` redirect would otherwise drop it; deduped by pi; skipped when absent).
+
 Spawns must name a known agent at **every** depth. A top-level session may spawn anything discoverable; a sub-agent may only spawn the agents in its `subagent_agents` list (enforced via `PI_SUBAGENT_ALLOWED`). There is no agentless spawn route, so a child can never escalate to a full-toolset profile by omitting its agent.
 
 Extensions can register additional tools for sub-agents at runtime via `registerToolExtension(name, path)` on the `__pi_interactive_subagents` process global.

@@ -85,7 +85,9 @@ These rules are load-bearing:
   pane-state reporters, capability tools (python, web-fetch, web-search, mermaid), and tab
   chrome. The parent's pipeline machinery (no-mistakes-gate, no-mistakes-pane,
   interactive-subagents, tuicr) and human-blocking tools never load inside a step agent -
-  keep it that way when adding extensions.
+  keep it that way when adding extensions. Every pi subagent spawned by interactive-subagents
+  gets the parent's tool-call renderer as a baseline explicit `-e` (deduped by pi; skipped when
+  absent) - the curated step-agent set above stays curated and unchanged.
 - A run started from a Herdr captain session is owned by the `nm-orchestrator` subagent tab
   (tuicr-review architecture, `no-mistakes-pane/orchestrate.ts` + the bundled agent). It drives
   axi run/respond and owns the attach pane, gate panels, pane labels, and the step-agent

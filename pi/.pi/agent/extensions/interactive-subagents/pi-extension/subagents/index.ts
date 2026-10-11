@@ -1004,6 +1004,19 @@ function buildSubagentToolAllowlist(
   return [...allow].join(",");
 }
 
+// ── baseline subagent renderer ──
+
+/** Baseline explicit -e args for every spawned pi subagent: the parent agent
+ *  dir's public tool-call renderer, restored when a repo-local `.pi/agent`
+ *  redirect would otherwise drop it. resolve() keeps a relative
+ *  PI_CODING_AGENT_DIR absolute; pi canonicalizes (realpath) and dedupes
+ *  explicit -e against discovered files, so double-loading is impossible, and
+ *  an absent renderer silently skips. */
+function baselineSubagentExtensionArgs(agentDir: string): string[] {
+  const rendererPath = resolve(agentDir, "extensions", "tool-call-renderer-public.ts");
+  return existsSync(rendererPath) ? ["-e", shellEscape(rendererPath)] : [];
+}
+
 /**
  * Apply a loadout snapshot's sandbox to a pi command's `parts` array: model,
  * identity (system prompt), and the tool allowlist (`--tools` plus one explicit
@@ -1021,6 +1034,10 @@ function applySandboxToParts(
   loadout: SubagentLoadout,
   opts: { artifactDir: string; name: string },
 ): void {
+  // Baseline for every spawned subagent — fresh launch, resume, fork, or
+  // bare spawn — pushed unconditionally, outside the toolAllowlist block.
+  // The Claude branch returns before the Pi path, so this stays Pi-only.
+  parts.push(...baselineSubagentExtensionArgs(getAgentConfigDir()));
   parts.push(...agentIsolationArgs(loadout.agent));
 
   if (loadout.model) {
@@ -1335,6 +1352,7 @@ export const __test__ = {
   resolveLaunchBehavior,
   resolveEffectiveInteractive,
   buildSubagentToolAllowlist,
+  baselineSubagentExtensionArgs,
   applySandboxToParts,
   buildPiPromptArgs,
   buildPiReadyPrompt,

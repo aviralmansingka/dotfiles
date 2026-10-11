@@ -9,7 +9,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	agentIsolationArgs,
@@ -434,5 +434,80 @@ for (const source of ["project", "global", "package"]) {
 }
 assert.equal(renderList([]), "<dim>No subagent definitions found.</dim>");
 assert.equal(renderList(undefined), "<dim>No subagent definitions found.</dim>");
+
+// --- Baseline tool renderer for every spawned subagent ---
+// index.ts cannot be jiti-loaded whole (it imports the pi package), so the
+// helper is eval'd from source with the real surface's shellEscape injected.
+const baselineSource = indexSource
+	.split("// ── baseline subagent renderer ──")[1]
+	.split("/**\n * Apply a loadout snapshot's sandbox")[0];
+globalThis.__baselineDeps = { shellEscape: surface.shellEscape, resolve, existsSync };
+const baselineSubagentExtensionArgs = jiti.evalModule(
+	`
+	const { shellEscape, resolve, existsSync } = globalThis.__baselineDeps;
+	${baselineSource}
+	module.exports = baselineSubagentExtensionArgs;
+`,
+	{ filename: join(tmpdir(), "subagent-baseline-renderer-test.ts") },
+);
+delete globalThis.__baselineDeps;
+
+// Missing renderer → no baseline args.
+const baselineRoot = mkdtempSync(join(tmpdir(), "subagent-baseline-test-"));
+try {
+	const emptyDir = join(baselineRoot, "agent");
+	mkdirSync(emptyDir, { recursive: true });
+	assert.deepEqual(baselineSubagentExtensionArgs(emptyDir), []);
+
+	// Present renderer → exactly one shell-escaped -e pair.
+	const rendererDir = join(baselineRoot, "agent-with-renderer", "extensions");
+	mkdirSync(rendererDir, { recursive: true });
+	writeFileSync(join(rendererDir, "tool-call-renderer-public.ts"), "export {};\n");
+	assert.deepEqual(baselineSubagentExtensionArgs(join(baselineRoot, "agent-with-renderer")), [
+		"-e",
+		`'${join(rendererDir, "tool-call-renderer-public.ts")}'`,
+	]);
+
+	// A parent dir with spaces and an apostrophe is correctly quoted.
+	const weirdDir = join(baselineRoot, "par ent's dir", "agent", "extensions");
+	mkdirSync(weirdDir, { recursive: true });
+	writeFileSync(join(weirdDir, "tool-call-renderer-public.ts"), "export {};\n");
+	const [weirdFlag, weirdPath] = baselineSubagentExtensionArgs(join(baselineRoot, "par ent's dir", "agent"));
+	assert.equal(weirdFlag, "-e");
+	assert.equal(
+		weirdPath,
+		`'${join(weirdDir, "tool-call-renderer-public.ts").replace(/'/g, "'\\''")}'`,
+		"spaces stay quoted and the apostrophe is escaped shell-style",
+	);
+
+	// A relative agent dir resolves against the process cwd to an absolute path.
+	const relRoot = join(baselineRoot, "rel-cwd");
+	mkdirSync(join(relRoot, "agent", "extensions"), { recursive: true });
+	writeFileSync(join(relRoot, "agent", "extensions", "tool-call-renderer-public.ts"), "export {};\n");
+	const previousCwd = process.cwd();
+	process.chdir(relRoot);
+	try {
+		const [relFlag, relPath] = baselineSubagentExtensionArgs("agent");
+		assert.equal(relFlag, "-e");
+		assert.ok(relPath.startsWith("'"), "path is shell-quoted");
+		assert.ok(
+			!relPath.startsWith("'agent"),
+			"resolve() made the relative agent dir absolute before quoting",
+		);
+		assert.ok(relPath.includes("tool-call-renderer-public.ts'"));
+	} finally {
+		process.chdir(previousCwd);
+	}
+
+	// The baseline is pushed unconditionally, outside the toolAllowlist block.
+	const sandboxBody = indexSource.split("function applySandboxToParts(")[1].split("\nfunction ")[0];
+	assert.ok(
+		sandboxBody.indexOf("baselineSubagentExtensionArgs(getAgentConfigDir())") <
+			sandboxBody.indexOf("loadout.toolAllowlist"),
+		"applySandboxToParts pushes the baseline -e before any toolAllowlist logic",
+	);
+} finally {
+	rmSync(baselineRoot, { recursive: true, force: true });
+}
 
 console.log("interactive-subagents surface smoke passed");
