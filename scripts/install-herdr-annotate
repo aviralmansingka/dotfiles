@@ -52,4 +52,4 @@ herdr plugin link "$root"
 herdr plugin install plannotator/herdr-annotate/lite \
     --ref bccf884b874f5f39ccbef1bb6ac67625c5fb5d54 --yes
 printf '\nProtected reviewer: %s\n' "$root"
-printf 'Review shortcuts must use annotate-review.open and annotate-review.last.\n'
+printf 'Review shortcuts must use annotate-review.last; annotate-review.open is unbound and prefix+o is the herdr-nvim file picker.\n'

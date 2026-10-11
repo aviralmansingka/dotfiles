@@ -101,7 +101,7 @@ fi
     keys = {item["key"]: item["command"] for item in config["keys"]["command"]}
     assert plugin["id"] == "annotate-review"
     assert "build" not in plugin, "link must not download a stock binary"
-    assert keys["prefix+o"] == "annotate-review.open"
+    assert keys["prefix+o"] == "chmarax.herdr-nvim.pick-file"
     assert keys["prefix+shift+o"] == "annotate-review.last"
     assert keys["prefix+a"] == "annotate.capture"
     for action in plugin["actions"]:
