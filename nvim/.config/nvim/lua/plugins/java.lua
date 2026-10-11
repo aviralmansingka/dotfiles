@@ -29,6 +29,16 @@ return {
     config = function()
       local Path = require("neotest-java.model.path")
 
+      -- FLAGGED FIX (feat-robust-ci-nm): guard against a double patch.
+      -- :Lazy reload of neotest-java runs this config again. Without the
+      -- guard, each reload stacked another wrapper layer on Path.new and
+      -- Path:append (the module table survives the reload). The marker
+      -- makes the patch idempotent.
+      if rawget(Path, "_dotfiles_path_coerce_patch") then
+        return
+      end
+      Path._dotfiles_path_coerce_patch = true
+
       local original_new = Path.new
       Path.new = function(raw_path, opts)
         if type(raw_path) == "table" and type(raw_path.to_string) == "function" then

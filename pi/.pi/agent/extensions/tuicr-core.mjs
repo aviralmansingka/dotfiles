@@ -129,6 +129,45 @@ export function activeSessions(sessions) {
 	return sessions.filter((session) => session?.active === true);
 }
 
+/** True when a session slug names exactly this PR review (e.g. gh:owner/repo/pr/287). */
+function slugMatchesPr(slug, pr) {
+	return new RegExp(`(?:^|/)pr/${Number(pr)}$`).test(String(slug ?? ""));
+}
+
+/**
+ * Resolve which session a review request targets. The EXPLICIT target wins:
+ * a sessionSlug resolves to that slug, and a pr/revset scope resolves only to
+ * a session whose slug names that target — never to "the only active
+ * session" (#289: tuicr_review pr:287 attached to PR-288's session).
+ *
+ * Statuses:
+ * - exact match → `ok` with the session
+ * - explicit slug absent → `missing` with the slug
+ * - explicit pr/revset absent while other sessions are active → `missing`
+ *   with the target and those sessions (caller must error, not attach)
+ * - several matches (or no target given and several active) → `ambiguous`
+ * - nothing active at all → `none` (caller may launch a fresh pane)
+ */
+export function resolveTargetSession(sessions, { sessionSlug, scope, pr, revset } = {}) {
+	if (sessionSlug) {
+		const found = sessions.find((session) => session?.slug === sessionSlug);
+		return found ? { status: "ok", session: found } : { status: "missing", slug: sessionSlug };
+	}
+	const active = activeSessions(sessions);
+	if (scope === "pr" || scope === "revset") {
+		const target = scope === "pr" ? `PR ${pr}` : `commit range ${revset}`;
+		const matches = active.filter((session) =>
+			scope === "pr" ? slugMatchesPr(session?.slug, pr)
+				: String(session?.slug ?? "").endsWith(`/commits/${revset}`));
+		if (matches.length === 1) return { status: "ok", session: matches[0] };
+		if (matches.length > 1) return { status: "ambiguous", sessions: matches };
+		return active.length > 0 ? { status: "missing", target, sessions: active } : { status: "none" };
+	}
+	if (active.length === 0) return { status: "none" };
+	if (active.length === 1) return { status: "ok", session: active[0] };
+	return { status: "ambiguous", sessions: active };
+}
+
 /**
  * Resolve which session to watch.
  * - explicit slug → that session, or `missing`

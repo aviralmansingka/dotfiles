@@ -1633,8 +1633,11 @@ def is_reply_to_bot(msg: IncomingMessage) -> bool:
 def strip_bot_mention(text: str) -> str:
     if not BOT_USERNAME:
         return text
-    cleaned = re.sub(rf"(?i)@{re.escape(BOT_USERNAME)}\b[,\-:\s]*", "", text).strip()
-    return cleaned or text
+    # A message that is only the mention strips to ""; should_handle then
+    # maps that to "status". Never return the original text here — that
+    # would leak the raw mention into the prompt and make the status
+    # fallback in should_handle unreachable.
+    return re.sub(rf"(?i)@{re.escape(BOT_USERNAME)}\b[,\-:\s]*", "", text).strip()
 
 
 def strip_command_prefix(content: str, is_voice: bool) -> Optional[str]:

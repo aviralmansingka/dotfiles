@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Paths: scripts/install-herdr-annotate ops/herdr-annotate-review/** herdr/.config/herdr/config.toml
 """Offline installer contract check: uv run --no-project python scripts/test-herdr-annotate-install.py."""
 from pathlib import Path
 import hashlib

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Paths: pi/.pi/agent/** pi/.stow-local-ignore scripts/pi-settings-sync scripts/pi-extensions-drift-check
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';

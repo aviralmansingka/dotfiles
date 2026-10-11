@@ -15,9 +15,11 @@ const { contextFileHint, lessonFileHint, normalizeContextFiles } = jiti("./user-
 assert.equal(lessonFileHint(), "h node · H journal");
 assert.equal(lessonFileHint(), lessonFileHint());
 
+// Inert smoke data — only the count matters to the hint, so keep the paths
+// host-neutral (no macOS-only absolute paths).
 const h100SmokeFiles = [
-	"/Users/aviral/.treehouse/vault-278260/2/vault/professor-lessons/h100-matmul-modal/bench_core.py",
-	"/Users/aviral/.treehouse/vault-278260/2/vault/professor-lessons/h100-matmul-modal/reference/fast.cu/h100/matmul.cu",
+	"~/vault/professor-lessons/h100-matmul-modal/bench_core.py",
+	"~/vault/professor-lessons/h100-matmul-modal/reference/fast.cu/h100/matmul.cu",
 ];
 
 assert.deepEqual(normalizeContextFiles(undefined), []);

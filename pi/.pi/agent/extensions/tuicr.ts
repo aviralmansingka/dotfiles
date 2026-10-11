@@ -45,8 +45,8 @@ import {
 	parseCommentPayload,
 	parseSessionList,
 	parseTuicrCommandArgs,
-	pickSession,
 	postTuicrReply,
+	resolveTargetSession,
 	resolveSkillDir,
 	scopeToTuicrArgs,
 	selectWrapper,
@@ -67,11 +67,14 @@ class TuicrBackgroundError extends Error {}
 
 interface WatchState {
 	repo: string;
+	/** The request's explicit target, so late slug resolution never attaches to an unrelated active session. */
+	target: { sessionSlug?: string; scope?: string; pr?: number; revset?: string };
 	slug: string | null;
 	seen: Set<string>;
 	pending: unknown[];
 	lastDeliveredAt: number | null;
-	timer: ReturnType<typeof setInterval>;
+	timer: ReturnType<typeof setInterval> | null;
+	firstTick: ReturnType<typeof setTimeout> | null;
 	ticking: boolean;
 	everActive: boolean;
 	launchedAt: number;
@@ -161,7 +164,8 @@ async function fetchComments(repo: string, slug: string): Promise<unknown[]> {
 
 function stopWatch(reason: string) {
 	if (!watch) return;
-	clearInterval(watch.timer);
+	clearInterval(watch.timer as ReturnType<typeof setInterval>);
+	if (watch.firstTick) clearTimeout(watch.firstTick);
 	watch = null;
 	notify(`tuicr background watcher stopped: ${reason}`, "info");
 }
@@ -232,7 +236,7 @@ async function tick(pi: ExtensionAPI, state: WatchState) {
 				);
 				return;
 			}
-			const picked = pickSession(await listSessions(state.repo));
+			const picked = resolveTargetSession(await listSessions(state.repo), state.target);
 			if (picked.status === "ok") {
 				state.slug = picked.session.slug;
 				state.everActive = true;
@@ -304,23 +308,33 @@ async function tick(pi: ExtensionAPI, state: WatchState) {
 	}
 }
 
-function startWatch(pi: ExtensionAPI, repo: string, slug: string | null, seen: Set<string>) {
+function startWatch(
+	pi: ExtensionAPI,
+	repo: string,
+	slug: string | null,
+	seen: Set<string>,
+	target: WatchState["target"] = {},
+) {
 	if (watch) stopWatch("replaced by a new tuicr launch");
 	const state: WatchState = {
 		repo,
+		target,
 		slug,
 		seen,
 		pending: [],
 		lastDeliveredAt: null,
-		timer: setInterval(() => void tick(pi, state), POLL_MS),
+		timer: null,
+		firstTick: null,
 		ticking: false,
 		everActive: slug !== null,
 		slugResolveDeadline: Date.now() + LAUNCH_WAIT_MS * 3,
 		consecutiveErrors: 0,
 	};
+	state.timer = setInterval(() => void tick(pi, state), POLL_MS);
 	watch = state;
 	// First tick soon so early comments are not missed while the TUI warms up.
-	setTimeout(() => void tick(pi, state), 2_000);
+	// Cleared by stopWatch so a stopped watcher never ticks again.
+	state.firstTick = setTimeout(() => void tick(pi, state), Math.min(2_000, POLL_MS));
 }
 
 // ── Launch / attach ──
@@ -348,12 +362,28 @@ async function startTuicrBackground(
 ): Promise<{ message: string; slug: string | null; attached: boolean; repo: string }> {
 	const startWatcher = opts.watcher !== false;
 	const repo = await resolveRepo(params.repo, cwd);
+	// Validate the scope before session resolution so an invalid pr/revset
+	// fails fast instead of attaching to an unrelated active session.
+	let tuicrArgs: string[];
+	try {
+		tuicrArgs = scopeToTuicrArgs(params.scope ?? "working-tree", params.revset, params.pr);
+	} catch (error) {
+		throw new TuicrBackgroundError(error instanceof Error ? error.message : String(error));
+	}
 	const sessions = await listSessions(repo);
-	const picked = pickSession(sessions, params.sessionSlug);
+	// The EXPLICIT target wins: a pr/revset request only ever attaches to a
+	// session naming that target — never to "the only active session" (#289).
+	const picked = resolveTargetSession(sessions, params);
 
 	if (picked.status === "missing") {
+		if (picked.slug) {
+			throw new TuicrBackgroundError(
+				`No tuicr session named ${picked.slug} under ${repo}. Run \`tuicr review list --repo ${repo}\` for valid slugs.`,
+			);
+		}
+		const active = picked.sessions.map((session) => (session as { slug?: string }).slug).join("\n  ");
 		throw new TuicrBackgroundError(
-			`No tuicr session named ${picked.slug} under ${repo}. Run \`tuicr review list --repo ${repo}\` for valid slugs.`,
+			`No active tuicr session for ${picked.target} under ${repo}, and an explicit target never attaches to another session:\n  ${active}\nPass sessionSlug for one of these, or close them and re-run to open ${picked.target}.`,
 		);
 	}
 	if (picked.status === "ambiguous") {
@@ -367,7 +397,7 @@ async function startTuicrBackground(
 		const slug = picked.session.slug as string;
 		if (startWatcher) {
 			const seen = collectSeenKeys(await fetchComments(repo, slug));
-			startWatch(pi, repo, slug, seen);
+			startWatch(pi, repo, slug, seen, params);
 		}
 		return { message: formatLaunchResult({ repo, slug, attached: true }), slug, attached: true, repo };
 	}
@@ -394,7 +424,6 @@ async function startTuicrBackground(
 			`tuicr wrapper not found at ${wrapperPath}. Set TUICR_SKILL_DIR or install the tuicr skill.`,
 		);
 	}
-	const tuicrArgs = scopeToTuicrArgs(params.scope ?? "working-tree", params.revset, params.pr);
 	const child = spawn(wrapperPath, buildWrapperArgs({ repo, tuicrArgs }), {
 		cwd: repo,
 		detached: true,
@@ -407,19 +436,24 @@ async function startTuicrBackground(
 	});
 
 	// Give the TUI a moment to register its session so the result can carry
-	// the slug; the watcher resolves it later if we time out here.
+	// the slug; the watcher resolves it later if we time out here. Poll before
+	// sleeping so an already-registered session needs no wait, and keep the
+	// sleep within the wait budget.
 	const deadline = Date.now() + LAUNCH_WAIT_MS;
 	let slug: string | null = null;
-	while (Date.now() < deadline && !slug) {
-		await new Promise((resolve) => setTimeout(resolve, 1_000));
-		const retry = pickSession(await listSessions(repo));
+	while (!slug) {
+		const retry = resolveTargetSession(await listSessions(repo), params);
 		if (retry.status === "ok") slug = retry.session.slug as string;
-		if (retry.status === "ambiguous") break;
+		else if (retry.status === "ambiguous" || Date.now() > deadline) break;
+		else await new Promise((resolve) => setTimeout(resolve, Math.min(1_000, LAUNCH_WAIT_MS)));
 	}
 
-	if (startWatcher && slug) {
-		const seen = collectSeenKeys(await fetchComments(repo, slug));
-		startWatch(pi, repo, slug, seen);
+	// Start the watcher even when the slug has not resolved yet: it keeps
+	// resolving (via the explicit target) until its deadline, matching the
+	// result message's promise that the watcher will pick the session up.
+	if (startWatcher) {
+		const seen = slug ? collectSeenKeys(await fetchComments(repo, slug)) : new Set<string>();
+		startWatch(pi, repo, slug, seen, params);
 	}
 	return {
 		message: formatLaunchResult({ repo, slug, attached: false, pending: startWatcher }),

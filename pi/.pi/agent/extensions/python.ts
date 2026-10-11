@@ -152,9 +152,14 @@ export default function pythonTool(pi: ExtensionAPI) {
 				};
 				let child: Child;
 				try {
+					// `detached` makes the child its own process-group leader so
+					// kills reach `uv run`'s python grandchild too — a SIGKILL to
+					// uv alone leaves that grandchild holding the stdio pipes,
+					// and the close event then waits out its full run.
 					child = spawn("uv", ["run", "python", "-"], {
 						cwd: ctx?.cwd,
 						stdio: ["pipe", "pipe", "pipe"],
+						detached: true,
 					});
 				} catch (error) {
 					resolve({
@@ -164,12 +169,18 @@ export default function pythonTool(pi: ExtensionAPI) {
 					});
 					return;
 				}
+				// Kill the whole process group: `uv run` sits between us and
+				// the python child, and a grandchild that traps SIGTERM only
+				// dies to SIGKILL. `killed` makes repeated soft kills
+				// idempotent, but the hard kill must still fire — gating
+				// SIGKILL on `killed` would break the escalation.
 				let killed = false;
 				const kill = (sig: NodeJS.Signals): void => {
-					if (killed || !child.pid) return;
+					if (!child.pid) return;
+					if (killed && sig !== "SIGKILL") return;
 					killed = true;
 					try {
-						child.kill(sig);
+						process.kill(-child.pid, sig);
 					} catch {
 						// Already dead; the close event settles the promise.
 					}

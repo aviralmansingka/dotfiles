@@ -55,7 +55,10 @@ export const BRIDGE_DIR_NAME = "herdr-bridge";
 export const TURN_SETTLE_TIMEOUT_MS = 30 * 60_000;
 export const TAB_READY_TIMEOUT_MS = 30_000;
 export const SESSION_DISCOVER_TIMEOUT_MS = 10_000;
-const PROMPT_POLL_MS = 250;
+/** Prompt/settle poll cadence. `NM_BRIDGE_POLL_MS` overrides it so the
+ *  offline test suite can drive the settle loop fast (default 250 ms —
+ *  same knob family as NM_HERDR_REAL_PI / NM_HERDR_BRIDGE_WAIT_MS). */
+const PROMPT_POLL_MS = Number(process.env.NM_BRIDGE_POLL_MS ?? 250);
 const OUTPUT_TOOL = "no_mistakes_output";
 
 // ---------------------------------------------------------------------------

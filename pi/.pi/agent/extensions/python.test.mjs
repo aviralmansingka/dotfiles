@@ -32,6 +32,9 @@ try {
 	assert.ok(tool.parameters, "the tool declares a parameter schema");
 	assert.ok(tool.description.includes("uv run python"), "the description states the uv execution path");
 	assert.deepEqual(tool.annotations, { readOnlyHint: false, destructiveHint: true }, "annotations stay honest: arbitrary code execution");
+	assert.equal(typeof tool.promptSnippet, "string", "a prompt snippet is registered");
+	assert.ok(tool.promptSnippet.length > 0, "the prompt snippet is not empty");
+	assert.ok(Array.isArray(tool.promptGuidelines) && tool.promptGuidelines.length > 0, "prompt guidelines are registered");
 
 	const run = (params, signal) => tool.execute("t", params, signal, undefined, { cwd: root });
 	const finish = async (promise) => {
@@ -47,6 +50,20 @@ try {
 		assert.equal(details.exitCode, 0);
 		assert.equal(text, root);
 		assert.ok(details.durationMs !== undefined, "durationMs lands in details for the exit banner");
+		assert.equal(details.timedOut, undefined, "a clean run does not set timedOut");
+		assert.equal(details.aborted, undefined, "a clean run does not set aborted");
+		assert.equal(details.truncated, undefined, "a clean run does not set truncated");
+	}
+
+	{
+		// Output above the 256 KiB cap is cut and flagged, never unbounded.
+		const CAP = 256 * 1024;
+		const { text, isError, details } = await finish(run({ code: `print("x" * ${CAP + 40 * 1024})` }));
+		assert.equal(isError, false);
+		assert.equal(details.exitCode, 0);
+		assert.equal(details.truncated, true, "oversized output sets the truncated flag");
+		assert.equal(details.stdout.length, CAP, "stdout is cut at the 256 KiB cap");
+		assert.ok(text.length >= CAP, "the text result carries the capped stdout");
 	}
 
 	{
@@ -73,6 +90,31 @@ try {
 	}
 
 	{
+		// timeoutMs below the 1 s floor clamps up to the floor, not down.
+		const { text, isError, details } = await finish(run({ code: "import time\ntime.sleep(30)", timeoutMs: 50 }));
+		assert.equal(isError, true);
+		assert.equal(details.timedOut, true);
+		assert.match(text, /Timed out after 1s/, "a sub-floor timeout still waits the 1 s minimum");
+	}
+
+	{
+		// A missing uv binary surfaces as a structured error, not a crash.
+		const savedPath = process.env.PATH;
+		process.env.PATH = "/nonexistent-python-tool-test";
+		try {
+			const { text, isError, details } = await finish(run({ code: "print(1)" }));
+			assert.equal(isError, true);
+			assert.match(text, /Could not run .uv run python./, "the error names the uv command");
+			assert.match(text, /uv is installed/, "the error tells how to fix it");
+			assert.equal(details.exitCode, undefined, "a failed spawn has no exit code");
+			assert.equal(details.stdout, "");
+			assert.equal(details.stderr, "");
+		} finally {
+			process.env.PATH = savedPath;
+		}
+	}
+
+	{
 		// The abort signal kills the child mid-run.
 		const controller = new AbortController();
 		const pending = run({ code: "import time\ntime.sleep(30)" }, controller.signal);
@@ -85,9 +127,12 @@ try {
 
 	{
 		// Empty code never spawns a child.
-		const { text, isError } = await finish(run({ code: "   " }));
-		assert.equal(isError, true);
-		assert.match(text, /non-empty/);
+		for (const code of ["", "   ", "\n\t"]) {
+			const { text, isError, details } = await finish(run({ code }));
+			assert.equal(isError, true);
+			assert.match(text, /non-empty/);
+			assert.equal(details.exitCode, undefined, "no child ran, so no exit code exists");
+		}
 	}
 
 	// tool_call guard: bash-wrapped inline Python is blocked with a
@@ -105,6 +150,10 @@ try {
 		["titled heredoc", "# parse the session log for nested bash calls\npython3 - <<EOF\nprint(1)\nEOF"],
 		["versioned interpreter", "python3.11 - <<EOF\nprint(1)\nEOF"],
 		["flagged stdin", "python3 -B -u - <<EOF\nprint(1)\nEOF"],
+		["dash-tagged heredoc", "python3 - <<-'EOF'\nprint(1)\nEOF"],
+		["versioned one-liner", "python3.11 -c 'print(1)'"],
+		["flagged one-liner", "python3 -u -c 'x = 1'"],
+		["double-quoted one-liner", "python -c \"print('a && b')\""],
 	];
 	for (const [label, command] of mustBlock) {
 		const outcome = blocked(command);
@@ -118,6 +167,9 @@ try {
 		["piped stdin", "echo '{\"a\":1}' | python3 -c 'import json,sys; print(json.load(sys.stdin))'"],
 		["plain shell", "grep -rn renderCall dist/core | head -5"],
 		["install command", "pip install requests"],
+		["uv-run script file", "uv run python scripts/analyze.py --flag"],
+		["uv-run module", "uv run python -m pytest"],
+		["chain chars inside quotes stay one command", "bash -c 'echo start; python3 run.py'"],
 	];
 	for (const [label, command] of mustPass) {
 		assert.equal(blocked(command), undefined, `${label}: not blocked`);

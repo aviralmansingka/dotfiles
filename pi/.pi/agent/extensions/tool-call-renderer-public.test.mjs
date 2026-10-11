@@ -30,11 +30,13 @@ try {
     'exports.keyHint = () => "ctrl+o to expand";',
     'exports.getLanguageFromPath = (p) => String(p || "").endsWith(".md") ? "markdown" : undefined;',
     'let hlInited = false;',
-    'exports.initTheme = (name) => { hlInited = true; exports.lastInitName = name; };',
+    'exports.themeNames = [];',
+    'exports.initTheme = (name) => { hlInited = true; exports.lastInitName = name; exports.themeNames.push(name); };',
     // mirrors the real dual-instance trap: uninitiated highlightCode silently
     // returns plain lines even for valid languages
     'exports.highlightCode = (code, lang) => (hlInited && lang) ? String(code).split("\\n").map((l) => l ? `<hl:${lang}>${l}` : l) : String(code).split("\\n");',
     'exports.truncateToVisualLines = (text, maxLines, width, _padding, keep = "end") => {',
+    '  if (String(text).includes("FORCE-WRAP-THROW")) throw new Error("stub: force the wrapLine fallback");',
     '  const out = [];',
     '  for (const line of String(text).split("\\n")) {',
     '    const chars = [...line];',
@@ -1158,6 +1160,125 @@ branch_sync:
   const restoredRow = render(bash.renderCall({ command: "du -sh ." }, theme, genRestoredCtx));
   assert.match(restoredRow, /— measure the working tree size/, "a stored intentTitle restores the title on reload without a request");
   assert.equal(titleRequests.length, 1, "restoring never fires a new request");
+  // --- R7: muted states keep failure rows error-colored while hidden.
+  const fhOut = render(bash.renderResult(result("boom\nmore detail", { exitCode: 2 }), options, colorTheme, context("fh", {}, quiet)));
+  assert.match(fhOut, /└─<\/borderMuted> <error>boom<\/error>/, "a hidden failure row keeps its whole summary in error color");
+  assert.ok(!fhOut.includes("<success>"), "a failed row never renders a success-colored status while hidden");
+  const rhOut = render(bash.renderResult(result("partial"), { ...options, isPartial: true }, colorTheme, context("rh", {}, quiet)));
+  assert.match(rhOut, /└─<\/borderMuted> <muted>running<\/muted>/, "a hidden running row stays muted, never success-colored");
+
+  // --- R1 extras: the remaining heredoc/operator shapes that shipped broken.
+  shortcut.handler(shortcutCtx);
+  const dashHeredoc = render(bash.renderCall({ command: "cat <<-EOF\nbody line\nEOF\necho done" }, theme, context("hdash", {}, quiet)));
+  assert.match(dashHeredoc, /├─ \$ {2}<hl:bash>cat <<-EOF/, "a dash-prefixed heredoc tag opens a heredoc");
+  assert.match(dashHeredoc, /│ {5}body line/, "dash-heredoc bodies are continuations");
+  assert.match(dashHeredoc, /└─ \$ {2}<hl:bash>echo done/, "the command after a dash-heredoc close is executable");
+  const orChain = render(bash.renderCall({ command: "ls missing || echo absent" }, theme, context("orch", {}, quiet)));
+  assert.match(orChain, /├─ \$ {2}<hl:bash>ls missing/);
+  assert.match(orChain, / │  \|\| <hl:bash>echo absent/, "|| joins segments on the spine like &&");
+  const semi = render(bash.renderCall({ command: "cd /tmp; ls" }, theme, context("semi", {}, quiet)));
+  assert.match(semi, /◇ bash \$ <hl:bash>cd \/tmp; ls/, "a mid-line ; never splits a single-line command");
+  const carried = render(bash.renderCall({ command: "grep needle file &&\necho next" }, theme, context("carry", {}, quiet)));
+  assert.match(carried, /├─ \$ {2}<hl:bash>grep needle file/);
+  assert.match(carried, / │  && <hl:bash>echo next/, "an operator ending a line carries to the next command row");
+  const quoteAfter = render(bash.renderCall({ command: "printf 'start' && cat <<'EOF'\nbody\nEOF\nprintf 'done'" }, theme, context("qa", {}, quiet)));
+  assert.match(quoteAfter, /├─ \$ {2}<hl:bash>printf 'start'/);
+  assert.match(quoteAfter, / │  && <hl:bash>cat <<'EOF'/);
+  assert.match(quoteAfter, /│ {5}body/);
+  assert.match(quoteAfter, /│ {5}EOF/);
+  assert.match(quoteAfter, /└─ \$ {2}<hl:bash>printf 'done'/, "quote state is clean after a quoted heredoc closes");
+  const bsHeredoc = render(bash.renderCall({ command: "cat <<EOF\nfoo \\\nbar\nEOF\necho x" }, theme, context("bsh", {}, quiet)));
+  assert.match(bsHeredoc, /├─ \$ {2}<hl:bash>cat <<EOF/);
+  assert.match(bsHeredoc, /│ {5}foo \\/, "a backslash inside a heredoc body is literal body text");
+  assert.match(bsHeredoc, /│ {5}bar/);
+  assert.match(bsHeredoc, /└─ \$ {2}<hl:bash>echo x/);
+  const trailing = render(bash.renderCall({ command: "cat <<EOF && echo x\nbody\nEOF" }, theme, context("trail", {}, quiet)));
+  assert.match(trailing, /├─ \$ {2}<hl:bash>cat <<EOF/);
+  assert.match(trailing, / │  && <hl:bash>echo x/, "an operator after the heredoc tag on the same line splits");
+  assert.match(trailing, /│ {5}body/);
+  assert.match(trailing, /│ {5}EOF/);
+
+  // --- R5: initTheme re-syncs when the theme name changes.
+  const agentModule = require(stubAgent);
+  const namesBefore = agentModule.themeNames.length;
+  render(read.renderResult(result("# A\n\nbody"), { ...options, expanded: true }, { ...theme, name: "sync-a" }, context("sync-a", { path: "notes.md" })));
+  assert.equal(agentModule.themeNames.at(-1), "sync-a", "a named theme syncs our highlight instance");
+  render(read.renderResult(result("# A\n\nbody"), { ...options, expanded: true }, { ...theme, name: "sync-b" }, context("sync-b", { path: "notes.md" })));
+  assert.equal(agentModule.themeNames.at(-1), "sync-b", "a different theme name re-syncs our highlight instance");
+  assert.ok(agentModule.themeNames.length >= namesBefore + 2, "both named themes actually reached initTheme");
+
+  // --- R6: details-contract degradation shapes.
+  const launchTool = resolver("mcp__server__deploy_thing", () => undefined);
+  const launchedOk = render(launchTool.renderResult(result("pane requested", { launched: false, paneId: 7 }), options, styT, context("mcp-launched", {}, quiet)));
+  assert.ok(launchedOk.includes("<success>✓ done</success>"), "launched:false stays a success shape, not a failure");
+  assert.ok(!launchedOk.includes("<error>"), "unknown details fields never turn a row into an error");
+  const statusFailed = render(mcpRead.renderResult(result("half done", { status: "failed" }), options, styT, context("mcp-status-failed", {}, quiet)));
+  assert.ok(statusFailed.includes("<error>✗ half done<\/error>"), "details.status failed renders as an error");
+  const emptyError = render(bash.renderResult({ content: [], details: {} }, options, errorTheme, context("bash-empty-error", {}, { isError: true })));
+  assert.match(emptyError, /└─ <error>failed<\/error>/, "an error result with no text still renders the error shape");
+  const oscStrip = render(ls.renderResult(result("\u001b]0;window title\u0007src/\nfile"), { ...options, expanded: true }, styT, context("ls-osc", {}, quiet)));
+  assert.ok(!oscStrip.includes("window title"), "OSC escape sequences are stripped from tool output");
+  assert.ok(!oscStrip.includes("\u001b") && oscStrip.includes("✓ 1 dir"), "the row still renders after stripping");
+  const blankInBlock = render(bash.renderCall({ command: "# first title line\n\n# second comment\ngit status --short" }, theme, context("blank-lift", {}, quiet)));
+  assert.match(blankInBlock, /^ ◇ bash — first title line$/m, "a blank line inside a leading comment block does not stop the lift");
+  assert.match(blankInBlock, /└─ \$ {2}<hl:bash>git status --short/, "the first code line after the block takes the leaf");
+  assert.ok(!blankInBlock.includes("# second"), "comment lines after the title stay out of the body");
+  const thrown = render(read.renderResult(result("keep\nFORCE-WRAP-THROW abcdefghijklmnopqrstuvwxyz tail"), { ...options, expanded: true }, theme, context("wrap-throw", { path: "file.txt" })), 30);
+  assert.match(thrown, /1 │ keep/, "rows before a pathological line render normally");
+  assert.match(thrown, /2 │ FORCE-WRAP-THROW/, "the truncateToVisualLines failure falls back to a rendered row");
+  assert.ok(!thrown.includes("qrstuvwxyz"), "the fallback truncates the line to the available width");
+
+  // --- R8: narrow-viewport sweep across every custom component family.
+  const sweepComponents = [
+    ["bash call", bash.renderCall({ command: "git status --short && git log --oneline -1" }, theme, context("sw-bash", {}, quiet))],
+    ["bash result", bash.renderResult(result(Array.from({ length: 80 }, (_, i) => `out ${i}`).join("\n"), { exitCode: 0 }), { ...options, expanded: true }, theme, context("sw-bashr", {}, quiet))],
+    ["python call", python.renderCall({ code: "# sweep title\nimport os\nprint(1)" }, theme, context("sw-py", {}, quiet))],
+    ["mcp read result", mcpRead.renderResult(result("one\ntwo\nthree"), { ...options, expanded: true }, theme, context("sw-mcp", {}, quiet))],
+    ["mcp send result", mcpSend.renderResult(result("receipt"), { ...options, expanded: true }, theme, context("sw-send", { message: "Hello\nGoodbye" }, quiet))],
+    ["subagent chip", subagent.renderResult(mixed, { ...options, expanded: true }, theme, context("sw-sub", { name: "scout" }))],
+    ["message result", message.renderResult(steerResult, { ...options, expanded: true }, theme, context("sw-msg", messageArgs, quiet))],
+    ["hunk comment call", hunk.renderCall(commentArgs, theme, context("sw-hunk", commentArgs, quiet))],
+    ["hunk review result", hunk.renderResult(reviewResult, { ...options, expanded: true }, theme, context("sw-review", reviewArgs, quiet))],
+    ["ask result", ask.renderResult(result("", askDetails), { ...options, expanded: true }, theme, context("sw-ask", askArgs, quiet))],
+    ["quiz result", quiz.renderResult(result("", quizDetails), { ...options, expanded: true }, theme, context("sw-quiz", quizArgs, quiet))],
+    ["explain result", explain.renderResult(result("", explainDetails), { ...options, expanded: true }, theme, context("sw-explain", explainArgs, quiet))],
+    ["tuicr call", tuicr.renderCall(tuicrArgs, theme, context("sw-tuicr", tuicrArgs, quiet))],
+    ["grep result", grep.renderResult(hits, { ...options, expanded: true }, theme, context("sw-grep", grepArgs, quiet))],
+    ["find result", find.renderResult(paths, { ...options, expanded: true }, theme, context("sw-find", {}, quiet))],
+    ["ls result", ls.renderResult(listing, { ...options, expanded: true }, theme, context("sw-ls", {}, quiet))],
+    ["edit call", editRow.renderCall({ path: "src/main.rs", edits: [{ oldText: "a", newText: "b" }] }, theme, context("sw-edit", {}, quiet))],
+    ["no-mistakes frame", axi.renderResult(toonResult(gateToon), { ...options, expanded: true }, theme, context("sw-axi", {}, quiet))],
+  ];
+  for (let width = 20; width <= 80; width += 2) {
+    for (const [name, component] of sweepComponents) {
+      component.invalidate();
+      const lines = component.render(width);
+      assert.ok(lines.length > 0, `width=${width} ${name}: the row renders`);
+      for (const line of lines) {
+        assert.ok([...line].length <= width, `width=${width} ${name}: a line is ${[...line].length} columns wide`);
+      }
+    }
+  }
+
+  // --- R2 extras: powershell backfills like bash.
+  sessionWith("model-session-2", [], {
+    model: { id: "stub-model" }, signal: undefined,
+    modelRegistry: { complete: async (model, request) => {
+      titleRequests.push({ model: model.id, text: request.messages[0].content[0].text });
+      return { content: [{ type: "text", text: "  list directory contents recursively  " }] };
+    } },
+  });
+  const ps = resolver("powershell", () => undefined);
+  const psCtx = context("ps-gen", { command: "Get-ChildItem -Recurse -File" }, { executionStarted: false });
+  render(ps.renderCall(psCtx.args, theme, psCtx));
+  assert.equal(titleRequests.length, 2, "a live title-less powershell row backfills exactly one more request");
+  assert.equal(titleRequests[1].model, "stub-model", "the request goes to the session model");
+  assert.match(titleRequests[1].text, /^powershell call:\nGet-ChildItem/, "the request carries the powershell source");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.match(render(ps.renderCall(psCtx.args, theme, psCtx)), /^ ◇ powershell — list directory contents recursively$/m, "the powershell backfilled title renders");
+  render(ps.renderCall(psCtx.args, theme, psCtx));
+  assert.equal(titleRequests.length, 2, "re-renders never re-request the powershell title");
+
   shutdown();
   assert.equal(bus.size, 0, "shutdown releases bus subscription");
   console.log("tool-call-renderer-public tests passed");

@@ -262,12 +262,21 @@ return {
     -- If the file panel is closed, select_next_unviewed_file no-ops.
     do
       local octo_mappings = require("octo.mappings")
-      local orig_toggle_viewed = octo_mappings.toggle_viewed
-      octo_mappings.toggle_viewed = function()
-        orig_toggle_viewed()
-        local layout = require("octo.reviews").get_current_layout()
-        if layout then
-          layout:select_next_unviewed_file()
+      -- Idempotency guard (flagged fix, exposed by tests/ci/octo_spec.lua):
+      -- re-running config() against the same octo.mappings table (a Lazy
+      -- reload or re-source) used to wrap the already-wrapped function, so
+      -- one keypress jumped to the next unviewed file twice. The flag lives
+      -- on the module table so it survives exactly as long as the wrap does
+      -- (a fresh require of octo.mappings resets both together).
+      if not octo_mappings._toggle_viewed_chained then
+        octo_mappings._toggle_viewed_chained = true
+        local orig_toggle_viewed = octo_mappings.toggle_viewed
+        octo_mappings.toggle_viewed = function()
+          orig_toggle_viewed()
+          local layout = require("octo.reviews").get_current_layout()
+          if layout then
+            layout:select_next_unviewed_file()
+          end
         end
       end
     end

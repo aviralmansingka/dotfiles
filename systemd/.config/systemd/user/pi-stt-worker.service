@@ -5,7 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=%h/bin/pi-stt-worker-run
+# Explicit interpreter: avoids the 203/EXEC failure class when the exec bit
+# is absent on the host.
+ExecStart=/bin/bash %h/bin/pi-stt-worker-run
 Restart=always
 RestartSec=5
 EnvironmentFile=%h/.config/pi-stt-worker.env

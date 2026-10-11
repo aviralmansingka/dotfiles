@@ -38,3 +38,7 @@ artifacts/pi-transcript-links/
 
 # Historical scratch feedback is archived in docs/professor-feedback.md.
 /professor_feedback.md
+
+# c8 / coverage.py transient artifacts
+.coverage
+coverage/

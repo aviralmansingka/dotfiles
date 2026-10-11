@@ -101,8 +101,10 @@ if [[ "$EDITOR_CMD" == "nvim" ]]; then
 	fi
 fi
 
-# Check if herdr is available
-if ! herdr_json workspace list >/dev/null 2>&1; then
+# Check if herdr is available. herdr_json always exits 0 (its `|| true`),
+# so the guard must test the response text: empty output means no herdr
+# answered, and the tmux fallback below stays reachable.
+if [ -z "$(herdr_json workspace list)" ]; then
 	# No herdr — try tmux
 	if command -v tmux >/dev/null 2>&1; then
 		if [[ ${#FILES[@]} -gt 0 ]]; then

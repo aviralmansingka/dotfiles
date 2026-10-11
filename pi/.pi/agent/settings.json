@@ -14,5 +14,8 @@
   ],
   "skills": [
     "!skills/tuicr"
-  ]
+  ],
+  "markdown": {
+    "codeBlockIndent": ""
+  }
 }

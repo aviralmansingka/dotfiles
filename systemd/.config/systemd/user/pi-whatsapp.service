@@ -6,7 +6,9 @@ Wants=network-online.target whatsapp-bridge.service
 [Service]
 Type=simple
 WorkingDirectory=%h/vault
-ExecStart=%h/bin/pi-whatsapp-daemon.py
+# Explicit interpreter: avoids the 203/EXEC failure class when the exec bit
+# is absent on the host.
+ExecStart=/usr/bin/python3 %h/bin/pi-whatsapp-daemon.py
 Restart=always
 RestartSec=5
 Environment=PATH=%h/.nvm/versions/node/v22.22.3/bin:%h/.local/bin:%h/go/bin:/usr/local/bin:/usr/bin:/bin

@@ -96,6 +96,63 @@ const GATE_OUTPUT = [
 	assert.equal(gate.findings[0].description, "New --force flag bypasses the confirm prompt");
 }
 
+// N2: every findings-table column variant the pipeline emits parses —
+// columns come from the actual header, quoted values keep commas, malformed
+// rows are skipped, and missing values fall back to safe defaults.
+{
+	const idSeverityOnly = parseNoMistakesGate(
+		'gate: lint\nfindings[1]{id,severity,description}:\n  r1,error,Unused import',
+	);
+	assert.ok(idSeverityOnly);
+	assert.deepEqual(idSeverityOnly.findings, [{
+		id: "r1",
+		severity: "error",
+		file: undefined,
+		line: undefined,
+		action: "",
+		description: "Unused import",
+	}], "absent file/line/action columns default safely");
+
+	const quotedCommas = parseNoMistakesGate(
+		'gate: review\nfindings[1]{id,severity,description}:\n  r9,error,"Calls f(a, b), then g(c)"',
+	);
+	assert.ok(quotedCommas);
+	assert.equal(quotedCommas.findings[0].description, "Calls f(a, b), then g(c)",
+		"a quoted description keeps its commas as one value");
+
+	const reordered = parseNoMistakesGate(
+		'gate: test\nfindings[1]{description,severity,id,owner}:\n  Flaky race,error,t9,agent-7',
+	);
+	assert.ok(reordered);
+	assert.deepEqual(
+		[reordered.findings[0].id, reordered.findings[0].severity, reordered.findings[0].description],
+		["t9", "error", "Flaky race"],
+		"unknown columns are ignored and column order never matters",
+	);
+
+	assert.deepEqual(
+		parseNoMistakesGate("gate: review\nfindings[0]{id,severity}:").findings,
+		[],
+		"an empty findings table parses to no findings",
+	);
+	assert.deepEqual(
+		parseNoMistakesGate("gate: build").findings,
+		[],
+		"a gate with no findings table parses to no findings",
+	);
+	const malformed = parseNoMistakesGate(
+		'gate: review\nfindings[2]{id,severity,description}:\n  r1,error\n  r2,error,ok',
+	);
+	assert.ok(malformed);
+	assert.deepEqual(malformed.findings.map((finding) => finding.id), ["r2"],
+		"a row with the wrong column count is skipped, never garbled");
+
+	const nestedNote = parseNoMistakesGate(
+		'gate: review\n  note: "decide now"\nfindings[1]{id,severity,description}:\n  r1,error,x',
+	);
+	assert.equal(nestedNote?.note, "decide now", "a nested gate note is read");
+}
+
 {
 	assert.equal(parseNoMistakesGate("outcome: checks-passed\n"), undefined, "no gate: line means no gate");
 	const gate = parseNoMistakesGate('gate: lint\nfindings[2]{severity,description}:\n  error,Unused import\n  warning,Long line');
@@ -116,6 +173,9 @@ function registerGateExtension(options = {}) {
 	const pi = {
 		on(name, handler) { handlers.set(name, handler); },
 		exec(command) {
+			if (options.execThrows?.includes(command)) {
+				return Promise.reject(new Error(`${command} unavailable`));
+			}
 			if (command === "git") {
 				return Promise.resolve({ code: 0, stdout: options.worktreeRoot ?? "/repo" });
 			}
@@ -151,7 +211,7 @@ function registerGateExtension(options = {}) {
 		},
 	};
 	handlers.get("session_start")({}, ctx);
-	return { api, frames, ctx };
+	return { api, frames, ctx, handlers };
 }
 
 // Reset both the api registration and the module state between blocks: a
@@ -431,6 +491,67 @@ const clearApi = () => {
 	clearApi();
 }
 
+// A panel that cannot open (the UI throws) falls back to null so the pane
+// steers the raw result and the agent relays findings as text — never a
+// swallowed gate.
+{
+	const { api, ctx } = registerGateExtension({});
+	ctx.ui.custom = () => { throw new Error("UI busy"); };
+	assert.equal(
+		await api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" }),
+		null,
+		"a panel that cannot open resolves null",
+	);
+	clearApi();
+}
+
+// When git fails (no repo, broken worktree), consent falls back to the
+// resolved cwd as the worktree key — identity still composes across path
+// spellings of the same directory.
+{
+	const firstRun = "00000000000000000000000003";
+	const activeStatus = {
+		code: 0,
+		stdout: [
+			"run:",
+			`  id: "${firstRun}"`,
+			"  status: running",
+			"  steps[1]{step,status,findings,duration_ms}:",
+			"    review,running,0,0",
+		].join("\n"),
+	};
+	const { api } = registerGateExtension({ execThrows: ["git"], execResult: activeStatus });
+	assert.deepEqual(await api.setYolo("/plain/dir/", true), { on: true, activeRun: true });
+	await api.runObserved("/plain/dir", firstRun);
+	assert.equal(api.yoloActive(firstRun), true,
+		"the cwd fallback key still binds consent across path spellings");
+	await api.runFinished("/plain/dir/", firstRun);
+	assert.equal(api.yoloActive(firstRun), false, "the fallback key retires consent too");
+	clearApi();
+}
+
+// Session shutdown retires standing consent and unregisters the api slot.
+{
+	const firstRun = "00000000000000000000000001";
+	const activeStatus = {
+		code: 0,
+		stdout: [
+			"run:",
+			`  id: "${firstRun}"`,
+			"  status: running",
+			"  steps[1]{step,status,findings,duration_ms}:",
+			"    review,running,0,0",
+		].join("\n"),
+	};
+	const { api, handlers } = registerGateExtension({ execResult: activeStatus, worktreeRoot: "/repo" });
+	await api.setYolo("/repo", true);
+	assert.equal(api.yoloActive(firstRun), true, "consent is armed before shutdown");
+	handlers.get("session_shutdown")();
+	assert.equal(api.yoloActive(firstRun), false, "shutdown retires standing consent");
+	assert.equal(globalThis[GATE_API_KEY], undefined, "shutdown unregisters the gate api slot");
+	clearApi();
+}
+
 // ---------------------------------------------------------------------------
 // Yolo consent lifecycle
 // ---------------------------------------------------------------------------
@@ -548,6 +669,16 @@ async function paneRunWithGateApi(fakeApi, roundTrip = false) {
 			},
 			sendMessage(message, options) { messages.push({ message, options }); },
 		});
+		// Bounded poll (25 ms sleeps, no long sleeps): tick the watcher until
+		// the expected steered result(s) land.
+		const waitForMessages = async (count, timeoutMs = 4000) => {
+			const deadline = Date.now() + timeoutMs;
+			while (messages.length < count && Date.now() < deadline) {
+				await tick();
+				await sleepReal(25);
+			}
+			assert.ok(messages.length >= count, `expected ${count} steered result(s), got ${messages.length}`);
+		};
 		const ack = await tool.execute(
 			"gate-run-1",
 			{ args: 'run --intent "gate decisions"', timeoutMs: 60 },
@@ -556,8 +687,7 @@ async function paneRunWithGateApi(fakeApi, roundTrip = false) {
 			{ cwd: stubDir, hasUI: false },
 		);
 		assert.equal(ack.details.status, "started");
-		await sleepReal(400);
-		await tick();
+		await waitForMessages(1);
 		await new Promise(setImmediate);
 		if (roundTrip) {
 			const exactCall = /Submit through no_mistakes_axi: `([^`]+)`/.exec(messages[0].message.content)?.[1];
@@ -575,8 +705,7 @@ async function paneRunWithGateApi(fakeApi, roundTrip = false) {
 				{ cwd: stubDir, hasUI: false },
 			);
 			assert.equal(respondAck.details.status, "started");
-			await sleepReal(400);
-			await tick();
+			await waitForMessages(2);
 			capturedArgs = readFileSync(argsLog, "utf-8").trimEnd().split("\n");
 		}
 		return { messages, capturedArgs };
@@ -624,6 +753,50 @@ async function paneRunWithGateApi(fakeApi, roundTrip = false) {
 		findings: ["r1", "r2"],
 		instructions: guidance,
 	});
+}
+
+// N1: every decision payload drives the exact `axi respond` argv — the
+// approve decision round-trips through the executable tool interface.
+{
+	const { messages, capturedArgs } = await paneRunWithGateApi({
+		handleGate: async () => ({ type: "approve" }),
+		yoloActive: () => false,
+		setYolo: async () => ({ on: false, activeRun: false }),
+		runObserved: async (_cwd, runId) => runId,
+		runFinished: async () => {},
+	}, true);
+	assert.match(messages[0].message.content, /GATE DECISION \(user\): approve/);
+	assert.deepEqual(messages[0].message.details.gateDecision, { type: "approve" });
+	assert.deepEqual(capturedArgs, ["axi", "respond", "--action", "approve"],
+		"the approve decision drives the exact respond argv");
+}
+
+// The skip decision round-trips the exact respond argv.
+{
+	const { messages, capturedArgs } = await paneRunWithGateApi({
+		handleGate: async () => ({ type: "skip" }),
+		yoloActive: () => false,
+		setYolo: async () => ({ on: false, activeRun: false }),
+		runObserved: async (_cwd, runId) => runId,
+		runFinished: async () => {},
+	}, true);
+	assert.match(messages[0].message.content, /GATE DECISION \(user\): skip/);
+	assert.deepEqual(capturedArgs, ["axi", "respond", "--action", "skip"],
+		"the skip decision drives the exact respond argv");
+}
+
+// The yolo decision round-trips `respond --yes` exactly.
+{
+	const { messages, capturedArgs } = await paneRunWithGateApi({
+		handleGate: async () => ({ type: "yolo" }),
+		yoloActive: () => false,
+		setYolo: async () => ({ on: false, activeRun: false }),
+		runObserved: async (_cwd, runId) => runId,
+		runFinished: async () => {},
+	}, true);
+	assert.match(messages[0].message.content, /GATE DECISION \(user\): yolo/);
+	assert.deepEqual(capturedArgs, ["axi", "respond", "--yes"],
+		"the yolo decision drives respond --yes");
 }
 
 // Standing consent: no panel, the steer instructs --yes directly.

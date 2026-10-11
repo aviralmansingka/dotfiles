@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const installRoot = join(homedir(), ".pi/agent/install");
@@ -63,6 +65,7 @@ const {
 	runMmdflux,
 	diffStructure,
 	diffArtContainment,
+	renderWithGrok,
 	paneWidth,
 } = mermaidModule;
 const extension = mermaidModule.default;
@@ -373,6 +376,7 @@ try {
 	});
 	assert.equal(bug.isError, true);
 	assert.ok(bug.details.error.includes("internal emitter bug"), `emitter parse failure is a bug report: ${bug.details.error}`);
+	assert.ok(bug.details.error.includes("do not retry"), "emitter parse failures are never retried");
 } finally {
 	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
 	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
@@ -456,6 +460,480 @@ assert.ok(renderedError.text.includes('- node "x" missing'), "problems render as
 
 const renderedPlain = tool.renderResult({ content: [{ type: "text", text: "plain text" }], details: undefined }, {}, theme, {});
 assert.equal(renderedPlain.text, "plain text", "no details falls back to content text");
+
+// ── paneWidth clamps ──────────────────────────────────────────────────────────
+
+{
+	const savedEnv = process.env.PI_MERMAID_WIDTH;
+	const savedCols = process.stdout.columns;
+	try {
+		process.env.PI_MERMAID_WIDTH = "60.9";
+		assert.equal(paneWidth(), 60, "env width is floored, never fractional");
+		process.env.PI_MERMAID_WIDTH = "39";
+		assert.notEqual(paneWidth(), 39, "env width under 40 is ignored as unusable");
+		process.env.PI_MERMAID_WIDTH = "garbage";
+		assert.ok(paneWidth() >= 40, "non-numeric env width is ignored");
+		delete process.env.PI_MERMAID_WIDTH;
+		process.stdout.columns = 84;
+		assert.equal(paneWidth(), 80, "stdout columns minus pane chrome (4 cols)");
+		process.stdout.columns = 20;
+		assert.equal(paneWidth(), 100, "unusable stdout columns fall back to the default width");
+		process.stdout.columns = undefined;
+		assert.equal(paneWidth(), 100, "no stdout columns falls back to the default width");
+	} finally {
+		if (savedEnv === undefined) delete process.env.PI_MERMAID_WIDTH;
+		else process.env.PI_MERMAID_WIDTH = savedEnv;
+		if (savedCols === undefined) delete process.stdout.columns;
+		else process.stdout.columns = savedCols;
+	}
+}
+
+// ── validateParams: per-type content requirements ─────────────────────────────
+
+const needs = (params, what) => {
+	const r = validateParams(params);
+	assert.equal(r.ok, false, `${what} is rejected`);
+	assert.ok(r.error.includes(what), `error names the requirement: ${r.error}`);
+};
+needs({ type: "flowchart" }, "flowchart needs at least one node");
+needs({ type: "sequenceDiagram" }, "sequenceDiagram needs at least one actor");
+needs({ type: "sequenceDiagram", actors: [{ id: "a" }] }, "sequenceDiagram needs at least one message");
+needs({ type: "stateDiagram-v2" }, "stateDiagram-v2 needs at least one state");
+needs({ type: "classDiagram" }, "classDiagram needs at least one class");
+
+const noId = validateParams({ type: "flowchart", nodes: [{ id: "   " }] });
+assert.equal(noId.ok, false);
+assert.ok(noId.error.includes("id is required"), `blank ids are rejected: ${noId.error}`);
+
+// undeclared references, per type
+const ghostActor = validateParams({
+	type: "sequenceDiagram",
+	actors: [{ id: "a" }],
+	messages: [{ from: "a", to: "ghost", text: "hi" }, { from: "a", to: "a", text: "" }],
+});
+assert.equal(ghostActor.ok, false);
+assert.ok(ghostActor.error.includes('"ghost" is not a declared actor'), `ghost actor is named: ${ghostActor.error}`);
+assert.ok(ghostActor.error.includes("text is required"), `blank message text is named: ${ghostActor.error}`);
+
+const ghostState = validateParams({ type: "stateDiagram-v2", states: [{ id: "s" }], transitions: [{ from: "s", to: "ghost" }] });
+assert.equal(ghostState.ok, false);
+assert.ok(ghostState.error.includes('"ghost" is not a declared state'), `ghost state is named: ${ghostState.error}`);
+
+const ghostClass = validateParams({ type: "classDiagram", classes: [{ id: "c", name: "C" }], relations: [{ from: "c", to: "ghost" }] });
+assert.equal(ghostClass.ok, false);
+assert.ok(ghostClass.error.includes('"ghost" is not a declared class'), `ghost class is named: ${ghostClass.error}`);
+
+// quotes are rejected in every label slot, never escaped
+const quoted = (params, where) => {
+	const r = validateParams(params);
+	assert.equal(r.ok, false, `quotes rejected in ${where}`);
+	assert.ok(r.error.includes("double quotes"), `quote policy in ${where}: ${r.error}`);
+};
+quoted({ type: "flowchart", nodes: [{ id: "a" }], groups: [{ id: "g", title: 'say "hi"', members: ["a"] }] }, "a group title");
+quoted({ type: "flowchart", nodes: [{ id: "a" }, { id: "b" }], edges: [{ from: "a", to: "b", label: 'x"y' }] }, "an edge label");
+quoted({ type: "sequenceDiagram", actors: [{ id: "a" }, { id: "b" }], messages: [{ from: "a", to: "b", text: 'x"y' }] }, "a message text");
+quoted({ type: "stateDiagram-v2", states: [{ id: "s" }], transitions: [{ from: "s", to: "s", label: 'x"y' }] }, "a transition label");
+quoted({ type: "classDiagram", classes: [{ id: "c", name: "C" }], relations: [{ from: "c", to: "c", label: 'x"y' }] }, "a relation label");
+
+// labels that clean up to nothing are rejected
+const blankLabel = validateParams({ type: "flowchart", nodes: [{ id: "a", label: "\u0007`" }] });
+assert.equal(blankLabel.ok, false);
+assert.ok(blankLabel.error.includes("label is empty after cleanup"), `post-cleanup empties are named: ${blankLabel.error}`);
+
+// class members cannot carry braces or newlines
+const braces = validateParams({ type: "classDiagram", classes: [{ id: "c", name: "C", members: ["+f({})"] }] });
+assert.equal(braces.ok, false);
+assert.ok(braces.error.includes("no braces or newlines"), `brace members are named: ${braces.error}`);
+
+// direction handling: LR passes through, anything else defaults to TD
+assert.equal(validateParams({ type: "flowchart", nodes: [{ id: "a" }], direction: "LR" }).value.direction, "LR");
+assert.equal(validateParams({ type: "flowchart", nodes: [{ id: "a" }], direction: "sideways" }).value.direction, "TD");
+assert.equal(validateParams({ type: "flowchart", nodes: [{ id: "a" }] }).value.direction, "TD");
+
+// ids are clamped to 40 chars; non-ascii is scrubbed
+assert.equal(sanitizeId("x".repeat(80), 0).length, 40, "ids are clamped to 40 chars");
+assert.equal(sanitizeId("\u00fcn\u00efcode", 0), "n_code", "non-ascii chars become underscores");
+
+// edges may target a group id, and the emitter keeps that reference
+const edgeToGroup = validateParams({
+	type: "flowchart",
+	nodes: [{ id: "a" }, { id: "b" }],
+	groups: [{ id: "g", title: "G", members: ["b"] }],
+	edges: [{ from: "a", to: "g" }],
+});
+assert.ok(edgeToGroup.ok, `group endpoints validate: ${edgeToGroup.ok === false ? edgeToGroup.error : ""}`);
+const edgeToGroupSrc = emitMermaid(edgeToGroup.value);
+assert.ok(/^  a --> g$/m.test(edgeToGroupSrc), `edge to a group emits the plain arrow: ${JSON.stringify(edgeToGroupSrc)}`);
+
+// ── emitMermaid: exact forms ───────────────────────────────────────────────────
+
+assert.ok(emitMermaid(okFlow.value, "LR").startsWith("flowchart LR"), "the LR override reaches the flowchart header");
+assert.ok(emitMermaid(state.value, "LR").includes("  direction LR"), "the state diagram carries its own direction line");
+assert.ok(!stateSrc.includes("as s2"), "an unlabeled state never emits the display form");
+
+// every relation kind maps to its exact arrow
+const relAll = validateParams({
+	type: "classDiagram",
+	classes: ["A", "B", "C", "D", "E", "F", "G"].map((name) => ({ id: name.toLowerCase(), name })),
+	relations: [
+		{ from: "a", to: "b", kind: "extends" },
+		{ from: "a", to: "c", kind: "implements" },
+		{ from: "a", to: "d", kind: "composition" },
+		{ from: "a", to: "e", kind: "aggregation" },
+		{ from: "a", to: "f" },
+		{ from: "a", to: "g", kind: "dependency", label: "uses" },
+	],
+});
+assert.ok(relAll.ok);
+const relSrc = emitMermaid(relAll.value);
+assert.ok(relSrc.includes("A <|-- B"), "extends arrow");
+assert.ok(relSrc.includes("A <|.. C"), "implements arrow");
+assert.ok(relSrc.includes("A *-- D"), "composition arrow");
+assert.ok(relSrc.includes("A o-- E"), "aggregation arrow");
+assert.ok(relSrc.includes("A --> F"), "default association arrow");
+assert.ok(relSrc.includes("A ..> G : uses"), "dependency arrow with its colon label");
+
+// sequenceDiagram lines cannot hold <br/>: newlines flatten to spaces
+const seqBr = validateParams({
+	type: "sequenceDiagram",
+	actors: [{ id: "a", label: "two\nlines" }],
+	messages: [{ from: "a", to: "a", text: "one\ntwo" }],
+});
+assert.ok(seqBr.ok);
+const seqBrSrc = emitMermaid(seqBr.value);
+assert.ok(seqBrSrc.includes("participant a as two lines"), `actor labels flatten: ${seqBrSrc}`);
+assert.ok(seqBrSrc.includes("a->>a: one two"), `message text flattens: ${seqBrSrc}`);
+
+// ── diffStructure: classDiagram and stateDiagram-v2 paths ─────────────────────
+
+const clsPair = validateParams({
+	type: "classDiagram",
+	classes: [{ id: "w", name: "Widget" }, { id: "b", name: "Button" }],
+	relations: [{ from: "b", to: "w", kind: "extends" }],
+});
+assert.ok(clsPair.ok);
+// class relations may come back in either orientation (W <|-- B)
+assert.deepEqual(
+	diffStructure(
+		{ nodes: [{ id: "Widget", label: "Widget" }, { id: "Button", label: "Button" }], edges: [{ source: "Widget", target: "Button" }] },
+		clsPair.value,
+	),
+	[],
+	"class relations match in either orientation",
+);
+assert.ok(
+	diffStructure(
+		{ nodes: [{ id: "Widget", label: "Widget" }, { id: "Button", label: "Button" }], edges: [] },
+		clsPair.value,
+	).some((p) => p.includes("edge b->w missing")),
+	"a missing class relation is reported",
+);
+assert.ok(
+	diffStructure(
+		{ nodes: [{ id: "Widget", label: "Gadget" }, { id: "Button", label: "Button" }], edges: [{ source: "Widget", target: "Button" }] },
+		clsPair.value,
+	).some((p) => p.includes('class "w" rendered as "Gadget"')),
+	"a renamed class body is reported",
+);
+
+const stateMmdsOk = {
+	nodes: [{ id: "s1", label: "Working" }, { id: "s2", label: "s2" }],
+	edges: [
+		{ source: "__root_start", target: "s1" },
+		{ source: "s1", target: "s2", label: "done" },
+		{ source: "s2", target: "__root_end" },
+	],
+};
+assert.deepEqual(diffStructure(stateMmdsOk, state.value), [], "[*] maps to the root start/end pseudo-states");
+assert.ok(
+	diffStructure({ nodes: [{ id: "s1", label: "Working" }], edges: stateMmdsOk.edges }, state.value).some((p) => p.includes('state "s2" missing')),
+	"a missing state is reported",
+);
+assert.ok(
+	diffStructure({ nodes: stateMmdsOk.nodes, edges: [{ source: "__root_start", target: "s1" }] }, state.value).some((p) => p.includes("transition s1->s2 missing")),
+	"a missing transition is reported",
+);
+assert.ok(
+	diffStructure(
+		{ nodes: stateMmdsOk.nodes, edges: stateMmdsOk.edges.map((e) => (e.label === "done" ? { ...e, label: "finished" } : e)) },
+		state.value,
+	).some((p) => p.includes('transition s1->s2 label rendered as "finished"')),
+	"a wrong transition label is reported",
+);
+
+// ── diffArtContainment: actor visibility ──────────────────────────────────────
+
+assert.ok(
+	diffArtContainment("Agent only here\n do the thing\n done", seq.value).some((p) => p.includes('actor "you"')),
+	"an actor missing from the art is reported",
+);
+assert.deepEqual(diffArtContainment("You Agent\n do the thing\n done", seq.value), [], "full containment passes");
+
+// ── renderWithGrok: direct contract ───────────────────────────────────────────
+
+try {
+	globalThis.__grokRender = () => { throw new Error("kaboom"); };
+	const grokCrash = await renderWithGrok("flowchart TD\n  A --> B");
+	assert.equal(grokCrash.ok, false);
+	assert.equal(grokCrash.kind, "crash");
+	assert.ok(grokCrash.error.includes("kaboom"), `crash error names the throw: ${grokCrash.error}`);
+
+	globalThis.__grokRender = () => ({ plain: ["no width field"] });
+	const grokNoArt = await renderWithGrok("flowchart TD\n  A --> B");
+	assert.equal(grokNoArt.ok, false);
+	assert.equal(grokNoArt.kind, "crash");
+	assert.ok(grokNoArt.error.includes("no art"), `artless render is a crash: ${grokNoArt.error}`);
+
+	globalThis.__grokRender = () => ({ width: 42, warnings: ["w1"], plain: ["art"] });
+	assert.deepEqual(
+		await renderWithGrok("flowchart TD\n  A --> B"),
+		{ ok: true, width: 42, warnings: ["w1"], art: "art" },
+		"a good render returns width, warnings, and joined art",
+	);
+} finally {
+	delete globalThis.__grokRender;
+}
+
+// ── grok-mermaid unavailable: the mmdflux text-art width is the local proxy ────
+
+const stubGrokBroken = join(tempRoot, "grok-broken.cjs");
+writeFileSync(stubGrokBroken, "throw new Error('cannot import grok');\n");
+// jiti caches modules by resolved path, so the no-grok instance needs its
+// own copy of the source to pick up the different grok alias.
+const noGrokSource = join(tempRoot, "mermaid-nogrok.ts");
+writeFileSync(noGrokSource, readFileSync(fileURLToPath(new URL("./mermaid.ts", import.meta.url)), "utf8"));
+const jitiNoGrok = createJiti(import.meta.url, {
+	alias: {
+		"@earendil-works/pi-coding-agent": stubAgent,
+		"@earendil-works/pi-tui": stubTui,
+		typebox: stubTypes,
+		"grok-mermaid": stubGrokBroken,
+	},
+});
+const noGrokModule = jitiNoGrok(noGrokSource);
+const unavailable = await noGrokModule.renderWithGrok("flowchart TD\n  A --> B");
+assert.equal(unavailable.ok, false);
+assert.equal(unavailable.kind, "unavailable", "an unimportable chat renderer is reported as unavailable");
+
+const sentNoGrok = [];
+const registeredNoGrok = [];
+noGrokModule.default({
+	registerTool(def) { registeredNoGrok.push(def); },
+	sendMessage(message, options) { sentNoGrok.push({ message, options }); },
+	registerMessageRenderer() {},
+});
+const toolNoGrok = registeredNoGrok[0];
+const okFlowParams = {
+	type: "flowchart",
+	nodes: [{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }],
+	edges: [{ from: "a", to: "b", label: "uses" }],
+};
+try {
+	process.env.PI_MERMAID_MMDFLUX = goodFlux;
+	const noGrokOk = await toolNoGrok.execute("id", okFlowParams, undefined, () => {}, {});
+	assert.equal(noGrokOk.isError, undefined, `success without the chat renderer: ${JSON.stringify(noGrokOk).slice(0, 200)}`);
+	assert.equal(noGrokOk.details.width, "fake art".length, "width falls back to the mmdflux text-art width");
+	assert.equal(noGrokOk.details.art, "fake art");
+	assert.equal(sentNoGrok.length, 1, "the display row still ships without the chat renderer");
+
+	const wideFlux = join(tempRoot, "wide-mmdflux");
+	writeFileSync(
+		wideFlux,
+		`#!/bin/sh\nif [ "$2" = "mmds" ]; then echo '${fakeMmds}'; else head -c 200 /dev/zero | tr '\\0' 'x'; echo; fi\n`,
+	);
+	chmodSync(wideFlux, 0o755);
+	process.env.PI_MERMAID_MMDFLUX = wideFlux;
+	const noGrokWide = await toolNoGrok.execute("id", okFlowParams, undefined, () => {}, {});
+	assert.equal(noGrokWide.isError, true);
+	assert.ok(noGrokWide.details.error.includes("cols, pane is"), `wide art without the renderer names both numbers: ${noGrokWide.details.error}`);
+	assert.equal(sentNoGrok.length, 1, "the rejected diagram ships no display row");
+} finally {
+	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+}
+
+// ── environment failures and aborts are never retried ─────────────────────────
+
+const noExec = join(tempRoot, "noexec-mmdflux");
+writeFileSync(noExec, "#!/bin/sh\necho never\n");
+chmodSync(noExec, 0o644);
+try {
+	process.env.PI_MERMAID_MMDFLUX = noExec;
+	const envFail = await runMmdflux("flowchart TD\n  A --> B", "text");
+	assert.equal(envFail.ok, false);
+	assert.equal(envFail.kind, "environment", "a non-starting binary is an environment failure, not a parse failure");
+	assert.ok(envFail.error.includes("failed to start"), `the failing candidate is named: ${envFail.error}`);
+
+	const envFailExec = await run(okFlowParams);
+	assert.equal(envFailExec.isError, true);
+	assert.ok(envFailExec.details.error.includes("environment failure, not retried"), `environment failures say not retried: ${envFailExec.details.error}`);
+} finally {
+	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+}
+
+const abortController = new AbortController();
+abortController.abort();
+try {
+	process.env.PI_MERMAID_MMDFLUX = goodFlux;
+	const runWithSignal = (params) => tool.execute("id", params, abortController.signal, () => {}, {});
+	const aborted = await runWithSignal(okFlowParams);
+	assert.equal(aborted.isError, true);
+	assert.ok(aborted.details.error.includes("aborted"), `a pre-aborted signal fails the call: ${aborted.details.error}`);
+	assert.equal(sentMessages.length, 2, "an aborted call ships no display row");
+} finally {
+	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+}
+
+// a signal aborted mid-flight kills the running mmdflux and fails the call
+const slowFlux = join(tempRoot, "slow-mmdflux");
+writeFileSync(slowFlux, "#!/bin/sh\nexec sleep 10\n"); // exec: the kill lands on the process holding the pipe
+chmodSync(slowFlux, 0o755);
+try {
+	process.env.PI_MERMAID_MMDFLUX = slowFlux;
+	const midFlight = new AbortController();
+	const midFlightRun = tool.execute("id", okFlowParams, midFlight.signal, () => {}, {});
+	setTimeout(() => midFlight.abort(), 50);
+	const midFlightResult = await midFlightRun;
+	assert.equal(midFlightResult.isError, true);
+	assert.ok(midFlightResult.details.error.includes("aborted"), `mid-flight abort fails the call: ${midFlightResult.details.error}`);
+} finally {
+	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+}
+
+// ── execute: gate-2 mismatch, unsupported type, freeform success ──────────────
+
+const mismatchMmds = JSON.stringify({ nodes: [{ id: "a", label: "Wrong" }, { id: "b", label: "Beta" }], edges: [{ source: "a", target: "b", label: "uses" }] });
+const mismatchFlux = join(tempRoot, "mismatch-mmdflux");
+writeFileSync(mismatchFlux, `#!/bin/sh\nif [ "$2" = "mmds" ]; then echo '${mismatchMmds}'; else echo 'fake art'; fi\n`);
+chmodSync(mismatchFlux, 0o755);
+try {
+	process.env.PI_MERMAID_MMDFLUX = mismatchFlux;
+	const mismatch = await run(okFlowParams);
+	assert.equal(mismatch.isError, true);
+	assert.ok(mismatch.details.error.includes("does not match your params"), `gate-2 failures name the mismatch: ${mismatch.details.error}`);
+	assert.ok(mismatch.details.error.includes("call once more"), "gate-2 failures allow one retry");
+	assert.deepEqual(mismatch.details.problems, ['node "a" rendered as "Wrong" instead of "Alpha"'], "the exact problem list is attached");
+} finally {
+	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+}
+
+// unsupported type stops at attempt 1 and names the list
+const noType = await run({ type: "erDiagram", nodes: [{ id: "a" }] });
+assert.equal(noType.isError, true);
+assert.ok(noType.details.error.includes("type must be one of"), `the type guard fires at execute level: ${noType.details.error}`);
+assert.ok(noType.details.error.includes("stateDiagram-v2"), "the error names the full supported list");
+
+// freeform success: the fence body is extracted and gated as-is
+try {
+	process.env.PI_MERMAID_MMDFLUX = goodFlux;
+	const freeOk = await run({ freeform: "intro\n```mermaid\nflowchart TD\n  A[\"X\"] --> B[\"Y\"]\n```\noutro" });
+	assert.equal(freeOk.isError, undefined, `freeform success: ${JSON.stringify(freeOk).slice(0, 200)}`);
+	assert.equal(freeOk.details.path, "freeform");
+	assert.equal(freeOk.details.source, 'flowchart TD\n  A["X"] --> B["Y"]', "only the fence body is kept, trimmed");
+} finally {
+	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+}
+
+// ── runMmdflux: a missing env candidate falls through to the next candidate ────
+
+if (haveMmdflux) {
+	const savedCandidate = process.env.PI_MERMAID_MMDFLUX;
+	process.env.PI_MERMAID_MMDFLUX = join(tempRoot, "no-such-binary");
+	try {
+		const fallback = await runMmdflux('flowchart TD\n  A["S"] --> B["E"]\n', "text");
+		assert.equal(fallback.ok, true, "an ENOENT env candidate falls through to the next candidate");
+	} finally {
+		if (savedCandidate === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+		else process.env.PI_MERMAID_MMDFLUX = savedCandidate;
+	}
+} else {
+	console.log("mermaid.test.mjs: skipping env-candidate fallback (no mmdflux candidate on this host)");
+}
+
+// ── real mmdflux: the emitter round-trips every supported type ─────────────────
+
+if (haveMmdflux && !process.env.PI_MERMAID_MMDFLUX) {
+	const roundTrip = async (valid, kind, name) => {
+		const src = emitMermaid(valid);
+		const mmds = await runMmdflux(src, "mmds");
+		assert.equal(mmds.ok, true, `emitted ${name} parses strictly: ${mmds.ok === false ? mmds.error : ""}`);
+		const text = await runMmdflux(src, "text");
+		assert.equal(text.ok, true, `emitted ${name} renders text art`);
+		const problems = kind === "containment" ? diffArtContainment(text.art, valid) : diffStructure(mmds.mmds, valid);
+		assert.deepEqual(problems, [], `emitted ${name} matches its params exactly: ${problems.join("; ")}`);
+	};
+	await roundTrip(okFlow.value, "structure", "flowchart");
+	await roundTrip(grouped.value, "structure", "grouped flowchart");
+	await roundTrip(seq.value, "containment", "sequenceDiagram");
+	await roundTrip(state.value, "structure", "stateDiagram-v2");
+	await roundTrip(relAll.value, "structure", "classDiagram");
+} else {
+	console.log("mermaid.test.mjs: skipping real-mmdflux emitter round-trip (binary not found)");
+}
+
+// ── display rows are best-effort: a throwing sendMessage never fails the call ──
+
+{
+	const throwingSource = join(tempRoot, "mermaid-throwing.ts");
+	writeFileSync(throwingSource, readFileSync(fileURLToPath(new URL("./mermaid.ts", import.meta.url)), "utf8"));
+	const jitiThrowing = createJiti(import.meta.url, {
+		alias: {
+			"@earendil-works/pi-coding-agent": stubAgent,
+			"@earendil-works/pi-tui": stubTui,
+			typebox: stubTypes,
+			"grok-mermaid": stubGrok,
+		},
+	});
+	const registeredThrowing = [];
+	jitiThrowing(throwingSource).default({
+		registerTool(def) { registeredThrowing.push(def); },
+		sendMessage() { throw new Error("display bus is down"); },
+		registerMessageRenderer() {},
+	});
+	try {
+		process.env.PI_MERMAID_MMDFLUX = goodFlux;
+		const displayDown = await registeredThrowing[0].execute("id", okFlowParams, undefined, () => {}, {});
+		assert.equal(displayDown.isError, undefined, `a failing display bus never fails the call: ${JSON.stringify(displayDown).slice(0, 200)}`);
+		assert.ok(displayDown.content[0].text.includes("```mermaid"), "the validated fence still ships in the tool result");
+	} finally {
+		if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+		else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+	}
+}
+
+// ── corpus harness: a manual gate that skips cleanly without real binaries ────
+
+// mermaid.corpus.mjs stays Tier 2 (real mmdflux + real grok-mermaid). Here we
+// only pin its skip behavior: on a host without the binaries it must exit
+// with a message, never a stack trace, and it must not run any case.
+if (process.env.JITI_PATH) {
+	const corpusScript = fileURLToPath(new URL("./mermaid.corpus.mjs", import.meta.url));
+	const fakeHome = mkdtempSync(join(tmpdir(), "mermaid-corpus-home-"));
+	const noBinaryEnv = { ...process.env, HOME: fakeHome };
+	delete noBinaryEnv.PI_MERMAID_MMDFLUX;
+	try {
+		const usage = spawnSync(process.execPath, [corpusScript], { env: noBinaryEnv, encoding: "utf8", timeout: 20_000 });
+		assert.equal(usage.status, 2, "no arguments prints usage");
+		assert.ok(usage.stderr.includes("usage:"), `usage message: ${usage.stderr}`);
+
+		const tinyCorpus = join(tempRoot, "tiny-corpus.json");
+		writeFileSync(tinyCorpus, JSON.stringify([{ name: "tiny", params: { type: "flowchart", nodes: [{ id: "a" }] } }]));
+		const skipped = spawnSync(process.execPath, [corpusScript, "e2e", tinyCorpus], { env: noBinaryEnv, encoding: "utf8", timeout: 20_000 });
+		assert.equal(skipped.status, 2, "the corpus exits 2 when real binaries are absent");
+		assert.ok(skipped.stderr.includes("not found"), `skip message: ${skipped.stderr}`);
+		assert.ok(!/^\s+at /m.test(skipped.stderr), "the skip is a message, never a stack trace");
+		assert.ok(!skipped.stdout.includes("pass tiny"), "no corpus case runs without the binaries");
+	} finally {
+		rmSync(fakeHome, { recursive: true, force: true });
+	}
+} else {
+	console.log("mermaid.test.mjs: skipping corpus skip-behavior check (JITI_PATH not set)");
+}
 
 rmSync(tempRoot, { recursive: true, force: true });
 console.log("mermaid.test.mjs: all assertions passed");

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Paths: scripts/pi-patch-hidden-thinking pi/.pi/agent/extensions/thinking-blank.ts
 // Hidden thinking must render nothing: thinking-blank.ts blanks the label,
 // and pi-patch-hidden-thinking guards the bundle's structural spacers out
 // of hidden runs. This test drives the patch script against fixture bundles

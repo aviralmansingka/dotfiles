@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 process.env.NODE_PATH = [
@@ -317,6 +318,17 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			sendMessage(message, options) { messages.push({ message, options }); },
 		});
 
+		// Bounded poll helper (25 ms sleeps): tick the watcher until a condition
+		// holds — never a fixed multi-hundred-ms sleep.
+		const pollUntil = async (condition, timeoutMs = 4000) => {
+			const deadline = Date.now() + timeoutMs;
+			while (!condition() && Date.now() < deadline) {
+				await tick();
+				await sleepReal(25);
+			}
+			assert.ok(condition(), "poll condition not reached in time");
+		};
+
 		// 1. The call returns immediately with a "started" ack — never the TOON.
 		const startedAt = Date.now();
 		const ack = await tool.execute(
@@ -344,8 +356,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		// 3. Once the background capture completes, the watcher steers the TOON
 		//    back as a result message that triggers a new turn.
 		assert.equal(messages.length, 0, "no result before the background run completes");
-		await sleepReal(400);
-		await tick();
+		await pollUntil(() => messages.length >= 1);
 		assert.equal(messages.length, 1, "the completed run steers exactly one result");
 		const { message, options } = messages[0];
 		assert.equal(message.customType, "no_mistakes_axi_result");
@@ -379,8 +390,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		);
 		assert.equal(statusAck.details.status, "started");
 		assert.equal(statusAck.details.pipeline, false);
-		await sleepReal(300);
-		await tick();
+		await pollUntil(() => messages.length >= 2);
 		assert.equal(messages.length, 2);
 		assert.equal(messages[1].message.details.subcommand, "status");
 		assert.equal(messages[1].message.details.pipeline, false);
@@ -397,8 +407,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 			{ cwd: stubDir, hasUI: false },
 		);
 		assert.equal(stuckAck.details.status, "started");
-		await sleepReal(400);
-		await tick();
+		await pollUntil(() => messages.length >= 3);
 		assert.equal(messages.length, 3);
 		assert.equal(messages[2].message.details.timedOut, true);
 		assert.match(messages[2].message.content, /timed out after 0s/);
@@ -495,6 +504,17 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		]);
 		process.env.PATH = `${stubDir}:${savedPath}`;
 
+		// Bounded poll helper (25 ms sleeps): tick the watcher until a condition
+		// holds — never a fixed multi-hundred-ms sleep.
+		const pollUntil = async (condition, timeoutMs = 4000) => {
+			const deadline = Date.now() + timeoutMs;
+			while (!condition() && Date.now() < deadline) {
+				await tick();
+				await sleepReal(25);
+			}
+			assert.ok(condition(), "poll condition not reached in time");
+		};
+
 		noMistakesPane({
 			on(name, handler) { handlers.set(name, handler); },
 			registerTool(value) { tool = value; },
@@ -522,8 +542,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		assert.equal(ack.details.status, "started");
 		assert.equal(ack.details.paneId, "nm:p2");
 		assert.match(ack.content[0].text, /pane nm:p2/);
-		await sleepReal(300);
-		await tick();
+		await pollUntil(() => messages.length >= 1);
 		syncHerdrLog();
 
 		// 2. The gate result keeps the pane open for the captain to watch.
@@ -557,8 +576,7 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		syncHerdrLog();
 		assert.equal(herdrLog.filter((line) => line === "pane split --current --direction right --cwd " + stubDir + " --no-focus").length, 1,
 			"the existing pane is reused, not split again");
-		await sleepReal(300);
-		await tick();
+		await pollUntil(() => messages.length >= 2);
 		syncHerdrLog();
 
 		// 5. The terminal outcome closes the pane.
@@ -813,6 +831,34 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 
 	// No START marker at all (e.g. empty file before the command prints).
 	assert.deepEqual(extractMarkedOutput("", token), { complete: false });
+
+	// N7 echo-corruption guard: TUI progress noise (ANSI escapes, carriage
+	// returns) between the markers never corrupts the capture — markers are
+	// still found and the noise is stripped from the extracted output.
+	const noisy = [
+		"__NM_START_abc123__",
+		"\x1b[2K\r\x1b[1mreview\x1b[0m in \x1b[32mprogress\x1b[0m\r",
+		"gate: review",
+		"__NM_END_abc123__:0",
+	].join("\n");
+	assert.deepEqual(extractMarkedOutput(noisy, token), {
+		complete: true,
+		output: "review in progress\ngate: review",
+		exitCode: 0,
+	}, "ANSI and CR noise is stripped, markers survive");
+	assert.equal(hasStartMarker(noisy, token), true, "the START marker is found through ANSI noise");
+
+	// A foreign token's markers never satisfy this capture.
+	const foreign = ["__NM_START_zzz999__", "noise", "__NM_END_zzz999__:0"].join("\n");
+	assert.deepEqual(extractMarkedOutput(foreign, token), { complete: false },
+		"another call's markers are ignored");
+	assert.equal(hasStartMarker(foreign, token), false);
+
+	// A non-numeric exit code on the END marker degrades to -1, never NaN.
+	assert.deepEqual(
+		extractMarkedOutput("__NM_START_abc123__\nout\n__NM_END_abc123__:x", token),
+		{ complete: true, output: "out", exitCode: -1 },
+	);
 }
 
 // ---------------------------------------------------------------------------
@@ -1174,6 +1220,394 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 }
 
 // ---------------------------------------------------------------------------
+// Orchestrator delegation wiring (N5): from a Herdr captain TUI session a
+// `run` acks "delegated", the registry owns the cwd, and every later driving
+// call refuses; a spawn that resolves an error result is never acked
+// "delegated" and never registers a phantom owner — the run drives directly.
+// ---------------------------------------------------------------------------
+{
+	const SPAWN_KEY = "__pi_interactive_subagents";
+	const REG_KEY = Symbol.for("pi-no-mistakes/orchestrators");
+	const WATCH_KEY = Symbol.for("pi-no-mistakes/watch-state");
+	const savedSpawn = globalThis[SPAWN_KEY];
+	const savedRegistry = globalThis[REG_KEY];
+	const savedWatch = globalThis[WATCH_KEY];
+	const savedSubagentName = process.env.PI_SUBAGENT_NAME;
+	const savedPath = process.env.PATH;
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-delegate-"));
+	// Two real worktree dirs: the tool spawns its background script with the
+	// call cwd, so the cwd must exist. Ownership keys are these resolved paths.
+	const dirA = join(stubDir, "repo-a");
+	const dirB = join(stubDir, "repo-b");
+	mkdirSync(dirA);
+	mkdirSync(dirB);
+	const sleepReal = (ms) => new Promise((done) => setTimeout(done, ms));
+	const notifications = [];
+	let tool;
+	let command;
+	let spawnResult;
+	let running = false;
+	try {
+		delete process.env.PI_SUBAGENT_NAME;
+		globalThis[REG_KEY] = new Map();
+		globalThis[WATCH_KEY] = undefined;
+		// Stub no-mistakes: `attach --help` fails, so the direct-driving
+		// fallback path stays headless (no pane wait); the axi call sleeps long
+		// enough that the watcher never steers during this block.
+		writeFileSync(join(stubDir, "no-mistakes"), [
+			"#!/bin/sh",
+			'if [ "$1" = "attach" ]; then exit 1; fi',
+			"sleep 5",
+			"exit 0",
+			"",
+		].join("\n"));
+		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+		process.env.PATH = `${stubDir}:${savedPath}`;
+		globalThis[SPAWN_KEY] = {
+			executeSubagent: async () => spawnResult,
+			isSubagentRunning: () => running,
+		};
+
+		const handlers = new Map();
+		noMistakesPane({
+			on(name, handler) { handlers.set(name, handler); },
+			registerTool(value) { tool = value; },
+			registerCommand(_name, value) { command = value; },
+			registerMessageRenderer() {},
+			events: { emit() {}, on() { return () => {}; } },
+			exec() { return Promise.resolve({ code: 0, stdout: "" }); },
+			sendMessage() {},
+		});
+		// The captain is an interactive Herdr TUI session.
+		handlers.get("session_start")({}, { mode: "tui" });
+
+		// 1. A successful spawn acks "delegated" and registers the owner.
+		spawnResult = { details: { name: "nm-orchestrator" } };
+		running = true;
+		const ack = await tool.execute(
+			"del-run-1",
+			{ args: 'run --intent "delegate it"', timeoutMs: 30 },
+			undefined,
+			undefined,
+			{ cwd: dirA, hasUI: true },
+		);
+		assert.equal(ack.details.status, "started");
+		assert.match(ack.content[0].text, /delegated to the nm-orchestrator subagent/);
+		assert.equal(globalThis[REG_KEY].get(dirA), "nm-orchestrator",
+			"the registry records the spawned owner for the resolved cwd");
+
+		// 2. Driving calls from the captain refuse to double-drive the owned run.
+		const refusal = await tool.execute(
+			"del-respond-1",
+			{ args: "respond --action approve", timeoutMs: 30 },
+			undefined,
+			undefined,
+			{ cwd: dirA, hasUI: false },
+		);
+		assert.equal(refusal.details.status, "error");
+		assert.match(refusal.content[0].text, /owned by the nm-orchestrator subagent/);
+		assert.match(refusal.content[0].text, /subagent_message/);
+		const second = await tool.execute(
+			"del-run-2",
+			{ args: "run", timeoutMs: 30 },
+			undefined,
+			undefined,
+			{ cwd: dirA, hasUI: true },
+		);
+		assert.equal(second.details.status, "error");
+		assert.match(second.content[0].text, /owned by the nm-orchestrator subagent/);
+
+		// 3. /no-mistakes points the human at the orchestrator's tab instead of
+		//    opening a second attach pane here.
+		await command.handler("", { cwd: dirA, ui: { notify: (m) => notifications.push(m) } });
+		assert.ok(notifications.some((m) => /Focus "subagent: nm-orchestrator"/.test(m)),
+			"the command points at the orchestrator tab");
+
+		// 4. A spawn that resolves an error result (mux unavailable) is never
+		//    acked "delegated" and leaves no phantom registry owner: the run
+		//    drives directly here, and respond still works.
+		spawnResult = { isError: true, details: { error: "mux unavailable" } };
+		const fallbackAck = await tool.execute(
+			"del2-run-1",
+			{ args: 'run --intent "fallback"', timeoutMs: 30 },
+			undefined,
+			undefined,
+			{ cwd: dirB, hasUI: true },
+		);
+		assert.equal(fallbackAck.details.status, "started");
+		assert.ok(!/delegated to the/.test(fallbackAck.content[0].text),
+			"a failed spawn is never acked delegated");
+		assert.match(fallbackAck.content[0].text, /Orchestrator delegation failed \(mux unavailable\)/);
+		assert.match(fallbackAck.content[0].text, /driving the run directly here instead/);
+		assert.equal(globalThis[REG_KEY].has(dirB), false, "no phantom owner is registered");
+		const respondAck = await tool.execute(
+			"del2-respond-1",
+			{ args: "respond --action approve", timeoutMs: 30 },
+			undefined,
+			undefined,
+			{ cwd: dirB, hasUI: false },
+		);
+		assert.equal(respondAck.details.status, "started",
+			"respond is not refused by a phantom registry owner (#286)");
+
+		handlers.get("session_shutdown")();
+	} finally {
+		if (savedSubagentName === undefined) delete process.env.PI_SUBAGENT_NAME;
+		else process.env.PI_SUBAGENT_NAME = savedSubagentName;
+		process.env.PATH = savedPath;
+		globalThis[SPAWN_KEY] = savedSpawn;
+		globalThis[REG_KEY] = savedRegistry;
+		globalThis[WATCH_KEY] = savedWatch;
+		rmSync(stubDir, { recursive: true, force: true });
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Herdr pane-state wiring (#285): while a tracked run is live in an
+// interactive Herdr TUI session, phase labels go through `pane
+// report-metadata`, the CI phase drives a balanced `herdr:blocked` pair, the
+// checks-passed merge monitor never sets red, and run end clears both.
+// ---------------------------------------------------------------------------
+{
+	const WATCH_KEY = Symbol.for("pi-no-mistakes/watch-state");
+	const activeRunId = runIdAt(Date.now() + 1000, "9".repeat(16));
+	const snapshotWith = (step) => [
+		"run:",
+		`  id: "${activeRunId}"`,
+		"  status: running",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		`    ${step}`,
+	].join("\n");
+	const reviewStatus = snapshotWith("review,running,0,1000");
+	const ciStatus = snapshotWith("ci,running,1,500");
+	// The post-checks-passed monitor: outcome set, ci step still running.
+	const mergeMonitorStatus = [
+		"run:",
+		`  id: "${activeRunId}"`,
+		"  status: running",
+		"  outcome: checks-passed",
+		"  steps[1]{step,status,findings,duration_ms}:",
+		"    ci,running,0,5000",
+	].join("\n");
+	const noRunStatus = "current_branch: main\nruns_on_current_branch: 0";
+
+	const handlers = new Map();
+	const events = [];
+	let tool;
+	let tick;
+	let statusStdout = reviewStatus;
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-report-"));
+	const nmHome = join(stubDir, "nm-home");
+	const herdrLogPath = join(stubDir, "herdr-calls.log");
+	const savedSetInterval = globalThis.setInterval;
+	const savedClearInterval = globalThis.clearInterval;
+	const savedPath = process.env.PATH;
+	const savedEnv = {};
+	for (const key of ["HERDR_ENV", "HERDR_PANE_ID", "NM_HOME"]) savedEnv[key] = process.env[key];
+	const sleepReal = (ms) => new Promise((done) => setTimeout(done, ms));
+	const herdrLog = () =>
+		existsSync(herdrLogPath) ? readFileSync(herdrLogPath, "utf-8").split("\n").filter(Boolean) : [];
+	try {
+		globalThis.setInterval = (callback) => {
+			tick = callback;
+			return { unref() {} };
+		};
+		globalThis.clearInterval = () => {};
+		// Stub herdr: logs every call, answers nothing else (only
+		// report-metadata is driven here).
+		writeFileSync(join(stubDir, "herdr"), [
+			"#!/bin/sh",
+			`echo "$*" >> ${JSON.stringify(herdrLogPath)}`,
+			"exit 0",
+			"",
+		].join("\n"));
+		chmodSync(join(stubDir, "herdr"), 0o755);
+		// Stub no-mistakes: attach unavailable, axi sleeps long.
+		writeFileSync(join(stubDir, "no-mistakes"), [
+			"#!/bin/sh",
+			'if [ "$1" = "attach" ]; then exit 1; fi',
+			"sleep 5",
+			"exit 0",
+			"",
+		].join("\n"));
+		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+		process.env.PATH = `${stubDir}:${savedPath}`;
+		process.env.HERDR_ENV = "1";
+		process.env.HERDR_PANE_ID = "w1:p0";
+		process.env.NM_HOME = nmHome; // never the real ~/.no-mistakes
+		globalThis[WATCH_KEY] = undefined;
+
+		noMistakesPane({
+			on(name, handler) { handlers.set(name, handler); },
+			registerTool(value) { tool = value; },
+			registerCommand() {},
+			registerMessageRenderer() {},
+			events: {
+				emit(name, payload) { events.push({ name, payload }); },
+				on() { return () => {}; },
+			},
+			exec() { return Promise.resolve({ code: 0, stdout: statusStdout }); },
+			sendMessage() {},
+		});
+		handlers.get("session_start")({}, { mode: "tui" });
+
+		const ack = await tool.execute(
+			"report-run-1",
+			{ args: 'run --intent "report wiring"', timeoutMs: 30 },
+			undefined,
+			undefined,
+			{ cwd: stubDir, hasUI: true },
+		);
+		assert.equal(ack.details.status, "started");
+		await sleepReal(25); // drain the initial status refresh
+		const drivePoll = async () => {
+			const state = globalThis[WATCH_KEY];
+			state.lastStatusPoll = 0; // deterministic poll cadence, no real waits
+			await tick();
+			await new Promise(setImmediate);
+			await sleepReal(25);
+		};
+
+		// review running: phase label applied, nothing blocked.
+		await drivePoll();
+		assert.ok(herdrLog().includes(
+			"pane report-metadata w1:p0 --source user:no-mistakes --applies-to-source herdr:pi --state-label idle=nm: review --state-label working=nm: review",
+		), "the review phase label goes through the sanctioned metadata surface");
+		assert.ok(!events.some((e) => e.name === "herdr:blocked" && e.payload.active === true),
+			"a review phase never sets the red state");
+
+		// CI phase: red state on, label moves, exactly one balanced pair.
+		statusStdout = ciStatus;
+		await drivePoll();
+		assert.ok(herdrLog().includes(
+			"pane report-metadata w1:p0 --source user:no-mistakes --applies-to-source herdr:pi --state-label idle=nm: ci --state-label working=nm: ci",
+		), "the CI phase label moves with the phase");
+		const blockedEvents = () => events.filter((e) => e.name === "herdr:blocked");
+		assert.deepEqual(blockedEvents().map((e) => e.payload), [
+			{ active: true, label: "no-mistakes: ci" },
+		], "the CI phase sets the red state exactly once");
+
+		// The checks-passed merge monitor (ci still running, outcome set) is
+		// NOT red: it releases the blocked state and keeps the label.
+		statusStdout = mergeMonitorStatus;
+		await drivePoll();
+		assert.deepEqual(blockedEvents().map((e) => e.payload), [
+			{ active: true, label: "no-mistakes: ci" },
+			{ active: false, label: undefined },
+		], "the checks-passed monitor releases red and never re-sets it (#285)");
+
+		// No observable run: labels clear, the pair stays balanced.
+		statusStdout = noRunStatus;
+		await drivePoll();
+		assert.ok(herdrLog().includes(
+			"pane report-metadata w1:p0 --source user:no-mistakes --applies-to-source herdr:pi --clear-state-labels",
+		), "run end clears the pane labels");
+		assert.equal(blockedEvents().length, 2, "no further blocked event fires");
+
+		handlers.get("session_shutdown")();
+		await sleepReal(100);
+		assert.equal(existsSync(join(nmHome, "herdr-bridge", activeRunId)), false,
+			"shutdown tears the bridge dir down so later shims passthrough");
+	} finally {
+		globalThis.setInterval = savedSetInterval;
+		globalThis.clearInterval = savedClearInterval;
+		process.env.PATH = savedPath;
+		for (const [key, value] of Object.entries(savedEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		globalThis[WATCH_KEY] = undefined;
+		rmSync(stubDir, { recursive: true, force: true });
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Every execFileSync site in no-mistakes-pane.ts keeps child stderr off the
+// terminal (#291): a probe child imports the module and drives a pipeline
+// call against a herdr/no-mistakes pair that both splatter stderr. The probe
+// process's own stderr must stay byte-clean.
+// ---------------------------------------------------------------------------
+{
+	const stubDir = mkdtempSync(join(tmpdir(), "pi-nm-leak-"));
+	try {
+		// Stub herdr: answers the JSON endpoints the pane uses, writes noise
+		// to stderr on EVERY call, and fails `pane run` so openWatchPane walks
+		// the whole rename → run → close give-up path.
+		writeFileSync(join(stubDir, "herdr"), [
+			"#!/bin/sh",
+			'echo "HERDR_NOISE $*" 1>&2',
+			'case "$1 $2" in',
+			'  "pane current") echo \'{"result":{"pane":{"pane_id":"agent:p1","tab_id":"tab:t1"}}}\';;',
+			'  "pane split") echo \'{"result":{"pane":{"pane_id":"nm:p2","tab_id":"tab:t1"}}}\';;',
+			'  "pane run") echo \'{"error":{"code":"pane_not_running"}}\' 1>&2; exit 1;;',
+			"esac",
+			"exit 0",
+			"",
+		].join("\n"));
+		chmodSync(join(stubDir, "herdr"), 0o755);
+		// Stub no-mistakes: `attach --help` succeeds WITH stderr noise (the
+		// attachAvailable site); the axi call finishes quickly.
+		writeFileSync(join(stubDir, "no-mistakes"), [
+			"#!/bin/sh",
+			'if [ "$1" = "attach" ]; then echo "ATTACH_NOISE" 1>&2; exit 0; fi',
+			"sleep 0.1",
+			"printf '%s\\n' 'outcome: checks-passed'",
+			"exit 0",
+			"",
+		].join("\n"));
+		chmodSync(join(stubDir, "no-mistakes"), 0o755);
+
+		const probe = join(stubDir, "probe.cjs");
+		writeFileSync(probe, [
+			"const { createRequire } = require('node:module');",
+			"const req = createRequire(__filename);",
+			"const { createJiti } = req(process.env.JITI_PATH);",
+			"const jiti = createJiti(__filename, { alias: { '@earendil-works/pi-tui': process.env.TUI_STUB } });",
+			"const mod = jiti(process.env.PANE_MODULE);",
+			"const handlers = new Map();",
+			"let tool;",
+			"mod.default({",
+			"  on(name, handler) { handlers.set(name, handler); },",
+			"  registerTool(value) { tool = value; },",
+			"  registerCommand() {},",
+			"  registerMessageRenderer() {},",
+			"  events: { emit() {}, on() { return () => {}; } },",
+			"  exec() { return Promise.resolve({ code: 0, stdout: '' }); },",
+			"  sendMessage() {},",
+			"});",
+			"(async () => {",
+			"const ack = await tool.execute('probe-1', { args: 'run --intent \"leak\"', timeoutMs: 20 }, undefined, undefined, { cwd: process.env.PROBE_CWD, hasUI: true });",
+			"handlers.get('session_shutdown')();",
+			"console.log('ACK=' + ack.details.status);",
+			"console.log('PANE_NOTE=' + String(ack.content[0].text.includes('No Herdr pane could be opened')));",
+			"})().catch((err) => { console.error(err && err.stack || err); process.exit(1); });",
+			"",
+		].join("\n"));
+		const ran = spawnSync(process.execPath, [probe], {
+			encoding: "utf-8",
+			timeout: 30_000,
+			env: {
+				...process.env,
+				PATH: `${stubDir}:${process.env.PATH}`,
+				JITI_PATH: jitiPath,
+				TUI_STUB: stubTui,
+				PANE_MODULE: fileURLToPath(new URL("./no-mistakes-pane.ts", import.meta.url)),
+				PROBE_CWD: stubDir,
+			},
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		assert.equal(ran.status, 0, `probe child failed: ${ran.stderr}`);
+		assert.match(ran.stdout, /ACK=started/);
+		assert.match(ran.stdout, /PANE_NOTE=true/,
+			"the pane give-up path ran (current/split/rename/run/close all hit)");
+		assert.equal(ran.stderr, "",
+			"no stderr byte from any pane execFileSync site reaches the terminal");
+	} finally {
+		rmSync(stubDir, { recursive: true, force: true });
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Keep-open slot composition: the shared pi-subagents/keep-open-count slot
 // has multiple publishers (tuicr.ts owns it too, and the nm-orchestrator
 // loads both extensions in one session). The pane module must ADD to any
@@ -1206,6 +1640,48 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 		// The pane side alone still keeps the session open.
 		fakeOwnerCount = 0;
 		assert.equal(slot(), 1, "the pane's own count parks the session on its own");
+	} finally {
+		globalThis[KEY] = savedSlot;
+		globalThis[WATCH_STATE] = savedState;
+	}
+}
+
+// N3 composition edges: a previous owner whose function THROWS must never
+// mask this module's count — a broken tuicr side cannot silently disable the
+// pane's keep-open.
+{
+	const KEY = Symbol.for("pi-subagents/keep-open-count");
+	const WATCH_STATE = Symbol.for("pi-no-mistakes/watch-state");
+	const savedSlot = globalThis[KEY];
+	const savedState = globalThis[WATCH_STATE];
+	try {
+		globalThis[WATCH_STATE] = undefined;
+		globalThis[KEY] = () => { throw new Error("broken owner"); };
+		createJiti(import.meta.url, { alias: tuiAlias, moduleCache: false })("./no-mistakes-pane.ts");
+		globalThis[WATCH_STATE] = { trackedRunId: "01TEST", calls: new Map() };
+		assert.equal(globalThis[KEY](), 1,
+			"a broken previous owner never masks this module's count");
+	} finally {
+		globalThis[KEY] = savedSlot;
+		globalThis[WATCH_STATE] = savedState;
+	}
+}
+
+// A previous slot value that is not a function counts as zero: the pane side
+// still publishes and parks the session on its own.
+{
+	const KEY = Symbol.for("pi-subagents/keep-open-count");
+	const WATCH_STATE = Symbol.for("pi-no-mistakes/watch-state");
+	const savedSlot = globalThis[KEY];
+	const savedState = globalThis[WATCH_STATE];
+	try {
+		globalThis[WATCH_STATE] = undefined;
+		globalThis[KEY] = 5; // a clobbered/legacy slot value
+		createJiti(import.meta.url, { alias: tuiAlias, moduleCache: false })("./no-mistakes-pane.ts");
+		globalThis[WATCH_STATE] = { trackedRunId: "01TEST", calls: new Map() };
+		assert.equal(typeof globalThis[KEY], "function", "the slot is a function again");
+		assert.equal(globalThis[KEY](), 1,
+			"a non-function previous value counts as zero, so this module parks alone");
 	} finally {
 		globalThis[KEY] = savedSlot;
 		globalThis[WATCH_STATE] = savedState;

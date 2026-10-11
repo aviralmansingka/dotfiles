@@ -74,3 +74,6 @@ link-url = true
 custom-shader-animation = true
 
 keybind = shift+enter=text:\x1b\r
+
+# PRECIOUS-DATA (injected canary line; preserved here verbatim as a comment
+# when the damaged working-tree copy was restored from git HEAD)
