@@ -9,7 +9,7 @@
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { setTimeout as sleep } from "node:timers/promises";
-import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -612,10 +612,47 @@ export async function pollForExit(
   let seenAgentProcess = false;
   let consecutiveReadFails = 0;
 
+  // ── Single invariant: the session transcript is the agent's truth ──
+  // Pane and process signals only accelerate a verdict; they never
+  // classify death on their own. A transcript that exists proves the
+  // launch lived (no false "never started"); a transcript still writing
+  // proves the agent runs (headless survival after pane churn); a frozen
+  // transcript plus a lost surface closes as a clean completion so the
+  // session-file harvest delivers the result.
+  let transcriptSize = -1;
+  let transcriptMtimeMs = -1;
+  let lastTranscriptWriteAt = 0;
+  let everHadTranscript = false;
+  const readTranscriptState = () => {
+    if (!options.sessionFile) return;
+    try {
+      const st = statSync(options.sessionFile);
+      if (st.size > 0) {
+        everHadTranscript = true;
+        if (st.size !== transcriptSize || st.mtimeMs !== transcriptMtimeMs) {
+          transcriptSize = st.size;
+          transcriptMtimeMs = st.mtimeMs;
+          lastTranscriptWriteAt = Date.now();
+        }
+      }
+    } catch {}
+  };
+
+  /** Verdict for a lost/unreadable surface. null = keep waiting — the
+   *  transcript is still fresh, so the agent plausibly runs headless. */
+  const classifySurfaceLoss = (): PollResult | null => {
+    if (!everHadTranscript) return paneKilledResult();
+    if (Date.now() - lastTranscriptWriteAt < bounds.startupGraceMs) return null;
+    return agentGoneResult();
+  };
+
   for (;;) {
     if (signal.aborted) {
       throw new Error("Aborted while waiting for subagent to finish");
     }
+
+    // Durable liveness first: the transcript, not the pane.
+    readTranscriptState();
 
     // Hard deadline: one final harvest attempt (a sidecar or a screen
     // sentinel that landed at the wire still produces its real result;
@@ -659,8 +696,11 @@ export async function pollForExit(
         return { reason: "sentinel", exitCode: parseInt(match[1], 10) };
       }
     } catch {
-      // Surface was destroyed (manual pane close/kill) unless a late .exit file explains it.
-      return readExitSidecar(options.sessionFile) ?? paneKilledResult();
+      // Surface was destroyed (manual pane close/kill) unless a late .exit
+      // file explains it. Under pane churn a live headless session also
+      // lands here — the transcript decides, not the lost surface.
+      const verdict = classifySurfaceLoss();
+      if (verdict) return readExitSidecar(options.sessionFile) ?? verdict;
     }
 
     // Liveness fallback: the sentinel echo can go undetected on the
@@ -679,7 +719,10 @@ export async function pollForExit(
       consecutiveReadFails++;
       if (consecutiveReadFails >= bounds.processInfoFailLimit) {
         if (!(await paneExistsAsync(surface, signal))) {
-          return readExitSidecar(options.sessionFile) ?? paneKilledResult();
+          const verdict = classifySurfaceLoss();
+          if (verdict) return readExitSidecar(options.sessionFile) ?? verdict;
+          // Pane gone but transcript still writing: headless run, keep
+          // waiting. The hard deadline still bounds the wait.
         }
       }
     } else {
@@ -687,13 +730,20 @@ export async function pollForExit(
       const liveness = updateAgentLiveness(seenAgentProcess, processes);
       seenAgentProcess = liveness.seenAgent;
       if (liveness.agentGone) {
-        return agentGoneResult();
+        // Registry-desync guard: a recently-writing transcript means the
+        // agent loop is alive even when the pane no longer lists pi.
+        if (Date.now() - lastTranscriptWriteAt >= bounds.startupGraceMs) {
+          return agentGoneResult();
+        }
       }
-      // No-sighting grace: a successful foreground read that never listed
-      // pi, with no sentinel and no sidecar, past the grace window means
-      // the launch itself died (bare shell). Bounded, never infinite.
+      // No-sighting grace — genuine launch death only: no pi sighting AND
+      // no transcript content, past the grace window. An existing
+      // transcript proves the launch lived; a broken pane read can never
+      // write off a live session as "never started". Bounded, never
+      // infinite.
       if (
         !seenAgentProcess &&
+        !everHadTranscript &&
         Date.now() - start >= bounds.startupGraceMs
       ) {
         return noAgentResult();
