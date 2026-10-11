@@ -13,11 +13,14 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	activeSlugs,
 	buildReplyArgs,
 	buildReviewSubagentTask,
 	buildWrapperArgs,
+	classifyReviewRequest,
 	collectSeenKeys,
 	commentKey,
+	describeReviewTarget,
 	formatCommentLine,
 	formatLaunchResult,
 	formatReplyCall,
@@ -31,11 +34,16 @@ import {
 	parseTuicrCommandArgs,
 	pickSession,
 	postTuicrReply,
+	prSessionNumber,
+	resolveLaunchedSession,
 	resolveSkillDir,
 	resolveTargetSession,
+	reviewTargetKey,
+	reviewerSubagentName,
 	scopeToTuicrArgs,
 	selectWrapper,
 	shouldDeliverBatch,
+	targetToScopeArgs,
 	truncateLines,
 } from "./tuicr-core.mjs";
 
@@ -68,8 +76,10 @@ assert.deepEqual(buildWrapperArgs({ repo: "/repo", tuicrArgs: ["pr", "272"] }), 
 
 // ── /tuicr command grammar ──
 
-assert.deepEqual(parseTuicrCommandArgs(""), { action: "open", scope: "working-tree" });
-assert.deepEqual(parseTuicrCommandArgs("open"), { action: "open", scope: "working-tree" });
+// A bare call carries no scope: the default target resolution (open PR of
+// the current branch, else the working tree) applies.
+assert.deepEqual(parseTuicrCommandArgs(""), { action: "open" });
+assert.deepEqual(parseTuicrCommandArgs("open"), { action: "open" });
 assert.deepEqual(parseTuicrCommandArgs("open pr 272"), {
 	action: "open", scope: "pr", pr: 272,
 });
@@ -79,9 +89,7 @@ assert.deepEqual(parseTuicrCommandArgs("pr 272"), {
 assert.deepEqual(parseTuicrCommandArgs("open -r main..@-"), {
 	action: "open", scope: "revset", revset: "main..@-",
 });
-assert.deepEqual(parseTuicrCommandArgs("watch"), {
-	action: "watch", scope: "working-tree",
-});
+assert.deepEqual(parseTuicrCommandArgs("watch"), { action: "watch" });
 assert.deepEqual(parseTuicrCommandArgs("watch --revset main..@-"), {
 	action: "watch", scope: "revset", revset: "main..@-",
 });
@@ -101,62 +109,80 @@ assert.throws(() => parseTuicrCommandArgs("open pr abc"), /positive PR number/);
 assert.throws(() => parseTuicrCommandArgs("open -r"), /-r <revset>/);
 assert.throws(() => parseTuicrCommandArgs("open --bogus"), /Unknown \/tuicr argument/);
 
-// ── review subagent task and launch result ──
+// ── review subagent task and launch result (the subagent owns the pane) ──
 
-const taskKnown = buildReviewSubagentTask({
-	repo: "/repo", slug: "s1", scope: "pr", revset: undefined, pr: 272,
+// Launch task: the subagent opens the pane in its OWN tab, never attachOnly.
+const taskLaunchPr = buildReviewSubagentTask({
+	repo: "/repo", slug: null, target: { type: "pr", pr: 272 },
 });
-assert.match(taskKnown, /PR 272/);
-assert.match(taskKnown, /sessionSlug "s1"/);
-assert.match(taskKnown, /attachOnly true/);
-assert.match(taskKnown, /tuicr_reply/);
-assert.match(taskKnown, /merge or review later/);
-const taskUnresolved = buildReviewSubagentTask({
-	repo: "/repo", slug: null, scope: "working-tree", revset: undefined, pr: undefined,
-});
-assert.match(taskUnresolved, /working tree/);
-assert.match(taskUnresolved, /Never launch a new pane/);
-assert.match(taskUnresolved, /retry for up to a minute/);
+assert.match(taskLaunchPr, /PR 272 in \/repo/);
+assert.match(taskLaunchPr, /Open the review FIRST with the tuicr tool/);
+assert.match(taskLaunchPr, /YOUR OWN tab/);
+assert.match(taskLaunchPr, /scope "pr", pr 272/);
+assert.match(taskLaunchPr, /Do not pass attachOnly/);
+assert.doesNotMatch(taskLaunchPr, /attachOnly true/);
+assert.match(taskLaunchPr, /tuicr_reply/);
+assert.match(taskLaunchPr, /merge or review later/);
+// The sweep and final-steer contracts are kept.
+assert.match(taskLaunchPr, /existed before the watcher attached/);
+assert.match(taskLaunchPr, /tuicr review comments --session <slug> --repo <repo>/);
+assert.match(taskLaunchPr, /no pi-agent reply/);
+assert.match(taskLaunchPr, /watcher stopped early/);
 
-// Scope args are validated on the attach path too — no pane launches, so
-// scopeToTuicrArgs never runs upstream of the task build.
+const taskLaunchRevset = buildReviewSubagentTask({
+	repo: "/repo", slug: null, target: { type: "revset", revset: "main..@-" },
+});
+assert.match(taskLaunchRevset, /commit range main\.\.@-/);
+assert.match(taskLaunchRevset, /scope "revset", revset "main\.\.@-"/);
+
+const taskLaunchWt = buildReviewSubagentTask({
+	repo: "/repo", slug: null, target: { type: "working-tree" },
+});
+assert.match(taskLaunchWt, /the working tree/);
+assert.match(taskLaunchWt, /scope "working-tree"/);
+
+// Attach task (session already active): sessionSlug + attachOnly, never a
+// second pane.
+const taskAttach = buildReviewSubagentTask({
+	repo: "/repo", slug: "gh:o/r/pr/272", target: { type: "pr", pr: 272 },
+});
+assert.match(taskAttach, /active tuicr session gh:o\/r\/pr\/272 \(PR 272\)/);
+assert.match(taskAttach, /sessionSlug "gh:o\/r\/pr\/272"/);
+assert.match(taskAttach, /attachOnly true/);
+assert.match(taskAttach, /never launch a second one/);
+
+const taskAttachSlug = buildReviewSubagentTask({
+	repo: "/repo", slug: "s1", target: { type: "slug", slug: "s1" },
+});
+assert.match(taskAttachSlug, /active tuicr session s1 in \/repo/);
+assert.doesNotMatch(taskAttachSlug, /\(session s1\)/);
+
+// Target validation happens on the task path too.
 assert.throws(
-	() => buildReviewSubagentTask({ repo: "/repo", slug: "s1", scope: "pr", revset: undefined, pr: undefined }),
+	() => buildReviewSubagentTask({ repo: "/repo", slug: null, target: { type: "pr" } }),
 	/pr is required/,
 );
 assert.throws(
-	() => buildReviewSubagentTask({ repo: "/repo", slug: "s1", scope: "revset", revset: undefined, pr: undefined }),
+	() => buildReviewSubagentTask({ repo: "/repo", slug: null, target: { type: "revset" } }),
 	/revset is required/,
 );
 assert.throws(
-	() => buildReviewSubagentTask({ repo: "/repo", slug: "s1", scope: "staged", revset: undefined, pr: undefined }),
-	/Unknown scope/,
+	() => buildReviewSubagentTask({ repo: "/repo", slug: null, target: { type: "staged" } }),
+	/Unknown review target type/,
 );
-
-// Attaching names the session actually watched, not the requested scope.
-const taskAttached = buildReviewSubagentTask({
-	repo: "/repo", slug: "s1", attached: true, scope: "pr", revset: undefined, pr: 272,
-});
-assert.match(taskAttached, /active tuicr session s1/);
-assert.doesNotMatch(taskAttached, /PR 272/);
-assert.match(taskAttached, /sessionSlug "s1"/);
-
-// Pre-attach comments are swept, and any final steer ends the flow.
-assert.match(taskKnown, /existed before the watcher attached/);
-assert.match(taskKnown, /tuicr review comments --session <slug> --repo <repo>/);
-assert.match(taskKnown, /no pi-agent reply/);
-assert.match(taskKnown, /watcher stopped early/);
+assert.throws(() => buildReviewSubagentTask({ repo: "", slug: null, target: { type: "working-tree" } }), /repo is required/);
 
 const reviewLaunch = formatReviewLaunchResult({
-	repo: "/repo", slug: "s1", attached: false, subagent: "tuicr-review",
+	repo: "/repo", target: { type: "pr", pr: 272 }, slug: null, subagent: "tuicr-review-pr-272",
 });
-assert.match(reviewLaunch, /session s1 is active/);
-assert.match(reviewLaunch, /"tuicr-review" subagent now watches/);
+assert.match(reviewLaunch, /Spawned the "tuicr-review-pr-272" subagent for PR 272 in \/repo/);
+assert.match(reviewLaunch, /opens the tuicr pane inside its own tab/);
+assert.match(reviewLaunch, /does not carry the session slug/);
 assert.match(reviewLaunch, /merge or review later/);
 const reviewAttach = formatReviewLaunchResult({
-	repo: "/repo", slug: "s1", attached: true, subagent: "tuicr-review",
+	repo: "/repo", target: { type: "pr", pr: 272 }, slug: "gh:o/r/pr/272", subagent: "tuicr-review-pr-272",
 });
-assert.match(reviewAttach, /Attached to the active tuicr review session/);
+assert.match(reviewAttach, /attaches to the active session gh:o\/r\/pr\/272/);
 assert.deepEqual(buildWrapperArgs({ repo: "/repo", tuicrArgs: ["-w"] }), [
 	"/repo",
 	"--",
@@ -316,7 +342,11 @@ assert.deepEqual(buildReplyArgs({ repo: "/r", slug: "s", file: "src/main.rs", me
 for (const [sessions, expected] of [
 	[[], /No active tuicr session/],
 	[[{ slug: "stale", active: false }], /No active tuicr session/],
-	[[{ slug: "a", active: true }, { slug: "b", active: true }], /Multiple active tuicr sessions/],
+	// The ambiguity error lists the active slugs so the caller can pick one.
+	[
+		[{ slug: "a", active: true }, { slug: "b", active: true }],
+		/Multiple active tuicr sessions under \/cwd:\n  a\n  b\nPass sessionSlug to choose one\./,
+	],
 ]) {
 	const cli = fakeCli({ sessions });
 	const result = await postTuicrReply(reply, { cwd: "/cwd", execFile: cli.execFile });
@@ -385,45 +415,221 @@ assert.deepEqual(newComments(new Set(), [ownUnattributed, userFlow], new Set(["a
 // both exclusion layers compose with the seen baseline
 assert.deepEqual(newComments(collectSeenKeys([userFlow]), [ownAuthored, ownUnattributed, userFlow], new Set(["a2"])), []);
 
-// ── resolveTargetSession (#289: explicit target, never any-active) ──
+// ── target classification (#289) ──
+
+assert.equal(classifyReviewRequest({}), "default");
+assert.equal(classifyReviewRequest({ scope: undefined }), "default");
+assert.equal(classifyReviewRequest({ sessionSlug: "s1" }), "session");
+assert.equal(classifyReviewRequest({ scope: "pr", pr: 287 }), "pr");
+assert.equal(classifyReviewRequest({ scope: "revset", revset: "main..@-" }), "revset");
+assert.equal(classifyReviewRequest({ scope: "working-tree" }), "working-tree");
+assert.throws(() => classifyReviewRequest({ scope: "staged" }), /Unknown scope/);
+
+// ── PR slug suffix parsing (#289: no prefix confusion) ──
+
+assert.equal(prSessionNumber("gh:owner/repo/pr/287"), 287);
+assert.equal(prSessionNumber("gh:owner/repo/pr/28"), 28); // no prefix confusion with 287
+assert.equal(prSessionNumber("gh:owner/repo/pr/287/extra"), null);
+assert.equal(prSessionNumber("slug@x/commits/1..1"), null);
+assert.equal(prSessionNumber(null), null);
+assert.deepEqual(
+	activeSlugs([
+		{ slug: "a", active: true },
+		{ slug: "b", active: false },
+		{ slug: "c", active: true },
+	]),
+	["a", "c"],
+);
+
+// ── resolveTargetSession (#289): the requested target is always honored ──
+// Consolidated API: ours (name + status shape) carrying main's decision
+// matrix — attach / launch / error, never any-active attach.
 
 const s288 = { slug: "gh:owner/repo/pr/288", active: true, kind: "pr" };
 const s287 = { slug: "gh:owner/repo/pr/287", active: true, kind: "pr" };
-const localSession = { slug: "wt@x/working", active: true, kind: "local" };
-const revsetSession = { slug: "rev@x/commits/main..@", active: true, kind: "local" };
+const repo = "/repo";
 
-// explicit slug resolves to that slug or reports it missing
-assert.equal(resolveTargetSession([s288], { sessionSlug: "gh:owner/repo/pr/288" }).status, "ok");
-assert.deepEqual(resolveTargetSession([s288], { sessionSlug: "zz" }), { status: "missing", slug: "zz" });
-// explicit slug outranks a disagreeing scope
-assert.equal(
-	resolveTargetSession([s288], { sessionSlug: "gh:owner/repo/pr/288", scope: "pr", pr: 287 }).session.slug,
-	"gh:owner/repo/pr/288",
+// THE INCIDENT: an explicit PR never attaches to an unrelated active
+// session — no match launches a pane for the requested PR instead.
+assert.deepEqual(
+	resolveTargetSession({ scope: "pr", pr: 287 }, { repo, sessions: [s288] }),
+	{ status: "launch", target: { type: "pr", pr: 287 } },
 );
-// a pr target matches its own session even with another active session (#289)
-const prPick = resolveTargetSession([s287, s288], { scope: "pr", pr: 287 });
-assert.equal(prPick.status, "ok");
-assert.equal(prPick.session.slug, "gh:owner/repo/pr/287");
-// a pr target miss with others active reports missing — never any-active
-const prMiss = resolveTargetSession([s288], { scope: "pr", pr: 287 });
-assert.equal(prMiss.status, "missing");
-assert.equal(prMiss.target, "PR 287");
-assert.deepEqual(prMiss.sessions, [s288]);
-// nothing active at all → none, so the caller may launch a fresh pane
-assert.equal(resolveTargetSession([{ slug: "gh:owner/repo/pr/288", active: false }], { scope: "pr", pr: 287 }).status, "none");
-assert.equal(resolveTargetSession([], { scope: "pr", pr: 287 }).status, "none");
-// the pr number must match exactly, not as a prefix
-assert.equal(resolveTargetSession([{ slug: "gh:owner/repo/pr/2873", active: true }], { scope: "pr", pr: 287 }).status, "missing");
-// local sessions never satisfy a pr target
-assert.equal(resolveTargetSession([localSession], { scope: "pr", pr: 287 }).status, "missing");
-// revset targets match a session naming that commit range
-assert.equal(resolveTargetSession([revsetSession], { scope: "revset", revset: "main..@" }).status, "ok");
-assert.equal(resolveTargetSession([revsetSession], { scope: "revset", revset: "other..range" }).status, "missing");
-assert.equal(resolveTargetSession([], { scope: "revset", revset: "main..@" }).status, "none");
-// no explicit target keeps the single-active attach convenience
-assert.equal(resolveTargetSession([localSession], {}).status, "ok");
-assert.equal(resolveTargetSession([localSession, s288], {}).status, "ambiguous");
-assert.equal(resolveTargetSession([{ slug: "x", active: false }], {}).status, "none");
+// An explicit working-tree review launches even while a session is active.
+assert.deepEqual(
+	resolveTargetSession({ scope: "working-tree" }, { repo, sessions: [s288] }),
+	{ status: "launch", target: { type: "working-tree" } },
+);
+// A matching PR session is attached to.
+assert.deepEqual(
+	resolveTargetSession({ scope: "pr", pr: 288 }, { repo, sessions: [s288] }),
+	{ status: "ok", session: s288, target: { type: "pr", pr: 288 } },
+);
+// An explicit revset always launches a new pane — never a suffix attach.
+assert.deepEqual(
+	resolveTargetSession({ scope: "revset", revset: "main..@-" }, { repo, sessions: [s288] }),
+	{ status: "launch", target: { type: "revset", revset: "main..@-" } },
+);
+// An explicit slug attaches to exactly that session — active or not — and
+// keys the review by its PR when the slug encodes one.
+assert.deepEqual(
+	resolveTargetSession({ sessionSlug: "s1" }, { repo, sessions: [{ slug: "s1", active: false }] }),
+	{ status: "ok", session: { slug: "s1", active: false }, target: { type: "slug", slug: "s1" } },
+);
+assert.deepEqual(
+	resolveTargetSession({ sessionSlug: "gh:o/r/pr/288" }, { repo, sessions: [s288] }),
+	{ status: "ok", session: s288, target: { type: "pr", pr: 288 } },
+);
+assert.match(
+	resolveTargetSession({ sessionSlug: "zz" }, { repo, sessions: [s288] }).message,
+	/No tuicr session named zz under \/repo.*tuicr review list --repo \/repo/s,
+);
+// Two active sessions for the same PR cannot be told apart.
+assert.equal(
+	resolveTargetSession({ scope: "pr", pr: 288 }, {
+		repo,
+		sessions: [s288, { slug: "gh:o2/r2/pr/288", active: true }],
+	}).status,
+	"error",
+);
+assert.match(
+	resolveTargetSession({ scope: "pr", pr: 288 }, {
+		repo,
+		sessions: [s288, { slug: "gh:o2/r2/pr/288", active: true }],
+	}).message,
+	/Multiple active tuicr sessions for PR 288[\s\S]*gh:o2\/r2\/pr\/288[\s\S]*sessionSlug/,
+);
+
+// Bare default rules (injected git/gh results).
+// Exactly one open PR → that PR, match-or-launch.
+assert.deepEqual(
+	resolveTargetSession({}, {
+		repo, sessions: [s288], currentBranch: "fix/a", openPrs: [{ number: 288, title: "t" }],
+	}),
+	{ status: "ok", session: s288, target: { type: "pr", pr: 288 } },
+);
+assert.deepEqual(
+	resolveTargetSession({}, {
+		repo, sessions: [], currentBranch: "fix/a", openPrs: [{ number: 287, title: "t" }],
+	}),
+	{ status: "launch", target: { type: "pr", pr: 287 } },
+);
+// Zero open PRs → working-tree review, never the unrelated active session.
+assert.deepEqual(
+	resolveTargetSession({}, { repo, sessions: [s288], currentBranch: "main", openPrs: [] }),
+	{ status: "launch", target: { type: "working-tree" } },
+);
+// Detached HEAD (no branch) → working-tree review.
+assert.deepEqual(
+	resolveTargetSession({}, { repo, sessions: [], currentBranch: "", openPrs: [] }),
+	{ status: "launch", target: { type: "working-tree" } },
+);
+// Several open PRs → error listing them, asking for pr explicitly.
+const several = resolveTargetSession({}, {
+	repo,
+	sessions: [],
+	currentBranch: "fix/a",
+	openPrs: [
+		{ number: 287, title: "chore: remove historical docs" },
+		{ number: 288, title: "fix(agents): /simple" },
+	],
+});
+assert.equal(several.status, "error");
+assert.match(several.message, /Several open PRs for branch fix\/a under \/repo/);
+assert.match(several.message, /#287 chore: remove historical docs/);
+assert.match(several.message, /#288 fix\(agents\): \/simple/);
+assert.match(several.message, /Pass pr explicitly/);
+
+// Invalid combos throw before any decision.
+assert.throws(() => resolveTargetSession({ scope: "pr" }, { repo }), /pr is required/);
+assert.throws(() => resolveTargetSession({ scope: "revset" }, { repo }), /revset is required/);
+assert.throws(() => resolveTargetSession({ scope: "staged" }, { repo }), /Unknown scope/);
+
+// ── keys and deterministic subagent names (one reviewer per target) ──
+
+assert.equal(reviewTargetKey({ type: "pr", pr: 287 }, repo), "pr:287");
+assert.equal(reviewTargetKey({ type: "revset", revset: "main..@-" }, repo), "rev:main..@-");
+assert.equal(reviewTargetKey({ type: "working-tree" }, "/home/u/dotfiles"), "wt:/home/u/dotfiles");
+assert.equal(reviewTargetKey({ type: "slug", slug: "s1" }, repo), "slug:s1");
+assert.equal(reviewerSubagentName({ type: "pr", pr: 287 }, repo), "tuicr-review-pr-287");
+// Non-alphanumeric runs collapse to a single dash (lossy but deterministic;
+// collisions are uniquified upstream by interactive-subagents).
+assert.equal(reviewerSubagentName({ type: "revset", revset: "main..@-" }, repo), "tuicr-review-rev-main");
+assert.equal(reviewerSubagentName({ type: "revset", revset: "main..HEAD" }, repo), "tuicr-review-rev-main-HEAD");
+assert.equal(reviewerSubagentName({ type: "working-tree" }, "/home/u/dotfiles"), "tuicr-review-wt-dotfiles");
+assert.equal(
+	reviewerSubagentName({ type: "slug", slug: "gh:o/r/pr/288" }, repo),
+	"tuicr-review-slug-gh-o-r-pr-288",
+);
+// Same target → same key (duplicate refused); different targets → different
+// keys (concurrent reviewers).
+assert.equal(
+	reviewTargetKey({ type: "pr", pr: 287 }, repo),
+	reviewTargetKey({ type: "pr", pr: 287 }, "/other"),
+);
+assert.notEqual(
+	reviewTargetKey({ type: "pr", pr: 287 }, repo),
+	reviewTargetKey({ type: "pr", pr: 288 }, repo),
+);
+assert.notEqual(
+	reviewTargetKey({ type: "pr", pr: 287 }, repo),
+	reviewTargetKey({ type: "working-tree" }, repo),
+);
+assert.equal(describeReviewTarget({ type: "pr", pr: 287 }), "PR 287");
+assert.equal(describeReviewTarget({ type: "revset", revset: "main..@-" }), "commit range main..@-");
+assert.equal(describeReviewTarget({ type: "working-tree" }), "the working tree");
+assert.equal(describeReviewTarget({ type: "slug", slug: "s1" }), "session s1");
+assert.deepEqual(targetToScopeArgs({ type: "pr", pr: 287 }), ["pr", "287"]);
+assert.deepEqual(targetToScopeArgs({ type: "revset", revset: "main..@-" }), ["-r", "main..@-"]);
+assert.deepEqual(targetToScopeArgs({ type: "working-tree" }), ["-w"]);
+assert.throws(() => targetToScopeArgs({ type: "staged" }), /Unknown review target type/);
+
+// ── watcher ambiguity resolution by target (#289) ──
+
+// A PR target resolves by slug suffix even with several sessions active.
+assert.deepEqual(
+	resolveLaunchedSession({
+		sessions: [s288, s287],
+		baselineSlugs: [],
+		pr: 287,
+	}),
+	{ status: "ok", session: s287 },
+);
+// No matching PR session yet → wait (the pane may still be launching).
+assert.equal(
+	resolveLaunchedSession({ sessions: [s288], baselineSlugs: [], pr: 287 }).status,
+	"wait",
+);
+// Several matching PR sessions → ambiguous.
+assert.equal(
+	resolveLaunchedSession({
+		sessions: [{ slug: "gh:a/r/pr/288", active: true }, { slug: "gh:b/r/pr/288", active: true }],
+		pr: 288,
+	}).status,
+	"ambiguous",
+);
+// A non-PR launch owns the session that appeared after it, not one that was
+// already active.
+assert.deepEqual(
+	resolveLaunchedSession({
+		sessions: [s288, { slug: "new@x/commits/1..1", active: true }],
+		baselineSlugs: ["gh:owner/repo/pr/288"],
+	}),
+	{ status: "ok", session: { slug: "new@x/commits/1..1", active: true } },
+);
+// Nothing new yet → wait.
+assert.equal(
+	resolveLaunchedSession({ sessions: [s288], baselineSlugs: ["gh:owner/repo/pr/288"] }).status,
+	"wait",
+);
+// Several new sessions → ambiguous.
+assert.equal(
+	resolveLaunchedSession({
+		sessions: [{ slug: "n1", active: true }, { slug: "n2", active: true }],
+		baselineSlugs: [],
+	}).status,
+	"ambiguous",
+);
 
 // ── extension behavior: jiti + fake tuicr/git binaries + stubbed peers ──
 // House pattern (mermaid/no-mistakes style): the tuicr/gh/git CLIs never run

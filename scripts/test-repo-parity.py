@@ -410,9 +410,21 @@ STOW_OPT_WITH_ARG = {"-d", "-t", "--dir", "--target"}
 FRONTMATTER_SKIP = ("http://", "https://", "mailto:")
 
 
+# Meta/historical docs that record past drift and deletions. They
+# intentionally mention packages and paths that no longer exist (e.g. the
+# removed hunk suite, 'stow ssh' findings, deleted verifiers), so the P4
+# mention/path checks exempt them. Everything else in docs/ stays checked.
+P4_EXEMPT_DOCS = {
+    "docs/ci-test-surfaces.md": "test-surface plan: records deleted suites and verifiers",
+    "docs/code-enhancements-from-testing.md": "findings tracker: quotes drift findings, incl. 'stow ssh'",
+}
+
 def scoped_docs(tracked: set) -> list:
     core = ["README.md", "CLAUDE.md", "AGENTS.md"]
-    extra = sorted(t for t in tracked if re.match(r"docs/[^/]+\.md$", t))
+    extra = sorted(
+        t for t in tracked
+        if re.match(r"docs/[^/]+\.md$", t) and t not in P4_EXEMPT_DOCS
+    )
     return core + [d for d in extra]
 
 

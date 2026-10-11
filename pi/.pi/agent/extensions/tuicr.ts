@@ -633,12 +633,13 @@ async function startTuicrReview(
 // eslint-disable-next-line @typescript-eslint/no-use-before-define -- execute runs only after the factory sets piRef
 const tuicrBackgroundTool = defineTool({
 	name: "tuicr",
-	label: "Attach the tuicr comment watcher",
+	label: "Launch the tuicr pane and attach the comment watcher",
 	description:
-		"INTERNAL — the comment watcher. Attach this session's tuicr comment watcher to an active review session (or launch the pane detached). Comments then steer into THIS session as tuicr_review_comments messages. The tuicr-review subagent attaches with this tool; a captain opening a review for the user should call tuicr_review instead. With attachOnly, never open a pane — fail while no session is active.",
-	promptSnippet: "Attach the internal tuicr comment watcher to an active review session",
+		"INTERNAL — the comment watcher. Launch the tuicr review pane in THIS session's own tab (splitting this pane) and attach the watcher, or attach to the active session matching the requested target. Comments then steer into THIS session as tuicr_review_comments messages. The tuicr-review subagent uses this tool to open the review pane in its own tab; a captain opening a review for the user should call tuicr_review instead. With attachOnly, never open a pane — fail while no session matches the requested target.",
+	promptSnippet: "Launch the tuicr pane in this session's tab and attach the comment watcher",
 	promptGuidelines: [
-		"Prefer tuicr_review when opening a review for the user; plain tuicr is the internal watcher the tuicr-review subagent attaches with.",
+		"Prefer tuicr_review when opening a review for the user; plain tuicr is the internal watcher (it can also launch the pane in this session's own tab).",
+		"The requested target is always honored: an explicit pr attaches only to that PR's active session (slug ending /pr/<N>) or launches a pane for it — never to an unrelated session. A bare call resolves the current branch's open PR (exactly one → that PR; none → working tree; several → error asking for pr).",
 		"tuicr returns immediately; user review comments arrive later as tuicr_review_comments steer messages.",
 		"Only one watcher runs per session — a second launch replaces the first.",
 		"With attachOnly true, never launch a pane: report the failure so the caller can retry.",
@@ -649,8 +650,9 @@ const tuicrBackgroundTool = defineTool({
 		),
 		scope: Type.Optional(
 			Type.Union([Type.Literal("working-tree"), Type.Literal("revset"), Type.Literal("pr")], {
-				description: "Review scope when launching a pane. Defaults to working-tree.",
-			}),
+				description:
+					"Review target: 'pr', 'revset', or 'working-tree'. Omit to resolve the current branch's open PR (exactly one → that PR; none → working tree; several → error asking for pr).",
+				}),
 		),
 		revset: Type.Optional(
 			Type.String({ description: "Commit range to review (required when scope is 'revset')." }),
@@ -667,7 +669,7 @@ const tuicrBackgroundTool = defineTool({
 		attachOnly: Type.Optional(
 			Type.Boolean({
 				description:
-					"Never launch a pane; fail while no active session exists. Use when the pane is owned elsewhere (tuicr-review subagent).",
+					"Never launch a pane; fail while no session matches the requested target. Strict attach for debugging and resumed reviewers — the tuicr-review subagent normally launches the pane in its own tab.",
 			}),
 		),
 	}),
@@ -694,13 +696,14 @@ const tuicrBackgroundTool = defineTool({
 
 const tuicrReviewTool = defineTool({
 	name: "tuicr_review",
-	label: "Open tuicr with a review subagent",
+	label: "Spawn the tuicr-review subagent for a review target",
 	description:
-		"Open a tuicr code review (working tree, a commit range, or a GitHub PR by number) in a background pane and spawn the tuicr-review subagent. The subagent receives the user's comments, answers each one INSIDE the TUI with tuicr_reply, applies fixes for actionable comments, and when the user closes the TUI its summary of every comment and fix steers back to this session. Then ask the user whether to merge or review later. This is the preferred way to open any code review — never run a tuicr wrapper script through bash.",
-	promptSnippet: "Open tuicr with a review subagent that answers comments and fixes code",
+		"Open a tuicr code review (working tree, a commit range, or a GitHub PR by number) by spawning the tuicr-review subagent. The requested target is always honored — an explicit PR attaches to that PR's session or opens a pane for it, never to an unrelated session. The SUBAGENT opens the tuicr pane inside its own tab, receives the user's comments, answers each one INSIDE the TUI with tuicr_reply, applies fixes for actionable comments, and when the user closes the TUI its summary of every comment and fix steers back to this session. A bare call with no target reviews the current branch's open PR (exactly one) or the working tree. Then ask the user whether to merge or review later. This is the preferred way to open any code review — never run a tuicr wrapper script through bash.",
+	promptSnippet: "Spawn the tuicr-review subagent; it opens the pane in its own tab and answers comments",
 	promptGuidelines: [
 		"Use tuicr_review as the default way to open a code review — working tree, revset, or PR number.",
-		"One review per repo: while a tuicr-review subagent runs for that repo, a second tuicr_review for it is refused — tell the user to keep commenting in the open TUI or wait for its summary.",
+		"One reviewer per review target: a second tuicr_review for the SAME target is refused — tell the user to keep commenting in the open TUI or wait for its summary. Different targets (another PR or range) run concurrently, each in its own tab with its own pane.",
+		"With no scope/pr, the current branch's open PR is reviewed when exactly one is open; several open PRs error asking for pr explicitly.",
 		"While the tuicr-review subagent runs, do not reply to review comments yourself; the subagent owns the TUI conversation.",
 		"When the tuicr-review subagent result arrives, give the user its summary and ask via ask_user_question whether to merge the branch or review later.",
 	],
@@ -710,7 +713,8 @@ const tuicrReviewTool = defineTool({
 		),
 		scope: Type.Optional(
 			Type.Union([Type.Literal("working-tree"), Type.Literal("revset"), Type.Literal("pr")], {
-				description: "Review scope. Defaults to working-tree.",
+				description:
+				"Review target: 'pr', 'revset', or 'working-tree'. Omit to resolve the current branch's open PR (exactly one → that PR; none → working tree; several → error asking for pr).",
 			}),
 		),
 		revset: Type.Optional(
@@ -796,6 +800,7 @@ export default function tuicrBackground(pi: ExtensionAPI) {
 	pi.registerCommand("tuicr", {
 		description:
 			"Open a tuicr review with the tuicr-review subagent: /tuicr [open] [pr <N> | -r <revset> | -w] [repo]. " +
+			"A bare /tuicr reviews the current branch's open PR (or the working tree when none is open). " +
 			"'watch' runs the internal chat-watcher instead; 'stop' stops it.",
 		handler: async (args, ctx) => {
 			latestUi = ctx.ui;

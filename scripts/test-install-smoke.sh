@@ -48,7 +48,7 @@ declare -A SENTINEL=(
   [zsh]=".zshenv" [tmux]=".tmux.conf" [nvim]=".config/nvim"
   [starship]=".config/starship.toml" [ghostty]=".config/ghostty"
   [aerospace]=".aerospace.toml" [gh-dash]=".config/gh-dash"
-  [tuicr]=".config/tuicr" [hunk]=".config/hunk/config.toml"
+  [tuicr]=".config/tuicr"
   [agents]=".agents" [pi]="bin" [herdr]=".config/herdr"
   [omarchy]=".config/omarchy" [systemd]=".config/systemd"
   [git]=".config/git"

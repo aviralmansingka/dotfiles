@@ -1157,8 +1157,6 @@ branch_sync:
     ["mcp send result", mcpSend.renderResult(result("receipt"), { ...options, expanded: true }, theme, context("sw-send", { message: "Hello\nGoodbye" }, quiet))],
     ["subagent chip", subagent.renderResult(mixed, { ...options, expanded: true }, theme, context("sw-sub", { name: "scout" }))],
     ["message result", message.renderResult(steerResult, { ...options, expanded: true }, theme, context("sw-msg", messageArgs, quiet))],
-    ["hunk comment call", hunk.renderCall(commentArgs, theme, context("sw-hunk", commentArgs, quiet))],
-    ["hunk review result", hunk.renderResult(reviewResult, { ...options, expanded: true }, theme, context("sw-review", reviewArgs, quiet))],
     ["ask result", ask.renderResult(result("", askDetails), { ...options, expanded: true }, theme, context("sw-ask", askArgs, quiet))],
     ["quiz result", quiz.renderResult(result("", quizDetails), { ...options, expanded: true }, theme, context("sw-quiz", quizArgs, quiet))],
     ["explain result", explain.renderResult(result("", explainDetails), { ...options, expanded: true }, theme, context("sw-explain", explainArgs, quiet))],
