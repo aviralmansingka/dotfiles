@@ -242,6 +242,30 @@ try {
 	else process.env.PI_MERMAID_MMDFLUX = savedKillerFlux;
 }
 
+// Progress updates must be partial AgentToolResult objects (SDK contract:
+// AgentToolUpdateCallback, pi-agent-core types.d.ts:407). The interactive
+// TUI's ToolExecutionComponent.updateDisplay dereferences partial.content as
+// an array on every update, so a raw string payload crashes the whole session
+// with an uncaught TypeError. Consume each update the way the TUI does.
+const tuiSeen = [];
+const tuiOnUpdate = (partial) => {
+	// ToolExecutionComponent.updateDisplay behavior: partial.content.filter(...)
+	tuiSeen.push(partial.content.filter((c) => c.type === "text").map((c) => c.text).join(" "));
+};
+const savedTuiFlux = process.env.PI_MERMAID_MMDFLUX;
+process.env.PI_MERMAID_MMDFLUX = killerBin; // deterministic env failure after both updates fire
+try {
+	const tuiCtx = fakeCtx(["```mermaid\nflowchart TD\n  R[Root] --> Z[Goal]\n```"]);
+	await tool.execute("id-7", { spec: "a diagram" }, undefined, tuiOnUpdate, tuiCtx);
+	assert.equal(tuiCtx.callCount(), 1, "the environment failure ends the run after one nested call");
+	assert.equal(tuiSeen.length, 2, "both progress updates fire: writing, then validating");
+	assert.match(tuiSeen[0], /writing diagram/, `first update reports the writing step: ${tuiSeen[0]}`);
+	assert.match(tuiSeen[1], /validating with mmdflux/, `second update reports the validation step: ${tuiSeen[1]}`);
+} finally {
+	if (savedTuiFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedTuiFlux;
+}
+
 // ── renderResult ─────────────────────────────────────────────────────────────
 
 const theme = { fg: (_name, s) => s };

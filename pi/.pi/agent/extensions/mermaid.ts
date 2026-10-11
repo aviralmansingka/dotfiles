@@ -254,7 +254,7 @@ export default function (pi: ExtensionAPI) {
 			for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 				if (signal?.aborted) break;
 				attemptsMade = attempt;
-				onUpdate?.(`attempt ${attempt}/${maxAttempts}: writing diagram with ${model.id ?? "model"}`);
+				onUpdate?.({ content: textContent(`attempt ${attempt}/${maxAttempts}: writing diagram with ${model.id ?? "model"}`) });
 				let response: any;
 				try {
 					response = await ctx.modelRegistry.complete(
@@ -286,7 +286,7 @@ export default function (pi: ExtensionAPI) {
 				}
 				lastSource = source;
 
-				onUpdate?.(`attempt ${attempt}/${maxAttempts}: validating with mmdflux`);
+				onUpdate?.({ content: textContent(`attempt ${attempt}/${maxAttempts}: validating with mmdflux`) });
 				let verdict: Awaited<ReturnType<typeof runMmdflux>>;
 				try {
 					verdict = await runMmdflux(source, signal);
