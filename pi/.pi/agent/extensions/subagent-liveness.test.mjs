@@ -30,18 +30,11 @@ import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 
-// Allow CI / other hosts to supply jiti via JITI_PATH; otherwise fall back to
-// the same installs the sibling suites use.
-const jitiCandidates = [
-	process.env.JITI_PATH,
-	"/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/jiti/lib/jiti.cjs",
-	"/home/avirus/.pi/agent/install/releases/1.1.0/node_modules/jiti/lib/jiti.cjs",
-].filter(Boolean);
-const jitiPath = jitiCandidates.find((p) => p && existsSync(p));
-if (!jitiPath) {
-	console.error("jiti not found. Set JITI_PATH to jiti.cjs for your pi install.");
-	process.exit(1);
-}
+// Shared jiti resolution (test-lib): the validated JITI_PATH / NODE_PATH
+// contract, this file's historical macOS homebrew fallback, and pi's managed
+// install (which covers the old hardcoded 1.1.0 release path).
+const { HOMEBREW_JITI, resolveJiti } = await import("./test-lib/jiti.mjs");
+const { jitiPath } = resolveJiti({ extraFallbacks: [HOMEBREW_JITI] });
 const { createJiti } = require(jitiPath);
 const jiti = createJiti(import.meta.url);
 const freshJiti = () => createJiti(import.meta.url, { moduleCache: false });
@@ -527,6 +520,17 @@ esac
 	mkdirSync(configDir, { recursive: true });
 	mkdirSync(stubDir, { recursive: true });
 	const parentSessionFile = join(sessionDir, "parent.jsonl");
+	// The worker profile's extension tools (web_search, web_fetch, mermaid,
+	// tuicr, tuicr_reply) must be discoverable in the child's agent dir —
+	// the subagent tool's spawn gate refuses a profile naming tools no
+	// source provides (C30).
+	for (const dir of ["web-search", "web-fetch"]) {
+		mkdirSync(join(configDir, "extensions", dir), { recursive: true });
+		writeFileSync(join(configDir, "extensions", dir, "index.ts"), "export {};\n");
+	}
+	for (const file of ["mermaid.ts", "tuicr.ts"]) {
+		writeFileSync(join(configDir, "extensions", file), "export {};\n");
+	}
 	writeFileSync(
 		parentSessionFile,
 		JSON.stringify({ type: "session", version: 3, id: "parent-id", cwd: root, timestamp: new Date().toISOString() }) + "\n",

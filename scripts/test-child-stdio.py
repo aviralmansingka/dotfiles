@@ -63,33 +63,11 @@ REGION_CAP = 4000  # chars; guards runaway scans on unbalanced text
 #     argument region contains the needle (content-anchored, survives line
 #     drift). An entry that suppresses nothing is a stale-entry failure.
 INTENTIONAL_INHERIT = {
-    # Liveness-owned (agent `subagent-liveness` in flight): findings were
-    # audited read-only and reported to that owner. Remove these entries
-    # when the owner's stdio pass lands; the lint then enforces the files.
-    "pi/.pi/agent/extensions/interactive-subagents/pi-extension/subagents/herdr.ts": [
-        {
-            "allow_all": True,
-            "reason": (
-                "liveness-owned by agent subagent-liveness; read-only audit "
-                "found 10 unguarded execFileSync sites (pane get/create/run, "
-                "agent prompt, pane read, pane/tab close) — the #291 "
-                "splatter class. Findings reported to the owner; delete this "
-                "entry after the stdio pass lands."
-            ),
-        },
-    ],
-    "pi/.pi/agent/extensions/interactive-subagents/pi-extension/subagents/tmux.ts": [
-        {
-            "allow_all": True,
-            "reason": (
-                "liveness-owned by agent subagent-liveness; read-only audit "
-                "found 9 unguarded execFileSync sites (select-layout, "
-                "display/kill pane, send-keys, split, kill-window) — the "
-                "#291 splatter class. Findings reported to the owner; delete "
-                "this entry after the stdio pass lands."
-            ),
-        },
-    ],
+    # (herdr.ts and tmux.ts previously sat here as allow_all while their
+    # stdio pass was in flight; the pass landed — every captured
+    # execFileSync in both files now carries stdio: ["pipe", "pipe",
+    # "pipe"] — so the entries were deleted and the lint enforces the
+    # files.)
     # Injectable seam wrapper: the call shape has no stdio of its own —
     # every caller passes one (audited: 6 sites, all explicit).
     "pi/.pi/agent/extensions/nvim-open.ts": [

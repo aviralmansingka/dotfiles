@@ -75,7 +75,15 @@ case "$1:$2" in
 			printf '%s\\n' '{"result":{"pane":{"pane_id":"w44:p2","workspace_id":"w44"}}}'
 		fi
 		;;
-	tab:create) printf '%s\\n' '{"result":{"root_pane":{"pane_id":"w44:p9"}}}' ;;
+	tab:create)
+		if [ "$HERDR_TEST_TAB_NO_PANE" = 1 ]; then
+			printf '%s\\n' '{"result":{"tab":{"tab_id":"w44:t9"}}}'
+		elif [ "$HERDR_TEST_TAB_NO_PANE" = 2 ]; then
+			printf '%s\\n' '{}'
+		else
+			printf '%s\\n' '{"result":{"root_pane":{"pane_id":"w44:p9"}}}'
+		fi
+		;;
 	pane:run) [ "$HERDR_TEST_FAIL_SEND" = 1 ] && exit 1; printf '%s\\n' '{"result":{}}' ;;
 	pane:split) printf '%s\\n' '{"result":{"pane":{"pane_id":"w44:p10"}}}' ;;
 	pane:read)
@@ -295,8 +303,39 @@ try {
 		"no tab create may follow a failed workspace lookup",
 	);
 
+	// C31: a `tab create` answer without a pane id leaves the caller no close
+	// target (withNewSurface closes by pane id). The recovery closes the tab
+	// the response DOES name, so no empty tab leaks, and the malformed
+	// response still fails loudly.
+	const paneLessOffset = paneGetFailOffset + 1;
+	process.env.HERDR_TEST_TAB_NO_PANE = "1";
+	assert.throws(() => herdr.createSurface("pane-less"), /Unexpected Herdr surface creation output/);
+	delete process.env.HERDR_TEST_TAB_NO_PANE;
+	assert.deepEqual(callsAfter(paneLessOffset), [
+		["pane", "get", "w44:p2"],
+		[
+			"tab", "create", "--workspace", "w44", "--cwd", process.cwd(),
+			"--label", "subagent: pane-less", "--no-focus",
+		],
+		["tab", "close", "w44:t9"],
+	], "the pane-less tab-create answer closes the tab it named — no leak");
+
+	// A response carrying NEITHER a pane id nor a tab id still fails loudly;
+	// there is simply nothing to close.
+	const noIdsOffset = paneLessOffset + 3;
+	process.env.HERDR_TEST_TAB_NO_PANE = "2";
+	assert.throws(() => herdr.createSurface("no-ids"), /Unexpected Herdr surface creation output/);
+	delete process.env.HERDR_TEST_TAB_NO_PANE;
+	assert.deepEqual(callsAfter(noIdsOffset), [
+		["pane", "get", "w44:p2"],
+		[
+			"tab", "create", "--workspace", "w44", "--cwd", process.cwd(),
+			"--label", "subagent: no-ids", "--no-focus",
+		],
+	], "an id-less response closes nothing and still throws");
+
 	// A successful launch keeps its pane open — only failures close it.
-	const successOffset = paneGetFailOffset + 1;
+	const successOffset = noIdsOffset + 2;
 	const kept = await herdrSurface.withNewSurface("good-launch", async (pane) => {
 		herdrSurface.sendCommand(pane, "pi --session good.jsonl");
 		return "kept-open";
@@ -627,8 +666,8 @@ try {
 		assert.equal(defs.thinking, thinking, `${name} keeps its thinking level on the inherited model`);
 	}
 	// With no model pin, the standalone --thinking behavior is asserted for
-	// real in the applySandboxToParts behavior block below (eval'd from source
-	// with injected deps — index.ts cannot be jiti-loaded whole).
+	// real through the whole-load __test__ hooks in the applySandboxToParts
+	// section of the index.ts whole-load block below.
 }
 
 // --- No Mistakes compact status follows the shared activity-widget contract ---
@@ -660,191 +699,12 @@ assert.deepEqual(noMistakesFindingLines(pipelineActivity), [
 	"❌ src/c.ts: Fourth explicit finding",
 ]);
 
-// --- List rendering groups definitions by override precedence without losing defaults ---
-// Isolate the registration so this check needs only jiti, not the installed Pi UI.
-const indexSource = readFileSync(new URL("./interactive-subagents/pi-extension/subagents/index.ts", import.meta.url), "utf8");
-const listRegistration = indexSource.split("// ── subagents_list tool ──")[1].split("// ── subagent_message tool ──")[0];
-const listTool = jiti.evalModule(`
-	const pi = { registerTool: (tool) => { module.exports = tool; } };
-	const Type = { Object: (value) => value };
-	class Text { constructor(text) { this.text = text; } render() { return this.text.split("\\n"); } }
-	${listRegistration}
-`, { filename: join(tmpdir(), "subagents-list-render-test.ts") });
-const theme = {
-	fg: (token, text) => `<${token}>${text}</${token}>`,
-	bold: (text) => `<bold>${text}</bold>`,
-};
-const renderList = (agents) => listTool.renderResult({ details: { agents } }, {}, theme).render(1000).join("\n").trimEnd();
-const definitions = [
-	{ name: "bundled", source: "package" },
-	{ name: "shared", source: "global", model: "test-model" },
-	{ name: "local", source: "project", model: "local-model", description: "Local helper" },
-	{ name: "plain", source: "global", description: "Shared helper" },
-];
-assert.equal(renderList(definitions), [
-	"<dim>project</dim>",
-	" • <toolTitle><bold>local</bold></toolTitle><accent> (project)</accent><dim> [local-model]</dim><dim> — Local helper</dim>",
-	"<dim>global</dim>",
-	" • <toolTitle><bold>shared</bold></toolTitle><dim> [test-model]</dim>",
-	" • <toolTitle><bold>plain</bold></toolTitle><dim> — Shared helper</dim>",
-	"<dim>package</dim>",
-	" • <toolTitle><bold>bundled</bold></toolTitle>",
-].join("\n"));
-for (const source of ["project", "global", "package"]) {
-	const rendered = renderList(definitions.filter((agent) => agent.source === source));
-	assert.equal(rendered.split("\n")[0], `<dim>${source}</dim>`);
-	assert.equal((rendered.match(/^<dim>/gm) ?? []).length, 1, "omit empty groups");
-}
-assert.equal(renderList([]), "<dim>No subagent definitions found.</dim>");
-assert.equal(renderList(undefined), "<dim>No subagent definitions found.</dim>");
-
-// --- Baseline tool renderer for every spawned subagent ---
-// index.ts cannot be jiti-loaded whole (it imports the pi package), so the
-// helper is eval'd from source with the real surface's shellEscape injected.
-const baselineSource = indexSource
-	.split("// ── baseline subagent renderer ──")[1]
-	.split("/**\n * Apply a loadout snapshot's sandbox")[0];
-globalThis.__baselineDeps = { shellEscape: surface.shellEscape, resolve, existsSync };
-const baselineSubagentExtensionArgs = jiti.evalModule(
-	`
-	const { shellEscape, resolve, existsSync } = globalThis.__baselineDeps;
-	${baselineSource}
-	module.exports = baselineSubagentExtensionArgs;
-`,
-	{ filename: join(tmpdir(), "subagent-baseline-renderer-test.ts") },
-);
-delete globalThis.__baselineDeps;
-
-// Missing renderer → no baseline args.
-const baselineRoot = mkdtempSync(join(tmpdir(), "subagent-baseline-test-"));
-try {
-	const emptyDir = join(baselineRoot, "agent");
-	mkdirSync(emptyDir, { recursive: true });
-	assert.deepEqual(baselineSubagentExtensionArgs(emptyDir), []);
-
-	// Present renderer → exactly one shell-escaped -e pair.
-	const rendererDir = join(baselineRoot, "agent-with-renderer", "extensions");
-	mkdirSync(rendererDir, { recursive: true });
-	writeFileSync(join(rendererDir, "tool-call-renderer-public.ts"), "export {};\n");
-	assert.deepEqual(baselineSubagentExtensionArgs(join(baselineRoot, "agent-with-renderer")), [
-		"-e",
-		`'${join(rendererDir, "tool-call-renderer-public.ts")}'`,
-	]);
-
-	// A parent dir with spaces and an apostrophe is correctly quoted.
-	const weirdDir = join(baselineRoot, "par ent's dir", "agent", "extensions");
-	mkdirSync(weirdDir, { recursive: true });
-	writeFileSync(join(weirdDir, "tool-call-renderer-public.ts"), "export {};\n");
-	const [weirdFlag, weirdPath] = baselineSubagentExtensionArgs(join(baselineRoot, "par ent's dir", "agent"));
-	assert.equal(weirdFlag, "-e");
-	assert.equal(
-		weirdPath,
-		`'${join(weirdDir, "tool-call-renderer-public.ts").replace(/'/g, "'\\''")}'`,
-		"spaces stay quoted and the apostrophe is escaped shell-style",
-	);
-
-	// A relative agent dir resolves against the process cwd to an absolute path.
-	const relRoot = join(baselineRoot, "rel-cwd");
-	mkdirSync(join(relRoot, "agent", "extensions"), { recursive: true });
-	writeFileSync(join(relRoot, "agent", "extensions", "tool-call-renderer-public.ts"), "export {};\n");
-	const previousCwd = process.cwd();
-	process.chdir(relRoot);
-	try {
-		const [relFlag, relPath] = baselineSubagentExtensionArgs("agent");
-		assert.equal(relFlag, "-e");
-		assert.ok(relPath.startsWith("'"), "path is shell-quoted");
-		assert.ok(
-			!relPath.startsWith("'agent"),
-			"resolve() made the relative agent dir absolute before quoting",
-		);
-		assert.ok(relPath.includes("tool-call-renderer-public.ts'"));
-	} finally {
-		process.chdir(previousCwd);
-	}
-
-} finally {
-	rmSync(baselineRoot, { recursive: true, force: true });
-}
-
-// --- applySandboxToParts behavior: standalone --thinking on the inherited
-// model, and the baseline renderer's -e pair ordered BEFORE the granted
-// tool's -e pair. Eval'd from index.ts source with injected deps (like the
-// baseline renderer above) because index.ts cannot be jiti-loaded whole.
-{
-	const sandboxRoot = mkdtempSync(join(tmpdir(), "subagent-sandbox-test-"));
-	try {
-		// An agent dir WITH the public renderer, so the baseline -e pair is live.
-		const agentDir = join(sandboxRoot, "agent");
-		mkdirSync(join(agentDir, "extensions"), { recursive: true });
-		const baselineRendererPath = join(agentDir, "extensions", "tool-call-renderer-public.ts");
-		writeFileSync(baselineRendererPath, "export {};\n");
-		// One granted tool whose helper extension is a real temp .ts on disk.
-		const toolExtPath = join(sandboxRoot, "tools", "faketool.ts");
-		mkdirSync(join(sandboxRoot, "tools"), { recursive: true });
-		writeFileSync(toolExtPath, "export {};\n");
-		globalThis.__sandboxDeps = {
-			shellEscape: surface.shellEscape,
-			getAgentConfigDir: () => agentDir,
-			agentIsolationArgs: () => [],
-			getToolExtensionPath: (tool) => (tool === "faketool" ? toolExtPath : undefined),
-			join,
-			resolve,
-			dirname,
-			mkdirSync,
-			writeFileSync,
-			existsSync,
-		};
-		const sandboxBody = indexSource.split("function applySandboxToParts(")[1].split("\nfunction ")[0];
-		const { applySandboxToParts } = jiti.evalModule(
-			`
-			const { shellEscape, getAgentConfigDir, agentIsolationArgs, getToolExtensionPath, join, resolve, dirname, mkdirSync, writeFileSync, existsSync } = globalThis.__sandboxDeps;
-			${baselineSource}
-			function applySandboxToParts(${sandboxBody}
-			module.exports = { applySandboxToParts };
-		`,
-			{ filename: join(tmpdir(), "subagent-sandbox-behavior-test.ts") },
-		);
-		delete globalThis.__sandboxDeps;
-
-		// (a) No model pin: the agent's thinking level rides the inherited
-		// default model as a standalone --thinking pair — no --model flag.
-		const thinkingParts = [];
-		applySandboxToParts(
-			thinkingParts,
-			{ model: null, thinking: "high", toolAllowlist: null },
-			{ artifactDir: join(sandboxRoot, "artifacts"), name: "thinking-test" },
-		);
-		const thinkingIndex = thinkingParts.indexOf("--thinking");
-		assert.ok(thinkingIndex !== -1, "a pinned thinking level yields a standalone --thinking flag");
-		assert.deepEqual(
-			thinkingParts.slice(thinkingIndex, thinkingIndex + 2),
-			["--thinking", "'high'"],
-			"the --thinking pair carries the shell-escaped level",
-		);
-		assert.ok(!thinkingParts.includes("--model"), "no model pin means no --model flag");
-
-		// (b) The baseline renderer's -e pair is pushed BEFORE the granted
-		// tool's helper-extension -e pair, regardless of source layout.
-		const toolParts = [];
-		applySandboxToParts(
-			toolParts,
-			{ model: null, thinking: null, toolAllowlist: "faketool" },
-			{ artifactDir: join(sandboxRoot, "artifacts"), name: "tools-test" },
-		);
-		const baselineIndex = toolParts.indexOf(`'${baselineRendererPath}'`);
-		const grantedIndex = toolParts.indexOf(`'${toolExtPath}'`);
-		assert.ok(baselineIndex !== -1, "the baseline renderer's -e pair is present");
-		assert.ok(grantedIndex !== -1, "the granted tool's helper -e pair is present");
-		assert.ok(
-			baselineIndex < grantedIndex,
-			"the baseline renderer's -e pair precedes the granted tool's -e pair",
-		);
-		assert.ok(toolParts.includes("--tools"), "the allowlist is replayed as --tools");
-	} finally {
-		rmSync(sandboxRoot, { recursive: true, force: true });
-	}
-}
-
+// --- List rendering, baseline renderer, and applySandboxToParts behavior ---
+// These were the last source-string-split eval blocks (C29): index.ts is
+// whole-loadable through __test__ hooks and a registered-tools harness, so
+// the assertions now drive the loaded module's real functions inside the
+// whole-load block below (list renderer via the registered subagents_list
+// tool; baseline + sandbox via __test__ hooks with a fixture agent dir).
 // --- session.ts: seeding, id resolution, result extraction, stats ---
 {
 	const sessionRoot = mkdtempSync(join(tmpdir(), "subagent-session-core-"));
@@ -1066,6 +926,8 @@ assert.equal(
 		TMUX: process.env.TMUX,
 		TMUX_PANE: process.env.TMUX_PANE,
 		PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
+		PI_SUBAGENT_ALLOWED: process.env.PI_SUBAGENT_ALLOWED,
+		PI_SUBAGENT_AGENT: process.env.PI_SUBAGENT_AGENT,
 	};
 	try {
 		process.env.PATH = `${loadBin}:${savedLoadEnv.PATH}`;
@@ -1073,6 +935,8 @@ assert.equal(
 		delete process.env.HERDR_PANE_ID;
 		delete process.env.TMUX;
 		delete process.env.TMUX_PANE;
+		delete process.env.PI_SUBAGENT_ALLOWED;
+		delete process.env.PI_SUBAGENT_AGENT;
 		process.env.PI_CODING_AGENT_DIR = agentConfigDir;
 		const index = createJiti(import.meta.url, {
 			alias: {
@@ -1110,8 +974,11 @@ assert.equal(
 		);
 		assert.equal(hooks.buildPiReadyPrompt({ effectiveSkills: "", task: "Plain." }), "Plain.");
 
-		// HEAD behavior: a tool with no backing extension still lands in --tools
-		// but gets no -e helper pair. No loud failure exists at this commit.
+		// Loadout REPLAY behavior: a recorded allowlist naming a tool with no
+		// backing extension still lands in --tools but gets no -e helper pair
+		// (the resume path replays snapshots exactly). A PROFILE can no longer
+		// produce such an allowlist — the C30 spawn gate below refuses it
+		// loudly before any surface is created.
 		const unknownToolParts = [];
 		hooks.applySandboxToParts(
 			unknownToolParts,
@@ -1138,6 +1005,206 @@ assert.equal(
 			unknownToolParts.includes("-e"),
 			false,
 			"an unknown tool gets no helper extension",
+		);
+
+		// ── list renderer (migrated from the source-split eval, C29): the REAL ──
+		// ── registered subagents_list tool renders the grouped list ──────────
+		const loadTools = [];
+		const loadCommands = new Map();
+		const loadHandlers = new Map();
+		const loadSent = [];
+		const loadNotifications = [];
+		const loadPi = {
+			registerTool: (tool) => loadTools.push(tool),
+			registerCommand: (name, def) => loadCommands.set(name, def),
+			registerMessageRenderer: () => {},
+			sendMessage: (message, options) => loadSent.push({ message, options }),
+			on: (event, handler) => loadHandlers.set(event, handler),
+			events: { on() {}, emit() {} },
+			getAllTools: () => [],
+		};
+		index.default(loadPi);
+		const listTool = loadTools.find((tool) => tool.name === "subagents_list");
+		assert.ok(listTool, "the subagents_list tool is registered");
+		const theme = {
+			fg: (token, text) => `<${token}>${text}</${token}>`,
+			bold: (text) => `<bold>${text}</bold>`,
+		};
+		const renderList = (agents) =>
+			listTool.renderResult({ details: { agents } }, {}, theme).render(1000).join("\n").trimEnd();
+		const definitions = [
+			{ name: "bundled", source: "package" },
+			{ name: "shared", source: "global", model: "test-model" },
+			{ name: "local", source: "project", model: "local-model", description: "Local helper" },
+			{ name: "plain", source: "global", description: "Shared helper" },
+		];
+		assert.equal(renderList(definitions), [
+			"<dim>project</dim>",
+			" • <toolTitle><bold>local</bold></toolTitle><accent> (project)</accent><dim> [local-model]</dim><dim> — Local helper</dim>",
+			"<dim>global</dim>",
+			" • <toolTitle><bold>shared</bold></toolTitle><dim> [test-model]</dim>",
+			" • <toolTitle><bold>plain</bold></toolTitle><dim> — Shared helper</dim>",
+			"<dim>package</dim>",
+			" • <toolTitle><bold>bundled</bold></toolTitle>",
+		].join("\n"));
+		for (const source of ["project", "global", "package"]) {
+			const rendered = renderList(definitions.filter((agent) => agent.source === source));
+			assert.equal(rendered.split("\n")[0], `<dim>${source}</dim>`);
+			assert.equal((rendered.match(/^<dim>/gm) ?? []).length, 1, "omit empty groups");
+		}
+		assert.equal(renderList([]), "<dim>No subagent definitions found.</dim>");
+		assert.equal(renderList(undefined), "<dim>No subagent definitions found.</dim>");
+
+		// ── baseline renderer (migrated from the source-split eval, C29): the ──
+		// ── REAL baselineSubagentExtensionArgs hook ────────────────────────
+		const baselineRoot = join(loadRoot, "baseline");
+		// Missing renderer → no baseline args.
+		const emptyAgentDir = join(baselineRoot, "agent");
+		mkdirSync(emptyAgentDir, { recursive: true });
+		assert.deepEqual(hooks.baselineSubagentExtensionArgs(emptyAgentDir), []);
+		// Present renderer → exactly one shell-escaped -e pair.
+		const rendererDir = join(baselineRoot, "agent-with-renderer", "extensions");
+		mkdirSync(rendererDir, { recursive: true });
+		writeFileSync(join(rendererDir, "tool-call-renderer-public.ts"), "export {};\n");
+		assert.deepEqual(hooks.baselineSubagentExtensionArgs(join(baselineRoot, "agent-with-renderer")), [
+			"-e",
+			`'${join(rendererDir, "tool-call-renderer-public.ts")}'`,
+		]);
+		// A parent dir with spaces and an apostrophe is correctly quoted.
+		const weirdDir = join(baselineRoot, "par ent's dir", "agent", "extensions");
+		mkdirSync(weirdDir, { recursive: true });
+		writeFileSync(join(weirdDir, "tool-call-renderer-public.ts"), "export {};\n");
+		const [weirdFlag, weirdPath] = hooks.baselineSubagentExtensionArgs(join(baselineRoot, "par ent's dir", "agent"));
+		assert.equal(weirdFlag, "-e");
+		assert.equal(
+			weirdPath,
+			`'${join(weirdDir, "tool-call-renderer-public.ts").replace(/'/g, "'\\''")}'`,
+			"spaces stay quoted and the apostrophe is escaped shell-style",
+		);
+		// A relative agent dir resolves against the process cwd to an absolute path.
+		const relRoot = join(baselineRoot, "rel-cwd");
+		mkdirSync(join(relRoot, "agent", "extensions"), { recursive: true });
+		writeFileSync(join(relRoot, "agent", "extensions", "tool-call-renderer-public.ts"), "export {};\n");
+		const previousCwd = process.cwd();
+		process.chdir(relRoot);
+		try {
+			const [relFlag, relPath] = hooks.baselineSubagentExtensionArgs("agent");
+			assert.equal(relFlag, "-e");
+			assert.ok(relPath.startsWith("'"), "path is shell-quoted");
+			assert.ok(
+				!relPath.startsWith("'agent"),
+				"resolve() made the relative agent dir absolute before quoting",
+			);
+			assert.ok(relPath.includes("tool-call-renderer-public.ts'"));
+		} finally {
+			process.chdir(previousCwd);
+		}
+
+		// ── applySandboxToParts behavior (migrated from the source-split eval, ──
+		// ── C29): the REAL hook, with a fixture agent dir behind
+		// ── PI_CODING_AGENT_DIR and a runtime-registered helper extension ────
+		const sandboxRoot = join(loadRoot, "sandbox");
+		const fixtureAgentDir = join(sandboxRoot, "agent");
+		mkdirSync(join(fixtureAgentDir, "extensions"), { recursive: true });
+		const fixtureRendererPath = join(fixtureAgentDir, "extensions", "tool-call-renderer-public.ts");
+		writeFileSync(fixtureRendererPath, "export {};\n");
+		const toolExtPath = join(sandboxRoot, "tools", "faketool.ts");
+		mkdirSync(join(sandboxRoot, "tools"), { recursive: true });
+		writeFileSync(toolExtPath, "export {};\n");
+		index.registerToolExtension("faketool", toolExtPath);
+		const savedAgentDir = process.env.PI_CODING_AGENT_DIR;
+		process.env.PI_CODING_AGENT_DIR = fixtureAgentDir;
+		try {
+			// (a) No model pin: the agent's thinking level rides the inherited
+			// default model as a standalone --thinking pair — no --model flag.
+			const thinkingParts = [];
+			hooks.applySandboxToParts(
+				thinkingParts,
+				{ model: null, thinking: "high", toolAllowlist: null },
+				{ artifactDir: join(sandboxRoot, "artifacts"), name: "thinking-test" },
+			);
+			const thinkingIndex = thinkingParts.indexOf("--thinking");
+			assert.ok(thinkingIndex !== -1, "a pinned thinking level yields a standalone --thinking flag");
+			assert.deepEqual(
+				thinkingParts.slice(thinkingIndex, thinkingIndex + 2),
+				["--thinking", "'high'"],
+				"the --thinking pair carries the shell-escaped level",
+			);
+			assert.ok(!thinkingParts.includes("--model"), "no model pin means no --model flag");
+
+			// (b) The baseline renderer's -e pair is pushed BEFORE the granted
+			// tool's helper-extension -e pair, regardless of source layout.
+			const toolParts = [];
+			hooks.applySandboxToParts(
+				toolParts,
+				{ model: null, thinking: null, toolAllowlist: "faketool" },
+				{ artifactDir: join(sandboxRoot, "artifacts"), name: "tools-test" },
+			);
+			const baselineIndex = toolParts.indexOf(`'${fixtureRendererPath}'`);
+			const grantedIndex = toolParts.indexOf(`'${toolExtPath}'`);
+			assert.ok(baselineIndex !== -1, "the baseline renderer's -e pair is present");
+			assert.ok(grantedIndex !== -1, "the granted tool's helper -e pair is present");
+			assert.ok(
+				baselineIndex < grantedIndex,
+				"the baseline renderer's -e pair precedes the granted tool's -e pair",
+			);
+			assert.ok(toolParts.includes("--tools"), "the allowlist is replayed as --tools");
+		} finally {
+			if (savedAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+			else process.env.PI_CODING_AGENT_DIR = savedAgentDir;
+		}
+
+		// ── auto-exit tab close decision (migrated from the source-split eval, ──
+		// ── C29): the REAL pure hook. Clean auto-exit closes the whole tab; ──
+		// ── interactive, killed, errored, or non-zero exit do not. ────────────
+		assert.equal(hooks.shouldCloseSubagentTab(false, { exitCode: 0 }), true, "clean auto-exit → close the tab");
+		assert.equal(hooks.shouldCloseSubagentTab(true, { exitCode: 0 }), false, "interactive → park for the user");
+		assert.equal(hooks.shouldCloseSubagentTab(false, { exitCode: 1 }), false);
+		assert.equal(hooks.shouldCloseSubagentTab(false, { exitCode: 0, killed: true }), false);
+		assert.equal(hooks.shouldCloseSubagentTab(false, { exitCode: 0, errorMessage: "overload" }), false);
+
+		// ── C30: an agent profile naming a nonexistent tool fails LOUDLY at ──
+		// ── spawn, before any surface exists — never a silent --tools ───────
+		// ── pass-through. A fixture profile in the configured agent dir ────
+		// names one real built-in and two bogus tools.
+		const brokenProfileDir = join(agentConfigDir, "agents");
+		mkdirSync(brokenProfileDir, { recursive: true });
+		writeFileSync(
+			join(brokenProfileDir, "broken-tool.md"),
+			"---\nname: broken-tool\ndescription: names a bogus tool\ntools: read, definitely_not_a_tool, also_missing\n---\nBody\n",
+		);
+		const subagentToolDef = loadTools.find((tool) => tool.name === "subagent");
+		assert.ok(subagentToolDef, "the subagent tool is registered");
+		const bogusSpawn = await subagentToolDef.execute(
+			"call-bogus-tool",
+			{ agent: "broken-tool", task: "Do things." },
+			new AbortController().signal,
+			undefined,
+			{ cwd: loadRoot },
+		);
+		assert.match(bogusSpawn.content[0].text, /agent profile "broken-tool" names a nonexistent tool/);
+		assert.match(bogusSpawn.content[0].text, /"definitely_not_a_tool"/);
+		assert.match(bogusSpawn.content[0].text, /"also_missing"/);
+		assert.match(bogusSpawn.content[0].text, /spawn was refused/);
+		assert.deepEqual(bogusSpawn.details, {
+			error: "unknown tool in profile",
+			agent: "broken-tool",
+			tools: ["definitely_not_a_tool", "also_missing"],
+		});
+		// A SOUND profile in the same environment passes the gate: the bundled
+		// worker names only built-ins plus tools the fixture agent dir
+		// provides through normal extension discovery.
+		const fixtureExts = join(agentConfigDir, "extensions");
+		mkdirSync(join(fixtureExts, "web-search"), { recursive: true });
+		writeFileSync(join(fixtureExts, "web-search", "index.ts"), "export {};\n");
+		mkdirSync(join(fixtureExts, "web-fetch"), { recursive: true });
+		writeFileSync(join(fixtureExts, "web-fetch", "index.ts"), "export {};\n");
+		writeFileSync(join(fixtureExts, "mermaid.ts"), "export {};\n");
+		writeFileSync(join(fixtureExts, "tuicr.ts"), "export {};\n");
+		assert.deepEqual(
+			hooks.findUnknownProfileTools("read, write, edit, bash, web_search, web_fetch, mermaid, tuicr, tuicr_reply", [agentConfigDir]),
+			[],
+			"every bundled-worker tool resolves through the discovery scan",
 		);
 	} finally {
 		for (const [key, value] of Object.entries(savedLoadEnv)) {
@@ -1466,21 +1533,10 @@ esac
 			"pollForExit itself must not close anything",
 		);
 
-		// Auto-exit tab close decision (pure, eval'd from index.ts source —
-		// index.ts cannot be jiti-loaded whole): clean auto-exit closes the
-		// whole tab; interactive, killed, errored, or non-zero exit do not.
-		const { shouldCloseSubagentTab } = jiti.evalModule(
-			`
-			${indexSource.split("// ── auto-exit tab close decision ──")[1].split("// ── auto-exit tab close mechanics ──")[0]}
-			module.exports = { shouldCloseSubagentTab };
-		`,
-			{ filename: join(tmpdir(), "subagent-tab-close-decision-test.ts") },
-		);
-		assert.equal(shouldCloseSubagentTab(false, { exitCode: 0 }), true, "clean auto-exit → close the tab");
-		assert.equal(shouldCloseSubagentTab(true, { exitCode: 0 }), false, "interactive → park for the user");
-		assert.equal(shouldCloseSubagentTab(false, { exitCode: 1 }), false);
-		assert.equal(shouldCloseSubagentTab(false, { exitCode: 0, killed: true }), false);
-		assert.equal(shouldCloseSubagentTab(false, { exitCode: 0, errorMessage: "overload" }), false);
+		// The auto-exit tab close DECISION (shouldCloseSubagentTab) moved to the
+		// whole-load __test__ block (C29): clean auto-exit closes the whole tab;
+		// interactive, killed, errored, or non-zero exit do not. The end-to-end
+		// close mechanics stay here.
 
 		// closeTabForPane end-to-end: pane get → tab close, and the pane-close
 		// fallback when tab close fails.
@@ -1588,6 +1644,16 @@ exit 0
 	mkdirSync(e2eSessionDir, { recursive: true });
 	mkdirSync(e2eConfigDir, { recursive: true });
 	const parentSessionFile = join(e2eSessionDir, "parent.jsonl");
+	// The worker profile's extension tools (web_search, web_fetch, mermaid,
+	// tuicr, tuicr_reply) must be discoverable in the child's agent dir —
+	// the C30 spawn gate refuses a profile naming tools no source provides.
+	for (const dir of ["web-search", "web-fetch"]) {
+		mkdirSync(join(e2eConfigDir, "extensions", dir), { recursive: true });
+		writeFileSync(join(e2eConfigDir, "extensions", dir, "index.ts"), "export {};\n");
+	}
+	for (const file of ["mermaid.ts", "tuicr.ts"]) {
+		writeFileSync(join(e2eConfigDir, "extensions", file), "export {};\n");
+	}
 	writeFileSync(
 		parentSessionFile,
 		JSON.stringify({ type: "session", version: 3, id: "parent-id", cwd: e2eRoot, timestamp: new Date().toISOString() }) + "\n",

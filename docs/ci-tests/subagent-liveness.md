@@ -54,7 +54,9 @@ tab with the attach pane. In bridge.ts, `waitTabReady` and
 ## How to run
 
 Run `node pi/.pi/agent/extensions/subagent-liveness.test.mjs`. Set
-`JITI_PATH` and `NODE_PATH` first (see `docs/ci-tests/README.md`). Fake
+`JITI_PATH` and `NODE_PATH` first (see `docs/ci-tests/README.md`; jiti
+resolves through the shared `test-lib/jiti.mjs` helper like every sibling
+suite). Fake
 `herdr`, `tmux`, and `ps` bins go on PATH before import; no network, no live
 multiplexer; staged responses come from env vars and state files.
 

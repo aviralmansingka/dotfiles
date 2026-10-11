@@ -1680,4 +1680,164 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Cross-load-order composition (C28): both writers publish through the one
+// shared keep-open-slot.mjs, so either load order sums both counts, repeated
+// loads replace (never stack) their own entry, and each side releases exactly
+// its own slot. This block drives the REAL pane module's run-tracking count
+// and a REAL tuicr watcher (minimal fake tuicr CLI on PATH) in one process —
+// both load orders.
+// ---------------------------------------------------------------------------
+{
+	const KEY = Symbol.for("pi-subagents/keep-open-count");
+	const HOLDER_KEY = Symbol.for("pi-subagents/keep-open-slot-holder");
+	const WATCH_STATE = Symbol.for("pi-no-mistakes/watch-state");
+	const crossRoot = mkdtempSync(join(tmpdir(), "nm-keepopen-cross-"));
+	const crossBin = join(crossRoot, "bin");
+	const crossStubs = join(crossRoot, "stubs");
+	const crossRepo = join(crossRoot, "repo");
+	mkdirSync(crossBin, { recursive: true });
+	mkdirSync(crossStubs, { recursive: true });
+	mkdirSync(crossRepo, { recursive: true });
+	// Minimal fake tuicr CLI: one active session, no comments. The watcher's
+	// tick only reads list/comments; everything else answers empty.
+	writeFileSync(
+			join(crossBin, "tuicr"),
+			`#!/bin/sh
+case "$2" in
+  list) printf '%s\\n' '[{"slug":"watched-s1","active":true}]' ;;
+  comments) printf '%s\\n' '[]' ;;
+  *) printf '%s\\n' '{}' ;;
+esac
+`,
+			{ mode: 0o755 },
+	);
+	// Stub the three packages tuicr.ts imports (same shapes the tuicr suite
+	// uses); typebox resolves from NODE_PATH like everywhere else here.
+	writeFileSync(join(crossStubs, "agent.cjs"), "exports.defineTool = (t) => t;\n");
+	writeFileSync(
+			join(crossStubs, "ai.cjs"),
+			"exports.Type = new Proxy({}, { get: () => (...a) => ({ args: a }) });\n",
+	);
+	writeFileSync(
+			join(crossStubs, "tui.cjs"),
+			[
+				"class Text { constructor(t) { this.text = String(t); } }",
+				"class Box { constructor() { this.children = []; } addChild(c) { this.children.push(c); } render() { return []; } }",
+				"exports.Box = Box;",
+				"exports.Text = Text;",
+				"exports.truncateToWidth = (t) => String(t);",
+			].join("\n"),
+	);
+	const loadPane = () =>
+		createJiti(import.meta.url, { alias: tuiAlias, moduleCache: false })("./no-mistakes-pane.ts");
+	const loadTuicr = () =>
+		createJiti(import.meta.url, {
+			moduleCache: false,
+			alias: {
+				"@earendil-works/pi-coding-agent": join(crossStubs, "agent.cjs"),
+				"@earendil-works/pi-ai": join(crossStubs, "ai.cjs"),
+				"@earendil-works/pi-tui": join(crossStubs, "tui.cjs"),
+			},
+		})("./tuicr.ts");
+	const makeTuicrHarness = () => {
+		const tools = [];
+		const commands = new Map();
+		const pi = {
+			registerTool: (def) => tools.push(def),
+			registerCommand: (name, def) => commands.set(name, def),
+			registerMessageRenderer: () => {},
+			sendMessage: () => {},
+			on: () => {},
+		};
+		return { tools, commands, pi, ctx: { cwd: crossRepo, ui: { notify: () => {} } } };
+	};
+	const paneTracking = (on) => {
+		globalThis[WATCH_STATE] = on ? { trackedRunId: "01XX", calls: new Map() } : undefined;
+	};
+	const restoreKey = (key, value) => {
+		if (value === undefined) delete globalThis[key];
+		else globalThis[key] = value;
+	};
+	const savedSlot = globalThis[KEY];
+	const savedHolder = globalThis[HOLDER_KEY];
+	const savedWatchState = globalThis[WATCH_STATE];
+	const savedPath = process.env.PATH;
+	const savedPoll = process.env.TUICR_BG_POLL_MS;
+	const savedHerdrEnv = process.env.HERDR_ENV;
+	const savedHerdrPane = process.env.HERDR_PANE_ID;
+	// attach never launches a pane, but the mux gate reads these; keep them set
+	// so the only thing under test is the keep-open composition.
+	process.env.HERDR_ENV = "1";
+	process.env.HERDR_PANE_ID = "wX:p1";
+	process.env.TUICR_BG_POLL_MS = "20";
+	process.env.PATH = `${crossBin}:${savedPath}`;
+	try {
+		const slotFn = () => {
+			const fn = globalThis[KEY];
+			assert.equal(typeof fn, "function", "keep-open slot must stay a function");
+			return fn();
+		};
+
+		// Order A: the pane module loads FIRST, tuicr second.
+		restoreKey(KEY, undefined);
+		paneTracking(false);
+		loadPane();
+		paneTracking(true);
+		assert.equal(slotFn(), 1, "pane-first: the pane side counts alone");
+		const tuicrA = loadTuicr();
+		assert.equal(slotFn(), 1, "pane-first: tuicr's load composes, never clobbers");
+		const harnessA = makeTuicrHarness();
+		tuicrA.default(harnessA.pi);
+		const toolA = harnessA.tools.find((tool) => tool.name === "tuicr");
+		const attachA = await toolA.execute("c28-a", { repo: crossRepo, sessionSlug: "watched-s1" }, undefined, undefined, harnessA.ctx);
+		assert.equal(attachA.isError, undefined);
+		assert.equal(slotFn(), 2, "pane-first: a running watcher sums with the pane's count");
+		harnessA.commands.get("tuicr").handler("stop", harnessA.ctx);
+		assert.equal(slotFn(), 1, "pane-first: stopping releases exactly the watcher's slot");
+		// Repeated pane loads replace their own entry — the old
+		// capture-and-wrap design stacked a layer per reload; the shared
+		// module cannot. (Reload tears the previous watch state down first,
+		// so drive the count off/on around the reloads, like a real reload.)
+		paneTracking(false);
+		loadPane();
+		loadPane();
+		paneTracking(true);
+		assert.equal(slotFn(), 1, "repeated pane loads never stack their own count");
+		paneTracking(false);
+		assert.equal(slotFn(), 0, "the pane side releases with its watch state");
+
+		// Order B: tuicr loads FIRST, the pane module second.
+		restoreKey(KEY, undefined);
+		restoreKey(HOLDER_KEY, undefined); // fresh holder for the fresh composition
+		const tuicrB = loadTuicr();
+		const harnessB = makeTuicrHarness();
+		tuicrB.default(harnessB.pi);
+		const toolB = harnessB.tools.find((tool) => tool.name === "tuicr");
+		const attachB = await toolB.execute("c28-b", { repo: crossRepo, sessionSlug: "watched-s1" }, undefined, undefined, harnessB.ctx);
+		assert.equal(attachB.isError, undefined);
+		assert.equal(slotFn(), 1, "tuicr-first: the watcher counts alone");
+		paneTracking(false);
+		loadPane();
+		paneTracking(true);
+		assert.equal(slotFn(), 2, "tuicr-first: the pane's load composes, never clobbers");
+		paneTracking(false);
+		assert.equal(slotFn(), 1, "tuicr-first: the pane side releases exactly its own count");
+		harnessB.commands.get("tuicr").handler("stop", harnessB.ctx);
+		assert.equal(slotFn(), 0, "tuicr-first: both sides released");
+	} finally {
+		restoreKey(KEY, savedSlot);
+		restoreKey(HOLDER_KEY, savedHolder);
+		restoreKey(WATCH_STATE, savedWatchState);
+		process.env.PATH = savedPath;
+		if (savedPoll === undefined) delete process.env.TUICR_BG_POLL_MS;
+		else process.env.TUICR_BG_POLL_MS = savedPoll;
+		if (savedHerdrEnv === undefined) delete process.env.HERDR_ENV;
+		else process.env.HERDR_ENV = savedHerdrEnv;
+		if (savedHerdrPane === undefined) delete process.env.HERDR_PANE_ID;
+		else process.env.HERDR_PANE_ID = savedHerdrPane;
+		rmSync(crossRoot, { recursive: true, force: true });
+	}
+}
+
 console.log("no-mistakes-pane capture tests passed");

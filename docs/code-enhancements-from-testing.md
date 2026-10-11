@@ -136,16 +136,25 @@ Status legend:
 27. **Audit every `execFileSync`/`spawnSync` site for stdio leaks** — the #291
     class is systemic; dom-nm covered its files, the repo-wide sweep is this
     issue.
-28. **Harden the shared keep-open slot composition** — make
-    `Symbol.for("pi-subagents/keep-open-count")` symmetric and idempotent by
-    construction in both `no-mistakes-pane.ts` and `tuicr.ts` (#286 class).
-29. **Migrate remaining string-split eval tests to the whole-load path** —
-    index.ts is now whole-loadable; the list/baseline renderer blocks still
-    source-split (post-#294).
-30. **Agent profile naming a nonexistent tool passes silently** — passes
-    through `--tools` with no `-e`; fail fast at spawn (dom-subagents).
-31. **createSurface leaks a tab when `tab create` answers without a pane id**
-    — no close target exists; decide recovery or document (dom-subagents).
+28. ~~Harden the shared keep-open slot composition~~ — FIXED (C28): both
+    publishers now go through one shared `keep-open-slot.mjs` (keyed
+    per-owner entries in a null-prototype holder, single summing reader),
+    making the composition symmetric and idempotent by construction;
+    cross-load-order tests live in both suites.
+29. ~~Migrate remaining string-split eval tests to the whole-load path~~ —
+    FIXED (C29): all four source-split eval blocks in
+    interactive-subagents.test.mjs (list renderer, baseline renderer,
+    applySandboxToParts, tab-close decision) now drive the whole-loaded
+    module's real functions/hooks; zero `evalModule` slices remain.
+30. ~~Agent profile naming a nonexistent tool passes silently~~ — FIXED
+    (C30): the subagent tool's spawn gate refuses a profile naming a tool
+    no source provides (built-ins, registry, runtime-registered,
+    conventional map, or child extension discovery) with a clear error
+    naming the tool and the profile, before any surface is created.
+31. ~~createSurface leaks a tab when `tab create` answers without a pane
+    id~~ — FIXED (C31): the missing-pane-id path closes the tab the
+    response names (best-effort) before rethrowing the parse failure;
+    regression-tested against a pane-less fake-herdr response.
 32. ~~Two pinned octo quirks~~ — FIXED by rel-nvim-fixes (see A19).
 33. ~~`dap_eval_hover` manual-focus branch~~ — FIXED by rel-nvim-fixes
     (deleted; see A20).

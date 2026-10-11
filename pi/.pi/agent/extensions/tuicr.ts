@@ -65,6 +65,7 @@ import {
 	targetToScopeArgs,
 	truncateLines,
 } from "./tuicr-core.mjs";
+import { publishKeepOpenCount } from "./keep-open-slot.mjs";
 
 const execFile = promisify(execFileCb);
 
@@ -131,26 +132,14 @@ function reviewerRunning(name: string): boolean {
 // COMPOSITION: this is a SHARED slot — no-mistakes-pane.ts publishes its
 // run-tracking count under the same well-known symbol, and a session can
 // load both writers (the nm-orchestrator discovers them via agent-dir:
-// parent). A plain assignment would be last-writer-wins by readdir load
-// order, silently disabling whichever extension loaded first. So capture
-// the previous owner's function (a non-function previous value counts as 0)
-// and publish a wrapper that ADDS it to ours — both sources must be able to
-// keep the session open. no-mistakes-pane.ts composes symmetrically, so
-// either load order sums both counts.
-const KEEP_OPEN_COUNT_KEY = Symbol.for("pi-subagents/keep-open-count");
-const previousKeepOpenCount: unknown = (globalThis as any)[KEEP_OPEN_COUNT_KEY];
-(globalThis as any)[KEEP_OPEN_COUNT_KEY] = (): number => {
-	let previous = 0;
-	if (typeof previousKeepOpenCount === "function") {
-		try {
-			const value = (previousKeepOpenCount as () => unknown)();
-			if (typeof value === "number" && value > 0) previous = value;
-		} catch {
-			// A broken previous owner must not mask this watcher's count.
-		}
-	}
-	return previous + (watch ? 1 : 0);
-};
+// parent). Both sides publish through the one shared module
+// (keep-open-slot.mjs), which owns the composition: keyed per-owner entries
+// in a null-prototype holder on globalThis, summed by one reader. That makes
+// the composition symmetric and idempotent BY CONSTRUCTION — either load
+// order sums both counts, repeated loads replace (never stack) their own
+// entry, and a broken or foreign previous owner reads as 0 instead of
+// masking this watcher's count.
+publishKeepOpenCount("tuicr", (): number => (watch ? 1 : 0));
 
 // The tool's execute closure needs the ExtensionAPI; captured at factory time.
 let piRef: ExtensionAPI | null = null;

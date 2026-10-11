@@ -277,6 +277,66 @@ function getToolExtensionPath(tool: string): string | undefined {
   return EXTRA_TOOL_EXTENSIONS.get(tool);
 }
 
+/** Every tool name a child's NORMAL extension discovery could register from
+ *  an agent dir: each extension file's basename (quiz.ts → quiz) and each
+ *  extension directory's name (web-search/ → web_search), hyphen and
+ *  underscore forms both — the same name shapes the profile `tools:` list
+ *  uses. A missing extensions root yields an empty set. */
+function discoverableExtensionToolNames(agentDir: string): Set<string> {
+  const names = new Set<string>();
+  const walk = (dir: string) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        names.add(entry.name);
+        names.add(entry.name.replace(/-/g, "_"));
+        walk(join(dir, entry.name));
+      } else if (entry.name.endsWith(".ts")) {
+        const base = entry.name.replace(/\.ts$/, "");
+        names.add(base);
+        names.add(base.replace(/-/g, "_"));
+      }
+    }
+  };
+  walk(join(agentDir, "extensions"));
+  return names;
+}
+
+/** Tools a profile's `tools:` list names that NO spawn source can provide:
+ *  not a pi built-in, not this extension's spawning or control tools, not
+ *  live in this process's tool registry, not runtime-registered, not in the
+ *  conventional agent-extensions map, and not discoverable from the given
+ *  agent dirs' extension roots. Returned in the profile's order; empty means
+ *  the list is sound. Exported for the regression test — the spawn gate in
+ *  the subagent tool refuses a profile that names a nonexistent tool
+ *  instead of silently passing it through `--tools` (C30). */
+export function findUnknownProfileTools(
+  toolsCsv: string | undefined,
+  discoverableDirs: string[] = [getAgentConfigDir()],
+): string[] {
+  if (!toolsCsv) return [];
+  const discoverable = new Set<string>();
+  for (const dir of discoverableDirs) {
+    for (const name of discoverableExtensionToolNames(dir)) discoverable.add(name);
+  }
+  const unknown: string[] = [];
+  for (const tool of toolsCsv.split(",").map((t) => t.trim()).filter(Boolean)) {
+    if (BUILTIN_TOOLS.has(tool)) continue;
+    if ((SPAWNING_TOOLS as readonly string[]).includes(tool)) continue;
+    if ((SUBAGENT_CONTROL_TOOLS as readonly string[]).includes(tool)) continue;
+    if (EXTRA_TOOL_EXTENSIONS.has(tool)) continue;
+    if (getToolExtensionPath(tool)) continue;
+    if (discoverable.has(tool)) continue;
+    unknown.push(tool);
+  }
+  return unknown;
+}
+
 /**
  * When this process was spawned as a restricted subagent, the parent pins the
  * set of agents it may itself spawn via PI_SUBAGENT_ALLOWED. `null` means no
@@ -1459,6 +1519,7 @@ export const __test__ = {
   resolveLaunchBehavior,
   resolveEffectiveInteractive,
   buildSubagentToolAllowlist,
+  findUnknownProfileTools,
   baselineSubagentExtensionArgs,
   applySandboxToParts,
   buildPiPromptArgs,
@@ -1473,6 +1534,7 @@ export const __test__ = {
   handleSubagentSteer,
   resolveResultPresentation,
   resolveResumeLaunchBehavior,
+  shouldCloseSubagentTab,
   runningSubagents,
   registerActiveWatcher,
   unregisterActiveWatcher,
@@ -2231,6 +2293,42 @@ export default function subagentsExtension(pi: ExtensionAPI) {
               error: SUBAGENT_ALLOWLIST ? "agent not in allowlist" : "unknown agent",
             },
           };
+        }
+
+        // C30: an agent profile naming a tool NO spawn source can provide
+        // must FAIL LOUDLY, before any surface is created — never a silent
+        // `--tools` pass-through that runs without the tool. The check covers
+        // pi built-ins, this extension's spawning/control tools, the live tool
+        // registry, runtime-registered helper extensions, the conventional
+        // agent-extensions map, and normal child extension discovery in both
+        // the parent's and the child's resolved agent dirs.
+        const gateDefs = loadAgentDefaults(params.agent);
+        if (gateDefs?.tools) {
+          const gatePaths = resolveSubagentPaths(params, gateDefs);
+          const unknownTools = findUnknownProfileTools(gateDefs.tools, [
+            getAgentConfigDir(),
+            gatePaths.effectiveAgentDir,
+          ]);
+          if (unknownTools.length > 0) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text:
+                    `Error: the agent profile "${params.agent}" names a nonexistent tool: ` +
+                    `${unknownTools.map((tool) => `"${tool}"`).join(", ")}. ` +
+                    `The spawn was refused — a --tools allowlist that silently runs without a named tool is worse than failing. ` +
+                    `Fix the profile's tools list (pi built-ins: read, write, edit, bash, grep, find, ls; ` +
+                    `extension tools resolve by their extension file or directory name).`,
+                },
+              ],
+              details: {
+                error: "unknown tool in profile",
+                agent: params.agent,
+                tools: unknownTools,
+              },
+            };
+          }
         }
 
         // Validate prerequisites (need mux + a session file to derive the

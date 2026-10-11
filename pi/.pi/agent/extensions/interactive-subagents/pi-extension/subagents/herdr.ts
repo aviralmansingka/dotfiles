@@ -15,6 +15,14 @@ import { dirname, join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
+// Explicit stdio on every captured execFileSync below is load-bearing: with
+// the default (unspecified) stdio, Node passes the child's stderr through to
+// this process's terminal while also capturing it — the #291 splatter class
+// (a failing herdr call painted raw error lines over the agent's TUI).
+// stdio: ["pipe", "pipe", "pipe"] keeps the CLI's stderr fully captured
+// (real failures still surface through the thrown error) and off the
+// terminal. Best-effort close sites swallow the error as before.
+
 // ── Availability ──
 
 const commandAvailability = new Map<string, boolean>();
@@ -80,7 +88,10 @@ function parsePaneId(stdout: string): string {
 }
 
 function workspaceForPane(paneId: string): string {
-  const stdout = execFileSync("herdr", ["pane", "get", paneId], { encoding: "utf8" });
+  const stdout = execFileSync("herdr", ["pane", "get", paneId], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
   const workspaceId = JSON.parse(stdout)?.result?.pane?.workspace_id;
   if (typeof workspaceId !== "string" || workspaceId.length === 0) {
     throw new Error(`Unexpected Herdr pane output: ${stdout}`);
@@ -92,7 +103,10 @@ function workspaceForPane(paneId: string): string {
  *  Returns null when the pane cannot be resolved. */
 export function tabForPane(paneId: string): string | null {
   try {
-    const stdout = execFileSync("herdr", ["pane", "get", paneId], { encoding: "utf8" });
+    const stdout = execFileSync("herdr", ["pane", "get", paneId], {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     const tabId = JSON.parse(stdout)?.result?.pane?.tab_id;
     return typeof tabId === "string" && tabId.length > 0 ? tabId : null;
   } catch {
@@ -113,6 +127,20 @@ function rebalanceSurfaces(_hintPane?: string): void {
 
 // ── Surface primitives ──
 
+/** Best-effort tab id extraction from a `tab create` response that carried
+ *  no root pane id. Used only by createSurface's missing-pane-id recovery:
+ *  the response's own tab key is the only close target that exists. */
+function tabIdFromCreateOutput(stdout: string): string | undefined {
+  try {
+    const data = JSON.parse(stdout);
+    const tab = data?.result?.tab ?? data?.result;
+    const tabId = tab?.tab_id ?? tab?.id ?? data?.result?.tab_id;
+    return typeof tabId === "string" && tabId.length > 0 ? tabId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Create a labeled, unfocused tab and return its root pane id. */
 export function createSurface(name: string): string {
   requireHerdr();
@@ -126,9 +154,29 @@ export function createSurface(name: string): string {
       "--label", `subagent: ${name}`,
       "--no-focus",
     ],
-    { encoding: "utf8" },
+    { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
   );
-  return parsePaneId(stdout);
+  // C31: a `tab create` answer without a pane id leaves no close target for
+  // the caller (withNewSurface closes by pane id). Recover by closing the tab
+  // the response DOES name — best-effort, then surface the original parse
+  // failure — so a pane-less tab-create answer never leaks an empty tab.
+  try {
+    return parsePaneId(stdout);
+  } catch (error) {
+    const tabId = tabIdFromCreateOutput(stdout);
+    if (tabId) {
+      try {
+        execFileSync("herdr", ["tab", "close", tabId], {
+          encoding: "utf8",
+          stdio: ["pipe", "pipe", "pipe"],
+        });
+      } catch {
+        // Best-effort: the tab may already be gone. The parse error below
+        // still reports the malformed response.
+      }
+    }
+    throw error;
+  }
 }
 
 /**
@@ -155,7 +203,10 @@ export function createSurfaceSplit(
   }
   args.push("--direction", herdrDirection, "--ratio", "0.5", "--no-focus");
 
-  const stdout = execFileSync("herdr", args, { encoding: "utf8" });
+  const stdout = execFileSync("herdr", args, {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
   const pane = parsePaneId(stdout);
   rebalanceSurfaces(pane);
   return pane;
@@ -167,7 +218,10 @@ export function createSurfaceSplit(
  */
 export function sendCommand(surface: string, command: string): void {
   requireHerdr();
-  execFileSync("herdr", ["pane", "run", surface, command], { encoding: "utf8" });
+  execFileSync("herdr", ["pane", "run", surface, command], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 }
 
 /** Wait until Herdr sees the launched agent at its interactive prompt. */
@@ -213,7 +267,10 @@ export async function waitForAgentReady(
 /** Submit a prompt only after waitForAgentReady has observed interactive readiness. */
 export function sendAgentPrompt(surface: string, prompt: string): void {
   requireHerdr();
-  execFileSync("herdr", ["agent", "prompt", surface, prompt], { encoding: "utf8" });
+  execFileSync("herdr", ["agent", "prompt", surface, prompt], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 }
 
 /**
@@ -263,7 +320,7 @@ export function readScreen(surface: string, lines = 50): string {
   return execFileSync(
     "herdr",
     ["pane", "read", surface, "--source", "recent", "--lines", String(Math.max(1, lines)), "--format", "text"],
-    { encoding: "utf8" },
+    { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
   );
 }
 
@@ -289,7 +346,10 @@ export async function readScreenAsync(
  */
 export function closeSurface(surface: string): void {
   requireHerdr();
-  execFileSync("herdr", ["pane", "close", surface], { encoding: "utf8" });
+  execFileSync("herdr", ["pane", "close", surface], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
   rebalanceSurfaces();
 }
 
@@ -305,12 +365,18 @@ export function closeTabForPane(paneId: string): void {
   const tabId = tabForPane(paneId);
   if (tabId) {
     try {
-      execFileSync("herdr", ["tab", "close", tabId], { encoding: "utf8" });
+      execFileSync("herdr", ["tab", "close", tabId], {
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+      });
       return;
     } catch {}
   }
   try {
-    execFileSync("herdr", ["pane", "close", paneId], { encoding: "utf8" });
+    execFileSync("herdr", ["pane", "close", paneId], {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
   } catch {}
 }
 

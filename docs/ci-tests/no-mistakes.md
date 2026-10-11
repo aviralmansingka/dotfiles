@@ -13,11 +13,13 @@ bridge suite `no-mistakes-bridge.test.mjs`, and the `pi/bin/nm-herdr-pi.mjs` shi
   until the user marks a finding. Every decision payload drives the exact respond argv.
 - **N2 Gate parser.** The parser accepts every findings-table column variant: columns from the
   header, quoted values with commas, wrong-count rows skipped, missing values defaulted.
-- **N3 Keep-open slot.** The module composes with `tuicr.ts` through
-  `Symbol.for("pi-subagents/keep-open-count")`. The wrapper adds the previous owner's count to its
-  own. A previous owner that throws, or a non-function slot value, never masks this module's
-  count. `tuicr.ts` composes symmetrically; either load order sums both counts. It belongs to
-  another owner, so this suite pins this side only.
+- **N3 Keep-open slot.** Both `no-mistakes-pane.ts` and `tuicr.ts` publish through the shared
+  `keep-open-slot.mjs` module: keyed per-owner entries in one null-prototype holder on
+  globalThis, summed by a single reader under
+  `Symbol.for("pi-subagents/keep-open-count")`. An owner that throws, or a non-function slot
+  value, reads as 0 and never masks the other owners; repeated loads replace (never stack)
+  their own entry; a foreign previous owner composes (3 → 4 → 3). Cross-load-order tests drive
+  the real pane count and a real tuicr watcher in one process — both orders.
 - **N4 Child stderr.** Every `execFileSync` site sets explicit stdio. A probe child drives a full
   pane cycle against stubs that splatter stderr. The probe's own stderr stays byte-clean.
 - **N5 Spawn success.** A spawn result that resolves with an error is never acked "delegated".
@@ -70,5 +72,3 @@ c8 over the three suites, includes limited to the domain files:
 - The TTY passthrough path of the shim needs a real terminal.
 - c8 marks some nested panel closures as uncovered although the tests drive them. The marks come
   from jiti source-map merging, not dead code; the baseline shows the same marks.
-- The `tuicr.ts` side of the keep-open slot belongs to its owner. This suite documents the
-  contract and pins this side only.

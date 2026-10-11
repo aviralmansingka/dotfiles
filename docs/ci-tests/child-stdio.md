@@ -65,16 +65,12 @@ set hold no unguarded captured call — the #291 fix wave guarded them.
 
 ## Known gaps
 
-- Five files are owned by the in-flight `subagent-liveness` agent. The
-  audit read them but did not change them. Findings for that owner:
-  - `subagents/herdr.ts`: 10 unguarded `execFileSync` sites — pane get
-    (×2), tab create, split, pane run, agent prompt, pane read, closes.
-  - `subagents/tmux.ts`: 9 unguarded sites — select-layout, pane parse,
-    send-keys (×2), split, kill-pane (×2), window id, kill-window.
-  - `subagents/index.ts`, `orchestrate.ts`: no direct child calls.
-  - `no-mistakes-pane.ts`: already guarded, no findings.
-  The lint allows these two files until the owner lands the stdio pass;
-  then remove the two `allow_all` entries and it enforces them.
+- The subagent surfaces' stdio pass landed: every captured `execFileSync`
+  in `subagents/herdr.ts` (10 sites) and `subagents/tmux.ts` (9 sites)
+  now carries `stdio: ["pipe", "pipe", "pipe"]`, the two `allow_all`
+  entries were deleted, and the lint enforces both files (0 unguarded).
+  `subagents/index.ts` and `orchestrate.ts` have no direct child calls;
+  `no-mistakes-pane.ts` was already guarded.
 - Shell wrappers in `pi/bin` use `exec`, not a captured child; the lint
   does not scan `.sh` files. It also cannot see a stdio built at runtime
   from a variable — no such site exists in scope today.

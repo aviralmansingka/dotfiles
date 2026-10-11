@@ -14,7 +14,9 @@ multiplexer.
   timeout, and abort stop the wait; a failed startup gets no prompt.
 - Initial prompt: encode/build round-trips; bad payloads and missing skills throw.
 - Surface launch: `withNewSurface` closes the pane on every failure, not on
-  success; a failed workspace lookup fails before tab creation.
+  success; a failed workspace lookup fails before tab creation; a pane-less
+  `tab create` answer closes the tab the response named before failing, so
+  no empty tab leaks (C31).
 - Name registry: null prototype (`__proto__` safe); corrupt file reads empty; `-2`/`-3` chain; reservations hold and release.
 - Exit polling: `.exit` sidecar, sentinel file, screen sentinel, killed pane (130), abort paths — on both surfaces.
 - Liveness fallback: the pi process seen once, then gone, means completed; a startup shell never counts.
@@ -22,7 +24,10 @@ multiplexer.
   neither → a hint naming both; tmux calls map to the four pane commands.
 - Session core: fork and lineage-only seeds; ids resolve exact then prefix; last assistant message with error fallback.
 - Agent profiles: bundled resolve, project overrides win; every frontmatter key
-  parses; unknown agent → null; zero stale tool references.
+  parses; unknown agent → null; zero stale tool references; a profile naming a
+  nonexistent tool fails LOUDLY at spawn — a clear error naming the tool and
+  the profile, before any surface is created, never a silent `--tools`
+  pass-through (C30).
 - Launch race (#294): concurrent openEditor calls in one tab produce one
   split; the loser routes to the registry pane with no scan; a cross-process
   winner closes the duplicate; provenance outcomes hit the log.
@@ -70,10 +75,6 @@ modules load twice (native and jiti); c8 merges the copies.
 
 ## Known gaps
 
-- A profile that names a nonexistent tool does not fail loudly: the allowlist
-  passes the name and no helper extension loads. The suite pins this.
-- `createSurface` leaks a tab when `tab create` answers without a pane id;
-  the close call needs the pane id, so no fix exists at this commit.
 - The nvim-open.sh fail-fast test skips on hosts whose fallback dirs
   (`/home/linuxbrew`, `/opt/homebrew`) provide an editor.
 - c8 line numbers for jiti-loaded files are approximate; behavior tests are

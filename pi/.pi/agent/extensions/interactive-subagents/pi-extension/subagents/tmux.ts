@@ -18,6 +18,14 @@ import { dirname, join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
+// Explicit stdio on every captured execFileSync below is load-bearing: with
+// the default (unspecified) stdio, Node passes the child's stderr through to
+// this process's terminal while also capturing it — the #291 splatter class
+// (a failing tmux call painted raw error lines over the agent's TUI).
+// stdio: ["pipe", "pipe", "pipe"] keeps the CLI's stderr fully captured
+// (real failures still surface through the thrown error) and off the
+// terminal. Best-effort close sites swallow the error as before.
+
 // ── Availability ──
 
 const commandAvailability = new Map<string, boolean>();
@@ -97,6 +105,7 @@ function rebalanceSurfaces(hintPane?: string): void {
       // -t <pane> resolves to that pane's window; does not change focus.
       execFileSync("tmux", ["select-layout", "-t", target, SUBAGENT_TMUX_LAYOUT], {
         encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
       });
     } catch {
       // Pane/window may be gone; balancing is best-effort.
@@ -144,7 +153,10 @@ export function createSurfaceSplit(
   }
   args.push("-P", "-F", "#{pane_id}");
 
-  const pane = execFileSync("tmux", args, { encoding: "utf8" }).trim();
+  const pane = execFileSync("tmux", args, {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  }).trim();
   if (!pane.startsWith("%")) {
     throw new Error(`Unexpected tmux split-window output: ${pane}`);
   }
@@ -160,8 +172,14 @@ export function createSurfaceSplit(
  */
 export function sendCommand(surface: string, command: string): void {
   requireTmux();
-  execFileSync("tmux", ["send-keys", "-t", surface, "-l", command], { encoding: "utf8" });
-  execFileSync("tmux", ["send-keys", "-t", surface, "Enter"], { encoding: "utf8" });
+  execFileSync("tmux", ["send-keys", "-t", surface, "-l", command], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  execFileSync("tmux", ["send-keys", "-t", surface, "Enter"], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 }
 
 /**
@@ -212,6 +230,7 @@ export function readScreen(surface: string, lines = 50): string {
     ["capture-pane", "-p", "-t", surface, "-S", `-${Math.max(1, lines)}`],
     {
       encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
     },
   );
 }
@@ -234,7 +253,10 @@ export async function readScreenAsync(surface: string, lines = 50): Promise<stri
  */
 export function closeSurface(surface: string): void {
   requireTmux();
-  execFileSync("tmux", ["kill-pane", "-t", surface], { encoding: "utf8" });
+  execFileSync("tmux", ["kill-pane", "-t", surface], {
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+  });
   rebalanceSurfaces();
 }
 
@@ -248,15 +270,21 @@ export function closeTabForPane(paneId: string): void {
     const windowId = execFileSync(
       "tmux",
       ["list-panes", "-t", paneId, "-F", "#{window_id}"],
-      { encoding: "utf8" },
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
     ).trim();
     if (windowId) {
-      execFileSync("tmux", ["kill-window", "-t", windowId], { encoding: "utf8" });
+      execFileSync("tmux", ["kill-window", "-t", windowId], {
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+      });
       return;
     }
   } catch {}
   try {
-    execFileSync("tmux", ["kill-pane", "-t", paneId], { encoding: "utf8" });
+    execFileSync("tmux", ["kill-pane", "-t", paneId], {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
   } catch {}
 }
 
