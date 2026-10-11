@@ -78,7 +78,7 @@ if have node; then
       echo "FAIL $f"
       fail=1
     fi
-  done < <(find pi/.pi/agent/extensions -name '*.test.mjs' | sort)
+  done < <(find pi/.pi/agent/extensions -name node_modules -prune -o -name '*.test.mjs' -print | sort)
 else
   echo "SKIP extension tests: node not found on PATH" >&2
   skips=$((skips + 1))

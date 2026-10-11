@@ -92,9 +92,14 @@ const STUBBED_SPECIFIERS = [
 function walkTsFiles(dir) {
   const out = [];
   for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...walkTsFiles(path));
-    else if (entry.isFile() && entry.name.endsWith(".ts")) out.push(path);
+    // Never descend into dependency dirs: a host-side node_modules under a
+    // stowed package (web-fetch/linkedom) is runtime state, not a repo
+    // extension — importing its .d.ts files as factories is meaningless and
+    // fails on files like types/dom/token-list.d.ts.
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
+      out.push(...walkTsFiles(join(dir, entry.name)));
+    } else if (entry.isFile() && entry.name.endsWith(".ts")) out.push(join(dir, entry.name));
   }
   return out;
 }
