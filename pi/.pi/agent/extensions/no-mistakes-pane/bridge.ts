@@ -394,9 +394,20 @@ export function herdrBridgeAvailable(): boolean {
 	}
 }
 
-function herdrJsonSync(args: string[]): any | null {
+/** Explicit stdio is load-bearing here: with the default (unspecified)
+ *  stdio, Node's execFileSync passes the child's stderr through to this
+ *  process's terminal while also capturing it (verified live). The bridge
+ *  runs inside the nm-orchestrator's pi process, so every readiness poll
+ *  of a booting or already-closed step tab printed its agent_not_found
+ *  JSON straight onto the orchestrator's TUI — raw error lines over the
+ *  input box. Explicit pipes keep the CLI's stderr fully captured and off
+ *  the terminal; real failures still surface through the null return and
+ *  the invocation error paths. Exported for the regression test. */
+export function herdrJsonSync(args: string[]): any | null {
 	try {
-		return JSON.parse(execFileSync("herdr", args, { encoding: "utf-8", timeout: 10_000 }));
+		return JSON.parse(
+			execFileSync("herdr", args, { encoding: "utf-8", timeout: 10_000, stdio: ["pipe", "pipe", "pipe"] }),
+		);
 	} catch {
 		return null;
 	}

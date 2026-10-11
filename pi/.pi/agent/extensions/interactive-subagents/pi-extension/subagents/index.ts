@@ -26,6 +26,7 @@ import {
   sendAgentPrompt,
   pollForExit,
   closeSurface,
+  closeTabForPane,
   shellEscape,
   readScreen,
 } from "./surface.ts";
@@ -1714,6 +1715,39 @@ async function launchSubagentOnSurface(
   return running;
 }
 
+// ── auto-exit tab close decision ──
+/**
+ * Decide how a finished subagent's surface is closed. A NON-interactive
+ * (auto-exit) subagent that finished cleanly closes its whole tab, so
+ * orphaned sibling panes (e.g. nvim_open editor splits) die with it
+ * instead of holding the tab open forever. Interactive subagents keep
+ * parking for the user; failed, killed, or errored runs keep the
+ * historical root-pane close for inspection.
+ */
+export function shouldCloseSubagentTab(
+  interactive: boolean,
+  result: { killed?: boolean; exitCode: number; errorMessage?: string },
+): boolean {
+  return !interactive && !result.killed && result.exitCode === 0 && !result.errorMessage;
+}
+
+// ── auto-exit tab close mechanics ──
+/** Close a finished subagent's surface: clean auto-exit completion closes
+ *  the whole tab (sibling panes die with it); everything else keeps the
+ *  historical root-pane close. */
+function closeFinishedSubagentSurface(
+  running: RunningSubagent,
+  result: { killed?: boolean; exitCode: number; errorMessage?: string },
+): void {
+  try {
+    if (shouldCloseSubagentTab(running.interactive, result)) {
+      closeTabForPane(running.surface);
+    } else {
+      closeSurface(running.surface);
+    }
+  } catch {}
+}
+
 /**
  * Watch a launched subagent until it exits. Polls for completion, extracts
  * the summary from the session file, cleans up the surface,
@@ -1832,7 +1866,7 @@ async function watchSubagent(
         try { unlinkSync(running.sentinelFile + ".transcript"); } catch {}
       }
 
-      try { closeSurface(surface); } catch {}
+      closeFinishedSubagentSurface(running, { killed, exitCode: result.exitCode });
       runningSubagents.delete(running.id);
 
       return { name, task, summary, exitCode: result.exitCode, elapsed, ...(killed ? { killed: true, error: "pane killed" } : {}), ...(sessionId ? { claudeSessionId: sessionId } : {}) };
@@ -1862,7 +1896,11 @@ async function watchSubagent(
     const stats = !killed && existsSync(sessionFile) ? summarizeSessionStats(sessionFile) : null;
     const subagentSessionId = !killed && existsSync(sessionFile) ? getSessionId(sessionFile) : null;
 
-    try { closeSurface(surface); } catch {}
+    closeFinishedSubagentSurface(running, {
+      killed,
+      exitCode: result.exitCode,
+      errorMessage: result.errorMessage,
+    });
     runningSubagents.delete(running.id);
 
     return {

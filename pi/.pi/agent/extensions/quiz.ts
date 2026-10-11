@@ -165,7 +165,7 @@ function normalizeOptions(
 
 async function openContextFiles(ctx: any, files: string[]): Promise<void> {
 	if (files.length === 0) return;
-	const result = await openEditor(ctx?.cwd ?? process.cwd(), files);
+	const result = await openEditor(ctx?.cwd ?? process.cwd(), files, "library:quiz");
 	ctx?.ui?.notify?.(result.message, "info");
 }
 

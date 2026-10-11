@@ -39,6 +39,7 @@ export const sendLongCommand = surface.sendLongCommand;
 export const readScreen = surface.readScreen;
 export const readScreenAsync = surface.readScreenAsync;
 export const closeSurface = surface.closeSurface;
+export const closeTabForPane = surface.closeTabForPane;
 
 export const waitForAgentReady = herdr.waitForAgentReady;
 export const sendAgentPrompt = herdr.sendAgentPrompt;

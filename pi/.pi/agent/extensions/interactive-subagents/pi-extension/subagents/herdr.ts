@@ -88,6 +88,18 @@ function workspaceForPane(paneId: string): string {
   return workspaceId;
 }
 
+/** Map a pane to the tab that holds it (`herdr pane get` reports tab_id).
+ *  Returns null when the pane cannot be resolved. */
+export function tabForPane(paneId: string): string | null {
+  try {
+    const stdout = execFileSync("herdr", ["pane", "get", paneId], { encoding: "utf8" });
+    const tabId = JSON.parse(stdout)?.result?.pane?.tab_id;
+    return typeof tabId === "string" && tabId.length > 0 ? tabId : null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Pane layout ──
 
 /**
@@ -281,11 +293,32 @@ export function closeSurface(surface: string): void {
   rebalanceSurfaces();
 }
 
+/**
+ * Close the whole tab holding a pane, so sibling panes (e.g. editor splits
+ * a subagent opened) close with it instead of holding the tab open forever
+ * after the subagent finished. Best-effort: falls back to closing just the
+ * pane when the tab cannot be resolved or `tab close` fails, preserving
+ * the historical cleanup behavior.
+ */
+export function closeTabForPane(paneId: string): void {
+  requireHerdr();
+  const tabId = tabForPane(paneId);
+  if (tabId) {
+    try {
+      execFileSync("herdr", ["tab", "close", tabId], { encoding: "utf8" });
+      return;
+    } catch {}
+  }
+  try {
+    execFileSync("herdr", ["pane", "close", paneId], { encoding: "utf8" });
+  } catch {}
+}
+
 // ── Exit polling ──
 
 export interface PollResult {
   /** How the subagent exited */
-  reason: "done" | "sentinel" | "error" | "killed";
+  reason: "done" | "sentinel" | "error" | "killed" | "agent-gone";
   /** Shell exit code. 0 for file-based exits; 130 when the pane was killed. */
   exitCode: number;
   /** Error message if reason is "error" (auto-retry exhausted, provider overload, etc.) */
@@ -329,7 +362,68 @@ function paneKilledResult(): PollResult {
   return { reason: "killed", exitCode: 130 };
 }
 
-export const __pollForExitTest__ = { interpretExitSidecar, paneKilledResult };
+/** Clean completion reported by the liveness fallback: the sentinel was
+ *  never detected, but the pane's pi agent process is gone. */
+function agentGoneResult(): PollResult {
+  return { reason: "agent-gone", exitCode: 0 };
+}
+
+// ── Liveness fallback ──
+
+/** True when a foreground-process entry is the subagent pane's pi agent.
+ *  herdr reports argv[0] as a bare name; also basename-match a full path. */
+export function isPiForegroundProcess(proc: { name?: string; argv?: string[] }): boolean {
+  const argv0 = proc?.argv?.[0];
+  const base = typeof argv0 === "string" ? argv0.replace(/^.*[\/\\]/, "") : "";
+  return proc?.name === "pi" || base === "pi";
+}
+
+/**
+ * One liveness-fallback state step. `processes === null` (transient read
+ * failure) keeps the current state and never reports gone. Otherwise:
+ * seeing the pi agent marks seenAgent; once seen, its absence means the
+ * agent loop ended (agentGone). It never fires before the agent was seen
+ * once, so a slow-starting pane cannot false-positive — and a crashed
+ * startup is caught by the sentinel echo or the .exit sidecar instead.
+ */
+export function updateAgentLiveness(
+  seenAgent: boolean,
+  processes: Array<{ name?: string; argv?: string[] }> | null,
+): { seenAgent: boolean; agentGone: boolean } {
+  if (processes === null) return { seenAgent, agentGone: false };
+  if (processes.some((proc) => isPiForegroundProcess(proc))) {
+    return { seenAgent: true, agentGone: false };
+  }
+  return { seenAgent, agentGone: seenAgent };
+}
+
+/** The pane's foreground processes, or null when the read fails. A missing
+ *  pane also answers null here — the screen read in the same poll tick is
+ *  what turns that into the killed result. */
+async function paneForegroundProcessesAsync(
+  paneId: string,
+  signal?: AbortSignal,
+): Promise<Array<{ name?: string; argv?: string[] }> | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      "herdr",
+      ["pane", "process-info", "--pane", paneId],
+      { encoding: "utf8", signal },
+    );
+    const info = JSON.parse(stdout)?.result?.process_info;
+    return Array.isArray(info?.foreground_processes) ? info.foreground_processes : null;
+  } catch {
+    return null;
+  }
+}
+
+export const __pollForExitTest__ = {
+  interpretExitSidecar,
+  paneKilledResult,
+  agentGoneResult,
+  updateAgentLiveness,
+  isPiForegroundProcess,
+};
 
 /**
  * Poll until the subagent exits. Checks for a `.exit` sidecar file first
@@ -348,6 +442,7 @@ export async function pollForExit(
   },
 ): Promise<PollResult> {
   const start = Date.now();
+  let seenAgentProcess = false;
 
   for (;;) {
     if (signal.aborted) {
@@ -377,6 +472,21 @@ export async function pollForExit(
     } catch {
       // Surface was destroyed (manual pane close/kill) unless a late .exit file explains it.
       return readExitSidecar(options.sessionFile) ?? paneKilledResult();
+    }
+
+    // Liveness fallback: the sentinel echo can go undetected on the
+    // visible screen (e.g. the agent left a full-screen app running above
+    // it). Once the pane's foreground processes have included the pi
+    // agent, its disappearance — with no sentinel and no .exit sidecar —
+    // means the agent loop ended. Report a clean completion so the normal
+    // session-file harvest, not the screen, produces the summary. Two
+    // lost workers were recovered by hand this way; this makes it
+    // automatic.
+    const processes = await paneForegroundProcessesAsync(surface, signal);
+    const liveness = updateAgentLiveness(seenAgentProcess, processes);
+    seenAgentProcess = liveness.seenAgent;
+    if (liveness.agentGone) {
+      return agentGoneResult();
     }
 
     const elapsed = Math.floor((Date.now() - start) / 1000);
