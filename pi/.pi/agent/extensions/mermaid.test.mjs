@@ -45,7 +45,16 @@ const jiti = createJiti(import.meta.url, {
 });
 
 const mermaidModule = jiti("./mermaid.ts");
-const { extractMermaidSource, buildAttemptPrompt, runMmdflux } = mermaidModule;
+const {
+	extractMermaidSource,
+	extractNoneEscape,
+	buildAttemptPrompt,
+	buildCheckerPrompt,
+	parseCheckerVerdict,
+	loadPatternCatalog,
+	buildSystemPrompt,
+	runMmdflux,
+} = mermaidModule;
 const extension = mermaidModule.default;
 
 const haveMmdflux = existsSync(join(homedir(), ".local", "bin", "mmdflux")) || !!process.env.PI_MERMAID_MMDFLUX;
@@ -82,26 +91,64 @@ assert.equal(
 	null,
 	"a bare diagram block is not accepted",
 );
-assert.equal(extractMeraldiSourceGuard("no diagram here at all"), null, "prose without a diagram returns null");
-function extractMeraldiSourceGuard(raw) {
-	// Wrapper so a thrown regression reads as a failure, not a test crash.
-	try {
-		return extractMermaidSource(raw);
-	} catch {
-		return "threw";
-	}
-}
+assert.equal(extractMermaidSource("no diagram here at all"), null, "prose without a diagram returns null");
 assert.equal(extractMermaidSource("```\nflowchart TD\n  A --> B\n```"), null, "an untagged fence is not accepted as mermaid");
+
+// ── escape hatch, checker, catalog (pure) ────────────────────────────────────
+
+assert.equal(extractNoneEscape("NONE: the spec needs a coordinate plot"), "the spec needs a coordinate plot");
+assert.equal(extractNoneEscape("NONE: needs exact positions"), "needs exact positions");
+assert.equal(extractNoneEscape("```mermaid\nflowchart TD\n  A --> B\n```"), null, "a fence is not an escape");
+
+const checkerPrompt = buildCheckerPrompt("Type: flowchart TD. Nodes: Root, Goal.", "┌──────┐\n│ Root │");
+assert.ok(checkerPrompt.includes("Type: flowchart TD"), "checker prompt carries the spec");
+assert.ok(checkerPrompt.includes("│ Root │"), "checker prompt carries the rendered art");
+
+assert.deepEqual(parseCheckerVerdict("VERDICT: MATCH"), { match: true });
+assert.deepEqual(parseCheckerVerdict("verdict: match"), { match: true }, "verdict matching is case-insensitive");
+const mismatchVerdict = parseCheckerVerdict("VERDICT: MISMATCH: the Goal node is missing");
+assert.equal(mismatchVerdict.match, false);
+assert.equal(mismatchVerdict.reason, "the Goal node is missing");
+assert.equal(parseCheckerVerdict("looks fine to me").reason, "checker returned no verdict");
+
+// Catalog: fixture skill file via PI_MERMAID_SKILL, then fallback when absent.
+const fixtureSkill = join(tempRoot, "fixture-skill.md");
+writeFileSync(
+	fixtureSkill,
+	"---\nname: mermaid\n---\n\n# mermaid\n\n## Named layout patterns\n\n### junction — split\n\nUse a junction node.\n\n## Renderers\n\nOther section.\n",
+);
+const savedSkill = process.env.PI_MERMAID_SKILL;
+process.env.PI_MERMAID_SKILL = fixtureSkill;
+try {
+	const catalog = loadPatternCatalog();
+	assert.ok(catalog.includes("junction"), "catalog carries the skill's named patterns");
+	assert.ok(!catalog.includes("Other section"), "catalog stops at the next section");
+	assert.ok(buildSystemPrompt().includes("junction"), "system prompt embeds the catalog");
+	assert.ok(buildSystemPrompt().includes("You write Mermaid diagrams"), "system prompt keeps the base rules");
+} finally {
+	if (savedSkill === undefined) delete process.env.PI_MERMAID_SKILL;
+	else process.env.PI_MERMAID_SKILL = savedSkill;
+}
+process.env.PI_MERMAID_SKILL = join(tempRoot, "missing-skill.md");
+try {
+	const fallback = loadPatternCatalog();
+	assert.ok(fallback.includes("hub-and-spoke"), "fallback catalog applies when the skill file is absent");
+	assert.ok(fallback.includes("Aspect rules"), "fallback carries the aspect rules");
+} finally {
+	if (savedSkill === undefined) delete process.env.PI_MERMAID_SKILL;
+	else process.env.PI_MERMAID_SKILL = savedSkill;
+}
 
 // ── buildAttemptPrompt (pure) ─────────────────────────────────────────────────
 
 const first = buildAttemptPrompt("Type: flowchart TD. Nodes: A, B. Edge: A --> B.");
 assert.ok(first.includes("flowchart TD"), "prompt carries the spec");
-assert.ok(!first.includes("FAILED"), "first attempt has no failure feedback");
+assert.ok(first.includes("~7 nodes"), "prompt carries the node budget");
+assert.ok(!first.includes("rejected"), "first attempt has no failure feedback");
 
 const retry = buildAttemptPrompt("spec text", { source: "flowchart TD\n  A -->", error: "Parse error at line 2" });
-assert.ok(retry.includes("FAILED"), "retry prompt names the failure");
-assert.ok(retry.includes("Parse error at line 2"), "retry prompt carries the parser error");
+assert.ok(retry.includes("rejected"), "retry prompt names the rejection");
+assert.ok(retry.includes("Reason: Parse error at line 2"), "retry prompt carries the reason");
 assert.ok(retry.includes("A -->"), "retry prompt carries the previous source");
 
 // ── runMmdflux against the real binary (skipped when absent) ──────────────────
@@ -171,19 +218,46 @@ assert.equal(noAuth.isError, true, "unauthenticated sol should error instead of 
 assert.equal(noAuth.details.error, "no model");
 assert.equal(noAuthCtx.callCount(), 0, "no nested call runs against an unauthenticated model");
 
-// Valid fence → success result whose content carries the fence verbatim.
+// Spatial escape: the author signals NONE → non-error result, no retries.
+const escapeCtx = fakeCtx(["NONE: the spec needs a coordinate plot with exact positions"]);
+const escaped = await tool.execute("id-9", { spec: "a coordinate plot of two vectors" }, undefined, () => {}, escapeCtx);
+assert.ok(!escaped.isError, "the spatial escape is a clean result, not an error");
+assert.ok(escaped.details.escape.includes("coordinate plot"), "details carry the escape reason");
+assert.equal(escaped.details.attempts, 1);
+assert.equal(escapeCtx.callCount(), 1, "the escape ends the run after one nested call");
+
+// Valid fence + matching checker verdict → success, checker usage summed.
 if (haveMmdflux) {
 	const succeeding = await tool.execute(
 		"id-2",
 		{ spec: "Type: flowchart TD. Nodes: Root, Goal. Edge: Root --> Goal." },
 		undefined,
 		() => {},
-		fakeCtx(["```mermaid\nflowchart TD\n  R[Root] --> Z[Goal]\n```"]),
+		fakeCtx(["```mermaid\nflowchart TD\n  R[Root] --> Z[Goal]\n```", "VERDICT: MATCH"]),
 	);
 	assert.ok(!succeeding.isError, `valid reply should succeed: ${JSON.stringify(succeeding.content).slice(0, 200)}`);
 	assert.ok(textOf(succeeding).includes("```mermaid\nflowchart TD\n  R[Root] --> Z[Goal]\n```"), "content embeds the validated fence");
 	assert.ok(succeeding.details.art.includes("Root"), "details carry the rendered art");
 	assert.equal(succeeding.details.attempts, 1);
+	assert.equal(succeeding.usage.inputTokens, 20, "author and checker usage are summed");
+
+	// Checker mismatch → retry with feedback, then match → success on attempt 2.
+	const mismatchCtx = fakeCtx([
+		"```mermaid\nflowchart TD\n  R[Root] --> Z[Goal]\n```",
+		"VERDICT: MISMATCH: the Goal node label is wrong",
+		"```mermaid\nflowchart TD\n  R[Root] --> Z[Goal]\n```",
+		"VERDICT: MATCH",
+	]);
+	const retried = await tool.execute(
+		"id-8",
+		{ spec: "Type: flowchart TD. Nodes: Root, Goal. Edge: Root --> Goal." },
+		undefined,
+		() => {},
+		mismatchCtx,
+	);
+	assert.ok(!retried.isError, `mismatch-then-match should succeed: ${JSON.stringify(retried.content).slice(0, 200)}`);
+	assert.equal(retried.details.attempts, 2, "a checker mismatch consumes an attempt and retries");
+	assert.equal(retried.usage.inputTokens, 40, "four nested calls are summed");
 }
 
 // A missing mmdflux binary must end the run after one attempt, not burn the rest.
@@ -285,6 +359,14 @@ const renderedError = tool.renderResult(
 	{},
 );
 assert.ok(renderedError.text.includes("failed after 4"), "error result renders the attempt count");
+
+const renderedEscape = tool.renderResult(
+	{ content: [{ type: "text", text: "unused" }], details: { escape: "needs a coordinate plot", attempts: 1 } },
+	{},
+	theme,
+	{},
+);
+assert.ok(renderedEscape.text.includes("not expressible"), "escape result renders the reason");
 
 const renderedPlain = tool.renderResult({ content: [{ type: "text", text: "plain text" }], details: undefined }, {}, theme, {});
 assert.equal(renderedPlain.text, "plain text", "no details falls back to content text");

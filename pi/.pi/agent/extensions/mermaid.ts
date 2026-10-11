@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { Type } from "typebox";
@@ -13,11 +13,17 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 // The tool writes the diagram with a nested model call (default
 // openai-codex/gpt-6.1-sol at max thinking; override with
 // PI_MERMAID_MODEL=provider/id), validates it with mmdflux — a strict
-// Mermaid parser that needs no browser — and retries with the parse error
-// fed back until the diagram parses. The validated diagram renders as
-// Unicode art in the tool-result row, and the source returns as a fence the
-// agent echoes verbatim. This replaces inline fence generation, which could
-// ship diagrams that do not parse.
+// Mermaid parser that needs no browser — retries with the parse error fed
+// back until it parses, then runs a second nested call that reads the
+// rendered Unicode art against the spec ("verify by looking", adapted:
+// the art is text, so a model can look at it) and retries on mismatch.
+// Layout patterns come from ~/.agents/skills/mermaid/SKILL.md at call time
+// (PI_MERMAID_SKILL overrides the path; a small fallback catalog applies
+// when the file is absent), so the skill stays the single source of truth
+// at zero parent-context cost. The validated diagram renders as Unicode
+// art in the tool-result row, and the source returns as a fence the agent
+// echoes verbatim. This replaces inline fence generation, which could ship
+// diagrams that do not parse — or parse and still lie.
 // ────────────────────────────────────────────────────────────────────────
 
 const DEFAULT_MODEL_PROVIDER = "openai-codex";
@@ -27,13 +33,73 @@ const DEFAULT_MAX_ATTEMPTS = 4;
 const MMDFLUX_TIMEOUT_MS = 30_000;
 const OUTPUT_CAP = 512 * 1024;
 
-export const MERMAID_SYSTEM_PROMPT = [
+export const MERMAID_BASE_PROMPT = [
 	"You write Mermaid diagrams.",
 	"Output exactly one ```mermaid fenced block and nothing else. No prose before or after.",
 	"Keep the diagram small: few nodes, short labels, roots at the top, the goal node as the sink.",
 	"Use plain node and edge syntax only. Do not use experimental or beta diagram types.",
 	"The diagram must pass a strict Mermaid parser. When a parser error is given back, fix it and output the full corrected diagram.",
+	"Node budget: at most ~7 nodes. If the spec lists more, cut the nodes and labels that do not earn their place; keep the idea intact. A diagram of 4 nodes that each pull weight beats one of 12 that fight for space.",
+	"Truth: if an edge or label is uncertain, omit it rather than assert something false. Do not invent content. If the spec is thin, draw the smaller true diagram.",
+	"If the spec needs a spatial or geometric picture (coordinates, vectors, function plots, exact positions) that Mermaid auto-layout cannot express, output exactly `NONE: <one-line reason>` and nothing else.",
 ].join("\n");
+
+const CHAT_ASPECT_RULES = [
+	"Aspect rules: the transcript is narrow; height is free. Target width under 60 columns.",
+	"Prefer TD. Use LR only for 4 ranks or fewer. Labels: one or two words.",
+	"Prefer the wrap pattern over serpentine for chat: the TUI fence renderer ignores inner subgraph directions.",
+].join("\n");
+
+const FALLBACK_CATALOG = [
+	"Pattern catalog (fallback; the mermaid skill file was not found):",
+	"- chain: flowchart LR, one node per step. Use for 6 linear steps or fewer.",
+	"- tree: flowchart TD, one root, children fan out.",
+	"- pipeline: flowchart TD, one subgraph per stage, stages link in order.",
+	"- hub-and-spoke: flowchart TD, hub on top, spokes below, hub links each spoke.",
+	"- fishbone: flowchart LR, causes above and below feed one spine node.",
+	"- cycle: the last node links back to the first.",
+	"- grid: subgraph rows, one row of peers per subgraph.",
+	"- wrap: rows read left-to-right; the last node of each row links down to the first node of the next.",
+	"- zones: subgraphs named for ownership or phase; arrows cross the borders.",
+].join("\n");
+
+/** Load the pattern catalog from the mermaid skill at call time; fallback when absent. */
+export function loadPatternCatalog(): string {
+	const skillPath = process.env.PI_MERMAID_SKILL || join(homedir(), ".agents", "skills", "mermaid", "SKILL.md");
+	try {
+		const raw = readFileSync(skillPath, "utf8");
+		const patterns = /## Named layout patterns\n([\s\S]*?)(?=\n## )/.exec(raw)?.[1]?.trim();
+		if (patterns) {
+			return "Pattern catalog (from the mermaid skill; pick the pattern that fits the spec):\n" + patterns + "\n\n" + CHAT_ASPECT_RULES;
+		}
+	} catch {
+		// Fall through to the fallback catalog.
+	}
+	return FALLBACK_CATALOG + "\n\n" + CHAT_ASPECT_RULES;
+}
+
+export function buildSystemPrompt(): string {
+	return MERMAID_BASE_PROMPT + "\n\n" + loadPatternCatalog();
+}
+
+export const CHECKER_SYSTEM_PROMPT = [
+	"You verify rendered Mermaid diagrams against their spec.",
+	"You receive a spec and the rendered Unicode art of a diagram.",
+	"Reply with exactly one line: `VERDICT: MATCH` when the art shows exactly what the spec says — every node, every label, every edge direction, nothing invented.",
+	"Or `VERDICT: MISMATCH: <one-line reason>` when anything differs, is missing, or was invented.",
+	"The syntax already parsed. Judge truth to the spec, not syntax.",
+].join("\n");
+
+export function buildCheckerPrompt(spec: string, art: string): string {
+	return "Spec:\n" + spec + "\n\nRendered diagram (Unicode art):\n" + art;
+}
+
+export function parseCheckerVerdict(raw: string): { match: true } | { match: false; reason: string } {
+	if (/VERDICT:\s*MATCH\b/i.test(raw)) return { match: true };
+	const mismatch = /VERDICT:\s*MISMATCH:\s*([\s\S]+)/i.exec(raw);
+	if (mismatch) return { match: false, reason: mismatch[1].trim().slice(0, 300) };
+	return { match: false, reason: "checker returned no verdict" };
+}
 
 const MermaidParams = Type.Object({
 	spec: Type.String({
@@ -48,6 +114,8 @@ interface MermaidDetails {
 	art?: string;
 	/** Last error, on failure. */
 	error?: string;
+	/** Reason the spec is not expressible in Mermaid, on escape. */
+	escape?: string;
 	attempts: number;
 }
 
@@ -56,6 +124,12 @@ export function extractMermaidSource(raw: string): string | null {
 	const fence = /```mermaid\s*\n([\s\S]*?)```/.exec(raw);
 	const body = fence?.[1]?.trim();
 	return body || null;
+}
+
+/** Detect the spatial escape hatch: `NONE: <reason>`. */
+export function extractNoneEscape(raw: string): string | null {
+	const m = /NONE:\s*(.+)/.exec(raw.trim());
+	return m ? m[1].trim().slice(0, 200) : null;
 }
 
 /** Build the user prompt for one generation attempt. */
@@ -67,22 +141,22 @@ export function buildAttemptPrompt(spec: string, previous?: { source: string; er
 		"",
 		"Rules:",
 		"- Output only one ```mermaid fenced block. No prose.",
-		"- Keep the diagram small: few nodes, short labels.",
+		"- Keep the diagram small: at most ~7 nodes, short labels.",
 		"- Roots at the top. The goal node is the sink.",
 		"- Use plain node and edge syntax only. No experimental or beta diagram types.",
 	];
 	if (previous) {
 		lines.push(
 			"",
-			"Your previous diagram FAILED strict parsing:",
+			"Your previous diagram was rejected:",
 			"",
 			"```mermaid",
 			previous.source,
 			"```",
 			"",
-			`Parser error: ${previous.error}`,
+			`Reason: ${previous.error}`,
 			"",
-			"Fix the error. Keep the spec. Output the full corrected diagram.",
+			"Fix the reason. Keep the spec. Output the full corrected diagram.",
 		);
 	}
 	return lines.join("\n");
@@ -260,7 +334,7 @@ export default function (pi: ExtensionAPI) {
 					response = await ctx.modelRegistry.complete(
 						model,
 						{
-							systemPrompt: MERMAID_SYSTEM_PROMPT,
+							systemPrompt: buildSystemPrompt(),
 							messages: [{ role: "user", content: buildAttemptPrompt(spec, previous), timestamp: Date.now() } as any],
 						},
 						// Max thinking needs a large output budget or the model spends it all
@@ -279,6 +353,17 @@ export default function (pi: ExtensionAPI) {
 					.filter((c: any) => c?.type === "text")
 					.map((c: any) => c.text)
 					.join("\n");
+				const escape = extractNoneEscape(raw);
+				if (escape) {
+					return {
+						content: textContent(
+							`The spec needs a picture Mermaid auto-layout cannot express: ${escape}. ` +
+								"Describe it in text or hand-author an SVG. Do not force a Mermaid diagram.",
+						),
+						details: { escape, attempts: attempt } satisfies MermaidDetails,
+						usage,
+					};
+				}
 				const source = extractMermaidSource(raw);
 				if (!source) {
 					lastError = "model returned no mermaid block";
@@ -295,8 +380,36 @@ export default function (pi: ExtensionAPI) {
 					break;
 				}
 				if (verdict.ok) {
-					success = { source, art: verdict.art, attempts: attempt };
-					break;
+					// Verify by looking: the art is text, so a nested call can read it
+					// against the spec. A checker infra failure never rejects the diagram.
+					onUpdate?.({ content: textContent(`attempt ${attempt}/${maxAttempts}: checking the rendered diagram against the spec`) });
+					let check: { match: boolean; reason?: string } = { match: true };
+					try {
+						const checkResponse = await ctx.modelRegistry.complete(
+							model,
+							{
+								systemPrompt: CHECKER_SYSTEM_PROMPT,
+								messages: [{ role: "user", content: buildCheckerPrompt(spec, verdict.art), timestamp: Date.now() } as any],
+							},
+							{ signal, maxTokens: 2000, reasoningEffort: "medium" } as any,
+						);
+						usage = addUsage(usage, checkResponse?.usage);
+						const checkRaw = (checkResponse?.content ?? [])
+							.filter((c: any) => c?.type === "text")
+							.map((c: any) => c.text)
+							.join("\n");
+						check = parseCheckerVerdict(checkRaw);
+					} catch (err: any) {
+						if (signal?.aborted) break;
+						// Checker unavailable: accept the parsed diagram rather than fail on infra.
+					}
+					if (check.match) {
+						success = { source, art: verdict.art, attempts: attempt };
+						break;
+					}
+					lastError = `diagram did not match the spec: ${check.reason ?? "unknown"}`;
+					previous = { source, error: lastError };
+					continue;
 				}
 				lastError = verdict.error;
 				if (verdict.kind === "environment") break;
@@ -341,6 +454,9 @@ export default function (pi: ExtensionAPI) {
 
 		renderResult(result, _options, theme) {
 			const details = result.details as MermaidDetails | undefined;
+			if (details?.escape) {
+				return new Text(theme.fg("muted", `mermaid: not expressible in Mermaid — ${details.escape}`), 0, 0);
+			}
 			if (details?.art) {
 				const header = `mermaid (validated, attempt ${details.attempts})`;
 				return new Text(theme.fg("muted", header) + "\n" + details.art, 0, 0);
