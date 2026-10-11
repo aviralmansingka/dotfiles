@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -131,6 +131,18 @@ try {
 		nvimOpen.isSidebarProcess({ name: "nvim", pid: 8, argv: ["/usr/bin/nvim", "--headless", "--listen", daemonSocket] }, daemonSocket),
 		false,
 	);
+
+	// ── dotfiles worktree config detection (pure) ───────────────────
+	const dotfilesRoot = join(tempRoot, "dotfiles");
+	mkdirSync(join(dotfilesRoot, "nvim", ".config", "nvim"), { recursive: true });
+	writeFileSync(join(dotfilesRoot, "nvim", ".config", "nvim", "init.lua"), "");
+	assert.equal(
+		nvimOpen.dotfilesConfigHome(join(dotfilesRoot, "nvim", ".config", "nvim", "lua")),
+		join(dotfilesRoot, "nvim", ".config"),
+	);
+	const plainRoot = join(tempRoot, "plain");
+	mkdirSync(plainRoot);
+	assert.equal(nvimOpen.dotfilesConfigHome(plainRoot), null);
 } finally {
 	rmSync(tempRoot, { recursive: true, force: true });
 }

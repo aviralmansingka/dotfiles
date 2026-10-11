@@ -286,9 +286,9 @@ if [[ "$EDITOR_FOUND" == "true" ]]; then
 	fi
 	# Focus the editor pane — find direction via neighbor
 	for dir in right down left up; do
-		NEIGHBOR=$(herdr_json pane neighbor --pane "$CURRENT_PANE_ID" --direction "$dir" | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',{}).get('neighbor',{}).get('pane_id',''))" 2>/dev/null || echo "")
+		NEIGHBOR=$(herdr_json pane neighbor --pane "$CURRENT_PANE_ID" --direction "$dir" | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',{}).get('neighbor',{}).get('neighbor_pane_id',''))" 2>/dev/null || echo "")
 		if [[ "$NEIGHBOR" == "$EDITOR_PANE_ID" ]]; then
-			herdr_ok pane focus --current --direction "$dir"
+			herdr_ok pane focus --pane "$CURRENT_PANE_ID" --direction "$dir"
 			break
 		fi
 	done

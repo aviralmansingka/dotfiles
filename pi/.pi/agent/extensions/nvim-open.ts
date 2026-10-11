@@ -4,7 +4,7 @@ import { truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve, isAbsolute } from "node:path";
+import { join, dirname, resolve, isAbsolute } from "node:path";
 
 const HERDR_TIMEOUT_MS = 5000;
 
@@ -301,6 +301,21 @@ function sendFilesViaText(paneId: string, files: string[]): boolean {
 // ---------------------------------------------------------------------------
 // launch & focus
 // ---------------------------------------------------------------------------
+/** XDG_CONFIG_HOME for a dotfiles worktree's nvim config — the nearest
+ *  ancestor of cwd holding nvim/.config/nvim/init.lua — or null when cwd
+ *  is not inside a dotfiles checkout. */
+export function dotfilesConfigHome(cwd: string): string | null {
+	let dir = cwd;
+	for (let i = 0; i < 20; i++) {
+		if (existsSync(join(dir, "nvim", ".config", "nvim", "init.lua"))) {
+			return join(dir, "nvim", ".config");
+		}
+		const parent = dirname(dir);
+		if (parent === dir) return null;
+		dir = parent;
+	}
+	return null;
+}
 /**
  * Split the current pane to the right and launch vim in the new pane.
  * Returns the new pane ID, or null if the split or run failed.
@@ -323,7 +338,11 @@ function launchEditor(cwd: string, files: string[]): string | null {
 	// run` injects the string into the pane's interactive shell (zsh/fish
 	// safe: bash -c with a single single-quoted argument, quotes escaped).
 	const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
-	const nvimLine = ["nvim", "--listen", socketPath, ...files.map(quote)].join(" ");
+	const configHome = dotfilesConfigHome(cwd);
+	const nvimLine = [
+		...(configHome ? ["env", `XDG_CONFIG_HOME=${quote(configHome)}`] : []),
+		"nvim", "--listen", socketPath, ...files.map(quote),
+	].join(" ");
 	const inner = `${nvimLine}; herdr pane close ${newPaneId}`;
 	const paneCommand = `bash -c '${inner.replace(/'/g, "'\\''")}'`;
 	if (!herdrOk(["pane", "run", newPaneId, paneCommand])) {
@@ -349,13 +368,6 @@ function focusEditorPane(editorPaneId: string, currentPaneId: string): boolean {
 			return herdrOk(["pane", "focus", "--pane", currentPaneId, "--direction", dir]);
 		}
 	}
-	// Fallback: try each direction directly
-	for (const dir of directions) {
-		if (herdrOk(["pane", "focus", "--current", "--direction", dir])) {
-			const current = getCurrentPane();
-			if (current?.pane_id === editorPaneId) return true;
-		}
-	}
 	return false;
 }
 // ---------------------------------------------------------------------------
@@ -366,14 +378,11 @@ function tmuxFallback(cwd: string, files: string[]): boolean {
 		// Same contract as the herdr launcher: nvim with an RPC socket, so
 		// focus-buffer can drive this pane too.
 		const socketPath = join(tmpdir(), `pi-nvim-${process.pid}-${Date.now()}.sock`);
-		const socketArg = `--listen ${socketPath}`;
-		let shellCmd: string;
-		if (files.length > 0) {
-			const quotedFiles = files.map((f) => `'${f.replace(/'/g, "'\\''")}'`);
-			shellCmd = `nvim ${socketArg} ${quotedFiles.join(" ")}`;
-		} else {
-			shellCmd = `nvim ${socketArg}`;
-		}
+		const configHome = dotfilesConfigHome(cwd);
+		const shellCmd = [
+			...(configHome ? ["env", `XDG_CONFIG_HOME='${configHome.replace(/'/g, "'\\''")}'`] : []),
+			"nvim", `--listen ${socketPath}`, ...files.map((f) => `'${f.replace(/'/g, "'\\''")}'`),
+		].join(" ");
 		execFileSync("tmux", ["split-window", "-h", "-c", cwd, shellCmd], {
 			timeout: HERDR_TIMEOUT_MS, stdio: "ignore",
 		});
