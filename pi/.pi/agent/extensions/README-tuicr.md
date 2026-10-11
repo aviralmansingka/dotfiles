@@ -36,15 +36,22 @@ How it works:
 2. It spawns the `tuicr-review` agent (via `interactive-subagents`) with the
    repo and session slug. The subagent attaches **its own** comment watcher
    with the internal `tuicr` tool (`attachOnly`) and parks in `waiting`.
-3. Every user comment steers into the subagent. It answers inside the TUI with
-   `tuicr_reply` and applies fixes for actionable comments.
+3. Comments written before the watcher attached never steer in, so the
+   subagent sweeps them right after attaching (bash `tuicr review comments`)
+   and answers them like any others. Every later user comment steers into the
+   subagent; it answers inside the TUI with `tuicr_reply` and applies fixes for
+   actionable comments.
 4. When the human closes the TUI, the watcher steers the final notice, the
    subagent writes a summary of every comment and fix, and its session exits —
    the summary steers back to the parent, which asks the user whether to merge
-   or review later.
+   or review later. If the tuicr CLI keeps failing instead, the watcher still
+   steers a final notice so the subagent summarizes and exits rather than
+   hanging.
 
 The parent chat never answers review comments while the subagent runs; a
 same-repo chat watcher is stopped on launch so comments are not double-steered.
+Re-running `/tuicr` for a repo whose review is still open is refused with
+guidance — one reviewer per repo, so comment batches are never double-answered.
 
 ## Tools
 

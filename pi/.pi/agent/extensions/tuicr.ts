@@ -31,6 +31,7 @@ import {
 	buildWrapperArgs,
 	collectSeenKeys,
 	commentKey,
+	formatCommentLine,
 	formatLaunchResult,
 	formatReplyCall,
 	formatReplyResult,
@@ -78,6 +79,17 @@ interface WatchState {
 let watch: WatchState | null = null;
 const replyIds = new Set<string>();
 let repliesInFlight = 0;
+
+// One tuicr-review subagent per repo: a second watcher on the same session
+// would double-answer every comment batch. Liveness is queried from the
+// interactive-subagents registry, so a finished reviewer never blocks the
+// next review.
+const spawnedReviewers = new Map<string, string>();
+
+function reviewerRunning(name: string): boolean {
+	const isRunning = (globalThis as any).__pi_interactive_subagents?.isSubagentRunning;
+	return typeof isRunning === "function" ? isRunning(name) : false;
+}
 
 // While this session's watcher is active, future turns are guaranteed
 // (comment batches steer in). subagent-done.ts reads this count in its
@@ -156,21 +168,41 @@ function deliver(pi: ExtensionAPI, state: WatchState, final: boolean) {
 	);
 }
 
+/**
+ * Stop the watcher and deliver the final `tuicr_review_comments` steer so the
+ * hosting session (a parked tuicr-review subagent, or the captain chat) wakes,
+ * wraps up, and — for the subagent — can auto-exit. Every watcher death the
+ * host did not cause itself goes through here.
+ */
+function stopWatchWithFinalSteer(
+	pi: ExtensionAPI,
+	state: WatchState,
+	reason: string,
+	content: string,
+) {
+	stopWatch(reason);
+	pi.sendMessage(
+		{
+			customType: "tuicr_review_comments",
+			content,
+			display: true,
+			details: { repo: state.repo, slug: state.slug, final: true, count: 0 },
+		},
+		{ triggerTurn: true, deliverAs: "steer" },
+	);
+}
+
 async function tick(pi: ExtensionAPI, state: WatchState) {
 	if (state.ticking || repliesInFlight > 0) return;
 	state.ticking = true;
 	try {
 		if (!state.slug) {
 			if (Date.now() > state.slugResolveDeadline) {
-				stopWatch(`no tuicr session became active for ${state.repo}`);
-				pi.sendMessage(
-					{
-						customType: "tuicr_review_comments",
-						content: `tuicr background watcher gave up: no review session became active for ${state.repo}. The pane may have failed to launch — check it, or ask the user to start tuicr manually and re-run tuicr.`,
-						display: true,
-						details: { repo: state.repo, slug: null, final: true, count: 0, gaveUp: true },
-					},
-					{ triggerTurn: true, deliverAs: "steer" },
+				stopWatchWithFinalSteer(
+					pi,
+					state,
+					`no tuicr session became active for ${state.repo}`,
+					`tuicr background watcher gave up: no review session became active for ${state.repo}. The pane may have failed to launch — check it, or ask the user to start tuicr manually and re-run tuicr.`,
 				);
 				return;
 			}
@@ -182,7 +214,12 @@ async function tick(pi: ExtensionAPI, state: WatchState) {
 				state.seen = collectSeenKeys(await fetchComments(state.repo, state.slug));
 				notify(`tuicr background watcher attached to ${state.slug}`, "info");
 			} else if (picked.status === "ambiguous") {
-				stopWatch("multiple active tuicr sessions; pass a session slug");
+				stopWatchWithFinalSteer(
+					pi,
+					state,
+					"multiple active tuicr sessions; pass a session slug",
+					`tuicr background watcher stopped: several tuicr sessions are active under ${state.repo}, so it cannot tell which one to watch. Ask the user which session holds this review, then re-attach with the tuicr tool and that sessionSlug. If the user cannot say, summarize the review so far and stop.`,
+				);
 				return;
 			}
 			return;
@@ -223,7 +260,18 @@ async function tick(pi: ExtensionAPI, state: WatchState) {
 	} catch (error) {
 		state.consecutiveErrors += 1;
 		if (state.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-			stopWatch(`repeated tuicr CLI failures: ${error instanceof Error ? error.message : error}`);
+			const detail = error instanceof Error ? error.message : error;
+			const missed = newComments(new Set(), state.pending, replyIds);
+			state.pending = [];
+			const missedLines = missed.length > 0
+				? ` ${missed.length} fetched comment(s) were never delivered:\n${truncateLines(missed.map(formatCommentLine), 40).join("\n")}`
+				: "";
+			stopWatchWithFinalSteer(
+				pi,
+				state,
+				`repeated tuicr CLI failures: ${detail}`,
+				`tuicr background watcher stopped: the tuicr CLI kept failing for ${state.repo}${state.slug ? ` (session ${state.slug})` : ""} — ${detail}. Tell the user the CLI is unavailable, summarize the review so far, and stop.${missedLines}`,
+			);
 		}
 	} finally {
 		state.ticking = false;
@@ -364,20 +412,35 @@ async function startTuicrReview(
 	cwd: string,
 	ctx: { cwd: string; ui: unknown },
 ): Promise<{ message: string; slug: string | null; attached: boolean; repo: string }> {
-	// The subagent hosts the watcher for this session; a same-repo watcher in
-	// the parent chat would double-steer every comment batch.
-	const { message, slug, attached, repo } = await startTuicrBackground(pi, params, cwd, {
-		watcher: false,
-	});
-	if (watch && watch.repo === repo) stopWatch("replaced by a tuicr_review subagent");
-
 	const spawn = (globalThis as any).__pi_interactive_subagents?.executeSubagent;
 	if (typeof spawn !== "function") {
 		throw new TuicrBackgroundError(
 			"interactive-subagents is not loaded, so the tuicr-review subagent cannot spawn. Attach a watcher with the plain tuicr tool instead.",
 		);
 	}
-	const task = buildReviewSubagentTask({ repo, slug, scope: params.scope ?? "working-tree", revset: params.revset, pr: params.pr });
+	const repo = await resolveRepo(params.repo, cwd);
+	const running = spawnedReviewers.get(repo);
+	if (running && reviewerRunning(running)) {
+		throw new TuicrBackgroundError(
+			`A tuicr-review subagent ("${running}") is already handling the review for ${repo}. ` +
+				"If the TUI is still open, keep commenting there — it replies inside it. " +
+				"Otherwise wait for its summary, then re-run tuicr_review.",
+		);
+	}
+	// The subagent hosts the watcher for this session; a same-repo watcher in
+	// the parent chat would double-steer every comment batch.
+	const { slug, attached } = await startTuicrBackground(pi, params, cwd, {
+		watcher: false,
+	});
+	const task = buildReviewSubagentTask({
+		repo,
+		slug,
+		attached,
+		scope: params.scope ?? "working-tree",
+		revset: params.revset,
+		pr: params.pr,
+	});
+	if (watch && watch.repo === repo) stopWatch("replaced by a tuicr_review subagent");
 	const result = await spawn({ agent: "tuicr-review", name: "tuicr-review", task, cwd: repo }, ctx);
 	const text = (result?.content ?? [])
 		.filter((part: { type: string }) => part.type === "text")
@@ -386,8 +449,11 @@ async function startTuicrReview(
 	if (result?.details?.error || result?.isError) {
 		throw new TuicrBackgroundError(text || result?.details?.error || "tuicr-review subagent failed to spawn.");
 	}
+	const reviewerName =
+		typeof result?.details?.name === "string" && result.details.name ? result.details.name : "tuicr-review";
+	spawnedReviewers.set(repo, reviewerName);
 	return {
-		message: formatReviewLaunchResult({ repo, slug, attached, subagent: "tuicr-review" }) + (text ? `\n${text}` : ""),
+		message: formatReviewLaunchResult({ repo, slug, attached, subagent: reviewerName }) + (text ? `\n${text}` : ""),
 		slug,
 		attached,
 		repo,
@@ -466,6 +532,7 @@ const tuicrReviewTool = defineTool({
 	promptSnippet: "Open tuicr with a review subagent that answers comments and fixes code",
 	promptGuidelines: [
 		"Use tuicr_review as the default way to open a code review — working tree, revset, or PR number.",
+		"One review per repo: while a tuicr-review subagent runs for that repo, a second tuicr_review for it is refused — tell the user to keep commenting in the open TUI or wait for its summary.",
 		"While the tuicr-review subagent runs, do not reply to review comments yourself; the subagent owns the TUI conversation.",
 		"When the tuicr-review subagent result arrives, give the user its summary and ask via ask_user_question whether to merge the branch or review later.",
 	],

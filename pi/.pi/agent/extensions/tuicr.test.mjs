@@ -96,6 +96,35 @@ assert.match(taskUnresolved, /working tree/);
 assert.match(taskUnresolved, /Never launch a new pane/);
 assert.match(taskUnresolved, /retry for up to a minute/);
 
+// Scope args are validated on the attach path too — no pane launches, so
+// scopeToTuicrArgs never runs upstream of the task build.
+assert.throws(
+	() => buildReviewSubagentTask({ repo: "/repo", slug: "s1", scope: "pr", revset: undefined, pr: undefined }),
+	/pr is required/,
+);
+assert.throws(
+	() => buildReviewSubagentTask({ repo: "/repo", slug: "s1", scope: "revset", revset: undefined, pr: undefined }),
+	/revset is required/,
+);
+assert.throws(
+	() => buildReviewSubagentTask({ repo: "/repo", slug: "s1", scope: "staged", revset: undefined, pr: undefined }),
+	/Unknown scope/,
+);
+
+// Attaching names the session actually watched, not the requested scope.
+const taskAttached = buildReviewSubagentTask({
+	repo: "/repo", slug: "s1", attached: true, scope: "pr", revset: undefined, pr: 272,
+});
+assert.match(taskAttached, /active tuicr session s1/);
+assert.doesNotMatch(taskAttached, /PR 272/);
+assert.match(taskAttached, /sessionSlug "s1"/);
+
+// Pre-attach comments are swept, and any final steer ends the flow.
+assert.match(taskKnown, /existed before the watcher attached/);
+assert.match(taskKnown, /tuicr review comments --session <slug> --repo <repo>/);
+assert.match(taskKnown, /no pi-agent reply/);
+assert.match(taskKnown, /watcher stopped early/);
+
 const reviewLaunch = formatReviewLaunchResult({
 	repo: "/repo", slug: "s1", attached: false, subagent: "tuicr-review",
 });

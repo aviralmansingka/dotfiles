@@ -228,17 +228,25 @@ export function registerToolExtension(name: string, extensionPath: string): void
 
 /**
  * Map a custom (non-built-in) tool name to the pi-extension file that
- * registers it. The child now keeps normal extension discovery enabled, but
- * explicit `-e` entries are still needed for helper tools outside discovered
- * extension locations (for example hunk_review). Returns undefined for built-in
- * tools and for unknown names (which simply won't be granted).
+ * registers it. The child keeps normal extension discovery enabled, but its
+ * config dir can be redirected to the target repo (resolveSubagentPaths), so
+ * the parent's agent-dir extensions may not be discovered there. Prefer the
+ * live tool registry — the exact file that registered the tool in this
+ * process — then the conventional agent-dir layout, then runtime-registered
+ * extensions. Returns undefined for built-in tools and for unknown names
+ * (which simply won't be granted).
  */
 function getToolExtensionPath(tool: string): string | undefined {
   if (BUILTIN_TOOLS.has(tool)) return undefined;
-  // The four spawning tools are registered by THIS extension.
+  // The spawning tools are registered by THIS extension.
   if ((SPAWNING_TOOLS as readonly string[]).includes(tool)) {
     return fileURLToPath(import.meta.url);
   }
+  const registered = latestPi?.getAllTools().find((info) => info.name === tool);
+  const registeredPath = registered && !registered.sourceInfo.path.startsWith("builtin:")
+    ? registered.sourceInfo.path
+    : undefined;
+  if (registeredPath && existsSync(registeredPath)) return registeredPath;
   const extBase = join(getAgentConfigDir(), "extensions");
   const map: Record<string, string> = {
     web_search: join(extBase, "web-search", "index.ts"),
@@ -246,6 +254,8 @@ function getToolExtensionPath(tool: string): string | undefined {
     video_extract: join(extBase, "video-extract", "index.ts"),
     youtube_search: join(extBase, "youtube-search", "index.ts"),
     google_image_search: join(extBase, "google-image-search", "index.ts"),
+    tuicr: join(extBase, "tuicr.ts"),
+    tuicr_reply: join(extBase, "tuicr.ts"),
   };
   // Prefer the built-in path, but fall back to a runtime-registered extension
   // when that path no longer exists on disk (e.g. a built-in tool extension
@@ -254,10 +264,6 @@ function getToolExtensionPath(tool: string): string | undefined {
   if (builtin && existsSync(builtin)) return builtin;
   return EXTRA_TOOL_EXTENSIONS.get(tool);
 }
-
-// Nothing else needs an explicit entry: tools registered by extensions in
-// normal discovery locations (e.g. the tuicr extension's `tuicr`,
-// `tuicr_reply`, `tuicr_review`) load in the child without an `-e` override.
 
 /**
  * When this process was spawned as a restricted subagent, the parent pins the
@@ -2600,6 +2606,13 @@ export default function subagentsExtension(pi: ExtensionAPI) {
   if (subagentsGlobal && typeof subagentsGlobal.executeSubagent !== "function") {
     subagentsGlobal.executeSubagent = (params: any, ctx: any) =>
       subagentTool.execute("", params, undefined, undefined, ctx);
+  }
+  // Liveness probe over the same running registry, so a sibling extension can
+  // refuse a duplicate spawn while its subagent still runs (tuicr keeps one
+  // reviewer per repo).
+  if (subagentsGlobal && typeof subagentsGlobal.isSubagentRunning !== "function") {
+    subagentsGlobal.isSubagentRunning = (name: string) =>
+      Array.from(runningSubagents.values()).some((running) => running.name === name);
   }
 
   // /subagent command — spawn a subagent by name

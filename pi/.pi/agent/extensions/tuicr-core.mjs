@@ -329,17 +329,20 @@ export function formatReplyResult(result, theme) {
 }
 
 /** Task prompt for the tuicr-review subagent spawned by `tuicr_review`. */
-export function buildReviewSubagentTask({ repo, slug, scope, revset, pr }) {
-	const target =
-		scope === "pr" ? `PR ${pr}` : scope === "revset" ? `commit range ${revset}` : "the working tree";
+export function buildReviewSubagentTask({ repo, slug, attached, scope, revset, pr }) {
+	scopeToTuicrArgs(scope ?? "working-tree", revset, pr);
+	const target = attached
+		? `the active tuicr session ${slug}`
+		: scope === "pr" ? `PR ${pr}` : scope === "revset" ? `commit range ${revset}` : "the working tree";
 	const lines = [
 		`Answer the user's tuicr review comments for ${target} in ${repo}.`,
 		slug
 			? `First attach this session's comment watcher with the tuicr tool: repo ${repo}, sessionSlug "${slug}", attachOnly true.`
 			: `First attach this session's comment watcher with the tuicr tool: repo ${repo}, attachOnly true. No session may be active yet — retry for up to a minute before giving up. Never launch a new pane; the parent already opened one.`,
-		"User comments arrive as tuicr_review_comments steer messages.",
+		"Comments that existed before the watcher attached never steer in. Right after attaching, sweep them: read the full list with bash — tuicr review comments --session <slug> --repo <repo> (omit --repo when the slug starts with gh:) — and answer every user-authored comment that has no pi-agent reply (agent replies start with `Re: `), exactly as you answer steered ones.",
+		"New user comments arrive as tuicr_review_comments steer messages.",
 		"Answer every user comment with tuicr_reply so it shows inside the TUI. Apply fixes for actionable comments and say what you changed.",
-		"When the final steer says the review session ended, write a terse summary of every comment, your answer, the fixes applied, and the files touched. Remind the orchestrator to ask the user whether to merge or review later. Then stop.",
+		"When a final steer arrives — the review session ended, or the watcher stopped early — write a terse summary of every comment, your answer, the fixes applied, and the files touched. Remind the orchestrator to ask the user whether to merge or review later. Then stop.",
 	];
 	return lines.join(" ");
 }
