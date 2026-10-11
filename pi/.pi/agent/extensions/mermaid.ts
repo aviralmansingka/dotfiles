@@ -102,7 +102,7 @@ function spawnMmdflux(
 	bin: string,
 	source: string,
 	signal?: AbortSignal,
-): Promise<{ ok: true; art: string } | { ok: false; kind: "parse"; error: string }> {
+): Promise<MmdfluxVerdict> {
 	return new Promise((resolve, reject) => {
 		const child = spawn(bin, ["-f", "text"], { stdio: ["pipe", "pipe", "pipe"] });
 		let out = "";
@@ -128,7 +128,7 @@ function spawnMmdflux(
 			finish();
 			reject(e);
 		});
-		child.on("close", (code: number | null) => {
+		child.on("close", (code: number | null, killSignal: NodeJS.Signals | null) => {
 			finish();
 			if (signal?.aborted) {
 				reject(new Error("aborted"));
@@ -137,6 +137,14 @@ function spawnMmdflux(
 			const art = out.trimEnd();
 			if (code === 0 && art) {
 				resolve({ ok: true, art });
+				return;
+			}
+			if (code === null) {
+				resolve({
+					ok: false,
+					kind: "environment",
+					error: `mmdflux killed by ${killSignal ?? "unknown signal"} before exiting`,
+				});
 				return;
 			}
 			resolve({ ok: false, kind: "parse", error: (err || out || `mmdflux exited with code ${code}`).trim() });

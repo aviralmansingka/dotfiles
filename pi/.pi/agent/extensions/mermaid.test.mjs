@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -218,6 +218,28 @@ try {
 	else process.env.PATH = savedPath;
 	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
 	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+}
+
+// A validator killed by a signal (timeout or crash) is an environment failure, not a parse error.
+const killerBin = join(tempRoot, "killer-mmdflux");
+writeFileSync(killerBin, "#!/bin/sh\nkill -9 $$\n");
+chmodSync(killerBin, 0o755);
+const savedKillerFlux = process.env.PI_MERMAID_MMDFLUX;
+process.env.PI_MERMAID_MMDFLUX = killerBin;
+try {
+	const killed = await runMmdflux("flowchart TD\n  A --> B");
+	assert.ok(!killed.ok, "a killed validator should fail");
+	assert.equal(killed.kind, "environment", "a signal kill must classify as environment, not parse");
+	assert.match(killed.error, /SIGKILL/, `error names the kill: ${killed.error}`);
+
+	const killCtx = fakeCtx(["```mermaid\nflowchart TD\n  A --> B\n```"]);
+	const killFail = await tool.execute("id-6", { spec: "a diagram" }, undefined, () => {}, killCtx);
+	assert.equal(killFail.isError, true, "a killed validator should fail the tool");
+	assert.equal(killCtx.callCount(), 1, "a killed validator must not consume further attempts");
+	assert.equal(killFail.details.attempts, 1, "details report the single attempt that ran");
+} finally {
+	if (savedKillerFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedKillerFlux;
 }
 
 // ── renderResult ─────────────────────────────────────────────────────────────
