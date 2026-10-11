@@ -594,6 +594,9 @@ export async function pollForExit(
     /** Poll cadence. Defaults to the PI_SUBAGENT_POLL_MS knob (1000 ms). */
     interval?: number;
     sessionFile?: string;
+    /** Spawn-time transcript size baseline: only growth beyond it counts
+     *  as agent output (seeded scaffolding is not life). Defaults to 0. */
+    transcriptBaseline?: number;
     sentinelFile?: string;
     onTick?: (elapsed: number) => void;
     maxWaitMs?: number;
@@ -614,35 +617,42 @@ export async function pollForExit(
 
   // ── Single invariant: the session transcript is the agent's truth ──
   // Pane and process signals only accelerate a verdict; they never
-  // classify death on their own. A transcript that exists proves the
-  // launch lived (no false "never started"); a transcript still writing
-  // proves the agent runs (headless survival after pane churn); a frozen
-  // transcript plus a lost surface closes as a clean completion so the
-  // session-file harvest delivers the result.
+  // classify death on their own. Only output the AGENT appended — growth
+  // beyond the spawn-time baseline — counts as life: seeded session
+  // scaffolding does not (seed with no growth past the grace window is a
+  // genuine launch death). A still-growing transcript proves a live run
+  // even headless after pane churn; a frozen one plus a lost surface
+  // closes as a clean completion so the session-file harvest delivers
+  // the result.
+  const transcriptBaseline = Math.max(0, options.transcriptBaseline ?? 0);
   let transcriptSize = -1;
   let transcriptMtimeMs = -1;
-  let lastTranscriptWriteAt = 0;
-  let everHadTranscript = false;
+  let lastAgentWriteAt = 0;
+  let agentWrote = false;
   const readTranscriptState = () => {
     if (!options.sessionFile) return;
     try {
       const st = statSync(options.sessionFile);
-      if (st.size > 0) {
-        everHadTranscript = true;
-        if (st.size !== transcriptSize || st.mtimeMs !== transcriptMtimeMs) {
-          transcriptSize = st.size;
-          transcriptMtimeMs = st.mtimeMs;
-          lastTranscriptWriteAt = Date.now();
+      if (st.size !== transcriptSize || st.mtimeMs !== transcriptMtimeMs) {
+        if (st.size > transcriptBaseline) {
+          agentWrote = true;
+          lastAgentWriteAt = Date.now();
         }
+        transcriptSize = st.size;
+        transcriptMtimeMs = st.mtimeMs;
       }
     } catch {}
   };
 
+  /** How long a vanished pi or lost surface must go without transcript
+   *  growth before closing — covers brief mid-tool silence. */
+  const confirmGoneMs = Math.max(bounds.pollMs, 400);
+
   /** Verdict for a lost/unreadable surface. null = keep waiting — the
-   *  transcript is still fresh, so the agent plausibly runs headless. */
+   *  transcript is still growing, so the agent plausibly runs headless. */
   const classifySurfaceLoss = (): PollResult | null => {
-    if (!everHadTranscript) return paneKilledResult();
-    if (Date.now() - lastTranscriptWriteAt < bounds.startupGraceMs) return null;
+    if (!agentWrote) return paneKilledResult();
+    if (Date.now() - lastAgentWriteAt < confirmGoneMs) return null;
     return agentGoneResult();
   };
 
@@ -730,20 +740,21 @@ export async function pollForExit(
       const liveness = updateAgentLiveness(seenAgentProcess, processes);
       seenAgentProcess = liveness.seenAgent;
       if (liveness.agentGone) {
-        // Registry-desync guard: a recently-writing transcript means the
-        // agent loop is alive even when the pane no longer lists pi.
-        if (Date.now() - lastTranscriptWriteAt >= bounds.startupGraceMs) {
+        // Registry-desync guard: pi vanished from the pane. Transcript
+        // growth within the confirm window means a live headless run;
+        // silence past it confirms completion.
+        if (Date.now() - lastAgentWriteAt >= confirmGoneMs) {
           return agentGoneResult();
         }
       }
       // No-sighting grace — genuine launch death only: no pi sighting AND
-      // no transcript content, past the grace window. An existing
-      // transcript proves the launch lived; a broken pane read can never
-      // write off a live session as "never started". Bounded, never
-      // infinite.
+      // no agent output beyond the spawn baseline, past the grace window.
+      // Agent transcript growth proves the launch lived; a broken pane
+      // read can never write off a live session as "never started".
+      // Bounded, never infinite.
       if (
         !seenAgentProcess &&
-        !everHadTranscript &&
+        !agentWrote &&
         Date.now() - start >= bounds.startupGraceMs
       ) {
         return noAgentResult();

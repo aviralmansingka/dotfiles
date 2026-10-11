@@ -12,6 +12,7 @@ import {
   mkdirSync,
   copyFileSync,
   unlinkSync,
+  statSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -849,6 +850,9 @@ interface RunningSubagent {
   surface: string;
   startTime: number;
   sessionFile: string;
+  /** Spawn-time size baseline for transcript-liveness: only growth
+   *  beyond it counts as agent output (seeded scaffolding is not life). */
+  transcriptBaseline?: number;
   launchScriptFile?: string;
   activityFile?: string;
   activity?: SubagentActivityState;
@@ -1626,6 +1630,11 @@ async function launchSubagentOnSurface(
       childCwd: targetCwdForSession,
     });
   }
+  // Transcript-liveness baseline: the seed (or nothing, for standalone
+  // sessions the child creates itself) is not agent output. Only growth
+  // beyond this size proves the agent ran.
+  const transcriptBaseline =
+    existsSync(subagentSessionFile) ? statSync(subagentSessionFile).size : 0;
 
   const activityFile = getSubagentActivityFile(artifactDir, id);
   mkdirSync(dirname(activityFile), { recursive: true });
@@ -1713,6 +1722,7 @@ async function launchSubagentOnSurface(
       surface,
       startTime,
       sessionFile: subagentSessionFile,
+      transcriptBaseline,
       launchScriptFile,
       cli: "claude",
       sentinelFile,
@@ -1869,6 +1879,7 @@ async function launchSubagentOnSurface(
     surface,
     startTime,
     sessionFile: subagentSessionFile,
+    transcriptBaseline,
     launchScriptFile,
     activityFile,
     interactive: effectiveInteractive,
@@ -2009,6 +2020,7 @@ async function watchSubagent(
       result = await pollForExit(surface, AbortSignal.any([signal, getModuleAbortSignal()]), {
         interval: bounds.pollMs,
         sessionFile,
+        transcriptBaseline: running.transcriptBaseline,
         sentinelFile: running.sentinelFile,
         onTick() {
           observeRunningSubagent(running);
@@ -2858,6 +2870,9 @@ export default function subagentsExtension(pi: ExtensionAPI) {
           surface,
           startTime,
           sessionFile: sessionPath,
+          // Resume baseline: the file's current size — only new output
+          // counts as agent activity for the resumed watcher.
+          transcriptBaseline: existsSync(sessionPath) ? statSync(sessionPath).size : 0,
           launchScriptFile,
           activityFile,
           interactive,
