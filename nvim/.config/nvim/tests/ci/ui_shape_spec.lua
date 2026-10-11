@@ -25,6 +25,13 @@ here = here:sub(1, 1) == "@" and here:sub(2) or here
 local H = dofile(vim.fs.dirname(here) .. "/harness.lua")
 local root = H.setup()
 
+-- A real config ships <config>/after as its own runtimepath entry (lazy.nvim
+-- adds it); H.setup prepends only the config root. Without this entry,
+-- `runtime!` never resolves after/ftplugin/*.lua under -u NONE, and the
+-- markdown case silently passes only where a stowed ~/.config/nvim supplies
+-- its own after dir (the #238 false-green class).
+vim.opt.runtimepath:append(root .. "/after")
+
 -- H.run with per-check wall-clock timing (ms) appended to the PASS line.
 local function run(name, fn)
   local t0 = os.clock()
@@ -329,6 +336,10 @@ end)
 
 -- ── after/ftplugin/markdown.lua: the real FileType trigger ────────────────
 run("markdown ftplugin settings", function()
+  -- root/after is on the runtimepath (see the setup block above), so the
+  -- worktree's after/ftplugin/markdown.lua resolves like it does in a real
+  -- editor. Setting vim.bo.filetype fires the real FileType autocmd on both
+  -- 0.12 and 0.13, which sources it through `filetype plugin on`.
   vim.cmd("filetype plugin on")
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_set_current_buf(buf)

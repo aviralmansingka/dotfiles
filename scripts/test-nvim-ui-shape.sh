@@ -47,6 +47,18 @@ if [[ -z "$nvim_bin" ]]; then
   exit 0
 fi
 
+# Neutral XDG dirs: a stowed ~/.config/nvim must never leak into the default
+# runtimepath and mask a worktree regression (harness invariant,
+# fix-markdown-line-length #238). Every case must load THIS worktree copy.
+# Cleaned up on exit via the trap below.
+xdg_root="$(mktemp -d)"
+trap 'rm -rf "$xdg_root"' EXIT
+mkdir -p "$xdg_root/config" "$xdg_root/data" "$xdg_root/state" "$xdg_root/cache"
+export XDG_CONFIG_HOME="$xdg_root/config"
+export XDG_DATA_HOME="$xdg_root/data"
+export XDG_STATE_HOME="$xdg_root/state"
+export XDG_CACHE_HOME="$xdg_root/cache"
+
 export NVIM_TEST_CONFIG_ROOT="$config_root"
 export LC_ALL=C
 
