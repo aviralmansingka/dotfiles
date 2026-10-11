@@ -68,11 +68,23 @@ flowchart TD
 Keep diagrams small. A diagram that needs scrolling carries too many nodes —
 split the answer instead.
 
-When one node branches into several parallel outcomes, draw a single
-shared arrow from the node to an invisible junction point, then split
-from the junction to each outcome — do not fan multiple arrows
-directly out of one node. Group the parallel outcomes in a subgraph
-when they belong together. Example:
+Use these named layout patterns (full catalog, sources, and renderer
+rules: consult the `mermaid` skill):
+
+- **junction** — one node splits into parallel outcomes: a single
+  shared arrow runs to an invisible junction `J((" "))`, then splits
+  to each outcome, with the outcomes grouped in a subgraph. Never fan
+  multiple arrows directly out of one node.
+- **serpentine** — a long ordered sequence reads as rows: first row
+  left-to-right, then down at the right edge, next row right-to-left
+  (one subgraph per row, `direction LR` then `direction RL`, last
+  node of a row linking to the first node of the next).
+- **wrap** — serpentine fallback: every row reads left-to-right; the
+  last node of each row links down to the first node of the next.
+- **zones** — subgraph boxes named by ownership or phase; arrows cross
+  the zone borders.
+
+Example (junction):
 
 ```mermaid
 flowchart LR
@@ -82,9 +94,6 @@ flowchart LR
     J --> C[Second parallel outcome]
   end
 ```
-
-The junction node `J((" "))` renders as a small circle. Keep it
-unlabeled so it reads as a split point, not a step.
 
 ### PNG export rules
 
