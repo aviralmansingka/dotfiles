@@ -2,14 +2,21 @@
 """Tests for pi-telegram-daemon.
 
 Run with: python3 -m unittest test_pi_telegram_daemon -v
+All tests are offline and deterministic: the Telegram API is always mocked,
+timers use injected/fake clocks, and no sleep exceeds 100 ms.
 """
 
 from __future__ import annotations
 
 import base64
 import importlib.util
+import json
+import os
+import re
+import shutil
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -1187,6 +1194,870 @@ class TestAskWithImages(unittest.TestCase):
 
             prompt_cmd = next(c for c in sent if c.get("type") == "prompt")
             self.assertNotIn("images", prompt_cmd)
+
+
+# ---------------------------------------------------------------------------
+# X2: group-chat mention gating (#126 multi-bot reply-loop guard)
+# ---------------------------------------------------------------------------
+
+
+class TestMentionGating(unittest.TestCase):
+    """fetch_bot_identity / mention matching / mention stripping / should_handle."""
+
+    def setUp(self):
+        self._saved = (
+            daemon.BOT_ID, daemon.BOT_USERNAME, daemon.ALLOWED_CHATS,
+            daemon.PREFIX, daemon.REQUIRE_MENTION, daemon.MENTION_STRIP,
+        )
+        daemon.BOT_ID = 42
+        daemon.BOT_USERNAME = "mybot"
+        daemon.ALLOWED_CHATS = {"123"}
+        daemon.PREFIX = "!pi"
+        daemon.REQUIRE_MENTION = True
+        daemon.MENTION_STRIP = True
+
+    def tearDown(self):
+        (daemon.BOT_ID, daemon.BOT_USERNAME, daemon.ALLOWED_CHATS,
+         daemon.PREFIX, daemon.REQUIRE_MENTION, daemon.MENTION_STRIP) = self._saved
+
+    def _msg(self, text="", chat_type="supergroup", entities=None,
+             reply_to=None, sender_is_bot=False):
+        message = {
+            "message_id": 10,
+            "date": 1700000000,
+            "text": text,
+            "chat": {"id": 123, "type": chat_type, "title": "Dev"},
+            "from": {"id": 456, "is_bot": sender_is_bot, "username": "owner"},
+        }
+        if entities is not None:
+            message["entities"] = entities
+        if reply_to is not None:
+            message["reply_to_message"] = reply_to
+        return daemon.parse_message({"update_id": 1, "message": message})
+
+    # -- fetch_bot_identity (mocked getMe) --------------------------------
+
+    def test_fetch_bot_identity_populates_globals(self):
+        with patch.object(daemon, "telegram_api") as api:
+            api.return_value = {"id": 42, "username": "@MyBot"}
+            daemon.BOT_ID, daemon.BOT_USERNAME = None, ""
+            daemon.fetch_bot_identity()
+            api.assert_called_once_with("getMe", {}, timeout=10)
+            self.assertEqual(daemon.BOT_ID, 42)
+            self.assertEqual(daemon.BOT_USERNAME, "mybot")  # @ stripped, lowered
+
+    def test_fetch_bot_identity_failure_is_nonfatal(self):
+        with patch.object(daemon, "telegram_api", side_effect=RuntimeError("network down")):
+            daemon.BOT_ID, daemon.BOT_USERNAME = None, ""
+            daemon.fetch_bot_identity()  # must not raise: daemon keeps running
+            self.assertIsNone(daemon.BOT_ID)
+            self.assertEqual(daemon.BOT_USERNAME, "")
+
+    def test_fetch_bot_identity_missing_id(self):
+        with patch.object(daemon, "telegram_api", return_value={}):
+            daemon.BOT_ID, daemon.BOT_USERNAME = None, ""
+            daemon.fetch_bot_identity()
+            self.assertIsNone(daemon.BOT_ID)
+
+    # -- message_mentions_bot ----------------------------------------------
+
+    def test_mention_entity_matches_bot(self):
+        msg = self._msg("@mybot do the thing",
+                        entities=[{"type": "mention", "offset": 0, "length": 7}])
+        self.assertTrue(daemon.message_mentions_bot(msg))
+
+    def test_mention_entity_other_bot_does_not_match(self):
+        msg = self._msg("@otherbot hi",
+                        entities=[{"type": "mention", "offset": 0, "length": 10}])
+        self.assertFalse(daemon.message_mentions_bot(msg))
+
+    def test_text_mention_matches_bot_user_id(self):
+        msg = self._msg("ping",
+                        entities=[{"type": "text_mention", "offset": 0, "length": 4,
+                                   "user": {"id": 42}}])
+        self.assertTrue(daemon.message_mentions_bot(msg))
+
+    def test_text_mention_other_user_does_not_match(self):
+        msg = self._msg("ping",
+                        entities=[{"type": "text_mention", "offset": 0, "length": 4,
+                                   "user": {"id": 999}}])
+        self.assertFalse(daemon.message_mentions_bot(msg))
+
+    def test_bot_command_with_bot_suffix_matches(self):
+        msg = self._msg("/status@mybot",
+                        entities=[{"type": "bot_command", "offset": 0, "length": 13}])
+        self.assertTrue(daemon.message_mentions_bot(msg))
+
+    def test_bot_command_other_suffix_does_not_match(self):
+        msg = self._msg("/status@otherbot",
+                        entities=[{"type": "bot_command", "offset": 0, "length": 16}])
+        self.assertFalse(daemon.message_mentions_bot(msg))
+
+    def test_bare_bot_command_does_not_match(self):
+        msg = self._msg("/status",
+                        entities=[{"type": "bot_command", "offset": 0, "length": 7}])
+        self.assertFalse(daemon.message_mentions_bot(msg))
+
+    def test_no_identity_never_matches(self):
+        daemon.BOT_ID, daemon.BOT_USERNAME = None, ""
+        msg = self._msg("@mybot hi",
+                        entities=[{"type": "mention", "offset": 0, "length": 7}])
+        self.assertFalse(daemon.message_mentions_bot(msg))
+
+    def test_invalid_entity_offsets_are_skipped(self):
+        msg = self._msg("@mybot hi",
+                        entities=[{"type": "mention", "offset": -1, "length": 7}])
+        self.assertFalse(daemon.message_mentions_bot(msg))
+
+    # -- is_reply_to_bot ----------------------------------------------------
+
+    def test_reply_to_bot_matches(self):
+        msg = self._msg("!pi hello",
+                        reply_to={"message_id": 5, "from": {"id": 42, "is_bot": True}})
+        self.assertTrue(daemon.is_reply_to_bot(msg))
+
+    def test_reply_to_other_user_does_not_match(self):
+        msg = self._msg("!pi hello",
+                        reply_to={"message_id": 5, "from": {"id": 999, "is_bot": False}})
+        self.assertFalse(daemon.is_reply_to_bot(msg))
+
+    def test_reply_check_requires_identity(self):
+        daemon.BOT_ID = None
+        msg = self._msg("!pi hello",
+                        reply_to={"message_id": 5, "from": {"id": 42, "is_bot": True}})
+        self.assertFalse(daemon.is_reply_to_bot(msg))
+
+    # -- strip_bot_mention ---------------------------------------------------
+
+    def test_strip_mention_leaves_prompt(self):
+        self.assertEqual(daemon.strip_bot_mention("hey @MyBot please"), "hey please")
+
+    def test_strip_leading_mention_and_punctuation(self):
+        self.assertEqual(daemon.strip_bot_mention("@MyBot, run tests"), "run tests")
+
+    def test_similar_bot_name_is_not_stripped(self):
+        self.assertEqual(daemon.strip_bot_mention("@mybot2 hi"), "@mybot2 hi")
+
+    def test_bare_mention_strips_to_empty(self):
+        # A message that is only the mention must strip to empty so
+        # should_handle can map it to "status".
+        self.assertEqual(daemon.strip_bot_mention("@MyBot"), "")
+
+    def test_strip_without_identity_is_noop(self):
+        daemon.BOT_USERNAME = ""
+        self.assertEqual(daemon.strip_bot_mention("@mybot hi"), "@mybot hi")
+
+    # -- should_handle gating -------------------------------------------------
+
+    def test_group_message_without_mention_is_ignored(self):
+        msg = self._msg("!pi do the thing")
+        self.assertIsNone(daemon.should_handle(msg))
+
+    def test_group_message_with_mention_is_handled_and_stripped(self):
+        msg = self._msg("!pi @mybot do the thing",
+                        entities=[{"type": "mention", "offset": 4, "length": 7}])
+        self.assertEqual(daemon.should_handle(msg), "do the thing")
+
+    def test_group_mention_without_strip_keeps_mention(self):
+        daemon.MENTION_STRIP = False
+        msg = self._msg("!pi @mybot do the thing",
+                        entities=[{"type": "mention", "offset": 4, "length": 7}])
+        self.assertEqual(daemon.should_handle(msg), "@mybot do the thing")
+
+    def test_group_reply_to_bot_is_handled(self):
+        msg = self._msg("!pi hello",
+                        reply_to={"message_id": 5, "from": {"id": 42, "is_bot": True}})
+        self.assertEqual(daemon.should_handle(msg), "hello")
+
+    def test_group_reply_to_other_user_is_ignored(self):
+        msg = self._msg("!pi hello",
+                        reply_to={"message_id": 5, "from": {"id": 999, "is_bot": False}})
+        self.assertIsNone(daemon.should_handle(msg))
+
+    def test_require_mention_off_handles_group_messages(self):
+        daemon.REQUIRE_MENTION = False
+        msg = self._msg("!pi do the thing")
+        self.assertEqual(daemon.should_handle(msg), "do the thing")
+
+    def test_private_chat_is_never_mention_gated(self):
+        msg = self._msg("!pi do the thing", chat_type="private")
+        self.assertEqual(daemon.should_handle(msg), "do the thing")
+
+    def test_bot_sender_is_always_ignored(self):
+        # The multi-bot reply-loop guard (#126): another bot's message is
+        # never handled, even when it mentions this bot.
+        msg = self._msg("!pi @mybot do the thing", sender_is_bot=True,
+                        entities=[{"type": "mention", "offset": 4, "length": 7}])
+        self.assertIsNone(daemon.should_handle(msg))
+
+    def test_group_mention_only_message_maps_to_status(self):
+        msg = self._msg("!pi @mybot",
+                        entities=[{"type": "mention", "offset": 4, "length": 7}])
+        self.assertEqual(daemon.should_handle(msg), "status")
+
+
+# ---------------------------------------------------------------------------
+# X3: image download edge cases (suffix sanitization, lying/absent sizes)
+# ---------------------------------------------------------------------------
+
+
+class TestDownloadTelegramImageEdges(unittest.TestCase):
+    """Triple size-check and suffix fallback edge cases (#149)."""
+
+    def _msg(self, **kwargs):
+        msg = daemon.parse_message(_make_update({
+            "photo": [{"file_id": "p1", "width": 10, "height": 10, "file_size": 100}],
+        }))
+        for key, value in kwargs.items():
+            setattr(msg, key, value)
+        return msg
+
+    def test_absent_sizes_everywhere_still_downloads(self):
+        # No file_size in the message, none in getFile: byte check still applies.
+        msg = self._msg(image_file_size=0)
+        with patch.object(daemon, "telegram_api", return_value={"file_path": "photos/x.jpg"}), \
+             patch.object(daemon, "telegram_download", return_value=b"jpeg-bytes"):
+            tmp = daemon.download_telegram_image(msg)
+        try:
+            self.assertEqual(tmp.suffix, ".jpg")
+            self.assertEqual(tmp.read_bytes(), b"jpeg-bytes")
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_absent_getfile_size_refuses_oversized_bytes(self):
+        # getFile reports no size and the message size is absent; the
+        # downloaded bytes still hit the hard limit.
+        msg = self._msg(image_file_size=0)
+        with patch.object(daemon, "MAX_IMAGE_BYTES", 4), \
+             patch.object(daemon, "telegram_api", return_value={"file_path": "photos/x.jpg"}), \
+             patch.object(daemon, "telegram_download", return_value=b"12345"):
+            with self.assertRaises(RuntimeError) as ctx:
+                daemon.download_telegram_image(msg)
+            self.assertIn("too large", str(ctx.exception))
+
+    def test_compound_suffix_uses_final_extension_only(self):
+        # Path.suffix takes only the final extension; ".gz" passes the safe
+        # suffix pattern, so it is kept as-is.
+        msg = self._msg(image_mime_type="image/jpeg")
+        with patch.object(daemon, "telegram_api", return_value={"file_path": "photos/f.tar.gz"}), \
+             patch.object(daemon, "telegram_download", return_value=b"j"):
+            tmp = daemon.download_telegram_image(msg)
+        try:
+            self.assertEqual(tmp.suffix, ".gz")
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_suffix_with_unsafe_characters_rejected(self):
+        msg = self._msg(image_mime_type="image/jpeg")
+        with patch.object(daemon, "telegram_api",
+                          return_value={"file_path": "photos/f.jpg%20x"}), \
+             patch.object(daemon, "telegram_download", return_value=b"j"):
+            tmp = daemon.download_telegram_image(msg)
+        try:
+            self.assertEqual(tmp.suffix, ".jpg")  # % fails the safe pattern → mime fallback
+            self.assertNotIn("%", tmp.name)
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_overlong_suffix_rejected(self):
+        msg = self._msg(image_mime_type="image/jpeg")
+        with patch.object(daemon, "telegram_api",
+                          return_value={"file_path": "photos/f.abcdefghijkl"}), \
+             patch.object(daemon, "telegram_download", return_value=b"j"):
+            tmp = daemon.download_telegram_image(msg)
+        try:
+            self.assertEqual(tmp.suffix, ".jpg")
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    def test_uppercase_suffix_is_lowercased(self):
+        msg = self._msg(image_mime_type="image/png")
+        with patch.object(daemon, "telegram_api", return_value={"file_path": "photos/f.PNG"}), \
+             patch.object(daemon, "telegram_download", return_value=b"p"):
+            tmp = daemon.download_telegram_image(msg)
+        try:
+            self.assertEqual(tmp.suffix, ".png")
+        finally:
+            tmp.unlink(missing_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# X3: image temp-file lifecycle through the main loop (#149)
+# ---------------------------------------------------------------------------
+
+
+class TestImageTempFileLifecycle(unittest.TestCase):
+    """The temp image file is deleted only AFTER pi.ask() returns —
+    on success and on exception. Premature delete means pi reads a
+    missing file."""
+
+    def setUp(self):
+        self._saved = (daemon.BOT_TOKEN, daemon.ALLOWED_CHATS, daemon.PREFIX)
+        daemon.BOT_TOKEN = "test-token"
+        daemon.ALLOWED_CHATS = {"123"}
+        daemon.PREFIX = "!pi"
+
+    def tearDown(self):
+        daemon.BOT_TOKEN, daemon.ALLOWED_CHATS, daemon.PREFIX = self._saved
+
+    def _run_main_with_image(self, ask_behavior):
+        image_update = _make_update({
+            "photo": [{"file_id": "p1", "width": 10, "height": 10, "file_size": 50}],
+        })
+        tmp_dir = tempfile.mkdtemp(prefix="pi-tg-lifecycle-")
+        self.addCleanup(shutil.rmtree, tmp_dir, ignore_errors=True)
+        tmp_path = Path(tmp_dir) / "shot.jpg"
+        tmp_path.write_bytes(b"image-bytes")
+        seen = {}
+
+        pi = MagicMock()
+
+        def fake_ask(message, chat_id=None, reply_to=None, images=None):
+            seen["exists_during_ask"] = tmp_path.exists()
+            seen["images"] = images
+            return ask_behavior(message)
+
+        pi.ask.side_effect = fake_ask
+        replies = []
+
+        with patch.object(daemon, "load_state", return_value={"last_update_id": 0}), \
+             patch.object(daemon, "save_state"), \
+             patch.object(daemon, "fetch_bot_identity"), \
+             patch.object(daemon, "send_chat_action"), \
+             patch.object(daemon, "send_telegram",
+                          side_effect=lambda chat_id, text, reply_to_message_id=None:
+                              replies.append((chat_id, text))), \
+             patch.object(daemon, "download_telegram_image", return_value=tmp_path), \
+             patch.object(daemon, "PiRPC", return_value=pi), \
+             patch.object(daemon, "fetch_updates", side_effect=[[image_update], SystemExit(0)]):
+            with self.assertRaises(SystemExit):
+                daemon.main()
+        return tmp_path, seen, replies, pi
+
+    def test_image_survives_ask_and_is_unlinked_after_success(self):
+        tmp_path, seen, replies, pi = self._run_main_with_image(lambda m: "It is a screenshot.")
+        pi.ask.assert_called_once()
+        self.assertTrue(seen["exists_during_ask"])  # still on disk while pi.ask ran
+        expected_b64 = base64.b64encode(b"image-bytes").decode("ascii")
+        self.assertEqual(seen["images"][0]["data"], expected_b64)
+        self.assertFalse(tmp_path.exists())  # deleted only after ask returned
+        self.assertEqual(replies[-1], ("123", "It is a screenshot."))
+
+    def test_image_is_unlinked_after_ask_exception(self):
+        def boom(message):
+            raise RuntimeError("pi exploded")
+
+        tmp_path, seen, replies, pi = self._run_main_with_image(boom)
+        self.assertTrue(seen["exists_during_ask"])
+        self.assertFalse(tmp_path.exists())  # finally-block cleanup ran
+        self.assertTrue(replies and "Pi bridge error" in replies[-1][1])
+
+
+# ---------------------------------------------------------------------------
+# X3b: scan_session bridge-header stripping
+# ---------------------------------------------------------------------------
+
+
+class TestScanSession(unittest.TestCase):
+    """scan_session strips this daemon's own bridge headers from labels."""
+
+    def _write_session(self, lines):
+        fd, name = tempfile.mkstemp(prefix="pi-tg-scan-", suffix=".jsonl")
+        os.close(fd)
+        path = Path(name)
+        self.addCleanup(path.unlink, missing_ok=True)
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+
+    @staticmethod
+    def _user_line(text):
+        return json.dumps({"type": "message",
+                           "message": {"role": "user", "content": text}})
+
+    def _header_case(self, header):
+        path = self._write_session([
+            json.dumps({"type": "session", "cwd": "/home/avirus/vault"}),
+            self._user_line(f"{header} Dev by owner at unix timestamp 1700000000:\n\nthe real prompt"),
+        ])
+        cwd, label = daemon.scan_session(path)
+        self.assertEqual(cwd, "/home/avirus/vault")
+        self.assertEqual(label, "the real prompt")
+
+    def test_image_header_is_stripped(self):
+        self._header_case("Telegram image from chat")
+
+    def test_command_header_is_stripped(self):
+        self._header_case("Telegram command from chat")
+
+    def test_voice_header_is_stripped(self):
+        self._header_case("Telegram voice-note transcript from chat")
+
+    def test_header_without_blank_line_is_kept(self):
+        # No "\n\n" separator: nothing is stripped.
+        path = self._write_session([
+            self._user_line("Telegram command from chat Dev by owner:\nno separator"),
+        ])
+        _cwd, label = daemon.scan_session(path)
+        self.assertTrue(label.startswith("Telegram command from chat"))
+
+    def test_content_list_form_is_supported(self):
+        path = self._write_session([
+            self._user_line([{"type": "text",
+                              "text": "Telegram image from chat Dev by owner at unix "
+                                      "timestamp 1:\n\nlist-form prompt"}]),
+        ])
+        _cwd, label = daemon.scan_session(path)
+        self.assertEqual(label, "list-form prompt")
+
+    def test_session_info_name_used_without_user_message(self):
+        path = self._write_session([
+            json.dumps({"type": "session_info", "name": "Named session"}),
+            json.dumps({"type": "message",
+                        "message": {"role": "assistant", "content": "hi"}}),
+        ])
+        _cwd, label = daemon.scan_session(path)
+        self.assertEqual(label, "Named session")
+
+    def test_falls_back_to_path_stem(self):
+        path = self._write_session(["this line is not json"])
+        path = path.with_name("2025-06-01_12-00_session_abcd1234.jsonl")
+        path.write_text("junk\n", encoding="utf-8")
+        self.addCleanup(path.unlink, missing_ok=True)
+        _cwd, label = daemon.scan_session(path)
+        self.assertEqual(label, "abcd1234")
+
+    def test_user_message_past_line_400_is_ignored(self):
+        lines = [json.dumps({"type": "note"}) for _ in range(401)]
+        lines.append(self._user_line("way too late"))
+        path = self._write_session(lines)
+        _cwd, label = daemon.scan_session(path)
+        self.assertNotEqual(label, "way too late")
+
+
+# ---------------------------------------------------------------------------
+# X4: env-example <-> daemon env-key parity (#146/#148/#149 drift class)
+# ---------------------------------------------------------------------------
+
+_ENV_EXAMPLE_PATH = Path(__file__).parent.parent / ".config" / "pi-telegram.env.example"
+
+
+class TestEnvKeyParity(unittest.TestCase):
+    """Every env key the daemon reads must appear in pi-telegram.env.example."""
+
+    # Generic shared vars, not daemon-specific; PATH is never read via .get().
+    _EXEMPT = {"OPENAI_API_KEY", "PATH"}
+    _PLACEHOLDER_MARKS = ("...", "replace-with", "/path", "sk-", "$HOME")
+
+    _ENV_READ_RE = re.compile(
+        r'os\.environ\.get\(\s*"([A-Z][A-Z0-9_]+)"\s*'
+        r'(?:,\s*(?:"([^"]*)"|\'([^\']*)\'))?'
+    )
+    _EXAMPLE_LINE_RE = re.compile(r"^(#?)\s*([A-Z][A-Z0-9_]+)=(.*)$", re.M)
+
+    def _daemon_env_reads(self):
+        source = _DAEMON_PATH.read_text(encoding="utf-8")
+        reads = {}
+        for m in self._ENV_READ_RE.finditer(source):
+            default = m.group(2) if m.group(2) is not None else m.group(3)
+            reads[m.group(1)] = default  # None when the default is not a literal
+        return reads
+
+    def _example_entries(self):
+        text = _ENV_EXAMPLE_PATH.read_text(encoding="utf-8")
+        entries = {}
+        for m in self._EXAMPLE_LINE_RE.finditer(text):
+            entries.setdefault(m.group(2), []).append(
+                (m.group(1) == "#", m.group(3).strip()))
+        return entries
+
+    def test_every_daemon_env_key_is_documented(self):
+        reads = self._daemon_env_reads()
+        documented = self._example_entries()
+        missing = sorted(
+            k for k in reads if k not in self._EXEMPT and k not in documented)
+        self.assertEqual(
+            missing, [],
+            f"env keys read by the daemon but missing from "
+            f"{_ENV_EXAMPLE_PATH.name}: {missing}")
+
+    def test_commented_example_defaults_match_daemon_defaults(self):
+        reads = self._daemon_env_reads()
+        documented = self._example_entries()
+        drift = []
+        for key, occurrences in documented.items():
+            raw_default = reads.get(key)
+            if raw_default is None:
+                continue  # daemon default is not a literal; presence check only
+            for commented, value in occurrences:
+                if not commented:
+                    continue  # uncommented lines are per-machine fill-ins
+                value = value.strip().strip('"').strip("'")
+                if not value or any(mark in value for mark in self._PLACEHOLDER_MARKS):
+                    continue  # placeholder sample, not a documented default
+                if value != raw_default:
+                    drift.append(f"{key}: example={value!r} daemon={raw_default!r}")
+        self.assertEqual(drift, [], f"documented defaults drifted: {drift}")
+
+
+# ---------------------------------------------------------------------------
+# X5: supervisor loops with fake clocks (PR #152 blind spot)
+# ---------------------------------------------------------------------------
+
+
+class _FakeTime:
+    """Injected clock: deterministic monotonic/time, recorded sleeps."""
+
+    def __init__(self, start=0.0):
+        self.now = start
+        self.sleeps = []
+
+    def monotonic(self):
+        return self.now
+
+    def time(self):
+        return self.now
+
+    def strftime(self, fmt):
+        return "2025-01-01 00:00:00"
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+
+
+class TestChatActionLoop(unittest.TestCase):
+    """The typing-indicator ticker keeps running when a tick fails."""
+
+    def test_send_chat_action_swallows_api_errors(self):
+        # The never-raises contract that keeps the ticker loop alive.
+        with patch.object(daemon, "telegram_api", side_effect=RuntimeError("429 Too Many Requests")):
+            daemon.send_chat_action("123")  # must not raise
+
+    def test_loop_ticks_repeatedly_and_stops_cleanly(self):
+        calls = []
+        with patch.object(daemon, "send_chat_action",
+                          side_effect=lambda chat_id, action="typing": calls.append(chat_id)):
+            loop = daemon.ChatActionLoop("9", interval=0.02)
+            with loop:
+                deadline = time.monotonic() + 2.0
+                while len(calls) < 3 and time.monotonic() < deadline:
+                    time.sleep(0.005)
+        self.assertGreaterEqual(len(calls), 3)
+        self.assertIsNotNone(loop.thread)
+        self.assertFalse(loop.thread.is_alive())  # __exit__ joined it
+
+    def test_loop_keeps_ticking_when_every_api_call_fails(self):
+        attempts = []
+
+        def failing_api(method, payload, timeout=60):
+            attempts.append(method)
+            raise RuntimeError("429 Too Many Requests")
+
+        with patch.object(daemon, "telegram_api", side_effect=failing_api), \
+             patch.object(daemon, "log"):
+            loop = daemon.ChatActionLoop("9", interval=0.02)
+            with loop:
+                deadline = time.monotonic() + 2.0
+                while len(attempts) < 3 and time.monotonic() < deadline:
+                    time.sleep(0.005)
+        self.assertGreaterEqual(len(attempts), 3)  # ticker survived every failed tick
+
+    def test_zero_interval_disables_indicator_and_thread(self):
+        # Set to 0: no typing indicator at all and no ticker thread.
+        calls = []
+        with patch.object(daemon, "send_chat_action",
+                          side_effect=lambda chat_id, action="typing": calls.append(chat_id)):
+            loop = daemon.ChatActionLoop("9", interval=0)
+            with loop:
+                pass
+        self.assertEqual(calls, [])
+        self.assertIsNone(loop.thread)
+
+
+class TestStatusMessengerFakeClock(unittest.TestCase):
+    """Deferred flush and error survival, driven by an injected clock."""
+
+    def test_deferred_flush_fires_when_throttle_cools(self):
+        fake = _FakeTime(100.0)
+        with patch.object(daemon, "time", fake), \
+             patch.object(daemon, "STATUS_EDIT_INTERVAL", 10.0), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0), \
+             patch.object(daemon, "telegram_api") as api:
+            api.return_value = {"message_id": 7}
+            sm = daemon.StatusMessenger("1")
+            sm.on_event({"type": "turn_start"})  # t=100: create
+            self.assertEqual([c[0][0] for c in api.call_args_list], ["sendMessage"])
+
+            fake.now = 103.0  # throttle hot: 103-100 < 10
+            sm.on_event({"type": "message_update", "assistantMessageEvent": {
+                "type": "text_delta", "contentIndex": 0, "delta": "Read"}})
+            sm.on_event({"type": "message_update", "assistantMessageEvent": {
+                "type": "text_delta", "contentIndex": 0, "delta": "ing config"}})
+            self.assertEqual(api.call_count, 1)  # edit deferred, change held
+            self.assertTrue(sm.dirty)
+
+            fake.now = 111.0  # throttle cold: 111-100 >= 10
+            sm.on_event({"type": "tool_execution_start",
+                         "toolCallId": "c1", "toolName": "read", "args": {}})
+            self.assertEqual(api.call_count, 2)  # deferred change flushed now
+            method, payload = api.call_args[0][0], api.call_args[0][1]
+            self.assertEqual(method, "editMessageText")
+            self.assertIn("Reading config", payload["text"])
+
+    def test_edit_failure_in_one_tick_does_not_kill_messenger(self):
+        fake = _FakeTime(100.0)
+        failing = {"next_edit_fails": True}
+
+        def api_side_effect(method, payload, timeout=60):
+            if method == "sendMessage":
+                return {"message_id": 7}
+            if method == "editMessageText" and failing["next_edit_fails"]:
+                failing["next_edit_fails"] = False
+                raise RuntimeError("429 Too Many Requests")
+            return {}
+
+        with patch.object(daemon, "time", fake), \
+             patch.object(daemon, "STATUS_EDIT_INTERVAL", 0.0), \
+             patch.object(daemon, "STATUS_FINAL_PAUSE", 0.0), \
+             patch.object(daemon, "telegram_api", side_effect=api_side_effect) as api:
+            sm = daemon.StatusMessenger("1")
+            sm.on_event({"type": "turn_start"})  # create
+            sm.on_event({"type": "turn_start"})  # edit raises — swallowed
+            sm.on_event({"type": "turn_start"})  # next edit succeeds
+            sm.finalize()  # final edit + delete still work
+        methods = [c[0][0] for c in api.call_args_list]
+        self.assertEqual(methods.count("editMessageText"), 2)
+        self.assertIn("deleteMessage", methods)
+
+
+class TestMainLoopResilience(unittest.TestCase):
+    """The main supervisor loop restarts after an exception in one tick,
+    with recorded (never real) backoff sleeps."""
+
+    def test_outer_loop_survives_fetch_failure_with_backoff(self):
+        fake = _FakeTime(0.0)
+        status_update = _make_update({"text": "!pi status"})
+        pi = MagicMock()
+        pi.status.return_value = "All good."
+        replies = []
+
+        with patch.object(daemon, "time", fake), \
+             patch.object(daemon, "RETRY_SECONDS", 3.5), \
+             patch.object(daemon, "BOT_TOKEN", "test-token"), \
+             patch.object(daemon, "ALLOWED_CHATS", {"123"}), \
+             patch.object(daemon, "PREFIX", "!pi"), \
+             patch.object(daemon, "load_state", return_value={"last_update_id": 0}), \
+             patch.object(daemon, "save_state"), \
+             patch.object(daemon, "fetch_bot_identity"), \
+             patch.object(daemon, "send_chat_action"), \
+             patch.object(daemon, "send_telegram",
+                          side_effect=lambda chat_id, text, reply_to_message_id=None:
+                              replies.append((chat_id, text))), \
+             patch.object(daemon, "PiRPC", return_value=pi), \
+             patch.object(daemon, "fetch_updates",
+                          side_effect=[RuntimeError("long poll failed"),
+                                       [status_update],
+                                       SystemExit(0)]):
+            with self.assertRaises(SystemExit):
+                daemon.main()
+
+        # The injected failure did not stop the loop: the next tick ran.
+        pi.status.assert_called_once()
+        self.assertEqual(replies[-1], ("123", "All good."))
+        # Backoff happened once, through the fake clock — never a real sleep.
+        self.assertEqual(fake.sleeps, [3.5])
+
+
+# ---------------------------------------------------------------------------
+# Extra daemon-behavior coverage (pure logic, offline)
+# ---------------------------------------------------------------------------
+
+
+class TestReplyFormatting(unittest.TestCase):
+    """chunk_reply splitting and telegram_html rendering."""
+
+    def test_short_reply_is_one_chunk(self):
+        with patch.object(daemon, "MAX_REPLY_CHARS", 100):
+            self.assertEqual(daemon.chunk_reply("hello"), ["hello"])
+
+    def test_split_on_line_boundary(self):
+        text = "aaaa\nbbbb\n"
+        with patch.object(daemon, "MAX_REPLY_CHARS", 5):
+            chunks = daemon.chunk_reply(text)
+        self.assertEqual(chunks, ["aaaa", "bbbb"])
+
+    def test_overlong_single_line_is_hard_split(self):
+        with patch.object(daemon, "MAX_REPLY_CHARS", 4):
+            chunks = daemon.chunk_reply("abcdefghij")
+        self.assertEqual(chunks, ["abcd", "efgh", "ij"])
+
+    def test_empty_reply_is_single_empty_chunk(self):
+        with patch.object(daemon, "MAX_REPLY_CHARS", 10):
+            self.assertEqual(daemon.chunk_reply(""), [""])
+
+    def test_html_escapes_raw_markup(self):
+        out = daemon.telegram_html("a <b> & c")
+        self.assertIn("a &lt;b&gt; &amp; c", out)
+        self.assertNotIn("<b>", out)
+
+    def test_html_renders_bold_code_and_bullet(self):
+        out = daemon.telegram_html("**bold** and `code`\n- item")
+        self.assertIn("<b>bold</b>", out)
+        self.assertIn("<code>code</code>", out)
+        self.assertIn("• item", out)
+
+    def test_html_renders_code_fence_as_pre(self):
+        out = daemon.telegram_html("before\n```py\nprint(1 < 2)\n```\nafter")
+        self.assertIn("<pre>print(1 &lt; 2)</pre>", out)
+        self.assertIn("before", out)
+        self.assertIn("after", out)
+
+    def test_html_empty_becomes_space(self):
+        self.assertEqual(daemon.telegram_html(""), " ")
+
+
+class TestHandleSwitch(unittest.TestCase):
+    """Session switching resolution over a mocked session list."""
+
+    def setUp(self):
+        self._sessions = [
+            (Path("/s/alpha.jsonl"), "/home/avirus/vault", "alpha label", 1000.0),
+            (Path("/s/beta-one.jsonl"), "/home/avirus/vault", "beta one", 1000.0),
+            (Path("/s/beta-two.jsonl"), "/home/avirus/vault", "beta two", 1000.0),
+        ]
+        self._patcher = patch.object(daemon, "list_pi_sessions", return_value=self._sessions)
+        self._patcher.start()
+        self.addCleanup(self._patcher.stop)
+
+    def test_switch_by_number(self):
+        pi = MagicMock()
+        pi.switch_session.return_value = None
+        reply = daemon.handle_switch(pi, "1")
+        pi.switch_session.assert_called_once_with("/s/alpha.jsonl")
+        self.assertTrue(reply.startswith("Switched to:"))
+
+    def test_switch_error_is_reported(self):
+        pi = MagicMock()
+        pi.switch_session.return_value = "Failed to switch session: busy"
+        self.assertEqual(daemon.handle_switch(pi, "1"), "Failed to switch session: busy")
+
+    def test_number_out_of_range(self):
+        pi = MagicMock()
+        self.assertIn("No chat '9'", daemon.handle_switch(pi, "9"))
+
+    def test_ambiguous_name_match(self):
+        pi = MagicMock()
+        reply = daemon.handle_switch(pi, "beta")
+        self.assertIn("matches 2 chats", reply)
+        pi.switch_session.assert_not_called()
+
+    def test_unique_name_match(self):
+        pi = MagicMock()
+        pi.switch_session.return_value = None
+        reply = daemon.handle_switch(pi, "alpha")
+        pi.switch_session.assert_called_once_with("/s/alpha.jsonl")
+        self.assertTrue(reply.startswith("Switched to:"))
+
+    def test_no_sessions(self):
+        self._patcher.stop()
+        with patch.object(daemon, "list_pi_sessions", return_value=[]):
+            pi = MagicMock()
+            self.assertIn("No pi sessions", daemon.handle_switch(pi, "1"))
+
+
+class TestVoiceTranscriptionGuards(unittest.TestCase):
+    """Provider resolution and command transcription, all offline."""
+
+    def setUp(self):
+        self._saved = (
+            daemon.VOICE_TRANSCRIPTION_PROVIDER, daemon.VOICE_TRANSCRIPTION_CMD,
+            daemon.VOICE_OPENAI_API_KEY,
+        )
+
+    def tearDown(self):
+        (daemon.VOICE_TRANSCRIPTION_PROVIDER, daemon.VOICE_TRANSCRIPTION_CMD,
+         daemon.VOICE_OPENAI_API_KEY) = self._saved
+
+    def test_provider_resolution_matrix(self):
+        cases = [
+            # (provider, cmd, key, expected)
+            ("none", "stt", "k", ""),
+            ("", "stt", "k", ""),
+            ("command", "stt", "", "command"),
+            ("command", "", "", ""),
+            ("openai", "", "k", "openai"),
+            ("openai", "", "", ""),
+            ("auto", "stt", "", "command"),
+            ("auto", "", "k", "openai"),
+            ("auto", "", "", ""),
+            ("whisperx", "", "", "whisperx"),
+        ]
+        for provider, cmd, key, expected in cases:
+            with self.subTest(provider=provider, cmd=cmd, key=key):
+                daemon.VOICE_TRANSCRIPTION_PROVIDER = provider
+                daemon.VOICE_TRANSCRIPTION_CMD = cmd
+                daemon.VOICE_OPENAI_API_KEY = key
+                self.assertEqual(daemon.configured_voice_provider(), expected)
+
+    def test_transcribe_without_provider_raises(self):
+        daemon.VOICE_TRANSCRIPTION_PROVIDER = "none"
+        daemon.VOICE_TRANSCRIPTION_CMD = ""
+        daemon.VOICE_OPENAI_API_KEY = ""
+        msg = daemon.parse_message(_make_update({
+            "voice": {"file_id": "v1", "file_size": 10, "mime_type": "audio/ogg"},
+        }))
+        with self.assertRaises(RuntimeError) as ctx:
+            daemon.transcribe_telegram_audio(msg)
+        self.assertIn("transcription configured", str(ctx.exception))
+
+    def test_transcribe_with_command_substitutes_placeholder(self):
+        daemon.VOICE_TRANSCRIPTION_CMD = "stt {file} --mime {mime}"
+        audio = Path("/tmp/pi-telegram-voice-x.oga")
+        sent = {}
+
+        class _Result:
+            returncode = 0
+            stdout = "  hello transcript  \n"
+            stderr = ""
+
+        def fake_run(command, **kwargs):
+            sent["command"] = command
+            return _Result()
+
+        with patch.object(daemon.subprocess, "run", side_effect=fake_run):
+            out = daemon.transcribe_with_command(audio, "audio/ogg")
+        self.assertEqual(out, "hello transcript")
+        self.assertTrue(sent["command"].startswith("stt '"))
+        self.assertIn("--mime 'audio/ogg'", sent["command"])
+        self.assertIn(str(audio), sent["command"])
+
+    def test_transcribe_with_command_failure_raises(self):
+        daemon.VOICE_TRANSCRIPTION_CMD = "stt {file}"
+
+        class _Result:
+            returncode = 2
+            stdout = ""
+            stderr = "boom"
+
+        with patch.object(daemon.subprocess, "run", return_value=_Result()):
+            with self.assertRaises(RuntimeError) as ctx:
+                daemon.transcribe_with_command(Path("/tmp/a.oga"), "audio/ogg")
+        self.assertIn("failed (2)", str(ctx.exception))
+
+
+class TestTelegramApiGuards(unittest.TestCase):
+    """The no-token guard fails fast before any network call."""
+
+    def test_api_without_token_raises(self):
+        with patch.object(daemon, "BOT_TOKEN", ""):
+            with self.assertRaises(RuntimeError) as ctx:
+                daemon.telegram_api("getMe", {})
+            self.assertIn("PI_TELEGRAM_BOT_TOKEN", str(ctx.exception))
+
+    def test_download_without_token_raises(self):
+        with patch.object(daemon, "BOT_TOKEN", ""):
+            with self.assertRaises(RuntimeError) as ctx:
+                daemon.telegram_download("photos/x.jpg")
+            self.assertIn("PI_TELEGRAM_BOT_TOKEN", str(ctx.exception))
 
 
 if __name__ == "__main__":
