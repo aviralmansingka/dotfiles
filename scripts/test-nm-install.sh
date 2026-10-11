@@ -29,6 +29,15 @@
 #   wrapper-daemon-root     : daemon execs run --root with NM_HOME override.
 #   wrapper-args            : daemon/exec/unknown/relative-home validation.
 #   wrapper-missing-binary  : missing binary fails cleanly with exit 1.
+#   pin-drift               : repo pinned VERSION matches the installed
+#                             no-mistakes binary's version when one exists
+#                             (SKIP when none is installed — absence is not
+#                             drift, e.g. CI runners); FAIL on mismatch with
+#                             the pin-update procedure. Offline and read-only:
+#                             the version probe runs with
+#                             NO_MISTAKES_NO_UPDATE_CHECK=1 so no network
+#                             update check happens and no update-check.json
+#                             is written.
 #   mutation-*              : each guard removed must let the regression in.
 #
 # Dual-mode pattern (PR #293 rule):
@@ -57,8 +66,11 @@ ROLLBACK_SRC=${REPO_ROOT:-}/scripts/rollback-no-mistakes
 WRAPPER_SRC=${REPO_ROOT:-}/pi/bin/no-mistakes-daemon
 PLIST_SRC=${REPO_ROOT:-}/launchd/Library/LaunchAgents/com.aviral.no-mistakes.plist
 FIXTURE_DIR=${SCRIPT_DIR:-}/fixtures/nm-install
-FIXTURE_V1=v9.9.1
-FIXTURE_V2=v9.9.2
+# Fixture versions mirror real release strings (B25): V1 is the current repo
+# pin's version; V2 is a hypothetical next release used to exercise the
+# exact-version replacement/rollback paths.
+FIXTURE_V1=v1.84.0
+FIXTURE_V2=v1.85.0
 FIXTURE_TARBALL_V1=$FIXTURE_DIR/no-mistakes-$FIXTURE_V1-fixture.tar.gz
 FIXTURE_TARBALL_V2=$FIXTURE_DIR/no-mistakes-$FIXTURE_V2-fixture.tar.gz
 FIXTURE_NAME_V1=no-mistakes-$FIXTURE_V1-fixture.tar.gz
@@ -778,6 +790,32 @@ check_wrapper_missing_binary() {
   esac
 }
 
+# --- pin drift tripwire (B25) ----------------------------------------------
+
+# Offline, read-only: compare the repo installer's pinned VERSION against the
+# version an installed no-mistakes binary reports. The 2026-10 incident let
+# the host binary drift to v1.84.0 past the v1.41.2 pin via a manual
+# `no-mistakes update` on the wizard's self-managed install (symlink under
+# ~/.local/bin), which the pin never governed. This check makes the next
+# silent drift loud. Absence of an installed binary is a SKIP, not drift.
+check_pin_drift() {
+  pd_pin=$(sed -n 's/^VERSION=//p' "$INSTALL_SRC" | head -n 1)
+  case $pd_pin in
+    v[0-9]*) ;;
+    *) bail "could not read the pinned VERSION from $INSTALL_SRC" ;;
+  esac
+  pd_out=$(NO_MISTAKES_NO_UPDATE_CHECK=1 NO_MISTAKES_TELEMETRY=0 \
+    "$PD_BIN" --version 2>/dev/null) || \
+    bail "installed binary failed to report a version: $PD_BIN"
+  for pd_token in $pd_out; do
+    pd_token=$(printf '%s' "$pd_token" | tr -d ',;()[]')
+    case $pd_token in
+      "$pd_pin"|"${pd_pin#v}") return 0 ;;
+    esac
+  done
+  bail "version drift: repo pin is $pd_pin, but the installed binary at $PD_BIN reports [$pd_out]. Never run 'no-mistakes update' — move the pin by editing VERSION (+ the release digests) in scripts/install-no-mistakes to the official release, then re-run scripts/install-no-mistakes."
+}
+
 # --- mutation checks: each guard removed must let the regression in ---------
 
 mutate_installer() {
@@ -916,6 +954,17 @@ run_check fixtures_checksums fixtures
 if [ "$FAIL_COUNT" -gt 0 ]; then
   printf 'fixture integrity failed; later checks would be noise. Stop here.\n'
   exit 1
+fi
+# B25 pin-drift tripwire: resolve an installed binary first. Absence is a
+# SKIP (CI runners, fresh hosts), never a FAIL — only a mismatch is drift.
+PD_BIN=$(command -v no-mistakes 2>/dev/null || true)
+if [ -z "$PD_BIN" ] && [ -x "${HOME:-/nonexistent}/.local/bin/no-mistakes" ]; then
+  PD_BIN=$HOME/.local/bin/no-mistakes
+fi
+if [ -n "$PD_BIN" ] && [ -x "$PD_BIN" ]; then
+  run_check pin_drift pin
+else
+  report SKIP pin_drift pin 'no installed no-mistakes binary (absence is not drift)' 0
 fi
 run_check install_offline install
 run_check install_idempotent install

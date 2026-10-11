@@ -18,7 +18,7 @@ versions, lock ownership, verified rollback, and wrapper exports.
 
 ## What the suite covers
 
-`scripts/test-nm-install.sh` runs 21 checks:
+`scripts/test-nm-install.sh` runs 22 checks:
 
 - Offline install through `NO_MISTAKES_ASSET`: pinned version, manifest, `agent: pi` config, skill, no temps, no lock.
 - Idempotent re-run: same inode and manifest, no rollback copy.
@@ -30,6 +30,7 @@ versions, lock ownership, verified rollback, and wrapper exports.
 - Lock: a live owner pid is respected by both scripts; a reaped pid and a non-numeric pid are reclaimed.
 - Rollback: the prior binary returns, NM_HOME history stays intact, a second rollback changes nothing.
 - Wrapper, run via `sh`: telemetry and update-check exports, NM_HOME default and override, PI dir, PATH, `daemon run --root`, argument checks, clean missing-binary failure.
+- Pin drift: the repo installer's pinned `VERSION` must match the version an installed no-mistakes binary reports (B25). A mismatch fails with the pin-update procedure (edit `VERSION` + digests, re-run the installer — never `no-mistakes update`). No installed binary is a SKIP in both modes: absence is not drift, and CI runners have none. The probe is offline and read-only (`NO_MISTAKES_NO_UPDATE_CHECK=1`).
 - Mutations: the suite removes one guard at a time in sandbox copies; each removal must let the regression in.
 
 ## How to run
