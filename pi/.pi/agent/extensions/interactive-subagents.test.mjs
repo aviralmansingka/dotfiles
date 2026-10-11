@@ -346,7 +346,6 @@ try {
 		bundledDir: bundledAgentsDir,
 	});
 	assert.ok(professor.tools.split(", ").includes("tuicr_reply"));
-	assert.ok(professor.tools.split(", ").includes("hunk_open"));
 	assert.ok(professor.tools.split(", ").includes("bash"));
 	assert.deepEqual(professor.subagentAgents, ["researcher", "tuicr-review"]);
 	assert.equal(professor.skills, "professor");

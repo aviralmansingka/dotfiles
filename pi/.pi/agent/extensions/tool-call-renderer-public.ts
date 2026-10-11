@@ -59,7 +59,7 @@ const pendingTitles = new Set<string>();
 let commandsHidden = true;
 const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
 // Launch/message/review receipts are not agent runs: never route them through chips.
-const RECEIPT_TOOLS = new Set(["subagent_message", "hunk_review", "tuicr"]);
+const RECEIPT_TOOLS = new Set(["subagent_message", "tuicr"]);
 const FILE_TOOLS = new Set(["read", "write"]);
 const OUTPUT_TOOLS = new Set(["bash", "powershell", "python"]);
 const INSPECT_TOOLS = new Set(["grep", "find", "ls"]);
@@ -1369,91 +1369,6 @@ function renderTuicr(result: Result, expanded: boolean, row: Row, theme: Theme, 
   return lines;
 }
 
-function commentLeaves(theme: Theme, comments: unknown, expanded: boolean, width: number): string[] {
-  if (!Array.isArray(comments)) return [];
-  return comments.map(asRecord).flatMap((comment) => {
-    const file = clean(comment.filePath) || "(file)";
-    const line = finiteNumber(comment.newLine) ? comment.newLine : comment.oldLine ?? comment.line;
-    const hunk = comment.hunk ?? comment.hunkNumber;
-    const location = file + (finiteNumber(line) ? `:${line}` : finiteNumber(hunk) ? ` · hunk ${hunk}` : "");
-    const lines = [` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "✎ ")} ${theme.fg("dim", location + (comment.summary ? " — " : ""))}${theme.fg("text", shortPedagogy(comment.summary, width - 10 - [...location].length))}`];
-    if (expanded && comment.rationale) lines.push(...spineText(theme, comment.rationale, width));
-    return lines;
-  });
-}
-
-// Hunk returns CLI JSON as text, not details. Head truncation may cut that
-// JSON mid-string; salvage only complete identity fields before its arrays.
-function hunkData(result: Result): { data: RecordValue; parsed: boolean } {
-  const text = textContent(result);
-  let data: RecordValue = {};
-  let parsed = false;
-  try {
-    data = asRecord(JSON.parse(text));
-    parsed = Object.keys(data).length > 0;
-  } catch {
-    const prefix = text.split(/"(?:files|reviewNotes|applied)"\s*:/, 1)[0];
-    for (const key of ["sessionId", "repoRoot", "sourceLabel"]) {
-      const match = new RegExp(`"${key}"\\s*:\\s*("(?:[^"\\\\]|\\\\.)*")`).exec(prefix);
-      if (match) {
-        try { data[key] = JSON.parse(match[1]); } catch { /* Incomplete strings stay unknown. */ }
-      }
-    }
-  }
-  return { data: { ...data, ...asRecord(result.details) }, parsed };
-}
-
-function reviewState(review: RecordValue, theme: Theme): string[] {
-  // Keep all returned status/notes metadata, but show patches as actual lines
-  // rather than escaped JSON strings. No inferred session status or counts.
-  const metadata = JSON.stringify(review, (key, value) => key === "patch" ? undefined : value, 2);
-  const lines = metadata.split("\n").map((line) => theme.fg("toolOutput", safeLine(line)));
-  const files = Array.isArray(review.files) ? review.files.map(asRecord) : [];
-  const patches = [...files, ...(review.patch ? [review] : [])];
-  for (const file of patches) {
-    if (typeof file.patch !== "string") continue;
-    if (file.path) lines.push(theme.fg("dim", clean(file.path)));
-    lines.push(...file.patch.replace(/\n$/, "").split("\n").map((line) => theme.fg("dim", safeLine(line))));
-  }
-  return lines;
-}
-
-function renderReview(result: Result, expanded: boolean, row: Row, theme: Theme, context: RenderContext, width: number): string[] {
-  const args = asRecord(context.args);
-  const text = textContent(result);
-  const source = JSON.stringify([args, result.details, text, expanded, row.settled, row.failed, width]);
-  const cached = receiptRows.get(context.toolCallId);
-  if (cached?.source === source && cached.theme === theme) return cached.rows;
-  const { data, parsed } = hunkData(result);
-  const review = data.review ? asRecord(data.review) : data;
-  const applied = asRecord(data.result).applied ?? data.applied;
-  const session = clean(review.sessionId || data.sessionId || asRecord(data.result).sessionId);
-  const returned = Array.isArray(data.comments) ? data.comments : Array.isArray(applied) ? applied : [];
-  // CLI batch results preserve request order; keep requested anchors/summaries
-  // and fill any returned rationale without treating requested count as applied.
-  const comments = Array.isArray(args.comments) ? args.comments.map((comment, index) => ({ ...asRecord(returned[index]), ...asRecord(comment) })) : returned;
-  const applying = args.operation === "comment_apply";
-  const identity = clean(review.repoRoot || review.sourceLabel) || session;
-  const lines = applying ? commentLeaves(theme, comments, expanded, width)
-    : [` ${theme.fg("borderMuted", "├─")} ${theme.fg("dim", "▣ ")} ${theme.fg("text", "hunk")}${identity ? theme.fg("dim", ` · ${identity}`) : ""}`];
-  const cancelled = data.status === "cancelled";
-  const error = row.failed || Boolean(data.error);
-  const count = Array.isArray(applied) ? applied.length : undefined;
-  const label = cancelled ? "✗ cancelled" : error ? `✗ ${firstLine(data.error || text) || "failed"}`
-    : !row.settled ? "running" : applying && count !== undefined ? `✓ applied · ${plural(count, "comment")}${session ? ` · session ${session}` : ""}`
-    : !applying && session ? `✓ session ${session}` : "✓ completed";
-  lines.push(` ${theme.fg("borderMuted", "└─")} ${theme.fg(cancelled ? "dim" : error ? "error" : row.settled ? "success" : "dim", label)}`);
-  if (expanded && !applying) {
-    const state = parsed || Object.keys(asRecord(result.details)).length ? reviewState(review, theme)
-      : text ? text.replace(/\n$/, "").split("\n").map((line) => theme.fg("toolOutput", safeLine(line))) : [];
-    for (const line of foldInspection(state, theme, " lines")) {
-      lines.push(...wrapLine(line, width - 4).chunks.map((chunk) => `    ${chunk}`));
-    }
-  }
-  receiptRows.set(context.toolCallId, { source, theme, rows: lines });
-  return lines;
-}
-
 function mcpIdentity(tool: string) {
   const parts = tool.split("__");
   const name = parts[parts.length - 1];
@@ -1729,10 +1644,6 @@ export default function (pi: ExtensionAPI) {
             ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
             ...(!row.leafResult ? questionLeaf(theme, asRecord(args).question, false, width) : []),
           ];
-          if (toolName === "hunk_review") return [
-            ` ${glyph} ${name}${theme.fg("dim", `${asRecord(args).operation ? ` · ${clean(asRecord(args).operation)}` : ""}${elapsed}`)}`,
-            ...(!row.leafResult ? commentLeaves(theme, asRecord(args).comments, false, width) : []),
-          ];
           if (toolName === "tuicr") return [
             ` ${glyph} ${name}${theme.fg("dim", elapsed)}`,
             ...(!row.leafResult ? tuicrLeaf(theme, tuicrData(asRecord(args), context.cwd)) : []),
@@ -1853,10 +1764,6 @@ export default function (pi: ExtensionAPI) {
           if (toolName === "tuicr") {
             row.leafResult = true;
             return renderTuicr(effective, expanded, row, theme, context, width);
-          }
-          if (toolName === "hunk_review") {
-            row.leafResult = true;
-            return renderReview(effective, expanded, row, theme, context, width);
           }
           if (toolName.startsWith("mcp__")) return renderMcp(toolName, effective, expanded, row, theme, context, width);
           if (toolName === "grep") return renderGrep(effective, expanded, row, theme, context, width);
