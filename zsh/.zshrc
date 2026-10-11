@@ -116,7 +116,10 @@ osc52-copy() {
 }
 
 export XDG_CONFIG_HOME="$HOME/.config"
-export TERM="xterm-256color"
+# Pin a safe TERM outside tmux (the #21 leak class), but leave TERM alone
+# inside panes: tmux sets tmux-256color there and overriding it breaks the
+# pane's truecolor/clipboard contract.
+[[ -z "$TMUX" ]] && export TERM="xterm-256color"
 # Pi uses COLORTERM to decide whether to emit 24-bit colors under SSH/tmux.
 export COLORTERM="truecolor"
 export EDITOR="bob run stable"
@@ -139,9 +142,10 @@ export CUDA_HOME=/usr/local/cuda
 export PATH=$CUDA_HOME/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
-eval "$(starship init zsh)"
-eval "$(zoxide init zsh)"
-eval "$(direnv hook zsh)"
+# command -v guards: a missing tool must never break or spam shell startup.
+command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
 
 export HOMEBREW_NO_AUTO_UPDATE=1
 
