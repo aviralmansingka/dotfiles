@@ -1,0 +1,115 @@
+#!/bin/sh
+set -eu
+
+# Owned installer for the no-mistakes Herdr bridge: hosts daemon step agents
+# as visible, interactive Herdr subagent tabs instead of headless processes.
+#
+#   1. Copies pi/bin/nm-herdr-pi.mjs (the pi shim the daemon launches) to
+#      ~/.local/lib/nm-herdr-bridge/.
+#   2. Writes the ~/.local/bin/nm-herdr-pi launcher with absolute node and
+#      script paths — the daemon's PATH does not include nvm directories,
+#      so `#!/usr/bin/env node` would fail inside the daemon context.
+#   3. Upserts `agent_path_override.pi` in $NM_HOME/config.yaml so the
+#      daemon launches the shim exactly as it would launch pi (the
+#      upstream-supported config knob; no PATH interception).
+#
+# The shim is a transparent passthrough whenever no parent-session bridge is
+# live, so installing it never changes headless behavior by itself. Runs
+# that outlive the triggering session, daemon restarts, and non-Herdr hosts
+# keep today's behavior.
+#
+# `--uninstall` reverses all three steps.
+#
+# The daemon reads config.yaml at startup: after (un)installing, restart it
+# once no pipeline runs are active (`no-mistakes update` resets the daemon;
+# or reboot). Active runs are never interrupted by this script.
+
+usage() {
+	printf 'install-nm-herdr-bridge: [--uninstall]\n' >&2
+	exit 2
+}
+
+fail() {
+	printf 'install-nm-herdr-bridge: %s\n' "$*" >&2
+	exit 1
+}
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+dotfiles_dir=$(dirname -- "$script_dir")
+shim_source=$dotfiles_dir/pi/bin/nm-herdr-pi.mjs
+[ -f "$shim_source" ] || fail "shim source missing: $shim_source"
+
+lib_dir=$HOME/.local/lib/nm-herdr-bridge
+lib_file=$lib_dir/nm-herdr-pi.mjs
+launcher=$HOME/.local/bin/nm-herdr-pi
+nm_home=${NM_HOME:-$HOME/.no-mistakes}
+config=$nm_home/config.yaml
+
+uninstall=0
+[ "${1:-}" = "--uninstall" ] && uninstall=1
+[ $# -gt 1 ] && usage
+[ "${1:-}" != "" ] && [ "$uninstall" -eq 0 ] && usage
+
+resolve_node() {
+	if command -v node >/dev/null 2>&1; then
+		command -v node
+		return 0
+	fi
+	for candidate in "$HOME"/.nvm/versions/node/*/bin/node; do
+		[ -x "$candidate" ] && {
+			printf '%s\n' "$candidate"
+			return 0
+		}
+	done
+	return 1
+}
+
+# Drop the top-level `agent_path_override:` block (key line plus its
+# indented children) from config.yaml, leaving every other key untouched.
+strip_config_block() {
+	[ -f "$config" ] || return 0
+	tmp=$config.nm-bridge.tmp
+	awk '
+		$1 == "agent_path_override:" { skip = 1; next }
+		skip && /^[[:space:]]/ { next }
+		{ skip = 0; print }
+	' "$config" > "$tmp"
+	mv "$tmp" "$config"
+}
+
+if [ "$uninstall" -eq 1 ]; then
+	strip_config_block
+	rm -f "$launcher" "$lib_file"
+	rmdir "$lib_dir" 2>/dev/null || true
+	printf 'install-nm-herdr-bridge: uninstalled (restart the daemon when no runs are active)\n'
+	exit 0
+fi
+
+node_bin=$(resolve_node) || fail 'no node binary found (checked PATH and ~/.nvm)'
+
+mkdir -p "$lib_dir" "$HOME/.local/bin"
+cp "$shim_source" "$lib_file"
+chmod 755 "$lib_file"
+
+printf '#!/bin/sh\n# Installed by dotfiles scripts/install-nm-herdr-bridge — do not edit.\nexec %s %s "$@"\n' \
+	"$node_bin" "$lib_file" > "$launcher"
+chmod 755 "$launcher"
+
+# Self-test: the launcher must reach real pi in passthrough mode (empty
+# stdin, non-worktree cwd) and print a version.
+version=$(printf '' | "$launcher" --version 2>/dev/null || true)
+[ -n "$version" ] || fail 'launcher self-test failed: passthrough pi --version printed nothing'
+printf 'install-nm-herdr-bridge: launcher self-test ok (pi %s)\n' "$version"
+
+if [ -f "$config" ]; then
+	strip_config_block
+	{
+		printf 'agent_path_override:\n'
+		printf '  pi: %s\n' "$launcher"
+	} >> "$config"
+	printf 'install-nm-herdr-bridge: config upserted (%s)\n' "$config"
+else
+	printf 'install-nm-herdr-bridge: no %s — install no-mistakes first; files installed only\n' "$config" >&2
+fi
+
+printf 'install-nm-herdr-bridge: installed (restart the daemon when no runs are active)\n'
