@@ -67,6 +67,18 @@ def read_text(path: Path) -> str:
 
 
 def top_dirs(root: Path) -> set:
+    # Tracked entries only: the README documents STOW PACKAGES (things the
+    # repo ships), so untracked host-side artifacts (a root __pycache__, a
+    # stowed package's node_modules) must not trip the parity check. Dot
+    # dirs stay excluded (same as the old filesystem walk); a non-git tree
+    # (the P5 sandbox copy) falls back to the filesystem walk.
+    proc = subprocess.run(
+        ["git", "-C", str(root), "ls-files"],
+        capture_output=True, text=True, check=False,
+    )
+    if proc.returncode == 0:
+        names = {entry.split("/", 1)[0] for entry in proc.stdout.splitlines() if "/" in entry}
+        return {n for n in names if not n.startswith(".")}
     return {p.name for p in root.iterdir()
             if p.is_dir() and not p.name.startswith(".")}
 
