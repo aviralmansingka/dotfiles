@@ -443,7 +443,7 @@ export async function presentLesson(
 	if (!buffer.ok && isEditorMissing(buffer.message)) {
 		// No editor pane yet: launch one, wait for nvim to bind its RPC
 		// socket, then retry — the node buffer must exist, not the journal.
-		const launched = await openEditor(ctx?.cwd ?? process.cwd(), []);
+		const launched = await openEditor(ctx?.cwd ?? process.cwd(), [], "library:md-log");
 		if (launched.ok && (await ensureEditorReady())) {
 			buffer = showNodeBuffer(key, title, title, body);
 		}
@@ -503,7 +503,7 @@ export async function openNodeView(
 	let view = attempt();
 	if (view.mode === "none" && isEditorMissing(view.message)) {
 		// No editor pane at all: launch one, wait for the RPC socket, retry.
-		const launched = await openEditor(ctx?.cwd ?? process.cwd(), []);
+		const launched = await openEditor(ctx?.cwd ?? process.cwd(), [], "library:md-log");
 		if (launched.ok && (await ensureEditorReady())) view = attempt();
 	}
 	if (view.mode !== "none") return view;
@@ -534,7 +534,7 @@ export async function openJournalInEditor(
 			launched: false,
 		};
 	}
-	const result = await openEditor(ctx?.cwd ?? process.cwd(), [journalPath]);
+	const result = await openEditor(ctx?.cwd ?? process.cwd(), [journalPath], "library:md-log");
 	return {
 		message: `${result.message} — lesson journal ${journalPath}`,
 		ok: result.ok,
@@ -561,7 +561,7 @@ export async function openProbesInEditor(
 			launched: false,
 		};
 	}
-	const result = await openEditor(ctx?.cwd ?? process.cwd(), [probesPath]);
+	const result = await openEditor(ctx?.cwd ?? process.cwd(), [probesPath], "library:md-log");
 	return {
 		message: `${result.message} — probe log ${probesPath}`,
 		ok: result.ok,
