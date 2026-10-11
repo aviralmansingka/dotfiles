@@ -371,14 +371,16 @@ export function closeTabPaneCleanly(paneId: string, budgetMs = CLEAN_CLOSE_BUDGE
 
 interface BridgeState {
 	runs: Map<string, RunBridge>;
+	generations: Map<string, number>;
 }
 
 function bridgeState(): BridgeState {
 	let state = (globalThis as any)[BRIDGE_KEY] as BridgeState | undefined;
 	if (!state) {
-		state = { runs: new Map() };
+		state = { runs: new Map(), generations: new Map() };
 		(globalThis as any)[BRIDGE_KEY] = state;
 	}
+	state.generations ??= new Map(); // extension reload can inherit older state
 	return state;
 }
 
@@ -523,9 +525,13 @@ export function ensureBridgeServer(runId: string): void {
 	if (!herdrBridgeAvailable()) return;
 	const dir = bridgeRunDir(nmHomeDir(), runId);
 	const sockPath = join(dir, "sock");
+	const generation = state.generations.get(runId) ?? 0;
+	state.generations.set(runId, generation);
 	if (existsSync(sockPath)) {
 		void probeSocket(sockPath).then((alive) => {
-			if (alive || state.runs.has(runId)) return;
+			if (alive || state.runs.has(runId) || state.generations.get(runId) !== generation) return;
+			// Known limitation: another host can claim between this stale probe
+			// and unlink; the cross-host stale-probe unlink race remains.
 			try {
 				rmSync(sockPath, { force: true });
 			} catch {}
@@ -611,6 +617,8 @@ async function runInvocation(
 		return;
 	}
 	const step = `agent-${++bridge.ordinal}`;
+	// Same-session invocations are unserialized: the daemon drives them
+	// sequentially. Durability belongs to the session file, not the tab.
 	const tab = openTab(bridge, hello, interactive, step, step);
 	if (!tab) {
 		fatal(`bridge: could not open a Herdr tab for step ${step}`);
@@ -636,8 +644,10 @@ async function runInvocation(
 	};
 
 	let fd: number | undefined;
+	let promptError: Error | undefined;
+	const isCut = () => cut.flag || promptError !== undefined;
 	try {
-		await waitTabReady(tab.paneId);
+		await waitTabReady(tab.paneId, isCut);
 		const translator = new SessionEventTranslator(sessionId);
 
 		let sessionFile: string | undefined;
@@ -648,7 +658,7 @@ async function runInvocation(
 			// event line goes to the shim, like a headless pi startup) and
 			// stream only records appended after this point — the prior
 			// conversation is never re-emitted.
-			sessionFile = await discoverSessionFile(tab, hello, sessionId);
+			sessionFile = await discoverSessionFile(tab, hello, sessionId, isCut);
 			for (const line of applyPreface(translator, sessionFile, sessionId)) {
 				send({ type: "events", lines: [line] });
 			}
@@ -660,22 +670,21 @@ async function runInvocation(
 		// (verified live: an idle tab pi has an empty session dir), so the
 		// daemon's prompt must be in flight before discovery can ever succeed
 		// — for a cold step the opposite order always times out.
-		const submit = execFileAsync(
+		let settled = false;
+		void execFileAsync(
 			"herdr",
 			["agent", "prompt", tab.paneId, hello.prompt, "--wait", "--timeout", String(TURN_SETTLE_TIMEOUT_MS)],
 			{ timeout: TURN_SETTLE_TIMEOUT_MS + 30_000, maxBuffer: 1024 * 1024 },
-		);
-		// Race discovery against rejection too: a failed prompt may never
-		// create a session file. All failures reach the same clean-close path.
-		const promptFailed = submit.then(() => new Promise<never>(() => {}));
-		promptFailed.catch(() => {});
+		).then(() => { settled = true; }, (err) => {
+			promptError = err instanceof Error ? err : new Error(String(err));
+		});
 
 		if (!sessionId) {
 			// Cold step: the whole fresh session file is this one turn, so the
 			// stream starts at byte 0 and the head records (session header,
 			// system message, this turn's user record) flow through the
 			// translator in file order.
-			sessionFile = await Promise.race([discoverSessionFile(tab, hello, sessionId), promptFailed]);
+			sessionFile = await discoverSessionFile(tab, hello, sessionId, isCut);
 			fd = openSync(sessionFile, "r");
 		}
 
@@ -685,17 +694,12 @@ async function runInvocation(
 			});
 		};
 
-		let settled = false;
-		const polling = (async () => {
-			while (!cut.flag && !settled) {
-				await sleep(PROMPT_POLL_MS);
-				if (cut.flag) return false;
-				streamNew();
-			}
-			return false;
-		})();
-		settled = await Promise.race([submit.then(() => true), polling]);
-		if (cut.flag && !settled) {
+		while (!isCut() && !settled) {
+			await sleep(PROMPT_POLL_MS);
+			if (!isCut() && !settled) streamNew();
+		}
+		if (promptError) throw promptError;
+		if (cut.flag) {
 			// The daemon cut the invocation (timeout/cancel): kill the tab so a
 			// retry or later --session resume never meets a second writer.
 			closeTab(tab);
@@ -715,7 +719,8 @@ async function runInvocation(
 		closeTab(tab);
 	} catch (err) {
 		closeTab(tab);
-		fatal(`bridge: ${err instanceof Error ? err.message : String(err)}`);
+		const reason = promptError ?? err;
+		fatal(`bridge: ${reason instanceof Error ? reason.message : String(reason)}`);
 	} finally {
 		if (fd !== undefined) closeSync(fd);
 	}
@@ -766,9 +771,10 @@ function openTab(
 	}
 }
 
-async function waitTabReady(paneId: string): Promise<void> {
+export async function waitTabReady(paneId: string, isCut = () => false): Promise<void> {
 	const deadline = Date.now() + TAB_READY_TIMEOUT_MS;
 	while (Date.now() < deadline) {
+		if (isCut()) throw new Error("invocation cut");
 		const info = herdrJsonSync(["agent", "get", paneId]);
 		const status = info?.result?.agent?.agent_status;
 		if (status === "idle" || status === "done") return;
@@ -780,14 +786,16 @@ async function waitTabReady(paneId: string): Promise<void> {
 	throw new Error("tab agent never became ready");
 }
 
-async function discoverSessionFile(tab: TabHandle, hello: Hello, sessionId?: string): Promise<string> {
+export async function discoverSessionFile(tab: TabHandle, hello: Hello, sessionId?: string, isCut = () => false): Promise<string> {
 	const deadline = Date.now() + SESSION_DISCOVER_TIMEOUT_MS;
 	while (Date.now() < deadline) {
+		if (isCut()) throw new Error("invocation cut");
 		const info = herdrJsonSync(["agent", "get", tab.paneId]);
 		const path = info?.result?.agent?.agent_session?.value;
 		if (typeof path === "string" && path && existsSync(path)) return path;
 		await sleep(PROMPT_POLL_MS);
 	}
+	if (isCut()) throw new Error("invocation cut");
 	// Fallback: resolve by session id under the mangled sessions dir.
 	if (sessionId) {
 		const dir = join(piSessionsDir(), mangledSessionDir(hello.cwd));
@@ -882,6 +890,7 @@ function streamNewRecords(fd: number, offset: number, onRecord: (record: unknown
 
 async function teardownRun(bridge: RunBridge): Promise<void> {
 	const state = bridgeState();
+	state.generations.set(bridge.runId, (state.generations.get(bridge.runId) ?? 0) + 1);
 	if (state.runs.get(bridge.runId) === bridge) state.runs.delete(bridge.runId);
 	for (const tab of bridge.tabs.values()) {
 		closeTabPaneCleanly(tab.paneId);
@@ -904,7 +913,9 @@ async function teardownRun(bridge: RunBridge): Promise<void> {
  *  bridge dirs (later shims then passthrough instantly). Called on run
  *  terminal, session shutdown, and extension reload. */
 export function teardownBridgeServers(): void {
-	for (const bridge of Array.from(bridgeState().runs.values())) {
+	const state = bridgeState();
+	for (const [runId, generation] of state.generations) state.generations.set(runId, generation + 1);
+	for (const bridge of Array.from(state.runs.values())) {
 		void teardownRun(bridge);
 	}
 }
@@ -914,4 +925,8 @@ export function teardownBridgeServers(): void {
 export function teardownBridgeForRun(runId: string): void {
 	const bridge = bridgeState().runs.get(runId);
 	if (bridge) void teardownRun(bridge);
+	else {
+		const state = bridgeState();
+		state.generations.set(runId, (state.generations.get(runId) ?? 0) + 1);
+	}
 }

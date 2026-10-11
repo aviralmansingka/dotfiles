@@ -35,6 +35,8 @@ const {
 	STEP_AGENT_EXTENSIONS,
 	closeTabPaneCleanly,
 	probeSocket,
+	waitTabReady,
+	discoverSessionFile,
 	SessionEventTranslator,
 	ensureBridgeServer,
 	teardownBridgeForRun,
@@ -422,6 +424,9 @@ await (async () => {
 const shimPath = fileURLToPath(new URL("../../../bin/nm-herdr-pi.mjs", import.meta.url));
 const TEST_RUN_ID = "01M4KZ1QA7E1CSFXJM5B4W0240";
 
+await assert.rejects(waitTabReady("unused", () => true), /invocation cut/);
+await assert.rejects(discoverSessionFile({ paneId: "unused" }, {}, undefined, () => true), /invocation cut/);
+
 function startFakeBridge(sockPath, onHello) {
 	mkdirSync(join(sockPath, ".."), { recursive: true });
 	const server = createServer((sock) => {
@@ -802,6 +807,26 @@ function stubCreateTab(root, label) {
 	);
 	return JSON.parse(out).result.root_pane.pane_id;
 }
+
+await (async () => {
+	// A stale probe may complete after teardown, but must never claim again.
+	const root = makeBridgeRoot("nm-bridge-generation-");
+	const restore = enterBridgeEnv(root);
+	try {
+		const dir = join(root, "herdr-bridge", TEST_RUN_ID);
+		mkdirSync(dir, { recursive: true });
+		const sock = join(dir, "sock");
+		writeFileSync(sock, "stale socket placeholder");
+		ensureBridgeServer(TEST_RUN_ID);
+		teardownBridgeForRun(TEST_RUN_ID);
+		await sleep(100);
+		assert.equal(readFileSync(sock, "utf8"), "stale socket placeholder", "late probe cannot unlink or resurrect a torn-down bridge");
+	} finally {
+		teardownBridgeForRun(TEST_RUN_ID);
+		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
+})();
 
 await (async () => {
 	// Clean tab close: the tab's pi is asked to exit (Ctrl+D on its idle
