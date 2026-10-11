@@ -59,14 +59,17 @@ One run takes about 1 s on Linux. The SLA is 60 s; a longer run fails.
 
 - Smoked: the `rm -f` pre-clean; the stow lines; `pi-settings-sync`;
   `tic` terminfo; `stow systemd` when `systemctl` exists; the hook link.
-- Guard smoked, step not run: `gh extension install`;
-  `herdr integration install codex`; `install-nm-herdr-bridge`.
+- Guard smoked, step not run: `herdr integration install pi`;
+  `gh extension install`; `herdr integration install codex`;
+  `install-nm-herdr-bridge`.
 - Skipped with reason: `stow launchd`, `install-no-mistakes`
   (macOS-only); `stow omarchy` (binary absent); `stow -R zsh`.
 - Not smoked, network: Homebrew and `brew bundle`; the installer
   curls; rustup, cargo, bob, `npm ci`; Oh My Zsh, zsh plugins, TPM.
-- Not smoked, live service: `herdr integration install pi` (unguarded;
-  section 2 installs herdr first); Herdr Flash; the annotate reviewer.
+- Not smoked, live service: the guarded `herdr integration install pi`
+  (its `command -v herdr` guard is smoked statically and dynamically; the
+  live integration still needs a real herdr); Herdr Flash; the annotate
+  reviewer.
 
 ## Known gaps
 
@@ -75,6 +78,10 @@ One run takes about 1 s on Linux. The SLA is 60 s; a longer run fails.
   and `ghostty` configs stow on Linux, but the apps do not start.
 - **Silent guards.** `install.sh` skips a guarded step without a
   message; the smoke prints the skip reason for each gated step.
-- **Stray nvim entries.** `stow nvim` links the stray
-  `tool-call-rendering-prototypes.md` and the markdownlint files into
-  `$HOME`; the nvim package owns the fix, not `install.sh`.
+- **Intentional nvim root entries.** `stow nvim` links
+  `.markdownlint-cli2.yaml` and `.markdownlint-rules/` into the `$HOME`
+  root on purpose: markdownlint-cli2 picks up `~/.markdownlint-cli2.yaml`
+  as the default config for every project, and nvim's conform/markdown
+  wiring passes that exact path. The stray `tool-call-rendering-prototypes.md`
+  that used to sit beside them was relocated to `docs/` (C35), and the
+  `pkgshape` phase fails if any other file lands at the nvim package root.

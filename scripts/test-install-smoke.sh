@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Paths: install.sh Brewfile
+# Paths: install.sh Brewfile nvim/**
 #
 # Sandbox smoke for install.sh. Drives the offline, Linux-runnable steps of
 # install.sh (the stow deployment of section 4, terminfo of section 6, the
-# git stow of section 7) against a mktemp fake HOME. Never touches the real
+# git stow of section 7) against a mktemp fake HOME. Also pins the nvim
+# stow package's root shape: stray files at the package root get stowed
+# into $HOME root (C35), so only the config tree and the intentional
+# $HOME-root markdownlint pair may sit there. Never touches the real
 # $HOME, never runs stow into the real $HOME, and never contacts a network.
 # install.sh itself cannot run offline: section 1 bootstraps Homebrew and
 # sections 2-3 curl installers, so this smoke mirrors its commands instead
@@ -98,6 +101,36 @@ gate_plan "$PLAN_FILE" > "$GATED_FILE"
 phase_lint() {
   if bash -n "$INSTALL" 2>/dev/null; then pass "lint/bash-n" "install.sh parses"
   else fail "lint/bash-n" "bash -n rejected install.sh"; fi
+}
+
+# Static package-shape: everything tracked directly at the nvim package
+# root is symlinked into $HOME ROOT by `stow nvim`. The config tree
+# (.config/) and the intentional markdownlint pair belong there - the yaml
+# is ~/.markdownlint-cli2.yaml, the default config markdownlint-cli2 picks
+# up for every project, and its custom rule dir sits next to it (nvim's
+# conform.lua/markdown.lua pass --config ~/.markdownlint-cli2.yaml).
+# Anything else at the root is a stray (C35: tool-call-rendering-prototypes.md
+# was relocated to docs/ for exactly this reason).
+NVIM_ROOT_ALLOWLIST="|.config|.markdownlint-cli2.yaml|.markdownlint-rules|"
+phase_pkgshape() {
+  local entries e bad=0
+  entries=$(git -C "$REPO" ls-files -- nvim | sed 's|^nvim/||' | cut -d/ -f1 | sort -u)
+  [ -n "$entries" ] || fail "pkgshape/nvim-root" "no tracked files under nvim/"
+  while read -r e; do
+    [ -n "$e" ] || continue
+    case "$NVIM_ROOT_ALLOWLIST" in
+      *"|$e|"*) ;;
+      *) bad=1; fail "pkgshape/nvim-root" "stray entry '$e' at the nvim package root would be stowed into \$HOME root (C35); move it under nvim/.config/ or docs/" ;;
+    esac
+  done <<<"$entries"
+  # Allowlist hygiene: every allowlisted root entry must still be tracked.
+  local keep
+  for e in .config .markdownlint-cli2.yaml .markdownlint-rules; do
+    keep=$(git -C "$REPO" ls-files -- "nvim/$e")
+    [ -n "$keep" ] || { bad=1; fail "pkgshape/nvim-root" "allowlisted entry '$e' is no longer tracked; drop it from NVIM_ROOT_ALLOWLIST"; }
+  done
+  [ "$bad" = 0 ] && pass "pkgshape/nvim-root" "nvim package root holds only .config + the intentional markdownlint pair"
+  return 0
 }
 
 phase_plan() {
@@ -306,6 +339,7 @@ phase_guards() {
     if [ -n "$gn" ]; then pass "guards/$1" "guarded by $2"
     else fail "guards/$1" "no $2 guard within ${3:-3} lines above (set -e abort risk)"; fi
   }
+  guard_line 'herdr integration install pi' 'command -v herdr'
   guard_line 'gh extension install' 'command -v gh'
   grep -E 'gh extension install' "$INSTALL" | grep -q '|| true' \
     && pass "guards/gh-extension-soft-fail" "gh extension install has || true" \
@@ -331,6 +365,7 @@ phase_guards() {
   GH="$(newtmp)"
   out=$(PATH=/usr/bin:/bin HOME="$GH" bash -euo pipefail -c '
     D="$1"
+    if command -v herdr >/dev/null 2>&1; then herdr integration install pi; fi
     if command -v gh >/dev/null 2>&1; then gh extension install dlvhdr/gh-dash 2>/dev/null || true; fi
     if command -v omarchy >/dev/null 2>&1; then stow -d "$D" -t "$HOME" omarchy; fi
     if command -v codex >/dev/null 2>&1; then herdr integration install codex; fi
@@ -411,7 +446,7 @@ phase_stub() {
   else fail "stub/git-hook" "hook link wrong or not idempotent ($l1 vs $l2)"; fi
 }
 
-PHASES=(lint plan deploy idempotence guards conflict stub)
+PHASES=(lint pkgshape plan deploy idempotence guards conflict stub)
 for ph in "${PHASES[@]}"; do
   echo "-- phase: $ph"
   t0="$(now_ms)"

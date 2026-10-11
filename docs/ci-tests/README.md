@@ -38,10 +38,10 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 | zsh layer | test-zsh.sh | 19 | 0.42 s |
 | tmux + ghostty + terminfo | test-tmux.sh, test-ghostty.sh | 17 + 11 | 0.36 s |
 | Config lint (starship, aerospace, tmuxinator, k9s, neovide, omarchy, code, blinksh, git) | test-config-lint.py | 14, 22 files | 0.06 s |
-| install.sh | test-install-smoke.sh | 48 | 0.97 s |
+| install.sh | test-install-smoke.sh | 49 | 0.95 s |
 | No-mistakes installer/rollback/daemon | test-nm-install.sh | 21 | 1.1 s |
 | Repo config (skills frontmatter, stow parity, gh-dash, settings, Brewfile, herdr TOML) | test-repo-config.py | 10 | 0.20 s |
-| Repo parity (skills-lock, claude hooks, notion-cli, docs accuracy) | test-repo-parity.py | 5 suites | 0.37 s |
+| Repo parity (skills store, claude hooks, notion-cli, docs accuracy) | test-repo-parity.py | 5 suites | 0.37 s |
 | Terraform invariants | test-terraform.sh | 17 (19 w/ TF_VALIDATE=1) | 0.1–12.7 s |
 | systemd + launchd units | test-service-units.py | 47 | ~0.5 s |
 | CI meta (structure, routing, gate matching, discovery) | test-ci-self.mjs | 20 synthetic gate cases | — |

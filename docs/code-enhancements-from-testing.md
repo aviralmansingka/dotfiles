@@ -77,19 +77,33 @@ Status legend:
     to its uncovered seams.
 21. **`ops/terraform/iam.tf` grants AdministratorAccess to the human admin IAM
     group** — owner's call; CI-role checks pass (dom-ops).
-22. **Three repo-parity drift findings** — (1) claude settings runs an
-    untracked, absent hook (`$HOME/.claude/hooks/herdr-agent-state.sh`);
-    (2) `docs/OSC52*.md` instruct `stow ssh` — no `ssh` package exists;
-    (3) all 8 locked skills' `.claude/skills/<name>` symlinks dangle in-tree
-    (external fetch tool unreferenced). Allowlisted in
-    `scripts/test-repo-parity.py` (dom-repo-parity).
-23. **zsh `.zshrc` TERM export has no `$TMUX` guard** — it overrides
-    `tmux-256color` inside panes (value is the safe #21 one; flagged by
-    dom-terminal, asserted as-is by dom-zsh). Decide guard-vs-current.
+22. **Three repo-parity drift findings** — [done] (1) the hook entry was
+    removed from `claude/.claude/settings.json` (the script never existed
+    on any audited host); (2) the `stow ssh` mentions were corrected - this
+    repo never shipped an ssh package, and the SSH config is host-side
+    (`~/.ssh/config`) needing nothing from the repo; (3) the 8 dangling
+    `.claude/skills/<name>` symlinks and the orphaned `skills-lock.json`
+    were removed - the captain's skill audit (commit 64a4a94) deleted the
+    mattpocock bundle, the fetch tool is referenced nowhere, and the
+    symlinks resolved nowhere (repo, host, or tool). All three allowlist
+    entries dropped; P1 rewritten as a skills-store check (dangling farm
+    entries fail, a returning lockfile must carry full
+    lock<->symlink<->target parity) (dom-repo-parity).
+23. **zsh `.zshrc` TERM export has no `$TMUX` guard** — [done] The export
+    is now `[[ -z "$TMUX" ]] && export TERM=xterm-256color`: outside tmux
+    the safe #21 value is pinned, inside panes tmux's `tmux-256color`
+    survives. `term-rc` pins both directions plus a selftest mutation for
+    an unguarded export (dom-zsh).
 24. **neovide `neovim-bin` absolute `/Users/...` path + git
-    `credential.helper=osxkeychain`** — portability/per-host decisions; no
-    safe minimal fix existed (dom-config-lint; `PORTABILITY_GAPS` pins the
-    exact strings).
+    `credential.helper=osxkeychain`** — [done] `neovim-bin` is unset:
+    neovide never expands `~` or env vars in config paths, and unset it
+    resolves `nvim` from PATH (`~/.local/bin/nvim`, a bob symlink, is on
+    PATH via `.zshenv` for every zsh). The git config drops `osxkeychain`
+    (macOS-only, and Homebrew/Apple git already default to it in the
+    system gitconfig) for a documented local-only pattern in
+    `~/.gitconfig`, and the no-op `[editor] tool` key is gone. All
+    `PORTABILITY_GAPS` entries removed; C9/C14 selftests pin the
+    recurrences (dom-config-lint).
 
 25. **no-mistakes binary drifted far past the repo pin** — [needs-decision]
     The installed binary is v1.84.0 while `scripts/install-no-mistakes`
@@ -142,10 +156,19 @@ Status legend:
     classes were observed live this session (bare-zsh delegate panes; the
     wedged step pi polling a deleted repo).
 
-35. **Stray nvim package-root files get stowed into `$HOME`** — [ready-to-file]
-    `tool-call-rendering-prototypes.md` and markdownlint files sit at the
-    nvim package root, so `stow nvim` deploys them into `$HOME` root.
-    Flagged by dom-install.
+35. **Stray nvim package-root files get stowed into `$HOME`** — [done]
+    `tool-call-rendering-prototypes.md` moved to `docs/` (a design doc,
+    not config). The markdownlint pair stays at the package root on
+    purpose: `~/.markdownlint-cli2.yaml` is the default config
+    markdownlint-cli2 picks up for every project, nvim's conform/markdown
+    wiring passes that exact path, and the custom rule dir sits next to
+    it. A new `pkgshape` phase in the install smoke fails on any other
+    root entry (C35 class).
+36. **`herdr integration install pi` is unguarded in install.sh** — [done]
+    All herdr-dependent steps (pi/codex integrations, Herdr Flash, the
+    annotate reviewer) now sit behind one `command -v herdr` guard with a
+    skip message. The install smoke asserts the guard statically and
+    dynamically (C36).
 
 36. **`herdr integration install pi` is unguarded in install.sh** —
     [ready-to-file]

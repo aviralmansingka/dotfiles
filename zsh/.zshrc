@@ -116,7 +116,10 @@ osc52-copy() {
 }
 
 export XDG_CONFIG_HOME="$HOME/.config"
-export TERM="xterm-256color"
+# Pin a safe TERM outside tmux (the #21 leak class), but leave TERM alone
+# inside panes: tmux sets tmux-256color there and overriding it breaks the
+# pane's truecolor/clipboard contract.
+[[ -z "$TMUX" ]] && export TERM="xterm-256color"
 # Pi uses COLORTERM to decide whether to emit 24-bit colors under SSH/tmux.
 export COLORTERM="truecolor"
 export EDITOR="bob run stable"

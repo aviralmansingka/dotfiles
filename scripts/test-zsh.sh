@@ -9,7 +9,9 @@
 #                    canonical home bin dirs, prepended on PATH (#13/#20).
 #   zshenv-exit0   : sourcing .zshenv alone exits 0 and never needs .zshrc.
 #   term-rc        : .zshrc exports TERM=xterm-256color - never xterm-ghostty -
-#                    for interactive and non-interactive sourcing (#21).
+#                    for interactive and non-interactive sourcing outside
+#                    tmux (#21); inside tmux ($TMUX set) TERM is left alone
+#                    (tmux-256color survives - the B23 guard).
 #   term-env       : .zshenv leaves TERM alone and never sets xterm-ghostty.
 #   term-content   : no tracked zsh file references xterm-ghostty as a TERM
 #                    value (#21).
@@ -169,6 +171,15 @@ runzsh() {
     env -i HOME="$h" PATH=/usr/bin:/bin TERM="$term" "$ZSH_BIN" "$@"
 }
 
+runzsh_tmux() {
+    # Same as runzsh, but simulates a shell inside a tmux pane: $TMUX is
+    # set, so .zshrc must leave TERM exactly as tmux provided it (B23).
+    local h=$1 term=$2
+    shift 2
+    env -i HOME="$h" PATH=/usr/bin:/bin TERM="$term" \
+        TMUX="/tmp/tmux-0/default,12345,0" "$ZSH_BIN" "$@"
+}
+
 # ---------------------------------------------------------------------------
 # Checks. Each takes the zsh dir under test and returns non-zero on failure.
 # ---------------------------------------------------------------------------
@@ -254,6 +265,24 @@ check_term_rc() {
         report PASS term-rc "zsh/.zshrc" "interactive shell exports TERM=xterm-256color even when TERM=xterm-ghostty (#21)" "$(( $(now_ms) - t0 ))"
     else
         report FAIL term-rc "zsh/.zshrc" "interactive TERM is '$v', must be xterm-256color (#21)" "$(( $(now_ms) - t0 ))"
+        rc=1
+    fi
+    # Inside a tmux pane ($TMUX set) the export must be skipped: tmux sets
+    # tmux-256color there and a .zshrc override breaks the pane contract.
+    t0="$(now_ms)"
+    v="$(runzsh_tmux "$h" tmux-256color -i -c 'print -r -- $TERM' </dev/null 2>/dev/null)"
+    if [ "$v" = "tmux-256color" ]; then
+        report PASS term-rc "zsh/.zshrc" "inside tmux (\$TMUX set) .zshrc leaves TERM untouched (tmux-256color survives) (B23)" "$(( $(now_ms) - t0 ))"
+    else
+        report FAIL term-rc "zsh/.zshrc" "inside-tmux interactive TERM is '$v', must stay tmux-256color (no export when \$TMUX is set) (B23)" "$(( $(now_ms) - t0 ))"
+        rc=1
+    fi
+    t0="$(now_ms)"
+    v="$(runzsh_tmux "$h" tmux-256color -c 'source $HOME/.zshrc; print -r -- $TERM' 2>/dev/null)"
+    if [ "$v" = "tmux-256color" ]; then
+        report PASS term-rc "zsh/.zshrc" "inside tmux, non-interactive sourcing also leaves TERM alone (B23)" "$(( $(now_ms) - t0 ))"
+    else
+        report FAIL term-rc "zsh/.zshrc" "inside-tmux non-interactive TERM is '$v', must stay tmux-256color (B23)" "$(( $(now_ms) - t0 ))"
         rc=1
     fi
     return $rc
@@ -464,6 +493,7 @@ if [ "$SELFTEST" = "1" ]; then
     st_run check_zshenv_path    zshenv-path  "mut_sed .zshenv 's|\$HOME/.local/bin:||'"
     st_run check_zshenv_exit0   zshenv-exit  "printf 'false\n' >> .zshenv"
     st_run check_term_rc        term-rc      "mut_sed .zshrc 's|export TERM=\"xterm-256color\"|export TERM=\"xterm-ghostty\"|'"
+    st_run check_term_rc        term-guard   "printf 'export TERM=\"xterm-256color\"\n' >> .zshrc"
     st_run check_term_env       term-env     "printf 'export TERM=\"xterm-ghostty\"\n' >> .zshenv"
     st_run check_term_content   term-content "mut_sed .zshrc 's|export TERM=\"xterm-256color\"|export TERM=\"xterm-ghostty\"|'"
     st_run check_alias_targets  alias-drop   "mut_sed .zshrc \"s|alias ghd='gh dash'|alias ghd='gh-dash-missing'|\""

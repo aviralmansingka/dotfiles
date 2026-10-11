@@ -57,8 +57,10 @@ Checked: the files listed above, plus the Brewfile and the three
 - App-owned configs with no proven drift class: starship, neovide,
   tuicr, hunk, lazygit, k9s skins, tmuxinator, stylua. The herdr
   config is the exception (#156-#158).
-- `skills-lock.json` and `package-lock.json`. Their tools manage them.
-  Markdown bodies and `.lavish` artifacts are not configuration.
+- `package-lock.json`. Its tool manages it. (`skills-lock.json` was
+  removed with the B22 skills-store fix; the repo-parity suite owns
+  the returning-lockfile contract.) Markdown bodies and `.lavish`
+  artifacts are not configuration.
 
 ## Known gaps
 

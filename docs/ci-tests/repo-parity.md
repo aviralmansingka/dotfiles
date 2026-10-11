@@ -2,8 +2,10 @@
 
 ## Purpose
 
-`scripts/test-repo-parity.py` guards the skills lockfile, the Claude
-hook references, the `notion-cli` error paths, and the user docs.
+`scripts/test-repo-parity.py` guards the skills store (the
+`.claude/skills` symlink farm and, if it ever returns, the skills
+lockfile), the Claude hook references, the `notion-cli` error paths, and
+the user docs.
 Each check reproduces a failure class that already occurred. The
 suite runs offline and never changes `$HOME`.
 
@@ -17,11 +19,18 @@ four items.
 
 ## What the suite covers
 
-- **P1 skills-lock parity.** `skills-lock.json` parses, sets version
-  1, and gives every entry a source, a sourceType, a skill path, and
-  a 64-character hash. Every locked skill has a tracked symlink with
-  the documented target and a lock entry. Every tracked skill dir
-  keeps `name` equal to its dir name, and no dir is also locked.
+- **P1 skills store parity.** Every tracked skill symlink
+  (`.claude/skills/<name>` project-level and
+  `claude/.claude/skills/<name>` stowed) points at the documented
+  relative target and resolves to a tracked, in-tree skill dir under
+  `agents/.agents/skills/` - no dangling entries anywhere. Every
+  tracked skill dir keeps `name` equal to its dir name.
+  `skills-lock.json` was removed with the dangling mattpocock-bundle
+  symlinks (B22: the captain's skill audit deleted the bundle, the
+  fetch tool was referenced nowhere, and the 8 symlinks resolved
+  nowhere - repo, host, or tool). If a lockfile ever returns it must
+  carry full lock<->symlink<->target parity with zero dangling or
+  untracked targets, and an untracked leftover on disk fails too.
 - **P2 Claude hooks resolve.** Every hook command in the tracked
   `.claude/settings*.json` files that names a script path resolves
   to a tracked file or to an `EXTERNAL_HOOK_ALLOWLIST` entry. A
@@ -37,10 +46,10 @@ four items.
   top-level dir except 5 exempted non-package dirs. A claim of the
   form "N stow packages" must equal the table count, and every
   `stow <pkg>` mention, repo-anchored path, and link target resolves.
-- **P5 negative sandbox.** Sandbox copies of the real lockfile, the
+- **P5 negative sandbox.** A synthetic passing lockfile sandbox, the
   real settings, and the real README pass first. The suite then
-  applies 13 mutations (5 lock, 3 hooks, 5 docs) and proves that the
-  matching check catches each one.
+  applies 16 mutations (8 skills-store, 3 hooks, 5 docs) and proves
+  that the matching check catches each one.
 
 ## How to run
 
@@ -54,10 +63,11 @@ The run takes less than 1 second. The SLA is 30 seconds.
 
 ## Coverage result
 
-Checked: `skills-lock.json`; the 8 `.claude/skills/` symlinks; the 11
-tracked skill dirs; the settings files `claude/.claude/settings.json`
-and `.claude/settings.local.json` (no hooks); the core docs and the
-15 tracked top-level `docs/*.md`; `pi/bin/notion-cli`.
+Checked: the `.claude/skills/` and `claude/.claude/skills/` symlink
+farms; the 11 tracked skill dirs; the settings files
+`claude/.claude/settings.json` and `.claude/settings.local.json`;
+the core docs and the tracked top-level `docs/*.md`;
+`pi/bin/notion-cli`.
 Out of scope: `docs/adr/`, `docs/agents/`, `docs/contracts/`,
 `docs/evidence/`, and `docs/superpowers/` are dated historical
 records. `docs/ci-tests/` and the untracked new docs are work in a
@@ -67,12 +77,16 @@ the dependency pins, `install.sh`, and the `/home/<user>` scan.
 
 ## Known gaps
 
-- The lockfile's fetch tool stays external. The suite cannot prove
-  that the 8 fetched dirs exist on a host.
-- The hook `herdr-agent-state.sh` stays allowlisted and dangling. The
-  captain must track the script or remove the hook.
-- The `stow ssh` doc drift stays allowlisted. The captain must fix
-  the docs or add the package.
+- A returning external skills fetch tool stays out of scope: the
+  suite only proves that whatever lands in the tree satisfies the
+  parity contract above (tracked, resolvable, name==dirname).
+
+Resolved with the B22 fix: the lockfile, the fetch tool reference,
+and the 8 dangling symlinks are gone; the hook `herdr-agent-state.sh`
+was removed from the settings (the script never existed on any
+audited host); and the `stow ssh` doc drift was corrected (this repo
+never shipped an ssh package - the SSH config is host-side and needs
+nothing from the repo).
 - `AGENTS.md` and a `tmux/.tmux.conf` comment both claim `prefix+o`.
   The plugin that owns the binding is machine-installed, so the tree
   cannot show which claim holds.

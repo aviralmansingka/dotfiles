@@ -593,15 +593,29 @@ def check_git_config(repo):
             problems.append(
                 f"FAIL {rel}: '{key}' is missing or empty; commits would "
                 f"carry a guessed identity")
+    # B24: this file is stowed to every host, so it must not carry an
+    # OS-specific credential helper (osxkeychain exists only on macOS, and
+    # Homebrew/Apple git already default to it in the system gitconfig).
+    # Each host sets its helper in the local ~/.gitconfig instead; the
+    # explanatory comment must stay where the key used to live.
+    text = path.read_text()
     helper = settings.get("credential.helper")
-    if helper is None:
+    if helper is not None:
         problems.append(
-            f"FAIL {rel}: no credential.helper; HTTPS pushes would prompt "
-            f"every time")
-    elif "/" in helper:
+            f"FAIL {rel}: tracked credential.helper '{helper}' is not "
+            f"portable (osxkeychain is macOS-only); move it to the "
+            f"host-local ~/.gitconfig (B24)")
+    elif "osxkeychain" not in text:
         problems.append(
-            f"FAIL {rel}: credential.helper '{helper}' is a path; use a "
-            f"helper name so each host resolves it")
+            f"FAIL {rel}: no credential.helper and the local-only helper "
+            f"pattern is undocumented; keep the explanatory comment where "
+            f"the key used to live (B24)")
+    # B24: '[editor] tool' was a silent no-op (git reads core.editor and
+    # $EDITOR, which zsh/.zshrc already sets); it must not come back.
+    if "editor.tool" in settings:
+        problems.append(
+            f"FAIL {rel}: '[editor] tool' is a no-op key (git reads "
+            f"core.editor / $EDITOR); remove it (B24)")
     # If a delta section appears, it must carry settings (shape, not wish).
     delta_keys = [k for k in settings if k.startswith("delta.")]
     sections = set(k.split(".")[0] for k in settings)
@@ -611,8 +625,10 @@ def check_git_config(repo):
     if problems:
         return False, problems
     return True, ["git config parses via `git config --list`; user identity "
-                  "and credential.helper are set; delta/credential sections "
-                  "hold a sane shape"]
+                  "is set; the credential helper is a documented local-only "
+                  "choice (no OS-specific helper in the stowed config, B24) "
+                  "and no no-op [editor] key remains; delta sections hold a "
+                  "sane shape"]
 
 
 # --------------------------------------------------------------------------
@@ -846,14 +862,12 @@ def check_blinksh(repo):
 
 # Known gaps, recorded the same way as STOW_GAP_ALLOWLIST: the entry is
 # the durable record of a pending captain decision, not an endorsement.
-# Remove the entry in the same change that fixes the path.
-PORTABILITY_GAPS = {
-    ("neovide/.config/neovide/config.toml",
-     "/Users/aviral/.local/share/bob/nvim-bin/nvim"):
-        "bob neovim path is Mac-GUI-launch specific; a portable form "
-        "(PATH resolution or per-host override) is a pending captain "
-        "decision (#8/#9 class)",
-}
+# Remove the entry in the same change that fixes the path. The last entry
+# (neovide's absolute /Users/<user> neovim-bin) was removed with the B24
+# fix: neovide never expands ~ or env vars in neovim-bin, so the key is now
+# unset and neovide resolves `nvim` from PATH (~/.local/bin/nvim, a bob
+# symlink, is on PATH via zsh/.zshenv for every zsh invocation).
+PORTABILITY_GAPS = {}
 
 ABS_USER_PATH_RE = re.compile(
     r"/(?:home|Users)/[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*")
@@ -874,11 +888,13 @@ def check_portability(repo):
                 f"use $HOME-relative or portable values (#8/#9)")
     if problems:
         return False, problems
+    messages = [f"no absolute /home/<user> or /Users/<user> paths in "
+                f"{len(files)} tracked files"]
     gaps = "; ".join(f"{rel}: {reason}" for (rel, _p), reason
                     in PORTABILITY_GAPS.items())
-    return True, [f"no absolute /home/<user> or /Users/<user> paths beyond "
-                  f"the recorded gap(s) in {len(files)} tracked files",
-                  f"known gap (captain decision pending): {gaps}"]
+    if gaps:
+        messages.append(f"known gap (captain decision pending): {gaps}")
+    return True, messages
 
 
 # --------------------------------------------------------------------------
@@ -1036,6 +1052,15 @@ SELFTEST_MUTATIONS = [
      _mut_replace("git/.config/git/config", "[user]", "[user"),
      "git config no longer parses",
      None),
+    ("C9 git-config-structure",
+     _mut_append("git/.config/git/config",
+                "\n[credential]\n\thelper = osxkeychain\n"),
+     "OS-specific credential.helper returns to the tracked git config (B24)",
+     None),
+    ("C9 git-config-structure",
+     _mut_append("git/.config/git/config", "\n[editor]\n\ttool = nvim\n"),
+     "no-op [editor] tool key returns to the git config (B24)",
+     None),
     ("C10 lazygit-structure",
      _mut_append("git/.config/lazygit/config.yml", "bogusSection: 1\n"),
      "unknown top-level key in lazygit config",
@@ -1059,6 +1084,12 @@ SELFTEST_MUTATIONS = [
      _mut_append("starship/.config/starship.toml",
                  "\n# hint: /home/ghostuser/.config/example\n"),
      "absolute /home/<user> path appears in a tracked config",
+     None),
+    ("C14 portability-tripwire",
+     _mut_replace("neovide/.config/neovide/config.toml",
+                  "# neovim-bin is intentionally unset",
+                  "neovim-bin = \"/Users/aviral/.local/share/bob/nvim-bin/nvim\""),
+     "absolute /Users/<user> neovim-bin returns to the neovide config (B24)",
      None),
 ]
 
