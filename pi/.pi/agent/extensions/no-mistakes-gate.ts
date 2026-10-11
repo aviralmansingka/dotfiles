@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { resolve } from "node:path";
-import { Editor, Key, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
+import { Editor, Key, matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { NUMBER_SHORTCUT_LIMIT, numberShortcutIndex } from "./user-input/option-shortcuts";
 import {
 	addWrapped,
@@ -25,11 +25,14 @@ import {
 // a small API registered on globalThis (same loose-coupling pattern as the
 // shared UI lock):
 //
-//   - handleGate(): open the gate panel (findings highlighted by severity and
-//     pipeline action classification) and resolve with the user's decision:
+//   - handleGate(): open the gate panel and resolve with the user's decision:
 //     approve, fix (+ selected finding ids, + optional fix guidance), skip,
-//     or yolo. Returns null when no panel can open (no TUI), so the pane
-//     falls back to steering the raw result for text relay.
+//     or yolo. The panel pages: an overview page lists every finding as one
+//     short line, then Tab/⇧Tab step through per-finding pages where each
+//     finding is approved, marked fix, or ignored. Ctrl-A accepts every
+//     finding and approves the step from any page (never while the fix
+//     guidance editor has focus). Returns null when no panel can open (no
+//     TUI), so the pane falls back to steering the raw result for text relay.
 //   - yolo state: the `y` shortcut inside the panel grants standing consent
 //     for the rest of the run (`respond --yes` at every gate, no more
 //     panels); `/no-mistakes yolo` enables it and `yolo off` disables it.
@@ -170,14 +173,26 @@ function findingCounts(gate: NoMistakesGate): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// The gate panel
+// The gate panel — paged. The overview page lists every finding as one short
+// line with its current choice at the right edge. Tab/⇧Tab step through the
+// per-finding pages, where each finding is approved, marked fix, or ignored;
+// choosing a finding's option advances to the next finding and wraps home.
+// Ctrl-A accepts every finding and approves the step from any page — never
+// while the fix guidance editor expects input.
 // ---------------------------------------------------------------------------
-type DecideOption = "approve" | "fix" | "skip";
+type OverviewOption = "approve" | "fix" | "skip";
+type FindingChoice = "approve" | "fix" | "ignore";
 
-const OPTION_LABEL: Record<DecideOption, string> = {
+const OVERVIEW_LABEL: Record<OverviewOption, string> = {
 	approve: "Approve — accept this step as-is and continue",
-	fix: "Fix — select findings for the pipeline to fix",
+	fix: "Fix — pipeline fixes the findings marked fix",
 	skip: "Skip — skip this step",
+};
+
+const FINDING_LABEL: Record<FindingChoice, string> = {
+	approve: "Approve — accept this finding as-is",
+	fix: "Fix — mark this finding for the pipeline to fix",
+	ignore: "Ignore — pass on this finding, leave it unfixed",
 };
 
 function askGateDecision(
@@ -187,50 +202,65 @@ function askGateDecision(
 ): Promise<NoMistakesGateDecision> {
 	return ctx.ui.custom<NoMistakesGateDecision>(
 		(tui: any, theme: any, _kb: any, done: (result: NoMistakesGateDecision) => void) => {
-			type Phase = "decide" | "select" | "instructions";
-			type Row = { kind: "finding"; finding: NoMistakesGateFinding } | { kind: "submit" };
+			type Phase = "overview" | "finding" | "instructions";
 
-			let phase: Phase = "decide";
+			let phase: Phase = "overview";
+			/** Page index: 0 = overview, 1..findings.length = finding pages. */
+			let pageIndex = 0;
 			let optionIndex = 0;
-			let rowIndex = 0;
 			let panelFocused = false;
 			let cachedLines: string[] | undefined;
 			let cachedWidth = -1;
-			const selected = new Map<string, NoMistakesGateFinding>();
+			/** Per-finding choice made on its page. Findings without a mark are
+			 *  never fixed; approve and ignore only differ in presentation. */
+			const marks = new Map<string, FindingChoice>();
 			const editor = new Editor(tui, createEditorTheme(theme));
 
 			const actionable = gate.findings.filter(
 				(finding) => finding.action.toLowerCase() !== "no-op",
 			);
-			const decideOptions: DecideOption[] =
+			const overviewOptions: OverviewOption[] =
 				actionable.length > 0 ? ["approve", "fix", "skip"] : ["approve", "skip"];
-			const rows: Row[] = [
-				...gate.findings.map((finding): Row => ({ kind: "finding", finding })),
-				{ kind: "submit" },
-			];
+			const pageCount = 1 + gate.findings.length;
 
 			function refresh() {
 				cachedLines = undefined;
 				tui.requestRender();
 			}
 
-			function toggle(finding: NoMistakesGateFinding) {
-				if (selected.has(finding.id)) selected.delete(finding.id);
-				else selected.set(finding.id, finding);
-				refresh();
+			/** Choices offered on a finding's page. The pipeline cannot fix a
+			 *  no-op finding, so its page offers no Fix option. */
+			function findingOptions(finding: NoMistakesGateFinding): FindingChoice[] {
+				return finding.action.toLowerCase() === "no-op"
+					? ["approve", "ignore"]
+					: ["approve", "fix", "ignore"];
+			}
+
+			function fixMarkedIds(): string[] {
+				return gate.findings
+					.filter((finding) => marks.get(finding.id) === "fix")
+					.map((finding) => finding.id);
 			}
 
 			function finishFix(instructions?: string): NoMistakesGateDecision {
-				return {
-					type: "fix",
-					findings: gate.findings
-						.filter((finding) => selected.has(finding.id))
-						.map((finding) => finding.id),
-					instructions,
-				};
+				return { type: "fix", findings: fixMarkedIds(), instructions };
 			}
 
-			function chooseOption(option: DecideOption) {
+			/** Jump to a page (wrapping in both directions) and focus its first
+			 *  option — or the finding's chosen option when revisiting a page. */
+			function gotoPage(target: number) {
+				pageIndex = ((target % pageCount) + pageCount) % pageCount;
+				phase = pageIndex === 0 ? "overview" : "finding";
+				optionIndex = 0;
+				if (phase === "finding") {
+					const finding = gate.findings[pageIndex - 1]!;
+					const mark = marks.get(finding.id);
+					if (mark) optionIndex = Math.max(0, findingOptions(finding).indexOf(mark));
+				}
+				refresh();
+			}
+
+			function chooseOverviewOption(option: OverviewOption) {
 				if (option === "approve") {
 					done({ type: "approve" });
 					return;
@@ -239,40 +269,27 @@ function askGateDecision(
 					done({ type: "skip" });
 					return;
 				}
-				phase = "select";
-				rowIndex = 0;
+				if (fixMarkedIds().length === 0) {
+					refresh(); // nothing marked fix yet: the option stays disabled
+					return;
+				}
+				phase = "instructions";
+				editor.setText("");
+				editor.focused = panelFocused;
 				refresh();
 			}
 
-			function findingLines(
-				finding: NoMistakesGateFinding,
-				opts: { focused: boolean; checkbox: boolean; index?: number },
-				tw: number,
-			): string[] {
-				const head: string[] = [];
-				if (opts.checkbox) {
-					const marker = selected.has(finding.id) ? "[x]" : "[ ]";
-					head.push(opts.focused ? theme.fg("accent", marker) : marker);
-				}
-				if (opts.index) head.push(theme.fg("dim", `${opts.index}.`));
-				head.push(severityGlyph(finding.severity, theme));
-				head.push(actionBadge(finding.action, theme));
-				head.push(theme.fg("muted", finding.id));
-				const location = findingLocation(finding);
-				if (location) head.push(theme.fg("muted", location));
-				const prefix = opts.focused ? theme.fg("accent", "> ") : "  ";
-				const lines = [truncateToWidth(`${prefix}${head.join(" ")}`, tw)];
-				addWrapped(lines, theme.fg("text", finding.description), tw, "     ");
-				return lines;
+			function chooseFindingOption(finding: NoMistakesGateFinding, choice: FindingChoice) {
+				marks.set(finding.id, choice);
+				gotoPage(pageIndex + 1); // one finding after the other, wrapping home
 			}
 
 			function handleInput(data: string) {
 				if (phase === "instructions") {
 					if (matchesKey(data, Key.escape)) {
-						phase = "select";
+						gotoPage(0);
 						editor.focused = false;
 						editor.setText("");
-						refresh();
 						return;
 					}
 					if (matchesKey(data, Key.enter)) {
@@ -285,16 +302,34 @@ function askGateDecision(
 					return;
 				}
 
+				// Ctrl-A accepts every finding and approves this step as-is,
+				// from any page — but never while the editor expects input.
+				if (matchesKey(data, Key.ctrl("a"))) {
+					done({ type: "approve" });
+					return;
+				}
+
 				// Yolo shortcut: standing consent for the rest of this run.
 				if (matchesKey(data, "y")) {
 					done({ type: "yolo" });
 					return;
 				}
 
-				if (phase === "decide") {
-					const shortcut = numberShortcutIndex(data, decideOptions.length);
+				// Tab / Shift-Tab page between the overview and each finding.
+				if (matchesKey(data, Key.tab)) {
+					gotoPage(pageIndex + 1);
+					return;
+				}
+				if (matchesKey(data, Key.shift("tab"))) {
+					gotoPage(pageIndex - 1);
+					return;
+				}
+
+				if (phase === "overview") {
+					const shortcut = numberShortcutIndex(data, overviewOptions.length);
 					if (shortcut !== undefined) {
-						chooseOption(decideOptions[shortcut]);
+						optionIndex = shortcut;
+						chooseOverviewOption(overviewOptions[shortcut]);
 						return;
 					}
 					if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
@@ -303,58 +338,69 @@ function askGateDecision(
 						return;
 					}
 					if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
-						optionIndex = Math.min(decideOptions.length - 1, optionIndex + 1);
+						optionIndex = Math.min(overviewOptions.length - 1, optionIndex + 1);
 						refresh();
 						return;
 					}
-					if (matchesKey(data, Key.enter)) {
-						chooseOption(decideOptions[optionIndex]);
-						return;
+					if (matchesKey(data, Key.enter) || matchesKey(data, Key.space)) {
+						chooseOverviewOption(overviewOptions[optionIndex]);
 					}
 					return;
 				}
 
-				// select phase
-				const shortcut = numberShortcutIndex(data, actionable.length);
+				// finding page
+				const finding = gate.findings[pageIndex - 1]!;
+				const options = findingOptions(finding);
+				const shortcut = numberShortcutIndex(data, options.length);
 				if (shortcut !== undefined) {
-					const finding = actionable[shortcut];
-					rowIndex = rows.findIndex(
-						(row) => row.kind === "finding" && row.finding.id === finding.id,
-					);
-					toggle(finding);
+					optionIndex = shortcut;
+					chooseFindingOption(finding, options[shortcut]);
 					return;
 				}
 				if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
-					rowIndex = Math.max(0, rowIndex - 1);
+					optionIndex = Math.max(0, optionIndex - 1);
 					refresh();
 					return;
 				}
 				if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
-					rowIndex = Math.min(rows.length - 1, rowIndex + 1);
+					optionIndex = Math.min(options.length - 1, optionIndex + 1);
 					refresh();
 					return;
 				}
-				const row = rows[rowIndex];
-				if (matchesKey(data, Key.space) || matchesKey(data, Key.enter)) {
-					if (row.kind === "submit") {
-						if (selected.size === 0) {
-							refresh();
-							return;
-						}
-						phase = "instructions";
-						editor.setText("");
-						editor.focused = panelFocused;
-						refresh();
-						return;
-					}
-					if (row.finding.action.toLowerCase() !== "no-op") toggle(row.finding);
+				if (matchesKey(data, Key.enter) || matchesKey(data, Key.space)) {
+					chooseFindingOption(finding, options[optionIndex]);
 					return;
 				}
 				if (matchesKey(data, Key.escape)) {
-					phase = "decide";
-					optionIndex = 0;
-					refresh();
+					gotoPage(0);
 				}
+			}
+
+			function choiceMark(choice: FindingChoice | undefined): string {
+				if (choice === "fix") return theme.fg("success", "fix");
+				if (choice === "approve") return theme.fg("accent", "approve");
+				if (choice === "ignore") return theme.fg("muted", "ignore");
+				return theme.fg("dim", "—");
+			}
+
+			/** One overview line per finding: severity, classification, id,
+			 *  location, a one-line description, and the page's choice at the
+			 *  right edge. */
+			function overviewFindingLine(finding: NoMistakesGateFinding, tw: number): string {
+				const head = [
+					severityGlyph(finding.severity, theme),
+					actionBadge(finding.action, theme),
+					theme.fg("muted", finding.id),
+				];
+				const location = findingLocation(finding);
+				if (location) head.push(theme.fg("muted", location));
+				const left = truncateToWidth(
+					` ${head.join(" ")} · ${finding.description}`,
+					Math.max(1, tw - 8),
+				);
+				const mark = choiceMark(marks.get(finding.id));
+				const pad = Math.max(1, tw - visibleWidth(left) - visibleWidth(mark));
+				return `${left}${" ".repeat(pad)}${mark}`;
 			}
 
 			function render(width: number): string[] {
@@ -374,94 +420,97 @@ function askGateDecision(
 					payload.runId ? `run ${payload.runId}` : undefined,
 				].filter(Boolean);
 				if (context.length > 0) add(theme.fg("muted", ` ${context.join(" · ")}`));
-				const counts = findingCounts(gate);
-				if (counts) add(theme.fg("muted", ` ${counts}`));
-				if (gate.note) {
-					top.push("");
-					addWrapped(top, theme.fg("muted", ` ${gate.note}`), tw);
-				}
-				top.push("");
-
-				// The decide phase must show what it can select: the options
-				// themselves, numbered and focusable, above the findings.
-				if (phase === "decide") {
-					for (const [index, option] of decideOptions.entries()) {
-						const focused = index === optionIndex;
-						const marker = focused ? theme.fg("accent", "> ") : "  ";
-						const num = theme.fg("dim", `${index + 1}.`);
-						const label = focused
-							? theme.fg("text", OPTION_LABEL[option])
-							: theme.fg("muted", OPTION_LABEL[option]);
-						add(`${marker}${num} ${label}`);
-					}
-					top.push("");
-				}
-
-				const showCheckboxes = phase === "select" || phase === "instructions";
-				for (const [index, row] of rows.entries()) {
-					if (row.kind === "submit") {
-						if (!showCheckboxes) continue;
-						const label =
-							selected.size > 0
-								? `✓ Submit fix (${selected.size} selected)`
-								: "○ Submit fix (nothing selected)";
-						const focused = index === rowIndex && phase === "select";
-						const styled = focused
-							? theme.fg("accent", label)
-							: theme.fg(selected.size > 0 ? "success" : "dim", label);
-						add(`${focused ? theme.fg("accent", "> ") : "  "}${styled}`);
-						continue;
-					}
-					const finding = row.finding;
-					const actionableIndex = actionable.indexOf(finding);
-					for (const line of findingLines(
-						finding,
-						{
-							focused: showCheckboxes && index === rowIndex && phase === "select",
-							checkbox: showCheckboxes,
-							index: showCheckboxes && actionableIndex >= 0 ? actionableIndex + 1 : undefined,
-						},
-						tw,
-					)) {
-						top.push(line);
-					}
-				}
 
 				if (phase === "instructions") {
+					top.push("");
+					add(theme.fg("muted", ` the pipeline fixes: ${fixMarkedIds().join(", ")}`));
 					top.push("");
 					add(theme.fg("muted", " Optional fix guidance — Enter submits · Esc back · empty = none"));
 					for (const [index, line] of editorInnerLines(editor, Math.max(1, bw - 2)).entries()) {
 						bottom.push(`${index === 0 ? "› " : "  "}${line}`);
 					}
-				} else {
+				} else if (phase === "overview") {
+					const counts = findingCounts(gate);
+					if (counts) add(theme.fg("muted", ` ${counts}`));
+					if (gate.note) {
+						top.push("");
+						addWrapped(top, theme.fg("muted", ` ${gate.note}`), tw);
+					}
 					top.push("");
-					if (phase === "select" && selected.size === 0) {
-						add(theme.fg("warning", " Select at least one finding before submitting."));
+					for (const finding of gate.findings) {
+						top.push(overviewFindingLine(finding, tw));
+					}
+					top.push("");
+					const fixable = fixMarkedIds().length > 0;
+					for (const [index, option] of overviewOptions.entries()) {
+						const focused = index === optionIndex;
+						const marker = focused ? theme.fg("accent", "> ") : "  ";
+						const num = theme.fg("dim", `${index + 1}.`);
+						const label =
+							option === "fix" && !fixable
+								? "Fix — no findings marked fix yet (Tab to review them)"
+								: OVERVIEW_LABEL[option];
+						const enabled = option !== "fix" || fixable;
+						const styled = !enabled
+							? theme.fg("dim", label)
+							: focused
+								? theme.fg("text", label)
+								: theme.fg("muted", label);
+						add(`${marker}${num} ${styled}`);
+					}
+				} else {
+					const finding = gate.findings[pageIndex - 1]!;
+					add(theme.fg("muted", ` finding ${pageIndex}/${gate.findings.length}`));
+					top.push("");
+					const meta = [
+						severityGlyph(finding.severity, theme),
+						actionBadge(finding.action, theme),
+						theme.fg("muted", finding.id),
+					];
+					const location = findingLocation(finding);
+					if (location) meta.push(theme.fg("muted", location));
+					add(` ${meta.join(" ")}`);
+					top.push("");
+					addWrapped(top, theme.fg("text", finding.description), tw, "  ");
+					top.push("");
+					if (finding.action.toLowerCase() === "no-op") {
+						add(theme.fg("dim", " the pipeline classifies this finding no-op — it cannot be fixed"));
 						top.push("");
 					}
+					const choice = marks.get(finding.id);
+					for (const [index, option] of findingOptions(finding).entries()) {
+						const focused = index === optionIndex;
+						const marker = focused ? theme.fg("accent", "> ") : "  ";
+						const num = theme.fg("dim", `${index + 1}.`);
+						const dot = choice === option
+							? theme.fg(option === "fix" ? "success" : option === "approve" ? "accent" : "muted", "● ")
+							: "  ";
+						const label = focused
+							? theme.fg("text", FINDING_LABEL[option])
+							: theme.fg("muted", FINDING_LABEL[option]);
+						add(`${marker}${num} ${dot}${label}`);
+					}
+				}
+
+				if (phase !== "instructions") {
+					top.push("");
 					// Shortcut legend: every key the panel accepts, labeled and
 					// aligned, so the decision surface is always discoverable.
-					const last = Math.min(
-						phase === "decide" ? decideOptions.length : actionable.length,
-						NUMBER_SHORTCUT_LIMIT,
-					);
+					const optionCount = phase === "overview"
+						? overviewOptions.length
+						: findingOptions(gate.findings[pageIndex - 1]!).length;
+					const last = Math.min(optionCount, NUMBER_SHORTCUT_LIMIT);
 					const pairs: Array<[string, string]> = [["↑↓/jk", "move"]];
 					if (last > 0) {
-						pairs.push([
-							last === 1 ? "1" : `1-${last}`,
-							phase === "decide" ? "select option" : "toggle finding",
-						]);
+						pairs.push([last === 1 ? "1" : `1-${last}`, phase === "overview" ? "select option" : "choose"]);
 					}
-					if (phase === "decide") {
-						pairs.push(["Enter", "select option"], ["y", "yolo this run"]);
-					} else {
-						pairs.push(
-							["Space", "toggle finding"],
-							["Enter", "toggle · submit"],
-							["Esc", "back"],
-							["y", "yolo this run"],
-						);
-					}
+					pairs.push(
+						["Tab", phase === "overview" ? "review findings" : "next finding"],
+						["⇧Tab", phase === "overview" ? "back" : "prev finding"],
+						["Ctrl-A", "accept all"],
+					);
+					if (phase === "finding") pairs.push(["Esc", "overview"]);
+					pairs.push(["y", "yolo this run"]);
 					for (let i = 0; i < pairs.length; i += 2) {
 						const cells = pairs.slice(i, i + 2).map(([key, action]) =>
 							`${theme.fg("accent", key.padEnd(7))}${theme.fg("dim", action)}`);
