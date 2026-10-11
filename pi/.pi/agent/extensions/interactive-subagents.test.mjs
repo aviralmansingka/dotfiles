@@ -310,6 +310,12 @@ try {
 		"read, write, edit, bash, grep, find, ls, tuicr, tuicr_reply",
 	);
 	assert.equal(reviewer.autoExit, true);
+	// The reviewer's own instructions must sweep pre-attach comments and stop
+	// on any final steer, matching the task the tuicr extension builds.
+	assert.match(reviewer.body, /existed before the watcher attached/);
+	assert.match(reviewer.body, /tuicr review comments --session <slug> --repo <repo>/);
+	assert.match(reviewer.body, /no pi-agent reply/);
+	assert.match(reviewer.body, /watcher\s+stopped\s+early/);
 
 	// A project-local profile now overrides the bundled one (no special case).
 	writeFileSync(

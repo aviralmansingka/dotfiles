@@ -40,7 +40,9 @@ without a model turn through the shared process global:
 `__pi_interactive_subagents.executeSubagent({ agent, name, task, cwd }, ctx)` —
 the same validation, registry, watcher, and completion-steer path as the tool.
 The tuicr extension's `tuicr_review` uses this to start the bundled
-`tuicr-review` agent.
+`tuicr-review` agent, and `__pi_interactive_subagents.isSubagentRunning(name)`
+reports whether such a spawn is still running (tuicr refuses a second reviewer
+for a repo whose review is already open).
 
 ### Spawning
 

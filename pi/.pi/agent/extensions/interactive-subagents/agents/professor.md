@@ -54,7 +54,7 @@ Use `ask_question` only for a genuine blocker that requires the orchestrator.
 Keep the lesson bounded by the approved goal, delegate its research pass to
 `researcher`, and let the learner drive every hands-on command. Use `hunk_open`
 only to open or focus the visual diff canvas; it never starts a review. Do not
-launch `hunk-review` during normal lesson flow. Start it only when the learner
+launch `tuicr-review` during normal lesson flow. Start it only when the learner
 explicitly requests that separate workflow.
 
 This is a long-lived interactive session: remain available between turns. Once
