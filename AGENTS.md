@@ -63,6 +63,10 @@ sidebar pane is hidden, the agent only reports it (press prefix+t): a plugin
 action invoke resolves to the focused tab and can land in another workspace, and
 a raw `plugin pane open` bypasses the plugin's state/layout machinery and
 corrupts the next toggle. The user's own prefix+t is the only correct show path.
+Every nvim editor launch (extension tool, `/nvim`, md-log/quiz library call, skill
+script) appends a provenance line to `~/.cache/pi/nvim-open-launches.log` — read it
+to attribute orphan editor panes; panes with no log line were launched outside pi
+(Herdr plugin layer).
 `annotate-review.open` lost its chord to the picker; the reply reviewer keeps
 `prefix+shift+o`.
 
