@@ -91,6 +91,18 @@ Status legend:
     safe minimal fix existed (dom-config-lint; `PORTABILITY_GAPS` pins the
     exact strings).
 
+25. **no-mistakes binary drifted far past the repo pin** — [needs-decision]
+    The installed binary is v1.84.0 while `scripts/install-no-mistakes`
+    pins v1.41.2, and the axi CLI contract has drifted with it (e.g.
+    `axi logs` now requires `--step`). Observed live: a launch from the
+    captain's tab never registered a run (daemon log untouched for hours)
+    and fell back to direct driving, splitting delegate panes into the
+    captain's tab. Decide: move the pin forward to the current version and
+    re-verify the extension's axi argv against it, and determine why the
+    update-check disable did not prevent the drift (manual update vs
+    `NO_MISTAKES_NO_UPDATE_CHECK=1` failing). Related: C34's liveness
+    hardening covers the wedged-watcher half of the incident.
+
 ## C. Code enhancements ready to file as issues
 
 25. **Consolidate heredoc/bash-command classification** — `python.ts` guard
