@@ -310,6 +310,18 @@ function snapshot(currentPhase, phases) {
 	assert.equal(runPhaseLabel(snapshot("review")), "nm: review");
 	assert.equal(runPhaseLabel(snapshot("starting")), "nm: starting");
 	assert.ok(isCiPhaseActive(snapshot("ci")));
+assert.ok(
+	!isCiPhaseActive({ ...snapshot("ci"), outcome: "checks-passed" }),
+	"checks-passed ci monitoring (the merge watch) is not CI-red",
+);
+assert.ok(
+	isCiPhaseActive({
+		...snapshot("ci"),
+		outcome: "checks-passed",
+		phases: [{ name: "ci", status: "fixing" }],
+	}),
+	"an actively repairing ci step stays red even after checks once passed",
+);
 	assert.ok(!isCiPhaseActive(snapshot("merge")), "checks-passed monitoring is not CI-red");
 	assert.ok(!isCiPhaseActive(snapshot("review", [
 		{ name: "ci", status: "pending" },
