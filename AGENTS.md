@@ -94,8 +94,9 @@ These rules are load-bearing:
   directly) and falls back to direct driving without a TUI or spawn API - headless behavior
   is unchanged.
 - Step-agent tab closes are clean exits: the tab's pi is asked to quit (Ctrl+D, Ctrl+C
-  fallback) before `pane close`, inside Herdr's toast delay. A terminated step agent must
-  never surface as an agent-killed notification in the hosting session.
+  fallback); after confirmed exit, `pane release-agent --source herdr:pi --agent pi` clears
+  its identity before `pane close`. A terminated step agent must never surface as an
+  agent-killed notification in the hosting session.
 
 ## CUDA LSP host invariant
 

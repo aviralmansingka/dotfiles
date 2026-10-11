@@ -36,7 +36,8 @@
 // Teardown rules: run terminal, session shutdown, and extension reload close
 // the tab panes (a later headless `--session` resume must never meet a live
 // tab writing the same session file). Every close is a clean exit — the
-// tab's pi is asked to quit (Ctrl+D, Ctrl+C fallback) before `pane close` —
+// tab's pi is asked to quit (Ctrl+D, Ctrl+C fallback), then release-agent
+// clears its identity before `pane close` —
 // so a terminated step agent never surfaces as an agent-killed notification
 // in the hosting session. The bridge dir is removed so later shims
 // passthrough instantly instead of probing a dead socket.
@@ -326,11 +327,11 @@ export function paneProcessGone(paneId: string): boolean {
  *  A bare `pane close` kills the tab's pi mid-flight, and Herdr raises an
  *  "agent killed" notification for a terminated background agent — stray
  *  noise in whichever session launched the run. Instead, ask pi to exit
- *  itself: Ctrl+D exits an idle pi after this invocation (fixer rounds
- *  resume the durable session in a fresh tab), and Ctrl+C first aborts a still-running turn so the following
- *  Ctrl+D lands on an empty editor. The pane is then closed while the
- *  toast delay window is still open, so neither a killed nor a finished
- *  notification fires.
+ *  itself: Ctrl+D exits an idle pi after this invocation; fixer rounds
+ *  resume the durable session in a fresh tab. Ctrl+C first aborts a running
+ *  turn so the following Ctrl+D lands on an empty editor. Once pi exits,
+ *  release-agent clears its name, state and resume command before pane
+ *  close, so the delayed toast's same-state check cannot notify.
  *
  *  Synchronous and bounded on purpose: teardown runs from session_shutdown
  *  and extension reload, which cannot await. Budget split: ~60% for the
@@ -340,6 +341,7 @@ export function paneProcessGone(paneId: string): boolean {
  *  small budget against the stub herdr. */
 export function closeTabPaneCleanly(paneId: string, budgetMs = CLEAN_CLOSE_BUDGET_MS): void {
 	if (paneProcessGone(paneId)) {
+		herdrOkSync(["pane", "release-agent", paneId, "--source", "herdr:pi", "--agent", "pi"]);
 		herdrOkSync(["pane", "close", paneId]);
 		return;
 	}
@@ -360,6 +362,9 @@ export function closeTabPaneCleanly(paneId: string, budgetMs = CLEAN_CLOSE_BUDGE
 			sleepSync(CLEAN_CLOSE_POLL_MS);
 			if (paneProcessGone(paneId)) break;
 		}
+	}
+	if (paneProcessGone(paneId)) {
+		herdrOkSync(["pane", "release-agent", paneId, "--source", "herdr:pi", "--agent", "pi"]);
 	}
 	herdrOkSync(["pane", "close", paneId]);
 }

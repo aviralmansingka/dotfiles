@@ -80,7 +80,8 @@ one curated explicit set (`STEP_AGENT_EXTENSIONS` in the bridge): the
 pane-state reporters, capability tools (python, web fetch, web search,
 mermaid, codemode), and tab chrome. The parent session's pipeline machinery
 and human-blocking panels never load inside a step tab. Tab closes are clean
-exits - the tab's pi quits itself before the pane closes - so terminated step
+exits - the tab's pi quits itself, then releases its agent identity before the
+pane closes - so terminated step
 agents never surface as agent-killed notifications. When the orchestrator
 session dies, its tabs close and later steps fall back to headless pi - so a
 step agent must never assume a tab exists. While a run is active, the

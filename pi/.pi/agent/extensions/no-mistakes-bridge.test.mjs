@@ -624,7 +624,13 @@ if (command === "pane" && sub === "process-info") {
 	const rec = readPane(pane);
 	if (!rec) process.exit(1);
 	const processes = rec.exited ? [] : [{ argv: ["pi"], pid: 4242 }];
+	log(rec.exited ? "process gone" : "process alive", pane);
 	emit({ process_info: { pane_id: pane, foreground_processes: processes } });
+	process.exit(0);
+}
+if (command === "pane" && sub === "release-agent") {
+	log("pane release-agent", argv[2]);
+	if (argv.slice(3).join(" ") !== "--source herdr:pi --agent pi") process.exit(1);
 	process.exit(0);
 }
 if (command === "pane" && sub === "close") {
@@ -725,6 +731,14 @@ function readCalls(root) {
 	return readFileSync(path, "utf-8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
+function assertCleanClose(root, pane) {
+	const ops = readCalls(root).filter((call) => call.pane === pane).map((call) => call.op);
+	const gone = ops.lastIndexOf("process gone");
+	const released = ops.indexOf("pane release-agent");
+	const closed = ops.indexOf("pane close");
+	assert.ok(gone >= 0 && gone < released && released < closed, `exit → release → close: ${ops}`);
+}
+
 function readKeys(root) {
 	const path = join(root, "stub-state", "keys.log");
 	if (!existsSync(path)) return [];
@@ -770,6 +784,8 @@ await (async () => {
 			"the exited pane is closed",
 		);
 
+		assertCleanClose(root, idle);
+
 		// Sticky pane (a mid-turn pi that ignores keys): ctrl+d, then the
 		// ctrl+c + ctrl+d fallback, then the pane close regardless.
 		process.env.HERDR_STUB_STICKY_PANE = "1";
@@ -791,7 +807,10 @@ await (async () => {
 			"the sticky pane is still closed after the budget",
 		);
 
-		// Already-gone pane: no keys are sent; the close is a no-op formality.
+		assert.ok(!readCalls(root).some((call) => call.pane === sticky && call.op === "pane release-agent"),
+			"never release an agent that has not exited");
+
+		// Already-gone pane: no keys are sent; release precedes the close.
 		const gone = stubCreateTab(root, "clean-close-gone");
 		execFileSync("herdr", ["pane", "close", gone]);
 		const keysBefore = readKeys(root).length;
@@ -801,6 +820,8 @@ await (async () => {
 			keysBefore,
 			"no keys are sent to a pane whose process is already gone",
 		);
+		assert.deepEqual(readCalls(root).filter((call) => call.pane === gone).slice(-2).map((call) => call.op),
+			["pane release-agent", "pane close"]);
 	} finally {
 		teardownBridgeForRun(TEST_RUN_ID);
 		restore();
@@ -856,6 +877,7 @@ await (async () => {
 			calls.some((call) => call.op === "pane close" && call.pane === created.pane),
 			"the cold tab closed after the turn settled",
 		);
+		assertCleanClose(root, created.pane);
 	} finally {
 		teardownBridgeForRun(TEST_RUN_ID);
 		restore();
@@ -916,8 +938,7 @@ await (async () => {
 		const created = calls.filter((call) => call.op === "tab create").at(-1);
 		assert.ok(created, "a visible tab was created for each fixer round");
 		panes.push(created.pane);
-		assert.ok(calls.some((call) => call.op === "pane close" && call.pane === created.pane), "each fixer tab closes after delivery");
-		assert.deepEqual(readKeys(root).filter((entry) => entry.pane === created.pane).map((entry) => entry.keys), ["ctrl+d"]);
+		assertCleanClose(root, created.pane);
 		if (round === 3) assert.ok(!out.includes("fixer round 2"), "second invocation never replays the first");
 		}
 		assert.equal(new Set(panes).size, 2, "each invocation owns a different pane");
