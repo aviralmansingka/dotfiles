@@ -24,13 +24,8 @@ const DEFAULT_MODEL_PROVIDER = "openai-codex";
 const DEFAULT_MODEL_ID = "gpt-6.1-sol";
 const DEFAULT_REASONING_EFFORT = "max";
 const DEFAULT_MAX_ATTEMPTS = 4;
-const HARD_MAX_ATTEMPTS = 8;
 const MMDFLUX_TIMEOUT_MS = 30_000;
 const OUTPUT_CAP = 512 * 1024;
-
-/** Diagram keywords that open a bare (unfenced) Mermaid block. */
-const DIAGRAM_START =
-	/^(flowchart|graph|sequenceDiagram|stateDiagram-v2|stateDiagram|classDiagram|erDiagram|journey|gantt|pie|mindmap|gitGraph|timeline|quadrantChart|xychart|requirementDiagram)\b/;
 
 export const MERMAID_SYSTEM_PROMPT = [
 	"You write Mermaid diagrams.",
@@ -45,35 +40,22 @@ const MermaidParams = Type.Object({
 		description:
 			"Detailed description of the diagram: diagram type (flowchart, sequenceDiagram, stateDiagram-v2, classDiagram, erDiagram, gantt, pie, mindmap), every node with its exact label, every edge with its direction and optional label, and layout direction (TD or LR).",
 	}),
-	title: Type.Optional(Type.String({ description: "Short heading shown above the rendered diagram." })),
-	maxAttempts: Type.Optional(
-		Type.Number({ minimum: 1, maximum: HARD_MAX_ATTEMPTS, description: `Retry limit. Default ${DEFAULT_MAX_ATTEMPTS}.` }),
-	),
 });
 
 interface MermaidDetails {
 	source?: string;
 	/** Unicode box art from mmdflux, shown in the transcript. */
 	art?: string;
-	/** Last parser or generation error, on failure. */
+	/** Last error, on failure. */
 	error?: string;
 	attempts: number;
-	title?: string;
 }
 
-/** Pull the mermaid source out of a model reply: a fence, or a bare block. */
+/** Pull the mermaid source out of a model reply's mermaid fence. */
 export function extractMermaidSource(raw: string): string | null {
-	const fence = /```(?:mermaid|mmd)\s*\n([\s\S]*?)```/.exec(raw);
-	if (fence) {
-		const body = fence[1].trim();
-		if (body) return body;
-	}
-	const trimmed = raw.trim();
-	if (DIAGRAM_START.test(trimmed)) {
-		// Strip a trailing fence opener the model may have left unclosed.
-		return trimmed.replace(/```$/, "").trim();
-	}
-	return null;
+	const fence = /```mermaid\s*\n([\s\S]*?)```/.exec(raw);
+	const body = fence?.[1]?.trim();
+	return body || null;
 }
 
 /** Build the user prompt for one generation attempt. */
@@ -120,7 +102,7 @@ function spawnMmdflux(
 	bin: string,
 	source: string,
 	signal?: AbortSignal,
-): Promise<{ ok: true; art: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; art: string } | { ok: false; kind: "parse"; error: string }> {
 	return new Promise((resolve, reject) => {
 		const child = spawn(bin, ["-f", "text"], { stdio: ["pipe", "pipe", "pipe"] });
 		let out = "";
@@ -157,7 +139,7 @@ function spawnMmdflux(
 				resolve({ ok: true, art });
 				return;
 			}
-			resolve({ ok: false, error: (err || out || `mmdflux exited with code ${code}`).trim() });
+			resolve({ ok: false, kind: "parse", error: (err || out || `mmdflux exited with code ${code}`).trim() });
 		});
 		child.stdin.on("error", () => {
 			// EPIPE when the binary is missing; the child error event handles it.
@@ -166,36 +148,46 @@ function spawnMmdflux(
 	});
 }
 
+export type MmdfluxVerdict =
+	| { ok: true; art: string }
+	| { ok: false; kind: "environment"; error: string }
+	| { ok: false; kind: "parse"; error: string };
+
 /** Validate and render a mermaid source with mmdflux. Never throws except on abort. */
-export async function runMmdflux(
-	source: string,
-	signal?: AbortSignal,
-): Promise<{ ok: true; art: string } | { ok: false; error: string }> {
+export async function runMmdflux(source: string, signal?: AbortSignal): Promise<MmdfluxVerdict> {
 	for (const bin of mmdfluxCandidates()) {
 		try {
 			return await spawnMmdflux(bin, source, signal);
 		} catch (err: any) {
 			if (signal?.aborted) throw new Error("aborted");
 			if (err?.code === "ENOENT") continue;
-			throw err;
+			return {
+				ok: false,
+				kind: "environment",
+				error: `mmdflux failed to start (${bin}): ${err?.message ?? String(err)}`,
+			};
 		}
 	}
-	return { ok: false, error: "mmdflux binary not found; set PI_MERMAID_MMDFLUX to its path" };
+	return { ok: false, kind: "environment", error: "mmdflux binary not found; set PI_MERMAID_MMDFLUX to its path" };
 }
 
-/** Pick the nested generation model: env override, then the default, then the session model. */
+function findAuthed(ctx: any, provider: string, id: string): any {
+	const m = ctx?.modelRegistry?.find?.(provider, id);
+	if (m && (!ctx?.modelRegistry?.hasConfiguredAuth || ctx.modelRegistry.hasConfiguredAuth(m))) return m;
+	return undefined;
+}
+
+/** Pick the nested generation model: env override, then the default. */
 export function pickModel(ctx: any): any {
 	const override = process.env.PI_MERMAID_MODEL;
 	if (override) {
 		const slash = override.indexOf("/");
 		if (slash > 0) {
-			const m = ctx?.modelRegistry?.find?.(override.slice(0, slash), override.slice(slash + 1));
+			const m = findAuthed(ctx, override.slice(0, slash), override.slice(slash + 1));
 			if (m) return m;
 		}
 	}
-	const found = ctx?.modelRegistry?.find?.(DEFAULT_MODEL_PROVIDER, DEFAULT_MODEL_ID);
-	if (found) return found;
-	return ctx?.model;
+	return findAuthed(ctx, DEFAULT_MODEL_PROVIDER, DEFAULT_MODEL_ID);
 }
 
 const textContent = (text: string): { type: "text"; text: string }[] => [{ type: "text" as const, text }];
@@ -224,17 +216,13 @@ export default function (pi: ExtensionAPI) {
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const spec = params.spec.trim();
-			const title = params.title?.trim() || undefined;
-			const maxAttempts = Math.min(
-				Math.max(Math.trunc(params.maxAttempts ?? DEFAULT_MAX_ATTEMPTS), 1),
-				HARD_MAX_ATTEMPTS,
-			);
+			const maxAttempts = DEFAULT_MAX_ATTEMPTS;
 
 			if (!spec) {
 				return {
 					isError: true,
 					content: textContent("mermaid tool requires a non-empty `spec`."),
-					details: { error: "empty spec", attempts: 0, title } satisfies MermaidDetails,
+					details: { error: "empty spec", attempts: 0 } satisfies MermaidDetails,
 				};
 			}
 			const model = pickModel(ctx);
@@ -242,9 +230,9 @@ export default function (pi: ExtensionAPI) {
 				return {
 					isError: true,
 					content: textContent(
-					`mermaid tool: no generation model. Set PI_MERMAID_MODEL=provider/id (default ${DEFAULT_MODEL_PROVIDER}/${DEFAULT_MODEL_ID}).`,
+					`mermaid tool: no generation model with configured auth. Set PI_MERMAID_MODEL=provider/id (default ${DEFAULT_MODEL_PROVIDER}/${DEFAULT_MODEL_ID}).`,
 				),
-					details: { error: "no model", attempts: 0, title } satisfies MermaidDetails,
+					details: { error: "no model", attempts: 0 } satisfies MermaidDetails,
 				};
 			}
 
@@ -252,10 +240,12 @@ export default function (pi: ExtensionAPI) {
 			let previous: { source: string; error: string } | undefined;
 			let lastSource: string | undefined;
 			let lastError = "no attempt ran";
+			let attemptsMade = 0;
 			let success: { source: string; art: string; attempts: number } | undefined;
 
 			for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 				if (signal?.aborted) break;
+				attemptsMade = attempt;
 				onUpdate?.(`attempt ${attempt}/${maxAttempts}: writing diagram with ${model.id ?? "model"}`);
 				let response: any;
 				try {
@@ -281,13 +271,6 @@ export default function (pi: ExtensionAPI) {
 					.filter((c: any) => c?.type === "text")
 					.map((c: any) => c.text)
 					.join("\n");
-				if (process.env.PI_MERMAID_DEBUG) {
-					const kinds = (response?.content ?? []).map((c: any) => c?.type ?? "?").join(",");
-					console.error(
-						`[mermaid] attempt ${attempt} blocks: [${kinds}] stopReason: ${response?.stopReason} ` +
-							`errorMessage: ${response?.errorMessage ?? "(none)"} raw reply:\n${raw.slice(0, 800)}`,
-					);
-				}
 				const source = extractMermaidSource(raw);
 				if (!source) {
 					lastError = "model returned no mermaid block";
@@ -300,16 +283,15 @@ export default function (pi: ExtensionAPI) {
 				try {
 					verdict = await runMmdflux(source, signal);
 				} catch (err: any) {
-					if (signal?.aborted) break;
 					lastError = `validation failed: ${err?.message ?? String(err)}`;
-					previous = { source, error: lastError };
-					continue;
+					break;
 				}
 				if (verdict.ok) {
 					success = { source, art: verdict.art, attempts: attempt };
 					break;
 				}
 				lastError = verdict.error;
+				if (verdict.kind === "environment") break;
 				previous = { source, error: verdict.error };
 			}
 
@@ -317,7 +299,7 @@ export default function (pi: ExtensionAPI) {
 				return {
 					isError: true,
 					content: textContent("mermaid tool: aborted."),
-					details: { source: lastSource, error: "aborted", attempts: maxAttempts, title } satisfies MermaidDetails,
+					details: { source: lastSource, error: "aborted", attempts: attemptsMade } satisfies MermaidDetails,
 					usage,
 				};
 			}
@@ -331,7 +313,7 @@ export default function (pi: ExtensionAPI) {
 						"\n```\n\n" +
 						"Show this fence to the user in your reply, verbatim. Do not edit it.",
 					),
-					details: { source: success.source, art: success.art, attempts: success.attempts, title } satisfies MermaidDetails,
+					details: { source: success.source, art: success.art, attempts: success.attempts } satisfies MermaidDetails,
 					usage,
 				};
 			}
@@ -339,12 +321,12 @@ export default function (pi: ExtensionAPI) {
 			return {
 				isError: true,
 				content: textContent(
-						`mermaid tool: no valid diagram after ${maxAttempts} attempt(s). Last parser error:\n${lastError}\n\n` +
+						`mermaid tool: no valid diagram after ${attemptsMade} attempt(s). Last error:\n${lastError}\n\n` +
 						"Last source:\n```mermaid\n" +
 						(lastSource ?? "(none)") +
 						"\n```\n\nDescribe the structure to the user in text instead.",
 					),
-				details: { source: lastSource, error: lastError, attempts: maxAttempts, title } satisfies MermaidDetails,
+				details: { source: lastSource, error: lastError, attempts: attemptsMade } satisfies MermaidDetails,
 				usage,
 			};
 		},
@@ -352,9 +334,7 @@ export default function (pi: ExtensionAPI) {
 		renderResult(result, _options, theme) {
 			const details = result.details as MermaidDetails | undefined;
 			if (details?.art) {
-				const header = details.title
-					? `${details.title} — mermaid (validated, attempt ${details.attempts})`
-					: `mermaid (validated, attempt ${details.attempts})`;
+				const header = `mermaid (validated, attempt ${details.attempts})`;
 				return new Text(theme.fg("muted", header) + "\n" + details.art, 0, 0);
 			}
 			if (details?.error) {

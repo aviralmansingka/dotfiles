@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -76,11 +76,11 @@ assert.equal(
 	"flowchart TD\n  A --> B",
 	"should extract a mermaid fence",
 );
-assert.equal(extractMermaidSource("```mmd\nflowchart TD\n  A --> B\n```"), "flowchart TD\n  A --> B", "should accept the mmd fence tag");
+assert.equal(extractMermaidSource("```mmd\nflowchart TD\n  A --> B\n```"), null, "only the mermaid fence tag is accepted");
 assert.equal(
 	extractMermaidSource("flowchart TD\n  A[Root] --> Z[Goal]"),
-	"flowchart TD\n  A[Root] --> Z[Goal]",
-	"should accept a bare diagram block",
+	null,
+	"a bare diagram block is not accepted",
 );
 assert.equal(extractMeraldiSourceGuard("no diagram here at all"), null, "prose without a diagram returns null");
 function extractMeraldiSourceGuard(raw) {
@@ -113,6 +113,7 @@ if (haveMmdflux) {
 
 	const bad = await runMmdflux("flowchart TD\n  A -->");
 	assert.ok(!bad.ok, "invalid diagram should fail");
+	assert.equal(bad.kind, "parse", "a completed run with a parse error is a parse verdict");
 	assert.ok(/parse error|error/i.test(bad.error), `failure should carry a parse error: ${bad.error.slice(0, 120)}`);
 } else {
 	console.log("note: mmdflux not found; skipping integration checks");
@@ -120,11 +121,13 @@ if (haveMmdflux) {
 
 // ── execute paths with a fake model registry ─────────────────────────────────
 
-const fakeCtx = (replies) => {
+const fakeCtx = (replies, { sol = true, authed = true } = {}) => {
 	let calls = 0;
-	return {
-		model: { id: "test-model" },
+	const ctx = {
 		modelRegistry: {
+			find: (provider, id) =>
+				provider === "openai-codex" && id === "gpt-6.1-sol" && sol ? { id: "gpt-6.1-sol" } : undefined,
+			hasConfiguredAuth: () => authed,
 			complete: async () => {
 				const reply = replies[Math.min(calls, replies.length - 1)];
 				calls++;
@@ -135,21 +138,38 @@ const fakeCtx = (replies) => {
 			},
 		},
 	};
+	ctx.callCount = () => calls;
+	return ctx;
 };
 
 // No mermaid in the replies → isError with the last error, usage summed.
 const failing = await tool.execute(
 	"id-1",
-	{ spec: "a diagram of the build pipeline", maxAttempts: 2 },
+	{ spec: "a diagram of the build pipeline" },
 	undefined,
 	() => {},
 	fakeCtx(["I cannot draw that.", "Still no diagram."]),
 );
 assert.equal(failing.isError, true, "all-bad replies should error");
-assert.ok(failing.details.attempts >= 2, "details record the attempt count");
+assert.equal(failing.details.attempts, 4, "details record every consumed attempt");
 assert.equal(failing.details.error, "model returned no mermaid block");
-assert.equal(failing.usage.inputTokens, 20, "nested usage is summed");
-assert.equal(failing.usage.outputTokens, 10, "nested usage is summed");
+assert.equal(failing.usage.inputTokens, 40, "nested usage is summed");
+assert.equal(failing.usage.outputTokens, 20, "nested usage is summed");
+
+// sol absent from the registry → loud error, no session-model substitution.
+const noSolCtx = fakeCtx(["```mermaid\nflowchart TD\n  A --> B\n```"], { sol: false });
+const noSol = await tool.execute("id-3", { spec: "a diagram" }, undefined, () => {}, noSolCtx);
+assert.equal(noSol.isError, true, "missing sol should error instead of substituting the session model");
+assert.equal(noSol.details.error, "no model");
+assert.equal(noSol.details.attempts, 0);
+assert.equal(noSolCtx.callCount(), 0, "no nested call runs without a model");
+
+// sol present but unauthenticated → same loud error, no attempts burned.
+const noAuthCtx = fakeCtx(["```mermaid\nflowchart TD\n  A --> B\n```"], { authed: false });
+const noAuth = await tool.execute("id-4", { spec: "a diagram" }, undefined, () => {}, noAuthCtx);
+assert.equal(noAuth.isError, true, "unauthenticated sol should error instead of burning attempts");
+assert.equal(noAuth.details.error, "no model");
+assert.equal(noAuthCtx.callCount(), 0, "no nested call runs against an unauthenticated model");
 
 // Valid fence → success result whose content carries the fence verbatim.
 if (haveMmdflux) {
@@ -166,17 +186,51 @@ if (haveMmdflux) {
 	assert.equal(succeeding.details.attempts, 1);
 }
 
+// A missing mmdflux binary must end the run after one attempt, not burn the rest.
+const emptyBin = join(tempRoot, "empty-bin");
+mkdirSync(emptyBin, { recursive: true });
+const savedHome = process.env.HOME;
+const savedPath = process.env.PATH;
+const savedFlux = process.env.PI_MERMAID_MMDFLUX;
+delete process.env.PI_MERMAID_MMDFLUX;
+process.env.HOME = tempRoot;
+process.env.PATH = emptyBin;
+try {
+	const envCtx = fakeCtx(["```mermaid\nflowchart TD\n  R[Root] --> Z[Goal]\n```"]);
+	const envFail = await tool.execute(
+		"id-5",
+		{ spec: "Type: flowchart TD. Nodes: Root, Goal. Edge: Root --> Goal." },
+		undefined,
+		() => {},
+		envCtx,
+	);
+	assert.equal(envFail.isError, true, "missing mmdflux should fail the tool");
+	assert.equal(envCtx.callCount(), 1, "a missing binary must not consume further attempts");
+	assert.equal(envFail.details.attempts, 1, "details report the single attempt that ran");
+	assert.ok(
+		envFail.details.error.includes("mmdflux binary not found"),
+		`error names the environment failure: ${envFail.details.error}`,
+	);
+} finally {
+	if (savedHome === undefined) delete process.env.HOME;
+	else process.env.HOME = savedHome;
+	if (savedPath === undefined) delete process.env.PATH;
+	else process.env.PATH = savedPath;
+	if (savedFlux === undefined) delete process.env.PI_MERMAID_MMDFLUX;
+	else process.env.PI_MERMAID_MMDFLUX = savedFlux;
+}
+
 // ── renderResult ─────────────────────────────────────────────────────────────
 
 const theme = { fg: (_name, s) => s };
 const rendered = tool.renderResult(
-	{ content: [{ type: "text", text: "unused" }], details: { art: "┌──────┐\n│ Root │", attempts: 1, title: "Flow" } },
+	{ content: [{ type: "text", text: "unused" }], details: { art: "┌──────┐\n│ Root │", attempts: 1 } },
 	{},
 	theme,
 	{},
 );
 assert.ok(rendered.text.includes("Root"), "art renders in the result row");
-assert.ok(rendered.text.includes("Flow"), "title renders in the header");
+assert.ok(rendered.text.includes("validated"), "header marks the diagram as validated");
 
 const renderedError = tool.renderResult(
 	{ content: [{ type: "text", text: "unused" }], details: { error: "Parse error at line 2", attempts: 4 } },
