@@ -42,6 +42,7 @@ try {
 	nvimOpen.default({
 		registerTool: (definition) => { tool = definition; },
 		registerCommand: (name, definition) => { commands[name] = definition; },
+		on: () => {},
 	});
 	assert.equal(tool.name, "nvim_open");
 	const theme = { fg: (_token, text) => text, bold: (text) => text };
@@ -247,6 +248,158 @@ try {
 	} finally {
 		process.env.PATH = savedPath;
 		for (const [key, value] of savedEnv) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+	}
+
+	// ── launch race lock + registry (injectable exec seam) ──────────
+	// The seam swaps every herdr/nvim/tmux exec in nvim-open.ts for a fake
+	// with canned responses, so the race guards run against the real
+	// decision logic with zero live multiplexer access — and the run can
+	// never leave a real split behind (checked against the real provenance
+	// log at the end of this file's CI run).
+	const seamLog = join(tempRoot, "seam-launches.log");
+	const savedSeamEnv = ["PI_NVIM_LAUNCH_LOG", "PI_SESSION_FILE", "PI_SUBAGENT_SESSION", "PI_SUBAGENT_NAME", "HERDR_PANE_ID"]
+		.map((key) => [key, process.env[key]]);
+	process.env.PI_NVIM_LAUNCH_LOG = seamLog;
+	process.env.PI_SESSION_FILE = "/sessions/main.jsonl";
+	delete process.env.PI_SUBAGENT_SESSION;
+	delete process.env.PI_SUBAGENT_NAME;
+	try {
+		/** A fake exec for one scenario: answers canned herdr JSON and
+		 *  records every invocation as [command, ...args]. */
+		const makeFakeExec = (scenario) => {
+			const calls = [];
+			const impl = (command, args) => {
+				calls.push([command, ...args]);
+				if (command === "herdr" && args[0] === "pane" && args[1] === "current") {
+					return JSON.stringify({ result: { pane: {
+						pane_id: scenario.callerPane, tab_id: scenario.tab, workspace_id: scenario.workspace, cwd: "/repo",
+					} } });
+				}
+				if (command === "herdr" && args[0] === "pane" && args[1] === "list") {
+					return JSON.stringify({ result: { panes: scenario.panes() } });
+				}
+				if (command === "herdr" && args[0] === "pane" && args[1] === "process-info") {
+					const paneId = args[args.indexOf("--pane") + 1];
+					return JSON.stringify({ result: { process_info: {
+						pane_id: paneId, foreground_processes: scenario.procs(paneId),
+					} } });
+				}
+				if (command === "herdr" && args[0] === "pane" && args[1] === "split") {
+					return JSON.stringify({ result: { pane: { pane_id: scenario.newPane } } });
+				}
+				return '{"result":{}}';
+			};
+			return { impl, calls };
+		};
+		const countCalls = (calls, ...prefix) =>
+			calls.filter((call) => prefix.every((part, i) => call[i] === part)).length;
+		const findCall = (calls, ...prefix) =>
+			calls.find((call) => prefix.every((part, i) => call[i] === part));
+
+		// Scenario A — the 27 ms incident: two concurrent openEditor calls
+		// in one tab. The first splits; the second waits on the per-tab lock,
+		// finds the first's pane in the registry WITHOUT a pane scan (the
+		// split pane's nvim has NOT reached foreground processes — it still
+		// shows its shell), and routes to it. Exactly one split may happen.
+		let aLists = 0;
+		const a = makeFakeExec({
+			callerPane: "wR1:p1", tab: "wR1:t1", workspace: "wR1", newPane: "wR1:p2",
+			panes: () => {
+				aLists += 1;
+				// 1st list: the detection scan (caller pane only). 2nd list: the
+				// post-split guard re-list (our new pane now exists too).
+				return aLists === 1
+					? [{ pane_id: "wR1:p1", tab_id: "wR1:t1" }]
+					: [{ pane_id: "wR1:p1", tab_id: "wR1:t1" }, { pane_id: "wR1:p2", tab_id: "wR1:t1" }];
+			},
+			// The new pane's nvim lags behind the split — foreground is still
+			// its shell. The registry must trust the pane anyway.
+			procs: (paneId) => paneId === "wR1:p2"
+				? [{ name: "bash", pid: 31, argv: ["bash"] }]
+				: [{ name: "zsh", pid: 11, argv: ["zsh"] }],
+		});
+		process.env.HERDR_PANE_ID = "wR1:p1";
+		nvimOpen.__setExecSyncForTests(a.impl);
+		const [first, second] = await Promise.all([
+			nvimOpen.openEditor("/repo", ["a.ts"], "tool"),
+			nvimOpen.openEditor("/repo", ["b.ts"], "tool"),
+		]);
+		assert.equal(first.ok, true);
+		assert.equal(first.launched, true);
+		assert.match(first.message, /Launched vim in a vertical split \(pane wR1:p2\)/);
+		assert.equal(second.ok, true);
+		assert.equal(second.launched, false);
+		assert.match(second.message, /Sent 1 file\(s\) to existing editor \(pane wR1:p2\)/);
+		// Exactly ONE split — the second call never split.
+		assert.equal(countCalls(a.calls, "herdr", "pane", "split"), 1);
+		// Exactly TWO pane lists — the first call's detection scan and its
+		// post-split guard re-list. The second call scanned NOTHING
+		// (registry-first) and neither did anything later.
+		assert.equal(countCalls(a.calls, "herdr", "pane", "list"), 2);
+		// The second call routed its file to the registry pane.
+		const routed = findCall(a.calls, "herdr", "pane", "send-text", "wR1:p2");
+		assert.ok(routed, "second call must send-text to the registry pane");
+		assert.match(routed[4], /:e \/repo\/b\.ts/);
+		// Provenance: one split line, then one existing line.
+		const seamLines = () => readFileSync(seamLog, "utf-8").split("\n").filter(Boolean);
+		assert.match(seamLines().at(-2), / outcome=split pane=wR1:p2 /);
+		assert.match(seamLines().at(-1), / outcome=existing files=1$/);
+
+		// A later call in the same tab hits the registry with no pane scan.
+		const listsBefore = countCalls(a.calls, "herdr", "pane", "list");
+		const again = await nvimOpen.openEditor("/repo", ["c.ts"], "tool");
+		assert.equal(again.ok, true);
+		assert.equal(again.launched, false);
+		assert.match(again.message, /Sent 1 file\(s\) to existing editor \(pane wR1:p2\)/);
+		assert.equal(countCalls(a.calls, "herdr", "pane", "list"), listsBefore);
+		assert.equal(countCalls(a.calls, "herdr", "pane", "split"), 1);
+
+		// Scenario B — cross-process race: between our "absent" detection
+		// and our split, another process's editor pane appeared in the tab.
+		// The post-split guard closes OUR new pane and routes to the
+		// pre-existing one.
+		let bLists = 0;
+		const b = makeFakeExec({
+			callerPane: "wG1:p1", tab: "wG1:t1", workspace: "wG1", newPane: "wG1:p2",
+			panes: () => {
+				bLists += 1;
+				// Detection sees only the caller; the guard re-list catches the
+				// rival pane that appeared in between (with its nvim up).
+				return bLists === 1
+					? [{ pane_id: "wG1:p1", tab_id: "wG1:t1" }]
+					: [
+						{ pane_id: "wG1:p1", tab_id: "wG1:t1" },
+						{ pane_id: "wG1:p9", tab_id: "wG1:t1" },
+						{ pane_id: "wG1:p2", tab_id: "wG1:t1" },
+					];
+			},
+			procs: (paneId) => paneId === "wG1:p9"
+				? [{ name: "nvim", pid: 91, argv: ["nvim", "src/main.rs"] }]
+				: [{ name: "zsh", pid: 11, argv: ["zsh"] }],
+		});
+		nvimOpen.__setExecSyncForTests(b.impl);
+		const raced = await nvimOpen.openEditor("/repo", ["a.ts"], "tool");
+		assert.equal(raced.ok, true);
+		assert.equal(raced.launched, false, "the duplicate pane was closed; the surviving editor is pre-existing");
+		assert.match(raced.message, /Closed duplicate pane wG1:p2/);
+		assert.match(raced.message, /Sent 1 file\(s\) to existing editor \(pane wG1:p9\)/);
+		// The NEW pane was closed — never the pre-existing one.
+		assert.ok(findCall(b.calls, "herdr", "pane", "close", "wG1:p2"), "guard must close the new pane");
+		assert.equal(countCalls(b.calls, "herdr", "pane", "close"), 1);
+		// Files routed to the pre-existing editor.
+		const racedRoute = findCall(b.calls, "herdr", "pane", "send-text", "wG1:p9");
+		assert.ok(racedRoute, "guard must route files to the pre-existing pane");
+		assert.match(racedRoute[4], /:e \/repo\/a\.ts/);
+		// Provenance: the routing outcome is "existing" — the pane we briefly
+		// created was closed, so no live pane is attributed to this call.
+		assert.match(seamLines().at(-1), / outcome=existing files=1$/);
+
+	} finally {
+		nvimOpen.__setExecSyncForTests(null);
+		for (const [key, value] of savedSeamEnv) {
 			if (value === undefined) delete process.env[key];
 			else process.env[key] = value;
 		}
