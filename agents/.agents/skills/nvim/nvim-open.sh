@@ -149,6 +149,9 @@ done
 unset _dir
 if [[ -n "$DAEMON_SOCKET" && "$EDITOR_CMD" == "nvim" ]] && \
 	nvim --server "$DAEMON_SOCKET" --remote-expr 1 >/dev/null 2>&1; then
+	if [[ -n "$DOTFILES_XDG_CONFIG_HOME" ]]; then
+		echo "Note: the sidebar daemon runs the global nvim config, not the detected worktree config." >&2
+	fi
 	DAEMON_OK=true
 	for file in "${FILES[@]}"; do
 		# Resolve against CWD — the daemon's own cwd is unrelated.

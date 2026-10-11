@@ -57,6 +57,11 @@ running in the tab, files are still sent to it, but a warning is printed
 noting that the existing editor may be using a different config. Close
 and relaunch `/nvim` to pick up the worktree config.
 
+When the tab has a live herdr-nvim sidebar daemon, files open in the
+daemon and it always runs the global nvim config. A note is printed
+when a worktree config was detected; relaunching `/nvim` does not
+change the daemon's config.
+
 If the user references a file by name rather than by path (e.g. "the
 readme"), resolve it yourself before calling the script — the script
 does not do natural-language resolution.

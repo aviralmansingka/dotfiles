@@ -195,9 +195,7 @@ function attachToSidebarDaemon(
 ): { message: string; ok: boolean; launched: boolean } {
 	const opened = files.length === 0 || openInDaemon(daemon.socket, files);
 	const sidebarPane = findSidebarPane(daemon.tabId, daemon.socket);
-	if (sidebarPane) {
-		focusEditorPane(sidebarPane, current.pane_id);
-	}
+	const focused = sidebarPane !== null && focusEditorPane(sidebarPane, current.pane_id);
 	const where = `herdr-nvim sidebar (tab ${daemon.tabId})`;
 	const viewNote = sidebarPane ? "" : " — press prefix+t in that tab to view";
 	if (!opened) {
@@ -206,13 +204,12 @@ function attachToSidebarDaemon(
 	if (files.length > 0) {
 		return { message: `Opened ${files.length} file(s) in the ${where}${viewNote}.`, ok: true, launched: false };
 	}
-	return {
-		message: sidebarPane
-			? `Focused the ${where}.`
-			: `The ${where} is this tab's editor${viewNote}.`,
-		ok: true,
-		launched: false,
-	};
+	if (!sidebarPane) {
+		return { message: `The ${where} is this tab's editor${viewNote}.`, ok: true, launched: false };
+	}
+	return focused
+		? { message: `Focused the ${where}.`, ok: true, launched: false }
+		: { message: `Could not focus the ${where}.`, ok: false, launched: false };
 }
 
 // ---------------------------------------------------------------------------
