@@ -13,15 +13,19 @@
 	cmd = nvim -f -c "Gdiff" "$MERGED"
 [commit]
 	verbose = true
-[editor]
-    tool = nvim
+# No [editor] section: git's real key is core.editor, and it already
+# follows $EDITOR from zsh/.zshrc ("bob run stable"), so an [editor] tool
+# entry was a silent no-op.
 [alias]
 	d = difftool
 [pull]
 	rebase = true
 [init]
 	defaultBranch = develop
-[credential]
-	helper = osxkeychain
+# credential.helper is deliberately not set in this tracked config:
+# osxkeychain exists only on macOS, and Homebrew/Apple git already default
+# to it in their system gitconfig. Set a host-specific helper in the
+# host-local ~/.gitconfig instead (e.g. osxkeychain on macOS, libsecret or
+# store on Linux) - this file is stowed to every host.
 [url "git@github.com:"]
 	insteadOf = https://github.com/
