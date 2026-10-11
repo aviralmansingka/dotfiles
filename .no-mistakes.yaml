@@ -11,4 +11,9 @@
 # scripts/nm-test.sh and scripts/nm-lint.sh for what each runner executes.
 commands:
   lint: 'scripts/nm-lint.sh'
-  test: 'scripts/nm-test.sh'
+  # Path-aware: the gate runs exactly the suites whose trigger paths match
+  # the branch's changed files (merge-base..HEAD), not the whole repo —
+  # same fixed gates + harvested # Paths: headers as the CI changes job.
+  # Docs-only branches select nothing and pass. Drop --changed for the full
+  # suite.
+  test: 'scripts/nm-test.sh --changed'
