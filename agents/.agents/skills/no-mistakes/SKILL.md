@@ -48,6 +48,23 @@ asks for something specific, translate that request into the matching `axi run`
 flags yourself - for example, "skip the lint step" becomes `--skip=lint`. Run
 `no-mistakes axi run --help` to see the available flags.
 
+## Visible step agents (Herdr bridge)
+
+When a pipeline is started from a session running inside Herdr, the daemon's
+step agents (review, fixer, test, lint, document, CI repair) run as visible,
+interactive Herdr subagent tabs of that session instead of headless
+processes - installed by `scripts/install-nm-herdr-bridge` via the upstream
+`agent_path_override.pi` knob. A step agent inside such a tab holds the same
+boundary as a headless one: it works only its assigned phase in the run
+worktree, the daemon owns rounds, budgets, and the findings schema, and the
+human may watch or steer the tab but never drives the pipeline from it.
+Fixer sessions reuse one tab across fix rounds; cold review turns get a fresh
+tab per pass. When the triggering session dies, tabs close and later steps
+fall back to headless pi - so a step agent must never assume a tab exists.
+While a run is active, the triggering session's own pane also shows the
+current pipeline phase as its state label (`nm: <phase>`), and the CI phase
+drives Herdr's red blocked state; both clear when the run ends.
+
 ## Two ways to invoke
 
 A validation request works in two modes, depending on whether the user hands
@@ -192,11 +209,14 @@ Run the pipeline and decide on its findings as they come up:
      [Escalate `ask-user` findings](#escalate-ask-user-findings) below.
 
    In an interactive TUI session, the no-mistakes-gate extension surfaces the
-   gate for you. A decision panel opens when the result parks the run. It
-   highlights each finding by severity and action. The user can approve, skip,
-   or select findings to fix with optional guidance. The user can also press
-   `y` to enable yolo consent. The result message includes the decision in a
-   `GATE DECISION (user)` block. This
+   gate for you. A paged decision panel opens when the result parks the run.
+   It highlights each finding by severity and action. An overview page lists
+   every finding as one short line; Tab/⇧Tab page through per-finding pages
+   where the user approves, marks fix, or ignores each finding, and a choice
+   auto-advances to the next finding. No-op findings get no fix choice, and
+   fix guidance stays optional. From any page the user can skip, press Ctrl-A
+   to accept every finding, or press `y` to enable yolo consent. The result
+   message includes the decision in a `GATE DECISION (user)` block. This
    block names the exact `respond` call. Execute that decision verbatim. Do not
    re-decide it, edit files yourself, or relay findings that the panel showed.
    A gate result with no decision block means the panel was unavailable or

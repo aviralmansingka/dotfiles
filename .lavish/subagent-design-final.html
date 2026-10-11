@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Subagent rendering — final design (C + retained blue widget)</title>
+<style>
+  :root{
+    --bg0:#282828; --bg1:#32302f; --bg2:#3c3836; --border:#504945;
+    --fg1:#ebdbb2; --muted:#928374; --ghost:#665c54;
+    --orange:#f28534; --green:#b8bb26; --red:#f2594b; --yellow:#fabd2f;
+    --widget-blue:#4da3ff; --icon-yellow:#d6b55e; --icon-red:#e06c75; --icon-dim:#808080;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg0); color:var(--fg1);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-size:14px; line-height:1.6; padding:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:32px 24px 72px}
+  h1{font-size:21px; font-weight:700; margin:0 0 4px; color:var(--fg1)}
+  .lede{color:var(--muted); margin:0 0 24px; font-size:13px}
+  .lede b{color:var(--fg1)}
+  h2{font-size:15.5px; font-weight:700; color:var(--orange); margin:38px 0 8px;
+     border-bottom:1px solid var(--border); padding-bottom:6px}
+  .sub{color:var(--muted); font-size:12.5px; margin:0 0 12px}
+  .sub b{color:var(--fg1)}
+  .term{
+    background:var(--bg0); color:var(--fg1);
+    font-family:inherit; font-size:13px; line-height:1.6;
+    padding:14px 16px; border-radius:6px; white-space:pre; overflow-x:auto;
+    margin:0; border:1px solid var(--border);
+  }
+  .region{margin:0 0 16px}
+  .region-label{color:var(--ghost); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+                margin:0 0 6px; font-weight:600}
+  .region-label b{color:var(--orange); font-weight:600}
+  .hidden-note{color:var(--ghost); font-size:12.5px; font-style:italic; padding:8px 0 0}
+  table{border-collapse:collapse; width:100%; font-size:12.5px; margin:8px 0 4px}
+  td,th{padding:6px 9px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em}
+  td{color:var(--fg1)}
+  td.k{color:var(--orange); white-space:nowrap}
+  .tag{display:inline-block; padding:1px 7px; border-radius:9px; font-size:11px; font-weight:600; margin-left:6px}
+  .tag.live{background:#2a3a1a; color:var(--green)}
+  .tag.final{background:#3a2a1a; color:var(--orange)}
+  .tag.exp{background:#253033; color:#7daea3}
+  code{color:var(--fg1); background:var(--bg2); padding:1px 5px; border-radius:3px; font-size:12.5px}
+  .callout{background:var(--bg1); border:1px solid var(--border); border-radius:6px;
+           padding:12px 14px; margin:0 0 22px; font-size:12.5px; color:var(--muted)}
+  .callout b{color:var(--fg1)}
+  .foot{color:var(--muted); font-size:12px; margin-top:30px; border-top:1px solid var(--border); padding-top:14px}
+  a{color:var(--orange)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Subagent rendering — final design</h1>
+<p class="lede"><b>Prototype C</b> (inline chips + expandable trace) <b>plus the existing blue-border live widget retained</b> as the <code>aboveEditor</code> overview. Two surfaces, complementary roles — neither duplicates the other.</p>
+
+<div class="callout"><b>Coexistence, not replacement.</b> The blue widget stays as the live fleet overview of <i>running</i> subagents and clears when nothing is running. The tree chips carry per-subagent lifecycle inline in the parent's reasoning flow and persist as a permanent, expandable record. The widget answers "what's running now"; the chips answer "how does this subagent fit my reasoning, and what did its tools do."</div>
+
+<h2>Role split</h2>
+<table>
+  <tr><th>Surface</th><th>Region</th><th>Shows</th><th>Lifetime</th></tr>
+  <tr><td class="k">Blue widget</td><td><code>aboveEditor</code></td><td>running subagents — fleet overview, at-a-glance</td><td>clears when nothing is running</td></tr>
+  <tr><td class="k">Tree chips</td><td>parent trace</td><td>per-subagent lifecycle inline in reasoning</td><td>permanent record; expandable on <code>ctrl+o</code></td></tr>
+</table>
+<p class="sub"><b>Stalled</b> renders on both: red <span style="color:var(--icon-red)">⟳</span> + label in the widget; working <span style="color:var(--orange)">▹</span> + warning-yellow label on the tree chip (the tree has no dedicated stalled glyph).</p>
+
+<h2>LIVE <span class="tag live">mid-run · both surfaces visible</span></h2>
+<p class="sub">scout active, researcher waiting. The blue widget sits above the editor; the chips sit inline in the parent trace.</p>
+
+<div class="region">
+  <div class="region-label"><b>aboveEditor region</b> — blue widget (retained, unchanged)</div>
+  <pre class="term"><span style="color:var(--widget-blue)">╭─ Subagents ─────────────────────────── 2 running ─╮</span>
+<span style="color:var(--widget-blue)">│</span> <span style="color:var(--icon-yellow)">⟳</span> 00:23  scout (scout)              <span style="color:var(--ghost)">  </span>active · bash 7m <span style="color:var(--widget-blue)">│</span>
+<span style="color:var(--widget-blue)">│</span> <span style="color:var(--icon-dim)">○</span> 00:45  researcher (researcher)              waiting 2m <span style="color:var(--widget-blue)">│</span>
+<span style="color:var(--widget-blue)">╰───────────────────────────────────────────────────╯</span></pre>
+</div>
+
+<div class="region">
+  <div class="region-label"><b>parent trace region</b> — Prototype C inline chips</div>
+  <pre class="term"> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatching scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--muted)">00:23 · active</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--muted)">00:45 · </span><span style="color:var(--yellow)">waiting 2m</span></pre>
+</div>
+
+<h2>Stalled moment <span class="tag live">researcher stuck</span></h2>
+<p class="sub">Widget flips researcher to red <span style="color:var(--icon-red)">⟳</span> + stalled label; the tree chip keeps the working glyph but turns its label warning-yellow.</p>
+
+<div class="region">
+  <div class="region-label"><b>aboveEditor region</b></div>
+  <pre class="term"><span style="color:var(--widget-blue)">╭─ Subagents ─────────────────────────── 2 running ─╮</span>
+<span style="color:var(--widget-blue)">│</span> <span style="color:var(--icon-yellow)">⟳</span> 00:31  scout (scout)              <span style="color:var(--ghost)">  </span>active · bash 7m <span style="color:var(--widget-blue)">│</span>
+<span style="color:var(--widget-blue)">│</span> <span style="color:var(--icon-red)">⟳</span> 01:12  researcher (researcher)    stalled 1m · wrong activity id <span style="color:var(--widget-blue)">│</span>
+<span style="color:var(--widget-blue)">╰───────────────────────────────────────────────────╯</span></pre>
+</div>
+
+<div class="region">
+  <div class="region-label"><b>parent trace region</b></div>
+  <pre class="term"> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatching scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--muted)">00:31 · active</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--orange)">▹</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--yellow)">01:12 · stalled · wrong activity id</span></pre>
+</div>
+
+<h2>FINAL <span class="tag final">collapsed · widget cleared</span></h2>
+<p class="sub">Nothing running → the blue widget hides. The tree chips persist as collapsed <span style="color:var(--muted)">▸</span>/<span style="color:var(--red)">×</span> rows with a <code>ctrl+o</code> expand hint.</p>
+
+<div class="region">
+  <div class="region-label"><b>aboveEditor region</b></div>
+  <div class="hidden-note">(widget hidden — no subagents running)</div>
+</div>
+
+<div class="region">
+  <div class="region-label"><b>parent trace region</b></div>
+  <pre class="term"> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatched scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--green)">◆</span> <span style="color:var(--muted)">3 tools · 43s</span>  <span style="color:var(--muted)">ctrl+o to expand</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--red)">×</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--red)">· failed · 1m 12s</span>  <span style="color:var(--muted)">ctrl+o to expand</span></pre>
+</div>
+
+<h2>EXPANDED <span class="tag exp">scout opened with ctrl+o</span></h2>
+<p class="sub">The collapsed <span style="color:var(--muted)">▸ scout</span> row unfolds into the subagent's full tool tree — the tree renderer's <code>◆ ◇ ├─ └─ │</code> vocabulary and theme tokens, no background box.</p>
+
+<div class="region">
+  <div class="region-label"><b>parent trace region</b></div>
+  <pre class="term"> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">Thinking</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">•</span> <span style="color:var(--muted)">dispatched scout + researcher in parallel</span>
+ <span style="color:var(--border)">├─</span> <span style="color:var(--muted)">▸</span> <span style="color:var(--fg1);font-weight:700">scout</span> <span style="color:var(--green)">◆</span> <span style="color:var(--muted)">3 tools · 43s · ↑4.3k ↓717 $0.001</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read · README.md — Project description…</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">├─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">read · budget.py — Core module…</span>
+ <span style="color:var(--border)">│  </span><span style="color:var(--border)">└─</span> <span style="color:var(--green)">◆</span> <span style="color:var(--fg1)">bash · ok</span>
+ <span style="color:var(--border)">└─</span> <span style="color:var(--red)">×</span> <span style="color:var(--fg1);font-weight:700">researcher</span> <span style="color:var(--red)">· failed · 1m 12s</span>  <span style="color:var(--muted)">ctrl+o to expand</span></pre>
+</div>
+
+<div class="foot"><b>What this is.</b> The agreed rendering design — Prototype C tree integration with the existing blue-border live widget retained. The implementation work (wiring subagent state into <code>tool-call-renderer.ts</code> alongside the kept widget) is the Phase 2 ship task for the <code>nvim-pi-subagents</code> crewmate. The 3-prototype comparison and the pre-integration color reference live beside this file in <code>.lavish/</code>.</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Command path — CLI to storage and back</title>
+  <style>
+    :root {
+      --bg0: #171918;
+      --bg1: #1d2021;
+      --bg2: #282828;
+      --bg3: #32302f;
+      --border: #504945;
+      --ghost: #665c54;
+      --muted: #a89984;
+      --fg0: #fbf1c7;
+      --fg1: #ebdbb2;
+      --red: #ea6962;
+      --red-bg: #3d2424;
+      --green: #a9b665;
+      --green-bg: #293126;
+      --yellow: #d8a657;
+      --yellow-bg: #353025;
+      --blue: #7daea3;
+      --blue-bg: #253033;
+      --aqua: #89b482;
+      --purple: #d3869b;
+      --orange: #e78a4e;
+      --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --shadow: 0 30px 100px rgb(0 0 0 / 48%);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg0); scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      color: var(--fg1);
+      font-family: var(--sans);
+      background:
+        linear-gradient(rgb(235 219 178 / 2.2%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(235 219 178 / 1.6%) 1px, transparent 1px),
+        radial-gradient(circle at 10% 0%, rgb(231 138 78 / 13%), transparent 31rem),
+        radial-gradient(circle at 96% 8%, rgb(125 174 163 / 10%), transparent 28rem),
+        var(--bg0);
+      background-size: 24px 24px, 24px 24px, auto, auto, auto;
+    }
+
+    a { color: var(--blue); text-underline-offset: 3px; }
+    a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
+    code, .gca-mono { font-family: var(--mono); }
+    code { overflow-wrap: anywhere; color: var(--yellow); font-size: .92em; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { text-wrap: balance; }
+
+    .gca-page {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: rgb(29 32 33 / 97%);
+      box-shadow: var(--shadow);
+    }
+    .gca-terminal, .gca-status {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      background: var(--bg3);
+      color: var(--muted);
+      font: 11px/1.3 var(--mono);
+    }
+    .gca-terminal { border-bottom: 1px solid var(--border); }
+    .gca-status { border-top: 1px solid var(--border); }
+    .gca-terminal-title { overflow: hidden; color: var(--fg1); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+    .gca-lights { color: var(--red); letter-spacing: 4px; }
+    .gca-lights span:nth-child(1) { color: var(--yellow); }
+    .gca-lights span:nth-child(2) { color: var(--green); }
+    .gca-command {
+      display: flex;
+      gap: 10px;
+      min-width: 0;
+      padding: 12px 16px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+      background: #242424;
+      font: 12px/1.3 var(--mono);
+    }
+    .gca-prompt { flex: 0 0 auto; color: var(--green); font-weight: 800; }
+    .gca-command-text { overflow: hidden; color: var(--fg0); text-overflow: ellipsis; white-space: nowrap; }
+
+    .gca-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 410px);
+      gap: 42px;
+      padding: 52px 46px 44px;
+      border-bottom: 1px solid var(--border);
+    }
+    .gca-eyebrow { margin-bottom: 13px; color: var(--orange); font: 800 11px/1.3 var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+    h1 { max-width: 920px; margin-bottom: 18px; color: var(--fg0); font-size: clamp(38px, 5.4vw, 74px); letter-spacing: -.055em; line-height: .96; }
+    .gca-lead { max-width: 860px; margin: 0; color: var(--muted); font-size: clamp(14px, 1.4vw, 17px); line-height: 1.75; }
+    .gca-meta { display: grid; align-content: start; gap: 10px; }
+    .gca-meta-card { min-width: 0; padding: 14px 15px; border: 1px solid var(--border); background: var(--bg2); color: var(--muted); font: 11px/1.55 var(--mono); }
+    .gca-meta-card strong { display: block; margin-bottom: 5px; color: var(--fg0); font-size: 12px; }
+    .gca-meta-card.scope { border-left: 3px solid var(--orange); }
+    .gca-meta-card.rule { border-left: 3px solid var(--yellow); }
+    .gca-meta-card.success { border-left: 3px solid var(--green); }
+    .gca-meta-card.failure { border-left: 3px solid var(--red); }
+
+    .gca-jumpbar { display: flex; gap: 8px; padding: 12px 18px; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--bg2); scrollbar-width: thin; }
+    .gca-jumpbar a { flex: 0 0 auto; padding: 7px 10px; border: 1px solid var(--border); background: var(--bg1); color: var(--muted); font: 10px/1 var(--mono); letter-spacing: .07em; text-decoration: none; text-transform: uppercase; }
+    .gca-jumpbar a:hover { border-color: var(--blue); color: var(--fg0); }
+
+    main { padding: 36px 34px 48px; }
+    section + section { margin-top: 48px; }
+    .gca-section-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 17px; }
+    h2 { margin-bottom: 5px; color: var(--aqua); font-size: clamp(21px, 2.3vw, 30px); letter-spacing: -.035em; }
+    .gca-section-kicker { margin: 0; color: var(--muted); font: 11px/1.55 var(--mono); text-align: right; }
+
+    .gca-summary, .gca-failure-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .gca-card { min-width: 0; padding: 18px; border: 1px solid var(--border); background: var(--bg2); }
+    .gca-card.interface { border-top: 3px solid var(--green); }
+    .gca-card.policy { border-top: 3px solid var(--yellow); }
+    .gca-card.persistence { border-top: 3px solid var(--blue); }
+    .gca-card.failure { border-left: 3px solid var(--red); }
+    .gca-label { margin-bottom: 11px; color: var(--blue); font: 800 10px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .gca-card.interface .gca-label { color: var(--green); }
+    .gca-card.policy .gca-label { color: var(--yellow); }
+    .gca-card.persistence .gca-label { color: var(--blue); }
+    .gca-card.failure .gca-label { color: var(--red); }
+    .gca-card h3 { margin-bottom: 8px; color: var(--fg0); font-size: 15px; }
+    .gca-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
+
+    .gca-panel { min-width: 0; border: 1px solid var(--border); background: var(--bg2); }
+    .gca-panel-title { display: flex; justify-content: space-between; gap: 14px; padding: 10px 13px; border-bottom: 1px solid var(--border); background: var(--bg3); color: var(--fg0); font: 11px/1.3 var(--mono); }
+    .gca-panel-title span:last-child { color: var(--muted); text-align: right; }
+    .gca-diagram { padding: 18px; overflow-x: auto; }
+    .gca-diagram svg { display: block; width: 100%; min-width: 900px; height: auto; }
+    .gca-node text { font-family: var(--mono); }
+    .gca-edge { fill: none; stroke-width: 2.2; marker-end: url(#gca-flow-arrow); }
+    .gca-edge.invoke { stroke: var(--yellow); }
+    .gca-edge.complete { stroke: var(--green); stroke-dasharray: 7 5; }
+    .gca-edge.reject { stroke: var(--red); stroke-dasharray: 3 6; }
+    .gca-edge-label { fill: var(--muted); font: 10px var(--mono); text-anchor: middle; paint-order: stroke; stroke: var(--bg2); stroke-width: 5px; stroke-linejoin: round; }
+    .gca-lane-label { font: 800 10px var(--mono); letter-spacing: .08em; }
+    .gca-caption { fill: var(--muted); font: 11px var(--mono); }
+
+    .gca-legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 14px 18px 18px; border-top: 1px solid var(--border); background: var(--bg1); }
+    .gca-legend-title { grid-column: 1 / -1; margin-bottom: 2px; color: var(--fg0); font: 800 10px/1.3 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .gca-key { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; min-width: 0; color: var(--muted); font: 10px/1.45 var(--mono); }
+    .gca-key strong { display: block; color: var(--fg1); font-size: 10px; }
+    .gca-swatch { display: block; width: 26px; height: 14px; margin-top: 2px; }
+    .gca-swatch.neutral { border: 2px solid var(--ghost); background: var(--bg3); }
+    .gca-swatch.green { border: 2px solid var(--green); background: var(--green-bg); }
+    .gca-swatch.yellow { border: 2px solid var(--yellow); background: var(--yellow-bg); }
+    .gca-swatch.blue { border: 2px solid var(--blue); background: var(--blue-bg); }
+    .gca-swatch.invoke { height: 8px; border-top: 2px solid var(--yellow); }
+    .gca-swatch.complete { height: 8px; border-top: 2px dashed var(--green); }
+    .gca-swatch.reject { height: 8px; border-top: 2px dotted var(--red); }
+
+    .gca-table-wrap { overflow-x: auto; border: 1px solid var(--border); background: var(--bg2); }
+    table { width: 100%; min-width: 820px; border-collapse: collapse; font-size: 11px; line-height: 1.55; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { background: var(--bg3); color: var(--fg0); font: 800 10px/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    td { color: var(--muted); }
+    td:first-child { color: var(--fg0); font-family: var(--mono); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .gca-owner { color: var(--yellow); font-weight: 700; }
+    .gca-return { color: var(--green); font-weight: 700; }
+    .gca-boundary { color: var(--red); }
+
+    .gca-failure-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .gca-step { margin-bottom: 10px; color: var(--red); font: 800 10px/1 var(--mono); letter-spacing: .08em; }
+    .gca-acceptance { margin-top: 14px; padding: 18px; border: 1px solid var(--green); background: var(--green-bg); color: var(--fg0); font: 800 clamp(14px, 1.8vw, 20px)/1.55 var(--mono); text-align: center; }
+    .gca-ok { color: var(--green); }
+
+    @media (max-width: 1050px) {
+      body { padding: 0; }
+      .gca-page { border-left: 0; border-right: 0; }
+      .gca-hero { grid-template-columns: 1fr; padding: 38px 26px 32px; }
+      main { padding: 28px 18px 38px; }
+      .gca-summary, .gca-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .gca-failure-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 650px) {
+      .gca-terminal, .gca-status { grid-template-columns: 1fr auto; }
+      .gca-terminal-title { display: none; }
+      .gca-hero { padding: 32px 20px 28px; }
+      .gca-section-head, .gca-panel-title { display: block; }
+      .gca-panel-title span { display: block; }
+      .gca-section-kicker, .gca-panel-title span + span { margin-top: 8px; text-align: left; }
+      .gca-summary, .gca-failure-grid, .gca-legend { grid-template-columns: 1fr; }
+    }
+    @media print {
+      :root { --bg0: #fff; --bg1: #fff; --bg2: #fff; --bg3: #f1f1f1; --border: #bbb; --ghost: #777; --muted: #444; --fg0: #000; --fg1: #111; --red-bg: #fff; --green-bg: #fff; --yellow-bg: #fff; --blue-bg: #fff; }
+      body { padding: 0; background: #fff; color: #111; }
+      .gca-page { width: 100%; border: 0; box-shadow: none; }
+      .gca-jumpbar, .gca-command, .gca-terminal, .gca-status { display: none; }
+      main { padding: 20px; }
+      section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="gca-page">
+    <header>
+      <div class="gca-terminal">
+        <div class="gca-lights">● <span>●</span> <span>●</span></div>
+        <div class="gca-terminal-title">command-path — boundary review</div>
+        <div>reference architecture</div>
+      </div>
+      <div class="gca-command"><span class="gca-prompt">$</span><span class="gca-command-text">tool record add --name "ship-v1"</span></div>
+      <div class="gca-hero">
+        <div>
+          <div class="gca-eyebrow">Target behavior · one command · three owners</div>
+          <h1>A command crosses boundaries. Its concerns do not.</h1>
+          <p class="gca-lead">The CLI adapter translates process input, the domain service applies policy, and the storage backend persists state. Success and failure return through the same boundaries, with each owner translating only its own vocabulary.</p>
+        </div>
+        <div class="gca-meta">
+          <div class="gca-meta-card scope"><strong>Scope</strong>Reference architecture; no implementation-specific claim is implied.</div>
+          <div class="gca-meta-card rule"><strong>Governing rule</strong>Translate at each boundary; never leak a lower layer's representation.</div>
+          <div class="gca-meta-card success"><strong>Success contract</strong>Render one domain outcome and return exit code <code>0</code>.</div>
+          <div class="gca-meta-card failure"><strong>Failure contract</strong>Render one actionable error and return a documented non-zero exit code.</div>
+        </div>
+      </div>
+      <nav class="gca-jumpbar" aria-label="Page sections">
+        <a href="#owners">Owners</a><a href="#flow">Command flow</a><a href="#contract">Boundary contract</a><a href="#failure">Failure return</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="owners">
+        <div class="gca-section-head">
+          <div><h2>Three owners, one direction of dependency</h2><p class="gca-mono">Interface → policy → persistence</p></div>
+          <p class="gca-section-kicker">The domain contract is the seam; terminal and driver details stay outside it.</p>
+        </div>
+        <div class="gca-summary">
+          <article class="gca-card interface"><div class="gca-label">CLI adapter · interface</div><h3>Translate process input</h3><p>Parse <code>argv</code>, validate command shape, create a typed request, render the final response, and choose the exit code.</p></article>
+          <article class="gca-card policy"><div class="gca-label">Domain service · authority</div><h3>Decide what the command means</h3><p>Enforce invariants, authorize the use case, orchestrate dependencies, and return a domain outcome.</p></article>
+          <article class="gca-card persistence"><div class="gca-label">Storage backend · durable state</div><h3>Perform persistence</h3><p>Serialize data, execute the read or write, protect durability, and report backend failure without printing or exiting.</p></article>
+        </div>
+      </section>
+
+      <section id="flow">
+        <div class="gca-section-head">
+          <div><h2>How does the command travel?</h2><p class="gca-mono">Forward as intent; backward as an explicit result.</p></div>
+          <p class="gca-section-kicker">The red lane makes the failure return path visible.</p>
+        </div>
+        <div class="gca-panel">
+          <div class="gca-panel-title"><span>Shell invocation → adapter → service → backend</span><span>success and failure return through every owner</span></div>
+          <div class="gca-diagram">
+            <svg viewBox="0 0 1120 520" role="img" aria-labelledby="gca-flow-title gca-flow-desc">
+              <title id="gca-flow-title">Command flow through CLI, domain, and storage layers</title>
+              <desc id="gca-flow-desc">A shell invocation moves from left to right through the CLI adapter, domain service, and storage backend. A successful stored value returns through the domain service and adapter to exit zero. A storage failure returns through the same layers, where it becomes a domain failure, then a concise standard-error response and non-zero shell exit.</desc>
+              <defs>
+                <marker id="gca-flow-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/>
+                </marker>
+              </defs>
+
+              <text x="34" y="34" fill="#d8a657" class="gca-lane-label">REQUEST · LEFT TO RIGHT</text>
+
+              <g class="gca-node" transform="translate(34 64)">
+                <rect width="210" height="124" rx="9" fill="#32302f" stroke="#665c54" stroke-width="1.4"/>
+                <text x="105" y="34" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Shell invocation</text>
+                <text x="105" y="62" text-anchor="middle" fill="#a89984" font-size="10">argv · flags · environment</text>
+                <text x="105" y="84" text-anchor="middle" fill="#d8a657" font-size="10">tool record add</text>
+                <text x="105" y="105" text-anchor="middle" fill="#a89984" font-size="10">external caller</text>
+              </g>
+
+              <g class="gca-node" transform="translate(316 64)">
+                <rect width="210" height="124" rx="9" fill="#293126" stroke="#a9b665" stroke-width="1.4"/>
+                <text x="105" y="34" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">CLI adapter</text>
+                <text x="105" y="62" text-anchor="middle" fill="#a9b665" font-size="10">parse · validate shape</text>
+                <text x="105" y="84" text-anchor="middle" fill="#a9b665" font-size="10">render · choose exit code</text>
+                <text x="105" y="105" text-anchor="middle" fill="#a89984" font-size="10">owns process vocabulary</text>
+              </g>
+
+              <g class="gca-node" transform="translate(598 64)">
+                <rect width="210" height="124" rx="9" fill="#353025" stroke="#d8a657" stroke-width="1.4"/>
+                <text x="105" y="34" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Domain service</text>
+                <text x="105" y="62" text-anchor="middle" fill="#d8a657" font-size="10">policy · invariants</text>
+                <text x="105" y="84" text-anchor="middle" fill="#d8a657" font-size="10">orchestrate use case</text>
+                <text x="105" y="105" text-anchor="middle" fill="#a89984" font-size="10">owns domain vocabulary</text>
+              </g>
+
+              <g class="gca-node" transform="translate(880 64)">
+                <rect width="206" height="124" rx="9" fill="#253033" stroke="#7daea3" stroke-width="1.4"/>
+                <text x="103" y="34" text-anchor="middle" fill="#fbf1c7" font-size="15" font-weight="700">Storage backend</text>
+                <text x="103" y="62" text-anchor="middle" fill="#7daea3" font-size="10">serialize · query · persist</text>
+                <text x="103" y="84" text-anchor="middle" fill="#7daea3" font-size="10">protect durability</text>
+                <text x="103" y="105" text-anchor="middle" fill="#a89984" font-size="10">owns backend vocabulary</text>
+              </g>
+
+              <path class="gca-edge invoke" d="M244 126 H316"/>
+              <path class="gca-edge invoke" d="M526 126 H598"/>
+              <path class="gca-edge invoke" d="M808 126 H880"/>
+              <text x="280" y="112" class="gca-edge-label">argv</text>
+              <text x="562" y="112" class="gca-edge-label">typed request</text>
+              <text x="844" y="112" class="gca-edge-label">repository op</text>
+
+              <text x="34" y="240" fill="#a9b665" class="gca-lane-label">SUCCESS · RIGHT TO LEFT</text>
+              <path class="gca-edge complete" d="M983 188 C983 256 808 270 808 216 C808 205 797 198 786 198 H620 C608 198 598 205 598 216 C598 281 526 281 526 216 C526 205 515 198 504 198 H338 C326 198 316 205 316 216 C316 281 244 281 244 216 C244 205 233 198 221 198 H140 C127 198 122 217 132 225"/>
+              <text x="845" y="248" class="gca-edge-label">stored value</text>
+              <text x="562" y="263" class="gca-edge-label">domain outcome</text>
+              <text x="278" y="263" class="gca-edge-label">stdout + exit 0</text>
+
+              <text x="34" y="320" fill="#ea6962" class="gca-lane-label">FAILURE · RIGHT TO LEFT, TRANSLATED AT EACH BOUNDARY</text>
+
+              <g class="gca-node" transform="translate(880 345)">
+                <rect width="206" height="88" rx="9" fill="#3d2424" stroke="#ea6962" stroke-width="1.3" stroke-dasharray="6 5"/>
+                <text x="103" y="31" text-anchor="middle" fill="#fbf1c7" font-size="13" font-weight="700">StorageFailure</text>
+                <text x="103" y="55" text-anchor="middle" fill="#ea6962" font-size="10">kind · operation</text>
+                <text x="103" y="73" text-anchor="middle" fill="#a89984" font-size="10">no print · no exit</text>
+              </g>
+              <g class="gca-node" transform="translate(598 345)">
+                <rect width="210" height="88" rx="9" fill="#3d2424" stroke="#ea6962" stroke-width="1.3" stroke-dasharray="6 5"/>
+                <text x="105" y="31" text-anchor="middle" fill="#fbf1c7" font-size="13" font-weight="700">CommandFailure</text>
+                <text x="105" y="55" text-anchor="middle" fill="#ea6962" font-size="10">code · safe context</text>
+                <text x="105" y="73" text-anchor="middle" fill="#a89984" font-size="10">policy decides retry</text>
+              </g>
+              <g class="gca-node" transform="translate(316 345)">
+                <rect width="210" height="88" rx="9" fill="#3d2424" stroke="#ea6962" stroke-width="1.3" stroke-dasharray="6 5"/>
+                <text x="105" y="31" text-anchor="middle" fill="#fbf1c7" font-size="13" font-weight="700">CLI error response</text>
+                <text x="105" y="55" text-anchor="middle" fill="#ea6962" font-size="10">one stderr message</text>
+                <text x="105" y="73" text-anchor="middle" fill="#a89984" font-size="10">documented exit code</text>
+              </g>
+              <g class="gca-node" transform="translate(34 345)">
+                <rect width="210" height="88" rx="9" fill="#32302f" stroke="#665c54" stroke-width="1.3"/>
+                <text x="105" y="31" text-anchor="middle" fill="#fbf1c7" font-size="13" font-weight="700">Shell receives failure</text>
+                <text x="105" y="55" text-anchor="middle" fill="#ea6962" font-size="10">actionable message</text>
+                <text x="105" y="73" text-anchor="middle" fill="#a89984" font-size="10">non-zero exit</text>
+              </g>
+
+              <path class="gca-edge reject" d="M880 389 H808"/>
+              <path class="gca-edge reject" d="M598 389 H526"/>
+              <path class="gca-edge reject" d="M316 389 H244"/>
+              <text x="844" y="375" class="gca-edge-label">map</text>
+              <text x="562" y="375" class="gca-edge-label">present</text>
+              <text x="280" y="375" class="gca-edge-label">return</text>
+              <text x="560" y="492" text-anchor="middle" class="gca-caption">The lower layer reports. The middle layer interprets. The outer layer communicates.</text>
+            </svg>
+          </div>
+          <div class="gca-legend" aria-label="Command flow diagram legend">
+            <div class="gca-legend-title">Legend · node color is ownership; line style is direction and outcome</div>
+            <div class="gca-key"><span class="gca-swatch neutral" aria-hidden="true"></span><span><strong>Neutral · caller</strong>The shell starts and receives the process.</span></div>
+            <div class="gca-key"><span class="gca-swatch green" aria-hidden="true"></span><span><strong>Green · interface</strong>The CLI adapter owns process translation.</span></div>
+            <div class="gca-key"><span class="gca-swatch yellow" aria-hidden="true"></span><span><strong>Yellow · authority</strong>The domain service owns policy.</span></div>
+            <div class="gca-key"><span class="gca-swatch blue" aria-hidden="true"></span><span><strong>Blue · durable state</strong>The backend owns persistence details.</span></div>
+            <div class="gca-key"><span class="gca-swatch invoke" aria-hidden="true"></span><span><strong>Solid yellow · request</strong>Intent travels toward storage.</span></div>
+            <div class="gca-key"><span class="gca-swatch complete" aria-hidden="true"></span><span><strong>Dashed green · success</strong>A value returns toward the shell.</span></div>
+            <div class="gca-key"><span class="gca-swatch reject" aria-hidden="true"></span><span><strong>Dotted red · failure</strong>An error returns and changes vocabulary.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="contract">
+        <div class="gca-section-head">
+          <div><h2>Boundary contract</h2><p class="gca-mono">Every row answers: what belongs here, and what must stay out?</p></div>
+          <p class="gca-section-kicker">The conclusion is ownership, not a prescribed framework.</p>
+        </div>
+        <div class="gca-table-wrap">
+          <table>
+            <thead><tr><th>Layer</th><th>Accepts</th><th>Owns</th><th>Returns</th><th>Must not own</th></tr></thead>
+            <tbody>
+              <tr><td>CLI adapter</td><td><code>argv</code>, flags, environment</td><td class="gca-owner">Syntax, help, display, exit codes</td><td class="gca-return">Typed request or process response</td><td class="gca-boundary">Business policy or persistence</td></tr>
+              <tr><td>Domain service</td><td>Typed command request</td><td class="gca-owner">Use-case policy, orchestration, invariants</td><td class="gca-return">Domain outcome or domain failure</td><td class="gca-boundary">Terminal formatting or driver details</td></tr>
+              <tr><td>Storage backend</td><td>Repository operation</td><td class="gca-owner">Serialization, query, durability, backend retry</td><td class="gca-return">Stored value or storage failure</td><td class="gca-boundary">User messaging or business policy</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="failure">
+        <div class="gca-section-head">
+          <div><h2>The failure return path</h2><p class="gca-mono">A failure is data moving outward, not an exception escaping upward.</p></div>
+          <p class="gca-section-kicker">Diagnostic detail may be logged; public vocabulary stays stable.</p>
+        </div>
+        <div class="gca-failure-grid">
+          <article class="gca-card failure"><div class="gca-step">01 · REPORT</div><h3>Backend names the operation</h3><p>Return <code>StorageFailure(kind, operation)</code>. Do not print, terminate, or choose a user message.</p></article>
+          <article class="gca-card failure"><div class="gca-step">02 · INTERPRET</div><h3>Service applies policy</h3><p>Map storage vocabulary to <code>CommandFailure(code, context)</code> and decide whether retry is valid.</p></article>
+          <article class="gca-card failure"><div class="gca-step">03 · PRESENT</div><h3>Adapter communicates</h3><p>Map the domain failure to one concise stderr message and a documented non-zero exit code.</p></article>
+          <article class="gca-card failure"><div class="gca-step">04 · RETURN</div><h3>Shell observes the result</h3><p>The caller gets a stable process contract; backend exceptions and persistence details remain contained.</p></article>
+        </div>
+        <div class="gca-acceptance">Given a storage write failure, the shell receives one actionable message and a non-zero exit code—without storage details crossing the CLI boundary.</div>
+      </section>
+    </main>
+
+    <footer class="gca-status">
+      <div><span class="gca-ok">● contract explicit</span></div>
+      <div class="gca-terminal-title">translate at each boundary · return through every owner</div>
+      <div>mode: standalone</div>
+    </footer>
+  </div>
+</body>
+</html>

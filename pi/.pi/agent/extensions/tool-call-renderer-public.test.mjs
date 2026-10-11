@@ -88,7 +88,7 @@ try {
   const options = { expanded: false, isPartial: false };
   const CONNECTED = new Set(["subagent", "no_mistakes_axi"]);
   const NEVER_DELEGATE = new Set([...CONNECTED, "read", "write", "bash", "powershell", "python", "grep", "find", "ls", "ask_user_question", "quiz", "explain", "subagent_message", "hunk_review", "tuicr", "mcp__not_connected__search"]);
-  for (const name of [...NEVER_DELEGATE, "mcp__whatsapp__list_messages", "edit", "ask_question", "unknown"]) {
+  for (const name of [...NEVER_DELEGATE, "mcp__whatsapp__list_messages", "edit", "ask_question", "mcpScript", "unknown"]) {
     const ours = NEVER_DELEGATE.has(name) || name.startsWith("mcp__");
     let calls = 0;
     const renderer = resolver(name, () => { calls++; });
@@ -232,6 +232,25 @@ try {
   assert.match(pyTitle, /^ ◇ python — parse the session log for nested bash calls$/m, "a lifted python title rides the header row");
   assert.match(pyTitle, /├─ \$ {2}<hl:python>import json/, "the first code line after the comment becomes the $");
   assert.match(pyTitle, /│ {5}<hl:python>rows = /, "remaining code lines ride the spine");
+  const mcpScript = resolver("mcpScript", () => undefined);
+  const jsTitle = render(mcpScript.renderCall({ code: "// fan out the workspace searches and filter failures\nconst settled = await Promise.allSettled(calls)\nemit(settled)" }, theme, context("js-title", {}, quiet)));
+  assert.match(jsTitle, /^ ◇ mcpScript — fan out the workspace searches and filter failures$/m, "a lifted // title rides the mcpScript header row");
+  assert.match(jsTitle, /├─ \$ {2}<hl:javascript>const settled = /, "the first code line after the comment becomes the $, javascript-highlighted");
+  assert.match(jsTitle, /│ {5}<hl:javascript>emit\(settled\)/, "remaining script lines ride the spine");
+  const jsOptionsFirst = render(mcpScript.renderCall({ code: "// @options: {\"timeoutMs\": 60000}\n// find the mcp tools for slack search\nconst found = await tools.search({ query: \"slack\" })" }, theme, context("js-options-first", {}, quiet)));
+  assert.match(jsOptionsFirst, /^ ◇ mcpScript — find the mcp tools for slack search$/m, "an @options-first script still lifts the next // comment as title");
+  assert.ok(!jsOptionsFirst.includes("@options"), "the @options directive never renders as title or body");
+  assert.match(jsOptionsFirst, /└─ \$ {2}<hl:javascript>const found = /, "the code after the comment block takes the railed leaf");
+  const jsTitleFirst = render(mcpScript.renderCall({ code: "// batch the slack searches across three workspaces\n// @options: {\"max_output_tokens\": 10000}\nconst results = []" }, theme, context("js-title-first", {}, quiet)));
+  assert.match(jsTitleFirst, /^ ◇ mcpScript — batch the slack searches across three workspaces$/m, "the rule-following title-first order lifts");
+  assert.ok(!jsTitleFirst.includes("@options"), "the directive line between title and code disappears");
+  assert.match(jsTitleFirst, /└─ \$ {2}<hl:javascript>const results = \[\]/, "the code after the directive takes the leaf");
+  const jsLateComment = render(mcpScript.renderCall({ code: "const a = 1\n// not a title\nemit(a)" }, theme, context("js-late-comment", {}, quiet)));
+  assert.ok(!jsLateComment.includes("— "), "a // comment after the first code line never lifts");
+  assert.match(jsLateComment, /<hl:javascript>\/\/ not a title/, "late // comments stay body rows");
+  const jsCommentOnly = render(mcpScript.renderCall({ code: "// poll the mcp gateway status until tools respond" }, theme, context("js-comment-only", {}, quiet)));
+  assert.match(jsCommentOnly, /^ ◇ mcpScript — poll the mcp gateway status until tools respond$/m, "a comment-only script renders the title as the whole row");
+  assert.ok(!jsCommentOnly.includes("$"), "no $ leaf renders without executable text");
   const longTitle = `# ${"word ".repeat(30).trim()}`;
   const capped = render(bash.renderCall({ command: `${longTitle}\necho hi` }, theme, context("bash-cap", {}, quiet)));
   assert.ok(capped.includes("…"), "overlong titles truncate with an ellipsis");

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subagent rendering — color-accurate reference</title>
+<style>
+  :root{
+    --bg0:#282828; --bg1:#32302f; --bg2:#3c3836; --border:#504945;
+    --fg1:#ebdbb2; --muted:#928374; --ghost:#665c54;
+    --orange:#f28534; --green:#b8bb26; --red:#f2594b; --yellow:#fabd2f;
+    --widget-blue:#4da3ff; --icon-yellow:#d6b55e; --icon-red:#e06c75; --icon-dim:#808080;
+    --success-bg:#353d25; --error-bg:#3d1f1f;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg0); color:var(--fg1);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    font-size:14px; line-height:1.6; padding:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:32px 24px 64px}
+  h1{font-size:20px; font-weight:700; margin:0 0 4px; color:var(--fg1)}
+  .lede{color:var(--muted); margin:0 0 28px; font-size:13px}
+  h2{font-size:15px; font-weight:700; color:var(--orange); margin:36px 0 10px;
+     border-bottom:1px solid var(--border); padding-bottom:6px}
+  h3{font-size:13px; color:var(--fg1); margin:20px 0 8px; font-weight:700}
+  .term{
+    background:var(--bg0); color:var(--fg1);
+    font-family:inherit; font-size:13px; line-height:1.55;
+    padding:14px 16px; border-radius:6px; white-space:pre; overflow-x:auto;
+    margin:0; border:1px solid var(--border);
+  }
+  .term.success{background:var(--success-bg); border-color:#4a5230}
+  .term.fail{background:var(--error-bg); border-color:#5a2a2a}
+  .legend{border-collapse:collapse; width:100%; font-size:12.5px; margin:10px 0 6px}
+  .legend td,.legend th{padding:5px 8px; text-align:left; border-bottom:1px solid var(--border)}
+  .legend th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em}
+  .legend td{color:var(--fg1)}
+  .swatch{display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-1px; margin-right:6px; border:1px solid rgba(255,255,255,.08)}
+  .note{color:var(--muted); font-size:12.5px; margin:10px 0 0}
+  .note b{color:var(--fg1); font-weight:600}
+  .map{font-size:12.5px; color:var(--fg1)}
+  .map td{border-bottom:1px solid var(--border); padding:4px 8px}
+  .map .k{color:var(--orange)}
+  .notyet{background:var(--bg1); border:1px solid var(--border); border-radius:6px; padding:14px 16px; margin-top:10px}
+  .notyet .term{border:1px solid var(--border); background:var(--bg0)}
+  .pill{display:inline-block; padding:1px 7px; border-radius:9px; font-size:11px; font-weight:600; margin-left:6px}
+  .pill.raw{background:#1e3a5f; color:var(--widget-blue)}
+  .pill.theme{background:#3a2a1a; color:var(--orange)}
+  code{color:var(--fg1); background:var(--bg2); padding:1px 5px; border-radius:3px; font-size:12.5px}
+  .row-anat{color:var(--muted); font-size:12px; margin:8px 0 0}
+  .row-anat b{color:var(--fg1); font-weight:600}
+  a{color:var(--orange)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Subagent rendering — color-accurate reference</h1>
+<p class="lede">A faithful reproduction of how <b style="color:var(--fg1)">pi-interactive-subagents</b> (vendored fork + Herdr surface layer) currently renders in pi, on Gruvbox Material. Every color is the exact hex the extension emits — raw ANSI for the live widget (bypasses theme) or a theme token for the completion boxes. This is the current state we align on before prototyping tree-renderer integration.</p>
+
+<h2>Color legend <span class="pill raw">raw ANSI</span> <span class="pill theme">theme token</span></h2>
+<table class="legend">
+  <tr><th>Element</th><th>Source</th><th>Hex</th><th>Token / raw</th></tr>
+  <tr><td>Terminal bg</td><td>theme</td><td><span class="swatch" style="background:#282828"></span>#282828</td><td><code>bg0</code></td></tr>
+  <tr><td>Default text</td><td>theme</td><td><span class="swatch" style="background:#ebdbb2"></span>#ebdbb2</td><td><code>fg1</code></td></tr>
+  <tr><td><b>Widget border</b></td><td>raw ANSI</td><td><span class="swatch" style="background:#4da3ff"></span>#4da3ff</td><td><code>ACCENT</code> (non-theme blue)</td></tr>
+  <tr><td>Active / running icon ⟳</td><td>raw ANSI</td><td><span class="swatch" style="background:#d6b55e"></span>#d6b55e</td><td><code>ICON_YELLOW</code></td></tr>
+  <tr><td>Stalled icon ⟳</td><td>raw ANSI</td><td><span class="swatch" style="background:#e06c75"></span>#e06c75</td><td><code>ICON_RED</code></td></tr>
+  <tr><td>Waiting / starting icon ○</td><td>raw ANSI</td><td><span class="swatch" style="background:#808080"></span>#808080</td><td><code>ICON_DIM</code></td></tr>
+  <tr><td>Success icon ✓</td><td>theme</td><td><span class="swatch" style="background:#b8bb26"></span>#b8bb26</td><td><code>success</code> = greenBright</td></tr>
+  <tr><td>Failure icon ✗</td><td>theme</td><td><span class="swatch" style="background:#f2594b"></span>#f2594b</td><td><code>error</code> = red</td></tr>
+  <tr><td>Title (name)</td><td>theme</td><td><span class="swatch" style="background:#f28534"></span>#f28534</td><td><code>toolTitle</code> = orange (bold)</td></tr>
+  <tr><td>agent / model / — / duration</td><td>theme</td><td><span class="swatch" style="background:#665c54"></span>#665c54</td><td><code>dim</code> = ghost</td></tr>
+  <tr><td>Preview / follow-up text</td><td>theme</td><td><span class="swatch" style="background:#665c54"></span>#665c54</td><td><code>dim</code> = ghost</td></tr>
+  <tr><td>Overflow / "ctrl+o to expand"</td><td>theme</td><td><span class="swatch" style="background:#928374"></span>#928374</td><td><code>muted</code></td></tr>
+  <tr><td>Context gauge &gt;90%</td><td>theme</td><td><span class="swatch" style="background:#f2594b"></span>#f2594b</td><td><code>error</code></td></tr>
+  <tr><td>Context gauge &gt;70%</td><td>theme</td><td><span class="swatch" style="background:#fabd2f"></span>#fabd2f</td><td><code>warning</code> = yellowBright</td></tr>
+  <tr><td>Success box bg</td><td>theme</td><td><span class="swatch" style="background:#353d25"></span>#353d25</td><td><code>toolSuccessBg</code></td></tr>
+  <tr><td>Failure box bg</td><td>theme</td><td><span class="swatch" style="background:#3d1f1f"></span>#3d1f1f</td><td><code>toolErrorBg</code></td></tr>
+</table>
+<p class="note"><b>The mismatch that motivates this work:</b> the live widget draws its border in a non-theme blue (<code>#4da3ff</code>) and its icons in non-theme yellow/red/gray, while the completion box speaks the theme's token language. Neither uses the tree renderer's glyph vocabulary (<code>▸ ▹ ◆ ◇ ├─ └─ │</code>) at all.</p>
+
+<h2>1. Live status widget <span style="color:var(--muted);font-weight:400;font-size:12px">— placement: "aboveEditor"</span></h2>
+<p class="row-anat">Rendered by <code>renderSubagentWidgetLines</code> — a rounded box, one row per running subagent. Border + icons are <b>raw ANSI</b> (bypass theme); row text is default <code>fg1</code>. Three subagents in three states so every icon color is visible.</p>
+<pre class="term"><span style="color:#4da3ff">╭─ Subagents ─────────────────────────── 3 running ─╮</span>
+<span style="color:#4da3ff">│</span> <span style="color:#d6b55e">⟳</span> 00:23  scout (scout)              active · bash 7m <span style="color:#4da3ff">│</span>
+<span style="color:#4da3ff">│</span> <span style="color:#808080">○</span> 00:45  scout-2 (scout)            waiting 2m <span style="color:#4da3ff">│</span>
+<span style="color:#4da3ff">│</span> <span style="color:#e06c75">⟳</span> 01:12  researcher (researcher)    stalled 1m · wrong activity id <span style="color:#4da3ff">│</span>
+<span style="color:#4da3ff">╰───────────────────────────────────────────────────╯</span></pre>
+<p class="row-anat"><b>Row anatomy:</b> left <code> {icon} {MM:SS}  {name}{ (agent)} </code> · right <code>active · {scope} {dur}</code> / <code>waiting {dur} (done)</code> / <code>stalled {dur} · {label}</code> / <code>starting…</code>. Only the icon is colored.</p>
+<h3>Status → icon mapping (<code>widgetIcon</code>)</h3>
+<table class="map"><tr><td><span style="color:#d6b55e">⟳</span> active / running</td><td><code>#d6b55e</code> yellow</td></tr>
+<tr><td><span style="color:#e06c75">⟳</span> stalled</td><td><code>#e06c75</code> red</td></tr>
+<tr><td><span style="color:#808080">○</span> waiting / starting</td><td><code>#808080</code> dim gray</td></tr></table>
+
+<h2>2. Completion — success (collapsed)</h2>
+<p class="row-anat">Rendered by the <code>subagent_result</code> message renderer via <code>Box</code> with <code>toolSuccessBg</code>. Real captured output from the live demo (scout on <code>/tmp/demo-proj</code>). Collapsed: header + usage + 5-line preview + overflow + expand hint.</p>
+<pre class="term success"><span style="color:#b8bb26">✓</span> <span style="color:#f28534;font-weight:700">scout</span><span style="color:#665c54"> (scout)</span><span style="color:#665c54"> (accounts/fireworks/models/glm-5p3-flash)</span> <span style="color:#665c54">—</span> <span style="color:#665c54">3 tools · 43s</span>
+<span style="color:#665c54">↑4.3k ↓717 R5.8k $0.001</span>  <span style="color:#665c54">4.3k ctx</span>
+<span style="color:#665c54">## Files Found</span>
+<span style="color:#665c54">1. `/tmp/demo-proj/README.md` — Project description: budget calculator…</span>
+<span style="color:#665c54">2. `/tmp/demo-proj/budget.py` (11 lines) — Core module. Imports compute_tax…</span>
+<span style="color:#665c54">3. `/tmp/demo-proj/taxes.py` (4 lines) — leaf module; compute_tax = amount * rate.</span>
+<span style="color:#928374">… 28 more lines</span>
+<span style="color:#928374">ctrl+o to expand</span></pre>
+<p class="row-anat"><b>Lines:</b> header <code>✓</code> green · bold orange <b>name</b> · <code>(agent)</code> ghost · <code>(model)</code> ghost · <code>—</code> ghost · <code>N tools · dur</code> ghost — usage segments ghost, ctx color-coded — preview 5 lines ghost — overflow + hint muted.</p>
+
+<h2>3. Completion — success (expanded)</h2>
+<p class="row-anat">Same box, expanded: full summary in default <code>fg1</code> (brighter than the dim preview), plus follow-up handle + session file.</p>
+<pre class="term success"><span style="color:#b8bb26">✓</span> <span style="color:#f28534;font-weight:700">scout</span><span style="color:#665c54"> (scout)</span><span style="color:#665c54"> (accounts/fireworks/models/glm-5p3-flash)</span> <span style="color:#665c54">—</span> <span style="color:#665c54">3 tools · 43s</span>
+<span style="color:#665c54">↑4.3k ↓717 R5.8k $0.001</span>  <span style="color:#665c54">4.3k ctx</span>
+<span style="color:#ebdbb2">## Files Found</span>
+<span style="color:#ebdbb2">1. `/tmp/demo-proj/README.md` — Project description: budget calculator; run via `python main.py`…</span>
+<span style="color:#ebdbb2">2. `/tmp/demo-proj/budget.py` (11 lines) — Core module. Imports compute_tax from taxes.</span>
+<span style="color:#ebdbb2">   - `line_total(price, qty)` → `price * qty`</span>
+<span style="color:#ebdbb2">   - `grand_total(lines, tax_rate)` → pre * tax_rate  ← BUG</span>
+<span style="color:#ebdbb2">3. `/tmp/demo-proj/taxes.py` (4 lines) — leaf module; compute_tax(amount, rate) = amount * rate.</span>
+<span style="color:#ebdbb2">…</span>
+<span style="color:#665c54">Follow up:  subagent_message({ name: "scout", message: "…" })</span>
+<span style="color:#928374">Session file: /home/avirus/.pi/agent/sessions/--tmp--/2026-…scout….jsonl</span></pre>
+<p class="row-anat"><b>Expanded-only:</b> full summary in default <code>fg1</code> (brightness, not color, distinguishes preview vs full) · <code>Follow up:</code> ghost · <code>Session file:</code> muted.</p>
+
+<h2>4. Completion — failure (collapsed)</h2>
+<p class="row-anat"><code>toolErrorBg</code> background, <code>✗</code> in <code>error</code> red, reason in <code>error</code> red. Context gauge here shows <code>96.2%/128k</code> in <code>warning</code> yellow (&gt;70%).</p>
+<pre class="term fail"><span style="color:#f2594b">✗</span> <span style="color:#f28534;font-weight:700">worker</span><span style="color:#665c54"> (worker)</span><span style="color:#665c54"> (accounts/fireworks/models/glm-5p3-flash)</span> <span style="color:#665c54">—</span> <span style="color:#f2594b">failed (provider/agent error)</span> <span style="color:#665c54">· 1m 12s</span>
+<span style="color:#665c54">↑8.1k ↓1.2k R0 $0.004</span>  <span style="color:#fabd2f">96.2%/128k</span>
+<span style="color:#665c54">Error: upstream rate limit exceeded (auto-retry exhausted).</span>
+<span style="color:#928374">ctrl+o to expand</span></pre>
+
+<h2>What this is NOT yet</h2>
+<div class="notyet">
+<p class="row-anat" style="margin-top:0">Neither surface uses the tree renderer's vocabulary. The captain's tree renderer (<code>tool-call-renderer.ts</code>) speaks a different glyph language:</p>
+<pre class="term"> <span style="color:#665c54">└─</span> <span style="color:#665c54">▸</span> <span style="color:#ebdbb2;font-weight:700">Thinking</span>                       <span style="color:#665c54">▸</span> muted = done, <span style="color:#f28534">▹</span> accent = working, <span style="color:#f2594b">×</span> error = failed
+    <span style="color:#504945">├─</span> <span style="color:#665c54">•</span> <span style="color:#665c54">let me look at the project</span>     <span style="color:#665c54">•</span> muted bullet, <span style="color:#504945">borderMuted</span> connector
+    <span style="color:#504945">└─</span> <span style="color:#b8bb26">◆</span> <span style="color:#ebdbb2">2 reads · loaded</span>               <span style="color:#b8bb26">◆</span> success, <span style="color:#f28534">◇</span> accent pending, <span style="color:#f2594b">×</span> error</pre>
+<p class="row-anat" style="margin-bottom:0">The subagent widget is a <b>rounded box with raw-ANSI blue borders</b>; the completion is a <b>flat bg box with ✓/✗</b>. They sit beside, but visually disconnected from, the parent's tree trace. The next step (once this reference is approved) is three prototypes that re-express subagent lifecycle in the tree renderer's <code>▸ ▹ ◆ ◇ ├─ └─ │</code> language and theme tokens.</p>
+</div>
+
+</div>
+</body>
+</html>

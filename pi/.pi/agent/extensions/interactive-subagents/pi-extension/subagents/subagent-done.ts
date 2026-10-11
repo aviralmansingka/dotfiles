@@ -48,6 +48,24 @@ export function runningChildrenCount(): number {
   }
 }
 
+/**
+ * Count of in-process external waits that will steer future turns into this
+ * session. Extensions that host an async source of steered input (e.g. the
+ * tuicr extension's comment watcher, used by the tuicr-review agent) publish
+ * a live count function under this symbol; `agent_end` keeps the session open
+ * while any count is positive, exactly like running children.
+ */
+export function externalWaitCount(): number {
+  const fn = (globalThis as any)[Symbol.for("pi-subagents/keep-open-count")];
+  if (typeof fn !== "function") return 0;
+  try {
+    const n = fn();
+    return typeof n === "number" && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function shouldAutoExitOnAgentEnd(
   _userTookOver: boolean,
   messages: any[] | undefined,
@@ -158,12 +176,16 @@ export default function (pi: ExtensionAPI) {
     //  - runningChildrenCount(): this subagent spawned its own children and is
     //    waiting for their results (delivered as steered turns). Exiting now
     //    would strand those children and drop their results.
+    //  - externalWaitCount(): an in-process watcher (e.g. the tuicr comment
+    //    watcher) will steer future turns in. Exiting now would orphan it.
     // In both cases the session parks as `waiting` and resumes when the next
     // turn lands.
     const hasPendingChildren = runningChildrenCount() > 0;
+    const hasExternalWaits = externalWaitCount() > 0;
     const shouldExit =
       !awaitingAnswer &&
       !hasPendingChildren &&
+      !hasExternalWaits &&
       autoExit &&
       shouldAutoExitOnAgentEnd(userTookOver, messages);
 

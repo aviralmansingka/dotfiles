@@ -65,11 +65,11 @@ fence in the reply verbatim. Do not edit it.
 Keep diagrams small. A diagram that needs scrolling carries too many nodes —
 split the answer instead.
 
-## Shell and python call titles
+## Shell, python, and mcpScript call titles
 
-Open every `bash` command and every `python` script with one comment line
-that states the intent of the call. The row header shows it as the call
-title, next to the tool name.
+Open every `bash` command, every `python` script, and every `mcpScript`
+script with one comment line that states the intent of the call. The row
+header shows it as the call title, next to the tool name.
 
 ```text
 bash example:
@@ -79,6 +79,10 @@ git diff --name-only main...HEAD
 python example:
 # parse the session log for nested bash calls
 rows = [json.loads(line) for line in open(path)]
+
+mcpScript example:
+// fan out the workspace searches and filter failures
+const settled = await Promise.allSettled(calls)
 ```
 
 Rules:
@@ -89,6 +93,10 @@ Rules:
 - Do not end the comment with a period.
 - Use one comment line. Do not write a comment block.
 - A `#` comment after the first code line stays a normal comment, not a
+  title.
+- `mcpScript` scripts use a `//` comment, not `#`. The `// @options:`
+  directive line comes after the title comment, never before it.
+- A `//` comment after the first code line stays a normal comment, not a
   title.
 - `powershell` calls take no title comment.
 
@@ -102,3 +110,12 @@ command.
 - A blocked `bash` call means: send the same code with the `python` tool.
 - Run an existing script file (`python3 script.py`) in `bash` only when the
   script is the deliverable. Do not use it for inline data work.
+
+## Edit tool paths
+
+Send the edit tool's `path` relative to the session cwd, the same way
+read calls do. Stored calls, result text, and downstream consumers then
+carry the short, worktree-stable form.
+
+- Send `path=src/main.rs`, not `path=/home/user/worktrees/fix-x/src/main.rs`.
+- Keep the absolute form only when the file lies outside the session cwd.
