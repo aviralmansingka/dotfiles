@@ -53,7 +53,7 @@ declare -A SENTINEL=(
   [aerospace]=".aerospace.toml" [gh-dash]=".config/gh-dash"
   [tuicr]=".config/tuicr"
   [agents]=".agents" [pi]="bin" [herdr]=".config/herdr"
-  [omarchy]=".config/omarchy" [systemd]=".config/systemd"
+  [systemd]=".config/systemd"
   [git]=".config/git"
 )
 
@@ -82,9 +82,6 @@ gate_plan() {
       launchd)
         if [ "$(uname -s)" = "Darwin" ]; then echo "RUN $pkg $flags"
         else echo "SKIP $pkg macOS-only (Darwin guard)"; fi ;;
-      omarchy)
-        if PATH=/usr/bin:/bin command -v omarchy >/dev/null 2>&1; then echo "RUN $pkg $flags"
-        else echo "SKIP $pkg omarchy absent"; fi ;;
       systemd)
         if PATH=/usr/bin:/bin command -v systemctl >/dev/null 2>&1; then echo "RUN $pkg $flags"
         else echo "SKIP $pkg systemctl absent"; fi ;;
@@ -344,7 +341,6 @@ phase_guards() {
   grep -E 'gh extension install' "$INSTALL" | grep -q '|| true' \
     && pass "guards/gh-extension-soft-fail" "gh extension install has || true" \
     || fail "guards/gh-extension-soft-fail" "gh extension install lacks || true"
-  guard_line 'stow .* omarchy$' 'command -v omarchy'
   guard_line 'herdr integration install codex' 'command -v codex'
   guard_line 'stow .* launchd$' 'uname -s.*Darwin'
   guard_line 'stow .* systemd$' 'command -v systemctl'
@@ -352,10 +348,10 @@ phase_guards() {
   grep -E 'install-nm-herdr-bridge' "$INSTALL" | grep -q '||' \
     && pass "guards/nm-bridge-fallback" "nm bridge install keeps its || fallback" \
     || fail "guards/nm-bridge-fallback" "nm bridge install lost its || fallback"
-  # Dynamic: with brew/gh/omarchy/herdr/codex absent from a controlled PATH,
+  # Dynamic: with brew/gh/herdr/codex absent from a controlled PATH,
   # the guarded snippets must skip and never abort under set -e.
   local t absent=()
-  for t in brew gh omarchy herdr codex; do
+  for t in brew gh herdr codex; do
     if PATH=/usr/bin:/bin command -v "$t" >/dev/null 2>&1; then
       skip "guards/dynamic-$t" "$t visible on controlled PATH; absence not testable here"
     else absent+=("$t"); fi
@@ -367,7 +363,6 @@ phase_guards() {
     D="$1"
     if command -v herdr >/dev/null 2>&1; then herdr integration install pi; fi
     if command -v gh >/dev/null 2>&1; then gh extension install dlvhdr/gh-dash 2>/dev/null || true; fi
-    if command -v omarchy >/dev/null 2>&1; then stow -d "$D" -t "$HOME" omarchy; fi
     if command -v codex >/dev/null 2>&1; then herdr integration install codex; fi
   ' _ "$REPO" 2>&1); local rc=$?
   if [ "$rc" -eq 0 ]; then

@@ -97,7 +97,7 @@ return {
         component_separators = { left = "󰿟", right = "󰿢" },
         section_separators = { left = "", right = "" },
         globalstatus = true,
-        disabled_filetypes = { statusline = { "dashboard", "alpha" } },
+        disabled_filetypes = { statusline = { "dashboard" } },
       },
       sections = {
         lualine_a = {
@@ -186,7 +186,7 @@ return {
         lualine_y = {},
         lualine_z = {},
       },
-      extensions = { "lazy", "mason", "oil" },
+      extensions = { "lazy", "mason" },
     })
   end,
 }

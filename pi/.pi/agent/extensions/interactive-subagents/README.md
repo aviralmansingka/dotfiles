@@ -90,6 +90,7 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | **professor** | session default | lesson tools, mermaid diagrams, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
 | **tuicr-review** | session default | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
 | **nm-orchestrator** | session default | `no_mistakes_axi`, `read` | no-mistakes run orchestrator; drives one pipeline run through its gates and returns the run summary |
+| **research-orchestrator** | session default | `read`, `write`, `edit`, `grep`, `find`, `ls`, `bash`, `web_fetch` + spawning | Maps research nodes and sends each one to a researcher |
 
 Bundled agents inherit the session model (no `model:` pin in their
 frontmatter); each agent's `thinking:` level still applies on top of the

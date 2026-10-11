@@ -15,7 +15,7 @@ This is a dotfiles repository that manages development environment configuration
 
 # Manual installation with stow
 brew bundle                    # Install dependencies from Brewfile
-stow nvim tmux zsh ghostty git kube tmuxinator agents pi
+stow nvim tmux zsh starship ghostty aerospace gh-dash tuicr git agents pi herdr
 
 # macOS: deploy user LaunchAgents
 stow launchd
@@ -42,11 +42,11 @@ stow systemd      # Deploy systemd user units (Linux)
 
 ### Plugin Management
 ```bash
-# Tmux plugins (after tmux config is stowed)
-~/.tmux/plugins/tpm/bin/install_plugins
+# Tmux plugins (after tmux config is stowed; TPM self-bootstraps from .tmux.conf)
+~/.local/share/tmux/plugins/tpm/bin/install_plugins
 
 # Zsh plugins (handled automatically by install.sh)
-# Oh My Zsh + Powerlevel10k + autosuggestions + syntax highlighting
+# Oh My Zsh + autosuggestions + syntax highlighting (Starship is the prompt)
 ```
 
 ## Architecture
@@ -65,26 +65,24 @@ See the authoritative package inventory in [README.md](README.md#stow-packages).
 ### Key Configuration Patterns
 
 **Zsh Configuration:**
-- Powerlevel10k theme with instant prompt
-- Extensive Kubernetes aliases (k, kgp, kgs, etc.)
-- Python virtual environment integration via pyenv
+- Starship prompt
+- uv-based Python workflows (`inv` alias runs `uv run inv`)
 - Development tools in PATH (Go, Rust, Node, Java)
 
 **Tmux Configuration:**
-- Catppuccin theme (macchiato)
+- Gruvbox Material theme
 - Custom prefix: Ctrl-A
 - Vim-style pane navigation (h/j/k/l)
 - Plugin ecosystem via TPM
 
 **Neovim (LazyVim):**
 - LazyVim distribution with extensive plugins
-- AI coding assistance (Avante plugin)
 - Language support for Python, Golang, Lua, Markdown
 - Session persistence and project management
 
 ### Development Dependencies
 
-**Languages:** Go, Rust, Node.js, Python (via pyenv), Lua
+**Languages:** Go, Rust, Node.js, Python (via uv), Lua
 **Cloud Tools:** AWS CLI, kubectl, kubectx, k9s, Docker
 **Terminal Tools:** fd, fzf, ripgrep, eza, lazygit, tig
 **Fonts:** JetBrains Mono, Meslo LG, Fira Code (Nerd Font variants)
@@ -94,7 +92,6 @@ See the authoritative package inventory in [README.md](README.md#stow-packages).
 ### Packer (`ops/packer/`)
 Builds Ubuntu 24.04 development AMIs with a multi-phase provisioning pipeline:
 1. System packages → Rust toolchain → CLI tools → Dotfiles deployment → Shell plugins → Cleanup
-2. Includes a validation script that checks 20+ tools post-build
 
 ### Terraform (`ops/terraform/`)
 Manages AWS infrastructure for the devbox:
@@ -102,22 +99,15 @@ Manages AWS infrastructure for the devbox:
 - IAM roles, security groups, DNS, GitHub OIDC integration
 
 ### CI/CD Workflows (`.github/workflows/`)
-- **CI** (`ci.yml`) - Fast, deterministic gate on every PR/push to `main`: shell/python/lua syntax checks, Pi extension unit tests (`*.test.mjs`), and `scripts/test-auto-git-sync.sh`. Covers the surfaces an agent touches without bootstrapping plugins or infra.
-- **Packer** (`packer.yml`) - Triggers on every PR/push to `main` so the "Packer Result" job always reports. Heavy AMI build/validate jobs are path-gated via the `detect-changes` job (`if: packer_changed == 'true'`, matching `ops/packer/**` and `dependencies.json`), so non-infra PRs only run two cheap jobs with no AWS work. `workflow_dispatch` stays ungated.
-- **Terraform** (`terraform.yml`) - Plans on PR, applies on push to `main` (when `ops/terraform/**` changes)
+- **CI** (`ci.yml`) - Fast, deterministic gate on every PR/push to `main`: glob-discovered test suites (`scripts/test-*`, `pi/.pi/agent/extensions/**/*.test.mjs`, `pi/bin` python tests) with tier-2 live-env exclusions. Covers the surfaces an agent touches without bootstrapping plugins or infra.
+- **Terraform** (`terraform.yml`) - Plans on PR, applies on push to `main` (when `ops/terraform/**` changes). The Packer AMI workflow was removed; build AMIs manually via `ops/packer/`.
 
 ## Dependency Management
 
 ### Centralized Package Configuration
-All dependencies are managed centrally in `dependencies.json`:
-
-```yaml
-categories:
-  core: [git, curl, zsh, tmux, neovim, stow]
-  development: [gcc, make, build-essential]
-  languages: [golang, python3, nodejs, rust]
-  tools: [fd, ripgrep, fzf, lazygit]
-```
+All dependencies are managed centrally in `dependencies.json`: it maps each tool to its
+Homebrew formula or cask and, where needed, to OS-specific install commands for Ubuntu and
+Alpine.
 
 ### Generating Platform-Specific Files
 ```bash
@@ -125,11 +115,6 @@ categories:
 python3 scripts/install_deps.py --os macos --format brewfile > Brewfile
 # Or use the convenience script:
 ./scripts/generate-brewfile.sh
-
-# Generate Dockerfile commands
-python3 scripts/install_deps.py --os ubuntu --format dockerfile
-python3 scripts/install_deps.py --os centos --format dockerfile
-python3 scripts/install_deps.py --os alpine --format dockerfile
 ```
 
 ## Working with This Repository
@@ -162,7 +147,7 @@ tmux source-file ~/.tmux.conf
 ```
 
 ### Cross-Platform Considerations
-- Install script supports macOS, RHEL/CentOS, Ubuntu
+- Install script targets macOS+Homebrew; the Ubuntu devbox is provisioned by `ops/packer/`
 - Homebrew works on both macOS and Linux
 - Configuration files are platform-agnostic where possible
 

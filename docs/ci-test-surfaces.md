@@ -190,7 +190,7 @@ renderer PR):
 - `verify-nvim` live routes, `test-osc52.sh`, `test-pi-hidden-thinking-render.py`
   (PTY/pyte), `test-sidekick-view-focus.lua` if it needs live tmux.
 - Live verifiers: `verify-no-mistakes-installation/live`, `verify-pi-image-drop`,
-  `verify-pi-no-mistakes-activity`, `verify-pi-transcript-links` (pins installed pi).
+  `verify-pi-no-mistakes-activity` (pins installed pi).
 - Terraform `plan` (creds + network), path-gated as today.
 - Pinned-version freshness (no-mistakes VERSION/SHA vs upstream) — scheduled,
   non-blocking.
@@ -205,11 +205,7 @@ renderer PR):
 2. **`usage.test.mjs` replicates the width formula** instead of importing `usage.ts`
    — rewrite to exercise the real function (#190 anti-pattern: test passes while the
    implementation regresses).
-3. **Delete orphans:** `scripts/fixtures/pi-work-step-ui-provider.ts`,
-   `fixtures/pi-work-step-ui-t22-v02/**`, `goldens/pi-work-step-ui-t22-v02/**`
-   (consumer deleted in #235); `scripts/verifiers/pi-transcript-links-v01/v02`
-   (rev-parse the deleted `transcript-scroll.ts`).
-4. **Fragile harnesses to harden:** `shouldCloseSubagentTab` is tested by
+3. **Fragile harnesses to harden:** `shouldCloseSubagentTab` is tested by
    string-splitting `index.ts` + `jiti.evalModule` (breaks on marker rename) —
    extract a pure module or make `index.ts` jiti-loadable; shutdown scenarios depend
    on module-level registry state leaking between scenarios (order-dependent);

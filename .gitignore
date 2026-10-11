@@ -1,5 +1,6 @@
 .git
 .envrc
+.DS_Store
 .todos/
 .tmp/
 nvim/.config/github-copilot/
@@ -7,23 +8,6 @@ __pycache__/
 pi/.pi/agent/extensions/tool-call-renderer-thinking-prototype.html
 
 git/.config/lazygit/state.yml
-
-aws/.aws/cli
-aws/.aws/credentials
-
-gradle/.gradle/.tmp
-gradle/.gradle/build-scan-data
-gradle/.gradle/caches
-gradle/.gradle/daemon
-gradle/.gradle/dependency-check-data
-gradle/.gradle/jdks
-gradle/.gradle/native
-gradle/.gradle/notifications
-gradle/.gradle/undefined-build
-gradle/.gradle/workers
-gradle/.gradle/wrapper
-
-kube/.config/k9s/config.yml
 
 Brewfile.lock.json
 
@@ -34,7 +18,6 @@ ops/terraform/terraform.tfstate*
 .td-root
 .nvimlog
 test-results/
-artifacts/pi-transcript-links/
 
 # Historical scratch feedback is archived in docs/professor-feedback.md.
 /professor_feedback.md

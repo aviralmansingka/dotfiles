@@ -84,49 +84,6 @@ class DependencyProcessor:
 
         return regular_packages, unavailable_packages, special_installations
 
-    def generate_dockerfile(self, os_name: str) -> str:
-        """Generate Dockerfile commands for the specified OS."""
-        regular_packages, unavailable, special = self.generate_package_list(os_name)
-
-        lines = []
-        lines.append(f"# Dependencies for {os_name}")
-        lines.append("")
-
-        if os_name == "ubuntu":
-            lines.append("RUN apt-get update && apt-get install -y \\")
-            for package in regular_packages[:-1]:
-                lines.append(f"    {package} \\")
-            if regular_packages:
-                lines.append(f"    {regular_packages[-1]} \\")
-            lines.append("    && apt-get clean && rm -rf /var/lib/apt/lists/*")
-
-        elif os_name == "alpine":
-            lines.append("RUN apk add --no-cache \\")
-            for package in regular_packages[:-1]:
-                lines.append(f"    {package} \\")
-            if regular_packages:
-                lines.append(f"    {regular_packages[-1]}")
-
-        else:
-            raise ValueError(f"Unsupported OS: {os_name}")
-
-        # Add special installations
-        if special:
-            lines.append("")
-            lines.append("# Special installations")
-            for package, command in special.items():
-                lines.append(f"# Install {package}")
-                lines.append(f"RUN {command}")
-
-        # Add note about unavailable packages
-        if unavailable:
-            lines.append("")
-            lines.append(f"# Note: The following packages are not available on {os_name}:")
-            for package in unavailable:
-                lines.append(f"# - {package}")
-
-        return "\n".join(lines)
-
     def generate_brewfile(self) -> str:
         """Generate Brewfile content."""
         lines = []
@@ -197,11 +154,11 @@ class DependencyProcessor:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Process dependencies.yml for different platforms")
+    parser = argparse.ArgumentParser(description="Process dependencies.json for different platforms")
     parser.add_argument("--os", required=True, choices=["ubuntu", "alpine", "macos"],
                        help="Target operating system")
     parser.add_argument("--format", required=True,
-                       choices=["dockerfile", "brewfile", "script", "list"],
+                       choices=["brewfile", "script", "list"],
                        help="Output format")
     parser.add_argument("--deps-file", default="dependencies.json",
                        help="Path to dependencies.json file")
@@ -211,13 +168,7 @@ def main():
     try:
         processor = DependencyProcessor(args.deps_file)
 
-        if args.format == "dockerfile":
-            if args.os == "macos":
-                print("Error: Dockerfile format not supported for macOS", file=sys.stderr)
-                sys.exit(1)
-            print(processor.generate_dockerfile(args.os))
-
-        elif args.format == "brewfile":
+        if args.format == "brewfile":
             print(processor.generate_brewfile())
 
         elif args.format == "script":

@@ -14,5 +14,5 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 
-echo "==> Installing TPM (Tmux Plugin Manager)"
-git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+# TPM is not cloned here: .tmux.conf self-bootstraps it into
+# ~/.local/share/tmux/plugins (TMUX_PLUGIN_MANAGER_PATH) on first load.

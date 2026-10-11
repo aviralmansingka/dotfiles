@@ -21,7 +21,7 @@
 [pull]
 	rebase = true
 [init]
-	defaultBranch = develop
+	defaultBranch = main
 # credential.helper is deliberately not set in this tracked config:
 # osxkeychain exists only on macOS, and Homebrew/Apple git already default
 # to it in their system gitconfig. Set a host-specific helper in the

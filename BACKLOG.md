@@ -10,8 +10,6 @@ I would solve problems at work.
 - [ ] Checkbox symbol misaligned
   - The checkbox symbols are not aligned in JetBrains font. Need to figure out why
   - [ ]  <- Example
-- [ ] Finding TODOs
-  - After the upgrade away from telescope this functionality appears to be broken
 - [ ] Slow DAP
   - Switching buffers
 - [ ] Snacks picker
@@ -21,10 +19,6 @@ I would solve problems at work.
 - [ ] Lazy border should be rounded
 
 ## Configuration
-
-### Collaborating features
-
-- [ ] Do a full PR review in `octo.nvim`
 
 ### Language features
 
@@ -67,7 +61,6 @@ I would solve problems at work.
 
 - Better task management
   - I want a shortcut to add a journal entry (in addition to journal today)
-  - I want to be able to search todos
 - Better todos
   - If a line ends with a `-`, and I hit enter, I want it to be a sub-bullet
   - Complete parent item causes child to be complete
@@ -92,8 +85,3 @@ I would solve problems at work.
   - When complete, I want it to go to the right section of my weekly summary
     with the timestamp
 
-### Neovide
-
-- There is some issue with the clipboard
-- copy-paste
-- colors are still weird

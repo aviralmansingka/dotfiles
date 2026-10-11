@@ -3,15 +3,14 @@
 Development environment configuration for macOS and AWS devbox (Ubuntu), managed with [GNU Stow](https://www.gnu.org/software/stow/).
 
 - **ghostty** - GPU-accelerated terminal emulator
-- **zsh** - Shell with Oh My Zsh, Powerlevel10k, and plugins
-- **tmux** - Terminal multiplexer with Catppuccin theme and TPM
-- **neovim** - LazyVim distribution with AI coding assistance
+- **zsh** - Shell with Oh My Zsh, autosuggestions, and syntax highlighting
+- **tmux** - Terminal multiplexer with Gruvbox Material theme and TPM
+- **neovim** - LazyVim distribution
 - **aerospace** - Tiling window manager for macOS
 - **starship** - Cross-shell prompt
 - **herdr** - Agent-aware terminal multiplexer used by Neovim Sidekick
 - **gh-dash** - GitHub dashboard with Herdr pull-request worktree integration
 - **tuicr** - Vim-first terminal code review with agent-aware sessions
-- **omarchy** - User theme overrides for Omarchy/Hyprland
 
 ## Setup
 
@@ -37,19 +36,13 @@ For manual package and configuration deployment (excluding installer-managed int
 brew bundle
 gh extension install dlvhdr/gh-dash
 ./scripts/pi-settings-sync
-stow nvim tmux zsh ghostty git starship gh-dash tuicr agents pi herdr launchd
+stow nvim tmux zsh ghostty aerospace git starship gh-dash tuicr agents pi herdr launchd
 ```
 
 On Linux (systemd) systems, deploy the user services with:
 
 ```sh
 stow systemd
-```
-
-On Omarchy systems, deploy the user Omarchy theme overrides with:
-
-```sh
-stow omarchy
 ```
 
 For a minimal stow deployment without agent configuration, omit `agents` and `pi`.
@@ -90,24 +83,18 @@ terraform -chdir=ops/devbox destroy \
 | ------------ | --------------------------------------------------------------------------- |
 | `aerospace`  | AeroSpace tiling window manager                                             |
 | `agents`     | Shared agent skills                                                         |
-| `blinksh`    | Blink Shell (iOS terminal) config                                           |
 | `claude`     | Claude AI context files                                                     |
-| `code`       | Code snippets (Golang, Lua)                                                 |
 | `ghostty`    | Ghostty terminal emulator                                                   |
 | `gh-dash`    | GitHub dashboard config and PR worktree launcher                            |
 | `herdr`      | Agent workspaces, notifications, and sound configuration                    |
 | `git`        | Git configuration                                                           |
-| `kube`       | Kubernetes configuration                                                    |
 | `launchd`    | macOS user LaunchAgents (vault and dotfiles auto-sync)                      |
-| `neovide`    | Neovide (Neovim GUI) config                                                 |
 | `nvim`       | Neovim with LazyVim                                                         |
-| `omarchy`    | User Omarchy theme overrides                                                |
 | `starship`   | Starship prompt                                                             |
 | `systemd`    | User systemd units (vault/dotfiles auto-sync, Pi/WhatsApp/Telegram bridges, flight check-in reminders) |
 | `pi`         | Pi agent config, packages, themes, and messaging daemons                    |
 | `terminfo`   | Custom terminfo entries                                                     |
 | `tmux`       | Tmux configuration                                                          |
-| `tmuxinator` | Tmuxinator session templates                                                |
 | `tuicr`      | Terminal pull-request review configuration                                  |
 | `zsh`        | Zsh shell configuration                                                     |
 
@@ -296,7 +283,8 @@ AMIs and cloud infrastructure are managed in `ops/`:
 - **Terraform** (`ops/terraform/`) - Manages shared AWS infrastructure (IAM, DNS, GitHub OIDC)
 - **Devbox** (`ops/devbox/`) - Manages the devbox EC2 instance
 
-CI/CD workflows automatically build AMIs and apply infrastructure changes on push to `main`.
+CI runs the offline test gate on every PR and push to `main`; Terraform plans on PRs and applies
+on push. Packer AMIs are built manually — the AMI CI pipeline was removed.
 
 ## LICENSE
 

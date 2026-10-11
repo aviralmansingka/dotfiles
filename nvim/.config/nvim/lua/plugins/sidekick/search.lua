@@ -1,5 +1,4 @@
 -- nvim/.config/nvim/lua/plugins/sidekick/search.lua
-local internal = require("plugins.sidekick.internal")
 local registry = require("plugins.sidekick.registry")
 local herdr = require("plugins.sidekick.herdr")
 
@@ -28,33 +27,6 @@ function M.snapshot()
     end
   end
   return dir, count
-end
-
-function M.grep()
-  if vim.fn.executable("rg") ~= 1 then
-    vim.notify("Sidekick: ripgrep (rg) is required for search. Install with: brew install ripgrep", vim.log.levels.ERROR)
-    return
-  end
-  registry.rehydrate()
-  local dir, count = M.snapshot()
-  if count == 0 then
-    vim.notify("Sidekick: no named sessions to search", vim.log.levels.INFO)
-    return
-  end
-  Snacks.picker.grep({
-    title = "Sidekick Search",
-    dirs = { dir },
-    confirm = function(picker, item)
-      picker:close()
-      if not item or not item.file then
-        return
-      end
-      local fname = vim.fn.fnamemodify(item.file, ":t:r") -- strip dir + .txt
-      if fname and fname ~= "" then
-        internal.toggle_tool_session(fname, true)
-      end
-    end,
-  })
 end
 
 function M.cleanup()

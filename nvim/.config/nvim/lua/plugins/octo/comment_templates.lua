@@ -27,7 +27,7 @@ function M.compose(kind)
 
   local review = reviews.get_current_review()
   if not review or review.id == -1 then
-    vim.notify("comment_templates: no active review (use <localleader>vs to start one)", vim.log.levels.WARN)
+    vim.notify("comment_templates: no active review (use <leader>OO to start one)", vim.log.levels.WARN)
     return
   end
 

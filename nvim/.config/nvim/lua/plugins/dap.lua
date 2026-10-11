@@ -439,11 +439,11 @@ return {
       desc = "Debug: Step (D)own (Next)",
     },
     {
-      "<localleader>b",
+      "<localleader>B",
       function()
         require("dap").step_back()
       end,
-      desc = "Debug: Step (b)ack",
+      desc = "Debug: Step (B)ack",
     },
     {
       "<localleader>a",

@@ -679,6 +679,3 @@ feat/nvim-mermaid change; `docs/neovim-mermaid-render.md` owns the full details.
 - Verification checks Herdr-backed Sidekick sessions, workspaces, and task routing.
 - Verification checks local picker visibility.
 - Verification checks search snapshot capture.
-- `scripts/nvim-verifier` launches a Pi verifier with no shell or file-mutation tools.
-- The verifier runs the selected checkout's config and returns structured PASS/FAIL evidence without replacing raw
-  harness output.

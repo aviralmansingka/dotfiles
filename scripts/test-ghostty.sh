@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ghostty + terminfo regression suite — PR #11 install surface.
-# Paths: ghostty/** xterm-ghostty.terminfo
+# Paths: ghostty/** terminfo/xterm-ghostty.terminfo
 #
 # Ghostty is absent on this Linux host (macOS-only terminal), so the
 # ghostty checks are parse-shape only: well-formed key=value lines, no
@@ -33,7 +33,7 @@ SANDBOX="${SANDBOX:-0}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONF="$REPO_ROOT/ghostty/.config/ghostty/config"
-TERMINFO_SRC="$REPO_ROOT/xterm-ghostty.terminfo"
+TERMINFO_SRC="$REPO_ROOT/terminfo/xterm-ghostty.terminfo"
 
 PASS_COUNT=0
 FAIL_COUNT=0

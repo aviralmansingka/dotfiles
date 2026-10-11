@@ -14,7 +14,6 @@ plugins=(
   extract
   colored-man-pages
   history
-  catimg
 )
 
 source $ZSH/oh-my-zsh.sh
@@ -124,12 +123,9 @@ export XDG_CONFIG_HOME="$HOME/.config"
 export COLORTERM="truecolor"
 export EDITOR="bob run stable"
 export FZF_DEFAULT_COMMAND='rg --hidden --ignore .git -g ""'
-export DISABLE_AUTO_TITLE=true
 
 export PATH="$HOME/bin:$PATH"
 export PATH="/usr/local/bin:$PATH"
-export PATH="/opt/homebrew/Cellar:$PATH"
-export PATH="/opt/brew/bin:$PATH"
 export PATH="/usr/local/go/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -165,5 +161,3 @@ export NVM_DIR="$HOME/.nvm"
 
 # Added by Windsurf
 export PATH="/Users/aviral/.codeium/windsurf/bin:$PATH"
-
-export PATH="$HOME/.local/bin:$PATH"

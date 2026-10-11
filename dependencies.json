@@ -46,7 +46,6 @@
         "lazygit",
         "tig",
         "tuicr",
-        "tmuxinator",
         "starship",
         "zoxide",
         "direnv",
@@ -182,8 +181,5 @@
       "whatsapp",
       "messenger"
     ]
-  },
-  "taps": [
-    "homebrew/cask-fonts"
-  ]
+  }
 }

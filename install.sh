@@ -7,7 +7,7 @@ set -euo pipefail
 #   2. CLI tools not in Homebrew (Claude Code, OpenCode)
 #   3. Rust toolchain + cargo tools
 #   4. Dotfiles deployment via stow
-#   5. Shell plugins (Oh My Zsh, zsh plugins, TPM)
+#   5. Shell plugins (Oh My Zsh, zsh plugins; TPM self-bootstraps from .tmux.conf)
 #   6. Terminfo
 #   7. Git config (deferred to avoid SSH URL rewrite during installs)
 #   8. Git hooks
@@ -117,9 +117,6 @@ stow -d "$DOTFILES_DIR" -t "$HOME" agents
 "$DOTFILES_DIR/scripts/pi-settings-sync"
 stow -d "$DOTFILES_DIR" -t "$HOME" pi
 stow -d "$DOTFILES_DIR" -t "$HOME" herdr
-if command -v omarchy >/dev/null 2>&1; then
-    stow -d "$DOTFILES_DIR" -t "$HOME" omarchy
-fi
 
 echo "==> Installing Pi extension dependencies"
 npm ci --ignore-scripts --no-fund --no-audit \
@@ -191,10 +188,8 @@ ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 [[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]] && \
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 
-echo "==> Installing TPM (Tmux Plugin Manager)"
-if [[ ! -d "$HOME/.tmux/plugins/tpm" ]]; then
-    git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
-fi
+# TPM self-bootstraps: .tmux.conf clones it into
+# ~/.local/share/tmux/plugins (TMUX_PLUGIN_MANAGER_PATH) on first load.
 
 ####################
 #  6. Terminfo     #

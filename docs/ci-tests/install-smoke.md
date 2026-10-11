@@ -22,15 +22,15 @@ proves that the deployment works, repeats safely, and fails safely.
 
 - **Lint and plan.** `bash -n` accepts `install.sh`. The suite extracts
   every `stow` line and gates each one as `install.sh` does:
-  `launchd` needs Darwin, `omarchy` its binary, `systemd` the
-  `systemctl` command; the phase-5 `stow -R` restow stays out.
+  `launchd` needs Darwin, `systemd` the `systemctl` command; the
+  phase-5 `stow -R` restow stays out.
 - **Deploy.** The suite runs the stow commands, `pi-settings-sync`,
   `tic`, and the git stow in the order of `install.sh`. It checks
   exit 0, that every symlink resolves into the repository, and that
   the only real files are what `pi-settings-sync` and `tic` write.
 - **Idempotence.** A second run exits 0, keeps the symlink set, prints
   no error about an existing target, and keeps the real `$HOME` intact.
-- **Guarded optional steps.** With `brew`, `gh`, `omarchy`, `herdr`,
+- **Guarded optional steps.** With `brew`, `gh`, `herdr`,
   and `codex` absent from the path, each guarded step skips and does
   not abort under `set -e`. The `|| true` and `||` fallbacks are also
   checked in the text.
@@ -63,7 +63,7 @@ One run takes about 1 s on Linux. The SLA is 60 s; a longer run fails.
   `gh extension install`; `herdr integration install codex`;
   `install-nm-herdr-bridge`.
 - Skipped with reason: `stow launchd`, `install-no-mistakes`
-  (macOS-only); `stow omarchy` (binary absent); `stow -R zsh`.
+  (macOS-only); `stow -R zsh`.
 - Not smoked, network: Homebrew and `brew bundle`; the installer
   curls; rustup, cargo, bob, `npm ci`; Oh My Zsh, zsh plugins, TPM.
 - Not smoked, live service: the guarded `herdr integration install pi`

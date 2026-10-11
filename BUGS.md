@@ -2,7 +2,7 @@
 
 This file documents known issues with the current dotfiles configuration.
 
-## Neovide Issues
+## Neovide Issues (open)
 
 ### 1. Background Color Inconsistency
 
@@ -67,31 +67,6 @@ Intermittent OSC52 clipboard errors occur when using Neovide, disrupting copy/pa
 - Goal is to use Neovide as primary frontend for remote development
 - Error occurs "every now and then" (intermittent)
 
----
-
-### 3. Duplicated LSP Signature-Help Popup
-
-**Status:** Fixed (branch `fm/nvim-signature-help-dupe`)
-**Severity:** Medium
-**Component:** Neovim LSP / blink.cmp / noice.nvim
-
-**Description:**
-While typing a function call (e.g. `matmul_kernel(A, B,` with clangd attached),
-two signature-help floats rendered simultaneously: a bordered float with
-active-parameter highlight (blink.cmp) and a second unhighlighted float
-(noice.nvim). Both auto-triggered on LSP trigger characters (`(`, `,`).
-
-**Root Cause:**
-`noice.nvim`'s `lsp.signature.auto_open` (enabled by default) and
-`blink.cmp`'s `signature.enabled = true` both auto-request
-`textDocument/signatureHelp` on trigger characters, each rendering its own
-float. The `vim.lsp.handlers["textDocument/signatureHelp"]` override in
-`lsp.lua` (border only) was not the duplicate source — both providers bypass
-the handler with their own callbacks.
-
-**Fix:**
-Disabled noice's signature handler (`lsp.signature.enabled = false` in the
-noice spec in `neovide.lua`). Blink.cmp remains the sole signature-help
-provider, with `treesitter_highlighting = true` (explicit) and
-`border = "rounded"`. The `lsp.lua` handler override is retained for manual
-`<C-k>` triggers.
+**Note:** The fixed "Duplicated LSP Signature-Help Popup" issue was resolved on branch
+`fm/nvim-signature-help-dupe` (noice's signature handler disabled; blink.cmp is the sole
+provider) and removed from this open-issues file. Git history keeps the full write-up.

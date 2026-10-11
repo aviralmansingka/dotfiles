@@ -12,13 +12,13 @@ offline and never contact the live tmux or herdr server.
   a 10 ms escape time, and the RGB plus OSC52 overrides. The `unbind C-b`
   tripwire stays present. zsh keeps TERM at xterm-256color.
 - #11 (terminfo install): `install.sh` compiles
-  `terminfo/xterm-ghostty.terminfo` with `tic`; the suite proves the root
-  copy compiles clean and stays identical to that file.
+  `terminfo/xterm-ghostty.terminfo` with `tic`; the suite proves that file
+  compiles clean (the byte-identical root duplicate was removed with the
+  dead-code cleanup).
 
 ## What the suite covers
 
-`scripts/test-tmux.sh` checks `tmux/.tmux.conf` and the modules under
-`tmux/tmux/custom_modules`:
+`scripts/test-tmux.sh` checks `tmux/.tmux.conf`:
 
 - Headless boot: `new-session -d` and `start-server` parse the config
   with no error output. This catches unknown commands and options.
@@ -27,14 +27,13 @@ offline and never contact the live tmux or herdr server.
   TERM, RGB overrides for both outer TERMs, clipboard feature for
   xterm-ghostty, set-clipboard on.
 - Key tables: C-a runs send-prefix. C-b stays unbound. The copy-mode-vi
-  keys v and y keep their actions. The script sources every custom module
-  in a sandbox session.
+  keys v and y keep their actions.
 - Cross-terminal checks: the tmux overrides name the TERM the terminfo
   defines, the Ghostty config sets no other TERM, zsh never exports
-  xterm-ghostty, and the root terminfo matches `terminfo/`'s copy.
+  xterm-ghostty, and the shipped terminfo defines the xterm-ghostty name.
 
 `scripts/test-ghostty.sh` checks `ghostty/.config/ghostty/config` and
-`xterm-ghostty.terminfo`:
+`terminfo/xterm-ghostty.terminfo`:
 
 - Config shape: every line is a key = value pair. No key repeats. The
   palette holds the indices 0 to 15. The font and color keys hold

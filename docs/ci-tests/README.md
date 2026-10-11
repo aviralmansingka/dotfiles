@@ -37,7 +37,7 @@ Scripts, configs, infra (job `scripts-tests` + `ops-tests`):
 |---|---|---|---|
 | zsh layer | test-zsh.sh | 19 | 0.42 s |
 | tmux + ghostty + terminfo | test-tmux.sh, test-ghostty.sh | 17 + 11 | 0.36 s |
-| Config lint (starship, aerospace, tmuxinator, k9s, neovide, omarchy, code, blinksh, git) | test-config-lint.py | 14, 22 files | 0.06 s |
+| Config lint (starship, aerospace, git) | test-config-lint.py | 8, 5 files | 0.06 s |
 | install.sh | test-install-smoke.sh | 49 | 0.95 s |
 | No-mistakes installer/rollback/daemon | test-nm-install.sh | 21 | 1.1 s |
 | Repo config (skills frontmatter, stow parity, gh-dash, settings, Brewfile, herdr TOML) | test-repo-config.py | 10 | 0.20 s |

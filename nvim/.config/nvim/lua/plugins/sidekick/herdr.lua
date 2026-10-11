@@ -483,13 +483,6 @@ function M.send_key(pane_id, key)
   return M.call({ "pane", "send-keys", pane_id, key }) ~= nil
 end
 
----@param pane_id string
----@param text string
----@return boolean
-function M.run(pane_id, text)
-  return M.call({ "pane", "run", pane_id, text }) ~= nil
-end
-
 ---@param target string
 ---@param source? "visible"|"recent"|"recent-unwrapped"
 ---@param lines? integer

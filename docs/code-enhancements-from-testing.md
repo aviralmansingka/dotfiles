@@ -241,9 +241,10 @@ holding for the final integration ping.
 ## F. Housekeeping and host-side
 
 - Clean untracked `.coverage` / `coverage/` artifacts before committing.
-- `docs/ci-tests/repo-config.md` lists starship/neovide/lazygit/k9s/
-  tmuxinator as unowned — stale now that config-lint owns them; update at
-  integration.
+- `docs/ci-tests/repo-config.md` still lists starship and lazygit as
+  unowned — stale now that config-lint owns them; update at integration.
+  (The neovide, k9s, and tmuxinator packages were deleted in the dead-code
+  cleanup.)
 - Host-side (runbook): LaunchAgent plist pointed into a deleted worktree for
   ~2 months; reminders service PATH targeted an old nvm `pi`; stale `gh`
   2.63.2 broke no-mistakes push steps. Repo-side shape checks live in

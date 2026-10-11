@@ -54,9 +54,8 @@ Checked: the files listed above, plus the Brewfile and the three
 - nvim Lua, lock files, and Lazy config: the nvim smoke lane (X11).
 - pi keybindings, themes, and extension `package.json`: the extension
   loader smoke (A3). `mcp.json.example` is a host template.
-- App-owned configs with no proven drift class: starship, neovide,
-  tuicr, hunk, lazygit, k9s skins, tmuxinator, stylua. The herdr
-  config is the exception (#156-#158).
+- App-owned configs with no proven drift class: starship, tuicr, hunk,
+  lazygit, stylua. The herdr config is the exception (#156-#158).
 - `package-lock.json`. Its tool manages it. (`skills-lock.json` was
   removed with the B22 skills-store fix; the repo-parity suite owns
   the returning-lockfile contract.) Markdown bodies and `.lavish`
@@ -64,11 +63,11 @@ Checked: the files listed above, plus the Brewfile and the three
 
 ## Known gaps
 
-Four stow-shaped directories have no `stow` line in `install.sh`:
-`claude/`, `kube/`, `tmuxinator/`, and `neovide/`. CLAUDE.md stows
-`kube` and `tmuxinator` manually, and a plan document stows `claude`;
-README lists neither. The suite records the four in
-`STOW_GAP_ALLOWLIST` and fails when a new directory joins.
+One stow-shaped directory has no `stow` line in `install.sh`:
+`claude/` (a plan document stows it; README lists it in the package
+table). The suite records it in `STOW_GAP_ALLOWLIST` and fails when a
+new directory joins. The former `kube/`, `tmuxinator/`, and `neovide/`
+gaps were removed together with their packages in the dead-code cleanup.
 
 Dry-run evidence for the claude decision: a simulated `stow claude`
 against an empty home plans one symlink and exits 0. Against a home

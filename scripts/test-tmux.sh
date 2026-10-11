@@ -42,8 +42,7 @@ SANDBOX="${SANDBOX:-0}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONF="$REPO_ROOT/tmux/.tmux.conf"
-MODULES_DIR="$REPO_ROOT/tmux/tmux/custom_modules"
-TERMINFO_SRC="$REPO_ROOT/xterm-ghostty.terminfo"
+TERMINFO_SRC="$REPO_ROOT/terminfo/xterm-ghostty.terminfo"
 GHOSTTY_CONF="$REPO_ROOT/ghostty/.config/ghostty/config"
 
 # Never inherit a live tmux session from the calling environment.
@@ -94,11 +93,8 @@ run_check() {
 WORK="$(mktemp -d)"
 BOOT_HOME="$WORK/home"
 mkdir -p "$BOOT_HOME/.local/share/tmux/plugins/tpm/bin"
-mkdir -p "$BOOT_HOME/.local/share/tmux/plugins/tmux/utils"
 printf '#!/bin/sh\nexit 0\n' >"$BOOT_HOME/.local/share/tmux/plugins/tpm/tpm"
 chmod +x "$BOOT_HOME/.local/share/tmux/plugins/tpm/tpm"
-# Stub consumed by custom_modules `source -F` format expansions.
-: >"$BOOT_HOME/.local/share/tmux/plugins/tmux/utils/status_module.conf"
 BOOT_ERR="$WORK/boot.err"
 
 # Socket cleanup must NOT rely on a socket list: boot_server runs inside
@@ -269,33 +265,13 @@ chk_copy_mode_keys() {
         || { echo "copy-mode-vi y no longer copies and cancels: $y"; return 1; }
 }
 
-chk_custom_modules_run() {
-    # Source every tracked custom module inside a sandbox session; the
-    # stub plugin tree satisfies their `source -F` expansions.
-    local sock f out found=0
-    sock="$(boot_server /dev/null)" || return 1
-    for f in "$MODULES_DIR"/*.conf; do
-        [[ -e "$f" ]] || continue
-        found=1
-        out="$(HOME="$BOOT_HOME" tmux -L "$sock" source-file "$f" 2>&1)"
-        if [[ -n "$out" ]]; then
-            echo "$(basename "$f") failed to source: $out"
-            return 1
-        fi
-    done
-    [[ $found -eq 1 ]] || { echo "no custom modules found in $MODULES_DIR"; return 1; }
-}
-
 chk_inventory() {
     # Coverage-equivalent inventory: every tracked file under tmux/** must
     # be covered by a check above. A new file fails this list until a check
     # is added (docs/ci-tests/terminal.md keeps the mapping).
     local expected actual
     expected="$(printf '%s\n' \
-        'tmux/.tmux.conf' \
-        'tmux/tmux/custom_modules/ctp_cpu.conf' \
-        'tmux/tmux/custom_modules/ctp_memory.conf' \
-        'tmux/tmux/custom_modules/primary_ip.conf' | sort)"
+        'tmux/.tmux.conf' | sort)"
     actual="$(git -C "$REPO_ROOT" ls-files -- tmux | sort)"
     if [[ "$actual" != "$expected" ]]; then
         echo "tracked files under tmux/ changed; update the checks + this list:"
@@ -354,14 +330,16 @@ chk_xt_zsh_term() {
 }
 
 chk_xt_terminfo_drift() {
-    # install.sh (#11) compiles terminfo/xterm-ghostty.terminfo, not the
-    # root copy this suite owns; the two must stay byte-identical.
-    if [[ ! -e "$REPO_ROOT/terminfo/xterm-ghostty.terminfo" ]]; then
-        echo "terminfo/xterm-ghostty.terminfo (compiled by install.sh) is missing"
+    # install.sh (#11) compiles terminfo/xterm-ghostty.terminfo; the former
+    # byte-identical root duplicate was removed with the dead-code cleanup.
+    # $1 is the shipped terminfo source: it must exist and define the
+    # xterm-ghostty primary name the rest of the suite asserts against.
+    if [[ ! -e "$1" ]]; then
+        echo "terminfo source '$1' is missing"
         return 1
     fi
-    cmp -s "$1" "$REPO_ROOT/terminfo/xterm-ghostty.terminfo" \
-        || { echo "root xterm-ghostty.terminfo drifted from terminfo/xterm-ghostty.terminfo (install.sh compiles the latter)"; return 1; }
+    head -2 "$1" | grep -q '^xterm-ghostty|' \
+        || { echo "'$1' does not define the xterm-ghostty terminfo name"; return 1; }
 }
 
 # ---------------------------------------------------------------------------
@@ -396,17 +374,11 @@ main() {
                 report SKIP "$name" "$CONF" "tmux not found; install tmux to run this check" 0
             fi
         done
-        if [[ "$STRICT" = "1" ]]; then
-            report FAIL tmux-custom-modules "$MODULES_DIR" "tmux not found (STRICT=1)" 0
-        else
-            report SKIP tmux-custom-modules "$MODULES_DIR" "tmux not found; install tmux to run this check" 0
-        fi
     else
         for pair in "${tmux_dep[@]}"; do
             name="${pair%%:*}"; func="${pair##*:}"
             run_check "$name" "$CONF" "$func" "$CONF"
         done
-        run_check tmux-custom-modules "$MODULES_DIR" chk_custom_modules_run
     fi
 
     # Static checks: no tmux binary needed.
@@ -480,21 +452,6 @@ sandbox() {
     sed 's/^bind -T copy-mode-vi v send-keys -X begin-selection$/bind -T copy-mode-vi v send-keys -X cursor-left/' "$CONF" >"$m/copymode.conf"
     expect_fail copy-mode-keys chk_copy_mode_keys "$m/copymode.conf"
 
-    cp "$MODULES_DIR/ctp_cpu.conf" "$m/bad_module.conf"
-    echo 'not-a-real-tmux-command' >>"$m/bad_module.conf"
-    local save_modules="$MODULES_DIR"
-    # Point the module check at the mutated copy directory.
-    MODULES_DIR="$m"
-    local rc reason t0
-    t0="$(now_ms)"
-    reason="$(chk_custom_modules_run 2>&1)" && rc=0 || rc=$?
-    MODULES_DIR="$save_modules"
-    if [[ $rc -ne 0 ]]; then
-        report PASS sbx-custom-modules "mktemp-mutation" "caught: $reason" "$(( $(now_ms) - t0 ))"
-    else
-        report FAIL sbx-custom-modules "mktemp-mutation" "NOT caught: broken module still sources" "$(( $(now_ms) - t0 ))"
-    fi
-
     # Cross-terminal mutations (copies of sibling-owned files).
     cp "$TERMINFO_SRC" "$m/xterm-kitty.terminfo"
     sed -i 's/^xterm-ghostty|/xterm-kitty|/' "$m/xterm-kitty.terminfo"
@@ -508,7 +465,7 @@ sandbox() {
     printf 'export TERM="xterm-ghostty"\n' >"$m/zsh/.zshrc"
     expect_fail xt-zsh-term chk_xt_zsh_term "$m"
 
-    printf 'xterm-ghostty|drifted copy,\n' >"$m/drift.terminfo"
+    printf 'xterm-drifted|drifted copy,\n' >"$m/drift.terminfo"
     expect_fail xt-terminfo-drift chk_xt_terminfo_drift "$m/drift.terminfo"
 }
 

@@ -201,21 +201,4 @@ function M.cwd_for_terminal(terminal)
   return terminal.cwd or session.cwd or (session.parent and session.parent.cwd)
 end
 
---- Winbar expression entry point. Resolves the current Sidekick terminal to
---- its Herdr session cwd and renders starship for that cwd. Cheap on cache hit.
----@return string
-function M.winbar_for_current_win()
-  local win = vim.api.nvim_get_current_win()
-  local sid = vim.w[win].sidekick_session_id
-  if not sid then
-    return ""
-  end
-  local term_ok, terminal_mod = pcall(require, "sidekick.cli.terminal")
-  if not term_ok then
-    return ""
-  end
-  local term = terminal_mod.get(sid)
-  return M.render(M.cwd_for_terminal(term))
-end
-
 return M

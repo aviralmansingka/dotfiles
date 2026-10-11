@@ -444,7 +444,6 @@ def check_notion_cli(root: Path, _tracked: set):
 # "Stow Packages" table must list every other top-level dir, and nothing
 # else. Remove an entry here in the same change that makes it a package.
 NON_PACKAGE_DIRS = {
-    "artifacts": "build/release artifacts, not a dotfiles package",
     "docs": "documentation tree, not a stow package",
     "ops": "ops tooling (terraform/packer/stt), not a stow package",
     "scripts": "repo scripts and test suites, not a stow package",

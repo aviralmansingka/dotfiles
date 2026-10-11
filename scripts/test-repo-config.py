@@ -201,16 +201,11 @@ def check_skill_frontmatter():
 #               2026-05-09-bug-report-skill.md stows it by hand); README and
 #               CLAUDE.md disagree about the package list; captain decision
 #               pending (stow it, keep it manual, or delete it).
-#   kube/       CLAUDE.md's manual instructions stow it; install.sh does not.
-#   tmuxinator/ CLAUDE.md's manual instructions stow it; install.sh does not.
-#   neovide/    no doc stows it; pending the same decision.
 # Remove an entry from this set in the same change that adds its stow line
-# (or deletes the package).
+# (or deletes the package). The former kube/, tmuxinator/, and neovide/
+# entries were removed together with their packages in the dead-code cleanup.
 STOW_GAP_ALLOWLIST = {
     "claude": "documented-manual deployment; README/CLAUDE.md disagree; decision pending",
-    "kube": "manual per CLAUDE.md; install.sh does not stow it",
-    "tmuxinator": "manual per CLAUDE.md; install.sh does not stow it",
-    "neovide": "no doc stows it; decision pending",
 }
 
 STOW_OPTS_WITH_ARG = {"-d", "-t", "--dir", "--target"}
@@ -311,9 +306,6 @@ def check_install_stow():
 
     # Optional steps stay command-guarded and idempotent (#199).
     for lineno, pkg, guard in stows:
-        if pkg == "omarchy" and "cmd:omarchy" not in guard:
-            problems.append(f"FAIL install.sh:{lineno}: stow omarchy must stay "
-                            f"behind a `command -v omarchy` guard (#199)")
         if pkg == "systemd" and "cmd:systemctl" not in guard:
             problems.append(f"FAIL install.sh:{lineno}: stow systemd must stay "
                             f"behind a `command -v systemctl` guard (#199)")

@@ -218,7 +218,7 @@ for (const f of runnable) {
 const synthetic = [
   { changed: ["zsh/.zshrc"], entry: "scripts/test-zsh.sh", entryGlobs: ["zsh/**"], job: "scripts" },
   { changed: ["tmux/tmux.conf"], entry: "scripts/test-tmux.sh", entryGlobs: ["tmux/**"], job: "scripts" },
-  { changed: ["ghostty/ghostty.config", "xterm-ghostty.terminfo"], entry: "scripts/test-ghostty.sh", entryGlobs: ["ghostty/**", "xterm-ghostty.terminfo"], job: "scripts" },
+  { changed: ["ghostty/ghostty.config", "terminfo/xterm-ghostty.terminfo"], entry: "scripts/test-ghostty.sh", entryGlobs: ["ghostty/**", "terminfo/xterm-ghostty.terminfo"], job: "scripts" },
   { changed: ["starship/starship.toml"], entry: "scripts/test-config-lint.py", entryGlobs: ["starship/**"], job: "scripts" },
   { changed: ["install.sh", "Brewfile"], entry: "scripts/test-install-smoke.sh", entryGlobs: ["install.sh", "Brewfile"], job: "scripts" },
   { changed: ["scripts/install-no-mistakes"], entry: "scripts/test-nm-install.sh", entryGlobs: ["scripts/install-no-mistakes"], job: "scripts" },
