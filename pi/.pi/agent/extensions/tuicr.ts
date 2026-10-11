@@ -1,16 +1,20 @@
 /**
- * tuicr: launch tuicr detached, steer review comments back.
+ * tuicr: open interactive tuicr reviews, steer comments back.
  *
  * Problem this replaces: asking an agent to open tuicr via the skill's
  * wrapper scripts blocks the agent (`herdr pane wait-output`, tmux/Zellij
  * equivalents) until the human closes the TUI.
  *
- * Instead:
- *   - `tuicr` / `/tuicr` spawn the same wrapper detached
- *     (the pane still opens; the wrapper still closes it on exit) and
- *     return immediately. An existing active session is attached instead.
- *   - A single watcher polls `tuicr review comments` and steers each new
- *     batch back with `deliverAs: "steer"` + `triggerTurn: true` — the same
+ * Instead, two surfaces (see README-tuicr.md):
+ *   - `tuicr_review` / `/tuicr` open a review: the same wrapper spawns
+ *     detached (the pane still opens; the wrapper still closes it on exit),
+ *     the call returns immediately, an existing active session is attached
+ *     instead, and the `tuicr-review` subagent is spawned to answer the
+ *     user's comments inside the TUI. The parent chat keeps no watcher for
+ *     that repo while the subagent runs.
+ *   - `tuicr` (internal; `/tuicr watch`) attaches this session's own
+ *     watcher: it polls `tuicr review comments` and steers each new batch
+ *     back with `deliverAs: "steer"` + `triggerTurn: true` — the same
  *     delivery path interactive-subagents uses — coalescing bursts so a
  *     comment at a time does not spawn a steer per comment. When the TUI
  *     exits, the remaining batch and a final notice are steered once.
