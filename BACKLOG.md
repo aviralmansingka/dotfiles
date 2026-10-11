@@ -97,3 +97,5 @@ I would solve problems at work.
 - There is some issue with the clipboard
 - copy-paste
 - colors are still weird
+
+sim
