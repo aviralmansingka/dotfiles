@@ -54,6 +54,14 @@ writeFileSync(stubTui, [
 const tuiAlias = { "@earendil-works/pi-tui": stubTui };
 const jiti = createJiti(import.meta.url, { alias: tuiAlias });
 const { extractMarkedOutput, buildBackgroundScript, buildAttachScript, hasStartMarker, wantsTuiPane, TUI_SUBCOMMANDS } = jiti("./no-mistakes-pane/capture.ts");
+const {
+	orchestratorDelegationDecision,
+	buildOrchestratorTask,
+	orchestratorAckMessage,
+	orchestratorOwnedMessage,
+	orchestratorSurfaceMessage,
+	ORCHESTRATOR_AGENT,
+} = jiti("./no-mistakes-pane/orchestrate.ts");
 const { parseDurationMs, parseNoMistakesRunId, parseNoMistakesStatus, observeNoMistakesTiming, isObservableNoMistakesRun, summarizeNoMistakesSnapshot, phaseProgress } = jiti("./no-mistakes-pane/status.ts");
 const noMistakesPane = jiti("./no-mistakes-pane.ts").default;
 
@@ -1025,6 +1033,113 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 	} finally {
 		rmSync(stubDir, { recursive: true, force: true });
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Orchestrator delegation policy: a Herdr captain delegates `run` to the
+// nm-orchestrator subagent; everything else — and every fallback context —
+// drives directly.
+// ---------------------------------------------------------------------------
+{
+	const base = {
+		subcommand: "run",
+		helpOnly: false,
+		insideSubagent: false,
+		hasSpawnApi: true,
+		hasTui: true,
+		cwd: "/repo",
+		orchestrators: new Map(),
+		isRunning: () => false,
+	};
+	assert.deepEqual(orchestratorDelegationDecision(base), { delegate: true }, "a Herdr captain run delegates");
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, subcommand: "respond" }).reason,
+		"not-run-subcommand",
+		"only run delegates; respond never does (the orchestrator itself drives it)",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, subcommand: "status" }).reason,
+		"not-run-subcommand",
+		"read-only calls pass through",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, helpOnly: true }).reason,
+		"help-call",
+		"`run --help` is documentation, never a delegated run",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, insideSubagent: true }).reason,
+		"inside-subagent",
+		"delegation never nests: the orchestrator itself executes axi directly",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, hasSpawnApi: false }).reason,
+		"no-spawn-api",
+		"without interactive-subagents the captain drives directly",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, hasTui: false }).reason,
+		"no-tui",
+		"headless hosts drive directly",
+	);
+
+	const owned = new Map([["/repo", "nm-orchestrator"]]);
+	assert.deepEqual(
+		orchestratorDelegationDecision({ ...base, orchestrators: owned, isRunning: () => true }),
+		{ delegate: false, reason: "already-owned", owner: "nm-orchestrator" },
+		"a live orchestrator for the same cwd owns the run",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({ ...base, orchestrators: owned, isRunning: () => false }).delegate,
+		true,
+		"a dead registry entry is replaced, never treated as ownership",
+	);
+	assert.equal(
+		orchestratorDelegationDecision({
+			...base,
+			orchestrators: new Map([["/other", "nm-orchestrator"]]),
+			isRunning: () => true,
+		}).delegate,
+		true,
+		"ownership is per-cwd: another worktree's orchestrator does not block this run",
+	);
+}
+
+// ---------------------------------------------------------------------------
+// Orchestrator task and messages: verbatim args carried, boundary rules
+// stated, and every user-facing text names the owner.
+// ---------------------------------------------------------------------------
+{
+	const args = 'run --intent "ship the feature safely"';
+	const task = buildOrchestratorTask({ args, cwd: "/repo" });
+	assert.ok(task.includes(args), "the task carries the verbatim axi args");
+	assert.ok(task.includes("/repo"), "the task names the repository");
+	for (const rule of [
+		"no_mistakes_axi",
+		"GATE DECISION",
+		"respond --yes",
+		"--wait 27m",
+		"never edit code",
+		"outcome:",
+		"summary",
+	]) {
+		assert.ok(task.toLowerCase().includes(rule.toLowerCase()), `task covers: ${rule}`);
+	}
+
+	const ack = orchestratorAckMessage("nm-orchestrator-2");
+	assert.ok(ack.includes("nm-orchestrator-2"), "the ack names the actual spawned name");
+	assert.ok(ack.includes("summary"), "the ack tells the captain a summary steers back");
+
+	const owned = orchestratorOwnedMessage("nm-orchestrator", "respond");
+	assert.ok(owned.includes("subagent_message"), "the refusal points at steering, not double-driving");
+	assert.ok(owned.includes("abort"), "the refusal keeps abort as the escape hatch");
+
+	assert.ok(orchestratorSurfaceMessage("nm-orchestrator", false).includes("Focus"), "the /no-mistakes pointer directs the human to the orchestrator tab");
+	assert.ok(
+		orchestratorSurfaceMessage("nm-orchestrator", true).includes("yolo"),
+		"the yolo pointer explains consent lives in the orchestrator session",
+	);
+	assert.equal(ORCHESTRATOR_AGENT, "nm-orchestrator");
 }
 
 console.log("no-mistakes-pane capture tests passed");

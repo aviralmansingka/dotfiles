@@ -154,6 +154,9 @@ interface AgentDefaults {
   interactive?: boolean;
   systemPromptMode?: "append" | "replace";
   sessionMode?: SubagentSessionMode;
+  /** `agent-dir: parent` — keep the captain's configured agent dir instead of
+   *  redirecting to a target-repo `.pi/agent` when one exists there. */
+  agentDir?: "parent";
   cwd?: string;
   cli?: string;
   body?: string;
@@ -307,6 +310,19 @@ function discoverAgentDefinitions(): ListedAgentDefinition[] {
   return SUBAGENT_ALLOWLIST ? all.filter((a) => SUBAGENT_ALLOWLIST.has(a.name)) : all;
 }
 
+/** Config-dir selection shared by every subagent spawn site so they cannot
+ *  drift: `agent-dir: parent` keeps the captain's configured agent root — a
+ *  concrete directory, never null, so the loadout snapshot replays exactly on
+ *  resume — otherwise a target-local `.pi/agent` wins, else the fallback. */
+function resolveSubagentAgentDir(
+  localAgentDir: string | null,
+  agentDefs: AgentDefaults | null,
+  fallback: string,
+): string {
+  if (agentDefs?.agentDir === "parent") return getAgentConfigDir();
+  return localAgentDir && existsSync(localAgentDir) ? localAgentDir : fallback;
+}
+
 function resolveSubagentPaths(
   params: Static<typeof SubagentParams>,
   agentDefs: AgentDefaults | null,
@@ -320,8 +336,7 @@ function resolveSubagentPaths(
       : join(cwdBase, rawCwd)
     : null;
   const localAgentDir = effectiveCwd ? join(effectiveCwd, ".pi", "agent") : null;
-  const effectiveAgentDir =
-    localAgentDir && existsSync(localAgentDir) ? localAgentDir : getAgentConfigDir();
+  const effectiveAgentDir = resolveSubagentAgentDir(localAgentDir, agentDefs, getAgentConfigDir());
   return { effectiveCwd, localAgentDir, effectiveAgentDir };
 }
 
@@ -989,6 +1004,19 @@ function buildSubagentToolAllowlist(
   return [...allow].join(",");
 }
 
+// ── baseline subagent renderer ──
+
+/** Baseline explicit -e args for every spawned pi subagent: the parent agent
+ *  dir's public tool-call renderer, restored when a repo-local `.pi/agent`
+ *  redirect would otherwise drop it. resolve() keeps a relative
+ *  PI_CODING_AGENT_DIR absolute; pi canonicalizes (realpath) and dedupes
+ *  explicit -e against discovered files, so double-loading is impossible, and
+ *  an absent renderer silently skips. */
+function baselineSubagentExtensionArgs(agentDir: string): string[] {
+  const rendererPath = resolve(agentDir, "extensions", "tool-call-renderer-public.ts");
+  return existsSync(rendererPath) ? ["-e", shellEscape(rendererPath)] : [];
+}
+
 /**
  * Apply a loadout snapshot's sandbox to a pi command's `parts` array: model,
  * identity (system prompt), and the tool allowlist (`--tools` plus one explicit
@@ -1006,11 +1034,20 @@ function applySandboxToParts(
   loadout: SubagentLoadout,
   opts: { artifactDir: string; name: string },
 ): void {
+  // Baseline for every spawned subagent — fresh launch, resume, fork, or
+  // bare spawn — pushed unconditionally, outside the toolAllowlist block.
+  // The Claude branch returns before the Pi path, so this stays Pi-only.
+  parts.push(...baselineSubagentExtensionArgs(getAgentConfigDir()));
   parts.push(...agentIsolationArgs(loadout.agent));
 
   if (loadout.model) {
     const model = loadout.thinking ? `${loadout.model}:${loadout.thinking}` : loadout.model;
     parts.push("--model", shellEscape(model));
+  } else if (loadout.thinking) {
+    // No model pin — the bundled agents inherit the session model. Keep the
+    // agent's thinking level by applying it to the default model instead of
+    // silently dropping it (pi supports a standalone --thinking flag).
+    parts.push("--thinking", shellEscape(loadout.thinking));
   }
 
   if (loadout.identity) {
@@ -1320,6 +1357,7 @@ export const __test__ = {
   resolveLaunchBehavior,
   resolveEffectiveInteractive,
   buildSubagentToolAllowlist,
+  baselineSubagentExtensionArgs,
   applySandboxToParts,
   buildPiPromptArgs,
   buildPiReadyPrompt,
@@ -1530,13 +1568,15 @@ async function launchSubagentOnSurface(
   const subagentDonePath = join(SUBAGENTS_DIR, "subagent-done.ts");
   parts.push("-e", shellEscape(subagentDonePath));
 
-  // Resolve the config dir the child sees: a target-local .pi/agent/ wins,
-  // else the propagated global dir. Captured once so the launch env and the
+  // Resolve the config dir the child sees: `agent-dir: parent` keeps the
+  // captain's configured root, else a target-local .pi/agent/ wins, else the
+  // propagated global dir. Captured once so the launch env and the
   // resume snapshot agree.
-  const resolvedAgentDir =
-    localAgentDir && existsSync(localAgentDir)
-      ? localAgentDir
-      : process.env.PI_CODING_AGENT_DIR ?? null;
+  const resolvedAgentDir = resolveSubagentAgentDir(
+    localAgentDir,
+    agentDefs,
+    process.env.PI_CODING_AGENT_DIR ?? null,
+  );
 
   // When an agent restricts its tools (or is granted the spawning toolset), we
   // still let pi load the user's configured extensions. --tools limits callable

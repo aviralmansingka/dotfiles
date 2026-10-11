@@ -155,6 +155,8 @@ async function bridgeMode(sockPath, prompt) {
 
 	let buffer = "";
 	let finished = false;
+	let settled = false;
+	let killed = false;
 	const writeStdout = (text) => {
 		pendingWrites++;
 		if (!process.stdout.write(text, () => {
@@ -177,6 +179,7 @@ async function bridgeMode(sockPath, prompt) {
 	};
 
 	process.on("SIGTERM", () => {
+		killed = true;
 		if (!socket.destroyed) {
 			try {
 				socket.write(JSON.stringify({ type: "killed" }) + "\n");
@@ -186,7 +189,9 @@ async function bridgeMode(sockPath, prompt) {
 	});
 
 	socket.on("error", () => exitBridge(1, "bridge connection lost mid-turn (the daemon will retry or fail the step)"));
-	socket.on("close", () => exitBridge(0));
+	socket.on("close", () => settled || killed
+		? exitBridge(0)
+		: exitBridge(1, "bridge delivery truncated before agent_settled"));
 	socket.on("data", (chunk) => {
 		buffer += chunk.toString("utf-8");
 		let index;
@@ -202,6 +207,9 @@ async function bridgeMode(sockPath, prompt) {
 			}
 			if (message?.type === "events" && Array.isArray(message.lines)) {
 				for (const eventLine of message.lines) {
+					try {
+						if (JSON.parse(eventLine)?.type === "agent_settled") settled = true;
+					} catch {}
 					writeStdout(String(eventLine) + "\n");
 				}
 			} else if (message?.type === "fatal") {

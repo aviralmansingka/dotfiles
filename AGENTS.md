@@ -70,11 +70,12 @@ corrupts the next toggle. The user's own prefix+t is the only correct show path.
 
 The no-mistakes daemon's step agents run as visible Herdr subagent tabs when the triggering
 session is inside Herdr (`scripts/install-nm-herdr-bridge`, upstream `agent_path_override.pi`).
-Three rules are load-bearing:
+These rules are load-bearing:
 
-- A live tab owns its pi session file. Teardown (run terminal, session shutdown, extension
-  reload) must close tab panes so a later headless `--session` resume never meets a second
-  writer; the shim then passthroughs to real pi with unchanged argv and stdin.
+- Every step invocation owns a fresh tab and closes it after delivery; fixer rounds resume
+  the durable session file in a fresh tab. Teardown (run terminal, session shutdown, extension
+  reload) also closes panes so a later headless `--session` resume never meets a second writer;
+  the shim then passthroughs to real pi with unchanged argv and stdin.
 - Pane state surfaces are Herdr's sanctioned ones only: `pane report-metadata --state-label`
   for display and the `herdr:blocked` event for the CI red state. Never report pane state
   from another source or impersonate a `herdr:` source - a second source cannot override the
@@ -84,7 +85,21 @@ Three rules are load-bearing:
   pane-state reporters, capability tools (python, web-fetch, web-search, mermaid), and tab
   chrome. The parent's pipeline machinery (no-mistakes-gate, no-mistakes-pane,
   interactive-subagents, tuicr) and human-blocking tools never load inside a step agent -
-  keep it that way when adding extensions.
+  keep it that way when adding extensions. Every pi subagent spawned by interactive-subagents
+  gets the parent's tool-call renderer as a baseline explicit `-e` (deduped by pi; skipped when
+  absent) - the curated step-agent set above stays curated and unchanged.
+- A run started from a Herdr captain session is owned by the `nm-orchestrator` subagent tab
+  (tuicr-review architecture, `no-mistakes-pane/orchestrate.ts` + the bundled agent). It drives
+  axi run/respond and owns the attach pane, gate panels, pane labels, and the step-agent
+  bridge; the captain keeps read-only status/logs, abort as the escape hatch, and the
+  orchestrator's final summary steer. Delegation never nests (subagent sessions execute
+  directly) and falls back to direct driving without a TUI or spawn API - headless behavior
+  is unchanged. The bundled nm-orchestrator declares `agent-dir: parent`, keeping the
+  captain's configured agent dir instead of a repo-local `.pi/agent` redirect.
+- Step-agent tab closes are clean exits: the tab's pi is asked to quit (Ctrl+D, Ctrl+C
+  fallback); after confirmed exit, `pane release-agent --source herdr:pi --agent pi` clears
+  its identity before `pane close`. A terminated step agent must never surface as an
+  agent-killed notification in the hosting session.
 
 ## CUDA LSP host invariant
 
