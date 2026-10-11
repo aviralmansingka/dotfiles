@@ -607,7 +607,6 @@ try {
 		bundledDir: bundledAgentsDir,
 	});
 	assert.ok(professor.tools.split(", ").includes("tuicr_reply"));
-	assert.ok(professor.tools.split(", ").includes("hunk_open"));
 	assert.ok(professor.tools.split(", ").includes("bash"));
 	assert.deepEqual(professor.subagentAgents, ["researcher", "tuicr-review"]);
 	assert.equal(professor.skills, "professor");
@@ -1365,6 +1364,157 @@ try {
 	// MATRIX_TMUX_CAPTURE stays set: the debounced select-layout writes into
 	// the kept matrixRoot after this block, and must not print to stderr.
 	// matrixRoot is intentionally kept: see the comment above this block.
+}
+
+
+// ── Subagent completion lifecycle: liveness fallback + auto-exit tab close ──
+// A dedicated fake-herdr bin (the established pattern) with pane:process-info
+// and tab:close cases drives the new completion-path behavior end-to-end: the
+// done-watcher's liveness fallback (sentinel missed, pi process gone) and the
+// auto-exit whole-tab close (orphaned sibling panes die with the subagent).
+{
+	const lifecycleBin = mkdtempSync(join(tmpdir(), "subagent-lifecycle-test-"));
+	const lifecycleCapture = join(lifecycleBin, "calls");
+	const lifecycleStageFile = join(lifecycleBin, "proc-stage");
+	writeFileSync(
+		join(lifecycleBin, "herdr"),
+		`#!/bin/sh
+printf '%s\\n' "$@" >> "$LIFECYCLE_CAPTURE"
+printf '%s\\n' --call-- >> "$LIFECYCLE_CAPTURE"
+case "$1:$2" in
+	pane:get)
+		printf '%s\\n' '{"result":{"pane":{"pane_id":"w44:p2","tab_id":"w44:t7","workspace_id":"w44"}}}'
+		;;
+	tab:close)
+		[ "$LIFECYCLE_FAIL_TAB_CLOSE" = "1" ] && exit 1
+		printf '%s\\n' '{"result":{}}'
+		;;
+	pane:close) printf '%s\\n' '{"result":{}}' ;;
+	pane:read) printf '%s\\n' "$LIFECYCLE_SCREEN" ;;
+	pane:process-info)
+		# Staged liveness: the first read shows the pi agent in the pane's
+		# foreground processes; every later read shows only the shell.
+		stage=0
+		[ -f "$LIFECYCLE_PROC_STAGE" ] && stage=$(cat "$LIFECYCLE_PROC_STAGE")
+		stage=$((stage + 1))
+		printf '%s' "$stage" > "$LIFECYCLE_PROC_STAGE"
+		if [ "$stage" = "1" ]; then
+			printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"bash","pid":100,"argv":["bash"]},{"name":"pi","pid":101,"argv":["pi"]}]}}}'
+		else
+			printf '%s\\n' '{"result":{"process_info":{"foreground_processes":[{"name":"zsh","pid":100,"argv":["zsh"]}]}}}'
+		fi
+		;;
+	*) printf '%s\\n' '{"result":{}}' ;;
+esac
+`,
+		{ mode: 0o755 },
+	);
+	const savedLifecycleEnv = {
+		HERDR_ENV: process.env.HERDR_ENV,
+		HERDR_PANE_ID: process.env.HERDR_PANE_ID,
+		PATH: process.env.PATH,
+	};
+	process.env.HERDR_ENV = "1";
+	process.env.HERDR_PANE_ID = "w44:p2";
+	process.env.PATH = `${lifecycleBin}:${savedLifecycleEnv.PATH}`;
+	process.env.LIFECYCLE_CAPTURE = lifecycleCapture;
+	process.env.LIFECYCLE_PROC_STAGE = lifecycleStageFile;
+	delete process.env.LIFECYCLE_SCREEN;
+	delete process.env.LIFECYCLE_FAIL_TAB_CLOSE;
+	const lifecycleCalls = () =>
+		readFileSync(lifecycleCapture, "utf8")
+			.split("--call--\n")
+			.filter(Boolean)
+			.map((call) => call.trim().split("\n"));
+	try {
+		const lifecycleHerdr = createJiti(import.meta.url, { moduleCache: false })(
+			"./interactive-subagents/pi-extension/subagents/herdr.ts",
+		);
+
+		// Pure decision logic: the liveness state machine.
+		const bashOnly = [{ name: "bash", pid: 1, argv: ["bash"] }];
+		const withPi = [{ name: "bash", pid: 1, argv: ["bash"] }, { name: "pi", pid: 2, argv: ["pi"] }];
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(false, bashOnly), {
+			seenAgent: false, agentGone: false,
+		}, "startup shell must never count as agent-gone");
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(false, withPi), {
+			seenAgent: true, agentGone: false,
+		});
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(true, bashOnly), {
+			seenAgent: true, agentGone: true,
+		}, "agent seen once, then gone → completed");
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(true, null), {
+			seenAgent: true, agentGone: false,
+		}, "transient process-info failure keeps polling");
+		assert.deepEqual(lifecycleHerdr.updateAgentLiveness(false, null), {
+			seenAgent: false, agentGone: false,
+		});
+		assert.equal(lifecycleHerdr.isPiForegroundProcess({ name: "pi", argv: ["pi"] }), true);
+		assert.equal(lifecycleHerdr.isPiForegroundProcess({ name: "bash", argv: ["/usr/local/bin/pi"] }), true);
+		assert.equal(lifecycleHerdr.isPiForegroundProcess({ name: "nvim", argv: ["nvim"] }), false);
+		assert.equal(lifecycleHerdr.isPiForegroundProcess({ name: "bash", argv: ["bash"] }), false);
+
+		// pollForExit end-to-end: the DONE sentinel never appears on the
+		// screen, the pi agent was seen once, then it vanished — the watcher
+		// must report a clean completion instead of polling forever.
+		const lifecyclePoll = new AbortController();
+		const livenessResult = await lifecycleHerdr.pollForExit("w44:p9", lifecyclePoll.signal, {
+			interval: 20,
+		});
+		lifecyclePoll.abort();
+		assert.deepEqual(livenessResult, { reason: "agent-gone", exitCode: 0 });
+		const polled = lifecycleCalls();
+		assert.ok(polled.filter((call) => call[1] === "read").length >= 2, "screen sentinel was checked every tick");
+		assert.ok(
+			polled.filter((call) => call[1] === "process-info").length >= 2,
+			"foreground processes were checked every tick",
+		);
+		assert.equal(
+			polled.some((call) => call[1] === "close" || call[1] === "tab"),
+			false,
+			"pollForExit itself must not close anything",
+		);
+
+		// Auto-exit tab close decision (pure, eval'd from index.ts source —
+		// index.ts cannot be jiti-loaded whole): clean auto-exit closes the
+		// whole tab; interactive, killed, errored, or non-zero exit do not.
+		const { shouldCloseSubagentTab } = jiti.evalModule(
+			`
+			${indexSource.split("// ── auto-exit tab close decision ──")[1].split("// ── auto-exit tab close mechanics ──")[0]}
+			module.exports = { shouldCloseSubagentTab };
+		`,
+			{ filename: join(tmpdir(), "subagent-tab-close-decision-test.ts") },
+		);
+		assert.equal(shouldCloseSubagentTab(false, { exitCode: 0 }), true, "clean auto-exit → close the tab");
+		assert.equal(shouldCloseSubagentTab(true, { exitCode: 0 }), false, "interactive → park for the user");
+		assert.equal(shouldCloseSubagentTab(false, { exitCode: 1 }), false);
+		assert.equal(shouldCloseSubagentTab(false, { exitCode: 0, killed: true }), false);
+		assert.equal(shouldCloseSubagentTab(false, { exitCode: 0, errorMessage: "overload" }), false);
+
+		// closeTabForPane end-to-end: pane get → tab close, and the pane-close
+		// fallback when tab close fails.
+		lifecycleHerdr.closeTabForPane("w44:p9");
+		assert.deepEqual(lifecycleCalls().at(-2), ["pane", "get", "w44:p9"]);
+		assert.deepEqual(lifecycleCalls().at(-1), ["tab", "close", "w44:t7"]);
+		process.env.LIFECYCLE_FAIL_TAB_CLOSE = "1";
+		lifecycleHerdr.closeTabForPane("w44:p9");
+		delete process.env.LIFECYCLE_FAIL_TAB_CLOSE;
+		// The fake bin records a call even when it then exits 1, so the
+		// failed tab close is followed by the pane-close fallback.
+		assert.deepEqual(lifecycleCalls().at(-3), ["pane", "get", "w44:p9"]);
+		assert.deepEqual(lifecycleCalls().at(-2), ["tab", "close", "w44:t7"]);
+		assert.deepEqual(lifecycleCalls().at(-1), ["pane", "close", "w44:p9"], "failed tab close falls back to pane close");
+	} finally {
+		for (const [key, value] of Object.entries(savedLifecycleEnv)) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+		delete process.env.LIFECYCLE_CAPTURE;
+		delete process.env.LIFECYCLE_PROC_STAGE;
+		delete process.env.LIFECYCLE_SCREEN;
+		delete process.env.LIFECYCLE_FAIL_TAB_CLOSE;
+		rmSync(lifecycleBin, { recursive: true, force: true });
+	}
 }
 
 console.log("interactive-subagents surface smoke passed");

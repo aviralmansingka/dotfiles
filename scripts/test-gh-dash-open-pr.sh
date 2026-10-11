@@ -11,10 +11,10 @@ ruby -ryaml -e '
   config = YAML.safe_load(File.read(ARGV.fetch(0)))
   bindings = config.fetch("keybindings").fetch("prs").to_h { |item| [item.fetch("key"), item] }
   expected = {
-    "H" => {
-      "key" => "H",
-      "name" => "hunk review",
-      "command" => "gh pr diff --repo \"{{.RepoName}}\" \"{{.PrNumber}}\" | hunk patch -"
+    "C" => {
+      "key" => "C",
+      "name" => "tuicr review",
+      "command" => "tuicr pr \"{{.RepoName}}\#{{.PrNumber}}\" --no-update-check"
     },
     "O" => {
       "key" => "O",
@@ -27,7 +27,8 @@ ruby -ryaml -e '
   end
   mapping = config.fetch("repoPaths").fetch(":owner/:repo")
   abort "unexpected repository mapping: #{mapping.inspect}" unless mapping == "/Users/aviral/:repo"
-  puts "CONFIG: H => #{bindings.fetch("H").fetch("command")}; O => #{bindings.fetch("O").fetch("command")}; :owner/:repo => #{mapping}"
+  abort "unexpected H binding" if bindings.key?("H")
+  puts "CONFIG: C => #{bindings.fetch("C").fetch("command")}; O => #{bindings.fetch("O").fetch("command")}; :owner/:repo => #{mapping}"
 ' "$config"
 
 bin="$test_dir/bin"

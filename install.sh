@@ -85,7 +85,6 @@ stow -d "$DOTFILES_DIR" -t "$HOME" ghostty
 stow -d "$DOTFILES_DIR" -t "$HOME" aerospace
 stow -d "$DOTFILES_DIR" -t "$HOME" gh-dash
 stow -d "$DOTFILES_DIR" -t "$HOME" tuicr
-stow --no-folding -d "$DOTFILES_DIR" -t "$HOME" hunk
 stow -d "$DOTFILES_DIR" -t "$HOME" agents
 "$DOTFILES_DIR/scripts/pi-settings-sync"
 stow -d "$DOTFILES_DIR" -t "$HOME" pi

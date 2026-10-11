@@ -1,12 +1,35 @@
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { execFileSync, type ExecFileSyncOptions } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join, dirname, resolve, isAbsolute } from "node:path";
 
 const HERDR_TIMEOUT_MS = 5000;
+
+// ---------------------------------------------------------------------------
+// injectable exec seam
+// ---------------------------------------------------------------------------
+// Same pattern as tuicr-core.mjs postTuicRreply's execFile injection: every
+// multiplexer call in this module goes through one injectable sync-exec
+// primitive. Production always runs the real execFileSync; tests inject a
+// fake that answers canned herdr/nvim/tmux responses, so the launch-race
+// logic is exercised against real decision code with zero live panes.
+export type SyncExecFn = (
+	command: string,
+	args: string[],
+	options: ExecFileSyncOptions & { encoding: "utf-8" },
+) => string;
+const realSyncExec: SyncExecFn = (command, args, options) =>
+	execFileSync(command, args, options);
+let syncExecImpl: SyncExecFn = realSyncExec;
+
+/** Test seam: swap the exec primitive used by every herdr/nvim/tmux call in
+ *  this module. Pass null to restore the real execFileSync. */
+export function __setExecSyncForTests(impl: SyncExecFn | null): void {
+	syncExecImpl = impl ?? realSyncExec;
+}
 
 // ---------------------------------------------------------------------------
 // Herdr helpers
@@ -31,7 +54,7 @@ interface ProcessInfo {
 /** Run a herdr subcommand and parse its JSON response. Returns null on failure. */
 function herdrJson(args: string[]): unknown | null {
 	try {
-		const out = execFileSync("herdr", args, {
+		const out = syncExecImpl("herdr", args, {
 			encoding: "utf-8", timeout: HERDR_TIMEOUT_MS, stdio: ["pipe", "pipe", "pipe"],
 		});
 		return JSON.parse(out);
@@ -42,8 +65,8 @@ function herdrJson(args: string[]): unknown | null {
 /** Run a herdr subcommand, discarding output. Returns true on success. */
 function herdrOk(args: string[]): boolean {
 	try {
-		execFileSync("herdr", args, {
-			timeout: HERDR_TIMEOUT_MS, stdio: ["pipe", "pipe", "pipe"],
+		syncExecImpl("herdr", args, {
+			encoding: "utf-8", timeout: HERDR_TIMEOUT_MS, stdio: ["pipe", "pipe", "pipe"],
 		});
 		return true;
 	} catch {
@@ -105,7 +128,8 @@ export function sidebarDaemonSocket(tabId: string): string | null {
 /** True when an nvim RPC server answers on `socket`. */
 export function nvimServerAlive(socket: string): boolean {
 	try {
-		execFileSync("nvim", ["--server", socket, "--remote-expr", "1"], {
+		syncExecImpl("nvim", ["--server", socket, "--remote-expr", "1"], {
+			encoding: "utf-8",
 			timeout: HERDR_TIMEOUT_MS,
 			stdio: ["pipe", "pipe", "ignore"],
 		});
@@ -169,7 +193,8 @@ function openInDaemon(socket: string, files: string[]): boolean {
 	let ok = true;
 	for (const file of files) {
 		try {
-			execFileSync("nvim", ["--server", socket, "--remote", file], {
+			syncExecImpl("nvim", ["--server", socket, "--remote", file], {
+				encoding: "utf-8",
 				timeout: HERDR_TIMEOUT_MS,
 				stdio: ["pipe", "pipe", "ignore"],
 			});
@@ -223,6 +248,12 @@ type DetectionResult =
 	| { status: "found"; editor: EditorPane }
 	| { status: "absent" }
 	| { status: "error" };
+/** True when a foreground-process entry is a vim/nvim editor. */
+function isEditorProcess(proc: ProcessEntry): boolean {
+	return proc.name === "vim" || proc.argv?.[0] === "vim" ||
+		proc.name === "nvim" || proc.argv?.[0] === "nvim";
+}
+
 /**
  * Search all panes in the current tab for one whose foreground process is
  * vim/nvim. Returns "error" if any herdr call fails, so the caller does NOT
@@ -241,10 +272,7 @@ export function findEditorPane(currentTabId: string): DetectionResult {
 			continue;
 		}
 		for (const proc of info.foreground_processes ?? []) {
-			if (
-				proc.name === "vim" || proc.argv?.[0] === "vim" ||
-				proc.name === "nvim" || proc.argv?.[0] === "nvim"
-			) {
+			if (isEditorProcess(proc)) {
 				return { status: "found", editor: { paneId: pane.pane_id, pid: proc.pid } };
 			}
 		}
@@ -289,7 +317,8 @@ function sendFilesViaText(paneId: string, files: string[]): boolean {
 		const escaped = fnameEscape(file);
 		const text = `\x1b:e ${escaped}\r`;
 		try {
-			execFileSync("herdr", ["pane", "send-text", paneId, text], {
+			syncExecImpl("herdr", ["pane", "send-text", paneId, text], {
+				encoding: "utf-8",
 				timeout: HERDR_TIMEOUT_MS, stdio: "ignore",
 			});
 		} catch {
@@ -316,16 +345,25 @@ export function dotfilesConfigHome(cwd: string): string | null {
 	}
 	return null;
 }
+/** A herdr split attempt: what it established before succeeding or
+ *  failing. The pane id and --listen socket survive a failed `pane run`
+ *  and identify the orphan pane in the failure log line. */
+interface SplitAttempt {
+	ran: boolean;
+	paneId: string | null;
+	socket: string | null;
+}
 /**
  * Split the current pane to the right and launch vim in the new pane.
- * Returns the new pane ID, or null if the split or run failed.
+ * Returns the attempt: ran=true on success, or whatever the failed
+ * attempt managed to establish (nulls when the split itself failed).
  */
-function launchEditor(cwd: string, files: string[]): string | null {
+function launchEditor(cwd: string, files: string[]): SplitAttempt {
 	const splitRes = herdrJson([
 		"pane", "split", "--current", "--direction", "right", "--cwd", cwd, "--focus",
 	]) as { result?: { pane?: { pane_id?: string } } } | null;
 	const newPaneId = splitRes?.result?.pane?.pane_id;
-	if (!newPaneId) return null;
+	if (!newPaneId) return { ran: false, paneId: null, socket: null };
 	// Launch nvim with an explicit RPC socket so focus-buffer (and nvimr)
 	// can drive this pane: the pi-focus:// node buffers live in THIS
 	// instance. Without --listen the pane is a dead end for buffer updates.
@@ -346,9 +384,9 @@ function launchEditor(cwd: string, files: string[]): string | null {
 	const inner = `${nvimLine}; herdr pane close ${newPaneId}`;
 	const paneCommand = `bash -c '${inner.replace(/'/g, "'\\''")}'`;
 	if (!herdrOk(["pane", "run", newPaneId, paneCommand])) {
-		return null;
+		return { ran: false, paneId: newPaneId, socket: socketPath };
 	}
-	return newPaneId;
+	return { ran: true, paneId: newPaneId, socket: socketPath };
 }
 /**
  * Focus the editor pane by discovering the direction from the current pane
@@ -371,9 +409,77 @@ function focusEditorPane(editorPaneId: string, currentPaneId: string): boolean {
 	return false;
 }
 // ---------------------------------------------------------------------------
+// launch registry & per-tab launch lock
+// ---------------------------------------------------------------------------
+// The provenance log once recorded two splits 27 ms apart in one tab: the
+// second caller scanned before the first caller's nvim had reached the
+// pane's foreground processes, so both decided "no editor" and both split.
+// Two guards fix that. In-process: every detect→split critical section runs
+// under a per-tab async lock and consults this process's registry FIRST — a
+// pane this process launched or attached to is trusted without a scan.
+// Cross-process: after a split, a re-list closes our pane when another
+// process's editor pane already won the race.
+
+/** The editor pane this process launched or attached to for one tab. */
+interface EditorRegistryEntry {
+	paneId: string;
+	/** --listen socket when this process launched the pane; null when attached. */
+	socket: string | null;
+	/** True only when THIS process created the pane (shutdown-close scope). */
+	created: boolean;
+}
+/** tab id → the tab's editor pane, as this process knows it. */
+const editorRegistry = new Map<string, EditorRegistryEntry>();
+
+/** True when the registry pane still exists: `pane process-info` answers.
+ *  A pane whose nvim is still starting answers with its shell — alive is
+ *  alive, and that is exactly the lag the registry exists to ride out. */
+function registryPaneAlive(paneId: string): boolean {
+	return getProcessInfo(paneId) !== null;
+}
+
+/** Panes in the tab running a vim/nvim foreground process, excluding
+ *  `exclude` (the post-split guard excludes the pane it just created). */
+function editorPanesInTab(currentTabId: string, exclude: string | null): string[] {
+	const panes = listPanes();
+	if (!panes) return [];
+	const found: string[] = [];
+	for (const pane of panes) {
+		if (pane.tab_id !== currentTabId) continue;
+		if (exclude !== null && pane.pane_id === exclude) continue;
+		const procs = getProcessInfo(pane.pane_id)?.foreground_processes ?? [];
+		if (procs.some((proc) => isEditorProcess(proc))) {
+			found.push(pane.pane_id);
+		}
+	}
+	return found;
+}
+
+/** Per-tab async launch locks (chain mutex): each caller queues on the
+ *  previous caller's completion, so concurrent openEditor calls in one tab
+ *  serialize their detect→split sections instead of racing. */
+const tabLaunchLocks = new Map<string, Promise<void>>();
+
+async function withTabLaunchLock<T>(
+	tabId: string,
+	section: () => Promise<T>,
+): Promise<T> {
+	const predecessor = tabLaunchLocks.get(tabId) ?? Promise.resolve();
+	const run = predecessor.then(section);
+	const tail = run.then(() => {}, () => {});
+	tabLaunchLocks.set(tabId, tail);
+	try {
+		return await run;
+	} finally {
+		// Drop the entry once no later caller queued behind us.
+		if (tabLaunchLocks.get(tabId) === tail) tabLaunchLocks.delete(tabId);
+	}
+}
+
+// ---------------------------------------------------------------------------
 // tmux fallback
 // ---------------------------------------------------------------------------
-function tmuxFallback(cwd: string, files: string[]): boolean {
+function tmuxFallback(cwd: string, files: string[]): string | null {
 	try {
 		// Same contract as the herdr launcher: nvim with an RPC socket, so
 		// focus-buffer can drive this pane too.
@@ -383,12 +489,86 @@ function tmuxFallback(cwd: string, files: string[]): boolean {
 			...(configHome ? ["env", `XDG_CONFIG_HOME='${configHome.replace(/'/g, "'\\''")}'`] : []),
 			"nvim", `--listen ${socketPath}`, ...files.map((f) => `'${f.replace(/'/g, "'\\''")}'`),
 		].join(" ");
-		execFileSync("tmux", ["split-window", "-h", "-c", cwd, shellCmd], {
+		syncExecImpl("tmux", ["split-window", "-h", "-c", cwd, shellCmd], {
+			encoding: "utf-8",
 			timeout: HERDR_TIMEOUT_MS, stdio: "ignore",
 		});
-		return true;
+		return socketPath;
 	} catch {
-		return false;
+		return null;
+	}
+}
+// ---------------------------------------------------------------------------
+// launch provenance log
+// ---------------------------------------------------------------------------
+// Two nvim panes once appeared in a subagent tab running the wrong
+// worktree's config, and no pi session log held any trace of their
+// launchers. Every editor launch from every route now appends one
+// attributable line to a fixed log, so an orphan pane can always be
+// traced back — and a pane with NO line was launched outside pi (the
+// Herdr plugin layer). Logging is debug state: a write failure must
+// never fail or delay the launch it describes.
+
+/** Fixed provenance log for editor launches; PI_NVIM_LAUNCH_LOG overrides. */
+export function launchLogPath(
+	env: { [key: string]: string | undefined } = process.env,
+): string {
+	return env.PI_NVIM_LAUNCH_LOG ?? join(homedir(), ".cache", "pi", "nvim-open-launches.log");
+}
+
+/** One provenance event, as known at the launch decision point. */
+export interface LaunchLogEvent {
+	route: string;
+	cwd: string;
+	outcome: "split" | "existing" | "sidebar" | "failed";
+	/** New pane id / --listen socket — recorded for split and failed only. */
+	pane?: string;
+	socket?: string;
+	files: number;
+}
+
+/** Quote a value that would otherwise break key=value token scanning:
+ *  empty, or containing whitespace, quotes, backslash, or "=". */
+function quoteLogValue(value: string): string {
+	if (value === "" || /[\s'"\\=]/.test(value)) {
+		return `'${value.replace(/'/g, "'\\''")}'`;
+	}
+	return value;
+}
+
+/** Build one grep-friendly provenance line: space-separated key=value
+ *  pairs, values with spaces single-quoted (shell style). Pure, so it
+ *  is unit-tested directly, mirroring tuicr-core.mjs. */
+export function buildLaunchLogLine(
+	event: LaunchLogEvent,
+	env: { [key: string]: string | undefined } = process.env,
+): string {
+	const pairs: Array<[string, string]> = [
+		["ts", new Date().toISOString()],
+		["pid", String(process.pid)],
+		["route", event.route],
+		["session", env.PI_SUBAGENT_SESSION ?? env.PI_SESSION_FILE ?? "-"],
+		["subagent", env.PI_SUBAGENT_NAME ?? "-"],
+		["callerPane", env.HERDR_PANE_ID ?? "-"],
+		["cwd", event.cwd],
+		["outcome", event.outcome],
+	];
+	if (event.outcome === "split" || event.outcome === "failed") {
+		pairs.push(["pane", event.pane ?? "-"], ["socket", event.socket ?? "-"]);
+	}
+	pairs.push(["files", String(event.files)]);
+	return pairs.map(([key, value]) => `${key}=${quoteLogValue(value)}`).join(" ");
+}
+
+/** Record one launch at its decision point (the outcome is now known).
+ *  Best-effort: any failure is swallowed and never delays the launch. */
+function logLaunch(event: LaunchLogEvent): void {
+	try {
+		const path = launchLogPath();
+		mkdirSync(dirname(path), { recursive: true });
+		appendFileSync(path, `${buildLaunchLogLine(event)}\n`, { encoding: "utf-8" });
+	} catch {
+		// Swallowed by design.
 	}
 }
 // ---------------------------------------------------------------------------
@@ -447,59 +627,175 @@ function parseArgs(input: string): string[] {
 function resolveFilePaths(cwd: string, files: string[]): string[] {
 	return files.map((f) => (isAbsolute(f) ? f : resolve(cwd, f)));
 }
+/** Route files/focus to an already-present editor pane (registry hit or
+ *  scan detection): send `:e <file>` keystrokes, focus the pane, log the
+ *  existing-editor outcome. `note` prefixes the message when the routing
+ *  came from the post-split duplicate guard. */
+function routeToExistingEditor(
+	current: PaneInfo,
+	editorPaneId: string,
+	finalFiles: string[],
+	cwd: string,
+	route: string,
+	note = "",
+): { message: string; ok: boolean; launched: boolean } {
+	if (finalFiles.length > 0) {
+		const ok = sendFilesViaText(editorPaneId, finalFiles);
+		if (ok) focusEditorPane(editorPaneId, current.pane_id);
+		logLaunch(ok
+			? { route, cwd, outcome: "existing", files: finalFiles.length }
+			: { route, cwd, outcome: "failed", pane: editorPaneId, socket: "-", files: finalFiles.length });
+		return {
+			message: ok
+				? `${note}Sent ${finalFiles.length} file(s) to existing editor (pane ${editorPaneId}).`
+				: `${note}Could not send files to existing editor (pane ${editorPaneId}).`,
+			ok,
+			launched: false,
+		};
+	}
+	const ok = focusEditorPane(editorPaneId, current.pane_id);
+	logLaunch(ok
+		? { route, cwd, outcome: "existing", files: 0 }
+		: { route, cwd, outcome: "failed", pane: editorPaneId, socket: "-", files: 0 });
+	return {
+		message: ok
+			? `${note}Focused existing editor pane (${editorPaneId}).`
+			: `${note}Could not focus existing editor pane (${editorPaneId}).`,
+		ok,
+		launched: false,
+	};
+}
+
+/** Register a fresh split as this tab's editor — after the cross-process
+ *  duplicate guard: re-list the tab's panes and, if another process's
+ *  editor pane appeared alongside ours, close OUR pane (the new one) and
+ *  route to the pre-existing editor instead. */
+function registerLaunchedEditor(
+	current: PaneInfo,
+	launch: SplitAttempt & { ran: true; paneId: string; socket: string },
+	finalFiles: string[],
+	cwd: string,
+	route: string,
+): { message: string; ok: boolean; launched: boolean } {
+	const rivals = editorPanesInTab(current.tab_id, launch.paneId);
+	if (rivals.length > 0) {
+		const winner = rivals[0];
+		herdrOk(["pane", "close", launch.paneId]);
+		editorRegistry.set(current.tab_id, { paneId: winner, socket: null, created: false });
+		return routeToExistingEditor(
+			current, winner, finalFiles, cwd, route,
+			`Closed duplicate pane ${launch.paneId} (a concurrent launch raced this one). `,
+		);
+	}
+	editorRegistry.set(current.tab_id, {
+		paneId: launch.paneId, socket: launch.socket, created: true,
+	});
+	const fileNote = finalFiles.length > 0 ? ` with ${finalFiles.length} file(s)` : "";
+	logLaunch({
+		route, cwd, outcome: "split",
+		pane: launch.paneId, socket: launch.socket,
+		files: finalFiles.length,
+	});
+	return {
+		message: `Launched vim in a vertical split (pane ${launch.paneId}) at ${cwd}${fileNote}.`,
+		ok: true,
+		launched: true,
+	};
+}
+
+/** The detect→split critical section for one tab, run under the tab's
+ *  launch lock. Returns null to fall through to the tmux fallback (herdr
+ *  scan error, or a split whose pane could not be programmed). */
+async function openEditorInTab(
+	current: PaneInfo,
+	finalFiles: string[],
+	cwd: string,
+	route: string,
+	noteAttempt: (attempt: SplitAttempt) => void,
+): Promise<{ message: string; ok: boolean; launched: boolean } | null> {
+	// Registry-first: an editor pane this process launched or attached to
+	// is trusted without a pane scan. The scan once missed a pane this
+	// process had split 27 ms earlier — its nvim had not reached the pane's
+	// foreground processes yet — and a second split landed on top of it.
+	const known = editorRegistry.get(current.tab_id);
+	if (known) {
+		if (registryPaneAlive(known.paneId)) {
+			return routeToExistingEditor(current, known.paneId, finalFiles, cwd, route);
+		}
+		// Stale entry: the pane is gone (closed with its editor, or killed).
+		editorRegistry.delete(current.tab_id);
+	}
+	const detection = findEditorPane(current.tab_id);
+	if (detection.status === "found") {
+		// Remember the pane we attached to so later calls skip the scan.
+		editorRegistry.set(current.tab_id, {
+			paneId: detection.editor.paneId, socket: null, created: false,
+		});
+		return routeToExistingEditor(current, detection.editor.paneId, finalFiles, cwd, route);
+	}
+	// Only launch a new editor if we definitively confirmed no editor exists.
+	// On error, fall through to tmux fallback rather than risking a duplicate.
+	if (detection.status === "absent") {
+		const launch = launchEditor(cwd, finalFiles);
+		if (launch.ran && launch.paneId) {
+			return registerLaunchedEditor(
+				current,
+				launch as SplitAttempt & { ran: true; paneId: string; socket: string },
+				finalFiles, cwd, route,
+			);
+		}
+		if (launch.paneId) noteAttempt(launch);
+	}
+	return null;
+}
+
 export async function openEditor(
 	cwd: string,
 	rawArgs: string[],
+	route = "library:unknown",
 ): Promise<{ message: string; ok: boolean; launched: boolean }> {
 	const finalFiles = resolveFilePaths(cwd, rawArgs);
+	// Provenance: remembered from a partial herdr attempt so even the
+	// final failure line can name the pane it left behind.
+	let herdrAttempt: SplitAttempt | null = null;
 	// Try Herdr — getCurrentPane returns null if herdr is unavailable
 	const current = getCurrentPane();
 	if (current) {
 		// A live herdr-nvim sidebar daemon owns editing for this tab:
 		// attach to it instead of detecting or launching a split editor.
 		const daemon = liveSidebarDaemon(current);
-		if (daemon) return attachToSidebarDaemon(daemon, current, finalFiles);
-		const detection = findEditorPane(current.tab_id);
-		if (detection.status === "found") {
-			const editor = detection.editor;
-			if (finalFiles.length > 0) {
-				const ok = sendFilesViaText(editor.paneId, finalFiles);
-				if (ok) focusEditorPane(editor.paneId, current.pane_id);
-				return {
-					message: ok
-						? `Sent ${finalFiles.length} file(s) to existing editor (pane ${editor.paneId}).`
-						: `Could not send files to existing editor (pane ${editor.paneId}).`,
-					ok,
-					launched: false,
-				};
-			}
-			const ok = focusEditorPane(editor.paneId, current.pane_id);
-			return {
-				message: ok
-					? `Focused existing editor pane (${editor.paneId}).`
-					: `Could not focus existing editor pane (${editor.paneId}).`,
-				ok,
-				launched: false,
-			};
+		if (daemon) {
+			const result = attachToSidebarDaemon(daemon, current, finalFiles);
+			logLaunch(result.ok
+				? { route, cwd, outcome: "sidebar", files: finalFiles.length }
+				: { route, cwd, outcome: "failed", pane: "-", socket: daemon.socket, files: finalFiles.length });
+			return result;
 		}
-		// Only launch a new editor if we definitively confirmed no editor exists.
-		// On error, fall through to tmux fallback rather than risking a duplicate.
-		if (detection.status === "absent") {
-			const newPane = launchEditor(cwd, finalFiles);
-			if (newPane) {
-				const fileNote = finalFiles.length > 0 ? ` with ${finalFiles.length} file(s)` : "";
-				return {
-					message: `Launched vim in a vertical split (pane ${newPane}) at ${cwd}${fileNote}.`,
-					ok: true,
-					launched: true,
-				};
-			}
-		}
+		// Everything below can split a pane. Two concurrent callers in one
+		// tab once double-split 27 ms apart (the second scan ran before the
+		// first split's nvim reached foreground processes), so the whole
+		// detect→split section runs under a per-tab launch lock with a
+		// registry-first lookup.
+		const outcome = await withTabLaunchLock(
+			current.tab_id,
+			() => openEditorInTab(current, finalFiles, cwd, route, (attempt) => {
+				herdrAttempt = attempt;
+			}),
+		);
+		if (outcome) return outcome;
 	}
 	// Herdr unavailable or failed — try tmux.
-	if (tmuxFallback(cwd, finalFiles)) {
+	const tmuxSocket = tmuxFallback(cwd, finalFiles);
+	if (tmuxSocket !== null) {
+		logLaunch({ route, cwd, outcome: "split", pane: "-", socket: tmuxSocket, files: finalFiles.length });
 		return { message: `Launched vim in a tmux split at ${cwd}.`, ok: true, launched: true };
 	}
+	logLaunch({
+		route, cwd, outcome: "failed",
+		pane: herdrAttempt?.paneId ?? "-",
+		socket: herdrAttempt?.socket ?? "-",
+		files: finalFiles.length,
+	});
 	return {
 		message: `Could not launch vim automatically. Run manually: cd ${cwd} && vim ${finalFiles.join(" ")}`,
 		ok: false,
@@ -535,7 +831,7 @@ const nvimOpenTool = defineTool({
 	async execute(_toolCallId, params) {
 		const cwd = params.cwd ?? process.cwd();
 		const files = params.files ?? [];
-		const result = await openEditor(cwd, files);
+		const result = await openEditor(cwd, files, "tool");
 		return { content: [{ type: "text", text: result.message }] };
 	},
 	renderResult(result, _options, theme, context) {
@@ -570,8 +866,20 @@ export default function (pi: ExtensionAPI) {
 				if (typeof args === "string") return args.trim() ? parseArgs(args.trim()) : [];
 				return [];
 			})();
-			const result = await openEditor(cwd, fileList);
+			const result = await openEditor(cwd, fileList, "command");
 			ctx?.ui?.notify(result.message, "info");
 		},
+	});
+	// Subagent sessions close the editor panes they created on shutdown:
+	// orphaned editor panes were keeping subagent tabs open forever after
+	// their pi exited. Captain sessions leave every pane open — a human may
+	// be editing in them; the tuicr extension keeps its human-facing panes
+	// open on session_shutdown by the same principle.
+	pi.on("session_shutdown", () => {
+		if (!process.env.PI_SUBAGENT_SESSION) return;
+		for (const entry of [...editorRegistry.values()]) {
+			if (entry.created) herdrOk(["pane", "close", entry.paneId]);
+		}
+		editorRegistry.clear();
 	});
 }

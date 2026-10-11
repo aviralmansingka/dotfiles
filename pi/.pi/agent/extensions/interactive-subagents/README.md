@@ -42,7 +42,7 @@ the same validation, registry, watcher, and completion-steer path as the tool.
 The tuicr extension's `tuicr_review` uses this to start the bundled
 `tuicr-review` agent, and `__pi_interactive_subagents.isSubagentRunning(name)`
 reports whether such a spawn is still running (tuicr refuses a second reviewer
-for a repo whose review is already open).
+for the same review target — another PR or range still runs concurrently).
 
 ### Spawning
 
@@ -87,7 +87,7 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | **scout** | session default | `read`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Fast read-only codebase recon |
 | **researcher** | session default | `web_search`, `web_fetch`, `bash`, `tuicr`, `tuicr_reply` | Web research, synthesized into a sourced brief |
 | **worker** | session default | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
-| **professor** | session default | lesson tools, mermaid diagrams, Hunk canvas, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
+| **professor** | session default | lesson tools, mermaid diagrams, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
 | **tuicr-review** | session default | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
 | **nm-orchestrator** | session default | `no_mistakes_axi`, `read` | no-mistakes run orchestrator; drives one pipeline run through its gates and returns the run summary |
 
@@ -104,9 +104,11 @@ until the learner exits it. All six carry their identity in the system prompt
 
 The `tuicr-review` agent is started by the tuicr extension's `tuicr_review`
 tool / `/tuicr` command (see
-[README-tuicr.md](../README-tuicr.md)); it parks in `waiting` between comment
-batches — auto-exit is suppressed while its comment watcher is active — and
-closes itself after the TUI exits and its summary is delivered.
+[README-tuicr.md](../README-tuicr.md)); it opens the tuicr pane inside its own
+tab (the wrapper it spawns inherits its `HERDR_PANE_ID`), parks in `waiting`
+between comment batches — auto-exit is suppressed while its comment watcher
+is active — and closes itself after the TUI exits and its summary is
+delivered.
 
 The `nm-orchestrator` agent is started by the no-mistake-pane extension's
 `no_mistakes_axi` tool when a Herdr captain session submits `run`: it owns

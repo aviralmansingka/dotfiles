@@ -1,0 +1,14 @@
+# Per-repo no-mistakes overrides.
+
+# Pin the gate's Test and Lint steps to this repo's offline runners so they run
+# exactly what .github/workflows/ci.yml runs, instead of no-mistakes' fallback
+# of asking a step agent to improvise tests. The 2026-10-11 professor-test
+# incident (run 01M4NRT2XKCHANREB6YFBPX6Q9) proved that fallback hazardous: the
+# step agent built a live harness (detached tmux server, real pi session, nvim
+# launches that leaked per retry), timed out, and left nvim processes on the
+# host. Unlike firstmate's intent-targeted Test contract, this repo pins the
+# full offline suite on purpose: determinism over improvisation. See
+# scripts/nm-test.sh and scripts/nm-lint.sh for what each runner executes.
+commands:
+  lint: 'scripts/nm-lint.sh'
+  test: 'scripts/nm-test.sh'

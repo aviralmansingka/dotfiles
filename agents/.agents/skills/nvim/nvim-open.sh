@@ -32,6 +32,7 @@ if ! command -v vim >/dev/null 2>&1 && ! command -v nvim >/dev/null 2>&1; then
 	echo "Error: neither vim nor nvim is installed on this host." >&2
 	echo "Fallback: use 'less <file>' for read-only viewing or 'vi -R <file>' for vi." >&2
 	echo "Files requested: ${FILES[*]:-$CWD}" >&2
+	log_launch failed
 	exit 1
 fi
 
@@ -79,6 +80,49 @@ fnameescape() {
 	printf '%s' "$path" | sed 's/[][\\ |%"'"'"'#\t\r\n]/\\&/g'
 }
 
+# ── Launch provenance log ──────────────────────────────────────
+# Every launch appends one attributable line (space-separated
+# key=value pairs) to ~/.cache/pi/nvim-open-launches.log —
+# PI_NVIM_LAUNCH_LOG overrides the path. Mirrors buildLaunchLogLine
+# in the nvim-open extension. Best-effort only: a write failure must
+# never fail or delay the launch, so the whole body runs inside a
+# swallowed group.
+
+# Quote a value that would break key=value token scanning: empty, or
+# containing whitespace, quotes, backslash, or '='.
+log_quote() {
+	local value="$1"
+	case "$value" in
+		"" | *[[:space:]\"\'\\=]*)
+			local escaped="${value//\'/\'\\\'\'}"
+			printf "'%s'" "$escaped"
+			;;
+		*)
+			printf '%s' "$value"
+			;;
+	esac
+}
+
+# $1 outcome, $2 pane (split/failed only, default -), $3 socket (default -).
+log_launch() {
+	{
+		local outcome="$1" pane="${2:--}" socket="${3:--}" line log_path
+		log_path="${PI_NVIM_LAUNCH_LOG:-$HOME/.cache/pi/nvim-open-launches.log}"
+		line="ts=$(date -u +%Y-%m-%dT%H:%M:%SZ) pid=$$ route=script"
+		line="$line session=$(log_quote "${PI_SUBAGENT_SESSION:-${PI_SESSION_FILE:--}}")"
+		line="$line subagent=$(log_quote "${PI_SUBAGENT_NAME:--}")"
+		line="$line callerPane=$(log_quote "${HERDR_PANE_ID:--}")"
+		line="$line cwd=$(log_quote "$CWD")"
+		line="$line outcome=$outcome"
+		if [[ "$outcome" == "split" || "$outcome" == "failed" ]]; then
+			line="$line pane=$(log_quote "$pane") socket=$(log_quote "$socket")"
+		fi
+		line="$line files=${#FILES[@]}"
+		mkdir -p "$(dirname "$log_path")" 2>/dev/null || true
+		printf '%s\n' "$line" >>"$log_path"
+	} 2>/dev/null || true
+}
+
 # Run herdr command, return JSON or null
 herdr_json() {
 	timeout "$HERDR_TIMEOUT" herdr "$@" 2>/dev/null || true
@@ -115,9 +159,11 @@ if [ -z "$(herdr_json workspace list)" ]; then
 		fi
 		echo "Launched $EDITOR_CMD in a tmux split at $CWD."
 		[[ -n "${_SOCKET_PATH:-}" ]] && echo "Listen socket: $_SOCKET_PATH"
+		log_launch split - "${_SOCKET_PATH:--}"
 		exit 0
 	fi
 	echo "Could not launch $EDITOR_CMD. Run manually: cd $CWD && $ENV_PREFIX $EDITOR_CMD ${FILES[*]}"
+	log_launch failed
 	exit 1
 fi
 
@@ -125,6 +171,7 @@ fi
 CURRENT_PANE_JSON=$(herdr_json pane current)
 if [[ -z "$CURRENT_PANE_JSON" ]]; then
 	echo "Could not get current pane from herdr."
+	log_launch failed
 	exit 1
 fi
 
@@ -133,6 +180,7 @@ CURRENT_PANE_ID=$(echo "$CURRENT_PANE_JSON" | python3 -c "import sys,json; print
 
 if [[ -z "$TAB_ID" || -z "$CURRENT_PANE_ID" ]]; then
 	echo "Could not parse current pane info."
+	log_launch failed
 	exit 1
 fi
 
@@ -200,6 +248,7 @@ sys.exit(1)
 	done <<< "$TAB_PANES_LIST"
 	if [[ "$DAEMON_OK" != "true" ]]; then
 		echo "Could not open files in the herdr-nvim sidebar (tab $TAB_ID)." >&2
+		log_launch failed - "$DAEMON_SOCKET"
 		exit 1
 	fi
 	# Toggled-off sidebar: never show the pane from the agent side — an
@@ -215,38 +264,57 @@ sys.exit(1)
 	else
 		echo "herdr-nvim sidebar (tab $TAB_ID) is this tab's editor$VIEW_NOTE."
 	fi
+	log_launch sidebar
 	exit 0
 fi
 
-# Detect existing editor in the current tab
-EDITOR_PANE_ID=""
-EDITOR_FOUND=false
-SCAN_ERROR=false
+# ── Per-tab launch lock ──────────────────────────────────────
+# Two invocations of this script in one tab (an agent tool call and a
+# skill call, or two racing callers) can both scan "no editor" and both
+# split — the provenance log recorded two splits 27 ms apart. Serialize
+# the detect→split section below on a per-tab lockfile. flock is
+# advisory and best-effort: when it is missing the script behaves as
+# before. The lock releases when fd 9 closes — every path below exits.
+LAUNCH_LOCK="/tmp/pi-nvim-launch-${TAB_ID//:/_}.lock"
+if command -v flock >/dev/null 2>&1; then
+	if exec 9>>"$LAUNCH_LOCK" 2>/dev/null; then
+		flock -w 15 9 || true
+	fi
+fi
 
-PANES_JSON=$(herdr_json pane list)
-if [[ -z "$PANES_JSON" ]]; then
-	SCAN_ERROR=true
-else
-	# Get panes in this tab
-	TAB_PANES=$(echo "$PANES_JSON" | python3 -c "
+# Detect existing editor in the current tab (sets EDITOR_PANE_ID,
+# EDITOR_FOUND, SCAN_ERROR). A function so the pre-split settle re-check
+# below can run the exact same scan.
+scan_tab_for_editor() {
+	EDITOR_PANE_ID=""
+	EDITOR_FOUND=false
+	SCAN_ERROR=false
+
+	local PANES_JSON TAB_PANES PROC_JSON IS_EDITOR pane_id
+	PANES_JSON=$(herdr_json pane list)
+	if [[ -z "$PANES_JSON" ]]; then
+		SCAN_ERROR=true
+	else
+		# Get panes in this tab
+		TAB_PANES=$(echo "$PANES_JSON" | python3 -c "
 import sys,json
 data=json.load(sys.stdin)
 panes=[p['pane_id'] for p in data.get('result',{}).get('panes',[]) if p.get('tab_id')=='$TAB_ID']
 print('\n'.join(panes))
 " 2>/dev/null || echo "")
 
-	if [[ -z "$TAB_PANES" ]]; then
-		SCAN_ERROR=true
-	else
-		while IFS= read -r pane_id; do
-			[[ -z "$pane_id" ]] && continue
-			PROC_JSON=$(herdr_json pane process-info --pane "$pane_id")
-			if [[ -z "$PROC_JSON" ]]; then
-				SCAN_ERROR=true
-				continue
-			fi
-			# Check if foreground process is vim or nvim
-			IS_EDITOR=$(echo "$PROC_JSON" | python3 -c "
+		if [[ -z "$TAB_PANES" ]]; then
+			SCAN_ERROR=true
+		else
+			while IFS= read -r pane_id; do
+				[[ -z "$pane_id" ]] && continue
+				PROC_JSON=$(herdr_json pane process-info --pane "$pane_id")
+				if [[ -z "$PROC_JSON" ]]; then
+					SCAN_ERROR=true
+					continue
+				fi
+				# Check if foreground process is vim or nvim
+				IS_EDITOR=$(echo "$PROC_JSON" | python3 -c "
 import sys,json
 data=json.load(sys.stdin)
 procs=data.get('result',{}).get('process_info',{}).get('foreground_processes',[])
@@ -258,26 +326,29 @@ for p in procs:
         break
 " 2>/dev/null || echo "")
 
-			if [[ "$IS_EDITOR" == "yes" ]]; then
-				EDITOR_PANE_ID="$pane_id"
-				EDITOR_FOUND=true
-				break
-			fi
-		done <<< "$TAB_PANES"
+				if [[ "$IS_EDITOR" == "yes" ]]; then
+					EDITOR_PANE_ID="$pane_id"
+					EDITOR_FOUND=true
+					break
+				fi
+			done <<< "$TAB_PANES"
+		fi
 	fi
-fi
+}
 
-# If editor exists, send files to it.
-# When a dotfiles config was detected, warn that the existing editor
-# may be running with a different config — the captain can close and
-# relaunch to pick up the worktree config.
-if [[ "$EDITOR_FOUND" == "true" ]]; then
+# Send files to / focus the existing editor pane (EDITOR_PANE_ID), then
+# exit. A function so the settle re-check reuses the exact same routing.
+use_existing_editor() {
+	# When a dotfiles config was detected, warn that the existing editor
+	# may be running with a different config — the captain can close and
+	# relaunch to pick up the worktree config.
 	if [[ -n "$DOTFILES_XDG_CONFIG_HOME" ]]; then
 		echo "Note: dotfiles config detected at $DOTFILES_XDG_CONFIG_HOME but" >&2
 		echo "      existing editor may be using a different config. Close and" >&2
 		echo "      relaunch /nvim to use the worktree config." >&2
 	fi
 	if [[ ${#FILES[@]} -gt 0 ]]; then
+		local escaped file
 		for file in "${FILES[@]}"; do
 			escaped=$(fnameescape "$file")
 			# Escape to exit insert mode, then :e with escaped path, then Enter
@@ -288,6 +359,7 @@ if [[ "$EDITOR_FOUND" == "true" ]]; then
 		echo "Editor already running (pane $EDITOR_PANE_ID)."
 	fi
 	# Focus the editor pane — find direction via neighbor
+	local dir NEIGHBOR
 	for dir in right down left up; do
 		NEIGHBOR=$(herdr_json pane neighbor --pane "$CURRENT_PANE_ID" --direction "$dir" | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',{}).get('neighbor',{}).get('neighbor_pane_id',''))" 2>/dev/null || echo "")
 		if [[ "$NEIGHBOR" == "$EDITOR_PANE_ID" ]]; then
@@ -295,7 +367,13 @@ if [[ "$EDITOR_FOUND" == "true" ]]; then
 			break
 		fi
 	done
+	log_launch existing
 	exit 0
+}
+
+scan_tab_for_editor
+if [[ "$EDITOR_FOUND" == "true" ]]; then
+	use_existing_editor
 fi
 
 # On scan error, don't launch a duplicate — fall through to tmux
@@ -310,7 +388,20 @@ if [[ "$SCAN_ERROR" == "true" ]]; then
 		fi
 		echo "Launched $EDITOR_CMD in a tmux split at $CWD."
 		[[ -n "${_SOCKET_PATH:-}" ]] && echo "Listen socket: $_SOCKET_PATH"
+		log_launch split - "${_SOCKET_PATH:--}"
 		exit 0
+	fi
+fi
+
+# Settle re-check before splitting: a concurrent invocation may have
+# split moments ago and its nvim has not reached the pane's foreground
+# processes yet (the 27 ms incident shape). Wait briefly and re-scan
+# once — a late-appearing editor wins over a duplicate split.
+if [[ "$SCAN_ERROR" != "true" ]]; then
+	sleep 0.3
+	scan_tab_for_editor
+	if [[ "$EDITOR_FOUND" == "true" ]]; then
+		use_existing_editor
 	fi
 fi
 
@@ -320,6 +411,7 @@ NEW_PANE_ID=$(echo "$SPLIT_JSON" | python3 -c "import sys,json; print(json.load(
 
 if [[ -z "$NEW_PANE_ID" ]]; then
 	echo "Could not create split pane."
+	log_launch failed
 	exit 1
 fi
 
@@ -331,6 +423,7 @@ if [[ ${#FILES[@]} -gt 0 ]]; then
 		echo "Launched $EDITOR_CMD in a vertical split (pane $NEW_PANE_ID) at $CWD with ${#FILES[@]} file(s)."
 	else
 		echo "Failed to launch $EDITOR_CMD in pane $NEW_PANE_ID."
+		log_launch failed "$NEW_PANE_ID" "${_SOCKET_PATH:--}"
 		exit 1
 	fi
 else
@@ -338,9 +431,13 @@ else
 		echo "Launched $EDITOR_CMD in a vertical split (pane $NEW_PANE_ID) at $CWD."
 	else
 		echo "Failed to launch $EDITOR_CMD in pane $NEW_PANE_ID."
+		log_launch failed "$NEW_PANE_ID" "${_SOCKET_PATH:--}"
 		exit 1
 	fi
 fi
+
+# Every launch is attributable: record this one before finishing.
+log_launch split "$NEW_PANE_ID" "${_SOCKET_PATH:--}"
 
 # Print the listen socket path if created, so the agent knows where it is.
 if [[ -n "${_SOCKET_PATH:-}" ]]; then

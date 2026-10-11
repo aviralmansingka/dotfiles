@@ -404,7 +404,19 @@ function arcJournal(journal: string | undefined): string | undefined {
 			.map((f) => join(dir, f))
 			.filter((f) => f !== journal && journalHasLessons(f));
 		if (candidates.length === 0) return journal;
-		candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+		// mtime can tie at the kernel's timestamp granularity when journals are
+		// written in quick succession (a restarted professor's second journal
+		// lands within the same clock tick as the first). V8's sort is stable, so
+		// a bare mtime comparator then preserves readdirSync order — ext4 hash
+		// order, arbitrary per directory — and the fallback can pick the WRONG
+		// journal (nondeterministically: this flaked CI). Break mtime ties by
+		// name, descending, so the choice is deterministic; pi session ids are
+		// time-ordered, so the name order also tracks session recency.
+		candidates.sort(
+			(a, b) =>
+				statSync(b).mtimeMs - statSync(a).mtimeMs ||
+				(a < b ? 1 : a > b ? -1 : 0),
+		);
 		return candidates[0];
 	} catch {
 		return journal;
@@ -448,7 +460,7 @@ export async function presentLesson(
 	if (!buffer.ok && isEditorMissing(buffer.message)) {
 		// No editor pane yet: launch one, wait for nvim to bind its RPC
 		// socket, then retry — the node buffer must exist, not the journal.
-		const launched = await openEditor(ctx?.cwd ?? process.cwd(), []);
+		const launched = await openEditor(ctx?.cwd ?? process.cwd(), [], "library:md-log");
 		if (launched.ok && (await ensureEditorReady())) {
 			buffer = showNodeBuffer(key, title, title, body);
 		}
@@ -508,7 +520,7 @@ export async function openNodeView(
 	let view = attempt();
 	if (view.mode === "none" && isEditorMissing(view.message)) {
 		// No editor pane at all: launch one, wait for the RPC socket, retry.
-		const launched = await openEditor(ctx?.cwd ?? process.cwd(), []);
+		const launched = await openEditor(ctx?.cwd ?? process.cwd(), [], "library:md-log");
 		if (launched.ok && (await ensureEditorReady())) view = attempt();
 	}
 	if (view.mode !== "none") return view;
@@ -539,7 +551,7 @@ export async function openJournalInEditor(
 			launched: false,
 		};
 	}
-	const result = await openEditor(ctx?.cwd ?? process.cwd(), [journalPath]);
+	const result = await openEditor(ctx?.cwd ?? process.cwd(), [journalPath], "library:md-log");
 	return {
 		message: `${result.message} — lesson journal ${journalPath}`,
 		ok: result.ok,
@@ -566,7 +578,7 @@ export async function openProbesInEditor(
 			launched: false,
 		};
 	}
-	const result = await openEditor(ctx?.cwd ?? process.cwd(), [probesPath]);
+	const result = await openEditor(ctx?.cwd ?? process.cwd(), [probesPath], "library:md-log");
 	return {
 		message: `${result.message} — probe log ${probesPath}`,
 		ok: result.ok,

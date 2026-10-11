@@ -238,6 +238,28 @@ export function closeSurface(surface: string): void {
   rebalanceSurfaces();
 }
 
+/**
+ * Close the whole window holding a pane, so sibling panes close with it
+ * (the tmux analogue of the Herdr tab close). Best-effort: falls back to
+ * killing just the pane.
+ */
+export function closeTabForPane(paneId: string): void {
+  try {
+    const windowId = execFileSync(
+      "tmux",
+      ["list-panes", "-t", paneId, "-F", "#{window_id}"],
+      { encoding: "utf8" },
+    ).trim();
+    if (windowId) {
+      execFileSync("tmux", ["kill-window", "-t", windowId], { encoding: "utf8" });
+      return;
+    }
+  } catch {}
+  try {
+    execFileSync("tmux", ["kill-pane", "-t", paneId], { encoding: "utf8" });
+  } catch {}
+}
+
 // ── Exit polling ──
 
 export interface PollResult {

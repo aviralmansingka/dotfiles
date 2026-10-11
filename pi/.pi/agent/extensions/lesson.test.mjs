@@ -22,7 +22,7 @@ const { createJiti } = require(jitiPath);
 // Peer stubs (house pattern from explain.test.mjs). md-log transitively
 // imports nvim-open (for openJournalInEditor), which imports defineTool and
 // Type — stub those. The editor-opening path itself is IO glue over herdr
-// and is intentionally NOT exercised here (same policy as hunk-open tests).
+// and is intentionally NOT exercised here.
 const tempRoot = mkdtempSync(join(tmpdir(), "lesson-test-"));
 const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
 const stubAi = join(tempRoot, "pi-ai.cjs");

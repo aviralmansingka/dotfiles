@@ -457,7 +457,7 @@ function realPiPath(): string {
  *    - ask-user-question, explain, quiz, lesson, focus-buffer, run-command —
  *      they block on a human; steps are autonomous;
  *    - cleanup — it deletes worktrees; it must never run in the run worktree;
- *    - nvim-open, hunk-open — captain-side canvases, not step tools;
+ *    - nvim-open — captain-side editor, not a step tool;
  *    - image-drop, mobile-mode, md-log, user-input — not applicable here.
  *  A file that is missing is skipped, so a leaner install degrades to a
  *  leaner step agent instead of failing the launch. */
