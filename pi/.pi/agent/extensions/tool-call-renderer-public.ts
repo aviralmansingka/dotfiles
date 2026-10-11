@@ -31,6 +31,7 @@ import {
   type ToolRenderers,
 } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, type Component } from "@earendil-works/pi-tui";
+import { isHeredocTerminator, scanCommandContext, scanQuoteClose } from "./shell-classify.mjs";
 
 type RenderContext = Parameters<NonNullable<ToolRenderers["renderCall"]>>[2];
 type Result = Parameters<NonNullable<ToolRenderers["renderResult"]>>[0];
@@ -736,8 +737,10 @@ type CommandRow = { text: string; command: boolean; op: string };
  */
 function commandRows(command: string): CommandRow[] {
   const rows: CommandRow[] = [];
-  let inSingle = false;
-  let inDouble = false;
+  // Shared shell-grammar state (quote, paren depth) lives in the
+  // shell-classify scanner; the heredoc tag, the backslash-wrap flag, and
+  // the operator carry are this renderer's row policy.
+  const state = { quote: "", parenDepth: 0 };
   let heredoc: string | undefined;
   let continued = false;
   let carriedOp: string | undefined;
@@ -745,68 +748,45 @@ function commandRows(command: string): CommandRow[] {
     const line = safeLine(raw);
     if (heredoc) {
       rows.push({ text: line, command: false, op: "" });
-      if (line.trim() === heredoc) heredoc = undefined;
+      if (isHeredocTerminator(heredoc, line)) heredoc = undefined;
       continue;
     }
     // A line that merely completes a backslash-continued segment after an
     // operator (a line ending in `&& \` whose next line holds the operand)
     // is executable: it takes the carried operator instead of rendering as
     // a dim continuation.
-    const completesCarried = continued && Boolean(carriedOp) && !inSingle && !inDouble;
-    const startsContinued = (inSingle || inDouble || continued) && !completesCarried;
+    const completesCarried = continued && Boolean(carriedOp) && !state.quote;
+    const startsContinued = (Boolean(state.quote) || continued) && !completesCarried;
     if (!startsContinued && !completesCarried && !line.trim()) continue;
 
     // Phase 1 — continuation prefix: everything up to where the continued
-    // construct closes renders dim.
+    // construct closes renders dim. The close scan is the shared
+    // shell-classify machine (escape-aware, single-quote literal).
     let i = 0;
     if (startsContinued) {
-      if (inSingle || inDouble) {
-        while (i < line.length) {
-          const ch = line[i];
-          if (inSingle) {
-            if (ch === "'") {
-              inSingle = false;
-              i++;
-              break;
-            }
-            i++;
-          } else if (ch === "\\") {
-            i += 2;
-          } else if (ch === '"') {
-            inDouble = false;
-            i++;
-            break;
-          } else {
-            i++;
-          }
-        }
+      if (state.quote) {
+        const close = scanQuoteClose(line, state.quote);
+        i = close.closeIndex;
+        state.quote = close.quote;
       } else {
         // Backslash wrap: the whole line continues its segment. Re-scan it
-        // for constructs that outlive it (opened quotes, another wrap).
-        i = line.length;
-        continued = false;
-        for (let j = 0; j < line.length; j++) {
-          const ch = line[j];
-          if (inSingle) {
-            if (ch === "'") inSingle = false;
-          } else if (inDouble) {
-            if (ch === "\\") j++;
-            else if (ch === '"') inDouble = false;
-          } else if (ch === "\\") {
-            if (j === line.length - 1) continued = true;
-            else j++;
-          } else if (ch === "'") {
-            inSingle = true;
-          } else if (ch === '"') {
-            inDouble = true;
-          }
+        // for constructs that outlive it (opened quotes, another wrap, a
+        // heredoc opener) through the shared scanner.
+        const scan = scanCommandContext(line, state);
+        state.quote = scan.quote;
+        state.parenDepth = scan.parenDepth;
+        continued = scan.trailingEscape;
+        for (const event of scan.events) {
+          if (event.type === "heredoc") heredoc = event.tag;
         }
+        i = line.length;
       }
       rows.push({ text: line.slice(0, i), command: false, op: "" });
     }
 
     // Phase 2 — command context for the remainder: split into executable
-    // segments at top-level operators; state persists across lines.
+    // segments at the top-level operators the shared scanner reports;
+    // quote and paren state persist across lines.
     const rest = startsContinued ? line.slice(i) : line;
     let pendingOp: string | undefined = carriedOp;
     carriedOp = undefined;
@@ -818,40 +798,18 @@ function commandRows(command: string): CommandRow[] {
         start = lead[0].length;
       }
     }
-    if (rest.length) continued = false;
-    let parenDepth = 0;
-    for (let j = start; j < rest.length; j++) {
-      const ch = rest[j];
-      if (inSingle) {
-        if (ch === "'") inSingle = false;
-      } else if (inDouble) {
-        if (ch === "\\") j++;
-        else if (ch === '"') inDouble = false;
-      } else if (ch === "\\") {
-        if (j === rest.length - 1) continued = true;
-        else j++;
-      } else if (ch === "'") {
-        inSingle = true;
-      } else if (ch === '"') {
-        inDouble = true;
-      } else if (parenDepth > 0) {
-        if (ch === ")") parenDepth--;
-        else if (ch === "(") parenDepth++;
-      } else if (ch === "(") {
-        parenDepth++;
-      } else if (ch === "|" || (ch === "&" && rest[j + 1] === "&")) {
-        const op = ch === "|" ? (rest[j + 1] === "|" ? "||" : "|") : "&&";
-        const text = rest.slice(start, j).trim();
+    const scan = scanCommandContext(rest, state, start);
+    state.quote = scan.quote;
+    state.parenDepth = scan.parenDepth;
+    if (rest.length) continued = scan.trailingEscape;
+    for (const event of scan.events) {
+      if (event.type === "operator") {
+        const text = rest.slice(start, event.index).trim();
         if (text) rows.push({ text, command: true, op: pendingOp ?? "$" });
-        pendingOp = op;
-        j += op.length - 1;
-        start = j + 1;
-      } else if (ch === "<" && rest[j + 1] === "<") {
-        const tag = /^<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_-]*)\1/.exec(rest.slice(j));
-        if (tag) {
-          heredoc = tag[2];
-          j += tag[0].length - 1;
-        }
+        pendingOp = event.op;
+        start = event.index + event.op.length;
+      } else {
+        heredoc = event.tag;
       }
     }
     const tailText = rest.slice(start).trim();
