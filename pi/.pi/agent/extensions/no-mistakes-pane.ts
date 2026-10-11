@@ -398,8 +398,19 @@ interface WatchState {
 // exiting after its first turn, exactly like the tuicr-review agent's
 // watcher. The count drops synchronously when a terminal outcome steers,
 // so the orchestrator's summary turn is its last.
+//
+// COMPOSITION: this is a SHARED slot — tuicr.ts publishes its watcher's
+// count under the same well-known symbol, and the nm-orchestrator (spawned
+// with agent-dir: parent) loads both extensions in one session. A plain
+// assignment would be last-writer-wins by readdir load order, silently
+// disabling whichever extension loaded first. So capture the previous
+// owner's function (a non-function previous value counts as 0) and publish
+// a wrapper that ADDS it to ours — both sources must be able to keep the
+// session open. tuicr.ts composes symmetrically, so either load order sums
+// both counts.
 const KEEP_OPEN_COUNT_KEY = Symbol.for("pi-subagents/keep-open-count");
-(globalThis as any)[KEEP_OPEN_COUNT_KEY] = () => {
+const previousKeepOpenCount: unknown = (globalThis as any)[KEEP_OPEN_COUNT_KEY];
+const ownKeepOpenCount = (): number => {
 	const state = (globalThis as any)[WATCH_STATE_KEY] as WatchState | undefined;
 	if (!state) return 0;
 	if (state.trackedRunId) return 1;
@@ -407,6 +418,18 @@ const KEEP_OPEN_COUNT_KEY = Symbol.for("pi-subagents/keep-open-count");
 		if (call.pipeline) return 1;
 	}
 	return 0;
+};
+(globalThis as any)[KEEP_OPEN_COUNT_KEY] = (): number => {
+	let previous = 0;
+	if (typeof previousKeepOpenCount === "function") {
+		try {
+			const value = (previousKeepOpenCount as () => unknown)();
+			if (typeof value === "number" && value > 0) previous = value;
+		} catch {
+			// A broken previous owner must not mask this module's count.
+		}
+	}
+	return previous + ownKeepOpenCount();
 };
 
 function orchestratorSpawnApi(): OrchestratorSpawnApi | undefined {

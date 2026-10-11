@@ -1142,4 +1142,43 @@ function runIdAt(timestamp, suffix = "0".repeat(16)) {
 	assert.equal(ORCHESTRATOR_AGENT, "nm-orchestrator");
 }
 
+// ---------------------------------------------------------------------------
+// Keep-open slot composition: the shared pi-subagents/keep-open-count slot
+// has multiple publishers (tuicr.ts owns it too, and the nm-orchestrator
+// loads both extensions in one session). The pane module must ADD to any
+// previous owner's count, never replace it — whichever extension loads
+// last, both sources must be able to keep the session open.
+// ---------------------------------------------------------------------------
+{
+	const KEY = Symbol.for("pi-subagents/keep-open-count");
+	const WATCH_STATE = Symbol.for("pi-no-mistakes/watch-state");
+	const savedSlot = globalThis[KEY];
+	const savedState = globalThis[WATCH_STATE];
+	try {
+		// A previous owner (e.g. tuicr's watcher) already holds the slot.
+		let fakeOwnerCount = 2;
+		globalThis[KEY] = () => fakeOwnerCount;
+		globalThis[WATCH_STATE] = undefined;
+		// Fresh import of the pane module (caching disabled so module scope
+		// re-runs): it must capture the previous owner and compose, not clobber.
+		const freshJiti = createJiti(import.meta.url, { alias: tuiAlias, moduleCache: false, fsCache: false });
+		freshJiti("./no-mistakes-pane.ts");
+
+		const slot = globalThis[KEY];
+		assert.equal(typeof slot, "function", "the pane module publishes the slot function");
+		assert.equal(slot(), 2, "the previous owner's count survives the pane module's load");
+
+		// Additive: when both sides report, the slot returns the sum.
+		globalThis[WATCH_STATE] = { trackedRunId: "01TEST", calls: new Map() };
+		assert.equal(slot(), 3, "the pane's own run-tracking count adds to the previous owner's count");
+
+		// The pane side alone still keeps the session open.
+		fakeOwnerCount = 0;
+		assert.equal(slot(), 1, "the pane's own count parks the session on its own");
+	} finally {
+		globalThis[KEY] = savedSlot;
+		globalThis[WATCH_STATE] = savedState;
+	}
+}
+
 console.log("no-mistakes-pane capture tests passed");
