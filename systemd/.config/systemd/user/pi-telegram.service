@@ -6,7 +6,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/vault
-ExecStart=%h/bin/pi-telegram-daemon.py
+# Explicit interpreter: avoids the 203/EXEC failure class when the exec bit
+# is absent on the host.
+ExecStart=/usr/bin/python3 %h/bin/pi-telegram-daemon.py
 Restart=always
 RestartSec=5
 TimeoutStopSec=10
