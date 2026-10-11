@@ -19,10 +19,34 @@ H.run("sidekick_herdr_adapter_spec", function()
 
   local herdr = require("plugins.sidekick.herdr")
 
+  -- ── spec-wide spawn boundary ─────────────────────────────────────────────
+  -- EVERY vim.system call in this spec must hit a fake, never a real binary.
+  -- A spec-level default fake catches branches the per-section stubs do not
+  -- cover: backend.sessions() -> Herdr.list_agents() reached the REAL
+  -- vim.system on the CI runner (herdr absent: ENOENT) while passing on a
+  -- host with herdr on PATH. Restored to the real vim.system at the very end.
+  local real_system = vim.system
+  local default_calls = {}
+  local function default_system(cmd, opts, callback)
+    default_calls[#default_calls + 1] = cmd
+    local result = { code = 0, stdout = '{"result":{"type":"ok"}}', stderr = "" }
+    if callback then
+      callback(result)
+      return {}
+    end
+    return {
+      wait = function()
+        return result
+      end,
+    }
+  end
+  vim.system = default_system
+
   -- ── argv contract with a recording vim.system stub ──────────────────────
+  -- H.replace below saves the default fake, so restore_system() falls back
+  -- to the spec-wide boundary, never to the real vim.system.
   local system_calls = {}
   local canned = {}
-  local real_system = vim.system
   local restore_system = H.replace(vim, "system", function(cmd, opts, callback)
     local key = table.concat(cmd, " ")
     local result = canned[key] or { code = 0, stdout = '{"result":{"type":"ok"}}', stderr = "" }
@@ -227,8 +251,22 @@ H.run("sidekick_herdr_adapter_spec", function()
   H.eq(session.herdr_agent_name, first_name, "a second init keeps the same agent name")
   H.eq(session.mux_session, first_name, "the mux session mirrors the agent name")
 
+  -- This call previously leaked to the REAL vim.system (runner ENOENT);
+  -- it must now go through the spec-wide default fake.
+  default_calls = {}
   local sessions = backend.sessions()
   H.eq(sessions, {}, "no configured tools means no sessions")
+  local saw_agent_list = false
+  for _, cmd in ipairs(default_calls) do
+    if vim.deep_equal(cmd, { "herdr", "agent", "list" }) then
+      saw_agent_list = true
+    end
+  end
+  H.truthy(saw_agent_list,
+    "backend.sessions() lists agents through the spec-wide fake, never a real herdr")
+  for _, cmd in ipairs(default_calls) do
+    H.eq(cmd[1], "herdr", "only herdr verbs cross the default fake boundary")
+  end
 
   -- attach/dump/send/submit/is_running argv and passthrough contracts.
   local attach_cmd = session:attach()
@@ -289,5 +327,9 @@ H.run("sidekick_herdr_adapter_spec", function()
 
   herdr.send, herdr.send_key, herdr.read = saved_send, saved_send_key, saved_read
   herdr.get_agent, herdr.focus = saved_get, saved_focus
+
+  -- close the spec-wide boundary: the real vim.system comes back only here,
+  -- after the last assertion that could cross it.
+  vim.system = real_system
   restore_notify()
 end)
