@@ -73,6 +73,12 @@ function M.ask()
 
       entry.sysobj = cli.spawn(prompt, function(result)
         entry.sysobj = nil
+        -- [fix: feat-hunk completion races] Fail closed on an ambiguous
+        -- result (ok with no data): mark it as an error instead of a
+        -- done entry with no answer, so the entry never ends up empty.
+        if result.ok and result.result == nil then
+          result = { ok = false, err = "pi: no result data" }
+        end
         if not vim.api.nvim_buf_is_valid(bufnr) then
           return
         end
@@ -80,10 +86,16 @@ function M.ask()
         if not cur then
           return
         end
+        -- [fix: feat-hunk duplicate-reply race] A late or duplicate
+        -- callback must not downgrade or remove an entry that already
+        -- completed. Only a pending entry may transition.
+        if cur.status ~= "pending" then
+          return
+        end
         if not result.ok then
           signs.clear(bufnr, cur)
           state.remove(bufnr, anchor_id)
-          vim.notify("ask: " .. result.err, vim.log.levels.ERROR)
+          vim.notify("ask: " .. (result.err or "pi failed"), vim.log.levels.ERROR)
           signs.ensure_spinner_running()
           return
         end
@@ -153,6 +165,12 @@ function M.edit()
 
       entry.sysobj = cli.spawn(prompt, function(result)
         entry.sysobj = nil
+        -- [fix: feat-hunk completion races] Fail closed on an ambiguous
+        -- result (ok with no data): mark it as an error instead of a
+        -- done entry with no answer, so the entry never ends up empty.
+        if result.ok and result.result == nil then
+          result = { ok = false, err = "pi: no result data" }
+        end
         if not vim.api.nvim_buf_is_valid(bufnr) then
           return
         end
@@ -160,10 +178,16 @@ function M.edit()
         if not cur then
           return
         end
+        -- [fix: feat-hunk duplicate-reply race] A late or duplicate
+        -- callback must not downgrade or remove an entry that already
+        -- completed. Only a pending entry may transition.
+        if cur.status ~= "pending" then
+          return
+        end
         if not result.ok then
           signs.clear(bufnr, cur)
           state.remove(bufnr, anchor_id)
-          vim.notify("edit: " .. result.err, vim.log.levels.ERROR)
+          vim.notify("edit: " .. (result.err or "pi failed"), vim.log.levels.ERROR)
           signs.ensure_spinner_running()
           return
         end
@@ -171,7 +195,7 @@ function M.edit()
         if not added then
           signs.clear(bufnr, cur)
           state.remove(bufnr, anchor_id)
-          vim.notify("edit: " .. (perr or "parse failed") .. "\n" .. result.result, vim.log.levels.ERROR)
+          vim.notify("edit: " .. (perr or "parse failed") .. "\n" .. (result.result or ""), vim.log.levels.ERROR)
           signs.ensure_spinner_running()
           return
         end
