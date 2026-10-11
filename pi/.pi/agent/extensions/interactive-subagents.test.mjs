@@ -337,7 +337,7 @@ try {
 	});
 	assert.equal(
 		researcher.tools,
-		"web_search, web_fetch, bash, mermaid, tuicr, tuicr_reply",
+		"web_search, web_fetch, bash, tuicr, tuicr_reply",
 	);
 
 	const professor = loadAgentDefaultsFromPaths("professor", {

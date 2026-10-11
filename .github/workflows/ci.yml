@@ -95,7 +95,6 @@ jobs:
           node pi/.pi/agent/extensions/interactive-subagents.test.mjs
           node pi/.pi/agent/extensions/lesson.test.mjs
           node pi/.pi/agent/extensions/md-log.test.mjs
-          node pi/.pi/agent/extensions/mermaid.test.mjs
           node pi/.pi/agent/extensions/no-mistakes-gate.test.mjs
           node pi/.pi/agent/extensions/no-mistakes-bridge.test.mjs
           node pi/.pi/agent/extensions/no-mistakes-pane.test.mjs

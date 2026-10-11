@@ -87,7 +87,7 @@ If the reply arrives while the sub-agent is still mid-turn, it is absorbed into 
 | **scout** | `openai-codex/gpt-6-astra` | `read`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Fast read-only codebase recon |
 | **researcher** | `openai-codex/gpt-6-astra` | `web_search`, `web_fetch`, `bash`, `tuicr`, `tuicr_reply` | Web research, synthesized into a sourced brief |
 | **worker** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `web_search`, `web_fetch`, `tuicr`, `tuicr_reply` + spawning | General implementer; may spawn `scout` and `researcher` |
-| **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, mermaid diagrams, Hunk canvas, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
+| **professor** | `fireworks/accounts/fireworks/routers/glm-5p3-fast` | lesson tools, Hunk canvas, tuicr + restricted spawning | Interactive teacher; may start a tuicr review only on the learner's explicit request |
 | **tuicr-review** | `openai-codex/gpt-6-astra` | `read`, `write`, `edit`, `bash`, `grep`, `find`, `ls`, `tuicr`, `tuicr_reply` | Review responder; answers the user's comments inside the tuicr TUI, applies fixes, returns a summary when the TUI exits |
 
 `scout`, `researcher`, `worker`, and `tuicr-review` are autonomous
