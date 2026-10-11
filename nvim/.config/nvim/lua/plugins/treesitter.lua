@@ -12,8 +12,8 @@ return {
         "python",
         "query",
         "regex",
-        "tsx",
-        "typescript",
+        -- tsx/typescript are added by the opts function below; this table
+        -- overwrite must not also list them (dedup tripwire, ui_shape_spec).
         "vim",
         "yaml",
         "toml",
