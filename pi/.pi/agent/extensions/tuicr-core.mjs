@@ -62,6 +62,8 @@ export function scopeToTuicrArgs(scope, revset, prNumber) {
  *   /tuicr stop                                                  → stop the watcher
  *
  * `open` is the default action and may be omitted (`/tuicr pr 272`).
+ *
+ * @returns {{ action: "open" | "watch", scope: string, revset?: string, pr?: number, repo?: string } | { action: "stop" }} Parsed command; revset/pr/repo are present only when given.
  */
 export function parseTuicrCommandArgs(raw) {
 	const tokens = String(raw ?? "").trim().split(/\s+/).filter(Boolean);
