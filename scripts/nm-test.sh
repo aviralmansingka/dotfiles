@@ -84,14 +84,45 @@ else
   skips=$((skips + 1))
 fi
 
-# --- scripts tests (mirror the ci.yml scripts-tests job) --------------------
-run_test auto-git-sync "git bash" bash scripts/test-auto-git-sync.sh
-run_test gh-dash-open-pr "ruby" bash scripts/test-gh-dash-open-pr.sh
-run_test herdr-clean-handoff "zsh" bash scripts/test-herdr-clean-handoff.sh
-run_test herdr-flash-copy "base64 tr" bash scripts/test-herdr-flash-copy.sh
-run_test herdr-annotate-install "python3" python3 scripts/test-herdr-annotate-install.py
-run_test pi-live-config "node stow" node scripts/test-pi-live-config.mjs
-run_test pi-hidden-thinking "node" node scripts/test-pi-hidden-thinking.mjs
+# --- scripts tests (mirror the ci.yml scripts-tests job: dynamic discovery) --
+# Every scripts/test-* entry runs, discovered with git ls-files exactly like
+# ci.yml — never a hand list, so new entries join automatically. The nvim and
+# terraform entries route to their own CI lanes and self-skip (dual mode) when
+# their binaries are absent. Tier-2 live-env exclusions come from
+# scripts/ci-tier2-exclusions.txt. Exit 127 (command not found) counts as a
+# SKIP, not a FAIL: this runner must skip, never hang, on a host that lacks a
+# tool. CI itself runs every lane with tools provisioned (STRICT semantics).
+tier2_list=$(grep -vE '^[[:space:]]*(#|$)' scripts/ci-tier2-exclusions.txt 2>/dev/null | cut -d'#' -f1 | sed 's/[[:space:]]*$//' || true)
+run_entry() {
+	case "$1" in
+		*.sh) timeout 120 bash "$1" ;;
+		*.py) timeout 120 python3 "$1" ;;
+		*.mjs) timeout 120 node "$1" ;;
+		*) timeout 120 "$1" ;;
+	esac
+}
+while IFS= read -r f; do
+	[ -n "$f" ] || continue
+	case "$f" in
+		scripts/test-nvim-* | scripts/test-terraform*) continue ;; # own CI lanes
+	esac
+	# shellcheck disable=SC2086
+	if [ -n "$tier2_list" ] && printf '%s\n' $tier2_list | grep -qxF "$f"; then
+		continue
+	fi
+	echo "== $f"
+	rc=0; run_entry "$f" || rc=$?
+	if [ "$rc" -eq 0 ]; then
+		echo "PASS $f"
+	elif [ "$rc" -eq 127 ]; then
+		echo "SKIP $f: required tool not found (exit 127)" >&2
+		skips=$((skips + 1))
+	else
+		echo "FAIL $f (exit $rc)"
+		fail=1
+	fi
+done < <(git ls-files 'scripts/test-*' | sort)
+
 run_test pi-telegram-daemon "python3" python3 -m unittest discover -s pi/bin -p 'test_pi_telegram_daemon.py'
 
 if [ "$fail" -ne 0 ]; then
