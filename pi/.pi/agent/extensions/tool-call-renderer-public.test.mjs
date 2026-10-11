@@ -16,7 +16,7 @@ for (const marker of ["Symbol.for", "prototype", "rendererState", "dist/bundle",
   assert.ok(!source.includes(marker), `public API guard: ${marker}`);
 }
 for (const [, specifier] of source.matchAll(/from\s+["']([^"']+)["']/g)) {
-  assert.ok(specifier.startsWith("node:") || ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"].includes(specifier));
+  assert.ok(specifier.startsWith("node:") || ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "./shell-classify.mjs"].includes(specifier));
 }
 
 const tempRoot = mkdtempSync(join(tmpdir(), "tool-call-renderer-public-test-"));
