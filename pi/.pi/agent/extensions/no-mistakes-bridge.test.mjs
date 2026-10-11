@@ -672,6 +672,9 @@ if (command === "agent" && sub === "prompt") {
 		records.push({ type: "message", message: { role: "system", content: "", sections: {} } });
 	}
 	records.push({ type: "message", message: { role: "user", content: [{ type: "text", text: prompt }] } });
+	for (let i = 0; i < Number(process.env.HERDR_STUB_BACKLOG ?? 0); i++) {
+		records.push({ type: "message", message: { role: "assistant", content: "x".repeat(8192), index: i } });
+	}
 	records.push({ type: "message", message: ${JSON.stringify(STUB_ASSISTANT)} });
 	appendFileSync(file, records.map((record) => JSON.stringify(record) + "\\n").join(""));
 	log("agent prompt", pane);
@@ -884,6 +887,34 @@ await (async () => {
 		rmSync(root, { recursive: true, force: true });
 	}
 })();
+
+for (const [knob, value] of [
+	["HERDR_STUB_BACKLOG", "1300"], // > 10 MiB: multiple capped reads after settle
+]) {
+	const root = makeBridgeRoot("nm-bridge-delivery-");
+	const restore = enterBridgeEnv(root);
+	const previous = process.env[knob];
+	process.env[knob] = value;
+	try {
+		ensureBridgeServer(TEST_RUN_ID);
+		const { child, stdout, stderr } = runShim({ root, argv: ["--mode", "json", "--no-session"] });
+		child.stdin.end("delivery test");
+		const result = await awaitExit(child, 30000);
+		const err = Buffer.concat(stderr).toString();
+		const events = Buffer.concat(stdout).toString().trim().split("\n").filter(Boolean).map(JSON.parse);
+		assert.equal(result.code, 0, err);
+		assert.deepEqual(events.at(-1), { type: "agent_settled", aborted: false });
+		const indices = events.filter((event) => event.type === "message_end" && event.message.index !== undefined)
+			.map((event) => event.message.index);
+		assert.deepEqual(indices, Array.from({ length: Number(value) }, (_, i) => i), "all backlog records arrive in order");
+		assertCleanClose(root, readCalls(root).find((call) => call.op === "tab create").pane);
+	} finally {
+		teardownBridgeForRun(TEST_RUN_ID);
+		if (previous === undefined) delete process.env[knob]; else process.env[knob] = previous;
+		restore();
+		rmSync(root, { recursive: true, force: true });
+	}
+}
 
 await (async () => {
 	// A fixer round resuming a durable session (`--mode json --session

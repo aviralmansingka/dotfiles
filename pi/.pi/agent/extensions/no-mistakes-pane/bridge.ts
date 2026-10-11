@@ -635,12 +635,12 @@ async function runInvocation(
 		bridge.tabs.delete(step);
 	};
 
+	let fd: number | undefined;
 	try {
 		await waitTabReady(tab.paneId);
 		const translator = new SessionEventTranslator(sessionId);
 
 		let sessionFile: string | undefined;
-		let fd: number | undefined;
 		let offset = 0;
 		if (sessionId) {
 			// Resumed fixer session: the durable session file already exists,
@@ -698,18 +698,25 @@ async function runInvocation(
 			// The daemon cut the invocation (timeout/cancel): kill the tab so a
 			// retry or later --session resume never meets a second writer.
 			closeTab(tab);
-			closeSync(fd!);
 			socket.end();
 			return;
 		}
-		streamNew();
+		// Drain the settled backlog, retaining the 4 MiB per-read cap. Bound
+		// work even if an unexpected writer keeps appending to the file.
+		for (let pass = 0; ; pass++) {
+			if (pass >= 1024) throw new Error("session backlog exceeded drain limit");
+			const previous = offset;
+			streamNew();
+			if (offset === previous) break;
+		}
 		for (const line of translator.finish()) send({ type: "events", lines: [line] });
-		closeSync(fd!);
 		socket.end();
 		closeTab(tab);
 	} catch (err) {
 		closeTab(tab);
 		fatal(`bridge: ${err instanceof Error ? err.message : String(err)}`);
+	} finally {
+		if (fd !== undefined) closeSync(fd);
 	}
 }
 
