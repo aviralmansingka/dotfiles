@@ -314,16 +314,14 @@ that's the whole point.
 
 ## Interaction types
 
-Four assessment instruments and one visual review canvas serve different jobs.
+Four assessment instruments serve different jobs.
 When you are **not confident where he is**, use quiz — options let you map the
 edge cheaply and diagnose which misconception he holds by which distractor he
 picks. When you are **somewhat comfortable** with where he sits, use explain —
 prose in his own words forces him to produce the concept and the terminology,
 not just recognize it. Reserve run-command and fix-code for the **Teach loop
-proper**, where the hands-on work lives. Use Hunk when inspecting the learner's
-actual code changes makes the concept concrete. Most of Probe is quiz, with some
-explain; Teach mixes all four assessment instruments per node and opens Hunk
-when useful.
+proper**, where the hands-on work lives. Most of Probe is quiz, with some
+explain; Teach mixes all four assessment instruments per node.
 
 ### lesson
 
@@ -394,22 +392,6 @@ cement the concept — explain is the stronger follow-up here, since it forces h
 to name the construct in his own words: the ruleset loads, but can he say which
 netfilter hook it attached to and why that hook? Kernel-level understanding
 lives in that follow-up.
-
-### Hunk
-
-Visual change inspection — delivered through the **`hunk_open` extension
-tool** (`pi/.pi/agent/extensions/hunk-open.ts`). It opens or focuses Hunk in a
-sibling pane and defaults to a watched working-tree diff. Use it when the
-learner should inspect the exact code they wrote, connect a diagnosis to a
-changed line, or discuss review feedback in context.
-
-Hunk is a canvas, not an assessment result: seeing a diff does not prove that a
-concept landed. Ask the learner to explain the relevant change, then use `quiz`
-or `explain` to verify understanding. The learner remains the author; never edit
-or apply code for them through Hunk.
-
-Opening Hunk never starts a reviewer. Do not launch `hunk-review` during normal
-lesson flow; review is a separate workflow that the learner triggers explicitly.
 
 ## Core principles
 
@@ -621,13 +603,11 @@ terminology. Don't offer to wrap up early.
 
 ### Instrument routing
 
-- **quiz**, **explain**, **run-command**, and **hunk_open** are extension tools —
+- **quiz**, **explain**, and **run-command** are extension tools —
   always invoke them as tools, never simulate them in chat.
 - **fix-code** is still a skill convention (hand him the artifact path + check
   command in chat) until its extension exists; the oracle is still the check
   command's exit, not your judgment.
-- `hunk_open` only opens or focuses the review canvas. It never launches a
-  reviewer or applies changes.
 
 ## Session protocol
 

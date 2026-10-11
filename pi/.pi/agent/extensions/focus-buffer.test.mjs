@@ -17,7 +17,7 @@ const { createJiti } = require(jitiPath);
 
 // Peer stubs (house pattern). focus-buffer imports nvim-open, which imports
 // defineTool and Type — stub those. The herdr/nvim IO paths are intentionally
-// NOT exercised here (same policy as hunk-open / lesson tests).
+// NOT exercised here (same policy as lesson tests).
 const tempRoot = mkdtempSync(join(tmpdir(), "focus-buffer-test-"));
 const stubAgent = join(tempRoot, "pi-coding-agent.cjs");
 const stubAi = join(tempRoot, "pi-ai.cjs");

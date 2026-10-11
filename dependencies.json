@@ -43,7 +43,6 @@
         "tree",
         "yq",
         "eza",
-        "hunk",
         "lazygit",
         "tig",
         "tuicr",
@@ -79,7 +78,6 @@
       "golang": "golang-go",
       "awscli": "awscli",
       "bun": null,
-      "hunk": null,
       "rust": "cargo",
       "tuicr": null
     },
@@ -90,7 +88,6 @@
       "golang": "go",
       "awscli": "aws-cli",
       "bun": null,
-      "hunk": null,
       "tuicr": null
     },
     "macos": {

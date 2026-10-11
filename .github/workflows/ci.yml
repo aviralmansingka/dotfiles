@@ -91,7 +91,6 @@ jobs:
           node pi/.pi/agent/extensions/explain.test.mjs
           node pi/.pi/agent/extensions/focus-buffer.test.mjs
           node pi/.pi/agent/extensions/herdr-prompt-state.test.mjs
-          node pi/.pi/agent/extensions/hunk-open.test.mjs
           node pi/.pi/agent/extensions/interactive-subagents.test.mjs
           node pi/.pi/agent/extensions/lesson.test.mjs
           node pi/.pi/agent/extensions/md-log.test.mjs

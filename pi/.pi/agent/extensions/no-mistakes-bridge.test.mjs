@@ -151,7 +151,7 @@ const {
 	}
 	assert.ok(
 		!STEP_AGENT_EXTENSIONS.some((name) =>
-			/no-mistakes|interactive-subagents|tuicr|cleanup|ask-user|explain|quiz|lesson|focus-buffer|run-command|nvim-open|hunk-open|image-drop|mobile-mode|md-log|user-input/.test(name)),
+			/no-mistakes|interactive-subagents|tuicr|cleanup|ask-user|explain|quiz|lesson|focus-buffer|run-command|nvim-open|image-drop|mobile-mode|md-log|user-input/.test(name)),
 		"pipeline, review, and human-blocking extensions stay out of the step set",
 	);
 	assert.ok(
