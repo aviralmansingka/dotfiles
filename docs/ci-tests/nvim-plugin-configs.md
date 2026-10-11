@@ -14,7 +14,7 @@ This suite checks the small plugin-config contracts in `lua/plugins/`. It loads 
 ## What the suite covers
 
 - `java.lua`: the real `Path.new` / `Path:append` wraps run against a fake `neotest-java.model.path` that fails on both crash sites before the patch; a second patch run adds no wrapper.
-- `neovide.lua`: `guifont` stays untouched at config time; `apply` sets the font, the input keys, and the Cmd maps; the noice spec disables its signature help and skips the font error message.
+- `noice.lua`: the `<C-b>` scroll-map deletion stays; noice's signature help stays disabled (blink.cmp owns it — the BUGS.md #3 fix). The former `neovide.lua` (late font, Cmd maps) was removed with Neovide.
 - `mason.lua`: `basedpyright`, `debugpy`, `clang-format`, and `jdtls` are pinned; `pyright` is absent; every entry is a string.
 - `conform.lua`: no `format_on_save` key; the prettier `prepend_args` and the ruff command discovery run against a fixture tree; non-listed filetypes return nil.
 - `lsp.lua`: the signatureHelp border wrap; the `lua_ls` settings shape.
@@ -40,7 +40,7 @@ Lua has no coverage tool, so this table is the inventory. "Part" means the suite
 | File | Covered | Not covered |
 |---|---|---|
 | java.lua | import, Path wraps, adapter opts | nothing beyond the fake |
-| neovide.lua | late font, apply, maps, noice opts | handler bodies; live attach |
+| noice.lua | <C-b> deletion, signature-help disable | popup render |
 | mason.lua | shape, four pins, pyright absent | other pins shape-checked |
 | conform.lua | all gates and discovery fns | markdownlint `condition` |
 | lsp.lua | handler wrap, lua_ls settings | real popup render |

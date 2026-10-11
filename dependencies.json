@@ -160,7 +160,6 @@
   },
   "casks": {
     "terminal": [
-      "neovide",
       "ghostty",
       "nikitabobko/tap/aerospace"
     ],

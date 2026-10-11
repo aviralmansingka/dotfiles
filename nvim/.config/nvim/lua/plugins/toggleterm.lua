@@ -7,7 +7,7 @@ return {
           position = "float",
           width = 0.9,
           height = 0.9,
-          border = vim.g.neovide and vim.g.neovide_fancy_borders and vim.g.neovide_fancy_borders.current or "rounded",
+          border = "rounded",
           backdrop = false,
           keys = {
             q = "hide",

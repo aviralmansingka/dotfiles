@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Paths: claude/** agents/** docs/** README.md CLAUDE.md AGENTS.md pi/bin/notion-cli
-"""repo-parity regression suite — lockfiles, hook references, notion-cli, docs-vs-reality.
+# Paths: claude/** agents/** docs/** README.md CLAUDE.md AGENTS.md
+"""repo-parity regression suite — lockfiles, hook references, docs-vs-reality.
 
 Offline and deterministic: no network, no $HOME mutation, no sleeps, no pip
 installs (python3 stdlib only). Each check prints PASS or FAIL with the file
@@ -21,9 +21,6 @@ repeat those checks; it locks the surfaces that suite does not touch:
                                   allowlisted-external, or fails (ses-A
                                   dangling-hook class); no /Users/<user>
                                   absolute home paths
-  P3 notion-cli behavior          offline CLI matrix: help, argparse errors,
-                                  missing token, bad ids, bad --body, and
-                                  a stubbed-dead-network boundary
   P4 docs accuracy lint           mechanical docs-vs-reality: stow table
                                   parity, stow-package count claims,
                                   `stow <pkg>` mentions, repo-anchored path
@@ -31,8 +28,8 @@ repeat those checks; it locks the surfaces that suite does not touch:
   P5 negative sandbox self-test   sandbox copies prove each P1/P2/P4 check
                                   catches its regression class
 
-P3's error-path subtests are themselves the negative tests for the
-notion-cli regressions they pin (clean SystemExit, never a traceback).
+The P3 notion-cli behavior matrix was removed together with pi/bin/notion-cli
+in the dead-code cleanup.
 """
 
 import json
@@ -260,8 +257,10 @@ def check_skills_store(root: Path, tracked: set):
 # (.claude/hooks/herdr-agent-state.sh) was removed with the B22 fix: the
 # script was untracked, absent at ~/.claude/hooks on every audited host,
 # and referenced by nothing else, so the hook entry itself was deleted
-# from claude/.claude/settings.json. Re-adding an external hook requires a
-# new entry here in the same change.
+# from claude/.claude/settings.json. The gh-axi and chrome-devtools-axi
+# SessionStart hooks (bare PATH commands) were removed with the dead-code
+# cleanup; the tracked settings now hold no hooks at all. Re-adding an
+# external hook requires a new entry here in the same change.
 EXTERNAL_HOOK_ALLOWLIST = {}
 
 
@@ -360,80 +359,6 @@ def check_claude_hooks(root: Path, tracked: set):
         f"{len(used_external)} external hook script(s) allowlisted with "
         f"reason; 0 absolute /Users/<user> paths",
     ]
-
-
-# --------------------------------------------------------------------------
-# P3 — notion-cli offline behavior matrix
-# --------------------------------------------------------------------------
-
-def check_notion_cli(root: Path, _tracked: set):
-    cli = root / "pi" / "bin" / "notion-cli"
-    if not cli.exists():
-        return False, ["FAIL pi/bin/notion-cli: file not found"]
-    # A fresh empty config dir keeps the CLI off $HOME; NOTION_TOKEN is
-    # never inherited. The dead local proxy port stubs the network at the
-    # boundary: urllib fails immediately with connection refused and no
-    # real API call is attempted.
-    dead_proxy = "http://127.0.0.1:9"
-    subtests = [
-        ("help", ["--help"], {}, lambda r: r.returncode == 0
-            and "search" in r.stdout and "create-page" in r.stdout),
-        ("no-subcommand", [], {}, lambda r: r.returncode != 0),
-        ("unknown-subcommand", ["frobnicate"], {},
-         lambda r: r.returncode != 0 and "invalid choice" in r.stderr.lower()),
-        ("missing-token", ["search"], {},
-         lambda r: r.returncode != 0 and "Missing NOTION_TOKEN" in r.stderr
-            and "Traceback" not in r.stderr + r.stdout),
-        ("url-id-parses-pre-network",
-         ["get-page", "https://www.notion.so/Foo-12345678-90ab-cdef-1234-567890abcdef"], {},
-         lambda r: "Missing NOTION_TOKEN" in r.stderr
-            and "Not a Notion id" not in r.stderr),
-        ("plain-id-parses-pre-network",
-         ["get-page", "1234567890abcdef1234567890abcdef"], {},
-         lambda r: "Missing NOTION_TOKEN" in r.stderr
-            and "Not a Notion id" not in r.stderr),
-        ("bad-id", ["get-page", "notanid"], {"NOTION_TOKEN": "stub-token"},
-         lambda r: r.returncode != 0 and "Not a Notion id or URL" in r.stderr
-            and "Traceback" not in r.stderr + r.stdout),
-        ("bad-id-url", ["get-page", "http://example.com/no-id"],
-         {"NOTION_TOKEN": "stub-token"},
-         lambda r: r.returncode != 0 and "Not a Notion id or URL" in r.stderr),
-        ("bad-body-json",
-         ["query-db", "1234567890abcdef1234567890abcdef", "--body", "{bad"],
-         {"NOTION_TOKEN": "stub-token"},
-         lambda r: r.returncode != 0 and "Invalid --body JSON" in r.stderr
-            and "Traceback" not in r.stderr + r.stdout),
-        ("offline-network-error", ["search", "query"],
-         {"NOTION_TOKEN": "stub-token", "https_proxy": dead_proxy,
-          "HTTPS_PROXY": dead_proxy},
-         lambda r: r.returncode != 0 and "Notion network error" in r.stderr
-            and "Traceback" not in r.stderr + r.stdout),
-    ]
-    failures = []
-    with tempfile.TemporaryDirectory(prefix="repo-parity-notion-") as tmp:
-        base_env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-                    "NOTION_CLI_CONFIG_DIR": tmp}
-        for label, argv, extra, ok in subtests:
-            env = dict(base_env)
-            env.update(extra)
-            try:
-                r = subprocess.run(
-                    [sys.executable, str(cli), *argv],
-                    capture_output=True, text=True, timeout=CHECK_TIMEOUT,
-                    env=env,
-                )
-            except subprocess.TimeoutExpired:
-                failures.append(f"FAIL pi/bin/notion-cli [{label}]: timed out")
-                continue
-            if not ok(r):
-                failures.append(
-                    f"FAIL pi/bin/notion-cli [{label}]: rc={r.returncode} "
-                    f"stdout={r.stdout[:120]!r} stderr={r.stderr[:160]!r}")
-    if failures:
-        return False, failures
-    return True, [f"all {len(subtests)} offline subtests passed (help, "
-                  f"argparse errors, token/id/body error paths, dead-proxy "
-                  f"network boundary; no tracebacks, no real API calls)"]
 
 
 # --------------------------------------------------------------------------
@@ -816,7 +741,7 @@ def _rewrite_hooks(root: Path, mutate) -> None:
 def _negative_hooks_cases():
     def dangling_hook(root):
         def go(cfg):
-            cfg["hooks"]["SessionStart"].append({
+            cfg.setdefault("hooks", {}).setdefault("SessionStart", []).append({
                 "matcher": "*",
                 "hooks": [{"type": "command",
                            "command": 'bash "$HOME/.claude/hooks/ghost.sh" session',
@@ -826,7 +751,7 @@ def _negative_hooks_cases():
 
     def mac_absolute_home(root):
         def go(cfg):
-            cfg["hooks"]["SessionStart"].append({
+            cfg.setdefault("hooks", {}).setdefault("SessionStart", []).append({
                 "matcher": "*",
                 "hooks": [{"type": "command",
                            "command": "bash /Users/joe/bin/hook.sh",
@@ -967,9 +892,7 @@ def check_negative_sandbox(_root: Path, _tracked: set):
     if failures:
         return False, failures
     return True, ["all 16 sandbox mutations were caught by the matching check "
-                  "(8 skills-store, 3 hooks, 5 docs); notion-cli regressions "
-                  "are pinned by the P3 error-path subtests (bad-id, bad-body, "
-                  "offline-network)"]
+                  "(8 skills-store, 3 hooks, 5 docs)"]
 
 
 def _negative_docs_cases():
@@ -1024,7 +947,6 @@ def _negative_docs_cases():
 CHECKS = [
     ("P1 skills store parity", check_skills_store),
     ("P2 claude hooks resolve", check_claude_hooks),
-    ("P3 notion-cli behavior", check_notion_cli),
     ("P4 docs accuracy", check_docs_accuracy),
     ("P5 negative sandbox", check_negative_sandbox),
 ]

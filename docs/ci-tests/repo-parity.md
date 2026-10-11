@@ -4,8 +4,7 @@
 
 `scripts/test-repo-parity.py` guards the skills store (the
 `.claude/skills` symlink farm and, if it ever returns, the skills
-lockfile), the Claude hook references, the `notion-cli` error paths, and
-the user docs.
+lockfile), the Claude hook references, and the user docs.
 Each check reproduces a failure class that already occurred. The
 suite runs offline and never changes `$HOME`.
 
@@ -36,11 +35,9 @@ four items.
   to a tracked file or to an `EXTERNAL_HOOK_ALLOWLIST` entry. A
   `$HOME/...` reference resolves through the `claude` stow package.
   No config holds an absolute `/Users/<user>` path.
-- **P3 notion-cli behavior.** `pi/bin/notion-cli` answers 10 offline
-  subtests: `--help`, argparse errors, a missing token, a bad id, a
-  bad `--body`, and a dead local proxy port that stubs the network
-  boundary. Every error path prints one clean message, and no path
-  prints a traceback. No subtest makes a real call.
+
+(The P3 notion-cli behavior matrix was removed together with
+`pi/bin/notion-cli` in the dead-code cleanup.)
 - **P4 docs accuracy.** For `README.md`, `CLAUDE.md`, `AGENTS.md`, and
   the tracked top-level `docs/*.md`: the README stow table lists every
   top-level dir except 5 exempted non-package dirs. A claim of the
@@ -66,8 +63,7 @@ The run takes less than 1 second. The SLA is 30 seconds.
 Checked: the `.claude/skills/` and `claude/.claude/skills/` symlink
 farms; the 11 tracked skill dirs; the settings files
 `claude/.claude/settings.json` and `.claude/settings.local.json`;
-the core docs and the tracked top-level `docs/*.md`;
-`pi/bin/notion-cli`.
+the core docs and the tracked top-level `docs/*.md`.
 Out of scope: `docs/adr/`, `docs/agents/`, `docs/contracts/`,
 `docs/evidence/`, and `docs/superpowers/` are dated historical
 records. `docs/ci-tests/` and the untracked new docs are work in a
@@ -90,5 +86,3 @@ nothing from the repo).
 - `AGENTS.md` and a `tmux/.tmux.conf` comment both claim `prefix+o`.
   The plugin that owns the binding is machine-installed, so the tree
   cannot show which claim holds.
-- The suite tests `notion-cli` error paths only. It never calls
-  the Notion API.

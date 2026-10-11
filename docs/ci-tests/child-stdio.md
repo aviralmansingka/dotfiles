@@ -61,7 +61,7 @@ set hold no unguarded captured call — the #291 fix wave guarded them.
 | image-drop · run-command · tuicr · tuicr-core | async execFile | stderr captured in the error |
 | no-mistakes gate · pane · bridge · report | 3 + 4 + 1 + 2 `pi.exec` | guarded, async, or pi API seam |
 | run-command `r` flow · tuicr pane · nm shim · `exec` wrappers | 6 | intentional passthrough |
-| telegram + whatsapp daemons · notion-cli · pi-stt-*.py | 2 each / 0 | pipes, capture_output, or no child |
+| telegram + whatsapp daemons · pi-stt-*.py | 2 each / 0 | pipes, capture_output, or no child |
 
 ## Known gaps
 

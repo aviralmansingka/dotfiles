@@ -36,7 +36,6 @@ brew "zoxide"
 brew "zsh"
 
 # Terminal
-cask "neovide"
 cask "ghostty"
 cask "nikitabobko/tap/aerospace"
 

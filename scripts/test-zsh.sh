@@ -45,8 +45,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ZSH_SRC="${ZSH_SRC:-$REPO_ROOT/zsh}"
 # Aliases whose targets live in home checkouts outside this repo:
-# dvim -> $HOME/tools/neovim (a Neovim source checkout, not this repo).
-HOST_ONLY_ALIASES="dvim"
+# (none currently — dvim was removed with the dead-code cleanup)
+HOST_ONLY_ALIASES=""
 
 PASS_COUNT=0
 FAIL_COUNT=0

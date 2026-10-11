@@ -231,7 +231,7 @@ jobs:
           set +e
           fail=0
           # Extensionless scripts (e.g. scripts/pi-settings-sync,
-          # pi/bin/notion-cli) fall through the *.sh/*.py loops above.
+          # pi/bin/no-mistakes-daemon) fall through the *.sh/*.py loops above.
           while IFS= read -r f; do
             sb=$(head -1 "$f" 2>/dev/null)
             case "$sb" in

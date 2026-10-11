@@ -228,7 +228,7 @@ const synthetic = [
   { changed: ["ops/terraform/main.tf"], expect: { ops: true } },
   { changed: ["pi/.pi/agent/settings.json"], expect: { pi: true, scripts: true } }, // repo-config + live-config declare pi/.pi/agent paths
   { changed: ["pi/bin/pi-stt-worker.py"], expect: { pi: true, scripts: true } }, // test-pi-stt declares pi/bin/pi-stt*
-  { changed: ["pi/bin/notion-cli"], expect: { pi: true, scripts: true } }, // test-repo-parity declares pi/bin/notion-cli
+  { changed: ["pi/bin/pr-digest.py"], expect: { pi: true, scripts: true } }, // test-child-stdio declares pi/bin/**
   { changed: ["pi/bin/pi-telegram-daemon.py"], expect: { pi: true, scripts: true } }, // test-child-stdio declares pi/bin/**
   { changed: ["pi/.pi/agent/extensions/usage.ts"], expect: { pi: true, scripts: true } }, // child-stdio + live-config declare pi/.pi/agent/**
   { changed: ["starship/starship.toml"], expect: { scripts: true } }, // test-config-lint declares starship/**

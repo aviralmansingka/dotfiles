@@ -74,7 +74,7 @@ for the entry and 30 s per case. Every case stays deterministic: no
 ## Known gaps
 
 These surfaces need a live environment. They stay out of this suite:
-neovide GUI options and key handling; vim-tmux-navigator, which needs
+vim-tmux-navigator, which needs
 a live tmux server; toggleterm key behavior in a live terminal; the
 live apply of colorschemes; the lazy.nvim bootstrap branch, which
 needs the network.

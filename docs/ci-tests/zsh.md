@@ -65,9 +65,9 @@ files. Both get checks:
 
 The suite asserts the starship, zoxide, and direnv guards. The bun, gcloud,
 and nvm blocks use file guards and run no commands; they stay out of scope.
-The `rg`, `ls`, `inv`, `ghd` aliases resolve in the stub PATH. `dvim` targets
-a Neovim checkout outside this repo; the script holds it on the host-only
-allowlist.
+The `rg`, `ls`, `inv`, `ghd` aliases resolve in the stub PATH. (The former
+host-only `dvim` alias was removed with the dead-code cleanup; the
+allowlist mechanism stays armed for a future host-only alias.)
 
 ## Known gaps
 

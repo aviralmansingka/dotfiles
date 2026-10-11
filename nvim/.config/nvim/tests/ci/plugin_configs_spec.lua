@@ -7,8 +7,8 @@
 --     Path("bin") (a table) where a string is annotated; Path.new crashes
 --     on `raw_path:sub` and Path:append crashes on table concat. The real
 --     wrap must coerce both — and stay idempotent across a double patch.
---   * neovide.lua (#30): guifont must NOT be set at config time (the
---     late-font fix); D-c / D-v keymaps present; noice spec shape.
+--   * noice.lua: <C-b> deletion; signature help disabled (blink.cmp
+--     owns it — the BUGS.md #3 fix).
 --   * mason.lua pins (#25): basedpyright in, pyright out.
 --   * conform.lua (#31): no format_on_save key (LazyVim owns the handler);
 --     prettier prepend_args discovery shape; ruff venv discovery.
@@ -130,19 +130,12 @@ H.run("plugin_configs/java path coerce (#29)", function()
   end
 end)
 
--- ── neovide.lua: late font + keymaps + noice spec shape ───────────────────
-H.run("plugin_configs/neovide (#30)", function()
-  vim.g.neovide = nil
-  local guifont_before = vim.o.guifont
-
-  local spec = plugin("neovide")
-  H.eq(#spec, 1, "neovide spec returns exactly the noice entry")
+-- ── noice.lua: <C-b> deletion + signature-help fix ────────────────────────
+H.run("plugin_configs/noice (BUGS.md #3 fix)", function()
+  local spec = plugin("noice")
+  H.eq(#spec, 1, "noice spec returns exactly one entry")
   local noice = spec[1]
   H.eq(noice[1], "folke/noice.nvim", "noice plugin name")
-
-  -- The late-font fix: dofile (config time) with Neovide absent must NOT
-  -- touch guifont — the font applies only on UIEnter/neovide attach.
-  H.eq(vim.o.guifont, guifont_before, "guifont untouched at config time (late-font fix #30)")
 
   -- <C-b> deletion entry for the noice scroll-map conflict.
   H.eq(#noice.keys, 1, "noice keys hold exactly the <C-b> deletion")
@@ -151,41 +144,12 @@ H.run("plugin_configs/neovide (#30)", function()
   H.eq(cb[2], false, "<C-b> entry is a deletion (false)")
   H.eq(cb.mode, { "n", "i", "s" }, "<C-b> deletion covers n/i/s")
 
-  -- opts: disable noice signature help + skip the transient font error.
+  -- opts: disable noice signature help (blink.cmp owns it; BUGS.md #3).
   local o = {}
   local ret = noice.opts(nil, o)
   H.eq(ret, o, "noice opts returns the same table")
   H.eq(o.lsp.signature.enabled, false, "noice signature help disabled (blink.cmp owns it)")
-  H.eq(#o.routes, 1, "exactly one route added")
-  H.eq(o.routes[1].filter.event, "msg_show", "route filters msg_show")
-  H.eq(o.routes[1].filter.kind, "echomsg", "route filters echomsg")
-  H.eq(o.routes[1].filter.find, "Font can't be updated to", "route skips the Neovide font error")
-  H.eq(o.routes[1].opts.skip, true, "route skips the message")
-
-  -- Now the Neovide-attached path: apply() runs and DOES set the font.
-  vim.g.neovide = true
-  plugin("neovide")
-  H.eq(vim.o.guifont, "JetBrainsMono NFM Medium:h13", "apply() sets the single-font chain")
-  H.eq(vim.g.neovide_input_use_logo, true, "logo key used as cmd")
-  H.eq(vim.g.neovide_input_macos_option_key_is_meta, "only_left", "only left option is meta")
-  H.eq(vim.o.errorbells, false, "errorbells off")
-  H.eq(vim.o.visualbell, true, "visualbell on")
-  H.eq(vim.o.belloff, "all", "belloff all")
-  H.eq(vim.g.neovide_floating_shadow, false, "floating shadow off")
-
-  -- Cmd-C / Cmd-V keymap entries present (the macOS muscle-memory fix).
-  H.truthy(has_map("n", "<D-c>", "Copy"), "<D-c> n map")
-  H.truthy(has_map("v", "<D-c>", "Copy"), "<D-c> v map")
-  for _, mode in ipairs({ "n", "v", "i", "c" }) do
-    H.truthy(has_map(mode, "<D-v>", "Paste"), "<D-v> " .. mode .. " map")
-  end
-  H.truthy(has_map("t", "<D-v>", "Paste in terminal"), "<D-v> terminal map")
-  H.truthy(has_map("n", "<D-a>", "Select all"), "<D-a> map")
-  H.truthy(has_map("n", "<D-s>", "Save"), "<D-s> map")
-  H.truthy(has_map("n", "<D-=>", "Increase font size"), "<D-=> map")
-  H.truthy(has_map("n", "<D-->", "Decrease font size"), "<D--> map")
-  H.truthy(has_map("n", "<D-0>", "Reset font size"), "<D-0> map")
-  vim.g.neovide = nil
+  H.eq(o.routes, nil, "no font-error route (Neovide removed)")
 end)
 
 -- ── mason.lua: pinned tools ───────────────────────────────────────────────

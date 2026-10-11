@@ -3,7 +3,7 @@ local M = {}
 
 --- Match Snacks terminal and toggleterm float borders.
 function M.float_border()
-  return vim.g.neovide and vim.g.neovide_fancy_borders and vim.g.neovide_fancy_borders.current or "rounded"
+  return "rounded"
 end
 
 local function find_sidekick_win()

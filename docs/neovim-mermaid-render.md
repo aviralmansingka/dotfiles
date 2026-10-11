@@ -116,7 +116,8 @@ Both are provisioned by the dotfiles installers, pinned to a release:
 - **macOS** — `install.sh` §2: mmdflux `v2.6.1` release binary →
   `~/.local/bin` + `npm install -g grok-mermaid`.
 - **homelab image** — `ops/packer/scripts/install_cli_tools.sh` installs the
-  same pair; `ops/packer/scripts/validate_tools.sh` checks both.
+  same pair (the validate_tools.sh post-build check was removed with the
+  dead-code cleanup).
 
 `~/.local/bin` is the first candidate path in pi's mermaid extension and
 `mermaid.corpus.mjs`, so the corpus pre-merge gate works unattended. The

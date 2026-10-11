@@ -181,7 +181,7 @@ def scan_py(text: str):
 
 def tracked_scope():
     """Every tracked .ts/.mjs/.py under the extensions tree and pi/bin, plus
-    extensionless python-shebang scripts under pi/bin (e.g. notion-cli)."""
+    extensionless python-shebang scripts under pi/bin."""
     if subprocess.run(
         ["git", "rev-parse", "--is-inside-work-tree"],
         cwd=REPO, capture_output=True,
