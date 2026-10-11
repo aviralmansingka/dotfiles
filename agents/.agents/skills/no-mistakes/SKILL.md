@@ -192,11 +192,14 @@ Run the pipeline and decide on its findings as they come up:
      [Escalate `ask-user` findings](#escalate-ask-user-findings) below.
 
    In an interactive TUI session, the no-mistakes-gate extension surfaces the
-   gate for you. A decision panel opens when the result parks the run. It
-   highlights each finding by severity and action. The user can approve, skip,
-   or select findings to fix with optional guidance. The user can also press
-   `y` to enable yolo consent. The result message includes the decision in a
-   `GATE DECISION (user)` block. This
+   gate for you. A paged decision panel opens when the result parks the run.
+   It highlights each finding by severity and action. An overview page lists
+   every finding as one short line; Tab/⇧Tab page through per-finding pages
+   where the user approves, marks fix, or ignores each finding, and a choice
+   auto-advances to the next finding. No-op findings get no fix choice, and
+   fix guidance stays optional. From any page the user can skip, press Ctrl-A
+   to accept every finding, or press `y` to enable yolo consent. The result
+   message includes the decision in a `GATE DECISION (user)` block. This
    block names the exact `respond` call. Execute that decision verbatim. Do not
    re-decide it, edit files yourself, or relay findings that the panel showed.
    A gate result with no decision block means the panel was unavailable or

@@ -39,6 +39,7 @@ exports.Key = {
 	down: "down",
 	space: " ",
 	tab: "tab",
+	shift: (key) => "shift-" + key,
 	ctrl: (key) => "ctrl-" + key,
 };
 exports.Text = class Text {};
@@ -126,8 +127,9 @@ function registerGateExtension(options = {}) {
 	assert.ok(api, "the extension registers its api on globalThis");
 
 	// Fire session_start with a TUI ctx whose custom() drives the panel with
-	// the given inputs and resolves with the decision.
-	const decisions = [];
+	// the given inputs and resolves with the decision. With renderWidth set,
+	// capture one rendered frame before the inputs and one after each input.
+	const frames = [];
 	const theme = { fg: (_color, text) => text, bold: (text) => text };
 	const ctx = {
 		hasUI: true,
@@ -136,13 +138,20 @@ function registerGateExtension(options = {}) {
 			custom(factory) {
 				return new Promise((done) => {
 					const component = factory({ requestRender() {} }, theme, {}, done);
-					for (const input of options.panelInputs ?? []) component.handleInput(input);
+					const capture = () => {
+						if (options.renderWidth) frames.push(component.render(options.renderWidth).join("\n"));
+					};
+					capture();
+					for (const input of options.panelInputs ?? []) {
+						component.handleInput(input);
+						capture();
+					}
 				});
 			},
 		},
 	};
 	handlers.get("session_start")({}, ctx);
-	return { api, decisions, ctx };
+	return { api, frames, ctx };
 }
 
 // Reset both the api registration and the module state between blocks: a
@@ -192,17 +201,16 @@ const clearApi = () => {
 	clearApi();
 }
 
-// Fix flow: enter selection, toggle two findings, Space on the no-op row is
-// ignored, submit, then submit non-empty fix guidance from the editor.
+// Fix flow: Tab pages through the findings one after the other, each
+// choice auto-advances, the no-op page offers no Fix, and the overview Fix
+// submits the marked findings with guidance from the editor.
 {
 	const inputs = [
-		"2", // Fix -> selection phase
-		"1", // toggle r1
-		"2", // toggle r2
-		"j", // to the no-op row (r3)
-		" ", // Space on a no-op finding does not select it
-		"j", // to the submit row
-		"\r", // submit -> instructions phase
+		"tab", // overview -> finding r1
+		"2", // mark r1 fix -> advances to r2
+		"2", // mark r2 fix -> advances to r3
+		"1", // r3 is no-op (approve/ignore only): approve -> wraps to overview
+		"2", // overview Fix (r1, r2 marked) -> guidance editor
 		"also check callers",
 		"\r", // submit guidance
 	];
@@ -214,56 +222,168 @@ const clearApi = () => {
 	clearApi();
 }
 
-// Fix flow with empty guidance submits without instructions.
+// Fix flow with empty guidance: Shift-Tab enters from the back, a chosen
+// option is re-confirmable, and an empty editor submits without instructions.
 {
-	const { api } = registerGateExtension({ panelInputs: ["2", "2", "j", "j", "\r", "\r"] });
+	const inputs = [
+		"shift-tab", // overview -> last finding r3 (no-op)
+		"2", // ignore r3 -> wraps to overview
+		"tab", // overview -> r1
+		"2", // fix r1 -> r2
+		"2", // fix r2 -> r3 (focus lands on its chosen ignore)
+		"\r", // re-confirm ignore -> wraps to overview
+		"2", // Fix (r1, r2 marked) -> guidance editor
+		"\r", // empty guidance submits
+	];
+	const { api } = registerGateExtension({ panelInputs: inputs });
 	assert.deepEqual(
 		await api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" }),
-		{ type: "fix", findings: ["r2"], instructions: undefined },
+		{ type: "fix", findings: ["r1", "r2"], instructions: undefined },
 	);
 	clearApi();
 }
 
-// Panel rendering highlights severity and action classification.
+// Ctrl-A accepts all from the overview page.
 {
-	let rendered;
-	const handlers = new Map();
-	noMistakesGate({
-		on(name, handler) { handlers.set(name, handler); },
-		exec() { return Promise.resolve({ code: 0, stdout: "" }); },
-	});
-	const theme = { fg: (_color, text) => text, bold: (text) => text };
-	const ctx = {
-		hasUI: true,
-		mode: "tui",
-		ui: {
-			custom(factory) {
-				return new Promise((done) => {
-					const component = factory({ requestRender() {} }, theme, {}, done);
-					rendered = component.render(80);
-				});
-			},
-		},
-	};
-	handlers.get("session_start")({}, ctx);
-	// Fire without awaiting: the panel never resolves (no decision input),
-	// which is fine — this block only asserts what it renders.
-	void globalThis[GATE_API_KEY].handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" });
-	await new Promise(setImmediate); // the panel factory runs on the next microtask
-	const flat = rendered.join("\n");
+	const { api } = registerGateExtension({ panelInputs: ["ctrl-a"] });
+	assert.deepEqual(
+		await api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" }),
+		{ type: "approve" },
+	);
+	clearApi();
+}
+
+// Ctrl-A accepts all from a finding page too.
+{
+	const { api } = registerGateExtension({ panelInputs: ["tab", "ctrl-a"] });
+	assert.deepEqual(
+		await api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" }),
+		{ type: "approve" },
+	);
+	clearApi();
+}
+
+// Ctrl-A never fires while the guidance editor expects input: it types into
+// the editor instead, and Enter submits it as fix guidance.
+{
+	const inputs = [
+		"tab", "2", "2", "1", // fix r1, r2; approve r3; back on the overview
+		"2", // Fix -> guidance editor
+		"ctrl-a", // the editor expects input: the keystroke goes to it
+		"\r", // submits the typed guidance
+	];
+	const { api } = registerGateExtension({ panelInputs: inputs });
+	assert.deepEqual(
+		await api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" }),
+		{ type: "fix", findings: ["r1", "r2"], instructions: "ctrl-a" },
+	);
+	clearApi();
+}
+
+// The overview Fix option stays disabled until a finding is marked fix.
+{
+	const { api, frames } = registerGateExtension({ panelInputs: ["2", "ctrl-a"], renderWidth: 80 });
+	const decided = api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" });
+	await new Promise(setImmediate);
+	assert.match(frames[1], /1\. Approve — accept this step as-is and continue/,
+		"pressing the disabled Fix keeps the overview up");
+	assert.match(frames[1], /2\. Fix — no findings marked fix yet \(Tab to review them\)/);
+	await decided; // releases the shared UI lock for the blocks below
+	clearApi();
+}
+
+// Overview rendering: one short line per finding with the choice column at
+// the right edge, the numbered options, and the full legend.
+{
+	const { api, frames } = registerGateExtension({ panelInputs: ["ctrl-a"], renderWidth: 120 });
+	const decided = api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" });
+	await new Promise(setImmediate);
+	const flat = frames[0];
 	assert.match(flat, /no-mistakes gate — review/, "the panel names the gated step");
 	assert.match(flat, /3 findings — 1 ask-user · 1 auto-fix · 1 no-op/, "the summary counts action classes");
 	assert.match(flat, /ask-user/, "the ask-user classification is surfaced");
 	assert.match(flat, /auto-fix/, "the auto-fix classification is surfaced");
 	assert.match(flat, /no-op/, "the no-op classification is surfaced");
-	assert.match(flat, /src\/a\.go:42/, "file and line are surfaced");
-	assert.match(flat, /New --force flag bypasses the confirm prompt/, "descriptions are relayed verbatim");
-	assert.match(flat, /y +yolo this run/, "the yolo shortcut is advertised");
-	assert.match(flat, /1\. Approve — accept this step as-is and continue/, "the decide options are visible and numbered");
-	assert.match(flat, /2\. Fix — select findings for the pipeline to fix/, "the fix option is visible");
+	assert.match(flat, /src\/a\.go:42 · New --force flag bypasses the confirm prompt\s+—/,
+		"each finding is one short line with location, description, and choice");
+	assert.match(flat, /1\. Approve — accept this step as-is and continue/, "the overview options are visible and numbered");
+	assert.match(flat, /2\. Fix — no findings marked fix yet \(Tab to review them\)/, "the fix option starts disabled");
 	assert.match(flat, /3\. Skip — skip this step/, "the skip option is visible");
 	assert.match(flat, /keys +↑↓\/jk +move/, "the legend labels the navigation keys");
 	assert.match(flat, /1-3 +select option/, "the legend advertises number selection");
+	assert.match(flat, /Tab +review findings/, "the legend advertises Tab paging");
+	assert.match(flat, /⇧Tab +back/, "the legend advertises Shift-Tab paging");
+	assert.match(flat, /Ctrl-A +accept all/, "the legend advertises accept-all");
+	assert.match(flat, /y +yolo this run/, "the yolo shortcut is advertised");
+	await decided;
+	clearApi();
+}
+
+// The overview shows each finding's choice in the right-aligned column and
+// enables Fix once findings are marked.
+{
+	const inputs = ["tab", "2", "2", "1", "ctrl-a"]; // fix r1, fix r2, approve r3, home
+	const { api, frames } = registerGateExtension({ panelInputs: inputs, renderWidth: 120 });
+	const decided = api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" });
+	await new Promise(setImmediate);
+	const flat = frames[4];
+	assert.match(flat, /New --force flag bypasses the confirm prompt\s+fix/, "r1 is marked fix");
+	assert.match(flat, /Error from os.Remove is ignored\s+fix/, "r2 is marked fix");
+	assert.match(flat, /Docs mention the old flag\s+approve/, "r3 is marked approve");
+	assert.match(flat, /2\. Fix — pipeline fixes the findings marked fix/, "Fix is enabled");
+	await decided;
+	clearApi();
+}
+
+// Finding pages render: the page counter, the full description, the choices
+// with the chosen dot, and paging keys in the legend.
+{
+	const inputs = ["tab", "2", "shift-tab", "ctrl-a"];
+	const { api, frames } = registerGateExtension({ panelInputs: inputs, renderWidth: 80 });
+	const decided = api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" });
+	await new Promise(setImmediate);
+	const r1 = frames[1];
+	assert.match(r1, /finding 1\/3/, "the page counter names the finding");
+	assert.match(r1, /ask-user r1 src\/a\.go:42/, "the meta line carries id and location");
+	assert.match(r1, /New --force flag bypasses the confirm prompt/, "the full description lives on its page");
+	assert.match(r1, /1\.\s+Approve — accept this finding as-is/);
+	assert.match(r1, /2\.\s+Fix — mark this finding for the pipeline to fix/);
+	assert.match(r1, /3\.\s+Ignore — pass on this finding, leave it unfixed/);
+	assert.match(r1, /Tab +next finding/);
+	assert.match(r1, /⇧Tab +prev finding/);
+	assert.match(r1, /Esc +overview/);
+	assert.match(frames[2], /finding 2\/3/, "choosing a finding's option advances to the next");
+	assert.match(frames[3], /finding 1\/3/, "Shift-Tab pages backward");
+	assert.match(frames[3], /2\. ● Fix — mark this finding for the pipeline to fix/,
+		"the chosen option carries the dot");
+	await decided;
+	clearApi();
+}
+
+// A no-op finding's page offers no Fix choice and explains why.
+{
+	const { api, frames } = registerGateExtension({ panelInputs: ["tab", "tab", "tab", "ctrl-a"], renderWidth: 80 });
+	const decided = api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" });
+	await new Promise(setImmediate);
+	const r3 = frames[3];
+	assert.match(r3, /finding 3\/3/);
+	assert.match(r3, /the pipeline classifies this finding no-op — it cannot be fixed/);
+	assert.doesNotMatch(r3, /Fix — mark this finding/);
+	assert.match(r3, /1\.\s+Approve — accept this finding as-is/);
+	assert.match(r3, /2\.\s+Ignore — pass on this finding, leave it unfixed/);
+	await decided;
+	clearApi();
+}
+
+// The guidance page names the findings the pipeline will fix.
+{
+	const inputs = ["tab", "2", "2", "1", "2", "\r"]; // ends in the editor: Enter submits
+	const { api, frames } = registerGateExtension({ panelInputs: inputs, renderWidth: 80 });
+	const decided = api.handleGate({ output: GATE_OUTPUT, cwd: "/repo", subcommand: "run" });
+	await new Promise(setImmediate);
+	assert.match(frames[5], /the pipeline fixes: r1, r2/);
+	assert.match(frames[5], /Optional fix guidance — Enter submits · Esc back · empty = none/);
+	await decided;
 	clearApi();
 }
 
