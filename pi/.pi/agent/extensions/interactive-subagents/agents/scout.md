@@ -1,7 +1,7 @@
 ---
 name: scout
 description: Fast codebase recon — explores files, finds patterns, maps architecture
-tools: read, grep, find, ls
+tools: read, grep, find, ls, tuicr, tuicr_reply
 model: openai-codex/gpt-6-astra
 thinking: low
 system-prompt: append
