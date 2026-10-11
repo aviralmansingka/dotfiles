@@ -28,7 +28,9 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [directory] [-- tuicr-args...]
 
-Launch tuicr in a Herdr split pane.
+Launch tuicr in a Herdr split pane — the pane named by HERDR_PANE_ID when
+set (e.g. when spawned from a Herdr-managed agent process), else the
+current pane.
 
 Arguments:
   directory    Repository directory to review (default: current directory)
@@ -85,8 +87,21 @@ launch_tuicr_pane() {
   log_info "Launching tuicr in a Herdr pane split $TUICR_PANE_DIRECTION"
   log_info "Directory: $target_dir"
 
+  # Split the pane this process was spawned from when we know it: every
+  # Herdr-managed process carries HERDR_PANE_ID, and so does anything
+  # spawned from one (e.g. the detached wrapper the tuicr-review subagent
+  # launches). An explicit pane id keeps placement deterministic even when
+  # --current would resolve by focus; --current stays the fallback for
+  # callers without the env var.
+  local split_args=()
+  if [[ -n "${HERDR_PANE_ID:-}" ]]; then
+    split_args=("$HERDR_PANE_ID")
+  else
+    split_args=(--current)
+  fi
+
   local split_response
-  split_response=$("$HERDR_BIN" pane split --current \
+  split_response=$("$HERDR_BIN" pane split "${split_args[@]}" \
     --direction "$TUICR_PANE_DIRECTION" \
     --cwd "$target_dir" \
     --focus)

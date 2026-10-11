@@ -42,7 +42,7 @@ the same validation, registry, watcher, and completion-steer path as the tool.
 The tuicr extension's `tuicr_review` uses this to start the bundled
 `tuicr-review` agent, and `__pi_interactive_subagents.isSubagentRunning(name)`
 reports whether such a spawn is still running (tuicr refuses a second reviewer
-for a repo whose review is already open).
+for the same review target — another PR or range still runs concurrently).
 
 ### Spawning
 
@@ -104,9 +104,11 @@ until the learner exits it. All six carry their identity in the system prompt
 
 The `tuicr-review` agent is started by the tuicr extension's `tuicr_review`
 tool / `/tuicr` command (see
-[README-tuicr.md](../README-tuicr.md)); it parks in `waiting` between comment
-batches — auto-exit is suppressed while its comment watcher is active — and
-closes itself after the TUI exits and its summary is delivered.
+[README-tuicr.md](../README-tuicr.md)); it opens the tuicr pane inside its own
+tab (the wrapper it spawns inherits its `HERDR_PANE_ID`), parks in `waiting`
+between comment batches — auto-exit is suppressed while its comment watcher
+is active — and closes itself after the TUI exits and its summary is
+delivered.
 
 The `nm-orchestrator` agent is started by the no-mistake-pane extension's
 `no_mistakes_axi` tool when a Herdr captain session submits `run`: it owns
